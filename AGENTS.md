@@ -19,6 +19,8 @@ cp .env.example .env        # Create env file (never commit .env)
 
 ## Commands
 
+**pnpm gotcha:** Do NOT use `pnpm -s` (no silent flag exists). Use `pnpm --loglevel silent` if needed, or just run commands without flags. Using `-s` triggers `/usr/bin/view` (vim) and hangs.
+
 ```bash
 # Development
 pnpm dev                    # Start dev server (http://localhost:3000)
