@@ -9,7 +9,7 @@
 
 ## Context
 
-We need to define the core domain model for Naltrexone University. This model must:
+We need to define the core domain model for Addiction Boards. This model must:
 
 1. Capture the essential business concepts of a medical board exam question bank
 2. Be independent of any framework or database
