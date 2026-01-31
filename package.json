@@ -7,6 +7,9 @@
     "lint": "biome check .",
     "lint:fix": "biome check . --write",
     "typecheck": "tsc --noEmit",
+    "test": "vitest",
+    "test:integration": "vitest --config vitest.config.ts --include 'tests/integration/**/*.test.ts'",
+    "test:e2e": "playwright test",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio"
@@ -40,6 +43,8 @@
     "zod": "^3.24.4"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.3.13"
+    "@biomejs/biome": "^2.3.13",
+    "@playwright/test": "^1.58.1",
+    "vitest": "^4.0.18"
   }
 }
