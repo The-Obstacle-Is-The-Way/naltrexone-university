@@ -1,20 +1,23 @@
 import 'dotenv/config';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
+import { eq, inArray } from 'drizzle-orm';
+import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
+import { drizzle } from 'drizzle-orm/postgres-js';
 import fg from 'fast-glob';
 import matter from 'gray-matter';
-import { eq, inArray } from 'drizzle-orm';
-import { drizzle } from 'drizzle-orm/postgres-js';
-import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
 import * as schema from '../db/schema';
-import { FullQuestionSchema, QuestionFrontmatterSchema } from '../lib/content/schemas';
 import {
   canonicalizeMarkdown,
   canonicalJsonString,
   parseMdxQuestionBody,
   sha256Hex,
 } from '../lib/content/parseMdxQuestion';
+import {
+  FullQuestionSchema,
+  QuestionFrontmatterSchema,
+} from '../lib/content/schemas';
 
 type SeedTag = {
   slug: string;
@@ -222,9 +225,11 @@ async function main(): Promise<void> {
         await tx.insert(schema.questionTags).values(
           seedFromFile.tags.map((t) => ({
             questionId: createdQuestion.id,
-            tagId: tagMap.get(t.slug)?.id ?? (() => {
-              throw new Error(`Missing tag id for slug "${t.slug}"`);
-            })(),
+            tagId:
+              tagMap.get(t.slug)?.id ??
+              (() => {
+                throw new Error(`Missing tag id for slug "${t.slug}"`);
+              })(),
           })),
         );
       });
@@ -293,9 +298,11 @@ async function main(): Promise<void> {
       await tx.insert(schema.questionTags).values(
         seedFromFile.tags.map((t) => ({
           questionId: existingQuestion.id,
-          tagId: tagMap.get(t.slug)?.id ?? (() => {
-            throw new Error(`Missing tag id for slug "${t.slug}"`);
-          })(),
+          tagId:
+            tagMap.get(t.slug)?.id ??
+            (() => {
+              throw new Error(`Missing tag id for slug "${t.slug}"`);
+            })(),
         })),
       );
     });

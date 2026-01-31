@@ -23,8 +23,8 @@ export function extractBetween(
   const normalized = trimTrailingWhitespacePerLine(content);
   const lines = normalized.split('\n');
 
-  const startIndex = lines.findIndex((line) => line === startHeading);
-  const endIndex = lines.findIndex((line) => line === endHeading);
+  const startIndex = lines.indexOf(startHeading);
+  const endIndex = lines.indexOf(endHeading);
 
   if (startIndex === -1) {
     throw new Error(`Missing required heading: ${startHeading}`);
@@ -45,7 +45,7 @@ export function extractAfter(content: string, heading: string): string {
   const normalized = trimTrailingWhitespacePerLine(content);
   const lines = normalized.split('\n');
 
-  const index = lines.findIndex((line) => line === heading);
+  const index = lines.indexOf(heading);
   if (index === -1) {
     throw new Error(`Missing required heading: ${heading}`);
   }
@@ -99,4 +99,3 @@ export function canonicalJsonString(value: unknown): string {
 export function sha256Hex(input: string): string {
   return createHash('sha256').update(input).digest('hex');
 }
-

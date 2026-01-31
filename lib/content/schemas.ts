@@ -10,7 +10,10 @@ export const ChoiceFrontmatterSchema = z
 
 export const TagFrontmatterSchema = z
   .object({
-    slug: z.string().min(1).regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/),
+    slug: z
+      .string()
+      .min(1)
+      .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/),
     name: z.string().min(1),
     kind: z.enum(['domain', 'topic', 'substance', 'treatment', 'diagnosis']),
   })
@@ -18,7 +21,10 @@ export const TagFrontmatterSchema = z
 
 export const QuestionFrontmatterSchema = z
   .object({
-    slug: z.string().min(1).regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/),
+    slug: z
+      .string()
+      .min(1)
+      .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/),
     difficulty: z.enum(['easy', 'medium', 'hard']),
     status: z.enum(['draft', 'published', 'archived']),
     tags: z.array(TagFrontmatterSchema).max(50),
@@ -51,4 +57,3 @@ export const FullQuestionSchema = z
     explanationMd: z.string().min(1),
   })
   .strict();
-
