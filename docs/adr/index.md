@@ -28,6 +28,7 @@ Architecture Decision Records document significant architectural decisions along
 | [ADR-009](./adr-009-security-hardening.md) | Security Hardening | Accepted | 2026-01-31 |
 | [ADR-010](./adr-010-caching-strategy.md) | Caching Strategy | Accepted | 2026-01-31 |
 | [ADR-011](./adr-011-api-design-principles.md) | API Design Principles | Accepted | 2026-01-31 |
+| [ADR-012](./adr-012-directory-structure.md) | Directory Structure | Accepted | 2026-01-31 |
 
 ## ADR Statuses
 
@@ -133,6 +134,19 @@ Contract-first design with Zod schemas:
 - Every action returns `ActionResult<T>`
 - Standard error codes
 - Semantic naming (verb + noun)
+
+### ADR-012: Directory Structure
+
+Authoritative directory structure reconciling Clean Architecture with Next.js:
+
+```
+src/domain/          → Entities, Value Objects, Domain Services
+src/application/     → Use Cases, Ports (interfaces)
+src/adapters/        → Repositories, Gateways, Controllers
+app/, components/, lib/, db/ → Frameworks & Drivers (Next.js)
+```
+
+Server Actions live in `src/adapters/controllers/` (not `/app/_actions/`).
 
 ---
 

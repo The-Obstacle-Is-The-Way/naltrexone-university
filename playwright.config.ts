@@ -1,6 +1,8 @@
 import 'dotenv/config';
 import { defineConfig, devices } from '@playwright/test';
 
+const baseURL = process.env.NEXT_PUBLIC_APP_URL || 'http://127.0.0.1:3000';
+
 export default defineConfig({
   testDir: './tests/e2e',
   fullyParallel: true,
@@ -9,7 +11,7 @@ export default defineConfig({
   workers: process.env.CI ? 1 : undefined,
   reporter: 'html',
   use: {
-    baseURL: process.env.NEXT_PUBLIC_APP_URL || 'http://127.0.0.1:3000',
+    baseURL,
     trace: 'on-first-retry',
   },
   projects: [
@@ -19,8 +21,8 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: 'pnpm dev',
-    url: 'http://127.0.0.1:3000',
+    command: process.env.CI ? 'pnpm start' : 'pnpm dev',
+    url: baseURL,
     reuseExistingServer: !process.env.CI,
     timeout: 120000,
   },
