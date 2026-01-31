@@ -266,7 +266,7 @@ test.describe('Practice Flow', () => {
 ```typescript
 // src/domain/test-helpers/factories.ts
 import type { Question, Choice, User, Subscription } from '../entities';
-import { QuestionDifficulty, QuestionStatus, SubscriptionStatus } from '../value-objects';
+import { QuestionDifficulty, QuestionStatus, SubscriptionStatus, SubscriptionPlan } from '../value-objects';
 
 let idCounter = 0;
 const nextId = () => `test-id-${++idCounter}`;
@@ -305,9 +305,9 @@ export function createChoice(overrides: Partial<Choice> = {}): Choice {
 export function createUser(overrides: Partial<User> = {}): User {
   return {
     id: nextId(),
-    externalAuthId: `clerk_${idCounter}`,
     email: `test${idCounter}@example.com`,
     createdAt: new Date(),
+    updatedAt: new Date(),
     ...overrides,
   };
 }
@@ -316,9 +316,8 @@ export function createSubscription(overrides: Partial<Subscription> = {}): Subsc
   return {
     id: nextId(),
     userId: 'user1',
-    externalSubscriptionId: `sub_${idCounter}`,
+    plan: SubscriptionPlan.Monthly,
     status: SubscriptionStatus.Active,
-    priceId: 'price_monthly',
     currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
     cancelAtPeriodEnd: false,
     createdAt: new Date(),

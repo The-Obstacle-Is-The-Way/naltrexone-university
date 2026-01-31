@@ -497,7 +497,10 @@ export function computeSessionSummary(
   attempts: readonly Attempt[]
 ): SessionSummary {
   if (!session.endedAt) {
-    throw new Error('Cannot compute summary for unfinished session');
+    throw new DomainError(
+      'INVALID_SESSION',
+      'Cannot compute summary for unfinished session'
+    );
   }
 
   const answered = attempts.length;
