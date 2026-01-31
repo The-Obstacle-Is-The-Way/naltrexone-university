@@ -1,20 +1,20 @@
 'use client';
 
-import Link from 'next/link';
-import { use, useState, Suspense } from 'react';
-import { Button } from '@/components/ui/button';
 import { CircleIcon, Home, LogOut } from 'lucide-react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { Suspense, use, useState } from 'react';
+import useSWR, { mutate } from 'swr';
+import { signOut } from '@/app/(login)/actions';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuTrigger
+  DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { signOut } from '@/app/(login)/actions';
-import { useRouter } from 'next/navigation';
-import { User } from '@/lib/db/schema';
-import useSWR, { mutate } from 'swr';
+import type { User } from '@/lib/db/schema';
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 

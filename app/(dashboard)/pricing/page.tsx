@@ -1,5 +1,5 @@
-import { checkoutAction } from '@/lib/payments/actions';
 import { Check } from 'lucide-react';
+import { checkoutAction } from '@/lib/payments/actions';
 import { getStripePrices, getStripeProducts } from '@/lib/payments/stripe';
 import { SubmitButton } from './submit-button';
 

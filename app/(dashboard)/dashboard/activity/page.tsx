@@ -1,18 +1,18 @@
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
-  Settings,
-  LogOut,
-  UserPlus,
-  Lock,
-  UserCog,
   AlertCircle,
-  UserMinus,
-  Mail,
   CheckCircle,
+  Lock,
+  LogOut,
   type LucideIcon,
+  Mail,
+  Settings,
+  UserCog,
+  UserMinus,
+  UserPlus,
 } from 'lucide-react';
-import { ActivityType } from '@/lib/db/schema';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { getActivityLogs } from '@/lib/db/queries';
+import { ActivityType } from '@/lib/db/schema';
 
 const iconMap: Record<ActivityType, LucideIcon> = {
   [ActivityType.SIGN_UP]: UserPlus,
@@ -86,7 +86,7 @@ export default async function ActivityPage() {
               {logs.map((log) => {
                 const Icon = iconMap[log.action as ActivityType] || Settings;
                 const formattedAction = formatAction(
-                  log.action as ActivityType
+                  log.action as ActivityType,
                 );
 
                 return (

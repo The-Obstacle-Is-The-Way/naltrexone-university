@@ -1,15 +1,14 @@
 'use client';
 
-import { useActionState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Label } from '@/components/ui/label';
 import { Loader2 } from 'lucide-react';
-import { updateAccount } from '@/app/(login)/actions';
-import { User } from '@/lib/db/schema';
+import { Suspense, useActionState } from 'react';
 import useSWR from 'swr';
-import { Suspense } from 'react';
+import { updateAccount } from '@/app/(login)/actions';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import type { User } from '@/lib/db/schema';
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -28,7 +27,7 @@ type AccountFormProps = {
 function AccountForm({
   state,
   nameValue = '',
-  emailValue = ''
+  emailValue = '',
 }: AccountFormProps) {
   return (
     <>
@@ -75,7 +74,7 @@ function AccountFormWithData({ state }: { state: ActionState }) {
 export default function GeneralPage() {
   const [state, formAction, isPending] = useActionState<ActionState, FormData>(
     updateAccount,
-    {}
+    {},
   );
 
   return (

@@ -1,24 +1,23 @@
 'use client';
 
-import { Button } from '@/components/ui/button';
+import { Loader2, PlusCircle } from 'lucide-react';
+import { Suspense, useActionState } from 'react';
+import useSWR from 'swr';
+import { inviteTeamMember, removeTeamMember } from '@/app/(login)/actions';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Button } from '@/components/ui/button';
 import {
   Card,
   CardContent,
+  CardFooter,
   CardHeader,
   CardTitle,
-  CardFooter
 } from '@/components/ui/card';
-import { customerPortalAction } from '@/lib/payments/actions';
-import { useActionState } from 'react';
-import { TeamDataWithMembers, User } from '@/lib/db/schema';
-import { removeTeamMember, inviteTeamMember } from '@/app/(login)/actions';
-import useSWR from 'swr';
-import { Suspense } from 'react';
 import { Input } from '@/components/ui/input';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
-import { Loader2, PlusCircle } from 'lucide-react';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import type { TeamDataWithMembers, User } from '@/lib/db/schema';
+import { customerPortalAction } from '@/lib/payments/actions';
 
 type ActionState = {
   error?: string;
@@ -56,8 +55,8 @@ function ManageSubscription() {
                 {teamData?.subscriptionStatus === 'active'
                   ? 'Billed monthly'
                   : teamData?.subscriptionStatus === 'trialing'
-                  ? 'Trial period'
-                  : 'No active subscription'}
+                    ? 'Trial period'
+                    : 'No active subscription'}
               </p>
             </div>
             <form action={customerPortalAction}>

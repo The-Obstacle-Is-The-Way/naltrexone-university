@@ -1,14 +1,14 @@
 'use client';
 
+import { CircleIcon, Loader2 } from 'lucide-react';
 import Link from 'next/link';
-import { useActionState } from 'react';
 import { useSearchParams } from 'next/navigation';
+import { useActionState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { CircleIcon, Loader2 } from 'lucide-react';
+import type { ActionState } from '@/lib/auth/middleware';
 import { signIn, signUp } from './actions';
-import { ActionState } from '@/lib/auth/middleware';
 
 export function Login({ mode = 'signin' }: { mode?: 'signin' | 'signup' }) {
   const searchParams = useSearchParams();
@@ -17,7 +17,7 @@ export function Login({ mode = 'signin' }: { mode?: 'signin' | 'signup' }) {
   const inviteId = searchParams.get('inviteId');
   const [state, formAction, pending] = useActionState<ActionState, FormData>(
     mode === 'signin' ? signIn : signUp,
-    { error: '' }
+    { error: '' },
   );
 
   return (

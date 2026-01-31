@@ -1,10 +1,10 @@
 import { eq } from 'drizzle-orm';
-import { db } from '@/lib/db/drizzle';
-import { users, teams, teamMembers } from '@/lib/db/schema';
+import { type NextRequest, NextResponse } from 'next/server';
+import type Stripe from 'stripe';
 import { setSession } from '@/lib/auth/session';
-import { NextRequest, NextResponse } from 'next/server';
+import { db } from '@/lib/db/drizzle';
+import { teamMembers, teams, users } from '@/lib/db/schema';
 import { stripe } from '@/lib/payments/stripe';
-import Stripe from 'stripe';
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
