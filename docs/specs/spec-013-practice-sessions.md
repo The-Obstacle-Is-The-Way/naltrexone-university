@@ -1,7 +1,7 @@
-# slice-3-practice-sessions
+# SPEC-013: Practice Sessions Feature Slice
 
-**Slice ID:** SLICE-3
-**Status:** Not Started
+**Spec ID:** SPEC-013
+**Status:** Ready
 **Dependencies:** SLICE-2 (Core Question Loop) must be complete
 **Estimated Complexity:** Medium (Session state management, question ordering, exam vs tutor modes)
 
@@ -640,7 +640,7 @@ export function computeSessionSummary(
 
 ### Step 3: Implement Practice Actions
 
-**File:** `app/(app)/app/_actions/practice.actions.ts`
+**File:** `src/adapters/controllers/practice-controller.ts`
 
 ```typescript
 'use server';
@@ -660,7 +660,7 @@ import { eq, and, inArray, desc } from 'drizzle-orm';
 import { checkUserEntitlement } from '@/lib/subscription';
 import { shuffleWithSeed, createSeedFromUserAndTime } from '@/lib/practice/shuffle';
 import { computeSessionSummary } from '@/lib/practice/summary';
-import { type ActionResult, success, failure } from './actionResult';
+import { type ActionResult, success, failure } from './action-result';
 
 // Input schemas
 const StartPracticeSessionInput = z.object({
@@ -980,7 +980,7 @@ pnpm test:e2e tests/e2e/session.spec.ts
 - [ ] `lib/practice/shuffle.test.ts`
 - [ ] `lib/practice/summary.ts`
 - [ ] `lib/practice/summary.test.ts`
-- [ ] `app/(app)/app/_actions/practice.actions.ts`
+- [ ] `src/adapters/controllers/practice-controller.ts`
 - [ ] `app/(app)/app/practice/page.tsx`
 - [ ] `app/(app)/app/practice/[sessionId]/page.tsx`
 - [ ] `tests/integration/practice.integration.test.ts`

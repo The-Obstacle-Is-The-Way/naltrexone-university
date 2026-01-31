@@ -15,16 +15,19 @@ Define Next.js Server Actions that serve as **Controllers** in Clean Architectur
 
 ## Files to Create
 
+> **Note:** Per ADR-012, server actions are Controllers in Clean Architecture and live in `src/adapters/controllers/`.
+
 ```
-app/actions/
-├── submit-answer.ts
-├── submit-answer.test.ts
-├── get-next-question.ts
-├── get-next-question.test.ts
-├── check-entitlement.ts
-├── check-entitlement.test.ts
-├── create-checkout.ts
-├── create-checkout.test.ts
+src/adapters/controllers/
+├── action-result.ts
+├── question-controller.ts
+├── question-controller.test.ts
+├── billing-controller.ts
+├── billing-controller.test.ts
+├── practice-controller.ts
+├── stats-controller.ts
+├── review-controller.ts
+├── bookmark-controller.ts
 └── index.ts
 ```
 
@@ -77,7 +80,7 @@ Server Action tests use **Fake** implementations for all dependencies (per ADR-0
 
 ## Test First
 
-### File: `app/actions/submit-answer.test.ts`
+### File: `src/adapters/controllers/question-controller.test.ts`
 
 ```typescript
 import { describe, it, expect, beforeEach } from 'vitest';
@@ -222,7 +225,7 @@ describe('submitAnswer action', () => {
 });
 ```
 
-### File: `app/actions/check-entitlement.test.ts`
+### File: `src/adapters/controllers/billing-controller.test.ts`
 
 ```typescript
 import { describe, it, expect, beforeEach } from 'vitest';
@@ -308,7 +311,7 @@ describe('checkEntitlement action', () => {
 
 ## Implementation
 
-### File: `app/actions/submit-answer.ts`
+### File: `src/adapters/controllers/question-controller.ts`
 
 ```typescript
 'use server';
@@ -439,7 +442,7 @@ function mapErrorToResult(error: unknown): ActionResult<never> {
 }
 ```
 
-### File: `app/actions/check-entitlement.ts`
+### File: `src/adapters/controllers/billing-controller.ts` (checkEntitlement export)
 
 ```typescript
 'use server';
@@ -524,7 +527,7 @@ function mapErrorToResult(error: unknown): ActionResult<never> {
 }
 ```
 
-### File: `app/actions/index.ts`
+### File: `src/adapters/controllers/index.ts`
 
 ```typescript
 export { submitAnswer } from './submit-answer';
@@ -538,7 +541,7 @@ export { createCheckout } from './create-checkout';
 ## Quality Gate
 
 ```bash
-pnpm test app/actions/
+pnpm test src/adapters/controllers/
 ```
 
 ---

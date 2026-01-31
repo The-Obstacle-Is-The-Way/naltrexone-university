@@ -1,7 +1,7 @@
-# slice-5-dashboard
+# SPEC-015: Dashboard Feature Slice
 
-**Slice ID:** SLICE-5
-**Status:** Not Started
+**Spec ID:** SPEC-015
+**Status:** Ready
 **Dependencies:** SLICE-4 (Review and Bookmarks) must be complete
 **Estimated Complexity:** Low-Medium (Stats computation, streak logic, UI components)
 
@@ -539,7 +539,7 @@ export function computeAccuracyInWindow(
 
 ### Step 2: Implement Stats Action
 
-**File:** `app/(app)/app/_actions/stats.actions.ts`
+**File:** `src/adapters/controllers/stats-controller.ts`
 
 ```typescript
 'use server';
@@ -556,7 +556,7 @@ import {
   computeAnsweredInWindow,
   computeAccuracyInWindow,
 } from '@/lib/stats/computeStats';
-import { type ActionResult, success, failure } from './actionResult';
+import { type ActionResult, success, failure } from './action-result';
 
 export type RecentActivity = {
   answeredAt: string;
@@ -776,7 +776,7 @@ export function RecentActivityList({ activities }: Props) {
 **File:** `app/(app)/app/dashboard/page.tsx`
 
 ```typescript
-import { getUserStats } from '../_actions/stats.actions';
+import { getUserStats } from '@/src/adapters/controllers/stats-controller';
 import { StatCard } from '@/components/stats/StatCard';
 import { RecentActivityList } from '@/components/stats/RecentActivityList';
 import { Target, Flame, TrendingUp, CheckSquare } from 'lucide-react';
@@ -873,7 +873,7 @@ pnpm test:e2e tests/e2e/dashboard.spec.ts
 ### Create
 - [ ] `lib/stats/computeStats.ts`
 - [ ] `lib/stats/computeStats.test.ts`
-- [ ] `app/(app)/app/_actions/stats.actions.ts`
+- [ ] `src/adapters/controllers/stats-controller.ts`
 - [ ] `app/(app)/app/dashboard/page.tsx`
 - [ ] `components/stats/StatCard.tsx`
 - [ ] `components/stats/RecentActivityList.tsx`

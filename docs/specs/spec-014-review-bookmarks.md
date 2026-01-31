@@ -1,7 +1,7 @@
-# slice-4-review-bookmarks
+# SPEC-014: Review and Bookmarks Feature Slice
 
-**Slice ID:** SLICE-4
-**Status:** Not Started
+**Spec ID:** SPEC-014
+**Status:** Ready
 **Dependencies:** SLICE-3 (Practice Sessions) must be complete
 **Estimated Complexity:** Medium (Query patterns, list pagination, reattempt flows)
 
@@ -682,7 +682,7 @@ export function sortBookmarksByDate<T extends BookmarkWithDate>(
 
 ### Step 2: Implement Review Actions
 
-**File:** `app/(app)/app/_actions/review.actions.ts`
+**File:** `src/adapters/controllers/review-controller.ts`
 
 ```typescript
 'use server';
@@ -693,7 +693,7 @@ import { db } from '@/lib/db';
 import { users, questions, attempts } from '@/db/schema';
 import { eq, and, desc } from 'drizzle-orm';
 import { checkUserEntitlement } from '@/lib/subscription';
-import { type ActionResult, success, failure } from './actionResult';
+import { type ActionResult, success, failure } from './action-result';
 
 const GetMissedQuestionsInput = z.object({
   limit: z.number().int().min(1).max(100),
@@ -956,7 +956,7 @@ pnpm test:e2e tests/e2e/review.spec.ts tests/e2e/bookmarks.spec.ts
 - [ ] `lib/review/queries.test.ts`
 - [ ] `lib/bookmarks/queries.ts`
 - [ ] `lib/bookmarks/queries.test.ts`
-- [ ] `app/(app)/app/_actions/review.actions.ts`
+- [ ] `src/adapters/controllers/review-controller.ts`
 - [ ] `app/(app)/app/review/page.tsx`
 - [ ] `app/(app)/app/bookmarks/page.tsx`
 - [ ] `components/question/QuestionListItem.tsx`
@@ -965,7 +965,7 @@ pnpm test:e2e tests/e2e/review.spec.ts tests/e2e/bookmarks.spec.ts
 - [ ] `tests/e2e/bookmarks.spec.ts`
 
 ### Modify
-- [ ] `app/(app)/app/_actions/bookmarks.actions.ts` (add getBookmarks)
+- [ ] `src/adapters/controllers/bookmark-controller.ts` (add getBookmarks)
 
 ---
 

@@ -1,7 +1,7 @@
-# SLICE-1: Paywall
+# SPEC-011: Paywall Feature Slice
 
-**Slice ID:** SLICE-1
-**Status:** Not Started
+**Spec ID:** SPEC-011
+**Status:** Ready
 **Dependencies:** SLICE-0 (Foundation) must be complete
 **Estimated Complexity:** High (Stripe integration, webhooks, state management)
 
@@ -467,7 +467,7 @@ pnpm test lib/subscription.test.ts  # Unit tests pass
 
 ### Step 3: Create ActionResult Type
 
-**File:** `app/(app)/app/_actions/actionResult.ts`
+**File:** `src/adapters/controllers/action-result.ts`
 
 ```typescript
 export type ActionErrorCode =
@@ -505,7 +505,7 @@ export function failure(
 
 ### Step 4: Implement Stripe Server Actions
 
-**File:** `app/(app)/app/_actions/stripe.actions.ts`
+**File:** `src/adapters/controllers/billing-controller.ts`
 
 ```typescript
 'use server';
@@ -516,7 +516,7 @@ import { stripe } from '@/lib/stripe';
 import { db } from '@/lib/db';
 import { users, stripeCustomers } from '@/db/schema';
 import { eq } from 'drizzle-orm';
-import { type ActionResult, success, failure } from './actionResult';
+import { type ActionResult, success, failure } from './action-result';
 
 const CreateCheckoutSessionInput = z.object({
   priceId: z.string().min(1),
@@ -1064,7 +1064,7 @@ export default async function BillingPage() {
 'use client';
 
 import { useState } from 'react';
-import { createPortalSession } from '../_actions/stripe.actions';
+import { createPortalSession } from '@/src/adapters/controllers/billing-controller';
 import { Button } from '@/components/ui/button';
 
 export function BillingClient() {
@@ -1145,8 +1145,8 @@ pnpm test:e2e tests/e2e/subscribe.spec.ts
 ### Create
 - [ ] `lib/subscription.ts`
 - [ ] `lib/subscription.test.ts`
-- [ ] `app/(app)/app/_actions/actionResult.ts`
-- [ ] `app/(app)/app/_actions/stripe.actions.ts`
+- [ ] `src/adapters/controllers/action-result.ts`
+- [ ] `src/adapters/controllers/billing-controller.ts`
 - [ ] `app/api/stripe/webhook/route.ts`
 - [ ] `app/(marketing)/checkout/success/page.tsx`
 - [ ] `app/(app)/app/layout.tsx`

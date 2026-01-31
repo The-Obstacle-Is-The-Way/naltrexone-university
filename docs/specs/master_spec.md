@@ -553,7 +553,7 @@ All other statuses (`past_due`, `canceled`, `unpaid`, `paused`, `incomplete`, `i
 All server actions MUST return a discriminated union to avoid leaking stack traces to clients:
 
 ```ts
-// app/(app)/app/_actions/actionResult.ts
+// src/adapters/controllers/action-result.ts
 export type ActionErrorCode =
   | 'UNAUTHENTICATED'
   | 'UNSUBSCRIBED'
@@ -665,7 +665,9 @@ export type StripeWebhookResponse = { received: true };
 ### 4.5 Server Actions (Required)
 
 All server actions are implemented under:
-`/app/(app)/app/_actions/*.ts`
+`src/adapters/controllers/*.ts`
+
+> **Note:** Per ADR-012, server actions are Controllers in Clean Architecture terms and live in the adapters layer, not in the Next.js app directory.
 
 All inputs MUST be validated with Zod before any DB/Stripe calls.
 
@@ -693,7 +695,7 @@ export const zPagination = z.object({
 * **Name:** `createCheckoutSession`
 * **Type:** Server Action
 * **Auth:** authenticated
-* **File:** `app/(app)/app/_actions/stripe.actions.ts`
+* **File:** `src/adapters/controllers/billing-controller.ts`
 
 **Input (Zod):**
 
@@ -745,7 +747,7 @@ export type CreateCheckoutSessionOutput = {
 * **Name:** `createPortalSession`
 * **Type:** Server Action
 * **Auth:** authenticated
-* **File:** `app/(app)/app/_actions/stripe.actions.ts`
+* **File:** `src/adapters/controllers/billing-controller.ts`
 
 **Input (Zod):**
 
@@ -783,7 +785,7 @@ export type CreatePortalSessionOutput = { url: string };
 * **Name:** `getNextQuestion`
 * **Type:** Server Action
 * **Auth:** subscribed
-* **File:** `app/(app)/app/_actions/questions.actions.ts`
+* **File:** `src/adapters/controllers/question-controller.ts`
 
 **Input (Zod):** (mutually exclusive: either session mode OR ad-hoc filters)
 
@@ -867,7 +869,7 @@ export type GetNextQuestionOutput = NextQuestion | null; // null means no remain
 * **Name:** `submitAnswer`
 * **Type:** Server Action
 * **Auth:** subscribed
-* **File:** `app/(app)/app/_actions/questions.actions.ts`
+* **File:** `src/adapters/controllers/question-controller.ts`
 
 **Input (Zod):**
 
@@ -924,7 +926,7 @@ export type SubmitAnswerOutput = {
 * **Name:** `startPracticeSession`
 * **Type:** Server Action
 * **Auth:** subscribed
-* **File:** `app/(app)/app/_actions/practice.actions.ts`
+* **File:** `src/adapters/controllers/practice-controller.ts`
 
 **Input (Zod):**
 
@@ -979,7 +981,7 @@ export type StartPracticeSessionOutput = { sessionId: string };
 * **Name:** `endPracticeSession`
 * **Type:** Server Action
 * **Auth:** subscribed
-* **File:** `app/(app)/app/_actions/practice.actions.ts`
+* **File:** `src/adapters/controllers/practice-controller.ts`
 
 **Input (Zod):**
 
@@ -1032,7 +1034,7 @@ export type EndPracticeSessionOutput = {
 * **Name:** `getUserStats`
 * **Type:** Server Action
 * **Auth:** subscribed
-* **File:** `app/(app)/app/_actions/stats.actions.ts`
+* **File:** `src/adapters/controllers/stats-controller.ts`
 
 **Input (Zod):**
 
@@ -1082,7 +1084,7 @@ export type UserStatsOutput = {
 * **Name:** `getMissedQuestions`
 * **Type:** Server Action
 * **Auth:** subscribed
-* **File:** `app/(app)/app/_actions/review.actions.ts`
+* **File:** `src/adapters/controllers/review-controller.ts`
 
 **Input (Zod):**
 
@@ -1130,7 +1132,7 @@ export type GetMissedQuestionsOutput = {
 * **Name:** `toggleBookmark`
 * **Type:** Server Action
 * **Auth:** subscribed
-* **File:** `app/(app)/app/_actions/bookmarks.actions.ts`
+* **File:** `src/adapters/controllers/bookmark-controller.ts`
 
 **Input (Zod):**
 
@@ -1169,7 +1171,7 @@ export type ToggleBookmarkOutput = {
 * **Name:** `getBookmarks`
 * **Type:** Server Action
 * **Auth:** subscribed
-* **File:** `app/(app)/app/_actions/bookmarks.actions.ts`
+* **File:** `src/adapters/controllers/bookmark-controller.ts`
 
 **Input (Zod):**
 

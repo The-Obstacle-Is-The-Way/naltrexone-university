@@ -1,7 +1,7 @@
-# SLICE-2: Core Question Loop
+# SPEC-012: Core Question Loop Feature Slice
 
-**Slice ID:** SLICE-2
-**Status:** Not Started
+**Spec ID:** SPEC-012
+**Status:** Ready
 **Dependencies:** SLICE-1 (Paywall) must be complete
 **Estimated Complexity:** Medium-High (Content pipeline, markdown rendering, question/answer flow)
 
@@ -1051,7 +1051,7 @@ export function BookmarkButton({ isBookmarked, onClick }: Props) {
 
 ### Step 4: Implement Question Actions
 
-**File:** `app/(app)/app/_actions/questions.actions.ts`
+**File:** `src/adapters/controllers/question-controller.ts`
 
 ```typescript
 'use server';
@@ -1062,7 +1062,7 @@ import { db } from '@/lib/db';
 import { users, questions, choices, attempts } from '@/db/schema';
 import { eq, and, desc, notInArray, sql } from 'drizzle-orm';
 import { checkUserEntitlement } from '@/lib/subscription';
-import { type ActionResult, success, failure } from './actionResult';
+import { type ActionResult, success, failure } from './action-result';
 
 // Input schemas
 const GetNextQuestionInput = z.object({
@@ -1313,7 +1313,7 @@ export async function submitAnswer(
 
 ### Step 5: Implement Bookmark Actions
 
-**File:** `app/(app)/app/_actions/bookmarks.actions.ts`
+**File:** `src/adapters/controllers/bookmark-controller.ts`
 
 ```typescript
 'use server';
@@ -1324,7 +1324,7 @@ import { db } from '@/lib/db';
 import { users, questions, bookmarks } from '@/db/schema';
 import { eq, and } from 'drizzle-orm';
 import { checkUserEntitlement } from '@/lib/subscription';
-import { type ActionResult, success, failure } from './actionResult';
+import { type ActionResult, success, failure } from './action-result';
 
 const ToggleBookmarkInput = z.object({
   questionId: z.string().uuid(),
@@ -1515,8 +1515,8 @@ pnpm db:seed
 - [ ] `components/question/AnswerFeedback.tsx`
 - [ ] `components/question/ExplanationPanel.tsx`
 - [ ] `components/question/BookmarkButton.tsx`
-- [ ] `app/(app)/app/_actions/questions.actions.ts`
-- [ ] `app/(app)/app/_actions/bookmarks.actions.ts`
+- [ ] `src/adapters/controllers/question-controller.ts`
+- [ ] `src/adapters/controllers/bookmark-controller.ts`
 - [ ] `app/(app)/app/practice/page.tsx`
 - [ ] `scripts/seed.ts`
 - [ ] `content/questions/general/*.mdx` (10 files)
