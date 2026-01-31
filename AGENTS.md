@@ -17,9 +17,18 @@ cp .env.example .env        # Create env file (never commit .env)
 # Set DATABASE_URL, Clerk keys, and Stripe keys in .env
 ```
 
+## Non-Interactive Safety (No Vim / No Pagers)
+
+This repo is frequently worked on in non-interactive shells (CI + AI agents). To avoid hard hangs:
+
+- Prefer non-interactive commands: `cat`, `sed -n`, `rg`, `git --no-pager …`.
+- Never rely on an editor opening implicitly: always commit with `git commit -m "…"`.
+- Avoid pager-triggering patterns: use `git --no-pager log`, `git --no-pager diff`, etc.
+- **pnpm gotcha:** Do NOT use `pnpm -s` (it is **not** a “silent” flag). It invokes `/usr/bin/view` (vim) and will hang in non-TTY runs.
+
 ## Commands
 
-**pnpm gotcha:** Do NOT use `pnpm -s` (no silent flag exists). Use `pnpm --loglevel silent` if needed, or just run commands without flags. Using `-s` triggers `/usr/bin/view` (vim) and hangs.
+Tip: keep commands non-interactive; see the safety notes above.
 
 ```bash
 # Development
