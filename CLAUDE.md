@@ -104,3 +104,4 @@ Integration tests run against a real Postgres instance. In CI, a service contain
 - `docs/specs/spec-*.md` - Detailed specs for each subsystem
 - `docs/adr/` - Architecture Decision Records
 - `docs/specs/drafts/` - Feature slice specifications
+
