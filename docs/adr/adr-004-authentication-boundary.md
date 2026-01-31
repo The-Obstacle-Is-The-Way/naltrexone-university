@@ -45,7 +45,7 @@ Authentication lives in the **Frameworks & Drivers** layer. Our domain only know
 │   │   │   │           DOMAIN                      │   │   │   │
 │   │   │   │                                       │   │   │   │
 │   │   │   │   User entity with internal ID       │   │   │   │
-│   │   │   │   No externalAuthId in domain logic  │   │   │   │
+│   │   │   │   Domain User has NO auth provider ID│   │   │   │
 │   │   │   └──────────────────────────────────────┘   │   │   │
 │   │   └──────────────────────────────────────────────┘   │   │
 │   └──────────────────────────────────────────────────────┘   │
@@ -161,11 +161,12 @@ export class ClerkAuthGateway implements AuthGateway {
   }
 
   private toDomain(row: typeof users.$inferSelect): User {
+    // Note: clerkUserId stays in persistence only - NOT mapped to domain
     return {
       id: row.id,
-      externalAuthId: row.clerkUserId,
       email: row.email,
       createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
     };
   }
 }
@@ -289,7 +290,9 @@ The mapping happens **once** at the gateway boundary. Domain and use cases only 
 - [ ] No Clerk imports in `src/domain/`
 - [ ] No Clerk imports in `src/application/`
 - [ ] Use cases receive `userId`, not `clerkUserId`
-- [ ] Domain User entity has internal ID as primary identity
+- [ ] Domain User entity has NO `clerkUserId` or `externalAuthId` field
+- [ ] `clerk_user_id` column exists ONLY in database schema (persistence)
+- [ ] Auth gateway `toDomain()` does NOT map clerkUserId to domain entity
 - [ ] Auth gateway implements interface defined in application layer
 
 ## Testing

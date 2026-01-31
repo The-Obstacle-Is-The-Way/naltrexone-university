@@ -58,15 +58,39 @@ Payment processing lives in the **Frameworks & Drivers** layer. Our domain deals
 └──────────────────────────────────────────────────────────────┘
 ```
 
+### Plan Mapping (Adapter Configuration)
+
+The domain uses `SubscriptionPlan` (monthly/annual). The adapter maps these to vendor-specific price IDs:
+
+```typescript
+// src/adapters/config/plan-price-mapping.ts
+import { SubscriptionPlan } from '@/domain/value-objects';
+
+/**
+ * Maps domain plans to Stripe price IDs.
+ * This is the ONLY place where Stripe price IDs appear.
+ */
+export const PLAN_TO_PRICE_ID: Record<SubscriptionPlan, string> = {
+  [SubscriptionPlan.Monthly]: process.env.STRIPE_PRICE_MONTHLY!,
+  [SubscriptionPlan.Annual]: process.env.STRIPE_PRICE_ANNUAL!,
+};
+
+export const PRICE_ID_TO_PLAN: Record<string, SubscriptionPlan> = {
+  [process.env.STRIPE_PRICE_MONTHLY!]: SubscriptionPlan.Monthly,
+  [process.env.STRIPE_PRICE_ANNUAL!]: SubscriptionPlan.Annual,
+};
+```
+
 ### Payment Gateway Interface (Application Layer)
 
 ```typescript
 // src/application/ports/gateways.ts
+import type { SubscriptionPlan } from '@/domain/value-objects';
 
 export type CheckoutSessionInput = {
   userId: string;
   userEmail: string;
-  priceId: string;
+  plan: SubscriptionPlan;  // Domain concept, NOT vendor price ID
   successUrl: string;
   cancelUrl: string;
 };
