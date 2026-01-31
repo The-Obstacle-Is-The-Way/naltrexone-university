@@ -13,9 +13,9 @@
       "**/*.js",
       "**/*.jsx",
       "**/*.json",
-      "!**/node_modules/**",
-      "!**/.next/**",
-      "!**/db/migrations/**"
+      "!**/node_modules",
+      "!**/.next",
+      "!**/db/migrations"
     ]
   },
   "formatter": {

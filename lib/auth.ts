@@ -1,8 +1,8 @@
 import 'server-only';
 import { auth, currentUser } from '@clerk/nextjs/server';
 import { eq } from 'drizzle-orm';
-import { db } from './db';
 import { users } from '@/db/schema';
+import { db } from './db';
 
 /**
  * Get the current Clerk user or throw if not authenticated.

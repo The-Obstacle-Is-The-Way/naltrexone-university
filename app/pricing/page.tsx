@@ -49,10 +49,7 @@ export default function PricingPage() {
           </div>
         </div>
         <div className="mt-8 text-center">
-          <Link
-            href="/"
-            className="text-sm text-gray-600 hover:text-gray-900"
-          >
+          <Link href="/" className="text-sm text-gray-600 hover:text-gray-900">
             Back to Home
           </Link>
         </div>
