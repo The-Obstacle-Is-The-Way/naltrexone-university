@@ -231,26 +231,32 @@ export class StripePaymentGateway implements PaymentGateway {
     switch (event.type) {
       case 'customer.subscription.created':
       case 'customer.subscription.updated':
-        return this.handleSubscriptionChange(event.data.object as Stripe.Subscription);
+        return this.handleSubscriptionChange(event.id, event.data.object as Stripe.Subscription);
 
       case 'customer.subscription.deleted':
-        return this.handleSubscriptionDeleted(event.data.object as Stripe.Subscription);
+        return this.handleSubscriptionDeleted(event.id, event.data.object as Stripe.Subscription);
 
       default:
-        return { processed: false };
+        return { eventId: event.id, processed: false };
     }
   }
 
-  private handleSubscriptionChange(sub: Stripe.Subscription): WebhookEventResult {
+  private handleSubscriptionChange(eventId: string, sub: Stripe.Subscription): WebhookEventResult {
     const userId = sub.metadata?.user_id;
     if (!userId) {
       throw new Error('Subscription missing user_id metadata');
     }
 
+    // Map Stripe price ID back to domain plan
+    const priceId = (sub.items.data[0]?.price?.id) ?? '';
+    const plan = PRICE_ID_TO_PLAN[priceId] ?? SubscriptionPlan.Monthly;
+
     return {
+      eventId,
       processed: true,
       subscriptionUpdate: {
         userId,
+        plan,
         status: this.mapStatus(sub.status),
         currentPeriodEnd: new Date(sub.current_period_end * 1000),
         cancelAtPeriodEnd: sub.cancel_at_period_end,
@@ -258,16 +264,21 @@ export class StripePaymentGateway implements PaymentGateway {
     };
   }
 
-  private handleSubscriptionDeleted(sub: Stripe.Subscription): WebhookEventResult {
+  private handleSubscriptionDeleted(eventId: string, sub: Stripe.Subscription): WebhookEventResult {
     const userId = sub.metadata?.user_id;
     if (!userId) {
-      return { processed: false };
+      return { eventId, processed: false };
     }
 
+    const priceId = (sub.items.data[0]?.price?.id) ?? '';
+    const plan = PRICE_ID_TO_PLAN[priceId] ?? SubscriptionPlan.Monthly;
+
     return {
+      eventId,
       processed: true,
       subscriptionUpdate: {
         userId,
+        plan,
         status: SubscriptionStatus.Canceled,
         currentPeriodEnd: new Date(sub.current_period_end * 1000),
         cancelAtPeriodEnd: true,
