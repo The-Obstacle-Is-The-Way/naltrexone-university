@@ -316,8 +316,10 @@ export type CheckEntitlementInput = {
 export type CheckEntitlementOutput = {
   isEntitled: boolean;
   subscription: {
+    plan: SubscriptionPlan;
     status: SubscriptionStatus;
     currentPeriodEnd: Date;
+    cancelAtPeriodEnd: boolean;
   } | null;
 };
 
@@ -333,8 +335,10 @@ export class CheckEntitlementUseCase {
       isEntitled: entitled,
       subscription: subscription
         ? {
+            plan: subscription.plan,
             status: subscription.status,
             currentPeriodEnd: subscription.currentPeriodEnd,
+            cancelAtPeriodEnd: subscription.cancelAtPeriodEnd,
           }
         : null,
     };
@@ -578,14 +582,40 @@ describe('CheckEntitlementUseCase', () => {
   });
 });
 
+// Use case - idempotency test
+describe('ProcessBillingEventUseCase', () => {
+  it('skips already processed events', async () => {
+    const eventRepo = new FakeBillingEventRepository();
+    const subRepo = new FakeSubscriptionRepository();
+
+    // Mark event as already processed
+    await eventRepo.markProcessed('evt_123', 'subscription_update');
+
+    const useCase = new ProcessBillingEventUseCase(eventRepo, subRepo);
+    const result = await useCase.execute({
+      eventId: 'evt_123',
+      processed: true,
+      subscriptionUpdate: {
+        userId: 'user1',
+        plan: SubscriptionPlan.Monthly,
+        status: SubscriptionStatus.Active,
+        currentPeriodEnd: new Date(),
+        cancelAtPeriodEnd: false,
+      },
+    });
+
+    expect(result.alreadyProcessed).toBe(true);
+  });
+});
+
 // Integration - with real Stripe test mode (optional)
 describe('StripePaymentGateway', () => {
-  it('creates checkout session', async () => {
+  it('creates checkout session with domain plan', async () => {
     const gateway = new StripePaymentGateway();
     const result = await gateway.createCheckoutSession({
       userId: 'test-user',
       userEmail: 'test@example.com',
-      priceId: process.env.TEST_PRICE_ID!,
+      plan: SubscriptionPlan.Monthly,  // Domain plan, NOT price ID
       successUrl: 'https://example.com/success',
       cancelUrl: 'https://example.com/cancel',
     });
