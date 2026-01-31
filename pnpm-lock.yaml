@@ -14,15 +14,6 @@ importers:
       '@tailwindcss/postcss':
         specifier: 4.1.7
         version: 4.1.7
-      '@types/node':
-        specifier: ^22.15.18
-        version: 22.15.18
-      '@types/react':
-        specifier: 19.1.4
-        version: 19.1.4
-      '@types/react-dom':
-        specifier: 19.1.5
-        version: 19.1.5(@types/react@19.1.4)
       autoprefixer:
         specifier: ^10.4.21
         version: 10.4.21(postcss@8.5.3)
@@ -93,6 +84,15 @@ importers:
       '@playwright/test':
         specifier: ^1.58.1
         version: 1.58.1
+      '@types/node':
+        specifier: ^22.15.18
+        version: 22.15.18
+      '@types/react':
+        specifier: 19.1.4
+        version: 19.1.4
+      '@types/react-dom':
+        specifier: 19.1.5
+        version: 19.1.5(@types/react@19.1.4)
       vitest:
         specifier: ^4.0.18
         version: 4.0.18(@types/node@22.15.18)(jiti@2.4.2)(lightningcss@1.30.1)

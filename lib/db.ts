@@ -2,8 +2,9 @@ import 'server-only';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
 import * as schema from '@/db/schema';
+import { env } from './env';
 
-const connectionString = process.env.DATABASE_URL!;
+const connectionString = env.DATABASE_URL;
 
 // Singleton pattern for connection pooling
 const globalForDb = globalThis as unknown as {

@@ -5,11 +5,8 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'node',
-    include: ['**/*.test.ts', '**/*.test.tsx'],
-    exclude: ['node_modules', '.next', 'db/migrations', 'tests/integration/**'],
-    coverage: {
-      reporter: ['text', 'json', 'html'],
-    },
+    include: ['tests/integration/**/*.test.ts'],
+    exclude: ['node_modules', '.next', 'db/migrations'],
   },
   resolve: {
     alias: {
