@@ -8,7 +8,7 @@
 
 ## Context
 
-We are building Naltrexone University, a subscription-based question bank for medical board exam preparation. The system involves:
+We are building **Addiction Boards**, a subscription-based question bank for addiction medicine board exam preparation. The system involves:
 
 - User authentication (Clerk)
 - Payment processing (Stripe)
@@ -338,12 +338,57 @@ components/                    # Layer 4: Frameworks
 - Create shared types at boundaries
 - Use dependency injection for testability
 
+## Composition Root
+
+Dependencies are wired in a single location. Server Actions and Route Handlers compose their dependencies at the point of use, NOT via global singletons.
+
+**Pattern:**
+```typescript
+// app/actions/submit-answer.ts
+'use server';
+
+export async function submitAnswer(input: SubmitAnswerInput, deps?: Dependencies) {
+  // Composition happens here at the entry point
+  const { questionRepo, attemptRepo, authGateway } = deps ?? createDependencies();
+
+  // ... use case execution
+}
+
+// Production dependency factory
+function createDependencies(): Dependencies {
+  const userRepo = new DrizzleUserRepository(db);
+  return {
+    questionRepo: new DrizzleQuestionRepository(db),
+    attemptRepo: new DrizzleAttemptRepository(db),
+    authGateway: createClerkAuthGateway(userRepo),
+  };
+}
+```
+
+**Why no DI container?**
+- Next.js Server Actions have no lifecycle hooks for DI
+- Functions are the unit of composition, not classes
+- Explicit wiring is more traceable than magic containers
+- Test injection is simple: pass `deps` parameter
+
+**Allowed composition locations:**
+- `app/actions/*.ts` — Server Actions
+- `app/api/**/route.ts` — Route Handlers
+- `tests/**/*.test.ts` — Test files (with fakes)
+
+**Prohibited:**
+- Global singleton gateways/repositories
+- Importing concrete implementations in use cases
+- Framework code creating adapters outside composition points
+
+---
+
 ## Compliance
 
 ### How to Verify
 
 1. **Dependency Check:** Run `madge --circular src/` — no circular dependencies
-2. **Import Lint:** ESLint rule preventing inner layers importing outer layers
+2. **Import Enforcement:** Use `dependency-cruiser` with rules preventing inner layers importing outer layers (Biome does not provide import boundary enforcement)
 3. **Test Coverage:** Domain and Use Cases must have 100% coverage without mocks
 
 ### Code Review Checklist

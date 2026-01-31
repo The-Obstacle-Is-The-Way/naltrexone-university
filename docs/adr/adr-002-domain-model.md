@@ -30,16 +30,17 @@ Entities have identity that persists over time. Two entities with the same attri
 // src/domain/entities/user.ts
 export type User = {
   readonly id: string;           // Our internal UUID
-  readonly externalAuthId: string; // Clerk user ID (external identity)
   readonly email: string;
   readonly createdAt: Date;
+  readonly updatedAt: Date;
 };
 ```
 
 **Invariants:**
 - `id` is a valid UUID
-- `externalAuthId` is non-empty
 - `email` is a valid email format
+
+**Note:** External auth provider IDs (e.g., Clerk user ID) are stored ONLY in the persistence layer (`users.clerk_user_id` column). The domain entity does not know about external identity providers. Mapping happens at the adapter boundary.
 
 #### Question
 
@@ -112,9 +113,8 @@ export type Attempt = {
 export type Subscription = {
   readonly id: string;
   readonly userId: string;
-  readonly externalSubscriptionId: string;  // Stripe subscription ID
+  readonly plan: SubscriptionPlan;          // Domain concept: which plan
   readonly status: SubscriptionStatus;
-  readonly priceId: string;
   readonly currentPeriodEnd: Date;
   readonly cancelAtPeriodEnd: boolean;
   readonly createdAt: Date;
@@ -125,6 +125,8 @@ export type Subscription = {
 **Invariants:**
 - `currentPeriodEnd` is a valid future or past date
 - One subscription per user (enforced at adapter level)
+
+**Note:** External payment provider IDs (e.g., Stripe subscription ID, Stripe price ID) are stored ONLY in the persistence layer (`stripe_subscriptions.stripe_subscription_id`, `stripe_subscriptions.price_id` columns). The domain entity uses a domain-level `SubscriptionPlan` value object instead of vendor-specific price IDs. Mapping between `SubscriptionPlan` and Stripe price IDs happens at the adapter boundary.
 
 #### PracticeSession
 
