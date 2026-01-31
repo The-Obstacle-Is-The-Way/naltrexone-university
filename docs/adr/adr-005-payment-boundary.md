@@ -540,8 +540,13 @@ paused                 =>  Paused                  NO
 
 - [ ] No Stripe imports in `src/domain/`
 - [ ] No Stripe imports in `src/application/`
+- [ ] Domain Subscription entity has NO `stripeSubscriptionId` or `priceId` fields
+- [ ] Domain uses `SubscriptionPlan` (monthly/annual), NOT Stripe price IDs
+- [ ] Plan-to-price mapping exists ONLY in `src/adapters/config/`
+- [ ] API/UI never sends raw `priceId` — only domain `plan` values
 - [ ] `isEntitled()` function has no external dependencies
 - [ ] Webhook handler uses gateway interface
+- [ ] Webhook processing is idempotent via BillingEventRepository
 - [ ] Status mapping is explicit and complete
 
 ## Testing
