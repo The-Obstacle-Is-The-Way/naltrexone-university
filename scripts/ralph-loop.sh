@@ -26,14 +26,17 @@ RALPH_SLEEP_SECONDS="${RALPH_SLEEP_SECONDS:-2}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
-# Agent command mapping
+# Agent command mapping (2026 best practices)
+# - Claude Code: -p for prompt, --dangerously-skip-permissions for YOLO mode
+# - Codex CLI: exec subcommand with --full-auto for non-interactive
+# - OpenCode: --auto-approve flag
 get_agent_command() {
   case "$RALPH_AGENT" in
     claude)
-      echo "claude --dangerously-skip-permissions -p"
+      echo "claude -p"
       ;;
     codex)
-      echo "codex --dangerously-auto-approve -p"
+      echo "codex exec --full-auto"
       ;;
     opencode)
       echo "opencode --auto-approve -p"
@@ -45,17 +48,31 @@ get_agent_command() {
   esac
 }
 
+# Get agent flags (separate from command for flexibility)
+get_agent_flags() {
+  case "$RALPH_AGENT" in
+    claude)
+      echo "--dangerously-skip-permissions"
+      ;;
+    codex|opencode)
+      echo ""  # Flags included in command
+      ;;
+  esac
+}
+
 # The actual loop command
 get_loop_command() {
   local agent_cmd
+  local agent_flags
   agent_cmd=$(get_agent_command)
+  agent_flags=$(get_agent_flags)
 
   cat <<EOF
 cd "$PROJECT_ROOT"
 MAX=$RALPH_MAX_ITERATIONS
 for i in \$(seq 1 \$MAX); do
   echo "=== Iteration \$i/\$MAX ==="
-  $agent_cmd "\$(cat PROMPT.md)"
+  $agent_cmd "\$(cat PROMPT.md)" $agent_flags
   if ! grep -q "^- \[ \]" PROGRESS.md 2>/dev/null; then
     echo "All tasks complete!"
     break

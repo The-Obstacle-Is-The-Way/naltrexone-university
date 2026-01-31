@@ -39,11 +39,37 @@ That's it. A bash loop that feeds an AI agent the same prompt repeatedly. The ag
 
 This protocol works with any AI coding agent that supports headless mode:
 
-| Agent | Headless Command | Auto-Approve Flag |
-|-------|------------------|-------------------|
-| **Claude Code** | `claude -p "..."` | `--dangerously-skip-permissions` |
-| **Codex CLI** | `codex -p "..."` | `--dangerously-auto-approve` |
-| **OpenCode** | `opencode -p "..."` | `--auto-approve` |
+| Agent | Headless Command | Notes |
+|-------|------------------|-------|
+| **Claude Code** | `claude -p "..." --dangerously-skip-permissions` | Default. Add `--output-format stream-json` for CI |
+| **Codex CLI** | `codex exec --full-auto "..."` | Uses `exec` subcommand for non-interactive |
+| **OpenCode** | `opencode --auto-approve -p "..."` | Community alternative |
+
+### Claude Code (Default)
+
+```bash
+# Basic headless execution
+claude -p "$(cat PROMPT.md)" --dangerously-skip-permissions
+
+# With JSON output for CI/CD
+claude -p "$(cat PROMPT.md)" --dangerously-skip-permissions --output-format stream-json
+
+# With budget limit
+claude -p "$(cat PROMPT.md)" --dangerously-skip-permissions --max-budget-usd 5.00
+```
+
+### Codex CLI (OpenAI)
+
+```bash
+# Headless authentication (run once)
+codex login --device-auth
+
+# Non-interactive execution with full-auto approval
+codex exec --full-auto "$(cat PROMPT.md)"
+
+# With suggest mode (safer, requires approval)
+codex exec --suggest "$(cat PROMPT.md)"
+```
 
 The loop script (`scripts/ralph-loop.sh`) defaults to Claude Code but can be configured via environment variable:
 
@@ -62,11 +88,12 @@ RALPH_AGENT="opencode" ./scripts/ralph-loop.sh start
 ### Tools Required
 
 ```bash
-# Claude Code CLI (default)
+# Claude Code CLI (default) - Anthropic's official CLI
 npm install -g @anthropic-ai/claude-code
 
-# OR Codex CLI
-npm install -g @openai/codex
+# OR Codex CLI (OpenAI) - As of Jan 2026, uses gpt-5.2-codex model
+npm install -g @openai/codex@latest
+codex login --device-auth  # Headless-compatible auth
 
 # tmux (for persistent sessions)
 brew install tmux  # macOS
@@ -328,13 +355,17 @@ done
 ./scripts/ralph-loop.sh stop
 ```
 
-#### Option D: Codex CLI (Alternative Agent)
+#### Option D: Codex CLI (OpenAI Alternative)
 
 ```bash
+# First-time setup: authenticate for headless use
+codex login --device-auth
+
+# The loop
 MAX=50
 for i in $(seq 1 $MAX); do
   echo "=== Iteration $i/$MAX ==="
-  codex --dangerously-auto-approve -p "$(cat PROMPT.md)"
+  codex exec --full-auto "$(cat PROMPT.md)"
   if ! grep -q "^\- \[ \]" PROGRESS.md; then
     echo "All tasks complete!"
     break
