@@ -58,6 +58,27 @@ pnpm db:studio              # Open Drizzle Studio GUI
 
 The project follows **Clean Architecture** (Robert C. Martin) with four layers. Dependencies point inward only.
 
+### Core Principles (Uncle Bob)
+
+All code in this repository MUST adhere to these principles:
+
+1. **Clean Architecture** - Strict layer boundaries with dependencies pointing inward only. Domain has ZERO external imports.
+
+2. **SOLID Principles**
+   - **S**ingle Responsibility: Each module has one reason to change
+   - **O**pen/Closed: Open for extension, closed for modification
+   - **L**iskov Substitution: Implementations are swappable
+   - **I**nterface Segregation: Small, specific interfaces
+   - **D**ependency Inversion: Depend on abstractions, not concretions
+
+3. **Test-Driven Development (TDD)** - Write tests first (Red → Green → Refactor). Specs define tests before implementation. Domain and application layers must be 100% unit testable without infrastructure.
+
+4. **DRY (Don't Repeat Yourself)** - Single source of truth for every concept. Extract common patterns into shared utilities.
+
+5. **Clean Code** - Meaningful names, small functions, minimal complexity, explicit error handling, no magic numbers.
+
+6. **Design Patterns** - Use appropriate patterns (Repository, Factory, Strategy, Composition Root) where they add clarity, not complexity.
+
 ### Layer Structure (planned, see ADR-012)
 
 ```
@@ -152,7 +173,7 @@ pnpm typecheck && pnpm lint && pnpm test --run && pnpm test:integration && pnpm 
 
 ## Documentation
 
-- `docs/specs/master_spec.md` - Complete technical specification
-- `docs/specs/spec-*.md` - Detailed specs for each subsystem
-- `docs/adr/` - Architecture Decision Records
-- `docs/specs/drafts/` - Feature slice specifications
+- `docs/specs/master_spec.md` - Complete technical specification (SSOT)
+- `docs/specs/spec-001 to spec-010` - Clean Architecture layer specs
+- `docs/specs/spec-011 to spec-015` - Feature slice specs
+- `docs/adr/` - Architecture Decision Records (ADR-001 through ADR-012)
