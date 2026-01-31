@@ -109,9 +109,11 @@ export type PortalSessionOutput = {
 };
 
 export type WebhookEventResult = {
+  eventId: string;           // For idempotency tracking
   processed: boolean;
   subscriptionUpdate?: {
     userId: string;
+    plan: SubscriptionPlan;  // Domain concept
     status: SubscriptionStatus;
     currentPeriodEnd: Date;
     cancelAtPeriodEnd: boolean;
@@ -173,7 +175,8 @@ export interface PaymentCustomerRepository {
 // src/adapters/gateways/stripe-payment-gateway.ts
 import Stripe from 'stripe';
 import type { PaymentGateway, CheckoutSessionInput, WebhookEventResult } from '@/application/ports/gateways';
-import { SubscriptionStatus } from '@/domain/value-objects';
+import { SubscriptionStatus, SubscriptionPlan } from '@/domain/value-objects';
+import { PLAN_TO_PRICE_ID, PRICE_ID_TO_PLAN } from '../config/plan-price-mapping';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2025-04-30.basil',
@@ -181,15 +184,21 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 
 export class StripePaymentGateway implements PaymentGateway {
   async createCheckoutSession(input: CheckoutSessionInput) {
+    // Map domain plan to Stripe price ID at adapter boundary
+    const priceId = PLAN_TO_PRICE_ID[input.plan];
+    if (!priceId) {
+      throw new Error(`Unknown plan: ${input.plan}`);
+    }
+
     const session = await stripe.checkout.sessions.create({
       mode: 'subscription',
       customer_email: input.userEmail,
-      line_items: [{ price: input.priceId, quantity: 1 }],
+      line_items: [{ price: priceId, quantity: 1 }],
       success_url: input.successUrl,
       cancel_url: input.cancelUrl,
       client_reference_id: input.userId,
       subscription_data: {
-        metadata: { user_id: input.userId },
+        metadata: { user_id: input.userId, plan: input.plan },
       },
     });
 
@@ -321,6 +330,85 @@ export class CheckEntitlementUseCase {
   }
 }
 ```
+
+### Webhook Idempotency (Application Layer)
+
+Webhooks may be delivered multiple times. We use an event store to ensure exactly-once processing.
+
+```typescript
+// src/application/ports/repositories.ts
+export interface BillingEventRepository {
+  /**
+   * Check if an event has been processed.
+   */
+  exists(eventId: string): Promise<boolean>;
+
+  /**
+   * Record that an event has been processed.
+   * Should be called AFTER successfully processing the event.
+   */
+  markProcessed(eventId: string, eventType: string): Promise<void>;
+
+  /**
+   * Record a processing error for debugging.
+   */
+  markFailed(eventId: string, eventType: string, error: string): Promise<void>;
+}
+```
+
+```typescript
+// src/application/use-cases/process-billing-event.ts
+import type { BillingEventRepository, SubscriptionRepository } from '../ports/repositories';
+import type { WebhookEventResult } from '../ports/gateways';
+
+export class ProcessBillingEventUseCase {
+  constructor(
+    private events: BillingEventRepository,
+    private subscriptions: SubscriptionRepository,
+  ) {}
+
+  async execute(result: WebhookEventResult): Promise<{ alreadyProcessed: boolean }> {
+    // Idempotency check
+    if (await this.events.exists(result.eventId)) {
+      return { alreadyProcessed: true };
+    }
+
+    if (!result.processed || !result.subscriptionUpdate) {
+      return { alreadyProcessed: false };
+    }
+
+    try {
+      // Update subscription
+      await this.subscriptions.upsert(result.subscriptionUpdate.userId, {
+        plan: result.subscriptionUpdate.plan,
+        status: result.subscriptionUpdate.status,
+        currentPeriodEnd: result.subscriptionUpdate.currentPeriodEnd,
+        cancelAtPeriodEnd: result.subscriptionUpdate.cancelAtPeriodEnd,
+      });
+
+      // Mark as processed AFTER successful update
+      await this.events.markProcessed(result.eventId, 'subscription_update');
+
+      return { alreadyProcessed: false };
+    } catch (error) {
+      await this.events.markFailed(
+        result.eventId,
+        'subscription_update',
+        error instanceof Error ? error.message : 'Unknown error'
+      );
+      throw error;
+    }
+  }
+}
+```
+
+**Why event store?**
+- Stripe may retry webhooks on timeout or error
+- Network issues may cause duplicate deliveries
+- Processing should be idempotent to avoid double-charging or inconsistent state
+- Error logging helps debug webhook issues
+
+---
 
 ### Webhook Route Handler (Frameworks Layer)
 
