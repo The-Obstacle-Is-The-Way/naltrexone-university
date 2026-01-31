@@ -1609,18 +1609,20 @@ As a user, I can load the site, sign up/sign in, and access the deployed app so 
 
 1. Create Next.js 16+ app with App Router and TypeScript strict mode.
    Next.js 16 requires Node.js 20.9+ and TypeScript 5.1+. ([Next.js][3])
-2. Install Tailwind CSS v4 and configure PostCSS using `@tailwindcss/postcss`; add `@import "tailwindcss";` to `app/globals.css`. ([Tailwind CSS][4])
-3. Install shadcn/ui and generate required base components (Button, Card, Badge, Dialog, Tabs, DropdownMenu, Separator).
-4. Install Drizzle ORM + drizzle-kit and configure migrations output to `/db/migrations`.
-5. Add Neon Postgres connection via `DATABASE_URL`.
-6. Add Clerk integration:
+2. **Use pnpm as the package manager.** pnpm provides better dependency isolation (prevents phantom dependencies), uses 70% less disk space than npm, and is 3x faster. Remove any `package-lock.json` and use only `pnpm-lock.yaml`.
+3. Install Tailwind CSS v4 and configure PostCSS using `@tailwindcss/postcss`; add `@import "tailwindcss";` to `app/globals.css`. ([Tailwind CSS][4])
+4. Install shadcn/ui and generate required base components (Button, Card, Badge, Dialog, Tabs, DropdownMenu, Separator).
+5. **Install Biome for linting and formatting.** Biome is 10-100x faster than ESLint+Prettier and provides both linting and formatting in a single tool with one config file (`biome.json`). Next.js 16 removed `next lint`, so Biome is the modern replacement. ([Biome][9])
+6. Install Drizzle ORM + drizzle-kit and configure migrations output to `/db/migrations`.
+7. Add Neon Postgres connection via `DATABASE_URL`.
+8. Add Clerk integration:
 
    * Add `<ClerkProvider>` in `app/layout.tsx`
    * Add Clerk routes for sign-in/up
    * Add Clerk middleware/proxy file (Next.js 16 uses `proxy.ts` naming per Clerk docs). ([Clerk][5])
-7. Add `/api/health` route handler.
-8. Add GitHub Actions CI (typecheck, lint, tests).
-9. Connect repo to Vercel (preview deployments on PR; production on main).
+9. Add `/api/health` route handler.
+10. Add GitHub Actions CI (typecheck, lint, tests).
+11. Connect repo to Vercel (preview deployments on PR; production on main).
 
 **Files to Create/Modify:**
 
@@ -1631,6 +1633,7 @@ As a user, I can load the site, sign up/sign in, and access the deployed app so 
 * `db/schema.ts`
 * `drizzle.config.ts`
 * `lib/env.ts`, `lib/db.ts`, `lib/auth.ts`
+* `biome.json` (Biome linting + formatting config)
 * `.github/workflows/ci.yml`
 * `playwright.config.ts`, `vitest.config.ts`
 
@@ -1651,7 +1654,7 @@ As a user, I can load the site, sign up/sign in, and access the deployed app so 
 
 **Definition of Done:**
 
-* `pnpm typecheck`, `pnpm lint`, `pnpm test`, `pnpm test:e2e` all pass locally
+* `pnpm typecheck`, `pnpm biome check .`, `pnpm test`, `pnpm test:e2e` all pass locally
 * CI passes on PR
 * Vercel preview deploy works
 * `/api/health` returns `{ ok: true, db: true, ... }`
@@ -1952,7 +1955,7 @@ As a subscribed user, I can see my stats and recent activity so that I can track
 
 ### 8.4 CI Pipeline (GitHub Actions)
 
-> Next.js 16 removed `next lint`; CI must run ESLint directly (`eslint .`). ([Next.js][3])
+> Next.js 16 removed `next lint`. Use **Biome** for linting and formatting (`biome check .`). Biome is 10-100x faster than ESLint+Prettier and combines both tools into one. ([Biome][9])
 
 **Workflow file:** `.github/workflows/ci.yml`
 
@@ -2022,8 +2025,8 @@ jobs:
       - name: Typecheck
         run: pnpm typecheck
 
-      - name: Lint
-        run: pnpm lint
+      - name: Lint and Format Check (Biome)
+        run: pnpm biome check .
 
       - name: Migrate DB
         run: pnpm db:migrate
@@ -2214,3 +2217,4 @@ Enable Stripe Customer Portal and configure:
 [6]: https://docs.stripe.com/testing?utm_source=chatgpt.com "Test card numbers"
 [7]: https://clerk.com/docs/guides/development/testing/playwright/test-authenticated-flows "Test authenticated flows - Playwright | Clerk Docs"
 [8]: https://clerk.com/docs/reference/nextjs/clerk-middleware "clerkMiddleware() | Next.js - Next.js - Next.js | Clerk Docs"
+[9]: https://biomejs.dev/ "Biome - One toolchain for your web project"
