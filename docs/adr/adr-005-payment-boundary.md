@@ -416,12 +416,10 @@ export class ProcessBillingEventUseCase {
 // app/api/stripe/webhook/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { StripePaymentGateway } from '@/adapters/gateways/stripe-payment-gateway';
-import { DrizzleSubscriptionRepository } from '@/adapters/repositories';
+import { DrizzleSubscriptionRepository, DrizzleBillingEventRepository } from '@/adapters/repositories';
+import { ProcessBillingEventUseCase } from '@/application/use-cases/process-billing-event';
 
 export const runtime = 'nodejs';
-
-const paymentGateway = new StripePaymentGateway();
-const subscriptionRepo = new DrizzleSubscriptionRepository();
 
 export async function POST(request: NextRequest) {
   const body = await request.text();
@@ -431,19 +429,21 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Missing signature' }, { status: 400 });
   }
 
+  // Compose dependencies
+  const paymentGateway = new StripePaymentGateway();
+  const subscriptionRepo = new DrizzleSubscriptionRepository();
+  const billingEventRepo = new DrizzleBillingEventRepository();
+  const useCase = new ProcessBillingEventUseCase(billingEventRepo, subscriptionRepo);
+
   try {
+    // Gateway parses and verifies Stripe event
     const result = await paymentGateway.processWebhookEvent(body, signature);
 
-    if (result.processed && result.subscriptionUpdate) {
-      // Update our database
-      await subscriptionRepo.update(
-        result.subscriptionUpdate.userId,
-        {
-          status: result.subscriptionUpdate.status,
-          currentPeriodEnd: result.subscriptionUpdate.currentPeriodEnd,
-          cancelAtPeriodEnd: result.subscriptionUpdate.cancelAtPeriodEnd,
-        }
-      );
+    // Use case handles idempotency and subscription updates
+    const { alreadyProcessed } = await useCase.execute(result);
+
+    if (alreadyProcessed) {
+      console.log(`Event ${result.eventId} already processed, skipping`);
     }
 
     return NextResponse.json({ received: true });
