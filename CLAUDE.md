@@ -8,12 +8,22 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **Technical source of truth:** `docs/specs/master_spec.md`
 
+## Setup
+
+```bash
+# Requirements: Node >=20.9.0, pnpm
+pnpm install                # Install dependencies
+cp .env.example .env        # Create env file (never commit .env)
+# Set DATABASE_URL, Clerk keys, and Stripe keys in .env
+```
+
 ## Commands
 
 ```bash
 # Development
 pnpm dev                    # Start dev server (http://localhost:3000)
 pnpm build                  # Production build
+pnpm start                  # Run production build
 
 # Quality gates (run before committing)
 pnpm lint                   # Biome check (lint + format)
@@ -22,8 +32,8 @@ pnpm typecheck              # TypeScript type checking
 
 # Testing
 pnpm test                   # Unit tests (Vitest, watch mode)
-pnpm test --run             # Unit tests (single run)
-pnpm test:integration       # Integration tests (requires DB)
+pnpm test --run             # Unit tests (single run, CI-style)
+pnpm test:integration       # Integration tests (requires DATABASE_URL)
 pnpm test:e2e               # E2E tests (Playwright)
 
 # Database
@@ -49,10 +59,12 @@ app/, lib/, db/    → Next.js framework code, infrastructure (outermost layer)
 ### Current State
 
 The `src/` Clean Architecture layers are **not yet implemented**. Current code lives in:
-- `app/` - Next.js pages and API routes
-- `lib/` - Utilities, DB client, auth helpers
+- `app/` - Next.js App Router pages, layouts, API routes
+- `lib/` - Core utilities (auth, Stripe, env, DB). Prefer importing via `@/...`
 - `db/schema.ts` - Drizzle ORM schema
-- `components/` - React components
+- `db/migrations/` - Generated migrations (drizzle-kit)
+- `components/` - React components; `components/ui/` has shadcn/ui primitives
+- `content/questions/` - MDX question content
 
 ### Key Architectural Decisions
 
@@ -90,13 +102,42 @@ See `docs/adr/` for all Architecture Decision Records (ADR-001 through ADR-012).
 | `biome.json` | Linter/formatter config |
 | `.env.example` | Required environment variables |
 
+## Coding Style
+
+Biome is the source of truth for style:
+- 2-space indents
+- Single quotes
+- Semicolons required
+- Trailing commas
+
+Rules:
+- TypeScript + React (Next.js). Keep modules small, prefer pure functions in `lib/`
+- Avoid non-null assertions (`!`) and unused imports/variables (Biome errors)
+- Prefer importing via `@/...` alias
+
 ## Testing
 
-- **Unit tests:** `**/*.test.ts` (colocated with source, or `tests/unit/`)
+- **Unit tests:** `**/*.test.ts(x)` - colocated with source, or `tests/unit/`
 - **Integration tests:** `tests/integration/*.integration.test.ts` (requires DATABASE_URL)
-- **E2E tests:** `tests/e2e/*.spec.ts` (Playwright, requires running app)
+- **E2E tests:** `tests/e2e/*.spec.ts` (Playwright, starts Next.js automatically)
 
 Integration tests run against a real Postgres instance. In CI, a service container provides the database.
+
+## Commit & PR Guidelines
+
+**Commits:**
+- Use imperative style: `Add ...`, `Fix ...`, `Refactor ...`, `Enhance ...`
+- Use optional tags like `[BASELINE]` when applicable
+
+**Pull Requests:**
+- Include short problem/solution summary
+- Link any spec/ADR updates in `docs/`
+- Add screenshots/GIFs for UI changes
+
+**Before opening a PR, run:**
+```bash
+pnpm typecheck && pnpm lint && pnpm test --run && pnpm test:integration && pnpm build
+```
 
 ## Documentation
 
@@ -104,4 +145,3 @@ Integration tests run against a real Postgres instance. In CI, a service contain
 - `docs/specs/spec-*.md` - Detailed specs for each subsystem
 - `docs/adr/` - Architecture Decision Records
 - `docs/specs/drafts/` - Feature slice specifications
-
