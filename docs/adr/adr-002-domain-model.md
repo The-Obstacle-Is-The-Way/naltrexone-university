@@ -273,6 +273,20 @@ export const TagKind = {
 export type TagKind = typeof TagKind[keyof typeof TagKind];
 ```
 
+#### SubscriptionPlan
+
+```typescript
+// src/domain/value-objects/subscription-plan.ts
+export const SubscriptionPlan = {
+  Monthly: 'monthly',
+  Annual: 'annual',
+} as const;
+
+export type SubscriptionPlan = typeof SubscriptionPlan[keyof typeof SubscriptionPlan];
+```
+
+**Note:** This is the domain's concept of a plan. The mapping to vendor-specific price IDs (e.g., `STRIPE_PRICE_MONTHLY`, `STRIPE_PRICE_ANNUAL`) happens at the adapter boundary via configuration.
+
 ### Domain Services
 
 Pure functions that implement business rules operating on entities.
@@ -501,16 +515,26 @@ export function computeSessionSummary(
 
 ```typescript
 // src/domain/services/shuffle.ts
-import { createHash } from 'crypto';
+
+/**
+ * Simple string hash (djb2 algorithm).
+ * Pure TypeScript - NO external dependencies.
+ */
+function hashString(str: string): number {
+  let hash = 5381;
+  for (let i = 0; i < str.length; i++) {
+    hash = ((hash << 5) + hash) ^ str.charCodeAt(i);
+  }
+  return hash >>> 0; // Convert to unsigned 32-bit integer
+}
 
 /**
  * Create deterministic seed from user and timestamp.
- * Pure function.
+ * Pure function - no Node.js dependencies.
  */
 export function createSeed(userId: string, timestamp: number): number {
   const input = `${userId}:${timestamp}`;
-  const hash = createHash('sha256').update(input).digest();
-  return hash.readUInt32BE(0);
+  return hashString(input);
 }
 
 /**
@@ -538,6 +562,8 @@ export function shuffleWithSeed<T>(items: readonly T[], seed: number): T[] {
   return result;
 }
 ```
+
+**Note:** We use a pure TypeScript hash function (djb2) instead of Node's `crypto` module. The domain layer must have ZERO external dependencies. If cryptographic-strength randomness is needed for security purposes, that logic belongs in the adapters layer, not the domain.
 
 ### Domain Errors
 
