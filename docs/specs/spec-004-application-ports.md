@@ -153,11 +153,25 @@ export interface PaymentGateway {
 
 ```ts
 import type { Attempt, Bookmark, PracticeSession, Question, Subscription, Tag } from '@/src/domain/entities';
+import type { QuestionDifficulty } from '@/src/domain/value-objects';
 
 export interface QuestionRepository {
   findPublishedById(id: string): Promise<Question | null>;
   findPublishedBySlug(slug: string): Promise<Question | null>;
   findPublishedByIds(ids: readonly string[]): Promise<readonly Question[]>;
+
+  /**
+   * Return candidate question ids for deterministic "next question" selection.
+   *
+   * Requirements:
+   * - Only returns `questions.status='published'`.
+   * - Applies tag/difficulty filters.
+   * - Returns ids in a deterministic order (repository defines ordering).
+   */
+  listPublishedCandidateIds(filters: {
+    tagSlugs: readonly string[];
+    difficulties: readonly QuestionDifficulty[];
+  }): Promise<readonly string[]>;
 }
 
 export interface AttemptRepository {
@@ -171,7 +185,16 @@ export interface AttemptRepository {
   }): Promise<Attempt>;
 
   findByUserId(userId: string): Promise<readonly Attempt[]>;
-  findBySessionId(sessionId: string): Promise<readonly Attempt[]>;
+  findBySessionId(sessionId: string, userId: string): Promise<readonly Attempt[]>;
+
+  /**
+   * For each question id, return the most recent answeredAt (max) for this user.
+   * Missing entries imply "never attempted".
+   */
+  findMostRecentAnsweredAtByQuestionIds(
+    userId: string,
+    questionIds: readonly string[],
+  ): Promise<readonly { questionId: string; answeredAt: Date }[]>;
 }
 
 export interface PracticeSessionRepository {
@@ -228,4 +251,3 @@ Ports are validated by:
 
 - TypeScript compile (`pnpm typecheck`)
 - Use case tests (SPEC-005) with fakes implementing these interfaces
-
