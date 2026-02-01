@@ -1,8 +1,9 @@
 # DEBT-005: Gateway Adapters Not Implemented (Architecture Boundary Violation)
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P1
 **Date:** 2026-01-31
+**Resolved:** 2026-02-01
 
 ## Summary
 
@@ -19,21 +20,21 @@ SPEC-004 and SPEC-008/009 define `AuthGateway` and `PaymentGateway` interfaces, 
 
 ```text
 src/application/ports/gateways.ts  → Interfaces defined ✅
-src/adapters/gateways/             → Directory doesn't exist ❌
-lib/auth.ts                        → Clerk logic here (wrong layer)
-lib/stripe.ts                      → Stripe logic here (wrong layer)
+src/adapters/gateways/             → Implementations exist ✅
+lib/container.ts                   → Wires gateways (composition root) ✅
+lib/auth.ts                        → Thin convenience wrapper ✅
 ```
 
 ## Expected State
 
 ```text
 src/adapters/gateways/
-├── clerk-auth-gateway.ts          → Implements AuthGateway
-├── stripe-payment-gateway.ts      → Implements PaymentGateway
-└── index.ts                       → Barrel export
+├── clerk-auth-gateway.ts          → Implements AuthGateway ✅
+├── stripe-payment-gateway.ts      → Implements PaymentGateway ✅
+└── index.ts                       → Barrel export ✅
 
-lib/auth.ts                        → Thin wrapper, calls gateway
-lib/stripe.ts                      → Thin wrapper, calls gateway
+lib/container.ts                   → Composition root wires gateways ✅
+lib/auth.ts                        → Thin wrapper, calls AuthGateway ✅
 ```
 
 ## Acceptance Criteria
@@ -43,3 +44,8 @@ lib/stripe.ts                      → Thin wrapper, calls gateway
 - Fake gateways added to `src/application/test-helpers/fakes.ts`
 - Use cases inject gateways via composition root
 - `lib/auth.ts` and `lib/stripe.ts` become thin convenience wrappers
+
+## Notes
+
+- Updated `CheckoutSessionInput` to require `stripeCustomerId` (matches `docs/specs/master_spec.md` checkout flow).
+- Removed the ambiguous `processed` flag from `WebhookEventResult`; webhook idempotency belongs to `stripe_events` + controller logic.

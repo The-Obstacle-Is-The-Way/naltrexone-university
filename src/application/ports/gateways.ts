@@ -19,7 +19,7 @@ export interface AuthGateway {
 
 export type CheckoutSessionInput = {
   userId: string; // internal UUID
-  userEmail: string;
+  stripeCustomerId: string; // opaque external id
   plan: SubscriptionPlan; // domain plan (monthly/annual)
   successUrl: string;
   cancelUrl: string;
@@ -42,7 +42,6 @@ export type WebhookEventResult = {
     | 'customer.subscription.updated'
     | 'customer.subscription.deleted'
     | (string & {});
-  processed: boolean;
   subscriptionUpdate?: {
     userId: string; // internal UUID
     stripeSubscriptionId: string; // opaque external id

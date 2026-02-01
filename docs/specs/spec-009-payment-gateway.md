@@ -51,7 +51,7 @@ The mapping is **the only place** where those price IDs appear.
 - Set subscription metadata:
   - `user_id = <internal user uuid>`
 
-If Stripe does not return a `session.url`, throw `ApplicationError('STRIPE_ERROR')` in the controller/use case layer.
+If Stripe does not return a `session.url`, throw `ApplicationError('STRIPE_ERROR')`.
 
 ---
 
@@ -64,7 +64,6 @@ If Stripe does not return a `session.url`, throw `ApplicationError('STRIPE_ERROR
 3. Include:
    - `eventId`
    - `type`
-   - `processed` flag
    - `subscriptionUpdate` when the event represents a subscription state change
 
 **Events handled (minimum):**

@@ -162,10 +162,10 @@ describe('StripeEventRepository', () => {
 // Integration - with real Stripe test mode (optional)
 describe('StripePaymentGateway', () => {
   it('creates checkout session with domain plan', async () => {
-    const gateway = new StripePaymentGateway();
-    const result = await gateway.createCheckoutSession({
+    const { paymentGateway } = createContainer();
+    const result = await paymentGateway.createCheckoutSession({
       userId: 'test-user',
-      userEmail: 'test@example.com',
+      stripeCustomerId: 'cus_test_123',
       plan: 'monthly', // Domain plan, NOT price ID
       successUrl: 'https://example.com/success',
       cancelUrl: 'https://example.com/cancel',

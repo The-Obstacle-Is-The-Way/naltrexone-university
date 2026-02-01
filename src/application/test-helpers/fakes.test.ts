@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { createPracticeSession } from '@/src/domain/test-helpers';
 import { ApplicationError } from '../errors';
 import {
+  FakeAuthGateway,
+  FakePaymentGateway,
   FakePracticeSessionRepository,
   FakeSubscriptionRepository,
 } from './fakes';
@@ -102,5 +104,57 @@ describe('FakeSubscriptionRepository', () => {
         'Stripe subscription id is already mapped to a different user',
       ),
     );
+  });
+});
+
+describe('FakeAuthGateway', () => {
+  it('returns null from getCurrentUser when unauthenticated', async () => {
+    const gateway = new FakeAuthGateway(null);
+    await expect(gateway.getCurrentUser()).resolves.toBeNull();
+  });
+
+  it('throws UNAUTHENTICATED from requireUser when unauthenticated', async () => {
+    const gateway = new FakeAuthGateway(null);
+    await expect(gateway.requireUser()).rejects.toEqual(
+      new ApplicationError('UNAUTHENTICATED', 'User not authenticated'),
+    );
+  });
+});
+
+describe('FakePaymentGateway', () => {
+  it('returns configured checkout/portal URLs and records inputs', async () => {
+    const gateway = new FakePaymentGateway({
+      checkoutUrl: 'https://fake/checkout',
+      portalUrl: 'https://fake/portal',
+      webhookResult: { eventId: 'evt_1', type: 'checkout.session.completed' },
+    });
+
+    await expect(
+      gateway.createCheckoutSession({
+        userId: 'user_1',
+        stripeCustomerId: 'cus_123',
+        plan: 'monthly',
+        successUrl: 'https://app/success',
+        cancelUrl: 'https://app/cancel',
+      }),
+    ).resolves.toEqual({ url: 'https://fake/checkout' });
+
+    await expect(
+      gateway.createPortalSession({
+        stripeCustomerId: 'cus_123',
+        returnUrl: 'https://app/return',
+      }),
+    ).resolves.toEqual({ url: 'https://fake/portal' });
+
+    await expect(gateway.processWebhookEvent('raw', 'sig')).resolves.toEqual({
+      eventId: 'evt_1',
+      type: 'checkout.session.completed',
+    });
+
+    expect(gateway.checkoutInputs).toHaveLength(1);
+    expect(gateway.portalInputs).toHaveLength(1);
+    expect(gateway.webhookInputs).toEqual([
+      { rawBody: 'raw', signature: 'sig' },
+    ]);
   });
 });
