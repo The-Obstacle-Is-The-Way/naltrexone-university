@@ -52,6 +52,7 @@ We adopt a **Testing Pyramid** aligned with our architecture layers:
 - **NO MOCKS** for domain tests
 - Use cases may use **fake implementations** of repository interfaces
 - Tests should read like specifications
+- Fakes do **not** need to replicate adapter-boundary parsing/validation (e.g. Zod schemas in Drizzle repositories). Adapter validation is covered by integration tests against real infrastructure.
 
 **Coverage Target:** 100% for domain services
 

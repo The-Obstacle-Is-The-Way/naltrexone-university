@@ -1,12 +1,15 @@
 # DEBT-004: Magic Numbers in Practice Session Validation
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P3
 **Date:** 2026-01-31
+**Resolved:** 2026-02-01
 
 ## Summary
 
-The `DrizzlePracticeSessionRepository` has hardcoded validation limits with no documentation explaining why these values were chosen.
+The `DrizzlePracticeSessionRepository` had hardcoded validation limits.
+
+The numeric limits themselves are already defined in SSOT (`docs/specs/master_spec.md` §4.5.5), but the adapter implementation used raw literals (harder to maintain and easier to drift).
 
 ## Location
 
@@ -53,5 +56,10 @@ export const MAX_DIFFICULTY_FILTERS = 3;
 
 - Magic numbers extracted to named constants
 - Comments explain the reasoning
-- Master spec documents the limits
+- Master spec documents the limits (already true)
 - Repository uses shared constants
+
+## Resolution
+
+- Added `src/adapters/repositories/practice-session-limits.ts` as the single source of truth for the adapter’s practice-session limits, with rationale and SSOT reference.
+- Updated `src/adapters/repositories/drizzle-practice-session-repository.ts` to reference the named constants instead of literals.

@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import type * as schema from '@/db/schema';
 import { stripeCustomers } from '@/db/schema';
@@ -6,6 +6,17 @@ import { ApplicationError } from '@/src/application/errors';
 import type { StripeCustomerRepository } from '@/src/application/ports/repositories';
 
 type Db = PostgresJsDatabase<typeof schema>;
+
+function isPostgresUniqueViolation(error: unknown): boolean {
+  if (!error || typeof error !== 'object') return false;
+
+  const maybeCode = (error as { code?: unknown }).code;
+  if (maybeCode === '23505') return true;
+
+  const maybeCause = (error as { cause?: unknown }).cause;
+  if (!maybeCause || typeof maybeCause !== 'object') return false;
+  return (maybeCause as { code?: unknown }).code === '23505';
+}
 
 export class DrizzleStripeCustomerRepository
   implements StripeCustomerRepository
@@ -24,41 +35,49 @@ export class DrizzleStripeCustomerRepository
   }
 
   async insert(userId: string, stripeCustomerId: string): Promise<void> {
-    const [inserted] = await this.db
-      .insert(stripeCustomers)
-      .values({ userId, stripeCustomerId })
-      .onConflictDoNothing()
-      .returning();
+    try {
+      const [row] = await this.db
+        .insert(stripeCustomers)
+        .values({ userId, stripeCustomerId })
+        .onConflictDoUpdate({
+          target: stripeCustomers.userId,
+          set: {
+            // No-op update to make the statement return the existing row.
+            stripeCustomerId: sql`${stripeCustomers.stripeCustomerId}`,
+          },
+        })
+        .returning({ stripeCustomerId: stripeCustomers.stripeCustomerId });
 
-    if (inserted) return;
+      if (!row) {
+        throw new ApplicationError(
+          'INTERNAL_ERROR',
+          'Failed to upsert Stripe customer mapping',
+        );
+      }
 
-    const existingByUserId = await this.db.query.stripeCustomers.findFirst({
-      where: eq(stripeCustomers.userId, userId),
-    });
+      if (row.stripeCustomerId !== stripeCustomerId) {
+        throw new ApplicationError(
+          'CONFLICT',
+          'Stripe customer already exists with a different stripeCustomerId',
+        );
+      }
+    } catch (error) {
+      if (error instanceof ApplicationError) {
+        throw error;
+      }
 
-    if (existingByUserId) {
-      if (existingByUserId.stripeCustomerId === stripeCustomerId) return;
+      if (isPostgresUniqueViolation(error)) {
+        // Unique constraint violation on `stripeCustomerId`.
+        throw new ApplicationError(
+          'CONFLICT',
+          'Stripe customer id is already mapped to a different user',
+        );
+      }
+
       throw new ApplicationError(
-        'CONFLICT',
-        'Stripe customer already exists with a different stripeCustomerId',
+        'INTERNAL_ERROR',
+        'Failed to upsert Stripe customer mapping',
       );
     }
-
-    const existingByStripeCustomerId =
-      await this.db.query.stripeCustomers.findFirst({
-        where: eq(stripeCustomers.stripeCustomerId, stripeCustomerId),
-      });
-
-    if (existingByStripeCustomerId) {
-      throw new ApplicationError(
-        'CONFLICT',
-        'Stripe customer id is already mapped to a different user',
-      );
-    }
-
-    throw new ApplicationError(
-      'CONFLICT',
-      'Stripe customer insert raced; please retry',
-    );
   }
 }

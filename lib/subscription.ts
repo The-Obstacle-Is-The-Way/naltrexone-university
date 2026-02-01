@@ -1,6 +1,7 @@
 import 'server-only';
 import { and, eq, gt, inArray } from 'drizzle-orm';
 import { stripeSubscriptions } from '@/db/schema';
+import { ApplicationError } from '@/src/application/errors';
 import { EntitledStatuses } from '@/src/domain/value-objects';
 import { db } from './db';
 
@@ -34,6 +35,9 @@ export async function getUserSubscription(userId: string) {
 export async function requireSubscriptionOrThrow(userId: string) {
   const entitled = await isUserEntitled(userId);
   if (!entitled) {
-    throw new Error('UNSUBSCRIBED');
+    throw new ApplicationError(
+      'UNSUBSCRIBED',
+      'Subscription is required to access this resource',
+    );
   }
 }

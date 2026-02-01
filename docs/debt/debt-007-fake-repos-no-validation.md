@@ -1,8 +1,9 @@
 # DEBT-007: Fake Repositories Don't Validate Input
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P3
 **Date:** 2026-01-31
+**Resolved:** 2026-02-01
 
 ## Summary
 
@@ -45,3 +46,11 @@ Option C: Accept the gap, rely on integration tests
 - Document chosen approach in ADR-003 (testing strategy)
 - If Option A/B: Add validation to fakes
 - If Option C: Add note that integration tests cover validation
+
+## Resolution
+
+We chose **Option C**.
+
+- Fake repositories remain lightweight in-memory implementations and do not attempt to replicate adapter-boundary Zod parsing.
+- Adapter-boundary validation is covered by integration tests in `tests/integration/**` (real Postgres + real Drizzle repositories).
+- ADR-003 was updated to explicitly document this division of responsibility.

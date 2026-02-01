@@ -1,8 +1,9 @@
 # DEBT-014: lib/ Layer Throws Plain Error Instead of ApplicationError
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P2
 **Date:** 2026-02-01
+**Resolved:** 2026-02-01
 
 ## Summary
 
@@ -60,3 +61,17 @@ Accept that lib/ is "outside" Clean Architecture boundaries and document the con
 - All error-throwing code follows consistent pattern
 - Error handlers can identify error type/code uniformly
 - Decision documented in ADR or spec
+
+## Resolution
+
+We treat `lib/` as an outer (framework/infrastructure) layer, but we still require **runtime, user-facing** failures to be typed and catchable as `ApplicationError`.
+
+- Converted runtime auth/subscription failures to `ApplicationError`:
+  - `lib/auth.ts` now throws `ApplicationError('UNAUTHENTICATED', ...)` and `ApplicationError('INTERNAL_ERROR', ...)` for invalid Clerk state.
+  - `lib/subscription.ts` now throws `ApplicationError('UNSUBSCRIBED', ...)`.
+- Kept **startup/build-time** failures as plain `Error`:
+  - `lib/env.ts` (invalid configuration is fatal)
+  - `lib/content/parseMdxQuestion.ts` (content parsing failures are build/seed-time concerns)
+- Added unit tests:
+  - `lib/auth.test.ts`
+  - `lib/subscription.test.ts`

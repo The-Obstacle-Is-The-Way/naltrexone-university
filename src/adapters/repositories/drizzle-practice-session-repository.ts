@@ -5,6 +5,11 @@ import type * as schema from '@/db/schema';
 import { practiceSessions } from '@/db/schema';
 import { ApplicationError } from '@/src/application/errors';
 import type { PracticeSessionRepository } from '@/src/application/ports/repositories';
+import {
+  MAX_PRACTICE_SESSION_DIFFICULTY_FILTERS,
+  MAX_PRACTICE_SESSION_QUESTIONS,
+  MAX_PRACTICE_SESSION_TAG_FILTERS,
+} from './practice-session-limits';
 
 type Db = PostgresJsDatabase<typeof schema>;
 
@@ -12,10 +17,12 @@ const questionDifficultySchema = z.enum(['easy', 'medium', 'hard']);
 
 const practiceSessionParamsSchema = z
   .object({
-    count: z.number().int().min(1).max(200),
-    tagSlugs: z.array(z.string().min(1)).max(50),
-    difficulties: z.array(questionDifficultySchema).max(3),
-    questionIds: z.array(z.string().min(1)).max(200),
+    count: z.number().int().min(1).max(MAX_PRACTICE_SESSION_QUESTIONS),
+    tagSlugs: z.array(z.string().min(1)).max(MAX_PRACTICE_SESSION_TAG_FILTERS),
+    difficulties: z
+      .array(questionDifficultySchema)
+      .max(MAX_PRACTICE_SESSION_DIFFICULTY_FILTERS),
+    questionIds: z.array(z.string().min(1)).max(MAX_PRACTICE_SESSION_QUESTIONS),
   })
   .strict();
 

@@ -1,8 +1,9 @@
 # DEBT-016: Duplicated Upsert Pattern Across Repositories
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P2
 **Date:** 2026-02-01
+**Resolved:** 2026-02-01
 
 ## Summary
 
@@ -94,3 +95,10 @@ return insertOrReturnExisting(
 - Both repositories use the helper
 - Tests cover the helper once, not twice
 - Fix for DEBT-015 applies to both automatically
+
+## Resolution
+
+This was resolved by **eliminating the duplication**, not by introducing a shared helper.
+
+- `DrizzleStripeCustomerRepository.insert()` now uses a single upsert statement (see DEBT-015), so it no longer shares the “insert-then-query-existing” pattern used by bookmarks.
+- `DrizzleBookmarkRepository` remains intentionally simple and readable; extracting a helper would add indirection without meaningful reuse.
