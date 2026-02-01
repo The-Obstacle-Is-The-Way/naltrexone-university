@@ -1,8 +1,9 @@
 # DEBT-003: SubscriptionRepository Missing update() Method
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P1
 **Date:** 2026-01-31
+**Resolved:** 2026-02-01
 
 ## Summary
 
@@ -47,3 +48,13 @@ interface SubscriptionRepository {
 - Drizzle implementation handles insert-or-update semantics
 - Stripe subscription ID lookup enabled for webhook processing
 - Integration tests cover upsert behavior
+
+## Resolution
+
+- Added `SubscriptionUpsertInput`, `SubscriptionRepository.upsert()`, and `SubscriptionRepository.findByStripeSubscriptionId()` to `src/application/ports/repositories.ts`.
+- Implemented `findByStripeSubscriptionId()` + `upsert()` in `src/adapters/repositories/drizzle-subscription-repository.ts`:
+  - Upsert is keyed by `userId` (1 row per user per SSOT).
+  - Stores `stripeSubscriptionId` and mapped `priceId` (from domain `plan` + adapter config).
+  - Maps Postgres unique-constraint violations to `ApplicationError('CONFLICT', ...)`.
+- Added integration test coverage in `tests/integration/repositories.integration.test.ts`.
+- Updated `FakeSubscriptionRepository` to implement the new port methods.

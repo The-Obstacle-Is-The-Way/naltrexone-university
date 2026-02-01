@@ -540,6 +540,106 @@ describe('Stripe repositories', () => {
       ApplicationError,
     );
   });
+
+  it('upserts subscriptions per user and supports lookup by stripeSubscriptionId', async () => {
+    const user = await createUser();
+
+    const priceIds = {
+      monthly: 'price_test_monthly',
+      annual: 'price_test_annual',
+    } as const;
+
+    const repo = new DrizzleSubscriptionRepository(db, priceIds);
+
+    const stripeSubscriptionId1 = `sub_${randomUUID().replaceAll('-', '')}`;
+    const periodEnd1 = new Date('2026-12-31T00:00:00.000Z');
+
+    await repo.upsert({
+      userId: user.id,
+      stripeSubscriptionId: stripeSubscriptionId1,
+      status: 'active',
+      plan: 'monthly',
+      currentPeriodEnd: periodEnd1,
+      cancelAtPeriodEnd: false,
+    });
+
+    const byUser1 = await repo.findByUserId(user.id);
+    expect(byUser1).toMatchObject({
+      userId: user.id,
+      plan: 'monthly',
+      status: 'active',
+      currentPeriodEnd: periodEnd1,
+      cancelAtPeriodEnd: false,
+    });
+
+    const byStripeSubId1 = await repo.findByStripeSubscriptionId(
+      stripeSubscriptionId1,
+    );
+    expect(byStripeSubId1?.userId).toBe(user.id);
+
+    const stripeSubscriptionId2 = `sub_${randomUUID().replaceAll('-', '')}`;
+    const periodEnd2 = new Date('2027-01-31T00:00:00.000Z');
+
+    await repo.upsert({
+      userId: user.id,
+      stripeSubscriptionId: stripeSubscriptionId2,
+      status: 'canceled',
+      plan: 'annual',
+      currentPeriodEnd: periodEnd2,
+      cancelAtPeriodEnd: true,
+    });
+
+    const byUser2 = await repo.findByUserId(user.id);
+    expect(byUser2).toMatchObject({
+      userId: user.id,
+      plan: 'annual',
+      status: 'canceled',
+      currentPeriodEnd: periodEnd2,
+      cancelAtPeriodEnd: true,
+    });
+
+    await expect(
+      repo.findByStripeSubscriptionId(stripeSubscriptionId1),
+    ).resolves.toBeNull();
+    await expect(
+      repo.findByStripeSubscriptionId(stripeSubscriptionId2),
+    ).resolves.toMatchObject({
+      userId: user.id,
+    });
+  });
+
+  it('throws CONFLICT when stripeSubscriptionId is already mapped to a different user', async () => {
+    const userA = await createUser();
+    const userB = await createUser();
+
+    const priceIds = {
+      monthly: 'price_test_monthly',
+      annual: 'price_test_annual',
+    } as const;
+
+    const repo = new DrizzleSubscriptionRepository(db, priceIds);
+    const stripeSubscriptionId = `sub_${randomUUID().replaceAll('-', '')}`;
+
+    await repo.upsert({
+      userId: userA.id,
+      stripeSubscriptionId,
+      status: 'active',
+      plan: 'monthly',
+      currentPeriodEnd: new Date('2026-12-31T00:00:00.000Z'),
+      cancelAtPeriodEnd: false,
+    });
+
+    await expect(
+      repo.upsert({
+        userId: userB.id,
+        stripeSubscriptionId,
+        status: 'active',
+        plan: 'monthly',
+        currentPeriodEnd: new Date('2026-12-31T00:00:00.000Z'),
+        cancelAtPeriodEnd: false,
+      }),
+    ).rejects.toMatchObject({ code: 'CONFLICT' });
+  });
 });
 
 describe('DrizzleTagRepository', () => {
