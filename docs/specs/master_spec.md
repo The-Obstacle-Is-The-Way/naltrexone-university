@@ -2189,9 +2189,9 @@ jobs:
       # App base URL used by redirects / Playwright baseURL
       NEXT_PUBLIC_APP_URL: http://127.0.0.1:3000
 
-      # Fork PRs do not have access to secrets; Clerk requires real keys even during prerender.
-      # When this is true, we skip ClerkProvider during build so non-secret jobs still run.
-      NEXT_PUBLIC_SKIP_CLERK: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository && 'true' || 'false' }}
+      # Skip Clerk when secrets aren't available (fork PRs or secrets not configured).
+      # Clerk requires real keys even during prerender; dummy values fail validation.
+      NEXT_PUBLIC_SKIP_CLERK: ${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY == '' && 'true' || 'false' }}
 
       # Clerk (dev instance keys for CI E2E)
       # Fall back to dummy values so fork PRs can still run non-E2E jobs.
