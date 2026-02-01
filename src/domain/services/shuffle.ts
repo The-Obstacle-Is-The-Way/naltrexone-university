@@ -40,7 +40,7 @@ export function createSeed(userId: string, timestamp: number): number {
     hash = ((hash << 5) - hash + str.charCodeAt(i)) | 0;
   }
 
-  // Use unsigned right shift to convert to unsigned 32-bit integer.
-  // Math.abs(-2147483648) returns -2147483648 due to 32-bit overflow.
+  // Convert signed int32 hash to an unsigned 32-bit integer (0..2^32-1) without
+  // collapsing the sign bit (e.g., via Math.abs()).
   return hash >>> 0;
 }
