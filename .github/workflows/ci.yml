@@ -93,11 +93,17 @@ jobs:
       - name: Seed DB (placeholder content)
         run: pnpm db:seed
 
-      - name: Unit tests
-        run: pnpm test --run
+      - name: Unit tests with coverage
+        run: pnpm test:coverage
 
       - name: Integration tests
         run: pnpm test:integration
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          fail_ci_if_error: false
 
       - name: Build
         run: pnpm build
