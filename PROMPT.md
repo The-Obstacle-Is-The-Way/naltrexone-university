@@ -2,14 +2,50 @@
 
 You are building **Naltrexone University**, a subscription-based SaaS question bank for Addiction Psychiatry and Addiction Medicine board exam preparation.
 
-This prompt runs headless via:
+---
 
+## ⚠️ MANDATORY: Test-Driven Development (Uncle Bob / Robert C. Martin)
+
+**ALL CODE MUST BE TEST-DRIVEN. NO EXCEPTIONS.**
+
+Before writing ANY implementation code:
+1. **Write the test first** (Red)
+2. **Write minimum code to pass** (Green)
+3. **Refactor if needed** (Refactor)
+
+**Core Principles:**
+- **SOLID** - Single Responsibility, Open/Closed, Liskov Substitution, Interface Segregation, Dependency Inversion
+- **DRY** - Don't Repeat Yourself. Single source of truth for every concept.
+- **Clean Architecture** - Domain → Application → Adapters → Infrastructure. Dependencies point inward only.
+- **Clean Code** - Meaningful names, small functions, minimal complexity, explicit error handling.
+- **Gang of Four Patterns** - Repository, Factory, Strategy, Composition Root where they add clarity.
+- **Fakes over Mocks** - In-memory fakes for testing, not jest.mock().
+
+**If you're about to write implementation code without a failing test, STOP.**
+
+---
+
+## Headless Execution
+
+This prompt runs headless via one of these agents:
+
+### Claude Code (Default)
 ```bash
 while true; do
   claude --dangerously-skip-permissions -p "$(cat PROMPT.md)"
   sleep 2
 done
 ```
+
+### Codex CLI (OpenAI Alternative)
+```bash
+while true; do
+  codex exec --full-auto "$(cat PROMPT.md)"
+  sleep 2
+done
+```
+
+See `docs/_ralphwiggum/protocol.md` for full setup and agent options.
 
 If `PROGRESS.md` has no unchecked items, exit cleanly without making changes.
 
@@ -73,14 +109,22 @@ If ANY check fails, fix it before proceeding.
 
 ---
 
-## TDD Workflow (When Writing Code)
+## TDD Workflow (MANDATORY When Writing Code)
 
-1. **RED**: Write test first (expect it to fail)
-2. **GREEN**: Write minimal code to pass
-3. **REFACTOR**: Clean up, keep tests green
+**Every code change follows Red → Green → Refactor:**
 
-**Prefer testing behavior over implementation.**
-**Minimal mocks** - only mock external services (Clerk, Stripe, Neon).
+1. **RED**: Write a failing test that describes the expected behavior
+2. **GREEN**: Write the minimum code to make the test pass
+3. **REFACTOR**: Clean up while keeping tests green
+
+**Testing Philosophy:**
+- Test behavior, not implementation details
+- Use in-memory fakes, not jest.mock()
+- Only mock true external services (Clerk, Stripe, Neon)
+- Domain and application layers must be 100% unit testable without infrastructure
+- Characterization tests for legacy/existing code before refactoring
+
+**If you wrote code without a test, go back and write the test first.**
 
 ---
 
@@ -136,10 +180,12 @@ If you made no changes (no active tasks), exit without committing.
 1. **ONE task per iteration**
 2. **Read PROGRESS.md first**
 3. **Read master_spec.md for task details**
-4. **Quality gates must pass**
-5. **Mark task complete in PROGRESS.md**
-6. **Commit before exit**
-7. **Follow master_spec.md exactly**
+4. **TDD: Write tests BEFORE implementation (Red → Green → Refactor)**
+5. **SOLID/DRY/Clean Code principles always**
+6. **Quality gates must pass**
+7. **Mark task complete in PROGRESS.md**
+8. **Commit before exit**
+9. **Follow master_spec.md exactly**
 
 ---
 
