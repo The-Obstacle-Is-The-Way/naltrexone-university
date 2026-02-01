@@ -112,11 +112,16 @@ export class StripePaymentGateway implements PaymentGateway {
     rawBody: string,
     signature: string,
   ): Promise<WebhookEventResult> {
-    const event = this.deps.stripe.webhooks.constructEvent(
-      rawBody,
-      signature,
-      this.deps.webhookSecret,
-    );
+    let event: ReturnType<StripeClient['webhooks']['constructEvent']>;
+    try {
+      event = this.deps.stripe.webhooks.constructEvent(
+        rawBody,
+        signature,
+        this.deps.webhookSecret,
+      );
+    } catch {
+      throw new ApplicationError('STRIPE_ERROR', 'Invalid webhook signature');
+    }
 
     const result: WebhookEventResult = {
       eventId: event.id,

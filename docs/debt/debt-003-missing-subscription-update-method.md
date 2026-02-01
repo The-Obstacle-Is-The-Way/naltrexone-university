@@ -38,7 +38,7 @@ Per SPEC-007 and webhook processing needs:
 interface SubscriptionRepository {
   findByUserId(userId: string): Promise<Subscription | null>;
   findByStripeSubscriptionId(stripeSubId: string): Promise<Subscription | null>;
-  upsert(subscription: Subscription): Promise<void>;
+  upsert(input: SubscriptionUpsertInput): Promise<void>;
 }
 ```
 
