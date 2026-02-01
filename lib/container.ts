@@ -14,8 +14,8 @@ import {
   DrizzleStripeEventRepository,
   DrizzleSubscriptionRepository,
   DrizzleTagRepository,
+  DrizzleUserRepository,
 } from '@/src/adapters/repositories';
-import { DrizzleUserRepository } from '@/src/adapters/repositories/drizzle-user-repository';
 import type { DrizzleDb } from '@/src/adapters/shared/database-types';
 import type {
   AuthGateway,
