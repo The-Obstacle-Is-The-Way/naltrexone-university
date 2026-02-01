@@ -6,23 +6,25 @@ Repository guidelines for AI coding agents (Codex CLI, Claude Code, etc.) workin
 
 ## ⚠️ CRITICAL: React 19 + Vitest Testing Requirements
 
-**READ THIS FIRST. Tests will fail randomly without these requirements.**
+**READ THIS FIRST. Tests will fail in git hooks/CI without these requirements.**
 
-### Mandatory for ALL `.test.tsx` files:
+### For ALL `.test.tsx` files:
 
 ```typescript
 // @vitest-environment jsdom   ← MUST be first line
-'use client';
+import { renderToStaticMarkup } from 'react-dom/server';
 
-import { act } from 'react';  // ← act from 'react', NOT react-test-renderer
+// Use renderToStaticMarkup for render-output tests
+const html = renderToStaticMarkup(<MyComponent />);
+expect(html).toContain('Expected text');
 ```
 
 ### Why:
-- React 19 requires `IS_REACT_ACT_ENVIRONMENT = true` (set in `vitest.setup.ts`)
-- Vitest defaults to `node` environment; React components need `jsdom`
-- Without both, tests pass locally but fail in git hooks/CI
+- `@testing-library/react` has a [known bug](https://github.com/testing-library/react-testing-library/issues/1392) with React 19 + Vitest in production builds
+- Git hooks and CI load production builds where `act()` is undefined
+- `renderToStaticMarkup` is a stable first-party React API that works everywhere
 
-### Full details: `TESTING-GOTCHAS.md`
+### Full details: `docs/dev/react-vitest-testing.md`
 
 ---
 
@@ -323,7 +325,7 @@ resolve: {
 - `react-dom/test-utils` — Removed in React 19
 - `environmentMatchGlobs` — Deprecated in Vitest 4
 
-See `TESTING-GOTCHAS.md` for full details.
+See `docs/dev/react-vitest-testing.md` for full details.
 
 ### FAKES OVER MOCKS — MANDATORY
 

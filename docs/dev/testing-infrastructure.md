@@ -254,7 +254,7 @@ killall "Google Chrome"
 
 ## Related Documentation
 
-- [TESTING-GOTCHAS.md](../../TESTING-GOTCHAS.md) — React 19 + Vitest component testing setup
+- [react-vitest-testing.md](./react-vitest-testing.md) — React 19 + Vitest component testing setup
 - [CLAUDE.md](../../CLAUDE.md) — Testing mandate and test locations
 - [SPEC-010](../specs/spec-010-server-actions.md) — Controller testing patterns
 - [Playwright Docs](https://playwright.dev/docs/intro)
