@@ -1,6 +1,6 @@
 # React 19 + Vitest Testing Guide
 
-**Last Updated:** 2026-02-01
+**Last Updated:** 2026-02-01 
 
 This document exists because we got burned. Every claim is validated against official sources.
 
