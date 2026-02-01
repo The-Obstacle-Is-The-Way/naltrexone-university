@@ -6,6 +6,7 @@ import {
   createTag,
 } from '@/src/domain/test-helpers';
 import { ApplicationError } from '../errors';
+import type { QuestionRepository } from '../ports/repositories';
 import {
   FakeAttemptRepository,
   FakePracticeSessionRepository,
@@ -64,6 +65,36 @@ describe('GetNextQuestionUseCase', () => {
     expect(result?.choices[0]).not.toHaveProperty('isCorrect');
   });
 
+  it('throws NOT_FOUND when next session question is not published', async () => {
+    const userId = 'user-1';
+    const sessionId = 'session-1';
+
+    const questionId = 'q1';
+
+    const session = createPracticeSession({
+      id: sessionId,
+      userId,
+      mode: 'tutor',
+      questionIds: [questionId],
+    });
+
+    const useCase = new GetNextQuestionUseCase(
+      new FakeQuestionRepository([
+        createQuestion({
+          id: questionId,
+          status: 'draft',
+          choices: [createChoice({ id: 'c1', questionId, label: 'A' })],
+        }),
+      ]),
+      new FakeAttemptRepository([]),
+      new FakePracticeSessionRepository([session]),
+    );
+
+    await expect(useCase.execute({ userId, sessionId })).rejects.toEqual(
+      new ApplicationError('NOT_FOUND', 'Question not found'),
+    );
+  });
+
   it('returns null when session is complete', async () => {
     const userId = 'user-1';
     const sessionId = 'session-1';
@@ -112,6 +143,21 @@ describe('GetNextQuestionUseCase', () => {
     ).rejects.toEqual(
       new ApplicationError('NOT_FOUND', 'Practice session not found'),
     );
+  });
+
+  it('returns null when no questions match filters', async () => {
+    const useCase = new GetNextQuestionUseCase(
+      new FakeQuestionRepository([]),
+      new FakeAttemptRepository([]),
+      new FakePracticeSessionRepository([]),
+    );
+
+    await expect(
+      useCase.execute({
+        userId: 'user-1',
+        filters: { tagSlugs: [], difficulties: [] },
+      }),
+    ).resolves.toBeNull();
   });
 
   it('prefers never-attempted questions in filter mode', async () => {
@@ -164,6 +210,33 @@ describe('GetNextQuestionUseCase', () => {
 
     expect(result?.questionId).toBe('q-new');
     expect(result?.session).toBeNull();
+  });
+
+  it('returns choices sorted by sortOrder', async () => {
+    const userId = 'user-1';
+
+    const questionId = 'q1';
+    const question = createQuestion({
+      id: questionId,
+      status: 'published',
+      choices: [
+        createChoice({ id: 'c2', questionId, label: 'B', sortOrder: 2 }),
+        createChoice({ id: 'c1', questionId, label: 'A', sortOrder: 1 }),
+      ],
+    });
+
+    const useCase = new GetNextQuestionUseCase(
+      new FakeQuestionRepository([question]),
+      new FakeAttemptRepository([]),
+      new FakePracticeSessionRepository([]),
+    );
+
+    const result = await useCase.execute({
+      userId,
+      filters: { tagSlugs: [], difficulties: [] },
+    });
+
+    expect(result?.choices.map((c) => c.id)).toEqual(['c1', 'c2']);
   });
 
   it('chooses the question with the oldest last attempt if all attempted', async () => {
@@ -219,5 +292,35 @@ describe('GetNextQuestionUseCase', () => {
     });
 
     expect(result?.questionId).toBe('q1');
+  });
+
+  it('throws NOT_FOUND when repository returns a candidate id that cannot be loaded', async () => {
+    const misbehavingQuestions: QuestionRepository = {
+      async findPublishedById() {
+        return null;
+      },
+      async findPublishedBySlug() {
+        return null;
+      },
+      async findPublishedByIds() {
+        return [];
+      },
+      async listPublishedCandidateIds() {
+        return ['missing'];
+      },
+    };
+
+    const useCase = new GetNextQuestionUseCase(
+      misbehavingQuestions,
+      new FakeAttemptRepository([]),
+      new FakePracticeSessionRepository([]),
+    );
+
+    await expect(
+      useCase.execute({
+        userId: 'user-1',
+        filters: { tagSlugs: [], difficulties: [] },
+      }),
+    ).rejects.toEqual(new ApplicationError('NOT_FOUND', 'Question not found'));
   });
 });
