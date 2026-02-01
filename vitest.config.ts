@@ -10,10 +10,6 @@ export default defineConfig({
     coverage: {
       reporter: ['text', 'json', 'html'],
     },
-    // Isolate test files that use vi.mock() for module-level imports
-    // to prevent module caching issues across test files
-    isolate: true,
-    testTimeout: 10000,
   },
   resolve: {
     alias: {

@@ -31,9 +31,13 @@ const repo = new DrizzleStripeCustomerRepository(db as unknown as RepoDb);
 
 ## Files Affected
 
-**Skipped Tests (vi.mock for our own code - anti-pattern):**
-- `lib/auth.test.ts` — Uses vi.mock('./db', './env', './container')
-- `lib/container.test.ts` — Uses vi.mock('./db', './env', './stripe')
+**Deleted Tests (redundant + anti-pattern):**
+- ~~`lib/auth.test.ts`~~ — DELETED: Redundant with ClerkAuthGateway tests
+- ~~`lib/container.test.ts`~~ — DELETED: Redundant with adapter tests
+
+These tests used `vi.mock()` for our own code (anti-pattern) and tested
+functionality already covered at the adapter layer. Per Clean Architecture,
+unit tests belong at adapters; integration tests verify wiring.
 
 **Inconsistent Repository Tests (inline db mocks):**
 - `src/adapters/repositories/drizzle-stripe-customer-repository.test.ts`
