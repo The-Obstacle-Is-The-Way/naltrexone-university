@@ -17,6 +17,7 @@ Define constrained types (value objects) that enforce business rules at the type
 
 ```
 src/domain/value-objects/
+├── subscription-plan.ts
 ├── subscription-status.ts
 ├── question-difficulty.ts
 ├── question-status.ts
@@ -29,6 +30,28 @@ src/domain/value-objects/
 ---
 
 ## Test First
+
+### File: `src/domain/value-objects/subscription-plan.test.ts`
+
+```typescript
+import { describe, it, expect } from 'vitest';
+import { AllSubscriptionPlans, isValidSubscriptionPlan } from './subscription-plan';
+
+describe('SubscriptionPlan', () => {
+  it('has monthly and annual plans', () => {
+    expect(AllSubscriptionPlans).toEqual(['monthly', 'annual']);
+  });
+
+  it('validates known plans', () => {
+    expect(isValidSubscriptionPlan('monthly')).toBe(true);
+    expect(isValidSubscriptionPlan('annual')).toBe(true);
+  });
+
+  it('rejects unknown plans', () => {
+    expect(isValidSubscriptionPlan('weekly')).toBe(false);
+  });
+});
+```
 
 ### File: `src/domain/value-objects/subscription-status.test.ts`
 
@@ -130,6 +153,22 @@ describe('PracticeMode', () => {
 ---
 
 ## Implementation
+
+### File: `src/domain/value-objects/subscription-plan.ts`
+
+```typescript
+/**
+ * Domain-level subscription plan identifiers.
+ * These are intentionally vendor-agnostic.
+ */
+export const AllSubscriptionPlans = ['monthly', 'annual'] as const;
+
+export type SubscriptionPlan = typeof AllSubscriptionPlans[number];
+
+export function isValidSubscriptionPlan(value: string): value is SubscriptionPlan {
+  return AllSubscriptionPlans.includes(value as SubscriptionPlan);
+}
+```
 
 ### File: `src/domain/value-objects/subscription-status.ts`
 
@@ -259,6 +298,12 @@ export type TagKind = typeof AllTagKinds[number];
 ### File: `src/domain/value-objects/index.ts`
 
 ```typescript
+export {
+  type SubscriptionPlan,
+  AllSubscriptionPlans,
+  isValidSubscriptionPlan,
+} from './subscription-plan';
+
 export {
   type SubscriptionStatus,
   AllSubscriptionStatuses,

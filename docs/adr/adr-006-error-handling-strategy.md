@@ -145,24 +145,29 @@ export type ActionErrorCode =
   | 'STRIPE_ERROR'
   | 'INTERNAL_ERROR';
 
-export type ActionError = {
-  code: ActionErrorCode;
-  message: string;
-  fieldErrors?: Record<string, string[]>;
-};
-
 export type ActionResult<T> =
   | { ok: true; data: T }
-  | { ok: false; error: ActionError };
+  | {
+      ok: false;
+      error: {
+        code: ActionErrorCode;
+        message: string;
+        fieldErrors?: Record<string, string[]>;
+      };
+    };
 
 // Helper to create success result
-export function ok<T>(data: T): ActionResult<T> {
+export function success<T>(data: T): ActionResult<T> {
   return { ok: true, data };
 }
 
 // Helper to create error result
-export function err<T>(error: ActionError): ActionResult<T> {
-  return { ok: false, error };
+export function failure(
+  code: ActionErrorCode,
+  message: string,
+  fieldErrors?: Record<string, string[]>,
+): ActionResult<never> {
+  return { ok: false, error: { code, message, fieldErrors } };
 }
 ```
 
@@ -200,7 +205,7 @@ export async function submitAnswerAction(
   try {
     const user = await authGateway.requireUser();
     const result = await useCase.execute({ userId: user.id, questionId, choiceId });
-    return ok(result);
+    return success(result);
   } catch (error) {
     return handleError(error);
   }
@@ -209,22 +214,18 @@ export async function submitAnswerAction(
 // 4. Error handler translates to ActionResult
 function handleError(error: unknown): ActionResult<never> {
   if (isApplicationError(error)) {
-    return err({
-      code: error.code,
-      message: error.message,
-      fieldErrors: error.fieldErrors,
-    });
+    return failure(error.code, error.message, error.fieldErrors);
   }
 
   if (isDomainError(error)) {
     // Domain errors indicate programmer error or data corruption
     console.error('DomainError:', error);
-    return err({ code: 'INTERNAL_ERROR', message: 'An unexpected error occurred' });
+    return failure('INTERNAL_ERROR', 'An unexpected error occurred');
   }
 
   // Unknown errors
   console.error('UnhandledError:', error);
-  return err({ code: 'INTERNAL_ERROR', message: 'An unexpected error occurred' });
+  return failure('INTERNAL_ERROR', 'An unexpected error occurred');
 }
 ```
 

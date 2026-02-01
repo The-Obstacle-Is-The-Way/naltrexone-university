@@ -285,7 +285,7 @@ export const SubscriptionPlan = {
 export type SubscriptionPlan = typeof SubscriptionPlan[keyof typeof SubscriptionPlan];
 ```
 
-**Note:** This is the domain's concept of a plan. The mapping to vendor-specific price IDs (e.g., `STRIPE_PRICE_MONTHLY`, `STRIPE_PRICE_ANNUAL`) happens at the adapter boundary via configuration.
+**Note:** This is the domain's concept of a plan. The mapping to vendor-specific Stripe price IDs (e.g., `NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY`, `NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL`) happens at the adapter boundary via configuration.
 
 ### Domain Services
 

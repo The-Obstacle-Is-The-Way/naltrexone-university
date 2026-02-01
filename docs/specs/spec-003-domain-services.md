@@ -16,7 +16,10 @@ Define pure domain functions that encapsulate core business logic. These have **
 ## Files to Create
 
 ```
-src/domain/services/
+src/domain/
+├── errors/
+│   └── domain-errors.ts
+└── services/
 ├── grading.ts
 ├── grading.test.ts
 ├── entitlement.ts
@@ -39,9 +42,36 @@ src/domain/services/
 ```typescript
 import { describe, it, expect } from 'vitest';
 import { gradeAnswer } from './grading';
-import type { Question, Choice } from '../entities';
+import type { Choice, Question } from '../entities';
 
 describe('gradeAnswer', () => {
+  const choices: Choice[] = [
+    {
+      id: 'c1',
+      questionId: 'q1',
+      label: 'A',
+      textMd: 'Wrong',
+      isCorrect: false,
+      sortOrder: 1,
+    },
+    {
+      id: 'c2',
+      questionId: 'q1',
+      label: 'B',
+      textMd: 'Right',
+      isCorrect: true,
+      sortOrder: 2,
+    },
+    {
+      id: 'c3',
+      questionId: 'q1',
+      label: 'C',
+      textMd: 'Wrong',
+      isCorrect: false,
+      sortOrder: 3,
+    },
+  ];
+
   const question: Question = {
     id: 'q1',
     slug: 'test',
@@ -49,45 +79,39 @@ describe('gradeAnswer', () => {
     explanationMd: 'Because.',
     difficulty: 'medium',
     status: 'published',
+    choices,
+    tags: [],
     createdAt: new Date(),
     updatedAt: new Date(),
   };
 
-  const choices: Choice[] = [
-    { id: 'c1', questionId: 'q1', label: 'A', textMd: 'Wrong', isCorrect: false, sortOrder: 1 },
-    { id: 'c2', questionId: 'q1', label: 'B', textMd: 'Right', isCorrect: true, sortOrder: 2 },
-    { id: 'c3', questionId: 'q1', label: 'C', textMd: 'Wrong', isCorrect: false, sortOrder: 3 },
-  ];
-
   it('returns isCorrect=true when correct choice selected', () => {
-    const result = gradeAnswer(question, choices, 'c2');
+    const result = gradeAnswer(question, 'c2');
     expect(result.isCorrect).toBe(true);
     expect(result.correctChoiceId).toBe('c2');
   });
 
   it('returns isCorrect=false when incorrect choice selected', () => {
-    const result = gradeAnswer(question, choices, 'c1');
+    const result = gradeAnswer(question, 'c1');
     expect(result.isCorrect).toBe(false);
     expect(result.correctChoiceId).toBe('c2');
   });
 
-  it('includes explanation from question', () => {
-    const result = gradeAnswer(question, choices, 'c1');
-    expect(result.explanationMd).toBe('Because.');
-  });
-
   it('returns correct choice label', () => {
-    const result = gradeAnswer(question, choices, 'c3');
+    const result = gradeAnswer(question, 'c3');
     expect(result.correctLabel).toBe('B');
   });
 
   it('throws if no correct choice exists', () => {
-    const badChoices = choices.map(c => ({ ...c, isCorrect: false }));
-    expect(() => gradeAnswer(question, badChoices, 'c1')).toThrow('No correct choice');
+    const questionWithoutCorrectChoice: Question = {
+      ...question,
+      choices: question.choices.map((c) => ({ ...c, isCorrect: false })),
+    };
+    expect(() => gradeAnswer(questionWithoutCorrectChoice, 'c1')).toThrow();
   });
 
   it('throws if selected choice not found', () => {
-    expect(() => gradeAnswer(question, choices, 'invalid')).toThrow('Choice not found');
+    expect(() => gradeAnswer(question, 'invalid')).toThrow();
   });
 });
 ```
@@ -103,14 +127,13 @@ describe('isEntitled', () => {
   const now = new Date('2026-01-31T12:00:00Z');
 
   const makeSubscription = (
-    status: string,
-    periodEnd: Date
+    status: Subscription['status'],
+    periodEnd: Date,
   ): Subscription => ({
     id: 's1',
     userId: 'u1',
-    stripeSubscriptionId: 'sub_123',
-    status: status as any,
-    priceId: 'price_123',
+    plan: 'monthly',
+    status,
     currentPeriodEnd: periodEnd,
     cancelAtPeriodEnd: false,
     createdAt: new Date(),
@@ -247,16 +270,44 @@ describe('shuffleWithSeed', () => {
 
 ## Implementation
 
+### File: `src/domain/errors/domain-errors.ts`
+
+```typescript
+export type DomainErrorCode =
+  | 'INVALID_QUESTION'
+  | 'INVALID_CHOICE'
+  | 'INVALID_SESSION'
+  | 'SESSION_ALREADY_ENDED'
+  | 'NO_QUESTIONS_MATCH';
+
+export class DomainError extends Error {
+  readonly _tag = 'DomainError' as const;
+
+  constructor(
+    public readonly code: DomainErrorCode,
+    message: string,
+  ) {
+    super(message);
+    this.name = 'DomainError';
+  }
+}
+
+export function isDomainError(error: unknown): error is DomainError {
+  return error instanceof DomainError;
+}
+```
+
 ### File: `src/domain/services/grading.ts`
 
 ```typescript
-import type { Question, Choice } from '../entities';
+import type { Question } from '../entities';
+import type { ChoiceLabel } from '../value-objects';
+import { DomainError } from '../errors/domain-errors';
 
 export type GradeResult = {
   isCorrect: boolean;
   correctChoiceId: string;
-  correctLabel: string;
-  explanationMd: string;
+  correctLabel: ChoiceLabel;
 };
 
 /**
@@ -264,24 +315,28 @@ export type GradeResult = {
  */
 export function gradeAnswer(
   question: Question,
-  choices: readonly Choice[],
   selectedChoiceId: string
 ): GradeResult {
-  const selected = choices.find(c => c.id === selectedChoiceId);
+  const selected = question.choices.find((c) => c.id === selectedChoiceId);
   if (!selected) {
-    throw new Error(`Choice not found: ${selectedChoiceId}`);
+    throw new DomainError(
+      'INVALID_CHOICE',
+      `Choice ${selectedChoiceId} does not belong to question ${question.id}`,
+    );
   }
 
-  const correct = choices.find(c => c.isCorrect);
+  const correct = question.choices.find((c) => c.isCorrect);
   if (!correct) {
-    throw new Error(`No correct choice for question: ${question.id}`);
+    throw new DomainError(
+      'INVALID_QUESTION',
+      `Question ${question.id} has no correct choice`,
+    );
   }
 
   return {
     isCorrect: selected.id === correct.id,
     correctChoiceId: correct.id,
     correctLabel: correct.label,
-    explanationMd: question.explanationMd,
   };
 }
 ```
@@ -373,7 +428,7 @@ export function computeSessionProgress(
   session: PracticeSession,
   attemptCount: number
 ): SessionProgress {
-  const total = session.params.questionIds.length;
+  const total = session.questionIds.length;
   return {
     current: attemptCount,
     total,
@@ -396,7 +451,7 @@ export function getNextQuestionId(
   answeredQuestionIds: readonly string[]
 ): string | null {
   const answeredSet = new Set(answeredQuestionIds);
-  for (const qId of session.params.questionIds) {
+  for (const qId of session.questionIds) {
     if (!answeredSet.has(qId)) return qId;
   }
   return null;

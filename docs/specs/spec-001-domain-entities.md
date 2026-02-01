@@ -42,14 +42,12 @@ describe('User entity', () => {
   it('has required readonly properties', () => {
     const user: User = {
       id: 'uuid-123',
-      clerkUserId: 'clerk_abc',
       email: 'test@example.com',
       createdAt: new Date(),
       updatedAt: new Date(),
     };
 
     expect(user.id).toBe('uuid-123');
-    expect(user.clerkUserId).toBe('clerk_abc');
     expect(user.email).toBe('test@example.com');
   });
 });
@@ -70,6 +68,8 @@ describe('Question entity', () => {
       explanationMd: 'The answer is B because...',
       difficulty: 'medium',
       status: 'published',
+      choices: [],
+      tags: [],
       createdAt: new Date(),
       updatedAt: new Date(),
     };
@@ -93,7 +93,6 @@ describe('Question entity', () => {
  */
 export type User = {
   readonly id: string;
-  readonly clerkUserId: string;
   readonly email: string;
   readonly createdAt: Date;
   readonly updatedAt: Date;
@@ -104,6 +103,8 @@ export type User = {
 
 ```typescript
 import type { QuestionDifficulty, QuestionStatus } from '../value-objects';
+import type { Choice } from './choice';
+import type { Tag } from './tag';
 
 /**
  * Question entity - a single MCQ item
@@ -115,6 +116,8 @@ export type Question = {
   readonly explanationMd: string;
   readonly difficulty: QuestionDifficulty;
   readonly status: QuestionStatus;
+  readonly choices: readonly Choice[];
+  readonly tags: readonly Tag[];
   readonly createdAt: Date;
   readonly updatedAt: Date;
 };
@@ -149,7 +152,7 @@ export type Attempt = {
   readonly userId: string;
   readonly questionId: string;
   readonly practiceSessionId: string | null;
-  readonly selectedChoiceId: string | null;
+  readonly selectedChoiceId: string;
   readonly isCorrect: boolean;
   readonly timeSpentSeconds: number;
   readonly answeredAt: Date;
@@ -159,17 +162,19 @@ export type Attempt = {
 ### File: `src/domain/entities/subscription.ts`
 
 ```typescript
-import type { SubscriptionStatus } from '../value-objects';
+import type { SubscriptionPlan, SubscriptionStatus } from '../value-objects';
 
 /**
  * Subscription entity - user's payment status
+ *
+ * IMPORTANT: No vendor IDs live in the domain layer.
+ * Stripe subscription IDs and price IDs belong in the persistence layer only.
  */
 export type Subscription = {
   readonly id: string;
   readonly userId: string;
-  readonly stripeSubscriptionId: string;
+  readonly plan: SubscriptionPlan;
   readonly status: SubscriptionStatus;
-  readonly priceId: string;
   readonly currentPeriodEnd: Date;
   readonly cancelAtPeriodEnd: boolean;
   readonly createdAt: Date;
@@ -180,17 +185,7 @@ export type Subscription = {
 ### File: `src/domain/entities/practice-session.ts`
 
 ```typescript
-import type { PracticeMode } from '../value-objects';
-
-/**
- * Practice session parameters stored as JSON
- */
-export type PracticeSessionParams = {
-  readonly count: number;
-  readonly tagSlugs: readonly string[];
-  readonly difficulties: readonly string[];
-  readonly questionIds: readonly string[];
-};
+import type { PracticeMode, QuestionDifficulty } from '../value-objects';
 
 /**
  * PracticeSession entity - a study session
@@ -199,7 +194,9 @@ export type PracticeSession = {
   readonly id: string;
   readonly userId: string;
   readonly mode: PracticeMode;
-  readonly params: PracticeSessionParams;
+  readonly questionIds: readonly string[]; // ordered list (UUIDs)
+  readonly tagFilters: readonly string[]; // tag slugs used for selection
+  readonly difficultyFilters: readonly QuestionDifficulty[]; // filters used for selection
   readonly startedAt: Date;
   readonly endedAt: Date | null;
 };
@@ -242,7 +239,7 @@ export type { Question } from './question';
 export type { Choice } from './choice';
 export type { Attempt } from './attempt';
 export type { Subscription } from './subscription';
-export type { PracticeSession, PracticeSessionParams } from './practice-session';
+export type { PracticeSession } from './practice-session';
 export type { Bookmark } from './bookmark';
 export type { Tag } from './tag';
 ```
@@ -261,5 +258,4 @@ pnpm test src/domain/entities/
 
 - [ ] All entity types defined as readonly
 - [ ] Zero external imports (only value-objects from same layer)
-- [ ] Unit tests verify type structure
 - [ ] Barrel export in index.ts

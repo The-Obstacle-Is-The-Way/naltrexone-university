@@ -102,17 +102,20 @@ export async function submitAnswer(
   // Validation
   const parsed = SubmitAnswerInputSchema.safeParse(input);
   if (!parsed.success) {
-    return err({
-      code: 'VALIDATION_ERROR',
-      message: 'Invalid input',
-      fieldErrors: parsed.error.flatten().fieldErrors,
-    });
+    return {
+      ok: false,
+      error: {
+        code: 'VALIDATION_ERROR',
+        message: 'Invalid input',
+        fieldErrors: parsed.error.flatten().fieldErrors,
+      },
+    };
   }
 
   // Business logic
   // ...
 
-  return ok(result);
+  return { ok: true, data: result };
 }
 ```
 
@@ -128,11 +131,14 @@ export async function submitAnswer(
 export async function submitAnswer(input: unknown): Promise<ActionResult<...>> {
   const parsed = SubmitAnswerInputSchema.safeParse(input);
   if (!parsed.success) {
-    return err({
-      code: 'VALIDATION_ERROR',
-      message: 'Invalid input',
-      fieldErrors: parsed.error.flatten().fieldErrors,
-    });
+    return {
+      ok: false,
+      error: {
+        code: 'VALIDATION_ERROR',
+        message: 'Invalid input',
+        fieldErrors: parsed.error.flatten().fieldErrors,
+      },
+    };
   }
 
   // Use case receives validated input (type-safe)
@@ -265,11 +271,9 @@ Standardized error codes across all actions:
 export type ActionErrorCode =
   | 'UNAUTHENTICATED'   // 401 - Not logged in
   | 'UNSUBSCRIBED'      // 403 - No active subscription
-  | 'FORBIDDEN'         // 403 - Not authorized for resource
-  | 'NOT_FOUND'         // 404 - Resource doesn't exist
   | 'VALIDATION_ERROR'  // 400 - Input validation failed
+  | 'NOT_FOUND'         // 404 - Resource doesn't exist
   | 'CONFLICT'          // 409 - State conflict (e.g., already submitted)
-  | 'RATE_LIMITED'      // 429 - Too many requests
   | 'STRIPE_ERROR'      // 502 - Payment provider error
   | 'INTERNAL_ERROR';   // 500 - Unexpected error
 ```

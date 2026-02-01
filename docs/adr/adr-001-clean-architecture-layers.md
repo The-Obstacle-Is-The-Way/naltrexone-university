@@ -340,44 +340,37 @@ components/                    # Layer 4: Frameworks
 
 ## Composition Root
 
-Dependencies are wired in a single location. Server Actions and Route Handlers compose their dependencies at the point of use, NOT via global singletons.
+Dependencies are wired in a single location: `lib/container.ts` (the composition root). Controllers and route handlers call factory functions from the composition root to obtain concrete implementations for ports.
 
 **Pattern:**
 ```typescript
-// app/actions/submit-answer.ts
+// src/adapters/controllers/question-controller.ts
 'use server';
 
+import { createQuestionControllerDeps } from '@/lib/container';
+
 export async function submitAnswer(input: SubmitAnswerInput, deps?: Dependencies) {
-  // Composition happens here at the entry point
-  const { questionRepo, attemptRepo, authGateway } = deps ?? createDependencies();
+  // Composition happens via a factory, called at the entry point
+  const { questionRepo, attemptRepo, authGateway } =
+    deps ?? createQuestionControllerDeps();
 
   // ... use case execution
 }
-
-// Production dependency factory
-function createDependencies(): Dependencies {
-  const userRepo = new DrizzleUserRepository(db);
-  return {
-    questionRepo: new DrizzleQuestionRepository(db),
-    attemptRepo: new DrizzleAttemptRepository(db),
-    authGateway: createClerkAuthGateway(userRepo),
-  };
-}
 ```
 
-**Why no DI container?**
-- Next.js Server Actions have no lifecycle hooks for DI
-- Functions are the unit of composition, not classes
-- Explicit wiring is more traceable than magic containers
-- Test injection is simple: pass `deps` parameter
+**Why no DI framework/container library?**
+- Next.js has no long-lived “app bootstrap” phase for container setup
+- Factory functions are explicit, tree-shakeable, and test-friendly
+- Test injection is simple: pass `deps` or call a test factory
 
 **Allowed composition locations:**
-- `app/actions/*.ts` — Server Actions
-- `app/api/**/route.ts` — Route Handlers
-- `tests/**/*.test.ts` — Test files (with fakes)
+- `lib/container.ts` — factory functions wiring dependencies
+- `src/adapters/controllers/*.ts` — Server Actions (Controllers) calling factories
+- `app/api/**/route.ts` — Route Handlers calling factories
+- `tests/**/*.test.ts` — Test files (with fakes or injected deps)
 
 **Prohibited:**
-- Global singleton gateways/repositories
+- Global singleton gateways/repositories/use cases (DB client is the only allowed singleton)
 - Importing concrete implementations in use cases
 - Framework code creating adapters outside composition points
 

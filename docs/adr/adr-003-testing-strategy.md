@@ -122,10 +122,16 @@ describe('SubmitAnswerUseCase', () => {
 
     const useCase = new SubmitAnswerUseCase(questionRepo, attemptRepo);
 
+    const correctChoiceId =
+      question.choices.find((c) => c.isCorrect)?.id ??
+      (() => {
+        throw new Error('Test fixture missing correct choice');
+      })();
+
     const result = await useCase.execute({
       userId: 'user1',
       questionId: 'q1',
-      choiceId: question.choices.find(c => c.isCorrect)!.id,
+      choiceId: correctChoiceId,
     });
 
     expect(result.isCorrect).toBe(true);
@@ -161,8 +167,8 @@ const mockRepo = {
 
 **Philosophy:**
 - Test that adapters correctly translate between layers
-- Use **real database** (Postgres via Docker/CI service)
-- Use **real Stripe** test mode (not mocks)
+- Use **real database** (Postgres via local service, Docker, or CI service)
+- Mock external providers at the boundary (Stripe/Clerk) to keep integration tests fast and non-flaky
 - Verify data persistence and retrieval
 
 **Coverage Target:** All repository methods, all gateway methods
@@ -369,113 +375,16 @@ export class FakeAttemptRepository implements AttemptRepository {
 }
 ```
 
-### CI Configuration
+### CI and Tooling Configuration (SSOT)
 
-```yaml
-# .github/workflows/ci.yml
-name: CI
+To avoid documentation drift, the exact CI and tooling configuration lives in the repo:
 
-on: [push, pull_request]
+- CI workflow: `.github/workflows/ci.yml`
+- Package scripts: `package.json`
+- Vitest config: `vitest.config.ts` + `vitest.integration.config.ts`
+- Playwright config: `playwright.config.ts`
 
-jobs:
-  test:
-    runs-on: ubuntu-latest
-
-    services:
-      postgres:
-        image: postgres:16
-        env:
-          POSTGRES_USER: test
-          POSTGRES_PASSWORD: test
-          POSTGRES_DB: test
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd="pg_isready"
-          --health-interval=5s
-          --health-timeout=5s
-          --health-retries=5
-
-    env:
-      DATABASE_URL: postgresql://test:test@localhost:5432/test
-
-    steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v2
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: 'pnpm'
-
-      - run: pnpm install --frozen-lockfile
-
-      # Type check
-      - run: pnpm tsc --noEmit
-
-      # Lint
-      - run: pnpm biome check .
-
-      # Unit tests (no DB needed)
-      - run: pnpm test:unit
-
-      # Integration tests (DB needed)
-      - run: pnpm db:migrate
-      - run: pnpm test:integration
-
-      # E2E tests
-      - run: pnpm exec playwright install --with-deps
-      - run: pnpm test:e2e
-```
-
-### Package Scripts
-
-```json
-{
-  "scripts": {
-    "test": "vitest run",
-    "test:watch": "vitest",
-    "test:unit": "vitest run --project unit",
-    "test:integration": "vitest run --project integration",
-    "test:e2e": "playwright test",
-    "test:coverage": "vitest run --coverage"
-  }
-}
-```
-
-### Vitest Configuration
-
-```typescript
-// vitest.config.ts
-import { defineConfig } from 'vitest/config';
-import path from 'node:path';
-
-export default defineConfig({
-  test: {
-    globals: true,
-    environment: 'node',
-    include: ['src/**/*.test.ts', 'tests/**/*.test.ts'],
-    exclude: ['tests/e2e/**'],
-    coverage: {
-      provider: 'v8',
-      include: ['src/domain/**', 'src/application/**'],
-      exclude: ['**/*.test.ts', '**/test-helpers/**'],
-      thresholds: {
-        'src/domain/**': {
-          statements: 100,
-          branches: 100,
-          functions: 100,
-          lines: 100,
-        },
-      },
-    },
-  },
-  resolve: {
-    alias: {
-      '@': path.resolve(__dirname, './'),
-    },
-  },
-});
-```
+This ADR defines the **strategy and boundaries**; the files above define the **exact commands and versions**.
 
 ## Consequences
 
@@ -488,7 +397,7 @@ export default defineConfig({
 
 ### Negative
 
-1. **Setup Complexity** — Need Docker for local integration tests
+1. **Setup Complexity** — Need a Postgres database for local integration tests (local service, Docker, or Neon)
 2. **Slower CI** — Integration + E2E adds time
 
 ### Mitigations

@@ -2,14 +2,17 @@
 
 **Status:** Ready
 **Layer:** Adapters
-**Dependencies:** SPEC-004 (Ports)
-**Implements:** ADR-001, ADR-005
+**Dependencies:** SPEC-004 (Ports), SPEC-006 (Drizzle Schema)
+**Implements:** ADR-005 (Payment Boundary)
 
 ---
 
 ## Objective
 
-Implement the `PaymentGateway` interface using Stripe. This adapter bridges the Application layer's payment abstraction to the concrete Stripe SDK.
+Implement `PaymentGateway` using Stripe while keeping:
+
+- Domain free of Stripe knowledge
+- Application ports free of Stripe SDK types
 
 ---
 
@@ -18,347 +21,79 @@ Implement the `PaymentGateway` interface using Stripe. This adapter bridges the 
 ```
 src/adapters/gateways/
 ├── stripe-payment-gateway.ts
-├── stripe-payment-gateway.test.ts
-└── (index.ts - updated)
+└── index.ts
 ```
 
 ---
 
-## Design Pattern: Adapter
+## Plan ↔ Price Mapping (Required)
 
-```
-┌─────────────────────────────────────────────────┐
-│         APPLICATION LAYER (ports)               │
-│                                                 │
-│   PaymentGateway (interface)                    │
-│   - createCheckoutSession()                     │
-│   - createPortalSession()                       │
-│   - constructWebhookEvent()                     │
-│                                                 │
-└─────────────────────────────────────────────────┘
-                    ▲
-                    │ implements
-                    │
-┌─────────────────────────────────────────────────┐
-│         ADAPTERS LAYER                          │
-│                                                 │
-│   StripePaymentGateway                          │
-│   - wraps Stripe SDK                            │
-│   - maps domain types ↔ Stripe types            │
-│   - handles webhook signature verification      │
-│                                                 │
-└─────────────────────────────────────────────────┘
-                    │
-                    │ uses
-                    ▼
-┌─────────────────────────────────────────────────┐
-│         EXTERNAL SERVICES                       │
-│                                                 │
-│   Stripe SDK                                    │
-│   - stripe.checkout.sessions.create()           │
-│   - stripe.billingPortal.sessions.create()      │
-│   - stripe.webhooks.constructEvent()            │
-│                                                 │
-└─────────────────────────────────────────────────┘
-```
+Stripe price IDs are configuration. Map them at the adapter boundary:
+
+- Monthly: `NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY`
+- Annual: `NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL`
+
+The mapping is **the only place** where those price IDs appear.
 
 ---
 
-## Test Strategy
+## Checkout Session Creation
 
-PaymentGateway tests use a **Fake** Stripe client (per ADR-003). We inject a fake implementation that mimics Stripe responses without network calls.
+`createCheckoutSession()` MUST:
 
----
+- Use `mode: 'subscription'`
+- Use an existing Stripe customer id (created upstream if needed)
+- Use the mapped price id for the selected domain plan
+- Set subscription metadata:
+  - `user_id = <internal user uuid>`
 
-## Test First
-
-### File: `src/adapters/gateways/stripe-payment-gateway.test.ts`
-
-```typescript
-import { describe, it, expect, beforeEach } from 'vitest';
-import { StripePaymentGateway } from './stripe-payment-gateway';
-import type { CreateCheckoutInput, CreatePortalInput } from '@/src/application/ports';
-
-// Fake Stripe client for testing
-class FakeStripeClient {
-  checkout = {
-    sessions: {
-      create: async (params: any) => ({
-        id: 'cs_test_123',
-        url: `https://checkout.stripe.com/c/pay/cs_test_123`,
-      }),
-    },
-  };
-
-  billingPortal = {
-    sessions: {
-      create: async (params: any) => ({
-        id: 'bps_test_123',
-        url: `https://billing.stripe.com/session/bps_test_123`,
-      }),
-    },
-  };
-
-  webhooks = {
-    constructEvent: (payload: string, signature: string, secret: string) => {
-      if (signature === 'invalid') {
-        throw new Error('Invalid signature');
-      }
-      return JSON.parse(payload);
-    },
-  };
-}
-
-describe('StripePaymentGateway', () => {
-  let fakeStripe: FakeStripeClient;
-  let gateway: StripePaymentGateway;
-
-  beforeEach(() => {
-    fakeStripe = new FakeStripeClient();
-    gateway = new StripePaymentGateway(fakeStripe as any, 'whsec_test');
-  });
-
-  describe('createCheckoutSession', () => {
-    it('creates checkout session with correct parameters', async () => {
-      const input: CreateCheckoutInput = {
-        userId: 'user_123',
-        email: 'test@example.com',
-        priceId: 'price_monthly',
-        successUrl: 'https://app.com/success',
-        cancelUrl: 'https://app.com/cancel',
-      };
-
-      const result = await gateway.createCheckoutSession(input);
-
-      expect(result.url).toContain('https://checkout.stripe.com');
-    });
-
-    it('returns checkout URL', async () => {
-      const input: CreateCheckoutInput = {
-        userId: 'user_123',
-        email: 'test@example.com',
-        priceId: 'price_monthly',
-        successUrl: 'https://app.com/success',
-        cancelUrl: 'https://app.com/cancel',
-      };
-
-      const result = await gateway.createCheckoutSession(input);
-
-      expect(result.url).toBeDefined();
-      expect(typeof result.url).toBe('string');
-    });
-  });
-
-  describe('createPortalSession', () => {
-    it('creates billing portal session', async () => {
-      const input: CreatePortalInput = {
-        customerId: 'cus_test_123',
-        returnUrl: 'https://app.com/settings',
-      };
-
-      const result = await gateway.createPortalSession(input);
-
-      expect(result.url).toContain('https://billing.stripe.com');
-    });
-  });
-
-  describe('constructWebhookEvent', () => {
-    it('parses valid webhook payload', async () => {
-      const payload = JSON.stringify({
-        id: 'evt_123',
-        type: 'checkout.session.completed',
-        data: { object: { id: 'cs_123' } },
-      });
-
-      const event = await gateway.constructWebhookEvent(payload, 'valid_sig');
-
-      expect(event.id).toBe('evt_123');
-      expect(event.type).toBe('checkout.session.completed');
-    });
-
-    it('throws on invalid signature', async () => {
-      const payload = JSON.stringify({ id: 'evt_123', type: 'test' });
-
-      await expect(
-        gateway.constructWebhookEvent(payload, 'invalid')
-      ).rejects.toThrow('Invalid signature');
-    });
-  });
-});
-```
+If Stripe does not return a `session.url`, throw `ApplicationError('STRIPE_ERROR')` in the controller/use case layer.
 
 ---
 
-## Implementation
+## Webhook Processing
 
-### File: `src/adapters/gateways/stripe-payment-gateway.ts`
+`processWebhookEvent(rawBody, signature)` MUST:
 
-```typescript
-import Stripe from 'stripe';
-import type {
-  PaymentGateway,
-  CreateCheckoutInput,
-  CreatePortalInput,
-  CheckoutSessionResult,
-  PortalSessionResult,
-  WebhookEvent,
-} from '@/src/application/ports';
+1. Verify signature using `stripe.webhooks.constructEvent`
+2. Normalize the event into `WebhookEventResult` (SPEC-004)
+3. Include:
+   - `eventId`
+   - `type`
+   - `processed` flag
+   - `subscriptionUpdate` when the event represents a subscription state change
 
-/**
- * Stripe implementation of PaymentGateway
- */
-export class StripePaymentGateway implements PaymentGateway {
-  constructor(
-    private readonly stripe: Stripe,
-    private readonly webhookSecret: string
-  ) {}
+**Events handled (minimum):**
 
-  /**
-   * Create a Stripe Checkout session for subscription
-   */
-  async createCheckoutSession(input: CreateCheckoutInput): Promise<CheckoutSessionResult> {
-    const session = await this.stripe.checkout.sessions.create({
-      mode: 'subscription',
-      payment_method_types: ['card'],
-      customer_email: input.email,
-      client_reference_id: input.userId,
-      line_items: [
-        {
-          price: input.priceId,
-          quantity: 1,
-        },
-      ],
-      success_url: input.successUrl,
-      cancel_url: input.cancelUrl,
-      metadata: {
-        userId: input.userId,
-      },
-    });
+- `checkout.session.completed`
+- `customer.subscription.created`
+- `customer.subscription.updated`
+- `customer.subscription.deleted`
 
-    if (!session.url) {
-      throw new Error('Failed to create checkout session URL');
-    }
+**User mapping rule:**
 
-    return { url: session.url };
-  }
-
-  /**
-   * Create a Stripe Billing Portal session
-   */
-  async createPortalSession(input: CreatePortalInput): Promise<PortalSessionResult> {
-    const session = await this.stripe.billingPortal.sessions.create({
-      customer: input.customerId,
-      return_url: input.returnUrl,
-    });
-
-    return { url: session.url };
-  }
-
-  /**
-   * Verify and parse Stripe webhook event
-   */
-  async constructWebhookEvent(payload: string, signature: string): Promise<WebhookEvent> {
-    const event = this.stripe.webhooks.constructEvent(
-      payload,
-      signature,
-      this.webhookSecret
-    );
-
-    return {
-      id: event.id,
-      type: event.type,
-      data: event.data.object,
-    };
-  }
-}
-
-/**
- * Factory function for production use
- */
-export function createStripePaymentGateway(): StripePaymentGateway {
-  const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-    apiVersion: '2024-12-18.acacia',
-  });
-
-  return new StripePaymentGateway(stripe, process.env.STRIPE_WEBHOOK_SECRET!);
-}
-```
+- The internal `userId` must come from Stripe metadata (`subscription_data.metadata.user_id`), not from email.
 
 ---
 
-## Webhook Handler Pattern
+## Stripe API Version Pinning
 
-### File: `app/api/stripe/webhook/route.ts` (Reference)
+Pin Stripe API version explicitly (do not float):
 
-```typescript
-import { NextRequest, NextResponse } from 'next/server';
-import { createStripePaymentGateway } from '@/src/adapters/gateways';
-import { DrizzleSubscriptionRepository } from '@/src/adapters/repositories';
-import { db } from '@/lib/db';
-
-export async function POST(req: NextRequest) {
-  const payload = await req.text();
-  const signature = req.headers.get('stripe-signature');
-
-  if (!signature) {
-    return NextResponse.json({ error: 'Missing signature' }, { status: 400 });
-  }
-
-  const paymentGateway = createStripePaymentGateway();
-  const subscriptionRepo = new DrizzleSubscriptionRepository(db);
-
-  try {
-    const event = await paymentGateway.constructWebhookEvent(payload, signature);
-
-    switch (event.type) {
-      case 'checkout.session.completed':
-        // Handle checkout completion
-        break;
-      case 'customer.subscription.updated':
-        // Handle subscription update
-        break;
-      case 'customer.subscription.deleted':
-        // Handle subscription cancellation
-        break;
-    }
-
-    return NextResponse.json({ received: true });
-  } catch (error) {
-    console.error('Webhook error:', error);
-    return NextResponse.json({ error: 'Webhook failed' }, { status: 400 });
-  }
-}
-```
+- Use the Stripe SDK’s built-in `Stripe.API_VERSION` constant (from the installed `stripe` package), or
+- Set an explicit version string and update it intentionally when bumping `stripe`.
 
 ---
 
-## Environment Variables
+## Testing
 
-```env
-# .env.example additions
-STRIPE_SECRET_KEY=sk_test_...
-STRIPE_PUBLISHABLE_KEY=pk_test_...
-STRIPE_WEBHOOK_SECRET=whsec_...
-STRIPE_PRICE_MONTHLY=price_...
-STRIPE_PRICE_ANNUAL=price_...
-```
+Gateway tests are unit tests:
 
----
+- Inject a fake Stripe client
+- No network calls
+- Verify that:
+  - `constructEvent` is used for signature verification
+  - Correct Stripe parameters are passed for checkout/portal session creation
 
-## Quality Gate
+Idempotency behavior is NOT owned by this gateway (it is implemented via `stripe_events` persistence + controller/use case logic per `docs/specs/master_spec.md` Section 4.4.2).
 
-```bash
-pnpm test src/adapters/gateways/stripe-payment-gateway.test.ts
-```
-
----
-
-## Definition of Done
-
-- [ ] StripePaymentGateway implements PaymentGateway interface
-- [ ] Checkout session creation works
-- [ ] Billing portal session creation works
-- [ ] Webhook signature verification works
-- [ ] Testable with fake Stripe client
-- [ ] All tests pass without real Stripe calls
-- [ ] Factory function for production use

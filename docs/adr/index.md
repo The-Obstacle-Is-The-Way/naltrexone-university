@@ -58,7 +58,7 @@ Domain services (pure functions): `gradeAnswer()`, `isEntitled()`, `computeStrea
 ### ADR-003: Testing Strategy
 
 - **Unit tests** — Domain and Use Cases, no mocks, 100% coverage
-- **Integration tests** — Real database, real Stripe test mode
+- **Integration tests** — Real database; external providers mocked at the boundary (Stripe/Clerk)
 - **E2E tests** — Critical user flows only
 
 Fakes over mocks. Test behavior, not implementation.
@@ -96,14 +96,14 @@ Type-safe errors at boundaries, no stack traces leaked to clients.
 Constructor injection with factory functions. Use cases receive interfaces, not implementations.
 
 ```
-Container → Factory → Use Case (with injected repos/gateways)
+Controller/Route Handler → Factory → Use Case (with injected ports)
 ```
 
-No DI framework — simple factory functions in `lib/container.ts`.
+No DI framework — wiring lives in `lib/container.ts` factories that are called by entry points (DB client is the only allowed singleton).
 
 ### ADR-008: Logging & Observability
 
-Structured JSON logging with Pino. Request ID correlation. Security-aware: no PII in logs.
+Structured JSON logging to stdout with request ID correlation. Security-aware: no PII in logs.
 
 ```
 Controller → Logger (with requestId, userId) → Vercel Log Drain
@@ -118,7 +118,6 @@ Defense in depth aligned with OWASP Top 10:
 - Input validation (Zod)
 - Parameterized queries (Drizzle)
 - Security headers
-- Rate limiting
 
 ### ADR-010: Caching Strategy
 

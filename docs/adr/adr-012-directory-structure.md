@@ -11,7 +11,7 @@
 
 We have a conflict between two approaches:
 
-1. **Master Spec (SPEC.md)** — Describes a flat, Next.js-native structure with server actions directly in `/app/(app)/app/_actions/`
+1. **Earlier master spec drafts** — Used a flat, Next.js-native structure with server actions directly in `/app/(app)/app/_actions/`
 2. **ADR-001 (Clean Architecture)** — Prescribes a layered `src/` structure with domain, application, and adapter layers
 
 This ADR **resolves the conflict** by defining the authoritative directory structure that:
@@ -241,7 +241,7 @@ We adopt a **hybrid structure** that places Clean Architecture layers under `src
 | `src/adapters/` | Interface Adapters | Glue between use cases and frameworks |
 | `app/`, `components/`, `lib/`, `db/` | Frameworks & Drivers | Next.js, React, Drizzle, external SDKs |
 
-### Import Rules (Enforced by Lint)
+### Import Rules (Enforced by Architecture + Review)
 
 ```typescript
 // ALLOWED: Inner layers importing from inner layers
@@ -265,53 +265,17 @@ import { db } from '@/lib/db';  // ERROR! Domain cannot import frameworks
 
 ### TypeScript Path Aliases
 
-```json
-// tsconfig.json
-{
-  "compilerOptions": {
-    "paths": {
-      "@/*": ["./*"],
-      "@/domain/*": ["./src/domain/*"],
-      "@/application/*": ["./src/application/*"],
-      "@/adapters/*": ["./src/adapters/*"]
-    }
-  }
-}
-```
+We use `@/*` mapped to the repo root (see `tsconfig.json`). This supports imports like `@/src/domain/...` without additional aliases.
+
+If we later add narrower aliases (e.g., `@/domain/*`), they must remain a convenience only and MUST NOT change the layer boundaries.
 
 ### Server Actions Location
 
-Server Actions are **controllers** in Clean Architecture terms. They live in `src/adapters/controllers/` and are marked with `'use server'`:
+Server Actions are **controllers** in Clean Architecture terms.
 
-```typescript
-// src/adapters/controllers/question-controller.ts
-'use server';
-
-import { getAuthGateway, createSubmitAnswerUseCase } from '@/lib/container';
-import { ok, err, handleError, type ActionResult } from './action-result';
-import type { SubmitAnswerOutput } from '@/application/use-cases/submit-answer';
-
-export async function submitAnswer(
-  questionId: string,
-  choiceId: string
-): Promise<ActionResult<SubmitAnswerOutput>> {
-  try {
-    const authGateway = getAuthGateway();
-    const user = await authGateway.requireUser();
-
-    const useCase = createSubmitAnswerUseCase();
-    const result = await useCase.execute({
-      userId: user.id,
-      questionId,
-      choiceId,
-    });
-
-    return ok(result);
-  } catch (error) {
-    return handleError(error);
-  }
-}
-```
+- They live in `src/adapters/controllers/`
+- They are implemented as `'use server'` entry points
+- They follow the controller conventions in `docs/specs/spec-010-server-actions.md`
 
 **Why not `/app/(app)/app/_actions/`?**
 
@@ -343,52 +307,10 @@ export default async function PracticePage() {
 
 ### Composition Root
 
-All dependency wiring happens in `lib/container.ts`:
+Dependency wiring happens at entry points (controllers and route handlers), using factory functions (see ADR-007).
 
-```typescript
-// lib/container.ts
-import 'server-only';
-
-// Repository implementations
-import { DrizzleQuestionRepository } from '@/src/adapters/repositories/drizzle-question-repository';
-import { DrizzleAttemptRepository } from '@/src/adapters/repositories/drizzle-attempt-repository';
-
-// Gateway implementations
-import { ClerkAuthGateway } from '@/src/adapters/gateways/clerk-auth-gateway';
-import { StripePaymentGateway } from '@/src/adapters/gateways/stripe-payment-gateway';
-
-// Use cases
-import { SubmitAnswerUseCase } from '@/src/application/use-cases/submit-answer';
-
-// Singletons
-let questionRepo: DrizzleQuestionRepository | null = null;
-let attemptRepo: DrizzleAttemptRepository | null = null;
-
-export function getQuestionRepository() {
-  return questionRepo ??= new DrizzleQuestionRepository();
-}
-
-export function getAttemptRepository() {
-  return attemptRepo ??= new DrizzleAttemptRepository();
-}
-
-export function getAuthGateway() {
-  return new ClerkAuthGateway();
-}
-
-export function getPaymentGateway() {
-  return new StripePaymentGateway();
-}
-
-export function createSubmitAnswerUseCase() {
-  return new SubmitAnswerUseCase(
-    getQuestionRepository(),
-    getAttemptRepository()
-  );
-}
-
-// ... other factories
-```
+- Allowed singleton: `lib/db.ts` (connection pooling / client reuse)
+- Prohibited singletons: repositories, gateways, and use cases
 
 ### Test File Placement
 
