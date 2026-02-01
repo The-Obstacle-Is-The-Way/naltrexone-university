@@ -11,6 +11,8 @@ import type {
   AuthGateway,
   CheckoutSessionInput,
   CheckoutSessionOutput,
+  CreateCustomerInput,
+  CreateCustomerOutput,
   PaymentGateway,
   PortalSessionInput,
   PortalSessionOutput,
@@ -95,22 +97,33 @@ export class FakeAuthGateway implements AuthGateway {
 }
 
 export class FakePaymentGateway implements PaymentGateway {
+  readonly customerInputs: CreateCustomerInput[] = [];
   readonly checkoutInputs: CheckoutSessionInput[] = [];
   readonly portalInputs: PortalSessionInput[] = [];
   readonly webhookInputs: Array<{ rawBody: string; signature: string }> = [];
 
+  private readonly stripeCustomerId: string;
   private readonly checkoutUrl: string;
   private readonly portalUrl: string;
   private readonly webhookResult: WebhookEventResult;
 
   constructor(input: {
+    stripeCustomerId: string;
     checkoutUrl: string;
     portalUrl: string;
     webhookResult: WebhookEventResult;
   }) {
+    this.stripeCustomerId = input.stripeCustomerId;
     this.checkoutUrl = input.checkoutUrl;
     this.portalUrl = input.portalUrl;
     this.webhookResult = input.webhookResult;
+  }
+
+  async createCustomer(
+    input: CreateCustomerInput,
+  ): Promise<CreateCustomerOutput> {
+    this.customerInputs.push(input);
+    return { stripeCustomerId: this.stripeCustomerId };
   }
 
   async createCheckoutSession(

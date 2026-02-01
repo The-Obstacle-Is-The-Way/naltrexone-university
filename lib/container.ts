@@ -1,5 +1,6 @@
 import 'server-only';
 import { currentUser } from '@clerk/nextjs/server';
+import type { BillingControllerDeps } from '@/src/adapters/controllers/billing-controller';
 import type { QuestionControllerDeps } from '@/src/adapters/controllers/question-controller';
 import type { StripeWebhookDeps } from '@/src/adapters/controllers/stripe-webhook-controller';
 import {
@@ -85,6 +86,7 @@ export type UseCaseFactories = {
 export type ControllerFactories = {
   createStripeWebhookDeps: () => StripeWebhookDeps;
   createQuestionControllerDeps: () => QuestionControllerDeps;
+  createBillingControllerDeps: () => BillingControllerDeps;
 };
 
 export type ContainerOverrides = {
@@ -213,6 +215,13 @@ export function createContainer(overrides: ContainerOverrides = {}) {
       checkEntitlementUseCase: useCases.createCheckEntitlementUseCase(),
       getNextQuestionUseCase: useCases.createGetNextQuestionUseCase(),
       submitAnswerUseCase: useCases.createSubmitAnswerUseCase(),
+    }),
+    createBillingControllerDeps: () => ({
+      authGateway: gateways.createAuthGateway(),
+      stripeCustomerRepository: repositories.createStripeCustomerRepository(),
+      paymentGateway: gateways.createPaymentGateway(),
+      getClerkUserId: async () => (await currentUser())?.id ?? null,
+      appUrl: primitives.env.NEXT_PUBLIC_APP_URL,
     }),
   };
 

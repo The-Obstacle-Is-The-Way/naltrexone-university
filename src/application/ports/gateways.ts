@@ -34,6 +34,14 @@ export type PortalSessionInput = {
 
 export type PortalSessionOutput = { url: string };
 
+export type CreateCustomerInput = {
+  userId: string; // internal UUID
+  clerkUserId: string; // opaque external id
+  email: string;
+};
+
+export type CreateCustomerOutput = { stripeCustomerId: string };
+
 export type WebhookEventResult = {
   eventId: string;
   type:
@@ -54,6 +62,8 @@ export type WebhookEventResult = {
 };
 
 export interface PaymentGateway {
+  createCustomer(input: CreateCustomerInput): Promise<CreateCustomerOutput>;
+
   createCheckoutSession(
     input: CheckoutSessionInput,
   ): Promise<CheckoutSessionOutput>;
