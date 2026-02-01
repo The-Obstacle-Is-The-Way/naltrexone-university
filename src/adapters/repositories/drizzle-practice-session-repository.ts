@@ -1,4 +1,4 @@
-import { and, eq } from 'drizzle-orm';
+import { and, eq, isNull } from 'drizzle-orm';
 import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { z } from 'zod';
 import type * as schema from '@/db/schema';
@@ -98,11 +98,22 @@ export class DrizzlePracticeSessionRepository
       .update(practiceSessions)
       .set({ endedAt })
       .where(
-        and(eq(practiceSessions.id, id), eq(practiceSessions.userId, userId)),
+        and(
+          eq(practiceSessions.id, id),
+          eq(practiceSessions.userId, userId),
+          isNull(practiceSessions.endedAt),
+        ),
       )
       .returning();
 
     if (!updated) {
+      const current = await this.findByIdAndUserId(id, userId);
+      if (!current) {
+        throw new ApplicationError('NOT_FOUND', 'Practice session not found');
+      }
+      if (current.endedAt) {
+        throw new ApplicationError('CONFLICT', 'Practice session already ended');
+      }
       throw new ApplicationError(
         'INTERNAL_ERROR',
         'Failed to end practice session',

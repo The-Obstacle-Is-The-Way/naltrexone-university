@@ -27,27 +27,39 @@ export class DrizzleStripeCustomerRepository
     const [inserted] = await this.db
       .insert(stripeCustomers)
       .values({ userId, stripeCustomerId })
-      .onConflictDoNothing({ target: stripeCustomers.userId })
+      .onConflictDoNothing()
       .returning();
 
     if (inserted) return;
 
-    const existing = await this.db.query.stripeCustomers.findFirst({
+    const existingByUserId = await this.db.query.stripeCustomers.findFirst({
       where: eq(stripeCustomers.userId, userId),
     });
 
-    if (!existing) {
-      throw new ApplicationError(
-        'INTERNAL_ERROR',
-        'Failed to insert Stripe customer (missing after conflict)',
-      );
-    }
-
-    if (existing.stripeCustomerId !== stripeCustomerId) {
+    if (existingByUserId) {
+      if (existingByUserId.stripeCustomerId === stripeCustomerId) return;
       throw new ApplicationError(
         'CONFLICT',
         'Stripe customer already exists with a different stripeCustomerId',
       );
     }
+
+    const existingByStripeCustomerId = await this.db.query.stripeCustomers.findFirst(
+      {
+        where: eq(stripeCustomers.stripeCustomerId, stripeCustomerId),
+      },
+    );
+
+    if (existingByStripeCustomerId) {
+      throw new ApplicationError(
+        'CONFLICT',
+        'Stripe customer id is already mapped to a different user',
+      );
+    }
+
+    throw new ApplicationError(
+      'INTERNAL_ERROR',
+      'Failed to insert Stripe customer (missing after conflict)',
+    );
   }
 }

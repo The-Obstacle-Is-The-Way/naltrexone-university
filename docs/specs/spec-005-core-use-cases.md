@@ -1,5 +1,9 @@
 # SPEC-005: Core Use Cases (Interactors)
 
+> **⚠️ TDD MANDATE:** This spec follows Test-Driven Development (Uncle Bob / Robert C. Martin).
+> Write tests FIRST. Red → Green → Refactor. No implementation without a failing test.
+> Principles: SOLID, DRY, Clean Code, Gang of Four patterns where appropriate.
+
 **Status:** Ready
 **Layer:** Application
 **Dependencies:** SPEC-003 (Domain Services), SPEC-004 (Ports)
