@@ -272,7 +272,6 @@ test.describe('Practice Flow', () => {
 ```typescript
 // src/domain/test-helpers/factories.ts
 import type { Question, Choice, User, Subscription } from '../entities';
-import { QuestionDifficulty, QuestionStatus, SubscriptionStatus, SubscriptionPlan } from '../value-objects';
 
 let idCounter = 0;
 const nextId = () => `test-id-${++idCounter}`;
@@ -283,8 +282,8 @@ export function createQuestion(overrides: Partial<Question> = {}): Question {
     slug: `test-question-${idCounter}`,
     stemMd: 'What is the answer?',
     explanationMd: 'The answer is B.',
-    difficulty: QuestionDifficulty.Medium,
-    status: QuestionStatus.Published,
+    difficulty: 'medium',
+    status: 'published',
     choices: [
       createChoice({ label: 'A', isCorrect: false }),
       createChoice({ label: 'B', isCorrect: true }),
@@ -322,8 +321,8 @@ export function createSubscription(overrides: Partial<Subscription> = {}): Subsc
   return {
     id: nextId(),
     userId: 'user1',
-    plan: SubscriptionPlan.Monthly,
-    status: SubscriptionStatus.Active,
+    plan: 'monthly',
+    status: 'active',
     currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
     cancelAtPeriodEnd: false,
     createdAt: new Date(),

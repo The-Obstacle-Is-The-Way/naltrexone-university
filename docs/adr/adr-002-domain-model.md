@@ -185,104 +185,131 @@ Value Objects have no identity. Two VOs with the same attributes are equal.
 
 ```typescript
 // src/domain/value-objects/question-difficulty.ts
-export const QuestionDifficulty = {
-  Easy: 'easy',
-  Medium: 'medium',
-  Hard: 'hard',
-} as const;
+export const AllDifficulties = ['easy', 'medium', 'hard'] as const;
 
-export type QuestionDifficulty = typeof QuestionDifficulty[keyof typeof QuestionDifficulty];
+export type QuestionDifficulty = typeof AllDifficulties[number];
+
+export function isValidDifficulty(value: string): value is QuestionDifficulty {
+  return AllDifficulties.includes(value as QuestionDifficulty);
+}
 ```
 
 #### QuestionStatus
 
 ```typescript
 // src/domain/value-objects/question-status.ts
-export const QuestionStatus = {
-  Draft: 'draft',
-  Published: 'published',
-  Archived: 'archived',
-} as const;
+export const AllQuestionStatuses = ['draft', 'published', 'archived'] as const;
 
-export type QuestionStatus = typeof QuestionStatus[keyof typeof QuestionStatus];
+export type QuestionStatus = typeof AllQuestionStatuses[number];
+
+export function isValidQuestionStatus(value: string): value is QuestionStatus {
+  return AllQuestionStatuses.includes(value as QuestionStatus);
+}
+
+export function isVisibleStatus(status: QuestionStatus): boolean {
+  return status === 'published';
+}
 ```
 
 #### SubscriptionStatus
 
 ```typescript
 // src/domain/value-objects/subscription-status.ts
-export const SubscriptionStatus = {
-  Incomplete: 'incomplete',
-  IncompleteExpired: 'incomplete_expired',
-  Trialing: 'trialing',
-  Active: 'active',
-  PastDue: 'past_due',
-  Canceled: 'canceled',
-  Unpaid: 'unpaid',
-  Paused: 'paused',
-} as const;
+export const AllSubscriptionStatuses = [
+  'incomplete',
+  'incomplete_expired',
+  'trialing',
+  'active',
+  'past_due',
+  'canceled',
+  'unpaid',
+  'paused',
+] as const;
 
-export type SubscriptionStatus = typeof SubscriptionStatus[keyof typeof SubscriptionStatus];
+export type SubscriptionStatus = typeof AllSubscriptionStatuses[number];
 
-// Entitled statuses (business rule encoded in value object)
+export function isValidSubscriptionStatus(
+  value: string,
+): value is SubscriptionStatus {
+  return AllSubscriptionStatuses.includes(value as SubscriptionStatus);
+}
+
 export const EntitledStatuses: readonly SubscriptionStatus[] = [
-  SubscriptionStatus.Active,
-  SubscriptionStatus.Trialing,
+  'active',
+  'trialing',
 ];
+
+export function isEntitledStatus(status: SubscriptionStatus): boolean {
+  return EntitledStatuses.includes(status);
+}
 ```
 
 #### PracticeMode
 
 ```typescript
 // src/domain/value-objects/practice-mode.ts
-export const PracticeMode = {
-  Tutor: 'tutor',   // Show explanation immediately after answer
-  Exam: 'exam',     // Hide explanation until session ends
-} as const;
+export const AllPracticeModes = ['tutor', 'exam'] as const;
 
-export type PracticeMode = typeof PracticeMode[keyof typeof PracticeMode];
+export type PracticeMode = typeof AllPracticeModes[number];
+
+export function isValidPracticeMode(value: string): value is PracticeMode {
+  return AllPracticeModes.includes(value as PracticeMode);
+}
+
+export function shouldShowExplanation(
+  mode: PracticeMode,
+  sessionEnded: boolean,
+): boolean {
+  if (mode === 'tutor') return true;
+  return sessionEnded;
+}
 ```
 
 #### ChoiceLabel
 
 ```typescript
 // src/domain/value-objects/choice-label.ts
-export const ChoiceLabel = {
-  A: 'A',
-  B: 'B',
-  C: 'C',
-  D: 'D',
-  E: 'E',
-} as const;
+export const AllChoiceLabels = ['A', 'B', 'C', 'D', 'E'] as const;
 
-export type ChoiceLabel = typeof ChoiceLabel[keyof typeof ChoiceLabel];
+export type ChoiceLabel = typeof AllChoiceLabels[number];
+
+export function isValidChoiceLabel(value: string): value is ChoiceLabel {
+  return AllChoiceLabels.includes(value as ChoiceLabel);
+}
 ```
 
 #### TagKind
 
 ```typescript
 // src/domain/value-objects/tag-kind.ts
-export const TagKind = {
-  Domain: 'domain',        // Exam blueprint domain
-  Topic: 'topic',          // Clinical topic
-  Substance: 'substance',  // Drug/substance class
-  Treatment: 'treatment',  // Treatment modality
-  Diagnosis: 'diagnosis',  // DSM/ICD category
-} as const;
+export const AllTagKinds = [
+  'domain', // exam blueprint domain
+  'topic', // clinical topic
+  'substance', // drug/substance class
+  'treatment', // treatment modality
+  'diagnosis', // DSM/ICD category
+] as const;
 
-export type TagKind = typeof TagKind[keyof typeof TagKind];
+export type TagKind = typeof AllTagKinds[number];
+
+export function isValidTagKind(value: string): value is TagKind {
+  return AllTagKinds.includes(value as TagKind);
+}
 ```
 
 #### SubscriptionPlan
 
 ```typescript
 // src/domain/value-objects/subscription-plan.ts
-export const SubscriptionPlan = {
-  Monthly: 'monthly',
-  Annual: 'annual',
-} as const;
+export const AllSubscriptionPlans = ['monthly', 'annual'] as const;
 
-export type SubscriptionPlan = typeof SubscriptionPlan[keyof typeof SubscriptionPlan];
+export type SubscriptionPlan = typeof AllSubscriptionPlans[number];
+
+export function isValidSubscriptionPlan(
+  value: string,
+): value is SubscriptionPlan {
+  return AllSubscriptionPlans.includes(value as SubscriptionPlan);
+}
 ```
 
 **Note:** This is the domain's concept of a plan. The mapping to vendor-specific Stripe price IDs (e.g., `NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY`, `NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL`) happens at the adapter boundary via configuration.
@@ -436,7 +463,6 @@ export function filterAttemptsInWindow(
 ```typescript
 // src/domain/services/session.ts
 import type { PracticeSession, Attempt } from '../entities';
-import { PracticeMode } from '../value-objects';
 
 export type SessionProgress = {
   readonly total: number;
@@ -482,7 +508,7 @@ export function shouldShowExplanation(
   if (!session) return true;
 
   // Tutor mode = immediate explanation
-  if (session.mode === PracticeMode.Tutor) return true;
+  if (session.mode === 'tutor') return true;
 
   // Exam mode = only after session ends
   return session.endedAt !== null;

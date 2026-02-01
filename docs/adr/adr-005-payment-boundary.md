@@ -116,7 +116,7 @@ This ADR records the boundary decision; specs above define the exact contracts a
 describe('isEntitled', () => {
   it('returns true for active subscription with future period end', () => {
     const subscription = createSubscription({
-      status: SubscriptionStatus.Active,
+      status: 'active',
       currentPeriodEnd: new Date(Date.now() + 86400000),
     });
 
@@ -128,7 +128,7 @@ describe('isEntitled', () => {
 describe('CheckEntitlementUseCase', () => {
   it('returns entitled when user has active subscription', async () => {
     const repo = new FakeSubscriptionRepository([
-      createSubscription({ userId: 'user1', status: SubscriptionStatus.Active }),
+      createSubscription({ userId: 'user1', status: 'active' }),
     ]);
 
     const useCase = new CheckEntitlementUseCase(repo);
@@ -153,8 +153,8 @@ describe('ProcessBillingEventUseCase', () => {
       processed: true,
       subscriptionUpdate: {
         userId: 'user1',
-        plan: SubscriptionPlan.Monthly,
-        status: SubscriptionStatus.Active,
+        plan: 'monthly',
+        status: 'active',
         currentPeriodEnd: new Date(),
         cancelAtPeriodEnd: false,
       },
@@ -171,7 +171,7 @@ describe('StripePaymentGateway', () => {
     const result = await gateway.createCheckoutSession({
       userId: 'test-user',
       userEmail: 'test@example.com',
-      plan: SubscriptionPlan.Monthly,  // Domain plan, NOT price ID
+      plan: 'monthly', // Domain plan, NOT price ID
       successUrl: 'https://example.com/success',
       cancelUrl: 'https://example.com/cancel',
     });
