@@ -1,8 +1,9 @@
 # DEBT-029: Untested Stripe Prices Config Module
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P2
 **Date:** 2026-02-01
+**Resolved:** 2026-02-01
 
 ---
 
@@ -87,12 +88,12 @@ describe('stripe-prices config', () => {
 
 ## Acceptance Criteria
 
-- [ ] Test file exists at `src/adapters/config/stripe-prices.test.ts`
-- [ ] Forward mapping tests (plan → price ID)
-- [ ] Reverse mapping tests (price ID → plan)
-- [ ] Unknown price ID returns null test
-- [ ] Round-trip bidirectional tests
-- [ ] Tests run in CI
+- [x] Test file exists at `src/adapters/config/stripe-prices.test.ts`
+- [x] Forward mapping tests (plan → price ID)
+- [x] Reverse mapping tests (price ID → plan)
+- [x] Unknown price ID returns null test
+- [x] Round-trip bidirectional tests
+- [x] Tests run in CI
 
 ## Related
 

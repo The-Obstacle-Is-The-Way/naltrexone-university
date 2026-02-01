@@ -1,8 +1,9 @@
 # DEBT-033: Flat Repository Structure (No Aggregate Organization)
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P3
 **Date:** 2026-02-01
+**Resolved:** 2026-02-01
 
 ---
 
@@ -77,15 +78,16 @@ src/adapters/repositories/
 
 ## Resolution
 
-1. Document aggregate boundaries in ADR-013
-2. When adding 9th+ repository, restructure by aggregate
-3. Update barrel exports to maintain same public API
+1. Documented aggregate boundaries and repository organization in ADR-013
+2. Decision recorded: keep flat structure until the next aggregate is added
+   (or repository count materially grows), then restructure by aggregate
+3. If restructured later, keep barrel exports API-compatible
 
 ## Acceptance Criteria
 
-- [ ] ADR-013 documents aggregate boundaries
-- [ ] Decision recorded on when to restructure
-- [ ] If restructured: barrel exports maintain API compatibility
+- [x] ADR-013 documents aggregate boundaries
+- [x] Decision recorded on when to restructure
+- [x] If restructured: barrel exports maintain API compatibility
 
 ## Related
 

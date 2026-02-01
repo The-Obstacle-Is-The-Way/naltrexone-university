@@ -1,8 +1,9 @@
 # DEBT-028: ClerkAuthGateway Violates Single Responsibility Principle
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P2
 **Date:** 2026-02-01
+**Resolved:** 2026-02-01
 
 ---
 
@@ -87,12 +88,12 @@ export class ClerkAuthGateway implements AuthGateway {
 
 ## Acceptance Criteria
 
-- [ ] `UserRepository` interface added to ports
-- [ ] `DrizzleUserRepository` implements persistence logic
-- [ ] `ClerkAuthGateway` delegates to repository
-- [ ] Gateway no longer imports Drizzle/schema
-- [ ] All existing tests pass
-- [ ] New tests cover UserRepository
+- [x] `UserRepository` interface added to ports
+- [x] `DrizzleUserRepository` implements persistence logic
+- [x] `ClerkAuthGateway` delegates to repository
+- [x] Gateway no longer imports Drizzle/schema
+- [x] All existing tests pass
+- [x] New tests cover UserRepository
 
 ## Related
 

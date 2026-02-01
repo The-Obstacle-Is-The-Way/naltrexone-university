@@ -1,8 +1,9 @@
 # DEBT-027: Repositories Hardcode `new Date()` Instead of Injecting Time Dependency
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P2
 **Date:** 2026-02-01
+**Resolved:** 2026-02-01
 
 ---
 
@@ -66,10 +67,10 @@ Update `lib/container.ts` to wire the `now` dependency when creating repositorie
 
 ## Acceptance Criteria
 
-- [ ] All 3 repositories accept optional `now: () => Date` parameter
-- [ ] Tests use injected time for deterministic assertions
-- [ ] Container wires default `() => new Date()` in production
-- [ ] No direct `new Date()` calls remain in repository methods
+- [x] All 3 repositories accept optional `now: () => Date` parameter
+- [x] Tests use injected time for deterministic assertions
+- [x] Container wires default `() => new Date()` in production
+- [x] No direct `new Date()` calls remain in repository methods
 
 ## Related
 

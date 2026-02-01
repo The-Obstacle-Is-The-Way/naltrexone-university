@@ -142,6 +142,26 @@ describe('DrizzleUserRepository', () => {
       });
     });
 
+    it('throws INTERNAL_ERROR when update returns no rows', async () => {
+      const db = createDbMock();
+      const existing = {
+        id: 'user_1',
+        clerkUserId: 'clerk_1',
+        email: 'old@example.com',
+        createdAt: new Date('2026-02-01T00:00:00Z'),
+        updatedAt: new Date('2026-02-01T00:00:00Z'),
+      };
+
+      db._mocks.queryFindFirst.mockResolvedValue(existing);
+      db._mocks.updateReturning.mockResolvedValue([]);
+
+      const repo = new DrizzleUserRepository(db as unknown as RepoDb);
+
+      const promise = repo.upsertByClerkId('clerk_1', 'new@example.com');
+      await expect(promise).rejects.toBeInstanceOf(ApplicationError);
+      await expect(promise).rejects.toMatchObject({ code: 'INTERNAL_ERROR' });
+    });
+
     it('inserts new user when not found', async () => {
       const db = createDbMock();
       const inserted = {
@@ -237,6 +257,29 @@ describe('DrizzleUserRepository', () => {
       expect(db.update).toHaveBeenCalled();
     });
 
+    it('throws INTERNAL_ERROR when update after conflict returns no rows', async () => {
+      const db = createDbMock();
+      const after = {
+        id: 'user_1',
+        clerkUserId: 'clerk_1',
+        email: 'old@example.com',
+        createdAt: new Date('2026-02-01T00:00:00Z'),
+        updatedAt: new Date('2026-02-01T00:00:00Z'),
+      };
+
+      db._mocks.queryFindFirst
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce(after);
+      db._mocks.insertReturning.mockResolvedValue([]);
+      db._mocks.updateReturning.mockResolvedValue([]);
+
+      const repo = new DrizzleUserRepository(db as unknown as RepoDb);
+
+      const promise = repo.upsertByClerkId('clerk_1', 'new@example.com');
+      await expect(promise).rejects.toBeInstanceOf(ApplicationError);
+      await expect(promise).rejects.toMatchObject({ code: 'INTERNAL_ERROR' });
+    });
+
     it('throws INTERNAL_ERROR when user not found after conflict', async () => {
       const db = createDbMock();
       db._mocks.queryFindFirst
@@ -246,12 +289,9 @@ describe('DrizzleUserRepository', () => {
 
       const repo = new DrizzleUserRepository(db as unknown as RepoDb);
 
-      await expect(
-        repo.upsertByClerkId('clerk_1', 'a@example.com'),
-      ).rejects.toBeInstanceOf(ApplicationError);
-      await expect(
-        repo.upsertByClerkId('clerk_1', 'a@example.com'),
-      ).rejects.toMatchObject({ code: 'INTERNAL_ERROR' });
+      const promise = repo.upsertByClerkId('clerk_1', 'a@example.com');
+      await expect(promise).rejects.toBeInstanceOf(ApplicationError);
+      await expect(promise).rejects.toMatchObject({ code: 'INTERNAL_ERROR' });
     });
 
     it('maps Postgres unique violations to CONFLICT', async () => {
@@ -269,12 +309,9 @@ describe('DrizzleUserRepository', () => {
 
       const repo = new DrizzleUserRepository(db as unknown as RepoDb);
 
-      await expect(
-        repo.upsertByClerkId('clerk_1', 'new@example.com'),
-      ).rejects.toBeInstanceOf(ApplicationError);
-      await expect(
-        repo.upsertByClerkId('clerk_1', 'new@example.com'),
-      ).rejects.toMatchObject({ code: 'CONFLICT' });
+      const promise = repo.upsertByClerkId('clerk_1', 'new@example.com');
+      await expect(promise).rejects.toBeInstanceOf(ApplicationError);
+      await expect(promise).rejects.toMatchObject({ code: 'CONFLICT' });
     });
   });
 });

@@ -1,38 +1,17 @@
-import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { NextResponse } from 'next/server';
-import type * as schema from '@/db/schema';
 import type {
   StripeWebhookDeps,
   StripeWebhookInput,
 } from '@/src/adapters/controllers/stripe-webhook-controller';
-import {
-  DrizzleStripeCustomerRepository,
-  DrizzleStripeEventRepository,
-  DrizzleSubscriptionRepository,
-} from '@/src/adapters/repositories';
 import { isApplicationError } from '@/src/application/errors';
-import type { PaymentGateway } from '@/src/application/ports/gateways';
-
-type StripeWebhookRouteDb = {
-  transaction: <T>(
-    fn: (tx: PostgresJsDatabase<typeof schema>) => Promise<T>,
-  ) => Promise<T>;
-};
-
-type StripeWebhookRouteEnv = {
-  NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY: string;
-  NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL: string;
-};
 
 type StripeWebhookRouteLogger = {
   error: (context: unknown, message: string) => void;
 };
 
 export type StripeWebhookRouteContainer = {
-  db: StripeWebhookRouteDb;
-  env: StripeWebhookRouteEnv;
   logger: StripeWebhookRouteLogger;
-  paymentGateway: PaymentGateway;
+  createStripeWebhookDeps: () => StripeWebhookDeps;
 };
 
 export function createWebhookHandler(
@@ -55,23 +34,10 @@ export function createWebhookHandler(
     const container = createContainer();
 
     try {
-      await processStripeWebhook(
-        {
-          paymentGateway: container.paymentGateway,
-          transaction: async (fn) =>
-            container.db.transaction(async (tx) =>
-              fn({
-                stripeEvents: new DrizzleStripeEventRepository(tx),
-                subscriptions: new DrizzleSubscriptionRepository(tx, {
-                  monthly: container.env.NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY,
-                  annual: container.env.NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL,
-                }),
-                stripeCustomers: new DrizzleStripeCustomerRepository(tx),
-              }),
-            ),
-        },
-        { rawBody, signature },
-      );
+      await processStripeWebhook(container.createStripeWebhookDeps(), {
+        rawBody,
+        signature,
+      });
 
       return NextResponse.json({ received: true }, { status: 200 });
     } catch (error) {

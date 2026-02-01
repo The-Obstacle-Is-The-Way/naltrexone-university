@@ -1,12 +1,12 @@
-import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { describe, expect, it, vi } from 'vitest';
 import type { StripeWebhookRouteContainer } from '@/app/api/stripe/webhook/handler';
 import { createWebhookHandler } from '@/app/api/stripe/webhook/handler';
-import type * as schema from '@/db/schema';
+import type {
+  StripeWebhookDeps,
+  StripeWebhookTransaction,
+} from '@/src/adapters/controllers/stripe-webhook-controller';
 import { ApplicationError } from '@/src/application/errors';
 import type { PaymentGateway } from '@/src/application/ports/gateways';
-
-type Db = PostgresJsDatabase<typeof schema>;
 
 function createPaymentGatewayStub(): PaymentGateway {
   return {
@@ -18,17 +18,33 @@ function createPaymentGatewayStub(): PaymentGateway {
 
 function createTestDeps() {
   const loggerError = vi.fn();
-  const createContainer = vi.fn<() => StripeWebhookRouteContainer>(() => ({
-    db: {
-      transaction: async <T>(fn: (tx: Db) => Promise<T>): Promise<T> =>
-        fn({} as Db),
+  const tx = {
+    stripeEvents: {
+      claim: async () => true,
+      lock: async () => ({ processedAt: null, error: null }),
+      markProcessed: async () => undefined,
+      markFailed: async () => undefined,
     },
-    env: {
-      NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY: 'price_m',
-      NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL: 'price_a',
+    subscriptions: {
+      findByUserId: async () => null,
+      findByStripeSubscriptionId: async () => null,
+      upsert: async () => undefined,
     },
-    logger: { error: loggerError },
+    stripeCustomers: {
+      findByUserId: async () => null,
+      insert: async () => undefined,
+    },
+  } satisfies StripeWebhookTransaction;
+
+  const deps: StripeWebhookDeps = {
     paymentGateway: createPaymentGatewayStub(),
+    transaction: async (fn) => fn(tx),
+  };
+
+  const createStripeWebhookDeps = vi.fn(() => deps);
+  const createContainer = vi.fn<() => StripeWebhookRouteContainer>(() => ({
+    logger: { error: loggerError },
+    createStripeWebhookDeps,
   }));
 
   const processStripeWebhook = vi.fn();
@@ -38,6 +54,8 @@ function createTestDeps() {
     createContainer,
     processStripeWebhook,
     loggerError,
+    createStripeWebhookDeps,
+    deps,
   };
 }
 
@@ -58,7 +76,8 @@ describe('POST /api/stripe/webhook', () => {
   });
 
   it('returns 200 and received=true when processing succeeds', async () => {
-    const { POST, processStripeWebhook } = createTestDeps();
+    const { POST, processStripeWebhook, createStripeWebhookDeps, deps } =
+      createTestDeps();
     processStripeWebhook.mockResolvedValue(undefined);
 
     const res = await POST(
@@ -71,6 +90,11 @@ describe('POST /api/stripe/webhook', () => {
 
     expect(res.status).toBe(200);
     await expect(res.json()).resolves.toEqual({ received: true });
+    expect(createStripeWebhookDeps).toHaveBeenCalledTimes(1);
+    expect(processStripeWebhook).toHaveBeenCalledWith(deps, {
+      rawBody: 'raw',
+      signature: 'sig_1',
+    });
   });
 
   it('returns 400 when signature verification fails', async () => {
@@ -111,25 +135,32 @@ describe('POST /api/stripe/webhook', () => {
     expect(loggerError).toHaveBeenCalledTimes(1);
   });
 
-  it('provides a transaction wrapper to processStripeWebhook', async () => {
-    const containerTransaction = vi.fn(
-      async <T>(fn: (tx: Db) => Promise<T>): Promise<T> => fn({} as Db),
-    ) as unknown as StripeWebhookRouteContainer['db']['transaction'];
-    const createContainer = vi.fn<() => StripeWebhookRouteContainer>(() => ({
-      db: { transaction: containerTransaction },
-      env: {
-        NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY: 'price_m',
-        NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL: 'price_a',
-      },
-      logger: { error: vi.fn() },
+  it('passes container-created deps into processStripeWebhook', async () => {
+    const tx = {
+      stripeEvents: { claim: async () => true },
+      subscriptions: { upsert: async () => undefined },
+      stripeCustomers: { insert: async () => undefined },
+    } as unknown as StripeWebhookTransaction;
+
+    const transactionSpy = vi.fn(
+      async (fn: (t: StripeWebhookTransaction) => Promise<void>) => fn(tx),
+    );
+
+    const deps: StripeWebhookDeps = {
       paymentGateway: createPaymentGatewayStub(),
+      transaction:
+        transactionSpy as unknown as StripeWebhookDeps['transaction'],
+    };
+
+    const createStripeWebhookDeps = vi.fn(() => deps);
+    const createContainer = vi.fn<() => StripeWebhookRouteContainer>(() => ({
+      logger: { error: vi.fn() },
+      createStripeWebhookDeps,
     }));
 
-    const processStripeWebhook = vi.fn(async (deps: unknown) => {
-      const d = deps as {
-        transaction: (fn: (tx: unknown) => Promise<void>) => Promise<void>;
-      };
-      await d.transaction(async (tx) => {
+    const processStripeWebhook = vi.fn(async (inputDeps: StripeWebhookDeps) => {
+      expect(inputDeps).toBe(deps);
+      await inputDeps.transaction(async (tx) => {
         const t = tx as {
           stripeEvents: { claim: unknown };
           subscriptions: { upsert: unknown };
@@ -152,6 +183,7 @@ describe('POST /api/stripe/webhook', () => {
     );
 
     expect(res.status).toBe(200);
-    expect(containerTransaction).toHaveBeenCalledTimes(1);
+    expect(createStripeWebhookDeps).toHaveBeenCalledTimes(1);
+    expect(transactionSpy).toHaveBeenCalledTimes(1);
   });
 });

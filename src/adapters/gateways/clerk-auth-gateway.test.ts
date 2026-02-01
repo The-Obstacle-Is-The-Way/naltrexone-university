@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { ApplicationError } from '@/src/application/errors';
 import type { UserRepository } from '@/src/application/ports/repositories';
 import { ClerkAuthGateway } from './clerk-auth-gateway';
@@ -8,19 +8,24 @@ function createFakeUserRepository(): UserRepository & {
 } {
   const calls: { upsertByClerkId: Array<{ clerkId: string; email: string }> } =
     { upsertByClerkId: [] };
+  const baseUser = {
+    id: 'user_1',
+    createdAt: new Date('2026-02-01T00:00:00Z'),
+    updatedAt: new Date('2026-02-01T00:00:00Z'),
+  };
 
   return {
     _calls: calls,
-    findByClerkId: vi.fn(async () => null),
-    upsertByClerkId: vi.fn(async (clerkId: string, email: string) => {
+    findByClerkId: async () => null,
+    upsertByClerkId: async (clerkId: string, email: string) => {
       calls.upsertByClerkId.push({ clerkId, email });
       return {
-        id: 'user_1',
+        id: baseUser.id,
         email,
-        createdAt: new Date('2026-02-01T00:00:00Z'),
-        updatedAt: new Date('2026-02-01T00:00:00Z'),
+        createdAt: baseUser.createdAt,
+        updatedAt: baseUser.updatedAt,
       };
-    }),
+    },
   };
 }
 
@@ -138,11 +143,9 @@ describe('ClerkAuthGateway', () => {
   });
 
   it('propagates repository errors', async () => {
-    const userRepository = {
-      findByClerkId: vi.fn(),
-      upsertByClerkId: vi.fn(async () => {
-        throw new ApplicationError('CONFLICT', 'User conflict');
-      }),
+    const userRepository = createFakeUserRepository();
+    userRepository.upsertByClerkId = async () => {
+      throw new ApplicationError('CONFLICT', 'User conflict');
     };
 
     const gateway = new ClerkAuthGateway({

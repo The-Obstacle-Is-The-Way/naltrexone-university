@@ -1,8 +1,9 @@
 # DEBT-026: Duplicated Db Type Definition Across All Repositories
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P2
 **Date:** 2026-02-01
+**Resolved:** 2026-02-01
 
 ---
 
@@ -60,10 +61,10 @@ export class DrizzleAttemptRepository implements AttemptRepository {
 
 ## Acceptance Criteria
 
-- [ ] `src/adapters/shared/database-types.ts` exists with `DrizzleDb` export
-- [ ] All 9 files import from shared module
-- [ ] No local `type Db = ...` declarations remain
-- [ ] All tests pass after refactor
+- [x] `src/adapters/shared/database-types.ts` exists with `DrizzleDb` export
+- [x] All 9 files import from shared module
+- [x] No local `type Db = ...` declarations remain
+- [x] All tests pass after refactor
 
 ## Related
 

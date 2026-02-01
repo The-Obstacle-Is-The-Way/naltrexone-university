@@ -67,7 +67,14 @@ export class DrizzleUserRepository implements UserRepository {
           .where(eq(users.clerkUserId, clerkId))
           .returning();
 
-        return this.toDomain(updated ?? existing);
+        if (!updated) {
+          throw new ApplicationError(
+            'INTERNAL_ERROR',
+            'Failed to update user email',
+          );
+        }
+
+        return this.toDomain(updated);
       } catch (error) {
         throw this.mapDbError(error);
       }
@@ -114,7 +121,14 @@ export class DrizzleUserRepository implements UserRepository {
         .where(eq(users.clerkUserId, clerkId))
         .returning();
 
-      return this.toDomain(updated ?? after);
+      if (!updated) {
+        throw new ApplicationError(
+          'INTERNAL_ERROR',
+          'Failed to update user email',
+        );
+      }
+
+      return this.toDomain(updated);
     } catch (error) {
       throw this.mapDbError(error);
     }

@@ -1,8 +1,9 @@
 # DEBT-030: Untested Tag Repository
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P2
 **Date:** 2026-02-01
+**Resolved:** 2026-02-01
 
 ---
 
@@ -19,7 +20,7 @@
 
 ```typescript
 interface TagRepository {
-  listAll(filter?: { kind?: TagKind }): Promise<Tag[]>;
+  listAll(): Promise<Tag[]>;
 }
 ```
 
@@ -33,23 +34,19 @@ interface TagRepository {
 
 Create test file covering:
 
-1. **listAll() without filter:**
+1. **listAll():**
    - Returns all tags
    - Tags ordered correctly (by name or id)
 
-2. **listAll() with kind filter:**
-   - Returns only tags of specified kind
-   - Empty result when no tags match
-
-3. **Tag mapping:**
+2. **Tag mapping:**
    - Database rows correctly mapped to domain Tag entities
 
 ## Acceptance Criteria
 
-- [ ] Test file exists at `src/adapters/repositories/drizzle-tag-repository.test.ts`
-- [ ] Unit tests cover listAll() with and without filters
-- [ ] Tests verify correct ordering
-- [ ] Tests verify domain entity mapping
+- [x] Test file exists at `src/adapters/repositories/drizzle-tag-repository.test.ts`
+- [x] Unit tests cover listAll()
+- [x] Tests verify correct ordering
+- [x] Tests verify domain entity mapping
 
 ## Related
 

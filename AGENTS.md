@@ -39,12 +39,12 @@ This codebase follows strict conventions (Clean Architecture, SOLID, TDD). Code 
 
 ### Why This Matters
 
-| Pattern | Wrong | Right |
-|---------|-------|-------|
-| Testing | `vi.mock('./my-repo')` | `new FakeRepository()` |
-| DI | `import { db } from './db'` | `constructor(private db: DrizzleDb)` |
-| Errors | `throw new Error('oops')` | `throw new ApplicationError('CODE', 'msg')` |
-| Types | Define locally in each file | Import from `src/adapters/shared/` |
+| Pattern | Wrong                          | Right                                         |
+|---------|--------------------------------|-----------------------------------------------|
+| Testing | `vi.mock('./my-repo')`         | `new FakeRepository()`                        |
+| DI      | `import { db } from './db'`    | `constructor(private db: DrizzleDb)`          |
+| Errors  | `throw new Error('oops')`      | `throw new ApplicationError('CODE', 'msg')`   |
+| Types   | Define locally in each file    | Import from `src/adapters/shared/`            |
 
 ---
 

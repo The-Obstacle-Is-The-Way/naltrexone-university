@@ -1,8 +1,9 @@
 # DEBT-032: Incomplete Composition Root (Missing Use Case Factories)
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P3
 **Date:** 2026-02-01
+**Resolved:** 2026-02-01
 
 ---
 
@@ -38,7 +39,9 @@ const controller = new StripeWebhookController(...);
 
 ## Resolution
 
-Expand container with factory functions for all layers:
+Expanded the container with factory functions for repositories, use cases,
+and controller deps. Call sites now use container factories (for example,
+Stripe webhook handler uses `createStripeWebhookDeps()`).
 
 ```typescript
 // lib/container.ts
@@ -68,23 +71,29 @@ export function createSubmitAnswerUseCase(): SubmitAnswerUseCase {
   );
 }
 
-// Controllers
-export function createStripeWebhookController(): StripeWebhookController {
-  return new StripeWebhookController(
-    createStripeEventRepository(),
-    createStripeCustomerRepository(),
-    createSubscriptionRepository()
-  );
+// Controllers (deps)
+export function createStripeWebhookDeps(): StripeWebhookDeps {
+  return {
+    paymentGateway: createPaymentGateway(),
+    transaction: async (fn) =>
+      db.transaction(async (tx) =>
+        fn({
+          stripeEvents: createStripeEventRepository(tx),
+          stripeCustomers: createStripeCustomerRepository(tx),
+          subscriptions: createSubscriptionRepository(tx),
+        }),
+      ),
+  };
 }
 ```
 
 ## Acceptance Criteria
 
-- [ ] Factory functions exist for all repositories
-- [ ] Factory functions exist for all use cases
-- [ ] Factory functions exist for controllers
-- [ ] Call sites use factories instead of direct instantiation
-- [ ] Tests can override factories for mocking
+- [x] Factory functions exist for all repositories
+- [x] Factory functions exist for all use cases
+- [x] Factory functions exist for controllers (controller deps factory)
+- [x] Call sites use factories instead of direct instantiation
+- [x] Tests can override factories for mocking
 
 ## Related
 

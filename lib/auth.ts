@@ -26,6 +26,6 @@ export async function getAuth() {
  * Ensures a `users` row exists (upsert by `clerk_user_id`) via the AuthGateway.
  */
 export async function getCurrentUser() {
-  const { authGateway } = createContainer();
-  return authGateway.requireUser();
+  const { createAuthGateway } = createContainer();
+  return createAuthGateway().requireUser();
 }

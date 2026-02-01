@@ -129,12 +129,9 @@ describe('DrizzleStripeEventRepository', () => {
 
       const repo = new DrizzleStripeEventRepository(db as unknown as RepoDb);
 
-      await expect(repo.lock('evt_missing')).rejects.toBeInstanceOf(
-        ApplicationError,
-      );
-      await expect(repo.lock('evt_missing')).rejects.toMatchObject({
-        code: 'NOT_FOUND',
-      });
+      const promise = repo.lock('evt_missing');
+      await expect(promise).rejects.toBeInstanceOf(ApplicationError);
+      await expect(promise).rejects.toMatchObject({ code: 'NOT_FOUND' });
     });
   });
 
@@ -180,12 +177,9 @@ describe('DrizzleStripeEventRepository', () => {
 
       const repo = new DrizzleStripeEventRepository(db as unknown as RepoDb);
 
-      await expect(repo.markProcessed('evt_missing')).rejects.toBeInstanceOf(
-        ApplicationError,
-      );
-      await expect(repo.markProcessed('evt_missing')).rejects.toMatchObject({
-        code: 'NOT_FOUND',
-      });
+      const promise = repo.markProcessed('evt_missing');
+      await expect(promise).rejects.toBeInstanceOf(ApplicationError);
+      await expect(promise).rejects.toMatchObject({ code: 'NOT_FOUND' });
     });
   });
 
@@ -226,14 +220,9 @@ describe('DrizzleStripeEventRepository', () => {
 
       const repo = new DrizzleStripeEventRepository(db as unknown as RepoDb);
 
-      await expect(
-        repo.markFailed('evt_missing', 'Error message'),
-      ).rejects.toBeInstanceOf(ApplicationError);
-      await expect(
-        repo.markFailed('evt_missing', 'Error message'),
-      ).rejects.toMatchObject({
-        code: 'NOT_FOUND',
-      });
+      const promise = repo.markFailed('evt_missing', 'Error message');
+      await expect(promise).rejects.toBeInstanceOf(ApplicationError);
+      await expect(promise).rejects.toMatchObject({ code: 'NOT_FOUND' });
     });
   });
 });

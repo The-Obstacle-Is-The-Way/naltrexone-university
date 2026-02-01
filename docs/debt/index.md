@@ -17,9 +17,7 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 | ID | Title | Status | Priority | Date |
 |----|-------|--------|----------|------|
-| [DEBT-034](./debt-034-test-coverage-gap-critical.md) | Test Coverage Gap (3 repo unit tests remain) | Open | P1 | 2026-02-01 |
-| [DEBT-032](./debt-032-incomplete-composition-root.md) | Incomplete Composition Root | Open | P3 | 2026-02-01 |
-| [DEBT-033](./debt-033-flat-repository-structure.md) | Flat Repository Structure | Open | P3 | 2026-02-01 |
+| _None_ | — | — | — | — |
 
 **Next Debt ID:** DEBT-036
 
@@ -58,6 +56,9 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 | [DEBT-029](../_archive/debt/debt-029-untested-stripe-prices-config.md) | Untested Stripe Prices Config | P2 | 2026-02-01 |
 | [DEBT-030](../_archive/debt/debt-030-untested-tag-repository.md) | Untested Tag Repository | P2 | 2026-02-01 |
 | [DEBT-031](../_archive/debt/debt-031-stripe-payment-gateway-unknown-args.md) | StripePaymentGateway unknown[] Args | P2 | 2026-02-01 |
+| [DEBT-032](../_archive/debt/debt-032-incomplete-composition-root.md) | Incomplete Composition Root | P3 | 2026-02-01 |
+| [DEBT-033](../_archive/debt/debt-033-flat-repository-structure.md) | Flat Repository Structure | P3 | 2026-02-01 |
+| [DEBT-034](../_archive/debt/debt-034-test-coverage-gap-critical.md) | Test Coverage Gap — Must Stabilize Before New Features | P1 | 2026-02-01 |
 | [DEBT-035](../_archive/debt/debt-035-inconsistent-repo-test-mocking.md) | Inconsistent Repo Test Mocking (False Positive) | P2 | 2026-02-01 |
 
 ## Debt Statuses

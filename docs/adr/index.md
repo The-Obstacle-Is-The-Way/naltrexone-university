@@ -1,7 +1,7 @@
 # Architecture Decision Records
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-01-31
+**Last Updated:** 2026-02-01
 
 ---
 
@@ -29,6 +29,7 @@ Architecture Decision Records document significant architectural decisions along
 | [ADR-010](./adr-010-caching-strategy.md) | Caching Strategy | Accepted | 2026-01-31 |
 | [ADR-011](./adr-011-api-design-principles.md) | API Design Principles | Accepted | 2026-01-31 |
 | [ADR-012](./adr-012-directory-structure.md) | Directory Structure | Accepted | 2026-01-31 |
+| [ADR-013](./adr-013-repository-organization.md) | Repository Organization by Aggregate | Accepted | 2026-02-01 |
 
 ## ADR Statuses
 

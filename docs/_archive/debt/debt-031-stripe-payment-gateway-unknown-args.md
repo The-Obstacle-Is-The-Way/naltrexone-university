@@ -1,8 +1,9 @@
 # DEBT-031: StripePaymentGateway Uses `unknown[]` Args (Type Safety Loss)
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P2
 **Date:** 2026-02-01
+**Resolved:** 2026-02-01
 
 ---
 
@@ -75,10 +76,10 @@ interface StripeClient {
 
 ## Acceptance Criteria
 
-- [ ] `StripeClient` interface has specific parameter types
-- [ ] No `unknown[]` in interface definition
-- [ ] Tests still compile and pass
-- [ ] IDE provides autocomplete for create() params
+- [x] `StripeClient` interface has specific parameter types
+- [x] No `unknown[]` in interface definition
+- [x] Tests still compile and pass
+- [x] IDE provides autocomplete for create() params
 
 ## Related
 

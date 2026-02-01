@@ -1,8 +1,9 @@
 # DEBT-025: Untested Stripe Event Repository (Critical Payment Infrastructure)
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P1
 **Date:** 2026-02-01
+**Resolved:** 2026-02-01
 
 ---
 
@@ -64,10 +65,10 @@ Create comprehensive test file covering:
 
 ## Acceptance Criteria
 
-- [ ] Test file exists at `src/adapters/repositories/drizzle-stripe-event-repository.test.ts`
-- [ ] Unit tests cover all 4 public methods
-- [ ] Integration tests in `tests/integration/repositories.integration.test.ts` cover Stripe event scenarios
-- [ ] Tests achieve >90% line coverage for this file
+- [x] Test file exists at `src/adapters/repositories/drizzle-stripe-event-repository.test.ts`
+- [x] Unit tests cover all 4 public methods
+- [x] Integration tests in `tests/integration/repositories.integration.test.ts` cover Stripe event scenarios
+- [x] Tests achieve >90% line coverage for this file
 
 ## Related
 
