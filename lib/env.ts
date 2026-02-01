@@ -8,6 +8,7 @@ const envSchema = z.object({
   // Clerk
   CLERK_SECRET_KEY: z.string().min(1),
   NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: z.string().min(1),
+  NEXT_PUBLIC_SKIP_CLERK: z.enum(['true', 'false']).optional(),
 
   // Stripe
   STRIPE_SECRET_KEY: z.string().min(1),
@@ -31,6 +32,15 @@ function validateEnv(): Env {
       parsed.error.flatten().fieldErrors,
     );
     throw new Error('Invalid environment variables');
+  }
+
+  if (
+    process.env.NODE_ENV === 'production' &&
+    parsed.data.NEXT_PUBLIC_SKIP_CLERK === 'true'
+  ) {
+    throw new Error(
+      'NEXT_PUBLIC_SKIP_CLERK must not be true in production environments',
+    );
   }
 
   return parsed.data;

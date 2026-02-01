@@ -27,25 +27,60 @@ export async function getAuth() {
  * Creates the row if it doesn't exist, returns the existing row if it does.
  */
 export async function ensureUserRow(clerkUserId: string, email: string) {
-  // Try to find existing user
-  const existingUser = await db.query.users.findFirst({
+  const existing = await db.query.users.findFirst({
     where: eq(users.clerkUserId, clerkUserId),
   });
 
-  if (existingUser) {
-    return existingUser;
+  if (existing) {
+    if (existing.email === email) {
+      return existing;
+    }
+
+    const [updated] = await db
+      .update(users)
+      .set({
+        email,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.clerkUserId, clerkUserId))
+      .returning();
+
+    return updated ?? existing;
   }
 
-  // Create new user
-  const [newUser] = await db
+  const [inserted] = await db
     .insert(users)
-    .values({
-      clerkUserId,
-      email,
-    })
+    .values({ clerkUserId, email })
+    .onConflictDoNothing({ target: users.clerkUserId })
     .returning();
 
-  return newUser;
+  if (inserted) {
+    return inserted;
+  }
+
+  // Another concurrent request may have created the row. Fetch and reconcile email if needed.
+  const after = await db.query.users.findFirst({
+    where: eq(users.clerkUserId, clerkUserId),
+  });
+
+  if (!after) {
+    throw new Error('Failed to ensure user row');
+  }
+
+  if (after.email === email) {
+    return after;
+  }
+
+  const [updated] = await db
+    .update(users)
+    .set({
+      email,
+      updatedAt: new Date(),
+    })
+    .where(eq(users.clerkUserId, clerkUserId))
+    .returning();
+
+  return updated ?? after;
 }
 
 /**
