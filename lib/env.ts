@@ -35,11 +35,11 @@ function validateEnv(): Env {
   }
 
   if (
-    process.env.NODE_ENV === 'production' &&
+    process.env.VERCEL_ENV === 'production' &&
     parsed.data.NEXT_PUBLIC_SKIP_CLERK === 'true'
   ) {
     throw new Error(
-      'NEXT_PUBLIC_SKIP_CLERK must not be true in production environments',
+      'NEXT_PUBLIC_SKIP_CLERK must not be true in production (VERCEL_ENV=production)',
     );
   }
 

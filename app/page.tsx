@@ -1,5 +1,5 @@
-import { SignedIn, SignedOut, UserButton } from '@clerk/nextjs';
 import Link from 'next/link';
+import { AuthNav } from '@/components/auth-nav';
 
 export default function HomePage() {
   return (
@@ -10,31 +10,7 @@ export default function HomePage() {
             <h1 className="text-xl font-semibold text-gray-900">
               Addiction Boards Question Bank
             </h1>
-            <div className="flex items-center space-x-4">
-              <SignedOut>
-                <Link
-                  href="/pricing"
-                  className="text-sm font-medium text-gray-700 hover:text-gray-900"
-                >
-                  Pricing
-                </Link>
-                <Link
-                  href="/sign-in"
-                  className="rounded-full bg-orange-600 px-4 py-2 text-sm font-medium text-white hover:bg-orange-700"
-                >
-                  Sign In
-                </Link>
-              </SignedOut>
-              <SignedIn>
-                <Link
-                  href="/app/dashboard"
-                  className="text-sm font-medium text-gray-700 hover:text-gray-900"
-                >
-                  Dashboard
-                </Link>
-                <UserButton />
-              </SignedIn>
-            </div>
+            <AuthNav />
           </div>
         </div>
       </header>
