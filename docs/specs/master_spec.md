@@ -2441,6 +2441,7 @@ Enable Stripe Customer Portal and configure:
 
 * **Admin UI for question authoring** — content is authored in MDX and seeded via script; admin UI adds large surface area and auth roles.
 * **Spaced repetition algorithm** — requires scheduling, per-tag modeling, and more complex data structures; MVP focuses on straightforward practice/review.
+* **Time spent tracking / pacing analytics** — MVP persists `attempts.time_spent_seconds = 0` and does not attempt to measure per-question timing.
 * **AI-generated questions** — quality/safety and editorial control are MVP priorities; AI generation introduces validation risk.
 * **Native mobile app** — web app is sufficient for initial market; mobile adds parallel build/test/deploy complexity.
 * **Offline mode** — requires caching and conflict resolution; not needed for initial board prep workflow.
