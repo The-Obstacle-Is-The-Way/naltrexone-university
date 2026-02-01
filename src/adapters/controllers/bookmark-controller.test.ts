@@ -100,7 +100,7 @@ function createDeps(overrides?: {
   const questionRepository: QuestionRepository = {
     findPublishedById: vi.fn(async (id: string) => questionsById[id] ?? null),
     findPublishedBySlug: vi.fn(async () => question),
-    findPublishedByIds: vi.fn(async (ids) =>
+    findPublishedByIds: vi.fn(async (ids: readonly string[]) =>
       ids.map((id) => questionsById[id]).filter((q): q is Question => !!q),
     ),
     listPublishedCandidateIds: vi.fn(async () => []),

@@ -84,6 +84,10 @@ describe('container factories', () => {
     expect(typeof container.createStripeWebhookDeps).toBe('function');
     expect(typeof container.createQuestionControllerDeps).toBe('function');
     expect(typeof container.createBillingControllerDeps).toBe('function');
+    expect(typeof container.createBookmarkControllerDeps).toBe('function');
+    expect(typeof container.createPracticeControllerDeps).toBe('function');
+    expect(typeof container.createReviewControllerDeps).toBe('function');
+    expect(typeof container.createStatsControllerDeps).toBe('function');
   }, 40000);
 
   it('wires concrete implementations for all factories', async () => {
@@ -172,6 +176,59 @@ describe('container factories', () => {
     expect(billingDeps.paymentGateway).toBeInstanceOf(StripePaymentGateway);
     expect(typeof billingDeps.getClerkUserId).toBe('function');
     expect(billingDeps.appUrl).toBe('https://app.example.com');
+
+    const bookmarkDeps = container.createBookmarkControllerDeps();
+    expect(bookmarkDeps.authGateway).toBeInstanceOf(ClerkAuthGateway);
+    expect(bookmarkDeps.checkEntitlementUseCase).toBeInstanceOf(
+      CheckEntitlementUseCase,
+    );
+    expect(bookmarkDeps.bookmarkRepository).toBeInstanceOf(
+      DrizzleBookmarkRepository,
+    );
+    expect(bookmarkDeps.questionRepository).toBeInstanceOf(
+      DrizzleQuestionRepository,
+    );
+
+    const practiceDeps = container.createPracticeControllerDeps();
+    expect(practiceDeps.authGateway).toBeInstanceOf(ClerkAuthGateway);
+    expect(practiceDeps.checkEntitlementUseCase).toBeInstanceOf(
+      CheckEntitlementUseCase,
+    );
+    expect(practiceDeps.attemptRepository).toBeInstanceOf(
+      DrizzleAttemptRepository,
+    );
+    expect(practiceDeps.practiceSessionRepository).toBeInstanceOf(
+      DrizzlePracticeSessionRepository,
+    );
+    expect(practiceDeps.questionRepository).toBeInstanceOf(
+      DrizzleQuestionRepository,
+    );
+    expect(typeof practiceDeps.now).toBe('function');
+
+    const reviewDeps = container.createReviewControllerDeps();
+    expect(reviewDeps.authGateway).toBeInstanceOf(ClerkAuthGateway);
+    expect(reviewDeps.checkEntitlementUseCase).toBeInstanceOf(
+      CheckEntitlementUseCase,
+    );
+    expect(reviewDeps.attemptRepository).toBeInstanceOf(
+      DrizzleAttemptRepository,
+    );
+    expect(reviewDeps.questionRepository).toBeInstanceOf(
+      DrizzleQuestionRepository,
+    );
+
+    const statsDeps = container.createStatsControllerDeps();
+    expect(statsDeps.authGateway).toBeInstanceOf(ClerkAuthGateway);
+    expect(statsDeps.checkEntitlementUseCase).toBeInstanceOf(
+      CheckEntitlementUseCase,
+    );
+    expect(statsDeps.attemptRepository).toBeInstanceOf(
+      DrizzleAttemptRepository,
+    );
+    expect(statsDeps.questionRepository).toBeInstanceOf(
+      DrizzleQuestionRepository,
+    );
+    expect(typeof statsDeps.now).toBe('function');
   }, 40000);
 
   it('shares Stripe price IDs between subscription repository and payment gateway', async () => {

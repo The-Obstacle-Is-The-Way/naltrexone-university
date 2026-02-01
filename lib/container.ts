@@ -1,7 +1,11 @@
 import 'server-only';
 import { currentUser } from '@clerk/nextjs/server';
 import type { BillingControllerDeps } from '@/src/adapters/controllers/billing-controller';
+import type { BookmarkControllerDeps } from '@/src/adapters/controllers/bookmark-controller';
+import type { PracticeControllerDeps } from '@/src/adapters/controllers/practice-controller';
 import type { QuestionControllerDeps } from '@/src/adapters/controllers/question-controller';
+import type { ReviewControllerDeps } from '@/src/adapters/controllers/review-controller';
+import type { StatsControllerDeps } from '@/src/adapters/controllers/stats-controller';
 import type { StripeWebhookDeps } from '@/src/adapters/controllers/stripe-webhook-controller';
 import {
   ClerkAuthGateway,
@@ -87,6 +91,10 @@ export type ControllerFactories = {
   createStripeWebhookDeps: () => StripeWebhookDeps;
   createQuestionControllerDeps: () => QuestionControllerDeps;
   createBillingControllerDeps: () => BillingControllerDeps;
+  createBookmarkControllerDeps: () => BookmarkControllerDeps;
+  createPracticeControllerDeps: () => PracticeControllerDeps;
+  createReviewControllerDeps: () => ReviewControllerDeps;
+  createStatsControllerDeps: () => StatsControllerDeps;
 };
 
 export type ContainerOverrides = {
@@ -222,6 +230,33 @@ export function createContainer(overrides: ContainerOverrides = {}) {
       paymentGateway: gateways.createPaymentGateway(),
       getClerkUserId: async () => (await currentUser())?.id ?? null,
       appUrl: primitives.env.NEXT_PUBLIC_APP_URL,
+    }),
+    createBookmarkControllerDeps: () => ({
+      authGateway: gateways.createAuthGateway(),
+      checkEntitlementUseCase: useCases.createCheckEntitlementUseCase(),
+      bookmarkRepository: repositories.createBookmarkRepository(),
+      questionRepository: repositories.createQuestionRepository(),
+    }),
+    createPracticeControllerDeps: () => ({
+      authGateway: gateways.createAuthGateway(),
+      checkEntitlementUseCase: useCases.createCheckEntitlementUseCase(),
+      questionRepository: repositories.createQuestionRepository(),
+      practiceSessionRepository: repositories.createPracticeSessionRepository(),
+      attemptRepository: repositories.createAttemptRepository(),
+      now: primitives.now,
+    }),
+    createReviewControllerDeps: () => ({
+      authGateway: gateways.createAuthGateway(),
+      checkEntitlementUseCase: useCases.createCheckEntitlementUseCase(),
+      attemptRepository: repositories.createAttemptRepository(),
+      questionRepository: repositories.createQuestionRepository(),
+    }),
+    createStatsControllerDeps: () => ({
+      authGateway: gateways.createAuthGateway(),
+      checkEntitlementUseCase: useCases.createCheckEntitlementUseCase(),
+      attemptRepository: repositories.createAttemptRepository(),
+      questionRepository: repositories.createQuestionRepository(),
+      now: primitives.now,
     }),
   };
 

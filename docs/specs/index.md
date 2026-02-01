@@ -27,7 +27,7 @@ Implementation specifications provide detailed technical guidance for building e
 | [SPEC-007](./spec-007-repository-implementations.md) | Repository Implementations (Drizzle) | Implemented | Adapters |
 | [SPEC-008](./spec-008-auth-gateway.md) | Auth Gateway (Clerk) | Implemented | Adapters |
 | [SPEC-009](./spec-009-payment-gateway.md) | Payment Gateway (Stripe) | Implemented | Adapters |
-| [SPEC-010](./spec-010-server-actions.md) | Server Actions (Controllers) | Partial | Adapters |
+| [SPEC-010](./spec-010-server-actions.md) | Server Actions (Controllers) | Implemented | Adapters |
 | [SPEC-011](./spec-011-paywall.md) | Paywall (Stripe Subscriptions) | Partial | Feature |
 | [SPEC-012](./spec-012-core-question-loop.md) | Core Question Loop | Partial | Feature |
 | [SPEC-013](./spec-013-practice-sessions.md) | Practice Sessions | Ready | Feature |
