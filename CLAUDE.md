@@ -245,10 +245,9 @@ pnpm db:test:down                                  # Stop database when done
 
 ### React 19 Component Testing
 
-This project uses **React 19** with `renderToStaticMarkup` for component tests.
+**For render-output tests** (checking HTML content), use `renderToStaticMarkup`:
 
 ```typescript
-// ✅ CORRECT - React 19 component test
 // @vitest-environment jsdom
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
@@ -262,10 +261,23 @@ describe('MyComponent', () => {
 });
 ```
 
+**For interactive tests** (clicking buttons, typing in forms), you'll need `@testing-library/react`. First add this to `vitest.config.ts`:
+
+```typescript
+resolve: {
+  conditions: ['development'],  // Fixes act() bug in git hooks/CI
+  alias: { '@': path.resolve(__dirname, './') },
+},
+```
+
+**Current state:** All our .test.tsx files only check render output, so we use `renderToStaticMarkup`.
+
 **DO NOT USE:**
 - `react-test-renderer` — Deprecated in React 19
-- `@testing-library/react` — Broken with React 19 (uses react-dom/test-utils internally)
 - `react-dom/test-utils` — Removed in React 19
+- `environmentMatchGlobs` — Deprecated in Vitest 4
+
+See `TESTING-GOTCHAS.md` for full details.
 
 ### FAKES OVER MOCKS — MANDATORY
 
