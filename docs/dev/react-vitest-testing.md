@@ -217,7 +217,8 @@ vi.mock('./user-repository');
 - [ ] Use dynamic imports: `const Component = (await import('./Component')).default`
 - [ ] Assert on HTML content: `expect(html).toContain('text')`
 - [ ] Use fakes for DI, not vi.mock() for our code
-- [ ] **Do NOT use @testing-library/react or vitest-browser-react** — both have act() bugs
+- [ ] **Do NOT use @testing-library/react** — zombie maintenance, no fix coming
+- [ ] **vitest-browser-react** — use for interactive tests when suspense bug is fixed (see above)
 
 ---
 
