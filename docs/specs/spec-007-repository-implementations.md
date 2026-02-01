@@ -52,6 +52,10 @@ Repository implementations are tested as **integration tests** against a real Po
 - Local: a dedicated test database (`DATABASE_URL`)
 - CI: service container (see `.github/workflows/ci.yml`)
 
+Safety note:
+
+- Integration tests MUST NOT run against production/remote databases by accident. The test suite will refuse to run when `DATABASE_URL` hostname is not local (`localhost`/`127.0.0.1`) unless `ALLOW_NON_LOCAL_DATABASE_URL=true` is explicitly set.
+
 Test location:
 
 ```

@@ -2327,6 +2327,7 @@ jobs:
 > Notes:
 >
 > - **CI** may use dummy values for third-party keys on fork PRs (no secrets). In that mode, set `NEXT_PUBLIC_SKIP_CLERK=true` so `next build` can prerender without real Clerk keys.
+>   - `NEXT_PUBLIC_SKIP_CLERK=true` is blocked on Vercel production deploys (`VERCEL_ENV=production`) by `lib/env.ts`.
 > - **E2E test credentials** are required only when running Playwright E2E (CI or local). Never set them in production.
 
 | Variable                            | Description                                                                                                                 | Required in Dev | Required in CI | Required in Preview | Required in Prod |
@@ -2338,7 +2339,7 @@ jobs:
 | NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY  | Stripe publishable key (client)                                                                                             |               ✅ |            ✅ |                   ✅ |                ✅ |
 | STRIPE_WEBHOOK_SECRET               | Stripe webhook signing secret                                                                                               |               ✅ |            ✅ |                   ✅ |                ✅ |
 | NEXT_PUBLIC_APP_URL                 | Canonical base URL (e.g., [http://localhost:3000](http://localhost:3000), [https://yourdomain.com](https://yourdomain.com)) |               ✅ |            ✅ |                   ✅ |                ✅ |
-| NEXT_PUBLIC_SKIP_CLERK              | Set to `true` to skip `ClerkProvider` during prerender/build (CI fork PRs without real keys)                                 |               — |            — |                   — |                — |
+| NEXT_PUBLIC_SKIP_CLERK              | Set to `true` to skip `ClerkProvider` during prerender/build (CI fork PRs without real keys). Forbidden on prod deploys (`VERCEL_ENV=production`). |               — |            — |                   — |                — |
 | NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY | Stripe Price ID for $29/mo                                                                                                  |               ✅ |            ✅ |                   ✅ |                ✅ |
 | NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL  | Stripe Price ID for $199/yr                                                                                                 |               ✅ |            ✅ |                   ✅ |                ✅ |
 | E2E_CLERK_USER_USERNAME             | Clerk test user username for Playwright                                                                                     |               — |            ✅ |                   — |                — |
