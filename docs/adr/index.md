@@ -67,7 +67,7 @@ Fakes over mocks. Test behavior, not implementation.
 
 Clerk lives in Frameworks layer. Domain knows about `User` entities with internal IDs.
 
-```
+```text
 Clerk Session → AuthGateway → Use Case (userId) → Domain (User)
 ```
 
@@ -75,7 +75,7 @@ Clerk Session → AuthGateway → Use Case (userId) → Domain (User)
 
 Stripe lives in Frameworks layer. Domain knows about `Subscription` with status.
 
-```
+```text
 Stripe Webhook → PaymentGateway → Repository → Domain (Subscription)
 ```
 
@@ -85,7 +85,7 @@ Stripe Webhook → PaymentGateway → Repository → Domain (Subscription)
 
 Layered error handling: Domain throws `DomainError`, Use Cases throw `ApplicationError`, Controllers return `ActionResult<T>` (discriminated union).
 
-```
+```text
 DomainError → ApplicationError → ActionResult<T>
 ```
 
@@ -95,7 +95,7 @@ Type-safe errors at boundaries, no stack traces leaked to clients.
 
 Constructor injection with factory functions. Use cases receive interfaces, not implementations.
 
-```
+```text
 Controller/Route Handler → Factory → Use Case (with injected ports)
 ```
 
@@ -105,7 +105,7 @@ No DI framework — wiring lives in `lib/container.ts` factories that are called
 
 Structured JSON logging via Pino with request ID correlation. Security-aware: no PII in logs.
 
-```
+```text
 Controller → Logger (with requestId, userId) → Vercel Log Drain
 ```
 
@@ -138,7 +138,7 @@ Contract-first design with Zod schemas:
 
 Authoritative directory structure reconciling Clean Architecture with Next.js:
 
-```
+```text
 src/domain/          → Entities, Value Objects, Domain Services
 src/application/     → Use Cases, Ports (interfaces)
 src/adapters/        → Repositories, Gateways, Controllers

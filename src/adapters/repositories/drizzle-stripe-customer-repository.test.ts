@@ -18,7 +18,10 @@ describe('DrizzleStripeCustomerRepository', () => {
       },
     } as const;
 
-    const repo = new DrizzleStripeCustomerRepository(db as any);
+    type RepoDb = ConstructorParameters<
+      typeof DrizzleStripeCustomerRepository
+    >[0];
+    const repo = new DrizzleStripeCustomerRepository(db as unknown as RepoDb);
 
     await expect(repo.insert('user_1', 'cus_123')).rejects.toMatchObject({
       code: 'CONFLICT',

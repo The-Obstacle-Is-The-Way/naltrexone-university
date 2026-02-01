@@ -534,9 +534,9 @@ export type NewBookmark = typeof bookmarks.$inferInsert;
 
 ### 4.1 Auth Level Definitions
 
-* **public**: no login required
-* **authenticated**: Clerk session required
-* **subscribed**: authenticated **AND** subscription entitlement required (see below)
+* **public**: no authentication required
+* **authenticated**: authentication required (Clerk session)
+* **subscribed**: subscription entitlement required (in addition to authentication; see below)
 
 ### 4.2 Subscription Entitlement (Server-Side, Exact Logic)
 
@@ -847,7 +847,7 @@ export type GetNextQuestionOutput = NextQuestion | null; // null means no remain
 
 **Behavior (exact):**
 
-**Case A: sessionId provided**
+##### Case A: sessionId provided
 
 1. Load practice session by `id` AND `user_id`.
 2. Parse `params_json` as `PracticeSessionParams`.
@@ -862,7 +862,7 @@ export type GetNextQuestionOutput = NextQuestion | null; // null means no remain
 7. Return `NextQuestion` with `session` populated.
    **Important:** `choices.isCorrect` MUST NOT be returned.
 
-**Case B: filters provided (no session)**
+##### Case B: filters provided (no session)
 
 1. Build candidate published questions filtered by tags/difficulties.
 2. Choose the next question deterministically:
@@ -2328,7 +2328,7 @@ jobs:
 >
 > Notes:
 >
-> - **CI** may use dummy values for third-party keys on fork PRs (no secrets). In that mode, set `NEXT_PUBLIC_SKIP_CLERK=true` so `next build` can prerender without real Clerk keys.
+> - **CI** fork PRs (no secrets) may use dummy values for third-party keys. In that mode, set `NEXT_PUBLIC_SKIP_CLERK=true` so `next build` can prerender without real Clerk keys.
 >   - `NEXT_PUBLIC_SKIP_CLERK=true` is blocked on Vercel production deploys (`VERCEL_ENV=production`) by `lib/env.ts`.
 > - **E2E test credentials** are required only when running Playwright E2E (CI or local). Never set them in production.
 

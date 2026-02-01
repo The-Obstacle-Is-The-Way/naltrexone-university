@@ -54,9 +54,18 @@ const [row] = await this.db
   .values({ userId, stripeCustomerId })
   .onConflictDoUpdate({
     target: stripeCustomers.userId,
-    set: { stripeCustomerId }, // or throw if different
+    // No-op update so RETURNING always yields the existing row.
+    // Then compare and reject conflicting mappings.
+    set: { stripeCustomerId: stripeCustomers.stripeCustomerId },
   })
   .returning();
+
+if (row?.stripeCustomerId !== stripeCustomerId) {
+  throw new ApplicationError(
+    'CONFLICT',
+    'Stripe customer already exists with a different stripeCustomerId',
+  );
+}
 ```
 
 ### Option B: Trust the DB constraint

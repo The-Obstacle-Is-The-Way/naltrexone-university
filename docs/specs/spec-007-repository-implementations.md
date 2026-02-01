@@ -43,7 +43,7 @@ src/adapters/repositories/
 ## Design Rules
 
 1. **No Drizzle types leak upward**: ports return domain types only.
-2. **All queries are parameterized**: use Drizzle query builders (`eq`, `and`, `inArray`, etc).
+2. **All queries are parameterized**: use Drizzle query builders (`eq`, `and`, `inArray`, etc.).
 3. **Ownership checks belong in use cases/controllers**: repositories are not authorization engines.
 4. **Mapping is explicit**: prefer small `toDomain()` helpers per entity.
 

@@ -63,7 +63,7 @@ Payment processing lives in the **Frameworks & Drivers** layer. Our domain deals
 The domain uses `SubscriptionPlan` (`monthly` / `annual`). Stripe price IDs are configuration and are mapped at the adapter boundary.
 
 - Stripe price IDs are stored in env (currently `NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY` / `NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL`).
-- The mapping between plan ↔ price ID lives in adapters (see `docs/specs/spec-009-payment-gateway.md`).
+- The mapping between plan ↔ price ID lives in adapters config (`src/adapters/config/stripe-prices.ts`) and is referenced by adapters (see `docs/specs/spec-009-payment-gateway.md`).
 - Price IDs may be persisted in `stripe_subscriptions.price_id` for audit/debug, but they MUST NOT appear in domain entities.
 
 ### Stripe Customer Mapping (1:1)
