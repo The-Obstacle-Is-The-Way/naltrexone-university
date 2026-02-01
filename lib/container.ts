@@ -115,6 +115,11 @@ export function createContainerPrimitives(
 export function createContainer(overrides: ContainerOverrides = {}) {
   const primitives = createContainerPrimitives(overrides.primitives);
 
+  const stripePriceIds = {
+    monthly: primitives.env.NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY,
+    annual: primitives.env.NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL,
+  };
+
   const repositoryFactories: RepositoryFactories = {
     createAttemptRepository: (dbOverride = primitives.db) =>
       new DrizzleAttemptRepository(dbOverride),
@@ -129,10 +134,7 @@ export function createContainer(overrides: ContainerOverrides = {}) {
     createSubscriptionRepository: (dbOverride = primitives.db) =>
       new DrizzleSubscriptionRepository(
         dbOverride,
-        {
-          monthly: primitives.env.NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY,
-          annual: primitives.env.NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL,
-        },
+        stripePriceIds,
         primitives.now,
       ),
     createStripeCustomerRepository: (dbOverride = primitives.db) =>
@@ -158,10 +160,7 @@ export function createContainer(overrides: ContainerOverrides = {}) {
       new StripePaymentGateway({
         stripe: primitives.stripe,
         webhookSecret: primitives.env.STRIPE_WEBHOOK_SECRET,
-        priceIds: {
-          monthly: primitives.env.NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY,
-          annual: primitives.env.NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL,
-        },
+        priceIds: stripePriceIds,
       }),
   };
 

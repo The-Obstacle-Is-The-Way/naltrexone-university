@@ -63,6 +63,35 @@ describe('container factories', () => {
     expect(typeof container.createStripeWebhookDeps).toBe('function');
   }, 40000);
 
+  it('shares Stripe price IDs between subscription repository and payment gateway', async () => {
+    const createContainer = await createContainerPromise;
+    const container = createContainer({
+      primitives: {
+        db: {} as unknown as DrizzleDb,
+        env: {
+          NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY: 'price_m',
+          NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL: 'price_a',
+          STRIPE_WEBHOOK_SECRET: 'whsec',
+        } as unknown as typeof import('./env').env,
+        logger: {
+          error: () => undefined,
+        } as unknown as typeof import('./logger').logger,
+        stripe: {} as unknown as typeof import('./stripe').stripe,
+        now: () => new Date('2026-02-01T00:00:00Z'),
+      },
+    });
+
+    const paymentGateway = container.createPaymentGateway();
+    const subscriptionRepository = container.createSubscriptionRepository();
+
+    expect(
+      (paymentGateway as unknown as { deps: { priceIds: unknown } }).deps
+        .priceIds,
+    ).toBe(
+      (subscriptionRepository as unknown as { priceIds: unknown }).priceIds,
+    );
+  }, 40000);
+
   it('uses repository factories inside createStripeWebhookDeps transactions', async () => {
     const createContainer = await createContainerPromise;
     const tx = { tx: true } as const;

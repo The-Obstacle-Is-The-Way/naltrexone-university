@@ -4,7 +4,7 @@
  */
 
 import { resolve } from 'node:path';
-import { config } from 'dotenv';
+import { loadDotenvFileOrThrow } from '../shared/load-dotenv-file';
 
 // Load .env.test from project root
-config({ path: resolve(__dirname, '../../.env.test') });
+loadDotenvFileOrThrow(resolve(__dirname, '../../.env.test'));
