@@ -125,10 +125,11 @@ export type WebhookEventResult = {
   processed: boolean;
   subscriptionUpdate?: {
     userId: string; // internal UUID
+    stripeSubscriptionId: string; // opaque external id
+    plan: SubscriptionPlan; // domain plan (monthly/annual)
     status: SubscriptionStatus;
     currentPeriodEnd: Date;
     cancelAtPeriodEnd: boolean;
-    priceId: string; // persisted for audit/debug (not a domain concept)
   };
 };
 
@@ -157,7 +158,7 @@ export interface PaymentGateway {
 
 ```ts
 import type { Attempt, Bookmark, PracticeSession, Question, Subscription, Tag } from '@/src/domain/entities';
-import type { QuestionDifficulty } from '@/src/domain/value-objects';
+import type { QuestionDifficulty, SubscriptionPlan, SubscriptionStatus } from '@/src/domain/value-objects';
 
 export interface QuestionRepository {
   findPublishedById(id: string): Promise<Question | null>;
@@ -222,8 +223,19 @@ export interface TagRepository {
   listAll(): Promise<readonly Tag[]>;
 }
 
+export type SubscriptionUpsertInput = {
+  userId: string;
+  stripeSubscriptionId: string; // opaque external id
+  plan: SubscriptionPlan; // domain plan (monthly/annual)
+  status: SubscriptionStatus;
+  currentPeriodEnd: Date;
+  cancelAtPeriodEnd: boolean;
+};
+
 export interface SubscriptionRepository {
   findByUserId(userId: string): Promise<Subscription | null>;
+  findByStripeSubscriptionId(stripeSubscriptionId: string): Promise<Subscription | null>;
+  upsert(input: SubscriptionUpsertInput): Promise<void>;
 }
 
 export interface StripeCustomerRepository {

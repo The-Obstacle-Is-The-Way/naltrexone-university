@@ -82,10 +82,11 @@ If Stripe does not return a `session.url`, throw `ApplicationError('STRIPE_ERROR
 
 - For subscription events, `subscriptionUpdate` MUST include:
   - `userId` (internal UUID from metadata)
+  - `stripeSubscriptionId`
+  - `plan` (domain plan mapped from Stripe price id)
   - `status`
   - `currentPeriodEnd`
   - `cancelAtPeriodEnd`
-  - `priceId` (persisted for audit/debug; not a domain concept)
 
 If required fields are missing (e.g., no `user_id` metadata), treat this as a processing error and let the webhook/controller mark the event as failed (do not silently ignore).
 

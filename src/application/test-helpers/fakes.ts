@@ -13,6 +13,7 @@ import type {
   QuestionFilters,
   QuestionRepository,
   SubscriptionRepository,
+  SubscriptionUpsertInput,
 } from '../ports/repositories';
 
 type InMemoryAttempt = Attempt & { practiceSessionId: string | null };
@@ -223,6 +224,8 @@ export class FakePracticeSessionRepository
 
 export class FakeSubscriptionRepository implements SubscriptionRepository {
   private readonly byUserId = new Map<string, Subscription>();
+  private readonly stripeSubscriptionIdByUserId = new Map<string, string>();
+  private readonly userIdByStripeSubscriptionId = new Map<string, string>();
 
   constructor(subscriptions: readonly Subscription[] = []) {
     for (const sub of subscriptions) {
@@ -232,5 +235,59 @@ export class FakeSubscriptionRepository implements SubscriptionRepository {
 
   async findByUserId(userId: string): Promise<Subscription | null> {
     return this.byUserId.get(userId) ?? null;
+  }
+
+  async findByStripeSubscriptionId(
+    stripeSubscriptionId: string,
+  ): Promise<Subscription | null> {
+    const userId = this.userIdByStripeSubscriptionId.get(stripeSubscriptionId);
+    if (!userId) return null;
+    return this.byUserId.get(userId) ?? null;
+  }
+
+  async upsert(input: SubscriptionUpsertInput): Promise<void> {
+    const mappedUserId = this.userIdByStripeSubscriptionId.get(
+      input.stripeSubscriptionId,
+    );
+
+    if (mappedUserId && mappedUserId !== input.userId) {
+      throw new ApplicationError(
+        'CONFLICT',
+        'Stripe subscription id is already mapped to a different user',
+      );
+    }
+
+    const now = new Date();
+    const existing = this.byUserId.get(input.userId);
+    const subscription: Subscription = {
+      id: existing?.id ?? `subscription-${this.byUserId.size + 1}`,
+      userId: input.userId,
+      plan: input.plan,
+      status: input.status,
+      currentPeriodEnd: input.currentPeriodEnd,
+      cancelAtPeriodEnd: input.cancelAtPeriodEnd,
+      createdAt: existing?.createdAt ?? now,
+      updatedAt: now,
+    };
+
+    const previousStripeSubscriptionId = this.stripeSubscriptionIdByUserId.get(
+      input.userId,
+    );
+    if (
+      previousStripeSubscriptionId &&
+      previousStripeSubscriptionId !== input.stripeSubscriptionId
+    ) {
+      this.userIdByStripeSubscriptionId.delete(previousStripeSubscriptionId);
+    }
+
+    this.byUserId.set(input.userId, subscription);
+    this.stripeSubscriptionIdByUserId.set(
+      input.userId,
+      input.stripeSubscriptionId,
+    );
+    this.userIdByStripeSubscriptionId.set(
+      input.stripeSubscriptionId,
+      input.userId,
+    );
   }
 }
