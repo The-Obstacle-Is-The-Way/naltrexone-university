@@ -313,5 +313,25 @@ describe('DrizzleUserRepository', () => {
       await expect(promise).rejects.toBeInstanceOf(ApplicationError);
       await expect(promise).rejects.toMatchObject({ code: 'CONFLICT' });
     });
+
+    it('maps unknown errors to INTERNAL_ERROR', async () => {
+      const db = createDbMock();
+      const existing = {
+        id: 'user_1',
+        clerkUserId: 'clerk_1',
+        email: 'old@example.com',
+        createdAt: new Date('2026-02-01T00:00:00Z'),
+        updatedAt: new Date('2026-02-01T00:00:00Z'),
+      };
+
+      db._mocks.queryFindFirst.mockResolvedValue(existing);
+      db._mocks.updateReturning.mockRejectedValue(new Error('boom'));
+
+      const repo = new DrizzleUserRepository(db as unknown as RepoDb);
+
+      const promise = repo.upsertByClerkId('clerk_1', 'new@example.com');
+      await expect(promise).rejects.toBeInstanceOf(ApplicationError);
+      await expect(promise).rejects.toMatchObject({ code: 'INTERNAL_ERROR' });
+    });
   });
 });

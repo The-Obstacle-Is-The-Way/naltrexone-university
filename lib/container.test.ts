@@ -1,6 +1,26 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { StripeWebhookDeps } from '@/src/adapters/controllers/stripe-webhook-controller';
+import {
+  ClerkAuthGateway,
+  StripePaymentGateway,
+} from '@/src/adapters/gateways';
+import {
+  DrizzleAttemptRepository,
+  DrizzleBookmarkRepository,
+  DrizzlePracticeSessionRepository,
+  DrizzleQuestionRepository,
+  DrizzleStripeCustomerRepository,
+  DrizzleStripeEventRepository,
+  DrizzleSubscriptionRepository,
+  DrizzleTagRepository,
+} from '@/src/adapters/repositories';
+import { DrizzleUserRepository } from '@/src/adapters/repositories/drizzle-user-repository';
 import type { DrizzleDb } from '@/src/adapters/shared/database-types';
+import {
+  CheckEntitlementUseCase,
+  GetNextQuestionUseCase,
+  SubmitAnswerUseCase,
+} from '@/src/application/use-cases';
 
 vi.mock('server-only', () => ({}));
 vi.mock('stripe', () => ({
@@ -61,6 +81,72 @@ describe('container factories', () => {
     expect(typeof container.createSubmitAnswerUseCase).toBe('function');
 
     expect(typeof container.createStripeWebhookDeps).toBe('function');
+  }, 40000);
+
+  it('wires concrete implementations for all factories', async () => {
+    const createContainer = await createContainerPromise;
+    const container = createContainer({
+      primitives: {
+        db: {} as unknown as DrizzleDb,
+        env: {
+          NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY: 'price_m',
+          NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL: 'price_a',
+          STRIPE_WEBHOOK_SECRET: 'whsec',
+        } as unknown as typeof import('./env').env,
+        logger: {
+          error: () => undefined,
+        } as unknown as typeof import('./logger').logger,
+        stripe: {} as unknown as typeof import('./stripe').stripe,
+        now: () => new Date('2026-02-01T00:00:00Z'),
+      },
+    });
+
+    expect(container.createAttemptRepository()).toBeInstanceOf(
+      DrizzleAttemptRepository,
+    );
+    expect(container.createBookmarkRepository()).toBeInstanceOf(
+      DrizzleBookmarkRepository,
+    );
+    expect(container.createPracticeSessionRepository()).toBeInstanceOf(
+      DrizzlePracticeSessionRepository,
+    );
+    expect(container.createQuestionRepository()).toBeInstanceOf(
+      DrizzleQuestionRepository,
+    );
+    expect(container.createTagRepository()).toBeInstanceOf(
+      DrizzleTagRepository,
+    );
+    expect(container.createSubscriptionRepository()).toBeInstanceOf(
+      DrizzleSubscriptionRepository,
+    );
+    expect(container.createStripeCustomerRepository()).toBeInstanceOf(
+      DrizzleStripeCustomerRepository,
+    );
+    expect(container.createStripeEventRepository()).toBeInstanceOf(
+      DrizzleStripeEventRepository,
+    );
+    expect(container.createUserRepository()).toBeInstanceOf(
+      DrizzleUserRepository,
+    );
+
+    expect(container.createAuthGateway()).toBeInstanceOf(ClerkAuthGateway);
+    expect(container.createPaymentGateway()).toBeInstanceOf(
+      StripePaymentGateway,
+    );
+
+    expect(container.createCheckEntitlementUseCase()).toBeInstanceOf(
+      CheckEntitlementUseCase,
+    );
+    expect(container.createGetNextQuestionUseCase()).toBeInstanceOf(
+      GetNextQuestionUseCase,
+    );
+    expect(container.createSubmitAnswerUseCase()).toBeInstanceOf(
+      SubmitAnswerUseCase,
+    );
+
+    const deps = container.createStripeWebhookDeps();
+    expect(deps.paymentGateway).toBeInstanceOf(StripePaymentGateway);
+    expect(typeof deps.transaction).toBe('function');
   }, 40000);
 
   it('shares Stripe price IDs between subscription repository and payment gateway', async () => {
