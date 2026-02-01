@@ -81,7 +81,7 @@ jobs:
         run: pnpm typecheck
 
       - name: Lint and Format Check (Biome)
-        run: pnpm exec biome ci .
+        run: pnpm lint:ci
 
       - name: Migrate DB
         run: pnpm db:migrate
