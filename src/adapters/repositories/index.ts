@@ -6,3 +6,4 @@ export { DrizzleStripeCustomerRepository } from './drizzle-stripe-customer-repos
 export { DrizzleStripeEventRepository } from './drizzle-stripe-event-repository';
 export { DrizzleSubscriptionRepository } from './drizzle-subscription-repository';
 export { DrizzleTagRepository } from './drizzle-tag-repository';
+export { DrizzleUserRepository } from './drizzle-user-repository';
