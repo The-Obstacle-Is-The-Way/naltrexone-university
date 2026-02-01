@@ -10,12 +10,16 @@ The `lib/` utilities throw plain `Error` objects with string messages, while the
 
 ## Locations
 
+### Runtime Errors (user-facing)
 - **`lib/auth.ts:13`**: `throw new Error('UNAUTHENTICATED')`
 - **`lib/auth.ts:67`**: `throw new Error('Failed to ensure user row')`
 - **`lib/auth.ts:95`**: `throw new Error('User has no email address')`
-- **`lib/subscription.ts`**: `throw new Error('UNSUBSCRIBED')` (if exists)
+- **`lib/subscription.ts:37`**: `throw new Error('UNSUBSCRIBED')`
+
+### Startup/Build-time Errors
 - **`lib/env.ts:34`**: `throw new Error('Invalid environment variables')`
 - **`lib/env.ts:41`**: `throw new Error('NEXT_PUBLIC_SKIP_CLERK must not be true...')`
+- **`lib/content/parseMdxQuestion.ts:30,33,36,50,64,67`**: Various content parsing errors
 
 ## Why This Is a Problem
 
