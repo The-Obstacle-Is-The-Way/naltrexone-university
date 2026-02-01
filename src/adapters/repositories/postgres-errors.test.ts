@@ -19,4 +19,10 @@ describe('postgres-errors', () => {
     expect(getPostgresErrorCode(new Error('boom'))).toBeNull();
     expect(isPostgresUniqueViolation(new Error('boom'))).toBe(false);
   });
+
+  it('returns null when error shape is not a postgres error', () => {
+    expect(getPostgresErrorCode(null)).toBeNull();
+    expect(getPostgresErrorCode({ code: 123 })).toBeNull();
+    expect(getPostgresErrorCode({ cause: { code: 123 } })).toBeNull();
+  });
 });

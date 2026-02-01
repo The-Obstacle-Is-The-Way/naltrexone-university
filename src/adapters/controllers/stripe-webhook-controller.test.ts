@@ -218,4 +218,50 @@ describe('processStripeWebhook', () => {
 
     expect(stripeCustomers.insertCalls).toBe(0);
   });
+
+  it('marks the event failed when processing throws', async () => {
+    const paymentGateway = new FakePaymentGateway({
+      checkoutUrl: 'https://stripe/checkout',
+      portalUrl: 'https://stripe/portal',
+      webhookResult: {
+        eventId: 'evt_4',
+        type: 'customer.subscription.updated',
+        subscriptionUpdate: {
+          userId: 'user_1',
+          stripeCustomerId: 'cus_123',
+          stripeSubscriptionId: 'sub_123',
+          plan: 'monthly',
+          status: 'active',
+          currentPeriodEnd: new Date('2026-03-01T00:00:00.000Z'),
+          cancelAtPeriodEnd: false,
+        },
+      },
+    });
+
+    class FailingSubscriptionRepository extends FakeSubscriptionRepository {
+      async upsert(): Promise<void> {
+        throw new Error('boom');
+      }
+    }
+
+    const stripeEvents = new FakeStripeEventRepository();
+    const subscriptions = new FailingSubscriptionRepository();
+    const stripeCustomers = new FakeStripeCustomerRepository();
+
+    await expect(
+      processStripeWebhook(
+        {
+          paymentGateway,
+          transaction: async (fn) =>
+            fn({ stripeEvents, subscriptions, stripeCustomers }),
+        },
+        { rawBody: 'raw', signature: 'sig' },
+      ),
+    ).rejects.toMatchObject({ message: 'boom' });
+
+    await expect(stripeEvents.lock('evt_4')).resolves.toMatchObject({
+      processedAt: null,
+      error: 'boom',
+    });
+  });
 });

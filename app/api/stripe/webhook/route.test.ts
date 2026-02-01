@@ -9,6 +9,7 @@ vi.mock('@/src/adapters/controllers/stripe-webhook-controller', () => ({
     processStripeWebhookMock(...args),
 }));
 
+const loggerErrorMock = vi.fn();
 vi.mock('@/lib/container', () => ({
   createContainer: () => ({
     db: {
@@ -18,7 +19,7 @@ vi.mock('@/lib/container', () => ({
       NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY: 'price_m',
       NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL: 'price_a',
     },
-    logger: { error: vi.fn() },
+    logger: { error: loggerErrorMock },
     paymentGateway: {},
   }),
 }));
@@ -70,5 +71,26 @@ describe('POST /api/stripe/webhook', () => {
     );
 
     expect(res.status).toBe(400);
+  });
+
+  it('returns 500 when processing fails unexpectedly', async () => {
+    loggerErrorMock.mockClear();
+    processStripeWebhookMock.mockRejectedValue(new Error('boom'));
+
+    const { POST } = await import('./route');
+
+    const res = await POST(
+      new Request('http://localhost/api/stripe/webhook', {
+        method: 'POST',
+        headers: { 'stripe-signature': 'sig_1' },
+        body: 'raw',
+      }),
+    );
+
+    expect(res.status).toBe(500);
+    await expect(res.json()).resolves.toEqual({
+      error: 'Webhook processing failed',
+    });
+    expect(loggerErrorMock).toHaveBeenCalledTimes(1);
   });
 });
