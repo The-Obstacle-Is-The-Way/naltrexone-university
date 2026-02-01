@@ -256,7 +256,7 @@ export function isValidPracticeMode(value: string): value is PracticeMode {
   return AllPracticeModes.includes(value as PracticeMode);
 }
 
-export function shouldShowExplanation(
+export function shouldShowExplanationForMode(
   mode: PracticeMode,
   sessionEnded: boolean,
 ): boolean {
@@ -502,16 +502,9 @@ export function computeSessionProgress(
  * Pure function.
  */
 export function shouldShowExplanation(
-  session: PracticeSession | null
+  session: PracticeSession
 ): boolean {
-  // No session = tutor mode (ad-hoc practice)
-  if (!session) return true;
-
-  // Tutor mode = immediate explanation
-  if (session.mode === 'tutor') return true;
-
-  // Exam mode = only after session ends
-  return session.endedAt !== null;
+  return shouldShowExplanationForMode(session.mode, session.endedAt !== null);
 }
 
 /**

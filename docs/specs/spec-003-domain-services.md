@@ -417,7 +417,7 @@ export function filterAttemptsInWindow<T extends { answeredAt: Date }>(
 
 ```typescript
 import type { PracticeSession, Attempt } from '../entities';
-import { shouldShowExplanation as modeShowsExplanation } from '../value-objects';
+import { shouldShowExplanationForMode } from '../value-objects';
 
 export type SessionProgress = {
   current: number;
@@ -444,7 +444,7 @@ export function computeSessionProgress(
  * Determine if explanation should be shown - pure function
  */
 export function shouldShowExplanation(session: PracticeSession): boolean {
-  return modeShowsExplanation(session.mode, session.endedAt !== null);
+  return shouldShowExplanationForMode(session.mode, session.endedAt !== null);
 }
 
 /**
