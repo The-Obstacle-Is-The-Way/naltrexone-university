@@ -6,36 +6,46 @@
 
 ## Summary
 
-The "insert or return existing" conflict resolution pattern is duplicated across two repositories with nearly identical logic.
+The "insert or return existing" conflict resolution pattern is used in two repositories with similar (but not identical) logic. While not exact duplication, both could benefit from a shared helper.
 
 ## Locations
 
 - **`src/adapters/repositories/drizzle-bookmark-repository.ts`** lines 23-57
 - **`src/adapters/repositories/drizzle-stripe-customer-repository.ts`** lines 26-63
 
-## Duplicated Pattern
+## Similar Patterns
 
+### Bookmark (simpler - lines 23-57)
 ```typescript
-// Both files have this ~30 line pattern:
-
-// 1. Try insert with onConflictDoNothing
-const [inserted] = await this.db
-  .insert(table)
-  .values({ ... })
-  .onConflictDoNothing()
-  .returning();
-
+// 1. Try insert
+const [inserted] = await this.db.insert(bookmarks)...onConflictDoNothing().returning();
 if (inserted) return inserted;
 
-// 2. Fallback query
-const existing = await this.db.query.table.findFirst({...});
+// 2. Query existing
+const existing = await this.db.query.bookmarks.findFirst({...});
+if (!existing) throw new ApplicationError('INTERNAL_ERROR', ...);
+return existing;
+```
 
-// 3. Error if still missing
-if (!existing) {
-  throw new ApplicationError('INTERNAL_ERROR', 'Failed to insert...');
+### StripeCustomer (more complex - lines 26-63)
+```typescript
+// 1. Try insert
+const [inserted] = await this.db.insert(stripeCustomers)...onConflictDoNothing().returning();
+if (inserted) return;
+
+// 2. Query by userId (check if same customer)
+const existingByUserId = ...
+if (existingByUserId) {
+  if (matches) return;
+  throw CONFLICT;
 }
 
-return existing;
+// 3. Query by stripeCustomerId (check if mapped to other user)
+const existingByStripeCustomerId = ...
+if (existingByStripeCustomerId) throw CONFLICT;
+
+// 4. Unexpected state
+throw INTERNAL_ERROR;
 ```
 
 ## Why This Is a Problem

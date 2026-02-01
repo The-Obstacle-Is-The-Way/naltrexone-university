@@ -1,19 +1,19 @@
-# DEBT-015: Race Condition in DrizzleStripeCustomerRepository.insert()
+# DEBT-015: Complex Fallback Logic in DrizzleStripeCustomerRepository.insert()
 
 **Status:** Open
-**Priority:** P1
+**Priority:** P3 (downgraded from P1 - not a data integrity issue)
 **Date:** 2026-02-01
 
 ## Summary
 
-The `insert()` method has a TOCTOU (Time-Of-Check-Time-Of-Use) race condition between the insert attempt and fallback queries.
+The `insert()` method uses a complex multi-query fallback pattern instead of a simpler atomic approach. While the DB constraints prevent data corruption, the code is harder to reason about.
 
 ## Location
 
 - **File:** `src/adapters/repositories/drizzle-stripe-customer-repository.ts`
 - **Lines:** 26-63
 
-## The Problem
+## The Pattern
 
 ```typescript
 // Step 1: Try insert, silently ignore conflict
@@ -25,53 +25,54 @@ const [inserted] = await this.db
 
 if (inserted) return;
 
-// RACE WINDOW: Another request could insert/modify here
-
-// Step 2: Fallback queries to check state
+// Step 2: Multiple fallback queries to understand why insert failed
 const existingByUserId = await this.db.query.stripeCustomers.findFirst({...});
-// State may have changed between Step 1 and Step 2
+// ... more queries and error handling
 ```
 
-## Why This Is a Problem
+## Why This Is NOT a Data Integrity Issue
 
-1. **Data Integrity Risk**: Under concurrent Stripe webhooks, could create inconsistent mappings
-2. **Non-Deterministic**: Race failures are intermittent, hard to reproduce
-3. **Silent Corruption**: Could map wrong Stripe customer to user
-4. **Missing Transaction**: Multi-step DB operations without atomicity guarantee
+The DB has two unique constraints (verified in schema):
+- `stripe_customers_user_id_uq` - one Stripe customer per user
+- `stripe_customers_stripe_customer_id_uq` - one user per Stripe customer
 
-## Scenario
+These constraints prevent the race condition scenario originally described. Concurrent inserts with the same `userId` will BOTH conflict, not just one.
 
-1. Request A: Insert user-1 → cus_AAA (conflict, onConflictDoNothing)
-2. Request B: Insert user-1 → cus_BBB (succeeds, different customer ID!)
-3. Request A: Query for user-1 → finds cus_BBB (wrong customer!)
-4. Request A: Returns success, but used wrong Stripe customer
+## Why This Is Still a Code Quality Issue
 
-## Fix
+1. **Complexity**: 40 lines of fallback logic when simpler approaches exist
+2. **Multiple Queries**: Could be reduced to one atomic statement
+3. **Hard to Test**: Race conditions are hard to test even if not dangerous
+4. **Redundant**: DB constraints already enforce the invariants
 
-Wrap in a transaction:
+## Simpler Alternatives
 
+### Option A: ON CONFLICT DO UPDATE with RETURNING
 ```typescript
-async insert(userId: string, stripeCustomerId: string): Promise<void> {
-  await this.db.transaction(async (tx) => {
-    const [inserted] = await tx
-      .insert(stripeCustomers)
-      .values({ userId, stripeCustomerId })
-      .onConflictDoNothing()
-      .returning();
+const [row] = await this.db
+  .insert(stripeCustomers)
+  .values({ userId, stripeCustomerId })
+  .onConflictDoUpdate({
+    target: stripeCustomers.userId,
+    set: { stripeCustomerId }, // or throw if different
+  })
+  .returning();
+```
 
-    if (inserted) return;
-
-    // Fallback queries inside same transaction
-    const existing = await tx.query.stripeCustomers.findFirst({...});
-    // ...
-  });
+### Option B: Trust the DB constraint
+```typescript
+try {
+  await this.db.insert(stripeCustomers).values({ userId, stripeCustomerId });
+} catch (e) {
+  if (isUniqueConstraintViolation(e)) {
+    throw new ApplicationError('CONFLICT', 'Stripe customer already exists');
+  }
+  throw e;
 }
 ```
 
-Or use `ON CONFLICT DO UPDATE` to handle atomically.
-
 ## Acceptance Criteria
 
-- Insert operation is atomic (transaction or single statement)
-- Concurrent insert tests added
-- No race window between insert and fallback
+- Simplify to single atomic statement
+- Remove multi-query fallback pattern
+- Maintain same business logic (reject conflicting mappings)

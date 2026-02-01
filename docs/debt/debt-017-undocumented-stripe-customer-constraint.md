@@ -34,18 +34,19 @@ This enforces: **One Stripe customer → One internal user** (no sharing)
 
 1. **Undocumented Business Rule**: Not in spec, ADR, or interface JSDoc
 2. **Implicit Assumption**: Future developers may not know about this constraint
-3. **No Schema Enforcement**: DB doesn't have unique constraint on `stripeCustomerId`
-4. **Fragile**: Rule could be violated by direct DB access or migrations
 
-## Potential Scenarios Where This Breaks
+**Note:** The schema DOES have a unique constraint (`stripe_customers_stripe_customer_id_uq` in `db/schema.ts` lines 118-120), so the DB enforces this. The issue is purely documentation - the interface at `src/application/ports/repositories.ts` lines 95-98 has no JSDoc explaining the constraint.
 
-1. **Account Merge**: User A and User B are same Stripe customer (support override)
-2. **Testing**: Same test Stripe customer used for multiple test users
-3. **Migration**: Importing users with shared Stripe accounts
+## Potential Scenarios to Consider
+
+1. **Account Merge**: If User A and User B need to share a Stripe customer (support override), the constraint prevents this
+2. **Testing**: Same test Stripe customer cannot be reused for multiple test users
+
+These may be intentional business rules - they just need to be documented.
 
 ## Fix
 
-### Option A: Document in Interface
+### Option A: Document in Interface (Recommended)
 ```typescript
 /**
  * Insert a Stripe customer mapping.
@@ -59,17 +60,10 @@ This enforces: **One Stripe customer → One internal user** (no sharing)
 insert(userId: string, stripeCustomerId: string): Promise<void>;
 ```
 
-### Option B: Add DB Constraint
-```sql
-ALTER TABLE stripe_customers ADD CONSTRAINT stripe_customer_unique
-  UNIQUE (stripe_customer_id);
-```
-
-### Option C: Document in ADR-005
+### Option B: Document in ADR-005
 Add to Payment Boundary ADR explaining the 1-to-1 assumption.
 
 ## Acceptance Criteria
 
-- Business rule documented somewhere (interface, ADR, or schema)
-- Ideally enforced at DB level, not just application level
-- Tests verify the constraint behavior
+- Business rule documented in interface JSDoc
+- ADR-005 mentions the 1-to-1 constraint as a design decision
