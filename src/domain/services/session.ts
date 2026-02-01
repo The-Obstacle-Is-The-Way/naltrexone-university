@@ -1,5 +1,5 @@
 import type { PracticeSession } from '../entities';
-import { shouldShowExplanation as shouldShowExplanationForMode } from '../value-objects/practice-mode';
+import { shouldShowExplanationForMode } from '../value-objects/practice-mode';
 
 export type SessionProgress = {
   current: number;

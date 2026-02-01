@@ -2,6 +2,26 @@
 
 Repository guidelines for AI coding agents (Codex CLI, etc.) working with this codebase.
 
+## ⚠️ MANDATORY: Test-Driven Development (TDD)
+
+**ALL CODE MUST BE TEST-DRIVEN. NO EXCEPTIONS.**
+
+Before writing ANY implementation code:
+1. **Write the test first** (Red)
+2. **Write minimum code to pass** (Green)
+3. **Refactor if needed** (Refactor)
+
+If you find yourself writing code without a failing test, STOP. Write the test first.
+
+**Test locations:**
+- Domain/Application: Colocate tests (`*.test.ts`) next to source
+- Integration: `tests/integration/*.integration.test.ts`
+- E2E: `tests/e2e/*.spec.ts`
+
+See Robert C. Martin (Uncle Bob) - Clean Code, Clean Architecture, TDD principles.
+
+---
+
 ## Project Overview
 
 **Addiction Boards** (Naltrexone University) is a subscription-based SaaS question bank for Addiction Psychiatry and Addiction Medicine board exam preparation. Users subscribe ($29/mo or $199/yr), practice questions in tutor/exam modes, and track progress.
