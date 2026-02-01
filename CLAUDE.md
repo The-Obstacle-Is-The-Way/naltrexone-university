@@ -326,6 +326,24 @@ Integration tests run against a real Postgres instance. In CI, a service contain
 pnpm typecheck && pnpm lint && pnpm test --run && pnpm test:integration && pnpm build
 ```
 
+## ⚠️ MANDATORY: Never Delete Uncommitted Work
+
+**If you see uncommitted files or changes you didn't create, DO NOT DELETE THEM.**
+
+Another agent or the user may be working concurrently. Uncommitted work is **intentional** until proven otherwise.
+
+**The Rule:**
+- See files you didn't create? → **Commit them or leave them alone**
+- See edits you didn't make? → **Ask before reverting**
+- Unsure if something should exist? → **ASK, don't delete**
+
+**Why this happens:**
+Multiple agents may work in parallel. One agent creates a file, another agent sees it as "unexpected" and deletes it. This destroys work.
+
+**When in doubt:** `git stash` to preserve work, then ask the user.
+
+---
+
 ## ⚠️ MANDATORY: CodeRabbit Review Before Merge
 
 **NEVER merge a PR without CodeRabbit review. NO EXCEPTIONS.**

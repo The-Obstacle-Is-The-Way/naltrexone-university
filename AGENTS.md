@@ -374,6 +374,35 @@ pnpm typecheck && pnpm lint && pnpm test --run && pnpm test:integration && pnpm 
 
 ---
 
+## ⚠️ MANDATORY: Never Delete Uncommitted Work
+
+**If you see uncommitted files or changes you didn't create, DO NOT DELETE THEM.**
+
+This is a multi-agent environment. Another agent or the user may be working concurrently. Uncommitted work is **intentional** until proven otherwise.
+
+### The Rule
+
+- See files you didn't create? → **Commit them or leave them alone**
+- See edits you didn't make? → **Ask before reverting**
+- Unsure if something should exist? → **ASK, don't delete**
+- See a file that seems "redundant"? → **It's not your call to delete it**
+
+### Why This Matters
+
+Multiple agents work in parallel on this codebase. One agent creates a file, another sees it as "unexpected" and deletes it. This destroys hours of work and creates frustration.
+
+### Safe Approach
+
+```bash
+# If you see unexpected uncommitted work:
+git stash -m "Preserving work from another session"
+# Then ask the user what to do
+```
+
+**Never assume uncommitted work is garbage. It's almost always intentional.**
+
+---
+
 ## ⚠️ MANDATORY: CodeRabbit Review Before Merge
 
 **NEVER merge a PR without CodeRabbit review. NO EXCEPTIONS.**
