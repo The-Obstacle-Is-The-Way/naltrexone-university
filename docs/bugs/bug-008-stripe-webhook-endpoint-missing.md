@@ -1,31 +1,30 @@
 # BUG-008: Stripe Webhook Endpoint Missing (`/api/stripe/webhook`)
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P0
 **Date:** 2026-02-01
+**Resolved:** 2026-02-01
 
 ## Summary
 
-SSOT (master spec + SPEC-011 Paywall) requires a Stripe webhook route handler at `app/api/stripe/webhook/route.ts` to sync Stripe subscription state into Postgres (via `stripe_events`, `stripe_customers`, `stripe_subscriptions`). The route handler does not exist, so Stripe cannot deliver subscription events and the system cannot become “subscription-aware”.
+SSOT (master spec + SPEC-011 Paywall) requires a Stripe webhook route handler at `app/api/stripe/webhook/route.ts` to sync Stripe subscription state into Postgres (via `stripe_events`, `stripe_customers`, `stripe_subscriptions`). The route handler was missing, so Stripe could not deliver subscription events and the system could not become “subscription-aware”.
 
 This is a hard blocker for SLICE-1 paywall acceptance criteria (subscribe → checkout success/webhook → DB subscription active → entitlement gate).
 
 ## Evidence / Current State
 
-- **Missing file:** `app/api/stripe/webhook/route.ts` (404)
+- **Implemented:** `app/api/stripe/webhook/route.ts` (Node runtime)
 - **Middleware expects it:** `proxy.ts` treats `/api/stripe/webhook(.*)` as a public route (signature-protected)
-- **Foundational pieces exist but are unused end-to-end:**
-  - `src/adapters/gateways/stripe-payment-gateway.ts` (signature verification + normalization)
-  - `src/adapters/repositories/drizzle-stripe-event-repository.ts` (stripe_events)
-  - `src/adapters/repositories/drizzle-subscription-repository.ts` (stripe_subscriptions)
-  - `src/adapters/repositories/drizzle-stripe-customer-repository.ts` (stripe_customers)
+- **End-to-end wiring exists:** route → controller → gateway + repositories (transactional)
 
 ## Impact
 
-- Stripe subscription state will never be persisted/updated from Stripe events.
-- Users can never become entitled via Stripe (subscription gating cannot be correct).
-- Any future webhook idempotency logic cannot run.
-- SLICE-1 paywall cannot be completed or tested (integration/E2E).
+Before this fix:
+
+- Stripe subscription state could not be persisted/updated from Stripe events.
+- Users could not become entitled via Stripe (subscription gating could not be correct).
+- Webhook idempotency logic could not run.
+- SLICE-1 paywall could not be completed or tested (integration/E2E).
 
 ## Repro
 
@@ -49,12 +48,17 @@ Implement `app/api/stripe/webhook/route.ts` per `docs/specs/master_spec.md` §4.
 
 Important: SSOT requires robust idempotency + concurrency control; current `StripeEventRepository` port likely needs extension to support “claim + lock” semantics (track separately in DEBT-019).
 
+Resolved via:
+
+- Implemented webhook route handler: `app/api/stripe/webhook/route.ts`
+- Implemented controller orchestration: `src/adapters/controllers/stripe-webhook-controller.ts`
+- Implemented SSOT idempotency primitives in `StripeEventRepository` and Drizzle adapter (see DEBT-019)
+
 ## Regression Tests (Required)
 
-- Integration: `tests/integration/stripe-webhook.integration.test.ts`
-  - `400` for invalid signature
-  - idempotency: duplicate deliveries do not double-process
-  - `stripe_events` marked processed/failed correctly
+- Unit: `app/api/stripe/webhook/route.test.ts`
+- Unit: `src/adapters/controllers/stripe-webhook-controller.test.ts`
+- Integration (repositories): `tests/integration/repositories.integration.test.ts` (Stripe events coverage)
 
 ## Acceptance Criteria
 
@@ -63,4 +67,3 @@ Important: SSOT requires robust idempotency + concurrency control; current `Stri
 - `stripe_events` idempotency is enforced (including concurrency safety)
 - Subscription state is persisted to `stripe_subscriptions`
 - Route returns `200` with `{ received: true }` on success and `400` on invalid signature
-

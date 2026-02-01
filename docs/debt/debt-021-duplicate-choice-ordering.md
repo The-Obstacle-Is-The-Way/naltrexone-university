@@ -1,8 +1,9 @@
 # DEBT-021: Choice Ordering Is Duplicated (Repository + Use Case)
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P4
 **Date:** 2026-02-01
+**Resolved:** 2026-02-01
 
 ## Summary
 
@@ -28,6 +29,11 @@ Pick one canonical owner for the invariant and delete the other sort.
 - Remove sorting from the use case and treat ordering as already normalized.
 - Add/keep unit tests ensuring repository output has ordered choices.
 
+Resolved via Option A:
+
+- `GetNextQuestionUseCase` no longer re-sorts; repository output is treated as normalized.
+- Test factories normalize choice ordering to match repository behavior.
+
 ### Option B: Use case guarantees ordering
 
 - Remove sorting from the repository.
@@ -38,4 +44,3 @@ Pick one canonical owner for the invariant and delete the other sort.
 - Exactly one layer owns choice ordering.
 - Tests enforce the invariant at that boundary.
 - No duplicated sorting in hot paths.
-

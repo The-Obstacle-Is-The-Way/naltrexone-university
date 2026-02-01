@@ -1,8 +1,9 @@
 # DEBT-019: Stripe Webhook Idempotency/Locking Not Implementable With Current `StripeEventRepository` Port
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P1
 **Date:** 2026-02-01
+**Resolved:** 2026-02-01
 
 ## Summary
 
@@ -46,13 +47,12 @@ Update the port and implementation so the webhook handler can implement SSOT exa
 
 ### Option A (Recommended): Claim + row lock
 
-Add port methods:
+Resolved via updating the port to explicitly support claim + lock:
 
 ```ts
 export interface StripeEventRepository {
   claim(eventId: string, type: string): Promise<boolean>; // true if inserted
-  getForUpdate(eventId: string): Promise<{
-    id: string;
+  lock(eventId: string): Promise<{
     processedAt: Date | null;
     error: string | null;
   }>;
@@ -61,9 +61,9 @@ export interface StripeEventRepository {
 }
 ```
 
-Implementation notes:
-- `claim` uses `ON CONFLICT DO NOTHING RETURNING id` and returns whether inserted.
-- `getForUpdate` runs inside a transaction and performs `SELECT ... FOR UPDATE` to serialize processing/retries.
+Implementation notes (Drizzle adapter):
+- `claim` uses `ON CONFLICT DO NOTHING RETURNING ...` and returns whether inserted.
+- `lock` runs inside a transaction and performs `SELECT ... FOR UPDATE` to serialize processing/retries.
 
 ### Option B: Advisory locks
 
@@ -75,6 +75,5 @@ This still requires a transactional API surface somewhere.
 ## Acceptance Criteria
 
 - Port supports claim + serialization semantics required by SSOT.
-- Adapter implementation is covered by integration tests with concurrent calls.
+- Adapter implementation is covered by integration tests, and webhook orchestration is unit-tested.
 - Webhook handler can follow SSOT steps without hacks (no racy `isProcessed` + `ensure`).
-

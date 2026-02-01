@@ -1,8 +1,9 @@
 # DEBT-020: Duplicated Postgres Unique-Violation Detection Helper
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P4
 **Date:** 2026-02-01
+**Resolved:** 2026-02-01
 
 ## Summary
 
@@ -42,9 +43,13 @@ export function isPostgresUniqueViolation(error: unknown): boolean {
 
 Then re-use in all adapters that need Postgres error mapping.
 
+Resolved via:
+
+- Added `src/adapters/repositories/postgres-errors.ts` + unit tests.
+- Refactored Stripe customer/subscription repositories and Clerk auth gateway to use the shared helper.
+
 ## Acceptance Criteria
 
 - Single canonical implementation of Postgres error-code extraction in adapters.
 - All repositories/gateways use it consistently.
 - Unit tests cover the helper against expected error shapes.
-

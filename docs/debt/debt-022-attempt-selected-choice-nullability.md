@@ -1,12 +1,13 @@
 # DEBT-022: `Attempt.selectedChoiceId` Nullability Mismatch (DB allows null, Domain forbids it)
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P2
 **Date:** 2026-02-01
+**Resolved:** 2026-02-01
 
 ## Summary
 
-The database schema allows `attempts.selected_choice_id` to become `NULL` (foreign key `onDelete: 'set null'`), but the domain entity `Attempt` requires `selectedChoiceId: string`.
+The database schema allowed `attempts.selected_choice_id` to be `NULL`, but the domain entity `Attempt` requires `selectedChoiceId: string`.
 
 The adapter currently treats a null `selectedChoiceId` as data corruption and throws `ApplicationError('INTERNAL_ERROR', ...)`.
 
@@ -15,9 +16,16 @@ This is a legitimate design choice, but it is currently **implicit** and therefo
 ## Locations
 
 - Domain entity: `src/domain/entities/attempt.ts` (`selectedChoiceId: string`)
-- DB schema: `db/schema.ts` (`selectedChoiceId` FK with `onDelete: 'set null'`)
+- DB schema: `db/schema.ts` (`selectedChoiceId` is `NOT NULL`; FK `onDelete: 'restrict'`)
 - Adapter behavior: `src/adapters/repositories/drizzle-attempt-repository.ts` (`requireSelectedChoiceId`)
 - SSOT schema snippet: `docs/specs/master_spec.md` (attempts table definition)
+
+## Current Mitigation
+
+To avoid violating the “choices cannot be deleted if referenced by attempts” constraint during content updates, the seed process avoids deleting choice rows that are referenced by existing attempts.
+
+- Seed logic: `scripts/seed.ts`
+- Sync planning helper + tests: `scripts/seed-helpers.ts`, `scripts/seed-helpers.test.ts`
 
 ## Why This Matters
 
@@ -55,3 +63,12 @@ Right now we have “nullable in storage, non-null in domain, crash if null” �
 - Storage + domain model + adapters are consistent with that policy.
 - Tests cover the chosen behavior (including migration/backfill if applicable).
 
+## Resolution
+
+Resolved via Option A (content immutability at the choice level):
+
+- `attempts.selected_choice_id` is now `NOT NULL`.
+- The choice FK is `ON DELETE RESTRICT` (a choice cannot be deleted if attempts reference it).
+- Integration tests assert the constraint and behavior:
+  - `tests/integration/db.integration.test.ts`
+  - `tests/integration/repositories.integration.test.ts`

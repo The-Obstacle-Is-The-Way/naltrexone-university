@@ -5,6 +5,7 @@ import { users } from '@/db/schema';
 import { ApplicationError } from '@/src/application/errors';
 import type { AuthGateway } from '@/src/application/ports/gateways';
 import type { User } from '@/src/domain/entities';
+import { getPostgresErrorCode } from '../repositories/postgres-errors';
 
 type Db = PostgresJsDatabase<typeof schema>;
 
@@ -45,22 +46,15 @@ export class ClerkAuthGateway implements AuthGateway {
   }
 
   private mapDbError(error: unknown): ApplicationError {
-    const code =
-      typeof error === 'object' &&
-      error !== null &&
-      'code' in error &&
-      typeof (error as { code?: unknown }).code === 'string'
-        ? (error as { code: string }).code
-        : null;
+    if (error instanceof ApplicationError) return error;
 
-    if (code === '23505') {
+    if (getPostgresErrorCode(error) === '23505') {
       return new ApplicationError(
         'CONFLICT',
         'User could not be upserted due to a uniqueness constraint',
       );
     }
 
-    if (error instanceof ApplicationError) return error;
     return new ApplicationError('INTERNAL_ERROR', 'Failed to ensure user row');
   }
 

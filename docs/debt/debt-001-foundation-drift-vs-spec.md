@@ -12,7 +12,7 @@ The SSOT documentation (master spec + ADRs) establishes foundational primitives 
 - Docs referenced `lib/container.ts` as the composition root (ADR-007 / SPEC-010), but the file did not exist.
 - Docs referenced logging/request context primitives (ADR-008), but `lib/logger.ts` / `lib/request-context.ts` did not exist.
 - Master spec/ADR-012 expects `src/domain/index.ts` domain barrel export, but it was missing.
-- Entitlement status literals were duplicated across layers (`lib/subscription.ts` vs domain value objects).
+- Entitlement logic existed in multiple places, including an unused `lib/` helper that bypassed the application layer patterns.
 
 ## Impact
 
@@ -25,11 +25,10 @@ The SSOT documentation (master spec + ADRs) establishes foundational primitives 
 - Added `lib/container.ts` with a minimal, extensible composition-root surface.
 - Added `lib/logger.ts` (Pino) + `lib/request-context.ts` to establish a standard logging entry point.
 - Added `src/domain/index.ts` barrel export.
-- Deduplicated entitlement statuses by importing `EntitledStatuses` from domain in `lib/subscription.ts`.
+- Removed the unused `lib/subscription.ts` entitlement helper (see DEBT-023), leaving a single canonical entitlement path in domain/application layers.
 
 ## Acceptance Criteria
 
 - Repo builds and tests pass with the new primitives present.
 - Documentation references now match real filepaths.
 - Entitlement status set has a single canonical definition in the domain layer.
-

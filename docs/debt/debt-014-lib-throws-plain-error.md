@@ -12,10 +12,7 @@ The `lib/` utilities throw plain `Error` objects with string messages, while the
 ## Locations
 
 ### Runtime Errors (user-facing)
-- **`lib/auth.ts:13`**: `throw new Error('UNAUTHENTICATED')`
-- **`lib/auth.ts:67`**: `throw new Error('Failed to ensure user row')`
-- **`lib/auth.ts:95`**: `throw new Error('User has no email address')`
-- **`lib/subscription.ts:37`**: `throw new Error('UNSUBSCRIBED')`
+- **`lib/auth.ts`**: runtime auth failures now throw `ApplicationError(...)` (see Resolution)
 
 ### Startup/Build-time Errors
 - **`lib/env.ts:34`**: `throw new Error('Invalid environment variables')`
@@ -66,12 +63,10 @@ Accept that lib/ is "outside" Clean Architecture boundaries and document the con
 
 We treat `lib/` as an outer (framework/infrastructure) layer, but we still require **runtime, user-facing** failures to be typed and catchable as `ApplicationError`.
 
-- Converted runtime auth/subscription failures to `ApplicationError`:
-  - `lib/auth.ts` now throws `ApplicationError('UNAUTHENTICATED', ...)` and `ApplicationError('INTERNAL_ERROR', ...)` for invalid Clerk state.
-  - `lib/subscription.ts` now throws `ApplicationError('UNSUBSCRIBED', ...)`.
+- Converted runtime auth failures to `ApplicationError`:
+  - `lib/auth.ts` now throws `ApplicationError('UNAUTHENTICATED', ...)` for unauthenticated state.
 - Kept **startup/build-time** failures as plain `Error`:
   - `lib/env.ts` (invalid configuration is fatal)
   - `lib/content/parseMdxQuestion.ts` (content parsing failures are build/seed-time concerns)
 - Added unit tests:
   - `lib/auth.test.ts`
-  - `lib/subscription.test.ts`

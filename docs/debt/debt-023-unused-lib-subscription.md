@@ -1,8 +1,9 @@
 # DEBT-023: `lib/subscription.ts` Is Unused and Duplicates Application Entitlement Logic
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P3
 **Date:** 2026-02-01
+**Resolved:** 2026-02-01
 
 ## Summary
 
@@ -45,9 +46,12 @@ Pick one strategy and delete the other:
 - Wire it into the actual enforcement boundary (e.g., `app/(app)/app/layout.tsx` or middleware once SLICE-1 is implemented).
 - Make it a thin wrapper that delegates to repositories + domain service, not its own “shadow” logic.
 
+Resolved via Option A:
+
+- Deleted unused `lib/subscription.ts` and its unit tests.
+
 ## Acceptance Criteria
 
 - No unused entitlement modules remain.
 - Exactly one canonical path exists for entitlement checks.
 - Consumers (layout/controllers/middleware) use the chosen path consistently.
-

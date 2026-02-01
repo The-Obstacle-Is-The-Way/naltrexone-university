@@ -134,14 +134,20 @@ export interface StripeCustomerRepository {
 
 export interface StripeEventRepository {
   /**
-   * Return true if the event was already successfully processed.
+   * Insert the event row if missing (idempotent).
+   * Returns true if the row was inserted (claimed), false if it already existed.
    */
-  isProcessed(eventId: string): Promise<boolean>;
+  claim(eventId: string, type: string): Promise<boolean>;
 
   /**
-   * Insert the event row if missing (idempotent).
+   * Lock the event row for exclusive processing and return its current state.
+   *
+   * IMPORTANT: This must be called inside a transaction.
    */
-  ensure(eventId: string, type: string): Promise<void>;
+  lock(eventId: string): Promise<{
+    processedAt: Date | null;
+    error: string | null;
+  }>;
 
   markProcessed(eventId: string): Promise<void>;
   markFailed(eventId: string, error: string): Promise<void>;

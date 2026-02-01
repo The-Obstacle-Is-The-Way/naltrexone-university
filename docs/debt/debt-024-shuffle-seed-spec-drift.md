@@ -1,18 +1,18 @@
-# DEBT-024: Shuffle Seed Generation Spec Drift (SSOT says sha256, Domain implements non-crypto hash)
+# DEBT-024: Shuffle Seed Generation Spec Drift
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P2
 **Date:** 2026-02-01
+**Resolved:** 2026-02-01
 
 ## Summary
 
-The SSOT for `startPracticeSession` shuffling (`docs/specs/master_spec.md` §4.5.5) specifies:
+We had “docs vs code” drift in how practice-session shuffling seeds were derived:
 
-- seed = `hash(userId + Date.now().toString())` using **sha256** (take first bytes as uint32)
+- The SSOT for `startPracticeSession` (`docs/specs/master_spec.md` §4.5.5) specified a sha256-based seed.
+- The domain already implemented a runtime-agnostic, non-crypto `createSeed(userId, timestamp)` and the domain spec also documented that approach, but with an outdated `Math.abs(hash)` snippet.
 
-However, the currently implemented domain helper `createSeed(userId, timestamp)` in `src/domain/services/shuffle.ts` uses a simple non-cryptographic rolling hash (int32 → uint32). The domain services spec (`docs/specs/spec-003-domain-services.md`) also documents the non-crypto approach — and still contains an outdated `Math.abs(hash)` snippet.
-
-This is a “docs vs docs vs code” inconsistency that will cause drift and rework when SLICE-1 practice sessions are implemented.
+This drift was resolved by choosing a single, pure-domain seed algorithm and updating SSOT/specs accordingly.
 
 ## Locations
 
@@ -47,3 +47,10 @@ Make a single explicit decision and align SSOT + specs + implementation:
 - Specs and implementation agree (no `Math.abs(hash)` drift).
 - Tests cover the chosen behavior deterministically.
 
+## Resolution
+
+Resolved via Option A (domain-owned, runtime-agnostic seed):
+
+- SSOT now specifies `seed = createSeed(userId, Date.now())` (non-crypto → uint32).
+- Domain services spec snippet matches implementation (no `Math.abs(hash)`).
+- Domain implementation remains pure and fully unit-tested (`src/domain/services/shuffle.test.ts`).

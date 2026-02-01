@@ -4,19 +4,9 @@ import type * as schema from '@/db/schema';
 import { stripeCustomers } from '@/db/schema';
 import { ApplicationError } from '@/src/application/errors';
 import type { StripeCustomerRepository } from '@/src/application/ports/repositories';
+import { isPostgresUniqueViolation } from './postgres-errors';
 
 type Db = PostgresJsDatabase<typeof schema>;
-
-function isPostgresUniqueViolation(error: unknown): boolean {
-  if (!error || typeof error !== 'object') return false;
-
-  const maybeCode = (error as { code?: unknown }).code;
-  if (maybeCode === '23505') return true;
-
-  const maybeCause = (error as { cause?: unknown }).cause;
-  if (!maybeCause || typeof maybeCause !== 'object') return false;
-  return (maybeCause as { code?: unknown }).code === '23505';
-}
 
 export class DrizzleStripeCustomerRepository
   implements StripeCustomerRepository

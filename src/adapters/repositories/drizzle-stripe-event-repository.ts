@@ -10,20 +10,33 @@ type Db = PostgresJsDatabase<typeof schema>;
 export class DrizzleStripeEventRepository implements StripeEventRepository {
   constructor(private readonly db: Db) {}
 
-  async isProcessed(eventId: string): Promise<boolean> {
-    const row = await this.db.query.stripeEvents.findFirst({
-      where: eq(stripeEvents.id, eventId),
-    });
-
-    if (!row) return false;
-    return row.processedAt !== null && row.error === null;
-  }
-
-  async ensure(eventId: string, type: string): Promise<void> {
-    await this.db
+  async claim(eventId: string, type: string): Promise<boolean> {
+    const [row] = await this.db
       .insert(stripeEvents)
       .values({ id: eventId, type, processedAt: null, error: null })
-      .onConflictDoNothing({ target: stripeEvents.id });
+      .onConflictDoNothing({ target: stripeEvents.id })
+      .returning({ id: stripeEvents.id });
+
+    return !!row;
+  }
+
+  async lock(
+    eventId: string,
+  ): Promise<{ processedAt: Date | null; error: string | null }> {
+    const [row] = await this.db
+      .select({
+        processedAt: stripeEvents.processedAt,
+        error: stripeEvents.error,
+      })
+      .from(stripeEvents)
+      .where(eq(stripeEvents.id, eventId))
+      .for('update');
+
+    if (!row) {
+      throw new ApplicationError('NOT_FOUND', 'Stripe event not found');
+    }
+
+    return { processedAt: row.processedAt ?? null, error: row.error ?? null };
   }
 
   async markProcessed(eventId: string): Promise<void> {

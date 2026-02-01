@@ -1,7 +1,7 @@
 import 'dotenv/config';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
-import { eq, inArray } from 'drizzle-orm';
+import { and, eq, inArray } from 'drizzle-orm';
 import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import fg from 'fast-glob';
@@ -18,6 +18,7 @@ import {
   FullQuestionSchema,
   QuestionFrontmatterSchema,
 } from '../lib/content/schemas';
+import { computeChoiceSyncPlan } from './seed-helpers';
 
 type SeedTag = {
   slug: string;
@@ -265,6 +266,39 @@ async function main(): Promise<void> {
       continue;
     }
 
+    const desiredLabels = new Set(seedFromFile.choices.map((c) => c.label));
+    const deleteCandidates = existingChoices.filter(
+      (c) => !desiredLabels.has(c.label),
+    );
+
+    const referencedChoiceIds = new Set<string>();
+    if (deleteCandidates.length > 0) {
+      const deleteCandidateIds = deleteCandidates.map((c) => c.id);
+
+      const referenced = await db
+        .select({ selectedChoiceId: schema.attempts.selectedChoiceId })
+        .from(schema.attempts)
+        .where(
+          and(
+            eq(schema.attempts.questionId, existingQuestion.id),
+            inArray(schema.attempts.selectedChoiceId, deleteCandidateIds),
+          ),
+        );
+
+      for (const row of referenced) {
+        if (row.selectedChoiceId) referencedChoiceIds.add(row.selectedChoiceId);
+      }
+    }
+
+    const { deleteChoiceIds } = computeChoiceSyncPlan({
+      existingChoices: existingChoices.map((c) => ({
+        id: c.id,
+        label: c.label,
+      })),
+      desiredChoices: seedFromFile.choices.map((c) => ({ label: c.label })),
+      referencedChoiceIds,
+    });
+
     await db.transaction(async (tx) => {
       await tx
         .update(schema.questions)
@@ -277,18 +311,31 @@ async function main(): Promise<void> {
         })
         .where(eq(schema.questions.id, existingQuestion.id));
 
-      await tx
-        .delete(schema.choices)
-        .where(eq(schema.choices.questionId, existingQuestion.id));
-      await tx.insert(schema.choices).values(
-        seedFromFile.choices.map((c) => ({
-          questionId: existingQuestion.id,
-          label: c.label,
-          textMd: c.text_md,
-          isCorrect: c.is_correct,
-          sortOrder: c.sort_order,
-        })),
-      );
+      if (deleteChoiceIds.length > 0) {
+        await tx
+          .delete(schema.choices)
+          .where(inArray(schema.choices.id, deleteChoiceIds));
+      }
+
+      for (const choice of seedFromFile.choices) {
+        await tx
+          .insert(schema.choices)
+          .values({
+            questionId: existingQuestion.id,
+            label: choice.label,
+            textMd: choice.text_md,
+            isCorrect: choice.is_correct,
+            sortOrder: choice.sort_order,
+          })
+          .onConflictDoUpdate({
+            target: [schema.choices.questionId, schema.choices.label],
+            set: {
+              textMd: choice.text_md,
+              isCorrect: choice.is_correct,
+              sortOrder: choice.sort_order,
+            },
+          });
+      }
 
       await tx
         .delete(schema.questionTags)

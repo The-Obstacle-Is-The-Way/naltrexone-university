@@ -301,9 +301,9 @@ export const attempts = pgTable(
         onDelete: 'set null',
       },
     ),
-    selectedChoiceId: uuid('selected_choice_id').references(() => choices.id, {
-      onDelete: 'set null',
-    }),
+    selectedChoiceId: uuid('selected_choice_id')
+      .notNull()
+      .references(() => choices.id, { onDelete: 'restrict' }),
     isCorrect: boolean('is_correct').notNull(),
     timeSpentSeconds: integer('time_spent_seconds').notNull().default(0),
     answeredAt: timestamp('answered_at', { withTimezone: true })
