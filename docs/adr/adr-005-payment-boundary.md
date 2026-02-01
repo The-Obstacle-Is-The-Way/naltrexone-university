@@ -106,7 +106,7 @@ This ADR records the boundary decision; specs above define the exact contracts a
 - [ ] API/UI never sends raw `priceId` — only domain `plan` values
 - [ ] `isEntitled()` function has no external dependencies
 - [ ] Webhook handler uses gateway interface
-- [ ] Webhook processing is idempotent via BillingEventRepository
+- [ ] Webhook processing is idempotent via StripeEventRepository (`stripe_events`)
 - [ ] Status mapping is explicit and complete
 
 ## Testing
@@ -138,29 +138,13 @@ describe('CheckEntitlementUseCase', () => {
   });
 });
 
-// Use case - idempotency test
-describe('ProcessBillingEventUseCase', () => {
-  it('skips already processed events', async () => {
-    const eventRepo = new FakeBillingEventRepository();
-    const subRepo = new FakeSubscriptionRepository();
-
-    // Mark event as already processed
-    await eventRepo.markProcessed('evt_123', 'subscription_update');
-
-    const useCase = new ProcessBillingEventUseCase(eventRepo, subRepo);
-    const result = await useCase.execute({
-      eventId: 'evt_123',
-      processed: true,
-      subscriptionUpdate: {
-        userId: 'user1',
-        plan: 'monthly',
-        status: 'active',
-        currentPeriodEnd: new Date(),
-        cancelAtPeriodEnd: false,
-      },
-    });
-
-    expect(result.alreadyProcessed).toBe(true);
+// Repository - idempotency behavior (stripe_events)
+describe('StripeEventRepository', () => {
+  it('treats already-processed events as processed', async () => {
+    const repo = new FakeStripeEventRepository();
+    await repo.ensure('evt_123', 'customer.subscription.updated');
+    await repo.markProcessed('evt_123');
+    expect(await repo.isProcessed('evt_123')).toBe(true);
   });
 });
 

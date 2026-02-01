@@ -90,7 +90,16 @@ app/, lib/, db/    → Next.js framework code, infrastructure (outermost layer)
 
 ### Current State
 
-The `src/` Clean Architecture layers are **not yet implemented**. Current code lives in:
+Implemented so far:
+- `src/domain/entities/**` + tests (SPEC-001)
+- `src/domain/value-objects/**` + tests (SPEC-002)
+
+Planned (per `docs/specs/master_spec.md` + ADR-012):
+- `src/domain/services/**`, `src/domain/errors/**`
+- `src/application/**` (use cases, ports, app errors)
+- `src/adapters/**` (repositories, gateways, controllers)
+
+Framework code lives in:
 - `app/` - Next.js App Router pages, layouts, API routes
 - `lib/` - Core utilities (auth, Stripe, env, DB). Prefer importing via `@/...`
 - `db/schema.ts` - Drizzle ORM schema

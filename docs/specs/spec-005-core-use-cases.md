@@ -16,6 +16,7 @@ Use cases MUST:
 - Depend only on domain + application ports
 - Throw `ApplicationError` for expected failures
 - Be unit-testable with **fakes** (no DB, no Clerk, no Stripe)
+- Be implemented as **classes** with constructor-injected ports (ADR-007)
 
 Controllers (SPEC-010) are responsible for:
 
@@ -48,6 +49,8 @@ src/application/use-cases/
 
 - `SubscriptionRepository`
 
+**Class name:** `CheckEntitlementUseCase`
+
 **Input:**
 
 ```ts
@@ -60,6 +63,14 @@ export type CheckEntitlementInput = { userId: string };
 export type CheckEntitlementOutput = {
   isEntitled: boolean;
 };
+```
+
+**Constructor signature (required):**
+
+```ts
+export class CheckEntitlementUseCase {
+  constructor(private readonly subscriptions: SubscriptionRepository) {}
+}
 ```
 
 **Algorithm:**
@@ -85,6 +96,8 @@ This implements the behavior defined in `docs/specs/master_spec.md` Section 4.5.
 - `AttemptRepository`
 - `PracticeSessionRepository`
 
+**Class name:** `GetNextQuestionUseCase`
+
 **Input (already validated by controller):**
 
 ```ts
@@ -104,6 +117,18 @@ export type GetNextQuestionInput =
 - Use case MUST NOT expose `isCorrect` on any choice.
 - In session mode, question order is taken from `practice_sessions.params_json.questionIds`.
 
+**Constructor signature (required):**
+
+```ts
+export class GetNextQuestionUseCase {
+  constructor(
+    private readonly questions: QuestionRepository,
+    private readonly attempts: AttemptRepository,
+    private readonly sessions: PracticeSessionRepository,
+  ) {}
+}
+```
+
 ---
 
 ## Use Case: `SubmitAnswer`
@@ -117,6 +142,8 @@ This implements the behavior defined in `docs/specs/master_spec.md` Section 4.5.
 - `QuestionRepository`
 - `AttemptRepository`
 - `PracticeSessionRepository`
+
+**Class name:** `SubmitAnswerUseCase`
 
 **Input:**
 
@@ -138,6 +165,18 @@ export type SubmitAnswerOutput = {
   correctChoiceId: string;
   explanationMd: string | null;
 };
+```
+
+**Constructor signature (required):**
+
+```ts
+export class SubmitAnswerUseCase {
+  constructor(
+    private readonly questions: QuestionRepository,
+    private readonly attempts: AttemptRepository,
+    private readonly sessions: PracticeSessionRepository,
+  ) {}
+}
 ```
 
 **Algorithm (high-level):**
@@ -164,4 +203,3 @@ Tests should read as specifications:
 
 - red → green → refactor
 - prefer behavioral assertions (inputs → outputs + persisted attempt calls)
-
