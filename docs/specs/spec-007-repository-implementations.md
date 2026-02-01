@@ -75,3 +75,27 @@ Stripe webhook idempotency uses `stripe_events`:
 
 See `docs/specs/master_spec.md` Section 4.4.2 for exact behavior.
 
+---
+
+## Minimum Test Suite (Required)
+
+These integration tests are required before any slice that depends on these repositories is considered complete:
+
+- `tests/integration/db.integration.test.ts`: migrations applied; required tables exist.
+- `tests/integration/repositories.integration.test.ts`: exercise each repository method with a real database.
+
+`tests/integration/repositories.integration.test.ts` MUST include (at minimum):
+
+- `QuestionRepository.findPublishedById` returns `null` for non-published questions.
+- `AttemptRepository.insert` creates an attempt row with correct FK wiring.
+- `BookmarkRepository.add/remove/exists/listByUserId` round-trips correctly.
+- `StripeEventRepository.ensure/isProcessed/markProcessed/markFailed` is idempotent and concurrency-safe (unique PK on `stripe_events.id`).
+
+---
+
+## Definition of Done
+
+- All repository ports in `docs/specs/spec-004-application-ports.md` have concrete Drizzle implementations.
+- Integration tests pass on:
+  - local Postgres (developer environment)
+  - GitHub Actions Postgres service (CI)

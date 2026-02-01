@@ -44,6 +44,12 @@ If not authenticated:
 - `getCurrentUser()` returns `null`
 - `requireUser()` throws `ApplicationError('UNAUTHENTICATED')`
 
+**Email rule (required):**
+
+- Use Clerk’s primary email if available; otherwise use the first email address.
+- If no email is present, treat this as an internal error (the app requires email for users).
+- If the email changes in Clerk, update the persisted `users.email` on the next successful auth read.
+
 ---
 
 ## Testing
@@ -59,9 +65,19 @@ The goal is to verify:
 - Correct behavior for authenticated vs unauthenticated
 - Correct user creation/upsert behavior at the adapter boundary
 
+**Required test file:**
+
+- `src/adapters/gateways/clerk-auth-gateway.test.ts`
+
 ---
 
 ## Notes
 
 Route protection is implemented at the framework layer via `proxy.ts` (Next.js 16 “Proxy” file convention), not inside the domain/application layers.
 
+---
+
+## Definition of Done
+
+- `AuthGateway` is implemented without leaking Clerk types into domain/application layers.
+- AuthGateway is unit-tested without network or a real database.

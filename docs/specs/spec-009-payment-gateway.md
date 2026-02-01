@@ -74,6 +74,17 @@ If Stripe does not return a `session.url`, throw `ApplicationError('STRIPE_ERROR
 
 - The internal `userId` must come from Stripe metadata (`subscription_data.metadata.user_id`), not from email.
 
+**Subscription update extraction (required):**
+
+- For subscription events, `subscriptionUpdate` MUST include:
+  - `userId` (internal UUID from metadata)
+  - `status`
+  - `currentPeriodEnd`
+  - `cancelAtPeriodEnd`
+  - `priceId` (persisted for audit/debug; not a domain concept)
+
+If required fields are missing (e.g., no `user_id` metadata), treat this as a processing error and let the webhook/controller mark the event as failed (do not silently ignore).
+
 ---
 
 ## Stripe API Version Pinning
@@ -97,3 +108,14 @@ Gateway tests are unit tests:
 
 Idempotency behavior is NOT owned by this gateway (it is implemented via `stripe_events` persistence + controller/use case logic per `docs/specs/master_spec.md` Section 4.4.2).
 
+**Required test file:**
+
+- `src/adapters/gateways/stripe-payment-gateway.test.ts`
+
+---
+
+## Definition of Done
+
+- `PaymentGateway` is implemented without leaking Stripe SDK types into domain/application layers.
+- Plan → price ID mapping is the only place where price IDs appear in application code.
+- Gateway is unit-tested without network calls.

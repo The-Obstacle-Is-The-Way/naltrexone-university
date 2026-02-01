@@ -45,6 +45,47 @@ src/adapters/controllers/
 
 ---
 
+## Composition Root Contract (Required)
+
+**File:** `lib/container.ts`
+
+This is the **only** place where concrete implementations are wired to application ports.
+
+**Rules:**
+
+- Export factory functions that create controller dependencies (ports → implementations).
+- Factories return **new** repositories/gateways/use cases (no singletons) on each call.
+- The only allowed singleton is the DB client in `lib/db.ts` (and Stripe SDK init in `lib/stripe.ts`).
+- Factories contain no request-specific logic (no `cookies()`, `headers()`, etc).
+- Controllers call factories when `deps` are not provided; tests pass `deps` explicitly.
+
+**Factory surface (minimum, grows by slice):**
+
+- SLICE-1: `createBillingControllerDeps()`
+- SLICE-2: `createQuestionControllerDeps()`, `createBookmarkControllerDeps()`
+- SLICE-3: `createPracticeControllerDeps()`
+- SLICE-4: `createReviewControllerDeps()`, `createBookmarkControllerDeps()`
+- SLICE-5: `createStatsControllerDeps()`
+
+**Controller signature pattern (required):**
+
+```ts
+import { createQuestionControllerDeps } from '@/lib/container';
+import type { ActionResult } from './action-result';
+
+type QuestionControllerDeps = ReturnType<typeof createQuestionControllerDeps>;
+
+export async function getNextQuestion(
+  input: unknown,
+  deps?: QuestionControllerDeps,
+): Promise<ActionResult<unknown>> {
+  const d = deps ?? createQuestionControllerDeps();
+  // ...
+}
+```
+
+---
+
 ## Standard Return Type (Required)
 
 **File:** `src/adapters/controllers/action-result.ts`
