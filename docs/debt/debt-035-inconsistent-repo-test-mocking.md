@@ -31,6 +31,11 @@ const repo = new DrizzleStripeCustomerRepository(db as unknown as RepoDb);
 
 ## Files Affected
 
+**Skipped Tests (vi.mock for our own code - anti-pattern):**
+- `lib/auth.test.ts` — Uses vi.mock('./db', './env', './container')
+- `lib/container.test.ts` — Uses vi.mock('./db', './env', './stripe')
+
+**Inconsistent Repository Tests (inline db mocks):**
 - `src/adapters/repositories/drizzle-stripe-customer-repository.test.ts`
 - `src/adapters/repositories/drizzle-practice-session-repository.test.ts`
 - `src/adapters/repositories/drizzle-subscription-repository.test.ts`

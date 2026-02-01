@@ -176,9 +176,8 @@ describe('DrizzlePracticeSessionRepository', () => {
   });
 
   it('ends an active practice session', async () => {
-    vi.useFakeTimers();
     const now = new Date('2026-02-01T01:02:03.000Z');
-    vi.setSystemTime(now);
+    const nowFn = vi.fn(() => now);
 
     const row = {
       id: 'session_1',
@@ -214,12 +213,16 @@ describe('DrizzlePracticeSessionRepository', () => {
     type RepoDb = ConstructorParameters<
       typeof DrizzlePracticeSessionRepository
     >[0];
-    const repo = new DrizzlePracticeSessionRepository(db as unknown as RepoDb);
+    const repo = new DrizzlePracticeSessionRepository(
+      db as unknown as RepoDb,
+      nowFn,
+    );
 
     await expect(repo.end('session_1', 'user_1')).resolves.toMatchObject({
       id: 'session_1',
       endedAt: now,
     });
+    expect(nowFn).toHaveBeenCalledTimes(1);
   });
 
   it('throws CONFLICT when the practice session is already ended', async () => {

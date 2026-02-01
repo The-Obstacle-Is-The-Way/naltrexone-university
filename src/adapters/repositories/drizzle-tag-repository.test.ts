@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { DrizzleTagRepository } from './drizzle-tag-repository';
 
 describe('DrizzleTagRepository', () => {
@@ -19,10 +19,11 @@ describe('DrizzleTagRepository', () => {
         },
       ] as const;
 
+      const findMany = vi.fn(async (_opts?: { orderBy?: unknown[] }) => rows);
       const db = {
         query: {
           tags: {
-            findMany: async () => rows,
+            findMany,
           },
         },
       } as const;
@@ -31,6 +32,10 @@ describe('DrizzleTagRepository', () => {
       const repo = new DrizzleTagRepository(db as unknown as RepoDb);
 
       const result = await repo.listAll();
+
+      expect(findMany).toHaveBeenCalledTimes(1);
+      const queryArgs = findMany.mock.calls[0]?.[0];
+      expect(queryArgs?.orderBy).toHaveLength(2);
 
       expect(result).toEqual([
         {

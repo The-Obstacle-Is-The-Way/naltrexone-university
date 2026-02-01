@@ -1,6 +1,52 @@
 # AGENTS.md
 
-Repository guidelines for AI coding agents (Codex CLI, etc.) working with this codebase.
+Repository guidelines for AI coding agents (Codex CLI, Claude Code, etc.) working with this codebase.
+
+---
+
+## ⚠️ SLOT PROTECTION: Understand Before Changing
+
+**BEFORE writing ANY code, you MUST study existing codebase patterns.**
+
+This codebase follows strict conventions (Clean Architecture, SOLID, TDD). Code that doesn't match existing patterns will be rejected. **Study first, code second.**
+
+### Mandatory Pre-Work (First-Time Agents)
+
+1. **Read 2-3 existing test files** to understand test structure:
+   ```bash
+   cat src/adapters/gateways/clerk-auth-gateway.test.ts
+   cat src/adapters/repositories/drizzle-user-repository.test.ts
+   ```
+   - We use **fakes**, NEVER `vi.mock()` for our own code
+   - Arrange-Act-Assert pattern
+   - Descriptive test names: `it('returns X when Y')`
+
+2. **Read 2-3 source files** to understand code style:
+   ```bash
+   cat src/adapters/gateways/clerk-auth-gateway.ts
+   cat src/adapters/repositories/drizzle-user-repository.ts
+   ```
+   - Constructor dependency injection
+   - `ApplicationError` with typed codes
+   - No magic numbers — use constants/configs
+
+3. **Check for existing shared types** before creating new ones:
+   ```bash
+   ls src/adapters/shared/           # Shared adapter types
+   ls src/application/ports/         # Port interfaces
+   ls src/application/test-helpers/  # Fakes for testing
+   ```
+
+### Why This Matters
+
+| Pattern | Wrong | Right |
+|---------|-------|-------|
+| Testing | `vi.mock('./my-repo')` | `new FakeRepository()` |
+| DI | `import { db } from './db'` | `constructor(private db: DrizzleDb)` |
+| Errors | `throw new Error('oops')` | `throw new ApplicationError('CODE', 'msg')` |
+| Types | Define locally in each file | Import from `src/adapters/shared/` |
+
+---
 
 ## ⚠️ MANDATORY: Test-Driven Development (TDD)
 
@@ -261,3 +307,18 @@ pnpm typecheck && pnpm lint && pnpm test --run && pnpm test:integration && pnpm 
 - `docs/specs/spec-001 to spec-010` - Clean Architecture layer specs
 - `docs/specs/spec-011 to spec-015` - Feature slice specs
 - `docs/adr/` - Architecture Decision Records (ADR-001 through ADR-012)
+
+---
+
+## Quick Reference: Slot Protection Checklist
+
+Before writing ANY code, verify you can answer:
+
+- [ ] **Tests:** Have I read 2-3 existing test files? Do I understand the fakes pattern?
+- [ ] **Style:** Have I read 2-3 source files? Do I understand constructor injection?
+- [ ] **Shared Types:** Have I checked `src/adapters/shared/` for existing types?
+- [ ] **Ports:** Have I checked `src/application/ports/` for existing interfaces?
+- [ ] **Fakes:** Have I checked `src/application/test-helpers/fakes.ts` for existing fakes?
+- [ ] **Layer:** Do I know which Clean Architecture layer I'm working in?
+
+**If you can't check all boxes, study existing code before proceeding.**

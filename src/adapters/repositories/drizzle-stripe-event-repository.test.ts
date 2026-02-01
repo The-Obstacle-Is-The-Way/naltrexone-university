@@ -140,9 +140,8 @@ describe('DrizzleStripeEventRepository', () => {
 
   describe('markProcessed', () => {
     it('updates processedAt timestamp and clears error', async () => {
-      vi.useFakeTimers();
       const now = new Date('2026-02-01T13:00:00.000Z');
-      vi.setSystemTime(now);
+      const nowFn = vi.fn(() => now);
 
       const updateSet = vi.fn(() => ({
         where: () => ({
@@ -154,7 +153,10 @@ describe('DrizzleStripeEventRepository', () => {
         update: () => ({ set: updateSet }),
       } as const;
 
-      const repo = new DrizzleStripeEventRepository(db as unknown as RepoDb);
+      const repo = new DrizzleStripeEventRepository(
+        db as unknown as RepoDb,
+        nowFn,
+      );
 
       await expect(repo.markProcessed('evt_123')).resolves.toBeUndefined();
 
@@ -162,6 +164,7 @@ describe('DrizzleStripeEventRepository', () => {
         processedAt: now,
         error: null,
       });
+      expect(nowFn).toHaveBeenCalledTimes(1);
     });
 
     it('throws NOT_FOUND when event does not exist', async () => {

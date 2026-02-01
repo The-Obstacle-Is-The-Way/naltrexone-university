@@ -677,12 +677,20 @@ describe('Stripe repositories', () => {
 
 describe('DrizzleTagRepository', () => {
   it('lists tags ordered by kind then slug', async () => {
-    const t1 = await createTag({
-      slug: `a-${randomUUID()}`,
+    const domainSlug = `a-domain-${randomUUID()}`;
+    const topicSlugA = `a-topic-${randomUUID()}`;
+    const topicSlugB = `b-topic-${randomUUID()}`;
+
+    await createTag({
+      slug: domainSlug,
+      kind: 'domain',
+    });
+    await createTag({
+      slug: topicSlugB,
       kind: 'topic',
     });
-    const t2 = await createTag({
-      slug: `b-${randomUUID()}`,
+    await createTag({
+      slug: topicSlugA,
       kind: 'topic',
     });
 
@@ -690,7 +698,15 @@ describe('DrizzleTagRepository', () => {
     const all = await repo.listAll();
 
     const slugs = all.map((t) => t.slug);
-    expect(slugs).toContain(t1.slug);
-    expect(slugs).toContain(t2.slug);
+    const domainIndex = slugs.indexOf(domainSlug);
+    const topicIndexA = slugs.indexOf(topicSlugA);
+    const topicIndexB = slugs.indexOf(topicSlugB);
+
+    expect(domainIndex).toBeGreaterThanOrEqual(0);
+    expect(topicIndexA).toBeGreaterThanOrEqual(0);
+    expect(topicIndexB).toBeGreaterThanOrEqual(0);
+
+    expect(domainIndex).toBeLessThan(topicIndexA);
+    expect(topicIndexA).toBeLessThan(topicIndexB);
   });
 });

@@ -51,14 +51,53 @@ If `PROGRESS.md` has no unchecked items, exit cleanly without making changes.
 
 ---
 
-## First Action: Read State
+## First Action: Slot Protection (Understand Before Changing)
 
-**IMMEDIATELY** read state files:
+**BEFORE writing ANY code, you MUST understand the codebase conventions.**
 
+### Step 1: Read State Files
 ```bash
 cat PROGRESS.md
 cat docs/specs/master_spec.md
 ```
+
+### Step 2: Study Existing Patterns (MANDATORY for new agents)
+
+Before implementing anything, examine existing code to understand:
+
+1. **Test Structure** — Read 2-3 existing test files to understand:
+   - How tests are organized (describe/it blocks)
+   - Fakes vs mocks pattern (we use fakes, NEVER `vi.mock()`)
+   - Arrange-Act-Assert structure
+   - Test naming conventions (`it('returns X when Y')`)
+   ```bash
+   # Example: study existing test patterns
+   cat src/adapters/gateways/clerk-auth-gateway.test.ts
+   cat src/adapters/repositories/drizzle-user-repository.test.ts
+   ```
+
+2. **Code Style** — Read 2-3 source files to understand:
+   - Clean Architecture layer structure (domain → application → adapters)
+   - Dependency injection patterns (constructor injection)
+   - Error handling (ApplicationError with codes)
+   - No magic numbers (use constants/configs)
+   ```bash
+   # Example: study existing implementation patterns
+   cat src/adapters/gateways/clerk-auth-gateway.ts
+   cat src/adapters/repositories/drizzle-user-repository.ts
+   ```
+
+3. **Centralized Configs** — Check for existing shared types/configs before creating new ones:
+   ```bash
+   # Shared types live here
+   ls src/adapters/shared/
+   cat src/adapters/shared/database-types.ts
+
+   # Application ports define interfaces
+   ls src/application/ports/
+   ```
+
+**WHY THIS MATTERS:** This codebase follows strict Clean Architecture and SOLID principles. Code that doesn't match existing patterns will be rejected in review. Study first, code second.
 
 ---
 
@@ -179,15 +218,25 @@ If you made no changes (no active tasks), exit without committing.
 
 ## Guardrails
 
-1. **ONE task per iteration**
-2. **Read PROGRESS.md first**
-3. **Read master_spec.md for task details**
-4. **TDD: Write tests BEFORE implementation (Red → Green → Refactor)**
-5. **SOLID/DRY/Clean Code principles always**
-6. **Quality gates must pass**
-7. **Mark task complete in PROGRESS.md**
-8. **Commit before exit**
-9. **Follow master_spec.md exactly**
+1. **SLOT PROTECTION: Study existing code patterns BEFORE writing anything**
+2. **ONE task per iteration**
+3. **Read PROGRESS.md first**
+4. **Read master_spec.md for task details**
+5. **TDD: Write tests BEFORE implementation (Red → Green → Refactor)**
+6. **SOLID/DRY/Clean Code principles always**
+7. **Quality gates must pass**
+8. **Mark task complete in PROGRESS.md**
+9. **Commit before exit**
+10. **Follow master_spec.md exactly**
+
+### Slot Protection Checklist
+
+Before writing code, verify you understand:
+- [ ] How existing tests are structured (fakes, not mocks)
+- [ ] Where shared types live (`src/adapters/shared/`)
+- [ ] How dependency injection is done (constructor injection)
+- [ ] How errors are handled (`ApplicationError` with codes)
+- [ ] The layer you're working in (domain/application/adapters/infra)
 
 ---
 

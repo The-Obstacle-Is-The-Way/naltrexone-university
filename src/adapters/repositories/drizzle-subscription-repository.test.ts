@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { ApplicationError } from '@/src/application/errors';
 import { DrizzleSubscriptionRepository } from './drizzle-subscription-repository';
 
@@ -89,6 +89,8 @@ describe('DrizzleSubscriptionRepository', () => {
   });
 
   it('upserts subscriptions by userId and maps plan → priceId', async () => {
+    const now = new Date('2026-02-01T02:03:04.000Z');
+    const nowFn = vi.fn(() => now);
     const onConflictDoUpdate = async () => {};
     const values = (input: unknown) => ({
       onConflictDoUpdate: async (conflict: unknown) => {
@@ -98,9 +100,11 @@ describe('DrizzleSubscriptionRepository', () => {
           status: 'active',
           priceId: 'price_monthly',
           cancelAtPeriodEnd: false,
+          updatedAt: now,
         });
         expect(conflict).toMatchObject({
           target: expect.anything(),
+          set: expect.objectContaining({ updatedAt: now }),
         });
         return onConflictDoUpdate;
       },
@@ -126,6 +130,7 @@ describe('DrizzleSubscriptionRepository', () => {
     const repo = new DrizzleSubscriptionRepository(
       db as unknown as RepoDb,
       priceIds,
+      nowFn,
     );
 
     await expect(
@@ -138,6 +143,7 @@ describe('DrizzleSubscriptionRepository', () => {
         cancelAtPeriodEnd: false,
       }),
     ).resolves.toBeUndefined();
+    expect(nowFn).toHaveBeenCalledTimes(2);
   });
 
   it('throws CONFLICT when the DB reports a unique-constraint violation during upsert', async () => {
