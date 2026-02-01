@@ -248,13 +248,32 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 ### FAKES OVER MOCKS — MANDATORY
 
-**Use in-memory fake implementations, NEVER `vi.mock()` or `jest.mock()` for our own code.**
+**The Simple Rule:**
+```
+Can you pass it through a constructor or function parameter?
+  YES → Use a fake object (with vi.fn() for spying if needed)
+  NO  → Use vi.mock() (React hooks, Next.js magic, external SDKs only)
+```
 
-| Approach | When to Use | Example |
-|----------|-------------|---------|
-| **Fakes** | Our own code (repositories, gateways, services) | `FakeAttemptRepository` in `src/application/test-helpers/fakes.ts` |
-| **Stubs** | Simple return values | `{ findById: async () => null }` |
-| **vi.fn()** | Only for verifying calls to external SDKs (Clerk, Stripe) | `vi.fn(() => Promise.resolve(...))` |
+**NEVER use `vi.mock()` for our own code.** Only for external packages you can't inject.
+
+| Pattern | When to Use | Example |
+|---------|-------------|---------|
+| **Fake via DI** | Our own code (repos, gateways, services) | `new UseCase(fakeRepo)` |
+| **Fake + vi.fn()** | When you need to spy on fake methods | `{ findById: vi.fn().mockResolvedValue(null) }` |
+| **vi.mock()** | External SDKs you can't inject (Clerk hooks, Next.js) | `vi.mock('@clerk/nextjs')` |
+
+**IMPORTANT: vi.fn() inside a fake is CORRECT:**
+```typescript
+// ✅ CORRECT - Fake object passed via DI, vi.fn() just adds spying
+const fakeDb = {
+  query: { users: { findFirst: vi.fn().mockResolvedValue(null) } }
+};
+const repo = new DrizzleUserRepository(fakeDb);  // DI injection
+
+// ❌ WRONG - Hijacking module imports for our own code
+vi.mock('./user-repository');  // NEVER DO THIS
+```
 
 **Why Fakes > Mocks:**
 - Mocks test implementation details (what methods were called)
@@ -273,6 +292,19 @@ expect(result.isCorrect).toBe(true);
 
 // BAD: Mocking our own code
 vi.mock('./attempt-repository');  // NEVER DO THIS
+```
+
+**When vi.mock() IS acceptable:**
+```typescript
+// ✅ External SDK with hooks you can't inject
+vi.mock('@clerk/nextjs', () => ({
+  SignedIn: ({ children }) => <>{children}</>,
+  useUser: () => ({ user: { id: 'test' } }),
+}));
+
+// ✅ Next.js internals
+vi.mock('next/link', () => ({ default: (props) => <a {...props} /> }));
+vi.mock('server-only', () => ({}));
 ```
 
 ### Test Quality Rules
