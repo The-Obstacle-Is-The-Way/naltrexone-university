@@ -3,9 +3,19 @@ import type {
   PracticeSession,
   Question,
   Subscription,
+  User,
 } from '@/src/domain/entities';
 import type { QuestionDifficulty } from '@/src/domain/value-objects';
 import { ApplicationError } from '../errors';
+import type {
+  AuthGateway,
+  CheckoutSessionInput,
+  CheckoutSessionOutput,
+  PaymentGateway,
+  PortalSessionInput,
+  PortalSessionOutput,
+  WebhookEventResult,
+} from '../ports/gateways';
 import type {
   AttemptMostRecentAnsweredAt,
   AttemptRepository,
@@ -66,6 +76,63 @@ export class FakeQuestionRepository implements QuestionRepository {
       });
 
     return matches.map((q) => q.id);
+  }
+}
+
+export class FakeAuthGateway implements AuthGateway {
+  constructor(private user: User | null) {}
+
+  async getCurrentUser(): Promise<User | null> {
+    return this.user;
+  }
+
+  async requireUser(): Promise<User> {
+    if (!this.user) {
+      throw new ApplicationError('UNAUTHENTICATED', 'User not authenticated');
+    }
+    return this.user;
+  }
+}
+
+export class FakePaymentGateway implements PaymentGateway {
+  readonly checkoutInputs: CheckoutSessionInput[] = [];
+  readonly portalInputs: PortalSessionInput[] = [];
+  readonly webhookInputs: Array<{ rawBody: string; signature: string }> = [];
+
+  private readonly checkoutUrl: string;
+  private readonly portalUrl: string;
+  private readonly webhookResult: WebhookEventResult;
+
+  constructor(input: {
+    checkoutUrl: string;
+    portalUrl: string;
+    webhookResult: WebhookEventResult;
+  }) {
+    this.checkoutUrl = input.checkoutUrl;
+    this.portalUrl = input.portalUrl;
+    this.webhookResult = input.webhookResult;
+  }
+
+  async createCheckoutSession(
+    input: CheckoutSessionInput,
+  ): Promise<CheckoutSessionOutput> {
+    this.checkoutInputs.push(input);
+    return { url: this.checkoutUrl };
+  }
+
+  async createPortalSession(
+    input: PortalSessionInput,
+  ): Promise<PortalSessionOutput> {
+    this.portalInputs.push(input);
+    return { url: this.portalUrl };
+  }
+
+  async processWebhookEvent(
+    rawBody: string,
+    signature: string,
+  ): Promise<WebhookEventResult> {
+    this.webhookInputs.push({ rawBody, signature });
+    return this.webhookResult;
   }
 }
 
