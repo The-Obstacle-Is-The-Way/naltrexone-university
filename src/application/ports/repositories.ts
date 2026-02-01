@@ -6,7 +6,11 @@ import type {
   Subscription,
   Tag,
 } from '@/src/domain/entities';
-import type { QuestionDifficulty } from '@/src/domain/value-objects';
+import type {
+  QuestionDifficulty,
+  SubscriptionPlan,
+  SubscriptionStatus,
+} from '@/src/domain/value-objects';
 
 export type QuestionFilters = {
   tagSlugs: readonly string[];
@@ -88,8 +92,23 @@ export interface TagRepository {
   listAll(): Promise<readonly Tag[]>;
 }
 
+export type SubscriptionUpsertInput = {
+  userId: string;
+  stripeSubscriptionId: string; // opaque external id
+  plan: SubscriptionPlan; // domain plan (monthly/annual)
+  status: SubscriptionStatus;
+  currentPeriodEnd: Date;
+  cancelAtPeriodEnd: boolean;
+};
+
 export interface SubscriptionRepository {
   findByUserId(userId: string): Promise<Subscription | null>;
+
+  findByStripeSubscriptionId(
+    stripeSubscriptionId: string,
+  ): Promise<Subscription | null>;
+
+  upsert(input: SubscriptionUpsertInput): Promise<void>;
 }
 
 export interface StripeCustomerRepository {

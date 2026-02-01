@@ -45,10 +45,11 @@ export type WebhookEventResult = {
   processed: boolean;
   subscriptionUpdate?: {
     userId: string; // internal UUID
+    stripeSubscriptionId: string; // opaque external id
+    plan: SubscriptionPlan; // domain plan (monthly/annual)
     status: SubscriptionStatus;
     currentPeriodEnd: Date;
     cancelAtPeriodEnd: boolean;
-    priceId: string; // persisted for audit/debug (not a domain concept)
   };
 };
 
