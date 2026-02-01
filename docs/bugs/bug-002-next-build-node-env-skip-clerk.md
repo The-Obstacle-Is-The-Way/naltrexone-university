@@ -13,8 +13,13 @@ In Next.js builds, `next build` forces `NODE_ENV=production`, even if CI sets `N
 
 - Changed the production guard in `lib/env.ts` to use `VERCEL_ENV=production` (real production deploy signal) instead of `NODE_ENV=production` (build-time signal).
 
+## Regression Test
+
+- `lib/env.test.ts` covers:
+  - `NEXT_PUBLIC_SKIP_CLERK=true` allowed even when `NODE_ENV=production` (simulates `next build`)
+  - `NEXT_PUBLIC_SKIP_CLERK=true` rejected when `VERCEL_ENV=production`
+
 ## Acceptance Criteria
 
 - `next build` succeeds in CI fork mode with `NEXT_PUBLIC_SKIP_CLERK=true` and dummy Clerk keys.
 - `NEXT_PUBLIC_SKIP_CLERK=true` is still rejected on Vercel production deploys (`VERCEL_ENV=production`).
-
