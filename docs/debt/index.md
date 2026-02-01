@@ -17,7 +17,7 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 | ID | Title | Status | Priority | Date |
 |----|-------|--------|----------|------|
-| [DEBT-034](./debt-034-test-coverage-gap-critical.md) | **Test Coverage Gap — BLOCK NEW FEATURES** | Open | **P0** | 2026-02-01 |
+| [DEBT-034](./debt-034-test-coverage-gap-critical.md) | Test Coverage Gap (3 repo unit tests remain) | Open | P1 | 2026-02-01 |
 | [DEBT-032](./debt-032-incomplete-composition-root.md) | Incomplete Composition Root | Open | P3 | 2026-02-01 |
 | [DEBT-033](./debt-033-flat-repository-structure.md) | Flat Repository Structure | Open | P3 | 2026-02-01 |
 
