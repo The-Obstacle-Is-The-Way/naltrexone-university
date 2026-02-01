@@ -11,7 +11,7 @@ The `DrizzleAttemptRepository` has the same null-check validation for `selectedC
 ## Location
 
 - **File:** `src/adapters/repositories/drizzle-attempt-repository.ts`
-- **Lines:** 36-44 (insert), 66-71 (findByUserId), 96-101 (findBySessionId)
+- **Lines:** 40-45 (insert), 66-71 (findByUserId), 96-101 (findBySessionId)
 
 ## Duplicated Code
 

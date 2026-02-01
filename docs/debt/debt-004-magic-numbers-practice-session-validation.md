@@ -10,7 +10,7 @@ The `DrizzlePracticeSessionRepository` has hardcoded validation limits with no d
 
 ## Location
 
-- **File:** `src/adapters/repositories/drizzle-practice-session-repository.ts` lines 15-18
+- **File:** `src/adapters/repositories/drizzle-practice-session-repository.ts` lines 13-20
 
 ## Current Code
 

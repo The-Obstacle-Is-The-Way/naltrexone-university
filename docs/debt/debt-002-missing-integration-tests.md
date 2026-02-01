@@ -1,8 +1,9 @@
 # DEBT-002: Missing Integration Tests for Repositories
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P2
 **Date:** 2026-01-31
+**Resolved:** 2026-02-01
 
 ## Summary
 
