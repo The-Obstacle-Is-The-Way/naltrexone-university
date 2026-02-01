@@ -24,7 +24,7 @@ This repo is frequently worked on in non-interactive shells (CI + AI agents). To
 - Prefer non-interactive commands: `cat`, `sed -n`, `rg`, `git --no-pager …`.
 - Never rely on an editor opening implicitly: always commit with `git commit -m "…"`.
 - Avoid pager-triggering patterns: use `git --no-pager log`, `git --no-pager diff`, etc.
-- **pnpm gotcha:** Do NOT use `pnpm -s` (it is **not** a “silent” flag). It invokes `/usr/bin/view` (vim) and will hang in non-TTY runs.
+- **pnpm gotcha:** Never prefix a pnpm command with `-s`. `pnpm -s <cmd>` runs `<cmd>` as a package script/binary (e.g. `view` → Vim) instead of the pnpm subcommand, which hard-hangs in non-TTY runs.
 
 ## Commands
 
