@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   AllPracticeModes,
   isValidPracticeMode,
-  shouldShowExplanation,
+  shouldShowExplanationForMode,
 } from './practice-mode';
 
 describe('PracticeMode', () => {
@@ -19,17 +19,17 @@ describe('PracticeMode', () => {
     expect(isValidPracticeMode('quiz')).toBe(false);
   });
 
-  describe('shouldShowExplanation', () => {
+  describe('shouldShowExplanationForMode', () => {
     it('returns true for tutor mode', () => {
-      expect(shouldShowExplanation('tutor', false)).toBe(true);
+      expect(shouldShowExplanationForMode('tutor', false)).toBe(true);
     });
 
     it('returns false for exam mode when not ended', () => {
-      expect(shouldShowExplanation('exam', false)).toBe(false);
+      expect(shouldShowExplanationForMode('exam', false)).toBe(false);
     });
 
     it('returns true for exam mode when ended', () => {
-      expect(shouldShowExplanation('exam', true)).toBe(true);
+      expect(shouldShowExplanationForMode('exam', true)).toBe(true);
     });
   });
 });

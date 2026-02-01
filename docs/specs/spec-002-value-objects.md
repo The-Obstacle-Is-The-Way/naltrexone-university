@@ -154,7 +154,7 @@ import { describe, it, expect } from 'vitest';
 import {
   AllPracticeModes,
   isValidPracticeMode,
-  shouldShowExplanation,
+  shouldShowExplanationForMode,
 } from './practice-mode';
 
 describe('PracticeMode', () => {
@@ -171,17 +171,17 @@ describe('PracticeMode', () => {
     expect(isValidPracticeMode('quiz')).toBe(false);
   });
 
-  describe('shouldShowExplanation', () => {
+  describe('shouldShowExplanationForMode', () => {
     it('returns true for tutor mode', () => {
-      expect(shouldShowExplanation('tutor', false)).toBe(true);
+      expect(shouldShowExplanationForMode('tutor', false)).toBe(true);
     });
 
     it('returns false for exam mode when not ended', () => {
-      expect(shouldShowExplanation('exam', false)).toBe(false);
+      expect(shouldShowExplanationForMode('exam', false)).toBe(false);
     });
 
     it('returns true for exam mode when ended', () => {
-      expect(shouldShowExplanation('exam', true)).toBe(true);
+      expect(shouldShowExplanationForMode('exam', true)).toBe(true);
     });
   });
 });
@@ -391,7 +391,7 @@ export function isValidPracticeMode(value: string): value is PracticeMode {
  * - Tutor: always show immediately
  * - Exam: only show after session ends
  */
-export function shouldShowExplanation(mode: PracticeMode, sessionEnded: boolean): boolean {
+export function shouldShowExplanationForMode(mode: PracticeMode, sessionEnded: boolean): boolean {
   if (mode === 'tutor') return true;
   return sessionEnded;
 }
@@ -470,7 +470,7 @@ export {
   type PracticeMode,
   AllPracticeModes,
   isValidPracticeMode,
-  shouldShowExplanation,
+  shouldShowExplanationForMode,
 } from './practice-mode';
 
 export {
@@ -500,6 +500,6 @@ pnpm test --run src/domain/value-objects/
 
 - [ ] All value objects defined with const arrays
 - [ ] Type guards for runtime validation
-- [ ] Business logic functions (isEntitledStatus, shouldShowExplanation)
+- [ ] Business logic functions (isEntitledStatus, shouldShowExplanationForMode)
 - [ ] Zero external dependencies
 - [ ] All tests pass
