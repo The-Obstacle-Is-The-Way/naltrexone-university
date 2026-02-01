@@ -13,8 +13,18 @@ export const metadata: Metadata = {
 const manrope = Manrope({ subsets: ['latin'] });
 const themeScript = `(() => {
   try {
-    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    document.documentElement.classList.toggle('dark', prefersDark);
+    const media = window.matchMedia('(prefers-color-scheme: dark)');
+    const apply = (matches) => {
+      document.documentElement.classList.toggle('dark', matches);
+    };
+
+    apply(media.matches);
+
+    if (typeof media.addEventListener === 'function') {
+      media.addEventListener('change', (event) => apply(event.matches));
+    } else if (typeof media.addListener === 'function') {
+      media.addListener((event) => apply(event.matches));
+    }
   } catch {
     // No-op: if matchMedia is unavailable, default to light mode.
   }

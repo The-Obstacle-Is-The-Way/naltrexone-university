@@ -26,4 +26,38 @@ test.describe('dark mode', () => {
       )
       .toBe(false);
   });
+
+  test('updates the `.dark` class when OS preference changes', async ({
+    page,
+  }) => {
+    await page.goto('/');
+
+    await expect
+      .poll(async () => {
+        return page.evaluate(() =>
+          document.documentElement.classList.contains('dark'),
+        );
+      })
+      .toBe(true);
+
+    await page.emulateMedia({ colorScheme: 'light' });
+
+    await expect
+      .poll(async () => {
+        return page.evaluate(() =>
+          document.documentElement.classList.contains('dark'),
+        );
+      })
+      .toBe(false);
+
+    await page.emulateMedia({ colorScheme: 'dark' });
+
+    await expect
+      .poll(async () => {
+        return page.evaluate(() =>
+          document.documentElement.classList.contains('dark'),
+        );
+      })
+      .toBe(true);
+  });
 });
