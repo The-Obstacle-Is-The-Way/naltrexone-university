@@ -326,6 +326,27 @@ Integration tests run against a real Postgres instance. In CI, a service contain
 pnpm typecheck && pnpm lint && pnpm test --run && pnpm test:integration && pnpm build
 ```
 
+## ⚠️ MANDATORY: CodeRabbit Review Before Merge
+
+**NEVER merge a PR without CodeRabbit review. NO EXCEPTIONS.**
+
+1. **Create the PR** and wait for CodeRabbit to comment (usually 1-2 minutes)
+2. **Read all CodeRabbit feedback** — do not skim or skip
+3. **Address every issue** raised by CodeRabbit before merging:
+   - If it's a valid issue → fix it
+   - If it's a false positive → reply explaining why
+4. **Only merge after** CodeRabbit has reviewed AND you've addressed feedback
+
+**Why this matters:**
+- CodeRabbit catches bugs, security issues, and style problems
+- Premature merges bypass this safety net
+- The 1-2 minute wait is worth it
+
+**Signs you're about to violate this rule:**
+- PR was just created seconds ago
+- No `coderabbitai[bot]` comment visible yet
+- You're thinking "I'll merge now and fix issues later"
+
 ## Documentation
 
 - `docs/specs/master_spec.md` - Complete technical specification (SSOT)
