@@ -37,6 +37,13 @@ cp .env.example .env        # Create env file (never commit .env)
 # Set DATABASE_URL, Clerk keys, and Stripe keys in .env
 ```
 
+## Git Hooks (Husky)
+
+Git hooks are installed automatically on `pnpm install` (via the `prepare` script).
+
+- `pre-commit`: runs staged-file checks via `lint-staged` + Biome auto-fix
+- `pre-push`: runs `pnpm typecheck && pnpm test --run`
+
 ## Non-Interactive Safety (No Vim / No Pagers)
 
 This repo is frequently worked on in non-interactive shells (CI + AI agents). To avoid hard hangs:

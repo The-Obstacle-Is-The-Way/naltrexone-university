@@ -9,6 +9,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
+    "prepare": "husky",
     "lint": "biome check .",
     "lint:ci": "biome ci .",
     "lint:fix": "biome check . --write",
@@ -21,6 +22,11 @@
     "db:migrate": "drizzle-kit migrate",
     "db:seed": "tsx scripts/seed.ts",
     "db:studio": "drizzle-kit studio"
+  },
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx,json}": [
+      "biome check --write --no-errors-on-unmatched"
+    ]
   },
   "dependencies": {
     "@clerk/nextjs": "^6.37.1",
@@ -57,6 +63,8 @@
     "@types/react": "19.2.10",
     "@types/react-dom": "19.2.3",
     "@vitest/coverage-v8": "^4.0.18",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.2.7",
     "tsx": "^4.20.5",
     "vitest": "^4.0.18"
   }
