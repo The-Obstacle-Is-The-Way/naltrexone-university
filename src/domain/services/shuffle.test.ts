@@ -36,4 +36,9 @@ describe('createSeed', () => {
     expect(createSeed('user-1', 123)).not.toBe(createSeed('user-2', 123));
     expect(createSeed('user-1', 123)).not.toBe(createSeed('user-1', 456));
   });
+
+  it('never returns a negative number for int32 MIN_VALUE hash', () => {
+    const userId = String.fromCharCode(22728, 4, 16, 30);
+    expect(createSeed(userId, 0)).toBe(2_147_483_648);
+  });
 });

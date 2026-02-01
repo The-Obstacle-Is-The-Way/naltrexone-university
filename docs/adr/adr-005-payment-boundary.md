@@ -113,10 +113,12 @@ This ADR records the boundary decision; specs above define the exact contracts a
 - [ ] Domain uses `SubscriptionPlan` (monthly/annual), NOT Stripe price IDs
 - [ ] Plan-to-price mapping exists ONLY in `src/adapters/config/`
 - [ ] API/UI never sends raw `priceId` — only domain `plan` values
-- [ ] `isEntitled()` function has no external dependencies
+- [ ] `src/domain/services/isEntitled()` is a pure function (no external dependencies)
 - [ ] Webhook handler uses gateway interface
 - [ ] Webhook processing is idempotent via StripeEventRepository (`stripe_events`)
 - [ ] Status mapping is explicit and complete
+
+> **Implementation note:** Gateway adapters (AuthGateway/PaymentGateway) are tracked as DEBT-005 and are not yet implemented in this baseline.
 
 ## Testing
 

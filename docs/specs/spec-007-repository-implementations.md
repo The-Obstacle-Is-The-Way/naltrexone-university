@@ -62,7 +62,7 @@ Safety note:
 
 Test location:
 
-```
+```text
 tests/integration/**/*.test.ts
 ```
 

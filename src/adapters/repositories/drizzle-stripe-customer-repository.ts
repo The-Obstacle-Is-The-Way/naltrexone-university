@@ -57,8 +57,8 @@ export class DrizzleStripeCustomerRepository
     }
 
     throw new ApplicationError(
-      'INTERNAL_ERROR',
-      'Failed to insert Stripe customer (missing after conflict)',
+      'CONFLICT',
+      'Stripe customer insert raced; please retry',
     );
   }
 }

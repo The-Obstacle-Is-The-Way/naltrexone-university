@@ -647,9 +647,11 @@ export type StripeWebhookResponse = { received: true };
 * `stripe_events.id` is the Stripe event id (primary key).
 * Webhook handler must:
 
-  1. Upsert a `stripe_events` row with `{ id, type, processed_at: null, error: null }` (insert if missing)
-  2. If row exists AND `processed_at` is not null AND `error` is null: return 200 immediately (already processed)
-  3. Process event
+  1. Attempt to *claim* the event by inserting a `stripe_events` row with `{ id, type, processed_at: null, error: null }` using `ON CONFLICT DO NOTHING RETURNING id`.
+  2. If not claimed, load the existing row:
+     * If `processed_at` is not null AND `error` is null: return 200 immediately (already processed)
+     * Otherwise, ensure only one request proceeds (e.g. `SELECT ... FOR UPDATE` on the `stripe_events` row, or a Postgres advisory lock keyed by `event.id`) before processing/retrying.
+  3. Process event (all writes must be idempotent)
   4. On success: set `processed_at = now()`, `error = null`
   5. On failure: set `error = <string>`, leave `processed_at` null
 
