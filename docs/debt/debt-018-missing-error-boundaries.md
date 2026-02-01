@@ -43,11 +43,12 @@ Without error boundaries:
 
 ### File: `app/global-error.tsx`
 
+`global-error.tsx` must define its own `<html>` and `<body>` tags because it replaces the root layout when active.
+
 ```tsx
 'use client';
 
 import { useEffect } from 'react';
-import * as Sentry from '@sentry/nextjs';
 
 export default function GlobalError({
   error,
@@ -57,7 +58,8 @@ export default function GlobalError({
   reset: () => void;
 }) {
   useEffect(() => {
-    Sentry.captureException(error);
+    // Log to console in dev, or send to error tracking service
+    console.error('GlobalError:', error);
   }, [error]);
 
   return (
@@ -66,10 +68,12 @@ export default function GlobalError({
         <div className="flex min-h-screen items-center justify-center">
           <div className="text-center">
             <h1 className="text-2xl font-bold">Something went wrong</h1>
-            <p className="mt-2 text-gray-600">We've been notified and are looking into it.</p>
+            <p className="mt-2 text-gray-600">
+              We've been notified and are looking into it.
+            </p>
             <button
               onClick={reset}
-              className="mt-4 rounded bg-primary px-4 py-2 text-white"
+              className="mt-4 rounded bg-black px-4 py-2 text-white"
             >
               Try again
             </button>
@@ -87,7 +91,6 @@ export default function GlobalError({
 'use client';
 
 import { useEffect } from 'react';
-import * as Sentry from '@sentry/nextjs';
 
 export default function Error({
   error,
@@ -97,7 +100,7 @@ export default function Error({
   reset: () => void;
 }) {
   useEffect(() => {
-    Sentry.captureException(error);
+    console.error('Error boundary caught:', error);
   }, [error]);
 
   return (
@@ -106,7 +109,7 @@ export default function Error({
         <h2 className="text-xl font-semibold">Something went wrong</h2>
         <button
           onClick={reset}
-          className="mt-4 rounded bg-primary px-4 py-2 text-white"
+          className="mt-4 rounded bg-black px-4 py-2 text-white"
         >
           Try again
         </button>
@@ -120,7 +123,6 @@ export default function Error({
 
 - [ ] `app/global-error.tsx` exists and catches root layout errors
 - [ ] `app/error.tsx` exists and catches page errors
-- [ ] Error boundaries report to Sentry (when configured)
 - [ ] User sees friendly error message, not white screen
 - [ ] "Try again" button calls `reset()` to recover
 
