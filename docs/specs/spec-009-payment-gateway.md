@@ -4,7 +4,7 @@
 > Write tests FIRST. Red → Green → Refactor. No implementation without a failing test.
 > Principles: SOLID, DRY, Clean Code, Gang of Four patterns where appropriate.
 
-**Status:** Ready
+**Status:** Implemented
 **Layer:** Adapters
 **Dependencies:** SPEC-004 (Ports), SPEC-006 (Drizzle Schema)
 **Implements:** ADR-005 (Payment Boundary)

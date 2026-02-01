@@ -27,12 +27,12 @@ Implementation specifications provide detailed technical guidance for building e
 | [SPEC-007](./spec-007-repository-implementations.md) | Repository Implementations (Drizzle) | Implemented | Adapters |
 | [SPEC-008](./spec-008-auth-gateway.md) | Auth Gateway (Clerk) | Implemented | Adapters |
 | [SPEC-009](./spec-009-payment-gateway.md) | Payment Gateway (Stripe) | Implemented | Adapters |
-| [SPEC-010](./spec-010-server-actions.md) | Server Actions (Controllers) | Implemented | Adapters |
-| [SPEC-011](./spec-011-paywall.md) | Paywall (Stripe Subscriptions) | Implemented | Feature |
-| [SPEC-012](./spec-012-core-question-loop.md) | Core Question Loop | Implemented | Feature |
-| [SPEC-013](./spec-013-practice-sessions.md) | Practice Sessions | Implemented | Feature |
-| [SPEC-014](./spec-014-review-bookmarks.md) | Review + Bookmarks | Implemented | Feature |
-| [SPEC-015](./spec-015-dashboard.md) | Dashboard | Implemented | Feature |
+| [SPEC-010](./spec-010-server-actions.md) | Server Actions (Controllers) | Ready | Adapters |
+| [SPEC-011](./spec-011-paywall.md) | Paywall (Stripe Subscriptions) | Ready | Feature |
+| [SPEC-012](./spec-012-core-question-loop.md) | Core Question Loop | Ready | Feature |
+| [SPEC-013](./spec-013-practice-sessions.md) | Practice Sessions | Ready | Feature |
+| [SPEC-014](./spec-014-review-bookmarks.md) | Review + Bookmarks | Ready | Feature |
+| [SPEC-015](./spec-015-dashboard.md) | Dashboard | Ready | Feature |
 | [SPEC-016](./spec-016-observability.md) | Observability (Logging, Error Tracking) | Partial | Infrastructure |
 | [SPEC-017](./spec-017-rate-limiting.md) | Rate Limiting | Proposed | Infrastructure |
 
@@ -41,7 +41,7 @@ Implementation specifications provide detailed technical guidance for building e
 ## Spec Statuses
 
 - **Proposed** — Under review, not yet approved
-- **Approved** — Ready for implementation
+- **Ready** — Ready for implementation
 - **In Progress** — Being implemented
 - **Partial** — Partially implemented
 - **Implemented** — Complete and verified
@@ -75,7 +75,7 @@ Specs are organized by Clean Architecture layer:
 > Write tests FIRST. Red → Green → Refactor. No implementation without a failing test.
 > Principles: SOLID, DRY, Clean Code, Gang of Four patterns where appropriate.
 
-**Status:** Proposed | Approved | In Progress | Implemented | Deprecated
+**Status:** Proposed | Ready | In Progress | Partial | Implemented | Deprecated
 **Layer:** Domain | Application | Adapters | Feature | Infrastructure
 **Date:** YYYY-MM-DD
 

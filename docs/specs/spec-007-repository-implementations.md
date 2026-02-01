@@ -4,7 +4,7 @@
 > Write tests FIRST. Red → Green → Refactor. No implementation without a failing test.
 > Principles: SOLID, DRY, Clean Code, Gang of Four patterns where appropriate.
 
-**Status:** Ready
+**Status:** Implemented
 **Layer:** Adapters
 **Dependencies:** SPEC-004 (Ports), SPEC-006 (Drizzle Schema)
 **Implements:** ADR-001 (Clean Architecture), ADR-003 (Testing)
@@ -32,6 +32,7 @@ src/adapters/repositories/
 ├── drizzle-practice-session-repository.ts
 ├── drizzle-bookmark-repository.ts
 ├── drizzle-tag-repository.ts
+├── drizzle-user-repository.ts
 ├── drizzle-subscription-repository.ts
 ├── drizzle-stripe-customer-repository.ts
 ├── drizzle-stripe-event-repository.ts
@@ -79,7 +80,7 @@ Tests should validate:
 Stripe webhook idempotency uses `stripe_events`:
 
 - `stripe_events.id` = Stripe event id (primary key)
-- Repositories must support: `ensure`, `isProcessed`, `markProcessed`, `markFailed`
+- Repositories must support: `claim`, `lock`, `markProcessed`, `markFailed`
 
 See `docs/specs/master_spec.md` Section 4.4.2 for exact behavior.
 
@@ -97,7 +98,7 @@ These integration tests are required before any slice that depends on these repo
 - `QuestionRepository.findPublishedById` returns `null` for non-published questions.
 - `AttemptRepository.insert` creates an attempt row with correct FK wiring.
 - `BookmarkRepository.add/remove/exists/listByUserId` round-trips correctly.
-- `StripeEventRepository.ensure/isProcessed/markProcessed/markFailed` is idempotent and concurrency-safe (unique PK on `stripe_events.id`).
+- `StripeEventRepository.claim/lock/markProcessed/markFailed` is idempotent and concurrency-safe (unique PK on `stripe_events.id`).
 
 ---
 

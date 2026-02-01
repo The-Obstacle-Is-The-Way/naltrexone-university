@@ -4,7 +4,7 @@
 > Write tests FIRST. Red → Green → Refactor. No implementation without a failing test.
 > Principles: SOLID, DRY, Clean Code, Gang of Four patterns where appropriate.
 
-**Status:** Ready
+**Status:** Implemented
 **Layer:** Application
 **Dependencies:** SPEC-003 (Domain Services), SPEC-004 (Ports)
 **Implements:** ADR-001 (Clean Architecture), ADR-003 (Testing), ADR-006 (Errors)
@@ -73,14 +73,17 @@ export type CheckEntitlementOutput = {
 
 ```ts
 export class CheckEntitlementUseCase {
-  constructor(private readonly subscriptions: SubscriptionRepository) {}
+  constructor(
+    private readonly subscriptions: SubscriptionRepository,
+    private readonly now: () => Date = () => new Date(),
+  ) {}
 }
 ```
 
 **Algorithm:**
 
 1. Load subscription by `userId` (may be null)
-2. Compute `isEntitled(subscription, now)`
+2. Compute `isEntitled(subscription, now())`
 3. Return `{ isEntitled }`
 
 ---

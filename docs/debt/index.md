@@ -19,7 +19,7 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 |----|-------|--------|----------|------|
 | _None_ | — | — | — | — |
 
-**Next Debt ID:** DEBT-036
+**Next Debt ID:** DEBT-037
 
 ## Archived Debt
 
@@ -60,6 +60,7 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 | [DEBT-033](../_archive/debt/debt-033-flat-repository-structure.md) | Flat Repository Structure | P3 | 2026-02-01 |
 | [DEBT-034](../_archive/debt/debt-034-test-coverage-gap-critical.md) | Test Coverage Gap — Must Stabilize Before New Features | P1 | 2026-02-01 |
 | [DEBT-035](../_archive/debt/debt-035-inconsistent-repo-test-mocking.md) | Inconsistent Repo Test Mocking (False Positive) | P2 | 2026-02-01 |
+| [DEBT-036](../_archive/debt/debt-036-specs-register-and-ports-doc-drift.md) | Specs Register and Ports Docs Drift | P2 | 2026-02-01 |
 
 ## Debt Statuses
 
