@@ -54,6 +54,7 @@ _Tasks will be added when SLICE-1 is complete_
 - 2026-01-31: **[SLICE-0 COMPLETE]** Manual baseline refactor via interactive Claude session. 16 atomic commits. Next.js 16.1.6, Clerk auth, Drizzle schema per spec, Biome linting, Vitest/Playwright configs, GitHub Actions CI.
 - 2026-01-31: **[START]** Initialized PROGRESS.md for Ralph Wiggum loop.
 - 2026-02-01: **[HARDENING]** Added Husky git hooks (pre-commit staged Biome via lint-staged; pre-push typecheck + unit tests). Removed trivial entity tests, added unit tests for DomainError/ApplicationError, and aligned specs/debt/bug docs with SSOT.
+- 2026-02-01: **[HARDENING]** Expanded characterization tests for core use cases (SubmitAnswer/GetNextQuestion/CheckEntitlement). Resolved DEBT-008/009/012/017 and documented DEBT-014.
 
 ---
 
