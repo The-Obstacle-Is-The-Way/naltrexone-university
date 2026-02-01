@@ -279,4 +279,36 @@ describe('ClerkAuthGateway', () => {
     expect(db._mocks.queryFindFirst).toHaveBeenCalledTimes(2);
     expect(db.update).not.toHaveBeenCalled();
   });
+
+  it('maps Postgres unique violations to CONFLICT', async () => {
+    const db = createDbMock();
+    const existing = {
+      id: 'db_user_1',
+      clerkUserId: 'clerk_1',
+      email: 'old@example.com',
+      createdAt: new Date('2026-02-01T00:00:00Z'),
+      updatedAt: new Date('2026-02-01T00:00:00Z'),
+    };
+
+    db._mocks.queryFindFirst.mockResolvedValue(existing);
+    db._mocks.updateReturning.mockRejectedValue({ code: '23505' });
+
+    const gateway = new ClerkAuthGateway({
+      db: db as unknown as ConstructorParameters<
+        typeof ClerkAuthGateway
+      >[0]['db'],
+      getClerkUser: async () => ({
+        id: 'clerk_1',
+        emailAddresses: [{ emailAddress: 'new@example.com' }],
+      }),
+      now: () => new Date('2026-02-01T01:00:00Z'),
+    });
+
+    await expect(gateway.requireUser()).rejects.toBeInstanceOf(
+      ApplicationError,
+    );
+    await expect(gateway.requireUser()).rejects.toMatchObject({
+      code: 'CONFLICT',
+    });
+  });
 });
