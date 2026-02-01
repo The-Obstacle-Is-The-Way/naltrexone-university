@@ -1,5 +1,9 @@
 # SPEC-007: Repository Implementations (Drizzle)
 
+> **⚠️ TDD MANDATE:** This spec follows Test-Driven Development (Uncle Bob / Robert C. Martin).
+> Write tests FIRST. Red → Green → Refactor. No implementation without a failing test.
+> Principles: SOLID, DRY, Clean Code, Gang of Four patterns where appropriate.
+
 **Status:** Ready
 **Layer:** Adapters
 **Dependencies:** SPEC-004 (Ports), SPEC-006 (Drizzle Schema)
