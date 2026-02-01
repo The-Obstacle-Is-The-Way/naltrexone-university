@@ -7,45 +7,36 @@
 
 ## Summary
 
-Several repository implementations lack integration tests against a real Postgres database. Unit tests with fakes exist, but integration tests are needed to validate:
+Repository implementations needed integration tests against a real Postgres database to validate behavior we cannot reliably prove with fakes alone:
 
-- Zod schema validation against real data
+- Constraint violations and uniqueness behavior
 - NULL handling edge cases
-- Constraint violations
-- Transaction behavior
+- Transaction/consistency behavior
 
-## Missing Tests
+## Resolution
 
-| Repository | Integration Test | Status |
-|-----------|------------------|--------|
-| DrizzleAttemptRepository | Missing | ❌ |
-| DrizzlePracticeSessionRepository | Missing | ❌ |
-| DrizzleStripeCustomerRepository | Missing | ❌ |
-| DrizzleQuestionRepository | Exists | ✅ |
-| DrizzleSubscriptionRepository | Exists | ✅ |
-| DrizzleTagRepository | Exists | ✅ |
+Integration tests now exist and run against a real Postgres instance (service container in CI):
 
-## Specific Gaps
+- `tests/integration/db.integration.test.ts` (migrations sanity: tables + `pgcrypto`)
+- `tests/integration/repositories.integration.test.ts` (repository behavior)
 
-### PracticeSessionRepository
-- Zod validation never tested against real data:
-  - `count: z.number().int().min(1).max(200)` - boundary testing
-  - `tagSlugs: z.array(z.string().min(1)).max(50)` - empty slug validation
-  - `difficulties: z.array(questionDifficultySchema).max(3)` - enum validation
-  - `.strict()` mode - extra fields rejection
+Repositories covered:
 
-### AttemptRepository
-- NULL value handling for `selectedChoiceId` (null = skipped)
-- Timestamp precision
-- Foreign key constraint behavior
+- `DrizzleAttemptRepository`
+- `DrizzleBookmarkRepository`
+- `DrizzlePracticeSessionRepository`
+- `DrizzleQuestionRepository`
+- `DrizzleStripeCustomerRepository`
+- `DrizzleStripeEventRepository`
+- `DrizzleSubscriptionRepository`
+- `DrizzleTagRepository`
 
-### StripeCustomerRepository
-- Upsert behavior (create vs update)
-- Unique constraint on stripeCustomerId
+Safety guard:
+
+- Integration tests refuse to run against a non-local `DATABASE_URL` unless `ALLOW_NON_LOCAL_DATABASE_URL=true`.
 
 ## Acceptance Criteria
 
-- Integration tests exist for all repository implementations
-- Boundary conditions tested (min/max values)
-- NULL handling explicitly tested
-- Tests run in CI with service container
+- Integration tests exist for all repository implementations ✅
+- Tests run in CI with a Postgres service container ✅
+- Tests refuse to run against a non-local `DATABASE_URL` by default ✅
