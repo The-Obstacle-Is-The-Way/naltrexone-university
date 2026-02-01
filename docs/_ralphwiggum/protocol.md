@@ -4,6 +4,27 @@
 
 ---
 
+## ⚠️ MANDATORY: Test-Driven Development (Uncle Bob / Robert C. Martin)
+
+**ALL CODE PRODUCED BY THE LOOP MUST BE TEST-DRIVEN. NO EXCEPTIONS.**
+
+Before writing ANY implementation code:
+1. **Write the test first** (Red)
+2. **Write minimum code to pass** (Green)
+3. **Refactor if needed** (Refactor)
+
+**Core Principles (enforce in your PROMPT.md):**
+- **SOLID** - Single Responsibility, Open/Closed, Liskov Substitution, Interface Segregation, Dependency Inversion
+- **DRY** - Don't Repeat Yourself. Single source of truth for every concept.
+- **Clean Architecture** - Domain → Application → Adapters → Infrastructure. Dependencies point inward only.
+- **Clean Code** - Meaningful names, small functions, minimal complexity, explicit error handling.
+- **Gang of Four Patterns** - Repository, Factory, Strategy, Composition Root where they add clarity.
+- **Fakes over Mocks** - In-memory fakes for testing, not jest.mock().
+
+**If the agent is writing implementation code without a failing test, the prompt needs adjustment.**
+
+---
+
 ## What is the Ralph Wiggum Technique?
 
 The Ralph Wiggum technique is an iterative AI development methodology where the **same prompt is run repeatedly** until objective completion criteria are met. Each iteration sees its **previous work in files and git history**, enabling self-correction and incremental progress.
