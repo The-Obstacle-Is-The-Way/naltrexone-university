@@ -681,16 +681,17 @@ export const zNonEmptyString = z.string().min(1);
 
 export const zDifficulty = z.enum(['easy', 'medium', 'hard']);
 export const zPracticeMode = z.enum(['tutor', 'exam']);
+export const zSubscriptionPlan = z.enum(['monthly', 'annual']);
 
 export const zPagination = z.object({
   limit: z.number().int().min(1).max(100),
   offset: z.number().int().min(0),
-});
+}).strict();
 ```
 
 ---
 
-#### 4.5.1 Server Action: `createCheckoutSession(priceId)`
+#### 4.5.1 Server Action: `createCheckoutSession(plan)`
 
 * **Name:** `createCheckoutSession`
 * **Type:** Server Action
@@ -701,8 +702,8 @@ export const zPagination = z.object({
 
 ```ts
 export const CreateCheckoutSessionInputSchema = z.object({
-  priceId: z.string().min(1),
-});
+  plan: zSubscriptionPlan,
+}).strict();
 ```
 
 **Output:**
@@ -727,18 +728,24 @@ export type CreateCheckoutSessionOutput = {
 
    * If none: create Stripe Customer with metadata `{ user_id, clerk_user_id }`.
    * Insert `stripe_customers` row.
-3. Create Stripe Checkout Session (subscription):
+3. Determine the Stripe Price ID from the selected **domain plan**:
+
+   * If `plan === 'monthly'`: use `NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY`
+   * If `plan === 'annual'`: use `NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL`
+
+   **Important:** The controller MUST NOT accept arbitrary client-supplied Stripe price IDs.
+4. Create Stripe Checkout Session (subscription):
 
    * `mode: 'subscription'`
    * `customer: <stripe_customer_id>`
-   * `line_items: [{ price: priceId, quantity: 1 }]`
+   * `line_items: [{ price: <derivedPriceId>, quantity: 1 }]`
    * `allow_promotion_codes: false`
    * `billing_address_collection: 'auto'`
    * `success_url: ${NEXT_PUBLIC_APP_URL}/checkout/success?session_id={CHECKOUT_SESSION_ID}`
    * `cancel_url: ${NEXT_PUBLIC_APP_URL}/pricing?checkout=cancel`
    * `client_reference_id: <users.id>` (internal uuid)
    * `subscription_data.metadata.user_id = <users.id>`
-4. Return `{ url: session.url }` (must be non-null; if null => STRIPE_ERROR)
+5. Return `{ url: session.url }` (must be non-null; if null => STRIPE_ERROR)
 
 ---
 
@@ -1762,7 +1769,7 @@ As a user, I can load the site, sign up/sign in, and access the deployed app so 
 
 **Definition of Done:**
 
-* `pnpm typecheck`, `pnpm biome check .`, `pnpm test`, `pnpm test:e2e` all pass locally
+* `pnpm typecheck`, `pnpm lint`, `pnpm test --run`, `pnpm test:e2e` all pass locally
 * CI passes on PR
 * Vercel preview deploy works
 * `/api/health` returns `{ ok: true, db: true, ... }`
@@ -2310,22 +2317,26 @@ jobs:
 
 ## 10. Environment Variables
 
-> All variables MUST be present in the specified environments.
+> Variables marked ✅ MUST be present in that environment.
+>
+> Notes:
+>
+> - **CI** may use dummy values for third-party keys when only running lint/typecheck/unit/integration tests.
+> - **E2E test credentials** are required only when running Playwright E2E (CI or local). Never set them in production.
 
-| Variable                            | Description                                                                                                                 | Required in Dev | Required in Preview | Required in Prod |
-| ----------------------------------- | --------------------------------------------------------------------------------------------------------------------------- | --------------: | ------------------: | ---------------: |
-| DATABASE_URL                        | Neon Postgres connection string                                                                                             |               ✅ |                   ✅ |                ✅ |
-| CLERK_SECRET_KEY                    | Clerk secret key (server)                                                                                                   |               ✅ |                   ✅ |                ✅ |
-| CLERK_PUBLISHABLE_KEY               | Clerk publishable key (legacy compatibility; set equal to NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY)                                |               ✅ |                   ✅ |                ✅ |
-| NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY   | Clerk publishable key (client)                                                                                              |               ✅ |                   ✅ |                ✅ |
-| STRIPE_SECRET_KEY                   | Stripe secret key (server)                                                                                                  |               ✅ |                   ✅ |                ✅ |
-| NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY  | Stripe publishable key (client)                                                                                             |               ✅ |                   ✅ |                ✅ |
-| STRIPE_WEBHOOK_SECRET               | Stripe webhook signing secret                                                                                               |               ✅ |                   ✅ |                ✅ |
-| NEXT_PUBLIC_APP_URL                 | Canonical base URL (e.g., [http://localhost:3000](http://localhost:3000), [https://yourdomain.com](https://yourdomain.com)) |               ✅ |                   ✅ |                ✅ |
-| NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY | Stripe Price ID for $29/mo                                                                                                  |               ✅ |                   ✅ |                ✅ |
-| NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL  | Stripe Price ID for $199/yr                                                                                                 |               ✅ |                   ✅ |                ✅ |
-| E2E_CLERK_USER_USERNAME             | Clerk test user username for Playwright                                                                                     |               ✅ |                   ✅ |                ✅ |
-| E2E_CLERK_USER_PASSWORD             | Clerk test user password for Playwright                                                                                     |               ✅ |                   ✅ |                ✅ |
+| Variable                            | Description                                                                                                                 | Required in Dev | Required in CI | Required in Preview | Required in Prod |
+| ----------------------------------- | --------------------------------------------------------------------------------------------------------------------------- | --------------: | -------------: | ------------------: | ---------------: |
+| DATABASE_URL                        | Neon Postgres connection string                                                                                             |               ✅ |            ✅ |                   ✅ |                ✅ |
+| CLERK_SECRET_KEY                    | Clerk secret key (server)                                                                                                   |               ✅ |            ✅ |                   ✅ |                ✅ |
+| NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY   | Clerk publishable key (client)                                                                                              |               ✅ |            ✅ |                   ✅ |                ✅ |
+| STRIPE_SECRET_KEY                   | Stripe secret key (server)                                                                                                  |               ✅ |            ✅ |                   ✅ |                ✅ |
+| NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY  | Stripe publishable key (client)                                                                                             |               ✅ |            ✅ |                   ✅ |                ✅ |
+| STRIPE_WEBHOOK_SECRET               | Stripe webhook signing secret                                                                                               |               ✅ |            ✅ |                   ✅ |                ✅ |
+| NEXT_PUBLIC_APP_URL                 | Canonical base URL (e.g., [http://localhost:3000](http://localhost:3000), [https://yourdomain.com](https://yourdomain.com)) |               ✅ |            ✅ |                   ✅ |                ✅ |
+| NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY | Stripe Price ID for $29/mo                                                                                                  |               ✅ |            ✅ |                   ✅ |                ✅ |
+| NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL  | Stripe Price ID for $199/yr                                                                                                 |               ✅ |            ✅ |                   ✅ |                ✅ |
+| E2E_CLERK_USER_USERNAME             | Clerk test user username for Playwright                                                                                     |               — |            ✅ |                   — |                — |
+| E2E_CLERK_USER_PASSWORD             | Clerk test user password for Playwright                                                                                     |               — |            ✅ |                   — |                — |
 
 ---
 
