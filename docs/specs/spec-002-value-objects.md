@@ -498,8 +498,8 @@ pnpm test --run src/domain/value-objects/
 
 ## Definition of Done
 
-- [ ] All value objects defined with const arrays
-- [ ] Type guards for runtime validation
-- [ ] Business logic functions (isEntitledStatus, shouldShowExplanationForMode)
-- [ ] Zero external dependencies
-- [ ] All tests pass
+- [x] All value objects defined with const arrays
+- [x] Type guards for runtime validation
+- [x] Business logic functions (isEntitledStatus, shouldShowExplanationForMode)
+- [x] Zero external dependencies
+- [x] All tests pass

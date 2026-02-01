@@ -31,11 +31,14 @@ This **is** a fake passed through dependency injection. The `vi.fn()` is just a 
 
 ## What Was Actually Fixed
 
-The real violations were:
-- `lib/auth.test.ts` — Used `vi.mock('./db', './container')` — **DELETED**
-- `lib/container.test.ts` — Used `vi.mock('./db', './env')` — **DELETED**
+The real violations were test files that mocked our own modules at the module level
+(bypassing DI) and created flakiness/redundancy:
 
-These mocked our own code at the module level, bypassing DI. They were also redundant with adapter tests.
+- `lib/auth.test.ts` — **deleted** (module-level mocking anti-pattern + redundant coverage)
+- An earlier version of `lib/container.test.ts` — **deleted**, then later replaced with a DI-friendly `lib/container.test.ts`
+  that only mocks uninjectable external modules (`server-only`, `stripe`).
+
+These were redundant with adapter-level tests and violated the “fakes over mocks” rule for our own code.
 
 ## Resolution
 
@@ -56,7 +59,7 @@ Can you pass it through a constructor?
 
 ## Verification
 
-- [x] Deleted `lib/auth.test.ts` (vi.mock anti-pattern)
-- [x] Deleted `lib/container.test.ts` (vi.mock anti-pattern)
-- [x] Reviewed remaining vi.mock() usage — only external SDKs (Clerk, Next.js)
+- [x] Deleted `lib/auth.test.ts` (module-level mocking anti-pattern)
+- [x] Deleted the original `lib/container.test.ts` (module-level mocking anti-pattern)
+- [x] Reviewed remaining `vi.mock()` usage — only external/uninjectable modules (Clerk hooks, Next.js internals, Stripe SDK, `server-only`)
 - [x] Repository tests use fakes via DI — pattern is correct
