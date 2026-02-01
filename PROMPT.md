@@ -159,11 +159,32 @@ If ANY check fails, fix it before proceeding.
 **Testing Philosophy:**
 - **Framework:** Vitest (NOT Jest) — use `vi.fn()` not `jest.fn()`
 - **FAKES OVER MOCKS** — Use `FakeRepository` classes from `src/application/test-helpers/fakes.ts`
-- **NEVER** use `vi.mock()` or `jest.mock()` for our own code
-- Only use `vi.fn()` for external SDKs (Clerk, Stripe)
 - Test behavior, not implementation details
 - Domain and application layers must be 100% unit testable without infrastructure
 - Colocate tests: `grading.ts` → `grading.test.ts` (same folder)
+
+**The Simple Rule for Fakes vs Mocks:**
+```
+Can you pass it through a constructor or function parameter?
+  YES → Use a fake object (with vi.fn() for spying if needed)
+  NO  → Use vi.mock() (React hooks, Next.js magic, external SDKs only)
+```
+
+**IMPORTANT: vi.fn() inside a fake is CORRECT:**
+```typescript
+// ✅ CORRECT - Fake object passed via DI, vi.fn() just adds spying
+const fakeDb = {
+  query: { users: { findFirst: vi.fn().mockResolvedValue(null) } }
+};
+const repo = new DrizzleUserRepository(fakeDb);  // DI injection
+
+// ❌ WRONG - Hijacking module imports for our own code
+vi.mock('./user-repository');  // NEVER DO THIS
+```
+
+**When vi.mock() IS acceptable:**
+- External SDKs with hooks you can't inject (`@clerk/nextjs`)
+- Next.js internals (`next/link`, `server-only`)
 
 **If you wrote code without a test, go back and write the test first.**
 
