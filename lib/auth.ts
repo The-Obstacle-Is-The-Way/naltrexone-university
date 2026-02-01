@@ -2,6 +2,7 @@ import 'server-only';
 import { auth, currentUser } from '@clerk/nextjs/server';
 import { eq } from 'drizzle-orm';
 import { users } from '@/db/schema';
+import { ApplicationError } from '@/src/application/errors';
 import { db } from './db';
 
 /**
@@ -10,7 +11,7 @@ import { db } from './db';
 export async function getClerkUserOrThrow() {
   const user = await currentUser();
   if (!user) {
-    throw new Error('UNAUTHENTICATED');
+    throw new ApplicationError('UNAUTHENTICATED', 'User not authenticated');
   }
   return user;
 }
@@ -64,7 +65,7 @@ export async function ensureUserRow(clerkUserId: string, email: string) {
   });
 
   if (!after) {
-    throw new Error('Failed to ensure user row');
+    throw new ApplicationError('INTERNAL_ERROR', 'Failed to ensure user row');
   }
 
   if (after.email === email) {
@@ -92,7 +93,7 @@ export async function getCurrentUser() {
   const email = clerkUser.emailAddresses[0]?.emailAddress;
 
   if (!email) {
-    throw new Error('User has no email address');
+    throw new ApplicationError('INTERNAL_ERROR', 'User has no email address');
   }
 
   return ensureUserRow(clerkUser.id, email);

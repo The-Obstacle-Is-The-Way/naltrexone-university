@@ -1,8 +1,9 @@
 # DEBT-015: Complex Fallback Logic in DrizzleStripeCustomerRepository.insert()
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P3 (downgraded from P1 - not a data integrity issue)
 **Date:** 2026-02-01
+**Resolved:** 2026-02-01
 
 ## Summary
 
@@ -85,3 +86,11 @@ try {
 - Simplify to single atomic statement
 - Remove multi-query fallback pattern
 - Maintain same business logic (reject conflicting mappings)
+
+## Resolution
+
+- Replaced the multi-query fallback logic with a single Postgres upsert statement:
+  - `ON CONFLICT (user_id) DO UPDATE ... RETURNING stripe_customer_id`
+  - Uses a no-op update to return the existing row, then compares `stripe_customer_id` to reject conflicting mappings.
+  - Translates unique-constraint failures on `stripe_customer_id` into `ApplicationError('CONFLICT', ...)`.
+- Updated unit tests in `src/adapters/repositories/drizzle-stripe-customer-repository.test.ts`.
