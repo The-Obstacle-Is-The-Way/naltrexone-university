@@ -185,9 +185,57 @@ Rules:
 
 ## Testing
 
-- **Unit tests:** `**/*.test.ts(x)` - colocated with source, or `tests/unit/`
+### Framework: Vitest (NOT Jest)
+
+We use **Vitest** exclusively. Do NOT use Jest APIs or `jest.mock()`.
+
+```typescript
+// Correct imports
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+```
+
+### Test Locations (Colocated)
+
+- **Unit tests:** `*.test.ts` colocated next to source files (e.g., `grading.ts` → `grading.test.ts`)
 - **Integration tests:** `tests/integration/*.integration.test.ts` (requires DATABASE_URL)
-- **E2E tests:** `tests/e2e/*.spec.ts` (Playwright, starts Next.js automatically)
+- **E2E tests:** `tests/e2e/*.spec.ts` (Playwright)
+
+### FAKES OVER MOCKS — MANDATORY
+
+**Use in-memory fake implementations, NEVER `vi.mock()` or `jest.mock()` for our own code.**
+
+| Approach | When to Use | Example |
+|----------|-------------|---------|
+| **Fakes** | Our own code (repositories, gateways, services) | `FakeAttemptRepository` in `src/application/test-helpers/fakes.ts` |
+| **Stubs** | Simple return values | `{ findById: async () => null }` |
+| **vi.fn()** | Only for verifying calls to external SDKs (Clerk, Stripe) | `vi.fn(() => Promise.resolve(...))` |
+
+**Why Fakes > Mocks:**
+- Mocks test implementation details (what methods were called)
+- Fakes test behavior (what the system does)
+- Mocks break when you refactor internals
+- Fakes only break when behavior changes
+
+**Our Fakes Location:** `src/application/test-helpers/fakes.ts`
+
+```typescript
+// GOOD: Using fake repository
+const repo = new FakeAttemptRepository();
+const useCase = new SubmitAnswerUseCase(repo, ...);
+const result = await useCase.execute(input);
+expect(result.isCorrect).toBe(true);
+
+// BAD: Mocking our own code
+vi.mock('./attempt-repository');  // NEVER DO THIS
+```
+
+### Test Quality Rules
+
+1. **Test behavior, not implementation** — If you refactor, tests should still pass
+2. **One concept per test** — Each `it()` verifies one thing
+3. **Arrange-Act-Assert pattern** — Setup, execute, verify
+4. **Use test factories** — `createQuestion()`, `createChoice()` from `src/domain/test-helpers/`
+5. **Descriptive names** — `it('returns isCorrect=false when incorrect choice selected')`
 
 Integration tests run against a real Postgres instance. In CI, a service container provides the database.
 

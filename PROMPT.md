@@ -118,11 +118,13 @@ If ANY check fails, fix it before proceeding.
 3. **REFACTOR**: Clean up while keeping tests green
 
 **Testing Philosophy:**
+- **Framework:** Vitest (NOT Jest) — use `vi.fn()` not `jest.fn()`
+- **FAKES OVER MOCKS** — Use `FakeRepository` classes from `src/application/test-helpers/fakes.ts`
+- **NEVER** use `vi.mock()` or `jest.mock()` for our own code
+- Only use `vi.fn()` for external SDKs (Clerk, Stripe)
 - Test behavior, not implementation details
-- Use in-memory fakes, not jest.mock()
-- Only mock true external services (Clerk, Stripe, Neon)
 - Domain and application layers must be 100% unit testable without infrastructure
-- Characterization tests for legacy/existing code before refactoring
+- Colocate tests: `grading.ts` → `grading.test.ts` (same folder)
 
 **If you wrote code without a test, go back and write the test first.**
 

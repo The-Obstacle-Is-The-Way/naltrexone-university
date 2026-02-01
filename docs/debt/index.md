@@ -27,8 +27,9 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 | [DEBT-031](./debt-031-stripe-payment-gateway-unknown-args.md) | StripePaymentGateway unknown[] Args | Open | P2 | 2026-02-01 |
 | [DEBT-032](./debt-032-incomplete-composition-root.md) | Incomplete Composition Root | Open | P3 | 2026-02-01 |
 | [DEBT-033](./debt-033-flat-repository-structure.md) | Flat Repository Structure | Open | P3 | 2026-02-01 |
+| [DEBT-035](./debt-035-inconsistent-repo-test-mocking.md) | Inconsistent Repo Test Mocking | Open | P2 | 2026-02-01 |
 
-**Next Debt ID:** DEBT-035
+**Next Debt ID:** DEBT-036
 
 ## Archived Debt
 
