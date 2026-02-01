@@ -221,6 +221,24 @@ pnpm db:test:down                                  # Stop database when done
 - Port 5434 avoids conflicts with local Postgres installations
 - Migrations require explicit `DATABASE_URL` (drizzle-kit reads from env)
 
+### React 19 Deprecations
+
+This project uses **React 19**. Key changes from earlier versions:
+
+1. **`act` must be imported from `react`** (not `react-test-renderer` or `react-dom/test-utils`):
+   ```typescript
+   // ✅ CORRECT (React 19)
+   import { act } from 'react';
+   import { create } from 'react-test-renderer';
+
+   // ❌ WRONG (deprecated)
+   import { act, create } from 'react-test-renderer';
+   ```
+
+2. **`react-test-renderer` is deprecated** — Consider migrating to `@testing-library/react` for new tests. Existing tests using `react-test-renderer` still work but will show deprecation warnings.
+
+3. **`react-dom/test-utils` is removed** — All test utilities moved to `react` package.
+
 ### FAKES OVER MOCKS — MANDATORY
 
 **The Simple Rule:**
