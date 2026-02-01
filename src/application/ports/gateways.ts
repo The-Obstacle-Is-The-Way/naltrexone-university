@@ -44,6 +44,7 @@ export type WebhookEventResult = {
     | (string & {});
   subscriptionUpdate?: {
     userId: string; // internal UUID
+    stripeCustomerId: string; // opaque external id
     stripeSubscriptionId: string; // opaque external id
     plan: SubscriptionPlan; // domain plan (monthly/annual)
     status: SubscriptionStatus;

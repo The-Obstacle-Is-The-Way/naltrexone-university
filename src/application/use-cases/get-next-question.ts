@@ -58,14 +58,12 @@ export class GetNextQuestionUseCase {
   }
 
   private mapChoicesForOutput(question: Question): PublicChoice[] {
-    return [...question.choices]
-      .sort((a, b) => a.sortOrder - b.sortOrder)
-      .map((c) => ({
-        id: c.id,
-        label: c.label,
-        textMd: c.textMd,
-        sortOrder: c.sortOrder,
-      }));
+    return question.choices.map((c) => ({
+      id: c.id,
+      label: c.label,
+      textMd: c.textMd,
+      sortOrder: c.sortOrder,
+    }));
   }
 
   private async executeForSession(

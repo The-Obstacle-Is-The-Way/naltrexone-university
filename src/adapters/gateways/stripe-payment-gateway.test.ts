@@ -127,6 +127,7 @@ describe('StripePaymentGateway', () => {
       data: {
         object: {
           id: 'sub_123',
+          customer: 'cus_123',
           status: 'active',
           current_period_end: 1_700_000_000,
           cancel_at_period_end: false,
@@ -163,6 +164,7 @@ describe('StripePaymentGateway', () => {
       type: 'customer.subscription.updated',
       subscriptionUpdate: {
         userId: 'user_1',
+        stripeCustomerId: 'cus_123',
         stripeSubscriptionId: 'sub_123',
         plan: 'monthly',
         status: 'active',
@@ -226,6 +228,7 @@ describe('StripePaymentGateway', () => {
           data: {
             object: {
               id: 'sub_123',
+              customer: 'cus_123',
               status: 'active',
               current_period_end: 1_700_000_000,
               cancel_at_period_end: false,

@@ -57,4 +57,27 @@ describe('database migrations', () => {
       expect(tables).toContain(table);
     }
   });
+
+  it('requires attempts.selected_choice_id (NOT NULL)', async () => {
+    const rows = await sql<{ is_nullable: string }[]>`
+      select is_nullable
+      from information_schema.columns
+      where table_schema = 'public'
+        and table_name = 'attempts'
+        and column_name = 'selected_choice_id'
+    `;
+    expect(rows[0]?.is_nullable).toBe('NO');
+  });
+
+  it('restricts deleting choices referenced by attempts', async () => {
+    const rows = await sql<{ def: string }[]>`
+      select pg_get_constraintdef(c.oid) as def
+      from pg_constraint c
+      join pg_class t on c.conrelid = t.oid
+      where t.relname = 'attempts'
+        and c.conname = 'attempts_selected_choice_id_choices_id_fk'
+    `;
+
+    expect(rows[0]?.def).toContain('ON DELETE RESTRICT');
+  });
 });

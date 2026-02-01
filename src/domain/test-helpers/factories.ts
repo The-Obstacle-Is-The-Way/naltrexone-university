@@ -49,7 +49,7 @@ export function createChoice(overrides: Partial<Choice> = {}): Choice {
 
 export function createQuestion(overrides: Partial<Question> = {}): Question {
   const now = new Date();
-  return {
+  const question: Question = {
     id: 'question-1',
     slug: 'question-1',
     stemMd: 'Stem',
@@ -61,6 +61,11 @@ export function createQuestion(overrides: Partial<Question> = {}): Question {
     createdAt: now,
     updatedAt: now,
     ...overrides,
+  };
+
+  return {
+    ...question,
+    choices: [...question.choices].sort((a, b) => a.sortOrder - b.sortOrder),
   };
 }
 

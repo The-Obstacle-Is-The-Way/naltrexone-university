@@ -49,6 +49,7 @@ export type StripePaymentGatewayDeps = {
 
 type StripeSubscriptionLike = {
   id?: string;
+  customer?: string;
   status?: string;
   current_period_end?: number;
   cancel_at_period_end?: boolean;
@@ -153,6 +154,14 @@ export class StripePaymentGateway implements PaymentGateway {
       );
     }
 
+    const stripeCustomerId = subscription.customer;
+    if (!stripeCustomerId) {
+      throw new ApplicationError(
+        'STRIPE_ERROR',
+        'Stripe subscription customer id is required',
+      );
+    }
+
     const status = subscription.status;
     if (!status || !isValidSubscriptionStatus(status)) {
       throw new ApplicationError(
@@ -197,6 +206,7 @@ export class StripePaymentGateway implements PaymentGateway {
       ...result,
       subscriptionUpdate: {
         userId,
+        stripeCustomerId,
         stripeSubscriptionId,
         plan,
         status,

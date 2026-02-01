@@ -354,9 +354,9 @@ export const attempts = pgTable(
     practiceSessionId: uuid('practice_session_id').references(() => practiceSessions.id, {
       onDelete: 'set null',
     }),
-    selectedChoiceId: uuid('selected_choice_id').references(() => choices.id, {
-      onDelete: 'set null',
-    }),
+    selectedChoiceId: uuid('selected_choice_id')
+      .notNull()
+      .references(() => choices.id, { onDelete: 'restrict' }),
     isCorrect: boolean('is_correct').notNull(),
     timeSpentSeconds: integer('time_spent_seconds').notNull().default(0),
     answeredAt: timestamp('answered_at', { withTimezone: true }).notNull().defaultNow(),
@@ -971,7 +971,7 @@ export type StartPracticeSessionOutput = { sessionId: string };
    * if `difficulties` non-empty: difficulty in list
 2. Shuffle deterministically in JavaScript using a seeded RNG:
 
-   * seed = `hash(userId + Date.now().toString())` (sha256 -> take first 8 bytes as uint32)
+   * seed = `createSeed(userId, Date.now())` (non-crypto rolling hash -> uint32; see `src/domain/services/shuffle.ts`)
    * shuffle algorithm = Fisher-Yates with seeded RNG
 3. Take first `count` IDs (or fewer if fewer candidates exist).
 

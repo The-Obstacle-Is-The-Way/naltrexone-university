@@ -333,6 +333,31 @@ describe('DrizzlePracticeSessionRepository + DrizzleAttemptRepository', () => {
     expect(attemptsForB).toHaveLength(0);
   });
 
+  it('rejects deleting a choice referenced by an attempt', async () => {
+    const user = await createUser();
+    const question = await createQuestion({
+      slug: `it-q-${randomUUID()}`,
+      status: 'published',
+      difficulty: 'easy',
+    });
+
+    const attemptRepo = new DrizzleAttemptRepository(db);
+    await attemptRepo.insert({
+      userId: user.id,
+      questionId: question.id,
+      practiceSessionId: null,
+      selectedChoiceId: question.correctChoiceId,
+      isCorrect: true,
+      timeSpentSeconds: 1,
+    });
+
+    await expect(
+      db
+        .delete(schema.choices)
+        .where(eq(schema.choices.id, question.correctChoiceId)),
+    ).rejects.toMatchObject({ cause: { code: '23503' } });
+  });
+
   it('ends practice sessions once', async () => {
     const user = await createUser();
     const question = await createQuestion({
@@ -470,17 +495,25 @@ describe('Stripe repositories', () => {
 
     const repo = new DrizzleStripeEventRepository(db);
 
-    await repo.ensure(eventId, 'checkout.session.completed');
-    expect(await repo.isProcessed(eventId)).toBe(false);
+    expect(await repo.claim(eventId, 'checkout.session.completed')).toBe(true);
+    await expect(repo.lock(eventId)).resolves.toEqual({
+      processedAt: null,
+      error: null,
+    });
 
     await repo.markProcessed(eventId);
-    expect(await repo.isProcessed(eventId)).toBe(true);
+    await expect(repo.lock(eventId)).resolves.toMatchObject({
+      processedAt: expect.any(Date),
+      error: null,
+    });
 
-    await repo.ensure(eventId, 'checkout.session.completed');
-    expect(await repo.isProcessed(eventId)).toBe(true);
+    expect(await repo.claim(eventId, 'checkout.session.completed')).toBe(false);
 
     await repo.markFailed(eventId, 'boom');
-    expect(await repo.isProcessed(eventId)).toBe(false);
+    await expect(repo.lock(eventId)).resolves.toEqual({
+      processedAt: null,
+      error: 'boom',
+    });
   });
 
   it('upserts Stripe customers per user', async () => {
