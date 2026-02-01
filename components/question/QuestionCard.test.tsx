@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 'use client';
 
 import { renderToStaticMarkup } from 'react-dom/server';

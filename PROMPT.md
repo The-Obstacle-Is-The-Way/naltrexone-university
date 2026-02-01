@@ -4,6 +4,28 @@ You are building **Naltrexone University**, a subscription-based SaaS question b
 
 ---
 
+## ⚠️ CRITICAL: React 19 + Vitest Testing Requirements
+
+**READ THIS FIRST. Tests will fail randomly without these requirements.**
+
+### Mandatory for ALL `.test.tsx` files:
+
+```typescript
+// @vitest-environment jsdom   ← MUST be first line
+'use client';
+
+import { act } from 'react';  // ← act from 'react', NOT react-test-renderer
+```
+
+### Why:
+- React 19 requires `IS_REACT_ACT_ENVIRONMENT = true` (set in `vitest.setup.ts`)
+- Vitest defaults to `node` environment; React components need `jsdom`
+- Without both, tests pass locally but fail in git hooks/CI
+
+### Full details: `TESTING-GOTCHAS.md`
+
+---
+
 ## ⚠️ MANDATORY: Test-Driven Development (Uncle Bob / Robert C. Martin)
 
 **ALL CODE MUST BE TEST-DRIVEN. NO EXCEPTIONS.**

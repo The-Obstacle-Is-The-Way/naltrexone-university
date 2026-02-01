@@ -4,6 +4,28 @@ Repository guidelines for AI coding agents (Codex CLI, Claude Code, etc.) workin
 
 ---
 
+## ⚠️ CRITICAL: React 19 + Vitest Testing Requirements
+
+**READ THIS FIRST. Tests will fail randomly without these requirements.**
+
+### Mandatory for ALL `.test.tsx` files:
+
+```typescript
+// @vitest-environment jsdom   ← MUST be first line
+'use client';
+
+import { act } from 'react';  // ← act from 'react', NOT react-test-renderer
+```
+
+### Why:
+- React 19 requires `IS_REACT_ACT_ENVIRONMENT = true` (set in `vitest.setup.ts`)
+- Vitest defaults to `node` environment; React components need `jsdom`
+- Without both, tests pass locally but fail in git hooks/CI
+
+### Full details: `TESTING-GOTCHAS.md`
+
+---
+
 ## ⚠️ SLOT PROTECTION: Understand Before Changing
 
 **BEFORE writing ANY code, you MUST study existing codebase patterns.**
