@@ -7,6 +7,8 @@ export default defineConfig({
     environment: 'node',
     include: ['**/*.test.ts', '**/*.test.tsx'],
     exclude: ['node_modules', '.next', 'db/migrations', 'tests/integration/**'],
+    // Use jsdom for React component tests (.tsx) to properly support act()
+    environmentMatchGlobs: [['**/*.test.tsx', 'jsdom']],
     coverage: {
       reporter: ['text', 'json', 'html'],
     },
