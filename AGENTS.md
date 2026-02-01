@@ -289,23 +289,27 @@ pnpm db:test:down                                  # Stop database when done
 - Port 5434 avoids conflicts with local Postgres installations
 - Migrations require explicit `DATABASE_URL` (drizzle-kit reads from env)
 
-### React 19 Deprecations
+### React 19 Component Testing
 
-This project uses **React 19**. Key changes from earlier versions:
+This project uses **React 19** with `@testing-library/react`.
 
-1. **`act` must be imported from `react`** (not `react-test-renderer` or `react-dom/test-utils`):
-   ```typescript
-   // ✅ CORRECT (React 19)
-   import { act } from 'react';
-   import { create } from 'react-test-renderer';
+```typescript
+// ✅ CORRECT - Modern React 19 component test
+// @vitest-environment jsdom
+import { render, screen } from '@testing-library/react';
+import { describe, expect, it } from 'vitest';
 
-   // ❌ WRONG (deprecated)
-   import { act, create } from 'react-test-renderer';
-   ```
+describe('MyComponent', () => {
+  it('renders correctly', () => {
+    render(<MyComponent />);
+    expect(screen.getByRole('button')).toBeInTheDocument();
+  });
+});
+```
 
-2. **`react-test-renderer` is deprecated** — Consider migrating to `@testing-library/react` for new tests. Existing tests using `react-test-renderer` still work but will show deprecation warnings.
-
-3. **`react-dom/test-utils` is removed** — All test utilities moved to `react` package.
+**DO NOT USE:**
+- `react-test-renderer` — Deprecated in React 19, removed from this codebase
+- `react-dom/test-utils` — Removed in React 19
 
 ### FAKES OVER MOCKS — MANDATORY
 

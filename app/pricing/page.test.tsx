@@ -1,8 +1,5 @@
 // @vitest-environment jsdom
-'use client';
-
-import { act } from 'react';
-import { create } from 'react-test-renderer';
+import { render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
 vi.mock('next/link', () => ({
@@ -13,15 +10,13 @@ describe('app/pricing', () => {
   it('renders subscribe actions', async () => {
     const PricingPage = (await import('./page')).default;
 
-    const tree = create(<PricingPage />);
-    await act(async () => {
-      tree.update(<PricingPage />);
-    });
+    render(<PricingPage />);
 
-    const buttons = tree.root.findAllByType('button');
-    const labels = buttons.map((b) => b.children.join(''));
-
-    expect(labels).toContain('Subscribe Monthly');
-    expect(labels).toContain('Subscribe Annual');
+    expect(
+      screen.getByRole('button', { name: 'Subscribe Monthly' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Subscribe Annual' }),
+    ).toBeInTheDocument();
   });
 });

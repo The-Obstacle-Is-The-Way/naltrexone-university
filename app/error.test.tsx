@@ -1,8 +1,5 @@
 // @vitest-environment jsdom
-'use client';
-
-import { act } from 'react';
-import { create } from 'react-test-renderer';
+import { render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
 describe('app/error', () => {
@@ -11,16 +8,16 @@ describe('app/error', () => {
     const ErrorPage = (await import('./error')).default;
 
     const error = new Error('boom');
-    const tree = create(<ErrorPage error={error} reset={() => {}} />);
-    await act(async () => {
-      tree.update(<ErrorPage error={error} reset={() => {}} />);
-    });
+    render(<ErrorPage error={error} reset={() => {}} />);
 
-    expect(tree.root.findByType('h2').children.join('')).toBe(
-      'Something went wrong',
-    );
-    expect(tree.root.findByType('button').children.join('')).toBe('Try again');
+    expect(
+      screen.getByRole('heading', { name: 'Something went wrong' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Try again' }),
+    ).toBeInTheDocument();
 
     expect(errorSpy).toHaveBeenCalledWith('app/error.tsx:', error);
+    errorSpy.mockRestore();
   });
 });

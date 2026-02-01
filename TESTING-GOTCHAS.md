@@ -4,61 +4,72 @@
 
 ---
 
-## React 19 + Vitest 4 + act() = Pain
+## React 19 + Vitest 4 Component Testing
 
-### The Problem
+### The Setup (2026 Best Practices)
 
-Tests pass locally but fail in git hooks / CI with:
+React component tests require:
+
+1. **jsdom** environment (not Node)
+2. **@testing-library/react** for rendering
+3. **@testing-library/jest-dom** for matchers
+
+### Required Dependencies
+
+```bash
+pnpm add -D jsdom @testing-library/react @testing-library/dom @testing-library/jest-dom
 ```
-TypeError: act is not a function
+
+### vitest.setup.ts
+
+```typescript
+import '@testing-library/jest-dom/vitest';
+
+(globalThis as Record<string, unknown>).IS_REACT_ACT_ENVIRONMENT = true;
 ```
 
-Or worse, they fail **intermittently**.
+### Every `.test.tsx` File
 
-### Root Cause
+```typescript
+// @vitest-environment jsdom   ← MUST be first line
+import { render, screen } from '@testing-library/react';
+import { describe, expect, it } from 'vitest';
 
-React 19 requires `globalThis.IS_REACT_ACT_ENVIRONMENT = true` to be set for `act()` to work correctly. Without it, act() behavior is inconsistent across different shell environments.
+describe('MyComponent', () => {
+  it('renders correctly', () => {
+    render(<MyComponent />);
+    expect(screen.getByRole('button')).toBeInTheDocument();
+  });
+});
+```
 
-Git hooks run in a different environment than your terminal. CI is different again. This causes "works for me" syndrome.
+### Why Per-File `// @vitest-environment jsdom`?
 
-### The Solution
-
-**Three things are required:**
-
-1. **Install jsdom** as a dev dependency:
-   ```bash
-   pnpm add -D jsdom
-   ```
-
-2. **vitest.setup.ts** sets the global flag:
-   ```typescript
-   (globalThis as Record<string, unknown>).IS_REACT_ACT_ENVIRONMENT = true;
-   ```
-
-3. **Every `.test.tsx` file** must have this comment at the top:
-   ```typescript
-   // @vitest-environment jsdom
-   ```
-
-This is explicit, per-file environment declaration. No magic, no config inheritance issues.
-
-### Why Not test.projects?
-
-Vitest 4 supports `test.projects` for multi-environment configs. We tried it. It broke with module resolution errors due to alias inheritance issues. The per-file directive is simpler and bulletproof.
-
-### Why Not environmentMatchGlobs?
-
-Deprecated in Vitest 4. Don't use it.
+- Vitest defaults to `node` environment
+- React components need a DOM
+- Per-file directive is explicit, simple, documented by Vitest
+- Avoids `test.projects` alias inheritance issues we encountered
 
 ---
 
-## react-test-renderer is Deprecated
+## DO NOT USE: react-test-renderer
 
-React 19 officially deprecates `react-test-renderer`. It still works, but React recommends migrating to `@testing-library/react`.
+**Deprecated in React 19. We removed it from this codebase.**
 
-**Current state:** Our tests use `react-test-renderer` for snapshot/structure tests and `renderToStaticMarkup` for HTML output tests. Both work fine.
+Old pattern (deprecated):
+```typescript
+// ❌ DEPRECATED - DO NOT USE
+import { create } from 'react-test-renderer';
+const tree = create(<Component />);
+```
 
-**Future:** When adding new component tests, prefer `@testing-library/react`. Migrate existing tests opportunistically.
+New pattern (correct):
+```typescript
+// ✅ CORRECT
+import { render, screen } from '@testing-library/react';
+render(<Component />);
+expect(screen.getByRole('button')).toBeInTheDocument();
+```
 
 ---
 
@@ -80,8 +91,6 @@ const useCase = new CreateUserUseCase(fakeRepo);
 vi.mock('./user-repository');
 ```
 
-See CLAUDE.md for full details.
-
 ---
 
 ## Test File Locations
@@ -97,21 +106,15 @@ See CLAUDE.md for full details.
 
 ## Checklist for New .test.tsx Files
 
-1. [ ] Add `// @vitest-environment jsdom` at the very top
-2. [ ] Import `act` from `'react'` (not react-test-renderer)
-3. [ ] Use fakes for DI, not vi.mock() for our code
-4. [ ] Follow TDD: write test first, then implementation
-
----
-
-## Related Issues
-
-- https://github.com/testing-library/react-testing-library/issues/1061
-- https://github.com/testing-library/react-testing-library/issues/1392
-- https://react.dev/reference/react/act
+1. [ ] First line: `// @vitest-environment jsdom`
+2. [ ] Use `@testing-library/react` (render, screen)
+3. [ ] Use `toBeInTheDocument()` and other jest-dom matchers
+4. [ ] Use fakes for DI, not vi.mock() for our code
+5. [ ] Follow TDD: write test first, then implementation
 
 ---
 
 ## History
 
 - 2026-02-01: Created after intermittent act() failures in pre-push hooks
+- 2026-02-01: Migrated from deprecated react-test-renderer to @testing-library/react
