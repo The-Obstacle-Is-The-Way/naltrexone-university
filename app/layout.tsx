@@ -1,6 +1,7 @@
 import './globals.css';
 import type { Metadata } from 'next';
 import { Manrope } from 'next/font/google';
+import Script from 'next/script';
 import { Providers } from '@/components/providers';
 
 export const metadata: Metadata = {
@@ -10,6 +11,14 @@ export const metadata: Metadata = {
 };
 
 const manrope = Manrope({ subsets: ['latin'] });
+const themeScript = `(() => {
+  try {
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    document.documentElement.classList.toggle('dark', prefersDark);
+  } catch {
+    // No-op: if matchMedia is unavailable, default to light mode.
+  }
+})();`;
 
 export default function RootLayout({
   children,
@@ -17,11 +26,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html
-      lang="en"
-      className={`bg-white dark:bg-gray-950 text-black dark:text-white ${manrope.className}`}
-    >
-      <body className="min-h-[100dvh] bg-gray-50">
+    <html lang="en" className={manrope.className} suppressHydrationWarning>
+      <body className="min-h-[100dvh]">
+        <Script id="theme" strategy="beforeInteractive">
+          {themeScript}
+        </Script>
         <Providers>{children}</Providers>
       </body>
     </html>

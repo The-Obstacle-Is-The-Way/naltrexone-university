@@ -20,7 +20,7 @@ export function AuthNav() {
       <div className="flex items-center space-x-4">
         <Link
           href="/pricing"
-          className="text-sm font-medium text-gray-700 hover:text-gray-900"
+          className="text-sm font-medium text-muted-foreground hover:text-foreground"
         >
           Pricing
         </Link>
@@ -39,7 +39,7 @@ export function AuthNav() {
       <SignedOut>
         <Link
           href="/pricing"
-          className="text-sm font-medium text-gray-700 hover:text-gray-900"
+          className="text-sm font-medium text-muted-foreground hover:text-foreground"
         >
           Pricing
         </Link>
@@ -52,10 +52,10 @@ export function AuthNav() {
       </SignedOut>
       <SignedIn>
         <Link
-          href="/app/dashboard"
-          className="text-sm font-medium text-gray-700 hover:text-gray-900"
+          href="/pricing"
+          className="text-sm font-medium text-muted-foreground hover:text-foreground"
         >
-          Dashboard
+          Pricing
         </Link>
         <UserButton />
       </SignedIn>
