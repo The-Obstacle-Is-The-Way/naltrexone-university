@@ -7,6 +7,10 @@ export default defineConfig({
     environment: 'node',
     include: ['tests/integration/**/*.test.ts'],
     exclude: ['node_modules', '.next', 'db/migrations'],
+    coverage: {
+      reporter: ['json'],
+      reportsDirectory: 'coverage/integration',
+    },
   },
   resolve: {
     alias: {
