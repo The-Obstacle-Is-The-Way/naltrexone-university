@@ -1,7 +1,7 @@
 import './globals.css';
-import { ClerkProvider } from '@clerk/nextjs';
 import type { Metadata, Viewport } from 'next';
 import { Manrope } from 'next/font/google';
+import { Providers } from '@/components/providers';
 
 export const metadata: Metadata = {
   title: 'Addiction Boards Question Bank',
@@ -21,13 +21,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <ClerkProvider>
-      <html
-        lang="en"
-        className={`bg-white dark:bg-gray-950 text-black dark:text-white ${manrope.className}`}
-      >
-        <body className="min-h-[100dvh] bg-gray-50">{children}</body>
-      </html>
-    </ClerkProvider>
+    <html
+      lang="en"
+      className={`bg-white dark:bg-gray-950 text-black dark:text-white ${manrope.className}`}
+    >
+      <body className="min-h-[100dvh] bg-gray-50">
+        <Providers>{children}</Providers>
+      </body>
+    </html>
   );
 }
