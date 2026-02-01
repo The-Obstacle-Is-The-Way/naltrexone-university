@@ -10,7 +10,7 @@ The `SubmitAnswer` use case always records `timeSpentSeconds: 0` for every answe
 
 ## Location
 
-- **File:** `src/application/use-cases/submit-answer.ts` line 52
+- **File:** `src/application/use-cases/submit-answer.ts` line 60
 - **Current:** `timeSpentSeconds: 0`
 - **Expected:** Should accept time from client or calculate from session/question start time
 

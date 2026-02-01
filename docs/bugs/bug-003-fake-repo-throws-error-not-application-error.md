@@ -1,8 +1,9 @@
 # BUG-003: FakePracticeSessionRepository throws Error instead of ApplicationError
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P0
 **Date:** 2026-01-31
+**Resolved:** 2026-02-01
 
 ## Summary
 
