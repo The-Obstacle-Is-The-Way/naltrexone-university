@@ -1,3 +1,4 @@
+import type { Question } from '@/src/domain/entities';
 import { getNextQuestionId } from '@/src/domain/services';
 import type {
   PracticeMode,
@@ -56,6 +57,17 @@ export class GetNextQuestionUseCase {
     return this.executeForFilters(input.userId, input.filters);
   }
 
+  private mapChoicesForOutput(question: Question): PublicChoice[] {
+    return [...question.choices]
+      .sort((a, b) => a.sortOrder - b.sortOrder)
+      .map((c) => ({
+        id: c.id,
+        label: c.label,
+        textMd: c.textMd,
+        sortOrder: c.sortOrder,
+      }));
+  }
+
   private async executeForSession(
     userId: string,
     sessionId: string,
@@ -89,14 +101,7 @@ export class GetNextQuestionUseCase {
       slug: question.slug,
       stemMd: question.stemMd,
       difficulty: question.difficulty,
-      choices: [...question.choices]
-        .sort((a, b) => a.sortOrder - b.sortOrder)
-        .map((c) => ({
-          id: c.id,
-          label: c.label,
-          textMd: c.textMd,
-          sortOrder: c.sortOrder,
-        })),
+      choices: this.mapChoicesForOutput(question),
       session: {
         sessionId: session.id,
         mode: session.mode,
@@ -163,14 +168,7 @@ export class GetNextQuestionUseCase {
       slug: question.slug,
       stemMd: question.stemMd,
       difficulty: question.difficulty,
-      choices: [...question.choices]
-        .sort((a, b) => a.sortOrder - b.sortOrder)
-        .map((c) => ({
-          id: c.id,
-          label: c.label,
-          textMd: c.textMd,
-          sortOrder: c.sortOrder,
-        })),
+      choices: this.mapChoicesForOutput(question),
       session: null,
     };
   }

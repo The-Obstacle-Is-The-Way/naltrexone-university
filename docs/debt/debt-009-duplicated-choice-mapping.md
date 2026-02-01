@@ -1,8 +1,9 @@
 # DEBT-009: Duplicated Choice Mapping Logic in GetNextQuestionUseCase
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P2
 **Date:** 2026-01-31
+**Resolved:** 2026-02-01
 
 ## Summary
 
@@ -55,3 +56,8 @@ private mapChoicesForOutput(question: Question): PublicChoice[] {
 - Single method for choice mapping
 - Both execution paths use the same helper
 - Output format unchanged
+
+## Resolution
+
+- Extracted `mapChoicesForOutput()` helper in `src/application/use-cases/get-next-question.ts`.
+- Both session and filter execution paths now call the helper, preserving the public output shape.
