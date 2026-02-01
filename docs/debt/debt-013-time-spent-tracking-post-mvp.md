@@ -1,12 +1,15 @@
 # DEBT-013: Time Spent Tracking Deferred (MVP Uses `time_spent_seconds = 0`)
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P3
 **Date:** 2026-02-01
+**Resolved:** 2026-02-01
 
 ## Summary
 
 Per SSOT (`docs/specs/master_spec.md`, SubmitAnswer behavior), attempts currently persist `time_spent_seconds = 0` for MVP. This keeps the system simple but prevents pacing analytics.
+
+This is not an architectural defect; it is an explicit MVP scope decision (see `docs/specs/master_spec.md` “Out of Scope for MVP”).
 
 ## Impact
 
