@@ -20,9 +20,15 @@ expect(html).toContain('Expected text');
 ```
 
 ### Why:
-- `@testing-library/react` has a [known bug](https://github.com/testing-library/react-testing-library/issues/1392) with React 19 + Vitest in production builds
+- `@testing-library/react` has a [known bug](https://github.com/testing-library/react-testing-library/issues/1392) with React 19 + Vitest — **no fix coming**
+- `vitest-browser-react` has the **same bug** — it's not a replacement
 - Git hooks and CI load production builds where `act()` is undefined
 - `renderToStaticMarkup` is a stable first-party React API that works everywhere
+
+### DO NOT USE for component tests:
+- `@testing-library/react` — broken, zombie maintenance
+- `vitest-browser-react` — same act() bug, not ready
+- `react-test-renderer` — deprecated in React 19
 
 ### Full details: `docs/dev/react-vitest-testing.md`
 

@@ -105,9 +105,11 @@ Every `.test.tsx` file must start with:
 
 ## When You Need Interactive Tests
 
-When you write tests that need to click buttons, type in forms, or test state changes, you'll need `@testing-library/react`.
+**TL;DR: There is no good solution right now. This is ecosystem debt, not our problem to solve.**
 
-**The fix:** Add this to `vitest.config.ts`:
+### Option 1: `conditions: ['development']` (Hack)
+
+Add this to `vitest.config.ts`:
 
 ```typescript
 resolve: {
@@ -118,9 +120,37 @@ resolve: {
 },
 ```
 
-This forces Vitest to load the **development** build of `react-dom`, which has a working `act()` export for backwards compatibility.
+This forces Vitest to load the **development** build of `react-dom`, which has a working `act()` export. **This is a hack, not a real fix.** It may break in future Vitest/React versions.
 
-**Don't add this now.** Add it when you actually write an interactive test. By then, the upstream bug might also be fixed.
+### Option 2: vitest-browser-react (NOT a Fix)
+
+You might hear that [vitest-browser-react](https://github.com/vitest-community/vitest-browser-react) is the successor to @testing-library/react. **It has the same bug.**
+
+- Components using React 19's `use()` hook never resolve suspense states
+- The library doesn't set `globalThis.IS_REACT_ACT_ENVIRONMENT`
+- Users report the README's own example code throws act() warnings
+
+Kent C. Dodds (Testing Library creator) is happy people are moving on, but the replacement isn't ready either.
+
+### Option 3: Wait (Recommended)
+
+Our `renderToStaticMarkup` approach handles render-output tests. For interactive tests, **wait for the ecosystem to fix itself**. When a real solution emerges, migrating 9 test files is trivial.
+
+---
+
+## The Ecosystem Reality
+
+**@testing-library/react is in zombie maintenance mode:**
+- The creator moved on and considers it "graduated"
+- One part-time maintainer, no bandwidth for React 19 fixes
+- 63 open issues, 14 open PRs, core bugs sitting for almost a year
+- No timeline for fixes, no assigned developers
+
+**vitest-browser-react is not ready:**
+- Same act() bug in different packaging
+- React 19 suspense issues unresolved
+
+**This is not your technical debt. This is ecosystem debt.** Professional teams are routing around the problem with workarounds like ours. You're not doing anything wrong.
 
 ---
 
@@ -181,8 +211,8 @@ vi.mock('./user-repository');
 - [ ] Use `renderToStaticMarkup` for render-output tests
 - [ ] Use dynamic imports: `const Component = (await import('./Component')).default`
 - [ ] Assert on HTML content: `expect(html).toContain('text')`
-- [ ] For interactive tests: add `conditions: ['development']` to vitest config first
 - [ ] Use fakes for DI, not vi.mock() for our code
+- [ ] **Do NOT use @testing-library/react or vitest-browser-react** — both have act() bugs
 
 ---
 
@@ -193,8 +223,9 @@ vi.mock('./user-repository');
 | 2026-02-01 | Created after intermittent act() failures in pre-push hooks |
 | 2026-02-01 | Removed react-test-renderer (deprecated in React 19) |
 | 2026-02-01 | Standardized on renderToStaticMarkup for render-output tests |
-| 2026-02-01 | Documented future fix for interactive tests (`conditions: ['development']`) |
 | 2026-02-01 | Validated all claims against official sources |
+| 2026-02-01 | Confirmed vitest-browser-react has same act() bug — not a fix |
+| 2026-02-01 | Documented ecosystem debt reality (Testing Library in zombie state) |
 
 ---
 
