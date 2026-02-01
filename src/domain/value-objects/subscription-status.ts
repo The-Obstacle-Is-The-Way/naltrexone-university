@@ -15,6 +15,12 @@ export const AllSubscriptionStatuses = [
 
 export type SubscriptionStatus = (typeof AllSubscriptionStatuses)[number];
 
+export function isValidSubscriptionStatus(
+  value: string,
+): value is SubscriptionStatus {
+  return AllSubscriptionStatuses.includes(value as SubscriptionStatus);
+}
+
 /**
  * Statuses that grant access to premium features.
  */

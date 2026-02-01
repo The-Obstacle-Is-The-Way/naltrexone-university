@@ -1,9 +1,22 @@
 import { describe, expect, it } from 'vitest';
-import { AllPracticeModes, shouldShowExplanation } from './practice-mode';
+import {
+  AllPracticeModes,
+  isValidPracticeMode,
+  shouldShowExplanation,
+} from './practice-mode';
 
 describe('PracticeMode', () => {
   it('has tutor and exam modes', () => {
     expect(AllPracticeModes).toEqual(['tutor', 'exam']);
+  });
+
+  it('validates known modes', () => {
+    expect(isValidPracticeMode('tutor')).toBe(true);
+    expect(isValidPracticeMode('exam')).toBe(true);
+  });
+
+  it('rejects unknown modes', () => {
+    expect(isValidPracticeMode('quiz')).toBe(false);
   });
 
   describe('shouldShowExplanation', () => {

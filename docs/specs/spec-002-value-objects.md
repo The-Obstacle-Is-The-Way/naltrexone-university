@@ -58,12 +58,38 @@ describe('SubscriptionPlan', () => {
 ```typescript
 import { describe, it, expect } from 'vitest';
 import {
+  isValidSubscriptionStatus,
   isEntitledStatus,
   EntitledStatuses,
   AllSubscriptionStatuses,
 } from './subscription-status';
 
 describe('SubscriptionStatus', () => {
+  it('contains all 8 Stripe subscription statuses', () => {
+    expect(AllSubscriptionStatuses).toEqual([
+      'incomplete',
+      'incomplete_expired',
+      'trialing',
+      'active',
+      'past_due',
+      'canceled',
+      'unpaid',
+      'paused',
+    ]);
+  });
+
+  describe('isValidSubscriptionStatus', () => {
+    it('returns true for known statuses', () => {
+      expect(isValidSubscriptionStatus('active')).toBe(true);
+      expect(isValidSubscriptionStatus('trialing')).toBe(true);
+      expect(isValidSubscriptionStatus('canceled')).toBe(true);
+    });
+
+    it('returns false for unknown status', () => {
+      expect(isValidSubscriptionStatus('expired')).toBe(false);
+    });
+  });
+
   describe('isEntitledStatus', () => {
     it('returns true for active', () => {
       expect(isEntitledStatus('active')).toBe(true);
@@ -89,12 +115,6 @@ describe('SubscriptionStatus', () => {
   describe('EntitledStatuses', () => {
     it('contains exactly active and trialing', () => {
       expect(EntitledStatuses).toEqual(['active', 'trialing']);
-    });
-  });
-
-  describe('AllSubscriptionStatuses', () => {
-    it('contains all 8 Stripe statuses', () => {
-      expect(AllSubscriptionStatuses).toHaveLength(8);
     });
   });
 });
@@ -127,11 +147,24 @@ describe('QuestionDifficulty', () => {
 
 ```typescript
 import { describe, it, expect } from 'vitest';
-import { AllPracticeModes, shouldShowExplanation } from './practice-mode';
+import {
+  AllPracticeModes,
+  isValidPracticeMode,
+  shouldShowExplanation,
+} from './practice-mode';
 
 describe('PracticeMode', () => {
   it('has tutor and exam modes', () => {
     expect(AllPracticeModes).toEqual(['tutor', 'exam']);
+  });
+
+  it('validates known modes', () => {
+    expect(isValidPracticeMode('tutor')).toBe(true);
+    expect(isValidPracticeMode('exam')).toBe(true);
+  });
+
+  it('rejects unknown modes', () => {
+    expect(isValidPracticeMode('quiz')).toBe(false);
   });
 
   describe('shouldShowExplanation', () => {
@@ -146,6 +179,94 @@ describe('PracticeMode', () => {
     it('returns true for exam mode when ended', () => {
       expect(shouldShowExplanation('exam', true)).toBe(true);
     });
+  });
+});
+```
+
+### File: `src/domain/value-objects/question-status.test.ts`
+
+```typescript
+import { describe, it, expect } from 'vitest';
+import {
+  AllQuestionStatuses,
+  isValidQuestionStatus,
+  isVisibleStatus,
+} from './question-status';
+
+describe('QuestionStatus', () => {
+  it('contains exactly draft, published, archived', () => {
+    expect(AllQuestionStatuses).toEqual(['draft', 'published', 'archived']);
+  });
+
+  it('validates known statuses', () => {
+    expect(isValidQuestionStatus('draft')).toBe(true);
+    expect(isValidQuestionStatus('published')).toBe(true);
+    expect(isValidQuestionStatus('archived')).toBe(true);
+  });
+
+  it('rejects unknown statuses', () => {
+    expect(isValidQuestionStatus('deleted')).toBe(false);
+  });
+
+  describe('isVisibleStatus', () => {
+    it('returns true only for published', () => {
+      expect(isVisibleStatus('draft')).toBe(false);
+      expect(isVisibleStatus('published')).toBe(true);
+      expect(isVisibleStatus('archived')).toBe(false);
+    });
+  });
+});
+```
+
+### File: `src/domain/value-objects/choice-label.test.ts`
+
+```typescript
+import { describe, it, expect } from 'vitest';
+import { AllChoiceLabels, isValidChoiceLabel } from './choice-label';
+
+describe('ChoiceLabel', () => {
+  it('contains exactly A through E', () => {
+    expect(AllChoiceLabels).toEqual(['A', 'B', 'C', 'D', 'E']);
+  });
+
+  it('validates known labels', () => {
+    for (const label of AllChoiceLabels) {
+      expect(isValidChoiceLabel(label)).toBe(true);
+    }
+  });
+
+  it('rejects unknown labels', () => {
+    expect(isValidChoiceLabel('F')).toBe(false);
+    expect(isValidChoiceLabel('a')).toBe(false);
+  });
+});
+```
+
+### File: `src/domain/value-objects/tag-kind.test.ts`
+
+```typescript
+import { describe, it, expect } from 'vitest';
+import { AllTagKinds, isValidTagKind } from './tag-kind';
+
+describe('TagKind', () => {
+  it('contains the canonical set of kinds', () => {
+    expect(AllTagKinds).toEqual([
+      'domain',
+      'topic',
+      'substance',
+      'treatment',
+      'diagnosis',
+    ]);
+  });
+
+  it('validates known kinds', () => {
+    for (const kind of AllTagKinds) {
+      expect(isValidTagKind(kind)).toBe(true);
+    }
+  });
+
+  it('rejects unknown kinds', () => {
+    expect(isValidTagKind('system')).toBe(false);
   });
 });
 ```
@@ -190,6 +311,10 @@ export const AllSubscriptionStatuses = [
 
 export type SubscriptionStatus = typeof AllSubscriptionStatuses[number];
 
+export function isValidSubscriptionStatus(value: string): value is SubscriptionStatus {
+  return AllSubscriptionStatuses.includes(value as SubscriptionStatus);
+}
+
 /**
  * Statuses that grant access to premium features
  */
@@ -231,6 +356,10 @@ export const AllQuestionStatuses = ['draft', 'published', 'archived'] as const;
 
 export type QuestionStatus = typeof AllQuestionStatuses[number];
 
+export function isValidQuestionStatus(value: string): value is QuestionStatus {
+  return AllQuestionStatuses.includes(value as QuestionStatus);
+}
+
 /**
  * Only published questions are shown to users
  */
@@ -248,6 +377,10 @@ export function isVisibleStatus(status: QuestionStatus): boolean {
 export const AllPracticeModes = ['tutor', 'exam'] as const;
 
 export type PracticeMode = typeof AllPracticeModes[number];
+
+export function isValidPracticeMode(value: string): value is PracticeMode {
+  return AllPracticeModes.includes(value as PracticeMode);
+}
 
 /**
  * Determine if explanation should be shown based on mode and session state
@@ -293,6 +426,10 @@ export const AllTagKinds = [
 ] as const;
 
 export type TagKind = typeof AllTagKinds[number];
+
+export function isValidTagKind(value: string): value is TagKind {
+  return AllTagKinds.includes(value as TagKind);
+}
 ```
 
 ### File: `src/domain/value-objects/index.ts`
@@ -309,6 +446,7 @@ export {
   AllSubscriptionStatuses,
   EntitledStatuses,
   isEntitledStatus,
+  isValidSubscriptionStatus,
 } from './subscription-status';
 
 export {
@@ -320,12 +458,14 @@ export {
 export {
   type QuestionStatus,
   AllQuestionStatuses,
+  isValidQuestionStatus,
   isVisibleStatus,
 } from './question-status';
 
 export {
   type PracticeMode,
   AllPracticeModes,
+  isValidPracticeMode,
   shouldShowExplanation,
 } from './practice-mode';
 
@@ -338,6 +478,7 @@ export {
 export {
   type TagKind,
   AllTagKinds,
+  isValidTagKind,
 } from './tag-kind';
 ```
 
@@ -346,7 +487,7 @@ export {
 ## Quality Gate
 
 ```bash
-pnpm test src/domain/value-objects/
+pnpm test --run src/domain/value-objects/
 ```
 
 ---

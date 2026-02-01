@@ -5,6 +5,7 @@ export {
 } from './choice-label';
 export {
   AllPracticeModes,
+  isValidPracticeMode,
   type PracticeMode,
   shouldShowExplanation,
 } from './practice-mode';
@@ -17,6 +18,7 @@ export {
 
 export {
   AllQuestionStatuses,
+  isValidQuestionStatus,
   isVisibleStatus,
   type QuestionStatus,
 } from './question-status';
@@ -29,7 +31,8 @@ export {
   AllSubscriptionStatuses,
   EntitledStatuses,
   isEntitledStatus,
+  isValidSubscriptionStatus,
   type SubscriptionStatus,
 } from './subscription-status';
 
-export { AllTagKinds, type TagKind } from './tag-kind';
+export { AllTagKinds, isValidTagKind, type TagKind } from './tag-kind';

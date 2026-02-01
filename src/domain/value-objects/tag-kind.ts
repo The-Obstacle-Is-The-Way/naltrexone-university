@@ -10,3 +10,7 @@ export const AllTagKinds = [
 ] as const;
 
 export type TagKind = (typeof AllTagKinds)[number];
+
+export function isValidTagKind(value: string): value is TagKind {
+  return AllTagKinds.includes(value as TagKind);
+}

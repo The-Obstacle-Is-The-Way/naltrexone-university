@@ -2,7 +2,7 @@
 
 **Status:** Ready
 **Layer:** Domain (Innermost)
-**Dependencies:** None
+**Dependencies:** SPEC-002 (Value Objects)
 **Implements:** ADR-001, ADR-002
 
 ---
@@ -249,7 +249,7 @@ export type { Tag } from './tag';
 ## Quality Gate
 
 ```bash
-pnpm test src/domain/entities/
+pnpm test --run src/domain/entities/
 ```
 
 ---
