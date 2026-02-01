@@ -48,6 +48,15 @@ export const QuestionFrontmatterSchema = z
         path: ['choices'],
       });
     }
+
+    const tagSlugSet = new Set(val.tags.map((t) => t.slug));
+    if (tagSlugSet.size !== val.tags.length) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'tag slugs must be unique',
+        path: ['tags'],
+      });
+    }
   });
 
 export const FullQuestionSchema = z
