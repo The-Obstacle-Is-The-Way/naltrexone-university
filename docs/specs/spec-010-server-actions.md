@@ -74,16 +74,17 @@ This is the **only** place where concrete implementations are wired to applicati
 **Controller signature pattern (required):**
 
 ```ts
-import { createQuestionControllerDeps } from '@/lib/container';
+import { createContainer } from '@/lib/container';
 import type { ActionResult } from './action-result';
 
-type QuestionControllerDeps = ReturnType<typeof createQuestionControllerDeps>;
+type Container = ReturnType<typeof createContainer>;
+type QuestionControllerDeps = ReturnType<Container['createQuestionControllerDeps']>;
 
 export async function getNextQuestion(
   input: unknown,
   deps?: QuestionControllerDeps,
 ): Promise<ActionResult<unknown>> {
-  const d = deps ?? createQuestionControllerDeps();
+  const d = deps ?? createContainer().createQuestionControllerDeps();
   // ...
 }
 ```
@@ -117,16 +118,21 @@ export type ActionResult<T> =
       };
     };
 
-export function success<T>(data: T): ActionResult<T> {
+export function ok<T>(data: T): ActionResult<T> {
   return { ok: true, data };
 }
 
-export function failure(
+export function err(
   code: ActionErrorCode,
   message: string,
   fieldErrors?: Record<string, string[]>,
 ): ActionResult<never> {
   return { ok: false, error: { code, message, fieldErrors } };
+}
+
+export function handleError(error: unknown): ActionResult<never> {
+  // Controllers should call this in their catch blocks to avoid leaking stacks.
+  return err('INTERNAL_ERROR', 'Internal error');
 }
 ```
 

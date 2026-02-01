@@ -65,7 +65,7 @@ Implement structured practice sessions:
 - `src/domain/services/session.ts` — `computeSessionProgress()`, `shouldShowExplanation()`
 - `src/domain/services/shuffle.ts` — deterministic selection/shuffle
 - `src/application/use-cases/start-practice-session.ts`, `end-practice-session.ts`
-- `src/adapters/repositories/drizzle-session-repository.ts`
+- `src/adapters/repositories/drizzle-practice-session-repository.ts`
 - `src/adapters/controllers/practice-controller.ts`
 - `app/(app)/app/practice/[sessionId]/page.tsx`
 - `components/question/*` (progress display + exam/tutor behaviors)

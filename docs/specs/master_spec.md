@@ -1562,7 +1562,7 @@ Canonical JSON rules (Exact):
 │       │   ├── drizzle-attempt-repository.ts
 │       │   ├── drizzle-user-repository.ts
 │       │   ├── drizzle-subscription-repository.ts
-│       │   ├── drizzle-session-repository.ts
+│       │   ├── drizzle-practice-session-repository.ts
 │       │   └── drizzle-bookmark-repository.ts
 │       │
 │       ├── gateways/                 # External service wrappers
@@ -1951,7 +1951,7 @@ As a subscribed user, I can run a timed practice session with filters and get a 
 * `src/domain/services/session.ts` — computeSessionProgress(), shouldShowExplanation()
 * `src/domain/services/shuffle.ts` — shuffleWithSeed() for deterministic question selection
 * `src/application/use-cases/start-practice-session.ts`, `end-practice-session.ts`
-* `src/adapters/repositories/drizzle-session-repository.ts`
+* `src/adapters/repositories/drizzle-practice-session-repository.ts`
 * `src/adapters/controllers/practice-controller.ts` — 'use server' exports
 * `app/(app)/app/practice/[sessionId]/page.tsx`
 * `components/question/*` (progress display + exam/tutor behaviors)
