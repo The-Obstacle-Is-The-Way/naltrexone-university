@@ -124,10 +124,19 @@ describe('FakeAuthGateway', () => {
 describe('FakePaymentGateway', () => {
   it('returns configured checkout/portal URLs and records inputs', async () => {
     const gateway = new FakePaymentGateway({
+      stripeCustomerId: 'cus_test',
       checkoutUrl: 'https://fake/checkout',
       portalUrl: 'https://fake/portal',
       webhookResult: { eventId: 'evt_1', type: 'checkout.session.completed' },
     });
+
+    await expect(
+      gateway.createCustomer({
+        userId: 'user_1',
+        clerkUserId: 'clerk_1',
+        email: 'user@example.com',
+      }),
+    ).resolves.toEqual({ stripeCustomerId: 'cus_test' });
 
     await expect(
       gateway.createCheckoutSession({
@@ -151,6 +160,7 @@ describe('FakePaymentGateway', () => {
       type: 'checkout.session.completed',
     });
 
+    expect(gateway.customerInputs).toHaveLength(1);
     expect(gateway.checkoutInputs).toHaveLength(1);
     expect(gateway.portalInputs).toHaveLength(1);
     expect(gateway.webhookInputs).toEqual([

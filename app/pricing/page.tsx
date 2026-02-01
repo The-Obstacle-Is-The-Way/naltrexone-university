@@ -1,6 +1,24 @@
 import Link from 'next/link';
+import { redirect } from 'next/navigation';
+import { createCheckoutSession } from '@/src/adapters/controllers/billing-controller';
 
 export default function PricingPage() {
+  async function subscribeMonthly() {
+    'use server';
+    const result = await createCheckoutSession({ plan: 'monthly' });
+    if (result.ok) redirect(result.data.url);
+    if (result.error.code === 'UNAUTHENTICATED') redirect('/sign-up');
+    redirect('/pricing?checkout=error');
+  }
+
+  async function subscribeAnnual() {
+    'use server';
+    const result = await createCheckoutSession({ plan: 'annual' });
+    if (result.ok) redirect(result.data.url);
+    if (result.error.code === 'UNAUTHENTICATED') redirect('/sign-up');
+    redirect('/pricing?checkout=error');
+  }
+
   return (
     <div className="min-h-screen bg-muted py-16">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -28,12 +46,14 @@ export default function PricingPage() {
               <li>Detailed explanations</li>
               <li>Progress tracking</li>
             </ul>
-            <Link
-              href="/sign-up"
-              className="mt-8 block w-full rounded-full bg-orange-600 py-3 text-center text-sm font-medium text-white hover:bg-orange-700"
-            >
-              Get Started
-            </Link>
+            <form action={subscribeMonthly}>
+              <button
+                type="submit"
+                className="mt-8 block w-full rounded-full bg-orange-600 py-3 text-center text-sm font-medium text-white hover:bg-orange-700"
+              >
+                Subscribe Monthly
+              </button>
+            </form>
           </div>
           <div className="rounded-2xl border-2 border-orange-500 bg-card p-8 shadow-sm">
             <h3 className="text-lg font-semibold text-foreground">
@@ -52,12 +72,14 @@ export default function PricingPage() {
               <li>Everything in Pro Monthly</li>
               <li>Best value</li>
             </ul>
-            <Link
-              href="/sign-up"
-              className="mt-8 block w-full rounded-full bg-orange-600 py-3 text-center text-sm font-medium text-white hover:bg-orange-700"
-            >
-              Get Started
-            </Link>
+            <form action={subscribeAnnual}>
+              <button
+                type="submit"
+                className="mt-8 block w-full rounded-full bg-orange-600 py-3 text-center text-sm font-medium text-white hover:bg-orange-700"
+              >
+                Subscribe Annual
+              </button>
+            </form>
           </div>
         </div>
         <div className="mt-8 text-center">

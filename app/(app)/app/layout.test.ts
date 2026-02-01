@@ -1,0 +1,79 @@
+import { describe, expect, it, vi } from 'vitest';
+import type { AuthGateway } from '@/src/application/ports/gateways';
+import { enforceEntitledAppUser } from './layout';
+
+type UserLike = {
+  id: string;
+  email: string;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+function createUser(): UserLike {
+  return {
+    id: 'user_1',
+    email: 'user@example.com',
+    createdAt: new Date('2026-02-01T00:00:00Z'),
+    updatedAt: new Date('2026-02-01T00:00:00Z'),
+  };
+}
+
+describe('app/(app)/app/layout', () => {
+  it('redirects to /pricing when user is not entitled', async () => {
+    const user = createUser();
+
+    const authGateway: AuthGateway = {
+      getCurrentUser: async () => user as never,
+      requireUser: async () => user as never,
+    };
+
+    const checkEntitlementUseCase = {
+      execute: vi.fn(async () => ({ isEntitled: false })),
+    };
+
+    const redirectFn = vi.fn((url: string) => {
+      throw new Error(`redirect:${url}`);
+    });
+
+    await expect(
+      enforceEntitledAppUser(
+        { authGateway, checkEntitlementUseCase },
+        redirectFn as never,
+      ),
+    ).rejects.toMatchObject({ message: 'redirect:/pricing' });
+
+    expect(checkEntitlementUseCase.execute).toHaveBeenCalledWith({
+      userId: 'user_1',
+    });
+    expect(redirectFn).toHaveBeenCalledWith('/pricing');
+  });
+
+  it('does not redirect when user is entitled', async () => {
+    const user = createUser();
+
+    const authGateway: AuthGateway = {
+      getCurrentUser: async () => user as never,
+      requireUser: async () => user as never,
+    };
+
+    const checkEntitlementUseCase = {
+      execute: vi.fn(async () => ({ isEntitled: true })),
+    };
+
+    const redirectFn = vi.fn(() => {
+      throw new Error('unexpected redirect');
+    });
+
+    await expect(
+      enforceEntitledAppUser(
+        { authGateway, checkEntitlementUseCase },
+        redirectFn as never,
+      ),
+    ).resolves.toBeUndefined();
+
+    expect(checkEntitlementUseCase.execute).toHaveBeenCalledWith({
+      userId: 'user_1',
+    });
+    expect(redirectFn).not.toHaveBeenCalled();
+  });
+});

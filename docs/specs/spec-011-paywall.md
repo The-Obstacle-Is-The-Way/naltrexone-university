@@ -4,7 +4,7 @@
 > Write tests FIRST. Red → Green → Refactor. No implementation without a failing test.
 > Principles: SOLID, DRY, Clean Code, Gang of Four patterns where appropriate.
 
-**Status:** Ready
+**Status:** Partial
 **Slice:** SLICE-1 (Paywall)
 **Depends On:** SLICE-0 (Foundation)
 **Implements:** ADR-004, ADR-005, ADR-006, ADR-011

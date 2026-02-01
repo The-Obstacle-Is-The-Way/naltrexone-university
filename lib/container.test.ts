@@ -54,6 +54,7 @@ describe('container factories', () => {
           NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY: 'price_m',
           NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL: 'price_a',
           STRIPE_WEBHOOK_SECRET: 'whsec',
+          NEXT_PUBLIC_APP_URL: 'https://app.example.com',
         } as unknown as typeof import('./env').env,
         logger: {
           error: () => undefined,
@@ -81,6 +82,8 @@ describe('container factories', () => {
     expect(typeof container.createSubmitAnswerUseCase).toBe('function');
 
     expect(typeof container.createStripeWebhookDeps).toBe('function');
+    expect(typeof container.createQuestionControllerDeps).toBe('function');
+    expect(typeof container.createBillingControllerDeps).toBe('function');
   }, 40000);
 
   it('wires concrete implementations for all factories', async () => {
@@ -92,6 +95,7 @@ describe('container factories', () => {
           NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY: 'price_m',
           NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL: 'price_a',
           STRIPE_WEBHOOK_SECRET: 'whsec',
+          NEXT_PUBLIC_APP_URL: 'https://app.example.com',
         } as unknown as typeof import('./env').env,
         logger: {
           error: () => undefined,
@@ -147,6 +151,27 @@ describe('container factories', () => {
     const deps = container.createStripeWebhookDeps();
     expect(deps.paymentGateway).toBeInstanceOf(StripePaymentGateway);
     expect(typeof deps.transaction).toBe('function');
+
+    const questionDeps = container.createQuestionControllerDeps();
+    expect(questionDeps.authGateway).toBeInstanceOf(ClerkAuthGateway);
+    expect(questionDeps.checkEntitlementUseCase).toBeInstanceOf(
+      CheckEntitlementUseCase,
+    );
+    expect(questionDeps.getNextQuestionUseCase).toBeInstanceOf(
+      GetNextQuestionUseCase,
+    );
+    expect(questionDeps.submitAnswerUseCase).toBeInstanceOf(
+      SubmitAnswerUseCase,
+    );
+
+    const billingDeps = container.createBillingControllerDeps();
+    expect(billingDeps.authGateway).toBeInstanceOf(ClerkAuthGateway);
+    expect(billingDeps.stripeCustomerRepository).toBeInstanceOf(
+      DrizzleStripeCustomerRepository,
+    );
+    expect(billingDeps.paymentGateway).toBeInstanceOf(StripePaymentGateway);
+    expect(typeof billingDeps.getClerkUserId).toBe('function');
+    expect(billingDeps.appUrl).toBe('https://app.example.com');
   }, 40000);
 
   it('shares Stripe price IDs between subscription repository and payment gateway', async () => {
@@ -158,6 +183,7 @@ describe('container factories', () => {
           NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY: 'price_m',
           NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL: 'price_a',
           STRIPE_WEBHOOK_SECRET: 'whsec',
+          NEXT_PUBLIC_APP_URL: 'https://app.example.com',
         } as unknown as typeof import('./env').env,
         logger: {
           error: () => undefined,
@@ -202,6 +228,7 @@ describe('container factories', () => {
     }));
 
     const paymentGateway = {
+      createCustomer: async () => ({ stripeCustomerId: 'cus_123' }),
       createCheckoutSession: async () => ({ url: 'https://stripe/checkout' }),
       createPortalSession: async () => ({ url: 'https://stripe/portal' }),
       processWebhookEvent: async () => ({ eventId: 'evt_1', type: 'test' }),
@@ -214,6 +241,7 @@ describe('container factories', () => {
           NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY: 'price_m',
           NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL: 'price_a',
           STRIPE_WEBHOOK_SECRET: 'whsec',
+          NEXT_PUBLIC_APP_URL: 'https://app.example.com',
         } as unknown as typeof import('./env').env,
         logger: {
           error: () => undefined,

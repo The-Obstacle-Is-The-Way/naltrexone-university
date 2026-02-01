@@ -2,11 +2,90 @@ import { describe, expect, it, vi } from 'vitest';
 import { StripePaymentGateway } from './stripe-payment-gateway';
 
 describe('StripePaymentGateway', () => {
+  it('creates a Stripe customer with the correct Stripe parameters', async () => {
+    const customersCreate = vi.fn(async () => ({ id: 'cus_123' }));
+    const stripe = {
+      customers: { create: customersCreate },
+      checkout: {
+        sessions: {
+          create: vi.fn(async () => ({ url: 'https://stripe/checkout' })),
+        },
+      },
+      billingPortal: {
+        sessions: {
+          create: vi.fn(async () => ({ url: 'https://stripe/portal' })),
+        },
+      },
+      webhooks: {
+        constructEvent: vi.fn(() => {
+          throw new Error('unexpected webhook call');
+        }),
+      },
+    } as const;
+
+    const gateway = new StripePaymentGateway({
+      stripe,
+      webhookSecret: 'whsec_1',
+      priceIds: { monthly: 'price_m', annual: 'price_a' },
+    });
+
+    await expect(
+      gateway.createCustomer({
+        userId: 'user_1',
+        clerkUserId: 'clerk_1',
+        email: 'user@example.com',
+      }),
+    ).resolves.toEqual({ stripeCustomerId: 'cus_123' });
+
+    expect(customersCreate).toHaveBeenCalledWith({
+      email: 'user@example.com',
+      metadata: { user_id: 'user_1', clerk_user_id: 'clerk_1' },
+    });
+  });
+
+  it('throws STRIPE_ERROR when a Stripe customer id is missing', async () => {
+    const stripe = {
+      customers: { create: vi.fn(async () => ({ id: undefined })) },
+      checkout: {
+        sessions: {
+          create: vi.fn(async () => ({ url: 'https://stripe/checkout' })),
+        },
+      },
+      billingPortal: {
+        sessions: {
+          create: vi.fn(async () => ({ url: 'https://stripe/portal' })),
+        },
+      },
+      webhooks: {
+        constructEvent: vi.fn(() => {
+          throw new Error('unexpected webhook call');
+        }),
+      },
+    } as const;
+
+    const gateway = new StripePaymentGateway({
+      stripe,
+      webhookSecret: 'whsec_1',
+      priceIds: { monthly: 'price_m', annual: 'price_a' },
+    });
+
+    await expect(
+      gateway.createCustomer({
+        userId: 'user_1',
+        clerkUserId: 'clerk_1',
+        email: 'user@example.com',
+      }),
+    ).rejects.toMatchObject({ code: 'STRIPE_ERROR' });
+  });
+
   it('creates a subscription checkout session with the correct Stripe parameters', async () => {
     const checkoutCreate = vi.fn(async () => ({
       url: 'https://stripe/checkout',
     }));
     const stripe = {
+      customers: {
+        create: vi.fn(async () => ({ id: 'cus_123' })),
+      },
       checkout: { sessions: { create: checkoutCreate } },
       billingPortal: {
         sessions: {
@@ -55,6 +134,9 @@ describe('StripePaymentGateway', () => {
 
   it('throws STRIPE_ERROR when a checkout session URL is missing', async () => {
     const stripe = {
+      customers: {
+        create: vi.fn(async () => ({ id: 'cus_123' })),
+      },
       checkout: { sessions: { create: vi.fn(async () => ({ url: null })) } },
       billingPortal: {
         sessions: {
@@ -88,6 +170,9 @@ describe('StripePaymentGateway', () => {
   it('creates a billing portal session with the correct Stripe parameters', async () => {
     const portalCreate = vi.fn(async () => ({ url: 'https://stripe/portal' }));
     const stripe = {
+      customers: {
+        create: vi.fn(async () => ({ id: 'cus_123' })),
+      },
       checkout: {
         sessions: {
           create: vi.fn(async () => ({ url: 'https://stripe/checkout' })),
@@ -138,6 +223,9 @@ describe('StripePaymentGateway', () => {
     }));
 
     const stripe = {
+      customers: {
+        create: vi.fn(async () => ({ id: 'cus_123' })),
+      },
       checkout: {
         sessions: {
           create: vi.fn(async () => ({ url: 'https://stripe/checkout' })),
@@ -178,6 +266,9 @@ describe('StripePaymentGateway', () => {
 
   it('throws STRIPE_ERROR when webhook signature verification fails', async () => {
     const stripe = {
+      customers: {
+        create: vi.fn(async () => ({ id: 'cus_123' })),
+      },
       checkout: {
         sessions: {
           create: vi.fn(async () => ({ url: 'https://stripe/checkout' })),
@@ -211,6 +302,9 @@ describe('StripePaymentGateway', () => {
 
   it('throws when a subscription update event is missing required metadata', async () => {
     const stripe = {
+      customers: {
+        create: vi.fn(async () => ({ id: 'cus_123' })),
+      },
       checkout: {
         sessions: {
           create: vi.fn(async () => ({ url: 'https://stripe/checkout' })),
@@ -253,6 +347,9 @@ describe('StripePaymentGateway', () => {
 
   it('ignores checkout.session.completed events (no subscription update extracted)', async () => {
     const stripe = {
+      customers: {
+        create: vi.fn(async () => ({ id: 'cus_123' })),
+      },
       checkout: {
         sessions: {
           create: vi.fn(async () => ({ url: 'https://stripe/checkout' })),

@@ -98,6 +98,7 @@ class FakeStripeCustomerRepository implements StripeCustomerRepository {
 describe('processStripeWebhook', () => {
   it('claims, processes, and marks subscription events idempotently', async () => {
     const paymentGateway = new FakePaymentGateway({
+      stripeCustomerId: 'cus_test',
       checkoutUrl: 'https://stripe/checkout',
       portalUrl: 'https://stripe/portal',
       webhookResult: {
@@ -155,6 +156,7 @@ describe('processStripeWebhook', () => {
 
   it('marks non-subscription events as processed (no subscription update)', async () => {
     const paymentGateway = new FakePaymentGateway({
+      stripeCustomerId: 'cus_test',
       checkoutUrl: 'https://stripe/checkout',
       portalUrl: 'https://stripe/portal',
       webhookResult: {
@@ -184,6 +186,7 @@ describe('processStripeWebhook', () => {
 
   it('returns early when the event was already processed', async () => {
     const paymentGateway = new FakePaymentGateway({
+      stripeCustomerId: 'cus_test',
       checkoutUrl: 'https://stripe/checkout',
       portalUrl: 'https://stripe/portal',
       webhookResult: {
@@ -221,6 +224,7 @@ describe('processStripeWebhook', () => {
 
   it('marks the event failed when processing throws', async () => {
     const paymentGateway = new FakePaymentGateway({
+      stripeCustomerId: 'cus_test',
       checkoutUrl: 'https://stripe/checkout',
       portalUrl: 'https://stripe/portal',
       webhookResult: {

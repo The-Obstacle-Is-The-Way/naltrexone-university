@@ -2,6 +2,8 @@ import { ApplicationError } from '@/src/application/errors';
 import type {
   CheckoutSessionInput,
   CheckoutSessionOutput,
+  CreateCustomerInput,
+  CreateCustomerOutput,
   PaymentGateway,
   PortalSessionInput,
   PortalSessionOutput,
@@ -16,6 +18,7 @@ import {
 
 type StripeCheckoutSession = { url: string | null };
 type StripeBillingPortalSession = { url: string | null };
+type StripeCustomer = { id?: string };
 
 type CheckoutSessionCreateParams = {
   mode: 'subscription' | 'payment' | 'setup';
@@ -36,7 +39,15 @@ type BillingPortalSessionCreateParams = {
   return_url: string;
 };
 
+type CustomerCreateParams = {
+  email?: string;
+  metadata?: Record<string, string>;
+};
+
 type StripeClient = {
+  customers: {
+    create(params: CustomerCreateParams): Promise<StripeCustomer>;
+  };
   checkout: {
     sessions: {
       create(
@@ -82,6 +93,27 @@ type StripeSubscriptionLike = {
 
 export class StripePaymentGateway implements PaymentGateway {
   constructor(private readonly deps: StripePaymentGatewayDeps) {}
+
+  async createCustomer(
+    input: CreateCustomerInput,
+  ): Promise<CreateCustomerOutput> {
+    const customer = await this.deps.stripe.customers.create({
+      email: input.email,
+      metadata: {
+        user_id: input.userId,
+        clerk_user_id: input.clerkUserId,
+      },
+    });
+
+    if (!customer.id) {
+      throw new ApplicationError(
+        'STRIPE_ERROR',
+        'Stripe customer id is missing',
+      );
+    }
+
+    return { stripeCustomerId: customer.id };
+  }
 
   async createCheckoutSession(
     input: CheckoutSessionInput,
