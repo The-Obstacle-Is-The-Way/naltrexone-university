@@ -29,6 +29,10 @@ No code change required.
 
 Track future work as debt (time tracking + validation) once the product needs pacing analytics.
 
+## Regression Test
+
+- `src/application/use-cases/submit-answer.test.ts`
+
 ## Acceptance Criteria
 
 - The code matches SSOT behavior ✅

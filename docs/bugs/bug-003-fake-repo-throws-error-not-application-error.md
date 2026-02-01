@@ -25,6 +25,10 @@ The `FakePracticeSessionRepository.end()` method throws a plain `Error('NOT_FOUN
 
 Replace `Error` with `ApplicationError` in all fake repository methods that throw NOT_FOUND.
 
+## Regression Test
+
+- `src/application/test-helpers/fakes.test.ts`
+
 ## Acceptance Criteria
 
 - All fake repository methods throw `ApplicationError` for NOT_FOUND cases

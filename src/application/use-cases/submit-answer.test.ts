@@ -45,6 +45,7 @@ describe('SubmitAnswerUseCase', () => {
     const inserted = attempts.getAll();
     expect(inserted).toHaveLength(1);
     expect(inserted[0]?.practiceSessionId).toBeNull();
+    expect(inserted[0]?.timeSpentSeconds).toBe(0);
   });
 
   it('returns isCorrect=false when an incorrect choice is selected', async () => {
