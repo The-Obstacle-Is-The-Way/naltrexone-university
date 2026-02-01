@@ -66,6 +66,15 @@ The domain uses `SubscriptionPlan` (`monthly` / `annual`). Stripe price IDs are 
 - The mapping between plan ↔ price ID lives in adapters (see `docs/specs/spec-009-payment-gateway.md`).
 - Price IDs may be persisted in `stripe_subscriptions.price_id` for audit/debug, but they MUST NOT appear in domain entities.
 
+### Stripe Customer Mapping (1:1)
+
+We persist a **one-to-one** mapping between internal users and Stripe customers in `stripe_customers`:
+
+- One internal user → one Stripe customer id (unique by `user_id`)
+- One Stripe customer id → one internal user (unique by `stripe_customer_id`)
+
+This keeps Stripe identifiers out of the domain model while still supporting idempotent billing flows.
+
 ### Payment Ports and Implementations (SSOT)
 
 To avoid drift, the canonical interfaces and implementation guidance live in:

@@ -1,8 +1,9 @@
 # DEBT-017: Undocumented 1-to-1 Stripe Customer Constraint
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P3
 **Date:** 2026-02-01
+**Resolved:** 2026-02-01
 
 ## Summary
 
@@ -67,3 +68,8 @@ Add to Payment Boundary ADR explaining the 1-to-1 assumption.
 
 - Business rule documented in interface JSDoc
 - ADR-005 mentions the 1-to-1 constraint as a design decision
+
+## Resolution
+
+- Documented the 1:1 Stripe customer mapping constraint in `src/application/ports/repositories.ts`.
+- Added a dedicated section to ADR-005 clarifying the rationale and guarantees.
