@@ -1,5 +1,6 @@
 import 'server-only';
 import { currentUser } from '@clerk/nextjs/server';
+import type { QuestionControllerDeps } from '@/src/adapters/controllers/question-controller';
 import type { StripeWebhookDeps } from '@/src/adapters/controllers/stripe-webhook-controller';
 import {
   ClerkAuthGateway,
@@ -83,6 +84,7 @@ export type UseCaseFactories = {
 
 export type ControllerFactories = {
   createStripeWebhookDeps: () => StripeWebhookDeps;
+  createQuestionControllerDeps: () => QuestionControllerDeps;
 };
 
 export type ContainerOverrides = {
@@ -205,6 +207,12 @@ export function createContainer(overrides: ContainerOverrides = {}) {
             stripeCustomers: repositories.createStripeCustomerRepository(tx),
           }),
         ),
+    }),
+    createQuestionControllerDeps: () => ({
+      authGateway: gateways.createAuthGateway(),
+      checkEntitlementUseCase: useCases.createCheckEntitlementUseCase(),
+      getNextQuestionUseCase: useCases.createGetNextQuestionUseCase(),
+      submitAnswerUseCase: useCases.createSubmitAnswerUseCase(),
     }),
   };
 

@@ -81,6 +81,7 @@ describe('container factories', () => {
     expect(typeof container.createSubmitAnswerUseCase).toBe('function');
 
     expect(typeof container.createStripeWebhookDeps).toBe('function');
+    expect(typeof container.createQuestionControllerDeps).toBe('function');
   }, 40000);
 
   it('wires concrete implementations for all factories', async () => {
@@ -147,6 +148,18 @@ describe('container factories', () => {
     const deps = container.createStripeWebhookDeps();
     expect(deps.paymentGateway).toBeInstanceOf(StripePaymentGateway);
     expect(typeof deps.transaction).toBe('function');
+
+    const questionDeps = container.createQuestionControllerDeps();
+    expect(questionDeps.authGateway).toBeInstanceOf(ClerkAuthGateway);
+    expect(questionDeps.checkEntitlementUseCase).toBeInstanceOf(
+      CheckEntitlementUseCase,
+    );
+    expect(questionDeps.getNextQuestionUseCase).toBeInstanceOf(
+      GetNextQuestionUseCase,
+    );
+    expect(questionDeps.submitAnswerUseCase).toBeInstanceOf(
+      SubmitAnswerUseCase,
+    );
   }, 40000);
 
   it('shares Stripe price IDs between subscription repository and payment gateway', async () => {
