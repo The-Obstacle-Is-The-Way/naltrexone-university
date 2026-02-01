@@ -71,8 +71,13 @@ pnpm typecheck              # TypeScript type checking
 # Testing
 pnpm test                   # Unit tests (Vitest, watch mode)
 pnpm test --run             # Unit tests (single run, CI-style)
-pnpm test:integration       # Integration tests (requires DATABASE_URL)
+pnpm test:integration       # Integration tests (uses .env.test, requires local DB)
 pnpm test:e2e               # E2E tests (Playwright)
+
+# Local Test Database (Docker)
+pnpm db:test:up             # Start local Postgres for integration tests
+pnpm db:test:down           # Stop local test database
+pnpm db:test:reset          # Wipe and restart test database
 
 # Database
 pnpm db:generate            # Generate migration from schema changes
@@ -197,8 +202,24 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 ### Test Locations (Colocated)
 
 - **Unit tests:** `*.test.ts` colocated next to source files (e.g., `grading.ts` → `grading.test.ts`)
-- **Integration tests:** `tests/integration/*.integration.test.ts` (requires DATABASE_URL)
+- **Integration tests:** `tests/integration/*.integration.test.ts` (requires local Postgres)
 - **E2E tests:** `tests/e2e/*.spec.ts` (Playwright)
+
+### Running Integration Tests Locally
+
+Integration tests require a local Postgres database. Use Docker:
+
+```bash
+pnpm db:test:up                                    # Start local Postgres (port 5434)
+DATABASE_URL="postgresql://postgres:postgres@localhost:5434/addiction_boards_test" pnpm db:migrate
+pnpm test:integration                              # Run integration tests
+pnpm db:test:down                                  # Stop database when done
+```
+
+- `.env.test` is committed and contains test database config (no secrets)
+- Integration tests auto-load `.env.test` via `tests/integration/setup.ts`
+- Port 5434 avoids conflicts with local Postgres installations
+- Migrations require explicit `DATABASE_URL` (drizzle-kit reads from env)
 
 ### FAKES OVER MOCKS — MANDATORY
 
