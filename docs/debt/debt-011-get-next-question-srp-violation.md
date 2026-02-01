@@ -1,8 +1,9 @@
 # DEBT-011: GetNextQuestionUseCase Violates Single Responsibility Principle
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P2
 **Date:** 2026-01-31
+**Resolved:** 2026-02-01
 
 ## Summary
 
@@ -69,3 +70,13 @@ Then composition at the edge:
 - Each use case has single responsibility
 - Tests are isolated per use case
 - Shared helpers extracted if any common logic found
+
+## Resolution
+
+After review, we decided **not** to split this use case.
+
+Rationale:
+
+- This use case has a single reason to change: **the definition of “next question” selection** (it supports two input modes, but one cohesive use case).
+- The implementation is already decomposed into focused private methods (`executeForSession`, `executeForFilters`) with isolated tests covering both paths (`src/application/use-cases/get-next-question.test.ts`).
+- Splitting into two public use cases would add surface area and wiring without improving testability (both paths already inject the same ports and are tested with fakes).

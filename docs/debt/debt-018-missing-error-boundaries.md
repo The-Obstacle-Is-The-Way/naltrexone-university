@@ -1,8 +1,9 @@
 # DEBT-018: Missing Next.js Error Boundaries
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P2
 **Date:** 2026-02-01
+**Resolved:** 2026-02-01
 
 ## Summary
 
@@ -121,10 +122,19 @@ export default function Error({
 
 ## Acceptance Criteria
 
-- [ ] `app/global-error.tsx` exists and catches root layout errors
-- [ ] `app/error.tsx` exists and catches page errors
-- [ ] User sees friendly error message, not white screen
-- [ ] "Try again" button calls `reset()` to recover
+- [x] `app/global-error.tsx` exists and catches root layout errors
+- [x] `app/error.tsx` exists and catches page errors
+- [x] User sees friendly error message, not white screen
+- [x] "Try again" button calls `reset()` to recover
+
+## Resolution
+
+- Added Next.js error boundaries:
+  - `app/error.tsx`
+  - `app/global-error.tsx`
+- Added regression tests:
+  - `app/error.test.tsx`
+  - `app/global-error.test.tsx`
 
 ## References
 
