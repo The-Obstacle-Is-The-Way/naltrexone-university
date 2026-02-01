@@ -1,8 +1,9 @@
 # DEBT-012: Validation Logic in Adapter Layer Instead of Application Layer
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P2
 **Date:** 2026-01-31
+**Resolved:** 2026-02-01
 
 ## Summary
 
@@ -74,3 +75,15 @@ await this.sessionRepo.create({ userId, mode, paramsJson: params }); // Trust in
 - Use cases validate input before calling repositories
 - Repositories don't throw validation errors
 - Fakes and real repos behave identically
+
+## Resolution
+
+This item was a **false positive** for our current architecture.
+
+- Repository-layer validation here is **adapter-boundary parsing of untrusted data**, not business-rule validation:
+  - `practice_sessions.params_json` is stored as JSON (`unknown` by contract) and must be parsed/validated when loading/creating sessions.
+  - DB rows can be corrupt/malformed; adapters must protect the domain from invalid persisted data.
+- This is consistent with SPEC-004, which explicitly defines `PracticeSessionRepository.create({ paramsJson: unknown })` with the note: **"adapter validates + persists exact shape"**.
+- User-input validation still belongs in controllers (SPEC-010) before calling use cases.
+
+We keep DEBT-007 as the place to discuss the fake-repo vs real-repo validation gap.
