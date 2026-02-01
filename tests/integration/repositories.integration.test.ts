@@ -483,6 +483,7 @@ describe('Stripe repositories', () => {
 
   it('upserts Stripe customers per user', async () => {
     const user = await createUser();
+    const otherUser = await createUser();
     const repo = new DrizzleStripeCustomerRepository(db);
 
     await repo.insert(user.id, 'cus_123');
@@ -491,6 +492,10 @@ describe('Stripe repositories', () => {
     });
 
     await repo.insert(user.id, 'cus_123');
+
+    await expect(repo.insert(otherUser.id, 'cus_123')).rejects.toMatchObject({
+      code: 'CONFLICT',
+    });
 
     await expect(repo.insert(user.id, 'cus_456')).rejects.toMatchObject({
       code: 'CONFLICT',
