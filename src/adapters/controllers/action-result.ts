@@ -33,11 +33,12 @@ export function handleError(error: unknown): ActionResult<never> {
   }
 
   if (error instanceof ZodError) {
-    return err(
-      'VALIDATION_ERROR',
-      'Invalid input',
-      error.flatten().fieldErrors,
-    );
+    const flat = error.flatten().fieldErrors;
+    const fieldErrors: Record<string, string[]> = {};
+    for (const [key, value] of Object.entries(flat)) {
+      if (value) fieldErrors[key] = value;
+    }
+    return err('VALIDATION_ERROR', 'Invalid input', fieldErrors);
   }
 
   return err('INTERNAL_ERROR', 'Internal error');
