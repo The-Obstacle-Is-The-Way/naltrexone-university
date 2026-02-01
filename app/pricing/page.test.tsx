@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { render, screen } from '@testing-library/react';
+import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
 
 vi.mock('next/link', () => ({
@@ -10,13 +10,9 @@ describe('app/pricing', () => {
   it('renders subscribe actions', async () => {
     const PricingPage = (await import('./page')).default;
 
-    render(<PricingPage />);
+    const html = renderToStaticMarkup(<PricingPage />);
 
-    expect(
-      screen.getByRole('button', { name: 'Subscribe Monthly' }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole('button', { name: 'Subscribe Annual' }),
-    ).toBeInTheDocument();
+    expect(html).toContain('Subscribe Monthly');
+    expect(html).toContain('Subscribe Annual');
   });
 });

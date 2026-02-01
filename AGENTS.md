@@ -291,24 +291,26 @@ pnpm db:test:down                                  # Stop database when done
 
 ### React 19 Component Testing
 
-This project uses **React 19** with `@testing-library/react`.
+This project uses **React 19** with `renderToStaticMarkup` for component tests.
 
 ```typescript
-// ✅ CORRECT - Modern React 19 component test
+// ✅ CORRECT - React 19 component test
 // @vitest-environment jsdom
-import { render, screen } from '@testing-library/react';
+import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 
 describe('MyComponent', () => {
-  it('renders correctly', () => {
-    render(<MyComponent />);
-    expect(screen.getByRole('button')).toBeInTheDocument();
+  it('renders correctly', async () => {
+    const MyComponent = (await import('./MyComponent')).default;
+    const html = renderToStaticMarkup(<MyComponent />);
+    expect(html).toContain('Expected text');
   });
 });
 ```
 
 **DO NOT USE:**
-- `react-test-renderer` — Deprecated in React 19, removed from this codebase
+- `react-test-renderer` — Deprecated in React 19
+- `@testing-library/react` — Broken with React 19 (uses react-dom/test-utils internally)
 - `react-dom/test-utils` — Removed in React 19
 
 ### FAKES OVER MOCKS — MANDATORY

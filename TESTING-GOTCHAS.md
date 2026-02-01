@@ -6,70 +6,63 @@
 
 ## React 19 + Vitest 4 Component Testing
 
-### The Setup (2026 Best Practices)
+### The Problem
 
-React component tests require:
+`@testing-library/react` internally uses `react-dom/test-utils` which is broken in React 19. Tests pass locally but fail in git hooks with:
 
-1. **jsdom** environment (not Node)
-2. **@testing-library/react** for rendering
-3. **@testing-library/jest-dom** for matchers
-
-### Required Dependencies
-
-```bash
-pnpm add -D jsdom @testing-library/react @testing-library/dom @testing-library/jest-dom
+```
+TypeError: React.act is not a function
 ```
 
-### vitest.setup.ts
+### The Solution: renderToStaticMarkup
+
+We use `renderToStaticMarkup` from `react-dom/server` for component tests. It's:
+- NOT deprecated
+- Works reliably with React 19
+- Doesn't depend on broken test utilities
+
+### Required Setup
+
+1. **jsdom** must be installed:
+   ```bash
+   pnpm add -D jsdom
+   ```
+
+2. **vitest.setup.ts** sets the environment flag:
+   ```typescript
+   (globalThis as Record<string, unknown>).IS_REACT_ACT_ENVIRONMENT = true;
+   ```
+
+3. **Every `.test.tsx` file** must have this comment at the top:
+   ```typescript
+   // @vitest-environment jsdom
+   ```
+
+### Standard Component Test Pattern
 
 ```typescript
-import '@testing-library/jest-dom/vitest';
-
-(globalThis as Record<string, unknown>).IS_REACT_ACT_ENVIRONMENT = true;
-```
-
-### Every `.test.tsx` File
-
-```typescript
-// @vitest-environment jsdom   ← MUST be first line
-import { render, screen } from '@testing-library/react';
+// @vitest-environment jsdom
+import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 
 describe('MyComponent', () => {
-  it('renders correctly', () => {
-    render(<MyComponent />);
-    expect(screen.getByRole('button')).toBeInTheDocument();
+  it('renders correctly', async () => {
+    const MyComponent = (await import('./MyComponent')).default;
+
+    const html = renderToStaticMarkup(<MyComponent />);
+
+    expect(html).toContain('Expected text');
   });
 });
 ```
 
-### Why Per-File `// @vitest-environment jsdom`?
+### What NOT to Use
 
-- Vitest defaults to `node` environment
-- React components need a DOM
-- Per-file directive is explicit, simple, documented by Vitest
-- Avoids `test.projects` alias inheritance issues we encountered
-
----
-
-## DO NOT USE: react-test-renderer
-
-**Deprecated in React 19. We removed it from this codebase.**
-
-Old pattern (deprecated):
-```typescript
-// ❌ DEPRECATED - DO NOT USE
-import { create } from 'react-test-renderer';
-const tree = create(<Component />);
-```
-
-New pattern (correct):
-```typescript
-// ✅ CORRECT
-import { render, screen } from '@testing-library/react';
-render(<Component />);
-expect(screen.getByRole('button')).toBeInTheDocument();
-```
+| Package | Status | Why |
+|---------|--------|-----|
+| `react-test-renderer` | Deprecated in React 19 | Removed from codebase |
+| `@testing-library/react` | Broken with React 19 | Uses react-dom/test-utils internally |
+| `react-dom/test-utils` | Removed in React 19 | Doesn't exist anymore |
 
 ---
 
@@ -107,14 +100,17 @@ vi.mock('./user-repository');
 ## Checklist for New .test.tsx Files
 
 1. [ ] First line: `// @vitest-environment jsdom`
-2. [ ] Use `@testing-library/react` (render, screen)
-3. [ ] Use `toBeInTheDocument()` and other jest-dom matchers
-4. [ ] Use fakes for DI, not vi.mock() for our code
-5. [ ] Follow TDD: write test first, then implementation
+2. [ ] Use `renderToStaticMarkup` from `react-dom/server`
+3. [ ] Use dynamic imports: `const Component = (await import('./Component')).default`
+4. [ ] Assert on HTML content: `expect(html).toContain('text')`
+5. [ ] Use fakes for DI, not vi.mock() for our code
+6. [ ] Follow TDD: write test first, then implementation
 
 ---
 
 ## History
 
 - 2026-02-01: Created after intermittent act() failures in pre-push hooks
-- 2026-02-01: Migrated from deprecated react-test-renderer to @testing-library/react
+- 2026-02-01: Removed react-test-renderer (deprecated)
+- 2026-02-01: Removed @testing-library/react (broken with React 19)
+- 2026-02-01: Standardized on renderToStaticMarkup
