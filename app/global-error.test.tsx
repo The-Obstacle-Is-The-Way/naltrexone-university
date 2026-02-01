@@ -1,6 +1,7 @@
 'use client';
 
-import { act, create } from 'react-test-renderer';
+import { act } from 'react';
+import { create } from 'react-test-renderer';
 import { describe, expect, it, vi } from 'vitest';
 
 describe('app/global-error', () => {
