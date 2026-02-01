@@ -17,10 +17,13 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 | ID | Title | Status | Priority | Date |
 |----|-------|--------|----------|------|
-| [BUG-010](./bug-010-production-database-not-seeded.md) | Production Database Not Seeded — No Questions Available | Open | P1 | 2026-02-01 |
+| [BUG-013](./bug-013-silent-error-handling.md) | Silent Error Handling — Errors Swallowed Without Logging | Open | P1 | 2026-02-01 |
+| [BUG-012](./bug-012-incomplete-feature-wiring.md) | Incomplete Feature Wiring — Missing Controllers and E2E Coverage | Open | P2 | 2026-02-01 |
+| [BUG-011](./bug-011-ux-flow-gaps-multiple-issues.md) | UX Flow Gaps — Multiple Navigation and Wiring Issues | Open | P1 | 2026-02-01 |
+| [BUG-010](./bug-010-database-not-seeded.md) | Database Not Seeded — No Questions Available | Open | P1 | 2026-02-01 |
 | [BUG-009](./bug-009-vercel-preview-deployment-rate-limit.md) | Vercel Preview Deployment Status Fails Due to Rate Limit | Open | P3 | 2026-02-01 |
 
-**Next Bug ID:** BUG-011
+**Next Bug ID:** BUG-014
 
 ## Archived Bugs
 
