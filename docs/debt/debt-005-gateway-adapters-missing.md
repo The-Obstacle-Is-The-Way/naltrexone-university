@@ -17,7 +17,7 @@ SPEC-004 and SPEC-008/009 define `AuthGateway` and `PaymentGateway` interfaces, 
 
 ## Current State
 
-```
+```text
 src/application/ports/gateways.ts  → Interfaces defined ✅
 src/adapters/gateways/             → Directory doesn't exist ❌
 lib/auth.ts                        → Clerk logic here (wrong layer)
@@ -26,7 +26,7 @@ lib/stripe.ts                      → Stripe logic here (wrong layer)
 
 ## Expected State
 
-```
+```text
 src/adapters/gateways/
 ├── clerk-auth-gateway.ts          → Implements AuthGateway
 ├── stripe-payment-gateway.ts      → Implements PaymentGateway

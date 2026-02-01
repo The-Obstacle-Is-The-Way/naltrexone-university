@@ -35,7 +35,7 @@ Per ADR-012 and the Next.js 16 “Proxy” file convention:
 
 ## Files to Create
 
-```
+```text
 src/adapters/controllers/
 ├── action-result.ts
 ├── billing-controller.ts

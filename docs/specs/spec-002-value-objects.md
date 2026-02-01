@@ -19,7 +19,7 @@ Define constrained types (value objects) that enforce business rules at the type
 
 ## Files to Create
 
-```
+```text
 src/domain/value-objects/
 ├── subscription-plan.ts
 ├── subscription-status.ts

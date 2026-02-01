@@ -25,7 +25,7 @@ These ports MUST:
 
 ## Files to Create
 
-```
+```text
 src/application/
 ├── ports/
 │   ├── repositories.ts

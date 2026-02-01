@@ -43,7 +43,7 @@ Architecture Decision Records document significant architectural decisions along
 
 We adopt Uncle Bob's Clean Architecture with four layers:
 
-```
+```text
 Frameworks → Adapters → Use Cases → Entities
 ```
 

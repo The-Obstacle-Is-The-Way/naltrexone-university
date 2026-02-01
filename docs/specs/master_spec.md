@@ -23,7 +23,7 @@ Board-relevant questions with detailed explanations, fast practice workflows, an
 
 ## 2. Architecture Diagram
 
-```
+```text
 +-------------------+            +-----------------------------------------------+
 |    Browser (UI)   |            |             Vercel (Next.js 16+)              |
 |  Next.js Client   |            |  App Router + Server Components + Actions      |
@@ -1434,7 +1434,7 @@ Canonical JSON rules (Exact):
 
 ### Clean Architecture Layer Mapping
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────────────────┐
 │                    FRAMEWORKS & DRIVERS (Outermost)                      │
 │  app/, components/, lib/, db/ — Next.js, React, Drizzle, External SDKs  │

@@ -24,7 +24,9 @@ if (!databaseUrl) {
 
 const allowNonLocal = process.env.ALLOW_NON_LOCAL_DATABASE_URL === 'true';
 const host = new URL(databaseUrl).hostname;
-if (!allowNonLocal && host !== 'localhost' && host !== '127.0.0.1') {
+const isLocalhost =
+  host === 'localhost' || host === '127.0.0.1' || host === '::1';
+if (!allowNonLocal && !isLocalhost) {
   throw new Error(
     `Refusing to run integration tests against non-local DATABASE_URL host "${host}". Set DATABASE_URL to a local Postgres (recommended: Docker) or export ALLOW_NON_LOCAL_DATABASE_URL=true to override.`,
   );

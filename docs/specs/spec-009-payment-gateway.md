@@ -22,7 +22,7 @@ Implement `PaymentGateway` using Stripe while keeping:
 
 ## Files to Create
 
-```
+```text
 src/adapters/gateways/
 ├── stripe-payment-gateway.ts
 └── index.ts

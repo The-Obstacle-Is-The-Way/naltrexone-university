@@ -19,7 +19,7 @@ Define pure TypeScript entity types with zero external dependencies. These are t
 
 ## Files to Create
 
-```
+```text
 src/domain/entities/
 ├── user.ts
 ├── question.ts

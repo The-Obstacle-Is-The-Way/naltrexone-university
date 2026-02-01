@@ -25,7 +25,7 @@ Repositories live in the **Adapters** layer:
 
 ## Files to Create
 
-```
+```text
 src/adapters/repositories/
 ├── drizzle-question-repository.ts
 ├── drizzle-attempt-repository.ts

@@ -24,7 +24,7 @@ Key requirement:
 
 ## Files to Create
 
-```
+```text
 src/adapters/gateways/
 ├── clerk-auth-gateway.ts
 └── index.ts

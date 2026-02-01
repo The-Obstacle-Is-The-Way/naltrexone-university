@@ -22,7 +22,7 @@ We need to handle subscription payments via Stripe. The challenge is:
 
 Payment processing lives in the **Frameworks & Drivers** layer. Our domain deals with `Subscription` entities with business-meaningful statuses.
 
-```
+```text
 ┌──────────────────────────────────────────────────────────────┐
 │                    FRAMEWORKS (Stripe)                        │
 │                                                               │

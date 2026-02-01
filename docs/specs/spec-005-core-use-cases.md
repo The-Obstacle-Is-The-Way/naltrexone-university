@@ -32,7 +32,7 @@ Controllers (SPEC-010) are responsible for:
 
 ## Files to Create
 
-```
+```text
 src/application/use-cases/
 ├── check-entitlement.ts
 ├── check-entitlement.test.ts

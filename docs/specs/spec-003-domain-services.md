@@ -19,7 +19,7 @@ Define pure domain functions that encapsulate core business logic. These have **
 
 ## Files to Create
 
-```
+```text
 src/domain/
 ├── errors/
 │   └── domain-errors.ts
