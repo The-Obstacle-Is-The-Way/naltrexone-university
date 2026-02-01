@@ -68,5 +68,5 @@ We treat `lib/` as an outer (framework/infrastructure) layer, but we still requi
 - Kept **startup/build-time** failures as plain `Error`:
   - `lib/env.ts` (invalid configuration is fatal)
   - `lib/content/parseMdxQuestion.ts` (content parsing failures are build/seed-time concerns)
-- Added unit tests:
-  - `lib/auth.test.ts`
+- Note on tests:
+  - A previous `lib/auth.test.ts` was removed later as redundant/anti-pattern (it relied on module-level mocks for our own code). See DEBT-035.

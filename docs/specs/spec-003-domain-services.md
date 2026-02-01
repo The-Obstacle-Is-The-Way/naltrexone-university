@@ -543,8 +543,8 @@ pnpm test src/domain/services/
 
 ## Definition of Done
 
-- [ ] All services are pure functions (no side effects)
-- [ ] Zero external dependencies (only domain layer imports)
-- [ ] 100% test coverage
-- [ ] All tests pass without mocks
-- [ ] Barrel export in index.ts
+- [x] All services are pure functions (no side effects)
+- [x] Zero external dependencies (only domain layer imports)
+- [x] 100% test coverage
+- [x] All tests pass without mocks
+- [x] Barrel export in index.ts

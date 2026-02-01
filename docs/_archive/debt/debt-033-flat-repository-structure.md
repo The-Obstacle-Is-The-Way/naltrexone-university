@@ -9,7 +9,7 @@
 
 ## Description
 
-All 8 Drizzle repositories exist in a flat structure at `src/adapters/repositories/` with no organization by aggregate root or domain concept. As the system grows, this structure won't scale well.
+All 9 Drizzle repositories exist in a flat structure at `src/adapters/repositories/` with no organization by aggregate root or domain concept. As the system grows, this structure won't scale well.
 
 ## Location
 
@@ -27,6 +27,7 @@ src/adapters/repositories/
 ├── drizzle-stripe-event-repository.ts
 ├── drizzle-subscription-repository.ts
 ├── drizzle-tag-repository.ts
+├── drizzle-user-repository.ts
 ├── index.ts
 ├── postgres-errors.ts
 └── practice-session-limits.ts

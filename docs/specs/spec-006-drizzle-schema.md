@@ -90,7 +90,7 @@ We verify the migration output (not the TypeScript AST) via integration tests:
 
 ## Definition of Done
 
-- [ ] `db/schema.ts` matches `docs/specs/master_spec.md` Section 3
-- [ ] `pnpm db:generate` produces a migration that includes `pgcrypto`
-- [ ] `pnpm db:migrate` applies cleanly on a fresh database
-- [ ] `pnpm test:integration` passes against a migrated Postgres database
+- [x] `db/schema.ts` matches `docs/specs/master_spec.md` Section 3
+- [x] `pnpm db:generate` produces a migration that includes `pgcrypto`
+- [x] `pnpm db:migrate` applies cleanly on a fresh database
+- [x] `pnpm test:integration` passes against a migrated Postgres database

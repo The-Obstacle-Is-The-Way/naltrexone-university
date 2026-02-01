@@ -217,6 +217,6 @@ pnpm typecheck
 
 ## Definition of Done
 
-- [ ] All entity types defined as readonly
-- [ ] Zero external imports (only value-objects from same layer)
-- [ ] Barrel export in index.ts
+- [x] All entity types defined as readonly
+- [x] Zero external imports (only value-objects from same layer)
+- [x] Barrel export in index.ts
