@@ -10,15 +10,15 @@ import type { StripeCustomerRepository } from '@/src/application/ports/repositor
 import type { ActionResult } from './action-result';
 import { err, handleError, ok } from './action-result';
 
-export const zSubscriptionPlan = z.enum(['monthly', 'annual']);
+const zSubscriptionPlan = z.enum(['monthly', 'annual']);
 
-export const CreateCheckoutSessionInputSchema = z
+const CreateCheckoutSessionInputSchema = z
   .object({
     plan: zSubscriptionPlan,
   })
   .strict();
 
-export const CreatePortalSessionInputSchema = z.object({}).strict();
+const CreatePortalSessionInputSchema = z.object({}).strict();
 
 export type CreateCheckoutSessionOutput = { url: string };
 export type CreatePortalSessionOutput = { url: string };

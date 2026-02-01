@@ -17,18 +17,18 @@ import type {
 import type { ActionResult } from './action-result';
 import { err, handleError, ok } from './action-result';
 
-export const zUuid = z.string().uuid();
+const zUuid = z.string().uuid();
 
-export const zDifficulty = z.enum(['easy', 'medium', 'hard']);
+const zDifficulty = z.enum(['easy', 'medium', 'hard']);
 
-export const QuestionFiltersSchema = z
+const QuestionFiltersSchema = z
   .object({
     tagSlugs: z.array(z.string().min(1)).max(50).default([]),
     difficulties: z.array(zDifficulty).max(3).default([]),
   })
   .strict();
 
-export const GetNextQuestionInputSchema = z.union([
+const GetNextQuestionInputSchema = z.union([
   z
     .object({
       sessionId: zUuid,
@@ -43,7 +43,7 @@ export const GetNextQuestionInputSchema = z.union([
     .strict(),
 ]);
 
-export const SubmitAnswerInputSchema = z
+const SubmitAnswerInputSchema = z
   .object({
     questionId: zUuid,
     choiceId: zUuid,
