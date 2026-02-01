@@ -1,5 +1,4 @@
 import { and, asc, desc, eq, inArray } from 'drizzle-orm';
-import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import type * as schema from '@/db/schema';
 import { questions, questionTags, tags } from '@/db/schema';
 import { ApplicationError } from '@/src/application/errors';
@@ -8,11 +7,10 @@ import type {
   QuestionRepository,
 } from '@/src/application/ports/repositories';
 import { isValidChoiceLabel } from '@/src/domain/value-objects';
-
-type Db = PostgresJsDatabase<typeof schema>;
+import type { DrizzleDb } from '../shared/database-types';
 
 export class DrizzleQuestionRepository implements QuestionRepository {
-  constructor(private readonly db: Db) {}
+  constructor(private readonly db: DrizzleDb) {}
 
   async findPublishedById(id: string) {
     const row = await this.db.query.questions.findFirst({

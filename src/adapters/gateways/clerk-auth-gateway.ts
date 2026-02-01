@@ -1,13 +1,10 @@
 import { eq } from 'drizzle-orm';
-import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
-import type * as schema from '@/db/schema';
 import { users } from '@/db/schema';
 import { isPostgresUniqueViolation } from '@/src/adapters/repositories/postgres-errors';
+import type { DrizzleDb } from '@/src/adapters/shared/database-types';
 import { ApplicationError } from '@/src/application/errors';
 import type { AuthGateway } from '@/src/application/ports/gateways';
 import type { User } from '@/src/domain/entities';
-
-type Db = PostgresJsDatabase<typeof schema>;
 
 type ClerkEmailAddressLike = {
   id?: string;
@@ -21,7 +18,7 @@ type ClerkUserLike = {
 };
 
 export type ClerkAuthGatewayDeps = {
-  db: Db;
+  db: DrizzleDb;
   getClerkUser: () => Promise<ClerkUserLike | null>;
   now?: () => Date;
 };

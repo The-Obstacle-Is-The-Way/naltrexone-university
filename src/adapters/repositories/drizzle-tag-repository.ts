@@ -1,13 +1,10 @@
 import { asc } from 'drizzle-orm';
-import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
-import type * as schema from '@/db/schema';
 import { tags } from '@/db/schema';
 import type { TagRepository } from '@/src/application/ports/repositories';
-
-type Db = PostgresJsDatabase<typeof schema>;
+import type { DrizzleDb } from '../shared/database-types';
 
 export class DrizzleTagRepository implements TagRepository {
-  constructor(private readonly db: Db) {}
+  constructor(private readonly db: DrizzleDb) {}
 
   async listAll() {
     const rows = await this.db.query.tags.findMany({

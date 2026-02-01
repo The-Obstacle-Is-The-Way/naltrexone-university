@@ -1,14 +1,14 @@
 import { eq } from 'drizzle-orm';
-import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
-import type * as schema from '@/db/schema';
 import { stripeEvents } from '@/db/schema';
 import { ApplicationError } from '@/src/application/errors';
 import type { StripeEventRepository } from '@/src/application/ports/repositories';
-
-type Db = PostgresJsDatabase<typeof schema>;
+import type { DrizzleDb } from '../shared/database-types';
 
 export class DrizzleStripeEventRepository implements StripeEventRepository {
-  constructor(private readonly db: Db) {}
+  constructor(
+    private readonly db: DrizzleDb,
+    private readonly now: () => Date = () => new Date(),
+  ) {}
 
   async claim(eventId: string, type: string): Promise<boolean> {
     const [row] = await this.db
@@ -42,7 +42,7 @@ export class DrizzleStripeEventRepository implements StripeEventRepository {
   async markProcessed(eventId: string): Promise<void> {
     const [updated] = await this.db
       .update(stripeEvents)
-      .set({ processedAt: new Date(), error: null })
+      .set({ processedAt: this.now(), error: null })
       .where(eq(stripeEvents.id, eventId))
       .returning();
 
