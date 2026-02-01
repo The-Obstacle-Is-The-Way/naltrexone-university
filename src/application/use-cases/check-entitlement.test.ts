@@ -26,4 +26,49 @@ describe('CheckEntitlementUseCase', () => {
     const result = await useCase.execute({ userId: 'user-1' });
     expect(result).toEqual({ isEntitled: true });
   });
+
+  it('returns true when subscription is trialing', async () => {
+    const sub = createSubscription({
+      userId: 'user-1',
+      status: 'trialing',
+      currentPeriodEnd: new Date('2026-03-01T00:00:00Z'),
+    });
+    const useCase = new CheckEntitlementUseCase(
+      new FakeSubscriptionRepository([sub]),
+      () => new Date('2026-01-31T12:00:00Z'),
+    );
+
+    const result = await useCase.execute({ userId: 'user-1' });
+    expect(result).toEqual({ isEntitled: true });
+  });
+
+  it('returns false when subscription status is not entitled', async () => {
+    const sub = createSubscription({
+      userId: 'user-1',
+      status: 'canceled',
+      currentPeriodEnd: new Date('2026-03-01T00:00:00Z'),
+    });
+    const useCase = new CheckEntitlementUseCase(
+      new FakeSubscriptionRepository([sub]),
+      () => new Date('2026-01-31T12:00:00Z'),
+    );
+
+    const result = await useCase.execute({ userId: 'user-1' });
+    expect(result).toEqual({ isEntitled: false });
+  });
+
+  it('returns false when current period has ended', async () => {
+    const sub = createSubscription({
+      userId: 'user-1',
+      status: 'active',
+      currentPeriodEnd: new Date('2026-01-31T12:00:00Z'),
+    });
+    const useCase = new CheckEntitlementUseCase(
+      new FakeSubscriptionRepository([sub]),
+      () => new Date('2026-01-31T12:00:00Z'),
+    );
+
+    const result = await useCase.execute({ userId: 'user-1' });
+    expect(result).toEqual({ isEntitled: false });
+  });
 });
