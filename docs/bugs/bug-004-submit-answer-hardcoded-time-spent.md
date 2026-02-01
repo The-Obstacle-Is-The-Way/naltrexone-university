@@ -1,39 +1,35 @@
 # BUG-004: SubmitAnswer use case hardcodes timeSpentSeconds to 0
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P2
 **Date:** 2026-01-31
+**Resolved:** 2026-02-01
 
 ## Summary
 
-The `SubmitAnswer` use case always records `timeSpentSeconds: 0` for every answer attempt, regardless of actual time spent.
+The `SubmitAnswer` use case records `timeSpentSeconds: 0` for every answer attempt.
 
 ## Location
 
 - **File:** `src/application/use-cases/submit-answer.ts` line 60
 - **Current:** `timeSpentSeconds: 0`
-- **Expected:** Should accept time from client or calculate from session/question start time
+- **SSOT:** `docs/specs/master_spec.md` specifies `time_spent_seconds = 0` (fixed for MVP)
 
 ## Impact
 
-- Time-spent analytics completely broken
-- Pacing analysis impossible
-- Study session duration tracking inaccurate
-- Cannot identify which questions take longest
+This is an MVP tradeoff: we defer time tracking until we have a clear client-side timing model.
 
 ## Root Cause
 
-Placeholder implementation that was never completed. The use case input doesn't include a `timeSpentSeconds` field.
+By-design per SSOT for MVP.
 
 ## Fix
 
-1. Add `timeSpentSeconds: number` to `SubmitAnswerInput` interface
-2. Pass client-measured time through from the frontend
-3. Validate reasonable bounds (0 < time < 3600 seconds)
+No code change required.
+
+Track future work as debt (time tracking + validation) once the product needs pacing analytics.
 
 ## Acceptance Criteria
 
-- Use case accepts `timeSpentSeconds` from caller
-- Time is persisted to attempt record
-- Validation prevents unreasonable values
-- Tests cover time tracking
+- The code matches SSOT behavior ✅
+- Follow-up tracked as debt for post-MVP ✅

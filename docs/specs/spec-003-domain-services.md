@@ -114,6 +114,14 @@ describe('gradeAnswer', () => {
     expect(() => gradeAnswer(questionWithoutCorrectChoice, 'c1')).toThrow();
   });
 
+  it('throws if multiple correct choices exist (single-best-answer only)', () => {
+    const questionWithMultipleCorrect: Question = {
+      ...question,
+      choices: question.choices.map((c) => ({ ...c, isCorrect: true })),
+    };
+    expect(() => gradeAnswer(questionWithMultipleCorrect, 'c1')).toThrow();
+  });
+
   it('throws if selected choice not found', () => {
     expect(() => gradeAnswer(question, 'invalid')).toThrow();
   });

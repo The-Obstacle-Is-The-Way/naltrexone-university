@@ -1,8 +1,9 @@
 # DEBT-010: Trivial Entity Tests Provide False Confidence
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P1
 **Date:** 2026-01-31
+**Resolved:** 2026-02-01
 
 ## Summary
 
@@ -58,6 +59,11 @@ Add comments explaining these are "type smoke tests" only, not behavioral tests.
 ## Recommendation
 
 Option A - delete. Pure type definitions don't need runtime tests.
+
+## Resolution
+
+- Deleted `src/domain/entities/user.test.ts` and `src/domain/entities/question.test.ts`.
+- Documented that pure entity type aliases are not runtime-tested (see ADR-003).
 
 ## Acceptance Criteria
 

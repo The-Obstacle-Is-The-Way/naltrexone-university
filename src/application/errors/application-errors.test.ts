@@ -1,0 +1,33 @@
+import { describe, expect, it } from 'vitest';
+import { ApplicationError, isApplicationError } from './application-errors';
+
+describe('ApplicationError', () => {
+  it('captures code and message', () => {
+    const error = new ApplicationError('NOT_FOUND', 'Question not found');
+
+    expect(error.name).toBe('ApplicationError');
+    expect(error._tag).toBe('ApplicationError');
+    expect(error.code).toBe('NOT_FOUND');
+    expect(error.message).toBe('Question not found');
+  });
+
+  it('preserves fieldErrors when provided', () => {
+    const error = new ApplicationError('VALIDATION_ERROR', 'Invalid input', {
+      email: ['Required'],
+    });
+
+    expect(error.fieldErrors).toEqual({ email: ['Required'] });
+  });
+});
+
+describe('isApplicationError', () => {
+  it('returns true for ApplicationError instances', () => {
+    expect(
+      isApplicationError(new ApplicationError('CONFLICT', 'Conflict')),
+    ).toBe(true);
+  });
+
+  it('returns false for non-ApplicationError values', () => {
+    expect(isApplicationError(new Error('nope'))).toBe(false);
+  });
+});

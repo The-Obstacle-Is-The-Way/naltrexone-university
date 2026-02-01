@@ -1,8 +1,9 @@
 # DEBT-006: Grading Service Stricter Than Spec
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P1
 **Date:** 2026-01-31
+**Resolved:** 2026-02-01
 
 ## Summary
 
@@ -54,6 +55,13 @@ if (!correct) {
 1. **Keep strict (update spec)** - If we want single-answer-only questions
 2. **Match spec (relax code)** - If we want to support multi-answer questions
 3. **Add question type** - Support both via `questionType: 'single' | 'multiple'`
+
+## Resolution
+
+We are **single-best-answer only** (board-style MCQ). The SSOT already requires exactly one `isCorrect=true` choice per question.
+
+- Kept `gradeAnswer()` strict (throws when 0 or >1 correct choices exist).
+- Updated SPEC-003 to include a test for “multiple correct choices” and document the single-best-answer constraint.
 
 ## Acceptance Criteria
 

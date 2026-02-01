@@ -34,55 +34,12 @@ src/domain/entities/
 
 ---
 
-## Test First
+## Testing
 
-### File: `src/domain/entities/user.test.ts`
+Entities in this spec are pure TypeScript `type` aliases with no runtime behavior.
 
-```typescript
-import { describe, it, expect } from 'vitest';
-import type { User } from './user';
-
-describe('User entity', () => {
-  it('has required readonly properties', () => {
-    const user: User = {
-      id: 'uuid-123',
-      email: 'test@example.com',
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
-
-    expect(user.id).toBe('uuid-123');
-    expect(user.email).toBe('test@example.com');
-  });
-});
-```
-
-### File: `src/domain/entities/question.test.ts`
-
-```typescript
-import { describe, it, expect } from 'vitest';
-import type { Question } from './question';
-
-describe('Question entity', () => {
-  it('has stem and explanation as markdown strings', () => {
-    const question: Question = {
-      id: 'q-123',
-      slug: 'buprenorphine-induction',
-      stemMd: '**What** is the answer?',
-      explanationMd: 'The answer is B because...',
-      difficulty: 'medium',
-      status: 'published',
-      choices: [],
-      tags: [],
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
-
-    expect(question.stemMd).toContain('**What**');
-    expect(question.status).toBe('published');
-  });
-});
-```
+- Do **not** write Vitest tests that only re-assert TypeScript typing at runtime (false confidence).
+- If/when an entity gains behavior (factory functions, validation, computed properties), add behavioral unit tests for that behavior.
 
 ---
 
@@ -253,7 +210,7 @@ export type { Tag } from './tag';
 ## Quality Gate
 
 ```bash
-pnpm test --run src/domain/entities/
+pnpm typecheck
 ```
 
 ---

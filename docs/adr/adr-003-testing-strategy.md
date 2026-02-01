@@ -57,6 +57,8 @@ We adopt a **Testing Pyramid** aligned with our architecture layers:
 
 **Naming Convention:** `*.test.ts` colocated with source
 
+**Entities are types:** We do **not** write runtime tests for pure entity type aliases (e.g. `User`, `Question`) that contain no behavior. TypeScript compilation already validates shape. If an entity gains behavior (factories, validation, computed properties), add behavioral unit tests for that behavior.
+
 **Example Domain Test:**
 ```typescript
 // src/domain/services/grading.test.ts
