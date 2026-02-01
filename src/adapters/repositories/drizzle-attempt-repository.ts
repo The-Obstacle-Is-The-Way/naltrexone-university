@@ -13,6 +13,21 @@ type Db = PostgresJsDatabase<typeof schema>;
 export class DrizzleAttemptRepository implements AttemptRepository {
   constructor(private readonly db: Db) {}
 
+  private requireSelectedChoiceId(row: {
+    id?: string | null;
+    selectedChoiceId?: string | null;
+  }): string {
+    if (!row.selectedChoiceId) {
+      const idPart = row.id ? ` ${row.id}` : '';
+      throw new ApplicationError(
+        'INTERNAL_ERROR',
+        `Attempt${idPart} selectedChoiceId must not be null`,
+      );
+    }
+
+    return row.selectedChoiceId;
+  }
+
   async insert(input: {
     userId: string;
     questionId: string;
@@ -37,19 +52,14 @@ export class DrizzleAttemptRepository implements AttemptRepository {
       throw new ApplicationError('INTERNAL_ERROR', 'Failed to insert attempt');
     }
 
-    if (!row.selectedChoiceId) {
-      throw new ApplicationError(
-        'INTERNAL_ERROR',
-        'Attempt selectedChoiceId must not be null',
-      );
-    }
+    const selectedChoiceId = this.requireSelectedChoiceId(row);
 
     return {
       id: row.id,
       userId: row.userId,
       questionId: row.questionId,
       practiceSessionId: row.practiceSessionId ?? null,
-      selectedChoiceId: row.selectedChoiceId,
+      selectedChoiceId,
       isCorrect: row.isCorrect,
       timeSpentSeconds: row.timeSpentSeconds,
       answeredAt: row.answeredAt,
@@ -63,19 +73,14 @@ export class DrizzleAttemptRepository implements AttemptRepository {
     });
 
     return rows.map((row) => {
-      if (!row.selectedChoiceId) {
-        throw new ApplicationError(
-          'INTERNAL_ERROR',
-          `Attempt ${row.id} selectedChoiceId must not be null`,
-        );
-      }
+      const selectedChoiceId = this.requireSelectedChoiceId(row);
 
       return {
         id: row.id,
         userId: row.userId,
         questionId: row.questionId,
         practiceSessionId: row.practiceSessionId ?? null,
-        selectedChoiceId: row.selectedChoiceId,
+        selectedChoiceId,
         isCorrect: row.isCorrect,
         timeSpentSeconds: row.timeSpentSeconds,
         answeredAt: row.answeredAt,
@@ -93,19 +98,14 @@ export class DrizzleAttemptRepository implements AttemptRepository {
     });
 
     return rows.map((row) => {
-      if (!row.selectedChoiceId) {
-        throw new ApplicationError(
-          'INTERNAL_ERROR',
-          `Attempt ${row.id} selectedChoiceId must not be null`,
-        );
-      }
+      const selectedChoiceId = this.requireSelectedChoiceId(row);
 
       return {
         id: row.id,
         userId: row.userId,
         questionId: row.questionId,
         practiceSessionId: row.practiceSessionId ?? null,
-        selectedChoiceId: row.selectedChoiceId,
+        selectedChoiceId,
         isCorrect: row.isCorrect,
         timeSpentSeconds: row.timeSpentSeconds,
         answeredAt: row.answeredAt,

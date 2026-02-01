@@ -1,8 +1,9 @@
 # DEBT-008: Duplicated Validation Logic in DrizzleAttemptRepository
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P2
 **Date:** 2026-01-31
+**Resolved:** 2026-02-01
 
 ## Summary
 
@@ -53,3 +54,8 @@ private validateSelectedChoiceId(row: any, attemptId?: string): string {
 - Single source of truth for null validation
 - Consistent error messages
 - All existing tests pass
+
+## Resolution
+
+- Extracted `requireSelectedChoiceId()` helper in `src/adapters/repositories/drizzle-attempt-repository.ts`.
+- Reused the helper across `insert()`, `findByUserId()`, and `findBySessionId()` to eliminate duplication.
