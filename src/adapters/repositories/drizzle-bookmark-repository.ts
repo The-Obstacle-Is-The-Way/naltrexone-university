@@ -1,14 +1,11 @@
 import { and, desc, eq } from 'drizzle-orm';
-import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
-import type * as schema from '@/db/schema';
 import { bookmarks } from '@/db/schema';
 import { ApplicationError } from '@/src/application/errors';
 import type { BookmarkRepository } from '@/src/application/ports/repositories';
-
-type Db = PostgresJsDatabase<typeof schema>;
+import type { DrizzleDb } from '../shared/database-types';
 
 export class DrizzleBookmarkRepository implements BookmarkRepository {
-  constructor(private readonly db: Db) {}
+  constructor(private readonly db: DrizzleDb) {}
 
   async exists(userId: string, questionId: string): Promise<boolean> {
     const row = await this.db.query.bookmarks.findFirst({

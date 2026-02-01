@@ -1,17 +1,14 @@
 import { and, desc, eq, inArray, max } from 'drizzle-orm';
-import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
-import type * as schema from '@/db/schema';
 import { attempts } from '@/db/schema';
 import { ApplicationError } from '@/src/application/errors';
 import type {
   AttemptMostRecentAnsweredAt,
   AttemptRepository,
 } from '@/src/application/ports/repositories';
-
-type Db = PostgresJsDatabase<typeof schema>;
+import type { DrizzleDb } from '../shared/database-types';
 
 export class DrizzleAttemptRepository implements AttemptRepository {
-  constructor(private readonly db: Db) {}
+  constructor(private readonly db: DrizzleDb) {}
 
   private requireSelectedChoiceId(row: {
     id?: string | null;

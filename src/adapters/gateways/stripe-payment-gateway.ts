@@ -17,15 +17,38 @@ import {
 type StripeCheckoutSession = { url: string | null };
 type StripeBillingPortalSession = { url: string | null };
 
+type CheckoutSessionCreateParams = {
+  mode: 'subscription' | 'payment' | 'setup';
+  customer: string;
+  line_items: Array<{ price: string; quantity: number }>;
+  allow_promotion_codes?: boolean;
+  billing_address_collection?: 'auto' | 'required';
+  success_url: string;
+  cancel_url: string;
+  client_reference_id?: string;
+  subscription_data?: {
+    metadata?: Record<string, string>;
+  };
+};
+
+type BillingPortalSessionCreateParams = {
+  customer: string;
+  return_url: string;
+};
+
 type StripeClient = {
   checkout: {
     sessions: {
-      create(...args: unknown[]): Promise<StripeCheckoutSession>;
+      create(
+        params: CheckoutSessionCreateParams,
+      ): Promise<StripeCheckoutSession>;
     };
   };
   billingPortal: {
     sessions: {
-      create(...args: unknown[]): Promise<StripeBillingPortalSession>;
+      create(
+        params: BillingPortalSessionCreateParams,
+      ): Promise<StripeBillingPortalSession>;
     };
   };
   webhooks: {

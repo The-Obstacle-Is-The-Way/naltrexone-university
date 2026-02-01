@@ -51,14 +51,53 @@ If `PROGRESS.md` has no unchecked items, exit cleanly without making changes.
 
 ---
 
-## First Action: Read State
+## First Action: Slot Protection (Understand Before Changing)
 
-**IMMEDIATELY** read state files:
+**BEFORE writing ANY code, you MUST understand the codebase conventions.**
 
+### Step 1: Read State Files
 ```bash
 cat PROGRESS.md
 cat docs/specs/master_spec.md
 ```
+
+### Step 2: Study Existing Patterns (MANDATORY for new agents)
+
+Before implementing anything, examine existing code to understand:
+
+1. **Test Structure** — Read 2-3 existing test files to understand:
+   - How tests are organized (describe/it blocks)
+   - Fakes vs mocks pattern (we use fakes, NEVER `vi.mock()`)
+   - Arrange-Act-Assert structure
+   - Test naming conventions (`it('returns X when Y')`)
+   ```bash
+   # Example: study existing test patterns
+   cat src/adapters/gateways/clerk-auth-gateway.test.ts
+   cat src/adapters/repositories/drizzle-user-repository.test.ts
+   ```
+
+2. **Code Style** — Read 2-3 source files to understand:
+   - Clean Architecture layer structure (domain → application → adapters)
+   - Dependency injection patterns (constructor injection)
+   - Error handling (ApplicationError with codes)
+   - No magic numbers (use constants/configs)
+   ```bash
+   # Example: study existing implementation patterns
+   cat src/adapters/gateways/clerk-auth-gateway.ts
+   cat src/adapters/repositories/drizzle-user-repository.ts
+   ```
+
+3. **Centralized Configs** — Check for existing shared types/configs before creating new ones:
+   ```bash
+   # Shared types live here
+   ls src/adapters/shared/
+   cat src/adapters/shared/database-types.ts
+
+   # Application ports define interfaces
+   ls src/application/ports/
+   ```
+
+**WHY THIS MATTERS:** This codebase follows strict Clean Architecture and SOLID principles. Code that doesn't match existing patterns will be rejected in review. Study first, code second.
 
 ---
 
@@ -118,11 +157,34 @@ If ANY check fails, fix it before proceeding.
 3. **REFACTOR**: Clean up while keeping tests green
 
 **Testing Philosophy:**
+- **Framework:** Vitest (NOT Jest) — use `vi.fn()` not `jest.fn()`
+- **FAKES OVER MOCKS** — Use `FakeRepository` classes from `src/application/test-helpers/fakes.ts`
 - Test behavior, not implementation details
-- Use in-memory fakes, not jest.mock()
-- Only mock true external services (Clerk, Stripe, Neon)
 - Domain and application layers must be 100% unit testable without infrastructure
-- Characterization tests for legacy/existing code before refactoring
+- Colocate tests: `grading.ts` → `grading.test.ts` (same folder)
+
+**The Simple Rule for Fakes vs Mocks:**
+```
+Can you pass it through a constructor or function parameter?
+  YES → Use a fake object (with vi.fn() for spying if needed)
+  NO  → Use vi.mock() (React hooks, Next.js magic, external SDKs only)
+```
+
+**IMPORTANT: vi.fn() inside a fake is CORRECT:**
+```typescript
+// ✅ CORRECT - Fake object passed via DI, vi.fn() just adds spying
+const fakeDb = {
+  query: { users: { findFirst: vi.fn().mockResolvedValue(null) } }
+};
+const repo = new DrizzleUserRepository(fakeDb);  // DI injection
+
+// ❌ WRONG - Hijacking module imports for our own code
+vi.mock('./user-repository');  // NEVER DO THIS
+```
+
+**When vi.mock() IS acceptable:**
+- External SDKs with hooks you can't inject (`@clerk/nextjs`)
+- Next.js internals (`next/link`, `server-only`)
 
 **If you wrote code without a test, go back and write the test first.**
 
@@ -177,15 +239,25 @@ If you made no changes (no active tasks), exit without committing.
 
 ## Guardrails
 
-1. **ONE task per iteration**
-2. **Read PROGRESS.md first**
-3. **Read master_spec.md for task details**
-4. **TDD: Write tests BEFORE implementation (Red → Green → Refactor)**
-5. **SOLID/DRY/Clean Code principles always**
-6. **Quality gates must pass**
-7. **Mark task complete in PROGRESS.md**
-8. **Commit before exit**
-9. **Follow master_spec.md exactly**
+1. **SLOT PROTECTION: Study existing code patterns BEFORE writing anything**
+2. **ONE task per iteration**
+3. **Read PROGRESS.md first**
+4. **Read master_spec.md for task details**
+5. **TDD: Write tests BEFORE implementation (Red → Green → Refactor)**
+6. **SOLID/DRY/Clean Code principles always**
+7. **Quality gates must pass**
+8. **Mark task complete in PROGRESS.md**
+9. **Commit before exit**
+10. **Follow master_spec.md exactly**
+
+### Slot Protection Checklist
+
+Before writing code, verify you understand:
+- [ ] How existing tests are structured (fakes, not mocks)
+- [ ] Where shared types live (`src/adapters/shared/`)
+- [ ] How dependency injection is done (constructor injection)
+- [ ] How errors are handled (`ApplicationError` with codes)
+- [ ] The layer you're working in (domain/application/adapters/infra)
 
 ---
 

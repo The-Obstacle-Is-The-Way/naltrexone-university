@@ -1,6 +1,4 @@
 import { eq } from 'drizzle-orm';
-import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
-import type * as schema from '@/db/schema';
 import { stripeSubscriptions } from '@/db/schema';
 import { ApplicationError } from '@/src/application/errors';
 import type {
@@ -12,14 +10,14 @@ import {
   getSubscriptionPlanFromPriceId,
   type StripePriceIds,
 } from '../config/stripe-prices';
+import type { DrizzleDb } from '../shared/database-types';
 import { isPostgresUniqueViolation } from './postgres-errors';
-
-type Db = PostgresJsDatabase<typeof schema>;
 
 export class DrizzleSubscriptionRepository implements SubscriptionRepository {
   constructor(
-    private readonly db: Db,
+    private readonly db: DrizzleDb,
     private readonly priceIds: StripePriceIds,
+    private readonly now: () => Date = () => new Date(),
   ) {}
 
   async findByUserId(userId: string) {
@@ -89,7 +87,7 @@ export class DrizzleSubscriptionRepository implements SubscriptionRepository {
           priceId,
           currentPeriodEnd: input.currentPeriodEnd,
           cancelAtPeriodEnd: input.cancelAtPeriodEnd,
-          updatedAt: new Date(),
+          updatedAt: this.now(),
         })
         .onConflictDoUpdate({
           target: stripeSubscriptions.userId,
@@ -99,7 +97,7 @@ export class DrizzleSubscriptionRepository implements SubscriptionRepository {
             priceId,
             currentPeriodEnd: input.currentPeriodEnd,
             cancelAtPeriodEnd: input.cancelAtPeriodEnd,
-            updatedAt: new Date(),
+            updatedAt: this.now(),
           },
         });
     } catch (error) {

@@ -71,8 +71,13 @@ pnpm typecheck              # TypeScript type checking
 # Testing
 pnpm test                   # Unit tests (Vitest, watch mode)
 pnpm test --run             # Unit tests (single run, CI-style)
-pnpm test:integration       # Integration tests (requires DATABASE_URL)
+pnpm test:integration       # Integration tests (uses .env.test, requires local DB)
 pnpm test:e2e               # E2E tests (Playwright)
+
+# Local Test Database (Docker)
+pnpm db:test:up             # Start local Postgres for integration tests
+pnpm db:test:down           # Stop local test database
+pnpm db:test:reset          # Wipe and restart test database
 
 # Database
 pnpm db:generate            # Generate migration from schema changes
@@ -185,9 +190,105 @@ Rules:
 
 ## Testing
 
-- **Unit tests:** `**/*.test.ts(x)` - colocated with source, or `tests/unit/`
-- **Integration tests:** `tests/integration/*.integration.test.ts` (requires DATABASE_URL)
-- **E2E tests:** `tests/e2e/*.spec.ts` (Playwright, starts Next.js automatically)
+### Framework: Vitest (NOT Jest)
+
+We use **Vitest** exclusively. Do NOT use Jest APIs or `jest.mock()`.
+
+```typescript
+// Correct imports
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+```
+
+### Test Locations (Colocated)
+
+- **Unit tests:** `*.test.ts` colocated next to source files (e.g., `grading.ts` → `grading.test.ts`)
+- **Integration tests:** `tests/integration/*.integration.test.ts` (requires local Postgres)
+- **E2E tests:** `tests/e2e/*.spec.ts` (Playwright)
+
+### Running Integration Tests Locally
+
+Integration tests require a local Postgres database. Use Docker:
+
+```bash
+pnpm db:test:up                                    # Start local Postgres (port 5434)
+DATABASE_URL="postgresql://postgres:postgres@localhost:5434/addiction_boards_test" pnpm db:migrate
+pnpm test:integration                              # Run integration tests
+pnpm db:test:down                                  # Stop database when done
+```
+
+- `.env.test` is committed and contains test database config (no secrets)
+- Integration tests auto-load `.env.test` via `tests/integration/setup.ts`
+- Port 5434 avoids conflicts with local Postgres installations
+- Migrations require explicit `DATABASE_URL` (drizzle-kit reads from env)
+
+### FAKES OVER MOCKS — MANDATORY
+
+**The Simple Rule:**
+```
+Can you pass it through a constructor or function parameter?
+  YES → Use a fake object (with vi.fn() for spying if needed)
+  NO  → Use vi.mock() (React hooks, Next.js magic, external SDKs only)
+```
+
+**NEVER use `vi.mock()` for our own code.** Only for external packages you can't inject.
+
+| Pattern | When to Use | Example |
+|---------|-------------|---------|
+| **Fake via DI** | Our own code (repos, gateways, services) | `new UseCase(fakeRepo)` |
+| **Fake + vi.fn()** | When you need to spy on fake methods | `{ findById: vi.fn().mockResolvedValue(null) }` |
+| **vi.mock()** | External SDKs you can't inject (Clerk hooks, Next.js) | `vi.mock('@clerk/nextjs')` |
+
+**IMPORTANT: vi.fn() inside a fake is CORRECT:**
+```typescript
+// ✅ CORRECT - Fake object passed via DI, vi.fn() just adds spying
+const fakeDb = {
+  query: { users: { findFirst: vi.fn().mockResolvedValue(null) } }
+};
+const repo = new DrizzleUserRepository(fakeDb);  // DI injection
+
+// ❌ WRONG - Hijacking module imports for our own code
+vi.mock('./user-repository');  // NEVER DO THIS
+```
+
+**Why Fakes > Mocks:**
+- Mocks test implementation details (what methods were called)
+- Fakes test behavior (what the system does)
+- Mocks break when you refactor internals
+- Fakes only break when behavior changes
+
+**Our Fakes Location:** `src/application/test-helpers/fakes.ts`
+
+```typescript
+// GOOD: Using fake repository
+const repo = new FakeAttemptRepository();
+const useCase = new SubmitAnswerUseCase(repo, ...);
+const result = await useCase.execute(input);
+expect(result.isCorrect).toBe(true);
+
+// BAD: Mocking our own code
+vi.mock('./attempt-repository');  // NEVER DO THIS
+```
+
+**When vi.mock() IS acceptable:**
+```typescript
+// ✅ External SDK with hooks you can't inject
+vi.mock('@clerk/nextjs', () => ({
+  SignedIn: ({ children }) => <>{children}</>,
+  useUser: () => ({ user: { id: 'test' } }),
+}));
+
+// ✅ Next.js internals
+vi.mock('next/link', () => ({ default: (props) => <a {...props} /> }));
+vi.mock('server-only', () => ({}));
+```
+
+### Test Quality Rules
+
+1. **Test behavior, not implementation** — If you refactor, tests should still pass
+2. **One concept per test** — Each `it()` verifies one thing
+3. **Arrange-Act-Assert pattern** — Setup, execute, verify
+4. **Use test factories** — `createQuestion()`, `createChoice()` from `src/domain/test-helpers/`
+5. **Descriptive names** — `it('returns isCorrect=false when incorrect choice selected')`
 
 Integration tests run against a real Postgres instance. In CI, a service container provides the database.
 

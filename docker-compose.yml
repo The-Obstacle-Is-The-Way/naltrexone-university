@@ -1,0 +1,19 @@
+# Local development database for integration tests
+# Usage: docker compose up -d
+# Matches CI environment (GitHub Actions postgres service)
+
+services:
+  db:
+    image: postgres:16
+    container_name: naltrexone-test-db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: addiction_boards_test
+    ports:
+      - '${DB_TEST_PORT:-5434}:5432'
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres -d addiction_boards_test']
+      interval: 5s
+      timeout: 5s
+      retries: 10

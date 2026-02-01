@@ -1,17 +1,14 @@
 import { and, eq, isNull } from 'drizzle-orm';
-import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { z } from 'zod';
-import type * as schema from '@/db/schema';
 import { practiceSessions } from '@/db/schema';
 import { ApplicationError } from '@/src/application/errors';
 import type { PracticeSessionRepository } from '@/src/application/ports/repositories';
+import type { DrizzleDb } from '../shared/database-types';
 import {
   MAX_PRACTICE_SESSION_DIFFICULTY_FILTERS,
   MAX_PRACTICE_SESSION_QUESTIONS,
   MAX_PRACTICE_SESSION_TAG_FILTERS,
 } from './practice-session-limits';
-
-type Db = PostgresJsDatabase<typeof schema>;
 
 const questionDifficultySchema = z.enum(['easy', 'medium', 'hard']);
 
@@ -29,7 +26,10 @@ const practiceSessionParamsSchema = z
 export class DrizzlePracticeSessionRepository
   implements PracticeSessionRepository
 {
-  constructor(private readonly db: Db) {}
+  constructor(
+    private readonly db: DrizzleDb,
+    private readonly now: () => Date = () => new Date(),
+  ) {}
 
   async findByIdAndUserId(id: string, userId: string) {
     const row = await this.db.query.practiceSessions.findFirst({
@@ -100,7 +100,7 @@ export class DrizzlePracticeSessionRepository
       throw new ApplicationError('CONFLICT', 'Practice session already ended');
     }
 
-    const endedAt = new Date();
+    const endedAt = this.now();
     const [updated] = await this.db
       .update(practiceSessions)
       .set({ endedAt })

@@ -1,154 +1,253 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+import type { StripeWebhookDeps } from '@/src/adapters/controllers/stripe-webhook-controller';
+import {
+  ClerkAuthGateway,
+  StripePaymentGateway,
+} from '@/src/adapters/gateways';
+import {
+  DrizzleAttemptRepository,
+  DrizzleBookmarkRepository,
+  DrizzlePracticeSessionRepository,
+  DrizzleQuestionRepository,
+  DrizzleStripeCustomerRepository,
+  DrizzleStripeEventRepository,
+  DrizzleSubscriptionRepository,
+  DrizzleTagRepository,
+} from '@/src/adapters/repositories';
+import { DrizzleUserRepository } from '@/src/adapters/repositories/drizzle-user-repository';
+import type { DrizzleDb } from '@/src/adapters/shared/database-types';
+import {
+  CheckEntitlementUseCase,
+  GetNextQuestionUseCase,
+  SubmitAnswerUseCase,
+} from '@/src/application/use-cases';
 
 vi.mock('server-only', () => ({}));
-
-const currentUserMock = vi.fn();
-vi.mock('@clerk/nextjs/server', () => ({
-  currentUser: () => currentUserMock(),
+vi.mock('stripe', () => ({
+  default: class StripeMock {},
 }));
 
-let dbMock: unknown;
-vi.mock('./db', () => ({
-  get db() {
-    return dbMock;
-  },
-}));
+process.env.DATABASE_URL ??=
+  'postgresql://user:pass@localhost:5432/addiction_boards_test';
+process.env.STRIPE_SECRET_KEY ??= 'sk_test_dummy';
+process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY ??= 'pk_test_dummy';
+process.env.STRIPE_WEBHOOK_SECRET ??= 'whsec_dummy';
+process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY ??= 'price_dummy_monthly';
+process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL ??= 'price_dummy_annual';
+process.env.NEXT_PUBLIC_APP_URL ??= 'http://localhost:3000';
+process.env.NEXT_PUBLIC_SKIP_CLERK ??= 'true';
 
-const stripeCheckoutCreateMock = vi.fn(async () => ({
-  url: 'https://stripe/checkout',
-}));
-const stripePortalCreateMock = vi.fn(async () => ({
-  url: 'https://stripe/portal',
-}));
-const stripeConstructEventMock = vi.fn(() => ({
-  id: 'evt_1',
-  type: 'checkout.session.completed',
-  data: { object: { id: 'cs_test_1' } },
-}));
-
-vi.mock('./stripe', () => ({
-  stripe: {
-    checkout: { sessions: { create: stripeCheckoutCreateMock } },
-    billingPortal: { sessions: { create: stripePortalCreateMock } },
-    webhooks: { constructEvent: stripeConstructEventMock },
-  },
-}));
-
-vi.mock('./logger', () => ({
-  logger: {
-    info: vi.fn(),
-    warn: vi.fn(),
-    error: vi.fn(),
-    debug: vi.fn(),
-  },
-}));
-
-vi.mock('./env', () => ({
-  env: {
-    STRIPE_WEBHOOK_SECRET: 'whsec_1',
-    NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY: 'price_m',
-    NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL: 'price_a',
-  },
-}));
-
-afterEach(() => {
-  currentUserMock.mockReset();
-  stripeCheckoutCreateMock.mockClear();
-  stripePortalCreateMock.mockClear();
-  stripeConstructEventMock.mockClear();
-  vi.restoreAllMocks();
-});
-
-function createDbMock() {
-  const queryFindFirst = vi.fn();
-
-  const updateReturning = vi.fn();
-  const updateWhere = vi.fn(() => ({ returning: updateReturning }));
-  const updateSet = vi.fn(() => ({ where: updateWhere }));
-  const update = vi.fn(() => ({ set: updateSet }));
-
-  const insertReturning = vi.fn();
-  const insertOnConflictDoNothing = vi.fn(() => ({
-    returning: insertReturning,
-  }));
-  const insertValues = vi.fn(() => ({
-    onConflictDoNothing: insertOnConflictDoNothing,
-  }));
-  const insert = vi.fn(() => ({ values: insertValues }));
-
-  return {
-    query: {
-      users: {
-        findFirst: queryFindFirst,
-      },
-    },
-    update,
-    insert,
-    _mocks: {
-      queryFindFirst,
-      updateReturning,
-      insertReturning,
-    },
-  } as const;
+async function loadContainer() {
+  const mod = await import('./container');
+  return mod.createContainer;
 }
 
-describe('lib/container', () => {
-  it('wires AuthGateway + PaymentGateway with validated primitives', async () => {
-    const db = createDbMock();
-    const inserted = {
-      id: 'db_user_1',
-      clerkUserId: 'clerk_1',
-      email: 'a@example.com',
-      createdAt: new Date('2026-02-01T00:00:00Z'),
-      updatedAt: new Date('2026-02-01T00:00:00Z'),
+const createContainerPromise = loadContainer();
+
+describe('container factories', () => {
+  it('exposes factory functions for repositories, use cases, and controllers', async () => {
+    const createContainer = await createContainerPromise;
+    const container = createContainer({
+      primitives: {
+        db: {} as unknown as DrizzleDb,
+        env: {
+          NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY: 'price_m',
+          NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL: 'price_a',
+          STRIPE_WEBHOOK_SECRET: 'whsec',
+        } as unknown as typeof import('./env').env,
+        logger: {
+          error: () => undefined,
+        } as unknown as typeof import('./logger').logger,
+        stripe: {} as unknown as typeof import('./stripe').stripe,
+        now: () => new Date('2026-02-01T00:00:00Z'),
+      },
+    });
+
+    expect(typeof container.createAttemptRepository).toBe('function');
+    expect(typeof container.createBookmarkRepository).toBe('function');
+    expect(typeof container.createPracticeSessionRepository).toBe('function');
+    expect(typeof container.createQuestionRepository).toBe('function');
+    expect(typeof container.createTagRepository).toBe('function');
+    expect(typeof container.createSubscriptionRepository).toBe('function');
+    expect(typeof container.createStripeCustomerRepository).toBe('function');
+    expect(typeof container.createStripeEventRepository).toBe('function');
+    expect(typeof container.createUserRepository).toBe('function');
+
+    expect(typeof container.createAuthGateway).toBe('function');
+    expect(typeof container.createPaymentGateway).toBe('function');
+
+    expect(typeof container.createCheckEntitlementUseCase).toBe('function');
+    expect(typeof container.createGetNextQuestionUseCase).toBe('function');
+    expect(typeof container.createSubmitAnswerUseCase).toBe('function');
+
+    expect(typeof container.createStripeWebhookDeps).toBe('function');
+  }, 40000);
+
+  it('wires concrete implementations for all factories', async () => {
+    const createContainer = await createContainerPromise;
+    const container = createContainer({
+      primitives: {
+        db: {} as unknown as DrizzleDb,
+        env: {
+          NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY: 'price_m',
+          NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL: 'price_a',
+          STRIPE_WEBHOOK_SECRET: 'whsec',
+        } as unknown as typeof import('./env').env,
+        logger: {
+          error: () => undefined,
+        } as unknown as typeof import('./logger').logger,
+        stripe: {} as unknown as typeof import('./stripe').stripe,
+        now: () => new Date('2026-02-01T00:00:00Z'),
+      },
+    });
+
+    expect(container.createAttemptRepository()).toBeInstanceOf(
+      DrizzleAttemptRepository,
+    );
+    expect(container.createBookmarkRepository()).toBeInstanceOf(
+      DrizzleBookmarkRepository,
+    );
+    expect(container.createPracticeSessionRepository()).toBeInstanceOf(
+      DrizzlePracticeSessionRepository,
+    );
+    expect(container.createQuestionRepository()).toBeInstanceOf(
+      DrizzleQuestionRepository,
+    );
+    expect(container.createTagRepository()).toBeInstanceOf(
+      DrizzleTagRepository,
+    );
+    expect(container.createSubscriptionRepository()).toBeInstanceOf(
+      DrizzleSubscriptionRepository,
+    );
+    expect(container.createStripeCustomerRepository()).toBeInstanceOf(
+      DrizzleStripeCustomerRepository,
+    );
+    expect(container.createStripeEventRepository()).toBeInstanceOf(
+      DrizzleStripeEventRepository,
+    );
+    expect(container.createUserRepository()).toBeInstanceOf(
+      DrizzleUserRepository,
+    );
+
+    expect(container.createAuthGateway()).toBeInstanceOf(ClerkAuthGateway);
+    expect(container.createPaymentGateway()).toBeInstanceOf(
+      StripePaymentGateway,
+    );
+
+    expect(container.createCheckEntitlementUseCase()).toBeInstanceOf(
+      CheckEntitlementUseCase,
+    );
+    expect(container.createGetNextQuestionUseCase()).toBeInstanceOf(
+      GetNextQuestionUseCase,
+    );
+    expect(container.createSubmitAnswerUseCase()).toBeInstanceOf(
+      SubmitAnswerUseCase,
+    );
+
+    const deps = container.createStripeWebhookDeps();
+    expect(deps.paymentGateway).toBeInstanceOf(StripePaymentGateway);
+    expect(typeof deps.transaction).toBe('function');
+  }, 40000);
+
+  it('shares Stripe price IDs between subscription repository and payment gateway', async () => {
+    const createContainer = await createContainerPromise;
+    const container = createContainer({
+      primitives: {
+        db: {} as unknown as DrizzleDb,
+        env: {
+          NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY: 'price_m',
+          NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL: 'price_a',
+          STRIPE_WEBHOOK_SECRET: 'whsec',
+        } as unknown as typeof import('./env').env,
+        logger: {
+          error: () => undefined,
+        } as unknown as typeof import('./logger').logger,
+        stripe: {} as unknown as typeof import('./stripe').stripe,
+        now: () => new Date('2026-02-01T00:00:00Z'),
+      },
+    });
+
+    const paymentGateway = container.createPaymentGateway();
+    const subscriptionRepository = container.createSubscriptionRepository();
+
+    expect(
+      (paymentGateway as unknown as { deps: { priceIds: unknown } }).deps
+        .priceIds,
+    ).toBe(
+      (subscriptionRepository as unknown as { priceIds: unknown }).priceIds,
+    );
+  }, 40000);
+
+  it('uses repository factories inside createStripeWebhookDeps transactions', async () => {
+    const createContainer = await createContainerPromise;
+    const tx = { tx: true } as const;
+    const transaction = vi.fn(
+      async <T>(fn: (db: unknown) => Promise<T>): Promise<T> => fn(tx),
+    );
+
+    const createStripeEventRepository = vi.fn(() => ({
+      claim: async () => true,
+      lock: async () => ({ processedAt: null, error: null }),
+      markProcessed: async () => undefined,
+      markFailed: async () => undefined,
+    }));
+    const createSubscriptionRepository = vi.fn(() => ({
+      findByUserId: async () => null,
+      findByStripeSubscriptionId: async () => null,
+      upsert: async () => undefined,
+    }));
+    const createStripeCustomerRepository = vi.fn(() => ({
+      findByUserId: async () => null,
+      insert: async () => undefined,
+    }));
+
+    const paymentGateway = {
+      createCheckoutSession: async () => ({ url: 'https://stripe/checkout' }),
+      createPortalSession: async () => ({ url: 'https://stripe/portal' }),
+      processWebhookEvent: async () => ({ eventId: 'evt_1', type: 'test' }),
     };
 
-    currentUserMock.mockResolvedValue({
-      id: 'clerk_1',
-      emailAddresses: [{ emailAddress: 'a@example.com' }],
-    });
-    db._mocks.queryFindFirst.mockResolvedValue(null);
-    db._mocks.insertReturning.mockResolvedValue([inserted]);
-
-    dbMock = db as unknown;
-
-    const { createContainer } = await import('./container');
-    const container = createContainer();
-
-    await expect(container.authGateway.requireUser()).resolves.toEqual({
-      id: 'db_user_1',
-      email: 'a@example.com',
-      createdAt: inserted.createdAt,
-      updatedAt: inserted.updatedAt,
-    });
-
-    await expect(
-      container.paymentGateway.createCheckoutSession({
-        userId: 'user_1',
-        stripeCustomerId: 'cus_123',
-        plan: 'monthly',
-        successUrl: 'https://app/success',
-        cancelUrl: 'https://app/cancel',
-      }),
-    ).resolves.toEqual({ url: 'https://stripe/checkout' });
-
-    expect(stripeCheckoutCreateMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        line_items: [{ price: 'price_m', quantity: 1 }],
-      }),
-    );
-
-    await expect(
-      container.paymentGateway.processWebhookEvent('raw', 'sig'),
-    ).resolves.toEqual({
-      eventId: 'evt_1',
-      type: 'checkout.session.completed',
+    const container = createContainer({
+      primitives: {
+        db: { transaction } as unknown as DrizzleDb,
+        env: {
+          NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY: 'price_m',
+          NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL: 'price_a',
+          STRIPE_WEBHOOK_SECRET: 'whsec',
+        } as unknown as typeof import('./env').env,
+        logger: {
+          error: () => undefined,
+        } as unknown as typeof import('./logger').logger,
+        stripe: {} as unknown as typeof import('./stripe').stripe,
+        now: () => new Date('2026-02-01T00:00:00Z'),
+      },
+      repositories: {
+        createStripeEventRepository,
+        createSubscriptionRepository,
+        createStripeCustomerRepository,
+      },
+      gateways: {
+        createPaymentGateway: () => paymentGateway,
+      },
     });
 
-    expect(stripeConstructEventMock).toHaveBeenCalledWith(
-      'raw',
-      'sig',
-      'whsec_1',
-    );
-  });
+    const deps: StripeWebhookDeps = container.createStripeWebhookDeps();
+
+    await deps.transaction(async (repoDeps) => {
+      expect(repoDeps.stripeEvents).toBe(
+        createStripeEventRepository.mock.results[0]?.value,
+      );
+      expect(repoDeps.subscriptions).toBe(
+        createSubscriptionRepository.mock.results[0]?.value,
+      );
+      expect(repoDeps.stripeCustomers).toBe(
+        createStripeCustomerRepository.mock.results[0]?.value,
+      );
+    });
+
+    expect(transaction).toHaveBeenCalledTimes(1);
+    expect(createStripeEventRepository).toHaveBeenCalledWith(tx);
+    expect(createSubscriptionRepository).toHaveBeenCalledWith(tx);
+    expect(createStripeCustomerRepository).toHaveBeenCalledWith(tx);
+  }, 40000);
 });

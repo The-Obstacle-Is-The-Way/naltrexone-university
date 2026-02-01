@@ -1,17 +1,14 @@
 import { eq, sql } from 'drizzle-orm';
-import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
-import type * as schema from '@/db/schema';
 import { stripeCustomers } from '@/db/schema';
 import { ApplicationError } from '@/src/application/errors';
 import type { StripeCustomerRepository } from '@/src/application/ports/repositories';
+import type { DrizzleDb } from '../shared/database-types';
 import { isPostgresUniqueViolation } from './postgres-errors';
-
-type Db = PostgresJsDatabase<typeof schema>;
 
 export class DrizzleStripeCustomerRepository
   implements StripeCustomerRepository
 {
-  constructor(private readonly db: Db) {}
+  constructor(private readonly db: DrizzleDb) {}
 
   async findByUserId(
     userId: string,

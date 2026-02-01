@@ -1,93 +1,52 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { ApplicationError } from '@/src/application/errors';
+import type { UserRepository } from '@/src/application/ports/repositories';
 import { ClerkAuthGateway } from './clerk-auth-gateway';
 
-function createDbMock() {
-  const queryFindFirst = vi.fn();
-
-  const updateReturning = vi.fn();
-  const updateWhere = vi.fn(() => ({ returning: updateReturning }));
-  const updateSet = vi.fn(() => ({ where: updateWhere }));
-  const update = vi.fn(() => ({ set: updateSet }));
-
-  const insertReturning = vi.fn();
-  const insertOnConflictDoNothing = vi.fn(() => ({
-    returning: insertReturning,
-  }));
-  const insertValues = vi.fn(() => ({
-    onConflictDoNothing: insertOnConflictDoNothing,
-  }));
-  const insert = vi.fn(() => ({ values: insertValues }));
+function createFakeUserRepository(): UserRepository & {
+  _calls: { upsertByClerkId: Array<{ clerkId: string; email: string }> };
+} {
+  const calls: { upsertByClerkId: Array<{ clerkId: string; email: string }> } =
+    { upsertByClerkId: [] };
+  const baseUser = {
+    id: 'user_1',
+    createdAt: new Date('2026-02-01T00:00:00Z'),
+    updatedAt: new Date('2026-02-01T00:00:00Z'),
+  };
 
   return {
-    query: {
-      users: {
-        findFirst: queryFindFirst,
-      },
+    _calls: calls,
+    findByClerkId: async () => null,
+    upsertByClerkId: async (clerkId: string, email: string) => {
+      calls.upsertByClerkId.push({ clerkId, email });
+      return {
+        id: baseUser.id,
+        email,
+        createdAt: baseUser.createdAt,
+        updatedAt: baseUser.updatedAt,
+      };
     },
-    update,
-    insert,
-    _mocks: {
-      queryFindFirst,
-      updateReturning,
-      updateWhere,
-      updateSet,
-      insertReturning,
-      insertOnConflictDoNothing,
-      insertValues,
-    },
-  } as const;
+  };
 }
 
 describe('ClerkAuthGateway', () => {
   it('returns null from getCurrentUser when unauthenticated', async () => {
-    const db = {
-      query: {
-        users: {
-          findFirst: vi.fn(() => {
-            throw new Error('unexpected db query');
-          }),
-        },
-      },
-      update: () => {
-        throw new Error('unexpected db update');
-      },
-      insert: () => {
-        throw new Error('unexpected db insert');
-      },
-    } as const;
+    const userRepository = createFakeUserRepository();
 
     const gateway = new ClerkAuthGateway({
-      db: db as unknown as ConstructorParameters<
-        typeof ClerkAuthGateway
-      >[0]['db'],
+      userRepository,
       getClerkUser: async () => null,
     });
 
     await expect(gateway.getCurrentUser()).resolves.toBeNull();
+    expect(userRepository._calls.upsertByClerkId).toHaveLength(0);
   });
 
   it('throws UNAUTHENTICATED from requireUser when unauthenticated', async () => {
-    const db = {
-      query: {
-        users: {
-          findFirst: vi.fn(() => {
-            throw new Error('unexpected db query');
-          }),
-        },
-      },
-      update: () => {
-        throw new Error('unexpected db update');
-      },
-      insert: () => {
-        throw new Error('unexpected db insert');
-      },
-    } as const;
+    const userRepository = createFakeUserRepository();
 
     const gateway = new ClerkAuthGateway({
-      db: db as unknown as ConstructorParameters<
-        typeof ClerkAuthGateway
-      >[0]['db'],
+      userRepository,
       getClerkUser: async () => null,
     });
 
@@ -100,26 +59,10 @@ describe('ClerkAuthGateway', () => {
   });
 
   it('throws INTERNAL_ERROR when the Clerk user has no email addresses', async () => {
-    const db = {
-      query: {
-        users: {
-          findFirst: vi.fn(() => {
-            throw new Error('unexpected db query');
-          }),
-        },
-      },
-      update: () => {
-        throw new Error('unexpected db update');
-      },
-      insert: () => {
-        throw new Error('unexpected db insert');
-      },
-    } as const;
+    const userRepository = createFakeUserRepository();
 
     const gateway = new ClerkAuthGateway({
-      db: db as unknown as ConstructorParameters<
-        typeof ClerkAuthGateway
-      >[0]['db'],
+      userRepository,
       getClerkUser: async () => ({
         id: 'clerk_1',
         emailAddresses: [],
@@ -129,26 +72,14 @@ describe('ClerkAuthGateway', () => {
     await expect(gateway.requireUser()).rejects.toMatchObject({
       code: 'INTERNAL_ERROR',
     });
+    expect(userRepository._calls.upsertByClerkId).toHaveLength(0);
   });
 
   it('uses the primary email address when available', async () => {
-    const db = createDbMock();
-
-    const inserted = {
-      id: 'db_user_1',
-      clerkUserId: 'clerk_1',
-      email: 'primary@example.com',
-      createdAt: new Date('2026-02-01T00:00:00Z'),
-      updatedAt: new Date('2026-02-01T00:00:00Z'),
-    };
-
-    db._mocks.queryFindFirst.mockResolvedValue(null);
-    db._mocks.insertReturning.mockResolvedValue([inserted]);
+    const userRepository = createFakeUserRepository();
 
     const gateway = new ClerkAuthGateway({
-      db: db as unknown as ConstructorParameters<
-        typeof ClerkAuthGateway
-      >[0]['db'],
+      userRepository,
       getClerkUser: async () => ({
         id: 'clerk_1',
         primaryEmailAddressId: 'email_2',
@@ -159,155 +90,73 @@ describe('ClerkAuthGateway', () => {
       }),
     });
 
-    await expect(gateway.requireUser()).resolves.toEqual({
-      id: 'db_user_1',
-      email: 'primary@example.com',
-      createdAt: inserted.createdAt,
-      updatedAt: inserted.updatedAt,
-    });
+    const user = await gateway.requireUser();
 
-    expect(db._mocks.insertValues).toHaveBeenCalledWith({
-      clerkUserId: 'clerk_1',
-      email: 'primary@example.com',
-    });
+    expect(user.email).toBe('primary@example.com');
+    expect(userRepository._calls.upsertByClerkId).toEqual([
+      { clerkId: 'clerk_1', email: 'primary@example.com' },
+    ]);
   });
 
-  it('returns existing user when email matches', async () => {
-    const db = createDbMock();
-    const existing = {
-      id: 'db_user_1',
-      clerkUserId: 'clerk_1',
-      email: 'a@example.com',
-      createdAt: new Date('2026-02-01T00:00:00Z'),
-      updatedAt: new Date('2026-02-01T00:00:00Z'),
-    };
-
-    db._mocks.queryFindFirst.mockResolvedValue(existing);
+  it('uses first email when no primary is set', async () => {
+    const userRepository = createFakeUserRepository();
 
     const gateway = new ClerkAuthGateway({
-      db: db as unknown as ConstructorParameters<
-        typeof ClerkAuthGateway
-      >[0]['db'],
+      userRepository,
       getClerkUser: async () => ({
         id: 'clerk_1',
-        emailAddresses: [{ emailAddress: 'a@example.com' }],
+        primaryEmailAddressId: null,
+        emailAddresses: [
+          { id: 'email_1', emailAddress: 'first@example.com' },
+          { id: 'email_2', emailAddress: 'second@example.com' },
+        ],
       }),
     });
 
-    await expect(gateway.getCurrentUser()).resolves.toEqual({
-      id: existing.id,
-      email: existing.email,
-      createdAt: existing.createdAt,
-      updatedAt: existing.updatedAt,
-    });
+    const user = await gateway.requireUser();
 
-    expect(db.update).not.toHaveBeenCalled();
-    expect(db.insert).not.toHaveBeenCalled();
+    expect(user.email).toBe('first@example.com');
+    expect(userRepository._calls.upsertByClerkId).toEqual([
+      { clerkId: 'clerk_1', email: 'first@example.com' },
+    ]);
   });
 
-  it('updates the email when the user exists but the Clerk email changed', async () => {
-    const db = createDbMock();
-    const existing = {
-      id: 'db_user_1',
-      clerkUserId: 'clerk_1',
-      email: 'old@example.com',
-      createdAt: new Date('2026-02-01T00:00:00Z'),
-      updatedAt: new Date('2026-02-01T00:00:00Z'),
-    };
-    const updated = {
-      ...existing,
-      email: 'new@example.com',
-      updatedAt: new Date('2026-02-01T01:00:00Z'),
-    };
-
-    db._mocks.queryFindFirst.mockResolvedValue(existing);
-    db._mocks.updateReturning.mockResolvedValue([updated]);
+  it('returns the user from the repository', async () => {
+    const userRepository = createFakeUserRepository();
 
     const gateway = new ClerkAuthGateway({
-      db: db as unknown as ConstructorParameters<
-        typeof ClerkAuthGateway
-      >[0]['db'],
+      userRepository,
       getClerkUser: async () => ({
         id: 'clerk_1',
-        emailAddresses: [{ emailAddress: 'new@example.com' }],
-      }),
-      now: () => new Date('2026-02-01T01:00:00Z'),
-    });
-
-    await expect(gateway.requireUser()).resolves.toEqual({
-      id: updated.id,
-      email: updated.email,
-      createdAt: updated.createdAt,
-      updatedAt: updated.updatedAt,
-    });
-
-    expect(db.update).toHaveBeenCalledTimes(1);
-    expect(db.insert).not.toHaveBeenCalled();
-  });
-
-  it('handles a concurrent insert by re-fetching the row (idempotent)', async () => {
-    const db = createDbMock();
-    const after = {
-      id: 'db_user_1',
-      clerkUserId: 'clerk_1',
-      email: 'a@example.com',
-      createdAt: new Date('2026-02-01T00:00:00Z'),
-      updatedAt: new Date('2026-02-01T00:00:00Z'),
-    };
-
-    db._mocks.queryFindFirst
-      .mockResolvedValueOnce(null)
-      .mockResolvedValueOnce(after);
-    db._mocks.insertReturning.mockResolvedValue([]);
-
-    const gateway = new ClerkAuthGateway({
-      db: db as unknown as ConstructorParameters<
-        typeof ClerkAuthGateway
-      >[0]['db'],
-      getClerkUser: async () => ({
-        id: 'clerk_1',
-        emailAddresses: [{ emailAddress: 'a@example.com' }],
+        emailAddresses: [{ emailAddress: 'user@example.com' }],
       }),
     });
 
-    await expect(gateway.requireUser()).resolves.toEqual({
-      id: after.id,
-      email: after.email,
-      createdAt: after.createdAt,
-      updatedAt: after.updatedAt,
-    });
-    expect(db._mocks.queryFindFirst).toHaveBeenCalledTimes(2);
-    expect(db.update).not.toHaveBeenCalled();
-  });
+    const user = await gateway.getCurrentUser();
 
-  it('maps Postgres unique violations to CONFLICT', async () => {
-    const db = createDbMock();
-    const existing = {
-      id: 'db_user_1',
-      clerkUserId: 'clerk_1',
-      email: 'old@example.com',
+    expect(user).toEqual({
+      id: 'user_1',
+      email: 'user@example.com',
       createdAt: new Date('2026-02-01T00:00:00Z'),
       updatedAt: new Date('2026-02-01T00:00:00Z'),
+    });
+  });
+
+  it('propagates repository errors', async () => {
+    const userRepository = createFakeUserRepository();
+    userRepository.upsertByClerkId = async () => {
+      throw new ApplicationError('CONFLICT', 'User conflict');
     };
 
-    db._mocks.queryFindFirst.mockResolvedValue(existing);
-    db._mocks.updateReturning.mockRejectedValue({ code: '23505' });
-
     const gateway = new ClerkAuthGateway({
-      db: db as unknown as ConstructorParameters<
-        typeof ClerkAuthGateway
-      >[0]['db'],
+      userRepository,
       getClerkUser: async () => ({
         id: 'clerk_1',
-        emailAddresses: [{ emailAddress: 'new@example.com' }],
+        emailAddresses: [{ emailAddress: 'user@example.com' }],
       }),
-      now: () => new Date('2026-02-01T01:00:00Z'),
     });
 
-    await expect(gateway.requireUser()).rejects.toBeInstanceOf(
-      ApplicationError,
-    );
-    await expect(gateway.requireUser()).rejects.toMatchObject({
+    await expect(gateway.getCurrentUser()).rejects.toMatchObject({
       code: 'CONFLICT',
     });
   });
