@@ -44,7 +44,7 @@ pnpm typecheck              # TypeScript type checking
 # Testing
 pnpm test                   # Unit tests (Vitest, watch mode)
 pnpm test --run             # Unit tests (single run, CI-style)
-pnpm test:integration       # Integration tests (requires DATABASE_URL)
+pnpm test:integration       # Integration tests (requires local DATABASE_URL; override with ALLOW_NON_LOCAL_DATABASE_URL=true)
 pnpm test:e2e               # E2E tests (Playwright)
 
 # Database
