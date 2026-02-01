@@ -17,9 +17,15 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 | ID | Title | Status | Priority | Date |
 |----|-------|--------|----------|------|
-| _None_ | — | — | — | — |
+| [DEBT-037](./debt-037-attempt-repo-unnecessary-null-checks.md) | Unnecessary Null Checks in Attempt Repository | Open | P3 | 2026-02-01 |
+| [DEBT-038](./debt-038-question-repo-type-assertion.md) | Misleading Type Assertion in Question Repository | Open | P3 | 2026-02-01 |
+| [DEBT-039](./debt-039-webhook-error-context-loss.md) | Error Context Loss in Stripe Webhook Failures | Open | P2 | 2026-02-01 |
+| [DEBT-040](./debt-040-missing-session-id-index.md) | Missing Standalone Index on Attempts by Session | Open | P2 | 2026-02-01 |
+| [DEBT-041](./debt-041-skip-clerk-production-safety.md) | SKIP_CLERK Production Safety Gap | Open | P2 | 2026-02-01 |
+| [DEBT-042](./debt-042-stripe-customer-concurrent-upsert.md) | Race Condition in Stripe Customer Concurrent Upsert | Open | P3 | 2026-02-01 |
+| [DEBT-043](./debt-043-unused-schema-wildcard-import.md) | Unused Schema Wildcard Import | Open | P4 | 2026-02-01 |
 
-**Next Debt ID:** DEBT-037
+**Next Debt ID:** DEBT-044
 
 ## Archived Debt
 
