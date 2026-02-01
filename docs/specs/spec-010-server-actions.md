@@ -4,7 +4,7 @@
 > Write tests FIRST. Red → Green → Refactor. No implementation without a failing test.
 > Principles: SOLID, DRY, Clean Code, Gang of Four patterns where appropriate.
 
-**Status:** Ready
+**Status:** Partial
 **Layer:** Adapters
 **Dependencies:** SPEC-004 (Ports), SPEC-005 (Use Cases)
 **Implements:** ADR-001 (Clean Architecture), ADR-006 (Errors), ADR-011 (API Principles), ADR-012 (Directory Structure)
