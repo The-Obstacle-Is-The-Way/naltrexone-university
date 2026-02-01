@@ -2143,7 +2143,7 @@ it('records attempt when answer submitted', async () => {
 
 ### 8.4 CI Pipeline (GitHub Actions)
 
-> Next.js 16 removed `next lint`. Use **Biome** for linting and formatting (`biome check .`). Biome is 10-100x faster than ESLint+Prettier and combines both tools into one. ([Biome][9])
+> Next.js 16 removed `next lint`. Use **Biome** for linting and formatting. Locally we run `pnpm lint` (`biome check .`); in CI we run `pnpm lint:ci` (`biome ci .`). Biome is 10-100x faster than ESLint+Prettier and combines both tools into one. ([Biome][9])
 
 **Workflow file:** `.github/workflows/ci.yml`
 
@@ -2189,6 +2189,10 @@ jobs:
       # App base URL used by redirects / Playwright baseURL
       NEXT_PUBLIC_APP_URL: http://127.0.0.1:3000
 
+      # Fork PRs do not have access to secrets; Clerk requires real keys even during prerender.
+      # When this is true, we skip ClerkProvider during build so non-secret jobs still run.
+      NEXT_PUBLIC_SKIP_CLERK: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository && 'true' || 'false' }}
+
       # Clerk (dev instance keys for CI E2E)
       # Fall back to dummy values so fork PRs can still run non-E2E jobs.
       CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY || 'sk_test_dummy' }}
@@ -2215,12 +2219,13 @@ jobs:
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
+          version: 10.9.0
           run_install: false
 
       - name: Setup Node
         uses: actions/setup-node@v6
         with:
-          node-version: 20
+          node-version: 22
           cache: pnpm
 
       - name: Install deps
@@ -2230,7 +2235,7 @@ jobs:
         run: pnpm typecheck
 
       - name: Lint and Format Check (Biome)
-        run: pnpm exec biome ci .
+        run: pnpm lint:ci
 
       - name: Migrate DB
         run: pnpm db:migrate
@@ -2321,7 +2326,7 @@ jobs:
 >
 > Notes:
 >
-> - **CI** may use dummy values for third-party keys when only running lint/typecheck/unit/integration tests.
+> - **CI** may use dummy values for third-party keys on fork PRs (no secrets). In that mode, set `NEXT_PUBLIC_SKIP_CLERK=true` so `next build` can prerender without real Clerk keys.
 > - **E2E test credentials** are required only when running Playwright E2E (CI or local). Never set them in production.
 
 | Variable                            | Description                                                                                                                 | Required in Dev | Required in CI | Required in Preview | Required in Prod |
@@ -2333,6 +2338,7 @@ jobs:
 | NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY  | Stripe publishable key (client)                                                                                             |               ✅ |            ✅ |                   ✅ |                ✅ |
 | STRIPE_WEBHOOK_SECRET               | Stripe webhook signing secret                                                                                               |               ✅ |            ✅ |                   ✅ |                ✅ |
 | NEXT_PUBLIC_APP_URL                 | Canonical base URL (e.g., [http://localhost:3000](http://localhost:3000), [https://yourdomain.com](https://yourdomain.com)) |               ✅ |            ✅ |                   ✅ |                ✅ |
+| NEXT_PUBLIC_SKIP_CLERK              | Set to `true` to skip `ClerkProvider` during prerender/build (CI fork PRs without real keys)                                 |               — |            — |                   — |                — |
 | NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY | Stripe Price ID for $29/mo                                                                                                  |               ✅ |            ✅ |                   ✅ |                ✅ |
 | NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL  | Stripe Price ID for $199/yr                                                                                                 |               ✅ |            ✅ |                   ✅ |                ✅ |
 | E2E_CLERK_USER_USERNAME             | Clerk test user username for Playwright                                                                                     |               — |            ✅ |                   — |                — |
