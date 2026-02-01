@@ -2,10 +2,10 @@ import { eq } from 'drizzle-orm';
 import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import type * as schema from '@/db/schema';
 import { users } from '@/db/schema';
+import { isPostgresUniqueViolation } from '@/src/adapters/repositories/postgres-errors';
 import { ApplicationError } from '@/src/application/errors';
 import type { AuthGateway } from '@/src/application/ports/gateways';
 import type { User } from '@/src/domain/entities';
-import { getPostgresErrorCode } from '../repositories/postgres-errors';
 
 type Db = PostgresJsDatabase<typeof schema>;
 
@@ -48,7 +48,7 @@ export class ClerkAuthGateway implements AuthGateway {
   private mapDbError(error: unknown): ApplicationError {
     if (error instanceof ApplicationError) return error;
 
-    if (getPostgresErrorCode(error) === '23505') {
+    if (isPostgresUniqueViolation(error)) {
       return new ApplicationError(
         'CONFLICT',
         'User could not be upserted due to a uniqueness constraint',

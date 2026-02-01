@@ -22,7 +22,13 @@ describe('postgres-errors', () => {
 
   it('returns null when error shape is not a postgres error', () => {
     expect(getPostgresErrorCode(null)).toBeNull();
+    expect(getPostgresErrorCode(undefined)).toBeNull();
+    expect(getPostgresErrorCode('string')).toBeNull();
     expect(getPostgresErrorCode({ code: 123 })).toBeNull();
     expect(getPostgresErrorCode({ cause: { code: 123 } })).toBeNull();
+  });
+
+  it('returns false for other Postgres error codes', () => {
+    expect(isPostgresUniqueViolation({ code: '23503' })).toBe(false);
   });
 });
