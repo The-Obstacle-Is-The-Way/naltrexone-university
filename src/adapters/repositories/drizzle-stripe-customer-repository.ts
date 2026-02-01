@@ -44,11 +44,10 @@ export class DrizzleStripeCustomerRepository
       );
     }
 
-    const existingByStripeCustomerId = await this.db.query.stripeCustomers.findFirst(
-      {
+    const existingByStripeCustomerId =
+      await this.db.query.stripeCustomers.findFirst({
         where: eq(stripeCustomers.stripeCustomerId, stripeCustomerId),
-      },
-    );
+      });
 
     if (existingByStripeCustomerId) {
       throw new ApplicationError(

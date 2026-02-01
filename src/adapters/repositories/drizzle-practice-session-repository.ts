@@ -112,7 +112,10 @@ export class DrizzlePracticeSessionRepository
         throw new ApplicationError('NOT_FOUND', 'Practice session not found');
       }
       if (current.endedAt) {
-        throw new ApplicationError('CONFLICT', 'Practice session already ended');
+        throw new ApplicationError(
+          'CONFLICT',
+          'Practice session already ended',
+        );
       }
       throw new ApplicationError(
         'INTERNAL_ERROR',

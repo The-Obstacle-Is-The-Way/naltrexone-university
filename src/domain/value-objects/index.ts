@@ -6,8 +6,8 @@ export {
 export {
   AllPracticeModes,
   isValidPracticeMode,
-  shouldShowExplanationForMode,
   type PracticeMode,
+  shouldShowExplanationForMode,
 } from './practice-mode';
 
 export {
