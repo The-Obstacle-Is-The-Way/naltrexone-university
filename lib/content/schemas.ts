@@ -28,7 +28,7 @@ export const QuestionFrontmatterSchema = z
     difficulty: z.enum(['easy', 'medium', 'hard']),
     status: z.enum(['draft', 'published', 'archived']),
     tags: z.array(TagFrontmatterSchema).max(50),
-    choices: z.array(ChoiceFrontmatterSchema).min(2).max(6),
+    choices: z.array(ChoiceFrontmatterSchema).min(2).max(5),
   })
   .strict()
   .superRefine((val, ctx) => {

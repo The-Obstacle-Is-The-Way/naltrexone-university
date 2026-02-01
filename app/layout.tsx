@@ -1,5 +1,5 @@
 import './globals.css';
-import type { Metadata, Viewport } from 'next';
+import type { Metadata } from 'next';
 import { Manrope } from 'next/font/google';
 import { Providers } from '@/components/providers';
 
@@ -7,10 +7,6 @@ export const metadata: Metadata = {
   title: 'Addiction Boards Question Bank',
   description:
     'Board-relevant questions with detailed explanations for Addiction Psychiatry and Addiction Medicine exam prep.',
-};
-
-export const viewport: Viewport = {
-  maximumScale: 1,
 };
 
 const manrope = Manrope({ subsets: ['latin'] });

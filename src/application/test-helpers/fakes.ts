@@ -5,6 +5,7 @@ import type {
   Subscription,
 } from '@/src/domain/entities';
 import type { QuestionDifficulty } from '@/src/domain/value-objects';
+import { ApplicationError } from '../errors';
 import type {
   AttemptMostRecentAnsweredAt,
   AttemptRepository,
@@ -207,7 +208,11 @@ export class FakePracticeSessionRepository
   async end(id: string, userId: string): Promise<PracticeSession> {
     const existing = await this.findByIdAndUserId(id, userId);
     if (!existing) {
-      throw new Error('NOT_FOUND');
+      throw new ApplicationError('NOT_FOUND', 'Practice session not found');
+    }
+
+    if (existing.endedAt) {
+      throw new ApplicationError('CONFLICT', 'Practice session already ended');
     }
 
     const ended: PracticeSession = { ...existing, endedAt: new Date() };

@@ -1242,7 +1242,7 @@ Fields:
 
 Rules:
 
-* `choices` must contain **2–6** entries
+* `choices` must contain **2–5** entries
 * exactly **1** choice must have `correct: true`
 * labels must be unique and match `^[A-E]$`
 
@@ -1310,7 +1310,7 @@ export const QuestionFrontmatterSchema = z.object({
   difficulty: z.enum(['easy', 'medium', 'hard']),
   status: z.enum(['draft', 'published', 'archived']),
   tags: z.array(TagFrontmatterSchema).max(50),
-  choices: z.array(ChoiceFrontmatterSchema).min(2).max(6),
+  choices: z.array(ChoiceFrontmatterSchema).min(2).max(5),
 }).strict().superRefine((val, ctx) => {
   const correctCount = val.choices.filter((c) => c.correct).length;
   if (correctCount !== 1) {

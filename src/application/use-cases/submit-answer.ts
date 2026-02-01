@@ -43,30 +43,27 @@ export class SubmitAnswerUseCase {
 
     const grade = gradeAnswer(question, input.choiceId);
 
+    const session = input.sessionId
+      ? await this.sessions.findByIdAndUserId(input.sessionId, input.userId)
+      : null;
+
+    if (input.sessionId && !session) {
+      throw new ApplicationError('NOT_FOUND', 'Practice session not found');
+    }
+
     const attempt = await this.attempts.insert({
       userId: input.userId,
       questionId: question.id,
-      practiceSessionId: input.sessionId ?? null,
+      practiceSessionId: session ? session.id : null,
       selectedChoiceId: input.choiceId,
       isCorrect: grade.isCorrect,
       timeSpentSeconds: 0,
     });
 
-    let explanationMd: string | null = question.explanationMd;
-
-    if (input.sessionId) {
-      const session = await this.sessions.findByIdAndUserId(
-        input.sessionId,
-        input.userId,
-      );
-      if (!session) {
-        throw new ApplicationError('NOT_FOUND', 'Practice session not found');
-      }
-
-      explanationMd = sessionShouldShowExplanation(session)
-        ? question.explanationMd
-        : null;
-    }
+    const explanationMd =
+      session && !sessionShouldShowExplanation(session)
+        ? null
+        : question.explanationMd;
 
     return {
       attemptId: attempt.id,

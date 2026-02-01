@@ -61,7 +61,7 @@ export type Question = {
 ```
 
 **Invariants:**
-- Must have 2-6 choices
+- Must have 2-5 choices
 - Exactly one choice must be correct
 - Choice labels must be unique within the question
 - Slug must be kebab-case and unique system-wide

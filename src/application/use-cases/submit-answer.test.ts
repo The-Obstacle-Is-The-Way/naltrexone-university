@@ -138,9 +138,10 @@ describe('SubmitAnswerUseCase', () => {
       ],
     });
 
+    const attempts = new FakeAttemptRepository();
     const useCase = new SubmitAnswerUseCase(
       new FakeQuestionRepository([question]),
-      new FakeAttemptRepository(),
+      attempts,
       new FakePracticeSessionRepository(),
     );
 
@@ -154,5 +155,7 @@ describe('SubmitAnswerUseCase', () => {
     ).rejects.toEqual(
       new ApplicationError('NOT_FOUND', 'Practice session not found'),
     );
+
+    expect(attempts.getAll()).toHaveLength(0);
   });
 });
