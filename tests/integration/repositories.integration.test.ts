@@ -355,7 +355,7 @@ describe('DrizzlePracticeSessionRepository + DrizzleAttemptRepository', () => {
       db
         .delete(schema.choices)
         .where(eq(schema.choices.id, question.correctChoiceId)),
-    ).rejects.toMatchObject({ code: '23503' });
+    ).rejects.toMatchObject({ cause: { code: '23503' } });
   });
 
   it('ends practice sessions once', async () => {
