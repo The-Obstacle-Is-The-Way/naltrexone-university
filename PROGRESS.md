@@ -1,6 +1,6 @@
 # Naltrexone University - Progress Tracker
 
-**Last Updated:** 2026-01-31
+**Last Updated:** 2026-02-01
 **Current Slice:** SLICE-1 (Paywall)
 **Purpose:** State file for Ralph Wiggum loop (see `docs/_ralphwiggum/protocol.md`)
 
@@ -21,6 +21,8 @@
 - [x] **SLICE-0-09**: Add /api/health endpoint
 - [x] **SLICE-0-10**: Configure Vitest and Playwright
 - [x] **SLICE-0-11**: Set up CI pipeline (GitHub Actions)
+- [x] **SLICE-0-12**: Add git hooks (Husky + lint-staged) for Biome + tests
+- [x] **SLICE-0-13**: Remove trivial entity tests; add error tests; align SSOT docs
 
 **Completion:** Manual baseline refactor completed 2026-01-31. All quality gates pass.
 
@@ -51,6 +53,7 @@ _Tasks will be added when SLICE-1 is complete_
 
 - 2026-01-31: **[SLICE-0 COMPLETE]** Manual baseline refactor via interactive Claude session. 16 atomic commits. Next.js 16.1.6, Clerk auth, Drizzle schema per spec, Biome linting, Vitest/Playwright configs, GitHub Actions CI.
 - 2026-01-31: **[START]** Initialized PROGRESS.md for Ralph Wiggum loop.
+- 2026-02-01: **[HARDENING]** Added Husky git hooks (pre-commit staged Biome via lint-staged; pre-push typecheck + unit tests). Removed trivial entity tests, added unit tests for DomainError/ApplicationError, and aligned specs/debt/bug docs with SSOT.
 
 ---
 
