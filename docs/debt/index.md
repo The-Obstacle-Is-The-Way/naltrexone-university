@@ -18,7 +18,6 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 | ID | Title | Status | Priority | Date |
 |----|-------|--------|----------|------|
 | [DEBT-034](./debt-034-test-coverage-gap-critical.md) | **Test Coverage Gap — BLOCK NEW FEATURES** | Open | **P0** | 2026-02-01 |
-| [DEBT-028](./debt-028-clerk-auth-gateway-srp-violation.md) | ClerkAuthGateway SRP Violation | Open | P2 | 2026-02-01 |
 | [DEBT-032](./debt-032-incomplete-composition-root.md) | Incomplete Composition Root | Open | P3 | 2026-02-01 |
 | [DEBT-033](./debt-033-flat-repository-structure.md) | Flat Repository Structure | Open | P3 | 2026-02-01 |
 | [DEBT-035](./debt-035-inconsistent-repo-test-mocking.md) | Inconsistent Repo Test Mocking | Open | P2 | 2026-02-01 |
@@ -56,6 +55,7 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 | [DEBT-025](../_archive/debt/debt-025-untested-stripe-event-repository.md) | Untested Stripe Event Repository | P1 | 2026-02-01 |
 | [DEBT-026](../_archive/debt/debt-026-duplicated-db-type-definition.md) | Duplicated Db Type Definition | P2 | 2026-02-01 |
 | [DEBT-027](../_archive/debt/debt-027-repositories-hardcode-new-date.md) | Repositories Hardcode new Date() | P2 | 2026-02-01 |
+| [DEBT-028](../_archive/debt/debt-028-clerk-auth-gateway-srp-violation.md) | ClerkAuthGateway SRP Violation | P2 | 2026-02-01 |
 | [DEBT-029](../_archive/debt/debt-029-untested-stripe-prices-config.md) | Untested Stripe Prices Config | P2 | 2026-02-01 |
 | [DEBT-030](../_archive/debt/debt-030-untested-tag-repository.md) | Untested Tag Repository | P2 | 2026-02-01 |
 | [DEBT-031](../_archive/debt/debt-031-stripe-payment-gateway-unknown-args.md) | StripePaymentGateway unknown[] Args | P2 | 2026-02-01 |

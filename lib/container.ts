@@ -4,6 +4,7 @@ import {
   ClerkAuthGateway,
   StripePaymentGateway,
 } from '@/src/adapters/gateways';
+import { DrizzleUserRepository } from '@/src/adapters/repositories/drizzle-user-repository';
 import { db } from './db';
 import { env } from './env';
 import { logger } from './logger';
@@ -26,11 +27,13 @@ export function createContainerPrimitives() {
 
 export function createContainer() {
   const primitives = createContainerPrimitives();
+  const userRepository = new DrizzleUserRepository(primitives.db);
 
   return {
     ...primitives,
+    userRepository,
     authGateway: new ClerkAuthGateway({
-      db: primitives.db,
+      userRepository,
       getClerkUser: currentUser,
     }),
     paymentGateway: new StripePaymentGateway({
