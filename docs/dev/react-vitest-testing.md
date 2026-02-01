@@ -122,15 +122,20 @@ resolve: {
 
 This forces Vitest to load the **development** build of `react-dom`, which has a working `act()` export. **This is a hack, not a real fix.** It may break in future Vitest/React versions.
 
-### Option 2: vitest-browser-react (NOT a Fix)
+### Option 2: vitest-browser-react (Intended Successor — Use When Ready)
 
-You might hear that [vitest-browser-react](https://github.com/vitest-community/vitest-browser-react) is the successor to @testing-library/react. **It has the same bug.**
+[vitest-browser-react](https://github.com/vitest-community/vitest-browser-react) **IS the intended modern successor** to @testing-library/react. Kent C. Dodds (Testing Library creator) endorses it.
 
-- Components using React 19's `use()` hook never resolve suspense states
-- The library doesn't set `globalThis.IS_REACT_ACT_ENVIRONMENT`
-- Users report the README's own example code throws act() warnings
+**What works:** Simple interactive tests (click button, check result, fill form).
 
-Kent C. Dodds (Testing Library creator) is happy people are moving on, but the replacement isn't ready either.
+**What's broken:** Components using React 19's `use()` hook with suspense don't resolve properly. This is a known issue that may be fixed by the time you need interactive tests.
+
+**When to use it:**
+- You need to test button clicks, form inputs, state changes
+- Your components don't use React 19 `use()` hook with suspense
+- Or the bug has been fixed (check the GitHub issues)
+
+**Current status (2026-02):** Has act() issues with suspense. Monitor [vitest-browser-react issues](https://github.com/vitest-community/vitest-browser-react/issues) for fixes.
 
 ### Option 3: Wait (Recommended)
 

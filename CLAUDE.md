@@ -25,7 +25,7 @@ expect(html).toContain('Expected text');
 
 ### DO NOT USE for component tests:
 - `@testing-library/react` — broken, zombie maintenance
-- `vitest-browser-react` — same act() bug, not ready
+- `vitest-browser-react` — intended successor, but has act() bug with suspense (use when fixed)
 - `react-test-renderer` — deprecated in React 19
 
 ### Full details: `docs/dev/react-vitest-testing.md`
