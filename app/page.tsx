@@ -3,11 +3,11 @@ import { AuthNav } from '@/components/auth-nav';
 
 export default function HomePage() {
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="border-b border-gray-200 bg-white">
+    <div className="min-h-screen bg-muted">
+      <header className="border-b border-border bg-background">
         <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between">
-            <h1 className="text-xl font-semibold text-gray-900">
+            <h1 className="text-xl font-semibold text-foreground">
               Addiction Boards Question Bank
             </h1>
             <AuthNav />
@@ -16,10 +16,10 @@ export default function HomePage() {
       </header>
       <main className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
         <div className="text-center">
-          <h2 className="text-4xl font-bold tracking-tight text-gray-900">
+          <h2 className="text-4xl font-bold tracking-tight text-foreground">
             Board-Ready Question Bank
           </h2>
-          <p className="mx-auto mt-4 max-w-2xl text-lg text-gray-600">
+          <p className="mx-auto mt-4 max-w-2xl text-lg text-muted-foreground">
             High-quality multiple-choice questions with detailed explanations
             for Addiction Psychiatry and Addiction Medicine board exam prep.
           </p>

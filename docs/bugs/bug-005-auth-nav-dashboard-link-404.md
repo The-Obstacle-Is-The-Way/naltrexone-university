@@ -1,8 +1,9 @@
 # BUG-005: Signed-in Nav Links to Missing `/app/dashboard` Route (404)
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P2
 **Date:** 2026-02-01
+**Resolved:** 2026-02-01
 
 ## Summary
 
@@ -10,8 +11,8 @@ When a user is signed in, the nav renders a **Dashboard** link to `/app/dashboar
 
 ## Location
 
-- **File:** `components/auth-nav.tsx` line 55
-- **Link:** `href="/app/dashboard"`
+- **File:** `components/auth-nav.tsx`
+- **Link:** `href="/app/dashboard"` (removed)
 
 ## Impact
 
@@ -33,8 +34,13 @@ Choose one (and document it in SSOT if needed):
 1. **Implement the route now**: add a minimal `app/(app)/app/dashboard/page.tsx` page (even a placeholder) so the link is never broken.
 2. **Hide the link until the route exists**: replace the signed-in Dashboard link with an existing route (or remove it) until SLICE-5 is implemented.
 
+Resolved via option 2: the signed-in nav no longer renders a link to `/app/dashboard`.
+
 ## Acceptance Criteria
 
 - Signed-in users can navigate to `/app/dashboard` without a 404, or the UI no longer renders a link to a missing route.
 - Add/extend E2E coverage once `/app/dashboard` exists (see SPEC-015).
 
+## Regression Test
+
+- Unit: `components/auth-nav.test.tsx`
