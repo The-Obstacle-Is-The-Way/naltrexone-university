@@ -22,13 +22,25 @@ We need production-grade observability for a subscription SaaS while minimizing 
 
 ### Structured Logging
 
-We log structured JSON to stdout (Vercel-compatible). Controllers and route handlers emit logs with:
+We log structured JSON to stdout (Vercel-compatible). We standardize on **Pino** for performance and structured output.
+
+**Implementation location (framework layer):**
+
+- `lib/logger.ts` exports a configured Pino logger.
+- `lib/request-context.ts` provides request-scoped context (at minimum `requestId`), so logs can be correlated across a single request/action.
+
+Controllers and route handlers emit logs with:
 
 - `requestId`
 - `userId` (internal UUID only; never email)
 - `action` / `route`
 - `durationMs`
 - `errorCode` (when applicable)
+
+**Request ID rules:**
+
+- Generate `requestId` at the entry point (route handler or server action) using `crypto.randomUUID()`.
+- Include `requestId` on every log line emitted while handling that request/action (directly or via a child logger).
 
 ### Redaction Rules
 
@@ -70,4 +82,3 @@ Never log:
 - [ ] No secrets in logs (keys, tokens, signatures)
 - [ ] Domain layer has zero logging imports
 - [ ] Controllers include `requestId` + `userId` when available
-

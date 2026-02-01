@@ -103,7 +103,7 @@ No DI framework — wiring lives in `lib/container.ts` factories that are called
 
 ### ADR-008: Logging & Observability
 
-Structured JSON logging to stdout with request ID correlation. Security-aware: no PII in logs.
+Structured JSON logging via Pino with request ID correlation. Security-aware: no PII in logs.
 
 ```
 Controller → Logger (with requestId, userId) → Vercel Log Drain
