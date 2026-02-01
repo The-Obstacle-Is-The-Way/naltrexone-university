@@ -15,7 +15,7 @@ Implement review workflows for subscribed users:
 - Bookmarks list + toggle
 - Reattempt from either list using the existing question loop
 
-This spec is intentionally **DRY**: the **exact** behavior and file list live in `docs/specs/master_spec.md` (SLICE-4).
+**SSOT:** `docs/specs/master_spec.md` (SLICE-4).
 
 ---
 
@@ -28,11 +28,58 @@ This spec is intentionally **DRY**: the **exact** behavior and file list live in
 
 ---
 
+## Acceptance Criteria
+
+- Missed questions page shows questions whose most recent attempt is incorrect.
+- Bookmark toggle persists; bookmarks page lists bookmarked questions.
+- From missed/bookmarked list, I can reattempt a question (records a new attempt).
+
+---
+
+## Test Cases
+
+- `tests/integration/actions.questions.integration.test.ts`: missed query logic.
+- `tests/e2e/review.spec.ts` and `tests/e2e/bookmarks.spec.ts`.
+
+---
+
+## Implementation Checklist (Ordered)
+
+1. Implement `getMissedQuestions(limit, offset)`.
+2. Build `/app/review` with pagination.
+3. Build `/app/bookmarks`.
+4. Add reattempt flow: open question view from list and submit answer.
+
+---
+
+## Files to Create/Modify
+
+- `src/application/use-cases/get-missed-questions.ts`, `get-bookmarks.ts`
+- `src/adapters/repositories/drizzle-bookmark-repository.ts`
+- `src/adapters/controllers/review-controller.ts`, `bookmark-controller.ts`
+- `app/(app)/app/review/page.tsx`
+- `app/(app)/app/bookmarks/page.tsx`
+- `components/question/*`
+- `lib/container.ts` (add review/bookmark factories)
+
+---
+
 ## Non-Negotiable Requirements
 
 - **Missed definition:** a question is “missed” if the most recent attempt for that question by the user is incorrect.
 - **No client trust:** lists are computed server-side from persisted attempts/bookmarks.
 - **Pagination:** lists must support pagination (limit/offset for MVP).
+
+---
+
+## Demo (Manual)
+
+Once implemented:
+
+1. Ensure you have an entitled user (complete SLICE-1) with at least a few attempts (SLICE-2/3).
+2. Visit `/app/review` and verify missed list matches “most recent attempt incorrect”.
+3. Toggle a bookmark from the question view; verify it appears in `/app/bookmarks`.
+4. From either list, reattempt a question; verify a new attempt is recorded and list updates accordingly.
 
 ---
 
