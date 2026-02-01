@@ -14,7 +14,7 @@ export function isValidPracticeMode(value: string): value is PracticeMode {
  * - Tutor: always show immediately
  * - Exam: only show after session ends
  */
-export function shouldShowExplanation(
+export function shouldShowExplanationForMode(
   mode: PracticeMode,
   sessionEnded: boolean,
 ): boolean {

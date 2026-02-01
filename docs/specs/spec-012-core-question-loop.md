@@ -1,5 +1,9 @@
 # SPEC-012: Core Question Loop
 
+> **⚠️ TDD MANDATE:** This spec follows Test-Driven Development (Uncle Bob / Robert C. Martin).
+> Write tests FIRST. Red → Green → Refactor. No implementation without a failing test.
+> Principles: SOLID, DRY, Clean Code, Gang of Four patterns where appropriate.
+
 **Status:** Ready
 **Slice:** SLICE-2 (Core Question Loop)
 **Depends On:** SLICE-1 (Paywall)
