@@ -4,7 +4,7 @@
 > Write tests FIRST. Red → Green → Refactor. No implementation without a failing test.
 > Principles: SOLID, DRY, Clean Code, Gang of Four patterns where appropriate.
 
-**Status:** Ready
+**Status:** Implemented
 **Layer:** Application
 **Dependencies:** SPEC-001 (Entities), SPEC-002 (Value Objects)
 **Implements:** ADR-001 (Clean Architecture), ADR-004 (Auth Boundary), ADR-005 (Payment Boundary), ADR-007 (DI)
@@ -124,6 +124,7 @@ export type WebhookEventResult = {
     | (string & {});
   subscriptionUpdate?: {
     userId: string; // internal UUID
+    stripeCustomerId: string; // opaque external id
     stripeSubscriptionId: string; // opaque external id
     plan: SubscriptionPlan; // domain plan (monthly/annual)
     status: SubscriptionStatus;
@@ -156,7 +157,15 @@ export interface PaymentGateway {
 **File:** `src/application/ports/repositories.ts`
 
 ```ts
-import type { Attempt, Bookmark, PracticeSession, Question, Subscription, Tag } from '@/src/domain/entities';
+import type {
+  Attempt,
+  Bookmark,
+  PracticeSession,
+  Question,
+  Subscription,
+  Tag,
+  User,
+} from '@/src/domain/entities';
 import type { QuestionDifficulty, SubscriptionPlan, SubscriptionStatus } from '@/src/domain/value-objects';
 
 export interface QuestionRepository {
@@ -244,17 +253,35 @@ export interface StripeCustomerRepository {
 
 export interface StripeEventRepository {
   /**
-   * Return true if the event was already successfully processed.
+   * Insert the event row if missing (idempotent).
+   * Returns true if the row was inserted (claimed), false if it already existed.
    */
-  isProcessed(eventId: string): Promise<boolean>;
+  claim(eventId: string, type: string): Promise<boolean>;
 
   /**
-   * Insert the event row if missing (idempotent).
+   * Lock the event row for exclusive processing and return its current state.
+   *
+   * IMPORTANT: This must be called inside a transaction.
    */
-  ensure(eventId: string, type: string): Promise<void>;
+  lock(eventId: string): Promise<{
+    processedAt: Date | null;
+    error: string | null;
+  }>;
 
   markProcessed(eventId: string): Promise<void>;
   markFailed(eventId: string, error: string): Promise<void>;
+}
+
+export interface UserRepository {
+  /**
+   * Find a user by their external Clerk ID.
+   */
+  findByClerkId(clerkId: string): Promise<User | null>;
+
+  /**
+   * Upsert a user by their Clerk ID.
+   */
+  upsertByClerkId(clerkId: string, email: string): Promise<User>;
 }
 ```
 

@@ -17,9 +17,9 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 | ID | Title | Status | Priority | Date |
 |----|-------|--------|----------|------|
-| — | *No active bugs* | — | — | — |
+| [BUG-009](./bug-009-vercel-preview-deployment-rate-limit.md) | Vercel Preview Deployment Status Fails Due to Rate Limit | Open | P3 | 2026-02-01 |
 
-**Next Bug ID:** BUG-009
+**Next Bug ID:** BUG-010
 
 ## Archived Bugs
 
