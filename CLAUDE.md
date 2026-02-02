@@ -152,14 +152,18 @@ app/, lib/, db/    → Next.js framework code, infrastructure (outermost layer)
 
 ### Current State
 
-Implemented so far:
-- `src/domain/entities/**` + tests (SPEC-001)
-- `src/domain/value-objects/**` + tests (SPEC-002)
+Implemented so far (see `docs/specs/index.md`):
+- **Domain:** entities, value objects, services, errors (`src/domain/**`) (SPEC-001 → SPEC-003)
+- **Application:** ports, core use cases, app errors (`src/application/**`) (SPEC-004 → SPEC-005)
+- **Adapters:** schema, repositories, gateways, controllers (`db/schema.ts`, `src/adapters/**`) (SPEC-006 → SPEC-010)
+- **Feature slices:** paywall + core question loop (`app/**`, `components/**`) (SPEC-011 → SPEC-012)
 
-Planned (per `docs/specs/master_spec.md` + ADR-012):
-- `src/domain/services/**`, `src/domain/errors/**`
-- `src/application/**` (use cases, ports, app errors)
-- `src/adapters/**` (repositories, gateways, controllers)
+Planned next (per `docs/specs/master_spec.md` + ADR-012):
+- SPEC-013 Practice Sessions
+- SPEC-014 Review + Bookmarks
+- SPEC-015 Dashboard
+- SPEC-016 Observability (partial)
+- SPEC-017 Rate Limiting (proposed)
 
 Framework code lives in:
 - `app/` - Next.js App Router pages, layouts, API routes
@@ -179,7 +183,7 @@ Framework code lives in:
 
 4. **Composition root** - Dependencies wired at entry points (Server Actions, Route Handlers), not global singletons.
 
-See `docs/adr/` for all Architecture Decision Records (ADR-001 through ADR-012).
+See `docs/adr/` for all Architecture Decision Records (ADR-001 through ADR-013).
 
 ## Tech Stack
 
@@ -417,5 +421,5 @@ Multiple agents may work in parallel. One agent creates a file, another agent se
 
 - `docs/specs/master_spec.md` - Complete technical specification (SSOT)
 - `docs/specs/spec-001 to spec-010` - Clean Architecture layer specs
-- `docs/specs/spec-011 to spec-015` - Feature slice specs
-- `docs/adr/` - Architecture Decision Records (ADR-001 through ADR-012)
+- `docs/specs/spec-011 to spec-017` - Feature slice specs
+- `docs/adr/` - Architecture Decision Records (ADR-001 through ADR-013)

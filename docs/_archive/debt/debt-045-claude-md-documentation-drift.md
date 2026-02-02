@@ -1,8 +1,9 @@
 # DEBT-045: CLAUDE.md Documentation Drift
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P2
 **Date:** 2026-02-01
+**Resolved:** 2026-02-02
 
 ---
 
@@ -75,15 +76,17 @@ SPEC-016 (Observability) and SPEC-017 (Rate Limiting) exist but aren't mentioned
 
 ## Resolution
 
-1. Update ADR reference to "ADR-001 through ADR-013"
-2. Rewrite "Current State" section to reflect actual implementation status
-3. Update spec ranges in Documentation section
+Updated `CLAUDE.md` to match the current repo state:
+
+1. Updated ADR reference to "ADR-001 through ADR-013"
+2. Rewrote "Current State" to reflect SPEC-001 through SPEC-012 as implemented
+3. Updated spec ranges in Documentation section to include SPEC-016 and SPEC-017
 
 ## Verification
 
-- [ ] ADR count matches actual ADR files
-- [ ] "Current State" lists all implemented specs
-- [ ] Spec ranges cover SPEC-001 through SPEC-017
+- [x] ADR count matches actual ADR files
+- [x] "Current State" lists all implemented specs
+- [x] Spec ranges cover SPEC-001 through SPEC-017
 
 ## Related
 
