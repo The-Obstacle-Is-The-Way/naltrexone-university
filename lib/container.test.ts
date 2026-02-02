@@ -8,6 +8,7 @@ import {
 import {
   DrizzleAttemptRepository,
   DrizzleBookmarkRepository,
+  DrizzleIdempotencyKeyRepository,
   DrizzlePracticeSessionRepository,
   DrizzleQuestionRepository,
   DrizzleStripeCustomerRepository,
@@ -67,6 +68,7 @@ describe('container factories', () => {
 
     expect(typeof container.createAttemptRepository).toBe('function');
     expect(typeof container.createBookmarkRepository).toBe('function');
+    expect(typeof container.createIdempotencyKeyRepository).toBe('function');
     expect(typeof container.createPracticeSessionRepository).toBe('function');
     expect(typeof container.createQuestionRepository).toBe('function');
     expect(typeof container.createTagRepository).toBe('function');
@@ -119,6 +121,9 @@ describe('container factories', () => {
     expect(container.createBookmarkRepository()).toBeInstanceOf(
       DrizzleBookmarkRepository,
     );
+    expect(container.createIdempotencyKeyRepository()).toBeInstanceOf(
+      DrizzleIdempotencyKeyRepository,
+    );
     expect(container.createPracticeSessionRepository()).toBeInstanceOf(
       DrizzlePracticeSessionRepository,
     );
@@ -164,6 +169,9 @@ describe('container factories', () => {
     const questionDeps = container.createQuestionControllerDeps();
     expect(questionDeps.authGateway).toBeInstanceOf(ClerkAuthGateway);
     expect(typeof questionDeps.rateLimiter.limit).toBe('function');
+    expect(questionDeps.idempotencyKeyRepository).toBeInstanceOf(
+      DrizzleIdempotencyKeyRepository,
+    );
     expect(questionDeps.checkEntitlementUseCase).toBeInstanceOf(
       CheckEntitlementUseCase,
     );
@@ -192,6 +200,9 @@ describe('container factories', () => {
       DrizzleSubscriptionRepository,
     );
     expect(billingDeps.paymentGateway).toBeInstanceOf(StripePaymentGateway);
+    expect(billingDeps.idempotencyKeyRepository).toBeInstanceOf(
+      DrizzleIdempotencyKeyRepository,
+    );
     expect(typeof billingDeps.rateLimiter.limit).toBe('function');
     expect(typeof billingDeps.getClerkUserId).toBe('function');
     expect(billingDeps.appUrl).toBe('https://app.example.com');
@@ -212,6 +223,9 @@ describe('container factories', () => {
     const practiceDeps = container.createPracticeControllerDeps();
     expect(practiceDeps.authGateway).toBeInstanceOf(ClerkAuthGateway);
     expect(typeof practiceDeps.rateLimiter.limit).toBe('function');
+    expect(practiceDeps.idempotencyKeyRepository).toBeInstanceOf(
+      DrizzleIdempotencyKeyRepository,
+    );
     expect(practiceDeps.checkEntitlementUseCase).toBeInstanceOf(
       CheckEntitlementUseCase,
     );

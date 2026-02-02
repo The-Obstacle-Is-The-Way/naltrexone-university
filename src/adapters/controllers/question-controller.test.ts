@@ -6,6 +6,7 @@ import type {
 } from '@/src/application/ports/gateways';
 import {
   FakeAuthGateway,
+  FakeIdempotencyKeyRepository,
   FakeSubscriptionRepository,
 } from '@/src/application/test-helpers/fakes';
 import { CheckEntitlementUseCase } from '@/src/application/use-cases/check-entitlement';
@@ -91,6 +92,8 @@ function createDeps(overrides?: {
     () => now,
   );
 
+  const idempotencyKeyRepository = new FakeIdempotencyKeyRepository(() => now);
+
   const getNextQuestionUseCase = new FakeGetNextQuestionUseCase(
     overrides?.getNextQuestionOutput ?? null,
     overrides?.getNextQuestionThrows,
@@ -120,6 +123,7 @@ function createDeps(overrides?: {
   return {
     authGateway,
     rateLimiter,
+    idempotencyKeyRepository,
     checkEntitlementUseCase,
     getNextQuestionUseCase,
     submitAnswerUseCase,
@@ -342,6 +346,31 @@ describe('question-controller', () => {
         choiceId: input.choiceId,
         timeSpentSeconds: 15,
       });
+    });
+
+    it('returns the cached result when idempotencyKey is reused', async () => {
+      const deps = createDeps();
+
+      const input = {
+        questionId: '11111111-1111-1111-1111-111111111111',
+        choiceId: '22222222-2222-2222-2222-222222222222',
+        idempotencyKey: '33333333-3333-3333-3333-333333333333',
+      };
+
+      const first = await submitAnswer(input, deps as never);
+      const second = await submitAnswer(input, deps as never);
+
+      expect(first).toEqual({
+        ok: true,
+        data: {
+          attemptId: 'attempt_1',
+          isCorrect: true,
+          correctChoiceId: 'choice_1',
+          explanationMd: 'Because...',
+        },
+      });
+      expect(second).toEqual(first);
+      expect(deps.submitAnswerUseCase.inputs).toHaveLength(1);
     });
 
     it('rejects negative timeSpentSeconds', async () => {

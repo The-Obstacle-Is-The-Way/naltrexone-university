@@ -9,6 +9,7 @@ import {
   createCheckoutSession,
   createPortalSession,
 } from '@/src/adapters/controllers/billing-controller';
+import { DrizzleIdempotencyKeyRepository } from '@/src/adapters/repositories/drizzle-idempotency-key-repository';
 import { DrizzleStripeCustomerRepository } from '@/src/adapters/repositories/drizzle-stripe-customer-repository';
 import {
   FakeAuthGateway,
@@ -86,6 +87,10 @@ describe('billing controllers (integration)', () => {
     });
 
     const stripeCustomerRepository = new DrizzleStripeCustomerRepository(db);
+    const idempotencyKeyRepository = new DrizzleIdempotencyKeyRepository(
+      db,
+      () => new Date('2026-02-01T00:00:00.000Z'),
+    );
 
     const result = await createCheckoutSession(
       { plan: 'monthly' },
@@ -94,6 +99,7 @@ describe('billing controllers (integration)', () => {
         stripeCustomerRepository,
         subscriptionRepository: new FakeSubscriptionRepository(),
         paymentGateway,
+        idempotencyKeyRepository,
         rateLimiter: {
           limit: async () => ({
             success: true,
@@ -144,6 +150,10 @@ describe('billing controllers (integration)', () => {
     });
 
     const stripeCustomerRepository = new DrizzleStripeCustomerRepository(db);
+    const idempotencyKeyRepository = new DrizzleIdempotencyKeyRepository(
+      db,
+      () => new Date('2026-02-01T00:00:00.000Z'),
+    );
 
     await createCheckoutSession(
       { plan: 'annual' },
@@ -152,6 +162,7 @@ describe('billing controllers (integration)', () => {
         stripeCustomerRepository,
         subscriptionRepository: new FakeSubscriptionRepository(),
         paymentGateway,
+        idempotencyKeyRepository,
         rateLimiter: {
           limit: async () => ({
             success: true,
@@ -173,6 +184,7 @@ describe('billing controllers (integration)', () => {
         stripeCustomerRepository,
         subscriptionRepository: new FakeSubscriptionRepository(),
         paymentGateway,
+        idempotencyKeyRepository,
         rateLimiter: {
           limit: async () => ({
             success: true,

@@ -30,16 +30,19 @@ export async function loadNextQuestion(input: {
     input: unknown,
   ) => Promise<ActionResult<NextQuestion | null>>;
   filters: PracticeFilters;
+  createIdempotencyKey: () => string;
   nowMs: () => number;
   setLoadState: (state: LoadState) => void;
   setSelectedChoiceId: (choiceId: string | null) => void;
   setSubmitResult: (result: SubmitAnswerOutput | null) => void;
+  setSubmitIdempotencyKey: (key: string | null) => void;
   setQuestionLoadedAt: (loadedAtMs: number | null) => void;
   setQuestion: (question: NextQuestion | null) => void;
 }): Promise<void> {
   input.setLoadState({ status: 'loading' });
   input.setSelectedChoiceId(null);
   input.setSubmitResult(null);
+  input.setSubmitIdempotencyKey(null);
   input.setQuestionLoadedAt(null);
 
   const res = await input.getNextQuestionFn({
@@ -57,6 +60,7 @@ export async function loadNextQuestion(input: {
 
   input.setQuestion(res.data);
   input.setQuestionLoadedAt(res.data ? input.nowMs() : null);
+  input.setSubmitIdempotencyKey(res.data ? input.createIdempotencyKey() : null);
   input.setLoadState({ status: 'ready' });
 }
 
@@ -66,10 +70,12 @@ export function createLoadNextQuestionAction(input: {
     input: unknown,
   ) => Promise<ActionResult<NextQuestion | null>>;
   filters: PracticeFilters;
+  createIdempotencyKey: () => string;
   nowMs: () => number;
   setLoadState: (state: LoadState) => void;
   setSelectedChoiceId: (choiceId: string | null) => void;
   setSubmitResult: (result: SubmitAnswerOutput | null) => void;
+  setSubmitIdempotencyKey: (key: string | null) => void;
   setQuestionLoadedAt: (loadedAtMs: number | null) => void;
   setQuestion: (question: NextQuestion | null) => void;
 }): () => void {
@@ -147,6 +153,7 @@ export async function submitAnswerForQuestion(input: {
   question: NextQuestion | null;
   selectedChoiceId: string | null;
   questionLoadedAtMs: number | null;
+  submitIdempotencyKey: string | null;
   submitAnswerFn: (input: unknown) => Promise<ActionResult<SubmitAnswerOutput>>;
   nowMs: () => number;
   setLoadState: (state: LoadState) => void;
@@ -168,6 +175,7 @@ export async function submitAnswerForQuestion(input: {
   const res = await input.submitAnswerFn({
     questionId: input.question.questionId,
     choiceId: input.selectedChoiceId,
+    idempotencyKey: input.submitIdempotencyKey ?? undefined,
     timeSpentSeconds,
   });
 
@@ -258,6 +266,9 @@ export async function startSession(input: {
   sessionMode: 'tutor' | 'exam';
   sessionCount: number;
   filters: PracticeFilters;
+  idempotencyKey: string;
+  createIdempotencyKey: () => string;
+  setIdempotencyKey: (key: string) => void;
   startPracticeSessionFn: (
     input: unknown,
   ) => Promise<ActionResult<StartPracticeSessionOutput>>;
@@ -271,6 +282,7 @@ export async function startSession(input: {
   const res = await input.startPracticeSessionFn({
     mode: input.sessionMode,
     count: input.sessionCount,
+    idempotencyKey: input.idempotencyKey,
     tagSlugs: input.filters.tagSlugs,
     difficulties: input.filters.difficulties,
   });
@@ -278,6 +290,7 @@ export async function startSession(input: {
   if (!res.ok) {
     input.setSessionStartStatus('error');
     input.setSessionStartError(getActionResultErrorMessage(res));
+    input.setIdempotencyKey(input.createIdempotencyKey());
     return;
   }
 

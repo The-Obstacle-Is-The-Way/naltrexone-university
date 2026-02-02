@@ -388,8 +388,14 @@ export default function PracticePage() {
   const [loadState, setLoadState] = useState<LoadState>({ status: 'idle' });
   const [isPending, startTransition] = useTransition();
   const [questionLoadedAt, setQuestionLoadedAt] = useState<number | null>(null);
+  const [submitIdempotencyKey, setSubmitIdempotencyKey] = useState<
+    string | null
+  >(null);
   const [sessionMode, setSessionMode] = useState<'tutor' | 'exam'>('tutor');
   const [sessionCount, setSessionCount] = useState(20);
+  const [startSessionIdempotencyKey, setStartSessionIdempotencyKey] = useState(
+    () => crypto.randomUUID(),
+  );
   const [sessionStartStatus, setSessionStartStatus] = useState<
     'idle' | 'loading' | 'error'
   >('idle');
@@ -403,10 +409,12 @@ export default function PracticePage() {
         startTransition,
         getNextQuestionFn: getNextQuestion,
         filters,
+        createIdempotencyKey: () => crypto.randomUUID(),
         nowMs: Date.now,
         setLoadState,
         setSelectedChoiceId,
         setSubmitResult,
+        setSubmitIdempotencyKey,
         setQuestionLoadedAt,
         setQuestion,
       }),
@@ -471,12 +479,13 @@ export default function PracticePage() {
         question,
         selectedChoiceId,
         questionLoadedAtMs: questionLoadedAt,
+        submitIdempotencyKey,
         submitAnswerFn: submitAnswer,
         nowMs: Date.now,
         setLoadState,
         setSubmitResult,
       }),
-    [question, questionLoadedAt, selectedChoiceId],
+    [question, questionLoadedAt, selectedChoiceId, submitIdempotencyKey],
   );
 
   const onToggleBookmark = useMemo(
@@ -508,12 +517,20 @@ export default function PracticePage() {
   );
 
   const onSessionModeChange = useMemo(
-    () => handleSessionModeChange.bind(null, setSessionMode),
+    () =>
+      handleSessionModeChange.bind(null, (mode) => {
+        setSessionMode(mode);
+        setStartSessionIdempotencyKey(crypto.randomUUID());
+      }),
     [],
   );
 
   const onSessionCountChange = useMemo(
-    () => handleSessionCountChange.bind(null, setSessionCount),
+    () =>
+      handleSessionCountChange.bind(null, (count) => {
+        setSessionCount(count);
+        setStartSessionIdempotencyKey(crypto.randomUUID());
+      }),
     [],
   );
 
@@ -526,6 +543,7 @@ export default function PracticePage() {
           (o) => o.value,
         );
         setFilters((prev) => ({ ...prev, tagSlugs: selected }));
+        setStartSessionIdempotencyKey(crypto.randomUUID());
       }) satisfies PracticeSessionStarterProps['onTagSlugsChange'],
     [],
   );
@@ -541,6 +559,7 @@ export default function PracticePage() {
 
           return { ...prev, difficulties: next };
         });
+        setStartSessionIdempotencyKey(crypto.randomUUID());
       }) satisfies PracticeSessionStarterProps['onToggleDifficulty'],
     [],
   );
@@ -551,12 +570,15 @@ export default function PracticePage() {
         sessionMode,
         sessionCount,
         filters,
+        idempotencyKey: startSessionIdempotencyKey,
+        createIdempotencyKey: () => crypto.randomUUID(),
+        setIdempotencyKey: setStartSessionIdempotencyKey,
         startPracticeSessionFn: startPracticeSession,
         setSessionStartStatus,
         setSessionStartError,
         navigateTo,
       }),
-    [filters, sessionMode, sessionCount],
+    [filters, sessionMode, sessionCount, startSessionIdempotencyKey],
   );
 
   return (

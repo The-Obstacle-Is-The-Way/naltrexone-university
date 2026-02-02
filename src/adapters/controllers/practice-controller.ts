@@ -8,6 +8,7 @@ import {
   MAX_PRACTICE_SESSION_TAG_FILTERS,
 } from '@/src/adapters/repositories/practice-session-limits';
 import { START_PRACTICE_SESSION_RATE_LIMIT } from '@/src/adapters/shared/rate-limits';
+import { withIdempotency } from '@/src/adapters/shared/with-idempotency';
 import { ApplicationError } from '@/src/application/errors';
 import type {
   AuthGateway,
@@ -15,6 +16,7 @@ import type {
 } from '@/src/application/ports/gateways';
 import type {
   AttemptRepository,
+  IdempotencyKeyRepository,
   PracticeSessionRepository,
   QuestionRepository,
 } from '@/src/application/ports/repositories';
@@ -38,6 +40,7 @@ const StartPracticeSessionInputSchema = z
   .object({
     mode: zPracticeMode,
     count: z.number().int().min(1).max(MAX_PRACTICE_SESSION_QUESTIONS),
+    idempotencyKey: zUuid.optional(),
     tagSlugs: z
       .array(z.string().min(1))
       .max(MAX_PRACTICE_SESSION_TAG_FILTERS)
@@ -71,6 +74,7 @@ export type EndPracticeSessionOutput = {
 export type PracticeControllerDeps = {
   authGateway: AuthGateway;
   rateLimiter: RateLimiter;
+  idempotencyKeyRepository: IdempotencyKeyRepository;
   checkEntitlementUseCase: CheckEntitlementUseCase;
   questionRepository: QuestionRepository;
   practiceSessionRepository: PracticeSessionRepository;
@@ -95,43 +99,59 @@ export async function startPracticeSession(
     if (typeof userIdOrError !== 'string') return userIdOrError;
     const userId = userIdOrError;
 
-    const rate = await d.rateLimiter.limit({
-      key: `practice:startPracticeSession:${userId}`,
-      ...START_PRACTICE_SESSION_RATE_LIMIT,
-    });
-    if (!rate.success) {
-      throw new ApplicationError(
-        'RATE_LIMITED',
-        `Too many session starts. Try again in ${rate.retryAfterSeconds}s.`,
+    const { mode, count, tagSlugs, difficulties, idempotencyKey } = parsed.data;
+
+    async function createNewSession(): Promise<StartPracticeSessionOutput> {
+      const rate = await d.rateLimiter.limit({
+        key: `practice:startPracticeSession:${userId}`,
+        ...START_PRACTICE_SESSION_RATE_LIMIT,
+      });
+      if (!rate.success) {
+        throw new ApplicationError(
+          'RATE_LIMITED',
+          `Too many session starts. Try again in ${rate.retryAfterSeconds}s.`,
+        );
+      }
+
+      const candidateIds = await d.questionRepository.listPublishedCandidateIds(
+        {
+          tagSlugs,
+          difficulties,
+        },
       );
+      if (candidateIds.length === 0) {
+        throw new ApplicationError('NOT_FOUND', 'No questions found');
+      }
+
+      const seed = createSeed(userId, d.now().getTime());
+      const questionIds = shuffleWithSeed(candidateIds, seed).slice(0, count);
+
+      const session = await d.practiceSessionRepository.create({
+        userId,
+        mode,
+        paramsJson: {
+          count,
+          tagSlugs,
+          difficulties,
+          questionIds,
+        },
+      });
+
+      return { sessionId: session.id };
     }
 
-    const candidateIds = await d.questionRepository.listPublishedCandidateIds({
-      tagSlugs: parsed.data.tagSlugs,
-      difficulties: parsed.data.difficulties,
-    });
-    if (candidateIds.length === 0) {
-      return err('NOT_FOUND', 'No questions found');
-    }
+    const session = idempotencyKey
+      ? await withIdempotency({
+          repo: d.idempotencyKeyRepository,
+          userId,
+          action: 'practice:startPracticeSession',
+          key: idempotencyKey,
+          now: d.now,
+          execute: createNewSession,
+        })
+      : await createNewSession();
 
-    const seed = createSeed(userId, d.now().getTime());
-    const questionIds = shuffleWithSeed(candidateIds, seed).slice(
-      0,
-      parsed.data.count,
-    );
-
-    const session = await d.practiceSessionRepository.create({
-      userId,
-      mode: parsed.data.mode,
-      paramsJson: {
-        count: parsed.data.count,
-        tagSlugs: parsed.data.tagSlugs,
-        difficulties: parsed.data.difficulties,
-        questionIds,
-      },
-    });
-
-    return ok({ sessionId: session.id });
+    return ok(session);
   } catch (error) {
     return handleError(error);
   }

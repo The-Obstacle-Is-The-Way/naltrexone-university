@@ -9,6 +9,7 @@ import type {
 } from '@/src/application/ports/repositories';
 import {
   FakeAuthGateway,
+  FakeIdempotencyKeyRepository,
   FakePaymentGateway,
   FakeSubscriptionRepository,
 } from '@/src/application/test-helpers/fakes';
@@ -109,15 +110,18 @@ function createDeps(overrides?: {
       }),
     } satisfies RateLimiter);
 
+  const now = overrides?.now ?? (() => new Date('2026-02-01T00:00:00Z'));
+
   return {
     authGateway,
     stripeCustomerRepository,
     subscriptionRepository,
     paymentGateway,
+    idempotencyKeyRepository: new FakeIdempotencyKeyRepository(now),
     rateLimiter,
     getClerkUserId: async () => clerkUserId,
     appUrl,
-    now: overrides?.now ?? (() => new Date('2026-02-01T00:00:00Z')),
+    now,
   };
 }
 
@@ -325,6 +329,32 @@ describe('billing-controller', () => {
           cancelUrl: 'https://app.example.com/pricing?checkout=cancel',
         },
       ]);
+    });
+
+    it('returns the cached checkout session when idempotencyKey is reused', async () => {
+      const paymentGateway = new FakePaymentGateway({
+        stripeCustomerId: 'cus_new',
+        checkoutUrl: 'https://stripe/checkout',
+        portalUrl: 'https://stripe/portal',
+        webhookResult: { eventId: 'evt_1', type: 'checkout.session.completed' },
+      });
+
+      const deps = createDeps({ paymentGateway });
+
+      const input = {
+        plan: 'monthly',
+        idempotencyKey: '11111111-1111-1111-1111-111111111111',
+      } as const;
+
+      const first = await createCheckoutSession(input, deps as never);
+      const second = await createCheckoutSession(input, deps as never);
+
+      expect(first).toEqual({
+        ok: true,
+        data: { url: 'https://stripe/checkout' },
+      });
+      expect(second).toEqual(first);
+      expect(paymentGateway.checkoutInputs).toHaveLength(1);
     });
   });
 

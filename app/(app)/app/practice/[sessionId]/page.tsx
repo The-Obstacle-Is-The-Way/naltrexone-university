@@ -176,6 +176,9 @@ export default function PracticeSessionPage({
   const [loadState, setLoadState] = useState<LoadState>({ status: 'idle' });
   const [isPending, startTransition] = useTransition();
   const [questionLoadedAt, setQuestionLoadedAt] = useState<number | null>(null);
+  const [submitIdempotencyKey, setSubmitIdempotencyKey] = useState<
+    string | null
+  >(null);
 
   const loadNext = useMemo(
     () =>
@@ -183,10 +186,12 @@ export default function PracticeSessionPage({
         sessionId,
         startTransition,
         getNextQuestionFn: getNextQuestion,
+        createIdempotencyKey: () => crypto.randomUUID(),
         nowMs: Date.now,
         setLoadState,
         setSelectedChoiceId,
         setSubmitResult,
+        setSubmitIdempotencyKey,
         setQuestionLoadedAt,
         setQuestion,
         setSessionInfo,
@@ -236,12 +241,19 @@ export default function PracticeSessionPage({
         question,
         selectedChoiceId,
         questionLoadedAtMs: questionLoadedAt,
+        submitIdempotencyKey,
         submitAnswerFn: submitAnswer,
         nowMs: Date.now,
         setLoadState,
         setSubmitResult,
       }),
-    [question, questionLoadedAt, selectedChoiceId, sessionId],
+    [
+      question,
+      questionLoadedAt,
+      selectedChoiceId,
+      sessionId,
+      submitIdempotencyKey,
+    ],
   );
 
   const onToggleBookmark = useMemo(

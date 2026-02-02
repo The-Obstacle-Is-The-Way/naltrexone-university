@@ -1,7 +1,12 @@
 'use client';
 
-import type { ReactNode } from 'react';
+import { type ReactNode, useState } from 'react';
 import { useFormStatus } from 'react-dom';
+
+export function IdempotencyKeyField() {
+  const [key] = useState(() => crypto.randomUUID());
+  return <input type="hidden" name="idempotencyKey" value={key} />;
+}
 
 export function SubscribeButton({ children }: { children: ReactNode }) {
   const { pending } = useFormStatus();

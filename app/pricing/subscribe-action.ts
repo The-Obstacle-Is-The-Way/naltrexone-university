@@ -6,6 +6,7 @@ type LogErrorFn = (context: Record<string, unknown>, msg: string) => void;
 
 type SubscribeActionInput = {
   plan: 'monthly' | 'annual';
+  idempotencyKey?: string;
 };
 
 type SubscribeActionDeps = {
@@ -20,7 +21,10 @@ export async function runSubscribeAction(
   input: SubscribeActionInput,
   deps: SubscribeActionDeps,
 ): Promise<void> {
-  const result = await deps.createCheckoutSessionFn({ plan: input.plan });
+  const result = await deps.createCheckoutSessionFn({
+    plan: input.plan,
+    idempotencyKey: input.idempotencyKey,
+  });
   if (result.ok) return deps.redirectFn(result.data.url);
 
   if (result.error.code === 'UNAUTHENTICATED') {
@@ -34,6 +38,7 @@ export async function runSubscribeAction(
   deps.logError?.(
     {
       plan: input.plan,
+      idempotencyKey: input.idempotencyKey,
       errorCode: result.error.code,
       errorMessage: result.error.message,
     },

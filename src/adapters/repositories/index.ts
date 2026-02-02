@@ -1,5 +1,6 @@
 export { DrizzleAttemptRepository } from './drizzle-attempt-repository';
 export { DrizzleBookmarkRepository } from './drizzle-bookmark-repository';
+export { DrizzleIdempotencyKeyRepository } from './drizzle-idempotency-key-repository';
 export { DrizzlePracticeSessionRepository } from './drizzle-practice-session-repository';
 export { DrizzleQuestionRepository } from './drizzle-question-repository';
 export { DrizzleStripeCustomerRepository } from './drizzle-stripe-customer-repository';

@@ -136,6 +136,9 @@ export default function QuestionPage({ params }: { params: { slug: string } }) {
     null,
   );
   const [questionLoadedAt, setQuestionLoadedAt] = useState<number | null>(null);
+  const [submitIdempotencyKey, setSubmitIdempotencyKey] = useState<
+    string | null
+  >(null);
   const [loadState, setLoadState] = useState<LoadState>({
     status: 'loading',
   });
@@ -147,10 +150,12 @@ export default function QuestionPage({ params }: { params: { slug: string } }) {
         slug,
         startTransition,
         getQuestionBySlugFn: getQuestionBySlug,
+        createIdempotencyKey: () => crypto.randomUUID(),
         nowMs: Date.now,
         setLoadState,
         setSelectedChoiceId,
         setSubmitResult,
+        setSubmitIdempotencyKey,
         setQuestionLoadedAt,
         setQuestion,
       }),
@@ -171,20 +176,23 @@ export default function QuestionPage({ params }: { params: { slug: string } }) {
         question,
         selectedChoiceId,
         questionLoadedAtMs: questionLoadedAt,
+        submitIdempotencyKey,
         submitAnswerFn: submitAnswer,
         nowMs: Date.now,
         setLoadState,
         setSubmitResult,
       }),
-    [question, questionLoadedAt, selectedChoiceId],
+    [question, questionLoadedAt, selectedChoiceId, submitIdempotencyKey],
   );
 
   const onReattempt = useMemo(
     () =>
       reattemptQuestion.bind(null, {
+        createIdempotencyKey: () => crypto.randomUUID(),
         nowMs: Date.now,
         setSelectedChoiceId,
         setSubmitResult,
+        setSubmitIdempotencyKey,
         setQuestionLoadedAt,
       }),
     [],

@@ -8,11 +8,13 @@ import {
 } from '@/src/adapters/repositories/practice-session-limits';
 import { SUBMIT_ANSWER_RATE_LIMIT } from '@/src/adapters/shared/rate-limits';
 import { MAX_TIME_SPENT_SECONDS } from '@/src/adapters/shared/validation-limits';
+import { withIdempotency } from '@/src/adapters/shared/with-idempotency';
 import { ApplicationError } from '@/src/application/errors';
 import type {
   AuthGateway,
   RateLimiter,
 } from '@/src/application/ports/gateways';
+import type { IdempotencyKeyRepository } from '@/src/application/ports/repositories';
 import type {
   GetNextQuestionInput,
   GetNextQuestionOutput,
@@ -63,6 +65,7 @@ const SubmitAnswerInputSchema = z
     questionId: zUuid,
     choiceId: zUuid,
     sessionId: zUuid.optional(),
+    idempotencyKey: zUuid.optional(),
     timeSpentSeconds: z
       .number()
       .int()
@@ -83,6 +86,7 @@ type SubmitAnswerUseCase = {
 export type QuestionControllerDeps = {
   authGateway: AuthGateway;
   rateLimiter: RateLimiter;
+  idempotencyKeyRepository: IdempotencyKeyRepository;
   checkEntitlementUseCase: CheckEntitlementUseCase;
   getNextQuestionUseCase: GetNextQuestionUseCase;
   submitAnswerUseCase: SubmitAnswerUseCase;
@@ -135,24 +139,45 @@ export async function submitAnswer(
     if (typeof userIdOrError !== 'string') return userIdOrError;
     const userId = userIdOrError;
 
-    const rate = await d.rateLimiter.limit({
-      key: `question:submitAnswer:${userId}`,
-      ...SUBMIT_ANSWER_RATE_LIMIT,
-    });
-    if (!rate.success) {
-      throw new ApplicationError(
-        'RATE_LIMITED',
-        `Too many submissions. Try again in ${rate.retryAfterSeconds}s.`,
-      );
+    const {
+      questionId,
+      choiceId,
+      sessionId,
+      idempotencyKey,
+      timeSpentSeconds,
+    } = parsed.data;
+
+    async function submitOnce(): Promise<SubmitAnswerOutput> {
+      const rate = await d.rateLimiter.limit({
+        key: `question:submitAnswer:${userId}`,
+        ...SUBMIT_ANSWER_RATE_LIMIT,
+      });
+      if (!rate.success) {
+        throw new ApplicationError(
+          'RATE_LIMITED',
+          `Too many submissions. Try again in ${rate.retryAfterSeconds}s.`,
+        );
+      }
+
+      return d.submitAnswerUseCase.execute({
+        userId,
+        questionId,
+        choiceId,
+        sessionId,
+        timeSpentSeconds,
+      });
     }
 
-    const data = await d.submitAnswerUseCase.execute({
-      userId,
-      questionId: parsed.data.questionId,
-      choiceId: parsed.data.choiceId,
-      sessionId: parsed.data.sessionId,
-      timeSpentSeconds: parsed.data.timeSpentSeconds,
-    });
+    const data = idempotencyKey
+      ? await withIdempotency({
+          repo: d.idempotencyKeyRepository,
+          userId,
+          action: 'question:submitAnswer',
+          key: idempotencyKey,
+          now: () => new Date(),
+          execute: submitOnce,
+        })
+      : await submitOnce();
 
     return ok(data);
   } catch (error) {

@@ -1,6 +1,6 @@
 # DEBT-078: No Idempotency Keys on State-Changing Actions
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P1
 **Date:** 2026-02-02
 
@@ -94,12 +94,31 @@ async function handleSubmit() {
 }
 ```
 
+---
+
+## Resolution
+
+We implemented **database-backed idempotency keys** (no vendor-specific dependency) and applied them to high-risk state changes:
+
+- Database: `db/schema.ts` + migration adds `idempotency_keys` (composite PK: `user_id + action + key`) with TTL via `expires_at`.
+- Port + adapter:
+  - `src/application/ports/repositories.ts`: `IdempotencyKeyRepository`
+  - `src/adapters/repositories/drizzle-idempotency-key-repository.ts`: Drizzle/Postgres implementation
+  - `src/adapters/shared/with-idempotency.ts`: claim/execute/store + in-progress polling behavior
+- Controllers now accept optional `idempotencyKey` and reuse results on retry:
+  - `src/adapters/controllers/billing-controller.ts` (`billing:createCheckoutSession`)
+  - `src/adapters/controllers/question-controller.ts` (`question:submitAnswer`)
+  - `src/adapters/controllers/practice-controller.ts` (`practice:startPracticeSession`)
+- Client coordination:
+  - Pricing subscribe forms include a stable hidden `idempotencyKey` per render.
+  - Question + practice pages generate a UUID per-question (and per session-start attempt) and pass it through to controllers.
+
 ## Verification
 
-- [ ] All state-changing server actions accept idempotency key
-- [ ] Duplicate requests return same result
-- [ ] Keys expire after 24 hours
-- [ ] Race condition test: fire 10 concurrent requests, assert 1 result
+- [x] Checkout session creation is idempotent per user/key/action
+- [x] Answer submission is idempotent per user/key/action (prevents duplicate attempts)
+- [x] Practice session creation is idempotent per user/key/action (prevents duplicate sessions)
+- [x] Keys are TTL-bound (default 24h) and tested
 
 ## Related
 

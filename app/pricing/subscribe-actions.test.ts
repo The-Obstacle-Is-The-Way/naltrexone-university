@@ -20,7 +20,7 @@ describe('app/pricing/subscribe-actions', () => {
     const redirectFn = createRedirectFn();
 
     await expect(
-      subscribeMonthlyAction({
+      subscribeMonthlyAction(new FormData(), {
         createCheckoutSessionFn,
         redirectFn,
       }),
@@ -28,7 +28,10 @@ describe('app/pricing/subscribe-actions', () => {
       message: 'redirect:https://checkout/monthly',
     });
 
-    expect(createCheckoutSessionFn).toHaveBeenCalledWith({ plan: 'monthly' });
+    expect(createCheckoutSessionFn).toHaveBeenCalledWith({
+      plan: 'monthly',
+      idempotencyKey: undefined,
+    });
   });
 
   it('subscribes annual via runSubscribeAction with injected deps', async () => {
@@ -39,7 +42,7 @@ describe('app/pricing/subscribe-actions', () => {
     const redirectFn = createRedirectFn();
 
     await expect(
-      subscribeAnnualAction({
+      subscribeAnnualAction(new FormData(), {
         createCheckoutSessionFn,
         redirectFn,
       }),
@@ -47,7 +50,10 @@ describe('app/pricing/subscribe-actions', () => {
       message: 'redirect:https://checkout/annual',
     });
 
-    expect(createCheckoutSessionFn).toHaveBeenCalledWith({ plan: 'annual' });
+    expect(createCheckoutSessionFn).toHaveBeenCalledWith({
+      plan: 'annual',
+      idempotencyKey: undefined,
+    });
   });
 
   it('redirects to sign-up when checkout session returns UNAUTHENTICATED', async () => {
@@ -58,7 +64,7 @@ describe('app/pricing/subscribe-actions', () => {
     const redirectFn = createRedirectFn();
 
     await expect(
-      subscribeMonthlyAction({
+      subscribeMonthlyAction(new FormData(), {
         createCheckoutSessionFn,
         redirectFn,
       }),
@@ -66,7 +72,10 @@ describe('app/pricing/subscribe-actions', () => {
       message: 'redirect:/sign-up',
     });
 
-    expect(createCheckoutSessionFn).toHaveBeenCalledWith({ plan: 'monthly' });
+    expect(createCheckoutSessionFn).toHaveBeenCalledWith({
+      plan: 'monthly',
+      idempotencyKey: undefined,
+    });
   });
 
   it('redirects back to pricing when checkout session fails', async () => {
@@ -77,7 +86,7 @@ describe('app/pricing/subscribe-actions', () => {
     const redirectFn = createRedirectFn();
 
     await expect(
-      subscribeMonthlyAction({
+      subscribeMonthlyAction(new FormData(), {
         createCheckoutSessionFn,
         redirectFn,
         logError: () => undefined,
@@ -87,6 +96,30 @@ describe('app/pricing/subscribe-actions', () => {
         'redirect:/pricing?checkout=error&plan=monthly&error_code=INTERNAL_ERROR',
     });
 
-    expect(createCheckoutSessionFn).toHaveBeenCalledWith({ plan: 'monthly' });
+    expect(createCheckoutSessionFn).toHaveBeenCalledWith({
+      plan: 'monthly',
+      idempotencyKey: undefined,
+    });
+  });
+
+  it('passes idempotencyKey from the form data to the checkout controller', async () => {
+    const createCheckoutSessionFn = vi.fn(async () =>
+      ok({ url: 'https://checkout/monthly' }),
+    );
+    const redirectFn = createRedirectFn();
+
+    const formData = new FormData();
+    formData.set('idempotencyKey', '11111111-1111-1111-1111-111111111111');
+
+    await expect(
+      subscribeMonthlyAction(formData, { createCheckoutSessionFn, redirectFn }),
+    ).rejects.toMatchObject({
+      message: 'redirect:https://checkout/monthly',
+    });
+
+    expect(createCheckoutSessionFn).toHaveBeenCalledWith({
+      plan: 'monthly',
+      idempotencyKey: '11111111-1111-1111-1111-111111111111',
+    });
   });
 });

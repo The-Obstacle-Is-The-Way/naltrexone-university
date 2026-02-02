@@ -25,16 +25,19 @@ describe('question-page-logic', () => {
       const setLoadState = vi.fn();
       const setSelectedChoiceId = vi.fn();
       const setSubmitResult = vi.fn();
+      const setSubmitIdempotencyKey = vi.fn();
       const setQuestionLoadedAt = vi.fn();
       const setQuestion = vi.fn();
 
       await loadQuestion({
         slug: 'q-1',
         getQuestionBySlugFn: async () => ok(createQuestion()),
+        createIdempotencyKey: () => 'idem_1',
         nowMs: () => 1234,
         setLoadState,
         setSelectedChoiceId,
         setSubmitResult,
+        setSubmitIdempotencyKey,
         setQuestionLoadedAt,
         setQuestion,
       });
@@ -42,12 +45,14 @@ describe('question-page-logic', () => {
       expect(setLoadState).toHaveBeenCalledWith({ status: 'loading' });
       expect(setSelectedChoiceId).toHaveBeenCalledWith(null);
       expect(setSubmitResult).toHaveBeenCalledWith(null);
+      expect(setSubmitIdempotencyKey).toHaveBeenCalledWith(null);
       expect(setQuestionLoadedAt).toHaveBeenCalledWith(null);
 
       expect(setQuestion).toHaveBeenCalledWith(
         expect.objectContaining({ questionId: 'q_1' }),
       );
       expect(setQuestionLoadedAt).toHaveBeenCalledWith(1234);
+      expect(setSubmitIdempotencyKey).toHaveBeenLastCalledWith('idem_1');
       expect(setLoadState).toHaveBeenCalledWith({ status: 'ready' });
     });
 
@@ -55,16 +60,19 @@ describe('question-page-logic', () => {
       const setLoadState = vi.fn();
       const setSelectedChoiceId = vi.fn();
       const setSubmitResult = vi.fn();
+      const setSubmitIdempotencyKey = vi.fn();
       const setQuestionLoadedAt = vi.fn();
       const setQuestion = vi.fn();
 
       await loadQuestion({
         slug: 'q-1',
         getQuestionBySlugFn: async () => err('NOT_FOUND', 'Question not found'),
+        createIdempotencyKey: () => 'idem_1',
         nowMs: () => 1234,
         setLoadState,
         setSelectedChoiceId,
         setSubmitResult,
+        setSubmitIdempotencyKey,
         setQuestionLoadedAt,
         setQuestion,
       });
@@ -86,10 +94,12 @@ describe('question-page-logic', () => {
         slug: 'q-1',
         startTransition,
         getQuestionBySlugFn: async () => ok(createQuestion()),
+        createIdempotencyKey: () => 'idem_1',
         nowMs: () => 1234,
         setLoadState,
         setSelectedChoiceId: vi.fn(),
         setSubmitResult: vi.fn(),
+        setSubmitIdempotencyKey: vi.fn(),
         setQuestionLoadedAt: vi.fn(),
         setQuestion: vi.fn(),
       });
@@ -116,6 +126,7 @@ describe('question-page-logic', () => {
         question: null,
         selectedChoiceId: 'choice_1',
         questionLoadedAtMs: 0,
+        submitIdempotencyKey: 'idem_1',
         submitAnswerFn,
         nowMs: () => 1000,
         setLoadState: vi.fn(),
@@ -142,6 +153,7 @@ describe('question-page-logic', () => {
         question: createQuestion(),
         selectedChoiceId: 'choice_1',
         questionLoadedAtMs: 1000,
+        submitIdempotencyKey: 'idem_1',
         submitAnswerFn,
         nowMs: () => 5000,
         setLoadState,
@@ -151,6 +163,7 @@ describe('question-page-logic', () => {
       expect(submitAnswerFn).toHaveBeenCalledWith({
         questionId: 'q_1',
         choiceId: 'choice_1',
+        idempotencyKey: 'idem_1',
         timeSpentSeconds: 4,
       });
       expect(setSubmitResult).toHaveBeenCalledWith(
@@ -169,6 +182,7 @@ describe('question-page-logic', () => {
         question: createQuestion(),
         selectedChoiceId: 'choice_1',
         questionLoadedAtMs: null,
+        submitIdempotencyKey: 'idem_1',
         submitAnswerFn,
         nowMs: () => 0,
         setLoadState,
@@ -186,17 +200,21 @@ describe('question-page-logic', () => {
     it('clears choice/result and resets loadedAt', () => {
       const setSelectedChoiceId = vi.fn();
       const setSubmitResult = vi.fn();
+      const setSubmitIdempotencyKey = vi.fn();
       const setQuestionLoadedAt = vi.fn();
 
       reattemptQuestion({
+        createIdempotencyKey: () => 'idem_1',
         nowMs: () => 1234,
         setSelectedChoiceId,
         setSubmitResult,
+        setSubmitIdempotencyKey,
         setQuestionLoadedAt,
       });
 
       expect(setSelectedChoiceId).toHaveBeenCalledWith(null);
       expect(setSubmitResult).toHaveBeenCalledWith(null);
+      expect(setSubmitIdempotencyKey).toHaveBeenCalledWith('idem_1');
       expect(setQuestionLoadedAt).toHaveBeenCalledWith(1234);
     });
   });

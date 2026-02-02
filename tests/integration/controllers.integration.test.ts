@@ -11,6 +11,7 @@ import {
   submitAnswer,
 } from '@/src/adapters/controllers/question-controller';
 import { DrizzleAttemptRepository } from '@/src/adapters/repositories/drizzle-attempt-repository';
+import { DrizzleIdempotencyKeyRepository } from '@/src/adapters/repositories/drizzle-idempotency-key-repository';
 import { DrizzlePracticeSessionRepository } from '@/src/adapters/repositories/drizzle-practice-session-repository';
 import { DrizzleQuestionRepository } from '@/src/adapters/repositories/drizzle-question-repository';
 import type { AuthGateway } from '@/src/application/ports/gateways';
@@ -214,6 +215,10 @@ describe('question controllers (integration)', () => {
     const questions = new DrizzleQuestionRepository(db);
     const attempts = new DrizzleAttemptRepository(db);
     const sessions = new DrizzlePracticeSessionRepository(db, () => new Date());
+    const idempotencyKeyRepository = new DrizzleIdempotencyKeyRepository(
+      db,
+      () => new Date(),
+    );
 
     const deps: QuestionControllerDeps = {
       authGateway,
@@ -225,6 +230,7 @@ describe('question controllers (integration)', () => {
           retryAfterSeconds: 0,
         }),
       },
+      idempotencyKeyRepository,
       checkEntitlementUseCase: { execute: async () => ({ isEntitled: true }) },
       getNextQuestionUseCase: new GetNextQuestionUseCase(
         questions,

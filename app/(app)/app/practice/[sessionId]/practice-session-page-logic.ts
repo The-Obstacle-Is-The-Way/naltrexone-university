@@ -10,10 +10,12 @@ export async function loadNextQuestion(input: {
   getNextQuestionFn: (
     input: unknown,
   ) => Promise<ActionResult<NextQuestion | null>>;
+  createIdempotencyKey: () => string;
   nowMs: () => number;
   setLoadState: (state: LoadState) => void;
   setSelectedChoiceId: (choiceId: string | null) => void;
   setSubmitResult: (result: SubmitAnswerOutput | null) => void;
+  setSubmitIdempotencyKey: (key: string | null) => void;
   setQuestionLoadedAt: (loadedAtMs: number | null) => void;
   setQuestion: (question: NextQuestion | null) => void;
   setSessionInfo: (info: NextQuestion['session']) => void;
@@ -21,6 +23,7 @@ export async function loadNextQuestion(input: {
   input.setLoadState({ status: 'loading' });
   input.setSelectedChoiceId(null);
   input.setSubmitResult(null);
+  input.setSubmitIdempotencyKey(null);
   input.setQuestionLoadedAt(null);
 
   const res = await input.getNextQuestionFn({ sessionId: input.sessionId });
@@ -36,6 +39,7 @@ export async function loadNextQuestion(input: {
 
   input.setQuestion(res.data);
   input.setQuestionLoadedAt(res.data ? input.nowMs() : null);
+  input.setSubmitIdempotencyKey(res.data ? input.createIdempotencyKey() : null);
   if (res.data?.session) {
     input.setSessionInfo(res.data.session);
   }
@@ -48,10 +52,12 @@ export function createLoadNextQuestionAction(input: {
   getNextQuestionFn: (
     input: unknown,
   ) => Promise<ActionResult<NextQuestion | null>>;
+  createIdempotencyKey: () => string;
   nowMs: () => number;
   setLoadState: (state: LoadState) => void;
   setSelectedChoiceId: (choiceId: string | null) => void;
   setSubmitResult: (result: SubmitAnswerOutput | null) => void;
+  setSubmitIdempotencyKey: (key: string | null) => void;
   setQuestionLoadedAt: (loadedAtMs: number | null) => void;
   setQuestion: (question: NextQuestion | null) => void;
   setSessionInfo: (info: NextQuestion['session']) => void;
@@ -68,6 +74,7 @@ export async function submitAnswerForQuestion(input: {
   question: NextQuestion | null;
   selectedChoiceId: string | null;
   questionLoadedAtMs: number | null;
+  submitIdempotencyKey: string | null;
   submitAnswerFn: (input: unknown) => Promise<ActionResult<SubmitAnswerOutput>>;
   nowMs: () => number;
   setLoadState: (state: LoadState) => void;
@@ -90,6 +97,7 @@ export async function submitAnswerForQuestion(input: {
     questionId: input.question.questionId,
     choiceId: input.selectedChoiceId,
     sessionId: input.sessionId,
+    idempotencyKey: input.submitIdempotencyKey ?? undefined,
     timeSpentSeconds,
   });
 

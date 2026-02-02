@@ -1,12 +1,13 @@
 import Link from 'next/link';
 import type { ComponentType, ReactNode } from 'react';
 import type { PricingBanner } from '@/app/pricing/types';
+import { IdempotencyKeyField } from './pricing-client';
 
 export type PricingViewProps = {
   isEntitled: boolean;
   banner: PricingBanner | null;
-  subscribeMonthlyAction: () => Promise<void>;
-  subscribeAnnualAction: () => Promise<void>;
+  subscribeMonthlyAction: (formData: FormData) => Promise<void>;
+  subscribeAnnualAction: (formData: FormData) => Promise<void>;
   SubscribeButtonComponent?: ComponentType<{ children: ReactNode }>;
 };
 
@@ -105,6 +106,7 @@ export function PricingView({
                 action={subscribeMonthlyAction}
                 aria-label="Subscribe monthly plan"
               >
+                <IdempotencyKeyField />
                 <SubscribeButtonComponent>
                   Subscribe Monthly
                 </SubscribeButtonComponent>
@@ -131,6 +133,7 @@ export function PricingView({
                 action={subscribeAnnualAction}
                 aria-label="Subscribe annual plan"
               >
+                <IdempotencyKeyField />
                 <SubscribeButtonComponent>
                   Subscribe Annual
                 </SubscribeButtonComponent>

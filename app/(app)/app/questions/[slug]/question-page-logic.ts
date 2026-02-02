@@ -13,16 +13,19 @@ export async function loadQuestion(input: {
   getQuestionBySlugFn: (
     input: unknown,
   ) => Promise<ActionResult<GetQuestionBySlugOutput>>;
+  createIdempotencyKey: () => string;
   nowMs: () => number;
   setLoadState: (state: LoadState) => void;
   setSelectedChoiceId: (choiceId: string | null) => void;
   setSubmitResult: (result: SubmitAnswerOutput | null) => void;
+  setSubmitIdempotencyKey: (key: string | null) => void;
   setQuestionLoadedAt: (loadedAtMs: number | null) => void;
   setQuestion: (question: GetQuestionBySlugOutput | null) => void;
 }): Promise<void> {
   input.setLoadState({ status: 'loading' });
   input.setSelectedChoiceId(null);
   input.setSubmitResult(null);
+  input.setSubmitIdempotencyKey(null);
   input.setQuestionLoadedAt(null);
 
   const res = await input.getQuestionBySlugFn({ slug: input.slug });
@@ -37,6 +40,7 @@ export async function loadQuestion(input: {
 
   input.setQuestion(res.data);
   input.setQuestionLoadedAt(input.nowMs());
+  input.setSubmitIdempotencyKey(input.createIdempotencyKey());
   input.setLoadState({ status: 'ready' });
 }
 
@@ -46,10 +50,12 @@ export function createLoadQuestionAction(input: {
   getQuestionBySlugFn: (
     input: unknown,
   ) => Promise<ActionResult<GetQuestionBySlugOutput>>;
+  createIdempotencyKey: () => string;
   nowMs: () => number;
   setLoadState: (state: LoadState) => void;
   setSelectedChoiceId: (choiceId: string | null) => void;
   setSubmitResult: (result: SubmitAnswerOutput | null) => void;
+  setSubmitIdempotencyKey: (key: string | null) => void;
   setQuestionLoadedAt: (loadedAtMs: number | null) => void;
   setQuestion: (question: GetQuestionBySlugOutput | null) => void;
 }): () => void {
@@ -64,6 +70,7 @@ export async function submitSelectedAnswer(input: {
   question: GetQuestionBySlugOutput | null;
   selectedChoiceId: string | null;
   questionLoadedAtMs: number | null;
+  submitIdempotencyKey: string | null;
   submitAnswerFn: (input: unknown) => Promise<ActionResult<SubmitAnswerOutput>>;
   nowMs: () => number;
   setLoadState: (state: LoadState) => void;
@@ -81,6 +88,7 @@ export async function submitSelectedAnswer(input: {
   const res = await input.submitAnswerFn({
     questionId: input.question.questionId,
     choiceId: input.selectedChoiceId,
+    idempotencyKey: input.submitIdempotencyKey ?? undefined,
     timeSpentSeconds,
   });
 
@@ -97,12 +105,15 @@ export async function submitSelectedAnswer(input: {
 }
 
 export function reattemptQuestion(input: {
+  createIdempotencyKey: () => string;
   nowMs: () => number;
   setSelectedChoiceId: (choiceId: string | null) => void;
   setSubmitResult: (result: SubmitAnswerOutput | null) => void;
+  setSubmitIdempotencyKey: (key: string | null) => void;
   setQuestionLoadedAt: (loadedAtMs: number) => void;
 }): void {
   input.setSelectedChoiceId(null);
   input.setSubmitResult(null);
+  input.setSubmitIdempotencyKey(input.createIdempotencyKey());
   input.setQuestionLoadedAt(input.nowMs());
 }

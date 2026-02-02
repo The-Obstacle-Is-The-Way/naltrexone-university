@@ -10,6 +10,7 @@ import type {
 import {
   FakeAttemptRepository,
   FakeAuthGateway,
+  FakeIdempotencyKeyRepository,
   FakeQuestionRepository,
   FakeSubscriptionRepository,
 } from '@/src/application/test-helpers/fakes';
@@ -176,6 +177,7 @@ function createDeps(overrides?: {
   return {
     authGateway,
     rateLimiter,
+    idempotencyKeyRepository: new FakeIdempotencyKeyRepository(now),
     checkEntitlementUseCase,
     questionRepository:
       overrides?.questionRepository ?? new FakeQuestionRepository([]),
@@ -330,6 +332,36 @@ describe('practice-controller', () => {
           },
         },
       ]);
+    });
+
+    it('returns the cached practice session when idempotencyKey is reused', async () => {
+      const candidateIds = ['q1', 'q2', 'q3'];
+      const now = new Date('2026-02-01T00:00:00Z');
+      const questionRepository = new CapturingQuestionRepository(candidateIds);
+      const practiceSessionRepository = new CapturingPracticeSessionRepository(
+        'session_123',
+      );
+
+      const deps = createDeps({
+        questionRepository,
+        practiceSessionRepository,
+        now: () => now,
+      });
+
+      const input = {
+        mode: 'tutor',
+        count: 1,
+        idempotencyKey: '11111111-1111-1111-1111-111111111111',
+        tagSlugs: [],
+        difficulties: [],
+      } as const;
+
+      const first = await startPracticeSession(input, deps);
+      const second = await startPracticeSession(input, deps);
+
+      expect(first).toEqual({ ok: true, data: { sessionId: 'session_123' } });
+      expect(second).toEqual(first);
+      expect(practiceSessionRepository.createInputs).toHaveLength(1);
     });
 
     it('loads dependencies from the container when deps are omitted', async () => {

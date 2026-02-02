@@ -7,6 +7,7 @@ import { runSubscribeAction } from './subscribe-action';
 
 type CreateCheckoutSessionFn = (input: {
   plan: 'monthly' | 'annual';
+  idempotencyKey?: string;
 }) => Promise<ActionResult<{ url: string }>>;
 
 export type SubscribeActionsDeps = {
@@ -31,11 +32,15 @@ async function getDeps(
 }
 
 export async function subscribeMonthlyAction(
+  formData: FormData,
   deps?: Partial<SubscribeActionsDeps>,
 ): Promise<void> {
   const d = await getDeps(deps);
+  const rawKey = formData.get('idempotencyKey');
+  const idempotencyKey = typeof rawKey === 'string' ? rawKey : undefined;
+
   return runSubscribeAction(
-    { plan: 'monthly' },
+    { plan: 'monthly', idempotencyKey },
     {
       createCheckoutSessionFn: d.createCheckoutSessionFn,
       redirectFn: d.redirectFn,
@@ -45,11 +50,15 @@ export async function subscribeMonthlyAction(
 }
 
 export async function subscribeAnnualAction(
+  formData: FormData,
   deps?: Partial<SubscribeActionsDeps>,
 ): Promise<void> {
   const d = await getDeps(deps);
+  const rawKey = formData.get('idempotencyKey');
+  const idempotencyKey = typeof rawKey === 'string' ? rawKey : undefined;
+
   return runSubscribeAction(
-    { plan: 'annual' },
+    { plan: 'annual', idempotencyKey },
     {
       createCheckoutSessionFn: d.createCheckoutSessionFn,
       redirectFn: d.redirectFn,

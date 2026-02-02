@@ -27,6 +27,7 @@ describe('practice-session-page-logic', () => {
       const setLoadState = vi.fn();
       const setSelectedChoiceId = vi.fn();
       const setSubmitResult = vi.fn();
+      const setSubmitIdempotencyKey = vi.fn();
       const setQuestionLoadedAt = vi.fn();
       const setQuestion = vi.fn();
       const setSessionInfo = vi.fn();
@@ -44,10 +45,12 @@ describe('practice-session-page-logic', () => {
               },
             }),
           ),
+        createIdempotencyKey: () => 'idem_1',
         nowMs: () => 1234,
         setLoadState,
         setSelectedChoiceId,
         setSubmitResult,
+        setSubmitIdempotencyKey,
         setQuestionLoadedAt,
         setQuestion,
         setSessionInfo,
@@ -57,6 +60,7 @@ describe('practice-session-page-logic', () => {
         expect.objectContaining({ questionId: 'q_1' }),
       );
       expect(setQuestionLoadedAt).toHaveBeenCalledWith(1234);
+      expect(setSubmitIdempotencyKey).toHaveBeenLastCalledWith('idem_1');
       expect(setSessionInfo).toHaveBeenCalledWith(
         expect.objectContaining({ mode: 'tutor', index: 0 }),
       );
@@ -66,14 +70,17 @@ describe('practice-session-page-logic', () => {
     it('sets error state when controller fails', async () => {
       const setLoadState = vi.fn();
       const setQuestion = vi.fn();
+      const setSubmitIdempotencyKey = vi.fn();
 
       await loadNextQuestion({
         sessionId: 'session-1',
         getNextQuestionFn: async () => err('INTERNAL_ERROR', 'Boom'),
+        createIdempotencyKey: () => 'idem_1',
         nowMs: () => 0,
         setLoadState,
         setSelectedChoiceId: vi.fn(),
         setSubmitResult: vi.fn(),
+        setSubmitIdempotencyKey,
         setQuestionLoadedAt: vi.fn(),
         setQuestion,
         setSessionInfo: vi.fn(),
@@ -84,6 +91,7 @@ describe('practice-session-page-logic', () => {
         status: 'error',
         message: 'Boom',
       });
+      expect(setSubmitIdempotencyKey).toHaveBeenLastCalledWith(null);
     });
   });
 
@@ -96,10 +104,12 @@ describe('practice-session-page-logic', () => {
         sessionId: 'session-1',
         startTransition,
         getNextQuestionFn: async () => ok(createNextQuestion()),
+        createIdempotencyKey: () => 'idem_1',
         nowMs: () => 0,
         setLoadState,
         setSelectedChoiceId: vi.fn(),
         setSubmitResult: vi.fn(),
+        setSubmitIdempotencyKey: vi.fn(),
         setQuestionLoadedAt: vi.fn(),
         setQuestion: vi.fn(),
         setSessionInfo: vi.fn(),
@@ -129,6 +139,7 @@ describe('practice-session-page-logic', () => {
         question: createNextQuestion(),
         selectedChoiceId: 'choice_1',
         questionLoadedAtMs: 1000,
+        submitIdempotencyKey: 'idem_1',
         submitAnswerFn,
         nowMs: () => 5000,
         setLoadState: vi.fn(),
@@ -139,6 +150,7 @@ describe('practice-session-page-logic', () => {
         questionId: 'q_1',
         choiceId: 'choice_1',
         sessionId: 'session-1',
+        idempotencyKey: 'idem_1',
         timeSpentSeconds: 4,
       });
       expect(setSubmitResult).toHaveBeenCalledWith(

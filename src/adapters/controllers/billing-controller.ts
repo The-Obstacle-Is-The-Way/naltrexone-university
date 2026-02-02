@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { createDepsResolver } from '@/lib/controller-helpers';
 import { ROUTES } from '@/lib/routes';
 import { CHECKOUT_SESSION_RATE_LIMIT } from '@/src/adapters/shared/rate-limits';
+import { withIdempotency } from '@/src/adapters/shared/with-idempotency';
 import { ApplicationError } from '@/src/application/errors';
 import type {
   AuthGateway,
@@ -11,6 +12,7 @@ import type {
   RateLimiter,
 } from '@/src/application/ports/gateways';
 import type {
+  IdempotencyKeyRepository,
   StripeCustomerRepository,
   SubscriptionRepository,
 } from '@/src/application/ports/repositories';
@@ -19,10 +21,12 @@ import type { ActionResult } from './action-result';
 import { err, handleError, ok } from './action-result';
 
 const zSubscriptionPlan = z.enum(['monthly', 'annual']);
+const zIdempotencyKey = z.string().uuid();
 
 const CreateCheckoutSessionInputSchema = z
   .object({
     plan: zSubscriptionPlan,
+    idempotencyKey: zIdempotencyKey.optional(),
   })
   .strict();
 
@@ -36,6 +40,7 @@ export type BillingControllerDeps = {
   stripeCustomerRepository: StripeCustomerRepository;
   subscriptionRepository: SubscriptionRepository;
   paymentGateway: PaymentGateway;
+  idempotencyKeyRepository: IdempotencyKeyRepository;
   rateLimiter: RateLimiter;
   getClerkUserId: () => Promise<string | null>;
   appUrl: string;
@@ -98,38 +103,54 @@ export async function createCheckoutSession(
   try {
     const d = await getDeps(deps);
     const user = await d.authGateway.requireUser();
+    const { plan, idempotencyKey } = parsed.data;
 
-    const checkoutRateLimit = await d.rateLimiter.limit({
-      key: `billing:createCheckoutSession:${user.id}`,
-      ...CHECKOUT_SESSION_RATE_LIMIT,
-    });
-    if (!checkoutRateLimit.success) {
-      throw new ApplicationError(
-        'RATE_LIMITED',
-        `Too many checkout attempts. Try again in ${checkoutRateLimit.retryAfterSeconds}s.`,
-      );
+    async function createNewSession(): Promise<CreateCheckoutSessionOutput> {
+      const checkoutRateLimit = await d.rateLimiter.limit({
+        key: `billing:createCheckoutSession:${user.id}`,
+        ...CHECKOUT_SESSION_RATE_LIMIT,
+      });
+      if (!checkoutRateLimit.success) {
+        throw new ApplicationError(
+          'RATE_LIMITED',
+          `Too many checkout attempts. Try again in ${checkoutRateLimit.retryAfterSeconds}s.`,
+        );
+      }
+
+      const subscription = await d.subscriptionRepository.findByUserId(user.id);
+      if (isEntitled(subscription, d.now())) {
+        throw new ApplicationError(
+          'ALREADY_SUBSCRIBED',
+          'Subscription already exists for this user',
+        );
+      }
+
+      const stripeCustomerId = await getOrCreateStripeCustomerId(d, {
+        userId: user.id,
+        email: user.email,
+      });
+
+      const checkoutSessionInput = {
+        userId: user.id,
+        stripeCustomerId,
+        plan,
+        successUrl: toSuccessUrl(d.appUrl),
+        cancelUrl: toCancelUrl(d.appUrl),
+      } as const;
+
+      return d.paymentGateway.createCheckoutSession(checkoutSessionInput);
     }
 
-    const subscription = await d.subscriptionRepository.findByUserId(user.id);
-    if (isEntitled(subscription, d.now())) {
-      throw new ApplicationError(
-        'ALREADY_SUBSCRIBED',
-        'Subscription already exists for this user',
-      );
-    }
-
-    const stripeCustomerId = await getOrCreateStripeCustomerId(d, {
-      userId: user.id,
-      email: user.email,
-    });
-
-    const session = await d.paymentGateway.createCheckoutSession({
-      userId: user.id,
-      stripeCustomerId,
-      plan: parsed.data.plan,
-      successUrl: toSuccessUrl(d.appUrl),
-      cancelUrl: toCancelUrl(d.appUrl),
-    });
+    const session = idempotencyKey
+      ? await withIdempotency({
+          repo: d.idempotencyKeyRepository,
+          userId: user.id,
+          action: 'billing:createCheckoutSession',
+          key: idempotencyKey,
+          now: d.now,
+          execute: createNewSession,
+        })
+      : await createNewSession();
 
     return ok(session);
   } catch (error) {

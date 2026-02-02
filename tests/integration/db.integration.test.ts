@@ -45,6 +45,7 @@ describe('database migrations', () => {
       'stripe_subscriptions',
       'stripe_events',
       'rate_limits',
+      'idempotency_keys',
       'questions',
       'choices',
       'tags',
