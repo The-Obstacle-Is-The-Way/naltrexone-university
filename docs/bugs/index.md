@@ -17,10 +17,9 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 | ID | Title | Status | Priority | Date |
 |----|-------|--------|----------|------|
+| [BUG-039](bug-039-checkout-success-searchparams-not-awaited.md) | Checkout Success Page Crashes — searchParams Not Awaited | Open | P1 | 2026-02-02 |
 
-No active bugs.
-
-**Next Bug ID:** BUG-039
+**Next Bug ID:** BUG-040
 
 ## Archived Bugs
 
