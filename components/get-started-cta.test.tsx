@@ -29,7 +29,7 @@ describe('GetStartedCta', () => {
   });
 
   it('links to /pricing when user is not entitled', async () => {
-    const { GetStartedCta } = await import('./get-started-cta');
+    const { GetStartedCta } = await import('@/components/get-started-cta');
 
     const authGateway: AuthGateway = {
       getCurrentUser: vi.fn(async () => ({
@@ -57,7 +57,7 @@ describe('GetStartedCta', () => {
   });
 
   it('links to /pricing when unauthenticated', async () => {
-    const { GetStartedCta } = await import('./get-started-cta');
+    const { GetStartedCta } = await import('@/components/get-started-cta');
 
     const authGateway: AuthGateway = {
       getCurrentUser: vi.fn(async () => null),
@@ -81,7 +81,7 @@ describe('GetStartedCta', () => {
   });
 
   it('links to /app/dashboard when user is entitled', async () => {
-    const { GetStartedCta } = await import('./get-started-cta');
+    const { GetStartedCta } = await import('@/components/get-started-cta');
 
     const authGateway: AuthGateway = {
       getCurrentUser: vi.fn(async () => ({
@@ -111,7 +111,36 @@ describe('GetStartedCta', () => {
   it('links to /pricing when NEXT_PUBLIC_SKIP_CLERK=true', async () => {
     process.env.NEXT_PUBLIC_SKIP_CLERK = 'true';
 
-    const { GetStartedCta } = await import('./get-started-cta');
+    const { GetStartedCta } = await import('@/components/get-started-cta');
+
+    const element = await GetStartedCta({ deps: undefined });
+    const html = renderToStaticMarkup(element);
+
+    expect(html).toContain('href="/pricing"');
+    expect(html).toContain('Get Started');
+  });
+
+  it('loads dependencies from the container when deps are omitted', async () => {
+    vi.doMock('@/lib/container', () => ({
+      createContainer: () => ({
+        createAuthGateway: () => ({
+          getCurrentUser: async () => ({
+            id: 'user_1',
+            email: 'user@example.com',
+            createdAt: new Date('2026-02-01T00:00:00Z'),
+            updatedAt: new Date('2026-02-01T00:00:00Z'),
+          }),
+          requireUser: async () => {
+            throw new Error('not used');
+          },
+        }),
+        createCheckEntitlementUseCase: () => ({
+          execute: async () => ({ isEntitled: false }),
+        }),
+      }),
+    }));
+
+    const { GetStartedCta } = await import('@/components/get-started-cta');
 
     const element = await GetStartedCta({ deps: undefined });
     const html = renderToStaticMarkup(element);

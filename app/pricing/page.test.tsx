@@ -90,6 +90,30 @@ describe('app/pricing', () => {
     );
   });
 
+  it('builds the checkout error banner when checkout=error', async () => {
+    const { getPricingBanner } = await import('./page');
+
+    expect(getPricingBanner({ checkout: 'error' })).toMatchObject({
+      tone: 'error',
+      message: 'Checkout failed. Please try again.',
+    });
+  });
+
+  it('builds the checkout canceled banner when checkout=cancel', async () => {
+    const { getPricingBanner } = await import('./page');
+
+    expect(getPricingBanner({ checkout: 'cancel' })).toMatchObject({
+      tone: 'info',
+      message: 'Checkout canceled.',
+    });
+  });
+
+  it('returns null when no banner parameters are set', async () => {
+    const { getPricingBanner } = await import('./page');
+
+    expect(getPricingBanner({})).toBe(null);
+  });
+
   it('loadPricingData returns isEntitled=false when unauthenticated', async () => {
     const { loadPricingData } = await import('./page');
 
