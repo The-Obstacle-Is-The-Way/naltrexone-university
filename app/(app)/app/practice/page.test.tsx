@@ -258,6 +258,38 @@ describe('app/(app)/app/practice', () => {
     expect(html).toContain('No questions');
   });
 
+  it('renders tag optgroups when tags are available', async () => {
+    const { PracticeSessionStarter } = await import(
+      '@/app/(app)/app/practice/page'
+    );
+
+    const html = renderToStaticMarkup(
+      <PracticeSessionStarter
+        sessionMode="tutor"
+        sessionCount={20}
+        filters={{ tagSlugs: ['topic-1'], difficulties: ['easy'] }}
+        tagLoadStatus="idle"
+        availableTags={[
+          { id: 'tag-1', slug: 'domain-1', name: 'Domain 1', kind: 'domain' },
+          { id: 'tag-2', slug: 'topic-1', name: 'Topic 1', kind: 'topic' },
+        ]}
+        sessionStartStatus="idle"
+        sessionStartError={null}
+        isPending={false}
+        onToggleDifficulty={() => undefined}
+        onTagSlugsChange={() => undefined}
+        onSessionModeChange={() => undefined}
+        onSessionCountChange={() => undefined}
+        onStartSession={() => undefined}
+      />,
+    );
+
+    expect(html).toContain('Domain');
+    expect(html).toContain('Topic');
+    expect(html).toContain('Domain 1');
+    expect(html).toContain('Topic 1');
+  });
+
   it('navigateTo calls window.location.assign', async () => {
     const { navigateTo } = await import(
       '@/app/(app)/app/practice/client-navigation'
