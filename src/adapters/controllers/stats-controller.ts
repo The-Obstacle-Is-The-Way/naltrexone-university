@@ -18,10 +18,29 @@ import { err, handleError, ok } from './action-result';
 
 const GetUserStatsInputSchema = z.object({}).strict();
 
-const STATS_WINDOW_DAYS = 7;
-const STREAK_WINDOW_DAYS = 60;
-const RECENT_ACTIVITY_LIMIT = 20;
 const DAY_MS = 86_400_000;
+
+/**
+ * Dashboard "last 7 days" accuracy window.
+ *
+ * SSOT: docs/specs/spec-015-dashboard.md ("Last 7 days accuracy").
+ */
+const STATS_WINDOW_DAYS = 7;
+
+/**
+ * Query window for streak computation.
+ *
+ * Note: This bounds the maximum streak we can compute to `STREAK_WINDOW_DAYS`
+ * for performance/memory safety. Increase if/when we want longer streaks.
+ */
+const STREAK_WINDOW_DAYS = 60;
+
+/**
+ * Max rows shown in the "Recent activity" list on the dashboard.
+ *
+ * This is a UX choice to keep the page scannable without scrolling.
+ */
+const RECENT_ACTIVITY_LIMIT = 20;
 
 type CheckEntitlementUseCase = {
   execute: (input: CheckEntitlementInput) => Promise<CheckEntitlementOutput>;
