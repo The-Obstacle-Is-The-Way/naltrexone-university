@@ -22,10 +22,10 @@ BUG-045 taught us a painful lesson: Stripe deprecated `subscription.current_peri
 
 | Vendor | Package | Our Version | API Version | Last Verified |
 |--------|---------|-------------|-------------|---------------|
-| Stripe | `stripe` | ^17.5.0 | `2026-01-28.clover` | 2026-02-02 |
-| Clerk | `@clerk/nextjs` | ^6.12.0 | `2024-10-01` | 2026-02-02 |
-| Neon | `@neondatabase/serverless` | ^0.10.4 | N/A (driver) | 2026-02-02 |
-| Drizzle | `drizzle-orm` | ^0.39.1 | N/A | 2026-02-02 |
+| Stripe | `stripe` | ^20.3.0 | `2026-01-28.clover` | 2026-02-02 |
+| Clerk | `@clerk/nextjs` | ^6.37.1 | `2024-10-01` | 2026-02-02 |
+| Postgres | `postgres` | ^3.4.8 | N/A (driver) | 2026-02-02 |
+| Drizzle | `drizzle-orm` | ^0.45.1 | N/A | 2026-02-02 |
 
 ---
 
@@ -35,7 +35,7 @@ BUG-045 taught us a painful lesson: Stripe deprecated `subscription.current_peri
 |--------|-----|-----------------|--------------|
 | [Stripe](./stripe.md) | Payment processing | `subscription.items.data[].current_period_end` | BUG-045 |
 | [Clerk](./clerk.md) | Authentication | `userId`, `sessionClaims` | None |
-| [Neon](./neon.md) | Database | Connection pooling | None |
+| [Postgres](./postgres.md) | Database | Connection pooling | None |
 
 ---
 

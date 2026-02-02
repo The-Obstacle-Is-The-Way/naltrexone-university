@@ -1,6 +1,6 @@
 # Clerk Vendor Documentation
 
-**Package:** `@clerk/nextjs` ^6.12.0
+**Package:** `@clerk/nextjs` ^6.37.1
 **API Version:** `2024-10-01`
 **Dashboard:** https://dashboard.clerk.com
 **Docs:** https://clerk.com/docs
@@ -46,20 +46,21 @@ Clerk uses date-based API versioning. Specify via:
 
 ```typescript
 import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server';
+import { PUBLIC_ROUTE_PATTERNS } from '@/lib/public-routes';
 
-const isPublicRoute = createRouteMatcher([
-  '/',
-  '/pricing',
-  '/checkout/success',
-  '/api/webhooks/(.*)',
-]);
+const isPublicRoute = createRouteMatcher(PUBLIC_ROUTE_PATTERNS);
 
-export default clerkMiddleware(async (auth, req) => {
-  if (!isPublicRoute(req)) {
+export default clerkMiddleware(async (auth, request) => {
+  if (!isPublicRoute(request)) {
     await auth.protect();
   }
 });
 ```
+
+**Public routes** (from `lib/public-routes.ts`):
+- `/`, `/pricing(.*)`, `/sign-in(.*)`, `/sign-up(.*)`
+- `/checkout/success(.*)`, `/api/health(.*)`
+- `/api/stripe/webhook(.*)`, `/api/webhooks/clerk(.*)`
 
 ### Server Components
 
@@ -90,15 +91,16 @@ function Component() {
 
 | Event | Handler | Purpose |
 |-------|---------|---------|
-| `user.created` | `/api/webhooks/clerk` | Sync new user to DB |
-| `user.updated` | `/api/webhooks/clerk` | Sync email changes |
-| `user.deleted` | `/api/webhooks/clerk` | Clean up user data |
+| `user.updated` | `/api/webhooks/clerk` | Sync user data (email changes) |
+| `user.deleted` | `/api/webhooks/clerk` | Cancel Stripe subscriptions, delete user data |
+
+**Note:** We do NOT handle `user.created`. Users are created lazily on first authenticated request.
 
 **Webhook endpoint:** `/api/webhooks/clerk`
 
-**Webhook secret:** `CLERK_WEBHOOK_SECRET` env var
+**Webhook secret:** `CLERK_WEBHOOK_SIGNING_SECRET` env var
 
-**Signature verification:** Use `svix` package or Clerk's built-in verification.
+**Signature verification:** Uses `@clerk/nextjs/webhooks` `verifyWebhook()` function.
 
 ---
 
@@ -120,7 +122,7 @@ For sign-ins matching a SAML connection, API now returns `needs_first_factor` st
 |----------|---------|----------|
 | `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` | Client-side auth | Yes |
 | `CLERK_SECRET_KEY` | Server-side auth | Yes |
-| `CLERK_WEBHOOK_SECRET` | Webhook verification | Yes |
+| `CLERK_WEBHOOK_SIGNING_SECRET` | Webhook verification | Yes |
 | `NEXT_PUBLIC_CLERK_SIGN_IN_URL` | Custom sign-in route | Optional |
 | `NEXT_PUBLIC_CLERK_SIGN_UP_URL` | Custom sign-up route | Optional |
 

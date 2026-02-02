@@ -1,6 +1,6 @@
 # Stripe Vendor Documentation
 
-**Package:** `stripe` ^17.5.0
+**Package:** `stripe` ^20.3.0
 **API Version:** `2026-01-28.clover`
 **Dashboard:** https://dashboard.stripe.com
 **Docs:** https://docs.stripe.com
@@ -81,6 +81,8 @@ subscription.items.data[0].current_period_end  // number
 | `customer.subscription.deleted` | `processWebhookEvent` | Cancellation |
 | `customer.subscription.paused` | `processWebhookEvent` | Pause (if enabled) |
 | `customer.subscription.resumed` | `processWebhookEvent` | Resume from pause |
+| `customer.subscription.pending_update_applied` | `processWebhookEvent` | Scheduled change applied |
+| `customer.subscription.pending_update_expired` | `processWebhookEvent` | Scheduled change expired |
 
 **Webhook endpoint:** `/api/webhooks/stripe`
 
