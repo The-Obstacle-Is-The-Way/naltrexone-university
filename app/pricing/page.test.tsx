@@ -163,8 +163,8 @@ describe('app/pricing', () => {
     ).resolves.toEqual({ isEntitled: true });
   });
 
-  it('createSubscribeAction redirects to checkout url on success', async () => {
-    const { createSubscribeAction } = await import('./page');
+  it('runSubscribeAction redirects to checkout url on success', async () => {
+    const { runSubscribeAction } = await import('./page');
 
     const createCheckoutSessionFn = vi.fn(async () => ({
       ok: true,
@@ -175,18 +175,21 @@ describe('app/pricing', () => {
       throw new Error(url);
     }) as unknown as (url: string) => never;
 
-    const action = createSubscribeAction({
-      plan: 'monthly',
-      createCheckoutSessionFn: createCheckoutSessionFn as never,
-      redirectFn,
-    });
+    const action = async () =>
+      runSubscribeAction(
+        { plan: 'monthly' },
+        {
+          createCheckoutSessionFn: createCheckoutSessionFn as never,
+          redirectFn,
+        },
+      );
 
     await expect(action()).rejects.toThrow('https://stripe.test/checkout');
     expect(createCheckoutSessionFn).toHaveBeenCalledWith({ plan: 'monthly' });
   });
 
-  it('createSubscribeAction redirects to /sign-up when unauthenticated', async () => {
-    const { createSubscribeAction } = await import('./page');
+  it('runSubscribeAction redirects to /sign-up when unauthenticated', async () => {
+    const { runSubscribeAction } = await import('./page');
 
     const createCheckoutSessionFn = vi.fn(async () => ({
       ok: false,
@@ -197,18 +200,21 @@ describe('app/pricing', () => {
       throw new Error(url);
     }) as unknown as (url: string) => never;
 
-    const action = createSubscribeAction({
-      plan: 'annual',
-      createCheckoutSessionFn: createCheckoutSessionFn as never,
-      redirectFn,
-    });
+    const action = async () =>
+      runSubscribeAction(
+        { plan: 'annual' },
+        {
+          createCheckoutSessionFn: createCheckoutSessionFn as never,
+          redirectFn,
+        },
+      );
 
     await expect(action()).rejects.toThrow('/sign-up');
     expect(createCheckoutSessionFn).toHaveBeenCalledWith({ plan: 'annual' });
   });
 
-  it('createSubscribeAction redirects to /pricing?checkout=error for other errors', async () => {
-    const { createSubscribeAction } = await import('./page');
+  it('runSubscribeAction redirects to /pricing?checkout=error for other errors', async () => {
+    const { runSubscribeAction } = await import('./page');
 
     const createCheckoutSessionFn = vi.fn(async () => ({
       ok: false,
@@ -219,11 +225,14 @@ describe('app/pricing', () => {
       throw new Error(url);
     }) as unknown as (url: string) => never;
 
-    const action = createSubscribeAction({
-      plan: 'monthly',
-      createCheckoutSessionFn: createCheckoutSessionFn as never,
-      redirectFn,
-    });
+    const action = async () =>
+      runSubscribeAction(
+        { plan: 'monthly' },
+        {
+          createCheckoutSessionFn: createCheckoutSessionFn as never,
+          redirectFn,
+        },
+      );
 
     await expect(action()).rejects.toThrow('/pricing?checkout=error');
     expect(createCheckoutSessionFn).toHaveBeenCalledWith({ plan: 'monthly' });
@@ -246,7 +255,7 @@ describe('app/pricing', () => {
 
     const PricingPage = (await import('./page')).default;
 
-    const element = await PricingPage({ searchParams: {} });
+    const element = await PricingPage({ searchParams: Promise.resolve({}) });
     const html = renderToStaticMarkup(element);
 
     expect(html).toContain('Pricing');

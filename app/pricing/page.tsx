@@ -211,45 +211,54 @@ export function getPricingBanner(
 
 type RedirectFn = (url: string) => never;
 
-export function createSubscribeAction(input: {
+type SubscribeActionInput = {
   plan: 'monthly' | 'annual';
+};
+
+type SubscribeActionDeps = {
   createCheckoutSessionFn: typeof createCheckoutSession;
   redirectFn: RedirectFn;
-}): () => Promise<void> {
+};
+
+export async function runSubscribeAction(
+  input: SubscribeActionInput,
+  deps: SubscribeActionDeps,
+): Promise<void> {
+  const result = await deps.createCheckoutSessionFn({ plan: input.plan });
+  if (result.ok) {
+    deps.redirectFn(result.data.url);
+  }
+
+  if (result.error.code === 'UNAUTHENTICATED') {
+    deps.redirectFn('/sign-up');
+  }
+
+  deps.redirectFn('/pricing?checkout=error');
+}
+
+export function createSubscribeAction(
+  plan: SubscribeActionInput['plan'],
+): () => Promise<void> {
   return async function subscribe() {
     'use server';
-    const result = await input.createCheckoutSessionFn({ plan: input.plan });
-    if (result.ok) {
-      input.redirectFn(result.data.url);
-    }
-
-    if (result.error.code === 'UNAUTHENTICATED') {
-      input.redirectFn('/sign-up');
-    }
-
-    input.redirectFn('/pricing?checkout=error');
+    await runSubscribeAction(
+      { plan },
+      { createCheckoutSessionFn: createCheckoutSession, redirectFn: redirect },
+    );
   };
 }
 
 export default async function PricingPage({
   searchParams,
 }: {
-  searchParams: PricingSearchParams;
+  searchParams: Promise<PricingSearchParams>;
 }) {
   const { isEntitled } = await loadPricingData();
-  const banner = getPricingBanner(searchParams);
+  const resolvedSearchParams = await searchParams;
+  const banner = getPricingBanner(resolvedSearchParams);
 
-  const subscribeMonthly = createSubscribeAction({
-    plan: 'monthly',
-    createCheckoutSessionFn: createCheckoutSession,
-    redirectFn: redirect,
-  });
-
-  const subscribeAnnual = createSubscribeAction({
-    plan: 'annual',
-    createCheckoutSessionFn: createCheckoutSession,
-    redirectFn: redirect,
-  });
+  const subscribeMonthly = createSubscribeAction('monthly');
+  const subscribeAnnual = createSubscribeAction('annual');
 
   return (
     <PricingView

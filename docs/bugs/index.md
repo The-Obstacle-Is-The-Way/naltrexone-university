@@ -19,12 +19,13 @@ Bug reports document issues discovered in the codebase along with their root cau
 |----|-------|--------|----------|------|
 | [BUG-009](./bug-009-vercel-preview-deployment-rate-limit.md) | Vercel Preview Deployment Status Fails Due to Rate Limit | Won't Fix | P3 | 2026-02-01 |
 
-**Next Bug ID:** BUG-014
+**Next Bug ID:** BUG-015
 
 ## Archived Bugs
 
 | ID | Title | Priority | Resolved |
 |----|-------|----------|----------|
+| [BUG-014](../_archive/bugs/bug-014-pricing-subscribe-action-not-working.md) | Pricing Subscribe Action Not Working (Server Action Serialization) | P1 | 2026-02-02 |
 | [BUG-013](../_archive/bugs/bug-013-silent-error-handling.md) | Silent Error Handling — Errors Swallowed Without Logging or User Feedback | P1 | 2026-02-02 |
 | [BUG-012](../_archive/bugs/bug-012-incomplete-feature-wiring.md) | Incomplete Feature Wiring — Missing Controllers and E2E Coverage | P2 | 2026-02-02 |
 | [BUG-011](../_archive/bugs/bug-011-ux-flow-gaps-multiple-issues.md) | UX Flow Gaps — Multiple Navigation and Wiring Issues | P1 | 2026-02-02 |
