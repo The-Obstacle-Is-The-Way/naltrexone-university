@@ -1,4 +1,4 @@
-# BUG-031: State Update After Component Unmount
+# BUG-032: State Update After Component Unmount
 
 ## Severity: P2 - Medium
 

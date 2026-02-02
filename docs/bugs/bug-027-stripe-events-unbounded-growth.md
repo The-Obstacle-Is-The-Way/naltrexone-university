@@ -1,4 +1,4 @@
-# BUG-026: Stripe Events Table Unbounded Growth
+# BUG-027: Stripe Events Table Unbounded Growth
 
 ## Severity: P2 - Medium
 

@@ -1,4 +1,4 @@
-# BUG-017: Silent Fallbacks in Controllers — Data Inconsistency Without Warning
+# BUG-018: Silent Fallbacks in Controllers — Data Inconsistency Without Warning
 
 **Status:** Open
 **Priority:** P2

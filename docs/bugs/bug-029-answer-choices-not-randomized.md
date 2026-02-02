@@ -1,4 +1,4 @@
-# BUG-028: Answer Choices Not Randomized
+# BUG-029: Answer Choices Not Randomized
 
 ## Severity: P1 - High (Test Validity Issue)
 

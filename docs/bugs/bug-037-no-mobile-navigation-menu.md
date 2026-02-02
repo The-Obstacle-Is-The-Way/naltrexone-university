@@ -1,4 +1,4 @@
-# BUG-036: No Mobile Navigation Menu
+# BUG-037: No Mobile Navigation Menu
 
 ## Severity: P2 - Medium
 

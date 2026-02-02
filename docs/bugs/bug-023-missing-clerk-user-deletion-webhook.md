@@ -1,4 +1,4 @@
-# BUG-022: Missing Clerk Webhook for User Deletion
+# BUG-023: Missing Clerk Webhook for User Deletion
 
 ## Severity: P2 - Medium
 

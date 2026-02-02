@@ -1,4 +1,4 @@
-# BUG-023: Entitlement Race Condition During Payment Failure
+# BUG-024: Entitlement Race Condition During Payment Failure
 
 ## Severity: P2 - Medium (Downgraded from P1)
 

@@ -1,4 +1,4 @@
-# BUG-032: Stale Closure in onToggleBookmark
+# BUG-033: Stale Closure in onToggleBookmark
 
 ## Severity: P2 - Medium
 

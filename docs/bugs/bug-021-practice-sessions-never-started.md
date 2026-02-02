@@ -1,4 +1,4 @@
-# BUG-020: Practice Sessions Never Started/Ended — Dead Session Controller Code
+# BUG-021: Practice Sessions Never Started/Ended — Dead Session Controller Code
 
 **Status:** Open
 **Priority:** P2

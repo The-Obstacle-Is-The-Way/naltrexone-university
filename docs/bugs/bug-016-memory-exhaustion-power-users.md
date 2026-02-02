@@ -1,4 +1,4 @@
-# BUG-015: Memory Exhaustion for Power Users — All Attempts Loaded Into Memory
+# BUG-016: Memory Exhaustion for Power Users — All Attempts Loaded Into Memory
 
 **Status:** Open
 **Priority:** P1

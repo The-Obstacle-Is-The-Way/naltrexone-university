@@ -1,4 +1,4 @@
-# BUG-037: Missing Clerk user.updated Webhook — Email Sync Gap
+# BUG-038: Missing Clerk user.updated Webhook — Email Sync Gap
 
 ## Severity: P3 - Low
 

@@ -1,4 +1,4 @@
-# BUG-035: No Loading State on Subscribe Buttons
+# BUG-036: No Loading State on Subscribe Buttons
 
 ## Severity: P2 - Medium
 

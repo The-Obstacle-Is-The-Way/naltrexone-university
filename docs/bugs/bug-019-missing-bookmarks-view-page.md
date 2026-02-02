@@ -1,4 +1,4 @@
-# BUG-018: Missing Bookmarks View Page — Users Can Bookmark But Can't View
+# BUG-019: Missing Bookmarks View Page — Users Can Bookmark But Can't View
 
 **Status:** Open
 **Priority:** P2

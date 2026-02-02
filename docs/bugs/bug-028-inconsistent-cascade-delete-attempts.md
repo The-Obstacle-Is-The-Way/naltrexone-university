@@ -1,4 +1,4 @@
-# BUG-027: Inconsistent Cascade Delete for Attempts
+# BUG-028: Inconsistent Cascade Delete for Attempts
 
 ## Severity: P2 - Medium
 

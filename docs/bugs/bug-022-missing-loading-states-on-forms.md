@@ -1,4 +1,4 @@
-# BUG-021: Missing Loading States on Form Buttons
+# BUG-022: Missing Loading States on Form Buttons
 
 **Status:** Open
 **Priority:** P3

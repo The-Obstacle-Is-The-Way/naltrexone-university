@@ -1,4 +1,4 @@
-# BUG-024: Missing Subscription Event Handlers (paused/resumed/incomplete_expired)
+# BUG-025: Missing Subscription Event Handlers (paused/resumed/incomplete_expired)
 
 ## Severity: P2 - Medium
 

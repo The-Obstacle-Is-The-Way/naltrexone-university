@@ -1,4 +1,4 @@
-# BUG-033: Webhook Catch Block Loses Error Context
+# BUG-034: Webhook Catch Block Loses Error Context
 
 ## Severity: P2 - Medium
 

@@ -17,17 +17,6 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 | ID | Title | Status | Priority | Date |
 |----|-------|--------|----------|------|
-| [DEBT-037](./debt-037-attempt-repo-unnecessary-null-checks.md) | Unnecessary Null Checks in Attempt Repository | Open | P3 | 2026-02-01 |
-| [DEBT-038](./debt-038-question-repo-type-assertion.md) | Misleading Type Assertion in Question Repository | Open | P3 | 2026-02-01 |
-| [DEBT-039](./debt-039-webhook-error-context-loss.md) | Error Context Loss in Stripe Webhook Failures | Open | P2 | 2026-02-01 |
-| [DEBT-040](./debt-040-missing-session-id-index.md) | Missing Standalone Index on Attempts by Session | Open | P2 | 2026-02-01 |
-| [DEBT-041](./debt-041-skip-clerk-production-safety.md) | SKIP_CLERK Production Safety Gap | Open | P2 | 2026-02-01 |
-| [DEBT-042](./debt-042-stripe-customer-concurrent-upsert.md) | Race Condition in Stripe Customer Concurrent Upsert | Open | P3 | 2026-02-01 |
-| [DEBT-043](./debt-043-unused-schema-wildcard-import.md) | Unused Schema Wildcard Import | Open | P4 | 2026-02-01 |
-| [DEBT-044](./debt-044-spec-005-status-drift.md) | SPEC-005 Status Incorrectly Marked as Implemented | Open | P2 | 2026-02-01 |
-| [DEBT-045](./debt-045-claude-md-documentation-drift.md) | CLAUDE.md Documentation Drift | Open | P2 | 2026-02-01 |
-| [DEBT-046](./debt-046-question-selection-in-wrong-layer.md) | Question Selection Algorithm in Wrong Layer | Open | P2 | 2026-02-01 |
-| [DEBT-047](./debt-047-spec-010-missing-webhook-controller.md) | SPEC-010 Missing Webhook Controller Documentation | Open | P3 | 2026-02-01 |
 | [DEBT-048](./debt-048-hardcoded-url-paths-billing.md) | Hard-Coded URL Paths in Billing Controller | Open | P2 | 2026-02-02 |
 | [DEBT-049](./debt-049-hardcoded-limits-not-centralized.md) | Hard-Coded Limits Not Centralized Across Controllers | Open | P2 | 2026-02-02 |
 | [DEBT-050](./debt-050-missing-fake-implementations.md) | Missing Fake Implementations for 5 Repositories | Open | P2 | 2026-02-02 |

@@ -1,4 +1,4 @@
-# BUG-034: Error Banner Not Clearable on Pricing Page
+# BUG-035: Error Banner Not Clearable on Pricing Page
 
 ## Severity: P3 - Low
 

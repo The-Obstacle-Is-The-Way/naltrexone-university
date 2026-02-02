@@ -1,4 +1,4 @@
-# BUG-030: Non-Unique React Key in Dashboard Recent Activity
+# BUG-031: Non-Unique React Key in Dashboard Recent Activity
 
 ## Severity: P3 - Low
 

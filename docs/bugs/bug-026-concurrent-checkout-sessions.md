@@ -1,4 +1,4 @@
-# BUG-025: No Protection Against Concurrent Checkout Sessions
+# BUG-026: No Protection Against Concurrent Checkout Sessions
 
 ## Severity: P2 - Medium
 

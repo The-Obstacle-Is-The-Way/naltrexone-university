@@ -1,4 +1,4 @@
-# BUG-016: Billing Page Shows "Manage in Stripe" When User Has No Subscription
+# BUG-017: Billing Page Shows "Manage in Stripe" When User Has No Subscription
 
 **Status:** Open
 **Priority:** P2
