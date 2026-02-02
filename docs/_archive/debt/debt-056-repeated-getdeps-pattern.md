@@ -1,8 +1,9 @@
 # DEBT-056: Repeated getDeps Pattern Across 6 Controllers
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P3
 **Date:** 2026-02-02
+**Resolved:** 2026-02-02
 
 ---
 
@@ -67,12 +68,12 @@ const getDeps = createDepsResolver(
 
 ## Verification
 
-- [ ] Helper function created
-- [ ] All 6 controllers updated to use helper
-- [ ] Tests still pass
-- [ ] Pattern change only requires updating one file
+- [x] Helper function exists (`lib/controller-helpers.ts`).
+- [x] Controllers use `createDepsResolver`.
+- [x] Unit tests pass.
 
 ## Related
 
 - `src/adapters/controllers/*.ts` — all 6 controller files
 - `lib/container.ts`
+ - `lib/controller-helpers.ts`

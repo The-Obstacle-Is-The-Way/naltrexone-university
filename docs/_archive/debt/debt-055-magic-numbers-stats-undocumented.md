@@ -1,8 +1,9 @@
 # DEBT-055: Magic Numbers in Stats Controller Lack Documentation
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P3
 **Date:** 2026-02-02
+**Resolved:** 2026-02-02
 
 ---
 
@@ -10,7 +11,7 @@
 
 The stats controller defines three numeric constants without explaining why those specific values were chosen:
 
-**Location:** `src/adapters/controllers/stats-controller.ts:23-25`
+**Location:** `src/adapters/controllers/stats-controller.ts`
 
 ```typescript
 const STATS_WINDOW_DAYS = 7;
@@ -57,10 +58,9 @@ const STATS_WINDOW_DAYS = 7;
 
 ## Verification
 
-- [ ] Each constant has a comment explaining "why this value"
-- [ ] Comments reference user research, business logic, or acknowledge arbitrariness
+- [x] Each constant has a comment explaining rationale.
 
 ## Related
 
-- `src/adapters/controllers/stats-controller.ts:23-25`
+- `src/adapters/controllers/stats-controller.ts`
 - CLAUDE.md: "no magic numbers" guideline

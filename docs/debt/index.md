@@ -17,23 +17,10 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 | ID | Title | Status | Priority | Date |
 |----|-------|--------|----------|------|
-| [DEBT-048](./debt-048-hardcoded-url-paths-billing.md) | Hard-Coded URL Paths in Billing Controller | Open | P2 | 2026-02-02 |
-| [DEBT-049](./debt-049-hardcoded-limits-not-centralized.md) | Hard-Coded Limits Not Centralized Across Controllers | Open | P2 | 2026-02-02 |
-| [DEBT-051](./debt-051-controller-tests-use-mocks-not-fakes.md) | Controller Tests Use vi.fn() Instead of Fakes | Open | P2 | 2026-02-02 |
 | [DEBT-053](./debt-053-unused-tag-repository.md) | Unused TagRepository — Wired But Never Called | Open | P2 | 2026-02-02 |
 | [DEBT-054](./debt-054-unused-domain-error-codes.md) | Unused Domain Error Codes — Defined But Never Thrown | Open | P3 | 2026-02-02 |
-| [DEBT-055](./debt-055-magic-numbers-stats-undocumented.md) | Magic Numbers in Stats Controller Lack Documentation | Open | P3 | 2026-02-02 |
-| [DEBT-056](./debt-056-repeated-getdeps-pattern.md) | Repeated getDeps Pattern Across 6 Controllers | Open | P3 | 2026-02-02 |
-| [DEBT-057](./debt-057-webhook-error-stack-trace-lost.md) | Webhook Error Stack Trace Lost in Database | Open | P3 | 2026-02-02 |
-| [DEBT-058](./debt-058-cancel-at-period-end-not-displayed.md) | cancelAtPeriodEnd Stored But Never Displayed in UI | Open | P2 | 2026-02-02 |
-| [DEBT-059](./debt-059-stripe-api-version-undocumented.md) | Stripe API Version Hardcoded Without Documentation | Open | P3 | 2026-02-02 |
 | [DEBT-060](./debt-060-no-rollback-migrations.md) | No Rollback Migrations | Open | P2 | 2026-02-02 |
 | [DEBT-061](./debt-061-timezone-not-explicitly-enforced.md) | Timezone Not Explicitly Enforced at Application Level | Open | P3 | 2026-02-02 |
-| [DEBT-063](./debt-063-missing-aria-labels-choice-buttons.md) | Missing ARIA Labels on Choice Buttons | Open | P2 | 2026-02-02 |
-| [DEBT-064](./debt-064-missing-focus-indicators-error-buttons.md) | Missing Focus Indicators on Error Page Buttons | Open | P3 | 2026-02-02 |
-| [DEBT-067](./debt-067-generic-error-page-no-details.md) | Generic Error Page Lacks Error Details | Open | P3 | 2026-02-02 |
-| [DEBT-068](./debt-068-missing-error-tsx-nested-routes.md) | Missing error.tsx in Nested Routes | Open | P3 | 2026-02-02 |
-| [DEBT-069](./debt-069-document-stripe-eager-sync-pattern.md) | Document Stripe Eager Sync Pattern | Open | P3 | 2026-02-02 |
 
 **Next Debt ID:** DEBT-071
 
@@ -88,11 +75,24 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 | [DEBT-045](../_archive/debt/debt-045-claude-md-documentation-drift.md) | CLAUDE.md Documentation Drift | P2 | 2026-02-02 |
 | [DEBT-046](../_archive/debt/debt-046-question-selection-in-wrong-layer.md) | Question Selection Algorithm in Wrong Layer | P2 | 2026-02-02 |
 | [DEBT-047](../_archive/debt/debt-047-spec-010-missing-webhook-controller.md) | SPEC-010 Missing Webhook Controller Documentation | P3 | 2026-02-02 |
+| [DEBT-048](../_archive/debt/debt-048-hardcoded-url-paths-billing.md) | Hard-Coded URL Paths in Billing Controller | P2 | 2026-02-02 |
+| [DEBT-049](../_archive/debt/debt-049-hardcoded-limits-not-centralized.md) | Hard-Coded Limits Not Centralized Across Controllers | P2 | 2026-02-02 |
 | [DEBT-050](../_archive/debt/debt-050-missing-fake-implementations.md) | Missing Fake Implementations for 5 Repositories | P2 | 2026-02-02 |
+| [DEBT-051](../_archive/debt/debt-051-controller-tests-use-mocks-not-fakes.md) | Controller Tests Use vi.fn() Instead of Fakes | P2 | 2026-02-02 |
 | [DEBT-052](../_archive/debt/debt-052-unused-domain-service-compute-session-progress.md) | Unused Domain Service — computeSessionProgress | P2 | 2026-02-02 |
+| [DEBT-055](../_archive/debt/debt-055-magic-numbers-stats-undocumented.md) | Magic Numbers in Stats Controller Lack Documentation | P3 | 2026-02-02 |
+| [DEBT-056](../_archive/debt/debt-056-repeated-getdeps-pattern.md) | Repeated getDeps Pattern Across 6 Controllers | P3 | 2026-02-02 |
+| [DEBT-057](../_archive/debt/debt-057-webhook-error-stack-trace-lost.md) | Webhook Error Stack Trace Lost in Database | P3 | 2026-02-02 |
+| [DEBT-058](../_archive/debt/debt-058-cancel-at-period-end-not-displayed.md) | cancelAtPeriodEnd Stored But Never Displayed in UI | P2 | 2026-02-02 |
+| [DEBT-059](../_archive/debt/debt-059-stripe-api-version-undocumented.md) | Stripe API Version Hardcoded Without Documentation | P3 | 2026-02-02 |
 | [DEBT-062](../_archive/debt/debt-062-confusing-redirect-control-flow.md) | Confusing Redirect Control Flow Relied on `redirect()` Throwing | P3 | 2026-02-02 |
+| [DEBT-063](../_archive/debt/debt-063-missing-aria-labels-choice-buttons.md) | Missing ARIA Labels on Choice Buttons | P2 | 2026-02-02 |
+| [DEBT-064](../_archive/debt/debt-064-missing-focus-indicators-error-buttons.md) | Missing Focus Indicators on Error Page Buttons | P3 | 2026-02-02 |
 | [DEBT-065](../_archive/debt/debt-065-touch-targets-too-small.md) | Touch Targets Too Small (Dropdown Menu, Pricing Buttons) | P2 | 2026-02-02 |
 | [DEBT-066](../_archive/debt/debt-066-no-success-toast-bookmark.md) | No Success Toast for Bookmark Action | P3 | 2026-02-02 |
+| [DEBT-067](../_archive/debt/debt-067-generic-error-page-no-details.md) | Generic Error Page Lacks Error Details | P3 | 2026-02-02 |
+| [DEBT-068](../_archive/debt/debt-068-missing-error-tsx-nested-routes.md) | Missing error.tsx in Nested Routes | P3 | 2026-02-02 |
+| [DEBT-069](../_archive/debt/debt-069-document-stripe-eager-sync-pattern.md) | Document Stripe Eager Sync Pattern | P3 | 2026-02-02 |
 | [DEBT-070](../_archive/debt/debt-070-checkout-failure-lacks-actionable-feedback.md) | Checkout Failure Lacks Actionable Feedback | P2 | 2026-02-02 |
 
 ## Debt Statuses
