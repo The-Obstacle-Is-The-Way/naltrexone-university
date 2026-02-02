@@ -29,6 +29,13 @@ function MobileNavLinks({ onClose }: { onClose?: () => void }) {
         Review
       </Link>
       <Link
+        href="/app/bookmarks"
+        className="block py-3 text-sm text-muted-foreground hover:text-foreground"
+        onClick={onClose}
+      >
+        Bookmarks
+      </Link>
+      <Link
         href="/app/billing"
         className="block py-3 text-sm text-muted-foreground hover:text-foreground"
         onClick={onClose}

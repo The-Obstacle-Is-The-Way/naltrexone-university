@@ -17,7 +17,6 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 | ID | Title | Status | Priority | Date |
 |----|-------|--------|----------|------|
-| [BUG-019](./bug-019-missing-bookmarks-view-page.md) | Missing Bookmarks View Page — Users Can Bookmark But Can't View | Open | P2 | 2026-02-02 |
 | [BUG-021](./bug-021-practice-sessions-never-started.md) | Practice Sessions Never Started/Ended — Dead Session Controller Code | Open | P2 | 2026-02-02 |
 | [BUG-023](./bug-023-missing-clerk-user-deletion-webhook.md) | Missing Clerk Webhook for User Deletion — Orphaned Data | Open | P2 | 2026-02-02 |
 | [BUG-024](./bug-024-entitlement-race-condition-past-due.md) | Entitlement Race Condition During Payment Failure | Open | P2 | 2026-02-02 |
@@ -35,6 +34,7 @@ Bug reports document issues discovered in the codebase along with their root cau
 | ID | Title | Priority | Resolved |
 |----|-------|----------|----------|
 | [BUG-016](../_archive/bugs/bug-016-memory-exhaustion-power-users.md) | Memory Exhaustion for Power Users — All Attempts Loaded Into Memory | P1 | 2026-02-02 |
+| [BUG-019](../_archive/bugs/bug-019-missing-bookmarks-view-page.md) | Missing Bookmarks View Page — Users Can Bookmark But Can't View | P2 | 2026-02-02 |
 | [BUG-020](../_archive/bugs/bug-020-missing-review-missed-questions-page.md) | Missing Review/Missed Questions Page — Dead Controller Code | P2 | 2026-02-02 |
 | [BUG-037](../_archive/bugs/bug-037-no-mobile-navigation-menu.md) | No Mobile Navigation Menu | P2 | 2026-02-02 |
 | [BUG-036](../_archive/bugs/bug-036-no-loading-state-subscribe-buttons.md) | No Loading State on Subscribe Buttons | P2 | 2026-02-02 |
