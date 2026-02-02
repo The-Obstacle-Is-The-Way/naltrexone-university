@@ -186,6 +186,7 @@ export async function toggleBookmarkForQuestion(input: {
   setBookmarkedQuestionIds: (
     next: Set<string> | ((prev: Set<string>) => Set<string>),
   ) => void;
+  onBookmarkToggled?: (bookmarked: boolean) => void;
 }): Promise<void> {
   if (!input.question) return;
 
@@ -206,6 +207,7 @@ export async function toggleBookmarkForQuestion(input: {
     return next;
   });
 
+  input.onBookmarkToggled?.(res.data.bookmarked);
   input.setBookmarkStatus('idle');
 }
 

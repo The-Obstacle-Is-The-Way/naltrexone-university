@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useMemo, useState, useTransition } from 'react';
+import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import {
   getBookmarks,
   toggleBookmark,
@@ -109,6 +109,7 @@ export type PracticeSessionPageViewProps = {
   isPending: boolean;
   bookmarkStatus: 'idle' | 'loading' | 'error';
   isBookmarked: boolean;
+  bookmarkMessage?: string | null;
   canSubmit: boolean;
   onEndSession: () => void;
   onTryAgain: () => void;
@@ -133,6 +134,7 @@ export function PracticeSessionPageView(props: PracticeSessionPageViewProps) {
       isPending={props.isPending}
       bookmarkStatus={props.bookmarkStatus}
       isBookmarked={props.isBookmarked}
+      bookmarkMessage={props.bookmarkMessage}
       canSubmit={props.canSubmit}
       onEndSession={props.onEndSession}
       onTryAgain={props.onTryAgain}
@@ -165,6 +167,10 @@ export default function PracticeSessionPage({
   const [bookmarkStatus, setBookmarkStatus] = useState<
     'idle' | 'loading' | 'error'
   >('idle');
+  const [bookmarkMessage, setBookmarkMessage] = useState<string | null>(null);
+  const bookmarkMessageTimeoutId = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
   const [bookmarkRetryCount, setBookmarkRetryCount] = useState(0);
 
   const [loadState, setLoadState] = useState<LoadState>({ status: 'idle' });
@@ -204,6 +210,14 @@ export default function PracticeSessionPage({
 
   useEffect(bookmarksEffect, [bookmarksEffect]);
 
+  useEffect(() => {
+    return () => {
+      if (bookmarkMessageTimeoutId.current) {
+        clearTimeout(bookmarkMessageTimeoutId.current);
+      }
+    };
+  }, []);
+
   const canSubmit = useMemo(() => {
     return (
       question !== null && selectedChoiceId !== null && submitResult === null
@@ -238,6 +252,17 @@ export default function PracticeSessionPage({
         setBookmarkStatus,
         setLoadState,
         setBookmarkedQuestionIds,
+        onBookmarkToggled: (bookmarked: boolean) => {
+          setBookmarkMessage(
+            bookmarked ? 'Question bookmarked.' : 'Bookmark removed.',
+          );
+          if (bookmarkMessageTimeoutId.current) {
+            clearTimeout(bookmarkMessageTimeoutId.current);
+          }
+          bookmarkMessageTimeoutId.current = setTimeout(() => {
+            setBookmarkMessage(null);
+          }, 2000);
+        },
       }),
     [question],
   );
@@ -272,6 +297,7 @@ export default function PracticeSessionPage({
       isPending={isPending}
       bookmarkStatus={bookmarkStatus}
       isBookmarked={isBookmarked}
+      bookmarkMessage={bookmarkMessage}
       canSubmit={canSubmit}
       onEndSession={onEndSession}
       onTryAgain={loadNext}

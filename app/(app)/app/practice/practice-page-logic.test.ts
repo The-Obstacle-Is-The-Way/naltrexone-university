@@ -371,6 +371,7 @@ describe('practice-page-logic', () => {
           ids = typeof next === 'function' ? next(ids) : next;
         },
       );
+      const onBookmarkToggled = vi.fn();
 
       await toggleBookmarkForQuestion({
         question: createNextQuestion(),
@@ -378,14 +379,17 @@ describe('practice-page-logic', () => {
         setBookmarkStatus: vi.fn(),
         setLoadState: vi.fn(),
         setBookmarkedQuestionIds,
+        onBookmarkToggled,
       });
 
       expect(ids.has('q_1')).toBe(true);
+      expect(onBookmarkToggled).toHaveBeenCalledWith(true);
     });
 
     it('sets error state when toggle fails', async () => {
       const setLoadState = vi.fn();
       const setBookmarkStatus = vi.fn();
+      const onBookmarkToggled = vi.fn();
 
       await toggleBookmarkForQuestion({
         question: createNextQuestion(),
@@ -393,10 +397,12 @@ describe('practice-page-logic', () => {
         setBookmarkStatus,
         setLoadState,
         setBookmarkedQuestionIds: vi.fn(),
+        onBookmarkToggled,
       });
 
       expect(setBookmarkStatus).toHaveBeenCalledWith('error');
       expect(setLoadState).not.toHaveBeenCalled();
+      expect(onBookmarkToggled).not.toHaveBeenCalled();
     });
   });
 

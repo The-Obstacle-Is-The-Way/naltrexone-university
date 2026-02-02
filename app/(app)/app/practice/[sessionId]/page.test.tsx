@@ -91,6 +91,50 @@ describe('app/(app)/app/practice/[sessionId]', () => {
     expect(html).toContain('Session Summary');
   });
 
+  it('renders bookmarkMessage when provided', async () => {
+    const { PracticeSessionPageView } = await import(
+      '@/app/(app)/app/practice/[sessionId]/page'
+    );
+
+    const html = renderToStaticMarkup(
+      <PracticeSessionPageView
+        summary={null}
+        sessionInfo={null}
+        loadState={{ status: 'ready' }}
+        question={{
+          questionId: 'question-1',
+          slug: 'question-1',
+          stemMd: 'Stem',
+          difficulty: 'easy',
+          choices: [
+            {
+              id: 'choice-1',
+              label: 'A',
+              textMd: 'Choice',
+              sortOrder: 1,
+            },
+          ],
+          session: null,
+        }}
+        selectedChoiceId={null}
+        submitResult={null}
+        isPending={false}
+        bookmarkStatus="idle"
+        isBookmarked={false}
+        bookmarkMessage="Question bookmarked."
+        canSubmit={false}
+        onEndSession={() => undefined}
+        onTryAgain={() => undefined}
+        onToggleBookmark={() => undefined}
+        onSelectChoice={() => undefined}
+        onSubmit={() => undefined}
+        onNextQuestion={() => undefined}
+      />,
+    );
+
+    expect(html).toContain('Question bookmarked.');
+  });
+
   it('isQuestionBookmarked returns true when questionId is in set', async () => {
     const { isQuestionBookmarked } = await import(
       '@/app/(app)/app/practice/[sessionId]/page'

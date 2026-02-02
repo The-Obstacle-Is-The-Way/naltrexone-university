@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useMemo, useState, useTransition } from 'react';
+import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import { Feedback } from '@/components/question/Feedback';
 import { QuestionCard } from '@/components/question/QuestionCard';
 import {
@@ -40,6 +40,7 @@ export type PracticeViewProps = {
   isPending: boolean;
   bookmarkStatus: 'idle' | 'loading' | 'error';
   isBookmarked: boolean;
+  bookmarkMessage?: string | null;
   canSubmit: boolean;
   onEndSession?: () => void;
   onTryAgain: () => void;
@@ -201,6 +202,11 @@ export function PracticeView(props: PracticeViewProps) {
               Bookmarks unavailable.
             </div>
           ) : null}
+          {props.bookmarkMessage ? (
+            <div className="text-xs text-muted-foreground" aria-live="polite">
+              {props.bookmarkMessage}
+            </div>
+          ) : null}
         </div>
       ) : null}
 
@@ -261,6 +267,10 @@ export default function PracticePage() {
   const [bookmarkStatus, setBookmarkStatus] = useState<
     'idle' | 'loading' | 'error'
   >('idle');
+  const [bookmarkMessage, setBookmarkMessage] = useState<string | null>(null);
+  const bookmarkMessageTimeoutId = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
   const [bookmarkRetryCount, setBookmarkRetryCount] = useState(0);
   const [loadState, setLoadState] = useState<LoadState>({ status: 'idle' });
   const [isPending, startTransition] = useTransition();
@@ -305,6 +315,14 @@ export default function PracticePage() {
 
   useEffect(bookmarksEffect, [bookmarksEffect]);
 
+  useEffect(() => {
+    return () => {
+      if (bookmarkMessageTimeoutId.current) {
+        clearTimeout(bookmarkMessageTimeoutId.current);
+      }
+    };
+  }, []);
+
   const canSubmit = useMemo(() => {
     return (
       question !== null && selectedChoiceId !== null && submitResult === null
@@ -337,6 +355,17 @@ export default function PracticePage() {
         setBookmarkStatus,
         setLoadState,
         setBookmarkedQuestionIds,
+        onBookmarkToggled: (bookmarked: boolean) => {
+          setBookmarkMessage(
+            bookmarked ? 'Question bookmarked.' : 'Bookmark removed.',
+          );
+          if (bookmarkMessageTimeoutId.current) {
+            clearTimeout(bookmarkMessageTimeoutId.current);
+          }
+          bookmarkMessageTimeoutId.current = setTimeout(() => {
+            setBookmarkMessage(null);
+          }, 2000);
+        },
       }),
     [question],
   );
@@ -390,6 +419,7 @@ export default function PracticePage() {
       isPending={isPending}
       bookmarkStatus={bookmarkStatus}
       isBookmarked={isBookmarked}
+      bookmarkMessage={bookmarkMessage}
       canSubmit={canSubmit}
       onTryAgain={loadNext}
       onToggleBookmark={onToggleBookmark}
