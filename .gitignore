@@ -44,3 +44,7 @@ next-env.d.ts
 # Docker
 postgres_data/
 .env*.local
+
+# Question content (proprietary)
+content/questions/
+content/drafts/
