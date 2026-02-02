@@ -56,5 +56,6 @@ const shuffledChoices = useMemo(
 **Prefer Option A** for reproducible sessions (same shuffle for same user reviewing same question).
 
 ## Related
-- `src/domain/services/randomization.ts` - Already has `shuffleWithSeed` and `createSeed`
+- `src/domain/services/shuffle.ts` - Already has `shuffleWithSeed` and `createSeed` (used for question order in sessions, but NOT for choice order)
+- `src/adapters/controllers/practice-controller.ts:125-127` - Uses shuffle for question IDs only
 - SPEC-011: Practice flow (should specify choice randomization)
