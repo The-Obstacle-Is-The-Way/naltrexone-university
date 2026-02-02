@@ -15,14 +15,36 @@ import {
 import { err, ok } from '@/src/adapters/controllers/action-result';
 import type { NextQuestion } from '@/src/application/use-cases/get-next-question';
 import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
+import { createChoice, createQuestion } from '@/src/domain/test-helpers';
 
 function createNextQuestion(): NextQuestion {
-  return {
-    questionId: 'q_1',
+  const questionId = 'q_1';
+  const choice = createChoice({
+    id: 'choice_1',
+    questionId,
+    label: 'A',
+    textMd: 'Choice A',
+    sortOrder: 1,
+  });
+  const question = createQuestion({
+    id: questionId,
     slug: 'q-1',
     stemMd: '#',
     difficulty: 'easy',
-    choices: [],
+    choices: [choice],
+  });
+
+  return {
+    questionId: question.id,
+    slug: question.slug,
+    stemMd: question.stemMd,
+    difficulty: question.difficulty,
+    choices: question.choices.map((c, index) => ({
+      id: c.id,
+      label: c.label,
+      textMd: c.textMd,
+      sortOrder: index + 1,
+    })),
     session: null,
   };
 }
@@ -293,6 +315,31 @@ describe('practice-page-logic', () => {
 
       expect(submitAnswerFn).toHaveBeenCalledWith(
         expect.objectContaining({ timeSpentSeconds: 0 }),
+      );
+    });
+
+    it('computes timeSpentSeconds when loadedAt is 0', async () => {
+      const submitAnswerFn = vi.fn(async () =>
+        ok({
+          attemptId: 'attempt_1',
+          isCorrect: true,
+          correctChoiceId: 'choice_1',
+          explanationMd: 'Because...',
+        } satisfies SubmitAnswerOutput),
+      );
+
+      await submitAnswerForQuestion({
+        question: createNextQuestion(),
+        selectedChoiceId: 'choice_1',
+        questionLoadedAtMs: 0,
+        submitAnswerFn,
+        nowMs: () => 1500,
+        setLoadState: vi.fn(),
+        setSubmitResult: vi.fn(),
+      });
+
+      expect(submitAnswerFn).toHaveBeenCalledWith(
+        expect.objectContaining({ timeSpentSeconds: 1 }),
       );
     });
 

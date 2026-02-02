@@ -78,9 +78,13 @@ export async function submitAnswerForQuestion(input: {
 
   input.setLoadState({ status: 'loading' });
 
-  const timeSpentSeconds = input.questionLoadedAtMs
-    ? Math.floor((input.nowMs() - input.questionLoadedAtMs) / 1000)
-    : 0;
+  const timeSpentSeconds =
+    input.questionLoadedAtMs === null
+      ? 0
+      : Math.max(
+          0,
+          Math.floor((input.nowMs() - input.questionLoadedAtMs) / 1000),
+        );
 
   const res = await input.submitAnswerFn({
     questionId: input.question.questionId,

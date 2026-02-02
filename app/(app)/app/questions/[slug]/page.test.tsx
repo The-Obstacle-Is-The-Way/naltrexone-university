@@ -7,6 +7,22 @@ vi.mock('next/link', () => ({
   default: (props: Record<string, unknown>) => <a {...props} />,
 }));
 
+function toGetQuestionBySlugOutput(
+  question: ReturnType<typeof createQuestion>,
+) {
+  return {
+    questionId: question.id,
+    slug: question.slug,
+    stemMd: question.stemMd,
+    difficulty: question.difficulty,
+    choices: question.choices.map((c) => ({
+      id: c.id,
+      label: c.label,
+      textMd: c.textMd,
+    })),
+  };
+}
+
 describe('app/(app)/app/questions/[slug]', () => {
   it('renders a question shell', async () => {
     const QuestionPage = (await import('@/app/(app)/app/questions/[slug]/page'))
@@ -91,17 +107,7 @@ describe('app/(app)/app/questions/[slug]', () => {
     const html = renderToStaticMarkup(
       <QuestionView
         loadState={{ status: 'ready' }}
-        question={{
-          questionId: question.id,
-          slug: question.slug,
-          stemMd: question.stemMd,
-          difficulty: question.difficulty,
-          choices: question.choices.map((c) => ({
-            id: c.id,
-            label: c.label,
-            textMd: c.textMd,
-          })),
-        }}
+        question={toGetQuestionBySlugOutput(question)}
         selectedChoiceId={null}
         submitResult={null}
         canSubmit={false}
