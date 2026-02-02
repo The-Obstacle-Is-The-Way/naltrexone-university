@@ -1,9 +1,9 @@
 import { redirect } from 'next/navigation';
+import { ManageBillingButton } from '@/app/(app)/app/billing/billing-client';
 import { createPortalSession } from '@/src/adapters/controllers/billing-controller';
 import type { AuthGateway } from '@/src/application/ports/gateways';
 import type { SubscriptionRepository } from '@/src/application/ports/repositories';
 import type { Subscription } from '@/src/domain/entities';
-import { ManageBillingButton } from './billing-client';
 
 export type BillingPageDeps = {
   authGateway: AuthGateway;

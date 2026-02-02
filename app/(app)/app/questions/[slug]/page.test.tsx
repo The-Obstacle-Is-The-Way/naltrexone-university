@@ -8,7 +8,8 @@ vi.mock('next/link', () => ({
 
 describe('app/(app)/app/questions/[slug]', () => {
   it('renders a question shell', async () => {
-    const QuestionPage = (await import('./page')).default;
+    const QuestionPage = (await import('@/app/(app)/app/questions/[slug]/page'))
+      .default;
 
     const html = renderToStaticMarkup(
       <QuestionPage params={{ slug: 'q-1' }} />,
@@ -21,7 +22,9 @@ describe('app/(app)/app/questions/[slug]', () => {
   });
 
   it('renders an error state with try again button', async () => {
-    const { QuestionView } = await import('./page');
+    const { QuestionView } = await import(
+      '@/app/(app)/app/questions/[slug]/page'
+    );
 
     const html = renderToStaticMarkup(
       <QuestionView
@@ -43,7 +46,9 @@ describe('app/(app)/app/questions/[slug]', () => {
   });
 
   it('renders not-found state when ready with no question', async () => {
-    const { QuestionView } = await import('./page');
+    const { QuestionView } = await import(
+      '@/app/(app)/app/questions/[slug]/page'
+    );
 
     const html = renderToStaticMarkup(
       <QuestionView
@@ -64,7 +69,9 @@ describe('app/(app)/app/questions/[slug]', () => {
   });
 
   it('renders the question card when question exists', async () => {
-    const { QuestionView } = await import('./page');
+    const { QuestionView } = await import(
+      '@/app/(app)/app/questions/[slug]/page'
+    );
 
     const html = renderToStaticMarkup(
       <QuestionView
@@ -92,7 +99,9 @@ describe('app/(app)/app/questions/[slug]', () => {
   });
 
   it('renders feedback and reattempt button when submitResult exists', async () => {
-    const { QuestionView } = await import('./page');
+    const { QuestionView } = await import(
+      '@/app/(app)/app/questions/[slug]/page'
+    );
 
     const html = renderToStaticMarkup(
       <QuestionView

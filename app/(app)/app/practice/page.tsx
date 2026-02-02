@@ -22,6 +22,8 @@ import {
   handleSessionCountChange,
   handleSessionModeChange,
   type LoadState,
+  SESSION_COUNT_MAX,
+  SESSION_COUNT_MIN,
   selectChoiceIfAllowed,
   startSession,
   submitAnswerForQuestion,
@@ -89,8 +91,8 @@ export function PracticeSessionStarter(props: PracticeSessionStarterProps) {
             <span className="mr-2">Count</span>
             <input
               type="number"
-              min={1}
-              max={100}
+              min={SESSION_COUNT_MIN}
+              max={SESSION_COUNT_MAX}
               className="w-24 rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground"
               value={props.sessionCount}
               onChange={props.onSessionCountChange}

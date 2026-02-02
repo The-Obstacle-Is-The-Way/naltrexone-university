@@ -8,7 +8,9 @@ vi.mock('next/link', () => ({
 
 describe('app/(app)/app/practice/[sessionId]', () => {
   it('renders a practice session shell', async () => {
-    const PracticeSessionPage = (await import('./page')).default;
+    const PracticeSessionPage = (
+      await import('@/app/(app)/app/practice/[sessionId]/page')
+    ).default;
 
     const html = renderToStaticMarkup(
       <PracticeSessionPage params={{ sessionId: 'session-1' }} />,
@@ -20,7 +22,9 @@ describe('app/(app)/app/practice/[sessionId]', () => {
   });
 
   it('renders the session summary view', async () => {
-    const { SessionSummaryView } = await import('./page');
+    const { SessionSummaryView } = await import(
+      '@/app/(app)/app/practice/[sessionId]/page'
+    );
 
     const html = renderToStaticMarkup(
       <SessionSummaryView
@@ -50,7 +54,9 @@ describe('app/(app)/app/practice/[sessionId]', () => {
   });
 
   it('renders the session summary branch in PracticeSessionPageView', async () => {
-    const { PracticeSessionPageView } = await import('./page');
+    const { PracticeSessionPageView } = await import(
+      '@/app/(app)/app/practice/[sessionId]/page'
+    );
 
     const html = renderToStaticMarkup(
       <PracticeSessionPageView
@@ -86,7 +92,9 @@ describe('app/(app)/app/practice/[sessionId]', () => {
   });
 
   it('isQuestionBookmarked returns true when questionId is in set', async () => {
-    const { isQuestionBookmarked } = await import('./page');
+    const { isQuestionBookmarked } = await import(
+      '@/app/(app)/app/practice/[sessionId]/page'
+    );
 
     expect(
       isQuestionBookmarked(

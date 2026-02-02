@@ -14,7 +14,8 @@ vi.mock('next/navigation', () => ({
 
 describe('app/(app)/app/practice', () => {
   it('renders a practice shell', async () => {
-    const PracticePage = (await import('./page')).default;
+    const PracticePage = (await import('@/app/(app)/app/practice/page'))
+      .default;
 
     const html = renderToStaticMarkup(<PracticePage />);
     expect(html).toContain('Practice');
@@ -22,7 +23,7 @@ describe('app/(app)/app/practice', () => {
   });
 
   it('renders an error banner when loadState is error', async () => {
-    const { PracticeView } = await import('./page');
+    const { PracticeView } = await import('@/app/(app)/app/practice/page');
 
     const html = renderToStaticMarkup(
       <PracticeView
@@ -47,7 +48,7 @@ describe('app/(app)/app/practice', () => {
   });
 
   it('renders a loading banner when loadState is loading', async () => {
-    const { PracticeView } = await import('./page');
+    const { PracticeView } = await import('@/app/(app)/app/practice/page');
 
     const html = renderToStaticMarkup(
       <PracticeView
@@ -71,7 +72,7 @@ describe('app/(app)/app/practice', () => {
   });
 
   it('renders empty state when no question remains', async () => {
-    const { PracticeView } = await import('./page');
+    const { PracticeView } = await import('@/app/(app)/app/practice/page');
 
     const html = renderToStaticMarkup(
       <PracticeView
@@ -95,7 +96,7 @@ describe('app/(app)/app/practice', () => {
   });
 
   it('renders bookmark control when question is present', async () => {
-    const { PracticeView } = await import('./page');
+    const { PracticeView } = await import('@/app/(app)/app/practice/page');
 
     const html = renderToStaticMarkup(
       <PracticeView
@@ -133,7 +134,7 @@ describe('app/(app)/app/practice', () => {
   });
 
   it('renders feedback when submitResult is present', async () => {
-    const { PracticeView } = await import('./page');
+    const { PracticeView } = await import('@/app/(app)/app/practice/page');
 
     const html = renderToStaticMarkup(
       <PracticeView
@@ -162,7 +163,7 @@ describe('app/(app)/app/practice', () => {
   });
 
   it('renders a bookmark warning when bookmarkStatus is error', async () => {
-    const { PracticeView } = await import('./page');
+    const { PracticeView } = await import('@/app/(app)/app/practice/page');
 
     const html = renderToStaticMarkup(
       <PracticeView
@@ -200,7 +201,7 @@ describe('app/(app)/app/practice', () => {
   });
 
   it('renders session info when sessionInfo is provided', async () => {
-    const { PracticeView } = await import('./page');
+    const { PracticeView } = await import('@/app/(app)/app/practice/page');
 
     const html = renderToStaticMarkup(
       <PracticeView
@@ -232,7 +233,9 @@ describe('app/(app)/app/practice', () => {
   });
 
   it('renders session start error when starter is in error state', async () => {
-    const { PracticeSessionStarter } = await import('./page');
+    const { PracticeSessionStarter } = await import(
+      '@/app/(app)/app/practice/page'
+    );
 
     const html = renderToStaticMarkup(
       <PracticeSessionStarter
@@ -250,15 +253,14 @@ describe('app/(app)/app/practice', () => {
     expect(html).toContain('No questions');
   });
 
-  it('navigateTo updates window.location.href', async () => {
-    const { navigateTo } = await import('./client-navigation');
+  it('navigateTo calls window.location.assign', async () => {
+    const { navigateTo } = await import(
+      '@/app/(app)/app/practice/client-navigation'
+    );
 
-    const initial = window.location.href;
-    navigateTo('#practice-nav-test');
+    const assign = vi.fn();
+    navigateTo('#practice-nav-test', { assign });
 
-    expect(window.location.href).toContain('#practice-nav-test');
-
-    window.location.hash = '';
-    window.location.href = initial;
+    expect(assign).toHaveBeenCalledWith('#practice-nav-test');
   });
 });

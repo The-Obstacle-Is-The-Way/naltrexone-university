@@ -11,6 +11,9 @@ type SetTimeoutFn = (
 
 type ClearTimeoutFn = (id: ReturnType<typeof setTimeout>) => void;
 
+export const SESSION_COUNT_MIN = 1;
+export const SESSION_COUNT_MAX = 100;
+
 export type LoadState =
   | { status: 'idle' }
   | { status: 'loading' }
@@ -229,7 +232,17 @@ export function handleSessionCountChange(
   setSessionCount: (count: number) => void,
   event: { target: { value: string } },
 ): void {
-  setSessionCount(Number(event.target.value));
+  const parsed = Number(event.target.value);
+  if (!Number.isFinite(parsed)) {
+    setSessionCount(SESSION_COUNT_MIN);
+    return;
+  }
+
+  const clamped = Math.min(
+    SESSION_COUNT_MAX,
+    Math.max(SESSION_COUNT_MIN, Math.trunc(parsed)),
+  );
+  setSessionCount(clamped);
 }
 
 export async function startSession(input: {

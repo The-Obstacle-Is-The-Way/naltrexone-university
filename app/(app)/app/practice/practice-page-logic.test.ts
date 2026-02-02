@@ -8,6 +8,8 @@ import {
   handleSessionCountChange,
   handleSessionModeChange,
   loadNextQuestion,
+  SESSION_COUNT_MAX,
+  SESSION_COUNT_MIN,
   selectChoiceIfAllowed,
   startSession,
   submitAnswerForQuestion,
@@ -402,6 +404,24 @@ describe('practice-page-logic', () => {
       handleSessionCountChange(setSessionCount, { target: { value: '12' } });
 
       expect(setSessionCount).toHaveBeenCalledWith(12);
+    });
+
+    it('clamps to minimum when value is below range or not finite', () => {
+      const setSessionCount = vi.fn();
+
+      handleSessionCountChange(setSessionCount, { target: { value: '0' } });
+      handleSessionCountChange(setSessionCount, { target: { value: '-1' } });
+      handleSessionCountChange(setSessionCount, { target: { value: 'NaN' } });
+
+      expect(setSessionCount).toHaveBeenLastCalledWith(SESSION_COUNT_MIN);
+    });
+
+    it('clamps to maximum when value is above range', () => {
+      const setSessionCount = vi.fn();
+
+      handleSessionCountChange(setSessionCount, { target: { value: '101' } });
+
+      expect(setSessionCount).toHaveBeenCalledWith(SESSION_COUNT_MAX);
     });
   });
 

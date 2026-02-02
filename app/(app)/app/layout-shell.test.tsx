@@ -8,7 +8,7 @@ vi.mock('next/link', () => ({
 
 describe('app/(app)/app/layout (shell)', () => {
   it('renders the app navigation and children', async () => {
-    const { AppLayoutShell } = await import('./layout');
+    const { AppLayoutShell } = await import('@/app/(app)/app/layout');
 
     const html = renderToStaticMarkup(
       <AppLayoutShell
@@ -31,7 +31,7 @@ describe('app/(app)/app/layout (shell)', () => {
   });
 
   it('renders AppLayout via renderAppLayout with injected deps', async () => {
-    const { renderAppLayout } = await import('./layout');
+    const { renderAppLayout } = await import('@/app/(app)/app/layout');
 
     const enforceEntitledAppUserFn = vi.fn(async () => undefined);
     const authNavFn = vi.fn(async () => <div>AuthNav</div>);

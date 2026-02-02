@@ -4,6 +4,10 @@ import { Menu, X } from 'lucide-react';
 import Link from 'next/link';
 import { useState } from 'react';
 
+/**
+ * Test helper: toggles the mobile nav open state.
+ * Exported to keep static render tests deterministic without exercising click handlers.
+ */
 export function toggleMobileNavOpen(isOpen: boolean): boolean {
   return !isOpen;
 }
@@ -52,12 +56,14 @@ function MobileNavLinks({ onClose }: { onClose?: () => void }) {
 
 export function MobileNav() {
   const [isOpen, setIsOpen] = useState(false);
+  const onToggleOpen = setIsOpen.bind(null, toggleMobileNavOpen);
+  const onClose = setIsOpen.bind(null, false);
 
   return (
     <div className="sm:hidden">
       <button
         type="button"
-        onClick={setIsOpen.bind(null, toggleMobileNavOpen)}
+        onClick={onToggleOpen}
         className="p-2 text-muted-foreground hover:text-foreground"
         aria-label={isOpen ? 'Close navigation menu' : 'Open navigation menu'}
         aria-expanded={isOpen}
@@ -65,7 +71,7 @@ export function MobileNav() {
         {isOpen ? <X className="size-6" /> : <Menu className="size-6" />}
       </button>
 
-      {isOpen && <MobileNavLinks onClose={setIsOpen.bind(null, false)} />}
+      {isOpen && <MobileNavLinks onClose={onClose} />}
     </div>
   );
 }

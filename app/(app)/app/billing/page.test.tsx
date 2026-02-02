@@ -1,10 +1,10 @@
 // @vitest-environment jsdom
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
+import { loadBillingData } from '@/app/(app)/app/billing/page';
 import type { AuthGateway } from '@/src/application/ports/gateways';
 import type { SubscriptionRepository } from '@/src/application/ports/repositories';
 import type { Subscription, User } from '@/src/domain/entities';
-import { loadBillingData } from './page';
 
 function createUser(): User {
   return {
@@ -56,7 +56,7 @@ describe('app/(app)/app/billing/page', () => {
 
   describe('BillingContent', () => {
     it('renders manage button when subscription exists', async () => {
-      const { BillingContent } = await import('./page');
+      const { BillingContent } = await import('@/app/(app)/app/billing/page');
       const subscription = createSubscription();
 
       const html = renderToStaticMarkup(
@@ -72,7 +72,7 @@ describe('app/(app)/app/billing/page', () => {
     });
 
     it('does NOT render manage button when subscription is null', async () => {
-      const { BillingContent } = await import('./page');
+      const { BillingContent } = await import('@/app/(app)/app/billing/page');
 
       const html = renderToStaticMarkup(<BillingContent subscription={null} />);
 
@@ -83,7 +83,7 @@ describe('app/(app)/app/billing/page', () => {
 
   describe('BillingPageView', () => {
     it('renders BillingContent with manage action when subscription exists', async () => {
-      const { BillingPageView } = await import('./page');
+      const { BillingPageView } = await import('@/app/(app)/app/billing/page');
       const subscription = createSubscription();
 
       const html = renderToStaticMarkup(
@@ -99,7 +99,7 @@ describe('app/(app)/app/billing/page', () => {
     });
 
     it('renders BillingContent without manage action when no subscription exists', async () => {
-      const { BillingPageView } = await import('./page');
+      const { BillingPageView } = await import('@/app/(app)/app/billing/page');
 
       const html = renderToStaticMarkup(
         <BillingPageView subscription={null} />,
@@ -113,7 +113,9 @@ describe('app/(app)/app/billing/page', () => {
 
 describe('ManageBillingButton', () => {
   it('renders "Manage in Stripe" text', async () => {
-    const { ManageBillingButton } = await import('./billing-client');
+    const { ManageBillingButton } = await import(
+      '@/app/(app)/app/billing/billing-client'
+    );
 
     const html = renderToStaticMarkup(<ManageBillingButton />);
 

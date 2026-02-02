@@ -1,9 +1,9 @@
 import { getActionResultErrorMessage } from '@/app/(app)/app/practice/practice-logic';
+import type { LoadState } from '@/app/(app)/app/practice/practice-page-logic';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import type { EndPracticeSessionOutput } from '@/src/adapters/controllers/practice-controller';
 import type { NextQuestion } from '@/src/application/use-cases/get-next-question';
 import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
-import type { LoadState } from '../practice-page-logic';
 
 export async function loadNextQuestion(input: {
   sessionId: string;
