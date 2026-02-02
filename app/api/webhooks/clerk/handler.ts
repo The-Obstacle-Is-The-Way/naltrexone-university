@@ -63,11 +63,8 @@ export function createWebhookHandler(
         {
           userRepository: container.createUserRepository(),
           stripeCustomerRepository: container.createStripeCustomerRepository(),
-          cancelStripeCustomerSubscriptions: (stripeCustomerId: string) =>
-            cancelStripeCustomerSubscriptions(
-              container.stripe,
-              stripeCustomerId,
-            ),
+          cancelStripeCustomerSubscriptions:
+            cancelStripeCustomerSubscriptions.bind(null, container.stripe),
         },
         event,
       );

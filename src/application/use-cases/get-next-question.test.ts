@@ -281,9 +281,9 @@ describe('GetNextQuestionUseCase', () => {
 
     const choices = [
       createChoice({ id: 'c1', questionId, label: 'A', sortOrder: 1 }),
-      createChoice({ id: 'c2', questionId, label: 'B', sortOrder: 2 }),
-      createChoice({ id: 'c3', questionId, label: 'C', sortOrder: 3 }),
-      createChoice({ id: 'c4', questionId, label: 'D', sortOrder: 4 }),
+      createChoice({ id: 'c2', questionId, label: 'B', sortOrder: 1 }),
+      createChoice({ id: 'c3', questionId, label: 'C', sortOrder: 1 }),
+      createChoice({ id: 'c4', questionId, label: 'D', sortOrder: 1 }),
     ];
 
     const questionOrdered = createQuestion({

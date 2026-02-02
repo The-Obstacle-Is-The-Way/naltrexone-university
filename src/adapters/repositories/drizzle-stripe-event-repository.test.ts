@@ -227,6 +227,25 @@ describe('DrizzleStripeEventRepository', () => {
   });
 
   describe('pruneProcessedBefore', () => {
+    it('returns 0 when limit is not a positive integer', async () => {
+      const selectFrom = vi.fn();
+      const deleteFn = vi.fn();
+
+      const db = {
+        select: () => ({ from: selectFrom }),
+        delete: deleteFn,
+      } as const;
+
+      const repo = new DrizzleStripeEventRepository(db as unknown as RepoDb);
+
+      await expect(
+        repo.pruneProcessedBefore(new Date('2026-02-01T00:00:00Z'), 0),
+      ).resolves.toBe(0);
+
+      expect(selectFrom).not.toHaveBeenCalled();
+      expect(deleteFn).not.toHaveBeenCalled();
+    });
+
     it('returns 0 when no rows match', async () => {
       const selectLimit = vi.fn(async () => []);
       const selectOrderBy = vi.fn(() => ({ limit: selectLimit }));

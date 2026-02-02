@@ -74,6 +74,38 @@ describe('processClerkWebhook', () => {
     expect(deps.userRepository.upsertByClerkId).not.toHaveBeenCalled();
   });
 
+  it('ignores user.updated when email_addresses is not an array', async () => {
+    const deps = createDeps();
+
+    await processClerkWebhook(deps, {
+      type: 'user.updated',
+      data: { id: 'clerk_1', email_addresses: 'nope' },
+    });
+
+    expect(deps.userRepository.upsertByClerkId).not.toHaveBeenCalled();
+  });
+
+  it('uses first email when no primary email is set', async () => {
+    const deps = createDeps();
+
+    await processClerkWebhook(deps, {
+      type: 'user.updated',
+      data: {
+        id: 'clerk_1',
+        primary_email_address_id: null,
+        email_addresses: [
+          { id: 'email_1', email_address: 'first@example.com' },
+          { id: 'email_2', email_address: 'second@example.com' },
+        ],
+      },
+    });
+
+    expect(deps.userRepository.upsertByClerkId).toHaveBeenCalledWith(
+      'clerk_1',
+      'first@example.com',
+    );
+  });
+
   it('cancels Stripe subscriptions and deletes the user when receiving user.deleted', async () => {
     const cancelStripeCustomerSubscriptions = vi.fn(async () => undefined);
 
