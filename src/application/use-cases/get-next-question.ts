@@ -1,5 +1,6 @@
 import type { Question } from '@/src/domain/entities';
 import {
+  computeSessionProgress,
   createQuestionSeed,
   getNextQuestionId,
   selectNextQuestionId,
@@ -110,6 +111,8 @@ export class GetNextQuestionUseCase {
       throw new ApplicationError('NOT_FOUND', 'Question not found');
     }
 
+    const progress = computeSessionProgress(session, index);
+
     return {
       questionId: question.id,
       slug: question.slug,
@@ -119,8 +122,8 @@ export class GetNextQuestionUseCase {
       session: {
         sessionId: session.id,
         mode: session.mode,
-        index,
-        total: session.questionIds.length,
+        index: progress.current,
+        total: progress.total,
       },
     };
   }

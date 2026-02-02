@@ -20,7 +20,6 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 | [DEBT-048](./debt-048-hardcoded-url-paths-billing.md) | Hard-Coded URL Paths in Billing Controller | Open | P2 | 2026-02-02 |
 | [DEBT-049](./debt-049-hardcoded-limits-not-centralized.md) | Hard-Coded Limits Not Centralized Across Controllers | Open | P2 | 2026-02-02 |
 | [DEBT-051](./debt-051-controller-tests-use-mocks-not-fakes.md) | Controller Tests Use vi.fn() Instead of Fakes | Open | P2 | 2026-02-02 |
-| [DEBT-052](./debt-052-unused-domain-service-compute-session-progress.md) | Unused Domain Service — computeSessionProgress | Open | P2 | 2026-02-02 |
 | [DEBT-053](./debt-053-unused-tag-repository.md) | Unused TagRepository — Wired But Never Called | Open | P2 | 2026-02-02 |
 | [DEBT-054](./debt-054-unused-domain-error-codes.md) | Unused Domain Error Codes — Defined But Never Thrown | Open | P3 | 2026-02-02 |
 | [DEBT-055](./debt-055-magic-numbers-stats-undocumented.md) | Magic Numbers in Stats Controller Lack Documentation | Open | P3 | 2026-02-02 |
@@ -92,6 +91,7 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 | [DEBT-046](../_archive/debt/debt-046-question-selection-in-wrong-layer.md) | Question Selection Algorithm in Wrong Layer | P2 | 2026-02-02 |
 | [DEBT-047](../_archive/debt/debt-047-spec-010-missing-webhook-controller.md) | SPEC-010 Missing Webhook Controller Documentation | P3 | 2026-02-02 |
 | [DEBT-050](../_archive/debt/debt-050-missing-fake-implementations.md) | Missing Fake Implementations for 5 Repositories | P2 | 2026-02-02 |
+| [DEBT-052](../_archive/debt/debt-052-unused-domain-service-compute-session-progress.md) | Unused Domain Service — computeSessionProgress | P2 | 2026-02-02 |
 | [DEBT-062](../_archive/debt/debt-062-confusing-redirect-control-flow.md) | Confusing Redirect Control Flow Relied on `redirect()` Throwing | P3 | 2026-02-02 |
 | [DEBT-066](../_archive/debt/debt-066-no-success-toast-bookmark.md) | No Success Toast for Bookmark Action | P3 | 2026-02-02 |
 
