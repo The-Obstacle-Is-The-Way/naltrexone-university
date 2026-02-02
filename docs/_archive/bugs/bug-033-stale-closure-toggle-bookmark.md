@@ -8,15 +8,19 @@
 ---
 
 ## Summary
+
 The `onToggleBookmark` function captures `question` from the closure. If the question changes (via `loadNext()`) between the initial check and the state updater callback, the wrong question will be bookmarked/unbookmarked.
 
 ## Location
+
 - `app/(app)/app/practice/page.tsx:281-301`
 
 ## Root Cause
+
 The `question.questionId` was accessed inside the state updater callback, but `question` could have changed during the async `toggleBookmark` call.
 
 ## Fix
+
 Capture `questionId` at the start of the function before any async operations:
 
 ```typescript
@@ -46,10 +50,12 @@ async function onToggleBookmark() {
 ```
 
 ## Verification
+
 - [x] Code review verified pattern correctness
 - [x] TypeScript compilation passes
 - [x] Build succeeds
 
 ## Related
+
 - BUG-032: State update after unmount
-- React docs on closures: https://react.dev/learn/state-as-a-snapshot
+- [React docs on closures](https://react.dev/learn/state-as-a-snapshot)

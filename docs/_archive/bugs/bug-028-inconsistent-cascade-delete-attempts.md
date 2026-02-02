@@ -12,9 +12,11 @@
 The `attempts` table intentionally uses different `onDelete` behaviors across foreign keys (`cascade`, `restrict`, `set null`). This is sometimes described as “inconsistent”, but it reflects deliberate tradeoffs for auditability and user-data deletion.
 
 ## Location
+
 - `db/schema.ts:294-310` (attempts table definition)
 
 ## Current Schema (as implemented)
+
 ```typescript
 // userId - CASCADE: Deleting user deletes all their attempts
 userId: uuid('user_id')
@@ -39,6 +41,7 @@ practiceSessionId: uuid('practice_session_id').references(
 ```
 
 ## Decision (Why This Is Not A Bug)
+
 
 This schema matches the SSOT and is consistent with the product’s data semantics:
 

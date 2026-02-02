@@ -108,17 +108,16 @@ reviews:
     eslint:
       enabled: false  # We use Biome, not ESLint
 
-  # Knowledge base: reference project docs
-  knowledge_base:
-    learnings:
-      enabled: true
-    issues:
-      enabled: true
-    jira:
-      enabled: false
-    linear:
-      enabled: false
-
 chat:
   enabled: true
   auto_reply: true
+
+knowledge_base:
+  learnings:
+    scope: auto
+  issues:
+    scope: auto
+  jira:
+    usage: disabled
+  linear:
+    usage: disabled

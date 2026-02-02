@@ -14,10 +14,12 @@ When a Stripe subscription transitions to `past_due` status (payment failure on 
 **Note:** New checkouts are NOT affected - the codebase already implements eager sync on the checkout success page (`app/(marketing)/checkout/success/page.tsx:92-151`), which fetches subscription data directly from Stripe API before redirecting. This bug only affects **existing subscription renewals and payment failures**.
 
 ## Location
+
 - `src/domain/services/entitlement.ts:7-15`
 - `src/domain/value-objects/subscription-status.ts:27-29`
 
 ## Current Behavior
+
 ```typescript
 // entitlement.ts
 export function isEntitled(
@@ -40,6 +42,7 @@ The `EntitledStatuses` array only includes `['active', 'trialing']`. When paymen
 ## What's Already Correct
 
 **Eager Sync for New Checkouts:** The checkout success page implements Theo Browne's recommended pattern:
+
 ```typescript
 // app/(marketing)/checkout/success/page.tsx:92-151
 export async function syncCheckoutSuccess(input, deps?, redirectFn) {
@@ -62,17 +65,20 @@ Only these scenarios have the race condition:
 3. **Plan changes** - User upgrades/downgrades via portal
 
 ## Impact (Revised)
+
 - **Low revenue leakage:** Window is typically seconds to minutes
 - **Acceptable for SaaS:** Industry standard approach per Theo Browne
 - **Grace period exists anyway:** Stripe gives users time to fix payment
 
 ## Severity Downgrade Rationale
+
 Changed from P1 to P2 because:
 1. New checkouts (most common path) already have eager sync
 2. Payment failures are rare and Stripe has built-in retry
 3. This is the standard webhook-based approach used by most SaaS
 
 ## Recommended Fix
+
 We are explicitly accepting this behavior (won't fix):
 
 - The system is intentionally webhook-driven for subscription state, which is eventually consistent by design.
@@ -82,8 +88,9 @@ We are explicitly accepting this behavior (won't fix):
 If we later introduce high-risk operations where this matters (e.g. expensive AI grading, protected exports, etc.), we can add a targeted “real-time entitlement” path that queries Stripe for those operations only.
 
 ## Related
+
 - BUG-014: Fragile webhook error matching
 - DEBT-069: Document Stripe eager sync pattern
 - AUDIT-003: External integrations review
 - SPEC-009: Stripe Integration
-- https://github.com/t3dotgg/stripe-recommendations
+- [Stripe recommendations](https://github.com/t3dotgg/stripe-recommendations)

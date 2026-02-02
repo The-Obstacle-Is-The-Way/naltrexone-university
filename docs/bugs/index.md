@@ -17,9 +17,8 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 | ID | Title | Status | Priority | Date |
 |----|-------|--------|----------|------|
-| [BUG-024](./bug-024-entitlement-race-condition-past-due.md) | Entitlement Race Condition During Payment Failure | Won't Fix | P2 | 2026-02-02 |
-| [BUG-028](./bug-028-inconsistent-cascade-delete-attempts.md) | Inconsistent Cascade Delete for Attempts | Won't Fix | P2 | 2026-02-02 |
-| [BUG-009](./bug-009-vercel-preview-deployment-rate-limit.md) | Vercel Preview Deployment Status Fails Due to Rate Limit | Won't Fix | P3 | 2026-02-01 |
+
+No active bugs.
 
 **Next Bug ID:** BUG-039
 
@@ -27,6 +26,8 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 | ID | Title | Priority | Resolved |
 |----|-------|----------|----------|
+| [BUG-028](../_archive/bugs/bug-028-inconsistent-cascade-delete-attempts.md) | Inconsistent Cascade Delete for Attempts | P2 | 2026-02-02 |
+| [BUG-024](../_archive/bugs/bug-024-entitlement-race-condition-past-due.md) | Entitlement Race Condition During Payment Failure | P2 | 2026-02-02 |
 | [BUG-016](../_archive/bugs/bug-016-memory-exhaustion-power-users.md) | Memory Exhaustion for Power Users — All Attempts Loaded Into Memory | P1 | 2026-02-02 |
 | [BUG-023](../_archive/bugs/bug-023-missing-clerk-user-deletion-webhook.md) | Missing Clerk Webhook for User Deletion — Orphaned Data | P2 | 2026-02-02 |
 | [BUG-019](../_archive/bugs/bug-019-missing-bookmarks-view-page.md) | Missing Bookmarks View Page — Users Can Bookmark But Can't View | P2 | 2026-02-02 |
@@ -62,6 +63,7 @@ Bug reports document issues discovered in the codebase along with their root cau
 | [BUG-006](../_archive/bugs/bug-006-dark-mode-not-applied.md) | Dark Theme Not Applied | P4 | 2026-02-01 |
 | [BUG-007](../_archive/bugs/bug-007-question-frontmatter-duplicate-tag-slugs.md) | Duplicate Tag Slugs in Frontmatter | P3 | 2026-02-01 |
 | [BUG-008](../_archive/bugs/bug-008-stripe-webhook-endpoint-missing.md) | Stripe Webhook Endpoint Missing | P0 | 2026-02-01 |
+| [BUG-009](../_archive/bugs/bug-009-vercel-preview-deployment-rate-limit.md) | Vercel Preview Deployment Status Fails Due to Rate Limit | P3 | 2026-02-01 |
 
 ## Bug Statuses
 

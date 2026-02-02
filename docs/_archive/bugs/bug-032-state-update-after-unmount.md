@@ -8,15 +8,19 @@
 ---
 
 ## Summary
+
 The practice page's bookmark loading effect has no cleanup function and doesn't check if the component is mounted before setting state. If the component unmounts while `getBookmarks` is pending, state will be set on an unmounted component.
 
 ## Location
+
 - `app/(app)/app/practice/page.tsx:208-238`
 
 ## Root Cause
+
 Missing mounted flag check before state updates in async effect.
 
 ## Fix
+
 Added mounted flag pattern to the bookmark loading effect:
 
 ```typescript
@@ -59,11 +63,13 @@ useEffect(() => {
 ```
 
 ## Verification
+
 - [x] Code review verified pattern correctness
 - [x] TypeScript compilation passes
 - [x] Build succeeds
 - [x] No React warnings in console during navigation
 
 ## Related
+
 - BUG-033: Stale closure in onToggleBookmark
 - [React Effects Documentation](https://react.dev/learn/synchronizing-with-effects#fetching-data)

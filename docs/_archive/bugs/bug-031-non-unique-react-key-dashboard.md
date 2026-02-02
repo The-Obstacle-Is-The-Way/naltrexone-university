@@ -8,19 +8,24 @@
 ---
 
 ## Summary
+
 The dashboard recent activity list uses `row.answeredAt` (timestamp) as the React key. If two questions are answered in the same millisecond, the key duplicates, causing React warnings and potential rendering bugs.
 
 ## Location
+
 - `app/(app)/app/dashboard/page.tsx:90`
 - `src/adapters/controllers/stats-controller.ts`
 
 ## Root Cause
+
 `answeredAt` was chosen for simplicity, but it's not guaranteed unique. The stats controller output didn't include the attempt ID.
 
 ## Fix
+
 Added `attemptId` to the `UserStatsOutput['recentActivity']` type and implementation:
 
 **stats-controller.ts:**
+
 ```typescript
 recentActivity: Array<{
   attemptId: string;  // Added
@@ -32,15 +37,17 @@ recentActivity: Array<{
 ```
 
 **dashboard/page.tsx:**
+
 ```typescript
 <li key={row.attemptId} className="flex items-center gap-2">
 ```
 
 ## Verification
+
 - [x] Unit test added (`stats-controller.test.ts` - includes attemptId in recentActivity)
 - [x] Dashboard test updated
 - [x] TypeScript compilation passes
 - [x] Build succeeds
 
 ## Related
-- React docs: https://react.dev/learn/rendering-lists#keeping-list-items-in-order-with-key
+- [React docs: keys in lists](https://react.dev/learn/rendering-lists#keeping-list-items-in-order-with-key)
