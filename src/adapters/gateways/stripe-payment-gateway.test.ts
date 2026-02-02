@@ -264,6 +264,63 @@ describe('StripePaymentGateway', () => {
     expect(constructEvent).toHaveBeenCalledWith('raw_body', 'sig_1', 'whsec_1');
   });
 
+  it('normalizes customer.subscription.paused events', async () => {
+    const constructEvent = vi.fn(() => ({
+      id: 'evt_2',
+      type: 'customer.subscription.paused',
+      data: {
+        object: {
+          id: 'sub_456',
+          customer: 'cus_456',
+          status: 'paused',
+          current_period_end: 1_700_000_000,
+          cancel_at_period_end: false,
+          metadata: { user_id: 'user_2' },
+          items: { data: [{ price: { id: 'price_a' } }] },
+        },
+      },
+    }));
+
+    const stripe = {
+      customers: {
+        create: vi.fn(async () => ({ id: 'cus_123' })),
+      },
+      checkout: {
+        sessions: {
+          create: vi.fn(async () => ({ url: 'https://stripe/checkout' })),
+        },
+      },
+      billingPortal: {
+        sessions: {
+          create: vi.fn(async () => ({ url: 'https://stripe/portal' })),
+        },
+      },
+      webhooks: { constructEvent },
+    } as const;
+
+    const gateway = new StripePaymentGateway({
+      stripe,
+      webhookSecret: 'whsec_1',
+      priceIds: { monthly: 'price_m', annual: 'price_a' },
+    });
+
+    await expect(
+      gateway.processWebhookEvent('raw_body', 'sig_1'),
+    ).resolves.toEqual({
+      eventId: 'evt_2',
+      type: 'customer.subscription.paused',
+      subscriptionUpdate: {
+        userId: 'user_2',
+        stripeCustomerId: 'cus_456',
+        stripeSubscriptionId: 'sub_456',
+        plan: 'annual',
+        status: 'paused',
+        currentPeriodEnd: new Date(1_700_000_000 * 1000),
+        cancelAtPeriodEnd: false,
+      },
+    });
+  });
+
   it('throws INVALID_WEBHOOK_SIGNATURE when webhook signature verification fails', async () => {
     const stripe = {
       customers: {

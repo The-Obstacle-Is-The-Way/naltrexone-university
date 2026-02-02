@@ -92,6 +92,16 @@ type StripeSubscriptionLike = {
   items?: { data?: Array<{ price?: { id?: string } }> };
 };
 
+const subscriptionEventTypes = new Set([
+  'customer.subscription.created',
+  'customer.subscription.updated',
+  'customer.subscription.deleted',
+  'customer.subscription.paused',
+  'customer.subscription.resumed',
+  'customer.subscription.pending_update_applied',
+  'customer.subscription.pending_update_expired',
+]);
+
 export class StripePaymentGateway implements PaymentGateway {
   constructor(private readonly deps: StripePaymentGatewayDeps) {}
 
@@ -195,11 +205,7 @@ export class StripePaymentGateway implements PaymentGateway {
       type: event.type,
     };
 
-    if (
-      event.type !== 'customer.subscription.created' &&
-      event.type !== 'customer.subscription.updated' &&
-      event.type !== 'customer.subscription.deleted'
-    ) {
+    if (!subscriptionEventTypes.has(event.type)) {
       return result;
     }
 
