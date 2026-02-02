@@ -19,8 +19,9 @@ Bug reports document issues discovered in the codebase along with their root cau
 |----|-------|--------|----------|------|
 | [BUG-040](bug-040-clerk-key-mismatch-infinite-redirect.md) | Clerk Session Token Refresh Warning — Intermittent | Open | P2 | 2026-02-02 |
 | [BUG-041](bug-041-webhook-subscription-created-missing-metadata.md) | Webhook Fails on subscription.created — Missing user_id Metadata | Open | P2 | 2026-02-02 |
+| [BUG-042](bug-042-checkout-success-silent-validation-failure.md) | Checkout Success Page Fails Silently — No Debug Logging | Open | P1 | 2026-02-02 |
 
-**Next Bug ID:** BUG-042
+**Next Bug ID:** BUG-043
 
 ## Archived Bugs
 
