@@ -1,3 +1,4 @@
+import { isApplicationError } from '@/src/application/errors';
 import type { PaymentGateway } from '@/src/application/ports/gateways';
 import type {
   StripeCustomerRepository,
@@ -23,9 +24,26 @@ export type StripeWebhookDeps = {
   ) => Promise<T>;
 };
 
-function toErrorMessage(error: unknown): string {
-  if (error instanceof Error) return error.message;
-  return 'Unknown error';
+function toErrorData(error: unknown): string {
+  if (isApplicationError(error)) {
+    return JSON.stringify({
+      name: error.name,
+      message: error.message,
+      code: error.code,
+      fieldErrors: error.fieldErrors ?? undefined,
+      stack: error.stack?.slice(0, 1000),
+    });
+  }
+
+  if (error instanceof Error) {
+    return JSON.stringify({
+      name: error.name,
+      message: error.message,
+      stack: error.stack?.slice(0, 1000),
+    });
+  }
+
+  return JSON.stringify({ message: 'Unknown error', raw: String(error) });
 }
 
 export async function processStripeWebhook(
@@ -65,7 +83,7 @@ export async function processStripeWebhook(
 
         await stripeEvents.markProcessed(event.eventId);
       } catch (error) {
-        await stripeEvents.markFailed(event.eventId, toErrorMessage(error));
+        await stripeEvents.markFailed(event.eventId, toErrorData(error));
         throw error;
       }
     },

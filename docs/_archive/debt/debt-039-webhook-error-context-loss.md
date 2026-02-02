@@ -1,8 +1,9 @@
 # DEBT-039: Error Context Loss in Stripe Webhook Failures
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P2
 **Date:** 2026-02-01
+**Resolved:** 2026-02-02
 
 ---
 
@@ -60,12 +61,23 @@ function toErrorData(error: unknown): string {
 
 The schema's `error` column is already `text` type, so it can accommodate JSON.
 
+### Stored error format
+
+`stripe_events.error` stores a JSON string with these fields (when available):
+
+- `name`: string
+- `message`: string
+- `stack`: string (truncated)
+- `code`: application error code (only for `ApplicationError`)
+- `fieldErrors`: record of field errors (only for `ApplicationError`)
+- `raw`: string (only for non-`Error` values)
+
 ## Verification
 
-- [ ] Update `toErrorMessage()` to capture structured error data
-- [ ] Verify JSON fits within any column size limits
-- [ ] Add test case for structured error storage
-- [ ] Document error format for future debugging
+- [x] Update `toErrorMessage()` to capture structured error data
+- [x] Verify JSON fits within any column size limits
+- [x] Add test case for structured error storage
+- [x] Document error format for future debugging
 
 ## Related
 

@@ -263,9 +263,20 @@ describe('processStripeWebhook', () => {
       ),
     ).rejects.toMatchObject({ message: 'boom' });
 
-    await expect(stripeEvents.lock('evt_4')).resolves.toMatchObject({
+    const stored = await stripeEvents.lock('evt_4');
+
+    expect(stored).toMatchObject({
       processedAt: null,
-      error: 'boom',
+      error: expect.any(String),
+    });
+
+    const errorData = JSON.parse(stored.error ?? '{}') as Record<
+      string,
+      unknown
+    >;
+    expect(errorData).toMatchObject({
+      name: 'Error',
+      message: 'boom',
     });
   });
 });
