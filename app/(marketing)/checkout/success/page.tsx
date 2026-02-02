@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation';
+import type { JSX } from 'react';
 import { ROUTES } from '@/lib/routes';
 import {
   getSubscriptionPlanFromPriceId,
