@@ -1,14 +1,37 @@
 # BUG-045: Checkout Success Validation Fails — missing_current_period_end
 
 **Status:** Open
-**Priority:** P2
+**Priority:** P1
 **Date:** 2026-02-02
 
 ---
 
 ## Summary
 
-After successful Stripe checkout payment, the checkout success page redirects to `/pricing?checkout=error` because the subscription object is missing `current_period_end`. This causes the eager sync to fail validation.
+After successful Stripe checkout payment, the checkout success page redirects to `/pricing?checkout=error` because `subscription.current_period_end` returns `null`. This is due to a **Stripe API breaking change** in version `2025-03-31`.
+
+## Root Cause (CONFIRMED)
+
+**Stripe API version `2025-03-31` deprecated `current_period_start` and `current_period_end` at the subscription level.** These fields now exist only on **subscription items**.
+
+Our Stripe API version: `2026-01-28.clover` (see Stripe CLI output)
+
+**Source:** https://docs.stripe.com/changelog/basil/2025-03-31/deprecate-subscription-current-period-start-and-end
+
+```typescript
+// OLD (broken on API >= 2025-03-31)
+subscription.current_period_end  // ❌ Returns null
+
+// NEW (correct)
+subscription.items.data[0].current_period_end  // ✅ This is where it lives now
+```
+
+## Affected Code
+
+1. **Checkout success page:** `app/(marketing)/checkout/success/page.tsx:258`
+2. **Webhook handler:** `src/adapters/gateways/stripe-payment-gateway.ts:321`
+
+Both read `subscription.current_period_end` which is now `null`.
 
 ## Observed Error
 
@@ -17,56 +40,48 @@ From server logs:
 {
   "level": 50,
   "reason": "missing_current_period_end",
-  "sessionId": "cs_test_a1C2mxQawUtoRy1cxV8HalMgFTtQzoFMFKsREfbkkBh5T4CgerXkjs0IAW",
+  "sessionId": "cs_test_...",
   "currentPeriodEndSeconds": null,
   "msg": "Checkout success validation failed"
 }
 ```
 
-## Steps to Reproduce
+## Fix Required
 
-1. Go to `/pricing` while logged in
-2. Click "Subscribe Annual" or "Subscribe Monthly"
-3. Complete Stripe checkout with test card `4242 4242 4242 4242`
-4. Observe redirect to `/pricing?checkout=error` instead of dashboard
-5. Check server logs for `missing_current_period_end`
+Update both locations to read from subscription items:
 
-## Root Cause (Investigation Needed)
-
-The `syncCheckoutSuccess` function retrieves the subscription via:
 ```typescript
-const subscription = await d.stripe.subscriptions.retrieve(subscriptionId);
-const currentPeriodEndSeconds = subscription.current_period_end;
-assertNumber(currentPeriodEndSeconds, 'missing_current_period_end', {...});
+// In checkout success page and webhook handler:
+const currentPeriodEndSeconds = subscription.items?.data?.[0]?.current_period_end;
 ```
 
-Possible causes:
-1. **Timing race**: Subscription not fully provisioned when checkout success page loads
-2. **Stripe API version mismatch**: The `2026-01-28.clover` API version may have different response shapes
-3. **Expand parameter**: Need to verify if `current_period_end` requires explicit expansion
+Also update the type definition in `stripe-payment-gateway.ts:112`:
+```typescript
+type StripeSubscriptionLike = {
+  // ... existing fields
+  items?: {
+    data?: Array<{
+      price?: { id?: string };
+      current_period_start?: number;  // ADD
+      current_period_end?: number;    // ADD
+    }>
+  };
+};
+```
 
 ## Current Workaround
 
-The Stripe webhook (`customer.subscription.created` / `updated`) still processes successfully after the initial 500, so subscriptions ARE eventually synced. Users can:
-- Refresh the page
-- Navigate to dashboard manually
-- Wait ~30 seconds for webhook to complete
-
-## Proposed Investigation
-
-1. Add logging to capture the full subscription object shape
-2. Verify Stripe API version compatibility
-3. Consider adding retry logic with exponential backoff
-4. Check if checkout session expansion includes subscription details
+Webhooks (after the initial 500) eventually sync the subscription because some webhook events still include period data in previous_attributes. Users can navigate to dashboard manually.
 
 ## Impact
 
-- **User experience:** Poor — checkout "fails" visually despite payment succeeding
-- **Data integrity:** Low — webhook backup ensures subscription is synced
+- **User experience:** Critical — ALL new subscriptions fail at checkout success
+- **Data integrity:** Low — webhook backup eventually syncs
 - **Revenue:** None — payments complete successfully
 
 ## Related
 
-- BUG-042: Checkout Success Redirects Without Diagnostics (archived — we added the logging that surfaced this)
-- DEBT-069: Document Stripe Eager Sync Pattern (archived)
+- Stripe changelog: https://docs.stripe.com/changelog/basil/2025-03-31/deprecate-subscription-current-period-start-and-end
+- BUG-042: Checkout Success Redirects Without Diagnostics (archived)
 - `app/(marketing)/checkout/success/page.tsx:258-263`
+- `src/adapters/gateways/stripe-payment-gateway.ts:321-325`

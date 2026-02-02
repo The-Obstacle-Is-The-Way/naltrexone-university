@@ -17,8 +17,7 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 | ID | Title | Status | Priority | Date |
 |----|-------|--------|----------|------|
-| [BUG-044](./bug-044-checkout-success-stale-cache.md) | Checkout Success Page Serving Stale Code | Open | P2 | 2026-02-02 |
-| [BUG-045](./bug-045-checkout-missing-current-period-end.md) | Checkout Success Validation Fails — missing_current_period_end | Open | P2 | 2026-02-02 |
+| [BUG-045](./bug-045-checkout-missing-current-period-end.md) | Stripe API Breaking Change — current_period_end moved to items | Open | P1 | 2026-02-02 |
 
 **Next Bug ID:** BUG-046
 
@@ -31,6 +30,7 @@ See: [Foundation Audit Report](foundation-audit-report.md)
 
 | ID | Title | Priority | Resolved |
 |----|-------|----------|----------|
+| [BUG-044](../_archive/bugs/bug-044-checkout-success-stale-cache.md) | Checkout Success Page Serving Stale Code | P2 | 2026-02-02 |
 | [BUG-043](../_archive/bugs/bug-043-checkout-success-not-public-route.md) | Checkout Success Route Not Public (Stripe Return) | P2 | 2026-02-02 |
 | [BUG-041](../_archive/bugs/bug-041-webhook-subscription-created-missing-metadata.md) | Webhook 500 on customer.subscription.created (Missing metadata.user_id) | P2 | 2026-02-02 |
 | [BUG-042](../_archive/bugs/bug-042-checkout-success-silent-validation-failure.md) | Checkout Success Redirects Without Diagnostics | P1 | 2026-02-02 |
