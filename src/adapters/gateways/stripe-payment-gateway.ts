@@ -79,6 +79,7 @@ export type StripePaymentGatewayDeps = {
   stripe: StripeClient;
   webhookSecret: string;
   priceIds: StripePriceIds;
+  logger?: { error: (msg: string, context?: Record<string, unknown>) => void };
 };
 
 type StripeSubscriptionLike = {
@@ -175,8 +176,18 @@ export class StripePaymentGateway implements PaymentGateway {
         signature,
         this.deps.webhookSecret,
       );
-    } catch {
-      throw new ApplicationError('STRIPE_ERROR', 'Invalid webhook signature');
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
+
+      this.deps.logger?.error('Webhook signature verification failed', {
+        error: errorMessage,
+      });
+
+      throw new ApplicationError(
+        'INVALID_WEBHOOK_SIGNATURE',
+        `Invalid webhook signature: ${errorMessage}`,
+      );
     }
 
     const result: WebhookEventResult = {

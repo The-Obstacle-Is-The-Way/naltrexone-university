@@ -173,6 +173,7 @@ export function createContainer(overrides: ContainerOverrides = {}) {
         stripe: primitives.stripe,
         webhookSecret: primitives.env.STRIPE_WEBHOOK_SECRET,
         priceIds: stripePriceIds,
+        logger: primitives.logger,
       }),
   };
 

@@ -17,7 +17,6 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 | ID | Title | Status | Priority | Date |
 |----|-------|--------|----------|------|
-| [BUG-015](./bug-015-fragile-webhook-error-matching.md) | Fragile Webhook Error Matching Uses String Instead of Error Code | Open | P1 | 2026-02-02 |
 | [BUG-016](./bug-016-memory-exhaustion-power-users.md) | Memory Exhaustion for Power Users — All Attempts Loaded Into Memory | Open | P1 | 2026-02-02 |
 | [BUG-017](./bug-017-billing-button-without-subscription.md) | Billing Page Shows "Manage in Stripe" When User Has No Subscription | Open | P2 | 2026-02-02 |
 | [BUG-018](./bug-018-silent-fallbacks-in-controllers.md) | Silent Fallbacks in Controllers — Data Inconsistency Without Warning | Open | P2 | 2026-02-02 |
@@ -31,14 +30,6 @@ Bug reports document issues discovered in the codebase along with their root cau
 | [BUG-026](./bug-026-concurrent-checkout-sessions.md) | No Protection Against Concurrent Checkout Sessions | Open | P2 | 2026-02-02 |
 | [BUG-027](./bug-027-stripe-events-unbounded-growth.md) | Stripe Events Table Unbounded Growth | Open | P2 | 2026-02-02 |
 | [BUG-028](./bug-028-inconsistent-cascade-delete-attempts.md) | Inconsistent Cascade Delete for Attempts | Open | P2 | 2026-02-02 |
-| [BUG-029](./bug-029-answer-choices-not-randomized.md) | Answer Choices Not Randomized — Test Validity Issue | Open | P1 | 2026-02-02 |
-| [BUG-030](./bug-030-time-spent-always-zero.md) | Time Spent Always Zero — No Timer Implementation | Open | P1 | 2026-02-02 |
-| [BUG-031](./bug-031-non-unique-react-key-dashboard.md) | Non-Unique React Key in Dashboard Recent Activity | Open | P3 | 2026-02-02 |
-| [BUG-032](./bug-032-state-update-after-unmount.md) | State Update After Component Unmount in Practice Page | Open | P2 | 2026-02-02 |
-| [BUG-033](./bug-033-stale-closure-toggle-bookmark.md) | Stale Closure in onToggleBookmark — Wrong Question Bookmarked | Open | P2 | 2026-02-02 |
-| [BUG-034](./bug-034-webhook-error-context-lost.md) | Webhook Catch Block Loses Error Context | Open | P2 | 2026-02-02 |
-| [BUG-035](./bug-035-error-banner-not-clearable.md) | Error Banner Not Clearable on Pricing Page | Open | P3 | 2026-02-02 |
-| [BUG-036](./bug-036-no-loading-state-subscribe-buttons.md) | No Loading State on Subscribe Buttons | Open | P2 | 2026-02-02 |
 | [BUG-037](./bug-037-no-mobile-navigation-menu.md) | No Mobile Navigation Menu | Open | P2 | 2026-02-02 |
 | [BUG-038](./bug-038-missing-clerk-user-updated-webhook.md) | Missing Clerk user.updated Webhook — Email Sync Gap | Open | P3 | 2026-02-02 |
 | [BUG-009](./bug-009-vercel-preview-deployment-rate-limit.md) | Vercel Preview Deployment Status Fails Due to Rate Limit | Won't Fix | P3 | 2026-02-01 |
@@ -49,6 +40,15 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 | ID | Title | Priority | Resolved |
 |----|-------|----------|----------|
+| [BUG-036](../_archive/bugs/bug-036-no-loading-state-subscribe-buttons.md) | No Loading State on Subscribe Buttons | P2 | 2026-02-02 |
+| [BUG-035](../_archive/bugs/bug-035-error-banner-not-clearable.md) | Error Banner Not Clearable on Pricing Page | P3 | 2026-02-02 |
+| [BUG-034](../_archive/bugs/bug-034-webhook-error-context-lost.md) | Webhook Catch Block Loses Error Context | P2 | 2026-02-02 |
+| [BUG-033](../_archive/bugs/bug-033-stale-closure-toggle-bookmark.md) | Stale Closure in onToggleBookmark — Wrong Question Bookmarked | P2 | 2026-02-02 |
+| [BUG-032](../_archive/bugs/bug-032-state-update-after-unmount.md) | State Update After Component Unmount in Practice Page | P2 | 2026-02-02 |
+| [BUG-031](../_archive/bugs/bug-031-non-unique-react-key-dashboard.md) | Non-Unique React Key in Dashboard Recent Activity | P3 | 2026-02-02 |
+| [BUG-015](../_archive/bugs/bug-015-fragile-webhook-error-matching.md) | Fragile Webhook Error Matching Uses String Instead of Error Code | P1 | 2026-02-02 |
+| [BUG-029](../_archive/bugs/bug-029-answer-choices-not-randomized.md) | Answer Choices Not Randomized — Test Validity Issue | P1 | 2026-02-02 |
+| [BUG-030](../_archive/bugs/bug-030-time-spent-always-zero.md) | Time Spent Always Zero — No Timer Implementation | P1 | 2026-02-02 |
 | [BUG-014](../_archive/bugs/bug-014-pricing-subscribe-action-not-working.md) | Pricing Subscribe Action Not Working (Server Action Serialization) | P1 | 2026-02-02 |
 | [BUG-013](../_archive/bugs/bug-013-silent-error-handling.md) | Silent Error Handling — Errors Swallowed Without Logging or User Feedback | P1 | 2026-02-02 |
 | [BUG-012](../_archive/bugs/bug-012-incomplete-feature-wiring.md) | Incomplete Feature Wiring — Missing Controllers and E2E Coverage | P2 | 2026-02-02 |

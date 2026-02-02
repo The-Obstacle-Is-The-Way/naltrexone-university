@@ -174,6 +174,7 @@ export default function PracticePage() {
   const [bookmarkRetryCount, setBookmarkRetryCount] = useState(0);
   const [loadState, setLoadState] = useState<LoadState>({ status: 'idle' });
   const [isPending, startTransition] = useTransition();
+  const [questionLoadedAt, setQuestionLoadedAt] = useState<number | null>(null);
 
   const loadNext = useCallback(() => {
     startTransition(() => {
@@ -181,6 +182,7 @@ export default function PracticePage() {
         setLoadState({ status: 'loading' });
         setSelectedChoiceId(null);
         setSubmitResult(null);
+        setQuestionLoadedAt(null);
 
         const res = await getNextQuestion({
           filters: { tagSlugs: [], difficulties: [] },
@@ -193,6 +195,7 @@ export default function PracticePage() {
         }
 
         setQuestion(res.data);
+        setQuestionLoadedAt(res.data ? Date.now() : null);
         setLoadState({ status: 'ready' });
       })();
     });
@@ -203,10 +206,13 @@ export default function PracticePage() {
   }, [loadNext]);
 
   useEffect(() => {
+    let mounted = true;
     let timeoutId: ReturnType<typeof setTimeout> | undefined;
 
     void (async () => {
       const res = await getBookmarks({});
+      if (!mounted) return;
+
       if (!res.ok) {
         console.error('Failed to load bookmarks', res.error);
         setBookmarkStatus('error');
@@ -214,7 +220,9 @@ export default function PracticePage() {
         if (bookmarkRetryCount < 2) {
           timeoutId = setTimeout(
             () => {
-              setBookmarkRetryCount((prev) => prev + 1);
+              if (mounted) {
+                setBookmarkRetryCount((prev) => prev + 1);
+              }
             },
             1000 * (bookmarkRetryCount + 1),
           );
@@ -230,6 +238,7 @@ export default function PracticePage() {
     })();
 
     return () => {
+      mounted = false;
       if (timeoutId) clearTimeout(timeoutId);
     };
   }, [bookmarkRetryCount]);
@@ -250,9 +259,14 @@ export default function PracticePage() {
 
     setLoadState({ status: 'loading' });
 
+    const timeSpentSeconds = questionLoadedAt
+      ? Math.floor((Date.now() - questionLoadedAt) / 1000)
+      : 0;
+
     const res = await submitAnswer({
       questionId: question.questionId,
       choiceId: selectedChoiceId,
+      timeSpentSeconds,
     });
 
     if (!res.ok) {
@@ -267,9 +281,11 @@ export default function PracticePage() {
   async function onToggleBookmark() {
     if (!question) return;
 
+    const questionId = question.questionId;
+
     setBookmarkStatus('loading');
 
-    const res = await toggleBookmark({ questionId: question.questionId });
+    const res = await toggleBookmark({ questionId });
     if (!res.ok) {
       setBookmarkStatus('error');
       setLoadState({ status: 'error', message: getErrorMessage(res) });
@@ -278,8 +294,8 @@ export default function PracticePage() {
 
     setBookmarkedQuestionIds((prev) => {
       const next = new Set(prev);
-      if (res.data.bookmarked) next.add(question.questionId);
-      else next.delete(question.questionId);
+      if (res.data.bookmarked) next.add(questionId);
+      else next.delete(questionId);
       return next;
     });
 

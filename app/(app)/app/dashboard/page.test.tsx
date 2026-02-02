@@ -16,6 +16,7 @@ describe('app/(app)/app/dashboard', () => {
           currentStreakDays: 3,
           recentActivity: [
             {
+              attemptId: 'attempt_1',
               answeredAt: '2026-02-01T00:00:00.000Z',
               questionId: 'q_1',
               slug: 'q-1',

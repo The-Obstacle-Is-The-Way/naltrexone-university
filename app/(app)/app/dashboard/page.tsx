@@ -87,10 +87,7 @@ export function DashboardView({ stats }: { stats: UserStatsOutput }) {
           </div>
           <ul className="mt-4 space-y-2 text-sm text-muted-foreground">
             {stats.recentActivity.map((row) => (
-              <li
-                key={`${row.answeredAt}-${row.questionId}`}
-                className="flex items-center gap-2"
-              >
+              <li key={row.attemptId} className="flex items-center gap-2">
                 <span className="font-medium text-foreground">{row.slug}</span>
                 <span className="text-muted-foreground">
                   {row.isCorrect ? 'Correct' : 'Incorrect'}

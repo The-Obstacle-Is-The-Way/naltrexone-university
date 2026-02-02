@@ -35,6 +35,7 @@ export type UserStatsOutput = {
   accuracyLast7Days: number; // 0..1
   currentStreakDays: number; // consecutive UTC days with >=1 attempt, ending today
   recentActivity: Array<{
+    attemptId: string;
     answeredAt: string; // ISO
     questionId: string;
     slug: string;
@@ -140,6 +141,7 @@ export async function getUserStats(
       if (!slug) continue;
 
       recentActivity.push({
+        attemptId: attempt.id,
         answeredAt: attempt.answeredAt.toISOString(),
         questionId: attempt.questionId,
         slug,

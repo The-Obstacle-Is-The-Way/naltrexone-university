@@ -264,7 +264,7 @@ describe('StripePaymentGateway', () => {
     expect(constructEvent).toHaveBeenCalledWith('raw_body', 'sig_1', 'whsec_1');
   });
 
-  it('throws STRIPE_ERROR when webhook signature verification fails', async () => {
+  it('throws INVALID_WEBHOOK_SIGNATURE when webhook signature verification fails', async () => {
     const stripe = {
       customers: {
         create: vi.fn(async () => ({ id: 'cus_123' })),
@@ -295,9 +295,86 @@ describe('StripePaymentGateway', () => {
     await expect(
       gateway.processWebhookEvent('raw_body', 'sig_1'),
     ).rejects.toMatchObject({
-      code: 'STRIPE_ERROR',
-      message: 'Invalid webhook signature',
+      code: 'INVALID_WEBHOOK_SIGNATURE',
     });
+  });
+
+  it('includes original error message when webhook signature verification fails', async () => {
+    const stripe = {
+      customers: {
+        create: vi.fn(async () => ({ id: 'cus_123' })),
+      },
+      checkout: {
+        sessions: {
+          create: vi.fn(async () => ({ url: 'https://stripe/checkout' })),
+        },
+      },
+      billingPortal: {
+        sessions: {
+          create: vi.fn(async () => ({ url: 'https://stripe/portal' })),
+        },
+      },
+      webhooks: {
+        constructEvent: vi.fn(() => {
+          throw new Error('Signature timestamp too old');
+        }),
+      },
+    } as const;
+
+    const gateway = new StripePaymentGateway({
+      stripe,
+      webhookSecret: 'whsec_1',
+      priceIds: { monthly: 'price_m', annual: 'price_a' },
+    });
+
+    await expect(
+      gateway.processWebhookEvent('raw_body', 'sig_1'),
+    ).rejects.toMatchObject({
+      code: 'INVALID_WEBHOOK_SIGNATURE',
+      message: expect.stringContaining('Signature timestamp too old'),
+    });
+  });
+
+  it('calls logger.error when logger is provided and webhook verification fails', async () => {
+    const stripe = {
+      customers: {
+        create: vi.fn(async () => ({ id: 'cus_123' })),
+      },
+      checkout: {
+        sessions: {
+          create: vi.fn(async () => ({ url: 'https://stripe/checkout' })),
+        },
+      },
+      billingPortal: {
+        sessions: {
+          create: vi.fn(async () => ({ url: 'https://stripe/portal' })),
+        },
+      },
+      webhooks: {
+        constructEvent: vi.fn(() => {
+          throw new Error('Invalid signature');
+        }),
+      },
+    } as const;
+
+    const loggerError = vi.fn();
+    const gateway = new StripePaymentGateway({
+      stripe,
+      webhookSecret: 'whsec_1',
+      priceIds: { monthly: 'price_m', annual: 'price_a' },
+      logger: { error: loggerError },
+    });
+
+    await expect(
+      gateway.processWebhookEvent('raw_body', 'sig_1'),
+    ).rejects.toMatchObject({
+      code: 'INVALID_WEBHOOK_SIGNATURE',
+    });
+
+    expect(loggerError).toHaveBeenCalledWith(
+      'Webhook signature verification failed',
+      { error: 'Invalid signature' },
+    );
   });
 
   it('throws when a subscription update event is missing required metadata', async () => {

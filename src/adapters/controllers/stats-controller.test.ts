@@ -182,18 +182,21 @@ describe('stats-controller', () => {
           currentStreakDays: 2,
           recentActivity: [
             {
+              attemptId: 'attempt-q1',
               answeredAt: '2026-02-01T11:00:00.000Z',
               questionId: 'q1',
               slug: 'q-1',
               isCorrect: true,
             },
             {
+              attemptId: 'attempt-q2',
               answeredAt: '2026-01-31T11:00:00.000Z',
               questionId: 'q2',
               slug: 'q-2',
               isCorrect: false,
             },
             {
+              attemptId: 'attempt-q3',
               answeredAt: '2026-01-20T11:00:00.000Z',
               questionId: 'q3',
               slug: 'q-3',
@@ -202,6 +205,35 @@ describe('stats-controller', () => {
           ],
         },
       });
+    });
+
+    it('includes attemptId in recentActivity for unique React keys', async () => {
+      const now = new Date('2026-02-01T12:00:00Z');
+
+      const deps = createDeps({
+        now: () => now,
+        attempts: [
+          createAttempt({
+            id: 'attempt_123',
+            questionId: 'q1',
+            isCorrect: true,
+            answeredAt: new Date('2026-02-01T11:00:00Z'),
+          }),
+        ],
+        questionsById: {
+          q1: createQuestion({ id: 'q1', slug: 'q-1' }),
+        },
+      });
+
+      const result = await getUserStats({}, deps as never);
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.data.recentActivity[0]).toHaveProperty(
+          'attemptId',
+          'attempt_123',
+        );
+      }
     });
 
     it('loads dependencies from the container when deps are omitted', async () => {

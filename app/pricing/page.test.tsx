@@ -238,6 +238,55 @@ describe('app/pricing', () => {
     expect(createCheckoutSessionFn).toHaveBeenCalledWith({ plan: 'monthly' });
   });
 
+  it('renders dismiss button when banner has onDismissBanner prop', async () => {
+    const { PricingView } = await import('./page');
+
+    const html = renderToStaticMarkup(
+      <PricingView
+        isEntitled={false}
+        banner={{
+          tone: 'error',
+          message: 'Checkout failed. Please try again.',
+        }}
+        onDismissBanner={() => {}}
+        subscribeMonthlyAction={async () => undefined}
+        subscribeAnnualAction={async () => undefined}
+      />,
+    );
+
+    expect(html).toContain('aria-label="Dismiss"');
+    expect(html).toContain('×');
+  });
+
+  it('SubscribeButton renders children when not pending', async () => {
+    const { SubscribeButton } = await import('./pricing-client');
+
+    const html = renderToStaticMarkup(
+      <SubscribeButton>Subscribe Monthly</SubscribeButton>,
+    );
+
+    expect(html).toContain('Subscribe Monthly');
+    expect(html).not.toContain('Processing...');
+  });
+
+  it('does not render dismiss button when onDismissBanner is not provided', async () => {
+    const { PricingView } = await import('./page');
+
+    const html = renderToStaticMarkup(
+      <PricingView
+        isEntitled={false}
+        banner={{
+          tone: 'error',
+          message: 'Checkout failed. Please try again.',
+        }}
+        subscribeMonthlyAction={async () => undefined}
+        subscribeAnnualAction={async () => undefined}
+      />,
+    );
+
+    expect(html).not.toContain('aria-label="Dismiss"');
+  });
+
   it('renders PricingPage with container-provided dependencies', async () => {
     vi.doMock('@/lib/container', () => ({
       createContainer: () => ({
