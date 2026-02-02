@@ -1,0 +1,262 @@
+import type { ActionResult } from '@/src/adapters/controllers/action-result';
+import type { StartPracticeSessionOutput } from '@/src/adapters/controllers/practice-controller';
+import type { NextQuestion } from '@/src/application/use-cases/get-next-question';
+import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
+import { getActionResultErrorMessage } from './practice-logic';
+
+type SetTimeoutFn = (
+  fn: () => void,
+  ms: number,
+) => ReturnType<typeof setTimeout>;
+
+type ClearTimeoutFn = (id: ReturnType<typeof setTimeout>) => void;
+
+export type LoadState =
+  | { status: 'idle' }
+  | { status: 'loading' }
+  | { status: 'ready' }
+  | { status: 'error'; message: string };
+
+export async function loadNextQuestion(input: {
+  getNextQuestionFn: (
+    input: unknown,
+  ) => Promise<ActionResult<NextQuestion | null>>;
+  nowMs: () => number;
+  setLoadState: (state: LoadState) => void;
+  setSelectedChoiceId: (choiceId: string | null) => void;
+  setSubmitResult: (result: SubmitAnswerOutput | null) => void;
+  setQuestionLoadedAt: (loadedAtMs: number | null) => void;
+  setQuestion: (question: NextQuestion | null) => void;
+}): Promise<void> {
+  input.setLoadState({ status: 'loading' });
+  input.setSelectedChoiceId(null);
+  input.setSubmitResult(null);
+  input.setQuestionLoadedAt(null);
+
+  const res = await input.getNextQuestionFn({
+    filters: { tagSlugs: [], difficulties: [] },
+  });
+
+  if (!res.ok) {
+    input.setLoadState({
+      status: 'error',
+      message: getActionResultErrorMessage(res),
+    });
+    input.setQuestion(null);
+    return;
+  }
+
+  input.setQuestion(res.data);
+  input.setQuestionLoadedAt(res.data ? input.nowMs() : null);
+  input.setLoadState({ status: 'ready' });
+}
+
+export function createLoadNextQuestionAction(input: {
+  startTransition: (fn: () => void) => void;
+  getNextQuestionFn: (
+    input: unknown,
+  ) => Promise<ActionResult<NextQuestion | null>>;
+  nowMs: () => number;
+  setLoadState: (state: LoadState) => void;
+  setSelectedChoiceId: (choiceId: string | null) => void;
+  setSubmitResult: (result: SubmitAnswerOutput | null) => void;
+  setQuestionLoadedAt: (loadedAtMs: number | null) => void;
+  setQuestion: (question: NextQuestion | null) => void;
+}): () => void {
+  return () => {
+    input.startTransition(() => {
+      void loadNextQuestion(input);
+    });
+  };
+}
+
+export function createBookmarksEffect(input: {
+  bookmarkRetryCount: number;
+  getBookmarksFn: (input: unknown) => Promise<
+    ActionResult<{
+      rows: Array<{ questionId: string }>;
+    }>
+  >;
+  setBookmarkedQuestionIds: (
+    next: Set<string> | ((prev: Set<string>) => Set<string>),
+  ) => void;
+  setBookmarkStatus: (status: 'idle' | 'loading' | 'error') => void;
+  setBookmarkRetryCount: (next: number | ((prev: number) => number)) => void;
+  setTimeoutFn?: SetTimeoutFn;
+  clearTimeoutFn?: ClearTimeoutFn;
+  logError?: (message: string, context: unknown) => void;
+}): () => void {
+  const setTimeoutFn: SetTimeoutFn =
+    input.setTimeoutFn ?? ((fn, ms) => setTimeout(fn, ms));
+  const clearTimeoutFn: ClearTimeoutFn =
+    input.clearTimeoutFn ?? ((id) => clearTimeout(id));
+  const logError =
+    input.logError ??
+    ((message: string, context: unknown) => {
+      console.error(message, context);
+    });
+
+  let mounted = true;
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
+
+  void (async () => {
+    const res = await input.getBookmarksFn({});
+    if (!mounted) return;
+
+    if (!res.ok) {
+      logError('Failed to load bookmarks', res.error);
+      input.setBookmarkStatus('error');
+
+      if (input.bookmarkRetryCount < 2) {
+        timeoutId = setTimeoutFn(
+          () => {
+            if (mounted) {
+              input.setBookmarkRetryCount((prev) => prev + 1);
+            }
+          },
+          1000 * (input.bookmarkRetryCount + 1),
+        );
+      }
+
+      return;
+    }
+
+    input.setBookmarkedQuestionIds(
+      new Set(res.data.rows.map((row) => row.questionId)),
+    );
+    input.setBookmarkStatus('idle');
+  })();
+
+  return () => {
+    mounted = false;
+    if (timeoutId !== undefined) clearTimeoutFn(timeoutId);
+  };
+}
+
+export async function submitAnswerForQuestion(input: {
+  question: NextQuestion | null;
+  selectedChoiceId: string | null;
+  questionLoadedAtMs: number | null;
+  submitAnswerFn: (input: unknown) => Promise<ActionResult<SubmitAnswerOutput>>;
+  nowMs: () => number;
+  setLoadState: (state: LoadState) => void;
+  setSubmitResult: (result: SubmitAnswerOutput | null) => void;
+}): Promise<void> {
+  if (!input.question) return;
+  if (!input.selectedChoiceId) return;
+
+  input.setLoadState({ status: 'loading' });
+
+  const timeSpentSeconds = input.questionLoadedAtMs
+    ? Math.floor((input.nowMs() - input.questionLoadedAtMs) / 1000)
+    : 0;
+
+  const res = await input.submitAnswerFn({
+    questionId: input.question.questionId,
+    choiceId: input.selectedChoiceId,
+    timeSpentSeconds,
+  });
+
+  if (!res.ok) {
+    input.setLoadState({
+      status: 'error',
+      message: getActionResultErrorMessage(res),
+    });
+    return;
+  }
+
+  input.setSubmitResult(res.data);
+  input.setLoadState({ status: 'ready' });
+}
+
+export async function toggleBookmarkForQuestion(input: {
+  question: NextQuestion | null;
+  toggleBookmarkFn: (
+    input: unknown,
+  ) => Promise<ActionResult<{ bookmarked: boolean }>>;
+  setBookmarkStatus: (status: 'idle' | 'loading' | 'error') => void;
+  setLoadState: (state: LoadState) => void;
+  setBookmarkedQuestionIds: (
+    next: Set<string> | ((prev: Set<string>) => Set<string>),
+  ) => void;
+}): Promise<void> {
+  if (!input.question) return;
+
+  const questionId = input.question.questionId;
+
+  input.setBookmarkStatus('loading');
+
+  const res = await input.toggleBookmarkFn({ questionId });
+  if (!res.ok) {
+    input.setBookmarkStatus('error');
+    input.setLoadState({
+      status: 'error',
+      message: getActionResultErrorMessage(res),
+    });
+    return;
+  }
+
+  input.setBookmarkedQuestionIds((prev) => {
+    const next = new Set(prev);
+    if (res.data.bookmarked) next.add(questionId);
+    else next.delete(questionId);
+    return next;
+  });
+
+  input.setBookmarkStatus('idle');
+}
+
+export function selectChoiceIfAllowed(
+  submitResult: SubmitAnswerOutput | null,
+  setSelectedChoiceId: (choiceId: string) => void,
+  choiceId: string,
+): void {
+  if (submitResult) return;
+  setSelectedChoiceId(choiceId);
+}
+
+export function handleSessionModeChange(
+  setSessionMode: (mode: 'tutor' | 'exam') => void,
+  event: { target: { value: string } },
+): void {
+  const value = event.target.value;
+  if (value === 'tutor' || value === 'exam') {
+    setSessionMode(value);
+  }
+}
+
+export function handleSessionCountChange(
+  setSessionCount: (count: number) => void,
+  event: { target: { value: string } },
+): void {
+  setSessionCount(Number(event.target.value));
+}
+
+export async function startSession(input: {
+  sessionMode: 'tutor' | 'exam';
+  sessionCount: number;
+  startPracticeSessionFn: (
+    input: unknown,
+  ) => Promise<ActionResult<StartPracticeSessionOutput>>;
+  setSessionStartStatus: (status: 'idle' | 'loading' | 'error') => void;
+  setSessionStartError: (message: string | null) => void;
+  navigateTo: (url: string) => void;
+}): Promise<void> {
+  input.setSessionStartStatus('loading');
+  input.setSessionStartError(null);
+
+  const res = await input.startPracticeSessionFn({
+    mode: input.sessionMode,
+    count: input.sessionCount,
+    tagSlugs: [],
+    difficulties: [],
+  });
+
+  if (!res.ok) {
+    input.setSessionStartStatus('error');
+    input.setSessionStartError(getActionResultErrorMessage(res));
+    return;
+  }
+
+  input.navigateTo(`/app/practice/${res.data.sessionId}`);
+}

@@ -3,6 +3,13 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 
 describe('MobileNav', () => {
+  it('toggles open state via toggleMobileNavOpen helper', async () => {
+    const { toggleMobileNavOpen } = await import('@/components/mobile-nav');
+
+    expect(toggleMobileNavOpen(false)).toBe(true);
+    expect(toggleMobileNavOpen(true)).toBe(false);
+  });
+
   it('renders hamburger button on initial render', async () => {
     const { MobileNav } = await import('@/components/mobile-nav');
 

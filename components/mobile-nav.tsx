@@ -4,6 +4,10 @@ import { Menu, X } from 'lucide-react';
 import Link from 'next/link';
 import { useState } from 'react';
 
+export function toggleMobileNavOpen(isOpen: boolean): boolean {
+  return !isOpen;
+}
+
 function MobileNavLinks({ onClose }: { onClose?: () => void }) {
   return (
     <nav className="absolute left-0 right-0 top-full border-b border-border bg-background p-4">
@@ -53,7 +57,7 @@ export function MobileNav() {
     <div className="sm:hidden">
       <button
         type="button"
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={setIsOpen.bind(null, toggleMobileNavOpen)}
         className="p-2 text-muted-foreground hover:text-foreground"
         aria-label={isOpen ? 'Close navigation menu' : 'Open navigation menu'}
         aria-expanded={isOpen}
@@ -61,7 +65,7 @@ export function MobileNav() {
         {isOpen ? <X className="size-6" /> : <Menu className="size-6" />}
       </button>
 
-      {isOpen && <MobileNavLinks onClose={() => setIsOpen(false)} />}
+      {isOpen && <MobileNavLinks onClose={setIsOpen.bind(null, false)} />}
     </div>
   );
 }

@@ -48,4 +48,60 @@ describe('app/(app)/app/practice/[sessionId]', () => {
     expect(html).toContain('123s');
     expect(html).toContain('Start another session');
   });
+
+  it('renders the session summary branch in PracticeSessionPageView', async () => {
+    const { PracticeSessionPageView } = await import('./page');
+
+    const html = renderToStaticMarkup(
+      <PracticeSessionPageView
+        summary={{
+          sessionId: 'session-1',
+          endedAt: '2026-02-01T00:00:00.000Z',
+          totals: {
+            answered: 10,
+            correct: 7,
+            accuracy: 0.7,
+            durationSeconds: 123,
+          },
+        }}
+        sessionInfo={null}
+        loadState={{ status: 'ready' }}
+        question={null}
+        selectedChoiceId={null}
+        submitResult={null}
+        isPending={false}
+        bookmarkStatus="idle"
+        isBookmarked={false}
+        canSubmit={false}
+        onEndSession={() => undefined}
+        onTryAgain={() => undefined}
+        onToggleBookmark={() => undefined}
+        onSelectChoice={() => undefined}
+        onSubmit={() => undefined}
+        onNextQuestion={() => undefined}
+      />,
+    );
+
+    expect(html).toContain('Session Summary');
+  });
+
+  it('isQuestionBookmarked returns true when questionId is in set', async () => {
+    const { isQuestionBookmarked } = await import('./page');
+
+    expect(
+      isQuestionBookmarked(
+        {
+          questionId: 'q_1',
+          slug: 'q-1',
+          stemMd: '#',
+          difficulty: 'easy',
+          choices: [],
+          session: null,
+        },
+        new Set(['q_1']),
+      ),
+    ).toBe(true);
+
+    expect(isQuestionBookmarked(null, new Set(['q_1']))).toBe(false);
+  });
 });

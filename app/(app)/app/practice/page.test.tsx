@@ -198,4 +198,67 @@ describe('app/(app)/app/practice', () => {
 
     expect(html).toContain('Bookmarks unavailable');
   });
+
+  it('renders session info when sessionInfo is provided', async () => {
+    const { PracticeView } = await import('./page');
+
+    const html = renderToStaticMarkup(
+      <PracticeView
+        sessionInfo={{
+          sessionId: 'session-1',
+          mode: 'tutor',
+          index: 0,
+          total: 10,
+        }}
+        loadState={{ status: 'ready' }}
+        question={null}
+        selectedChoiceId={null}
+        submitResult={null}
+        isPending={false}
+        bookmarkStatus="idle"
+        isBookmarked={false}
+        canSubmit={false}
+        onEndSession={() => undefined}
+        onTryAgain={() => undefined}
+        onToggleBookmark={() => undefined}
+        onSelectChoice={() => undefined}
+        onSubmit={() => undefined}
+        onNextQuestion={() => undefined}
+      />,
+    );
+
+    expect(html).toContain('Session: tutor');
+    expect(html).toContain('1/10');
+  });
+
+  it('renders session start error when starter is in error state', async () => {
+    const { PracticeSessionStarter } = await import('./page');
+
+    const html = renderToStaticMarkup(
+      <PracticeSessionStarter
+        sessionMode="tutor"
+        sessionCount={20}
+        sessionStartStatus="error"
+        sessionStartError="No questions"
+        isPending={false}
+        onSessionModeChange={() => undefined}
+        onSessionCountChange={() => undefined}
+        onStartSession={() => undefined}
+      />,
+    );
+
+    expect(html).toContain('No questions');
+  });
+
+  it('navigateTo updates window.location.href', async () => {
+    const { navigateTo } = await import('./client-navigation');
+
+    const initial = window.location.href;
+    navigateTo('#practice-nav-test');
+
+    expect(window.location.href).toContain('#practice-nav-test');
+
+    window.location.hash = '';
+    window.location.href = initial;
+  });
 });

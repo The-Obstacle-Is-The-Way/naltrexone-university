@@ -1,16 +1,9 @@
 'use client';
 
 import Link from 'next/link';
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useState,
-  useTransition,
-} from 'react';
+import { useEffect, useMemo, useState, useTransition } from 'react';
 import { Feedback } from '@/components/question/Feedback';
 import { QuestionCard } from '@/components/question/QuestionCard';
-import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import {
   getBookmarks,
   toggleBookmark,
@@ -22,17 +15,18 @@ import {
 } from '@/src/adapters/controllers/question-controller';
 import type { NextQuestion } from '@/src/application/use-cases/get-next-question';
 import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
-
-type LoadState =
-  | { status: 'idle' }
-  | { status: 'loading' }
-  | { status: 'ready' }
-  | { status: 'error'; message: string };
-
-function getErrorMessage(result: ActionResult<unknown>): string {
-  if (result.ok) return 'Unexpected ok result';
-  return result.error.message;
-}
+import { navigateTo } from './client-navigation';
+import {
+  createBookmarksEffect,
+  createLoadNextQuestionAction,
+  handleSessionCountChange,
+  handleSessionModeChange,
+  type LoadState,
+  selectChoiceIfAllowed,
+  startSession,
+  submitAnswerForQuestion,
+  toggleBookmarkForQuestion,
+} from './practice-page-logic';
 
 export type PracticeViewProps = {
   topContent?: React.ReactNode;
@@ -52,6 +46,76 @@ export type PracticeViewProps = {
   onSubmit: () => void;
   onNextQuestion: () => void;
 };
+
+export type PracticeSessionStarterProps = {
+  sessionMode: 'tutor' | 'exam';
+  sessionCount: number;
+  sessionStartStatus: 'idle' | 'loading' | 'error';
+  sessionStartError: string | null;
+  isPending: boolean;
+  onSessionModeChange: (event: { target: { value: string } }) => void;
+  onSessionCountChange: (event: { target: { value: string } }) => void;
+  onStartSession: () => void;
+};
+
+export function PracticeSessionStarter(props: PracticeSessionStarterProps) {
+  return (
+    <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div className="space-y-1">
+          <div className="text-sm font-medium text-foreground">
+            Start a session
+          </div>
+          <div className="text-sm text-muted-foreground">
+            Tutor mode shows explanations immediately. Exam mode hides
+            explanations until you end the session.
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          <label className="text-sm text-muted-foreground">
+            <span className="mr-2">Mode</span>
+            <select
+              className="rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground"
+              value={props.sessionMode}
+              onChange={props.onSessionModeChange}
+            >
+              <option value="tutor">Tutor</option>
+              <option value="exam">Exam</option>
+            </select>
+          </label>
+
+          <label className="text-sm text-muted-foreground">
+            <span className="mr-2">Count</span>
+            <input
+              type="number"
+              min={1}
+              max={100}
+              className="w-24 rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground"
+              value={props.sessionCount}
+              onChange={props.onSessionCountChange}
+            />
+          </label>
+
+          <button
+            type="button"
+            className="inline-flex items-center justify-center rounded-full bg-orange-600 px-4 py-2 text-sm font-medium text-white hover:bg-orange-700 disabled:cursor-not-allowed disabled:opacity-60"
+            disabled={props.sessionStartStatus === 'loading' || props.isPending}
+            onClick={props.onStartSession}
+          >
+            Start session
+          </button>
+        </div>
+      </div>
+
+      {props.sessionStartStatus === 'error' && props.sessionStartError ? (
+        <div className="mt-3 text-sm text-destructive">
+          {props.sessionStartError}
+        </div>
+      ) : null}
+    </div>
+  );
+}
 
 export function PracticeView(props: PracticeViewProps) {
   const correctChoiceId = props.submitResult?.correctChoiceId ?? null;
@@ -208,72 +272,36 @@ export default function PracticePage() {
     null,
   );
 
-  const loadNext = useCallback(() => {
-    startTransition(() => {
-      void (async () => {
-        setLoadState({ status: 'loading' });
-        setSelectedChoiceId(null);
-        setSubmitResult(null);
-        setQuestionLoadedAt(null);
+  const loadNext = useMemo(
+    () =>
+      createLoadNextQuestionAction({
+        startTransition,
+        getNextQuestionFn: getNextQuestion,
+        nowMs: Date.now,
+        setLoadState,
+        setSelectedChoiceId,
+        setSubmitResult,
+        setQuestionLoadedAt,
+        setQuestion,
+      }),
+    [],
+  );
 
-        const res = await getNextQuestion({
-          filters: { tagSlugs: [], difficulties: [] },
-        });
+  useEffect(loadNext, [loadNext]);
 
-        if (!res.ok) {
-          setLoadState({ status: 'error', message: getErrorMessage(res) });
-          setQuestion(null);
-          return;
-        }
+  const bookmarksEffect = useMemo(
+    () =>
+      createBookmarksEffect.bind(null, {
+        bookmarkRetryCount,
+        getBookmarksFn: getBookmarks,
+        setBookmarkedQuestionIds,
+        setBookmarkStatus,
+        setBookmarkRetryCount,
+      }),
+    [bookmarkRetryCount],
+  );
 
-        setQuestion(res.data);
-        setQuestionLoadedAt(res.data ? Date.now() : null);
-        setLoadState({ status: 'ready' });
-      })();
-    });
-  }, []);
-
-  useEffect(() => {
-    loadNext();
-  }, [loadNext]);
-
-  useEffect(() => {
-    let mounted = true;
-    let timeoutId: ReturnType<typeof setTimeout> | undefined;
-
-    void (async () => {
-      const res = await getBookmarks({});
-      if (!mounted) return;
-
-      if (!res.ok) {
-        console.error('Failed to load bookmarks', res.error);
-        setBookmarkStatus('error');
-
-        if (bookmarkRetryCount < 2) {
-          timeoutId = setTimeout(
-            () => {
-              if (mounted) {
-                setBookmarkRetryCount((prev) => prev + 1);
-              }
-            },
-            1000 * (bookmarkRetryCount + 1),
-          );
-        }
-
-        return;
-      }
-
-      setBookmarkedQuestionIds(
-        new Set(res.data.rows.map((row) => row.questionId)),
-      );
-      setBookmarkStatus('idle');
-    })();
-
-    return () => {
-      mounted = false;
-      if (timeoutId) clearTimeout(timeoutId);
-    };
-  }, [bookmarkRetryCount]);
+  useEffect(bookmarksEffect, [bookmarksEffect]);
 
   const canSubmit = useMemo(() => {
     return (
@@ -285,134 +313,73 @@ export default function PracticePage() {
     ? bookmarkedQuestionIds.has(question.questionId)
     : false;
 
-  async function onSubmit() {
-    if (!question) return;
-    if (!selectedChoiceId) return;
+  const onSubmit = useMemo(
+    () =>
+      submitAnswerForQuestion.bind(null, {
+        question,
+        selectedChoiceId,
+        questionLoadedAtMs: questionLoadedAt,
+        submitAnswerFn: submitAnswer,
+        nowMs: Date.now,
+        setLoadState,
+        setSubmitResult,
+      }),
+    [question, questionLoadedAt, selectedChoiceId],
+  );
 
-    setLoadState({ status: 'loading' });
+  const onToggleBookmark = useMemo(
+    () =>
+      toggleBookmarkForQuestion.bind(null, {
+        question,
+        toggleBookmarkFn: toggleBookmark,
+        setBookmarkStatus,
+        setLoadState,
+        setBookmarkedQuestionIds,
+      }),
+    [question],
+  );
 
-    const timeSpentSeconds = questionLoadedAt
-      ? Math.floor((Date.now() - questionLoadedAt) / 1000)
-      : 0;
+  const onSelectChoice = useMemo(
+    () => selectChoiceIfAllowed.bind(null, submitResult, setSelectedChoiceId),
+    [submitResult],
+  );
 
-    const res = await submitAnswer({
-      questionId: question.questionId,
-      choiceId: selectedChoiceId,
-      timeSpentSeconds,
-    });
+  const onSessionModeChange = useMemo(
+    () => handleSessionModeChange.bind(null, setSessionMode),
+    [],
+  );
 
-    if (!res.ok) {
-      setLoadState({ status: 'error', message: getErrorMessage(res) });
-      return;
-    }
+  const onSessionCountChange = useMemo(
+    () => handleSessionCountChange.bind(null, setSessionCount),
+    [],
+  );
 
-    setSubmitResult(res.data);
-    setLoadState({ status: 'ready' });
-  }
-
-  async function onToggleBookmark() {
-    if (!question) return;
-
-    const questionId = question.questionId;
-
-    setBookmarkStatus('loading');
-
-    const res = await toggleBookmark({ questionId });
-    if (!res.ok) {
-      setBookmarkStatus('error');
-      setLoadState({ status: 'error', message: getErrorMessage(res) });
-      return;
-    }
-
-    setBookmarkedQuestionIds((prev) => {
-      const next = new Set(prev);
-      if (res.data.bookmarked) next.add(questionId);
-      else next.delete(questionId);
-      return next;
-    });
-
-    setBookmarkStatus('idle');
-  }
-
-  async function onStartSession() {
-    setSessionStartStatus('loading');
-    setSessionStartError(null);
-
-    const res = await startPracticeSession({
-      mode: sessionMode,
-      count: sessionCount,
-      tagSlugs: [],
-      difficulties: [],
-    });
-
-    if (!res.ok) {
-      setSessionStartStatus('error');
-      setSessionStartError(getErrorMessage(res));
-      return;
-    }
-
-    window.location.href = `/app/practice/${res.data.sessionId}`;
-  }
+  const onStartSession = useMemo(
+    () =>
+      startSession.bind(null, {
+        sessionMode,
+        sessionCount,
+        startPracticeSessionFn: startPracticeSession,
+        setSessionStartStatus,
+        setSessionStartError,
+        navigateTo,
+      }),
+    [sessionMode, sessionCount],
+  );
 
   return (
     <PracticeView
       topContent={
-        <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-            <div className="space-y-1">
-              <div className="text-sm font-medium text-foreground">
-                Start a session
-              </div>
-              <div className="text-sm text-muted-foreground">
-                Tutor mode shows explanations immediately. Exam mode hides
-                explanations until you end the session.
-              </div>
-            </div>
-
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-              <label className="text-sm text-muted-foreground">
-                <span className="mr-2">Mode</span>
-                <select
-                  className="rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground"
-                  value={sessionMode}
-                  onChange={(e) =>
-                    setSessionMode(e.target.value as 'tutor' | 'exam')
-                  }
-                >
-                  <option value="tutor">Tutor</option>
-                  <option value="exam">Exam</option>
-                </select>
-              </label>
-
-              <label className="text-sm text-muted-foreground">
-                <span className="mr-2">Count</span>
-                <input
-                  type="number"
-                  min={1}
-                  max={100}
-                  className="w-24 rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground"
-                  value={sessionCount}
-                  onChange={(e) => setSessionCount(Number(e.target.value))}
-                />
-              </label>
-
-              <button
-                type="button"
-                className="inline-flex items-center justify-center rounded-full bg-orange-600 px-4 py-2 text-sm font-medium text-white hover:bg-orange-700 disabled:cursor-not-allowed disabled:opacity-60"
-                disabled={sessionStartStatus === 'loading' || isPending}
-                onClick={() => void onStartSession()}
-              >
-                Start session
-              </button>
-            </div>
-          </div>
-
-          {sessionStartStatus === 'error' && sessionStartError ? (
-            <div className="mt-3 text-sm text-destructive">
-              {sessionStartError}
-            </div>
-          ) : null}
-        </div>
+        <PracticeSessionStarter
+          sessionMode={sessionMode}
+          sessionCount={sessionCount}
+          sessionStartStatus={sessionStartStatus}
+          sessionStartError={sessionStartError}
+          isPending={isPending}
+          onSessionModeChange={onSessionModeChange}
+          onSessionCountChange={onSessionCountChange}
+          onStartSession={onStartSession}
+        />
       }
       loadState={loadState}
       question={question}
@@ -423,12 +390,9 @@ export default function PracticePage() {
       isBookmarked={isBookmarked}
       canSubmit={canSubmit}
       onTryAgain={loadNext}
-      onToggleBookmark={() => void onToggleBookmark()}
-      onSelectChoice={(choiceId) => {
-        if (submitResult) return;
-        setSelectedChoiceId(choiceId);
-      }}
-      onSubmit={() => void onSubmit()}
+      onToggleBookmark={onToggleBookmark}
+      onSelectChoice={onSelectChoice}
+      onSubmit={onSubmit}
       onNextQuestion={loadNext}
     />
   );

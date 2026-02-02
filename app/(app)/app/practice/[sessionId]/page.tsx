@@ -1,14 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useState,
-  useTransition,
-} from 'react';
-import type { ActionResult } from '@/src/adapters/controllers/action-result';
+import { useEffect, useMemo, useState, useTransition } from 'react';
 import {
   getBookmarks,
   toggleBookmark,
@@ -22,16 +15,24 @@ import {
 import type { NextQuestion } from '@/src/application/use-cases/get-next-question';
 import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
 import { PracticeView } from '../page';
+import {
+  createBookmarksEffect,
+  type LoadState,
+  selectChoiceIfAllowed,
+  toggleBookmarkForQuestion,
+} from '../practice-page-logic';
+import {
+  createLoadNextQuestionAction,
+  endSession,
+  submitAnswerForQuestion,
+} from './practice-session-page-logic';
 
-type LoadState =
-  | { status: 'idle' }
-  | { status: 'loading' }
-  | { status: 'ready' }
-  | { status: 'error'; message: string };
-
-function getErrorMessage(result: ActionResult<unknown>): string {
-  if (result.ok) return 'Unexpected ok result';
-  return result.error.message;
+export function isQuestionBookmarked(
+  question: NextQuestion | null,
+  bookmarkedQuestionIds: Set<string>,
+): boolean {
+  if (!question) return false;
+  return bookmarkedQuestionIds.has(question.questionId);
 }
 
 export function SessionSummaryView({
@@ -98,6 +99,51 @@ export function SessionSummaryView({
   );
 }
 
+export type PracticeSessionPageViewProps = {
+  summary: EndPracticeSessionOutput | null;
+  sessionInfo: NextQuestion['session'];
+  loadState: LoadState;
+  question: NextQuestion | null;
+  selectedChoiceId: string | null;
+  submitResult: SubmitAnswerOutput | null;
+  isPending: boolean;
+  bookmarkStatus: 'idle' | 'loading' | 'error';
+  isBookmarked: boolean;
+  canSubmit: boolean;
+  onEndSession: () => void;
+  onTryAgain: () => void;
+  onToggleBookmark: () => void;
+  onSelectChoice: (choiceId: string) => void;
+  onSubmit: () => void;
+  onNextQuestion: () => void;
+};
+
+export function PracticeSessionPageView(props: PracticeSessionPageViewProps) {
+  if (props.summary) {
+    return <SessionSummaryView summary={props.summary} />;
+  }
+
+  return (
+    <PracticeView
+      sessionInfo={props.sessionInfo}
+      loadState={props.loadState}
+      question={props.question}
+      selectedChoiceId={props.selectedChoiceId}
+      submitResult={props.submitResult}
+      isPending={props.isPending}
+      bookmarkStatus={props.bookmarkStatus}
+      isBookmarked={props.isBookmarked}
+      canSubmit={props.canSubmit}
+      onEndSession={props.onEndSession}
+      onTryAgain={props.onTryAgain}
+      onToggleBookmark={props.onToggleBookmark}
+      onSelectChoice={props.onSelectChoice}
+      onSubmit={props.onSubmit}
+      onNextQuestion={props.onNextQuestion}
+    />
+  );
+}
+
 export default function PracticeSessionPage({
   params,
 }: {
@@ -125,73 +171,38 @@ export default function PracticeSessionPage({
   const [isPending, startTransition] = useTransition();
   const [questionLoadedAt, setQuestionLoadedAt] = useState<number | null>(null);
 
-  const loadNext = useCallback(() => {
-    startTransition(() => {
-      void (async () => {
-        setLoadState({ status: 'loading' });
-        setSelectedChoiceId(null);
-        setSubmitResult(null);
-        setQuestionLoadedAt(null);
+  const loadNext = useMemo(
+    () =>
+      createLoadNextQuestionAction({
+        sessionId,
+        startTransition,
+        getNextQuestionFn: getNextQuestion,
+        nowMs: Date.now,
+        setLoadState,
+        setSelectedChoiceId,
+        setSubmitResult,
+        setQuestionLoadedAt,
+        setQuestion,
+        setSessionInfo,
+      }),
+    [sessionId],
+  );
 
-        const res = await getNextQuestion({ sessionId });
+  useEffect(loadNext, [loadNext]);
 
-        if (!res.ok) {
-          setLoadState({ status: 'error', message: getErrorMessage(res) });
-          setQuestion(null);
-          return;
-        }
+  const bookmarksEffect = useMemo(
+    () =>
+      createBookmarksEffect.bind(null, {
+        bookmarkRetryCount,
+        getBookmarksFn: getBookmarks,
+        setBookmarkedQuestionIds,
+        setBookmarkStatus,
+        setBookmarkRetryCount,
+      }),
+    [bookmarkRetryCount],
+  );
 
-        setQuestion(res.data);
-        setQuestionLoadedAt(res.data ? Date.now() : null);
-        if (res.data?.session) {
-          setSessionInfo(res.data.session);
-        }
-        setLoadState({ status: 'ready' });
-      })();
-    });
-  }, [sessionId]);
-
-  useEffect(() => {
-    loadNext();
-  }, [loadNext]);
-
-  useEffect(() => {
-    let mounted = true;
-    let timeoutId: ReturnType<typeof setTimeout> | undefined;
-
-    void (async () => {
-      const res = await getBookmarks({});
-      if (!mounted) return;
-
-      if (!res.ok) {
-        console.error('Failed to load bookmarks', res.error);
-        setBookmarkStatus('error');
-
-        if (bookmarkRetryCount < 2) {
-          timeoutId = setTimeout(
-            () => {
-              if (mounted) {
-                setBookmarkRetryCount((prev) => prev + 1);
-              }
-            },
-            1000 * (bookmarkRetryCount + 1),
-          );
-        }
-
-        return;
-      }
-
-      setBookmarkedQuestionIds(
-        new Set(res.data.rows.map((row) => row.questionId)),
-      );
-      setBookmarkStatus('idle');
-    })();
-
-    return () => {
-      mounted = false;
-      if (timeoutId) clearTimeout(timeoutId);
-    };
-  }, [bookmarkRetryCount]);
+  useEffect(bookmarksEffect, [bookmarksEffect]);
 
   const canSubmit = useMemo(() => {
     return (
@@ -199,82 +210,60 @@ export default function PracticeSessionPage({
     );
   }, [question, selectedChoiceId, submitResult]);
 
-  const isBookmarked = question
-    ? bookmarkedQuestionIds.has(question.questionId)
-    : false;
+  const isBookmarked = useMemo(
+    () => isQuestionBookmarked(question, bookmarkedQuestionIds),
+    [bookmarkedQuestionIds, question],
+  );
 
-  async function onSubmit() {
-    if (!question) return;
-    if (!selectedChoiceId) return;
+  const onSubmit = useMemo(
+    () =>
+      submitAnswerForQuestion.bind(null, {
+        sessionId,
+        question,
+        selectedChoiceId,
+        questionLoadedAtMs: questionLoadedAt,
+        submitAnswerFn: submitAnswer,
+        nowMs: Date.now,
+        setLoadState,
+        setSubmitResult,
+      }),
+    [question, questionLoadedAt, selectedChoiceId, sessionId],
+  );
 
-    setLoadState({ status: 'loading' });
+  const onToggleBookmark = useMemo(
+    () =>
+      toggleBookmarkForQuestion.bind(null, {
+        question,
+        toggleBookmarkFn: toggleBookmark,
+        setBookmarkStatus,
+        setLoadState,
+        setBookmarkedQuestionIds,
+      }),
+    [question],
+  );
 
-    const timeSpentSeconds = questionLoadedAt
-      ? Math.floor((Date.now() - questionLoadedAt) / 1000)
-      : 0;
+  const onEndSession = useMemo(
+    () =>
+      endSession.bind(null, {
+        sessionId,
+        endPracticeSessionFn: endPracticeSession,
+        setLoadState,
+        setSummary,
+        setQuestion,
+        setSubmitResult,
+        setSelectedChoiceId,
+      }),
+    [sessionId],
+  );
 
-    const res = await submitAnswer({
-      questionId: question.questionId,
-      choiceId: selectedChoiceId,
-      sessionId,
-      timeSpentSeconds,
-    });
-
-    if (!res.ok) {
-      setLoadState({ status: 'error', message: getErrorMessage(res) });
-      return;
-    }
-
-    setSubmitResult(res.data);
-    setLoadState({ status: 'ready' });
-  }
-
-  async function onToggleBookmark() {
-    if (!question) return;
-
-    const questionId = question.questionId;
-
-    setBookmarkStatus('loading');
-
-    const res = await toggleBookmark({ questionId });
-    if (!res.ok) {
-      setBookmarkStatus('error');
-      setLoadState({ status: 'error', message: getErrorMessage(res) });
-      return;
-    }
-
-    setBookmarkedQuestionIds((prev) => {
-      const next = new Set(prev);
-      if (res.data.bookmarked) next.add(questionId);
-      else next.delete(questionId);
-      return next;
-    });
-
-    setBookmarkStatus('idle');
-  }
-
-  async function onEndSession() {
-    setLoadState({ status: 'loading' });
-
-    const res = await endPracticeSession({ sessionId });
-    if (!res.ok) {
-      setLoadState({ status: 'error', message: getErrorMessage(res) });
-      return;
-    }
-
-    setSummary(res.data);
-    setQuestion(null);
-    setSubmitResult(null);
-    setSelectedChoiceId(null);
-    setLoadState({ status: 'ready' });
-  }
-
-  if (summary) {
-    return <SessionSummaryView summary={summary} />;
-  }
+  const onSelectChoice = useMemo(
+    () => selectChoiceIfAllowed.bind(null, submitResult, setSelectedChoiceId),
+    [submitResult],
+  );
 
   return (
-    <PracticeView
+    <PracticeSessionPageView
+      summary={summary}
       sessionInfo={sessionInfo}
       loadState={loadState}
       question={question}
@@ -284,14 +273,11 @@ export default function PracticeSessionPage({
       bookmarkStatus={bookmarkStatus}
       isBookmarked={isBookmarked}
       canSubmit={canSubmit}
-      onEndSession={() => void onEndSession()}
+      onEndSession={onEndSession}
       onTryAgain={loadNext}
-      onToggleBookmark={() => void onToggleBookmark()}
-      onSelectChoice={(choiceId) => {
-        if (submitResult) return;
-        setSelectedChoiceId(choiceId);
-      }}
-      onSubmit={() => void onSubmit()}
+      onToggleBookmark={onToggleBookmark}
+      onSelectChoice={onSelectChoice}
+      onSubmit={onSubmit}
       onNextQuestion={loadNext}
     />
   );
