@@ -17,7 +17,8 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 | ID | Title | Status | Priority | Date |
 |----|-------|--------|----------|------|
-| [DEBT-074](./debt-074-missing-boundary-integration-tests.md) | Missing Boundary Integration Tests (Uncle Bob's "Humble Object" Gap) | Open | P1 | 2026-02-02 |
+
+_No active debt items._
 
 **Next Debt ID:** DEBT-080
 
@@ -25,6 +26,7 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 | ID | Title | Priority | Resolved |
 |----|-------|----------|----------|
+| [DEBT-074](../_archive/debt/debt-074-missing-boundary-integration-tests.md) | Missing Boundary Integration Tests (Uncle Bob's "Humble Object" Gap) | P1 | 2026-02-02 |
 | [DEBT-079](../_archive/debt/debt-079-no-retry-backoff-external-calls.md) | No Retry/Backoff Logic for External API Calls | P2 | 2026-02-02 |
 | [DEBT-078](../_archive/debt/debt-078-no-idempotency-keys.md) | No Idempotency Keys on State-Changing Actions | P1 | 2026-02-02 |
 | [DEBT-077](../_archive/debt/debt-077-no-rate-limiting.md) | No Rate Limiting on Webhooks or Actions | P1 | 2026-02-02 |

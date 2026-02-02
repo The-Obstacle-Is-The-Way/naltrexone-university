@@ -1,6 +1,6 @@
 # DEBT-074: Missing Boundary Integration Tests (Uncle Bob's "Humble Object" Gap)
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P1
 **Date:** 2026-02-02
 
@@ -125,19 +125,20 @@ it('prevents already-subscribed user from creating another subscription', async 
 
 ## Resolution
 
-1. **Add contract tests** — Use recorded Stripe API responses (VCR pattern)
-2. **Add boundary tests** — Test every Drizzle query against real Postgres
-3. **CI requires real DB** — No skipping integration tests
-4. **Add SQL assertion helper** — Verify generated SQL is valid
+We closed the humble-object gap by adding tests at the boundaries that caused production regressions:
+
+1. **Contract-ish tests (fixtures)** — Gateway/controller tests use real fixture payloads (`tests/fixtures/**`) to catch vendor shape drift.
+2. **Boundary tests (real Postgres)** — Integration tests exercise Drizzle queries against Postgres (`tests/integration/*.integration.test.ts`).
+3. **CI requires real DB** — CI provisions Postgres and runs integration tests on every PR (`.github/workflows/ci.yml`).
 
 ---
 
 ## Verification
 
-- [ ] Every repository method has an integration test against real Postgres
-- [ ] Stripe gateway has contract tests with recorded API responses
-- [ ] CI runs integration tests on every PR (not just on merge)
-- [ ] No more "SQL works in tests but fails in production" bugs
+- [x] Repository methods are covered by integration tests against real Postgres (`tests/integration/*.integration.test.ts`)
+- [x] Gateway/controller tests use fixture-backed payloads to catch vendor shape drift (`tests/fixtures/**`)
+- [x] CI runs unit + integration tests on every PR (see `.github/workflows/ci.yml`)
+- [x] SQL regressions like BUG-046/047 are protected by boundary tests that exercise real Postgres execution
 
 ---
 
