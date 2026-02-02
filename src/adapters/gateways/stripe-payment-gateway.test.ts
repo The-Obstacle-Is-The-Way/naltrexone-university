@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
+import { loadJsonFixture } from '@/tests/shared/load-json-fixture';
 import { StripePaymentGateway } from './stripe-payment-gateway';
 
 describe('StripePaymentGateway', () => {
@@ -413,24 +414,8 @@ describe('StripePaymentGateway', () => {
   });
 
   it('verifies webhook signatures and normalizes subscription update events', async () => {
-    const constructEvent = vi.fn(() => ({
-      id: 'evt_1',
-      type: 'customer.subscription.updated',
-      data: {
-        object: {
-          id: 'sub_123',
-          customer: 'cus_123',
-          status: 'active',
-          cancel_at_period_end: false,
-          metadata: { user_id: 'user_1' },
-          items: {
-            data: [
-              { current_period_end: 1_700_000_000, price: { id: 'price_m' } },
-            ],
-          },
-        },
-      },
-    }));
+    const event = loadJsonFixture('stripe/customer.subscription.updated.json');
+    const constructEvent = vi.fn(() => event as never);
 
     const stripe = {
       customers: {
@@ -488,24 +473,8 @@ describe('StripePaymentGateway', () => {
   });
 
   it('normalizes customer.subscription.paused events', async () => {
-    const constructEvent = vi.fn(() => ({
-      id: 'evt_2',
-      type: 'customer.subscription.paused',
-      data: {
-        object: {
-          id: 'sub_456',
-          customer: 'cus_456',
-          status: 'paused',
-          cancel_at_period_end: false,
-          metadata: { user_id: 'user_2' },
-          items: {
-            data: [
-              { current_period_end: 1_700_000_000, price: { id: 'price_a' } },
-            ],
-          },
-        },
-      },
-    }));
+    const event = loadJsonFixture('stripe/customer.subscription.paused.json');
+    const constructEvent = vi.fn(() => event as never);
 
     const stripe = {
       customers: {
@@ -561,24 +530,8 @@ describe('StripePaymentGateway', () => {
   });
 
   it('normalizes customer.subscription.resumed events', async () => {
-    const constructEvent = vi.fn(() => ({
-      id: 'evt_3',
-      type: 'customer.subscription.resumed',
-      data: {
-        object: {
-          id: 'sub_789',
-          customer: 'cus_789',
-          status: 'active',
-          cancel_at_period_end: false,
-          metadata: { user_id: 'user_3' },
-          items: {
-            data: [
-              { current_period_end: 1_700_000_000, price: { id: 'price_m' } },
-            ],
-          },
-        },
-      },
-    }));
+    const event = loadJsonFixture('stripe/customer.subscription.resumed.json');
+    const constructEvent = vi.fn(() => event as never);
 
     const stripe = {
       customers: {
@@ -634,24 +587,10 @@ describe('StripePaymentGateway', () => {
   });
 
   it('normalizes customer.subscription.pending_update_applied events', async () => {
-    const constructEvent = vi.fn(() => ({
-      id: 'evt_4',
-      type: 'customer.subscription.pending_update_applied',
-      data: {
-        object: {
-          id: 'sub_901',
-          customer: 'cus_901',
-          status: 'active',
-          cancel_at_period_end: false,
-          metadata: { user_id: 'user_4' },
-          items: {
-            data: [
-              { current_period_end: 1_700_000_000, price: { id: 'price_a' } },
-            ],
-          },
-        },
-      },
-    }));
+    const event = loadJsonFixture(
+      'stripe/customer.subscription.pending_update_applied.json',
+    );
+    const constructEvent = vi.fn(() => event as never);
 
     const stripe = {
       customers: {
@@ -707,24 +646,10 @@ describe('StripePaymentGateway', () => {
   });
 
   it('normalizes customer.subscription.pending_update_expired events', async () => {
-    const constructEvent = vi.fn(() => ({
-      id: 'evt_5',
-      type: 'customer.subscription.pending_update_expired',
-      data: {
-        object: {
-          id: 'sub_902',
-          customer: 'cus_902',
-          status: 'active',
-          cancel_at_period_end: false,
-          metadata: { user_id: 'user_5' },
-          items: {
-            data: [
-              { current_period_end: 1_700_000_000, price: { id: 'price_m' } },
-            ],
-          },
-        },
-      },
-    }));
+    const event = loadJsonFixture(
+      'stripe/customer.subscription.pending_update_expired.json',
+    );
+    const constructEvent = vi.fn(() => event as never);
 
     const stripe = {
       customers: {

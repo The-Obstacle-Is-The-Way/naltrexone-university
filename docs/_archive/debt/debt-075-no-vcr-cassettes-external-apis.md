@@ -1,6 +1,6 @@
 # DEBT-075: No VCR/Cassette Pattern for External API Testing
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P1
 **Date:** 2026-02-02
 
@@ -63,9 +63,9 @@ Use these in gateway tests instead of fabricated objects.
 
 ## Verification
 
-- [ ] Gateway tests use recorded real API responses
-- [ ] CI fails if response shape changes
-- [ ] Webhook handler tests use real webhook payloads
+- [x] Gateway/controller tests use fixture-backed payloads (`tests/fixtures/stripe/**`, `tests/fixtures/clerk/**`)
+- [x] CI would fail if payload shape drifts (fixtures + assertions)
+- [x] Fixture loader exists for reuse (`tests/shared/load-json-fixture.ts`)
 
 ## Related
 

@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest';
+import type { ClerkWebhookEvent } from '@/src/adapters/controllers/clerk-webhook-controller';
 import { processClerkWebhook } from '@/src/adapters/controllers/clerk-webhook-controller';
 import {
   FakeStripeCustomerRepository,
   FakeUserRepository,
 } from '@/src/application/test-helpers/fakes';
+import { loadJsonFixture } from '@/tests/shared/load-json-fixture';
 
 function createDeps() {
   const cancelCalls: string[] = [];
@@ -22,17 +24,9 @@ describe('processClerkWebhook', () => {
   it('upserts the user when receiving user.updated with a primary email', async () => {
     const deps = createDeps();
 
-    await processClerkWebhook(deps, {
-      type: 'user.updated',
-      data: {
-        id: 'clerk_1',
-        primary_email_address_id: 'email_2',
-        email_addresses: [
-          { id: 'email_1', email_address: 'secondary@example.com' },
-          { id: 'email_2', email_address: 'primary@example.com' },
-        ],
-      },
-    });
+    const event = loadJsonFixture<ClerkWebhookEvent>('clerk/user.updated.json');
+
+    await processClerkWebhook(deps, event);
 
     await expect(
       deps.userRepository.findByClerkId('clerk_1'),
@@ -97,10 +91,8 @@ describe('processClerkWebhook', () => {
     );
     await deps.stripeCustomerRepository.insert(user.id, 'cus_123');
 
-    await processClerkWebhook(deps, {
-      type: 'user.deleted',
-      data: { id: 'clerk_1' },
-    });
+    const event = loadJsonFixture<ClerkWebhookEvent>('clerk/user.deleted.json');
+    await processClerkWebhook(deps, event);
 
     expect(deps.cancelCalls).toEqual(['cus_123']);
     await expect(
