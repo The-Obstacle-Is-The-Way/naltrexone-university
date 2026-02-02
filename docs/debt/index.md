@@ -19,8 +19,9 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 |----|-------|--------|----------|------|
 | [DEBT-060](./debt-060-no-rollback-migrations.md) | No Rollback Migrations | Open | P2 | 2026-02-02 |
 | [DEBT-061](./debt-061-timezone-not-explicitly-enforced.md) | Timezone Not Explicitly Enforced at Application Level | Open | P3 | 2026-02-02 |
+| [DEBT-071](./debt-071-missing-why-comments.md) | Missing WHY Comments on Non-Obvious Business Logic | Open | P3 | 2026-02-02 |
 
-**Next Debt ID:** DEBT-071
+**Next Debt ID:** DEBT-072
 
 ## Archived Debt
 
