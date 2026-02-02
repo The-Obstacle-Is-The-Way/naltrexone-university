@@ -97,7 +97,7 @@ export function PracticeView(props: PracticeViewProps) {
       ) : null}
 
       {props.question ? (
-        <div className="flex items-center justify-end">
+        <div className="flex flex-col items-end gap-2">
           <button
             type="button"
             className="inline-flex items-center justify-center rounded-full border border-border bg-background px-4 py-2 text-sm font-medium text-foreground hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60"
@@ -106,6 +106,11 @@ export function PracticeView(props: PracticeViewProps) {
           >
             {props.isBookmarked ? 'Bookmarked' : 'Bookmark'}
           </button>
+          {props.bookmarkStatus === 'error' ? (
+            <div className="text-xs text-destructive">
+              Bookmarks unavailable.
+            </div>
+          ) : null}
         </div>
       ) : null}
 
@@ -166,6 +171,7 @@ export default function PracticePage() {
   const [bookmarkStatus, setBookmarkStatus] = useState<
     'idle' | 'loading' | 'error'
   >('idle');
+  const [bookmarkRetryCount, setBookmarkRetryCount] = useState(0);
   const [loadState, setLoadState] = useState<LoadState>({ status: 'idle' });
   const [isPending, startTransition] = useTransition();
 
@@ -197,18 +203,36 @@ export default function PracticePage() {
   }, [loadNext]);
 
   useEffect(() => {
+    let timeoutId: ReturnType<typeof setTimeout> | undefined;
+
     void (async () => {
       const res = await getBookmarks({});
       if (!res.ok) {
+        console.error('Failed to load bookmarks', res.error);
         setBookmarkStatus('error');
+
+        if (bookmarkRetryCount < 2) {
+          timeoutId = setTimeout(
+            () => {
+              setBookmarkRetryCount((prev) => prev + 1);
+            },
+            1000 * (bookmarkRetryCount + 1),
+          );
+        }
+
         return;
       }
+
       setBookmarkedQuestionIds(
         new Set(res.data.rows.map((row) => row.questionId)),
       );
       setBookmarkStatus('idle');
     })();
-  }, []);
+
+    return () => {
+      if (timeoutId) clearTimeout(timeoutId);
+    };
+  }, [bookmarkRetryCount]);
 
   const canSubmit = useMemo(() => {
     return (

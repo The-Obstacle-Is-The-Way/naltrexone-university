@@ -219,8 +219,14 @@ export function createSubscribeAction(input: {
   return async function subscribe() {
     'use server';
     const result = await input.createCheckoutSessionFn({ plan: input.plan });
-    if (result.ok) input.redirectFn(result.data.url);
-    if (result.error.code === 'UNAUTHENTICATED') input.redirectFn('/sign-up');
+    if (result.ok) {
+      input.redirectFn(result.data.url);
+    }
+
+    if (result.error.code === 'UNAUTHENTICATED') {
+      input.redirectFn('/sign-up');
+    }
+
     input.redirectFn('/pricing?checkout=error');
   };
 }

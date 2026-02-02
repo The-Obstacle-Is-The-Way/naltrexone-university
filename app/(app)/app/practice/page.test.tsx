@@ -160,4 +160,42 @@ describe('app/(app)/app/practice', () => {
 
     expect(html).toContain('Explanation');
   });
+
+  it('renders a bookmark warning when bookmarkStatus is error', async () => {
+    const { PracticeView } = await import('./page');
+
+    const html = renderToStaticMarkup(
+      <PracticeView
+        loadState={{ status: 'ready' }}
+        question={{
+          questionId: 'question-1',
+          slug: 'question-1',
+          stemMd: 'Stem',
+          difficulty: 'easy',
+          choices: [
+            {
+              id: 'choice-1',
+              label: 'A',
+              textMd: 'Choice',
+              sortOrder: 1,
+            },
+          ],
+          session: null,
+        }}
+        selectedChoiceId={null}
+        submitResult={null}
+        isPending={false}
+        bookmarkStatus="error"
+        isBookmarked={false}
+        canSubmit={false}
+        onTryAgain={() => undefined}
+        onToggleBookmark={() => undefined}
+        onSelectChoice={() => undefined}
+        onSubmit={() => undefined}
+        onNextQuestion={() => undefined}
+      />,
+    );
+
+    expect(html).toContain('Bookmarks unavailable');
+  });
 });
