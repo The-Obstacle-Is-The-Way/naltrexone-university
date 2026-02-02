@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { ApplicationError } from '@/src/application/errors';
 import type { UserRepository } from '@/src/application/ports/repositories';
 import { ClerkAuthGateway } from './clerk-auth-gateway';
@@ -160,5 +160,29 @@ describe('ClerkAuthGateway', () => {
     await expect(gateway.getCurrentUser()).rejects.toMatchObject({
       code: 'CONFLICT',
     });
+  });
+
+  it('retries transient errors from getClerkUser', async () => {
+    const userRepository = createFakeUserRepository();
+
+    const getClerkUser = vi
+      .fn()
+      .mockRejectedValueOnce(
+        Object.assign(new Error('timeout'), { code: 'ETIMEDOUT' }),
+      )
+      .mockResolvedValueOnce({
+        id: 'clerk_1',
+        emailAddresses: [{ emailAddress: 'user@example.com' }],
+      });
+
+    const gateway = new ClerkAuthGateway({
+      userRepository,
+      getClerkUser,
+    });
+
+    await expect(gateway.getCurrentUser()).resolves.toMatchObject({
+      email: 'user@example.com',
+    });
+    expect(getClerkUser).toHaveBeenCalledTimes(2);
   });
 });

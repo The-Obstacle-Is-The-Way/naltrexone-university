@@ -84,6 +84,7 @@ async function getOrCreateStripeCustomerId(
     userId: input.userId,
     clerkUserId,
     email: input.email,
+    idempotencyKey: `stripe_customer:${input.userId}`,
   });
 
   await deps.stripeCustomerRepository.insert(
@@ -138,7 +139,11 @@ export async function createCheckoutSession(
         cancelUrl: toCancelUrl(d.appUrl),
       } as const;
 
-      return d.paymentGateway.createCheckoutSession(checkoutSessionInput);
+      return d.paymentGateway.createCheckoutSession(
+        idempotencyKey
+          ? { ...checkoutSessionInput, idempotencyKey }
+          : checkoutSessionInput,
+      );
     }
 
     const session = idempotencyKey

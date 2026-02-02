@@ -16,6 +16,7 @@ import {
   getSubscriptionPlanFromPriceId,
   type StripePriceIds,
 } from '../config/stripe-prices';
+import { isTransientExternalError, retry } from '../shared/retry';
 
 type StripeCheckoutSession = { id: string; url: string | null };
 type StripeBillingPortalSession = { url: string | null };
@@ -55,14 +56,22 @@ type CustomerCreateParams = {
   metadata?: Record<string, string>;
 };
 
+type StripeRequestOptions = {
+  idempotencyKey?: string;
+};
+
 type StripeClient = {
   customers: {
-    create(params: CustomerCreateParams): Promise<StripeCustomer>;
+    create(
+      params: CustomerCreateParams,
+      options?: StripeRequestOptions,
+    ): Promise<StripeCustomer>;
   };
   checkout: {
     sessions: {
       create(
         params: CheckoutSessionCreateParams,
+        options?: StripeRequestOptions,
       ): Promise<StripeCheckoutSession>;
       list(params: {
         customer: string;
@@ -73,13 +82,17 @@ type StripeClient = {
         sessionId: string,
         params?: { expand?: string[] },
       ): Promise<StripeCheckoutSessionRetrieved>;
-      expire(sessionId: string): Promise<StripeCheckoutSession>;
+      expire(
+        sessionId: string,
+        options?: StripeRequestOptions,
+      ): Promise<StripeCheckoutSession>;
     };
   };
   billingPortal: {
     sessions: {
       create(
         params: BillingPortalSessionCreateParams,
+        options?: StripeRequestOptions,
       ): Promise<StripeBillingPortalSession>;
     };
   };
@@ -138,19 +151,66 @@ const subscriptionEventTypes = new Set([
   'customer.subscription.pending_update_expired',
 ]);
 
+const STRIPE_RETRY_OPTIONS = {
+  maxAttempts: 3,
+  initialDelayMs: 100,
+  factor: 2,
+  maxDelayMs: 1000,
+} as const;
+
+function toStripeErrorContext(error: unknown): Record<string, unknown> {
+  if (error instanceof Error) {
+    const record = error as Error & Record<string, unknown>;
+    return {
+      name: error.name,
+      message: error.message,
+      code: typeof record.code === 'string' ? record.code : null,
+      statusCode:
+        typeof record.statusCode === 'number' ? record.statusCode : null,
+      status: typeof record.status === 'number' ? record.status : null,
+    };
+  }
+
+  return { error: String(error) };
+}
+
 export class StripePaymentGateway implements PaymentGateway {
   constructor(private readonly deps: StripePaymentGatewayDeps) {}
+
+  private callStripe<T>(operation: string, fn: () => Promise<T>): Promise<T> {
+    return retry(fn, {
+      ...STRIPE_RETRY_OPTIONS,
+      shouldRetry: isTransientExternalError,
+      onRetry: ({ attempt, maxAttempts, delayMs, error }) => {
+        this.deps.logger?.warn?.('Retrying Stripe API call', {
+          operation,
+          attempt,
+          maxAttempts,
+          delayMs,
+          error: toStripeErrorContext(error),
+        });
+      },
+    });
+  }
 
   async createCustomer(
     input: CreateCustomerInput,
   ): Promise<CreateCustomerOutput> {
-    const customer = await this.deps.stripe.customers.create({
+    const params = {
       email: input.email,
       metadata: {
         user_id: input.userId,
         clerk_user_id: input.clerkUserId,
       },
-    });
+    } satisfies CustomerCreateParams;
+
+    const customer = input.idempotencyKey
+      ? await this.callStripe('customers.create', () =>
+          this.deps.stripe.customers.create(params, {
+            idempotencyKey: input.idempotencyKey,
+          }),
+        )
+      : await this.deps.stripe.customers.create(params);
 
     if (!customer.id) {
       throw new ApplicationError(
@@ -167,19 +227,24 @@ export class StripePaymentGateway implements PaymentGateway {
   ): Promise<CheckoutSessionOutput> {
     const priceId = getStripePriceId(input.plan, this.deps.priceIds);
 
-    const existing = await this.deps.stripe.checkout.sessions.list({
-      customer: input.stripeCustomerId,
-      status: 'open',
-      limit: 1,
-    });
+    const existing = await this.callStripe('checkout.sessions.list', () =>
+      this.deps.stripe.checkout.sessions.list({
+        customer: input.stripeCustomerId,
+        status: 'open',
+        limit: 1,
+      }),
+    );
 
     const existingSession = existing.data[0];
     const existingUrl = existingSession?.url;
     if (existingSession && existingUrl) {
       try {
-        const session = await this.deps.stripe.checkout.sessions.retrieve(
-          existingSession.id,
-          { expand: ['line_items'] },
+        const session = await this.callStripe(
+          'checkout.sessions.retrieve',
+          () =>
+            this.deps.stripe.checkout.sessions.retrieve(existingSession.id, {
+              expand: ['line_items'],
+            }),
         );
         const existingPriceId = session.line_items?.data?.[0]?.price?.id;
         if (existingPriceId === priceId) {
@@ -194,7 +259,11 @@ export class StripePaymentGateway implements PaymentGateway {
           existingPriceId: existingPriceId ?? null,
           requestedPriceId: priceId,
         });
-        await this.deps.stripe.checkout.sessions.expire(existingSession.id);
+        await this.callStripe('checkout.sessions.expire', () =>
+          this.deps.stripe.checkout.sessions.expire(existingSession.id, {
+            idempotencyKey: `expire_checkout_session:${existingSession.id}`,
+          }),
+        );
       } catch (error) {
         const errorMessage =
           error instanceof Error ? error.message : 'Unknown error';
@@ -208,7 +277,7 @@ export class StripePaymentGateway implements PaymentGateway {
       }
     }
 
-    const session = await this.deps.stripe.checkout.sessions.create({
+    const params = {
       mode: 'subscription',
       customer: input.stripeCustomerId,
       line_items: [{ price: priceId, quantity: 1 }],
@@ -222,7 +291,15 @@ export class StripePaymentGateway implements PaymentGateway {
           user_id: input.userId,
         },
       },
-    });
+    } satisfies CheckoutSessionCreateParams;
+
+    const session = input.idempotencyKey
+      ? await this.callStripe('checkout.sessions.create', () =>
+          this.deps.stripe.checkout.sessions.create(params, {
+            idempotencyKey: input.idempotencyKey,
+          }),
+        )
+      : await this.deps.stripe.checkout.sessions.create(params);
 
     if (!session.url) {
       throw new ApplicationError(
@@ -237,10 +314,20 @@ export class StripePaymentGateway implements PaymentGateway {
   async createPortalSession(
     input: PortalSessionInput,
   ): Promise<PortalSessionOutput> {
-    const session = await this.deps.stripe.billingPortal.sessions.create({
+    const params = {
       customer: input.stripeCustomerId,
       return_url: input.returnUrl,
-    });
+    } satisfies BillingPortalSessionCreateParams;
+
+    const session = input.idempotencyKey
+      ? await this.callStripe('billingPortal.sessions.create', () =>
+          this.deps.stripe.billingPortal.sessions.create(params, {
+            idempotencyKey: input.idempotencyKey,
+          }),
+        )
+      : await this.callStripe('billingPortal.sessions.create', () =>
+          this.deps.stripe.billingPortal.sessions.create(params),
+        );
 
     if (!session.url) {
       throw new ApplicationError(

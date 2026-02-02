@@ -57,6 +57,65 @@ describe('StripePaymentGateway', () => {
     });
   });
 
+  it('retries Stripe customer creation on transient errors when an idempotency key is provided', async () => {
+    const customersCreate = vi
+      .fn()
+      .mockRejectedValueOnce(
+        Object.assign(new Error('reset'), { code: 'ECONNRESET' }),
+      )
+      .mockResolvedValueOnce({ id: 'cus_123' });
+
+    const stripe = {
+      customers: { create: customersCreate },
+      checkout: {
+        sessions: {
+          create: vi.fn(async () => ({
+            id: 'cs_new',
+            url: 'https://stripe/checkout',
+          })),
+          list: vi.fn(async () => ({ data: [] })),
+          retrieve: vi.fn(async () => ({
+            id: 'cs_existing',
+            url: 'https://stripe/existing-checkout',
+            line_items: { data: [] },
+          })),
+          expire: vi.fn(async () => ({
+            id: 'cs_existing',
+            url: 'https://stripe/existing-checkout',
+          })),
+        },
+      },
+      billingPortal: {
+        sessions: {
+          create: vi.fn(async () => ({ url: 'https://stripe/portal' })),
+        },
+      },
+      webhooks: {
+        constructEvent: vi.fn(() => {
+          throw new Error('unexpected webhook call');
+        }),
+      },
+    } as const;
+
+    const gateway = new StripePaymentGateway({
+      stripe,
+      webhookSecret: 'whsec_1',
+      priceIds: { monthly: 'price_m', annual: 'price_a' },
+      logger: { error: vi.fn(), warn: vi.fn() },
+    });
+
+    await expect(
+      gateway.createCustomer({
+        userId: 'user_1',
+        clerkUserId: 'clerk_1',
+        email: 'user@example.com',
+        idempotencyKey: '11111111-1111-1111-1111-111111111111',
+      }),
+    ).resolves.toEqual({ stripeCustomerId: 'cus_123' });
+
+    expect(customersCreate).toHaveBeenCalledTimes(2);
+  });
+
   it('throws STRIPE_ERROR when a Stripe customer id is missing', async () => {
     const stripe = {
       customers: { create: vi.fn(async () => ({ id: undefined })) },
@@ -305,7 +364,9 @@ describe('StripePaymentGateway', () => {
     expect(checkoutRetrieve).toHaveBeenCalledWith('cs_existing', {
       expand: ['line_items'],
     });
-    expect(checkoutExpire).toHaveBeenCalledWith('cs_existing');
+    expect(checkoutExpire).toHaveBeenCalledWith('cs_existing', {
+      idempotencyKey: 'expire_checkout_session:cs_existing',
+    });
     expect(checkoutCreate).toHaveBeenCalledWith(
       expect.objectContaining({
         line_items: [{ price: 'price_m', quantity: 1 }],

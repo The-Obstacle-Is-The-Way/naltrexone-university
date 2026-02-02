@@ -1,6 +1,6 @@
 # DEBT-079: No Retry/Backoff Logic for External API Calls
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P2
 **Date:** 2026-02-02
 
@@ -92,12 +92,30 @@ await circuitBreaker.execute(() => stripe.checkout.sessions.create({...}));
 - `cockatiel` — Full resilience (retry, circuit breaker, timeout, bulkhead)
 - `p-retry` — Promise-based retry
 
+## Resolution
+
+We implemented a small internal retry helper and applied it at the integration boundaries (where transient vendor failures occur):
+
+- Retry helper:
+  - `src/adapters/shared/retry.ts` + `src/adapters/shared/retry.test.ts`
+  - Exponential backoff (`maxAttempts=3`, `100ms`, factor `2`)
+  - Retries only transient errors (network codes + 5xx)
+- Stripe:
+  - `src/adapters/gateways/stripe-payment-gateway.ts` wraps Stripe SDK calls with retry
+  - Uses Stripe idempotency keys for write calls when an `idempotencyKey` is available
+- Clerk:
+  - `src/adapters/gateways/clerk-auth-gateway.ts` retries transient failures from `getClerkUser()`
+- Checkout success:
+  - `app/(marketing)/checkout/success/page.tsx` retries Stripe retrieval calls for session/subscription
+- Clerk webhook cleanup:
+  - `app/api/webhooks/clerk/route.ts` retries Stripe subscription list/cancel (cancel uses idempotency keys)
+
 ## Verification
 
-- [ ] All external API calls have retry wrapper
-- [ ] Transient errors retry, permanent errors fail fast
-- [ ] Retry attempts are logged
-- [ ] Total timeout doesn't exceed user patience (~10s)
+- [x] External API calls have retry wrappers (Stripe + Clerk)
+- [x] Transient errors retry; non-transient errors fail fast
+- [x] Retry attempts are logged where a logger is available
+- [x] Total backoff stays within user patience (~<1s of delays across 3 attempts)
 
 ## Related
 

@@ -5,6 +5,7 @@ import {
   getSubscriptionPlanFromPriceId,
   type StripePriceIds,
 } from '@/src/adapters/config/stripe-prices';
+import { isTransientExternalError, retry } from '@/src/adapters/shared/retry';
 import type { AuthGateway } from '@/src/application/ports/gateways';
 import type {
   StripeCustomerRepository,
@@ -52,6 +53,7 @@ type ClerkAuthLike = {
 
 type CheckoutSuccessLogger = {
   error: (context: Record<string, unknown>, message: string) => void;
+  warn?: (context: Record<string, unknown>, message: string) => void;
 };
 
 export type CheckoutSuccessTransaction = {
@@ -76,6 +78,12 @@ type SyncCheckoutSuccessInput = {
 };
 
 const CHECKOUT_ERROR_ROUTE = `${ROUTES.PRICING}?checkout=error`;
+const STRIPE_RETRY_OPTIONS = {
+  maxAttempts: 3,
+  initialDelayMs: 100,
+  factor: 2,
+  maxDelayMs: 1000,
+} as const;
 
 type CheckoutSuccessSearchParams = {
   session_id?: string;
@@ -218,9 +226,28 @@ export async function syncCheckoutSuccess(
 
   const user = await d.authGateway.requireUser();
 
-  const session = await d.stripe.checkout.sessions.retrieve(sessionId, {
-    expand: ['subscription'],
-  });
+  const session = await retry(
+    () =>
+      d.stripe.checkout.sessions.retrieve(sessionId, {
+        expand: ['subscription'],
+      }),
+    {
+      ...STRIPE_RETRY_OPTIONS,
+      shouldRetry: isTransientExternalError,
+      onRetry: ({ attempt, maxAttempts, delayMs, error }) => {
+        d.logger.warn?.(
+          {
+            sessionId,
+            attempt,
+            maxAttempts,
+            delayMs,
+            error: error instanceof Error ? error.message : String(error),
+          },
+          'Retrying Stripe API call',
+        );
+      },
+    },
+  );
 
   const stripeCustomerId = getStripeId(session.customer);
   const subscriptionId = getStripeId(session.subscription);
@@ -236,7 +263,25 @@ export async function syncCheckoutSuccess(
     subscriptionId,
   });
 
-  const subscription = await d.stripe.subscriptions.retrieve(subscriptionId);
+  const subscription = await retry(
+    () => d.stripe.subscriptions.retrieve(subscriptionId),
+    {
+      ...STRIPE_RETRY_OPTIONS,
+      shouldRetry: isTransientExternalError,
+      onRetry: ({ attempt, maxAttempts, delayMs, error }) => {
+        d.logger.warn?.(
+          {
+            subscriptionId,
+            attempt,
+            maxAttempts,
+            delayMs,
+            error: error instanceof Error ? error.message : String(error),
+          },
+          'Retrying Stripe API call',
+        );
+      },
+    },
+  );
 
   const metadataUserId = subscription.metadata?.user_id;
   // Prevent cross-account leakage if the user switches accounts mid-checkout.

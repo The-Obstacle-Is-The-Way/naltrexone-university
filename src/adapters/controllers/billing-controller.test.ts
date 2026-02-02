@@ -314,6 +314,7 @@ describe('billing-controller', () => {
           userId: 'user_1',
           clerkUserId: 'clerk_1',
           email: 'user@example.com',
+          idempotencyKey: 'stripe_customer:user_1',
         },
       ]);
       expect(stripeCustomerRepository.insertInputs).toEqual([

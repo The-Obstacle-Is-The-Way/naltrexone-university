@@ -18,7 +18,10 @@ type StripeClient = {
       status: 'all';
       limit?: number;
     }) => AsyncIterable<{ id: string; status: string }>;
-    cancel: (subscriptionId: string) => Promise<unknown>;
+    cancel: (
+      subscriptionId: string,
+      options?: { idempotencyKey?: string },
+    ) => Promise<unknown>;
   };
 };
 
