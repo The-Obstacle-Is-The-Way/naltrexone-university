@@ -1,5 +1,10 @@
 import type { Question } from '@/src/domain/entities';
-import { getNextQuestionId, selectNextQuestionId } from '@/src/domain/services';
+import {
+  createQuestionSeed,
+  getNextQuestionId,
+  selectNextQuestionId,
+  shuffleWithSeed,
+} from '@/src/domain/services';
 import type {
   PracticeMode,
   QuestionDifficulty,
@@ -57,12 +62,18 @@ export class GetNextQuestionUseCase {
     return this.executeForFilters(input.userId, input.filters);
   }
 
-  private mapChoicesForOutput(question: Question): PublicChoice[] {
-    return question.choices.map((c) => ({
+  private mapChoicesForOutput(
+    question: Question,
+    userId: string,
+  ): PublicChoice[] {
+    const seed = createQuestionSeed(userId, question.id);
+    const shuffledChoices = shuffleWithSeed(question.choices, seed);
+
+    return shuffledChoices.map((c, index) => ({
       id: c.id,
       label: c.label,
       textMd: c.textMd,
-      sortOrder: c.sortOrder,
+      sortOrder: index + 1,
     }));
   }
 
@@ -99,7 +110,7 @@ export class GetNextQuestionUseCase {
       slug: question.slug,
       stemMd: question.stemMd,
       difficulty: question.difficulty,
-      choices: this.mapChoicesForOutput(question),
+      choices: this.mapChoicesForOutput(question, userId),
       session: {
         sessionId: session.id,
         mode: session.mode,
@@ -139,7 +150,7 @@ export class GetNextQuestionUseCase {
       slug: question.slug,
       stemMd: question.stemMd,
       difficulty: question.difficulty,
-      choices: this.mapChoicesForOutput(question),
+      choices: this.mapChoicesForOutput(question, userId),
       session: null,
     };
   }

@@ -1,8 +1,10 @@
 import type {
   Attempt,
+  Bookmark,
   PracticeSession,
   Question,
   Subscription,
+  Tag,
   User,
 } from '@/src/domain/entities';
 import type { QuestionDifficulty } from '@/src/domain/value-objects';
@@ -21,11 +23,16 @@ import type {
 import type {
   AttemptMostRecentAnsweredAt,
   AttemptRepository,
+  BookmarkRepository,
   PracticeSessionRepository,
   QuestionFilters,
   QuestionRepository,
+  StripeCustomerRepository,
+  StripeEventRepository,
   SubscriptionRepository,
   SubscriptionUpsertInput,
+  TagRepository,
+  UserRepository,
 } from '../ports/repositories';
 
 type InMemoryAttempt = Attempt & { practiceSessionId: string | null };
@@ -369,5 +376,185 @@ export class FakeSubscriptionRepository implements SubscriptionRepository {
       input.stripeSubscriptionId,
       input.userId,
     );
+  }
+}
+
+type StoredUser = { user: User; clerkId: string };
+
+export class FakeUserRepository implements UserRepository {
+  private readonly byClerkId = new Map<string, StoredUser>();
+  private nextId = 1;
+
+  async findByClerkId(clerkId: string): Promise<User | null> {
+    const stored = this.byClerkId.get(clerkId);
+    return stored?.user ?? null;
+  }
+
+  async upsertByClerkId(clerkId: string, email: string): Promise<User> {
+    const existing = this.byClerkId.get(clerkId);
+
+    if (existing) {
+      if (existing.user.email === email) {
+        return existing.user;
+      }
+      const updatedUser: User = {
+        ...existing.user,
+        email,
+        updatedAt: new Date(),
+      };
+      this.byClerkId.set(clerkId, { user: updatedUser, clerkId });
+      return updatedUser;
+    }
+
+    const now = new Date();
+    const newUser: User = {
+      id: `user-${this.nextId++}`,
+      email,
+      createdAt: now,
+      updatedAt: now,
+    };
+    this.byClerkId.set(clerkId, { user: newUser, clerkId });
+    return newUser;
+  }
+}
+
+export class FakeBookmarkRepository implements BookmarkRepository {
+  private readonly bookmarks = new Map<string, Bookmark>();
+
+  private key(userId: string, questionId: string): string {
+    return `${userId}:${questionId}`;
+  }
+
+  async exists(userId: string, questionId: string): Promise<boolean> {
+    return this.bookmarks.has(this.key(userId, questionId));
+  }
+
+  async add(userId: string, questionId: string): Promise<Bookmark> {
+    const k = this.key(userId, questionId);
+    const existing = this.bookmarks.get(k);
+    if (existing) {
+      return existing;
+    }
+
+    const bookmark: Bookmark = {
+      userId,
+      questionId,
+      createdAt: new Date(),
+    };
+    this.bookmarks.set(k, bookmark);
+    return bookmark;
+  }
+
+  async remove(userId: string, questionId: string): Promise<boolean> {
+    const k = this.key(userId, questionId);
+    return this.bookmarks.delete(k);
+  }
+
+  async listByUserId(userId: string): Promise<readonly Bookmark[]> {
+    const result: Bookmark[] = [];
+    for (const bookmark of this.bookmarks.values()) {
+      if (bookmark.userId === userId) {
+        result.push(bookmark);
+      }
+    }
+    return result;
+  }
+}
+
+export class FakeTagRepository implements TagRepository {
+  private readonly tags: readonly Tag[];
+
+  constructor(tags: readonly Tag[] = []) {
+    this.tags = tags;
+  }
+
+  async listAll(): Promise<readonly Tag[]> {
+    return this.tags;
+  }
+}
+
+export class FakeStripeCustomerRepository implements StripeCustomerRepository {
+  private readonly userIdToCustomerId = new Map<string, string>();
+  private readonly customerIdToUserId = new Map<string, string>();
+
+  async findByUserId(
+    userId: string,
+  ): Promise<{ stripeCustomerId: string } | null> {
+    const customerId = this.userIdToCustomerId.get(userId);
+    if (!customerId) return null;
+    return { stripeCustomerId: customerId };
+  }
+
+  async insert(userId: string, stripeCustomerId: string): Promise<void> {
+    const existingCustomerId = this.userIdToCustomerId.get(userId);
+    const existingUserId = this.customerIdToUserId.get(stripeCustomerId);
+
+    if (existingCustomerId === stripeCustomerId && existingUserId === userId) {
+      return;
+    }
+
+    if (existingCustomerId && existingCustomerId !== stripeCustomerId) {
+      throw new ApplicationError(
+        'CONFLICT',
+        'User is already mapped to a different Stripe customer',
+      );
+    }
+
+    if (existingUserId && existingUserId !== userId) {
+      throw new ApplicationError(
+        'CONFLICT',
+        'Stripe customer is already mapped to a different user',
+      );
+    }
+
+    this.userIdToCustomerId.set(userId, stripeCustomerId);
+    this.customerIdToUserId.set(stripeCustomerId, userId);
+  }
+}
+
+type StoredStripeEvent = {
+  type: string;
+  processedAt: Date | null;
+  error: string | null;
+};
+
+export class FakeStripeEventRepository implements StripeEventRepository {
+  private readonly events = new Map<string, StoredStripeEvent>();
+
+  async claim(eventId: string, type: string): Promise<boolean> {
+    if (this.events.has(eventId)) {
+      return false;
+    }
+
+    this.events.set(eventId, {
+      type,
+      processedAt: null,
+      error: null,
+    });
+    return true;
+  }
+
+  async lock(
+    eventId: string,
+  ): Promise<{ processedAt: Date | null; error: string | null }> {
+    const event = this.events.get(eventId);
+    if (!event) {
+      throw new ApplicationError('NOT_FOUND', 'Event not found');
+    }
+    return { processedAt: event.processedAt, error: event.error };
+  }
+
+  async markProcessed(eventId: string): Promise<void> {
+    const event = this.events.get(eventId);
+    if (event) {
+      event.processedAt = new Date();
+    }
+  }
+
+  async markFailed(eventId: string, error: string): Promise<void> {
+    const event = this.events.get(eventId);
+    if (event) {
+      event.error = error;
+    }
   }
 }

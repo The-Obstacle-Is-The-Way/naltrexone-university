@@ -48,6 +48,63 @@ describe('SubmitAnswerUseCase', () => {
     expect(inserted[0]?.timeSpentSeconds).toBe(0);
   });
 
+  it('stores timeSpentSeconds from input', async () => {
+    const userId = 'user-1';
+
+    const questionId = 'q1';
+    const question = createQuestion({
+      id: questionId,
+      status: 'published',
+      choices: [
+        createChoice({ id: 'c1', questionId, label: 'A', isCorrect: true }),
+      ],
+    });
+
+    const attempts = new FakeAttemptRepository();
+    const useCase = new SubmitAnswerUseCase(
+      new FakeQuestionRepository([question]),
+      attempts,
+      new FakePracticeSessionRepository(),
+    );
+
+    await useCase.execute({
+      userId,
+      questionId,
+      choiceId: 'c1',
+      timeSpentSeconds: 42,
+    });
+
+    expect(attempts.getAll()[0]?.timeSpentSeconds).toBe(42);
+  });
+
+  it('defaults timeSpentSeconds to 0 when not provided', async () => {
+    const userId = 'user-1';
+
+    const questionId = 'q1';
+    const question = createQuestion({
+      id: questionId,
+      status: 'published',
+      choices: [
+        createChoice({ id: 'c1', questionId, label: 'A', isCorrect: true }),
+      ],
+    });
+
+    const attempts = new FakeAttemptRepository();
+    const useCase = new SubmitAnswerUseCase(
+      new FakeQuestionRepository([question]),
+      attempts,
+      new FakePracticeSessionRepository(),
+    );
+
+    await useCase.execute({
+      userId,
+      questionId,
+      choiceId: 'c1',
+    });
+
+    expect(attempts.getAll()[0]?.timeSpentSeconds).toBe(0);
+  });
+
   it('returns isCorrect=false when an incorrect choice is selected', async () => {
     const userId = 'user-1';
 

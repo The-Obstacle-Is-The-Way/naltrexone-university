@@ -14,6 +14,7 @@ export type SubmitAnswerInput = {
   questionId: string;
   choiceId: string;
   sessionId?: string;
+  timeSpentSeconds?: number;
 };
 
 export type SubmitAnswerOutput = {
@@ -57,7 +58,7 @@ export class SubmitAnswerUseCase {
       practiceSessionId: session ? session.id : null,
       selectedChoiceId: input.choiceId,
       isCorrect: grade.isCorrect,
-      timeSpentSeconds: 0,
+      timeSpentSeconds: input.timeSpentSeconds ?? 0,
     });
 
     const explanationMd =

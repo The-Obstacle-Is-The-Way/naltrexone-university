@@ -1,5 +1,15 @@
 import { describe, expect, it } from 'vitest';
-import { ApplicationError, isApplicationError } from './application-errors';
+import {
+  ApplicationError,
+  ApplicationErrorCodes,
+  isApplicationError,
+} from './application-errors';
+
+describe('ApplicationErrorCodes', () => {
+  it('includes INVALID_WEBHOOK_SIGNATURE', () => {
+    expect(ApplicationErrorCodes).toContain('INVALID_WEBHOOK_SIGNATURE');
+  });
+});
 
 describe('ApplicationError', () => {
   it('captures code and message', () => {

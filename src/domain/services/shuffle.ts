@@ -34,6 +34,23 @@ export function shuffleWithSeed<T>(items: readonly T[], seed: number): T[] {
  */
 export function createSeed(userId: string, timestamp: number): number {
   const str = `${userId}:${timestamp}`;
+  return hashString(str);
+}
+
+/**
+ * Create a deterministic numeric seed from user id + question id (pure function).
+ *
+ * This ensures the same user always sees the same choice order for a given question,
+ * but different users see different orders.
+ *
+ * Note: This is NOT a cryptographic hash. It's used only for deterministic shuffling.
+ */
+export function createQuestionSeed(userId: string, questionId: string): number {
+  const str = `${userId}:${questionId}`;
+  return hashString(str);
+}
+
+function hashString(str: string): number {
   let hash = 0;
 
   for (let i = 0; i < str.length; i += 1) {

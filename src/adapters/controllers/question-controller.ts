@@ -48,6 +48,7 @@ const SubmitAnswerInputSchema = z
     questionId: zUuid,
     choiceId: zUuid,
     sessionId: zUuid.optional(),
+    timeSpentSeconds: z.number().int().min(0).max(86400).optional(),
   })
   .strict();
 
@@ -142,6 +143,7 @@ export async function submitAnswer(
       questionId: parsed.data.questionId,
       choiceId: parsed.data.choiceId,
       sessionId: parsed.data.sessionId,
+      timeSpentSeconds: parsed.data.timeSpentSeconds,
     });
 
     return ok(data);

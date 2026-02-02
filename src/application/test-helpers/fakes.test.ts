@@ -1,11 +1,17 @@
 import { describe, expect, it } from 'vitest';
+import type { Tag } from '@/src/domain/entities';
 import { createPracticeSession } from '@/src/domain/test-helpers';
 import { ApplicationError } from '../errors';
 import {
   FakeAuthGateway,
+  FakeBookmarkRepository,
   FakePaymentGateway,
   FakePracticeSessionRepository,
+  FakeStripeCustomerRepository,
+  FakeStripeEventRepository,
   FakeSubscriptionRepository,
+  FakeTagRepository,
+  FakeUserRepository,
 } from './fakes';
 
 describe('FakePracticeSessionRepository', () => {
@@ -166,5 +172,284 @@ describe('FakePaymentGateway', () => {
     expect(gateway.webhookInputs).toEqual([
       { rawBody: 'raw', signature: 'sig' },
     ]);
+  });
+});
+
+describe('FakeUserRepository', () => {
+  describe('findByClerkId', () => {
+    it('returns null when user not found', async () => {
+      const repo = new FakeUserRepository();
+      const result = await repo.findByClerkId('clerk-123');
+      expect(result).toBeNull();
+    });
+
+    it('returns user when found', async () => {
+      const repo = new FakeUserRepository();
+      await repo.upsertByClerkId('clerk-123', 'test@example.com');
+
+      const result = await repo.findByClerkId('clerk-123');
+
+      expect(result).not.toBeNull();
+      expect(result?.email).toBe('test@example.com');
+    });
+  });
+
+  describe('upsertByClerkId', () => {
+    it('creates new user when not exists', async () => {
+      const repo = new FakeUserRepository();
+      const user = await repo.upsertByClerkId('clerk-123', 'test@example.com');
+
+      expect(user.id).toMatch(/^user-\d+$/);
+      expect(user.email).toBe('test@example.com');
+      expect(user.createdAt).toBeInstanceOf(Date);
+      expect(user.updatedAt).toBeInstanceOf(Date);
+    });
+
+    it('returns existing user when email matches', async () => {
+      const repo = new FakeUserRepository();
+      const first = await repo.upsertByClerkId('clerk-123', 'test@example.com');
+      const second = await repo.upsertByClerkId(
+        'clerk-123',
+        'test@example.com',
+      );
+
+      expect(second.id).toBe(first.id);
+      expect(second.email).toBe(first.email);
+    });
+
+    it('updates email when different', async () => {
+      const repo = new FakeUserRepository();
+      const first = await repo.upsertByClerkId('clerk-123', 'old@example.com');
+      const second = await repo.upsertByClerkId('clerk-123', 'new@example.com');
+
+      expect(second.id).toBe(first.id);
+      expect(second.email).toBe('new@example.com');
+    });
+  });
+});
+
+describe('FakeBookmarkRepository', () => {
+  describe('exists', () => {
+    it('returns false when bookmark not found', async () => {
+      const repo = new FakeBookmarkRepository();
+      const result = await repo.exists('user-1', 'question-1');
+      expect(result).toBe(false);
+    });
+
+    it('returns true when bookmark exists', async () => {
+      const repo = new FakeBookmarkRepository();
+      await repo.add('user-1', 'question-1');
+
+      const result = await repo.exists('user-1', 'question-1');
+
+      expect(result).toBe(true);
+    });
+  });
+
+  describe('add', () => {
+    it('creates bookmark', async () => {
+      const repo = new FakeBookmarkRepository();
+      const bookmark = await repo.add('user-1', 'question-1');
+
+      expect(bookmark.userId).toBe('user-1');
+      expect(bookmark.questionId).toBe('question-1');
+      expect(bookmark.createdAt).toBeInstanceOf(Date);
+    });
+
+    it('is idempotent - returns existing bookmark', async () => {
+      const repo = new FakeBookmarkRepository();
+      const first = await repo.add('user-1', 'question-1');
+      const second = await repo.add('user-1', 'question-1');
+
+      expect(second.createdAt).toEqual(first.createdAt);
+    });
+  });
+
+  describe('remove', () => {
+    it('returns true when bookmark existed', async () => {
+      const repo = new FakeBookmarkRepository();
+      await repo.add('user-1', 'question-1');
+
+      const result = await repo.remove('user-1', 'question-1');
+
+      expect(result).toBe(true);
+    });
+
+    it('returns false when bookmark was absent', async () => {
+      const repo = new FakeBookmarkRepository();
+      const result = await repo.remove('user-1', 'question-1');
+      expect(result).toBe(false);
+    });
+  });
+
+  describe('listByUserId', () => {
+    it("returns user's bookmarks", async () => {
+      const repo = new FakeBookmarkRepository();
+      await repo.add('user-1', 'question-1');
+      await repo.add('user-1', 'question-2');
+      await repo.add('user-2', 'question-3');
+
+      const result = await repo.listByUserId('user-1');
+
+      expect(result).toHaveLength(2);
+      expect(result.map((b) => b.questionId)).toEqual(
+        expect.arrayContaining(['question-1', 'question-2']),
+      );
+    });
+
+    it('returns empty array when user has no bookmarks', async () => {
+      const repo = new FakeBookmarkRepository();
+      const result = await repo.listByUserId('user-1');
+      expect(result).toEqual([]);
+    });
+  });
+});
+
+describe('FakeTagRepository', () => {
+  describe('listAll', () => {
+    it('returns all seeded tags', async () => {
+      const tags: Tag[] = [
+        {
+          id: 'tag-1',
+          slug: 'pharmacology',
+          name: 'Pharmacology',
+          kind: 'topic',
+        },
+        { id: 'tag-2', slug: 'diagnosis', name: 'Diagnosis', kind: 'topic' },
+      ];
+      const repo = new FakeTagRepository(tags);
+
+      const result = await repo.listAll();
+
+      expect(result).toHaveLength(2);
+      expect(result[0].slug).toBe('pharmacology');
+      expect(result[1].slug).toBe('diagnosis');
+    });
+
+    it('returns empty array when no tags', async () => {
+      const repo = new FakeTagRepository([]);
+      const result = await repo.listAll();
+      expect(result).toEqual([]);
+    });
+  });
+});
+
+describe('FakeStripeCustomerRepository', () => {
+  describe('findByUserId', () => {
+    it('returns null when no mapping exists', async () => {
+      const repo = new FakeStripeCustomerRepository();
+      const result = await repo.findByUserId('user-1');
+      expect(result).toBeNull();
+    });
+
+    it('returns stripeCustomerId when mapping exists', async () => {
+      const repo = new FakeStripeCustomerRepository();
+      await repo.insert('user-1', 'cus_123');
+
+      const result = await repo.findByUserId('user-1');
+
+      expect(result).toEqual({ stripeCustomerId: 'cus_123' });
+    });
+  });
+
+  describe('insert', () => {
+    it('creates new mapping', async () => {
+      const repo = new FakeStripeCustomerRepository();
+      await repo.insert('user-1', 'cus_123');
+
+      const result = await repo.findByUserId('user-1');
+
+      expect(result).toEqual({ stripeCustomerId: 'cus_123' });
+    });
+
+    it('is idempotent for same mapping', async () => {
+      const repo = new FakeStripeCustomerRepository();
+      await repo.insert('user-1', 'cus_123');
+      await repo.insert('user-1', 'cus_123');
+
+      const result = await repo.findByUserId('user-1');
+
+      expect(result).toEqual({ stripeCustomerId: 'cus_123' });
+    });
+
+    it('throws CONFLICT when userId mapped to different customerId', async () => {
+      const repo = new FakeStripeCustomerRepository();
+      await repo.insert('user-1', 'cus_123');
+
+      await expect(repo.insert('user-1', 'cus_456')).rejects.toMatchObject({
+        code: 'CONFLICT',
+      });
+    });
+
+    it('throws CONFLICT when customerId mapped to different userId', async () => {
+      const repo = new FakeStripeCustomerRepository();
+      await repo.insert('user-1', 'cus_123');
+
+      await expect(repo.insert('user-2', 'cus_123')).rejects.toMatchObject({
+        code: 'CONFLICT',
+      });
+    });
+  });
+});
+
+describe('FakeStripeEventRepository', () => {
+  describe('claim', () => {
+    it('returns true for new event', async () => {
+      const repo = new FakeStripeEventRepository();
+      const result = await repo.claim('evt_123', 'checkout.session.completed');
+      expect(result).toBe(true);
+    });
+
+    it('returns false for existing event', async () => {
+      const repo = new FakeStripeEventRepository();
+      await repo.claim('evt_123', 'checkout.session.completed');
+
+      const result = await repo.claim('evt_123', 'checkout.session.completed');
+
+      expect(result).toBe(false);
+    });
+  });
+
+  describe('lock', () => {
+    it('returns state for existing event', async () => {
+      const repo = new FakeStripeEventRepository();
+      await repo.claim('evt_123', 'checkout.session.completed');
+
+      const result = await repo.lock('evt_123');
+
+      expect(result).toEqual({ processedAt: null, error: null });
+    });
+
+    it('throws NOT_FOUND when event missing', async () => {
+      const repo = new FakeStripeEventRepository();
+
+      await expect(repo.lock('evt_123')).rejects.toMatchObject({
+        code: 'NOT_FOUND',
+      });
+    });
+  });
+
+  describe('markProcessed', () => {
+    it('updates processedAt', async () => {
+      const repo = new FakeStripeEventRepository();
+      await repo.claim('evt_123', 'checkout.session.completed');
+
+      await repo.markProcessed('evt_123');
+
+      const state = await repo.lock('evt_123');
+      expect(state.processedAt).toBeInstanceOf(Date);
+    });
+  });
+
+  describe('markFailed', () => {
+    it('sets error', async () => {
+      const repo = new FakeStripeEventRepository();
+      await repo.claim('evt_123', 'checkout.session.completed');
+
+      await repo.markFailed('evt_123', 'Something went wrong');
+
+      const state = await repo.lock('evt_123');
+      expect(state.error).toBe('Something went wrong');
+    });
   });
 });

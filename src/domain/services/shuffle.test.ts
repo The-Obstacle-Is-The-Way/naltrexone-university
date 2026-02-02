@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createSeed, shuffleWithSeed } from './shuffle';
+import { createQuestionSeed, createSeed, shuffleWithSeed } from './shuffle';
 
 describe('shuffleWithSeed', () => {
   it('is deterministic for same seed', () => {
@@ -40,5 +40,25 @@ describe('createSeed', () => {
   it('never returns a negative number for int32 MIN_VALUE hash', () => {
     const userId = String.fromCharCode(22728, 4, 16, 30);
     expect(createSeed(userId, 0)).toBe(2_147_483_648);
+  });
+});
+
+describe('createQuestionSeed', () => {
+  it('produces consistent seed for same userId and questionId', () => {
+    const seed1 = createQuestionSeed('user-1', 'question-1');
+    const seed2 = createQuestionSeed('user-1', 'question-1');
+    expect(seed1).toBe(seed2);
+  });
+
+  it('produces different seeds for different userIds', () => {
+    const seed1 = createQuestionSeed('user-1', 'question-1');
+    const seed2 = createQuestionSeed('user-2', 'question-1');
+    expect(seed1).not.toBe(seed2);
+  });
+
+  it('produces different seeds for different questionIds', () => {
+    const seed1 = createQuestionSeed('user-1', 'question-1');
+    const seed2 = createQuestionSeed('user-1', 'question-2');
+    expect(seed1).not.toBe(seed2);
   });
 });

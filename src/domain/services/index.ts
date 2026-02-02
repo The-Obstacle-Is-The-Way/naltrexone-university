@@ -10,7 +10,7 @@ export {
   type SessionProgress,
   shouldShowExplanation,
 } from './session';
-export { createSeed, shuffleWithSeed } from './shuffle';
+export { createQuestionSeed, createSeed, shuffleWithSeed } from './shuffle';
 export {
   computeAccuracy,
   computeStreak,

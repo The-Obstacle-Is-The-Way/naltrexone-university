@@ -102,7 +102,10 @@ describe('POST /api/stripe/webhook', () => {
     const { POST, processStripeWebhook } = createTestDeps();
 
     processStripeWebhook.mockRejectedValue(
-      new ApplicationError('STRIPE_ERROR', 'Invalid webhook signature'),
+      new ApplicationError(
+        'INVALID_WEBHOOK_SIGNATURE',
+        'Invalid webhook signature',
+      ),
     );
 
     const res = await POST(

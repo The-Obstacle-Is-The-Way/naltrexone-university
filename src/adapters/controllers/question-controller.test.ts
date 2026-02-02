@@ -244,6 +244,67 @@ describe('question-controller', () => {
       });
     });
 
+    it('accepts timeSpentSeconds in input and passes to use case', async () => {
+      const deps = createDeps();
+
+      const input = {
+        questionId: '11111111-1111-1111-1111-111111111111',
+        choiceId: '22222222-2222-2222-2222-222222222222',
+        timeSpentSeconds: 15,
+      };
+
+      await submitAnswer(input, deps as never);
+
+      expect(deps.submitAnswerUseCase.execute).toHaveBeenCalledWith({
+        userId: 'user_1',
+        questionId: input.questionId,
+        choiceId: input.choiceId,
+        timeSpentSeconds: 15,
+      });
+    });
+
+    it('rejects negative timeSpentSeconds', async () => {
+      const deps = createDeps();
+
+      const result = await submitAnswer(
+        {
+          questionId: '11111111-1111-1111-1111-111111111111',
+          choiceId: '22222222-2222-2222-2222-222222222222',
+          timeSpentSeconds: -1,
+        },
+        deps as never,
+      );
+
+      expect(result).toMatchObject({
+        ok: false,
+        error: {
+          code: 'VALIDATION_ERROR',
+          fieldErrors: { timeSpentSeconds: expect.any(Array) },
+        },
+      });
+    });
+
+    it('rejects timeSpentSeconds exceeding 24 hours', async () => {
+      const deps = createDeps();
+
+      const result = await submitAnswer(
+        {
+          questionId: '11111111-1111-1111-1111-111111111111',
+          choiceId: '22222222-2222-2222-2222-222222222222',
+          timeSpentSeconds: 86401,
+        },
+        deps as never,
+      );
+
+      expect(result).toMatchObject({
+        ok: false,
+        error: {
+          code: 'VALIDATION_ERROR',
+          fieldErrors: { timeSpentSeconds: expect.any(Array) },
+        },
+      });
+    });
+
     it('maps ApplicationError from use case via handleError', async () => {
       const deps = createDeps({
         submitAnswerThrows: new ApplicationError(
