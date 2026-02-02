@@ -10,7 +10,10 @@ import type {
   StripeCustomerRepository,
   SubscriptionRepository,
 } from '@/src/application/ports/repositories';
-import { isValidSubscriptionStatus } from '@/src/domain/value-objects';
+import {
+  isValidSubscriptionStatus,
+  type SubscriptionStatus,
+} from '@/src/domain/value-objects';
 
 type StripeCheckoutSessionLike = { customer?: unknown; subscription?: unknown };
 
@@ -43,6 +46,10 @@ type ClerkAuthLike = {
   redirectToSignIn: (opts: { returnBackUrl: string | URL }) => never;
 };
 
+type CheckoutSuccessLogger = {
+  error: (context: Record<string, unknown>, message: string) => void;
+};
+
 export type CheckoutSuccessTransaction = {
   stripeCustomers: StripeCustomerRepository;
   subscriptions: SubscriptionRepository;
@@ -51,6 +58,7 @@ export type CheckoutSuccessTransaction = {
 export type CheckoutSuccessDeps = {
   authGateway: AuthGateway;
   getClerkAuth: () => Promise<ClerkAuthLike>;
+  logger: CheckoutSuccessLogger;
   stripe: StripeClientLike;
   priceIds: StripePriceIds;
   appUrl: string;
@@ -83,6 +91,7 @@ async function getDeps(
   return {
     authGateway: container.createAuthGateway(),
     getClerkAuth: auth,
+    logger: container.logger,
     stripe,
     priceIds: {
       monthly: container.env.NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY,
@@ -125,51 +134,146 @@ export async function syncCheckoutSuccess(
   deps?: CheckoutSuccessDeps,
   redirectFn: (url: string) => never = redirect,
 ): Promise<void> {
-  if (!input.sessionId) redirectFn(CHECKOUT_ERROR_ROUTE);
-
   const d = await getDeps(deps);
+
+  const fail = (
+    reason: string,
+    context: Record<string, unknown> = {},
+  ): never => {
+    d.logger.error(
+      {
+        reason,
+        ...context,
+      },
+      'Checkout success validation failed',
+    );
+    return redirectFn(CHECKOUT_ERROR_ROUTE);
+  };
+
+  function assertNotNull<T>(
+    value: T | null,
+    reason: string,
+    context: Record<string, unknown>,
+  ): asserts value is T {
+    if (value === null) {
+      fail(reason, context);
+    }
+  }
+
+  function assertNonEmptyString(
+    value: unknown,
+    reason: string,
+    context: Record<string, unknown>,
+  ): asserts value is string {
+    if (typeof value !== 'string' || value.length === 0) {
+      fail(reason, context);
+    }
+  }
+
+  function assertNumber(
+    value: unknown,
+    reason: string,
+    context: Record<string, unknown>,
+  ): asserts value is number {
+    if (typeof value !== 'number') {
+      fail(reason, context);
+    }
+  }
+
+  function assertBoolean(
+    value: unknown,
+    reason: string,
+    context: Record<string, unknown>,
+  ): asserts value is boolean {
+    if (typeof value !== 'boolean') {
+      fail(reason, context);
+    }
+  }
+
+  function assertSubscriptionStatus(
+    value: string,
+    reason: string,
+    context: Record<string, unknown>,
+  ): asserts value is SubscriptionStatus {
+    if (!isValidSubscriptionStatus(value)) {
+      fail(reason, context);
+    }
+  }
+
+  const sessionId = input.sessionId;
+  assertNonEmptyString(sessionId, 'missing_session_id', { sessionId });
+
   const clerkAuth = await d.getClerkAuth();
   if (!clerkAuth.userId) {
     const returnBackUrl = new URL(ROUTES.CHECKOUT_SUCCESS, d.appUrl);
-    returnBackUrl.searchParams.set('session_id', input.sessionId);
-    clerkAuth.redirectToSignIn({ returnBackUrl });
+    returnBackUrl.searchParams.set('session_id', sessionId);
+    return clerkAuth.redirectToSignIn({ returnBackUrl });
   }
 
   const user = await d.authGateway.requireUser();
 
-  const session = await d.stripe.checkout.sessions.retrieve(input.sessionId, {
+  const session = await d.stripe.checkout.sessions.retrieve(sessionId, {
     expand: ['subscription'],
   });
 
   const stripeCustomerId = getStripeId(session.customer);
   const subscriptionId = getStripeId(session.subscription);
-  if (!stripeCustomerId || !subscriptionId) redirectFn(CHECKOUT_ERROR_ROUTE);
+  assertNonEmptyString(stripeCustomerId, 'missing_stripe_ids', {
+    sessionId,
+    stripeCustomerId,
+    subscriptionId,
+  });
+  assertNonEmptyString(subscriptionId, 'missing_stripe_ids', {
+    sessionId,
+    stripeCustomerId,
+    subscriptionId,
+  });
 
-  const subscription =
-    typeof session.subscription === 'object' && session.subscription !== null
-      ? (session.subscription as StripeSubscriptionLike)
-      : await d.stripe.subscriptions.retrieve(subscriptionId);
+  const subscription = await d.stripe.subscriptions.retrieve(subscriptionId);
 
   const metadataUserId = subscription.metadata?.user_id;
-  if (metadataUserId && metadataUserId !== user.id)
-    redirectFn(CHECKOUT_ERROR_ROUTE);
+  if (metadataUserId && metadataUserId !== user.id) {
+    fail('user_id_mismatch', {
+      sessionId,
+      metadataUserId,
+      userId: user.id,
+    });
+  }
 
   const status = subscription.status;
-  if (!status || !isValidSubscriptionStatus(status))
-    redirectFn(CHECKOUT_ERROR_ROUTE);
+  assertNonEmptyString(status, 'invalid_subscription_status', {
+    sessionId,
+    status: status ?? null,
+  });
+  assertSubscriptionStatus(status, 'invalid_subscription_status', {
+    sessionId,
+    status,
+  });
 
   const currentPeriodEndSeconds = subscription.current_period_end;
-  if (typeof currentPeriodEndSeconds !== 'number')
-    redirectFn(CHECKOUT_ERROR_ROUTE);
+  assertNumber(currentPeriodEndSeconds, 'missing_current_period_end', {
+    sessionId,
+    currentPeriodEndSeconds: currentPeriodEndSeconds ?? null,
+  });
 
   const cancelAtPeriodEnd = subscription.cancel_at_period_end;
-  if (typeof cancelAtPeriodEnd !== 'boolean') redirectFn(CHECKOUT_ERROR_ROUTE);
+  assertBoolean(cancelAtPeriodEnd, 'missing_cancel_at_period_end', {
+    sessionId,
+    cancelAtPeriodEnd: cancelAtPeriodEnd ?? null,
+  });
 
   const priceId = subscription.items?.data?.[0]?.price?.id;
-  if (!priceId) redirectFn(CHECKOUT_ERROR_ROUTE);
+  assertNonEmptyString(priceId, 'missing_price_id', {
+    sessionId,
+    priceId: priceId ?? null,
+  });
 
   const plan = getSubscriptionPlanFromPriceId(priceId, d.priceIds);
-  if (!plan) redirectFn(CHECKOUT_ERROR_ROUTE);
+  assertNotNull(plan, 'unknown_plan', {
+    sessionId,
+    priceId,
+    configuredPriceIds: d.priceIds,
+  });
 
   await d.transaction(async ({ stripeCustomers, subscriptions }) => {
     await stripeCustomers.insert(user.id, stripeCustomerId);

@@ -18,7 +18,6 @@ Bug reports document issues discovered in the codebase along with their root cau
 | ID | Title | Status | Priority | Date |
 |----|-------|--------|----------|------|
 | [BUG-040](bug-040-clerk-key-mismatch-infinite-redirect.md) | Clerk Session Token Refresh Warning — Intermittent | Open | P2 | 2026-02-02 |
-| [BUG-042](bug-042-checkout-success-silent-validation-failure.md) | Checkout Success Page Fails Silently — No Debug Logging | Open | P1 | 2026-02-02 |
 
 **Next Bug ID:** BUG-044
 
@@ -33,6 +32,7 @@ See: [Foundation Audit Report](foundation-audit-report.md)
 |----|-------|----------|----------|
 | [BUG-043](../_archive/bugs/bug-043-checkout-success-not-public-route.md) | Checkout Success Route Not Public (Stripe Return) | P2 | 2026-02-02 |
 | [BUG-041](../_archive/bugs/bug-041-webhook-subscription-created-missing-metadata.md) | Webhook 500 on customer.subscription.created (Missing metadata.user_id) | P2 | 2026-02-02 |
+| [BUG-042](../_archive/bugs/bug-042-checkout-success-silent-validation-failure.md) | Checkout Success Redirects Without Diagnostics | P1 | 2026-02-02 |
 | [BUG-039](../_archive/bugs/bug-039-checkout-success-searchparams-not-awaited.md) | Checkout Success Page Crashes — searchParams Not Awaited | P1 | 2026-02-02 |
 | [BUG-028](../_archive/bugs/bug-028-inconsistent-cascade-delete-attempts.md) | Inconsistent Cascade Delete for Attempts | P2 | 2026-02-02 |
 | [BUG-024](../_archive/bugs/bug-024-entitlement-race-condition-past-due.md) | Entitlement Race Condition During Payment Failure | P2 | 2026-02-02 |
