@@ -1,15 +1,16 @@
 import Link from 'next/link';
-import type { PricingBanner } from './types';
+import type { ComponentType, ReactNode } from 'react';
+import type { PricingBanner } from '@/app/pricing/types';
 
 export type PricingViewProps = {
   isEntitled: boolean;
   banner: PricingBanner | null;
   subscribeMonthlyAction: () => Promise<void>;
   subscribeAnnualAction: () => Promise<void>;
-  SubscribeButtonComponent?: React.ComponentType<{ children: React.ReactNode }>;
+  SubscribeButtonComponent?: ComponentType<{ children: ReactNode }>;
 };
 
-function DefaultButton({ children }: { children: React.ReactNode }) {
+function DefaultButton({ children }: { children: ReactNode }) {
   return (
     <button
       type="submit"
@@ -100,7 +101,10 @@ export function PricingView({
                 <li>Detailed explanations</li>
                 <li>Progress tracking</li>
               </ul>
-              <form action={subscribeMonthlyAction}>
+              <form
+                action={subscribeMonthlyAction}
+                aria-label="Subscribe monthly plan"
+              >
                 <SubscribeButtonComponent>
                   Subscribe Monthly
                 </SubscribeButtonComponent>
@@ -123,7 +127,10 @@ export function PricingView({
                 <li>Everything in Pro Monthly</li>
                 <li>Best value</li>
               </ul>
-              <form action={subscribeAnnualAction}>
+              <form
+                action={subscribeAnnualAction}
+                aria-label="Subscribe annual plan"
+              >
                 <SubscribeButtonComponent>
                   Subscribe Annual
                 </SubscribeButtonComponent>

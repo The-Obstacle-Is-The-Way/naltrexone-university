@@ -51,7 +51,7 @@ function createQuestion(input: Partial<Question> & { id: string }): Question {
 }
 
 type Logger = {
-  warn: (msg: string, context?: Record<string, unknown>) => void;
+  warn: (context: Record<string, unknown>, msg: string) => void;
 };
 
 function createDeps(overrides?: {
@@ -323,8 +323,8 @@ describe('review-controller', () => {
         data: { rows: [], limit: 10, offset: 0 },
       });
       expect(logger.warn).toHaveBeenCalledWith(
-        'Missed question references missing question',
         { questionId: orphanedQuestionId },
+        'Missed question references missing question',
       );
     });
 

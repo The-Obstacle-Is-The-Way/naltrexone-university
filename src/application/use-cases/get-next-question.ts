@@ -67,7 +67,12 @@ export class GetNextQuestionUseCase {
     userId: string,
   ): PublicChoice[] {
     const seed = createQuestionSeed(userId, question.id);
-    const shuffledChoices = shuffleWithSeed(question.choices, seed);
+    const stableInput = question.choices.slice().sort((a, b) => {
+      const bySortOrder = a.sortOrder - b.sortOrder;
+      if (bySortOrder !== 0) return bySortOrder;
+      return a.id.localeCompare(b.id);
+    });
+    const shuffledChoices = shuffleWithSeed(stableInput, seed);
 
     return shuffledChoices.map((c, index) => ({
       id: c.id,

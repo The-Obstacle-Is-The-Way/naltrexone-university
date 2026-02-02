@@ -46,7 +46,7 @@ function createBookmark(
 }
 
 type Logger = {
-  warn: (msg: string, context?: Record<string, unknown>) => void;
+  warn: (context: Record<string, unknown>, msg: string) => void;
 };
 
 function createDeps(overrides?: {
@@ -348,8 +348,8 @@ describe('bookmark-controller', () => {
 
       expect(result).toEqual({ ok: true, data: { rows: [] } });
       expect(logger.warn).toHaveBeenCalledWith(
-        'Bookmark references missing question',
         { questionId: orphanedQuestionId },
+        'Bookmark references missing question',
       );
     });
 

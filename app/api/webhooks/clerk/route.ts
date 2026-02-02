@@ -1,23 +1,22 @@
 import { verifyWebhook } from '@clerk/nextjs/webhooks';
 import { createContainer } from '@/lib/container';
-import { stripe } from '@/lib/stripe';
 import type { ClerkWebhookEvent } from '@/src/adapters/controllers/clerk-webhook-controller';
 import { processClerkWebhook } from '@/src/adapters/controllers/clerk-webhook-controller';
+import type { ClerkWebhookRouteContainer } from './handler';
 import { createWebhookHandler } from './handler';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 async function cancelStripeCustomerSubscriptions(
+  stripe: ClerkWebhookRouteContainer['stripe'],
   stripeCustomerId: string,
 ): Promise<void> {
-  const subscriptions = await stripe.subscriptions.list({
+  for await (const subscription of stripe.subscriptions.list({
     customer: stripeCustomerId,
     status: 'all',
     limit: 100,
-  });
-
-  for (const subscription of subscriptions.data) {
+  })) {
     if (
       subscription.status === 'canceled' ||
       subscription.status === 'incomplete_expired'

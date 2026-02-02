@@ -11,10 +11,59 @@ function createDbMock() {
 
   const queryFindMany = vi.fn();
 
-  const selectGroupBy = vi.fn();
-  const selectWhere = vi.fn(() => ({ groupBy: selectGroupBy }));
-  const selectFrom = vi.fn(() => ({ where: selectWhere }));
-  const select = vi.fn(() => ({ from: selectFrom }));
+  const countWhere = vi.fn(async () => []);
+  const groupByExecute = vi.fn(async () => []);
+  const finalQueryExecute = vi.fn(async () => []);
+
+  const groupByAs = vi.fn((alias: string) => ({
+    __alias: alias,
+    __isLatestAttemptByQuestion: true,
+    questionId: Symbol.for(`${alias}.questionId`),
+    answeredAt: Symbol.for(`${alias}.answeredAt`),
+  }));
+
+  const groupBy = vi.fn(() => {
+    const promise = groupByExecute();
+    return Object.assign(promise, {
+      as: groupByAs,
+    });
+  });
+
+  const whereGroupBy = vi.fn(() => ({ groupBy }));
+
+  const offset = vi.fn(() => finalQueryExecute());
+  const limit = vi.fn(() => ({ offset }));
+  const orderBy = vi.fn(() => ({ limit }));
+  const whereFinal = vi.fn(() => ({ orderBy }));
+  const innerJoin = vi.fn(() => ({ where: whereFinal }));
+
+  const from = vi.fn((table: unknown) => {
+    if (
+      typeof table === 'object' &&
+      table !== null &&
+      '__isLatestAttemptByQuestion' in table
+    ) {
+      return {
+        innerJoin,
+      };
+    }
+
+    return {
+      where: whereGroupBy,
+    };
+  });
+
+  const select = vi.fn((fields: Record<string, unknown>) => {
+    if ('count' in fields) {
+      return {
+        from: () => ({
+          where: countWhere,
+        }),
+      };
+    }
+
+    return { from };
+  });
 
   return {
     insert,
@@ -28,10 +77,19 @@ function createDbMock() {
       insertReturning,
       insertValues,
       queryFindMany,
-      selectGroupBy,
-      selectWhere,
-      selectFrom,
       select,
+      from,
+      countWhere,
+      whereGroupBy,
+      groupBy,
+      groupByAs,
+      groupByExecute,
+      innerJoin,
+      whereFinal,
+      orderBy,
+      limit,
+      offset,
+      finalQueryExecute,
     },
   } as const;
 }
@@ -245,7 +303,7 @@ describe('DrizzleAttemptRepository', () => {
     it('returns only rows with answeredAt values', async () => {
       const db = createDbMock();
       const answeredAt = new Date('2026-02-01T00:00:00Z');
-      db._mocks.selectGroupBy.mockResolvedValue([
+      db._mocks.groupByExecute.mockResolvedValue([
         { questionId: 'q1', answeredAt },
         { questionId: 'q2', answeredAt: null },
       ]);
@@ -254,6 +312,100 @@ describe('DrizzleAttemptRepository', () => {
 
       await expect(
         repo.findMostRecentAnsweredAtByQuestionIds('user_1', ['q1', 'q2']),
+      ).resolves.toEqual([{ questionId: 'q1', answeredAt }]);
+    });
+  });
+
+  describe('count*', () => {
+    it('returns count values from the database', async () => {
+      const db = createDbMock();
+      const repo = new DrizzleAttemptRepository(db as unknown as RepoDb);
+
+      db._mocks.countWhere
+        .mockResolvedValueOnce([{ count: 10 }])
+        .mockResolvedValueOnce([{ count: 7 }])
+        .mockResolvedValueOnce([{ count: 3 }])
+        .mockResolvedValueOnce([{ count: 2 }]);
+
+      await expect(repo.countByUserId('user_1')).resolves.toBe(10);
+      await expect(repo.countCorrectByUserId('user_1')).resolves.toBe(7);
+      await expect(
+        repo.countByUserIdSince('user_1', new Date('2026-02-01T00:00:00Z')),
+      ).resolves.toBe(3);
+      await expect(
+        repo.countCorrectByUserIdSince(
+          'user_1',
+          new Date('2026-02-01T00:00:00Z'),
+        ),
+      ).resolves.toBe(2);
+    });
+  });
+
+  describe('listRecentByUserId', () => {
+    it('returns recent attempts mapped to domain objects', async () => {
+      const db = createDbMock();
+      const answeredAt = new Date('2026-02-02T00:00:00Z');
+      db._mocks.queryFindMany.mockResolvedValue([
+        {
+          id: 'attempt_1',
+          userId: 'user_1',
+          questionId: 'question_1',
+          practiceSessionId: null,
+          selectedChoiceId: 'choice_1',
+          isCorrect: true,
+          timeSpentSeconds: 12,
+          answeredAt,
+        },
+      ]);
+
+      const repo = new DrizzleAttemptRepository(db as unknown as RepoDb);
+
+      await expect(repo.listRecentByUserId('user_1', 5)).resolves.toEqual([
+        {
+          id: 'attempt_1',
+          userId: 'user_1',
+          questionId: 'question_1',
+          practiceSessionId: null,
+          selectedChoiceId: 'choice_1',
+          isCorrect: true,
+          timeSpentSeconds: 12,
+          answeredAt,
+        },
+      ]);
+    });
+  });
+
+  describe('listAnsweredAtByUserIdSince', () => {
+    it('returns answeredAt values from the database', async () => {
+      const db = createDbMock();
+      const answeredAt = new Date('2026-02-02T00:00:00Z');
+      db._mocks.queryFindMany.mockResolvedValue([{ answeredAt }]);
+
+      const repo = new DrizzleAttemptRepository(db as unknown as RepoDb);
+
+      await expect(
+        repo.listAnsweredAtByUserIdSince(
+          'user_1',
+          new Date('2026-02-01T00:00:00Z'),
+        ),
+      ).resolves.toEqual([answeredAt]);
+    });
+  });
+
+  describe('listMissedQuestionsByUserId', () => {
+    it('returns only rows with answeredAt values', async () => {
+      const db = createDbMock();
+      const answeredAt = new Date('2026-02-02T00:00:00Z');
+
+      db._mocks.finalQueryExecute.mockResolvedValue([
+        { questionId: 'q1', answeredAt },
+        { questionId: 'q2', answeredAt: null },
+      ]);
+
+      const repo = new DrizzleAttemptRepository(db as unknown as RepoDb);
+
+      await expect(
+        repo.listMissedQuestionsByUserId('user_1', 10, 0),
       ).resolves.toEqual([{ questionId: 'q1', answeredAt }]);
     });
   });

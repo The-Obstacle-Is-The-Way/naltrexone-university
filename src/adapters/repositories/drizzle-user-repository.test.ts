@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { DrizzleUserRepository } from '@/src/adapters/repositories/drizzle-user-repository';
 import { ApplicationError } from '@/src/application/errors';
-import { DrizzleUserRepository } from './drizzle-user-repository';
 
 type RepoDb = ConstructorParameters<typeof DrizzleUserRepository>[0];
 
@@ -361,6 +361,19 @@ describe('DrizzleUserRepository', () => {
 
       await expect(repo.deleteByClerkId('clerk_1')).resolves.toBe(true);
       expect(db._mocks.deleteFn).toHaveBeenCalledTimes(1);
+    });
+
+    it('throws INTERNAL_ERROR when delete query throws', async () => {
+      const db = createDbMock();
+      db._mocks.deleteFn.mockImplementation(() => {
+        throw new Error('boom');
+      });
+
+      const repo = new DrizzleUserRepository(db as unknown as RepoDb);
+
+      const promise = repo.deleteByClerkId('clerk_1');
+      await expect(promise).rejects.toBeInstanceOf(ApplicationError);
+      await expect(promise).rejects.toMatchObject({ code: 'INTERNAL_ERROR' });
     });
   });
 });

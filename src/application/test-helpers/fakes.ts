@@ -262,6 +262,8 @@ export class FakeAttemptRepository implements AttemptRepository {
   ): Promise<readonly Date[]> {
     return this.attempts
       .filter((a) => a.userId === userId && a.answeredAt >= since)
+      .slice()
+      .sort((a, b) => b.answeredAt.getTime() - a.answeredAt.getTime())
       .map((a) => a.answeredAt);
   }
 

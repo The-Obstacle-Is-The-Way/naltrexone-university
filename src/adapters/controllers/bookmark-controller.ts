@@ -28,7 +28,7 @@ type CheckEntitlementUseCase = {
 };
 
 type Logger = {
-  warn: (msg: string, context?: Record<string, unknown>) => void;
+  warn: (context: Record<string, unknown>, msg: string) => void;
 };
 
 export type ToggleBookmarkOutput = {
@@ -138,9 +138,10 @@ export async function getBookmarks(
     for (const bookmark of bookmarks) {
       const question = byId.get(bookmark.questionId);
       if (!question) {
-        d.logger?.warn('Bookmark references missing question', {
-          questionId: bookmark.questionId,
-        });
+        d.logger?.warn(
+          { questionId: bookmark.questionId },
+          'Bookmark references missing question',
+        );
         continue;
       }
 

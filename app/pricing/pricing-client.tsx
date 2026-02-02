@@ -1,8 +1,9 @@
 'use client';
 
+import type { ReactNode } from 'react';
 import { useFormStatus } from 'react-dom';
 
-export function SubscribeButton({ children }: { children: React.ReactNode }) {
+export function SubscribeButton({ children }: { children: ReactNode }) {
   const { pending } = useFormStatus();
   return (
     <button

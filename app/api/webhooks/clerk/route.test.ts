@@ -29,6 +29,12 @@ function createTestDeps() {
 
   const createContainer = vi.fn<() => ClerkWebhookRouteContainer>(() => ({
     logger: { error: loggerError },
+    stripe: {
+      subscriptions: {
+        list: async function* () {},
+        cancel: async () => undefined,
+      },
+    },
     createUserRepository,
     createStripeCustomerRepository,
   }));

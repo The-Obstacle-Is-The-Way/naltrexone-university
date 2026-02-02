@@ -1,8 +1,9 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import type { Tag } from '@/src/domain/entities';
 import { createPracticeSession } from '@/src/domain/test-helpers';
 import { ApplicationError } from '../errors';
 import {
+  FakeAttemptRepository,
   FakeAuthGateway,
   FakeBookmarkRepository,
   FakePaymentGateway,
@@ -450,6 +451,125 @@ describe('FakeStripeEventRepository', () => {
 
       const state = await repo.lock('evt_123');
       expect(state.error).toBe('Something went wrong');
+    });
+  });
+
+  describe('pruneProcessedBefore', () => {
+    it('deletes processed events older than cutoff (oldest-first, limited)', async () => {
+      vi.useFakeTimers();
+      try {
+        const repo = new FakeStripeEventRepository();
+
+        await repo.claim('evt_oldest', 'checkout.session.completed');
+        await repo.claim('evt_older', 'checkout.session.completed');
+        await repo.claim('evt_newer', 'checkout.session.completed');
+        await repo.claim('evt_recent', 'checkout.session.completed');
+        await repo.claim('evt_unprocessed', 'checkout.session.completed');
+
+        vi.setSystemTime(new Date('2026-02-01T00:00:00Z'));
+        await repo.markProcessed('evt_oldest');
+
+        vi.setSystemTime(new Date('2026-02-02T00:00:00Z'));
+        await repo.markProcessed('evt_older');
+
+        vi.setSystemTime(new Date('2026-02-03T00:00:00Z'));
+        await repo.markProcessed('evt_newer');
+
+        vi.setSystemTime(new Date('2026-02-10T00:00:00Z'));
+        await repo.markProcessed('evt_recent');
+
+        const cutoff = new Date('2026-02-04T00:00:00Z');
+
+        await expect(repo.pruneProcessedBefore(cutoff, 2)).resolves.toBe(2);
+
+        await expect(repo.lock('evt_oldest')).rejects.toMatchObject({
+          code: 'NOT_FOUND',
+        });
+        await expect(repo.lock('evt_older')).rejects.toMatchObject({
+          code: 'NOT_FOUND',
+        });
+
+        await expect(repo.lock('evt_newer')).resolves.toMatchObject({
+          processedAt: expect.any(Date),
+        });
+        await expect(repo.lock('evt_recent')).resolves.toMatchObject({
+          processedAt: expect.any(Date),
+        });
+        await expect(repo.lock('evt_unprocessed')).resolves.toMatchObject({
+          processedAt: null,
+        });
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it('returns 0 when limit is not a positive integer', async () => {
+      const repo = new FakeStripeEventRepository();
+      await repo.claim('evt_1', 'checkout.session.completed');
+      await repo.markProcessed('evt_1');
+
+      await expect(
+        repo.pruneProcessedBefore(new Date('2026-02-10T00:00:00Z'), 0),
+      ).resolves.toBe(0);
+    });
+  });
+});
+
+describe('FakeAttemptRepository', () => {
+  describe('listAnsweredAtByUserIdSince', () => {
+    it('returns answeredAt values in descending order', async () => {
+      const repo = new FakeAttemptRepository([
+        {
+          id: 'attempt-1',
+          userId: 'user-1',
+          questionId: 'q-1',
+          practiceSessionId: null,
+          selectedChoiceId: 'c-1',
+          isCorrect: true,
+          timeSpentSeconds: 0,
+          answeredAt: new Date('2026-02-01T00:00:00Z'),
+        },
+        {
+          id: 'attempt-2',
+          userId: 'user-1',
+          questionId: 'q-2',
+          practiceSessionId: null,
+          selectedChoiceId: 'c-2',
+          isCorrect: true,
+          timeSpentSeconds: 0,
+          answeredAt: new Date('2026-02-03T00:00:00Z'),
+        },
+        {
+          id: 'attempt-3',
+          userId: 'user-1',
+          questionId: 'q-3',
+          practiceSessionId: null,
+          selectedChoiceId: 'c-3',
+          isCorrect: true,
+          timeSpentSeconds: 0,
+          answeredAt: new Date('2026-01-01T00:00:00Z'),
+        },
+        {
+          id: 'attempt-4',
+          userId: 'other',
+          questionId: 'q-4',
+          practiceSessionId: null,
+          selectedChoiceId: 'c-4',
+          isCorrect: true,
+          timeSpentSeconds: 0,
+          answeredAt: new Date('2026-02-02T00:00:00Z'),
+        },
+      ]);
+
+      await expect(
+        repo.listAnsweredAtByUserIdSince(
+          'user-1',
+          new Date('2026-02-01T00:00:00Z'),
+        ),
+      ).resolves.toEqual([
+        new Date('2026-02-03T00:00:00Z'),
+        new Date('2026-02-01T00:00:00Z'),
+      ]);
     });
   });
 });

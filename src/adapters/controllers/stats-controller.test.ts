@@ -51,7 +51,7 @@ function createQuestion(input: Partial<Question> & { id: string }): Question {
 }
 
 type Logger = {
-  warn: (msg: string, context?: Record<string, unknown>) => void;
+  warn: (context: Record<string, unknown>, msg: string) => void;
 };
 
 function createDeps(overrides?: {
@@ -319,8 +319,8 @@ describe('stats-controller', () => {
         expect(result.data.recentActivity).toEqual([]);
       }
       expect(logger.warn).toHaveBeenCalledWith(
-        'Recent activity references missing question',
         { questionId: orphanedQuestionId },
+        'Recent activity references missing question',
       );
     });
 

@@ -26,7 +26,7 @@ type CheckEntitlementUseCase = {
 };
 
 type Logger = {
-  warn: (msg: string, context?: Record<string, unknown>) => void;
+  warn: (context: Record<string, unknown>, msg: string) => void;
 };
 
 export type UserStatsOutput = {
@@ -137,9 +137,10 @@ export async function getUserStats(
     for (const attempt of recentAttempts) {
       const slug = slugByQuestionId.get(attempt.questionId);
       if (!slug) {
-        d.logger?.warn('Recent activity references missing question', {
-          questionId: attempt.questionId,
-        });
+        d.logger?.warn(
+          { questionId: attempt.questionId },
+          'Recent activity references missing question',
+        );
         continue;
       }
 

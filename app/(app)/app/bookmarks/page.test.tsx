@@ -2,7 +2,7 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 
-import { BookmarksView, renderBookmarks } from './page';
+import { BookmarksView, renderBookmarks } from '@/app/(app)/app/bookmarks/page';
 
 describe('app/(app)/app/bookmarks', () => {
   it('renders bookmarks', () => {

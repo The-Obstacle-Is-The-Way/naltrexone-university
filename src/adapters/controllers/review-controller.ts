@@ -25,7 +25,7 @@ type CheckEntitlementUseCase = {
 };
 
 type Logger = {
-  warn: (msg: string, context?: Record<string, unknown>) => void;
+  warn: (context: Record<string, unknown>, msg: string) => void;
 };
 
 export type MissedQuestionRow = {
@@ -102,9 +102,10 @@ export async function getMissedQuestions(
     for (const m of page) {
       const question = byId.get(m.questionId);
       if (!question) {
-        d.logger?.warn('Missed question references missing question', {
-          questionId: m.questionId,
-        });
+        d.logger?.warn(
+          { questionId: m.questionId },
+          'Missed question references missing question',
+        );
         continue;
       }
       rows.push({

@@ -135,11 +135,19 @@ export class DrizzleUserRepository implements UserRepository {
   }
 
   async deleteByClerkId(clerkId: string): Promise<boolean> {
-    const [deleted] = await this.db
-      .delete(users)
-      .where(eq(users.clerkUserId, clerkId))
-      .returning({ id: users.id });
+    try {
+      const [deleted] = await this.db
+        .delete(users)
+        .where(eq(users.clerkUserId, clerkId))
+        .returning({ id: users.id });
 
-    return !!deleted;
+      return !!deleted;
+    } catch (error) {
+      if (error instanceof ApplicationError) throw error;
+      throw new ApplicationError(
+        'INTERNAL_ERROR',
+        'Failed to delete user by clerkId',
+      );
+    }
   }
 }

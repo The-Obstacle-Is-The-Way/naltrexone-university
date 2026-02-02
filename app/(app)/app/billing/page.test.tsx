@@ -3,17 +3,10 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 import type { AuthGateway } from '@/src/application/ports/gateways';
 import type { SubscriptionRepository } from '@/src/application/ports/repositories';
-import type { Subscription } from '@/src/domain/entities';
+import type { Subscription, User } from '@/src/domain/entities';
 import { loadBillingData } from './page';
 
-type UserLike = {
-  id: string;
-  email: string;
-  createdAt: Date;
-  updatedAt: Date;
-};
-
-function createUser(): UserLike {
+function createUser(): User {
   return {
     id: 'user_1',
     email: 'user@example.com',
@@ -42,8 +35,8 @@ describe('app/(app)/app/billing/page', () => {
       const user = createUser();
 
       const authGateway: AuthGateway = {
-        getCurrentUser: async () => user as never,
-        requireUser: async () => user as never,
+        getCurrentUser: async () => user,
+        requireUser: async () => user,
       };
 
       const subscriptionRepository: SubscriptionRepository = {
@@ -67,7 +60,10 @@ describe('app/(app)/app/billing/page', () => {
       const subscription = createSubscription();
 
       const html = renderToStaticMarkup(
-        <BillingContent subscription={subscription} />,
+        <BillingContent
+          subscription={subscription}
+          manageBillingAction={async () => undefined}
+        />,
       );
 
       expect(html).toContain('Manage in Stripe');

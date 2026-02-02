@@ -32,11 +32,13 @@ export async function loadBillingData(
 }
 
 /** Extracted for testing (Server Components can't be directly tested) */
-export function BillingContent({
-  subscription,
-}: {
-  subscription: Subscription | null;
-}) {
+export type BillingContentProps =
+  | { subscription: Subscription; manageBillingAction: () => Promise<void> }
+  | { subscription: null; manageBillingAction?: never };
+
+export function BillingContent(props: BillingContentProps) {
+  const subscription = props.subscription;
+
   return (
     <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -55,11 +57,11 @@ export function BillingContent({
           )}
         </div>
 
-        {subscription && (
-          <form>
+        {subscription ? (
+          <form action={props.manageBillingAction}>
             <ManageBillingButton />
           </form>
-        )}
+        ) : null}
       </div>
     </div>
   );
@@ -87,35 +89,12 @@ export default async function BillingPage() {
       </div>
 
       {subscription ? (
-        <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="space-y-1">
-              <div className="text-sm font-medium text-foreground">
-                Subscription
-              </div>
-              <div className="text-sm text-muted-foreground">
-                {subscription.plan} · {subscription.status}
-              </div>
-            </div>
-
-            <form action={manageBilling}>
-              <ManageBillingButton />
-            </form>
-          </div>
-        </div>
+        <BillingContent
+          subscription={subscription}
+          manageBillingAction={manageBilling}
+        />
       ) : (
-        <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="space-y-1">
-              <div className="text-sm font-medium text-foreground">
-                Subscription
-              </div>
-              <div className="text-sm text-muted-foreground">
-                No subscription found.
-              </div>
-            </div>
-          </div>
-        </div>
+        <BillingContent subscription={null} />
       )}
     </div>
   );

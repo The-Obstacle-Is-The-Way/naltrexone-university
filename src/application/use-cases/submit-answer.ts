@@ -52,13 +52,20 @@ export class SubmitAnswerUseCase {
       throw new ApplicationError('NOT_FOUND', 'Practice session not found');
     }
 
+    const rawTimeSpentSeconds = input.timeSpentSeconds;
+    const timeSpentSeconds =
+      typeof rawTimeSpentSeconds === 'number' &&
+      Number.isFinite(rawTimeSpentSeconds)
+        ? Math.max(0, rawTimeSpentSeconds)
+        : 0;
+
     const attempt = await this.attempts.insert({
       userId: input.userId,
       questionId: question.id,
       practiceSessionId: session ? session.id : null,
       selectedChoiceId: input.choiceId,
       isCorrect: grade.isCorrect,
-      timeSpentSeconds: input.timeSpentSeconds ?? 0,
+      timeSpentSeconds,
     });
 
     const explanationMd =

@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 
 describe('MobileNav', () => {
   it('renders hamburger button on initial render', async () => {
-    const { MobileNav } = await import('./mobile-nav');
+    const { MobileNav } = await import('@/components/mobile-nav');
 
     const html = renderToStaticMarkup(<MobileNav />);
 
@@ -14,7 +14,7 @@ describe('MobileNav', () => {
   });
 
   it('does not render links when menu is closed (initial state)', async () => {
-    const { MobileNav } = await import('./mobile-nav');
+    const { MobileNav } = await import('@/components/mobile-nav');
 
     const html = renderToStaticMarkup(<MobileNav />);
 
@@ -28,7 +28,7 @@ describe('MobileNav', () => {
 
   it('renders navigation links when open (MobileNavOpen variant)', async () => {
     // For static render tests, we test the expanded state via a test-only component
-    const { MobileNavOpen } = await import('./mobile-nav');
+    const { MobileNavOpen } = await import('@/components/mobile-nav');
 
     const html = renderToStaticMarkup(<MobileNavOpen />);
 
@@ -45,7 +45,7 @@ describe('MobileNav', () => {
   });
 
   it('has sm:hidden class to only show on mobile', async () => {
-    const { MobileNav } = await import('./mobile-nav');
+    const { MobileNav } = await import('@/components/mobile-nav');
 
     const html = renderToStaticMarkup(<MobileNav />);
 

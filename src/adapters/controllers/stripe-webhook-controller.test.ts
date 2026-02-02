@@ -188,39 +188,41 @@ describe('processStripeWebhook', () => {
 
   it('prunes old processed stripe events after successful processing', async () => {
     vi.useFakeTimers();
-    const now = new Date('2026-02-01T00:00:00Z');
-    vi.setSystemTime(now);
+    try {
+      const now = new Date('2026-02-01T00:00:00Z');
+      vi.setSystemTime(now);
 
-    const paymentGateway = new FakePaymentGateway({
-      stripeCustomerId: 'cus_test',
-      checkoutUrl: 'https://stripe/checkout',
-      portalUrl: 'https://stripe/portal',
-      webhookResult: {
-        eventId: 'evt_prune',
-        type: 'checkout.session.completed',
-      },
-    });
+      const paymentGateway = new FakePaymentGateway({
+        stripeCustomerId: 'cus_test',
+        checkoutUrl: 'https://stripe/checkout',
+        portalUrl: 'https://stripe/portal',
+        webhookResult: {
+          eventId: 'evt_prune',
+          type: 'checkout.session.completed',
+        },
+      });
 
-    const stripeEvents = new FakeStripeEventRepository();
-    const subscriptions = new FakeSubscriptionRepository();
-    const stripeCustomers = new FakeStripeCustomerRepository();
+      const stripeEvents = new FakeStripeEventRepository();
+      const subscriptions = new FakeSubscriptionRepository();
+      const stripeCustomers = new FakeStripeCustomerRepository();
 
-    await processStripeWebhook(
-      {
-        paymentGateway,
-        transaction: async (fn) =>
-          fn({ stripeEvents, subscriptions, stripeCustomers }),
-      },
-      { rawBody: 'raw', signature: 'sig' },
-    );
+      await processStripeWebhook(
+        {
+          paymentGateway,
+          transaction: async (fn) =>
+            fn({ stripeEvents, subscriptions, stripeCustomers }),
+        },
+        { rawBody: 'raw', signature: 'sig' },
+      );
 
-    const ninetyDaysMs = 86_400_000 * 90;
-    expect(stripeEvents.pruneProcessedBefore).toHaveBeenCalledWith(
-      new Date(now.getTime() - ninetyDaysMs),
-      100,
-    );
-
-    vi.useRealTimers();
+      const ninetyDaysMs = 86_400_000 * 90;
+      expect(stripeEvents.pruneProcessedBefore).toHaveBeenCalledWith(
+        new Date(now.getTime() - ninetyDaysMs),
+        100,
+      );
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('returns early when the event was already processed', async () => {

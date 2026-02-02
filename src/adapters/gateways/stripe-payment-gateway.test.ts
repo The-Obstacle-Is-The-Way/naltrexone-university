@@ -390,6 +390,180 @@ describe('StripePaymentGateway', () => {
     });
   });
 
+  it('normalizes customer.subscription.resumed events', async () => {
+    const constructEvent = vi.fn(() => ({
+      id: 'evt_3',
+      type: 'customer.subscription.resumed',
+      data: {
+        object: {
+          id: 'sub_789',
+          customer: 'cus_789',
+          status: 'active',
+          current_period_end: 1_700_000_000,
+          cancel_at_period_end: false,
+          metadata: { user_id: 'user_3' },
+          items: { data: [{ price: { id: 'price_m' } }] },
+        },
+      },
+    }));
+
+    const stripe = {
+      customers: {
+        create: vi.fn(async () => ({ id: 'cus_123' })),
+      },
+      checkout: {
+        sessions: {
+          create: vi.fn(async () => ({ url: 'https://stripe/checkout' })),
+          list: vi.fn(async () => ({ data: [] })),
+        },
+      },
+      billingPortal: {
+        sessions: {
+          create: vi.fn(async () => ({ url: 'https://stripe/portal' })),
+        },
+      },
+      webhooks: { constructEvent },
+    } as const;
+
+    const gateway = new StripePaymentGateway({
+      stripe,
+      webhookSecret: 'whsec_1',
+      priceIds: { monthly: 'price_m', annual: 'price_a' },
+    });
+
+    await expect(
+      gateway.processWebhookEvent('raw_body', 'sig_1'),
+    ).resolves.toEqual({
+      eventId: 'evt_3',
+      type: 'customer.subscription.resumed',
+      subscriptionUpdate: {
+        userId: 'user_3',
+        stripeCustomerId: 'cus_789',
+        stripeSubscriptionId: 'sub_789',
+        plan: 'monthly',
+        status: 'active',
+        currentPeriodEnd: new Date(1_700_000_000 * 1000),
+        cancelAtPeriodEnd: false,
+      },
+    });
+  });
+
+  it('normalizes customer.subscription.pending_update_applied events', async () => {
+    const constructEvent = vi.fn(() => ({
+      id: 'evt_4',
+      type: 'customer.subscription.pending_update_applied',
+      data: {
+        object: {
+          id: 'sub_901',
+          customer: 'cus_901',
+          status: 'active',
+          current_period_end: 1_700_000_000,
+          cancel_at_period_end: false,
+          metadata: { user_id: 'user_4' },
+          items: { data: [{ price: { id: 'price_a' } }] },
+        },
+      },
+    }));
+
+    const stripe = {
+      customers: {
+        create: vi.fn(async () => ({ id: 'cus_123' })),
+      },
+      checkout: {
+        sessions: {
+          create: vi.fn(async () => ({ url: 'https://stripe/checkout' })),
+          list: vi.fn(async () => ({ data: [] })),
+        },
+      },
+      billingPortal: {
+        sessions: {
+          create: vi.fn(async () => ({ url: 'https://stripe/portal' })),
+        },
+      },
+      webhooks: { constructEvent },
+    } as const;
+
+    const gateway = new StripePaymentGateway({
+      stripe,
+      webhookSecret: 'whsec_1',
+      priceIds: { monthly: 'price_m', annual: 'price_a' },
+    });
+
+    await expect(
+      gateway.processWebhookEvent('raw_body', 'sig_1'),
+    ).resolves.toEqual({
+      eventId: 'evt_4',
+      type: 'customer.subscription.pending_update_applied',
+      subscriptionUpdate: {
+        userId: 'user_4',
+        stripeCustomerId: 'cus_901',
+        stripeSubscriptionId: 'sub_901',
+        plan: 'annual',
+        status: 'active',
+        currentPeriodEnd: new Date(1_700_000_000 * 1000),
+        cancelAtPeriodEnd: false,
+      },
+    });
+  });
+
+  it('normalizes customer.subscription.pending_update_expired events', async () => {
+    const constructEvent = vi.fn(() => ({
+      id: 'evt_5',
+      type: 'customer.subscription.pending_update_expired',
+      data: {
+        object: {
+          id: 'sub_902',
+          customer: 'cus_902',
+          status: 'active',
+          current_period_end: 1_700_000_000,
+          cancel_at_period_end: false,
+          metadata: { user_id: 'user_5' },
+          items: { data: [{ price: { id: 'price_m' } }] },
+        },
+      },
+    }));
+
+    const stripe = {
+      customers: {
+        create: vi.fn(async () => ({ id: 'cus_123' })),
+      },
+      checkout: {
+        sessions: {
+          create: vi.fn(async () => ({ url: 'https://stripe/checkout' })),
+          list: vi.fn(async () => ({ data: [] })),
+        },
+      },
+      billingPortal: {
+        sessions: {
+          create: vi.fn(async () => ({ url: 'https://stripe/portal' })),
+        },
+      },
+      webhooks: { constructEvent },
+    } as const;
+
+    const gateway = new StripePaymentGateway({
+      stripe,
+      webhookSecret: 'whsec_1',
+      priceIds: { monthly: 'price_m', annual: 'price_a' },
+    });
+
+    await expect(
+      gateway.processWebhookEvent('raw_body', 'sig_1'),
+    ).resolves.toEqual({
+      eventId: 'evt_5',
+      type: 'customer.subscription.pending_update_expired',
+      subscriptionUpdate: {
+        userId: 'user_5',
+        stripeCustomerId: 'cus_902',
+        stripeSubscriptionId: 'sub_902',
+        plan: 'monthly',
+        status: 'active',
+        currentPeriodEnd: new Date(1_700_000_000 * 1000),
+        cancelAtPeriodEnd: false,
+      },
+    });
+  });
+
   it('throws INVALID_WEBHOOK_SIGNATURE when webhook signature verification fails', async () => {
     const stripe = {
       customers: {

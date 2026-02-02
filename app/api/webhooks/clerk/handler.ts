@@ -8,17 +8,33 @@ import type {
   UserRepository,
 } from '@/src/application/ports/repositories';
 
+type StripeClient = {
+  subscriptions: {
+    list: (params: {
+      customer: string;
+      status: 'all';
+      limit?: number;
+    }) => AsyncIterable<{ id: string; status: string }>;
+    cancel: (subscriptionId: string) => Promise<unknown>;
+  };
+};
+
 type ClerkWebhookRouteLogger = {
   error: (context: unknown, message: string) => void;
 };
 
 export type ClerkWebhookRouteContainer = {
   logger: ClerkWebhookRouteLogger;
+  stripe: StripeClient;
   createUserRepository: () => UserRepository;
   createStripeCustomerRepository: () => StripeCustomerRepository;
 };
 
 type VerifyWebhookFn = (req: Request) => Promise<ClerkWebhookEvent>;
+type CancelStripeCustomerSubscriptionsFn = (
+  stripe: StripeClient,
+  stripeCustomerId: string,
+) => Promise<void>;
 
 export function createWebhookHandler(
   createContainer: () => ClerkWebhookRouteContainer,
@@ -27,9 +43,7 @@ export function createWebhookHandler(
     deps: ClerkWebhookDeps,
     event: ClerkWebhookEvent,
   ) => Promise<void>,
-  cancelStripeCustomerSubscriptions: (
-    stripeCustomerId: string,
-  ) => Promise<void>,
+  cancelStripeCustomerSubscriptions: CancelStripeCustomerSubscriptionsFn,
 ) {
   return async function POST(req: Request) {
     const container = createContainer();
@@ -49,7 +63,11 @@ export function createWebhookHandler(
         {
           userRepository: container.createUserRepository(),
           stripeCustomerRepository: container.createStripeCustomerRepository(),
-          cancelStripeCustomerSubscriptions,
+          cancelStripeCustomerSubscriptions: (stripeCustomerId: string) =>
+            cancelStripeCustomerSubscriptions(
+              container.stripe,
+              stripeCustomerId,
+            ),
         },
         event,
       );

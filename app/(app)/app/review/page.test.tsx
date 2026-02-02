@@ -2,7 +2,7 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 
-import { ReviewView, renderReview } from './page';
+import { ReviewView, renderReview } from '@/app/(app)/app/review/page';
 
 describe('app/(app)/app/review', () => {
   it('renders missed questions', () => {
