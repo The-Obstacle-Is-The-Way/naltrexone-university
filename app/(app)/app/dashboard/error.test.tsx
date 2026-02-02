@@ -2,17 +2,18 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 
-describe('app/error', () => {
-  it('renders a recoverable error UI', async () => {
-    const ErrorPage = (await import('./error')).default;
+describe('app/(app)/app/dashboard/error', () => {
+  it('renders a contextual error boundary', async () => {
+    const DashboardError = (await import('./error')).default;
 
     const error = new Error('boom');
     (error as Error & { digest?: string }).digest = 'digest_123';
+
     const html = renderToStaticMarkup(
-      <ErrorPage error={error} reset={() => {}} />,
+      <DashboardError error={error} reset={() => {}} />,
     );
 
-    expect(html).toContain('Something went wrong');
+    expect(html).toContain('Dashboard');
     expect(html).toContain('Try again');
     expect(html).toContain('Error ID');
     expect(html).toContain('digest_123');

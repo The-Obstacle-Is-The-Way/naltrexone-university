@@ -3,8 +3,9 @@
 import Link from 'next/link';
 import { useEffect } from 'react';
 import { Button } from '@/components/ui/button';
+import { ROUTES } from '@/lib/routes';
 
-export default function ErrorPage({
+export default function PracticeError({
   error,
   reset,
 }: {
@@ -12,16 +13,15 @@ export default function ErrorPage({
   reset: () => void;
 }) {
   useEffect(() => {
-    console.error('app/error.tsx:', error);
+    console.error('app/(app)/app/practice/error.tsx:', error);
   }, [error]);
 
   return (
     <div className="flex min-h-[50vh] items-center justify-center bg-background text-foreground">
       <div className="w-full max-w-md space-y-4 px-4 text-center">
-        <h2 className="text-xl font-semibold">Something went wrong</h2>
+        <h2 className="text-xl font-semibold">Practice error</h2>
         <p className="text-sm text-muted-foreground">
-          Please try again. If the problem persists, contact support and share
-          the error ID.
+          We couldn&apos;t load practice right now. Please try again.
         </p>
         {error.digest ? (
           <p className="text-xs text-muted-foreground">
@@ -33,7 +33,7 @@ export default function ErrorPage({
             Try again
           </Button>
           <Button asChild variant="outline">
-            <Link href="/">Go home</Link>
+            <Link href={ROUTES.APP_DASHBOARD}>Back to Dashboard</Link>
           </Button>
         </div>
       </div>
