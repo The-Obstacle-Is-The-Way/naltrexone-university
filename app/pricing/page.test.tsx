@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { renderToStaticMarkup } from 'react-dom/server';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { AuthGateway } from '@/src/application/ports/gateways';
 
 vi.mock('server-only', () => ({}));
@@ -10,6 +10,11 @@ vi.mock('next/link', () => ({
 }));
 
 describe('app/pricing', () => {
+  afterEach(() => {
+    vi.resetModules();
+    vi.restoreAllMocks();
+  });
+
   it('renders subscribe actions when user is not subscribed', async () => {
     const { PricingView } = await import('./page');
 
@@ -222,5 +227,29 @@ describe('app/pricing', () => {
 
     await expect(action()).rejects.toThrow('/pricing?checkout=error');
     expect(createCheckoutSessionFn).toHaveBeenCalledWith({ plan: 'monthly' });
+  });
+
+  it('renders PricingPage with container-provided dependencies', async () => {
+    vi.doMock('@/lib/container', () => ({
+      createContainer: () => ({
+        createAuthGateway: () => ({
+          getCurrentUser: async () => null,
+          requireUser: async () => {
+            throw new Error('not used');
+          },
+        }),
+        createCheckEntitlementUseCase: () => ({
+          execute: async () => ({ isEntitled: false }),
+        }),
+      }),
+    }));
+
+    const PricingPage = (await import('./page')).default;
+
+    const element = await PricingPage({ searchParams: {} });
+    const html = renderToStaticMarkup(element);
+
+    expect(html).toContain('Pricing');
+    expect(html).toContain('Subscribe Monthly');
   });
 });

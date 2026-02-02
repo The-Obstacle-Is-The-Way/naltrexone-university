@@ -234,6 +234,32 @@ describe('practice-controller', () => {
         },
       });
     });
+
+    it('loads dependencies from the container when deps are omitted', async () => {
+      vi.resetModules();
+
+      const deps = createDeps({
+        candidateIds: ['q1'],
+        createdSessionId: 'session_123',
+      });
+
+      vi.doMock('@/lib/container', () => ({
+        createContainer: () => ({
+          createPracticeControllerDeps: () => deps,
+        }),
+      }));
+
+      const { startPracticeSession } = await import('./practice-controller');
+
+      const result = await startPracticeSession({
+        mode: 'tutor',
+        count: 1,
+        tagSlugs: [],
+        difficulties: [],
+      });
+
+      expect(result).toEqual({ ok: true, data: { sessionId: 'session_123' } });
+    });
   });
 
   describe('endPracticeSession', () => {
@@ -279,6 +305,28 @@ describe('practice-controller', () => {
         ok: false,
         error: { code: 'CONFLICT', message: 'Practice session already ended' },
       });
+    });
+
+    it('returns INTERNAL_ERROR when endedAt is missing from the session', async () => {
+      const sessionId = '11111111-1111-1111-1111-111111111111';
+      const deps = createDeps({
+        endedSession: createSession({
+          id: sessionId,
+          startedAt: new Date('2026-02-01T00:00:00Z'),
+          endedAt: null,
+        }),
+      });
+
+      const result = await endPracticeSession({ sessionId }, deps as never);
+
+      expect(result).toEqual({
+        ok: false,
+        error: {
+          code: 'INTERNAL_ERROR',
+          message: 'Practice session did not end',
+        },
+      });
+      expect(deps.attemptRepository.findBySessionId).not.toHaveBeenCalled();
     });
 
     it('ends the session and returns a summary', async () => {

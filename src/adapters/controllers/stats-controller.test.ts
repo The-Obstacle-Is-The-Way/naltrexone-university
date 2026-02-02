@@ -203,5 +203,33 @@ describe('stats-controller', () => {
         },
       });
     });
+
+    it('loads dependencies from the container when deps are omitted', async () => {
+      vi.resetModules();
+
+      const deps = createDeps({ attempts: [], questionsById: {} });
+
+      vi.doMock('@/lib/container', () => ({
+        createContainer: () => ({
+          createStatsControllerDeps: () => deps,
+        }),
+      }));
+
+      const { getUserStats } = await import('./stats-controller');
+
+      const result = await getUserStats({});
+
+      expect(result).toEqual({
+        ok: true,
+        data: {
+          totalAnswered: 0,
+          accuracyOverall: 0,
+          answeredLast7Days: 0,
+          accuracyLast7Days: 0,
+          currentStreakDays: 0,
+          recentActivity: [],
+        },
+      });
+    });
   });
 });

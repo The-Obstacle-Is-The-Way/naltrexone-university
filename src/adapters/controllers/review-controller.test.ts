@@ -207,5 +207,49 @@ describe('review-controller', () => {
         },
       });
     });
+
+    it('loads dependencies from the container when deps are omitted', async () => {
+      vi.resetModules();
+
+      const deps = createDeps({
+        attempts: [
+          createAttempt({
+            questionId: 'q1',
+            isCorrect: false,
+            answeredAt: new Date('2026-02-01T12:00:00Z'),
+          }),
+        ],
+        questionsById: {
+          q1: createQuestion({ id: 'q1', slug: 'q-1' }),
+        },
+      });
+
+      vi.doMock('@/lib/container', () => ({
+        createContainer: () => ({
+          createReviewControllerDeps: () => deps,
+        }),
+      }));
+
+      const { getMissedQuestions } = await import('./review-controller');
+
+      const result = await getMissedQuestions({ limit: 10, offset: 0 });
+
+      expect(result).toEqual({
+        ok: true,
+        data: {
+          rows: [
+            {
+              questionId: 'q1',
+              slug: 'q-1',
+              stemMd: 'Stem for q1',
+              difficulty: 'easy',
+              lastAnsweredAt: '2026-02-01T12:00:00.000Z',
+            },
+          ],
+          limit: 10,
+          offset: 0,
+        },
+      });
+    });
   });
 });

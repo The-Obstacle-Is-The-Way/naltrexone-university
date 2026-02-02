@@ -209,6 +209,25 @@ describe('bookmark-controller', () => {
         questionId,
       );
     });
+
+    it('loads dependencies from the container when deps are omitted', async () => {
+      vi.resetModules();
+
+      const deps = createDeps({ bookmarkWasRemoved: false });
+
+      vi.doMock('@/lib/container', () => ({
+        createContainer: () => ({
+          createBookmarkControllerDeps: () => deps,
+        }),
+      }));
+
+      const { toggleBookmark } = await import('./bookmark-controller');
+
+      const questionId = '11111111-1111-1111-1111-111111111111';
+      const result = await toggleBookmark({ questionId });
+
+      expect(result).toEqual({ ok: true, data: { bookmarked: true } });
+    });
   });
 
   describe('getBookmarks', () => {
@@ -291,6 +310,20 @@ describe('bookmark-controller', () => {
         '11111111-1111-1111-1111-111111111111',
         '22222222-2222-2222-2222-222222222222',
       ]);
+    });
+
+    it('returns INTERNAL_ERROR when a dependency throws', async () => {
+      const deps = createDeps();
+      deps.bookmarkRepository.listByUserId = vi.fn(async () => {
+        throw new Error('boom');
+      });
+
+      const result = await getBookmarks({}, deps);
+
+      expect(result).toEqual({
+        ok: false,
+        error: { code: 'INTERNAL_ERROR', message: 'Internal error' },
+      });
     });
   });
 });
