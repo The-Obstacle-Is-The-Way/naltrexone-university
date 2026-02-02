@@ -75,4 +75,62 @@ describe('AuthNav', () => {
     expect(html).toContain('data-testid="user-button"');
     expect(html).not.toContain('href="/pricing"');
   });
+
+  it('renders an unauthenticated UI when there is no current user', async () => {
+    process.env.NEXT_PUBLIC_SKIP_CLERK = 'false';
+
+    const { AuthNav } = await import('./auth-nav');
+
+    const authGateway: AuthGateway = {
+      getCurrentUser: vi.fn(async () => null),
+      requireUser: vi.fn(async () => {
+        throw new Error('not used');
+      }),
+    };
+
+    const checkEntitlementUseCase = {
+      execute: vi.fn(async () => ({ isEntitled: true })),
+    };
+
+    const element = await AuthNav({
+      deps: { authGateway, checkEntitlementUseCase },
+    });
+    const html = renderToStaticMarkup(element);
+
+    expect(html).toContain('href="/pricing"');
+    expect(html).toContain('href="/sign-in"');
+    expect(html).not.toContain('data-testid="user-button"');
+    expect(checkEntitlementUseCase.execute).not.toHaveBeenCalled();
+  });
+
+  it('shows a Pricing link when the user is not entitled', async () => {
+    process.env.NEXT_PUBLIC_SKIP_CLERK = 'false';
+
+    const { AuthNav } = await import('./auth-nav');
+
+    const authGateway: AuthGateway = {
+      getCurrentUser: vi.fn(async () => ({
+        id: 'user_1',
+        email: 'user@example.com',
+        createdAt: new Date('2026-02-01T00:00:00Z'),
+        updatedAt: new Date('2026-02-01T00:00:00Z'),
+      })),
+      requireUser: vi.fn(async () => {
+        throw new Error('not used');
+      }),
+    };
+
+    const checkEntitlementUseCase = {
+      execute: vi.fn(async () => ({ isEntitled: false })),
+    };
+
+    const element = await AuthNav({
+      deps: { authGateway, checkEntitlementUseCase },
+    });
+    const html = renderToStaticMarkup(element);
+
+    expect(html).toContain('href="/pricing"');
+    expect(html).toContain('data-testid="user-button"');
+    expect(html).not.toContain('href="/app/dashboard"');
+  });
 });

@@ -33,6 +33,127 @@ function getErrorMessage(result: ActionResult<unknown>): string {
   return result.error.message;
 }
 
+export type PracticeViewProps = {
+  loadState: LoadState;
+  question: NextQuestion | null;
+  selectedChoiceId: string | null;
+  submitResult: SubmitAnswerOutput | null;
+  isPending: boolean;
+  bookmarkStatus: 'idle' | 'loading' | 'error';
+  isBookmarked: boolean;
+  canSubmit: boolean;
+  onTryAgain: () => void;
+  onToggleBookmark: () => void;
+  onSelectChoice: (choiceId: string) => void;
+  onSubmit: () => void;
+  onNextQuestion: () => void;
+};
+
+export function PracticeView(props: PracticeViewProps) {
+  const correctChoiceId = props.submitResult?.correctChoiceId ?? null;
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-baseline sm:justify-between">
+          <div>
+            <h1 className="text-2xl font-semibold text-foreground">Practice</h1>
+            <p className="mt-1 text-muted-foreground">
+              Answer one question at a time.
+            </p>
+          </div>
+          <Link
+            href="/app/dashboard"
+            className="text-sm font-medium text-muted-foreground hover:text-foreground"
+          >
+            Back to Dashboard
+          </Link>
+        </div>
+      </div>
+
+      {props.loadState.status === 'error' ? (
+        <div className="rounded-2xl border border-border bg-card p-6 text-sm text-destructive shadow-sm">
+          <div>{props.loadState.message}</div>
+          <button
+            type="button"
+            className="mt-4 inline-flex items-center justify-center rounded-full border border-border bg-background px-4 py-2 text-sm font-medium text-foreground hover:bg-muted"
+            onClick={props.onTryAgain}
+          >
+            Try again
+          </button>
+        </div>
+      ) : null}
+
+      {props.loadState.status === 'loading' ? (
+        <div className="rounded-2xl border border-border bg-card p-6 text-sm text-muted-foreground shadow-sm">
+          Loading question…
+        </div>
+      ) : null}
+
+      {props.loadState.status === 'ready' && props.question === null ? (
+        <div className="rounded-2xl border border-border bg-card p-6 text-sm text-muted-foreground shadow-sm">
+          No more questions found.
+        </div>
+      ) : null}
+
+      {props.question ? (
+        <div className="flex items-center justify-end">
+          <button
+            type="button"
+            className="inline-flex items-center justify-center rounded-full border border-border bg-background px-4 py-2 text-sm font-medium text-foreground hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60"
+            disabled={props.bookmarkStatus === 'loading' || props.isPending}
+            onClick={props.onToggleBookmark}
+          >
+            {props.isBookmarked ? 'Bookmarked' : 'Bookmark'}
+          </button>
+        </div>
+      ) : null}
+
+      {props.question ? (
+        <QuestionCard
+          stemMd={props.question.stemMd}
+          choices={props.question.choices.map((c) => ({
+            id: c.id,
+            label: c.label,
+            textMd: c.textMd,
+          }))}
+          selectedChoiceId={props.selectedChoiceId}
+          correctChoiceId={correctChoiceId}
+          disabled={props.isPending || props.loadState.status === 'loading'}
+          onSelectChoice={props.onSelectChoice}
+        />
+      ) : null}
+
+      {props.submitResult ? (
+        <Feedback
+          isCorrect={props.submitResult.isCorrect}
+          explanationMd={props.submitResult.explanationMd}
+        />
+      ) : null}
+
+      <div className="flex flex-col gap-3 sm:flex-row">
+        <button
+          type="button"
+          className="inline-flex items-center justify-center rounded-full bg-orange-600 px-4 py-2 text-sm font-medium text-white hover:bg-orange-700 disabled:cursor-not-allowed disabled:opacity-60"
+          disabled={!props.canSubmit || props.isPending}
+          onClick={props.onSubmit}
+        >
+          Submit
+        </button>
+
+        <button
+          type="button"
+          className="inline-flex items-center justify-center rounded-full border border-border bg-background px-4 py-2 text-sm font-medium text-foreground hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60"
+          disabled={props.isPending || props.loadState.status === 'loading'}
+          onClick={props.onNextQuestion}
+        >
+          Next Question
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export default function PracticePage() {
   const [question, setQuestion] = useState<NextQuestion | null>(null);
   const [selectedChoiceId, setSelectedChoiceId] = useState<string | null>(null);
@@ -95,7 +216,6 @@ export default function PracticePage() {
     );
   }, [question, selectedChoiceId, submitResult]);
 
-  const correctChoiceId = submitResult?.correctChoiceId ?? null;
   const isBookmarked = question
     ? bookmarkedQuestionIds.has(question.questionId)
     : false;
@@ -143,106 +263,23 @@ export default function PracticePage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-baseline sm:justify-between">
-          <div>
-            <h1 className="text-2xl font-semibold text-foreground">Practice</h1>
-            <p className="mt-1 text-muted-foreground">
-              Answer one question at a time.
-            </p>
-          </div>
-          <Link
-            href="/app/dashboard"
-            className="text-sm font-medium text-muted-foreground hover:text-foreground"
-          >
-            Back to Dashboard
-          </Link>
-        </div>
-      </div>
-
-      {loadState.status === 'error' ? (
-        <div className="rounded-2xl border border-border bg-card p-6 text-sm text-destructive shadow-sm">
-          <div>{loadState.message}</div>
-          <button
-            type="button"
-            className="mt-4 inline-flex items-center justify-center rounded-full border border-border bg-background px-4 py-2 text-sm font-medium text-foreground hover:bg-muted"
-            onClick={loadNext}
-          >
-            Try again
-          </button>
-        </div>
-      ) : null}
-
-      {loadState.status === 'loading' ? (
-        <div className="rounded-2xl border border-border bg-card p-6 text-sm text-muted-foreground shadow-sm">
-          Loading question…
-        </div>
-      ) : null}
-
-      {loadState.status !== 'loading' && question === null ? (
-        <div className="rounded-2xl border border-border bg-card p-6 text-sm text-muted-foreground shadow-sm">
-          No more questions found.
-        </div>
-      ) : null}
-
-      {question ? (
-        <div className="flex items-center justify-end">
-          <button
-            type="button"
-            className="inline-flex items-center justify-center rounded-full border border-border bg-background px-4 py-2 text-sm font-medium text-foreground hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60"
-            disabled={bookmarkStatus === 'loading' || isPending}
-            onClick={() => void onToggleBookmark()}
-          >
-            {isBookmarked ? 'Bookmarked' : 'Bookmark'}
-          </button>
-        </div>
-      ) : null}
-
-      {question ? (
-        <QuestionCard
-          stemMd={question.stemMd}
-          choices={question.choices.map((c) => ({
-            id: c.id,
-            label: c.label,
-            textMd: c.textMd,
-          }))}
-          selectedChoiceId={selectedChoiceId}
-          correctChoiceId={correctChoiceId}
-          disabled={isPending || loadState.status === 'loading'}
-          onSelectChoice={(choiceId) => {
-            if (submitResult) return;
-            setSelectedChoiceId(choiceId);
-          }}
-        />
-      ) : null}
-
-      {submitResult ? (
-        <Feedback
-          isCorrect={submitResult.isCorrect}
-          explanationMd={submitResult.explanationMd}
-        />
-      ) : null}
-
-      <div className="flex flex-col gap-3 sm:flex-row">
-        <button
-          type="button"
-          className="inline-flex items-center justify-center rounded-full bg-orange-600 px-4 py-2 text-sm font-medium text-white hover:bg-orange-700 disabled:cursor-not-allowed disabled:opacity-60"
-          disabled={!canSubmit || isPending}
-          onClick={() => void onSubmit()}
-        >
-          Submit
-        </button>
-
-        <button
-          type="button"
-          className="inline-flex items-center justify-center rounded-full border border-border bg-background px-4 py-2 text-sm font-medium text-foreground hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60"
-          disabled={isPending || loadState.status === 'loading'}
-          onClick={loadNext}
-        >
-          Next Question
-        </button>
-      </div>
-    </div>
+    <PracticeView
+      loadState={loadState}
+      question={question}
+      selectedChoiceId={selectedChoiceId}
+      submitResult={submitResult}
+      isPending={isPending}
+      bookmarkStatus={bookmarkStatus}
+      isBookmarked={isBookmarked}
+      canSubmit={canSubmit}
+      onTryAgain={loadNext}
+      onToggleBookmark={() => void onToggleBookmark()}
+      onSelectChoice={(choiceId) => {
+        if (submitResult) return;
+        setSelectedChoiceId(choiceId);
+      }}
+      onSubmit={() => void onSubmit()}
+      onNextQuestion={loadNext}
+    />
   );
 }

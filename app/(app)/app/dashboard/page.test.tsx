@@ -2,7 +2,7 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 
-import { DashboardView } from './page';
+import { DashboardView, renderDashboard } from './page';
 
 describe('app/(app)/app/dashboard', () => {
   it('renders user stats', () => {
@@ -33,5 +33,35 @@ describe('app/(app)/app/dashboard', () => {
     expect(html).toContain('60%');
     expect(html).toContain('3');
     expect(html).toContain('q-1');
+  });
+
+  it('hides recent activity section when empty', () => {
+    const html = renderToStaticMarkup(
+      <DashboardView
+        stats={{
+          totalAnswered: 0,
+          accuracyOverall: 0,
+          answeredLast7Days: 0,
+          accuracyLast7Days: 0,
+          currentStreakDays: 0,
+          recentActivity: [],
+        }}
+      />,
+    );
+
+    expect(html).toContain('Dashboard');
+    expect(html).not.toContain('Recent activity');
+  });
+
+  it('renders an error state when stats load fails', () => {
+    const element = renderDashboard({
+      ok: false,
+      error: { code: 'INTERNAL_ERROR', message: 'Internal error' },
+    });
+    const html = renderToStaticMarkup(element);
+
+    expect(html).toContain('Unable to load stats.');
+    expect(html).toContain('Internal error');
+    expect(html).toContain('Go to Practice');
   });
 });

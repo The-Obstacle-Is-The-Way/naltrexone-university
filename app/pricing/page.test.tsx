@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
+import type { AuthGateway } from '@/src/application/ports/gateways';
 
 vi.mock('server-only', () => ({}));
 
@@ -76,5 +77,126 @@ describe('app/pricing', () => {
     expect(html).toContain('already subscribed');
     expect(html).not.toContain('Subscribe Monthly');
     expect(html).not.toContain('Subscribe Annual');
+  });
+
+  it('builds the subscription-required banner when reason=subscription_required', async () => {
+    const { getPricingBanner } = await import('./page');
+
+    expect(getPricingBanner({ reason: 'subscription_required' })).toMatchObject(
+      {
+        tone: 'info',
+        message: 'Subscription required to access the app.',
+      },
+    );
+  });
+
+  it('loadPricingData returns isEntitled=false when unauthenticated', async () => {
+    const { loadPricingData } = await import('./page');
+
+    const authGateway: AuthGateway = {
+      getCurrentUser: vi.fn(async () => null),
+      requireUser: vi.fn(async () => {
+        throw new Error('not used');
+      }),
+    };
+
+    const checkEntitlementUseCase = {
+      execute: vi.fn(async () => ({ isEntitled: true })),
+    };
+
+    await expect(
+      loadPricingData({ authGateway, checkEntitlementUseCase }),
+    ).resolves.toEqual({ isEntitled: false });
+    expect(checkEntitlementUseCase.execute).not.toHaveBeenCalled();
+  });
+
+  it('loadPricingData returns isEntitled=true when entitled', async () => {
+    const { loadPricingData } = await import('./page');
+
+    const authGateway: AuthGateway = {
+      getCurrentUser: vi.fn(async () => ({
+        id: 'user_1',
+        email: 'user@example.com',
+        createdAt: new Date('2026-02-01T00:00:00Z'),
+        updatedAt: new Date('2026-02-01T00:00:00Z'),
+      })),
+      requireUser: vi.fn(async () => {
+        throw new Error('not used');
+      }),
+    };
+
+    const checkEntitlementUseCase = {
+      execute: vi.fn(async () => ({ isEntitled: true })),
+    };
+
+    await expect(
+      loadPricingData({ authGateway, checkEntitlementUseCase }),
+    ).resolves.toEqual({ isEntitled: true });
+  });
+
+  it('createSubscribeAction redirects to checkout url on success', async () => {
+    const { createSubscribeAction } = await import('./page');
+
+    const createCheckoutSessionFn = vi.fn(async () => ({
+      ok: true,
+      data: { url: 'https://stripe.test/checkout' },
+    }));
+
+    const redirectFn = vi.fn((url: string) => {
+      throw new Error(url);
+    }) as unknown as (url: string) => never;
+
+    const action = createSubscribeAction({
+      plan: 'monthly',
+      createCheckoutSessionFn: createCheckoutSessionFn as never,
+      redirectFn,
+    });
+
+    await expect(action()).rejects.toThrow('https://stripe.test/checkout');
+    expect(createCheckoutSessionFn).toHaveBeenCalledWith({ plan: 'monthly' });
+  });
+
+  it('createSubscribeAction redirects to /sign-up when unauthenticated', async () => {
+    const { createSubscribeAction } = await import('./page');
+
+    const createCheckoutSessionFn = vi.fn(async () => ({
+      ok: false,
+      error: { code: 'UNAUTHENTICATED', message: 'No session' },
+    }));
+
+    const redirectFn = vi.fn((url: string) => {
+      throw new Error(url);
+    }) as unknown as (url: string) => never;
+
+    const action = createSubscribeAction({
+      plan: 'annual',
+      createCheckoutSessionFn: createCheckoutSessionFn as never,
+      redirectFn,
+    });
+
+    await expect(action()).rejects.toThrow('/sign-up');
+    expect(createCheckoutSessionFn).toHaveBeenCalledWith({ plan: 'annual' });
+  });
+
+  it('createSubscribeAction redirects to /pricing?checkout=error for other errors', async () => {
+    const { createSubscribeAction } = await import('./page');
+
+    const createCheckoutSessionFn = vi.fn(async () => ({
+      ok: false,
+      error: { code: 'INTERNAL_ERROR', message: 'Internal error' },
+    }));
+
+    const redirectFn = vi.fn((url: string) => {
+      throw new Error(url);
+    }) as unknown as (url: string) => never;
+
+    const action = createSubscribeAction({
+      plan: 'monthly',
+      createCheckoutSessionFn: createCheckoutSessionFn as never,
+      redirectFn,
+    });
+
+    await expect(action()).rejects.toThrow('/pricing?checkout=error');
+    expect(createCheckoutSessionFn).toHaveBeenCalledWith({ plan: 'monthly' });
   });
 });

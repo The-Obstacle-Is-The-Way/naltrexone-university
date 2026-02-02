@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import {
   getUserStats,
   type UserStatsOutput,
@@ -103,6 +104,10 @@ export function DashboardView({ stats }: { stats: UserStatsOutput }) {
 export default async function DashboardPage() {
   const result = await getUserStats({});
 
+  return renderDashboard(result);
+}
+
+export function renderDashboard(result: ActionResult<UserStatsOutput>) {
   if (!result.ok) {
     return (
       <div className="space-y-6">

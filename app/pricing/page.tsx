@@ -182,7 +182,7 @@ type PricingSearchParams = {
   reason?: string;
 };
 
-function getPricingBanner(
+export function getPricingBanner(
   searchParams: PricingSearchParams,
 ): PricingBanner | null {
   if (searchParams.checkout === 'error') {
@@ -209,6 +209,22 @@ function getPricingBanner(
   return null;
 }
 
+type RedirectFn = (url: string) => never;
+
+export function createSubscribeAction(input: {
+  plan: 'monthly' | 'annual';
+  createCheckoutSessionFn: typeof createCheckoutSession;
+  redirectFn: RedirectFn;
+}): () => Promise<void> {
+  return async function subscribe() {
+    'use server';
+    const result = await input.createCheckoutSessionFn({ plan: input.plan });
+    if (result.ok) input.redirectFn(result.data.url);
+    if (result.error.code === 'UNAUTHENTICATED') input.redirectFn('/sign-up');
+    input.redirectFn('/pricing?checkout=error');
+  };
+}
+
 export default async function PricingPage({
   searchParams,
 }: {
@@ -217,21 +233,17 @@ export default async function PricingPage({
   const { isEntitled } = await loadPricingData();
   const banner = getPricingBanner(searchParams);
 
-  async function subscribeMonthly() {
-    'use server';
-    const result = await createCheckoutSession({ plan: 'monthly' });
-    if (result.ok) redirect(result.data.url);
-    if (result.error.code === 'UNAUTHENTICATED') redirect('/sign-up');
-    redirect('/pricing?checkout=error');
-  }
+  const subscribeMonthly = createSubscribeAction({
+    plan: 'monthly',
+    createCheckoutSessionFn: createCheckoutSession,
+    redirectFn: redirect,
+  });
 
-  async function subscribeAnnual() {
-    'use server';
-    const result = await createCheckoutSession({ plan: 'annual' });
-    if (result.ok) redirect(result.data.url);
-    if (result.error.code === 'UNAUTHENTICATED') redirect('/sign-up');
-    redirect('/pricing?checkout=error');
-  }
+  const subscribeAnnual = createSubscribeAction({
+    plan: 'annual',
+    createCheckoutSessionFn: createCheckoutSession,
+    redirectFn: redirect,
+  });
 
   return (
     <PricingView
