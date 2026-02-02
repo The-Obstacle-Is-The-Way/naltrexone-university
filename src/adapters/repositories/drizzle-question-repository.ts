@@ -1,3 +1,4 @@
+import type { SQL } from 'drizzle-orm';
 import { and, asc, desc, eq, inArray } from 'drizzle-orm';
 import type * as schema from '@/db/schema';
 import { questions, questionTags, tags } from '@/db/schema';
@@ -72,9 +73,7 @@ export class DrizzleQuestionRepository implements QuestionRepository {
     const hasDifficultyFilter = filters.difficulties.length > 0;
     const hasTagFilter = filters.tagSlugs.length > 0;
 
-    const whereParts = [eq(questions.status, 'published')] as Array<
-      ReturnType<typeof eq>
-    >;
+    const whereParts: SQL[] = [eq(questions.status, 'published')];
 
     if (hasDifficultyFilter) {
       whereParts.push(inArray(questions.difficulty, [...filters.difficulties]));
