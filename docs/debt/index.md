@@ -31,7 +31,6 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 | [DEBT-061](./debt-061-timezone-not-explicitly-enforced.md) | Timezone Not Explicitly Enforced at Application Level | Open | P3 | 2026-02-02 |
 | [DEBT-063](./debt-063-missing-aria-labels-choice-buttons.md) | Missing ARIA Labels on Choice Buttons | Open | P2 | 2026-02-02 |
 | [DEBT-064](./debt-064-missing-focus-indicators-error-buttons.md) | Missing Focus Indicators on Error Page Buttons | Open | P3 | 2026-02-02 |
-| [DEBT-065](./debt-065-touch-targets-too-small.md) | Touch Targets Too Small (Dropdown Menu, Pricing Buttons) | Open | P2 | 2026-02-02 |
 | [DEBT-067](./debt-067-generic-error-page-no-details.md) | Generic Error Page Lacks Error Details | Open | P3 | 2026-02-02 |
 | [DEBT-068](./debt-068-missing-error-tsx-nested-routes.md) | Missing error.tsx in Nested Routes | Open | P3 | 2026-02-02 |
 | [DEBT-069](./debt-069-document-stripe-eager-sync-pattern.md) | Document Stripe Eager Sync Pattern | Open | P3 | 2026-02-02 |
@@ -93,6 +92,7 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 | [DEBT-050](../_archive/debt/debt-050-missing-fake-implementations.md) | Missing Fake Implementations for 5 Repositories | P2 | 2026-02-02 |
 | [DEBT-052](../_archive/debt/debt-052-unused-domain-service-compute-session-progress.md) | Unused Domain Service — computeSessionProgress | P2 | 2026-02-02 |
 | [DEBT-062](../_archive/debt/debt-062-confusing-redirect-control-flow.md) | Confusing Redirect Control Flow Relied on `redirect()` Throwing | P3 | 2026-02-02 |
+| [DEBT-065](../_archive/debt/debt-065-touch-targets-too-small.md) | Touch Targets Too Small (Dropdown Menu, Pricing Buttons) | P2 | 2026-02-02 |
 | [DEBT-066](../_archive/debt/debt-066-no-success-toast-bookmark.md) | No Success Toast for Bookmark Action | P3 | 2026-02-02 |
 
 ## Debt Statuses
