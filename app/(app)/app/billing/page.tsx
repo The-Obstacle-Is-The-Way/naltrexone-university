@@ -67,9 +67,7 @@ export function BillingContent(props: BillingContentProps) {
   );
 }
 
-export type BillingPageViewProps =
-  | { subscription: Subscription; manageBillingAction: () => Promise<void> }
-  | { subscription: null; manageBillingAction?: never };
+export type BillingPageViewProps = BillingContentProps;
 
 export function BillingPageView(props: BillingPageViewProps) {
   return (

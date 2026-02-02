@@ -1,8 +1,8 @@
+import { getActionResultErrorMessage } from '@/app/(app)/app/practice/practice-logic';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import type { StartPracticeSessionOutput } from '@/src/adapters/controllers/practice-controller';
 import type { NextQuestion } from '@/src/application/use-cases/get-next-question';
 import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
-import { getActionResultErrorMessage } from './practice-logic';
 
 type SetTimeoutFn = (
   fn: () => void,
@@ -192,10 +192,6 @@ export async function toggleBookmarkForQuestion(input: {
   const res = await input.toggleBookmarkFn({ questionId });
   if (!res.ok) {
     input.setBookmarkStatus('error');
-    input.setLoadState({
-      status: 'error',
-      message: getActionResultErrorMessage(res),
-    });
     return;
   }
 

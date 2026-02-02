@@ -90,6 +90,14 @@ export async function getMissedQuestions(
       parsed.data.offset,
     );
 
+    if (page.length === 0) {
+      return ok({
+        rows: [],
+        limit: parsed.data.limit,
+        offset: parsed.data.offset,
+      });
+    }
+
     const questionIds = page.map((m) => m.questionId);
     const questions =
       await d.questionRepository.findPublishedByIds(questionIds);

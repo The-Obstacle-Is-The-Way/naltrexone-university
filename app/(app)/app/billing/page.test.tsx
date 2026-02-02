@@ -4,35 +4,12 @@ import { describe, expect, it } from 'vitest';
 import { loadBillingData } from '@/app/(app)/app/billing/page';
 import type { AuthGateway } from '@/src/application/ports/gateways';
 import type { SubscriptionRepository } from '@/src/application/ports/repositories';
-import type { Subscription, User } from '@/src/domain/entities';
-
-function createUser(): User {
-  return {
-    id: 'user_1',
-    email: 'user@example.com',
-    createdAt: new Date('2026-02-01T00:00:00Z'),
-    updatedAt: new Date('2026-02-01T00:00:00Z'),
-  };
-}
-
-function createSubscription(overrides?: Partial<Subscription>): Subscription {
-  return {
-    id: 'sub_row_1',
-    userId: 'user_1',
-    plan: 'monthly',
-    status: 'active',
-    currentPeriodEnd: new Date('2026-12-31T00:00:00.000Z'),
-    cancelAtPeriodEnd: false,
-    createdAt: new Date('2026-02-01T00:00:00Z'),
-    updatedAt: new Date('2026-02-01T00:00:00Z'),
-    ...overrides,
-  };
-}
+import { createSubscription, createUser } from '@/src/domain/test-helpers';
 
 describe('app/(app)/app/billing/page', () => {
   describe('loadBillingData', () => {
     it('loads the subscription for the current user', async () => {
-      const user = createUser();
+      const user = createUser({ id: 'user_1' });
 
       const authGateway: AuthGateway = {
         getCurrentUser: async () => user,
@@ -40,7 +17,7 @@ describe('app/(app)/app/billing/page', () => {
       };
 
       const subscriptionRepository: SubscriptionRepository = {
-        findByUserId: async () => createSubscription(),
+        findByUserId: async () => createSubscription({ userId: user.id }),
         findByStripeSubscriptionId: async () => null,
         upsert: async () => undefined,
       };

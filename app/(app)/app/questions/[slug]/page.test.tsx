@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
+import { createChoice, createQuestion } from '@/src/domain/test-helpers';
 
 vi.mock('next/link', () => ({
   default: (props: Record<string, unknown>) => <a {...props} />,
@@ -73,15 +74,33 @@ describe('app/(app)/app/questions/[slug]', () => {
       '@/app/(app)/app/questions/[slug]/page'
     );
 
+    const choice = createChoice({
+      id: 'c1',
+      questionId: 'q_1',
+      label: 'A',
+      textMd: 'Choice A',
+    });
+    const question = createQuestion({
+      id: 'q_1',
+      slug: 'q-1',
+      stemMd: 'Stem',
+      difficulty: 'easy',
+      choices: [choice],
+    });
+
     const html = renderToStaticMarkup(
       <QuestionView
         loadState={{ status: 'ready' }}
         question={{
-          questionId: 'q_1',
-          slug: 'q-1',
-          stemMd: 'Stem',
-          difficulty: 'easy',
-          choices: [{ id: 'c1', label: 'A', textMd: 'Choice A' }],
+          questionId: question.id,
+          slug: question.slug,
+          stemMd: question.stemMd,
+          difficulty: question.difficulty,
+          choices: question.choices.map((c) => ({
+            id: c.id,
+            label: c.label,
+            textMd: c.textMd,
+          })),
         }}
         selectedChoiceId={null}
         submitResult={null}

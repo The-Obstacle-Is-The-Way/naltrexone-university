@@ -1,7 +1,4 @@
 import { describe, expect, it, vi } from 'vitest';
-import { err, ok } from '@/src/adapters/controllers/action-result';
-import type { NextQuestion } from '@/src/application/use-cases/get-next-question';
-import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
 import {
   createBookmarksEffect,
   createLoadNextQuestionAction,
@@ -14,7 +11,10 @@ import {
   startSession,
   submitAnswerForQuestion,
   toggleBookmarkForQuestion,
-} from './practice-page-logic';
+} from '@/app/(app)/app/practice/practice-page-logic';
+import { err, ok } from '@/src/adapters/controllers/action-result';
+import type { NextQuestion } from '@/src/application/use-cases/get-next-question';
+import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
 
 function createNextQuestion(): NextQuestion {
   return {
@@ -349,10 +349,7 @@ describe('practice-page-logic', () => {
       });
 
       expect(setBookmarkStatus).toHaveBeenCalledWith('error');
-      expect(setLoadState).toHaveBeenCalledWith({
-        status: 'error',
-        message: 'Boom',
-      });
+      expect(setLoadState).not.toHaveBeenCalled();
     });
   });
 

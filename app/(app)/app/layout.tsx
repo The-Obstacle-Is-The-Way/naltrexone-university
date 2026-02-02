@@ -118,7 +118,7 @@ export async function renderAppLayout(input: {
   enforceEntitledAppUserFn?: () => Promise<void>;
   authNavFn?: () => Promise<React.ReactNode>;
   mobileNav?: React.ReactNode;
-}): Promise<React.ReactNode> {
+}): Promise<React.ReactElement> {
   const enforceEntitledAppUserFn =
     input.enforceEntitledAppUserFn ?? enforceEntitledAppUser;
   const authNavFn = input.authNavFn ?? AuthNav;
