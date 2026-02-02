@@ -1,14 +1,20 @@
 # BUG-028: Inconsistent Cascade Delete for Attempts
 
-## Severity: P2 - Medium
+**Status:** Won't Fix
+**Priority:** P2 - Medium
+**Date:** 2026-02-02
+**Decision:** 2026-02-02
+
+---
 
 ## Summary
-The `attempts` table has inconsistent foreign key cascade behaviors. When related records are deleted, some FKs cascade, some restrict, and some set null—leading to potential orphaned or blocked data.
+
+The `attempts` table intentionally uses different `onDelete` behaviors across foreign keys (`cascade`, `restrict`, `set null`). This is sometimes described as “inconsistent”, but it reflects deliberate tradeoffs for auditability and user-data deletion.
 
 ## Location
 - `db/schema.ts:294-310` (attempts table definition)
 
-## Current Behavior
+## Current Schema (as implemented)
 ```typescript
 // userId - CASCADE: Deleting user deletes all their attempts
 userId: uuid('user_id')
@@ -32,44 +38,35 @@ practiceSessionId: uuid('practice_session_id').references(
 ),
 ```
 
-## Inconsistencies
-1. **User deletion** → Cascades attempts (audit trail lost)
-2. **Question deletion** → Cascades attempts (user history lost)
-3. **Choice deletion** → BLOCKED if any attempt references it
-4. **Session deletion** → Attempts remain with null session (orphaned context)
+## Decision (Why This Is Not A Bug)
 
-## Impact
-- **Data integrity:** Inconsistent rules make it hard to reason about deletions
-- **Blocked operations:** Cannot delete a choice that has been selected
-- **Orphaned data:** Attempts exist without session context after session cleanup
-- **Lost audit trail:** Deleting a user removes all their answer history
+This schema matches the SSOT and is consistent with the product’s data semantics:
 
-## Expected Behavior
-Consistent strategy across all FKs:
-- Either preserve audit trail (soft delete everywhere)
-- Or clean cascade (full deletion everywhere)
+1. **`selectedChoiceId: restrict` is audit-preserving**
+   - An `attempt` should always reference the exact choice selected at the time.
+   - Deleting a referenced choice would break historical integrity. We should version/soft-delete choices if we ever need “remove”.
 
-## Recommended Fix
-**Option A (Audit-preserving):**
-```typescript
-// All FKs should SET NULL and use soft delete
-onDelete: 'set null'
-// Add deletedAt column to users, questions, choices, sessions
-```
+2. **`practiceSessionId: set null` keeps attempts valid outside a session**
+   - Attempts are meaningful even if a session record is removed (sessions are contextual grouping, not the attempt’s identity).
+   - The application does not currently delete sessions in normal operation; this FK is a safety valve for cleanup tools.
 
-**Option B (Clean cascade):**
-```typescript
-// All FKs should CASCADE consistently
-onDelete: 'cascade'
-```
+3. **`userId: cascade` supports user deletion (GDPR / account removal)**
+   - When a user is deleted, their dependent data is removed as well.
 
-**Option C (Restrict all):**
-```typescript
-// Prevent deletion of anything referenced
-onDelete: 'restrict'
-// Use soft delete for all tables
-```
+4. **`questionId: cascade` is acceptable because questions should be archived, not deleted**
+   - In production we should prefer `questions.status='archived'` to preserve history.
+   - If a hard delete occurs (e.g. test/dev cleanup), cascading attempts avoids orphans.
+
+Changing these constraints to “make them consistent” would either:
+- weaken referential/audit integrity (`set null` on choices), or
+- risk unintended data loss (`cascade` from sessions), or
+- require a broader soft-delete strategy across multiple tables (a larger design decision).
+
+## Verification
+
+- [x] `db/schema.ts` matches `docs/specs/master_spec.md` for `attempts` FK deletion semantics.
+- [x] No production code path relies on deleting `choices` or `practice_sessions`.
 
 ## Related
-- ADR-010: Data model decisions (if exists)
-- SPEC-001: Domain entities
+- `docs/specs/master_spec.md` (schema section for `attempts`)
+- `db/schema.ts` (`attempts` table definition)

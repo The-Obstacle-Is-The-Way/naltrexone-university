@@ -1,8 +1,14 @@
 # BUG-024: Entitlement Race Condition During Payment Failure
 
-## Severity: P2 - Medium (Downgraded from P1)
+**Status:** Won't Fix
+**Priority:** P2 - Medium
+**Date:** 2026-02-02
+**Decision:** 2026-02-02
+
+---
 
 ## Summary
+
 When a Stripe subscription transitions to `past_due` status (payment failure on renewal), there is a race condition window where `isEntitled()` may still return `true` because the database hasn't been updated yet via webhook.
 
 **Note:** New checkouts are NOT affected - the codebase already implements eager sync on the checkout success page (`app/(marketing)/checkout/success/page.tsx:92-151`), which fetches subscription data directly from Stripe API before redirecting. This bug only affects **existing subscription renewals and payment failures**.
@@ -67,11 +73,13 @@ Changed from P1 to P2 because:
 3. This is the standard webhook-based approach used by most SaaS
 
 ## Recommended Fix
-**Option A (Document and Accept):** This is industry standard behavior. Document it and move on.
+We are explicitly accepting this behavior (won't fix):
 
-**Option B (Real-time for Sensitive Operations):** Add a `checkSubscriptionRealTime()` function for high-value operations that queries Stripe API directly.
+- The system is intentionally webhook-driven for subscription state, which is eventually consistent by design.
+- The window is typically seconds to minutes and Stripe already has a built-in grace/retry period.
+- Adding real-time Stripe checks on every entitled action would add latency, cost, and rate-limit risk.
 
-**Option C (Shorter Webhook Timeout):** Ensure webhook processing is fast (<1 second) to minimize window.
+If we later introduce high-risk operations where this matters (e.g. expensive AI grading, protected exports, etc.), we can add a targeted “real-time entitlement” path that queries Stripe for those operations only.
 
 ## Related
 - BUG-014: Fragile webhook error matching

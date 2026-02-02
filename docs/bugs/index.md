@@ -17,8 +17,8 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 | ID | Title | Status | Priority | Date |
 |----|-------|--------|----------|------|
-| [BUG-024](./bug-024-entitlement-race-condition-past-due.md) | Entitlement Race Condition During Payment Failure | Open | P2 | 2026-02-02 |
-| [BUG-028](./bug-028-inconsistent-cascade-delete-attempts.md) | Inconsistent Cascade Delete for Attempts | Open | P2 | 2026-02-02 |
+| [BUG-024](./bug-024-entitlement-race-condition-past-due.md) | Entitlement Race Condition During Payment Failure | Won't Fix | P2 | 2026-02-02 |
+| [BUG-028](./bug-028-inconsistent-cascade-delete-attempts.md) | Inconsistent Cascade Delete for Attempts | Won't Fix | P2 | 2026-02-02 |
 | [BUG-009](./bug-009-vercel-preview-deployment-rate-limit.md) | Vercel Preview Deployment Status Fails Due to Rate Limit | Won't Fix | P3 | 2026-02-01 |
 
 **Next Bug ID:** BUG-039
