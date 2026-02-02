@@ -17,7 +17,7 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 | ID | Title | Status | Priority | Date |
 |----|-------|--------|----------|------|
-| [DEBT-047](./debt-047-spec-010-missing-webhook-controller.md) | SPEC-010 Missing Webhook Controller Documentation | Open | P3 | 2026-02-01 |
+| — | No active debt items | — | — | — |
 
 **Next Debt ID:** DEBT-048
 
@@ -71,6 +71,7 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 | [DEBT-044](../_archive/debt/debt-044-spec-005-status-drift.md) | SPEC-005 Status Incorrectly Marked as Implemented | P2 | 2026-02-02 |
 | [DEBT-045](../_archive/debt/debt-045-claude-md-documentation-drift.md) | CLAUDE.md Documentation Drift | P2 | 2026-02-02 |
 | [DEBT-046](../_archive/debt/debt-046-question-selection-in-wrong-layer.md) | Question Selection Algorithm in Wrong Layer | P2 | 2026-02-02 |
+| [DEBT-047](../_archive/debt/debt-047-spec-010-missing-webhook-controller.md) | SPEC-010 Missing Webhook Controller Documentation | P3 | 2026-02-02 |
 
 ## Debt Statuses
 

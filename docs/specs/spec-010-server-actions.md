@@ -44,6 +44,7 @@ src/adapters/controllers/
 ├── review-controller.ts
 ├── bookmark-controller.ts
 ├── stats-controller.ts
+├── stripe-webhook-controller.ts
 └── index.ts
 ```
 
@@ -66,6 +67,7 @@ This is the **only** place where concrete implementations are wired to applicati
 **Factory surface (minimum, grows by slice):**
 
 - SLICE-1: `createBillingControllerDeps()`
+- PAYWALL: `createStripeWebhookDeps()`
 - SLICE-2: `createQuestionControllerDeps()`, `createBookmarkControllerDeps()`
 - SLICE-3: `createPracticeControllerDeps()`
 - SLICE-4: `createReviewControllerDeps()`, `createBookmarkControllerDeps()`
@@ -152,6 +154,30 @@ Controllers SHOULD NOT:
 
 - Perform complex business decisions (belongs in domain/use cases)
 - Contain raw SQL or large query/mapping blocks (belongs in repositories)
+
+---
+
+## Stripe Webhook Controller (Route Handler)
+
+**File:** `src/adapters/controllers/stripe-webhook-controller.ts`
+
+Stripe webhooks are **not** Server Actions, but they still live in the controller layer because they:
+
+- Verify request authenticity (signature verification via `PaymentGateway`)
+- Define a transaction boundary for idempotency + subscription updates
+- Coordinate repositories/gateways without leaking infrastructure details upward
+
+**Invocation (Route Handler):**
+
+- `app/api/stripe/webhook/route.ts` calls `processStripeWebhook(...)` via `createWebhookHandler(...)`.
+- `lib/container.ts` wires `createStripeWebhookDeps()` (including a transaction wrapper).
+
+**Responsibilities (high level):**
+
+- Parse and verify Stripe webhook event (delegate to `PaymentGateway`)
+- Claim/lock event for idempotency (`StripeEventRepository`)
+- Upsert subscription state (`SubscriptionRepository`) and stripe customer mapping (`StripeCustomerRepository`)
+- Mark events processed/failed with useful error context
 
 ---
 

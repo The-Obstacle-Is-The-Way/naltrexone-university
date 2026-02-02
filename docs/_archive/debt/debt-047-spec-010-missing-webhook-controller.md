@@ -1,8 +1,9 @@
 # DEBT-047: SPEC-010 Missing stripe-webhook-controller Documentation
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P3
 **Date:** 2026-02-01
+**Resolved:** 2026-02-02
 
 ---
 
@@ -47,18 +48,16 @@ The `stripe-webhook-controller.ts` is a critical component that handles Stripe w
 
 ## Resolution
 
-1. Add `stripe-webhook-controller.ts` to SPEC-010's file list
-2. Document its responsibilities:
-   - Webhook signature verification (via PaymentGateway)
-   - Event idempotency (via StripeEventRepository)
-   - Subscription state updates (via SubscriptionRepository)
-   - Transaction boundary management
+Updated `docs/specs/spec-010-server-actions.md` to:
+
+1. Add `stripe-webhook-controller.ts` to the controller file list
+2. Document its route-handler usage and responsibilities (signature verification, idempotency, subscription updates, and transaction boundary)
 
 ## Verification
 
-- [ ] SPEC-010 lists `stripe-webhook-controller.ts`
-- [ ] Controller responsibilities are documented
-- [ ] File list matches actual implementation
+- [x] SPEC-010 lists `stripe-webhook-controller.ts`
+- [x] Controller responsibilities are documented
+- [x] File list matches actual implementation
 
 ## Related
 
