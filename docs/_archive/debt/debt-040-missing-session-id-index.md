@@ -1,8 +1,9 @@
 # DEBT-040: Missing Standalone Index on Attempts by Session
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P2
 **Date:** 2026-02-01
+**Resolved:** 2026-02-02
 
 ---
 
@@ -45,31 +46,22 @@ This query might not efficiently use the existing index because:
 
 ## Resolution
 
-Consider adding a standalone index on just `practiceSessionId`:
+This was **premature optimization**.
 
-```typescript
-practiceSessionIdIdx: index('attempts_practice_session_id_idx').on(
-  t.practiceSessionId
-),
-```
+We already have an index that starts with `practiceSessionId` and matches the query's ordering:
 
-Or a composite index matching the query pattern:
+- `attempts_session_answered_at_idx` on `(practiceSessionId, desc(answeredAt))`
 
-```typescript
-sessionUserIdx: index('attempts_session_user_idx').on(
-  t.practiceSessionId,
-  t.userId
-),
-```
+Also, practice sessions are bounded (`MAX_PRACTICE_SESSION_QUESTIONS = 200`), so `findBySessionId()` is expected to return a small result set per session. Adding another index would increase write-amplification on every attempt insert with no demonstrated production benefit.
 
-Before implementing, run `EXPLAIN ANALYZE` on production-like data to verify the issue.
+If this ever becomes a real bottleneck, we should revisit with `EXPLAIN (ANALYZE, BUFFERS)` on production-like data and consider an index that matches the final query shape.
 
 ## Verification
 
-- [ ] Profile current query performance with `EXPLAIN ANALYZE`
-- [ ] Add appropriate index if performance is suboptimal
-- [ ] Re-run `EXPLAIN ANALYZE` to confirm improvement
-- [ ] Generate and apply migration
+- [x] Verified existing index covers `(practiceSessionId, desc(answeredAt))`
+- [x] Verified per-session attempt count is bounded (max questions per session)
+- [x] Chose not to add an additional index without evidence
+- [x] Existing tests pass
 
 ## Related
 
