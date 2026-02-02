@@ -57,6 +57,10 @@ type SyncCheckoutSuccessInput = {
 
 const CHECKOUT_ERROR_ROUTE = `${ROUTES.PRICING}?checkout=error`;
 
+type CheckoutSuccessSearchParams = {
+  session_id?: string;
+};
+
 async function getDeps(
   deps?: CheckoutSuccessDeps,
 ): Promise<CheckoutSuccessDeps> {
@@ -164,12 +168,17 @@ export async function syncCheckoutSuccess(
   redirectFn(ROUTES.APP_DASHBOARD);
 }
 
-export default async function CheckoutSuccessPage({
-  searchParams,
-}: {
-  searchParams: { session_id?: string };
-}) {
-  await syncCheckoutSuccess({ sessionId: searchParams.session_id ?? null });
+export async function runCheckoutSuccessPage(
+  { searchParams }: { searchParams: Promise<CheckoutSuccessSearchParams> },
+  deps?: CheckoutSuccessDeps,
+  redirectFn: (url: string) => never = redirect,
+): Promise<JSX.Element> {
+  const resolvedSearchParams = await searchParams;
+  await syncCheckoutSuccess(
+    { sessionId: resolvedSearchParams.session_id ?? null },
+    deps,
+    redirectFn,
+  );
 
   return (
     <div className="flex min-h-[60vh] items-center justify-center">
@@ -183,4 +192,12 @@ export default async function CheckoutSuccessPage({
       </div>
     </div>
   );
+}
+
+export default async function CheckoutSuccessPage({
+  searchParams,
+}: {
+  searchParams: Promise<CheckoutSuccessSearchParams>;
+}) {
+  return runCheckoutSuccessPage({ searchParams });
 }

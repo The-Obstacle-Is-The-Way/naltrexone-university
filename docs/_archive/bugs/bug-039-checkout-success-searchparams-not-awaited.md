@@ -1,25 +1,15 @@
 # BUG-039: Checkout Success Page Crashes — searchParams Not Awaited
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P1
 **Date:** 2026-02-02
+**Resolved:** 2026-02-02
 
 ---
 
-## Description
+## Summary
 
-The checkout success page crashes after a successful Stripe payment because it accesses `searchParams.session_id` synchronously instead of awaiting the Promise.
-
-**Observed:** After completing Stripe checkout, users are redirected to `/pricing?checkout=error` with "Checkout failed" message, even though payment succeeded.
-
-**Expected:** Users should land on `/checkout/success`, subscription should sync, and they should be redirected to the dashboard.
-
-**Error message:**
-```
-Error: Route "/checkout/success" used `searchParams.session_id`.
-`searchParams` is a Promise and must be unwrapped with `await`
-or `React.use()` before accessing its properties.
-```
+The checkout success page crashed after a successful Stripe payment because it accessed `searchParams.session_id` without awaiting `searchParams` (Next.js 15+ makes `searchParams` a Promise). This prevented eager subscription sync and caused a fallback redirect to the pricing error banner.
 
 ## Steps to Reproduce
 
@@ -48,7 +38,7 @@ export default async function CheckoutSuccessPage({
 
 ## Fix
 
-Update the component to await `searchParams`:
+Update the component to await `searchParams` before reading `session_id`, and export a small testable wrapper that supports dependency injection:
 
 ```typescript
 // FIXED
@@ -65,7 +55,7 @@ export default async function CheckoutSuccessPage({
 
 ## Verification
 
-- [ ] Unit test added for checkout success page with async searchParams
+- [x] Unit test added (`app/(marketing)/checkout/success/page.test.ts`)
 - [ ] Manual verification: complete Stripe checkout, confirm redirect to dashboard
 - [ ] Verify subscription appears in database after checkout
 
