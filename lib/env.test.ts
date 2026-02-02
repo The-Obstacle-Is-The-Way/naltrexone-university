@@ -166,4 +166,60 @@ describe('env', () => {
     );
     consoleError.mockRestore();
   });
+
+  it('rejects Clerk keys with mismatched environments (pk_test vs sk_live)', async () => {
+    const consoleError = vi
+      .spyOn(console, 'error')
+      .mockImplementation(() => {});
+
+    process.env.DATABASE_URL =
+      'postgresql://postgres:postgres@localhost:5432/db';
+    process.env.NEXT_PUBLIC_APP_URL = 'http://localhost:3000';
+
+    process.env.STRIPE_SECRET_KEY = 'sk_test_dummy';
+    process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY = 'pk_test_dummy';
+    process.env.STRIPE_WEBHOOK_SECRET = 'whsec_dummy';
+    process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY = 'price_dummy_monthly';
+    process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL = 'price_dummy_annual';
+
+    process.env.NEXT_PUBLIC_SKIP_CLERK = 'false';
+    process.env.CLERK_SECRET_KEY = 'sk_live_dummy';
+    process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY = 'pk_test_dummy';
+    delete process.env.VERCEL_ENV;
+
+    vi.resetModules();
+
+    await expect(import('./env')).rejects.toThrow(
+      'Invalid environment variables',
+    );
+    consoleError.mockRestore();
+  });
+
+  it('rejects Clerk keys that appear to reference different instances', async () => {
+    const consoleError = vi
+      .spyOn(console, 'error')
+      .mockImplementation(() => {});
+
+    process.env.DATABASE_URL =
+      'postgresql://postgres:postgres@localhost:5432/db';
+    process.env.NEXT_PUBLIC_APP_URL = 'http://localhost:3000';
+
+    process.env.STRIPE_SECRET_KEY = 'sk_test_dummy';
+    process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY = 'pk_test_dummy';
+    process.env.STRIPE_WEBHOOK_SECRET = 'whsec_dummy';
+    process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY = 'price_dummy_monthly';
+    process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL = 'price_dummy_annual';
+
+    process.env.NEXT_PUBLIC_SKIP_CLERK = 'false';
+    process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY = 'pk_test_b25l';
+    process.env.CLERK_SECRET_KEY = 'sk_test_dHdv_secret';
+    delete process.env.VERCEL_ENV;
+
+    vi.resetModules();
+
+    await expect(import('./env')).rejects.toThrow(
+      'Invalid environment variables',
+    );
+    consoleError.mockRestore();
+  });
 });
