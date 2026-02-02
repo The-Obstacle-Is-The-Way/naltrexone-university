@@ -7,6 +7,7 @@ describe('ChoiceButton', () => {
   it('renders label and text', () => {
     const html = renderToStaticMarkup(
       <ChoiceButton
+        name="choices"
         label="A"
         textMd="Choice A"
         selected={false}
@@ -16,5 +17,22 @@ describe('ChoiceButton', () => {
 
     expect(html).toContain('A');
     expect(html).toContain('Choice A');
+    expect(html).toContain('type="radio"');
+    expect(html).toContain('name="choices"');
+    expect(html).not.toContain('checked=""');
+  });
+
+  it('exposes selected state via checked input', () => {
+    const html = renderToStaticMarkup(
+      <ChoiceButton
+        name="choices"
+        label="A"
+        textMd="Choice A"
+        selected
+        onClick={() => {}}
+      />,
+    );
+
+    expect(html).toContain('checked=""');
   });
 });

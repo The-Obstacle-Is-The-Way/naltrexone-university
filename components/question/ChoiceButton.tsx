@@ -4,6 +4,7 @@ import { Markdown } from '@/components/markdown/Markdown';
 import { cn } from '@/lib/utils';
 
 export type ChoiceButtonProps = {
+  name: string;
   label: string;
   textMd: string;
   selected: boolean;
@@ -13,6 +14,7 @@ export type ChoiceButtonProps = {
 };
 
 export function ChoiceButton({
+  name,
   label,
   textMd,
   selected,
@@ -21,12 +23,10 @@ export function ChoiceButton({
   onClick,
 }: ChoiceButtonProps) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
+    <label
       className={cn(
-        'w-full rounded-xl border border-border bg-background p-4 text-left shadow-sm transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60',
+        'w-full rounded-xl border border-border bg-background p-4 text-left shadow-sm transition-colors hover:bg-muted focus-within:border-ring focus-within:ring-ring/50 focus-within:ring-[3px]',
+        disabled && 'cursor-not-allowed opacity-60',
         selected && correctness === null && 'border-orange-500',
         correctness === 'correct' &&
           'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/20',
@@ -34,6 +34,14 @@ export function ChoiceButton({
           'border-red-500 bg-red-50 dark:bg-red-950/20',
       )}
     >
+      <input
+        type="radio"
+        name={name}
+        checked={selected}
+        onChange={onClick}
+        disabled={disabled}
+        className="sr-only"
+      />
       <div className="flex items-start gap-3">
         <div
           className={cn(
@@ -47,6 +55,6 @@ export function ChoiceButton({
         </div>
         <Markdown content={textMd} className="text-sm text-foreground" />
       </div>
-    </button>
+    </label>
   );
 }
