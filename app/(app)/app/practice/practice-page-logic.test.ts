@@ -52,6 +52,7 @@ function createNextQuestion(): NextQuestion {
 describe('practice-page-logic', () => {
   describe('loadNextQuestion', () => {
     it('loads next question and updates loadedAt when a question exists', async () => {
+      const getNextQuestionFn = vi.fn(async () => ok(createNextQuestion()));
       const setLoadState = vi.fn();
       const setSelectedChoiceId = vi.fn();
       const setSubmitResult = vi.fn();
@@ -59,7 +60,8 @@ describe('practice-page-logic', () => {
       const setQuestion = vi.fn();
 
       await loadNextQuestion({
-        getNextQuestionFn: async () => ok(createNextQuestion()),
+        getNextQuestionFn,
+        filters: { tagSlugs: ['opioids'], difficulties: ['easy'] },
         nowMs: () => 1234,
         setLoadState,
         setSelectedChoiceId,
@@ -68,6 +70,9 @@ describe('practice-page-logic', () => {
         setQuestion,
       });
 
+      expect(getNextQuestionFn).toHaveBeenCalledWith({
+        filters: { tagSlugs: ['opioids'], difficulties: ['easy'] },
+      });
       expect(setLoadState).toHaveBeenCalledWith({ status: 'loading' });
       expect(setSelectedChoiceId).toHaveBeenCalledWith(null);
       expect(setSubmitResult).toHaveBeenCalledWith(null);
@@ -85,6 +90,7 @@ describe('practice-page-logic', () => {
 
       await loadNextQuestion({
         getNextQuestionFn: async () => ok(null),
+        filters: { tagSlugs: [], difficulties: [] },
         nowMs: () => 1234,
         setLoadState: vi.fn(),
         setSelectedChoiceId: vi.fn(),
@@ -103,6 +109,7 @@ describe('practice-page-logic', () => {
       await loadNextQuestion({
         getNextQuestionFn: async () =>
           err('UNSUBSCRIBED', 'Subscription required'),
+        filters: { tagSlugs: [], difficulties: [] },
         nowMs: () => 1234,
         setLoadState,
         setSelectedChoiceId: vi.fn(),
@@ -127,6 +134,7 @@ describe('practice-page-logic', () => {
       const action = createLoadNextQuestionAction({
         startTransition,
         getNextQuestionFn: async () => ok(createNextQuestion()),
+        filters: { tagSlugs: [], difficulties: [] },
         nowMs: () => 1234,
         setLoadState,
         setSelectedChoiceId: vi.fn(),
@@ -483,6 +491,7 @@ describe('practice-page-logic', () => {
       await startSession({
         sessionMode: 'tutor',
         sessionCount: 20,
+        filters: { tagSlugs: ['alcohol'], difficulties: [] },
         startPracticeSessionFn: async () => err('NOT_FOUND', 'No questions'),
         setSessionStartStatus,
         setSessionStartError,
@@ -494,17 +503,27 @@ describe('practice-page-logic', () => {
     });
 
     it('navigates to the session route on success', async () => {
+      const startPracticeSessionFn = vi.fn(async () =>
+        ok({ sessionId: 'session-1' }),
+      );
       const navigateTo = vi.fn();
 
       await startSession({
         sessionMode: 'exam',
         sessionCount: 10,
-        startPracticeSessionFn: async () => ok({ sessionId: 'session-1' }),
+        filters: { tagSlugs: ['opioids'], difficulties: ['hard'] },
+        startPracticeSessionFn,
         setSessionStartStatus: vi.fn(),
         setSessionStartError: vi.fn(),
         navigateTo,
       });
 
+      expect(startPracticeSessionFn).toHaveBeenCalledWith({
+        mode: 'exam',
+        count: 10,
+        tagSlugs: ['opioids'],
+        difficulties: ['hard'],
+      });
       expect(navigateTo).toHaveBeenCalledWith('/app/practice/session-1');
     });
   });

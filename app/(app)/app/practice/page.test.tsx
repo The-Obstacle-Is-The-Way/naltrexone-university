@@ -241,9 +241,14 @@ describe('app/(app)/app/practice', () => {
       <PracticeSessionStarter
         sessionMode="tutor"
         sessionCount={20}
+        filters={{ tagSlugs: [], difficulties: [] }}
+        tagLoadStatus="idle"
+        availableTags={[]}
         sessionStartStatus="error"
         sessionStartError="No questions"
         isPending={false}
+        onToggleDifficulty={() => undefined}
+        onTagSlugsChange={() => undefined}
         onSessionModeChange={() => undefined}
         onSessionCountChange={() => undefined}
         onStartSession={() => undefined}

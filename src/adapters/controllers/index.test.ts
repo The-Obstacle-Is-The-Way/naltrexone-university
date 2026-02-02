@@ -3,6 +3,7 @@ import {
   createCheckoutSession,
   getNextQuestion,
   getQuestionBySlug,
+  getTags,
   getUserStats,
   processStripeWebhook,
   submitAnswer,
@@ -18,5 +19,6 @@ describe('controllers exports', () => {
     expect(toggleBookmark).toBeTypeOf('function');
     expect(getUserStats).toBeTypeOf('function');
     expect(processStripeWebhook).toBeTypeOf('function');
+    expect(getTags).toBeTypeOf('function');
   });
 });

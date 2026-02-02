@@ -89,6 +89,7 @@ describe('container factories', () => {
     expect(typeof container.createPracticeControllerDeps).toBe('function');
     expect(typeof container.createReviewControllerDeps).toBe('function');
     expect(typeof container.createStatsControllerDeps).toBe('function');
+    expect(typeof container.createTagControllerDeps).toBe('function');
   }, 40000);
 
   it('wires concrete implementations for all factories', async () => {
@@ -239,6 +240,13 @@ describe('container factories', () => {
       DrizzleQuestionRepository,
     );
     expect(typeof statsDeps.now).toBe('function');
+
+    const tagDeps = container.createTagControllerDeps();
+    expect(tagDeps.authGateway).toBeInstanceOf(ClerkAuthGateway);
+    expect(tagDeps.checkEntitlementUseCase).toBeInstanceOf(
+      CheckEntitlementUseCase,
+    );
+    expect(tagDeps.tagRepository).toBeInstanceOf(DrizzleTagRepository);
   }, 40000);
 
   it('shares Stripe price IDs between subscription repository and payment gateway', async () => {

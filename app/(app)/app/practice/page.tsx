@@ -13,6 +13,10 @@ import {
   getNextQuestion,
   submitAnswer,
 } from '@/src/adapters/controllers/question-controller';
+import {
+  getTags,
+  type TagRow,
+} from '@/src/adapters/controllers/tag-controller';
 import type { NextQuestion } from '@/src/application/use-cases/get-next-question';
 import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
 import { navigateTo } from './client-navigation';
@@ -22,6 +26,7 @@ import {
   handleSessionCountChange,
   handleSessionModeChange,
   type LoadState,
+  type PracticeFilters,
   SESSION_COUNT_MAX,
   SESSION_COUNT_MIN,
   selectChoiceIfAllowed,
@@ -53,15 +58,40 @@ export type PracticeViewProps = {
 export type PracticeSessionStarterProps = {
   sessionMode: 'tutor' | 'exam';
   sessionCount: number;
+  filters: PracticeFilters;
+  tagLoadStatus: 'idle' | 'loading' | 'error';
+  availableTags: TagRow[];
   sessionStartStatus: 'idle' | 'loading' | 'error';
   sessionStartError: string | null;
   isPending: boolean;
+  onToggleDifficulty: (difficulty: NextQuestion['difficulty']) => void;
+  onTagSlugsChange: (event: {
+    target: { selectedOptions: ArrayLike<{ value: string }> };
+  }) => void;
   onSessionModeChange: (event: { target: { value: string } }) => void;
   onSessionCountChange: (event: { target: { value: string } }) => void;
   onStartSession: () => void;
 };
 
 export function PracticeSessionStarter(props: PracticeSessionStarterProps) {
+  const difficulties = ['easy', 'medium', 'hard'] satisfies Array<
+    NextQuestion['difficulty']
+  >;
+  const tagsByKind = new Map<string, TagRow[]>();
+  for (const tag of props.availableTags) {
+    const list = tagsByKind.get(tag.kind) ?? [];
+    list.push(tag);
+    tagsByKind.set(tag.kind, list);
+  }
+
+  const tagKindLabels: Record<TagRow['kind'], string> = {
+    domain: 'Domain',
+    topic: 'Topic',
+    substance: 'Substance',
+    treatment: 'Treatment',
+    diagnosis: 'Diagnosis',
+  };
+
   return (
     <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
@@ -108,6 +138,78 @@ export function PracticeSessionStarter(props: PracticeSessionStarterProps) {
           >
             Start session
           </button>
+        </div>
+      </div>
+
+      <div className="mt-4 grid gap-4 md:grid-cols-2">
+        <div>
+          <div className="text-sm font-medium text-foreground">Difficulty</div>
+          <div className="mt-2 flex flex-wrap gap-3">
+            {difficulties.map((difficulty) => {
+              const checked = props.filters.difficulties.includes(difficulty);
+              return (
+                <label
+                  key={difficulty}
+                  className="inline-flex items-center gap-2 text-sm text-muted-foreground"
+                >
+                  <input
+                    type="checkbox"
+                    className="size-4"
+                    checked={checked}
+                    onChange={() => props.onToggleDifficulty(difficulty)}
+                  />
+                  <span className="capitalize">{difficulty}</span>
+                </label>
+              );
+            })}
+          </div>
+          <div className="mt-1 text-xs text-muted-foreground">
+            Leave empty to include all difficulties.
+          </div>
+        </div>
+
+        <div>
+          <div className="text-sm font-medium text-foreground">Tags</div>
+          {props.tagLoadStatus === 'loading' ? (
+            <div className="mt-2 text-sm text-muted-foreground">
+              Loading tags…
+            </div>
+          ) : null}
+          {props.tagLoadStatus === 'error' ? (
+            <div className="mt-2 text-sm text-destructive">
+              Tags unavailable.
+            </div>
+          ) : null}
+          {props.tagLoadStatus === 'idle' ? (
+            <>
+              <select
+                multiple
+                className="mt-2 h-28 w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground"
+                value={props.filters.tagSlugs}
+                onChange={props.onTagSlugsChange}
+              >
+                {Array.from(tagsByKind.entries()).map(([kind, tags]) => (
+                  <optgroup
+                    key={kind}
+                    label={
+                      kind in tagKindLabels
+                        ? tagKindLabels[kind as TagRow['kind']]
+                        : kind
+                    }
+                  >
+                    {tags.map((tag) => (
+                      <option key={tag.slug} value={tag.slug}>
+                        {tag.name}
+                      </option>
+                    ))}
+                  </optgroup>
+                ))}
+              </select>
+              <div className="mt-1 text-xs text-muted-foreground">
+                Leave empty to include all tags.
+              </div>
+            </>
+          ) : null}
         </div>
       </div>
 
@@ -261,6 +363,14 @@ export default function PracticePage() {
   const [submitResult, setSubmitResult] = useState<SubmitAnswerOutput | null>(
     null,
   );
+  const [filters, setFilters] = useState<PracticeFilters>({
+    tagSlugs: [],
+    difficulties: [],
+  });
+  const [tagLoadStatus, setTagLoadStatus] = useState<
+    'idle' | 'loading' | 'error'
+  >('loading');
+  const [availableTags, setAvailableTags] = useState<TagRow[]>([]);
   const [bookmarkedQuestionIds, setBookmarkedQuestionIds] = useState<
     Set<string>
   >(() => new Set());
@@ -289,6 +399,7 @@ export default function PracticePage() {
       createLoadNextQuestionAction({
         startTransition,
         getNextQuestionFn: getNextQuestion,
+        filters,
         nowMs: Date.now,
         setLoadState,
         setSelectedChoiceId,
@@ -296,10 +407,32 @@ export default function PracticePage() {
         setQuestionLoadedAt,
         setQuestion,
       }),
-    [],
+    [filters],
   );
 
   useEffect(loadNext, [loadNext]);
+
+  useEffect(() => {
+    let mounted = true;
+    setTagLoadStatus('loading');
+
+    void (async () => {
+      const res = await getTags({});
+      if (!mounted) return;
+
+      if (!res.ok) {
+        setTagLoadStatus('error');
+        return;
+      }
+
+      setAvailableTags(res.data.rows);
+      setTagLoadStatus('idle');
+    })();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   const bookmarksEffect = useMemo(
     () =>
@@ -385,17 +518,46 @@ export default function PracticePage() {
     [],
   );
 
+  const onTagSlugsChange = useMemo(
+    () =>
+      ((event: {
+        target: { selectedOptions: ArrayLike<{ value: string }> };
+      }) => {
+        const selected = Array.from(event.target.selectedOptions).map(
+          (o) => o.value,
+        );
+        setFilters((prev) => ({ ...prev, tagSlugs: selected }));
+      }) satisfies PracticeSessionStarterProps['onTagSlugsChange'],
+    [],
+  );
+
+  const onToggleDifficulty = useMemo(
+    () =>
+      ((difficulty: NextQuestion['difficulty']) => {
+        setFilters((prev) => {
+          const existing = prev.difficulties;
+          const next = existing.includes(difficulty)
+            ? existing.filter((d) => d !== difficulty)
+            : [...existing, difficulty];
+
+          return { ...prev, difficulties: next };
+        });
+      }) satisfies PracticeSessionStarterProps['onToggleDifficulty'],
+    [],
+  );
+
   const onStartSession = useMemo(
     () =>
       startSession.bind(null, {
         sessionMode,
         sessionCount,
+        filters,
         startPracticeSessionFn: startPracticeSession,
         setSessionStartStatus,
         setSessionStartError,
         navigateTo,
       }),
-    [sessionMode, sessionCount],
+    [filters, sessionMode, sessionCount],
   );
 
   return (
@@ -404,9 +566,14 @@ export default function PracticePage() {
         <PracticeSessionStarter
           sessionMode={sessionMode}
           sessionCount={sessionCount}
+          filters={filters}
+          tagLoadStatus={tagLoadStatus}
+          availableTags={availableTags}
           sessionStartStatus={sessionStartStatus}
           sessionStartError={sessionStartError}
           isPending={isPending}
+          onToggleDifficulty={onToggleDifficulty}
+          onTagSlugsChange={onTagSlugsChange}
           onSessionModeChange={onSessionModeChange}
           onSessionCountChange={onSessionCountChange}
           onStartSession={onStartSession}

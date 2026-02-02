@@ -8,6 +8,7 @@ import type { QuestionViewControllerDeps } from '@/src/adapters/controllers/ques
 import type { ReviewControllerDeps } from '@/src/adapters/controllers/review-controller';
 import type { StatsControllerDeps } from '@/src/adapters/controllers/stats-controller';
 import type { StripeWebhookDeps } from '@/src/adapters/controllers/stripe-webhook-controller';
+import type { TagControllerDeps } from '@/src/adapters/controllers/tag-controller';
 import {
   ClerkAuthGateway,
   StripePaymentGateway,
@@ -97,6 +98,7 @@ export type ControllerFactories = {
   createPracticeControllerDeps: () => PracticeControllerDeps;
   createReviewControllerDeps: () => ReviewControllerDeps;
   createStatsControllerDeps: () => StatsControllerDeps;
+  createTagControllerDeps: () => TagControllerDeps;
 };
 
 export type ContainerOverrides = {
@@ -267,6 +269,12 @@ export function createContainer(overrides: ContainerOverrides = {}) {
       attemptRepository: repositories.createAttemptRepository(),
       questionRepository: repositories.createQuestionRepository(),
       now: primitives.now,
+      logger: primitives.logger,
+    }),
+    createTagControllerDeps: () => ({
+      authGateway: gateways.createAuthGateway(),
+      checkEntitlementUseCase: useCases.createCheckEntitlementUseCase(),
+      tagRepository: repositories.createTagRepository(),
       logger: primitives.logger,
     }),
   };

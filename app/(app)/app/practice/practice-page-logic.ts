@@ -20,10 +20,16 @@ export type LoadState =
   | { status: 'ready' }
   | { status: 'error'; message: string };
 
+export type PracticeFilters = {
+  tagSlugs: string[];
+  difficulties: Array<NextQuestion['difficulty']>;
+};
+
 export async function loadNextQuestion(input: {
   getNextQuestionFn: (
     input: unknown,
   ) => Promise<ActionResult<NextQuestion | null>>;
+  filters: PracticeFilters;
   nowMs: () => number;
   setLoadState: (state: LoadState) => void;
   setSelectedChoiceId: (choiceId: string | null) => void;
@@ -37,7 +43,7 @@ export async function loadNextQuestion(input: {
   input.setQuestionLoadedAt(null);
 
   const res = await input.getNextQuestionFn({
-    filters: { tagSlugs: [], difficulties: [] },
+    filters: input.filters,
   });
 
   if (!res.ok) {
@@ -59,6 +65,7 @@ export function createLoadNextQuestionAction(input: {
   getNextQuestionFn: (
     input: unknown,
   ) => Promise<ActionResult<NextQuestion | null>>;
+  filters: PracticeFilters;
   nowMs: () => number;
   setLoadState: (state: LoadState) => void;
   setSelectedChoiceId: (choiceId: string | null) => void;
@@ -250,6 +257,7 @@ export function handleSessionCountChange(
 export async function startSession(input: {
   sessionMode: 'tutor' | 'exam';
   sessionCount: number;
+  filters: PracticeFilters;
   startPracticeSessionFn: (
     input: unknown,
   ) => Promise<ActionResult<StartPracticeSessionOutput>>;
@@ -263,8 +271,8 @@ export async function startSession(input: {
   const res = await input.startPracticeSessionFn({
     mode: input.sessionMode,
     count: input.sessionCount,
-    tagSlugs: [],
-    difficulties: [],
+    tagSlugs: input.filters.tagSlugs,
+    difficulties: input.filters.difficulties,
   });
 
   if (!res.ok) {

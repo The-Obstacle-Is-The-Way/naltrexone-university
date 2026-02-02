@@ -8,3 +8,4 @@ export * from './question-view-controller';
 export * from './review-controller';
 export * from './stats-controller';
 export * from './stripe-webhook-controller';
+export * from './tag-controller';
