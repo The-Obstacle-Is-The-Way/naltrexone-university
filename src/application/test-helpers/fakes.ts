@@ -493,6 +493,18 @@ export class FakeUserRepository implements UserRepository {
 export class FakeBookmarkRepository implements BookmarkRepository {
   private readonly bookmarks = new Map<string, Bookmark>();
 
+  constructor(
+    seed: readonly Bookmark[] = [],
+    private readonly now: () => Date = () => new Date(),
+  ) {
+    for (const bookmark of seed) {
+      this.bookmarks.set(
+        this.key(bookmark.userId, bookmark.questionId),
+        bookmark,
+      );
+    }
+  }
+
   private key(userId: string, questionId: string): string {
     return `${userId}:${questionId}`;
   }
@@ -511,7 +523,7 @@ export class FakeBookmarkRepository implements BookmarkRepository {
     const bookmark: Bookmark = {
       userId,
       questionId,
-      createdAt: new Date(),
+      createdAt: this.now(),
     };
     this.bookmarks.set(k, bookmark);
     return bookmark;

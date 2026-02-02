@@ -1,89 +1,68 @@
 import { describe, expect, it, vi } from 'vitest';
-import { getUserStats } from '@/src/adapters/controllers/stats-controller';
 import type { Logger } from '@/src/adapters/shared/logger';
-import { ApplicationError } from '@/src/application/errors';
-import type { AuthGateway } from '@/src/application/ports/gateways';
-import type {
-  AttemptRepository,
-  QuestionRepository,
-} from '@/src/application/ports/repositories';
+import {
+  FakeAttemptRepository,
+  FakeAuthGateway,
+  FakeQuestionRepository,
+  FakeSubscriptionRepository,
+} from '@/src/application/test-helpers/fakes';
+import { CheckEntitlementUseCase } from '@/src/application/use-cases/check-entitlement';
 import type { Attempt, Question, User } from '@/src/domain/entities';
 import {
   createAttempt,
   createQuestion,
+  createSubscription,
   createUser,
 } from '@/src/domain/test-helpers';
+import { getUserStats } from './stats-controller';
+
+class FakeLogger implements Logger {
+  readonly warnCalls: Array<{ context: Record<string, unknown>; msg: string }> =
+    [];
+
+  warn(context: Record<string, unknown>, msg: string): void {
+    this.warnCalls.push({ context, msg });
+  }
+}
 
 function createDeps(overrides?: {
-  user?: User;
-  authGateway?: Partial<AuthGateway>;
+  user?: User | null;
   isEntitled?: boolean;
   attempts?: readonly Attempt[];
-  questionsById?: Record<string, Question>;
+  questions?: readonly Question[];
   now?: () => Date;
   logger?: Logger;
 }) {
-  const user = overrides?.user ?? createUser({ id: 'user_1' });
-  const isEntitled = overrides?.isEntitled ?? true;
-  const attempts = overrides?.attempts ?? [];
-  const questionsById = overrides?.questionsById ?? {};
+  const user =
+    overrides?.user === undefined
+      ? createUser({ id: 'user_1' })
+      : overrides.user;
   const now = overrides?.now ?? (() => new Date('2026-02-01T12:00:00Z'));
 
-  const authGateway: AuthGateway = {
-    getCurrentUser: async () => user,
-    requireUser: async () => user,
-    ...overrides?.authGateway,
-  };
+  const authGateway = new FakeAuthGateway(user);
 
-  const checkEntitlementUseCase = {
-    execute: vi.fn(async () => ({ isEntitled })),
-  };
+  const subscriptionRepository = new FakeSubscriptionRepository(
+    overrides?.isEntitled === false
+      ? []
+      : [
+          createSubscription({
+            userId: user?.id ?? 'user_1',
+            status: 'active',
+            currentPeriodEnd: new Date('2026-12-31T00:00:00Z'),
+          }),
+        ],
+  );
 
-  const attemptRepository: AttemptRepository = {
-    insert: vi.fn(async () => createAttempt({ questionId: 'q_1' })),
-    findByUserId: vi.fn(async () => {
-      throw new Error('findByUserId should not be called by stats-controller');
-    }),
-    findBySessionId: vi.fn(async () => []),
-    countByUserId: vi.fn(async () => attempts.length),
-    countCorrectByUserId: vi.fn(
-      async () => attempts.filter((a) => a.isCorrect).length,
-    ),
-    countByUserIdSince: vi.fn(
-      async (_userId: string, since: Date) =>
-        attempts.filter((a) => a.answeredAt >= since).length,
-    ),
-    countCorrectByUserIdSince: vi.fn(
-      async (_userId: string, since: Date) =>
-        attempts.filter((a) => a.answeredAt >= since && a.isCorrect).length,
-    ),
-    listRecentByUserId: vi.fn(async (_userId: string, limit: number) =>
-      attempts
-        .slice()
-        .sort((a, b) => b.answeredAt.getTime() - a.answeredAt.getTime())
-        .slice(0, limit),
-    ),
-    listAnsweredAtByUserIdSince: vi.fn(async (_userId: string, since: Date) =>
-      attempts.filter((a) => a.answeredAt >= since).map((a) => a.answeredAt),
-    ),
-    listMissedQuestionsByUserId: vi.fn(async () => []),
-    findMostRecentAnsweredAtByQuestionIds: vi.fn(async () => []),
-  };
-
-  const questionRepository: QuestionRepository = {
-    findPublishedById: vi.fn(async () => null),
-    findPublishedBySlug: vi.fn(async () => null),
-    findPublishedByIds: vi.fn(async (ids: readonly string[]) =>
-      ids.map((id) => questionsById[id]).filter((q): q is Question => !!q),
-    ),
-    listPublishedCandidateIds: vi.fn(async () => []),
-  };
+  const checkEntitlementUseCase = new CheckEntitlementUseCase(
+    subscriptionRepository,
+    now,
+  );
 
   return {
     authGateway,
     checkEntitlementUseCase,
-    attemptRepository,
-    questionRepository,
+    attemptRepository: new FakeAttemptRepository(overrides?.attempts ?? []),
+    questionRepository: new FakeQuestionRepository(overrides?.questions ?? []),
     now,
     logger: overrides?.logger,
   };
@@ -103,13 +82,7 @@ describe('stats-controller', () => {
     });
 
     it('returns UNAUTHENTICATED when unauthenticated', async () => {
-      const deps = createDeps({
-        authGateway: {
-          requireUser: async () => {
-            throw new ApplicationError('UNAUTHENTICATED', 'No session');
-          },
-        },
-      });
+      const deps = createDeps({ user: null });
 
       const result = await getUserStats({}, deps as never);
 
@@ -121,6 +94,9 @@ describe('stats-controller', () => {
 
     it('returns UNSUBSCRIBED when not entitled', async () => {
       const deps = createDeps({ isEntitled: false });
+      deps.attemptRepository.countByUserId = async () => {
+        throw new Error('AttemptRepository should not be called');
+      };
 
       const result = await getUserStats({}, deps as never);
 
@@ -128,7 +104,6 @@ describe('stats-controller', () => {
         ok: false,
         error: { code: 'UNSUBSCRIBED' },
       });
-      expect(deps.attemptRepository.findByUserId).not.toHaveBeenCalled();
     });
 
     it('computes stats from attempts and joins recent activity slugs', async () => {
@@ -138,26 +113,29 @@ describe('stats-controller', () => {
         now: () => now,
         attempts: [
           createAttempt({
+            userId: 'user_1',
             questionId: 'q1',
             isCorrect: true,
             answeredAt: new Date('2026-02-01T11:00:00Z'),
           }),
           createAttempt({
+            userId: 'user_1',
             questionId: 'q2',
             isCorrect: false,
             answeredAt: new Date('2026-01-31T11:00:00Z'),
           }),
           createAttempt({
+            userId: 'user_1',
             questionId: 'q3',
             isCorrect: true,
             answeredAt: new Date('2026-01-20T11:00:00Z'),
           }),
         ],
-        questionsById: {
-          q1: createQuestion({ id: 'q1', slug: 'q-1' }),
-          q2: createQuestion({ id: 'q2', slug: 'q-2' }),
-          q3: createQuestion({ id: 'q3', slug: 'q-3' }),
-        },
+        questions: [
+          createQuestion({ id: 'q1', slug: 'q-1' }),
+          createQuestion({ id: 'q2', slug: 'q-2' }),
+          createQuestion({ id: 'q3', slug: 'q-3' }),
+        ],
       });
 
       const result = await getUserStats({}, deps as never);
@@ -205,14 +183,13 @@ describe('stats-controller', () => {
         attempts: [
           createAttempt({
             id: 'attempt_123',
+            userId: 'user_1',
             questionId: 'q1',
             isCorrect: true,
             answeredAt: new Date('2026-02-01T11:00:00Z'),
           }),
         ],
-        questionsById: {
-          q1: createQuestion({ id: 'q1', slug: 'q-1' }),
-        },
+        questions: [createQuestion({ id: 'q1', slug: 'q-1' })],
       });
 
       const result = await getUserStats({}, deps as never);
@@ -229,7 +206,7 @@ describe('stats-controller', () => {
     it('loads dependencies from the container when deps are omitted', async () => {
       vi.resetModules();
 
-      const deps = createDeps({ attempts: [], questionsById: {} });
+      const deps = createDeps({ attempts: [], questions: [] });
 
       vi.doMock('@/lib/container', () => ({
         createContainer: () => ({
@@ -257,18 +234,19 @@ describe('stats-controller', () => {
     it('logs warning when recent activity references missing question', async () => {
       const orphanedQuestionId = 'q-orphaned';
       const now = new Date('2026-02-01T12:00:00Z');
-      const logger: Logger = { warn: vi.fn() };
+      const logger = new FakeLogger();
 
       const deps = createDeps({
         now: () => now,
         attempts: [
           createAttempt({
+            userId: 'user_1',
             questionId: orphanedQuestionId,
             isCorrect: true,
             answeredAt: new Date('2026-02-01T11:00:00Z'),
           }),
         ],
-        questionsById: {},
+        questions: [],
         logger,
       });
 
@@ -278,10 +256,12 @@ describe('stats-controller', () => {
       if (result.ok) {
         expect(result.data.recentActivity).toEqual([]);
       }
-      expect(logger.warn).toHaveBeenCalledWith(
-        { questionId: orphanedQuestionId },
-        'Recent activity references missing question',
-      );
+      expect(logger.warnCalls).toEqual([
+        {
+          context: { questionId: orphanedQuestionId },
+          msg: 'Recent activity references missing question',
+        },
+      ]);
     });
 
     it('works without logger (optional dependency)', async () => {
@@ -292,12 +272,13 @@ describe('stats-controller', () => {
         now: () => now,
         attempts: [
           createAttempt({
+            userId: 'user_1',
             questionId: orphanedQuestionId,
             isCorrect: true,
             answeredAt: new Date('2026-02-01T11:00:00Z'),
           }),
         ],
-        questionsById: {},
+        questions: [],
       });
 
       const result = await getUserStats({}, deps as never);

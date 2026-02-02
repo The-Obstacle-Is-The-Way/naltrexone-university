@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { processClerkWebhook } from '@/src/adapters/controllers/clerk-webhook-controller';
 import {
   FakeStripeCustomerRepository,
@@ -6,10 +6,15 @@ import {
 } from '@/src/application/test-helpers/fakes';
 
 function createDeps() {
+  const cancelCalls: string[] = [];
+
   return {
     userRepository: new FakeUserRepository(),
     stripeCustomerRepository: new FakeStripeCustomerRepository(),
-    cancelStripeCustomerSubscriptions: vi.fn(async () => undefined),
+    cancelCalls,
+    cancelStripeCustomerSubscriptions: async (stripeCustomerId: string) => {
+      cancelCalls.push(stripeCustomerId);
+    },
   };
 }
 
@@ -97,9 +102,7 @@ describe('processClerkWebhook', () => {
       data: { id: 'clerk_1' },
     });
 
-    expect(deps.cancelStripeCustomerSubscriptions).toHaveBeenCalledWith(
-      'cus_123',
-    );
+    expect(deps.cancelCalls).toEqual(['cus_123']);
     await expect(
       deps.userRepository.findByClerkId('clerk_1'),
     ).resolves.toBeNull();
@@ -113,6 +116,6 @@ describe('processClerkWebhook', () => {
       data: { id: 'clerk_1' },
     });
 
-    expect(deps.cancelStripeCustomerSubscriptions).not.toHaveBeenCalled();
+    expect(deps.cancelCalls).toEqual([]);
   });
 });

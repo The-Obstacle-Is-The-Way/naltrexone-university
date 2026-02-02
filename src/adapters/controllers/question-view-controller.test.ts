@@ -1,48 +1,70 @@
-import { describe, expect, it, vi } from 'vitest';
-import { ApplicationError } from '@/src/application/errors';
-import type { AuthGateway } from '@/src/application/ports/gateways';
+import { describe, expect, it } from 'vitest';
 import type { QuestionRepository } from '@/src/application/ports/repositories';
+import {
+  FakeAuthGateway,
+  FakeQuestionRepository,
+  FakeSubscriptionRepository,
+} from '@/src/application/test-helpers/fakes';
+import { CheckEntitlementUseCase } from '@/src/application/use-cases/check-entitlement';
+import type { User } from '@/src/domain/entities';
 import {
   createChoice,
   createQuestion,
+  createSubscription,
   createUser,
 } from '@/src/domain/test-helpers';
 import { getQuestionBySlug } from './question-view-controller';
 
-type CheckEntitlementUseCase = {
-  execute: (input: { userId: string }) => Promise<{ isEntitled: boolean }>;
-};
+function createThrowingQuestionRepository(
+  errorMessage = 'QuestionRepository should not be called',
+): QuestionRepository {
+  return {
+    findPublishedById: async () => null,
+    findPublishedBySlug: async () => {
+      throw new Error(errorMessage);
+    },
+    findPublishedByIds: async () => [],
+    listPublishedCandidateIds: async () => [],
+  };
+}
 
 function createDeps(overrides?: {
-  authGateway?: Partial<AuthGateway>;
+  user?: User | null;
   isEntitled?: boolean;
   question?: ReturnType<typeof createQuestion> | null;
+  questionRepository?: QuestionRepository;
 }) {
-  const user = createUser({
-    id: 'user_1',
-    email: 'user@example.com',
-    createdAt: new Date('2026-02-01T00:00:00Z'),
-    updatedAt: new Date('2026-02-01T00:00:00Z'),
-  });
+  const user =
+    overrides?.user === undefined
+      ? createUser({
+          id: 'user_1',
+          email: 'user@example.com',
+          createdAt: new Date('2026-02-01T00:00:00Z'),
+          updatedAt: new Date('2026-02-01T00:00:00Z'),
+        })
+      : overrides.user;
 
-  const authGateway: AuthGateway = {
-    getCurrentUser: async () => user,
-    requireUser: async () => user,
-    ...overrides?.authGateway,
-  };
+  const authGateway = new FakeAuthGateway(user);
 
-  const checkEntitlementUseCase: CheckEntitlementUseCase = {
-    execute: vi.fn(async () => ({ isEntitled: overrides?.isEntitled ?? true })),
-  };
+  const subscriptionRepository = new FakeSubscriptionRepository(
+    overrides?.isEntitled === false
+      ? []
+      : [
+          createSubscription({
+            userId: user?.id ?? 'user_1',
+            status: 'active',
+            currentPeriodEnd: new Date('2026-12-31T00:00:00Z'),
+          }),
+        ],
+  );
 
-  const question = overrides?.question ?? null;
+  const checkEntitlementUseCase = new CheckEntitlementUseCase(
+    subscriptionRepository,
+  );
 
-  const questionRepository: QuestionRepository = {
-    findPublishedById: vi.fn(async () => null),
-    findPublishedBySlug: vi.fn(async () => question),
-    findPublishedByIds: vi.fn(async () => []),
-    listPublishedCandidateIds: vi.fn(async () => []),
-  };
+  const questionRepository =
+    overrides?.questionRepository ??
+    new FakeQuestionRepository(overrides?.question ? [overrides.question] : []);
 
   return { authGateway, checkEntitlementUseCase, questionRepository };
 }
@@ -61,13 +83,7 @@ describe('question-view-controller', () => {
     });
 
     it('returns UNAUTHENTICATED when unauthenticated', async () => {
-      const deps = createDeps({
-        authGateway: {
-          requireUser: async () => {
-            throw new ApplicationError('UNAUTHENTICATED', 'No session');
-          },
-        },
-      });
+      const deps = createDeps({ user: null });
 
       const result = await getQuestionBySlug({ slug: 'q-1' }, deps as never);
 
@@ -78,7 +94,10 @@ describe('question-view-controller', () => {
     });
 
     it('returns UNSUBSCRIBED when not entitled', async () => {
-      const deps = createDeps({ isEntitled: false });
+      const deps = createDeps({
+        isEntitled: false,
+        questionRepository: createThrowingQuestionRepository(),
+      });
 
       const result = await getQuestionBySlug({ slug: 'q-1' }, deps as never);
 
@@ -86,9 +105,6 @@ describe('question-view-controller', () => {
         ok: false,
         error: { code: 'UNSUBSCRIBED' },
       });
-      expect(
-        deps.questionRepository.findPublishedBySlug,
-      ).not.toHaveBeenCalled();
     });
 
     it('returns NOT_FOUND when the question does not exist', async () => {
