@@ -1,6 +1,7 @@
 import { verifyWebhook } from '@clerk/nextjs/webhooks';
 import { createContainer } from '@/lib/container';
 import { stripe } from '@/lib/stripe';
+import type { ClerkWebhookEvent } from '@/src/adapters/controllers/clerk-webhook-controller';
 import { processClerkWebhook } from '@/src/adapters/controllers/clerk-webhook-controller';
 import { createWebhookHandler } from './handler';
 
@@ -27,9 +28,16 @@ async function cancelStripeCustomerSubscriptions(
   }
 }
 
+async function verifyClerkWebhook(req: Request): Promise<ClerkWebhookEvent> {
+  type ClerkRequestLike = Parameters<typeof verifyWebhook>[0];
+  return (await verifyWebhook(
+    req as unknown as ClerkRequestLike,
+  )) as unknown as ClerkWebhookEvent;
+}
+
 export const POST = createWebhookHandler(
   createContainer,
-  verifyWebhook,
+  verifyClerkWebhook,
   processClerkWebhook,
   cancelStripeCustomerSubscriptions,
 );

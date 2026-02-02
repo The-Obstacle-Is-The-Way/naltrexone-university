@@ -283,6 +283,7 @@ describe('container factories', () => {
       lock: async () => ({ processedAt: null, error: null }),
       markProcessed: async () => undefined,
       markFailed: async () => undefined,
+      pruneProcessedBefore: async () => 0,
     }));
     const createSubscriptionRepository = vi.fn(() => ({
       findByUserId: async () => null,

@@ -25,6 +25,7 @@ function createTestDeps() {
       lock: async () => ({ processedAt: null, error: null }),
       markProcessed: async () => undefined,
       markFailed: async () => undefined,
+      pruneProcessedBefore: async () => 0,
     },
     subscriptions: {
       findByUserId: async () => null,
