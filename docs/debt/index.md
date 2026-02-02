@@ -1,7 +1,7 @@
 # Technical Debt Register
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-02-01
+**Last Updated:** 2026-02-02
 
 ---
 
@@ -17,7 +17,6 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 | ID | Title | Status | Priority | Date |
 |----|-------|--------|----------|------|
-| [DEBT-037](./debt-037-attempt-repo-unnecessary-null-checks.md) | Unnecessary Null Checks in Attempt Repository | Open | P3 | 2026-02-01 |
 | [DEBT-038](./debt-038-question-repo-type-assertion.md) | Misleading Type Assertion in Question Repository | Open | P3 | 2026-02-01 |
 | [DEBT-039](./debt-039-webhook-error-context-loss.md) | Error Context Loss in Stripe Webhook Failures | Open | P2 | 2026-02-01 |
 | [DEBT-040](./debt-040-missing-session-id-index.md) | Missing Standalone Index on Attempts by Session | Open | P2 | 2026-02-01 |
@@ -71,6 +70,7 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 | [DEBT-034](../_archive/debt/debt-034-test-coverage-gap-critical.md) | Test Coverage Gap — Must Stabilize Before New Features | P1 | 2026-02-01 |
 | [DEBT-035](../_archive/debt/debt-035-inconsistent-repo-test-mocking.md) | Inconsistent Repo Test Mocking (False Positive) | P2 | 2026-02-01 |
 | [DEBT-036](../_archive/debt/debt-036-specs-register-and-ports-doc-drift.md) | Specs Register and Ports Docs Drift | P2 | 2026-02-01 |
+| [DEBT-037](../_archive/debt/debt-037-attempt-repo-unnecessary-null-checks.md) | Unnecessary Null Checks in Attempt Repository | P3 | 2026-02-02 |
 
 ## Debt Statuses
 
