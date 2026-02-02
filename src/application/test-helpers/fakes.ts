@@ -24,6 +24,7 @@ import type {
   AttemptMostRecentAnsweredAt,
   AttemptRepository,
   BookmarkRepository,
+  MissedQuestionAttempt,
   PracticeSessionRepository,
   QuestionFilters,
   QuestionRepository,
@@ -218,6 +219,71 @@ export class FakeAttemptRepository implements AttemptRepository {
     return this.attempts.filter(
       (a) => a.practiceSessionId === sessionId && a.userId === userId,
     );
+  }
+
+  async countByUserId(userId: string): Promise<number> {
+    return this.attempts.filter((a) => a.userId === userId).length;
+  }
+
+  async countCorrectByUserId(userId: string): Promise<number> {
+    return this.attempts.filter((a) => a.userId === userId && a.isCorrect)
+      .length;
+  }
+
+  async countByUserIdSince(userId: string, since: Date): Promise<number> {
+    return this.attempts.filter(
+      (a) => a.userId === userId && a.answeredAt >= since,
+    ).length;
+  }
+
+  async countCorrectByUserIdSince(
+    userId: string,
+    since: Date,
+  ): Promise<number> {
+    return this.attempts.filter(
+      (a) => a.userId === userId && a.answeredAt >= since && a.isCorrect,
+    ).length;
+  }
+
+  async listRecentByUserId(
+    userId: string,
+    limit: number,
+  ): Promise<readonly Attempt[]> {
+    return this.attempts
+      .filter((a) => a.userId === userId)
+      .slice()
+      .sort((a, b) => b.answeredAt.getTime() - a.answeredAt.getTime())
+      .slice(0, limit);
+  }
+
+  async listAnsweredAtByUserIdSince(
+    userId: string,
+    since: Date,
+  ): Promise<readonly Date[]> {
+    return this.attempts
+      .filter((a) => a.userId === userId && a.answeredAt >= since)
+      .map((a) => a.answeredAt);
+  }
+
+  async listMissedQuestionsByUserId(
+    userId: string,
+    limit: number,
+    offset: number,
+  ): Promise<readonly MissedQuestionAttempt[]> {
+    const mostRecentByQuestionId = new Map<string, InMemoryAttempt>();
+    for (const attempt of this.attempts) {
+      if (attempt.userId !== userId) continue;
+      const existing = mostRecentByQuestionId.get(attempt.questionId);
+      if (!existing || attempt.answeredAt > existing.answeredAt) {
+        mostRecentByQuestionId.set(attempt.questionId, attempt);
+      }
+    }
+
+    return [...mostRecentByQuestionId.values()]
+      .filter((a) => !a.isCorrect)
+      .sort((a, b) => b.answeredAt.getTime() - a.answeredAt.getTime())
+      .slice(offset, offset + limit)
+      .map((a) => ({ questionId: a.questionId, answeredAt: a.answeredAt }));
   }
 
   async findMostRecentAnsweredAtByQuestionIds(

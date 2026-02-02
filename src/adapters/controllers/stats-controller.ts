@@ -10,11 +10,7 @@ import type {
   CheckEntitlementInput,
   CheckEntitlementOutput,
 } from '@/src/application/use-cases/check-entitlement';
-import {
-  computeAccuracy,
-  computeStreak,
-  filterAttemptsInWindow,
-} from '@/src/domain/services';
+import { computeAccuracy, computeStreak } from '@/src/domain/services';
 import type { ActionResult } from './action-result';
 import { err, handleError, ok } from './action-result';
 
@@ -23,6 +19,7 @@ const GetUserStatsInputSchema = z.object({}).strict();
 const STATS_WINDOW_DAYS = 7;
 const STREAK_WINDOW_DAYS = 60;
 const RECENT_ACTIVITY_LIMIT = 20;
+const DAY_MS = 86_400_000;
 
 type CheckEntitlementUseCase = {
   execute: (input: CheckEntitlementInput) => Promise<CheckEntitlementOutput>;
@@ -93,40 +90,36 @@ export async function getUserStats(
     if (typeof userIdOrError !== 'string') return userIdOrError;
     const userId = userIdOrError;
 
-    const attempts = await d.attemptRepository.findByUserId(userId);
-    const totalAnswered = attempts.length;
-    const correctOverall = attempts.filter((a) => a.isCorrect).length;
+    const totalAnswered = await d.attemptRepository.countByUserId(userId);
+    const correctOverall =
+      await d.attemptRepository.countCorrectByUserId(userId);
     const accuracyOverall = computeAccuracy(totalAnswered, correctOverall);
 
     const now = d.now();
-    const attemptsLast7Days = filterAttemptsInWindow(
-      attempts,
-      STATS_WINDOW_DAYS,
-      now,
+    const since7Days = new Date(now.getTime() - STATS_WINDOW_DAYS * DAY_MS);
+    const answeredLast7Days = await d.attemptRepository.countByUserIdSince(
+      userId,
+      since7Days,
     );
-    const answeredLast7Days = attemptsLast7Days.length;
-    const correctLast7Days = attemptsLast7Days.filter(
-      (a) => a.isCorrect,
-    ).length;
+    const correctLast7Days =
+      await d.attemptRepository.countCorrectByUserIdSince(userId, since7Days);
     const accuracyLast7Days = computeAccuracy(
       answeredLast7Days,
       correctLast7Days,
     );
 
-    const attemptsLast60Days = filterAttemptsInWindow(
-      attempts,
-      STREAK_WINDOW_DAYS,
-      now,
-    );
-    const currentStreakDays = computeStreak(
-      attemptsLast60Days.map((a) => a.answeredAt),
-      now,
-    );
+    const since60Days = new Date(now.getTime() - STREAK_WINDOW_DAYS * DAY_MS);
+    const attemptsLast60Days =
+      await d.attemptRepository.listAnsweredAtByUserIdSince(
+        userId,
+        since60Days,
+      );
+    const currentStreakDays = computeStreak(attemptsLast60Days, now);
 
-    const sortedAttempts = attempts
-      .slice()
-      .sort((a, b) => b.answeredAt.getTime() - a.answeredAt.getTime());
-    const recentAttempts = sortedAttempts.slice(0, RECENT_ACTIVITY_LIMIT);
+    const recentAttempts = await d.attemptRepository.listRecentByUserId(
+      userId,
+      RECENT_ACTIVITY_LIMIT,
+    );
 
     const uniqueQuestionIds: string[] = [];
     const seen = new Set<string>();

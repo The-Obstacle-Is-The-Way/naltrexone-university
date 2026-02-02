@@ -79,8 +79,48 @@ function createDeps(overrides?: {
 
   const attemptRepository: AttemptRepository = {
     insert: vi.fn(async () => createAttempt({ questionId: 'q_1' })),
-    findByUserId: vi.fn(async () => attempts),
+    findByUserId: vi.fn(async () => {
+      throw new Error('findByUserId should not be called by review-controller');
+    }),
     findBySessionId: vi.fn(async () => []),
+    countByUserId: vi.fn(async () => attempts.length),
+    countCorrectByUserId: vi.fn(
+      async () => attempts.filter((a) => a.isCorrect).length,
+    ),
+    countByUserIdSince: vi.fn(
+      async (_userId: string, since: Date) =>
+        attempts.filter((a) => a.answeredAt >= since).length,
+    ),
+    countCorrectByUserIdSince: vi.fn(
+      async (_userId: string, since: Date) =>
+        attempts.filter((a) => a.answeredAt >= since && a.isCorrect).length,
+    ),
+    listRecentByUserId: vi.fn(async (_userId: string, limit: number) =>
+      attempts
+        .slice()
+        .sort((a, b) => b.answeredAt.getTime() - a.answeredAt.getTime())
+        .slice(0, limit),
+    ),
+    listAnsweredAtByUserIdSince: vi.fn(async (_userId: string, since: Date) =>
+      attempts.filter((a) => a.answeredAt >= since).map((a) => a.answeredAt),
+    ),
+    listMissedQuestionsByUserId: vi.fn(
+      async (_userId: string, limit: number, offset: number) => {
+        const mostRecentByQuestionId = new Map<string, Attempt>();
+        for (const attempt of attempts) {
+          const existing = mostRecentByQuestionId.get(attempt.questionId);
+          if (!existing || attempt.answeredAt > existing.answeredAt) {
+            mostRecentByQuestionId.set(attempt.questionId, attempt);
+          }
+        }
+
+        return [...mostRecentByQuestionId.values()]
+          .filter((a) => !a.isCorrect)
+          .sort((a, b) => b.answeredAt.getTime() - a.answeredAt.getTime())
+          .slice(offset, offset + limit)
+          .map((a) => ({ questionId: a.questionId, answeredAt: a.answeredAt }));
+      },
+    ),
     findMostRecentAnsweredAtByQuestionIds: vi.fn(async () => []),
   };
 

@@ -106,6 +106,13 @@ function createDeps(overrides?: {
     insert: vi.fn(async () => createAttempt({ questionId: 'q_1' })),
     findByUserId: vi.fn(async () => []),
     findBySessionId: vi.fn(async () => attempts),
+    countByUserId: vi.fn(async () => 0),
+    countCorrectByUserId: vi.fn(async () => 0),
+    countByUserIdSince: vi.fn(async () => 0),
+    countCorrectByUserIdSince: vi.fn(async () => 0),
+    listRecentByUserId: vi.fn(async () => []),
+    listAnsweredAtByUserIdSince: vi.fn(async () => []),
+    listMissedQuestionsByUserId: vi.fn(async () => []),
     findMostRecentAnsweredAtByQuestionIds: vi.fn(async () => []),
   };
 

@@ -1,8 +1,9 @@
 # BUG-016: Memory Exhaustion for Power Users — All Attempts Loaded Into Memory
 
-**Status:** Open
-**Priority:** P1
+**Status:** Resolved
+**Priority:** P1 - High
 **Date:** 2026-02-02
+**Resolved:** 2026-02-02
 
 ---
 
@@ -43,28 +44,23 @@ const page = missed.slice(parsed.data.offset, parsed.data.offset + parsed.data.l
 
 ## Fix
 
-1. Add date-range filtering to `AttemptRepository` interface:
-```typescript
-findByUserIdInDateRange(userId: string, since: Date): Promise<Attempt[]>;
-```
+1. Added database-level aggregation and pagination methods to the `AttemptRepository` port:
+   - `countByUserId`, `countCorrectByUserId`
+   - `countByUserIdSince`, `countCorrectByUserIdSince`
+   - `listRecentByUserId`, `listAnsweredAtByUserIdSince`
+   - `listMissedQuestionsByUserId`
 
-2. Add pagination to repository for missed questions:
-```typescript
-findMissedByUserId(userId: string, limit: number, offset: number): Promise<Attempt[]>;
-```
+2. Updated `stats-controller.ts` to compute totals, last-7-days stats, streak, and recent activity without loading all attempts.
 
-3. Move aggregation to database:
-```typescript
-countByUserId(userId: string): Promise<number>;
-countCorrectByUserIdInDateRange(userId: string, since: Date): Promise<number>;
-```
+3. Updated `review-controller.ts` to page missed questions via `listMissedQuestionsByUserId` (latest incorrect attempt per question), avoiding in-memory dedup + pagination.
+
+4. Implemented the new queries in `DrizzleAttemptRepository`.
 
 ## Verification
 
-- [ ] Load test with 10,000 attempts per user
-- [ ] Memory profiling before/after fix
-- [ ] Query plan analysis showing index usage
-- [ ] Integration test with large dataset
+- [x] Unit tests updated and passing (`stats-controller.test.ts`, `review-controller.test.ts`)
+- [x] `pnpm test --run`
+- [ ] Integration/load test with large attempt history (recommended follow-up)
 
 ## Related
 

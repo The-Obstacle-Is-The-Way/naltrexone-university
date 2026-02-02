@@ -50,6 +50,11 @@ export type AttemptMostRecentAnsweredAt = {
   answeredAt: Date;
 };
 
+export type MissedQuestionAttempt = {
+  questionId: string;
+  answeredAt: Date;
+};
+
 export interface AttemptRepository {
   insert(input: AttemptInsertInput): Promise<Attempt>;
 
@@ -58,6 +63,36 @@ export interface AttemptRepository {
     sessionId: string,
     userId: string,
   ): Promise<readonly Attempt[]>;
+
+  countByUserId(userId: string): Promise<number>;
+  countCorrectByUserId(userId: string): Promise<number>;
+
+  countByUserIdSince(userId: string, since: Date): Promise<number>;
+  countCorrectByUserIdSince(userId: string, since: Date): Promise<number>;
+
+  listRecentByUserId(
+    userId: string,
+    limit: number,
+  ): Promise<readonly Attempt[]>;
+
+  /**
+   * Return answeredAt timestamps for attempts within a date range.
+   * Intended for streak computation; repository may return a subset of columns.
+   */
+  listAnsweredAtByUserIdSince(
+    userId: string,
+    since: Date,
+  ): Promise<readonly Date[]>;
+
+  /**
+   * Paginated missed question IDs based on the user's most recent attempt
+   * per question (only included when the most recent attempt is incorrect).
+   */
+  listMissedQuestionsByUserId(
+    userId: string,
+    limit: number,
+    offset: number,
+  ): Promise<readonly MissedQuestionAttempt[]>;
 
   /**
    * For each question id, return the most recent answeredAt (max) for this user.

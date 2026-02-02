@@ -74,8 +74,6 @@ async function requireEntitledUserId(
   return user.id;
 }
 
-type MissedQuestion = { questionId: string; answeredAt: Date };
-
 export async function getMissedQuestions(
   input: unknown,
   deps?: ReviewControllerDeps,
@@ -89,30 +87,10 @@ export async function getMissedQuestions(
     if (typeof userIdOrError !== 'string') return userIdOrError;
     const userId = userIdOrError;
 
-    const attempts = await d.attemptRepository.findByUserId(userId);
-
-    const sortedAttempts = attempts
-      .slice()
-      .sort((a, b) => b.answeredAt.getTime() - a.answeredAt.getTime());
-
-    const seen = new Set<string>();
-    const missed: MissedQuestion[] = [];
-
-    for (const attempt of sortedAttempts) {
-      if (seen.has(attempt.questionId)) continue;
-      seen.add(attempt.questionId);
-
-      if (!attempt.isCorrect) {
-        missed.push({
-          questionId: attempt.questionId,
-          answeredAt: attempt.answeredAt,
-        });
-      }
-    }
-
-    const page = missed.slice(
+    const page = await d.attemptRepository.listMissedQuestionsByUserId(
+      userId,
+      parsed.data.limit,
       parsed.data.offset,
-      parsed.data.offset + parsed.data.limit,
     );
 
     const questionIds = page.map((m) => m.questionId);

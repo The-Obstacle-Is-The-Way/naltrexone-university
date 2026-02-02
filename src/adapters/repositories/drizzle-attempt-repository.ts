@@ -1,10 +1,12 @@
-import { and, desc, eq, inArray, max } from 'drizzle-orm';
+import { and, desc, eq, gte, inArray, max, sql } from 'drizzle-orm';
 import { attempts } from '@/db/schema';
 import { ApplicationError } from '@/src/application/errors';
 import type {
   AttemptMostRecentAnsweredAt,
   AttemptRepository,
+  MissedQuestionAttempt,
 } from '@/src/application/ports/repositories';
+import type { Attempt } from '@/src/domain/entities';
 import type { DrizzleDb } from '../shared/database-types';
 
 export class DrizzleAttemptRepository implements AttemptRepository {
@@ -108,6 +110,133 @@ export class DrizzleAttemptRepository implements AttemptRepository {
         answeredAt: row.answeredAt,
       };
     });
+  }
+
+  async countByUserId(userId: string): Promise<number> {
+    const [row] = await this.db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(attempts)
+      .where(eq(attempts.userId, userId));
+
+    return row?.count ?? 0;
+  }
+
+  async countCorrectByUserId(userId: string): Promise<number> {
+    const [row] = await this.db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(attempts)
+      .where(and(eq(attempts.userId, userId), eq(attempts.isCorrect, true)));
+
+    return row?.count ?? 0;
+  }
+
+  async countByUserIdSince(userId: string, since: Date): Promise<number> {
+    const [row] = await this.db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(attempts)
+      .where(and(eq(attempts.userId, userId), gte(attempts.answeredAt, since)));
+
+    return row?.count ?? 0;
+  }
+
+  async countCorrectByUserIdSince(
+    userId: string,
+    since: Date,
+  ): Promise<number> {
+    const [row] = await this.db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(attempts)
+      .where(
+        and(
+          eq(attempts.userId, userId),
+          eq(attempts.isCorrect, true),
+          gte(attempts.answeredAt, since),
+        ),
+      );
+
+    return row?.count ?? 0;
+  }
+
+  async listRecentByUserId(
+    userId: string,
+    limit: number,
+  ): Promise<readonly Attempt[]> {
+    const rows = await this.db.query.attempts.findMany({
+      where: eq(attempts.userId, userId),
+      orderBy: desc(attempts.answeredAt),
+      limit,
+    });
+
+    return rows.map((row) => {
+      const selectedChoiceId = this.requireSelectedChoiceId(row);
+
+      return {
+        id: row.id,
+        userId: row.userId,
+        questionId: row.questionId,
+        practiceSessionId: row.practiceSessionId ?? null,
+        selectedChoiceId,
+        isCorrect: row.isCorrect,
+        timeSpentSeconds: row.timeSpentSeconds,
+        answeredAt: row.answeredAt,
+      };
+    });
+  }
+
+  async listAnsweredAtByUserIdSince(
+    userId: string,
+    since: Date,
+  ): Promise<readonly Date[]> {
+    const rows = await this.db.query.attempts.findMany({
+      columns: { answeredAt: true },
+      where: and(eq(attempts.userId, userId), gte(attempts.answeredAt, since)),
+      orderBy: desc(attempts.answeredAt),
+    });
+
+    return rows.map((row) => row.answeredAt);
+  }
+
+  async listMissedQuestionsByUserId(
+    userId: string,
+    limit: number,
+    offset: number,
+  ): Promise<readonly MissedQuestionAttempt[]> {
+    const latestAttemptByQuestion = this.db
+      .select({
+        questionId: attempts.questionId,
+        answeredAt: max(attempts.answeredAt).as('answered_at'),
+      })
+      .from(attempts)
+      .where(eq(attempts.userId, userId))
+      .groupBy(attempts.questionId)
+      .as('latest_attempt_by_question');
+
+    const rows = await this.db
+      .select({
+        questionId: latestAttemptByQuestion.questionId,
+        answeredAt: latestAttemptByQuestion.answeredAt,
+      })
+      .from(latestAttemptByQuestion)
+      .innerJoin(
+        attempts,
+        and(
+          eq(attempts.userId, userId),
+          eq(attempts.questionId, latestAttemptByQuestion.questionId),
+          eq(attempts.answeredAt, latestAttemptByQuestion.answeredAt),
+        ),
+      )
+      .where(eq(attempts.isCorrect, false))
+      .orderBy(desc(latestAttemptByQuestion.answeredAt))
+      .limit(limit)
+      .offset(offset);
+
+    const result: MissedQuestionAttempt[] = [];
+    for (const row of rows) {
+      if (!row.answeredAt) continue;
+      result.push({ questionId: row.questionId, answeredAt: row.answeredAt });
+    }
+
+    return result;
   }
 
   async findMostRecentAnsweredAtByQuestionIds(
