@@ -1,3 +1,4 @@
+import { ApplicationError } from '@/src/application/errors';
 import type {
   Attempt,
   Bookmark,
@@ -8,7 +9,6 @@ import type {
   User,
 } from '@/src/domain/entities';
 import type { QuestionDifficulty } from '@/src/domain/value-objects';
-import { ApplicationError } from '../errors';
 import type {
   AuthGateway,
   CheckoutSessionInput,
@@ -620,12 +620,14 @@ export class FakeStripeEventRepository implements StripeEventRepository {
     const event = this.events.get(eventId);
     if (event) {
       event.processedAt = new Date();
+      event.error = null;
     }
   }
 
   async markFailed(eventId: string, error: string): Promise<void> {
     const event = this.events.get(eventId);
     if (event) {
+      event.processedAt = null;
       event.error = error;
     }
   }

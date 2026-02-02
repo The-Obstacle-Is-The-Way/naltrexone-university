@@ -135,6 +135,64 @@ describe('SubmitAnswerUseCase', () => {
     expect(attempts.getAll()[0]?.timeSpentSeconds).toBe(0);
   });
 
+  it('defaults timeSpentSeconds to 0 when Infinity', async () => {
+    const userId = 'user-1';
+
+    const questionId = 'q1';
+    const question = createQuestion({
+      id: questionId,
+      status: 'published',
+      choices: [
+        createChoice({ id: 'c1', questionId, label: 'A', isCorrect: true }),
+      ],
+    });
+
+    const attempts = new FakeAttemptRepository();
+    const useCase = new SubmitAnswerUseCase(
+      new FakeQuestionRepository([question]),
+      attempts,
+      new FakePracticeSessionRepository(),
+    );
+
+    await useCase.execute({
+      userId,
+      questionId,
+      choiceId: 'c1',
+      timeSpentSeconds: Number.POSITIVE_INFINITY,
+    });
+
+    expect(attempts.getAll()[0]?.timeSpentSeconds).toBe(0);
+  });
+
+  it('defaults timeSpentSeconds to 0 when -Infinity', async () => {
+    const userId = 'user-1';
+
+    const questionId = 'q1';
+    const question = createQuestion({
+      id: questionId,
+      status: 'published',
+      choices: [
+        createChoice({ id: 'c1', questionId, label: 'A', isCorrect: true }),
+      ],
+    });
+
+    const attempts = new FakeAttemptRepository();
+    const useCase = new SubmitAnswerUseCase(
+      new FakeQuestionRepository([question]),
+      attempts,
+      new FakePracticeSessionRepository(),
+    );
+
+    await useCase.execute({
+      userId,
+      questionId,
+      choiceId: 'c1',
+      timeSpentSeconds: Number.NEGATIVE_INFINITY,
+    });
+
+    expect(attempts.getAll()[0]?.timeSpentSeconds).toBe(0);
+  });
+
   it('defaults timeSpentSeconds to 0 when not provided', async () => {
     const userId = 'user-1';
 

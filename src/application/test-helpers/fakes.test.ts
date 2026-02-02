@@ -1,7 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import type { Tag } from '@/src/domain/entities';
-import { createPracticeSession } from '@/src/domain/test-helpers';
-import { ApplicationError } from '../errors';
+import { ApplicationError } from '@/src/application/errors';
 import {
   FakeAttemptRepository,
   FakeAuthGateway,
@@ -13,7 +11,9 @@ import {
   FakeSubscriptionRepository,
   FakeTagRepository,
   FakeUserRepository,
-} from './fakes';
+} from '@/src/application/test-helpers/fakes';
+import type { Tag } from '@/src/domain/entities';
+import { createPracticeSession } from '@/src/domain/test-helpers';
 
 describe('FakePracticeSessionRepository', () => {
   it('throws NOT_FOUND when ending a missing session', async () => {
@@ -447,25 +447,29 @@ describe('FakeStripeEventRepository', () => {
   });
 
   describe('markProcessed', () => {
-    it('updates processedAt', async () => {
+    it('updates processedAt and clears error', async () => {
       const repo = new FakeStripeEventRepository();
       await repo.claim('evt_123', 'checkout.session.completed');
+      await repo.markFailed('evt_123', 'Something went wrong');
 
       await repo.markProcessed('evt_123');
 
       const state = await repo.lock('evt_123');
       expect(state.processedAt).toBeInstanceOf(Date);
+      expect(state.error).toBeNull();
     });
   });
 
   describe('markFailed', () => {
-    it('sets error', async () => {
+    it('sets error and clears processedAt', async () => {
       const repo = new FakeStripeEventRepository();
       await repo.claim('evt_123', 'checkout.session.completed');
+      await repo.markProcessed('evt_123');
 
       await repo.markFailed('evt_123', 'Something went wrong');
 
       const state = await repo.lock('evt_123');
+      expect(state.processedAt).toBeNull();
       expect(state.error).toBe('Something went wrong');
     });
   });

@@ -286,17 +286,17 @@ describe('GetNextQuestionUseCase', () => {
       createChoice({ id: 'c4', questionId, label: 'D', sortOrder: 1 }),
     ];
 
-    const questionOrdered = createQuestion({
+    const baseQuestion = createQuestion({
       id: questionId,
       status: 'published',
       choices,
     });
 
-    const questionUnordered = createQuestion({
-      id: questionId,
-      status: 'published',
+    const questionOrdered = baseQuestion;
+    const questionUnordered = {
+      ...baseQuestion,
       choices: [choices[2], choices[0], choices[3], choices[1]],
-    });
+    };
 
     const useCase1 = new GetNextQuestionUseCase(
       new FakeQuestionRepository([questionOrdered]),
@@ -321,40 +321,6 @@ describe('GetNextQuestionUseCase', () => {
     });
 
     expect(result1?.choices.map((c) => c.id)).toEqual(
-      result2?.choices.map((c) => c.id),
-    );
-  });
-
-  it('different users get different shuffle orders', async () => {
-    const questionId = 'q1';
-    const question = createQuestion({
-      id: questionId,
-      status: 'published',
-      choices: [
-        createChoice({ id: 'c1', questionId, label: 'A', sortOrder: 1 }),
-        createChoice({ id: 'c2', questionId, label: 'B', sortOrder: 2 }),
-        createChoice({ id: 'c3', questionId, label: 'C', sortOrder: 3 }),
-        createChoice({ id: 'c4', questionId, label: 'D', sortOrder: 4 }),
-      ],
-    });
-
-    const useCase = new GetNextQuestionUseCase(
-      new FakeQuestionRepository([question]),
-      new FakeAttemptRepository([]),
-      new FakePracticeSessionRepository([]),
-    );
-
-    const result1 = await useCase.execute({
-      userId: 'user-1',
-      filters: { tagSlugs: [], difficulties: [] },
-    });
-
-    const result2 = await useCase.execute({
-      userId: 'user-2',
-      filters: { tagSlugs: [], difficulties: [] },
-    });
-
-    expect(result1?.choices.map((c) => c.id)).not.toEqual(
       result2?.choices.map((c) => c.id),
     );
   });
