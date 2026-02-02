@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation';
+import { ROUTES } from '@/lib/routes';
 import {
   getSubscriptionPlanFromPriceId,
   type StripePriceIds,
@@ -54,6 +55,8 @@ type SyncCheckoutSuccessInput = {
   sessionId: string | null;
 };
 
+const CHECKOUT_ERROR_ROUTE = `${ROUTES.PRICING}?checkout=error`;
+
 async function getDeps(
   deps?: CheckoutSuccessDeps,
 ): Promise<CheckoutSuccessDeps> {
@@ -89,12 +92,25 @@ function getStripeId(value: unknown): string | null {
   return typeof record.id === 'string' ? record.id : null;
 }
 
+/**
+ * Eagerly sync the user's subscription after checkout completion.
+ *
+ * Stripe webhooks are eventually consistent; users often reach the success page
+ * before the webhook updates our database. This function fetches the checkout
+ * session/subscription from Stripe and upserts the minimal subscription state
+ * before redirecting so entitlement is correct immediately.
+ *
+ * Webhooks remain necessary for lifecycle events when the user is not present
+ * (renewals, payment failures, admin actions).
+ *
+ * See ADR-014: Stripe eager sync pattern.
+ */
 export async function syncCheckoutSuccess(
   input: SyncCheckoutSuccessInput,
   deps?: CheckoutSuccessDeps,
   redirectFn: (url: string) => never = redirect,
 ): Promise<void> {
-  if (!input.sessionId) redirectFn('/pricing?checkout=error');
+  if (!input.sessionId) redirectFn(CHECKOUT_ERROR_ROUTE);
 
   const d = await getDeps(deps);
   const user = await d.authGateway.requireUser();
@@ -105,8 +121,7 @@ export async function syncCheckoutSuccess(
 
   const stripeCustomerId = getStripeId(session.customer);
   const subscriptionId = getStripeId(session.subscription);
-  if (!stripeCustomerId || !subscriptionId)
-    redirectFn('/pricing?checkout=error');
+  if (!stripeCustomerId || !subscriptionId) redirectFn(CHECKOUT_ERROR_ROUTE);
 
   const subscription =
     typeof session.subscription === 'object' && session.subscription !== null
@@ -115,25 +130,24 @@ export async function syncCheckoutSuccess(
 
   const metadataUserId = subscription.metadata?.user_id;
   if (metadataUserId && metadataUserId !== user.id)
-    redirectFn('/pricing?checkout=error');
+    redirectFn(CHECKOUT_ERROR_ROUTE);
 
   const status = subscription.status;
   if (!status || !isValidSubscriptionStatus(status))
-    redirectFn('/pricing?checkout=error');
+    redirectFn(CHECKOUT_ERROR_ROUTE);
 
   const currentPeriodEndSeconds = subscription.current_period_end;
   if (typeof currentPeriodEndSeconds !== 'number')
-    redirectFn('/pricing?checkout=error');
+    redirectFn(CHECKOUT_ERROR_ROUTE);
 
   const cancelAtPeriodEnd = subscription.cancel_at_period_end;
-  if (typeof cancelAtPeriodEnd !== 'boolean')
-    redirectFn('/pricing?checkout=error');
+  if (typeof cancelAtPeriodEnd !== 'boolean') redirectFn(CHECKOUT_ERROR_ROUTE);
 
   const priceId = subscription.items?.data?.[0]?.price?.id;
-  if (!priceId) redirectFn('/pricing?checkout=error');
+  if (!priceId) redirectFn(CHECKOUT_ERROR_ROUTE);
 
   const plan = getSubscriptionPlanFromPriceId(priceId, d.priceIds);
-  if (!plan) redirectFn('/pricing?checkout=error');
+  if (!plan) redirectFn(CHECKOUT_ERROR_ROUTE);
 
   await d.transaction(async ({ stripeCustomers, subscriptions }) => {
     await stripeCustomers.insert(user.id, stripeCustomerId);
@@ -147,7 +161,7 @@ export async function syncCheckoutSuccess(
     });
   });
 
-  redirectFn('/app/dashboard');
+  redirectFn(ROUTES.APP_DASHBOARD);
 }
 
 export default async function CheckoutSuccessPage({
