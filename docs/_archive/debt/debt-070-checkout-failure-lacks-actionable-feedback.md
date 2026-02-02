@@ -1,8 +1,9 @@
 # DEBT-070: Checkout Failure Lacks Actionable Feedback
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P2
 **Date:** 2026-02-02
+**Resolved:** 2026-02-02
 
 ---
 
@@ -25,9 +26,9 @@ User clicks "Subscribe"
 
 ## Location
 
-- `app/pricing/subscribe-action.ts:27` — Redirects to error without preserving error info
-- `app/pricing/page.tsx:66` — Shows generic "Checkout failed" message
-- `src/adapters/controllers/action-result.ts:53` — Logs error but doesn't surface it
+- `app/pricing/subscribe-action.ts` — Builds the error redirect URL
+- `app/pricing/page.tsx` — Builds the pricing banner based on URL params
+- `app/pricing/subscribe-actions.ts` — Wires server actions and logging
 
 ## Impact
 
@@ -46,53 +47,19 @@ User clicks "Subscribe"
 
 ## Recommended Fix
 
-### Option A: Dev-Mode Error Banner (Recommended)
+Implemented a dev-mode error banner and improved redirect diagnostics:
 
-In development, show the actual error on the pricing page:
+- `runSubscribeAction()` now redirects to `/pricing?checkout=error&plan=...&error_code=...` on non-auth errors.
+- In development only, the redirect includes a truncated `error_message` (200 chars) and the pricing banner renders `Checkout failed (<code>). <message>`.
+- `subscribeMonthlyAction`/`subscribeAnnualAction` inject structured logging (via `lib/logger`) without polluting unit test output.
 
-```typescript
-// app/pricing/page.tsx
-const checkoutError = searchParams.checkout === 'error'
-  ? searchParams.error_code // Pass error code in redirect
-  : null;
-
-{checkoutError && process.env.NODE_ENV === 'development' && (
-  <div className="bg-red-100 text-red-900 p-4 rounded">
-    <strong>Dev Error:</strong> {decodeErrorCode(checkoutError)}
-  </div>
-)}
-```
-
-### Option B: Startup Validation
-
-Validate Stripe config at app startup:
-
-```typescript
-// lib/stripe.ts
-if (!env.NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY.startsWith('price_')) {
-  console.warn('⚠️  NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY looks invalid');
-}
-```
-
-### Option C: Better Logging
-
-Add structured logging with clear context:
-
-```typescript
-logger.error({
-  action: 'createCheckoutSession',
-  userId: user.id,
-  plan: parsed.data.plan,
-  priceId: stripePriceIds[parsed.data.plan],
-  err: error,
-}, 'Checkout session creation failed');
-```
+Additionally, environment validation now rejects Stripe price IDs that do not start with `price_` to catch common misconfiguration early.
 
 ## Verification
 
-- [ ] Developer can diagnose missing price IDs without digging through logs
-- [ ] Clear error message shown in dev mode
-- [ ] Production still shows generic message (no info leak)
+- [x] Developer can see `error_code` in the redirect URL.
+- [x] Clear error message shown in development mode (no production info leak).
+- [x] Unit tests updated and passing (`app/pricing/page.test.tsx`, `app/pricing/subscribe-actions.test.ts`).
 
 ## Related
 

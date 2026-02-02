@@ -34,7 +34,6 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 | [DEBT-067](./debt-067-generic-error-page-no-details.md) | Generic Error Page Lacks Error Details | Open | P3 | 2026-02-02 |
 | [DEBT-068](./debt-068-missing-error-tsx-nested-routes.md) | Missing error.tsx in Nested Routes | Open | P3 | 2026-02-02 |
 | [DEBT-069](./debt-069-document-stripe-eager-sync-pattern.md) | Document Stripe Eager Sync Pattern | Open | P3 | 2026-02-02 |
-| [DEBT-070](./debt-070-checkout-failure-lacks-actionable-feedback.md) | Checkout Failure Lacks Actionable Feedback | Open | P2 | 2026-02-02 |
 
 **Next Debt ID:** DEBT-071
 
@@ -94,6 +93,7 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 | [DEBT-062](../_archive/debt/debt-062-confusing-redirect-control-flow.md) | Confusing Redirect Control Flow Relied on `redirect()` Throwing | P3 | 2026-02-02 |
 | [DEBT-065](../_archive/debt/debt-065-touch-targets-too-small.md) | Touch Targets Too Small (Dropdown Menu, Pricing Buttons) | P2 | 2026-02-02 |
 | [DEBT-066](../_archive/debt/debt-066-no-success-toast-bookmark.md) | No Success Toast for Bookmark Action | P3 | 2026-02-02 |
+| [DEBT-070](../_archive/debt/debt-070-checkout-failure-lacks-actionable-feedback.md) | Checkout Failure Lacks Actionable Feedback | P2 | 2026-02-02 |
 
 ## Debt Statuses
 

@@ -80,9 +80,11 @@ describe('app/pricing/subscribe-actions', () => {
       subscribeMonthlyAction({
         createCheckoutSessionFn,
         redirectFn,
+        logError: () => undefined,
       }),
     ).rejects.toMatchObject({
-      message: 'redirect:/pricing?checkout=error',
+      message:
+        'redirect:/pricing?checkout=error&plan=monthly&error_code=INTERNAL_ERROR',
     });
 
     expect(createCheckoutSessionFn).toHaveBeenCalledWith({ plan: 'monthly' });

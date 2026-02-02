@@ -15,8 +15,14 @@ const envSchema = z.object({
   STRIPE_SECRET_KEY: z.string().min(1),
   NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: z.string().min(1),
   STRIPE_WEBHOOK_SECRET: z.string().min(1),
-  NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY: z.string().min(1),
-  NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL: z.string().min(1),
+  NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY: z
+    .string()
+    .min(1)
+    .regex(/^price_/, 'Must start with "price_"'),
+  NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL: z
+    .string()
+    .min(1)
+    .regex(/^price_/, 'Must start with "price_"'),
 
   // App
   NEXT_PUBLIC_APP_URL: z.string().url(),

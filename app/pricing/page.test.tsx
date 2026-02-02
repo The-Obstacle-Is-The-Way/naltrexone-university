@@ -104,6 +104,29 @@ describe('app/pricing', () => {
     });
   });
 
+  it('includes error code details in development for checkout=error', async () => {
+    const { getPricingBanner } = await import('./page');
+
+    const originalEnv = process.env.NODE_ENV;
+    (process.env as Record<string, string | undefined>).NODE_ENV =
+      'development';
+    try {
+      expect(
+        getPricingBanner({
+          checkout: 'error',
+          error_code: 'INTERNAL_ERROR',
+          error_message: 'Boom',
+        }),
+      ).toMatchObject({
+        tone: 'error',
+        message: 'Checkout failed (INTERNAL_ERROR). Boom',
+      });
+    } finally {
+      (process.env as Record<string, string | undefined>).NODE_ENV =
+        originalEnv;
+    }
+  });
+
   it('builds the checkout canceled banner when checkout=cancel', async () => {
     const { getPricingBanner } = await import('./page');
 
@@ -234,7 +257,9 @@ describe('app/pricing', () => {
         },
       );
 
-    await expect(action()).rejects.toThrow('/pricing?checkout=error');
+    await expect(action()).rejects.toThrow(
+      '/pricing?checkout=error&plan=monthly&error_code=INTERNAL_ERROR',
+    );
     expect(createCheckoutSessionFn).toHaveBeenCalledWith({ plan: 'monthly' });
   });
 

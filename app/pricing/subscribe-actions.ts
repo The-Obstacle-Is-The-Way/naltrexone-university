@@ -1,6 +1,7 @@
 'use server';
 
 import { redirect } from 'next/navigation';
+import { logger } from '@/lib/logger';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import { runSubscribeAction } from './subscribe-action';
 
@@ -11,6 +12,7 @@ type CreateCheckoutSessionFn = (input: {
 export type SubscribeActionsDeps = {
   createCheckoutSessionFn: CreateCheckoutSessionFn;
   redirectFn: (url: string) => never;
+  logError?: (context: Record<string, unknown>, msg: string) => void;
 };
 
 async function getDeps(
@@ -24,6 +26,7 @@ async function getDeps(
   return {
     createCheckoutSessionFn,
     redirectFn: deps?.redirectFn ?? redirect,
+    logError: deps?.logError ?? ((context, msg) => logger.error(context, msg)),
   };
 }
 
@@ -36,6 +39,7 @@ export async function subscribeMonthlyAction(
     {
       createCheckoutSessionFn: d.createCheckoutSessionFn,
       redirectFn: d.redirectFn,
+      logError: d.logError,
     },
   );
 }
@@ -49,6 +53,7 @@ export async function subscribeAnnualAction(
     {
       createCheckoutSessionFn: d.createCheckoutSessionFn,
       redirectFn: d.redirectFn,
+      logError: d.logError,
     },
   );
 }
