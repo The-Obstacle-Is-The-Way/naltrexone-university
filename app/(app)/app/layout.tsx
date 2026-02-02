@@ -77,6 +77,12 @@ export default async function AppLayout({
                 Practice
               </Link>
               <Link
+                href="/app/review"
+                className="text-muted-foreground hover:text-foreground"
+              >
+                Review
+              </Link>
+              <Link
                 href="/app/billing"
                 className="text-muted-foreground hover:text-foreground"
               >
