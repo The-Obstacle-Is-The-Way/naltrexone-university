@@ -45,6 +45,7 @@ function validateEnv(): Env {
   }
 
   const skipClerk = parsed.data.NEXT_PUBLIC_SKIP_CLERK === 'true';
+  const isVercelProductionDeploy = process.env.VERCEL_ENV === 'production';
   if (!skipClerk) {
     const missingClerkKeys: Record<string, string[]> = {};
     if (!parsed.data.CLERK_SECRET_KEY) {
@@ -53,7 +54,7 @@ function validateEnv(): Env {
     if (!parsed.data.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY) {
       missingClerkKeys.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY = ['Required'];
     }
-    if (!parsed.data.CLERK_WEBHOOK_SIGNING_SECRET) {
+    if (isVercelProductionDeploy && !parsed.data.CLERK_WEBHOOK_SIGNING_SECRET) {
       missingClerkKeys.CLERK_WEBHOOK_SIGNING_SECRET = ['Required'];
     }
 
@@ -63,7 +64,7 @@ function validateEnv(): Env {
     }
   }
 
-  if (process.env.VERCEL_ENV === 'production' && skipClerk) {
+  if (isVercelProductionDeploy && skipClerk) {
     throw new Error(
       'NEXT_PUBLIC_SKIP_CLERK must not be true in production (VERCEL_ENV=production)',
     );

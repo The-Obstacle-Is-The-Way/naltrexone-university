@@ -88,6 +88,57 @@ describe('env', () => {
     );
   });
 
+  it('allows missing CLERK_WEBHOOK_SIGNING_SECRET when not on Vercel production deploys', async () => {
+    process.env.DATABASE_URL =
+      'postgresql://postgres:postgres@localhost:5432/db';
+    process.env.NEXT_PUBLIC_APP_URL = 'http://localhost:3000';
+
+    process.env.STRIPE_SECRET_KEY = 'sk_test_dummy';
+    process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY = 'pk_test_dummy';
+    process.env.STRIPE_WEBHOOK_SECRET = 'whsec_dummy';
+    process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY = 'price_dummy_monthly';
+    process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL = 'price_dummy_annual';
+
+    process.env.NEXT_PUBLIC_SKIP_CLERK = 'false';
+    process.env.CLERK_SECRET_KEY = 'sk_test_clerk_dummy';
+    process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY = 'pk_test_clerk_dummy';
+    delete process.env.CLERK_WEBHOOK_SIGNING_SECRET;
+    delete process.env.VERCEL_ENV;
+
+    vi.resetModules();
+
+    await expect(import('./env')).resolves.toHaveProperty('env');
+  });
+
+  it('requires CLERK_WEBHOOK_SIGNING_SECRET on Vercel production deploys when Clerk is enabled', async () => {
+    const consoleError = vi
+      .spyOn(console, 'error')
+      .mockImplementation(() => {});
+
+    process.env.DATABASE_URL =
+      'postgresql://postgres:postgres@localhost:5432/db';
+    process.env.NEXT_PUBLIC_APP_URL = 'http://localhost:3000';
+
+    process.env.STRIPE_SECRET_KEY = 'sk_test_dummy';
+    process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY = 'pk_test_dummy';
+    process.env.STRIPE_WEBHOOK_SECRET = 'whsec_dummy';
+    process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY = 'price_dummy_monthly';
+    process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL = 'price_dummy_annual';
+
+    process.env.VERCEL_ENV = 'production';
+    process.env.NEXT_PUBLIC_SKIP_CLERK = 'false';
+    process.env.CLERK_SECRET_KEY = 'sk_test_clerk_dummy';
+    process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY = 'pk_test_clerk_dummy';
+    delete process.env.CLERK_WEBHOOK_SIGNING_SECRET;
+
+    vi.resetModules();
+
+    await expect(import('./env')).rejects.toThrow(
+      'Invalid environment variables',
+    );
+    consoleError.mockRestore();
+  });
+
   it('requires Clerk keys when NEXT_PUBLIC_SKIP_CLERK is not true', async () => {
     const consoleError = vi
       .spyOn(console, 'error')
