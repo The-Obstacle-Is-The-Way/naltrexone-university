@@ -81,15 +81,21 @@ describe('app/(app)/app/bookmarks', () => {
     expect(revalidatePathFn).toHaveBeenCalledWith('/app/bookmarks');
   });
 
-  it('throws when removeBookmarkAction is missing questionId', async () => {
+  it('redirects when removeBookmarkAction is missing questionId', async () => {
     const formData = new FormData();
 
-    await expect(removeBookmarkAction(formData)).rejects.toThrow(
-      'questionId is required',
-    );
+    await expect(
+      removeBookmarkAction(formData, {
+        redirectFn: (url: string): never => {
+          throw new Error(`redirect:${url}`);
+        },
+      }),
+    ).rejects.toMatchObject({
+      message: 'redirect:/app/bookmarks?error=missing_question_id',
+    });
   });
 
-  it('throws when removeBookmarkAction cannot toggle bookmark', async () => {
+  it('redirects when removeBookmarkAction cannot toggle bookmark', async () => {
     const formData = new FormData();
     formData.set('questionId', 'q_1');
 
@@ -97,11 +103,16 @@ describe('app/(app)/app/bookmarks', () => {
       removeBookmarkAction(formData, {
         toggleBookmarkFn: async () => err('INTERNAL_ERROR', 'Boom'),
         revalidatePathFn: vi.fn(),
+        redirectFn: (url: string): never => {
+          throw new Error(`redirect:${url}`);
+        },
       }),
-    ).rejects.toThrow('Boom');
+    ).rejects.toMatchObject({
+      message: 'redirect:/app/bookmarks?error=toggle_failed',
+    });
   });
 
-  it('throws when removeBookmarkAction results in bookmarked=true', async () => {
+  it('redirects when removeBookmarkAction results in bookmarked=true', async () => {
     const formData = new FormData();
     formData.set('questionId', 'q_1');
 
@@ -109,8 +120,13 @@ describe('app/(app)/app/bookmarks', () => {
       removeBookmarkAction(formData, {
         toggleBookmarkFn: async () => ok({ bookmarked: true }),
         revalidatePathFn: vi.fn(),
+        redirectFn: (url: string): never => {
+          throw new Error(`redirect:${url}`);
+        },
       }),
-    ).rejects.toThrow('Expected bookmark to be removed');
+    ).rejects.toMatchObject({
+      message: 'redirect:/app/bookmarks?error=remove_failed',
+    });
   });
 
   it('loads bookmarks via createBookmarksPage', async () => {
@@ -133,6 +149,31 @@ describe('app/(app)/app/bookmarks', () => {
     const html = renderToStaticMarkup(element);
 
     expect(getBookmarksFn).toHaveBeenCalledWith({});
+    expect(html).toContain('q-1');
+  });
+
+  it('renders a banner when redirected back with an error code', async () => {
+    const getBookmarksFn = vi.fn(async () =>
+      ok({
+        rows: [
+          {
+            questionId: 'q_1',
+            slug: 'q-1',
+            stemMd: 'Stem for q1',
+            difficulty: 'easy' as const,
+            bookmarkedAt: '2026-02-01T00:00:00.000Z',
+          },
+        ],
+      }),
+    );
+
+    const BookmarksPage = createBookmarksPage({ getBookmarksFn });
+    const element = await BookmarksPage({
+      searchParams: Promise.resolve({ error: 'toggle_failed' }),
+    });
+    const html = renderToStaticMarkup(element);
+
+    expect(html).toContain('Unable to remove bookmark.');
     expect(html).toContain('q-1');
   });
 });

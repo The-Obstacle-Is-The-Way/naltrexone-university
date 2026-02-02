@@ -1,5 +1,6 @@
 import { revalidatePath } from 'next/cache';
 import Link from 'next/link';
+import { redirect } from 'next/navigation';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import {
   type GetBookmarksOutput,
@@ -7,30 +8,61 @@ import {
   toggleBookmark,
 } from '@/src/adapters/controllers/bookmark-controller';
 
+type RemoveBookmarkErrorCode =
+  | 'missing_question_id'
+  | 'toggle_failed'
+  | 'remove_failed';
+
+function parseRemoveBookmarkErrorCode(
+  code: string | undefined,
+): RemoveBookmarkErrorCode | undefined {
+  if (code === 'missing_question_id') return code;
+  if (code === 'toggle_failed') return code;
+  if (code === 'remove_failed') return code;
+  return undefined;
+}
+
+function getRemoveBookmarkErrorMessage(
+  code: RemoveBookmarkErrorCode | undefined,
+): string | null {
+  if (!code) return null;
+
+  switch (code) {
+    case 'missing_question_id':
+      return 'Unable to remove bookmark: missing question id.';
+    case 'toggle_failed':
+      return 'Unable to remove bookmark. Please try again.';
+    case 'remove_failed':
+      return 'Unable to remove bookmark. Please refresh and try again.';
+  }
+}
+
 export async function removeBookmarkAction(
   formData: FormData,
   deps?: {
     toggleBookmarkFn?: typeof toggleBookmark;
     revalidatePathFn?: typeof revalidatePath;
+    redirectFn?: (url: string) => never;
   },
 ) {
   'use server';
 
   const toggleBookmarkFn = deps?.toggleBookmarkFn ?? toggleBookmark;
   const revalidatePathFn = deps?.revalidatePathFn ?? revalidatePath;
+  const redirectFn = deps?.redirectFn ?? redirect;
 
   const questionId = formData.get('questionId');
   if (typeof questionId !== 'string') {
-    throw new Error('questionId is required');
+    return redirectFn('/app/bookmarks?error=missing_question_id');
   }
 
   const result = await toggleBookmarkFn({ questionId });
   if (!result.ok) {
-    throw new Error(result.error.message);
+    return redirectFn('/app/bookmarks?error=toggle_failed');
   }
 
   if (result.data.bookmarked) {
-    throw new Error('Expected bookmark to be removed');
+    return redirectFn('/app/bookmarks?error=remove_failed');
   }
 
   revalidatePathFn('/app/bookmarks');
@@ -145,9 +177,30 @@ export function createBookmarksPage(deps?: {
 }) {
   const getBookmarksFn = deps?.getBookmarksFn ?? getBookmarks;
 
-  return async function BookmarksPage() {
+  return async function BookmarksPage(props?: {
+    searchParams?: Promise<Record<string, string | undefined>>;
+  }) {
+    const searchParams = await props?.searchParams;
+    const errorMessage = getRemoveBookmarkErrorMessage(
+      parseRemoveBookmarkErrorCode(searchParams?.error),
+    );
+
     const result = await getBookmarksFn({});
-    return renderBookmarks(result);
+    if (!result.ok) return renderBookmarks(result);
+
+    if (!errorMessage) return <BookmarksView rows={result.data.rows} />;
+
+    return (
+      <div className="space-y-6">
+        <div
+          className="rounded-2xl border border-border bg-card p-4 text-sm text-destructive shadow-sm"
+          role="alert"
+        >
+          {errorMessage}
+        </div>
+        <BookmarksView rows={result.data.rows} />
+      </div>
+    );
   };
 }
 
