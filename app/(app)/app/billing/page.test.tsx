@@ -48,6 +48,31 @@ describe('app/(app)/app/billing/page', () => {
       expect(html).toContain('active');
     });
 
+    it('renders cancelAtPeriodEnd banner when cancellation is scheduled', async () => {
+      const { BillingContent } = await import('@/app/(app)/app/billing/page');
+      const subscription = createSubscription({
+        cancelAtPeriodEnd: true,
+        currentPeriodEnd: new Date('2026-02-15T00:00:00Z'),
+      });
+
+      const cancelDate = new Intl.DateTimeFormat('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        timeZone: 'UTC',
+      }).format(subscription.currentPeriodEnd);
+
+      const html = renderToStaticMarkup(
+        <BillingContent
+          subscription={subscription}
+          manageBillingAction={async () => undefined}
+        />,
+      );
+
+      expect(html).toContain('will cancel');
+      expect(html).toContain(cancelDate);
+    });
+
     it('does NOT render manage button when subscription is null', async () => {
       const { BillingContent } = await import('@/app/(app)/app/billing/page');
 

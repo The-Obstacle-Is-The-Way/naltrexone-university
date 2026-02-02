@@ -5,6 +5,17 @@ import type { AuthGateway } from '@/src/application/ports/gateways';
 import type { SubscriptionRepository } from '@/src/application/ports/repositories';
 import type { Subscription } from '@/src/domain/entities';
 
+const billingDateFormatter = new Intl.DateTimeFormat('en-US', {
+  year: 'numeric',
+  month: 'short',
+  day: 'numeric',
+  timeZone: 'UTC',
+});
+
+function formatBillingDate(date: Date): string {
+  return billingDateFormatter.format(date);
+}
+
 export type BillingPageDeps = {
   authGateway: AuthGateway;
   subscriptionRepository: SubscriptionRepository;
@@ -63,6 +74,19 @@ export function BillingContent(props: BillingContentProps) {
           </form>
         ) : null}
       </div>
+
+      {subscription?.cancelAtPeriodEnd ? (
+        <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/20 dark:text-amber-100">
+          <div className="font-medium">Cancellation scheduled</div>
+          <div className="mt-1">
+            Your subscription will cancel on{' '}
+            <span className="font-medium">
+              {formatBillingDate(subscription.currentPeriodEnd)}
+            </span>
+            . You&apos;ll keep access until then.
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
