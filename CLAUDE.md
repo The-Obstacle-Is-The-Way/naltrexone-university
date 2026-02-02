@@ -293,64 +293,75 @@ See `docs/dev/react-vitest-testing.md` for full details.
 
 ### FAKES OVER MOCKS — MANDATORY
 
-**The Simple Rule:**
+**The Golden Rule: USE EXISTING FAKES FROM `src/application/test-helpers/fakes.ts`**
+
+If a fake class exists (e.g., `FakeAttemptRepository`), you MUST use it. Do NOT create inline objects with `vi.fn()`.
+
+**Available Fakes (use these!):**
+- `FakeQuestionRepository`
+- `FakeAttemptRepository`
+- `FakePracticeSessionRepository`
+- `FakeSubscriptionRepository`
+- `FakeUserRepository`
+- `FakeBookmarkRepository`
+- `FakeTagRepository`
+- `FakeStripeCustomerRepository`
+- `FakeStripeEventRepository`
+- `FakeAuthGateway`
+- `FakePaymentGateway`
+
+**The Decision Tree:**
 ```
-Can you pass it through a constructor or function parameter?
-  YES → Use a fake object (with vi.fn() for spying if needed)
-  NO  → Use vi.mock() (React hooks, Next.js magic, external SDKs only)
+Does a Fake* class exist in fakes.ts for this dependency?
+  YES → Use it: new FakeAttemptRepository()
+  NO  → Is it an external dependency (Drizzle db, Clerk, Stripe SDK)?
+    YES → Use vi.fn() inline object OR vi.mock()
+    NO  → Create a new Fake* class in fakes.ts, then use it
 ```
 
 **NEVER use `vi.mock()` for our own code.** Only for external packages you can't inject.
 
-| Pattern | When to Use | Example |
-|---------|-------------|---------|
-| **Fake via DI** | Our own code (repos, gateways, services) | `new UseCase(fakeRepo)` |
-| **Fake + vi.fn()** | When you need to spy on fake methods | `{ findById: vi.fn().mockResolvedValue(null) }` |
-| **vi.mock()** | External SDKs you can't inject (Clerk hooks, Next.js) | `vi.mock('@clerk/nextjs')` |
-
-**IMPORTANT: vi.fn() inside a fake is CORRECT:**
 ```typescript
-// ✅ CORRECT - Fake object passed via DI, vi.fn() just adds spying
-const fakeDb = {
-  query: { users: { findFirst: vi.fn().mockResolvedValue(null) } }
-};
-const repo = new DrizzleUserRepository(fakeDb);  // DI injection
+// ✅ CORRECT - Use existing fake classes
+const attemptRepo = new FakeAttemptRepository();
+const questionRepo = new FakeQuestionRepository([question1, question2]);
+const authGateway = new FakeAuthGateway(user);
+const useCase = new SubmitAnswerUseCase(attemptRepo, questionRepo);
 
-// ❌ WRONG - Hijacking module imports for our own code
-vi.mock('./user-repository');  // NEVER DO THIS
-```
+// ❌ WRONG - Inline vi.fn() when a fake exists (creates DEBT-051!)
+const attemptRepo = {
+  insert: vi.fn().mockResolvedValue(attempt),
+  findByUserId: vi.fn().mockResolvedValue([]),
+};  // DON'T DO THIS - use FakeAttemptRepository instead
 
-**Why Fakes > Mocks:**
-- Mocks test implementation details (what methods were called)
-- Fakes test behavior (what the system does)
-- Mocks break when you refactor internals
-- Fakes only break when behavior changes
-
-**Our Fakes Location:** `src/application/test-helpers/fakes.ts`
-
-```typescript
-// GOOD: Using fake repository
-const repo = new FakeAttemptRepository();
-const useCase = new SubmitAnswerUseCase(repo, ...);
-const result = await useCase.execute(input);
-expect(result.isCorrect).toBe(true);
-
-// BAD: Mocking our own code
+// ❌ WRONG - Hijacking module imports
 vi.mock('./attempt-repository');  // NEVER DO THIS
 ```
 
-**When vi.mock() IS acceptable:**
+**When vi.fn() inline objects ARE acceptable:**
 ```typescript
-// ✅ External SDK with hooks you can't inject
+// ✅ OK - Mocking external Drizzle db object (no fake exists)
+const fakeDb = {
+  query: { users: { findFirst: vi.fn().mockResolvedValue(null) } }
+};
+const repo = new DrizzleUserRepository(fakeDb);
+
+// ✅ OK - External SDK with hooks you can't inject
 vi.mock('@clerk/nextjs', () => ({
   SignedIn: ({ children }) => <>{children}</>,
   useUser: () => ({ user: { id: 'test' } }),
 }));
 
-// ✅ Next.js internals
+// ✅ OK - Next.js internals
 vi.mock('next/link', () => ({ default: (props) => <a {...props} /> }));
 vi.mock('server-only', () => ({}));
 ```
+
+**Why Fakes > Inline vi.fn():**
+- Fakes are reusable across all tests
+- Fakes have real behavior (filtering, sorting, validation)
+- Inline vi.fn() duplicates logic and drifts from real implementations
+- Fakes only break when actual behavior changes
 
 ### Test Quality Rules
 
