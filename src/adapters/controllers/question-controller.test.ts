@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { ApplicationError } from '@/src/application/errors';
-import type { AuthGateway } from '@/src/application/ports/gateways';
+import type {
+  AuthGateway,
+  RateLimiter,
+} from '@/src/application/ports/gateways';
 import {
   FakeAuthGateway,
   FakeSubscriptionRepository,
@@ -50,6 +53,7 @@ class FakeSubmitAnswerUseCase {
 function createDeps(overrides?: {
   user?: ReturnType<typeof createUser> | null;
   authGateway?: AuthGateway;
+  rateLimiter?: RateLimiter;
   isEntitled?: boolean;
   getNextQuestionOutput?: GetNextQuestionOutput;
   submitAnswerOutput?: SubmitAnswerOutput;
@@ -92,6 +96,17 @@ function createDeps(overrides?: {
     overrides?.getNextQuestionThrows,
   );
 
+  const rateLimiter: RateLimiter =
+    overrides?.rateLimiter ??
+    ({
+      limit: async () => ({
+        success: true,
+        limit: 120,
+        remaining: 119,
+        retryAfterSeconds: 0,
+      }),
+    } satisfies RateLimiter);
+
   const submitAnswerUseCase = new FakeSubmitAnswerUseCase(
     overrides?.submitAnswerOutput ?? {
       attemptId: 'attempt_1',
@@ -104,6 +119,7 @@ function createDeps(overrides?: {
 
   return {
     authGateway,
+    rateLimiter,
     checkEntitlementUseCase,
     getNextQuestionUseCase,
     submitAnswerUseCase,
@@ -240,6 +256,33 @@ describe('question-controller', () => {
       expect(result).toMatchObject({
         ok: false,
         error: { code: 'UNSUBSCRIBED' },
+      });
+      expect(deps.submitAnswerUseCase.inputs).toEqual([]);
+    });
+
+    it('returns RATE_LIMITED when rate limited', async () => {
+      const deps = createDeps({
+        rateLimiter: {
+          limit: async () => ({
+            success: false,
+            limit: 120,
+            remaining: 0,
+            retryAfterSeconds: 60,
+          }),
+        },
+      });
+
+      const result = await submitAnswer(
+        {
+          questionId: '11111111-1111-1111-1111-111111111111',
+          choiceId: '22222222-2222-2222-2222-222222222222',
+        },
+        deps as never,
+      );
+
+      expect(result).toMatchObject({
+        ok: false,
+        error: { code: 'RATE_LIMITED' },
       });
       expect(deps.submitAnswerUseCase.inputs).toEqual([]);
     });

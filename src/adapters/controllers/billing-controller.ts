@@ -3,10 +3,12 @@
 import { z } from 'zod';
 import { createDepsResolver } from '@/lib/controller-helpers';
 import { ROUTES } from '@/lib/routes';
+import { CHECKOUT_SESSION_RATE_LIMIT } from '@/src/adapters/shared/rate-limits';
 import { ApplicationError } from '@/src/application/errors';
 import type {
   AuthGateway,
   PaymentGateway,
+  RateLimiter,
 } from '@/src/application/ports/gateways';
 import type {
   StripeCustomerRepository,
@@ -34,6 +36,7 @@ export type BillingControllerDeps = {
   stripeCustomerRepository: StripeCustomerRepository;
   subscriptionRepository: SubscriptionRepository;
   paymentGateway: PaymentGateway;
+  rateLimiter: RateLimiter;
   getClerkUserId: () => Promise<string | null>;
   appUrl: string;
   now: () => Date;
@@ -95,6 +98,17 @@ export async function createCheckoutSession(
   try {
     const d = await getDeps(deps);
     const user = await d.authGateway.requireUser();
+
+    const checkoutRateLimit = await d.rateLimiter.limit({
+      key: `billing:createCheckoutSession:${user.id}`,
+      ...CHECKOUT_SESSION_RATE_LIMIT,
+    });
+    if (!checkoutRateLimit.success) {
+      throw new ApplicationError(
+        'RATE_LIMITED',
+        `Too many checkout attempts. Try again in ${checkoutRateLimit.retryAfterSeconds}s.`,
+      );
+    }
 
     const subscription = await d.subscriptionRepository.findByUserId(user.id);
     if (isEntitled(subscription, d.now())) {

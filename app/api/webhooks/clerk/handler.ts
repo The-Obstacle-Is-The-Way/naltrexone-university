@@ -3,7 +3,9 @@ import type {
   ClerkWebhookDeps,
   ClerkWebhookEvent,
 } from '@/src/adapters/controllers/clerk-webhook-controller';
+import { CLERK_WEBHOOK_RATE_LIMIT } from '@/src/adapters/shared/rate-limits';
 import { isApplicationError } from '@/src/application/errors';
+import type { RateLimiter } from '@/src/application/ports/gateways';
 import type {
   StripeCustomerRepository,
   UserRepository,
@@ -27,6 +29,7 @@ type ClerkWebhookRouteLogger = {
 export type ClerkWebhookRouteContainer = {
   logger: ClerkWebhookRouteLogger;
   stripe: StripeClient;
+  createRateLimiter: () => RateLimiter;
   createUserRepository: () => UserRepository;
   createStripeCustomerRepository: () => StripeCustomerRepository;
 };
@@ -48,6 +51,32 @@ export function createWebhookHandler(
 ) {
   return async function POST(req: Request) {
     const container = createContainer();
+
+    try {
+      const forwardedFor = req.headers.get('x-forwarded-for');
+      const ip = forwardedFor?.split(',')[0]?.trim() ?? 'unknown';
+
+      const rate = await container.createRateLimiter().limit({
+        key: `webhook:clerk:${ip}`,
+        ...CLERK_WEBHOOK_RATE_LIMIT,
+      });
+
+      if (!rate.success) {
+        return NextResponse.json(
+          { error: 'Too many requests' },
+          {
+            status: 429,
+            headers: {
+              'Retry-After': String(rate.retryAfterSeconds),
+              'X-RateLimit-Limit': String(rate.limit),
+              'X-RateLimit-Remaining': String(rate.remaining),
+            },
+          },
+        );
+      }
+    } catch (error) {
+      container.logger.error({ error }, 'Clerk webhook rate limiter failed');
+    }
 
     let event: ClerkWebhookEvent;
     try {

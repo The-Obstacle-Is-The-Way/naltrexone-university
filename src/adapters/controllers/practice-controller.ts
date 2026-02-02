@@ -7,7 +7,12 @@ import {
   MAX_PRACTICE_SESSION_QUESTIONS,
   MAX_PRACTICE_SESSION_TAG_FILTERS,
 } from '@/src/adapters/repositories/practice-session-limits';
-import type { AuthGateway } from '@/src/application/ports/gateways';
+import { START_PRACTICE_SESSION_RATE_LIMIT } from '@/src/adapters/shared/rate-limits';
+import { ApplicationError } from '@/src/application/errors';
+import type {
+  AuthGateway,
+  RateLimiter,
+} from '@/src/application/ports/gateways';
 import type {
   AttemptRepository,
   PracticeSessionRepository,
@@ -65,6 +70,7 @@ export type EndPracticeSessionOutput = {
 
 export type PracticeControllerDeps = {
   authGateway: AuthGateway;
+  rateLimiter: RateLimiter;
   checkEntitlementUseCase: CheckEntitlementUseCase;
   questionRepository: QuestionRepository;
   practiceSessionRepository: PracticeSessionRepository;
@@ -88,6 +94,17 @@ export async function startPracticeSession(
     const userIdOrError = await requireEntitledUserId(d);
     if (typeof userIdOrError !== 'string') return userIdOrError;
     const userId = userIdOrError;
+
+    const rate = await d.rateLimiter.limit({
+      key: `practice:startPracticeSession:${userId}`,
+      ...START_PRACTICE_SESSION_RATE_LIMIT,
+    });
+    if (!rate.success) {
+      throw new ApplicationError(
+        'RATE_LIMITED',
+        `Too many session starts. Try again in ${rate.retryAfterSeconds}s.`,
+      );
+    }
 
     const candidateIds = await d.questionRepository.listPublishedCandidateIds({
       tagSlugs: parsed.data.tagSlugs,

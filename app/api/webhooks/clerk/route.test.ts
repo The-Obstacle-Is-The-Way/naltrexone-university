@@ -6,6 +6,14 @@ import { ApplicationError } from '@/src/application/errors';
 
 function createTestDeps() {
   const loggerError = vi.fn();
+  const rateLimiter = {
+    limit: vi.fn(async () => ({
+      success: true,
+      limit: 100,
+      remaining: 99,
+      retryAfterSeconds: 0,
+    })),
+  };
 
   const userRepository = {
     findByClerkId: vi.fn(async () => null),
@@ -36,6 +44,7 @@ function createTestDeps() {
         cancel: async () => undefined,
       },
     },
+    createRateLimiter: () => rateLimiter as never,
     createUserRepository,
     createStripeCustomerRepository,
   }));
@@ -61,6 +70,7 @@ function createTestDeps() {
     createStripeCustomerRepository,
     userRepository,
     stripeCustomerRepository,
+    rateLimiter,
   };
 }
 
@@ -101,6 +111,30 @@ describe('POST /api/webhooks/clerk', () => {
 
     expect(res.status).toBe(200);
     await expect(res.json()).resolves.toEqual({ received: true });
+  });
+
+  it('returns 429 when rate limited', async () => {
+    const { POST, rateLimiter, processClerkWebhook, verifyWebhook } =
+      createTestDeps();
+
+    rateLimiter.limit.mockResolvedValue({
+      success: false,
+      limit: 100,
+      remaining: 0,
+      retryAfterSeconds: 60,
+    });
+
+    const res = await POST(
+      new Request('http://localhost/api/webhooks/clerk', {
+        method: 'POST',
+        body: 'raw',
+      }),
+    );
+
+    expect(res.status).toBe(429);
+    expect(res.headers.get('Retry-After')).toBe('60');
+    expect(verifyWebhook).not.toHaveBeenCalled();
+    expect(processClerkWebhook).not.toHaveBeenCalled();
   });
 
   it('returns 400 when payload validation fails', async () => {

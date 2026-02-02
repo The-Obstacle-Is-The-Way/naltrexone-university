@@ -1,5 +1,8 @@
-import { describe, expect, it } from 'vitest';
-import type { PaymentGateway } from '@/src/application/ports/gateways';
+import { describe, expect, it, vi } from 'vitest';
+import type {
+  PaymentGateway,
+  RateLimiter,
+} from '@/src/application/ports/gateways';
 import type {
   StripeCustomerRepository,
   SubscriptionRepository,
@@ -49,6 +52,7 @@ function createDeps(overrides?: {
   clerkUserId?: string | null;
   stripeCustomerId?: string | null;
   paymentGateway?: PaymentGateway;
+  rateLimiter?: RateLimiter;
   stripeCustomerRepository?: StripeCustomerRepository;
   subscriptionRepository?: SubscriptionRepository;
   now?: () => Date;
@@ -94,11 +98,23 @@ function createDeps(overrides?: {
   const subscriptionRepository =
     overrides?.subscriptionRepository ?? new FakeSubscriptionRepository();
 
+  const rateLimiter: RateLimiter =
+    overrides?.rateLimiter ??
+    ({
+      limit: async () => ({
+        success: true,
+        limit: 10,
+        remaining: 9,
+        retryAfterSeconds: 0,
+      }),
+    } satisfies RateLimiter);
+
   return {
     authGateway,
     stripeCustomerRepository,
     subscriptionRepository,
     paymentGateway,
+    rateLimiter,
     getClerkUserId: async () => clerkUserId,
     appUrl,
     now: overrides?.now ?? (() => new Date('2026-02-01T00:00:00Z')),
@@ -172,6 +188,49 @@ describe('billing-controller', () => {
 
       expect(paymentGateway.customerInputs).toEqual([]);
       expect(paymentGateway.checkoutInputs).toEqual([]);
+    });
+
+    it('returns RATE_LIMITED when checkout is rate limited', async () => {
+      const paymentGateway = new FakePaymentGateway({
+        stripeCustomerId: 'cus_new',
+        checkoutUrl: 'https://stripe/checkout',
+        portalUrl: 'https://stripe/portal',
+        webhookResult: { eventId: 'evt_1', type: 'checkout.session.completed' },
+      });
+
+      const rateLimiter: RateLimiter = {
+        limit: vi.fn(async () => ({
+          success: false,
+          limit: 10,
+          remaining: 0,
+          retryAfterSeconds: 60,
+        })),
+      };
+
+      const subscriptionRepository = {
+        findByUserId: vi.fn(async () => null),
+        findByStripeSubscriptionId: vi.fn(async () => null),
+        upsert: vi.fn(async () => undefined),
+      } satisfies SubscriptionRepository;
+
+      const deps = createDeps({
+        paymentGateway,
+        rateLimiter,
+        subscriptionRepository,
+      });
+
+      const result = await createCheckoutSession(
+        { plan: 'monthly' },
+        deps as never,
+      );
+
+      expect(result).toMatchObject({
+        ok: false,
+        error: { code: 'RATE_LIMITED' },
+      });
+      expect(paymentGateway.customerInputs).toEqual([]);
+      expect(paymentGateway.checkoutInputs).toEqual([]);
+      expect(subscriptionRepository.findByUserId).not.toHaveBeenCalled();
     });
 
     it('uses existing stripe customer mapping when available', async () => {

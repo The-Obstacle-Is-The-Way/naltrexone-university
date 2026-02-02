@@ -15,6 +15,13 @@
       "when": 1769942859252,
       "tag": "0001_attempts_selected_choice_not_null",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1770067162278,
+      "tag": "0002_curious_firelord",
+      "breakpoints": true
     }
   ]
 }

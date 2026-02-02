@@ -19,6 +19,14 @@ function createPaymentGatewayStub(): PaymentGateway {
 
 function createTestDeps() {
   const loggerError = vi.fn();
+  const rateLimiter = {
+    limit: vi.fn(async () => ({
+      success: true,
+      limit: 1000,
+      remaining: 999,
+      retryAfterSeconds: 0,
+    })),
+  };
   const tx = {
     stripeEvents: {
       claim: async () => true,
@@ -44,9 +52,11 @@ function createTestDeps() {
   };
 
   const createStripeWebhookDeps = vi.fn(() => deps);
+  const createRateLimiter = vi.fn(() => rateLimiter as never);
   const createContainer = vi.fn<() => StripeWebhookRouteContainer>(() => ({
     logger: { error: loggerError },
     createStripeWebhookDeps,
+    createRateLimiter,
   }));
 
   const processStripeWebhook = vi.fn();
@@ -57,6 +67,8 @@ function createTestDeps() {
     processStripeWebhook,
     loggerError,
     createStripeWebhookDeps,
+    createRateLimiter,
+    rateLimiter,
     deps,
   };
 }
@@ -138,6 +150,29 @@ describe('POST /api/stripe/webhook', () => {
     expect(res.status).toBe(400);
   });
 
+  it('returns 429 when rate limited', async () => {
+    const { POST, processStripeWebhook, rateLimiter } = createTestDeps();
+
+    rateLimiter.limit.mockResolvedValue({
+      success: false,
+      limit: 1000,
+      remaining: 0,
+      retryAfterSeconds: 60,
+    });
+
+    const res = await POST(
+      new Request('http://localhost/api/stripe/webhook', {
+        method: 'POST',
+        headers: { 'stripe-signature': 'sig_1' },
+        body: 'raw',
+      }),
+    );
+
+    expect(res.status).toBe(429);
+    expect(res.headers.get('Retry-After')).toBe('60');
+    expect(processStripeWebhook).not.toHaveBeenCalled();
+  });
+
   it('returns 500 when processing fails unexpectedly', async () => {
     const { POST, loggerError, processStripeWebhook } = createTestDeps();
     loggerError.mockClear();
@@ -178,6 +213,15 @@ describe('POST /api/stripe/webhook', () => {
     const createStripeWebhookDeps = vi.fn(() => deps);
     const createContainer = vi.fn<() => StripeWebhookRouteContainer>(() => ({
       logger: { error: vi.fn() },
+      createRateLimiter: () =>
+        ({
+          limit: async () => ({
+            success: true,
+            limit: 1000,
+            remaining: 999,
+            retryAfterSeconds: 0,
+          }),
+        }) as never,
       createStripeWebhookDeps,
     }));
 

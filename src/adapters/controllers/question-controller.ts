@@ -6,8 +6,13 @@ import {
   MAX_PRACTICE_SESSION_DIFFICULTY_FILTERS,
   MAX_PRACTICE_SESSION_TAG_FILTERS,
 } from '@/src/adapters/repositories/practice-session-limits';
+import { SUBMIT_ANSWER_RATE_LIMIT } from '@/src/adapters/shared/rate-limits';
 import { MAX_TIME_SPENT_SECONDS } from '@/src/adapters/shared/validation-limits';
-import type { AuthGateway } from '@/src/application/ports/gateways';
+import { ApplicationError } from '@/src/application/errors';
+import type {
+  AuthGateway,
+  RateLimiter,
+} from '@/src/application/ports/gateways';
 import type {
   GetNextQuestionInput,
   GetNextQuestionOutput,
@@ -77,6 +82,7 @@ type SubmitAnswerUseCase = {
 
 export type QuestionControllerDeps = {
   authGateway: AuthGateway;
+  rateLimiter: RateLimiter;
   checkEntitlementUseCase: CheckEntitlementUseCase;
   getNextQuestionUseCase: GetNextQuestionUseCase;
   submitAnswerUseCase: SubmitAnswerUseCase;
@@ -128,6 +134,17 @@ export async function submitAnswer(
     const userIdOrError = await requireEntitledUserId(d);
     if (typeof userIdOrError !== 'string') return userIdOrError;
     const userId = userIdOrError;
+
+    const rate = await d.rateLimiter.limit({
+      key: `question:submitAnswer:${userId}`,
+      ...SUBMIT_ANSWER_RATE_LIMIT,
+    });
+    if (!rate.success) {
+      throw new ApplicationError(
+        'RATE_LIMITED',
+        `Too many submissions. Try again in ${rate.retryAfterSeconds}s.`,
+      );
+    }
 
     const data = await d.submitAnswerUseCase.execute({
       userId,

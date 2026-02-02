@@ -5,6 +5,7 @@ export const ApplicationErrorCodes = [
   'VALIDATION_ERROR',
   'NOT_FOUND',
   'CONFLICT',
+  'RATE_LIMITED',
   'STRIPE_ERROR',
   'INVALID_WEBHOOK_SIGNATURE',
   'INVALID_WEBHOOK_PAYLOAD',

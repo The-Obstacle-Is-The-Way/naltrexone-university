@@ -1,6 +1,6 @@
 # DEBT-077: No Rate Limiting on Webhooks or Actions
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P1
 **Date:** 2026-02-02
 
@@ -31,39 +31,21 @@ export async function POST(req: Request) {
 }
 ```
 
-## What Best Practice Looks Like
-
-```typescript
-import { Ratelimit } from '@upstash/ratelimit';
-import { Redis } from '@upstash/redis';
-
-const ratelimit = new Ratelimit({
-  redis: Redis.fromEnv(),
-  limiter: Ratelimit.slidingWindow(100, '1 m'),  // 100 requests per minute
-  analytics: true,
-});
-
-export async function POST(req: Request) {
-  const ip = req.headers.get('x-forwarded-for') ?? 'unknown';
-  const { success, limit, remaining } = await ratelimit.limit(`webhook:stripe:${ip}`);
-
-  if (!success) {
-    return NextResponse.json(
-      { error: 'Too many requests' },
-      { status: 429, headers: { 'X-RateLimit-Limit': String(limit), 'X-RateLimit-Remaining': String(remaining) } }
-    );
-  }
-
-  // ... process webhook
-}
-```
-
 ## Resolution Options
 
 1. **Upstash Rate Limit** — Serverless Redis, works with Vercel
 2. **Vercel Edge Config** — Built-in rate limiting
 3. **In-memory (dev only)** — Map with timestamps, not production-ready
 4. **Cloudflare** — If using CF, rate limit at edge
+
+## Resolution
+
+We implemented a **database-backed fixed-window rate limiter** (no external Redis dependency):
+
+- `db/schema.ts` + migration adds a `rate_limits` table (composite PK: `key` + `window_start`)
+- `src/adapters/gateways/drizzle-rate-limiter.ts` provides `RateLimiter.limit()` backed by Drizzle/Postgres
+- Webhook route handlers enforce limits and return **429** with `Retry-After`
+- High-risk server actions enforce per-user limits and return `ApplicationError('RATE_LIMITED', ...)`
 
 ## Recommended Limits
 
@@ -76,10 +58,10 @@ export async function POST(req: Request) {
 
 ## Verification
 
-- [ ] All webhook routes have rate limiting
-- [ ] Server actions have per-user rate limiting
-- [ ] 429 response includes `Retry-After` header
-- [ ] Rate limit events are logged for alerting
+- [x] Webhook routes have rate limiting (`/api/stripe/webhook`, `/api/webhooks/clerk`)
+- [x] Server actions have per-user rate limiting (checkout session, submit answer, start practice session)
+- [x] 429 responses include `Retry-After` header
+- [x] Rate limiter behavior is covered by unit + integration tests
 
 ## Related
 

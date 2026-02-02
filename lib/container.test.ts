@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import type { StripeWebhookDeps } from '@/src/adapters/controllers/stripe-webhook-controller';
 import {
   ClerkAuthGateway,
+  DrizzleRateLimiter,
   StripePaymentGateway,
 } from '@/src/adapters/gateways';
 import {
@@ -76,6 +77,7 @@ describe('container factories', () => {
 
     expect(typeof container.createAuthGateway).toBe('function');
     expect(typeof container.createPaymentGateway).toBe('function');
+    expect(typeof container.createRateLimiter).toBe('function');
 
     expect(typeof container.createCheckEntitlementUseCase).toBe('function');
     expect(typeof container.createGetNextQuestionUseCase).toBe('function');
@@ -143,6 +145,7 @@ describe('container factories', () => {
     expect(container.createPaymentGateway()).toBeInstanceOf(
       StripePaymentGateway,
     );
+    expect(container.createRateLimiter()).toBeInstanceOf(DrizzleRateLimiter);
 
     expect(container.createCheckEntitlementUseCase()).toBeInstanceOf(
       CheckEntitlementUseCase,
@@ -160,6 +163,7 @@ describe('container factories', () => {
 
     const questionDeps = container.createQuestionControllerDeps();
     expect(questionDeps.authGateway).toBeInstanceOf(ClerkAuthGateway);
+    expect(typeof questionDeps.rateLimiter.limit).toBe('function');
     expect(questionDeps.checkEntitlementUseCase).toBeInstanceOf(
       CheckEntitlementUseCase,
     );
@@ -188,6 +192,7 @@ describe('container factories', () => {
       DrizzleSubscriptionRepository,
     );
     expect(billingDeps.paymentGateway).toBeInstanceOf(StripePaymentGateway);
+    expect(typeof billingDeps.rateLimiter.limit).toBe('function');
     expect(typeof billingDeps.getClerkUserId).toBe('function');
     expect(billingDeps.appUrl).toBe('https://app.example.com');
     expect(typeof billingDeps.now).toBe('function');
@@ -206,6 +211,7 @@ describe('container factories', () => {
 
     const practiceDeps = container.createPracticeControllerDeps();
     expect(practiceDeps.authGateway).toBeInstanceOf(ClerkAuthGateway);
+    expect(typeof practiceDeps.rateLimiter.limit).toBe('function');
     expect(practiceDeps.checkEntitlementUseCase).toBeInstanceOf(
       CheckEntitlementUseCase,
     );

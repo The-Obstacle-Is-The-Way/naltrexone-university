@@ -94,6 +94,14 @@ describe('billing controllers (integration)', () => {
         stripeCustomerRepository,
         subscriptionRepository: new FakeSubscriptionRepository(),
         paymentGateway,
+        rateLimiter: {
+          limit: async () => ({
+            success: true,
+            limit: 10,
+            remaining: 9,
+            retryAfterSeconds: 0,
+          }),
+        },
         getClerkUserId: async () => user.clerkUserId,
         appUrl: 'http://localhost:3000',
         now: () => new Date('2026-02-01T00:00:00.000Z'),
@@ -144,6 +152,14 @@ describe('billing controllers (integration)', () => {
         stripeCustomerRepository,
         subscriptionRepository: new FakeSubscriptionRepository(),
         paymentGateway,
+        rateLimiter: {
+          limit: async () => ({
+            success: true,
+            limit: 10,
+            remaining: 9,
+            retryAfterSeconds: 0,
+          }),
+        },
         getClerkUserId: async () => user.clerkUserId,
         appUrl: 'http://localhost:3000',
         now: () => new Date('2026-02-01T00:00:00.000Z'),
@@ -157,6 +173,14 @@ describe('billing controllers (integration)', () => {
         stripeCustomerRepository,
         subscriptionRepository: new FakeSubscriptionRepository(),
         paymentGateway,
+        rateLimiter: {
+          limit: async () => ({
+            success: true,
+            limit: 10,
+            remaining: 9,
+            retryAfterSeconds: 0,
+          }),
+        },
         getClerkUserId: async () => user.clerkUserId,
         appUrl: 'http://localhost:3000',
         now: () => new Date('2026-02-01T00:00:00.000Z'),

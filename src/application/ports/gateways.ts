@@ -78,3 +78,20 @@ export interface PaymentGateway {
     signature: string,
   ): Promise<WebhookEventResult>;
 }
+
+export type RateLimitInput = {
+  key: string;
+  limit: number;
+  windowMs: number;
+};
+
+export type RateLimitResult = {
+  success: boolean;
+  limit: number;
+  remaining: number;
+  retryAfterSeconds: number;
+};
+
+export interface RateLimiter {
+  limit(input: RateLimitInput): Promise<RateLimitResult>;
+}

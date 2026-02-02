@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { ApplicationError } from '@/src/application/errors';
+import type { RateLimiter } from '@/src/application/ports/gateways';
 import type {
   AttemptRepository,
   PracticeSessionRepository,
@@ -124,6 +125,7 @@ function createThrowingQuestionRepository(
 function createDeps(overrides?: {
   user?: User | null;
   isEntitled?: boolean;
+  rateLimiter?: RateLimiter;
   questionRepository?: QuestionRepository;
   practiceSessionRepository?: PracticeSessionRepository;
   attemptRepository?: AttemptRepository;
@@ -160,8 +162,20 @@ function createDeps(overrides?: {
     now,
   );
 
+  const rateLimiter: RateLimiter =
+    overrides?.rateLimiter ??
+    ({
+      limit: async () => ({
+        success: true,
+        limit: 20,
+        remaining: 19,
+        retryAfterSeconds: 0,
+      }),
+    } satisfies RateLimiter);
+
   return {
     authGateway,
+    rateLimiter,
     checkEntitlementUseCase,
     questionRepository:
       overrides?.questionRepository ?? new FakeQuestionRepository([]),
@@ -219,6 +233,31 @@ describe('practice-controller', () => {
       expect(result).toMatchObject({
         ok: false,
         error: { code: 'UNSUBSCRIBED' },
+      });
+    });
+
+    it('returns RATE_LIMITED when rate limited', async () => {
+      const deps = createDeps({
+        rateLimiter: {
+          limit: async () => ({
+            success: false,
+            limit: 20,
+            remaining: 0,
+            retryAfterSeconds: 60,
+          }),
+        },
+        questionRepository: createThrowingQuestionRepository(),
+        practiceSessionRepository: createThrowingPracticeSessionRepository(),
+      });
+
+      const result = await startPracticeSession(
+        { mode: 'tutor', count: 10, tagSlugs: [], difficulties: [] },
+        deps,
+      );
+
+      expect(result).toMatchObject({
+        ok: false,
+        error: { code: 'RATE_LIMITED' },
       });
     });
 

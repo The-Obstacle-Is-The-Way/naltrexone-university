@@ -217,6 +217,14 @@ describe('question controllers (integration)', () => {
 
     const deps: QuestionControllerDeps = {
       authGateway,
+      rateLimiter: {
+        limit: async () => ({
+          success: true,
+          limit: 120,
+          remaining: 119,
+          retryAfterSeconds: 0,
+        }),
+      },
       checkEntitlementUseCase: { execute: async () => ({ isEntitled: true }) },
       getNextQuestionUseCase: new GetNextQuestionUseCase(
         questions,

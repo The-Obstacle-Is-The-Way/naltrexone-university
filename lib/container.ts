@@ -11,6 +11,7 @@ import type { StripeWebhookDeps } from '@/src/adapters/controllers/stripe-webhoo
 import type { TagControllerDeps } from '@/src/adapters/controllers/tag-controller';
 import {
   ClerkAuthGateway,
+  DrizzleRateLimiter,
   StripePaymentGateway,
 } from '@/src/adapters/gateways';
 import {
@@ -28,6 +29,7 @@ import type { DrizzleDb } from '@/src/adapters/shared/database-types';
 import type {
   AuthGateway,
   PaymentGateway,
+  RateLimiter,
 } from '@/src/application/ports/gateways';
 import type {
   AttemptRepository,
@@ -81,6 +83,7 @@ export type RepositoryFactories = {
 export type GatewayFactories = {
   createAuthGateway: () => AuthGateway;
   createPaymentGateway: () => PaymentGateway;
+  createRateLimiter: () => RateLimiter;
 };
 
 export type UseCaseFactories = {
@@ -179,6 +182,8 @@ export function createContainer(overrides: ContainerOverrides = {}) {
         priceIds: stripePriceIds,
         logger: primitives.logger,
       }),
+    createRateLimiter: () =>
+      new DrizzleRateLimiter(primitives.db, primitives.now),
   };
 
   const gateways = {
@@ -225,6 +230,7 @@ export function createContainer(overrides: ContainerOverrides = {}) {
     }),
     createQuestionControllerDeps: () => ({
       authGateway: gateways.createAuthGateway(),
+      rateLimiter: gateways.createRateLimiter(),
       checkEntitlementUseCase: useCases.createCheckEntitlementUseCase(),
       getNextQuestionUseCase: useCases.createGetNextQuestionUseCase(),
       submitAnswerUseCase: useCases.createSubmitAnswerUseCase(),
@@ -239,6 +245,7 @@ export function createContainer(overrides: ContainerOverrides = {}) {
       stripeCustomerRepository: repositories.createStripeCustomerRepository(),
       subscriptionRepository: repositories.createSubscriptionRepository(),
       paymentGateway: gateways.createPaymentGateway(),
+      rateLimiter: gateways.createRateLimiter(),
       getClerkUserId: async () => (await currentUser())?.id ?? null,
       appUrl: primitives.env.NEXT_PUBLIC_APP_URL,
       now: primitives.now,
@@ -252,6 +259,7 @@ export function createContainer(overrides: ContainerOverrides = {}) {
     }),
     createPracticeControllerDeps: () => ({
       authGateway: gateways.createAuthGateway(),
+      rateLimiter: gateways.createRateLimiter(),
       checkEntitlementUseCase: useCases.createCheckEntitlementUseCase(),
       questionRepository: repositories.createQuestionRepository(),
       practiceSessionRepository: repositories.createPracticeSessionRepository(),

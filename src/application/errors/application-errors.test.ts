@@ -13,6 +13,10 @@ describe('ApplicationErrorCodes', () => {
   it('includes INVALID_WEBHOOK_PAYLOAD', () => {
     expect(ApplicationErrorCodes).toContain('INVALID_WEBHOOK_PAYLOAD');
   });
+
+  it('includes RATE_LIMITED', () => {
+    expect(ApplicationErrorCodes).toContain('RATE_LIMITED');
+  });
 });
 
 describe('ApplicationError', () => {

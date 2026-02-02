@@ -172,6 +172,20 @@ export const stripeEvents = pgTable(
   }),
 );
 
+// rate_limits (composite PK: key + window_start)
+export const rateLimits = pgTable(
+  'rate_limits',
+  {
+    key: varchar('key', { length: 255 }).notNull(),
+    windowStart: timestamp('window_start', { withTimezone: true }).notNull(),
+    count: integer('count').notNull(),
+  },
+  (t) => ({
+    pk: primaryKey({ columns: [t.key, t.windowStart] }),
+    windowStartIdx: index('rate_limits_window_start_idx').on(t.windowStart),
+  }),
+);
+
 // questions
 export const questions = pgTable(
   'questions',
