@@ -17,7 +17,10 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 | ID | Title | Status | Priority | Date |
 |----|-------|--------|----------|------|
-**Next Bug ID:** BUG-044
+| [BUG-044](./bug-044-checkout-success-stale-cache.md) | Checkout Success Page Serving Stale Code | Open | P2 | 2026-02-02 |
+| [BUG-045](./bug-045-checkout-missing-current-period-end.md) | Checkout Success Validation Fails — missing_current_period_end | Open | P2 | 2026-02-02 |
+
+**Next Bug ID:** BUG-046
 
 ## Foundation Audit
 
