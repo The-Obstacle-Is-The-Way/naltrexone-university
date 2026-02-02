@@ -1,7 +1,9 @@
 'use server';
 
 import { z } from 'zod';
+import { createDepsResolver } from '@/lib/controller-helpers';
 import type { Logger } from '@/src/adapters/shared/logger';
+import { MAX_PAGINATION_LIMIT } from '@/src/adapters/shared/validation-limits';
 import type { AuthGateway } from '@/src/application/ports/gateways';
 import type {
   AttemptRepository,
@@ -16,7 +18,7 @@ import { err, handleError, ok } from './action-result';
 
 const GetMissedQuestionsInputSchema = z
   .object({
-    limit: z.number().int().min(1).max(100),
+    limit: z.number().int().min(1).max(MAX_PAGINATION_LIMIT),
     offset: z.number().int().min(0),
   })
   .strict();
@@ -47,14 +49,9 @@ export type ReviewControllerDeps = {
   logger?: Logger;
 };
 
-async function getDeps(
-  deps?: ReviewControllerDeps,
-): Promise<ReviewControllerDeps> {
-  if (deps) return deps;
-
-  const { createContainer } = await import('@/lib/container');
-  return createContainer().createReviewControllerDeps();
-}
+const getDeps = createDepsResolver((container) =>
+  container.createReviewControllerDeps(),
+);
 
 async function requireEntitledUserId(
   deps: ReviewControllerDeps,

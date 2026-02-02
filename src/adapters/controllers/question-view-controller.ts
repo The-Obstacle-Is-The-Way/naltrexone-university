@@ -1,6 +1,7 @@
 'use server';
 
 import { z } from 'zod';
+import { createDepsResolver } from '@/lib/controller-helpers';
 import type { AuthGateway } from '@/src/application/ports/gateways';
 import type { QuestionRepository } from '@/src/application/ports/repositories';
 import type {
@@ -40,14 +41,9 @@ export type QuestionViewControllerDeps = {
   questionRepository: QuestionRepository;
 };
 
-async function getDeps(
-  deps?: QuestionViewControllerDeps,
-): Promise<QuestionViewControllerDeps> {
-  if (deps) return deps;
-
-  const { createContainer } = await import('@/lib/container');
-  return createContainer().createQuestionViewControllerDeps();
-}
+const getDeps = createDepsResolver((container) =>
+  container.createQuestionViewControllerDeps(),
+);
 
 async function requireEntitledUserId(
   deps: QuestionViewControllerDeps,

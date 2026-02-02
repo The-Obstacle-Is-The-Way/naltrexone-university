@@ -1,6 +1,7 @@
 'use server';
 
 import { z } from 'zod';
+import { createDepsResolver } from '@/lib/controller-helpers';
 import {
   MAX_PRACTICE_SESSION_DIFFICULTY_FILTERS,
   MAX_PRACTICE_SESSION_QUESTIONS,
@@ -77,14 +78,9 @@ export type PracticeControllerDeps = {
   now: () => Date;
 };
 
-async function getDeps(
-  deps?: PracticeControllerDeps,
-): Promise<PracticeControllerDeps> {
-  if (deps) return deps;
-
-  const { createContainer } = await import('@/lib/container');
-  return createContainer().createPracticeControllerDeps();
-}
+const getDeps = createDepsResolver((container) =>
+  container.createPracticeControllerDeps(),
+);
 
 async function requireEntitledUserId(
   deps: PracticeControllerDeps,

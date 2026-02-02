@@ -1,6 +1,12 @@
 'use server';
 
 import { z } from 'zod';
+import { createDepsResolver } from '@/lib/controller-helpers';
+import {
+  MAX_PRACTICE_SESSION_DIFFICULTY_FILTERS,
+  MAX_PRACTICE_SESSION_TAG_FILTERS,
+} from '@/src/adapters/repositories/practice-session-limits';
+import { MAX_TIME_SPENT_SECONDS } from '@/src/adapters/shared/validation-limits';
 import type { AuthGateway } from '@/src/application/ports/gateways';
 import type {
   CheckEntitlementInput,
@@ -23,8 +29,14 @@ const zDifficulty = z.enum(['easy', 'medium', 'hard']);
 
 const QuestionFiltersSchema = z
   .object({
-    tagSlugs: z.array(z.string().min(1)).max(50).default([]),
-    difficulties: z.array(zDifficulty).max(3).default([]),
+    tagSlugs: z
+      .array(z.string().min(1))
+      .max(MAX_PRACTICE_SESSION_TAG_FILTERS)
+      .default([]),
+    difficulties: z
+      .array(zDifficulty)
+      .max(MAX_PRACTICE_SESSION_DIFFICULTY_FILTERS)
+      .default([]),
   })
   .strict();
 
@@ -48,7 +60,12 @@ const SubmitAnswerInputSchema = z
     questionId: zUuid,
     choiceId: zUuid,
     sessionId: zUuid.optional(),
-    timeSpentSeconds: z.number().int().min(0).max(86400).optional(),
+    timeSpentSeconds: z
+      .number()
+      .int()
+      .min(0)
+      .max(MAX_TIME_SPENT_SECONDS)
+      .optional(),
   })
   .strict();
 
@@ -71,14 +88,9 @@ export type QuestionControllerDeps = {
   submitAnswerUseCase: SubmitAnswerUseCase;
 };
 
-async function getDeps(
-  deps?: QuestionControllerDeps,
-): Promise<QuestionControllerDeps> {
-  if (deps) return deps;
-
-  const { createContainer } = await import('@/lib/container');
-  return createContainer().createQuestionControllerDeps();
-}
+const getDeps = createDepsResolver((container) =>
+  container.createQuestionControllerDeps(),
+);
 
 async function requireEntitledUserId(
   deps: QuestionControllerDeps,

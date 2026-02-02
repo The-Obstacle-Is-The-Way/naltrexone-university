@@ -1,6 +1,8 @@
 'use server';
 
 import { z } from 'zod';
+import { createDepsResolver } from '@/lib/controller-helpers';
+import { ROUTES } from '@/lib/routes';
 import { ApplicationError } from '@/src/application/errors';
 import type {
   AuthGateway,
@@ -31,28 +33,23 @@ export type BillingControllerDeps = {
   appUrl: string;
 };
 
-async function getDeps(
-  deps?: BillingControllerDeps,
-): Promise<BillingControllerDeps> {
-  if (deps) return deps;
-
-  const { createContainer } = await import('@/lib/container');
-  return createContainer().createBillingControllerDeps();
-}
+const getDeps = createDepsResolver((container) =>
+  container.createBillingControllerDeps(),
+);
 
 function toSuccessUrl(appUrl: string): string {
-  const base = new URL('/checkout/success', appUrl);
+  const base = new URL(ROUTES.CHECKOUT_SUCCESS, appUrl);
   return `${base.toString()}?session_id={CHECKOUT_SESSION_ID}`;
 }
 
 function toCancelUrl(appUrl: string): string {
-  const url = new URL('/pricing', appUrl);
+  const url = new URL(ROUTES.PRICING, appUrl);
   url.searchParams.set('checkout', 'cancel');
   return url.toString();
 }
 
 function toBillingReturnUrl(appUrl: string): string {
-  return new URL('/app/billing', appUrl).toString();
+  return new URL(ROUTES.APP_BILLING, appUrl).toString();
 }
 
 async function getOrCreateStripeCustomerId(

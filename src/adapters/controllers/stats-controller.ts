@@ -1,6 +1,7 @@
 'use server';
 
 import { z } from 'zod';
+import { createDepsResolver } from '@/lib/controller-helpers';
 import type { Logger } from '@/src/adapters/shared/logger';
 import type { AuthGateway } from '@/src/application/ports/gateways';
 import type {
@@ -50,14 +51,9 @@ export type StatsControllerDeps = {
   logger?: Logger;
 };
 
-async function getDeps(
-  deps?: StatsControllerDeps,
-): Promise<StatsControllerDeps> {
-  if (deps) return deps;
-
-  const { createContainer } = await import('@/lib/container');
-  return createContainer().createStatsControllerDeps();
-}
+const getDeps = createDepsResolver((container) =>
+  container.createStatsControllerDeps(),
+);
 
 async function requireEntitledUserId(
   deps: StatsControllerDeps,

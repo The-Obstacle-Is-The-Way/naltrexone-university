@@ -1,6 +1,7 @@
 'use server';
 
 import { z } from 'zod';
+import { createDepsResolver } from '@/lib/controller-helpers';
 import type { Logger } from '@/src/adapters/shared/logger';
 import type { AuthGateway } from '@/src/application/ports/gateways';
 import type {
@@ -52,14 +53,9 @@ export type BookmarkControllerDeps = {
   logger?: Logger;
 };
 
-async function getDeps(
-  deps?: BookmarkControllerDeps,
-): Promise<BookmarkControllerDeps> {
-  if (deps) return deps;
-
-  const { createContainer } = await import('@/lib/container');
-  return createContainer().createBookmarkControllerDeps();
-}
+const getDeps = createDepsResolver((container) =>
+  container.createBookmarkControllerDeps(),
+);
 
 async function requireEntitledUserId(
   deps: BookmarkControllerDeps,
