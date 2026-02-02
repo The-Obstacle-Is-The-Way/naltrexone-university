@@ -48,3 +48,4 @@ postgres_data/
 # Question content (proprietary)
 content/questions/
 content/drafts/
+content/imports/
