@@ -1,6 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
 import { ROUTES } from '@/lib/routes';
-import { runCheckoutSuccessPage, syncCheckoutSuccess } from './page';
+import {
+  type CheckoutSuccessTransaction,
+  runCheckoutSuccessPage,
+  syncCheckoutSuccess,
+} from './page';
 
 class RedirectError extends Error {
   constructor(readonly url: string) {
@@ -138,10 +142,19 @@ describe('runCheckoutSuccessPage', () => {
       },
       priceIds: { monthly: 'price_monthly', annual: 'price_annual' },
       appUrl: 'https://example.com',
-      transaction: async (fn: any) =>
+      transaction: async <T>(
+        fn: (tx: CheckoutSuccessTransaction) => Promise<T>,
+      ): Promise<T> =>
         fn({
-          stripeCustomers: { insert: async () => undefined },
-          subscriptions: { upsert: async () => undefined },
+          stripeCustomers: {
+            findByUserId: async () => null,
+            insert: async () => undefined,
+          },
+          subscriptions: {
+            findByUserId: async () => null,
+            findByStripeSubscriptionId: async () => null,
+            upsert: async () => undefined,
+          },
         }),
     };
 
