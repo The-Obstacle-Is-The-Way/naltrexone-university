@@ -1,113 +1,37 @@
 'use client';
 
 import Link from 'next/link';
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useState,
-  useTransition,
-} from 'react';
+import { useEffect, useMemo, useState, useTransition } from 'react';
 import { Feedback } from '@/components/question/Feedback';
 import { QuestionCard } from '@/components/question/QuestionCard';
-import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import { submitAnswer } from '@/src/adapters/controllers/question-controller';
 import {
   type GetQuestionBySlugOutput,
   getQuestionBySlug,
 } from '@/src/adapters/controllers/question-view-controller';
 import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
+import {
+  createLoadQuestionAction,
+  type LoadState,
+  reattemptQuestion,
+  submitSelectedAnswer,
+} from './question-page-logic';
 
-type LoadState =
-  | { status: 'loading' }
-  | { status: 'ready' }
-  | { status: 'error'; message: string };
+export type QuestionViewProps = {
+  loadState: LoadState;
+  question: GetQuestionBySlugOutput | null;
+  selectedChoiceId: string | null;
+  submitResult: SubmitAnswerOutput | null;
+  canSubmit: boolean;
+  isPending: boolean;
+  onTryAgain: () => void;
+  onSelectChoice: (choiceId: string) => void;
+  onSubmit: () => void;
+  onReattempt: () => void;
+};
 
-function getErrorMessage(result: ActionResult<unknown>): string {
-  if (result.ok) return 'Unexpected ok result';
-  return result.error.message;
-}
-
-export default function QuestionPage({ params }: { params: { slug: string } }) {
-  const slug = params.slug;
-
-  const [question, setQuestion] = useState<GetQuestionBySlugOutput | null>(
-    null,
-  );
-  const [selectedChoiceId, setSelectedChoiceId] = useState<string | null>(null);
-  const [submitResult, setSubmitResult] = useState<SubmitAnswerOutput | null>(
-    null,
-  );
-  const [questionLoadedAt, setQuestionLoadedAt] = useState<number | null>(null);
-  const [loadState, setLoadState] = useState<LoadState>({
-    status: 'loading',
-  });
-  const [isPending, startTransition] = useTransition();
-
-  const loadQuestion = useCallback(() => {
-    startTransition(() => {
-      void (async () => {
-        setLoadState({ status: 'loading' });
-        setSelectedChoiceId(null);
-        setSubmitResult(null);
-        setQuestionLoadedAt(null);
-
-        const res = await getQuestionBySlug({ slug });
-        if (!res.ok) {
-          setLoadState({ status: 'error', message: getErrorMessage(res) });
-          setQuestion(null);
-          return;
-        }
-
-        setQuestion(res.data);
-        setQuestionLoadedAt(Date.now());
-        setLoadState({ status: 'ready' });
-      })();
-    });
-  }, [slug]);
-
-  useEffect(() => {
-    loadQuestion();
-  }, [loadQuestion]);
-
-  const canSubmit = useMemo(() => {
-    return (
-      question !== null && selectedChoiceId !== null && submitResult === null
-    );
-  }, [question, selectedChoiceId, submitResult]);
-
-  const correctChoiceId = submitResult?.correctChoiceId ?? null;
-
-  async function onSubmit() {
-    if (!question) return;
-    if (!selectedChoiceId) return;
-
-    setLoadState({ status: 'loading' });
-
-    const timeSpentSeconds = questionLoadedAt
-      ? Math.floor((Date.now() - questionLoadedAt) / 1000)
-      : 0;
-
-    const res = await submitAnswer({
-      questionId: question.questionId,
-      choiceId: selectedChoiceId,
-      timeSpentSeconds,
-    });
-
-    if (!res.ok) {
-      setLoadState({ status: 'error', message: getErrorMessage(res) });
-      return;
-    }
-
-    setSubmitResult(res.data);
-    setLoadState({ status: 'ready' });
-  }
-
-  function onReattempt() {
-    setSelectedChoiceId(null);
-    setSubmitResult(null);
-    setQuestionLoadedAt(Date.now());
-  }
+export function QuestionView(props: QuestionViewProps) {
+  const correctChoiceId = props.submitResult?.correctChoiceId ?? null;
 
   return (
     <div className="space-y-6">
@@ -126,53 +50,53 @@ export default function QuestionPage({ params }: { params: { slug: string } }) {
         </Link>
       </div>
 
-      {loadState.status === 'error' ? (
+      {props.loadState.status === 'error' ? (
         <div
           className="rounded-2xl border border-border bg-card p-6 text-sm text-destructive shadow-sm"
           role="alert"
         >
-          <div>{loadState.message}</div>
+          <div>{props.loadState.message}</div>
           <button
             type="button"
             className="mt-4 inline-flex items-center justify-center rounded-full border border-border bg-background px-4 py-2 text-sm font-medium text-foreground hover:bg-muted"
-            onClick={loadQuestion}
+            onClick={props.onTryAgain}
           >
             Try again
           </button>
         </div>
       ) : null}
 
-      {loadState.status === 'loading' ? (
+      {props.loadState.status === 'loading' ? (
         <div className="rounded-2xl border border-border bg-card p-6 text-sm text-muted-foreground shadow-sm">
           Loading question…
         </div>
       ) : null}
 
-      {loadState.status === 'ready' && question === null ? (
+      {props.loadState.status === 'ready' && props.question === null ? (
         <div className="rounded-2xl border border-border bg-card p-6 text-sm text-muted-foreground shadow-sm">
           Question not found.
         </div>
       ) : null}
 
-      {question ? (
+      {props.question ? (
         <QuestionCard
-          stemMd={question.stemMd}
-          choices={question.choices.map((c) => ({
+          stemMd={props.question.stemMd}
+          choices={props.question.choices.map((c) => ({
             id: c.id,
             label: c.label,
             textMd: c.textMd,
           }))}
-          selectedChoiceId={selectedChoiceId}
+          selectedChoiceId={props.selectedChoiceId}
           correctChoiceId={correctChoiceId}
-          disabled={isPending || loadState.status === 'loading'}
-          onSelectChoice={setSelectedChoiceId}
+          disabled={props.isPending || props.loadState.status === 'loading'}
+          onSelectChoice={props.onSelectChoice}
         />
       ) : null}
 
-      {submitResult ? (
+      {props.submitResult ? (
         <Feedback
-          isCorrect={submitResult.isCorrect}
-          explanationMd={submitResult.explanationMd}
+          isCorrect={props.submitResult.isCorrect}
+          explanationMd={props.submitResult.explanationMd}
         />
       ) : null}
 
@@ -180,23 +104,104 @@ export default function QuestionPage({ params }: { params: { slug: string } }) {
         <button
           type="button"
           className="inline-flex items-center justify-center rounded-full bg-orange-600 px-4 py-2 text-sm font-medium text-white hover:bg-orange-700 disabled:cursor-not-allowed disabled:opacity-60"
-          disabled={!canSubmit || isPending}
-          onClick={onSubmit}
+          disabled={!props.canSubmit || props.isPending}
+          onClick={props.onSubmit}
         >
           Submit
         </button>
 
-        {submitResult ? (
+        {props.submitResult ? (
           <button
             type="button"
             className="inline-flex items-center justify-center rounded-full border border-border bg-background px-4 py-2 text-sm font-medium text-foreground hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60"
-            disabled={isPending}
-            onClick={onReattempt}
+            disabled={props.isPending}
+            onClick={props.onReattempt}
           >
             Reattempt
           </button>
         ) : null}
       </div>
     </div>
+  );
+}
+
+export default function QuestionPage({ params }: { params: { slug: string } }) {
+  const slug = params.slug;
+
+  const [question, setQuestion] = useState<GetQuestionBySlugOutput | null>(
+    null,
+  );
+  const [selectedChoiceId, setSelectedChoiceId] = useState<string | null>(null);
+  const [submitResult, setSubmitResult] = useState<SubmitAnswerOutput | null>(
+    null,
+  );
+  const [questionLoadedAt, setQuestionLoadedAt] = useState<number | null>(null);
+  const [loadState, setLoadState] = useState<LoadState>({
+    status: 'loading',
+  });
+  const [isPending, startTransition] = useTransition();
+
+  const loadQuestion = useMemo(
+    () =>
+      createLoadQuestionAction({
+        slug,
+        startTransition,
+        getQuestionBySlugFn: getQuestionBySlug,
+        nowMs: Date.now,
+        setLoadState,
+        setSelectedChoiceId,
+        setSubmitResult,
+        setQuestionLoadedAt,
+        setQuestion,
+      }),
+    [slug],
+  );
+
+  useEffect(loadQuestion, [loadQuestion]);
+
+  const canSubmit = useMemo(() => {
+    return (
+      question !== null && selectedChoiceId !== null && submitResult === null
+    );
+  }, [question, selectedChoiceId, submitResult]);
+
+  const onSubmit = useMemo(
+    () =>
+      submitSelectedAnswer.bind(null, {
+        question,
+        selectedChoiceId,
+        questionLoadedAtMs: questionLoadedAt,
+        submitAnswerFn: submitAnswer,
+        nowMs: Date.now,
+        setLoadState,
+        setSubmitResult,
+      }),
+    [question, questionLoadedAt, selectedChoiceId],
+  );
+
+  const onReattempt = useMemo(
+    () =>
+      reattemptQuestion.bind(null, {
+        nowMs: Date.now,
+        setSelectedChoiceId,
+        setSubmitResult,
+        setQuestionLoadedAt,
+      }),
+    [],
+  );
+
+  return (
+    <QuestionView
+      loadState={loadState}
+      question={question}
+      selectedChoiceId={selectedChoiceId}
+      submitResult={submitResult}
+      canSubmit={canSubmit}
+      isPending={isPending}
+      onTryAgain={loadQuestion}
+      onSelectChoice={setSelectedChoiceId}
+      onSubmit={onSubmit}
+      onReattempt={onReattempt}
+    />
   );
 }
