@@ -7,6 +7,7 @@ export const ApplicationErrorCodes = [
   'CONFLICT',
   'STRIPE_ERROR',
   'INVALID_WEBHOOK_SIGNATURE',
+  'INVALID_WEBHOOK_PAYLOAD',
   'INTERNAL_ERROR',
 ] as const;
 

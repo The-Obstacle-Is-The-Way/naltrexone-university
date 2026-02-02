@@ -1,6 +1,6 @@
 # DEBT-076: No Schema Validation on Webhook Payloads
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P1
 **Date:** 2026-02-02
 
@@ -12,17 +12,8 @@ Stripe and Clerk webhook handlers use TypeScript `as` assertions on untrusted ex
 
 ## Current State
 
-```typescript
-// stripe-payment-gateway.ts:280
-const subscription = event.data.object as StripeSubscriptionLike;
-const userId = subscription.metadata?.user_id;  // Could be undefined
-```
-
-```typescript
-// clerk-webhook-controller.ts:70-76
-if (event.type === 'user.updated') {
-  const email = event.data.email_addresses?.[0]?.email_address;  // Duck typing
-```
+Before resolution, webhook handlers relied on structural assumptions and
+TypeScript assertions on untrusted payloads (no runtime schema validation).
 
 ## Problems
 
@@ -69,24 +60,24 @@ const subscription = parsed.data.data.object;  // Fully typed and validated
 
 ## Resolution
 
-1. **Create Zod schemas** for all webhook event types we handle
-2. **Validate at handler boundary** — Before any business logic
-3. **Log validation failures** — With enough context to debug
-4. **Return 400** on invalid payloads (Stripe will stop retrying)
+1. **Create Zod schemas** for webhook payloads we depend on
+2. **Validate at the boundary** (gateway/controller) before business logic
+3. **Log validation failures** with enough context to debug
+4. **Return 400** for invalid payloads; only return 2xx when the event is accepted
 
 ## Files to Update
 
 - `src/adapters/gateways/stripe-payment-gateway.ts` — Add schemas for subscription events
 - `src/adapters/controllers/clerk-webhook-controller.ts` — Add schemas for user events
-- `app/api/stripe/webhook/handler.ts` — Validate before processing
-- `app/api/webhooks/clerk/handler.ts` — Validate before processing
+- `app/api/stripe/webhook/handler.ts` — Map validation errors to 400
+- `app/api/webhooks/clerk/handler.ts` — Map validation errors to 400
 
 ## Verification
 
-- [ ] All webhook handlers use Zod validation
-- [ ] Invalid payloads return 400, not 500
-- [ ] Validation errors are logged with context
-- [ ] Tests include malformed payload scenarios
+- [x] Webhook handlers validate payloads with Zod (Stripe gateway + Clerk controller)
+- [x] Invalid payloads return 400 (not 500)
+- [x] Validation errors are logged with context
+- [x] Tests cover malformed payload scenarios
 
 ## Related
 

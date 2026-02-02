@@ -1,3 +1,4 @@
+import { z } from 'zod';
 import { ApplicationError } from '@/src/application/errors';
 import type {
   CheckoutSessionInput,
@@ -105,19 +106,27 @@ export type StripePaymentGatewayDeps = {
   };
 };
 
-type StripeSubscriptionLike = {
-  id?: string;
-  customer?: string;
-  status?: string;
-  cancel_at_period_end?: boolean;
-  metadata?: Record<string, string>;
-  items?: {
-    data?: Array<{
-      current_period_end?: number;
-      price?: { id?: string };
-    }>;
-  };
-};
+const stripeSubscriptionItemSchema = z
+  .object({
+    current_period_end: z.number(),
+    price: z.object({
+      id: z.string(),
+    }),
+  })
+  .passthrough();
+
+const stripeSubscriptionSchema = z
+  .object({
+    id: z.string(),
+    customer: z.string(),
+    status: z.string(),
+    cancel_at_period_end: z.boolean(),
+    metadata: z.record(z.string()).optional(),
+    items: z.object({
+      data: z.array(stripeSubscriptionItemSchema).min(1),
+    }),
+  })
+  .passthrough();
 
 const subscriptionEventTypes = new Set([
   'customer.subscription.created',
@@ -277,7 +286,23 @@ export class StripePaymentGateway implements PaymentGateway {
       return result;
     }
 
-    const subscription = event.data.object as StripeSubscriptionLike;
+    const parsedSubscription = stripeSubscriptionSchema.safeParse(
+      event.data.object,
+    );
+    if (!parsedSubscription.success) {
+      this.deps.logger?.error('Invalid Stripe subscription webhook payload', {
+        eventId: event.id,
+        type: event.type,
+        error: parsedSubscription.error.flatten(),
+      });
+
+      throw new ApplicationError(
+        'INVALID_WEBHOOK_PAYLOAD',
+        'Invalid Stripe subscription webhook payload',
+      );
+    }
+
+    const subscription = parsedSubscription.data;
     const userId = subscription.metadata?.user_id;
     if (!userId) {
       // Stripe can emit `customer.subscription.created` without our metadata.
@@ -302,20 +327,7 @@ export class StripePaymentGateway implements PaymentGateway {
     }
 
     const stripeSubscriptionId = subscription.id;
-    if (!stripeSubscriptionId) {
-      throw new ApplicationError(
-        'STRIPE_ERROR',
-        'Stripe subscription id is required',
-      );
-    }
-
     const stripeCustomerId = subscription.customer;
-    if (!stripeCustomerId) {
-      throw new ApplicationError(
-        'STRIPE_ERROR',
-        'Stripe subscription customer id is required',
-      );
-    }
 
     const status = subscription.status;
     if (!status || !isValidSubscriptionStatus(status)) {
@@ -325,30 +337,10 @@ export class StripePaymentGateway implements PaymentGateway {
       );
     }
 
-    const subscriptionItem = subscription.items?.data?.[0];
-    const currentPeriodEndSeconds = subscriptionItem?.current_period_end;
-    if (typeof currentPeriodEndSeconds !== 'number') {
-      throw new ApplicationError(
-        'STRIPE_ERROR',
-        'Stripe subscription current_period_end is required',
-      );
-    }
-
+    const subscriptionItem = subscription.items.data[0];
+    const currentPeriodEndSeconds = subscriptionItem.current_period_end;
     const cancelAtPeriodEnd = subscription.cancel_at_period_end;
-    if (typeof cancelAtPeriodEnd !== 'boolean') {
-      throw new ApplicationError(
-        'STRIPE_ERROR',
-        'Stripe subscription cancel_at_period_end is required',
-      );
-    }
-
-    const priceId = subscriptionItem?.price?.id;
-    if (!priceId) {
-      throw new ApplicationError(
-        'STRIPE_ERROR',
-        'Stripe subscription price id is required',
-      );
-    }
+    const priceId = subscriptionItem.price.id;
 
     const plan = getSubscriptionPlanFromPriceId(priceId, this.deps.priceIds);
     if (!plan) {

@@ -43,7 +43,8 @@ export function createWebhookHandler(
     } catch (error) {
       if (
         isApplicationError(error) &&
-        error.code === 'INVALID_WEBHOOK_SIGNATURE'
+        (error.code === 'INVALID_WEBHOOK_SIGNATURE' ||
+          error.code === 'INVALID_WEBHOOK_PAYLOAD')
       ) {
         return NextResponse.json({ error: error.message }, { status: 400 });
       }

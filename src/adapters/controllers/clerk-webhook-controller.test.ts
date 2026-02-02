@@ -51,10 +51,12 @@ describe('processClerkWebhook', () => {
   it('ignores user.updated when email_addresses is not an array', async () => {
     const deps = createDeps();
 
-    await processClerkWebhook(deps, {
-      type: 'user.updated',
-      data: { id: 'clerk_1', email_addresses: 'nope' },
-    });
+    await expect(
+      processClerkWebhook(deps, {
+        type: 'user.updated',
+        data: { id: 'clerk_1', email_addresses: 'nope' },
+      }),
+    ).rejects.toMatchObject({ code: 'INVALID_WEBHOOK_PAYLOAD' });
 
     await expect(
       deps.userRepository.findByClerkId('clerk_1'),

@@ -3,6 +3,7 @@ import type {
   ClerkWebhookDeps,
   ClerkWebhookEvent,
 } from '@/src/adapters/controllers/clerk-webhook-controller';
+import { isApplicationError } from '@/src/application/errors';
 import type {
   StripeCustomerRepository,
   UserRepository,
@@ -71,6 +72,14 @@ export function createWebhookHandler(
 
       return NextResponse.json({ received: true }, { status: 200 });
     } catch (error) {
+      if (
+        isApplicationError(error) &&
+        error.code === 'INVALID_WEBHOOK_PAYLOAD'
+      ) {
+        container.logger.error({ error }, 'Clerk webhook payload invalid');
+        return NextResponse.json({ error: error.message }, { status: 400 });
+      }
+
       container.logger.error({ error }, 'Clerk webhook failed');
       return NextResponse.json(
         { error: 'Webhook processing failed' },

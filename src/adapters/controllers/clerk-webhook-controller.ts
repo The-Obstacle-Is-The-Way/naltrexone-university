@@ -1,3 +1,5 @@
+import { z } from 'zod';
+import { ApplicationError } from '@/src/application/errors';
 import type {
   StripeCustomerRepository,
   UserRepository,
@@ -29,6 +31,46 @@ type ClerkUserDataLike = {
   emailAddresses?: unknown;
   email_addresses?: unknown;
 };
+
+const clerkEmailAddressSchema = z
+  .object({
+    id: z.string(),
+    emailAddress: z.string().optional(),
+    email_address: z.string().optional(),
+  })
+  .passthrough()
+  .superRefine((value, ctx) => {
+    if (!value.emailAddress && !value.email_address) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Email address is required',
+      });
+    }
+  });
+
+const clerkUserUpdatedDataSchema = z
+  .object({
+    id: z.string(),
+    primaryEmailAddressId: z.string().nullable().optional(),
+    primary_email_address_id: z.string().nullable().optional(),
+    emailAddresses: z.array(clerkEmailAddressSchema).optional(),
+    email_addresses: z.array(clerkEmailAddressSchema).optional(),
+  })
+  .passthrough()
+  .superRefine((value, ctx) => {
+    if (!value.emailAddresses && !value.email_addresses) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Email addresses are required',
+      });
+    }
+  });
+
+const clerkUserDeletedDataSchema = z
+  .object({
+    id: z.string(),
+  })
+  .passthrough();
 
 function getStringOrNull(value: unknown): string | null {
   return typeof value === 'string' ? value : null;
@@ -68,9 +110,22 @@ export async function processClerkWebhook(
   event: ClerkWebhookEvent,
 ): Promise<void> {
   if (event.type === 'user.updated') {
-    const data = event.data as ClerkUserDataLike;
+    const parsed = clerkUserUpdatedDataSchema.safeParse(event.data);
+    if (!parsed.success) {
+      throw new ApplicationError(
+        'INVALID_WEBHOOK_PAYLOAD',
+        'Invalid Clerk user.updated webhook payload',
+      );
+    }
+
+    const data = parsed.data as ClerkUserDataLike;
     const clerkUserId = getStringOrNull(data.id);
-    if (!clerkUserId) return;
+    if (!clerkUserId) {
+      throw new ApplicationError(
+        'INVALID_WEBHOOK_PAYLOAD',
+        'Clerk user.updated webhook payload is missing user id',
+      );
+    }
 
     const email = getPrimaryEmailOrNull(data);
     if (!email) return;
@@ -80,9 +135,15 @@ export async function processClerkWebhook(
   }
 
   if (event.type === 'user.deleted') {
-    const data = event.data as { id?: unknown };
-    const clerkUserId = getStringOrNull(data.id);
-    if (!clerkUserId) return;
+    const parsed = clerkUserDeletedDataSchema.safeParse(event.data);
+    if (!parsed.success) {
+      throw new ApplicationError(
+        'INVALID_WEBHOOK_PAYLOAD',
+        'Invalid Clerk user.deleted webhook payload',
+      );
+    }
+
+    const clerkUserId = parsed.data.id;
 
     const user = await deps.userRepository.findByClerkId(clerkUserId);
     if (!user) return;

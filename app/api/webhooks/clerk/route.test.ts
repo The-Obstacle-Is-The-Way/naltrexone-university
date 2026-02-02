@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import type { ClerkWebhookRouteContainer } from '@/app/api/webhooks/clerk/handler';
 import { createWebhookHandler } from '@/app/api/webhooks/clerk/handler';
 import type { ClerkWebhookDeps } from '@/src/adapters/controllers/clerk-webhook-controller';
+import { ApplicationError } from '@/src/application/errors';
 
 function createTestDeps() {
   const loggerError = vi.fn();
@@ -100,6 +101,27 @@ describe('POST /api/webhooks/clerk', () => {
 
     expect(res.status).toBe(200);
     await expect(res.json()).resolves.toEqual({ received: true });
+  });
+
+  it('returns 400 when payload validation fails', async () => {
+    const { POST, verifyWebhook, processClerkWebhook } = createTestDeps();
+
+    verifyWebhook.mockResolvedValue({
+      type: 'user.updated',
+      data: { id: 'clerk_1' },
+    });
+    processClerkWebhook.mockRejectedValue(
+      new ApplicationError('INVALID_WEBHOOK_PAYLOAD', 'Invalid payload'),
+    );
+
+    const res = await POST(
+      new Request('http://localhost/api/webhooks/clerk', {
+        method: 'POST',
+        body: 'raw',
+      }),
+    );
+
+    expect(res.status).toBe(400);
   });
 
   it('returns 500 when processing fails unexpectedly', async () => {

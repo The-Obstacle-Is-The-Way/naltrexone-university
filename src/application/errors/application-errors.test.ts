@@ -9,6 +9,10 @@ describe('ApplicationErrorCodes', () => {
   it('includes INVALID_WEBHOOK_SIGNATURE', () => {
     expect(ApplicationErrorCodes).toContain('INVALID_WEBHOOK_SIGNATURE');
   });
+
+  it('includes INVALID_WEBHOOK_PAYLOAD', () => {
+    expect(ApplicationErrorCodes).toContain('INVALID_WEBHOOK_PAYLOAD');
+  });
 });
 
 describe('ApplicationError', () => {

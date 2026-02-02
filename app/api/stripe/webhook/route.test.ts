@@ -120,6 +120,24 @@ describe('POST /api/stripe/webhook', () => {
     expect(res.status).toBe(400);
   });
 
+  it('returns 400 when payload validation fails', async () => {
+    const { POST, processStripeWebhook } = createTestDeps();
+
+    processStripeWebhook.mockRejectedValue(
+      new ApplicationError('INVALID_WEBHOOK_PAYLOAD', 'Invalid payload'),
+    );
+
+    const res = await POST(
+      new Request('http://localhost/api/stripe/webhook', {
+        method: 'POST',
+        headers: { 'stripe-signature': 'sig_1' },
+        body: 'raw',
+      }),
+    );
+
+    expect(res.status).toBe(400);
+  });
+
   it('returns 500 when processing fails unexpectedly', async () => {
     const { POST, loggerError, processStripeWebhook } = createTestDeps();
     loggerError.mockClear();
