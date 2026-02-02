@@ -1,9 +1,11 @@
 # BUG-023: Entitlement Race Condition During Payment Failure
 
-## Severity: P1 - High
+## Severity: P2 - Medium (Downgraded from P1)
 
 ## Summary
-When a Stripe subscription transitions to `past_due` status (payment failure), there is a race condition window where `isEntitled()` may still return `true` because the database hasn't been updated yet via webhook.
+When a Stripe subscription transitions to `past_due` status (payment failure on renewal), there is a race condition window where `isEntitled()` may still return `true` because the database hasn't been updated yet via webhook.
+
+**Note:** New checkouts are NOT affected - the codebase already implements eager sync on the checkout success page (`app/(marketing)/checkout/success/page.tsx:92-151`), which fetches subscription data directly from Stripe API before redirecting. This bug only affects **existing subscription renewals and payment failures**.
 
 ## Location
 - `src/domain/services/entitlement.ts:7-15`
@@ -29,39 +31,51 @@ The `EntitledStatuses` array only includes `['active', 'trialing']`. When paymen
 3. **Race window:** Between steps 1 and 2, database still shows `active`
 4. During this window, `isEntitled()` returns `true` for a user with failed payment
 
-## Expected Behavior
-Zero trust of stale subscription state during payment processing. Users with failed payments should be denied access immediately upon Stripe state change.
+## What's Already Correct
 
-## Impact
-- **Revenue leakage:** Users access premium content without paying
-- **Grace period abuse:** Window can be exploited if webhook processing is slow
-- **SLA violation:** Paying customers subsidize non-paying users
-
-## Root Cause
-1. Webhook-based state synchronization has inherent latency
-2. No real-time Stripe API check at entitlement time
-3. `past_due` status not explicitly handled
-
-## Recommended Fix
-**Option A (Minimal):** Document the race window and accept it as a trade-off for performance:
+**Eager Sync for New Checkouts:** The checkout success page implements Theo Browne's recommended pattern:
 ```typescript
-/**
- * NOTE: There is a small window (ms to seconds) between Stripe marking
- * a subscription as past_due and the webhook updating the database.
- * This is acceptable for SaaS; consider real-time checks for high-value operations.
- */
-```
-
-**Option B (Stricter):** Add a grace period buffer to the entitlement check:
-```typescript
-// Deny access if within 1 hour of period end (covers grace period)
-if (subscription.currentPeriodEnd <= new Date(now.getTime() + 3600000)) {
-  // Consider real-time Stripe API check here
+// app/(marketing)/checkout/success/page.tsx:92-151
+export async function syncCheckoutSuccess(input, deps?, redirectFn) {
+  const session = await d.stripe.checkout.sessions.retrieve(input.sessionId);
+  // ... fetch subscription data directly from Stripe API
+  await d.transaction(async ({ stripeCustomers, subscriptions }) => {
+    await subscriptions.upsert({ ... });  // Sync BEFORE redirect
+  });
+  redirectFn('/app/dashboard');
 }
 ```
 
-**Option C (Real-time):** For critical operations, query Stripe API directly.
+This prevents users from seeing "no subscription" after checkout.
+
+## What's Still Affected
+
+Only these scenarios have the race condition:
+1. **Payment failures on renewal** - User has active subscription, payment fails
+2. **Admin actions** - Stripe dashboard changes to subscription
+3. **Plan changes** - User upgrades/downgrades via portal
+
+## Impact (Revised)
+- **Low revenue leakage:** Window is typically seconds to minutes
+- **Acceptable for SaaS:** Industry standard approach per Theo Browne
+- **Grace period exists anyway:** Stripe gives users time to fix payment
+
+## Severity Downgrade Rationale
+Changed from P1 to P2 because:
+1. New checkouts (most common path) already have eager sync
+2. Payment failures are rare and Stripe has built-in retry
+3. This is the standard webhook-based approach used by most SaaS
+
+## Recommended Fix
+**Option A (Document and Accept):** This is industry standard behavior. Document it and move on.
+
+**Option B (Real-time for Sensitive Operations):** Add a `checkSubscriptionRealTime()` function for high-value operations that queries Stripe API directly.
+
+**Option C (Shorter Webhook Timeout):** Ensure webhook processing is fast (<1 second) to minimize window.
 
 ## Related
 - BUG-014: Fragile webhook error matching
+- DEBT-069: Document Stripe eager sync pattern
+- AUDIT-003: External integrations review
 - SPEC-009: Stripe Integration
+- https://github.com/t3dotgg/stripe-recommendations

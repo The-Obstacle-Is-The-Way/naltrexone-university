@@ -26,7 +26,7 @@ Bug reports document issues discovered in the codebase along with their root cau
 | [BUG-020](./bug-020-practice-sessions-never-started.md) | Practice Sessions Never Started/Ended — Dead Session Controller Code | Open | P2 | 2026-02-02 |
 | [BUG-021](./bug-021-missing-loading-states-on-forms.md) | Missing Loading States on Form Buttons | Open | P3 | 2026-02-02 |
 | [BUG-022](./bug-022-missing-clerk-user-deletion-webhook.md) | Missing Clerk Webhook for User Deletion — Orphaned Data | Open | P2 | 2026-02-02 |
-| [BUG-023](./bug-023-entitlement-race-condition-past-due.md) | Entitlement Race Condition During Payment Failure | Open | P1 | 2026-02-02 |
+| [BUG-023](./bug-023-entitlement-race-condition-past-due.md) | Entitlement Race Condition During Payment Failure | Open | P2 | 2026-02-02 |
 | [BUG-024](./bug-024-missing-subscription-event-handlers.md) | Missing Subscription Event Handlers (paused/resumed) | Open | P2 | 2026-02-02 |
 | [BUG-025](./bug-025-concurrent-checkout-sessions.md) | No Protection Against Concurrent Checkout Sessions | Open | P2 | 2026-02-02 |
 | [BUG-026](./bug-026-stripe-events-unbounded-growth.md) | Stripe Events Table Unbounded Growth | Open | P2 | 2026-02-02 |
@@ -40,9 +40,10 @@ Bug reports document issues discovered in the codebase along with their root cau
 | [BUG-034](./bug-034-error-banner-not-clearable.md) | Error Banner Not Clearable on Pricing Page | Open | P3 | 2026-02-02 |
 | [BUG-035](./bug-035-no-loading-state-subscribe-buttons.md) | No Loading State on Subscribe Buttons | Open | P2 | 2026-02-02 |
 | [BUG-036](./bug-036-no-mobile-navigation-menu.md) | No Mobile Navigation Menu | Open | P2 | 2026-02-02 |
+| [BUG-037](./bug-037-missing-clerk-user-updated-webhook.md) | Missing Clerk user.updated Webhook — Email Sync Gap | Open | P3 | 2026-02-02 |
 | [BUG-009](./bug-009-vercel-preview-deployment-rate-limit.md) | Vercel Preview Deployment Status Fails Due to Rate Limit | Won't Fix | P3 | 2026-02-01 |
 
-**Next Bug ID:** BUG-037
+**Next Bug ID:** BUG-038
 
 ## Archived Bugs
 
