@@ -22,7 +22,7 @@ This is not urgent debt — the code works and is maintainable. These comments w
 
 ### 1. Stripe Metadata Race Condition
 
-**File:** `src/adapters/gateways/stripe-payment-gateway.ts:230-237`
+**File:** `src/adapters/gateways/stripe-payment-gateway.ts:231-237`
 
 ```typescript
 const userId = subscription.metadata?.user_id;
@@ -125,8 +125,8 @@ Already has a good JSDoc comment. No changes needed.
 
 **Files:**
 - `src/adapters/controllers/bookmark-controller.ts:131-139`
-- `src/adapters/controllers/review-controller.ts` (similar pattern)
-- `src/adapters/controllers/stats-controller.ts` (similar pattern)
+- `src/adapters/controllers/review-controller.ts:104-112`
+- `src/adapters/controllers/stats-controller.ts:144-152`
 
 ```typescript
 for (const bookmark of bookmarks) {
@@ -163,20 +163,20 @@ if (!question) {
 
 ### 6. Choice Shuffling Seed
 
-**File:** `src/application/use-cases/get-next-question.ts:69-76`
+**File:** `src/application/use-cases/get-next-question.ts:66-84` (method), shuffle logic at lines 70-76
 
 ```typescript
 private mapChoicesForOutput(
   question: Question,
   userId: string,
 ): PublicChoice[] {
-  const seed = createQuestionSeed(userId, question.id);
-  const stableInput = question.choices.slice().sort((a, b) => {
+  const seed = createQuestionSeed(userId, question.id);  // line 70
+  const stableInput = question.choices.slice().sort((a, b) => {  // lines 71-75
     const bySortOrder = a.sortOrder - b.sortOrder;
     if (bySortOrder !== 0) return bySortOrder;
     return a.id.localeCompare(b.id);
   });
-  const shuffledChoices = shuffleWithSeed(stableInput, seed);
+  const shuffledChoices = shuffleWithSeed(stableInput, seed);  // line 76
   // ...
 }
 ```
