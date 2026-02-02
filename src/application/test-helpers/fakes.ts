@@ -627,4 +627,23 @@ export class FakeStripeEventRepository implements StripeEventRepository {
       event.error = error;
     }
   }
+
+  async pruneProcessedBefore(cutoff: Date, limit: number): Promise<number> {
+    if (!Number.isInteger(limit) || limit <= 0) return 0;
+
+    const toDelete = [...this.events.entries()]
+      .filter(([, event]) => event.processedAt && event.processedAt < cutoff)
+      .sort((a, b) => {
+        const aTime = a[1].processedAt?.getTime() ?? 0;
+        const bTime = b[1].processedAt?.getTime() ?? 0;
+        return aTime - bTime;
+      })
+      .slice(0, limit);
+
+    for (const [eventId] of toDelete) {
+      this.events.delete(eventId);
+    }
+
+    return toDelete.length;
+  }
 }

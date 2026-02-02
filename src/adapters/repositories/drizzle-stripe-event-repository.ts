@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm';
+import { and, asc, eq, inArray, isNotNull, lt } from 'drizzle-orm';
 import { stripeEvents } from '@/db/schema';
 import { ApplicationError } from '@/src/application/errors';
 import type { StripeEventRepository } from '@/src/application/ports/repositories';
@@ -61,5 +61,37 @@ export class DrizzleStripeEventRepository implements StripeEventRepository {
     if (!updated) {
       throw new ApplicationError('NOT_FOUND', 'Stripe event not found');
     }
+  }
+
+  async pruneProcessedBefore(cutoff: Date, limit: number): Promise<number> {
+    if (!Number.isInteger(limit) || limit <= 0) {
+      return 0;
+    }
+
+    const idsToDelete = await this.db
+      .select({ id: stripeEvents.id, processedAt: stripeEvents.processedAt })
+      .from(stripeEvents)
+      .where(
+        and(
+          isNotNull(stripeEvents.processedAt),
+          lt(stripeEvents.processedAt, cutoff),
+        ),
+      )
+      .orderBy(asc(stripeEvents.processedAt))
+      .limit(limit);
+
+    if (idsToDelete.length === 0) return 0;
+
+    const deleted = await this.db
+      .delete(stripeEvents)
+      .where(
+        inArray(
+          stripeEvents.id,
+          idsToDelete.map((row) => row.id),
+        ),
+      )
+      .returning({ id: stripeEvents.id });
+
+    return deleted.length;
   }
 }
