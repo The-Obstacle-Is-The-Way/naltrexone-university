@@ -17,7 +17,6 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 | ID | Title | Status | Priority | Date |
 |----|-------|--------|----------|------|
-| [DEBT-041](./debt-041-skip-clerk-production-safety.md) | SKIP_CLERK Production Safety Gap | Open | P2 | 2026-02-01 |
 | [DEBT-042](./debt-042-stripe-customer-concurrent-upsert.md) | Race Condition in Stripe Customer Concurrent Upsert | Open | P3 | 2026-02-01 |
 | [DEBT-043](./debt-043-unused-schema-wildcard-import.md) | Unused Schema Wildcard Import | Open | P4 | 2026-02-01 |
 | [DEBT-044](./debt-044-spec-005-status-drift.md) | SPEC-005 Status Incorrectly Marked as Implemented | Open | P2 | 2026-02-01 |
@@ -71,6 +70,7 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 | [DEBT-038](../_archive/debt/debt-038-question-repo-type-assertion.md) | Misleading Type Assertion in Question Repository | P3 | 2026-02-02 |
 | [DEBT-039](../_archive/debt/debt-039-webhook-error-context-loss.md) | Error Context Loss in Stripe Webhook Failures | P2 | 2026-02-02 |
 | [DEBT-040](../_archive/debt/debt-040-missing-session-id-index.md) | Missing Standalone Index on Attempts by Session | P2 | 2026-02-02 |
+| [DEBT-041](../_archive/debt/debt-041-skip-clerk-production-safety.md) | SKIP_CLERK Production Safety Gap | P2 | 2026-02-02 |
 
 ## Debt Statuses
 
