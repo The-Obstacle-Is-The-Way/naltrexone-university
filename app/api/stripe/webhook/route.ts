@@ -3,5 +3,6 @@ import { processStripeWebhook } from '@/src/adapters/controllers/stripe-webhook-
 import { createWebhookHandler } from './handler';
 
 export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 
 export const POST = createWebhookHandler(createContainer, processStripeWebhook);

@@ -170,7 +170,23 @@ Stripe webhooks are **not** Server Actions, but they still live in the controlle
 **Invocation (Route Handler):**
 
 - `app/api/stripe/webhook/route.ts` calls `processStripeWebhook(...)` via `createWebhookHandler(...)`.
-- `lib/container.ts` wires `createStripeWebhookDeps()` (including a transaction wrapper).
+- Route handlers MUST read the **raw** request body (do NOT use `request.json()`), and pass it to the `PaymentGateway` for signature verification (`stripe.webhooks.constructEvent(...)`).
+- Route handlers SHOULD set:
+  - `export const runtime = 'nodejs'`
+  - `export const dynamic = 'force-dynamic'`
+- `lib/container.ts` wires `createStripeWebhookDeps()` (including a transaction wrapper and idempotency via `StripeEventRepository`).
+
+Example route-handler body parsing:
+
+```ts
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
+const signature = request.headers.get('stripe-signature');
+const rawBody = await request.text();
+// Alternative:
+// const rawBody = Buffer.from(await request.arrayBuffer()).toString('utf8');
+```
 
 **Responsibilities (high level):**
 

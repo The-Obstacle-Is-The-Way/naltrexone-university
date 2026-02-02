@@ -24,6 +24,8 @@ export type StripeWebhookDeps = {
   ) => Promise<T>;
 };
 
+const STACK_TRACE_LIMIT = 1000;
+
 function toErrorData(error: unknown): string {
   if (isApplicationError(error)) {
     return JSON.stringify({
@@ -31,7 +33,7 @@ function toErrorData(error: unknown): string {
       message: error.message,
       code: error.code,
       fieldErrors: error.fieldErrors ?? undefined,
-      stack: error.stack?.slice(0, 1000),
+      stack: error.stack?.slice(0, STACK_TRACE_LIMIT),
     });
   }
 
@@ -39,7 +41,7 @@ function toErrorData(error: unknown): string {
     return JSON.stringify({
       name: error.name,
       message: error.message,
-      stack: error.stack?.slice(0, 1000),
+      stack: error.stack?.slice(0, STACK_TRACE_LIMIT),
     });
   }
 

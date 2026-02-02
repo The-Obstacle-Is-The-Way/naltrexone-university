@@ -60,7 +60,7 @@ If this ever becomes a real bottleneck, we should revisit with `EXPLAIN (ANALYZE
 
 - [x] Verified existing index covers `(practiceSessionId, desc(answeredAt))`
 - [x] Verified per-session attempt count is bounded (max questions per session)
-- [x] Chose not to add an additional index without evidence
+- [x] Chose not to add an index without evidence
 - [x] Existing tests pass
 
 ## Related
