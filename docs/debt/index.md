@@ -1,7 +1,7 @@
 # Technical Debt Register
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-02-01
+**Last Updated:** 2026-02-02
 
 ---
 
@@ -28,8 +28,18 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 | [DEBT-045](./debt-045-claude-md-documentation-drift.md) | CLAUDE.md Documentation Drift | Open | P2 | 2026-02-01 |
 | [DEBT-046](./debt-046-question-selection-in-wrong-layer.md) | Question Selection Algorithm in Wrong Layer | Open | P2 | 2026-02-01 |
 | [DEBT-047](./debt-047-spec-010-missing-webhook-controller.md) | SPEC-010 Missing Webhook Controller Documentation | Open | P3 | 2026-02-01 |
+| [DEBT-048](./debt-048-hardcoded-url-paths-billing.md) | Hard-Coded URL Paths in Billing Controller | Open | P2 | 2026-02-02 |
+| [DEBT-049](./debt-049-hardcoded-limits-not-centralized.md) | Hard-Coded Limits Not Centralized Across Controllers | Open | P2 | 2026-02-02 |
+| [DEBT-050](./debt-050-missing-fake-implementations.md) | Missing Fake Implementations for 5 Repositories | Open | P2 | 2026-02-02 |
+| [DEBT-051](./debt-051-controller-tests-use-mocks-not-fakes.md) | Controller Tests Use vi.fn() Instead of Fakes | Open | P2 | 2026-02-02 |
+| [DEBT-052](./debt-052-unused-domain-service-compute-session-progress.md) | Unused Domain Service — computeSessionProgress | Open | P2 | 2026-02-02 |
+| [DEBT-053](./debt-053-unused-tag-repository.md) | Unused TagRepository — Wired But Never Called | Open | P2 | 2026-02-02 |
+| [DEBT-054](./debt-054-unused-domain-error-codes.md) | Unused Domain Error Codes — Defined But Never Thrown | Open | P3 | 2026-02-02 |
+| [DEBT-055](./debt-055-magic-numbers-stats-undocumented.md) | Magic Numbers in Stats Controller Lack Documentation | Open | P3 | 2026-02-02 |
+| [DEBT-056](./debt-056-repeated-getdeps-pattern.md) | Repeated getDeps Pattern Across 6 Controllers | Open | P3 | 2026-02-02 |
+| [DEBT-057](./debt-057-webhook-error-stack-trace-lost.md) | Webhook Error Stack Trace Lost in Database | Open | P3 | 2026-02-02 |
 
-**Next Debt ID:** DEBT-048
+**Next Debt ID:** DEBT-058
 
 ## Archived Debt
 

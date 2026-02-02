@@ -17,9 +17,17 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 | ID | Title | Status | Priority | Date |
 |----|-------|--------|----------|------|
+| [BUG-014](./bug-014-fragile-webhook-error-matching.md) | Fragile Webhook Error Matching Uses String Instead of Error Code | Open | P1 | 2026-02-02 |
+| [BUG-015](./bug-015-memory-exhaustion-power-users.md) | Memory Exhaustion for Power Users — All Attempts Loaded Into Memory | Open | P1 | 2026-02-02 |
+| [BUG-016](./bug-016-billing-button-without-subscription.md) | Billing Page Shows "Manage in Stripe" When User Has No Subscription | Open | P2 | 2026-02-02 |
+| [BUG-017](./bug-017-silent-fallbacks-in-controllers.md) | Silent Fallbacks in Controllers — Data Inconsistency Without Warning | Open | P2 | 2026-02-02 |
+| [BUG-018](./bug-018-missing-bookmarks-view-page.md) | Missing Bookmarks View Page — Users Can Bookmark But Can't View | Open | P2 | 2026-02-02 |
+| [BUG-019](./bug-019-missing-review-missed-questions-page.md) | Missing Review/Missed Questions Page — Dead Controller Code | Open | P2 | 2026-02-02 |
+| [BUG-020](./bug-020-practice-sessions-never-started.md) | Practice Sessions Never Started/Ended — Dead Session Controller Code | Open | P2 | 2026-02-02 |
+| [BUG-021](./bug-021-missing-loading-states-on-forms.md) | Missing Loading States on Form Buttons | Open | P3 | 2026-02-02 |
 | [BUG-009](./bug-009-vercel-preview-deployment-rate-limit.md) | Vercel Preview Deployment Status Fails Due to Rate Limit | Won't Fix | P3 | 2026-02-01 |
 
-**Next Bug ID:** BUG-014
+**Next Bug ID:** BUG-022
 
 ## Archived Bugs
 
