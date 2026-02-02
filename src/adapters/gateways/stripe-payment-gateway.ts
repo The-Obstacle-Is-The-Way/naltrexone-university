@@ -86,7 +86,10 @@ export type StripePaymentGatewayDeps = {
   stripe: StripeClient;
   webhookSecret: string;
   priceIds: StripePriceIds;
-  logger?: { error: (msg: string, context?: Record<string, unknown>) => void };
+  logger?: {
+    error: (msg: string, context?: Record<string, unknown>) => void;
+    warn?: (msg: string, context?: Record<string, unknown>) => void;
+  };
 };
 
 type StripeSubscriptionLike = {
@@ -230,6 +233,18 @@ export class StripePaymentGateway implements PaymentGateway {
     const subscription = event.data.object as StripeSubscriptionLike;
     const userId = subscription.metadata?.user_id;
     if (!userId) {
+      if (event.type === 'customer.subscription.created') {
+        this.deps.logger?.warn?.(
+          'Skipping subscription.created event without metadata.user_id',
+          {
+            eventId: event.id,
+            stripeSubscriptionId: subscription.id ?? null,
+            stripeCustomerId: subscription.customer ?? null,
+          },
+        );
+        return result;
+      }
+
       throw new ApplicationError(
         'STRIPE_ERROR',
         'Stripe subscription metadata.user_id is required',

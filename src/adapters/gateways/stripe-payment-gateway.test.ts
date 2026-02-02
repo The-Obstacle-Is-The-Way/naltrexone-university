@@ -726,6 +726,66 @@ describe('StripePaymentGateway', () => {
     ).rejects.toMatchObject({ code: 'STRIPE_ERROR' });
   });
 
+  it('skips customer.subscription.created events when metadata.user_id is missing', async () => {
+    const stripe = {
+      customers: {
+        create: vi.fn(async () => ({ id: 'cus_123' })),
+      },
+      checkout: {
+        sessions: {
+          create: vi.fn(async () => ({ url: 'https://stripe/checkout' })),
+          list: vi.fn(async () => ({ data: [] })),
+        },
+      },
+      billingPortal: {
+        sessions: {
+          create: vi.fn(async () => ({ url: 'https://stripe/portal' })),
+        },
+      },
+      webhooks: {
+        constructEvent: vi.fn(() => ({
+          id: 'evt_1',
+          type: 'customer.subscription.created',
+          data: {
+            object: {
+              id: 'sub_123',
+              customer: 'cus_123',
+              status: 'active',
+              current_period_end: 1_700_000_000,
+              cancel_at_period_end: false,
+              metadata: {},
+              items: { data: [{ price: { id: 'price_m' } }] },
+            },
+          },
+        })),
+      },
+    } as const;
+
+    const loggerWarn = vi.fn();
+    const gateway = new StripePaymentGateway({
+      stripe,
+      webhookSecret: 'whsec_1',
+      priceIds: { monthly: 'price_m', annual: 'price_a' },
+      logger: { error: vi.fn(), warn: loggerWarn },
+    });
+
+    await expect(
+      gateway.processWebhookEvent('raw_body', 'sig_1'),
+    ).resolves.toEqual({
+      eventId: 'evt_1',
+      type: 'customer.subscription.created',
+    });
+
+    expect(loggerWarn).toHaveBeenCalledWith(
+      'Skipping subscription.created event without metadata.user_id',
+      {
+        eventId: 'evt_1',
+        stripeSubscriptionId: 'sub_123',
+        stripeCustomerId: 'cus_123',
+      },
+    );
+  });
+
   it('ignores checkout.session.completed events (no subscription update extracted)', async () => {
     const stripe = {
       customers: {
