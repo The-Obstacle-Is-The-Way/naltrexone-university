@@ -8,13 +8,11 @@ import type {
   AttemptRepository,
   QuestionRepository,
 } from '@/src/application/ports/repositories';
-import type {
-  CheckEntitlementInput,
-  CheckEntitlementOutput,
-} from '@/src/application/use-cases/check-entitlement';
 import { computeAccuracy, computeStreak } from '@/src/domain/services';
 import type { ActionResult } from './action-result';
-import { err, handleError, ok } from './action-result';
+import { handleError, ok } from './action-result';
+import type { CheckEntitlementUseCase } from './require-entitled-user-id';
+import { requireEntitledUserId } from './require-entitled-user-id';
 
 const GetUserStatsInputSchema = z.object({}).strict();
 
@@ -41,10 +39,6 @@ const STREAK_WINDOW_DAYS = 60;
  * This is a UX choice to keep the page scannable without scrolling.
  */
 const RECENT_ACTIVITY_LIMIT = 20;
-
-type CheckEntitlementUseCase = {
-  execute: (input: CheckEntitlementInput) => Promise<CheckEntitlementOutput>;
-};
 
 export type UserStatsOutput = {
   totalAnswered: number;
@@ -73,21 +67,6 @@ export type StatsControllerDeps = {
 const getDeps = createDepsResolver((container) =>
   container.createStatsControllerDeps(),
 );
-
-async function requireEntitledUserId(
-  deps: StatsControllerDeps,
-): Promise<string | ActionResult<never>> {
-  const user = await deps.authGateway.requireUser();
-  const entitlement = await deps.checkEntitlementUseCase.execute({
-    userId: user.id,
-  });
-
-  if (!entitlement.isEntitled) {
-    return err('UNSUBSCRIBED', 'Subscription required');
-  }
-
-  return user.id;
-}
 
 export async function getUserStats(
   input: unknown,

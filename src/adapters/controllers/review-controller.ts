@@ -9,12 +9,10 @@ import type {
   AttemptRepository,
   QuestionRepository,
 } from '@/src/application/ports/repositories';
-import type {
-  CheckEntitlementInput,
-  CheckEntitlementOutput,
-} from '@/src/application/use-cases/check-entitlement';
 import type { ActionResult } from './action-result';
-import { err, handleError, ok } from './action-result';
+import { handleError, ok } from './action-result';
+import type { CheckEntitlementUseCase } from './require-entitled-user-id';
+import { requireEntitledUserId } from './require-entitled-user-id';
 
 const GetMissedQuestionsInputSchema = z
   .object({
@@ -22,10 +20,6 @@ const GetMissedQuestionsInputSchema = z
     offset: z.number().int().min(0),
   })
   .strict();
-
-type CheckEntitlementUseCase = {
-  execute: (input: CheckEntitlementInput) => Promise<CheckEntitlementOutput>;
-};
 
 export type MissedQuestionRow = {
   questionId: string;
@@ -52,21 +46,6 @@ export type ReviewControllerDeps = {
 const getDeps = createDepsResolver((container) =>
   container.createReviewControllerDeps(),
 );
-
-async function requireEntitledUserId(
-  deps: ReviewControllerDeps,
-): Promise<string | ActionResult<never>> {
-  const user = await deps.authGateway.requireUser();
-  const entitlement = await deps.checkEntitlementUseCase.execute({
-    userId: user.id,
-  });
-
-  if (!entitlement.isEntitled) {
-    return err('UNSUBSCRIBED', 'Subscription required');
-  }
-
-  return user.id;
-}
 
 export async function getMissedQuestions(
   input: unknown,

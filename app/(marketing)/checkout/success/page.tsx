@@ -21,10 +21,14 @@ type StripeSubscriptionLike = {
   id?: string;
   customer?: unknown;
   status?: string;
-  current_period_end?: number;
   cancel_at_period_end?: boolean;
   metadata?: Record<string, string>;
-  items?: { data?: Array<{ price?: { id?: string } }> };
+  items?: {
+    data?: Array<{
+      current_period_end?: number;
+      price?: { id?: string };
+    }>;
+  };
 };
 
 type StripeClientLike = {
@@ -255,7 +259,9 @@ export async function syncCheckoutSuccess(
     status,
   });
 
-  const currentPeriodEndSeconds = subscription.current_period_end;
+  const subscriptionItem = subscription.items?.data?.[0];
+
+  const currentPeriodEndSeconds = subscriptionItem?.current_period_end;
   // Entitlement depends on a current billing period end timestamp.
   assertNumber(currentPeriodEndSeconds, 'missing_current_period_end', {
     sessionId,
@@ -269,7 +275,7 @@ export async function syncCheckoutSuccess(
     cancelAtPeriodEnd: cancelAtPeriodEnd ?? null,
   });
 
-  const priceId = subscription.items?.data?.[0]?.price?.id;
+  const priceId = subscriptionItem?.price?.id;
   // We map the Stripe price id back to a domain plan (monthly/annual).
   assertNonEmptyString(priceId, 'missing_price_id', {
     sessionId,

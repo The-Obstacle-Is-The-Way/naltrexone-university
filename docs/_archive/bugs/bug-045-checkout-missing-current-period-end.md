@@ -1,6 +1,6 @@
 # BUG-045: Checkout Success Validation Fails — missing_current_period_end
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P1
 **Date:** 2026-02-02
 
@@ -28,10 +28,10 @@ subscription.items.data[0].current_period_end  // ✅ This is where it lives now
 
 ## Affected Code
 
-1. **Checkout success page:** `app/(marketing)/checkout/success/page.tsx:258`
-2. **Webhook handler:** `src/adapters/gateways/stripe-payment-gateway.ts:321`
+1. **Checkout success page:** `app/(marketing)/checkout/success/page.tsx:264`
+2. **Webhook handler:** `src/adapters/gateways/stripe-payment-gateway.ts:329`
 
-Both read `subscription.current_period_end` which is now `null`.
+Both read `subscription.current_period_end`, which is no longer present in our pinned Stripe API version.
 
 ## Observed Error
 
@@ -46,7 +46,7 @@ From server logs:
 }
 ```
 
-## Fix Required
+## Fix Implemented
 
 Update both locations to read from subscription items:
 
@@ -55,15 +55,14 @@ Update both locations to read from subscription items:
 const currentPeriodEndSeconds = subscription.items?.data?.[0]?.current_period_end;
 ```
 
-Also update the type definition in `stripe-payment-gateway.ts:112`:
+Also update the type definition in `stripe-payment-gateway.ts`:
 ```typescript
 type StripeSubscriptionLike = {
   // ... existing fields
   items?: {
     data?: Array<{
-      price?: { id?: string };
-      current_period_start?: number;  // ADD
       current_period_end?: number;    // ADD
+      price?: { id?: string };
     }>
   };
 };
@@ -83,5 +82,5 @@ Webhooks (after the initial 500) eventually sync the subscription because some w
 
 - Stripe changelog: https://docs.stripe.com/changelog/basil/2025-03-31/deprecate-subscription-current-period-start-and-end
 - BUG-042: Checkout Success Redirects Without Diagnostics (archived)
-- `app/(marketing)/checkout/success/page.tsx:258-263`
-- `src/adapters/gateways/stripe-payment-gateway.ts:321-325`
+- `app/(marketing)/checkout/success/page.tsx:264`
+- `src/adapters/gateways/stripe-payment-gateway.ts:329`

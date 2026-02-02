@@ -16,11 +16,19 @@ import {
   type StripePriceIds,
 } from '../config/stripe-prices';
 
-type StripeCheckoutSession = { url: string | null };
+type StripeCheckoutSession = { id: string; url: string | null };
 type StripeBillingPortalSession = { url: string | null };
 type StripeCustomer = { id?: string };
 
 type StripeCheckoutSessionList = { data: StripeCheckoutSession[] };
+
+type StripeCheckoutSessionLineItem = {
+  price?: { id?: string } | null;
+};
+
+type StripeCheckoutSessionRetrieved = StripeCheckoutSession & {
+  line_items?: { data?: StripeCheckoutSessionLineItem[] };
+};
 
 type CheckoutSessionCreateParams = {
   mode: 'subscription' | 'payment' | 'setup';
@@ -60,6 +68,11 @@ type StripeClient = {
         status: 'open';
         limit: number;
       }): Promise<StripeCheckoutSessionList>;
+      retrieve(
+        sessionId: string,
+        params?: { expand?: string[] },
+      ): Promise<StripeCheckoutSessionRetrieved>;
+      expire(sessionId: string): Promise<StripeCheckoutSession>;
     };
   };
   billingPortal: {
@@ -96,10 +109,14 @@ type StripeSubscriptionLike = {
   id?: string;
   customer?: string;
   status?: string;
-  current_period_end?: number;
   cancel_at_period_end?: boolean;
   metadata?: Record<string, string>;
-  items?: { data?: Array<{ price?: { id?: string } }> };
+  items?: {
+    data?: Array<{
+      current_period_end?: number;
+      price?: { id?: string };
+    }>;
+  };
 };
 
 const subscriptionEventTypes = new Set([
@@ -147,9 +164,39 @@ export class StripePaymentGateway implements PaymentGateway {
       limit: 1,
     });
 
-    const existingUrl = existing.data[0]?.url;
-    if (existingUrl) {
-      return { url: existingUrl };
+    const existingSession = existing.data[0];
+    const existingUrl = existingSession?.url;
+    if (existingSession && existingUrl) {
+      try {
+        const session = await this.deps.stripe.checkout.sessions.retrieve(
+          existingSession.id,
+          { expand: ['line_items'] },
+        );
+        const existingPriceId = session.line_items?.data?.[0]?.price?.id;
+        if (existingPriceId === priceId) {
+          return { url: existingUrl };
+        }
+
+        // Avoid reusing a checkout session for a different plan. If the user
+        // changes plans, we expire the old session and create a new one so the
+        // Stripe UI matches their selection.
+        this.deps.logger?.warn?.('Expiring mismatched checkout session', {
+          sessionId: existingSession.id,
+          existingPriceId: existingPriceId ?? null,
+          requestedPriceId: priceId,
+        });
+        await this.deps.stripe.checkout.sessions.expire(existingSession.id);
+      } catch (error) {
+        const errorMessage =
+          error instanceof Error ? error.message : 'Unknown error';
+        this.deps.logger?.warn?.(
+          'Failed to inspect existing checkout session',
+          {
+            sessionId: existingSession.id,
+            error: errorMessage,
+          },
+        );
+      }
     }
 
     const session = await this.deps.stripe.checkout.sessions.create({
@@ -278,7 +325,8 @@ export class StripePaymentGateway implements PaymentGateway {
       );
     }
 
-    const currentPeriodEndSeconds = subscription.current_period_end;
+    const subscriptionItem = subscription.items?.data?.[0];
+    const currentPeriodEndSeconds = subscriptionItem?.current_period_end;
     if (typeof currentPeriodEndSeconds !== 'number') {
       throw new ApplicationError(
         'STRIPE_ERROR',
@@ -294,7 +342,7 @@ export class StripePaymentGateway implements PaymentGateway {
       );
     }
 
-    const priceId = subscription.items?.data?.[0]?.price?.id;
+    const priceId = subscriptionItem?.price?.id;
     if (!priceId) {
       throw new ApplicationError(
         'STRIPE_ERROR',

@@ -52,10 +52,16 @@ describe('runCheckoutSuccessPage', () => {
             id: 'sub_123',
             customer: 'cus_123',
             status: 'active',
-            current_period_end: 1_706_000_000,
             cancel_at_period_end: false,
             metadata: { user_id: 'user_1' },
-            items: { data: [{ price: { id: 'price_monthly' } }] },
+            items: {
+              data: [
+                {
+                  current_period_end: 1_706_000_000,
+                  price: { id: 'price_monthly' },
+                },
+              ],
+            },
           }),
         },
       },
@@ -115,15 +121,7 @@ describe('runCheckoutSuccessPage', () => {
               stripeRetrieveCalls.push({ sessionId, params });
               return {
                 customer: 'cus_123',
-                subscription: {
-                  id: 'sub_123',
-                  customer: 'cus_123',
-                  status: 'active',
-                  current_period_end: 1_706_000_000,
-                  cancel_at_period_end: false,
-                  metadata: { user_id: 'user_1' },
-                  items: { data: [{ price: { id: 'price_monthly' } }] },
-                },
+                subscription: { id: 'sub_123' },
               };
             },
           },
@@ -133,10 +131,16 @@ describe('runCheckoutSuccessPage', () => {
             id: 'sub_123',
             customer: 'cus_123',
             status: 'active',
-            current_period_end: 1_706_000_000,
             cancel_at_period_end: false,
             metadata: { user_id: 'user_1' },
-            items: { data: [{ price: { id: 'price_monthly' } }] },
+            items: {
+              data: [
+                {
+                  current_period_end: 1_706_000_000,
+                  price: { id: 'price_monthly' },
+                },
+              ],
+            },
           }),
         },
       },
@@ -215,7 +219,7 @@ describe('syncCheckoutSuccess', () => {
       reason: 'missing_current_period_end',
       input: { sessionId: 'cs_test' },
       session: { customer: 'cus_123', subscription: 'sub_123' },
-      subscription: { current_period_end: undefined },
+      subscription: { items: { data: [{ price: { id: 'price_monthly' } }] } },
     },
     {
       reason: 'missing_cancel_at_period_end',
@@ -227,13 +231,24 @@ describe('syncCheckoutSuccess', () => {
       reason: 'missing_price_id',
       input: { sessionId: 'cs_test' },
       session: { customer: 'cus_123', subscription: 'sub_123' },
-      subscription: { items: { data: [] } },
+      subscription: {
+        items: { data: [{ current_period_end: 1_706_000_000 }] },
+      },
     },
     {
       reason: 'unknown_plan',
       input: { sessionId: 'cs_test' },
       session: { customer: 'cus_123', subscription: 'sub_123' },
-      subscription: { items: { data: [{ price: { id: 'price_unknown' } }] } },
+      subscription: {
+        items: {
+          data: [
+            {
+              current_period_end: 1_706_000_000,
+              price: { id: 'price_unknown' },
+            },
+          ],
+        },
+      },
     },
   ])('logs %s before redirecting to pricing error', async ({
     reason,
@@ -277,10 +292,16 @@ describe('syncCheckoutSuccess', () => {
               id: 'sub_123',
               customer: 'cus_123',
               status: 'active',
-              current_period_end: 1_706_000_000,
               cancel_at_period_end: false,
               metadata: { user_id: 'user_1' },
-              items: { data: [{ price: { id: 'price_monthly' } }] },
+              items: {
+                data: [
+                  {
+                    current_period_end: 1_706_000_000,
+                    price: { id: 'price_monthly' },
+                  },
+                ],
+              },
               ...subscription,
             };
           },

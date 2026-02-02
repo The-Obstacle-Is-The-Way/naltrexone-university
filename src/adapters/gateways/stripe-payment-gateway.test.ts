@@ -8,8 +8,20 @@ describe('StripePaymentGateway', () => {
       customers: { create: customersCreate },
       checkout: {
         sessions: {
-          create: vi.fn(async () => ({ url: 'https://stripe/checkout' })),
+          create: vi.fn(async () => ({
+            id: 'cs_new',
+            url: 'https://stripe/checkout',
+          })),
           list: vi.fn(async () => ({ data: [] })),
+          retrieve: vi.fn(async () => ({
+            id: 'cs_existing',
+            url: 'https://stripe/existing-checkout',
+            line_items: { data: [] },
+          })),
+          expire: vi.fn(async () => ({
+            id: 'cs_existing',
+            url: 'https://stripe/existing-checkout',
+          })),
         },
       },
       billingPortal: {
@@ -49,8 +61,20 @@ describe('StripePaymentGateway', () => {
       customers: { create: vi.fn(async () => ({ id: undefined })) },
       checkout: {
         sessions: {
-          create: vi.fn(async () => ({ url: 'https://stripe/checkout' })),
+          create: vi.fn(async () => ({
+            id: 'cs_new',
+            url: 'https://stripe/checkout',
+          })),
           list: vi.fn(async () => ({ data: [] })),
+          retrieve: vi.fn(async () => ({
+            id: 'cs_existing',
+            url: 'https://stripe/existing-checkout',
+            line_items: { data: [] },
+          })),
+          expire: vi.fn(async () => ({
+            id: 'cs_existing',
+            url: 'https://stripe/existing-checkout',
+          })),
         },
       },
       billingPortal: {
@@ -82,6 +106,7 @@ describe('StripePaymentGateway', () => {
 
   it('creates a subscription checkout session with the correct Stripe parameters', async () => {
     const checkoutCreate = vi.fn(async () => ({
+      id: 'cs_new',
       url: 'https://stripe/checkout',
     }));
     const stripe = {
@@ -92,6 +117,15 @@ describe('StripePaymentGateway', () => {
         sessions: {
           create: checkoutCreate,
           list: vi.fn(async () => ({ data: [] })),
+          retrieve: vi.fn(async () => ({
+            id: 'cs_existing',
+            url: 'https://stripe/existing-checkout',
+            line_items: { data: [] },
+          })),
+          expire: vi.fn(async () => ({
+            id: 'cs_existing',
+            url: 'https://stripe/existing-checkout',
+          })),
         },
       },
       billingPortal: {
@@ -141,9 +175,19 @@ describe('StripePaymentGateway', () => {
 
   it('reuses an existing open checkout session when present', async () => {
     const checkoutList = vi.fn(async () => ({
-      data: [{ url: 'https://stripe/existing-checkout' }],
+      data: [{ id: 'cs_existing', url: 'https://stripe/existing-checkout' }],
+    }));
+    const checkoutRetrieve = vi.fn(async () => ({
+      id: 'cs_existing',
+      url: 'https://stripe/existing-checkout',
+      line_items: { data: [{ price: { id: 'price_a' } }] },
+    }));
+    const checkoutExpire = vi.fn(async () => ({
+      id: 'cs_existing',
+      url: 'https://stripe/existing-checkout',
     }));
     const checkoutCreate = vi.fn(async () => ({
+      id: 'cs_new',
       url: 'https://stripe/new-checkout',
     }));
 
@@ -155,6 +199,8 @@ describe('StripePaymentGateway', () => {
         sessions: {
           create: checkoutCreate,
           list: checkoutList,
+          retrieve: checkoutRetrieve,
+          expire: checkoutExpire,
         },
       },
       billingPortal: {
@@ -190,7 +236,80 @@ describe('StripePaymentGateway', () => {
       status: 'open',
       limit: 1,
     });
+    expect(checkoutRetrieve).toHaveBeenCalledWith('cs_existing', {
+      expand: ['line_items'],
+    });
+    expect(checkoutExpire).not.toHaveBeenCalled();
     expect(checkoutCreate).not.toHaveBeenCalled();
+  });
+
+  it('expires an existing open checkout session when the plan does not match', async () => {
+    const checkoutList = vi.fn(async () => ({
+      data: [{ id: 'cs_existing', url: 'https://stripe/existing-checkout' }],
+    }));
+    const checkoutRetrieve = vi.fn(async () => ({
+      id: 'cs_existing',
+      url: 'https://stripe/existing-checkout',
+      line_items: { data: [{ price: { id: 'price_a' } }] },
+    }));
+    const checkoutExpire = vi.fn(async () => ({
+      id: 'cs_existing',
+      url: 'https://stripe/existing-checkout',
+    }));
+    const checkoutCreate = vi.fn(async () => ({
+      id: 'cs_new',
+      url: 'https://stripe/new-checkout',
+    }));
+
+    const stripe = {
+      customers: {
+        create: vi.fn(async () => ({ id: 'cus_123' })),
+      },
+      checkout: {
+        sessions: {
+          create: checkoutCreate,
+          list: checkoutList,
+          retrieve: checkoutRetrieve,
+          expire: checkoutExpire,
+        },
+      },
+      billingPortal: {
+        sessions: {
+          create: vi.fn(async () => ({ url: 'https://stripe/portal' })),
+        },
+      },
+      webhooks: {
+        constructEvent: vi.fn(() => {
+          throw new Error('unexpected webhook call');
+        }),
+      },
+    } as const;
+
+    const gateway = new StripePaymentGateway({
+      stripe,
+      webhookSecret: 'whsec_1',
+      priceIds: { monthly: 'price_m', annual: 'price_a' },
+    });
+
+    await expect(
+      gateway.createCheckoutSession({
+        userId: 'user_1',
+        stripeCustomerId: 'cus_123',
+        plan: 'monthly',
+        successUrl: 'https://app/success',
+        cancelUrl: 'https://app/cancel',
+      }),
+    ).resolves.toEqual({ url: 'https://stripe/new-checkout' });
+
+    expect(checkoutRetrieve).toHaveBeenCalledWith('cs_existing', {
+      expand: ['line_items'],
+    });
+    expect(checkoutExpire).toHaveBeenCalledWith('cs_existing');
+    expect(checkoutCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        line_items: [{ price: 'price_m', quantity: 1 }],
+      }),
+    );
   });
 
   it('throws STRIPE_ERROR when a checkout session URL is missing', async () => {
@@ -200,8 +319,17 @@ describe('StripePaymentGateway', () => {
       },
       checkout: {
         sessions: {
-          create: vi.fn(async () => ({ url: null })),
+          create: vi.fn(async () => ({ id: 'cs_new', url: null })),
           list: vi.fn(async () => ({ data: [] })),
+          retrieve: vi.fn(async () => ({
+            id: 'cs_existing',
+            url: 'https://stripe/existing-checkout',
+            line_items: { data: [] },
+          })),
+          expire: vi.fn(async () => ({
+            id: 'cs_existing',
+            url: 'https://stripe/existing-checkout',
+          })),
         },
       },
       billingPortal: {
@@ -241,8 +369,20 @@ describe('StripePaymentGateway', () => {
       },
       checkout: {
         sessions: {
-          create: vi.fn(async () => ({ url: 'https://stripe/checkout' })),
+          create: vi.fn(async () => ({
+            id: 'cs_new',
+            url: 'https://stripe/checkout',
+          })),
           list: vi.fn(async () => ({ data: [] })),
+          retrieve: vi.fn(async () => ({
+            id: 'cs_existing',
+            url: 'https://stripe/existing-checkout',
+            line_items: { data: [] },
+          })),
+          expire: vi.fn(async () => ({
+            id: 'cs_existing',
+            url: 'https://stripe/existing-checkout',
+          })),
         },
       },
       billingPortal: { sessions: { create: portalCreate } },
@@ -281,10 +421,13 @@ describe('StripePaymentGateway', () => {
           id: 'sub_123',
           customer: 'cus_123',
           status: 'active',
-          current_period_end: 1_700_000_000,
           cancel_at_period_end: false,
           metadata: { user_id: 'user_1' },
-          items: { data: [{ price: { id: 'price_m' } }] },
+          items: {
+            data: [
+              { current_period_end: 1_700_000_000, price: { id: 'price_m' } },
+            ],
+          },
         },
       },
     }));
@@ -295,8 +438,20 @@ describe('StripePaymentGateway', () => {
       },
       checkout: {
         sessions: {
-          create: vi.fn(async () => ({ url: 'https://stripe/checkout' })),
+          create: vi.fn(async () => ({
+            id: 'cs_new',
+            url: 'https://stripe/checkout',
+          })),
           list: vi.fn(async () => ({ data: [] })),
+          retrieve: vi.fn(async () => ({
+            id: 'cs_existing',
+            url: 'https://stripe/existing-checkout',
+            line_items: { data: [] },
+          })),
+          expire: vi.fn(async () => ({
+            id: 'cs_existing',
+            url: 'https://stripe/existing-checkout',
+          })),
         },
       },
       billingPortal: {
@@ -341,10 +496,13 @@ describe('StripePaymentGateway', () => {
           id: 'sub_456',
           customer: 'cus_456',
           status: 'paused',
-          current_period_end: 1_700_000_000,
           cancel_at_period_end: false,
           metadata: { user_id: 'user_2' },
-          items: { data: [{ price: { id: 'price_a' } }] },
+          items: {
+            data: [
+              { current_period_end: 1_700_000_000, price: { id: 'price_a' } },
+            ],
+          },
         },
       },
     }));
@@ -355,8 +513,20 @@ describe('StripePaymentGateway', () => {
       },
       checkout: {
         sessions: {
-          create: vi.fn(async () => ({ url: 'https://stripe/checkout' })),
+          create: vi.fn(async () => ({
+            id: 'cs_new',
+            url: 'https://stripe/checkout',
+          })),
           list: vi.fn(async () => ({ data: [] })),
+          retrieve: vi.fn(async () => ({
+            id: 'cs_existing',
+            url: 'https://stripe/existing-checkout',
+            line_items: { data: [] },
+          })),
+          expire: vi.fn(async () => ({
+            id: 'cs_existing',
+            url: 'https://stripe/existing-checkout',
+          })),
         },
       },
       billingPortal: {
@@ -399,10 +569,13 @@ describe('StripePaymentGateway', () => {
           id: 'sub_789',
           customer: 'cus_789',
           status: 'active',
-          current_period_end: 1_700_000_000,
           cancel_at_period_end: false,
           metadata: { user_id: 'user_3' },
-          items: { data: [{ price: { id: 'price_m' } }] },
+          items: {
+            data: [
+              { current_period_end: 1_700_000_000, price: { id: 'price_m' } },
+            ],
+          },
         },
       },
     }));
@@ -413,8 +586,20 @@ describe('StripePaymentGateway', () => {
       },
       checkout: {
         sessions: {
-          create: vi.fn(async () => ({ url: 'https://stripe/checkout' })),
+          create: vi.fn(async () => ({
+            id: 'cs_new',
+            url: 'https://stripe/checkout',
+          })),
           list: vi.fn(async () => ({ data: [] })),
+          retrieve: vi.fn(async () => ({
+            id: 'cs_existing',
+            url: 'https://stripe/existing-checkout',
+            line_items: { data: [] },
+          })),
+          expire: vi.fn(async () => ({
+            id: 'cs_existing',
+            url: 'https://stripe/existing-checkout',
+          })),
         },
       },
       billingPortal: {
@@ -457,10 +642,13 @@ describe('StripePaymentGateway', () => {
           id: 'sub_901',
           customer: 'cus_901',
           status: 'active',
-          current_period_end: 1_700_000_000,
           cancel_at_period_end: false,
           metadata: { user_id: 'user_4' },
-          items: { data: [{ price: { id: 'price_a' } }] },
+          items: {
+            data: [
+              { current_period_end: 1_700_000_000, price: { id: 'price_a' } },
+            ],
+          },
         },
       },
     }));
@@ -471,8 +659,20 @@ describe('StripePaymentGateway', () => {
       },
       checkout: {
         sessions: {
-          create: vi.fn(async () => ({ url: 'https://stripe/checkout' })),
+          create: vi.fn(async () => ({
+            id: 'cs_new',
+            url: 'https://stripe/checkout',
+          })),
           list: vi.fn(async () => ({ data: [] })),
+          retrieve: vi.fn(async () => ({
+            id: 'cs_existing',
+            url: 'https://stripe/existing-checkout',
+            line_items: { data: [] },
+          })),
+          expire: vi.fn(async () => ({
+            id: 'cs_existing',
+            url: 'https://stripe/existing-checkout',
+          })),
         },
       },
       billingPortal: {
@@ -515,10 +715,13 @@ describe('StripePaymentGateway', () => {
           id: 'sub_902',
           customer: 'cus_902',
           status: 'active',
-          current_period_end: 1_700_000_000,
           cancel_at_period_end: false,
           metadata: { user_id: 'user_5' },
-          items: { data: [{ price: { id: 'price_m' } }] },
+          items: {
+            data: [
+              { current_period_end: 1_700_000_000, price: { id: 'price_m' } },
+            ],
+          },
         },
       },
     }));
@@ -529,8 +732,20 @@ describe('StripePaymentGateway', () => {
       },
       checkout: {
         sessions: {
-          create: vi.fn(async () => ({ url: 'https://stripe/checkout' })),
+          create: vi.fn(async () => ({
+            id: 'cs_new',
+            url: 'https://stripe/checkout',
+          })),
           list: vi.fn(async () => ({ data: [] })),
+          retrieve: vi.fn(async () => ({
+            id: 'cs_existing',
+            url: 'https://stripe/existing-checkout',
+            line_items: { data: [] },
+          })),
+          expire: vi.fn(async () => ({
+            id: 'cs_existing',
+            url: 'https://stripe/existing-checkout',
+          })),
         },
       },
       billingPortal: {
@@ -571,8 +786,20 @@ describe('StripePaymentGateway', () => {
       },
       checkout: {
         sessions: {
-          create: vi.fn(async () => ({ url: 'https://stripe/checkout' })),
+          create: vi.fn(async () => ({
+            id: 'cs_new',
+            url: 'https://stripe/checkout',
+          })),
           list: vi.fn(async () => ({ data: [] })),
+          retrieve: vi.fn(async () => ({
+            id: 'cs_existing',
+            url: 'https://stripe/existing-checkout',
+            line_items: { data: [] },
+          })),
+          expire: vi.fn(async () => ({
+            id: 'cs_existing',
+            url: 'https://stripe/existing-checkout',
+          })),
         },
       },
       billingPortal: {
@@ -607,8 +834,20 @@ describe('StripePaymentGateway', () => {
       },
       checkout: {
         sessions: {
-          create: vi.fn(async () => ({ url: 'https://stripe/checkout' })),
+          create: vi.fn(async () => ({
+            id: 'cs_new',
+            url: 'https://stripe/checkout',
+          })),
           list: vi.fn(async () => ({ data: [] })),
+          retrieve: vi.fn(async () => ({
+            id: 'cs_existing',
+            url: 'https://stripe/existing-checkout',
+            line_items: { data: [] },
+          })),
+          expire: vi.fn(async () => ({
+            id: 'cs_existing',
+            url: 'https://stripe/existing-checkout',
+          })),
         },
       },
       billingPortal: {
@@ -644,8 +883,20 @@ describe('StripePaymentGateway', () => {
       },
       checkout: {
         sessions: {
-          create: vi.fn(async () => ({ url: 'https://stripe/checkout' })),
+          create: vi.fn(async () => ({
+            id: 'cs_new',
+            url: 'https://stripe/checkout',
+          })),
           list: vi.fn(async () => ({ data: [] })),
+          retrieve: vi.fn(async () => ({
+            id: 'cs_existing',
+            url: 'https://stripe/existing-checkout',
+            line_items: { data: [] },
+          })),
+          expire: vi.fn(async () => ({
+            id: 'cs_existing',
+            url: 'https://stripe/existing-checkout',
+          })),
         },
       },
       billingPortal: {
@@ -687,8 +938,20 @@ describe('StripePaymentGateway', () => {
       },
       checkout: {
         sessions: {
-          create: vi.fn(async () => ({ url: 'https://stripe/checkout' })),
+          create: vi.fn(async () => ({
+            id: 'cs_new',
+            url: 'https://stripe/checkout',
+          })),
           list: vi.fn(async () => ({ data: [] })),
+          retrieve: vi.fn(async () => ({
+            id: 'cs_existing',
+            url: 'https://stripe/existing-checkout',
+            line_items: { data: [] },
+          })),
+          expire: vi.fn(async () => ({
+            id: 'cs_existing',
+            url: 'https://stripe/existing-checkout',
+          })),
         },
       },
       billingPortal: {
@@ -705,10 +968,16 @@ describe('StripePaymentGateway', () => {
               id: 'sub_123',
               customer: 'cus_123',
               status: 'active',
-              current_period_end: 1_700_000_000,
               cancel_at_period_end: false,
               metadata: {},
-              items: { data: [{ price: { id: 'price_m' } }] },
+              items: {
+                data: [
+                  {
+                    current_period_end: 1_700_000_000,
+                    price: { id: 'price_m' },
+                  },
+                ],
+              },
             },
           },
         })),
@@ -733,8 +1002,20 @@ describe('StripePaymentGateway', () => {
       },
       checkout: {
         sessions: {
-          create: vi.fn(async () => ({ url: 'https://stripe/checkout' })),
+          create: vi.fn(async () => ({
+            id: 'cs_new',
+            url: 'https://stripe/checkout',
+          })),
           list: vi.fn(async () => ({ data: [] })),
+          retrieve: vi.fn(async () => ({
+            id: 'cs_existing',
+            url: 'https://stripe/existing-checkout',
+            line_items: { data: [] },
+          })),
+          expire: vi.fn(async () => ({
+            id: 'cs_existing',
+            url: 'https://stripe/existing-checkout',
+          })),
         },
       },
       billingPortal: {
@@ -751,10 +1032,16 @@ describe('StripePaymentGateway', () => {
               id: 'sub_123',
               customer: 'cus_123',
               status: 'active',
-              current_period_end: 1_700_000_000,
               cancel_at_period_end: false,
               metadata: {},
-              items: { data: [{ price: { id: 'price_m' } }] },
+              items: {
+                data: [
+                  {
+                    current_period_end: 1_700_000_000,
+                    price: { id: 'price_m' },
+                  },
+                ],
+              },
             },
           },
         })),
@@ -793,8 +1080,20 @@ describe('StripePaymentGateway', () => {
       },
       checkout: {
         sessions: {
-          create: vi.fn(async () => ({ url: 'https://stripe/checkout' })),
+          create: vi.fn(async () => ({
+            id: 'cs_new',
+            url: 'https://stripe/checkout',
+          })),
           list: vi.fn(async () => ({ data: [] })),
+          retrieve: vi.fn(async () => ({
+            id: 'cs_existing',
+            url: 'https://stripe/existing-checkout',
+            line_items: { data: [] },
+          })),
+          expire: vi.fn(async () => ({
+            id: 'cs_existing',
+            url: 'https://stripe/existing-checkout',
+          })),
         },
       },
       billingPortal: {

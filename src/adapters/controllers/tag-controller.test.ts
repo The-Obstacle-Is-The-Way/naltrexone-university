@@ -10,13 +10,13 @@ import {
   createTag,
   createUser,
 } from '@/src/domain/test-helpers';
-import { getTags } from './tag-controller';
+import { getTags, type TagControllerDeps } from './tag-controller';
 
 function createDeps(overrides?: {
   user?: ReturnType<typeof createUser> | null;
   isEntitled?: boolean;
   tags?: Array<ReturnType<typeof createTag>>;
-}) {
+}): TagControllerDeps {
   const user =
     overrides?.user === undefined
       ? createUser({
@@ -61,7 +61,7 @@ describe('tag-controller', () => {
     it('returns VALIDATION_ERROR when input is invalid', async () => {
       const deps = createDeps();
 
-      const result = await getTags({ extra: 'nope' }, deps as never);
+      const result = await getTags({ extra: 'nope' }, deps);
 
       expect(result).toMatchObject({
         ok: false,
@@ -72,7 +72,7 @@ describe('tag-controller', () => {
     it('returns UNAUTHENTICATED when unauthenticated', async () => {
       const deps = createDeps({ user: null });
 
-      const result = await getTags({}, deps as never);
+      const result = await getTags({}, deps);
 
       expect(result).toMatchObject({
         ok: false,
@@ -83,7 +83,7 @@ describe('tag-controller', () => {
     it('returns UNSUBSCRIBED when not entitled', async () => {
       const deps = createDeps({ isEntitled: false });
 
-      const result = await getTags({}, deps as never);
+      const result = await getTags({}, deps);
 
       expect(result).toMatchObject({
         ok: false,
@@ -109,7 +109,7 @@ describe('tag-controller', () => {
         ],
       });
 
-      const result = await getTags({}, deps as never);
+      const result = await getTags({}, deps);
 
       expect(result).toMatchObject({
         ok: true,

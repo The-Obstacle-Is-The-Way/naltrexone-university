@@ -3,12 +3,16 @@
 **Date:** 2026-02-02
 **Auditor:** Comprehensive vertical/horizontal trace of all critical paths
 **Purpose:** Identify ALL foundational issues before building more features
+**Status:** Resolved — all issues identified here were fixed and archived on 2026-02-02 (see `docs/bugs/index.md`)
+
+> [!NOTE]
+> This report is a historical snapshot of the system state at audit time. For current status, see `docs/bugs/index.md`.
 
 ---
 
 ## Executive Summary
 
-Despite having 17 detailed specs and 39 resolved bugs, **the core subscription flow is broken**. Users complete Stripe payments but cannot access the app. This audit traces every critical path to identify ALL remaining gaps.
+Despite having 17 detailed specs and 39 resolved bugs, **at the time of this audit the core subscription flow was broken**. Users could complete Stripe payments but could not access the app. This audit traces every critical path to identify ALL remaining gaps.
 
 ### Current State
 
@@ -25,7 +29,7 @@ Despite having 17 detailed specs and 39 resolved bugs, **the core subscription f
 
 ### 1. Subscription Flow — **BROKEN (P1)**
 
-```
+```text
 User Journey:
 /pricing → Subscribe → Stripe → /checkout/success → /app/dashboard
                                       ↓
@@ -65,7 +69,7 @@ User Journey:
 
 ### 2. Authentication Flow — **DEGRADED (P2)**
 
-```
+```text
 User Journey:
 /sign-up → Clerk → User in DB → /app/dashboard
 ```
@@ -85,10 +89,12 @@ User Journey:
    - `lib/env.ts:81-85` has dummy key fallbacks that mask config errors
 
 2. **Environment Variable Fallbacks (P3):**
+
    ```typescript
    // lib/env.ts:81-85
    CLERK_SECRET_KEY: parsed.data.CLERK_SECRET_KEY ?? 'sk_test_dummy',
    ```
+
    - Allows app to boot with invalid keys
    - Fails silently at runtime
 
@@ -96,7 +102,7 @@ User Journey:
 
 ### 3. Core App Flow — **WORKING ✅**
 
-```
+```text
 User Journey (after subscription):
 /app/dashboard → /app/practice → Answer Questions → /app/review
 ```
@@ -137,7 +143,7 @@ User Journey (after subscription):
 
 ### 5. Question Content Pipeline — **WORKING ✅**
 
-```
+```text
 MDX Files → Parser → Seed Script → Database → Practice Flow
 ```
 
@@ -207,7 +213,7 @@ All previously identified issues have been fixed and archived.
 **None found** — all previously marked items have been addressed.
 
 ### Type Safety Escapes
-```
+```text
 as unknown as ClerkRequestLike  — lib/api/webhooks/clerk (acceptable for lib interop)
 as unknown as ClerkWebhookEvent — lib/api/webhooks/clerk (acceptable for lib interop)
 globalThis as unknown as        — lib/db.ts (standard singleton pattern)
@@ -235,15 +241,15 @@ Found only in error boundary components (appropriate):
 
 ### Short-Term (This Week)
 
-4. Handle `subscription.created` webhook gracefully (skip if no user_id)
-5. Verify Clerk keys match between dashboard and `.env.local`
-6. Remove or gate dummy key fallbacks in `lib/env.ts`
+1. Handle `subscription.created` webhook gracefully (skip if no user_id)
+2. Verify Clerk keys match between dashboard and `.env.local`
+3. Remove or gate dummy key fallbacks in `lib/env.ts`
 
 ### Medium-Term
 
-7. Add integration test for complete subscription flow
-8. Add E2E test for checkout → dashboard journey
-9. Add health check that verifies Clerk/Stripe connectivity
+1. Add integration test for complete subscription flow
+2. Add E2E test for checkout → dashboard journey
+3. Add health check that verifies Clerk/Stripe connectivity
 
 ---
 

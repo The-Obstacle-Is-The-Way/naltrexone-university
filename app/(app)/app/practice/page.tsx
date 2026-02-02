@@ -434,19 +434,15 @@ export default function PracticePage() {
     };
   }, []);
 
-  const bookmarksEffect = useMemo(
-    () =>
-      createBookmarksEffect.bind(null, {
-        bookmarkRetryCount,
-        getBookmarksFn: getBookmarks,
-        setBookmarkedQuestionIds,
-        setBookmarkStatus,
-        setBookmarkRetryCount,
-      }),
-    [bookmarkRetryCount],
-  );
-
-  useEffect(bookmarksEffect, [bookmarksEffect]);
+  useEffect(() => {
+    return createBookmarksEffect({
+      bookmarkRetryCount,
+      getBookmarksFn: getBookmarks,
+      setBookmarkedQuestionIds,
+      setBookmarkStatus,
+      setBookmarkRetryCount,
+    });
+  }, [bookmarkRetryCount]);
 
   useEffect(() => {
     return () => {

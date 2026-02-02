@@ -13,10 +13,6 @@ import type {
   PracticeSessionRepository,
   QuestionRepository,
 } from '@/src/application/ports/repositories';
-import type {
-  CheckEntitlementInput,
-  CheckEntitlementOutput,
-} from '@/src/application/use-cases/check-entitlement';
 import {
   computeAccuracy,
   createSeed,
@@ -24,6 +20,8 @@ import {
 } from '@/src/domain/services';
 import type { ActionResult } from './action-result';
 import { err, handleError, ok } from './action-result';
+import type { CheckEntitlementUseCase } from './require-entitled-user-id';
+import { requireEntitledUserId } from './require-entitled-user-id';
 
 const zUuid = z.string().uuid();
 
@@ -52,10 +50,6 @@ const EndPracticeSessionInputSchema = z
   })
   .strict();
 
-type CheckEntitlementUseCase = {
-  execute: (input: CheckEntitlementInput) => Promise<CheckEntitlementOutput>;
-};
-
 export type StartPracticeSessionOutput = { sessionId: string };
 
 export type EndPracticeSessionOutput = {
@@ -81,21 +75,6 @@ export type PracticeControllerDeps = {
 const getDeps = createDepsResolver((container) =>
   container.createPracticeControllerDeps(),
 );
-
-async function requireEntitledUserId(
-  deps: PracticeControllerDeps,
-): Promise<string | ActionResult<never>> {
-  const user = await deps.authGateway.requireUser();
-  const entitlement = await deps.checkEntitlementUseCase.execute({
-    userId: user.id,
-  });
-
-  if (!entitlement.isEntitled) {
-    return err('UNSUBSCRIBED', 'Subscription required');
-  }
-
-  return user.id;
-}
 
 export async function startPracticeSession(
   input: unknown,

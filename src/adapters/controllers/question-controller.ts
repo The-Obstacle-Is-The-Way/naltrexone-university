@@ -9,10 +9,6 @@ import {
 import { MAX_TIME_SPENT_SECONDS } from '@/src/adapters/shared/validation-limits';
 import type { AuthGateway } from '@/src/application/ports/gateways';
 import type {
-  CheckEntitlementInput,
-  CheckEntitlementOutput,
-} from '@/src/application/use-cases/check-entitlement';
-import type {
   GetNextQuestionInput,
   GetNextQuestionOutput,
 } from '@/src/application/use-cases/get-next-question';
@@ -21,7 +17,9 @@ import type {
   SubmitAnswerOutput,
 } from '@/src/application/use-cases/submit-answer';
 import type { ActionResult } from './action-result';
-import { err, handleError, ok } from './action-result';
+import { handleError, ok } from './action-result';
+import type { CheckEntitlementUseCase } from './require-entitled-user-id';
+import { requireEntitledUserId } from './require-entitled-user-id';
 
 const zUuid = z.string().uuid();
 
@@ -69,10 +67,6 @@ const SubmitAnswerInputSchema = z
   })
   .strict();
 
-type CheckEntitlementUseCase = {
-  execute: (input: CheckEntitlementInput) => Promise<CheckEntitlementOutput>;
-};
-
 type GetNextQuestionUseCase = {
   execute: (input: GetNextQuestionInput) => Promise<GetNextQuestionOutput>;
 };
@@ -91,21 +85,6 @@ export type QuestionControllerDeps = {
 const getDeps = createDepsResolver((container) =>
   container.createQuestionControllerDeps(),
 );
-
-async function requireEntitledUserId(
-  deps: QuestionControllerDeps,
-): Promise<string | ActionResult<never>> {
-  const user = await deps.authGateway.requireUser();
-  const entitlement = await deps.checkEntitlementUseCase.execute({
-    userId: user.id,
-  });
-
-  if (!entitlement.isEntitled) {
-    return err('UNSUBSCRIBED', 'Subscription required');
-  }
-
-  return user.id;
-}
 
 export async function getNextQuestion(
   input: unknown,
