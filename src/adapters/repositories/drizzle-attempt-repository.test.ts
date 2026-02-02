@@ -11,9 +11,17 @@ function createDbMock() {
 
   const queryFindMany = vi.fn();
 
-  const countWhere = vi.fn(async () => []);
-  const groupByExecute = vi.fn(async () => []);
-  const finalQueryExecute = vi.fn(async () => []);
+  const countWhere = vi.fn(async (): Promise<Array<{ count: number }>> => []);
+  const groupByExecute = vi.fn(
+    async (): Promise<
+      Array<{ questionId: string; answeredAt: Date | null }>
+    > => [],
+  );
+  const finalQueryExecute = vi.fn(
+    async (): Promise<
+      Array<{ questionId: string; answeredAt: Date | null }>
+    > => [],
+  );
 
   const groupByAs = vi.fn((alias: string) => ({
     __alias: alias,
