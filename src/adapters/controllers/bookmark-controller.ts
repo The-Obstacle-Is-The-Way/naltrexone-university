@@ -1,6 +1,7 @@
 'use server';
 
 import { z } from 'zod';
+import type { Logger } from '@/src/adapters/shared/logger';
 import type { AuthGateway } from '@/src/application/ports/gateways';
 import type {
   BookmarkRepository,
@@ -25,10 +26,6 @@ const GetBookmarksInputSchema = z.object({}).strict();
 
 type CheckEntitlementUseCase = {
   execute: (input: CheckEntitlementInput) => Promise<CheckEntitlementOutput>;
-};
-
-type Logger = {
-  warn: (context: Record<string, unknown>, msg: string) => void;
 };
 
 export type ToggleBookmarkOutput = {

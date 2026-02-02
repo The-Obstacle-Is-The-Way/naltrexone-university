@@ -241,6 +241,12 @@ describe('DrizzleStripeEventRepository', () => {
       await expect(
         repo.pruneProcessedBefore(new Date('2026-02-01T00:00:00Z'), 0),
       ).resolves.toBe(0);
+      await expect(
+        repo.pruneProcessedBefore(new Date('2026-02-01T00:00:00Z'), -1),
+      ).resolves.toBe(0);
+      await expect(
+        repo.pruneProcessedBefore(new Date('2026-02-01T00:00:00Z'), 1.5),
+      ).resolves.toBe(0);
 
       expect(selectFrom).not.toHaveBeenCalled();
       expect(deleteFn).not.toHaveBeenCalled();

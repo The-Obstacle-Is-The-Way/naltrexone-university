@@ -1,6 +1,7 @@
 'use server';
 
 import { z } from 'zod';
+import type { Logger } from '@/src/adapters/shared/logger';
 import type { AuthGateway } from '@/src/application/ports/gateways';
 import type {
   AttemptRepository,
@@ -22,10 +23,6 @@ const GetMissedQuestionsInputSchema = z
 
 type CheckEntitlementUseCase = {
   execute: (input: CheckEntitlementInput) => Promise<CheckEntitlementOutput>;
-};
-
-type Logger = {
-  warn: (context: Record<string, unknown>, msg: string) => void;
 };
 
 export type MissedQuestionRow = {

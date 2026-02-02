@@ -1,101 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
-import { ApplicationError } from '@/src/application/errors';
-import type {
-  StripeCustomerRepository,
-  StripeEventRepository,
-} from '@/src/application/ports/repositories';
+import { processStripeWebhook } from '@/src/adapters/controllers/stripe-webhook-controller';
 import {
   FakePaymentGateway,
+  FakeStripeCustomerRepository,
+  FakeStripeEventRepository,
   FakeSubscriptionRepository,
 } from '@/src/application/test-helpers/fakes';
-import { processStripeWebhook } from './stripe-webhook-controller';
-
-class FakeStripeEventRepository implements StripeEventRepository {
-  private readonly rows = new Map<
-    string,
-    { type: string; processedAt: Date | null; error: string | null }
-  >();
-
-  pruneProcessedBefore = vi.fn(async () => 0);
-
-  async claim(eventId: string, type: string): Promise<boolean> {
-    if (this.rows.has(eventId)) return false;
-    this.rows.set(eventId, { type, processedAt: null, error: null });
-    return true;
-  }
-
-  async lock(
-    eventId: string,
-  ): Promise<{ processedAt: Date | null; error: string | null }> {
-    const row = this.rows.get(eventId);
-    if (!row) {
-      throw new ApplicationError('NOT_FOUND', 'Stripe event not found');
-    }
-    return { processedAt: row.processedAt, error: row.error };
-  }
-
-  async markProcessed(eventId: string): Promise<void> {
-    const row = this.rows.get(eventId);
-    if (!row) {
-      throw new ApplicationError('NOT_FOUND', 'Stripe event not found');
-    }
-    row.processedAt = new Date('2026-02-01T00:00:00Z');
-    row.error = null;
-  }
-
-  async markFailed(eventId: string, error: string): Promise<void> {
-    const row = this.rows.get(eventId);
-    if (!row) {
-      throw new ApplicationError('NOT_FOUND', 'Stripe event not found');
-    }
-    row.processedAt = null;
-    row.error = error;
-  }
-
-  seedProcessed(eventId: string, type: string) {
-    this.rows.set(eventId, {
-      type,
-      processedAt: new Date('2026-02-01T00:00:00Z'),
-      error: null,
-    });
-  }
-}
-
-class FakeStripeCustomerRepository implements StripeCustomerRepository {
-  insertCalls = 0;
-
-  private readonly byUserId = new Map<string, { stripeCustomerId: string }>();
-  private readonly userIdByStripeCustomerId = new Map<string, string>();
-
-  async findByUserId(
-    userId: string,
-  ): Promise<{ stripeCustomerId: string } | null> {
-    return this.byUserId.get(userId) ?? null;
-  }
-
-  async insert(userId: string, stripeCustomerId: string): Promise<void> {
-    this.insertCalls += 1;
-
-    const existing = this.byUserId.get(userId);
-    if (existing && existing.stripeCustomerId !== stripeCustomerId) {
-      throw new ApplicationError(
-        'CONFLICT',
-        'Stripe customer already exists with a different stripeCustomerId',
-      );
-    }
-
-    const mappedUserId = this.userIdByStripeCustomerId.get(stripeCustomerId);
-    if (mappedUserId && mappedUserId !== userId) {
-      throw new ApplicationError(
-        'CONFLICT',
-        'Stripe customer id is already mapped to a different user',
-      );
-    }
-
-    this.byUserId.set(userId, { stripeCustomerId });
-    this.userIdByStripeCustomerId.set(stripeCustomerId, userId);
-  }
-}
 
 describe('processStripeWebhook', () => {
   it('claims, processes, and marks subscription events idempotently', async () => {
@@ -121,6 +31,7 @@ describe('processStripeWebhook', () => {
     const stripeEvents = new FakeStripeEventRepository();
     const subscriptions = new FakeSubscriptionRepository();
     const stripeCustomers = new FakeStripeCustomerRepository();
+    const insertSpy = vi.spyOn(stripeCustomers, 'insert');
 
     await processStripeWebhook(
       {
@@ -141,7 +52,7 @@ describe('processStripeWebhook', () => {
     ).resolves.toMatchObject({
       userId: 'user_1',
     });
-    expect(stripeCustomers.insertCalls).toBe(1);
+    expect(insertSpy).toHaveBeenCalledTimes(1);
 
     // Second delivery of the same event should short-circuit (no double upsert).
     await processStripeWebhook(
@@ -153,7 +64,7 @@ describe('processStripeWebhook', () => {
       { rawBody: 'raw', signature: 'sig' },
     );
 
-    expect(stripeCustomers.insertCalls).toBe(1);
+    expect(insertSpy).toHaveBeenCalledTimes(1);
   });
 
   it('marks non-subscription events as processed (no subscription update)', async () => {
@@ -205,6 +116,7 @@ describe('processStripeWebhook', () => {
       const stripeEvents = new FakeStripeEventRepository();
       const subscriptions = new FakeSubscriptionRepository();
       const stripeCustomers = new FakeStripeCustomerRepository();
+      const pruneSpy = vi.spyOn(stripeEvents, 'pruneProcessedBefore');
 
       await processStripeWebhook(
         {
@@ -216,7 +128,7 @@ describe('processStripeWebhook', () => {
       );
 
       const ninetyDaysMs = 86_400_000 * 90;
-      expect(stripeEvents.pruneProcessedBefore).toHaveBeenCalledWith(
+      expect(pruneSpy).toHaveBeenCalledWith(
         new Date(now.getTime() - ninetyDaysMs),
         100,
       );
@@ -246,10 +158,12 @@ describe('processStripeWebhook', () => {
     });
 
     const stripeEvents = new FakeStripeEventRepository();
-    stripeEvents.seedProcessed('evt_3', 'customer.subscription.updated');
+    await stripeEvents.claim('evt_3', 'customer.subscription.updated');
+    await stripeEvents.markProcessed('evt_3');
 
     const subscriptions = new FakeSubscriptionRepository();
     const stripeCustomers = new FakeStripeCustomerRepository();
+    const insertSpy = vi.spyOn(stripeCustomers, 'insert');
 
     await processStripeWebhook(
       {
@@ -260,7 +174,7 @@ describe('processStripeWebhook', () => {
       { rawBody: 'raw', signature: 'sig' },
     );
 
-    expect(stripeCustomers.insertCalls).toBe(0);
+    expect(insertSpy).not.toHaveBeenCalled();
   });
 
   it('marks the event failed when processing throws', async () => {

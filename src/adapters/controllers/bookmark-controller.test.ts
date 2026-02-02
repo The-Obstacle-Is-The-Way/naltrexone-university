@@ -1,4 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
+import {
+  getBookmarks,
+  toggleBookmark,
+} from '@/src/adapters/controllers/bookmark-controller';
+import type { Logger } from '@/src/adapters/shared/logger';
 import { ApplicationError } from '@/src/application/errors';
 import type { AuthGateway } from '@/src/application/ports/gateways';
 import type {
@@ -6,7 +11,6 @@ import type {
   QuestionRepository,
 } from '@/src/application/ports/repositories';
 import type { Bookmark, Question, User } from '@/src/domain/entities';
-import { getBookmarks, toggleBookmark } from './bookmark-controller';
 
 type UserLike = User;
 
@@ -44,10 +48,6 @@ function createBookmark(
     createdAt: input.createdAt ?? new Date('2026-02-01T00:00:00Z'),
   };
 }
-
-type Logger = {
-  warn: (context: Record<string, unknown>, msg: string) => void;
-};
 
 function createDeps(overrides?: {
   user?: UserLike;

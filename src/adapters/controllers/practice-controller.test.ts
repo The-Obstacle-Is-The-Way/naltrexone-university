@@ -8,6 +8,7 @@ import type {
 } from '@/src/application/ports/repositories';
 import type { Attempt, PracticeSession, User } from '@/src/domain/entities';
 import { createSeed, shuffleWithSeed } from '@/src/domain/services';
+import { createAttempt } from '@/src/domain/test-helpers';
 import type { PracticeControllerDeps } from './practice-controller';
 import {
   endPracticeSession,
@@ -22,21 +23,6 @@ function createUser(): UserLike {
     email: 'user@example.com',
     createdAt: new Date('2026-02-01T00:00:00Z'),
     updatedAt: new Date('2026-02-01T00:00:00Z'),
-  };
-}
-
-function createAttempt(
-  input: Partial<Attempt> & { questionId: string },
-): Attempt {
-  return {
-    id: input.id ?? `attempt-${input.questionId}`,
-    userId: input.userId ?? 'user_1',
-    questionId: input.questionId,
-    practiceSessionId: input.practiceSessionId ?? 'session_1',
-    selectedChoiceId: input.selectedChoiceId ?? 'choice_1',
-    isCorrect: input.isCorrect ?? false,
-    timeSpentSeconds: input.timeSpentSeconds ?? 0,
-    answeredAt: input.answeredAt ?? new Date('2026-02-01T00:00:00Z'),
   };
 }
 

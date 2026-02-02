@@ -1,4 +1,5 @@
 export {
+  createAttempt,
   createChoice,
   createPracticeSession,
   createQuestion,

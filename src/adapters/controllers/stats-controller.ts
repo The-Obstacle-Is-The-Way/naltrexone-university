@@ -1,6 +1,7 @@
 'use server';
 
 import { z } from 'zod';
+import type { Logger } from '@/src/adapters/shared/logger';
 import type { AuthGateway } from '@/src/application/ports/gateways';
 import type {
   AttemptRepository,
@@ -23,10 +24,6 @@ const DAY_MS = 86_400_000;
 
 type CheckEntitlementUseCase = {
   execute: (input: CheckEntitlementInput) => Promise<CheckEntitlementOutput>;
-};
-
-type Logger = {
-  warn: (context: Record<string, unknown>, msg: string) => void;
 };
 
 export type UserStatsOutput = {
@@ -90,36 +87,31 @@ export async function getUserStats(
     if (typeof userIdOrError !== 'string') return userIdOrError;
     const userId = userIdOrError;
 
-    const totalAnswered = await d.attemptRepository.countByUserId(userId);
-    const correctOverall =
-      await d.attemptRepository.countCorrectByUserId(userId);
-    const accuracyOverall = computeAccuracy(totalAnswered, correctOverall);
-
     const now = d.now();
     const since7Days = new Date(now.getTime() - STATS_WINDOW_DAYS * DAY_MS);
-    const answeredLast7Days = await d.attemptRepository.countByUserIdSince(
-      userId,
-      since7Days,
-    );
-    const correctLast7Days =
-      await d.attemptRepository.countCorrectByUserIdSince(userId, since7Days);
+    const since60Days = new Date(now.getTime() - STREAK_WINDOW_DAYS * DAY_MS);
+    const [
+      totalAnswered,
+      correctOverall,
+      answeredLast7Days,
+      correctLast7Days,
+      attemptsLast60Days,
+      recentAttempts,
+    ] = await Promise.all([
+      d.attemptRepository.countByUserId(userId),
+      d.attemptRepository.countCorrectByUserId(userId),
+      d.attemptRepository.countByUserIdSince(userId, since7Days),
+      d.attemptRepository.countCorrectByUserIdSince(userId, since7Days),
+      d.attemptRepository.listAnsweredAtByUserIdSince(userId, since60Days),
+      d.attemptRepository.listRecentByUserId(userId, RECENT_ACTIVITY_LIMIT),
+    ]);
+
+    const accuracyOverall = computeAccuracy(totalAnswered, correctOverall);
     const accuracyLast7Days = computeAccuracy(
       answeredLast7Days,
       correctLast7Days,
     );
-
-    const since60Days = new Date(now.getTime() - STREAK_WINDOW_DAYS * DAY_MS);
-    const attemptsLast60Days =
-      await d.attemptRepository.listAnsweredAtByUserIdSince(
-        userId,
-        since60Days,
-      );
     const currentStreakDays = computeStreak(attemptsLast60Days, now);
-
-    const recentAttempts = await d.attemptRepository.listRecentByUserId(
-      userId,
-      RECENT_ACTIVITY_LIMIT,
-    );
 
     const uniqueQuestionIds: string[] = [];
     const seen = new Set<string>();
