@@ -1,8 +1,9 @@
 # DEBT-043: Unused Schema Wildcard Import
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P4
 **Date:** 2026-02-01
+**Resolved:** 2026-02-02
 
 ---
 
@@ -53,9 +54,9 @@ type QuestionRow = InferSelectModel<typeof questions>;
 
 ## Verification
 
-- [ ] Replace wildcard import with specific imports
-- [ ] TypeScript compiler accepts the change
-- [ ] Existing tests pass
+- [x] Replace wildcard import with specific imports
+- [x] TypeScript compiler accepts the change
+- [x] Existing tests pass
 
 ## Related
 

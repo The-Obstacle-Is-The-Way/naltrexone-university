@@ -1,6 +1,6 @@
 import type { SQL } from 'drizzle-orm';
 import { and, asc, desc, eq, inArray } from 'drizzle-orm';
-import type * as schema from '@/db/schema';
+import type { Choice, Question, QuestionTag, Tag } from '@/db/schema';
 import { questions, questionTags, tags } from '@/db/schema';
 import { ApplicationError } from '@/src/application/errors';
 import type {
@@ -104,9 +104,9 @@ export class DrizzleQuestionRepository implements QuestionRepository {
   }
 
   private toDomain(
-    row: schema.Question & {
-      choices: schema.Choice[];
-      questionTags: Array<schema.QuestionTag & { tag: schema.Tag }>;
+    row: Question & {
+      choices: Choice[];
+      questionTags: Array<QuestionTag & { tag: Tag }>;
     },
   ) {
     const mappedChoices = row.choices.map((c) => {
