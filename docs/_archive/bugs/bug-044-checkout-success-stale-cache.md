@@ -46,8 +46,8 @@ pnpm dev
 
 ## Verification
 
-- [ ] After cache clear, checkout flow completes without searchParams error
-- [ ] Error message no longer references old line numbers
+- [x] After cache clear, checkout flow completes without searchParams error
+- [x] Error message no longer references old line numbers
 
 ## Related
 

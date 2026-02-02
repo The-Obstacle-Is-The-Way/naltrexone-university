@@ -84,7 +84,7 @@ subscription.items.data[0].current_period_end  // number
 | `customer.subscription.pending_update_applied` | `processWebhookEvent` | Scheduled change applied |
 | `customer.subscription.pending_update_expired` | `processWebhookEvent` | Scheduled change expired |
 
-**Webhook endpoint:** `/api/webhooks/stripe`
+**Webhook endpoint:** `/api/stripe/webhook`
 
 **Webhook secret:** `STRIPE_WEBHOOK_SECRET` env var
 
@@ -99,7 +99,7 @@ subscription.items.data[0].current_period_end  // number
 
 **CLI for local testing:**
 ```bash
-stripe listen --forward-to localhost:3000/api/webhooks/stripe
+stripe listen --forward-to localhost:3000/api/stripe/webhook
 ```
 
 ---

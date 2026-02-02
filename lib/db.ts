@@ -2,8 +2,8 @@ import 'server-only';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
 import * as schema from '@/db/schema';
-import { POSTGRES_CONNECTION_PARAMETERS } from './db-connection-options';
-import { env } from './env';
+import { POSTGRES_CONNECTION_PARAMETERS } from '@/lib/db-connection-options';
+import { env } from '@/lib/env';
 
 const connectionString = env.DATABASE_URL;
 

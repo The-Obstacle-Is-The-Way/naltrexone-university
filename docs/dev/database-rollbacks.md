@@ -28,3 +28,4 @@ For local integration testing, prefer recreating the database state:
 - `pnpm db:test:reset` (Docker Postgres on port 5434)
 - `pnpm db:migrate`
 
+**Note:** Drizzle commands read `DATABASE_URL` from the environment. After `pnpm db:test:up`, set `DATABASE_URL` to your local test Postgres instance (for example `postgresql://postgres:postgres@localhost:5434/addiction_boards_test`) before running `pnpm db:test:reset` or `pnpm db:migrate` so migrations target the intended database.

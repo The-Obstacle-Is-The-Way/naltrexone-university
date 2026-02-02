@@ -31,7 +31,7 @@ export const db = drizzle(conn, { schema });
 
 Use for all application queries. The `-pooler` suffix routes through PgBouncer.
 
-```
+```text
 DATABASE_URL=postgresql://user:pass@ep-xxx-pooler.region.aws.neon.tech/dbname?sslmode=require
 ```
 
@@ -39,7 +39,7 @@ DATABASE_URL=postgresql://user:pass@ep-xxx-pooler.region.aws.neon.tech/dbname?ss
 
 Use for `drizzle-kit push`, schema operations. No `-pooler` suffix.
 
-```
+```text
 DIRECT_URL=postgresql://user:pass@ep-xxx.region.aws.neon.tech/dbname?sslmode=require
 ```
 

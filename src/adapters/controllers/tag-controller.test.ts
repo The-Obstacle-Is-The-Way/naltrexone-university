@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
+  getTags,
+  type TagControllerDeps,
+} from '@/src/adapters/controllers/tag-controller';
+import {
   FakeAuthGateway,
   FakeSubscriptionRepository,
   FakeTagRepository,
@@ -10,7 +14,6 @@ import {
   createTag,
   createUser,
 } from '@/src/domain/test-helpers';
-import { getTags, type TagControllerDeps } from './tag-controller';
 
 function createDeps(overrides?: {
   user?: ReturnType<typeof createUser> | null;

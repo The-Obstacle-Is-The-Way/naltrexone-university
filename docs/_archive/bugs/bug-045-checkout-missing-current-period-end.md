@@ -36,6 +36,7 @@ Both read `subscription.current_period_end`, which is no longer present in our p
 ## Observed Error
 
 From server logs:
+
 ```json
 {
   "level": 50,
@@ -56,6 +57,7 @@ const currentPeriodEndSeconds = subscription.items?.data?.[0]?.current_period_en
 ```
 
 Also update the type definition in `stripe-payment-gateway.ts`:
+
 ```typescript
 type StripeSubscriptionLike = {
   // ... existing fields

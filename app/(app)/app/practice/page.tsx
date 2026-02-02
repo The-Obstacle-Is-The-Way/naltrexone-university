@@ -77,12 +77,15 @@ export function PracticeSessionStarter(props: PracticeSessionStarterProps) {
   const difficulties = ['easy', 'medium', 'hard'] satisfies Array<
     NextQuestion['difficulty']
   >;
-  const tagsByKind = new Map<string, TagRow[]>();
-  for (const tag of props.availableTags) {
-    const list = tagsByKind.get(tag.kind) ?? [];
-    list.push(tag);
-    tagsByKind.set(tag.kind, list);
-  }
+  const tagsByKind = useMemo(() => {
+    const map = new Map<string, TagRow[]>();
+    for (const tag of props.availableTags) {
+      const list = map.get(tag.kind) ?? [];
+      list.push(tag);
+      map.set(tag.kind, list);
+    }
+    return map;
+  }, [props.availableTags]);
 
   const tagKindLabels: Record<TagRow['kind'], string> = {
     domain: 'Domain',

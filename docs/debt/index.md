@@ -17,6 +17,7 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 | ID | Title | Status | Priority | Date |
 |----|-------|--------|----------|------|
+| — | _None_ | — | — | — |
 
 **Next Debt ID:** DEBT-072
 

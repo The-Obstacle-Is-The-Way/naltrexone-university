@@ -2,6 +2,15 @@
 
 import { z } from 'zod';
 import { createDepsResolver } from '@/lib/controller-helpers';
+import {
+  type ActionResult,
+  handleError,
+  ok,
+} from '@/src/adapters/controllers/action-result';
+import {
+  type CheckEntitlementUseCase,
+  requireEntitledUserId,
+} from '@/src/adapters/controllers/require-entitled-user-id';
 import type { Logger } from '@/src/adapters/shared/logger';
 import type { AuthGateway } from '@/src/application/ports/gateways';
 import type {
@@ -9,10 +18,6 @@ import type {
   QuestionRepository,
 } from '@/src/application/ports/repositories';
 import { computeAccuracy, computeStreak } from '@/src/domain/services';
-import type { ActionResult } from './action-result';
-import { handleError, ok } from './action-result';
-import type { CheckEntitlementUseCase } from './require-entitled-user-id';
-import { requireEntitledUserId } from './require-entitled-user-id';
 
 const GetUserStatsInputSchema = z.object({}).strict();
 
