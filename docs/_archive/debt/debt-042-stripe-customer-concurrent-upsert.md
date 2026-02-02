@@ -1,8 +1,9 @@
 # DEBT-042: Race Condition in Stripe Customer Concurrent Upsert
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P3
 **Date:** 2026-02-01
+**Resolved:** 2026-02-02
 
 ---
 
@@ -37,23 +38,16 @@ catch (error) {
 
 ## Resolution
 
-Consider one of these approaches:
+This is already addressed:
 
-1. **Advisory locking:** Use Postgres advisory locks per customer to serialize processing
-
-2. **Conflict resolution:** Use `ON CONFLICT DO UPDATE` instead of `ON CONFLICT DO NOTHING` to handle the race properly
-
-3. **Queue serialization:** Process webhook events per customer sequentially (requires infrastructure changes)
-
-4. **Idempotent upsert:** Modify `insert()` to be truly idempotent by ignoring conflicts if the data matches
-
-For MVP, option 4 is simplest - ensure that if a conflict occurs but data matches, it's not an error.
+- `DrizzleStripeCustomerRepository.insert()` uses a single upsert statement (`ON CONFLICT DO UPDATE`) keyed on `userId` and treats the "same mapping" case as idempotent (no error).
+- True conflicts (same user with a different customer id, or a customer id mapped to a different user) still throw `CONFLICT` — which is correct because it indicates inconsistent identity mapping.
 
 ## Verification
 
-- [ ] Add integration test for concurrent webhook processing
-- [ ] Verify conflict handling doesn't lose events
-- [ ] Monitor webhook failure rate in production
+- [x] Verified repository uses a single upsert statement (no read-before-write)
+- [x] Verified unit tests cover idempotent inserts and conflict cases
+- [x] No behavior change required
 
 ## Related
 
