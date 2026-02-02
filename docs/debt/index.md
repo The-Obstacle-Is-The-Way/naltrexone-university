@@ -17,15 +17,21 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 | ID | Title | Status | Priority | Date |
 |----|-------|--------|----------|------|
-| [DEBT-072](./debt-072-drizzle-subquery-join-pattern.md) | Drizzle Subquery Join Pattern Causes Ambiguous Columns | Open | P2 | 2026-02-02 |
-| [DEBT-073](./debt-073-pricing-page-shows-subscribe-to-subscribers.md) | Pricing Page Shows Subscribe Buttons to Already-Subscribed Users | Open | P2 | 2026-02-02 |
+| [DEBT-074](./debt-074-missing-boundary-integration-tests.md) | Missing Boundary Integration Tests (Uncle Bob's "Humble Object" Gap) | Open | P1 | 2026-02-02 |
+| [DEBT-075](./debt-075-no-vcr-cassettes-external-apis.md) | No VCR/Cassette Pattern for External API Testing | Open | P1 | 2026-02-02 |
+| [DEBT-076](./debt-076-no-webhook-input-validation.md) | No Schema Validation on Webhook Payloads | Open | P1 | 2026-02-02 |
+| [DEBT-077](./debt-077-no-rate-limiting.md) | No Rate Limiting on Webhooks or Actions | Open | P1 | 2026-02-02 |
+| [DEBT-078](./debt-078-no-idempotency-keys.md) | No Idempotency Keys on State-Changing Actions | Open | P1 | 2026-02-02 |
+| [DEBT-079](./debt-079-no-retry-backoff-external-calls.md) | No Retry/Backoff Logic for External API Calls | Open | P2 | 2026-02-02 |
 
-**Next Debt ID:** DEBT-074
+**Next Debt ID:** DEBT-080
 
 ## Archived Debt
 
 | ID | Title | Priority | Resolved |
 |----|-------|----------|----------|
+| [DEBT-073](../_archive/debt/debt-073-pricing-page-shows-subscribe-to-subscribers.md) | Pricing Page Shows Subscribe Buttons to Already-Subscribed Users | P2 | 2026-02-02 |
+| [DEBT-072](../_archive/debt/debt-072-drizzle-subquery-join-pattern.md) | Drizzle Subquery Join Pattern Causes Ambiguous Columns | P2 | 2026-02-02 |
 | [DEBT-071](../_archive/debt/debt-071-missing-why-comments.md) | Missing WHY Comments on Non-Obvious Business Logic | P3 | 2026-02-02 |
 | [DEBT-060](../_archive/debt/debt-060-no-rollback-migrations.md) | No Rollback Migrations | P2 | 2026-02-02 |
 | [DEBT-061](../_archive/debt/debt-061-timezone-not-explicitly-enforced.md) | Timezone Not Explicitly Enforced at Application Level | P3 | 2026-02-02 |
