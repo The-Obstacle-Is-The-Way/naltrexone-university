@@ -664,6 +664,35 @@ export type StripeWebhookResponse = { received: true };
 
 ---
 
+#### 4.4.3 `POST /api/webhooks/clerk`
+
+* **Path:** `/app/api/webhooks/clerk/route.ts`
+* **Method:** POST
+* **Auth:** public (Svix signature-protected)
+* **Runtime:** `nodejs`
+* **Purpose:** sync Clerk user events → DB user state
+
+**Input:** raw request body + Svix signature headers (`svix-id`, `svix-timestamp`, `svix-signature`)
+
+**Output:**
+
+```ts
+export type ClerkWebhookResponse = { received: true };
+```
+
+**Errors:**
+
+* `400` if signature verification fails
+* `500` if DB processing fails
+
+**Events handled:**
+
+* `user.created` — Create user in `users` table
+* `user.updated` — Update user email in `users` table
+* `user.deleted` — Delete user and cascade (subscription, attempts, bookmarks, etc.)
+
+---
+
 ### 4.5 Server Actions (Required)
 
 All server actions are implemented under:
@@ -1952,7 +1981,7 @@ As a subscribed user, I can run a timed practice session with filters and get a 
 * `src/domain/services/shuffle.ts` — shuffleWithSeed() for deterministic question selection
 * `src/application/use-cases/start-practice-session.ts`, `end-practice-session.ts`
 * `src/adapters/repositories/drizzle-practice-session-repository.ts`
-* `src/adapters/controllers/practice-controller.ts` — 'use server' exports
+* `src/adapters/controllers/practice-controller.ts`, `tag-controller.ts` — 'use server' exports
 * `app/(app)/app/practice/[sessionId]/page.tsx`
 * `components/question/*` (progress display + exam/tutor behaviors)
 * `lib/container.ts` (add session factories)
@@ -1997,9 +2026,10 @@ As a subscribed user, I can review missed questions and bookmarked questions so 
 
 * `src/application/use-cases/get-missed-questions.ts`, `get-bookmarks.ts`
 * `src/adapters/repositories/drizzle-bookmark-repository.ts`
-* `src/adapters/controllers/review-controller.ts`, `bookmark-controller.ts` — 'use server' exports
+* `src/adapters/controllers/review-controller.ts`, `bookmark-controller.ts`, `question-view-controller.ts` — 'use server' exports
 * `app/(app)/app/review/page.tsx`
 * `app/(app)/app/bookmarks/page.tsx`
+* `app/(app)/app/questions/[slug]/page.tsx` — direct question view for reattempt flow
 * `components/question/*`
 * `lib/container.ts` (add review/bookmark factories)
 
