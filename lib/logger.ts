@@ -27,6 +27,7 @@ export const logger = pino({
       'stripeSignature',
       // Never log these env vars if accidentally attached
       'env.CLERK_SECRET_KEY',
+      'env.CLERK_WEBHOOK_SIGNING_SECRET',
       'env.STRIPE_SECRET_KEY',
       'env.STRIPE_WEBHOOK_SECRET',
     ],

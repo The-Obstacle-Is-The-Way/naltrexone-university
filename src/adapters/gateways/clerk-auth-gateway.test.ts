@@ -26,6 +26,7 @@ function createFakeUserRepository(): UserRepository & {
         updatedAt: baseUser.updatedAt,
       };
     },
+    deleteByClerkId: async () => false,
   };
 }
 

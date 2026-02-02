@@ -482,6 +482,10 @@ export class FakeUserRepository implements UserRepository {
     this.byClerkId.set(clerkId, { user: newUser, clerkId });
     return newUser;
   }
+
+  async deleteByClerkId(clerkId: string): Promise<boolean> {
+    return this.byClerkId.delete(clerkId);
+  }
 }
 
 export class FakeBookmarkRepository implements BookmarkRepository {

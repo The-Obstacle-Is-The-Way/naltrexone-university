@@ -8,6 +8,7 @@ const envSchema = z.object({
   // Clerk
   CLERK_SECRET_KEY: z.string().min(1).optional(),
   NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: z.string().min(1).optional(),
+  CLERK_WEBHOOK_SIGNING_SECRET: z.string().min(1).optional(),
   NEXT_PUBLIC_SKIP_CLERK: z.enum(['true', 'false']).optional(),
 
   // Stripe
@@ -23,10 +24,13 @@ const envSchema = z.object({
 
 export type Env = Omit<
   z.infer<typeof envSchema>,
-  'CLERK_SECRET_KEY' | 'NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY'
+  | 'CLERK_SECRET_KEY'
+  | 'NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY'
+  | 'CLERK_WEBHOOK_SIGNING_SECRET'
 > & {
   CLERK_SECRET_KEY: string;
   NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: string;
+  CLERK_WEBHOOK_SIGNING_SECRET: string;
 };
 
 function validateEnv(): Env {
@@ -49,6 +53,9 @@ function validateEnv(): Env {
     if (!parsed.data.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY) {
       missingClerkKeys.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY = ['Required'];
     }
+    if (!parsed.data.CLERK_WEBHOOK_SIGNING_SECRET) {
+      missingClerkKeys.CLERK_WEBHOOK_SIGNING_SECRET = ['Required'];
+    }
 
     if (Object.keys(missingClerkKeys).length > 0) {
       console.error('Invalid environment variables:', missingClerkKeys);
@@ -67,6 +74,8 @@ function validateEnv(): Env {
     CLERK_SECRET_KEY: parsed.data.CLERK_SECRET_KEY ?? 'sk_test_dummy',
     NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY:
       parsed.data.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY ?? 'pk_test_dummy',
+    CLERK_WEBHOOK_SIGNING_SECRET:
+      parsed.data.CLERK_WEBHOOK_SIGNING_SECRET ?? 'whsec_dummy',
   };
 }
 

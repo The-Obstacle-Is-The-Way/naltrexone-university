@@ -21,6 +21,10 @@ function createDbMock() {
   }));
   const insert = vi.fn(() => ({ values: insertValues }));
 
+  const deleteReturning = vi.fn();
+  const deleteWhere = vi.fn(() => ({ returning: deleteReturning }));
+  const deleteFn = vi.fn(() => ({ where: deleteWhere }));
+
   return {
     query: {
       users: {
@@ -29,6 +33,7 @@ function createDbMock() {
     },
     update,
     insert,
+    delete: deleteFn,
     _mocks: {
       queryFindFirst,
       updateReturning,
@@ -37,6 +42,9 @@ function createDbMock() {
       insertReturning,
       insertOnConflictDoNothing,
       insertValues,
+      deleteReturning,
+      deleteWhere,
+      deleteFn,
     },
   } as const;
 }
@@ -332,6 +340,27 @@ describe('DrizzleUserRepository', () => {
       const promise = repo.upsertByClerkId('clerk_1', 'new@example.com');
       await expect(promise).rejects.toBeInstanceOf(ApplicationError);
       await expect(promise).rejects.toMatchObject({ code: 'INTERNAL_ERROR' });
+    });
+  });
+
+  describe('deleteByClerkId', () => {
+    it('returns false when no user row exists', async () => {
+      const db = createDbMock();
+      db._mocks.deleteReturning.mockResolvedValue([]);
+
+      const repo = new DrizzleUserRepository(db as unknown as RepoDb);
+
+      await expect(repo.deleteByClerkId('clerk_1')).resolves.toBe(false);
+    });
+
+    it('returns true when a user row is deleted', async () => {
+      const db = createDbMock();
+      db._mocks.deleteReturning.mockResolvedValue([{ id: 'user_1' }]);
+
+      const repo = new DrizzleUserRepository(db as unknown as RepoDb);
+
+      await expect(repo.deleteByClerkId('clerk_1')).resolves.toBe(true);
+      expect(db._mocks.deleteFn).toHaveBeenCalledTimes(1);
     });
   });
 });

@@ -212,4 +212,13 @@ export interface UserRepository {
    * This handles race conditions with ON CONFLICT gracefully.
    */
   upsertByClerkId(clerkId: string, email: string): Promise<User>;
+
+  /**
+   * Delete a user by their external Clerk ID.
+   *
+   * Returns:
+   * - true when a user row was deleted
+   * - false when no user row existed
+   */
+  deleteByClerkId(clerkId: string): Promise<boolean>;
 }

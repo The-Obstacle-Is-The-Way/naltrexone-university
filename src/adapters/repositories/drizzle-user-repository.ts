@@ -133,4 +133,13 @@ export class DrizzleUserRepository implements UserRepository {
       throw this.mapDbError(error);
     }
   }
+
+  async deleteByClerkId(clerkId: string): Promise<boolean> {
+    const [deleted] = await this.db
+      .delete(users)
+      .where(eq(users.clerkUserId, clerkId))
+      .returning({ id: users.id });
+
+    return !!deleted;
+  }
 }
