@@ -1,12 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import type { PaymentGateway } from '@/src/application/ports/gateways';
-import type { StripeCustomerRepository } from '@/src/application/ports/repositories';
+import type {
+  StripeCustomerRepository,
+  SubscriptionRepository,
+} from '@/src/application/ports/repositories';
 import {
   FakeAuthGateway,
   FakePaymentGateway,
+  FakeSubscriptionRepository,
 } from '@/src/application/test-helpers/fakes';
 import type { User } from '@/src/domain/entities';
-import { createUser } from '@/src/domain/test-helpers';
+import { createSubscription, createUser } from '@/src/domain/test-helpers';
 import {
   createCheckoutSession,
   createPortalSession,
@@ -46,6 +50,8 @@ function createDeps(overrides?: {
   stripeCustomerId?: string | null;
   paymentGateway?: PaymentGateway;
   stripeCustomerRepository?: StripeCustomerRepository;
+  subscriptionRepository?: SubscriptionRepository;
+  now?: () => Date;
 }) {
   const user =
     overrides?.user === undefined
@@ -85,12 +91,17 @@ function createDeps(overrides?: {
       },
     });
 
+  const subscriptionRepository =
+    overrides?.subscriptionRepository ?? new FakeSubscriptionRepository();
+
   return {
     authGateway,
     stripeCustomerRepository,
+    subscriptionRepository,
     paymentGateway,
     getClerkUserId: async () => clerkUserId,
     appUrl,
+    now: overrides?.now ?? (() => new Date('2026-02-01T00:00:00Z')),
   };
 }
 
@@ -125,6 +136,42 @@ describe('billing-controller', () => {
         ok: false,
         error: { code: 'UNAUTHENTICATED' },
       });
+    });
+
+    it('returns ALREADY_SUBSCRIBED when subscription is still active', async () => {
+      const paymentGateway = new FakePaymentGateway({
+        stripeCustomerId: 'cus_new',
+        checkoutUrl: 'https://stripe/checkout',
+        portalUrl: 'https://stripe/portal',
+        webhookResult: { eventId: 'evt_1', type: 'checkout.session.completed' },
+      });
+
+      const subscriptionRepository = new FakeSubscriptionRepository([
+        createSubscription({
+          userId: 'user_1',
+          status: 'active',
+          currentPeriodEnd: new Date('2026-03-01T00:00:00Z'),
+        }),
+      ]);
+
+      const deps = createDeps({
+        paymentGateway,
+        subscriptionRepository,
+        now: () => new Date('2026-02-01T00:00:00Z'),
+      });
+
+      const result = await createCheckoutSession(
+        { plan: 'monthly' },
+        deps as never,
+      );
+
+      expect(result).toMatchObject({
+        ok: false,
+        error: { code: 'ALREADY_SUBSCRIBED' },
+      });
+
+      expect(paymentGateway.customerInputs).toEqual([]);
+      expect(paymentGateway.checkoutInputs).toEqual([]);
     });
 
     it('uses existing stripe customer mapping when available', async () => {

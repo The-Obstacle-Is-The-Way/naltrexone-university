@@ -1,6 +1,6 @@
 # DEBT-072: Drizzle Subquery Join Pattern Causes Ambiguous Columns
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P2
 **Date:** 2026-02-02
 
@@ -55,16 +55,15 @@ Generated SQL has unqualified `answered_at`:
 
 ## Resolution
 
-1. **Audit existing queries** — Search for `.as('...')` with joins
-2. **Use unique aliases** — Avoid column names that exist in joined tables
-3. **Consider raw SQL** — For complex queries, use `sql` template tag with explicit qualification
-4. **Add integration tests** — Every repository method with joins needs integration test coverage
+1. **Audit existing queries** — Search for `.as('...')` with joins (only `listMissedQuestionsByUserId` was affected)
+2. **Use unique aliases** — Avoid aliases that collide with joined table columns (e.g., `max_answered_at` instead of `answered_at`)
+3. **Add integration coverage** — Add an integration test that executes the query against real Postgres
 
 ## Verification
 
-- [ ] All `.as()` aliases are unique and don't collide with joined table columns
-- [ ] Integration tests cover all subquery join patterns
-- [ ] BUG-046 fixed
+- [x] Aggregate alias is unique (`max_answered_at`), no collision with `attempts.answered_at`
+- [x] Integration test covers the query path (`tests/integration/repositories.integration.test.ts`)
+- [x] BUG-046 fixed
 
 ## Related
 

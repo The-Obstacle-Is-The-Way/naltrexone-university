@@ -1,6 +1,6 @@
 # DEBT-073: Pricing Page Shows Subscribe Buttons to Already-Subscribed Users
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P2
 **Date:** 2026-02-02
 
@@ -8,13 +8,12 @@
 
 ## Description
 
-The pricing page (`/pricing`) shows "Subscribe" buttons to users who already have an active subscription. This is a UX issue and contributes to BUG-047 (multiple subscriptions).
+The pricing page (`/pricing`) should not offer "Subscribe" actions to already-entitled users. This is both a UX issue and a defense-in-depth measure for BUG-047.
 
 ## Current Behavior
 
-- User with active subscription visits /pricing
-- Page shows "Monthly $29" and "Annual $199" subscribe buttons
-- Clicking creates a new checkout session → duplicate subscription
+- **Subscribed users** see a dedicated “You’re already subscribed” panel with links to Dashboard and Billing.
+- **Unsubscribed users** see the Subscribe buttons.
 
 ## Expected Behavior
 
@@ -31,29 +30,15 @@ For subscribed users, the pricing page should either:
 
 ## Resolution
 
-1. **Check subscription status** in pricing page server component
-2. **Conditionally render** different UI for subscribed vs unsubscribed users
-3. **Add redirect** — subscribed users going to /pricing could redirect to /app/billing
-
-```typescript
-// app/(marketing)/pricing/page.tsx
-export default async function PricingPage() {
-  const subscription = await getSubscription();
-
-  if (subscription?.status === 'active') {
-    return <SubscribedPricingView subscription={subscription} />;
-    // Or: redirect('/app/billing');
-  }
-
-  return <UnsubscribedPricingView />;
-}
-```
+1. **Conditionally render** based on entitlement (`app/pricing/pricing-view.tsx`).
+2. **Defense in depth:** if a stale UI submits anyway, server action redirects already-subscribed users to `/app/billing` (`app/pricing/subscribe-action.ts`).
+3. **Backend guard:** refuse to create a checkout session when a current subscription exists (BUG-047 fix in `src/adapters/controllers/billing-controller.ts`).
 
 ## Verification
 
-- [ ] Subscribed users see different pricing page
-- [ ] Cannot accidentally create duplicate subscription from UI
-- [ ] BUG-047 backend protection also in place (defense in depth)
+- [x] Subscribed users see different pricing page
+- [x] Subscribe actions are not presented to entitled users
+- [x] Backend protection exists (BUG-047)
 
 ## Related
 

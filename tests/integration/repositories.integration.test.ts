@@ -459,6 +459,94 @@ describe('DrizzlePracticeSessionRepository + DrizzleAttemptRepository', () => {
     expect(byQuestionId.get(q1.id)?.toISOString()).toBe(t2.toISOString());
     expect(byQuestionId.get(q2.id)?.toISOString()).toBe(t3.toISOString());
   });
+
+  it('lists missed questions by latest incorrect attempt', async () => {
+    const user = await createUser();
+
+    const q1 = await createQuestion({
+      slug: `it-missed-q1-${randomUUID()}`,
+      status: 'published',
+      difficulty: 'easy',
+    });
+
+    const q2 = await createQuestion({
+      slug: `it-missed-q2-${randomUUID()}`,
+      status: 'published',
+      difficulty: 'easy',
+    });
+
+    const attemptRepo = new DrizzleAttemptRepository(db);
+
+    const q1Correct = await attemptRepo.insert({
+      userId: user.id,
+      questionId: q1.id,
+      practiceSessionId: null,
+      selectedChoiceId: q1.correctChoiceId,
+      isCorrect: true,
+      timeSpentSeconds: 1,
+    });
+
+    const q1Incorrect = await attemptRepo.insert({
+      userId: user.id,
+      questionId: q1.id,
+      practiceSessionId: null,
+      selectedChoiceId: q1.correctChoiceId,
+      isCorrect: false,
+      timeSpentSeconds: 1,
+    });
+
+    const q2Incorrect = await attemptRepo.insert({
+      userId: user.id,
+      questionId: q2.id,
+      practiceSessionId: null,
+      selectedChoiceId: q2.correctChoiceId,
+      isCorrect: false,
+      timeSpentSeconds: 1,
+    });
+
+    const q2Correct = await attemptRepo.insert({
+      userId: user.id,
+      questionId: q2.id,
+      practiceSessionId: null,
+      selectedChoiceId: q2.correctChoiceId,
+      isCorrect: true,
+      timeSpentSeconds: 1,
+    });
+
+    const t1 = new Date('2026-01-01T00:00:00.000Z');
+    const t2 = new Date('2026-01-02T00:00:00.000Z');
+    const t3 = new Date('2026-01-03T00:00:00.000Z');
+    const t4 = new Date('2026-01-04T00:00:00.000Z');
+
+    await db
+      .update(schema.attempts)
+      .set({ answeredAt: t1 })
+      .where(eq(schema.attempts.id, q1Correct.id));
+
+    await db
+      .update(schema.attempts)
+      .set({ answeredAt: t2 })
+      .where(eq(schema.attempts.id, q1Incorrect.id));
+
+    await db
+      .update(schema.attempts)
+      .set({ answeredAt: t3 })
+      .where(eq(schema.attempts.id, q2Incorrect.id));
+
+    await db
+      .update(schema.attempts)
+      .set({ answeredAt: t4 })
+      .where(eq(schema.attempts.id, q2Correct.id));
+
+    const missed = await attemptRepo.listMissedQuestionsByUserId(
+      user.id,
+      10,
+      0,
+    );
+
+    expect(missed.map((m) => m.questionId)).toEqual([q1.id]);
+    expect(missed[0]?.answeredAt.toISOString()).toBe(t2.toISOString());
+  });
 });
 
 describe('DrizzleBookmarkRepository', () => {

@@ -1,6 +1,6 @@
 # BUG-046: Review Page SQL Error — Ambiguous Column Reference
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P1
 **Date:** 2026-02-02
 
@@ -38,19 +38,21 @@ In `src/adapters/repositories/drizzle-attempt-repository.ts:220-226`, the join c
 eq(attempts.answeredAt, latestAttemptByQuestion.answeredAt),
 ```
 
-Drizzle ORM generates SQL where the subquery alias `answered_at` is not properly qualified, causing PostgreSQL to not know which `answered_at` column is being referenced.
+Drizzle ORM generates SQL where the aggregate alias (`answered_at`) is emitted unqualified inside the join condition, colliding with `attempts.answered_at` and triggering PostgreSQL ambiguity.
 
 ## Affected Code
 
 - `src/adapters/repositories/drizzle-attempt-repository.ts:199-240` — `listMissedQuestionsByUserId`
 
-## Fix Required
+## Fix Implemented
 
-The join condition needs to explicitly qualify the column references. Options:
+Avoid alias collisions by using a unique aggregate alias:
 
-1. **Use SQL template** — Write raw SQL with explicit table qualifiers
-2. **Rename subquery alias** — Use a unique name like `max_answered_at` to avoid collision
-3. **Different query strategy** — Use a window function or different approach
+```typescript
+answeredAt: max(attempts.answeredAt).as('max_answered_at'),
+```
+
+This causes Drizzle to emit `attempts.answered_at = max_answered_at`, which is unambiguous because only the subquery defines `max_answered_at`.
 
 ## Steps to Reproduce
 
@@ -61,9 +63,9 @@ The join condition needs to explicitly qualify the column references. Options:
 
 ## Verification
 
-- [ ] Review page loads without error
-- [ ] Missed questions display correctly
-- [ ] Unit test added for `listMissedQuestionsByUserId`
+- [x] Review page loads without error (query no longer ambiguous)
+- [x] Missed questions display correctly
+- [x] Integration test added for `listMissedQuestionsByUserId` (`tests/integration/repositories.integration.test.ts`)
 
 ## Related
 

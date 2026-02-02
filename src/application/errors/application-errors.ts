@@ -1,5 +1,6 @@
 export const ApplicationErrorCodes = [
   'UNAUTHENTICATED',
+  'ALREADY_SUBSCRIBED',
   'UNSUBSCRIBED',
   'VALIDATION_ERROR',
   'NOT_FOUND',

@@ -8,7 +8,11 @@ import type {
   AuthGateway,
   PaymentGateway,
 } from '@/src/application/ports/gateways';
-import type { StripeCustomerRepository } from '@/src/application/ports/repositories';
+import type {
+  StripeCustomerRepository,
+  SubscriptionRepository,
+} from '@/src/application/ports/repositories';
+import { isEntitled } from '@/src/domain/services';
 import type { ActionResult } from './action-result';
 import { err, handleError, ok } from './action-result';
 
@@ -28,9 +32,11 @@ export type CreatePortalSessionOutput = { url: string };
 export type BillingControllerDeps = {
   authGateway: AuthGateway;
   stripeCustomerRepository: StripeCustomerRepository;
+  subscriptionRepository: SubscriptionRepository;
   paymentGateway: PaymentGateway;
   getClerkUserId: () => Promise<string | null>;
   appUrl: string;
+  now: () => Date;
 };
 
 const getDeps = createDepsResolver((container) =>
@@ -89,6 +95,14 @@ export async function createCheckoutSession(
   try {
     const d = await getDeps(deps);
     const user = await d.authGateway.requireUser();
+
+    const subscription = await d.subscriptionRepository.findByUserId(user.id);
+    if (isEntitled(subscription, d.now())) {
+      throw new ApplicationError(
+        'ALREADY_SUBSCRIBED',
+        'Subscription already exists for this user',
+      );
+    }
 
     const stripeCustomerId = await getOrCreateStripeCustomerId(d, {
       userId: user.id,

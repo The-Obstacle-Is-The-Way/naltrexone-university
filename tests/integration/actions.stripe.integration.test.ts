@@ -13,6 +13,7 @@ import { DrizzleStripeCustomerRepository } from '@/src/adapters/repositories/dri
 import {
   FakeAuthGateway,
   FakePaymentGateway,
+  FakeSubscriptionRepository,
 } from '@/src/application/test-helpers/fakes';
 import type { User } from '@/src/domain/entities';
 
@@ -91,9 +92,11 @@ describe('billing controllers (integration)', () => {
       {
         authGateway: new FakeAuthGateway(user),
         stripeCustomerRepository,
+        subscriptionRepository: new FakeSubscriptionRepository(),
         paymentGateway,
         getClerkUserId: async () => user.clerkUserId,
         appUrl: 'http://localhost:3000',
+        now: () => new Date('2026-02-01T00:00:00.000Z'),
       },
     );
 
@@ -139,9 +142,11 @@ describe('billing controllers (integration)', () => {
       {
         authGateway: new FakeAuthGateway(user),
         stripeCustomerRepository,
+        subscriptionRepository: new FakeSubscriptionRepository(),
         paymentGateway,
         getClerkUserId: async () => user.clerkUserId,
         appUrl: 'http://localhost:3000',
+        now: () => new Date('2026-02-01T00:00:00.000Z'),
       },
     );
 
@@ -150,9 +155,11 @@ describe('billing controllers (integration)', () => {
       {
         authGateway: new FakeAuthGateway(user),
         stripeCustomerRepository,
+        subscriptionRepository: new FakeSubscriptionRepository(),
         paymentGateway,
         getClerkUserId: async () => user.clerkUserId,
         appUrl: 'http://localhost:3000',
+        now: () => new Date('2026-02-01T00:00:00.000Z'),
       },
     );
 

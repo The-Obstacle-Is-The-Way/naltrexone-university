@@ -1,6 +1,6 @@
 # BUG-047: Multiple Subscriptions Created Per User
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P1
 **Date:** 2026-02-02
 
@@ -51,29 +51,27 @@ This does NOT prevent users who already have an active subscription from creatin
 
 ## Fix Required
 
-Before creating a checkout session, check if the user already has an active subscription:
+This needs **defense in depth**:
+
+1. **UI** — hide Subscribe actions for entitled users (already implemented in `app/pricing/pricing-view.tsx`).
+2. **Backend** — refuse to create a new checkout session when a subscription is still current in our DB.
+
+Implemented backend guard in `src/adapters/controllers/billing-controller.ts`:
 
 ```typescript
-// Option 1: Check subscription status in our DB
-const existingSubscription = await subscriptionRepo.findByUserId(userId);
-if (existingSubscription?.status === 'active') {
-  throw new ApplicationError('ALREADY_SUBSCRIBED', 'User already has an active subscription');
-}
-
-// Option 2: Check Stripe directly
-const subscriptions = await stripe.subscriptions.list({
-  customer: stripeCustomerId,
-  status: 'active',
-  limit: 1,
-});
-if (subscriptions.data.length > 0) {
-  throw new ApplicationError('ALREADY_SUBSCRIBED', 'User already has an active subscription');
+const subscription = await d.subscriptionRepository.findByUserId(user.id);
+if (isEntitled(subscription, d.now())) {
+  throw new ApplicationError('ALREADY_SUBSCRIBED', 'Subscription already exists for this user');
 }
 ```
 
-Also consider:
-- UI should hide/disable Subscribe buttons for subscribed users
-- Redirect subscribed users from /pricing to /app/billing
+Implemented redirect in `app/pricing/subscribe-action.ts` so stale UI / manual calls land users in billing management:
+
+```typescript
+if (result.error.code === 'ALREADY_SUBSCRIBED') {
+  return deps.redirectFn('/app/billing');
+}
+```
 
 ## Steps to Reproduce
 
@@ -87,10 +85,9 @@ Also consider:
 
 ## Verification
 
-- [ ] Cannot create checkout session when user has active subscription
-- [ ] Pricing page shows "Manage Subscription" instead of "Subscribe" for active users
-- [ ] Unit test added for subscription-exists check
-- [ ] Manual test: cannot create duplicate subscription
+- [x] Cannot create checkout session when a current subscription exists (DB-backed guard)
+- [x] Pricing page hides Subscribe actions for entitled users (UI already in place)
+- [x] Unit tests cover already-subscribed behavior (billing controller + subscribe action)
 
 ## Related
 

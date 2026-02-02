@@ -204,7 +204,7 @@ export class DrizzleAttemptRepository implements AttemptRepository {
     const latestAttemptByQuestion = this.db
       .select({
         questionId: attempts.questionId,
-        answeredAt: max(attempts.answeredAt).as('answered_at'),
+        answeredAt: max(attempts.answeredAt).as('max_answered_at'),
       })
       .from(attempts)
       .where(eq(attempts.userId, userId))

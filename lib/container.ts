@@ -237,9 +237,11 @@ export function createContainer(overrides: ContainerOverrides = {}) {
     createBillingControllerDeps: () => ({
       authGateway: gateways.createAuthGateway(),
       stripeCustomerRepository: repositories.createStripeCustomerRepository(),
+      subscriptionRepository: repositories.createSubscriptionRepository(),
       paymentGateway: gateways.createPaymentGateway(),
       getClerkUserId: async () => (await currentUser())?.id ?? null,
       appUrl: primitives.env.NEXT_PUBLIC_APP_URL,
+      now: primitives.now,
     }),
     createBookmarkControllerDeps: () => ({
       authGateway: gateways.createAuthGateway(),

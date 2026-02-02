@@ -236,6 +236,31 @@ describe('app/pricing', () => {
     expect(createCheckoutSessionFn).toHaveBeenCalledWith({ plan: 'annual' });
   });
 
+  it('runSubscribeAction redirects to /app/billing when already subscribed', async () => {
+    const { runSubscribeAction } = await import('./page');
+
+    const createCheckoutSessionFn = vi.fn(async () => ({
+      ok: false,
+      error: { code: 'ALREADY_SUBSCRIBED', message: 'Already subscribed' },
+    }));
+
+    const redirectFn = vi.fn((url: string) => {
+      throw new Error(url);
+    }) as unknown as (url: string) => never;
+
+    const action = async () =>
+      runSubscribeAction(
+        { plan: 'monthly' },
+        {
+          createCheckoutSessionFn: createCheckoutSessionFn as never,
+          redirectFn,
+        },
+      );
+
+    await expect(action()).rejects.toThrow('/app/billing');
+    expect(createCheckoutSessionFn).toHaveBeenCalledWith({ plan: 'monthly' });
+  });
+
   it('runSubscribeAction redirects to /pricing?checkout=error for other errors', async () => {
     const { runSubscribeAction } = await import('./page');
 

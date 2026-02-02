@@ -184,9 +184,13 @@ describe('container factories', () => {
     expect(billingDeps.stripeCustomerRepository).toBeInstanceOf(
       DrizzleStripeCustomerRepository,
     );
+    expect(billingDeps.subscriptionRepository).toBeInstanceOf(
+      DrizzleSubscriptionRepository,
+    );
     expect(billingDeps.paymentGateway).toBeInstanceOf(StripePaymentGateway);
     expect(typeof billingDeps.getClerkUserId).toBe('function');
     expect(billingDeps.appUrl).toBe('https://app.example.com');
+    expect(typeof billingDeps.now).toBe('function');
 
     const bookmarkDeps = container.createBookmarkControllerDeps();
     expect(bookmarkDeps.authGateway).toBeInstanceOf(ClerkAuthGateway);

@@ -27,6 +27,10 @@ export async function runSubscribeAction(
     return deps.redirectFn('/sign-up');
   }
 
+  if (result.error.code === 'ALREADY_SUBSCRIBED') {
+    return deps.redirectFn('/app/billing');
+  }
+
   deps.logError?.(
     {
       plan: input.plan,
