@@ -20,6 +20,10 @@ import { err, handleError, ok } from './action-result';
 
 const GetUserStatsInputSchema = z.object({}).strict();
 
+const STATS_WINDOW_DAYS = 7;
+const STREAK_WINDOW_DAYS = 60;
+const RECENT_ACTIVITY_LIMIT = 20;
+
 type CheckEntitlementUseCase = {
   execute: (input: CheckEntitlementInput) => Promise<CheckEntitlementOutput>;
 };
@@ -89,7 +93,11 @@ export async function getUserStats(
     const accuracyOverall = computeAccuracy(totalAnswered, correctOverall);
 
     const now = d.now();
-    const attemptsLast7Days = filterAttemptsInWindow(attempts, 7, now);
+    const attemptsLast7Days = filterAttemptsInWindow(
+      attempts,
+      STATS_WINDOW_DAYS,
+      now,
+    );
     const answeredLast7Days = attemptsLast7Days.length;
     const correctLast7Days = attemptsLast7Days.filter(
       (a) => a.isCorrect,
@@ -99,7 +107,11 @@ export async function getUserStats(
       correctLast7Days,
     );
 
-    const attemptsLast60Days = filterAttemptsInWindow(attempts, 60, now);
+    const attemptsLast60Days = filterAttemptsInWindow(
+      attempts,
+      STREAK_WINDOW_DAYS,
+      now,
+    );
     const currentStreakDays = computeStreak(
       attemptsLast60Days.map((a) => a.answeredAt),
       now,
@@ -108,7 +120,7 @@ export async function getUserStats(
     const sortedAttempts = attempts
       .slice()
       .sort((a, b) => b.answeredAt.getTime() - a.answeredAt.getTime());
-    const recentAttempts = sortedAttempts.slice(0, 20);
+    const recentAttempts = sortedAttempts.slice(0, RECENT_ACTIVITY_LIMIT);
 
     const uniqueQuestionIds: string[] = [];
     const seen = new Set<string>();

@@ -94,13 +94,12 @@ export async function toggleBookmark(
       return err('NOT_FOUND', 'Question not found');
     }
 
-    const exists = await d.bookmarkRepository.exists(
+    const wasRemoved = await d.bookmarkRepository.remove(
       userId,
       parsed.data.questionId,
     );
 
-    if (exists) {
-      await d.bookmarkRepository.remove(userId, parsed.data.questionId);
+    if (wasRemoved) {
       return ok({ bookmarked: false });
     }
 

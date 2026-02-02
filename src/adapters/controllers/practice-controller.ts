@@ -1,6 +1,11 @@
 'use server';
 
 import { z } from 'zod';
+import {
+  MAX_PRACTICE_SESSION_DIFFICULTY_FILTERS,
+  MAX_PRACTICE_SESSION_QUESTIONS,
+  MAX_PRACTICE_SESSION_TAG_FILTERS,
+} from '@/src/adapters/repositories/practice-session-limits';
 import type { AuthGateway } from '@/src/application/ports/gateways';
 import type {
   AttemptRepository,
@@ -16,11 +21,6 @@ import {
   createSeed,
   shuffleWithSeed,
 } from '@/src/domain/services';
-import {
-  MAX_PRACTICE_SESSION_DIFFICULTY_FILTERS,
-  MAX_PRACTICE_SESSION_QUESTIONS,
-  MAX_PRACTICE_SESSION_TAG_FILTERS,
-} from '../repositories/practice-session-limits';
 import type { ActionResult } from './action-result';
 import { err, handleError, ok } from './action-result';
 

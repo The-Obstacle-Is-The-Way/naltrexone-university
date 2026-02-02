@@ -85,7 +85,14 @@ export interface PracticeSessionRepository {
 export interface BookmarkRepository {
   exists(userId: string, questionId: string): Promise<boolean>;
   add(userId: string, questionId: string): Promise<Bookmark>;
-  remove(userId: string, questionId: string): Promise<void>;
+  /**
+   * Remove the bookmark if it exists.
+   *
+   * Returns:
+   * - true when a bookmark was removed
+   * - false when it was already absent
+   */
+  remove(userId: string, questionId: string): Promise<boolean>;
   listByUserId(userId: string): Promise<readonly Bookmark[]>;
 }
 

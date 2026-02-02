@@ -15,7 +15,8 @@ function createDbMock() {
   }));
   const insert = vi.fn(() => ({ values: insertValues }));
 
-  const deleteWhere = vi.fn(async () => undefined);
+  const deleteReturning = vi.fn();
+  const deleteWhere = vi.fn(() => ({ returning: deleteReturning }));
   const deleteFn = vi.fn(() => ({ where: deleteWhere }));
 
   return {
@@ -33,6 +34,7 @@ function createDbMock() {
       insertReturning,
       insertOnConflict,
       insertValues,
+      deleteReturning,
       deleteWhere,
       deleteFn,
     },
@@ -122,15 +124,24 @@ describe('DrizzleBookmarkRepository', () => {
   });
 
   describe('remove', () => {
-    it('issues a delete for the bookmark', async () => {
+    it('returns true when a bookmark was removed', async () => {
       const db = createDbMock();
+      db._mocks.deleteReturning.mockResolvedValue([
+        { userId: 'user_1', questionId: 'question_1' },
+      ]);
       const repo = new DrizzleBookmarkRepository(db as unknown as RepoDb);
 
-      await expect(
-        repo.remove('user_1', 'question_1'),
-      ).resolves.toBeUndefined();
+      await expect(repo.remove('user_1', 'question_1')).resolves.toBe(true);
       expect(db._mocks.deleteFn).toHaveBeenCalledTimes(1);
       expect(db._mocks.deleteWhere).toHaveBeenCalledTimes(1);
+    });
+
+    it('returns false when the bookmark is already absent', async () => {
+      const db = createDbMock();
+      db._mocks.deleteReturning.mockResolvedValue([]);
+      const repo = new DrizzleBookmarkRepository(db as unknown as RepoDb);
+
+      await expect(repo.remove('user_1', 'question_1')).resolves.toBe(false);
     });
   });
 

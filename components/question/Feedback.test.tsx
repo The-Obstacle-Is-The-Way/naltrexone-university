@@ -1,9 +1,7 @@
 // @vitest-environment jsdom
-'use client';
-
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
-import { Feedback } from './Feedback';
+import { Feedback } from '@/components/question/Feedback';
 
 describe('Feedback', () => {
   it('renders correct feedback with explanation', () => {

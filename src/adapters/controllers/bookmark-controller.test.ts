@@ -5,15 +5,10 @@ import type {
   BookmarkRepository,
   QuestionRepository,
 } from '@/src/application/ports/repositories';
-import type { Bookmark, Question } from '@/src/domain/entities';
+import type { Bookmark, Question, User } from '@/src/domain/entities';
 import { getBookmarks, toggleBookmark } from './bookmark-controller';
 
-type UserLike = {
-  id: string;
-  email: string;
-  createdAt: Date;
-  updatedAt: Date;
-};
+type UserLike = User;
 
 function createUser(): UserLike {
   return {
@@ -55,7 +50,7 @@ function createDeps(overrides?: {
   authGateway?: Partial<AuthGateway>;
   isEntitled?: boolean;
   question?: Question | null;
-  bookmarkExists?: boolean;
+  bookmarkWasRemoved?: boolean;
   bookmarks?: readonly Bookmark[];
   questionsById?: Record<string, Question>;
 }) {
@@ -67,7 +62,7 @@ function createDeps(overrides?: {
       id: '11111111-1111-1111-1111-111111111111',
       slug: 'q-1',
     });
-  const bookmarkExists = overrides?.bookmarkExists ?? false;
+  const bookmarkWasRemoved = overrides?.bookmarkWasRemoved ?? false;
   const bookmarks = overrides?.bookmarks ?? [
     createBookmark({
       questionId: '11111111-1111-1111-1111-111111111111',
@@ -79,8 +74,8 @@ function createDeps(overrides?: {
   };
 
   const authGateway: AuthGateway = {
-    getCurrentUser: async () => user as never,
-    requireUser: async () => user as never,
+    getCurrentUser: async () => user,
+    requireUser: async () => user,
     ...overrides?.authGateway,
   };
 
@@ -89,11 +84,11 @@ function createDeps(overrides?: {
   };
 
   const bookmarkRepository: BookmarkRepository = {
-    exists: vi.fn(async () => bookmarkExists),
+    exists: vi.fn(async () => false),
     add: vi.fn(async () =>
       createBookmark({ questionId: '11111111-1111-1111-1111-111111111111' }),
     ),
-    remove: vi.fn(async () => undefined),
+    remove: vi.fn(async () => bookmarkWasRemoved),
     listByUserId: vi.fn(async () => bookmarks),
   };
 
@@ -119,10 +114,7 @@ describe('bookmark-controller', () => {
     it('returns VALIDATION_ERROR when input is invalid', async () => {
       const deps = createDeps();
 
-      const result = await toggleBookmark(
-        { questionId: 'not-a-uuid' },
-        deps as never,
-      );
+      const result = await toggleBookmark({ questionId: 'not-a-uuid' }, deps);
 
       expect(result).toMatchObject({
         ok: false,
@@ -144,7 +136,7 @@ describe('bookmark-controller', () => {
 
       const result = await toggleBookmark(
         { questionId: '11111111-1111-1111-1111-111111111111' },
-        deps as never,
+        deps,
       );
 
       expect(result).toMatchObject({
@@ -158,7 +150,7 @@ describe('bookmark-controller', () => {
 
       const result = await toggleBookmark(
         { questionId: '11111111-1111-1111-1111-111111111111' },
-        deps as never,
+        deps,
       );
 
       expect(result).toMatchObject({
@@ -166,6 +158,7 @@ describe('bookmark-controller', () => {
         error: { code: 'UNSUBSCRIBED' },
       });
       expect(deps.bookmarkRepository.exists).not.toHaveBeenCalled();
+      expect(deps.bookmarkRepository.remove).not.toHaveBeenCalled();
     });
 
     it('returns NOT_FOUND when question does not exist', async () => {
@@ -173,7 +166,7 @@ describe('bookmark-controller', () => {
 
       const result = await toggleBookmark(
         { questionId: '11111111-1111-1111-1111-111111111111' },
-        deps as never,
+        deps,
       );
 
       expect(result).toEqual({
@@ -181,16 +174,33 @@ describe('bookmark-controller', () => {
         error: { code: 'NOT_FOUND', message: 'Question not found' },
       });
       expect(deps.bookmarkRepository.exists).not.toHaveBeenCalled();
+      expect(deps.bookmarkRepository.remove).not.toHaveBeenCalled();
     });
 
     it('removes the bookmark when it exists', async () => {
-      const deps = createDeps({ bookmarkExists: true });
+      const deps = createDeps({ bookmarkWasRemoved: true });
       const questionId = '11111111-1111-1111-1111-111111111111';
 
-      const result = await toggleBookmark({ questionId }, deps as never);
+      const result = await toggleBookmark({ questionId }, deps);
 
       expect(result).toEqual({ ok: true, data: { bookmarked: false } });
-      expect(deps.bookmarkRepository.exists).toHaveBeenCalledWith(
+      expect(deps.bookmarkRepository.remove).toHaveBeenCalledWith(
+        'user_1',
+        questionId,
+      );
+      expect(deps.bookmarkRepository.add).not.toHaveBeenCalled();
+      expect(deps.bookmarkRepository.exists).not.toHaveBeenCalled();
+    });
+
+    it('adds the bookmark when it does not exist', async () => {
+      const deps = createDeps({ bookmarkWasRemoved: false });
+      const questionId = '11111111-1111-1111-1111-111111111111';
+
+      const result = await toggleBookmark({ questionId }, deps);
+
+      expect(result).toEqual({ ok: true, data: { bookmarked: true } });
+      expect(deps.bookmarkRepository.exists).not.toHaveBeenCalled();
+      expect(deps.bookmarkRepository.add).toHaveBeenCalledWith(
         'user_1',
         questionId,
       );
@@ -198,25 +208,6 @@ describe('bookmark-controller', () => {
         'user_1',
         questionId,
       );
-      expect(deps.bookmarkRepository.add).not.toHaveBeenCalled();
-    });
-
-    it('adds the bookmark when it does not exist', async () => {
-      const deps = createDeps({ bookmarkExists: false });
-      const questionId = '11111111-1111-1111-1111-111111111111';
-
-      const result = await toggleBookmark({ questionId }, deps as never);
-
-      expect(result).toEqual({ ok: true, data: { bookmarked: true } });
-      expect(deps.bookmarkRepository.exists).toHaveBeenCalledWith(
-        'user_1',
-        questionId,
-      );
-      expect(deps.bookmarkRepository.add).toHaveBeenCalledWith(
-        'user_1',
-        questionId,
-      );
-      expect(deps.bookmarkRepository.remove).not.toHaveBeenCalled();
     });
   });
 
@@ -224,7 +215,7 @@ describe('bookmark-controller', () => {
     it('returns VALIDATION_ERROR when input is invalid', async () => {
       const deps = createDeps();
 
-      const result = await getBookmarks({ unexpected: true }, deps as never);
+      const result = await getBookmarks({ unexpected: true }, deps);
 
       expect(result).toMatchObject({
         ok: false,
@@ -235,7 +226,7 @@ describe('bookmark-controller', () => {
     it('returns UNSUBSCRIBED when not entitled', async () => {
       const deps = createDeps({ isEntitled: false });
 
-      const result = await getBookmarks({}, deps as never);
+      const result = await getBookmarks({}, deps);
 
       expect(result).toMatchObject({
         ok: false,
@@ -269,7 +260,7 @@ describe('bookmark-controller', () => {
 
       const deps = createDeps({ bookmarks, questionsById });
 
-      const result = await getBookmarks({}, deps as never);
+      const result = await getBookmarks({}, deps);
 
       expect(result).toEqual({
         ok: true,

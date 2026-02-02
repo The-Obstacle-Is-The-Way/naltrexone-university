@@ -10,7 +10,7 @@ This document exists because we got burned. Every claim is validated against off
 
 Tests pass locally but fail in git hooks / CI with:
 
-```
+```text
 TypeError: React.act is not a function
 ```
 

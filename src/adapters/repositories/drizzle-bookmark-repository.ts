@@ -53,12 +53,15 @@ export class DrizzleBookmarkRepository implements BookmarkRepository {
     };
   }
 
-  async remove(userId: string, questionId: string): Promise<void> {
-    await this.db
+  async remove(userId: string, questionId: string): Promise<boolean> {
+    const deleted = await this.db
       .delete(bookmarks)
       .where(
         and(eq(bookmarks.userId, userId), eq(bookmarks.questionId, questionId)),
-      );
+      )
+      .returning({ questionId: bookmarks.questionId });
+
+    return deleted.length > 0;
   }
 
   async listByUserId(userId: string) {

@@ -6,19 +6,14 @@ import type {
   PracticeSessionRepository,
   QuestionRepository,
 } from '@/src/application/ports/repositories';
-import type { Attempt, PracticeSession } from '@/src/domain/entities';
+import type { Attempt, PracticeSession, User } from '@/src/domain/entities';
 import { createSeed, shuffleWithSeed } from '@/src/domain/services';
 import {
   endPracticeSession,
   startPracticeSession,
 } from './practice-controller';
 
-type UserLike = {
-  id: string;
-  email: string;
-  createdAt: Date;
-  updatedAt: Date;
-};
+type UserLike = User;
 
 function createUser(): UserLike {
   return {
@@ -84,8 +79,8 @@ function createDeps(overrides?: {
   const now = overrides?.now ?? (() => new Date('2026-02-01T00:00:00Z'));
 
   const authGateway: AuthGateway = {
-    getCurrentUser: async () => user as never,
-    requireUser: async () => user as never,
+    getCurrentUser: async () => user,
+    requireUser: async () => user,
     ...overrides?.authGateway,
   };
 

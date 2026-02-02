@@ -5,15 +5,10 @@ import type {
   AttemptRepository,
   QuestionRepository,
 } from '@/src/application/ports/repositories';
-import type { Attempt, Question } from '@/src/domain/entities';
+import type { Attempt, Question, User } from '@/src/domain/entities';
 import { getUserStats } from './stats-controller';
 
-type UserLike = {
-  id: string;
-  email: string;
-  createdAt: Date;
-  updatedAt: Date;
-};
+type UserLike = User;
 
 function createUser(): UserLike {
   return {
@@ -70,8 +65,8 @@ function createDeps(overrides?: {
   const now = overrides?.now ?? (() => new Date('2026-02-01T12:00:00Z'));
 
   const authGateway: AuthGateway = {
-    getCurrentUser: async () => user as never,
-    requireUser: async () => user as never,
+    getCurrentUser: async () => user,
+    requireUser: async () => user,
     ...overrides?.authGateway,
   };
 

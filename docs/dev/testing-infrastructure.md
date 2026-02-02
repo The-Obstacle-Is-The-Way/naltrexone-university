@@ -9,7 +9,7 @@ This document covers our E2E testing tools: Playwright and Vercel's agent-browse
 ## Overview
 
 | Tool | Purpose | When to Use |
-|------|---------|-------------|
+| ---- | ------- | ----------- |
 | **Playwright** | Scripted E2E tests | Regression testing, CI validation |
 | **Agent-Browser** | AI-driven exploration | Autonomous bug discovery, exploratory testing |
 | **Webapp-Testing Skill** | Python Playwright helpers | Complex automation scenarios |
@@ -36,7 +36,7 @@ workers: process.env.CI ? 1 : undefined,
 ### Existing Tests
 
 | File | Purpose |
-|------|---------|
+| ---- | ------- |
 | `tests/e2e/smoke.spec.ts` | Public pages load (home, pricing) |
 | `tests/e2e/dark-mode.spec.ts` | Dark mode toggle and OS preference |
 | `tests/e2e/subscribe-and-practice.spec.ts` | Full user journey (subscribe → practice) |
@@ -164,7 +164,7 @@ Python-based Playwright helpers for complex automation.
 ### Available Scripts
 
 | Script | Purpose |
-|--------|---------|
+| ------ | ------- |
 | `scripts/with_server.py` | Manages server lifecycle during tests |
 
 ### Example Usage
@@ -203,7 +203,7 @@ E2E tests run in CI via Playwright:
 ### Required Secrets
 
 | Secret | Purpose |
-|--------|---------|
+| ------ | ------- |
 | `E2E_CLERK_USER_USERNAME` | Test Clerk account username |
 | `E2E_CLERK_USER_PASSWORD` | Test Clerk account password |
 
@@ -214,8 +214,8 @@ E2E tests run in CI via Playwright:
 The following specs need E2E test coverage:
 
 | Spec | Current Status | E2E Test Needed |
-|------|----------------|-----------------|
-| SPEC-010 Server Actions | Partial | Controllers integration |
+| ---- | -------------- | --------------- |
+| SPEC-010 Server Actions | Implemented | Controllers integration |
 | SPEC-011 Paywall | Partial | Subscription gating |
 | SPEC-012 Question Loop | Partial | Full practice flow |
 | SPEC-013 Practice Sessions | Ready | Session management |
