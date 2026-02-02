@@ -30,7 +30,6 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 | [DEBT-059](./debt-059-stripe-api-version-undocumented.md) | Stripe API Version Hardcoded Without Documentation | Open | P3 | 2026-02-02 |
 | [DEBT-060](./debt-060-no-rollback-migrations.md) | No Rollback Migrations | Open | P2 | 2026-02-02 |
 | [DEBT-061](./debt-061-timezone-not-explicitly-enforced.md) | Timezone Not Explicitly Enforced at Application Level | Open | P3 | 2026-02-02 |
-| [DEBT-062](./debt-062-confusing-redirect-control-flow.md) | Confusing Redirect Control Flow Relies on redirect() Throwing | Open | P3 | 2026-02-02 |
 | [DEBT-063](./debt-063-missing-aria-labels-choice-buttons.md) | Missing ARIA Labels on Choice Buttons | Open | P2 | 2026-02-02 |
 | [DEBT-064](./debt-064-missing-focus-indicators-error-buttons.md) | Missing Focus Indicators on Error Page Buttons | Open | P3 | 2026-02-02 |
 | [DEBT-065](./debt-065-touch-targets-too-small.md) | Touch Targets Too Small (Dropdown Menu, Pricing Buttons) | Open | P2 | 2026-02-02 |
@@ -93,6 +92,7 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 | [DEBT-046](../_archive/debt/debt-046-question-selection-in-wrong-layer.md) | Question Selection Algorithm in Wrong Layer | P2 | 2026-02-02 |
 | [DEBT-047](../_archive/debt/debt-047-spec-010-missing-webhook-controller.md) | SPEC-010 Missing Webhook Controller Documentation | P3 | 2026-02-02 |
 | [DEBT-050](../_archive/debt/debt-050-missing-fake-implementations.md) | Missing Fake Implementations for 5 Repositories | P2 | 2026-02-02 |
+| [DEBT-062](../_archive/debt/debt-062-confusing-redirect-control-flow.md) | Confusing Redirect Control Flow Relied on `redirect()` Throwing | P3 | 2026-02-02 |
 
 ## Debt Statuses
 
