@@ -18,7 +18,6 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 | ID | Title | Status | Priority | Date |
 |----|-------|--------|----------|------|
 | [DEBT-060](./debt-060-no-rollback-migrations.md) | No Rollback Migrations | Open | P2 | 2026-02-02 |
-| [DEBT-061](./debt-061-timezone-not-explicitly-enforced.md) | Timezone Not Explicitly Enforced at Application Level | Open | P3 | 2026-02-02 |
 | [DEBT-071](./debt-071-missing-why-comments.md) | Missing WHY Comments on Non-Obvious Business Logic | Open | P3 | 2026-02-02 |
 
 **Next Debt ID:** DEBT-072
@@ -27,6 +26,7 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 | ID | Title | Priority | Resolved |
 |----|-------|----------|----------|
+| [DEBT-061](../_archive/debt/debt-061-timezone-not-explicitly-enforced.md) | Timezone Not Explicitly Enforced at Application Level | P3 | 2026-02-02 |
 | [DEBT-001](../_archive/debt/debt-001-foundation-drift-vs-spec.md) | Foundation Drift vs SSOT | P2 | 2026-02-01 |
 | [DEBT-002](../_archive/debt/debt-002-missing-integration-tests.md) | Missing Integration Tests | P2 | 2026-01-31 |
 | [DEBT-003](../_archive/debt/debt-003-missing-subscription-update-method.md) | SubscriptionRepository Missing update() | P1 | 2026-01-31 |
