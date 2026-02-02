@@ -238,7 +238,7 @@ describe('app/pricing', () => {
     expect(createCheckoutSessionFn).toHaveBeenCalledWith({ plan: 'monthly' });
   });
 
-  it('renders dismiss button when banner has onDismissBanner prop', async () => {
+  it('renders dismiss link when banner is present', async () => {
     const { PricingView } = await import('./page');
 
     const html = renderToStaticMarkup(
@@ -248,7 +248,6 @@ describe('app/pricing', () => {
           tone: 'error',
           message: 'Checkout failed. Please try again.',
         }}
-        onDismissBanner={() => {}}
         subscribeMonthlyAction={async () => undefined}
         subscribeAnnualAction={async () => undefined}
       />,
@@ -256,6 +255,7 @@ describe('app/pricing', () => {
 
     expect(html).toContain('aria-label="Dismiss"');
     expect(html).toContain('×');
+    expect(html).toContain('href="/pricing"');
   });
 
   it('SubscribeButton renders children when not pending', async () => {
@@ -269,16 +269,13 @@ describe('app/pricing', () => {
     expect(html).not.toContain('Processing...');
   });
 
-  it('does not render dismiss button when onDismissBanner is not provided', async () => {
+  it('does not render dismiss link when banner is null', async () => {
     const { PricingView } = await import('./page');
 
     const html = renderToStaticMarkup(
       <PricingView
         isEntitled={false}
-        banner={{
-          tone: 'error',
-          message: 'Checkout failed. Please try again.',
-        }}
+        banner={null}
         subscribeMonthlyAction={async () => undefined}
         subscribeAnnualAction={async () => undefined}
       />,

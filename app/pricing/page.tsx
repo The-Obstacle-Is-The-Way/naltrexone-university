@@ -1,15 +1,19 @@
-import { redirect } from 'next/navigation';
-import { createCheckoutSession } from '@/src/adapters/controllers/billing-controller';
 import type { AuthGateway } from '@/src/application/ports/gateways';
 import type {
   CheckEntitlementInput,
   CheckEntitlementOutput,
 } from '@/src/application/use-cases/check-entitlement';
-import { PricingClient } from './pricing-client';
+import { SubscribeButton } from './pricing-client';
+import { PricingView } from './pricing-view';
+import {
+  subscribeAnnualAction,
+  subscribeMonthlyAction,
+} from './subscribe-actions';
 import type { PricingBanner } from './types';
 
 export type { PricingViewProps } from './pricing-view';
-export { PricingView } from './pricing-view';
+export { runSubscribeAction } from './subscribe-action';
+export { PricingView };
 // Re-export for tests
 export type { PricingBanner } from './types';
 
@@ -80,45 +84,6 @@ export function getPricingBanner(
   return null;
 }
 
-type RedirectFn = (url: string) => never;
-
-type SubscribeActionInput = {
-  plan: 'monthly' | 'annual';
-};
-
-type SubscribeActionDeps = {
-  createCheckoutSessionFn: typeof createCheckoutSession;
-  redirectFn: RedirectFn;
-};
-
-export async function runSubscribeAction(
-  input: SubscribeActionInput,
-  deps: SubscribeActionDeps,
-): Promise<void> {
-  const result = await deps.createCheckoutSessionFn({ plan: input.plan });
-  if (result.ok) {
-    deps.redirectFn(result.data.url);
-  }
-
-  if (result.error.code === 'UNAUTHENTICATED') {
-    deps.redirectFn('/sign-up');
-  }
-
-  deps.redirectFn('/pricing?checkout=error');
-}
-
-export function createSubscribeAction(
-  plan: SubscribeActionInput['plan'],
-): () => Promise<void> {
-  return async function subscribe() {
-    'use server';
-    await runSubscribeAction(
-      { plan },
-      { createCheckoutSessionFn: createCheckoutSession, redirectFn: redirect },
-    );
-  };
-}
-
 export default async function PricingPage({
   searchParams,
 }: {
@@ -128,15 +93,13 @@ export default async function PricingPage({
   const resolvedSearchParams = await searchParams;
   const banner = getPricingBanner(resolvedSearchParams);
 
-  const subscribeMonthly = createSubscribeAction('monthly');
-  const subscribeAnnual = createSubscribeAction('annual');
-
   return (
-    <PricingClient
+    <PricingView
       isEntitled={isEntitled}
-      initialBanner={banner}
-      subscribeMonthlyAction={subscribeMonthly}
-      subscribeAnnualAction={subscribeAnnual}
+      banner={banner}
+      subscribeMonthlyAction={subscribeMonthlyAction}
+      subscribeAnnualAction={subscribeAnnualAction}
+      SubscribeButtonComponent={SubscribeButton}
     />
   );
 }

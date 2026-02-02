@@ -4,7 +4,6 @@ import type { PricingBanner } from './types';
 export type PricingViewProps = {
   isEntitled: boolean;
   banner: PricingBanner | null;
-  onDismissBanner?: () => void;
   subscribeMonthlyAction: () => Promise<void>;
   subscribeAnnualAction: () => Promise<void>;
   SubscribeButtonComponent?: React.ComponentType<{ children: React.ReactNode }>;
@@ -24,7 +23,6 @@ function DefaultButton({ children }: { children: React.ReactNode }) {
 export function PricingView({
   isEntitled,
   banner,
-  onDismissBanner,
   subscribeMonthlyAction,
   subscribeAnnualAction,
   SubscribeButtonComponent = DefaultButton,
@@ -52,16 +50,13 @@ export function PricingView({
             role="alert"
           >
             <span>{banner.message}</span>
-            {onDismissBanner ? (
-              <button
-                type="button"
-                onClick={onDismissBanner}
-                className="ml-4 text-current hover:opacity-70"
-                aria-label="Dismiss"
-              >
-                ×
-              </button>
-            ) : null}
+            <Link
+              href="/pricing"
+              className="ml-4 text-current hover:opacity-70"
+              aria-label="Dismiss"
+            >
+              ×
+            </Link>
           </div>
         ) : null}
 

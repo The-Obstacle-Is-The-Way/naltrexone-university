@@ -1,9 +1,6 @@
 'use client';
 
-import { useState } from 'react';
 import { useFormStatus } from 'react-dom';
-import { PricingView } from './pricing-view';
-import type { PricingBanner } from './types';
 
 export function SubscribeButton({ children }: { children: React.ReactNode }) {
   const { pending } = useFormStatus();
@@ -15,32 +12,5 @@ export function SubscribeButton({ children }: { children: React.ReactNode }) {
     >
       {pending ? 'Processing...' : children}
     </button>
-  );
-}
-
-export type PricingClientProps = {
-  isEntitled: boolean;
-  initialBanner: PricingBanner | null;
-  subscribeMonthlyAction: () => Promise<void>;
-  subscribeAnnualAction: () => Promise<void>;
-};
-
-export function PricingClient({
-  isEntitled,
-  initialBanner,
-  subscribeMonthlyAction,
-  subscribeAnnualAction,
-}: PricingClientProps) {
-  const [banner, setBanner] = useState<PricingBanner | null>(initialBanner);
-
-  return (
-    <PricingView
-      isEntitled={isEntitled}
-      banner={banner}
-      onDismissBanner={() => setBanner(null)}
-      subscribeMonthlyAction={subscribeMonthlyAction}
-      subscribeAnnualAction={subscribeAnnualAction}
-      SubscribeButtonComponent={SubscribeButton}
-    />
   );
 }
