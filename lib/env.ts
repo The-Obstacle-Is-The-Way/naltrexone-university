@@ -146,6 +146,8 @@ function validateEnv(): Env {
     );
   }
 
+  // When Clerk is skipped (local/CI builds), allow missing Clerk keys by
+  // providing dummy values. Production deploys forbid SKIP_CLERK above.
   return {
     ...parsed.data,
     CLERK_SECRET_KEY: parsed.data.CLERK_SECRET_KEY ?? 'sk_test_dummy',

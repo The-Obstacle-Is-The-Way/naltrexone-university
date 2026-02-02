@@ -67,6 +67,8 @@ export class GetNextQuestionUseCase {
     question: Question,
     userId: string,
   ): PublicChoice[] {
+    // Deterministic shuffle: the same user sees a stable choice order for a given question.
+    // Stable pre-sort makes the shuffle reproducible regardless of DB row ordering.
     const seed = createQuestionSeed(userId, question.id);
     const stableInput = question.choices.slice().sort((a, b) => {
       const bySortOrder = a.sortOrder - b.sortOrder;

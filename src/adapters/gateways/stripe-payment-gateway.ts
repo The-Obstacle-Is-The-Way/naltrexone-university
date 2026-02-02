@@ -233,6 +233,9 @@ export class StripePaymentGateway implements PaymentGateway {
     const subscription = event.data.object as StripeSubscriptionLike;
     const userId = subscription.metadata?.user_id;
     if (!userId) {
+      // Stripe can emit `customer.subscription.created` without our metadata.
+      // Without `user_id` we can't map the event to an internal user, so we skip
+      // and rely on subsequent subscription events to sync.
       if (event.type === 'customer.subscription.created') {
         this.deps.logger?.warn?.(
           'Skipping subscription.created event without metadata.user_id',

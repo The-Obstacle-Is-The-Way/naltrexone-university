@@ -104,6 +104,8 @@ export async function getMissedQuestions(
     for (const m of page) {
       const question = byId.get(m.questionId);
       if (!question) {
+        // Graceful degradation: questions can be unpublished/deleted while attempts persist.
+        // Skip orphans to return a partial list instead of failing the entire view.
         d.logger?.warn(
           { questionId: m.questionId },
           'Missed question references missing question',

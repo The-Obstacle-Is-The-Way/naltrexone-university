@@ -17,7 +17,6 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 | ID | Title | Status | Priority | Date |
 |----|-------|--------|----------|------|
-| [DEBT-071](./debt-071-missing-why-comments.md) | Missing WHY Comments on Non-Obvious Business Logic | Open | P3 | 2026-02-02 |
 
 **Next Debt ID:** DEBT-072
 
@@ -25,6 +24,7 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 | ID | Title | Priority | Resolved |
 |----|-------|----------|----------|
+| [DEBT-071](../_archive/debt/debt-071-missing-why-comments.md) | Missing WHY Comments on Non-Obvious Business Logic | P3 | 2026-02-02 |
 | [DEBT-060](../_archive/debt/debt-060-no-rollback-migrations.md) | No Rollback Migrations | P2 | 2026-02-02 |
 | [DEBT-061](../_archive/debt/debt-061-timezone-not-explicitly-enforced.md) | Timezone Not Explicitly Enforced at Application Level | P3 | 2026-02-02 |
 | [DEBT-001](../_archive/debt/debt-001-foundation-drift-vs-spec.md) | Foundation Drift vs SSOT | P2 | 2026-02-01 |

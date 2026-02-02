@@ -201,6 +201,8 @@ export async function syncCheckoutSuccess(
   }
 
   const sessionId = input.sessionId;
+  // Users can land here via direct navigation or a tampered URL; treat missing
+  // session_id as an invalid checkout completion.
   assertNonEmptyString(sessionId, 'missing_session_id', { sessionId });
 
   const clerkAuth = await d.getClerkAuth();
@@ -218,6 +220,7 @@ export async function syncCheckoutSuccess(
 
   const stripeCustomerId = getStripeId(session.customer);
   const subscriptionId = getStripeId(session.subscription);
+  // A completed subscription checkout must have both a customer and a subscription.
   assertNonEmptyString(stripeCustomerId, 'missing_stripe_ids', {
     sessionId,
     stripeCustomerId,
@@ -232,6 +235,7 @@ export async function syncCheckoutSuccess(
   const subscription = await d.stripe.subscriptions.retrieve(subscriptionId);
 
   const metadataUserId = subscription.metadata?.user_id;
+  // Prevent cross-account leakage if the user switches accounts mid-checkout.
   if (metadataUserId && metadataUserId !== user.id) {
     fail('user_id_mismatch', {
       sessionId,
@@ -241,6 +245,7 @@ export async function syncCheckoutSuccess(
   }
 
   const status = subscription.status;
+  // Reject malformed subscription objects and unexpected statuses.
   assertNonEmptyString(status, 'invalid_subscription_status', {
     sessionId,
     status: status ?? null,
@@ -251,24 +256,28 @@ export async function syncCheckoutSuccess(
   });
 
   const currentPeriodEndSeconds = subscription.current_period_end;
+  // Entitlement depends on a current billing period end timestamp.
   assertNumber(currentPeriodEndSeconds, 'missing_current_period_end', {
     sessionId,
     currentPeriodEndSeconds: currentPeriodEndSeconds ?? null,
   });
 
   const cancelAtPeriodEnd = subscription.cancel_at_period_end;
+  // We persist cancel-at-period-end to display accurately in billing UI.
   assertBoolean(cancelAtPeriodEnd, 'missing_cancel_at_period_end', {
     sessionId,
     cancelAtPeriodEnd: cancelAtPeriodEnd ?? null,
   });
 
   const priceId = subscription.items?.data?.[0]?.price?.id;
+  // We map the Stripe price id back to a domain plan (monthly/annual).
   assertNonEmptyString(priceId, 'missing_price_id', {
     sessionId,
     priceId: priceId ?? null,
   });
 
   const plan = getSubscriptionPlanFromPriceId(priceId, d.priceIds);
+  // Mismatched price IDs usually means environment misconfiguration.
   assertNotNull(plan, 'unknown_plan', {
     sessionId,
     priceId,

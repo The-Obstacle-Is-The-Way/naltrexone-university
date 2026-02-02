@@ -144,6 +144,8 @@ export async function getUserStats(
     for (const attempt of recentAttempts) {
       const slug = slugByQuestionId.get(attempt.questionId);
       if (!slug) {
+        // Graceful degradation: questions can be unpublished/deleted while attempts persist.
+        // Skip orphans to keep the dashboard usable and log for later cleanup.
         d.logger?.warn(
           { questionId: attempt.questionId },
           'Recent activity references missing question',
