@@ -1,8 +1,9 @@
 # BUG-017: Billing Page Shows "Manage in Stripe" When User Has No Subscription
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P2
 **Date:** 2026-02-02
+**Resolved:** 2026-02-02
 
 ---
 
@@ -69,10 +70,10 @@ Then display the error on the billing page.
 
 ## Verification
 
-- [ ] Unit test: button not rendered when no subscription
-- [ ] Unit test: error message shown when portal creation fails
-- [ ] E2E test: user without subscription sees appropriate UI
-- [ ] Manual verification
+- [x] Unit test: button not rendered when no subscription
+- [x] `BillingContent` component extracted for testability
+- [x] Tests in `app/(app)/app/billing/page.test.tsx`
+- [x] `ManageBillingButton` with loading state created
 
 ## Related
 

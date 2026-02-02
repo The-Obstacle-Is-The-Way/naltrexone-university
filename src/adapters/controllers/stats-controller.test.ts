@@ -50,6 +50,10 @@ function createQuestion(input: Partial<Question> & { id: string }): Question {
   };
 }
 
+type Logger = {
+  warn: (msg: string, context?: Record<string, unknown>) => void;
+};
+
 function createDeps(overrides?: {
   user?: UserLike;
   authGateway?: Partial<AuthGateway>;
@@ -57,6 +61,7 @@ function createDeps(overrides?: {
   attempts?: readonly Attempt[];
   questionsById?: Record<string, Question>;
   now?: () => Date;
+  logger?: Logger;
 }) {
   const user = overrides?.user ?? createUser();
   const isEntitled = overrides?.isEntitled ?? true;
@@ -96,6 +101,7 @@ function createDeps(overrides?: {
     attemptRepository,
     questionRepository,
     now,
+    logger: overrides?.logger,
   };
 }
 
@@ -262,6 +268,60 @@ describe('stats-controller', () => {
           recentActivity: [],
         },
       });
+    });
+
+    it('logs warning when recent activity references missing question', async () => {
+      const orphanedQuestionId = 'q-orphaned';
+      const now = new Date('2026-02-01T12:00:00Z');
+      const logger: Logger = { warn: vi.fn() };
+
+      const deps = createDeps({
+        now: () => now,
+        attempts: [
+          createAttempt({
+            questionId: orphanedQuestionId,
+            isCorrect: true,
+            answeredAt: new Date('2026-02-01T11:00:00Z'),
+          }),
+        ],
+        questionsById: {},
+        logger,
+      });
+
+      const result = await getUserStats({}, deps as never);
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.data.recentActivity).toEqual([]);
+      }
+      expect(logger.warn).toHaveBeenCalledWith(
+        'Recent activity references missing question',
+        { questionId: orphanedQuestionId },
+      );
+    });
+
+    it('works without logger (optional dependency)', async () => {
+      const orphanedQuestionId = 'q-orphaned';
+      const now = new Date('2026-02-01T12:00:00Z');
+
+      const deps = createDeps({
+        now: () => now,
+        attempts: [
+          createAttempt({
+            questionId: orphanedQuestionId,
+            isCorrect: true,
+            answeredAt: new Date('2026-02-01T11:00:00Z'),
+          }),
+        ],
+        questionsById: {},
+      });
+
+      const result = await getUserStats({}, deps as never);
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.data.recentActivity).toEqual([]);
+      }
     });
   });
 });

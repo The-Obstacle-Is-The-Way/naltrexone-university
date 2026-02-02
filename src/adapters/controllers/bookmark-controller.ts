@@ -27,6 +27,10 @@ type CheckEntitlementUseCase = {
   execute: (input: CheckEntitlementInput) => Promise<CheckEntitlementOutput>;
 };
 
+type Logger = {
+  warn: (msg: string, context?: Record<string, unknown>) => void;
+};
+
 export type ToggleBookmarkOutput = {
   bookmarked: boolean;
 };
@@ -48,6 +52,7 @@ export type BookmarkControllerDeps = {
   checkEntitlementUseCase: CheckEntitlementUseCase;
   bookmarkRepository: BookmarkRepository;
   questionRepository: QuestionRepository;
+  logger?: Logger;
 };
 
 async function getDeps(
@@ -132,7 +137,12 @@ export async function getBookmarks(
     const rows: BookmarkRow[] = [];
     for (const bookmark of bookmarks) {
       const question = byId.get(bookmark.questionId);
-      if (!question) continue;
+      if (!question) {
+        d.logger?.warn('Bookmark references missing question', {
+          questionId: bookmark.questionId,
+        });
+        continue;
+      }
 
       rows.push({
         questionId: question.id,

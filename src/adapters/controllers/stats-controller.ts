@@ -28,6 +28,10 @@ type CheckEntitlementUseCase = {
   execute: (input: CheckEntitlementInput) => Promise<CheckEntitlementOutput>;
 };
 
+type Logger = {
+  warn: (msg: string, context?: Record<string, unknown>) => void;
+};
+
 export type UserStatsOutput = {
   totalAnswered: number;
   accuracyOverall: number; // 0..1
@@ -49,6 +53,7 @@ export type StatsControllerDeps = {
   attemptRepository: AttemptRepository;
   questionRepository: QuestionRepository;
   now: () => Date;
+  logger?: Logger;
 };
 
 async function getDeps(
@@ -138,7 +143,12 @@ export async function getUserStats(
     const recentActivity: UserStatsOutput['recentActivity'] = [];
     for (const attempt of recentAttempts) {
       const slug = slugByQuestionId.get(attempt.questionId);
-      if (!slug) continue;
+      if (!slug) {
+        d.logger?.warn('Recent activity references missing question', {
+          questionId: attempt.questionId,
+        });
+        continue;
+      }
 
       recentActivity.push({
         attemptId: attempt.id,

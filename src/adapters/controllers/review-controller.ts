@@ -24,6 +24,10 @@ type CheckEntitlementUseCase = {
   execute: (input: CheckEntitlementInput) => Promise<CheckEntitlementOutput>;
 };
 
+type Logger = {
+  warn: (msg: string, context?: Record<string, unknown>) => void;
+};
+
 export type MissedQuestionRow = {
   questionId: string;
   slug: string;
@@ -43,6 +47,7 @@ export type ReviewControllerDeps = {
   checkEntitlementUseCase: CheckEntitlementUseCase;
   attemptRepository: AttemptRepository;
   questionRepository: QuestionRepository;
+  logger?: Logger;
 };
 
 async function getDeps(
@@ -118,7 +123,12 @@ export async function getMissedQuestions(
     const rows: MissedQuestionRow[] = [];
     for (const m of page) {
       const question = byId.get(m.questionId);
-      if (!question) continue;
+      if (!question) {
+        d.logger?.warn('Missed question references missing question', {
+          questionId: m.questionId,
+        });
+        continue;
+      }
       rows.push({
         questionId: question.id,
         slug: question.slug,

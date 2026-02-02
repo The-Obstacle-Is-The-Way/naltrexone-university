@@ -1,6 +1,11 @@
 # BUG-037: No Mobile Navigation Menu
 
-## Severity: P2 - Medium
+**Status:** Resolved
+**Priority:** P2
+**Date:** 2026-02-02
+**Resolved:** 2026-02-02
+
+---
 
 ## Summary
 The app layout header navigation is hidden on mobile viewports (`hidden sm:flex`) with no hamburger menu alternative. Mobile users cannot access Dashboard, Practice, or Billing links from the header.
@@ -87,6 +92,15 @@ export function MobileNav() {
   </div>
 </header>
 ```
+
+## Verification
+
+- [x] Created `components/mobile-nav.tsx` with hamburger menu
+- [x] Uses `sm:hidden` class to show only on mobile
+- [x] Proper aria-labels and aria-expanded for accessibility
+- [x] Links close menu on click
+- [x] Header has `relative` class for absolute positioning of dropdown
+- [x] Unit tests in `components/mobile-nav.test.tsx`
 
 ## Related
 - WCAG 2.1 SC 2.4.5: Multiple Ways (Level AA)

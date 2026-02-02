@@ -18,19 +18,15 @@ Bug reports document issues discovered in the codebase along with their root cau
 | ID | Title | Status | Priority | Date |
 |----|-------|--------|----------|------|
 | [BUG-016](./bug-016-memory-exhaustion-power-users.md) | Memory Exhaustion for Power Users — All Attempts Loaded Into Memory | Open | P1 | 2026-02-02 |
-| [BUG-017](./bug-017-billing-button-without-subscription.md) | Billing Page Shows "Manage in Stripe" When User Has No Subscription | Open | P2 | 2026-02-02 |
-| [BUG-018](./bug-018-silent-fallbacks-in-controllers.md) | Silent Fallbacks in Controllers — Data Inconsistency Without Warning | Open | P2 | 2026-02-02 |
 | [BUG-019](./bug-019-missing-bookmarks-view-page.md) | Missing Bookmarks View Page — Users Can Bookmark But Can't View | Open | P2 | 2026-02-02 |
 | [BUG-020](./bug-020-missing-review-missed-questions-page.md) | Missing Review/Missed Questions Page — Dead Controller Code | Open | P2 | 2026-02-02 |
 | [BUG-021](./bug-021-practice-sessions-never-started.md) | Practice Sessions Never Started/Ended — Dead Session Controller Code | Open | P2 | 2026-02-02 |
-| [BUG-022](./bug-022-missing-loading-states-on-forms.md) | Missing Loading States on Form Buttons | Open | P3 | 2026-02-02 |
 | [BUG-023](./bug-023-missing-clerk-user-deletion-webhook.md) | Missing Clerk Webhook for User Deletion — Orphaned Data | Open | P2 | 2026-02-02 |
 | [BUG-024](./bug-024-entitlement-race-condition-past-due.md) | Entitlement Race Condition During Payment Failure | Open | P2 | 2026-02-02 |
 | [BUG-025](./bug-025-missing-subscription-event-handlers.md) | Missing Subscription Event Handlers (paused/resumed) | Open | P2 | 2026-02-02 |
 | [BUG-026](./bug-026-concurrent-checkout-sessions.md) | No Protection Against Concurrent Checkout Sessions | Open | P2 | 2026-02-02 |
 | [BUG-027](./bug-027-stripe-events-unbounded-growth.md) | Stripe Events Table Unbounded Growth | Open | P2 | 2026-02-02 |
 | [BUG-028](./bug-028-inconsistent-cascade-delete-attempts.md) | Inconsistent Cascade Delete for Attempts | Open | P2 | 2026-02-02 |
-| [BUG-037](./bug-037-no-mobile-navigation-menu.md) | No Mobile Navigation Menu | Open | P2 | 2026-02-02 |
 | [BUG-038](./bug-038-missing-clerk-user-updated-webhook.md) | Missing Clerk user.updated Webhook — Email Sync Gap | Open | P3 | 2026-02-02 |
 | [BUG-009](./bug-009-vercel-preview-deployment-rate-limit.md) | Vercel Preview Deployment Status Fails Due to Rate Limit | Won't Fix | P3 | 2026-02-01 |
 
@@ -40,7 +36,11 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 | ID | Title | Priority | Resolved |
 |----|-------|----------|----------|
+| [BUG-037](../_archive/bugs/bug-037-no-mobile-navigation-menu.md) | No Mobile Navigation Menu | P2 | 2026-02-02 |
 | [BUG-036](../_archive/bugs/bug-036-no-loading-state-subscribe-buttons.md) | No Loading State on Subscribe Buttons | P2 | 2026-02-02 |
+| [BUG-022](../_archive/bugs/bug-022-missing-loading-states-on-forms.md) | Missing Loading States on Form Buttons | P3 | 2026-02-02 |
+| [BUG-018](../_archive/bugs/bug-018-silent-fallbacks-in-controllers.md) | Silent Fallbacks in Controllers — Data Inconsistency | P2 | 2026-02-02 |
+| [BUG-017](../_archive/bugs/bug-017-billing-button-without-subscription.md) | Billing Page Shows "Manage in Stripe" When No Subscription | P2 | 2026-02-02 |
 | [BUG-035](../_archive/bugs/bug-035-error-banner-not-clearable.md) | Error Banner Not Clearable on Pricing Page | P3 | 2026-02-02 |
 | [BUG-034](../_archive/bugs/bug-034-webhook-error-context-lost.md) | Webhook Catch Block Loses Error Context | P2 | 2026-02-02 |
 | [BUG-033](../_archive/bugs/bug-033-stale-closure-toggle-bookmark.md) | Stale Closure in onToggleBookmark — Wrong Question Bookmarked | P2 | 2026-02-02 |

@@ -50,12 +50,17 @@ function createQuestion(input: Partial<Question> & { id: string }): Question {
   };
 }
 
+type Logger = {
+  warn: (msg: string, context?: Record<string, unknown>) => void;
+};
+
 function createDeps(overrides?: {
   user?: UserLike;
   authGateway?: Partial<AuthGateway>;
   isEntitled?: boolean;
   attempts?: readonly Attempt[];
   questionsById?: Record<string, Question>;
+  logger?: Logger;
 }) {
   const user = overrides?.user ?? createUser();
   const isEntitled = overrides?.isEntitled ?? true;
@@ -93,6 +98,7 @@ function createDeps(overrides?: {
     checkEntitlementUseCase,
     attemptRepository,
     questionRepository,
+    logger: overrides?.logger,
   };
 }
 
@@ -249,6 +255,60 @@ describe('review-controller', () => {
           limit: 10,
           offset: 0,
         },
+      });
+    });
+
+    it('logs warning when missed question references missing question', async () => {
+      const orphanedQuestionId = 'q-orphaned';
+      const logger: Logger = { warn: vi.fn() };
+      const deps = createDeps({
+        attempts: [
+          createAttempt({
+            questionId: orphanedQuestionId,
+            isCorrect: false,
+            answeredAt: new Date('2026-02-01T12:00:00Z'),
+          }),
+        ],
+        questionsById: {},
+        logger,
+      });
+
+      const result = await getMissedQuestions(
+        { limit: 10, offset: 0 },
+        deps as never,
+      );
+
+      expect(result).toEqual({
+        ok: true,
+        data: { rows: [], limit: 10, offset: 0 },
+      });
+      expect(logger.warn).toHaveBeenCalledWith(
+        'Missed question references missing question',
+        { questionId: orphanedQuestionId },
+      );
+    });
+
+    it('works without logger (optional dependency)', async () => {
+      const orphanedQuestionId = 'q-orphaned';
+      const deps = createDeps({
+        attempts: [
+          createAttempt({
+            questionId: orphanedQuestionId,
+            isCorrect: false,
+            answeredAt: new Date('2026-02-01T12:00:00Z'),
+          }),
+        ],
+        questionsById: {},
+      });
+
+      const result = await getMissedQuestions(
+        { limit: 10, offset: 0 },
+        deps as never,
+      );
+
+      expect(result).toEqual({
+        ok: true,
+        data: { rows: [], limit: 10, offset: 0 },
       });
     });
   });

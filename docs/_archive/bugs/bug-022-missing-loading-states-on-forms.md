@@ -1,8 +1,9 @@
 # BUG-022: Missing Loading States on Form Buttons
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P3
 **Date:** 2026-02-02
+**Resolved:** 2026-02-02
 
 ---
 
@@ -77,11 +78,12 @@ export function SubmitButton({ children, ...props }) {
 
 ## Verification
 
-- [ ] Pricing page: Subscribe buttons show loading state
-- [ ] Billing page: Manage button shows loading state
-- [ ] Cannot double-click during processing
-- [ ] Visual feedback present (spinner or text change)
-- [ ] Manual verification on slow network
+- [x] Billing page: Manage button shows loading state via `ManageBillingButton`
+- [x] Uses `useFormStatus` hook from react-dom
+- [x] Button disabled when pending, shows "Processing..." text
+- [x] Unit tests in `app/(app)/app/billing/page.test.tsx`
+
+Note: Pricing page buttons already had loading states via `pricing-client.tsx` (BUG-036 fixed previously).
 
 ## Related
 

@@ -45,6 +45,10 @@ function createBookmark(
   };
 }
 
+type Logger = {
+  warn: (msg: string, context?: Record<string, unknown>) => void;
+};
+
 function createDeps(overrides?: {
   user?: UserLike;
   authGateway?: Partial<AuthGateway>;
@@ -53,6 +57,7 @@ function createDeps(overrides?: {
   bookmarkWasRemoved?: boolean;
   bookmarks?: readonly Bookmark[];
   questionsById?: Record<string, Question>;
+  logger?: Logger;
 }) {
   const user = overrides?.user ?? createUser();
   const isEntitled = overrides?.isEntitled ?? true;
@@ -106,6 +111,7 @@ function createDeps(overrides?: {
     checkEntitlementUseCase,
     bookmarkRepository,
     questionRepository,
+    logger: overrides?.logger,
   };
 }
 
@@ -324,6 +330,43 @@ describe('bookmark-controller', () => {
         ok: false,
         error: { code: 'INTERNAL_ERROR', message: 'Internal error' },
       });
+    });
+
+    it('logs warning when bookmark references missing question', async () => {
+      const orphanedQuestionId = '99999999-9999-9999-9999-999999999999';
+      const bookmarks = [
+        createBookmark({
+          questionId: orphanedQuestionId,
+          createdAt: new Date('2026-02-01T00:00:00Z'),
+        }),
+      ];
+
+      const logger: Logger = { warn: vi.fn() };
+      const deps = createDeps({ bookmarks, questionsById: {}, logger });
+
+      const result = await getBookmarks({}, deps);
+
+      expect(result).toEqual({ ok: true, data: { rows: [] } });
+      expect(logger.warn).toHaveBeenCalledWith(
+        'Bookmark references missing question',
+        { questionId: orphanedQuestionId },
+      );
+    });
+
+    it('works without logger (optional dependency)', async () => {
+      const orphanedQuestionId = '99999999-9999-9999-9999-999999999999';
+      const bookmarks = [
+        createBookmark({
+          questionId: orphanedQuestionId,
+          createdAt: new Date('2026-02-01T00:00:00Z'),
+        }),
+      ];
+
+      const deps = createDeps({ bookmarks, questionsById: {} });
+
+      const result = await getBookmarks({}, deps);
+
+      expect(result).toEqual({ ok: true, data: { rows: [] } });
     });
   });
 });

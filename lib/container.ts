@@ -237,6 +237,7 @@ export function createContainer(overrides: ContainerOverrides = {}) {
       checkEntitlementUseCase: useCases.createCheckEntitlementUseCase(),
       bookmarkRepository: repositories.createBookmarkRepository(),
       questionRepository: repositories.createQuestionRepository(),
+      logger: primitives.logger,
     }),
     createPracticeControllerDeps: () => ({
       authGateway: gateways.createAuthGateway(),
@@ -251,6 +252,7 @@ export function createContainer(overrides: ContainerOverrides = {}) {
       checkEntitlementUseCase: useCases.createCheckEntitlementUseCase(),
       attemptRepository: repositories.createAttemptRepository(),
       questionRepository: repositories.createQuestionRepository(),
+      logger: primitives.logger,
     }),
     createStatsControllerDeps: () => ({
       authGateway: gateways.createAuthGateway(),
@@ -258,6 +260,7 @@ export function createContainer(overrides: ContainerOverrides = {}) {
       attemptRepository: repositories.createAttemptRepository(),
       questionRepository: repositories.createQuestionRepository(),
       now: primitives.now,
+      logger: primitives.logger,
     }),
   };
 

@@ -3,6 +3,7 @@ import { createPortalSession } from '@/src/adapters/controllers/billing-controll
 import type { AuthGateway } from '@/src/application/ports/gateways';
 import type { SubscriptionRepository } from '@/src/application/ports/repositories';
 import type { Subscription } from '@/src/domain/entities';
+import { ManageBillingButton } from './billing-client';
 
 export type BillingPageDeps = {
   authGateway: AuthGateway;
@@ -30,6 +31,40 @@ export async function loadBillingData(
   return { userId: user.id, subscription };
 }
 
+/** Extracted for testing (Server Components can't be directly tested) */
+export function BillingContent({
+  subscription,
+}: {
+  subscription: Subscription | null;
+}) {
+  return (
+    <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="space-y-1">
+          <div className="text-sm font-medium text-foreground">
+            Subscription
+          </div>
+          {subscription ? (
+            <div className="text-sm text-muted-foreground">
+              {subscription.plan} · {subscription.status}
+            </div>
+          ) : (
+            <div className="text-sm text-muted-foreground">
+              No subscription found.
+            </div>
+          )}
+        </div>
+
+        {subscription && (
+          <form>
+            <ManageBillingButton />
+          </form>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default async function BillingPage() {
   const { subscription } = await loadBillingData();
 
@@ -51,33 +86,37 @@ export default async function BillingPage() {
         </p>
       </div>
 
-      <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="space-y-1">
-            <div className="text-sm font-medium text-foreground">
-              Subscription
-            </div>
-            {subscription ? (
+      {subscription ? (
+        <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="space-y-1">
+              <div className="text-sm font-medium text-foreground">
+                Subscription
+              </div>
               <div className="text-sm text-muted-foreground">
                 {subscription.plan} · {subscription.status}
               </div>
-            ) : (
+            </div>
+
+            <form action={manageBilling}>
+              <ManageBillingButton />
+            </form>
+          </div>
+        </div>
+      ) : (
+        <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="space-y-1">
+              <div className="text-sm font-medium text-foreground">
+                Subscription
+              </div>
               <div className="text-sm text-muted-foreground">
                 No subscription found.
               </div>
-            )}
+            </div>
           </div>
-
-          <form action={manageBilling}>
-            <button
-              type="submit"
-              className="inline-flex items-center justify-center rounded-full bg-orange-600 px-4 py-2 text-sm font-medium text-white hover:bg-orange-700"
-            >
-              Manage in Stripe
-            </button>
-          </form>
         </div>
-      </div>
+      )}
     </div>
   );
 }
