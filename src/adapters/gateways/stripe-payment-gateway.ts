@@ -20,6 +20,8 @@ type StripeCheckoutSession = { url: string | null };
 type StripeBillingPortalSession = { url: string | null };
 type StripeCustomer = { id?: string };
 
+type StripeCheckoutSessionList = { data: StripeCheckoutSession[] };
+
 type CheckoutSessionCreateParams = {
   mode: 'subscription' | 'payment' | 'setup';
   customer: string;
@@ -53,6 +55,11 @@ type StripeClient = {
       create(
         params: CheckoutSessionCreateParams,
       ): Promise<StripeCheckoutSession>;
+      list(params: {
+        customer: string;
+        status: 'open';
+        limit: number;
+      }): Promise<StripeCheckoutSessionList>;
     };
   };
   billingPortal: {
@@ -130,6 +137,17 @@ export class StripePaymentGateway implements PaymentGateway {
     input: CheckoutSessionInput,
   ): Promise<CheckoutSessionOutput> {
     const priceId = getStripePriceId(input.plan, this.deps.priceIds);
+
+    const existing = await this.deps.stripe.checkout.sessions.list({
+      customer: input.stripeCustomerId,
+      status: 'open',
+      limit: 1,
+    });
+
+    const existingUrl = existing.data[0]?.url;
+    if (existingUrl) {
+      return { url: existingUrl };
+    }
 
     const session = await this.deps.stripe.checkout.sessions.create({
       mode: 'subscription',
