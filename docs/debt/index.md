@@ -17,7 +17,6 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 | ID | Title | Status | Priority | Date |
 |----|-------|--------|----------|------|
-| [DEBT-044](./debt-044-spec-005-status-drift.md) | SPEC-005 Status Incorrectly Marked as Implemented | Open | P2 | 2026-02-01 |
 | [DEBT-045](./debt-045-claude-md-documentation-drift.md) | CLAUDE.md Documentation Drift | Open | P2 | 2026-02-01 |
 | [DEBT-046](./debt-046-question-selection-in-wrong-layer.md) | Question Selection Algorithm in Wrong Layer | Open | P2 | 2026-02-01 |
 | [DEBT-047](./debt-047-spec-010-missing-webhook-controller.md) | SPEC-010 Missing Webhook Controller Documentation | Open | P3 | 2026-02-01 |
@@ -71,6 +70,7 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 | [DEBT-041](../_archive/debt/debt-041-skip-clerk-production-safety.md) | SKIP_CLERK Production Safety Gap | P2 | 2026-02-02 |
 | [DEBT-042](../_archive/debt/debt-042-stripe-customer-concurrent-upsert.md) | Race Condition in Stripe Customer Concurrent Upsert | P3 | 2026-02-02 |
 | [DEBT-043](../_archive/debt/debt-043-unused-schema-wildcard-import.md) | Unused Schema Wildcard Import | P4 | 2026-02-02 |
+| [DEBT-044](../_archive/debt/debt-044-spec-005-status-drift.md) | SPEC-005 Status Incorrectly Marked as Implemented | P2 | 2026-02-02 |
 
 ## Debt Statuses
 
