@@ -17,9 +17,10 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 | ID | Title | Status | Priority | Date |
 |----|-------|--------|----------|------|
-| — | _None_ | — | — | — |
+| [DEBT-072](./debt-072-drizzle-subquery-join-pattern.md) | Drizzle Subquery Join Pattern Causes Ambiguous Columns | Open | P2 | 2026-02-02 |
+| [DEBT-073](./debt-073-pricing-page-shows-subscribe-to-subscribers.md) | Pricing Page Shows Subscribe Buttons to Already-Subscribed Users | Open | P2 | 2026-02-02 |
 
-**Next Debt ID:** DEBT-072
+**Next Debt ID:** DEBT-074
 
 ## Archived Debt
 
