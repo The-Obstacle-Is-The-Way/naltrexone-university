@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import type { ClerkWebhookEvent } from '@/src/adapters/controllers/clerk-webhook-controller';
 import { processClerkWebhook } from '@/src/adapters/controllers/clerk-webhook-controller';
 import {
@@ -46,6 +46,24 @@ describe('processClerkWebhook', () => {
     await expect(
       deps.userRepository.findByClerkId('clerk_1'),
     ).resolves.toBeNull();
+  });
+
+  it('logs a warning when user.updated is missing an email', async () => {
+    const deps = createDeps();
+    const warn = vi.fn();
+
+    await processClerkWebhook(
+      { ...deps, logger: { warn } },
+      {
+        type: 'user.updated',
+        data: { id: 'clerk_1', email_addresses: [] },
+      },
+    );
+
+    expect(warn).toHaveBeenCalledWith(
+      { clerkUserId: 'clerk_1' },
+      'Clerk user.updated missing email; skipping user upsert',
+    );
   });
 
   it('ignores user.updated when email_addresses is not an array', async () => {

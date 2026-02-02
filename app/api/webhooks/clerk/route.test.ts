@@ -1,11 +1,15 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { ClerkWebhookRouteContainer } from '@/app/api/webhooks/clerk/handler';
 import { createWebhookHandler } from '@/app/api/webhooks/clerk/handler';
-import type { ClerkWebhookDeps } from '@/src/adapters/controllers/clerk-webhook-controller';
+import type {
+  ClerkWebhookDeps,
+  ClerkWebhookEvent,
+} from '@/src/adapters/controllers/clerk-webhook-controller';
 import { ApplicationError } from '@/src/application/errors';
 
 function createTestDeps() {
   const loggerError = vi.fn();
+  const loggerWarn = vi.fn();
   const rateLimiter = {
     limit: vi.fn(async () => ({
       success: true,
@@ -37,7 +41,7 @@ function createTestDeps() {
   );
 
   const createContainer = vi.fn<() => ClerkWebhookRouteContainer>(() => ({
-    logger: { error: loggerError },
+    logger: { error: loggerError, warn: loggerWarn },
     stripe: {
       subscriptions: {
         list: async function* () {},
@@ -51,14 +55,16 @@ function createTestDeps() {
 
   const verifyWebhook = vi.fn();
   const processClerkWebhook =
-    vi.fn<(deps: ClerkWebhookDeps) => Promise<void>>();
+    vi.fn<
+      (deps: ClerkWebhookDeps, event: ClerkWebhookEvent) => Promise<void>
+    >();
   const cancelStripeCustomerSubscriptions = vi.fn(async () => undefined);
 
   return {
     POST: createWebhookHandler(
       createContainer,
       verifyWebhook,
-      processClerkWebhook as never,
+      processClerkWebhook,
       cancelStripeCustomerSubscriptions,
     ),
     createContainer,
@@ -66,6 +72,7 @@ function createTestDeps() {
     processClerkWebhook,
     cancelStripeCustomerSubscriptions,
     loggerError,
+    loggerWarn,
     createUserRepository,
     createStripeCustomerRepository,
     userRepository,

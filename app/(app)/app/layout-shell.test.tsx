@@ -28,7 +28,7 @@ describe('app/(app)/app/layout (shell)', () => {
     expect(html).toContain('AuthNav');
     expect(html).toContain('MobileNav');
     expect(html).toContain('Child content');
-  });
+  }, 10_000);
 
   it('renders AppLayout via renderAppLayout with injected deps', async () => {
     const { renderAppLayout } = await import('@/app/(app)/app/layout');

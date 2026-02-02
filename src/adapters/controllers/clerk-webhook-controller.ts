@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import type { Logger } from '@/src/adapters/shared/logger';
 import { ApplicationError } from '@/src/application/errors';
 import type {
   StripeCustomerRepository,
@@ -16,6 +17,7 @@ export type ClerkWebhookDeps = {
   cancelStripeCustomerSubscriptions: (
     stripeCustomerId: string,
   ) => Promise<void>;
+  logger?: Logger;
 };
 
 type ClerkEmailAddressLike = {
@@ -128,7 +130,13 @@ export async function processClerkWebhook(
     }
 
     const email = getPrimaryEmailOrNull(data);
-    if (!email) return;
+    if (!email) {
+      deps.logger?.warn(
+        { clerkUserId },
+        'Clerk user.updated missing email; skipping user upsert',
+      );
+      return;
+    }
 
     await deps.userRepository.upsertByClerkId(clerkUserId, email);
     return;

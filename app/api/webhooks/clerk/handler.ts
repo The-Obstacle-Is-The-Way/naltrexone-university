@@ -27,6 +27,7 @@ type StripeClient = {
 
 type ClerkWebhookRouteLogger = {
   error: (context: unknown, message: string) => void;
+  warn: (context: Record<string, unknown>, message: string) => void;
 };
 
 export type ClerkWebhookRouteContainer = {
@@ -98,6 +99,7 @@ export function createWebhookHandler(
           stripeCustomerRepository: container.createStripeCustomerRepository(),
           cancelStripeCustomerSubscriptions:
             cancelStripeCustomerSubscriptions.bind(null, container.stripe),
+          logger: container.logger,
         },
         event,
       );
