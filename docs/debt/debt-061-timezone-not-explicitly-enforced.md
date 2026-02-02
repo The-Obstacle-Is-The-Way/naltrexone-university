@@ -19,7 +19,7 @@ createdAt: timestamp('created_at', { withTimezone: true })
 
 Application code uses `new Date()` without explicit timezone handling:
 ```typescript
-// Could be local timezone depending on environment
+// new Date() stores UTC internally, but interpretation varies by environment
 const now = new Date();
 ```
 

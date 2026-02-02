@@ -41,5 +41,5 @@ No Clerk webhook integration was implemented. Only Stripe webhooks exist.
 5. Cancel any active Stripe subscription for the user
 
 ## Related
-- Clerk docs: https://clerk.com/docs/integrations/webhooks
+- [Clerk Webhooks Documentation](https://clerk.com/docs/integrations/webhooks)
 - SPEC-007: User-facing API (should include deletion handling)

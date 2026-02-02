@@ -33,6 +33,8 @@ return (
 Add more context (while keeping sensitive details hidden):
 
 ```typescript
+import Link from 'next/link';
+
 export default function Error({
   error,
   reset,

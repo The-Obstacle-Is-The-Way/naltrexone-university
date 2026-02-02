@@ -27,6 +27,7 @@ test.describe('practice', () => {
 
     // Go to practice; if redirected to pricing, subscribe first
     await page.goto('/app/practice');
+    await page.waitForURL(/\/(app\/practice|pricing)/);
     if (page.url().includes('/pricing')) {
       await expect(
         page.getByRole('heading', { name: 'Pricing' }),

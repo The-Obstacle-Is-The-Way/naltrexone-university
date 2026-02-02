@@ -1,0 +1,132 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+# CodeRabbit Configuration for Naltrexone University
+# See: https://docs.coderabbit.ai/reference/configuration
+
+language: en-US
+
+tone_instructions: |
+  Be direct and technical. Focus on correctness and best practices.
+  Prioritize actionable feedback over praise. Flag violations of
+  project conventions documented in CLAUDE.md.
+
+early_access: false
+
+reviews:
+  profile: assertive
+  request_changes_workflow: true
+  high_level_summary: true
+  poem: false
+  review_status: true
+  collapse_walkthrough: false
+  auto_review:
+    enabled: true
+    drafts: false
+  path_instructions:
+    # Domain Layer - Pure business logic, no external dependencies
+    - path: "src/domain/**"
+      instructions: |
+        This is the DOMAIN layer (Clean Architecture innermost layer).
+        MUST have ZERO external dependencies - only pure TypeScript.
+        Entities must not contain vendor IDs (Clerk, Stripe).
+        Value objects must be immutable with factory functions.
+        Domain services must be pure functions.
+        All domain code MUST be 100% unit testable without mocks.
+
+    # Application Layer - Use cases and ports
+    - path: "src/application/**"
+      instructions: |
+        This is the APPLICATION layer (use cases + ports).
+        Dependencies flow INWARD only (can import from domain/).
+        Use cases orchestrate, they don't implement business rules.
+        Ports (interfaces) define contracts for adapters.
+        Tests should use fakes from test-helpers/fakes.ts, NOT vi.mock().
+
+    # Adapters Layer - Implementations
+    - path: "src/adapters/**"
+      instructions: |
+        This is the ADAPTERS layer (repositories, gateways, controllers).
+        Implements ports defined in application layer.
+        Controllers handle validation, error mapping, and orchestration.
+        Repositories wrap database operations.
+        Gateways wrap external services (Clerk, Stripe).
+        Tests MUST use fake DB objects via DI, NOT vi.mock() on our own code.
+
+    # Test files - Vitest conventions
+    - path: "**/*.test.ts"
+      instructions: |
+        TESTING CONVENTIONS (Vitest, NOT Jest):
+        1. Use fakes via dependency injection, NOT vi.mock() for our own code
+        2. vi.mock() is ONLY acceptable for external packages (Clerk, Next.js, server-only)
+        3. vi.fn() inside fake objects for spying is CORRECT
+        4. One concept per test, use Arrange-Act-Assert pattern
+        5. Test behavior, not implementation details
+        6. Use factories: createQuestion(), createChoice() from test-helpers/
+
+    # React component tests - React 19 specific
+    - path: "**/*.test.tsx"
+      instructions: |
+        REACT 19 + VITEST REQUIREMENTS:
+        1. MUST have "// @vitest-environment jsdom" as FIRST LINE
+        2. Use renderToStaticMarkup from react-dom/server for render tests
+        3. DO NOT use @testing-library/react (broken with React 19)
+        4. DO NOT use react-test-renderer (deprecated in React 19)
+        5. For interactive tests, add conditions: ['development'] to vitest.config.ts
+
+    # E2E tests - Playwright
+    - path: "tests/e2e/**"
+      instructions: |
+        E2E tests use Playwright.
+        Use waitForURL() or waitForNavigation() before checking page.url().
+        Avoid race conditions with synchronous URL checks after navigation.
+
+    # Next.js App Router
+    - path: "app/**"
+      instructions: |
+        Next.js App Router with Server Components and Server Actions.
+        Server Actions must be in files with 'use server' directive.
+        Client components must have 'use client' directive.
+        Use composition root pattern - wire dependencies at entry points.
+
+    # Database schema
+    - path: "db/**"
+      instructions: |
+        Drizzle ORM schema and migrations.
+        Schema changes require running pnpm db:generate.
+        Tables should have appropriate indexes for query patterns.
+
+  path_filters:
+    - "!**/node_modules/**"
+    - "!**/pnpm-lock.yaml"
+    - "!**/.next/**"
+    - "!**/dist/**"
+    - "!db/migrations/**"
+
+  # Focus on these tools
+  tools:
+    biome:
+      enabled: true
+    eslint:
+      enabled: false  # We use Biome, not ESLint
+
+  # Knowledge base: reference project docs
+  knowledge_base:
+    learnings:
+      enabled: true
+    issues:
+      enabled: true
+    jira:
+      enabled: false
+    linear:
+      enabled: false
+
+chat:
+  enabled: true
+  auto_reply: true
+
+# Reference our coding guidelines
+code_guidelines:
+  enabled: true
+  file_patterns:
+    - "CLAUDE.md"
+    - "docs/specs/master_spec.md"
+    - "AGENTS.md"

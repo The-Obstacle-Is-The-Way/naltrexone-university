@@ -57,4 +57,4 @@ checkout_session_id: varchar('checkout_session_id')
 
 ## Related
 - SPEC-009: Stripe Integration
-- Stripe docs: https://stripe.com/docs/api/checkout/sessions/list
+- [Stripe Checkout Sessions API](https://stripe.com/docs/api/checkout/sessions/list)

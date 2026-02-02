@@ -8,6 +8,7 @@ import type {
 } from '@/src/application/ports/repositories';
 import type { Attempt, PracticeSession, User } from '@/src/domain/entities';
 import { createSeed, shuffleWithSeed } from '@/src/domain/services';
+import type { PracticeControllerDeps } from './practice-controller';
 import {
   endPracticeSession,
   startPracticeSession,
@@ -63,7 +64,7 @@ function createDeps(overrides?: {
   endedSession?: PracticeSession;
   attempts?: readonly Attempt[];
   now?: () => Date;
-}) {
+}): PracticeControllerDeps {
   const user = overrides?.user ?? createUser();
   const isEntitled = overrides?.isEntitled ?? true;
   const candidateIds = overrides?.candidateIds ?? [];
@@ -125,7 +126,7 @@ describe('practice-controller', () => {
 
       const result = await startPracticeSession(
         { mode: 'tutor', count: 0, tagSlugs: [], difficulties: [] },
-        deps as never,
+        deps,
       );
 
       expect(result).toMatchObject({
@@ -145,7 +146,7 @@ describe('practice-controller', () => {
 
       const result = await startPracticeSession(
         { mode: 'tutor', count: 10, tagSlugs: [], difficulties: [] },
-        deps as never,
+        deps,
       );
 
       expect(result).toMatchObject({
@@ -159,7 +160,7 @@ describe('practice-controller', () => {
 
       const result = await startPracticeSession(
         { mode: 'tutor', count: 10, tagSlugs: [], difficulties: [] },
-        deps as never,
+        deps,
       );
 
       expect(result).toMatchObject({
@@ -177,7 +178,7 @@ describe('practice-controller', () => {
 
       const result = await startPracticeSession(
         { mode: 'tutor', count: 10, tagSlugs: [], difficulties: [] },
-        deps as never,
+        deps,
       );
 
       expect(result).toEqual({
@@ -209,7 +210,7 @@ describe('practice-controller', () => {
         2,
       );
 
-      const result = await startPracticeSession(input, deps as never);
+      const result = await startPracticeSession(input, deps);
 
       expect(result).toEqual({
         ok: true,
@@ -266,10 +267,7 @@ describe('practice-controller', () => {
     it('returns VALIDATION_ERROR when input is invalid', async () => {
       const deps = createDeps();
 
-      const result = await endPracticeSession(
-        { sessionId: 'bad' },
-        deps as never,
-      );
+      const result = await endPracticeSession({ sessionId: 'bad' }, deps);
 
       expect(result).toMatchObject({
         ok: false,
@@ -284,7 +282,7 @@ describe('practice-controller', () => {
           endedAt: new Date('2026-02-01T00:00:00Z'),
         }),
         authGateway: {
-          requireUser: async () => createUser() as never,
+          requireUser: async () => createUser(),
         },
       });
 
@@ -298,7 +296,7 @@ describe('practice-controller', () => {
 
       const result = await endPracticeSession(
         { sessionId: '11111111-1111-1111-1111-111111111111' },
-        deps as never,
+        deps,
       );
 
       expect(result).toEqual({
@@ -317,7 +315,7 @@ describe('practice-controller', () => {
         }),
       });
 
-      const result = await endPracticeSession({ sessionId }, deps as never);
+      const result = await endPracticeSession({ sessionId }, deps);
 
       expect(result).toEqual({
         ok: false,
@@ -345,7 +343,7 @@ describe('practice-controller', () => {
 
       const deps = createDeps({ endedSession, attempts });
 
-      const result = await endPracticeSession({ sessionId }, deps as never);
+      const result = await endPracticeSession({ sessionId }, deps);
 
       expect(result).toEqual({
         ok: true,

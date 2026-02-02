@@ -56,8 +56,8 @@ The codebase uses **upsert-on-login** pattern (line 46 of clerk-auth-gateway.ts)
 
 | Issue | Impact | Bug/Debt ID |
 |-------|--------|-------------|
-| No `user.deleted` webhook | Orphaned data, GDPR risk | BUG-022 |
-| No `user.updated` webhook | Email out of sync | BUG-037 |
+| No `user.deleted` webhook | Orphaned data, GDPR risk | BUG-023 |
+| No `user.updated` webhook | Email out of sync | BUG-038 |
 
 ### Recommendation
 
@@ -114,10 +114,10 @@ The upsert-on-login pattern is CORRECT for this use case. Do NOT add unnecessary
 
 | Issue | Impact | Bug/Debt ID |
 |-------|--------|-------------|
-| No eager sync for subscription updates | Race on payment failures | BUG-023 (partial) |
-| Missing `paused`/`resumed` handlers | State machine incomplete | BUG-024 |
-| No cleanup on `stripe_events` | Unbounded table growth | BUG-026 |
-| Webhook error context lost | Hard to debug | BUG-033 |
+| No eager sync for subscription updates | Race on payment failures | BUG-024 (partial) |
+| Missing `paused`/`resumed` handlers | State machine incomplete | BUG-025 |
+| No cleanup on `stripe_events` | Unbounded table growth | BUG-027 |
+| Webhook error context lost | Hard to debug | BUG-034 |
 
 ### Recommendation
 
@@ -189,11 +189,12 @@ Adopting paykit would require significant refactoring with minimal benefit.
 
 ## Related Documentation
 
-- BUG-022: Missing Clerk user.deleted webhook
-- BUG-037: Missing Clerk user.updated webhook
-- BUG-023: Entitlement race condition (webhook delay)
-- BUG-024: Missing subscription event handlers
-- BUG-026: Stripe events unbounded growth
+- BUG-023: Missing Clerk user.deleted webhook
+- BUG-038: Missing Clerk user.updated webhook
+- BUG-024: Entitlement race condition (webhook delay)
+- BUG-025: Missing subscription event handlers
+- BUG-027: Stripe events unbounded growth
+- BUG-034: Webhook error context lost
 - DEBT-069: Document Stripe eager sync pattern
 
 ## Sources

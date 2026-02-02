@@ -84,5 +84,5 @@ useEffect(() => {
 ```
 
 ## Related
-- BUG-032: Stale closure in onToggleBookmark
-- React docs on cleanup: https://react.dev/learn/synchronizing-with-effects#fetching-data
+- BUG-033: Stale closure in onToggleBookmark
+- [React Effects Documentation](https://react.dev/learn/synchronizing-with-effects#fetching-data)

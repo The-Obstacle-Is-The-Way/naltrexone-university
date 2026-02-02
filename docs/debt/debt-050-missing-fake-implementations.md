@@ -39,7 +39,7 @@ const fakeDb = {
 };
 ```
 
-**Should be:**
+**Correct pattern:**
 ```typescript
 const userRepo = new FakeUserRepository([existingUser]);
 ```
