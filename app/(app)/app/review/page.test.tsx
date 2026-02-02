@@ -27,6 +27,8 @@ describe('app/(app)/app/review', () => {
     expect(html).toContain('Stem for q1');
     expect(html).toContain('easy');
     expect(html).toContain('Missed 2026-02-01');
+    expect(html).toContain('Reattempt');
+    expect(html).toContain('/app/questions/q-1');
   });
 
   it('renders empty state when no missed questions exist', () => {

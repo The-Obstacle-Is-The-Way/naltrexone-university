@@ -25,6 +25,8 @@ describe('app/(app)/app/bookmarks', () => {
     expect(html).toContain('Stem for q1');
     expect(html).toContain('easy');
     expect(html).toContain('Bookmarked 2026-02-01');
+    expect(html).toContain('Reattempt');
+    expect(html).toContain('/app/questions/q-1');
     expect(html).toContain('Remove');
   });
 

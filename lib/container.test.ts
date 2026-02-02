@@ -83,6 +83,7 @@ describe('container factories', () => {
 
     expect(typeof container.createStripeWebhookDeps).toBe('function');
     expect(typeof container.createQuestionControllerDeps).toBe('function');
+    expect(typeof container.createQuestionViewControllerDeps).toBe('function');
     expect(typeof container.createBillingControllerDeps).toBe('function');
     expect(typeof container.createBookmarkControllerDeps).toBe('function');
     expect(typeof container.createPracticeControllerDeps).toBe('function');
@@ -166,6 +167,15 @@ describe('container factories', () => {
     );
     expect(questionDeps.submitAnswerUseCase).toBeInstanceOf(
       SubmitAnswerUseCase,
+    );
+
+    const questionViewDeps = container.createQuestionViewControllerDeps();
+    expect(questionViewDeps.authGateway).toBeInstanceOf(ClerkAuthGateway);
+    expect(questionViewDeps.checkEntitlementUseCase).toBeInstanceOf(
+      CheckEntitlementUseCase,
+    );
+    expect(questionViewDeps.questionRepository).toBeInstanceOf(
+      DrizzleQuestionRepository,
     );
 
     const billingDeps = container.createBillingControllerDeps();

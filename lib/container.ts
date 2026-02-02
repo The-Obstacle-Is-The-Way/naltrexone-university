@@ -4,6 +4,7 @@ import type { BillingControllerDeps } from '@/src/adapters/controllers/billing-c
 import type { BookmarkControllerDeps } from '@/src/adapters/controllers/bookmark-controller';
 import type { PracticeControllerDeps } from '@/src/adapters/controllers/practice-controller';
 import type { QuestionControllerDeps } from '@/src/adapters/controllers/question-controller';
+import type { QuestionViewControllerDeps } from '@/src/adapters/controllers/question-view-controller';
 import type { ReviewControllerDeps } from '@/src/adapters/controllers/review-controller';
 import type { StatsControllerDeps } from '@/src/adapters/controllers/stats-controller';
 import type { StripeWebhookDeps } from '@/src/adapters/controllers/stripe-webhook-controller';
@@ -90,6 +91,7 @@ export type UseCaseFactories = {
 export type ControllerFactories = {
   createStripeWebhookDeps: () => StripeWebhookDeps;
   createQuestionControllerDeps: () => QuestionControllerDeps;
+  createQuestionViewControllerDeps: () => QuestionViewControllerDeps;
   createBillingControllerDeps: () => BillingControllerDeps;
   createBookmarkControllerDeps: () => BookmarkControllerDeps;
   createPracticeControllerDeps: () => PracticeControllerDeps;
@@ -224,6 +226,11 @@ export function createContainer(overrides: ContainerOverrides = {}) {
       checkEntitlementUseCase: useCases.createCheckEntitlementUseCase(),
       getNextQuestionUseCase: useCases.createGetNextQuestionUseCase(),
       submitAnswerUseCase: useCases.createSubmitAnswerUseCase(),
+    }),
+    createQuestionViewControllerDeps: () => ({
+      authGateway: gateways.createAuthGateway(),
+      checkEntitlementUseCase: useCases.createCheckEntitlementUseCase(),
+      questionRepository: repositories.createQuestionRepository(),
     }),
     createBillingControllerDeps: () => ({
       authGateway: gateways.createAuthGateway(),
