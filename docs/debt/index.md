@@ -18,7 +18,6 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 | ID | Title | Status | Priority | Date |
 |----|-------|--------|----------|------|
 | [DEBT-053](./debt-053-unused-tag-repository.md) | Unused TagRepository — Wired But Never Called | Open | P2 | 2026-02-02 |
-| [DEBT-054](./debt-054-unused-domain-error-codes.md) | Unused Domain Error Codes — Defined But Never Thrown | Open | P3 | 2026-02-02 |
 | [DEBT-060](./debt-060-no-rollback-migrations.md) | No Rollback Migrations | Open | P2 | 2026-02-02 |
 | [DEBT-061](./debt-061-timezone-not-explicitly-enforced.md) | Timezone Not Explicitly Enforced at Application Level | Open | P3 | 2026-02-02 |
 
@@ -80,6 +79,7 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 | [DEBT-050](../_archive/debt/debt-050-missing-fake-implementations.md) | Missing Fake Implementations for 5 Repositories | P2 | 2026-02-02 |
 | [DEBT-051](../_archive/debt/debt-051-controller-tests-use-mocks-not-fakes.md) | Controller Tests Use vi.fn() Instead of Fakes | P2 | 2026-02-02 |
 | [DEBT-052](../_archive/debt/debt-052-unused-domain-service-compute-session-progress.md) | Unused Domain Service — computeSessionProgress | P2 | 2026-02-02 |
+| [DEBT-054](../_archive/debt/debt-054-unused-domain-error-codes.md) | Unused Domain Error Codes — Defined But Never Thrown | P3 | 2026-02-02 |
 | [DEBT-055](../_archive/debt/debt-055-magic-numbers-stats-undocumented.md) | Magic Numbers in Stats Controller Lack Documentation | P3 | 2026-02-02 |
 | [DEBT-056](../_archive/debt/debt-056-repeated-getdeps-pattern.md) | Repeated getDeps Pattern Across 6 Controllers | P3 | 2026-02-02 |
 | [DEBT-057](../_archive/debt/debt-057-webhook-error-stack-trace-lost.md) | Webhook Error Stack Trace Lost in Database | P3 | 2026-02-02 |

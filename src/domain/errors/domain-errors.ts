@@ -1,10 +1,4 @@
-export const DomainErrorCodes = [
-  'INVALID_QUESTION',
-  'INVALID_CHOICE',
-  'INVALID_SESSION',
-  'SESSION_ALREADY_ENDED',
-  'NO_QUESTIONS_MATCH',
-] as const;
+export const DomainErrorCodes = ['INVALID_QUESTION', 'INVALID_CHOICE'] as const;
 
 export type DomainErrorCode = (typeof DomainErrorCodes)[number];
 

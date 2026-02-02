@@ -14,7 +14,7 @@ describe('DomainError', () => {
 
 describe('isDomainError', () => {
   it('returns true for DomainError instances', () => {
-    expect(isDomainError(new DomainError('INVALID_SESSION', 'Invalid'))).toBe(
+    expect(isDomainError(new DomainError('INVALID_CHOICE', 'Invalid'))).toBe(
       true,
     );
   });
