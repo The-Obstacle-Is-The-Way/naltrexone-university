@@ -40,12 +40,16 @@ describe('app/(app)/app/layout', () => {
         { authGateway, checkEntitlementUseCase },
         redirectFn as never,
       ),
-    ).rejects.toMatchObject({ message: 'redirect:/pricing' });
+    ).rejects.toMatchObject({
+      message: 'redirect:/pricing?reason=subscription_required',
+    });
 
     expect(checkEntitlementUseCase.execute).toHaveBeenCalledWith({
       userId: 'user_1',
     });
-    expect(redirectFn).toHaveBeenCalledWith('/pricing');
+    expect(redirectFn).toHaveBeenCalledWith(
+      '/pricing?reason=subscription_required',
+    );
   });
 
   it('does not redirect when user is entitled', async () => {

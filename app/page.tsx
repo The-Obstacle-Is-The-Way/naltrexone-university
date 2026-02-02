@@ -1,5 +1,5 @@
-import Link from 'next/link';
 import { AuthNav } from '@/components/auth-nav';
+import { GetStartedCta } from '@/components/get-started-cta';
 
 export default function HomePage() {
   return (
@@ -24,12 +24,7 @@ export default function HomePage() {
             for Addiction Psychiatry and Addiction Medicine board exam prep.
           </p>
           <div className="mt-8">
-            <Link
-              href="/pricing"
-              className="inline-block rounded-full bg-orange-600 px-8 py-3 text-base font-medium text-white hover:bg-orange-700"
-            >
-              Get Started
-            </Link>
+            <GetStartedCta />
           </div>
         </div>
       </main>

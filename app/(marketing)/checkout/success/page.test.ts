@@ -31,7 +31,7 @@ describe('app/(marketing)/checkout/success/page', () => {
 
     await expect(
       syncCheckoutSuccess({ sessionId: null }, undefined, redirectFn as never),
-    ).rejects.toMatchObject({ message: 'redirect:/pricing' });
+    ).rejects.toMatchObject({ message: 'redirect:/pricing?checkout=error' });
   });
 
   it('syncs subscription and redirects to /app/dashboard on success', async () => {
@@ -166,6 +166,6 @@ describe('app/(marketing)/checkout/success/page', () => {
         deps,
         redirectFn as never,
       ),
-    ).rejects.toMatchObject({ message: 'redirect:/pricing' });
+    ).rejects.toMatchObject({ message: 'redirect:/pricing?checkout=error' });
   });
 });

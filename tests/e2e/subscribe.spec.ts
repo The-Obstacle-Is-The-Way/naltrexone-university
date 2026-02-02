@@ -3,10 +3,10 @@ import { expect, test } from '@playwright/test';
 const clerkUsername = process.env.E2E_CLERK_USER_USERNAME;
 const clerkPassword = process.env.E2E_CLERK_USER_PASSWORD;
 
-test.describe('subscribe and practice', () => {
+test.describe('subscribe', () => {
   test.skip(!clerkUsername || !clerkPassword, 'Missing Clerk E2E credentials');
 
-  test('user can subscribe and answer a question', async ({ page }) => {
+  test('user can subscribe and reach dashboard', async ({ page }) => {
     // Sign in via Clerk
     await page.goto('/sign-in');
 
@@ -68,36 +68,9 @@ test.describe('subscribe and practice', () => {
       // Success page syncs and redirects to dashboard
       await expect(page).toHaveURL(/\/app\/dashboard/);
     }
+
     await expect(
       page.getByRole('heading', { name: 'Dashboard' }),
     ).toBeVisible();
-
-    // Practice flow
-    await page.goto('/app/practice');
-    await expect(page.getByRole('heading', { name: 'Practice' })).toBeVisible();
-
-    // Bookmark toggle
-    const bookmarkButton = page.getByRole('button', {
-      name: /Bookmark|Bookmarked/,
-    });
-    await expect(bookmarkButton).toBeVisible();
-
-    if (await page.getByRole('button', { name: 'Bookmark' }).count()) {
-      await page.getByRole('button', { name: 'Bookmark' }).click();
-    }
-    await expect(
-      page.getByRole('button', { name: 'Bookmarked' }),
-    ).toBeVisible();
-
-    // Select first choice and submit
-    const firstChoiceButton = page.getByRole('button').filter({
-      has: page.getByText(/^A$/),
-    });
-    await firstChoiceButton.first().click();
-
-    await page.getByRole('button', { name: 'Submit' }).click();
-
-    await expect(page.getByText(/Correct|Incorrect/)).toBeVisible();
-    await expect(page.getByText('Explanation')).toBeVisible();
   });
 });

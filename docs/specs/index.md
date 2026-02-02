@@ -1,7 +1,7 @@
 # Implementation Specifications
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-02-01
+**Last Updated:** 2026-02-02
 
 ---
 
@@ -28,8 +28,8 @@ Implementation specifications provide detailed technical guidance for building e
 | [SPEC-008](./spec-008-auth-gateway.md) | Auth Gateway (Clerk) | Implemented | Adapters |
 | [SPEC-009](./spec-009-payment-gateway.md) | Payment Gateway (Stripe) | Implemented | Adapters |
 | [SPEC-010](./spec-010-server-actions.md) | Server Actions (Controllers) | Implemented | Adapters |
-| [SPEC-011](./spec-011-paywall.md) | Paywall (Stripe Subscriptions) | Partial | Feature |
-| [SPEC-012](./spec-012-core-question-loop.md) | Core Question Loop | Partial | Feature |
+| [SPEC-011](./spec-011-paywall.md) | Paywall (Stripe Subscriptions) | Implemented | Feature |
+| [SPEC-012](./spec-012-core-question-loop.md) | Core Question Loop | Implemented | Feature |
 | [SPEC-013](./spec-013-practice-sessions.md) | Practice Sessions | Ready | Feature |
 | [SPEC-014](./spec-014-review-bookmarks.md) | Review + Bookmarks | Ready | Feature |
 | [SPEC-015](./spec-015-dashboard.md) | Dashboard | Ready | Feature |

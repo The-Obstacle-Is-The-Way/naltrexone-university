@@ -94,7 +94,7 @@ export async function syncCheckoutSuccess(
   deps?: CheckoutSuccessDeps,
   redirectFn: (url: string) => never = redirect,
 ): Promise<void> {
-  if (!input.sessionId) redirectFn('/pricing');
+  if (!input.sessionId) redirectFn('/pricing?checkout=error');
 
   const d = await getDeps(deps);
   const user = await d.authGateway.requireUser();
@@ -105,7 +105,8 @@ export async function syncCheckoutSuccess(
 
   const stripeCustomerId = getStripeId(session.customer);
   const subscriptionId = getStripeId(session.subscription);
-  if (!stripeCustomerId || !subscriptionId) redirectFn('/pricing');
+  if (!stripeCustomerId || !subscriptionId)
+    redirectFn('/pricing?checkout=error');
 
   const subscription =
     typeof session.subscription === 'object' && session.subscription !== null
@@ -113,22 +114,26 @@ export async function syncCheckoutSuccess(
       : await d.stripe.subscriptions.retrieve(subscriptionId);
 
   const metadataUserId = subscription.metadata?.user_id;
-  if (metadataUserId && metadataUserId !== user.id) redirectFn('/pricing');
+  if (metadataUserId && metadataUserId !== user.id)
+    redirectFn('/pricing?checkout=error');
 
   const status = subscription.status;
-  if (!status || !isValidSubscriptionStatus(status)) redirectFn('/pricing');
+  if (!status || !isValidSubscriptionStatus(status))
+    redirectFn('/pricing?checkout=error');
 
   const currentPeriodEndSeconds = subscription.current_period_end;
-  if (typeof currentPeriodEndSeconds !== 'number') redirectFn('/pricing');
+  if (typeof currentPeriodEndSeconds !== 'number')
+    redirectFn('/pricing?checkout=error');
 
   const cancelAtPeriodEnd = subscription.cancel_at_period_end;
-  if (typeof cancelAtPeriodEnd !== 'boolean') redirectFn('/pricing');
+  if (typeof cancelAtPeriodEnd !== 'boolean')
+    redirectFn('/pricing?checkout=error');
 
   const priceId = subscription.items?.data?.[0]?.price?.id;
-  if (!priceId) redirectFn('/pricing');
+  if (!priceId) redirectFn('/pricing?checkout=error');
 
   const plan = getSubscriptionPlanFromPriceId(priceId, d.priceIds);
-  if (!plan) redirectFn('/pricing');
+  if (!plan) redirectFn('/pricing?checkout=error');
 
   await d.transaction(async ({ stripeCustomers, subscriptions }) => {
     await stripeCustomers.insert(user.id, stripeCustomerId);

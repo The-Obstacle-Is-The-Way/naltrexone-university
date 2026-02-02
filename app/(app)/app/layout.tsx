@@ -40,7 +40,7 @@ export async function enforceEntitledAppUser(
   });
 
   if (!entitlement.isEntitled) {
-    redirectFn('/pricing');
+    redirectFn('/pricing?reason=subscription_required');
   }
 }
 

@@ -1,6 +1,6 @@
 # BUG-010: Database Not Seeded — No Questions Available
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P1
 **Date:** 2026-02-01
 

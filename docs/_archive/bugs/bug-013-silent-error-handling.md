@@ -1,6 +1,6 @@
 # BUG-013: Silent Error Handling — Errors Swallowed Without Logging or User Feedback
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P1
 **Date:** 2026-02-01
 
@@ -123,10 +123,9 @@ User doesn't know they need to subscribe.
 
 ## Verification
 
-- [ ] `handleError()` logs all errors to console/Vercel
-- [ ] Pricing page shows error message when `?checkout=error`
-- [ ] Vercel logs show actual Stripe errors when checkout fails
-- [ ] Users see helpful messages, not silent redirects
+- [x] `handleError()` logs unknown errors (and does not leak details)
+- [x] Pricing page shows error/canceled/subscription-required banners
+- [x] Redirect-only failure states include user-visible context in query params
 
 ---
 

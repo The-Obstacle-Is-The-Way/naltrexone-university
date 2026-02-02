@@ -14,5 +14,6 @@ describe('app/(app)/app/practice', () => {
 
     const html = renderToStaticMarkup(<PracticePage />);
     expect(html).toContain('Practice');
+    expect(html).toContain('Back to Dashboard');
   });
 });

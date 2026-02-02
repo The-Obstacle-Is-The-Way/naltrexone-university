@@ -1,6 +1,6 @@
 # BUG-012: Incomplete Feature Wiring — Missing Controllers and E2E Coverage
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P2
 **Date:** 2026-02-01
 

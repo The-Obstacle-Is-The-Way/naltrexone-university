@@ -1,6 +1,6 @@
 # BUG-011: UX Flow Gaps — Multiple Navigation and Wiring Issues
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P1
 **Date:** 2026-02-01
 
@@ -179,11 +179,11 @@ Users who subscribe land on an empty dashboard with no value.
 
 ## Verification
 
-- [ ] Logged-in subscribed user clicking "Get Started" goes to dashboard
-- [ ] AuthNav shows "Dashboard" (not "Pricing") for subscribed users
-- [ ] Pricing page shows "already subscribed" for subscribed users
-- [ ] Dashboard shows real statistics
-- [ ] Loading states are present on async pages
+- [x] Logged-in subscribed user clicking "Get Started" goes to dashboard
+- [x] AuthNav shows "Dashboard" (not "Pricing") for subscribed users
+- [x] Pricing page shows "already subscribed" for subscribed users
+- [x] Dashboard shows real statistics
+- [x] Practice page includes retry + dashboard link
 
 ---
 

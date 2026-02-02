@@ -1,6 +1,6 @@
 # BUG-009: Vercel Preview Deployment Status Fails Due to Rate Limit
 
-**Status:** Open
+**Status:** Won't Fix
 **Priority:** P3
 **Date:** 2026-02-01
 
@@ -26,7 +26,9 @@ The Vercel integration is hitting a free-tier/plan deployment limit for preview 
 
 ## Fix
 
-Pending decision (options):
+Won't fix in code. This is expected behavior on the current Vercel plan.
+
+Options (operational):
 
 - Upgrade the Vercel plan to raise/remove preview deployment limits.
 - Reduce preview deployments (e.g., only deploy on certain branches).
@@ -34,8 +36,7 @@ Pending decision (options):
 
 ## Verification
 
-- [ ] Open a PR and confirm `Vercel` status becomes non-blocking (pass or skipped) under normal usage.
-- [ ] Confirm merges are not blocked by Vercel failures (if Vercel is kept as advisory only).
+- [x] Confirm merges are not blocked by Vercel failures (treat as advisory).
 
 ## Related
 
