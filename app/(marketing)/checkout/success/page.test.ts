@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { ROUTES } from '@/lib/routes';
 import { runCheckoutSuccessPage } from './page';
 
@@ -9,6 +9,66 @@ class RedirectError extends Error {
 }
 
 describe('runCheckoutSuccessPage', () => {
+  it('redirects unauthenticated users to sign-in (preserves session_id)', async () => {
+    const requireUser = vi.fn(async () => {
+      throw new Error('should not be called');
+    });
+
+    const stripeRetrieve = vi.fn(async () => {
+      throw new Error('should not be called');
+    });
+
+    const redirectToSignIn = vi.fn(
+      ({ returnBackUrl }: { returnBackUrl: string | URL }): never => {
+        expect(returnBackUrl.toString()).toBe(
+          'https://example.com/checkout/success?session_id=cs_test',
+        );
+        throw new RedirectError('REDIRECT:SIGN_IN');
+      },
+    );
+
+    const deps = {
+      authGateway: {
+        getCurrentUser: async () => null,
+        requireUser,
+      },
+      getClerkAuth: async () => ({
+        userId: null,
+        redirectToSignIn,
+      }),
+      stripe: {
+        checkout: {
+          sessions: {
+            retrieve: stripeRetrieve,
+          },
+        },
+        subscriptions: {
+          retrieve: async () => ({}),
+        },
+      },
+      priceIds: { monthly: 'price_monthly', annual: 'price_annual' },
+      appUrl: 'https://example.com',
+      transaction: async () => undefined,
+    };
+
+    const redirectFn = (url: string): never => {
+      throw new RedirectError(url);
+    };
+
+    const promise = runCheckoutSuccessPage(
+      { searchParams: Promise.resolve({ session_id: 'cs_test' }) },
+      deps as never,
+      redirectFn,
+    );
+
+    await expect(promise).rejects.toMatchObject({ url: 'REDIRECT:SIGN_IN' });
+    expect(redirectToSignIn).toHaveBeenCalledWith({
+      returnBackUrl: expect.any(URL),
+    });
+    expect(stripeRetrieve).not.toHaveBeenCalled();
+    expect(requireUser).not.toHaveBeenCalled();
+  });
+
   it('awaits searchParams before reading session_id', async () => {
     const stripeRetrieveCalls: Array<{
       sessionId: string;
@@ -25,6 +85,12 @@ describe('runCheckoutSuccessPage', () => {
           updatedAt: new Date('2026-02-01T00:00:00Z'),
         }),
       },
+      getClerkAuth: async () => ({
+        userId: 'clerk_user_1',
+        redirectToSignIn: () => {
+          throw new Error('should not redirect to sign-in');
+        },
+      }),
       stripe: {
         checkout: {
           sessions: {
@@ -53,6 +119,7 @@ describe('runCheckoutSuccessPage', () => {
         },
       },
       priceIds: { monthly: 'price_monthly', annual: 'price_annual' },
+      appUrl: 'https://example.com',
       transaction: async (fn: any) =>
         fn({
           stripeCustomers: { insert: async () => undefined },

@@ -38,6 +38,11 @@ type StripeClientLike = {
   };
 };
 
+type ClerkAuthLike = {
+  userId: string | null;
+  redirectToSignIn: (opts: { returnBackUrl: string | URL }) => never;
+};
+
 export type CheckoutSuccessTransaction = {
   stripeCustomers: StripeCustomerRepository;
   subscriptions: SubscriptionRepository;
@@ -45,8 +50,10 @@ export type CheckoutSuccessTransaction = {
 
 export type CheckoutSuccessDeps = {
   authGateway: AuthGateway;
+  getClerkAuth: () => Promise<ClerkAuthLike>;
   stripe: StripeClientLike;
   priceIds: StripePriceIds;
+  appUrl: string;
   transaction: <T>(
     fn: (tx: CheckoutSuccessTransaction) => Promise<T>,
   ) => Promise<T>;
@@ -69,16 +76,19 @@ async function getDeps(
 
   const { createContainer } = await import('@/lib/container');
   const { stripe } = await import('@/lib/stripe');
+  const { auth } = await import('@clerk/nextjs/server');
 
   const container = createContainer();
 
   return {
     authGateway: container.createAuthGateway(),
+    getClerkAuth: auth,
     stripe,
     priceIds: {
       monthly: container.env.NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY,
       annual: container.env.NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL,
     },
+    appUrl: container.env.NEXT_PUBLIC_APP_URL,
     transaction: async (fn) =>
       container.db.transaction(async (tx) =>
         fn({
@@ -118,6 +128,13 @@ export async function syncCheckoutSuccess(
   if (!input.sessionId) redirectFn(CHECKOUT_ERROR_ROUTE);
 
   const d = await getDeps(deps);
+  const clerkAuth = await d.getClerkAuth();
+  if (!clerkAuth.userId) {
+    const returnBackUrl = new URL(ROUTES.CHECKOUT_SUCCESS, d.appUrl);
+    returnBackUrl.searchParams.set('session_id', input.sessionId);
+    clerkAuth.redirectToSignIn({ returnBackUrl });
+  }
+
   const user = await d.authGateway.requireUser();
 
   const session = await d.stripe.checkout.sessions.retrieve(input.sessionId, {
