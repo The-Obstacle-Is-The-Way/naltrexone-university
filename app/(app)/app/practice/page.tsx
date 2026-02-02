@@ -15,6 +15,7 @@ import {
   getBookmarks,
   toggleBookmark,
 } from '@/src/adapters/controllers/bookmark-controller';
+import { startPracticeSession } from '@/src/adapters/controllers/practice-controller';
 import {
   getNextQuestion,
   submitAnswer,
@@ -34,6 +35,8 @@ function getErrorMessage(result: ActionResult<unknown>): string {
 }
 
 export type PracticeViewProps = {
+  topContent?: React.ReactNode;
+  sessionInfo?: NextQuestion['session'];
   loadState: LoadState;
   question: NextQuestion | null;
   selectedChoiceId: string | null;
@@ -42,6 +45,7 @@ export type PracticeViewProps = {
   bookmarkStatus: 'idle' | 'loading' | 'error';
   isBookmarked: boolean;
   canSubmit: boolean;
+  onEndSession?: () => void;
   onTryAgain: () => void;
   onToggleBookmark: () => void;
   onSelectChoice: (choiceId: string) => void;
@@ -51,9 +55,11 @@ export type PracticeViewProps = {
 
 export function PracticeView(props: PracticeViewProps) {
   const correctChoiceId = props.submitResult?.correctChoiceId ?? null;
+  const sessionInfo = props.sessionInfo ?? null;
 
   return (
     <div className="space-y-6">
+      {props.topContent}
       <div>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-baseline sm:justify-between">
           <div>
@@ -61,13 +67,31 @@ export function PracticeView(props: PracticeViewProps) {
             <p className="mt-1 text-muted-foreground">
               Answer one question at a time.
             </p>
+            {sessionInfo ? (
+              <p className="mt-2 text-xs text-muted-foreground">
+                Session: {sessionInfo.mode} • {sessionInfo.index + 1}/
+                {sessionInfo.total}
+              </p>
+            ) : null}
           </div>
-          <Link
-            href="/app/dashboard"
-            className="text-sm font-medium text-muted-foreground hover:text-foreground"
-          >
-            Back to Dashboard
-          </Link>
+          <div className="flex items-center gap-3">
+            {props.onEndSession ? (
+              <button
+                type="button"
+                className="inline-flex items-center justify-center rounded-full border border-border bg-background px-4 py-2 text-sm font-medium text-foreground hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60"
+                disabled={props.isPending}
+                onClick={props.onEndSession}
+              >
+                End session
+              </button>
+            ) : null}
+            <Link
+              href="/app/dashboard"
+              className="text-sm font-medium text-muted-foreground hover:text-foreground"
+            >
+              Back to Dashboard
+            </Link>
+          </div>
         </div>
       </div>
 
@@ -175,6 +199,14 @@ export default function PracticePage() {
   const [loadState, setLoadState] = useState<LoadState>({ status: 'idle' });
   const [isPending, startTransition] = useTransition();
   const [questionLoadedAt, setQuestionLoadedAt] = useState<number | null>(null);
+  const [sessionMode, setSessionMode] = useState<'tutor' | 'exam'>('tutor');
+  const [sessionCount, setSessionCount] = useState(20);
+  const [sessionStartStatus, setSessionStartStatus] = useState<
+    'idle' | 'loading' | 'error'
+  >('idle');
+  const [sessionStartError, setSessionStartError] = useState<string | null>(
+    null,
+  );
 
   const loadNext = useCallback(() => {
     startTransition(() => {
@@ -302,8 +334,86 @@ export default function PracticePage() {
     setBookmarkStatus('idle');
   }
 
+  async function onStartSession() {
+    setSessionStartStatus('loading');
+    setSessionStartError(null);
+
+    const res = await startPracticeSession({
+      mode: sessionMode,
+      count: sessionCount,
+      tagSlugs: [],
+      difficulties: [],
+    });
+
+    if (!res.ok) {
+      setSessionStartStatus('error');
+      setSessionStartError(getErrorMessage(res));
+      return;
+    }
+
+    window.location.href = `/app/practice/${res.data.sessionId}`;
+  }
+
   return (
     <PracticeView
+      topContent={
+        <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+            <div className="space-y-1">
+              <div className="text-sm font-medium text-foreground">
+                Start a session
+              </div>
+              <div className="text-sm text-muted-foreground">
+                Tutor mode shows explanations immediately. Exam mode hides
+                explanations until you end the session.
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+              <label className="text-sm text-muted-foreground">
+                <span className="mr-2">Mode</span>
+                <select
+                  className="rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground"
+                  value={sessionMode}
+                  onChange={(e) =>
+                    setSessionMode(e.target.value as 'tutor' | 'exam')
+                  }
+                >
+                  <option value="tutor">Tutor</option>
+                  <option value="exam">Exam</option>
+                </select>
+              </label>
+
+              <label className="text-sm text-muted-foreground">
+                <span className="mr-2">Count</span>
+                <input
+                  type="number"
+                  min={1}
+                  max={100}
+                  className="w-24 rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground"
+                  value={sessionCount}
+                  onChange={(e) => setSessionCount(Number(e.target.value))}
+                />
+              </label>
+
+              <button
+                type="button"
+                className="inline-flex items-center justify-center rounded-full bg-orange-600 px-4 py-2 text-sm font-medium text-white hover:bg-orange-700 disabled:cursor-not-allowed disabled:opacity-60"
+                disabled={sessionStartStatus === 'loading' || isPending}
+                onClick={() => void onStartSession()}
+              >
+                Start session
+              </button>
+            </div>
+          </div>
+
+          {sessionStartStatus === 'error' && sessionStartError ? (
+            <div className="mt-3 text-sm text-destructive">
+              {sessionStartError}
+            </div>
+          ) : null}
+        </div>
+      }
       loadState={loadState}
       question={question}
       selectedChoiceId={selectedChoiceId}
