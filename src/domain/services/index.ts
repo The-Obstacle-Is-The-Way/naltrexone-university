@@ -1,6 +1,10 @@
 export { isEntitled } from './entitlement';
 export { type GradeResult, gradeAnswer } from './grading';
 export {
+  type AttemptHistory,
+  selectNextQuestionId,
+} from './question-selection';
+export {
   computeSessionProgress,
   getNextQuestionId,
   type SessionProgress,

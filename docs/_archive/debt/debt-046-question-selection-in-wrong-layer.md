@@ -1,8 +1,9 @@
 # DEBT-046: Question Selection Algorithm in Wrong Layer
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P2
 **Date:** 2026-02-01
+**Resolved:** 2026-02-02
 
 ---
 
@@ -54,48 +55,19 @@ This selection logic (prefer unattempted, then select oldest) is a **business ru
 
 ## Resolution
 
-1. Create domain service `src/domain/services/question-selection.ts`:
+Implemented a domain service and made the use case delegate to it:
 
-```typescript
-export type AttemptHistory = ReadonlyMap<string, Date>;
-
-export function selectNextQuestionId(
-  candidateIds: readonly string[],
-  attemptHistory: AttemptHistory,
-): string | null {
-  // Prefer unattempted questions
-  for (const questionId of candidateIds) {
-    if (!attemptHistory.has(questionId)) {
-      return questionId;
-    }
-  }
-
-  // All attempted - select oldest
-  let oldestId: string | null = null;
-  let oldestDate: Date | null = null;
-
-  for (const questionId of candidateIds) {
-    const answeredAt = attemptHistory.get(questionId);
-    if (!answeredAt) continue;
-    if (!oldestDate || answeredAt < oldestDate) {
-      oldestDate = answeredAt;
-      oldestId = questionId;
-    }
-  }
-
-  return oldestId;
-}
-```
-
-2. Add unit tests for the domain service
-3. Update `GetNextQuestionUseCase` to call this service
+1. Added `src/domain/services/question-selection.ts` + `question-selection.test.ts`
+2. Exported the new service from `src/domain/services/index.ts`
+3. Updated `GetNextQuestionUseCase` to call `selectNextQuestionId(...)` for the filters path
+4. Updated SPEC-003 file list to include the new domain service
 
 ## Verification
 
-- [ ] Domain service exists with pure function
-- [ ] Domain service has unit tests
-- [ ] Use case delegates to domain service
-- [ ] Existing use case tests still pass
+- [x] Domain service exists with pure function
+- [x] Domain service has unit tests
+- [x] Use case delegates to domain service
+- [x] Existing use case tests still pass
 
 ## Related
 

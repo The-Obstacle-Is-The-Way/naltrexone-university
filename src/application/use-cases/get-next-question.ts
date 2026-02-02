@@ -1,5 +1,5 @@
 import type { Question } from '@/src/domain/entities';
-import { getNextQuestionId } from '@/src/domain/services';
+import { getNextQuestionId, selectNextQuestionId } from '@/src/domain/services';
 import type {
   PracticeMode,
   QuestionDifficulty,
@@ -126,34 +126,7 @@ export class GetNextQuestionUseCase {
       mostRecent.map((r) => [r.questionId, r.answeredAt]),
     );
 
-    let selectedId: string | null = null;
-
-    // Prefer a never-attempted question in repository-defined deterministic order.
-    for (const questionId of candidateIds) {
-      if (!byQuestionId.has(questionId)) {
-        selectedId = questionId;
-        break;
-      }
-    }
-
-    // If all attempted, pick the question with the oldest last attempt timestamp.
-    if (!selectedId) {
-      let oldestQuestionId: string | null = null;
-      let oldestAnsweredAt: Date | null = null;
-
-      for (const questionId of candidateIds) {
-        const answeredAt = byQuestionId.get(questionId);
-        if (!answeredAt) continue;
-
-        if (!oldestAnsweredAt || answeredAt < oldestAnsweredAt) {
-          oldestAnsweredAt = answeredAt;
-          oldestQuestionId = questionId;
-        }
-      }
-
-      selectedId = oldestQuestionId;
-    }
-
+    const selectedId = selectNextQuestionId(candidateIds, byQuestionId);
     if (!selectedId) return null;
 
     const question = await this.questions.findPublishedById(selectedId);
