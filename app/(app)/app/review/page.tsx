@@ -144,15 +144,23 @@ export function renderReview(result: ActionResult<GetMissedQuestionsOutput>) {
   );
 }
 
-export default async function ReviewPage({
-  searchParams,
-}: {
-  searchParams: Promise<ReviewSearchParams>;
+export function createReviewPage(deps?: {
+  getMissedQuestionsFn?: typeof getMissedQuestions;
 }) {
-  const params = await searchParams;
-  const limit = parseLimit(params.limit);
-  const offset = parsePositiveInt(params.offset, 0);
+  const getMissedQuestionsFn = deps?.getMissedQuestionsFn ?? getMissedQuestions;
 
-  const result = await getMissedQuestions({ limit, offset });
-  return renderReview(result);
+  return async function ReviewPage({
+    searchParams,
+  }: {
+    searchParams: Promise<ReviewSearchParams>;
+  }) {
+    const params = await searchParams;
+    const limit = parseLimit(params.limit);
+    const offset = parsePositiveInt(params.offset, 0);
+
+    const result = await getMissedQuestionsFn({ limit, offset });
+    return renderReview(result);
+  };
 }
+
+export default createReviewPage();

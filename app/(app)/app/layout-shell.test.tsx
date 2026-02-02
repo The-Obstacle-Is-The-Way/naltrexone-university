@@ -29,4 +29,26 @@ describe('app/(app)/app/layout (shell)', () => {
     expect(html).toContain('MobileNav');
     expect(html).toContain('Child content');
   });
+
+  it('renders AppLayout via renderAppLayout with injected deps', async () => {
+    const { renderAppLayout } = await import('./layout');
+
+    const enforceEntitledAppUserFn = vi.fn(async () => undefined);
+    const authNavFn = vi.fn(async () => <div>AuthNav</div>);
+
+    const element = await renderAppLayout({
+      children: <div>Child content</div>,
+      enforceEntitledAppUserFn,
+      authNavFn,
+      mobileNav: <div>MobileNav</div>,
+    });
+
+    const html = renderToStaticMarkup(element);
+
+    expect(enforceEntitledAppUserFn).toHaveBeenCalledTimes(1);
+    expect(authNavFn).toHaveBeenCalledTimes(1);
+    expect(html).toContain('AuthNav');
+    expect(html).toContain('MobileNav');
+    expect(html).toContain('Child content');
+  });
 });

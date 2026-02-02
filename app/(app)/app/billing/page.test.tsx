@@ -80,6 +80,35 @@ describe('app/(app)/app/billing/page', () => {
       expect(html).toContain('No subscription found');
     });
   });
+
+  describe('BillingPageView', () => {
+    it('renders BillingContent with manage action when subscription exists', async () => {
+      const { BillingPageView } = await import('./page');
+      const subscription = createSubscription();
+
+      const html = renderToStaticMarkup(
+        <BillingPageView
+          subscription={subscription}
+          manageBillingAction={async () => undefined}
+        />,
+      );
+
+      expect(html).toContain('Billing');
+      expect(html).toContain('Manage your subscription');
+      expect(html).toContain('Manage in Stripe');
+    });
+
+    it('renders BillingContent without manage action when no subscription exists', async () => {
+      const { BillingPageView } = await import('./page');
+
+      const html = renderToStaticMarkup(
+        <BillingPageView subscription={null} />,
+      );
+
+      expect(html).toContain('Billing');
+      expect(html).toContain('No subscription found');
+    });
+  });
 });
 
 describe('ManageBillingButton', () => {

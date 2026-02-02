@@ -113,17 +113,31 @@ export function AppLayoutShell({
   );
 }
 
+export async function renderAppLayout(input: {
+  children: React.ReactNode;
+  enforceEntitledAppUserFn?: () => Promise<void>;
+  authNavFn?: () => Promise<React.ReactNode>;
+  mobileNav?: React.ReactNode;
+}): Promise<React.ReactNode> {
+  const enforceEntitledAppUserFn =
+    input.enforceEntitledAppUserFn ?? enforceEntitledAppUser;
+  const authNavFn = input.authNavFn ?? AuthNav;
+  const mobileNav = input.mobileNav ?? <MobileNav />;
+
+  await enforceEntitledAppUserFn();
+  const authNav = await authNavFn();
+
+  return (
+    <AppLayoutShell authNav={authNav} mobileNav={mobileNav}>
+      {input.children}
+    </AppLayoutShell>
+  );
+}
+
 export default async function AppLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  await enforceEntitledAppUser();
-  const authNav = await AuthNav();
-
-  return (
-    <AppLayoutShell authNav={authNav} mobileNav={<MobileNav />}>
-      {children}
-    </AppLayoutShell>
-  );
+  return renderAppLayout({ children });
 }

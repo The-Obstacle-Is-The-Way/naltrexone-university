@@ -7,15 +7,24 @@ import {
   toggleBookmark,
 } from '@/src/adapters/controllers/bookmark-controller';
 
-async function removeBookmarkAction(formData: FormData) {
+export async function removeBookmarkAction(
+  formData: FormData,
+  deps?: {
+    toggleBookmarkFn?: typeof toggleBookmark;
+    revalidatePathFn?: typeof revalidatePath;
+  },
+) {
   'use server';
+
+  const toggleBookmarkFn = deps?.toggleBookmarkFn ?? toggleBookmark;
+  const revalidatePathFn = deps?.revalidatePathFn ?? revalidatePath;
 
   const questionId = formData.get('questionId');
   if (typeof questionId !== 'string') {
     throw new Error('questionId is required');
   }
 
-  const result = await toggleBookmark({ questionId });
+  const result = await toggleBookmarkFn({ questionId });
   if (!result.ok) {
     throw new Error(result.error.message);
   }
@@ -24,7 +33,7 @@ async function removeBookmarkAction(formData: FormData) {
     throw new Error('Expected bookmark to be removed');
   }
 
-  revalidatePath('/app/bookmarks');
+  revalidatePathFn('/app/bookmarks');
 }
 
 export function BookmarksView({ rows }: { rows: GetBookmarksOutput['rows'] }) {
@@ -131,7 +140,15 @@ export function renderBookmarks(result: ActionResult<GetBookmarksOutput>) {
   return <BookmarksView rows={result.data.rows} />;
 }
 
-export default async function BookmarksPage() {
-  const result = await getBookmarks({});
-  return renderBookmarks(result);
+export function createBookmarksPage(deps?: {
+  getBookmarksFn?: typeof getBookmarks;
+}) {
+  const getBookmarksFn = deps?.getBookmarksFn ?? getBookmarks;
+
+  return async function BookmarksPage() {
+    const result = await getBookmarksFn({});
+    return renderBookmarks(result);
+  };
 }
+
+export default createBookmarksPage();

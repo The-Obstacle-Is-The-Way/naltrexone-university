@@ -67,8 +67,38 @@ export function BillingContent(props: BillingContentProps) {
   );
 }
 
+export type BillingPageViewProps =
+  | { subscription: Subscription; manageBillingAction: () => Promise<void> }
+  | { subscription: null; manageBillingAction?: never };
+
+export function BillingPageView(props: BillingPageViewProps) {
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-semibold text-foreground">Billing</h1>
+        <p className="mt-1 text-muted-foreground">
+          Manage your subscription and billing details.
+        </p>
+      </div>
+
+      {props.subscription ? (
+        <BillingContent
+          subscription={props.subscription}
+          manageBillingAction={props.manageBillingAction}
+        />
+      ) : (
+        <BillingContent subscription={null} />
+      )}
+    </div>
+  );
+}
+
 export default async function BillingPage() {
   const { subscription } = await loadBillingData();
+
+  if (!subscription) {
+    return <BillingPageView subscription={null} />;
+  }
 
   async function manageBilling() {
     'use server';
@@ -80,22 +110,9 @@ export default async function BillingPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold text-foreground">Billing</h1>
-        <p className="mt-1 text-muted-foreground">
-          Manage your subscription and billing details.
-        </p>
-      </div>
-
-      {subscription ? (
-        <BillingContent
-          subscription={subscription}
-          manageBillingAction={manageBilling}
-        />
-      ) : (
-        <BillingContent subscription={null} />
-      )}
-    </div>
+    <BillingPageView
+      subscription={subscription}
+      manageBillingAction={manageBilling}
+    />
   );
 }
