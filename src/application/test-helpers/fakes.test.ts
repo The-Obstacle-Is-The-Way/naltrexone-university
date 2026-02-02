@@ -227,6 +227,22 @@ describe('FakeUserRepository', () => {
       expect(second.email).toBe('new@example.com');
     });
   });
+
+  describe('deleteByClerkId', () => {
+    it('returns true when a user existed and was deleted', async () => {
+      const repo = new FakeUserRepository();
+      await repo.upsertByClerkId('clerk-1', 'user@example.com');
+
+      await expect(repo.deleteByClerkId('clerk-1')).resolves.toBe(true);
+      await expect(repo.findByClerkId('clerk-1')).resolves.toBeNull();
+    });
+
+    it('returns false when the user did not exist', async () => {
+      const repo = new FakeUserRepository();
+
+      await expect(repo.deleteByClerkId('missing')).resolves.toBe(false);
+    });
+  });
 });
 
 describe('FakeBookmarkRepository', () => {
@@ -516,6 +532,177 @@ describe('FakeStripeEventRepository', () => {
 });
 
 describe('FakeAttemptRepository', () => {
+  describe('count*', () => {
+    it('counts attempts with correctness and since filters', async () => {
+      const repo = new FakeAttemptRepository([
+        {
+          id: 'attempt-1',
+          userId: 'user-1',
+          questionId: 'q-1',
+          practiceSessionId: null,
+          selectedChoiceId: 'c-1',
+          isCorrect: true,
+          timeSpentSeconds: 0,
+          answeredAt: new Date('2026-02-01T00:00:00Z'),
+        },
+        {
+          id: 'attempt-2',
+          userId: 'user-1',
+          questionId: 'q-2',
+          practiceSessionId: null,
+          selectedChoiceId: 'c-2',
+          isCorrect: false,
+          timeSpentSeconds: 0,
+          answeredAt: new Date('2026-02-03T00:00:00Z'),
+        },
+        {
+          id: 'attempt-3',
+          userId: 'other',
+          questionId: 'q-3',
+          practiceSessionId: null,
+          selectedChoiceId: 'c-3',
+          isCorrect: true,
+          timeSpentSeconds: 0,
+          answeredAt: new Date('2026-02-04T00:00:00Z'),
+        },
+      ]);
+
+      await expect(repo.countByUserId('user-1')).resolves.toBe(2);
+      await expect(repo.countCorrectByUserId('user-1')).resolves.toBe(1);
+
+      const since = new Date('2026-02-02T00:00:00Z');
+      await expect(repo.countByUserIdSince('user-1', since)).resolves.toBe(1);
+      await expect(
+        repo.countCorrectByUserIdSince('user-1', since),
+      ).resolves.toBe(0);
+    });
+  });
+
+  describe('listRecentByUserId', () => {
+    it('returns attempts in descending answeredAt order (limited)', async () => {
+      const repo = new FakeAttemptRepository([
+        {
+          id: 'attempt-1',
+          userId: 'user-1',
+          questionId: 'q-1',
+          practiceSessionId: null,
+          selectedChoiceId: 'c-1',
+          isCorrect: true,
+          timeSpentSeconds: 0,
+          answeredAt: new Date('2026-02-01T00:00:00Z'),
+        },
+        {
+          id: 'attempt-2',
+          userId: 'user-1',
+          questionId: 'q-2',
+          practiceSessionId: null,
+          selectedChoiceId: 'c-2',
+          isCorrect: true,
+          timeSpentSeconds: 0,
+          answeredAt: new Date('2026-02-03T00:00:00Z'),
+        },
+        {
+          id: 'attempt-3',
+          userId: 'user-1',
+          questionId: 'q-3',
+          practiceSessionId: null,
+          selectedChoiceId: 'c-3',
+          isCorrect: true,
+          timeSpentSeconds: 0,
+          answeredAt: new Date('2026-02-02T00:00:00Z'),
+        },
+      ]);
+
+      const result = await repo.listRecentByUserId('user-1', 2);
+
+      expect(result.map((a) => a.id)).toEqual(['attempt-2', 'attempt-3']);
+    });
+  });
+
+  describe('listMissedQuestionsByUserId', () => {
+    it('returns the latest incorrect attempt per question ordered by answeredAt desc', async () => {
+      const repo = new FakeAttemptRepository([
+        // q-1: most recent correct => NOT missed
+        {
+          id: 'attempt-1',
+          userId: 'user-1',
+          questionId: 'q-1',
+          practiceSessionId: null,
+          selectedChoiceId: 'c-1',
+          isCorrect: false,
+          timeSpentSeconds: 0,
+          answeredAt: new Date('2026-02-01T00:00:00Z'),
+        },
+        {
+          id: 'attempt-2',
+          userId: 'user-1',
+          questionId: 'q-1',
+          practiceSessionId: null,
+          selectedChoiceId: 'c-2',
+          isCorrect: true,
+          timeSpentSeconds: 0,
+          answeredAt: new Date('2026-02-03T00:00:00Z'),
+        },
+        // q-2: most recent incorrect => missed
+        {
+          id: 'attempt-3',
+          userId: 'user-1',
+          questionId: 'q-2',
+          practiceSessionId: null,
+          selectedChoiceId: 'c-3',
+          isCorrect: true,
+          timeSpentSeconds: 0,
+          answeredAt: new Date('2026-02-01T00:00:00Z'),
+        },
+        {
+          id: 'attempt-4',
+          userId: 'user-1',
+          questionId: 'q-2',
+          practiceSessionId: null,
+          selectedChoiceId: 'c-4',
+          isCorrect: false,
+          timeSpentSeconds: 0,
+          answeredAt: new Date('2026-02-04T00:00:00Z'),
+        },
+        // q-3: only incorrect => missed
+        {
+          id: 'attempt-5',
+          userId: 'user-1',
+          questionId: 'q-3',
+          practiceSessionId: null,
+          selectedChoiceId: 'c-5',
+          isCorrect: false,
+          timeSpentSeconds: 0,
+          answeredAt: new Date('2026-02-02T00:00:00Z'),
+        },
+        // other user ignored
+        {
+          id: 'attempt-6',
+          userId: 'other',
+          questionId: 'q-2',
+          practiceSessionId: null,
+          selectedChoiceId: 'c-6',
+          isCorrect: false,
+          timeSpentSeconds: 0,
+          answeredAt: new Date('2026-02-10T00:00:00Z'),
+        },
+      ]);
+
+      await expect(
+        repo.listMissedQuestionsByUserId('user-1', 10, 0),
+      ).resolves.toEqual([
+        { questionId: 'q-2', answeredAt: new Date('2026-02-04T00:00:00Z') },
+        { questionId: 'q-3', answeredAt: new Date('2026-02-02T00:00:00Z') },
+      ]);
+
+      await expect(
+        repo.listMissedQuestionsByUserId('user-1', 1, 1),
+      ).resolves.toEqual([
+        { questionId: 'q-3', answeredAt: new Date('2026-02-02T00:00:00Z') },
+      ]);
+    });
+  });
+
   describe('listAnsweredAtByUserIdSince', () => {
     it('returns answeredAt values in descending order', async () => {
       const repo = new FakeAttemptRepository([

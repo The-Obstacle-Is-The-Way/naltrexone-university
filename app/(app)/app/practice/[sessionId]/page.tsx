@@ -34,7 +34,7 @@ function getErrorMessage(result: ActionResult<unknown>): string {
   return result.error.message;
 }
 
-function SessionSummaryView({
+export function SessionSummaryView({
   summary,
 }: {
   summary: EndPracticeSessionOutput;

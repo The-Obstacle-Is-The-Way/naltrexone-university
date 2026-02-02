@@ -45,13 +45,17 @@ export async function enforceEntitledAppUser(
   }
 }
 
-export default async function AppLayout({
-  children,
-}: {
+export type AppLayoutShellProps = {
   children: React.ReactNode;
-}) {
-  await enforceEntitledAppUser();
+  mobileNav: React.ReactNode;
+  authNav: React.ReactNode;
+};
 
+export function AppLayoutShell({
+  children,
+  mobileNav,
+  authNav,
+}: AppLayoutShellProps) {
   return (
     <div className="min-h-screen bg-muted">
       <header className="relative border-b border-border bg-background">
@@ -97,8 +101,8 @@ export default async function AppLayout({
             </nav>
           </div>
           <div className="flex items-center gap-2">
-            <MobileNav />
-            <AuthNav />
+            {mobileNav}
+            {authNav}
           </div>
         </div>
       </header>
@@ -106,5 +110,20 @@ export default async function AppLayout({
         {children}
       </main>
     </div>
+  );
+}
+
+export default async function AppLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  await enforceEntitledAppUser();
+  const authNav = await AuthNav();
+
+  return (
+    <AppLayoutShell authNav={authNav} mobileNav={<MobileNav />}>
+      {children}
+    </AppLayoutShell>
   );
 }
