@@ -6,7 +6,7 @@ import type { PricingBanner } from '@/app/pricing/types';
 export type PricingViewProps = {
   isEntitled: boolean;
   banner: PricingBanner | null;
-  manageBillingAction?: () => Promise<void>;
+  manageBillingAction?: (formData: FormData) => Promise<void>;
   subscribeMonthlyAction: (formData: FormData) => Promise<void>;
   subscribeAnnualAction: (formData: FormData) => Promise<void>;
   SubscribeButtonComponent?: ComponentType<{ children: ReactNode }>;

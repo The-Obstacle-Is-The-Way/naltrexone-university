@@ -337,7 +337,7 @@ describe('app/pricing', () => {
           message:
             'Subscription found. Manage billing to resolve payment issues.',
         }}
-        manageBillingAction={async () => undefined}
+        manageBillingAction={async (_formData: FormData) => undefined}
         subscribeMonthlyAction={async () => undefined}
         subscribeAnnualAction={async () => undefined}
       />,

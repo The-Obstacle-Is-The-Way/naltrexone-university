@@ -263,7 +263,7 @@ describe('processStripeWebhook', () => {
     expect(insertSpy).not.toHaveBeenCalled();
   });
 
-  it('still prunes old processed stripe events when the event was already processed', async () => {
+  it('returns call to prune processed stripe events when event already processed', async () => {
     vi.useFakeTimers();
     try {
       const now = new Date('2026-02-01T00:00:00Z');

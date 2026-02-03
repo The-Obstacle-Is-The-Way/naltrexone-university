@@ -330,7 +330,7 @@ describe('syncCheckoutSuccess', () => {
     );
   });
 
-  it('redirects to pricing with reason=payment_processing when subscription is not entitled', async () => {
+  it('returns redirect to pricing with reason=payment_processing when subscription is not entitled', async () => {
     const stripeCustomerInserts: Array<{
       userId: string;
       stripeCustomerId: string;
@@ -419,7 +419,7 @@ describe('syncCheckoutSuccess', () => {
     expect(subscriptionUpserts).toEqual([{ status: 'incomplete' }]);
   });
 
-  it('redirects to pricing with reason=manage_billing when subscription is not entitled (non-incomplete)', async () => {
+  it('returns redirect to pricing with reason=manage_billing when subscription is not entitled', async () => {
     const stripeCustomerInserts: Array<{
       userId: string;
       stripeCustomerId: string;

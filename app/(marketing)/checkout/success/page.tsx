@@ -336,9 +336,10 @@ export async function syncCheckoutSuccess(
     configuredPriceIds: d.priceIds,
   });
 
+  const currentPeriodEnd = new Date(currentPeriodEndSeconds * 1000);
+
   await d.transaction(async ({ stripeCustomers, subscriptions }) => {
     await stripeCustomers.insert(user.id, stripeCustomerId);
-    const currentPeriodEnd = new Date(currentPeriodEndSeconds * 1000);
     await subscriptions.upsert({
       userId: user.id,
       stripeSubscriptionId: subscriptionId,
@@ -350,7 +351,7 @@ export async function syncCheckoutSuccess(
   });
 
   const isEntitled =
-    isEntitledStatus(status) && currentPeriodEndSeconds * 1000 > Date.now();
+    isEntitledStatus(status) && currentPeriodEnd.getTime() > Date.now();
 
   if (!isEntitled) {
     const reason =
