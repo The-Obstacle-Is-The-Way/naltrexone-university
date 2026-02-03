@@ -179,6 +179,36 @@ describe('practice-page-logic', () => {
         message: 'Subscription required',
       });
     });
+
+    it('sets error state when controller throws', async () => {
+      const setLoadState = vi.fn();
+      const setQuestionLoadedAt = vi.fn();
+      const setSubmitIdempotencyKey = vi.fn();
+      const setQuestion = vi.fn();
+
+      await loadNextQuestion({
+        getNextQuestionFn: async () => {
+          throw new Error('Network down');
+        },
+        filters: { tagSlugs: [], difficulties: [] },
+        createIdempotencyKey: () => 'idem_1',
+        nowMs: () => 1234,
+        setLoadState,
+        setSelectedChoiceId: vi.fn(),
+        setSubmitResult: vi.fn(),
+        setSubmitIdempotencyKey,
+        setQuestionLoadedAt,
+        setQuestion,
+      });
+
+      expect(setQuestion).toHaveBeenCalledWith(null);
+      expect(setQuestionLoadedAt).toHaveBeenLastCalledWith(null);
+      expect(setSubmitIdempotencyKey).toHaveBeenLastCalledWith(null);
+      expect(setLoadState).toHaveBeenCalledWith({
+        status: 'error',
+        message: 'Network down',
+      });
+    });
   });
 
   describe('createLoadNextQuestionAction', () => {
@@ -394,6 +424,43 @@ describe('practice-page-logic', () => {
       expect(setBookmarkedQuestionIds).not.toHaveBeenCalled();
       expect(setBookmarkStatus).not.toHaveBeenCalled();
     });
+
+    it('sets error state when getBookmarksFn throws', async () => {
+      vi.useFakeTimers();
+      try {
+        const setBookmarkStatus = vi.fn();
+        const setTimeoutFn = vi.fn((fn: () => void, ms: number) =>
+          setTimeout(fn, ms),
+        );
+        const logError = vi.fn();
+
+        const cleanup = createBookmarksEffect({
+          bookmarkRetryCount: 0,
+          getBookmarksFn: async () => {
+            throw new Error('Boom');
+          },
+          setBookmarkedQuestionIds: vi.fn(),
+          setBookmarkStatus,
+          setBookmarkRetryCount: vi.fn(),
+          setTimeoutFn,
+          clearTimeoutFn: vi.fn(),
+          logError,
+        });
+
+        await Promise.resolve();
+
+        expect(logError).toHaveBeenCalledWith(
+          'Failed to load bookmarks',
+          expect.any(Error),
+        );
+        expect(setBookmarkStatus).toHaveBeenCalledWith('error');
+        expect(setTimeoutFn).toHaveBeenCalledWith(expect.any(Function), 1000);
+
+        cleanup();
+      } finally {
+        vi.useRealTimers();
+      }
+    });
   });
 
   describe('submitAnswerForQuestion', () => {
@@ -502,6 +569,28 @@ describe('practice-page-logic', () => {
         message: 'Boom',
       });
     });
+
+    it('sets error state when submit throws', async () => {
+      const setLoadState = vi.fn();
+
+      await submitAnswerForQuestion({
+        question: createNextQuestion(),
+        selectedChoiceId: 'choice_1',
+        questionLoadedAtMs: 0,
+        submitIdempotencyKey: 'idem_1',
+        submitAnswerFn: async () => {
+          throw new Error('Boom');
+        },
+        nowMs: () => 0,
+        setLoadState,
+        setSubmitResult: vi.fn(),
+      });
+
+      expect(setLoadState).toHaveBeenCalledWith({
+        status: 'error',
+        message: 'Boom',
+      });
+    });
   });
 
   describe('toggleBookmarkForQuestion', () => {
@@ -565,6 +654,24 @@ describe('practice-page-logic', () => {
       expect(ids.has('q_1')).toBe(false);
       expect(onBookmarkToggled).toHaveBeenCalledWith(false);
       expect(setBookmarkStatus).toHaveBeenLastCalledWith('idle');
+    });
+
+    it('sets error state when toggle throws', async () => {
+      const setBookmarkStatus = vi.fn();
+      const onBookmarkToggled = vi.fn();
+
+      await toggleBookmarkForQuestion({
+        question: createNextQuestion(),
+        toggleBookmarkFn: async () => {
+          throw new Error('Boom');
+        },
+        setBookmarkStatus,
+        setBookmarkedQuestionIds: vi.fn(),
+        onBookmarkToggled,
+      });
+
+      expect(setBookmarkStatus).toHaveBeenLastCalledWith('error');
+      expect(onBookmarkToggled).not.toHaveBeenCalled();
     });
   });
 
@@ -690,6 +797,31 @@ describe('practice-page-logic', () => {
       });
       expect(navigateTo).toHaveBeenCalledWith('/app/practice/session-1');
       expect(setIdempotencyKey).not.toHaveBeenCalled();
+    });
+
+    it('sets error state when controller throws', async () => {
+      const setSessionStartStatus = vi.fn();
+      const setSessionStartError = vi.fn();
+      const setIdempotencyKey = vi.fn();
+
+      await startSession({
+        sessionMode: 'tutor',
+        sessionCount: 20,
+        filters: { tagSlugs: ['alcohol'], difficulties: [] },
+        idempotencyKey: 'idem_1',
+        createIdempotencyKey: () => 'idem_2',
+        setIdempotencyKey,
+        startPracticeSessionFn: async () => {
+          throw new Error('Boom');
+        },
+        setSessionStartStatus,
+        setSessionStartError,
+        navigateTo: vi.fn(),
+      });
+
+      expect(setSessionStartStatus).toHaveBeenCalledWith('error');
+      expect(setSessionStartError).toHaveBeenCalledWith('Boom');
+      expect(setIdempotencyKey).toHaveBeenCalledWith('idem_2');
     });
   });
 });

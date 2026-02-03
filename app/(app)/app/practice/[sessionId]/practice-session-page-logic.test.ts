@@ -93,6 +93,37 @@ describe('practice-session-page-logic', () => {
       });
       expect(setSubmitIdempotencyKey).toHaveBeenLastCalledWith(null);
     });
+
+    it('sets error state when controller throws', async () => {
+      const setLoadState = vi.fn();
+      const setQuestionLoadedAt = vi.fn();
+      const setSubmitIdempotencyKey = vi.fn();
+      const setQuestion = vi.fn();
+
+      await loadNextQuestion({
+        sessionId: 'session-1',
+        getNextQuestionFn: async () => {
+          throw new Error('Boom');
+        },
+        createIdempotencyKey: () => 'idem_1',
+        nowMs: () => 0,
+        setLoadState,
+        setSelectedChoiceId: vi.fn(),
+        setSubmitResult: vi.fn(),
+        setSubmitIdempotencyKey,
+        setQuestionLoadedAt,
+        setQuestion,
+        setSessionInfo: vi.fn(),
+      });
+
+      expect(setQuestion).toHaveBeenCalledWith(null);
+      expect(setQuestionLoadedAt).toHaveBeenLastCalledWith(null);
+      expect(setSubmitIdempotencyKey).toHaveBeenLastCalledWith(null);
+      expect(setLoadState).toHaveBeenCalledWith({
+        status: 'error',
+        message: 'Boom',
+      });
+    });
   });
 
   describe('createLoadNextQuestionAction', () => {
@@ -238,6 +269,29 @@ describe('practice-session-page-logic', () => {
         message: 'Boom',
       });
     });
+
+    it('sets error state when submit throws', async () => {
+      const setLoadState = vi.fn();
+
+      await submitAnswerForQuestion({
+        sessionId: 'session-1',
+        question: createNextQuestion(),
+        selectedChoiceId: 'choice_1',
+        questionLoadedAtMs: 0,
+        submitIdempotencyKey: 'idem_1',
+        submitAnswerFn: async () => {
+          throw new Error('Boom');
+        },
+        nowMs: () => 0,
+        setLoadState,
+        setSubmitResult: vi.fn(),
+      });
+
+      expect(setLoadState).toHaveBeenCalledWith({
+        status: 'error',
+        message: 'Boom',
+      });
+    });
   });
 
   describe('endSession', () => {
@@ -281,6 +335,27 @@ describe('practice-session-page-logic', () => {
       await endSession({
         sessionId: 'session-1',
         endPracticeSessionFn: async () => err('INTERNAL_ERROR', 'Boom'),
+        setLoadState,
+        setSummary: vi.fn(),
+        setQuestion: vi.fn(),
+        setSubmitResult: vi.fn(),
+        setSelectedChoiceId: vi.fn(),
+      });
+
+      expect(setLoadState).toHaveBeenCalledWith({
+        status: 'error',
+        message: 'Boom',
+      });
+    });
+
+    it('sets error state when controller throws', async () => {
+      const setLoadState = vi.fn();
+
+      await endSession({
+        sessionId: 'session-1',
+        endPracticeSessionFn: async () => {
+          throw new Error('Boom');
+        },
         setLoadState,
         setSummary: vi.fn(),
         setQuestion: vi.fn(),

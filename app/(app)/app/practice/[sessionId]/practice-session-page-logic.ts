@@ -1,4 +1,7 @@
-import { getActionResultErrorMessage } from '@/app/(app)/app/practice/practice-logic';
+import {
+  getActionResultErrorMessage,
+  getThrownErrorMessage,
+} from '@/app/(app)/app/practice/practice-logic';
 import type { LoadState } from '@/app/(app)/app/practice/practice-page-logic';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import type { EndPracticeSessionOutput } from '@/src/adapters/controllers/practice-controller';
@@ -26,7 +29,21 @@ export async function loadNextQuestion(input: {
   input.setSubmitIdempotencyKey(null);
   input.setQuestionLoadedAt(null);
 
-  const res = await input.getNextQuestionFn({ sessionId: input.sessionId });
+  let res: ActionResult<NextQuestion | null>;
+  try {
+    res = await input.getNextQuestionFn({ sessionId: input.sessionId });
+  } catch (error) {
+    input.setLoadState({
+      status: 'error',
+      message: getThrownErrorMessage(error),
+    });
+    input.setQuestion(null);
+    input.setSelectedChoiceId(null);
+    input.setSubmitResult(null);
+    input.setSubmitIdempotencyKey(null);
+    input.setQuestionLoadedAt(null);
+    return;
+  }
 
   if (!res.ok) {
     input.setLoadState({
@@ -93,13 +110,22 @@ export async function submitAnswerForQuestion(input: {
           Math.floor((input.nowMs() - input.questionLoadedAtMs) / 1000),
         );
 
-  const res = await input.submitAnswerFn({
-    questionId: input.question.questionId,
-    choiceId: input.selectedChoiceId,
-    sessionId: input.sessionId,
-    idempotencyKey: input.submitIdempotencyKey ?? undefined,
-    timeSpentSeconds,
-  });
+  let res: ActionResult<SubmitAnswerOutput>;
+  try {
+    res = await input.submitAnswerFn({
+      questionId: input.question.questionId,
+      choiceId: input.selectedChoiceId,
+      sessionId: input.sessionId,
+      idempotencyKey: input.submitIdempotencyKey ?? undefined,
+      timeSpentSeconds,
+    });
+  } catch (error) {
+    input.setLoadState({
+      status: 'error',
+      message: getThrownErrorMessage(error),
+    });
+    return;
+  }
 
   if (!res.ok) {
     input.setLoadState({
@@ -126,7 +152,16 @@ export async function endSession(input: {
 }): Promise<void> {
   input.setLoadState({ status: 'loading' });
 
-  const res = await input.endPracticeSessionFn({ sessionId: input.sessionId });
+  let res: ActionResult<EndPracticeSessionOutput>;
+  try {
+    res = await input.endPracticeSessionFn({ sessionId: input.sessionId });
+  } catch (error) {
+    input.setLoadState({
+      status: 'error',
+      message: getThrownErrorMessage(error),
+    });
+    return;
+  }
   if (!res.ok) {
     input.setLoadState({
       status: 'error',

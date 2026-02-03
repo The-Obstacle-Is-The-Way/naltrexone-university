@@ -1,4 +1,7 @@
-import { getActionResultErrorMessage } from '@/app/(app)/app/practice/practice-logic';
+import {
+  getActionResultErrorMessage,
+  getThrownErrorMessage,
+} from '@/app/(app)/app/practice/practice-logic';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import type { StartPracticeSessionOutput } from '@/src/adapters/controllers/practice-controller';
 import type { NextQuestion } from '@/src/application/use-cases/get-next-question';
@@ -58,9 +61,23 @@ export async function loadNextQuestion(input: {
   input.setSubmitIdempotencyKey(null);
   input.setQuestionLoadedAt(null);
 
-  const res = await input.getNextQuestionFn({
-    filters: input.filters,
-  });
+  let res: ActionResult<NextQuestion | null>;
+  try {
+    res = await input.getNextQuestionFn({
+      filters: input.filters,
+    });
+  } catch (error) {
+    input.setLoadState({
+      status: 'error',
+      message: getThrownErrorMessage(error),
+    });
+    input.setQuestion(null);
+    input.setSelectedChoiceId(null);
+    input.setSubmitResult(null);
+    input.setSubmitIdempotencyKey(null);
+    input.setQuestionLoadedAt(null);
+    return;
+  }
 
   if (!res.ok) {
     input.setLoadState({
@@ -129,7 +146,28 @@ export function createBookmarksEffect(input: {
   let timeoutId: ReturnType<typeof setTimeout> | undefined;
 
   void (async () => {
-    const res = await input.getBookmarksFn({});
+    let res: ActionResult<{ rows: Array<{ questionId: string }> }>;
+    try {
+      res = await input.getBookmarksFn({});
+    } catch (error) {
+      if (!mounted) return;
+
+      logError('Failed to load bookmarks', error);
+      input.setBookmarkStatus('error');
+
+      if (input.bookmarkRetryCount < 2) {
+        timeoutId = setTimeoutFn(
+          () => {
+            if (mounted) {
+              input.setBookmarkRetryCount((prev) => prev + 1);
+            }
+          },
+          1000 * (input.bookmarkRetryCount + 1),
+        );
+      }
+
+      return;
+    }
     if (!mounted) return;
 
     if (!res.ok) {
@@ -185,12 +223,21 @@ export async function submitAnswerForQuestion(input: {
           Math.floor((input.nowMs() - input.questionLoadedAtMs) / 1000),
         );
 
-  const res = await input.submitAnswerFn({
-    questionId: input.question.questionId,
-    choiceId: input.selectedChoiceId,
-    idempotencyKey: input.submitIdempotencyKey ?? undefined,
-    timeSpentSeconds,
-  });
+  let res: ActionResult<SubmitAnswerOutput>;
+  try {
+    res = await input.submitAnswerFn({
+      questionId: input.question.questionId,
+      choiceId: input.selectedChoiceId,
+      idempotencyKey: input.submitIdempotencyKey ?? undefined,
+      timeSpentSeconds,
+    });
+  } catch (error) {
+    input.setLoadState({
+      status: 'error',
+      message: getThrownErrorMessage(error),
+    });
+    return;
+  }
 
   if (!res.ok) {
     input.setLoadState({
@@ -221,7 +268,13 @@ export async function toggleBookmarkForQuestion(input: {
 
   input.setBookmarkStatus('loading');
 
-  const res = await input.toggleBookmarkFn({ questionId });
+  let res: ActionResult<{ bookmarked: boolean }>;
+  try {
+    res = await input.toggleBookmarkFn({ questionId });
+  } catch {
+    input.setBookmarkStatus('error');
+    return;
+  }
   if (!res.ok) {
     input.setBookmarkStatus('error');
     return;
@@ -291,13 +344,21 @@ export async function startSession(input: {
   input.setSessionStartStatus('loading');
   input.setSessionStartError(null);
 
-  const res = await input.startPracticeSessionFn({
-    mode: input.sessionMode,
-    count: input.sessionCount,
-    idempotencyKey: input.idempotencyKey,
-    tagSlugs: input.filters.tagSlugs,
-    difficulties: input.filters.difficulties,
-  });
+  let res: ActionResult<StartPracticeSessionOutput>;
+  try {
+    res = await input.startPracticeSessionFn({
+      mode: input.sessionMode,
+      count: input.sessionCount,
+      idempotencyKey: input.idempotencyKey,
+      tagSlugs: input.filters.tagSlugs,
+      difficulties: input.filters.difficulties,
+    });
+  } catch (error) {
+    input.setSessionStartStatus('error');
+    input.setSessionStartError(getThrownErrorMessage(error));
+    input.setIdempotencyKey(input.createIdempotencyKey());
+    return;
+  }
 
   if (!res.ok) {
     input.setSessionStartStatus('error');
