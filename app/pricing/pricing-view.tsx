@@ -6,6 +6,7 @@ import type { PricingBanner } from '@/app/pricing/types';
 export type PricingViewProps = {
   isEntitled: boolean;
   banner: PricingBanner | null;
+  manageBillingAction?: (formData: FormData) => Promise<void>;
   subscribeMonthlyAction: (formData: FormData) => Promise<void>;
   subscribeAnnualAction: (formData: FormData) => Promise<void>;
   SubscribeButtonComponent?: ComponentType<{ children: ReactNode }>;
@@ -25,6 +26,7 @@ function DefaultButton({ children }: { children: ReactNode }) {
 export function PricingView({
   isEntitled,
   banner,
+  manageBillingAction,
   subscribeMonthlyAction,
   subscribeAnnualAction,
   SubscribeButtonComponent = DefaultButton,
@@ -52,13 +54,25 @@ export function PricingView({
             role="alert"
           >
             <span>{banner.message}</span>
-            <Link
-              href="/pricing"
-              className="ml-4 text-current hover:opacity-70"
-              aria-label="Dismiss"
-            >
-              ×
-            </Link>
+            <div className="ml-4 flex items-center gap-3">
+              {manageBillingAction ? (
+                <form action={manageBillingAction}>
+                  <button
+                    type="submit"
+                    className="rounded-full border border-border bg-background px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted"
+                  >
+                    Manage Billing
+                  </button>
+                </form>
+              ) : null}
+              <Link
+                href="/pricing"
+                className="text-current hover:opacity-70"
+                aria-label="Dismiss"
+              >
+                ×
+              </Link>
+            </div>
           </div>
         ) : null}
 

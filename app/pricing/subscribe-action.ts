@@ -32,7 +32,7 @@ export async function runSubscribeAction(
   }
 
   if (result.error.code === 'ALREADY_SUBSCRIBED') {
-    return deps.redirectFn('/app/billing');
+    return deps.redirectFn('/pricing?reason=manage_billing');
   }
 
   deps.logError?.(

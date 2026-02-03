@@ -1,3 +1,4 @@
+import { manageBillingAction } from '@/app/pricing/manage-billing-actions';
 import { SubscribeButton } from '@/app/pricing/pricing-client';
 import { PricingView } from '@/app/pricing/pricing-view';
 import {
@@ -90,6 +91,21 @@ export function getPricingBanner(
     };
   }
 
+  if (searchParams.reason === 'manage_billing') {
+    return {
+      tone: 'info',
+      message: 'Subscription found. Manage billing to resolve payment issues.',
+    };
+  }
+
+  if (searchParams.reason === 'payment_processing') {
+    return {
+      tone: 'info',
+      message:
+        'Payment processing. It may take a moment for access to activate.',
+    };
+  }
+
   return null;
 }
 
@@ -104,10 +120,17 @@ export default async function PricingPage({
   const resolvedSearchParams = await searchParams;
   const banner = getPricingBanner(resolvedSearchParams);
 
+  const showManageBillingAction =
+    resolvedSearchParams.reason === 'manage_billing' ||
+    resolvedSearchParams.reason === 'payment_processing';
+
   return (
     <PricingView
       isEntitled={isEntitled}
       banner={banner}
+      manageBillingAction={
+        showManageBillingAction ? manageBillingAction : undefined
+      }
       subscribeMonthlyAction={subscribeMonthlyAction}
       subscribeAnnualAction={subscribeAnnualAction}
       SubscribeButtonComponent={SubscribeButton}
