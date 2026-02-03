@@ -263,6 +263,53 @@ describe('processStripeWebhook', () => {
     expect(insertSpy).not.toHaveBeenCalled();
   });
 
+  it('still prunes old processed stripe events when the event was already processed', async () => {
+    vi.useFakeTimers();
+    try {
+      const now = new Date('2026-02-01T00:00:00Z');
+      vi.setSystemTime(now);
+
+      const paymentGateway = new FakePaymentGateway({
+        stripeCustomerId: 'cus_test',
+        checkoutUrl: 'https://stripe/checkout',
+        portalUrl: 'https://stripe/portal',
+        webhookResult: {
+          eventId: 'evt_already_processed_prune',
+          type: 'checkout.session.completed',
+        },
+      });
+
+      const stripeEvents = new FakeStripeEventRepository();
+      await stripeEvents.claim(
+        'evt_already_processed_prune',
+        'checkout.session.completed',
+      );
+      await stripeEvents.markProcessed('evt_already_processed_prune');
+
+      const subscriptions = new FakeSubscriptionRepository();
+      const stripeCustomers = new FakeStripeCustomerRepository();
+      const pruneSpy = vi.spyOn(stripeEvents, 'pruneProcessedBefore');
+
+      await processStripeWebhook(
+        {
+          paymentGateway,
+          logger: new FakeLogger(),
+          transaction: async (fn) =>
+            fn({ stripeEvents, subscriptions, stripeCustomers }),
+        },
+        { rawBody: 'raw', signature: 'sig' },
+      );
+
+      const ninetyDaysMs = 86_400_000 * 90;
+      expect(pruneSpy).toHaveBeenCalledWith(
+        new Date(now.getTime() - ninetyDaysMs),
+        100,
+      );
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('marks the event failed when processing throws', async () => {
     const paymentGateway = new FakePaymentGateway({
       stripeCustomerId: 'cus_test',
