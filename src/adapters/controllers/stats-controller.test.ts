@@ -150,6 +150,7 @@ describe('stats-controller', () => {
           currentStreakDays: 2,
           recentActivity: [
             {
+              isAvailable: true,
               attemptId: 'attempt-q1',
               answeredAt: '2026-02-01T11:00:00.000Z',
               questionId: 'q1',
@@ -157,6 +158,7 @@ describe('stats-controller', () => {
               isCorrect: true,
             },
             {
+              isAvailable: true,
               attemptId: 'attempt-q2',
               answeredAt: '2026-01-31T11:00:00.000Z',
               questionId: 'q2',
@@ -164,6 +166,7 @@ describe('stats-controller', () => {
               isCorrect: false,
             },
             {
+              isAvailable: true,
               attemptId: 'attempt-q3',
               answeredAt: '2026-01-20T11:00:00.000Z',
               questionId: 'q3',
@@ -247,7 +250,15 @@ describe('stats-controller', () => {
 
       expect(result.ok).toBe(true);
       if (result.ok) {
-        expect(result.data.recentActivity).toEqual([]);
+        expect(result.data.recentActivity).toEqual([
+          {
+            isAvailable: false,
+            attemptId: 'attempt-q-orphaned',
+            answeredAt: '2026-02-01T11:00:00.000Z',
+            questionId: orphanedQuestionId,
+            isCorrect: true,
+          },
+        ]);
       }
       expect(logger.warnCalls).toEqual([
         {

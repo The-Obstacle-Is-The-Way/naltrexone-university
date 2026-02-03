@@ -55,13 +55,23 @@ export type UserStatsOutput = {
   answeredLast7Days: number;
   accuracyLast7Days: number; // 0..1
   currentStreakDays: number; // consecutive UTC days with >=1 attempt, ending today
-  recentActivity: Array<{
-    attemptId: string;
-    answeredAt: string; // ISO
-    questionId: string;
-    slug: string;
-    isCorrect: boolean;
-  }>;
+  recentActivity: Array<
+    | {
+        isAvailable: true;
+        attemptId: string;
+        answeredAt: string; // ISO
+        questionId: string;
+        slug: string;
+        isCorrect: boolean;
+      }
+    | {
+        isAvailable: false;
+        attemptId: string;
+        answeredAt: string; // ISO
+        questionId: string;
+        isCorrect: boolean;
+      }
+  >;
 };
 
 export type StatsControllerDeps = {
@@ -137,15 +147,22 @@ export async function getUserStats(
       const slug = slugByQuestionId.get(attempt.questionId);
       if (!slug) {
         // Graceful degradation: questions can be unpublished/deleted while attempts persist.
-        // Skip orphans to keep the dashboard usable and log for later cleanup.
         d.logger.warn(
           { questionId: attempt.questionId },
           'Recent activity references missing question',
         );
+        recentActivity.push({
+          isAvailable: false,
+          attemptId: attempt.id,
+          answeredAt: attempt.answeredAt.toISOString(),
+          questionId: attempt.questionId,
+          isCorrect: attempt.isCorrect,
+        });
         continue;
       }
 
       recentActivity.push({
+        isAvailable: true,
         attemptId: attempt.id,
         answeredAt: attempt.answeredAt.toISOString(),
         questionId: attempt.questionId,

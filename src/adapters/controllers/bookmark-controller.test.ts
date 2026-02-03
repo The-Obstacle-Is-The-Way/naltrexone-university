@@ -187,7 +187,7 @@ describe('bookmark-controller', () => {
     it('returns NOT_FOUND when question does not exist', async () => {
       const deps = createDeps({
         questionRepository: new FakeQuestionRepository([]),
-        bookmarkRepository: createThrowingBookmarkRepository(),
+        bookmarkRepository: new FakeBookmarkRepository(),
       });
 
       const result = await toggleBookmark(
@@ -199,6 +199,25 @@ describe('bookmark-controller', () => {
         ok: false,
         error: { code: 'NOT_FOUND', message: 'Question not found' },
       });
+    });
+
+    it('removes the bookmark even when the question is missing', async () => {
+      const questionId = '11111111-1111-1111-1111-111111111111';
+      const bookmarkRepository = new FakeBookmarkRepository([
+        createBookmark({ questionId }),
+      ]);
+
+      const deps = createDeps({
+        bookmarkRepository,
+        questionRepository: new FakeQuestionRepository([]),
+      });
+
+      const result = await toggleBookmark({ questionId }, deps as never);
+
+      expect(result).toEqual({ ok: true, data: { bookmarked: false } });
+      await expect(
+        bookmarkRepository.exists('user_1', questionId),
+      ).resolves.toBe(false);
     });
 
     it('removes the bookmark when it exists', async () => {
@@ -309,6 +328,7 @@ describe('bookmark-controller', () => {
         data: {
           rows: [
             {
+              isAvailable: true,
               questionId: '11111111-1111-1111-1111-111111111111',
               slug: 'q-1',
               stemMd: 'Stem for 11111111-1111-1111-1111-111111111111',
@@ -316,6 +336,7 @@ describe('bookmark-controller', () => {
               bookmarkedAt: '2026-02-01T00:00:00.000Z',
             },
             {
+              isAvailable: true,
               questionId: '22222222-2222-2222-2222-222222222222',
               slug: 'q-2',
               stemMd: 'Stem for 22222222-2222-2222-2222-222222222222',
@@ -367,7 +388,18 @@ describe('bookmark-controller', () => {
 
       const result = await getBookmarks({}, deps as never);
 
-      expect(result).toEqual({ ok: true, data: { rows: [] } });
+      expect(result).toEqual({
+        ok: true,
+        data: {
+          rows: [
+            {
+              isAvailable: false,
+              questionId: orphanedQuestionId,
+              bookmarkedAt: '2026-02-01T00:00:00.000Z',
+            },
+          ],
+        },
+      });
       expect(logger.warnCalls).toEqual([
         {
           context: { questionId: orphanedQuestionId },
@@ -376,7 +408,7 @@ describe('bookmark-controller', () => {
       ]);
     });
 
-    it('works without logger (optional dependency)', async () => {
+    it('returns an unavailable bookmark row when question is missing', async () => {
       const orphanedQuestionId = '99999999-9999-9999-9999-999999999999';
       const bookmarks = [
         createBookmark({
@@ -392,7 +424,18 @@ describe('bookmark-controller', () => {
 
       const result = await getBookmarks({}, deps as never);
 
-      expect(result).toEqual({ ok: true, data: { rows: [] } });
+      expect(result).toEqual({
+        ok: true,
+        data: {
+          rows: [
+            {
+              isAvailable: false,
+              questionId: orphanedQuestionId,
+              bookmarkedAt: '2026-02-01T00:00:00.000Z',
+            },
+          ],
+        },
+      });
     });
   });
 });

@@ -31,13 +31,22 @@ export type ToggleBookmarkOutput = {
   bookmarked: boolean;
 };
 
-export type BookmarkRow = {
+export type AvailableBookmarkRow = {
+  isAvailable: true;
   questionId: string;
   slug: string;
   stemMd: string;
   difficulty: 'easy' | 'medium' | 'hard';
   bookmarkedAt: string; // ISO
 };
+
+export type UnavailableBookmarkRow = {
+  isAvailable: false;
+  questionId: string;
+  bookmarkedAt: string; // ISO
+};
+
+export type BookmarkRow = AvailableBookmarkRow | UnavailableBookmarkRow;
 
 export type GetBookmarksOutput = {
   rows: BookmarkRow[];
@@ -72,13 +81,6 @@ export async function toggleBookmark(
     const d = await getDeps(deps, options);
     const userId = await requireEntitledUserId(d);
 
-    const question = await d.questionRepository.findPublishedById(
-      parsed.data.questionId,
-    );
-    if (!question) {
-      return err('NOT_FOUND', 'Question not found');
-    }
-
     const wasRemoved = await d.bookmarkRepository.remove(
       userId,
       parsed.data.questionId,
@@ -86,6 +88,13 @@ export async function toggleBookmark(
 
     if (wasRemoved) {
       return ok({ bookmarked: false });
+    }
+
+    const question = await d.questionRepository.findPublishedById(
+      parsed.data.questionId,
+    );
+    if (!question) {
+      return err('NOT_FOUND', 'Question not found');
     }
 
     await d.bookmarkRepository.add(userId, parsed.data.questionId);
@@ -118,15 +127,21 @@ export async function getBookmarks(
       const question = byId.get(bookmark.questionId);
       if (!question) {
         // Graceful degradation: questions can be unpublished/deleted while bookmarks persist.
-        // Skip orphans to return a partial list instead of failing the entire view.
         d.logger.warn(
           { questionId: bookmark.questionId },
           'Bookmark references missing question',
         );
+
+        rows.push({
+          isAvailable: false,
+          questionId: bookmark.questionId,
+          bookmarkedAt: bookmark.createdAt.toISOString(),
+        });
         continue;
       }
 
       rows.push({
+        isAvailable: true,
         questionId: question.id,
         slug: question.slug,
         stemMd: question.stemMd,

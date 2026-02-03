@@ -156,6 +156,7 @@ describe('review-controller', () => {
         data: {
           rows: [
             {
+              isAvailable: true,
               questionId: 'q1',
               slug: 'q-1',
               stemMd: 'Stem for q1',
@@ -163,6 +164,7 @@ describe('review-controller', () => {
               lastAnsweredAt: '2026-02-01T12:00:00.000Z',
             },
             {
+              isAvailable: true,
               questionId: 'q2',
               slug: 'q-2',
               stemMd: 'Stem for q2',
@@ -205,6 +207,7 @@ describe('review-controller', () => {
         data: {
           rows: [
             {
+              isAvailable: true,
               questionId: 'q1',
               slug: 'q-1',
               stemMd: 'Stem for q1',
@@ -242,7 +245,17 @@ describe('review-controller', () => {
 
       expect(result).toEqual({
         ok: true,
-        data: { rows: [], limit: 10, offset: 0 },
+        data: {
+          rows: [
+            {
+              isAvailable: false,
+              questionId: orphanedQuestionId,
+              lastAnsweredAt: '2026-02-01T12:00:00.000Z',
+            },
+          ],
+          limit: 10,
+          offset: 0,
+        },
       });
       expect(logger.warnCalls).toEqual([
         {

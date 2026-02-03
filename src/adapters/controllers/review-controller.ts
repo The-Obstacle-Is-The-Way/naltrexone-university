@@ -25,13 +25,24 @@ const GetMissedQuestionsInputSchema = z
   })
   .strict();
 
-export type MissedQuestionRow = {
+export type AvailableMissedQuestionRow = {
+  isAvailable: true;
   questionId: string;
   slug: string;
   stemMd: string;
   difficulty: 'easy' | 'medium' | 'hard';
   lastAnsweredAt: string; // ISO
 };
+
+export type UnavailableMissedQuestionRow = {
+  isAvailable: false;
+  questionId: string;
+  lastAnsweredAt: string; // ISO
+};
+
+export type MissedQuestionRow =
+  | AvailableMissedQuestionRow
+  | UnavailableMissedQuestionRow;
 
 export type GetMissedQuestionsOutput = {
   rows: MissedQuestionRow[];
@@ -92,14 +103,19 @@ export async function getMissedQuestions(
       const question = byId.get(m.questionId);
       if (!question) {
         // Graceful degradation: questions can be unpublished/deleted while attempts persist.
-        // Skip orphans to return a partial list instead of failing the entire view.
         d.logger.warn(
           { questionId: m.questionId },
           'Missed question references missing question',
         );
+        rows.push({
+          isAvailable: false,
+          questionId: m.questionId,
+          lastAnsweredAt: m.answeredAt.toISOString(),
+        });
         continue;
       }
       rows.push({
+        isAvailable: true,
         questionId: question.id,
         slug: question.slug,
         stemMd: question.stemMd,
