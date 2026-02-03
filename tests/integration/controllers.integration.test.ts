@@ -1,21 +1,31 @@
 import 'dotenv/config';
 import { randomUUID } from 'node:crypto';
-import { inArray } from 'drizzle-orm';
+import { eq, inArray } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
-import { afterAll, afterEach, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, describe, expect, it, vi } from 'vitest';
 import * as schema from '@/db/schema';
+import type { ClerkWebhookEvent } from '@/src/adapters/controllers/clerk-webhook-controller';
+import { processClerkWebhook } from '@/src/adapters/controllers/clerk-webhook-controller';
 import type { QuestionControllerDeps } from '@/src/adapters/controllers/question-controller';
 import {
   getNextQuestion,
   submitAnswer,
 } from '@/src/adapters/controllers/question-controller';
+import { getMissedQuestions } from '@/src/adapters/controllers/review-controller';
 import { getUserStats } from '@/src/adapters/controllers/stats-controller';
+import type { StripeWebhookInput } from '@/src/adapters/controllers/stripe-webhook-controller';
+import { processStripeWebhook } from '@/src/adapters/controllers/stripe-webhook-controller';
 import { DrizzleAttemptRepository } from '@/src/adapters/repositories/drizzle-attempt-repository';
 import { DrizzleIdempotencyKeyRepository } from '@/src/adapters/repositories/drizzle-idempotency-key-repository';
 import { DrizzlePracticeSessionRepository } from '@/src/adapters/repositories/drizzle-practice-session-repository';
 import { DrizzleQuestionRepository } from '@/src/adapters/repositories/drizzle-question-repository';
+import { DrizzleStripeCustomerRepository } from '@/src/adapters/repositories/drizzle-stripe-customer-repository';
+import { DrizzleStripeEventRepository } from '@/src/adapters/repositories/drizzle-stripe-event-repository';
+import { DrizzleSubscriptionRepository } from '@/src/adapters/repositories/drizzle-subscription-repository';
+import { DrizzleUserRepository } from '@/src/adapters/repositories/drizzle-user-repository';
 import type { AuthGateway } from '@/src/application/ports/gateways';
+import { FakePaymentGateway } from '@/src/application/test-helpers/fakes';
 import { GetNextQuestionUseCase } from '@/src/application/use-cases/get-next-question';
 import { SubmitAnswerUseCase } from '@/src/application/use-cases/submit-answer';
 
@@ -43,22 +53,32 @@ type CleanupState = {
   userIds: string[];
   questionIds: string[];
   tagIds: string[];
+  stripeEventIds: string[];
 };
 
 const cleanup: CleanupState = {
   userIds: [],
   questionIds: [],
   tagIds: [],
+  stripeEventIds: [],
 };
 
-async function createUser(): Promise<{ id: string; email: string }> {
+async function createUser(): Promise<{
+  id: string;
+  email: string;
+  clerkUserId: string;
+}> {
   const email = `it-${randomUUID()}@example.com`;
   const clerkUserId = `user_${randomUUID().replaceAll('-', '')}`;
 
   const [row] = await db
     .insert(schema.users)
     .values({ email, clerkUserId })
-    .returning({ id: schema.users.id, email: schema.users.email });
+    .returning({
+      id: schema.users.id,
+      email: schema.users.email,
+      clerkUserId: schema.users.clerkUserId,
+    });
 
   if (!row) {
     throw new Error('Failed to insert user');
@@ -159,6 +179,12 @@ async function createQuestion(input: {
 }
 
 afterEach(async () => {
+  if (cleanup.stripeEventIds.length > 0) {
+    await db
+      .delete(schema.stripeEvents)
+      .where(inArray(schema.stripeEvents.id, cleanup.stripeEventIds));
+  }
+
   if (cleanup.userIds.length > 0) {
     await db
       .delete(schema.users)
@@ -178,6 +204,7 @@ afterEach(async () => {
   cleanup.userIds.length = 0;
   cleanup.questionIds.length = 0;
   cleanup.tagIds.length = 0;
+  cleanup.stripeEventIds.length = 0;
 });
 
 afterAll(async () => {
@@ -369,5 +396,255 @@ describe('stats controller (integration)', () => {
       isCorrect: true,
     });
     expect(result.data.recentActivity.map((row) => row.slug)).toContain(slugB);
+  });
+});
+
+describe('review controller (integration)', () => {
+  it('lists missed questions and skips ones that are no longer published', async () => {
+    const user = await createUser();
+    const missedSlug = `it-missed-${randomUUID()}`;
+    const missedQuestion = await createQuestion({
+      slug: missedSlug,
+      status: 'published',
+      difficulty: 'easy',
+    });
+    const recoveredQuestion = await createQuestion({
+      slug: `it-recovered-${randomUUID()}`,
+      status: 'published',
+      difficulty: 'easy',
+    });
+
+    const t1 = new Date('2026-02-01T00:00:00.000Z');
+    const t2 = new Date('2026-02-02T00:00:00.000Z');
+    const t3 = new Date('2026-02-03T00:00:00.000Z');
+    const t4 = new Date('2026-02-04T00:00:00.000Z');
+
+    await db.insert(schema.attempts).values([
+      {
+        userId: user.id,
+        questionId: missedQuestion.id,
+        practiceSessionId: null,
+        selectedChoiceId: missedQuestion.correctChoiceId,
+        isCorrect: true,
+        timeSpentSeconds: 1,
+        answeredAt: t1,
+      },
+      {
+        userId: user.id,
+        questionId: missedQuestion.id,
+        practiceSessionId: null,
+        selectedChoiceId: missedQuestion.wrongChoiceId,
+        isCorrect: false,
+        timeSpentSeconds: 1,
+        answeredAt: t2,
+      },
+      {
+        userId: user.id,
+        questionId: recoveredQuestion.id,
+        practiceSessionId: null,
+        selectedChoiceId: recoveredQuestion.wrongChoiceId,
+        isCorrect: false,
+        timeSpentSeconds: 1,
+        answeredAt: t3,
+      },
+      {
+        userId: user.id,
+        questionId: recoveredQuestion.id,
+        practiceSessionId: null,
+        selectedChoiceId: recoveredQuestion.correctChoiceId,
+        isCorrect: true,
+        timeSpentSeconds: 1,
+        answeredAt: t4,
+      },
+    ]);
+
+    const warn = vi.fn();
+
+    const authGateway: AuthGateway = {
+      getCurrentUser: async () => ({
+        id: user.id,
+        email: user.email,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      }),
+      requireUser: async () => ({
+        id: user.id,
+        email: user.email,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      }),
+    };
+
+    const deps = {
+      authGateway,
+      checkEntitlementUseCase: {
+        execute: async () => ({ isEntitled: true }),
+      },
+      attemptRepository: new DrizzleAttemptRepository(db),
+      questionRepository: new DrizzleQuestionRepository(db),
+      logger: { warn },
+    };
+
+    const first = await getMissedQuestions({ limit: 10, offset: 0 }, deps);
+
+    expect(first.ok).toBe(true);
+    if (!first.ok) return;
+
+    expect(first.data.rows).toHaveLength(1);
+    expect(first.data.rows[0]).toMatchObject({
+      questionId: missedQuestion.id,
+      slug: missedSlug,
+      stemMd: '# Stem',
+      difficulty: 'easy',
+      lastAnsweredAt: t2.toISOString(),
+    });
+    expect(warn).not.toHaveBeenCalled();
+
+    await db
+      .update(schema.questions)
+      .set({ status: 'draft' })
+      .where(eq(schema.questions.id, missedQuestion.id));
+
+    const second = await getMissedQuestions({ limit: 10, offset: 0 }, deps);
+
+    expect(second.ok).toBe(true);
+    if (!second.ok) return;
+
+    expect(second.data.rows).toEqual([]);
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(warn).toHaveBeenCalledWith(
+      { questionId: missedQuestion.id },
+      'Missed question references missing question',
+    );
+  });
+});
+
+describe('stripe webhook controller (integration)', () => {
+  it('persists subscription updates and marks the Stripe event as processed', async () => {
+    const user = await createUser();
+    const eventId = `evt_${randomUUID().replaceAll('-', '')}`;
+    cleanup.stripeEventIds.push(eventId);
+
+    const subscriptionUpdate = {
+      userId: user.id,
+      stripeCustomerId: `cus_${randomUUID().replaceAll('-', '')}`,
+      stripeSubscriptionId: `sub_${randomUUID().replaceAll('-', '')}`,
+      plan: 'monthly' as const,
+      status: 'active' as const,
+      currentPeriodEnd: new Date('2026-03-01T00:00:00.000Z'),
+      cancelAtPeriodEnd: false,
+    };
+
+    const paymentGateway = new FakePaymentGateway({
+      stripeCustomerId: 'cus_unused',
+      checkoutUrl: 'https://stripe.test/checkout',
+      portalUrl: 'https://stripe.test/portal',
+      webhookResult: {
+        eventId,
+        type: 'customer.subscription.updated',
+        subscriptionUpdate,
+      },
+    });
+
+    const priceIds = {
+      monthly: 'price_test_monthly',
+      annual: 'price_test_annual',
+    };
+
+    const input: StripeWebhookInput = { rawBody: 'raw', signature: 'sig_1' };
+
+    await processStripeWebhook(
+      {
+        paymentGateway,
+        transaction: async (fn) =>
+          db.transaction(async (tx) =>
+            fn({
+              stripeEvents: new DrizzleStripeEventRepository(tx),
+              subscriptions: new DrizzleSubscriptionRepository(tx, priceIds),
+              stripeCustomers: new DrizzleStripeCustomerRepository(tx),
+            }),
+          ),
+      },
+      input,
+    );
+
+    const stripeCustomers = new DrizzleStripeCustomerRepository(db);
+    await expect(stripeCustomers.findByUserId(user.id)).resolves.toEqual({
+      stripeCustomerId: subscriptionUpdate.stripeCustomerId,
+    });
+
+    const subscriptions = new DrizzleSubscriptionRepository(db, priceIds);
+    const subscription = await subscriptions.findByUserId(user.id);
+    expect(subscription).toMatchObject({
+      userId: user.id,
+      plan: 'monthly',
+      status: 'active',
+      cancelAtPeriodEnd: false,
+    });
+    expect(subscription?.currentPeriodEnd.toISOString()).toBe(
+      subscriptionUpdate.currentPeriodEnd.toISOString(),
+    );
+
+    const event = await db.query.stripeEvents.findFirst({
+      where: eq(schema.stripeEvents.id, eventId),
+    });
+    expect(event).toMatchObject({
+      id: eventId,
+      type: 'customer.subscription.updated',
+      error: null,
+    });
+    expect(event?.processedAt).toBeInstanceOf(Date);
+  });
+});
+
+describe('clerk webhook controller (integration)', () => {
+  it('deletes the user and cascades stripe data on user.deleted', async () => {
+    const user = await createUser();
+    const stripeCustomerId = `cus_${randomUUID().replaceAll('-', '')}`;
+
+    await db.insert(schema.stripeCustomers).values({
+      userId: user.id,
+      stripeCustomerId,
+    });
+
+    await db.insert(schema.stripeSubscriptions).values({
+      userId: user.id,
+      stripeSubscriptionId: `sub_${randomUUID().replaceAll('-', '')}`,
+      status: 'active',
+      priceId: 'price_test_monthly',
+      currentPeriodEnd: new Date('2026-03-01T00:00:00.000Z'),
+    });
+
+    const cancelStripeCustomerSubscriptions = vi.fn(async () => undefined);
+
+    const deps = {
+      userRepository: new DrizzleUserRepository(db),
+      stripeCustomerRepository: new DrizzleStripeCustomerRepository(db),
+      cancelStripeCustomerSubscriptions,
+    };
+
+    const event: ClerkWebhookEvent = {
+      type: 'user.deleted',
+      data: { id: user.clerkUserId },
+    };
+
+    await processClerkWebhook(deps, event);
+
+    expect(cancelStripeCustomerSubscriptions).toHaveBeenCalledTimes(1);
+    expect(cancelStripeCustomerSubscriptions).toHaveBeenCalledWith(
+      stripeCustomerId,
+    );
+
+    await expect(
+      deps.userRepository.findByClerkId(user.clerkUserId),
+    ).resolves.toBeNull();
+    await expect(
+      deps.stripeCustomerRepository.findByUserId(user.id),
+    ).resolves.toBeNull();
+    await expect(
+      db.query.stripeSubscriptions.findFirst({
+        where: eq(schema.stripeSubscriptions.userId, user.id),
+      }),
+    ).resolves.toBeUndefined();
   });
 });
