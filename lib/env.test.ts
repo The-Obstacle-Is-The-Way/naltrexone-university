@@ -1,24 +1,16 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import {
+  restoreProcessEnv,
+  snapshotProcessEnv,
+} from '@/tests/shared/process-env';
 
 vi.mock('server-only', () => ({}));
 
-const ORIGINAL_ENV = { ...process.env };
-
-function restoreEnv() {
-  for (const key of Object.keys(process.env)) {
-    if (!(key in ORIGINAL_ENV)) {
-      delete process.env[key];
-    }
-  }
-
-  for (const [key, value] of Object.entries(ORIGINAL_ENV)) {
-    process.env[key] = value;
-  }
-}
+const ORIGINAL_ENV = snapshotProcessEnv();
 
 describe('env', () => {
   afterEach(() => {
-    restoreEnv();
+    restoreProcessEnv(ORIGINAL_ENV);
     vi.resetModules();
     vi.restoreAllMocks();
   });

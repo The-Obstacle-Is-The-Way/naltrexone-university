@@ -1,24 +1,17 @@
 // @vitest-environment jsdom
+import type { ReactNode } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import {
+  restoreProcessEnv,
+  snapshotProcessEnv,
+} from '@/tests/shared/process-env';
 
-const ORIGINAL_ENV = { ...process.env };
-
-function restoreEnv() {
-  for (const key of Object.keys(process.env)) {
-    if (!(key in ORIGINAL_ENV)) {
-      delete process.env[key];
-    }
-  }
-
-  for (const [key, value] of Object.entries(ORIGINAL_ENV)) {
-    process.env[key] = value;
-  }
-}
+const ORIGINAL_ENV = snapshotProcessEnv();
 
 describe('Providers', () => {
   afterEach(() => {
-    restoreEnv();
+    restoreProcessEnv(ORIGINAL_ENV);
     vi.resetModules();
     vi.restoreAllMocks();
   });
@@ -37,6 +30,31 @@ describe('Providers', () => {
       </Providers>,
     );
 
+    expect(html).toContain('child');
+  });
+
+  it('wraps children when NEXT_PUBLIC_SKIP_CLERK is not true', async () => {
+    process.env.NEXT_PUBLIC_SKIP_CLERK = 'false';
+
+    vi.doMock('@clerk/nextjs', () => {
+      throw new Error('Publishable key not valid.');
+    });
+    vi.doMock('next/dynamic', () => ({
+      default: () =>
+        function MockClerkProvider({ children }: { children: ReactNode }) {
+          return <div data-testid="clerk-provider">{children}</div>;
+        },
+    }));
+
+    const { Providers } = await import('@/components/providers');
+
+    const html = renderToStaticMarkup(
+      <Providers>
+        <div>child</div>
+      </Providers>,
+    );
+
+    expect(html).toContain('data-testid="clerk-provider"');
     expect(html).toContain('child');
   });
 });
