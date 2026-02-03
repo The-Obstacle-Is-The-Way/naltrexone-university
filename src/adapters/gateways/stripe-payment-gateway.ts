@@ -125,9 +125,9 @@ export type StripePaymentGatewayDeps = {
   stripe: StripeClient;
   webhookSecret: string;
   priceIds: StripePriceIds;
-  logger?: {
+  logger: {
     error: (msg: string, context?: Record<string, unknown>) => void;
-    warn?: (msg: string, context?: Record<string, unknown>) => void;
+    warn: (msg: string, context?: Record<string, unknown>) => void;
   };
 };
 
@@ -203,7 +203,7 @@ export class StripePaymentGateway implements PaymentGateway {
       ...STRIPE_RETRY_OPTIONS,
       shouldRetry: isTransientExternalError,
       onRetry: ({ attempt, maxAttempts, delayMs, error }) => {
-        this.deps.logger?.warn?.('Retrying Stripe API call', {
+        this.deps.logger.warn('Retrying Stripe API call', {
           operation,
           attempt,
           maxAttempts,
@@ -231,7 +231,7 @@ export class StripePaymentGateway implements PaymentGateway {
             ? 'Skipping subscription.created event without metadata.user_id'
             : 'Skipping checkout.session.completed event without metadata.user_id';
 
-        this.deps.logger?.warn?.(message, {
+        this.deps.logger.warn(message, {
           eventId: input.eventId,
           stripeSubscriptionId: subscription.id ?? null,
           stripeCustomerId: subscription.customer ?? null,
@@ -341,7 +341,7 @@ export class StripePaymentGateway implements PaymentGateway {
         // Avoid reusing a checkout session for a different plan. If the user
         // changes plans, we expire the old session and create a new one so the
         // Stripe UI matches their selection.
-        this.deps.logger?.warn?.('Expiring mismatched checkout session', {
+        this.deps.logger.warn('Expiring mismatched checkout session', {
           sessionId: existingSession.id,
           existingPriceId: existingPriceId ?? null,
           requestedPriceId: priceId,
@@ -354,13 +354,10 @@ export class StripePaymentGateway implements PaymentGateway {
       } catch (error) {
         const errorMessage =
           error instanceof Error ? error.message : 'Unknown error';
-        this.deps.logger?.warn?.(
-          'Failed to inspect existing checkout session',
-          {
-            sessionId: existingSession.id,
-            error: errorMessage,
-          },
-        );
+        this.deps.logger.warn('Failed to inspect existing checkout session', {
+          sessionId: existingSession.id,
+          error: errorMessage,
+        });
       }
     }
 
@@ -441,7 +438,7 @@ export class StripePaymentGateway implements PaymentGateway {
       const errorMessage =
         error instanceof Error ? error.message : 'Unknown error';
 
-      this.deps.logger?.error('Webhook signature verification failed', {
+      this.deps.logger.error('Webhook signature verification failed', {
         error: errorMessage,
       });
 
@@ -461,7 +458,7 @@ export class StripePaymentGateway implements PaymentGateway {
         event.data.object,
       );
       if (!parsedSession.success) {
-        this.deps.logger?.error(
+        this.deps.logger.error(
           'Invalid Stripe checkout.session.completed webhook payload',
           {
             eventId: event.id,
@@ -502,7 +499,7 @@ export class StripePaymentGateway implements PaymentGateway {
       const parsedSubscription =
         stripeSubscriptionSchema.safeParse(subscription);
       if (!parsedSubscription.success) {
-        this.deps.logger?.error(
+        this.deps.logger.error(
           'Invalid Stripe subscription payload retrieved from checkout session',
           {
             eventId: event.id,
@@ -535,7 +532,7 @@ export class StripePaymentGateway implements PaymentGateway {
       event.data.object,
     );
     if (!parsedSubscription.success) {
-      this.deps.logger?.error('Invalid Stripe subscription webhook payload', {
+      this.deps.logger.error('Invalid Stripe subscription webhook payload', {
         eventId: event.id,
         type: event.type,
         error: parsedSubscription.error.flatten(),

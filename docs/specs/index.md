@@ -1,7 +1,7 @@
 # Implementation Specifications
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-02-02
+**Last Updated:** 2026-02-03
 
 ---
 
@@ -30,11 +30,11 @@ Implementation specifications provide detailed technical guidance for building e
 | [SPEC-010](./spec-010-server-actions.md) | Server Actions (Controllers) | Implemented | Adapters |
 | [SPEC-011](./spec-011-paywall.md) | Paywall (Stripe Subscriptions) | Implemented | Feature |
 | [SPEC-012](./spec-012-core-question-loop.md) | Core Question Loop | Implemented | Feature |
-| [SPEC-013](./spec-013-practice-sessions.md) | Practice Sessions | Partial | Feature |
-| [SPEC-014](./spec-014-review-bookmarks.md) | Review + Bookmarks | Partial | Feature |
-| [SPEC-015](./spec-015-dashboard.md) | Dashboard | Partial | Feature |
+| [SPEC-013](./spec-013-practice-sessions.md) | Practice Sessions | Implemented | Feature |
+| [SPEC-014](./spec-014-review-bookmarks.md) | Review + Bookmarks | Implemented | Feature |
+| [SPEC-015](./spec-015-dashboard.md) | Dashboard | Implemented | Feature |
 | [SPEC-016](./spec-016-observability.md) | Observability (Logging, Error Tracking) | Partial | Infrastructure |
-| [SPEC-017](./spec-017-rate-limiting.md) | Rate Limiting | Proposed | Infrastructure |
+| [SPEC-017](./spec-017-rate-limiting.md) | Rate Limiting | Partial | Infrastructure |
 
 **Next Spec ID:** SPEC-018
 

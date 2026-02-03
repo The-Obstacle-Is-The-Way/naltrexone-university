@@ -15,11 +15,9 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 ## Bug Index (Active)
 
-| ID | Title | Status | Priority | Date |
-|----|-------|--------|----------|------|
-| None | — | — | — | — |
+✅ No active bugs.
 
-**Next Bug ID:** BUG-049
+**Next Bug ID:** BUG-050
 
 ## Foundation Audit
 
@@ -30,6 +28,7 @@ See: [Foundation Audit Report](foundation-audit-report.md)
 
 | ID | Title | Priority | Resolved |
 |----|-------|----------|----------|
+| [BUG-049](../_archive/bugs/bug-049-silent-pruning-failures-stripe-webhook.md) | Silent Pruning Failures in Stripe Webhook Controller | P3 | 2026-02-03 |
 | [BUG-048](../_archive/bugs/bug-048-webhook-rate-limiter-fails-open.md) | Webhook Rate Limiter Failures Fail Open | P2 | 2026-02-03 |
 | [BUG-047](../_archive/bugs/bug-047-multiple-subscriptions-per-user.md) | Multiple Subscriptions Created Per User | P1 | 2026-02-02 |
 | [BUG-046](../_archive/bugs/bug-046-review-page-ambiguous-column.md) | Review Page SQL Error — Ambiguous Column Reference | P1 | 2026-02-02 |

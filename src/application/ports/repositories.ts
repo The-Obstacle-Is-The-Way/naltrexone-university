@@ -19,6 +19,11 @@ export type QuestionFilters = {
   difficulties: readonly QuestionDifficulty[];
 };
 
+export type PageOptions = {
+  limit: number;
+  offset: number;
+};
+
 export interface QuestionRepository {
   findPublishedById(id: string): Promise<Question | null>;
   findPublishedBySlug(slug: string): Promise<Question | null>;
@@ -59,7 +64,7 @@ export type MissedQuestionAttempt = {
 export interface AttemptRepository {
   insert(input: AttemptInsertInput): Promise<Attempt>;
 
-  findByUserId(userId: string): Promise<readonly Attempt[]>;
+  findByUserId(userId: string, page: PageOptions): Promise<readonly Attempt[]>;
   findBySessionId(
     sessionId: string,
     userId: string,

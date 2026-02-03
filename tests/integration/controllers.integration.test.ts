@@ -296,7 +296,10 @@ describe('question controllers (integration)', () => {
       },
     });
 
-    const inserted = await attempts.findByUserId(user.id);
+    const inserted = await attempts.findByUserId(user.id, {
+      limit: 10,
+      offset: 0,
+    });
     expect(inserted).toHaveLength(1);
     expect(inserted[0]).toMatchObject({
       userId: user.id,
@@ -380,6 +383,7 @@ describe('stats controller (integration)', () => {
         attemptRepository: new DrizzleAttemptRepository(db),
         questionRepository: new DrizzleQuestionRepository(db),
         now: () => now,
+        logger: { warn: vi.fn() },
       },
     );
 
@@ -556,6 +560,7 @@ describe('stripe webhook controller (integration)', () => {
     await processStripeWebhook(
       {
         paymentGateway,
+        logger: { warn: vi.fn() },
         transaction: async (fn) =>
           db.transaction(async (tx) =>
             fn({
@@ -621,6 +626,7 @@ describe('clerk webhook controller (integration)', () => {
       userRepository: new DrizzleUserRepository(db),
       stripeCustomerRepository: new DrizzleStripeCustomerRepository(db),
       cancelStripeCustomerSubscriptions,
+      logger: { warn: vi.fn() },
     };
 
     const event: ClerkWebhookEvent = {

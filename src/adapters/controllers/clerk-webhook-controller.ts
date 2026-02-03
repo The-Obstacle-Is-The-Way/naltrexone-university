@@ -17,7 +17,7 @@ export type ClerkWebhookDeps = {
   cancelStripeCustomerSubscriptions: (
     stripeCustomerId: string,
   ) => Promise<void>;
-  logger?: Logger;
+  logger: Logger;
 };
 
 type ClerkEmailAddressLike = {
@@ -131,7 +131,7 @@ export async function processClerkWebhook(
 
     const email = getPrimaryEmailOrNull(data);
     if (!email) {
-      deps.logger?.warn(
+      deps.logger.warn(
         { clerkUserId },
         'Clerk user.updated missing email; skipping user upsert',
       );

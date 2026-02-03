@@ -70,7 +70,7 @@ export type StatsControllerDeps = {
   attemptRepository: AttemptRepository;
   questionRepository: QuestionRepository;
   now: () => Date;
-  logger?: Logger;
+  logger: Logger;
 };
 
 type StatsControllerContainer = {
@@ -140,7 +140,7 @@ export async function getUserStats(
       if (!slug) {
         // Graceful degradation: questions can be unpublished/deleted while attempts persist.
         // Skip orphans to keep the dashboard usable and log for later cleanup.
-        d.logger?.warn(
+        d.logger.warn(
           { questionId: attempt.questionId },
           'Recent activity references missing question',
         );

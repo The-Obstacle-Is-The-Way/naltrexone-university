@@ -50,6 +50,7 @@ function createTestDeps() {
 
   const deps: StripeWebhookDeps = {
     paymentGateway: createPaymentGatewayStub(),
+    logger: { warn: vi.fn() },
     transaction: async (fn) => fn(tx),
   };
 
@@ -229,6 +230,7 @@ describe('POST /api/stripe/webhook', () => {
 
     const deps: StripeWebhookDeps = {
       paymentGateway: createPaymentGatewayStub(),
+      logger: { warn: vi.fn() },
       transaction:
         transactionSpy as unknown as StripeWebhookDeps['transaction'],
     };
