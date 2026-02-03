@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { processStripeWebhook } from '@/src/adapters/controllers/stripe-webhook-controller';
 import {
+  FakeLogger,
   FakePaymentGateway,
   FakeStripeCustomerRepository,
   FakeStripeEventRepository,
@@ -11,15 +12,6 @@ class FailingStripeEventRepository extends FakeStripeEventRepository {
   async pruneProcessedBefore(_cutoff: Date, _limit: number): Promise<number> {
     throw new Error('boom');
   }
-}
-
-function createFakeLogger() {
-  return {
-    debug: vi.fn(),
-    info: vi.fn(),
-    warn: vi.fn(),
-    error: vi.fn(),
-  };
 }
 
 describe('processStripeWebhook', () => {
@@ -47,7 +39,7 @@ describe('processStripeWebhook', () => {
     const subscriptions = new FakeSubscriptionRepository();
     const stripeCustomers = new FakeStripeCustomerRepository();
     const insertSpy = vi.spyOn(stripeCustomers, 'insert');
-    const logger = createFakeLogger();
+    const logger = new FakeLogger();
 
     await processStripeWebhook(
       {
@@ -99,7 +91,7 @@ describe('processStripeWebhook', () => {
     const stripeEvents = new FakeStripeEventRepository();
     const subscriptions = new FakeSubscriptionRepository();
     const stripeCustomers = new FakeStripeCustomerRepository();
-    const logger = createFakeLogger();
+    const logger = new FakeLogger();
 
     await processStripeWebhook(
       {
@@ -137,7 +129,7 @@ describe('processStripeWebhook', () => {
       const subscriptions = new FakeSubscriptionRepository();
       const stripeCustomers = new FakeStripeCustomerRepository();
       const pruneSpy = vi.spyOn(stripeEvents, 'pruneProcessedBefore');
-      const logger = createFakeLogger();
+      const logger = new FakeLogger();
 
       await processStripeWebhook(
         {
@@ -173,7 +165,7 @@ describe('processStripeWebhook', () => {
     const stripeEvents = new FailingStripeEventRepository();
     const subscriptions = new FakeSubscriptionRepository();
     const stripeCustomers = new FakeStripeCustomerRepository();
-    const logger = createFakeLogger();
+    const logger = new FakeLogger();
 
     await expect(
       processStripeWebhook(
@@ -187,15 +179,15 @@ describe('processStripeWebhook', () => {
       ),
     ).resolves.toBeUndefined();
 
-    expect(logger.warn).toHaveBeenCalledWith(
-      expect.objectContaining({
+    expect(logger.warnCalls).toContainEqual({
+      context: expect.objectContaining({
         eventId: 'evt_prune_fail',
         error: 'boom',
         retentionDays: 90,
         pruneLimit: 100,
       }),
-      'Stripe event pruning failed',
-    );
+      msg: 'Stripe event pruning failed',
+    });
   });
 
   it('still succeeds when pruning processed stripe events fails', async () => {
@@ -216,7 +208,7 @@ describe('processStripeWebhook', () => {
     await processStripeWebhook(
       {
         paymentGateway,
-        logger: createFakeLogger(),
+        logger: new FakeLogger(),
         transaction: async (fn) =>
           fn({ stripeEvents, subscriptions, stripeCustomers }),
       },
@@ -256,7 +248,7 @@ describe('processStripeWebhook', () => {
     const subscriptions = new FakeSubscriptionRepository();
     const stripeCustomers = new FakeStripeCustomerRepository();
     const insertSpy = vi.spyOn(stripeCustomers, 'insert');
-    const logger = createFakeLogger();
+    const logger = new FakeLogger();
 
     await processStripeWebhook(
       {
@@ -305,7 +297,7 @@ describe('processStripeWebhook', () => {
       processStripeWebhook(
         {
           paymentGateway,
-          logger: createFakeLogger(),
+          logger: new FakeLogger(),
           transaction: async (fn) =>
             fn({ stripeEvents, subscriptions, stripeCustomers }),
         },

@@ -1,7 +1,8 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import type { ClerkWebhookEvent } from '@/src/adapters/controllers/clerk-webhook-controller';
 import { processClerkWebhook } from '@/src/adapters/controllers/clerk-webhook-controller';
 import {
+  FakeLogger,
   FakeStripeCustomerRepository,
   FakeUserRepository,
 } from '@/src/application/test-helpers/fakes';
@@ -9,6 +10,7 @@ import { loadJsonFixture } from '@/tests/shared/load-json-fixture';
 
 function createDeps() {
   const cancelCalls: string[] = [];
+  const logger = new FakeLogger();
 
   return {
     userRepository: new FakeUserRepository(),
@@ -17,12 +19,7 @@ function createDeps() {
     cancelStripeCustomerSubscriptions: async (stripeCustomerId: string) => {
       cancelCalls.push(stripeCustomerId);
     },
-    logger: {
-      debug: vi.fn(),
-      info: vi.fn(),
-      warn: vi.fn(),
-      error: vi.fn(),
-    },
+    logger,
   };
 }
 
@@ -56,28 +53,16 @@ describe('processClerkWebhook', () => {
 
   it('logs a warning when user.updated is missing an email', async () => {
     const deps = createDeps();
-    const warn = vi.fn();
 
-    await processClerkWebhook(
-      {
-        ...deps,
-        logger: {
-          debug: vi.fn(),
-          info: vi.fn(),
-          warn,
-          error: vi.fn(),
-        },
-      },
-      {
-        type: 'user.updated',
-        data: { id: 'clerk_1', email_addresses: [] },
-      },
-    );
+    await processClerkWebhook(deps, {
+      type: 'user.updated',
+      data: { id: 'clerk_1', email_addresses: [] },
+    });
 
-    expect(warn).toHaveBeenCalledWith(
-      { clerkUserId: 'clerk_1' },
-      'Clerk user.updated missing email; skipping user upsert',
-    );
+    expect(deps.logger.warnCalls).toContainEqual({
+      context: { clerkUserId: 'clerk_1' },
+      msg: 'Clerk user.updated missing email; skipping user upsert',
+    });
   });
 
   it('ignores user.updated when email_addresses is not an array', async () => {

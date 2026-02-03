@@ -27,11 +27,7 @@ type StripeCheckoutSessionList = { data: StripeCheckoutSession[] };
 
 type StripeSubscription = unknown;
 
-type StripeCheckoutSessionCompleted = {
-  subscription?: string | { id: string } | null;
-};
-
-type StripeInvoicePaymentFailed = {
+type StripeEventWithSubscriptionRef = {
   subscription?: string | { id: string } | null;
 };
 
@@ -164,14 +160,7 @@ const stripeCheckoutSessionSchema = z
   })
   .passthrough();
 
-const stripeInvoiceSchema = z
-  .object({
-    subscription: z
-      .union([z.string(), z.object({ id: z.string() }).passthrough()])
-      .nullable()
-      .optional(),
-  })
-  .passthrough();
+const stripeEventWithSubscriptionRefSchema = stripeCheckoutSessionSchema;
 
 const subscriptionEventTypes = new Set([
   'customer.subscription.created',
@@ -225,6 +214,52 @@ export class StripePaymentGateway implements PaymentGateway {
           'Retrying Stripe API call',
         );
       },
+    });
+  }
+
+  private async retrieveAndNormalizeSubscription(
+    event: { id: string; type: string },
+    subscriptionRef: string | { id: string },
+  ): Promise<WebhookEventResult['subscriptionUpdate'] | null> {
+    const stripeSubscriptionId =
+      typeof subscriptionRef === 'string'
+        ? subscriptionRef
+        : subscriptionRef.id;
+
+    const stripeSubscriptions = this.deps.stripe.subscriptions;
+    if (!stripeSubscriptions) {
+      throw new ApplicationError(
+        'STRIPE_ERROR',
+        'Stripe subscriptions client is unavailable',
+      );
+    }
+
+    const subscription = await this.callStripe('subscriptions.retrieve', () =>
+      stripeSubscriptions.retrieve(stripeSubscriptionId),
+    );
+
+    const parsedSubscription = stripeSubscriptionSchema.safeParse(subscription);
+    if (!parsedSubscription.success) {
+      this.deps.logger.error(
+        {
+          eventId: event.id,
+          type: event.type,
+          stripeSubscriptionId,
+          error: parsedSubscription.error.flatten(),
+        },
+        `Invalid Stripe subscription payload retrieved from ${event.type}`,
+      );
+
+      throw new ApplicationError(
+        'INVALID_WEBHOOK_PAYLOAD',
+        'Invalid Stripe subscription webhook payload',
+      );
+    }
+
+    return this.normalizeSubscriptionUpdate({
+      subscription: parsedSubscription.data,
+      eventId: event.id,
+      type: event.type,
     });
   }
 
@@ -478,7 +513,7 @@ export class StripePaymentGateway implements PaymentGateway {
     };
 
     if (event.type === 'checkout.session.completed') {
-      const parsedSession = stripeCheckoutSessionSchema.safeParse(
+      const parsedSession = stripeEventWithSubscriptionRefSchema.safeParse(
         event.data.object,
       );
       if (!parsedSession.success) {
@@ -497,59 +532,24 @@ export class StripePaymentGateway implements PaymentGateway {
         );
       }
 
-      const session = parsedSession.data as StripeCheckoutSessionCompleted;
-      const subscriptionRef = session.subscription;
+      const payload = parsedSession.data as StripeEventWithSubscriptionRef;
+      const subscriptionRef = payload.subscription;
       if (!subscriptionRef) {
         return result;
       }
 
-      const stripeSubscriptionId =
-        typeof subscriptionRef === 'string'
-          ? subscriptionRef
-          : subscriptionRef.id;
-
-      const stripeSubscriptions = this.deps.stripe.subscriptions;
-      if (!stripeSubscriptions) {
-        throw new ApplicationError(
-          'STRIPE_ERROR',
-          'Stripe subscriptions client is unavailable',
-        );
-      }
-
-      const subscription = await this.callStripe('subscriptions.retrieve', () =>
-        stripeSubscriptions.retrieve(stripeSubscriptionId),
+      const subscriptionUpdate = await this.retrieveAndNormalizeSubscription(
+        event,
+        subscriptionRef,
       );
-
-      const parsedSubscription =
-        stripeSubscriptionSchema.safeParse(subscription);
-      if (!parsedSubscription.success) {
-        this.deps.logger.error(
-          {
-            eventId: event.id,
-            type: event.type,
-            stripeSubscriptionId,
-            error: parsedSubscription.error.flatten(),
-          },
-          'Invalid Stripe subscription payload retrieved from checkout session',
-        );
-
-        throw new ApplicationError(
-          'INVALID_WEBHOOK_PAYLOAD',
-          'Invalid Stripe subscription webhook payload',
-        );
-      }
-
-      const subscriptionUpdate = this.normalizeSubscriptionUpdate({
-        subscription: parsedSubscription.data,
-        eventId: event.id,
-        type: event.type,
-      });
 
       return subscriptionUpdate ? { ...result, subscriptionUpdate } : result;
     }
 
     if (event.type === 'invoice.payment_failed') {
-      const parsedInvoice = stripeInvoiceSchema.safeParse(event.data.object);
+      const parsedInvoice = stripeEventWithSubscriptionRefSchema.safeParse(
+        event.data.object,
+      );
       if (!parsedInvoice.success) {
         this.deps.logger.error(
           {
@@ -566,53 +566,16 @@ export class StripePaymentGateway implements PaymentGateway {
         );
       }
 
-      const invoice = parsedInvoice.data as StripeInvoicePaymentFailed;
-      const subscriptionRef = invoice.subscription;
+      const payload = parsedInvoice.data as StripeEventWithSubscriptionRef;
+      const subscriptionRef = payload.subscription;
       if (!subscriptionRef) {
         return result;
       }
 
-      const stripeSubscriptionId =
-        typeof subscriptionRef === 'string'
-          ? subscriptionRef
-          : subscriptionRef.id;
-
-      const stripeSubscriptions = this.deps.stripe.subscriptions;
-      if (!stripeSubscriptions) {
-        throw new ApplicationError(
-          'STRIPE_ERROR',
-          'Stripe subscriptions client is unavailable',
-        );
-      }
-
-      const subscription = await this.callStripe('subscriptions.retrieve', () =>
-        stripeSubscriptions.retrieve(stripeSubscriptionId),
+      const subscriptionUpdate = await this.retrieveAndNormalizeSubscription(
+        event,
+        subscriptionRef,
       );
-
-      const parsedSubscription =
-        stripeSubscriptionSchema.safeParse(subscription);
-      if (!parsedSubscription.success) {
-        this.deps.logger.error(
-          {
-            eventId: event.id,
-            type: event.type,
-            stripeSubscriptionId,
-            error: parsedSubscription.error.flatten(),
-          },
-          'Invalid Stripe subscription payload retrieved from invoice payment failure',
-        );
-
-        throw new ApplicationError(
-          'INVALID_WEBHOOK_PAYLOAD',
-          'Invalid Stripe subscription webhook payload',
-        );
-      }
-
-      const subscriptionUpdate = this.normalizeSubscriptionUpdate({
-        subscription: parsedSubscription.data,
-        eventId: event.id,
-        type: event.type,
-      });
 
       return subscriptionUpdate ? { ...result, subscriptionUpdate } : result;
     }

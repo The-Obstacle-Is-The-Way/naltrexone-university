@@ -24,9 +24,11 @@ import { DrizzleStripeCustomerRepository } from '@/src/adapters/repositories/dri
 import { DrizzleStripeEventRepository } from '@/src/adapters/repositories/drizzle-stripe-event-repository';
 import { DrizzleSubscriptionRepository } from '@/src/adapters/repositories/drizzle-subscription-repository';
 import { DrizzleUserRepository } from '@/src/adapters/repositories/drizzle-user-repository';
-import type { Logger } from '@/src/adapters/shared/logger';
 import type { AuthGateway } from '@/src/application/ports/gateways';
-import { FakePaymentGateway } from '@/src/application/test-helpers/fakes';
+import {
+  FakeLogger,
+  FakePaymentGateway,
+} from '@/src/application/test-helpers/fakes';
 import { GetNextQuestionUseCase } from '@/src/application/use-cases/get-next-question';
 import { SubmitAnswerUseCase } from '@/src/application/use-cases/submit-answer';
 
@@ -63,16 +65,6 @@ const cleanup: CleanupState = {
   tagIds: [],
   stripeEventIds: [],
 };
-
-function createTestLogger(overrides: Partial<Logger> = {}): Logger {
-  return {
-    debug: vi.fn(),
-    info: vi.fn(),
-    warn: vi.fn(),
-    error: vi.fn(),
-    ...overrides,
-  };
-}
 
 async function createUser(): Promise<{
   id: string;
@@ -394,7 +386,7 @@ describe('stats controller (integration)', () => {
         attemptRepository: new DrizzleAttemptRepository(db),
         questionRepository: new DrizzleQuestionRepository(db),
         now: () => now,
-        logger: createTestLogger(),
+        logger: new FakeLogger(),
       },
     );
 
@@ -477,7 +469,7 @@ describe('review controller (integration)', () => {
       },
     ]);
 
-    const warn = vi.fn();
+    const logger = new FakeLogger();
 
     const authGateway: AuthGateway = {
       getCurrentUser: async () => ({
@@ -501,7 +493,7 @@ describe('review controller (integration)', () => {
       },
       attemptRepository: new DrizzleAttemptRepository(db),
       questionRepository: new DrizzleQuestionRepository(db),
-      logger: createTestLogger({ warn }),
+      logger,
     };
 
     const first = await getMissedQuestions({ limit: 10, offset: 0 }, deps);
@@ -518,7 +510,7 @@ describe('review controller (integration)', () => {
       difficulty: 'easy',
       lastAnsweredAt: t2.toISOString(),
     });
-    expect(warn).not.toHaveBeenCalled();
+    expect(logger.warnCalls).toHaveLength(0);
 
     await db
       .update(schema.questions)
@@ -537,11 +529,12 @@ describe('review controller (integration)', () => {
         lastAnsweredAt: t2.toISOString(),
       },
     ]);
-    expect(warn).toHaveBeenCalledTimes(1);
-    expect(warn).toHaveBeenCalledWith(
-      { questionId: missedQuestion.id },
-      'Missed question references missing question',
-    );
+    expect(logger.warnCalls).toEqual([
+      {
+        context: { questionId: missedQuestion.id },
+        msg: 'Missed question references missing question',
+      },
+    ]);
   });
 });
 
@@ -582,7 +575,7 @@ describe('stripe webhook controller (integration)', () => {
     await processStripeWebhook(
       {
         paymentGateway,
-        logger: createTestLogger(),
+        logger: new FakeLogger(),
         transaction: async (fn) =>
           db.transaction(async (tx) =>
             fn({
@@ -648,7 +641,7 @@ describe('clerk webhook controller (integration)', () => {
       userRepository: new DrizzleUserRepository(db),
       stripeCustomerRepository: new DrizzleStripeCustomerRepository(db),
       cancelStripeCustomerSubscriptions,
-      logger: createTestLogger(),
+      logger: new FakeLogger(),
     };
 
     const event: ClerkWebhookEvent = {

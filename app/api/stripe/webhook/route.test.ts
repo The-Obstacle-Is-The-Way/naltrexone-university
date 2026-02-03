@@ -10,6 +10,7 @@ import type {
   PaymentGateway,
   RateLimiter,
 } from '@/src/application/ports/gateways';
+import { FakeLogger } from '@/src/application/test-helpers/fakes';
 
 function createPaymentGatewayStub(): PaymentGateway {
   return {
@@ -17,15 +18,6 @@ function createPaymentGatewayStub(): PaymentGateway {
     createCheckoutSession: async () => ({ url: 'https://stripe/checkout' }),
     createPortalSession: async () => ({ url: 'https://stripe/portal' }),
     processWebhookEvent: async () => ({ eventId: 'evt_1', type: 'test' }),
-  };
-}
-
-function createControllerLogger() {
-  return {
-    debug: vi.fn(),
-    info: vi.fn(),
-    warn: vi.fn(),
-    error: vi.fn(),
   };
 }
 
@@ -57,9 +49,10 @@ function createTestDeps() {
     },
   } satisfies StripeWebhookTransaction;
 
+  const logger = new FakeLogger();
   const deps: StripeWebhookDeps = {
     paymentGateway: createPaymentGatewayStub(),
-    logger: createControllerLogger(),
+    logger,
     transaction: async (fn) => fn(tx),
   };
 
@@ -239,7 +232,7 @@ describe('POST /api/stripe/webhook', () => {
 
     const deps: StripeWebhookDeps = {
       paymentGateway: createPaymentGatewayStub(),
-      logger: createControllerLogger(),
+      logger: new FakeLogger(),
       transaction:
         transactionSpy as unknown as StripeWebhookDeps['transaction'],
     };

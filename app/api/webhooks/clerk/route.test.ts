@@ -12,13 +12,13 @@ import type {
   UserRepository,
 } from '@/src/application/ports/repositories';
 import {
+  FakeLogger,
   FakeStripeCustomerRepository,
   FakeUserRepository,
 } from '@/src/application/test-helpers/fakes';
 
 function createTestDeps() {
-  const loggerError = vi.fn();
-  const loggerWarn = vi.fn();
+  const logger = new FakeLogger();
   const limit = vi.fn<RateLimiter['limit']>(async () => ({
     success: true,
     limit: 100,
@@ -38,12 +38,7 @@ function createTestDeps() {
   );
 
   const createContainer = vi.fn<() => ClerkWebhookRouteContainer>(() => ({
-    logger: {
-      debug: vi.fn(),
-      info: vi.fn(),
-      error: loggerError,
-      warn: loggerWarn,
-    },
+    logger,
     stripe: {
       subscriptions: {
         list: async function* () {},
@@ -73,8 +68,7 @@ function createTestDeps() {
     verifyWebhook,
     processClerkWebhook,
     cancelStripeCustomerSubscriptions,
-    loggerError,
-    loggerWarn,
+    logger,
     createUserRepository,
     createStripeCustomerRepository,
     userRepository,
@@ -147,13 +141,8 @@ describe('POST /api/webhooks/clerk', () => {
   });
 
   it('returns 503 when rate limiter throws', async () => {
-    const {
-      POST,
-      rateLimiter,
-      verifyWebhook,
-      processClerkWebhook,
-      loggerError,
-    } = createTestDeps();
+    const { POST, rateLimiter, verifyWebhook, processClerkWebhook, logger } =
+      createTestDeps();
 
     rateLimiter.limit.mockRejectedValue(new Error('rate limiter down'));
 
@@ -170,7 +159,7 @@ describe('POST /api/webhooks/clerk', () => {
     });
     expect(verifyWebhook).not.toHaveBeenCalled();
     expect(processClerkWebhook).not.toHaveBeenCalled();
-    expect(loggerError).toHaveBeenCalledTimes(1);
+    expect(logger.errorCalls).toHaveLength(1);
   });
 
   it('returns 400 when payload validation fails', async () => {
@@ -195,7 +184,7 @@ describe('POST /api/webhooks/clerk', () => {
   });
 
   it('returns 500 when processing fails unexpectedly', async () => {
-    const { POST, loggerError, verifyWebhook, processClerkWebhook } =
+    const { POST, logger, verifyWebhook, processClerkWebhook } =
       createTestDeps();
 
     verifyWebhook.mockResolvedValue({
@@ -215,6 +204,6 @@ describe('POST /api/webhooks/clerk', () => {
     await expect(res.json()).resolves.toEqual({
       error: 'Webhook processing failed',
     });
-    expect(loggerError).toHaveBeenCalledTimes(1);
+    expect(logger.errorCalls).toHaveLength(1);
   });
 });

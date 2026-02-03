@@ -893,7 +893,7 @@ describe('StripePaymentGateway', () => {
         type: 'invoice.payment_failed',
         stripeSubscriptionId: 'sub_123',
       }),
-      'Invalid Stripe subscription payload retrieved from invoice payment failure',
+      'Invalid Stripe subscription payload retrieved from invoice.payment_failed',
     );
   });
 
@@ -1068,7 +1068,7 @@ describe('StripePaymentGateway', () => {
         type: 'checkout.session.completed',
         stripeSubscriptionId: 'sub_123',
       }),
-      'Invalid Stripe subscription payload retrieved from checkout session',
+      'Invalid Stripe subscription payload retrieved from checkout.session.completed',
     );
   });
 
