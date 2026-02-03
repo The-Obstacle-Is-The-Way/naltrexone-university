@@ -12,6 +12,7 @@ import type {
   SubscriptionRepository,
 } from '@/src/application/ports/repositories';
 import {
+  isEntitledStatus,
   isValidSubscriptionStatus,
   type SubscriptionStatus,
 } from '@/src/domain/value-objects';
@@ -337,15 +338,28 @@ export async function syncCheckoutSuccess(
 
   await d.transaction(async ({ stripeCustomers, subscriptions }) => {
     await stripeCustomers.insert(user.id, stripeCustomerId);
+    const currentPeriodEnd = new Date(currentPeriodEndSeconds * 1000);
     await subscriptions.upsert({
       userId: user.id,
       stripeSubscriptionId: subscriptionId,
       plan,
       status,
-      currentPeriodEnd: new Date(currentPeriodEndSeconds * 1000),
+      currentPeriodEnd,
       cancelAtPeriodEnd,
     });
   });
+
+  const isEntitled =
+    isEntitledStatus(status) && currentPeriodEndSeconds * 1000 > Date.now();
+
+  if (!isEntitled) {
+    const reason =
+      status === 'incomplete' || status === 'incomplete_expired'
+        ? 'payment_processing'
+        : 'manage_billing';
+
+    redirectFn(`${ROUTES.PRICING}?reason=${reason}`);
+  }
 
   redirectFn(ROUTES.APP_DASHBOARD);
 }

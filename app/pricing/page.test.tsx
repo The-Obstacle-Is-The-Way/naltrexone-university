@@ -100,6 +100,25 @@ describe('app/pricing', () => {
     );
   });
 
+  it('builds the manage-billing banner when reason=manage_billing', async () => {
+    const { getPricingBanner } = await import('@/app/pricing/page');
+
+    expect(getPricingBanner({ reason: 'manage_billing' })).toMatchObject({
+      tone: 'info',
+      message: 'Subscription found. Manage billing to resolve payment issues.',
+    });
+  });
+
+  it('builds the payment-processing banner when reason=payment_processing', async () => {
+    const { getPricingBanner } = await import('@/app/pricing/page');
+
+    expect(getPricingBanner({ reason: 'payment_processing' })).toMatchObject({
+      tone: 'info',
+      message:
+        'Payment processing. It may take a moment for access to activate.',
+    });
+  });
+
   it('builds the checkout error banner when checkout=error', async () => {
     const { getPricingBanner } = await import('@/app/pricing/page');
 
@@ -245,7 +264,7 @@ describe('app/pricing', () => {
     });
   });
 
-  it('runSubscribeAction redirects to /app/billing when already subscribed', async () => {
+  it('runSubscribeAction redirects to /pricing?reason=manage_billing when already subscribed', async () => {
     const { runSubscribeAction } = await import('@/app/pricing/page');
 
     const createCheckoutSessionFn = vi.fn<CreateCheckoutSessionFn>(
@@ -268,7 +287,7 @@ describe('app/pricing', () => {
         },
       );
 
-    await expect(action()).rejects.toThrow('/app/billing');
+    await expect(action()).rejects.toThrow('/pricing?reason=manage_billing');
     expect(createCheckoutSessionFn).toHaveBeenCalledWith({
       plan: 'monthly',
       idempotencyKey: undefined,
@@ -305,6 +324,26 @@ describe('app/pricing', () => {
       plan: 'monthly',
       idempotencyKey: undefined,
     });
+  });
+
+  it('renders a manage-billing action when provided', async () => {
+    const { PricingView } = await import('@/app/pricing/page');
+
+    const html = renderToStaticMarkup(
+      <PricingView
+        isEntitled={false}
+        banner={{
+          tone: 'info',
+          message:
+            'Subscription found. Manage billing to resolve payment issues.',
+        }}
+        manageBillingAction={async () => undefined}
+        subscribeMonthlyAction={async () => undefined}
+        subscribeAnnualAction={async () => undefined}
+      />,
+    );
+
+    expect(html).toContain('Manage Billing');
   });
 
   it('renders dismiss link when banner is present', async () => {

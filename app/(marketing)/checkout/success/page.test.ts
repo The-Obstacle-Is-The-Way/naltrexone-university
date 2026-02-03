@@ -57,7 +57,7 @@ describe('runCheckoutSuccessPage', () => {
             items: {
               data: [
                 {
-                  current_period_end: 1_706_000_000,
+                  current_period_end: 2_000_000_000,
                   price: { id: 'price_monthly' },
                 },
               ],
@@ -136,7 +136,7 @@ describe('runCheckoutSuccessPage', () => {
             items: {
               data: [
                 {
-                  current_period_end: 1_706_000_000,
+                  current_period_end: 2_000_000_000,
                   price: { id: 'price_monthly' },
                 },
               ],
@@ -232,7 +232,7 @@ describe('syncCheckoutSuccess', () => {
       input: { sessionId: 'cs_test' },
       session: { customer: 'cus_123', subscription: 'sub_123' },
       subscription: {
-        items: { data: [{ current_period_end: 1_706_000_000 }] },
+        items: { data: [{ current_period_end: 2_000_000_000 }] },
       },
     },
     {
@@ -243,7 +243,7 @@ describe('syncCheckoutSuccess', () => {
         items: {
           data: [
             {
-              current_period_end: 1_706_000_000,
+              current_period_end: 2_000_000_000,
               price: { id: 'price_unknown' },
             },
           ],
@@ -297,7 +297,7 @@ describe('syncCheckoutSuccess', () => {
               items: {
                 data: [
                   {
-                    current_period_end: 1_706_000_000,
+                    current_period_end: 2_000_000_000,
                     price: { id: 'price_monthly' },
                   },
                 ],
@@ -328,5 +328,94 @@ describe('syncCheckoutSuccess', () => {
       expect.objectContaining({ reason }),
       'Checkout success validation failed',
     );
+  });
+
+  it('redirects to pricing with reason=payment_processing when subscription is not entitled', async () => {
+    const stripeCustomerInserts: Array<{
+      userId: string;
+      stripeCustomerId: string;
+    }> = [];
+    const subscriptionUpserts: Array<{ status: string }> = [];
+
+    const deps = {
+      authGateway: {
+        getCurrentUser: async () => null,
+        requireUser: async () => ({
+          id: 'user_1',
+          email: 'user@example.com',
+          createdAt: new Date('2026-02-01T00:00:00Z'),
+          updatedAt: new Date('2026-02-01T00:00:00Z'),
+        }),
+      },
+      getClerkAuth: async () => ({
+        userId: 'clerk_user_1',
+        redirectToSignIn: () => {
+          throw new Error('should not redirect to sign-in');
+        },
+      }),
+      logger: { error: vi.fn() },
+      stripe: {
+        checkout: {
+          sessions: {
+            retrieve: async () => ({
+              customer: 'cus_123',
+              subscription: 'sub_123',
+            }),
+          },
+        },
+        subscriptions: {
+          retrieve: async () => ({
+            id: 'sub_123',
+            customer: 'cus_123',
+            status: 'incomplete',
+            cancel_at_period_end: false,
+            metadata: { user_id: 'user_1' },
+            items: {
+              data: [
+                {
+                  current_period_end: 2_000_000_000,
+                  price: { id: 'price_monthly' },
+                },
+              ],
+            },
+          }),
+        },
+      },
+      priceIds: { monthly: 'price_monthly', annual: 'price_annual' },
+      appUrl: 'https://example.com',
+      transaction: async <T>(
+        fn: (tx: CheckoutSuccessTransaction) => Promise<T>,
+      ): Promise<T> =>
+        fn({
+          stripeCustomers: {
+            findByUserId: async () => null,
+            insert: async (userId: string, stripeCustomerId: string) => {
+              stripeCustomerInserts.push({ userId, stripeCustomerId });
+            },
+          },
+          subscriptions: {
+            findByUserId: async () => null,
+            findByStripeSubscriptionId: async () => null,
+            upsert: async (input: { status: string }) => {
+              subscriptionUpserts.push({ status: input.status });
+            },
+          },
+        }),
+    };
+
+    const redirectFn = (url: string): never => {
+      throw new RedirectError(url);
+    };
+
+    await expect(
+      syncCheckoutSuccess({ sessionId: 'cs_test' }, deps as never, redirectFn),
+    ).rejects.toMatchObject({
+      url: `${ROUTES.PRICING}?reason=payment_processing`,
+    });
+
+    expect(stripeCustomerInserts).toEqual([
+      { userId: 'user_1', stripeCustomerId: 'cus_123' },
+    ]);
+    expect(subscriptionUpserts).toEqual([{ status: 'incomplete' }]);
   });
 });

@@ -1,3 +1,4 @@
+import { redirect } from 'next/navigation';
 import { SubscribeButton } from '@/app/pricing/pricing-client';
 import { PricingView } from '@/app/pricing/pricing-view';
 import {
@@ -5,6 +6,7 @@ import {
   subscribeMonthlyAction,
 } from '@/app/pricing/subscribe-actions';
 import type { PricingBanner } from '@/app/pricing/types';
+import { createPortalSession } from '@/src/adapters/controllers/billing-controller';
 import type { AuthGateway } from '@/src/application/ports/gateways';
 import type { CheckEntitlementUseCase } from '@/src/application/ports/use-cases';
 
@@ -90,6 +92,21 @@ export function getPricingBanner(
     };
   }
 
+  if (searchParams.reason === 'manage_billing') {
+    return {
+      tone: 'info',
+      message: 'Subscription found. Manage billing to resolve payment issues.',
+    };
+  }
+
+  if (searchParams.reason === 'payment_processing') {
+    return {
+      tone: 'info',
+      message:
+        'Payment processing. It may take a moment for access to activate.',
+    };
+  }
+
   return null;
 }
 
@@ -104,10 +121,40 @@ export default async function PricingPage({
   const resolvedSearchParams = await searchParams;
   const banner = getPricingBanner(resolvedSearchParams);
 
+  const showManageBillingAction =
+    resolvedSearchParams.reason === 'manage_billing' ||
+    resolvedSearchParams.reason === 'payment_processing';
+
+  async function manageBilling() {
+    'use server';
+    const result = await createPortalSession({});
+    if (result.ok) {
+      redirect(result.data.url);
+    }
+
+    if (result.error.code === 'UNAUTHENTICATED') {
+      redirect('/sign-up');
+    }
+
+    const url = new URL('/pricing', 'https://example.com');
+    url.searchParams.set('checkout', 'error');
+    url.searchParams.set('error_code', result.error.code);
+
+    if (process.env.NODE_ENV === 'development') {
+      const rawMessage = result.error.message;
+      const safeMessage =
+        rawMessage.length > 200 ? `${rawMessage.slice(0, 200)}…` : rawMessage;
+      url.searchParams.set('error_message', safeMessage);
+    }
+
+    redirect(`${url.pathname}${url.search}`);
+  }
+
   return (
     <PricingView
       isEntitled={isEntitled}
       banner={banner}
+      manageBillingAction={showManageBillingAction ? manageBilling : undefined}
       subscribeMonthlyAction={subscribeMonthlyAction}
       subscribeAnnualAction={subscribeAnnualAction}
       SubscribeButtonComponent={SubscribeButton}
