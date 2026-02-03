@@ -1,10 +1,7 @@
-import type { ActionResult } from '@/src/adapters/controllers/action-result';
-
-type RedirectFn = (url: string) => never;
-
-type CreatePortalSessionFn = (
-  input: Record<string, never>,
-) => Promise<ActionResult<{ url: string }>>;
+import type {
+  CreatePortalSessionFn,
+  RedirectFn,
+} from '@/app/pricing/manage-billing-types';
 
 export async function runManageBillingAction(deps: {
   createPortalSessionFn: CreatePortalSessionFn;

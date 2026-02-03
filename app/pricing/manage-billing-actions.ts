@@ -2,23 +2,20 @@
 
 import { redirect } from 'next/navigation';
 import { runManageBillingAction } from '@/app/pricing/manage-billing-action';
-import type { ActionResult } from '@/src/adapters/controllers/action-result';
+import type {
+  CreatePortalSessionFn,
+  RedirectFn,
+} from '@/app/pricing/manage-billing-types';
 import { createPortalSession } from '@/src/adapters/controllers/billing-controller';
-
-type RedirectFn = (url: string) => never;
-
-type CreatePortalSessionFn = (
-  input: Record<string, never>,
-) => Promise<ActionResult<{ url: string }>>;
 
 export type ManageBillingActionDeps = {
   createPortalSessionFn: CreatePortalSessionFn;
   redirectFn: RedirectFn;
 };
 
-async function getDeps(
+function getDeps(
   deps?: Partial<ManageBillingActionDeps>,
-): Promise<ManageBillingActionDeps> {
+): ManageBillingActionDeps {
   const createPortalSessionFn: CreatePortalSessionFn =
     deps?.createPortalSessionFn ?? createPortalSession;
 
@@ -32,7 +29,7 @@ export async function manageBillingAction(
   _formData: FormData,
   deps?: Partial<ManageBillingActionDeps>,
 ): Promise<void> {
-  const d = await getDeps(deps);
+  const d = getDeps(deps);
   return runManageBillingAction({
     createPortalSessionFn: d.createPortalSessionFn,
     redirectFn: d.redirectFn,
