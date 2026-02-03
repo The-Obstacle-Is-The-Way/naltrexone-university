@@ -5,6 +5,9 @@ import { MobileNav } from '@/components/mobile-nav';
 import type { AuthGateway } from '@/src/application/ports/gateways';
 import type { CheckEntitlementUseCase } from '@/src/application/ports/use-cases';
 
+// Auth-gated routes must be dynamic to avoid build-time prerendering.
+export const dynamic = 'force-dynamic';
+
 export type AppLayoutDeps = {
   authGateway: AuthGateway;
   checkEntitlementUseCase: CheckEntitlementUseCase;

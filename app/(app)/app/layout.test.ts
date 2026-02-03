@@ -19,6 +19,11 @@ function createUser(): UserLike {
 }
 
 describe('app/(app)/app/layout', () => {
+  it('forces dynamic rendering to avoid build-time prerendering auth-gated routes', async () => {
+    const mod = await import('./layout');
+    expect((mod as Record<string, unknown>).dynamic).toBe('force-dynamic');
+  });
+
   it('redirects to /pricing when user is not entitled', async () => {
     const user = createUser();
 
