@@ -99,26 +99,46 @@ export function BookmarksView({ rows }: { rows: GetBookmarksOutput['rows'] }) {
             >
               <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                 <div className="space-y-2">
-                  <div className="text-sm font-medium text-foreground">
-                    {row.slug}
-                  </div>
-                  <div className="text-sm text-muted-foreground">
-                    {row.stemMd}
-                  </div>
-                  <div className="text-xs text-muted-foreground">
-                    <span className="capitalize">{row.difficulty}</span>
-                    <span className="mx-2">•</span>
-                    <span>Bookmarked {row.bookmarkedAt.slice(0, 10)}</span>
-                  </div>
+                  {row.isAvailable ? (
+                    <>
+                      <div className="text-sm font-medium text-foreground">
+                        {row.slug}
+                      </div>
+                      <div className="text-sm text-muted-foreground">
+                        {row.stemMd}
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        <span className="capitalize">{row.difficulty}</span>
+                        <span className="mx-2">•</span>
+                        <span>Bookmarked {row.bookmarkedAt.slice(0, 10)}</span>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="text-sm font-medium text-foreground">
+                        [Question no longer available]
+                      </div>
+                      <div className="text-sm text-muted-foreground">
+                        This question was removed or unpublished.
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        <span>Unavailable</span>
+                        <span className="mx-2">•</span>
+                        <span>Bookmarked {row.bookmarkedAt.slice(0, 10)}</span>
+                      </div>
+                    </>
+                  )}
                 </div>
 
                 <div className="flex flex-col gap-2 sm:items-end">
-                  <Link
-                    href={`/app/questions/${row.slug}`}
-                    className="inline-flex items-center justify-center rounded-full border border-border bg-background px-4 py-2 text-sm font-medium text-foreground hover:bg-muted"
-                  >
-                    Reattempt
-                  </Link>
+                  {row.isAvailable ? (
+                    <Link
+                      href={`/app/questions/${row.slug}`}
+                      className="inline-flex items-center justify-center rounded-full border border-border bg-background px-4 py-2 text-sm font-medium text-foreground hover:bg-muted"
+                    >
+                      Reattempt
+                    </Link>
+                  ) : null}
 
                   <form action={removeBookmarkAction}>
                     <input

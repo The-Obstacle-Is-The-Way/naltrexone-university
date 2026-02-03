@@ -1,11 +1,7 @@
 'use server';
 
 import { z } from 'zod';
-import {
-  createDepsResolver,
-  type LoadContainerFn,
-  loadAppContainer,
-} from '@/lib/controller-helpers';
+import { createDepsResolver, loadAppContainer } from '@/lib/controller-helpers';
 import type { Logger } from '@/src/adapters/shared/logger';
 import { MAX_PAGINATION_LIMIT } from '@/src/adapters/shared/validation-limits';
 import type { AuthGateway } from '@/src/application/ports/gateways';
@@ -13,8 +9,7 @@ import type {
   AttemptRepository,
   QuestionRepository,
 } from '@/src/application/ports/repositories';
-import type { ActionResult } from './action-result';
-import { handleError, ok } from './action-result';
+import { createAction } from './create-action';
 import type { CheckEntitlementUseCase } from './require-entitled-user-id';
 import { requireEntitledUserId } from './require-entitled-user-id';
 
@@ -25,13 +20,24 @@ const GetMissedQuestionsInputSchema = z
   })
   .strict();
 
-export type MissedQuestionRow = {
+export type AvailableMissedQuestionRow = {
+  isAvailable: true;
   questionId: string;
   slug: string;
   stemMd: string;
   difficulty: 'easy' | 'medium' | 'hard';
   lastAnsweredAt: string; // ISO
 };
+
+export type UnavailableMissedQuestionRow = {
+  isAvailable: false;
+  questionId: string;
+  lastAnsweredAt: string; // ISO
+};
+
+export type MissedQuestionRow =
+  | AvailableMissedQuestionRow
+  | UnavailableMissedQuestionRow;
 
 export type GetMissedQuestionsOutput = {
   rows: MissedQuestionRow[];
@@ -56,32 +62,20 @@ const getDeps = createDepsResolver<
   ReviewControllerContainer
 >((container) => container.createReviewControllerDeps(), loadAppContainer);
 
-export async function getMissedQuestions(
-  input: unknown,
-  deps?: ReviewControllerDeps,
-  options?: { loadContainer?: LoadContainerFn<ReviewControllerContainer> },
-): Promise<ActionResult<GetMissedQuestionsOutput>> {
-  const parsed = GetMissedQuestionsInputSchema.safeParse(input);
-  if (!parsed.success) return handleError(parsed.error);
-
-  try {
-    const d = await getDeps(deps, options);
-    const userIdOrError = await requireEntitledUserId(d);
-    if (typeof userIdOrError !== 'string') return userIdOrError;
-    const userId = userIdOrError;
+export const getMissedQuestions = createAction({
+  schema: GetMissedQuestionsInputSchema,
+  getDeps,
+  execute: async (input, d) => {
+    const userId = await requireEntitledUserId(d);
 
     const page = await d.attemptRepository.listMissedQuestionsByUserId(
       userId,
-      parsed.data.limit,
-      parsed.data.offset,
+      input.limit,
+      input.offset,
     );
 
     if (page.length === 0) {
-      return ok({
-        rows: [],
-        limit: parsed.data.limit,
-        offset: parsed.data.offset,
-      });
+      return { rows: [], limit: input.limit, offset: input.offset };
     }
 
     const questionIds = page.map((m) => m.questionId);
@@ -94,14 +88,19 @@ export async function getMissedQuestions(
       const question = byId.get(m.questionId);
       if (!question) {
         // Graceful degradation: questions can be unpublished/deleted while attempts persist.
-        // Skip orphans to return a partial list instead of failing the entire view.
         d.logger.warn(
           { questionId: m.questionId },
           'Missed question references missing question',
         );
+        rows.push({
+          isAvailable: false,
+          questionId: m.questionId,
+          lastAnsweredAt: m.answeredAt.toISOString(),
+        });
         continue;
       }
       rows.push({
+        isAvailable: true,
         questionId: question.id,
         slug: question.slug,
         stemMd: question.stemMd,
@@ -110,12 +109,10 @@ export async function getMissedQuestions(
       });
     }
 
-    return ok({
+    return {
       rows,
-      limit: parsed.data.limit,
-      offset: parsed.data.offset,
-    });
-  } catch (error) {
-    return handleError(error);
-  }
-}
+      limit: input.limit,
+      offset: input.offset,
+    };
+  },
+});

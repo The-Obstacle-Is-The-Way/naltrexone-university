@@ -1,20 +1,9 @@
 'use server';
 
 import { z } from 'zod';
-import {
-  createDepsResolver,
-  type LoadContainerFn,
-  loadAppContainer,
-} from '@/lib/controller-helpers';
-import {
-  type ActionResult,
-  handleError,
-  ok,
-} from '@/src/adapters/controllers/action-result';
-import {
-  type CheckEntitlementUseCase,
-  requireEntitledUserId,
-} from '@/src/adapters/controllers/require-entitled-user-id';
+import { createDepsResolver, loadAppContainer } from '@/lib/controller-helpers';
+import type { CheckEntitlementUseCase } from '@/src/adapters/controllers/require-entitled-user-id';
+import { requireEntitledUserId } from '@/src/adapters/controllers/require-entitled-user-id';
 import type { Logger } from '@/src/adapters/shared/logger';
 import type { AuthGateway } from '@/src/application/ports/gateways';
 import type {
@@ -22,6 +11,7 @@ import type {
   QuestionRepository,
 } from '@/src/application/ports/repositories';
 import { computeAccuracy, computeStreak } from '@/src/domain/services';
+import { createAction } from './create-action';
 
 const GetUserStatsInputSchema = z.object({}).strict();
 
@@ -55,13 +45,23 @@ export type UserStatsOutput = {
   answeredLast7Days: number;
   accuracyLast7Days: number; // 0..1
   currentStreakDays: number; // consecutive UTC days with >=1 attempt, ending today
-  recentActivity: Array<{
-    attemptId: string;
-    answeredAt: string; // ISO
-    questionId: string;
-    slug: string;
-    isCorrect: boolean;
-  }>;
+  recentActivity: Array<
+    | {
+        isAvailable: true;
+        attemptId: string;
+        answeredAt: string; // ISO
+        questionId: string;
+        slug: string;
+        isCorrect: boolean;
+      }
+    | {
+        isAvailable: false;
+        attemptId: string;
+        answeredAt: string; // ISO
+        questionId: string;
+        isCorrect: boolean;
+      }
+  >;
 };
 
 export type StatsControllerDeps = {
@@ -82,19 +82,11 @@ const getDeps = createDepsResolver<
   StatsControllerContainer
 >((container) => container.createStatsControllerDeps(), loadAppContainer);
 
-export async function getUserStats(
-  input: unknown,
-  deps?: StatsControllerDeps,
-  options?: { loadContainer?: LoadContainerFn<StatsControllerContainer> },
-): Promise<ActionResult<UserStatsOutput>> {
-  const parsed = GetUserStatsInputSchema.safeParse(input);
-  if (!parsed.success) return handleError(parsed.error);
-
-  try {
-    const d = await getDeps(deps, options);
-    const userIdOrError = await requireEntitledUserId(d);
-    if (typeof userIdOrError !== 'string') return userIdOrError;
-    const userId = userIdOrError;
+export const getUserStats = createAction({
+  schema: GetUserStatsInputSchema,
+  getDeps,
+  execute: async (_input, d) => {
+    const userId = await requireEntitledUserId(d);
 
     const now = d.now();
     const since7Days = new Date(now.getTime() - STATS_WINDOW_DAYS * DAY_MS);
@@ -139,15 +131,22 @@ export async function getUserStats(
       const slug = slugByQuestionId.get(attempt.questionId);
       if (!slug) {
         // Graceful degradation: questions can be unpublished/deleted while attempts persist.
-        // Skip orphans to keep the dashboard usable and log for later cleanup.
         d.logger.warn(
           { questionId: attempt.questionId },
           'Recent activity references missing question',
         );
+        recentActivity.push({
+          isAvailable: false,
+          attemptId: attempt.id,
+          answeredAt: attempt.answeredAt.toISOString(),
+          questionId: attempt.questionId,
+          isCorrect: attempt.isCorrect,
+        });
         continue;
       }
 
       recentActivity.push({
+        isAvailable: true,
         attemptId: attempt.id,
         answeredAt: attempt.answeredAt.toISOString(),
         questionId: attempt.questionId,
@@ -156,15 +155,13 @@ export async function getUserStats(
       });
     }
 
-    return ok({
+    return {
       totalAnswered,
       accuracyOverall,
       answeredLast7Days,
       accuracyLast7Days,
       currentStreakDays,
       recentActivity,
-    });
-  } catch (error) {
-    return handleError(error);
-  }
-}
+    };
+  },
+});

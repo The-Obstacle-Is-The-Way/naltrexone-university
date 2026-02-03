@@ -396,15 +396,19 @@ describe('stats controller (integration)', () => {
     expect(result.data.accuracyLast7Days).toBeCloseTo(1 / 2);
     expect(result.data.currentStreakDays).toBe(2);
     expect(result.data.recentActivity[0]).toMatchObject({
+      isAvailable: true,
       slug: slugA,
       isCorrect: true,
     });
-    expect(result.data.recentActivity.map((row) => row.slug)).toContain(slugB);
+    const slugs = result.data.recentActivity.flatMap((row) =>
+      row.isAvailable ? [row.slug] : [],
+    );
+    expect(slugs).toContain(slugB);
   });
 });
 
 describe('review controller (integration)', () => {
-  it('lists missed questions and skips ones that are no longer published', async () => {
+  it('lists missed questions and marks unavailable ones when they are no longer published', async () => {
     const user = await createUser();
     const missedSlug = `it-missed-${randomUUID()}`;
     const missedQuestion = await createQuestion({
@@ -496,6 +500,7 @@ describe('review controller (integration)', () => {
 
     expect(first.data.rows).toHaveLength(1);
     expect(first.data.rows[0]).toMatchObject({
+      isAvailable: true,
       questionId: missedQuestion.id,
       slug: missedSlug,
       stemMd: '# Stem',
@@ -514,7 +519,13 @@ describe('review controller (integration)', () => {
     expect(second.ok).toBe(true);
     if (!second.ok) return;
 
-    expect(second.data.rows).toEqual([]);
+    expect(second.data.rows).toEqual([
+      {
+        isAvailable: false,
+        questionId: missedQuestion.id,
+        lastAnsweredAt: t2.toISOString(),
+      },
+    ]);
     expect(warn).toHaveBeenCalledTimes(1);
     expect(warn).toHaveBeenCalledWith(
       { questionId: missedQuestion.id },

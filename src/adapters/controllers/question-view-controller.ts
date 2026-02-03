@@ -1,15 +1,11 @@
 'use server';
 
 import { z } from 'zod';
-import {
-  createDepsResolver,
-  type LoadContainerFn,
-  loadAppContainer,
-} from '@/lib/controller-helpers';
+import { createDepsResolver, loadAppContainer } from '@/lib/controller-helpers';
+import { ApplicationError } from '@/src/application/errors';
 import type { AuthGateway } from '@/src/application/ports/gateways';
 import type { QuestionRepository } from '@/src/application/ports/repositories';
-import type { ActionResult } from './action-result';
-import { err, handleError, ok } from './action-result';
+import { createAction } from './create-action';
 import type { CheckEntitlementUseCase } from './require-entitled-user-id';
 import { requireEntitledUserId } from './require-entitled-user-id';
 
@@ -51,29 +47,18 @@ const getDeps = createDepsResolver<
   loadAppContainer,
 );
 
-export async function getQuestionBySlug(
-  input: unknown,
-  deps?: QuestionViewControllerDeps,
-  options?: {
-    loadContainer?: LoadContainerFn<QuestionViewControllerContainer>;
-  },
-): Promise<ActionResult<GetQuestionBySlugOutput>> {
-  const parsed = GetQuestionBySlugInputSchema.safeParse(input);
-  if (!parsed.success) return handleError(parsed.error);
+export const getQuestionBySlug = createAction({
+  schema: GetQuestionBySlugInputSchema,
+  getDeps,
+  execute: async (input, d) => {
+    await requireEntitledUserId(d);
 
-  try {
-    const d = await getDeps(deps, options);
-    const userIdOrError = await requireEntitledUserId(d);
-    if (typeof userIdOrError !== 'string') return userIdOrError;
-
-    const question = await d.questionRepository.findPublishedBySlug(
-      parsed.data.slug,
-    );
+    const question = await d.questionRepository.findPublishedBySlug(input.slug);
     if (!question) {
-      return err('NOT_FOUND', 'Question not found');
+      throw new ApplicationError('NOT_FOUND', 'Question not found');
     }
 
-    return ok({
+    return {
       questionId: question.id,
       slug: question.slug,
       stemMd: question.stemMd,
@@ -83,8 +68,6 @@ export async function getQuestionBySlug(
         label: choice.label,
         textMd: choice.textMd,
       })),
-    });
-  } catch (error) {
-    return handleError(error);
-  }
-}
+    };
+  },
+});

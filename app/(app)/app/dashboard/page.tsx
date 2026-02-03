@@ -88,7 +88,11 @@ export function DashboardView({ stats }: { stats: UserStatsOutput }) {
           <ul className="mt-4 space-y-2 text-sm text-muted-foreground">
             {stats.recentActivity.map((row) => (
               <li key={row.attemptId} className="flex items-center gap-2">
-                <span className="font-medium text-foreground">{row.slug}</span>
+                <span className="font-medium text-foreground">
+                  {row.isAvailable
+                    ? row.slug
+                    : '[Question no longer available]'}
+                </span>
                 <span className="text-muted-foreground">
                   {row.isCorrect ? 'Correct' : 'Incorrect'}
                 </span>

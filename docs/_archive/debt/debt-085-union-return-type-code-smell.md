@@ -1,8 +1,9 @@
 # DEBT-085: Union Return Type Pattern in requireEntitledUserId()
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P3
 **Date:** 2026-02-03
+**Resolved:** 2026-02-03
 
 ---
 
@@ -144,9 +145,17 @@ The concern about "returning errors to avoid throwing" is unnecessary — the co
 ## Verification
 
 After refactoring:
-- [ ] TypeScript compiles
-- [ ] All controller tests pass
-- [ ] Error responses unchanged (same HTTP status codes, messages)
+- [x] TypeScript compiles
+- [x] All controller tests pass
+- [x] Error responses unchanged (same HTTP status codes, messages)
+
+## Resolution
+
+We implemented **Option A (Throw)**:
+
+- `requireEntitledUserId()` now throws `ApplicationError('UNSUBSCRIBED', ...)`
+  instead of returning a union type.
+- Call sites no longer need runtime `typeof !== 'string'` checks.
 
 ## Related
 

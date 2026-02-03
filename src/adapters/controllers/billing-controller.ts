@@ -1,11 +1,7 @@
 'use server';
 
 import { z } from 'zod';
-import {
-  createDepsResolver,
-  type LoadContainerFn,
-  loadAppContainer,
-} from '@/lib/controller-helpers';
+import { createDepsResolver, loadAppContainer } from '@/lib/controller-helpers';
 import { ROUTES } from '@/lib/routes';
 import { CHECKOUT_SESSION_RATE_LIMIT } from '@/src/adapters/shared/rate-limits';
 import { withIdempotency } from '@/src/adapters/shared/with-idempotency';
@@ -21,8 +17,7 @@ import type {
   SubscriptionRepository,
 } from '@/src/application/ports/repositories';
 import { isEntitled } from '@/src/domain/services';
-import type { ActionResult } from './action-result';
-import { err, handleError, ok } from './action-result';
+import { createAction } from './create-action';
 
 const zSubscriptionPlan = z.enum(['monthly', 'annual']);
 const zIdempotencyKey = z.string().uuid();
@@ -103,18 +98,12 @@ async function getOrCreateStripeCustomerId(
   return created.stripeCustomerId;
 }
 
-export async function createCheckoutSession(
-  input: unknown,
-  deps?: BillingControllerDeps,
-  options?: { loadContainer?: LoadContainerFn<BillingControllerContainer> },
-): Promise<ActionResult<CreateCheckoutSessionOutput>> {
-  const parsed = CreateCheckoutSessionInputSchema.safeParse(input);
-  if (!parsed.success) return handleError(parsed.error);
-
-  try {
-    const d = await getDeps(deps, options);
+export const createCheckoutSession = createAction({
+  schema: CreateCheckoutSessionInputSchema,
+  getDeps,
+  execute: async (input, d) => {
     const user = await d.authGateway.requireUser();
-    const { plan, idempotencyKey } = parsed.data;
+    const { plan, idempotencyKey } = input;
 
     async function createNewSession(): Promise<CreateCheckoutSessionOutput> {
       const checkoutRateLimit = await d.rateLimiter.limit({
@@ -156,49 +145,37 @@ export async function createCheckoutSession(
       );
     }
 
-    const session = idempotencyKey
-      ? await withIdempotency({
-          repo: d.idempotencyKeyRepository,
-          userId: user.id,
-          action: 'billing:createCheckoutSession',
-          key: idempotencyKey,
-          now: d.now,
-          execute: createNewSession,
-        })
-      : await createNewSession();
+    if (!idempotencyKey) {
+      return createNewSession();
+    }
 
-    return ok(session);
-  } catch (error) {
-    return handleError(error);
-  }
-}
+    return withIdempotency({
+      repo: d.idempotencyKeyRepository,
+      userId: user.id,
+      action: 'billing:createCheckoutSession',
+      key: idempotencyKey,
+      now: d.now,
+      execute: createNewSession,
+    });
+  },
+});
 
-export async function createPortalSession(
-  input: unknown,
-  deps?: BillingControllerDeps,
-  options?: { loadContainer?: LoadContainerFn<BillingControllerContainer> },
-): Promise<ActionResult<CreatePortalSessionOutput>> {
-  const parsed = CreatePortalSessionInputSchema.safeParse(input);
-  if (!parsed.success) return handleError(parsed.error);
-
-  try {
-    const d = await getDeps(deps, options);
+export const createPortalSession = createAction({
+  schema: CreatePortalSessionInputSchema,
+  getDeps,
+  execute: async (_input, d) => {
     const user = await d.authGateway.requireUser();
 
     const stripeCustomer = await d.stripeCustomerRepository.findByUserId(
       user.id,
     );
     if (!stripeCustomer) {
-      return err('NOT_FOUND', 'Stripe customer not found');
+      throw new ApplicationError('NOT_FOUND', 'Stripe customer not found');
     }
 
-    const session = await d.paymentGateway.createPortalSession({
+    return d.paymentGateway.createPortalSession({
       stripeCustomerId: stripeCustomer.stripeCustomerId,
       returnUrl: toBillingReturnUrl(d.appUrl),
     });
-
-    return ok(session);
-  } catch (error) {
-    return handleError(error);
-  }
-}
+  },
+});

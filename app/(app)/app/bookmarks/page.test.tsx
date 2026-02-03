@@ -15,6 +15,7 @@ describe('app/(app)/app/bookmarks', () => {
       <BookmarksView
         rows={[
           {
+            isAvailable: true,
             questionId: 'q_1',
             slug: 'q-1',
             stemMd: 'Stem for q1',
@@ -40,6 +41,25 @@ describe('app/(app)/app/bookmarks', () => {
 
     expect(html).toContain('Bookmarks');
     expect(html).toContain('No bookmarks yet.');
+  });
+
+  it('renders unavailable bookmarks without a reattempt link', () => {
+    const html = renderToStaticMarkup(
+      <BookmarksView
+        rows={[
+          {
+            isAvailable: false,
+            questionId: 'q_orphaned',
+            bookmarkedAt: '2026-02-01T00:00:00.000Z',
+          },
+        ]}
+      />,
+    );
+
+    expect(html).toContain('[Question no longer available]');
+    expect(html).toContain('Bookmarked 2026-02-01');
+    expect(html).toContain('Remove');
+    expect(html).not.toContain('Reattempt');
   });
 
   it('renders an error state when bookmarks load fails', () => {
@@ -134,6 +154,7 @@ describe('app/(app)/app/bookmarks', () => {
       ok({
         rows: [
           {
+            isAvailable: true,
             questionId: 'q_1',
             slug: 'q-1',
             stemMd: 'Stem for q1',
@@ -157,6 +178,7 @@ describe('app/(app)/app/bookmarks', () => {
       ok({
         rows: [
           {
+            isAvailable: true,
             questionId: 'q_1',
             slug: 'q-1',
             stemMd: 'Stem for q1',
@@ -182,6 +204,7 @@ describe('app/(app)/app/bookmarks', () => {
       ok({
         rows: [
           {
+            isAvailable: true,
             questionId: 'q_1',
             slug: 'q-1',
             stemMd: 'Stem for q1',
@@ -207,6 +230,7 @@ describe('app/(app)/app/bookmarks', () => {
       ok({
         rows: [
           {
+            isAvailable: true,
             questionId: 'q_1',
             slug: 'q-1',
             stemMd: 'Stem for q1',

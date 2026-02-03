@@ -1,8 +1,9 @@
 # DEBT-087: Graceful Degradation Hides Data Loss from Users
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P2
 **Date:** 2026-02-03
+**Resolved:** 2026-02-03
 
 ---
 
@@ -140,9 +141,16 @@ Your Bookmarks
 ## Verification
 
 After implementing:
-- [ ] UI shows unavailable items with indicator
-- [ ] Logger.warn called for each orphan
+- [x] UI shows unavailable items with indicator
+- [x] Logger.warn called for each orphan
 - [ ] Metrics/alerts for high orphan rate (optional)
+
+## Resolution
+
+We implemented **Option A + C**:
+
+- Controllers return "unavailable" rows instead of silently skipping orphans.
+- Controller `logger` deps are required (no optional chaining), ensuring warnings are not silently dropped.
 
 ## Related
 
