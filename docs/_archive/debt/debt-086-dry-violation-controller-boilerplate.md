@@ -1,8 +1,9 @@
 # DEBT-086: DRY Violation — Repeated Controller Boilerplate Pattern
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P3
 **Date:** 2026-02-03
+**Resolved:** 2026-02-03
 
 ---
 
@@ -185,10 +186,18 @@ Keep as-is but add a generator script or template.
 ## Verification
 
 After refactoring:
-- [ ] TypeScript compiles
-- [ ] All controller tests pass
-- [ ] Action signatures unchanged (same input/output types)
-- [ ] Error handling unchanged
+- [x] TypeScript compiles
+- [x] All controller tests pass
+- [x] Action signatures unchanged (same input/output types)
+- [x] Error handling unchanged
+
+## Resolution
+
+Implemented a shared action wrapper:
+
+- Added `src/adapters/controllers/create-action.ts` (plus tests).
+- Migrated server-action controllers to use `createAction(...)` so schema parsing,
+  dependency loading, and error handling are consistently applied in one place.
 
 ## Related
 

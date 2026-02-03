@@ -1,8 +1,9 @@
 # DEBT-084: User Email Race Condition in Concurrent Webhook Handling
 
-**Status:** Open
+**Status:** Accepted
 **Priority:** P3
 **Date:** 2026-02-03
+**Accepted:** 2026-02-03
 
 ---
 
@@ -166,7 +167,7 @@ const [updated] = await this.db
 
 ## Verification
 
-If implementing a fix:
+N/A (accepted). If we implement Option D later:
 - [ ] Unit test: Concurrent upserts don't overwrite newer data
 - [ ] Integration test: Two simultaneous webhooks resolve correctly
 - [ ] Load test: No deadlocks under concurrent webhook load
