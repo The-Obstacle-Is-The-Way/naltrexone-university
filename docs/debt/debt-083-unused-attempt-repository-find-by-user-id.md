@@ -1,153 +1,145 @@
-# DEBT-083: Unused AttemptRepository.findByUserId() — Spec-Implementation Gap
+# DEBT-083: AttemptRepository.findByUserId() Needs Pagination
 
 **Status:** Open
-**Priority:** P3
+**Priority:** P2
 **Date:** 2026-02-03
+**Updated:** 2026-02-03
 
 ---
 
 ## Description
 
-The `AttemptRepository.findByUserId(userId: string)` method is:
+The `AttemptRepository.findByUserId(userId: string)` method exists but is:
 
-1. **Defined in SPEC-004** (line 200) as part of the canonical port interface
-2. **Implemented** in both `DrizzleAttemptRepository` and `FakeAttemptRepository`
-3. **Tested** in repository tests
-4. **Never called** anywhere in production code (controllers, use cases)
+1. **Unbounded** — loads ALL attempts into memory with no limit
+2. **Dangerous** — caused BUG-016 (memory exhaustion for power users)
+3. **Currently unused** — we created bounded alternatives to fix BUG-016
 
-This is a **spec-implementation gap**: the spec anticipated a need for this method, but during implementation we evolved to use more specific, bounded methods instead.
+The method should NOT be removed — it represents a legitimate need (GDPR data export, admin tools). But it must be made SAFE by requiring pagination.
 
-## Why It Exists (Spec Intent)
+## History
 
-From SPEC-004:
-```typescript
-export interface AttemptRepository {
-  // ...
-  findByUserId(userId: string): Promise<readonly Attempt[]>;
-  // ...
-}
-```
+**BUG-016** documented that this method was being used by `stats-controller` and `review-controller`, causing memory exhaustion. The fix was to create bounded alternatives:
 
-The spec likely intended this for:
-- Bulk export of user data
-- Admin/debugging views showing all user attempts
-- Analytics that require full attempt history
+| Use Case | Old (Dangerous) | New (Safe) |
+|----------|-----------------|------------|
+| Total count | `findByUserId()` → `.length` | `countByUserId()` |
+| Recent activity | `findByUserId()` → `.slice(0, 10)` | `listRecentByUserId(limit)` |
+| 7-day stats | `findByUserId()` → filter in JS | `countByUserIdSince(since)` |
+| Missed questions | `findByUserId()` → paginate in JS | `listMissedQuestionsByUserId(limit, offset)` |
 
-## Why It's Currently Unused
+The method was left in place but is now orphaned — never called but still dangerous if used.
 
-During implementation, we created more specific, safer methods:
-
-| Use Case | Specced Method | Actual Implementation |
-|----------|----------------|----------------------|
-| Dashboard stats | `findByUserId()` + compute | `countByUserId()`, `countCorrectByUserId()` |
-| Recent activity | `findByUserId()` + slice | `listRecentByUserId(limit)` |
-| Streak calculation | `findByUserId()` + filter | `listAnsweredAtByUserIdSince(since)` |
-| Session attempts | `findByUserId()` + filter | `findBySessionId(sessionId, userId)` |
-
-These bounded methods are more efficient and safer (no memory exhaustion risk).
-
-## The Unbounded Query Concern
-
-If this method WERE used, it loads all attempts without limit:
+## The Problem
 
 ```typescript
-// drizzle-attempt-repository.ts:68-72
+// Current signature (DANGEROUS)
+findByUserId(userId: string): Promise<readonly Attempt[]>;
+
+// Implementation loads ALL rows
 async findByUserId(userId: string) {
   const rows = await this.db.query.attempts.findMany({
     where: eq(attempts.userId, userId),
     orderBy: desc(attempts.answeredAt),
-    // NO LIMIT — loads all rows into memory
+    // NO LIMIT — user with 10,000 attempts = OOM
   });
-  // ...
+  return rows.map(...);
 }
 ```
 
-A power user with 10,000+ attempts would cause memory issues.
+## Why We Still Need This Method
 
-## Resolution Options
+1. **GDPR Data Export** — User requests "give me all my data"
+2. **Account Deletion Verification** — Confirm all user data is gone
+3. **Admin/Support Tools** — View full user history for debugging
+4. **Future Analytics** — Batch processing of user attempt history
 
-### Option A: Remove from Spec and Implementation (Recommended for Now)
+These are legitimate needs. The method shouldn't be removed — it should be made safe.
 
-If no current or planned feature needs all attempts unbounded:
+## The Fix
 
-1. Remove from SPEC-004
-2. Remove from `AttemptRepository` interface
-3. Remove from `DrizzleAttemptRepository`
-4. Remove from `FakeAttemptRepository`
-5. Remove associated tests
-
-**Rationale:** YAGNI - we have bounded alternatives for all known use cases.
-
-### Option B: Keep but Add Pagination
-
-If we anticipate needing bulk access (e.g., GDPR data export):
+### 1. Update Port Signature (SPEC-004 + repositories.ts)
 
 ```typescript
-// Change signature to require pagination
+// BEFORE
+findByUserId(userId: string): Promise<readonly Attempt[]>;
+
+// AFTER — require pagination
 findByUserId(
   userId: string,
   options: { limit: number; offset: number }
 ): Promise<readonly Attempt[]>;
 ```
 
-**Rationale:** Enables bulk access safely with cursor/offset pagination.
-
-### Option C: Keep but Add JSDoc Warning + Safe Limit
-
-If we need it rarely but want to keep it simple:
+### 2. Update DrizzleAttemptRepository
 
 ```typescript
-/**
- * Returns all attempts for a user.
- *
- * ⚠️ WARNING: This loads all attempts into memory. Only use for:
- * - GDPR data export
- * - Admin tools with low-frequency access
- *
- * For regular features, use bounded alternatives:
- * - listRecentByUserId(limit) for recent activity
- * - countByUserId() for statistics
- * - listAnsweredAtByUserIdSince() for streaks
- *
- * @internal Applies a safety limit of 10,000 rows.
- */
-findByUserId(userId: string): Promise<readonly Attempt[]>;
-```
-
-Then add a hardcoded safety limit in implementation:
-
-```typescript
-async findByUserId(userId: string) {
-  const SAFETY_LIMIT = 10_000;
+async findByUserId(
+  userId: string,
+  options: { limit: number; offset: number }
+): Promise<readonly Attempt[]> {
   const rows = await this.db.query.attempts.findMany({
     where: eq(attempts.userId, userId),
     orderBy: desc(attempts.answeredAt),
-    limit: SAFETY_LIMIT,
+    limit: options.limit,
+    offset: options.offset,
   });
-  // ...
+  return rows.map((row) => ({
+    id: row.id,
+    userId: row.userId,
+    questionId: row.questionId,
+    practiceSessionId: row.practiceSessionId ?? null,
+    selectedChoiceId: this.requireSelectedChoiceId(row),
+    isCorrect: row.isCorrect,
+    timeSpentSeconds: row.timeSpentSeconds,
+    answeredAt: row.answeredAt,
+  }));
 }
 ```
 
-## Recommendation
+### 3. Update FakeAttemptRepository
 
-**Option A (Remove)** for now because:
-- No feature currently needs it
-- All known use cases have bounded alternatives
-- If GDPR export is needed later, we'll add it with pagination
+```typescript
+async findByUserId(
+  userId: string,
+  options: { limit: number; offset: number }
+): Promise<readonly Attempt[]> {
+  const userAttempts = this.attempts
+    .filter((a) => a.userId === userId)
+    .sort((a, b) => b.answeredAt.getTime() - a.answeredAt.getTime());
 
-**However**, before removing, verify with stakeholders if any planned feature needs bulk attempt access.
+  return userAttempts.slice(options.offset, options.offset + options.limit);
+}
+```
+
+### 4. Update SPEC-004
+
+Change the spec to document the paginated signature.
+
+### 5. Update Tests
+
+- `drizzle-attempt-repository.test.ts` — update test to pass options
+- `fakes.test.ts` — update FakeAttemptRepository tests
+
+## TDD Order
+
+1. **Write failing test** — call `findByUserId(userId, { limit: 10, offset: 0 })`, expect it to compile and return max 10 results
+2. **Update port** — change signature in `repositories.ts`
+3. **Update implementation** — add limit/offset to DrizzleAttemptRepository
+4. **Update fake** — add limit/offset to FakeAttemptRepository
+5. **Verify** — all tests pass, TypeScript compiles
 
 ## Verification
 
-After any resolution:
-- [ ] TypeScript compiles without errors
-- [ ] All tests pass
-- [ ] SPEC-004 and implementation are in sync
-- [ ] No `findByUserId` calls on `AttemptRepository` in production code
+- [ ] TypeScript compiles with new signature
+- [ ] All existing tests pass (none currently call this method)
+- [ ] New test verifies pagination works
+- [ ] SPEC-004 updated to reflect new signature
 
 ## Related
 
-- `docs/specs/spec-004-application-ports.md:200` — Port definition in spec
-- `docs/_archive/bugs/bug-016-memory-exhaustion-power-users.md` — Previous memory issue
+- `docs/_archive/bugs/bug-016-memory-exhaustion-power-users.md` — Original memory issue
+- `docs/specs/spec-004-application-ports.md` — Port definition to update
 - `src/application/ports/repositories.ts:62` — Current port definition
 - `src/adapters/repositories/drizzle-attempt-repository.ts:68` — Implementation
+- `src/application/test-helpers/fakes.ts:321` — Fake implementation
