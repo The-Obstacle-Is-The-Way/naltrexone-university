@@ -49,7 +49,7 @@ See the working implementation (canonical source of truth):
 // For Stripe operations only
 // IMPORTANT: the idempotency key must be stable for the same logical action.
 // Do NOT use Date.now() or random values here.
-const idempotencyKey = '<uuid-from-client>'; // stable across retries
+const idempotencyKey = uuidFromClient; // provided by the client; stable across retries
 const session = await stripe.checkout.sessions.create(
   { ...params },
   { idempotencyKey: `checkout:${userId}:${idempotencyKey}` }
@@ -110,4 +110,4 @@ We implemented **database-backed idempotency keys** (no vendor-specific dependen
 
 - BUG-047: Multiple subscriptions created per user
 - [Stripe Idempotent Requests](https://stripe.com/docs/api/idempotent_requests)
-- AWS Best Practices: Idempotency in Serverless
+- [AWS Best Practices: Idempotency in Serverless](https://aws.amazon.com/blogs/compute/handling-lambda-functions-idempotency-with-aws-lambda-powertools/)
