@@ -207,6 +207,12 @@ describe('syncCheckoutSuccess', () => {
       subscription: { metadata: {} },
     },
     {
+      reason: 'missing_user_id',
+      input: { sessionId: 'cs_test' },
+      session: { customer: 'cus_123', subscription: 'sub_123' },
+      subscription: { metadata: { user_id: '' } },
+    },
+    {
       reason: 'user_id_mismatch',
       input: { sessionId: 'cs_test' },
       session: { customer: 'cus_123', subscription: 'sub_123' },
