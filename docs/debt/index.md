@@ -17,10 +17,10 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 | ID | Title | Status | Priority | Date |
 |----|-------|--------|----------|------|
+| [DEBT-083](debt-083-unused-attempt-repository-find-by-user-id.md) | Unused AttemptRepository.findByUserId() Method | Open | P3 | 2026-02-03 |
+| [DEBT-084](debt-084-user-email-race-condition.md) | User Email Race Condition in Concurrent Webhook Handling | Open | P3 | 2026-02-03 |
 
-_No active debt items._
-
-**Next Debt ID:** DEBT-083
+**Next Debt ID:** DEBT-085
 
 ## Archived Debt
 

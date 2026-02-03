@@ -17,9 +17,9 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 | ID | Title | Status | Priority | Date |
 |----|-------|--------|----------|------|
-| None | — | — | — | — |
+| [BUG-049](bug-049-silent-pruning-failures-stripe-webhook.md) | Silent Pruning Failures in Stripe Webhook Controller | Open | P3 | 2026-02-03 |
 
-**Next Bug ID:** BUG-049
+**Next Bug ID:** BUG-050
 
 ## Foundation Audit
 
