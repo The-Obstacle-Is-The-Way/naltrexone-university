@@ -231,6 +231,7 @@ export function createContainer(overrides: ContainerOverrides = {}) {
   const controllerFactories: ControllerFactories = {
     createStripeWebhookDeps: () => ({
       paymentGateway: gateways.createPaymentGateway(),
+      logger: primitives.logger,
       transaction: async (fn) =>
         primitives.db.transaction(async (tx) =>
           fn({

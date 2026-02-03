@@ -1,3 +1,4 @@
+import type { Logger } from '@/src/adapters/shared/logger';
 import { isApplicationError } from '@/src/application/errors';
 import type { PaymentGateway } from '@/src/application/ports/gateways';
 import type {
@@ -22,6 +23,7 @@ export type StripeWebhookDeps = {
   transaction: <T>(
     fn: (tx: StripeWebhookTransaction) => Promise<T>,
   ) => Promise<T>;
+  logger?: Logger;
 };
 
 const STACK_TRACE_LIMIT = 1000;
@@ -93,8 +95,17 @@ export async function processStripeWebhook(
             new Date(Date.now() - STRIPE_EVENT_RETENTION_DAYS * DAY_MS),
             STRIPE_EVENT_PRUNE_LIMIT,
           );
-        } catch {
+        } catch (error) {
           // Best-effort cleanup: do not fail webhook processing if pruning fails.
+          deps.logger?.warn(
+            {
+              eventId: event.eventId,
+              error: error instanceof Error ? error.message : String(error),
+              retentionDays: STRIPE_EVENT_RETENTION_DAYS,
+              pruneLimit: STRIPE_EVENT_PRUNE_LIMIT,
+            },
+            'Stripe event pruning failed',
+          );
         }
       } catch (error) {
         await stripeEvents.markFailed(event.eventId, toErrorData(error));

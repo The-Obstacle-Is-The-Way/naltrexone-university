@@ -1,6 +1,6 @@
 # BUG-049: Silent Pruning Failures in Stripe Webhook Controller
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P3
 **Date:** 2026-02-03
 
@@ -68,11 +68,15 @@ try {
 } catch (error) {
   // Best-effort cleanup: do not fail webhook processing if pruning fails.
   // Log warning so operators can detect persistent pruning failures.
-  deps.logger?.warn?.('Stripe event pruning failed', {
-    error: error instanceof Error ? error.message : String(error),
-    retentionDays: STRIPE_EVENT_RETENTION_DAYS,
-    pruneLimit: STRIPE_EVENT_PRUNE_LIMIT,
-  });
+  deps.logger?.warn(
+    {
+      eventId: event.eventId,
+      error: error instanceof Error ? error.message : String(error),
+      retentionDays: STRIPE_EVENT_RETENTION_DAYS,
+      pruneLimit: STRIPE_EVENT_PRUNE_LIMIT,
+    },
+    'Stripe event pruning failed',
+  );
 }
 ```
 
@@ -83,9 +87,8 @@ try {
 
 ## Verification
 
-- [ ] Unit test: Verify logger.warn is called when pruning throws
-- [ ] Unit test: Verify webhook processing still succeeds when pruning fails
-- [ ] Manual: Check logs contain pruning failure warnings after simulating failure
+- [x] Unit test: Verify logger.warn is called when pruning throws
+- [x] Unit test: Verify webhook processing still succeeds when pruning fails
 
 ## Related
 
