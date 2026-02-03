@@ -1,16 +1,11 @@
 'use server';
 
 import type { AuthGateway } from '@/src/application/ports/gateways';
-import type {
-  CheckEntitlementInput,
-  CheckEntitlementOutput,
-} from '@/src/application/use-cases/check-entitlement';
+import type { CheckEntitlementUseCase } from '@/src/application/ports/use-cases';
 import type { ActionResult } from './action-result';
 import { err } from './action-result';
 
-export type CheckEntitlementUseCase = {
-  execute: (input: CheckEntitlementInput) => Promise<CheckEntitlementOutput>;
-};
+export type { CheckEntitlementUseCase } from '@/src/application/ports/use-cases';
 
 export async function requireEntitledUserId(deps: {
   authGateway: AuthGateway;

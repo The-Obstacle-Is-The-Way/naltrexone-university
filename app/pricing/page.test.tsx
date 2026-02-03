@@ -10,6 +10,10 @@ vi.mock('next/link', () => ({
 }));
 
 describe('app/pricing', () => {
+  type CreateCheckoutSessionFn = Parameters<
+    typeof import('@/app/pricing/page').runSubscribeAction
+  >[1]['createCheckoutSessionFn'];
+
   afterEach(() => {
     vi.resetModules();
     vi.restoreAllMocks();
@@ -184,10 +188,6 @@ describe('app/pricing', () => {
   it('runSubscribeAction redirects to checkout url on success', async () => {
     const { runSubscribeAction } = await import('@/app/pricing/page');
 
-    type CreateCheckoutSessionFn = Parameters<
-      typeof runSubscribeAction
-    >[1]['createCheckoutSessionFn'];
-
     const createCheckoutSessionFn = vi.fn<CreateCheckoutSessionFn>(
       async () => ({
         ok: true,
@@ -217,10 +217,6 @@ describe('app/pricing', () => {
 
   it('runSubscribeAction redirects to /sign-up when unauthenticated', async () => {
     const { runSubscribeAction } = await import('@/app/pricing/page');
-
-    type CreateCheckoutSessionFn = Parameters<
-      typeof runSubscribeAction
-    >[1]['createCheckoutSessionFn'];
 
     const createCheckoutSessionFn = vi.fn<CreateCheckoutSessionFn>(
       async () => ({
@@ -252,10 +248,6 @@ describe('app/pricing', () => {
   it('runSubscribeAction redirects to /app/billing when already subscribed', async () => {
     const { runSubscribeAction } = await import('@/app/pricing/page');
 
-    type CreateCheckoutSessionFn = Parameters<
-      typeof runSubscribeAction
-    >[1]['createCheckoutSessionFn'];
-
     const createCheckoutSessionFn = vi.fn<CreateCheckoutSessionFn>(
       async () => ({
         ok: false,
@@ -285,10 +277,6 @@ describe('app/pricing', () => {
 
   it('runSubscribeAction redirects to /pricing?checkout=error for other errors', async () => {
     const { runSubscribeAction } = await import('@/app/pricing/page');
-
-    type CreateCheckoutSessionFn = Parameters<
-      typeof runSubscribeAction
-    >[1]['createCheckoutSessionFn'];
 
     const createCheckoutSessionFn = vi.fn<CreateCheckoutSessionFn>(
       async () => ({

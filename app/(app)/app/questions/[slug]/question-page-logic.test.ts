@@ -172,6 +172,58 @@ describe('question-page-logic', () => {
       expect(setLoadState).toHaveBeenCalledWith({ status: 'ready' });
     });
 
+    it('computes timeSpentSeconds when questionLoadedAtMs is 0', async () => {
+      const submitAnswerFn = vi.fn(async () =>
+        ok({
+          attemptId: 'attempt_1',
+          isCorrect: true,
+          correctChoiceId: 'choice_1',
+          explanationMd: 'Because...',
+        } satisfies SubmitAnswerOutput),
+      );
+
+      await submitSelectedAnswer({
+        question: createQuestion(),
+        selectedChoiceId: 'choice_1',
+        questionLoadedAtMs: 0,
+        submitIdempotencyKey: 'idem_1',
+        submitAnswerFn,
+        nowMs: () => 1500,
+        setLoadState: vi.fn(),
+        setSubmitResult: vi.fn(),
+      });
+
+      expect(submitAnswerFn).toHaveBeenCalledWith(
+        expect.objectContaining({ timeSpentSeconds: 1 }),
+      );
+    });
+
+    it('clamps timeSpentSeconds to 0 when clock goes backwards', async () => {
+      const submitAnswerFn = vi.fn(async () =>
+        ok({
+          attemptId: 'attempt_1',
+          isCorrect: true,
+          correctChoiceId: 'choice_1',
+          explanationMd: 'Because...',
+        } satisfies SubmitAnswerOutput),
+      );
+
+      await submitSelectedAnswer({
+        question: createQuestion(),
+        selectedChoiceId: 'choice_1',
+        questionLoadedAtMs: 5000,
+        submitIdempotencyKey: 'idem_1',
+        submitAnswerFn,
+        nowMs: () => 1000,
+        setLoadState: vi.fn(),
+        setSubmitResult: vi.fn(),
+      });
+
+      expect(submitAnswerFn).toHaveBeenCalledWith(
+        expect.objectContaining({ timeSpentSeconds: 0 }),
+      );
+    });
+
     it('sets error state when submit fails', async () => {
       const submitAnswerFn = vi.fn(async () =>
         err('INTERNAL_ERROR', 'Internal error'),

@@ -100,20 +100,16 @@ export class GetNextQuestionUseCase {
     const nextQuestionId = getNextQuestionId(session, answeredQuestionIds);
     if (!nextQuestionId) return null;
 
-    const index = session.questionIds.indexOf(nextQuestionId);
-    if (index === -1) {
-      throw new ApplicationError(
-        'INTERNAL_ERROR',
-        `Session ${session.id} is missing next question id ${nextQuestionId}`,
-      );
-    }
-
     const question = await this.questions.findPublishedById(nextQuestionId);
     if (!question) {
       throw new ApplicationError('NOT_FOUND', 'Question not found');
     }
 
-    const progress = computeSessionProgress(session, index);
+    const sessionQuestionIds = new Set(session.questionIds);
+    const answeredCount = new Set(
+      answeredQuestionIds.filter((id) => sessionQuestionIds.has(id)),
+    ).size;
+    const progress = computeSessionProgress(session, answeredCount);
 
     return {
       questionId: question.id,
