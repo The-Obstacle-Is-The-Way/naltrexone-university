@@ -15,10 +15,13 @@ describe('runManageBillingAction', () => {
 
     const action = async () =>
       runManageBillingAction({
-        createPortalSessionFn: vi.fn(async () => ({
-          ok: true,
-          data: { url: 'https://stripe.test/portal' },
-        })),
+        createPortalSessionFn: vi.fn(
+          async () =>
+            ({
+              ok: true,
+              data: { url: 'https://stripe.test/portal' },
+            }) as const,
+        ),
         redirectFn,
       });
 
@@ -34,10 +37,13 @@ describe('runManageBillingAction', () => {
 
     const action = async () =>
       runManageBillingAction({
-        createPortalSessionFn: vi.fn(async () => ({
-          ok: false,
-          error: { code: 'UNAUTHENTICATED', message: 'No session' },
-        })),
+        createPortalSessionFn: vi.fn(
+          async () =>
+            ({
+              ok: false,
+              error: { code: 'UNAUTHENTICATED', message: 'No session' },
+            }) as const,
+        ),
         redirectFn,
       });
 
@@ -53,10 +59,13 @@ describe('runManageBillingAction', () => {
 
     const action = async () =>
       runManageBillingAction({
-        createPortalSessionFn: vi.fn(async () => ({
-          ok: false,
-          error: { code: 'INTERNAL_ERROR', message: 'Boom' },
-        })),
+        createPortalSessionFn: vi.fn(
+          async () =>
+            ({
+              ok: false,
+              error: { code: 'INTERNAL_ERROR', message: 'Boom' },
+            }) as const,
+        ),
         redirectFn,
       });
 
@@ -74,10 +83,13 @@ describe('runManageBillingAction', () => {
 
       const action = async () =>
         runManageBillingAction({
-          createPortalSessionFn: vi.fn(async () => ({
-            ok: false,
-            error: { code: 'INTERNAL_ERROR', message: 'Boom' },
-          })),
+          createPortalSessionFn: vi.fn(
+            async () =>
+              ({
+                ok: false,
+                error: { code: 'INTERNAL_ERROR', message: 'Boom' },
+              }) as const,
+          ),
           redirectFn,
         });
 
