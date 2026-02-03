@@ -21,7 +21,7 @@ Async logic helpers (e.g., `loadNextQuestion`, `submitAnswerForQuestion`) had no
 
 1. Add an optional `isMounted(): boolean` callback to affected async logic functions.
 2. After each awaited call (and inside catch blocks), bail out early when unmounted.
-3. Wire a stable `isMounted()` implementation from client pages via a `useRef` that is flipped to `false` on unmount.
+3. Wire a stable `isMounted()` implementation from client pages via `useIsMounted()` (`lib/use-is-mounted.ts`).
 4. Add regression tests covering the unmount-before-resolve behavior.
 
 ## Verification
@@ -35,4 +35,3 @@ Async logic helpers (e.g., `loadNextQuestion`, `submitAnswerForQuestion`) had no
 ## Related
 
 - BUG-032: State Update After Component Unmount (bookmark effect)
-

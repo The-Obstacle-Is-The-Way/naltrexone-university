@@ -10,6 +10,7 @@ import { err, ok } from '@/src/adapters/controllers/action-result';
 import type { EndPracticeSessionOutput } from '@/src/adapters/controllers/practice-controller';
 import type { NextQuestion } from '@/src/application/use-cases/get-next-question';
 import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
+import { createDeferred } from '@/tests/test-helpers/create-deferred';
 
 function createNextQuestion(overrides?: Partial<NextQuestion>): NextQuestion {
   return {
@@ -21,22 +22,6 @@ function createNextQuestion(overrides?: Partial<NextQuestion>): NextQuestion {
     session: null,
     ...overrides,
   };
-}
-
-function createDeferred<T>() {
-  let resolve: (value: T) => void = () => {
-    throw new Error('Deferred promise resolved before initialization');
-  };
-  let reject: (reason?: unknown) => void = () => {
-    throw new Error('Deferred promise rejected before initialization');
-  };
-
-  const promise = new Promise<T>((res, rej) => {
-    resolve = res;
-    reject = rej;
-  });
-
-  return { promise, resolve, reject };
 }
 
 describe('practice-session-page-logic', () => {
@@ -169,7 +154,7 @@ describe('practice-session-page-logic', () => {
       });
     });
 
-    it('does not update state after unmount', async () => {
+    it('returns no state updates when unmounted during loadNextQuestion', async () => {
       const deferred = createDeferred<ActionResult<NextQuestion | null>>();
       let mounted = true;
 

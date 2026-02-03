@@ -15,6 +15,7 @@ import {
   selectChoiceIfAllowed,
   toggleBookmarkForQuestion,
 } from '@/app/(app)/app/practice/practice-page-logic';
+import { useIsMounted } from '@/lib/use-is-mounted';
 import {
   getBookmarks,
   toggleBookmark,
@@ -176,17 +177,11 @@ export default function PracticeSessionPage({
 
   const [loadState, setLoadState] = useState<LoadState>({ status: 'idle' });
   const [isPending, startTransition] = useTransition();
-  const isMountedRef = useRef(true);
+  const isMounted = useIsMounted();
   const [questionLoadedAt, setQuestionLoadedAt] = useState<number | null>(null);
   const [submitIdempotencyKey, setSubmitIdempotencyKey] = useState<
     string | null
   >(null);
-
-  useEffect(() => {
-    return () => {
-      isMountedRef.current = false;
-    };
-  }, []);
 
   const loadNext = useMemo(
     () =>
@@ -203,9 +198,9 @@ export default function PracticeSessionPage({
         setQuestionLoadedAt,
         setQuestion,
         setSessionInfo,
-        isMounted: () => isMountedRef.current,
+        isMounted,
       }),
-    [sessionId],
+    [sessionId, isMounted],
   );
 
   useEffect(loadNext, [loadNext]);
@@ -258,7 +253,7 @@ export default function PracticeSessionPage({
         nowMs: Date.now,
         setLoadState,
         setSubmitResult,
-        isMounted: () => isMountedRef.current,
+        isMounted,
       }),
     [
       question,
@@ -266,6 +261,7 @@ export default function PracticeSessionPage({
       selectedChoiceId,
       sessionId,
       submitIdempotencyKey,
+      isMounted,
     ],
   );
 
@@ -287,9 +283,9 @@ export default function PracticeSessionPage({
             setBookmarkMessage(null);
           }, 2000);
         },
-        isMounted: () => isMountedRef.current,
+        isMounted,
       }),
-    [question],
+    [question, isMounted],
   );
 
   const onEndSession = useMemo(
@@ -302,9 +298,9 @@ export default function PracticeSessionPage({
         setQuestion,
         setSubmitResult,
         setSelectedChoiceId,
-        isMounted: () => isMountedRef.current,
+        isMounted,
       }),
-    [sessionId],
+    [sessionId, isMounted],
   );
 
   const onSelectChoice = useMemo(

@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import { Feedback } from '@/components/question/Feedback';
 import { QuestionCard } from '@/components/question/QuestionCard';
+import { useIsMounted } from '@/lib/use-is-mounted';
 import {
   getBookmarks,
   toggleBookmark,
@@ -403,13 +404,7 @@ export default function PracticePage() {
   const [sessionStartError, setSessionStartError] = useState<string | null>(
     null,
   );
-  const isMountedRef = useRef(true);
-
-  useEffect(() => {
-    return () => {
-      isMountedRef.current = false;
-    };
-  }, []);
+  const isMounted = useIsMounted();
 
   const loadNext = useMemo(
     () =>
@@ -425,9 +420,9 @@ export default function PracticePage() {
         setSubmitIdempotencyKey,
         setQuestionLoadedAt,
         setQuestion,
-        isMounted: () => isMountedRef.current,
+        isMounted,
       }),
-    [filters],
+    [filters, isMounted],
   );
 
   useEffect(loadNext, [loadNext]);
@@ -496,9 +491,15 @@ export default function PracticePage() {
         nowMs: Date.now,
         setLoadState,
         setSubmitResult,
-        isMounted: () => isMountedRef.current,
+        isMounted,
       }),
-    [question, questionLoadedAt, selectedChoiceId, submitIdempotencyKey],
+    [
+      question,
+      questionLoadedAt,
+      selectedChoiceId,
+      submitIdempotencyKey,
+      isMounted,
+    ],
   );
 
   const onToggleBookmark = useMemo(
@@ -519,9 +520,9 @@ export default function PracticePage() {
             setBookmarkMessage(null);
           }, 2000);
         },
-        isMounted: () => isMountedRef.current,
+        isMounted,
       }),
-    [question],
+    [question, isMounted],
   );
 
   const onSelectChoice = useMemo(
@@ -590,9 +591,9 @@ export default function PracticePage() {
         setSessionStartStatus,
         setSessionStartError,
         navigateTo,
-        isMounted: () => isMountedRef.current,
+        isMounted,
       }),
-    [filters, sessionMode, sessionCount, startSessionIdempotencyKey],
+    [filters, sessionMode, sessionCount, startSessionIdempotencyKey, isMounted],
   );
 
   return (

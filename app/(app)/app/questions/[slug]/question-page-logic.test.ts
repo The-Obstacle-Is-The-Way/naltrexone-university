@@ -10,6 +10,7 @@ import { err, ok } from '@/src/adapters/controllers/action-result';
 import type { GetQuestionBySlugOutput } from '@/src/adapters/controllers/question-view-controller';
 import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
 import { createQuestion } from '@/src/domain/test-helpers';
+import { createDeferred } from '@/tests/test-helpers/create-deferred';
 
 function createQuestionOutput(): GetQuestionBySlugOutput {
   const question = createQuestion({
@@ -31,22 +32,6 @@ function createQuestionOutput(): GetQuestionBySlugOutput {
       textMd: c.textMd,
     })),
   };
-}
-
-function createDeferred<T>() {
-  let resolve: (value: T) => void = () => {
-    throw new Error('Deferred promise resolved before initialization');
-  };
-  let reject: (reason?: unknown) => void = () => {
-    throw new Error('Deferred promise rejected before initialization');
-  };
-
-  const promise = new Promise<T>((res, rej) => {
-    resolve = res;
-    reject = rej;
-  });
-
-  return { promise, resolve, reject };
 }
 
 describe('question-page-logic', () => {
@@ -114,7 +99,7 @@ describe('question-page-logic', () => {
       });
     });
 
-    it('does not update state after unmount', async () => {
+    it('returns no state updates when unmounted during loadQuestion', async () => {
       const deferred = createDeferred<ActionResult<GetQuestionBySlugOutput>>();
       let mounted = true;
 
