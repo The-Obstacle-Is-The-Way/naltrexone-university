@@ -29,10 +29,10 @@ export const TestimonialsColumn = (props: {
         className="flex flex-col gap-6 pb-6"
       >
         {/* First set for seamless infinite scroll loop */}
-        {props.testimonials.map(({ text, image, name, role }) => (
+        {props.testimonials.map(({ text, image, name, role }, index) => (
           <div
             className="p-8 rounded-2xl border border-zinc-800/50 bg-zinc-900/50 backdrop-blur-sm max-w-xs w-full shadow-lg shadow-black/20"
-            key={`first-${name}-${role}`}
+            key={`first-${index}-${name}`}
           >
             <p className="text-zinc-300 leading-relaxed">{text}</p>
             <div className="flex items-center gap-3 mt-6">
@@ -54,10 +54,10 @@ export const TestimonialsColumn = (props: {
           </div>
         ))}
         {/* Second set (duplicate) for seamless infinite scroll loop */}
-        {props.testimonials.map(({ text, image, name, role }) => (
+        {props.testimonials.map(({ text, image, name, role }, index) => (
           <div
             className="p-8 rounded-2xl border border-zinc-800/50 bg-zinc-900/50 backdrop-blur-sm max-w-xs w-full shadow-lg shadow-black/20"
-            key={`second-${name}-${role}`}
+            key={`second-${index}-${name}`}
           >
             <p className="text-zinc-300 leading-relaxed">{text}</p>
             <div className="flex items-center gap-3 mt-6">

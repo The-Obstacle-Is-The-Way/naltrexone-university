@@ -20,32 +20,31 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useState } from 'react';
 
+interface NavItemProps {
+  href: string;
+  icon: React.ComponentType<{ className?: string }>;
+  children: React.ReactNode;
+  onClick?: () => void;
+}
+
+function NavItem({ href, icon: Icon, children, onClick }: NavItemProps) {
+  return (
+    <Link
+      href={href}
+      onClick={onClick}
+      className="flex items-center px-3 py-2 text-sm rounded-md transition-colors text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-[#1F1F23]"
+    >
+      <Icon className="h-4 w-4 mr-3 flex-shrink-0" />
+      {children}
+    </Link>
+  );
+}
+
 export default function Sidebar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   function handleNavigation() {
     setIsMobileMenuOpen(false);
-  }
-
-  function NavItem({
-    href,
-    icon: Icon,
-    children,
-  }: {
-    href: string;
-    icon: React.ComponentType<{ className?: string }>;
-    children: React.ReactNode;
-  }) {
-    return (
-      <Link
-        href={href}
-        onClick={handleNavigation}
-        className="flex items-center px-3 py-2 text-sm rounded-md transition-colors text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-[#1F1F23]"
-      >
-        <Icon className="h-4 w-4 mr-3 flex-shrink-0" />
-        {children}
-      </Link>
-    );
   }
 
   return (
@@ -99,16 +98,16 @@ export default function Sidebar() {
                   Overview
                 </div>
                 <div className="space-y-1">
-                  <NavItem href="#" icon={Home}>
+                  <NavItem href="#" icon={Home} onClick={handleNavigation}>
                     Dashboard
                   </NavItem>
-                  <NavItem href="#" icon={BarChart2}>
+                  <NavItem href="#" icon={BarChart2} onClick={handleNavigation}>
                     Analytics
                   </NavItem>
-                  <NavItem href="#" icon={Building2}>
+                  <NavItem href="#" icon={Building2} onClick={handleNavigation}>
                     Organization
                   </NavItem>
-                  <NavItem href="#" icon={Folder}>
+                  <NavItem href="#" icon={Folder} onClick={handleNavigation}>
                     Projects
                   </NavItem>
                 </div>
@@ -119,13 +118,17 @@ export default function Sidebar() {
                   Finance
                 </div>
                 <div className="space-y-1">
-                  <NavItem href="#" icon={Wallet}>
+                  <NavItem href="#" icon={Wallet} onClick={handleNavigation}>
                     Transactions
                   </NavItem>
-                  <NavItem href="#" icon={Receipt}>
+                  <NavItem href="#" icon={Receipt} onClick={handleNavigation}>
                     Invoices
                   </NavItem>
-                  <NavItem href="#" icon={CreditCard}>
+                  <NavItem
+                    href="#"
+                    icon={CreditCard}
+                    onClick={handleNavigation}
+                  >
                     Payments
                   </NavItem>
                 </div>
@@ -136,16 +139,20 @@ export default function Sidebar() {
                   Team
                 </div>
                 <div className="space-y-1">
-                  <NavItem href="#" icon={Users2}>
+                  <NavItem href="#" icon={Users2} onClick={handleNavigation}>
                     Members
                   </NavItem>
-                  <NavItem href="#" icon={Shield}>
+                  <NavItem href="#" icon={Shield} onClick={handleNavigation}>
                     Permissions
                   </NavItem>
-                  <NavItem href="#" icon={MessagesSquare}>
+                  <NavItem
+                    href="#"
+                    icon={MessagesSquare}
+                    onClick={handleNavigation}
+                  >
                     Chat
                   </NavItem>
-                  <NavItem href="#" icon={Video}>
+                  <NavItem href="#" icon={Video} onClick={handleNavigation}>
                     Meetings
                   </NavItem>
                 </div>
@@ -155,10 +162,10 @@ export default function Sidebar() {
 
           <div className="px-4 py-4 border-t border-gray-200 dark:border-[#1F1F23]">
             <div className="space-y-1">
-              <NavItem href="#" icon={Settings}>
+              <NavItem href="#" icon={Settings} onClick={handleNavigation}>
                 Settings
               </NavItem>
-              <NavItem href="#" icon={HelpCircle}>
+              <NavItem href="#" icon={HelpCircle} onClick={handleNavigation}>
                 Help
               </NavItem>
             </div>

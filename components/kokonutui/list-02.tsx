@@ -25,14 +25,6 @@ interface List02Props {
   className?: string;
 }
 
-const _categoryStyles = {
-  shopping: 'bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100',
-  food: 'bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100',
-  transport: 'bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100',
-  entertainment:
-    'bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100',
-};
-
 const TRANSACTIONS: Transaction[] = [
   {
     id: '1',

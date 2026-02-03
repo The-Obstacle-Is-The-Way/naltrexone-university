@@ -9,25 +9,212 @@ import { cn } from '@/lib/utils';
 const THEMES = { light: '', dark: '.dark' } as const;
 
 /**
+ * List of valid CSS named colors (CSS Level 4).
+ * Used for strict validation to prevent injection.
+ */
+const CSS_NAMED_COLORS = new Set([
+  'aliceblue',
+  'antiquewhite',
+  'aqua',
+  'aquamarine',
+  'azure',
+  'beige',
+  'bisque',
+  'black',
+  'blanchedalmond',
+  'blue',
+  'blueviolet',
+  'brown',
+  'burlywood',
+  'cadetblue',
+  'chartreuse',
+  'chocolate',
+  'coral',
+  'cornflowerblue',
+  'cornsilk',
+  'crimson',
+  'cyan',
+  'darkblue',
+  'darkcyan',
+  'darkgoldenrod',
+  'darkgray',
+  'darkgreen',
+  'darkgrey',
+  'darkkhaki',
+  'darkmagenta',
+  'darkolivegreen',
+  'darkorange',
+  'darkorchid',
+  'darkred',
+  'darksalmon',
+  'darkseagreen',
+  'darkslateblue',
+  'darkslategray',
+  'darkslategrey',
+  'darkturquoise',
+  'darkviolet',
+  'deeppink',
+  'deepskyblue',
+  'dimgray',
+  'dimgrey',
+  'dodgerblue',
+  'firebrick',
+  'floralwhite',
+  'forestgreen',
+  'fuchsia',
+  'gainsboro',
+  'ghostwhite',
+  'gold',
+  'goldenrod',
+  'gray',
+  'green',
+  'greenyellow',
+  'grey',
+  'honeydew',
+  'hotpink',
+  'indianred',
+  'indigo',
+  'ivory',
+  'khaki',
+  'lavender',
+  'lavenderblush',
+  'lawngreen',
+  'lemonchiffon',
+  'lightblue',
+  'lightcoral',
+  'lightcyan',
+  'lightgoldenrodyellow',
+  'lightgray',
+  'lightgreen',
+  'lightgrey',
+  'lightpink',
+  'lightsalmon',
+  'lightseagreen',
+  'lightskyblue',
+  'lightslategray',
+  'lightslategrey',
+  'lightsteelblue',
+  'lightyellow',
+  'lime',
+  'limegreen',
+  'linen',
+  'magenta',
+  'maroon',
+  'mediumaquamarine',
+  'mediumblue',
+  'mediumorchid',
+  'mediumpurple',
+  'mediumseagreen',
+  'mediumslateblue',
+  'mediumspringgreen',
+  'mediumturquoise',
+  'mediumvioletred',
+  'midnightblue',
+  'mintcream',
+  'mistyrose',
+  'moccasin',
+  'navajowhite',
+  'navy',
+  'oldlace',
+  'olive',
+  'olivedrab',
+  'orange',
+  'orangered',
+  'orchid',
+  'palegoldenrod',
+  'palegreen',
+  'paleturquoise',
+  'palevioletred',
+  'papayawhip',
+  'peachpuff',
+  'peru',
+  'pink',
+  'plum',
+  'powderblue',
+  'purple',
+  'rebeccapurple',
+  'red',
+  'rosybrown',
+  'royalblue',
+  'saddlebrown',
+  'salmon',
+  'sandybrown',
+  'seagreen',
+  'seashell',
+  'sienna',
+  'silver',
+  'skyblue',
+  'slateblue',
+  'slategray',
+  'slategrey',
+  'snow',
+  'springgreen',
+  'steelblue',
+  'tan',
+  'teal',
+  'thistle',
+  'tomato',
+  'transparent',
+  'turquoise',
+  'violet',
+  'wheat',
+  'white',
+  'whitesmoke',
+  'yellow',
+  'yellowgreen',
+  // CSS system colors
+  'currentcolor',
+  'inherit',
+  'initial',
+  'unset',
+]);
+
+/**
  * Validates that a string is a safe CSS color value.
- * Allows: hex colors, rgb/rgba, hsl/hsla, CSS color names, CSS variables
- * Blocks: any potential script injection attempts
+ * Uses strict validation patterns to prevent any injection attempts.
+ *
+ * Security approach:
+ * - Hex: Only allows exact hex color format
+ * - RGB/HSL: Only allows numeric values, commas, spaces, dots, and % (no arbitrary content)
+ * - CSS variables: Only allows safe variable name characters
+ * - Named colors: Only allows known CSS color names (whitelist)
  */
 function isValidCssColor(value: string): boolean {
   const trimmed = value.trim();
-  // Block any HTML/script injection attempts
-  if (/<|>|javascript:|expression\(|url\(/i.test(trimmed)) {
+
+  // Block any HTML/script injection attempts first
+  if (/<|>|javascript:|expression\(|url\(|;|{|}/i.test(trimmed)) {
     return false;
   }
-  // Allow: hex, rgb, rgba, hsl, hsla, CSS variables, named colors
-  const validPatterns = [
-    /^#[0-9a-fA-F]{3,8}$/, // hex
-    /^rgba?\([^)]+\)$/, // rgb/rgba
-    /^hsla?\([^)]+\)$/, // hsl/hsla
-    /^var\(--[a-zA-Z0-9-]+\)$/, // CSS variables
-    /^[a-zA-Z]+$/, // named colors
-  ];
-  return validPatterns.some((pattern) => pattern.test(trimmed));
+
+  // Hex colors: #RGB, #RRGGBB, #RRGGBBAA
+  if (/^#[0-9a-fA-F]{3,8}$/.test(trimmed)) {
+    return true;
+  }
+
+  // RGB/RGBA: Only numeric values, commas, spaces, dots, percentages, slashes (for modern syntax)
+  // Matches: rgb(255, 128, 0), rgba(255, 128, 0, 0.5), rgb(100% 50% 0% / 0.5)
+  if (/^rgba?\(\s*[\d.%,\s/]+\s*\)$/.test(trimmed)) {
+    return true;
+  }
+
+  // HSL/HSLA: Only numeric values, commas, spaces, dots, percentages, "deg", slashes
+  // Matches: hsl(360, 100%, 50%), hsla(360deg, 100%, 50%, 0.5), hsl(360deg 100% 50% / 0.5)
+  if (/^hsla?\(\s*[\d.%,\s/deg]+\s*\)$/i.test(trimmed)) {
+    return true;
+  }
+
+  // CSS variables: Only alphanumeric, hyphens within var(--)
+  if (/^var\(--[a-zA-Z0-9-]+\)$/.test(trimmed)) {
+    return true;
+  }
+
+  // Named colors: Whitelist approach for maximum security
+  if (CSS_NAMED_COLORS.has(trimmed.toLowerCase())) {
+    return true;
+  }
+
+  return false;
 }
 
 /**
