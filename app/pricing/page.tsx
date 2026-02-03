@@ -6,20 +6,13 @@ import {
 } from '@/app/pricing/subscribe-actions';
 import type { PricingBanner } from '@/app/pricing/types';
 import type { AuthGateway } from '@/src/application/ports/gateways';
-import type {
-  CheckEntitlementInput,
-  CheckEntitlementOutput,
-} from '@/src/application/use-cases/check-entitlement';
+import type { CheckEntitlementUseCase } from '@/src/application/ports/use-cases';
 
 export type { PricingViewProps } from '@/app/pricing/pricing-view';
 export { runSubscribeAction } from '@/app/pricing/subscribe-action';
 export { PricingView };
 // Re-export for tests
 export type { PricingBanner } from '@/app/pricing/types';
-
-type CheckEntitlementUseCase = {
-  execute: (input: CheckEntitlementInput) => Promise<CheckEntitlementOutput>;
-};
 
 export type PricingPageDeps = {
   authGateway: AuthGateway;

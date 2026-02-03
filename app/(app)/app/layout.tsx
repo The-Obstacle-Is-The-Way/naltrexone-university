@@ -3,14 +3,7 @@ import { redirect } from 'next/navigation';
 import { AuthNav } from '@/components/auth-nav';
 import { MobileNav } from '@/components/mobile-nav';
 import type { AuthGateway } from '@/src/application/ports/gateways';
-import type {
-  CheckEntitlementInput,
-  CheckEntitlementOutput,
-} from '@/src/application/use-cases/check-entitlement';
-
-type CheckEntitlementUseCase = {
-  execute: (input: CheckEntitlementInput) => Promise<CheckEntitlementOutput>;
-};
+import type { CheckEntitlementUseCase } from '@/src/application/ports/use-cases';
 
 export type AppLayoutDeps = {
   authGateway: AuthGateway;

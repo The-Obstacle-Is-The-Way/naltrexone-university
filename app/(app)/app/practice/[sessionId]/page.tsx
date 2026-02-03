@@ -3,6 +3,18 @@
 import Link from 'next/link';
 import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import {
+  createLoadNextQuestionAction,
+  endSession,
+  submitAnswerForQuestion,
+} from '@/app/(app)/app/practice/[sessionId]/practice-session-page-logic';
+import { PracticeView } from '@/app/(app)/app/practice/page';
+import {
+  createBookmarksEffect,
+  type LoadState,
+  selectChoiceIfAllowed,
+  toggleBookmarkForQuestion,
+} from '@/app/(app)/app/practice/practice-page-logic';
+import {
   getBookmarks,
   toggleBookmark,
 } from '@/src/adapters/controllers/bookmark-controller';
@@ -14,18 +26,6 @@ import {
 } from '@/src/adapters/controllers/question-controller';
 import type { NextQuestion } from '@/src/application/use-cases/get-next-question';
 import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
-import { PracticeView } from '../page';
-import {
-  createBookmarksEffect,
-  type LoadState,
-  selectChoiceIfAllowed,
-  toggleBookmarkForQuestion,
-} from '../practice-page-logic';
-import {
-  createLoadNextQuestionAction,
-  endSession,
-  submitAnswerForQuestion,
-} from './practice-session-page-logic';
 
 export function isQuestionBookmarked(
   question: NextQuestion | null,

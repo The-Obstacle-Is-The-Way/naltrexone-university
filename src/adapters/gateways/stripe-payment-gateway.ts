@@ -24,6 +24,12 @@ type StripeCustomer = { id?: string };
 
 type StripeCheckoutSessionList = { data: StripeCheckoutSession[] };
 
+type StripeSubscription = unknown;
+
+type StripeCheckoutSessionCompleted = {
+  subscription?: string | { id: string } | null;
+};
+
 type StripeCheckoutSessionLineItem = {
   price?: { id?: string } | null;
 };
@@ -88,6 +94,12 @@ type StripeClient = {
       ): Promise<StripeCheckoutSession>;
     };
   };
+  subscriptions?: {
+    retrieve(
+      subscriptionId: string,
+      options?: StripeRequestOptions,
+    ): Promise<StripeSubscription>;
+  };
   billingPortal: {
     sessions: {
       create(
@@ -141,6 +153,15 @@ const stripeSubscriptionSchema = z
   })
   .passthrough();
 
+const stripeCheckoutSessionSchema = z
+  .object({
+    subscription: z
+      .union([z.string(), z.object({ id: z.string() }).passthrough()])
+      .nullable()
+      .optional(),
+  })
+  .passthrough();
+
 const subscriptionEventTypes = new Set([
   'customer.subscription.created',
   'customer.subscription.updated',
@@ -191,6 +212,72 @@ export class StripePaymentGateway implements PaymentGateway {
         });
       },
     });
+  }
+
+  private normalizeSubscriptionUpdate(input: {
+    subscription: z.infer<typeof stripeSubscriptionSchema>;
+    eventId: string;
+    type: string;
+  }): WebhookEventResult['subscriptionUpdate'] | null {
+    const { subscription } = input;
+    const userId = subscription.metadata?.user_id;
+    if (!userId) {
+      if (
+        input.type === 'customer.subscription.created' ||
+        input.type === 'checkout.session.completed'
+      ) {
+        const message =
+          input.type === 'customer.subscription.created'
+            ? 'Skipping subscription.created event without metadata.user_id'
+            : 'Skipping checkout.session.completed event without metadata.user_id';
+
+        this.deps.logger?.warn?.(message, {
+          eventId: input.eventId,
+          stripeSubscriptionId: subscription.id ?? null,
+          stripeCustomerId: subscription.customer ?? null,
+        });
+        return null;
+      }
+
+      throw new ApplicationError(
+        'STRIPE_ERROR',
+        'Stripe subscription metadata.user_id is required',
+      );
+    }
+
+    const stripeSubscriptionId = subscription.id;
+    const stripeCustomerId = subscription.customer;
+
+    const status = subscription.status;
+    if (!status || !isValidSubscriptionStatus(status)) {
+      throw new ApplicationError(
+        'STRIPE_ERROR',
+        'Stripe subscription status is invalid',
+      );
+    }
+
+    const subscriptionItem = subscription.items.data[0];
+    const currentPeriodEndSeconds = subscriptionItem.current_period_end;
+    const cancelAtPeriodEnd = subscription.cancel_at_period_end;
+    const priceId = subscriptionItem.price.id;
+
+    const plan = getSubscriptionPlanFromPriceId(priceId, this.deps.priceIds);
+    if (!plan) {
+      throw new ApplicationError(
+        'STRIPE_ERROR',
+        'Stripe subscription price id does not match a configured plan',
+      );
+    }
+
+    return {
+      userId,
+      stripeCustomerId,
+      stripeSubscriptionId,
+      plan,
+      status,
+      currentPeriodEnd: new Date(currentPeriodEndSeconds * 1000),
+      cancelAtPeriodEnd,
+    };
   }
 
   async createCustomer(
@@ -369,6 +456,77 @@ export class StripePaymentGateway implements PaymentGateway {
       type: event.type,
     };
 
+    if (event.type === 'checkout.session.completed') {
+      const parsedSession = stripeCheckoutSessionSchema.safeParse(
+        event.data.object,
+      );
+      if (!parsedSession.success) {
+        this.deps.logger?.error(
+          'Invalid Stripe checkout.session.completed webhook payload',
+          {
+            eventId: event.id,
+            type: event.type,
+            error: parsedSession.error.flatten(),
+          },
+        );
+
+        throw new ApplicationError(
+          'INVALID_WEBHOOK_PAYLOAD',
+          'Invalid Stripe checkout.session.completed webhook payload',
+        );
+      }
+
+      const session = parsedSession.data as StripeCheckoutSessionCompleted;
+      const subscriptionRef = session.subscription;
+      if (!subscriptionRef) {
+        return result;
+      }
+
+      const stripeSubscriptionId =
+        typeof subscriptionRef === 'string'
+          ? subscriptionRef
+          : subscriptionRef.id;
+
+      const stripeSubscriptions = this.deps.stripe.subscriptions;
+      if (!stripeSubscriptions) {
+        throw new ApplicationError(
+          'STRIPE_ERROR',
+          'Stripe subscriptions client is unavailable',
+        );
+      }
+
+      const subscription = await this.callStripe('subscriptions.retrieve', () =>
+        stripeSubscriptions.retrieve(stripeSubscriptionId),
+      );
+
+      const parsedSubscription =
+        stripeSubscriptionSchema.safeParse(subscription);
+      if (!parsedSubscription.success) {
+        this.deps.logger?.error(
+          'Invalid Stripe subscription payload retrieved from checkout session',
+          {
+            eventId: event.id,
+            type: event.type,
+            stripeSubscriptionId,
+            error: parsedSubscription.error.flatten(),
+          },
+        );
+
+        throw new ApplicationError(
+          'INVALID_WEBHOOK_PAYLOAD',
+          'Invalid Stripe subscription webhook payload',
+        );
+      }
+
+      const subscriptionUpdate = this.normalizeSubscriptionUpdate({
+        subscription: parsedSubscription.data,
+        eventId: event.id,
+        type: event.type,
+      });
+
+      return subscriptionUpdate ? { ...result, subscriptionUpdate } : result;
+    }
+
     if (!subscriptionEventTypes.has(event.type)) {
       return result;
     }
@@ -389,65 +547,12 @@ export class StripePaymentGateway implements PaymentGateway {
       );
     }
 
-    const subscription = parsedSubscription.data;
-    const userId = subscription.metadata?.user_id;
-    if (!userId) {
-      // Stripe can emit `customer.subscription.created` without our metadata.
-      // Without `user_id` we can't map the event to an internal user, so we skip
-      // and rely on subsequent subscription events to sync.
-      if (event.type === 'customer.subscription.created') {
-        this.deps.logger?.warn?.(
-          'Skipping subscription.created event without metadata.user_id',
-          {
-            eventId: event.id,
-            stripeSubscriptionId: subscription.id ?? null,
-            stripeCustomerId: subscription.customer ?? null,
-          },
-        );
-        return result;
-      }
+    const subscriptionUpdate = this.normalizeSubscriptionUpdate({
+      subscription: parsedSubscription.data,
+      eventId: event.id,
+      type: event.type,
+    });
 
-      throw new ApplicationError(
-        'STRIPE_ERROR',
-        'Stripe subscription metadata.user_id is required',
-      );
-    }
-
-    const stripeSubscriptionId = subscription.id;
-    const stripeCustomerId = subscription.customer;
-
-    const status = subscription.status;
-    if (!status || !isValidSubscriptionStatus(status)) {
-      throw new ApplicationError(
-        'STRIPE_ERROR',
-        'Stripe subscription status is invalid',
-      );
-    }
-
-    const subscriptionItem = subscription.items.data[0];
-    const currentPeriodEndSeconds = subscriptionItem.current_period_end;
-    const cancelAtPeriodEnd = subscription.cancel_at_period_end;
-    const priceId = subscriptionItem.price.id;
-
-    const plan = getSubscriptionPlanFromPriceId(priceId, this.deps.priceIds);
-    if (!plan) {
-      throw new ApplicationError(
-        'STRIPE_ERROR',
-        'Stripe subscription price id does not match a configured plan',
-      );
-    }
-
-    return {
-      ...result,
-      subscriptionUpdate: {
-        userId,
-        stripeCustomerId,
-        stripeSubscriptionId,
-        plan,
-        status,
-        currentPeriodEnd: new Date(currentPeriodEndSeconds * 1000),
-        cancelAtPeriodEnd,
-      },
-    };
+    return subscriptionUpdate ? { ...result, subscriptionUpdate } : result;
   }
 }

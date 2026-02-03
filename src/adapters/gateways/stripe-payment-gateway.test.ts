@@ -533,6 +533,82 @@ describe('StripePaymentGateway', () => {
     expect(constructEvent).toHaveBeenCalledWith('raw_body', 'sig_1', 'whsec_1');
   });
 
+  it('normalizes checkout.session.completed events by retrieving the subscription', async () => {
+    const subscriptionEvent = loadJsonFixture<{
+      data: { object: { id: string } };
+    }>('stripe/customer.subscription.updated.json');
+    const subscription = subscriptionEvent.data.object;
+
+    const constructEvent = vi.fn(() => ({
+      id: 'evt_checkout_1',
+      type: 'checkout.session.completed',
+      data: {
+        object: {
+          subscription: subscription.id,
+        },
+      },
+    }));
+
+    const subscriptionsRetrieve = vi.fn(async () => subscription);
+
+    const stripe = {
+      customers: {
+        create: vi.fn(async () => ({ id: 'cus_123' })),
+      },
+      checkout: {
+        sessions: {
+          create: vi.fn(async () => ({
+            id: 'cs_new',
+            url: 'https://stripe/checkout',
+          })),
+          list: vi.fn(async () => ({ data: [] })),
+          retrieve: vi.fn(async () => ({
+            id: 'cs_existing',
+            url: 'https://stripe/existing-checkout',
+            line_items: { data: [] },
+          })),
+          expire: vi.fn(async () => ({
+            id: 'cs_existing',
+            url: 'https://stripe/existing-checkout',
+          })),
+        },
+      },
+      subscriptions: {
+        retrieve: subscriptionsRetrieve,
+      },
+      billingPortal: {
+        sessions: {
+          create: vi.fn(async () => ({ url: 'https://stripe/portal' })),
+        },
+      },
+      webhooks: { constructEvent },
+    } as const;
+
+    const gateway = new StripePaymentGateway({
+      stripe,
+      webhookSecret: 'whsec_1',
+      priceIds: { monthly: 'price_m', annual: 'price_a' },
+    });
+
+    await expect(
+      gateway.processWebhookEvent('raw_body', 'sig_1'),
+    ).resolves.toEqual({
+      eventId: 'evt_checkout_1',
+      type: 'checkout.session.completed',
+      subscriptionUpdate: {
+        userId: 'user_1',
+        stripeCustomerId: 'cus_123',
+        stripeSubscriptionId: 'sub_123',
+        plan: 'monthly',
+        status: 'active',
+        currentPeriodEnd: new Date(1_700_000_000 * 1000),
+        cancelAtPeriodEnd: false,
+      },
+    });
+
+    expect(subscriptionsRetrieve).toHaveBeenCalledWith('sub_123');
+  });
+
   it('throws INVALID_WEBHOOK_PAYLOAD when subscription payload shape is invalid', async () => {
     const constructEvent = vi.fn(() => ({
       id: 'evt_bad',

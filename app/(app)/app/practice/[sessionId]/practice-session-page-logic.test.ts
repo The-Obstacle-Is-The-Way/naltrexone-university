@@ -1,13 +1,13 @@
 import { describe, expect, it, vi } from 'vitest';
-import { err, ok } from '@/src/adapters/controllers/action-result';
-import type { NextQuestion } from '@/src/application/use-cases/get-next-question';
-import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
 import {
   createLoadNextQuestionAction,
   endSession,
   loadNextQuestion,
   submitAnswerForQuestion,
-} from './practice-session-page-logic';
+} from '@/app/(app)/app/practice/[sessionId]/practice-session-page-logic';
+import { err, ok } from '@/src/adapters/controllers/action-result';
+import type { NextQuestion } from '@/src/application/use-cases/get-next-question';
+import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
 
 function createNextQuestion(overrides?: Partial<NextQuestion>): NextQuestion {
   return {
