@@ -9,6 +9,7 @@ import {
 } from '@/app/(app)/app/practice/[sessionId]/practice-session-page-logic';
 import { PracticeView } from '@/app/(app)/app/practice/page';
 import {
+  canSubmitAnswer,
   createBookmarksEffect,
   type LoadState,
   selectChoiceIfAllowed,
@@ -224,10 +225,13 @@ export default function PracticeSessionPage({
   }, []);
 
   const canSubmit = useMemo(() => {
-    return (
-      question !== null && selectedChoiceId !== null && submitResult === null
-    );
-  }, [question, selectedChoiceId, submitResult]);
+    return canSubmitAnswer({
+      loadState,
+      question,
+      selectedChoiceId,
+      submitResult,
+    });
+  }, [loadState, question, selectedChoiceId, submitResult]);
 
   const isBookmarked = useMemo(
     () => isQuestionBookmarked(question, bookmarkedQuestionIds),

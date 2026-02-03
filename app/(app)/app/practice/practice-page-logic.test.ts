@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
+  canSubmitAnswer,
   createBookmarksEffect,
   createLoadNextQuestionAction,
   handleSessionCountChange,
@@ -51,6 +52,46 @@ function createNextQuestion(): NextQuestion {
 }
 
 describe('practice-page-logic', () => {
+  describe('canSubmitAnswer', () => {
+    it('returns true when question is loaded, choice is selected, and not loading', () => {
+      expect(
+        canSubmitAnswer({
+          loadState: { status: 'ready' },
+          question: createNextQuestion(),
+          selectedChoiceId: 'choice_1',
+          submitResult: null,
+        }),
+      ).toBe(true);
+    });
+
+    it('returns false when loadState is loading', () => {
+      expect(
+        canSubmitAnswer({
+          loadState: { status: 'loading' },
+          question: createNextQuestion(),
+          selectedChoiceId: 'choice_1',
+          submitResult: null,
+        }),
+      ).toBe(false);
+    });
+
+    it('returns false when submitResult exists', () => {
+      expect(
+        canSubmitAnswer({
+          loadState: { status: 'ready' },
+          question: createNextQuestion(),
+          selectedChoiceId: 'choice_1',
+          submitResult: {
+            attemptId: 'attempt_1',
+            isCorrect: true,
+            correctChoiceId: 'choice_1',
+            explanationMd: 'Because…',
+          },
+        }),
+      ).toBe(false);
+    });
+  });
+
   describe('loadNextQuestion', () => {
     it('loads next question and updates loadedAt when a question exists', async () => {
       const getNextQuestionFn = vi.fn(async () => ok(createNextQuestion()));

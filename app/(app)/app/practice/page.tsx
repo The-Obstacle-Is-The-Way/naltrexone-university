@@ -21,6 +21,7 @@ import type { NextQuestion } from '@/src/application/use-cases/get-next-question
 import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
 import { navigateTo } from './client-navigation';
 import {
+  canSubmitAnswer,
   createBookmarksEffect,
   createLoadNextQuestionAction,
   handleSessionCountChange,
@@ -464,10 +465,13 @@ export default function PracticePage() {
   }, []);
 
   const canSubmit = useMemo(() => {
-    return (
-      question !== null && selectedChoiceId !== null && submitResult === null
-    );
-  }, [question, selectedChoiceId, submitResult]);
+    return canSubmitAnswer({
+      loadState,
+      question,
+      selectedChoiceId,
+      submitResult,
+    });
+  }, [loadState, question, selectedChoiceId, submitResult]);
 
   const isBookmarked = question
     ? bookmarkedQuestionIds.has(question.questionId)

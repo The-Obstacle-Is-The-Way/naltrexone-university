@@ -25,6 +25,19 @@ export type PracticeFilters = {
   difficulties: Array<NextQuestion['difficulty']>;
 };
 
+export function canSubmitAnswer(input: {
+  loadState: LoadState;
+  question: NextQuestion | null;
+  selectedChoiceId: string | null;
+  submitResult: SubmitAnswerOutput | null;
+}): boolean {
+  if (input.loadState.status === 'loading') return false;
+  if (!input.question) return false;
+  if (!input.selectedChoiceId) return false;
+  if (input.submitResult) return false;
+  return true;
+}
+
 export async function loadNextQuestion(input: {
   getNextQuestionFn: (
     input: unknown,
