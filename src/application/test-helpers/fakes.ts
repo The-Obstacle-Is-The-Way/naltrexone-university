@@ -318,8 +318,15 @@ export class FakeAttemptRepository implements AttemptRepository {
     return attempt;
   }
 
-  async findByUserId(userId: string): Promise<readonly Attempt[]> {
-    return this.attempts.filter((a) => a.userId === userId);
+  async findByUserId(
+    userId: string,
+    page: { limit: number; offset: number },
+  ): Promise<readonly Attempt[]> {
+    return this.attempts
+      .filter((a) => a.userId === userId)
+      .slice()
+      .sort((a, b) => b.answeredAt.getTime() - a.answeredAt.getTime())
+      .slice(page.offset, page.offset + page.limit);
   }
 
   async findBySessionId(

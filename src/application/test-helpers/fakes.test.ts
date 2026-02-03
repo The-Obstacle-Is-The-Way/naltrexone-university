@@ -582,6 +582,47 @@ describe('FakeAttemptRepository', () => {
     });
   });
 
+  describe('findByUserId', () => {
+    it('returns attempts in descending answeredAt order (paginated)', async () => {
+      const repo = new FakeAttemptRepository([
+        {
+          id: 'attempt-1',
+          userId: 'user-1',
+          questionId: 'q-1',
+          practiceSessionId: null,
+          selectedChoiceId: 'c-1',
+          isCorrect: true,
+          timeSpentSeconds: 0,
+          answeredAt: new Date('2026-02-01T00:00:00Z'),
+        },
+        {
+          id: 'attempt-2',
+          userId: 'user-1',
+          questionId: 'q-2',
+          practiceSessionId: null,
+          selectedChoiceId: 'c-2',
+          isCorrect: true,
+          timeSpentSeconds: 0,
+          answeredAt: new Date('2026-02-03T00:00:00Z'),
+        },
+        {
+          id: 'attempt-3',
+          userId: 'user-1',
+          questionId: 'q-3',
+          practiceSessionId: null,
+          selectedChoiceId: 'c-3',
+          isCorrect: true,
+          timeSpentSeconds: 0,
+          answeredAt: new Date('2026-02-02T00:00:00Z'),
+        },
+      ]);
+
+      const result = await repo.findByUserId('user-1', { limit: 2, offset: 1 });
+
+      expect(result.map((a) => a.id)).toEqual(['attempt-3', 'attempt-1']);
+    });
+  });
+
   describe('listRecentByUserId', () => {
     it('returns attempts in descending answeredAt order (limited)', async () => {
       const repo = new FakeAttemptRepository([

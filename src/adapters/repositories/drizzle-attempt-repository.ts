@@ -65,10 +65,12 @@ export class DrizzleAttemptRepository implements AttemptRepository {
     };
   }
 
-  async findByUserId(userId: string) {
+  async findByUserId(userId: string, page: { limit: number; offset: number }) {
     const rows = await this.db.query.attempts.findMany({
       where: eq(attempts.userId, userId),
       orderBy: desc(attempts.answeredAt),
+      limit: page.limit,
+      offset: page.offset,
     });
 
     return rows.map((row) => {

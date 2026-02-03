@@ -1,6 +1,6 @@
 # DEBT-083: AttemptRepository.findByUserId() Needs Pagination
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P2
 **Date:** 2026-02-03
 **Updated:** 2026-02-03
@@ -33,7 +33,7 @@ The method was left in place but is now orphaned — never called but still dang
 ## The Problem
 
 ```typescript
-// Current signature (DANGEROUS)
+// Previous signature (DANGEROUS)
 findByUserId(userId: string): Promise<readonly Attempt[]>;
 
 // Implementation loads ALL rows
@@ -131,10 +131,10 @@ Change the spec to document the paginated signature.
 
 ## Verification
 
-- [ ] TypeScript compiles with new signature
-- [ ] All existing tests pass (none currently call this method)
-- [ ] New test verifies pagination works
-- [ ] SPEC-004 updated to reflect new signature
+- [x] TypeScript compiles with new signature
+- [x] All tests pass
+- [x] New test verifies pagination works
+- [x] SPEC-004 updated to reflect new signature
 
 ## Related
 

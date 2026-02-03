@@ -17,7 +17,6 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 | ID | Title | Status | Priority | Date |
 |----|-------|--------|----------|------|
-| [DEBT-083](debt-083-unused-attempt-repository-find-by-user-id.md) | Unused AttemptRepository.findByUserId() — Spec-Implementation Gap | Open | P3 | 2026-02-03 |
 | [DEBT-084](debt-084-user-email-race-condition.md) | User Email Race Condition in Concurrent Webhook Handling | Open | P3 | 2026-02-03 |
 | [DEBT-085](debt-085-union-return-type-code-smell.md) | Union Return Type Pattern in requireEntitledUserId() | Open | P3 | 2026-02-03 |
 | [DEBT-086](debt-086-dry-violation-controller-boilerplate.md) | DRY Violation — Repeated Controller Boilerplate Pattern | Open | P3 | 2026-02-03 |
@@ -30,6 +29,7 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 | ID | Title | Priority | Resolved |
 |----|-------|----------|----------|
+| [DEBT-083](../_archive/debt/debt-083-unused-attempt-repository-find-by-user-id.md) | AttemptRepository.findByUserId() Needs Pagination | P2 | 2026-02-03 |
 | [DEBT-082](../_archive/debt/debt-082-test-logs-too-noisy.md) | Unit Tests Emit Noisy Error Logs | P3 | 2026-02-03 |
 | [DEBT-081](../_archive/debt/debt-081-nextjs-alloweddevorigins-warning.md) | Next.js allowedDevOrigins Warning in E2E Runs | P3 | 2026-02-03 |
 | [DEBT-080](../_archive/debt/debt-080-missing-e2e-coverage-core-pages.md) | Missing E2E Coverage for Core App Pages | P1 | 2026-02-03 |

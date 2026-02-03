@@ -59,7 +59,10 @@ export type MissedQuestionAttempt = {
 export interface AttemptRepository {
   insert(input: AttemptInsertInput): Promise<Attempt>;
 
-  findByUserId(userId: string): Promise<readonly Attempt[]>;
+  findByUserId(
+    userId: string,
+    page: { limit: number; offset: number },
+  ): Promise<readonly Attempt[]>;
   findBySessionId(
     sessionId: string,
     userId: string,

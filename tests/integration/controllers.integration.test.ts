@@ -296,7 +296,10 @@ describe('question controllers (integration)', () => {
       },
     });
 
-    const inserted = await attempts.findByUserId(user.id);
+    const inserted = await attempts.findByUserId(user.id, {
+      limit: 10,
+      offset: 0,
+    });
     expect(inserted).toHaveLength(1);
     expect(inserted[0]).toMatchObject({
       userId: user.id,
