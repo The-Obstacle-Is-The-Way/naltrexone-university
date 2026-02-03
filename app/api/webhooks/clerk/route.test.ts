@@ -11,6 +11,10 @@ import type {
   StripeCustomerRepository,
   UserRepository,
 } from '@/src/application/ports/repositories';
+import {
+  FakeStripeCustomerRepository,
+  FakeUserRepository,
+} from '@/src/application/test-helpers/fakes';
 
 function createTestDeps() {
   const loggerError = vi.fn();
@@ -23,43 +27,8 @@ function createTestDeps() {
   }));
   const rateLimiter: RateLimiter & { limit: typeof limit } = { limit };
 
-  const findByClerkId = vi.fn<UserRepository['findByClerkId']>(
-    async (_clerkId) => null,
-  );
-  const upsertByClerkId = vi.fn<UserRepository['upsertByClerkId']>(
-    async (_clerkId, _email) => ({
-      id: 'user_1',
-      email: 'user@example.com',
-      createdAt: new Date('2026-02-01T00:00:00Z'),
-      updatedAt: new Date('2026-02-01T00:00:00Z'),
-    }),
-  );
-  const deleteByClerkId = vi.fn<UserRepository['deleteByClerkId']>(
-    async (_clerkId) => false,
-  );
-  const userRepository: UserRepository & {
-    findByClerkId: typeof findByClerkId;
-    upsertByClerkId: typeof upsertByClerkId;
-    deleteByClerkId: typeof deleteByClerkId;
-  } = {
-    findByClerkId,
-    upsertByClerkId,
-    deleteByClerkId,
-  };
-
-  const findByUserId = vi.fn<StripeCustomerRepository['findByUserId']>(
-    async (_userId) => null,
-  );
-  const insert = vi.fn<StripeCustomerRepository['insert']>(
-    async (_userId, _stripeCustomerId) => undefined,
-  );
-  const stripeCustomerRepository: StripeCustomerRepository & {
-    findByUserId: typeof findByUserId;
-    insert: typeof insert;
-  } = {
-    findByUserId,
-    insert,
-  };
+  const userRepository = new FakeUserRepository();
+  const stripeCustomerRepository = new FakeStripeCustomerRepository();
 
   const createUserRepository = vi.fn<() => UserRepository>(
     () => userRepository,

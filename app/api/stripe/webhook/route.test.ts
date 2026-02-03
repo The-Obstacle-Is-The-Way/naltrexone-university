@@ -199,7 +199,6 @@ describe('POST /api/stripe/webhook', () => {
 
   it('returns 500 when processing fails unexpectedly', async () => {
     const { POST, loggerError, processStripeWebhook } = createTestDeps();
-    loggerError.mockClear();
     processStripeWebhook.mockRejectedValue(new Error('boom'));
 
     const res = await POST(
