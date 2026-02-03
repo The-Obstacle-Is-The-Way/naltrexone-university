@@ -99,17 +99,34 @@ Create a `createAction` utility:
 
 ```typescript
 // src/adapters/controllers/create-action.ts
-export function createAction<TInput, TOutput, TDeps>(config: {
+import type { LoadContainerFn } from '@/lib/controller-helpers';
+import type { ActionResult } from '@/src/adapters/controllers/action-result';
+import { handleError, ok } from '@/src/adapters/controllers/action-result';
+
+export type ServerAction<TOutput, TDeps, TContainer> = (
+  input: unknown,
+  deps?: TDeps,
+  options?: { loadContainer?: LoadContainerFn<TContainer> },
+) => Promise<ActionResult<TOutput>>;
+
+export function createAction<TInput, TOutput, TDeps, TContainer>(config: {
   schema: z.ZodSchema<TInput>;
-  getDeps: (options?: LoadOptions) => Promise<TDeps>;
+  getDeps: (
+    deps?: TDeps,
+    options?: { loadContainer?: LoadContainerFn<TContainer> },
+  ) => Promise<TDeps>;
   execute: (input: TInput, deps: TDeps) => Promise<TOutput>;
-}): ServerAction<TInput, TOutput> {
-  return async (input, deps?, options?) => {
+}): ServerAction<TOutput, TDeps, TContainer> {
+  return async (
+    input: unknown,
+    deps?: TDeps,
+    options?: { loadContainer?: LoadContainerFn<TContainer> },
+  ) => {
     const parsed = config.schema.safeParse(input);
     if (!parsed.success) return handleError(parsed.error);
 
     try {
-      const d = deps ?? await config.getDeps(options);
+      const d = await config.getDeps(deps, options);
       const result = await config.execute(parsed.data, d);
       return ok(result);
     } catch (error) {
@@ -121,7 +138,7 @@ export function createAction<TInput, TOutput, TDeps>(config: {
 // Usage in controller:
 export const getNextQuestion = createAction({
   schema: GetNextQuestionInput,
-  getDeps: (opts) => getDeps(undefined, opts),
+  getDeps: getDeps,
   execute: async (input, deps) => {
     // Pure business logic here
   },

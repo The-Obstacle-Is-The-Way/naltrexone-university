@@ -78,11 +78,15 @@ async findByUserId(
   userId: string,
   options: { limit: number; offset: number }
 ): Promise<readonly Attempt[]> {
+  const limit = Math.max(0, Math.floor(options.limit));
+  const offset = Math.max(0, Math.floor(options.offset));
+  if (limit === 0) return [];
+
   const rows = await this.db.query.attempts.findMany({
     where: eq(attempts.userId, userId),
     orderBy: desc(attempts.answeredAt),
-    limit: options.limit,
-    offset: options.offset,
+    limit,
+    offset,
   });
   return rows.map((row) => ({
     id: row.id,
@@ -104,11 +108,15 @@ async findByUserId(
   userId: string,
   options: { limit: number; offset: number }
 ): Promise<readonly Attempt[]> {
+  const limit = Math.max(0, Math.floor(options.limit));
+  const offset = Math.max(0, Math.floor(options.offset));
+  if (limit === 0) return [];
+
   const userAttempts = this.attempts
     .filter((a) => a.userId === userId)
     .sort((a, b) => b.answeredAt.getTime() - a.answeredAt.getTime());
 
-  return userAttempts.slice(options.offset, options.offset + options.limit);
+  return userAttempts.slice(offset, offset + limit);
 }
 ```
 

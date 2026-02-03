@@ -128,7 +128,7 @@ This provides:
 
 ## Example UI Treatment
 
-```
+```text
 Your Bookmarks
 ─────────────
 ✓ Question about naltrexone dosing

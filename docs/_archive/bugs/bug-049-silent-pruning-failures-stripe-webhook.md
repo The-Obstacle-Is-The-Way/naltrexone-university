@@ -68,7 +68,7 @@ try {
 } catch (error) {
   // Best-effort cleanup: do not fail webhook processing if pruning fails.
   // Log warning so operators can detect persistent pruning failures.
-  deps.logger?.warn(
+  deps.logger.warn(
     {
       eventId: event.eventId,
       error: error instanceof Error ? error.message : String(error),
@@ -81,9 +81,9 @@ try {
 ```
 
 **Requirements:**
-1. Add optional `logger` to `StripeWebhookDeps` type
-2. Inject logger from container
-3. Log warning with error context
+1. Ensure `StripeWebhookDeps` includes a non-optional `logger`
+2. Inject logger from the DI container
+3. Log a warning with error context
 
 ## Verification
 

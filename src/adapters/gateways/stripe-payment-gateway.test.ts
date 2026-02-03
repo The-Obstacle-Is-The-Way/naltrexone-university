@@ -2,8 +2,9 @@ import { describe, expect, it, vi } from 'vitest';
 import { loadJsonFixture } from '@/tests/shared/load-json-fixture';
 import { StripePaymentGateway } from './stripe-payment-gateway';
 
-function createTestLogger() {
-  return { error: vi.fn(), warn: vi.fn() };
+class FakeLogger {
+  readonly error = vi.fn();
+  readonly warn = vi.fn();
 }
 
 describe('StripePaymentGateway', () => {
@@ -45,7 +46,7 @@ describe('StripePaymentGateway', () => {
       stripe,
       webhookSecret: 'whsec_1',
       priceIds: { monthly: 'price_m', annual: 'price_a' },
-      logger: createTestLogger(),
+      logger: new FakeLogger(),
     });
 
     await expect(
@@ -106,7 +107,7 @@ describe('StripePaymentGateway', () => {
       stripe,
       webhookSecret: 'whsec_1',
       priceIds: { monthly: 'price_m', annual: 'price_a' },
-      logger: { error: vi.fn(), warn: vi.fn() },
+      logger: new FakeLogger(),
     });
 
     await expect(
@@ -158,7 +159,7 @@ describe('StripePaymentGateway', () => {
       stripe,
       webhookSecret: 'whsec_1',
       priceIds: { monthly: 'price_m', annual: 'price_a' },
-      logger: createTestLogger(),
+      logger: new FakeLogger(),
     });
 
     await expect(
@@ -210,7 +211,7 @@ describe('StripePaymentGateway', () => {
       stripe,
       webhookSecret: 'whsec_1',
       priceIds: { monthly: 'price_m', annual: 'price_a' },
-      logger: createTestLogger(),
+      logger: new FakeLogger(),
     });
 
     await expect(
@@ -286,7 +287,7 @@ describe('StripePaymentGateway', () => {
       stripe,
       webhookSecret: 'whsec_1',
       priceIds: { monthly: 'price_m', annual: 'price_a' },
-      logger: createTestLogger(),
+      logger: new FakeLogger(),
     });
 
     await expect(
@@ -357,7 +358,7 @@ describe('StripePaymentGateway', () => {
       stripe,
       webhookSecret: 'whsec_1',
       priceIds: { monthly: 'price_m', annual: 'price_a' },
-      logger: createTestLogger(),
+      logger: new FakeLogger(),
     });
 
     await expect(
@@ -398,7 +399,7 @@ describe('StripePaymentGateway', () => {
       id: 'cs_new',
       url: 'https://stripe/new-checkout',
     }));
-    const logger = createTestLogger();
+    const logger = new FakeLogger();
 
     const stripe = {
       customers: {
@@ -491,7 +492,7 @@ describe('StripePaymentGateway', () => {
       stripe,
       webhookSecret: 'whsec_1',
       priceIds: { monthly: 'price_m', annual: 'price_a' },
-      logger: createTestLogger(),
+      logger: new FakeLogger(),
     });
 
     await expect(
@@ -541,7 +542,7 @@ describe('StripePaymentGateway', () => {
       stripe,
       webhookSecret: 'whsec_1',
       priceIds: { monthly: 'price_m', annual: 'price_a' },
-      logger: createTestLogger(),
+      logger: new FakeLogger(),
     });
 
     await expect(
@@ -595,7 +596,7 @@ describe('StripePaymentGateway', () => {
       stripe,
       webhookSecret: 'whsec_1',
       priceIds: { monthly: 'price_m', annual: 'price_a' },
-      logger: createTestLogger(),
+      logger: new FakeLogger(),
     });
 
     await expect(
@@ -672,7 +673,7 @@ describe('StripePaymentGateway', () => {
       stripe,
       webhookSecret: 'whsec_1',
       priceIds: { monthly: 'price_m', annual: 'price_a' },
-      logger: createTestLogger(),
+      logger: new FakeLogger(),
     });
 
     await expect(
@@ -735,7 +736,7 @@ describe('StripePaymentGateway', () => {
       stripe,
       webhookSecret: 'whsec_1',
       priceIds: { monthly: 'price_m', annual: 'price_a' },
-      logger: createTestLogger(),
+      logger: new FakeLogger(),
     });
 
     await expect(
@@ -781,7 +782,7 @@ describe('StripePaymentGateway', () => {
       stripe,
       webhookSecret: 'whsec_1',
       priceIds: { monthly: 'price_m', annual: 'price_a' },
-      logger: createTestLogger(),
+      logger: new FakeLogger(),
     });
 
     await expect(
@@ -839,7 +840,7 @@ describe('StripePaymentGateway', () => {
       stripe,
       webhookSecret: 'whsec_1',
       priceIds: { monthly: 'price_m', annual: 'price_a' },
-      logger: createTestLogger(),
+      logger: new FakeLogger(),
     });
 
     await expect(
@@ -899,7 +900,7 @@ describe('StripePaymentGateway', () => {
       stripe,
       webhookSecret: 'whsec_1',
       priceIds: { monthly: 'price_m', annual: 'price_a' },
-      logger: createTestLogger(),
+      logger: new FakeLogger(),
     });
 
     await expect(
@@ -959,7 +960,7 @@ describe('StripePaymentGateway', () => {
       stripe,
       webhookSecret: 'whsec_1',
       priceIds: { monthly: 'price_m', annual: 'price_a' },
-      logger: createTestLogger(),
+      logger: new FakeLogger(),
     });
 
     await expect(
@@ -1018,7 +1019,7 @@ describe('StripePaymentGateway', () => {
       stripe,
       webhookSecret: 'whsec_1',
       priceIds: { monthly: 'price_m', annual: 'price_a' },
-      logger: createTestLogger(),
+      logger: new FakeLogger(),
     });
 
     await expect(
@@ -1067,7 +1068,7 @@ describe('StripePaymentGateway', () => {
       stripe,
       webhookSecret: 'whsec_1',
       priceIds: { monthly: 'price_m', annual: 'price_a' },
-      logger: createTestLogger(),
+      logger: new FakeLogger(),
     });
 
     await expect(
@@ -1190,7 +1191,7 @@ describe('StripePaymentGateway', () => {
       stripe,
       webhookSecret: 'whsec_1',
       priceIds: { monthly: 'price_m', annual: 'price_a' },
-      logger: createTestLogger(),
+      logger: new FakeLogger(),
     });
 
     await expect(
@@ -1317,7 +1318,7 @@ describe('StripePaymentGateway', () => {
       stripe,
       webhookSecret: 'whsec_1',
       priceIds: { monthly: 'price_m', annual: 'price_a' },
-      logger: createTestLogger(),
+      logger: new FakeLogger(),
     });
 
     await expect(

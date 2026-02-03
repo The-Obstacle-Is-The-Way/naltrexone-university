@@ -242,6 +242,30 @@ describe('DrizzleAttemptRepository', () => {
       );
     });
 
+    it('returns empty array without hitting the database when limit is <= 0', async () => {
+      const db = createDbMock();
+      db._mocks.queryFindMany.mockResolvedValue([]);
+      const repo = new DrizzleAttemptRepository(db as unknown as RepoDb);
+
+      await expect(
+        repo.findByUserId('user_1', { limit: 0, offset: 0 }),
+      ).resolves.toEqual([]);
+
+      expect(db._mocks.queryFindMany).not.toHaveBeenCalled();
+    });
+
+    it('clamps negative offsets to 0', async () => {
+      const db = createDbMock();
+      db._mocks.queryFindMany.mockResolvedValue([]);
+      const repo = new DrizzleAttemptRepository(db as unknown as RepoDb);
+
+      await repo.findByUserId('user_1', { limit: 10, offset: -5 });
+
+      expect(db._mocks.queryFindMany).toHaveBeenCalledWith(
+        expect.objectContaining({ limit: 10, offset: 0 }),
+      );
+    });
+
     it('throws INTERNAL_ERROR when selectedChoiceId is missing', async () => {
       const db = createDbMock();
       db._mocks.queryFindMany.mockResolvedValue([

@@ -88,7 +88,18 @@ export const apiRateLimiter = new Ratelimit({
 
 ## MVP Implementation
 
-For MVP, we do **nothing custom** - just document what's already protected:
+For MVP, we ship a Postgres-backed sliding-window rate limiter via
+`src/adapters/gateways/drizzle-rate-limiter.ts` and apply it to:
+
+1. Checkout session creation (`billing-controller.ts`)
+2. Practice session start (`practice-controller.ts`)
+3. Answer submission (`question-controller.ts`)
+
+### Historical Note (Pre-Implementation)
+
+Before the Postgres-backed limiter existed, the MVP plan was to rely only on
+upstream protections (Clerk/Stripe/Vercel). That plan is now superseded, but is
+kept here for context:
 
 ### Already Protected
 

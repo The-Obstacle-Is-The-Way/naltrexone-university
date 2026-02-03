@@ -5,6 +5,7 @@ import type {
   AttemptMostRecentAnsweredAt,
   AttemptRepository,
   MissedQuestionAttempt,
+  PageOptions,
 } from '@/src/application/ports/repositories';
 import type { Attempt } from '@/src/domain/entities';
 import type { DrizzleDb } from '../shared/database-types';
@@ -65,12 +66,23 @@ export class DrizzleAttemptRepository implements AttemptRepository {
     };
   }
 
-  async findByUserId(userId: string, page: { limit: number; offset: number }) {
+  async findByUserId(
+    userId: string,
+    page: PageOptions,
+  ): Promise<readonly Attempt[]> {
+    const limit = Number.isFinite(page.limit) ? Math.floor(page.limit) : 0;
+    const offset = Number.isFinite(page.offset) ? Math.floor(page.offset) : 0;
+
+    const safeLimit = Math.max(0, limit);
+    if (safeLimit === 0) return [];
+
+    const safeOffset = Math.max(0, offset);
+
     const rows = await this.db.query.attempts.findMany({
       where: eq(attempts.userId, userId),
       orderBy: desc(attempts.answeredAt),
-      limit: page.limit,
-      offset: page.offset,
+      limit: safeLimit,
+      offset: safeOffset,
     });
 
     return rows.map((row) => {

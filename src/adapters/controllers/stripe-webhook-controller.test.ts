@@ -7,6 +7,12 @@ import {
   FakeSubscriptionRepository,
 } from '@/src/application/test-helpers/fakes';
 
+class FailingStripeEventRepository extends FakeStripeEventRepository {
+  async pruneProcessedBefore(_cutoff: Date, _limit: number): Promise<number> {
+    throw new Error('boom');
+  }
+}
+
 describe('processStripeWebhook', () => {
   it('claims, processes, and marks subscription events idempotently', async () => {
     const paymentGateway = new FakePaymentGateway({
@@ -155,15 +161,6 @@ describe('processStripeWebhook', () => {
       },
     });
 
-    class FailingStripeEventRepository extends FakeStripeEventRepository {
-      async pruneProcessedBefore(
-        _cutoff: Date,
-        _limit: number,
-      ): Promise<number> {
-        throw new Error('boom');
-      }
-    }
-
     const stripeEvents = new FailingStripeEventRepository();
     const subscriptions = new FakeSubscriptionRepository();
     const stripeCustomers = new FakeStripeCustomerRepository();
@@ -202,15 +199,6 @@ describe('processStripeWebhook', () => {
         type: 'checkout.session.completed',
       },
     });
-
-    class FailingStripeEventRepository extends FakeStripeEventRepository {
-      async pruneProcessedBefore(
-        _cutoff: Date,
-        _limit: number,
-      ): Promise<number> {
-        throw new Error('boom');
-      }
-    }
 
     const stripeEvents = new FailingStripeEventRepository();
     const subscriptions = new FakeSubscriptionRepository();
