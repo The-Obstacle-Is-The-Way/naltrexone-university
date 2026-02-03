@@ -1,5 +1,5 @@
-import Link from 'next/link';
 import { redirect } from 'next/navigation';
+import { AppShell } from '@/components/app-shell/app-shell';
 import { AuthNav } from '@/components/auth-nav';
 import { MobileNav } from '@/components/mobile-nav';
 import type { AuthGateway } from '@/src/application/ports/gateways';
@@ -57,59 +57,9 @@ export function AppLayoutShell({
   authNav,
 }: AppLayoutShellProps) {
   return (
-    <div className="min-h-screen bg-muted">
-      <header className="relative border-b border-border bg-background">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
-          <div className="flex items-center gap-6">
-            <Link
-              href="/app/dashboard"
-              className="rounded-md text-sm font-semibold text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-            >
-              Addiction Boards
-            </Link>
-            <nav className="hidden items-center gap-4 text-sm sm:flex">
-              <Link
-                href="/app/dashboard"
-                className="rounded-md text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-              >
-                Dashboard
-              </Link>
-              <Link
-                href="/app/practice"
-                className="rounded-md text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-              >
-                Practice
-              </Link>
-              <Link
-                href="/app/review"
-                className="rounded-md text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-              >
-                Review
-              </Link>
-              <Link
-                href="/app/bookmarks"
-                className="rounded-md text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-              >
-                Bookmarks
-              </Link>
-              <Link
-                href="/app/billing"
-                className="rounded-md text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-              >
-                Billing
-              </Link>
-            </nav>
-          </div>
-          <div className="flex items-center gap-2">
-            {mobileNav}
-            {authNav}
-          </div>
-        </div>
-      </header>
-      <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        {children}
-      </main>
-    </div>
+    <AppShell authNav={authNav} mobileNav={mobileNav}>
+      {children}
+    </AppShell>
   );
 }
 

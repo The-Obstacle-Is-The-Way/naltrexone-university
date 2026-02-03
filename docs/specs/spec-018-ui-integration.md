@@ -4,7 +4,7 @@
 > Write tests FIRST. Red → Green → Refactor. No implementation without a failing test.
 > Principles: SOLID, DRY, Clean Code, Gang of Four patterns where appropriate.
 
-**Status:** Proposed
+**Status:** Implemented
 **Layer:** Feature
 **Date:** 2026-02-03
 
@@ -19,6 +19,10 @@ This spec is intentionally UI-focused and should not require changes to:
 - `src/domain/**`
 - `src/application/**`
 - `src/adapters/**` (except adding new controllers where UI needs new reads/writes)
+
+> **Note (CodeRabbit limit):** CodeRabbit skips automated review when a PR changes too many files.
+> Net-changes must stay under the tool’s limit (150 files) to get review coverage.
+> This spec includes a cleanup phase to remove template folders once extraction is complete.
 
 ---
 
@@ -57,11 +61,12 @@ This spec is intentionally UI-focused and should not require changes to:
 
 ## Current State (What’s in the Repo Today)
 
-- `components/kokonutui/**` is a dashboard UI template (not wired into routes).
-- `components/premium-landing-page/**` is a standalone template app (not wired into routes).
-- To prevent shipping unused CSS / toolchain conflicts:
-  - `components/premium-landing-page/**` is excluded from the root TS project (`tsconfig.json`).
-  - Both template folders are excluded from Tailwind content scanning (`tailwind.config.js`).
+- Marketing UI is implemented in `components/marketing/**` and wired into `app/page.tsx`.
+- App shell UI is implemented in `components/app-shell/**` and wired into `app/(app)/app/layout.tsx`.
+- Template source folders and artifacts are removed after extraction to:
+  - keep the repository clean and reviewable
+  - avoid shipping unused code and assets
+  - reduce Tailwind and TypeScript configuration workarounds
 
 ---
 
@@ -114,7 +119,19 @@ This spec is intentionally UI-focused and should not require changes to:
    - Tailwind tokens (shadcn-style CSS variables in `app/globals.css`)
    - `components/ui/**` primitives
    - routing conventions under `app/`
-3. Replace routes/layouts incrementally behind a feature flag if needed.
+3. Replace routes/layouts incrementally behind a feature flag if needed (default: direct replacement in this PR).
+
+### Theme Strategy (Avoid Flash + Keep User Preference)
+
+If the integrated UI exposes theme switching (via `next-themes`):
+
+- Root layout must include the repo’s `ThemeProvider` with `attribute="class"`.
+- The “beforeInteractive” theme script must:
+  - Prefer persisted user choice from `localStorage` (`light`/`dark`/`system`)
+  - Fall back to system preference when `system`
+  - Avoid overriding the user’s selected theme after hydration
+
+This prevents “dark-mode flash” while keeping `ThemeToggle` reliable.
 
 ---
 
@@ -123,23 +140,12 @@ This spec is intentionally UI-focused and should not require changes to:
 ### Marketing
 
 - `components/marketing/**`
-  - `components/marketing/hero-section.tsx`
-  - `components/marketing/features-section.tsx`
-  - `components/marketing/testimonials-section.tsx`
-  - `components/marketing/pricing-section.tsx`
-  - `components/marketing/footer.tsx`
+  - `components/marketing/marketing-home.tsx`
 
 ### App Shell
 
 - `components/app-shell/**`
-  - `components/app-shell/app-shell.tsx` (layout wrapper)
-  - `components/app-shell/sidebar.tsx` (nav)
-  - `components/app-shell/top-nav.tsx`
-
-### Keep Templates as Reference
-
-- Keep `components/premium-landing-page/**` and `components/kokonutui/**` as reference until extraction is complete.
-- When extracted components replace them, decide whether to delete/archive templates in a dedicated cleanup PR.
+  - `components/app-shell/app-shell.tsx`
 
 ---
 
@@ -164,35 +170,34 @@ App Router pages and layouts are responsible for wiring dependencies via `lib/co
 
 ## Migration Plan (Ordered, TDD)
 
-### Phase 0 — Baseline Safety (This PR Set)
+### Phase 0 — Baseline Safety
 
-- Ensure templates compile in isolation and do not break build/test/lint.
-- Ensure a11y basics: focus-visible styles and aria labeling where present.
+- Ensure extracted components compile and do not break build/test/lint.
+- Ensure a11y basics: focus-visible styles and accessible naming.
 
-### Phase 1 — Extract Marketing Sections
+### Phase 1 — Integrate Marketing Home
 
-1. Add tests for each extracted section component (`renderToStaticMarkup`).
-2. Create `components/marketing/**` by porting template sections and:
-   - Replacing template-local imports (`@/components/...`) with main-app paths.
-   - Replacing missing primitives with existing `components/ui/**` or adding new shadcn primitives as needed.
-3. Replace `app/page.tsx` to use extracted sections.
-4. Keep `AuthNav` + `GetStartedCta` as the CTA/auth SSOT.
+1. Add static render tests for `components/marketing/marketing-home.tsx`.
+2. Implement `MarketingHomeShell` (synchronous) + `renderMarketingHome` (async wiring).
+3. Replace `app/page.tsx` to call `renderMarketingHome()`.
+4. Keep `AuthNav` + `GetStartedCta` as the auth/CTA SSOT.
 
-### Phase 2 — Extract App Shell (Dashboard UI)
+### Phase 2 — Integrate App Shell (Dashboard UI)
 
-1. Add tests for extracted shell components (static render).
-2. Create `components/app-shell/**` from kokonutui:
-   - Sidebar must map to the app IA routes.
-   - Top nav should be data-driven (props for breadcrumbs, avatar, etc.).
-3. Update `app/(app)/app/layout.tsx`:
-   - Preserve `enforceEntitledAppUser()` behavior.
-   - Swap the header/nav UI for the new app shell wrapper.
+1. Add static render tests for `components/app-shell/app-shell.tsx`.
+2. Implement `AppShell` with a sidebar that maps to the app IA routes.
+3. Update `app/(app)/app/layout.tsx` to wrap children with `AppShell` while preserving `enforceEntitledAppUser()`.
 
-### Phase 3 — Remove Tailwind Exclusions (Only When Wired)
+### Phase 3 — Remove Template Workarounds
 
-1. When extracted components are used in `app/`, Tailwind will pick up their classes automatically.
-2. Keep template folders excluded until they are no longer referenced.
-3. If you decide to keep templates permanently as reference, keep them excluded to avoid CSS bloat.
+1. Delete template folders and artifacts once extraction is complete.
+2. Remove any `tailwind.config.js` and `tsconfig.json` exclusions that referenced template folders.
+
+### Phase 4 — Reduce PR Surface Area (CodeRabbit Review)
+
+1. Ensure template folders are deleted in the same PR once extraction is complete.
+2. Confirm the PR file count drops below the CodeRabbit review limit.
+3. Trigger CodeRabbit review after the PR is within limits.
 
 ---
 
@@ -226,6 +231,7 @@ For each new component file `X.tsx`:
 - `pnpm lint && pnpm typecheck && pnpm test --run && pnpm build` pass.
 - No new XSS surfaces introduced; external links safe; markdown remains sanitized.
 - Focus-visible and accessible naming requirements met for interactive elements.
+- Template folders are removed and config exclusions cleaned up.
 
 ---
 

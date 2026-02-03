@@ -2,8 +2,6 @@ module.exports = {
   darkMode: ['class'],
   content: [
     './components/**/*.{ts,tsx}',
-    '!./components/kokonutui/**/*',
-    '!./components/premium-landing-page/**/*',
     './app/**/*.{ts,tsx}',
     './src/**/*.{ts,tsx}',
   ],
