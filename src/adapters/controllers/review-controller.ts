@@ -1,7 +1,11 @@
 'use server';
 
 import { z } from 'zod';
-import { createDepsResolver } from '@/lib/controller-helpers';
+import {
+  createDepsResolver,
+  type LoadContainerFn,
+  loadAppContainer,
+} from '@/lib/controller-helpers';
 import type { Logger } from '@/src/adapters/shared/logger';
 import { MAX_PAGINATION_LIMIT } from '@/src/adapters/shared/validation-limits';
 import type { AuthGateway } from '@/src/application/ports/gateways';
@@ -43,19 +47,25 @@ export type ReviewControllerDeps = {
   logger?: Logger;
 };
 
-const getDeps = createDepsResolver((container) =>
-  container.createReviewControllerDeps(),
-);
+type ReviewControllerContainer = {
+  createReviewControllerDeps: () => ReviewControllerDeps;
+};
+
+const getDeps = createDepsResolver<
+  ReviewControllerDeps,
+  ReviewControllerContainer
+>((container) => container.createReviewControllerDeps(), loadAppContainer);
 
 export async function getMissedQuestions(
   input: unknown,
   deps?: ReviewControllerDeps,
+  options?: { loadContainer?: LoadContainerFn<ReviewControllerContainer> },
 ): Promise<ActionResult<GetMissedQuestionsOutput>> {
   const parsed = GetMissedQuestionsInputSchema.safeParse(input);
   if (!parsed.success) return handleError(parsed.error);
 
   try {
-    const d = await getDeps(deps);
+    const d = await getDeps(deps, options);
     const userIdOrError = await requireEntitledUserId(d);
     if (typeof userIdOrError !== 'string') return userIdOrError;
     const userId = userIdOrError;

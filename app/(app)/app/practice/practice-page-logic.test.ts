@@ -477,7 +477,6 @@ describe('practice-page-logic', () => {
         question: createNextQuestion(),
         toggleBookmarkFn: async () => ok({ bookmarked: true }),
         setBookmarkStatus: vi.fn(),
-        setLoadState: vi.fn(),
         setBookmarkedQuestionIds,
         onBookmarkToggled,
       });
@@ -487,7 +486,6 @@ describe('practice-page-logic', () => {
     });
 
     it('sets error state when toggle fails', async () => {
-      const setLoadState = vi.fn();
       const setBookmarkStatus = vi.fn();
       const onBookmarkToggled = vi.fn();
 
@@ -495,13 +493,11 @@ describe('practice-page-logic', () => {
         question: createNextQuestion(),
         toggleBookmarkFn: async () => err('INTERNAL_ERROR', 'Boom'),
         setBookmarkStatus,
-        setLoadState,
         setBookmarkedQuestionIds: vi.fn(),
         onBookmarkToggled,
       });
 
       expect(setBookmarkStatus).toHaveBeenCalledWith('error');
-      expect(setLoadState).not.toHaveBeenCalled();
       expect(onBookmarkToggled).not.toHaveBeenCalled();
     });
 
@@ -521,7 +517,6 @@ describe('practice-page-logic', () => {
         question: createNextQuestion(),
         toggleBookmarkFn: async () => ok({ bookmarked: false }),
         setBookmarkStatus,
-        setLoadState: vi.fn(),
         setBookmarkedQuestionIds,
         onBookmarkToggled,
       });

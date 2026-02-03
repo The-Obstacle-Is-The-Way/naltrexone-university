@@ -1,7 +1,11 @@
 'use server';
 
 import { z } from 'zod';
-import { createDepsResolver } from '@/lib/controller-helpers';
+import {
+  createDepsResolver,
+  type LoadContainerFn,
+  loadAppContainer,
+} from '@/lib/controller-helpers';
 import type { Logger } from '@/src/adapters/shared/logger';
 import type { AuthGateway } from '@/src/application/ports/gateways';
 import type { TagRepository } from '@/src/application/ports/repositories';
@@ -30,19 +34,25 @@ export type TagControllerDeps = {
   logger?: Logger;
 };
 
-const getDeps = createDepsResolver((container) =>
-  container.createTagControllerDeps(),
+type TagControllerContainer = {
+  createTagControllerDeps: () => TagControllerDeps;
+};
+
+const getDeps = createDepsResolver<TagControllerDeps, TagControllerContainer>(
+  (container) => container.createTagControllerDeps(),
+  loadAppContainer,
 );
 
 export async function getTags(
   input: unknown,
   deps?: TagControllerDeps,
+  options?: { loadContainer?: LoadContainerFn<TagControllerContainer> },
 ): Promise<ActionResult<GetTagsOutput>> {
   const parsed = GetTagsInputSchema.safeParse(input);
   if (!parsed.success) return handleError(parsed.error);
 
   try {
-    const d = await getDeps(deps);
+    const d = await getDeps(deps, options);
     const userIdOrError = await requireEntitledUserId(d);
     if (typeof userIdOrError !== 'string') return userIdOrError;
 

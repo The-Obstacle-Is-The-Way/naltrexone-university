@@ -1,14 +1,25 @@
 import type { createContainer } from '@/lib/container';
 
-type Container = ReturnType<typeof createContainer>;
+export type AppContainer = ReturnType<typeof createContainer>;
 
-export function createDepsResolver<TDeps>(
-  resolveFromContainer: (container: Container) => TDeps,
+export type LoadContainerFn<TContainer> = () => Promise<TContainer>;
+
+export async function loadAppContainer(): Promise<AppContainer> {
+  const { createContainer } = await import('@/lib/container');
+  return createContainer();
+}
+
+export function createDepsResolver<TDeps, TContainer>(
+  resolveFromContainer: (container: TContainer) => TDeps,
+  loadContainer: LoadContainerFn<TContainer>,
 ) {
-  return async function getDeps(deps?: TDeps): Promise<TDeps> {
+  return async function getDeps(
+    deps?: TDeps,
+    options?: { loadContainer?: LoadContainerFn<TContainer> },
+  ): Promise<TDeps> {
     if (deps) return deps;
 
-    const { createContainer } = await import('@/lib/container');
-    return resolveFromContainer(createContainer());
+    const container = await (options?.loadContainer ?? loadContainer)();
+    return resolveFromContainer(container);
   };
 }

@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import type { Logger } from '@/src/adapters/shared/logger';
 import {
   FakeAttemptRepository,
@@ -204,19 +204,12 @@ describe('stats-controller', () => {
     });
 
     it('loads dependencies from the container when deps are omitted', async () => {
-      vi.resetModules();
-
       const deps = createDeps({ attempts: [], questions: [] });
-
-      vi.doMock('@/lib/container', () => ({
-        createContainer: () => ({
+      const result = await getUserStats({}, undefined, {
+        loadContainer: async () => ({
           createStatsControllerDeps: () => deps,
         }),
-      }));
-
-      const { getUserStats } = await import('./stats-controller');
-
-      const result = await getUserStats({});
+      });
 
       expect(result).toEqual({
         ok: true,

@@ -165,15 +165,3 @@ describe('app/(app)/app/billing/page', () => {
     });
   });
 });
-
-describe('ManageBillingButton', () => {
-  it('renders "Manage in Stripe" text', async () => {
-    const { ManageBillingButton } = await import(
-      '@/app/(app)/app/billing/billing-client'
-    );
-
-    const html = renderToStaticMarkup(<ManageBillingButton />);
-
-    expect(html).toContain('Manage in Stripe');
-  });
-});

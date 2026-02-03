@@ -189,95 +189,128 @@ describe('app/pricing', () => {
   it('runSubscribeAction redirects to checkout url on success', async () => {
     const { runSubscribeAction } = await import('./page');
 
-    const createCheckoutSessionFn = vi.fn(async () => ({
-      ok: true,
-      data: { url: 'https://stripe.test/checkout' },
-    }));
+    type CreateCheckoutSessionFn = Parameters<
+      typeof runSubscribeAction
+    >[1]['createCheckoutSessionFn'];
 
-    const redirectFn = vi.fn((url: string) => {
+    const createCheckoutSessionFn = vi.fn<CreateCheckoutSessionFn>(
+      async () => ({
+        ok: true,
+        data: { url: 'https://stripe.test/checkout' },
+      }),
+    );
+
+    const redirectFn = (url: string): never => {
       throw new Error(url);
-    }) as unknown as (url: string) => never;
+    };
 
     const action = async () =>
       runSubscribeAction(
         { plan: 'monthly' },
         {
-          createCheckoutSessionFn: createCheckoutSessionFn as never,
+          createCheckoutSessionFn,
           redirectFn,
         },
       );
 
     await expect(action()).rejects.toThrow('https://stripe.test/checkout');
-    expect(createCheckoutSessionFn).toHaveBeenCalledWith({ plan: 'monthly' });
+    expect(createCheckoutSessionFn).toHaveBeenCalledWith({
+      plan: 'monthly',
+      idempotencyKey: undefined,
+    });
   });
 
   it('runSubscribeAction redirects to /sign-up when unauthenticated', async () => {
     const { runSubscribeAction } = await import('./page');
 
-    const createCheckoutSessionFn = vi.fn(async () => ({
-      ok: false,
-      error: { code: 'UNAUTHENTICATED', message: 'No session' },
-    }));
+    type CreateCheckoutSessionFn = Parameters<
+      typeof runSubscribeAction
+    >[1]['createCheckoutSessionFn'];
 
-    const redirectFn = vi.fn((url: string) => {
+    const createCheckoutSessionFn = vi.fn<CreateCheckoutSessionFn>(
+      async () => ({
+        ok: false,
+        error: { code: 'UNAUTHENTICATED', message: 'No session' },
+      }),
+    );
+
+    const redirectFn = (url: string): never => {
       throw new Error(url);
-    }) as unknown as (url: string) => never;
+    };
 
     const action = async () =>
       runSubscribeAction(
         { plan: 'annual' },
         {
-          createCheckoutSessionFn: createCheckoutSessionFn as never,
+          createCheckoutSessionFn,
           redirectFn,
         },
       );
 
     await expect(action()).rejects.toThrow('/sign-up');
-    expect(createCheckoutSessionFn).toHaveBeenCalledWith({ plan: 'annual' });
+    expect(createCheckoutSessionFn).toHaveBeenCalledWith({
+      plan: 'annual',
+      idempotencyKey: undefined,
+    });
   });
 
   it('runSubscribeAction redirects to /app/billing when already subscribed', async () => {
     const { runSubscribeAction } = await import('./page');
 
-    const createCheckoutSessionFn = vi.fn(async () => ({
-      ok: false,
-      error: { code: 'ALREADY_SUBSCRIBED', message: 'Already subscribed' },
-    }));
+    type CreateCheckoutSessionFn = Parameters<
+      typeof runSubscribeAction
+    >[1]['createCheckoutSessionFn'];
 
-    const redirectFn = vi.fn((url: string) => {
+    const createCheckoutSessionFn = vi.fn<CreateCheckoutSessionFn>(
+      async () => ({
+        ok: false,
+        error: { code: 'ALREADY_SUBSCRIBED', message: 'Already subscribed' },
+      }),
+    );
+
+    const redirectFn = (url: string): never => {
       throw new Error(url);
-    }) as unknown as (url: string) => never;
+    };
 
     const action = async () =>
       runSubscribeAction(
         { plan: 'monthly' },
         {
-          createCheckoutSessionFn: createCheckoutSessionFn as never,
+          createCheckoutSessionFn,
           redirectFn,
         },
       );
 
     await expect(action()).rejects.toThrow('/app/billing');
-    expect(createCheckoutSessionFn).toHaveBeenCalledWith({ plan: 'monthly' });
+    expect(createCheckoutSessionFn).toHaveBeenCalledWith({
+      plan: 'monthly',
+      idempotencyKey: undefined,
+    });
   });
 
   it('runSubscribeAction redirects to /pricing?checkout=error for other errors', async () => {
     const { runSubscribeAction } = await import('./page');
 
-    const createCheckoutSessionFn = vi.fn(async () => ({
-      ok: false,
-      error: { code: 'INTERNAL_ERROR', message: 'Internal error' },
-    }));
+    type CreateCheckoutSessionFn = Parameters<
+      typeof runSubscribeAction
+    >[1]['createCheckoutSessionFn'];
 
-    const redirectFn = vi.fn((url: string) => {
+    const createCheckoutSessionFn = vi.fn<CreateCheckoutSessionFn>(
+      async () => ({
+        ok: false,
+        error: { code: 'INTERNAL_ERROR', message: 'Internal error' },
+      }),
+    );
+
+    const redirectFn = (url: string): never => {
       throw new Error(url);
-    }) as unknown as (url: string) => never;
+    };
 
     const action = async () =>
       runSubscribeAction(
         { plan: 'monthly' },
         {
-          createCheckoutSessionFn: createCheckoutSessionFn as never,
+          createCheckoutSessionFn,
           redirectFn,
         },
       );
@@ -285,7 +318,10 @@ describe('app/pricing', () => {
     await expect(action()).rejects.toThrow(
       '/pricing?checkout=error&plan=monthly&error_code=INTERNAL_ERROR',
     );
-    expect(createCheckoutSessionFn).toHaveBeenCalledWith({ plan: 'monthly' });
+    expect(createCheckoutSessionFn).toHaveBeenCalledWith({
+      plan: 'monthly',
+      idempotencyKey: undefined,
+    });
   });
 
   it('renders dismiss link when banner is present', async () => {
@@ -334,24 +370,23 @@ describe('app/pricing', () => {
     expect(html).not.toContain('aria-label="Dismiss"');
   });
 
-  it('renders PricingPage with container-provided dependencies', async () => {
-    vi.doMock('@/lib/container', () => ({
-      createContainer: () => ({
-        createAuthGateway: () => ({
+  it('renders PricingPage when deps are injected', async () => {
+    const PricingPage = (await import('./page')).default;
+
+    const element = await PricingPage({
+      searchParams: Promise.resolve({}),
+      deps: {
+        authGateway: {
           getCurrentUser: async () => null,
           requireUser: async () => {
             throw new Error('not used');
           },
-        }),
-        createCheckEntitlementUseCase: () => ({
+        },
+        checkEntitlementUseCase: {
           execute: async () => ({ isEntitled: false }),
-        }),
-      }),
-    }));
-
-    const PricingPage = (await import('./page')).default;
-
-    const element = await PricingPage({ searchParams: Promise.resolve({}) });
+        },
+      },
+    });
     const html = renderToStaticMarkup(element);
 
     expect(html).toContain('Pricing');

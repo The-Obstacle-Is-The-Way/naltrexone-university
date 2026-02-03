@@ -1,7 +1,11 @@
 'use server';
 
 import { z } from 'zod';
-import { createDepsResolver } from '@/lib/controller-helpers';
+import {
+  createDepsResolver,
+  type LoadContainerFn,
+  loadAppContainer,
+} from '@/lib/controller-helpers';
 import type { AuthGateway } from '@/src/application/ports/gateways';
 import type { QuestionRepository } from '@/src/application/ports/repositories';
 import type { ActionResult } from './action-result';
@@ -35,19 +39,30 @@ export type QuestionViewControllerDeps = {
   questionRepository: QuestionRepository;
 };
 
-const getDeps = createDepsResolver((container) =>
-  container.createQuestionViewControllerDeps(),
+type QuestionViewControllerContainer = {
+  createQuestionViewControllerDeps: () => QuestionViewControllerDeps;
+};
+
+const getDeps = createDepsResolver<
+  QuestionViewControllerDeps,
+  QuestionViewControllerContainer
+>(
+  (container) => container.createQuestionViewControllerDeps(),
+  loadAppContainer,
 );
 
 export async function getQuestionBySlug(
   input: unknown,
   deps?: QuestionViewControllerDeps,
+  options?: {
+    loadContainer?: LoadContainerFn<QuestionViewControllerContainer>;
+  },
 ): Promise<ActionResult<GetQuestionBySlugOutput>> {
   const parsed = GetQuestionBySlugInputSchema.safeParse(input);
   if (!parsed.success) return handleError(parsed.error);
 
   try {
-    const d = await getDeps(deps);
+    const d = await getDeps(deps, options);
     const userIdOrError = await requireEntitledUserId(d);
     if (typeof userIdOrError !== 'string') return userIdOrError;
 

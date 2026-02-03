@@ -262,7 +262,6 @@ export default function PracticeSessionPage({
         question,
         toggleBookmarkFn: toggleBookmark,
         setBookmarkStatus,
-        setLoadState,
         setBookmarkedQuestionIds,
         onBookmarkToggled: (bookmarked: boolean) => {
           setBookmarkMessage(

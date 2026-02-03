@@ -115,6 +115,8 @@ function getBillingBanner(
         message: "Couldn't open the billing portal. Please try again.",
       };
   }
+
+  return null;
 }
 
 export type BillingPageViewProps = BillingContentProps & {

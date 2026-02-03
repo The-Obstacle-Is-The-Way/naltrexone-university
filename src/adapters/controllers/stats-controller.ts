@@ -1,7 +1,11 @@
 'use server';
 
 import { z } from 'zod';
-import { createDepsResolver } from '@/lib/controller-helpers';
+import {
+  createDepsResolver,
+  type LoadContainerFn,
+  loadAppContainer,
+} from '@/lib/controller-helpers';
 import {
   type ActionResult,
   handleError,
@@ -69,19 +73,25 @@ export type StatsControllerDeps = {
   logger?: Logger;
 };
 
-const getDeps = createDepsResolver((container) =>
-  container.createStatsControllerDeps(),
-);
+type StatsControllerContainer = {
+  createStatsControllerDeps: () => StatsControllerDeps;
+};
+
+const getDeps = createDepsResolver<
+  StatsControllerDeps,
+  StatsControllerContainer
+>((container) => container.createStatsControllerDeps(), loadAppContainer);
 
 export async function getUserStats(
   input: unknown,
   deps?: StatsControllerDeps,
+  options?: { loadContainer?: LoadContainerFn<StatsControllerContainer> },
 ): Promise<ActionResult<UserStatsOutput>> {
   const parsed = GetUserStatsInputSchema.safeParse(input);
   if (!parsed.success) return handleError(parsed.error);
 
   try {
-    const d = await getDeps(deps);
+    const d = await getDeps(deps, options);
     const userIdOrError = await requireEntitledUserId(d);
     if (typeof userIdOrError !== 'string') return userIdOrError;
     const userId = userIdOrError;

@@ -1,13 +1,17 @@
 'use server';
 
 import { z } from 'zod';
-import { createDepsResolver } from '@/lib/controller-helpers';
+import {
+  createDepsResolver,
+  type LoadContainerFn,
+  loadAppContainer,
+} from '@/lib/controller-helpers';
+import { SUBMIT_ANSWER_RATE_LIMIT } from '@/src/adapters/shared/rate-limits';
 import {
   MAX_PRACTICE_SESSION_DIFFICULTY_FILTERS,
   MAX_PRACTICE_SESSION_TAG_FILTERS,
-} from '@/src/adapters/repositories/practice-session-limits';
-import { SUBMIT_ANSWER_RATE_LIMIT } from '@/src/adapters/shared/rate-limits';
-import { MAX_TIME_SPENT_SECONDS } from '@/src/adapters/shared/validation-limits';
+  MAX_TIME_SPENT_SECONDS,
+} from '@/src/adapters/shared/validation-limits';
 import { withIdempotency } from '@/src/adapters/shared/with-idempotency';
 import { ApplicationError } from '@/src/application/errors';
 import type {
@@ -92,19 +96,25 @@ export type QuestionControllerDeps = {
   submitAnswerUseCase: SubmitAnswerUseCase;
 };
 
-const getDeps = createDepsResolver((container) =>
-  container.createQuestionControllerDeps(),
-);
+type QuestionControllerContainer = {
+  createQuestionControllerDeps: () => QuestionControllerDeps;
+};
+
+const getDeps = createDepsResolver<
+  QuestionControllerDeps,
+  QuestionControllerContainer
+>((container) => container.createQuestionControllerDeps(), loadAppContainer);
 
 export async function getNextQuestion(
   input: unknown,
   deps?: QuestionControllerDeps,
+  options?: { loadContainer?: LoadContainerFn<QuestionControllerContainer> },
 ): Promise<ActionResult<GetNextQuestionOutput>> {
   const parsed = GetNextQuestionInputSchema.safeParse(input);
   if (!parsed.success) return handleError(parsed.error);
 
   try {
-    const d = await getDeps(deps);
+    const d = await getDeps(deps, options);
     const userIdOrError = await requireEntitledUserId(d);
     if (typeof userIdOrError !== 'string') return userIdOrError;
     const userId = userIdOrError;
@@ -129,12 +139,13 @@ export async function getNextQuestion(
 export async function submitAnswer(
   input: unknown,
   deps?: QuestionControllerDeps,
+  options?: { loadContainer?: LoadContainerFn<QuestionControllerContainer> },
 ): Promise<ActionResult<SubmitAnswerOutput>> {
   const parsed = SubmitAnswerInputSchema.safeParse(input);
   if (!parsed.success) return handleError(parsed.error);
 
   try {
-    const d = await getDeps(deps);
+    const d = await getDeps(deps, options);
     const userIdOrError = await requireEntitledUserId(d);
     if (typeof userIdOrError !== 'string') return userIdOrError;
     const userId = userIdOrError;

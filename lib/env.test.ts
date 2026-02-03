@@ -46,6 +46,8 @@ describe('env', () => {
 
   it('allows NEXT_PUBLIC_SKIP_CLERK=true even when NODE_ENV=production (next build)', async () => {
     (process.env as Record<string, string | undefined>).NODE_ENV = 'production';
+    (process.env as Record<string, string | undefined>).npm_lifecycle_event =
+      'build';
     delete process.env.VERCEL_ENV;
 
     process.env.DATABASE_URL =
@@ -84,7 +86,34 @@ describe('env', () => {
     vi.resetModules();
 
     await expect(import('./env')).rejects.toThrow(
-      'NEXT_PUBLIC_SKIP_CLERK must not be true in production (VERCEL_ENV=production)',
+      'NEXT_PUBLIC_SKIP_CLERK must not be true in production',
+    );
+  });
+
+  it('rejects NEXT_PUBLIC_SKIP_CLERK=true in non-Vercel production runtime', async () => {
+    (process.env as Record<string, string | undefined>).NODE_ENV = 'production';
+    (process.env as Record<string, string | undefined>).npm_lifecycle_event =
+      'start';
+    delete process.env.VERCEL_ENV;
+
+    process.env.DATABASE_URL =
+      'postgresql://postgres:postgres@localhost:5432/db';
+    process.env.NEXT_PUBLIC_APP_URL = 'http://localhost:3000';
+
+    process.env.STRIPE_SECRET_KEY = 'sk_test_dummy';
+    process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY = 'pk_test_dummy';
+    process.env.STRIPE_WEBHOOK_SECRET = 'whsec_dummy';
+    process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY = 'price_dummy_monthly';
+    process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL = 'price_dummy_annual';
+
+    process.env.NEXT_PUBLIC_SKIP_CLERK = 'true';
+    delete process.env.CLERK_SECRET_KEY;
+    delete process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
+
+    vi.resetModules();
+
+    await expect(import('./env')).rejects.toThrow(
+      'NEXT_PUBLIC_SKIP_CLERK must not be true in production',
     );
   });
 
@@ -108,6 +137,39 @@ describe('env', () => {
     vi.resetModules();
 
     await expect(import('./env')).resolves.toHaveProperty('env');
+  });
+
+  it('requires CLERK_WEBHOOK_SIGNING_SECRET in non-Vercel production runtime when Clerk is enabled', async () => {
+    const consoleError = vi
+      .spyOn(console, 'error')
+      .mockImplementation(() => {});
+
+    (process.env as Record<string, string | undefined>).NODE_ENV = 'production';
+    (process.env as Record<string, string | undefined>).npm_lifecycle_event =
+      'start';
+    delete process.env.VERCEL_ENV;
+
+    process.env.DATABASE_URL =
+      'postgresql://postgres:postgres@localhost:5432/db';
+    process.env.NEXT_PUBLIC_APP_URL = 'http://localhost:3000';
+
+    process.env.STRIPE_SECRET_KEY = 'sk_test_dummy';
+    process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY = 'pk_test_dummy';
+    process.env.STRIPE_WEBHOOK_SECRET = 'whsec_dummy';
+    process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY = 'price_dummy_monthly';
+    process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL = 'price_dummy_annual';
+
+    process.env.NEXT_PUBLIC_SKIP_CLERK = 'false';
+    process.env.CLERK_SECRET_KEY = 'sk_test_clerk_dummy';
+    process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY = 'pk_test_clerk_dummy';
+    delete process.env.CLERK_WEBHOOK_SIGNING_SECRET;
+
+    vi.resetModules();
+
+    await expect(import('./env')).rejects.toThrow(
+      'Invalid environment variables',
+    );
+    consoleError.mockRestore();
   });
 
   it('requires CLERK_WEBHOOK_SIGNING_SECRET on Vercel production deploys when Clerk is enabled', async () => {

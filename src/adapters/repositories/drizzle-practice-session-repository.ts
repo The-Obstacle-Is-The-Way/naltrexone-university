@@ -1,14 +1,14 @@
 import { and, eq, isNull } from 'drizzle-orm';
 import { z } from 'zod';
 import { practiceSessions } from '@/db/schema';
-import { ApplicationError } from '@/src/application/errors';
-import type { PracticeSessionRepository } from '@/src/application/ports/repositories';
-import type { DrizzleDb } from '../shared/database-types';
 import {
   MAX_PRACTICE_SESSION_DIFFICULTY_FILTERS,
   MAX_PRACTICE_SESSION_QUESTIONS,
   MAX_PRACTICE_SESSION_TAG_FILTERS,
-} from './practice-session-limits';
+} from '@/src/adapters/shared/validation-limits';
+import { ApplicationError } from '@/src/application/errors';
+import type { PracticeSessionRepository } from '@/src/application/ports/repositories';
+import type { DrizzleDb } from '../shared/database-types';
 
 const questionDifficultySchema = z.enum(['easy', 'medium', 'hard']);
 

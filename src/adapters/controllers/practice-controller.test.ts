@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { ApplicationError } from '@/src/application/errors';
 import type { RateLimiter } from '@/src/application/ports/gateways';
 import type {
@@ -365,8 +365,6 @@ describe('practice-controller', () => {
     });
 
     it('loads dependencies from the container when deps are omitted', async () => {
-      vi.resetModules();
-
       const deps = createDeps({
         questionRepository: new CapturingQuestionRepository(['q1']),
         practiceSessionRepository: new CapturingPracticeSessionRepository(
@@ -374,20 +372,20 @@ describe('practice-controller', () => {
         ),
       });
 
-      vi.doMock('@/lib/container', () => ({
-        createContainer: () => ({
-          createPracticeControllerDeps: () => deps,
-        }),
-      }));
-
-      const { startPracticeSession } = await import('./practice-controller');
-
-      const result = await startPracticeSession({
-        mode: 'tutor',
-        count: 1,
-        tagSlugs: [],
-        difficulties: [],
-      });
+      const result = await startPracticeSession(
+        {
+          mode: 'tutor',
+          count: 1,
+          tagSlugs: [],
+          difficulties: [],
+        },
+        undefined,
+        {
+          loadContainer: async () => ({
+            createPracticeControllerDeps: () => deps,
+          }),
+        },
+      );
 
       expect(result).toEqual({ ok: true, data: { sessionId: 'session_123' } });
     });

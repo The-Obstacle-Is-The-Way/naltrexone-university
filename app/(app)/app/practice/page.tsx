@@ -494,7 +494,6 @@ export default function PracticePage() {
         question,
         toggleBookmarkFn: toggleBookmark,
         setBookmarkStatus,
-        setLoadState,
         setBookmarkedQuestionIds,
         onBookmarkToggled: (bookmarked: boolean) => {
           setBookmarkMessage(

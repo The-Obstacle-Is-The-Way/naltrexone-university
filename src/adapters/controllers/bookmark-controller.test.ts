@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import type { Logger } from '@/src/adapters/shared/logger';
 import type {
   BookmarkRepository,
@@ -232,20 +232,14 @@ describe('bookmark-controller', () => {
     });
 
     it('loads dependencies from the container when deps are omitted', async () => {
-      vi.resetModules();
-
       const deps = createDeps();
 
-      vi.doMock('@/lib/container', () => ({
-        createContainer: () => ({
+      const questionId = '11111111-1111-1111-1111-111111111111';
+      const result = await toggleBookmark({ questionId }, undefined, {
+        loadContainer: async () => ({
           createBookmarkControllerDeps: () => deps,
         }),
-      }));
-
-      const { toggleBookmark } = await import('./bookmark-controller');
-
-      const questionId = '11111111-1111-1111-1111-111111111111';
-      const result = await toggleBookmark({ questionId });
+      });
 
       expect(result).toEqual({ ok: true, data: { bookmarked: true } });
     });

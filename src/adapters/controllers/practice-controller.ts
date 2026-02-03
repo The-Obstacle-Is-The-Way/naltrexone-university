@@ -1,13 +1,17 @@
 'use server';
 
 import { z } from 'zod';
-import { createDepsResolver } from '@/lib/controller-helpers';
+import {
+  createDepsResolver,
+  type LoadContainerFn,
+  loadAppContainer,
+} from '@/lib/controller-helpers';
+import { START_PRACTICE_SESSION_RATE_LIMIT } from '@/src/adapters/shared/rate-limits';
 import {
   MAX_PRACTICE_SESSION_DIFFICULTY_FILTERS,
   MAX_PRACTICE_SESSION_QUESTIONS,
   MAX_PRACTICE_SESSION_TAG_FILTERS,
-} from '@/src/adapters/repositories/practice-session-limits';
-import { START_PRACTICE_SESSION_RATE_LIMIT } from '@/src/adapters/shared/rate-limits';
+} from '@/src/adapters/shared/validation-limits';
 import { withIdempotency } from '@/src/adapters/shared/with-idempotency';
 import { ApplicationError } from '@/src/application/errors';
 import type {
@@ -82,19 +86,25 @@ export type PracticeControllerDeps = {
   now: () => Date;
 };
 
-const getDeps = createDepsResolver((container) =>
-  container.createPracticeControllerDeps(),
-);
+type PracticeControllerContainer = {
+  createPracticeControllerDeps: () => PracticeControllerDeps;
+};
+
+const getDeps = createDepsResolver<
+  PracticeControllerDeps,
+  PracticeControllerContainer
+>((container) => container.createPracticeControllerDeps(), loadAppContainer);
 
 export async function startPracticeSession(
   input: unknown,
   deps?: PracticeControllerDeps,
+  options?: { loadContainer?: LoadContainerFn<PracticeControllerContainer> },
 ): Promise<ActionResult<StartPracticeSessionOutput>> {
   const parsed = StartPracticeSessionInputSchema.safeParse(input);
   if (!parsed.success) return handleError(parsed.error);
 
   try {
-    const d = await getDeps(deps);
+    const d = await getDeps(deps, options);
     const userIdOrError = await requireEntitledUserId(d);
     if (typeof userIdOrError !== 'string') return userIdOrError;
     const userId = userIdOrError;
@@ -160,12 +170,13 @@ export async function startPracticeSession(
 export async function endPracticeSession(
   input: unknown,
   deps?: PracticeControllerDeps,
+  options?: { loadContainer?: LoadContainerFn<PracticeControllerContainer> },
 ): Promise<ActionResult<EndPracticeSessionOutput>> {
   const parsed = EndPracticeSessionInputSchema.safeParse(input);
   if (!parsed.success) return handleError(parsed.error);
 
   try {
-    const d = await getDeps(deps);
+    const d = await getDeps(deps, options);
     const userIdOrError = await requireEntitledUserId(d);
     if (typeof userIdOrError !== 'string') return userIdOrError;
     const userId = userIdOrError;

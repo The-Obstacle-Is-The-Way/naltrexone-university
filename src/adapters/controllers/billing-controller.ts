@@ -1,7 +1,11 @@
 'use server';
 
 import { z } from 'zod';
-import { createDepsResolver } from '@/lib/controller-helpers';
+import {
+  createDepsResolver,
+  type LoadContainerFn,
+  loadAppContainer,
+} from '@/lib/controller-helpers';
 import { ROUTES } from '@/lib/routes';
 import { CHECKOUT_SESSION_RATE_LIMIT } from '@/src/adapters/shared/rate-limits';
 import { withIdempotency } from '@/src/adapters/shared/with-idempotency';
@@ -47,9 +51,14 @@ export type BillingControllerDeps = {
   now: () => Date;
 };
 
-const getDeps = createDepsResolver((container) =>
-  container.createBillingControllerDeps(),
-);
+type BillingControllerContainer = {
+  createBillingControllerDeps: () => BillingControllerDeps;
+};
+
+const getDeps = createDepsResolver<
+  BillingControllerDeps,
+  BillingControllerContainer
+>((container) => container.createBillingControllerDeps(), loadAppContainer);
 
 function toSuccessUrl(appUrl: string): string {
   const base = new URL(ROUTES.CHECKOUT_SUCCESS, appUrl);
@@ -97,12 +106,13 @@ async function getOrCreateStripeCustomerId(
 export async function createCheckoutSession(
   input: unknown,
   deps?: BillingControllerDeps,
+  options?: { loadContainer?: LoadContainerFn<BillingControllerContainer> },
 ): Promise<ActionResult<CreateCheckoutSessionOutput>> {
   const parsed = CreateCheckoutSessionInputSchema.safeParse(input);
   if (!parsed.success) return handleError(parsed.error);
 
   try {
-    const d = await getDeps(deps);
+    const d = await getDeps(deps, options);
     const user = await d.authGateway.requireUser();
     const { plan, idempotencyKey } = parsed.data;
 
@@ -166,12 +176,13 @@ export async function createCheckoutSession(
 export async function createPortalSession(
   input: unknown,
   deps?: BillingControllerDeps,
+  options?: { loadContainer?: LoadContainerFn<BillingControllerContainer> },
 ): Promise<ActionResult<CreatePortalSessionOutput>> {
   const parsed = CreatePortalSessionInputSchema.safeParse(input);
   if (!parsed.success) return handleError(parsed.error);
 
   try {
-    const d = await getDeps(deps);
+    const d = await getDeps(deps, options);
     const user = await d.authGateway.requireUser();
 
     const stripeCustomer = await d.stripeCustomerRepository.findByUserId(

@@ -1,4 +1,9 @@
 import Link from 'next/link';
+import {
+  createDepsResolver,
+  type LoadContainerFn,
+  loadAppContainer,
+} from '@/lib/controller-helpers';
 import type { AuthGateway } from '@/src/application/ports/gateways';
 import type {
   CheckEntitlementInput,
@@ -14,19 +19,26 @@ export type GetStartedCtaDeps = {
   checkEntitlementUseCase: CheckEntitlementUseCase;
 };
 
-async function getDeps(deps?: GetStartedCtaDeps): Promise<GetStartedCtaDeps> {
-  if (deps) return deps;
+type GetStartedCtaContainer = {
+  createAuthGateway: () => AuthGateway;
+  createCheckEntitlementUseCase: () => CheckEntitlementUseCase;
+};
 
-  const { createContainer } = await import('@/lib/container');
-  const container = createContainer();
-
-  return {
+const getDeps = createDepsResolver<GetStartedCtaDeps, GetStartedCtaContainer>(
+  (container) => ({
     authGateway: container.createAuthGateway(),
     checkEntitlementUseCase: container.createCheckEntitlementUseCase(),
-  };
-}
+  }),
+  loadAppContainer,
+);
 
-export async function GetStartedCta({ deps }: { deps?: GetStartedCtaDeps }) {
+export async function GetStartedCta({
+  deps,
+  options,
+}: {
+  deps?: GetStartedCtaDeps;
+  options?: { loadContainer?: LoadContainerFn<GetStartedCtaContainer> };
+} = {}) {
   const skipClerk = process.env.NEXT_PUBLIC_SKIP_CLERK === 'true';
   if (skipClerk) {
     return (
@@ -39,7 +51,7 @@ export async function GetStartedCta({ deps }: { deps?: GetStartedCtaDeps }) {
     );
   }
 
-  const d = await getDeps(deps);
+  const d = await getDeps(deps, options);
   const user = await d.authGateway.getCurrentUser();
   if (!user) {
     return (

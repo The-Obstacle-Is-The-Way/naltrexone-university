@@ -85,7 +85,15 @@ function validateEnv(): Env {
   }
 
   const skipClerk = parsed.data.NEXT_PUBLIC_SKIP_CLERK === 'true';
-  const isVercelProductionDeploy = process.env.VERCEL_ENV === 'production';
+  // NOTE: Next.js sets NODE_ENV=production during `next build`, which we still
+  // need to support in CI without real Clerk keys. Treat "production runtime"
+  // as:
+  // - Vercel production deploys (VERCEL_ENV=production), OR
+  // - NODE_ENV=production when not running the build script.
+  const isProductionRuntime =
+    process.env.VERCEL_ENV === 'production' ||
+    (process.env.NODE_ENV === 'production' &&
+      process.env.npm_lifecycle_event !== 'build');
   if (!skipClerk) {
     const missingClerkKeys: Record<string, string[]> = {};
     if (!parsed.data.CLERK_SECRET_KEY) {
@@ -94,7 +102,7 @@ function validateEnv(): Env {
     if (!parsed.data.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY) {
       missingClerkKeys.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY = ['Required'];
     }
-    if (isVercelProductionDeploy && !parsed.data.CLERK_WEBHOOK_SIGNING_SECRET) {
+    if (isProductionRuntime && !parsed.data.CLERK_WEBHOOK_SIGNING_SECRET) {
       missingClerkKeys.CLERK_WEBHOOK_SIGNING_SECRET = ['Required'];
     }
 
@@ -140,10 +148,8 @@ function validateEnv(): Env {
     }
   }
 
-  if (isVercelProductionDeploy && skipClerk) {
-    throw new Error(
-      'NEXT_PUBLIC_SKIP_CLERK must not be true in production (VERCEL_ENV=production)',
-    );
+  if (isProductionRuntime && skipClerk) {
+    throw new Error('NEXT_PUBLIC_SKIP_CLERK must not be true in production');
   }
 
   // When Clerk is skipped (local/CI builds), allow missing Clerk keys by

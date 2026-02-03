@@ -197,7 +197,6 @@ export async function toggleBookmarkForQuestion(input: {
     input: unknown,
   ) => Promise<ActionResult<{ bookmarked: boolean }>>;
   setBookmarkStatus: (status: 'idle' | 'loading' | 'error') => void;
-  setLoadState: (state: LoadState) => void;
   setBookmarkedQuestionIds: (
     next: Set<string> | ((prev: Set<string>) => Set<string>),
   ) => void;

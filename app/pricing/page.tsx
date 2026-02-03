@@ -102,10 +102,12 @@ export function getPricingBanner(
 
 export default async function PricingPage({
   searchParams,
+  deps,
 }: {
   searchParams: Promise<PricingSearchParams>;
+  deps?: PricingPageDeps;
 }) {
-  const { isEntitled } = await loadPricingData();
+  const { isEntitled } = await loadPricingData(deps);
   const resolvedSearchParams = await searchParams;
   const banner = getPricingBanner(resolvedSearchParams);
 

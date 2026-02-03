@@ -1,7 +1,11 @@
 'use server';
 
 import { z } from 'zod';
-import { createDepsResolver } from '@/lib/controller-helpers';
+import {
+  createDepsResolver,
+  type LoadContainerFn,
+  loadAppContainer,
+} from '@/lib/controller-helpers';
 import type { Logger } from '@/src/adapters/shared/logger';
 import type { AuthGateway } from '@/src/application/ports/gateways';
 import type {
@@ -47,19 +51,25 @@ export type BookmarkControllerDeps = {
   logger?: Logger;
 };
 
-const getDeps = createDepsResolver((container) =>
-  container.createBookmarkControllerDeps(),
-);
+type BookmarkControllerContainer = {
+  createBookmarkControllerDeps: () => BookmarkControllerDeps;
+};
+
+const getDeps = createDepsResolver<
+  BookmarkControllerDeps,
+  BookmarkControllerContainer
+>((container) => container.createBookmarkControllerDeps(), loadAppContainer);
 
 export async function toggleBookmark(
   input: unknown,
   deps?: BookmarkControllerDeps,
+  options?: { loadContainer?: LoadContainerFn<BookmarkControllerContainer> },
 ): Promise<ActionResult<ToggleBookmarkOutput>> {
   const parsed = ToggleBookmarkInputSchema.safeParse(input);
   if (!parsed.success) return handleError(parsed.error);
 
   try {
-    const d = await getDeps(deps);
+    const d = await getDeps(deps, options);
     const userIdOrError = await requireEntitledUserId(d);
     if (typeof userIdOrError !== 'string') return userIdOrError;
     const userId = userIdOrError;
@@ -90,12 +100,13 @@ export async function toggleBookmark(
 export async function getBookmarks(
   input: unknown,
   deps?: BookmarkControllerDeps,
+  options?: { loadContainer?: LoadContainerFn<BookmarkControllerContainer> },
 ): Promise<ActionResult<GetBookmarksOutput>> {
   const parsed = GetBookmarksInputSchema.safeParse(input);
   if (!parsed.success) return handleError(parsed.error);
 
   try {
-    const d = await getDeps(deps);
+    const d = await getDeps(deps, options);
     const userIdOrError = await requireEntitledUserId(d);
     if (typeof userIdOrError !== 'string') return userIdOrError;
     const userId = userIdOrError;

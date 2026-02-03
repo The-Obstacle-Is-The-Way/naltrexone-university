@@ -137,28 +137,28 @@ describe('AuthNav', () => {
   it('loads dependencies from the container when deps are omitted', async () => {
     process.env.NEXT_PUBLIC_SKIP_CLERK = 'false';
 
-    vi.doMock('@/lib/container', () => ({
-      createContainer: () => ({
-        createAuthGateway: () => ({
-          getCurrentUser: async () => ({
-            id: 'user_1',
-            email: 'user@example.com',
-            createdAt: new Date('2026-02-01T00:00:00Z'),
-            updatedAt: new Date('2026-02-01T00:00:00Z'),
-          }),
-          requireUser: async () => {
-            throw new Error('not used');
-          },
-        }),
-        createCheckEntitlementUseCase: () => ({
-          execute: async () => ({ isEntitled: true }),
-        }),
-      }),
-    }));
-
     const { AuthNav } = await import('./auth-nav');
 
-    const element = await AuthNav({ deps: undefined });
+    const element = await AuthNav({
+      options: {
+        loadContainer: async () => ({
+          createAuthGateway: () => ({
+            getCurrentUser: async () => ({
+              id: 'user_1',
+              email: 'user@example.com',
+              createdAt: new Date('2026-02-01T00:00:00Z'),
+              updatedAt: new Date('2026-02-01T00:00:00Z'),
+            }),
+            requireUser: async () => {
+              throw new Error('not used');
+            },
+          }),
+          createCheckEntitlementUseCase: () => ({
+            execute: async () => ({ isEntitled: true }),
+          }),
+        }),
+      },
+    });
     const html = renderToStaticMarkup(element);
 
     expect(html).toContain('href="/app/dashboard"');

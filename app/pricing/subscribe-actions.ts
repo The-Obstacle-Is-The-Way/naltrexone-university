@@ -1,9 +1,9 @@
 'use server';
 
 import { redirect } from 'next/navigation';
+import { runSubscribeAction } from '@/app/pricing/subscribe-action';
 import { logger } from '@/lib/logger';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
-import { runSubscribeAction } from './subscribe-action';
 
 type CreateCheckoutSessionFn = (input: {
   plan: 'monthly' | 'annual';
