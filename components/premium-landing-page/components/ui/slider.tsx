@@ -52,7 +52,8 @@ function Slider({
       {Array.from({ length: _values.length }, (_, index) => (
         <SliderPrimitive.Thumb
           data-slot="slider-thumb"
-          key={`thumb-${index}`}
+          // biome-ignore lint/suspicious/noArrayIndexKey: Slider thumb identity IS the index - thumb 0 always controls _values[0], thumb 1 controls _values[1]. Values themselves could be duplicates (e.g., both thumbs at position 50), so index is the correct stable identifier per Radix UI's slider design.
+          key={index}
           className="border-primary ring-ring/50 block size-4 shrink-0 rounded-full border bg-white shadow-sm transition-[color,box-shadow] hover:ring-4 focus-visible:ring-4 focus-visible:outline-hidden disabled:pointer-events-none disabled:opacity-50"
         />
       ))}

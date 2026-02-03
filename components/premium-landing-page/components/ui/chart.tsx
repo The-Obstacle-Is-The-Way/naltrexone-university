@@ -8,6 +8,36 @@ import { cn } from '@/lib/utils';
 // Format: { THEME_NAME: CSS_SELECTOR }
 const THEMES = { light: '', dark: '.dark' } as const;
 
+/**
+ * Validates that a string is a safe CSS color value.
+ * Allows: hex colors, rgb/rgba, hsl/hsla, CSS color names, CSS variables
+ * Blocks: any potential script injection attempts
+ */
+function isValidCssColor(value: string): boolean {
+  const trimmed = value.trim();
+  // Block any HTML/script injection attempts
+  if (/<|>|javascript:|expression\(|url\(/i.test(trimmed)) {
+    return false;
+  }
+  // Allow: hex, rgb, rgba, hsl, hsla, CSS variables, named colors
+  const validPatterns = [
+    /^#[0-9a-fA-F]{3,8}$/, // hex
+    /^rgba?\([^)]+\)$/, // rgb/rgba
+    /^hsla?\([^)]+\)$/, // hsl/hsla
+    /^var\(--[a-zA-Z0-9-]+\)$/, // CSS variables
+    /^[a-zA-Z]+$/, // named colors
+  ];
+  return validPatterns.some((pattern) => pattern.test(trimmed));
+}
+
+/**
+ * Sanitizes a CSS property name to prevent injection.
+ * Only allows alphanumeric characters and hyphens.
+ */
+function sanitizeCssPropertyName(name: string): string {
+  return name.replace(/[^a-zA-Z0-9-]/g, '');
+}
+
 export type ChartConfig = {
   [k in string]: {
     label?: React.ReactNode;
@@ -78,26 +108,34 @@ const ChartStyle = ({ id, config }: { id: string; config: ChartConfig }) => {
     return null;
   }
 
+  // Sanitize the chart ID to prevent CSS selector injection
+  const safeId = sanitizeCssPropertyName(id);
+
+  // Build CSS with validated color values only
+  const cssContent = Object.entries(THEMES)
+    .map(([theme, prefix]) => {
+      const properties = colorConfig
+        .map(([key, itemConfig]) => {
+          const color =
+            itemConfig.theme?.[theme as keyof typeof itemConfig.theme] ||
+            itemConfig.color;
+          // Only include valid CSS colors with sanitized property names
+          if (color && isValidCssColor(color)) {
+            const safePropName = sanitizeCssPropertyName(key);
+            return `  --color-${safePropName}: ${color};`;
+          }
+          return null;
+        })
+        .filter(Boolean)
+        .join('\n');
+      return `${prefix} [data-chart=${safeId}] {\n${properties}\n}`;
+    })
+    .join('\n');
+
   return (
     <style
-      dangerouslySetInnerHTML={{
-        __html: Object.entries(THEMES)
-          .map(
-            ([theme, prefix]) => `
-${prefix} [data-chart=${id}] {
-${colorConfig
-  .map(([key, itemConfig]) => {
-    const color =
-      itemConfig.theme?.[theme as keyof typeof itemConfig.theme] ||
-      itemConfig.color;
-    return color ? `  --color-${key}: ${color};` : null;
-  })
-  .join('\n')}
-}
-`,
-          )
-          .join('\n'),
-      }}
+      // biome-ignore lint/security/noDangerouslySetInnerHtml: CSS injection is safe here - all values are validated through isValidCssColor() and property names are sanitized through sanitizeCssPropertyName(). No user input flows into this - only developer-controlled ChartConfig.
+      dangerouslySetInnerHTML={{ __html: cssContent }}
     />
   );
 };

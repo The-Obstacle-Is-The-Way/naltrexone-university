@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils';
 
 function InputGroup({ className, ...props }: React.ComponentProps<'div'>) {
   return (
+    // biome-ignore lint/a11y/useSemanticElements: role="group" is appropriate for input groups that contain an input with related addon elements. <fieldset> is for grouping multiple form controls, not single inputs with decorations.
     <div
       data-slot="input-group"
       role="group"
@@ -60,7 +61,15 @@ function InputGroupAddon({
   align = 'inline-start',
   ...props
 }: React.ComponentProps<'div'> & VariantProps<typeof inputGroupAddonVariants>) {
+  const focusInput = (element: HTMLElement) => {
+    element
+      .closest('[data-slot="input-group"]')
+      ?.querySelector('input')
+      ?.focus();
+  };
+
   return (
+    // biome-ignore lint/a11y/useSemanticElements: role="group" is appropriate for addon containers within an input group per WAI-ARIA patterns.
     <div
       role="group"
       data-slot="input-group-addon"
@@ -70,7 +79,16 @@ function InputGroupAddon({
         if ((e.target as HTMLElement).closest('button')) {
           return;
         }
-        e.currentTarget.parentElement?.querySelector('input')?.focus();
+        focusInput(e.currentTarget);
+      }}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          if ((e.target as HTMLElement).closest('button')) {
+            return;
+          }
+          e.preventDefault();
+          focusInput(e.currentTarget);
+        }
       }}
       {...props}
     />

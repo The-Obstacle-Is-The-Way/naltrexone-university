@@ -137,10 +137,18 @@ export function TestimonialsSection() {
                 },
               }}
             >
-              {/* Duplicate logos for seamless loop */}
-              {[...logos, ...logos].map((logo, index) => (
+              {/* Duplicate logos for seamless infinite scroll loop */}
+              {logos.map((logo) => (
                 <span
-                  key={`logo-${logo}-${index}`}
+                  key={`first-${logo}`}
+                  className="text-xl font-semibold text-zinc-700 whitespace-nowrap flex-shrink-0"
+                >
+                  {logo}
+                </span>
+              ))}
+              {logos.map((logo) => (
+                <span
+                  key={`second-${logo}`}
                   className="text-xl font-semibold text-zinc-700 whitespace-nowrap flex-shrink-0"
                 >
                   {logo}

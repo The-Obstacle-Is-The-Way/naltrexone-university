@@ -26,6 +26,7 @@ function ButtonGroup({
   ...props
 }: React.ComponentProps<'div'> & VariantProps<typeof buttonGroupVariants>) {
   return (
+    // biome-ignore lint/a11y/useSemanticElements: role="group" is the correct ARIA pattern for button groups per WAI-ARIA APG. <fieldset> is for form fields with legends, not button groups.
     <div
       role="group"
       data-slot="button-group"

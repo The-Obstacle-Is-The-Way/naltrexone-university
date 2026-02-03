@@ -130,19 +130,19 @@ export function FeaturesSection() {
                       </motion.div>
                     ))}
                   </div>
-                  {/* Animated bar chart */}
+                  {/* Animated bar chart - heights are unique identifiers */}
                   <div className="flex items-end gap-1.5 h-16">
                     {[35, 55, 40, 75, 50, 85, 60, 70, 45, 90, 65, 80].map(
-                      (h, i) => (
+                      (height, index) => (
                         <motion.div
-                          key={`bar-${h}-${i}`}
+                          key={height}
                           className="flex-1 bg-gradient-to-t from-zinc-700 to-zinc-500 rounded-sm origin-bottom"
                           initial={{ scaleY: 0 }}
-                          whileInView={{ scaleY: h / 100 }}
+                          whileInView={{ scaleY: height / 100 }}
                           viewport={{ once: true }}
                           transition={{
                             duration: 0.6,
-                            delay: 0.5 + i * 0.04,
+                            delay: 0.5 + index * 0.04,
                             ease: 'easeOut',
                           }}
                           whileHover={{

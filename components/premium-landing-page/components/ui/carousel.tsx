@@ -117,6 +117,7 @@ function Carousel({
         canScrollNext,
       }}
     >
+      {/* biome-ignore lint/a11y/useSemanticElements: role="region" with aria-roledescription="carousel" is the correct ARIA pattern per WAI-ARIA APG Carousel Pattern. <section> would work but aria-roledescription requires role="region". */}
       <div
         onKeyDownCapture={handleKeyDown}
         className={cn('relative', className)}
@@ -156,6 +157,7 @@ function CarouselItem({ className, ...props }: React.ComponentProps<'div'>) {
   const { orientation } = useCarousel();
 
   return (
+    // biome-ignore lint/a11y/useSemanticElements: role="group" with aria-roledescription="slide" is the correct ARIA pattern per WAI-ARIA APG Carousel Pattern for individual slides.
     <div
       role="group"
       aria-roledescription="slide"
