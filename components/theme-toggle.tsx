@@ -20,10 +20,16 @@ export function ThemeToggle() {
     <button
       type="button"
       onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-      className="relative p-2 hover:bg-gray-100 dark:hover:bg-[#1F1F23] rounded-full transition-colors"
+      className="relative rounded-full p-2 transition-colors hover:bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background dark:hover:bg-[#1F1F23]"
     >
-      <Sun className="h-5 w-5 text-gray-600 dark:text-gray-300 transition-all dark:hidden" />
-      <Moon className="h-5 w-5 text-gray-600 dark:text-gray-300 transition-all hidden dark:block" />
+      <Sun
+        aria-hidden="true"
+        className="h-5 w-5 text-gray-600 dark:text-gray-300 transition-colors dark:hidden"
+      />
+      <Moon
+        aria-hidden="true"
+        className="h-5 w-5 text-gray-600 dark:text-gray-300 transition-colors hidden dark:block"
+      />
       <span className="sr-only">Toggle theme</span>
     </button>
   );

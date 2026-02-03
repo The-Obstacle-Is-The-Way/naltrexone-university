@@ -103,7 +103,7 @@ export default function List01({
                 'group flex items-center justify-between',
                 'p-2 rounded-lg',
                 'hover:bg-zinc-100 dark:hover:bg-zinc-800/50',
-                'transition-all duration-200',
+                'transition-colors duration-200',
               )}
             >
               <div className="flex items-center gap-2">
@@ -118,16 +118,28 @@ export default function List01({
                   })}
                 >
                   {account.type === 'savings' && (
-                    <Wallet className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                    <Wallet
+                      aria-hidden="true"
+                      className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400"
+                    />
                   )}
                   {account.type === 'checking' && (
-                    <QrCode className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+                    <QrCode
+                      aria-hidden="true"
+                      className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400"
+                    />
                   )}
                   {account.type === 'investment' && (
-                    <ArrowUpRight className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
+                    <ArrowUpRight
+                      aria-hidden="true"
+                      className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400"
+                    />
                   )}
                   {account.type === 'debt' && (
-                    <CreditCard className="w-3.5 h-3.5 text-red-600 dark:text-red-400" />
+                    <CreditCard
+                      aria-hidden="true"
+                      className="w-3.5 h-3.5 text-red-600 dark:text-red-400"
+                    />
                   )}
                 </div>
                 <div>
@@ -165,10 +177,10 @@ export default function List01({
               'text-zinc-50 dark:text-zinc-900',
               'hover:bg-zinc-800 dark:hover:bg-zinc-200',
               'shadow-sm hover:shadow',
-              'transition-all duration-200',
+              'transition-colors duration-200',
             )}
           >
-            <Plus className="w-3.5 h-3.5" />
+            <Plus aria-hidden="true" className="w-3.5 h-3.5" />
             <span>Add</span>
           </button>
           <button
@@ -181,10 +193,10 @@ export default function List01({
               'text-zinc-50 dark:text-zinc-900',
               'hover:bg-zinc-800 dark:hover:bg-zinc-200',
               'shadow-sm hover:shadow',
-              'transition-all duration-200',
+              'transition-colors duration-200',
             )}
           >
-            <SendHorizontal className="w-3.5 h-3.5" />
+            <SendHorizontal aria-hidden="true" className="w-3.5 h-3.5" />
             <span>Send</span>
           </button>
           <button
@@ -197,10 +209,10 @@ export default function List01({
               'text-zinc-50 dark:text-zinc-900',
               'hover:bg-zinc-800 dark:hover:bg-zinc-200',
               'shadow-sm hover:shadow',
-              'transition-all duration-200',
+              'transition-colors duration-200',
             )}
           >
-            <ArrowDownLeft className="w-3.5 h-3.5" />
+            <ArrowDownLeft aria-hidden="true" className="w-3.5 h-3.5" />
             <span>Top-up</span>
           </button>
           <button
@@ -213,10 +225,10 @@ export default function List01({
               'text-zinc-50 dark:text-zinc-900',
               'hover:bg-zinc-800 dark:hover:bg-zinc-200',
               'shadow-sm hover:shadow',
-              'transition-all duration-200',
+              'transition-colors duration-200',
             )}
           >
-            <ArrowRight className="w-3.5 h-3.5" />
+            <ArrowRight aria-hidden="true" className="w-3.5 h-3.5" />
             <span>More</span>
           </button>
         </div>

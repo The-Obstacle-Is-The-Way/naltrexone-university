@@ -30,12 +30,5 @@
     ".next/types/**/*.ts",
     ".next/dev/types/**/*.ts"
   ],
-  "exclude": [
-    "node_modules",
-    "components/premium-landing-page",
-    "components/kokonutui",
-    "src/components/kokonutui",
-    "src/pages",
-    "src/pages.tsx"
-  ]
+  "exclude": ["node_modules", "components/premium-landing-page"]
 }

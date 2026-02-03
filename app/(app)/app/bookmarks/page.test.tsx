@@ -176,4 +176,65 @@ describe('app/(app)/app/bookmarks', () => {
     expect(html).toContain('Unable to remove bookmark.');
     expect(html).toContain('q-1');
   });
+
+  it('renders missing_question_id banner copy when redirected back', async () => {
+    const getBookmarksFn = vi.fn(async () =>
+      ok({
+        rows: [
+          {
+            questionId: 'q_1',
+            slug: 'q-1',
+            stemMd: 'Stem for q1',
+            difficulty: 'easy' as const,
+            bookmarkedAt: '2026-02-01T00:00:00.000Z',
+          },
+        ],
+      }),
+    );
+
+    const BookmarksPage = createBookmarksPage({ getBookmarksFn });
+    const element = await BookmarksPage({
+      searchParams: Promise.resolve({ error: 'missing_question_id' }),
+    });
+    const html = renderToStaticMarkup(element);
+
+    expect(html).toContain('Unable to remove bookmark: missing question id.');
+  });
+
+  it('renders remove_failed banner copy when redirected back', async () => {
+    const getBookmarksFn = vi.fn(async () =>
+      ok({
+        rows: [
+          {
+            questionId: 'q_1',
+            slug: 'q-1',
+            stemMd: 'Stem for q1',
+            difficulty: 'easy' as const,
+            bookmarkedAt: '2026-02-01T00:00:00.000Z',
+          },
+        ],
+      }),
+    );
+
+    const BookmarksPage = createBookmarksPage({ getBookmarksFn });
+    const element = await BookmarksPage({
+      searchParams: Promise.resolve({ error: 'remove_failed' }),
+    });
+    const html = renderToStaticMarkup(element);
+
+    expect(html).toContain(
+      'Unable to remove bookmark. Please refresh and try again.',
+    );
+  });
+
+  it('renders an error state when createBookmarksPage cannot load bookmarks', async () => {
+    const getBookmarksFn = vi.fn(async () => err('INTERNAL_ERROR', 'Boom'));
+
+    const BookmarksPage = createBookmarksPage({ getBookmarksFn });
+    const element = await BookmarksPage();
+    const html = renderToStaticMarkup(element);
+
+    expect(html).toContain('Unable to load bookmarks.');
+    expect(html).toContain('Boom');
+  });
 });

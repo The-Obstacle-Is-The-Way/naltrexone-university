@@ -42,19 +42,17 @@ export default function Profile01({
       label: 'Subscription',
       value: subscription,
       href: '#',
-      icon: <CreditCard className="w-4 h-4" />,
-      external: false,
+      icon: <CreditCard aria-hidden="true" className="w-4 h-4" />,
     },
     {
       label: 'Settings',
       href: '#',
-      icon: <Settings className="w-4 h-4" />,
+      icon: <Settings aria-hidden="true" className="w-4 h-4" />,
     },
     {
       label: 'Terms & Policies',
       href: '#',
-      icon: <FileText className="w-4 h-4" />,
-      external: true,
+      icon: <FileText aria-hidden="true" className="w-4 h-4" />,
     },
   ];
 
@@ -88,9 +86,12 @@ export default function Profile01({
               <Link
                 key={item.label}
                 href={item.href}
+                target={item.external ? '_blank' : undefined}
+                rel={item.external ? 'noopener noreferrer' : undefined}
                 className="flex items-center justify-between p-2 
                                     hover:bg-zinc-50 dark:hover:bg-zinc-800/50 
-                                    rounded-lg transition-colors duration-200"
+                                    rounded-lg transition-colors duration-200
+                                    focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-200 focus-visible:ring-offset-2 dark:focus-visible:ring-zinc-700"
               >
                 <div className="flex items-center gap-2">
                   {item.icon}
@@ -104,7 +105,9 @@ export default function Profile01({
                       {item.value}
                     </span>
                   )}
-                  {item.external && <MoveUpRight className="w-4 h-4" />}
+                  {item.external && (
+                    <MoveUpRight aria-hidden="true" className="w-4 h-4" />
+                  )}
                 </div>
               </Link>
             ))}
@@ -113,10 +116,11 @@ export default function Profile01({
               type="button"
               className="w-full flex items-center justify-between p-2 
                                 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 
-                                rounded-lg transition-colors duration-200"
+                                rounded-lg transition-colors duration-200
+                                focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-200 focus-visible:ring-offset-2 dark:focus-visible:ring-zinc-700"
             >
               <div className="flex items-center gap-2">
-                <LogOut className="w-4 h-4" />
+                <LogOut aria-hidden="true" className="w-4 h-4" />
                 <span className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
                   Logout
                 </span>

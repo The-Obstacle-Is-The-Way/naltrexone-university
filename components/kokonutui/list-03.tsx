@@ -104,7 +104,7 @@ export default function List03({ items = ITEMS, className }: List03Props) {
               'rounded-xl',
               'border border-zinc-100 dark:border-zinc-800',
               'hover:border-zinc-200 dark:hover:border-zinc-700',
-              'transition-all duration-200',
+              'transition-colors duration-200',
               'shadow-sm backdrop-blur-xl',
             )}
           >
@@ -116,7 +116,7 @@ export default function List03({ items = ITEMS, className }: List03Props) {
                     iconStyles[item.iconStyle as keyof typeof iconStyles],
                   )}
                 >
-                  <item.icon className="w-4 h-4" />
+                  <item.icon aria-hidden="true" className="w-4 h-4" />
                 </div>
                 <div
                   className={cn(
@@ -127,6 +127,7 @@ export default function List03({ items = ITEMS, className }: List03Props) {
                 >
                   {React.createElement(statusConfig[item.status].icon, {
                     className: 'w-3.5 h-3.5',
+                    'aria-hidden': true,
                   })}
                   {item.status.charAt(0).toUpperCase() + item.status.slice(1)}
                 </div>
@@ -172,7 +173,7 @@ export default function List03({ items = ITEMS, className }: List03Props) {
               )}
 
               <div className="flex items-center text-xs text-zinc-600 dark:text-zinc-400">
-                <Calendar className="w-3.5 h-3.5 mr-1.5" />
+                <Calendar aria-hidden="true" className="w-3.5 h-3.5 mr-1.5" />
                 <span>{item.date}</span>
               </div>
             </div>
@@ -191,7 +192,7 @@ export default function List03({ items = ITEMS, className }: List03Props) {
                 )}
               >
                 View Details
-                <ArrowRight className="w-3.5 h-3.5" />
+                <ArrowRight aria-hidden="true" className="w-3.5 h-3.5" />
               </button>
             </div>
           </div>

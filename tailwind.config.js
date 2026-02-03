@@ -1,8 +1,9 @@
 module.exports = {
   darkMode: ['class'],
   content: [
-    './pages/**/*.{ts,tsx}',
     './components/**/*.{ts,tsx}',
+    '!./components/kokonutui/**/*',
+    '!./components/premium-landing-page/**/*',
     './app/**/*.{ts,tsx}',
     './src/**/*.{ts,tsx}',
   ],
@@ -50,5 +51,4 @@ module.exports = {
       },
     },
   },
-  plugins: [require('tailwindcss-animate')],
 };

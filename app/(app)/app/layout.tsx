@@ -63,38 +63,38 @@ export function AppLayoutShell({
           <div className="flex items-center gap-6">
             <Link
               href="/app/dashboard"
-              className="text-sm font-semibold text-foreground"
+              className="rounded-md text-sm font-semibold text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
             >
               Addiction Boards
             </Link>
             <nav className="hidden items-center gap-4 text-sm sm:flex">
               <Link
                 href="/app/dashboard"
-                className="text-muted-foreground hover:text-foreground"
+                className="rounded-md text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
               >
                 Dashboard
               </Link>
               <Link
                 href="/app/practice"
-                className="text-muted-foreground hover:text-foreground"
+                className="rounded-md text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
               >
                 Practice
               </Link>
               <Link
                 href="/app/review"
-                className="text-muted-foreground hover:text-foreground"
+                className="rounded-md text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
               >
                 Review
               </Link>
               <Link
                 href="/app/bookmarks"
-                className="text-muted-foreground hover:text-foreground"
+                className="rounded-md text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
               >
                 Bookmarks
               </Link>
               <Link
                 href="/app/billing"
-                className="text-muted-foreground hover:text-foreground"
+                className="rounded-md text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
               >
                 Billing
               </Link>

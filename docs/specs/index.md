@@ -1,7 +1,7 @@
 # Implementation Specifications
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-02-02
+**Last Updated:** 2026-02-03
 
 ---
 
@@ -35,8 +35,9 @@ Implementation specifications provide detailed technical guidance for building e
 | [SPEC-015](./spec-015-dashboard.md) | Dashboard | Partial | Feature |
 | [SPEC-016](./spec-016-observability.md) | Observability (Logging, Error Tracking) | Partial | Infrastructure |
 | [SPEC-017](./spec-017-rate-limiting.md) | Rate Limiting | Proposed | Infrastructure |
+| [SPEC-018](./spec-018-ui-integration.md) | UI Integration (v0 Templates) | Proposed | Feature |
 
-**Next Spec ID:** SPEC-018
+**Next Spec ID:** SPEC-019
 
 ## Spec Statuses
 

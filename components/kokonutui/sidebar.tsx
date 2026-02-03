@@ -22,7 +22,7 @@ import { useState } from 'react';
 
 interface NavItemProps {
   href: string;
-  icon: React.ComponentType<{ className?: string }>;
+  icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
   children: React.ReactNode;
   onClick?: () => void;
 }
@@ -32,9 +32,9 @@ function NavItem({ href, icon: Icon, children, onClick }: NavItemProps) {
     <Link
       href={href}
       onClick={onClick}
-      className="flex items-center px-3 py-2 text-sm rounded-md transition-colors text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-[#1F1F23]"
+      className="flex items-center px-3 py-2 text-sm rounded-md transition-colors text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-[#1F1F23] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-300 focus-visible:ring-offset-2 dark:focus-visible:ring-[#2B2B30]"
     >
-      <Icon className="h-4 w-4 mr-3 flex-shrink-0" />
+      <Icon aria-hidden="true" className="h-4 w-4 mr-3 flex-shrink-0" />
       {children}
     </Link>
   );
@@ -51,12 +51,19 @@ export default function Sidebar() {
     <>
       <button
         type="button"
-        className="lg:hidden fixed top-4 left-4 z-[70] p-2 rounded-lg bg-white dark:bg-[#0F0F12] shadow-md"
+        className="lg:hidden fixed top-4 left-4 z-[70] p-2 rounded-lg bg-white dark:bg-[#0F0F12] shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-300 focus-visible:ring-offset-2 dark:focus-visible:ring-[#2B2B30]"
         onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+        aria-label={isMobileMenuOpen ? 'Close menu' : 'Open menu'}
+        aria-expanded={isMobileMenuOpen}
+        aria-controls="kokonutui-sidebar"
       >
-        <Menu className="h-5 w-5 text-gray-600 dark:text-gray-300" />
+        <Menu
+          aria-hidden="true"
+          className="h-5 w-5 text-gray-600 dark:text-gray-300"
+        />
       </button>
       <nav
+        id="kokonutui-sidebar"
         className={`
                 fixed inset-y-0 left-0 z-[70] w-64 bg-white dark:bg-[#0F0F12] transform transition-transform duration-200 ease-in-out
                 lg:translate-x-0 lg:static lg:w-64 border-r border-gray-200 dark:border-[#1F1F23]
@@ -68,7 +75,7 @@ export default function Sidebar() {
             href="https://kokonutui.com/"
             target="_blank"
             rel="noopener noreferrer"
-            className="h-16 px-6 flex items-center border-b border-gray-200 dark:border-[#1F1F23]"
+            className="h-16 px-6 flex items-center border-b border-gray-200 dark:border-[#1F1F23] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-300 focus-visible:ring-offset-2 dark:focus-visible:ring-[#2B2B30]"
           >
             <div className="flex items-center gap-3">
               <Image

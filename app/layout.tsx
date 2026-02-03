@@ -41,7 +41,15 @@ export default function RootLayout({
         <Script id="theme" strategy="beforeInteractive">
           {themeScript}
         </Script>
-        <Providers>{children}</Providers>
+        <a
+          href="#main-content"
+          className="sr-only focus:not-sr-only focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+        >
+          Skip to content
+        </a>
+        <div id="main-content" tabIndex={-1}>
+          <Providers>{children}</Providers>
+        </div>
       </body>
     </html>
   );

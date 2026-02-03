@@ -93,6 +93,28 @@ describe('practice-session-page-logic', () => {
       });
       expect(setSubmitIdempotencyKey).toHaveBeenLastCalledWith(null);
     });
+
+    it('sets loadedAt and idempotencyKey to null when no next question exists', async () => {
+      const setQuestionLoadedAt = vi.fn();
+      const setSubmitIdempotencyKey = vi.fn();
+
+      await loadNextQuestion({
+        sessionId: 'session-1',
+        getNextQuestionFn: async () => ok(null),
+        createIdempotencyKey: () => 'idem_1',
+        nowMs: () => 1234,
+        setLoadState: vi.fn(),
+        setSelectedChoiceId: vi.fn(),
+        setSubmitResult: vi.fn(),
+        setSubmitIdempotencyKey,
+        setQuestionLoadedAt,
+        setQuestion: vi.fn(),
+        setSessionInfo: vi.fn(),
+      });
+
+      expect(setQuestionLoadedAt).toHaveBeenCalledWith(null);
+      expect(setSubmitIdempotencyKey).toHaveBeenLastCalledWith(null);
+    });
   });
 
   describe('createLoadNextQuestionAction', () => {
@@ -156,6 +178,108 @@ describe('practice-session-page-logic', () => {
       expect(setSubmitResult).toHaveBeenCalledWith(
         expect.objectContaining({ isCorrect: true }),
       );
+    });
+
+    it('does nothing when question is null', async () => {
+      const submitAnswerFn = vi.fn(async () =>
+        ok({
+          attemptId: 'attempt_1',
+          isCorrect: true,
+          correctChoiceId: 'choice_1',
+          explanationMd: 'Because...',
+        } satisfies SubmitAnswerOutput),
+      );
+
+      await submitAnswerForQuestion({
+        sessionId: 'session-1',
+        question: null,
+        selectedChoiceId: 'choice_1',
+        questionLoadedAtMs: 0,
+        submitIdempotencyKey: 'idem_1',
+        submitAnswerFn,
+        nowMs: () => 0,
+        setLoadState: vi.fn(),
+        setSubmitResult: vi.fn(),
+      });
+
+      expect(submitAnswerFn).not.toHaveBeenCalled();
+    });
+
+    it('does nothing when selectedChoiceId is null', async () => {
+      const submitAnswerFn = vi.fn(async () =>
+        ok({
+          attemptId: 'attempt_1',
+          isCorrect: true,
+          correctChoiceId: 'choice_1',
+          explanationMd: 'Because...',
+        } satisfies SubmitAnswerOutput),
+      );
+
+      await submitAnswerForQuestion({
+        sessionId: 'session-1',
+        question: createNextQuestion(),
+        selectedChoiceId: null,
+        questionLoadedAtMs: 0,
+        submitIdempotencyKey: 'idem_1',
+        submitAnswerFn,
+        nowMs: () => 0,
+        setLoadState: vi.fn(),
+        setSubmitResult: vi.fn(),
+      });
+
+      expect(submitAnswerFn).not.toHaveBeenCalled();
+    });
+
+    it('omits idempotencyKey when it is null', async () => {
+      const submitAnswerFn = vi.fn(async () =>
+        ok({
+          attemptId: 'attempt_1',
+          isCorrect: true,
+          correctChoiceId: 'choice_1',
+          explanationMd: 'Because...',
+        } satisfies SubmitAnswerOutput),
+      );
+
+      await submitAnswerForQuestion({
+        sessionId: 'session-1',
+        question: createNextQuestion(),
+        selectedChoiceId: 'choice_1',
+        questionLoadedAtMs: 0,
+        submitIdempotencyKey: null,
+        submitAnswerFn,
+        nowMs: () => 0,
+        setLoadState: vi.fn(),
+        setSubmitResult: vi.fn(),
+      });
+
+      expect(submitAnswerFn).toHaveBeenCalledWith(
+        expect.objectContaining({
+          idempotencyKey: undefined,
+        }),
+      );
+    });
+
+    it('sets error state when submit fails', async () => {
+      const setLoadState = vi.fn();
+      const setSubmitResult = vi.fn();
+
+      await submitAnswerForQuestion({
+        sessionId: 'session-1',
+        question: createNextQuestion(),
+        selectedChoiceId: 'choice_1',
+        questionLoadedAtMs: 0,
+        submitIdempotencyKey: 'idem_1',
+        submitAnswerFn: async () => err('INTERNAL_ERROR', 'Boom'),
+        nowMs: () => 0,
+        setLoadState,
+        setSubmitResult,
+      });
+
+      expect(setLoadState).toHaveBeenCalledWith({
+        status: 'error',
+        message: 'Boom',
+      });
+      expect(setSubmitResult).not.toHaveBeenCalled();
     });
   });
 

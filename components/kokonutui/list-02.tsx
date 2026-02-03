@@ -123,7 +123,7 @@ export default function List02({
                 'group flex items-center gap-3',
                 'p-2 rounded-lg',
                 'hover:bg-zinc-100 dark:hover:bg-zinc-800/50',
-                'transition-all duration-200',
+                'transition-colors duration-200',
               )}
             >
               <div
@@ -133,7 +133,10 @@ export default function List02({
                   'border border-zinc-200 dark:border-zinc-700',
                 )}
               >
-                <transaction.icon className="w-4 h-4 text-zinc-900 dark:text-zinc-100" />
+                <transaction.icon
+                  aria-hidden="true"
+                  className="w-4 h-4 text-zinc-900 dark:text-zinc-100"
+                />
               </div>
 
               <div className="flex-1 flex items-center justify-between min-w-0">
@@ -159,9 +162,15 @@ export default function List02({
                     {transaction.amount}
                   </span>
                   {transaction.type === 'incoming' ? (
-                    <ArrowDownLeft className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                    <ArrowDownLeft
+                      aria-hidden="true"
+                      className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400"
+                    />
                   ) : (
-                    <ArrowUpRight className="w-3.5 h-3.5 text-red-600 dark:text-red-400" />
+                    <ArrowUpRight
+                      aria-hidden="true"
+                      className="w-3.5 h-3.5 text-red-600 dark:text-red-400"
+                    />
                   )}
                 </div>
               </div>
@@ -183,16 +192,16 @@ export default function List02({
             'hover:from-zinc-800 hover:to-zinc-700',
             'dark:hover:from-zinc-200 dark:hover:to-zinc-300',
             'shadow-sm hover:shadow',
-            'transform transition-all duration-200',
+            'transform transition-transform duration-200',
             'hover:-translate-y-0.5',
             'active:translate-y-0',
-            'focus:outline-none focus:ring-2',
-            'focus:ring-zinc-500 dark:focus:ring-zinc-400',
-            'focus:ring-offset-2 dark:focus:ring-offset-zinc-900',
+            'focus-visible:outline-none focus-visible:ring-2',
+            'focus-visible:ring-zinc-500 dark:focus-visible:ring-zinc-400',
+            'focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900',
           )}
         >
           <span>View All Transactions</span>
-          <ArrowRight className="w-3.5 h-3.5" />
+          <ArrowRight aria-hidden="true" className="w-3.5 h-3.5" />
         </button>
       </div>
     </div>

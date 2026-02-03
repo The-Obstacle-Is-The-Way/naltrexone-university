@@ -2,50 +2,52 @@
 
 import { Menu, X } from 'lucide-react';
 import Link from 'next/link';
-import { useState } from 'react';
+import { useId, useState } from 'react';
 
-/**
- * Test helper: toggles the mobile nav open state.
- * Exported to keep static render tests deterministic without exercising click handlers.
- */
-export function toggleMobileNavOpen(isOpen: boolean): boolean {
-  return !isOpen;
-}
-
-function MobileNavLinks({ onClose }: { onClose?: () => void }) {
+function MobileNavLinks({
+  id,
+  onClose,
+}: {
+  id?: string;
+  onClose?: () => void;
+}) {
   return (
-    <nav className="absolute left-0 right-0 top-full border-b border-border bg-background p-4">
+    <nav
+      id={id}
+      aria-label="Mobile navigation"
+      className="absolute left-0 right-0 top-full border-b border-border bg-background p-4"
+    >
       <Link
         href="/app/dashboard"
-        className="block py-3 text-sm text-muted-foreground hover:text-foreground"
+        className="block rounded-md py-3 text-sm text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
         onClick={onClose}
       >
         Dashboard
       </Link>
       <Link
         href="/app/practice"
-        className="block py-3 text-sm text-muted-foreground hover:text-foreground"
+        className="block rounded-md py-3 text-sm text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
         onClick={onClose}
       >
         Practice
       </Link>
       <Link
         href="/app/review"
-        className="block py-3 text-sm text-muted-foreground hover:text-foreground"
+        className="block rounded-md py-3 text-sm text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
         onClick={onClose}
       >
         Review
       </Link>
       <Link
         href="/app/bookmarks"
-        className="block py-3 text-sm text-muted-foreground hover:text-foreground"
+        className="block rounded-md py-3 text-sm text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
         onClick={onClose}
       >
         Bookmarks
       </Link>
       <Link
         href="/app/billing"
-        className="block py-3 text-sm text-muted-foreground hover:text-foreground"
+        className="block rounded-md py-3 text-sm text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
         onClick={onClose}
       >
         Billing
@@ -55,40 +57,29 @@ function MobileNavLinks({ onClose }: { onClose?: () => void }) {
 }
 
 export function MobileNav() {
+  const navId = useId();
   const [isOpen, setIsOpen] = useState(false);
-  const onToggleOpen = setIsOpen.bind(null, toggleMobileNavOpen);
-  const onClose = setIsOpen.bind(null, false);
+  const onToggleOpen = () => setIsOpen((open) => !open);
+  const onClose = () => setIsOpen(false);
 
   return (
     <div className="sm:hidden">
       <button
         type="button"
         onClick={onToggleOpen}
-        className="p-2 text-muted-foreground hover:text-foreground"
+        className="p-2 text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
         aria-label={isOpen ? 'Close navigation menu' : 'Open navigation menu'}
         aria-expanded={isOpen}
+        aria-controls={navId}
       >
-        {isOpen ? <X className="size-6" /> : <Menu className="size-6" />}
+        {isOpen ? (
+          <X aria-hidden="true" className="size-6" />
+        ) : (
+          <Menu aria-hidden="true" className="size-6" />
+        )}
       </button>
 
-      {isOpen && <MobileNavLinks onClose={onClose} />}
-    </div>
-  );
-}
-
-/** Test-only: Renders MobileNav in expanded state for static render testing */
-export function MobileNavOpen() {
-  return (
-    <div className="sm:hidden">
-      <button
-        type="button"
-        className="p-2 text-muted-foreground hover:text-foreground"
-        aria-label="Close navigation menu"
-        aria-expanded={true}
-      >
-        <X className="size-6" />
-      </button>
-      <MobileNavLinks />
+      {isOpen && <MobileNavLinks id={navId} onClose={onClose} />}
     </div>
   );
 }

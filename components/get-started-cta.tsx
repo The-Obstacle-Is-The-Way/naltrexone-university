@@ -14,8 +14,24 @@ export type GetStartedCtaDeps = {
   checkEntitlementUseCase: CheckEntitlementUseCase;
 };
 
-async function getDeps(deps?: GetStartedCtaDeps): Promise<GetStartedCtaDeps> {
+type ContainerLike = {
+  createAuthGateway: () => AuthGateway;
+  createCheckEntitlementUseCase: () => CheckEntitlementUseCase;
+};
+
+async function getDeps(
+  deps?: GetStartedCtaDeps,
+  createContainerFn?: () => ContainerLike,
+): Promise<GetStartedCtaDeps> {
   if (deps) return deps;
+
+  if (createContainerFn) {
+    const container = createContainerFn();
+    return {
+      authGateway: container.createAuthGateway(),
+      checkEntitlementUseCase: container.createCheckEntitlementUseCase(),
+    };
+  }
 
   const { createContainer } = await import('@/lib/container');
   const container = createContainer();
@@ -26,26 +42,32 @@ async function getDeps(deps?: GetStartedCtaDeps): Promise<GetStartedCtaDeps> {
   };
 }
 
-export async function GetStartedCta({ deps }: { deps?: GetStartedCtaDeps }) {
+export async function GetStartedCta({
+  deps,
+  createContainerFn,
+}: {
+  deps?: GetStartedCtaDeps;
+  createContainerFn?: () => ContainerLike;
+}) {
   const skipClerk = process.env.NEXT_PUBLIC_SKIP_CLERK === 'true';
   if (skipClerk) {
     return (
       <Link
         href="/pricing"
-        className="inline-block rounded-full bg-orange-600 px-8 py-3 text-base font-medium text-white hover:bg-orange-700"
+        className="inline-block rounded-full bg-orange-600 px-8 py-3 text-base font-medium text-white hover:bg-orange-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
       >
         Get Started
       </Link>
     );
   }
 
-  const d = await getDeps(deps);
+  const d = await getDeps(deps, createContainerFn);
   const user = await d.authGateway.getCurrentUser();
   if (!user) {
     return (
       <Link
         href="/pricing"
-        className="inline-block rounded-full bg-orange-600 px-8 py-3 text-base font-medium text-white hover:bg-orange-700"
+        className="inline-block rounded-full bg-orange-600 px-8 py-3 text-base font-medium text-white hover:bg-orange-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
       >
         Get Started
       </Link>
@@ -62,7 +84,7 @@ export async function GetStartedCta({ deps }: { deps?: GetStartedCtaDeps }) {
   return (
     <Link
       href={href}
-      className="inline-block rounded-full bg-orange-600 px-8 py-3 text-base font-medium text-white hover:bg-orange-700"
+      className="inline-block rounded-full bg-orange-600 px-8 py-3 text-base font-medium text-white hover:bg-orange-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
     >
       {label}
     </Link>

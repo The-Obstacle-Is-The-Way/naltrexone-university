@@ -122,4 +122,66 @@ describe('app/pricing/subscribe-actions', () => {
       idempotencyKey: '11111111-1111-1111-1111-111111111111',
     });
   });
+
+  it('redirects to /app/billing when checkout session returns ALREADY_SUBSCRIBED', async () => {
+    const createCheckoutSessionFn = vi.fn(async () =>
+      err('ALREADY_SUBSCRIBED', 'Already subscribed'),
+    );
+
+    const redirectFn = createRedirectFn();
+
+    await expect(
+      subscribeMonthlyAction(new FormData(), {
+        createCheckoutSessionFn,
+        redirectFn,
+      }),
+    ).rejects.toMatchObject({
+      message: 'redirect:/app/billing',
+    });
+
+    expect(createCheckoutSessionFn).toHaveBeenCalledWith({
+      plan: 'monthly',
+      idempotencyKey: undefined,
+    });
+  });
+
+  it('includes a truncated error_message in development', async () => {
+    const longMessage = 'x'.repeat(210);
+    const createCheckoutSessionFn = vi.fn(async () =>
+      err('INTERNAL_ERROR', longMessage),
+    );
+
+    let redirected: string | null = null;
+    const redirectFn = vi.fn((url: string): never => {
+      redirected = url;
+      throw new Error(`redirect:${url}`);
+    });
+
+    const originalEnv = process.env.NODE_ENV;
+    (process.env as Record<string, string | undefined>).NODE_ENV =
+      'development';
+    try {
+      await expect(
+        subscribeMonthlyAction(new FormData(), {
+          createCheckoutSessionFn,
+          redirectFn,
+          logError: () => undefined,
+        }),
+      ).rejects.toMatchObject({
+        message: expect.stringContaining('redirect:'),
+      });
+    } finally {
+      (process.env as Record<string, string | undefined>).NODE_ENV =
+        originalEnv;
+    }
+
+    expect(redirected).not.toBeNull();
+
+    const url = new URL(`https://example.com${redirected}`);
+    expect(url.pathname).toBe('/pricing');
+    expect(url.searchParams.get('checkout')).toBe('error');
+    expect(url.searchParams.get('plan')).toBe('monthly');
+    expect(url.searchParams.get('error_code')).toBe('INTERNAL_ERROR');
+    expect(url.searchParams.get('error_message')).toBe(`${'x'.repeat(200)}…`);
+  });
 });

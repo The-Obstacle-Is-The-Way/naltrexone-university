@@ -1,7 +1,9 @@
 // @vitest-environment jsdom
 import { renderToStaticMarkup } from 'react-dom/server';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { AuthGateway } from '@/src/application/ports/gateways';
+import { FakeAuthGateway } from '@/src/application/test-helpers/fakes';
+import type { CheckEntitlementInput } from '@/src/application/use-cases/check-entitlement';
+import type { User } from '@/src/domain/entities';
 
 vi.mock('next/link', () => ({
   default: (props: Record<string, unknown>) => <a {...props} />,
@@ -28,23 +30,26 @@ describe('GetStartedCta', () => {
     vi.restoreAllMocks();
   });
 
+  function createUser(): User {
+    return {
+      id: 'user_1',
+      email: 'user@example.com',
+      createdAt: new Date('2026-02-01T00:00:00Z'),
+      updatedAt: new Date('2026-02-01T00:00:00Z'),
+    };
+  }
+
   it('links to /pricing when user is not entitled', async () => {
     const { GetStartedCta } = await import('@/components/get-started-cta');
 
-    const authGateway: AuthGateway = {
-      getCurrentUser: vi.fn(async () => ({
-        id: 'user_1',
-        email: 'user@example.com',
-        createdAt: new Date('2026-02-01T00:00:00Z'),
-        updatedAt: new Date('2026-02-01T00:00:00Z'),
-      })),
-      requireUser: vi.fn(async () => {
-        throw new Error('not used');
-      }),
-    };
+    const authGateway = new FakeAuthGateway(createUser());
 
+    const calls: CheckEntitlementInput[] = [];
     const checkEntitlementUseCase = {
-      execute: vi.fn(async () => ({ isEntitled: false })),
+      execute: async (input: CheckEntitlementInput) => {
+        calls.push(input);
+        return { isEntitled: false };
+      },
     };
 
     const element = await GetStartedCta({
@@ -54,20 +59,20 @@ describe('GetStartedCta', () => {
 
     expect(html).toContain('href="/pricing"');
     expect(html).toContain('Get Started');
+    expect(calls).toEqual([{ userId: 'user_1' }]);
   });
 
   it('links to /pricing when unauthenticated', async () => {
     const { GetStartedCta } = await import('@/components/get-started-cta');
 
-    const authGateway: AuthGateway = {
-      getCurrentUser: vi.fn(async () => null),
-      requireUser: vi.fn(async () => {
-        throw new Error('not used');
-      }),
-    };
+    const authGateway = new FakeAuthGateway(null);
 
+    const calls: CheckEntitlementInput[] = [];
     const checkEntitlementUseCase = {
-      execute: vi.fn(async () => ({ isEntitled: true })),
+      execute: async (input: CheckEntitlementInput) => {
+        calls.push(input);
+        return { isEntitled: true };
+      },
     };
 
     const element = await GetStartedCta({
@@ -77,26 +82,20 @@ describe('GetStartedCta', () => {
 
     expect(html).toContain('href="/pricing"');
     expect(html).toContain('Get Started');
-    expect(checkEntitlementUseCase.execute).not.toHaveBeenCalled();
+    expect(calls).toHaveLength(0);
   });
 
   it('links to /app/dashboard when user is entitled', async () => {
     const { GetStartedCta } = await import('@/components/get-started-cta');
 
-    const authGateway: AuthGateway = {
-      getCurrentUser: vi.fn(async () => ({
-        id: 'user_1',
-        email: 'user@example.com',
-        createdAt: new Date('2026-02-01T00:00:00Z'),
-        updatedAt: new Date('2026-02-01T00:00:00Z'),
-      })),
-      requireUser: vi.fn(async () => {
-        throw new Error('not used');
-      }),
-    };
+    const authGateway = new FakeAuthGateway(createUser());
 
+    const calls: CheckEntitlementInput[] = [];
     const checkEntitlementUseCase = {
-      execute: vi.fn(async () => ({ isEntitled: true })),
+      execute: async (input: CheckEntitlementInput) => {
+        calls.push(input);
+        return { isEntitled: true };
+      },
     };
 
     const element = await GetStartedCta({
@@ -106,6 +105,7 @@ describe('GetStartedCta', () => {
 
     expect(html).toContain('href="/app/dashboard"');
     expect(html).toContain('Go to Dashboard');
+    expect(calls).toEqual([{ userId: 'user_1' }]);
   });
 
   it('links to /pricing when NEXT_PUBLIC_SKIP_CLERK=true', async () => {
@@ -121,28 +121,17 @@ describe('GetStartedCta', () => {
   });
 
   it('loads dependencies from the container when deps are omitted', async () => {
-    vi.doMock('@/lib/container', () => ({
-      createContainer: () => ({
-        createAuthGateway: () => ({
-          getCurrentUser: async () => ({
-            id: 'user_1',
-            email: 'user@example.com',
-            createdAt: new Date('2026-02-01T00:00:00Z'),
-            updatedAt: new Date('2026-02-01T00:00:00Z'),
-          }),
-          requireUser: async () => {
-            throw new Error('not used');
-          },
-        }),
+    const { GetStartedCta } = await import('@/components/get-started-cta');
+
+    const element = await GetStartedCta({
+      deps: undefined,
+      createContainerFn: () => ({
+        createAuthGateway: () => new FakeAuthGateway(createUser()),
         createCheckEntitlementUseCase: () => ({
           execute: async () => ({ isEntitled: false }),
         }),
       }),
-    }));
-
-    const { GetStartedCta } = await import('@/components/get-started-cta');
-
-    const element = await GetStartedCta({ deps: undefined });
+    });
     const html = renderToStaticMarkup(element);
 
     expect(html).toContain('href="/pricing"');

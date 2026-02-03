@@ -1,7 +1,9 @@
 // @vitest-environment jsdom
 import { renderToStaticMarkup } from 'react-dom/server';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { AuthGateway } from '@/src/application/ports/gateways';
+import { FakeAuthGateway } from '@/src/application/test-helpers/fakes';
+import type { CheckEntitlementInput } from '@/src/application/use-cases/check-entitlement';
+import type { User } from '@/src/domain/entities';
 
 vi.mock('@clerk/nextjs', () => ({
   UserButton: () => <div data-testid="user-button" />,
@@ -32,6 +34,15 @@ describe('AuthNav', () => {
     vi.restoreAllMocks();
   });
 
+  function createUser(): User {
+    return {
+      id: 'user_1',
+      email: 'user@example.com',
+      createdAt: new Date('2026-02-01T00:00:00Z'),
+      updatedAt: new Date('2026-02-01T00:00:00Z'),
+    };
+  }
+
   it('renders a CI fallback UI when NEXT_PUBLIC_SKIP_CLERK=true', async () => {
     process.env.NEXT_PUBLIC_SKIP_CLERK = 'true';
 
@@ -50,20 +61,14 @@ describe('AuthNav', () => {
 
     const { AuthNav } = await import('./auth-nav');
 
-    const authGateway: AuthGateway = {
-      getCurrentUser: vi.fn(async () => ({
-        id: 'user_1',
-        email: 'user@example.com',
-        createdAt: new Date('2026-02-01T00:00:00Z'),
-        updatedAt: new Date('2026-02-01T00:00:00Z'),
-      })),
-      requireUser: vi.fn(async () => {
-        throw new Error('not used');
-      }),
-    };
+    const authGateway = new FakeAuthGateway(createUser());
 
+    const calls: CheckEntitlementInput[] = [];
     const checkEntitlementUseCase = {
-      execute: vi.fn(async () => ({ isEntitled: true })),
+      execute: async (input: CheckEntitlementInput) => {
+        calls.push(input);
+        return { isEntitled: true };
+      },
     };
 
     const element = await AuthNav({
@@ -74,6 +79,7 @@ describe('AuthNav', () => {
     expect(html).toContain('href="/app/dashboard"');
     expect(html).toContain('data-testid="user-button"');
     expect(html).not.toContain('href="/pricing"');
+    expect(calls).toEqual([{ userId: 'user_1' }]);
   });
 
   it('renders an unauthenticated UI when there is no current user', async () => {
@@ -81,15 +87,14 @@ describe('AuthNav', () => {
 
     const { AuthNav } = await import('./auth-nav');
 
-    const authGateway: AuthGateway = {
-      getCurrentUser: vi.fn(async () => null),
-      requireUser: vi.fn(async () => {
-        throw new Error('not used');
-      }),
-    };
+    const authGateway = new FakeAuthGateway(null);
 
+    const calls: CheckEntitlementInput[] = [];
     const checkEntitlementUseCase = {
-      execute: vi.fn(async () => ({ isEntitled: true })),
+      execute: async (input: CheckEntitlementInput) => {
+        calls.push(input);
+        return { isEntitled: true };
+      },
     };
 
     const element = await AuthNav({
@@ -100,7 +105,7 @@ describe('AuthNav', () => {
     expect(html).toContain('href="/pricing"');
     expect(html).toContain('href="/sign-in"');
     expect(html).not.toContain('data-testid="user-button"');
-    expect(checkEntitlementUseCase.execute).not.toHaveBeenCalled();
+    expect(calls).toHaveLength(0);
   });
 
   it('shows a Pricing link when the user is not entitled', async () => {
@@ -108,20 +113,14 @@ describe('AuthNav', () => {
 
     const { AuthNav } = await import('./auth-nav');
 
-    const authGateway: AuthGateway = {
-      getCurrentUser: vi.fn(async () => ({
-        id: 'user_1',
-        email: 'user@example.com',
-        createdAt: new Date('2026-02-01T00:00:00Z'),
-        updatedAt: new Date('2026-02-01T00:00:00Z'),
-      })),
-      requireUser: vi.fn(async () => {
-        throw new Error('not used');
-      }),
-    };
+    const authGateway = new FakeAuthGateway(createUser());
 
+    const calls: CheckEntitlementInput[] = [];
     const checkEntitlementUseCase = {
-      execute: vi.fn(async () => ({ isEntitled: false })),
+      execute: async (input: CheckEntitlementInput) => {
+        calls.push(input);
+        return { isEntitled: false };
+      },
     };
 
     const element = await AuthNav({
@@ -132,33 +131,23 @@ describe('AuthNav', () => {
     expect(html).toContain('href="/pricing"');
     expect(html).toContain('data-testid="user-button"');
     expect(html).not.toContain('href="/app/dashboard"');
+    expect(calls).toEqual([{ userId: 'user_1' }]);
   });
 
   it('loads dependencies from the container when deps are omitted', async () => {
     process.env.NEXT_PUBLIC_SKIP_CLERK = 'false';
 
-    vi.doMock('@/lib/container', () => ({
-      createContainer: () => ({
-        createAuthGateway: () => ({
-          getCurrentUser: async () => ({
-            id: 'user_1',
-            email: 'user@example.com',
-            createdAt: new Date('2026-02-01T00:00:00Z'),
-            updatedAt: new Date('2026-02-01T00:00:00Z'),
-          }),
-          requireUser: async () => {
-            throw new Error('not used');
-          },
-        }),
+    const { AuthNav } = await import('./auth-nav');
+
+    const element = await AuthNav({
+      deps: undefined,
+      createContainerFn: () => ({
+        createAuthGateway: () => new FakeAuthGateway(createUser()),
         createCheckEntitlementUseCase: () => ({
           execute: async () => ({ isEntitled: true }),
         }),
       }),
-    }));
-
-    const { AuthNav } = await import('./auth-nav');
-
-    const element = await AuthNav({ deps: undefined });
+    });
     const html = renderToStaticMarkup(element);
 
     expect(html).toContain('href="/app/dashboard"');

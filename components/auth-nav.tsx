@@ -15,8 +15,24 @@ export type AuthNavDeps = {
   checkEntitlementUseCase: CheckEntitlementUseCase;
 };
 
-async function getDeps(deps?: AuthNavDeps): Promise<AuthNavDeps> {
+type ContainerLike = {
+  createAuthGateway: () => AuthGateway;
+  createCheckEntitlementUseCase: () => CheckEntitlementUseCase;
+};
+
+async function getDeps(
+  deps?: AuthNavDeps,
+  createContainerFn?: () => ContainerLike,
+): Promise<AuthNavDeps> {
   if (deps) return deps;
+
+  if (createContainerFn) {
+    const container = createContainerFn();
+    return {
+      authGateway: container.createAuthGateway(),
+      checkEntitlementUseCase: container.createCheckEntitlementUseCase(),
+    };
+  }
 
   const { createContainer } = await import('@/lib/container');
   const container = createContainer();
@@ -35,7 +51,13 @@ async function getDeps(deps?: AuthNavDeps): Promise<AuthNavDeps> {
  *
  * In production/development with real Clerk keys, renders the full auth UI.
  */
-export async function AuthNav({ deps }: { deps?: AuthNavDeps } = {}) {
+export async function AuthNav({
+  deps,
+  createContainerFn,
+}: {
+  deps?: AuthNavDeps;
+  createContainerFn?: () => ContainerLike;
+} = {}) {
   const skipClerk = process.env.NEXT_PUBLIC_SKIP_CLERK === 'true';
 
   if (skipClerk) {
@@ -44,13 +66,13 @@ export async function AuthNav({ deps }: { deps?: AuthNavDeps } = {}) {
       <div className="flex items-center space-x-4">
         <Link
           href="/pricing"
-          className="text-sm font-medium text-muted-foreground hover:text-foreground"
+          className="text-sm font-medium text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
         >
           Pricing
         </Link>
         <Link
           href="/sign-in"
-          className="rounded-full bg-orange-600 px-4 py-2 text-sm font-medium text-white hover:bg-orange-700"
+          className="rounded-full bg-orange-600 px-4 py-2 text-sm font-medium text-white hover:bg-orange-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
         >
           Sign In
         </Link>
@@ -58,7 +80,7 @@ export async function AuthNav({ deps }: { deps?: AuthNavDeps } = {}) {
     );
   }
 
-  const d = await getDeps(deps);
+  const d = await getDeps(deps, createContainerFn);
   const user = await d.authGateway.getCurrentUser();
 
   if (!user) {
@@ -66,13 +88,13 @@ export async function AuthNav({ deps }: { deps?: AuthNavDeps } = {}) {
       <div className="flex items-center space-x-4">
         <Link
           href="/pricing"
-          className="text-sm font-medium text-muted-foreground hover:text-foreground"
+          className="text-sm font-medium text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
         >
           Pricing
         </Link>
         <Link
           href="/sign-in"
-          className="rounded-full bg-orange-600 px-4 py-2 text-sm font-medium text-white hover:bg-orange-700"
+          className="rounded-full bg-orange-600 px-4 py-2 text-sm font-medium text-white hover:bg-orange-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
         >
           Sign In
         </Link>
@@ -91,7 +113,7 @@ export async function AuthNav({ deps }: { deps?: AuthNavDeps } = {}) {
     <div className="flex items-center space-x-4">
       <Link
         href={primaryLink.href}
-        className="text-sm font-medium text-muted-foreground hover:text-foreground"
+        className="text-sm font-medium text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
       >
         {primaryLink.label}
       </Link>

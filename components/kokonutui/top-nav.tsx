@@ -28,12 +28,15 @@ export default function TopNav() {
         {breadcrumbs.map((item, index) => (
           <div key={item.label} className="flex items-center">
             {index > 0 && (
-              <ChevronRight className="h-4 w-4 text-gray-500 dark:text-gray-400 mx-1" />
+              <ChevronRight
+                aria-hidden="true"
+                className="h-4 w-4 text-gray-500 dark:text-gray-400 mx-1"
+              />
             )}
             {item.href ? (
               <Link
                 href={item.href}
-                className="text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100 transition-colors"
+                className="text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-300 focus-visible:ring-offset-2 dark:focus-visible:ring-[#2B2B30]"
               >
                 {item.label}
               </Link>
@@ -49,15 +52,22 @@ export default function TopNav() {
       <div className="flex items-center gap-2 sm:gap-4 ml-auto sm:ml-0">
         <button
           type="button"
-          className="p-1.5 sm:p-2 hover:bg-gray-100 dark:hover:bg-[#1F1F23] rounded-full transition-colors"
+          aria-label="Notifications"
+          className="rounded-full p-1.5 transition-colors hover:bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-300 focus-visible:ring-offset-2 dark:hover:bg-[#1F1F23] dark:focus-visible:ring-[#2B2B30] sm:p-2"
         >
-          <Bell className="h-4 w-4 sm:h-5 sm:w-5 text-gray-600 dark:text-gray-300" />
+          <Bell
+            aria-hidden="true"
+            className="h-4 w-4 sm:h-5 sm:w-5 text-gray-600 dark:text-gray-300"
+          />
         </button>
 
         <ThemeToggle />
 
         <DropdownMenu>
-          <DropdownMenuTrigger className="focus:outline-none">
+          <DropdownMenuTrigger
+            aria-label="Open user menu"
+            className="rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-300 focus-visible:ring-offset-2 dark:focus-visible:ring-[#2B2B30]"
+          >
             <Image
               src="https://ferf1mheo22r9ira.public.blob.vercel-storage.com/avatar-01-n0x8HFv8EUetf9z6ht0wScJKoTHqf8.png"
               alt="User avatar"

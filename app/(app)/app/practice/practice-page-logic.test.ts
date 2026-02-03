@@ -12,6 +12,7 @@ import {
   submitAnswerForQuestion,
   toggleBookmarkForQuestion,
 } from '@/app/(app)/app/practice/practice-page-logic';
+import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import { err, ok } from '@/src/adapters/controllers/action-result';
 import type { NextQuestion } from '@/src/application/use-cases/get-next-question';
 import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
@@ -281,6 +282,78 @@ describe('practice-page-logic', () => {
         vi.useRealTimers();
       }
     });
+
+    it('uses default timeout helpers and default logger when deps are omitted', async () => {
+      vi.useFakeTimers();
+      const consoleError = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
+      try {
+        let retry = 0;
+        const setBookmarkRetryCount = vi.fn(
+          (next: number | ((prev: number) => number)) => {
+            retry = typeof next === 'function' ? next(retry) : next;
+          },
+        );
+
+        const cleanup = createBookmarksEffect({
+          bookmarkRetryCount: 0,
+          getBookmarksFn: async () => err('INTERNAL_ERROR', 'Boom'),
+          setBookmarkedQuestionIds: vi.fn(),
+          setBookmarkStatus: vi.fn(),
+          setBookmarkRetryCount,
+        });
+
+        await Promise.resolve();
+
+        expect(consoleError).toHaveBeenCalledWith(
+          'Failed to load bookmarks',
+          expect.anything(),
+        );
+
+        await vi.advanceTimersByTimeAsync(1000);
+        expect(retry).toBe(1);
+
+        cleanup();
+      } finally {
+        consoleError.mockRestore();
+        vi.useRealTimers();
+      }
+    });
+
+    it('does not update state when cleaned up before async bookmarks load completes', async () => {
+      type BookmarksResponse = { rows: Array<{ questionId: string }> };
+      let resolvePromise: (value: ActionResult<BookmarksResponse>) => void =
+        () => {
+          throw new Error('resolvePromise not set');
+        };
+
+      const bookmarksPromise = new Promise<ActionResult<BookmarksResponse>>(
+        (resolve) => {
+          resolvePromise = resolve;
+        },
+      );
+      const getBookmarksFn = vi.fn(() => bookmarksPromise);
+
+      const setBookmarkedQuestionIds = vi.fn();
+      const setBookmarkStatus = vi.fn();
+
+      const cleanup = createBookmarksEffect({
+        bookmarkRetryCount: 0,
+        getBookmarksFn,
+        setBookmarkedQuestionIds,
+        setBookmarkStatus,
+        setBookmarkRetryCount: vi.fn(),
+      });
+
+      cleanup();
+
+      resolvePromise(ok({ rows: [{ questionId: 'q_1' }] }));
+      await Promise.resolve();
+
+      expect(setBookmarkedQuestionIds).not.toHaveBeenCalled();
+      expect(setBookmarkStatus).not.toHaveBeenCalledWith('idle');
+    });
   });
 
   describe('submitAnswerForQuestion', () => {
@@ -389,6 +462,82 @@ describe('practice-page-logic', () => {
         message: 'Boom',
       });
     });
+
+    it('does nothing when question is null', async () => {
+      const submitAnswerFn = vi.fn(async () =>
+        ok({
+          attemptId: 'attempt_1',
+          isCorrect: true,
+          correctChoiceId: 'choice_1',
+          explanationMd: 'Because...',
+        } satisfies SubmitAnswerOutput),
+      );
+
+      await submitAnswerForQuestion({
+        question: null,
+        selectedChoiceId: 'choice_1',
+        questionLoadedAtMs: 0,
+        submitIdempotencyKey: 'idem_1',
+        submitAnswerFn,
+        nowMs: () => 0,
+        setLoadState: vi.fn(),
+        setSubmitResult: vi.fn(),
+      });
+
+      expect(submitAnswerFn).not.toHaveBeenCalled();
+    });
+
+    it('does nothing when selectedChoiceId is null', async () => {
+      const submitAnswerFn = vi.fn(async () =>
+        ok({
+          attemptId: 'attempt_1',
+          isCorrect: true,
+          correctChoiceId: 'choice_1',
+          explanationMd: 'Because...',
+        } satisfies SubmitAnswerOutput),
+      );
+
+      await submitAnswerForQuestion({
+        question: createNextQuestion(),
+        selectedChoiceId: null,
+        questionLoadedAtMs: 0,
+        submitIdempotencyKey: 'idem_1',
+        submitAnswerFn,
+        nowMs: () => 0,
+        setLoadState: vi.fn(),
+        setSubmitResult: vi.fn(),
+      });
+
+      expect(submitAnswerFn).not.toHaveBeenCalled();
+    });
+
+    it('omits idempotencyKey when it is null', async () => {
+      const submitAnswerFn = vi.fn(async () =>
+        ok({
+          attemptId: 'attempt_1',
+          isCorrect: true,
+          correctChoiceId: 'choice_1',
+          explanationMd: 'Because...',
+        } satisfies SubmitAnswerOutput),
+      );
+
+      await submitAnswerForQuestion({
+        question: createNextQuestion(),
+        selectedChoiceId: 'choice_1',
+        questionLoadedAtMs: 0,
+        submitIdempotencyKey: null,
+        submitAnswerFn,
+        nowMs: () => 0,
+        setLoadState: vi.fn(),
+        setSubmitResult: vi.fn(),
+      });
+
+      expect(submitAnswerFn).toHaveBeenCalledWith(
+        expect.objectContaining({
+          idempotencyKey: undefined,
+        }),
+      );
+    });
   });
 
   describe('toggleBookmarkForQuestion', () => {
@@ -431,6 +580,43 @@ describe('practice-page-logic', () => {
       expect(setBookmarkStatus).toHaveBeenCalledWith('error');
       expect(setLoadState).not.toHaveBeenCalled();
       expect(onBookmarkToggled).not.toHaveBeenCalled();
+    });
+
+    it('does nothing when question is null', async () => {
+      const toggleBookmarkFn = vi.fn(async () => ok({ bookmarked: true }));
+
+      await toggleBookmarkForQuestion({
+        question: null,
+        toggleBookmarkFn,
+        setBookmarkStatus: vi.fn(),
+        setLoadState: vi.fn(),
+        setBookmarkedQuestionIds: vi.fn(),
+        onBookmarkToggled: vi.fn(),
+      });
+
+      expect(toggleBookmarkFn).not.toHaveBeenCalled();
+    });
+
+    it('removes bookmark when bookmarked=false', async () => {
+      let ids = new Set<string>(['q_1']);
+      const setBookmarkedQuestionIds = vi.fn(
+        (next: Set<string> | ((prev: Set<string>) => Set<string>)) => {
+          ids = typeof next === 'function' ? next(ids) : next;
+        },
+      );
+      const onBookmarkToggled = vi.fn();
+
+      await toggleBookmarkForQuestion({
+        question: createNextQuestion(),
+        toggleBookmarkFn: async () => ok({ bookmarked: false }),
+        setBookmarkStatus: vi.fn(),
+        setLoadState: vi.fn(),
+        setBookmarkedQuestionIds,
+        onBookmarkToggled,
+      });
+
+      expect(ids.has('q_1')).toBe(false);
+      expect(onBookmarkToggled).toHaveBeenCalledWith(false);
     });
   });
 
