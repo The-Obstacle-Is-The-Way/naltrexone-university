@@ -10,6 +10,7 @@ import {
   getNextQuestion,
   submitAnswer,
 } from '@/src/adapters/controllers/question-controller';
+import { getUserStats } from '@/src/adapters/controllers/stats-controller';
 import { DrizzleAttemptRepository } from '@/src/adapters/repositories/drizzle-attempt-repository';
 import { DrizzleIdempotencyKeyRepository } from '@/src/adapters/repositories/drizzle-idempotency-key-repository';
 import { DrizzlePracticeSessionRepository } from '@/src/adapters/repositories/drizzle-practice-session-repository';
@@ -276,5 +277,97 @@ describe('question controllers (integration)', () => {
       selectedChoiceId: question.correctChoiceId,
       isCorrect: true,
     });
+  });
+});
+
+describe('stats controller (integration)', () => {
+  it('aggregates totals, windows, streak, and recent activity from real DB', async () => {
+    const user = await createUser();
+    const slugA = `it-stats-a-${randomUUID()}`;
+    const questionA = await createQuestion({
+      slug: slugA,
+      status: 'published',
+      difficulty: 'easy',
+    });
+    const slugB = `it-stats-b-${randomUUID()}`;
+    const questionB = await createQuestion({
+      slug: slugB,
+      status: 'published',
+      difficulty: 'easy',
+    });
+
+    const now = new Date('2026-02-10T12:00:00.000Z');
+
+    await db.insert(schema.attempts).values([
+      {
+        userId: user.id,
+        questionId: questionA.id,
+        practiceSessionId: null,
+        selectedChoiceId: questionA.correctChoiceId,
+        isCorrect: true,
+        timeSpentSeconds: 10,
+        answeredAt: new Date('2026-02-02T12:00:00.000Z'),
+      },
+      {
+        userId: user.id,
+        questionId: questionB.id,
+        practiceSessionId: null,
+        selectedChoiceId: questionB.wrongChoiceId,
+        isCorrect: false,
+        timeSpentSeconds: 10,
+        answeredAt: new Date('2026-02-09T12:00:00.000Z'),
+      },
+      {
+        userId: user.id,
+        questionId: questionA.id,
+        practiceSessionId: null,
+        selectedChoiceId: questionA.correctChoiceId,
+        isCorrect: true,
+        timeSpentSeconds: 10,
+        answeredAt: new Date('2026-02-10T11:00:00.000Z'),
+      },
+    ]);
+
+    const authGateway: AuthGateway = {
+      getCurrentUser: async () => ({
+        id: user.id,
+        email: user.email,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      }),
+      requireUser: async () => ({
+        id: user.id,
+        email: user.email,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      }),
+    };
+
+    const result = await getUserStats(
+      {},
+      {
+        authGateway,
+        checkEntitlementUseCase: {
+          execute: async () => ({ isEntitled: true }),
+        },
+        attemptRepository: new DrizzleAttemptRepository(db),
+        questionRepository: new DrizzleQuestionRepository(db),
+        now: () => now,
+      },
+    );
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+
+    expect(result.data.totalAnswered).toBe(3);
+    expect(result.data.accuracyOverall).toBeCloseTo(2 / 3);
+    expect(result.data.answeredLast7Days).toBe(2);
+    expect(result.data.accuracyLast7Days).toBeCloseTo(1 / 2);
+    expect(result.data.currentStreakDays).toBe(2);
+    expect(result.data.recentActivity[0]).toMatchObject({
+      slug: slugA,
+      isCorrect: true,
+    });
+    expect(result.data.recentActivity.map((row) => row.slug)).toContain(slugB);
   });
 });
