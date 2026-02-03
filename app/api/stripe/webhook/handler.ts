@@ -59,6 +59,10 @@ export function createWebhookHandler(
       }
     } catch (error) {
       container.logger.error({ error }, 'Stripe webhook rate limiter failed');
+      return NextResponse.json(
+        { error: 'Rate limiter unavailable' },
+        { status: 503 },
+      );
     }
 
     const rawBody = await req.text();

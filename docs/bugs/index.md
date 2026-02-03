@@ -1,7 +1,7 @@
 # Bug Reports
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-02-02
+**Last Updated:** 2026-02-03
 
 ---
 
@@ -19,7 +19,7 @@ Bug reports document issues discovered in the codebase along with their root cau
 |----|-------|--------|----------|------|
 | None | — | — | — | — |
 
-**Next Bug ID:** BUG-048
+**Next Bug ID:** BUG-049
 
 ## Foundation Audit
 
@@ -30,6 +30,7 @@ See: [Foundation Audit Report](foundation-audit-report.md)
 
 | ID | Title | Priority | Resolved |
 |----|-------|----------|----------|
+| [BUG-048](../_archive/bugs/bug-048-webhook-rate-limiter-fails-open.md) | Webhook Rate Limiter Failures Fail Open | P2 | 2026-02-03 |
 | [BUG-047](../_archive/bugs/bug-047-multiple-subscriptions-per-user.md) | Multiple Subscriptions Created Per User | P1 | 2026-02-02 |
 | [BUG-046](../_archive/bugs/bug-046-review-page-ambiguous-column.md) | Review Page SQL Error — Ambiguous Column Reference | P1 | 2026-02-02 |
 | [BUG-045](../_archive/bugs/bug-045-checkout-missing-current-period-end.md) | Checkout Success Validation Fails — missing_current_period_end | P1 | 2026-02-02 |

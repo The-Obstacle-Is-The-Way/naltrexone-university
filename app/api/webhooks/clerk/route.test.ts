@@ -144,6 +144,33 @@ describe('POST /api/webhooks/clerk', () => {
     expect(processClerkWebhook).not.toHaveBeenCalled();
   });
 
+  it('returns 503 when rate limiter throws', async () => {
+    const {
+      POST,
+      rateLimiter,
+      verifyWebhook,
+      processClerkWebhook,
+      loggerError,
+    } = createTestDeps();
+
+    rateLimiter.limit.mockRejectedValue(new Error('rate limiter down'));
+
+    const res = await POST(
+      new Request('http://localhost/api/webhooks/clerk', {
+        method: 'POST',
+        body: 'raw',
+      }),
+    );
+
+    expect(res.status).toBe(503);
+    await expect(res.json()).resolves.toEqual({
+      error: 'Rate limiter unavailable',
+    });
+    expect(verifyWebhook).not.toHaveBeenCalled();
+    expect(processClerkWebhook).not.toHaveBeenCalled();
+    expect(loggerError).toHaveBeenCalledTimes(1);
+  });
+
   it('returns 400 when payload validation fails', async () => {
     const { POST, verifyWebhook, processClerkWebhook } = createTestDeps();
 

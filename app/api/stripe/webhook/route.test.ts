@@ -173,6 +173,28 @@ describe('POST /api/stripe/webhook', () => {
     expect(processStripeWebhook).not.toHaveBeenCalled();
   });
 
+  it('returns 503 when rate limiter throws', async () => {
+    const { POST, processStripeWebhook, rateLimiter, loggerError } =
+      createTestDeps();
+
+    rateLimiter.limit.mockRejectedValue(new Error('rate limiter down'));
+
+    const res = await POST(
+      new Request('http://localhost/api/stripe/webhook', {
+        method: 'POST',
+        headers: { 'stripe-signature': 'sig_1' },
+        body: 'raw',
+      }),
+    );
+
+    expect(res.status).toBe(503);
+    await expect(res.json()).resolves.toEqual({
+      error: 'Rate limiter unavailable',
+    });
+    expect(processStripeWebhook).not.toHaveBeenCalled();
+    expect(loggerError).toHaveBeenCalledTimes(1);
+  });
+
   it('returns 500 when processing fails unexpectedly', async () => {
     const { POST, loggerError, processStripeWebhook } = createTestDeps();
     loggerError.mockClear();

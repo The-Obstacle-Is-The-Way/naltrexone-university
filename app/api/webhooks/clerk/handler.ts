@@ -80,6 +80,10 @@ export function createWebhookHandler(
       }
     } catch (error) {
       container.logger.error({ error }, 'Clerk webhook rate limiter failed');
+      return NextResponse.json(
+        { error: 'Rate limiter unavailable' },
+        { status: 503 },
+      );
     }
 
     let event: ClerkWebhookEvent;
