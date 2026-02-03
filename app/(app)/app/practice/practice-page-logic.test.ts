@@ -12,6 +12,7 @@ import {
   submitAnswerForQuestion,
   toggleBookmarkForQuestion,
 } from '@/app/(app)/app/practice/practice-page-logic';
+import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import { err, ok } from '@/src/adapters/controllers/action-result';
 import type { NextQuestion } from '@/src/application/use-cases/get-next-question';
 import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
@@ -281,6 +282,77 @@ describe('practice-page-logic', () => {
         vi.useRealTimers();
       }
     });
+
+    it('logs via console.error when bookmarks load fails and no logError is provided', async () => {
+      vi.useFakeTimers();
+      const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {
+        // swallow expected error logs
+      });
+
+      try {
+        const setBookmarkStatus = vi.fn();
+
+        const cleanup = createBookmarksEffect({
+          bookmarkRetryCount: 0,
+          getBookmarksFn: async () => err('INTERNAL_ERROR', 'Boom'),
+          setBookmarkedQuestionIds: vi.fn(),
+          setBookmarkStatus,
+          setBookmarkRetryCount: vi.fn(),
+        });
+
+        await Promise.resolve();
+
+        expect(consoleError).toHaveBeenCalledWith('Failed to load bookmarks', {
+          code: 'INTERNAL_ERROR',
+          message: 'Boom',
+        });
+        expect(setBookmarkStatus).toHaveBeenCalledWith('error');
+
+        cleanup();
+      } finally {
+        consoleError.mockRestore();
+        vi.useRealTimers();
+      }
+    });
+
+    it('does not update state after cleanup', async () => {
+      const setBookmarkedQuestionIds = vi.fn();
+      const setBookmarkStatus = vi.fn();
+
+      let resolveBookmarks:
+        | ((
+            value: ActionResult<{ rows: Array<{ questionId: string }> }>,
+          ) => void)
+        | undefined;
+      const pending = new Promise<
+        ActionResult<{ rows: Array<{ questionId: string }> }>
+      >((res) => {
+        resolveBookmarks = res;
+      });
+      if (!resolveBookmarks) throw new Error('Expected resolve function');
+
+      const getBookmarksFn = vi.fn(async () => pending);
+
+      const cleanup = createBookmarksEffect({
+        bookmarkRetryCount: 0,
+        getBookmarksFn,
+        setBookmarkedQuestionIds,
+        setBookmarkStatus,
+        setBookmarkRetryCount: vi.fn(),
+      });
+
+      cleanup();
+      resolveBookmarks(
+        ok({
+          rows: [{ questionId: 'q_1' }],
+        }),
+      );
+
+      await Promise.resolve();
+
+      expect(setBookmarkedQuestionIds).not.toHaveBeenCalled();
+      expect(setBookmarkStatus).not.toHaveBeenCalled();
+    });
   });
 
   describe('submitAnswerForQuestion', () => {
@@ -431,6 +503,32 @@ describe('practice-page-logic', () => {
       expect(setBookmarkStatus).toHaveBeenCalledWith('error');
       expect(setLoadState).not.toHaveBeenCalled();
       expect(onBookmarkToggled).not.toHaveBeenCalled();
+    });
+
+    it('removes the question id when bookmark is removed', async () => {
+      let ids = new Set<string>(['q_1', 'other']);
+
+      const setBookmarkedQuestionIds = vi.fn(
+        (next: Set<string> | ((prev: Set<string>) => Set<string>)) => {
+          ids = typeof next === 'function' ? next(ids) : next;
+        },
+      );
+
+      const setBookmarkStatus = vi.fn();
+      const onBookmarkToggled = vi.fn();
+
+      await toggleBookmarkForQuestion({
+        question: createNextQuestion(),
+        toggleBookmarkFn: async () => ok({ bookmarked: false }),
+        setBookmarkStatus,
+        setLoadState: vi.fn(),
+        setBookmarkedQuestionIds,
+        onBookmarkToggled,
+      });
+
+      expect(ids.has('q_1')).toBe(false);
+      expect(onBookmarkToggled).toHaveBeenCalledWith(false);
+      expect(setBookmarkStatus).toHaveBeenLastCalledWith('idle');
     });
   });
 

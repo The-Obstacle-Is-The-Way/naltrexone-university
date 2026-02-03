@@ -130,4 +130,59 @@ describe('processClerkWebhook', () => {
 
     expect(deps.cancelCalls).toEqual([]);
   });
+
+  it('rejects user.updated when the payload is missing email addresses', async () => {
+    const deps = createDeps();
+
+    await expect(
+      processClerkWebhook(deps, {
+        type: 'user.updated',
+        data: { id: 'clerk_1' },
+      }),
+    ).rejects.toMatchObject({ code: 'INVALID_WEBHOOK_PAYLOAD' });
+  });
+
+  it('rejects user.updated when an email record is missing an email field', async () => {
+    const deps = createDeps();
+
+    await expect(
+      processClerkWebhook(deps, {
+        type: 'user.updated',
+        data: { id: 'clerk_1', email_addresses: [{ id: 'email_1' }] },
+      }),
+    ).rejects.toMatchObject({ code: 'INVALID_WEBHOOK_PAYLOAD' });
+  });
+
+  it('rejects user.updated when the payload includes an empty user id', async () => {
+    const deps = createDeps();
+
+    await expect(
+      processClerkWebhook(deps, {
+        type: 'user.updated',
+        data: {
+          id: '',
+          email_addresses: [
+            { id: 'email_1', email_address: 'test@example.com' },
+          ],
+        },
+      }),
+    ).rejects.toMatchObject({
+      code: 'INVALID_WEBHOOK_PAYLOAD',
+      message: 'Clerk user.updated webhook payload is missing user id',
+    });
+  });
+
+  it('rejects user.deleted when the payload is invalid', async () => {
+    const deps = createDeps();
+
+    await expect(
+      processClerkWebhook(deps, {
+        type: 'user.deleted',
+        data: {},
+      }),
+    ).rejects.toMatchObject({
+      code: 'INVALID_WEBHOOK_PAYLOAD',
+      message: 'Invalid Clerk user.deleted webhook payload',
+    });
+  });
 });

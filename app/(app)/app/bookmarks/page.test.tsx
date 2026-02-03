@@ -176,4 +176,67 @@ describe('app/(app)/app/bookmarks', () => {
     expect(html).toContain('Unable to remove bookmark.');
     expect(html).toContain('q-1');
   });
+
+  it('renders a banner when redirected back with missing_question_id', async () => {
+    const getBookmarksFn = vi.fn(async () =>
+      ok({
+        rows: [
+          {
+            questionId: 'q_1',
+            slug: 'q-1',
+            stemMd: 'Stem for q1',
+            difficulty: 'easy' as const,
+            bookmarkedAt: '2026-02-01T00:00:00.000Z',
+          },
+        ],
+      }),
+    );
+
+    const BookmarksPage = createBookmarksPage({ getBookmarksFn });
+    const element = await BookmarksPage({
+      searchParams: Promise.resolve({ error: 'missing_question_id' }),
+    });
+    const html = renderToStaticMarkup(element);
+
+    expect(html).toContain('Unable to remove bookmark: missing question id.');
+    expect(html).toContain('q-1');
+  });
+
+  it('renders a banner when redirected back with remove_failed', async () => {
+    const getBookmarksFn = vi.fn(async () =>
+      ok({
+        rows: [
+          {
+            questionId: 'q_1',
+            slug: 'q-1',
+            stemMd: 'Stem for q1',
+            difficulty: 'easy' as const,
+            bookmarkedAt: '2026-02-01T00:00:00.000Z',
+          },
+        ],
+      }),
+    );
+
+    const BookmarksPage = createBookmarksPage({ getBookmarksFn });
+    const element = await BookmarksPage({
+      searchParams: Promise.resolve({ error: 'remove_failed' }),
+    });
+    const html = renderToStaticMarkup(element);
+
+    expect(html).toContain(
+      'Unable to remove bookmark. Please refresh and try again.',
+    );
+    expect(html).toContain('q-1');
+  });
+
+  it('renders an error view when createBookmarksPage fails to load bookmarks', async () => {
+    const getBookmarksFn = vi.fn(async () => err('INTERNAL_ERROR', 'Boom'));
+
+    const BookmarksPage = createBookmarksPage({ getBookmarksFn });
+    const element = await BookmarksPage();
+    const html = renderToStaticMarkup(element);
+
+    expect(html).toContain('Unable to load bookmarks.');
+    expect(html).toContain('Boom');
+  });
 });

@@ -31,6 +31,33 @@ describe('app/(app)/app/billing/page', () => {
     });
   });
 
+  describe('BillingPage', () => {
+    it('renders the no-subscription view when subscription is null', async () => {
+      const BillingPage = (await import('@/app/(app)/app/billing/page'))
+        .default;
+      const user = createUser({ id: 'user_1' });
+
+      const authGateway: AuthGateway = {
+        getCurrentUser: async () => user,
+        requireUser: async () => user,
+      };
+
+      const subscriptionRepository: SubscriptionRepository = {
+        findByUserId: async () => null,
+        findByStripeSubscriptionId: async () => null,
+        upsert: async () => undefined,
+      };
+
+      const element = await BillingPage({
+        deps: { authGateway, subscriptionRepository },
+      });
+      const html = renderToStaticMarkup(element);
+
+      expect(html).toContain('No subscription found');
+      expect(html).not.toContain('Manage in Stripe');
+    });
+  });
+
   describe('BillingContent', () => {
     it('renders manage button when subscription exists', async () => {
       const { BillingContent } = await import('@/app/(app)/app/billing/page');

@@ -157,6 +157,87 @@ describe('practice-session-page-logic', () => {
         expect.objectContaining({ isCorrect: true }),
       );
     });
+
+    it('does nothing when question is null', async () => {
+      const submitAnswerFn = vi.fn(async () =>
+        ok({
+          attemptId: 'attempt_1',
+          isCorrect: true,
+          correctChoiceId: 'choice_1',
+          explanationMd: 'Because...',
+        } satisfies SubmitAnswerOutput),
+      );
+
+      const setLoadState = vi.fn();
+      const setSubmitResult = vi.fn();
+
+      await submitAnswerForQuestion({
+        sessionId: 'session-1',
+        question: null,
+        selectedChoiceId: 'choice_1',
+        questionLoadedAtMs: 0,
+        submitIdempotencyKey: 'idem_1',
+        submitAnswerFn,
+        nowMs: () => 0,
+        setLoadState,
+        setSubmitResult,
+      });
+
+      expect(submitAnswerFn).not.toHaveBeenCalled();
+      expect(setLoadState).not.toHaveBeenCalled();
+      expect(setSubmitResult).not.toHaveBeenCalled();
+    });
+
+    it('does nothing when selectedChoiceId is null', async () => {
+      const submitAnswerFn = vi.fn(async () =>
+        ok({
+          attemptId: 'attempt_1',
+          isCorrect: true,
+          correctChoiceId: 'choice_1',
+          explanationMd: 'Because...',
+        } satisfies SubmitAnswerOutput),
+      );
+
+      const setLoadState = vi.fn();
+      const setSubmitResult = vi.fn();
+
+      await submitAnswerForQuestion({
+        sessionId: 'session-1',
+        question: createNextQuestion(),
+        selectedChoiceId: null,
+        questionLoadedAtMs: 0,
+        submitIdempotencyKey: 'idem_1',
+        submitAnswerFn,
+        nowMs: () => 0,
+        setLoadState,
+        setSubmitResult,
+      });
+
+      expect(submitAnswerFn).not.toHaveBeenCalled();
+      expect(setLoadState).not.toHaveBeenCalled();
+      expect(setSubmitResult).not.toHaveBeenCalled();
+    });
+
+    it('sets error state when submit fails', async () => {
+      const setLoadState = vi.fn();
+
+      await submitAnswerForQuestion({
+        sessionId: 'session-1',
+        question: createNextQuestion(),
+        selectedChoiceId: 'choice_1',
+        questionLoadedAtMs: 0,
+        submitIdempotencyKey: 'idem_1',
+        submitAnswerFn: async () => err('INTERNAL_ERROR', 'Boom'),
+        nowMs: () => 0,
+        setLoadState,
+        setSubmitResult: vi.fn(),
+      });
+
+      expect(setLoadState).toHaveBeenCalledWith({
+        status: 'error',
+        message: 'Boom',
+      });
+    });
   });
 
   describe('endSession', () => {

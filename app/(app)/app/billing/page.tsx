@@ -115,8 +115,12 @@ export function BillingPageView(props: BillingPageViewProps) {
   );
 }
 
-export default async function BillingPage() {
-  const { subscription } = await loadBillingData();
+export type BillingPageProps = {
+  deps?: BillingPageDeps;
+};
+
+export default async function BillingPage(props?: BillingPageProps) {
+  const { subscription } = await loadBillingData(props?.deps);
 
   if (!subscription) {
     return <BillingPageView subscription={null} />;

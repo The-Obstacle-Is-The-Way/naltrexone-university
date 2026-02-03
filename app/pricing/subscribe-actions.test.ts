@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
+import { runSubscribeAction } from '@/app/pricing/subscribe-action';
 import {
   subscribeAnnualAction,
   subscribeMonthlyAction,
@@ -121,5 +122,53 @@ describe('app/pricing/subscribe-actions', () => {
       plan: 'monthly',
       idempotencyKey: '11111111-1111-1111-1111-111111111111',
     });
+  });
+
+  it('includes a truncated error_message when checkout fails in development', async () => {
+    vi.stubEnv('NODE_ENV', 'development');
+    try {
+      const longMessage = 'x'.repeat(250);
+
+      const createCheckoutSessionFn = vi.fn(async () =>
+        err('INTERNAL_ERROR', longMessage),
+      );
+
+      const redirectFn = createRedirectFn();
+      const logError = vi.fn();
+
+      await expect(
+        runSubscribeAction(
+          { plan: 'monthly', idempotencyKey: 'idem_1' },
+          {
+            createCheckoutSessionFn: createCheckoutSessionFn as never,
+            redirectFn,
+            logError,
+          },
+        ),
+      ).rejects.toMatchObject({
+        message: expect.stringContaining('redirect:/pricing?'),
+      });
+
+      const redirectUrl = redirectFn.mock.calls[0]?.[0];
+      if (!redirectUrl) throw new Error('Expected redirect url');
+
+      const url = new URL(redirectUrl, 'https://example.com');
+      expect(url.pathname).toBe('/pricing');
+      expect(url.searchParams.get('checkout')).toBe('error');
+      expect(url.searchParams.get('plan')).toBe('monthly');
+      expect(url.searchParams.get('error_code')).toBe('INTERNAL_ERROR');
+      expect(url.searchParams.get('error_message')).toBe(`${'x'.repeat(200)}…`);
+
+      expect(logError).toHaveBeenCalledWith(
+        expect.objectContaining({
+          plan: 'monthly',
+          idempotencyKey: 'idem_1',
+          errorCode: 'INTERNAL_ERROR',
+        }),
+        'Stripe checkout failed',
+      );
+    } finally {
+      vi.unstubAllEnvs();
+    }
   });
 });
