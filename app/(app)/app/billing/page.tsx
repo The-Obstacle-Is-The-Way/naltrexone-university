@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation';
 import { ManageBillingButton } from '@/app/(app)/app/billing/billing-client';
+import { ROUTES } from '@/lib/routes';
 import { createPortalSession } from '@/src/adapters/controllers/billing-controller';
 import type { AuthGateway } from '@/src/application/ports/gateways';
 import type { SubscriptionRepository } from '@/src/application/ports/repositories';
@@ -91,9 +92,38 @@ export function BillingContent(props: BillingContentProps) {
   );
 }
 
-export type BillingPageViewProps = BillingContentProps;
+type BillingPageErrorCode = 'portal_failed';
+
+type BillingBanner = { tone: 'error'; message: string };
+
+function parseBillingErrorCode(
+  error: string | string[] | undefined,
+): BillingPageErrorCode | undefined {
+  const value = Array.isArray(error) ? error[0] : error;
+  if (value === 'portal_failed') return value;
+  return undefined;
+}
+
+function getBillingBanner(
+  code: BillingPageErrorCode | undefined,
+): BillingBanner | null {
+  if (!code) return null;
+  switch (code) {
+    case 'portal_failed':
+      return {
+        tone: 'error',
+        message: "Couldn't open the billing portal. Please try again.",
+      };
+  }
+}
+
+export type BillingPageViewProps = BillingContentProps & {
+  banner?: BillingBanner | null;
+};
 
 export function BillingPageView(props: BillingPageViewProps) {
+  const { banner, ...contentProps } = props;
+
   return (
     <div className="space-y-6">
       <div>
@@ -103,34 +133,40 @@ export function BillingPageView(props: BillingPageViewProps) {
         </p>
       </div>
 
-      {props.subscription ? (
-        <BillingContent
-          subscription={props.subscription}
-          manageBillingAction={props.manageBillingAction}
-        />
-      ) : (
-        <BillingContent subscription={null} />
-      )}
+      {banner ? (
+        <div
+          className="rounded-2xl border border-border bg-card p-4 text-sm text-destructive shadow-sm"
+          role="alert"
+        >
+          {banner.message}
+        </div>
+      ) : null}
+
+      <BillingContent {...contentProps} />
     </div>
   );
 }
 
 export type BillingPageProps = {
   deps?: BillingPageDeps;
+  searchParams?: { error?: string | string[] };
 };
 
 export default async function BillingPage(props?: BillingPageProps) {
   const { subscription } = await loadBillingData(props?.deps);
+  const banner = getBillingBanner(
+    parseBillingErrorCode(props?.searchParams?.error),
+  );
 
   if (!subscription) {
-    return <BillingPageView subscription={null} />;
+    return <BillingPageView subscription={null} banner={banner} />;
   }
 
   async function manageBilling() {
     'use server';
     const result = await createPortalSession({});
     if (!result.ok) {
-      redirect('/app/billing');
+      redirect(`${ROUTES.APP_BILLING}?error=portal_failed`);
     }
     redirect(result.data.url);
   }
@@ -139,6 +175,7 @@ export default async function BillingPage(props?: BillingPageProps) {
     <BillingPageView
       subscription={subscription}
       manageBillingAction={manageBilling}
+      banner={banner}
     />
   );
 }

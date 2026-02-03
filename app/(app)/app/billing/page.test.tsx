@@ -56,6 +56,32 @@ describe('app/(app)/app/billing/page', () => {
       expect(html).toContain('No subscription found');
       expect(html).not.toContain('Manage in Stripe');
     });
+
+    it('renders an error banner when redirected back with portal_failed', async () => {
+      const BillingPage = (await import('@/app/(app)/app/billing/page'))
+        .default;
+      const user = createUser({ id: 'user_1' });
+
+      const authGateway: AuthGateway = {
+        getCurrentUser: async () => user,
+        requireUser: async () => user,
+      };
+
+      const subscriptionRepository: SubscriptionRepository = {
+        findByUserId: async () => createSubscription({ userId: user.id }),
+        findByStripeSubscriptionId: async () => null,
+        upsert: async () => undefined,
+      };
+
+      const element = await BillingPage({
+        deps: { authGateway, subscriptionRepository },
+        searchParams: { error: 'portal_failed' },
+      });
+      const html = renderToStaticMarkup(element);
+
+      expect(html).toContain('open the billing portal. Please try again.');
+      expect(html).toContain('Manage in Stripe');
+    });
   });
 
   describe('BillingContent', () => {

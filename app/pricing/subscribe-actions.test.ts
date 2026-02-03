@@ -129,7 +129,10 @@ describe('app/pricing/subscribe-actions', () => {
     try {
       const longMessage = 'x'.repeat(250);
 
-      const createCheckoutSessionFn = vi.fn(async () =>
+      type CreateCheckoutSessionFn = Parameters<
+        typeof runSubscribeAction
+      >[1]['createCheckoutSessionFn'];
+      const createCheckoutSessionFn = vi.fn<CreateCheckoutSessionFn>(async () =>
         err('INTERNAL_ERROR', longMessage),
       );
 
@@ -140,7 +143,7 @@ describe('app/pricing/subscribe-actions', () => {
         runSubscribeAction(
           { plan: 'monthly', idempotencyKey: 'idem_1' },
           {
-            createCheckoutSessionFn: createCheckoutSessionFn as never,
+            createCheckoutSessionFn,
             redirectFn,
             logError,
           },
