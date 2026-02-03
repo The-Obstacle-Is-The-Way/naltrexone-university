@@ -57,9 +57,7 @@ export async function loadNextQuestion(input: {
   input.setQuestion(res.data);
   input.setQuestionLoadedAt(res.data ? input.nowMs() : null);
   input.setSubmitIdempotencyKey(res.data ? input.createIdempotencyKey() : null);
-  if (res.data?.session) {
-    input.setSessionInfo(res.data.session);
-  }
+  input.setSessionInfo(res.data?.session ?? null);
   input.setLoadState({ status: 'ready' });
 }
 

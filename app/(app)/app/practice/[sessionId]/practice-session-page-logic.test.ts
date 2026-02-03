@@ -67,6 +67,32 @@ describe('practice-session-page-logic', () => {
       expect(setLoadState).toHaveBeenCalledWith({ status: 'ready' });
     });
 
+    it('clears sessionInfo when no next question is returned', async () => {
+      const setSubmitIdempotencyKey = vi.fn();
+      const setQuestionLoadedAt = vi.fn();
+      const setQuestion = vi.fn();
+      const setSessionInfo = vi.fn();
+
+      await loadNextQuestion({
+        sessionId: 'session-1',
+        getNextQuestionFn: async () => ok(null),
+        createIdempotencyKey: () => 'idem_1',
+        nowMs: () => 1234,
+        setLoadState: vi.fn(),
+        setSelectedChoiceId: vi.fn(),
+        setSubmitResult: vi.fn(),
+        setSubmitIdempotencyKey,
+        setQuestionLoadedAt,
+        setQuestion,
+        setSessionInfo,
+      });
+
+      expect(setQuestion).toHaveBeenCalledWith(null);
+      expect(setQuestionLoadedAt).toHaveBeenLastCalledWith(null);
+      expect(setSubmitIdempotencyKey).toHaveBeenLastCalledWith(null);
+      expect(setSessionInfo).toHaveBeenCalledWith(null);
+    });
+
     it('sets error state when controller fails', async () => {
       const setLoadState = vi.fn();
       const setQuestion = vi.fn();
