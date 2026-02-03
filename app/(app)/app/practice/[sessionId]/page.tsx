@@ -176,10 +176,17 @@ export default function PracticeSessionPage({
 
   const [loadState, setLoadState] = useState<LoadState>({ status: 'idle' });
   const [isPending, startTransition] = useTransition();
+  const isMountedRef = useRef(true);
   const [questionLoadedAt, setQuestionLoadedAt] = useState<number | null>(null);
   const [submitIdempotencyKey, setSubmitIdempotencyKey] = useState<
     string | null
   >(null);
+
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   const loadNext = useMemo(
     () =>
@@ -196,6 +203,7 @@ export default function PracticeSessionPage({
         setQuestionLoadedAt,
         setQuestion,
         setSessionInfo,
+        isMounted: () => isMountedRef.current,
       }),
     [sessionId],
   );
@@ -250,6 +258,7 @@ export default function PracticeSessionPage({
         nowMs: Date.now,
         setLoadState,
         setSubmitResult,
+        isMounted: () => isMountedRef.current,
       }),
     [
       question,
@@ -278,6 +287,7 @@ export default function PracticeSessionPage({
             setBookmarkMessage(null);
           }, 2000);
         },
+        isMounted: () => isMountedRef.current,
       }),
     [question],
   );
@@ -292,6 +302,7 @@ export default function PracticeSessionPage({
         setQuestion,
         setSubmitResult,
         setSelectedChoiceId,
+        isMounted: () => isMountedRef.current,
       }),
     [sessionId],
   );

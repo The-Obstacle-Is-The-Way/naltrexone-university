@@ -51,6 +51,22 @@ function createNextQuestion(): NextQuestion {
   };
 }
 
+function createDeferred<T>() {
+  let resolve: (value: T) => void = () => {
+    throw new Error('Deferred promise resolved before initialization');
+  };
+  let reject: (reason?: unknown) => void = () => {
+    throw new Error('Deferred promise rejected before initialization');
+  };
+
+  const promise = new Promise<T>((res, rej) => {
+    resolve = res;
+    reject = rej;
+  });
+
+  return { promise, resolve, reject };
+}
+
 describe('practice-page-logic', () => {
   describe('canSubmitAnswer', () => {
     it('returns true when question is loaded, choice is selected, and not loading', () => {
@@ -208,6 +224,39 @@ describe('practice-page-logic', () => {
         status: 'error',
         message: 'Network down',
       });
+    });
+
+    it('does not update state after unmount', async () => {
+      const deferred = createDeferred<ActionResult<NextQuestion | null>>();
+      let mounted = true;
+
+      const setLoadState = vi.fn();
+      const setQuestionLoadedAt = vi.fn();
+      const setSubmitIdempotencyKey = vi.fn();
+      const setQuestion = vi.fn();
+
+      const promise = loadNextQuestion({
+        getNextQuestionFn: async () => deferred.promise,
+        filters: { tagSlugs: [], difficulties: [] },
+        createIdempotencyKey: () => 'idem_1',
+        nowMs: () => 1234,
+        setLoadState,
+        setSelectedChoiceId: vi.fn(),
+        setSubmitResult: vi.fn(),
+        setSubmitIdempotencyKey,
+        setQuestionLoadedAt,
+        setQuestion,
+        isMounted: () => mounted,
+      });
+
+      mounted = false;
+      deferred.resolve(ok(createNextQuestion()));
+      await promise;
+
+      expect(setQuestion).not.toHaveBeenCalled();
+      expect(setQuestionLoadedAt).not.toHaveBeenCalledWith(1234);
+      expect(setSubmitIdempotencyKey).not.toHaveBeenCalledWith('idem_1');
+      expect(setLoadState).not.toHaveBeenCalledWith({ status: 'ready' });
     });
   });
 
@@ -591,6 +640,40 @@ describe('practice-page-logic', () => {
         message: 'Boom',
       });
     });
+
+    it('does not update state after unmount', async () => {
+      const deferred = createDeferred<ActionResult<SubmitAnswerOutput>>();
+      let mounted = true;
+
+      const setLoadState = vi.fn();
+      const setSubmitResult = vi.fn();
+
+      const promise = submitAnswerForQuestion({
+        question: createNextQuestion(),
+        selectedChoiceId: 'choice_1',
+        questionLoadedAtMs: 0,
+        submitIdempotencyKey: 'idem_1',
+        submitAnswerFn: async () => deferred.promise,
+        nowMs: () => 0,
+        setLoadState,
+        setSubmitResult,
+        isMounted: () => mounted,
+      });
+
+      mounted = false;
+      deferred.resolve(
+        ok({
+          attemptId: 'attempt_1',
+          isCorrect: true,
+          correctChoiceId: 'choice_1',
+          explanationMd: 'Because...',
+        } satisfies SubmitAnswerOutput),
+      );
+      await promise;
+
+      expect(setSubmitResult).not.toHaveBeenCalled();
+      expect(setLoadState).not.toHaveBeenCalledWith({ status: 'ready' });
+    });
   });
 
   describe('toggleBookmarkForQuestion', () => {
@@ -672,6 +755,32 @@ describe('practice-page-logic', () => {
 
       expect(setBookmarkStatus).toHaveBeenLastCalledWith('error');
       expect(onBookmarkToggled).not.toHaveBeenCalled();
+    });
+
+    it('does not update state after unmount', async () => {
+      const deferred = createDeferred<ActionResult<{ bookmarked: boolean }>>();
+      let mounted = true;
+
+      const setBookmarkStatus = vi.fn();
+      const setBookmarkedQuestionIds = vi.fn();
+      const onBookmarkToggled = vi.fn();
+
+      const promise = toggleBookmarkForQuestion({
+        question: createNextQuestion(),
+        toggleBookmarkFn: async () => deferred.promise,
+        setBookmarkStatus,
+        setBookmarkedQuestionIds,
+        onBookmarkToggled,
+        isMounted: () => mounted,
+      });
+
+      mounted = false;
+      deferred.resolve(ok({ bookmarked: true }));
+      await promise;
+
+      expect(setBookmarkedQuestionIds).not.toHaveBeenCalled();
+      expect(onBookmarkToggled).not.toHaveBeenCalled();
+      expect(setBookmarkStatus).not.toHaveBeenCalledWith('idle');
     });
   });
 
@@ -822,6 +931,33 @@ describe('practice-page-logic', () => {
       expect(setSessionStartStatus).toHaveBeenCalledWith('error');
       expect(setSessionStartError).toHaveBeenCalledWith('Boom');
       expect(setIdempotencyKey).toHaveBeenCalledWith('idem_2');
+    });
+
+    it('does not navigate after unmount', async () => {
+      const deferred = createDeferred<ActionResult<{ sessionId: string }>>();
+      let mounted = true;
+
+      const navigateTo = vi.fn();
+
+      const promise = startSession({
+        sessionMode: 'exam',
+        sessionCount: 10,
+        filters: { tagSlugs: ['opioids'], difficulties: ['hard'] },
+        idempotencyKey: 'idem_1',
+        createIdempotencyKey: () => 'idem_2',
+        setIdempotencyKey: vi.fn(),
+        startPracticeSessionFn: async () => deferred.promise,
+        setSessionStartStatus: vi.fn(),
+        setSessionStartError: vi.fn(),
+        navigateTo,
+        isMounted: () => mounted,
+      });
+
+      mounted = false;
+      deferred.resolve(ok({ sessionId: 'session-1' }));
+      await promise;
+
+      expect(navigateTo).not.toHaveBeenCalled();
     });
   });
 });

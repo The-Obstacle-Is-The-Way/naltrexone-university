@@ -5,7 +5,9 @@ import {
   loadNextQuestion,
   submitAnswerForQuestion,
 } from '@/app/(app)/app/practice/[sessionId]/practice-session-page-logic';
+import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import { err, ok } from '@/src/adapters/controllers/action-result';
+import type { EndPracticeSessionOutput } from '@/src/adapters/controllers/practice-controller';
 import type { NextQuestion } from '@/src/application/use-cases/get-next-question';
 import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
 
@@ -19,6 +21,22 @@ function createNextQuestion(overrides?: Partial<NextQuestion>): NextQuestion {
     session: null,
     ...overrides,
   };
+}
+
+function createDeferred<T>() {
+  let resolve: (value: T) => void = () => {
+    throw new Error('Deferred promise resolved before initialization');
+  };
+  let reject: (reason?: unknown) => void = () => {
+    throw new Error('Deferred promise rejected before initialization');
+  };
+
+  const promise = new Promise<T>((res, rej) => {
+    resolve = res;
+    reject = rej;
+  });
+
+  return { promise, resolve, reject };
 }
 
 describe('practice-session-page-logic', () => {
@@ -149,6 +167,42 @@ describe('practice-session-page-logic', () => {
         status: 'error',
         message: 'Boom',
       });
+    });
+
+    it('does not update state after unmount', async () => {
+      const deferred = createDeferred<ActionResult<NextQuestion | null>>();
+      let mounted = true;
+
+      const setLoadState = vi.fn();
+      const setQuestionLoadedAt = vi.fn();
+      const setSubmitIdempotencyKey = vi.fn();
+      const setQuestion = vi.fn();
+      const setSessionInfo = vi.fn();
+
+      const promise = loadNextQuestion({
+        sessionId: 'session-1',
+        getNextQuestionFn: async () => deferred.promise,
+        createIdempotencyKey: () => 'idem_1',
+        nowMs: () => 1234,
+        setLoadState,
+        setSelectedChoiceId: vi.fn(),
+        setSubmitResult: vi.fn(),
+        setSubmitIdempotencyKey,
+        setQuestionLoadedAt,
+        setQuestion,
+        setSessionInfo,
+        isMounted: () => mounted,
+      });
+
+      mounted = false;
+      deferred.resolve(ok(createNextQuestion()));
+      await promise;
+
+      expect(setQuestion).not.toHaveBeenCalled();
+      expect(setQuestionLoadedAt).not.toHaveBeenCalledWith(1234);
+      expect(setSubmitIdempotencyKey).not.toHaveBeenCalledWith('idem_1');
+      expect(setSessionInfo).not.toHaveBeenCalled();
+      expect(setLoadState).not.toHaveBeenCalledWith({ status: 'ready' });
     });
   });
 
@@ -318,6 +372,41 @@ describe('practice-session-page-logic', () => {
         message: 'Boom',
       });
     });
+
+    it('does not update state after unmount', async () => {
+      const deferred = createDeferred<ActionResult<SubmitAnswerOutput>>();
+      let mounted = true;
+
+      const setLoadState = vi.fn();
+      const setSubmitResult = vi.fn();
+
+      const promise = submitAnswerForQuestion({
+        sessionId: 'session-1',
+        question: createNextQuestion(),
+        selectedChoiceId: 'choice_1',
+        questionLoadedAtMs: 0,
+        submitIdempotencyKey: 'idem_1',
+        submitAnswerFn: async () => deferred.promise,
+        nowMs: () => 0,
+        setLoadState,
+        setSubmitResult,
+        isMounted: () => mounted,
+      });
+
+      mounted = false;
+      deferred.resolve(
+        ok({
+          attemptId: 'attempt_1',
+          isCorrect: true,
+          correctChoiceId: 'choice_1',
+          explanationMd: 'Because...',
+        } satisfies SubmitAnswerOutput),
+      );
+      await promise;
+
+      expect(setSubmitResult).not.toHaveBeenCalled();
+      expect(setLoadState).not.toHaveBeenCalledWith({ status: 'ready' });
+    });
   });
 
   describe('endSession', () => {
@@ -393,6 +482,38 @@ describe('practice-session-page-logic', () => {
         status: 'error',
         message: 'Boom',
       });
+    });
+
+    it('does not update state after unmount', async () => {
+      const deferred = createDeferred<ActionResult<EndPracticeSessionOutput>>();
+      let mounted = true;
+
+      const setLoadState = vi.fn();
+      const setSummary = vi.fn();
+
+      const promise = endSession({
+        sessionId: 'session-1',
+        endPracticeSessionFn: async () => deferred.promise,
+        setLoadState,
+        setSummary,
+        setQuestion: vi.fn(),
+        setSubmitResult: vi.fn(),
+        setSelectedChoiceId: vi.fn(),
+        isMounted: () => mounted,
+      });
+
+      mounted = false;
+      deferred.resolve(
+        ok({
+          sessionId: 'session-1',
+          endedAt: '2026-02-01T00:00:00.000Z',
+          totals: { answered: 1, correct: 1, accuracy: 1, durationSeconds: 1 },
+        }),
+      );
+      await promise;
+
+      expect(setSummary).not.toHaveBeenCalled();
+      expect(setLoadState).not.toHaveBeenCalledWith({ status: 'ready' });
     });
   });
 });

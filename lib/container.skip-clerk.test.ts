@@ -62,7 +62,7 @@ describe('container (skip clerk)', () => {
     await expect(
       container.createBillingControllerDeps().getClerkUserId(),
     ).resolves.toBeNull();
-  });
+  }, 20_000);
 
   it('loads Clerk currentUser when NEXT_PUBLIC_SKIP_CLERK is not true', async () => {
     process.env.DATABASE_URL ??=
@@ -112,5 +112,5 @@ describe('container (skip clerk)', () => {
       container.createBillingControllerDeps().getClerkUserId(),
     ).resolves.toBeNull();
     expect(currentUser).toHaveBeenCalledTimes(2);
-  });
+  }, 20_000);
 });

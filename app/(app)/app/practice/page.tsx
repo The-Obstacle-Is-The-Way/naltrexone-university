@@ -403,6 +403,13 @@ export default function PracticePage() {
   const [sessionStartError, setSessionStartError] = useState<string | null>(
     null,
   );
+  const isMountedRef = useRef(true);
+
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   const loadNext = useMemo(
     () =>
@@ -418,6 +425,7 @@ export default function PracticePage() {
         setSubmitIdempotencyKey,
         setQuestionLoadedAt,
         setQuestion,
+        isMounted: () => isMountedRef.current,
       }),
     [filters],
   );
@@ -488,6 +496,7 @@ export default function PracticePage() {
         nowMs: Date.now,
         setLoadState,
         setSubmitResult,
+        isMounted: () => isMountedRef.current,
       }),
     [question, questionLoadedAt, selectedChoiceId, submitIdempotencyKey],
   );
@@ -510,6 +519,7 @@ export default function PracticePage() {
             setBookmarkMessage(null);
           }, 2000);
         },
+        isMounted: () => isMountedRef.current,
       }),
     [question],
   );
@@ -580,6 +590,7 @@ export default function PracticePage() {
         setSessionStartStatus,
         setSessionStartError,
         navigateTo,
+        isMounted: () => isMountedRef.current,
       }),
     [filters, sessionMode, sessionCount, startSessionIdempotencyKey],
   );

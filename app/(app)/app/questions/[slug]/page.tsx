@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useMemo, useState, useTransition } from 'react';
+import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import { Feedback } from '@/components/question/Feedback';
 import { QuestionCard } from '@/components/question/QuestionCard';
 import { submitAnswer } from '@/src/adapters/controllers/question-controller';
@@ -143,6 +143,13 @@ export default function QuestionPage({ params }: { params: { slug: string } }) {
     status: 'loading',
   });
   const [isPending, startTransition] = useTransition();
+  const isMountedRef = useRef(true);
+
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   const loadQuestion = useMemo(
     () =>
@@ -158,6 +165,7 @@ export default function QuestionPage({ params }: { params: { slug: string } }) {
         setSubmitIdempotencyKey,
         setQuestionLoadedAt,
         setQuestion,
+        isMounted: () => isMountedRef.current,
       }),
     [slug],
   );
@@ -181,6 +189,7 @@ export default function QuestionPage({ params }: { params: { slug: string } }) {
         nowMs: Date.now,
         setLoadState,
         setSubmitResult,
+        isMounted: () => isMountedRef.current,
       }),
     [question, questionLoadedAt, selectedChoiceId, submitIdempotencyKey],
   );

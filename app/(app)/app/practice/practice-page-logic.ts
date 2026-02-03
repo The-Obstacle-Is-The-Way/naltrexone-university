@@ -54,7 +54,10 @@ export async function loadNextQuestion(input: {
   setSubmitIdempotencyKey: (key: string | null) => void;
   setQuestionLoadedAt: (loadedAtMs: number | null) => void;
   setQuestion: (question: NextQuestion | null) => void;
+  isMounted?: () => boolean;
 }): Promise<void> {
+  const isMounted = input.isMounted ?? (() => true);
+
   input.setLoadState({ status: 'loading' });
   input.setSelectedChoiceId(null);
   input.setSubmitResult(null);
@@ -67,6 +70,8 @@ export async function loadNextQuestion(input: {
       filters: input.filters,
     });
   } catch (error) {
+    if (!isMounted()) return;
+
     input.setLoadState({
       status: 'error',
       message: getThrownErrorMessage(error),
@@ -78,6 +83,7 @@ export async function loadNextQuestion(input: {
     input.setQuestionLoadedAt(null);
     return;
   }
+  if (!isMounted()) return;
 
   if (!res.ok) {
     input.setLoadState({
@@ -108,6 +114,7 @@ export function createLoadNextQuestionAction(input: {
   setSubmitIdempotencyKey: (key: string | null) => void;
   setQuestionLoadedAt: (loadedAtMs: number | null) => void;
   setQuestion: (question: NextQuestion | null) => void;
+  isMounted?: () => boolean;
 }): () => void {
   return () => {
     input.startTransition(() => {
@@ -209,9 +216,12 @@ export async function submitAnswerForQuestion(input: {
   nowMs: () => number;
   setLoadState: (state: LoadState) => void;
   setSubmitResult: (result: SubmitAnswerOutput | null) => void;
+  isMounted?: () => boolean;
 }): Promise<void> {
   if (!input.question) return;
   if (!input.selectedChoiceId) return;
+
+  const isMounted = input.isMounted ?? (() => true);
 
   input.setLoadState({ status: 'loading' });
 
@@ -232,12 +242,15 @@ export async function submitAnswerForQuestion(input: {
       timeSpentSeconds,
     });
   } catch (error) {
+    if (!isMounted()) return;
+
     input.setLoadState({
       status: 'error',
       message: getThrownErrorMessage(error),
     });
     return;
   }
+  if (!isMounted()) return;
 
   if (!res.ok) {
     input.setLoadState({
@@ -261,8 +274,11 @@ export async function toggleBookmarkForQuestion(input: {
     next: Set<string> | ((prev: Set<string>) => Set<string>),
   ) => void;
   onBookmarkToggled?: (bookmarked: boolean) => void;
+  isMounted?: () => boolean;
 }): Promise<void> {
   if (!input.question) return;
+
+  const isMounted = input.isMounted ?? (() => true);
 
   const questionId = input.question.questionId;
 
@@ -272,9 +288,11 @@ export async function toggleBookmarkForQuestion(input: {
   try {
     res = await input.toggleBookmarkFn({ questionId });
   } catch {
+    if (!isMounted()) return;
     input.setBookmarkStatus('error');
     return;
   }
+  if (!isMounted()) return;
   if (!res.ok) {
     input.setBookmarkStatus('error');
     return;
@@ -340,7 +358,10 @@ export async function startSession(input: {
   setSessionStartStatus: (status: 'idle' | 'loading' | 'error') => void;
   setSessionStartError: (message: string | null) => void;
   navigateTo: (url: string) => void;
+  isMounted?: () => boolean;
 }): Promise<void> {
+  const isMounted = input.isMounted ?? (() => true);
+
   input.setSessionStartStatus('loading');
   input.setSessionStartError(null);
 
@@ -354,11 +375,14 @@ export async function startSession(input: {
       difficulties: input.filters.difficulties,
     });
   } catch (error) {
+    if (!isMounted()) return;
+
     input.setSessionStartStatus('error');
     input.setSessionStartError(getThrownErrorMessage(error));
     input.setIdempotencyKey(input.createIdempotencyKey());
     return;
   }
+  if (!isMounted()) return;
 
   if (!res.ok) {
     input.setSessionStartStatus('error');
