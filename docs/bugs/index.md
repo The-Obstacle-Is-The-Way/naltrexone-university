@@ -17,7 +17,7 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 ✅ No active bugs.
 
-**Next Bug ID:** BUG-053
+**Next Bug ID:** BUG-054
 
 ## Foundation Audit
 
@@ -28,6 +28,7 @@ See: [Foundation Audit Report](foundation-audit-report.md)
 
 | ID | Title | Priority | Resolved |
 |----|-------|----------|----------|
+| [BUG-053](../_archive/bugs/bug-053-checkout-success-missing-user-id-metadata.md) | Checkout Success Accepts Missing `metadata.user_id` | P1 | 2026-02-03 |
 | [BUG-052](../_archive/bugs/bug-052-non-entitled-subscriptions-could-start-new-checkout.md) | Non-Entitled Subscriptions Could Start New Checkout Sessions | P1 | 2026-02-03 |
 | [BUG-051](../_archive/bugs/bug-051-checkout-success-redirects-with-non-entitled-status.md) | Checkout Success Redirects with Non-Entitled Status | P1 | 2026-02-03 |
 | [BUG-050](../_archive/bugs/bug-050-stripe-webhook-missing-user-id-metadata.md) | Stripe Webhook Skips Events Missing `metadata.user_id` | P1 | 2026-02-03 |
