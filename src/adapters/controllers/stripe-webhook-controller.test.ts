@@ -13,6 +13,15 @@ class FailingStripeEventRepository extends FakeStripeEventRepository {
   }
 }
 
+function createFakeLogger() {
+  return {
+    debug: vi.fn(),
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+  };
+}
+
 describe('processStripeWebhook', () => {
   it('claims, processes, and marks subscription events idempotently', async () => {
     const paymentGateway = new FakePaymentGateway({
@@ -38,7 +47,7 @@ describe('processStripeWebhook', () => {
     const subscriptions = new FakeSubscriptionRepository();
     const stripeCustomers = new FakeStripeCustomerRepository();
     const insertSpy = vi.spyOn(stripeCustomers, 'insert');
-    const logger = { warn: vi.fn() };
+    const logger = createFakeLogger();
 
     await processStripeWebhook(
       {
@@ -90,7 +99,7 @@ describe('processStripeWebhook', () => {
     const stripeEvents = new FakeStripeEventRepository();
     const subscriptions = new FakeSubscriptionRepository();
     const stripeCustomers = new FakeStripeCustomerRepository();
-    const logger = { warn: vi.fn() };
+    const logger = createFakeLogger();
 
     await processStripeWebhook(
       {
@@ -128,7 +137,7 @@ describe('processStripeWebhook', () => {
       const subscriptions = new FakeSubscriptionRepository();
       const stripeCustomers = new FakeStripeCustomerRepository();
       const pruneSpy = vi.spyOn(stripeEvents, 'pruneProcessedBefore');
-      const logger = { warn: vi.fn() };
+      const logger = createFakeLogger();
 
       await processStripeWebhook(
         {
@@ -164,7 +173,7 @@ describe('processStripeWebhook', () => {
     const stripeEvents = new FailingStripeEventRepository();
     const subscriptions = new FakeSubscriptionRepository();
     const stripeCustomers = new FakeStripeCustomerRepository();
-    const logger = { warn: vi.fn() };
+    const logger = createFakeLogger();
 
     await expect(
       processStripeWebhook(
@@ -207,7 +216,7 @@ describe('processStripeWebhook', () => {
     await processStripeWebhook(
       {
         paymentGateway,
-        logger: { warn: vi.fn() },
+        logger: createFakeLogger(),
         transaction: async (fn) =>
           fn({ stripeEvents, subscriptions, stripeCustomers }),
       },
@@ -247,7 +256,7 @@ describe('processStripeWebhook', () => {
     const subscriptions = new FakeSubscriptionRepository();
     const stripeCustomers = new FakeStripeCustomerRepository();
     const insertSpy = vi.spyOn(stripeCustomers, 'insert');
-    const logger = { warn: vi.fn() };
+    const logger = createFakeLogger();
 
     await processStripeWebhook(
       {
@@ -296,7 +305,7 @@ describe('processStripeWebhook', () => {
       processStripeWebhook(
         {
           paymentGateway,
-          logger: { warn: vi.fn() },
+          logger: createFakeLogger(),
           transaction: async (fn) =>
             fn({ stripeEvents, subscriptions, stripeCustomers }),
         },

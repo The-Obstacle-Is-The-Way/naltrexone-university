@@ -17,7 +17,12 @@ function createDeps() {
     cancelStripeCustomerSubscriptions: async (stripeCustomerId: string) => {
       cancelCalls.push(stripeCustomerId);
     },
-    logger: { warn: vi.fn() },
+    logger: {
+      debug: vi.fn(),
+      info: vi.fn(),
+      warn: vi.fn(),
+      error: vi.fn(),
+    },
   };
 }
 
@@ -54,7 +59,15 @@ describe('processClerkWebhook', () => {
     const warn = vi.fn();
 
     await processClerkWebhook(
-      { ...deps, logger: { warn } },
+      {
+        ...deps,
+        logger: {
+          debug: vi.fn(),
+          info: vi.fn(),
+          warn,
+          error: vi.fn(),
+        },
+      },
       {
         type: 'user.updated',
         data: { id: 'clerk_1', email_addresses: [] },

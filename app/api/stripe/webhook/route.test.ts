@@ -20,6 +20,15 @@ function createPaymentGatewayStub(): PaymentGateway {
   };
 }
 
+function createControllerLogger() {
+  return {
+    debug: vi.fn(),
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+  };
+}
+
 function createTestDeps() {
   const loggerError = vi.fn();
   const limit = vi.fn<RateLimiter['limit']>(async () => ({
@@ -50,7 +59,7 @@ function createTestDeps() {
 
   const deps: StripeWebhookDeps = {
     paymentGateway: createPaymentGatewayStub(),
-    logger: { warn: vi.fn() },
+    logger: createControllerLogger(),
     transaction: async (fn) => fn(tx),
   };
 
@@ -230,7 +239,7 @@ describe('POST /api/stripe/webhook', () => {
 
     const deps: StripeWebhookDeps = {
       paymentGateway: createPaymentGatewayStub(),
-      logger: { warn: vi.fn() },
+      logger: createControllerLogger(),
       transaction:
         transactionSpy as unknown as StripeWebhookDeps['transaction'],
     };

@@ -4,6 +4,7 @@ import type {
   ClerkWebhookDeps,
   ClerkWebhookEvent,
 } from '@/src/adapters/controllers/clerk-webhook-controller';
+import type { Logger } from '@/src/adapters/shared/logger';
 import { CLERK_WEBHOOK_RATE_LIMIT } from '@/src/adapters/shared/rate-limits';
 import { isApplicationError } from '@/src/application/errors';
 import type { RateLimiter } from '@/src/application/ports/gateways';
@@ -26,13 +27,8 @@ type StripeClient = {
   };
 };
 
-type ClerkWebhookRouteLogger = {
-  error: (context: unknown, message: string) => void;
-  warn: (context: Record<string, unknown>, message: string) => void;
-};
-
 export type ClerkWebhookRouteContainer = {
-  logger: ClerkWebhookRouteLogger;
+  logger: Logger;
   stripe: StripeClient;
   createRateLimiter: () => RateLimiter;
   createUserRepository: () => UserRepository;

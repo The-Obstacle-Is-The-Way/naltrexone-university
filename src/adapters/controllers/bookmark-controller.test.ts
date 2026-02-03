@@ -23,9 +23,15 @@ class FakeLogger implements Logger {
   readonly warnCalls: Array<{ context: Record<string, unknown>; msg: string }> =
     [];
 
+  debug(_context: Record<string, unknown>, _msg: string): void {}
+
+  info(_context: Record<string, unknown>, _msg: string): void {}
+
   warn(context: Record<string, unknown>, msg: string): void {
     this.warnCalls.push({ context, msg });
   }
+
+  error(_context: Record<string, unknown>, _msg: string): void {}
 }
 
 function createThrowingBookmarkRepository(
