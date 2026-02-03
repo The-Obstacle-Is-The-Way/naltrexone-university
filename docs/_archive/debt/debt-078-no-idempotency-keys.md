@@ -68,9 +68,12 @@ async function withIdempotency<T>(
 
 ```typescript
 // For Stripe operations only
+// IMPORTANT: the idempotency key must be stable for the same logical action.
+// Do NOT use Date.now() or random values here.
+const idempotencyKey = '<uuid-from-client>'; // stable across retries
 const session = await stripe.checkout.sessions.create(
   { ...params },
-  { idempotencyKey: `checkout:${userId}:${Date.now()}` }
+  { idempotencyKey: `checkout:${userId}:${idempotencyKey}` }
 );
 ```
 

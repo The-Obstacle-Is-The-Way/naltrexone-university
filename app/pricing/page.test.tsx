@@ -17,7 +17,7 @@ describe('app/pricing', () => {
   });
 
   it('renders subscribe actions when user is not subscribed', async () => {
-    const { PricingView } = await import('./page');
+    const { PricingView } = await import('@/app/pricing/page');
 
     const html = renderToStaticMarkup(
       <PricingView
@@ -33,7 +33,7 @@ describe('app/pricing', () => {
   });
 
   it('shows an error banner when checkout=error', async () => {
-    const { PricingView } = await import('./page');
+    const { PricingView } = await import('@/app/pricing/page');
 
     const html = renderToStaticMarkup(
       <PricingView
@@ -51,7 +51,7 @@ describe('app/pricing', () => {
   });
 
   it('shows a cancel banner when checkout=cancel', async () => {
-    const { PricingView } = await import('./page');
+    const { PricingView } = await import('@/app/pricing/page');
 
     const html = renderToStaticMarkup(
       <PricingView
@@ -69,7 +69,7 @@ describe('app/pricing', () => {
   });
 
   it('hides subscribe actions when user is already subscribed', async () => {
-    const { PricingView } = await import('./page');
+    const { PricingView } = await import('@/app/pricing/page');
 
     const html = renderToStaticMarkup(
       <PricingView
@@ -86,7 +86,7 @@ describe('app/pricing', () => {
   });
 
   it('builds the subscription-required banner when reason=subscription_required', async () => {
-    const { getPricingBanner } = await import('./page');
+    const { getPricingBanner } = await import('@/app/pricing/page');
 
     expect(getPricingBanner({ reason: 'subscription_required' })).toMatchObject(
       {
@@ -97,7 +97,7 @@ describe('app/pricing', () => {
   });
 
   it('builds the checkout error banner when checkout=error', async () => {
-    const { getPricingBanner } = await import('./page');
+    const { getPricingBanner } = await import('@/app/pricing/page');
 
     expect(getPricingBanner({ checkout: 'error' })).toMatchObject({
       tone: 'error',
@@ -106,7 +106,7 @@ describe('app/pricing', () => {
   });
 
   it('includes error code details in development for checkout=error', async () => {
-    const { getPricingBanner } = await import('./page');
+    const { getPricingBanner } = await import('@/app/pricing/page');
 
     vi.stubEnv('NODE_ENV', 'development');
 
@@ -123,7 +123,7 @@ describe('app/pricing', () => {
   });
 
   it('builds the checkout canceled banner when checkout=cancel', async () => {
-    const { getPricingBanner } = await import('./page');
+    const { getPricingBanner } = await import('@/app/pricing/page');
 
     expect(getPricingBanner({ checkout: 'cancel' })).toMatchObject({
       tone: 'info',
@@ -132,13 +132,13 @@ describe('app/pricing', () => {
   });
 
   it('returns null when no banner parameters are set', async () => {
-    const { getPricingBanner } = await import('./page');
+    const { getPricingBanner } = await import('@/app/pricing/page');
 
     expect(getPricingBanner({})).toBe(null);
   });
 
   it('loadPricingData returns isEntitled=false when unauthenticated', async () => {
-    const { loadPricingData } = await import('./page');
+    const { loadPricingData } = await import('@/app/pricing/page');
 
     const authGateway: AuthGateway = {
       getCurrentUser: vi.fn(async () => null),
@@ -158,7 +158,7 @@ describe('app/pricing', () => {
   });
 
   it('loadPricingData returns isEntitled=true when entitled', async () => {
-    const { loadPricingData } = await import('./page');
+    const { loadPricingData } = await import('@/app/pricing/page');
 
     const authGateway: AuthGateway = {
       getCurrentUser: vi.fn(async () => ({
@@ -182,7 +182,7 @@ describe('app/pricing', () => {
   });
 
   it('runSubscribeAction redirects to checkout url on success', async () => {
-    const { runSubscribeAction } = await import('./page');
+    const { runSubscribeAction } = await import('@/app/pricing/page');
 
     type CreateCheckoutSessionFn = Parameters<
       typeof runSubscribeAction
@@ -216,7 +216,7 @@ describe('app/pricing', () => {
   });
 
   it('runSubscribeAction redirects to /sign-up when unauthenticated', async () => {
-    const { runSubscribeAction } = await import('./page');
+    const { runSubscribeAction } = await import('@/app/pricing/page');
 
     type CreateCheckoutSessionFn = Parameters<
       typeof runSubscribeAction
@@ -250,7 +250,7 @@ describe('app/pricing', () => {
   });
 
   it('runSubscribeAction redirects to /app/billing when already subscribed', async () => {
-    const { runSubscribeAction } = await import('./page');
+    const { runSubscribeAction } = await import('@/app/pricing/page');
 
     type CreateCheckoutSessionFn = Parameters<
       typeof runSubscribeAction
@@ -284,7 +284,7 @@ describe('app/pricing', () => {
   });
 
   it('runSubscribeAction redirects to /pricing?checkout=error for other errors', async () => {
-    const { runSubscribeAction } = await import('./page');
+    const { runSubscribeAction } = await import('@/app/pricing/page');
 
     type CreateCheckoutSessionFn = Parameters<
       typeof runSubscribeAction
@@ -320,7 +320,7 @@ describe('app/pricing', () => {
   });
 
   it('renders dismiss link when banner is present', async () => {
-    const { PricingView } = await import('./page');
+    const { PricingView } = await import('@/app/pricing/page');
 
     const html = renderToStaticMarkup(
       <PricingView
@@ -351,7 +351,7 @@ describe('app/pricing', () => {
   });
 
   it('does not render dismiss link when banner is null', async () => {
-    const { PricingView } = await import('./page');
+    const { PricingView } = await import('@/app/pricing/page');
 
     const html = renderToStaticMarkup(
       <PricingView
@@ -366,7 +366,7 @@ describe('app/pricing', () => {
   });
 
   it('renders PricingPage when deps are injected', async () => {
-    const PricingPage = (await import('./page')).default;
+    const PricingPage = (await import('@/app/pricing/page')).default;
 
     const element = await PricingPage({
       searchParams: Promise.resolve({}),

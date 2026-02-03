@@ -1,21 +1,21 @@
+import { SubscribeButton } from '@/app/pricing/pricing-client';
+import { PricingView } from '@/app/pricing/pricing-view';
+import {
+  subscribeAnnualAction,
+  subscribeMonthlyAction,
+} from '@/app/pricing/subscribe-actions';
+import type { PricingBanner } from '@/app/pricing/types';
 import type { AuthGateway } from '@/src/application/ports/gateways';
 import type {
   CheckEntitlementInput,
   CheckEntitlementOutput,
 } from '@/src/application/use-cases/check-entitlement';
-import { SubscribeButton } from './pricing-client';
-import { PricingView } from './pricing-view';
-import {
-  subscribeAnnualAction,
-  subscribeMonthlyAction,
-} from './subscribe-actions';
-import type { PricingBanner } from './types';
 
-export type { PricingViewProps } from './pricing-view';
-export { runSubscribeAction } from './subscribe-action';
+export type { PricingViewProps } from '@/app/pricing/pricing-view';
+export { runSubscribeAction } from '@/app/pricing/subscribe-action';
 export { PricingView };
 // Re-export for tests
-export type { PricingBanner } from './types';
+export type { PricingBanner } from '@/app/pricing/types';
 
 type CheckEntitlementUseCase = {
   execute: (input: CheckEntitlementInput) => Promise<CheckEntitlementOutput>;

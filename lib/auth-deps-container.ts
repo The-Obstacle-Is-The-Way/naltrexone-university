@@ -8,6 +8,11 @@ export type CheckEntitlementUseCase = {
   execute: (input: CheckEntitlementInput) => Promise<CheckEntitlementOutput>;
 };
 
+export type AuthCheckDeps = {
+  authGateway: AuthGateway;
+  checkEntitlementUseCase: CheckEntitlementUseCase;
+};
+
 export type AuthDepsContainer = {
   createAuthGateway: () => AuthGateway;
   createCheckEntitlementUseCase: () => CheckEntitlementUseCase;

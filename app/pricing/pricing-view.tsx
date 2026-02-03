@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import type { ComponentType, ReactNode } from 'react';
+import { IdempotencyKeyField } from '@/app/pricing/pricing-client';
 import type { PricingBanner } from '@/app/pricing/types';
-import { IdempotencyKeyField } from './pricing-client';
 
 export type PricingViewProps = {
   isEntitled: boolean;

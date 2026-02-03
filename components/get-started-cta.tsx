@@ -1,19 +1,15 @@
 import Link from 'next/link';
 import type {
+  AuthCheckDeps,
   AuthDepsContainer,
-  CheckEntitlementUseCase,
 } from '@/lib/auth-deps-container';
 import {
   createDepsResolver,
   type LoadContainerFn,
   loadAppContainer,
 } from '@/lib/controller-helpers';
-import type { AuthGateway } from '@/src/application/ports/gateways';
 
-export type GetStartedCtaDeps = {
-  authGateway: AuthGateway;
-  checkEntitlementUseCase: CheckEntitlementUseCase;
-};
+export type GetStartedCtaDeps = AuthCheckDeps;
 
 const getDeps = createDepsResolver<GetStartedCtaDeps, AuthDepsContainer>(
   (container) => ({

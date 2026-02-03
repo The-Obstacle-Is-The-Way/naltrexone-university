@@ -1,20 +1,16 @@
 import { UserButton } from '@clerk/nextjs';
 import Link from 'next/link';
 import type {
+  AuthCheckDeps,
   AuthDepsContainer,
-  CheckEntitlementUseCase,
 } from '@/lib/auth-deps-container';
 import {
   createDepsResolver,
   type LoadContainerFn,
   loadAppContainer,
 } from '@/lib/controller-helpers';
-import type { AuthGateway } from '@/src/application/ports/gateways';
 
-export type AuthNavDeps = {
-  authGateway: AuthGateway;
-  checkEntitlementUseCase: CheckEntitlementUseCase;
-};
+export type AuthNavDeps = AuthCheckDeps;
 
 const getDeps = createDepsResolver<AuthNavDeps, AuthDepsContainer>(
   (container) => ({

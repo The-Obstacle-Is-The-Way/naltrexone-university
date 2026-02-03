@@ -140,9 +140,7 @@ describe('env', () => {
   });
 
   it('requires CLERK_WEBHOOK_SIGNING_SECRET in non-Vercel production runtime when Clerk is enabled', async () => {
-    const consoleError = vi
-      .spyOn(console, 'error')
-      .mockImplementation(() => {});
+    vi.spyOn(console, 'error').mockImplementation(() => {});
 
     (process.env as Record<string, string | undefined>).NODE_ENV = 'production';
     (process.env as Record<string, string | undefined>).npm_lifecycle_event =
@@ -169,13 +167,10 @@ describe('env', () => {
     await expect(import('@/lib/env')).rejects.toThrow(
       'Invalid environment variables',
     );
-    consoleError.mockRestore();
   });
 
   it('requires CLERK_WEBHOOK_SIGNING_SECRET on Vercel production deploys when Clerk is enabled', async () => {
-    const consoleError = vi
-      .spyOn(console, 'error')
-      .mockImplementation(() => {});
+    vi.spyOn(console, 'error').mockImplementation(() => {});
 
     process.env.DATABASE_URL =
       'postgresql://postgres:postgres@localhost:5432/db';
@@ -198,13 +193,10 @@ describe('env', () => {
     await expect(import('@/lib/env')).rejects.toThrow(
       'Invalid environment variables',
     );
-    consoleError.mockRestore();
   });
 
   it('requires Clerk keys when NEXT_PUBLIC_SKIP_CLERK is not true', async () => {
-    const consoleError = vi
-      .spyOn(console, 'error')
-      .mockImplementation(() => {});
+    vi.spyOn(console, 'error').mockImplementation(() => {});
 
     process.env.DATABASE_URL =
       'postgresql://postgres:postgres@localhost:5432/db';
@@ -226,13 +218,10 @@ describe('env', () => {
     await expect(import('@/lib/env')).rejects.toThrow(
       'Invalid environment variables',
     );
-    consoleError.mockRestore();
   });
 
   it('rejects Clerk keys with mismatched environments (pk_test vs sk_live)', async () => {
-    const consoleError = vi
-      .spyOn(console, 'error')
-      .mockImplementation(() => {});
+    vi.spyOn(console, 'error').mockImplementation(() => {});
 
     process.env.DATABASE_URL =
       'postgresql://postgres:postgres@localhost:5432/db';
@@ -254,13 +243,10 @@ describe('env', () => {
     await expect(import('@/lib/env')).rejects.toThrow(
       'Invalid environment variables',
     );
-    consoleError.mockRestore();
   });
 
   it('rejects Clerk keys that appear to reference different instances', async () => {
-    const consoleError = vi
-      .spyOn(console, 'error')
-      .mockImplementation(() => {});
+    vi.spyOn(console, 'error').mockImplementation(() => {});
 
     process.env.DATABASE_URL =
       'postgresql://postgres:postgres@localhost:5432/db';
@@ -282,6 +268,5 @@ describe('env', () => {
     await expect(import('@/lib/env')).rejects.toThrow(
       'Invalid environment variables',
     );
-    consoleError.mockRestore();
   });
 });
