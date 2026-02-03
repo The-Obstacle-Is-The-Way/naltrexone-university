@@ -5,10 +5,6 @@ import { FakeAuthGateway } from '@/src/application/test-helpers/fakes';
 import type { CheckEntitlementInput } from '@/src/application/use-cases/check-entitlement';
 import type { User } from '@/src/domain/entities';
 
-vi.mock('@clerk/nextjs', () => ({
-  UserButton: () => <div data-testid="user-button" />,
-}));
-
 vi.mock('next/link', () => ({
   default: (props: Record<string, unknown>) => <a {...props} />,
 }));
@@ -30,9 +26,16 @@ function restoreEnv() {
 describe('AuthNav', () => {
   afterEach(() => {
     restoreEnv();
+    vi.unmock('@clerk/nextjs');
     vi.resetModules();
     vi.restoreAllMocks();
   });
+
+  function mockUserButton() {
+    vi.doMock('@clerk/nextjs', () => ({
+      UserButton: () => <div data-testid="user-button" />,
+    }));
+  }
 
   function createUser(): User {
     return {
@@ -46,6 +49,10 @@ describe('AuthNav', () => {
   it('renders a CI fallback UI when NEXT_PUBLIC_SKIP_CLERK=true', async () => {
     process.env.NEXT_PUBLIC_SKIP_CLERK = 'true';
 
+    vi.doMock('@clerk/nextjs', () => {
+      throw new Error('Clerk must not be imported when skipClerk=true');
+    });
+
     const { AuthNav } = await import('./auth-nav');
 
     const element = await AuthNav({ deps: undefined });
@@ -58,6 +65,7 @@ describe('AuthNav', () => {
 
   it('shows a Dashboard link when the user is entitled', async () => {
     process.env.NEXT_PUBLIC_SKIP_CLERK = 'false';
+    mockUserButton();
 
     const { AuthNav } = await import('./auth-nav');
 
@@ -84,6 +92,7 @@ describe('AuthNav', () => {
 
   it('renders an unauthenticated UI when there is no current user', async () => {
     process.env.NEXT_PUBLIC_SKIP_CLERK = 'false';
+    mockUserButton();
 
     const { AuthNav } = await import('./auth-nav');
 
@@ -110,6 +119,7 @@ describe('AuthNav', () => {
 
   it('shows a Pricing link when the user is not entitled', async () => {
     process.env.NEXT_PUBLIC_SKIP_CLERK = 'false';
+    mockUserButton();
 
     const { AuthNav } = await import('./auth-nav');
 
@@ -136,6 +146,7 @@ describe('AuthNav', () => {
 
   it('loads dependencies from the container when deps are omitted', async () => {
     process.env.NEXT_PUBLIC_SKIP_CLERK = 'false';
+    mockUserButton();
 
     const { AuthNav } = await import('./auth-nav');
 

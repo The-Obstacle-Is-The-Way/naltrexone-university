@@ -12,6 +12,7 @@ import type { TagControllerDeps } from '@/src/adapters/controllers/tag-controlle
 import {
   ClerkAuthGateway,
   DrizzleRateLimiter,
+  SkipAuthGateway,
   StripePaymentGateway,
 } from '@/src/adapters/gateways';
 import {
@@ -178,10 +179,12 @@ export function createContainer(overrides: ContainerOverrides = {}) {
 
   const gatewayFactories: GatewayFactories = {
     createAuthGateway: () =>
-      new ClerkAuthGateway({
-        userRepository: repositories.createUserRepository(),
-        getClerkUser: currentUser,
-      }),
+      primitives.env.NEXT_PUBLIC_SKIP_CLERK === 'true'
+        ? new SkipAuthGateway()
+        : new ClerkAuthGateway({
+            userRepository: repositories.createUserRepository(),
+            getClerkUser: currentUser,
+          }),
     createPaymentGateway: () =>
       new StripePaymentGateway({
         stripe: primitives.stripe,
@@ -255,7 +258,10 @@ export function createContainer(overrides: ContainerOverrides = {}) {
       paymentGateway: gateways.createPaymentGateway(),
       idempotencyKeyRepository: repositories.createIdempotencyKeyRepository(),
       rateLimiter: gateways.createRateLimiter(),
-      getClerkUserId: async () => (await currentUser())?.id ?? null,
+      getClerkUserId: async () =>
+        primitives.env.NEXT_PUBLIC_SKIP_CLERK === 'true'
+          ? null
+          : ((await currentUser())?.id ?? null),
       appUrl: primitives.env.NEXT_PUBLIC_APP_URL,
       now: primitives.now,
     }),

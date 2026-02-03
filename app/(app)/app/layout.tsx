@@ -2,11 +2,14 @@ import { redirect } from 'next/navigation';
 import { AppShell } from '@/components/app-shell/app-shell';
 import { AuthNav } from '@/components/auth-nav';
 import { MobileNav } from '@/components/mobile-nav';
+import { ApplicationError } from '@/src/application/errors';
 import type { AuthGateway } from '@/src/application/ports/gateways';
 import type {
   CheckEntitlementInput,
   CheckEntitlementOutput,
 } from '@/src/application/use-cases/check-entitlement';
+
+export const dynamic = 'force-dynamic';
 
 type CheckEntitlementUseCase = {
   execute: (input: CheckEntitlementInput) => Promise<CheckEntitlementOutput>;
@@ -34,7 +37,12 @@ export async function enforceEntitledAppUser(
   redirectFn: (url: string) => never = redirect,
 ): Promise<void> {
   const d = await getDeps(deps);
-  const user = await d.authGateway.requireUser();
+  const user = await d.authGateway.requireUser().catch((error) => {
+    if (error instanceof ApplicationError && error.code === 'UNAUTHENTICATED') {
+      return redirectFn('/sign-in');
+    }
+    throw error;
+  });
 
   const entitlement = await d.checkEntitlementUseCase.execute({
     userId: user.id,
