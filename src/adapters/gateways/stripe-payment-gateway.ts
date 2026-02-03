@@ -271,26 +271,15 @@ export class StripePaymentGateway implements PaymentGateway {
     const { subscription } = input;
     const userId = subscription.metadata?.user_id;
     if (!userId) {
-      if (
-        input.type === 'customer.subscription.created' ||
-        input.type === 'checkout.session.completed'
-      ) {
-        const message =
-          input.type === 'customer.subscription.created'
-            ? 'Skipping subscription.created event without metadata.user_id'
-            : 'Skipping checkout.session.completed event without metadata.user_id';
-
-        this.deps.logger.warn(
-          {
-            eventId: input.eventId,
-            stripeSubscriptionId: subscription.id ?? null,
-            stripeCustomerId: subscription.customer ?? null,
-          },
-          message,
-        );
-        return null;
-      }
-
+      this.deps.logger.error(
+        {
+          eventId: input.eventId,
+          type: input.type,
+          stripeSubscriptionId: subscription.id,
+          stripeCustomerId: subscription.customer,
+        },
+        'Stripe subscription metadata.user_id is required',
+      );
       throw new ApplicationError(
         'STRIPE_ERROR',
         'Stripe subscription metadata.user_id is required',
