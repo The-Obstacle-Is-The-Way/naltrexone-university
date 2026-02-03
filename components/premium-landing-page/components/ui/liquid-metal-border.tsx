@@ -1,28 +1,28 @@
-"use client"
+'use client';
 
-import type React from "react"
-import { useState, useEffect, useRef } from "react"
-import { LiquidMetal } from "@paper-design/shaders-react"
-import { cn } from "@/lib/utils"
+import { LiquidMetal } from '@paper-design/shaders-react';
+import type React from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { cn } from '@/lib/utils';
 
 interface LiquidMetalBorderProps {
-  children: React.ReactNode
-  className?: string
-  borderRadius?: number
-  borderWidth?: number
-  colorBack?: string
-  colorTint?: string
-  repetition?: number
-  softness?: number
-  shiftRed?: number
-  shiftBlue?: number
-  distortion?: number
-  contour?: number
-  angle?: number
-  speed?: number
-  scale?: number
-  opacity?: number
-  theme?: "light" | "dark"
+  children: React.ReactNode;
+  className?: string;
+  borderRadius?: number;
+  borderWidth?: number;
+  colorBack?: string;
+  colorTint?: string;
+  repetition?: number;
+  softness?: number;
+  shiftRed?: number;
+  shiftBlue?: number;
+  distortion?: number;
+  contour?: number;
+  angle?: number;
+  speed?: number;
+  scale?: number;
+  opacity?: number;
+  theme?: 'light' | 'dark';
 }
 
 export function LiquidMetalBorder({
@@ -42,45 +42,48 @@ export function LiquidMetalBorder({
   speed = 0.9,
   scale = 4,
   opacity = 0.7,
-  theme = "dark",
+  theme = 'dark',
 }: LiquidMetalBorderProps) {
-  const defaultColorBack = theme === "light" ? "#888888" : "#aaaaac"
-  const defaultColorTint = theme === "light" ? "#ffffff" : "#ffffff"
+  const defaultColorBack = theme === 'light' ? '#888888' : '#aaaaac';
+  const defaultColorTint = theme === 'light' ? '#ffffff' : '#ffffff';
 
-  const [isVisible, setIsVisible] = useState(false)
-  const containerRef = useRef<HTMLDivElement>(null)
+  const [isVisible, setIsVisible] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const element = containerRef.current
-    if (!element) return
+    const element = containerRef.current;
+    if (!element) return;
 
     const observer = new IntersectionObserver(
       ([entry]) => {
-        setIsVisible(entry.isIntersecting)
+        setIsVisible(entry.isIntersecting);
       },
       {
-        rootMargin: "100px",
+        rootMargin: '100px',
         threshold: 0,
       },
-    )
+    );
 
-    observer.observe(element)
-    return () => observer.disconnect()
-  }, [])
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
 
   return (
     <div
       ref={containerRef}
-      className={cn("relative", className)}
+      className={cn('relative', className)}
       style={{
         borderRadius,
         padding: borderWidth,
       }}
     >
-      <div className="absolute inset-0 z-0 overflow-hidden" style={{ borderRadius, opacity }}>
+      <div
+        className="absolute inset-0 z-0 overflow-hidden"
+        style={{ borderRadius, opacity }}
+      >
         {isVisible ? (
           <LiquidMetal
-            style={{ width: "100%", height: "100%" }}
+            style={{ width: '100%', height: '100%' }}
             colorBack={colorBack ?? defaultColorBack}
             colorTint={colorTint ?? defaultColorTint}
             shape="none"
@@ -100,9 +103,9 @@ export function LiquidMetalBorder({
             className="w-full h-full"
             style={{
               background:
-                theme === "light"
-                  ? "linear-gradient(135deg, #d1d5db 0%, #9ca3af 50%, #d1d5db 100%)"
-                  : "linear-gradient(135deg, #71717a 0%, #52525b 50%, #71717a 100%)",
+                theme === 'light'
+                  ? 'linear-gradient(135deg, #d1d5db 0%, #9ca3af 50%, #d1d5db 100%)'
+                  : 'linear-gradient(135deg, #71717a 0%, #52525b 50%, #71717a 100%)',
             }}
           />
         )}
@@ -117,5 +120,5 @@ export function LiquidMetalBorder({
         {children}
       </div>
     </div>
-  )
+  );
 }

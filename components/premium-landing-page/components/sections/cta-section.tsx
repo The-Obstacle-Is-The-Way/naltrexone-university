@@ -1,14 +1,17 @@
-import Link from "next/link"
-import { ArrowRight } from "lucide-react"
-import { LiquidCtaButton } from "@/components/buttons/liquid-cta-button"
+import { ArrowRight } from 'lucide-react';
+import Link from 'next/link';
+import { LiquidCtaButton } from '@/components/buttons/liquid-cta-button';
 
 export function CtaSection() {
   return (
     <section className="px-6 py-24">
       <div className="max-w-3xl mx-auto text-center">
-        <h2 className="font-display text-4xl md:text-5xl font-bold text-zinc-100 mb-6">Ready to get started?</h2>
+        <h2 className="font-display text-4xl md:text-5xl font-bold text-zinc-100 mb-6">
+          Ready to get started?
+        </h2>
         <p className="text-lg text-zinc-500 mb-10 text-balance">
-          Join thousands of teams already building better products with our platform. Start your free trial today.
+          Join thousands of teams already building better products with our
+          platform. Start your free trial today.
         </p>
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
           <Link href="#pricing">
@@ -24,5 +27,5 @@ export function CtaSection() {
         </div>
       </div>
     </section>
-  )
+  );
 }

@@ -1,8 +1,8 @@
-"use client"
+'use client';
 
-import Link from "next/link"
-import { LiquidCtaButton } from "@/components/buttons/liquid-cta-button"
-import { Sparkles, ArrowRight } from "lucide-react"
+import { ArrowRight, Sparkles } from 'lucide-react';
+import Link from 'next/link';
+import { LiquidCtaButton } from '@/components/buttons/liquid-cta-button';
 
 export function HeroSection() {
   return (
@@ -15,7 +15,9 @@ export function HeroSection() {
         {/* Badge - customize your announcement */}
         <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-zinc-900/80 border border-zinc-800 mb-8">
           <Sparkles className="w-4 h-4 text-zinc-400" />
-          <span className="text-sm text-zinc-400">Introducing v2.0 — Now with AI</span>
+          <span className="text-sm text-zinc-400">
+            Introducing v2.0 — Now with AI
+          </span>
         </div>
 
         {/* Headline - customize your value proposition */}
@@ -28,8 +30,8 @@ export function HeroSection() {
 
         {/* Subheadline - describe your product */}
         <p className="text-lg md:text-xl text-zinc-500 max-w-2xl mx-auto mb-10 leading-relaxed text-balance">
-          The all-in-one platform that helps teams build, deploy, and scale their products 10x faster. No complexity,
-          just results.
+          The all-in-one platform that helps teams build, deploy, and scale
+          their products 10x faster. No complexity, just results.
         </p>
 
         {/* CTAs */}
@@ -49,27 +51,33 @@ export function HeroSection() {
         {/* Social proof */}
         <div className="mt-16 flex flex-col sm:flex-row items-center justify-center gap-4">
           <div className="flex items-center gap-4">
+            {/* External Unsplash avatars for social proof - biome-ignore applied per element */}
             <div className="flex -space-x-3">
+              {/* biome-ignore lint/performance/noImgElement: External URL requires remotePatterns config */}
               <img
                 src="https://images.unsplash.com/photo-1633332755192-727a05c4013d?q=80&w=200"
                 alt="User avatar"
                 className="w-10 h-10 rounded-full border-2 border-zinc-950 hover:-translate-y-1 transition object-cover z-[1]"
               />
+              {/* biome-ignore lint/performance/noImgElement: External URL requires remotePatterns config */}
               <img
                 src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=200"
                 alt="User avatar"
                 className="w-10 h-10 rounded-full border-2 border-zinc-950 hover:-translate-y-1 transition object-cover z-[2]"
               />
+              {/* biome-ignore lint/performance/noImgElement: External URL requires remotePatterns config */}
               <img
                 src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?q=80&w=200&h=200&auto=format&fit=crop"
                 alt="User avatar"
                 className="w-10 h-10 rounded-full border-2 border-zinc-950 hover:-translate-y-1 transition object-cover z-[3]"
               />
+              {/* biome-ignore lint/performance/noImgElement: External URL requires remotePatterns config */}
               <img
                 src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=200"
                 alt="User avatar"
                 className="w-10 h-10 rounded-full border-2 border-zinc-950 hover:-translate-y-1 transition object-cover z-[4]"
               />
+              {/* biome-ignore lint/performance/noImgElement: External URL requires remotePatterns config */}
               <img
                 src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=200"
                 alt="User avatar"
@@ -78,7 +86,11 @@ export function HeroSection() {
             </div>
             <div className="h-8 w-px bg-zinc-800" />
             <div className="flex flex-col items-start">
-              <div className="flex items-center gap-1">
+              <div
+                className="flex items-center gap-1"
+                role="img"
+                aria-label="5 out of 5 stars"
+              >
                 {[1, 2, 3, 4, 5].map((i) => (
                   <svg
                     key={i}
@@ -91,19 +103,24 @@ export function HeroSection() {
                     strokeWidth="2"
                     strokeLinecap="round"
                     strokeLinejoin="round"
+                    aria-hidden="true"
                   >
                     <path d="m12 2 3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z" />
                   </svg>
                 ))}
-                <span className="text-zinc-400 font-medium ml-1 text-sm">5.0</span>
+                <span className="text-zinc-400 font-medium ml-1 text-sm">
+                  5.0
+                </span>
               </div>
               <p className="text-sm text-zinc-500">
-                Trusted by <span className="text-zinc-300 font-medium">10,000+</span> developers
+                Trusted by{' '}
+                <span className="text-zinc-300 font-medium">10,000+</span>{' '}
+                developers
               </p>
             </div>
           </div>
         </div>
       </div>
     </section>
-  )
+  );
 }

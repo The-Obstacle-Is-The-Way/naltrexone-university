@@ -1,31 +1,30 @@
-"use client"
+'use client';
 
 import {
   BarChart2,
-  Receipt,
   Building2,
   CreditCard,
   Folder,
-  Wallet,
-  Users2,
-  Shield,
-  MessagesSquare,
-  Video,
-  Settings,
   HelpCircle,
+  Home,
   Menu,
-} from "lucide-react"
-
-import { Home } from "lucide-react"
-import Link from "next/link"
-import { useState } from "react"
-import Image from "next/image"
+  MessagesSquare,
+  Receipt,
+  Settings,
+  Shield,
+  Users2,
+  Video,
+  Wallet,
+} from 'lucide-react';
+import Image from 'next/image';
+import Link from 'next/link';
+import { useState } from 'react';
 
 export default function Sidebar() {
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   function handleNavigation() {
-    setIsMobileMenuOpen(false)
+    setIsMobileMenuOpen(false);
   }
 
   function NavItem({
@@ -33,9 +32,9 @@ export default function Sidebar() {
     icon: Icon,
     children,
   }: {
-    href: string
-    icon: any
-    children: React.ReactNode
+    href: string;
+    icon: React.ComponentType<{ className?: string }>;
+    children: React.ReactNode;
   }) {
     return (
       <Link
@@ -46,7 +45,7 @@ export default function Sidebar() {
         <Icon className="h-4 w-4 mr-3 flex-shrink-0" />
         {children}
       </Link>
-    )
+    );
   }
 
   return (
@@ -62,7 +61,7 @@ export default function Sidebar() {
         className={`
                 fixed inset-y-0 left-0 z-[70] w-64 bg-white dark:bg-[#0F0F12] transform transition-transform duration-200 ease-in-out
                 lg:translate-x-0 lg:static lg:w-64 border-r border-gray-200 dark:border-[#1F1F23]
-                ${isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"}
+                ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}
             `}
       >
         <div className="h-full flex flex-col">
@@ -168,11 +167,13 @@ export default function Sidebar() {
       </nav>
 
       {isMobileMenuOpen && (
-        <div
-          className="fixed inset-0 bg-black bg-opacity-50 z-[65] lg:hidden"
+        <button
+          type="button"
+          aria-label="Close menu"
+          className="fixed inset-0 bg-black bg-opacity-50 z-[65] lg:hidden border-none cursor-default"
           onClick={() => setIsMobileMenuOpen(false)}
         />
       )}
     </>
-  )
+  );
 }

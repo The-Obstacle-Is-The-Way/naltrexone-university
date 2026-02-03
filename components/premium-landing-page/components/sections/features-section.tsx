@@ -1,19 +1,19 @@
-"use client"
+'use client';
 
-import { motion } from "framer-motion"
-import { Zap, BarChart3, Layers, ArrowRight, Command } from "lucide-react"
-import { Card, CardContent } from "@/components/ui/card"
+import { motion } from 'framer-motion';
+import { ArrowRight, BarChart3, Command, Layers, Zap } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
 
 const integrationLogos = [
-  { name: "Tool 1" },
-  { name: "Tool 2" },
-  { name: "Tool 3" },
-  { name: "Tool 4" },
-  { name: "Tool 5" },
-  { name: "Tool 6" },
-  { name: "Tool 7" },
-  { name: "Tool 8" },
-]
+  { name: 'Tool 1' },
+  { name: 'Tool 2' },
+  { name: 'Tool 3' },
+  { name: 'Tool 4' },
+  { name: 'Tool 5' },
+  { name: 'Tool 6' },
+  { name: 'Tool 7' },
+  { name: 'Tool 8' },
+];
 
 export function FeaturesSection() {
   return (
@@ -27,7 +27,9 @@ export function FeaturesSection() {
           transition={{ duration: 0.5 }}
           className="text-center mb-12"
         >
-          <p className="text-sm font-medium text-zinc-500 uppercase tracking-wider mb-4">Features</p>
+          <p className="text-sm font-medium text-zinc-500 uppercase tracking-wider mb-4">
+            Features
+          </p>
           <h2 className="font-display text-3xl md:text-4xl font-bold text-zinc-100 mb-4">
             Everything you need to succeed
           </h2>
@@ -55,7 +57,9 @@ export function FeaturesSection() {
                   >
                     <BarChart3 className="w-5 h-5 text-zinc-400 group-hover:text-zinc-200 transition-colors" />
                   </motion.div>
-                  <p className="font-heading font-semibold text-zinc-100">Real-time Dashboard</p>
+                  <p className="font-heading font-semibold text-zinc-100">
+                    Real-time Dashboard
+                  </p>
                 </div>
                 <p className="text-zinc-500 text-sm mb-5">
                   Track every metric that matters with customizable dashboards.
@@ -93,9 +97,9 @@ export function FeaturesSection() {
                   {/* Animated metrics row */}
                   <div className="grid grid-cols-3 gap-3 mb-4">
                     {[
-                      { label: "Total Users", value: "12.4K", change: "+12%" },
-                      { label: "Revenue", value: "$48.2K", change: "+8%" },
-                      { label: "Conversion", value: "3.2%", change: "+2%" },
+                      { label: 'Total Users', value: '12.4K', change: '+12%' },
+                      { label: 'Revenue', value: '$48.2K', change: '+8%' },
+                      { label: 'Conversion', value: '3.2%', change: '+2%' },
                     ].map((metric, i) => (
                       <motion.div
                         key={metric.label}
@@ -105,13 +109,20 @@ export function FeaturesSection() {
                         viewport={{ once: true }}
                         transition={{ delay: 0.3 + i * 0.1 }}
                       >
-                        <p className="text-zinc-500 text-xs mb-1">{metric.label}</p>
+                        <p className="text-zinc-500 text-xs mb-1">
+                          {metric.label}
+                        </p>
                         <div className="flex items-baseline gap-1.5">
-                          <span className="text-zinc-100 font-semibold text-sm">{metric.value}</span>
+                          <span className="text-zinc-100 font-semibold text-sm">
+                            {metric.value}
+                          </span>
                           <motion.span
                             className="text-zinc-400 text-xs"
                             animate={{ opacity: [0.5, 1, 0.5] }}
-                            transition={{ duration: 2, repeat: Number.POSITIVE_INFINITY }}
+                            transition={{
+                              duration: 2,
+                              repeat: Number.POSITIVE_INFINITY,
+                            }}
                           >
                             {metric.change}
                           </motion.span>
@@ -121,17 +132,26 @@ export function FeaturesSection() {
                   </div>
                   {/* Animated bar chart */}
                   <div className="flex items-end gap-1.5 h-16">
-                    {[35, 55, 40, 75, 50, 85, 60, 70, 45, 90, 65, 80].map((h, i) => (
-                      <motion.div
-                        key={i}
-                        className="flex-1 bg-gradient-to-t from-zinc-700 to-zinc-500 rounded-sm origin-bottom"
-                        initial={{ scaleY: 0 }}
-                        whileInView={{ scaleY: h / 100 }}
-                        viewport={{ once: true }}
-                        transition={{ duration: 0.6, delay: 0.5 + i * 0.04, ease: "easeOut" }}
-                        whileHover={{ scaleY: 1, transition: { duration: 0.2 } }}
-                      />
-                    ))}
+                    {[35, 55, 40, 75, 50, 85, 60, 70, 45, 90, 65, 80].map(
+                      (h, i) => (
+                        <motion.div
+                          key={`bar-${h}-${i}`}
+                          className="flex-1 bg-gradient-to-t from-zinc-700 to-zinc-500 rounded-sm origin-bottom"
+                          initial={{ scaleY: 0 }}
+                          whileInView={{ scaleY: h / 100 }}
+                          viewport={{ once: true }}
+                          transition={{
+                            duration: 0.6,
+                            delay: 0.5 + i * 0.04,
+                            ease: 'easeOut',
+                          }}
+                          whileHover={{
+                            scaleY: 1,
+                            transition: { duration: 0.2 },
+                          }}
+                        />
+                      ),
+                    )}
                   </div>
                   {/* Animated line underneath */}
                   <motion.div
@@ -160,13 +180,21 @@ export function FeaturesSection() {
                   <motion.div
                     className="w-10 h-10 rounded-xl bg-zinc-800 flex items-center justify-center"
                     animate={{ scale: [1, 1.1, 1] }}
-                    transition={{ duration: 2, repeat: Number.POSITIVE_INFINITY, ease: "easeInOut" }}
+                    transition={{
+                      duration: 2,
+                      repeat: Number.POSITIVE_INFINITY,
+                      ease: 'easeInOut',
+                    }}
                   >
                     <Zap className="w-5 h-5 text-zinc-400 group-hover:text-zinc-200 transition-colors" />
                   </motion.div>
-                  <p className="font-heading font-semibold text-zinc-100">Blazing Fast</p>
+                  <p className="font-heading font-semibold text-zinc-100">
+                    Blazing Fast
+                  </p>
                 </div>
-                <p className="text-zinc-500 text-sm mb-5">Optimized for speed at any scale.</p>
+                <p className="text-zinc-500 text-sm mb-5">
+                  Optimized for speed at any scale.
+                </p>
                 <div className="mt-auto">
                   <div className="flex items-baseline gap-2 mb-3">
                     <motion.span
@@ -182,10 +210,14 @@ export function FeaturesSection() {
                   <div className="h-2 bg-zinc-800 rounded-full overflow-hidden">
                     <motion.div
                       className="h-full bg-gradient-to-r from-zinc-500 to-zinc-300 rounded-full"
-                      initial={{ width: "0%" }}
-                      whileInView={{ width: "99.9%" }}
+                      initial={{ width: '0%' }}
+                      whileInView={{ width: '99.9%' }}
                       viewport={{ once: true }}
-                      transition={{ duration: 1.5, delay: 0.3, ease: "easeOut" }}
+                      transition={{
+                        duration: 1.5,
+                        delay: 0.3,
+                        ease: 'easeOut',
+                      }}
                     />
                   </div>
                 </div>
@@ -210,11 +242,15 @@ export function FeaturesSection() {
                   >
                     <Command className="w-5 h-5 text-zinc-400 group-hover:text-zinc-200 transition-colors" />
                   </motion.div>
-                  <p className="font-heading font-semibold text-zinc-100">Keyboard First</p>
+                  <p className="font-heading font-semibold text-zinc-100">
+                    Keyboard First
+                  </p>
                 </div>
-                <p className="text-zinc-500 text-sm mb-5">Every action is just a keystroke away.</p>
+                <p className="text-zinc-500 text-sm mb-5">
+                  Every action is just a keystroke away.
+                </p>
                 <div className="flex justify-center gap-2 mt-auto">
-                  {["⌘", "K"].map((key, i) => (
+                  {['⌘', 'K'].map((key, i) => (
                     <motion.div
                       key={key}
                       className="flex items-center justify-center w-12 h-12 rounded-xl bg-zinc-800/80 border border-zinc-700/50 shadow-lg"
@@ -228,7 +264,9 @@ export function FeaturesSection() {
                       }}
                       whileHover={{ scale: 1.1, y: -4 }}
                     >
-                      <span className="text-zinc-300 font-mono text-lg">{key}</span>
+                      <span className="text-zinc-300 font-mono text-lg">
+                        {key}
+                      </span>
                     </motion.div>
                   ))}
                 </div>
@@ -254,9 +292,13 @@ export function FeaturesSection() {
                   >
                     <Layers className="w-5 h-5 text-zinc-400 group-hover:text-zinc-200 transition-colors" />
                   </motion.div>
-                  <p className="font-heading font-semibold text-zinc-100">100+ Integrations</p>
+                  <p className="font-heading font-semibold text-zinc-100">
+                    100+ Integrations
+                  </p>
                 </div>
-                <p className="text-zinc-500 text-sm mb-5">Connect with tools you already use daily.</p>
+                <p className="text-zinc-500 text-sm mb-5">
+                  Connect with tools you already use daily.
+                </p>
                 <div className="grid grid-cols-8 gap-2 mt-auto">
                   {integrationLogos.map((logo, i) => (
                     <motion.div
@@ -284,5 +326,5 @@ export function FeaturesSection() {
         </div>
       </div>
     </section>
-  )
+  );
 }

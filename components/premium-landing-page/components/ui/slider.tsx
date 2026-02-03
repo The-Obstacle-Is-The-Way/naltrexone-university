@@ -1,9 +1,9 @@
-'use client'
+'use client';
 
-import * as React from 'react'
-import * as SliderPrimitive from '@radix-ui/react-slider'
+import * as SliderPrimitive from '@radix-ui/react-slider';
+import * as React from 'react';
 
-import { cn } from '@/lib/utils'
+import { cn } from '@/lib/utils';
 
 function Slider({
   className,
@@ -21,7 +21,7 @@ function Slider({
           ? defaultValue
           : [min, max],
     [value, defaultValue, min, max],
-  )
+  );
 
   return (
     <SliderPrimitive.Root
@@ -52,12 +52,12 @@ function Slider({
       {Array.from({ length: _values.length }, (_, index) => (
         <SliderPrimitive.Thumb
           data-slot="slider-thumb"
-          key={index}
+          key={`thumb-${index}`}
           className="border-primary ring-ring/50 block size-4 shrink-0 rounded-full border bg-white shadow-sm transition-[color,box-shadow] hover:ring-4 focus-visible:ring-4 focus-visible:outline-hidden disabled:pointer-events-none disabled:opacity-50"
         />
       ))}
     </SliderPrimitive.Root>
-  )
+  );
 }
 
-export { Slider }
+export { Slider };
