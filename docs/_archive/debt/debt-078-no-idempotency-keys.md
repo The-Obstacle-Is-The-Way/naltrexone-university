@@ -109,5 +109,5 @@ We implemented **database-backed idempotency keys** (no vendor-specific dependen
 ## Related
 
 - BUG-047: Multiple subscriptions created per user
-- Stripe Idempotent Requests: https://stripe.com/docs/api/idempotent_requests
+- [Stripe Idempotent Requests](https://stripe.com/docs/api/idempotent_requests)
 - AWS Best Practices: Idempotency in Serverless
