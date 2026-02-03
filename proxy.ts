@@ -1,13 +1,43 @@
-import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server';
+import {
+  type NextFetchEvent,
+  type NextMiddleware,
+  type NextRequest,
+  NextResponse,
+} from 'next/server';
 import { PUBLIC_ROUTE_PATTERNS } from '@/lib/public-routes';
 
-const isPublicRoute = createRouteMatcher(PUBLIC_ROUTE_PATTERNS);
+let cachedClerkMiddleware: NextMiddleware | null = null;
 
-export default clerkMiddleware(async (auth, request) => {
-  if (!isPublicRoute(request)) {
-    await auth.protect();
+async function getClerkMiddleware(): Promise<NextMiddleware> {
+  if (cachedClerkMiddleware) return cachedClerkMiddleware;
+
+  const { clerkMiddleware, createRouteMatcher } = await import(
+    '@clerk/nextjs/server'
+  );
+
+  const isPublicRoute = createRouteMatcher(PUBLIC_ROUTE_PATTERNS);
+
+  const middleware = clerkMiddleware(async (auth, request) => {
+    if (!isPublicRoute(request)) {
+      await auth.protect();
+    }
+  });
+
+  cachedClerkMiddleware = middleware;
+  return middleware;
+}
+
+export default async function middleware(
+  request: NextRequest,
+  event: NextFetchEvent,
+) {
+  if (process.env.NEXT_PUBLIC_SKIP_CLERK === 'true') {
+    return NextResponse.next();
   }
-});
+
+  const clerkMiddleware = await getClerkMiddleware();
+  return clerkMiddleware(request, event);
+}
 
 export const config = {
   matcher: [
