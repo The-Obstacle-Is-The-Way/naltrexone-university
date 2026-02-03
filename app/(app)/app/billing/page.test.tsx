@@ -2,8 +2,10 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 import { loadBillingData } from '@/app/(app)/app/billing/page';
-import type { AuthGateway } from '@/src/application/ports/gateways';
-import type { SubscriptionRepository } from '@/src/application/ports/repositories';
+import {
+  FakeAuthGateway,
+  FakeSubscriptionRepository,
+} from '@/src/application/test-helpers/fakes';
 import { createSubscription, createUser } from '@/src/domain/test-helpers';
 
 describe('app/(app)/app/billing/page', () => {
@@ -11,16 +13,10 @@ describe('app/(app)/app/billing/page', () => {
     it('loads the subscription for the current user', async () => {
       const user = createUser({ id: 'user_1' });
 
-      const authGateway: AuthGateway = {
-        getCurrentUser: async () => user,
-        requireUser: async () => user,
-      };
-
-      const subscriptionRepository: SubscriptionRepository = {
-        findByUserId: async () => createSubscription({ userId: user.id }),
-        findByStripeSubscriptionId: async () => null,
-        upsert: async () => undefined,
-      };
+      const authGateway = new FakeAuthGateway(user);
+      const subscriptionRepository = new FakeSubscriptionRepository([
+        createSubscription({ userId: user.id }),
+      ]);
 
       await expect(
         loadBillingData({ authGateway, subscriptionRepository }),
@@ -37,16 +33,8 @@ describe('app/(app)/app/billing/page', () => {
         .default;
       const user = createUser({ id: 'user_1' });
 
-      const authGateway: AuthGateway = {
-        getCurrentUser: async () => user,
-        requireUser: async () => user,
-      };
-
-      const subscriptionRepository: SubscriptionRepository = {
-        findByUserId: async () => null,
-        findByStripeSubscriptionId: async () => null,
-        upsert: async () => undefined,
-      };
+      const authGateway = new FakeAuthGateway(user);
+      const subscriptionRepository = new FakeSubscriptionRepository();
 
       const element = await BillingPage({
         deps: { authGateway, subscriptionRepository },
@@ -62,16 +50,10 @@ describe('app/(app)/app/billing/page', () => {
         .default;
       const user = createUser({ id: 'user_1' });
 
-      const authGateway: AuthGateway = {
-        getCurrentUser: async () => user,
-        requireUser: async () => user,
-      };
-
-      const subscriptionRepository: SubscriptionRepository = {
-        findByUserId: async () => createSubscription({ userId: user.id }),
-        findByStripeSubscriptionId: async () => null,
-        upsert: async () => undefined,
-      };
+      const authGateway = new FakeAuthGateway(user);
+      const subscriptionRepository = new FakeSubscriptionRepository([
+        createSubscription({ userId: user.id }),
+      ]);
 
       const element = await BillingPage({
         deps: { authGateway, subscriptionRepository },
