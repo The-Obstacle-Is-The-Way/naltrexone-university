@@ -8,7 +8,7 @@ class RedirectError extends Error {
 }
 
 describe('runManageBillingAction', () => {
-  it('redirects to the portal url on success', async () => {
+  it('returns redirect to portal url when portal session creation succeeds', async () => {
     const redirectFn = (url: string): never => {
       throw new RedirectError(url);
     };
@@ -30,7 +30,7 @@ describe('runManageBillingAction', () => {
     });
   });
 
-  it('redirects to /sign-up when unauthenticated', async () => {
+  it('returns redirect to /sign-up when portal session creation is unauthenticated', async () => {
     const redirectFn = (url: string): never => {
       throw new RedirectError(url);
     };
@@ -52,7 +52,7 @@ describe('runManageBillingAction', () => {
     });
   });
 
-  it('redirects to /pricing?checkout=error for other errors', async () => {
+  it('returns redirect to /pricing?checkout=error when portal session creation fails', async () => {
     const redirectFn = (url: string): never => {
       throw new RedirectError(url);
     };
@@ -74,7 +74,7 @@ describe('runManageBillingAction', () => {
     });
   });
 
-  it('includes error message details in development', async () => {
+  it('returns redirect to /pricing?checkout=error with error_message when in development', async () => {
     vi.stubEnv('NODE_ENV', 'development');
     try {
       const redirectFn = (url: string): never => {

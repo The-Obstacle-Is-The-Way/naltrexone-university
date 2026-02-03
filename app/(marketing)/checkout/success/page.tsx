@@ -359,10 +359,10 @@ export async function syncCheckoutSuccess(
         ? 'payment_processing'
         : 'manage_billing';
 
-    redirectFn(`${ROUTES.PRICING}?reason=${reason}`);
+    return redirectFn(`${ROUTES.PRICING}?reason=${reason}`);
   }
 
-  redirectFn(ROUTES.APP_DASHBOARD);
+  return redirectFn(ROUTES.APP_DASHBOARD);
 }
 
 export async function runCheckoutSuccessPage(

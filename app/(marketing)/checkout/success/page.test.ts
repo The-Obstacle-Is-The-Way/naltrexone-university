@@ -1,6 +1,12 @@
 import { describe, expect, it, vi } from 'vitest';
 import { ROUTES } from '@/lib/routes';
 import {
+  FakeAuthGateway,
+  FakeLogger,
+  FakeStripeCustomerRepository,
+  FakeSubscriptionRepository,
+} from '@/src/application/test-helpers/fakes';
+import {
   type CheckoutSuccessTransaction,
   runCheckoutSuccessPage,
   syncCheckoutSuccess,
@@ -14,9 +20,8 @@ class RedirectError extends Error {
 
 describe('runCheckoutSuccessPage', () => {
   it('redirects unauthenticated users to sign-in (preserves session_id)', async () => {
-    const requireUser = vi.fn(async () => {
-      throw new Error('should not be called');
-    });
+    const authGateway = new FakeAuthGateway(null);
+    const requireUser = vi.spyOn(authGateway, 'requireUser');
 
     const stripeRetrieve = vi.fn(async () => {
       throw new Error('should not be called');
@@ -32,15 +37,12 @@ describe('runCheckoutSuccessPage', () => {
     );
 
     const deps = {
-      authGateway: {
-        getCurrentUser: async () => null,
-        requireUser,
-      },
+      authGateway,
       getClerkAuth: async () => ({
         userId: null,
         redirectToSignIn,
       }),
-      logger: { error: vi.fn() },
+      logger: new FakeLogger(),
       stripe: {
         checkout: {
           sessions: {
@@ -94,23 +96,25 @@ describe('runCheckoutSuccessPage', () => {
       params?: { expand?: string[] };
     }> = [];
 
+    const user = {
+      id: 'user_1',
+      email: 'user@example.com',
+      createdAt: new Date('2026-02-01T00:00:00Z'),
+      updatedAt: new Date('2026-02-01T00:00:00Z'),
+    };
+
+    const stripeCustomers = new FakeStripeCustomerRepository();
+    const subscriptions = new FakeSubscriptionRepository();
+
     const deps = {
-      authGateway: {
-        getCurrentUser: async () => null,
-        requireUser: async () => ({
-          id: 'user_1',
-          email: 'user@example.com',
-          createdAt: new Date('2026-02-01T00:00:00Z'),
-          updatedAt: new Date('2026-02-01T00:00:00Z'),
-        }),
-      },
+      authGateway: new FakeAuthGateway(user),
       getClerkAuth: async () => ({
         userId: 'clerk_user_1',
         redirectToSignIn: () => {
           throw new Error('should not redirect to sign-in');
         },
       }),
-      logger: { error: vi.fn() },
+      logger: new FakeLogger(),
       stripe: {
         checkout: {
           sessions: {
@@ -150,15 +154,8 @@ describe('runCheckoutSuccessPage', () => {
         fn: (tx: CheckoutSuccessTransaction) => Promise<T>,
       ): Promise<T> =>
         fn({
-          stripeCustomers: {
-            findByUserId: async () => null,
-            insert: async () => undefined,
-          },
-          subscriptions: {
-            findByUserId: async () => null,
-            findByStripeSubscriptionId: async () => null,
-            upsert: async () => undefined,
-          },
+          stripeCustomers,
+          subscriptions,
         }),
     };
 
@@ -256,25 +253,23 @@ describe('syncCheckoutSuccess', () => {
     session,
     subscription,
   }) => {
-    const loggerError = vi.fn();
+    const logger = new FakeLogger();
+    const authGateway = new FakeAuthGateway({
+      id: 'user_1',
+      email: 'user@example.com',
+      createdAt: new Date('2026-02-01T00:00:00Z'),
+      updatedAt: new Date('2026-02-01T00:00:00Z'),
+    });
 
     const deps = {
-      authGateway: {
-        getCurrentUser: async () => null,
-        requireUser: async () => ({
-          id: 'user_1',
-          email: 'user@example.com',
-          createdAt: new Date('2026-02-01T00:00:00Z'),
-          updatedAt: new Date('2026-02-01T00:00:00Z'),
-        }),
-      },
+      authGateway,
       getClerkAuth: async () => ({
         userId: 'clerk_user_1',
         redirectToSignIn: () => {
           throw new Error('should not redirect to sign-in');
         },
       }),
-      logger: { error: loggerError },
+      logger,
       stripe: {
         checkout: {
           sessions: {
@@ -324,36 +319,32 @@ describe('syncCheckoutSuccess', () => {
       url: CHECKOUT_ERROR_ROUTE,
     });
 
-    expect(loggerError).toHaveBeenCalledWith(
-      expect.objectContaining({ reason }),
-      'Checkout success validation failed',
-    );
+    expect(logger.errorCalls).toHaveLength(1);
+    expect(logger.errorCalls[0]).toMatchObject({
+      msg: 'Checkout success validation failed',
+      context: expect.objectContaining({ reason }),
+    });
   });
 
   it('returns redirect to pricing with reason=payment_processing when subscription is not entitled', async () => {
-    const stripeCustomerInserts: Array<{
-      userId: string;
-      stripeCustomerId: string;
-    }> = [];
-    const subscriptionUpserts: Array<{ status: string }> = [];
+    const stripeCustomers = new FakeStripeCustomerRepository();
+    const subscriptions = new FakeSubscriptionRepository();
+    const user = {
+      id: 'user_1',
+      email: 'user@example.com',
+      createdAt: new Date('2026-02-01T00:00:00Z'),
+      updatedAt: new Date('2026-02-01T00:00:00Z'),
+    };
 
     const deps = {
-      authGateway: {
-        getCurrentUser: async () => null,
-        requireUser: async () => ({
-          id: 'user_1',
-          email: 'user@example.com',
-          createdAt: new Date('2026-02-01T00:00:00Z'),
-          updatedAt: new Date('2026-02-01T00:00:00Z'),
-        }),
-      },
+      authGateway: new FakeAuthGateway(user),
       getClerkAuth: async () => ({
         userId: 'clerk_user_1',
         redirectToSignIn: () => {
           throw new Error('should not redirect to sign-in');
         },
       }),
-      logger: { error: vi.fn() },
+      logger: new FakeLogger(),
       stripe: {
         checkout: {
           sessions: {
@@ -387,19 +378,8 @@ describe('syncCheckoutSuccess', () => {
         fn: (tx: CheckoutSuccessTransaction) => Promise<T>,
       ): Promise<T> =>
         fn({
-          stripeCustomers: {
-            findByUserId: async () => null,
-            insert: async (userId: string, stripeCustomerId: string) => {
-              stripeCustomerInserts.push({ userId, stripeCustomerId });
-            },
-          },
-          subscriptions: {
-            findByUserId: async () => null,
-            findByStripeSubscriptionId: async () => null,
-            upsert: async (input: { status: string }) => {
-              subscriptionUpserts.push({ status: input.status });
-            },
-          },
+          stripeCustomers,
+          subscriptions,
         }),
     };
 
@@ -413,36 +393,38 @@ describe('syncCheckoutSuccess', () => {
       url: `${ROUTES.PRICING}?reason=payment_processing`,
     });
 
-    expect(stripeCustomerInserts).toEqual([
-      { userId: 'user_1', stripeCustomerId: 'cus_123' },
-    ]);
-    expect(subscriptionUpserts).toEqual([{ status: 'incomplete' }]);
+    expect(await stripeCustomers.findByUserId('user_1')).toEqual({
+      stripeCustomerId: 'cus_123',
+    });
+    expect(
+      await subscriptions.findByStripeSubscriptionId('sub_123'),
+    ).toMatchObject({
+      userId: 'user_1',
+      status: 'incomplete',
+      plan: 'monthly',
+      cancelAtPeriodEnd: false,
+    });
   });
 
   it('returns redirect to pricing with reason=manage_billing when subscription is not entitled', async () => {
-    const stripeCustomerInserts: Array<{
-      userId: string;
-      stripeCustomerId: string;
-    }> = [];
-    const subscriptionUpserts: Array<{ status: string }> = [];
+    const stripeCustomers = new FakeStripeCustomerRepository();
+    const subscriptions = new FakeSubscriptionRepository();
+    const user = {
+      id: 'user_1',
+      email: 'user@example.com',
+      createdAt: new Date('2026-02-01T00:00:00Z'),
+      updatedAt: new Date('2026-02-01T00:00:00Z'),
+    };
 
     const deps = {
-      authGateway: {
-        getCurrentUser: async () => null,
-        requireUser: async () => ({
-          id: 'user_1',
-          email: 'user@example.com',
-          createdAt: new Date('2026-02-01T00:00:00Z'),
-          updatedAt: new Date('2026-02-01T00:00:00Z'),
-        }),
-      },
+      authGateway: new FakeAuthGateway(user),
       getClerkAuth: async () => ({
         userId: 'clerk_user_1',
         redirectToSignIn: () => {
           throw new Error('should not redirect to sign-in');
         },
       }),
-      logger: { error: vi.fn() },
+      logger: new FakeLogger(),
       stripe: {
         checkout: {
           sessions: {
@@ -476,19 +458,8 @@ describe('syncCheckoutSuccess', () => {
         fn: (tx: CheckoutSuccessTransaction) => Promise<T>,
       ): Promise<T> =>
         fn({
-          stripeCustomers: {
-            findByUserId: async () => null,
-            insert: async (userId: string, stripeCustomerId: string) => {
-              stripeCustomerInserts.push({ userId, stripeCustomerId });
-            },
-          },
-          subscriptions: {
-            findByUserId: async () => null,
-            findByStripeSubscriptionId: async () => null,
-            upsert: async (input: { status: string }) => {
-              subscriptionUpserts.push({ status: input.status });
-            },
-          },
+          stripeCustomers,
+          subscriptions,
         }),
     };
 
@@ -502,9 +473,16 @@ describe('syncCheckoutSuccess', () => {
       url: `${ROUTES.PRICING}?reason=manage_billing`,
     });
 
-    expect(stripeCustomerInserts).toEqual([
-      { userId: 'user_1', stripeCustomerId: 'cus_123' },
-    ]);
-    expect(subscriptionUpserts).toEqual([{ status: 'past_due' }]);
+    expect(await stripeCustomers.findByUserId('user_1')).toEqual({
+      stripeCustomerId: 'cus_123',
+    });
+    expect(
+      await subscriptions.findByStripeSubscriptionId('sub_123'),
+    ).toMatchObject({
+      userId: 'user_1',
+      status: 'past_due',
+      plan: 'monthly',
+      cancelAtPeriodEnd: false,
+    });
   });
 });

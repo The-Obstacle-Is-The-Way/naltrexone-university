@@ -9,7 +9,7 @@ function createRedirectFn() {
 }
 
 describe('app/pricing/manage-billing-actions', () => {
-  it('redirects to the portal url when portal session creation succeeds', async () => {
+  it('returns redirect to portal url when portal session creation succeeds', async () => {
     const createPortalSessionFn = vi.fn(async () =>
       ok({ url: 'https://stripe.test/portal' }),
     );
@@ -26,7 +26,7 @@ describe('app/pricing/manage-billing-actions', () => {
     });
   });
 
-  it('redirects to sign-up when portal session creation is unauthenticated', async () => {
+  it('returns redirect to sign-up when portal session creation is unauthenticated', async () => {
     const createPortalSessionFn = vi.fn(async () =>
       err('UNAUTHENTICATED', 'Not signed in'),
     );
