@@ -1,19 +1,15 @@
 'use server';
 
 import { z } from 'zod';
-import {
-  createDepsResolver,
-  type LoadContainerFn,
-  loadAppContainer,
-} from '@/lib/controller-helpers';
+import { createDepsResolver, loadAppContainer } from '@/lib/controller-helpers';
 import type { Logger } from '@/src/adapters/shared/logger';
+import { ApplicationError } from '@/src/application/errors';
 import type { AuthGateway } from '@/src/application/ports/gateways';
 import type {
   BookmarkRepository,
   QuestionRepository,
 } from '@/src/application/ports/repositories';
-import type { ActionResult } from './action-result';
-import { err, handleError, ok } from './action-result';
+import { createAction } from './create-action';
 import type { CheckEntitlementUseCase } from './require-entitled-user-id';
 import { requireEntitledUserId } from './require-entitled-user-id';
 
@@ -69,51 +65,37 @@ const getDeps = createDepsResolver<
   BookmarkControllerContainer
 >((container) => container.createBookmarkControllerDeps(), loadAppContainer);
 
-export async function toggleBookmark(
-  input: unknown,
-  deps?: BookmarkControllerDeps,
-  options?: { loadContainer?: LoadContainerFn<BookmarkControllerContainer> },
-): Promise<ActionResult<ToggleBookmarkOutput>> {
-  const parsed = ToggleBookmarkInputSchema.safeParse(input);
-  if (!parsed.success) return handleError(parsed.error);
-
-  try {
-    const d = await getDeps(deps, options);
+export const toggleBookmark = createAction({
+  schema: ToggleBookmarkInputSchema,
+  getDeps,
+  execute: async (input, d) => {
     const userId = await requireEntitledUserId(d);
 
     const wasRemoved = await d.bookmarkRepository.remove(
       userId,
-      parsed.data.questionId,
+      input.questionId,
     );
 
     if (wasRemoved) {
-      return ok({ bookmarked: false });
+      return { bookmarked: false };
     }
 
     const question = await d.questionRepository.findPublishedById(
-      parsed.data.questionId,
+      input.questionId,
     );
     if (!question) {
-      return err('NOT_FOUND', 'Question not found');
+      throw new ApplicationError('NOT_FOUND', 'Question not found');
     }
 
-    await d.bookmarkRepository.add(userId, parsed.data.questionId);
-    return ok({ bookmarked: true });
-  } catch (error) {
-    return handleError(error);
-  }
-}
+    await d.bookmarkRepository.add(userId, input.questionId);
+    return { bookmarked: true };
+  },
+});
 
-export async function getBookmarks(
-  input: unknown,
-  deps?: BookmarkControllerDeps,
-  options?: { loadContainer?: LoadContainerFn<BookmarkControllerContainer> },
-): Promise<ActionResult<GetBookmarksOutput>> {
-  const parsed = GetBookmarksInputSchema.safeParse(input);
-  if (!parsed.success) return handleError(parsed.error);
-
-  try {
-    const d = await getDeps(deps, options);
+export const getBookmarks = createAction({
+  schema: GetBookmarksInputSchema,
+  getDeps,
+  execute: async (_input, d) => {
     const userId = await requireEntitledUserId(d);
 
     const bookmarks = await d.bookmarkRepository.listByUserId(userId);
@@ -150,8 +132,6 @@ export async function getBookmarks(
       });
     }
 
-    return ok({ rows });
-  } catch (error) {
-    return handleError(error);
-  }
-}
+    return { rows };
+  },
+});

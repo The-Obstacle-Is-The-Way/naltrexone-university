@@ -1,20 +1,9 @@
 'use server';
 
 import { z } from 'zod';
-import {
-  createDepsResolver,
-  type LoadContainerFn,
-  loadAppContainer,
-} from '@/lib/controller-helpers';
-import {
-  type ActionResult,
-  handleError,
-  ok,
-} from '@/src/adapters/controllers/action-result';
-import {
-  type CheckEntitlementUseCase,
-  requireEntitledUserId,
-} from '@/src/adapters/controllers/require-entitled-user-id';
+import { createDepsResolver, loadAppContainer } from '@/lib/controller-helpers';
+import type { CheckEntitlementUseCase } from '@/src/adapters/controllers/require-entitled-user-id';
+import { requireEntitledUserId } from '@/src/adapters/controllers/require-entitled-user-id';
 import type { Logger } from '@/src/adapters/shared/logger';
 import type { AuthGateway } from '@/src/application/ports/gateways';
 import type {
@@ -22,6 +11,7 @@ import type {
   QuestionRepository,
 } from '@/src/application/ports/repositories';
 import { computeAccuracy, computeStreak } from '@/src/domain/services';
+import { createAction } from './create-action';
 
 const GetUserStatsInputSchema = z.object({}).strict();
 
@@ -92,16 +82,10 @@ const getDeps = createDepsResolver<
   StatsControllerContainer
 >((container) => container.createStatsControllerDeps(), loadAppContainer);
 
-export async function getUserStats(
-  input: unknown,
-  deps?: StatsControllerDeps,
-  options?: { loadContainer?: LoadContainerFn<StatsControllerContainer> },
-): Promise<ActionResult<UserStatsOutput>> {
-  const parsed = GetUserStatsInputSchema.safeParse(input);
-  if (!parsed.success) return handleError(parsed.error);
-
-  try {
-    const d = await getDeps(deps, options);
+export const getUserStats = createAction({
+  schema: GetUserStatsInputSchema,
+  getDeps,
+  execute: async (_input, d) => {
     const userId = await requireEntitledUserId(d);
 
     const now = d.now();
@@ -171,15 +155,13 @@ export async function getUserStats(
       });
     }
 
-    return ok({
+    return {
       totalAnswered,
       accuracyOverall,
       answeredLast7Days,
       accuracyLast7Days,
       currentStreakDays,
       recentActivity,
-    });
-  } catch (error) {
-    return handleError(error);
-  }
-}
+    };
+  },
+});
