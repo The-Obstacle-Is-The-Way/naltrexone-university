@@ -1,6 +1,10 @@
 'use client';
 
-import { SignUp } from '@clerk/nextjs';
+import dynamic from 'next/dynamic';
+
+const SignUp = dynamic(() => import('@clerk/nextjs').then((m) => m.SignUp), {
+  ssr: false,
+});
 
 export default function SignUpPage() {
   const skipClerk = process.env.NEXT_PUBLIC_SKIP_CLERK === 'true';

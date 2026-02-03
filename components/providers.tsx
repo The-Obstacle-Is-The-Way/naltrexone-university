@@ -1,6 +1,11 @@
 'use client';
 
-import { ClerkProvider } from '@clerk/nextjs';
+import dynamic from 'next/dynamic';
+
+const ClerkProvider = dynamic(
+  () => import('@clerk/nextjs').then((m) => m.ClerkProvider),
+  { ssr: false },
+);
 
 /**
  * Conditionally wrap children with ClerkProvider.

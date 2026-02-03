@@ -1,6 +1,10 @@
 'use client';
 
-import { SignIn } from '@clerk/nextjs';
+import dynamic from 'next/dynamic';
+
+const SignIn = dynamic(() => import('@clerk/nextjs').then((m) => m.SignIn), {
+  ssr: false,
+});
 
 export default function SignInPage() {
   const skipClerk = process.env.NEXT_PUBLIC_SKIP_CLERK === 'true';

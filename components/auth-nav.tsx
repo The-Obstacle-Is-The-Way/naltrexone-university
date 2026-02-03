@@ -1,4 +1,3 @@
-import { UserButton } from '@clerk/nextjs';
 import Link from 'next/link';
 import type {
   AuthCheckDeps,
@@ -85,6 +84,8 @@ export async function AuthNav({
   const primaryLink = entitlement.isEntitled
     ? { href: '/app/dashboard', label: 'Dashboard' }
     : { href: '/pricing', label: 'Pricing' };
+
+  const { UserButton } = await import('@clerk/nextjs');
 
   return (
     <div className="flex items-center space-x-4">

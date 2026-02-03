@@ -2,28 +2,20 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { AuthGateway } from '@/src/application/ports/gateways';
+import {
+  restoreProcessEnv,
+  snapshotProcessEnv,
+} from '@/tests/shared/process-env';
 
 vi.mock('next/link', () => ({
   default: (props: Record<string, unknown>) => <a {...props} />,
 }));
 
-const ORIGINAL_ENV = { ...process.env };
-
-function restoreEnv() {
-  for (const key of Object.keys(process.env)) {
-    if (!(key in ORIGINAL_ENV)) {
-      delete process.env[key];
-    }
-  }
-
-  for (const [key, value] of Object.entries(ORIGINAL_ENV)) {
-    process.env[key] = value;
-  }
-}
+const ORIGINAL_ENV = snapshotProcessEnv();
 
 describe('GetStartedCta', () => {
   afterEach(() => {
-    restoreEnv();
+    restoreProcessEnv(ORIGINAL_ENV);
     vi.resetModules();
     vi.restoreAllMocks();
   });

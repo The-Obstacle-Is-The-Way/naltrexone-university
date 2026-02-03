@@ -2,38 +2,29 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { AuthGateway } from '@/src/application/ports/gateways';
-
-vi.mock('@clerk/nextjs', () => ({
-  UserButton: () => <div data-testid="user-button" />,
-}));
+import {
+  restoreProcessEnv,
+  snapshotProcessEnv,
+} from '@/tests/shared/process-env';
 
 vi.mock('next/link', () => ({
   default: (props: Record<string, unknown>) => <a {...props} />,
 }));
 
-const ORIGINAL_ENV = { ...process.env };
-
-function restoreEnv() {
-  for (const key of Object.keys(process.env)) {
-    if (!(key in ORIGINAL_ENV)) {
-      delete process.env[key];
-    }
-  }
-
-  for (const [key, value] of Object.entries(ORIGINAL_ENV)) {
-    process.env[key] = value;
-  }
-}
+const ORIGINAL_ENV = snapshotProcessEnv();
 
 describe('AuthNav', () => {
   afterEach(() => {
-    restoreEnv();
+    restoreProcessEnv(ORIGINAL_ENV);
     vi.resetModules();
     vi.restoreAllMocks();
   });
 
   it('renders a CI fallback UI when NEXT_PUBLIC_SKIP_CLERK=true', async () => {
     process.env.NEXT_PUBLIC_SKIP_CLERK = 'true';
+    vi.doMock('@clerk/nextjs', () => {
+      throw new Error('Publishable key not valid.');
+    });
 
     const { AuthNav } = await import('./auth-nav');
 
@@ -47,6 +38,9 @@ describe('AuthNav', () => {
 
   it('shows a Dashboard link when the user is entitled', async () => {
     process.env.NEXT_PUBLIC_SKIP_CLERK = 'false';
+    vi.doMock('@clerk/nextjs', () => ({
+      UserButton: () => <div data-testid="user-button" />,
+    }));
 
     const { AuthNav } = await import('./auth-nav');
 
@@ -78,6 +72,9 @@ describe('AuthNav', () => {
 
   it('renders an unauthenticated UI when there is no current user', async () => {
     process.env.NEXT_PUBLIC_SKIP_CLERK = 'false';
+    vi.doMock('@clerk/nextjs', () => ({
+      UserButton: () => <div data-testid="user-button" />,
+    }));
 
     const { AuthNav } = await import('./auth-nav');
 
@@ -105,6 +102,9 @@ describe('AuthNav', () => {
 
   it('shows a Pricing link when the user is not entitled', async () => {
     process.env.NEXT_PUBLIC_SKIP_CLERK = 'false';
+    vi.doMock('@clerk/nextjs', () => ({
+      UserButton: () => <div data-testid="user-button" />,
+    }));
 
     const { AuthNav } = await import('./auth-nav');
 
@@ -136,6 +136,9 @@ describe('AuthNav', () => {
 
   it('loads dependencies from the container when deps are omitted', async () => {
     process.env.NEXT_PUBLIC_SKIP_CLERK = 'false';
+    vi.doMock('@clerk/nextjs', () => ({
+      UserButton: () => <div data-testid="user-button" />,
+    }));
 
     const { AuthNav } = await import('./auth-nav');
 
