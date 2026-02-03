@@ -4,6 +4,7 @@ import {
   FakeAttemptRepository,
   FakeAuthGateway,
   FakeBookmarkRepository,
+  FakeLogger,
   FakePaymentGateway,
   FakePracticeSessionRepository,
   FakeStripeCustomerRepository,
@@ -14,6 +15,30 @@ import {
 } from '@/src/application/test-helpers/fakes';
 import type { Tag } from '@/src/domain/entities';
 import { createPracticeSession } from '@/src/domain/test-helpers';
+
+describe('FakeLogger', () => {
+  it('records calls for each log level', () => {
+    const logger = new FakeLogger();
+
+    logger.debug({ debug: true }, 'debug');
+    logger.info({ info: true }, 'info');
+    logger.warn({ warn: true }, 'warn');
+    logger.error({ error: true }, 'error');
+
+    expect(logger.debugCalls).toEqual([
+      { context: { debug: true }, msg: 'debug' },
+    ]);
+    expect(logger.infoCalls).toEqual([
+      { context: { info: true }, msg: 'info' },
+    ]);
+    expect(logger.warnCalls).toEqual([
+      { context: { warn: true }, msg: 'warn' },
+    ]);
+    expect(logger.errorCalls).toEqual([
+      { context: { error: true }, msg: 'error' },
+    ]);
+  });
+});
 
 describe('FakePracticeSessionRepository', () => {
   it('throws NOT_FOUND when ending a missing session', async () => {

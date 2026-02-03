@@ -1,3 +1,4 @@
+import type { Logger, LoggerContext } from '@/src/adapters/shared/logger';
 import { ApplicationError } from '@/src/application/errors';
 import type {
   Attempt,
@@ -41,6 +42,31 @@ import type {
 } from '../ports/repositories';
 
 type InMemoryAttempt = Attempt & { practiceSessionId: string | null };
+
+type LoggerCall = { context: LoggerContext; msg: string };
+
+export class FakeLogger implements Logger {
+  readonly debugCalls: LoggerCall[] = [];
+  readonly infoCalls: LoggerCall[] = [];
+  readonly warnCalls: LoggerCall[] = [];
+  readonly errorCalls: LoggerCall[] = [];
+
+  debug(context: LoggerContext, msg: string): void {
+    this.debugCalls.push({ context, msg });
+  }
+
+  info(context: LoggerContext, msg: string): void {
+    this.infoCalls.push({ context, msg });
+  }
+
+  warn(context: LoggerContext, msg: string): void {
+    this.warnCalls.push({ context, msg });
+  }
+
+  error(context: LoggerContext, msg: string): void {
+    this.errorCalls.push({ context, msg });
+  }
+}
 
 export class FakeQuestionRepository implements QuestionRepository {
   private readonly questions: readonly Question[];

@@ -56,7 +56,12 @@ function createDeps(overrides?: {
     authGateway,
     checkEntitlementUseCase,
     tagRepository,
-    logger: { warn: () => {} },
+    logger: {
+      debug: () => {},
+      info: () => {},
+      warn: () => {},
+      error: () => {},
+    },
   };
 }
 
