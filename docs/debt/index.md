@@ -20,12 +20,13 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 _No active debt items._
 
-**Next Debt ID:** DEBT-081
+**Next Debt ID:** DEBT-082
 
 ## Archived Debt
 
 | ID | Title | Priority | Resolved |
 |----|-------|----------|----------|
+| [DEBT-081](../_archive/debt/debt-081-nextjs-alloweddevorigins-warning.md) | Next.js allowedDevOrigins Warning in E2E Runs | P3 | 2026-02-03 |
 | [DEBT-080](../_archive/debt/debt-080-missing-e2e-coverage-core-pages.md) | Missing E2E Coverage for Core App Pages | P1 | 2026-02-03 |
 | [DEBT-074](../_archive/debt/debt-074-missing-boundary-integration-tests.md) | Missing Boundary Integration Tests (Uncle Bob's "Humble Object" Gap) | P1 | 2026-02-02 |
 | [DEBT-079](../_archive/debt/debt-079-no-retry-backoff-external-calls.md) | No Retry/Backoff Logic for External API Calls | P2 | 2026-02-02 |
