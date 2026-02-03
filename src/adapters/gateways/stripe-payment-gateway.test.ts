@@ -383,6 +383,78 @@ describe('StripePaymentGateway', () => {
     );
   });
 
+  it('creates a new checkout session when inspecting an existing session fails', async () => {
+    const checkoutList = vi.fn(async () => ({
+      data: [{ id: 'cs_existing', url: 'https://stripe/existing-checkout' }],
+    }));
+    const checkoutRetrieve = vi.fn(async () => {
+      throw new Error('inspect failed');
+    });
+    const checkoutExpire = vi.fn(async () => ({
+      id: 'cs_existing',
+      url: 'https://stripe/existing-checkout',
+    }));
+    const checkoutCreate = vi.fn(async () => ({
+      id: 'cs_new',
+      url: 'https://stripe/new-checkout',
+    }));
+    const logger = createTestLogger();
+
+    const stripe = {
+      customers: {
+        create: vi.fn(async () => ({ id: 'cus_123' })),
+      },
+      checkout: {
+        sessions: {
+          create: checkoutCreate,
+          list: checkoutList,
+          retrieve: checkoutRetrieve,
+          expire: checkoutExpire,
+        },
+      },
+      billingPortal: {
+        sessions: {
+          create: vi.fn(async () => ({ url: 'https://stripe/portal' })),
+        },
+      },
+      webhooks: {
+        constructEvent: vi.fn(() => {
+          throw new Error('unexpected webhook call');
+        }),
+      },
+    } as const;
+
+    const gateway = new StripePaymentGateway({
+      stripe,
+      webhookSecret: 'whsec_1',
+      priceIds: { monthly: 'price_m', annual: 'price_a' },
+      logger,
+    });
+
+    await expect(
+      gateway.createCheckoutSession({
+        userId: 'user_1',
+        stripeCustomerId: 'cus_123',
+        plan: 'monthly',
+        successUrl: 'https://app/success',
+        cancelUrl: 'https://app/cancel',
+      }),
+    ).resolves.toEqual({ url: 'https://stripe/new-checkout' });
+
+    expect(checkoutRetrieve).toHaveBeenCalledWith('cs_existing', {
+      expand: ['line_items'],
+    });
+    expect(checkoutExpire).not.toHaveBeenCalled();
+    expect(checkoutCreate).toHaveBeenCalledTimes(1);
+    expect(logger.warn).toHaveBeenCalledWith(
+      'Failed to inspect existing checkout session',
+      expect.objectContaining({
+        sessionId: 'cs_existing',
+        error: 'inspect failed',
+      }),
+    );
+  });
+
   it('throws STRIPE_ERROR when a checkout session URL is missing', async () => {
     const stripe = {
       customers: {
