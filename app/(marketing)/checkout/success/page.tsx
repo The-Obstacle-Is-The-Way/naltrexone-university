@@ -285,8 +285,12 @@ export async function syncCheckoutSuccess(
   );
 
   const metadataUserId = subscription.metadata?.user_id;
+  assertNonEmptyString(metadataUserId, 'missing_user_id', {
+    sessionId,
+    metadataUserId: metadataUserId ?? null,
+  });
   // Prevent cross-account leakage if the user switches accounts mid-checkout.
-  if (metadataUserId && metadataUserId !== user.id) {
+  if (metadataUserId !== user.id) {
     fail('user_id_mismatch', {
       sessionId,
       metadataUserId,
