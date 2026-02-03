@@ -6,7 +6,10 @@ import type {
   StripeWebhookTransaction,
 } from '@/src/adapters/controllers/stripe-webhook-controller';
 import { ApplicationError } from '@/src/application/errors';
-import type { PaymentGateway } from '@/src/application/ports/gateways';
+import type {
+  PaymentGateway,
+  RateLimiter,
+} from '@/src/application/ports/gateways';
 
 function createPaymentGatewayStub(): PaymentGateway {
   return {
@@ -19,14 +22,13 @@ function createPaymentGatewayStub(): PaymentGateway {
 
 function createTestDeps() {
   const loggerError = vi.fn();
-  const rateLimiter = {
-    limit: vi.fn(async () => ({
-      success: true,
-      limit: 1000,
-      remaining: 999,
-      retryAfterSeconds: 0,
-    })),
-  };
+  const limit = vi.fn<RateLimiter['limit']>(async () => ({
+    success: true,
+    limit: 1000,
+    remaining: 999,
+    retryAfterSeconds: 0,
+  }));
+  const rateLimiter: RateLimiter & { limit: typeof limit } = { limit };
   const tx = {
     stripeEvents: {
       claim: async () => true,
@@ -52,7 +54,7 @@ function createTestDeps() {
   };
 
   const createStripeWebhookDeps = vi.fn(() => deps);
-  const createRateLimiter = vi.fn(() => rateLimiter as never);
+  const createRateLimiter = vi.fn<() => RateLimiter>(() => rateLimiter);
   const createContainer = vi.fn<() => StripeWebhookRouteContainer>(() => ({
     logger: { error: loggerError },
     createStripeWebhookDeps,
@@ -233,17 +235,17 @@ describe('POST /api/stripe/webhook', () => {
     };
 
     const createStripeWebhookDeps = vi.fn(() => deps);
+    const rateLimiter: RateLimiter = {
+      limit: async () => ({
+        success: true,
+        limit: 1000,
+        remaining: 999,
+        retryAfterSeconds: 0,
+      }),
+    };
     const createContainer = vi.fn<() => StripeWebhookRouteContainer>(() => ({
       logger: { error: vi.fn() },
-      createRateLimiter: () =>
-        ({
-          limit: async () => ({
-            success: true,
-            limit: 1000,
-            remaining: 999,
-            retryAfterSeconds: 0,
-          }),
-        }) as never,
+      createRateLimiter: () => rateLimiter,
       createStripeWebhookDeps,
     }));
 

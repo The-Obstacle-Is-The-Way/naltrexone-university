@@ -6,38 +6,66 @@ import type {
   ClerkWebhookEvent,
 } from '@/src/adapters/controllers/clerk-webhook-controller';
 import { ApplicationError } from '@/src/application/errors';
+import type { RateLimiter } from '@/src/application/ports/gateways';
+import type {
+  StripeCustomerRepository,
+  UserRepository,
+} from '@/src/application/ports/repositories';
 
 function createTestDeps() {
   const loggerError = vi.fn();
   const loggerWarn = vi.fn();
-  const rateLimiter = {
-    limit: vi.fn(async () => ({
-      success: true,
-      limit: 100,
-      remaining: 99,
-      retryAfterSeconds: 0,
-    })),
-  };
+  const limit = vi.fn<RateLimiter['limit']>(async () => ({
+    success: true,
+    limit: 100,
+    remaining: 99,
+    retryAfterSeconds: 0,
+  }));
+  const rateLimiter: RateLimiter & { limit: typeof limit } = { limit };
 
-  const userRepository = {
-    findByClerkId: vi.fn(async () => null),
-    upsertByClerkId: vi.fn(async () => ({
+  const findByClerkId = vi.fn<UserRepository['findByClerkId']>(
+    async (_clerkId) => null,
+  );
+  const upsertByClerkId = vi.fn<UserRepository['upsertByClerkId']>(
+    async (_clerkId, _email) => ({
       id: 'user_1',
       email: 'user@example.com',
       createdAt: new Date('2026-02-01T00:00:00Z'),
       updatedAt: new Date('2026-02-01T00:00:00Z'),
-    })),
-    deleteByClerkId: vi.fn(async () => false),
+    }),
+  );
+  const deleteByClerkId = vi.fn<UserRepository['deleteByClerkId']>(
+    async (_clerkId) => false,
+  );
+  const userRepository: UserRepository & {
+    findByClerkId: typeof findByClerkId;
+    upsertByClerkId: typeof upsertByClerkId;
+    deleteByClerkId: typeof deleteByClerkId;
+  } = {
+    findByClerkId,
+    upsertByClerkId,
+    deleteByClerkId,
   };
 
-  const stripeCustomerRepository = {
-    findByUserId: vi.fn(async () => null),
-    insert: vi.fn(async () => undefined),
+  const findByUserId = vi.fn<StripeCustomerRepository['findByUserId']>(
+    async (_userId) => null,
+  );
+  const insert = vi.fn<StripeCustomerRepository['insert']>(
+    async (_userId, _stripeCustomerId) => undefined,
+  );
+  const stripeCustomerRepository: StripeCustomerRepository & {
+    findByUserId: typeof findByUserId;
+    insert: typeof insert;
+  } = {
+    findByUserId,
+    insert,
   };
 
-  const createUserRepository = vi.fn(() => userRepository as never);
-  const createStripeCustomerRepository = vi.fn(
-    () => stripeCustomerRepository as never,
+  const createUserRepository = vi.fn<() => UserRepository>(
+    () => userRepository,
+  );
+  const createStripeCustomerRepository = vi.fn<() => StripeCustomerRepository>(
+    () => stripeCustomerRepository,
   );
 
   const createContainer = vi.fn<() => ClerkWebhookRouteContainer>(() => ({
@@ -48,7 +76,7 @@ function createTestDeps() {
         cancel: async () => undefined,
       },
     },
-    createRateLimiter: () => rateLimiter as never,
+    createRateLimiter: () => rateLimiter,
     createUserRepository,
     createStripeCustomerRepository,
   }));
