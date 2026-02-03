@@ -3,6 +3,7 @@
 import { redirect } from 'next/navigation';
 import { runManageBillingAction } from '@/app/pricing/manage-billing-action';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
+import { createPortalSession } from '@/src/adapters/controllers/billing-controller';
 
 type RedirectFn = (url: string) => never;
 
@@ -19,9 +20,7 @@ async function getDeps(
   deps?: Partial<ManageBillingActionDeps>,
 ): Promise<ManageBillingActionDeps> {
   const createPortalSessionFn: CreatePortalSessionFn =
-    deps?.createPortalSessionFn ??
-    (await import('@/src/adapters/controllers/billing-controller'))
-      .createPortalSession;
+    deps?.createPortalSessionFn ?? createPortalSession;
 
   return {
     createPortalSessionFn,
