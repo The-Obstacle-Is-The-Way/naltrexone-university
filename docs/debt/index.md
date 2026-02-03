@@ -17,10 +17,14 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 | ID | Title | Status | Priority | Date |
 |----|-------|--------|----------|------|
-| [DEBT-083](debt-083-unused-attempt-repository-find-by-user-id.md) | Unused AttemptRepository.findByUserId() Method | Open | P3 | 2026-02-03 |
+| [DEBT-083](debt-083-unused-attempt-repository-find-by-user-id.md) | Unused AttemptRepository.findByUserId() — Spec-Implementation Gap | Open | P3 | 2026-02-03 |
 | [DEBT-084](debt-084-user-email-race-condition.md) | User Email Race Condition in Concurrent Webhook Handling | Open | P3 | 2026-02-03 |
+| [DEBT-085](debt-085-union-return-type-code-smell.md) | Union Return Type Pattern in requireEntitledUserId() | Open | P3 | 2026-02-03 |
+| [DEBT-086](debt-086-dry-violation-controller-boilerplate.md) | DRY Violation — Repeated Controller Boilerplate Pattern | Open | P3 | 2026-02-03 |
+| [DEBT-087](debt-087-graceful-degradation-hides-data-loss.md) | Graceful Degradation Hides Data Loss from Users | Open | P2 | 2026-02-03 |
+| [DEBT-088](debt-088-optional-logger-hides-errors.md) | Optional Logger Pattern Hides Errors | Open | P2 | 2026-02-03 |
 
-**Next Debt ID:** DEBT-085
+**Next Debt ID:** DEBT-089
 
 ## Archived Debt
 
