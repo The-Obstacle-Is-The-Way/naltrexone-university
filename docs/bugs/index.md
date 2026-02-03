@@ -1,7 +1,7 @@
 # Bug Reports
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-02-02
+**Last Updated:** 2026-02-03
 
 ---
 
@@ -17,38 +17,53 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 | ID | Title | Status | Priority | Date |
 |----|-------|--------|----------|------|
-| [BUG-015](./bug-015-fragile-webhook-error-matching.md) | Fragile Webhook Error Matching Uses String Instead of Error Code | Open | P1 | 2026-02-02 |
-| [BUG-016](./bug-016-memory-exhaustion-power-users.md) | Memory Exhaustion for Power Users — All Attempts Loaded Into Memory | Open | P1 | 2026-02-02 |
-| [BUG-017](./bug-017-billing-button-without-subscription.md) | Billing Page Shows "Manage in Stripe" When User Has No Subscription | Open | P2 | 2026-02-02 |
-| [BUG-018](./bug-018-silent-fallbacks-in-controllers.md) | Silent Fallbacks in Controllers — Data Inconsistency Without Warning | Open | P2 | 2026-02-02 |
-| [BUG-019](./bug-019-missing-bookmarks-view-page.md) | Missing Bookmarks View Page — Users Can Bookmark But Can't View | Open | P2 | 2026-02-02 |
-| [BUG-020](./bug-020-missing-review-missed-questions-page.md) | Missing Review/Missed Questions Page — Dead Controller Code | Open | P2 | 2026-02-02 |
-| [BUG-021](./bug-021-practice-sessions-never-started.md) | Practice Sessions Never Started/Ended — Dead Session Controller Code | Open | P2 | 2026-02-02 |
-| [BUG-022](./bug-022-missing-loading-states-on-forms.md) | Missing Loading States on Form Buttons | Open | P3 | 2026-02-02 |
-| [BUG-023](./bug-023-missing-clerk-user-deletion-webhook.md) | Missing Clerk Webhook for User Deletion — Orphaned Data | Open | P2 | 2026-02-02 |
-| [BUG-024](./bug-024-entitlement-race-condition-past-due.md) | Entitlement Race Condition During Payment Failure | Open | P2 | 2026-02-02 |
-| [BUG-025](./bug-025-missing-subscription-event-handlers.md) | Missing Subscription Event Handlers (paused/resumed) | Open | P2 | 2026-02-02 |
-| [BUG-026](./bug-026-concurrent-checkout-sessions.md) | No Protection Against Concurrent Checkout Sessions | Open | P2 | 2026-02-02 |
-| [BUG-027](./bug-027-stripe-events-unbounded-growth.md) | Stripe Events Table Unbounded Growth | Open | P2 | 2026-02-02 |
-| [BUG-028](./bug-028-inconsistent-cascade-delete-attempts.md) | Inconsistent Cascade Delete for Attempts | Open | P2 | 2026-02-02 |
-| [BUG-029](./bug-029-answer-choices-not-randomized.md) | Answer Choices Not Randomized — Test Validity Issue | Open | P1 | 2026-02-02 |
-| [BUG-030](./bug-030-time-spent-always-zero.md) | Time Spent Always Zero — No Timer Implementation | Open | P1 | 2026-02-02 |
-| [BUG-031](./bug-031-non-unique-react-key-dashboard.md) | Non-Unique React Key in Dashboard Recent Activity | Open | P3 | 2026-02-02 |
-| [BUG-032](./bug-032-state-update-after-unmount.md) | State Update After Component Unmount in Practice Page | Open | P2 | 2026-02-02 |
-| [BUG-033](./bug-033-stale-closure-toggle-bookmark.md) | Stale Closure in onToggleBookmark — Wrong Question Bookmarked | Open | P2 | 2026-02-02 |
-| [BUG-034](./bug-034-webhook-error-context-lost.md) | Webhook Catch Block Loses Error Context | Open | P2 | 2026-02-02 |
-| [BUG-035](./bug-035-error-banner-not-clearable.md) | Error Banner Not Clearable on Pricing Page | Open | P3 | 2026-02-02 |
-| [BUG-036](./bug-036-no-loading-state-subscribe-buttons.md) | No Loading State on Subscribe Buttons | Open | P2 | 2026-02-02 |
-| [BUG-037](./bug-037-no-mobile-navigation-menu.md) | No Mobile Navigation Menu | Open | P2 | 2026-02-02 |
-| [BUG-038](./bug-038-missing-clerk-user-updated-webhook.md) | Missing Clerk user.updated Webhook — Email Sync Gap | Open | P3 | 2026-02-02 |
-| [BUG-009](./bug-009-vercel-preview-deployment-rate-limit.md) | Vercel Preview Deployment Status Fails Due to Rate Limit | Won't Fix | P3 | 2026-02-01 |
+| None | — | — | — | — |
 
-**Next Bug ID:** BUG-039
+**Next Bug ID:** BUG-049
+
+## Foundation Audit
+
+A comprehensive vertical/horizontal trace of all critical paths was conducted on 2026-02-02.
+See: [Foundation Audit Report](foundation-audit-report.md)
 
 ## Archived Bugs
 
 | ID | Title | Priority | Resolved |
 |----|-------|----------|----------|
+| [BUG-048](../_archive/bugs/bug-048-webhook-rate-limiter-fails-open.md) | Webhook Rate Limiter Failures Fail Open | P2 | 2026-02-03 |
+| [BUG-047](../_archive/bugs/bug-047-multiple-subscriptions-per-user.md) | Multiple Subscriptions Created Per User | P1 | 2026-02-02 |
+| [BUG-046](../_archive/bugs/bug-046-review-page-ambiguous-column.md) | Review Page SQL Error — Ambiguous Column Reference | P1 | 2026-02-02 |
+| [BUG-045](../_archive/bugs/bug-045-checkout-missing-current-period-end.md) | Checkout Success Validation Fails — missing_current_period_end | P1 | 2026-02-02 |
+| [BUG-044](../_archive/bugs/bug-044-checkout-success-stale-cache.md) | Checkout Success Page Serving Stale Code | P2 | 2026-02-02 |
+| [BUG-043](../_archive/bugs/bug-043-checkout-success-not-public-route.md) | Checkout Success Route Not Public (Stripe Return) | P2 | 2026-02-02 |
+| [BUG-041](../_archive/bugs/bug-041-webhook-subscription-created-missing-metadata.md) | Webhook 500 on customer.subscription.created (Missing metadata.user_id) | P2 | 2026-02-02 |
+| [BUG-042](../_archive/bugs/bug-042-checkout-success-silent-validation-failure.md) | Checkout Success Redirects Without Diagnostics | P1 | 2026-02-02 |
+| [BUG-040](../_archive/bugs/bug-040-clerk-key-mismatch-infinite-redirect.md) | Clerk Infinite Redirect Loop Warning (Key Mismatch) | P2 | 2026-02-02 |
+| [BUG-039](../_archive/bugs/bug-039-checkout-success-searchparams-not-awaited.md) | Checkout Success Page Crashes — searchParams Not Awaited | P1 | 2026-02-02 |
+| [BUG-028](../_archive/bugs/bug-028-inconsistent-cascade-delete-attempts.md) | Inconsistent Cascade Delete for Attempts | P2 | 2026-02-02 |
+| [BUG-024](../_archive/bugs/bug-024-entitlement-race-condition-past-due.md) | Entitlement Race Condition During Payment Failure | P2 | 2026-02-02 |
+| [BUG-016](../_archive/bugs/bug-016-memory-exhaustion-power-users.md) | Memory Exhaustion for Power Users — All Attempts Loaded Into Memory | P1 | 2026-02-02 |
+| [BUG-023](../_archive/bugs/bug-023-missing-clerk-user-deletion-webhook.md) | Missing Clerk Webhook for User Deletion — Orphaned Data | P2 | 2026-02-02 |
+| [BUG-019](../_archive/bugs/bug-019-missing-bookmarks-view-page.md) | Missing Bookmarks View Page — Users Can Bookmark But Can't View | P2 | 2026-02-02 |
+| [BUG-020](../_archive/bugs/bug-020-missing-review-missed-questions-page.md) | Missing Review/Missed Questions Page — Dead Controller Code | P2 | 2026-02-02 |
+| [BUG-021](../_archive/bugs/bug-021-practice-sessions-never-started.md) | Practice Sessions Never Started/Ended — Dead Session Controller Code | P2 | 2026-02-02 |
+| [BUG-025](../_archive/bugs/bug-025-missing-subscription-event-handlers.md) | Missing Subscription Event Handlers (paused/resumed) | P2 | 2026-02-02 |
+| [BUG-026](../_archive/bugs/bug-026-concurrent-checkout-sessions.md) | No Protection Against Concurrent Checkout Sessions | P2 | 2026-02-02 |
+| [BUG-027](../_archive/bugs/bug-027-stripe-events-unbounded-growth.md) | Stripe Events Table Unbounded Growth | P2 | 2026-02-02 |
+| [BUG-038](../_archive/bugs/bug-038-missing-clerk-user-updated-webhook.md) | Missing Clerk user.updated Webhook — Email Sync Gap | P3 | 2026-02-02 |
+| [BUG-037](../_archive/bugs/bug-037-no-mobile-navigation-menu.md) | No Mobile Navigation Menu | P2 | 2026-02-02 |
+| [BUG-036](../_archive/bugs/bug-036-no-loading-state-subscribe-buttons.md) | No Loading State on Subscribe Buttons | P2 | 2026-02-02 |
+| [BUG-022](../_archive/bugs/bug-022-missing-loading-states-on-forms.md) | Missing Loading States on Form Buttons | P3 | 2026-02-02 |
+| [BUG-018](../_archive/bugs/bug-018-silent-fallbacks-in-controllers.md) | Silent Fallbacks in Controllers — Data Inconsistency | P2 | 2026-02-02 |
+| [BUG-017](../_archive/bugs/bug-017-billing-button-without-subscription.md) | Billing Page Shows "Manage in Stripe" When No Subscription | P2 | 2026-02-02 |
+| [BUG-035](../_archive/bugs/bug-035-error-banner-not-clearable.md) | Error Banner Not Clearable on Pricing Page | P3 | 2026-02-02 |
+| [BUG-034](../_archive/bugs/bug-034-webhook-error-context-lost.md) | Webhook Catch Block Loses Error Context | P2 | 2026-02-02 |
+| [BUG-033](../_archive/bugs/bug-033-stale-closure-toggle-bookmark.md) | Stale Closure in onToggleBookmark — Wrong Question Bookmarked | P2 | 2026-02-02 |
+| [BUG-032](../_archive/bugs/bug-032-state-update-after-unmount.md) | State Update After Component Unmount in Practice Page | P2 | 2026-02-02 |
+| [BUG-031](../_archive/bugs/bug-031-non-unique-react-key-dashboard.md) | Non-Unique React Key in Dashboard Recent Activity | P3 | 2026-02-02 |
+| [BUG-015](../_archive/bugs/bug-015-fragile-webhook-error-matching.md) | Fragile Webhook Error Matching Uses String Instead of Error Code | P1 | 2026-02-02 |
+| [BUG-029](../_archive/bugs/bug-029-answer-choices-not-randomized.md) | Answer Choices Not Randomized — Test Validity Issue | P1 | 2026-02-02 |
+| [BUG-030](../_archive/bugs/bug-030-time-spent-always-zero.md) | Time Spent Always Zero — No Timer Implementation | P1 | 2026-02-02 |
 | [BUG-014](../_archive/bugs/bug-014-pricing-subscribe-action-not-working.md) | Pricing Subscribe Action Not Working (Server Action Serialization) | P1 | 2026-02-02 |
 | [BUG-013](../_archive/bugs/bug-013-silent-error-handling.md) | Silent Error Handling — Errors Swallowed Without Logging or User Feedback | P1 | 2026-02-02 |
 | [BUG-012](../_archive/bugs/bug-012-incomplete-feature-wiring.md) | Incomplete Feature Wiring — Missing Controllers and E2E Coverage | P2 | 2026-02-02 |
@@ -62,6 +77,7 @@ Bug reports document issues discovered in the codebase along with their root cau
 | [BUG-006](../_archive/bugs/bug-006-dark-mode-not-applied.md) | Dark Theme Not Applied | P4 | 2026-02-01 |
 | [BUG-007](../_archive/bugs/bug-007-question-frontmatter-duplicate-tag-slugs.md) | Duplicate Tag Slugs in Frontmatter | P3 | 2026-02-01 |
 | [BUG-008](../_archive/bugs/bug-008-stripe-webhook-endpoint-missing.md) | Stripe Webhook Endpoint Missing | P0 | 2026-02-01 |
+| [BUG-009](../_archive/bugs/bug-009-vercel-preview-deployment-rate-limit.md) | Vercel Preview Deployment Status Fails Due to Rate Limit | P3 | 2026-02-01 |
 
 ## Bug Statuses
 

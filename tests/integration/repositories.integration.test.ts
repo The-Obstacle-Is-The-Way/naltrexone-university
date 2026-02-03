@@ -5,14 +5,17 @@ import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
 import { afterAll, afterEach, describe, expect, it } from 'vitest';
 import * as schema from '@/db/schema';
+import { DrizzleRateLimiter } from '@/src/adapters/gateways/drizzle-rate-limiter';
 import { DrizzleAttemptRepository } from '@/src/adapters/repositories/drizzle-attempt-repository';
 import { DrizzleBookmarkRepository } from '@/src/adapters/repositories/drizzle-bookmark-repository';
+import { DrizzleIdempotencyKeyRepository } from '@/src/adapters/repositories/drizzle-idempotency-key-repository';
 import { DrizzlePracticeSessionRepository } from '@/src/adapters/repositories/drizzle-practice-session-repository';
 import { DrizzleQuestionRepository } from '@/src/adapters/repositories/drizzle-question-repository';
 import { DrizzleStripeCustomerRepository } from '@/src/adapters/repositories/drizzle-stripe-customer-repository';
 import { DrizzleStripeEventRepository } from '@/src/adapters/repositories/drizzle-stripe-event-repository';
 import { DrizzleSubscriptionRepository } from '@/src/adapters/repositories/drizzle-subscription-repository';
 import { DrizzleTagRepository } from '@/src/adapters/repositories/drizzle-tag-repository';
+import { DrizzleUserRepository } from '@/src/adapters/repositories/drizzle-user-repository';
 import { ApplicationError } from '@/src/application/errors';
 
 const databaseUrl = process.env.DATABASE_URL;
@@ -36,6 +39,7 @@ const sql = postgres(databaseUrl, { max: 1 });
 const db = drizzle(sql, { schema });
 
 type CleanupState = {
+  rateLimitKeys: string[];
   userIds: string[];
   questionIds: string[];
   tagIds: string[];
@@ -43,6 +47,7 @@ type CleanupState = {
 };
 
 const cleanup: CleanupState = {
+  rateLimitKeys: [],
   userIds: [],
   questionIds: [],
   tagIds: [],
@@ -167,6 +172,12 @@ afterEach(async () => {
       .where(inArray(schema.stripeEvents.id, cleanup.stripeEventIds));
   }
 
+  if (cleanup.rateLimitKeys.length > 0) {
+    await db
+      .delete(schema.rateLimits)
+      .where(inArray(schema.rateLimits.key, cleanup.rateLimitKeys));
+  }
+
   if (cleanup.userIds.length > 0) {
     await db
       .delete(schema.users)
@@ -187,6 +198,7 @@ afterEach(async () => {
   cleanup.questionIds.length = 0;
   cleanup.tagIds.length = 0;
   cleanup.stripeEventIds.length = 0;
+  cleanup.rateLimitKeys.length = 0;
 });
 
 afterAll(async () => {
@@ -459,6 +471,94 @@ describe('DrizzlePracticeSessionRepository + DrizzleAttemptRepository', () => {
     expect(byQuestionId.get(q1.id)?.toISOString()).toBe(t2.toISOString());
     expect(byQuestionId.get(q2.id)?.toISOString()).toBe(t3.toISOString());
   });
+
+  it('lists missed questions by latest incorrect attempt', async () => {
+    const user = await createUser();
+
+    const q1 = await createQuestion({
+      slug: `it-missed-q1-${randomUUID()}`,
+      status: 'published',
+      difficulty: 'easy',
+    });
+
+    const q2 = await createQuestion({
+      slug: `it-missed-q2-${randomUUID()}`,
+      status: 'published',
+      difficulty: 'easy',
+    });
+
+    const attemptRepo = new DrizzleAttemptRepository(db);
+
+    const q1Correct = await attemptRepo.insert({
+      userId: user.id,
+      questionId: q1.id,
+      practiceSessionId: null,
+      selectedChoiceId: q1.correctChoiceId,
+      isCorrect: true,
+      timeSpentSeconds: 1,
+    });
+
+    const q1Incorrect = await attemptRepo.insert({
+      userId: user.id,
+      questionId: q1.id,
+      practiceSessionId: null,
+      selectedChoiceId: q1.correctChoiceId,
+      isCorrect: false,
+      timeSpentSeconds: 1,
+    });
+
+    const q2Incorrect = await attemptRepo.insert({
+      userId: user.id,
+      questionId: q2.id,
+      practiceSessionId: null,
+      selectedChoiceId: q2.correctChoiceId,
+      isCorrect: false,
+      timeSpentSeconds: 1,
+    });
+
+    const q2Correct = await attemptRepo.insert({
+      userId: user.id,
+      questionId: q2.id,
+      practiceSessionId: null,
+      selectedChoiceId: q2.correctChoiceId,
+      isCorrect: true,
+      timeSpentSeconds: 1,
+    });
+
+    const t1 = new Date('2026-01-01T00:00:00.000Z');
+    const t2 = new Date('2026-01-02T00:00:00.000Z');
+    const t3 = new Date('2026-01-03T00:00:00.000Z');
+    const t4 = new Date('2026-01-04T00:00:00.000Z');
+
+    await db
+      .update(schema.attempts)
+      .set({ answeredAt: t1 })
+      .where(eq(schema.attempts.id, q1Correct.id));
+
+    await db
+      .update(schema.attempts)
+      .set({ answeredAt: t2 })
+      .where(eq(schema.attempts.id, q1Incorrect.id));
+
+    await db
+      .update(schema.attempts)
+      .set({ answeredAt: t3 })
+      .where(eq(schema.attempts.id, q2Incorrect.id));
+
+    await db
+      .update(schema.attempts)
+      .set({ answeredAt: t4 })
+      .where(eq(schema.attempts.id, q2Correct.id));
+
+    const missed = await attemptRepo.listMissedQuestionsByUserId(
+      user.id,
+      10,
+      0,
+    );
+
+    expect(missed.map((m) => m.questionId)).toEqual([q1.id]);
+    expect(missed[0]?.answeredAt.toISOString()).toBe(t2.toISOString());
+  });
 });
 
 describe('DrizzleBookmarkRepository', () => {
@@ -672,6 +772,166 @@ describe('Stripe repositories', () => {
         cancelAtPeriodEnd: false,
       }),
     ).rejects.toMatchObject({ code: 'CONFLICT' });
+  });
+});
+
+describe('DrizzleUserRepository', () => {
+  it('upserts users by clerk id and can find them', async () => {
+    const repo = new DrizzleUserRepository(db);
+    const clerkUserId = `user_${randomUUID().replaceAll('-', '')}`;
+    const email = `it-${randomUUID()}@example.com`;
+
+    const user = await repo.upsertByClerkId(clerkUserId, email);
+    cleanup.userIds.push(user.id);
+
+    await expect(repo.findByClerkId(clerkUserId)).resolves.toMatchObject({
+      id: user.id,
+      email,
+    });
+  });
+
+  it('updates email when upserting an existing user', async () => {
+    const repo = new DrizzleUserRepository(db);
+    const clerkUserId = `user_${randomUUID().replaceAll('-', '')}`;
+
+    const first = await repo.upsertByClerkId(
+      clerkUserId,
+      `it-${randomUUID()}@example.com`,
+    );
+    cleanup.userIds.push(first.id);
+
+    const secondEmail = `it-${randomUUID()}@example.com`;
+    const second = await repo.upsertByClerkId(clerkUserId, secondEmail);
+
+    expect(second).toMatchObject({
+      id: first.id,
+      email: secondEmail,
+    });
+  });
+
+  it('deletes by clerk id and returns false when missing', async () => {
+    const repo = new DrizzleUserRepository(db);
+    await expect(repo.deleteByClerkId('user_missing')).resolves.toBe(false);
+
+    const clerkUserId = `user_${randomUUID().replaceAll('-', '')}`;
+    const user = await repo.upsertByClerkId(
+      clerkUserId,
+      `it-${randomUUID()}@example.com`,
+    );
+    cleanup.userIds.push(user.id);
+
+    await expect(repo.deleteByClerkId(clerkUserId)).resolves.toBe(true);
+    await expect(repo.findByClerkId(clerkUserId)).resolves.toBeNull();
+  });
+});
+
+describe('DrizzleIdempotencyKeyRepository', () => {
+  it('claims keys and stores results + errors', async () => {
+    const user = await createUser();
+    const now = () => new Date('2026-02-01T00:00:00.000Z');
+    const repo = new DrizzleIdempotencyKeyRepository(db, now);
+
+    const expiresAt = new Date('2026-02-02T00:00:00.000Z');
+
+    await expect(
+      repo.claim({ userId: user.id, action: 'it', key: 'k1', expiresAt }),
+    ).resolves.toBe(true);
+
+    await repo.storeResult({
+      userId: user.id,
+      action: 'it',
+      key: 'k1',
+      resultJson: { ok: true },
+    });
+
+    await expect(repo.find(user.id, 'it', 'k1')).resolves.toMatchObject({
+      resultJson: { ok: true },
+      error: null,
+      expiresAt,
+    });
+
+    await expect(
+      repo.claim({ userId: user.id, action: 'it', key: 'k2', expiresAt }),
+    ).resolves.toBe(true);
+
+    await repo.storeError({
+      userId: user.id,
+      action: 'it',
+      key: 'k2',
+      error: { code: 'INTERNAL_ERROR', message: 'boom' },
+    });
+
+    await expect(repo.find(user.id, 'it', 'k2')).resolves.toMatchObject({
+      resultJson: null,
+      error: { code: 'INTERNAL_ERROR', message: 'boom' },
+      expiresAt,
+    });
+  });
+
+  it('reclaims expired keys and resets stored state', async () => {
+    const user = await createUser();
+    const now = () => new Date('2026-02-01T00:00:10.000Z');
+    const repo = new DrizzleIdempotencyKeyRepository(db, now);
+
+    const expiredAt = new Date('2026-02-01T00:00:00.000Z');
+    await expect(
+      repo.claim({
+        userId: user.id,
+        action: 'it',
+        key: 'k3',
+        expiresAt: expiredAt,
+      }),
+    ).resolves.toBe(true);
+
+    await repo.storeResult({
+      userId: user.id,
+      action: 'it',
+      key: 'k3',
+      resultJson: { ok: true },
+    });
+
+    const refreshedAt = new Date('2026-02-02T00:00:00.000Z');
+    await expect(
+      repo.claim({
+        userId: user.id,
+        action: 'it',
+        key: 'k3',
+        expiresAt: refreshedAt,
+      }),
+    ).resolves.toBe(true);
+
+    await expect(repo.find(user.id, 'it', 'k3')).resolves.toMatchObject({
+      resultJson: null,
+      error: null,
+      expiresAt: refreshedAt,
+    });
+  });
+});
+
+describe('DrizzleRateLimiter', () => {
+  it('increments within a window and rejects over the limit', async () => {
+    const now = () => new Date('2026-02-01T00:00:01.500Z');
+    const limiter = new DrizzleRateLimiter(db, now);
+    const key = `it-rate:${randomUUID()}`;
+    cleanup.rateLimitKeys.push(key);
+
+    const input = { key, limit: 2, windowMs: 1000 };
+
+    await expect(limiter.limit(input)).resolves.toMatchObject({
+      success: true,
+      remaining: 1,
+      retryAfterSeconds: 1,
+    });
+    await expect(limiter.limit(input)).resolves.toMatchObject({
+      success: true,
+      remaining: 0,
+      retryAfterSeconds: 1,
+    });
+    await expect(limiter.limit(input)).resolves.toMatchObject({
+      success: false,
+      remaining: 0,
+      retryAfterSeconds: 1,
+    });
   });
 });
 

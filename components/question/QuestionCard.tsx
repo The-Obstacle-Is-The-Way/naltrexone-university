@@ -1,5 +1,6 @@
 'use client';
 
+import { useId } from 'react';
 import { Markdown } from '@/components/markdown/Markdown';
 import { ChoiceButton } from './ChoiceButton';
 
@@ -26,11 +27,14 @@ export function QuestionCard({
   disabled = false,
   onSelectChoice,
 }: QuestionCardProps) {
+  const choiceGroupName = useId();
+
   return (
     <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
       <Markdown content={stemMd} className="text-sm text-foreground" />
 
-      <div className="mt-6 space-y-3">
+      <fieldset className="mt-6 space-y-3">
+        <legend className="sr-only">Answer choices</legend>
         {choices.map((choice) => {
           const selected = selectedChoiceId === choice.id;
           const correctness =
@@ -45,6 +49,7 @@ export function QuestionCard({
           return (
             <ChoiceButton
               key={choice.id}
+              name={choiceGroupName}
               label={choice.label}
               textMd={choice.textMd}
               selected={selected}
@@ -54,7 +59,7 @@ export function QuestionCard({
             />
           );
         })}
-      </div>
+      </fieldset>
     </div>
   );
 }

@@ -9,10 +9,12 @@ import {
   createCheckoutSession,
   createPortalSession,
 } from '@/src/adapters/controllers/billing-controller';
+import { DrizzleIdempotencyKeyRepository } from '@/src/adapters/repositories/drizzle-idempotency-key-repository';
 import { DrizzleStripeCustomerRepository } from '@/src/adapters/repositories/drizzle-stripe-customer-repository';
 import {
   FakeAuthGateway,
   FakePaymentGateway,
+  FakeSubscriptionRepository,
 } from '@/src/application/test-helpers/fakes';
 import type { User } from '@/src/domain/entities';
 
@@ -85,15 +87,30 @@ describe('billing controllers (integration)', () => {
     });
 
     const stripeCustomerRepository = new DrizzleStripeCustomerRepository(db);
+    const idempotencyKeyRepository = new DrizzleIdempotencyKeyRepository(
+      db,
+      () => new Date('2026-02-01T00:00:00.000Z'),
+    );
 
     const result = await createCheckoutSession(
       { plan: 'monthly' },
       {
         authGateway: new FakeAuthGateway(user),
         stripeCustomerRepository,
+        subscriptionRepository: new FakeSubscriptionRepository(),
         paymentGateway,
+        idempotencyKeyRepository,
+        rateLimiter: {
+          limit: async () => ({
+            success: true,
+            limit: 10,
+            remaining: 9,
+            retryAfterSeconds: 0,
+          }),
+        },
         getClerkUserId: async () => user.clerkUserId,
         appUrl: 'http://localhost:3000',
+        now: () => new Date('2026-02-01T00:00:00.000Z'),
       },
     );
 
@@ -133,15 +150,30 @@ describe('billing controllers (integration)', () => {
     });
 
     const stripeCustomerRepository = new DrizzleStripeCustomerRepository(db);
+    const idempotencyKeyRepository = new DrizzleIdempotencyKeyRepository(
+      db,
+      () => new Date('2026-02-01T00:00:00.000Z'),
+    );
 
     await createCheckoutSession(
       { plan: 'annual' },
       {
         authGateway: new FakeAuthGateway(user),
         stripeCustomerRepository,
+        subscriptionRepository: new FakeSubscriptionRepository(),
         paymentGateway,
+        idempotencyKeyRepository,
+        rateLimiter: {
+          limit: async () => ({
+            success: true,
+            limit: 10,
+            remaining: 9,
+            retryAfterSeconds: 0,
+          }),
+        },
         getClerkUserId: async () => user.clerkUserId,
         appUrl: 'http://localhost:3000',
+        now: () => new Date('2026-02-01T00:00:00.000Z'),
       },
     );
 
@@ -150,9 +182,20 @@ describe('billing controllers (integration)', () => {
       {
         authGateway: new FakeAuthGateway(user),
         stripeCustomerRepository,
+        subscriptionRepository: new FakeSubscriptionRepository(),
         paymentGateway,
+        idempotencyKeyRepository,
+        rateLimiter: {
+          limit: async () => ({
+            success: true,
+            limit: 10,
+            remaining: 9,
+            retryAfterSeconds: 0,
+          }),
+        },
         getClerkUserId: async () => user.clerkUserId,
         appUrl: 'http://localhost:3000',
+        now: () => new Date('2026-02-01T00:00:00.000Z'),
       },
     );
 

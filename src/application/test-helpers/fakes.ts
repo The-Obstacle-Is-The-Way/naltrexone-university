@@ -1,12 +1,14 @@
+import { ApplicationError } from '@/src/application/errors';
 import type {
   Attempt,
+  Bookmark,
   PracticeSession,
   Question,
   Subscription,
+  Tag,
   User,
 } from '@/src/domain/entities';
 import type { QuestionDifficulty } from '@/src/domain/value-objects';
-import { ApplicationError } from '../errors';
 import type {
   AuthGateway,
   CheckoutSessionInput,
@@ -21,11 +23,20 @@ import type {
 import type {
   AttemptMostRecentAnsweredAt,
   AttemptRepository,
+  BookmarkRepository,
+  IdempotencyKeyError,
+  IdempotencyKeyRecord,
+  IdempotencyKeyRepository,
+  MissedQuestionAttempt,
   PracticeSessionRepository,
   QuestionFilters,
   QuestionRepository,
+  StripeCustomerRepository,
+  StripeEventRepository,
   SubscriptionRepository,
   SubscriptionUpsertInput,
+  TagRepository,
+  UserRepository,
 } from '../ports/repositories';
 
 type InMemoryAttempt = Attempt & { practiceSessionId: string | null };
@@ -149,6 +160,113 @@ export class FakePaymentGateway implements PaymentGateway {
   }
 }
 
+type InMemoryIdempotencyRecord = {
+  resultJson: unknown | null;
+  error: IdempotencyKeyError | null;
+  expiresAt: Date;
+};
+
+export class FakeIdempotencyKeyRepository implements IdempotencyKeyRepository {
+  private readonly records = new Map<string, InMemoryIdempotencyRecord>();
+
+  constructor(private readonly now: () => Date = () => new Date()) {}
+
+  private toKey(userId: string, action: string, key: string): string {
+    return `${userId}:${action}:${key}`;
+  }
+
+  async claim(input: {
+    userId: string;
+    action: string;
+    key: string;
+    expiresAt: Date;
+  }): Promise<boolean> {
+    const id = this.toKey(input.userId, input.action, input.key);
+    const existing = this.records.get(id);
+    if (existing && existing.expiresAt.getTime() >= this.now().getTime()) {
+      return false;
+    }
+
+    this.records.set(id, {
+      resultJson: null,
+      error: null,
+      expiresAt: input.expiresAt,
+    });
+    return true;
+  }
+
+  async find(
+    userId: string,
+    action: string,
+    key: string,
+  ): Promise<IdempotencyKeyRecord | null> {
+    const id = this.toKey(userId, action, key);
+    const existing = this.records.get(id);
+    if (!existing) return null;
+
+    if (existing.expiresAt.getTime() < this.now().getTime()) {
+      return null;
+    }
+
+    return existing;
+  }
+
+  async storeResult(input: {
+    userId: string;
+    action: string;
+    key: string;
+    resultJson: unknown;
+  }): Promise<void> {
+    const id = this.toKey(input.userId, input.action, input.key);
+    const existing = this.records.get(id);
+    if (!existing) {
+      throw new ApplicationError('NOT_FOUND', 'Idempotency key not found');
+    }
+
+    this.records.set(id, {
+      ...existing,
+      resultJson: input.resultJson,
+      error: null,
+    });
+  }
+
+  async storeError(input: {
+    userId: string;
+    action: string;
+    key: string;
+    error: IdempotencyKeyError;
+  }): Promise<void> {
+    const id = this.toKey(input.userId, input.action, input.key);
+    const existing = this.records.get(id);
+    if (!existing) {
+      throw new ApplicationError('NOT_FOUND', 'Idempotency key not found');
+    }
+
+    this.records.set(id, {
+      ...existing,
+      resultJson: null,
+      error: input.error,
+    });
+  }
+
+  async pruneExpiredBefore(cutoff: Date, limit: number): Promise<number> {
+    if (!Number.isInteger(limit) || limit <= 0) {
+      return 0;
+    }
+
+    const rows = Array.from(this.records.entries())
+      .filter(([, record]) => record.expiresAt.getTime() < cutoff.getTime())
+      .sort(([, a], [, b]) => a.expiresAt.getTime() - b.expiresAt.getTime())
+      .slice(0, limit);
+
+    for (const [id] of rows) {
+      this.records.delete(id);
+    }
+
+    return rows.length;
+  }
+}
+
 function matchesDifficulty(
   difficulty: QuestionDifficulty,
   filter: readonly QuestionDifficulty[],
@@ -211,6 +329,73 @@ export class FakeAttemptRepository implements AttemptRepository {
     return this.attempts.filter(
       (a) => a.practiceSessionId === sessionId && a.userId === userId,
     );
+  }
+
+  async countByUserId(userId: string): Promise<number> {
+    return this.attempts.filter((a) => a.userId === userId).length;
+  }
+
+  async countCorrectByUserId(userId: string): Promise<number> {
+    return this.attempts.filter((a) => a.userId === userId && a.isCorrect)
+      .length;
+  }
+
+  async countByUserIdSince(userId: string, since: Date): Promise<number> {
+    return this.attempts.filter(
+      (a) => a.userId === userId && a.answeredAt >= since,
+    ).length;
+  }
+
+  async countCorrectByUserIdSince(
+    userId: string,
+    since: Date,
+  ): Promise<number> {
+    return this.attempts.filter(
+      (a) => a.userId === userId && a.answeredAt >= since && a.isCorrect,
+    ).length;
+  }
+
+  async listRecentByUserId(
+    userId: string,
+    limit: number,
+  ): Promise<readonly Attempt[]> {
+    return this.attempts
+      .filter((a) => a.userId === userId)
+      .slice()
+      .sort((a, b) => b.answeredAt.getTime() - a.answeredAt.getTime())
+      .slice(0, limit);
+  }
+
+  async listAnsweredAtByUserIdSince(
+    userId: string,
+    since: Date,
+  ): Promise<readonly Date[]> {
+    return this.attempts
+      .filter((a) => a.userId === userId && a.answeredAt >= since)
+      .slice()
+      .sort((a, b) => b.answeredAt.getTime() - a.answeredAt.getTime())
+      .map((a) => a.answeredAt);
+  }
+
+  async listMissedQuestionsByUserId(
+    userId: string,
+    limit: number,
+    offset: number,
+  ): Promise<readonly MissedQuestionAttempt[]> {
+    const mostRecentByQuestionId = new Map<string, InMemoryAttempt>();
+    for (const attempt of this.attempts) {
+      if (attempt.userId !== userId) continue;
+      const existing = mostRecentByQuestionId.get(attempt.questionId);
+      if (!existing || attempt.answeredAt > existing.answeredAt) {
+        mostRecentByQuestionId.set(attempt.questionId, attempt);
+      }
+    }
+
+    return [...mostRecentByQuestionId.values()]
+      .filter((a) => !a.isCorrect)
+      .sort((a, b) => b.answeredAt.getTime() - a.answeredAt.getTime())
+      .slice(offset, offset + limit)
+      .map((a) => ({ questionId: a.questionId, answeredAt: a.answeredAt }));
   }
 
   async findMostRecentAnsweredAtByQuestionIds(
@@ -369,5 +554,222 @@ export class FakeSubscriptionRepository implements SubscriptionRepository {
       input.stripeSubscriptionId,
       input.userId,
     );
+  }
+}
+
+type StoredUser = { user: User; clerkId: string };
+
+export class FakeUserRepository implements UserRepository {
+  private readonly byClerkId = new Map<string, StoredUser>();
+  private nextId = 1;
+
+  async findByClerkId(clerkId: string): Promise<User | null> {
+    const stored = this.byClerkId.get(clerkId);
+    return stored?.user ?? null;
+  }
+
+  async upsertByClerkId(clerkId: string, email: string): Promise<User> {
+    const existing = this.byClerkId.get(clerkId);
+
+    if (existing) {
+      if (existing.user.email === email) {
+        return existing.user;
+      }
+      const updatedUser: User = {
+        ...existing.user,
+        email,
+        updatedAt: new Date(),
+      };
+      this.byClerkId.set(clerkId, { user: updatedUser, clerkId });
+      return updatedUser;
+    }
+
+    const now = new Date();
+    const newUser: User = {
+      id: `user-${this.nextId++}`,
+      email,
+      createdAt: now,
+      updatedAt: now,
+    };
+    this.byClerkId.set(clerkId, { user: newUser, clerkId });
+    return newUser;
+  }
+
+  async deleteByClerkId(clerkId: string): Promise<boolean> {
+    return this.byClerkId.delete(clerkId);
+  }
+}
+
+export class FakeBookmarkRepository implements BookmarkRepository {
+  private readonly bookmarks = new Map<string, Bookmark>();
+
+  constructor(
+    seed: readonly Bookmark[] = [],
+    private readonly now: () => Date = () => new Date(),
+  ) {
+    for (const bookmark of seed) {
+      this.bookmarks.set(
+        this.key(bookmark.userId, bookmark.questionId),
+        bookmark,
+      );
+    }
+  }
+
+  private key(userId: string, questionId: string): string {
+    return `${userId}:${questionId}`;
+  }
+
+  async exists(userId: string, questionId: string): Promise<boolean> {
+    return this.bookmarks.has(this.key(userId, questionId));
+  }
+
+  async add(userId: string, questionId: string): Promise<Bookmark> {
+    const k = this.key(userId, questionId);
+    const existing = this.bookmarks.get(k);
+    if (existing) {
+      return existing;
+    }
+
+    const bookmark: Bookmark = {
+      userId,
+      questionId,
+      createdAt: this.now(),
+    };
+    this.bookmarks.set(k, bookmark);
+    return bookmark;
+  }
+
+  async remove(userId: string, questionId: string): Promise<boolean> {
+    const k = this.key(userId, questionId);
+    return this.bookmarks.delete(k);
+  }
+
+  async listByUserId(userId: string): Promise<readonly Bookmark[]> {
+    const result: Bookmark[] = [];
+    for (const bookmark of this.bookmarks.values()) {
+      if (bookmark.userId === userId) {
+        result.push(bookmark);
+      }
+    }
+    return result;
+  }
+}
+
+export class FakeTagRepository implements TagRepository {
+  private readonly tags: readonly Tag[];
+
+  constructor(tags: readonly Tag[] = []) {
+    this.tags = tags;
+  }
+
+  async listAll(): Promise<readonly Tag[]> {
+    return this.tags;
+  }
+}
+
+export class FakeStripeCustomerRepository implements StripeCustomerRepository {
+  private readonly userIdToCustomerId = new Map<string, string>();
+  private readonly customerIdToUserId = new Map<string, string>();
+
+  async findByUserId(
+    userId: string,
+  ): Promise<{ stripeCustomerId: string } | null> {
+    const customerId = this.userIdToCustomerId.get(userId);
+    if (!customerId) return null;
+    return { stripeCustomerId: customerId };
+  }
+
+  async insert(userId: string, stripeCustomerId: string): Promise<void> {
+    const existingCustomerId = this.userIdToCustomerId.get(userId);
+    const existingUserId = this.customerIdToUserId.get(stripeCustomerId);
+
+    if (existingCustomerId === stripeCustomerId && existingUserId === userId) {
+      return;
+    }
+
+    if (existingCustomerId && existingCustomerId !== stripeCustomerId) {
+      throw new ApplicationError(
+        'CONFLICT',
+        'User is already mapped to a different Stripe customer',
+      );
+    }
+
+    if (existingUserId && existingUserId !== userId) {
+      throw new ApplicationError(
+        'CONFLICT',
+        'Stripe customer is already mapped to a different user',
+      );
+    }
+
+    this.userIdToCustomerId.set(userId, stripeCustomerId);
+    this.customerIdToUserId.set(stripeCustomerId, userId);
+  }
+}
+
+type StoredStripeEvent = {
+  type: string;
+  processedAt: Date | null;
+  error: string | null;
+};
+
+export class FakeStripeEventRepository implements StripeEventRepository {
+  private readonly events = new Map<string, StoredStripeEvent>();
+
+  async claim(eventId: string, type: string): Promise<boolean> {
+    if (this.events.has(eventId)) {
+      return false;
+    }
+
+    this.events.set(eventId, {
+      type,
+      processedAt: null,
+      error: null,
+    });
+    return true;
+  }
+
+  async lock(
+    eventId: string,
+  ): Promise<{ processedAt: Date | null; error: string | null }> {
+    const event = this.events.get(eventId);
+    if (!event) {
+      throw new ApplicationError('NOT_FOUND', 'Event not found');
+    }
+    return { processedAt: event.processedAt, error: event.error };
+  }
+
+  async markProcessed(eventId: string): Promise<void> {
+    const event = this.events.get(eventId);
+    if (event) {
+      event.processedAt = new Date();
+      event.error = null;
+    }
+  }
+
+  async markFailed(eventId: string, error: string): Promise<void> {
+    const event = this.events.get(eventId);
+    if (event) {
+      event.processedAt = null;
+      event.error = error;
+    }
+  }
+
+  async pruneProcessedBefore(cutoff: Date, limit: number): Promise<number> {
+    if (!Number.isInteger(limit) || limit <= 0) return 0;
+
+    const toDelete = [...this.events.entries()]
+      .filter(([, event]) => event.processedAt && event.processedAt < cutoff)
+      .sort((a, b) => {
+        const aTime = a[1].processedAt?.getTime() ?? 0;
+        const bTime = b[1].processedAt?.getTime() ?? 0;
+        return aTime - bTime;
+      })
+      .slice(0, limit);
+
+    for (const [eventId] of toDelete) {
+      this.events.delete(eventId);
+    }
+
+    return toDelete.length;
   }
 }

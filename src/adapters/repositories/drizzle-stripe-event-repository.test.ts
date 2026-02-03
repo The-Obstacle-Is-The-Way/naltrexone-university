@@ -225,4 +225,83 @@ describe('DrizzleStripeEventRepository', () => {
       await expect(promise).rejects.toMatchObject({ code: 'NOT_FOUND' });
     });
   });
+
+  describe('pruneProcessedBefore', () => {
+    it('returns 0 when limit is not a positive integer', async () => {
+      const selectFrom = vi.fn();
+      const deleteFn = vi.fn();
+
+      const db = {
+        select: () => ({ from: selectFrom }),
+        delete: deleteFn,
+      } as const;
+
+      const repo = new DrizzleStripeEventRepository(db as unknown as RepoDb);
+
+      await expect(
+        repo.pruneProcessedBefore(new Date('2026-02-01T00:00:00Z'), 0),
+      ).resolves.toBe(0);
+      await expect(
+        repo.pruneProcessedBefore(new Date('2026-02-01T00:00:00Z'), -1),
+      ).resolves.toBe(0);
+      await expect(
+        repo.pruneProcessedBefore(new Date('2026-02-01T00:00:00Z'), 1.5),
+      ).resolves.toBe(0);
+
+      expect(selectFrom).not.toHaveBeenCalled();
+      expect(deleteFn).not.toHaveBeenCalled();
+    });
+
+    it('returns 0 when no rows match', async () => {
+      const selectLimit = vi.fn(async () => []);
+      const selectOrderBy = vi.fn(() => ({ limit: selectLimit }));
+      const selectWhere = vi.fn(() => ({ orderBy: selectOrderBy }));
+      const selectFrom = vi.fn(() => ({ where: selectWhere }));
+
+      const deleteFn = vi.fn(() => ({
+        where: () => ({
+          returning: async () => [],
+        }),
+      }));
+
+      const db = {
+        select: () => ({ from: selectFrom }),
+        delete: deleteFn,
+      } as const;
+
+      const repo = new DrizzleStripeEventRepository(db as unknown as RepoDb);
+
+      await expect(
+        repo.pruneProcessedBefore(new Date('2026-02-01T00:00:00Z'), 100),
+      ).resolves.toBe(0);
+      expect(deleteFn).not.toHaveBeenCalled();
+    });
+
+    it('deletes and returns the number of pruned rows', async () => {
+      const selectLimit = vi.fn(async () => [{ id: 'evt_1' }, { id: 'evt_2' }]);
+      const selectOrderBy = vi.fn(() => ({ limit: selectLimit }));
+      const selectWhere = vi.fn(() => ({ orderBy: selectOrderBy }));
+      const selectFrom = vi.fn(() => ({ where: selectWhere }));
+
+      const deleteReturning = vi.fn(async () => [
+        { id: 'evt_1' },
+        { id: 'evt_2' },
+      ]);
+      const deleteWhere = vi.fn(() => ({ returning: deleteReturning }));
+      const deleteFn = vi.fn(() => ({ where: deleteWhere }));
+
+      const db = {
+        select: () => ({ from: selectFrom }),
+        delete: deleteFn,
+      } as const;
+
+      const repo = new DrizzleStripeEventRepository(db as unknown as RepoDb);
+
+      await expect(
+        repo.pruneProcessedBefore(new Date('2026-02-01T00:00:00Z'), 100),
+      ).resolves.toBe(2);
+      expect(deleteFn).toHaveBeenCalledTimes(1);
+      expect(deleteWhere).toHaveBeenCalledTimes(1);
+    });
+  });
 });

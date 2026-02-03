@@ -1,9 +1,15 @@
 import 'server-only';
 import pino from 'pino';
 
+const envLevel = process.env.LOG_LEVEL?.trim();
+
 const level =
-  process.env.LOG_LEVEL ??
-  (process.env.NODE_ENV === 'production' ? 'info' : 'debug');
+  envLevel ||
+  (process.env.NODE_ENV === 'production'
+    ? 'info'
+    : process.env.NODE_ENV === 'test'
+      ? 'silent'
+      : 'debug');
 
 /**
  * Structured JSON logger (Vercel-friendly).
@@ -27,6 +33,7 @@ export const logger = pino({
       'stripeSignature',
       // Never log these env vars if accidentally attached
       'env.CLERK_SECRET_KEY',
+      'env.CLERK_WEBHOOK_SIGNING_SECRET',
       'env.STRIPE_SECRET_KEY',
       'env.STRIPE_WEBHOOK_SECRET',
     ],

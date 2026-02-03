@@ -1,17 +1,21 @@
 'use server';
 
 import { z } from 'zod';
+import {
+  createDepsResolver,
+  type LoadContainerFn,
+  loadAppContainer,
+} from '@/lib/controller-helpers';
+import type { Logger } from '@/src/adapters/shared/logger';
 import type { AuthGateway } from '@/src/application/ports/gateways';
 import type {
   BookmarkRepository,
   QuestionRepository,
 } from '@/src/application/ports/repositories';
-import type {
-  CheckEntitlementInput,
-  CheckEntitlementOutput,
-} from '@/src/application/use-cases/check-entitlement';
 import type { ActionResult } from './action-result';
 import { err, handleError, ok } from './action-result';
+import type { CheckEntitlementUseCase } from './require-entitled-user-id';
+import { requireEntitledUserId } from './require-entitled-user-id';
 
 const zUuid = z.string().uuid();
 
@@ -22,10 +26,6 @@ const ToggleBookmarkInputSchema = z
   .strict();
 
 const GetBookmarksInputSchema = z.object({}).strict();
-
-type CheckEntitlementUseCase = {
-  execute: (input: CheckEntitlementInput) => Promise<CheckEntitlementOutput>;
-};
 
 export type ToggleBookmarkOutput = {
   bookmarked: boolean;
@@ -48,41 +48,28 @@ export type BookmarkControllerDeps = {
   checkEntitlementUseCase: CheckEntitlementUseCase;
   bookmarkRepository: BookmarkRepository;
   questionRepository: QuestionRepository;
+  logger?: Logger;
 };
 
-async function getDeps(
-  deps?: BookmarkControllerDeps,
-): Promise<BookmarkControllerDeps> {
-  if (deps) return deps;
+type BookmarkControllerContainer = {
+  createBookmarkControllerDeps: () => BookmarkControllerDeps;
+};
 
-  const { createContainer } = await import('@/lib/container');
-  return createContainer().createBookmarkControllerDeps();
-}
-
-async function requireEntitledUserId(
-  deps: BookmarkControllerDeps,
-): Promise<string | ActionResult<never>> {
-  const user = await deps.authGateway.requireUser();
-  const entitlement = await deps.checkEntitlementUseCase.execute({
-    userId: user.id,
-  });
-
-  if (!entitlement.isEntitled) {
-    return err('UNSUBSCRIBED', 'Subscription required');
-  }
-
-  return user.id;
-}
+const getDeps = createDepsResolver<
+  BookmarkControllerDeps,
+  BookmarkControllerContainer
+>((container) => container.createBookmarkControllerDeps(), loadAppContainer);
 
 export async function toggleBookmark(
   input: unknown,
   deps?: BookmarkControllerDeps,
+  options?: { loadContainer?: LoadContainerFn<BookmarkControllerContainer> },
 ): Promise<ActionResult<ToggleBookmarkOutput>> {
   const parsed = ToggleBookmarkInputSchema.safeParse(input);
   if (!parsed.success) return handleError(parsed.error);
 
   try {
-    const d = await getDeps(deps);
+    const d = await getDeps(deps, options);
     const userIdOrError = await requireEntitledUserId(d);
     if (typeof userIdOrError !== 'string') return userIdOrError;
     const userId = userIdOrError;
@@ -113,12 +100,13 @@ export async function toggleBookmark(
 export async function getBookmarks(
   input: unknown,
   deps?: BookmarkControllerDeps,
+  options?: { loadContainer?: LoadContainerFn<BookmarkControllerContainer> },
 ): Promise<ActionResult<GetBookmarksOutput>> {
   const parsed = GetBookmarksInputSchema.safeParse(input);
   if (!parsed.success) return handleError(parsed.error);
 
   try {
-    const d = await getDeps(deps);
+    const d = await getDeps(deps, options);
     const userIdOrError = await requireEntitledUserId(d);
     if (typeof userIdOrError !== 'string') return userIdOrError;
     const userId = userIdOrError;
@@ -132,7 +120,15 @@ export async function getBookmarks(
     const rows: BookmarkRow[] = [];
     for (const bookmark of bookmarks) {
       const question = byId.get(bookmark.questionId);
-      if (!question) continue;
+      if (!question) {
+        // Graceful degradation: questions can be unpublished/deleted while bookmarks persist.
+        // Skip orphans to return a partial list instead of failing the entire view.
+        d.logger?.warn(
+          { questionId: bookmark.questionId },
+          'Bookmark references missing question',
+        );
+        continue;
+      }
 
       rows.push({
         questionId: question.id,

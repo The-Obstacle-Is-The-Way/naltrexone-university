@@ -24,15 +24,19 @@ This blocked the paywall flow from the very first step.
 
 ## Root Cause
 
-`app/pricing/page.tsx` built server actions via `createSubscribeAction(...)` that **closed over function values** (e.g., `createCheckoutSessionFn`, `redirectFn`). Next.js server actions must be serializable for progressive enhancement and cannot capture non-serializable values like functions.
+In production (`pnpm build && pnpm start`), submitting the subscribe form triggered:
 
-Additionally, the page accessed `searchParams.checkout` synchronously, which Next.js flagged as a sync dynamic API usage.
+- `Error: Failed to find Server Action "<id>"` (Next.js)
+
+The server action reference existed in the compiled output (the client submitted an action id), but the build output did **not** include that id in `.next/server/server-reference-manifest.json`. Without a manifest mapping, Next.js cannot route the action request to the correct module, so the form submission fails and the user remains on `/pricing`.
 
 ## Fix
 
-- Refactored the subscribe logic into a testable helper `runSubscribeAction(...)` and changed `createSubscribeAction(plan)` to only close over the serializable `plan` value.
-- Updated `PricingPage` to accept `searchParams` as a Promise and `await` it before reading.
-- Added a Playwright test to ensure the unauthenticated subscribe action redirects to `/sign-up`.
+- Moved the subscribe server actions into a dedicated `use server` module:
+  - `app/pricing/subscribe-actions.ts` exports `subscribeMonthlyAction` and `subscribeAnnualAction`
+  - This ensures the actions are present in `.next/server/server-reference-manifest.json` for production/CI
+- Extracted the redirect decision logic into a unit-testable helper with explicit returns:
+  - `app/pricing/subscribe-action.ts` (`runSubscribeAction(...)`)
 
 ## Verification
 
@@ -40,10 +44,10 @@ Additionally, the page accessed `searchParams.checkout` synchronously, which Nex
 - [x] Unit tests updated: `app/pricing/page.test.tsx`
 - [x] Verified locally:
   - `pnpm test --run`
-  - `pnpm test:e2e`
+  - `pnpm build`
+  - `CI=1 pnpm test:e2e` (ensures Playwright runs against `pnpm start`, same as CI)
 
 ## Related
 
 - `app/pricing/page.tsx`
 - `tests/e2e/pricing-unauthenticated.spec.ts`
-

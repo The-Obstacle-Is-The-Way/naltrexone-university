@@ -1,0 +1,141 @@
+// @vitest-environment jsdom
+import { renderToStaticMarkup } from 'react-dom/server';
+import { describe, expect, it, vi } from 'vitest';
+import {
+  createReviewPage,
+  ReviewView,
+  renderReview,
+} from '@/app/(app)/app/review/page';
+import { ok } from '@/src/adapters/controllers/action-result';
+
+describe('app/(app)/app/review', () => {
+  it('renders missed questions', () => {
+    const html = renderToStaticMarkup(
+      <ReviewView
+        rows={[
+          {
+            questionId: 'q_1',
+            slug: 'q-1',
+            stemMd: 'Stem for q1',
+            difficulty: 'easy',
+            lastAnsweredAt: '2026-02-01T00:00:00.000Z',
+          },
+        ]}
+        limit={20}
+        offset={0}
+      />,
+    );
+
+    expect(html).toContain('Review');
+    expect(html).toContain('q-1');
+    expect(html).toContain('Stem for q1');
+    expect(html).toContain('easy');
+    expect(html).toContain('Missed 2026-02-01');
+    expect(html).toContain('Reattempt');
+    expect(html).toContain('/app/questions/q-1');
+  });
+
+  it('renders pagination links when offset > 0 and rows length equals limit', () => {
+    const html = renderToStaticMarkup(
+      <ReviewView
+        rows={[
+          {
+            questionId: 'q_1',
+            slug: 'q-1',
+            stemMd: 'Stem for q1',
+            difficulty: 'easy',
+            lastAnsweredAt: '2026-02-01T00:00:00.000Z',
+          },
+          {
+            questionId: 'q_2',
+            slug: 'q-2',
+            stemMd: 'Stem for q2',
+            difficulty: 'easy',
+            lastAnsweredAt: '2026-02-01T00:00:00.000Z',
+          },
+        ]}
+        limit={2}
+        offset={2}
+      />,
+    );
+
+    expect(html).toContain('Previous');
+    expect(html).toContain('/app/review?offset=0&amp;limit=2');
+    expect(html).toContain('Next');
+    expect(html).toContain('/app/review?offset=4&amp;limit=2');
+  });
+
+  it('renders empty state when no missed questions exist', () => {
+    const html = renderToStaticMarkup(
+      <ReviewView rows={[]} limit={20} offset={0} />,
+    );
+
+    expect(html).toContain('Review');
+    expect(html).toContain('No missed questions yet.');
+  });
+
+  it('renders an error state when missed questions load fails', () => {
+    const element = renderReview({
+      ok: false,
+      error: { code: 'INTERNAL_ERROR', message: 'Internal error' },
+    });
+    const html = renderToStaticMarkup(element);
+
+    expect(html).toContain('Unable to load missed questions.');
+    expect(html).toContain('Internal error');
+    expect(html).toContain('Go to Practice');
+  });
+
+  it('renders ok state via renderReview', () => {
+    const element = renderReview(
+      ok({
+        rows: [],
+        limit: 20,
+        offset: 0,
+      }),
+    );
+    const html = renderToStaticMarkup(element);
+
+    expect(html).toContain('Review');
+    expect(html).toContain('No missed questions yet.');
+  });
+
+  it('parses limit and offset from searchParams in createReviewPage', async () => {
+    const getMissedQuestionsFn = vi.fn(async (input: unknown) => {
+      const data = input as { limit: number; offset: number };
+      return ok({ rows: [], limit: data.limit, offset: data.offset });
+    });
+
+    const ReviewPage = createReviewPage({ getMissedQuestionsFn });
+
+    await ReviewPage({
+      searchParams: Promise.resolve({ limit: 'NaN', offset: '0' }),
+    });
+    await ReviewPage({
+      searchParams: Promise.resolve({ limit: '1.5', offset: '2.2' }),
+    });
+    await ReviewPage({
+      searchParams: Promise.resolve({ limit: '0', offset: '-1' }),
+    });
+    await ReviewPage({
+      searchParams: Promise.resolve({ limit: '101', offset: '5' }),
+    });
+
+    expect(getMissedQuestionsFn).toHaveBeenNthCalledWith(1, {
+      limit: 20,
+      offset: 0,
+    });
+    expect(getMissedQuestionsFn).toHaveBeenNthCalledWith(2, {
+      limit: 20,
+      offset: 0,
+    });
+    expect(getMissedQuestionsFn).toHaveBeenNthCalledWith(3, {
+      limit: 1,
+      offset: 0,
+    });
+    expect(getMissedQuestionsFn).toHaveBeenNthCalledWith(4, {
+      limit: 100,
+      offset: 5,
+    });
+  });
+});

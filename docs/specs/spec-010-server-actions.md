@@ -39,12 +39,15 @@ Per ADR-012 and the Next.js 16 “Proxy” file convention:
 src/adapters/controllers/
 ├── action-result.ts
 ├── billing-controller.ts
-├── question-controller.ts
-├── practice-controller.ts
-├── review-controller.ts
 ├── bookmark-controller.ts
+├── clerk-webhook-controller.ts
+├── practice-controller.ts
+├── question-controller.ts
+├── question-view-controller.ts
+├── review-controller.ts
 ├── stats-controller.ts
 ├── stripe-webhook-controller.ts
+├── tag-controller.ts
 └── index.ts
 ```
 
@@ -67,9 +70,9 @@ This is the **only** place where concrete implementations are wired to applicati
 **Factory surface (minimum, grows by slice):**
 
 - SLICE-1: `createBillingControllerDeps()`
-- PAYWALL: `createStripeWebhookDeps()`
-- SLICE-2: `createQuestionControllerDeps()`, `createBookmarkControllerDeps()`
-- SLICE-3: `createPracticeControllerDeps()`
+- PAYWALL: `createStripeWebhookDeps()`, `createClerkWebhookDeps()`
+- SLICE-2: `createQuestionControllerDeps()`, `createBookmarkControllerDeps()`, `createQuestionViewControllerDeps()`
+- SLICE-3: `createPracticeControllerDeps()`, `createTagControllerDeps()`
 - SLICE-4: `createReviewControllerDeps()`, `createBookmarkControllerDeps()`
 - SLICE-5: `createStatsControllerDeps()`
 
@@ -194,6 +197,44 @@ const rawBody = await request.text();
 - Claim/lock event for idempotency (`StripeEventRepository`)
 - Upsert subscription state (`SubscriptionRepository`) and stripe customer mapping (`StripeCustomerRepository`)
 - Mark events processed/failed with useful error context
+
+---
+
+## Clerk Webhook Controller (Route Handler)
+
+**File:** `src/adapters/controllers/clerk-webhook-controller.ts`
+
+Similar to Stripe webhooks, Clerk webhooks live in the controller layer:
+
+- Verify request authenticity (Svix signature verification)
+- Handle `user.created`, `user.updated`, `user.deleted` events
+- Sync user data to `UserRepository`
+
+**Invocation:**
+
+- `app/api/webhooks/clerk/route.ts` calls `processClerkWebhook(...)`
+- Uses `CLERK_WEBHOOK_SIGNING_SECRET` for signature verification
+
+---
+
+## Tag Controller
+
+**File:** `src/adapters/controllers/tag-controller.ts`
+
+Provides tag listing for practice session filters:
+
+- `getTags()`: Returns all tags for filtering practice sessions by topic/domain/substance
+
+---
+
+## Question View Controller
+
+**File:** `src/adapters/controllers/question-view-controller.ts`
+
+Provides direct question access by slug:
+
+- `getQuestionBySlug(slug)`: Returns a question for direct viewing (used by `/app/questions/[slug]` page)
+- Enforces entitlement check before returning question data
 
 ---
 

@@ -1,32 +1,53 @@
 'use server';
 
 import { z } from 'zod';
+import {
+  createDepsResolver,
+  type LoadContainerFn,
+  loadAppContainer,
+} from '@/lib/controller-helpers';
+import {
+  type ActionResult,
+  handleError,
+  ok,
+} from '@/src/adapters/controllers/action-result';
+import {
+  type CheckEntitlementUseCase,
+  requireEntitledUserId,
+} from '@/src/adapters/controllers/require-entitled-user-id';
+import type { Logger } from '@/src/adapters/shared/logger';
 import type { AuthGateway } from '@/src/application/ports/gateways';
 import type {
   AttemptRepository,
   QuestionRepository,
 } from '@/src/application/ports/repositories';
-import type {
-  CheckEntitlementInput,
-  CheckEntitlementOutput,
-} from '@/src/application/use-cases/check-entitlement';
-import {
-  computeAccuracy,
-  computeStreak,
-  filterAttemptsInWindow,
-} from '@/src/domain/services';
-import type { ActionResult } from './action-result';
-import { err, handleError, ok } from './action-result';
+import { computeAccuracy, computeStreak } from '@/src/domain/services';
 
 const GetUserStatsInputSchema = z.object({}).strict();
 
-const STATS_WINDOW_DAYS = 7;
-const STREAK_WINDOW_DAYS = 60;
-const RECENT_ACTIVITY_LIMIT = 20;
+const DAY_MS = 86_400_000;
 
-type CheckEntitlementUseCase = {
-  execute: (input: CheckEntitlementInput) => Promise<CheckEntitlementOutput>;
-};
+/**
+ * Dashboard "last 7 days" accuracy window.
+ *
+ * SSOT: docs/specs/spec-015-dashboard.md ("Last 7 days accuracy").
+ */
+const STATS_WINDOW_DAYS = 7;
+
+/**
+ * Query window for streak computation.
+ *
+ * Note: This bounds the maximum streak we can compute to `STREAK_WINDOW_DAYS`
+ * for performance/memory safety. Increase if/when we want longer streaks.
+ */
+const STREAK_WINDOW_DAYS = 60;
+
+/**
+ * Max rows shown in the "Recent activity" list on the dashboard.
+ *
+ * This is a UX choice to keep the page scannable without scrolling.
+ */
+const RECENT_ACTIVITY_LIMIT = 20;
 
 export type UserStatsOutput = {
   totalAnswered: number;
@@ -35,6 +56,7 @@ export type UserStatsOutput = {
   accuracyLast7Days: number; // 0..1
   currentStreakDays: number; // consecutive UTC days with >=1 attempt, ending today
   recentActivity: Array<{
+    attemptId: string;
     answeredAt: string; // ISO
     questionId: string;
     slug: string;
@@ -48,79 +70,57 @@ export type StatsControllerDeps = {
   attemptRepository: AttemptRepository;
   questionRepository: QuestionRepository;
   now: () => Date;
+  logger?: Logger;
 };
 
-async function getDeps(
-  deps?: StatsControllerDeps,
-): Promise<StatsControllerDeps> {
-  if (deps) return deps;
+type StatsControllerContainer = {
+  createStatsControllerDeps: () => StatsControllerDeps;
+};
 
-  const { createContainer } = await import('@/lib/container');
-  return createContainer().createStatsControllerDeps();
-}
-
-async function requireEntitledUserId(
-  deps: StatsControllerDeps,
-): Promise<string | ActionResult<never>> {
-  const user = await deps.authGateway.requireUser();
-  const entitlement = await deps.checkEntitlementUseCase.execute({
-    userId: user.id,
-  });
-
-  if (!entitlement.isEntitled) {
-    return err('UNSUBSCRIBED', 'Subscription required');
-  }
-
-  return user.id;
-}
+const getDeps = createDepsResolver<
+  StatsControllerDeps,
+  StatsControllerContainer
+>((container) => container.createStatsControllerDeps(), loadAppContainer);
 
 export async function getUserStats(
   input: unknown,
   deps?: StatsControllerDeps,
+  options?: { loadContainer?: LoadContainerFn<StatsControllerContainer> },
 ): Promise<ActionResult<UserStatsOutput>> {
   const parsed = GetUserStatsInputSchema.safeParse(input);
   if (!parsed.success) return handleError(parsed.error);
 
   try {
-    const d = await getDeps(deps);
+    const d = await getDeps(deps, options);
     const userIdOrError = await requireEntitledUserId(d);
     if (typeof userIdOrError !== 'string') return userIdOrError;
     const userId = userIdOrError;
 
-    const attempts = await d.attemptRepository.findByUserId(userId);
-    const totalAnswered = attempts.length;
-    const correctOverall = attempts.filter((a) => a.isCorrect).length;
-    const accuracyOverall = computeAccuracy(totalAnswered, correctOverall);
-
     const now = d.now();
-    const attemptsLast7Days = filterAttemptsInWindow(
-      attempts,
-      STATS_WINDOW_DAYS,
-      now,
-    );
-    const answeredLast7Days = attemptsLast7Days.length;
-    const correctLast7Days = attemptsLast7Days.filter(
-      (a) => a.isCorrect,
-    ).length;
+    const since7Days = new Date(now.getTime() - STATS_WINDOW_DAYS * DAY_MS);
+    const since60Days = new Date(now.getTime() - STREAK_WINDOW_DAYS * DAY_MS);
+    const [
+      totalAnswered,
+      correctOverall,
+      answeredLast7Days,
+      correctLast7Days,
+      attemptsLast60Days,
+      recentAttempts,
+    ] = await Promise.all([
+      d.attemptRepository.countByUserId(userId),
+      d.attemptRepository.countCorrectByUserId(userId),
+      d.attemptRepository.countByUserIdSince(userId, since7Days),
+      d.attemptRepository.countCorrectByUserIdSince(userId, since7Days),
+      d.attemptRepository.listAnsweredAtByUserIdSince(userId, since60Days),
+      d.attemptRepository.listRecentByUserId(userId, RECENT_ACTIVITY_LIMIT),
+    ]);
+
+    const accuracyOverall = computeAccuracy(totalAnswered, correctOverall);
     const accuracyLast7Days = computeAccuracy(
       answeredLast7Days,
       correctLast7Days,
     );
-
-    const attemptsLast60Days = filterAttemptsInWindow(
-      attempts,
-      STREAK_WINDOW_DAYS,
-      now,
-    );
-    const currentStreakDays = computeStreak(
-      attemptsLast60Days.map((a) => a.answeredAt),
-      now,
-    );
-
-    const sortedAttempts = attempts
-      .slice()
-      .sort((a, b) => b.answeredAt.getTime() - a.answeredAt.getTime());
-    const recentAttempts = sortedAttempts.slice(0, RECENT_ACTIVITY_LIMIT);
+    const currentStreakDays = computeStreak(attemptsLast60Days, now);
 
     const uniqueQuestionIds: string[] = [];
     const seen = new Set<string>();
@@ -137,9 +137,18 @@ export async function getUserStats(
     const recentActivity: UserStatsOutput['recentActivity'] = [];
     for (const attempt of recentAttempts) {
       const slug = slugByQuestionId.get(attempt.questionId);
-      if (!slug) continue;
+      if (!slug) {
+        // Graceful degradation: questions can be unpublished/deleted while attempts persist.
+        // Skip orphans to keep the dashboard usable and log for later cleanup.
+        d.logger?.warn(
+          { questionId: attempt.questionId },
+          'Recent activity references missing question',
+        );
+        continue;
+      }
 
       recentActivity.push({
+        attemptId: attempt.id,
         answeredAt: attempt.answeredAt.toISOString(),
         questionId: attempt.questionId,
         slug,

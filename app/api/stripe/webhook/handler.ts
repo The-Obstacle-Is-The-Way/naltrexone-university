@@ -1,9 +1,12 @@
 import { NextResponse } from 'next/server';
+import { getClientIp } from '@/lib/request-ip';
 import type {
   StripeWebhookDeps,
   StripeWebhookInput,
 } from '@/src/adapters/controllers/stripe-webhook-controller';
+import { STRIPE_WEBHOOK_RATE_LIMIT } from '@/src/adapters/shared/rate-limits';
 import { isApplicationError } from '@/src/application/errors';
+import type { RateLimiter } from '@/src/application/ports/gateways';
 
 type StripeWebhookRouteLogger = {
   error: (context: unknown, message: string) => void;
@@ -12,6 +15,7 @@ type StripeWebhookRouteLogger = {
 export type StripeWebhookRouteContainer = {
   logger: StripeWebhookRouteLogger;
   createStripeWebhookDeps: () => StripeWebhookDeps;
+  createRateLimiter: () => RateLimiter;
 };
 
 export function createWebhookHandler(
@@ -30,8 +34,38 @@ export function createWebhookHandler(
       );
     }
 
-    const rawBody = await req.text();
     const container = createContainer();
+
+    try {
+      const ip = getClientIp(req.headers);
+
+      const rate = await container.createRateLimiter().limit({
+        key: `webhook:stripe:${ip}`,
+        ...STRIPE_WEBHOOK_RATE_LIMIT,
+      });
+
+      if (!rate.success) {
+        return NextResponse.json(
+          { error: 'Too many requests' },
+          {
+            status: 429,
+            headers: {
+              'Retry-After': String(rate.retryAfterSeconds),
+              'X-RateLimit-Limit': String(rate.limit),
+              'X-RateLimit-Remaining': String(rate.remaining),
+            },
+          },
+        );
+      }
+    } catch (error) {
+      container.logger.error({ error }, 'Stripe webhook rate limiter failed');
+      return NextResponse.json(
+        { error: 'Rate limiter unavailable' },
+        { status: 503 },
+      );
+    }
+
+    const rawBody = await req.text();
 
     try {
       await processStripeWebhook(container.createStripeWebhookDeps(), {
@@ -43,8 +77,8 @@ export function createWebhookHandler(
     } catch (error) {
       if (
         isApplicationError(error) &&
-        error.code === 'STRIPE_ERROR' &&
-        error.message === 'Invalid webhook signature'
+        (error.code === 'INVALID_WEBHOOK_SIGNATURE' ||
+          error.code === 'INVALID_WEBHOOK_PAYLOAD')
       ) {
         return NextResponse.json({ error: error.message }, { status: 400 });
       }

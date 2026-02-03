@@ -23,6 +23,13 @@ export type CheckoutSessionInput = {
   plan: SubscriptionPlan; // domain plan (monthly/annual)
   successUrl: string;
   cancelUrl: string;
+  /**
+   * Optional idempotency key provided by the client for this logical operation.
+   *
+   * Adapters may forward this to external providers (e.g., Stripe idempotency keys)
+   * to make retries safe and avoid duplicate external side effects.
+   */
+  idempotencyKey?: string;
 };
 
 export type CheckoutSessionOutput = { url: string };
@@ -30,6 +37,7 @@ export type CheckoutSessionOutput = { url: string };
 export type PortalSessionInput = {
   stripeCustomerId: string; // opaque external id
   returnUrl: string;
+  idempotencyKey?: string;
 };
 
 export type PortalSessionOutput = { url: string };
@@ -38,6 +46,7 @@ export type CreateCustomerInput = {
   userId: string; // internal UUID
   clerkUserId: string; // opaque external id
   email: string;
+  idempotencyKey?: string;
 };
 
 export type CreateCustomerOutput = { stripeCustomerId: string };
@@ -77,4 +86,21 @@ export interface PaymentGateway {
     rawBody: string,
     signature: string,
   ): Promise<WebhookEventResult>;
+}
+
+export type RateLimitInput = {
+  key: string;
+  limit: number;
+  windowMs: number;
+};
+
+export type RateLimitResult = {
+  success: boolean;
+  limit: number;
+  remaining: number;
+  retryAfterSeconds: number;
+};
+
+export interface RateLimiter {
+  limit(input: RateLimitInput): Promise<RateLimitResult>;
 }

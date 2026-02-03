@@ -1,11 +1,24 @@
 'use server';
 
 import { z } from 'zod';
-import type { AuthGateway } from '@/src/application/ports/gateways';
+import {
+  createDepsResolver,
+  type LoadContainerFn,
+  loadAppContainer,
+} from '@/lib/controller-helpers';
+import { SUBMIT_ANSWER_RATE_LIMIT } from '@/src/adapters/shared/rate-limits';
+import {
+  MAX_PRACTICE_SESSION_DIFFICULTY_FILTERS,
+  MAX_PRACTICE_SESSION_TAG_FILTERS,
+  MAX_TIME_SPENT_SECONDS,
+} from '@/src/adapters/shared/validation-limits';
+import { withIdempotency } from '@/src/adapters/shared/with-idempotency';
+import { ApplicationError } from '@/src/application/errors';
 import type {
-  CheckEntitlementInput,
-  CheckEntitlementOutput,
-} from '@/src/application/use-cases/check-entitlement';
+  AuthGateway,
+  RateLimiter,
+} from '@/src/application/ports/gateways';
+import type { IdempotencyKeyRepository } from '@/src/application/ports/repositories';
 import type {
   GetNextQuestionInput,
   GetNextQuestionOutput,
@@ -15,7 +28,9 @@ import type {
   SubmitAnswerOutput,
 } from '@/src/application/use-cases/submit-answer';
 import type { ActionResult } from './action-result';
-import { err, handleError, ok } from './action-result';
+import { handleError, ok } from './action-result';
+import type { CheckEntitlementUseCase } from './require-entitled-user-id';
+import { requireEntitledUserId } from './require-entitled-user-id';
 
 const zUuid = z.string().uuid();
 
@@ -23,8 +38,14 @@ const zDifficulty = z.enum(['easy', 'medium', 'hard']);
 
 const QuestionFiltersSchema = z
   .object({
-    tagSlugs: z.array(z.string().min(1)).max(50).default([]),
-    difficulties: z.array(zDifficulty).max(3).default([]),
+    tagSlugs: z
+      .array(z.string().min(1))
+      .max(MAX_PRACTICE_SESSION_TAG_FILTERS)
+      .default([]),
+    difficulties: z
+      .array(zDifficulty)
+      .max(MAX_PRACTICE_SESSION_DIFFICULTY_FILTERS)
+      .default([]),
   })
   .strict();
 
@@ -48,12 +69,15 @@ const SubmitAnswerInputSchema = z
     questionId: zUuid,
     choiceId: zUuid,
     sessionId: zUuid.optional(),
+    idempotencyKey: zUuid.optional(),
+    timeSpentSeconds: z
+      .number()
+      .int()
+      .min(0)
+      .max(MAX_TIME_SPENT_SECONDS)
+      .optional(),
   })
   .strict();
-
-type CheckEntitlementUseCase = {
-  execute: (input: CheckEntitlementInput) => Promise<CheckEntitlementOutput>;
-};
 
 type GetNextQuestionUseCase = {
   execute: (input: GetNextQuestionInput) => Promise<GetNextQuestionOutput>;
@@ -65,44 +89,32 @@ type SubmitAnswerUseCase = {
 
 export type QuestionControllerDeps = {
   authGateway: AuthGateway;
+  rateLimiter: RateLimiter;
+  idempotencyKeyRepository: IdempotencyKeyRepository;
   checkEntitlementUseCase: CheckEntitlementUseCase;
   getNextQuestionUseCase: GetNextQuestionUseCase;
   submitAnswerUseCase: SubmitAnswerUseCase;
 };
 
-async function getDeps(
-  deps?: QuestionControllerDeps,
-): Promise<QuestionControllerDeps> {
-  if (deps) return deps;
+type QuestionControllerContainer = {
+  createQuestionControllerDeps: () => QuestionControllerDeps;
+};
 
-  const { createContainer } = await import('@/lib/container');
-  return createContainer().createQuestionControllerDeps();
-}
-
-async function requireEntitledUserId(
-  deps: QuestionControllerDeps,
-): Promise<string | ActionResult<never>> {
-  const user = await deps.authGateway.requireUser();
-  const entitlement = await deps.checkEntitlementUseCase.execute({
-    userId: user.id,
-  });
-
-  if (!entitlement.isEntitled) {
-    return err('UNSUBSCRIBED', 'Subscription required');
-  }
-
-  return user.id;
-}
+const getDeps = createDepsResolver<
+  QuestionControllerDeps,
+  QuestionControllerContainer
+>((container) => container.createQuestionControllerDeps(), loadAppContainer);
 
 export async function getNextQuestion(
   input: unknown,
   deps?: QuestionControllerDeps,
+  options?: { loadContainer?: LoadContainerFn<QuestionControllerContainer> },
 ): Promise<ActionResult<GetNextQuestionOutput>> {
   const parsed = GetNextQuestionInputSchema.safeParse(input);
   if (!parsed.success) return handleError(parsed.error);
 
   try {
-    const d = await getDeps(deps);
+    const d = await getDeps(deps, options);
     const userIdOrError = await requireEntitledUserId(d);
     if (typeof userIdOrError !== 'string') return userIdOrError;
     const userId = userIdOrError;
@@ -127,22 +139,56 @@ export async function getNextQuestion(
 export async function submitAnswer(
   input: unknown,
   deps?: QuestionControllerDeps,
+  options?: { loadContainer?: LoadContainerFn<QuestionControllerContainer> },
 ): Promise<ActionResult<SubmitAnswerOutput>> {
   const parsed = SubmitAnswerInputSchema.safeParse(input);
   if (!parsed.success) return handleError(parsed.error);
 
   try {
-    const d = await getDeps(deps);
+    const d = await getDeps(deps, options);
     const userIdOrError = await requireEntitledUserId(d);
     if (typeof userIdOrError !== 'string') return userIdOrError;
     const userId = userIdOrError;
 
-    const data = await d.submitAnswerUseCase.execute({
-      userId,
-      questionId: parsed.data.questionId,
-      choiceId: parsed.data.choiceId,
-      sessionId: parsed.data.sessionId,
-    });
+    const {
+      questionId,
+      choiceId,
+      sessionId,
+      idempotencyKey,
+      timeSpentSeconds,
+    } = parsed.data;
+
+    async function submitOnce(): Promise<SubmitAnswerOutput> {
+      const rate = await d.rateLimiter.limit({
+        key: `question:submitAnswer:${userId}`,
+        ...SUBMIT_ANSWER_RATE_LIMIT,
+      });
+      if (!rate.success) {
+        throw new ApplicationError(
+          'RATE_LIMITED',
+          `Too many submissions. Try again in ${rate.retryAfterSeconds}s.`,
+        );
+      }
+
+      return d.submitAnswerUseCase.execute({
+        userId,
+        questionId,
+        choiceId,
+        sessionId,
+        timeSpentSeconds,
+      });
+    }
+
+    const data = idempotencyKey
+      ? await withIdempotency({
+          repo: d.idempotencyKeyRepository,
+          userId,
+          action: 'question:submitAnswer',
+          key: idempotencyKey,
+          now: () => new Date(),
+          execute: submitOnce,
+        })
+      : await submitOnce();
 
     return ok(data);
   } catch (error) {

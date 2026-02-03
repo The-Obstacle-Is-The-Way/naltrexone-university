@@ -121,28 +121,28 @@ describe('GetStartedCta', () => {
   });
 
   it('loads dependencies from the container when deps are omitted', async () => {
-    vi.doMock('@/lib/container', () => ({
-      createContainer: () => ({
-        createAuthGateway: () => ({
-          getCurrentUser: async () => ({
-            id: 'user_1',
-            email: 'user@example.com',
-            createdAt: new Date('2026-02-01T00:00:00Z'),
-            updatedAt: new Date('2026-02-01T00:00:00Z'),
-          }),
-          requireUser: async () => {
-            throw new Error('not used');
-          },
-        }),
-        createCheckEntitlementUseCase: () => ({
-          execute: async () => ({ isEntitled: false }),
-        }),
-      }),
-    }));
-
     const { GetStartedCta } = await import('@/components/get-started-cta');
 
-    const element = await GetStartedCta({ deps: undefined });
+    const element = await GetStartedCta({
+      options: {
+        loadContainer: async () => ({
+          createAuthGateway: () => ({
+            getCurrentUser: async () => ({
+              id: 'user_1',
+              email: 'user@example.com',
+              createdAt: new Date('2026-02-01T00:00:00Z'),
+              updatedAt: new Date('2026-02-01T00:00:00Z'),
+            }),
+            requireUser: async () => {
+              throw new Error('not used');
+            },
+          }),
+          createCheckEntitlementUseCase: () => ({
+            execute: async () => ({ isEntitled: false }),
+          }),
+        }),
+      },
+    });
     const html = renderToStaticMarkup(element);
 
     expect(html).toContain('href="/pricing"');

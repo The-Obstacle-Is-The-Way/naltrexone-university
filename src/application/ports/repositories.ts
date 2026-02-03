@@ -1,3 +1,4 @@
+import type { ApplicationErrorCode } from '@/src/application/errors';
 import type {
   Attempt,
   Bookmark,
@@ -50,6 +51,11 @@ export type AttemptMostRecentAnsweredAt = {
   answeredAt: Date;
 };
 
+export type MissedQuestionAttempt = {
+  questionId: string;
+  answeredAt: Date;
+};
+
 export interface AttemptRepository {
   insert(input: AttemptInsertInput): Promise<Attempt>;
 
@@ -58,6 +64,36 @@ export interface AttemptRepository {
     sessionId: string,
     userId: string,
   ): Promise<readonly Attempt[]>;
+
+  countByUserId(userId: string): Promise<number>;
+  countCorrectByUserId(userId: string): Promise<number>;
+
+  countByUserIdSince(userId: string, since: Date): Promise<number>;
+  countCorrectByUserIdSince(userId: string, since: Date): Promise<number>;
+
+  listRecentByUserId(
+    userId: string,
+    limit: number,
+  ): Promise<readonly Attempt[]>;
+
+  /**
+   * Return answeredAt timestamps for attempts within a date range.
+   * Intended for streak computation; repository may return a subset of columns.
+   */
+  listAnsweredAtByUserIdSince(
+    userId: string,
+    since: Date,
+  ): Promise<readonly Date[]>;
+
+  /**
+   * Paginated missed question IDs based on the user's most recent attempt
+   * per question (only included when the most recent attempt is incorrect).
+   */
+  listMissedQuestionsByUserId(
+    userId: string,
+    limit: number,
+    offset: number,
+  ): Promise<readonly MissedQuestionAttempt[]>;
 
   /**
    * For each question id, return the most recent answeredAt (max) for this user.
@@ -159,6 +195,18 @@ export interface StripeEventRepository {
 
   markProcessed(eventId: string): Promise<void>;
   markFailed(eventId: string, error: string): Promise<void>;
+
+  /**
+   * Delete old, successfully-processed webhook events to keep the table bounded.
+   *
+   * Constraints:
+   * - Only deletes rows where `processedAt` is not null.
+   * - Deletes at most `limit` rows per call.
+   *
+   * Returns:
+   * - Number of rows deleted.
+   */
+  pruneProcessedBefore(cutoff: Date, limit: number): Promise<number>;
 }
 
 export interface UserRepository {
@@ -177,4 +225,69 @@ export interface UserRepository {
    * This handles race conditions with ON CONFLICT gracefully.
    */
   upsertByClerkId(clerkId: string, email: string): Promise<User>;
+
+  /**
+   * Delete a user by their external Clerk ID.
+   *
+   * Returns:
+   * - true when a user row was deleted
+   * - false when no user row existed
+   */
+  deleteByClerkId(clerkId: string): Promise<boolean>;
+}
+
+export type IdempotencyKeyError = {
+  code: ApplicationErrorCode;
+  message: string;
+};
+
+export type IdempotencyKeyRecord = {
+  resultJson: unknown | null;
+  error: IdempotencyKeyError | null;
+  expiresAt: Date;
+};
+
+export interface IdempotencyKeyRepository {
+  /**
+   * Attempt to claim an idempotency key for exclusive execution.
+   *
+   * Returns:
+   * - true when the key was inserted (caller should execute the operation)
+   * - false when the key already exists (caller should read and reuse result)
+   */
+  claim(input: {
+    userId: string;
+    action: string;
+    key: string;
+    expiresAt: Date;
+  }): Promise<boolean>;
+
+  /**
+   * Read an existing idempotency record.
+   *
+   * Returns null when:
+   * - no record exists, or
+   * - the record has expired
+   */
+  find(
+    userId: string,
+    action: string,
+    key: string,
+  ): Promise<IdempotencyKeyRecord | null>;
+
+  storeResult(input: {
+    userId: string;
+    action: string;
+    key: string;
+    resultJson: unknown;
+  }): Promise<void>;
+
+  storeError(input: {
+    userId: string;
+    action: string;
+    key: string;
+    error: IdempotencyKeyError;
+  }): Promise<void>;
+
+  pruneExpiredBefore(cutoff: Date, limit: number): Promise<number>;
 }

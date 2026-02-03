@@ -4,16 +4,20 @@ import type { BillingControllerDeps } from '@/src/adapters/controllers/billing-c
 import type { BookmarkControllerDeps } from '@/src/adapters/controllers/bookmark-controller';
 import type { PracticeControllerDeps } from '@/src/adapters/controllers/practice-controller';
 import type { QuestionControllerDeps } from '@/src/adapters/controllers/question-controller';
+import type { QuestionViewControllerDeps } from '@/src/adapters/controllers/question-view-controller';
 import type { ReviewControllerDeps } from '@/src/adapters/controllers/review-controller';
 import type { StatsControllerDeps } from '@/src/adapters/controllers/stats-controller';
 import type { StripeWebhookDeps } from '@/src/adapters/controllers/stripe-webhook-controller';
+import type { TagControllerDeps } from '@/src/adapters/controllers/tag-controller';
 import {
   ClerkAuthGateway,
+  DrizzleRateLimiter,
   StripePaymentGateway,
 } from '@/src/adapters/gateways';
 import {
   DrizzleAttemptRepository,
   DrizzleBookmarkRepository,
+  DrizzleIdempotencyKeyRepository,
   DrizzlePracticeSessionRepository,
   DrizzleQuestionRepository,
   DrizzleStripeCustomerRepository,
@@ -26,10 +30,12 @@ import type { DrizzleDb } from '@/src/adapters/shared/database-types';
 import type {
   AuthGateway,
   PaymentGateway,
+  RateLimiter,
 } from '@/src/application/ports/gateways';
 import type {
   AttemptRepository,
   BookmarkRepository,
+  IdempotencyKeyRepository,
   PracticeSessionRepository,
   QuestionRepository,
   StripeCustomerRepository,
@@ -59,6 +65,9 @@ export type ContainerPrimitives = {
 export type RepositoryFactories = {
   createAttemptRepository: (dbOverride?: DrizzleDb) => AttemptRepository;
   createBookmarkRepository: (dbOverride?: DrizzleDb) => BookmarkRepository;
+  createIdempotencyKeyRepository: (
+    dbOverride?: DrizzleDb,
+  ) => IdempotencyKeyRepository;
   createPracticeSessionRepository: (
     dbOverride?: DrizzleDb,
   ) => PracticeSessionRepository;
@@ -79,6 +88,7 @@ export type RepositoryFactories = {
 export type GatewayFactories = {
   createAuthGateway: () => AuthGateway;
   createPaymentGateway: () => PaymentGateway;
+  createRateLimiter: () => RateLimiter;
 };
 
 export type UseCaseFactories = {
@@ -90,11 +100,13 @@ export type UseCaseFactories = {
 export type ControllerFactories = {
   createStripeWebhookDeps: () => StripeWebhookDeps;
   createQuestionControllerDeps: () => QuestionControllerDeps;
+  createQuestionViewControllerDeps: () => QuestionViewControllerDeps;
   createBillingControllerDeps: () => BillingControllerDeps;
   createBookmarkControllerDeps: () => BookmarkControllerDeps;
   createPracticeControllerDeps: () => PracticeControllerDeps;
   createReviewControllerDeps: () => ReviewControllerDeps;
   createStatsControllerDeps: () => StatsControllerDeps;
+  createTagControllerDeps: () => TagControllerDeps;
 };
 
 export type ContainerOverrides = {
@@ -137,6 +149,8 @@ export function createContainer(overrides: ContainerOverrides = {}) {
       new DrizzleAttemptRepository(dbOverride),
     createBookmarkRepository: (dbOverride = primitives.db) =>
       new DrizzleBookmarkRepository(dbOverride),
+    createIdempotencyKeyRepository: (dbOverride = primitives.db) =>
+      new DrizzleIdempotencyKeyRepository(dbOverride, primitives.now),
     createPracticeSessionRepository: (dbOverride = primitives.db) =>
       new DrizzlePracticeSessionRepository(dbOverride, primitives.now),
     createQuestionRepository: (dbOverride = primitives.db) =>
@@ -173,7 +187,10 @@ export function createContainer(overrides: ContainerOverrides = {}) {
         stripe: primitives.stripe,
         webhookSecret: primitives.env.STRIPE_WEBHOOK_SECRET,
         priceIds: stripePriceIds,
+        logger: primitives.logger,
       }),
+    createRateLimiter: () =>
+      new DrizzleRateLimiter(primitives.db, primitives.now),
   };
 
   const gateways = {
@@ -220,25 +237,39 @@ export function createContainer(overrides: ContainerOverrides = {}) {
     }),
     createQuestionControllerDeps: () => ({
       authGateway: gateways.createAuthGateway(),
+      rateLimiter: gateways.createRateLimiter(),
+      idempotencyKeyRepository: repositories.createIdempotencyKeyRepository(),
       checkEntitlementUseCase: useCases.createCheckEntitlementUseCase(),
       getNextQuestionUseCase: useCases.createGetNextQuestionUseCase(),
       submitAnswerUseCase: useCases.createSubmitAnswerUseCase(),
     }),
+    createQuestionViewControllerDeps: () => ({
+      authGateway: gateways.createAuthGateway(),
+      checkEntitlementUseCase: useCases.createCheckEntitlementUseCase(),
+      questionRepository: repositories.createQuestionRepository(),
+    }),
     createBillingControllerDeps: () => ({
       authGateway: gateways.createAuthGateway(),
       stripeCustomerRepository: repositories.createStripeCustomerRepository(),
+      subscriptionRepository: repositories.createSubscriptionRepository(),
       paymentGateway: gateways.createPaymentGateway(),
+      idempotencyKeyRepository: repositories.createIdempotencyKeyRepository(),
+      rateLimiter: gateways.createRateLimiter(),
       getClerkUserId: async () => (await currentUser())?.id ?? null,
       appUrl: primitives.env.NEXT_PUBLIC_APP_URL,
+      now: primitives.now,
     }),
     createBookmarkControllerDeps: () => ({
       authGateway: gateways.createAuthGateway(),
       checkEntitlementUseCase: useCases.createCheckEntitlementUseCase(),
       bookmarkRepository: repositories.createBookmarkRepository(),
       questionRepository: repositories.createQuestionRepository(),
+      logger: primitives.logger,
     }),
     createPracticeControllerDeps: () => ({
       authGateway: gateways.createAuthGateway(),
+      rateLimiter: gateways.createRateLimiter(),
+      idempotencyKeyRepository: repositories.createIdempotencyKeyRepository(),
       checkEntitlementUseCase: useCases.createCheckEntitlementUseCase(),
       questionRepository: repositories.createQuestionRepository(),
       practiceSessionRepository: repositories.createPracticeSessionRepository(),
@@ -250,6 +281,7 @@ export function createContainer(overrides: ContainerOverrides = {}) {
       checkEntitlementUseCase: useCases.createCheckEntitlementUseCase(),
       attemptRepository: repositories.createAttemptRepository(),
       questionRepository: repositories.createQuestionRepository(),
+      logger: primitives.logger,
     }),
     createStatsControllerDeps: () => ({
       authGateway: gateways.createAuthGateway(),
@@ -257,6 +289,13 @@ export function createContainer(overrides: ContainerOverrides = {}) {
       attemptRepository: repositories.createAttemptRepository(),
       questionRepository: repositories.createQuestionRepository(),
       now: primitives.now,
+      logger: primitives.logger,
+    }),
+    createTagControllerDeps: () => ({
+      authGateway: gateways.createAuthGateway(),
+      checkEntitlementUseCase: useCases.createCheckEntitlementUseCase(),
+      tagRepository: repositories.createTagRepository(),
+      logger: primitives.logger,
     }),
   };
 

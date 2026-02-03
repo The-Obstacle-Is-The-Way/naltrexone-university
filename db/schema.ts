@@ -172,6 +172,43 @@ export const stripeEvents = pgTable(
   }),
 );
 
+// rate_limits (composite PK: key + window_start)
+export const rateLimits = pgTable(
+  'rate_limits',
+  {
+    key: varchar('key', { length: 255 }).notNull(),
+    windowStart: timestamp('window_start', { withTimezone: true }).notNull(),
+    count: integer('count').notNull(),
+  },
+  (t) => ({
+    pk: primaryKey({ columns: [t.key, t.windowStart] }),
+    windowStartIdx: index('rate_limits_window_start_idx').on(t.windowStart),
+  }),
+);
+
+// idempotency_keys (composite PK: user_id + action + key)
+export const idempotencyKeys = pgTable(
+  'idempotency_keys',
+  {
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    action: varchar('action', { length: 255 }).notNull(),
+    key: varchar('key', { length: 255 }).notNull(),
+    resultJson: jsonb('result_json').$type<unknown>(),
+    errorCode: varchar('error_code', { length: 255 }),
+    errorMessage: text('error_message'),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+  },
+  (t) => ({
+    pk: primaryKey({ columns: [t.userId, t.action, t.key] }),
+    expiresAtIdx: index('idempotency_keys_expires_at_idx').on(t.expiresAt),
+  }),
+);
+
 // questions
 export const questions = pgTable(
   'questions',

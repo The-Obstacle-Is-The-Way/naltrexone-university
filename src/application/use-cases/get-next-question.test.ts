@@ -65,6 +65,61 @@ describe('GetNextQuestionUseCase', () => {
     expect(result?.choices[0]).not.toHaveProperty('isCorrect');
   });
 
+  it('computes session progress index from distinct answered questions', async () => {
+    const userId = 'user-1';
+    const sessionId = 'session-1';
+
+    const q1 = createQuestion({
+      id: 'q1',
+      status: 'published',
+      choices: [createChoice({ id: 'c1', questionId: 'q1', label: 'A' })],
+    });
+    const q2 = createQuestion({
+      id: 'q2',
+      status: 'published',
+      choices: [createChoice({ id: 'c2', questionId: 'q2', label: 'A' })],
+    });
+    const q3 = createQuestion({
+      id: 'q3',
+      status: 'published',
+      choices: [createChoice({ id: 'c3', questionId: 'q3', label: 'A' })],
+    });
+
+    const session = createPracticeSession({
+      id: sessionId,
+      userId,
+      mode: 'tutor',
+      questionIds: ['q1', 'q2', 'q3'],
+    });
+
+    const questions = new FakeQuestionRepository([q1, q2, q3]);
+    const attempts = new FakeAttemptRepository([
+      {
+        id: 'attempt-1',
+        userId,
+        questionId: 'q2',
+        practiceSessionId: sessionId,
+        selectedChoiceId: 'c2',
+        isCorrect: false,
+        timeSpentSeconds: 0,
+        answeredAt: new Date('2026-01-31T00:00:00Z'),
+      },
+    ]);
+    const sessions = new FakePracticeSessionRepository([session]);
+
+    const useCase = new GetNextQuestionUseCase(questions, attempts, sessions);
+
+    const result = await useCase.execute({ userId, sessionId });
+
+    expect(result?.questionId).toBe('q1');
+    expect(result?.session).toEqual({
+      sessionId,
+      mode: 'tutor',
+      index: 1,
+      total: 3,
+    });
+  });
+
   it('throws NOT_FOUND when next session question is not published', async () => {
     const userId = 'user-1';
     const sessionId = 'session-1';
@@ -212,16 +267,16 @@ describe('GetNextQuestionUseCase', () => {
     expect(result?.session).toBeNull();
   });
 
-  it('returns choices sorted by sortOrder', async () => {
-    const userId = 'user-1';
-
+  it('shuffles choices based on userId and questionId', async () => {
     const questionId = 'q1';
     const question = createQuestion({
       id: questionId,
       status: 'published',
       choices: [
-        createChoice({ id: 'c2', questionId, label: 'B', sortOrder: 2 }),
         createChoice({ id: 'c1', questionId, label: 'A', sortOrder: 1 }),
+        createChoice({ id: 'c2', questionId, label: 'B', sortOrder: 2 }),
+        createChoice({ id: 'c3', questionId, label: 'C', sortOrder: 3 }),
+        createChoice({ id: 'c4', questionId, label: 'D', sortOrder: 4 }),
       ],
     });
 
@@ -232,11 +287,97 @@ describe('GetNextQuestionUseCase', () => {
     );
 
     const result = await useCase.execute({
-      userId,
+      userId: 'user-1',
       filters: { tagSlugs: [], difficulties: [] },
     });
 
-    expect(result?.choices.map((c) => c.id)).toEqual(['c1', 'c2']);
+    expect(result?.choices).toHaveLength(4);
+    expect(new Set(result?.choices.map((c) => c.id))).toEqual(
+      new Set(['c1', 'c2', 'c3', 'c4']),
+    );
+  });
+
+  it('same user+question always gets same shuffle order', async () => {
+    const questionId = 'q1';
+    const question = createQuestion({
+      id: questionId,
+      status: 'published',
+      choices: [
+        createChoice({ id: 'c1', questionId, label: 'A', sortOrder: 1 }),
+        createChoice({ id: 'c2', questionId, label: 'B', sortOrder: 2 }),
+        createChoice({ id: 'c3', questionId, label: 'C', sortOrder: 3 }),
+        createChoice({ id: 'c4', questionId, label: 'D', sortOrder: 4 }),
+      ],
+    });
+
+    const useCase = new GetNextQuestionUseCase(
+      new FakeQuestionRepository([question]),
+      new FakeAttemptRepository([]),
+      new FakePracticeSessionRepository([]),
+    );
+
+    const result1 = await useCase.execute({
+      userId: 'user-1',
+      filters: { tagSlugs: [], difficulties: [] },
+    });
+
+    const result2 = await useCase.execute({
+      userId: 'user-1',
+      filters: { tagSlugs: [], difficulties: [] },
+    });
+
+    expect(result1?.choices.map((c) => c.id)).toEqual(
+      result2?.choices.map((c) => c.id),
+    );
+  });
+
+  it('produces the same shuffle order regardless of initial choice ordering', async () => {
+    const questionId = 'q1';
+
+    const choices = [
+      createChoice({ id: 'c1', questionId, label: 'A', sortOrder: 1 }),
+      createChoice({ id: 'c2', questionId, label: 'B', sortOrder: 1 }),
+      createChoice({ id: 'c3', questionId, label: 'C', sortOrder: 1 }),
+      createChoice({ id: 'c4', questionId, label: 'D', sortOrder: 1 }),
+    ];
+
+    const baseQuestion = createQuestion({
+      id: questionId,
+      status: 'published',
+      choices,
+    });
+
+    const questionOrdered = baseQuestion;
+    const questionUnordered = {
+      ...baseQuestion,
+      choices: [choices[2], choices[0], choices[3], choices[1]],
+    };
+
+    const useCase1 = new GetNextQuestionUseCase(
+      new FakeQuestionRepository([questionOrdered]),
+      new FakeAttemptRepository([]),
+      new FakePracticeSessionRepository([]),
+    );
+
+    const useCase2 = new GetNextQuestionUseCase(
+      new FakeQuestionRepository([questionUnordered]),
+      new FakeAttemptRepository([]),
+      new FakePracticeSessionRepository([]),
+    );
+
+    const result1 = await useCase1.execute({
+      userId: 'user-1',
+      filters: { tagSlugs: [], difficulties: [] },
+    });
+
+    const result2 = await useCase2.execute({
+      userId: 'user-1',
+      filters: { tagSlugs: [], difficulties: [] },
+    });
+
+    expect(result1?.choices.map((c) => c.id)).toEqual(
+      result2?.choices.map((c) => c.id),
+    );
   });
 
   it('chooses the question with the oldest last attempt if all attempted', async () => {

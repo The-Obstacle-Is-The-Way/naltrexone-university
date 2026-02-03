@@ -1,5 +1,11 @@
 import type { Question } from '@/src/domain/entities';
-import { getNextQuestionId, selectNextQuestionId } from '@/src/domain/services';
+import {
+  computeSessionProgress,
+  createQuestionSeed,
+  getNextQuestionId,
+  selectNextQuestionId,
+  shuffleWithSeed,
+} from '@/src/domain/services';
 import type {
   PracticeMode,
   QuestionDifficulty,
@@ -57,12 +63,25 @@ export class GetNextQuestionUseCase {
     return this.executeForFilters(input.userId, input.filters);
   }
 
-  private mapChoicesForOutput(question: Question): PublicChoice[] {
-    return question.choices.map((c) => ({
+  private mapChoicesForOutput(
+    question: Question,
+    userId: string,
+  ): PublicChoice[] {
+    // Deterministic shuffle: the same user sees a stable choice order for a given question.
+    // Stable pre-sort makes the shuffle reproducible regardless of DB row ordering.
+    const seed = createQuestionSeed(userId, question.id);
+    const stableInput = question.choices.slice().sort((a, b) => {
+      const bySortOrder = a.sortOrder - b.sortOrder;
+      if (bySortOrder !== 0) return bySortOrder;
+      return a.id.localeCompare(b.id);
+    });
+    const shuffledChoices = shuffleWithSeed(stableInput, seed);
+
+    return shuffledChoices.map((c, index) => ({
       id: c.id,
       label: c.label,
       textMd: c.textMd,
-      sortOrder: c.sortOrder,
+      sortOrder: index + 1,
     }));
   }
 
@@ -81,30 +100,28 @@ export class GetNextQuestionUseCase {
     const nextQuestionId = getNextQuestionId(session, answeredQuestionIds);
     if (!nextQuestionId) return null;
 
-    const index = session.questionIds.indexOf(nextQuestionId);
-    if (index === -1) {
-      throw new ApplicationError(
-        'INTERNAL_ERROR',
-        `Session ${session.id} is missing next question id ${nextQuestionId}`,
-      );
-    }
-
     const question = await this.questions.findPublishedById(nextQuestionId);
     if (!question) {
       throw new ApplicationError('NOT_FOUND', 'Question not found');
     }
+
+    const sessionQuestionIds = new Set(session.questionIds);
+    const answeredCount = new Set(
+      answeredQuestionIds.filter((id) => sessionQuestionIds.has(id)),
+    ).size;
+    const progress = computeSessionProgress(session, answeredCount);
 
     return {
       questionId: question.id,
       slug: question.slug,
       stemMd: question.stemMd,
       difficulty: question.difficulty,
-      choices: this.mapChoicesForOutput(question),
+      choices: this.mapChoicesForOutput(question, userId),
       session: {
         sessionId: session.id,
         mode: session.mode,
-        index,
-        total: session.questionIds.length,
+        index: progress.current,
+        total: progress.total,
       },
     };
   }
@@ -139,7 +156,7 @@ export class GetNextQuestionUseCase {
       slug: question.slug,
       stemMd: question.stemMd,
       difficulty: question.difficulty,
-      choices: this.mapChoicesForOutput(question),
+      choices: this.mapChoicesForOutput(question, userId),
       session: null,
     };
   }

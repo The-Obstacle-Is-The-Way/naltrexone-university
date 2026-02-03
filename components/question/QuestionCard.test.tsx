@@ -21,5 +21,7 @@ describe('QuestionCard', () => {
     expect(html).toContain('Stem');
     expect(html).toContain('Choice A');
     expect(html).toContain('Choice B');
+    expect(html).toContain('<fieldset');
+    expect(html).toContain('Answer choices');
   });
 });

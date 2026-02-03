@@ -1,43 +1,76 @@
-import { describe, expect, it, vi } from 'vitest';
-import { ApplicationError } from '@/src/application/errors';
-import type { AuthGateway } from '@/src/application/ports/gateways';
+import { describe, expect, it } from 'vitest';
+import type { Logger } from '@/src/adapters/shared/logger';
 import type {
   BookmarkRepository,
   QuestionRepository,
 } from '@/src/application/ports/repositories';
-import type { Bookmark, Question, User } from '@/src/domain/entities';
+import {
+  FakeAuthGateway,
+  FakeBookmarkRepository,
+  FakeQuestionRepository,
+  FakeSubscriptionRepository,
+} from '@/src/application/test-helpers/fakes';
+import { CheckEntitlementUseCase } from '@/src/application/use-cases/check-entitlement';
+import type { Bookmark, User } from '@/src/domain/entities';
+import {
+  createQuestion,
+  createSubscription,
+  createUser,
+} from '@/src/domain/test-helpers';
 import { getBookmarks, toggleBookmark } from './bookmark-controller';
 
-type UserLike = User;
+class FakeLogger implements Logger {
+  readonly warnCalls: Array<{ context: Record<string, unknown>; msg: string }> =
+    [];
 
-function createUser(): UserLike {
+  warn(context: Record<string, unknown>, msg: string): void {
+    this.warnCalls.push({ context, msg });
+  }
+}
+
+function createThrowingBookmarkRepository(
+  errorMessage = 'BookmarkRepository should not be called',
+): BookmarkRepository {
   return {
-    id: 'user_1',
-    email: 'user@example.com',
-    createdAt: new Date('2026-02-01T00:00:00Z'),
-    updatedAt: new Date('2026-02-01T00:00:00Z'),
+    exists: async () => {
+      throw new Error(errorMessage);
+    },
+    add: async () => {
+      throw new Error(errorMessage);
+    },
+    remove: async () => {
+      throw new Error(errorMessage);
+    },
+    listByUserId: async () => {
+      throw new Error(errorMessage);
+    },
   };
 }
 
-function createQuestion(input: Partial<Question> & { id: string }): Question {
-  const now = new Date('2026-02-01T00:00:00Z');
+function createThrowingQuestionRepository(
+  errorMessage = 'QuestionRepository should not be called',
+): QuestionRepository {
   return {
-    id: input.id,
-    slug: input.slug ?? `slug-${input.id}`,
-    stemMd: input.stemMd ?? `Stem for ${input.id}`,
-    explanationMd: input.explanationMd ?? `Explanation for ${input.id}`,
-    difficulty: input.difficulty ?? 'easy',
-    status: input.status ?? 'published',
-    choices: input.choices ?? [],
-    tags: input.tags ?? [],
-    createdAt: input.createdAt ?? now,
-    updatedAt: input.updatedAt ?? now,
+    findPublishedById: async () => {
+      throw new Error(errorMessage);
+    },
+    findPublishedBySlug: async () => {
+      throw new Error(errorMessage);
+    },
+    findPublishedByIds: async () => {
+      throw new Error(errorMessage);
+    },
+    listPublishedCandidateIds: async () => {
+      throw new Error(errorMessage);
+    },
   };
 }
 
-function createBookmark(
-  input: Partial<Bookmark> & { questionId: string },
-): Bookmark {
+function createBookmark(input: {
+  userId?: string;
+  questionId: string;
+  createdAt?: Date;
+}): Bookmark {
   return {
     userId: input.userId ?? 'user_1',
     questionId: input.questionId,
@@ -46,66 +79,60 @@ function createBookmark(
 }
 
 function createDeps(overrides?: {
-  user?: UserLike;
-  authGateway?: Partial<AuthGateway>;
+  user?: User | null;
   isEntitled?: boolean;
-  question?: Question | null;
-  bookmarkWasRemoved?: boolean;
-  bookmarks?: readonly Bookmark[];
-  questionsById?: Record<string, Question>;
+  bookmarkRepository?: BookmarkRepository;
+  questionRepository?: QuestionRepository;
+  logger?: Logger;
 }) {
-  const user = overrides?.user ?? createUser();
-  const isEntitled = overrides?.isEntitled ?? true;
-  const question =
-    overrides?.question ??
-    createQuestion({
-      id: '11111111-1111-1111-1111-111111111111',
-      slug: 'q-1',
-    });
-  const bookmarkWasRemoved = overrides?.bookmarkWasRemoved ?? false;
-  const bookmarks = overrides?.bookmarks ?? [
-    createBookmark({
-      questionId: '11111111-1111-1111-1111-111111111111',
-    }),
-  ];
+  const user =
+    overrides?.user === undefined
+      ? createUser({
+          id: 'user_1',
+          email: 'user@example.com',
+          createdAt: new Date('2026-02-01T00:00:00Z'),
+          updatedAt: new Date('2026-02-01T00:00:00Z'),
+        })
+      : overrides.user;
 
-  const questionsById = overrides?.questionsById ?? {
-    [question.id]: question,
-  };
+  const now = new Date('2026-02-01T00:00:00Z');
 
-  const authGateway: AuthGateway = {
-    getCurrentUser: async () => user,
-    requireUser: async () => user,
-    ...overrides?.authGateway,
-  };
+  const authGateway = new FakeAuthGateway(user);
 
-  const checkEntitlementUseCase = {
-    execute: vi.fn(async () => ({ isEntitled })),
-  };
+  const subscriptionRepository = new FakeSubscriptionRepository(
+    overrides?.isEntitled === false
+      ? []
+      : [
+          createSubscription({
+            userId: user?.id ?? 'user_1',
+            status: 'active',
+            currentPeriodEnd: new Date('2026-12-31T00:00:00Z'),
+          }),
+        ],
+  );
 
-  const bookmarkRepository: BookmarkRepository = {
-    exists: vi.fn(async () => false),
-    add: vi.fn(async () =>
-      createBookmark({ questionId: '11111111-1111-1111-1111-111111111111' }),
-    ),
-    remove: vi.fn(async () => bookmarkWasRemoved),
-    listByUserId: vi.fn(async () => bookmarks),
-  };
+  const checkEntitlementUseCase = new CheckEntitlementUseCase(
+    subscriptionRepository,
+    () => now,
+  );
 
-  const questionRepository: QuestionRepository = {
-    findPublishedById: vi.fn(async (id: string) => questionsById[id] ?? null),
-    findPublishedBySlug: vi.fn(async () => question),
-    findPublishedByIds: vi.fn(async (ids: readonly string[]) =>
-      ids.map((id) => questionsById[id]).filter((q): q is Question => !!q),
-    ),
-    listPublishedCandidateIds: vi.fn(async () => []),
-  };
+  const defaultQuestion = createQuestion({
+    id: '11111111-1111-1111-1111-111111111111',
+    slug: 'q-1',
+    stemMd: 'Stem for 11111111-1111-1111-1111-111111111111',
+    createdAt: now,
+    updatedAt: now,
+  });
 
   return {
     authGateway,
     checkEntitlementUseCase,
-    bookmarkRepository,
-    questionRepository,
+    bookmarkRepository:
+      overrides?.bookmarkRepository ?? new FakeBookmarkRepository(),
+    questionRepository:
+      overrides?.questionRepository ??
+      new FakeQuestionRepository([defaultQuestion]),
+    logger: overrides?.logger,
   };
 }
 
@@ -126,17 +153,11 @@ describe('bookmark-controller', () => {
     });
 
     it('returns UNAUTHENTICATED when unauthenticated', async () => {
-      const deps = createDeps({
-        authGateway: {
-          requireUser: async () => {
-            throw new ApplicationError('UNAUTHENTICATED', 'No session');
-          },
-        },
-      });
+      const deps = createDeps({ user: null });
 
       const result = await toggleBookmark(
         { questionId: '11111111-1111-1111-1111-111111111111' },
-        deps,
+        deps as never,
       );
 
       expect(result).toMatchObject({
@@ -146,85 +167,79 @@ describe('bookmark-controller', () => {
     });
 
     it('returns UNSUBSCRIBED when not entitled', async () => {
-      const deps = createDeps({ isEntitled: false });
+      const deps = createDeps({
+        isEntitled: false,
+        bookmarkRepository: createThrowingBookmarkRepository(),
+        questionRepository: createThrowingQuestionRepository(),
+      });
 
       const result = await toggleBookmark(
         { questionId: '11111111-1111-1111-1111-111111111111' },
-        deps,
+        deps as never,
       );
 
       expect(result).toMatchObject({
         ok: false,
         error: { code: 'UNSUBSCRIBED' },
       });
-      expect(deps.bookmarkRepository.exists).not.toHaveBeenCalled();
-      expect(deps.bookmarkRepository.remove).not.toHaveBeenCalled();
     });
 
     it('returns NOT_FOUND when question does not exist', async () => {
-      const deps = createDeps({ question: null, questionsById: {} });
+      const deps = createDeps({
+        questionRepository: new FakeQuestionRepository([]),
+        bookmarkRepository: createThrowingBookmarkRepository(),
+      });
 
       const result = await toggleBookmark(
         { questionId: '11111111-1111-1111-1111-111111111111' },
-        deps,
+        deps as never,
       );
 
       expect(result).toEqual({
         ok: false,
         error: { code: 'NOT_FOUND', message: 'Question not found' },
       });
-      expect(deps.bookmarkRepository.exists).not.toHaveBeenCalled();
-      expect(deps.bookmarkRepository.remove).not.toHaveBeenCalled();
     });
 
     it('removes the bookmark when it exists', async () => {
-      const deps = createDeps({ bookmarkWasRemoved: true });
       const questionId = '11111111-1111-1111-1111-111111111111';
+      const bookmarkRepository = new FakeBookmarkRepository([
+        createBookmark({ questionId }),
+      ]);
 
-      const result = await toggleBookmark({ questionId }, deps);
+      const deps = createDeps({ bookmarkRepository });
+
+      const result = await toggleBookmark({ questionId }, deps as never);
 
       expect(result).toEqual({ ok: true, data: { bookmarked: false } });
-      expect(deps.bookmarkRepository.remove).toHaveBeenCalledWith(
-        'user_1',
-        questionId,
-      );
-      expect(deps.bookmarkRepository.add).not.toHaveBeenCalled();
-      expect(deps.bookmarkRepository.exists).not.toHaveBeenCalled();
+      await expect(
+        bookmarkRepository.exists('user_1', questionId),
+      ).resolves.toBe(false);
     });
 
     it('adds the bookmark when it does not exist', async () => {
-      const deps = createDeps({ bookmarkWasRemoved: false });
       const questionId = '11111111-1111-1111-1111-111111111111';
+      const bookmarkRepository = new FakeBookmarkRepository();
 
-      const result = await toggleBookmark({ questionId }, deps);
+      const deps = createDeps({ bookmarkRepository });
+
+      const result = await toggleBookmark({ questionId }, deps as never);
 
       expect(result).toEqual({ ok: true, data: { bookmarked: true } });
-      expect(deps.bookmarkRepository.exists).not.toHaveBeenCalled();
-      expect(deps.bookmarkRepository.add).toHaveBeenCalledWith(
-        'user_1',
-        questionId,
-      );
-      expect(deps.bookmarkRepository.remove).toHaveBeenCalledWith(
-        'user_1',
-        questionId,
-      );
+      await expect(
+        bookmarkRepository.exists('user_1', questionId),
+      ).resolves.toBe(true);
     });
 
     it('loads dependencies from the container when deps are omitted', async () => {
-      vi.resetModules();
-
-      const deps = createDeps({ bookmarkWasRemoved: false });
-
-      vi.doMock('@/lib/container', () => ({
-        createContainer: () => ({
-          createBookmarkControllerDeps: () => deps,
-        }),
-      }));
-
-      const { toggleBookmark } = await import('./bookmark-controller');
+      const deps = createDeps();
 
       const questionId = '11111111-1111-1111-1111-111111111111';
-      const result = await toggleBookmark({ questionId });
+      const result = await toggleBookmark({ questionId }, undefined, {
+        loadContainer: async () => ({
+          createBookmarkControllerDeps: () => deps,
+        }),
+      });
 
       expect(result).toEqual({ ok: true, data: { bookmarked: true } });
     });
@@ -243,15 +258,17 @@ describe('bookmark-controller', () => {
     });
 
     it('returns UNSUBSCRIBED when not entitled', async () => {
-      const deps = createDeps({ isEntitled: false });
+      const deps = createDeps({
+        isEntitled: false,
+        bookmarkRepository: createThrowingBookmarkRepository(),
+      });
 
-      const result = await getBookmarks({}, deps);
+      const result = await getBookmarks({}, deps as never);
 
       expect(result).toMatchObject({
         ok: false,
         error: { code: 'UNSUBSCRIBED' },
       });
-      expect(deps.bookmarkRepository.listByUserId).not.toHaveBeenCalled();
     });
 
     it('returns bookmark rows joined to published questions', async () => {
@@ -265,21 +282,27 @@ describe('bookmark-controller', () => {
           createdAt: new Date('2026-01-31T00:00:00Z'),
         }),
       ];
-
-      const questionsById = {
-        '11111111-1111-1111-1111-111111111111': createQuestion({
+      const bookmarkRepository = new FakeBookmarkRepository(bookmarks);
+      const questionRepository = new FakeQuestionRepository([
+        createQuestion({
           id: '11111111-1111-1111-1111-111111111111',
           slug: 'q-1',
+          stemMd: 'Stem for 11111111-1111-1111-1111-111111111111',
+          createdAt: new Date('2026-02-01T00:00:00Z'),
+          updatedAt: new Date('2026-02-01T00:00:00Z'),
         }),
-        '22222222-2222-2222-2222-222222222222': createQuestion({
+        createQuestion({
           id: '22222222-2222-2222-2222-222222222222',
           slug: 'q-2',
+          stemMd: 'Stem for 22222222-2222-2222-2222-222222222222',
+          createdAt: new Date('2026-02-01T00:00:00Z'),
+          updatedAt: new Date('2026-02-01T00:00:00Z'),
         }),
-      };
+      ]);
 
-      const deps = createDeps({ bookmarks, questionsById });
+      const deps = createDeps({ bookmarkRepository, questionRepository });
 
-      const result = await getBookmarks({}, deps);
+      const result = await getBookmarks({}, deps as never);
 
       expect(result).toEqual({
         ok: true,
@@ -302,28 +325,74 @@ describe('bookmark-controller', () => {
           ],
         },
       });
-
-      expect(deps.bookmarkRepository.listByUserId).toHaveBeenCalledWith(
-        'user_1',
-      );
-      expect(deps.questionRepository.findPublishedByIds).toHaveBeenCalledWith([
-        '11111111-1111-1111-1111-111111111111',
-        '22222222-2222-2222-2222-222222222222',
-      ]);
     });
 
     it('returns INTERNAL_ERROR when a dependency throws', async () => {
-      const deps = createDeps();
-      deps.bookmarkRepository.listByUserId = vi.fn(async () => {
-        throw new Error('boom');
-      });
+      const bookmarkRepository: BookmarkRepository = {
+        exists: async () => false,
+        add: async () => {
+          throw new Error('boom');
+        },
+        remove: async () => false,
+        listByUserId: async () => {
+          throw new Error('boom');
+        },
+      };
 
-      const result = await getBookmarks({}, deps);
+      const deps = createDeps({ bookmarkRepository });
+
+      const result = await getBookmarks({}, deps as never);
 
       expect(result).toEqual({
         ok: false,
         error: { code: 'INTERNAL_ERROR', message: 'Internal error' },
       });
+    });
+
+    it('logs warning when bookmark references missing question', async () => {
+      const orphanedQuestionId = '99999999-9999-9999-9999-999999999999';
+      const bookmarks = [
+        createBookmark({
+          questionId: orphanedQuestionId,
+          createdAt: new Date('2026-02-01T00:00:00Z'),
+        }),
+      ];
+
+      const logger = new FakeLogger();
+      const deps = createDeps({
+        bookmarkRepository: new FakeBookmarkRepository(bookmarks),
+        questionRepository: new FakeQuestionRepository([]),
+        logger,
+      });
+
+      const result = await getBookmarks({}, deps as never);
+
+      expect(result).toEqual({ ok: true, data: { rows: [] } });
+      expect(logger.warnCalls).toEqual([
+        {
+          context: { questionId: orphanedQuestionId },
+          msg: 'Bookmark references missing question',
+        },
+      ]);
+    });
+
+    it('works without logger (optional dependency)', async () => {
+      const orphanedQuestionId = '99999999-9999-9999-9999-999999999999';
+      const bookmarks = [
+        createBookmark({
+          questionId: orphanedQuestionId,
+          createdAt: new Date('2026-02-01T00:00:00Z'),
+        }),
+      ];
+
+      const deps = createDeps({
+        bookmarkRepository: new FakeBookmarkRepository(bookmarks),
+        questionRepository: new FakeQuestionRepository([]),
+      });
+
+      const result = await getBookmarks({}, deps as never);
+
+      expect(result).toEqual({ ok: true, data: { rows: [] } });
     });
   });
 });

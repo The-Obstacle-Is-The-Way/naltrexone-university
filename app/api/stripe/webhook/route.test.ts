@@ -6,7 +6,10 @@ import type {
   StripeWebhookTransaction,
 } from '@/src/adapters/controllers/stripe-webhook-controller';
 import { ApplicationError } from '@/src/application/errors';
-import type { PaymentGateway } from '@/src/application/ports/gateways';
+import type {
+  PaymentGateway,
+  RateLimiter,
+} from '@/src/application/ports/gateways';
 
 function createPaymentGatewayStub(): PaymentGateway {
   return {
@@ -19,12 +22,20 @@ function createPaymentGatewayStub(): PaymentGateway {
 
 function createTestDeps() {
   const loggerError = vi.fn();
+  const limit = vi.fn<RateLimiter['limit']>(async () => ({
+    success: true,
+    limit: 1000,
+    remaining: 999,
+    retryAfterSeconds: 0,
+  }));
+  const rateLimiter: RateLimiter & { limit: typeof limit } = { limit };
   const tx = {
     stripeEvents: {
       claim: async () => true,
       lock: async () => ({ processedAt: null, error: null }),
       markProcessed: async () => undefined,
       markFailed: async () => undefined,
+      pruneProcessedBefore: async () => 0,
     },
     subscriptions: {
       findByUserId: async () => null,
@@ -43,9 +54,11 @@ function createTestDeps() {
   };
 
   const createStripeWebhookDeps = vi.fn(() => deps);
+  const createRateLimiter = vi.fn<() => RateLimiter>(() => rateLimiter);
   const createContainer = vi.fn<() => StripeWebhookRouteContainer>(() => ({
     logger: { error: loggerError },
     createStripeWebhookDeps,
+    createRateLimiter,
   }));
 
   const processStripeWebhook = vi.fn();
@@ -56,6 +69,8 @@ function createTestDeps() {
     processStripeWebhook,
     loggerError,
     createStripeWebhookDeps,
+    createRateLimiter,
+    rateLimiter,
     deps,
   };
 }
@@ -102,7 +117,10 @@ describe('POST /api/stripe/webhook', () => {
     const { POST, processStripeWebhook } = createTestDeps();
 
     processStripeWebhook.mockRejectedValue(
-      new ApplicationError('STRIPE_ERROR', 'Invalid webhook signature'),
+      new ApplicationError(
+        'INVALID_WEBHOOK_SIGNATURE',
+        'Invalid webhook signature',
+      ),
     );
 
     const res = await POST(
@@ -116,9 +134,71 @@ describe('POST /api/stripe/webhook', () => {
     expect(res.status).toBe(400);
   });
 
+  it('returns 400 when payload validation fails', async () => {
+    const { POST, processStripeWebhook } = createTestDeps();
+
+    processStripeWebhook.mockRejectedValue(
+      new ApplicationError('INVALID_WEBHOOK_PAYLOAD', 'Invalid payload'),
+    );
+
+    const res = await POST(
+      new Request('http://localhost/api/stripe/webhook', {
+        method: 'POST',
+        headers: { 'stripe-signature': 'sig_1' },
+        body: 'raw',
+      }),
+    );
+
+    expect(res.status).toBe(400);
+  });
+
+  it('returns 429 when rate limited', async () => {
+    const { POST, processStripeWebhook, rateLimiter } = createTestDeps();
+
+    rateLimiter.limit.mockResolvedValue({
+      success: false,
+      limit: 1000,
+      remaining: 0,
+      retryAfterSeconds: 60,
+    });
+
+    const res = await POST(
+      new Request('http://localhost/api/stripe/webhook', {
+        method: 'POST',
+        headers: { 'stripe-signature': 'sig_1' },
+        body: 'raw',
+      }),
+    );
+
+    expect(res.status).toBe(429);
+    expect(res.headers.get('Retry-After')).toBe('60');
+    expect(processStripeWebhook).not.toHaveBeenCalled();
+  });
+
+  it('returns 503 when rate limiter throws', async () => {
+    const { POST, processStripeWebhook, rateLimiter, loggerError } =
+      createTestDeps();
+
+    rateLimiter.limit.mockRejectedValue(new Error('rate limiter down'));
+
+    const res = await POST(
+      new Request('http://localhost/api/stripe/webhook', {
+        method: 'POST',
+        headers: { 'stripe-signature': 'sig_1' },
+        body: 'raw',
+      }),
+    );
+
+    expect(res.status).toBe(503);
+    await expect(res.json()).resolves.toEqual({
+      error: 'Rate limiter unavailable',
+    });
+    expect(processStripeWebhook).not.toHaveBeenCalled();
+    expect(loggerError).toHaveBeenCalledTimes(1);
+  });
+
   it('returns 500 when processing fails unexpectedly', async () => {
     const { POST, loggerError, processStripeWebhook } = createTestDeps();
-    loggerError.mockClear();
     processStripeWebhook.mockRejectedValue(new Error('boom'));
 
     const res = await POST(
@@ -154,8 +234,17 @@ describe('POST /api/stripe/webhook', () => {
     };
 
     const createStripeWebhookDeps = vi.fn(() => deps);
+    const rateLimiter: RateLimiter = {
+      limit: async () => ({
+        success: true,
+        limit: 1000,
+        remaining: 999,
+        retryAfterSeconds: 0,
+      }),
+    };
     const createContainer = vi.fn<() => StripeWebhookRouteContainer>(() => ({
       logger: { error: vi.fn() },
+      createRateLimiter: () => rateLimiter,
       createStripeWebhookDeps,
     }));
 

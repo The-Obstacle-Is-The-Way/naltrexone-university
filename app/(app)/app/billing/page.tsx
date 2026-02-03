@@ -1,8 +1,21 @@
 import { redirect } from 'next/navigation';
+import { ManageBillingButton } from '@/app/(app)/app/billing/billing-client';
+import { ROUTES } from '@/lib/routes';
 import { createPortalSession } from '@/src/adapters/controllers/billing-controller';
 import type { AuthGateway } from '@/src/application/ports/gateways';
 import type { SubscriptionRepository } from '@/src/application/ports/repositories';
 import type { Subscription } from '@/src/domain/entities';
+
+const billingDateFormatter = new Intl.DateTimeFormat('en-US', {
+  year: 'numeric',
+  month: 'short',
+  day: 'numeric',
+  timeZone: 'UTC',
+});
+
+function formatBillingDate(date: Date): string {
+  return billingDateFormatter.format(date);
+}
 
 export type BillingPageDeps = {
   authGateway: AuthGateway;
@@ -30,17 +43,88 @@ export async function loadBillingData(
   return { userId: user.id, subscription };
 }
 
-export default async function BillingPage() {
-  const { subscription } = await loadBillingData();
+/** Extracted for testing (Server Components can't be directly tested) */
+export type BillingContentProps =
+  | { subscription: Subscription; manageBillingAction: () => Promise<void> }
+  | { subscription: null; manageBillingAction?: never };
 
-  async function manageBilling() {
-    'use server';
-    const result = await createPortalSession({});
-    if (!result.ok) {
-      redirect('/app/billing');
-    }
-    redirect(result.data.url);
+export function BillingContent(props: BillingContentProps) {
+  const subscription = props.subscription;
+
+  return (
+    <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="space-y-1">
+          <div className="text-sm font-medium text-foreground">
+            Subscription
+          </div>
+          {subscription ? (
+            <div className="text-sm text-muted-foreground">
+              {subscription.plan} · {subscription.status}
+            </div>
+          ) : (
+            <div className="text-sm text-muted-foreground">
+              No subscription found.
+            </div>
+          )}
+        </div>
+
+        {subscription ? (
+          <form action={props.manageBillingAction}>
+            <ManageBillingButton />
+          </form>
+        ) : null}
+      </div>
+
+      {subscription?.cancelAtPeriodEnd ? (
+        <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/20 dark:text-amber-100">
+          <div className="font-medium">Cancellation scheduled</div>
+          <div className="mt-1">
+            Your subscription will cancel on{' '}
+            <span className="font-medium">
+              {formatBillingDate(subscription.currentPeriodEnd)}
+            </span>
+            . You&apos;ll keep access until then.
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+type BillingPageErrorCode = 'portal_failed';
+
+type BillingBanner = { tone: 'error'; message: string };
+
+function parseBillingErrorCode(
+  error: string | string[] | undefined,
+): BillingPageErrorCode | undefined {
+  const value = Array.isArray(error) ? error[0] : error;
+  if (value === 'portal_failed') return value;
+  return undefined;
+}
+
+function getBillingBanner(
+  code: BillingPageErrorCode | undefined,
+): BillingBanner | null {
+  if (!code) return null;
+  switch (code) {
+    case 'portal_failed':
+      return {
+        tone: 'error',
+        message: "Couldn't open the billing portal. Please try again.",
+      };
   }
+
+  return null;
+}
+
+export type BillingPageViewProps = BillingContentProps & {
+  banner?: BillingBanner | null;
+};
+
+export function BillingPageView(props: BillingPageViewProps) {
+  const { banner, ...contentProps } = props;
 
   return (
     <div className="space-y-6">
@@ -51,33 +135,49 @@ export default async function BillingPage() {
         </p>
       </div>
 
-      <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="space-y-1">
-            <div className="text-sm font-medium text-foreground">
-              Subscription
-            </div>
-            {subscription ? (
-              <div className="text-sm text-muted-foreground">
-                {subscription.plan} · {subscription.status}
-              </div>
-            ) : (
-              <div className="text-sm text-muted-foreground">
-                No subscription found.
-              </div>
-            )}
-          </div>
-
-          <form action={manageBilling}>
-            <button
-              type="submit"
-              className="inline-flex items-center justify-center rounded-full bg-orange-600 px-4 py-2 text-sm font-medium text-white hover:bg-orange-700"
-            >
-              Manage in Stripe
-            </button>
-          </form>
+      {banner ? (
+        <div
+          className="rounded-2xl border border-border bg-card p-4 text-sm text-destructive shadow-sm"
+          role="alert"
+        >
+          {banner.message}
         </div>
-      </div>
+      ) : null}
+
+      <BillingContent {...contentProps} />
     </div>
+  );
+}
+
+export type BillingPageProps = {
+  deps?: BillingPageDeps;
+  searchParams?: { error?: string | string[] };
+};
+
+export default async function BillingPage(props?: BillingPageProps) {
+  const { subscription } = await loadBillingData(props?.deps);
+  const banner = getBillingBanner(
+    parseBillingErrorCode(props?.searchParams?.error),
+  );
+
+  if (!subscription) {
+    return <BillingPageView subscription={null} banner={banner} />;
+  }
+
+  async function manageBilling() {
+    'use server';
+    const result = await createPortalSession({});
+    if (!result.ok) {
+      redirect(`${ROUTES.APP_BILLING}?error=portal_failed`);
+    }
+    redirect(result.data.url);
+  }
+
+  return (
+    <BillingPageView
+      subscription={subscription}
+      manageBillingAction={manageBilling}
+      banner={banner}
+    />
   );
 }

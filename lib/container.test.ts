@@ -2,11 +2,13 @@ import { describe, expect, it, vi } from 'vitest';
 import type { StripeWebhookDeps } from '@/src/adapters/controllers/stripe-webhook-controller';
 import {
   ClerkAuthGateway,
+  DrizzleRateLimiter,
   StripePaymentGateway,
 } from '@/src/adapters/gateways';
 import {
   DrizzleAttemptRepository,
   DrizzleBookmarkRepository,
+  DrizzleIdempotencyKeyRepository,
   DrizzlePracticeSessionRepository,
   DrizzleQuestionRepository,
   DrizzleStripeCustomerRepository,
@@ -66,6 +68,7 @@ describe('container factories', () => {
 
     expect(typeof container.createAttemptRepository).toBe('function');
     expect(typeof container.createBookmarkRepository).toBe('function');
+    expect(typeof container.createIdempotencyKeyRepository).toBe('function');
     expect(typeof container.createPracticeSessionRepository).toBe('function');
     expect(typeof container.createQuestionRepository).toBe('function');
     expect(typeof container.createTagRepository).toBe('function');
@@ -76,6 +79,7 @@ describe('container factories', () => {
 
     expect(typeof container.createAuthGateway).toBe('function');
     expect(typeof container.createPaymentGateway).toBe('function');
+    expect(typeof container.createRateLimiter).toBe('function');
 
     expect(typeof container.createCheckEntitlementUseCase).toBe('function');
     expect(typeof container.createGetNextQuestionUseCase).toBe('function');
@@ -83,11 +87,13 @@ describe('container factories', () => {
 
     expect(typeof container.createStripeWebhookDeps).toBe('function');
     expect(typeof container.createQuestionControllerDeps).toBe('function');
+    expect(typeof container.createQuestionViewControllerDeps).toBe('function');
     expect(typeof container.createBillingControllerDeps).toBe('function');
     expect(typeof container.createBookmarkControllerDeps).toBe('function');
     expect(typeof container.createPracticeControllerDeps).toBe('function');
     expect(typeof container.createReviewControllerDeps).toBe('function');
     expect(typeof container.createStatsControllerDeps).toBe('function');
+    expect(typeof container.createTagControllerDeps).toBe('function');
   }, 40000);
 
   it('wires concrete implementations for all factories', async () => {
@@ -115,6 +121,9 @@ describe('container factories', () => {
     expect(container.createBookmarkRepository()).toBeInstanceOf(
       DrizzleBookmarkRepository,
     );
+    expect(container.createIdempotencyKeyRepository()).toBeInstanceOf(
+      DrizzleIdempotencyKeyRepository,
+    );
     expect(container.createPracticeSessionRepository()).toBeInstanceOf(
       DrizzlePracticeSessionRepository,
     );
@@ -141,6 +150,7 @@ describe('container factories', () => {
     expect(container.createPaymentGateway()).toBeInstanceOf(
       StripePaymentGateway,
     );
+    expect(container.createRateLimiter()).toBeInstanceOf(DrizzleRateLimiter);
 
     expect(container.createCheckEntitlementUseCase()).toBeInstanceOf(
       CheckEntitlementUseCase,
@@ -158,6 +168,10 @@ describe('container factories', () => {
 
     const questionDeps = container.createQuestionControllerDeps();
     expect(questionDeps.authGateway).toBeInstanceOf(ClerkAuthGateway);
+    expect(typeof questionDeps.rateLimiter.limit).toBe('function');
+    expect(questionDeps.idempotencyKeyRepository).toBeInstanceOf(
+      DrizzleIdempotencyKeyRepository,
+    );
     expect(questionDeps.checkEntitlementUseCase).toBeInstanceOf(
       CheckEntitlementUseCase,
     );
@@ -168,14 +182,31 @@ describe('container factories', () => {
       SubmitAnswerUseCase,
     );
 
+    const questionViewDeps = container.createQuestionViewControllerDeps();
+    expect(questionViewDeps.authGateway).toBeInstanceOf(ClerkAuthGateway);
+    expect(questionViewDeps.checkEntitlementUseCase).toBeInstanceOf(
+      CheckEntitlementUseCase,
+    );
+    expect(questionViewDeps.questionRepository).toBeInstanceOf(
+      DrizzleQuestionRepository,
+    );
+
     const billingDeps = container.createBillingControllerDeps();
     expect(billingDeps.authGateway).toBeInstanceOf(ClerkAuthGateway);
     expect(billingDeps.stripeCustomerRepository).toBeInstanceOf(
       DrizzleStripeCustomerRepository,
     );
+    expect(billingDeps.subscriptionRepository).toBeInstanceOf(
+      DrizzleSubscriptionRepository,
+    );
     expect(billingDeps.paymentGateway).toBeInstanceOf(StripePaymentGateway);
+    expect(billingDeps.idempotencyKeyRepository).toBeInstanceOf(
+      DrizzleIdempotencyKeyRepository,
+    );
+    expect(typeof billingDeps.rateLimiter.limit).toBe('function');
     expect(typeof billingDeps.getClerkUserId).toBe('function');
     expect(billingDeps.appUrl).toBe('https://app.example.com');
+    expect(typeof billingDeps.now).toBe('function');
 
     const bookmarkDeps = container.createBookmarkControllerDeps();
     expect(bookmarkDeps.authGateway).toBeInstanceOf(ClerkAuthGateway);
@@ -191,6 +222,10 @@ describe('container factories', () => {
 
     const practiceDeps = container.createPracticeControllerDeps();
     expect(practiceDeps.authGateway).toBeInstanceOf(ClerkAuthGateway);
+    expect(typeof practiceDeps.rateLimiter.limit).toBe('function');
+    expect(practiceDeps.idempotencyKeyRepository).toBeInstanceOf(
+      DrizzleIdempotencyKeyRepository,
+    );
     expect(practiceDeps.checkEntitlementUseCase).toBeInstanceOf(
       CheckEntitlementUseCase,
     );
@@ -229,6 +264,13 @@ describe('container factories', () => {
       DrizzleQuestionRepository,
     );
     expect(typeof statsDeps.now).toBe('function');
+
+    const tagDeps = container.createTagControllerDeps();
+    expect(tagDeps.authGateway).toBeInstanceOf(ClerkAuthGateway);
+    expect(tagDeps.checkEntitlementUseCase).toBeInstanceOf(
+      CheckEntitlementUseCase,
+    );
+    expect(tagDeps.tagRepository).toBeInstanceOf(DrizzleTagRepository);
   }, 40000);
 
   it('shares Stripe price IDs between subscription repository and payment gateway', async () => {
@@ -273,6 +315,7 @@ describe('container factories', () => {
       lock: async () => ({ processedAt: null, error: null }),
       markProcessed: async () => undefined,
       markFailed: async () => undefined,
+      pruneProcessedBefore: async () => 0,
     }));
     const createSubscriptionRepository = vi.fn(() => ({
       findByUserId: async () => null,

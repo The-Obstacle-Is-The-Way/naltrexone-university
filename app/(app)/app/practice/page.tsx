@@ -1,39 +1,44 @@
 'use client';
 
 import Link from 'next/link';
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useState,
-  useTransition,
-} from 'react';
+import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import { Feedback } from '@/components/question/Feedback';
 import { QuestionCard } from '@/components/question/QuestionCard';
-import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import {
   getBookmarks,
   toggleBookmark,
 } from '@/src/adapters/controllers/bookmark-controller';
+import { startPracticeSession } from '@/src/adapters/controllers/practice-controller';
 import {
   getNextQuestion,
   submitAnswer,
 } from '@/src/adapters/controllers/question-controller';
+import {
+  getTags,
+  type TagRow,
+} from '@/src/adapters/controllers/tag-controller';
 import type { NextQuestion } from '@/src/application/use-cases/get-next-question';
 import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
-
-type LoadState =
-  | { status: 'idle' }
-  | { status: 'loading' }
-  | { status: 'ready' }
-  | { status: 'error'; message: string };
-
-function getErrorMessage(result: ActionResult<unknown>): string {
-  if (result.ok) return 'Unexpected ok result';
-  return result.error.message;
-}
+import { navigateTo } from './client-navigation';
+import {
+  canSubmitAnswer,
+  createBookmarksEffect,
+  createLoadNextQuestionAction,
+  handleSessionCountChange,
+  handleSessionModeChange,
+  type LoadState,
+  type PracticeFilters,
+  SESSION_COUNT_MAX,
+  SESSION_COUNT_MIN,
+  selectChoiceIfAllowed,
+  startSession,
+  submitAnswerForQuestion,
+  toggleBookmarkForQuestion,
+} from './practice-page-logic';
 
 export type PracticeViewProps = {
+  topContent?: React.ReactNode;
+  sessionInfo?: NextQuestion['session'];
   loadState: LoadState;
   question: NextQuestion | null;
   selectedChoiceId: string | null;
@@ -41,7 +46,9 @@ export type PracticeViewProps = {
   isPending: boolean;
   bookmarkStatus: 'idle' | 'loading' | 'error';
   isBookmarked: boolean;
+  bookmarkMessage?: string | null;
   canSubmit: boolean;
+  onEndSession?: () => void;
   onTryAgain: () => void;
   onToggleBookmark: () => void;
   onSelectChoice: (choiceId: string) => void;
@@ -49,11 +56,183 @@ export type PracticeViewProps = {
   onNextQuestion: () => void;
 };
 
+export type PracticeSessionStarterProps = {
+  sessionMode: 'tutor' | 'exam';
+  sessionCount: number;
+  filters: PracticeFilters;
+  tagLoadStatus: 'idle' | 'loading' | 'error';
+  availableTags: TagRow[];
+  sessionStartStatus: 'idle' | 'loading' | 'error';
+  sessionStartError: string | null;
+  isPending: boolean;
+  onToggleDifficulty: (difficulty: NextQuestion['difficulty']) => void;
+  onTagSlugsChange: (event: {
+    target: { selectedOptions: ArrayLike<{ value: string }> };
+  }) => void;
+  onSessionModeChange: (event: { target: { value: string } }) => void;
+  onSessionCountChange: (event: { target: { value: string } }) => void;
+  onStartSession: () => void;
+};
+
+export function PracticeSessionStarter(props: PracticeSessionStarterProps) {
+  const difficulties = ['easy', 'medium', 'hard'] satisfies Array<
+    NextQuestion['difficulty']
+  >;
+  const tagsByKind = useMemo(() => {
+    const map = new Map<string, TagRow[]>();
+    for (const tag of props.availableTags) {
+      const list = map.get(tag.kind) ?? [];
+      list.push(tag);
+      map.set(tag.kind, list);
+    }
+    return map;
+  }, [props.availableTags]);
+
+  const tagKindLabels: Record<TagRow['kind'], string> = {
+    domain: 'Domain',
+    topic: 'Topic',
+    substance: 'Substance',
+    treatment: 'Treatment',
+    diagnosis: 'Diagnosis',
+  };
+
+  return (
+    <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div className="space-y-1">
+          <div className="text-sm font-medium text-foreground">
+            Start a session
+          </div>
+          <div className="text-sm text-muted-foreground">
+            Tutor mode shows explanations immediately. Exam mode hides
+            explanations until you end the session.
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          <label className="text-sm text-muted-foreground">
+            <span className="mr-2">Mode</span>
+            <select
+              className="rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground"
+              value={props.sessionMode}
+              onChange={props.onSessionModeChange}
+            >
+              <option value="tutor">Tutor</option>
+              <option value="exam">Exam</option>
+            </select>
+          </label>
+
+          <label className="text-sm text-muted-foreground">
+            <span className="mr-2">Count</span>
+            <input
+              type="number"
+              min={SESSION_COUNT_MIN}
+              max={SESSION_COUNT_MAX}
+              className="w-24 rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground"
+              value={props.sessionCount}
+              onChange={props.onSessionCountChange}
+            />
+          </label>
+
+          <button
+            type="button"
+            className="inline-flex items-center justify-center rounded-full bg-orange-600 px-4 py-2 text-sm font-medium text-white hover:bg-orange-700 disabled:cursor-not-allowed disabled:opacity-60"
+            disabled={props.sessionStartStatus === 'loading' || props.isPending}
+            onClick={props.onStartSession}
+          >
+            Start session
+          </button>
+        </div>
+      </div>
+
+      <div className="mt-4 grid gap-4 md:grid-cols-2">
+        <div>
+          <div className="text-sm font-medium text-foreground">Difficulty</div>
+          <div className="mt-2 flex flex-wrap gap-3">
+            {difficulties.map((difficulty) => {
+              const checked = props.filters.difficulties.includes(difficulty);
+              return (
+                <label
+                  key={difficulty}
+                  className="inline-flex items-center gap-2 text-sm text-muted-foreground"
+                >
+                  <input
+                    type="checkbox"
+                    className="size-4"
+                    checked={checked}
+                    onChange={() => props.onToggleDifficulty(difficulty)}
+                  />
+                  <span className="capitalize">{difficulty}</span>
+                </label>
+              );
+            })}
+          </div>
+          <div className="mt-1 text-xs text-muted-foreground">
+            Leave empty to include all difficulties.
+          </div>
+        </div>
+
+        <div>
+          <div className="text-sm font-medium text-foreground">Tags</div>
+          {props.tagLoadStatus === 'loading' ? (
+            <div className="mt-2 text-sm text-muted-foreground">
+              Loading tags…
+            </div>
+          ) : null}
+          {props.tagLoadStatus === 'error' ? (
+            <div className="mt-2 text-sm text-destructive">
+              Tags unavailable.
+            </div>
+          ) : null}
+          {props.tagLoadStatus === 'idle' ? (
+            <>
+              <select
+                multiple
+                className="mt-2 h-28 w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground"
+                value={props.filters.tagSlugs}
+                onChange={props.onTagSlugsChange}
+              >
+                {Array.from(tagsByKind.entries()).map(([kind, tags]) => (
+                  <optgroup
+                    key={kind}
+                    label={
+                      kind in tagKindLabels
+                        ? tagKindLabels[kind as TagRow['kind']]
+                        : kind
+                    }
+                  >
+                    {tags.map((tag) => (
+                      <option key={tag.slug} value={tag.slug}>
+                        {tag.name}
+                      </option>
+                    ))}
+                  </optgroup>
+                ))}
+              </select>
+              <div className="mt-1 text-xs text-muted-foreground">
+                Leave empty to include all tags.
+              </div>
+            </>
+          ) : null}
+        </div>
+      </div>
+
+      {props.sessionStartStatus === 'error' && props.sessionStartError ? (
+        <div className="mt-3 text-sm text-destructive">
+          {props.sessionStartError}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 export function PracticeView(props: PracticeViewProps) {
   const correctChoiceId = props.submitResult?.correctChoiceId ?? null;
+  const sessionInfo = props.sessionInfo ?? null;
 
   return (
     <div className="space-y-6">
+      {props.topContent}
       <div>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-baseline sm:justify-between">
           <div>
@@ -61,13 +240,31 @@ export function PracticeView(props: PracticeViewProps) {
             <p className="mt-1 text-muted-foreground">
               Answer one question at a time.
             </p>
+            {sessionInfo ? (
+              <p className="mt-2 text-xs text-muted-foreground">
+                Session: {sessionInfo.mode} • {sessionInfo.index + 1}/
+                {sessionInfo.total}
+              </p>
+            ) : null}
           </div>
-          <Link
-            href="/app/dashboard"
-            className="text-sm font-medium text-muted-foreground hover:text-foreground"
-          >
-            Back to Dashboard
-          </Link>
+          <div className="flex items-center gap-3">
+            {props.onEndSession ? (
+              <button
+                type="button"
+                className="inline-flex items-center justify-center rounded-full border border-border bg-background px-4 py-2 text-sm font-medium text-foreground hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60"
+                disabled={props.isPending}
+                onClick={props.onEndSession}
+              >
+                End session
+              </button>
+            ) : null}
+            <Link
+              href="/app/dashboard"
+              className="text-sm font-medium text-muted-foreground hover:text-foreground"
+            >
+              Back to Dashboard
+            </Link>
+          </div>
         </div>
       </div>
 
@@ -109,6 +306,11 @@ export function PracticeView(props: PracticeViewProps) {
           {props.bookmarkStatus === 'error' ? (
             <div className="text-xs text-destructive">
               Bookmarks unavailable.
+            </div>
+          ) : null}
+          {props.bookmarkMessage ? (
+            <div className="text-xs text-muted-foreground" aria-live="polite">
+              {props.bookmarkMessage}
             </div>
           ) : null}
         </div>
@@ -165,129 +367,242 @@ export default function PracticePage() {
   const [submitResult, setSubmitResult] = useState<SubmitAnswerOutput | null>(
     null,
   );
+  const [filters, setFilters] = useState<PracticeFilters>({
+    tagSlugs: [],
+    difficulties: [],
+  });
+  const [tagLoadStatus, setTagLoadStatus] = useState<
+    'idle' | 'loading' | 'error'
+  >('loading');
+  const [availableTags, setAvailableTags] = useState<TagRow[]>([]);
   const [bookmarkedQuestionIds, setBookmarkedQuestionIds] = useState<
     Set<string>
   >(() => new Set());
   const [bookmarkStatus, setBookmarkStatus] = useState<
     'idle' | 'loading' | 'error'
   >('idle');
+  const [bookmarkMessage, setBookmarkMessage] = useState<string | null>(null);
+  const bookmarkMessageTimeoutId = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
   const [bookmarkRetryCount, setBookmarkRetryCount] = useState(0);
   const [loadState, setLoadState] = useState<LoadState>({ status: 'idle' });
   const [isPending, startTransition] = useTransition();
+  const [questionLoadedAt, setQuestionLoadedAt] = useState<number | null>(null);
+  const [submitIdempotencyKey, setSubmitIdempotencyKey] = useState<
+    string | null
+  >(null);
+  const [sessionMode, setSessionMode] = useState<'tutor' | 'exam'>('tutor');
+  const [sessionCount, setSessionCount] = useState(20);
+  const [startSessionIdempotencyKey, setStartSessionIdempotencyKey] = useState(
+    () => crypto.randomUUID(),
+  );
+  const [sessionStartStatus, setSessionStartStatus] = useState<
+    'idle' | 'loading' | 'error'
+  >('idle');
+  const [sessionStartError, setSessionStartError] = useState<string | null>(
+    null,
+  );
 
-  const loadNext = useCallback(() => {
-    startTransition(() => {
-      void (async () => {
-        setLoadState({ status: 'loading' });
-        setSelectedChoiceId(null);
-        setSubmitResult(null);
+  const loadNext = useMemo(
+    () =>
+      createLoadNextQuestionAction({
+        startTransition,
+        getNextQuestionFn: getNextQuestion,
+        filters,
+        createIdempotencyKey: () => crypto.randomUUID(),
+        nowMs: Date.now,
+        setLoadState,
+        setSelectedChoiceId,
+        setSubmitResult,
+        setSubmitIdempotencyKey,
+        setQuestionLoadedAt,
+        setQuestion,
+      }),
+    [filters],
+  );
 
-        const res = await getNextQuestion({
-          filters: { tagSlugs: [], difficulties: [] },
-        });
-
-        if (!res.ok) {
-          setLoadState({ status: 'error', message: getErrorMessage(res) });
-          setQuestion(null);
-          return;
-        }
-
-        setQuestion(res.data);
-        setLoadState({ status: 'ready' });
-      })();
-    });
-  }, []);
+  useEffect(loadNext, [loadNext]);
 
   useEffect(() => {
-    loadNext();
-  }, [loadNext]);
-
-  useEffect(() => {
-    let timeoutId: ReturnType<typeof setTimeout> | undefined;
+    let mounted = true;
+    setTagLoadStatus('loading');
 
     void (async () => {
-      const res = await getBookmarks({});
+      const res = await getTags({});
+      if (!mounted) return;
+
       if (!res.ok) {
-        console.error('Failed to load bookmarks', res.error);
-        setBookmarkStatus('error');
-
-        if (bookmarkRetryCount < 2) {
-          timeoutId = setTimeout(
-            () => {
-              setBookmarkRetryCount((prev) => prev + 1);
-            },
-            1000 * (bookmarkRetryCount + 1),
-          );
-        }
-
+        setTagLoadStatus('error');
         return;
       }
 
-      setBookmarkedQuestionIds(
-        new Set(res.data.rows.map((row) => row.questionId)),
-      );
-      setBookmarkStatus('idle');
+      setAvailableTags(res.data.rows);
+      setTagLoadStatus('idle');
     })();
 
     return () => {
-      if (timeoutId) clearTimeout(timeoutId);
+      mounted = false;
     };
+  }, []);
+
+  useEffect(() => {
+    return createBookmarksEffect({
+      bookmarkRetryCount,
+      getBookmarksFn: getBookmarks,
+      setBookmarkedQuestionIds,
+      setBookmarkStatus,
+      setBookmarkRetryCount,
+    });
   }, [bookmarkRetryCount]);
 
+  useEffect(() => {
+    return () => {
+      if (bookmarkMessageTimeoutId.current) {
+        clearTimeout(bookmarkMessageTimeoutId.current);
+      }
+    };
+  }, []);
+
   const canSubmit = useMemo(() => {
-    return (
-      question !== null && selectedChoiceId !== null && submitResult === null
-    );
-  }, [question, selectedChoiceId, submitResult]);
+    return canSubmitAnswer({
+      loadState,
+      question,
+      selectedChoiceId,
+      submitResult,
+    });
+  }, [loadState, question, selectedChoiceId, submitResult]);
 
   const isBookmarked = question
     ? bookmarkedQuestionIds.has(question.questionId)
     : false;
 
-  async function onSubmit() {
-    if (!question) return;
-    if (!selectedChoiceId) return;
+  const onSubmit = useMemo(
+    () =>
+      submitAnswerForQuestion.bind(null, {
+        question,
+        selectedChoiceId,
+        questionLoadedAtMs: questionLoadedAt,
+        submitIdempotencyKey,
+        submitAnswerFn: submitAnswer,
+        nowMs: Date.now,
+        setLoadState,
+        setSubmitResult,
+      }),
+    [question, questionLoadedAt, selectedChoiceId, submitIdempotencyKey],
+  );
 
-    setLoadState({ status: 'loading' });
+  const onToggleBookmark = useMemo(
+    () =>
+      toggleBookmarkForQuestion.bind(null, {
+        question,
+        toggleBookmarkFn: toggleBookmark,
+        setBookmarkStatus,
+        setBookmarkedQuestionIds,
+        onBookmarkToggled: (bookmarked: boolean) => {
+          setBookmarkMessage(
+            bookmarked ? 'Question bookmarked.' : 'Bookmark removed.',
+          );
+          if (bookmarkMessageTimeoutId.current) {
+            clearTimeout(bookmarkMessageTimeoutId.current);
+          }
+          bookmarkMessageTimeoutId.current = setTimeout(() => {
+            setBookmarkMessage(null);
+          }, 2000);
+        },
+      }),
+    [question],
+  );
 
-    const res = await submitAnswer({
-      questionId: question.questionId,
-      choiceId: selectedChoiceId,
-    });
+  const onSelectChoice = useMemo(
+    () => selectChoiceIfAllowed.bind(null, submitResult, setSelectedChoiceId),
+    [submitResult],
+  );
 
-    if (!res.ok) {
-      setLoadState({ status: 'error', message: getErrorMessage(res) });
-      return;
-    }
+  const onSessionModeChange = useMemo(
+    () =>
+      handleSessionModeChange.bind(null, (mode) => {
+        setSessionMode(mode);
+        setStartSessionIdempotencyKey(crypto.randomUUID());
+      }),
+    [],
+  );
 
-    setSubmitResult(res.data);
-    setLoadState({ status: 'ready' });
-  }
+  const onSessionCountChange = useMemo(
+    () =>
+      handleSessionCountChange.bind(null, (count) => {
+        setSessionCount(count);
+        setStartSessionIdempotencyKey(crypto.randomUUID());
+      }),
+    [],
+  );
 
-  async function onToggleBookmark() {
-    if (!question) return;
+  const onTagSlugsChange = useMemo(
+    () =>
+      ((event: {
+        target: { selectedOptions: ArrayLike<{ value: string }> };
+      }) => {
+        const selected = Array.from(event.target.selectedOptions).map(
+          (o) => o.value,
+        );
+        setFilters((prev) => ({ ...prev, tagSlugs: selected }));
+        setStartSessionIdempotencyKey(crypto.randomUUID());
+      }) satisfies PracticeSessionStarterProps['onTagSlugsChange'],
+    [],
+  );
 
-    setBookmarkStatus('loading');
+  const onToggleDifficulty = useMemo(
+    () =>
+      ((difficulty: NextQuestion['difficulty']) => {
+        setFilters((prev) => {
+          const existing = prev.difficulties;
+          const next = existing.includes(difficulty)
+            ? existing.filter((d) => d !== difficulty)
+            : [...existing, difficulty];
 
-    const res = await toggleBookmark({ questionId: question.questionId });
-    if (!res.ok) {
-      setBookmarkStatus('error');
-      setLoadState({ status: 'error', message: getErrorMessage(res) });
-      return;
-    }
+          return { ...prev, difficulties: next };
+        });
+        setStartSessionIdempotencyKey(crypto.randomUUID());
+      }) satisfies PracticeSessionStarterProps['onToggleDifficulty'],
+    [],
+  );
 
-    setBookmarkedQuestionIds((prev) => {
-      const next = new Set(prev);
-      if (res.data.bookmarked) next.add(question.questionId);
-      else next.delete(question.questionId);
-      return next;
-    });
-
-    setBookmarkStatus('idle');
-  }
+  const onStartSession = useMemo(
+    () =>
+      startSession.bind(null, {
+        sessionMode,
+        sessionCount,
+        filters,
+        idempotencyKey: startSessionIdempotencyKey,
+        createIdempotencyKey: () => crypto.randomUUID(),
+        setIdempotencyKey: setStartSessionIdempotencyKey,
+        startPracticeSessionFn: startPracticeSession,
+        setSessionStartStatus,
+        setSessionStartError,
+        navigateTo,
+      }),
+    [filters, sessionMode, sessionCount, startSessionIdempotencyKey],
+  );
 
   return (
     <PracticeView
+      topContent={
+        <PracticeSessionStarter
+          sessionMode={sessionMode}
+          sessionCount={sessionCount}
+          filters={filters}
+          tagLoadStatus={tagLoadStatus}
+          availableTags={availableTags}
+          sessionStartStatus={sessionStartStatus}
+          sessionStartError={sessionStartError}
+          isPending={isPending}
+          onToggleDifficulty={onToggleDifficulty}
+          onTagSlugsChange={onTagSlugsChange}
+          onSessionModeChange={onSessionModeChange}
+          onSessionCountChange={onSessionCountChange}
+          onStartSession={onStartSession}
+        />
+      }
       loadState={loadState}
       question={question}
       selectedChoiceId={selectedChoiceId}
@@ -295,14 +610,12 @@ export default function PracticePage() {
       isPending={isPending}
       bookmarkStatus={bookmarkStatus}
       isBookmarked={isBookmarked}
+      bookmarkMessage={bookmarkMessage}
       canSubmit={canSubmit}
       onTryAgain={loadNext}
-      onToggleBookmark={() => void onToggleBookmark()}
-      onSelectChoice={(choiceId) => {
-        if (submitResult) return;
-        setSelectedChoiceId(choiceId);
-      }}
-      onSubmit={() => void onSubmit()}
+      onToggleBookmark={onToggleBookmark}
+      onSelectChoice={onSelectChoice}
+      onSubmit={onSubmit}
       onNextQuestion={loadNext}
     />
   );

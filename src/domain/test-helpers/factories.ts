@@ -1,3 +1,4 @@
+import type { Attempt } from '../entities/attempt';
 import type { Choice } from '../entities/choice';
 import type { PracticeSession } from '../entities/practice-session';
 import type { Question } from '../entities/question';
@@ -22,6 +23,22 @@ export function createUser(overrides: Partial<User> = {}): User {
     createdAt: now,
     updatedAt: now,
     ...overrides,
+  };
+}
+
+export function createAttempt(overrides: Partial<Attempt> = {}): Attempt {
+  const now = new Date();
+  const questionId = overrides.questionId ?? 'question-1';
+
+  return {
+    id: overrides.id ?? `attempt-${questionId}`,
+    userId: overrides.userId ?? 'user-1',
+    questionId,
+    practiceSessionId: overrides.practiceSessionId ?? null,
+    selectedChoiceId: overrides.selectedChoiceId ?? 'choice-1',
+    isCorrect: overrides.isCorrect ?? false,
+    timeSpentSeconds: overrides.timeSpentSeconds ?? 0,
+    answeredAt: overrides.answeredAt ?? now,
   };
 }
 

@@ -1,28 +1,29 @@
 'use server';
 
 import { z } from 'zod';
+import {
+  createDepsResolver,
+  type LoadContainerFn,
+  loadAppContainer,
+} from '@/lib/controller-helpers';
+import type { Logger } from '@/src/adapters/shared/logger';
+import { MAX_PAGINATION_LIMIT } from '@/src/adapters/shared/validation-limits';
 import type { AuthGateway } from '@/src/application/ports/gateways';
 import type {
   AttemptRepository,
   QuestionRepository,
 } from '@/src/application/ports/repositories';
-import type {
-  CheckEntitlementInput,
-  CheckEntitlementOutput,
-} from '@/src/application/use-cases/check-entitlement';
 import type { ActionResult } from './action-result';
-import { err, handleError, ok } from './action-result';
+import { handleError, ok } from './action-result';
+import type { CheckEntitlementUseCase } from './require-entitled-user-id';
+import { requireEntitledUserId } from './require-entitled-user-id';
 
 const GetMissedQuestionsInputSchema = z
   .object({
-    limit: z.number().int().min(1).max(100),
+    limit: z.number().int().min(1).max(MAX_PAGINATION_LIMIT),
     offset: z.number().int().min(0),
   })
   .strict();
-
-type CheckEntitlementUseCase = {
-  execute: (input: CheckEntitlementInput) => Promise<CheckEntitlementOutput>;
-};
 
 export type MissedQuestionRow = {
   questionId: string;
@@ -43,72 +44,45 @@ export type ReviewControllerDeps = {
   checkEntitlementUseCase: CheckEntitlementUseCase;
   attemptRepository: AttemptRepository;
   questionRepository: QuestionRepository;
+  logger?: Logger;
 };
 
-async function getDeps(
-  deps?: ReviewControllerDeps,
-): Promise<ReviewControllerDeps> {
-  if (deps) return deps;
+type ReviewControllerContainer = {
+  createReviewControllerDeps: () => ReviewControllerDeps;
+};
 
-  const { createContainer } = await import('@/lib/container');
-  return createContainer().createReviewControllerDeps();
-}
-
-async function requireEntitledUserId(
-  deps: ReviewControllerDeps,
-): Promise<string | ActionResult<never>> {
-  const user = await deps.authGateway.requireUser();
-  const entitlement = await deps.checkEntitlementUseCase.execute({
-    userId: user.id,
-  });
-
-  if (!entitlement.isEntitled) {
-    return err('UNSUBSCRIBED', 'Subscription required');
-  }
-
-  return user.id;
-}
-
-type MissedQuestion = { questionId: string; answeredAt: Date };
+const getDeps = createDepsResolver<
+  ReviewControllerDeps,
+  ReviewControllerContainer
+>((container) => container.createReviewControllerDeps(), loadAppContainer);
 
 export async function getMissedQuestions(
   input: unknown,
   deps?: ReviewControllerDeps,
+  options?: { loadContainer?: LoadContainerFn<ReviewControllerContainer> },
 ): Promise<ActionResult<GetMissedQuestionsOutput>> {
   const parsed = GetMissedQuestionsInputSchema.safeParse(input);
   if (!parsed.success) return handleError(parsed.error);
 
   try {
-    const d = await getDeps(deps);
+    const d = await getDeps(deps, options);
     const userIdOrError = await requireEntitledUserId(d);
     if (typeof userIdOrError !== 'string') return userIdOrError;
     const userId = userIdOrError;
 
-    const attempts = await d.attemptRepository.findByUserId(userId);
-
-    const sortedAttempts = attempts
-      .slice()
-      .sort((a, b) => b.answeredAt.getTime() - a.answeredAt.getTime());
-
-    const seen = new Set<string>();
-    const missed: MissedQuestion[] = [];
-
-    for (const attempt of sortedAttempts) {
-      if (seen.has(attempt.questionId)) continue;
-      seen.add(attempt.questionId);
-
-      if (!attempt.isCorrect) {
-        missed.push({
-          questionId: attempt.questionId,
-          answeredAt: attempt.answeredAt,
-        });
-      }
-    }
-
-    const page = missed.slice(
+    const page = await d.attemptRepository.listMissedQuestionsByUserId(
+      userId,
+      parsed.data.limit,
       parsed.data.offset,
-      parsed.data.offset + parsed.data.limit,
     );
+
+    if (page.length === 0) {
+      return ok({
+        rows: [],
+        limit: parsed.data.limit,
+        offset: parsed.data.offset,
+      });
+    }
 
     const questionIds = page.map((m) => m.questionId);
     const questions =
@@ -118,7 +92,15 @@ export async function getMissedQuestions(
     const rows: MissedQuestionRow[] = [];
     for (const m of page) {
       const question = byId.get(m.questionId);
-      if (!question) continue;
+      if (!question) {
+        // Graceful degradation: questions can be unpublished/deleted while attempts persist.
+        // Skip orphans to return a partial list instead of failing the entire view.
+        d.logger?.warn(
+          { questionId: m.questionId },
+          'Missed question references missing question',
+        );
+        continue;
+      }
       rows.push({
         questionId: question.id,
         slug: question.slug,

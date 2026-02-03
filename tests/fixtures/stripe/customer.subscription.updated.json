@@ -1,0 +1,32 @@
+{
+  "id": "evt_1",
+  "object": "event",
+  "api_version": "2026-01-28.clover",
+  "created": 1700000000,
+  "livemode": false,
+  "pending_webhooks": 1,
+  "request": { "id": "req_123", "idempotency_key": null },
+  "type": "customer.subscription.updated",
+  "data": {
+    "object": {
+      "id": "sub_123",
+      "object": "subscription",
+      "customer": "cus_123",
+      "status": "active",
+      "cancel_at_period_end": false,
+      "metadata": { "user_id": "user_1" },
+      "items": {
+        "object": "list",
+        "data": [
+          {
+            "id": "si_123",
+            "object": "subscription_item",
+            "current_period_start": 1700000000,
+            "current_period_end": 1700000000,
+            "price": { "id": "price_m", "object": "price" }
+          }
+        ]
+      }
+    }
+  }
+}

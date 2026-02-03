@@ -7,7 +7,7 @@ language: en-US
 tone_instructions: |
   Be direct and technical. Focus on correctness and best practices.
   Prioritize actionable feedback over praise. Flag violations of
-  project conventions documented in CLAUDE.md.
+  project conventions documented in AGENTS.md, CLAUDE.md, and docs/specs/master_spec.md.
 
 early_access: false
 
@@ -108,25 +108,16 @@ reviews:
     eslint:
       enabled: false  # We use Biome, not ESLint
 
-  # Knowledge base: reference project docs
-  knowledge_base:
-    learnings:
-      enabled: true
-    issues:
-      enabled: true
-    jira:
-      enabled: false
-    linear:
-      enabled: false
-
 chat:
   enabled: true
   auto_reply: true
 
-# Reference our coding guidelines
-code_guidelines:
-  enabled: true
-  file_patterns:
-    - "CLAUDE.md"
-    - "docs/specs/master_spec.md"
-    - "AGENTS.md"
+knowledge_base:
+  learnings:
+    scope: auto
+  issues:
+    scope: auto
+  jira:
+    usage: disabled
+  linear:
+    usage: disabled
