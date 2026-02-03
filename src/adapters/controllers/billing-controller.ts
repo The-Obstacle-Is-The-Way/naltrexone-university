@@ -16,7 +16,6 @@ import type {
   StripeCustomerRepository,
   SubscriptionRepository,
 } from '@/src/application/ports/repositories';
-import { isEntitled } from '@/src/domain/services';
 import { createAction } from './create-action';
 
 const zSubscriptionPlan = z.enum(['monthly', 'annual']);
@@ -118,7 +117,8 @@ export const createCheckoutSession = createAction({
       }
 
       const subscription = await d.subscriptionRepository.findByUserId(user.id);
-      if (isEntitled(subscription, d.now())) {
+      const now = d.now();
+      if (subscription && subscription.currentPeriodEnd > now) {
         throw new ApplicationError(
           'ALREADY_SUBSCRIBED',
           'Subscription already exists for this user',

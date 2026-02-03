@@ -194,6 +194,42 @@ describe('billing-controller', () => {
       expect(paymentGateway.checkoutInputs).toEqual([]);
     });
 
+    it('returns ALREADY_SUBSCRIBED when subscription is not entitled but still current', async () => {
+      const paymentGateway = new FakePaymentGateway({
+        stripeCustomerId: 'cus_new',
+        checkoutUrl: 'https://stripe/checkout',
+        portalUrl: 'https://stripe/portal',
+        webhookResult: { eventId: 'evt_1', type: 'checkout.session.completed' },
+      });
+
+      const subscriptionRepository = new FakeSubscriptionRepository([
+        createSubscription({
+          userId: 'user_1',
+          status: 'past_due',
+          currentPeriodEnd: new Date('2026-03-01T00:00:00Z'),
+        }),
+      ]);
+
+      const deps = createDeps({
+        paymentGateway,
+        subscriptionRepository,
+        now: () => new Date('2026-02-01T00:00:00Z'),
+      });
+
+      const result = await createCheckoutSession(
+        { plan: 'monthly' },
+        deps as never,
+      );
+
+      expect(result).toMatchObject({
+        ok: false,
+        error: { code: 'ALREADY_SUBSCRIBED' },
+      });
+
+      expect(paymentGateway.customerInputs).toEqual([]);
+      expect(paymentGateway.checkoutInputs).toEqual([]);
+    });
+
     it('returns RATE_LIMITED when checkout is rate limited', async () => {
       const paymentGateway = new FakePaymentGateway({
         stripeCustomerId: 'cus_new',

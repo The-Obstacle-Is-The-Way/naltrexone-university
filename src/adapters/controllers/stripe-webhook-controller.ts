@@ -89,28 +89,30 @@ export async function processStripeWebhook(
         }
 
         await stripeEvents.markProcessed(event.eventId);
-
-        try {
-          await stripeEvents.pruneProcessedBefore(
-            new Date(Date.now() - STRIPE_EVENT_RETENTION_DAYS * DAY_MS),
-            STRIPE_EVENT_PRUNE_LIMIT,
-          );
-        } catch (error) {
-          // Best-effort cleanup: do not fail webhook processing if pruning fails.
-          deps.logger.warn(
-            {
-              eventId: event.eventId,
-              error: error instanceof Error ? error.message : String(error),
-              retentionDays: STRIPE_EVENT_RETENTION_DAYS,
-              pruneLimit: STRIPE_EVENT_PRUNE_LIMIT,
-            },
-            'Stripe event pruning failed',
-          );
-        }
       } catch (error) {
         await stripeEvents.markFailed(event.eventId, toErrorData(error));
         throw error;
       }
     },
   );
+
+  try {
+    await deps.transaction(async ({ stripeEvents }) => {
+      await stripeEvents.pruneProcessedBefore(
+        new Date(Date.now() - STRIPE_EVENT_RETENTION_DAYS * DAY_MS),
+        STRIPE_EVENT_PRUNE_LIMIT,
+      );
+    });
+  } catch (error) {
+    // Best-effort cleanup: do not fail webhook processing if pruning fails.
+    deps.logger.warn(
+      {
+        eventId: event.eventId,
+        error: error instanceof Error ? error.message : String(error),
+        retentionDays: STRIPE_EVENT_RETENTION_DAYS,
+        pruneLimit: STRIPE_EVENT_PRUNE_LIMIT,
+      },
+      'Stripe event pruning failed',
+    );
+  }
 }
