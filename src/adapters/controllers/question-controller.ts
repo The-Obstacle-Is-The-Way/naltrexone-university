@@ -115,9 +115,7 @@ export async function getNextQuestion(
 
   try {
     const d = await getDeps(deps, options);
-    const userIdOrError = await requireEntitledUserId(d);
-    if (typeof userIdOrError !== 'string') return userIdOrError;
-    const userId = userIdOrError;
+    const userId = await requireEntitledUserId(d);
 
     const data =
       typeof parsed.data.sessionId === 'string'
@@ -146,9 +144,7 @@ export async function submitAnswer(
 
   try {
     const d = await getDeps(deps, options);
-    const userIdOrError = await requireEntitledUserId(d);
-    if (typeof userIdOrError !== 'string') return userIdOrError;
-    const userId = userIdOrError;
+    const userId = await requireEntitledUserId(d);
 
     const {
       questionId,

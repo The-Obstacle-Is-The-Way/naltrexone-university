@@ -70,9 +70,7 @@ export async function toggleBookmark(
 
   try {
     const d = await getDeps(deps, options);
-    const userIdOrError = await requireEntitledUserId(d);
-    if (typeof userIdOrError !== 'string') return userIdOrError;
-    const userId = userIdOrError;
+    const userId = await requireEntitledUserId(d);
 
     const question = await d.questionRepository.findPublishedById(
       parsed.data.questionId,
@@ -107,9 +105,7 @@ export async function getBookmarks(
 
   try {
     const d = await getDeps(deps, options);
-    const userIdOrError = await requireEntitledUserId(d);
-    if (typeof userIdOrError !== 'string') return userIdOrError;
-    const userId = userIdOrError;
+    const userId = await requireEntitledUserId(d);
 
     const bookmarks = await d.bookmarkRepository.listByUserId(userId);
     const questionIds = bookmarks.map((b) => b.questionId);

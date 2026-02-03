@@ -63,8 +63,7 @@ export async function getQuestionBySlug(
 
   try {
     const d = await getDeps(deps, options);
-    const userIdOrError = await requireEntitledUserId(d);
-    if (typeof userIdOrError !== 'string') return userIdOrError;
+    await requireEntitledUserId(d);
 
     const question = await d.questionRepository.findPublishedBySlug(
       parsed.data.slug,

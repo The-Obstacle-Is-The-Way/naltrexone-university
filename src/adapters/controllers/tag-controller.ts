@@ -53,8 +53,7 @@ export async function getTags(
 
   try {
     const d = await getDeps(deps, options);
-    const userIdOrError = await requireEntitledUserId(d);
-    if (typeof userIdOrError !== 'string') return userIdOrError;
+    await requireEntitledUserId(d);
 
     const tags = await d.tagRepository.listAll();
     return ok({

@@ -66,9 +66,7 @@ export async function getMissedQuestions(
 
   try {
     const d = await getDeps(deps, options);
-    const userIdOrError = await requireEntitledUserId(d);
-    if (typeof userIdOrError !== 'string') return userIdOrError;
-    const userId = userIdOrError;
+    const userId = await requireEntitledUserId(d);
 
     const page = await d.attemptRepository.listMissedQuestionsByUserId(
       userId,

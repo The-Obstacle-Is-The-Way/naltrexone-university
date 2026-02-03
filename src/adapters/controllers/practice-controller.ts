@@ -105,9 +105,7 @@ export async function startPracticeSession(
 
   try {
     const d = await getDeps(deps, options);
-    const userIdOrError = await requireEntitledUserId(d);
-    if (typeof userIdOrError !== 'string') return userIdOrError;
-    const userId = userIdOrError;
+    const userId = await requireEntitledUserId(d);
 
     const { mode, count, tagSlugs, difficulties, idempotencyKey } = parsed.data;
 
@@ -177,9 +175,7 @@ export async function endPracticeSession(
 
   try {
     const d = await getDeps(deps, options);
-    const userIdOrError = await requireEntitledUserId(d);
-    if (typeof userIdOrError !== 'string') return userIdOrError;
-    const userId = userIdOrError;
+    const userId = await requireEntitledUserId(d);
 
     const session = await d.practiceSessionRepository.end(
       parsed.data.sessionId,
