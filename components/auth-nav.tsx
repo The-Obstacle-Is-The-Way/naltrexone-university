@@ -1,31 +1,22 @@
 import { UserButton } from '@clerk/nextjs';
 import Link from 'next/link';
+import type {
+  AuthDepsContainer,
+  CheckEntitlementUseCase,
+} from '@/lib/auth-deps-container';
 import {
   createDepsResolver,
   type LoadContainerFn,
   loadAppContainer,
 } from '@/lib/controller-helpers';
 import type { AuthGateway } from '@/src/application/ports/gateways';
-import type {
-  CheckEntitlementInput,
-  CheckEntitlementOutput,
-} from '@/src/application/use-cases/check-entitlement';
-
-type CheckEntitlementUseCase = {
-  execute: (input: CheckEntitlementInput) => Promise<CheckEntitlementOutput>;
-};
 
 export type AuthNavDeps = {
   authGateway: AuthGateway;
   checkEntitlementUseCase: CheckEntitlementUseCase;
 };
 
-type AuthNavContainer = {
-  createAuthGateway: () => AuthGateway;
-  createCheckEntitlementUseCase: () => CheckEntitlementUseCase;
-};
-
-const getDeps = createDepsResolver<AuthNavDeps, AuthNavContainer>(
+const getDeps = createDepsResolver<AuthNavDeps, AuthDepsContainer>(
   (container) => ({
     authGateway: container.createAuthGateway(),
     checkEntitlementUseCase: container.createCheckEntitlementUseCase(),
@@ -46,7 +37,7 @@ export async function AuthNav({
   options,
 }: {
   deps?: AuthNavDeps;
-  options?: { loadContainer?: LoadContainerFn<AuthNavContainer> };
+  options?: { loadContainer?: LoadContainerFn<AuthDepsContainer> };
 } = {}) {
   const skipClerk = process.env.NEXT_PUBLIC_SKIP_CLERK === 'true';
 

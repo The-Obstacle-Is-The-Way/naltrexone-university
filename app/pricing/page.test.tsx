@@ -13,6 +13,7 @@ describe('app/pricing', () => {
   afterEach(() => {
     vi.resetModules();
     vi.restoreAllMocks();
+    vi.unstubAllEnvs();
   });
 
   it('renders subscribe actions when user is not subscribed', async () => {
@@ -107,24 +108,18 @@ describe('app/pricing', () => {
   it('includes error code details in development for checkout=error', async () => {
     const { getPricingBanner } = await import('./page');
 
-    const originalEnv = process.env.NODE_ENV;
-    (process.env as Record<string, string | undefined>).NODE_ENV =
-      'development';
-    try {
-      expect(
-        getPricingBanner({
-          checkout: 'error',
-          error_code: 'INTERNAL_ERROR',
-          error_message: 'Boom',
-        }),
-      ).toMatchObject({
-        tone: 'error',
-        message: 'Checkout failed (INTERNAL_ERROR). Boom',
-      });
-    } finally {
-      (process.env as Record<string, string | undefined>).NODE_ENV =
-        originalEnv;
-    }
+    vi.stubEnv('NODE_ENV', 'development');
+
+    expect(
+      getPricingBanner({
+        checkout: 'error',
+        error_code: 'INTERNAL_ERROR',
+        error_message: 'Boom',
+      }),
+    ).toMatchObject({
+      tone: 'error',
+      message: 'Checkout failed (INTERNAL_ERROR). Boom',
+    });
   });
 
   it('builds the checkout canceled banner when checkout=cancel', async () => {
@@ -345,7 +340,7 @@ describe('app/pricing', () => {
   });
 
   it('SubscribeButton renders children when not pending', async () => {
-    const { SubscribeButton } = await import('./pricing-client');
+    const { SubscribeButton } = await import('@/app/pricing/pricing-client');
 
     const html = renderToStaticMarkup(
       <SubscribeButton>Subscribe Monthly</SubscribeButton>,

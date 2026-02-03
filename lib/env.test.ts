@@ -41,7 +41,7 @@ describe('env', () => {
 
     vi.resetModules();
 
-    await expect(import('./env')).resolves.toHaveProperty('env');
+    await expect(import('@/lib/env')).resolves.toHaveProperty('env');
   });
 
   it('allows NEXT_PUBLIC_SKIP_CLERK=true even when NODE_ENV=production (next build)', async () => {
@@ -66,7 +66,7 @@ describe('env', () => {
 
     vi.resetModules();
 
-    await expect(import('./env')).resolves.toHaveProperty('env');
+    await expect(import('@/lib/env')).resolves.toHaveProperty('env');
   });
 
   it('rejects NEXT_PUBLIC_SKIP_CLERK=true on Vercel production deploys', async () => {
@@ -85,7 +85,7 @@ describe('env', () => {
 
     vi.resetModules();
 
-    await expect(import('./env')).rejects.toThrow(
+    await expect(import('@/lib/env')).rejects.toThrow(
       'NEXT_PUBLIC_SKIP_CLERK must not be true in production',
     );
   });
@@ -112,7 +112,7 @@ describe('env', () => {
 
     vi.resetModules();
 
-    await expect(import('./env')).rejects.toThrow(
+    await expect(import('@/lib/env')).rejects.toThrow(
       'NEXT_PUBLIC_SKIP_CLERK must not be true in production',
     );
   });
@@ -136,7 +136,7 @@ describe('env', () => {
 
     vi.resetModules();
 
-    await expect(import('./env')).resolves.toHaveProperty('env');
+    await expect(import('@/lib/env')).resolves.toHaveProperty('env');
   });
 
   it('requires CLERK_WEBHOOK_SIGNING_SECRET in non-Vercel production runtime when Clerk is enabled', async () => {
@@ -166,7 +166,7 @@ describe('env', () => {
 
     vi.resetModules();
 
-    await expect(import('./env')).rejects.toThrow(
+    await expect(import('@/lib/env')).rejects.toThrow(
       'Invalid environment variables',
     );
     consoleError.mockRestore();
@@ -195,7 +195,7 @@ describe('env', () => {
 
     vi.resetModules();
 
-    await expect(import('./env')).rejects.toThrow(
+    await expect(import('@/lib/env')).rejects.toThrow(
       'Invalid environment variables',
     );
     consoleError.mockRestore();
@@ -223,7 +223,7 @@ describe('env', () => {
 
     vi.resetModules();
 
-    await expect(import('./env')).rejects.toThrow(
+    await expect(import('@/lib/env')).rejects.toThrow(
       'Invalid environment variables',
     );
     consoleError.mockRestore();
@@ -251,7 +251,7 @@ describe('env', () => {
 
     vi.resetModules();
 
-    await expect(import('./env')).rejects.toThrow(
+    await expect(import('@/lib/env')).rejects.toThrow(
       'Invalid environment variables',
     );
     consoleError.mockRestore();
@@ -279,7 +279,7 @@ describe('env', () => {
 
     vi.resetModules();
 
-    await expect(import('./env')).rejects.toThrow(
+    await expect(import('@/lib/env')).rejects.toThrow(
       'Invalid environment variables',
     );
     consoleError.mockRestore();
