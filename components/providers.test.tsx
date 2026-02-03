@@ -29,7 +29,7 @@ describe('Providers', () => {
       throw new Error('Publishable key not valid.');
     });
 
-    const { Providers } = await import('./providers');
+    const { Providers } = await import('@/components/providers');
 
     const html = renderToStaticMarkup(
       <Providers>

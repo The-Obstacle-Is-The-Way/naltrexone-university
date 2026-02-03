@@ -29,7 +29,8 @@ describe('app/sign-in/[[...sign-in]]', () => {
       throw new Error('Publishable key not valid.');
     });
 
-    const SignInPage = (await import('./page')).default;
+    const SignInPage = (await import('@/app/sign-in/[[...sign-in]]/page'))
+      .default;
     const html = renderToStaticMarkup(<SignInPage />);
 
     expect(html).toContain('Sign In');
