@@ -32,7 +32,7 @@ describe('loadDotenvFileOrThrow', () => {
       await writeFile(envPath, 'TEST_ENV_LOADED=1\n');
       process.env.TEST_ENV_LOADED = '2';
 
-      loadDotenvFileOrThrow(envPath);
+      loadDotenvFileOrThrow(envPath, { override: true });
 
       expect(process.env.TEST_ENV_LOADED).toBe('1');
     } finally {
