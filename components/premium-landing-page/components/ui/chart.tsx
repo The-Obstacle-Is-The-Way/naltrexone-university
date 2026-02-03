@@ -187,8 +187,12 @@ function isValidCssColor(value: string): boolean {
     return false;
   }
 
-  // Hex colors: #RGB, #RRGGBB, #RRGGBBAA
-  if (/^#[0-9a-fA-F]{3,8}$/.test(trimmed)) {
+  // Hex colors: #RGB (3), #RGBA (4), #RRGGBB (6), #RRGGBBAA (8) - only valid lengths
+  if (
+    /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/.test(
+      trimmed,
+    )
+  ) {
     return true;
   }
 

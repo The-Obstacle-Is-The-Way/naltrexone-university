@@ -1,6 +1,7 @@
 'use client';
 
 import { ArrowRight, Sparkles } from 'lucide-react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { LiquidCtaButton } from '@/components/buttons/liquid-cta-button';
 
@@ -51,36 +52,41 @@ export function HeroSection() {
         {/* Social proof */}
         <div className="mt-16 flex flex-col sm:flex-row items-center justify-center gap-4">
           <div className="flex items-center gap-4">
-            {/* External Unsplash avatars for social proof - biome-ignore applied per element */}
+            {/* Social proof avatars using next/image with configured remotePatterns */}
             <div className="flex -space-x-3">
-              {/* biome-ignore lint/performance/noImgElement: External URL requires remotePatterns config */}
-              <img
+              <Image
                 src="https://images.unsplash.com/photo-1633332755192-727a05c4013d?q=80&w=200"
                 alt="User avatar"
+                width={40}
+                height={40}
                 className="w-10 h-10 rounded-full border-2 border-zinc-950 hover:-translate-y-1 transition object-cover z-[1]"
               />
-              {/* biome-ignore lint/performance/noImgElement: External URL requires remotePatterns config */}
-              <img
+              <Image
                 src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=200"
                 alt="User avatar"
+                width={40}
+                height={40}
                 className="w-10 h-10 rounded-full border-2 border-zinc-950 hover:-translate-y-1 transition object-cover z-[2]"
               />
-              {/* biome-ignore lint/performance/noImgElement: External URL requires remotePatterns config */}
-              <img
+              <Image
                 src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?q=80&w=200&h=200&auto=format&fit=crop"
                 alt="User avatar"
+                width={40}
+                height={40}
                 className="w-10 h-10 rounded-full border-2 border-zinc-950 hover:-translate-y-1 transition object-cover z-[3]"
               />
-              {/* biome-ignore lint/performance/noImgElement: External URL requires remotePatterns config */}
-              <img
+              <Image
                 src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=200"
                 alt="User avatar"
+                width={40}
+                height={40}
                 className="w-10 h-10 rounded-full border-2 border-zinc-950 hover:-translate-y-1 transition object-cover z-[4]"
               />
-              {/* biome-ignore lint/performance/noImgElement: External URL requires remotePatterns config */}
-              <img
+              <Image
                 src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=200"
                 alt="User avatar"
+                width={40}
+                height={40}
                 className="w-10 h-10 rounded-full border-2 border-zinc-950 hover:-translate-y-1 transition object-cover z-[5]"
               />
             </div>
