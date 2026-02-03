@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { DrizzleDb } from '@/src/adapters/shared/database-types';
 import {
   restoreProcessEnv,
@@ -9,10 +9,14 @@ import {
 const ORIGINAL_ENV = snapshotProcessEnv();
 
 describe('container (skip clerk)', () => {
-  afterEach(() => {
+  beforeEach(() => {
     restoreProcessEnv(ORIGINAL_ENV);
     vi.resetModules();
     vi.restoreAllMocks();
+  });
+
+  afterEach(() => {
+    restoreProcessEnv(ORIGINAL_ENV);
   });
 
   it('does not import Clerk server modules when NEXT_PUBLIC_SKIP_CLERK=true', async () => {
