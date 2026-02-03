@@ -31,7 +31,7 @@ export type TagControllerDeps = {
   authGateway: AuthGateway;
   checkEntitlementUseCase: CheckEntitlementUseCase;
   tagRepository: TagRepository;
-  logger?: Logger;
+  logger: Logger;
 };
 
 type TagControllerContainer = {

@@ -23,7 +23,7 @@ export type StripeWebhookDeps = {
   transaction: <T>(
     fn: (tx: StripeWebhookTransaction) => Promise<T>,
   ) => Promise<T>;
-  logger?: Logger;
+  logger: Logger;
 };
 
 const STACK_TRACE_LIMIT = 1000;
@@ -97,7 +97,7 @@ export async function processStripeWebhook(
           );
         } catch (error) {
           // Best-effort cleanup: do not fail webhook processing if pruning fails.
-          deps.logger?.warn(
+          deps.logger.warn(
             {
               eventId: event.eventId,
               error: error instanceof Error ? error.message : String(error),

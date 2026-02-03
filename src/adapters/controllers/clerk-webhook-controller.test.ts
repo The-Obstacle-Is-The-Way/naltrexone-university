@@ -17,6 +17,7 @@ function createDeps() {
     cancelStripeCustomerSubscriptions: async (stripeCustomerId: string) => {
       cancelCalls.push(stripeCustomerId);
     },
+    logger: { warn: vi.fn() },
   };
 }
 

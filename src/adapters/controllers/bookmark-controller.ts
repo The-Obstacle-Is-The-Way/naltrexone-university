@@ -48,7 +48,7 @@ export type BookmarkControllerDeps = {
   checkEntitlementUseCase: CheckEntitlementUseCase;
   bookmarkRepository: BookmarkRepository;
   questionRepository: QuestionRepository;
-  logger?: Logger;
+  logger: Logger;
 };
 
 type BookmarkControllerContainer = {
@@ -123,7 +123,7 @@ export async function getBookmarks(
       if (!question) {
         // Graceful degradation: questions can be unpublished/deleted while bookmarks persist.
         // Skip orphans to return a partial list instead of failing the entire view.
-        d.logger?.warn(
+        d.logger.warn(
           { questionId: bookmark.questionId },
           'Bookmark references missing question',
         );

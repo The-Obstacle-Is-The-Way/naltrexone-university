@@ -132,7 +132,7 @@ function createDeps(overrides?: {
     questionRepository:
       overrides?.questionRepository ??
       new FakeQuestionRepository([defaultQuestion]),
-    logger: overrides?.logger,
+    logger: overrides?.logger ?? new FakeLogger(),
   };
 }
 

@@ -125,13 +125,18 @@ export type ContainerOverrides = {
 export function createContainerPrimitives(
   overrides: Partial<ContainerPrimitives> = {},
 ) {
-  return {
+  const primitives = {
     db,
     env,
     logger,
     stripe,
     now: () => new Date(),
     ...overrides,
+  } as const;
+
+  return {
+    ...primitives,
+    logger: primitives.logger ?? console,
   } as const;
 }
 

@@ -60,7 +60,7 @@ function createDeps(overrides?: {
     checkEntitlementUseCase,
     attemptRepository: new FakeAttemptRepository(overrides?.attempts ?? []),
     questionRepository: new FakeQuestionRepository(overrides?.questions ?? []),
-    logger: overrides?.logger,
+    logger: overrides?.logger ?? { warn: () => {} },
   };
 }
 
@@ -250,31 +250,6 @@ describe('review-controller', () => {
           msg: 'Missed question references missing question',
         },
       ]);
-    });
-
-    it('works without logger (optional dependency)', async () => {
-      const orphanedQuestionId = 'q-orphaned';
-      const deps = createDeps({
-        attempts: [
-          createAttempt({
-            userId: 'user_1',
-            questionId: orphanedQuestionId,
-            isCorrect: false,
-            answeredAt: new Date('2026-02-01T12:00:00Z'),
-          }),
-        ],
-        questions: [],
-      });
-
-      const result = await getMissedQuestions(
-        { limit: 10, offset: 0 },
-        deps as never,
-      );
-
-      expect(result).toEqual({
-        ok: true,
-        data: { rows: [], limit: 10, offset: 0 },
-      });
     });
   });
 });

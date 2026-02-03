@@ -1,6 +1,6 @@
 # DEBT-088: Optional Logger Pattern Hides Errors
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P2
 **Date:** 2026-02-03
 
@@ -12,7 +12,7 @@ Multiple locations use optional chaining on the logger (`logger?.warn`, `logger?
 
 ```typescript
 // Pattern seen throughout codebase
-d.logger?.warn('Something bad happened', { context });  // ← Silently does nothing if logger undefined
+d.logger?.warn({ context }, 'Something bad happened');  // ← Silently does nothing if logger undefined
 ```
 
 ## Affected Locations
@@ -41,13 +41,13 @@ The logger is injected via dependency injection:
 // Controller deps type
 type BookmarkControllerDeps = {
   // ...
-  logger?: Logger;  // ← Optional
+  logger: Logger;  // ← Required
 };
 
 // Container provides it... or not
 createBookmarkControllerDeps: () => ({
   // ...
-  logger: primitives.logger,  // ← Could be undefined
+  logger: primitives.logger ?? console,  // ← Always defined
 }),
 ```
 
@@ -139,9 +139,9 @@ This ensures:
 
 ## Verification
 
-- [ ] Grep finds no `logger?.` patterns in controllers
-- [ ] All controller tests pass
-- [ ] Logs appear in both dev and prod environments
+- [x] Grep finds no `logger?.` patterns
+- [x] `pnpm test --run`
+- [x] `pnpm typecheck`
 
 ## Related
 

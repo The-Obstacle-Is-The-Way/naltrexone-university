@@ -21,7 +21,6 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 | [DEBT-085](debt-085-union-return-type-code-smell.md) | Union Return Type Pattern in requireEntitledUserId() | Open | P3 | 2026-02-03 |
 | [DEBT-086](debt-086-dry-violation-controller-boilerplate.md) | DRY Violation — Repeated Controller Boilerplate Pattern | Open | P3 | 2026-02-03 |
 | [DEBT-087](debt-087-graceful-degradation-hides-data-loss.md) | Graceful Degradation Hides Data Loss from Users | Open | P2 | 2026-02-03 |
-| [DEBT-088](debt-088-optional-logger-hides-errors.md) | Optional Logger Pattern Hides Errors | Open | P2 | 2026-02-03 |
 
 **Next Debt ID:** DEBT-089
 
@@ -29,6 +28,7 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 | ID | Title | Priority | Resolved |
 |----|-------|----------|----------|
+| [DEBT-088](../_archive/debt/debt-088-optional-logger-hides-errors.md) | Optional Logger Pattern Hides Errors | P2 | 2026-02-03 |
 | [DEBT-083](../_archive/debt/debt-083-unused-attempt-repository-find-by-user-id.md) | AttemptRepository.findByUserId() Needs Pagination | P2 | 2026-02-03 |
 | [DEBT-082](../_archive/debt/debt-082-test-logs-too-noisy.md) | Unit Tests Emit Noisy Error Logs | P3 | 2026-02-03 |
 | [DEBT-081](../_archive/debt/debt-081-nextjs-alloweddevorigins-warning.md) | Next.js allowedDevOrigins Warning in E2E Runs | P3 | 2026-02-03 |

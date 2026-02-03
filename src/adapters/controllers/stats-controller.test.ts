@@ -64,7 +64,7 @@ function createDeps(overrides?: {
     attemptRepository: new FakeAttemptRepository(overrides?.attempts ?? []),
     questionRepository: new FakeQuestionRepository(overrides?.questions ?? []),
     now,
-    logger: overrides?.logger,
+    logger: overrides?.logger ?? { warn: () => {} },
   };
 }
 
@@ -255,31 +255,6 @@ describe('stats-controller', () => {
           msg: 'Recent activity references missing question',
         },
       ]);
-    });
-
-    it('works without logger (optional dependency)', async () => {
-      const orphanedQuestionId = 'q-orphaned';
-      const now = new Date('2026-02-01T12:00:00Z');
-
-      const deps = createDeps({
-        now: () => now,
-        attempts: [
-          createAttempt({
-            userId: 'user_1',
-            questionId: orphanedQuestionId,
-            isCorrect: true,
-            answeredAt: new Date('2026-02-01T11:00:00Z'),
-          }),
-        ],
-        questions: [],
-      });
-
-      const result = await getUserStats({}, deps as never);
-
-      expect(result.ok).toBe(true);
-      if (result.ok) {
-        expect(result.data.recentActivity).toEqual([]);
-      }
     });
   });
 });

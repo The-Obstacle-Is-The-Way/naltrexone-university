@@ -44,7 +44,7 @@ export type ReviewControllerDeps = {
   checkEntitlementUseCase: CheckEntitlementUseCase;
   attemptRepository: AttemptRepository;
   questionRepository: QuestionRepository;
-  logger?: Logger;
+  logger: Logger;
 };
 
 type ReviewControllerContainer = {
@@ -95,7 +95,7 @@ export async function getMissedQuestions(
       if (!question) {
         // Graceful degradation: questions can be unpublished/deleted while attempts persist.
         // Skip orphans to return a partial list instead of failing the entire view.
-        d.logger?.warn(
+        d.logger.warn(
           { questionId: m.questionId },
           'Missed question references missing question',
         );
