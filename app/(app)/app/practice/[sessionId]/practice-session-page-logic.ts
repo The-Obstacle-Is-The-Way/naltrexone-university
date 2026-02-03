@@ -51,6 +51,7 @@ export async function loadNextQuestion(input: {
       message: getActionResultErrorMessage(res),
     });
     input.setQuestion(null);
+    input.setSubmitIdempotencyKey(null);
     return;
   }
 
