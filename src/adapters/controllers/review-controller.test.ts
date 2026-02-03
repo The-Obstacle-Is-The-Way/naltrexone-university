@@ -111,6 +111,24 @@ describe('review-controller', () => {
       });
     });
 
+    it('returns empty rows when there are no missed questions', async () => {
+      const deps = createDeps({ attempts: [], questions: [] });
+
+      const result = await getMissedQuestions(
+        { limit: 10, offset: 0 },
+        deps as never,
+      );
+
+      expect(result).toEqual({
+        ok: true,
+        data: {
+          rows: [],
+          limit: 10,
+          offset: 0,
+        },
+      });
+    });
+
     it('returns missed questions based on most recent attempt only', async () => {
       const deps = createDeps({
         attempts: [
