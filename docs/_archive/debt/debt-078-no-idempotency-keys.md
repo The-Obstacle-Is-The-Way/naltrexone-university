@@ -56,6 +56,8 @@ const session = await stripe.checkout.sessions.create(
 );
 ```
 
+See "Client-Side Coordination" below for how clients generate and pass stable keys.
+
 ## Where to Apply
 
 | Action | Risk Without Idempotency |

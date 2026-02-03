@@ -1,21 +1,34 @@
 import { describe, expect, it, vi } from 'vitest';
-import { err, ok } from '@/src/adapters/controllers/action-result';
-import type { GetQuestionBySlugOutput } from '@/src/adapters/controllers/question-view-controller';
-import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
 import {
   createLoadQuestionAction,
   loadQuestion,
   reattemptQuestion,
   submitSelectedAnswer,
-} from './question-page-logic';
+} from '@/app/(app)/app/questions/[slug]/question-page-logic';
+import { err, ok } from '@/src/adapters/controllers/action-result';
+import type { GetQuestionBySlugOutput } from '@/src/adapters/controllers/question-view-controller';
+import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
+import { createQuestion } from '@/src/domain/test-helpers';
 
-function createQuestion(): GetQuestionBySlugOutput {
-  return {
-    questionId: 'q_1',
+function createQuestionOutput(): GetQuestionBySlugOutput {
+  const question = createQuestion({
+    id: 'q_1',
     slug: 'q-1',
     stemMd: '#',
     difficulty: 'easy',
     choices: [],
+  });
+
+  return {
+    questionId: question.id,
+    slug: question.slug,
+    stemMd: question.stemMd,
+    difficulty: question.difficulty,
+    choices: question.choices.map((c) => ({
+      id: c.id,
+      label: c.label,
+      textMd: c.textMd,
+    })),
   };
 }
 
@@ -31,7 +44,7 @@ describe('question-page-logic', () => {
 
       await loadQuestion({
         slug: 'q-1',
-        getQuestionBySlugFn: async () => ok(createQuestion()),
+        getQuestionBySlugFn: async () => ok(createQuestionOutput()),
         createIdempotencyKey: () => 'idem_1',
         nowMs: () => 1234,
         setLoadState,
@@ -93,7 +106,7 @@ describe('question-page-logic', () => {
       const action = createLoadQuestionAction({
         slug: 'q-1',
         startTransition,
-        getQuestionBySlugFn: async () => ok(createQuestion()),
+        getQuestionBySlugFn: async () => ok(createQuestionOutput()),
         createIdempotencyKey: () => 'idem_1',
         nowMs: () => 1234,
         setLoadState,
@@ -150,7 +163,7 @@ describe('question-page-logic', () => {
       const setSubmitResult = vi.fn();
 
       await submitSelectedAnswer({
-        question: createQuestion(),
+        question: createQuestionOutput(),
         selectedChoiceId: 'choice_1',
         questionLoadedAtMs: 1000,
         submitIdempotencyKey: 'idem_1',
@@ -183,7 +196,7 @@ describe('question-page-logic', () => {
       );
 
       await submitSelectedAnswer({
-        question: createQuestion(),
+        question: createQuestionOutput(),
         selectedChoiceId: 'choice_1',
         questionLoadedAtMs: 0,
         submitIdempotencyKey: 'idem_1',
@@ -209,7 +222,7 @@ describe('question-page-logic', () => {
       );
 
       await submitSelectedAnswer({
-        question: createQuestion(),
+        question: createQuestionOutput(),
         selectedChoiceId: 'choice_1',
         questionLoadedAtMs: 5000,
         submitIdempotencyKey: 'idem_1',
@@ -231,7 +244,7 @@ describe('question-page-logic', () => {
       const setLoadState = vi.fn();
 
       await submitSelectedAnswer({
-        question: createQuestion(),
+        question: createQuestionOutput(),
         selectedChoiceId: 'choice_1',
         questionLoadedAtMs: null,
         submitIdempotencyKey: 'idem_1',
