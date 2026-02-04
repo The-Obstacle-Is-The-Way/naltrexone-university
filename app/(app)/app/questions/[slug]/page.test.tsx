@@ -24,13 +24,28 @@ function toGetQuestionBySlugOutput(
 }
 
 describe('app/(app)/app/questions/[slug]', () => {
+  it('unwraps async params before rendering the client page', async () => {
+    const QuestionPage = (await import('@/app/(app)/app/questions/[slug]/page'))
+      .default;
+
+    const element = await QuestionPage({
+      params: Promise.resolve({ slug: 'q-1' }),
+    } as never);
+
+    expect(element).toMatchObject({
+      props: { slug: 'q-1' },
+    });
+  }, 20_000);
+
   it('renders a question shell', async () => {
     const QuestionPage = (await import('@/app/(app)/app/questions/[slug]/page'))
       .default;
 
-    const html = renderToStaticMarkup(
-      <QuestionPage params={{ slug: 'q-1' }} />,
-    );
+    const element = await QuestionPage({
+      params: Promise.resolve({ slug: 'q-1' }),
+    } as never);
+
+    const html = renderToStaticMarkup(element);
 
     expect(html).toContain('Question');
     expect(html).toContain('Loading question');
