@@ -1,18 +1,19 @@
 # DEBT-093: Clerk Webhook Route Contains Business Logic (Framework Layer Leakage)
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P2
 **Date:** 2026-02-04
+**Resolved:** 2026-02-04
 
 ---
 
 ## Description
 
-The framework route file `app/api/webhooks/clerk/route.ts` defines and owns non-trivial Stripe cancellation logic (`cancelStripeCustomerSubscriptions`) including nested retries and subscription iteration.
+The framework route file `app/api/webhooks/clerk/route.ts` defined and owned non-trivial Stripe cancellation logic (`cancelStripeCustomerSubscriptions`) including nested retries and subscription iteration.
 
 Evidence:
 
-- `app/api/webhooks/clerk/route.ts:19-48` defines `cancelStripeCustomerSubscriptions(...)` with:
+- `app/api/webhooks/clerk/route.ts` previously defined `cancelStripeCustomerSubscriptions(...)` with:
   - `stripe.subscriptions.list(...)` iteration
   - per-subscription cancellation with idempotency keys
   - retry/backoff policy via `retry(...)`
@@ -27,20 +28,9 @@ This is adapter/use-case behavior living in the outermost framework layer.
 
 ## Resolution
 
-### Option A: Move cancellation into adapters (Recommended)
-
-1. Move `cancelStripeCustomerSubscriptions` into an adapters module, e.g.:
-   - `src/adapters/gateways/stripe-subscription-canceler.ts`, or
-   - add `cancelCustomerSubscriptions(...)` to `StripePaymentGateway`.
-2. Inject it via the container (composition root).
-3. Keep `route.ts` as wiring only:
-   - verify webhook
-   - call controller/use case
-   - return response
-
-### Option B: Promote to application use case
-
-If cancellation semantics become business rules (e.g., which statuses to cancel), move orchestration into a use case and keep Stripe calls behind a port.
+1. Extracted Stripe cancellation into `src/adapters/gateways/stripe-subscription-canceler.ts`.
+2. Added unit coverage in `src/adapters/gateways/stripe-subscription-canceler.test.ts`.
+3. Updated `app/api/webhooks/clerk/route.ts` to be wiring-only by importing and passing the canceler into `createWebhookHandler(...)`.
 
 ## Verification
 
@@ -53,4 +43,3 @@ If cancellation semantics become business rules (e.g., which statuses to cancel)
 - `app/api/webhooks/clerk/route.ts`
 - `src/adapters/controllers/clerk-webhook-controller.ts`
 - `lib/container.ts` (composition root)
-
