@@ -1,7 +1,5 @@
-import { redirect } from 'next/navigation';
 import { ManageBillingButton } from '@/app/(app)/app/billing/billing-client';
-import { ROUTES } from '@/lib/routes';
-import { createPortalSession } from '@/src/adapters/controllers/billing-controller';
+import { manageBillingAction } from '@/app/(app)/app/billing/manage-billing-actions';
 import type { AuthGateway } from '@/src/application/ports/gateways';
 import type { SubscriptionRepository } from '@/src/application/ports/repositories';
 import type { Subscription } from '@/src/domain/entities';
@@ -45,7 +43,10 @@ export async function loadBillingData(
 
 /** Extracted for testing (Server Components can't be directly tested) */
 export type BillingContentProps =
-  | { subscription: Subscription; manageBillingAction: () => Promise<void> }
+  | {
+      subscription: Subscription;
+      manageBillingAction: (formData: FormData) => Promise<void>;
+    }
   | { subscription: null; manageBillingAction?: never };
 
 export function BillingContent(props: BillingContentProps) {
@@ -164,19 +165,10 @@ export default async function BillingPage(props?: BillingPageProps) {
     return <BillingPageView subscription={null} banner={banner} />;
   }
 
-  async function manageBilling() {
-    'use server';
-    const result = await createPortalSession({});
-    if (!result.ok) {
-      redirect(`${ROUTES.APP_BILLING}?error=portal_failed`);
-    }
-    redirect(result.data.url);
-  }
-
   return (
     <BillingPageView
       subscription={subscription}
-      manageBillingAction={manageBilling}
+      manageBillingAction={manageBillingAction}
       banner={banner}
     />
   );

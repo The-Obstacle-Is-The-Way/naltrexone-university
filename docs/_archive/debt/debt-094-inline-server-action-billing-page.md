@@ -1,8 +1,9 @@
 # DEBT-094: Inline Server Action Inside Billing Page (Inconsistent Pattern)
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P3
 **Date:** 2026-02-04
+**Resolved:** 2026-02-04
 
 ---
 
@@ -41,4 +42,3 @@ Evidence:
 
 - `app/(app)/app/billing/page.tsx`
 - `src/adapters/controllers/billing-controller.ts`
-
