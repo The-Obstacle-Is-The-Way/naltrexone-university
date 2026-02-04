@@ -159,13 +159,6 @@ describe('DrizzleUserRepository', () => {
       };
 
       db._mocks.queryFindFirst.mockResolvedValue(existing);
-      db._mocks.updateReturning.mockResolvedValue([
-        {
-          ...existing,
-          email: 'old@example.com',
-          updatedAt: new Date('2026-02-01T00:30:00Z'),
-        },
-      ]);
 
       const repo = new DrizzleUserRepository(db as unknown as RepoDb);
 
