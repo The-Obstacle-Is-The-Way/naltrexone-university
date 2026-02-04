@@ -15,9 +15,11 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 ## Bug Index (Active)
 
-✅ No active bugs.
+| ID | Title | Status | Priority | Date |
+|----|-------|--------|----------|------|
+| [BUG-055](bug-055-post-login-redirects-to-landing-page.md) | Authenticated Subscribers Redirected to Landing Page After Sign-In | Open | P2 | 2026-02-04 |
 
-**Next Bug ID:** BUG-055
+**Next Bug ID:** BUG-056
 
 ## Foundation Audit
 
