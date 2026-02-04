@@ -30,7 +30,7 @@ export function AppShell({
   authNav,
   activePath,
 }: AppShellProps) {
-  const normalizedActivePath = activePath?.split('?')[0] ?? null;
+  const normalizedActivePath = activePath?.split(/[?#]/)[0] ?? null;
 
   return (
     <div className="flex min-h-screen bg-muted">

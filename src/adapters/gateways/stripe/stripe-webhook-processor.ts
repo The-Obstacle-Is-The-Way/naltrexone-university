@@ -8,7 +8,6 @@ import {
   retrieveAndNormalizeStripeSubscription,
 } from './stripe-subscription-normalizer';
 import {
-  type StripeEventWithSubscriptionRef,
   stripeEventWithSubscriptionRefSchema,
   stripeSubscriptionSchema,
   subscriptionEventTypes,
@@ -39,7 +38,7 @@ async function getSubscriptionUpdateForSubscriptionRefEvent(input: {
     );
   }
 
-  const payload = parsedPayload.data as StripeEventWithSubscriptionRef;
+  const payload = parsedPayload.data;
   const subscriptionRef = payload.subscription;
   if (!subscriptionRef) return undefined;
 
