@@ -22,7 +22,6 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 | [DEBT-091](debt-091-attempt-repository-isp-violation.md) | AttemptRepository is “Fat” (Interface Segregation Pressure) | Open | P3 | 2026-02-04 |
 | [DEBT-092](debt-092-stripe-payment-gateway-god-class.md) | StripePaymentGateway is a God Class (SRP + Separation Pressure) | Open | P2 | 2026-02-04 |
 | [DEBT-093](debt-093-clerk-webhook-route-business-logic.md) | Clerk Webhook Route Contains Business Logic (Framework Layer Leakage) | Open | P2 | 2026-02-04 |
-| [DEBT-094](debt-094-inline-server-action-billing-page.md) | Inline Server Action Inside Billing Page (Inconsistent Pattern) | Open | P3 | 2026-02-04 |
 | [DEBT-096](debt-096-repository-mapper-duplication.md) | Repository Row→Domain Mapping Duplicated (DRY Violation) | Open | P3 | 2026-02-04 |
 
 **Next Debt ID:** DEBT-097
@@ -31,6 +30,7 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 | ID | Title | Priority | Resolved |
 |----|-------|----------|----------|
+| [DEBT-094](../_archive/debt/debt-094-inline-server-action-billing-page.md) | Inline Server Action Inside Billing Page (Inconsistent Pattern) | P3 | 2026-02-04 |
 | [DEBT-095](../_archive/debt/debt-095-console-error-in-production.md) | console.error Usage in Production Code (Bypasses Structured Logger) | P3 | 2026-02-04 |
 | [DEBT-089](../_archive/debt/debt-089-logger-port-wrong-layer.md) | Logger Port Defined in Wrong Layer (Dependency Arrow Outward) | P2 | 2026-02-04 |
 | [DEBT-088](../_archive/debt/debt-088-optional-logger-hides-errors.md) | Optional Logger Pattern Hides Errors | P2 | 2026-02-03 |
