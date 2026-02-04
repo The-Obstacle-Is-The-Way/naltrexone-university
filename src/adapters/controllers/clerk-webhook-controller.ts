@@ -1,6 +1,6 @@
 import { z } from 'zod';
-import type { Logger } from '@/src/adapters/shared/logger';
 import { ApplicationError } from '@/src/application/errors';
+import type { Logger } from '@/src/application/ports/logger';
 import type {
   StripeCustomerRepository,
   UserRepository,

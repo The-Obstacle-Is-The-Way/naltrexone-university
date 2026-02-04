@@ -3,7 +3,7 @@
 ## Source of truth
 
 - Implementation: `lib/logger.ts` (Pino)
-- Adapter contract: `src/adapters/shared/logger.ts`
+- Adapter contract: `src/application/ports/logger.ts`
 
 ## Adapter logger contract
 
@@ -24,4 +24,3 @@ logger.error({ error, eventId }, 'Stripe webhook failed');
 - Prefer small, structured context objects; keep messages human-readable.
 - Do not log secrets/PII. `lib/logger.ts` redacts common sensitive fields, but treat that as defense-in-depth, not permission to log secrets.
 - When adding new adapters, inject `logger` via constructor/deps instead of importing global singletons.
-

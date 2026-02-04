@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { Logger } from '@/src/adapters/shared/logger';
+import type { Logger } from '@/src/application/ports/logger';
 import {
   FakeAttemptRepository,
   FakeAuthGateway,

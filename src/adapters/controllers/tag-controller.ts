@@ -2,8 +2,8 @@
 
 import { z } from 'zod';
 import { createDepsResolver, loadAppContainer } from '@/lib/controller-helpers';
-import type { Logger } from '@/src/adapters/shared/logger';
 import type { AuthGateway } from '@/src/application/ports/gateways';
+import type { Logger } from '@/src/application/ports/logger';
 import type { TagRepository } from '@/src/application/ports/repositories';
 import { createAction } from './create-action';
 import type { CheckEntitlementUseCase } from './require-entitled-user-id';

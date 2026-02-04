@@ -4,8 +4,8 @@ import { z } from 'zod';
 import { createDepsResolver, loadAppContainer } from '@/lib/controller-helpers';
 import type { CheckEntitlementUseCase } from '@/src/adapters/controllers/require-entitled-user-id';
 import { requireEntitledUserId } from '@/src/adapters/controllers/require-entitled-user-id';
-import type { Logger } from '@/src/adapters/shared/logger';
 import type { AuthGateway } from '@/src/application/ports/gateways';
+import type { Logger } from '@/src/application/ports/logger';
 import type {
   AttemptRepository,
   QuestionRepository,
