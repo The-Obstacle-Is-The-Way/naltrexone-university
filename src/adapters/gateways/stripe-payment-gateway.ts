@@ -1,3 +1,4 @@
+import type { StripePriceIds } from '@/src/adapters/config/stripe-prices';
 import type { StripeClient } from '@/src/adapters/shared/stripe-types';
 import type {
   CheckoutSessionInput,
@@ -11,7 +12,6 @@ import type {
   WebhookEventResult,
 } from '@/src/application/ports/gateways';
 import type { Logger } from '@/src/application/ports/logger';
-import type { StripePriceIds } from '../config/stripe-prices';
 import { createStripeCheckoutSession } from './stripe/stripe-checkout-sessions';
 import { createStripeCustomer } from './stripe/stripe-customers';
 import { createStripePortalSession } from './stripe/stripe-portal';

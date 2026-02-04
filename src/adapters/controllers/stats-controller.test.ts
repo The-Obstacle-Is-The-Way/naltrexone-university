@@ -102,7 +102,7 @@ describe('stats-controller', () => {
       expect(deps.getUserStatsUseCase.inputs).toEqual([]);
     });
 
-    it('returns ok result from the use case', async () => {
+    it('returns OK when use case succeeds', async () => {
       const deps = createDeps();
 
       const result = await getUserStats({}, deps);
@@ -111,7 +111,7 @@ describe('stats-controller', () => {
       expect(deps.getUserStatsUseCase.inputs).toEqual([{ userId: 'user_1' }]);
     });
 
-    it('maps ApplicationError from use case via handleError', async () => {
+    it('returns INTERNAL_ERROR when use case throws ApplicationError', async () => {
       const deps = createDeps({
         useCaseThrows: new ApplicationError('INTERNAL_ERROR', 'boom'),
       });
@@ -124,7 +124,7 @@ describe('stats-controller', () => {
       });
     });
 
-    it('loads dependencies from the container when deps are omitted', async () => {
+    it('returns OK when deps are loaded from the container', async () => {
       const deps = createDeps();
 
       const result = await getUserStats({}, undefined, {

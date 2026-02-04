@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { describe, expect, it } from 'vitest';
 import { createSubscription } from '@/src/domain/test-helpers';
 import {
@@ -8,7 +9,7 @@ import {
 import { CreateCheckoutSessionUseCase } from './create-checkout-session';
 
 describe('CreateCheckoutSessionUseCase', () => {
-  it('throws ALREADY_SUBSCRIBED when a subscription is still current', async () => {
+  it('returns ALREADY_SUBSCRIBED when a subscription is still current', async () => {
     const paymentGateway = new FakePaymentGateway({
       stripeCustomerId: 'cus_new',
       checkoutUrl: 'https://stripe/checkout',
@@ -47,7 +48,7 @@ describe('CreateCheckoutSessionUseCase', () => {
     expect(paymentGateway.checkoutInputs).toEqual([]);
   });
 
-  it('uses existing stripe customer mapping when available', async () => {
+  it('returns checkout URL when stripe customer mapping exists', async () => {
     const paymentGateway = new FakePaymentGateway({
       stripeCustomerId: 'cus_should_not_be_used',
       checkoutUrl: 'https://stripe/checkout',
@@ -90,7 +91,7 @@ describe('CreateCheckoutSessionUseCase', () => {
     ]);
   });
 
-  it('creates stripe customer mapping when missing', async () => {
+  it('returns checkout URL and creates stripe customer mapping when missing', async () => {
     const paymentGateway = new FakePaymentGateway({
       stripeCustomerId: 'cus_new',
       checkoutUrl: 'https://stripe/checkout',

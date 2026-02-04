@@ -2,10 +2,12 @@
 
 import { z } from 'zod';
 import { createDepsResolver, loadAppContainer } from '@/lib/controller-helpers';
-import type { AuthGateway } from '@/src/application/ports/gateways';
 import type {
   GetBookmarksInput,
   GetBookmarksOutput,
+} from '@/src/application/ports/bookmarks';
+import type { AuthGateway } from '@/src/application/ports/gateways';
+import type {
   ToggleBookmarkInput,
   ToggleBookmarkOutput,
 } from '@/src/application/use-cases';
@@ -26,8 +28,9 @@ const GetBookmarksInputSchema = z.object({}).strict();
 export type {
   BookmarkRow,
   GetBookmarksOutput,
-  ToggleBookmarkOutput,
-} from '@/src/application/use-cases';
+} from '@/src/application/ports/bookmarks';
+
+export type { ToggleBookmarkOutput } from '@/src/application/use-cases';
 
 export type BookmarkControllerDeps = {
   authGateway: AuthGateway;

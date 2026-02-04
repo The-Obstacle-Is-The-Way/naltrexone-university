@@ -14,6 +14,9 @@ const NAV_ITEMS: readonly NavItem[] = [
   { href: '/app/billing', label: 'Billing' },
 ];
 
+const focusVisibleRing =
+  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background';
+
 export type AppShellProps = {
   children: ReactNode;
   mobileNav?: ReactNode;
@@ -35,7 +38,7 @@ export function AppShell({
         <div className="px-6 py-5">
           <Link
             href="/app/dashboard"
-            className="rounded-md text-sm font-semibold text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+            className={`rounded-md text-sm font-semibold text-foreground ${focusVisibleRing}`}
           >
             Addiction Boards
           </Link>
@@ -53,8 +56,8 @@ export function AppShell({
                   href={item.href}
                   className={
                     isActive
-                      ? 'block rounded-md bg-zinc-800 px-3 py-2 text-sm font-medium text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background'
-                      : 'block rounded-md px-3 py-2 text-sm text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background'
+                      ? `block rounded-md bg-zinc-800 px-3 py-2 text-sm font-medium text-foreground ${focusVisibleRing}`
+                      : `block rounded-md px-3 py-2 text-sm text-muted-foreground hover:bg-muted hover:text-foreground ${focusVisibleRing}`
                   }
                 >
                   {item.label}
@@ -72,7 +75,7 @@ export function AppShell({
               {mobileNav}
               <Link
                 href="/app/dashboard"
-                className="rounded-md text-sm font-semibold text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background sm:hidden"
+                className={`rounded-md text-sm font-semibold text-foreground ${focusVisibleRing} sm:hidden`}
               >
                 Addiction Boards
               </Link>

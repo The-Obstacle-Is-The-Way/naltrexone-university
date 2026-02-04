@@ -251,10 +251,10 @@ export function MarketingHomeShell({
             <div className="mt-8 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
               <MetallicCtaButton href="/pricing">Get Started</MetallicCtaButton>
               <Link
-                href="/pricing"
+                href="/sign-in"
                 className="rounded-full border border-zinc-800 bg-zinc-900 px-6 py-3 text-sm font-medium text-zinc-300 hover:bg-zinc-800 transition-colors"
               >
-                View Pricing
+                Sign In
               </Link>
             </div>
           </div>

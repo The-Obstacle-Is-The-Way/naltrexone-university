@@ -14,6 +14,44 @@ import {
   subscriptionEventTypes,
 } from './stripe-webhook-schemas';
 
+async function getSubscriptionUpdateForSubscriptionRefEvent(input: {
+  stripe: StripeClient;
+  event: ReturnType<StripeClient['webhooks']['constructEvent']>;
+  priceIds: StripePriceIds;
+  logger: Logger;
+}): Promise<WebhookEventResult['subscriptionUpdate'] | undefined> {
+  const parsedPayload = stripeEventWithSubscriptionRefSchema.safeParse(
+    input.event.data.object,
+  );
+  if (!parsedPayload.success) {
+    input.logger.error(
+      {
+        eventId: input.event.id,
+        type: input.event.type,
+        error: parsedPayload.error.flatten(),
+      },
+      `Invalid Stripe ${input.event.type} webhook payload`,
+    );
+
+    throw new ApplicationError(
+      'INVALID_WEBHOOK_PAYLOAD',
+      `Invalid Stripe ${input.event.type} webhook payload`,
+    );
+  }
+
+  const payload = parsedPayload.data as StripeEventWithSubscriptionRef;
+  const subscriptionRef = payload.subscription;
+  if (!subscriptionRef) return undefined;
+
+  return retrieveAndNormalizeStripeSubscription({
+    stripe: input.stripe,
+    subscriptionRef,
+    event: input.event,
+    priceIds: input.priceIds,
+    logger: input.logger,
+  });
+}
+
 export async function processStripeWebhookEvent({
   stripe,
   webhookSecret,
@@ -52,76 +90,17 @@ export async function processStripeWebhookEvent({
     type: event.type,
   };
 
-  if (event.type === 'checkout.session.completed') {
-    const parsedSession = stripeEventWithSubscriptionRefSchema.safeParse(
-      event.data.object,
-    );
-    if (!parsedSession.success) {
-      logger.error(
-        {
-          eventId: event.id,
-          type: event.type,
-          error: parsedSession.error.flatten(),
-        },
-        'Invalid Stripe checkout.session.completed webhook payload',
-      );
-
-      throw new ApplicationError(
-        'INVALID_WEBHOOK_PAYLOAD',
-        'Invalid Stripe checkout.session.completed webhook payload',
-      );
-    }
-
-    const payload = parsedSession.data as StripeEventWithSubscriptionRef;
-    const subscriptionRef = payload.subscription;
-    if (!subscriptionRef) {
-      return result;
-    }
-
-    const subscriptionUpdate = await retrieveAndNormalizeStripeSubscription({
-      stripe,
-      subscriptionRef,
-      event,
-      priceIds,
-      logger,
-    });
-
-    return subscriptionUpdate ? { ...result, subscriptionUpdate } : result;
-  }
-
-  if (event.type === 'invoice.payment_failed') {
-    const parsedInvoice = stripeEventWithSubscriptionRefSchema.safeParse(
-      event.data.object,
-    );
-    if (!parsedInvoice.success) {
-      logger.error(
-        {
-          eventId: event.id,
-          type: event.type,
-          error: parsedInvoice.error.flatten(),
-        },
-        'Invalid Stripe invoice.payment_failed webhook payload',
-      );
-
-      throw new ApplicationError(
-        'INVALID_WEBHOOK_PAYLOAD',
-        'Invalid Stripe invoice.payment_failed webhook payload',
-      );
-    }
-
-    const payload = parsedInvoice.data as StripeEventWithSubscriptionRef;
-    const subscriptionRef = payload.subscription;
-    if (!subscriptionRef) {
-      return result;
-    }
-
-    const subscriptionUpdate = await retrieveAndNormalizeStripeSubscription({
-      stripe,
-      subscriptionRef,
-      event,
-      priceIds,
-      logger,
-    });
+  if (
+    event.type === 'checkout.session.completed' ||
+    event.type === 'invoice.payment_failed'
+  ) {
+    const subscriptionUpdate =
+      await getSubscriptionUpdateForSubscriptionRefEvent({
+        stripe,
+        event,
+        priceIds,
+        logger,
+      });
 
     return subscriptionUpdate ? { ...result, subscriptionUpdate } : result;
   }

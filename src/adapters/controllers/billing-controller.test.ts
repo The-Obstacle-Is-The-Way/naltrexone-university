@@ -148,7 +148,7 @@ describe('billing-controller', () => {
       expect(deps.createCheckoutSessionUseCase.inputs).toEqual([]);
     });
 
-    it('passes URLs and user identity to the use case', async () => {
+    it('returns checkout URL when inputs are valid', async () => {
       const deps = createDeps({ appUrl: 'https://app.example.com' });
 
       const result = await createCheckoutSession({ plan: 'annual' }, deps);
@@ -191,7 +191,7 @@ describe('billing-controller', () => {
       expect(deps._calls.clerkCalls).toHaveLength(1);
     });
 
-    it('maps ApplicationError from use case via handleError', async () => {
+    it('returns ALREADY_SUBSCRIBED when use case throws ApplicationError', async () => {
       const deps = createDeps({
         checkoutThrows: new ApplicationError(
           'ALREADY_SUBSCRIBED',
@@ -233,7 +233,7 @@ describe('billing-controller', () => {
       expect(deps.createPortalSessionUseCase.inputs).toEqual([]);
     });
 
-    it('passes returnUrl to the use case', async () => {
+    it('returns portal URL when inputs are valid', async () => {
       const deps = createDeps({ appUrl: 'https://app.example.com' });
 
       const result = await createPortalSession({}, deps);
@@ -247,7 +247,7 @@ describe('billing-controller', () => {
       ]);
     });
 
-    it('maps ApplicationError from use case via handleError', async () => {
+    it('returns NOT_FOUND when use case throws ApplicationError', async () => {
       const deps = createDeps({
         portalThrows: new ApplicationError(
           'NOT_FOUND',

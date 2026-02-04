@@ -1,15 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { ApplicationError } from '@/src/application/errors';
+import type { GetBookmarksOutput } from '@/src/application/ports/bookmarks';
 import {
   FakeAuthGateway,
   FakeGetBookmarksUseCase,
   FakeSubscriptionRepository,
   FakeToggleBookmarkUseCase,
 } from '@/src/application/test-helpers/fakes';
-import type {
-  GetBookmarksOutput,
-  ToggleBookmarkOutput,
-} from '@/src/application/use-cases';
+import type { ToggleBookmarkOutput } from '@/src/application/use-cases';
 import { CheckEntitlementUseCase } from '@/src/application/use-cases/check-entitlement';
 import type { User } from '@/src/domain/entities';
 import { createSubscription, createUser } from '@/src/domain/test-helpers';

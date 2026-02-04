@@ -10,6 +10,7 @@ import type {
   User,
 } from '@/src/domain/entities';
 import type { QuestionDifficulty } from '@/src/domain/value-objects';
+import type { GetBookmarksInput, GetBookmarksOutput } from '../ports/bookmarks';
 import type {
   AuthGateway,
   CheckoutSessionInput,
@@ -49,8 +50,6 @@ import type {
   CreatePortalSessionOutput,
   EndPracticeSessionInput,
   EndPracticeSessionOutput,
-  GetBookmarksInput,
-  GetBookmarksOutput,
   GetMissedQuestionsInput,
   GetMissedQuestionsOutput,
   GetNextQuestionInput,
