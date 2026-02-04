@@ -1,3 +1,4 @@
+export * from './billing';
 export * from './bookmarks';
 export * from './gateways';
 export * from './logger';

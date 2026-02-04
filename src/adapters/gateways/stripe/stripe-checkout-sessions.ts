@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import type { StripePriceIds } from '@/src/adapters/config/stripe-prices';
 import { getStripePriceId } from '@/src/adapters/config/stripe-prices';
 import type {
@@ -103,17 +104,17 @@ export async function createStripeCheckoutSession({
     },
   } satisfies CheckoutSessionCreateParams;
 
-  const idempotencyKey = options?.idempotencyKey;
-  const session = idempotencyKey
-    ? await callStripeWithRetry({
-        operation: 'checkout.sessions.create',
-        fn: () =>
-          stripe.checkout.sessions.create(params, {
-            idempotencyKey,
-          }),
-        logger,
-      })
-    : await stripe.checkout.sessions.create(params);
+  const idempotencyKey =
+    options?.idempotencyKey ??
+    `checkout_session:${input.userId}:${randomUUID()}`;
+  const session = await callStripeWithRetry({
+    operation: 'checkout.sessions.create',
+    fn: () =>
+      stripe.checkout.sessions.create(params, {
+        idempotencyKey,
+      }),
+    logger,
+  });
 
   if (!session.url) {
     throw new ApplicationError(

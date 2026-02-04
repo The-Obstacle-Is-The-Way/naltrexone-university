@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { describe, expect, it } from 'vitest';
 import { ApplicationError } from '@/src/application/errors';
 import type {
@@ -8,6 +9,7 @@ import {
   FakeAuthGateway,
   FakeGetNextQuestionUseCase,
   FakeIdempotencyKeyRepository,
+  FakeRateLimiter,
   FakeSubmitAnswerUseCase,
   FakeSubscriptionRepository,
 } from '@/src/application/test-helpers/fakes';
@@ -75,15 +77,7 @@ function createDeps(overrides?: {
   );
 
   const rateLimiter: RateLimiter =
-    overrides?.rateLimiter ??
-    ({
-      limit: async () => ({
-        success: true,
-        limit: 120,
-        remaining: 119,
-        retryAfterSeconds: 0,
-      }),
-    } satisfies RateLimiter);
+    overrides?.rateLimiter ?? new FakeRateLimiter();
 
   const submitAnswerUseCase = new FakeSubmitAnswerUseCase(
     overrides?.submitAnswerOutput ?? {
@@ -152,7 +146,7 @@ describe('question-controller', () => {
       expect(deps.getNextQuestionUseCase.inputs).toEqual([]);
     });
 
-    it('returns ok result from the use case (filters)', async () => {
+    it('returns ok result when filters are provided', async () => {
       const deps = createDeps({ getNextQuestionOutput: null });
 
       const result = await getNextQuestion(
@@ -166,7 +160,7 @@ describe('question-controller', () => {
       ]);
     });
 
-    it('passes sessionId to the use case when provided', async () => {
+    it('returns ok result when sessionId is provided', async () => {
       const deps = createDeps({
         getNextQuestionOutput: {
           questionId: 'q_1',
@@ -194,7 +188,7 @@ describe('question-controller', () => {
       ]);
     });
 
-    it('maps ApplicationError from use case via handleError', async () => {
+    it('returns NOT_FOUND when use case throws ApplicationError', async () => {
       const deps = createDeps({
         getNextQuestionThrows: new ApplicationError('NOT_FOUND', 'Not found'),
       });
@@ -252,14 +246,12 @@ describe('question-controller', () => {
 
     it('returns RATE_LIMITED when rate limited', async () => {
       const deps = createDeps({
-        rateLimiter: {
-          limit: async () => ({
-            success: false,
-            limit: 120,
-            remaining: 0,
-            retryAfterSeconds: 60,
-          }),
-        },
+        rateLimiter: new FakeRateLimiter({
+          success: false,
+          limit: 120,
+          remaining: 0,
+          retryAfterSeconds: 60,
+        }),
       });
 
       const result = await submitAnswer(
@@ -277,7 +269,7 @@ describe('question-controller', () => {
       expect(deps.submitAnswerUseCase.inputs).toEqual([]);
     });
 
-    it('returns ok result from the use case', async () => {
+    it('returns ok result when use case succeeds', async () => {
       const deps = createDeps({
         submitAnswerOutput: {
           attemptId: 'attempt_2',
@@ -315,7 +307,7 @@ describe('question-controller', () => {
       ]);
     });
 
-    it('accepts timeSpentSeconds in input and passes to use case', async () => {
+    it('returns ok result when timeSpentSeconds is provided', async () => {
       const deps = createDeps();
 
       const input = {
@@ -359,7 +351,7 @@ describe('question-controller', () => {
       expect(deps.submitAnswerUseCase.inputs).toHaveLength(1);
     });
 
-    it('rejects negative timeSpentSeconds', async () => {
+    it('returns VALIDATION_ERROR when timeSpentSeconds is negative', async () => {
       const deps = createDeps();
 
       const result = await submitAnswer(
@@ -380,7 +372,7 @@ describe('question-controller', () => {
       });
     });
 
-    it('rejects timeSpentSeconds exceeding 24 hours', async () => {
+    it('returns VALIDATION_ERROR when timeSpentSeconds exceeds 24 hours', async () => {
       const deps = createDeps();
 
       const result = await submitAnswer(
@@ -401,7 +393,7 @@ describe('question-controller', () => {
       });
     });
 
-    it('maps ApplicationError from use case via handleError', async () => {
+    it('returns NOT_FOUND when use case throws ApplicationError', async () => {
       const deps = createDeps({
         submitAnswerThrows: new ApplicationError(
           'NOT_FOUND',

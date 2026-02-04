@@ -1,8 +1,8 @@
-import { ApplicationError } from '../errors';
+import { ApplicationError } from '@/src/application/errors';
 import type {
   BookmarkRepository,
   QuestionRepository,
-} from '../ports/repositories';
+} from '@/src/application/ports/repositories';
 
 export type ToggleBookmarkInput = {
   userId: string;

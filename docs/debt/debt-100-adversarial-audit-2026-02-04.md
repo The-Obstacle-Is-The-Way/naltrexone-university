@@ -102,6 +102,8 @@ A multi-agent adversarial audit (auth, UI/UX, architecture, data integrity, feat
 
 **Evidence:** `app/(app)/app/layout.tsx` and `components/mobile-nav.tsx` don’t indicate the current route.
 
+**Note:** `components/app-shell/app-shell.tsx` supports active-state styling via `activePath`, but it is not wired into the current app layout, so users still don’t see an active nav state in the live navigation.
+
 **Resolution (proposed):**
 - Add active-state styling and `aria-current="page"` for the current page in both desktop and mobile nav.
 
@@ -217,4 +219,3 @@ Routes lacking contextual error boundaries include: review, bookmarks, questions
 - `DEBT-101` — Sentry error tracking (free tier)
 - `docs/specs/spec-016-observability.md`
 - `docs/_archive/debt/debt-084-user-email-race-condition.md`
-

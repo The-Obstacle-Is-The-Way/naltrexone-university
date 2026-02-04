@@ -1,9 +1,9 @@
 import type { Logger } from '@/src/application/ports/logger';
-import type { QuestionDifficulty } from '@/src/domain/value-objects';
 import type {
   AttemptMissedQuestionsReader,
   QuestionRepository,
-} from '../ports/repositories';
+} from '@/src/application/ports/repositories';
+import type { QuestionDifficulty } from '@/src/domain/value-objects';
 
 export type GetMissedQuestionsInput = {
   userId: string;

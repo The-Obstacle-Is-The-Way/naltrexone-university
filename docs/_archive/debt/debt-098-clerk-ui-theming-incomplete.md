@@ -1,6 +1,6 @@
 # DEBT-098: Clerk UI Components Not Fully Themed for Achromatic Dark Mode
 
-**Status:** Resolved
+**Status:** Resolved in repo; external pending
 **Priority:** P2
 **Date:** 2026-02-04
 **Archived:** 2026-02-04

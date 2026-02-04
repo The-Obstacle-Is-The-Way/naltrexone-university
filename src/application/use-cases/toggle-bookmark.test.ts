@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { describe, expect, it } from 'vitest';
 import { createQuestion } from '@/src/domain/test-helpers';
 import { ApplicationError } from '../errors';
@@ -31,7 +32,7 @@ describe('ToggleBookmarkUseCase', () => {
     await expect(bookmarks.exists(userId, questionId)).resolves.toBe(false);
   });
 
-  it('adds a bookmark and returns bookmarked=true when none exists', async () => {
+  it('returns bookmarked=true when none exists', async () => {
     const userId = 'user-1';
     const questionId = 'q1';
 
@@ -48,7 +49,7 @@ describe('ToggleBookmarkUseCase', () => {
     await expect(bookmarks.exists(userId, questionId)).resolves.toBe(true);
   });
 
-  it('throws NOT_FOUND when the question is missing', async () => {
+  it('returns NOT_FOUND when the question is missing', async () => {
     const useCase = new ToggleBookmarkUseCase(
       new FakeBookmarkRepository(),
       new FakeQuestionRepository([]),

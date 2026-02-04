@@ -38,7 +38,7 @@ describe('processClerkWebhook', () => {
     });
   });
 
-  it('does not overwrite newer email when receiving an older user.updated event', async () => {
+  it('returns the newer email when an older user.updated event is received', async () => {
     const deps = createDeps();
 
     await processClerkWebhook(deps, {

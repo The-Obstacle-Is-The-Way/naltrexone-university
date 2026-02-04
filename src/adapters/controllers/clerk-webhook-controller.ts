@@ -158,7 +158,7 @@ export async function processClerkWebhook(
 
     const observedAtMs =
       getNumberOrNull(data.updatedAt) ?? getNumberOrNull(data.updated_at);
-    const observedAt = observedAtMs ? new Date(observedAtMs) : null;
+    const observedAt = observedAtMs === null ? null : new Date(observedAtMs);
 
     await deps.userRepository.upsertByClerkId(clerkUserId, email, {
       observedAt: observedAt ?? new Date(),

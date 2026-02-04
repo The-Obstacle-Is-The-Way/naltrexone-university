@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { describe, expect, it } from 'vitest';
 import { createAttempt, createQuestion } from '@/src/domain/test-helpers';
 import {
@@ -8,7 +9,7 @@ import {
 import { GetUserStatsUseCase } from './get-user-stats';
 
 describe('GetUserStatsUseCase', () => {
-  it('computes stats from attempts and joins recent activity slugs', async () => {
+  it('returns computed stats and recent activity when user has attempts', async () => {
     const now = new Date('2026-02-01T12:00:00Z');
 
     const useCase = new GetUserStatsUseCase(
@@ -76,7 +77,7 @@ describe('GetUserStatsUseCase', () => {
     });
   });
 
-  it('logs warning and marks recent activity unavailable when question is missing', async () => {
+  it('returns recent activity marked unavailable and logs a warning when a referenced question is missing', async () => {
     const orphanedQuestionId = 'q-orphaned';
     const now = new Date('2026-02-01T12:00:00Z');
     const logger = new FakeLogger();

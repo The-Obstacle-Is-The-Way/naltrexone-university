@@ -21,6 +21,9 @@ import type {
   PaymentGatewayRequestOptions,
   PortalSessionInput,
   PortalSessionOutput,
+  RateLimiter,
+  RateLimitInput,
+  RateLimitResult,
   WebhookEventResult,
 } from '../ports/gateways';
 import type {
@@ -156,6 +159,32 @@ export class FakeAuthGateway implements AuthGateway {
       throw new ApplicationError('UNAUTHENTICATED', 'User not authenticated');
     }
     return this.user;
+  }
+}
+
+export class FakeRateLimiter implements RateLimiter {
+  readonly inputs: RateLimitInput[] = [];
+  private readonly results: RateLimitResult[];
+
+  constructor(result?: RateLimitResult | readonly RateLimitResult[]) {
+    this.results = result
+      ? Array.isArray(result)
+        ? [...result]
+        : [result]
+      : [];
+  }
+
+  async limit(input: RateLimitInput): Promise<RateLimitResult> {
+    this.inputs.push(input);
+    const next = this.results.shift();
+    if (next) return next;
+
+    return {
+      success: true,
+      limit: input.limit,
+      remaining: Math.max(0, input.limit - 1),
+      retryAfterSeconds: 0,
+    };
   }
 }
 

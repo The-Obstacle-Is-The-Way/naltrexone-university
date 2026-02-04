@@ -27,7 +27,7 @@ describe('GetBookmarksUseCase', () => {
     expect(questions.findPublishedByIdsCalls).toEqual([]);
   });
 
-  it('returns bookmark rows joined to published questions', async () => {
+  it('returns bookmark rows joined to published questions when the user has bookmarks', async () => {
     const userId = 'user-1';
 
     const bookmarks = new FakeBookmarkRepository([

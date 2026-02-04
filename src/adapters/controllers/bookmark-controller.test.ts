@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { describe, expect, it } from 'vitest';
 import { ApplicationError } from '@/src/application/errors';
 import type { GetBookmarksOutput } from '@/src/application/ports/bookmarks';
@@ -126,7 +127,7 @@ describe('bookmark-controller', () => {
       expect(deps.toggleBookmarkUseCase.inputs).toEqual([]);
     });
 
-    it('returns ok result from the use case', async () => {
+    it('returns ok when use case succeeds', async () => {
       const deps = createDeps({ toggleBookmarkOutput: { bookmarked: false } });
 
       const result = await toggleBookmark(
@@ -143,7 +144,7 @@ describe('bookmark-controller', () => {
       ]);
     });
 
-    it('maps ApplicationError from use case via handleError', async () => {
+    it('returns NOT_FOUND when use case throws ApplicationError', async () => {
       const deps = createDeps({
         toggleBookmarkThrows: new ApplicationError(
           'NOT_FOUND',
@@ -162,7 +163,7 @@ describe('bookmark-controller', () => {
       });
     });
 
-    it('loads dependencies from the container when deps are omitted', async () => {
+    it('returns ok when deps are loaded from the container', async () => {
       const deps = createDeps({ toggleBookmarkOutput: { bookmarked: true } });
 
       const questionId = '11111111-1111-1111-1111-111111111111';
@@ -201,7 +202,7 @@ describe('bookmark-controller', () => {
       expect(deps.getBookmarksUseCase.inputs).toEqual([]);
     });
 
-    it('returns ok result from the use case', async () => {
+    it('returns ok when use case returns bookmarks', async () => {
       const deps = createDeps({
         getBookmarksOutput: {
           rows: [
@@ -223,7 +224,7 @@ describe('bookmark-controller', () => {
       expect(deps.getBookmarksUseCase.inputs).toEqual([{ userId: 'user_1' }]);
     });
 
-    it('maps ApplicationError from use case via handleError', async () => {
+    it('returns error when use case throws ApplicationError', async () => {
       const deps = createDeps({
         getBookmarksThrows: new ApplicationError('INTERNAL_ERROR', 'boom'),
       });
@@ -236,7 +237,7 @@ describe('bookmark-controller', () => {
       });
     });
 
-    it('loads dependencies from the container when deps are omitted', async () => {
+    it('returns data when dependencies are loaded from container', async () => {
       const deps = createDeps({
         getBookmarksOutput: { rows: [] },
       });

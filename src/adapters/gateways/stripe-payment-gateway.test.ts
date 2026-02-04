@@ -242,6 +242,9 @@ describe('StripePaymentGateway', () => {
           metadata: { user_id: 'user_1' },
         },
       }),
+      expect.objectContaining({
+        idempotencyKey: expect.stringMatching(/^checkout_session:user_1:/),
+      }),
     );
   });
 
@@ -384,6 +387,9 @@ describe('StripePaymentGateway', () => {
     expect(checkoutCreate).toHaveBeenCalledWith(
       expect.objectContaining({
         line_items: [{ price: 'price_m', quantity: 1 }],
+      }),
+      expect.objectContaining({
+        idempotencyKey: expect.stringMatching(/^checkout_session:user_1:/),
       }),
     );
   });

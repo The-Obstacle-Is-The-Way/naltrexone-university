@@ -6,6 +6,7 @@ import {
   FakeAuthGateway,
   FakeEndPracticeSessionUseCase,
   FakeIdempotencyKeyRepository,
+  FakeRateLimiter,
   FakeStartPracticeSessionUseCase,
   FakeSubscriptionRepository,
 } from '@/src/application/test-helpers/fakes';
@@ -69,15 +70,7 @@ function createDeps(overrides?: {
   );
 
   const rateLimiter: RateLimiter =
-    overrides?.rateLimiter ??
-    ({
-      limit: async () => ({
-        success: true,
-        limit: 20,
-        remaining: 19,
-        retryAfterSeconds: 0,
-      }),
-    } satisfies RateLimiter);
+    overrides?.rateLimiter ?? new FakeRateLimiter();
 
   const startPracticeSessionUseCase = new FakeStartPracticeSessionUseCase(
     overrides?.startOutput ?? { sessionId: 'session_123' },
@@ -153,14 +146,12 @@ describe('practice-controller', () => {
 
     it('returns RATE_LIMITED when rate limited', async () => {
       const deps = createDeps({
-        rateLimiter: {
-          limit: async () => ({
-            success: false,
-            limit: 20,
-            remaining: 0,
-            retryAfterSeconds: 60,
-          }),
-        },
+        rateLimiter: new FakeRateLimiter({
+          success: false,
+          limit: 20,
+          remaining: 0,
+          retryAfterSeconds: 60,
+        }),
       });
 
       const result = await startPracticeSession(

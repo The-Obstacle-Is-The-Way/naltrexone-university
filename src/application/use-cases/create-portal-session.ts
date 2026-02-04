@@ -1,14 +1,12 @@
 import { ApplicationError } from '../errors';
+import type {
+  CreatePortalSessionInput,
+  CreatePortalSessionOutput,
+} from '../ports/billing';
 import type { PaymentGateway } from '../ports/gateways';
 import type { StripeCustomerRepository } from '../ports/repositories';
 
-export type CreatePortalSessionInput = {
-  userId: string;
-  returnUrl: string;
-  idempotencyKey?: string;
-};
-
-export type CreatePortalSessionOutput = { url: string };
+export type { CreatePortalSessionInput, CreatePortalSessionOutput };
 
 export class CreatePortalSessionUseCase {
   constructor(

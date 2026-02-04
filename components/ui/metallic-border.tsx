@@ -13,14 +13,16 @@ export function MetallicBorder({
   borderRadius = 16,
   borderWidth = 2,
 }: MetallicBorderProps) {
-  const innerRadius = Math.max(0, borderRadius - borderWidth);
+  const safeBorderRadius = Math.max(0, borderRadius);
+  const safeBorderWidth = Math.max(0, borderWidth);
+  const innerRadius = Math.max(0, safeBorderRadius - safeBorderWidth);
 
   return (
     <div
       className={`metallic-border inline-flex${className ? ` ${className}` : ''}`}
       style={{
-        borderRadius: `${borderRadius}px`,
-        padding: `${borderWidth}px`,
+        borderRadius: `${safeBorderRadius}px`,
+        padding: `${safeBorderWidth}px`,
       }}
     >
       <div

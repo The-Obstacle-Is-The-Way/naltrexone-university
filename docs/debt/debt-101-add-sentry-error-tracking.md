@@ -14,7 +14,7 @@ The app currently relies on:
 
 …but there is no error aggregation with grouping, stack traces, user impact, or alerting. For production, we should add a first-class error tracking service.
 
-Sentry’s free tier is sufficient for MVP.
+Sentry’s free-tier plan is sufficient for MVP.
 
 ---
 
@@ -87,4 +87,3 @@ Production/Preview (data sent):
 
 - `docs/specs/spec-016-observability.md`
 - `docs/debt/debt-100-adversarial-audit-2026-02-04.md`
-

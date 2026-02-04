@@ -28,6 +28,7 @@ function createDeps(overrides?: {
       : overrides.user;
 
   const authGateway = new FakeAuthGateway(user);
+  const now = () => new Date('2026-02-01T00:00:00Z');
 
   const subscriptionRepository = new FakeSubscriptionRepository(
     overrides?.isEntitled === false
@@ -43,6 +44,7 @@ function createDeps(overrides?: {
 
   const checkEntitlementUseCase = new CheckEntitlementUseCase(
     subscriptionRepository,
+    now,
   );
 
   const getUserStatsUseCase = new FakeGetUserStatsUseCase(

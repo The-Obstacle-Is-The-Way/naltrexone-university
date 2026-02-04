@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   createAttempt,
@@ -15,7 +16,7 @@ describe('EndPracticeSessionUseCase', () => {
     vi.restoreAllMocks();
   });
 
-  it('ends the session and computes totals and duration', async () => {
+  it('returns computed totals and duration when ending a session', async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-02-01T00:10:00Z'));
 

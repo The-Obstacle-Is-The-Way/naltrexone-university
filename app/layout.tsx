@@ -13,7 +13,7 @@ export const metadata: Metadata = {
 const manrope = Manrope({ subsets: ['latin'], variable: '--font-manrope' });
 const plusJakartaSans = Plus_Jakarta_Sans({
   subsets: ['latin'],
-  weight: ['800'],
+  weight: ['700', '800'],
   variable: '--font-plus-jakarta-sans',
 });
 const instrumentSans = Instrument_Sans({

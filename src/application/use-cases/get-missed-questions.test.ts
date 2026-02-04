@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { describe, expect, it } from 'vitest';
 import { createAttempt, createQuestion } from '@/src/domain/test-helpers';
 import {
@@ -24,7 +25,7 @@ describe('GetMissedQuestionsUseCase', () => {
     });
   });
 
-  it('returns missed questions joined to published questions', async () => {
+  it('returns missed questions joined to published questions when user has missed attempts', async () => {
     const useCase = new GetMissedQuestionsUseCase(
       new FakeAttemptRepository([
         createAttempt({

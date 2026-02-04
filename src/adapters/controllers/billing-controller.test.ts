@@ -7,6 +7,7 @@ import {
   FakeCreateCheckoutSessionUseCase,
   FakeCreatePortalSessionUseCase,
   FakeIdempotencyKeyRepository,
+  FakeRateLimiter,
 } from '@/src/application/test-helpers/fakes';
 import type {
   CreateCheckoutSessionOutput,
@@ -68,15 +69,7 @@ function createDeps(overrides?: {
   );
 
   const rateLimiter: RateLimiter =
-    overrides?.rateLimiter ??
-    ({
-      limit: async () => ({
-        success: true,
-        limit: 10,
-        remaining: 9,
-        retryAfterSeconds: 0,
-      }),
-    } satisfies RateLimiter);
+    overrides?.rateLimiter ?? new FakeRateLimiter();
 
   const clerkCalls: Array<undefined> = [];
 
@@ -129,14 +122,12 @@ describe('billing-controller', () => {
 
     it('returns RATE_LIMITED when checkout is rate limited', async () => {
       const deps = createDeps({
-        rateLimiter: {
-          limit: async () => ({
-            success: false,
-            limit: 10,
-            remaining: 0,
-            retryAfterSeconds: 60,
-          }),
-        },
+        rateLimiter: new FakeRateLimiter({
+          success: false,
+          limit: 10,
+          remaining: 0,
+          retryAfterSeconds: 60,
+        }),
       });
 
       const result = await createCheckoutSession({ plan: 'monthly' }, deps);
