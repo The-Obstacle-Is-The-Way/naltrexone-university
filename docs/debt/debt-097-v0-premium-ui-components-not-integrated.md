@@ -1,6 +1,6 @@
 # DEBT-097: V0 Premium Landing Page Components Deleted Instead of Integrated
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P2
 **Date:** 2026-02-04
 
@@ -257,7 +257,7 @@ This CSS fallback gives 90% of the visual impact with zero JS overhead.
 
 ##### 3a. Header/Nav
 
-```
+```text
 Current: Frosted glass header with "Addiction Boards" + Features/Pricing links + auth nav
 Change: Keep structure, update to pure black bg, remove backdrop-blur (not needed on black)
 ```
@@ -329,7 +329,7 @@ Monthly card: Standard `border-zinc-800` card, no metallic effect.
 
 Bottom-of-page call to action. Centered text with `LiquidCtaButton`.
 
-```
+```text
 "Ready to start studying?"
 "Join physicians and psychiatrists preparing for addiction boards. Full access, cancel anytime."
 [Get Started →]  [View Pricing]
@@ -649,7 +649,7 @@ html {
 
 #### Replace `.dark` CSS variables:
 
-Replace the **entire** `.dark` block — including the sidebar-* and chart-* variables — with the new achromatic palette (see "New: Obsidian Dark Mode" above). The current sidebar vars use blue hue 240 and the chart vars have mixed hues including orange (`--chart-3: 30 80% 55%`) which would break the achromatic design.
+Replace the **entire** `.dark` block — including the `sidebar-*` and `chart-*` variables — with the new achromatic palette (see "New: Obsidian Dark Mode" above). The current sidebar vars use blue hue 240 and the chart vars have mixed hues including orange (`--chart-3: 30 80% 55%`) which would break the achromatic design.
 
 ### Files to Modify (Exhaustive List)
 
@@ -729,12 +729,12 @@ Tests that may need updates if we change text content:
 
 1. Replace `bg-orange-600` in all app pages (see full file list above)
 2. Update `ChoiceButton.tsx` selected state (`border-orange-500` → `border-zinc-400`)
-4. Update `QuestionCard.tsx` borders
-5. Update dashboard, practice, review, bookmarks, billing, question-reattempt page styling
-6. Update practice session summary stat cards (`font-display` treatment)
-7. Update `pricing-client.tsx` SubscribeButton
-8. Update app-shell active nav indicator
-9. Verify all tests pass
+3. Update `QuestionCard.tsx` borders
+4. Update dashboard, practice, review, bookmarks, billing, question-reattempt page styling
+5. Update practice session summary stat cards (`font-display` treatment)
+6. Update `pricing-client.tsx` SubscribeButton
+7. Update app-shell active nav indicator
+8. Verify all tests pass
 
 ### Phase 4: Polish & Content (1 PR)
 

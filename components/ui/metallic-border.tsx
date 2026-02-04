@@ -13,7 +13,7 @@ export function MetallicBorder({
   borderRadius = 16,
   borderWidth = 2,
 }: MetallicBorderProps) {
-  const innerRadius = borderRadius - borderWidth;
+  const innerRadius = Math.max(0, borderRadius - borderWidth);
 
   return (
     <div

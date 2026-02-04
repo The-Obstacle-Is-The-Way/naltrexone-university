@@ -218,13 +218,11 @@
     sans-serif;
 }
 
-/* Hide scrollbar */
-.scrollbar-hidden::-webkit-scrollbar,
-html::-webkit-scrollbar {
+/* Hide scrollbar (opt-in only) */
+.scrollbar-hidden::-webkit-scrollbar {
   display: none;
 }
-.scrollbar-hidden,
-html {
+.scrollbar-hidden {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }

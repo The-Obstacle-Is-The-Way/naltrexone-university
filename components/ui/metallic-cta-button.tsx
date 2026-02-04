@@ -1,6 +1,6 @@
 import { ArrowRight } from 'lucide-react';
 import type { ReactNode } from 'react';
-import { MetallicBorder } from './metallic-border';
+import { MetallicBorder } from '@/components/ui/metallic-border';
 
 interface MetallicCtaButtonProps {
   children: ReactNode;
@@ -16,7 +16,7 @@ export function MetallicCtaButton({
   const inner = (
     <span className="flex items-center gap-2 px-8 py-3 text-base font-medium text-foreground">
       {children}
-      <ArrowRight className="h-4 w-4" />
+      <ArrowRight aria-hidden="true" className="h-4 w-4" />
     </span>
   );
 
