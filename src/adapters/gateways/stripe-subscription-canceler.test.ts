@@ -10,17 +10,12 @@ describe('cancelStripeCustomerSubscriptions', () => {
       yield { id: 'sub_past_due', status: 'past_due' };
     }
 
+    let capturedListInput: unknown;
     const cancel = vi.fn(async () => undefined);
     const stripe = {
       subscriptions: {
         list: vi.fn(async function* (input: unknown) {
-          // Ensure our code passes expected list params to Stripe.
-          expect(input).toEqual({
-            customer: 'cus_123',
-            status: 'all',
-            limit: 100,
-          });
-
+          capturedListInput = input;
           yield* list();
         }),
         cancel,
@@ -29,6 +24,11 @@ describe('cancelStripeCustomerSubscriptions', () => {
 
     await cancelStripeCustomerSubscriptions(stripe, 'cus_123');
 
+    expect(capturedListInput).toEqual({
+      customer: 'cus_123',
+      status: 'all',
+      limit: 100,
+    });
     expect(cancel).toHaveBeenCalledTimes(2);
     expect(cancel).toHaveBeenNthCalledWith(1, 'sub_active', {
       idempotencyKey: 'cancel_subscription:sub_active',
