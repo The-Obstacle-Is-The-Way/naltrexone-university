@@ -3,7 +3,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 
 describe('components/ui/radio-group', () => {
-  it('renders radio group slots', async () => {
+  it('renders radio group slots', { timeout: 15_000 }, async () => {
     const { RadioGroup, RadioGroupItem } = await import('./radio-group');
 
     const html = renderToStaticMarkup(

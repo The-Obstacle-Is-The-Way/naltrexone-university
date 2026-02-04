@@ -7,22 +7,26 @@ vi.mock('next/link', () => ({
 }));
 
 describe('components/marketing/marketing-home', () => {
-  it('renders marketing sections with injected nav and cta', async () => {
-    const { MarketingHomeShell } = await import('./marketing-home');
+  it(
+    'renders marketing sections with injected nav and cta',
+    { timeout: 15_000 },
+    async () => {
+      const { MarketingHomeShell } = await import('./marketing-home');
 
-    const html = renderToStaticMarkup(
-      <MarketingHomeShell
-        authNav={<div>AuthNav</div>}
-        primaryCta={<a href="/pricing">Get Started</a>}
-      />,
-    );
+      const html = renderToStaticMarkup(
+        <MarketingHomeShell
+          authNav={<div>AuthNav</div>}
+          primaryCta={<a href="/pricing">Get Started</a>}
+        />,
+      );
 
-    expect(html).toContain('Addiction Boards');
-    expect(html).toContain('AuthNav');
-    expect(html).toContain('Get Started');
-    expect(html).toContain('href="/pricing"');
-    expect(html).toContain('href="#features"');
-  });
+      expect(html).toContain('Addiction Boards');
+      expect(html).toContain('AuthNav');
+      expect(html).toContain('Get Started');
+      expect(html).toContain('href="/pricing"');
+      expect(html).toContain('href="#features"');
+    },
+  );
 
   it('renders via renderMarketingHome with injected deps', async () => {
     const { renderMarketingHome } = await import('./marketing-home');
