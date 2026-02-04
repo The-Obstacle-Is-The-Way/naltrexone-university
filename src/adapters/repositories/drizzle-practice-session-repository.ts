@@ -6,8 +6,12 @@ import {
   MAX_PRACTICE_SESSION_QUESTIONS,
   MAX_PRACTICE_SESSION_TAG_FILTERS,
 } from '@/src/adapters/shared/validation-limits';
-import { ApplicationError } from '@/src/application/errors';
+import {
+  ApplicationError,
+  type ApplicationErrorCode,
+} from '@/src/application/errors';
 import type { PracticeSessionRepository } from '@/src/application/ports/repositories';
+import type { PracticeSession } from '@/src/domain/entities';
 import type { DrizzleDb } from '../shared/database-types';
 
 const questionDifficultySchema = z.enum(['easy', 'medium', 'hard']);
@@ -23,6 +27,9 @@ const practiceSessionParamsSchema = z
   })
   .strict();
 
+type PracticeSessionRow = typeof practiceSessions.$inferSelect;
+type PracticeSessionParams = z.infer<typeof practiceSessionParamsSchema>;
+
 export class DrizzlePracticeSessionRepository
   implements PracticeSessionRepository
 {
@@ -31,18 +38,35 @@ export class DrizzlePracticeSessionRepository
     private readonly now: () => Date = () => new Date(),
   ) {}
 
-  async findByIdAndUserId(id: string, userId: string) {
-    const row = await this.db.query.practiceSessions.findFirst({
-      where: and(
-        eq(practiceSessions.id, id),
-        eq(practiceSessions.userId, userId),
-      ),
-    });
+  private parseParams(
+    paramsJson: unknown,
+    errorCode: ApplicationErrorCode,
+  ): PracticeSessionParams {
+    try {
+      return practiceSessionParamsSchema.parse(paramsJson);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        const cleanedFieldErrors: Record<string, string[]> = {};
+        for (const [field, messages] of Object.entries(
+          error.flatten().fieldErrors,
+        )) {
+          if (messages) cleanedFieldErrors[field] = messages;
+        }
 
-    if (!row) return null;
+        throw new ApplicationError(
+          errorCode,
+          `Invalid practice session parameters: ${error.message}`,
+          cleanedFieldErrors,
+        );
+      }
+      throw error;
+    }
+  }
 
-    const params = practiceSessionParamsSchema.parse(row.paramsJson);
-
+  private toDomain(
+    row: PracticeSessionRow,
+    params: PracticeSessionParams,
+  ): PracticeSession {
     return {
       id: row.id,
       userId: row.userId,
@@ -55,12 +79,26 @@ export class DrizzlePracticeSessionRepository
     };
   }
 
+  async findByIdAndUserId(id: string, userId: string) {
+    const row = await this.db.query.practiceSessions.findFirst({
+      where: and(
+        eq(practiceSessions.id, id),
+        eq(practiceSessions.userId, userId),
+      ),
+    });
+
+    if (!row) return null;
+
+    const params = this.parseParams(row.paramsJson, 'INTERNAL_ERROR');
+    return this.toDomain(row, params);
+  }
+
   async create(input: {
     userId: string;
     mode: 'tutor' | 'exam';
     paramsJson: unknown;
   }) {
-    const params = practiceSessionParamsSchema.parse(input.paramsJson);
+    const params = this.parseParams(input.paramsJson, 'VALIDATION_ERROR');
 
     const [row] = await this.db
       .insert(practiceSessions)
@@ -78,16 +116,7 @@ export class DrizzlePracticeSessionRepository
       );
     }
 
-    return {
-      id: row.id,
-      userId: row.userId,
-      mode: row.mode,
-      questionIds: params.questionIds,
-      tagFilters: params.tagSlugs,
-      difficultyFilters: params.difficulties,
-      startedAt: row.startedAt,
-      endedAt: row.endedAt ?? null,
-    };
+    return this.toDomain(row, params);
   }
 
   async end(id: string, userId: string) {

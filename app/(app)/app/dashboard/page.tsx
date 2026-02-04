@@ -13,46 +13,48 @@ export function DashboardView({ stats }: { stats: UserStatsOutput }) {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold text-foreground">Dashboard</h1>
+        <h1 className="text-2xl font-bold font-heading tracking-tight text-foreground">
+          Dashboard
+        </h1>
         <p className="mt-1 text-muted-foreground">
           Track your progress and keep your streak alive.
         </p>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
+        <div className="rounded-2xl border border-border bg-card p-6 shadow-sm hover:border-zinc-700/50 hover:bg-zinc-900/80 transition-all">
           <div className="text-sm text-muted-foreground">Total answered</div>
-          <div className="mt-2 text-2xl font-semibold text-foreground">
+          <div className="mt-2 text-3xl font-bold font-display text-foreground">
             {stats.totalAnswered}
           </div>
         </div>
 
-        <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
+        <div className="rounded-2xl border border-border bg-card p-6 shadow-sm hover:border-zinc-700/50 hover:bg-zinc-900/80 transition-all">
           <div className="text-sm text-muted-foreground">Overall accuracy</div>
-          <div className="mt-2 text-2xl font-semibold text-foreground">
+          <div className="mt-2 text-3xl font-bold font-display text-foreground">
             {formatPercent(stats.accuracyOverall)}
           </div>
         </div>
 
-        <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
+        <div className="rounded-2xl border border-border bg-card p-6 shadow-sm hover:border-zinc-700/50 hover:bg-zinc-900/80 transition-all">
           <div className="text-sm text-muted-foreground">Answered (7 days)</div>
-          <div className="mt-2 text-2xl font-semibold text-foreground">
+          <div className="mt-2 text-3xl font-bold font-display text-foreground">
             {stats.answeredLast7Days}
           </div>
         </div>
 
-        <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
+        <div className="rounded-2xl border border-border bg-card p-6 shadow-sm hover:border-zinc-700/50 hover:bg-zinc-900/80 transition-all">
           <div className="text-sm text-muted-foreground">Accuracy (7 days)</div>
-          <div className="mt-2 text-2xl font-semibold text-foreground">
+          <div className="mt-2 text-3xl font-bold font-display text-foreground">
             {formatPercent(stats.accuracyLast7Days)}
           </div>
         </div>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-3">
-        <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
+        <div className="rounded-2xl border border-border bg-card p-6 shadow-sm hover:border-zinc-700/50 hover:bg-zinc-900/80 transition-all">
           <div className="text-sm text-muted-foreground">Current streak</div>
-          <div className="mt-2 text-2xl font-semibold text-foreground">
+          <div className="mt-2 text-3xl font-bold font-display text-foreground">
             {stats.currentStreakDays}
           </div>
           <div className="mt-1 text-sm text-muted-foreground">
@@ -72,7 +74,7 @@ export function DashboardView({ stats }: { stats: UserStatsOutput }) {
             </div>
             <Link
               href="/app/practice"
-              className="inline-flex items-center justify-center rounded-full bg-orange-600 px-4 py-2 text-sm font-medium text-white hover:bg-orange-700"
+              className="inline-flex items-center justify-center rounded-full bg-zinc-100 px-4 py-2 text-sm font-medium text-zinc-900 hover:bg-white transition-colors"
             >
               Go to Practice
             </Link>
@@ -116,7 +118,9 @@ export function renderDashboard(result: ActionResult<UserStatsOutput>) {
     return (
       <div className="space-y-6">
         <div>
-          <h1 className="text-2xl font-semibold text-foreground">Dashboard</h1>
+          <h1 className="text-2xl font-bold font-heading tracking-tight text-foreground">
+            Dashboard
+          </h1>
           <p className="mt-1 text-muted-foreground">Unable to load stats.</p>
         </div>
         <div
@@ -127,7 +131,7 @@ export function renderDashboard(result: ActionResult<UserStatsOutput>) {
         </div>
         <Link
           href="/app/practice"
-          className="inline-flex items-center justify-center rounded-full bg-orange-600 px-4 py-2 text-sm font-medium text-white hover:bg-orange-700"
+          className="inline-flex items-center justify-center rounded-full bg-zinc-100 px-4 py-2 text-sm font-medium text-zinc-900 hover:bg-white transition-colors"
         >
           Go to Practice
         </Link>

@@ -16,7 +16,7 @@ function DefaultButton({ children }: { children: ReactNode }) {
   return (
     <button
       type="submit"
-      className="mt-8 block w-full rounded-full bg-orange-600 py-3 text-center text-sm font-medium text-white hover:bg-orange-700"
+      className="mt-8 block w-full rounded-full bg-zinc-100 py-3 text-center text-sm font-medium text-zinc-900 hover:bg-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
     >
       {children}
     </button>
@@ -32,7 +32,7 @@ export function PricingView({
   SubscribeButtonComponent = DefaultButton,
 }: PricingViewProps) {
   return (
-    <div className="min-h-screen bg-muted py-16">
+    <div className="min-h-screen bg-background py-16">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="text-center">
           <h1 className="text-4xl font-bold tracking-tight text-foreground">
@@ -67,7 +67,7 @@ export function PricingView({
               ) : null}
               <Link
                 href="/pricing"
-                className="text-current hover:opacity-70"
+                className="ml-4 rounded-md text-current hover:opacity-70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                 aria-label="Dismiss"
               >
                 ×
@@ -87,13 +87,13 @@ export function PricingView({
             <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-center">
               <Link
                 href="/app/dashboard"
-                className="inline-flex items-center justify-center rounded-full bg-orange-600 px-4 py-2 text-sm font-medium text-white hover:bg-orange-700"
+                className="inline-flex items-center justify-center rounded-full bg-zinc-100 px-4 py-2 text-sm font-medium text-zinc-900 hover:bg-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
               >
                 Go to Dashboard
               </Link>
               <Link
                 href="/app/billing"
-                className="inline-flex items-center justify-center rounded-full border border-border bg-background px-4 py-2 text-sm font-medium text-foreground hover:bg-muted"
+                className="inline-flex items-center justify-center rounded-full border border-border bg-background px-4 py-2 text-sm font-medium text-foreground hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
               >
                 Manage Billing
               </Link>
@@ -126,7 +126,7 @@ export function PricingView({
                 </SubscribeButtonComponent>
               </form>
             </div>
-            <div className="rounded-2xl border-2 border-orange-500 bg-card p-8 shadow-sm">
+            <div className="rounded-2xl border-2 border-zinc-500 bg-card p-8 shadow-sm">
               <h3 className="text-lg font-semibold text-foreground">
                 Pro Annual
               </h3>
@@ -159,7 +159,7 @@ export function PricingView({
         <div className="mt-8 text-center">
           <Link
             href="/"
-            className="text-sm text-muted-foreground hover:text-foreground"
+            className="rounded-md text-sm text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
           >
             Back to Home
           </Link>

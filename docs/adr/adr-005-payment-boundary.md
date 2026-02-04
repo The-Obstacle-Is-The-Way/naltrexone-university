@@ -24,31 +24,31 @@ Payment processing lives in the **Frameworks & Drivers** layer. Our domain deals
 
 ```text
 ┌──────────────────────────────────────────────────────────────┐
-│                    FRAMEWORKS (Stripe)                        │
-│                                                               │
+│                    FRAMEWORKS (Stripe)                       │
+│                                                              │
 │   /api/stripe/webhook ──> signature verification             │
 │   Stripe SDK ──> checkout sessions, portal sessions          │
-│                                                               │
+│                                                              │
 │   ┌──────────────────────────────────────────────────────┐   │
-│   │              ADAPTERS (Payment Gateway)               │   │
-│   │                                                       │   │
+│   │              ADAPTERS (Payment Gateway)              │   │
+│   │                                                      │   │
 │   │   StripePaymentGateway implements PaymentGateway     │   │
 │   │   - createCheckoutSession()                          │   │
 │   │   - createPortalSession()                            │   │
 │   │   - handleWebhookEvent()                             │   │
-│   │                                                       │   │
+│   │                                                      │   │
 │   │   Maps Stripe events → Domain subscription updates   │   │
-│   │                                                       │   │
+│   │                                                      │   │
 │   │   ┌──────────────────────────────────────────────┐   │   │
-│   │   │              USE CASES                        │   │   │
-│   │   │                                               │   │   │
+│   │   │              USE CASES                       │   │   │
+│   │   │                                              │   │   │
 │   │   │   CheckEntitlementUseCase                    │   │   │
 │   │   │   Input: userId                              │   │   │
 │   │   │   Output: { isEntitled: boolean }            │   │   │
-│   │   │                                               │   │   │
+│   │   │                                              │   │   │
 │   │   │   ┌──────────────────────────────────────┐   │   │   │
-│   │   │   │           DOMAIN                      │   │   │   │
-│   │   │   │                                       │   │   │   │
+│   │   │   │           DOMAIN                     │   │   │   │
+│   │   │   │                                      │   │   │   │
 │   │   │   │   Subscription entity                │   │   │   │
 │   │   │   │   isEntitled() pure function         │   │   │   │
 │   │   │   │   No Stripe types                    │   │   │   │

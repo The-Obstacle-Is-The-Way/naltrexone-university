@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { DrizzleUserRepository } from '@/src/adapters/repositories/drizzle-user-repository';
 import { ApplicationError } from '@/src/application/errors';
@@ -114,6 +115,64 @@ describe('DrizzleUserRepository', () => {
       expect(db.insert).not.toHaveBeenCalled();
     });
 
+    it('returns user with bumped updatedAt when observedAt is newer and email matches', async () => {
+      const db = createDbMock();
+      const existing = {
+        id: 'user_1',
+        clerkUserId: 'clerk_1',
+        email: 'a@example.com',
+        createdAt: new Date('2026-02-01T00:00:00Z'),
+        updatedAt: new Date('2026-02-01T00:00:00Z'),
+      };
+
+      const observedAt = new Date('2026-02-01T00:30:00Z');
+      const updated = { ...existing, updatedAt: observedAt };
+
+      db._mocks.queryFindFirst.mockResolvedValue(existing);
+      db._mocks.updateReturning.mockResolvedValue([updated]);
+
+      const repo = new DrizzleUserRepository(db as unknown as RepoDb);
+
+      await expect(
+        repo.upsertByClerkId('clerk_1', 'a@example.com', { observedAt }),
+      ).resolves.toEqual({
+        id: updated.id,
+        email: updated.email,
+        createdAt: updated.createdAt,
+        updatedAt: updated.updatedAt,
+      });
+
+      expect(db._mocks.updateSet).toHaveBeenCalledWith({
+        updatedAt: observedAt,
+      });
+      expect(db.insert).not.toHaveBeenCalled();
+    });
+
+    it('returns existing newer email when observedAt is older than stored updatedAt', async () => {
+      const db = createDbMock();
+      const existing = {
+        id: 'user_1',
+        clerkUserId: 'clerk_1',
+        email: 'new@example.com',
+        createdAt: new Date('2026-02-01T00:00:00Z'),
+        updatedAt: new Date('2026-02-01T01:00:00Z'),
+      };
+
+      db._mocks.queryFindFirst.mockResolvedValue(existing);
+
+      const repo = new DrizzleUserRepository(db as unknown as RepoDb);
+
+      await expect(
+        repo.upsertByClerkId('clerk_1', 'old@example.com', {
+          observedAt: new Date('2026-02-01T00:30:00Z'),
+        }),
+      ).resolves.toMatchObject({
+        email: 'new@example.com',
+      });
+
+      expect(db.update).not.toHaveBeenCalled();
+    });
+
     it('updates email when user exists with different email', async () => {
       vi.useFakeTimers();
       const now = new Date('2026-02-01T01:00:00Z');
@@ -151,6 +210,9 @@ describe('DrizzleUserRepository', () => {
     });
 
     it('throws INTERNAL_ERROR when update returns no rows', async () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date('2026-02-01T01:00:00Z'));
+
       const db = createDbMock();
       const existing = {
         id: 'user_1',
@@ -170,14 +232,18 @@ describe('DrizzleUserRepository', () => {
       await expect(promise).rejects.toMatchObject({ code: 'INTERNAL_ERROR' });
     });
 
-    it('inserts new user when not found', async () => {
+    it('returns new user when not found', async () => {
+      vi.useFakeTimers();
+      const now = new Date('2026-02-01T00:00:00Z');
+      vi.setSystemTime(now);
+
       const db = createDbMock();
       const inserted = {
         id: 'user_1',
         clerkUserId: 'clerk_1',
         email: 'new@example.com',
-        createdAt: new Date('2026-02-01T00:00:00Z'),
-        updatedAt: new Date('2026-02-01T00:00:00Z'),
+        createdAt: now,
+        updatedAt: now,
       };
 
       db._mocks.queryFindFirst.mockResolvedValue(null);
@@ -197,6 +263,8 @@ describe('DrizzleUserRepository', () => {
       expect(db._mocks.insertValues).toHaveBeenCalledWith({
         clerkUserId: 'clerk_1',
         email: 'new@example.com',
+        createdAt: now,
+        updatedAt: now,
       });
     });
 
@@ -228,6 +296,41 @@ describe('DrizzleUserRepository', () => {
 
       expect(db._mocks.queryFindFirst).toHaveBeenCalledTimes(2);
       expect(db.update).not.toHaveBeenCalled();
+    });
+
+    it('returns user with bumped updatedAt when observedAt is newer and email matches after conflict', async () => {
+      const db = createDbMock();
+
+      const observedAt = new Date('2026-02-01T00:30:00Z');
+      const after = {
+        id: 'user_1',
+        clerkUserId: 'clerk_1',
+        email: 'a@example.com',
+        createdAt: new Date('2026-02-01T00:00:00Z'),
+        updatedAt: new Date('2026-02-01T00:00:00Z'),
+      };
+      const updated = { ...after, updatedAt: observedAt };
+
+      db._mocks.queryFindFirst
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce(after);
+      db._mocks.insertReturning.mockResolvedValue([]);
+      db._mocks.updateReturning.mockResolvedValue([updated]);
+
+      const repo = new DrizzleUserRepository(db as unknown as RepoDb);
+
+      await expect(
+        repo.upsertByClerkId('clerk_1', 'a@example.com', { observedAt }),
+      ).resolves.toEqual({
+        id: updated.id,
+        email: updated.email,
+        createdAt: updated.createdAt,
+        updatedAt: updated.updatedAt,
+      });
+
+      expect(db._mocks.updateSet).toHaveBeenCalledWith({
+        updatedAt: observedAt,
+      });
     });
 
     it('updates email after race condition if email differs', async () => {

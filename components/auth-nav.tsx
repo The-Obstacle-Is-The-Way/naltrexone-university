@@ -36,46 +36,33 @@ export async function AuthNav({
 } = {}) {
   const skipClerk = process.env.NEXT_PUBLIC_SKIP_CLERK === 'true';
 
+  const unauthenticatedNav = (
+    <div className="flex items-center space-x-4">
+      <Link
+        href="/pricing"
+        className="text-sm font-medium text-muted-foreground hover:text-foreground"
+      >
+        Pricing
+      </Link>
+      <Link
+        href="/sign-in"
+        className="rounded-full bg-zinc-100 px-4 py-2 text-sm font-medium text-zinc-900 hover:bg-white transition-colors"
+      >
+        Sign In
+      </Link>
+    </div>
+  );
+
   if (skipClerk) {
     // CI fallback: render unauthenticated state
-    return (
-      <div className="flex items-center space-x-4">
-        <Link
-          href="/pricing"
-          className="text-sm font-medium text-muted-foreground hover:text-foreground"
-        >
-          Pricing
-        </Link>
-        <Link
-          href="/sign-in"
-          className="rounded-full bg-orange-600 px-4 py-2 text-sm font-medium text-white hover:bg-orange-700"
-        >
-          Sign In
-        </Link>
-      </div>
-    );
+    return unauthenticatedNav;
   }
 
   const d = await getDeps(deps, options);
   const user = await d.authGateway.getCurrentUser();
 
   if (!user) {
-    return (
-      <div className="flex items-center space-x-4">
-        <Link
-          href="/pricing"
-          className="text-sm font-medium text-muted-foreground hover:text-foreground"
-        >
-          Pricing
-        </Link>
-        <Link
-          href="/sign-in"
-          className="rounded-full bg-orange-600 px-4 py-2 text-sm font-medium text-white hover:bg-orange-700"
-        >
-          Sign In
-        </Link>
-      </div>
-    );
+    return unauthenticatedNav;
   }
 
   const entitlement = await d.checkEntitlementUseCase.execute({

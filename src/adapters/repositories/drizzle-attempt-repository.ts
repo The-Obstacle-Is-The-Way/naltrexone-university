@@ -28,6 +28,30 @@ export class DrizzleAttemptRepository implements AttemptRepository {
     return row.selectedChoiceId;
   }
 
+  private toDomain(row: {
+    id: string;
+    userId: string;
+    questionId: string;
+    practiceSessionId: string | null;
+    selectedChoiceId: string | null;
+    isCorrect: boolean;
+    timeSpentSeconds: number;
+    answeredAt: Date;
+  }): Attempt {
+    const selectedChoiceId = this.requireSelectedChoiceId(row);
+
+    return {
+      id: row.id,
+      userId: row.userId,
+      questionId: row.questionId,
+      practiceSessionId: row.practiceSessionId ?? null,
+      selectedChoiceId,
+      isCorrect: row.isCorrect,
+      timeSpentSeconds: row.timeSpentSeconds,
+      answeredAt: row.answeredAt,
+    };
+  }
+
   async insert(input: {
     userId: string;
     questionId: string;
@@ -52,18 +76,7 @@ export class DrizzleAttemptRepository implements AttemptRepository {
       throw new ApplicationError('INTERNAL_ERROR', 'Failed to insert attempt');
     }
 
-    const selectedChoiceId = this.requireSelectedChoiceId(row);
-
-    return {
-      id: row.id,
-      userId: row.userId,
-      questionId: row.questionId,
-      practiceSessionId: row.practiceSessionId ?? null,
-      selectedChoiceId,
-      isCorrect: row.isCorrect,
-      timeSpentSeconds: row.timeSpentSeconds,
-      answeredAt: row.answeredAt,
-    };
+    return this.toDomain(row);
   }
 
   async findByUserId(
@@ -85,20 +98,7 @@ export class DrizzleAttemptRepository implements AttemptRepository {
       offset: safeOffset,
     });
 
-    return rows.map((row) => {
-      const selectedChoiceId = this.requireSelectedChoiceId(row);
-
-      return {
-        id: row.id,
-        userId: row.userId,
-        questionId: row.questionId,
-        practiceSessionId: row.practiceSessionId ?? null,
-        selectedChoiceId,
-        isCorrect: row.isCorrect,
-        timeSpentSeconds: row.timeSpentSeconds,
-        answeredAt: row.answeredAt,
-      };
-    });
+    return rows.map((row) => this.toDomain(row));
   }
 
   async findBySessionId(sessionId: string, userId: string) {
@@ -110,20 +110,7 @@ export class DrizzleAttemptRepository implements AttemptRepository {
       orderBy: desc(attempts.answeredAt),
     });
 
-    return rows.map((row) => {
-      const selectedChoiceId = this.requireSelectedChoiceId(row);
-
-      return {
-        id: row.id,
-        userId: row.userId,
-        questionId: row.questionId,
-        practiceSessionId: row.practiceSessionId ?? null,
-        selectedChoiceId,
-        isCorrect: row.isCorrect,
-        timeSpentSeconds: row.timeSpentSeconds,
-        answeredAt: row.answeredAt,
-      };
-    });
+    return rows.map((row) => this.toDomain(row));
   }
 
   async countByUserId(userId: string): Promise<number> {
@@ -181,20 +168,7 @@ export class DrizzleAttemptRepository implements AttemptRepository {
       limit,
     });
 
-    return rows.map((row) => {
-      const selectedChoiceId = this.requireSelectedChoiceId(row);
-
-      return {
-        id: row.id,
-        userId: row.userId,
-        questionId: row.questionId,
-        practiceSessionId: row.practiceSessionId ?? null,
-        selectedChoiceId,
-        isCorrect: row.isCorrect,
-        timeSpentSeconds: row.timeSpentSeconds,
-        answeredAt: row.answeredAt,
-      };
-    });
+    return rows.map((row) => this.toDomain(row));
   }
 
   async listAnsweredAtByUserIdSince(

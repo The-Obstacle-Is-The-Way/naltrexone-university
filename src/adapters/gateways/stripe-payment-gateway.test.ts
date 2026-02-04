@@ -113,12 +113,14 @@ describe('StripePaymentGateway', () => {
     });
 
     await expect(
-      gateway.createCustomer({
-        userId: 'user_1',
-        clerkUserId: 'clerk_1',
-        email: 'user@example.com',
-        idempotencyKey: '11111111-1111-1111-1111-111111111111',
-      }),
+      gateway.createCustomer(
+        {
+          userId: 'user_1',
+          clerkUserId: 'clerk_1',
+          email: 'user@example.com',
+        },
+        { idempotencyKey: '11111111-1111-1111-1111-111111111111' },
+      ),
     ).resolves.toEqual({ stripeCustomerId: 'cus_123' });
 
     expect(customersCreate).toHaveBeenCalledTimes(2);
@@ -239,6 +241,9 @@ describe('StripePaymentGateway', () => {
         subscription_data: {
           metadata: { user_id: 'user_1' },
         },
+      }),
+      expect.objectContaining({
+        idempotencyKey: expect.stringMatching(/^checkout_session:user_1:/),
       }),
     );
   });
@@ -382,6 +387,9 @@ describe('StripePaymentGateway', () => {
     expect(checkoutCreate).toHaveBeenCalledWith(
       expect.objectContaining({
         line_items: [{ price: 'price_m', quantity: 1 }],
+      }),
+      expect.objectContaining({
+        idempotencyKey: expect.stringMatching(/^checkout_session:user_1:/),
       }),
     );
   });

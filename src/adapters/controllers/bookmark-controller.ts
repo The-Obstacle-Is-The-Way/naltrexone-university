@@ -2,13 +2,15 @@
 
 import { z } from 'zod';
 import { createDepsResolver, loadAppContainer } from '@/lib/controller-helpers';
-import { ApplicationError } from '@/src/application/errors';
-import type { AuthGateway } from '@/src/application/ports/gateways';
-import type { Logger } from '@/src/application/ports/logger';
 import type {
-  BookmarkRepository,
-  QuestionRepository,
-} from '@/src/application/ports/repositories';
+  GetBookmarksInput,
+  GetBookmarksOutput,
+} from '@/src/application/ports/bookmarks';
+import type { AuthGateway } from '@/src/application/ports/gateways';
+import type {
+  ToggleBookmarkInput,
+  ToggleBookmarkOutput,
+} from '@/src/application/use-cases';
 import { createAction } from './create-action';
 import type { CheckEntitlementUseCase } from './require-entitled-user-id';
 import { requireEntitledUserId } from './require-entitled-user-id';
@@ -23,37 +25,22 @@ const ToggleBookmarkInputSchema = z
 
 const GetBookmarksInputSchema = z.object({}).strict();
 
-export type ToggleBookmarkOutput = {
-  bookmarked: boolean;
-};
+export type {
+  BookmarkRow,
+  GetBookmarksOutput,
+} from '@/src/application/ports/bookmarks';
 
-export type AvailableBookmarkRow = {
-  isAvailable: true;
-  questionId: string;
-  slug: string;
-  stemMd: string;
-  difficulty: 'easy' | 'medium' | 'hard';
-  bookmarkedAt: string; // ISO
-};
-
-export type UnavailableBookmarkRow = {
-  isAvailable: false;
-  questionId: string;
-  bookmarkedAt: string; // ISO
-};
-
-export type BookmarkRow = AvailableBookmarkRow | UnavailableBookmarkRow;
-
-export type GetBookmarksOutput = {
-  rows: BookmarkRow[];
-};
+export type { ToggleBookmarkOutput } from '@/src/application/use-cases';
 
 export type BookmarkControllerDeps = {
   authGateway: AuthGateway;
   checkEntitlementUseCase: CheckEntitlementUseCase;
-  bookmarkRepository: BookmarkRepository;
-  questionRepository: QuestionRepository;
-  logger: Logger;
+  toggleBookmarkUseCase: {
+    execute: (input: ToggleBookmarkInput) => Promise<ToggleBookmarkOutput>;
+  };
+  getBookmarksUseCase: {
+    execute: (input: GetBookmarksInput) => Promise<GetBookmarksOutput>;
+  };
 };
 
 type BookmarkControllerContainer = {
@@ -70,25 +57,10 @@ export const toggleBookmark = createAction({
   getDeps,
   execute: async (input, d) => {
     const userId = await requireEntitledUserId(d);
-
-    const wasRemoved = await d.bookmarkRepository.remove(
+    return d.toggleBookmarkUseCase.execute({
       userId,
-      input.questionId,
-    );
-
-    if (wasRemoved) {
-      return { bookmarked: false };
-    }
-
-    const question = await d.questionRepository.findPublishedById(
-      input.questionId,
-    );
-    if (!question) {
-      throw new ApplicationError('NOT_FOUND', 'Question not found');
-    }
-
-    await d.bookmarkRepository.add(userId, input.questionId);
-    return { bookmarked: true };
+      questionId: input.questionId,
+    });
   },
 });
 
@@ -97,41 +69,6 @@ export const getBookmarks = createAction({
   getDeps,
   execute: async (_input, d) => {
     const userId = await requireEntitledUserId(d);
-
-    const bookmarks = await d.bookmarkRepository.listByUserId(userId);
-    const questionIds = bookmarks.map((b) => b.questionId);
-    const questions =
-      await d.questionRepository.findPublishedByIds(questionIds);
-    const byId = new Map(questions.map((q) => [q.id, q]));
-
-    const rows: BookmarkRow[] = [];
-    for (const bookmark of bookmarks) {
-      const question = byId.get(bookmark.questionId);
-      if (!question) {
-        // Graceful degradation: questions can be unpublished/deleted while bookmarks persist.
-        d.logger.warn(
-          { questionId: bookmark.questionId },
-          'Bookmark references missing question',
-        );
-
-        rows.push({
-          isAvailable: false,
-          questionId: bookmark.questionId,
-          bookmarkedAt: bookmark.createdAt.toISOString(),
-        });
-        continue;
-      }
-
-      rows.push({
-        isAvailable: true,
-        questionId: question.id,
-        slug: question.slug,
-        stemMd: question.stemMd,
-        difficulty: question.difficulty,
-        bookmarkedAt: bookmark.createdAt.toISOString(),
-      });
-    }
-
-    return { rows };
+    return d.getBookmarksUseCase.execute({ userId });
   },
 });

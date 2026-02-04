@@ -10,6 +10,7 @@ import type {
   User,
 } from '@/src/domain/entities';
 import type { QuestionDifficulty } from '@/src/domain/value-objects';
+import type { GetBookmarksInput, GetBookmarksOutput } from '../ports/bookmarks';
 import type {
   AuthGateway,
   CheckoutSessionInput,
@@ -17,8 +18,12 @@ import type {
   CreateCustomerInput,
   CreateCustomerOutput,
   PaymentGateway,
+  PaymentGatewayRequestOptions,
   PortalSessionInput,
   PortalSessionOutput,
+  RateLimiter,
+  RateLimitInput,
+  RateLimitResult,
   WebhookEventResult,
 } from '../ports/gateways';
 import type {
@@ -38,8 +43,29 @@ import type {
   SubscriptionRepository,
   SubscriptionUpsertInput,
   TagRepository,
+  UpsertUserByClerkIdOptions,
   UserRepository,
 } from '../ports/repositories';
+import type {
+  CreateCheckoutSessionInput,
+  CreateCheckoutSessionOutput,
+  CreatePortalSessionInput,
+  CreatePortalSessionOutput,
+  EndPracticeSessionInput,
+  EndPracticeSessionOutput,
+  GetMissedQuestionsInput,
+  GetMissedQuestionsOutput,
+  GetNextQuestionInput,
+  GetNextQuestionOutput,
+  GetUserStatsInput,
+  StartPracticeSessionInput,
+  StartPracticeSessionOutput,
+  SubmitAnswerInput,
+  SubmitAnswerOutput,
+  ToggleBookmarkInput,
+  ToggleBookmarkOutput,
+  UserStatsOutput,
+} from '../use-cases';
 
 type InMemoryAttempt = Attempt & { practiceSessionId: string | null };
 
@@ -70,6 +96,7 @@ export class FakeLogger implements Logger {
 
 export class FakeQuestionRepository implements QuestionRepository {
   private readonly questions: readonly Question[];
+  readonly findPublishedByIdsCalls: string[][] = [];
 
   constructor(questions: readonly Question[]) {
     this.questions = questions;
@@ -92,6 +119,7 @@ export class FakeQuestionRepository implements QuestionRepository {
   async findPublishedByIds(
     ids: readonly string[],
   ): Promise<readonly Question[]> {
+    this.findPublishedByIdsCalls.push([...ids]);
     const byId = new Map(
       this.questions
         .filter((q) => q.status === 'published')
@@ -134,10 +162,41 @@ export class FakeAuthGateway implements AuthGateway {
   }
 }
 
+export class FakeRateLimiter implements RateLimiter {
+  readonly inputs: RateLimitInput[] = [];
+  private readonly results: RateLimitResult[];
+
+  constructor(result?: RateLimitResult | readonly RateLimitResult[]) {
+    this.results = result
+      ? Array.isArray(result)
+        ? [...result]
+        : [result]
+      : [];
+  }
+
+  async limit(input: RateLimitInput): Promise<RateLimitResult> {
+    this.inputs.push(input);
+    const next = this.results.shift();
+    if (next) return next;
+
+    return {
+      success: true,
+      limit: input.limit,
+      remaining: Math.max(0, input.limit - 1),
+      retryAfterSeconds: 0,
+    };
+  }
+}
+
 export class FakePaymentGateway implements PaymentGateway {
   readonly customerInputs: CreateCustomerInput[] = [];
+  readonly customerOptions: Array<PaymentGatewayRequestOptions | undefined> =
+    [];
   readonly checkoutInputs: CheckoutSessionInput[] = [];
+  readonly checkoutOptions: Array<PaymentGatewayRequestOptions | undefined> =
+    [];
   readonly portalInputs: PortalSessionInput[] = [];
+  readonly portalOptions: Array<PaymentGatewayRequestOptions | undefined> = [];
   readonly webhookInputs: Array<{ rawBody: string; signature: string }> = [];
 
   private readonly stripeCustomerId: string;
@@ -159,22 +218,28 @@ export class FakePaymentGateway implements PaymentGateway {
 
   async createCustomer(
     input: CreateCustomerInput,
+    options?: PaymentGatewayRequestOptions,
   ): Promise<CreateCustomerOutput> {
     this.customerInputs.push(input);
+    this.customerOptions.push(options);
     return { stripeCustomerId: this.stripeCustomerId };
   }
 
   async createCheckoutSession(
     input: CheckoutSessionInput,
+    options?: PaymentGatewayRequestOptions,
   ): Promise<CheckoutSessionOutput> {
     this.checkoutInputs.push(input);
+    this.checkoutOptions.push(options);
     return { url: this.checkoutUrl };
   }
 
   async createPortalSession(
     input: PortalSessionInput,
+    options?: PaymentGatewayRequestOptions,
   ): Promise<PortalSessionOutput> {
     this.portalInputs.push(input);
+    this.portalOptions.push(options);
     return { url: this.portalUrl };
   }
 
@@ -184,6 +249,166 @@ export class FakePaymentGateway implements PaymentGateway {
   ): Promise<WebhookEventResult> {
     this.webhookInputs.push({ rawBody, signature });
     return this.webhookResult;
+  }
+}
+
+export class FakeToggleBookmarkUseCase {
+  readonly inputs: ToggleBookmarkInput[] = [];
+
+  constructor(
+    private readonly output: ToggleBookmarkOutput,
+    private readonly toThrow?: unknown,
+  ) {}
+
+  async execute(input: ToggleBookmarkInput): Promise<ToggleBookmarkOutput> {
+    this.inputs.push(input);
+    if (this.toThrow) throw this.toThrow;
+    return this.output;
+  }
+}
+
+export class FakeGetBookmarksUseCase {
+  readonly inputs: GetBookmarksInput[] = [];
+
+  constructor(
+    private readonly output: GetBookmarksOutput,
+    private readonly toThrow?: unknown,
+  ) {}
+
+  async execute(input: GetBookmarksInput): Promise<GetBookmarksOutput> {
+    this.inputs.push(input);
+    if (this.toThrow) throw this.toThrow;
+    return this.output;
+  }
+}
+
+export class FakeStartPracticeSessionUseCase {
+  readonly inputs: StartPracticeSessionInput[] = [];
+
+  constructor(
+    private readonly output: StartPracticeSessionOutput,
+    private readonly toThrow?: unknown,
+  ) {}
+
+  async execute(
+    input: StartPracticeSessionInput,
+  ): Promise<StartPracticeSessionOutput> {
+    this.inputs.push(input);
+    if (this.toThrow) throw this.toThrow;
+    return this.output;
+  }
+}
+
+export class FakeEndPracticeSessionUseCase {
+  readonly inputs: EndPracticeSessionInput[] = [];
+
+  constructor(
+    private readonly output: EndPracticeSessionOutput,
+    private readonly toThrow?: unknown,
+  ) {}
+
+  async execute(
+    input: EndPracticeSessionInput,
+  ): Promise<EndPracticeSessionOutput> {
+    this.inputs.push(input);
+    if (this.toThrow) throw this.toThrow;
+    return this.output;
+  }
+}
+
+export class FakeCreateCheckoutSessionUseCase {
+  readonly inputs: CreateCheckoutSessionInput[] = [];
+
+  constructor(
+    private readonly output: CreateCheckoutSessionOutput,
+    private readonly toThrow?: unknown,
+  ) {}
+
+  async execute(
+    input: CreateCheckoutSessionInput,
+  ): Promise<CreateCheckoutSessionOutput> {
+    this.inputs.push(input);
+    if (this.toThrow) throw this.toThrow;
+    return this.output;
+  }
+}
+
+export class FakeCreatePortalSessionUseCase {
+  readonly inputs: CreatePortalSessionInput[] = [];
+
+  constructor(
+    private readonly output: CreatePortalSessionOutput,
+    private readonly toThrow?: unknown,
+  ) {}
+
+  async execute(
+    input: CreatePortalSessionInput,
+  ): Promise<CreatePortalSessionOutput> {
+    this.inputs.push(input);
+    if (this.toThrow) throw this.toThrow;
+    return this.output;
+  }
+}
+
+export class FakeGetMissedQuestionsUseCase {
+  readonly inputs: GetMissedQuestionsInput[] = [];
+
+  constructor(
+    private readonly output: GetMissedQuestionsOutput,
+    private readonly toThrow?: unknown,
+  ) {}
+
+  async execute(
+    input: GetMissedQuestionsInput,
+  ): Promise<GetMissedQuestionsOutput> {
+    this.inputs.push(input);
+    if (this.toThrow) throw this.toThrow;
+    return this.output;
+  }
+}
+
+export class FakeGetUserStatsUseCase {
+  readonly inputs: GetUserStatsInput[] = [];
+
+  constructor(
+    private readonly output: UserStatsOutput,
+    private readonly toThrow?: unknown,
+  ) {}
+
+  async execute(input: GetUserStatsInput): Promise<UserStatsOutput> {
+    this.inputs.push(input);
+    if (this.toThrow) throw this.toThrow;
+    return this.output;
+  }
+}
+
+export class FakeGetNextQuestionUseCase {
+  readonly inputs: GetNextQuestionInput[] = [];
+
+  constructor(
+    private readonly output: GetNextQuestionOutput,
+    private readonly toThrow?: unknown,
+  ) {}
+
+  async execute(input: GetNextQuestionInput): Promise<GetNextQuestionOutput> {
+    this.inputs.push(input);
+    if (this.toThrow) throw this.toThrow;
+    return this.output;
+  }
+}
+
+export class FakeSubmitAnswerUseCase {
+  readonly inputs: SubmitAnswerInput[] = [];
+
+  constructor(
+    private readonly output: SubmitAnswerOutput,
+    private readonly toThrow?: unknown,
+  ) {}
+
+  async execute(input: SubmitAnswerInput): Promise<SubmitAnswerOutput> {
+    this.inputs.push(input);
+    if (this.toThrow) throw this.toThrow;
+    return this.output;
   }
 }
 
@@ -475,6 +700,11 @@ export class FakePracticeSessionRepository
   implements PracticeSessionRepository
 {
   private sessions: readonly PracticeSession[];
+  readonly createInputs: Array<{
+    userId: string;
+    mode: 'tutor' | 'exam';
+    paramsJson: unknown;
+  }> = [];
 
   constructor(seed: readonly PracticeSession[] = []) {
     this.sessions = seed;
@@ -494,6 +724,7 @@ export class FakePracticeSessionRepository
     mode: 'tutor' | 'exam';
     paramsJson: unknown;
   }): Promise<PracticeSession> {
+    this.createInputs.push(input);
     const params = input.paramsJson as {
       questionIds: string[];
       tagSlugs: string[];
@@ -605,29 +836,54 @@ type StoredUser = { user: User; clerkId: string };
 export class FakeUserRepository implements UserRepository {
   private readonly byClerkId = new Map<string, StoredUser>();
   private nextId = 1;
+  private lastObservedAtMs: number | null = null;
 
   async findByClerkId(clerkId: string): Promise<User | null> {
     const stored = this.byClerkId.get(clerkId);
     return stored?.user ?? null;
   }
 
-  async upsertByClerkId(clerkId: string, email: string): Promise<User> {
+  async upsertByClerkId(
+    clerkId: string,
+    email: string,
+    options?: UpsertUserByClerkIdOptions,
+  ): Promise<User> {
+    const observedAt =
+      options?.observedAt ??
+      (() => {
+        const nowMs = Date.now();
+        const observedAtMs =
+          this.lastObservedAtMs === null
+            ? nowMs
+            : Math.max(nowMs, this.lastObservedAtMs + 1);
+        this.lastObservedAtMs = observedAtMs;
+        return new Date(observedAtMs);
+      })();
+
+    this.lastObservedAtMs = Math.max(
+      this.lastObservedAtMs ?? 0,
+      observedAt.getTime(),
+    );
     const existing = this.byClerkId.get(clerkId);
 
     if (existing) {
       if (existing.user.email === email) {
         return existing.user;
       }
+
+      if (existing.user.updatedAt >= observedAt) {
+        return existing.user;
+      }
       const updatedUser: User = {
         ...existing.user,
         email,
-        updatedAt: new Date(),
+        updatedAt: observedAt,
       };
       this.byClerkId.set(clerkId, { user: updatedUser, clerkId });
       return updatedUser;
     }
 
-    const now = new Date();
+    const now = observedAt;
     const newUser: User = {
       id: `user-${this.nextId++}`,
       email,

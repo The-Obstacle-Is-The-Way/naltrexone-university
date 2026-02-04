@@ -82,6 +82,45 @@ describe('DrizzlePracticeSessionRepository', () => {
     });
   });
 
+  it('returns INTERNAL_ERROR when persisted paramsJson is invalid', async () => {
+    const row = {
+      id: 'session_1',
+      userId: 'user_1',
+      mode: 'tutor',
+      paramsJson: {
+        count: 0,
+        tagSlugs: [],
+        difficulties: [],
+        questionIds: [],
+      },
+      startedAt: new Date('2026-02-01T00:00:00.000Z'),
+      endedAt: null,
+    } as const;
+
+    const db = {
+      query: {
+        practiceSessions: {
+          findFirst: async () => row,
+        },
+      },
+      insert: () => {
+        throw new Error('unexpected insert');
+      },
+      update: () => {
+        throw new Error('unexpected update');
+      },
+    } as const;
+
+    type RepoDb = ConstructorParameters<
+      typeof DrizzlePracticeSessionRepository
+    >[0];
+    const repo = new DrizzlePracticeSessionRepository(db as unknown as RepoDb);
+
+    await expect(
+      repo.findByIdAndUserId('session_1', 'user_1'),
+    ).rejects.toMatchObject({ code: 'INTERNAL_ERROR' });
+  });
+
   it('creates a practice session and returns a mapped PracticeSession', async () => {
     const startedAt = new Date('2026-02-01T00:00:00.000Z');
     const returningRow = {
@@ -139,6 +178,40 @@ describe('DrizzlePracticeSessionRepository', () => {
     expect(insertValues).toHaveBeenCalledWith(
       expect.objectContaining({ userId: 'user_1', mode: 'exam' }),
     );
+  });
+
+  it('returns VALIDATION_ERROR when create() is called with invalid paramsJson', async () => {
+    const db = {
+      query: {
+        practiceSessions: {
+          findFirst: async () => null,
+        },
+      },
+      insert: () => {
+        throw new Error('unexpected insert');
+      },
+      update: () => {
+        throw new Error('unexpected update');
+      },
+    } as const;
+
+    type RepoDb = ConstructorParameters<
+      typeof DrizzlePracticeSessionRepository
+    >[0];
+    const repo = new DrizzlePracticeSessionRepository(db as unknown as RepoDb);
+
+    await expect(
+      repo.create({
+        userId: 'user_1',
+        mode: 'tutor',
+        paramsJson: {
+          count: 0,
+          tagSlugs: [],
+          difficulties: [],
+          questionIds: [],
+        },
+      }),
+    ).rejects.toMatchObject({ code: 'VALIDATION_ERROR' });
   });
 
   it('throws INTERNAL_ERROR when create() does not return an inserted row', async () => {

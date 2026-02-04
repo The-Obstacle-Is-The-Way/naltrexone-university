@@ -1,20 +1,22 @@
 # DEBT-084: User Email Race Condition in Concurrent Webhook Handling
 
-**Status:** Accepted
+**Status:** Resolved
 **Priority:** P3
 **Date:** 2026-02-03
-**Accepted:** 2026-02-03
+**Resolved:** 2026-02-04
 
 ---
 
 ## Description
 
-The `DrizzleUserRepository.upsertByClerkId()` method handles concurrent inserts via `onConflictDoNothing`, but the subsequent email update logic has a theoretical race condition where concurrent requests could overwrite each other's email updates with stale data.
+The `DrizzleUserRepository.upsertByClerkId()` method handled concurrent inserts via `onConflictDoNothing`, but the subsequent email update logic could overwrite a newer email with stale data when webhook deliveries are concurrent or out-of-order.
+
+This is now fixed by ordering updates using a source-of-truth timestamp (Clerk user `updated_at`) and applying updates only when the incoming timestamp is newer than the stored timestamp.
 
 ## Location
 
 **File:** `src/adapters/repositories/drizzle-user-repository.ts`
-**Lines:** 102-134
+**Lines:** (see current repo; lines drift as code evolves)
 
 ```typescript
 // Race condition: another request inserted the row
@@ -154,23 +156,21 @@ const [updated] = await this.db
 **Pros:** Correct ordering based on actual event time
 **Cons:** Requires Clerk webhook timestamp to be passed through
 
-## Recommendation
+## Resolution (Implemented)
 
-**Option A (Accept current behavior)** for now:
+Implemented **Option D (Timestamp-Based Conflict Resolution)** without a schema change:
 
-1. The race condition is extremely unlikely in practice
-2. The impact is minimal (email display only)
-3. It's self-correcting on next webhook
-4. Adding complexity for a theoretical edge case violates YAGNI
-
-**Future consideration:** If we ever see evidence of this in production (user complaints about wrong email), implement Option D with Clerk event timestamps.
+- `UserRepository.upsertByClerkId()` accepts optional `{ observedAt }`
+- Clerk `user.updated` webhooks pass `observedAt = new Date(user.updated_at)`
+- The Drizzle repository:
+  - short-circuits stale updates (`existing.updatedAt >= observedAt`)
+  - guards updates with `WHERE users.updated_at < observedAt`
+  - returns the latest row when an update is skipped due to ordering
 
 ## Verification
 
-N/A (accepted). If we implement Option D later:
-- [ ] Unit test: Concurrent upserts don't overwrite newer data
-- [ ] Integration test: Two simultaneous webhooks resolve correctly
-- [ ] Load test: No deadlocks under concurrent webhook load
+- [x] Unit test: `DrizzleUserRepository` ignores stale updates via `observedAt`
+- [x] Unit test: `processClerkWebhook` does not overwrite newer email when receiving an older `user.updated` event
 
 ## Related
 

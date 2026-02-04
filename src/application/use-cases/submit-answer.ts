@@ -4,7 +4,7 @@ import {
 } from '@/src/domain/services';
 import { ApplicationError } from '../errors';
 import type {
-  AttemptRepository,
+  AttemptWriter,
   PracticeSessionRepository,
   QuestionRepository,
 } from '../ports/repositories';
@@ -27,7 +27,7 @@ export type SubmitAnswerOutput = {
 export class SubmitAnswerUseCase {
   constructor(
     private readonly questions: QuestionRepository,
-    private readonly attempts: AttemptRepository,
+    private readonly attempts: AttemptWriter,
     private readonly sessions: PracticeSessionRepository,
   ) {}
 

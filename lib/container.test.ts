@@ -20,8 +20,16 @@ import { DrizzleUserRepository } from '@/src/adapters/repositories/drizzle-user-
 import type { DrizzleDb } from '@/src/adapters/shared/database-types';
 import {
   CheckEntitlementUseCase,
+  CreateCheckoutSessionUseCase,
+  CreatePortalSessionUseCase,
+  EndPracticeSessionUseCase,
+  GetBookmarksUseCase,
+  GetMissedQuestionsUseCase,
   GetNextQuestionUseCase,
+  GetUserStatsUseCase,
+  StartPracticeSessionUseCase,
   SubmitAnswerUseCase,
+  ToggleBookmarkUseCase,
 } from '@/src/application/use-cases';
 
 vi.mock('server-only', () => ({}));
@@ -161,6 +169,30 @@ describe('container factories', () => {
     expect(container.createSubmitAnswerUseCase()).toBeInstanceOf(
       SubmitAnswerUseCase,
     );
+    expect(container.createToggleBookmarkUseCase()).toBeInstanceOf(
+      ToggleBookmarkUseCase,
+    );
+    expect(container.createGetBookmarksUseCase()).toBeInstanceOf(
+      GetBookmarksUseCase,
+    );
+    expect(container.createGetMissedQuestionsUseCase()).toBeInstanceOf(
+      GetMissedQuestionsUseCase,
+    );
+    expect(container.createGetUserStatsUseCase()).toBeInstanceOf(
+      GetUserStatsUseCase,
+    );
+    expect(container.createStartPracticeSessionUseCase()).toBeInstanceOf(
+      StartPracticeSessionUseCase,
+    );
+    expect(container.createEndPracticeSessionUseCase()).toBeInstanceOf(
+      EndPracticeSessionUseCase,
+    );
+    expect(container.createCheckoutSessionUseCase()).toBeInstanceOf(
+      CreateCheckoutSessionUseCase,
+    );
+    expect(container.createPortalSessionUseCase()).toBeInstanceOf(
+      CreatePortalSessionUseCase,
+    );
 
     const deps = container.createStripeWebhookDeps();
     expect(deps.paymentGateway).toBeInstanceOf(StripePaymentGateway);
@@ -193,13 +225,12 @@ describe('container factories', () => {
 
     const billingDeps = container.createBillingControllerDeps();
     expect(billingDeps.authGateway).toBeInstanceOf(ClerkAuthGateway);
-    expect(billingDeps.stripeCustomerRepository).toBeInstanceOf(
-      DrizzleStripeCustomerRepository,
+    expect(billingDeps.createCheckoutSessionUseCase).toBeInstanceOf(
+      CreateCheckoutSessionUseCase,
     );
-    expect(billingDeps.subscriptionRepository).toBeInstanceOf(
-      DrizzleSubscriptionRepository,
+    expect(billingDeps.createPortalSessionUseCase).toBeInstanceOf(
+      CreatePortalSessionUseCase,
     );
-    expect(billingDeps.paymentGateway).toBeInstanceOf(StripePaymentGateway);
     expect(billingDeps.idempotencyKeyRepository).toBeInstanceOf(
       DrizzleIdempotencyKeyRepository,
     );
@@ -213,11 +244,11 @@ describe('container factories', () => {
     expect(bookmarkDeps.checkEntitlementUseCase).toBeInstanceOf(
       CheckEntitlementUseCase,
     );
-    expect(bookmarkDeps.bookmarkRepository).toBeInstanceOf(
-      DrizzleBookmarkRepository,
+    expect(bookmarkDeps.toggleBookmarkUseCase).toBeInstanceOf(
+      ToggleBookmarkUseCase,
     );
-    expect(bookmarkDeps.questionRepository).toBeInstanceOf(
-      DrizzleQuestionRepository,
+    expect(bookmarkDeps.getBookmarksUseCase).toBeInstanceOf(
+      GetBookmarksUseCase,
     );
 
     const practiceDeps = container.createPracticeControllerDeps();
@@ -229,14 +260,11 @@ describe('container factories', () => {
     expect(practiceDeps.checkEntitlementUseCase).toBeInstanceOf(
       CheckEntitlementUseCase,
     );
-    expect(practiceDeps.attemptRepository).toBeInstanceOf(
-      DrizzleAttemptRepository,
+    expect(practiceDeps.startPracticeSessionUseCase).toBeInstanceOf(
+      StartPracticeSessionUseCase,
     );
-    expect(practiceDeps.practiceSessionRepository).toBeInstanceOf(
-      DrizzlePracticeSessionRepository,
-    );
-    expect(practiceDeps.questionRepository).toBeInstanceOf(
-      DrizzleQuestionRepository,
+    expect(practiceDeps.endPracticeSessionUseCase).toBeInstanceOf(
+      EndPracticeSessionUseCase,
     );
     expect(typeof practiceDeps.now).toBe('function');
 
@@ -245,11 +273,8 @@ describe('container factories', () => {
     expect(reviewDeps.checkEntitlementUseCase).toBeInstanceOf(
       CheckEntitlementUseCase,
     );
-    expect(reviewDeps.attemptRepository).toBeInstanceOf(
-      DrizzleAttemptRepository,
-    );
-    expect(reviewDeps.questionRepository).toBeInstanceOf(
-      DrizzleQuestionRepository,
+    expect(reviewDeps.getMissedQuestionsUseCase).toBeInstanceOf(
+      GetMissedQuestionsUseCase,
     );
 
     const statsDeps = container.createStatsControllerDeps();
@@ -257,13 +282,7 @@ describe('container factories', () => {
     expect(statsDeps.checkEntitlementUseCase).toBeInstanceOf(
       CheckEntitlementUseCase,
     );
-    expect(statsDeps.attemptRepository).toBeInstanceOf(
-      DrizzleAttemptRepository,
-    );
-    expect(statsDeps.questionRepository).toBeInstanceOf(
-      DrizzleQuestionRepository,
-    );
-    expect(typeof statsDeps.now).toBe('function');
+    expect(statsDeps.getUserStatsUseCase).toBeInstanceOf(GetUserStatsUseCase);
 
     const tagDeps = container.createTagControllerDeps();
     expect(tagDeps.authGateway).toBeInstanceOf(ClerkAuthGateway);

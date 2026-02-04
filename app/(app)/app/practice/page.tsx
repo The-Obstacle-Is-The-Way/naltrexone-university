@@ -137,7 +137,7 @@ export function PracticeSessionStarter(props: PracticeSessionStarterProps) {
 
           <button
             type="button"
-            className="inline-flex items-center justify-center rounded-full bg-orange-600 px-4 py-2 text-sm font-medium text-white hover:bg-orange-700 disabled:cursor-not-allowed disabled:opacity-60"
+            className="inline-flex items-center justify-center rounded-full bg-zinc-100 px-4 py-2 text-sm font-medium text-zinc-900 hover:bg-white transition-colors disabled:cursor-not-allowed disabled:opacity-60"
             disabled={props.sessionStartStatus === 'loading' || props.isPending}
             onClick={props.onStartSession}
           >
@@ -237,7 +237,9 @@ export function PracticeView(props: PracticeViewProps) {
       <div>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-baseline sm:justify-between">
           <div>
-            <h1 className="text-2xl font-semibold text-foreground">Practice</h1>
+            <h1 className="text-2xl font-bold font-heading tracking-tight text-foreground">
+              Practice
+            </h1>
             <p className="mt-1 text-muted-foreground">
               Answer one question at a time.
             </p>
@@ -342,7 +344,7 @@ export function PracticeView(props: PracticeViewProps) {
       <div className="flex flex-col gap-3 sm:flex-row">
         <button
           type="button"
-          className="inline-flex items-center justify-center rounded-full bg-orange-600 px-4 py-2 text-sm font-medium text-white hover:bg-orange-700 disabled:cursor-not-allowed disabled:opacity-60"
+          className="inline-flex items-center justify-center rounded-full bg-zinc-100 px-4 py-2 text-sm font-medium text-zinc-900 hover:bg-white transition-colors disabled:cursor-not-allowed disabled:opacity-60"
           disabled={!props.canSubmit || props.isPending}
           onClick={props.onSubmit}
         >

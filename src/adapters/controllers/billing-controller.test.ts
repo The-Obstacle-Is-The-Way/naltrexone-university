@@ -1,63 +1,45 @@
-import { describe, expect, it, vi } from 'vitest';
-import type {
-  PaymentGateway,
-  RateLimiter,
-} from '@/src/application/ports/gateways';
-import type {
-  StripeCustomerRepository,
-  SubscriptionRepository,
-} from '@/src/application/ports/repositories';
+// @vitest-environment jsdom
+import { describe, expect, it } from 'vitest';
+import { ApplicationError } from '@/src/application/errors';
+import type { RateLimiter } from '@/src/application/ports/gateways';
 import {
   FakeAuthGateway,
+  FakeCreateCheckoutSessionUseCase,
+  FakeCreatePortalSessionUseCase,
   FakeIdempotencyKeyRepository,
-  FakePaymentGateway,
-  FakeSubscriptionRepository,
+  FakeRateLimiter,
 } from '@/src/application/test-helpers/fakes';
+import type {
+  CreateCheckoutSessionOutput,
+  CreatePortalSessionOutput,
+} from '@/src/application/use-cases';
 import type { User } from '@/src/domain/entities';
-import { createSubscription, createUser } from '@/src/domain/test-helpers';
+import { createUser } from '@/src/domain/test-helpers';
 import {
+  type BillingControllerDeps,
   createCheckoutSession,
   createPortalSession,
 } from './billing-controller';
 
-class CapturingStripeCustomerRepository implements StripeCustomerRepository {
-  readonly findInputs: string[] = [];
-  readonly insertInputs: Array<{ userId: string; stripeCustomerId: string }> =
-    [];
-
-  private readonly stripeCustomerIdByUserId = new Map<string, string>();
-
-  constructor(seed?: { userId: string; stripeCustomerId: string } | null) {
-    if (seed) {
-      this.stripeCustomerIdByUserId.set(seed.userId, seed.stripeCustomerId);
-    }
-  }
-
-  async findByUserId(
-    userId: string,
-  ): Promise<{ stripeCustomerId: string } | null> {
-    this.findInputs.push(userId);
-    const stripeCustomerId = this.stripeCustomerIdByUserId.get(userId);
-    return stripeCustomerId ? { stripeCustomerId } : null;
-  }
-
-  async insert(userId: string, stripeCustomerId: string): Promise<void> {
-    this.insertInputs.push({ userId, stripeCustomerId });
-    this.stripeCustomerIdByUserId.set(userId, stripeCustomerId);
-  }
-}
+type BillingControllerTestDeps = BillingControllerDeps & {
+  createCheckoutSessionUseCase: FakeCreateCheckoutSessionUseCase;
+  createPortalSessionUseCase: FakeCreatePortalSessionUseCase;
+  _calls: {
+    clerkCalls: Array<undefined>;
+  };
+};
 
 function createDeps(overrides?: {
   user?: User | null;
   appUrl?: string;
   clerkUserId?: string | null;
-  stripeCustomerId?: string | null;
-  paymentGateway?: PaymentGateway;
+  checkoutOutput?: CreateCheckoutSessionOutput;
+  checkoutThrows?: unknown;
+  portalOutput?: CreatePortalSessionOutput;
+  portalThrows?: unknown;
   rateLimiter?: RateLimiter;
-  stripeCustomerRepository?: StripeCustomerRepository;
-  subscriptionRepository?: SubscriptionRepository;
   now?: () => Date;
-}) {
+}): BillingControllerTestDeps {
   const user =
     overrides?.user === undefined
       ? createUser({
@@ -72,56 +54,40 @@ function createDeps(overrides?: {
   const clerkUserId =
     overrides?.clerkUserId === undefined ? 'clerk_1' : overrides.clerkUserId;
 
+  const now = overrides?.now ?? (() => new Date('2026-02-01T00:00:00Z'));
+
   const authGateway = new FakeAuthGateway(user);
 
-  const stripeCustomerRepository =
-    overrides?.stripeCustomerRepository ??
-    new CapturingStripeCustomerRepository(
-      overrides?.stripeCustomerId === undefined
-        ? { userId: 'user_1', stripeCustomerId: 'cus_123' }
-        : overrides.stripeCustomerId
-          ? { userId: 'user_1', stripeCustomerId: overrides.stripeCustomerId }
-          : null,
-    );
+  const createCheckoutSessionUseCase = new FakeCreateCheckoutSessionUseCase(
+    overrides?.checkoutOutput ?? { url: 'https://stripe/checkout' },
+    overrides?.checkoutThrows,
+  );
 
-  const paymentGateway =
-    overrides?.paymentGateway ??
-    new FakePaymentGateway({
-      stripeCustomerId: 'cus_new',
-      checkoutUrl: 'https://stripe/checkout',
-      portalUrl: 'https://stripe/portal',
-      webhookResult: {
-        eventId: 'evt_1',
-        type: 'checkout.session.completed',
-      },
-    });
-
-  const subscriptionRepository =
-    overrides?.subscriptionRepository ?? new FakeSubscriptionRepository();
+  const createPortalSessionUseCase = new FakeCreatePortalSessionUseCase(
+    overrides?.portalOutput ?? { url: 'https://stripe/portal' },
+    overrides?.portalThrows,
+  );
 
   const rateLimiter: RateLimiter =
-    overrides?.rateLimiter ??
-    ({
-      limit: async () => ({
-        success: true,
-        limit: 10,
-        remaining: 9,
-        retryAfterSeconds: 0,
-      }),
-    } satisfies RateLimiter);
+    overrides?.rateLimiter ?? new FakeRateLimiter();
 
-  const now = overrides?.now ?? (() => new Date('2026-02-01T00:00:00Z'));
+  const clerkCalls: Array<undefined> = [];
 
   return {
     authGateway,
-    stripeCustomerRepository,
-    subscriptionRepository,
-    paymentGateway,
+    createCheckoutSessionUseCase,
+    createPortalSessionUseCase,
     idempotencyKeyRepository: new FakeIdempotencyKeyRepository(now),
     rateLimiter,
-    getClerkUserId: async () => clerkUserId,
+    getClerkUserId: async () => {
+      clerkCalls.push(undefined);
+      return clerkUserId;
+    },
     appUrl,
     now,
+    _calls: {
+      clerkCalls,
+    },
   };
 }
 
@@ -130,10 +96,7 @@ describe('billing-controller', () => {
     it('returns VALIDATION_ERROR when input is invalid', async () => {
       const deps = createDeps();
 
-      const result = await createCheckoutSession(
-        { plan: 'weekly' },
-        deps as never,
-      );
+      const result = await createCheckoutSession({ plan: 'weekly' }, deps);
 
       expect(result).toMatchObject({
         ok: false,
@@ -142,256 +105,97 @@ describe('billing-controller', () => {
           fieldErrors: { plan: expect.any(Array) },
         },
       });
+      expect(deps.createCheckoutSessionUseCase.inputs).toEqual([]);
     });
 
     it('returns UNAUTHENTICATED when unauthenticated', async () => {
       const deps = createDeps({ user: null });
 
-      const result = await createCheckoutSession(
-        { plan: 'monthly' },
-        deps as never,
-      );
+      const result = await createCheckoutSession({ plan: 'monthly' }, deps);
 
       expect(result).toMatchObject({
         ok: false,
         error: { code: 'UNAUTHENTICATED' },
       });
-    });
-
-    it('returns ALREADY_SUBSCRIBED when subscription is still active', async () => {
-      const paymentGateway = new FakePaymentGateway({
-        stripeCustomerId: 'cus_new',
-        checkoutUrl: 'https://stripe/checkout',
-        portalUrl: 'https://stripe/portal',
-        webhookResult: { eventId: 'evt_1', type: 'checkout.session.completed' },
-      });
-
-      const subscriptionRepository = new FakeSubscriptionRepository([
-        createSubscription({
-          userId: 'user_1',
-          status: 'active',
-          currentPeriodEnd: new Date('2026-03-01T00:00:00Z'),
-        }),
-      ]);
-
-      const deps = createDeps({
-        paymentGateway,
-        subscriptionRepository,
-        now: () => new Date('2026-02-01T00:00:00Z'),
-      });
-
-      const result = await createCheckoutSession(
-        { plan: 'monthly' },
-        deps as never,
-      );
-
-      expect(result).toMatchObject({
-        ok: false,
-        error: { code: 'ALREADY_SUBSCRIBED' },
-      });
-
-      expect(paymentGateway.customerInputs).toEqual([]);
-      expect(paymentGateway.checkoutInputs).toEqual([]);
-    });
-
-    it('returns ALREADY_SUBSCRIBED when subscription is not entitled but still current', async () => {
-      const paymentGateway = new FakePaymentGateway({
-        stripeCustomerId: 'cus_new',
-        checkoutUrl: 'https://stripe/checkout',
-        portalUrl: 'https://stripe/portal',
-        webhookResult: { eventId: 'evt_1', type: 'checkout.session.completed' },
-      });
-
-      const subscriptionRepository = new FakeSubscriptionRepository([
-        createSubscription({
-          userId: 'user_1',
-          status: 'past_due',
-          currentPeriodEnd: new Date('2026-03-01T00:00:00Z'),
-        }),
-      ]);
-
-      const deps = createDeps({
-        paymentGateway,
-        subscriptionRepository,
-        now: () => new Date('2026-02-01T00:00:00Z'),
-      });
-
-      const result = await createCheckoutSession(
-        { plan: 'monthly' },
-        deps as never,
-      );
-
-      expect(result).toMatchObject({
-        ok: false,
-        error: { code: 'ALREADY_SUBSCRIBED' },
-      });
-
-      expect(paymentGateway.customerInputs).toEqual([]);
-      expect(paymentGateway.checkoutInputs).toEqual([]);
+      expect(deps.createCheckoutSessionUseCase.inputs).toEqual([]);
     });
 
     it('returns RATE_LIMITED when checkout is rate limited', async () => {
-      const paymentGateway = new FakePaymentGateway({
-        stripeCustomerId: 'cus_new',
-        checkoutUrl: 'https://stripe/checkout',
-        portalUrl: 'https://stripe/portal',
-        webhookResult: { eventId: 'evt_1', type: 'checkout.session.completed' },
-      });
-
-      const rateLimiter: RateLimiter = {
-        limit: vi.fn(async () => ({
+      const deps = createDeps({
+        rateLimiter: new FakeRateLimiter({
           success: false,
           limit: 10,
           remaining: 0,
           retryAfterSeconds: 60,
-        })),
-      };
-
-      const subscriptionRepository = {
-        findByUserId: vi.fn(async () => null),
-        findByStripeSubscriptionId: vi.fn(async () => null),
-        upsert: vi.fn(async () => undefined),
-      } satisfies SubscriptionRepository;
-
-      const deps = createDeps({
-        paymentGateway,
-        rateLimiter,
-        subscriptionRepository,
+        }),
       });
 
-      const result = await createCheckoutSession(
-        { plan: 'monthly' },
-        deps as never,
-      );
+      const result = await createCheckoutSession({ plan: 'monthly' }, deps);
 
       expect(result).toMatchObject({
         ok: false,
         error: { code: 'RATE_LIMITED' },
       });
-      expect(paymentGateway.customerInputs).toEqual([]);
-      expect(paymentGateway.checkoutInputs).toEqual([]);
-      expect(subscriptionRepository.findByUserId).not.toHaveBeenCalled();
+      expect(deps.createCheckoutSessionUseCase.inputs).toEqual([]);
     });
 
-    it('uses existing stripe customer mapping when available', async () => {
-      const paymentGateway = new FakePaymentGateway({
-        stripeCustomerId: 'cus_new',
-        checkoutUrl: 'https://stripe/checkout',
-        portalUrl: 'https://stripe/portal',
-        webhookResult: { eventId: 'evt_1', type: 'checkout.session.completed' },
-      });
+    it('returns checkout URL when inputs are valid', async () => {
+      const deps = createDeps({ appUrl: 'https://app.example.com' });
 
-      const stripeCustomerRepository = new CapturingStripeCustomerRepository({
-        userId: 'user_1',
-        stripeCustomerId: 'cus_existing',
-      });
-
-      const deps = createDeps({
-        stripeCustomerRepository,
-        paymentGateway,
-        stripeCustomerId: 'cus_existing',
-      });
-
-      const result = await createCheckoutSession(
-        { plan: 'annual' },
-        deps as never,
-      );
+      const result = await createCheckoutSession({ plan: 'annual' }, deps);
 
       expect(result).toEqual({
         ok: true,
         data: { url: 'https://stripe/checkout' },
       });
-
-      expect(paymentGateway.customerInputs).toEqual([]);
-      expect(stripeCustomerRepository.insertInputs).toEqual([]);
-
-      expect(paymentGateway.checkoutInputs).toEqual([
+      expect(deps.createCheckoutSessionUseCase.inputs).toEqual([
         {
           userId: 'user_1',
-          stripeCustomerId: 'cus_existing',
+          clerkUserId: 'clerk_1',
+          email: 'user@example.com',
           plan: 'annual',
           successUrl:
             'https://app.example.com/checkout/success?session_id={CHECKOUT_SESSION_ID}',
           cancelUrl: 'https://app.example.com/pricing?checkout=cancel',
         },
       ]);
-    });
-
-    it('creates stripe customer mapping when missing', async () => {
-      const paymentGateway = new FakePaymentGateway({
-        stripeCustomerId: 'cus_new',
-        checkoutUrl: 'https://stripe/checkout',
-        portalUrl: 'https://stripe/portal',
-        webhookResult: { eventId: 'evt_1', type: 'checkout.session.completed' },
-      });
-
-      const stripeCustomerRepository = new CapturingStripeCustomerRepository(
-        null,
-      );
-
-      const deps = createDeps({
-        stripeCustomerRepository,
-        paymentGateway,
-        stripeCustomerId: null,
-      });
-
-      const result = await createCheckoutSession(
-        { plan: 'monthly' },
-        deps as never,
-      );
-
-      expect(result).toEqual({
-        ok: true,
-        data: { url: 'https://stripe/checkout' },
-      });
-
-      expect(paymentGateway.customerInputs).toEqual([
-        {
-          userId: 'user_1',
-          clerkUserId: 'clerk_1',
-          email: 'user@example.com',
-          idempotencyKey: 'stripe_customer:user_1',
-        },
-      ]);
-      expect(stripeCustomerRepository.insertInputs).toEqual([
-        { userId: 'user_1', stripeCustomerId: 'cus_new' },
-      ]);
-      expect(paymentGateway.checkoutInputs).toEqual([
-        {
-          userId: 'user_1',
-          stripeCustomerId: 'cus_new',
-          plan: 'monthly',
-          successUrl:
-            'https://app.example.com/checkout/success?session_id={CHECKOUT_SESSION_ID}',
-          cancelUrl: 'https://app.example.com/pricing?checkout=cancel',
-        },
-      ]);
+      expect(deps._calls.clerkCalls).toHaveLength(1);
     });
 
     it('returns the cached checkout session when idempotencyKey is reused', async () => {
-      const paymentGateway = new FakePaymentGateway({
-        stripeCustomerId: 'cus_new',
-        checkoutUrl: 'https://stripe/checkout',
-        portalUrl: 'https://stripe/portal',
-        webhookResult: { eventId: 'evt_1', type: 'checkout.session.completed' },
-      });
-
-      const deps = createDeps({ paymentGateway });
+      const deps = createDeps();
 
       const input = {
         plan: 'monthly',
         idempotencyKey: '11111111-1111-1111-1111-111111111111',
       } as const;
 
-      const first = await createCheckoutSession(input, deps as never);
-      const second = await createCheckoutSession(input, deps as never);
+      const first = await createCheckoutSession(input, deps);
+      const second = await createCheckoutSession(input, deps);
 
       expect(first).toEqual({
         ok: true,
         data: { url: 'https://stripe/checkout' },
       });
       expect(second).toEqual(first);
-      expect(paymentGateway.checkoutInputs).toHaveLength(1);
+      expect(deps.createCheckoutSessionUseCase.inputs).toHaveLength(1);
+      expect(deps._calls.clerkCalls).toHaveLength(1);
+    });
+
+    it('returns ALREADY_SUBSCRIBED when use case throws ApplicationError', async () => {
+      const deps = createDeps({
+        checkoutThrows: new ApplicationError(
+          'ALREADY_SUBSCRIBED',
+          'Already subscribed',
+        ),
+      });
+
+      const result = await createCheckoutSession({ plan: 'monthly' }, deps);
+
+      expect(result).toEqual({
+        ok: false,
+        error: { code: 'ALREADY_SUBSCRIBED', message: 'Already subscribed' },
+      });
     });
   });
 
@@ -399,77 +203,55 @@ describe('billing-controller', () => {
     it('returns VALIDATION_ERROR when input is invalid', async () => {
       const deps = createDeps();
 
-      const result = await createPortalSession(undefined, deps as never);
+      const result = await createPortalSession(undefined, deps);
 
       expect(result).toMatchObject({
         ok: false,
         error: { code: 'VALIDATION_ERROR' },
       });
+      expect(deps.createPortalSessionUseCase.inputs).toEqual([]);
     });
 
     it('returns UNAUTHENTICATED when unauthenticated', async () => {
       const deps = createDeps({ user: null });
 
-      const result = await createPortalSession({}, deps as never);
+      const result = await createPortalSession({}, deps);
 
       expect(result).toMatchObject({
         ok: false,
         error: { code: 'UNAUTHENTICATED' },
       });
+      expect(deps.createPortalSessionUseCase.inputs).toEqual([]);
     });
 
-    it('returns NOT_FOUND when user has no stripe customer mapping', async () => {
-      const paymentGateway = new FakePaymentGateway({
-        stripeCustomerId: 'cus_new',
-        checkoutUrl: 'https://stripe/checkout',
-        portalUrl: 'https://stripe/portal',
-        webhookResult: { eventId: 'evt_1', type: 'checkout.session.completed' },
-      });
+    it('returns portal URL when inputs are valid', async () => {
+      const deps = createDeps({ appUrl: 'https://app.example.com' });
 
-      const deps = createDeps({
-        stripeCustomerId: null,
-        stripeCustomerRepository: new CapturingStripeCustomerRepository(null),
-        paymentGateway,
-      });
-
-      const result = await createPortalSession({}, deps as never);
-
-      expect(result).toMatchObject({
-        ok: false,
-        error: { code: 'NOT_FOUND' },
-      });
-      expect(paymentGateway.portalInputs).toEqual([]);
-    });
-
-    it('creates a portal session when stripe customer mapping exists', async () => {
-      const paymentGateway = new FakePaymentGateway({
-        stripeCustomerId: 'cus_new',
-        checkoutUrl: 'https://stripe/checkout',
-        portalUrl: 'https://stripe/portal',
-        webhookResult: { eventId: 'evt_1', type: 'checkout.session.completed' },
-      });
-
-      const deps = createDeps({
-        stripeCustomerId: 'cus_existing',
-        stripeCustomerRepository: new CapturingStripeCustomerRepository({
-          userId: 'user_1',
-          stripeCustomerId: 'cus_existing',
-        }),
-        paymentGateway,
-      });
-
-      const result = await createPortalSession({}, deps as never);
+      const result = await createPortalSession({}, deps);
 
       expect(result).toEqual({
         ok: true,
         data: { url: 'https://stripe/portal' },
       });
-      expect(paymentGateway.portalInputs).toEqual([
-        {
-          stripeCustomerId: 'cus_existing',
-          returnUrl: 'https://app.example.com/app/billing',
-        },
+      expect(deps.createPortalSessionUseCase.inputs).toEqual([
+        { userId: 'user_1', returnUrl: 'https://app.example.com/app/billing' },
       ]);
+    });
+
+    it('returns NOT_FOUND when use case throws ApplicationError', async () => {
+      const deps = createDeps({
+        portalThrows: new ApplicationError(
+          'NOT_FOUND',
+          'Stripe customer not found',
+        ),
+      });
+
+      const result = await createPortalSession({}, deps);
+
+      expect(result).toEqual({
+        ok: false,
+        error: { code: 'NOT_FOUND', message: 'Stripe customer not found' },
+      });
     });
   });
 });

@@ -16,6 +16,10 @@ import {
   FakePaymentGateway,
   FakeSubscriptionRepository,
 } from '@/src/application/test-helpers/fakes';
+import {
+  CreateCheckoutSessionUseCase,
+  CreatePortalSessionUseCase,
+} from '@/src/application/use-cases';
 import type { User } from '@/src/domain/entities';
 
 const databaseUrl = process.env.DATABASE_URL;
@@ -91,14 +95,23 @@ describe('billing controllers (integration)', () => {
       db,
       () => new Date('2026-02-01T00:00:00.000Z'),
     );
+    const createCheckoutSessionUseCase = new CreateCheckoutSessionUseCase(
+      stripeCustomerRepository,
+      new FakeSubscriptionRepository(),
+      paymentGateway,
+      () => new Date('2026-02-01T00:00:00.000Z'),
+    );
+    const createPortalSessionUseCase = new CreatePortalSessionUseCase(
+      stripeCustomerRepository,
+      paymentGateway,
+    );
 
     const result = await createCheckoutSession(
       { plan: 'monthly' },
       {
         authGateway: new FakeAuthGateway(user),
-        stripeCustomerRepository,
-        subscriptionRepository: new FakeSubscriptionRepository(),
-        paymentGateway,
+        createCheckoutSessionUseCase,
+        createPortalSessionUseCase,
         idempotencyKeyRepository,
         rateLimiter: {
           limit: async () => ({
@@ -154,14 +167,23 @@ describe('billing controllers (integration)', () => {
       db,
       () => new Date('2026-02-01T00:00:00.000Z'),
     );
+    const createCheckoutSessionUseCase = new CreateCheckoutSessionUseCase(
+      stripeCustomerRepository,
+      new FakeSubscriptionRepository(),
+      paymentGateway,
+      () => new Date('2026-02-01T00:00:00.000Z'),
+    );
+    const createPortalSessionUseCase = new CreatePortalSessionUseCase(
+      stripeCustomerRepository,
+      paymentGateway,
+    );
 
     await createCheckoutSession(
       { plan: 'annual' },
       {
         authGateway: new FakeAuthGateway(user),
-        stripeCustomerRepository,
-        subscriptionRepository: new FakeSubscriptionRepository(),
-        paymentGateway,
+        createCheckoutSessionUseCase,
+        createPortalSessionUseCase,
         idempotencyKeyRepository,
         rateLimiter: {
           limit: async () => ({
@@ -181,9 +203,8 @@ describe('billing controllers (integration)', () => {
       {},
       {
         authGateway: new FakeAuthGateway(user),
-        stripeCustomerRepository,
-        subscriptionRepository: new FakeSubscriptionRepository(),
-        paymentGateway,
+        createCheckoutSessionUseCase,
+        createPortalSessionUseCase,
         idempotencyKeyRepository,
         rateLimiter: {
           limit: async () => ({

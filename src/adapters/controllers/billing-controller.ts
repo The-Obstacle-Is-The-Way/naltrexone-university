@@ -8,14 +8,15 @@ import { withIdempotency } from '@/src/adapters/shared/with-idempotency';
 import { ApplicationError } from '@/src/application/errors';
 import type {
   AuthGateway,
-  PaymentGateway,
   RateLimiter,
 } from '@/src/application/ports/gateways';
+import type { IdempotencyKeyRepository } from '@/src/application/ports/repositories';
 import type {
-  IdempotencyKeyRepository,
-  StripeCustomerRepository,
-  SubscriptionRepository,
-} from '@/src/application/ports/repositories';
+  CreateCheckoutSessionInput,
+  CreateCheckoutSessionOutput,
+  CreatePortalSessionInput,
+  CreatePortalSessionOutput,
+} from '@/src/application/use-cases';
 import { createAction } from './create-action';
 
 const zSubscriptionPlan = z.enum(['monthly', 'annual']);
@@ -30,14 +31,23 @@ const CreateCheckoutSessionInputSchema = z
 
 const CreatePortalSessionInputSchema = z.object({}).strict();
 
-export type CreateCheckoutSessionOutput = { url: string };
-export type CreatePortalSessionOutput = { url: string };
+export type {
+  CreateCheckoutSessionOutput,
+  CreatePortalSessionOutput,
+} from '@/src/application/use-cases';
 
 export type BillingControllerDeps = {
   authGateway: AuthGateway;
-  stripeCustomerRepository: StripeCustomerRepository;
-  subscriptionRepository: SubscriptionRepository;
-  paymentGateway: PaymentGateway;
+  createCheckoutSessionUseCase: {
+    execute: (
+      input: CreateCheckoutSessionInput,
+    ) => Promise<CreateCheckoutSessionOutput>;
+  };
+  createPortalSessionUseCase: {
+    execute: (
+      input: CreatePortalSessionInput,
+    ) => Promise<CreatePortalSessionOutput>;
+  };
   idempotencyKeyRepository: IdempotencyKeyRepository;
   rateLimiter: RateLimiter;
   getClerkUserId: () => Promise<string | null>;
@@ -69,34 +79,6 @@ function toBillingReturnUrl(appUrl: string): string {
   return new URL(ROUTES.APP_BILLING, appUrl).toString();
 }
 
-async function getOrCreateStripeCustomerId(
-  deps: BillingControllerDeps,
-  input: { userId: string; email: string },
-): Promise<string> {
-  const existing = await deps.stripeCustomerRepository.findByUserId(
-    input.userId,
-  );
-  if (existing) return existing.stripeCustomerId;
-
-  const clerkUserId = await deps.getClerkUserId();
-  if (!clerkUserId) {
-    throw new ApplicationError('INTERNAL_ERROR', 'Clerk user id is required');
-  }
-
-  const created = await deps.paymentGateway.createCustomer({
-    userId: input.userId,
-    clerkUserId,
-    email: input.email,
-    idempotencyKey: `stripe_customer:${input.userId}`,
-  });
-
-  await deps.stripeCustomerRepository.insert(
-    input.userId,
-    created.stripeCustomerId,
-  );
-  return created.stripeCustomerId;
-}
-
 export const createCheckoutSession = createAction({
   schema: CreateCheckoutSessionInputSchema,
   getDeps,
@@ -116,29 +98,16 @@ export const createCheckoutSession = createAction({
         );
       }
 
-      const subscription = await d.subscriptionRepository.findByUserId(user.id);
-      const now = d.now();
-      if (subscription && subscription.currentPeriodEnd > now) {
-        throw new ApplicationError(
-          'ALREADY_SUBSCRIBED',
-          'Subscription already exists for this user',
-        );
-      }
-
-      const stripeCustomerId = await getOrCreateStripeCustomerId(d, {
-        userId: user.id,
-        email: user.email,
-      });
-
       const checkoutSessionInput = {
         userId: user.id,
-        stripeCustomerId,
+        clerkUserId: await d.getClerkUserId(),
+        email: user.email,
         plan,
         successUrl: toSuccessUrl(d.appUrl),
         cancelUrl: toCancelUrl(d.appUrl),
       } as const;
 
-      return d.paymentGateway.createCheckoutSession(
+      return d.createCheckoutSessionUseCase.execute(
         idempotencyKey
           ? { ...checkoutSessionInput, idempotencyKey }
           : checkoutSessionInput,
@@ -165,16 +134,8 @@ export const createPortalSession = createAction({
   getDeps,
   execute: async (_input, d) => {
     const user = await d.authGateway.requireUser();
-
-    const stripeCustomer = await d.stripeCustomerRepository.findByUserId(
-      user.id,
-    );
-    if (!stripeCustomer) {
-      throw new ApplicationError('NOT_FOUND', 'Stripe customer not found');
-    }
-
-    return d.paymentGateway.createPortalSession({
-      stripeCustomerId: stripeCustomer.stripeCustomerId,
+    return d.createPortalSessionUseCase.execute({
+      userId: user.id,
       returnUrl: toBillingReturnUrl(d.appUrl),
     });
   },

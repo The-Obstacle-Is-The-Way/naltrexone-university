@@ -279,6 +279,10 @@ export interface StripeEventRepository {
   markFailed(eventId: string, error: string): Promise<void>;
 }
 
+export type UpsertUserByClerkIdOptions = {
+  observedAt?: Date;
+};
+
 export interface UserRepository {
   /**
    * Find a user by their external Clerk ID.
@@ -288,7 +292,11 @@ export interface UserRepository {
   /**
    * Upsert a user by their Clerk ID.
    */
-  upsertByClerkId(clerkId: string, email: string): Promise<User>;
+  upsertByClerkId(
+    clerkId: string,
+    email: string,
+    options?: UpsertUserByClerkIdOptions,
+  ): Promise<User>;
 }
 ```
 

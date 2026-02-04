@@ -27,28 +27,28 @@ We adopt **Clean Architecture** as defined by Robert C. Martin, with four concen
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                    FRAMEWORKS & DRIVERS                      │
+│                    FRAMEWORKS & DRIVERS                     │
 │  Next.js, Clerk SDK, Stripe SDK, Drizzle, React Components  │
-│                                                              │
+│                                                             │
 │  ┌─────────────────────────────────────────────────────┐    │
-│  │                 INTERFACE ADAPTERS                   │    │
+│  │                 INTERFACE ADAPTERS                  │    │
 │  │   Server Actions, Route Handlers, Repositories,     │    │
 │  │   Presenters, ViewModels                            │    │
-│  │                                                      │    │
+│  │                                                     │    │
 │  │  ┌─────────────────────────────────────────────┐    │    │
-│  │  │              USE CASES                       │    │    │
+│  │  │              USE CASES                      │    │    │
 │  │  │   SubmitAnswer, StartSession, CheckAccess,  │    │    │
 │  │  │   ComputeStats, ToggleBookmark              │    │    │
-│  │  │                                              │    │    │
+│  │  │                                             │    │    │
 │  │  │  ┌─────────────────────────────────────┐    │    │    │
-│  │  │  │           ENTITIES                   │    │    │    │
+│  │  │  │           ENTITIES                  │    │    │    │
 │  │  │  │   Question, Choice, Attempt, User,  │    │    │    │
 │  │  │  │   Subscription, PracticeSession     │    │    │    │
-│  │  │  │                                      │    │    │    │
-│  │  │  │   Business Rules:                    │    │    │    │
-│  │  │  │   - gradeAnswer()                    │    │    │    │
-│  │  │  │   - isEntitled()                     │    │    │    │
-│  │  │  │   - computeAccuracy()                │    │    │    │
+│  │  │  │                                     │    │    │    │
+│  │  │  │   Business Rules:                   │    │    │    │
+│  │  │  │   - gradeAnswer()                   │    │    │    │
+│  │  │  │   - isEntitled()                    │    │    │    │
+│  │  │  │   - computeAccuracy()               │    │    │    │
 │  │  │  └─────────────────────────────────────┘    │    │    │
 │  │  └─────────────────────────────────────────────┘    │    │
 │  └─────────────────────────────────────────────────────┘    │

@@ -31,7 +31,9 @@ export function ReviewView({ rows, limit, offset }: GetMissedQuestionsOutput) {
     <div className="space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-baseline sm:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-foreground">Review</h1>
+          <h1 className="text-2xl font-bold font-heading tracking-tight text-foreground">
+            Review
+          </h1>
           <p className="mt-1 text-muted-foreground">
             Review questions you&apos;ve missed.
           </p>
@@ -134,7 +136,9 @@ export function renderReview(result: ActionResult<GetMissedQuestionsOutput>) {
     return (
       <div className="space-y-6">
         <div>
-          <h1 className="text-2xl font-semibold text-foreground">Review</h1>
+          <h1 className="text-2xl font-bold font-heading tracking-tight text-foreground">
+            Review
+          </h1>
           <p className="mt-1 text-muted-foreground">
             Unable to load missed questions.
           </p>
@@ -147,7 +151,7 @@ export function renderReview(result: ActionResult<GetMissedQuestionsOutput>) {
         </div>
         <Link
           href="/app/practice"
-          className="inline-flex items-center justify-center rounded-full bg-orange-600 px-4 py-2 text-sm font-medium text-white hover:bg-orange-700"
+          className="inline-flex items-center justify-center rounded-full bg-zinc-100 px-4 py-2 text-sm font-medium text-zinc-900 hover:bg-white transition-colors"
         >
           Go to Practice
         </Link>

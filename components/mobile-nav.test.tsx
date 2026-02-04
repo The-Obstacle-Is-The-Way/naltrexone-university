@@ -3,11 +3,20 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 
 describe('MobileNav', () => {
-  it('toggles open state via toggleMobileNavOpen helper', async () => {
-    const { toggleMobileNavOpen } = await import('@/components/mobile-nav');
+  it('renders an accessible menu toggle button on initial render', async () => {
+    const { MobileNav } = await import('@/components/mobile-nav');
 
-    expect(toggleMobileNavOpen(false)).toBe(true);
-    expect(toggleMobileNavOpen(true)).toBe(false);
+    const html = renderToStaticMarkup(<MobileNav />);
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const button = doc.querySelector('button');
+
+    expect(button?.getAttribute('aria-label')).toBe('Open navigation menu');
+    expect(button?.getAttribute('aria-expanded')).toBe('false');
+
+    const ariaControls = button?.getAttribute('aria-controls');
+    expect(typeof ariaControls).toBe('string');
+    expect(ariaControls).not.toBe('');
+    expect(doc.getElementById(ariaControls ?? '')).toBeNull();
   });
 
   it('renders hamburger button on initial render', async () => {
@@ -31,24 +40,6 @@ describe('MobileNav', () => {
     expect(html).not.toContain('/app/review');
     expect(html).not.toContain('/app/bookmarks');
     expect(html).not.toContain('/app/billing');
-  });
-
-  it('renders navigation links when open (MobileNavOpen variant)', async () => {
-    // For static render tests, we test the expanded state via a test-only component
-    const { MobileNavOpen } = await import('@/components/mobile-nav');
-
-    const html = renderToStaticMarkup(<MobileNavOpen />);
-
-    expect(html).toContain('/app/dashboard');
-    expect(html).toContain('/app/practice');
-    expect(html).toContain('/app/review');
-    expect(html).toContain('/app/bookmarks');
-    expect(html).toContain('/app/billing');
-    expect(html).toContain('Dashboard');
-    expect(html).toContain('Practice');
-    expect(html).toContain('Review');
-    expect(html).toContain('Bookmarks');
-    expect(html).toContain('Billing');
   });
 
   it('has sm:hidden class to only show on mobile', async () => {
