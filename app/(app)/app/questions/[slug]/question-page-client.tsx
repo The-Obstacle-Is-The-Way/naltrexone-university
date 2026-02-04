@@ -2,6 +2,12 @@
 
 import Link from 'next/link';
 import { useEffect, useMemo, useState, useTransition } from 'react';
+import {
+  createLoadQuestionAction,
+  type LoadState,
+  reattemptQuestion,
+  submitSelectedAnswer,
+} from '@/app/(app)/app/questions/[slug]/question-page-logic';
 import { Feedback } from '@/components/question/Feedback';
 import { QuestionCard } from '@/components/question/QuestionCard';
 import { useIsMounted } from '@/lib/use-is-mounted';
@@ -11,12 +17,6 @@ import {
   getQuestionBySlug,
 } from '@/src/adapters/controllers/question-view-controller';
 import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
-import {
-  createLoadQuestionAction,
-  type LoadState,
-  reattemptQuestion,
-  submitSelectedAnswer,
-} from './question-page-logic';
 
 export type QuestionViewProps = {
   loadState: LoadState;
