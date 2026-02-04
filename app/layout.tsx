@@ -1,6 +1,6 @@
 import './globals.css';
 import type { Metadata } from 'next';
-import { Manrope } from 'next/font/google';
+import { Instrument_Sans, Manrope, Plus_Jakarta_Sans } from 'next/font/google';
 import Script from 'next/script';
 import { Providers } from '@/components/providers';
 
@@ -10,7 +10,16 @@ export const metadata: Metadata = {
     'Board-relevant questions with detailed explanations for Addiction Psychiatry and Addiction Medicine exam prep.',
 };
 
-const manrope = Manrope({ subsets: ['latin'] });
+const manrope = Manrope({ subsets: ['latin'], variable: '--font-manrope' });
+const plusJakartaSans = Plus_Jakarta_Sans({
+  subsets: ['latin'],
+  weight: ['800'],
+  variable: '--font-plus-jakarta-sans',
+});
+const instrumentSans = Instrument_Sans({
+  subsets: ['latin'],
+  variable: '--font-instrument-sans',
+});
 const themeScript = `(() => {
   try {
     const media = window.matchMedia('(prefers-color-scheme: dark)');
@@ -36,7 +45,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={manrope.className} suppressHydrationWarning>
+    <html
+      lang="en"
+      className={`${manrope.className} ${manrope.variable} ${plusJakartaSans.variable} ${instrumentSans.variable}`}
+      suppressHydrationWarning
+    >
       <body className="min-h-[100dvh]">
         <Script id="theme" strategy="beforeInteractive">
           {themeScript}
