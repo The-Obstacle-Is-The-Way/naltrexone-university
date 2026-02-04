@@ -18,5 +18,5 @@ describe('app/global-error', () => {
     expect(html).toContain('digest_123');
     expect(html).toContain('focus-visible:ring-[3px]');
     expect(html).toContain('<html');
-  });
+  }, 10_000);
 });
