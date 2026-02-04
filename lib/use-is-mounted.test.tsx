@@ -5,12 +5,12 @@ import { useIsMounted } from '@/lib/use-is-mounted';
 
 describe('useIsMounted', () => {
   it('returns false after unmount', async () => {
-    let isMounted: () => boolean = () => {
-      throw new Error('Expected isMounted callback to be set');
-    };
+    let didRender = false;
+    let isMounted: () => boolean = () => false;
 
     function TestComponent() {
       isMounted = useIsMounted();
+      didRender = true;
       return <div />;
     }
 
@@ -20,11 +20,20 @@ describe('useIsMounted', () => {
     const root = createRoot(container);
     root.render(<TestComponent />);
 
-    await new Promise((resolve) => setTimeout(resolve, 0));
+    for (let attempt = 0; attempt < 10 && !didRender; attempt += 1) {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    }
+    expect(didRender).toBe(true);
+
+    for (let attempt = 0; attempt < 10 && !isMounted(); attempt += 1) {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    }
     expect(isMounted()).toBe(true);
 
     root.unmount();
-    await new Promise((resolve) => setTimeout(resolve, 0));
+    for (let attempt = 0; attempt < 10 && isMounted(); attempt += 1) {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    }
     expect(isMounted()).toBe(false);
 
     container.remove();

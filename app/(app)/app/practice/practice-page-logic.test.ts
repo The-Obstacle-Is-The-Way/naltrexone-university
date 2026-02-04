@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { describe, expect, it, vi } from 'vitest';
 import {
   canSubmitAnswer,
@@ -420,7 +421,7 @@ describe('practice-page-logic', () => {
       }
     });
 
-    it('does not update state after cleanup', async () => {
+    it('returns no state updates when cleaned up before resolve', async () => {
       const setBookmarkedQuestionIds = vi.fn();
       const setBookmarkStatus = vi.fn();
 
@@ -626,7 +627,7 @@ describe('practice-page-logic', () => {
       });
     });
 
-    it('does not update state after unmount', async () => {
+    it('returns no state updates when unmounted during submitAnswerForQuestion', async () => {
       const deferred = createDeferred<ActionResult<SubmitAnswerOutput>>();
       let mounted = true;
 
@@ -742,7 +743,7 @@ describe('practice-page-logic', () => {
       expect(onBookmarkToggled).not.toHaveBeenCalled();
     });
 
-    it('does not update state after unmount', async () => {
+    it('returns no state updates when unmounted during toggleBookmarkForQuestion', async () => {
       const deferred = createDeferred<ActionResult<{ bookmarked: boolean }>>();
       let mounted = true;
 
@@ -918,7 +919,7 @@ describe('practice-page-logic', () => {
       expect(setIdempotencyKey).toHaveBeenCalledWith('idem_2');
     });
 
-    it('does not navigate after unmount', async () => {
+    it('returns without navigating when unmounted during startSession', async () => {
       const deferred = createDeferred<ActionResult<{ sessionId: string }>>();
       let mounted = true;
 

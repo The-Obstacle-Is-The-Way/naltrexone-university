@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { describe, expect, it, vi } from 'vitest';
 import {
   createLoadQuestionAction,
@@ -134,7 +135,7 @@ describe('question-page-logic', () => {
       expect(setLoadState).not.toHaveBeenCalledWith({ status: 'ready' });
     });
 
-    it('sets error state when controller throws', async () => {
+    it('returns error state when controller throws', async () => {
       const setLoadState = vi.fn();
       const setQuestion = vi.fn();
 
@@ -302,7 +303,7 @@ describe('question-page-logic', () => {
       );
     });
 
-    it('sets error state when submit fails', async () => {
+    it('returns error state when submit fails', async () => {
       const submitAnswerFn = vi.fn(async () =>
         err('INTERNAL_ERROR', 'Internal error'),
       );
@@ -325,7 +326,7 @@ describe('question-page-logic', () => {
       });
     });
 
-    it('does not update state after unmount', async () => {
+    it('returns no state updates when unmounted during submitSelectedAnswer', async () => {
       const deferred = createDeferred<ActionResult<SubmitAnswerOutput>>();
       let mounted = true;
 
@@ -359,7 +360,7 @@ describe('question-page-logic', () => {
       expect(setLoadState).not.toHaveBeenCalledWith({ status: 'ready' });
     });
 
-    it('sets error state when submit throws', async () => {
+    it('returns error state when submit throws', async () => {
       const setLoadState = vi.fn();
 
       await expect(

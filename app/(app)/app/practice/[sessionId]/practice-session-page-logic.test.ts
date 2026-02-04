@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { describe, expect, it, vi } from 'vitest';
 import {
   createLoadNextQuestionAction,
@@ -358,7 +359,7 @@ describe('practice-session-page-logic', () => {
       });
     });
 
-    it('does not update state after unmount', async () => {
+    it('returns no state updates when unmounted during submitAnswerForQuestion', async () => {
       const deferred = createDeferred<ActionResult<SubmitAnswerOutput>>();
       let mounted = true;
 
@@ -469,7 +470,7 @@ describe('practice-session-page-logic', () => {
       });
     });
 
-    it('does not update state after unmount', async () => {
+    it('returns no state updates when unmounted during endSession', async () => {
       const deferred = createDeferred<ActionResult<EndPracticeSessionOutput>>();
       let mounted = true;
 
