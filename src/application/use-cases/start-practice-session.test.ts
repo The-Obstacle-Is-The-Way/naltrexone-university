@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { describe, expect, it } from 'vitest';
 import { createSeed, shuffleWithSeed } from '@/src/domain/services';
 import { createQuestion, createTag } from '@/src/domain/test-helpers';
@@ -10,7 +11,7 @@ import type { StartPracticeSessionInput } from './start-practice-session';
 import { StartPracticeSessionUseCase } from './start-practice-session';
 
 describe('StartPracticeSessionUseCase', () => {
-  it('creates a practice session with deterministically shuffled questions', async () => {
+  it('returns sessionId when creating a practice session with deterministically shuffled questions', async () => {
     const userId = 'user-1';
     const now = new Date('2026-02-01T00:00:00Z');
     const tag = createTag({ id: 'tag-opioids', slug: 'opioids' });
@@ -89,7 +90,7 @@ describe('StartPracticeSessionUseCase', () => {
     });
   });
 
-  it('stores paramsJson.count based on actual questionIds length', async () => {
+  it('returns paramsJson.count equal to actual questionIds length when requested count exceeds available questions', async () => {
     const userId = 'user-1';
     const now = new Date('2026-02-01T00:00:00Z');
     const tag = createTag({ id: 'tag-opioids', slug: 'opioids' });
@@ -141,7 +142,7 @@ describe('StartPracticeSessionUseCase', () => {
     expect(paramsJson.count).toBe(2);
   });
 
-  it('throws NOT_FOUND when filters yield zero questions', async () => {
+  it('returns NOT_FOUND error when filters yield zero questions', async () => {
     const useCase = new StartPracticeSessionUseCase(
       new FakeQuestionRepository([]),
       new FakePracticeSessionRepository(),

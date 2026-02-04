@@ -185,7 +185,7 @@ export function renderBookmarks(result: ActionResult<GetBookmarksOutput>) {
         </div>
         <Link
           href="/app/practice"
-          className="inline-flex items-center justify-center rounded-full border border-border bg-background px-4 py-2 text-sm font-medium text-foreground hover:bg-muted"
+          className="text-sm font-medium text-muted-foreground hover:text-foreground"
         >
           Go to Practice
         </Link>

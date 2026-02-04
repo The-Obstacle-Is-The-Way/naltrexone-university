@@ -26,10 +26,17 @@ export class CreatePortalSessionUseCase {
       throw new ApplicationError('NOT_FOUND', 'Stripe customer not found');
     }
 
-    return this.payments.createPortalSession({
+    const portalSessionInput = {
       stripeCustomerId: stripeCustomer.stripeCustomerId,
       returnUrl: input.returnUrl,
-      ...(input.idempotencyKey ? { idempotencyKey: input.idempotencyKey } : {}),
-    });
+    };
+
+    if (input.idempotencyKey) {
+      return this.payments.createPortalSession(portalSessionInput, {
+        idempotencyKey: input.idempotencyKey,
+      });
+    }
+
+    return this.payments.createPortalSession(portalSessionInput);
   }
 }

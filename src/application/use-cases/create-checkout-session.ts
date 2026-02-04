@@ -37,12 +37,14 @@ export class CreateCheckoutSessionUseCase {
       throw new ApplicationError('INTERNAL_ERROR', 'Clerk user id is required');
     }
 
-    const created = await this.payments.createCustomer({
-      userId: input.userId,
-      clerkUserId: input.clerkUserId,
-      email: input.email,
-      idempotencyKey: `stripe_customer:${input.userId}`,
-    });
+    const created = await this.payments.createCustomer(
+      {
+        userId: input.userId,
+        clerkUserId: input.clerkUserId,
+        email: input.email,
+      },
+      { idempotencyKey: `stripe_customer:${input.userId}` },
+    );
 
     await this.stripeCustomers.insert(input.userId, created.stripeCustomerId);
     return created.stripeCustomerId;
@@ -65,13 +67,20 @@ export class CreateCheckoutSessionUseCase {
       email: input.email,
     });
 
-    return this.payments.createCheckoutSession({
+    const checkoutSessionInput = {
       userId: input.userId,
       stripeCustomerId,
       plan: input.plan,
       successUrl: input.successUrl,
       cancelUrl: input.cancelUrl,
-      ...(input.idempotencyKey ? { idempotencyKey: input.idempotencyKey } : {}),
-    });
+    };
+
+    if (input.idempotencyKey) {
+      return this.payments.createCheckoutSession(checkoutSessionInput, {
+        idempotencyKey: input.idempotencyKey,
+      });
+    }
+
+    return this.payments.createCheckoutSession(checkoutSessionInput);
   }
 }

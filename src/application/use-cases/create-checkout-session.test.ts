@@ -128,8 +128,10 @@ describe('CreateCheckoutSessionUseCase', () => {
         userId: 'user-1',
         clerkUserId: 'clerk-1',
         email: 'user@example.com',
-        idempotencyKey: 'stripe_customer:user-1',
       },
+    ]);
+    expect(paymentGateway.customerOptions).toEqual([
+      { idempotencyKey: 'stripe_customer:user-1' },
     ]);
     expect(paymentGateway.checkoutInputs).toEqual([
       {

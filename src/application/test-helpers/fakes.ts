@@ -17,6 +17,7 @@ import type {
   CreateCustomerInput,
   CreateCustomerOutput,
   PaymentGateway,
+  PaymentGatewayRequestOptions,
   PortalSessionInput,
   PortalSessionOutput,
   WebhookEventResult,
@@ -161,8 +162,13 @@ export class FakeAuthGateway implements AuthGateway {
 
 export class FakePaymentGateway implements PaymentGateway {
   readonly customerInputs: CreateCustomerInput[] = [];
+  readonly customerOptions: Array<PaymentGatewayRequestOptions | undefined> =
+    [];
   readonly checkoutInputs: CheckoutSessionInput[] = [];
+  readonly checkoutOptions: Array<PaymentGatewayRequestOptions | undefined> =
+    [];
   readonly portalInputs: PortalSessionInput[] = [];
+  readonly portalOptions: Array<PaymentGatewayRequestOptions | undefined> = [];
   readonly webhookInputs: Array<{ rawBody: string; signature: string }> = [];
 
   private readonly stripeCustomerId: string;
@@ -184,22 +190,28 @@ export class FakePaymentGateway implements PaymentGateway {
 
   async createCustomer(
     input: CreateCustomerInput,
+    options?: PaymentGatewayRequestOptions,
   ): Promise<CreateCustomerOutput> {
     this.customerInputs.push(input);
+    this.customerOptions.push(options);
     return { stripeCustomerId: this.stripeCustomerId };
   }
 
   async createCheckoutSession(
     input: CheckoutSessionInput,
+    options?: PaymentGatewayRequestOptions,
   ): Promise<CheckoutSessionOutput> {
     this.checkoutInputs.push(input);
+    this.checkoutOptions.push(options);
     return { url: this.checkoutUrl };
   }
 
   async createPortalSession(
     input: PortalSessionInput,
+    options?: PaymentGatewayRequestOptions,
   ): Promise<PortalSessionOutput> {
     this.portalInputs.push(input);
+    this.portalOptions.push(options);
     return { url: this.portalUrl };
   }
 
@@ -819,6 +831,11 @@ export class FakeUserRepository implements UserRepository {
         this.lastObservedAtMs = observedAtMs;
         return new Date(observedAtMs);
       })();
+
+    this.lastObservedAtMs = Math.max(
+      this.lastObservedAtMs ?? 0,
+      observedAt.getTime(),
+    );
     const existing = this.byClerkId.get(clerkId);
 
     if (existing) {

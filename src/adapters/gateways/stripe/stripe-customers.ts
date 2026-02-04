@@ -1,19 +1,24 @@
 import type {
   CustomerCreateParams,
   StripeClient,
-} from '@/src/adapters/gateways/stripe/stripe-client';
+} from '@/src/adapters/shared/stripe-types';
 import { ApplicationError } from '@/src/application/errors';
-import type { CreateCustomerInput } from '@/src/application/ports/gateways';
+import type {
+  CreateCustomerInput,
+  PaymentGatewayRequestOptions,
+} from '@/src/application/ports/gateways';
 import type { Logger } from '@/src/application/ports/logger';
 import { callStripeWithRetry } from './stripe-retry';
 
 export async function createStripeCustomer({
   stripe,
   input,
+  options,
   logger,
 }: {
   stripe: StripeClient;
   input: CreateCustomerInput;
+  options?: PaymentGatewayRequestOptions;
   logger: Logger;
 }): Promise<{ stripeCustomerId: string }> {
   const params = {
@@ -24,12 +29,13 @@ export async function createStripeCustomer({
     },
   } satisfies CustomerCreateParams;
 
-  const customer = input.idempotencyKey
+  const idempotencyKey = options?.idempotencyKey;
+  const customer = idempotencyKey
     ? await callStripeWithRetry({
         operation: 'customers.create',
         fn: () =>
           stripe.customers.create(params, {
-            idempotencyKey: input.idempotencyKey,
+            idempotencyKey,
           }),
         logger,
       })

@@ -27,6 +27,8 @@ export function AppShell({
   authNav,
   activePath,
 }: AppShellProps) {
+  const normalizedActivePath = activePath?.split('?')[0] ?? null;
+
   return (
     <div className="flex min-h-screen bg-muted">
       <aside className="hidden w-64 flex-col border-r border-border bg-background sm:flex">
@@ -41,7 +43,6 @@ export function AppShell({
         <nav aria-label="App navigation" className="flex-1 px-3 pb-6">
           <div className="space-y-1">
             {NAV_ITEMS.map((item) => {
-              const normalizedActivePath = activePath?.split('?')[0] ?? null;
               const isActive =
                 normalizedActivePath !== null &&
                 (normalizedActivePath === item.href ||

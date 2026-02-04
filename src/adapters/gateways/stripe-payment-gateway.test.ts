@@ -113,12 +113,14 @@ describe('StripePaymentGateway', () => {
     });
 
     await expect(
-      gateway.createCustomer({
-        userId: 'user_1',
-        clerkUserId: 'clerk_1',
-        email: 'user@example.com',
-        idempotencyKey: '11111111-1111-1111-1111-111111111111',
-      }),
+      gateway.createCustomer(
+        {
+          userId: 'user_1',
+          clerkUserId: 'clerk_1',
+          email: 'user@example.com',
+        },
+        { idempotencyKey: '11111111-1111-1111-1111-111111111111' },
+      ),
     ).resolves.toEqual({ stripeCustomerId: 'cus_123' });
 
     expect(customersCreate).toHaveBeenCalledTimes(2);

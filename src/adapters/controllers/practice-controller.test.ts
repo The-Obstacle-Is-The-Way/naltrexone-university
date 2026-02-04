@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { describe, expect, it } from 'vitest';
 import { ApplicationError } from '@/src/application/errors';
 import type { RateLimiter } from '@/src/application/ports/gateways';
@@ -174,7 +175,7 @@ describe('practice-controller', () => {
       expect(deps.startPracticeSessionUseCase.inputs).toEqual([]);
     });
 
-    it('passes input to the use case', async () => {
+    it('returns sessionId when use case succeeds', async () => {
       const deps = createDeps({ startOutput: { sessionId: 'session_123' } });
 
       const result = await startPracticeSession(
@@ -218,7 +219,7 @@ describe('practice-controller', () => {
       expect(deps.startPracticeSessionUseCase.inputs).toHaveLength(1);
     });
 
-    it('maps ApplicationError from use case via handleError', async () => {
+    it('returns NOT_FOUND when use case throws ApplicationError', async () => {
       const deps = createDeps({
         startThrows: new ApplicationError('NOT_FOUND', 'No questions found'),
       });
@@ -281,32 +282,32 @@ describe('practice-controller', () => {
       expect(deps.endPracticeSessionUseCase.inputs).toEqual([]);
     });
 
-    it('passes input to the use case', async () => {
-      const deps = createDeps({
-        endOutput: {
-          sessionId: 'session_123',
-          endedAt: '2026-02-01T00:00:00.000Z',
-          totals: {
-            answered: 2,
-            correct: 1,
-            accuracy: 0.5,
-            durationSeconds: 60,
-          },
+    it('returns session summary when use case succeeds', async () => {
+      const endOutput = {
+        sessionId: 'session_123',
+        endedAt: '2026-02-01T00:00:00.000Z',
+        totals: {
+          answered: 2,
+          correct: 1,
+          accuracy: 0.5,
+          durationSeconds: 60,
         },
-      });
+      } as const;
+
+      const deps = createDeps({ endOutput });
 
       const result = await endPracticeSession(
         { sessionId: '11111111-1111-1111-1111-111111111111' },
         deps,
       );
 
-      expect(result.ok).toBe(true);
+      expect(result).toEqual({ ok: true, data: endOutput });
       expect(deps.endPracticeSessionUseCase.inputs).toEqual([
         { userId: 'user_1', sessionId: '11111111-1111-1111-1111-111111111111' },
       ]);
     });
 
-    it('maps ApplicationError from use case via handleError', async () => {
+    it('returns NOT_FOUND when use case throws ApplicationError', async () => {
       const deps = createDeps({
         endThrows: new ApplicationError(
           'NOT_FOUND',

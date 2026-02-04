@@ -3,20 +3,25 @@ import { getStripePriceId } from '@/src/adapters/config/stripe-prices';
 import type {
   CheckoutSessionCreateParams,
   StripeClient,
-} from '@/src/adapters/gateways/stripe/stripe-client';
+} from '@/src/adapters/shared/stripe-types';
 import { ApplicationError } from '@/src/application/errors';
-import type { CheckoutSessionInput } from '@/src/application/ports/gateways';
+import type {
+  CheckoutSessionInput,
+  PaymentGatewayRequestOptions,
+} from '@/src/application/ports/gateways';
 import type { Logger } from '@/src/application/ports/logger';
 import { callStripeWithRetry } from './stripe-retry';
 
 export async function createStripeCheckoutSession({
   stripe,
   input,
+  options,
   priceIds,
   logger,
 }: {
   stripe: StripeClient;
   input: CheckoutSessionInput;
+  options?: PaymentGatewayRequestOptions;
   priceIds: StripePriceIds;
   logger: Logger;
 }): Promise<{ url: string }> {
@@ -98,12 +103,13 @@ export async function createStripeCheckoutSession({
     },
   } satisfies CheckoutSessionCreateParams;
 
-  const session = input.idempotencyKey
+  const idempotencyKey = options?.idempotencyKey;
+  const session = idempotencyKey
     ? await callStripeWithRetry({
         operation: 'checkout.sessions.create',
         fn: () =>
           stripe.checkout.sessions.create(params, {
-            idempotencyKey: input.idempotencyKey,
+            idempotencyKey,
           }),
         logger,
       })

@@ -16,7 +16,7 @@ A set of premium V0 landing page components was removed during early UI integrat
 The codebase now has an integrated, achromatic ("Obsidian") design system foundation plus premium marketing components:
 
 - `app/globals.css`: Obsidian CSS variables, metallic gradient utilities, and typography utility classes
-- `components/app-shell/app-shell.tsx`: Premium app shell with `activePath` support for active nav highlighting
+- `components/app-shell/app-shell.tsx`: Added optional `activePath` prop for active nav highlighting
 - `components/ui/metallic-border.tsx`: Premium border wrapper
 - `components/ui/metallic-cta-button.tsx`: Premium CTA component
 - `components/marketing/marketing-home.tsx`: Rewritten marketing home using the new system

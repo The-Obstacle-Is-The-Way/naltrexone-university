@@ -82,7 +82,7 @@ describe('DrizzlePracticeSessionRepository', () => {
     });
   });
 
-  it('throws INTERNAL_ERROR when persisted paramsJson is invalid', async () => {
+  it('returns INTERNAL_ERROR when persisted paramsJson is invalid', async () => {
     const row = {
       id: 'session_1',
       userId: 'user_1',
@@ -180,7 +180,7 @@ describe('DrizzlePracticeSessionRepository', () => {
     );
   });
 
-  it('throws VALIDATION_ERROR when create() paramsJson is invalid', async () => {
+  it('returns VALIDATION_ERROR when create() is called with invalid paramsJson', async () => {
     const db = {
       query: {
         practiceSessions: {

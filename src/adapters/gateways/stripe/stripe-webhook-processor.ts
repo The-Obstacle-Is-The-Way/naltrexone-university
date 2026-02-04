@@ -1,5 +1,5 @@
 import type { StripePriceIds } from '@/src/adapters/config/stripe-prices';
-import type { StripeClient } from '@/src/adapters/gateways/stripe/stripe-client';
+import type { StripeClient } from '@/src/adapters/shared/stripe-types';
 import { ApplicationError } from '@/src/application/errors';
 import type { WebhookEventResult } from '@/src/application/ports/gateways';
 import type { Logger } from '@/src/application/ports/logger';

@@ -17,12 +17,7 @@ export interface AuthGateway {
   requireUser(): Promise<User>;
 }
 
-export type CheckoutSessionInput = {
-  userId: string; // internal UUID
-  stripeCustomerId: string; // opaque external id
-  plan: SubscriptionPlan; // domain plan (monthly/annual)
-  successUrl: string;
-  cancelUrl: string;
+export type PaymentGatewayRequestOptions = {
   /**
    * Optional idempotency key provided by the client for this logical operation.
    *
@@ -32,12 +27,19 @@ export type CheckoutSessionInput = {
   idempotencyKey?: string;
 };
 
+export type CheckoutSessionInput = {
+  userId: string; // internal UUID
+  stripeCustomerId: string; // opaque external id
+  plan: SubscriptionPlan; // domain plan (monthly/annual)
+  successUrl: string;
+  cancelUrl: string;
+};
+
 export type CheckoutSessionOutput = { url: string };
 
 export type PortalSessionInput = {
   stripeCustomerId: string; // opaque external id
   returnUrl: string;
-  idempotencyKey?: string;
 };
 
 export type PortalSessionOutput = { url: string };
@@ -46,7 +48,6 @@ export type CreateCustomerInput = {
   userId: string; // internal UUID
   clerkUserId: string; // opaque external id
   email: string;
-  idempotencyKey?: string;
 };
 
 export type CreateCustomerOutput = { stripeCustomerId: string };
@@ -71,13 +72,20 @@ export type WebhookEventResult = {
 };
 
 export interface PaymentGateway {
-  createCustomer(input: CreateCustomerInput): Promise<CreateCustomerOutput>;
+  createCustomer(
+    input: CreateCustomerInput,
+    options?: PaymentGatewayRequestOptions,
+  ): Promise<CreateCustomerOutput>;
 
   createCheckoutSession(
     input: CheckoutSessionInput,
+    options?: PaymentGatewayRequestOptions,
   ): Promise<CheckoutSessionOutput>;
 
-  createPortalSession(input: PortalSessionInput): Promise<PortalSessionOutput>;
+  createPortalSession(
+    input: PortalSessionInput,
+    options?: PaymentGatewayRequestOptions,
+  ): Promise<PortalSessionOutput>;
 
   /**
    * Verifies signature and normalizes the Stripe event for the use case/controller.

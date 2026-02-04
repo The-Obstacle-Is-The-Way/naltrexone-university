@@ -1,9 +1,11 @@
+import type { StripeClient } from '@/src/adapters/shared/stripe-types';
 import type {
   CheckoutSessionInput,
   CheckoutSessionOutput,
   CreateCustomerInput,
   CreateCustomerOutput,
   PaymentGateway,
+  PaymentGatewayRequestOptions,
   PortalSessionInput,
   PortalSessionOutput,
   WebhookEventResult,
@@ -11,7 +13,6 @@ import type {
 import type { Logger } from '@/src/application/ports/logger';
 import type { StripePriceIds } from '../config/stripe-prices';
 import { createStripeCheckoutSession } from './stripe/stripe-checkout-sessions';
-import type { StripeClient } from './stripe/stripe-client';
 import { createStripeCustomer } from './stripe/stripe-customers';
 import { createStripePortalSession } from './stripe/stripe-portal';
 import { processStripeWebhookEvent } from './stripe/stripe-webhook-processor';
@@ -28,20 +29,24 @@ export class StripePaymentGateway implements PaymentGateway {
 
   async createCustomer(
     input: CreateCustomerInput,
+    options?: PaymentGatewayRequestOptions,
   ): Promise<CreateCustomerOutput> {
     return createStripeCustomer({
       stripe: this.deps.stripe,
       input,
+      options,
       logger: this.deps.logger,
     });
   }
 
   async createCheckoutSession(
     input: CheckoutSessionInput,
+    options?: PaymentGatewayRequestOptions,
   ): Promise<CheckoutSessionOutput> {
     return createStripeCheckoutSession({
       stripe: this.deps.stripe,
       input,
+      options,
       priceIds: this.deps.priceIds,
       logger: this.deps.logger,
     });
@@ -49,10 +54,12 @@ export class StripePaymentGateway implements PaymentGateway {
 
   async createPortalSession(
     input: PortalSessionInput,
+    options?: PaymentGatewayRequestOptions,
   ): Promise<PortalSessionOutput> {
     return createStripePortalSession({
       stripe: this.deps.stripe,
       input,
+      options,
       logger: this.deps.logger,
     });
   }

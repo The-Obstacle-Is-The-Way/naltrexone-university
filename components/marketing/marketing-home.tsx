@@ -1,12 +1,13 @@
 import { BarChart3, Bookmark, BookOpen, Zap } from 'lucide-react';
 import Link from 'next/link';
+import type { ReactElement, ReactNode } from 'react';
 import { AuthNav } from '@/components/auth-nav';
 import { GetStartedCta } from '@/components/get-started-cta';
 import { MetallicCtaButton } from '@/components/ui/metallic-cta-button';
 
 export type MarketingHomeShellProps = {
-  authNav: React.ReactNode;
-  primaryCta: React.ReactNode;
+  authNav: ReactNode;
+  primaryCta: ReactNode;
 };
 
 const impactStats = [
@@ -305,9 +306,9 @@ export function MarketingHomeShell({
 }
 
 export async function renderMarketingHome(input?: {
-  authNavFn?: () => Promise<React.ReactNode>;
-  getStartedCtaFn?: () => Promise<React.ReactNode>;
-}): Promise<React.ReactElement> {
+  authNavFn?: () => Promise<ReactNode>;
+  getStartedCtaFn?: () => Promise<ReactNode>;
+}): Promise<ReactElement> {
   const authNavFn = input?.authNavFn ?? (() => AuthNav());
   const getStartedCtaFn = input?.getStartedCtaFn ?? (() => GetStartedCta({}));
 
