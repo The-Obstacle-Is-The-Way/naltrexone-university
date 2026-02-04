@@ -6,50 +6,25 @@ import type {
 } from '@/src/application/ports/gateways';
 import {
   FakeAuthGateway,
+  FakeGetNextQuestionUseCase,
   FakeIdempotencyKeyRepository,
+  FakeSubmitAnswerUseCase,
   FakeSubscriptionRepository,
 } from '@/src/application/test-helpers/fakes';
 import { CheckEntitlementUseCase } from '@/src/application/use-cases/check-entitlement';
-import type {
-  GetNextQuestionInput,
-  GetNextQuestionOutput,
-} from '@/src/application/use-cases/get-next-question';
-import type {
-  SubmitAnswerInput,
-  SubmitAnswerOutput,
-} from '@/src/application/use-cases/submit-answer';
+import type { GetNextQuestionOutput } from '@/src/application/use-cases/get-next-question';
+import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
 import { createSubscription, createUser } from '@/src/domain/test-helpers';
-import { getNextQuestion, submitAnswer } from './question-controller';
+import {
+  getNextQuestion,
+  type QuestionControllerDeps,
+  submitAnswer,
+} from './question-controller';
 
-class FakeGetNextQuestionUseCase {
-  readonly inputs: GetNextQuestionInput[] = [];
-
-  constructor(
-    private readonly output: GetNextQuestionOutput,
-    private readonly toThrow?: unknown,
-  ) {}
-
-  async execute(input: GetNextQuestionInput): Promise<GetNextQuestionOutput> {
-    this.inputs.push(input);
-    if (this.toThrow) throw this.toThrow;
-    return this.output;
-  }
-}
-
-class FakeSubmitAnswerUseCase {
-  readonly inputs: SubmitAnswerInput[] = [];
-
-  constructor(
-    private readonly output: SubmitAnswerOutput,
-    private readonly toThrow?: unknown,
-  ) {}
-
-  async execute(input: SubmitAnswerInput): Promise<SubmitAnswerOutput> {
-    this.inputs.push(input);
-    if (this.toThrow) throw this.toThrow;
-    return this.output;
-  }
-}
+type QuestionControllerTestDeps = QuestionControllerDeps & {
+  getNextQuestionUseCase: FakeGetNextQuestionUseCase;
+  submitAnswerUseCase: FakeSubmitAnswerUseCase;
+};
 
 function createDeps(overrides?: {
   user?: ReturnType<typeof createUser> | null;
@@ -60,7 +35,7 @@ function createDeps(overrides?: {
   submitAnswerOutput?: SubmitAnswerOutput;
   getNextQuestionThrows?: unknown;
   submitAnswerThrows?: unknown;
-}) {
+}): QuestionControllerTestDeps {
   const user =
     overrides?.user ??
     createUser({
@@ -135,10 +110,7 @@ describe('question-controller', () => {
     it('returns VALIDATION_ERROR when input is invalid', async () => {
       const deps = createDeps();
 
-      const result = await getNextQuestion(
-        { sessionId: 'not-a-uuid' },
-        deps as never,
-      );
+      const result = await getNextQuestion({ sessionId: 'not-a-uuid' }, deps);
 
       expect(result).toMatchObject({
         ok: false,
@@ -156,7 +128,7 @@ describe('question-controller', () => {
 
       const result = await getNextQuestion(
         { filters: { tagSlugs: [], difficulties: [] } },
-        deps as never,
+        deps,
       );
 
       expect(result).toMatchObject({
@@ -170,7 +142,7 @@ describe('question-controller', () => {
 
       const result = await getNextQuestion(
         { filters: { tagSlugs: [], difficulties: [] } },
-        deps as never,
+        deps,
       );
 
       expect(result).toMatchObject({
@@ -185,7 +157,7 @@ describe('question-controller', () => {
 
       const result = await getNextQuestion(
         { filters: { tagSlugs: [], difficulties: [] } },
-        deps as never,
+        deps,
       );
 
       expect(result).toEqual({ ok: true, data: null });
@@ -196,13 +168,27 @@ describe('question-controller', () => {
 
     it('passes sessionId to the use case when provided', async () => {
       const deps = createDeps({
-        getNextQuestionOutput: { questionId: 'q_1' } as never,
+        getNextQuestionOutput: {
+          questionId: 'q_1',
+          slug: 'q-1',
+          stemMd: 'Stem',
+          difficulty: 'easy',
+          choices: [
+            {
+              id: 'choice_1',
+              label: 'A',
+              textMd: 'Choice',
+              sortOrder: 1,
+            },
+          ],
+          session: null,
+        },
       });
 
       const sessionId = '11111111-1111-1111-1111-111111111111';
-      const result = await getNextQuestion({ sessionId }, deps as never);
+      const result = await getNextQuestion({ sessionId }, deps);
 
-      expect(result).toEqual({ ok: true, data: { questionId: 'q_1' } });
+      expect(result).toMatchObject({ ok: true, data: { questionId: 'q_1' } });
       expect(deps.getNextQuestionUseCase.inputs).toEqual([
         { userId: 'user_1', sessionId },
       ]);
@@ -215,7 +201,7 @@ describe('question-controller', () => {
 
       const result = await getNextQuestion(
         { filters: { tagSlugs: [], difficulties: [] } },
-        deps as never,
+        deps,
       );
 
       expect(result).toEqual({
@@ -231,7 +217,7 @@ describe('question-controller', () => {
 
       const result = await submitAnswer(
         { questionId: 'bad', choiceId: 'bad' },
-        deps as never,
+        deps,
       );
 
       expect(result).toMatchObject({
@@ -254,7 +240,7 @@ describe('question-controller', () => {
           questionId: '11111111-1111-1111-1111-111111111111',
           choiceId: '22222222-2222-2222-2222-222222222222',
         },
-        deps as never,
+        deps,
       );
 
       expect(result).toMatchObject({
@@ -281,7 +267,7 @@ describe('question-controller', () => {
           questionId: '11111111-1111-1111-1111-111111111111',
           choiceId: '22222222-2222-2222-2222-222222222222',
         },
-        deps as never,
+        deps,
       );
 
       expect(result).toMatchObject({
@@ -307,7 +293,7 @@ describe('question-controller', () => {
         sessionId: '33333333-3333-3333-3333-333333333333',
       };
 
-      const result = await submitAnswer(input, deps as never);
+      const result = await submitAnswer(input, deps);
 
       expect(result).toEqual({
         ok: true,
@@ -338,7 +324,7 @@ describe('question-controller', () => {
         timeSpentSeconds: 15,
       };
 
-      await submitAnswer(input, deps as never);
+      await submitAnswer(input, deps);
 
       expect(deps.submitAnswerUseCase.inputs[0]).toMatchObject({
         userId: 'user_1',
@@ -357,8 +343,8 @@ describe('question-controller', () => {
         idempotencyKey: '33333333-3333-3333-3333-333333333333',
       };
 
-      const first = await submitAnswer(input, deps as never);
-      const second = await submitAnswer(input, deps as never);
+      const first = await submitAnswer(input, deps);
+      const second = await submitAnswer(input, deps);
 
       expect(first).toEqual({
         ok: true,
@@ -382,7 +368,7 @@ describe('question-controller', () => {
           choiceId: '22222222-2222-2222-2222-222222222222',
           timeSpentSeconds: -1,
         },
-        deps as never,
+        deps,
       );
 
       expect(result).toMatchObject({
@@ -403,7 +389,7 @@ describe('question-controller', () => {
           choiceId: '22222222-2222-2222-2222-222222222222',
           timeSpentSeconds: 86401,
         },
-        deps as never,
+        deps,
       );
 
       expect(result).toMatchObject({
@@ -428,7 +414,7 @@ describe('question-controller', () => {
           questionId: '11111111-1111-1111-1111-111111111111',
           choiceId: '22222222-2222-2222-2222-222222222222',
         },
-        deps as never,
+        deps,
       );
 
       expect(result).toEqual({

@@ -89,6 +89,58 @@ describe('StartPracticeSessionUseCase', () => {
     });
   });
 
+  it('stores paramsJson.count based on actual questionIds length', async () => {
+    const userId = 'user-1';
+    const now = new Date('2026-02-01T00:00:00Z');
+    const tag = createTag({ id: 'tag-opioids', slug: 'opioids' });
+
+    const questionRepository = new FakeQuestionRepository([
+      createQuestion({
+        id: 'q1',
+        difficulty: 'easy',
+        tags: [tag],
+        createdAt: new Date('2026-02-01T00:00:00Z'),
+        updatedAt: new Date('2026-02-01T00:00:00Z'),
+      }),
+      createQuestion({
+        id: 'q2',
+        difficulty: 'medium',
+        tags: [tag],
+        createdAt: new Date('2026-01-31T00:00:00Z'),
+        updatedAt: new Date('2026-01-31T00:00:00Z'),
+      }),
+    ]);
+
+    const practiceSessionRepository = new FakePracticeSessionRepository();
+
+    const useCase = new StartPracticeSessionUseCase(
+      questionRepository,
+      practiceSessionRepository,
+      () => now,
+    );
+
+    await expect(
+      useCase.execute({
+        userId,
+        mode: 'tutor',
+        count: 10,
+        tagSlugs: ['opioids'],
+        difficulties: ['easy', 'medium'],
+      }),
+    ).resolves.toEqual({ sessionId: 'session-1' });
+
+    const createInput = practiceSessionRepository.createInputs[0];
+    expect(createInput).toBeTruthy();
+
+    const paramsJson = createInput?.paramsJson as {
+      count: number;
+      questionIds: string[];
+    };
+
+    expect(paramsJson.questionIds).toHaveLength(2);
+    expect(paramsJson.count).toBe(2);
+  });
+
   it('throws NOT_FOUND when filters yield zero questions', async () => {
     const useCase = new StartPracticeSessionUseCase(
       new FakeQuestionRepository([]),

@@ -1,4 +1,5 @@
 import { ArrowRight } from 'lucide-react';
+import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { MetallicBorder } from '@/components/ui/metallic-border';
 
@@ -20,7 +21,17 @@ export function MetallicCtaButton({
     </span>
   );
 
-  const content = href ? <a href={href}>{inner}</a> : <span>{inner}</span>;
+  const content = href ? (
+    href.startsWith('/') ? (
+      <Link href={href}>{inner}</Link>
+    ) : (
+      <a href={href} rel="noopener noreferrer">
+        {inner}
+      </a>
+    )
+  ) : (
+    <span>{inner}</span>
+  );
 
   return (
     <MetallicBorder borderRadius={9999} borderWidth={2} className={className}>

@@ -41,6 +41,28 @@ import type {
   UpsertUserByClerkIdOptions,
   UserRepository,
 } from '../ports/repositories';
+import type {
+  CreateCheckoutSessionInput,
+  CreateCheckoutSessionOutput,
+  CreatePortalSessionInput,
+  CreatePortalSessionOutput,
+  EndPracticeSessionInput,
+  EndPracticeSessionOutput,
+  GetBookmarksInput,
+  GetBookmarksOutput,
+  GetMissedQuestionsInput,
+  GetMissedQuestionsOutput,
+  GetNextQuestionInput,
+  GetNextQuestionOutput,
+  GetUserStatsInput,
+  StartPracticeSessionInput,
+  StartPracticeSessionOutput,
+  SubmitAnswerInput,
+  SubmitAnswerOutput,
+  ToggleBookmarkInput,
+  ToggleBookmarkOutput,
+  UserStatsOutput,
+} from '../use-cases';
 
 type InMemoryAttempt = Attempt & { practiceSessionId: string | null };
 
@@ -71,6 +93,7 @@ export class FakeLogger implements Logger {
 
 export class FakeQuestionRepository implements QuestionRepository {
   private readonly questions: readonly Question[];
+  readonly findPublishedByIdsCalls: string[][] = [];
 
   constructor(questions: readonly Question[]) {
     this.questions = questions;
@@ -93,6 +116,7 @@ export class FakeQuestionRepository implements QuestionRepository {
   async findPublishedByIds(
     ids: readonly string[],
   ): Promise<readonly Question[]> {
+    this.findPublishedByIdsCalls.push([...ids]);
     const byId = new Map(
       this.questions
         .filter((q) => q.status === 'published')
@@ -185,6 +209,166 @@ export class FakePaymentGateway implements PaymentGateway {
   ): Promise<WebhookEventResult> {
     this.webhookInputs.push({ rawBody, signature });
     return this.webhookResult;
+  }
+}
+
+export class FakeToggleBookmarkUseCase {
+  readonly inputs: ToggleBookmarkInput[] = [];
+
+  constructor(
+    private readonly output: ToggleBookmarkOutput,
+    private readonly toThrow?: unknown,
+  ) {}
+
+  async execute(input: ToggleBookmarkInput): Promise<ToggleBookmarkOutput> {
+    this.inputs.push(input);
+    if (this.toThrow) throw this.toThrow;
+    return this.output;
+  }
+}
+
+export class FakeGetBookmarksUseCase {
+  readonly inputs: GetBookmarksInput[] = [];
+
+  constructor(
+    private readonly output: GetBookmarksOutput,
+    private readonly toThrow?: unknown,
+  ) {}
+
+  async execute(input: GetBookmarksInput): Promise<GetBookmarksOutput> {
+    this.inputs.push(input);
+    if (this.toThrow) throw this.toThrow;
+    return this.output;
+  }
+}
+
+export class FakeStartPracticeSessionUseCase {
+  readonly inputs: StartPracticeSessionInput[] = [];
+
+  constructor(
+    private readonly output: StartPracticeSessionOutput,
+    private readonly toThrow?: unknown,
+  ) {}
+
+  async execute(
+    input: StartPracticeSessionInput,
+  ): Promise<StartPracticeSessionOutput> {
+    this.inputs.push(input);
+    if (this.toThrow) throw this.toThrow;
+    return this.output;
+  }
+}
+
+export class FakeEndPracticeSessionUseCase {
+  readonly inputs: EndPracticeSessionInput[] = [];
+
+  constructor(
+    private readonly output: EndPracticeSessionOutput,
+    private readonly toThrow?: unknown,
+  ) {}
+
+  async execute(
+    input: EndPracticeSessionInput,
+  ): Promise<EndPracticeSessionOutput> {
+    this.inputs.push(input);
+    if (this.toThrow) throw this.toThrow;
+    return this.output;
+  }
+}
+
+export class FakeCreateCheckoutSessionUseCase {
+  readonly inputs: CreateCheckoutSessionInput[] = [];
+
+  constructor(
+    private readonly output: CreateCheckoutSessionOutput,
+    private readonly toThrow?: unknown,
+  ) {}
+
+  async execute(
+    input: CreateCheckoutSessionInput,
+  ): Promise<CreateCheckoutSessionOutput> {
+    this.inputs.push(input);
+    if (this.toThrow) throw this.toThrow;
+    return this.output;
+  }
+}
+
+export class FakeCreatePortalSessionUseCase {
+  readonly inputs: CreatePortalSessionInput[] = [];
+
+  constructor(
+    private readonly output: CreatePortalSessionOutput,
+    private readonly toThrow?: unknown,
+  ) {}
+
+  async execute(
+    input: CreatePortalSessionInput,
+  ): Promise<CreatePortalSessionOutput> {
+    this.inputs.push(input);
+    if (this.toThrow) throw this.toThrow;
+    return this.output;
+  }
+}
+
+export class FakeGetMissedQuestionsUseCase {
+  readonly inputs: GetMissedQuestionsInput[] = [];
+
+  constructor(
+    private readonly output: GetMissedQuestionsOutput,
+    private readonly toThrow?: unknown,
+  ) {}
+
+  async execute(
+    input: GetMissedQuestionsInput,
+  ): Promise<GetMissedQuestionsOutput> {
+    this.inputs.push(input);
+    if (this.toThrow) throw this.toThrow;
+    return this.output;
+  }
+}
+
+export class FakeGetUserStatsUseCase {
+  readonly inputs: GetUserStatsInput[] = [];
+
+  constructor(
+    private readonly output: UserStatsOutput,
+    private readonly toThrow?: unknown,
+  ) {}
+
+  async execute(input: GetUserStatsInput): Promise<UserStatsOutput> {
+    this.inputs.push(input);
+    if (this.toThrow) throw this.toThrow;
+    return this.output;
+  }
+}
+
+export class FakeGetNextQuestionUseCase {
+  readonly inputs: GetNextQuestionInput[] = [];
+
+  constructor(
+    private readonly output: GetNextQuestionOutput,
+    private readonly toThrow?: unknown,
+  ) {}
+
+  async execute(input: GetNextQuestionInput): Promise<GetNextQuestionOutput> {
+    this.inputs.push(input);
+    if (this.toThrow) throw this.toThrow;
+    return this.output;
+  }
+}
+
+export class FakeSubmitAnswerUseCase {
+  readonly inputs: SubmitAnswerInput[] = [];
+
+  constructor(
+    private readonly output: SubmitAnswerOutput,
+    private readonly toThrow?: unknown,
+  ) {}
+
+  async execute(input: SubmitAnswerInput): Promise<SubmitAnswerOutput> {
+    this.inputs.push(input);
+    if (this.toThrow) throw this.toThrow;
+    return this.output;
   }
 }
 
@@ -476,6 +660,11 @@ export class FakePracticeSessionRepository
   implements PracticeSessionRepository
 {
   private sessions: readonly PracticeSession[];
+  readonly createInputs: Array<{
+    userId: string;
+    mode: 'tutor' | 'exam';
+    paramsJson: unknown;
+  }> = [];
 
   constructor(seed: readonly PracticeSession[] = []) {
     this.sessions = seed;
@@ -495,6 +684,7 @@ export class FakePracticeSessionRepository
     mode: 'tutor' | 'exam';
     paramsJson: unknown;
   }): Promise<PracticeSession> {
+    this.createInputs.push(input);
     const params = input.paramsJson as {
       questionIds: string[];
       tagSlugs: string[];

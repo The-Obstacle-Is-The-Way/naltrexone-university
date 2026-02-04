@@ -2,40 +2,28 @@ import { describe, expect, it } from 'vitest';
 import { ApplicationError } from '@/src/application/errors';
 import {
   FakeAuthGateway,
+  FakeGetMissedQuestionsUseCase,
   FakeSubscriptionRepository,
 } from '@/src/application/test-helpers/fakes';
-import type {
-  GetMissedQuestionsInput,
-  GetMissedQuestionsOutput,
-} from '@/src/application/use-cases';
+import type { GetMissedQuestionsOutput } from '@/src/application/use-cases';
 import { CheckEntitlementUseCase } from '@/src/application/use-cases/check-entitlement';
 import type { User } from '@/src/domain/entities';
 import { createSubscription, createUser } from '@/src/domain/test-helpers';
-import { getMissedQuestions } from './review-controller';
+import {
+  getMissedQuestions,
+  type ReviewControllerDeps,
+} from './review-controller';
 
-class FakeGetMissedQuestionsUseCase {
-  readonly inputs: GetMissedQuestionsInput[] = [];
-
-  constructor(
-    private readonly output: GetMissedQuestionsOutput,
-    private readonly toThrow?: unknown,
-  ) {}
-
-  async execute(
-    input: GetMissedQuestionsInput,
-  ): Promise<GetMissedQuestionsOutput> {
-    this.inputs.push(input);
-    if (this.toThrow) throw this.toThrow;
-    return this.output;
-  }
-}
+type ReviewControllerTestDeps = ReviewControllerDeps & {
+  getMissedQuestionsUseCase: FakeGetMissedQuestionsUseCase;
+};
 
 function createDeps(overrides?: {
   user?: User | null;
   isEntitled?: boolean;
   useCaseOutput?: GetMissedQuestionsOutput;
   useCaseThrows?: unknown;
-}) {
+}): ReviewControllerTestDeps {
   const user =
     overrides?.user === undefined
       ? createUser({ id: 'user_1' })
@@ -76,10 +64,7 @@ describe('review-controller', () => {
     it('returns VALIDATION_ERROR when input is invalid', async () => {
       const deps = createDeps();
 
-      const result = await getMissedQuestions(
-        { limit: 0, offset: -1 },
-        deps as never,
-      );
+      const result = await getMissedQuestions({ limit: 0, offset: -1 }, deps);
 
       expect(result).toMatchObject({
         ok: false,
@@ -91,10 +76,7 @@ describe('review-controller', () => {
     it('returns UNAUTHENTICATED when unauthenticated', async () => {
       const deps = createDeps({ user: null });
 
-      const result = await getMissedQuestions(
-        { limit: 10, offset: 0 },
-        deps as never,
-      );
+      const result = await getMissedQuestions({ limit: 10, offset: 0 }, deps);
 
       expect(result).toMatchObject({
         ok: false,
@@ -106,10 +88,7 @@ describe('review-controller', () => {
     it('returns UNSUBSCRIBED when not entitled', async () => {
       const deps = createDeps({ isEntitled: false });
 
-      const result = await getMissedQuestions(
-        { limit: 10, offset: 0 },
-        deps as never,
-      );
+      const result = await getMissedQuestions({ limit: 10, offset: 0 }, deps);
 
       expect(result).toMatchObject({
         ok: false,
@@ -123,10 +102,7 @@ describe('review-controller', () => {
         useCaseOutput: { rows: [], limit: 10, offset: 0 },
       });
 
-      const result = await getMissedQuestions(
-        { limit: 10, offset: 0 },
-        deps as never,
-      );
+      const result = await getMissedQuestions({ limit: 10, offset: 0 }, deps);
 
       expect(result).toEqual({
         ok: true,
@@ -142,10 +118,7 @@ describe('review-controller', () => {
         useCaseThrows: new ApplicationError('INTERNAL_ERROR', 'boom'),
       });
 
-      const result = await getMissedQuestions(
-        { limit: 10, offset: 0 },
-        deps as never,
-      );
+      const result = await getMissedQuestions({ limit: 10, offset: 0 }, deps);
 
       expect(result).toEqual({
         ok: false,

@@ -39,7 +39,12 @@ export class GetBookmarksUseCase {
 
   async execute(input: GetBookmarksInput): Promise<GetBookmarksOutput> {
     const bookmarks = await this.bookmarks.listByUserId(input.userId);
-    const questionIds = bookmarks.map((b) => b.questionId);
+
+    if (bookmarks.length === 0) return { rows: [] };
+
+    const questionIds = [...new Set(bookmarks.map((b) => b.questionId))];
+    if (questionIds.length === 0) return { rows: [] };
+
     const questions = await this.questions.findPublishedByIds(questionIds);
     const byId = new Map(questions.map((q) => [q.id, q]));
 

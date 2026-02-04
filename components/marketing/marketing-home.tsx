@@ -157,7 +157,10 @@ export function MarketingHomeShell({
                     key={feature.title}
                     className={`rounded-2xl border border-zinc-800/50 bg-zinc-900/50 p-6 transition-all hover:border-zinc-700/50 hover:bg-zinc-900/80${feature.wide ? ' md:col-span-2' : ''}`}
                   >
-                    <Icon className="h-6 w-6 text-zinc-400" />
+                    <Icon
+                      aria-hidden="true"
+                      className="h-6 w-6 text-zinc-400"
+                    />
                     <h3 className="mt-4 font-heading font-semibold">
                       {feature.title}
                     </h3>

@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import type { ReactNode } from 'react';
 
 type NavItem = {
   href: string;
@@ -14,9 +15,9 @@ const NAV_ITEMS: readonly NavItem[] = [
 ];
 
 export type AppShellProps = {
-  children: React.ReactNode;
-  mobileNav?: React.ReactNode;
-  authNav: React.ReactNode;
+  children: ReactNode;
+  mobileNav?: ReactNode;
+  authNav: ReactNode;
   activePath?: string;
 };
 
@@ -40,7 +41,11 @@ export function AppShell({
         <nav aria-label="App navigation" className="flex-1 px-3 pb-6">
           <div className="space-y-1">
             {NAV_ITEMS.map((item) => {
-              const isActive = activePath === item.href;
+              const normalizedActivePath = activePath?.split('?')[0] ?? null;
+              const isActive =
+                normalizedActivePath !== null &&
+                (normalizedActivePath === item.href ||
+                  normalizedActivePath.startsWith(`${item.href}/`));
               return (
                 <Link
                   key={item.href}

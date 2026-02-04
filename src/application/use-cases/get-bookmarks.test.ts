@@ -8,6 +8,24 @@ import {
 import { GetBookmarksUseCase } from './get-bookmarks';
 
 describe('GetBookmarksUseCase', () => {
+  it('returns empty rows without querying questions when the user has no bookmarks', async () => {
+    const userId = 'user-1';
+
+    const bookmarks = new FakeBookmarkRepository();
+    const questions = new FakeQuestionRepository([
+      createQuestion({ id: 'q1', slug: 'q-1', stemMd: 'Stem for q1' }),
+    ]);
+
+    const useCase = new GetBookmarksUseCase(
+      bookmarks,
+      questions,
+      new FakeLogger(),
+    );
+
+    await expect(useCase.execute({ userId })).resolves.toEqual({ rows: [] });
+    expect(questions.findPublishedByIdsCalls).toEqual([]);
+  });
+
   it('returns bookmark rows joined to published questions', async () => {
     const userId = 'user-1';
 

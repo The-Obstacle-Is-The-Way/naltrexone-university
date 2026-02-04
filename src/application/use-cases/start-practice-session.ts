@@ -47,7 +47,7 @@ export class StartPracticeSessionUseCase {
       userId: input.userId,
       mode: input.mode,
       paramsJson: {
-        count: input.count,
+        count: questionIds.length,
         tagSlugs: input.tagSlugs,
         difficulties: input.difficulties,
         questionIds,

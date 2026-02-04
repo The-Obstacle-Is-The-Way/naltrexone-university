@@ -3,54 +3,29 @@ import { ApplicationError } from '@/src/application/errors';
 import type { RateLimiter } from '@/src/application/ports/gateways';
 import {
   FakeAuthGateway,
+  FakeCreateCheckoutSessionUseCase,
+  FakeCreatePortalSessionUseCase,
   FakeIdempotencyKeyRepository,
 } from '@/src/application/test-helpers/fakes';
 import type {
-  CreateCheckoutSessionInput,
   CreateCheckoutSessionOutput,
-  CreatePortalSessionInput,
   CreatePortalSessionOutput,
 } from '@/src/application/use-cases';
 import type { User } from '@/src/domain/entities';
 import { createUser } from '@/src/domain/test-helpers';
 import {
+  type BillingControllerDeps,
   createCheckoutSession,
   createPortalSession,
 } from './billing-controller';
 
-class FakeCreateCheckoutSessionUseCase {
-  readonly inputs: CreateCheckoutSessionInput[] = [];
-
-  constructor(
-    private readonly output: CreateCheckoutSessionOutput,
-    private readonly toThrow?: unknown,
-  ) {}
-
-  async execute(
-    input: CreateCheckoutSessionInput,
-  ): Promise<CreateCheckoutSessionOutput> {
-    this.inputs.push(input);
-    if (this.toThrow) throw this.toThrow;
-    return this.output;
-  }
-}
-
-class FakeCreatePortalSessionUseCase {
-  readonly inputs: CreatePortalSessionInput[] = [];
-
-  constructor(
-    private readonly output: CreatePortalSessionOutput,
-    private readonly toThrow?: unknown,
-  ) {}
-
-  async execute(
-    input: CreatePortalSessionInput,
-  ): Promise<CreatePortalSessionOutput> {
-    this.inputs.push(input);
-    if (this.toThrow) throw this.toThrow;
-    return this.output;
-  }
-}
+type BillingControllerTestDeps = BillingControllerDeps & {
+  createCheckoutSessionUseCase: FakeCreateCheckoutSessionUseCase;
+  createPortalSessionUseCase: FakeCreatePortalSessionUseCase;
+  _calls: {
+    clerkCalls: Array<undefined>;
+  };
+};
 
 function createDeps(overrides?: {
   user?: User | null;
@@ -62,7 +37,7 @@ function createDeps(overrides?: {
   portalThrows?: unknown;
   rateLimiter?: RateLimiter;
   now?: () => Date;
-}) {
+}): BillingControllerTestDeps {
   const user =
     overrides?.user === undefined
       ? createUser({
@@ -127,10 +102,7 @@ describe('billing-controller', () => {
     it('returns VALIDATION_ERROR when input is invalid', async () => {
       const deps = createDeps();
 
-      const result = await createCheckoutSession(
-        { plan: 'weekly' },
-        deps as never,
-      );
+      const result = await createCheckoutSession({ plan: 'weekly' }, deps);
 
       expect(result).toMatchObject({
         ok: false,
@@ -145,10 +117,7 @@ describe('billing-controller', () => {
     it('returns UNAUTHENTICATED when unauthenticated', async () => {
       const deps = createDeps({ user: null });
 
-      const result = await createCheckoutSession(
-        { plan: 'monthly' },
-        deps as never,
-      );
+      const result = await createCheckoutSession({ plan: 'monthly' }, deps);
 
       expect(result).toMatchObject({
         ok: false,
@@ -169,10 +138,7 @@ describe('billing-controller', () => {
         },
       });
 
-      const result = await createCheckoutSession(
-        { plan: 'monthly' },
-        deps as never,
-      );
+      const result = await createCheckoutSession({ plan: 'monthly' }, deps);
 
       expect(result).toMatchObject({
         ok: false,
@@ -184,10 +150,7 @@ describe('billing-controller', () => {
     it('passes URLs and user identity to the use case', async () => {
       const deps = createDeps({ appUrl: 'https://app.example.com' });
 
-      const result = await createCheckoutSession(
-        { plan: 'annual' },
-        deps as never,
-      );
+      const result = await createCheckoutSession({ plan: 'annual' }, deps);
 
       expect(result).toEqual({
         ok: true,
@@ -215,8 +178,8 @@ describe('billing-controller', () => {
         idempotencyKey: '11111111-1111-1111-1111-111111111111',
       } as const;
 
-      const first = await createCheckoutSession(input, deps as never);
-      const second = await createCheckoutSession(input, deps as never);
+      const first = await createCheckoutSession(input, deps);
+      const second = await createCheckoutSession(input, deps);
 
       expect(first).toEqual({
         ok: true,
@@ -235,10 +198,7 @@ describe('billing-controller', () => {
         ),
       });
 
-      const result = await createCheckoutSession(
-        { plan: 'monthly' },
-        deps as never,
-      );
+      const result = await createCheckoutSession({ plan: 'monthly' }, deps);
 
       expect(result).toEqual({
         ok: false,
@@ -251,7 +211,7 @@ describe('billing-controller', () => {
     it('returns VALIDATION_ERROR when input is invalid', async () => {
       const deps = createDeps();
 
-      const result = await createPortalSession(undefined, deps as never);
+      const result = await createPortalSession(undefined, deps);
 
       expect(result).toMatchObject({
         ok: false,
@@ -263,7 +223,7 @@ describe('billing-controller', () => {
     it('returns UNAUTHENTICATED when unauthenticated', async () => {
       const deps = createDeps({ user: null });
 
-      const result = await createPortalSession({}, deps as never);
+      const result = await createPortalSession({}, deps);
 
       expect(result).toMatchObject({
         ok: false,
@@ -275,7 +235,7 @@ describe('billing-controller', () => {
     it('passes returnUrl to the use case', async () => {
       const deps = createDeps({ appUrl: 'https://app.example.com' });
 
-      const result = await createPortalSession({}, deps as never);
+      const result = await createPortalSession({}, deps);
 
       expect(result).toEqual({
         ok: true,
@@ -294,7 +254,7 @@ describe('billing-controller', () => {
         ),
       });
 
-      const result = await createPortalSession({}, deps as never);
+      const result = await createPortalSession({}, deps);
 
       expect(result).toEqual({
         ok: false,

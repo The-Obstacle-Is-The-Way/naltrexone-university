@@ -21,20 +21,18 @@ export async function createStripePortalSession({
     return_url: input.returnUrl,
   } satisfies BillingPortalSessionCreateParams;
 
-  const session = input.idempotencyKey
-    ? await callStripeWithRetry({
-        operation: 'billingPortal.sessions.create',
-        fn: () =>
-          stripe.billingPortal.sessions.create(params, {
-            idempotencyKey: input.idempotencyKey,
-          }),
-        logger,
-      })
-    : await callStripeWithRetry({
-        operation: 'billingPortal.sessions.create',
-        fn: () => stripe.billingPortal.sessions.create(params),
-        logger,
-      });
+  const options = input.idempotencyKey
+    ? { idempotencyKey: input.idempotencyKey }
+    : undefined;
+
+  const session = await callStripeWithRetry({
+    operation: 'billingPortal.sessions.create',
+    fn: () =>
+      options
+        ? stripe.billingPortal.sessions.create(params, options)
+        : stripe.billingPortal.sessions.create(params),
+    logger,
+  });
 
   if (!session.url) {
     throw new ApplicationError(

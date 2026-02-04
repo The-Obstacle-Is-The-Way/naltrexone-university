@@ -3,13 +3,13 @@ import { ApplicationError } from '@/src/application/errors';
 import type { RateLimiter } from '@/src/application/ports/gateways';
 import {
   FakeAuthGateway,
+  FakeEndPracticeSessionUseCase,
   FakeIdempotencyKeyRepository,
+  FakeStartPracticeSessionUseCase,
   FakeSubscriptionRepository,
 } from '@/src/application/test-helpers/fakes';
 import type {
-  EndPracticeSessionInput,
   EndPracticeSessionOutput,
-  StartPracticeSessionInput,
   StartPracticeSessionOutput,
 } from '@/src/application/use-cases';
 import { CheckEntitlementUseCase } from '@/src/application/use-cases/check-entitlement';
@@ -17,42 +17,14 @@ import type { User } from '@/src/domain/entities';
 import { createSubscription, createUser } from '@/src/domain/test-helpers';
 import {
   endPracticeSession,
+  type PracticeControllerDeps,
   startPracticeSession,
 } from './practice-controller';
 
-class FakeStartPracticeSessionUseCase {
-  readonly inputs: StartPracticeSessionInput[] = [];
-
-  constructor(
-    private readonly output: StartPracticeSessionOutput,
-    private readonly toThrow?: unknown,
-  ) {}
-
-  async execute(
-    input: StartPracticeSessionInput,
-  ): Promise<StartPracticeSessionOutput> {
-    this.inputs.push(input);
-    if (this.toThrow) throw this.toThrow;
-    return this.output;
-  }
-}
-
-class FakeEndPracticeSessionUseCase {
-  readonly inputs: EndPracticeSessionInput[] = [];
-
-  constructor(
-    private readonly output: EndPracticeSessionOutput,
-    private readonly toThrow?: unknown,
-  ) {}
-
-  async execute(
-    input: EndPracticeSessionInput,
-  ): Promise<EndPracticeSessionOutput> {
-    this.inputs.push(input);
-    if (this.toThrow) throw this.toThrow;
-    return this.output;
-  }
-}
+type PracticeControllerTestDeps = PracticeControllerDeps & {
+  startPracticeSessionUseCase: FakeStartPracticeSessionUseCase;
+  endPracticeSessionUseCase: FakeEndPracticeSessionUseCase;
+};
 
 function createDeps(overrides?: {
   user?: User | null;
@@ -63,7 +35,7 @@ function createDeps(overrides?: {
   endOutput?: EndPracticeSessionOutput;
   endThrows?: unknown;
   now?: () => Date;
-}) {
+}): PracticeControllerTestDeps {
   const user =
     overrides?.user === undefined
       ? createUser({
@@ -267,10 +239,7 @@ describe('practice-controller', () => {
     it('returns VALIDATION_ERROR when input is invalid', async () => {
       const deps = createDeps();
 
-      const result = await endPracticeSession(
-        { sessionId: 'bad' },
-        deps as never,
-      );
+      const result = await endPracticeSession({ sessionId: 'bad' }, deps);
 
       expect(result).toMatchObject({
         ok: false,
@@ -287,7 +256,7 @@ describe('practice-controller', () => {
 
       const result = await endPracticeSession(
         { sessionId: '11111111-1111-1111-1111-111111111111' },
-        deps as never,
+        deps,
       );
 
       expect(result).toMatchObject({
@@ -302,7 +271,7 @@ describe('practice-controller', () => {
 
       const result = await endPracticeSession(
         { sessionId: '11111111-1111-1111-1111-111111111111' },
-        deps as never,
+        deps,
       );
 
       expect(result).toMatchObject({
@@ -328,7 +297,7 @@ describe('practice-controller', () => {
 
       const result = await endPracticeSession(
         { sessionId: '11111111-1111-1111-1111-111111111111' },
-        deps as never,
+        deps,
       );
 
       expect(result.ok).toBe(true);
@@ -347,7 +316,7 @@ describe('practice-controller', () => {
 
       const result = await endPracticeSession(
         { sessionId: '11111111-1111-1111-1111-111111111111' },
-        deps as never,
+        deps,
       );
 
       expect(result).toEqual({

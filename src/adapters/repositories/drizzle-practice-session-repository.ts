@@ -6,7 +6,10 @@ import {
   MAX_PRACTICE_SESSION_QUESTIONS,
   MAX_PRACTICE_SESSION_TAG_FILTERS,
 } from '@/src/adapters/shared/validation-limits';
-import { ApplicationError } from '@/src/application/errors';
+import {
+  ApplicationError,
+  type ApplicationErrorCode,
+} from '@/src/application/errors';
 import type { PracticeSessionRepository } from '@/src/application/ports/repositories';
 import type { PracticeSession } from '@/src/domain/entities';
 import type { DrizzleDb } from '../shared/database-types';
@@ -35,8 +38,29 @@ export class DrizzlePracticeSessionRepository
     private readonly now: () => Date = () => new Date(),
   ) {}
 
-  private parseParams(paramsJson: unknown): PracticeSessionParams {
-    return practiceSessionParamsSchema.parse(paramsJson);
+  private parseParams(
+    paramsJson: unknown,
+    errorCode: ApplicationErrorCode,
+  ): PracticeSessionParams {
+    try {
+      return practiceSessionParamsSchema.parse(paramsJson);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        const cleanedFieldErrors: Record<string, string[]> = {};
+        for (const [field, messages] of Object.entries(
+          error.flatten().fieldErrors,
+        )) {
+          if (messages) cleanedFieldErrors[field] = messages;
+        }
+
+        throw new ApplicationError(
+          errorCode,
+          `Invalid practice session parameters: ${error.message}`,
+          cleanedFieldErrors,
+        );
+      }
+      throw error;
+    }
   }
 
   private toDomain(
@@ -65,7 +89,7 @@ export class DrizzlePracticeSessionRepository
 
     if (!row) return null;
 
-    const params = this.parseParams(row.paramsJson);
+    const params = this.parseParams(row.paramsJson, 'INTERNAL_ERROR');
     return this.toDomain(row, params);
   }
 
@@ -74,7 +98,7 @@ export class DrizzlePracticeSessionRepository
     mode: 'tutor' | 'exam';
     paramsJson: unknown;
   }) {
-    const params = this.parseParams(input.paramsJson);
+    const params = this.parseParams(input.paramsJson, 'VALIDATION_ERROR');
 
     const [row] = await this.db
       .insert(practiceSessions)

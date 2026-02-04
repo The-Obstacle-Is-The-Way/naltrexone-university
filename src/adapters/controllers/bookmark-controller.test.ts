@@ -2,48 +2,27 @@ import { describe, expect, it } from 'vitest';
 import { ApplicationError } from '@/src/application/errors';
 import {
   FakeAuthGateway,
+  FakeGetBookmarksUseCase,
   FakeSubscriptionRepository,
+  FakeToggleBookmarkUseCase,
 } from '@/src/application/test-helpers/fakes';
 import type {
-  GetBookmarksInput,
   GetBookmarksOutput,
-  ToggleBookmarkInput,
   ToggleBookmarkOutput,
 } from '@/src/application/use-cases';
 import { CheckEntitlementUseCase } from '@/src/application/use-cases/check-entitlement';
 import type { User } from '@/src/domain/entities';
 import { createSubscription, createUser } from '@/src/domain/test-helpers';
-import { getBookmarks, toggleBookmark } from './bookmark-controller';
+import {
+  type BookmarkControllerDeps,
+  getBookmarks,
+  toggleBookmark,
+} from './bookmark-controller';
 
-class FakeToggleBookmarkUseCase {
-  readonly inputs: ToggleBookmarkInput[] = [];
-
-  constructor(
-    private readonly output: ToggleBookmarkOutput,
-    private readonly toThrow?: unknown,
-  ) {}
-
-  async execute(input: ToggleBookmarkInput): Promise<ToggleBookmarkOutput> {
-    this.inputs.push(input);
-    if (this.toThrow) throw this.toThrow;
-    return this.output;
-  }
-}
-
-class FakeGetBookmarksUseCase {
-  readonly inputs: GetBookmarksInput[] = [];
-
-  constructor(
-    private readonly output: GetBookmarksOutput,
-    private readonly toThrow?: unknown,
-  ) {}
-
-  async execute(input: GetBookmarksInput): Promise<GetBookmarksOutput> {
-    this.inputs.push(input);
-    if (this.toThrow) throw this.toThrow;
-    return this.output;
-  }
-}
+type BookmarkControllerTestDeps = BookmarkControllerDeps & {
+  toggleBookmarkUseCase: FakeToggleBookmarkUseCase;
+  getBookmarksUseCase: FakeGetBookmarksUseCase;
+};
 
 function createDeps(overrides?: {
   user?: User | null;
@@ -52,7 +31,7 @@ function createDeps(overrides?: {
   toggleBookmarkThrows?: unknown;
   getBookmarksOutput?: GetBookmarksOutput;
   getBookmarksThrows?: unknown;
-}) {
+}): BookmarkControllerTestDeps {
   const user =
     overrides?.user === undefined
       ? createUser({
@@ -124,7 +103,7 @@ describe('bookmark-controller', () => {
 
       const result = await toggleBookmark(
         { questionId: '11111111-1111-1111-1111-111111111111' },
-        deps as never,
+        deps,
       );
 
       expect(result).toMatchObject({
@@ -139,7 +118,7 @@ describe('bookmark-controller', () => {
 
       const result = await toggleBookmark(
         { questionId: '11111111-1111-1111-1111-111111111111' },
-        deps as never,
+        deps,
       );
 
       expect(result).toMatchObject({
@@ -154,7 +133,7 @@ describe('bookmark-controller', () => {
 
       const result = await toggleBookmark(
         { questionId: '11111111-1111-1111-1111-111111111111' },
-        deps as never,
+        deps,
       );
 
       expect(result).toEqual({ ok: true, data: { bookmarked: false } });
@@ -176,7 +155,7 @@ describe('bookmark-controller', () => {
 
       const result = await toggleBookmark(
         { questionId: '11111111-1111-1111-1111-111111111111' },
-        deps as never,
+        deps,
       );
 
       expect(result).toEqual({
@@ -215,7 +194,7 @@ describe('bookmark-controller', () => {
     it('returns UNSUBSCRIBED when not entitled', async () => {
       const deps = createDeps({ isEntitled: false });
 
-      const result = await getBookmarks({}, deps as never);
+      const result = await getBookmarks({}, deps);
 
       expect(result).toMatchObject({
         ok: false,
@@ -240,7 +219,7 @@ describe('bookmark-controller', () => {
         },
       });
 
-      const result = await getBookmarks({}, deps as never);
+      const result = await getBookmarks({}, deps);
 
       expect(result.ok).toBe(true);
       expect(deps.getBookmarksUseCase.inputs).toEqual([{ userId: 'user_1' }]);
@@ -251,7 +230,7 @@ describe('bookmark-controller', () => {
         getBookmarksThrows: new ApplicationError('INTERNAL_ERROR', 'boom'),
       });
 
-      const result = await getBookmarks({}, deps as never);
+      const result = await getBookmarks({}, deps);
 
       expect(result).toEqual({
         ok: false,

@@ -33,11 +33,14 @@ export const stripeCheckoutSessionSchema = z
 
 export const stripeEventWithSubscriptionRefSchema = stripeCheckoutSessionSchema;
 
-export type StripeSubscriptionRef = string | { id: string };
+export type StripeEventWithSubscriptionRef = z.infer<
+  typeof stripeCheckoutSessionSchema
+>;
 
-export type StripeEventWithSubscriptionRef = {
-  subscription?: StripeSubscriptionRef | null;
-};
+export type StripeSubscriptionRef = Exclude<
+  StripeEventWithSubscriptionRef['subscription'],
+  null | undefined
+>;
 
 export const subscriptionEventTypes = new Set([
   'customer.subscription.created',
