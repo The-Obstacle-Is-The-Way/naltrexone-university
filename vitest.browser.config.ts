@@ -9,6 +9,9 @@ export default defineConfig({
     include: ['server-only'],
   },
   test: {
+    env: {
+      NODE_ENV: 'test',
+    },
     setupFiles: ['./vitest.setup.ts', './vitest.browser.setup.ts'],
     browser: {
       enabled: true,
