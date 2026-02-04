@@ -5,10 +5,12 @@ import {
   reattemptQuestion,
   submitSelectedAnswer,
 } from '@/app/(app)/app/questions/[slug]/question-page-logic';
+import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import { err, ok } from '@/src/adapters/controllers/action-result';
 import type { GetQuestionBySlugOutput } from '@/src/adapters/controllers/question-view-controller';
 import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
 import { createQuestion } from '@/src/domain/test-helpers';
+import { createDeferred } from '@/tests/test-helpers/create-deferred';
 
 function createQuestionOutput(): GetQuestionBySlugOutput {
   const question = createQuestion({
@@ -94,6 +96,69 @@ describe('question-page-logic', () => {
       expect(setLoadState).toHaveBeenCalledWith({
         status: 'error',
         message: 'Question not found',
+      });
+    });
+
+    it('returns no state updates when unmounted during loadQuestion', async () => {
+      const deferred = createDeferred<ActionResult<GetQuestionBySlugOutput>>();
+      let mounted = true;
+
+      const setLoadState = vi.fn();
+      const setSelectedChoiceId = vi.fn();
+      const setSubmitResult = vi.fn();
+      const setSubmitIdempotencyKey = vi.fn();
+      const setQuestionLoadedAt = vi.fn();
+      const setQuestion = vi.fn();
+
+      const promise = loadQuestion({
+        slug: 'q-1',
+        getQuestionBySlugFn: async () => deferred.promise,
+        createIdempotencyKey: () => 'idem_1',
+        nowMs: () => 1234,
+        setLoadState,
+        setSelectedChoiceId,
+        setSubmitResult,
+        setSubmitIdempotencyKey,
+        setQuestionLoadedAt,
+        setQuestion,
+        isMounted: () => mounted,
+      });
+
+      mounted = false;
+      deferred.resolve(ok(createQuestionOutput()));
+      await promise;
+
+      expect(setQuestion).not.toHaveBeenCalled();
+      expect(setQuestionLoadedAt).not.toHaveBeenCalledWith(1234);
+      expect(setSubmitIdempotencyKey).not.toHaveBeenCalledWith('idem_1');
+      expect(setLoadState).not.toHaveBeenCalledWith({ status: 'ready' });
+    });
+
+    it('sets error state when controller throws', async () => {
+      const setLoadState = vi.fn();
+      const setQuestion = vi.fn();
+
+      await expect(
+        loadQuestion({
+          slug: 'q-1',
+          getQuestionBySlugFn: async () => {
+            throw new Error('Boom');
+          },
+          createIdempotencyKey: () => 'idem_1',
+          nowMs: () => 1234,
+          setLoadState,
+          setSelectedChoiceId: vi.fn(),
+          setSubmitResult: vi.fn(),
+          setSubmitIdempotencyKey: vi.fn(),
+          setQuestionLoadedAt: vi.fn(),
+          setQuestion,
+        }),
+      ).resolves.toBeUndefined();
+
+      expect(setQuestion).toHaveBeenCalledWith(null);
+      expect(setLoadState).toHaveBeenCalledWith({
+        status: 'error',
+        message: 'Boom',
       });
     });
   });
@@ -257,6 +322,64 @@ describe('question-page-logic', () => {
       expect(setLoadState).toHaveBeenCalledWith({
         status: 'error',
         message: 'Internal error',
+      });
+    });
+
+    it('does not update state after unmount', async () => {
+      const deferred = createDeferred<ActionResult<SubmitAnswerOutput>>();
+      let mounted = true;
+
+      const setLoadState = vi.fn();
+      const setSubmitResult = vi.fn();
+
+      const promise = submitSelectedAnswer({
+        question: createQuestionOutput(),
+        selectedChoiceId: 'choice_1',
+        questionLoadedAtMs: 0,
+        submitIdempotencyKey: 'idem_1',
+        submitAnswerFn: async () => deferred.promise,
+        nowMs: () => 0,
+        setLoadState,
+        setSubmitResult,
+        isMounted: () => mounted,
+      });
+
+      mounted = false;
+      deferred.resolve(
+        ok({
+          attemptId: 'attempt_1',
+          isCorrect: true,
+          correctChoiceId: 'choice_1',
+          explanationMd: 'Because...',
+        } satisfies SubmitAnswerOutput),
+      );
+      await promise;
+
+      expect(setSubmitResult).not.toHaveBeenCalled();
+      expect(setLoadState).not.toHaveBeenCalledWith({ status: 'ready' });
+    });
+
+    it('sets error state when submit throws', async () => {
+      const setLoadState = vi.fn();
+
+      await expect(
+        submitSelectedAnswer({
+          question: createQuestionOutput(),
+          selectedChoiceId: 'choice_1',
+          questionLoadedAtMs: 0,
+          submitIdempotencyKey: 'idem_1',
+          submitAnswerFn: async () => {
+            throw new Error('Boom');
+          },
+          nowMs: () => 0,
+          setLoadState,
+          setSubmitResult: vi.fn(),
+        }),
+      ).resolves.toBeUndefined();
+
+      expect(setLoadState).toHaveBeenCalledWith({
+        status: 'error',
+        message: 'Boom',
       });
     });
   });

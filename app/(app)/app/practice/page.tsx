@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import { Feedback } from '@/components/question/Feedback';
 import { QuestionCard } from '@/components/question/QuestionCard';
+import { useIsMounted } from '@/lib/use-is-mounted';
 import {
   getBookmarks,
   toggleBookmark,
@@ -403,6 +404,7 @@ export default function PracticePage() {
   const [sessionStartError, setSessionStartError] = useState<string | null>(
     null,
   );
+  const isMounted = useIsMounted();
 
   const loadNext = useMemo(
     () =>
@@ -418,8 +420,9 @@ export default function PracticePage() {
         setSubmitIdempotencyKey,
         setQuestionLoadedAt,
         setQuestion,
+        isMounted,
       }),
-    [filters],
+    [filters, isMounted],
   );
 
   useEffect(loadNext, [loadNext]);
@@ -488,8 +491,15 @@ export default function PracticePage() {
         nowMs: Date.now,
         setLoadState,
         setSubmitResult,
+        isMounted,
       }),
-    [question, questionLoadedAt, selectedChoiceId, submitIdempotencyKey],
+    [
+      question,
+      questionLoadedAt,
+      selectedChoiceId,
+      submitIdempotencyKey,
+      isMounted,
+    ],
   );
 
   const onToggleBookmark = useMemo(
@@ -510,8 +520,9 @@ export default function PracticePage() {
             setBookmarkMessage(null);
           }, 2000);
         },
+        isMounted,
       }),
-    [question],
+    [question, isMounted],
   );
 
   const onSelectChoice = useMemo(
@@ -580,8 +591,9 @@ export default function PracticePage() {
         setSessionStartStatus,
         setSessionStartError,
         navigateTo,
+        isMounted,
       }),
-    [filters, sessionMode, sessionCount, startSessionIdempotencyKey],
+    [filters, sessionMode, sessionCount, startSessionIdempotencyKey, isMounted],
   );
 
   return (

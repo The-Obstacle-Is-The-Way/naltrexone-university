@@ -22,7 +22,10 @@ export async function loadNextQuestion(input: {
   setQuestionLoadedAt: (loadedAtMs: number | null) => void;
   setQuestion: (question: NextQuestion | null) => void;
   setSessionInfo: (info: NextQuestion['session']) => void;
+  isMounted?: () => boolean;
 }): Promise<void> {
+  const isMounted = input.isMounted ?? (() => true);
+
   input.setLoadState({ status: 'loading' });
   input.setSelectedChoiceId(null);
   input.setSubmitResult(null);
@@ -33,6 +36,8 @@ export async function loadNextQuestion(input: {
   try {
     res = await input.getNextQuestionFn({ sessionId: input.sessionId });
   } catch (error) {
+    if (!isMounted()) return;
+
     input.setLoadState({
       status: 'error',
       message: getThrownErrorMessage(error),
@@ -44,6 +49,7 @@ export async function loadNextQuestion(input: {
     input.setQuestionLoadedAt(null);
     return;
   }
+  if (!isMounted()) return;
 
   if (!res.ok) {
     input.setLoadState({
@@ -77,6 +83,7 @@ export function createLoadNextQuestionAction(input: {
   setQuestionLoadedAt: (loadedAtMs: number | null) => void;
   setQuestion: (question: NextQuestion | null) => void;
   setSessionInfo: (info: NextQuestion['session']) => void;
+  isMounted?: () => boolean;
 }): () => void {
   return () => {
     input.startTransition(() => {
@@ -95,9 +102,12 @@ export async function submitAnswerForQuestion(input: {
   nowMs: () => number;
   setLoadState: (state: LoadState) => void;
   setSubmitResult: (result: SubmitAnswerOutput | null) => void;
+  isMounted?: () => boolean;
 }): Promise<void> {
   if (!input.question) return;
   if (!input.selectedChoiceId) return;
+
+  const isMounted = input.isMounted ?? (() => true);
 
   input.setLoadState({ status: 'loading' });
 
@@ -119,12 +129,15 @@ export async function submitAnswerForQuestion(input: {
       timeSpentSeconds,
     });
   } catch (error) {
+    if (!isMounted()) return;
+
     input.setLoadState({
       status: 'error',
       message: getThrownErrorMessage(error),
     });
     return;
   }
+  if (!isMounted()) return;
 
   if (!res.ok) {
     input.setLoadState({
@@ -148,19 +161,25 @@ export async function endSession(input: {
   setQuestion: (question: NextQuestion | null) => void;
   setSubmitResult: (result: SubmitAnswerOutput | null) => void;
   setSelectedChoiceId: (choiceId: string | null) => void;
+  isMounted?: () => boolean;
 }): Promise<void> {
+  const isMounted = input.isMounted ?? (() => true);
+
   input.setLoadState({ status: 'loading' });
 
   let res: ActionResult<EndPracticeSessionOutput>;
   try {
     res = await input.endPracticeSessionFn({ sessionId: input.sessionId });
   } catch (error) {
+    if (!isMounted()) return;
+
     input.setLoadState({
       status: 'error',
       message: getThrownErrorMessage(error),
     });
     return;
   }
+  if (!isMounted()) return;
   if (!res.ok) {
     input.setLoadState({
       status: 'error',
