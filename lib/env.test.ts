@@ -15,6 +15,22 @@ describe('env', () => {
     vi.restoreAllMocks();
   });
 
+  it('logs and throws when env schema validation fails', async () => {
+    const errorSpy = vi
+      .spyOn(console, 'error')
+      .mockImplementation(() => undefined);
+
+    process.env.DATABASE_URL = 'not-a-url';
+
+    vi.resetModules();
+
+    await expect(import('@/lib/env')).rejects.toThrow(
+      'Invalid environment variables',
+    );
+    expect(errorSpy).toHaveBeenCalledTimes(1);
+    expect(errorSpy.mock.calls[0]?.[0]).toBe('Invalid environment variables:');
+  });
+
   it('allows missing Clerk keys when NEXT_PUBLIC_SKIP_CLERK=true', async () => {
     process.env.DATABASE_URL =
       'postgresql://postgres:postgres@localhost:5432/db';
