@@ -136,5 +136,5 @@ export async function processStripeWebhookEvent({
     logger,
   });
 
-  return subscriptionUpdate ? { ...result, subscriptionUpdate } : result;
+  return { ...result, subscriptionUpdate };
 }

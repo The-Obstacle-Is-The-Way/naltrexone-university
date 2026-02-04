@@ -54,6 +54,7 @@ export function AppShell({
                 <Link
                   key={item.href}
                   href={item.href}
+                  aria-current={isActive ? 'page' : undefined}
                   className={
                     isActive
                       ? `block rounded-md bg-zinc-800 px-3 py-2 text-sm font-medium text-foreground ${focusVisibleRing}`

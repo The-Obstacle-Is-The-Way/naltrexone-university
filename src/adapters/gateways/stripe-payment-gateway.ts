@@ -1,4 +1,8 @@
 import type { StripePriceIds } from '@/src/adapters/config/stripe-prices';
+import { createStripeCheckoutSession } from '@/src/adapters/gateways/stripe/stripe-checkout-sessions';
+import { createStripeCustomer } from '@/src/adapters/gateways/stripe/stripe-customers';
+import { createStripePortalSession } from '@/src/adapters/gateways/stripe/stripe-portal';
+import { processStripeWebhookEvent } from '@/src/adapters/gateways/stripe/stripe-webhook-processor';
 import type { StripeClient } from '@/src/adapters/shared/stripe-types';
 import type {
   CheckoutSessionInput,
@@ -12,10 +16,6 @@ import type {
   WebhookEventResult,
 } from '@/src/application/ports/gateways';
 import type { Logger } from '@/src/application/ports/logger';
-import { createStripeCheckoutSession } from './stripe/stripe-checkout-sessions';
-import { createStripeCustomer } from './stripe/stripe-customers';
-import { createStripePortalSession } from './stripe/stripe-portal';
-import { processStripeWebhookEvent } from './stripe/stripe-webhook-processor';
 
 export type StripePaymentGatewayDeps = {
   stripe: StripeClient;
