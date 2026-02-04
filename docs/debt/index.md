@@ -15,9 +15,12 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 ## Debt Index (Active)
 
-No active debt items.
+| ID | Title | Priority | Date |
+|----|-------|----------|------|
+| [DEBT-100](debt-100-adversarial-audit-2026-02-04.md) | Adversarial Codebase Audit Backlog (2026-02-04) | P0 | 2026-02-04 |
+| [DEBT-101](debt-101-add-sentry-error-tracking.md) | Add Sentry Error Tracking (Next.js, Free Tier) | P1 | 2026-02-04 |
 
-**Next Debt ID:** DEBT-100
+**Next Debt ID:** DEBT-102
 
 ## Archived Debt
 
