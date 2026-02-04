@@ -11,7 +11,7 @@ export default function SignInPage() {
 
   if (skipClerk) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-muted">
+      <div className="flex min-h-screen items-center justify-center bg-background">
         <div className="text-center">
           <h1 className="text-xl font-semibold text-foreground">Sign In</h1>
           <p className="mt-2 text-muted-foreground">
@@ -23,18 +23,8 @@ export default function SignInPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-muted">
-      <SignIn
-        appearance={{
-          variables: {
-            colorBackground: '#1c1c1c',
-            colorPrimary: '#e4e4e7',
-            colorText: '#ededed',
-            colorTextSecondary: '#737373',
-            borderRadius: '0.75rem',
-          },
-        }}
-      />
+    <div className="flex min-h-screen items-center justify-center bg-background">
+      <SignIn />
     </div>
   );
 }

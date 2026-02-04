@@ -18,19 +18,20 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 | ID | Title | Status | Priority | Date |
 |----|-------|--------|----------|------|
 | [DEBT-084](debt-084-user-email-race-condition.md) | User Email Race Condition in Concurrent Webhook Handling | Accepted | P3 | 2026-02-03 |
-| [DEBT-090](debt-090-missing-use-cases-business-logic-in-controllers.md) | Missing Application Use Cases (Business Logic Lives in Controllers) | Open | P1 | 2026-02-04 |
-| [DEBT-091](debt-091-attempt-repository-isp-violation.md) | AttemptRepository is “Fat” (Interface Segregation Pressure) | Open | P3 | 2026-02-04 |
-| [DEBT-092](debt-092-stripe-payment-gateway-god-class.md) | StripePaymentGateway is a God Class (SRP + Separation Pressure) | Open | P2 | 2026-02-04 |
-| [DEBT-096](debt-096-repository-mapper-duplication.md) | Repository Row→Domain Mapping Duplicated (DRY Violation) | Open | P3 | 2026-02-04 |
-| [DEBT-097](debt-097-v0-premium-ui-components-not-integrated.md) | V0 Premium Landing Page Components Deleted Instead of Integrated | Resolved | P2 | 2026-02-04 |
-| [DEBT-098](debt-098-clerk-ui-theming-incomplete.md) | Clerk UI Components Not Fully Themed for Achromatic Dark Mode | Open | P2 | 2026-02-04 |
 
-**Next Debt ID:** DEBT-099
+**Next Debt ID:** DEBT-100
 
 ## Archived Debt
 
 | ID | Title | Priority | Resolved |
 |----|-------|----------|----------|
+| [DEBT-090](../_archive/debt/debt-090-missing-use-cases-business-logic-in-controllers.md) | Missing Application Use Cases (Business Logic Lives in Controllers) | P1 | 2026-02-04 |
+| [DEBT-096](../_archive/debt/debt-096-repository-mapper-duplication.md) | Repository Row→Domain Mapping Duplicated (DRY Violation) | P3 | 2026-02-04 |
+| [DEBT-099](../_archive/debt/debt-099-interactive-ui-tests-missing.md) | Interactive UI Tests Missing — Client Components Had Zero Interaction Coverage | P1 | 2026-02-04 |
+| [DEBT-092](../_archive/debt/debt-092-stripe-payment-gateway-god-class.md) | StripePaymentGateway is a God Class (SRP + Separation Pressure) | P2 | 2026-02-04 |
+| [DEBT-091](../_archive/debt/debt-091-attempt-repository-isp-violation.md) | AttemptRepository is “Fat” (Interface Segregation Pressure) | P3 | 2026-02-04 |
+| [DEBT-098](../_archive/debt/debt-098-clerk-ui-theming-incomplete.md) | Clerk UI Components Not Fully Themed for Achromatic Dark Mode | P2 | 2026-02-04 |
+| [DEBT-097](../_archive/debt/debt-097-v0-premium-ui-components-not-integrated.md) | V0 Premium Landing Page Components Deleted Instead of Integrated | P2 | 2026-02-04 |
 | [DEBT-093](../_archive/debt/debt-093-clerk-webhook-route-business-logic.md) | Clerk Webhook Route Contains Business Logic (Framework Layer Leakage) | P2 | 2026-02-04 |
 | [DEBT-094](../_archive/debt/debt-094-inline-server-action-billing-page.md) | Inline Server Action Inside Billing Page (Inconsistent Pattern) | P3 | 2026-02-04 |
 | [DEBT-095](../_archive/debt/debt-095-console-error-in-production.md) | console.error Usage in Production Code (Bypasses Structured Logger) | P3 | 2026-02-04 |

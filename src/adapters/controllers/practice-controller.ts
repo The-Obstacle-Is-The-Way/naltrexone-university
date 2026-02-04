@@ -14,17 +14,13 @@ import type {
   AuthGateway,
   RateLimiter,
 } from '@/src/application/ports/gateways';
+import type { IdempotencyKeyRepository } from '@/src/application/ports/repositories';
 import type {
-  AttemptRepository,
-  IdempotencyKeyRepository,
-  PracticeSessionRepository,
-  QuestionRepository,
-} from '@/src/application/ports/repositories';
-import {
-  computeAccuracy,
-  createSeed,
-  shuffleWithSeed,
-} from '@/src/domain/services';
+  EndPracticeSessionInput,
+  EndPracticeSessionOutput,
+  StartPracticeSessionInput,
+  StartPracticeSessionOutput,
+} from '@/src/application/use-cases';
 import { createAction } from './create-action';
 import type { CheckEntitlementUseCase } from './require-entitled-user-id';
 import { requireEntitledUserId } from './require-entitled-user-id';
@@ -57,27 +53,26 @@ const EndPracticeSessionInputSchema = z
   })
   .strict();
 
-export type StartPracticeSessionOutput = { sessionId: string };
-
-export type EndPracticeSessionOutput = {
-  sessionId: string;
-  endedAt: string; // ISO
-  totals: {
-    answered: number;
-    correct: number;
-    accuracy: number; // 0..1
-    durationSeconds: number;
-  };
-};
+export type {
+  EndPracticeSessionOutput,
+  StartPracticeSessionOutput,
+} from '@/src/application/use-cases';
 
 export type PracticeControllerDeps = {
   authGateway: AuthGateway;
   rateLimiter: RateLimiter;
   idempotencyKeyRepository: IdempotencyKeyRepository;
   checkEntitlementUseCase: CheckEntitlementUseCase;
-  questionRepository: QuestionRepository;
-  practiceSessionRepository: PracticeSessionRepository;
-  attemptRepository: AttemptRepository;
+  startPracticeSessionUseCase: {
+    execute: (
+      input: StartPracticeSessionInput,
+    ) => Promise<StartPracticeSessionOutput>;
+  };
+  endPracticeSessionUseCase: {
+    execute: (
+      input: EndPracticeSessionInput,
+    ) => Promise<EndPracticeSessionOutput>;
+  };
   now: () => Date;
 };
 
@@ -110,31 +105,13 @@ export const startPracticeSession = createAction({
         );
       }
 
-      const candidateIds = await d.questionRepository.listPublishedCandidateIds(
-        {
-          tagSlugs,
-          difficulties,
-        },
-      );
-      if (candidateIds.length === 0) {
-        throw new ApplicationError('NOT_FOUND', 'No questions found');
-      }
-
-      const seed = createSeed(userId, d.now().getTime());
-      const questionIds = shuffleWithSeed(candidateIds, seed).slice(0, count);
-
-      const session = await d.practiceSessionRepository.create({
+      return d.startPracticeSessionUseCase.execute({
         userId,
         mode,
-        paramsJson: {
-          count,
-          tagSlugs,
-          difficulties,
-          questionIds,
-        },
+        count,
+        tagSlugs,
+        difficulties,
       });
-
-      return { sessionId: session.id };
     }
 
     if (!idempotencyKey) {
@@ -157,43 +134,9 @@ export const endPracticeSession = createAction({
   getDeps,
   execute: async (input, d) => {
     const userId = await requireEntitledUserId(d);
-
-    const session = await d.practiceSessionRepository.end(
-      input.sessionId,
+    return d.endPracticeSessionUseCase.execute({
       userId,
-    );
-
-    const endedAt = session.endedAt;
-    if (!endedAt) {
-      throw new ApplicationError(
-        'INTERNAL_ERROR',
-        'Practice session did not end',
-      );
-    }
-
-    const attempts = await d.attemptRepository.findBySessionId(
-      session.id,
-      userId,
-    );
-
-    const answered = attempts.length;
-    const correct = attempts.filter((a) => a.isCorrect).length;
-    const accuracy = computeAccuracy(answered, correct);
-
-    const durationSeconds = Math.max(
-      0,
-      Math.floor((endedAt.getTime() - session.startedAt.getTime()) / 1000),
-    );
-
-    return {
-      sessionId: session.id,
-      endedAt: endedAt.toISOString(),
-      totals: {
-        answered,
-        correct,
-        accuracy,
-        durationSeconds,
-      },
-    };
+      sessionId: input.sessionId,
+    });
   },
 });

@@ -12,7 +12,8 @@ import type {
 } from '@/src/domain/value-objects';
 import { ApplicationError } from '../errors';
 import type {
-  AttemptRepository,
+  AttemptMostRecentAnsweredAtReader,
+  AttemptSessionReader,
   PracticeSessionRepository,
   QuestionRepository,
 } from '../ports/repositories';
@@ -51,7 +52,8 @@ export type GetNextQuestionOutput = NextQuestion | null;
 export class GetNextQuestionUseCase {
   constructor(
     private readonly questions: QuestionRepository,
-    private readonly attempts: AttemptRepository,
+    private readonly attempts: AttemptSessionReader &
+      AttemptMostRecentAnsweredAtReader,
     private readonly sessions: PracticeSessionRepository,
   ) {}
 

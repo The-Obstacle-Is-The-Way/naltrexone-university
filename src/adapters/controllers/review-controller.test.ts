@@ -1,42 +1,40 @@
 import { describe, expect, it } from 'vitest';
-import type { Logger } from '@/src/application/ports/logger';
+import { ApplicationError } from '@/src/application/errors';
 import {
-  FakeAttemptRepository,
   FakeAuthGateway,
-  FakeQuestionRepository,
   FakeSubscriptionRepository,
 } from '@/src/application/test-helpers/fakes';
+import type {
+  GetMissedQuestionsInput,
+  GetMissedQuestionsOutput,
+} from '@/src/application/use-cases';
 import { CheckEntitlementUseCase } from '@/src/application/use-cases/check-entitlement';
-import type { Attempt, Question, User } from '@/src/domain/entities';
-import {
-  createAttempt,
-  createQuestion,
-  createSubscription,
-  createUser,
-} from '@/src/domain/test-helpers';
+import type { User } from '@/src/domain/entities';
+import { createSubscription, createUser } from '@/src/domain/test-helpers';
 import { getMissedQuestions } from './review-controller';
 
-class FakeLogger implements Logger {
-  readonly warnCalls: Array<{ context: Record<string, unknown>; msg: string }> =
-    [];
+class FakeGetMissedQuestionsUseCase {
+  readonly inputs: GetMissedQuestionsInput[] = [];
 
-  debug(_context: Record<string, unknown>, _msg: string): void {}
+  constructor(
+    private readonly output: GetMissedQuestionsOutput,
+    private readonly toThrow?: unknown,
+  ) {}
 
-  info(_context: Record<string, unknown>, _msg: string): void {}
-
-  warn(context: Record<string, unknown>, msg: string): void {
-    this.warnCalls.push({ context, msg });
+  async execute(
+    input: GetMissedQuestionsInput,
+  ): Promise<GetMissedQuestionsOutput> {
+    this.inputs.push(input);
+    if (this.toThrow) throw this.toThrow;
+    return this.output;
   }
-
-  error(_context: Record<string, unknown>, _msg: string): void {}
 }
 
 function createDeps(overrides?: {
   user?: User | null;
   isEntitled?: boolean;
-  attempts?: readonly Attempt[];
-  questions?: readonly Question[];
-  logger?: Logger;
+  useCaseOutput?: GetMissedQuestionsOutput;
+  useCaseThrows?: unknown;
 }) {
   const user =
     overrides?.user === undefined
@@ -61,12 +59,15 @@ function createDeps(overrides?: {
     subscriptionRepository,
   );
 
+  const getMissedQuestionsUseCase = new FakeGetMissedQuestionsUseCase(
+    overrides?.useCaseOutput ?? { rows: [], limit: 10, offset: 0 },
+    overrides?.useCaseThrows,
+  );
+
   return {
     authGateway,
     checkEntitlementUseCase,
-    attemptRepository: new FakeAttemptRepository(overrides?.attempts ?? []),
-    questionRepository: new FakeQuestionRepository(overrides?.questions ?? []),
-    logger: overrides?.logger ?? new FakeLogger(),
+    getMissedQuestionsUseCase,
   };
 }
 
@@ -84,6 +85,7 @@ describe('review-controller', () => {
         ok: false,
         error: { code: 'VALIDATION_ERROR' },
       });
+      expect(deps.getMissedQuestionsUseCase.inputs).toEqual([]);
     });
 
     it('returns UNAUTHENTICATED when unauthenticated', async () => {
@@ -98,13 +100,11 @@ describe('review-controller', () => {
         ok: false,
         error: { code: 'UNAUTHENTICATED' },
       });
+      expect(deps.getMissedQuestionsUseCase.inputs).toEqual([]);
     });
 
     it('returns UNSUBSCRIBED when not entitled', async () => {
       const deps = createDeps({ isEntitled: false });
-      deps.attemptRepository.listMissedQuestionsByUserId = async () => {
-        throw new Error('AttemptRepository should not be called');
-      };
 
       const result = await getMissedQuestions(
         { limit: 10, offset: 0 },
@@ -115,59 +115,12 @@ describe('review-controller', () => {
         ok: false,
         error: { code: 'UNSUBSCRIBED' },
       });
+      expect(deps.getMissedQuestionsUseCase.inputs).toEqual([]);
     });
 
-    it('returns empty rows when there are no missed questions', async () => {
-      const deps = createDeps({ attempts: [], questions: [] });
-
-      const result = await getMissedQuestions(
-        { limit: 10, offset: 0 },
-        deps as never,
-      );
-
-      expect(result).toEqual({
-        ok: true,
-        data: {
-          rows: [],
-          limit: 10,
-          offset: 0,
-        },
-      });
-    });
-
-    it('returns missed questions based on most recent attempt only', async () => {
+    it('returns ok result from the use case', async () => {
       const deps = createDeps({
-        attempts: [
-          createAttempt({
-            userId: 'user_1',
-            questionId: 'q1',
-            isCorrect: false,
-            answeredAt: new Date('2026-02-01T12:00:00Z'),
-          }),
-          createAttempt({
-            userId: 'user_1',
-            questionId: 'q1',
-            isCorrect: true,
-            answeredAt: new Date('2026-02-01T11:00:00Z'),
-          }),
-          createAttempt({
-            userId: 'user_1',
-            questionId: 'q2',
-            isCorrect: false,
-            answeredAt: new Date('2026-02-01T10:00:00Z'),
-          }),
-          createAttempt({
-            userId: 'user_1',
-            questionId: 'q3',
-            isCorrect: true,
-            answeredAt: new Date('2026-02-01T09:00:00Z'),
-          }),
-        ],
-        questions: [
-          createQuestion({ id: 'q1', slug: 'q-1', stemMd: 'Stem for q1' }),
-          createQuestion({ id: 'q2', slug: 'q-2', stemMd: 'Stem for q2' }),
-          createQuestion({ id: 'q3', slug: 'q-3', stemMd: 'Stem for q3' }),
-        ],
+        useCaseOutput: { rows: [], limit: 10, offset: 0 },
       });
 
       const result = await getMissedQuestions(
@@ -177,45 +130,34 @@ describe('review-controller', () => {
 
       expect(result).toEqual({
         ok: true,
-        data: {
-          rows: [
-            {
-              isAvailable: true,
-              questionId: 'q1',
-              slug: 'q-1',
-              stemMd: 'Stem for q1',
-              difficulty: 'easy',
-              lastAnsweredAt: '2026-02-01T12:00:00.000Z',
-            },
-            {
-              isAvailable: true,
-              questionId: 'q2',
-              slug: 'q-2',
-              stemMd: 'Stem for q2',
-              difficulty: 'easy',
-              lastAnsweredAt: '2026-02-01T10:00:00.000Z',
-            },
-          ],
-          limit: 10,
-          offset: 0,
-        },
+        data: { rows: [], limit: 10, offset: 0 },
+      });
+      expect(deps.getMissedQuestionsUseCase.inputs).toEqual([
+        { userId: 'user_1', limit: 10, offset: 0 },
+      ]);
+    });
+
+    it('maps ApplicationError from use case via handleError', async () => {
+      const deps = createDeps({
+        useCaseThrows: new ApplicationError('INTERNAL_ERROR', 'boom'),
+      });
+
+      const result = await getMissedQuestions(
+        { limit: 10, offset: 0 },
+        deps as never,
+      );
+
+      expect(result).toEqual({
+        ok: false,
+        error: { code: 'INTERNAL_ERROR', message: 'boom' },
       });
     });
 
     it('loads dependencies from the container when deps are omitted', async () => {
       const deps = createDeps({
-        attempts: [
-          createAttempt({
-            userId: 'user_1',
-            questionId: 'q1',
-            isCorrect: false,
-            answeredAt: new Date('2026-02-01T12:00:00Z'),
-          }),
-        ],
-        questions: [
-          createQuestion({ id: 'q1', slug: 'q-1', stemMd: 'Stem for q1' }),
-        ],
+        useCaseOutput: { rows: [], limit: 10, offset: 0 },
       });
+
       const result = await getMissedQuestions(
         { limit: 10, offset: 0 },
         undefined,
@@ -228,65 +170,8 @@ describe('review-controller', () => {
 
       expect(result).toEqual({
         ok: true,
-        data: {
-          rows: [
-            {
-              isAvailable: true,
-              questionId: 'q1',
-              slug: 'q-1',
-              stemMd: 'Stem for q1',
-              difficulty: 'easy',
-              lastAnsweredAt: '2026-02-01T12:00:00.000Z',
-            },
-          ],
-          limit: 10,
-          offset: 0,
-        },
+        data: { rows: [], limit: 10, offset: 0 },
       });
-    });
-
-    it('logs warning when missed question references missing question', async () => {
-      const orphanedQuestionId = 'q-orphaned';
-      const logger = new FakeLogger();
-
-      const deps = createDeps({
-        attempts: [
-          createAttempt({
-            userId: 'user_1',
-            questionId: orphanedQuestionId,
-            isCorrect: false,
-            answeredAt: new Date('2026-02-01T12:00:00Z'),
-          }),
-        ],
-        questions: [],
-        logger,
-      });
-
-      const result = await getMissedQuestions(
-        { limit: 10, offset: 0 },
-        deps as never,
-      );
-
-      expect(result).toEqual({
-        ok: true,
-        data: {
-          rows: [
-            {
-              isAvailable: false,
-              questionId: orphanedQuestionId,
-              lastAnsweredAt: '2026-02-01T12:00:00.000Z',
-            },
-          ],
-          limit: 10,
-          offset: 0,
-        },
-      });
-      expect(logger.warnCalls).toEqual([
-        {
-          context: { questionId: orphanedQuestionId },
-          msg: 'Missed question references missing question',
-        },
-      ]);
     });
   });
 });

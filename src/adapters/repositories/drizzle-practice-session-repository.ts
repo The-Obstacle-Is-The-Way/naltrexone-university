@@ -8,6 +8,7 @@ import {
 } from '@/src/adapters/shared/validation-limits';
 import { ApplicationError } from '@/src/application/errors';
 import type { PracticeSessionRepository } from '@/src/application/ports/repositories';
+import type { PracticeSession } from '@/src/domain/entities';
 import type { DrizzleDb } from '../shared/database-types';
 
 const questionDifficultySchema = z.enum(['easy', 'medium', 'hard']);
@@ -23,6 +24,9 @@ const practiceSessionParamsSchema = z
   })
   .strict();
 
+type PracticeSessionRow = typeof practiceSessions.$inferSelect;
+type PracticeSessionParams = z.infer<typeof practiceSessionParamsSchema>;
+
 export class DrizzlePracticeSessionRepository
   implements PracticeSessionRepository
 {
@@ -31,18 +35,14 @@ export class DrizzlePracticeSessionRepository
     private readonly now: () => Date = () => new Date(),
   ) {}
 
-  async findByIdAndUserId(id: string, userId: string) {
-    const row = await this.db.query.practiceSessions.findFirst({
-      where: and(
-        eq(practiceSessions.id, id),
-        eq(practiceSessions.userId, userId),
-      ),
-    });
+  private parseParams(paramsJson: unknown): PracticeSessionParams {
+    return practiceSessionParamsSchema.parse(paramsJson);
+  }
 
-    if (!row) return null;
-
-    const params = practiceSessionParamsSchema.parse(row.paramsJson);
-
+  private toDomain(
+    row: PracticeSessionRow,
+    params: PracticeSessionParams,
+  ): PracticeSession {
     return {
       id: row.id,
       userId: row.userId,
@@ -55,12 +55,26 @@ export class DrizzlePracticeSessionRepository
     };
   }
 
+  async findByIdAndUserId(id: string, userId: string) {
+    const row = await this.db.query.practiceSessions.findFirst({
+      where: and(
+        eq(practiceSessions.id, id),
+        eq(practiceSessions.userId, userId),
+      ),
+    });
+
+    if (!row) return null;
+
+    const params = this.parseParams(row.paramsJson);
+    return this.toDomain(row, params);
+  }
+
   async create(input: {
     userId: string;
     mode: 'tutor' | 'exam';
     paramsJson: unknown;
   }) {
-    const params = practiceSessionParamsSchema.parse(input.paramsJson);
+    const params = this.parseParams(input.paramsJson);
 
     const [row] = await this.db
       .insert(practiceSessions)
@@ -78,16 +92,7 @@ export class DrizzlePracticeSessionRepository
       );
     }
 
-    return {
-      id: row.id,
-      userId: row.userId,
-      mode: row.mode,
-      questionIds: params.questionIds,
-      tagFilters: params.tagSlugs,
-      difficultyFilters: params.difficulties,
-      startedAt: row.startedAt,
-      endedAt: row.endedAt ?? null,
-    };
+    return this.toDomain(row, params);
   }
 
   async end(id: string, userId: string) {

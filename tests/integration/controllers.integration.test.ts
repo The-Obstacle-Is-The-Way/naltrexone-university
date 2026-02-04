@@ -29,7 +29,9 @@ import {
   FakeLogger,
   FakePaymentGateway,
 } from '@/src/application/test-helpers/fakes';
+import { GetMissedQuestionsUseCase } from '@/src/application/use-cases/get-missed-questions';
 import { GetNextQuestionUseCase } from '@/src/application/use-cases/get-next-question';
+import { GetUserStatsUseCase } from '@/src/application/use-cases/get-user-stats';
 import { SubmitAnswerUseCase } from '@/src/application/use-cases/submit-answer';
 
 const databaseUrl = process.env.DATABASE_URL;
@@ -383,10 +385,12 @@ describe('stats controller (integration)', () => {
         checkEntitlementUseCase: {
           execute: async () => ({ isEntitled: true }),
         },
-        attemptRepository: new DrizzleAttemptRepository(db),
-        questionRepository: new DrizzleQuestionRepository(db),
-        now: () => now,
-        logger: new FakeLogger(),
+        getUserStatsUseCase: new GetUserStatsUseCase(
+          new DrizzleAttemptRepository(db),
+          new DrizzleQuestionRepository(db),
+          new FakeLogger(),
+          () => now,
+        ),
       },
     );
 
@@ -491,9 +495,11 @@ describe('review controller (integration)', () => {
       checkEntitlementUseCase: {
         execute: async () => ({ isEntitled: true }),
       },
-      attemptRepository: new DrizzleAttemptRepository(db),
-      questionRepository: new DrizzleQuestionRepository(db),
-      logger,
+      getMissedQuestionsUseCase: new GetMissedQuestionsUseCase(
+        new DrizzleAttemptRepository(db),
+        new DrizzleQuestionRepository(db),
+        logger,
+      ),
     };
 
     const first = await getMissedQuestions({ limit: 10, offset: 0 }, deps);

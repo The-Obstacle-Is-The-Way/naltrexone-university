@@ -21,16 +21,22 @@ expect(html).toContain('Expected text');
 
 ### Why:
 - `@testing-library/react` has a [known bug](https://github.com/testing-library/react-testing-library/issues/1392) with React 19 + Vitest — **no fix coming**
-- `vitest-browser-react` has the **same bug** — it's not a replacement
 - Git hooks and CI load production builds where `act()` is undefined
 - `renderToStaticMarkup` is a stable first-party React API that works everywhere
 
 ### DO NOT USE for component tests:
 - `@testing-library/react` — broken, zombie maintenance
-- `vitest-browser-react` — intended successor, but has act() bug with suspense (use when fixed)
 - `react-test-renderer` — deprecated in React 19
 
 ### Full details: `docs/dev/react-vitest-testing.md`
+
+### Interactive UI tests (Browser Mode)
+
+For click/state/effect tests, use Vitest Browser Mode + `vitest-browser-react`:
+
+- File naming: `*.browser.spec.tsx`
+- Command: `pnpm test:browser`
+- Config: `vitest.browser.config.ts`
 
 ---
 
@@ -147,6 +153,7 @@ pnpm typecheck              # TypeScript type checking
 # Testing
 pnpm test                   # Unit tests (Vitest, watch mode)
 pnpm test --run             # Unit tests (single run, CI-style)
+pnpm test:browser           # Interactive component tests (Vitest Browser Mode)
 pnpm test:integration       # Integration tests (uses .env.test, requires local DB)
 pnpm test:e2e               # E2E tests (Playwright)
 

@@ -1,6 +1,6 @@
 # React 19 + Vitest Testing Guide
 
-**Last Updated:** 2026-02-01 
+**Last Updated:** 2026-02-04
 
 This document exists because we got burned. Every claim is validated against official sources.
 
@@ -105,41 +105,34 @@ Every `.test.tsx` file must start with:
 
 ## When You Need Interactive Tests
 
-**TL;DR: There is no good solution right now. This is ecosystem debt, not our problem to solve.**
+### Preferred: Vitest Browser Mode + `vitest-browser-react`
 
-### Option 1: `conditions: ['development']` (Hack)
+For unit-level **interactive** UI tests (clicks, form input, state changes), use Vitest Browser Mode (Chromium via Playwright) with `vitest-browser-react`.
 
-Add this to `vitest.config.ts`:
+This repo is configured for it:
 
-```typescript
-resolve: {
-  conditions: ['development'],  // Forces dev build of react-dom
-  alias: {
-    '@': path.resolve(__dirname, './'),
-  },
-},
+- Config: `vitest.browser.config.ts`
+- Setup: `vitest.browser.setup.ts`
+- Script: `pnpm test:browser`
+- Naming convention: `*.browser.spec.tsx` (kept separate from render-output `.test.tsx` files)
+
+Example:
+
+```tsx
+import { render } from 'vitest-browser-react';
+import { expect, test, vi } from 'vitest';
+
+test('fires onClick when clicked', async () => {
+  const onClick = vi.fn();
+  const screen = await render(<button onClick={onClick}>Click</button>);
+  await screen.getByRole('button', { name: 'Click' }).click();
+  expect(onClick).toHaveBeenCalledTimes(1);
+});
 ```
 
-This forces Vitest to load the **development** build of `react-dom`, which has a working `act()` export. **This is a hack, not a real fix.** It may break in future Vitest/React versions.
+### Alternative: Playwright E2E
 
-### Option 2: vitest-browser-react (Intended Successor — Use When Ready)
-
-[vitest-browser-react](https://github.com/vitest-community/vitest-browser-react) **IS the intended modern successor** to @testing-library/react. Kent C. Dodds (Testing Library creator) endorses it.
-
-**What works:** Simple interactive tests (click button, check result, fill form).
-
-**What's broken:** Components using React 19's `use()` hook with suspense don't resolve properly. This is a known issue that may be fixed by the time you need interactive tests.
-
-**When to use it:**
-- You need to test button clicks, form inputs, state changes
-- Your components don't use React 19 `use()` hook with suspense
-- Or the bug has been fixed (check the GitHub issues)
-
-**Current status (2026-02):** Has act() issues with suspense. Monitor [vitest-browser-react issues](https://github.com/vitest-community/vitest-browser-react/issues) for fixes.
-
-### Option 3: Wait (Recommended)
-
-Our `renderToStaticMarkup` approach handles render-output tests. For interactive tests, **wait for the ecosystem to fix itself**. When a real solution emerges, migrating 9 test files is trivial.
+For full user journeys (auth, Stripe checkout, navigation), prefer Playwright (`pnpm test:e2e`). E2E tests are slower but validate real integrations end-to-end.
 
 ---
 
@@ -151,11 +144,11 @@ Our `renderToStaticMarkup` approach handles render-output tests. For interactive
 - 63 open issues, 14 open PRs, core bugs sitting for almost a year
 - No timeline for fixes, no assigned developers
 
-**vitest-browser-react is not ready:**
-- Same act() bug in different packaging
-- React 19 suspense issues unresolved
+**Our stance (2026-02-04):**
+- Avoid `@testing-library/react` in this repo (Vitest + React 19 + production resolution issues in hooks/CI).
+- Use `vitest-browser-react` **only in Browser Mode** (`pnpm test:browser`) for interactive tests.
 
-**This is not your technical debt. This is ecosystem debt.** Professional teams are routing around the problem with workarounds like ours. You're not doing anything wrong.
+The goal is pragmatic stability: keep CI green, and still have a path to verify user interactions.
 
 ---
 
@@ -175,7 +168,7 @@ From [react.dev](https://react.dev/warnings/react-test-renderer):
 >
 > react-test-renderer is deprecated and no longer maintained. It will be removed in a future version.
 
-The React team recommends migrating to `@testing-library/react` — which is what we'll do once the Vitest compatibility is fixed upstream.
+The React team recommends migrating to `@testing-library/react`. In this repo we route around the Vitest compatibility issue by using render-only tests for `.test.tsx` and Browser Mode for interactions.
 
 ---
 
@@ -218,7 +211,7 @@ vi.mock('./user-repository');
 - [ ] Assert on HTML content: `expect(html).toContain('text')`
 - [ ] Use fakes for DI, not vi.mock() for our code
 - [ ] **Do NOT use @testing-library/react** — zombie maintenance, no fix coming
-- [ ] **vitest-browser-react** — use for interactive tests when suspense bug is fixed (see above)
+- [ ] For interactive tests: create `*.browser.spec.tsx` and run `pnpm test:browser`
 
 ---
 
@@ -231,6 +224,7 @@ vi.mock('./user-repository');
 | 2026-02-01 | Standardized on renderToStaticMarkup for render-output tests |
 | 2026-02-01 | Validated all claims against official sources |
 | 2026-02-01 | Confirmed vitest-browser-react has same act() bug — not a fix |
+| 2026-02-04 | Added Vitest Browser Mode + vitest-browser-react (`pnpm test:browser`) |
 | 2026-02-01 | Documented ecosystem debt reality (Testing Library in zombie state) |
 
 ---

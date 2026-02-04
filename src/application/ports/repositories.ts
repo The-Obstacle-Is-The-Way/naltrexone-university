@@ -61,15 +61,22 @@ export type MissedQuestionAttempt = {
   answeredAt: Date;
 };
 
-export interface AttemptRepository {
+export interface AttemptWriter {
   insert(input: AttemptInsertInput): Promise<Attempt>;
+}
 
+export interface AttemptHistoryReader {
   findByUserId(userId: string, page: PageOptions): Promise<readonly Attempt[]>;
+}
+
+export interface AttemptSessionReader {
   findBySessionId(
     sessionId: string,
     userId: string,
   ): Promise<readonly Attempt[]>;
+}
 
+export interface AttemptStatsReader {
   countByUserId(userId: string): Promise<number>;
   countCorrectByUserId(userId: string): Promise<number>;
 
@@ -89,7 +96,9 @@ export interface AttemptRepository {
     userId: string,
     since: Date,
   ): Promise<readonly Date[]>;
+}
 
+export interface AttemptMissedQuestionsReader {
   /**
    * Paginated missed question IDs based on the user's most recent attempt
    * per question (only included when the most recent attempt is incorrect).
@@ -99,7 +108,9 @@ export interface AttemptRepository {
     limit: number,
     offset: number,
   ): Promise<readonly MissedQuestionAttempt[]>;
+}
 
+export interface AttemptMostRecentAnsweredAtReader {
   /**
    * For each question id, return the most recent answeredAt (max) for this user.
    * Missing entries imply "never attempted".
@@ -109,6 +120,14 @@ export interface AttemptRepository {
     questionIds: readonly string[],
   ): Promise<readonly AttemptMostRecentAnsweredAt[]>;
 }
+
+export interface AttemptRepository
+  extends AttemptWriter,
+    AttemptHistoryReader,
+    AttemptSessionReader,
+    AttemptStatsReader,
+    AttemptMissedQuestionsReader,
+    AttemptMostRecentAnsweredAtReader {}
 
 export interface PracticeSessionRepository {
   findByIdAndUserId(

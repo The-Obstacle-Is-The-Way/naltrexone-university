@@ -41,8 +41,24 @@ describe('Providers', () => {
     });
     vi.doMock('next/dynamic', () => ({
       default: () =>
-        function MockClerkProvider({ children }: { children: ReactNode }) {
-          return <div data-testid="clerk-provider">{children}</div>;
+        function MockClerkProvider({
+          children,
+          signInFallbackRedirectUrl,
+          signUpFallbackRedirectUrl,
+        }: {
+          children: ReactNode;
+          signInFallbackRedirectUrl?: string;
+          signUpFallbackRedirectUrl?: string;
+        }) {
+          return (
+            <div
+              data-testid="clerk-provider"
+              data-sign-in-fallback={signInFallbackRedirectUrl}
+              data-sign-up-fallback={signUpFallbackRedirectUrl}
+            >
+              {children}
+            </div>
+          );
         },
     }));
 
@@ -56,5 +72,7 @@ describe('Providers', () => {
 
     expect(html).toContain('data-testid="clerk-provider"');
     expect(html).toContain('child');
+    expect(html).toContain('data-sign-in-fallback="/app/dashboard"');
+    expect(html).toContain('data-sign-up-fallback="/app/dashboard"');
   });
 });

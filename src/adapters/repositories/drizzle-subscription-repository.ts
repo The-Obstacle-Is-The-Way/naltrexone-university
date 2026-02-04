@@ -5,6 +5,7 @@ import type {
   SubscriptionRepository,
   SubscriptionUpsertInput,
 } from '@/src/application/ports/repositories';
+import type { Subscription } from '@/src/domain/entities';
 import {
   getStripePriceId,
   getSubscriptionPlanFromPriceId,
@@ -13,6 +14,8 @@ import {
 import type { DrizzleDb } from '../shared/database-types';
 import { isPostgresUniqueViolation } from './postgres-errors';
 
+type StripeSubscriptionRow = typeof stripeSubscriptions.$inferSelect;
+
 export class DrizzleSubscriptionRepository implements SubscriptionRepository {
   constructor(
     private readonly db: DrizzleDb,
@@ -20,13 +23,7 @@ export class DrizzleSubscriptionRepository implements SubscriptionRepository {
     private readonly now: () => Date = () => new Date(),
   ) {}
 
-  async findByUserId(userId: string) {
-    const row = await this.db.query.stripeSubscriptions.findFirst({
-      where: eq(stripeSubscriptions.userId, userId),
-    });
-
-    if (!row) return null;
-
+  private toDomain(row: StripeSubscriptionRow): Subscription {
     const plan = getSubscriptionPlanFromPriceId(row.priceId, this.priceIds);
     if (!plan) {
       throw new ApplicationError(
@@ -47,31 +44,20 @@ export class DrizzleSubscriptionRepository implements SubscriptionRepository {
     };
   }
 
+  async findByUserId(userId: string) {
+    const row = await this.db.query.stripeSubscriptions.findFirst({
+      where: eq(stripeSubscriptions.userId, userId),
+    });
+
+    return row ? this.toDomain(row) : null;
+  }
+
   async findByStripeSubscriptionId(stripeSubscriptionId: string) {
     const row = await this.db.query.stripeSubscriptions.findFirst({
       where: eq(stripeSubscriptions.stripeSubscriptionId, stripeSubscriptionId),
     });
 
-    if (!row) return null;
-
-    const plan = getSubscriptionPlanFromPriceId(row.priceId, this.priceIds);
-    if (!plan) {
-      throw new ApplicationError(
-        'INTERNAL_ERROR',
-        `Unknown Stripe price id "${row.priceId}" for subscription ${row.id}`,
-      );
-    }
-
-    return {
-      id: row.id,
-      userId: row.userId,
-      plan,
-      status: row.status,
-      currentPeriodEnd: row.currentPeriodEnd,
-      cancelAtPeriodEnd: row.cancelAtPeriodEnd,
-      createdAt: row.createdAt,
-      updatedAt: row.updatedAt,
-    };
+    return row ? this.toDomain(row) : null;
   }
 
   async upsert(input: SubscriptionUpsertInput): Promise<void> {

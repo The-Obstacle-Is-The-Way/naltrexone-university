@@ -45,8 +45,16 @@ import type {
 } from '@/src/application/ports/repositories';
 import {
   CheckEntitlementUseCase,
+  CreateCheckoutSessionUseCase,
+  CreatePortalSessionUseCase,
+  EndPracticeSessionUseCase,
+  GetBookmarksUseCase,
+  GetMissedQuestionsUseCase,
   GetNextQuestionUseCase,
+  GetUserStatsUseCase,
+  StartPracticeSessionUseCase,
   SubmitAnswerUseCase,
+  ToggleBookmarkUseCase,
 } from '@/src/application/use-cases';
 import { db } from './db';
 import { env } from './env';
@@ -92,8 +100,16 @@ export type GatewayFactories = {
 
 export type UseCaseFactories = {
   createCheckEntitlementUseCase: () => CheckEntitlementUseCase;
+  createCheckoutSessionUseCase: () => CreateCheckoutSessionUseCase;
+  createPortalSessionUseCase: () => CreatePortalSessionUseCase;
+  createEndPracticeSessionUseCase: () => EndPracticeSessionUseCase;
   createGetNextQuestionUseCase: () => GetNextQuestionUseCase;
+  createGetBookmarksUseCase: () => GetBookmarksUseCase;
+  createGetMissedQuestionsUseCase: () => GetMissedQuestionsUseCase;
+  createGetUserStatsUseCase: () => GetUserStatsUseCase;
+  createStartPracticeSessionUseCase: () => StartPracticeSessionUseCase;
   createSubmitAnswerUseCase: () => SubmitAnswerUseCase;
+  createToggleBookmarkUseCase: () => ToggleBookmarkUseCase;
 };
 
 export type ControllerFactories = {
@@ -214,17 +230,64 @@ export function createContainer(overrides: ContainerOverrides = {}) {
         repositories.createSubscriptionRepository(),
         primitives.now,
       ),
+    createCheckoutSessionUseCase: () =>
+      new CreateCheckoutSessionUseCase(
+        repositories.createStripeCustomerRepository(),
+        repositories.createSubscriptionRepository(),
+        gateways.createPaymentGateway(),
+        primitives.now,
+      ),
+    createPortalSessionUseCase: () =>
+      new CreatePortalSessionUseCase(
+        repositories.createStripeCustomerRepository(),
+        gateways.createPaymentGateway(),
+      ),
+    createEndPracticeSessionUseCase: () =>
+      new EndPracticeSessionUseCase(
+        repositories.createPracticeSessionRepository(),
+        repositories.createAttemptRepository(),
+      ),
     createGetNextQuestionUseCase: () =>
       new GetNextQuestionUseCase(
         repositories.createQuestionRepository(),
         repositories.createAttemptRepository(),
         repositories.createPracticeSessionRepository(),
       ),
+    createGetBookmarksUseCase: () =>
+      new GetBookmarksUseCase(
+        repositories.createBookmarkRepository(),
+        repositories.createQuestionRepository(),
+        primitives.logger,
+      ),
+    createGetMissedQuestionsUseCase: () =>
+      new GetMissedQuestionsUseCase(
+        repositories.createAttemptRepository(),
+        repositories.createQuestionRepository(),
+        primitives.logger,
+      ),
+    createGetUserStatsUseCase: () =>
+      new GetUserStatsUseCase(
+        repositories.createAttemptRepository(),
+        repositories.createQuestionRepository(),
+        primitives.logger,
+        primitives.now,
+      ),
+    createStartPracticeSessionUseCase: () =>
+      new StartPracticeSessionUseCase(
+        repositories.createQuestionRepository(),
+        repositories.createPracticeSessionRepository(),
+        primitives.now,
+      ),
     createSubmitAnswerUseCase: () =>
       new SubmitAnswerUseCase(
         repositories.createQuestionRepository(),
         repositories.createAttemptRepository(),
         repositories.createPracticeSessionRepository(),
+      ),
+    createToggleBookmarkUseCase: () =>
+      new ToggleBookmarkUseCase(
+        repositories.createBookmarkRepository(),
+        repositories.createQuestionRepository(),
       ),
   };
 
@@ -261,9 +324,8 @@ export function createContainer(overrides: ContainerOverrides = {}) {
     }),
     createBillingControllerDeps: () => ({
       authGateway: gateways.createAuthGateway(),
-      stripeCustomerRepository: repositories.createStripeCustomerRepository(),
-      subscriptionRepository: repositories.createSubscriptionRepository(),
-      paymentGateway: gateways.createPaymentGateway(),
+      createCheckoutSessionUseCase: useCases.createCheckoutSessionUseCase(),
+      createPortalSessionUseCase: useCases.createPortalSessionUseCase(),
       idempotencyKeyRepository: repositories.createIdempotencyKeyRepository(),
       rateLimiter: gateways.createRateLimiter(),
       getClerkUserId: async () => (await getClerkUser())?.id ?? null,
@@ -273,34 +335,27 @@ export function createContainer(overrides: ContainerOverrides = {}) {
     createBookmarkControllerDeps: () => ({
       authGateway: gateways.createAuthGateway(),
       checkEntitlementUseCase: useCases.createCheckEntitlementUseCase(),
-      bookmarkRepository: repositories.createBookmarkRepository(),
-      questionRepository: repositories.createQuestionRepository(),
-      logger: primitives.logger,
+      toggleBookmarkUseCase: useCases.createToggleBookmarkUseCase(),
+      getBookmarksUseCase: useCases.createGetBookmarksUseCase(),
     }),
     createPracticeControllerDeps: () => ({
       authGateway: gateways.createAuthGateway(),
       rateLimiter: gateways.createRateLimiter(),
       idempotencyKeyRepository: repositories.createIdempotencyKeyRepository(),
       checkEntitlementUseCase: useCases.createCheckEntitlementUseCase(),
-      questionRepository: repositories.createQuestionRepository(),
-      practiceSessionRepository: repositories.createPracticeSessionRepository(),
-      attemptRepository: repositories.createAttemptRepository(),
+      startPracticeSessionUseCase: useCases.createStartPracticeSessionUseCase(),
+      endPracticeSessionUseCase: useCases.createEndPracticeSessionUseCase(),
       now: primitives.now,
     }),
     createReviewControllerDeps: () => ({
       authGateway: gateways.createAuthGateway(),
       checkEntitlementUseCase: useCases.createCheckEntitlementUseCase(),
-      attemptRepository: repositories.createAttemptRepository(),
-      questionRepository: repositories.createQuestionRepository(),
-      logger: primitives.logger,
+      getMissedQuestionsUseCase: useCases.createGetMissedQuestionsUseCase(),
     }),
     createStatsControllerDeps: () => ({
       authGateway: gateways.createAuthGateway(),
       checkEntitlementUseCase: useCases.createCheckEntitlementUseCase(),
-      attemptRepository: repositories.createAttemptRepository(),
-      questionRepository: repositories.createQuestionRepository(),
-      now: primitives.now,
-      logger: primitives.logger,
+      getUserStatsUseCase: useCases.createGetUserStatsUseCase(),
     }),
     createTagControllerDeps: () => ({
       authGateway: gateways.createAuthGateway(),
