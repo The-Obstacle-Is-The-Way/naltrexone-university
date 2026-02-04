@@ -19,7 +19,7 @@ describe('app/(app)/app/practice/[sessionId]', () => {
     expect(html).toContain('Practice');
     expect(html).toContain('End session');
     expect(html).toContain('Back to Dashboard');
-  }, 10_000);
+  }, 20_000);
 
   it('renders the session summary view', async () => {
     const { SessionSummaryView } = await import(

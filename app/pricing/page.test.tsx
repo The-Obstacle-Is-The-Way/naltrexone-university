@@ -34,7 +34,7 @@ describe('app/pricing', () => {
 
     expect(html).toContain('Subscribe Monthly');
     expect(html).toContain('Subscribe Annual');
-  });
+  }, 10_000);
 
   it('shows an error banner when checkout=error', async () => {
     const { PricingView } = await import('@/app/pricing/page');

@@ -4,10 +4,10 @@ import type {
   ClerkWebhookDeps,
   ClerkWebhookEvent,
 } from '@/src/adapters/controllers/clerk-webhook-controller';
-import type { Logger } from '@/src/adapters/shared/logger';
 import { CLERK_WEBHOOK_RATE_LIMIT } from '@/src/adapters/shared/rate-limits';
 import { isApplicationError } from '@/src/application/errors';
 import type { RateLimiter } from '@/src/application/ports/gateways';
+import type { Logger } from '@/src/application/ports/logger';
 import type {
   StripeCustomerRepository,
   UserRepository,

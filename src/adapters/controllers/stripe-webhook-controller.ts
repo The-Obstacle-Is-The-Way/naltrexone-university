@@ -1,6 +1,6 @@
-import type { Logger } from '@/src/adapters/shared/logger';
 import { isApplicationError } from '@/src/application/errors';
 import type { PaymentGateway } from '@/src/application/ports/gateways';
+import type { Logger } from '@/src/application/ports/logger';
 import type {
   StripeCustomerRepository,
   StripeEventRepository,

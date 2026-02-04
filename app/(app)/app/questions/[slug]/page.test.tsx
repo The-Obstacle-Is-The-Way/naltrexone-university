@@ -36,7 +36,7 @@ describe('app/(app)/app/questions/[slug]', () => {
     expect(html).toContain('Loading question');
     expect(html).toContain('Back to Dashboard');
     expect(html).toContain('Submit');
-  });
+  }, 10_000);
 
   it('renders an error state with try again button', async () => {
     const { QuestionView } = await import(

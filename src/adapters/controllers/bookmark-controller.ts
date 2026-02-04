@@ -2,9 +2,9 @@
 
 import { z } from 'zod';
 import { createDepsResolver, loadAppContainer } from '@/lib/controller-helpers';
-import type { Logger } from '@/src/adapters/shared/logger';
 import { ApplicationError } from '@/src/application/errors';
 import type { AuthGateway } from '@/src/application/ports/gateways';
+import type { Logger } from '@/src/application/ports/logger';
 import type {
   BookmarkRepository,
   QuestionRepository,

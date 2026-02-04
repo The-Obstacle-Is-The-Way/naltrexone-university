@@ -10,13 +10,13 @@ import type {
   PortalSessionOutput,
   WebhookEventResult,
 } from '@/src/application/ports/gateways';
+import type { Logger } from '@/src/application/ports/logger';
 import { isValidSubscriptionStatus } from '@/src/domain/value-objects';
 import {
   getStripePriceId,
   getSubscriptionPlanFromPriceId,
   type StripePriceIds,
 } from '../config/stripe-prices';
-import type { Logger } from '../shared/logger';
 import { isTransientExternalError, retry } from '../shared/retry';
 
 type StripeCheckoutSession = { id: string; url: string | null };
