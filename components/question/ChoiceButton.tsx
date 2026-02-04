@@ -27,7 +27,7 @@ export function ChoiceButton({
       className={cn(
         'w-full rounded-xl border border-border bg-background p-4 text-left shadow-sm transition-colors hover:bg-muted focus-within:border-ring focus-within:ring-ring/50 focus-within:ring-[3px]',
         disabled && 'cursor-not-allowed opacity-60',
-        selected && correctness === null && 'border-orange-500',
+        selected && correctness === null && 'border-zinc-400',
         correctness === 'correct' &&
           'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/20',
         correctness === 'incorrect' &&
@@ -46,7 +46,7 @@ export function ChoiceButton({
         <div
           className={cn(
             'flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-border text-xs font-semibold text-foreground',
-            selected && correctness === null && 'border-orange-500',
+            selected && correctness === null && 'border-zinc-400',
             correctness === 'correct' && 'border-emerald-500 text-emerald-700',
             correctness === 'incorrect' && 'border-red-500 text-red-700',
           )}

@@ -1,13 +1,51 @@
+import { BarChart3, Bookmark, BookOpen, Zap } from 'lucide-react';
 import Link from 'next/link';
 import { AuthNav } from '@/components/auth-nav';
 import { GetStartedCta } from '@/components/get-started-cta';
-import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
+import { MetallicCtaButton } from '@/components/ui/metallic-cta-button';
 
 export type MarketingHomeShellProps = {
   authNav: React.ReactNode;
   primaryCta: React.ReactNode;
 };
+
+const impactStats = [
+  { value: '500+', label: 'Board-Style Questions' },
+  { value: '2', label: 'Study Modes' },
+  { value: 'Instant', label: 'Explanations' },
+  { value: '100%', label: 'Mobile Responsive' },
+];
+
+const features = [
+  {
+    icon: BookOpen,
+    title: 'High-Yield Explanations',
+    description:
+      'Learn the "why" behind every answer with detailed rationales and references.',
+    wide: true,
+  },
+  {
+    icon: Zap,
+    title: 'Tutor + Exam Modes',
+    description:
+      'Tutor shows feedback immediately. Exam mode simulates real test conditions.',
+    wide: false,
+  },
+  {
+    icon: Bookmark,
+    title: 'Smart Bookmarking',
+    description:
+      'Flag questions for review. Build a personalized study list from your weak areas.',
+    wide: false,
+  },
+  {
+    icon: BarChart3,
+    title: 'Progress Dashboard',
+    description:
+      'Track accuracy, streaks, and trends. See where you need to focus.',
+    wide: true,
+  },
+];
 
 export function MarketingHomeShell({
   authNav,
@@ -15,7 +53,7 @@ export function MarketingHomeShell({
 }: MarketingHomeShellProps) {
   return (
     <div className="min-h-[100dvh] bg-background text-foreground">
-      <header className="border-b border-border bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <header className="border-b border-border bg-background">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:px-8">
           <div className="flex items-center gap-6">
             <Link
@@ -47,68 +85,62 @@ export function MarketingHomeShell({
       </header>
 
       <main>
-        <section className="relative overflow-hidden">
-          <div
-            aria-hidden="true"
-            className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(249,115,22,0.15),transparent_55%)]"
-          />
-          <div className="mx-auto grid max-w-7xl gap-10 px-4 py-20 sm:px-6 lg:grid-cols-12 lg:gap-12 lg:px-8 lg:py-28">
-            <div className="lg:col-span-7">
-              <p className="inline-flex items-center rounded-full border border-border bg-muted px-3 py-1 text-xs font-medium text-muted-foreground">
-                Board prep, built for outcomes
-              </p>
-              <h1 className="mt-6 text-balance text-4xl font-bold tracking-tight sm:text-5xl">
-                Addiction Boards Question Bank
-              </h1>
-              <p className="mt-4 max-w-2xl text-pretty text-lg text-muted-foreground">
-                High-yield questions with detailed explanations for Addiction
-                Psychiatry and Addiction Medicine. Practice with confidence and
-                track your progress.
-              </p>
+        {/* Hero */}
+        <section className="py-20 lg:py-32">
+          <div className="mx-auto max-w-4xl px-4 text-center sm:px-6 lg:px-8">
+            <p className="inline-flex items-center rounded-full border border-zinc-800 bg-zinc-900/80 px-3 py-1 text-xs font-medium text-muted-foreground">
+              Board prep, built for outcomes
+            </p>
+            <h1 className="mt-6 font-display text-5xl font-bold tracking-tight md:text-7xl">
+              <span className="block text-zinc-100">Master Your</span>
+              <span className="bg-gradient-to-r from-zinc-500 via-zinc-300 to-zinc-500 bg-clip-text text-transparent">
+                Board Exams.
+              </span>
+            </h1>
+            <p className="mx-auto mt-6 max-w-2xl text-balance text-lg text-zinc-500 leading-relaxed md:text-xl">
+              High-yield questions with detailed explanations for Addiction
+              Psychiatry and Addiction Medicine. Practice with confidence and
+              track your progress.
+            </p>
 
-              <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">
-                {primaryCta}
-                <Button asChild variant="outline">
-                  <Link href="/pricing">View pricing</Link>
-                </Button>
-              </div>
-
-              <dl className="mt-10 grid max-w-xl grid-cols-2 gap-6 text-sm text-muted-foreground sm:grid-cols-3">
-                <div className="rounded-lg border border-border bg-card px-4 py-3">
-                  <dt className="font-medium text-foreground">Tutor + Exam</dt>
-                  <dd className="mt-1">Study modes</dd>
-                </div>
-                <div className="rounded-lg border border-border bg-card px-4 py-3">
-                  <dt className="font-medium text-foreground">Bookmarks</dt>
-                  <dd className="mt-1">Review misses</dd>
-                </div>
-                <div className="rounded-lg border border-border bg-card px-4 py-3">
-                  <dt className="font-medium text-foreground">Analytics</dt>
-                  <dd className="mt-1">Track progress</dd>
-                </div>
-              </dl>
-            </div>
-
-            <div className="lg:col-span-5">
-              <Card className="relative overflow-hidden border-border bg-card">
-                <div className="p-6">
-                  <h2 className="text-sm font-semibold">What you get</h2>
-                  <ul className="mt-4 space-y-3 text-sm text-muted-foreground">
-                    <li>Board-style multiple-choice questions</li>
-                    <li>Detailed rationales and references</li>
-                    <li>Filter by difficulty and tags</li>
-                    <li>Save and revisit missed questions</li>
-                  </ul>
-                </div>
-              </Card>
+            <div className="mt-10 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
+              {primaryCta}
+              <Link
+                href="/pricing"
+                className="rounded-full border border-zinc-800 bg-zinc-900 px-6 py-3 text-sm font-medium text-zinc-300 hover:bg-zinc-800 transition-colors"
+              >
+                View pricing
+              </Link>
             </div>
           </div>
         </section>
 
-        <section id="features" className="border-t border-border bg-muted/30">
-          <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
+        {/* Impact stats */}
+        <section className="border-t border-border py-16">
+          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              {impactStats.map((stat) => (
+                <div
+                  key={stat.label}
+                  className="rounded-2xl border border-zinc-800/50 bg-zinc-900/50 p-6 text-center animate-fade-in-up"
+                >
+                  <div className="font-display text-3xl font-bold text-foreground md:text-4xl">
+                    {stat.value}
+                  </div>
+                  <div className="mt-2 text-sm text-muted-foreground">
+                    {stat.label}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* Features */}
+        <section id="features" className="border-t border-border py-16">
+          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <div className="max-w-2xl">
-              <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">
+              <h2 className="font-heading text-3xl font-bold tracking-tight md:text-4xl">
                 Everything you need to prep efficiently
               </h2>
               <p className="mt-3 text-muted-foreground">
@@ -117,101 +149,151 @@ export function MarketingHomeShell({
               </p>
             </div>
 
-            <div className="mt-10 grid gap-6 md:grid-cols-3">
-              <Card className="border-border bg-card">
-                <div className="p-6">
-                  <h3 className="font-semibold">High-yield explanations</h3>
-                  <p className="mt-2 text-sm text-muted-foreground">
-                    Learn the “why”, not just the answer.
-                  </p>
-                </div>
-              </Card>
-              <Card className="border-border bg-card">
-                <div className="p-6">
-                  <h3 className="font-semibold">Smart review</h3>
-                  <p className="mt-2 text-sm text-muted-foreground">
-                    Bookmark, revisit, and reinforce weak areas.
-                  </p>
-                </div>
-              </Card>
-              <Card className="border-border bg-card">
-                <div className="p-6">
-                  <h3 className="font-semibold">Progress tracking</h3>
-                  <p className="mt-2 text-sm text-muted-foreground">
-                    See trends and focus where it matters most.
-                  </p>
-                </div>
-              </Card>
-            </div>
-          </div>
-        </section>
-
-        <section className="border-t border-border">
-          <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
-            <div className="grid gap-8 lg:grid-cols-12 lg:items-center">
-              <div className="lg:col-span-7">
-                <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">
-                  Simple pricing
-                </h2>
-                <p className="mt-3 text-muted-foreground">
-                  One subscription unlocks the full question bank and all study
-                  modes.
-                </p>
-              </div>
-              <div className="lg:col-span-5">
-                <Card className="border-border bg-card">
-                  <div className="p-6">
-                    <div className="flex items-baseline justify-between">
-                      <div>
-                        <p className="text-sm font-medium">Monthly</p>
-                        <p className="mt-1 text-3xl font-bold">$29</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-sm font-medium">Annual</p>
-                        <p className="mt-1 text-3xl font-bold">$199</p>
-                      </div>
-                    </div>
-                    <p className="mt-4 text-sm text-muted-foreground">
-                      Cancel anytime. No hidden fees.
+            <div className="mt-10 grid gap-4 md:grid-cols-3">
+              {features.map((feature) => {
+                const Icon = feature.icon;
+                return (
+                  <div
+                    key={feature.title}
+                    className={`rounded-2xl border border-zinc-800/50 bg-zinc-900/50 p-6 transition-all hover:border-zinc-700/50 hover:bg-zinc-900/80${feature.wide ? ' md:col-span-2' : ''}`}
+                  >
+                    <Icon className="h-6 w-6 text-zinc-400" />
+                    <h3 className="mt-4 font-heading font-semibold">
+                      {feature.title}
+                    </h3>
+                    <p className="mt-2 text-sm text-muted-foreground">
+                      {feature.description}
                     </p>
-                    <div className="mt-6">
-                      <Button asChild className="w-full">
-                        <Link href="/pricing">Compare plans</Link>
-                      </Button>
-                    </div>
                   </div>
-                </Card>
-              </div>
+                );
+              })}
             </div>
           </div>
         </section>
 
-        <footer className="border-t border-border bg-muted/30">
-          <div className="mx-auto flex max-w-7xl flex-col gap-6 px-4 py-10 text-sm text-muted-foreground sm:px-6 lg:px-8">
-            <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
-              <p className="font-medium text-foreground">Addiction Boards</p>
-              <div className="flex flex-wrap items-center gap-4">
+        {/* Pricing */}
+        <section className="border-t border-border py-16">
+          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+            <div className="text-center">
+              <h2 className="font-heading text-3xl font-bold tracking-tight md:text-4xl">
+                Simple pricing
+              </h2>
+              <p className="mt-3 text-muted-foreground">
+                One subscription unlocks the full question bank and all study
+                modes.
+              </p>
+            </div>
+
+            <div className="mx-auto mt-10 grid max-w-3xl gap-6 md:grid-cols-2">
+              <div className="rounded-2xl border border-zinc-800 bg-zinc-900/50 p-8">
+                <h3 className="font-heading font-semibold text-foreground">
+                  Pro Monthly
+                </h3>
+                <p className="mt-4 font-display text-4xl font-bold text-foreground">
+                  $29
+                  <span className="text-lg font-normal text-muted-foreground">
+                    /mo
+                  </span>
+                </p>
+                <ul className="mt-6 space-y-3 text-sm text-muted-foreground">
+                  <li>Access to all questions</li>
+                  <li>Detailed explanations</li>
+                  <li>Progress tracking</li>
+                </ul>
                 <Link
                   href="/pricing"
-                  className="rounded-md hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                  className="mt-8 block w-full rounded-full border border-zinc-700 bg-zinc-800 py-3 text-center text-sm font-medium text-zinc-100 hover:bg-zinc-700 transition-colors"
                 >
-                  Pricing
+                  Get Started
                 </Link>
+              </div>
+
+              <div className="rounded-2xl border-2 border-zinc-500 bg-zinc-900/50 p-8">
+                <h3 className="font-heading font-semibold text-foreground">
+                  Pro Annual
+                </h3>
+                <p className="mt-4 font-display text-4xl font-bold text-foreground">
+                  $199
+                  <span className="text-lg font-normal text-muted-foreground">
+                    /yr
+                  </span>
+                </p>
+                <p className="text-sm text-emerald-400">Save $149 per year</p>
+                <ul className="mt-6 space-y-3 text-sm text-muted-foreground">
+                  <li>Everything in Pro Monthly</li>
+                  <li>Best value</li>
+                </ul>
                 <Link
-                  href="/sign-in"
-                  className="rounded-md hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                  href="/pricing"
+                  className="mt-8 block w-full rounded-full bg-zinc-100 py-3 text-center text-sm font-medium text-zinc-900 hover:bg-white transition-colors"
                 >
-                  Sign in
-                </Link>
-                <Link
-                  href="/sign-up"
-                  className="rounded-md hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-                >
-                  Sign up
+                  Get Started
                 </Link>
               </div>
             </div>
-            <p>© Addiction Boards</p>
+          </div>
+        </section>
+
+        {/* CTA */}
+        <section className="border-t border-border py-20">
+          <div className="mx-auto max-w-3xl px-4 text-center sm:px-6 lg:px-8">
+            <h2 className="font-heading text-3xl font-bold tracking-tight md:text-4xl">
+              Ready to start studying?
+            </h2>
+            <p className="mt-4 text-muted-foreground">
+              Join physicians and psychiatrists preparing for addiction boards.
+              Full access, cancel anytime.
+            </p>
+            <div className="mt-8 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
+              <MetallicCtaButton href="/pricing">Get Started</MetallicCtaButton>
+              <Link
+                href="/pricing"
+                className="rounded-full border border-zinc-800 bg-zinc-900 px-6 py-3 text-sm font-medium text-zinc-300 hover:bg-zinc-800 transition-colors"
+              >
+                View Pricing
+              </Link>
+            </div>
+          </div>
+        </section>
+
+        {/* Footer */}
+        <footer className="border-t border-border">
+          <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
+            <div className="grid gap-8 md:grid-cols-3">
+              <div>
+                <p className="font-semibold text-foreground">
+                  Addiction Boards
+                </p>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  Board exam preparation for addiction medicine professionals.
+                </p>
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-foreground">Product</p>
+                <div className="mt-3 flex flex-col gap-2 text-sm text-muted-foreground">
+                  <Link href="#features" className="hover:text-foreground">
+                    Features
+                  </Link>
+                  <Link href="/pricing" className="hover:text-foreground">
+                    Pricing
+                  </Link>
+                </div>
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-foreground">Account</p>
+                <div className="mt-3 flex flex-col gap-2 text-sm text-muted-foreground">
+                  <Link href="/sign-in" className="hover:text-foreground">
+                    Sign in
+                  </Link>
+                  <Link href="/sign-up" className="hover:text-foreground">
+                    Sign up
+                  </Link>
+                </div>
+              </div>
+            </div>
+            <div className="mt-8 border-t border-border pt-8 text-sm text-muted-foreground">
+              <p>&copy; Addiction Boards</p>
+            </div>
           </div>
         </footer>
       </main>

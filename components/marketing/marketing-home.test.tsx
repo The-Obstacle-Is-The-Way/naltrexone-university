@@ -25,6 +25,14 @@ describe('components/marketing/marketing-home', () => {
       expect(html).toContain('Get Started');
       expect(html).toContain('href="/pricing"');
       expect(html).toContain('href="#features"');
+      // Impact stats
+      expect(html).toContain('500+');
+      expect(html).toContain('Board-Style Questions');
+      // CTA section
+      expect(html).toContain('Ready to start studying?');
+      // Hero gradient text
+      expect(html).toContain('Master Your');
+      expect(html).toContain('Board Exams.');
     },
   );
 

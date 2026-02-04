@@ -48,7 +48,7 @@ export async function AuthNav({
         </Link>
         <Link
           href="/sign-in"
-          className="rounded-full bg-orange-600 px-4 py-2 text-sm font-medium text-white hover:bg-orange-700"
+          className="rounded-full bg-zinc-100 px-4 py-2 text-sm font-medium text-zinc-900 hover:bg-white transition-colors"
         >
           Sign In
         </Link>
@@ -70,7 +70,7 @@ export async function AuthNav({
         </Link>
         <Link
           href="/sign-in"
-          className="rounded-full bg-orange-600 px-4 py-2 text-sm font-medium text-white hover:bg-orange-700"
+          className="rounded-full bg-zinc-100 px-4 py-2 text-sm font-medium text-zinc-900 hover:bg-white transition-colors"
         >
           Sign In
         </Link>
