@@ -217,6 +217,9 @@ describe('DrizzleUserRepository', () => {
     });
 
     it('throws INTERNAL_ERROR when update returns no rows', async () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date('2026-02-01T01:00:00Z'));
+
       const db = createDbMock();
       const existing = {
         id: 'user_1',

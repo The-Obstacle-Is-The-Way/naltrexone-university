@@ -1,12 +1,12 @@
 // @vitest-environment jsdom
 import { describe, expect, it } from 'vitest';
-import { createQuestion } from '@/src/domain/test-helpers';
-import { ApplicationError } from '../errors';
+import { ApplicationError } from '@/src/application/errors';
 import {
   FakeBookmarkRepository,
   FakeQuestionRepository,
-} from '../test-helpers/fakes';
-import { ToggleBookmarkUseCase } from './toggle-bookmark';
+} from '@/src/application/test-helpers/fakes';
+import { ToggleBookmarkUseCase } from '@/src/application/use-cases/toggle-bookmark';
+import { createQuestion } from '@/src/domain/test-helpers';
 
 describe('ToggleBookmarkUseCase', () => {
   it('returns bookmarked=false when an existing bookmark is removed', async () => {

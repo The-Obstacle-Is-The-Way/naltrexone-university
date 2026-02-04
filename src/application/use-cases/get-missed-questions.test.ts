@@ -1,11 +1,11 @@
 // @vitest-environment jsdom
 import { describe, expect, it } from 'vitest';
-import { createAttempt, createQuestion } from '@/src/domain/test-helpers';
 import {
   FakeAttemptRepository,
   FakeLogger,
   FakeQuestionRepository,
-} from '../test-helpers/fakes';
+} from '@/src/application/test-helpers/fakes';
+import { createAttempt, createQuestion } from '@/src/domain/test-helpers';
 import { GetMissedQuestionsUseCase } from './get-missed-questions';
 
 describe('GetMissedQuestionsUseCase', () => {
