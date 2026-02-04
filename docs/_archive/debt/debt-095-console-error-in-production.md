@@ -1,8 +1,9 @@
 # DEBT-095: console.error Usage in Production Code (Bypasses Structured Logger)
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P3
 **Date:** 2026-02-04
+**Resolved:** 2026-02-04
 
 ---
 
@@ -12,10 +13,8 @@ Some production code uses `console.error(...)` directly rather than the structur
 
 Evidence:
 
-- `lib/env.ts:79-85` logs validation failures with `console.error(...)` before throwing.
-- `lib/env.ts:109-112` logs missing Clerk keys with `console.error(...)` before throwing.
-- `lib/env.ts:144-147` logs Clerk key consistency validation errors with `console.error(...)` before throwing.
-- `app/api/health/route.ts:15-17` logs DB health-check failure via `console.error(...)`.
+- `lib/env.ts` logs validation failures with `console.error(...)` before throwing.
+- `app/api/health/route.ts` logged DB health-check failure via `console.error(...)`.
 
 ## Impact
 
@@ -25,11 +24,11 @@ Evidence:
 
 ## Resolution
 
-### Option A: Replace with structured logger where safe (Recommended for non-bootstrap code)
+### Replace with structured logger where safe (Non-bootstrap code)
 
-- For request/route code like `app/api/health/route.ts`, use the structured logger (`lib/logger.ts`) or DI logger.
+- `app/api/health/route.ts` now logs failures via the structured logger (with an injected handler to keep it unit-testable).
 
-### Option B: Keep `console.error` in bootstrap code but document why (Recommended for env validation)
+### Keep `console.error` in bootstrap code but document why (Env validation)
 
 For `lib/env.ts`, using `console.error` may be intentional because env validation happens very early at import-time, before DI/container initialization. If we keep it:
 
@@ -41,6 +40,7 @@ For `lib/env.ts`, using `console.error` may be intentional because env validatio
 - `rg "console\\.error" lib app` is limited to:
   - error boundaries (acceptable)
   - explicitly documented bootstrap/edge cases
+  - client-only fallback logging (acceptable; browser-side)
 - `pnpm test --run` remains green.
 
 ## Related
@@ -48,4 +48,3 @@ For `lib/env.ts`, using `console.error` may be intentional because env validatio
 - `lib/logger.ts` (pino logger + redaction config)
 - `lib/env.ts`
 - `app/api/health/route.ts`
-
