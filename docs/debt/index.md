@@ -22,8 +22,9 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 | [DEBT-091](debt-091-attempt-repository-isp-violation.md) | AttemptRepository is “Fat” (Interface Segregation Pressure) | Open | P3 | 2026-02-04 |
 | [DEBT-092](debt-092-stripe-payment-gateway-god-class.md) | StripePaymentGateway is a God Class (SRP + Separation Pressure) | Open | P2 | 2026-02-04 |
 | [DEBT-096](debt-096-repository-mapper-duplication.md) | Repository Row→Domain Mapping Duplicated (DRY Violation) | Open | P3 | 2026-02-04 |
+| [DEBT-097](debt-097-v0-premium-ui-components-not-integrated.md) | V0 Premium Landing Page Components Deleted Instead of Integrated | Open | P2 | 2026-02-04 |
 
-**Next Debt ID:** DEBT-097
+**Next Debt ID:** DEBT-098
 
 ## Archived Debt
 

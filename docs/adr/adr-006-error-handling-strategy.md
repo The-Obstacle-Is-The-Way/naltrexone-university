@@ -30,32 +30,32 @@ We adopt a **layered error handling strategy**:
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐
-│                          FRAMEWORKS (Next.js)                            │
-│                                                                          │
+│                          FRAMEWORKS (Next.js)                           │
+│                                                                         │
 │   Server Actions → ActionResult<T> (discriminated union)                │
 │   Route Handlers → HTTP status codes + JSON body                        │
 │   React Components → try/catch at boundaries + error.tsx                │
-│                                                                          │
+│                                                                         │
 │   ┌─────────────────────────────────────────────────────────────────┐   │
-│   │                     ADAPTERS (Gateways/Repos)                    │   │
-│   │                                                                  │   │
+│   │                     ADAPTERS (Gateways/Repos)                   │   │
+│   │                                                                 │   │
 │   │   Translate external errors → ApplicationError                  │   │
 │   │   Stripe SDK errors → ApplicationError('STRIPE_ERROR', ...)     │   │
-│   │   Drizzle errors → ApplicationError('INTERNAL_ERROR', ...)     │   │
-│   │                                                                  │   │
+│   │   Drizzle errors → ApplicationError('INTERNAL_ERROR', ...)      │   │
+│   │                                                                 │   │
 │   │   ┌─────────────────────────────────────────────────────────┐   │   │
-│   │   │                    USE CASES                             │   │   │
-│   │   │                                                          │   │   │
+│   │   │                    USE CASES                            │   │   │
+│   │   │                                                         │   │   │
 │   │   │   Throw ApplicationError for expected failures          │   │   │
-│   │   │   - NOT_FOUND, VALIDATION_ERROR, UNAUTHENTICATED       │   │   │
+│   │   │   - NOT_FOUND, VALIDATION_ERROR, UNAUTHENTICATED        │   │   │
 │   │   │   - UNSUBSCRIBED, CONFLICT                              │   │   │
-│   │   │                                                          │   │   │
+│   │   │                                                         │   │   │
 │   │   │   ┌─────────────────────────────────────────────────┐   │   │   │
-│   │   │   │                 DOMAIN                           │   │   │   │
-│   │   │   │                                                  │   │   │   │
+│   │   │   │                 DOMAIN                          │   │   │   │
+│   │   │   │                                                 │   │   │   │
 │   │   │   │   Throw DomainError for invariant violations    │   │   │   │
 │   │   │   │   - INVALID_QUESTION, INVALID_CHOICE            │   │   │   │
-│   │   │   │   - SESSION_ALREADY_ENDED                        │   │   │   │
+│   │   │   │   - SESSION_ALREADY_ENDED                       │   │   │   │
 │   │   │   └─────────────────────────────────────────────────┘   │   │   │
 │   │   └─────────────────────────────────────────────────────────┘   │   │
 │   └─────────────────────────────────────────────────────────────────┘   │

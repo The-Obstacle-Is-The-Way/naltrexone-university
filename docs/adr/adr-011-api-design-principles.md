@@ -29,8 +29,8 @@ We adopt **contract-first design** with Zod schemas defining all boundaries.
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐
-│                        API DESIGN PRINCIPLES                             │
-│                                                                          │
+│                        API DESIGN PRINCIPLES                            │
+│                                                                         │
 │   1. EXPLICIT CONTRACTS — Zod schemas define all inputs/outputs         │
 │   2. FAIL FAST — Validate at the boundary, not deep in code             │
 │   3. SINGLE RESPONSIBILITY — One action = one purpose                   │
