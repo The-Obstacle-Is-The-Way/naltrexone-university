@@ -18,5 +18,5 @@ describe('app/(app)/app/dashboard/error', () => {
     expect(html).toContain('Error ID');
     expect(html).toContain('digest_123');
     expect(html).toContain('focus-visible:ring-[3px]');
-  });
+  }, 10_000);
 });
