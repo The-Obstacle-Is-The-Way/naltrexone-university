@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useEffect, useMemo, useState, useTransition } from 'react';
 import { Feedback } from '@/components/question/Feedback';
 import { QuestionCard } from '@/components/question/QuestionCard';
+import { useIsMounted } from '@/lib/use-is-mounted';
 import { submitAnswer } from '@/src/adapters/controllers/question-controller';
 import {
   type GetQuestionBySlugOutput,
@@ -143,6 +144,7 @@ export default function QuestionPage({ params }: { params: { slug: string } }) {
     status: 'loading',
   });
   const [isPending, startTransition] = useTransition();
+  const isMounted = useIsMounted();
 
   const loadQuestion = useMemo(
     () =>
@@ -158,8 +160,9 @@ export default function QuestionPage({ params }: { params: { slug: string } }) {
         setSubmitIdempotencyKey,
         setQuestionLoadedAt,
         setQuestion,
+        isMounted,
       }),
-    [slug],
+    [slug, isMounted],
   );
 
   useEffect(loadQuestion, [loadQuestion]);
@@ -181,8 +184,15 @@ export default function QuestionPage({ params }: { params: { slug: string } }) {
         nowMs: Date.now,
         setLoadState,
         setSubmitResult,
+        isMounted,
       }),
-    [question, questionLoadedAt, selectedChoiceId, submitIdempotencyKey],
+    [
+      question,
+      questionLoadedAt,
+      selectedChoiceId,
+      submitIdempotencyKey,
+      isMounted,
+    ],
   );
 
   const onReattempt = useMemo(
