@@ -233,6 +233,16 @@ export interface StripeEventRepository {
   pruneProcessedBefore(cutoff: Date, limit: number): Promise<number>;
 }
 
+/**
+ * Optional metadata for ordering concurrent updates.
+ *
+ * - `observedAt` should represent the source-of-truth timestamp for the email
+ *   value (e.g., Clerk `updated_at`).
+ */
+export type UpsertUserByClerkIdOptions = {
+  observedAt?: Date;
+};
+
 export interface UserRepository {
   /**
    * Find a user by their external Clerk ID.
@@ -248,7 +258,11 @@ export interface UserRepository {
    *
    * This handles race conditions with ON CONFLICT gracefully.
    */
-  upsertByClerkId(clerkId: string, email: string): Promise<User>;
+  upsertByClerkId(
+    clerkId: string,
+    email: string,
+    options?: UpsertUserByClerkIdOptions,
+  ): Promise<User>;
 
   /**
    * Delete a user by their external Clerk ID.

@@ -3,6 +3,7 @@
   "data": {
     "id": "clerk_1",
     "primary_email_address_id": "email_2",
+    "updated_at": 1769904000000,
     "email_addresses": [
       { "id": "email_1", "email_address": "secondary@example.com" },
       { "id": "email_2", "email_address": "primary@example.com" }

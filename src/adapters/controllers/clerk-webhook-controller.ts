@@ -32,6 +32,8 @@ type ClerkUserDataLike = {
   primary_email_address_id?: unknown;
   emailAddresses?: unknown;
   email_addresses?: unknown;
+  updatedAt?: unknown;
+  updated_at?: unknown;
 };
 
 const clerkEmailAddressSchema = z
@@ -57,6 +59,8 @@ const clerkUserUpdatedDataSchema = z
     primary_email_address_id: z.string().nullable().optional(),
     emailAddresses: z.array(clerkEmailAddressSchema).optional(),
     email_addresses: z.array(clerkEmailAddressSchema).optional(),
+    updatedAt: z.number().optional(),
+    updated_at: z.number().optional(),
   })
   .passthrough()
   .superRefine((value, ctx) => {
@@ -64,6 +68,16 @@ const clerkUserUpdatedDataSchema = z
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         message: 'Email addresses are required',
+      });
+    }
+
+    if (
+      typeof value.updatedAt !== 'number' &&
+      typeof value.updated_at !== 'number'
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'updated_at is required',
       });
     }
   });
@@ -76,6 +90,10 @@ const clerkUserDeletedDataSchema = z
 
 function getStringOrNull(value: unknown): string | null {
   return typeof value === 'string' ? value : null;
+}
+
+function getNumberOrNull(value: unknown): number | null {
+  return typeof value === 'number' ? value : null;
 }
 
 function getPrimaryEmailOrNull(data: ClerkUserDataLike): string | null {
@@ -138,7 +156,13 @@ export async function processClerkWebhook(
       return;
     }
 
-    await deps.userRepository.upsertByClerkId(clerkUserId, email);
+    const observedAtMs =
+      getNumberOrNull(data.updatedAt) ?? getNumberOrNull(data.updated_at);
+    const observedAt = observedAtMs ? new Date(observedAtMs) : null;
+
+    await deps.userRepository.upsertByClerkId(clerkUserId, email, {
+      observedAt: observedAt ?? new Date(),
+    });
     return;
   }
 

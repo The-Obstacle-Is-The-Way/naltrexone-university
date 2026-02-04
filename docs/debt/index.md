@@ -15,9 +15,7 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 ## Debt Index (Active)
 
-| ID | Title | Status | Priority | Date |
-|----|-------|--------|----------|------|
-| [DEBT-084](debt-084-user-email-race-condition.md) | User Email Race Condition in Concurrent Webhook Handling | Accepted | P3 | 2026-02-03 |
+No active debt items.
 
 **Next Debt ID:** DEBT-100
 
@@ -25,6 +23,7 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 | ID | Title | Priority | Resolved |
 |----|-------|----------|----------|
+| [DEBT-084](../_archive/debt/debt-084-user-email-race-condition.md) | User Email Race Condition in Concurrent Webhook Handling | P3 | 2026-02-04 |
 | [DEBT-090](../_archive/debt/debt-090-missing-use-cases-business-logic-in-controllers.md) | Missing Application Use Cases (Business Logic Lives in Controllers) | P1 | 2026-02-04 |
 | [DEBT-096](../_archive/debt/debt-096-repository-mapper-duplication.md) | Repository Row→Domain Mapping Duplicated (DRY Violation) | P3 | 2026-02-04 |
 | [DEBT-099](../_archive/debt/debt-099-interactive-ui-tests-missing.md) | Interactive UI Tests Missing — Client Components Had Zero Interaction Coverage | P1 | 2026-02-04 |

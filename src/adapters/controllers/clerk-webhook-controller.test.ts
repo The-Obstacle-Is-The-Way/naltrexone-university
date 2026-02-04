@@ -38,12 +38,42 @@ describe('processClerkWebhook', () => {
     });
   });
 
+  it('does not overwrite newer email when receiving an older user.updated event', async () => {
+    const deps = createDeps();
+
+    await processClerkWebhook(deps, {
+      type: 'user.updated',
+      data: {
+        id: 'clerk_1',
+        primary_email_address_id: 'email_1',
+        updated_at: 1769904001000,
+        email_addresses: [{ id: 'email_1', email_address: 'new@example.com' }],
+      },
+    });
+
+    await processClerkWebhook(deps, {
+      type: 'user.updated',
+      data: {
+        id: 'clerk_1',
+        primary_email_address_id: 'email_1',
+        updated_at: 1769904000000,
+        email_addresses: [{ id: 'email_1', email_address: 'old@example.com' }],
+      },
+    });
+
+    await expect(
+      deps.userRepository.findByClerkId('clerk_1'),
+    ).resolves.toMatchObject({
+      email: 'new@example.com',
+    });
+  });
+
   it('ignores user.updated when no email addresses are present', async () => {
     const deps = createDeps();
 
     await processClerkWebhook(deps, {
       type: 'user.updated',
-      data: { id: 'clerk_1', email_addresses: [] },
+      data: { id: 'clerk_1', updated_at: 1769904000000, email_addresses: [] },
     });
 
     await expect(
@@ -56,7 +86,7 @@ describe('processClerkWebhook', () => {
 
     await processClerkWebhook(deps, {
       type: 'user.updated',
-      data: { id: 'clerk_1', email_addresses: [] },
+      data: { id: 'clerk_1', updated_at: 1769904000000, email_addresses: [] },
     });
 
     expect(deps.logger.warnCalls).toContainEqual({
@@ -71,7 +101,11 @@ describe('processClerkWebhook', () => {
     await expect(
       processClerkWebhook(deps, {
         type: 'user.updated',
-        data: { id: 'clerk_1', email_addresses: 'nope' },
+        data: {
+          id: 'clerk_1',
+          updated_at: 1769904000000,
+          email_addresses: 'nope',
+        },
       }),
     ).rejects.toMatchObject({ code: 'INVALID_WEBHOOK_PAYLOAD' });
 
@@ -88,6 +122,7 @@ describe('processClerkWebhook', () => {
       data: {
         id: 'clerk_1',
         primary_email_address_id: null,
+        updated_at: 1769904000000,
         email_addresses: [
           { id: 'email_1', email_address: 'first@example.com' },
           { id: 'email_2', email_address: 'second@example.com' },
@@ -136,7 +171,7 @@ describe('processClerkWebhook', () => {
     await expect(
       processClerkWebhook(deps, {
         type: 'user.updated',
-        data: { id: 'clerk_1' },
+        data: { id: 'clerk_1', updated_at: 1769904000000 },
       }),
     ).rejects.toMatchObject({ code: 'INVALID_WEBHOOK_PAYLOAD' });
   });
@@ -147,7 +182,11 @@ describe('processClerkWebhook', () => {
     await expect(
       processClerkWebhook(deps, {
         type: 'user.updated',
-        data: { id: 'clerk_1', email_addresses: [{ id: 'email_1' }] },
+        data: {
+          id: 'clerk_1',
+          updated_at: 1769904000000,
+          email_addresses: [{ id: 'email_1' }],
+        },
       }),
     ).rejects.toMatchObject({ code: 'INVALID_WEBHOOK_PAYLOAD' });
   });
@@ -160,6 +199,7 @@ describe('processClerkWebhook', () => {
         type: 'user.updated',
         data: {
           id: '',
+          updated_at: 1769904000000,
           email_addresses: [
             { id: 'email_1', email_address: 'test@example.com' },
           ],
