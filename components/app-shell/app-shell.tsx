@@ -17,9 +17,15 @@ export type AppShellProps = {
   children: React.ReactNode;
   mobileNav?: React.ReactNode;
   authNav: React.ReactNode;
+  activePath?: string;
 };
 
-export function AppShell({ children, mobileNav, authNav }: AppShellProps) {
+export function AppShell({
+  children,
+  mobileNav,
+  authNav,
+  activePath,
+}: AppShellProps) {
   return (
     <div className="flex min-h-screen bg-muted">
       <aside className="hidden w-64 flex-col border-r border-border bg-background sm:flex">
@@ -33,15 +39,22 @@ export function AppShell({ children, mobileNav, authNav }: AppShellProps) {
         </div>
         <nav aria-label="App navigation" className="flex-1 px-3 pb-6">
           <div className="space-y-1">
-            {NAV_ITEMS.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className="block rounded-md px-3 py-2 text-sm text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-              >
-                {item.label}
-              </Link>
-            ))}
+            {NAV_ITEMS.map((item) => {
+              const isActive = activePath === item.href;
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={
+                    isActive
+                      ? 'block rounded-md bg-zinc-800 px-3 py-2 text-sm font-medium text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background'
+                      : 'block rounded-md px-3 py-2 text-sm text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background'
+                  }
+                >
+                  {item.label}
+                </Link>
+              );
+            })}
           </div>
         </nav>
       </aside>

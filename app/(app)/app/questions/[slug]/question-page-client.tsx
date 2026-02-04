@@ -38,7 +38,9 @@ export function QuestionView(props: QuestionViewProps) {
     <div className="space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-baseline sm:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-foreground">Question</h1>
+          <h1 className="text-2xl font-bold font-heading tracking-tight text-foreground">
+            Question
+          </h1>
           <p className="mt-1 text-muted-foreground">
             Reattempt a question from your review list.
           </p>

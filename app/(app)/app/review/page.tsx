@@ -31,7 +31,9 @@ export function ReviewView({ rows, limit, offset }: GetMissedQuestionsOutput) {
     <div className="space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-baseline sm:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-foreground">Review</h1>
+          <h1 className="text-2xl font-bold font-heading tracking-tight text-foreground">
+            Review
+          </h1>
           <p className="mt-1 text-muted-foreground">
             Review questions you&apos;ve missed.
           </p>
@@ -134,7 +136,9 @@ export function renderReview(result: ActionResult<GetMissedQuestionsOutput>) {
     return (
       <div className="space-y-6">
         <div>
-          <h1 className="text-2xl font-semibold text-foreground">Review</h1>
+          <h1 className="text-2xl font-bold font-heading tracking-tight text-foreground">
+            Review
+          </h1>
           <p className="mt-1 text-muted-foreground">
             Unable to load missed questions.
           </p>

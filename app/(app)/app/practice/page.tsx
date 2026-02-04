@@ -237,7 +237,9 @@ export function PracticeView(props: PracticeViewProps) {
       <div>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-baseline sm:justify-between">
           <div>
-            <h1 className="text-2xl font-semibold text-foreground">Practice</h1>
+            <h1 className="text-2xl font-bold font-heading tracking-tight text-foreground">
+              Practice
+            </h1>
             <p className="mt-1 text-muted-foreground">
               Answer one question at a time.
             </p>

@@ -47,37 +47,37 @@ export function SessionSummaryView({
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold text-foreground">
+        <h1 className="text-2xl font-bold font-heading tracking-tight text-foreground">
           Session Summary
         </h1>
         <p className="mt-1 text-muted-foreground">Here&apos;s how you did.</p>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
+        <div className="rounded-2xl border border-border bg-card p-6 shadow-sm hover:border-zinc-700/50 hover:bg-zinc-900/80 transition-all">
           <div className="text-sm text-muted-foreground">Answered</div>
-          <div className="mt-2 text-2xl font-semibold text-foreground">
+          <div className="mt-2 text-3xl font-bold font-display text-foreground">
             {summary.totals.answered}
           </div>
         </div>
 
-        <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
+        <div className="rounded-2xl border border-border bg-card p-6 shadow-sm hover:border-zinc-700/50 hover:bg-zinc-900/80 transition-all">
           <div className="text-sm text-muted-foreground">Correct</div>
-          <div className="mt-2 text-2xl font-semibold text-foreground">
+          <div className="mt-2 text-3xl font-bold font-display text-foreground">
             {summary.totals.correct}
           </div>
         </div>
 
-        <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
+        <div className="rounded-2xl border border-border bg-card p-6 shadow-sm hover:border-zinc-700/50 hover:bg-zinc-900/80 transition-all">
           <div className="text-sm text-muted-foreground">Accuracy</div>
-          <div className="mt-2 text-2xl font-semibold text-foreground">
+          <div className="mt-2 text-3xl font-bold font-display text-foreground">
             {accuracyPercent}%
           </div>
         </div>
 
-        <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
+        <div className="rounded-2xl border border-border bg-card p-6 shadow-sm hover:border-zinc-700/50 hover:bg-zinc-900/80 transition-all">
           <div className="text-sm text-muted-foreground">Duration</div>
-          <div className="mt-2 text-2xl font-semibold text-foreground">
+          <div className="mt-2 text-3xl font-bold font-display text-foreground">
             {summary.totals.durationSeconds}s
           </div>
         </div>
