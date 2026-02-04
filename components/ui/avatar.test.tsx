@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 
 describe('components/ui/avatar', () => {
   it('renders avatar slots', async () => {
-    const { Avatar, AvatarFallback } = await import('./avatar');
+    const { Avatar, AvatarFallback } = await import('@/components/ui/avatar');
 
     const html = renderToStaticMarkup(
       <Avatar>

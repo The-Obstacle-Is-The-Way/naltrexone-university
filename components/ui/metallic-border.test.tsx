@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 
 describe('MetallicBorder', () => {
   it('renders children inside the border wrapper', async () => {
-    const { MetallicBorder } = await import('./metallic-border');
+    const { MetallicBorder } = await import('@/components/ui/metallic-border');
     const html = renderToStaticMarkup(
       <MetallicBorder>
         <span>Content</span>
@@ -14,7 +14,7 @@ describe('MetallicBorder', () => {
   });
 
   it('applies the metallic-border CSS class', async () => {
-    const { MetallicBorder } = await import('./metallic-border');
+    const { MetallicBorder } = await import('@/components/ui/metallic-border');
     const html = renderToStaticMarkup(
       <MetallicBorder>
         <span>Content</span>
@@ -24,7 +24,7 @@ describe('MetallicBorder', () => {
   });
 
   it('applies custom className', async () => {
-    const { MetallicBorder } = await import('./metallic-border');
+    const { MetallicBorder } = await import('@/components/ui/metallic-border');
     const html = renderToStaticMarkup(
       <MetallicBorder className="my-custom-class">
         <span>Content</span>
@@ -34,7 +34,7 @@ describe('MetallicBorder', () => {
   });
 
   it('renders with default border radius and width styles', async () => {
-    const { MetallicBorder } = await import('./metallic-border');
+    const { MetallicBorder } = await import('@/components/ui/metallic-border');
     const html = renderToStaticMarkup(
       <MetallicBorder>
         <span>Content</span>
@@ -46,7 +46,7 @@ describe('MetallicBorder', () => {
   });
 
   it('renders with custom border radius and width', async () => {
-    const { MetallicBorder } = await import('./metallic-border');
+    const { MetallicBorder } = await import('@/components/ui/metallic-border');
     const html = renderToStaticMarkup(
       <MetallicBorder borderRadius={9999} borderWidth={3}>
         <span>Content</span>

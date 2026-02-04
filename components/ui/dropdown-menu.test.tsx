@@ -12,7 +12,7 @@ describe('components/ui/dropdown-menu', () => {
         DropdownMenuTrigger,
         DropdownMenuContent,
         DropdownMenuItem,
-      } = await import('./dropdown-menu');
+      } = await import('@/components/ui/dropdown-menu');
 
       const html = renderToStaticMarkup(
         <DropdownMenu>

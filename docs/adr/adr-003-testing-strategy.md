@@ -22,11 +22,11 @@ We need a testing strategy that:
 We adopt a **Testing Pyramid** aligned with our architecture layers:
 
 ```text
-                    ┌───────────┐
-                    │   E2E     │  Few, slow, high confidence
-                    │(Playwright)
-                    ├───────────┤
-                    │           │
+                    ┌────────────┐
+                    │   E2E      │  Few, slow, high confidence
+                    │(Playwright)│
+                    ├────────────┤
+                    │            │
                ┌────┤Integration├────┐  Some, medium speed
                │    │ (Vitest)  │    │
                │    ├───────────┤    │

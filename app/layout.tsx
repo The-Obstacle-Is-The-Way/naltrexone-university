@@ -60,9 +60,9 @@ export default function RootLayout({
         >
           Skip to content
         </a>
-        <div id="main-content" tabIndex={-1}>
+        <main id="main-content" tabIndex={-1}>
           <Providers>{children}</Providers>
-        </div>
+        </main>
       </body>
     </html>
   );

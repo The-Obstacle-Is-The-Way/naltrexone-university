@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 
 describe('components/ui/button', () => {
   it('renders a button with expected slot attribute', async () => {
-    const { Button } = await import('./button');
+    const { Button } = await import('@/components/ui/button');
 
     const html = renderToStaticMarkup(<Button type="button">Click</Button>);
 

@@ -4,7 +4,9 @@ import { describe, expect, it } from 'vitest';
 
 describe('MetallicCtaButton', () => {
   it('renders children text', async () => {
-    const { MetallicCtaButton } = await import('./metallic-cta-button');
+    const { MetallicCtaButton } = await import(
+      '@/components/ui/metallic-cta-button'
+    );
     const html = renderToStaticMarkup(
       <MetallicCtaButton>Get Started</MetallicCtaButton>,
     );
@@ -12,7 +14,9 @@ describe('MetallicCtaButton', () => {
   });
 
   it('wraps content with a metallic border', async () => {
-    const { MetallicCtaButton } = await import('./metallic-cta-button');
+    const { MetallicCtaButton } = await import(
+      '@/components/ui/metallic-cta-button'
+    );
     const html = renderToStaticMarkup(
       <MetallicCtaButton>Get Started</MetallicCtaButton>,
     );
@@ -20,7 +24,9 @@ describe('MetallicCtaButton', () => {
   });
 
   it('uses pill border radius (9999)', async () => {
-    const { MetallicCtaButton } = await import('./metallic-cta-button');
+    const { MetallicCtaButton } = await import(
+      '@/components/ui/metallic-cta-button'
+    );
     const html = renderToStaticMarkup(
       <MetallicCtaButton>Get Started</MetallicCtaButton>,
     );
@@ -28,7 +34,9 @@ describe('MetallicCtaButton', () => {
   });
 
   it('renders an arrow icon', async () => {
-    const { MetallicCtaButton } = await import('./metallic-cta-button');
+    const { MetallicCtaButton } = await import(
+      '@/components/ui/metallic-cta-button'
+    );
     const html = renderToStaticMarkup(
       <MetallicCtaButton>Get Started</MetallicCtaButton>,
     );
@@ -37,7 +45,9 @@ describe('MetallicCtaButton', () => {
   });
 
   it('renders as a link when href is provided', async () => {
-    const { MetallicCtaButton } = await import('./metallic-cta-button');
+    const { MetallicCtaButton } = await import(
+      '@/components/ui/metallic-cta-button'
+    );
     const html = renderToStaticMarkup(
       <MetallicCtaButton href="/pricing">Get Started</MetallicCtaButton>,
     );
