@@ -1,9 +1,15 @@
 import 'server-only';
 import pino from 'pino';
 
+const envLevel = process.env.LOG_LEVEL?.trim();
+
 const level =
-  process.env.LOG_LEVEL ??
-  (process.env.NODE_ENV === 'production' ? 'info' : 'debug');
+  envLevel ||
+  (process.env.NODE_ENV === 'production'
+    ? 'info'
+    : process.env.NODE_ENV === 'test'
+      ? 'silent'
+      : 'debug');
 
 /**
  * Structured JSON logger (Vercel-friendly).

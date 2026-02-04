@@ -63,7 +63,7 @@ const subscription = parsed.data.data.object;  // Fully typed and validated
 1. **Create Zod schemas** for webhook payloads we depend on
 2. **Validate at the boundary** (gateway/controller) before business logic
 3. **Log validation failures** with enough context to debug
-4. **Return 400** for invalid payloads; only return 2xx when the event is accepted
+4. **Return 400** for invalid payloads (Stripe retries non-2xx); only return 2xx when the event is accepted
 
 ## Files to Update
 

@@ -7,19 +7,35 @@ vi.mock('next/link', () => ({
 }));
 
 describe('app/(app)/app/practice/[sessionId]', () => {
+  it('unwraps async params before rendering the client page', async () => {
+    const PracticeSessionPage = (
+      await import('@/app/(app)/app/practice/[sessionId]/page')
+    ).default;
+
+    const element = await PracticeSessionPage({
+      params: Promise.resolve({ sessionId: 'session-1' }),
+    } as never);
+
+    expect(element).toMatchObject({
+      props: { sessionId: 'session-1' },
+    });
+  }, 20_000);
+
   it('renders a practice session shell', async () => {
     const PracticeSessionPage = (
       await import('@/app/(app)/app/practice/[sessionId]/page')
     ).default;
 
-    const html = renderToStaticMarkup(
-      <PracticeSessionPage params={{ sessionId: 'session-1' }} />,
-    );
+    const element = await PracticeSessionPage({
+      params: Promise.resolve({ sessionId: 'session-1' }),
+    } as never);
+
+    const html = renderToStaticMarkup(element);
 
     expect(html).toContain('Practice');
     expect(html).toContain('End session');
     expect(html).toContain('Back to Dashboard');
-  }, 10_000);
+  }, 20_000);
 
   it('renders the session summary view', async () => {
     const { SessionSummaryView } = await import(

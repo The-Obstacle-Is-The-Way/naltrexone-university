@@ -1,4 +1,7 @@
-import { getActionResultErrorMessage } from '@/app/(app)/app/practice/practice-logic';
+import {
+  getActionResultErrorMessage,
+  getThrownErrorMessage,
+} from '@/app/(app)/app/practice/practice-logic';
 import type { LoadState } from '@/app/(app)/app/practice/practice-page-logic';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import type { EndPracticeSessionOutput } from '@/src/adapters/controllers/practice-controller';
@@ -19,14 +22,34 @@ export async function loadNextQuestion(input: {
   setQuestionLoadedAt: (loadedAtMs: number | null) => void;
   setQuestion: (question: NextQuestion | null) => void;
   setSessionInfo: (info: NextQuestion['session']) => void;
+  isMounted?: () => boolean;
 }): Promise<void> {
+  const isMounted = input.isMounted ?? (() => true);
+
   input.setLoadState({ status: 'loading' });
   input.setSelectedChoiceId(null);
   input.setSubmitResult(null);
   input.setSubmitIdempotencyKey(null);
   input.setQuestionLoadedAt(null);
 
-  const res = await input.getNextQuestionFn({ sessionId: input.sessionId });
+  let res: ActionResult<NextQuestion | null>;
+  try {
+    res = await input.getNextQuestionFn({ sessionId: input.sessionId });
+  } catch (error) {
+    if (!isMounted()) return;
+
+    input.setLoadState({
+      status: 'error',
+      message: getThrownErrorMessage(error),
+    });
+    input.setQuestion(null);
+    input.setSelectedChoiceId(null);
+    input.setSubmitResult(null);
+    input.setSubmitIdempotencyKey(null);
+    input.setQuestionLoadedAt(null);
+    return;
+  }
+  if (!isMounted()) return;
 
   if (!res.ok) {
     input.setLoadState({
@@ -34,15 +57,14 @@ export async function loadNextQuestion(input: {
       message: getActionResultErrorMessage(res),
     });
     input.setQuestion(null);
+    input.setSubmitIdempotencyKey(null);
     return;
   }
 
   input.setQuestion(res.data);
   input.setQuestionLoadedAt(res.data ? input.nowMs() : null);
   input.setSubmitIdempotencyKey(res.data ? input.createIdempotencyKey() : null);
-  if (res.data?.session) {
-    input.setSessionInfo(res.data.session);
-  }
+  input.setSessionInfo(res.data?.session ?? null);
   input.setLoadState({ status: 'ready' });
 }
 
@@ -61,6 +83,7 @@ export function createLoadNextQuestionAction(input: {
   setQuestionLoadedAt: (loadedAtMs: number | null) => void;
   setQuestion: (question: NextQuestion | null) => void;
   setSessionInfo: (info: NextQuestion['session']) => void;
+  isMounted?: () => boolean;
 }): () => void {
   return () => {
     input.startTransition(() => {
@@ -79,9 +102,12 @@ export async function submitAnswerForQuestion(input: {
   nowMs: () => number;
   setLoadState: (state: LoadState) => void;
   setSubmitResult: (result: SubmitAnswerOutput | null) => void;
+  isMounted?: () => boolean;
 }): Promise<void> {
   if (!input.question) return;
   if (!input.selectedChoiceId) return;
+
+  const isMounted = input.isMounted ?? (() => true);
 
   input.setLoadState({ status: 'loading' });
 
@@ -93,13 +119,25 @@ export async function submitAnswerForQuestion(input: {
           Math.floor((input.nowMs() - input.questionLoadedAtMs) / 1000),
         );
 
-  const res = await input.submitAnswerFn({
-    questionId: input.question.questionId,
-    choiceId: input.selectedChoiceId,
-    sessionId: input.sessionId,
-    idempotencyKey: input.submitIdempotencyKey ?? undefined,
-    timeSpentSeconds,
-  });
+  let res: ActionResult<SubmitAnswerOutput>;
+  try {
+    res = await input.submitAnswerFn({
+      questionId: input.question.questionId,
+      choiceId: input.selectedChoiceId,
+      sessionId: input.sessionId,
+      idempotencyKey: input.submitIdempotencyKey ?? undefined,
+      timeSpentSeconds,
+    });
+  } catch (error) {
+    if (!isMounted()) return;
+
+    input.setLoadState({
+      status: 'error',
+      message: getThrownErrorMessage(error),
+    });
+    return;
+  }
+  if (!isMounted()) return;
 
   if (!res.ok) {
     input.setLoadState({
@@ -123,10 +161,25 @@ export async function endSession(input: {
   setQuestion: (question: NextQuestion | null) => void;
   setSubmitResult: (result: SubmitAnswerOutput | null) => void;
   setSelectedChoiceId: (choiceId: string | null) => void;
+  isMounted?: () => boolean;
 }): Promise<void> {
+  const isMounted = input.isMounted ?? (() => true);
+
   input.setLoadState({ status: 'loading' });
 
-  const res = await input.endPracticeSessionFn({ sessionId: input.sessionId });
+  let res: ActionResult<EndPracticeSessionOutput>;
+  try {
+    res = await input.endPracticeSessionFn({ sessionId: input.sessionId });
+  } catch (error) {
+    if (!isMounted()) return;
+
+    input.setLoadState({
+      status: 'error',
+      message: getThrownErrorMessage(error),
+    });
+    return;
+  }
+  if (!isMounted()) return;
   if (!res.ok) {
     input.setLoadState({
       status: 'error',

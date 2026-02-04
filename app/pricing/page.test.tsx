@@ -10,13 +10,18 @@ vi.mock('next/link', () => ({
 }));
 
 describe('app/pricing', () => {
+  type CreateCheckoutSessionFn = Parameters<
+    typeof import('@/app/pricing/page').runSubscribeAction
+  >[1]['createCheckoutSessionFn'];
+
   afterEach(() => {
     vi.resetModules();
     vi.restoreAllMocks();
+    vi.unstubAllEnvs();
   });
 
   it('renders subscribe actions when user is not subscribed', async () => {
-    const { PricingView } = await import('./page');
+    const { PricingView } = await import('@/app/pricing/page');
 
     const html = renderToStaticMarkup(
       <PricingView
@@ -29,10 +34,10 @@ describe('app/pricing', () => {
 
     expect(html).toContain('Subscribe Monthly');
     expect(html).toContain('Subscribe Annual');
-  });
+  }, 10_000);
 
   it('shows an error banner when checkout=error', async () => {
-    const { PricingView } = await import('./page');
+    const { PricingView } = await import('@/app/pricing/page');
 
     const html = renderToStaticMarkup(
       <PricingView
@@ -50,7 +55,7 @@ describe('app/pricing', () => {
   });
 
   it('shows a cancel banner when checkout=cancel', async () => {
-    const { PricingView } = await import('./page');
+    const { PricingView } = await import('@/app/pricing/page');
 
     const html = renderToStaticMarkup(
       <PricingView
@@ -68,7 +73,7 @@ describe('app/pricing', () => {
   });
 
   it('hides subscribe actions when user is already subscribed', async () => {
-    const { PricingView } = await import('./page');
+    const { PricingView } = await import('@/app/pricing/page');
 
     const html = renderToStaticMarkup(
       <PricingView
@@ -85,7 +90,7 @@ describe('app/pricing', () => {
   });
 
   it('builds the subscription-required banner when reason=subscription_required', async () => {
-    const { getPricingBanner } = await import('./page');
+    const { getPricingBanner } = await import('@/app/pricing/page');
 
     expect(getPricingBanner({ reason: 'subscription_required' })).toMatchObject(
       {
@@ -95,8 +100,27 @@ describe('app/pricing', () => {
     );
   });
 
+  it('builds the manage-billing banner when reason=manage_billing', async () => {
+    const { getPricingBanner } = await import('@/app/pricing/page');
+
+    expect(getPricingBanner({ reason: 'manage_billing' })).toMatchObject({
+      tone: 'info',
+      message: 'Subscription found. Manage billing to resolve payment issues.',
+    });
+  });
+
+  it('builds the payment-processing banner when reason=payment_processing', async () => {
+    const { getPricingBanner } = await import('@/app/pricing/page');
+
+    expect(getPricingBanner({ reason: 'payment_processing' })).toMatchObject({
+      tone: 'info',
+      message:
+        'Payment processing. It may take a moment for access to activate.',
+    });
+  });
+
   it('builds the checkout error banner when checkout=error', async () => {
-    const { getPricingBanner } = await import('./page');
+    const { getPricingBanner } = await import('@/app/pricing/page');
 
     expect(getPricingBanner({ checkout: 'error' })).toMatchObject({
       tone: 'error',
@@ -105,30 +129,24 @@ describe('app/pricing', () => {
   });
 
   it('includes error code details in development for checkout=error', async () => {
-    const { getPricingBanner } = await import('./page');
+    const { getPricingBanner } = await import('@/app/pricing/page');
 
-    const originalEnv = process.env.NODE_ENV;
-    (process.env as Record<string, string | undefined>).NODE_ENV =
-      'development';
-    try {
-      expect(
-        getPricingBanner({
-          checkout: 'error',
-          error_code: 'INTERNAL_ERROR',
-          error_message: 'Boom',
-        }),
-      ).toMatchObject({
-        tone: 'error',
-        message: 'Checkout failed (INTERNAL_ERROR). Boom',
-      });
-    } finally {
-      (process.env as Record<string, string | undefined>).NODE_ENV =
-        originalEnv;
-    }
+    vi.stubEnv('NODE_ENV', 'development');
+
+    expect(
+      getPricingBanner({
+        checkout: 'error',
+        error_code: 'INTERNAL_ERROR',
+        error_message: 'Boom',
+      }),
+    ).toMatchObject({
+      tone: 'error',
+      message: 'Checkout failed (INTERNAL_ERROR). Boom',
+    });
   });
 
   it('builds the checkout canceled banner when checkout=cancel', async () => {
-    const { getPricingBanner } = await import('./page');
+    const { getPricingBanner } = await import('@/app/pricing/page');
 
     expect(getPricingBanner({ checkout: 'cancel' })).toMatchObject({
       tone: 'info',
@@ -137,13 +155,13 @@ describe('app/pricing', () => {
   });
 
   it('returns null when no banner parameters are set', async () => {
-    const { getPricingBanner } = await import('./page');
+    const { getPricingBanner } = await import('@/app/pricing/page');
 
     expect(getPricingBanner({})).toBe(null);
   });
 
   it('loadPricingData returns isEntitled=false when unauthenticated', async () => {
-    const { loadPricingData } = await import('./page');
+    const { loadPricingData } = await import('@/app/pricing/page');
 
     const authGateway: AuthGateway = {
       getCurrentUser: vi.fn(async () => null),
@@ -163,7 +181,7 @@ describe('app/pricing', () => {
   });
 
   it('loadPricingData returns isEntitled=true when entitled', async () => {
-    const { loadPricingData } = await import('./page');
+    const { loadPricingData } = await import('@/app/pricing/page');
 
     const authGateway: AuthGateway = {
       getCurrentUser: vi.fn(async () => ({
@@ -187,97 +205,114 @@ describe('app/pricing', () => {
   });
 
   it('runSubscribeAction redirects to checkout url on success', async () => {
-    const { runSubscribeAction } = await import('./page');
+    const { runSubscribeAction } = await import('@/app/pricing/page');
 
-    const createCheckoutSessionFn = vi.fn(async () => ({
-      ok: true,
-      data: { url: 'https://stripe.test/checkout' },
-    }));
+    const createCheckoutSessionFn = vi.fn<CreateCheckoutSessionFn>(
+      async () => ({
+        ok: true,
+        data: { url: 'https://stripe.test/checkout' },
+      }),
+    );
 
-    const redirectFn = vi.fn((url: string) => {
+    const redirectFn = (url: string): never => {
       throw new Error(url);
-    }) as unknown as (url: string) => never;
+    };
 
     const action = async () =>
       runSubscribeAction(
         { plan: 'monthly' },
         {
-          createCheckoutSessionFn: createCheckoutSessionFn as never,
+          createCheckoutSessionFn,
           redirectFn,
         },
       );
 
     await expect(action()).rejects.toThrow('https://stripe.test/checkout');
-    expect(createCheckoutSessionFn).toHaveBeenCalledWith({ plan: 'monthly' });
+    expect(createCheckoutSessionFn).toHaveBeenCalledWith({
+      plan: 'monthly',
+      idempotencyKey: undefined,
+    });
   });
 
   it('runSubscribeAction redirects to /sign-up when unauthenticated', async () => {
-    const { runSubscribeAction } = await import('./page');
+    const { runSubscribeAction } = await import('@/app/pricing/page');
 
-    const createCheckoutSessionFn = vi.fn(async () => ({
-      ok: false,
-      error: { code: 'UNAUTHENTICATED', message: 'No session' },
-    }));
+    const createCheckoutSessionFn = vi.fn<CreateCheckoutSessionFn>(
+      async () => ({
+        ok: false,
+        error: { code: 'UNAUTHENTICATED', message: 'No session' },
+      }),
+    );
 
-    const redirectFn = vi.fn((url: string) => {
+    const redirectFn = (url: string): never => {
       throw new Error(url);
-    }) as unknown as (url: string) => never;
+    };
 
     const action = async () =>
       runSubscribeAction(
         { plan: 'annual' },
         {
-          createCheckoutSessionFn: createCheckoutSessionFn as never,
+          createCheckoutSessionFn,
           redirectFn,
         },
       );
 
     await expect(action()).rejects.toThrow('/sign-up');
-    expect(createCheckoutSessionFn).toHaveBeenCalledWith({ plan: 'annual' });
+    expect(createCheckoutSessionFn).toHaveBeenCalledWith({
+      plan: 'annual',
+      idempotencyKey: undefined,
+    });
   });
 
-  it('runSubscribeAction redirects to /app/billing when already subscribed', async () => {
-    const { runSubscribeAction } = await import('./page');
+  it('runSubscribeAction redirects to /pricing?reason=manage_billing when already subscribed', async () => {
+    const { runSubscribeAction } = await import('@/app/pricing/page');
 
-    const createCheckoutSessionFn = vi.fn(async () => ({
-      ok: false,
-      error: { code: 'ALREADY_SUBSCRIBED', message: 'Already subscribed' },
-    }));
+    const createCheckoutSessionFn = vi.fn<CreateCheckoutSessionFn>(
+      async () => ({
+        ok: false,
+        error: { code: 'ALREADY_SUBSCRIBED', message: 'Already subscribed' },
+      }),
+    );
 
-    const redirectFn = vi.fn((url: string) => {
+    const redirectFn = (url: string): never => {
       throw new Error(url);
-    }) as unknown as (url: string) => never;
+    };
 
     const action = async () =>
       runSubscribeAction(
         { plan: 'monthly' },
         {
-          createCheckoutSessionFn: createCheckoutSessionFn as never,
+          createCheckoutSessionFn,
           redirectFn,
         },
       );
 
-    await expect(action()).rejects.toThrow('/app/billing');
-    expect(createCheckoutSessionFn).toHaveBeenCalledWith({ plan: 'monthly' });
+    await expect(action()).rejects.toThrow('/pricing?reason=manage_billing');
+    expect(createCheckoutSessionFn).toHaveBeenCalledWith({
+      plan: 'monthly',
+      idempotencyKey: undefined,
+    });
   });
 
   it('runSubscribeAction redirects to /pricing?checkout=error for other errors', async () => {
-    const { runSubscribeAction } = await import('./page');
+    const { runSubscribeAction } = await import('@/app/pricing/page');
 
-    const createCheckoutSessionFn = vi.fn(async () => ({
-      ok: false,
-      error: { code: 'INTERNAL_ERROR', message: 'Internal error' },
-    }));
+    const createCheckoutSessionFn = vi.fn<CreateCheckoutSessionFn>(
+      async () => ({
+        ok: false,
+        error: { code: 'INTERNAL_ERROR', message: 'Internal error' },
+      }),
+    );
 
-    const redirectFn = vi.fn((url: string) => {
+    const redirectFn = (url: string): never => {
       throw new Error(url);
-    }) as unknown as (url: string) => never;
+    };
 
     const action = async () =>
       runSubscribeAction(
         { plan: 'monthly' },
         {
-          createCheckoutSessionFn: createCheckoutSessionFn as never,
+          createCheckoutSessionFn,
           redirectFn,
         },
       );
@@ -285,11 +320,34 @@ describe('app/pricing', () => {
     await expect(action()).rejects.toThrow(
       '/pricing?checkout=error&plan=monthly&error_code=INTERNAL_ERROR',
     );
-    expect(createCheckoutSessionFn).toHaveBeenCalledWith({ plan: 'monthly' });
+    expect(createCheckoutSessionFn).toHaveBeenCalledWith({
+      plan: 'monthly',
+      idempotencyKey: undefined,
+    });
+  });
+
+  it('renders a manage-billing action when provided', async () => {
+    const { PricingView } = await import('@/app/pricing/page');
+
+    const html = renderToStaticMarkup(
+      <PricingView
+        isEntitled={false}
+        banner={{
+          tone: 'info',
+          message:
+            'Subscription found. Manage billing to resolve payment issues.',
+        }}
+        manageBillingAction={async (_formData: FormData) => undefined}
+        subscribeMonthlyAction={async () => undefined}
+        subscribeAnnualAction={async () => undefined}
+      />,
+    );
+
+    expect(html).toContain('Manage Billing');
   });
 
   it('renders dismiss link when banner is present', async () => {
-    const { PricingView } = await import('./page');
+    const { PricingView } = await import('@/app/pricing/page');
 
     const html = renderToStaticMarkup(
       <PricingView
@@ -309,7 +367,7 @@ describe('app/pricing', () => {
   });
 
   it('SubscribeButton renders children when not pending', async () => {
-    const { SubscribeButton } = await import('./pricing-client');
+    const { SubscribeButton } = await import('@/app/pricing/pricing-client');
 
     const html = renderToStaticMarkup(
       <SubscribeButton>Subscribe Monthly</SubscribeButton>,
@@ -320,7 +378,7 @@ describe('app/pricing', () => {
   });
 
   it('does not render dismiss link when banner is null', async () => {
-    const { PricingView } = await import('./page');
+    const { PricingView } = await import('@/app/pricing/page');
 
     const html = renderToStaticMarkup(
       <PricingView
@@ -334,24 +392,23 @@ describe('app/pricing', () => {
     expect(html).not.toContain('aria-label="Dismiss"');
   });
 
-  it('renders PricingPage with container-provided dependencies', async () => {
-    vi.doMock('@/lib/container', () => ({
-      createContainer: () => ({
-        createAuthGateway: () => ({
+  it('renders PricingPage when deps are injected', async () => {
+    const PricingPage = (await import('@/app/pricing/page')).default;
+
+    const element = await PricingPage({
+      searchParams: Promise.resolve({}),
+      deps: {
+        authGateway: {
           getCurrentUser: async () => null,
           requireUser: async () => {
             throw new Error('not used');
           },
-        }),
-        createCheckEntitlementUseCase: () => ({
+        },
+        checkEntitlementUseCase: {
           execute: async () => ({ isEntitled: false }),
-        }),
-      }),
-    }));
-
-    const PricingPage = (await import('./page')).default;
-
-    const element = await PricingPage({ searchParams: Promise.resolve({}) });
+        },
+      },
+    });
     const html = renderToStaticMarkup(element);
 
     expect(html).toContain('Pricing');

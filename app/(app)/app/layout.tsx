@@ -1,19 +1,12 @@
+import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { AppShell } from '@/components/app-shell/app-shell';
 import { AuthNav } from '@/components/auth-nav';
 import { MobileNav } from '@/components/mobile-nav';
-import { ApplicationError } from '@/src/application/errors';
 import type { AuthGateway } from '@/src/application/ports/gateways';
-import type {
-  CheckEntitlementInput,
-  CheckEntitlementOutput,
-} from '@/src/application/use-cases/check-entitlement';
+import type { CheckEntitlementUseCase } from '@/src/application/ports/use-cases';
 
+// Auth-gated routes must be dynamic to avoid build-time prerendering.
 export const dynamic = 'force-dynamic';
-
-type CheckEntitlementUseCase = {
-  execute: (input: CheckEntitlementInput) => Promise<CheckEntitlementOutput>;
-};
 
 export type AppLayoutDeps = {
   authGateway: AuthGateway;
@@ -37,12 +30,7 @@ export async function enforceEntitledAppUser(
   redirectFn: (url: string) => never = redirect,
 ): Promise<void> {
   const d = await getDeps(deps);
-  const user = await d.authGateway.requireUser().catch((error) => {
-    if (error instanceof ApplicationError && error.code === 'UNAUTHENTICATED') {
-      return redirectFn('/sign-in');
-    }
-    throw error;
-  });
+  const user = await d.authGateway.requireUser();
 
   const entitlement = await d.checkEntitlementUseCase.execute({
     userId: user.id,
@@ -65,9 +53,59 @@ export function AppLayoutShell({
   authNav,
 }: AppLayoutShellProps) {
   return (
-    <AppShell authNav={authNav} mobileNav={mobileNav}>
-      {children}
-    </AppShell>
+    <div className="min-h-screen bg-muted">
+      <header className="relative border-b border-border bg-background">
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
+          <div className="flex items-center gap-6">
+            <Link
+              href="/app/dashboard"
+              className="text-sm font-semibold text-foreground"
+            >
+              Addiction Boards
+            </Link>
+            <nav className="hidden items-center gap-4 text-sm sm:flex">
+              <Link
+                href="/app/dashboard"
+                className="text-muted-foreground hover:text-foreground"
+              >
+                Dashboard
+              </Link>
+              <Link
+                href="/app/practice"
+                className="text-muted-foreground hover:text-foreground"
+              >
+                Practice
+              </Link>
+              <Link
+                href="/app/review"
+                className="text-muted-foreground hover:text-foreground"
+              >
+                Review
+              </Link>
+              <Link
+                href="/app/bookmarks"
+                className="text-muted-foreground hover:text-foreground"
+              >
+                Bookmarks
+              </Link>
+              <Link
+                href="/app/billing"
+                className="text-muted-foreground hover:text-foreground"
+              >
+                Billing
+              </Link>
+            </nav>
+          </div>
+          <div className="flex items-center gap-2">
+            {mobileNav}
+            {authNav}
+          </div>
+        </div>
+      </header>
+      <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+        {children}
+      </main>
+    </div>
   );
 }
 

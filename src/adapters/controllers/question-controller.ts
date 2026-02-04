@@ -1,13 +1,13 @@
 'use server';
 
 import { z } from 'zod';
-import { createDepsResolver } from '@/lib/controller-helpers';
+import { createDepsResolver, loadAppContainer } from '@/lib/controller-helpers';
+import { SUBMIT_ANSWER_RATE_LIMIT } from '@/src/adapters/shared/rate-limits';
 import {
   MAX_PRACTICE_SESSION_DIFFICULTY_FILTERS,
   MAX_PRACTICE_SESSION_TAG_FILTERS,
-} from '@/src/adapters/repositories/practice-session-limits';
-import { SUBMIT_ANSWER_RATE_LIMIT } from '@/src/adapters/shared/rate-limits';
-import { MAX_TIME_SPENT_SECONDS } from '@/src/adapters/shared/validation-limits';
+  MAX_TIME_SPENT_SECONDS,
+} from '@/src/adapters/shared/validation-limits';
 import { withIdempotency } from '@/src/adapters/shared/with-idempotency';
 import { ApplicationError } from '@/src/application/errors';
 import type {
@@ -23,8 +23,7 @@ import type {
   SubmitAnswerInput,
   SubmitAnswerOutput,
 } from '@/src/application/use-cases/submit-answer';
-import type { ActionResult } from './action-result';
-import { handleError, ok } from './action-result';
+import { createAction } from './create-action';
 import type { CheckEntitlementUseCase } from './require-entitled-user-id';
 import { requireEntitledUserId } from './require-entitled-user-id';
 
@@ -92,52 +91,40 @@ export type QuestionControllerDeps = {
   submitAnswerUseCase: SubmitAnswerUseCase;
 };
 
-const getDeps = createDepsResolver((container) =>
-  container.createQuestionControllerDeps(),
-);
+type QuestionControllerContainer = {
+  createQuestionControllerDeps: () => QuestionControllerDeps;
+};
 
-export async function getNextQuestion(
-  input: unknown,
-  deps?: QuestionControllerDeps,
-): Promise<ActionResult<GetNextQuestionOutput>> {
-  const parsed = GetNextQuestionInputSchema.safeParse(input);
-  if (!parsed.success) return handleError(parsed.error);
+const getDeps = createDepsResolver<
+  QuestionControllerDeps,
+  QuestionControllerContainer
+>((container) => container.createQuestionControllerDeps(), loadAppContainer);
 
-  try {
-    const d = await getDeps(deps);
-    const userIdOrError = await requireEntitledUserId(d);
-    if (typeof userIdOrError !== 'string') return userIdOrError;
-    const userId = userIdOrError;
+export const getNextQuestion = createAction({
+  schema: GetNextQuestionInputSchema,
+  getDeps,
+  execute: async (input, d) => {
+    const userId = await requireEntitledUserId(d);
 
-    const data =
-      typeof parsed.data.sessionId === 'string'
-        ? await d.getNextQuestionUseCase.execute({
-            userId,
-            sessionId: parsed.data.sessionId,
-          })
-        : await d.getNextQuestionUseCase.execute({
-            userId,
-            filters: parsed.data.filters,
-          });
+    if (typeof input.sessionId === 'string') {
+      return d.getNextQuestionUseCase.execute({
+        userId,
+        sessionId: input.sessionId,
+      });
+    }
 
-    return ok(data);
-  } catch (error) {
-    return handleError(error);
-  }
-}
+    return d.getNextQuestionUseCase.execute({
+      userId,
+      filters: input.filters,
+    });
+  },
+});
 
-export async function submitAnswer(
-  input: unknown,
-  deps?: QuestionControllerDeps,
-): Promise<ActionResult<SubmitAnswerOutput>> {
-  const parsed = SubmitAnswerInputSchema.safeParse(input);
-  if (!parsed.success) return handleError(parsed.error);
-
-  try {
-    const d = await getDeps(deps);
-    const userIdOrError = await requireEntitledUserId(d);
-    if (typeof userIdOrError !== 'string') return userIdOrError;
-    const userId = userIdOrError;
+export const submitAnswer = createAction({
+  schema: SubmitAnswerInputSchema,
+  getDeps,
+  execute: async (input, d) => {
+    const userId = await requireEntitledUserId(d);
 
     const {
       questionId,
@@ -145,7 +132,7 @@ export async function submitAnswer(
       sessionId,
       idempotencyKey,
       timeSpentSeconds,
-    } = parsed.data;
+    } = input;
 
     async function submitOnce(): Promise<SubmitAnswerOutput> {
       const rate = await d.rateLimiter.limit({
@@ -168,19 +155,17 @@ export async function submitAnswer(
       });
     }
 
-    const data = idempotencyKey
-      ? await withIdempotency({
-          repo: d.idempotencyKeyRepository,
-          userId,
-          action: 'question:submitAnswer',
-          key: idempotencyKey,
-          now: () => new Date(),
-          execute: submitOnce,
-        })
-      : await submitOnce();
+    if (!idempotencyKey) {
+      return submitOnce();
+    }
 
-    return ok(data);
-  } catch (error) {
-    return handleError(error);
-  }
-}
+    return withIdempotency({
+      repo: d.idempotencyKeyRepository,
+      userId,
+      action: 'question:submitAnswer',
+      key: idempotencyKey,
+      now: () => new Date(),
+      execute: submitOnce,
+    });
+  },
+});

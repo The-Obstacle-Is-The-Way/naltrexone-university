@@ -1,7 +1,7 @@
 'use server';
 
 import { z } from 'zod';
-import { createDepsResolver } from '@/lib/controller-helpers';
+import { createDepsResolver, loadAppContainer } from '@/lib/controller-helpers';
 import { ROUTES } from '@/lib/routes';
 import { CHECKOUT_SESSION_RATE_LIMIT } from '@/src/adapters/shared/rate-limits';
 import { withIdempotency } from '@/src/adapters/shared/with-idempotency';
@@ -16,9 +16,7 @@ import type {
   StripeCustomerRepository,
   SubscriptionRepository,
 } from '@/src/application/ports/repositories';
-import { isEntitled } from '@/src/domain/services';
-import type { ActionResult } from './action-result';
-import { err, handleError, ok } from './action-result';
+import { createAction } from './create-action';
 
 const zSubscriptionPlan = z.enum(['monthly', 'annual']);
 const zIdempotencyKey = z.string().uuid();
@@ -47,9 +45,14 @@ export type BillingControllerDeps = {
   now: () => Date;
 };
 
-const getDeps = createDepsResolver((container) =>
-  container.createBillingControllerDeps(),
-);
+type BillingControllerContainer = {
+  createBillingControllerDeps: () => BillingControllerDeps;
+};
+
+const getDeps = createDepsResolver<
+  BillingControllerDeps,
+  BillingControllerContainer
+>((container) => container.createBillingControllerDeps(), loadAppContainer);
 
 function toSuccessUrl(appUrl: string): string {
   const base = new URL(ROUTES.CHECKOUT_SUCCESS, appUrl);
@@ -94,17 +97,12 @@ async function getOrCreateStripeCustomerId(
   return created.stripeCustomerId;
 }
 
-export async function createCheckoutSession(
-  input: unknown,
-  deps?: BillingControllerDeps,
-): Promise<ActionResult<CreateCheckoutSessionOutput>> {
-  const parsed = CreateCheckoutSessionInputSchema.safeParse(input);
-  if (!parsed.success) return handleError(parsed.error);
-
-  try {
-    const d = await getDeps(deps);
+export const createCheckoutSession = createAction({
+  schema: CreateCheckoutSessionInputSchema,
+  getDeps,
+  execute: async (input, d) => {
     const user = await d.authGateway.requireUser();
-    const { plan, idempotencyKey } = parsed.data;
+    const { plan, idempotencyKey } = input;
 
     async function createNewSession(): Promise<CreateCheckoutSessionOutput> {
       const checkoutRateLimit = await d.rateLimiter.limit({
@@ -119,7 +117,8 @@ export async function createCheckoutSession(
       }
 
       const subscription = await d.subscriptionRepository.findByUserId(user.id);
-      if (isEntitled(subscription, d.now())) {
+      const now = d.now();
+      if (subscription && subscription.currentPeriodEnd > now) {
         throw new ApplicationError(
           'ALREADY_SUBSCRIBED',
           'Subscription already exists for this user',
@@ -146,48 +145,37 @@ export async function createCheckoutSession(
       );
     }
 
-    const session = idempotencyKey
-      ? await withIdempotency({
-          repo: d.idempotencyKeyRepository,
-          userId: user.id,
-          action: 'billing:createCheckoutSession',
-          key: idempotencyKey,
-          now: d.now,
-          execute: createNewSession,
-        })
-      : await createNewSession();
+    if (!idempotencyKey) {
+      return createNewSession();
+    }
 
-    return ok(session);
-  } catch (error) {
-    return handleError(error);
-  }
-}
+    return withIdempotency({
+      repo: d.idempotencyKeyRepository,
+      userId: user.id,
+      action: 'billing:createCheckoutSession',
+      key: idempotencyKey,
+      now: d.now,
+      execute: createNewSession,
+    });
+  },
+});
 
-export async function createPortalSession(
-  input: unknown,
-  deps?: BillingControllerDeps,
-): Promise<ActionResult<CreatePortalSessionOutput>> {
-  const parsed = CreatePortalSessionInputSchema.safeParse(input);
-  if (!parsed.success) return handleError(parsed.error);
-
-  try {
-    const d = await getDeps(deps);
+export const createPortalSession = createAction({
+  schema: CreatePortalSessionInputSchema,
+  getDeps,
+  execute: async (_input, d) => {
     const user = await d.authGateway.requireUser();
 
     const stripeCustomer = await d.stripeCustomerRepository.findByUserId(
       user.id,
     );
     if (!stripeCustomer) {
-      return err('NOT_FOUND', 'Stripe customer not found');
+      throw new ApplicationError('NOT_FOUND', 'Stripe customer not found');
     }
 
-    const session = await d.paymentGateway.createPortalSession({
+    return d.paymentGateway.createPortalSession({
       stripeCustomerId: stripeCustomer.stripeCustomerId,
       returnUrl: toBillingReturnUrl(d.appUrl),
     });
-
-    return ok(session);
-  } catch (error) {
-    return handleError(error);
-  }
-}
+  },
+});

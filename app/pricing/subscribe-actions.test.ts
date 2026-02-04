@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
+import { runSubscribeAction } from '@/app/pricing/subscribe-action';
 import {
   subscribeAnnualAction,
   subscribeMonthlyAction,
@@ -123,65 +124,54 @@ describe('app/pricing/subscribe-actions', () => {
     });
   });
 
-  it('redirects to /app/billing when checkout session returns ALREADY_SUBSCRIBED', async () => {
-    const createCheckoutSessionFn = vi.fn(async () =>
-      err('ALREADY_SUBSCRIBED', 'Already subscribed'),
-    );
-
-    const redirectFn = createRedirectFn();
-
-    await expect(
-      subscribeMonthlyAction(new FormData(), {
-        createCheckoutSessionFn,
-        redirectFn,
-      }),
-    ).rejects.toMatchObject({
-      message: 'redirect:/app/billing',
-    });
-
-    expect(createCheckoutSessionFn).toHaveBeenCalledWith({
-      plan: 'monthly',
-      idempotencyKey: undefined,
-    });
-  });
-
-  it('includes a truncated error_message in development', async () => {
-    const longMessage = 'x'.repeat(210);
-    const createCheckoutSessionFn = vi.fn(async () =>
-      err('INTERNAL_ERROR', longMessage),
-    );
-
-    let redirected: string | null = null;
-    const redirectFn = vi.fn((url: string): never => {
-      redirected = url;
-      throw new Error(`redirect:${url}`);
-    });
-
-    const originalEnv = process.env.NODE_ENV;
-    (process.env as Record<string, string | undefined>).NODE_ENV =
-      'development';
+  it('includes a truncated error_message when checkout fails in development', async () => {
+    vi.stubEnv('NODE_ENV', 'development');
     try {
+      const longMessage = 'x'.repeat(250);
+
+      type CreateCheckoutSessionFn = Parameters<
+        typeof runSubscribeAction
+      >[1]['createCheckoutSessionFn'];
+      const createCheckoutSessionFn = vi.fn<CreateCheckoutSessionFn>(async () =>
+        err('INTERNAL_ERROR', longMessage),
+      );
+
+      const redirectFn = createRedirectFn();
+      const logError = vi.fn();
+
       await expect(
-        subscribeMonthlyAction(new FormData(), {
-          createCheckoutSessionFn,
-          redirectFn,
-          logError: () => undefined,
-        }),
+        runSubscribeAction(
+          { plan: 'monthly', idempotencyKey: 'idem_1' },
+          {
+            createCheckoutSessionFn,
+            redirectFn,
+            logError,
+          },
+        ),
       ).rejects.toMatchObject({
-        message: expect.stringContaining('redirect:'),
+        message: expect.stringContaining('redirect:/pricing?'),
       });
+
+      const redirectUrl = redirectFn.mock.calls[0]?.[0];
+      if (!redirectUrl) throw new Error('Expected redirect url');
+
+      const url = new URL(redirectUrl, 'https://example.com');
+      expect(url.pathname).toBe('/pricing');
+      expect(url.searchParams.get('checkout')).toBe('error');
+      expect(url.searchParams.get('plan')).toBe('monthly');
+      expect(url.searchParams.get('error_code')).toBe('INTERNAL_ERROR');
+      expect(url.searchParams.get('error_message')).toBe(`${'x'.repeat(200)}…`);
+
+      expect(logError).toHaveBeenCalledWith(
+        expect.objectContaining({
+          plan: 'monthly',
+          idempotencyKey: 'idem_1',
+          errorCode: 'INTERNAL_ERROR',
+        }),
+        'Stripe checkout failed',
+      );
     } finally {
-      (process.env as Record<string, string | undefined>).NODE_ENV =
-        originalEnv;
+      vi.unstubAllEnvs();
     }
-
-    expect(redirected).not.toBeNull();
-
-    const url = new URL(`https://example.com${redirected}`);
-    expect(url.pathname).toBe('/pricing');
-    expect(url.searchParams.get('checkout')).toBe('error');
-    expect(url.searchParams.get('plan')).toBe('monthly');
-    expect(url.searchParams.get('error_code')).toBe('INTERNAL_ERROR');
-    expect(url.searchParams.get('error_message')).toBe(`${'x'.repeat(200)}…`);
   });
 });

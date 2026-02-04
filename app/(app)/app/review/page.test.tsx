@@ -14,6 +14,7 @@ describe('app/(app)/app/review', () => {
       <ReviewView
         rows={[
           {
+            isAvailable: true,
             questionId: 'q_1',
             slug: 'q-1',
             stemMd: 'Stem for q1',
@@ -40,6 +41,7 @@ describe('app/(app)/app/review', () => {
       <ReviewView
         rows={[
           {
+            isAvailable: true,
             questionId: 'q_1',
             slug: 'q-1',
             stemMd: 'Stem for q1',
@@ -47,6 +49,7 @@ describe('app/(app)/app/review', () => {
             lastAnsweredAt: '2026-02-01T00:00:00.000Z',
           },
           {
+            isAvailable: true,
             questionId: 'q_2',
             slug: 'q-2',
             stemMd: 'Stem for q2',
@@ -72,6 +75,26 @@ describe('app/(app)/app/review', () => {
 
     expect(html).toContain('Review');
     expect(html).toContain('No missed questions yet.');
+  });
+
+  it('renders unavailable missed questions without a reattempt link', () => {
+    const html = renderToStaticMarkup(
+      <ReviewView
+        rows={[
+          {
+            isAvailable: false,
+            questionId: 'q_orphaned',
+            lastAnsweredAt: '2026-02-01T00:00:00.000Z',
+          },
+        ]}
+        limit={20}
+        offset={0}
+      />,
+    );
+
+    expect(html).toContain('[Question no longer available]');
+    expect(html).toContain('Missed 2026-02-01');
+    expect(html).not.toContain('Reattempt');
   });
 
   it('renders an error state when missed questions load fails', () => {

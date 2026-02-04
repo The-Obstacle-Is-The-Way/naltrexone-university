@@ -1,5 +1,5 @@
-import { describe, expect, it, vi } from 'vitest';
-import type { Logger } from '@/src/adapters/shared/logger';
+import { describe, expect, it } from 'vitest';
+import type { Logger } from '@/src/application/ports/logger';
 import {
   FakeAttemptRepository,
   FakeAuthGateway,
@@ -20,9 +20,15 @@ class FakeLogger implements Logger {
   readonly warnCalls: Array<{ context: Record<string, unknown>; msg: string }> =
     [];
 
+  debug(_context: Record<string, unknown>, _msg: string): void {}
+
+  info(_context: Record<string, unknown>, _msg: string): void {}
+
   warn(context: Record<string, unknown>, msg: string): void {
     this.warnCalls.push({ context, msg });
   }
+
+  error(_context: Record<string, unknown>, _msg: string): void {}
 }
 
 function createDeps(overrides?: {
@@ -60,7 +66,7 @@ function createDeps(overrides?: {
     checkEntitlementUseCase,
     attemptRepository: new FakeAttemptRepository(overrides?.attempts ?? []),
     questionRepository: new FakeQuestionRepository(overrides?.questions ?? []),
-    logger: overrides?.logger,
+    logger: overrides?.logger ?? new FakeLogger(),
   };
 }
 
@@ -111,6 +117,24 @@ describe('review-controller', () => {
       });
     });
 
+    it('returns empty rows when there are no missed questions', async () => {
+      const deps = createDeps({ attempts: [], questions: [] });
+
+      const result = await getMissedQuestions(
+        { limit: 10, offset: 0 },
+        deps as never,
+      );
+
+      expect(result).toEqual({
+        ok: true,
+        data: {
+          rows: [],
+          limit: 10,
+          offset: 0,
+        },
+      });
+    });
+
     it('returns missed questions based on most recent attempt only', async () => {
       const deps = createDeps({
         attempts: [
@@ -156,6 +180,7 @@ describe('review-controller', () => {
         data: {
           rows: [
             {
+              isAvailable: true,
               questionId: 'q1',
               slug: 'q-1',
               stemMd: 'Stem for q1',
@@ -163,6 +188,7 @@ describe('review-controller', () => {
               lastAnsweredAt: '2026-02-01T12:00:00.000Z',
             },
             {
+              isAvailable: true,
               questionId: 'q2',
               slug: 'q-2',
               stemMd: 'Stem for q2',
@@ -177,8 +203,6 @@ describe('review-controller', () => {
     });
 
     it('loads dependencies from the container when deps are omitted', async () => {
-      vi.resetModules();
-
       const deps = createDeps({
         attempts: [
           createAttempt({
@@ -192,22 +216,22 @@ describe('review-controller', () => {
           createQuestion({ id: 'q1', slug: 'q-1', stemMd: 'Stem for q1' }),
         ],
       });
-
-      vi.doMock('@/lib/container', () => ({
-        createContainer: () => ({
-          createReviewControllerDeps: () => deps,
-        }),
-      }));
-
-      const { getMissedQuestions } = await import('./review-controller');
-
-      const result = await getMissedQuestions({ limit: 10, offset: 0 });
+      const result = await getMissedQuestions(
+        { limit: 10, offset: 0 },
+        undefined,
+        {
+          loadContainer: async () => ({
+            createReviewControllerDeps: () => deps,
+          }),
+        },
+      );
 
       expect(result).toEqual({
         ok: true,
         data: {
           rows: [
             {
+              isAvailable: true,
               questionId: 'q1',
               slug: 'q-1',
               stemMd: 'Stem for q1',
@@ -245,7 +269,17 @@ describe('review-controller', () => {
 
       expect(result).toEqual({
         ok: true,
-        data: { rows: [], limit: 10, offset: 0 },
+        data: {
+          rows: [
+            {
+              isAvailable: false,
+              questionId: orphanedQuestionId,
+              lastAnsweredAt: '2026-02-01T12:00:00.000Z',
+            },
+          ],
+          limit: 10,
+          offset: 0,
+        },
       });
       expect(logger.warnCalls).toEqual([
         {
@@ -253,31 +287,6 @@ describe('review-controller', () => {
           msg: 'Missed question references missing question',
         },
       ]);
-    });
-
-    it('works without logger (optional dependency)', async () => {
-      const orphanedQuestionId = 'q-orphaned';
-      const deps = createDeps({
-        attempts: [
-          createAttempt({
-            userId: 'user_1',
-            questionId: orphanedQuestionId,
-            isCorrect: false,
-            answeredAt: new Date('2026-02-01T12:00:00Z'),
-          }),
-        ],
-        questions: [],
-      });
-
-      const result = await getMissedQuestions(
-        { limit: 10, offset: 0 },
-        deps as never,
-      );
-
-      expect(result).toEqual({
-        ok: true,
-        data: { rows: [], limit: 10, offset: 0 },
-      });
     });
   });
 });

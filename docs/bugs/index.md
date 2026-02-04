@@ -1,7 +1,7 @@
 # Bug Reports
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-02-02
+**Last Updated:** 2026-02-03
 
 ---
 
@@ -15,11 +15,9 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 ## Bug Index (Active)
 
-| ID | Title | Status | Priority | Date |
-|----|-------|--------|----------|------|
-| None | — | — | — | — |
+✅ No active bugs.
 
-**Next Bug ID:** BUG-048
+**Next Bug ID:** BUG-055
 
 ## Foundation Audit
 
@@ -30,6 +28,13 @@ See: [Foundation Audit Report](foundation-audit-report.md)
 
 | ID | Title | Priority | Resolved |
 |----|-------|----------|----------|
+| [BUG-054](../_archive/bugs/bug-054-async-state-updates-after-unmount-in-page-logic.md) | Async State Updates After Component Unmount in Page Logic | P2 | 2026-02-03 |
+| [BUG-053](../_archive/bugs/bug-053-checkout-success-missing-user-id-metadata.md) | Checkout Success Accepts Missing `metadata.user_id` | P1 | 2026-02-03 |
+| [BUG-052](../_archive/bugs/bug-052-non-entitled-subscriptions-could-start-new-checkout.md) | Non-Entitled Subscriptions Could Start New Checkout Sessions | P1 | 2026-02-03 |
+| [BUG-051](../_archive/bugs/bug-051-checkout-success-redirects-with-non-entitled-status.md) | Checkout Success Redirects with Non-Entitled Status | P1 | 2026-02-03 |
+| [BUG-050](../_archive/bugs/bug-050-stripe-webhook-missing-user-id-metadata.md) | Stripe Webhook Skips Events Missing `metadata.user_id` | P1 | 2026-02-03 |
+| [BUG-049](../_archive/bugs/bug-049-silent-pruning-failures-stripe-webhook.md) | Silent Pruning Failures in Stripe Webhook Controller | P3 | 2026-02-03 |
+| [BUG-048](../_archive/bugs/bug-048-webhook-rate-limiter-fails-open.md) | Webhook Rate Limiter Failures Fail Open | P2 | 2026-02-03 |
 | [BUG-047](../_archive/bugs/bug-047-multiple-subscriptions-per-user.md) | Multiple Subscriptions Created Per User | P1 | 2026-02-02 |
 | [BUG-046](../_archive/bugs/bug-046-review-page-ambiguous-column.md) | Review Page SQL Error — Ambiguous Column Reference | P1 | 2026-02-02 |
 | [BUG-045](../_archive/bugs/bug-045-checkout-missing-current-period-end.md) | Checkout Success Validation Fails — missing_current_period_end | P1 | 2026-02-02 |

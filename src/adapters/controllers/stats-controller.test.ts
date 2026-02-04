@@ -1,5 +1,5 @@
-import { describe, expect, it, vi } from 'vitest';
-import type { Logger } from '@/src/adapters/shared/logger';
+import { describe, expect, it } from 'vitest';
+import type { Logger } from '@/src/application/ports/logger';
 import {
   FakeAttemptRepository,
   FakeAuthGateway,
@@ -20,9 +20,15 @@ class FakeLogger implements Logger {
   readonly warnCalls: Array<{ context: Record<string, unknown>; msg: string }> =
     [];
 
+  debug(_context: Record<string, unknown>, _msg: string): void {}
+
+  info(_context: Record<string, unknown>, _msg: string): void {}
+
   warn(context: Record<string, unknown>, msg: string): void {
     this.warnCalls.push({ context, msg });
   }
+
+  error(_context: Record<string, unknown>, _msg: string): void {}
 }
 
 function createDeps(overrides?: {
@@ -64,7 +70,7 @@ function createDeps(overrides?: {
     attemptRepository: new FakeAttemptRepository(overrides?.attempts ?? []),
     questionRepository: new FakeQuestionRepository(overrides?.questions ?? []),
     now,
-    logger: overrides?.logger,
+    logger: overrides?.logger ?? new FakeLogger(),
   };
 }
 
@@ -150,6 +156,7 @@ describe('stats-controller', () => {
           currentStreakDays: 2,
           recentActivity: [
             {
+              isAvailable: true,
               attemptId: 'attempt-q1',
               answeredAt: '2026-02-01T11:00:00.000Z',
               questionId: 'q1',
@@ -157,6 +164,7 @@ describe('stats-controller', () => {
               isCorrect: true,
             },
             {
+              isAvailable: true,
               attemptId: 'attempt-q2',
               answeredAt: '2026-01-31T11:00:00.000Z',
               questionId: 'q2',
@@ -164,6 +172,7 @@ describe('stats-controller', () => {
               isCorrect: false,
             },
             {
+              isAvailable: true,
               attemptId: 'attempt-q3',
               answeredAt: '2026-01-20T11:00:00.000Z',
               questionId: 'q3',
@@ -204,19 +213,12 @@ describe('stats-controller', () => {
     });
 
     it('loads dependencies from the container when deps are omitted', async () => {
-      vi.resetModules();
-
       const deps = createDeps({ attempts: [], questions: [] });
-
-      vi.doMock('@/lib/container', () => ({
-        createContainer: () => ({
+      const result = await getUserStats({}, undefined, {
+        loadContainer: async () => ({
           createStatsControllerDeps: () => deps,
         }),
-      }));
-
-      const { getUserStats } = await import('./stats-controller');
-
-      const result = await getUserStats({});
+      });
 
       expect(result).toEqual({
         ok: true,
@@ -254,7 +256,15 @@ describe('stats-controller', () => {
 
       expect(result.ok).toBe(true);
       if (result.ok) {
-        expect(result.data.recentActivity).toEqual([]);
+        expect(result.data.recentActivity).toEqual([
+          {
+            isAvailable: false,
+            attemptId: 'attempt-q-orphaned',
+            answeredAt: '2026-02-01T11:00:00.000Z',
+            questionId: orphanedQuestionId,
+            isCorrect: true,
+          },
+        ]);
       }
       expect(logger.warnCalls).toEqual([
         {
@@ -262,31 +272,6 @@ describe('stats-controller', () => {
           msg: 'Recent activity references missing question',
         },
       ]);
-    });
-
-    it('works without logger (optional dependency)', async () => {
-      const orphanedQuestionId = 'q-orphaned';
-      const now = new Date('2026-02-01T12:00:00Z');
-
-      const deps = createDeps({
-        now: () => now,
-        attempts: [
-          createAttempt({
-            userId: 'user_1',
-            questionId: orphanedQuestionId,
-            isCorrect: true,
-            answeredAt: new Date('2026-02-01T11:00:00Z'),
-          }),
-        ],
-        questions: [],
-      });
-
-      const result = await getUserStats({}, deps as never);
-
-      expect(result.ok).toBe(true);
-      if (result.ok) {
-        expect(result.data.recentActivity).toEqual([]);
-      }
     });
   });
 });

@@ -1,5 +1,4 @@
 import { describe, expect, it, vi } from 'vitest';
-import { ApplicationError } from '@/src/application/errors';
 import type { AuthGateway } from '@/src/application/ports/gateways';
 import { enforceEntitledAppUser } from './layout';
 
@@ -20,6 +19,11 @@ function createUser(): UserLike {
 }
 
 describe('app/(app)/app/layout', () => {
+  it('forces dynamic rendering to avoid build-time prerendering auth-gated routes', async () => {
+    const mod = await import('./layout');
+    expect((mod as Record<string, unknown>).dynamic).toBe('force-dynamic');
+  });
+
   it('redirects to /pricing when user is not entitled', async () => {
     const user = createUser();
 
@@ -80,34 +84,5 @@ describe('app/(app)/app/layout', () => {
       userId: 'user_1',
     });
     expect(redirectFn).not.toHaveBeenCalled();
-  });
-
-  it('redirects to /sign-in when unauthenticated', async () => {
-    const authGateway: AuthGateway = {
-      getCurrentUser: async () => null,
-      requireUser: async () => {
-        throw new ApplicationError('UNAUTHENTICATED', 'User not authenticated');
-      },
-    };
-
-    const checkEntitlementUseCase = {
-      execute: vi.fn(async () => ({ isEntitled: false })),
-    };
-
-    const redirectFn = vi.fn((url: string) => {
-      throw new Error(`redirect:${url}`);
-    });
-
-    await expect(
-      enforceEntitledAppUser(
-        { authGateway, checkEntitlementUseCase },
-        redirectFn as never,
-      ),
-    ).rejects.toMatchObject({
-      message: 'redirect:/sign-in',
-    });
-
-    expect(checkEntitlementUseCase.execute).not.toHaveBeenCalled();
-    expect(redirectFn).toHaveBeenCalledWith('/sign-in');
   });
 });

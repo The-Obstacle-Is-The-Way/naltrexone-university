@@ -16,6 +16,7 @@ describe('app/(app)/app/dashboard', () => {
           currentStreakDays: 3,
           recentActivity: [
             {
+              isAvailable: true,
               attemptId: 'attempt_1',
               answeredAt: '2026-02-01T00:00:00.000Z',
               questionId: 'q_1',
@@ -52,6 +53,32 @@ describe('app/(app)/app/dashboard', () => {
 
     expect(html).toContain('Dashboard');
     expect(html).not.toContain('Recent activity');
+  });
+
+  it('renders placeholder text for unavailable recent activity rows', () => {
+    const html = renderToStaticMarkup(
+      <DashboardView
+        stats={{
+          totalAnswered: 1,
+          accuracyOverall: 1,
+          answeredLast7Days: 1,
+          accuracyLast7Days: 1,
+          currentStreakDays: 1,
+          recentActivity: [
+            {
+              isAvailable: false,
+              attemptId: 'attempt_1',
+              answeredAt: '2026-02-01T00:00:00.000Z',
+              questionId: 'q_orphaned',
+              isCorrect: false,
+            },
+          ],
+        }}
+      />,
+    );
+
+    expect(html).toContain('[Question no longer available]');
+    expect(html).toContain('Incorrect');
   });
 
   it('renders an error state when stats load fails', () => {

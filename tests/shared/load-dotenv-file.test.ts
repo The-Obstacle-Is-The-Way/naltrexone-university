@@ -24,4 +24,20 @@ describe('loadDotenvFileOrThrow', () => {
       await rm(dir, { recursive: true, force: true });
     }
   });
+
+  it('overrides existing environment variables from a file', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'nu-test-env-override-'));
+    try {
+      const envPath = join(dir, '.env');
+      await writeFile(envPath, 'TEST_ENV_LOADED=1\n');
+      process.env.TEST_ENV_LOADED = '2';
+
+      loadDotenvFileOrThrow(envPath, { override: true });
+
+      expect(process.env.TEST_ENV_LOADED).toBe('1');
+    } finally {
+      delete process.env.TEST_ENV_LOADED;
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
 });

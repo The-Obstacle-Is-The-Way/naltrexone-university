@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { getClientIp } from '@/lib/request-ip';
 import type {
   StripeWebhookDeps,
   StripeWebhookInput,
@@ -36,8 +37,7 @@ export function createWebhookHandler(
     const container = createContainer();
 
     try {
-      const forwardedFor = req.headers.get('x-forwarded-for');
-      const ip = forwardedFor?.split(',')[0]?.trim() ?? 'unknown';
+      const ip = getClientIp(req.headers);
 
       const rate = await container.createRateLimiter().limit({
         key: `webhook:stripe:${ip}`,
@@ -59,6 +59,10 @@ export function createWebhookHandler(
       }
     } catch (error) {
       container.logger.error({ error }, 'Stripe webhook rate limiter failed');
+      return NextResponse.json(
+        { error: 'Rate limiter unavailable' },
+        { status: 503 },
+      );
     }
 
     const rawBody = await req.text();

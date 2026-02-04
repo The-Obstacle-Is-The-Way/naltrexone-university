@@ -36,43 +36,27 @@ async function createCheckoutSession(d: BillingControllerDeps) {
 
 ### Option 1: Database-backed (recommended)
 
-```typescript
-// idempotency-repository.ts
-interface IdempotencyKey {
-  key: string;
-  userId: string;
-  action: string;
-  result: unknown;
-  createdAt: Date;
-  expiresAt: Date;
-}
+See the working implementation (canonical source of truth):
 
-async function withIdempotency<T>(
-  key: string,
-  userId: string,
-  action: string,
-  fn: () => Promise<T>
-): Promise<T> {
-  const existing = await idempotencyRepo.find(key);
-  if (existing) {
-    return existing.result as T;
-  }
-
-  const result = await fn();
-  await idempotencyRepo.save({ key, userId, action, result, expiresAt: addHours(24) });
-  return result;
-}
-```
+- `src/adapters/shared/with-idempotency.ts`
+- `src/application/ports/repositories.ts` (`IdempotencyKeyRepository`)
+- `src/adapters/repositories/drizzle-idempotency-key-repository.ts`
+- `db/schema.ts` (`idempotency_keys`)
 
 ### Option 2: Stripe's built-in idempotency
 
 ```typescript
 // For Stripe operations only
+// IMPORTANT: the idempotency key must be stable for the same logical action.
+// Do NOT use Date.now() or random values here.
+const idempotencyKey = uuidFromClient; // provided by the client; stable across retries
 const session = await stripe.checkout.sessions.create(
   { ...params },
-  { idempotencyKey: `checkout:${userId}:${Date.now()}` }
+  { idempotencyKey: `checkout:${userId}:${idempotencyKey}` }
 );
 ```
+
+See "Client-Side Coordination" below for how clients generate and pass stable keys.
 
 ## Where to Apply
 
@@ -93,6 +77,8 @@ async function handleSubmit() {
   await createCheckoutSession({ idempotencyKey });
 }
 ```
+
+**Key lifetime:** This pattern creates a per-form-instance key (prevents double-clicks during a single render). If you need per-logical-operation idempotency (same key after refresh/navigation), persist the key in URL params, sessionStorage, or server-side state.
 
 ---
 
@@ -123,5 +109,5 @@ We implemented **database-backed idempotency keys** (no vendor-specific dependen
 ## Related
 
 - BUG-047: Multiple subscriptions created per user
-- Stripe Idempotent Requests: https://stripe.com/docs/api/idempotent_requests
-- AWS Best Practices: Idempotency in Serverless
+- [Stripe Idempotent Requests](https://stripe.com/docs/api/idempotent_requests)
+- [AWS Best Practices: Idempotency in Serverless](https://aws.amazon.com/blogs/compute/handling-lambda-functions-idempotency-with-aws-lambda-powertools/)

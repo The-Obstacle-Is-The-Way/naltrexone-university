@@ -38,7 +38,7 @@ export function ChoiceButton({
         type="radio"
         name={name}
         checked={selected}
-        onChange={onClick}
+        onChange={() => onClick()}
         disabled={disabled}
         className="sr-only"
       />

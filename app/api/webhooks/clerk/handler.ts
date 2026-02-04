@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { getClientIp } from '@/lib/request-ip';
 import type {
   ClerkWebhookDeps,
   ClerkWebhookEvent,
@@ -6,6 +7,7 @@ import type {
 import { CLERK_WEBHOOK_RATE_LIMIT } from '@/src/adapters/shared/rate-limits';
 import { isApplicationError } from '@/src/application/errors';
 import type { RateLimiter } from '@/src/application/ports/gateways';
+import type { Logger } from '@/src/application/ports/logger';
 import type {
   StripeCustomerRepository,
   UserRepository,
@@ -25,13 +27,8 @@ type StripeClient = {
   };
 };
 
-type ClerkWebhookRouteLogger = {
-  error: (context: unknown, message: string) => void;
-  warn: (context: Record<string, unknown>, message: string) => void;
-};
-
 export type ClerkWebhookRouteContainer = {
-  logger: ClerkWebhookRouteLogger;
+  logger: Logger;
   stripe: StripeClient;
   createRateLimiter: () => RateLimiter;
   createUserRepository: () => UserRepository;
@@ -57,8 +54,7 @@ export function createWebhookHandler(
     const container = createContainer();
 
     try {
-      const forwardedFor = req.headers.get('x-forwarded-for');
-      const ip = forwardedFor?.split(',')[0]?.trim() ?? 'unknown';
+      const ip = getClientIp(req.headers);
 
       const rate = await container.createRateLimiter().limit({
         key: `webhook:clerk:${ip}`,
@@ -80,6 +76,10 @@ export function createWebhookHandler(
       }
     } catch (error) {
       container.logger.error({ error }, 'Clerk webhook rate limiter failed');
+      return NextResponse.json(
+        { error: 'Rate limiter unavailable' },
+        { status: 503 },
+      );
     }
 
     let event: ClerkWebhookEvent;

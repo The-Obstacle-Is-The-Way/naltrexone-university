@@ -1,7 +1,7 @@
 # Technical Debt Register
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-02-02
+**Last Updated:** 2026-02-04
 
 ---
 
@@ -17,15 +17,30 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 | ID | Title | Status | Priority | Date |
 |----|-------|--------|----------|------|
+| [DEBT-084](debt-084-user-email-race-condition.md) | User Email Race Condition in Concurrent Webhook Handling | Accepted | P3 | 2026-02-03 |
+| [DEBT-090](debt-090-missing-use-cases-business-logic-in-controllers.md) | Missing Application Use Cases (Business Logic Lives in Controllers) | Open | P1 | 2026-02-04 |
+| [DEBT-091](debt-091-attempt-repository-isp-violation.md) | AttemptRepository is “Fat” (Interface Segregation Pressure) | Open | P3 | 2026-02-04 |
+| [DEBT-092](debt-092-stripe-payment-gateway-god-class.md) | StripePaymentGateway is a God Class (SRP + Separation Pressure) | Open | P2 | 2026-02-04 |
+| [DEBT-096](debt-096-repository-mapper-duplication.md) | Repository Row→Domain Mapping Duplicated (DRY Violation) | Open | P3 | 2026-02-04 |
 
-_No active debt items._
-
-**Next Debt ID:** DEBT-080
+**Next Debt ID:** DEBT-097
 
 ## Archived Debt
 
 | ID | Title | Priority | Resolved |
 |----|-------|----------|----------|
+| [DEBT-093](../_archive/debt/debt-093-clerk-webhook-route-business-logic.md) | Clerk Webhook Route Contains Business Logic (Framework Layer Leakage) | P2 | 2026-02-04 |
+| [DEBT-094](../_archive/debt/debt-094-inline-server-action-billing-page.md) | Inline Server Action Inside Billing Page (Inconsistent Pattern) | P3 | 2026-02-04 |
+| [DEBT-095](../_archive/debt/debt-095-console-error-in-production.md) | console.error Usage in Production Code (Bypasses Structured Logger) | P3 | 2026-02-04 |
+| [DEBT-089](../_archive/debt/debt-089-logger-port-wrong-layer.md) | Logger Port Defined in Wrong Layer (Dependency Arrow Outward) | P2 | 2026-02-04 |
+| [DEBT-088](../_archive/debt/debt-088-optional-logger-hides-errors.md) | Optional Logger Pattern Hides Errors | P2 | 2026-02-03 |
+| [DEBT-087](../_archive/debt/debt-087-graceful-degradation-hides-data-loss.md) | Graceful Degradation Hides Data Loss from Users | P2 | 2026-02-03 |
+| [DEBT-086](../_archive/debt/debt-086-dry-violation-controller-boilerplate.md) | DRY Violation — Repeated Controller Boilerplate Pattern | P3 | 2026-02-03 |
+| [DEBT-085](../_archive/debt/debt-085-union-return-type-code-smell.md) | Union Return Type Pattern in requireEntitledUserId() | P3 | 2026-02-03 |
+| [DEBT-083](../_archive/debt/debt-083-unused-attempt-repository-find-by-user-id.md) | AttemptRepository.findByUserId() Needs Pagination | P2 | 2026-02-03 |
+| [DEBT-082](../_archive/debt/debt-082-test-logs-too-noisy.md) | Unit Tests Emit Noisy Error Logs | P3 | 2026-02-03 |
+| [DEBT-081](../_archive/debt/debt-081-nextjs-alloweddevorigins-warning.md) | Next.js allowedDevOrigins Warning in E2E Runs | P3 | 2026-02-03 |
+| [DEBT-080](../_archive/debt/debt-080-missing-e2e-coverage-core-pages.md) | Missing E2E Coverage for Core App Pages | P1 | 2026-02-03 |
 | [DEBT-074](../_archive/debt/debt-074-missing-boundary-integration-tests.md) | Missing Boundary Integration Tests (Uncle Bob's "Humble Object" Gap) | P1 | 2026-02-02 |
 | [DEBT-079](../_archive/debt/debt-079-no-retry-backoff-external-calls.md) | No Retry/Backoff Logic for External API Calls | P2 | 2026-02-02 |
 | [DEBT-078](../_archive/debt/debt-078-no-idempotency-keys.md) | No Idempotency Keys on State-Changing Actions | P1 | 2026-02-02 |

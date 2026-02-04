@@ -1,28 +1,22 @@
 'use server';
 
+import { ApplicationError } from '@/src/application/errors';
 import type { AuthGateway } from '@/src/application/ports/gateways';
-import type {
-  CheckEntitlementInput,
-  CheckEntitlementOutput,
-} from '@/src/application/use-cases/check-entitlement';
-import type { ActionResult } from './action-result';
-import { err } from './action-result';
+import type { CheckEntitlementUseCase } from '@/src/application/ports/use-cases';
 
-export type CheckEntitlementUseCase = {
-  execute: (input: CheckEntitlementInput) => Promise<CheckEntitlementOutput>;
-};
+export type { CheckEntitlementUseCase } from '@/src/application/ports/use-cases';
 
 export async function requireEntitledUserId(deps: {
   authGateway: AuthGateway;
   checkEntitlementUseCase: CheckEntitlementUseCase;
-}): Promise<string | ActionResult<never>> {
+}): Promise<string> {
   const user = await deps.authGateway.requireUser();
   const entitlement = await deps.checkEntitlementUseCase.execute({
     userId: user.id,
   });
 
   if (!entitlement.isEntitled) {
-    return err('UNSUBSCRIBED', 'Subscription required');
+    throw new ApplicationError('UNSUBSCRIBED', 'Subscription required');
   }
 
   return user.id;

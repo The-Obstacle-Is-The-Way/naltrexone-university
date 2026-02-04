@@ -1,5 +1,6 @@
 import { isApplicationError } from '@/src/application/errors';
 import type { PaymentGateway } from '@/src/application/ports/gateways';
+import type { Logger } from '@/src/application/ports/logger';
 import type {
   StripeCustomerRepository,
   StripeEventRepository,
@@ -22,6 +23,7 @@ export type StripeWebhookDeps = {
   transaction: <T>(
     fn: (tx: StripeWebhookTransaction) => Promise<T>,
   ) => Promise<T>;
+  logger: Logger;
 };
 
 const STACK_TRACE_LIMIT = 1000;
@@ -87,19 +89,30 @@ export async function processStripeWebhook(
         }
 
         await stripeEvents.markProcessed(event.eventId);
-
-        try {
-          await stripeEvents.pruneProcessedBefore(
-            new Date(Date.now() - STRIPE_EVENT_RETENTION_DAYS * DAY_MS),
-            STRIPE_EVENT_PRUNE_LIMIT,
-          );
-        } catch {
-          // Best-effort cleanup: do not fail webhook processing if pruning fails.
-        }
       } catch (error) {
         await stripeEvents.markFailed(event.eventId, toErrorData(error));
         throw error;
       }
     },
   );
+
+  try {
+    await deps.transaction(async ({ stripeEvents }) => {
+      await stripeEvents.pruneProcessedBefore(
+        new Date(Date.now() - STRIPE_EVENT_RETENTION_DAYS * DAY_MS),
+        STRIPE_EVENT_PRUNE_LIMIT,
+      );
+    });
+  } catch (error) {
+    // Best-effort cleanup: do not fail webhook processing if pruning fails.
+    deps.logger.warn(
+      {
+        eventId: event.eventId,
+        error: error instanceof Error ? error.message : String(error),
+        retentionDays: STRIPE_EVENT_RETENTION_DAYS,
+        pruneLimit: STRIPE_EVENT_PRUNE_LIMIT,
+      },
+      'Stripe event pruning failed',
+    );
+  }
 }

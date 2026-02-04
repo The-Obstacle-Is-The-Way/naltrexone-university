@@ -6,49 +6,46 @@ import type {
   ClerkWebhookEvent,
 } from '@/src/adapters/controllers/clerk-webhook-controller';
 import { ApplicationError } from '@/src/application/errors';
+import type { RateLimiter } from '@/src/application/ports/gateways';
+import type {
+  StripeCustomerRepository,
+  UserRepository,
+} from '@/src/application/ports/repositories';
+import {
+  FakeLogger,
+  FakeStripeCustomerRepository,
+  FakeUserRepository,
+} from '@/src/application/test-helpers/fakes';
 
 function createTestDeps() {
-  const loggerError = vi.fn();
-  const loggerWarn = vi.fn();
-  const rateLimiter = {
-    limit: vi.fn(async () => ({
-      success: true,
-      limit: 100,
-      remaining: 99,
-      retryAfterSeconds: 0,
-    })),
-  };
+  const logger = new FakeLogger();
+  const limit = vi.fn<RateLimiter['limit']>(async () => ({
+    success: true,
+    limit: 100,
+    remaining: 99,
+    retryAfterSeconds: 0,
+  }));
+  const rateLimiter: RateLimiter & { limit: typeof limit } = { limit };
 
-  const userRepository = {
-    findByClerkId: vi.fn(async () => null),
-    upsertByClerkId: vi.fn(async () => ({
-      id: 'user_1',
-      email: 'user@example.com',
-      createdAt: new Date('2026-02-01T00:00:00Z'),
-      updatedAt: new Date('2026-02-01T00:00:00Z'),
-    })),
-    deleteByClerkId: vi.fn(async () => false),
-  };
+  const userRepository = new FakeUserRepository();
+  const stripeCustomerRepository = new FakeStripeCustomerRepository();
 
-  const stripeCustomerRepository = {
-    findByUserId: vi.fn(async () => null),
-    insert: vi.fn(async () => undefined),
-  };
-
-  const createUserRepository = vi.fn(() => userRepository as never);
-  const createStripeCustomerRepository = vi.fn(
-    () => stripeCustomerRepository as never,
+  const createUserRepository = vi.fn<() => UserRepository>(
+    () => userRepository,
+  );
+  const createStripeCustomerRepository = vi.fn<() => StripeCustomerRepository>(
+    () => stripeCustomerRepository,
   );
 
   const createContainer = vi.fn<() => ClerkWebhookRouteContainer>(() => ({
-    logger: { error: loggerError, warn: loggerWarn },
+    logger,
     stripe: {
       subscriptions: {
         list: async function* () {},
         cancel: async () => undefined,
       },
     },
-    createRateLimiter: () => rateLimiter as never,
+    createRateLimiter: () => rateLimiter,
     createUserRepository,
     createStripeCustomerRepository,
   }));
@@ -71,8 +68,7 @@ function createTestDeps() {
     verifyWebhook,
     processClerkWebhook,
     cancelStripeCustomerSubscriptions,
-    loggerError,
-    loggerWarn,
+    logger,
     createUserRepository,
     createStripeCustomerRepository,
     userRepository,
@@ -144,6 +140,28 @@ describe('POST /api/webhooks/clerk', () => {
     expect(processClerkWebhook).not.toHaveBeenCalled();
   });
 
+  it('returns 503 when rate limiter throws', async () => {
+    const { POST, rateLimiter, verifyWebhook, processClerkWebhook, logger } =
+      createTestDeps();
+
+    rateLimiter.limit.mockRejectedValue(new Error('rate limiter down'));
+
+    const res = await POST(
+      new Request('http://localhost/api/webhooks/clerk', {
+        method: 'POST',
+        body: 'raw',
+      }),
+    );
+
+    expect(res.status).toBe(503);
+    await expect(res.json()).resolves.toEqual({
+      error: 'Rate limiter unavailable',
+    });
+    expect(verifyWebhook).not.toHaveBeenCalled();
+    expect(processClerkWebhook).not.toHaveBeenCalled();
+    expect(logger.errorCalls).toHaveLength(1);
+  });
+
   it('returns 400 when payload validation fails', async () => {
     const { POST, verifyWebhook, processClerkWebhook } = createTestDeps();
 
@@ -166,7 +184,7 @@ describe('POST /api/webhooks/clerk', () => {
   });
 
   it('returns 500 when processing fails unexpectedly', async () => {
-    const { POST, loggerError, verifyWebhook, processClerkWebhook } =
+    const { POST, logger, verifyWebhook, processClerkWebhook } =
       createTestDeps();
 
     verifyWebhook.mockResolvedValue({
@@ -186,6 +204,6 @@ describe('POST /api/webhooks/clerk', () => {
     await expect(res.json()).resolves.toEqual({
       error: 'Webhook processing failed',
     });
-    expect(loggerError).toHaveBeenCalledTimes(1);
+    expect(logger.errorCalls).toHaveLength(1);
   });
 });

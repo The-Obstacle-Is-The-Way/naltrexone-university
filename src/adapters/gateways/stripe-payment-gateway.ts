@@ -10,6 +10,7 @@ import type {
   PortalSessionOutput,
   WebhookEventResult,
 } from '@/src/application/ports/gateways';
+import type { Logger } from '@/src/application/ports/logger';
 import { isValidSubscriptionStatus } from '@/src/domain/value-objects';
 import {
   getStripePriceId,
@@ -23,6 +24,12 @@ type StripeBillingPortalSession = { url: string | null };
 type StripeCustomer = { id?: string };
 
 type StripeCheckoutSessionList = { data: StripeCheckoutSession[] };
+
+type StripeSubscription = unknown;
+
+type StripeEventWithSubscriptionRef = {
+  subscription?: string | { id: string } | null;
+};
 
 type StripeCheckoutSessionLineItem = {
   price?: { id?: string } | null;
@@ -88,6 +95,12 @@ type StripeClient = {
       ): Promise<StripeCheckoutSession>;
     };
   };
+  subscriptions?: {
+    retrieve(
+      subscriptionId: string,
+      options?: StripeRequestOptions,
+    ): Promise<StripeSubscription>;
+  };
   billingPortal: {
     sessions: {
       create(
@@ -113,10 +126,7 @@ export type StripePaymentGatewayDeps = {
   stripe: StripeClient;
   webhookSecret: string;
   priceIds: StripePriceIds;
-  logger?: {
-    error: (msg: string, context?: Record<string, unknown>) => void;
-    warn?: (msg: string, context?: Record<string, unknown>) => void;
-  };
+  logger: Logger;
 };
 
 const stripeSubscriptionItemSchema = z
@@ -140,6 +150,17 @@ const stripeSubscriptionSchema = z
     }),
   })
   .passthrough();
+
+const stripeCheckoutSessionSchema = z
+  .object({
+    subscription: z
+      .union([z.string(), z.object({ id: z.string() }).passthrough()])
+      .nullable()
+      .optional(),
+  })
+  .passthrough();
+
+const stripeEventWithSubscriptionRefSchema = stripeCheckoutSessionSchema;
 
 const subscriptionEventTypes = new Set([
   'customer.subscription.created',
@@ -182,15 +203,122 @@ export class StripePaymentGateway implements PaymentGateway {
       ...STRIPE_RETRY_OPTIONS,
       shouldRetry: isTransientExternalError,
       onRetry: ({ attempt, maxAttempts, delayMs, error }) => {
-        this.deps.logger?.warn?.('Retrying Stripe API call', {
-          operation,
-          attempt,
-          maxAttempts,
-          delayMs,
-          error: toStripeErrorContext(error),
-        });
+        this.deps.logger.warn(
+          {
+            operation,
+            attempt,
+            maxAttempts,
+            delayMs,
+            error: toStripeErrorContext(error),
+          },
+          'Retrying Stripe API call',
+        );
       },
     });
+  }
+
+  private async retrieveAndNormalizeSubscription(
+    event: { id: string; type: string },
+    subscriptionRef: string | { id: string },
+  ): Promise<WebhookEventResult['subscriptionUpdate'] | null> {
+    const stripeSubscriptionId =
+      typeof subscriptionRef === 'string'
+        ? subscriptionRef
+        : subscriptionRef.id;
+
+    const stripeSubscriptions = this.deps.stripe.subscriptions;
+    if (!stripeSubscriptions) {
+      throw new ApplicationError(
+        'STRIPE_ERROR',
+        'Stripe subscriptions client is unavailable',
+      );
+    }
+
+    const subscription = await this.callStripe('subscriptions.retrieve', () =>
+      stripeSubscriptions.retrieve(stripeSubscriptionId),
+    );
+
+    const parsedSubscription = stripeSubscriptionSchema.safeParse(subscription);
+    if (!parsedSubscription.success) {
+      this.deps.logger.error(
+        {
+          eventId: event.id,
+          type: event.type,
+          stripeSubscriptionId,
+          error: parsedSubscription.error.flatten(),
+        },
+        `Invalid Stripe subscription payload retrieved from ${event.type}`,
+      );
+
+      throw new ApplicationError(
+        'INVALID_WEBHOOK_PAYLOAD',
+        'Invalid Stripe subscription webhook payload',
+      );
+    }
+
+    return this.normalizeSubscriptionUpdate({
+      subscription: parsedSubscription.data,
+      eventId: event.id,
+      type: event.type,
+    });
+  }
+
+  private normalizeSubscriptionUpdate(input: {
+    subscription: z.infer<typeof stripeSubscriptionSchema>;
+    eventId: string;
+    type: string;
+  }): WebhookEventResult['subscriptionUpdate'] | null {
+    const { subscription } = input;
+    const userId = subscription.metadata?.user_id;
+    if (!userId) {
+      this.deps.logger.error(
+        {
+          eventId: input.eventId,
+          type: input.type,
+          stripeSubscriptionId: subscription.id,
+          stripeCustomerId: subscription.customer,
+        },
+        'Stripe subscription metadata.user_id is required',
+      );
+      throw new ApplicationError(
+        'STRIPE_ERROR',
+        'Stripe subscription metadata.user_id is required',
+      );
+    }
+
+    const stripeSubscriptionId = subscription.id;
+    const stripeCustomerId = subscription.customer;
+
+    const status = subscription.status;
+    if (!status || !isValidSubscriptionStatus(status)) {
+      throw new ApplicationError(
+        'STRIPE_ERROR',
+        'Stripe subscription status is invalid',
+      );
+    }
+
+    const subscriptionItem = subscription.items.data[0];
+    const currentPeriodEndSeconds = subscriptionItem.current_period_end;
+    const cancelAtPeriodEnd = subscription.cancel_at_period_end;
+    const priceId = subscriptionItem.price.id;
+
+    const plan = getSubscriptionPlanFromPriceId(priceId, this.deps.priceIds);
+    if (!plan) {
+      throw new ApplicationError(
+        'STRIPE_ERROR',
+        'Stripe subscription price id does not match a configured plan',
+      );
+    }
+
+    return {
+      userId,
+      stripeCustomerId,
+      stripeSubscriptionId,
+      plan,
+      status,
+      currentPeriodEnd: new Date(currentPeriodEndSeconds * 1000),
+      cancelAtPeriodEnd,
+    };
   }
 
   async createCustomer(
@@ -254,11 +382,14 @@ export class StripePaymentGateway implements PaymentGateway {
         // Avoid reusing a checkout session for a different plan. If the user
         // changes plans, we expire the old session and create a new one so the
         // Stripe UI matches their selection.
-        this.deps.logger?.warn?.('Expiring mismatched checkout session', {
-          sessionId: existingSession.id,
-          existingPriceId: existingPriceId ?? null,
-          requestedPriceId: priceId,
-        });
+        this.deps.logger.warn(
+          {
+            sessionId: existingSession.id,
+            existingPriceId: existingPriceId ?? null,
+            requestedPriceId: priceId,
+          },
+          'Expiring mismatched checkout session',
+        );
         await this.callStripe('checkout.sessions.expire', () =>
           this.deps.stripe.checkout.sessions.expire(existingSession.id, {
             idempotencyKey: `expire_checkout_session:${existingSession.id}`,
@@ -267,12 +398,12 @@ export class StripePaymentGateway implements PaymentGateway {
       } catch (error) {
         const errorMessage =
           error instanceof Error ? error.message : 'Unknown error';
-        this.deps.logger?.warn?.(
-          'Failed to inspect existing checkout session',
+        this.deps.logger.warn(
           {
             sessionId: existingSession.id,
             error: errorMessage,
           },
+          'Failed to inspect existing checkout session',
         );
       }
     }
@@ -354,9 +485,10 @@ export class StripePaymentGateway implements PaymentGateway {
       const errorMessage =
         error instanceof Error ? error.message : 'Unknown error';
 
-      this.deps.logger?.error('Webhook signature verification failed', {
-        error: errorMessage,
-      });
+      this.deps.logger.error(
+        { error: errorMessage },
+        'Webhook signature verification failed',
+      );
 
       throw new ApplicationError(
         'INVALID_WEBHOOK_SIGNATURE',
@@ -369,6 +501,74 @@ export class StripePaymentGateway implements PaymentGateway {
       type: event.type,
     };
 
+    if (event.type === 'checkout.session.completed') {
+      const parsedSession = stripeEventWithSubscriptionRefSchema.safeParse(
+        event.data.object,
+      );
+      if (!parsedSession.success) {
+        this.deps.logger.error(
+          {
+            eventId: event.id,
+            type: event.type,
+            error: parsedSession.error.flatten(),
+          },
+          'Invalid Stripe checkout.session.completed webhook payload',
+        );
+
+        throw new ApplicationError(
+          'INVALID_WEBHOOK_PAYLOAD',
+          'Invalid Stripe checkout.session.completed webhook payload',
+        );
+      }
+
+      const payload = parsedSession.data as StripeEventWithSubscriptionRef;
+      const subscriptionRef = payload.subscription;
+      if (!subscriptionRef) {
+        return result;
+      }
+
+      const subscriptionUpdate = await this.retrieveAndNormalizeSubscription(
+        event,
+        subscriptionRef,
+      );
+
+      return subscriptionUpdate ? { ...result, subscriptionUpdate } : result;
+    }
+
+    if (event.type === 'invoice.payment_failed') {
+      const parsedInvoice = stripeEventWithSubscriptionRefSchema.safeParse(
+        event.data.object,
+      );
+      if (!parsedInvoice.success) {
+        this.deps.logger.error(
+          {
+            eventId: event.id,
+            type: event.type,
+            error: parsedInvoice.error.flatten(),
+          },
+          'Invalid Stripe invoice.payment_failed webhook payload',
+        );
+
+        throw new ApplicationError(
+          'INVALID_WEBHOOK_PAYLOAD',
+          'Invalid Stripe invoice.payment_failed webhook payload',
+        );
+      }
+
+      const payload = parsedInvoice.data as StripeEventWithSubscriptionRef;
+      const subscriptionRef = payload.subscription;
+      if (!subscriptionRef) {
+        return result;
+      }
+
+      const subscriptionUpdate = await this.retrieveAndNormalizeSubscription(
+        event,
+        subscriptionRef,
+      );
+
+      return subscriptionUpdate ? { ...result, subscriptionUpdate } : result;
+    }
+
     if (!subscriptionEventTypes.has(event.type)) {
       return result;
     }
@@ -377,11 +577,14 @@ export class StripePaymentGateway implements PaymentGateway {
       event.data.object,
     );
     if (!parsedSubscription.success) {
-      this.deps.logger?.error('Invalid Stripe subscription webhook payload', {
-        eventId: event.id,
-        type: event.type,
-        error: parsedSubscription.error.flatten(),
-      });
+      this.deps.logger.error(
+        {
+          eventId: event.id,
+          type: event.type,
+          error: parsedSubscription.error.flatten(),
+        },
+        'Invalid Stripe subscription webhook payload',
+      );
 
       throw new ApplicationError(
         'INVALID_WEBHOOK_PAYLOAD',
@@ -389,65 +592,12 @@ export class StripePaymentGateway implements PaymentGateway {
       );
     }
 
-    const subscription = parsedSubscription.data;
-    const userId = subscription.metadata?.user_id;
-    if (!userId) {
-      // Stripe can emit `customer.subscription.created` without our metadata.
-      // Without `user_id` we can't map the event to an internal user, so we skip
-      // and rely on subsequent subscription events to sync.
-      if (event.type === 'customer.subscription.created') {
-        this.deps.logger?.warn?.(
-          'Skipping subscription.created event without metadata.user_id',
-          {
-            eventId: event.id,
-            stripeSubscriptionId: subscription.id ?? null,
-            stripeCustomerId: subscription.customer ?? null,
-          },
-        );
-        return result;
-      }
+    const subscriptionUpdate = this.normalizeSubscriptionUpdate({
+      subscription: parsedSubscription.data,
+      eventId: event.id,
+      type: event.type,
+    });
 
-      throw new ApplicationError(
-        'STRIPE_ERROR',
-        'Stripe subscription metadata.user_id is required',
-      );
-    }
-
-    const stripeSubscriptionId = subscription.id;
-    const stripeCustomerId = subscription.customer;
-
-    const status = subscription.status;
-    if (!status || !isValidSubscriptionStatus(status)) {
-      throw new ApplicationError(
-        'STRIPE_ERROR',
-        'Stripe subscription status is invalid',
-      );
-    }
-
-    const subscriptionItem = subscription.items.data[0];
-    const currentPeriodEndSeconds = subscriptionItem.current_period_end;
-    const cancelAtPeriodEnd = subscription.cancel_at_period_end;
-    const priceId = subscriptionItem.price.id;
-
-    const plan = getSubscriptionPlanFromPriceId(priceId, this.deps.priceIds);
-    if (!plan) {
-      throw new ApplicationError(
-        'STRIPE_ERROR',
-        'Stripe subscription price id does not match a configured plan',
-      );
-    }
-
-    return {
-      ...result,
-      subscriptionUpdate: {
-        userId,
-        stripeCustomerId,
-        stripeSubscriptionId,
-        plan,
-        status,
-        currentPeriodEnd: new Date(currentPeriodEndSeconds * 1000),
-        cancelAtPeriodEnd,
-      },
-    };
+    return subscriptionUpdate ? { ...result, subscriptionUpdate } : result;
   }
 }

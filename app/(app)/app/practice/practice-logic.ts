@@ -9,6 +9,12 @@ export function getActionResultErrorMessage(
   return result.error.message;
 }
 
+export function getThrownErrorMessage(error: unknown): string {
+  if (error instanceof Error && error.message) return error.message;
+  if (typeof error === 'string' && error.length > 0) return error;
+  return 'Unexpected error';
+}
+
 export async function loadNextQuestion(input: {
   getNextQuestionFn: (
     input: unknown,

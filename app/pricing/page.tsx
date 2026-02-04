@@ -1,25 +1,19 @@
-import type { AuthGateway } from '@/src/application/ports/gateways';
-import type {
-  CheckEntitlementInput,
-  CheckEntitlementOutput,
-} from '@/src/application/use-cases/check-entitlement';
-import { SubscribeButton } from './pricing-client';
-import { PricingView } from './pricing-view';
+import { manageBillingAction } from '@/app/pricing/manage-billing-actions';
+import { SubscribeButton } from '@/app/pricing/pricing-client';
+import { PricingView } from '@/app/pricing/pricing-view';
 import {
   subscribeAnnualAction,
   subscribeMonthlyAction,
-} from './subscribe-actions';
-import type { PricingBanner } from './types';
+} from '@/app/pricing/subscribe-actions';
+import type { PricingBanner } from '@/app/pricing/types';
+import type { AuthGateway } from '@/src/application/ports/gateways';
+import type { CheckEntitlementUseCase } from '@/src/application/ports/use-cases';
 
-export type { PricingViewProps } from './pricing-view';
-export { runSubscribeAction } from './subscribe-action';
+export type { PricingViewProps } from '@/app/pricing/pricing-view';
+export { runSubscribeAction } from '@/app/pricing/subscribe-action';
 export { PricingView };
 // Re-export for tests
-export type { PricingBanner } from './types';
-
-type CheckEntitlementUseCase = {
-  execute: (input: CheckEntitlementInput) => Promise<CheckEntitlementOutput>;
-};
+export type { PricingBanner } from '@/app/pricing/types';
 
 export type PricingPageDeps = {
   authGateway: AuthGateway;
@@ -97,22 +91,46 @@ export function getPricingBanner(
     };
   }
 
+  if (searchParams.reason === 'manage_billing') {
+    return {
+      tone: 'info',
+      message: 'Subscription found. Manage billing to resolve payment issues.',
+    };
+  }
+
+  if (searchParams.reason === 'payment_processing') {
+    return {
+      tone: 'info',
+      message:
+        'Payment processing. It may take a moment for access to activate.',
+    };
+  }
+
   return null;
 }
 
 export default async function PricingPage({
   searchParams,
+  deps,
 }: {
   searchParams: Promise<PricingSearchParams>;
+  deps?: PricingPageDeps;
 }) {
-  const { isEntitled } = await loadPricingData();
+  const { isEntitled } = await loadPricingData(deps);
   const resolvedSearchParams = await searchParams;
   const banner = getPricingBanner(resolvedSearchParams);
+
+  const showManageBillingAction =
+    resolvedSearchParams.reason === 'manage_billing' ||
+    resolvedSearchParams.reason === 'payment_processing';
 
   return (
     <PricingView
       isEntitled={isEntitled}
       banner={banner}
+      manageBillingAction={
+        showManageBillingAction ? manageBillingAction : undefined
+      }
       subscribeMonthlyAction={subscribeMonthlyAction}
       subscribeAnnualAction={subscribeAnnualAction}
       SubscribeButtonComponent={SubscribeButton}

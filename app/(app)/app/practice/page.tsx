@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import { Feedback } from '@/components/question/Feedback';
 import { QuestionCard } from '@/components/question/QuestionCard';
+import { useIsMounted } from '@/lib/use-is-mounted';
 import {
   getBookmarks,
   toggleBookmark,
@@ -21,6 +22,7 @@ import type { NextQuestion } from '@/src/application/use-cases/get-next-question
 import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
 import { navigateTo } from './client-navigation';
 import {
+  canSubmitAnswer,
   createBookmarksEffect,
   createLoadNextQuestionAction,
   handleSessionCountChange,
@@ -402,6 +404,7 @@ export default function PracticePage() {
   const [sessionStartError, setSessionStartError] = useState<string | null>(
     null,
   );
+  const isMounted = useIsMounted();
 
   const loadNext = useMemo(
     () =>
@@ -417,8 +420,9 @@ export default function PracticePage() {
         setSubmitIdempotencyKey,
         setQuestionLoadedAt,
         setQuestion,
+        isMounted,
       }),
-    [filters],
+    [filters, isMounted],
   );
 
   useEffect(loadNext, [loadNext]);
@@ -464,10 +468,13 @@ export default function PracticePage() {
   }, []);
 
   const canSubmit = useMemo(() => {
-    return (
-      question !== null && selectedChoiceId !== null && submitResult === null
-    );
-  }, [question, selectedChoiceId, submitResult]);
+    return canSubmitAnswer({
+      loadState,
+      question,
+      selectedChoiceId,
+      submitResult,
+    });
+  }, [loadState, question, selectedChoiceId, submitResult]);
 
   const isBookmarked = question
     ? bookmarkedQuestionIds.has(question.questionId)
@@ -484,8 +491,15 @@ export default function PracticePage() {
         nowMs: Date.now,
         setLoadState,
         setSubmitResult,
+        isMounted,
       }),
-    [question, questionLoadedAt, selectedChoiceId, submitIdempotencyKey],
+    [
+      question,
+      questionLoadedAt,
+      selectedChoiceId,
+      submitIdempotencyKey,
+      isMounted,
+    ],
   );
 
   const onToggleBookmark = useMemo(
@@ -494,7 +508,6 @@ export default function PracticePage() {
         question,
         toggleBookmarkFn: toggleBookmark,
         setBookmarkStatus,
-        setLoadState,
         setBookmarkedQuestionIds,
         onBookmarkToggled: (bookmarked: boolean) => {
           setBookmarkMessage(
@@ -507,8 +520,9 @@ export default function PracticePage() {
             setBookmarkMessage(null);
           }, 2000);
         },
+        isMounted,
       }),
-    [question],
+    [question, isMounted],
   );
 
   const onSelectChoice = useMemo(
@@ -577,8 +591,9 @@ export default function PracticePage() {
         setSessionStartStatus,
         setSessionStartError,
         navigateTo,
+        isMounted,
       }),
-    [filters, sessionMode, sessionCount, startSessionIdempotencyKey],
+    [filters, sessionMode, sessionCount, startSessionIdempotencyKey, isMounted],
   );
 
   return (

@@ -1,13 +1,13 @@
 'use server';
 
 import { z } from 'zod';
-import { createDepsResolver } from '@/lib/controller-helpers';
+import { createDepsResolver, loadAppContainer } from '@/lib/controller-helpers';
+import { START_PRACTICE_SESSION_RATE_LIMIT } from '@/src/adapters/shared/rate-limits';
 import {
   MAX_PRACTICE_SESSION_DIFFICULTY_FILTERS,
   MAX_PRACTICE_SESSION_QUESTIONS,
   MAX_PRACTICE_SESSION_TAG_FILTERS,
-} from '@/src/adapters/repositories/practice-session-limits';
-import { START_PRACTICE_SESSION_RATE_LIMIT } from '@/src/adapters/shared/rate-limits';
+} from '@/src/adapters/shared/validation-limits';
 import { withIdempotency } from '@/src/adapters/shared/with-idempotency';
 import { ApplicationError } from '@/src/application/errors';
 import type {
@@ -25,8 +25,7 @@ import {
   createSeed,
   shuffleWithSeed,
 } from '@/src/domain/services';
-import type { ActionResult } from './action-result';
-import { err, handleError, ok } from './action-result';
+import { createAction } from './create-action';
 import type { CheckEntitlementUseCase } from './require-entitled-user-id';
 import { requireEntitledUserId } from './require-entitled-user-id';
 
@@ -82,24 +81,22 @@ export type PracticeControllerDeps = {
   now: () => Date;
 };
 
-const getDeps = createDepsResolver((container) =>
-  container.createPracticeControllerDeps(),
-);
+type PracticeControllerContainer = {
+  createPracticeControllerDeps: () => PracticeControllerDeps;
+};
 
-export async function startPracticeSession(
-  input: unknown,
-  deps?: PracticeControllerDeps,
-): Promise<ActionResult<StartPracticeSessionOutput>> {
-  const parsed = StartPracticeSessionInputSchema.safeParse(input);
-  if (!parsed.success) return handleError(parsed.error);
+const getDeps = createDepsResolver<
+  PracticeControllerDeps,
+  PracticeControllerContainer
+>((container) => container.createPracticeControllerDeps(), loadAppContainer);
 
-  try {
-    const d = await getDeps(deps);
-    const userIdOrError = await requireEntitledUserId(d);
-    if (typeof userIdOrError !== 'string') return userIdOrError;
-    const userId = userIdOrError;
+export const startPracticeSession = createAction({
+  schema: StartPracticeSessionInputSchema,
+  getDeps,
+  execute: async (input, d) => {
+    const userId = await requireEntitledUserId(d);
 
-    const { mode, count, tagSlugs, difficulties, idempotencyKey } = parsed.data;
+    const { mode, count, tagSlugs, difficulties, idempotencyKey } = input;
 
     async function createNewSession(): Promise<StartPracticeSessionOutput> {
       const rate = await d.rateLimiter.limit({
@@ -140,44 +137,38 @@ export async function startPracticeSession(
       return { sessionId: session.id };
     }
 
-    const session = idempotencyKey
-      ? await withIdempotency({
-          repo: d.idempotencyKeyRepository,
-          userId,
-          action: 'practice:startPracticeSession',
-          key: idempotencyKey,
-          now: d.now,
-          execute: createNewSession,
-        })
-      : await createNewSession();
+    if (!idempotencyKey) {
+      return createNewSession();
+    }
 
-    return ok(session);
-  } catch (error) {
-    return handleError(error);
-  }
-}
+    return withIdempotency({
+      repo: d.idempotencyKeyRepository,
+      userId,
+      action: 'practice:startPracticeSession',
+      key: idempotencyKey,
+      now: d.now,
+      execute: createNewSession,
+    });
+  },
+});
 
-export async function endPracticeSession(
-  input: unknown,
-  deps?: PracticeControllerDeps,
-): Promise<ActionResult<EndPracticeSessionOutput>> {
-  const parsed = EndPracticeSessionInputSchema.safeParse(input);
-  if (!parsed.success) return handleError(parsed.error);
-
-  try {
-    const d = await getDeps(deps);
-    const userIdOrError = await requireEntitledUserId(d);
-    if (typeof userIdOrError !== 'string') return userIdOrError;
-    const userId = userIdOrError;
+export const endPracticeSession = createAction({
+  schema: EndPracticeSessionInputSchema,
+  getDeps,
+  execute: async (input, d) => {
+    const userId = await requireEntitledUserId(d);
 
     const session = await d.practiceSessionRepository.end(
-      parsed.data.sessionId,
+      input.sessionId,
       userId,
     );
 
     const endedAt = session.endedAt;
     if (!endedAt) {
-      return err('INTERNAL_ERROR', 'Practice session did not end');
+      throw new ApplicationError(
+        'INTERNAL_ERROR',
+        'Practice session did not end',
+      );
     }
 
     const attempts = await d.attemptRepository.findBySessionId(
@@ -194,7 +185,7 @@ export async function endPracticeSession(
       Math.floor((endedAt.getTime() - session.startedAt.getTime()) / 1000),
     );
 
-    return ok({
+    return {
       sessionId: session.id,
       endedAt: endedAt.toISOString(),
       totals: {
@@ -203,8 +194,6 @@ export async function endPracticeSession(
         accuracy,
         durationSeconds,
       },
-    });
-  } catch (error) {
-    return handleError(error);
-  }
-}
+    };
+  },
+});

@@ -1,9 +1,10 @@
 'use server';
 
 import { redirect } from 'next/navigation';
+import { runSubscribeAction } from '@/app/pricing/subscribe-action';
 import { logger } from '@/lib/logger';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
-import { runSubscribeAction } from './subscribe-action';
+import { createCheckoutSession } from '@/src/adapters/controllers/billing-controller';
 
 type CreateCheckoutSessionFn = (input: {
   plan: 'monthly' | 'annual';
@@ -20,9 +21,7 @@ async function getDeps(
   deps?: Partial<SubscribeActionsDeps>,
 ): Promise<SubscribeActionsDeps> {
   const createCheckoutSessionFn: CreateCheckoutSessionFn =
-    deps?.createCheckoutSessionFn ??
-    (await import('@/src/adapters/controllers/billing-controller'))
-      .createCheckoutSession;
+    deps?.createCheckoutSessionFn ?? createCheckoutSession;
 
   return {
     createCheckoutSessionFn,

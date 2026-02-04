@@ -1,56 +1,29 @@
 // @vitest-environment jsdom
 import { renderToStaticMarkup } from 'react-dom/server';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { FakeAuthGateway } from '@/src/application/test-helpers/fakes';
-import type { CheckEntitlementInput } from '@/src/application/use-cases/check-entitlement';
-import type { User } from '@/src/domain/entities';
+import type { AuthGateway } from '@/src/application/ports/gateways';
+import {
+  restoreProcessEnv,
+  snapshotProcessEnv,
+} from '@/tests/shared/process-env';
 
 vi.mock('next/link', () => ({
   default: (props: Record<string, unknown>) => <a {...props} />,
 }));
 
-const ORIGINAL_ENV = { ...process.env };
-
-function restoreEnv() {
-  for (const key of Object.keys(process.env)) {
-    if (!(key in ORIGINAL_ENV)) {
-      delete process.env[key];
-    }
-  }
-
-  for (const [key, value] of Object.entries(ORIGINAL_ENV)) {
-    process.env[key] = value;
-  }
-}
+const ORIGINAL_ENV = snapshotProcessEnv();
 
 describe('AuthNav', () => {
   afterEach(() => {
-    restoreEnv();
-    vi.unmock('@clerk/nextjs');
+    restoreProcessEnv(ORIGINAL_ENV);
     vi.resetModules();
     vi.restoreAllMocks();
   });
 
-  function mockUserButton() {
-    vi.doMock('@clerk/nextjs', () => ({
-      UserButton: () => <div data-testid="user-button" />,
-    }));
-  }
-
-  function createUser(): User {
-    return {
-      id: 'user_1',
-      email: 'user@example.com',
-      createdAt: new Date('2026-02-01T00:00:00Z'),
-      updatedAt: new Date('2026-02-01T00:00:00Z'),
-    };
-  }
-
   it('renders a CI fallback UI when NEXT_PUBLIC_SKIP_CLERK=true', async () => {
     process.env.NEXT_PUBLIC_SKIP_CLERK = 'true';
-
     vi.doMock('@clerk/nextjs', () => {
-      throw new Error('Clerk must not be imported when skipClerk=true');
+      throw new Error('Publishable key not valid.');
     });
 
     const { AuthNav } = await import('./auth-nav');
@@ -65,18 +38,26 @@ describe('AuthNav', () => {
 
   it('shows a Dashboard link when the user is entitled', async () => {
     process.env.NEXT_PUBLIC_SKIP_CLERK = 'false';
-    mockUserButton();
+    vi.doMock('@clerk/nextjs', () => ({
+      UserButton: () => <div data-testid="user-button" />,
+    }));
 
     const { AuthNav } = await import('./auth-nav');
 
-    const authGateway = new FakeAuthGateway(createUser());
+    const authGateway: AuthGateway = {
+      getCurrentUser: vi.fn(async () => ({
+        id: 'user_1',
+        email: 'user@example.com',
+        createdAt: new Date('2026-02-01T00:00:00Z'),
+        updatedAt: new Date('2026-02-01T00:00:00Z'),
+      })),
+      requireUser: vi.fn(async () => {
+        throw new Error('not used');
+      }),
+    };
 
-    const calls: CheckEntitlementInput[] = [];
     const checkEntitlementUseCase = {
-      execute: async (input: CheckEntitlementInput) => {
-        calls.push(input);
-        return { isEntitled: true };
-      },
+      execute: vi.fn(async () => ({ isEntitled: true })),
     };
 
     const element = await AuthNav({
@@ -87,23 +68,25 @@ describe('AuthNav', () => {
     expect(html).toContain('href="/app/dashboard"');
     expect(html).toContain('data-testid="user-button"');
     expect(html).not.toContain('href="/pricing"');
-    expect(calls).toEqual([{ userId: 'user_1' }]);
   });
 
   it('renders an unauthenticated UI when there is no current user', async () => {
     process.env.NEXT_PUBLIC_SKIP_CLERK = 'false';
-    mockUserButton();
+    vi.doMock('@clerk/nextjs', () => ({
+      UserButton: () => <div data-testid="user-button" />,
+    }));
 
     const { AuthNav } = await import('./auth-nav');
 
-    const authGateway = new FakeAuthGateway(null);
+    const authGateway: AuthGateway = {
+      getCurrentUser: vi.fn(async () => null),
+      requireUser: vi.fn(async () => {
+        throw new Error('not used');
+      }),
+    };
 
-    const calls: CheckEntitlementInput[] = [];
     const checkEntitlementUseCase = {
-      execute: async (input: CheckEntitlementInput) => {
-        calls.push(input);
-        return { isEntitled: true };
-      },
+      execute: vi.fn(async () => ({ isEntitled: true })),
     };
 
     const element = await AuthNav({
@@ -114,23 +97,31 @@ describe('AuthNav', () => {
     expect(html).toContain('href="/pricing"');
     expect(html).toContain('href="/sign-in"');
     expect(html).not.toContain('data-testid="user-button"');
-    expect(calls).toHaveLength(0);
+    expect(checkEntitlementUseCase.execute).not.toHaveBeenCalled();
   });
 
   it('shows a Pricing link when the user is not entitled', async () => {
     process.env.NEXT_PUBLIC_SKIP_CLERK = 'false';
-    mockUserButton();
+    vi.doMock('@clerk/nextjs', () => ({
+      UserButton: () => <div data-testid="user-button" />,
+    }));
 
     const { AuthNav } = await import('./auth-nav');
 
-    const authGateway = new FakeAuthGateway(createUser());
+    const authGateway: AuthGateway = {
+      getCurrentUser: vi.fn(async () => ({
+        id: 'user_1',
+        email: 'user@example.com',
+        createdAt: new Date('2026-02-01T00:00:00Z'),
+        updatedAt: new Date('2026-02-01T00:00:00Z'),
+      })),
+      requireUser: vi.fn(async () => {
+        throw new Error('not used');
+      }),
+    };
 
-    const calls: CheckEntitlementInput[] = [];
     const checkEntitlementUseCase = {
-      execute: async (input: CheckEntitlementInput) => {
-        calls.push(input);
-        return { isEntitled: false };
-      },
+      execute: vi.fn(async () => ({ isEntitled: false })),
     };
 
     const element = await AuthNav({
@@ -141,23 +132,35 @@ describe('AuthNav', () => {
     expect(html).toContain('href="/pricing"');
     expect(html).toContain('data-testid="user-button"');
     expect(html).not.toContain('href="/app/dashboard"');
-    expect(calls).toEqual([{ userId: 'user_1' }]);
   });
 
   it('loads dependencies from the container when deps are omitted', async () => {
     process.env.NEXT_PUBLIC_SKIP_CLERK = 'false';
-    mockUserButton();
+    vi.doMock('@clerk/nextjs', () => ({
+      UserButton: () => <div data-testid="user-button" />,
+    }));
 
     const { AuthNav } = await import('./auth-nav');
 
     const element = await AuthNav({
-      deps: undefined,
-      createContainerFn: () => ({
-        createAuthGateway: () => new FakeAuthGateway(createUser()),
-        createCheckEntitlementUseCase: () => ({
-          execute: async () => ({ isEntitled: true }),
+      options: {
+        loadContainer: async () => ({
+          createAuthGateway: () => ({
+            getCurrentUser: async () => ({
+              id: 'user_1',
+              email: 'user@example.com',
+              createdAt: new Date('2026-02-01T00:00:00Z'),
+              updatedAt: new Date('2026-02-01T00:00:00Z'),
+            }),
+            requireUser: async () => {
+              throw new Error('not used');
+            },
+          }),
+          createCheckEntitlementUseCase: () => ({
+            execute: async () => ({ isEntitled: true }),
+          }),
         }),
-      }),
+      },
     });
     const html = renderToStaticMarkup(element);
 

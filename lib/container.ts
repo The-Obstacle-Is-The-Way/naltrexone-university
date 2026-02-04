@@ -1,5 +1,4 @@
 import 'server-only';
-import { currentUser } from '@clerk/nextjs/server';
 import type { BillingControllerDeps } from '@/src/adapters/controllers/billing-controller';
 import type { BookmarkControllerDeps } from '@/src/adapters/controllers/bookmark-controller';
 import type { PracticeControllerDeps } from '@/src/adapters/controllers/practice-controller';
@@ -12,7 +11,6 @@ import type { TagControllerDeps } from '@/src/adapters/controllers/tag-controlle
 import {
   ClerkAuthGateway,
   DrizzleRateLimiter,
-  SkipAuthGateway,
   StripePaymentGateway,
 } from '@/src/adapters/gateways';
 import {
@@ -127,13 +125,18 @@ export type ContainerOverrides = {
 export function createContainerPrimitives(
   overrides: Partial<ContainerPrimitives> = {},
 ) {
-  return {
+  const primitives = {
     db,
     env,
     logger,
     stripe,
     now: () => new Date(),
     ...overrides,
+  } as const;
+
+  return {
+    ...primitives,
+    logger: primitives.logger ?? console,
   } as const;
 }
 
@@ -143,6 +146,12 @@ export function createContainer(overrides: ContainerOverrides = {}) {
   const stripePriceIds = {
     monthly: primitives.env.NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY,
     annual: primitives.env.NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL,
+  };
+
+  const getClerkUser = async () => {
+    if (process.env.NEXT_PUBLIC_SKIP_CLERK === 'true') return null;
+    const { currentUser } = await import('@clerk/nextjs/server');
+    return currentUser();
   };
 
   const repositoryFactories: RepositoryFactories = {
@@ -179,12 +188,10 @@ export function createContainer(overrides: ContainerOverrides = {}) {
 
   const gatewayFactories: GatewayFactories = {
     createAuthGateway: () =>
-      primitives.env.NEXT_PUBLIC_SKIP_CLERK === 'true'
-        ? new SkipAuthGateway()
-        : new ClerkAuthGateway({
-            userRepository: repositories.createUserRepository(),
-            getClerkUser: currentUser,
-          }),
+      new ClerkAuthGateway({
+        userRepository: repositories.createUserRepository(),
+        getClerkUser,
+      }),
     createPaymentGateway: () =>
       new StripePaymentGateway({
         stripe: primitives.stripe,
@@ -229,6 +236,7 @@ export function createContainer(overrides: ContainerOverrides = {}) {
   const controllerFactories: ControllerFactories = {
     createStripeWebhookDeps: () => ({
       paymentGateway: gateways.createPaymentGateway(),
+      logger: primitives.logger,
       transaction: async (fn) =>
         primitives.db.transaction(async (tx) =>
           fn({
@@ -258,10 +266,7 @@ export function createContainer(overrides: ContainerOverrides = {}) {
       paymentGateway: gateways.createPaymentGateway(),
       idempotencyKeyRepository: repositories.createIdempotencyKeyRepository(),
       rateLimiter: gateways.createRateLimiter(),
-      getClerkUserId: async () =>
-        primitives.env.NEXT_PUBLIC_SKIP_CLERK === 'true'
-          ? null
-          : ((await currentUser())?.id ?? null),
+      getClerkUserId: async () => (await getClerkUser())?.id ?? null,
       appUrl: primitives.env.NEXT_PUBLIC_APP_URL,
       now: primitives.now,
     }),

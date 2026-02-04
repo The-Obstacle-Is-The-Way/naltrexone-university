@@ -73,19 +73,31 @@ export type Env = Omit<
   CLERK_WEBHOOK_SIGNING_SECRET: string;
 };
 
+function logInvalidEnv(details: unknown) {
+  // NOTE: This module validates env at import-time, before DI/container wiring.
+  // Use console.error intentionally here and only log safe metadata (field names
+  // + validation errors), never secret values.
+  console.error('Invalid environment variables:', details);
+}
+
 function validateEnv(): Env {
   const parsed = envSchema.safeParse(process.env);
 
   if (!parsed.success) {
-    console.error(
-      'Invalid environment variables:',
-      parsed.error.flatten().fieldErrors,
-    );
+    logInvalidEnv(parsed.error.flatten().fieldErrors);
     throw new Error('Invalid environment variables');
   }
 
   const skipClerk = parsed.data.NEXT_PUBLIC_SKIP_CLERK === 'true';
-  const isVercelProductionDeploy = process.env.VERCEL_ENV === 'production';
+  // NOTE: Next.js sets NODE_ENV=production during `next build`, which we still
+  // need to support in CI without real Clerk keys. Treat "production runtime"
+  // as:
+  // - Vercel production deploys (VERCEL_ENV=production), OR
+  // - NODE_ENV=production when not running the build script.
+  const isProductionRuntime =
+    process.env.VERCEL_ENV === 'production' ||
+    (process.env.NODE_ENV === 'production' &&
+      process.env.npm_lifecycle_event !== 'build');
   if (!skipClerk) {
     const missingClerkKeys: Record<string, string[]> = {};
     if (!parsed.data.CLERK_SECRET_KEY) {
@@ -94,12 +106,12 @@ function validateEnv(): Env {
     if (!parsed.data.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY) {
       missingClerkKeys.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY = ['Required'];
     }
-    if (isVercelProductionDeploy && !parsed.data.CLERK_WEBHOOK_SIGNING_SECRET) {
+    if (isProductionRuntime && !parsed.data.CLERK_WEBHOOK_SIGNING_SECRET) {
       missingClerkKeys.CLERK_WEBHOOK_SIGNING_SECRET = ['Required'];
     }
 
     if (Object.keys(missingClerkKeys).length > 0) {
-      console.error('Invalid environment variables:', missingClerkKeys);
+      logInvalidEnv(missingClerkKeys);
       throw new Error('Invalid environment variables');
     }
 
@@ -134,16 +146,14 @@ function validateEnv(): Env {
       }
 
       if (Object.keys(clerkKeyErrors).length > 0) {
-        console.error('Invalid environment variables:', clerkKeyErrors);
+        logInvalidEnv(clerkKeyErrors);
         throw new Error('Invalid environment variables');
       }
     }
   }
 
-  if (isVercelProductionDeploy && skipClerk) {
-    throw new Error(
-      'NEXT_PUBLIC_SKIP_CLERK must not be true in production (VERCEL_ENV=production)',
-    );
+  if (isProductionRuntime && skipClerk) {
+    throw new Error('NEXT_PUBLIC_SKIP_CLERK must not be true in production');
   }
 
   // When Clerk is skipped (local/CI builds), allow missing Clerk keys by

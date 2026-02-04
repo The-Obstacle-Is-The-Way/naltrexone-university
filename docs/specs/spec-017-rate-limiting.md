@@ -1,9 +1,28 @@
 # SPEC-017: Rate Limiting
 
-> **Status:** Proposed
+> **Status:** Partial
 > **Priority:** P2 (Important for Production)
 > **Author:** Claude
 > **Created:** 2026-02-01
+> **Updated:** 2026-02-03
+
+---
+
+## Current State
+
+✅ **Implemented:**
+- `src/adapters/gateways/drizzle-rate-limiter.ts` — Postgres-backed sliding window rate limiter
+- `src/application/ports/gateways.ts` — `RateLimiter` interface
+- Rate limiting applied to:
+  - Checkout session creation (`billing-controller.ts`)
+  - Practice session start (`practice-controller.ts`)
+  - Answer submission (`question-controller.ts`)
+- `db/schema.ts` — `rateLimits` table for tracking
+
+❌ **Not Yet Implemented:**
+- Redis-backed rate limiter (Upstash) for edge performance
+- IP-based rate limiting for webhooks
+- Rate limit headers in responses
 
 ---
 
@@ -19,9 +38,9 @@ Without rate limiting, our APIs are vulnerable to:
 
 ## Decision
 
-### MVP Strategy: Rely on Built-in Protections
+### Current Implementation: Postgres-Backed Rate Limiter
 
-For MVP, we rely on platform/vendor rate limits rather than implementing custom limiting:
+We implemented a custom rate limiter using Postgres for durability:
 
 | Layer | Protection | Notes |
 |-------|------------|-------|
@@ -69,7 +88,18 @@ export const apiRateLimiter = new Ratelimit({
 
 ## MVP Implementation
 
-For MVP, we do **nothing custom** - just document what's already protected:
+For MVP, we ship a Postgres-backed sliding-window rate limiter via
+`src/adapters/gateways/drizzle-rate-limiter.ts` and apply it to:
+
+1. Checkout session creation (`billing-controller.ts`)
+2. Practice session start (`practice-controller.ts`)
+3. Answer submission (`question-controller.ts`)
+
+### Historical Note (Pre-Implementation)
+
+Before the Postgres-backed limiter existed, the MVP plan was to rely only on
+upstream protections (Clerk/Stripe/Vercel). That plan is now superseded, but is
+kept here for context:
 
 ### Already Protected
 

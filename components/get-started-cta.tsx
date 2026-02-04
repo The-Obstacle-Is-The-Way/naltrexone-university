@@ -1,73 +1,50 @@
 import Link from 'next/link';
-import type { AuthGateway } from '@/src/application/ports/gateways';
 import type {
-  CheckEntitlementInput,
-  CheckEntitlementOutput,
-} from '@/src/application/use-cases/check-entitlement';
+  AuthCheckDeps,
+  AuthDepsContainer,
+} from '@/lib/auth-deps-container';
+import {
+  createDepsResolver,
+  type LoadContainerFn,
+  loadAppContainer,
+} from '@/lib/controller-helpers';
 
-type CheckEntitlementUseCase = {
-  execute: (input: CheckEntitlementInput) => Promise<CheckEntitlementOutput>;
-};
+export type GetStartedCtaDeps = AuthCheckDeps;
 
-export type GetStartedCtaDeps = {
-  authGateway: AuthGateway;
-  checkEntitlementUseCase: CheckEntitlementUseCase;
-};
-
-type ContainerLike = {
-  createAuthGateway: () => AuthGateway;
-  createCheckEntitlementUseCase: () => CheckEntitlementUseCase;
-};
-
-async function getDeps(
-  deps?: GetStartedCtaDeps,
-  createContainerFn?: () => ContainerLike,
-): Promise<GetStartedCtaDeps> {
-  if (deps) return deps;
-
-  if (createContainerFn) {
-    const container = createContainerFn();
-    return {
-      authGateway: container.createAuthGateway(),
-      checkEntitlementUseCase: container.createCheckEntitlementUseCase(),
-    };
-  }
-
-  const { createContainer } = await import('@/lib/container');
-  const container = createContainer();
-
-  return {
+const getDeps = createDepsResolver<GetStartedCtaDeps, AuthDepsContainer>(
+  (container) => ({
     authGateway: container.createAuthGateway(),
     checkEntitlementUseCase: container.createCheckEntitlementUseCase(),
-  };
-}
+  }),
+  loadAppContainer,
+);
 
 export async function GetStartedCta({
   deps,
-  createContainerFn,
+  options,
 }: {
   deps?: GetStartedCtaDeps;
-  createContainerFn?: () => ContainerLike;
-}) {
+  options?: { loadContainer?: LoadContainerFn<AuthDepsContainer> };
+} = {}) {
   const skipClerk = process.env.NEXT_PUBLIC_SKIP_CLERK === 'true';
   if (skipClerk) {
     return (
       <Link
         href="/pricing"
-        className="inline-block rounded-full bg-orange-600 px-8 py-3 text-base font-medium text-white hover:bg-orange-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+        className="inline-block rounded-full bg-orange-600 px-8 py-3 text-base font-medium text-white hover:bg-orange-700"
       >
         Get Started
       </Link>
     );
   }
 
-  const d = await getDeps(deps, createContainerFn);
+  const d = await getDeps(deps, options);
   const user = await d.authGateway.getCurrentUser();
   if (!user) {
     return (
       <Link
         href="/pricing"
-        className="inline-block rounded-full bg-orange-600 px-8 py-3 text-base font-medium text-white hover:bg-orange-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+        className="inline-block rounded-full bg-orange-600 px-8 py-3 text-base font-medium text-white hover:bg-orange-700"
       >
         Get Started
       </Link>
@@ -84,7 +61,7 @@ export async function GetStartedCta({
   return (
     <Link
       href={href}
-      className="inline-block rounded-full bg-orange-600 px-8 py-3 text-base font-medium text-white hover:bg-orange-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+      className="inline-block rounded-full bg-orange-600 px-8 py-3 text-base font-medium text-white hover:bg-orange-700"
     >
       {label}
     </Link>

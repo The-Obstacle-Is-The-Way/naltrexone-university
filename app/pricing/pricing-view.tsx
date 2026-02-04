@@ -1,11 +1,12 @@
 import Link from 'next/link';
 import type { ComponentType, ReactNode } from 'react';
+import { IdempotencyKeyField } from '@/app/pricing/pricing-client';
 import type { PricingBanner } from '@/app/pricing/types';
-import { IdempotencyKeyField } from './pricing-client';
 
 export type PricingViewProps = {
   isEntitled: boolean;
   banner: PricingBanner | null;
+  manageBillingAction?: (formData: FormData) => Promise<void>;
   subscribeMonthlyAction: (formData: FormData) => Promise<void>;
   subscribeAnnualAction: (formData: FormData) => Promise<void>;
   SubscribeButtonComponent?: ComponentType<{ children: ReactNode }>;
@@ -25,6 +26,7 @@ function DefaultButton({ children }: { children: ReactNode }) {
 export function PricingView({
   isEntitled,
   banner,
+  manageBillingAction,
   subscribeMonthlyAction,
   subscribeAnnualAction,
   SubscribeButtonComponent = DefaultButton,
@@ -52,13 +54,25 @@ export function PricingView({
             role="alert"
           >
             <span>{banner.message}</span>
-            <Link
-              href="/pricing"
-              className="ml-4 rounded-md text-current hover:opacity-70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-              aria-label="Dismiss"
-            >
-              ×
-            </Link>
+            <div className="ml-4 flex items-center gap-3">
+              {manageBillingAction ? (
+                <form action={manageBillingAction}>
+                  <button
+                    type="submit"
+                    className="rounded-full border border-border bg-background px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted"
+                  >
+                    Manage Billing
+                  </button>
+                </form>
+              ) : null}
+              <Link
+                href="/pricing"
+                className="ml-4 rounded-md text-current hover:opacity-70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                aria-label="Dismiss"
+              >
+                ×
+              </Link>
+            </div>
           </div>
         ) : null}
 

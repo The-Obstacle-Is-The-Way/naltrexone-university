@@ -1,4 +1,5 @@
 import { ApplicationError } from '@/src/application/errors';
+import type { Logger, LoggerContext } from '@/src/application/ports/logger';
 import type {
   Attempt,
   Bookmark,
@@ -28,6 +29,7 @@ import type {
   IdempotencyKeyRecord,
   IdempotencyKeyRepository,
   MissedQuestionAttempt,
+  PageOptions,
   PracticeSessionRepository,
   QuestionFilters,
   QuestionRepository,
@@ -40,6 +42,31 @@ import type {
 } from '../ports/repositories';
 
 type InMemoryAttempt = Attempt & { practiceSessionId: string | null };
+
+type LoggerCall = { context: LoggerContext; msg: string };
+
+export class FakeLogger implements Logger {
+  readonly debugCalls: LoggerCall[] = [];
+  readonly infoCalls: LoggerCall[] = [];
+  readonly warnCalls: LoggerCall[] = [];
+  readonly errorCalls: LoggerCall[] = [];
+
+  debug(context: LoggerContext, msg: string): void {
+    this.debugCalls.push({ context, msg });
+  }
+
+  info(context: LoggerContext, msg: string): void {
+    this.infoCalls.push({ context, msg });
+  }
+
+  warn(context: LoggerContext, msg: string): void {
+    this.warnCalls.push({ context, msg });
+  }
+
+  error(context: LoggerContext, msg: string): void {
+    this.errorCalls.push({ context, msg });
+  }
+}
 
 export class FakeQuestionRepository implements QuestionRepository {
   private readonly questions: readonly Question[];
@@ -318,8 +345,24 @@ export class FakeAttemptRepository implements AttemptRepository {
     return attempt;
   }
 
-  async findByUserId(userId: string): Promise<readonly Attempt[]> {
-    return this.attempts.filter((a) => a.userId === userId);
+  async findByUserId(
+    userId: string,
+    page: PageOptions,
+  ): Promise<readonly Attempt[]> {
+    const limit = Number.isFinite(page.limit) ? Math.floor(page.limit) : 0;
+    const offset = Number.isFinite(page.offset) ? Math.floor(page.offset) : 0;
+
+    const safeLimit = Math.max(0, limit);
+    if (safeLimit === 0) return [];
+
+    const start = Math.max(0, offset);
+    const end = start + safeLimit;
+
+    return this.attempts
+      .filter((a) => a.userId === userId)
+      .slice()
+      .sort((a, b) => b.answeredAt.getTime() - a.answeredAt.getTime())
+      .slice(start, end);
   }
 
   async findBySessionId(

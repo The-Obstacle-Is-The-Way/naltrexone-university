@@ -12,6 +12,7 @@ import type {
   SubscriptionRepository,
 } from '@/src/application/ports/repositories';
 import {
+  isEntitledStatus,
   isValidSubscriptionStatus,
   type SubscriptionStatus,
 } from '@/src/domain/value-objects';
@@ -284,8 +285,12 @@ export async function syncCheckoutSuccess(
   );
 
   const metadataUserId = subscription.metadata?.user_id;
+  assertNonEmptyString(metadataUserId, 'missing_user_id', {
+    sessionId,
+    metadataUserId: metadataUserId ?? null,
+  });
   // Prevent cross-account leakage if the user switches accounts mid-checkout.
-  if (metadataUserId && metadataUserId !== user.id) {
+  if (metadataUserId !== user.id) {
     fail('user_id_mismatch', {
       sessionId,
       metadataUserId,
@@ -335,6 +340,8 @@ export async function syncCheckoutSuccess(
     configuredPriceIds: d.priceIds,
   });
 
+  const currentPeriodEnd = new Date(currentPeriodEndSeconds * 1000);
+
   await d.transaction(async ({ stripeCustomers, subscriptions }) => {
     await stripeCustomers.insert(user.id, stripeCustomerId);
     await subscriptions.upsert({
@@ -342,12 +349,24 @@ export async function syncCheckoutSuccess(
       stripeSubscriptionId: subscriptionId,
       plan,
       status,
-      currentPeriodEnd: new Date(currentPeriodEndSeconds * 1000),
+      currentPeriodEnd,
       cancelAtPeriodEnd,
     });
   });
 
-  redirectFn(ROUTES.APP_DASHBOARD);
+  const isEntitled =
+    isEntitledStatus(status) && currentPeriodEnd.getTime() > Date.now();
+
+  if (!isEntitled) {
+    const reason =
+      status === 'incomplete' || status === 'incomplete_expired'
+        ? 'payment_processing'
+        : 'manage_billing';
+
+    return redirectFn(`${ROUTES.PRICING}?reason=${reason}`);
+  }
+
+  return redirectFn(ROUTES.APP_DASHBOARD);
 }
 
 export async function runCheckoutSuccessPage(

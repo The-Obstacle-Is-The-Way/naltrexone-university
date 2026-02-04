@@ -9,46 +9,46 @@
 
 ## Description
 
-The environment validation in `lib/env.ts` checks for `NEXT_PUBLIC_SKIP_CLERK=true` in production:
+The environment validation in `lib/env.ts` rejects `NEXT_PUBLIC_SKIP_CLERK=true` in production runtime.
 
 ```typescript
-// lib/env.ts:59-63
-if (process.env.VERCEL_ENV === 'production' && skipClerk) {
-  throw new Error(
-    'NEXT_PUBLIC_SKIP_CLERK must not be true in production (VERCEL_ENV=production)',
-  );
+// validateEnv() in lib/env.ts
+const isProductionRuntime =
+  process.env.VERCEL_ENV === 'production' ||
+  (process.env.NODE_ENV === 'production' &&
+    process.env.npm_lifecycle_event !== 'build');
+
+if (isProductionRuntime && skipClerk) {
+  throw new Error('NEXT_PUBLIC_SKIP_CLERK must not be true in production');
 }
 ```
 
-This check only validates when `VERCEL_ENV === 'production'`. However:
+Rationale:
 
-1. `VERCEL_ENV` might not be set in non-Vercel deployments (self-hosted, Docker, etc.)
-2. `VERCEL_ENV` could be `'preview'` or `'development'` but still be a sensitive environment
-3. If the environment detection fails, the flag could accidentally bypass authentication
+1. We must allow `NEXT_PUBLIC_SKIP_CLERK=true` during `next build` (CI fork PRs with no secrets), even though Next sets `NODE_ENV=production` for builds.
+2. We must forbid `NEXT_PUBLIC_SKIP_CLERK=true` at production runtime to prevent accidentally bypassing authentication.
 
 ## Impact
 
 - **Security risk:** Authentication bypass possible in misconfigured deployments
-- **Silent failure:** No warning if `VERCEL_ENV` is missing or unexpected
 - **Deployment portability:** Logic assumes Vercel-specific environment variables
 
 ## Location
 
-- `lib/env.ts:59-63`
+- `validateEnv()` in `lib/env.ts`
 
 ## Resolution
 
-This is intentionally **Vercel-production-specific**.
+We treat production runtime as:
 
-- In this codebase, production is expected to run on Vercel (SSOT: `docs/specs/master_spec.md` §10).
-- We must allow `NEXT_PUBLIC_SKIP_CLERK=true` during `next build` in CI fork PRs (no secrets), even though Next sets `NODE_ENV=production` during builds.
-- We still block `NEXT_PUBLIC_SKIP_CLERK=true` on Vercel production deploys via `VERCEL_ENV=production` (and this is covered by unit tests).
+- Vercel production deploys (`VERCEL_ENV=production`), or
+- `NODE_ENV=production` when not running the build script (`npm_lifecycle_event !== 'build'`).
 
-To reduce confusion and misconfiguration risk, we documented this behavior directly in `.env.example`.
+This preserves CI/local build ergonomics while failing closed in production runtime, including non‑Vercel deployments.
 
 ## Verification
 
-- [x] Verified unit test coverage for Vercel production rejection
+- [x] Verified unit test coverage for production runtime rejection
 - [x] Verified `NEXT_PUBLIC_SKIP_CLERK=true` remains allowed for CI builds
 - [x] Documented behavior in `.env.example`
 

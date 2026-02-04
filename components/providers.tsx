@@ -1,10 +1,19 @@
+'use client';
+
+import dynamic from 'next/dynamic';
+
+const ClerkProvider = dynamic(
+  () => import('@clerk/nextjs').then((m) => m.ClerkProvider),
+  { ssr: false },
+);
+
 /**
  * Conditionally wrap children with ClerkProvider.
  * In CI environments with dummy keys, Clerk validation fails during static
  * page generation. This component skips the provider when NEXT_PUBLIC_SKIP_CLERK
  * is set, allowing builds to succeed without real Clerk credentials.
  */
-export async function Providers({ children }: { children: React.ReactNode }) {
+export function Providers({ children }: { children: React.ReactNode }) {
   const skipClerk = process.env.NEXT_PUBLIC_SKIP_CLERK === 'true';
 
   if (skipClerk) {
@@ -12,6 +21,5 @@ export async function Providers({ children }: { children: React.ReactNode }) {
     return <>{children}</>;
   }
 
-  const { ClerkProvider } = await import('@clerk/nextjs');
   return <ClerkProvider>{children}</ClerkProvider>;
 }

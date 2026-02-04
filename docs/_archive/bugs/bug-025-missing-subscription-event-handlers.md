@@ -33,7 +33,7 @@ These events are normalized using the same subscription object parsing as `custo
 
 ## Notes
 
-Invoice events like `invoice.payment_failed` are not directly normalized in the payment gateway because the system’s persisted state is driven by subscription object updates. If Stripe behavior changes and invoice events become the only signal for subscription status transitions, we should add a targeted handler that retrieves the subscription and performs a sync.
+Invoice events like `invoice.payment_failed` are normalized by retrieving the subscription and emitting a `subscriptionUpdate`, ensuring subscription state can be reconciled even when subscription webhooks are delayed or missing.
 
 ## Related
 

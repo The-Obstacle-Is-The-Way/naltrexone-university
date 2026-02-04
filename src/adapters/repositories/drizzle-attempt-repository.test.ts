@@ -221,7 +221,9 @@ describe('DrizzleAttemptRepository', () => {
 
       const repo = new DrizzleAttemptRepository(db as unknown as RepoDb);
 
-      await expect(repo.findByUserId('user_1')).resolves.toEqual([
+      await expect(
+        repo.findByUserId('user_1', { limit: 10, offset: 0 }),
+      ).resolves.toEqual([
         {
           id: 'attempt_1',
           userId: 'user_1',
@@ -235,6 +237,33 @@ describe('DrizzleAttemptRepository', () => {
       ]);
 
       expect(db._mocks.queryFindMany).toHaveBeenCalledTimes(1);
+      expect(db._mocks.queryFindMany).toHaveBeenCalledWith(
+        expect.objectContaining({ limit: 10, offset: 0 }),
+      );
+    });
+
+    it('returns empty array without hitting the database when limit is <= 0', async () => {
+      const db = createDbMock();
+      db._mocks.queryFindMany.mockResolvedValue([]);
+      const repo = new DrizzleAttemptRepository(db as unknown as RepoDb);
+
+      await expect(
+        repo.findByUserId('user_1', { limit: 0, offset: 0 }),
+      ).resolves.toEqual([]);
+
+      expect(db._mocks.queryFindMany).not.toHaveBeenCalled();
+    });
+
+    it('clamps negative offsets to 0', async () => {
+      const db = createDbMock();
+      db._mocks.queryFindMany.mockResolvedValue([]);
+      const repo = new DrizzleAttemptRepository(db as unknown as RepoDb);
+
+      await repo.findByUserId('user_1', { limit: 10, offset: -5 });
+
+      expect(db._mocks.queryFindMany).toHaveBeenCalledWith(
+        expect.objectContaining({ limit: 10, offset: 0 }),
+      );
     });
 
     it('throws INTERNAL_ERROR when selectedChoiceId is missing', async () => {
@@ -254,7 +283,7 @@ describe('DrizzleAttemptRepository', () => {
 
       const repo = new DrizzleAttemptRepository(db as unknown as RepoDb);
 
-      const promise = repo.findByUserId('user_1');
+      const promise = repo.findByUserId('user_1', { limit: 10, offset: 0 });
       await expect(promise).rejects.toBeInstanceOf(ApplicationError);
       await expect(promise).rejects.toMatchObject({ code: 'INTERNAL_ERROR' });
     });

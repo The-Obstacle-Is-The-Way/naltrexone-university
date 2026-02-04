@@ -1,13 +1,17 @@
+// @vitest-environment jsdom
 import { describe, expect, it, vi } from 'vitest';
-import { err, ok } from '@/src/adapters/controllers/action-result';
-import type { NextQuestion } from '@/src/application/use-cases/get-next-question';
-import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
 import {
   createLoadNextQuestionAction,
   endSession,
   loadNextQuestion,
   submitAnswerForQuestion,
-} from './practice-session-page-logic';
+} from '@/app/(app)/app/practice/[sessionId]/practice-session-page-logic';
+import type { ActionResult } from '@/src/adapters/controllers/action-result';
+import { err, ok } from '@/src/adapters/controllers/action-result';
+import type { EndPracticeSessionOutput } from '@/src/adapters/controllers/practice-controller';
+import type { NextQuestion } from '@/src/application/use-cases/get-next-question';
+import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
+import { createDeferred } from '@/tests/test-helpers/create-deferred';
 
 function createNextQuestion(overrides?: Partial<NextQuestion>): NextQuestion {
   return {
@@ -67,6 +71,32 @@ describe('practice-session-page-logic', () => {
       expect(setLoadState).toHaveBeenCalledWith({ status: 'ready' });
     });
 
+    it('clears sessionInfo when no next question is returned', async () => {
+      const setSubmitIdempotencyKey = vi.fn();
+      const setQuestionLoadedAt = vi.fn();
+      const setQuestion = vi.fn();
+      const setSessionInfo = vi.fn();
+
+      await loadNextQuestion({
+        sessionId: 'session-1',
+        getNextQuestionFn: async () => ok(null),
+        createIdempotencyKey: () => 'idem_1',
+        nowMs: () => 1234,
+        setLoadState: vi.fn(),
+        setSelectedChoiceId: vi.fn(),
+        setSubmitResult: vi.fn(),
+        setSubmitIdempotencyKey,
+        setQuestionLoadedAt,
+        setQuestion,
+        setSessionInfo,
+      });
+
+      expect(setQuestion).toHaveBeenCalledWith(null);
+      expect(setQuestionLoadedAt).toHaveBeenLastCalledWith(null);
+      expect(setSubmitIdempotencyKey).toHaveBeenLastCalledWith(null);
+      expect(setSessionInfo).toHaveBeenCalledWith(null);
+    });
+
     it('sets error state when controller fails', async () => {
       const setLoadState = vi.fn();
       const setQuestion = vi.fn();
@@ -94,26 +124,71 @@ describe('practice-session-page-logic', () => {
       expect(setSubmitIdempotencyKey).toHaveBeenLastCalledWith(null);
     });
 
-    it('sets loadedAt and idempotencyKey to null when no next question exists', async () => {
+    it('sets error state when controller throws', async () => {
+      const setLoadState = vi.fn();
       const setQuestionLoadedAt = vi.fn();
       const setSubmitIdempotencyKey = vi.fn();
+      const setQuestion = vi.fn();
 
       await loadNextQuestion({
         sessionId: 'session-1',
-        getNextQuestionFn: async () => ok(null),
+        getNextQuestionFn: async () => {
+          throw new Error('Boom');
+        },
         createIdempotencyKey: () => 'idem_1',
-        nowMs: () => 1234,
-        setLoadState: vi.fn(),
+        nowMs: () => 0,
+        setLoadState,
         setSelectedChoiceId: vi.fn(),
         setSubmitResult: vi.fn(),
         setSubmitIdempotencyKey,
         setQuestionLoadedAt,
-        setQuestion: vi.fn(),
+        setQuestion,
         setSessionInfo: vi.fn(),
       });
 
-      expect(setQuestionLoadedAt).toHaveBeenCalledWith(null);
+      expect(setQuestion).toHaveBeenCalledWith(null);
+      expect(setQuestionLoadedAt).toHaveBeenLastCalledWith(null);
       expect(setSubmitIdempotencyKey).toHaveBeenLastCalledWith(null);
+      expect(setLoadState).toHaveBeenCalledWith({
+        status: 'error',
+        message: 'Boom',
+      });
+    });
+
+    it('returns no state updates when unmounted during loadNextQuestion', async () => {
+      const deferred = createDeferred<ActionResult<NextQuestion | null>>();
+      let mounted = true;
+
+      const setLoadState = vi.fn();
+      const setQuestionLoadedAt = vi.fn();
+      const setSubmitIdempotencyKey = vi.fn();
+      const setQuestion = vi.fn();
+      const setSessionInfo = vi.fn();
+
+      const promise = loadNextQuestion({
+        sessionId: 'session-1',
+        getNextQuestionFn: async () => deferred.promise,
+        createIdempotencyKey: () => 'idem_1',
+        nowMs: () => 1234,
+        setLoadState,
+        setSelectedChoiceId: vi.fn(),
+        setSubmitResult: vi.fn(),
+        setSubmitIdempotencyKey,
+        setQuestionLoadedAt,
+        setQuestion,
+        setSessionInfo,
+        isMounted: () => mounted,
+      });
+
+      mounted = false;
+      deferred.resolve(ok(createNextQuestion()));
+      await promise;
+
+      expect(setQuestion).not.toHaveBeenCalled();
+      expect(setQuestionLoadedAt).not.toHaveBeenCalledWith(1234);
+      expect(setSubmitIdempotencyKey).not.toHaveBeenCalledWith('idem_1');
+      expect(setSessionInfo).not.toHaveBeenCalled();
+      expect(setLoadState).not.toHaveBeenCalledWith({ status: 'ready' });
     });
   });
 
@@ -190,6 +265,9 @@ describe('practice-session-page-logic', () => {
         } satisfies SubmitAnswerOutput),
       );
 
+      const setLoadState = vi.fn();
+      const setSubmitResult = vi.fn();
+
       await submitAnswerForQuestion({
         sessionId: 'session-1',
         question: null,
@@ -198,11 +276,13 @@ describe('practice-session-page-logic', () => {
         submitIdempotencyKey: 'idem_1',
         submitAnswerFn,
         nowMs: () => 0,
-        setLoadState: vi.fn(),
-        setSubmitResult: vi.fn(),
+        setLoadState,
+        setSubmitResult,
       });
 
       expect(submitAnswerFn).not.toHaveBeenCalled();
+      expect(setLoadState).not.toHaveBeenCalled();
+      expect(setSubmitResult).not.toHaveBeenCalled();
     });
 
     it('does nothing when selectedChoiceId is null', async () => {
@@ -215,6 +295,9 @@ describe('practice-session-page-logic', () => {
         } satisfies SubmitAnswerOutput),
       );
 
+      const setLoadState = vi.fn();
+      const setSubmitResult = vi.fn();
+
       await submitAnswerForQuestion({
         sessionId: 'session-1',
         question: createNextQuestion(),
@@ -223,45 +306,17 @@ describe('practice-session-page-logic', () => {
         submitIdempotencyKey: 'idem_1',
         submitAnswerFn,
         nowMs: () => 0,
-        setLoadState: vi.fn(),
-        setSubmitResult: vi.fn(),
+        setLoadState,
+        setSubmitResult,
       });
 
       expect(submitAnswerFn).not.toHaveBeenCalled();
-    });
-
-    it('omits idempotencyKey when it is null', async () => {
-      const submitAnswerFn = vi.fn(async () =>
-        ok({
-          attemptId: 'attempt_1',
-          isCorrect: true,
-          correctChoiceId: 'choice_1',
-          explanationMd: 'Because...',
-        } satisfies SubmitAnswerOutput),
-      );
-
-      await submitAnswerForQuestion({
-        sessionId: 'session-1',
-        question: createNextQuestion(),
-        selectedChoiceId: 'choice_1',
-        questionLoadedAtMs: 0,
-        submitIdempotencyKey: null,
-        submitAnswerFn,
-        nowMs: () => 0,
-        setLoadState: vi.fn(),
-        setSubmitResult: vi.fn(),
-      });
-
-      expect(submitAnswerFn).toHaveBeenCalledWith(
-        expect.objectContaining({
-          idempotencyKey: undefined,
-        }),
-      );
+      expect(setLoadState).not.toHaveBeenCalled();
+      expect(setSubmitResult).not.toHaveBeenCalled();
     });
 
     it('sets error state when submit fails', async () => {
       const setLoadState = vi.fn();
-      const setSubmitResult = vi.fn();
 
       await submitAnswerForQuestion({
         sessionId: 'session-1',
@@ -272,14 +327,71 @@ describe('practice-session-page-logic', () => {
         submitAnswerFn: async () => err('INTERNAL_ERROR', 'Boom'),
         nowMs: () => 0,
         setLoadState,
-        setSubmitResult,
+        setSubmitResult: vi.fn(),
       });
 
       expect(setLoadState).toHaveBeenCalledWith({
         status: 'error',
         message: 'Boom',
       });
+    });
+
+    it('sets error state when submit throws', async () => {
+      const setLoadState = vi.fn();
+
+      await submitAnswerForQuestion({
+        sessionId: 'session-1',
+        question: createNextQuestion(),
+        selectedChoiceId: 'choice_1',
+        questionLoadedAtMs: 0,
+        submitIdempotencyKey: 'idem_1',
+        submitAnswerFn: async () => {
+          throw new Error('Boom');
+        },
+        nowMs: () => 0,
+        setLoadState,
+        setSubmitResult: vi.fn(),
+      });
+
+      expect(setLoadState).toHaveBeenCalledWith({
+        status: 'error',
+        message: 'Boom',
+      });
+    });
+
+    it('returns no state updates when unmounted during submitAnswerForQuestion', async () => {
+      const deferred = createDeferred<ActionResult<SubmitAnswerOutput>>();
+      let mounted = true;
+
+      const setLoadState = vi.fn();
+      const setSubmitResult = vi.fn();
+
+      const promise = submitAnswerForQuestion({
+        sessionId: 'session-1',
+        question: createNextQuestion(),
+        selectedChoiceId: 'choice_1',
+        questionLoadedAtMs: 0,
+        submitIdempotencyKey: 'idem_1',
+        submitAnswerFn: async () => deferred.promise,
+        nowMs: () => 0,
+        setLoadState,
+        setSubmitResult,
+        isMounted: () => mounted,
+      });
+
+      mounted = false;
+      deferred.resolve(
+        ok({
+          attemptId: 'attempt_1',
+          isCorrect: true,
+          correctChoiceId: 'choice_1',
+          explanationMd: 'Because...',
+        } satisfies SubmitAnswerOutput),
+      );
+      await promise;
+
       expect(setSubmitResult).not.toHaveBeenCalled();
+      expect(setLoadState).not.toHaveBeenCalledWith({ status: 'ready' });
     });
   });
 
@@ -335,6 +447,59 @@ describe('practice-session-page-logic', () => {
         status: 'error',
         message: 'Boom',
       });
+    });
+
+    it('sets error state when controller throws', async () => {
+      const setLoadState = vi.fn();
+
+      await endSession({
+        sessionId: 'session-1',
+        endPracticeSessionFn: async () => {
+          throw new Error('Boom');
+        },
+        setLoadState,
+        setSummary: vi.fn(),
+        setQuestion: vi.fn(),
+        setSubmitResult: vi.fn(),
+        setSelectedChoiceId: vi.fn(),
+      });
+
+      expect(setLoadState).toHaveBeenCalledWith({
+        status: 'error',
+        message: 'Boom',
+      });
+    });
+
+    it('returns no state updates when unmounted during endSession', async () => {
+      const deferred = createDeferred<ActionResult<EndPracticeSessionOutput>>();
+      let mounted = true;
+
+      const setLoadState = vi.fn();
+      const setSummary = vi.fn();
+
+      const promise = endSession({
+        sessionId: 'session-1',
+        endPracticeSessionFn: async () => deferred.promise,
+        setLoadState,
+        setSummary,
+        setQuestion: vi.fn(),
+        setSubmitResult: vi.fn(),
+        setSelectedChoiceId: vi.fn(),
+        isMounted: () => mounted,
+      });
+
+      mounted = false;
+      deferred.resolve(
+        ok({
+          sessionId: 'session-1',
+          endedAt: '2026-02-01T00:00:00.000Z',
+          totals: { answered: 1, correct: 1, accuracy: 1, durationSeconds: 1 },
+        }),
+      );
+      await promise;
+
+      expect(setSummary).not.toHaveBeenCalled();
+      expect(setLoadState).not.toHaveBeenCalledWith({ status: 'ready' });
     });
   });
 });

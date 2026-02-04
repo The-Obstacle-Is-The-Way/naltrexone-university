@@ -15,6 +15,7 @@ describe('app/(app)/app/bookmarks', () => {
       <BookmarksView
         rows={[
           {
+            isAvailable: true,
             questionId: 'q_1',
             slug: 'q-1',
             stemMd: 'Stem for q1',
@@ -40,6 +41,25 @@ describe('app/(app)/app/bookmarks', () => {
 
     expect(html).toContain('Bookmarks');
     expect(html).toContain('No bookmarks yet.');
+  });
+
+  it('renders unavailable bookmarks without a reattempt link', () => {
+    const html = renderToStaticMarkup(
+      <BookmarksView
+        rows={[
+          {
+            isAvailable: false,
+            questionId: 'q_orphaned',
+            bookmarkedAt: '2026-02-01T00:00:00.000Z',
+          },
+        ]}
+      />,
+    );
+
+    expect(html).toContain('[Question no longer available]');
+    expect(html).toContain('Bookmarked 2026-02-01');
+    expect(html).toContain('Remove');
+    expect(html).not.toContain('Reattempt');
   });
 
   it('renders an error state when bookmarks load fails', () => {
@@ -134,6 +154,7 @@ describe('app/(app)/app/bookmarks', () => {
       ok({
         rows: [
           {
+            isAvailable: true,
             questionId: 'q_1',
             slug: 'q-1',
             stemMd: 'Stem for q1',
@@ -157,6 +178,7 @@ describe('app/(app)/app/bookmarks', () => {
       ok({
         rows: [
           {
+            isAvailable: true,
             questionId: 'q_1',
             slug: 'q-1',
             stemMd: 'Stem for q1',
@@ -177,11 +199,12 @@ describe('app/(app)/app/bookmarks', () => {
     expect(html).toContain('q-1');
   });
 
-  it('renders missing_question_id banner copy when redirected back', async () => {
+  it('renders a banner when redirected back with missing_question_id', async () => {
     const getBookmarksFn = vi.fn(async () =>
       ok({
         rows: [
           {
+            isAvailable: true,
             questionId: 'q_1',
             slug: 'q-1',
             stemMd: 'Stem for q1',
@@ -199,13 +222,15 @@ describe('app/(app)/app/bookmarks', () => {
     const html = renderToStaticMarkup(element);
 
     expect(html).toContain('Unable to remove bookmark: missing question id.');
+    expect(html).toContain('q-1');
   });
 
-  it('renders remove_failed banner copy when redirected back', async () => {
+  it('renders a banner when redirected back with remove_failed', async () => {
     const getBookmarksFn = vi.fn(async () =>
       ok({
         rows: [
           {
+            isAvailable: true,
             questionId: 'q_1',
             slug: 'q-1',
             stemMd: 'Stem for q1',
@@ -225,9 +250,10 @@ describe('app/(app)/app/bookmarks', () => {
     expect(html).toContain(
       'Unable to remove bookmark. Please refresh and try again.',
     );
+    expect(html).toContain('q-1');
   });
 
-  it('renders an error state when createBookmarksPage cannot load bookmarks', async () => {
+  it('renders an error view when createBookmarksPage fails to load bookmarks', async () => {
     const getBookmarksFn = vi.fn(async () => err('INTERNAL_ERROR', 'Boom'));
 
     const BookmarksPage = createBookmarksPage({ getBookmarksFn });

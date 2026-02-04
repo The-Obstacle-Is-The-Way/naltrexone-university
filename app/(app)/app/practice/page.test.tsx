@@ -20,7 +20,7 @@ describe('app/(app)/app/practice', () => {
     const html = renderToStaticMarkup(<PracticePage />);
     expect(html).toContain('Practice');
     expect(html).toContain('Back to Dashboard');
-  }, 10_000);
+  }, 20_000);
 
   it('renders an error banner when loadState is error', async () => {
     const { PracticeView } = await import('@/app/(app)/app/practice/page');

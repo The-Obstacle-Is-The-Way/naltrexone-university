@@ -2,8 +2,10 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 import { loadBillingData } from '@/app/(app)/app/billing/page';
-import type { AuthGateway } from '@/src/application/ports/gateways';
-import type { SubscriptionRepository } from '@/src/application/ports/repositories';
+import {
+  FakeAuthGateway,
+  FakeSubscriptionRepository,
+} from '@/src/application/test-helpers/fakes';
 import { createSubscription, createUser } from '@/src/domain/test-helpers';
 
 describe('app/(app)/app/billing/page', () => {
@@ -11,16 +13,10 @@ describe('app/(app)/app/billing/page', () => {
     it('loads the subscription for the current user', async () => {
       const user = createUser({ id: 'user_1' });
 
-      const authGateway: AuthGateway = {
-        getCurrentUser: async () => user,
-        requireUser: async () => user,
-      };
-
-      const subscriptionRepository: SubscriptionRepository = {
-        findByUserId: async () => createSubscription({ userId: user.id }),
-        findByStripeSubscriptionId: async () => null,
-        upsert: async () => undefined,
-      };
+      const authGateway = new FakeAuthGateway(user);
+      const subscriptionRepository = new FakeSubscriptionRepository([
+        createSubscription({ userId: user.id }),
+      ]);
 
       await expect(
         loadBillingData({ authGateway, subscriptionRepository }),
@@ -28,6 +24,45 @@ describe('app/(app)/app/billing/page', () => {
         userId: user.id,
         subscription: { status: 'active', plan: 'monthly' },
       });
+    });
+  });
+
+  describe('BillingPage', () => {
+    it('renders the no-subscription view when subscription is null', async () => {
+      const BillingPage = (await import('@/app/(app)/app/billing/page'))
+        .default;
+      const user = createUser({ id: 'user_1' });
+
+      const authGateway = new FakeAuthGateway(user);
+      const subscriptionRepository = new FakeSubscriptionRepository();
+
+      const element = await BillingPage({
+        deps: { authGateway, subscriptionRepository },
+      });
+      const html = renderToStaticMarkup(element);
+
+      expect(html).toContain('No subscription found');
+      expect(html).not.toContain('Manage in Stripe');
+    });
+
+    it('renders an error banner when redirected back with portal_failed', async () => {
+      const BillingPage = (await import('@/app/(app)/app/billing/page'))
+        .default;
+      const user = createUser({ id: 'user_1' });
+
+      const authGateway = new FakeAuthGateway(user);
+      const subscriptionRepository = new FakeSubscriptionRepository([
+        createSubscription({ userId: user.id }),
+      ]);
+
+      const element = await BillingPage({
+        deps: { authGateway, subscriptionRepository },
+        searchParams: { error: 'portal_failed' },
+      });
+      const html = renderToStaticMarkup(element);
+
+      expect(html).toContain('open the billing portal. Please try again.');
+      expect(html).toContain('Manage in Stripe');
     });
   });
 
@@ -110,17 +145,5 @@ describe('app/(app)/app/billing/page', () => {
       expect(html).toContain('Billing');
       expect(html).toContain('No subscription found');
     });
-  });
-});
-
-describe('ManageBillingButton', () => {
-  it('renders "Manage in Stripe" text', async () => {
-    const { ManageBillingButton } = await import(
-      '@/app/(app)/app/billing/billing-client'
-    );
-
-    const html = renderToStaticMarkup(<ManageBillingButton />);
-
-    expect(html).toContain('Manage in Stripe');
   });
 });

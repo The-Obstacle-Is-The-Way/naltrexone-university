@@ -65,6 +65,61 @@ describe('GetNextQuestionUseCase', () => {
     expect(result?.choices[0]).not.toHaveProperty('isCorrect');
   });
 
+  it('computes session progress index from distinct answered questions', async () => {
+    const userId = 'user-1';
+    const sessionId = 'session-1';
+
+    const q1 = createQuestion({
+      id: 'q1',
+      status: 'published',
+      choices: [createChoice({ id: 'c1', questionId: 'q1', label: 'A' })],
+    });
+    const q2 = createQuestion({
+      id: 'q2',
+      status: 'published',
+      choices: [createChoice({ id: 'c2', questionId: 'q2', label: 'A' })],
+    });
+    const q3 = createQuestion({
+      id: 'q3',
+      status: 'published',
+      choices: [createChoice({ id: 'c3', questionId: 'q3', label: 'A' })],
+    });
+
+    const session = createPracticeSession({
+      id: sessionId,
+      userId,
+      mode: 'tutor',
+      questionIds: ['q1', 'q2', 'q3'],
+    });
+
+    const questions = new FakeQuestionRepository([q1, q2, q3]);
+    const attempts = new FakeAttemptRepository([
+      {
+        id: 'attempt-1',
+        userId,
+        questionId: 'q2',
+        practiceSessionId: sessionId,
+        selectedChoiceId: 'c2',
+        isCorrect: false,
+        timeSpentSeconds: 0,
+        answeredAt: new Date('2026-01-31T00:00:00Z'),
+      },
+    ]);
+    const sessions = new FakePracticeSessionRepository([session]);
+
+    const useCase = new GetNextQuestionUseCase(questions, attempts, sessions);
+
+    const result = await useCase.execute({ userId, sessionId });
+
+    expect(result?.questionId).toBe('q1');
+    expect(result?.session).toEqual({
+      sessionId,
+      mode: 'tutor',
+      index: 1,
+      total: 3,
+    });
+  });
+
   it('throws NOT_FOUND when next session question is not published', async () => {
     const userId = 'user-1';
     const sessionId = 'session-1';
