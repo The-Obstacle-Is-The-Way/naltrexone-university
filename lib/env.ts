@@ -73,14 +73,18 @@ export type Env = Omit<
   CLERK_WEBHOOK_SIGNING_SECRET: string;
 };
 
+function logInvalidEnv(details: unknown) {
+  // NOTE: This module validates env at import-time, before DI/container wiring.
+  // Use console.error intentionally here and only log safe metadata (field names
+  // + validation errors), never secret values.
+  console.error('Invalid environment variables:', details);
+}
+
 function validateEnv(): Env {
   const parsed = envSchema.safeParse(process.env);
 
   if (!parsed.success) {
-    console.error(
-      'Invalid environment variables:',
-      parsed.error.flatten().fieldErrors,
-    );
+    logInvalidEnv(parsed.error.flatten().fieldErrors);
     throw new Error('Invalid environment variables');
   }
 
@@ -107,7 +111,7 @@ function validateEnv(): Env {
     }
 
     if (Object.keys(missingClerkKeys).length > 0) {
-      console.error('Invalid environment variables:', missingClerkKeys);
+      logInvalidEnv(missingClerkKeys);
       throw new Error('Invalid environment variables');
     }
 
@@ -142,7 +146,7 @@ function validateEnv(): Env {
       }
 
       if (Object.keys(clerkKeyErrors).length > 0) {
-        console.error('Invalid environment variables:', clerkKeyErrors);
+        logInvalidEnv(clerkKeyErrors);
         throw new Error('Invalid environment variables');
       }
     }
