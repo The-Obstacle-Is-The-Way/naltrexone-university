@@ -77,9 +77,13 @@ We generate CSP headers via **Clerk middleware**, not `next.config.ts`.
 
 In `proxy.ts`, we pass `contentSecurityPolicy` options to `clerkMiddleware()` so Clerk emits a Clerk + Stripe compatible CSP header, and we merge in app-specific directives (e.g., `base-uri`, `frame-ancestors`, `object-src`, expanded `img-src`).
 
+We currently run in **non-strict** mode (no per-request nonce) because our app wraps Clerk in a **client-only** provider (`components/providers.tsx` uses `next/dynamic` with `ssr: false`).
+
 ### Strict / Nonce Mode (Optional)
 
 Clerk supports a stricter mode (`contentSecurityPolicy: { strict: true }`) that adds a per-request nonce via the `X-Nonce` header.
+
+If enabling strict CSP in an App Router setup, Clerk requires using the App Router `ClerkProvider` with the `dynamic` prop so the server-generated nonce can flow to client components.
 
 If enabling strict CSP, ensure the app is compatible with nonce-based script loading and follow Clerk + Next.js CSP documentation closely before shipping.
 

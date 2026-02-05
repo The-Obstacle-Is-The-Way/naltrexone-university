@@ -82,7 +82,8 @@ describe('proxy middleware', () => {
     expect(await second.text()).toBe('ok');
   });
 
-  it('configures Clerk-generated CSP directives on middleware responses', async () => {
+  it('returns configured Clerk CSP directives when NEXT_PUBLIC_SKIP_CLERK is false', async () => {
+    // Arrange
     process.env.NEXT_PUBLIC_SKIP_CLERK = 'false';
 
     type ClerkMiddlewareCallback = (
@@ -110,6 +111,7 @@ describe('proxy middleware', () => {
 
     const { default: middleware } = await import('./proxy');
 
+    // Act
     const res = await middleware(
       {} as unknown as NextRequest,
       {} as unknown as NextFetchEvent,
@@ -119,6 +121,7 @@ describe('proxy middleware', () => {
       throw new Error('Expected middleware to return a response');
     }
 
+    // Assert
     expect(capturedOptions).toMatchObject({
       contentSecurityPolicy: {
         directives: expect.objectContaining({
