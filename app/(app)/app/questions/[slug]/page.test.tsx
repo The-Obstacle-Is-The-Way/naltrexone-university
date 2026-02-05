@@ -166,4 +166,41 @@ describe('app/(app)/app/questions/[slug]', () => {
     expect(html).toContain('Explanation');
     expect(html).toContain('Reattempt');
   });
+
+  it('disables submit while loading to prevent duplicate submissions', async () => {
+    const { QuestionView } = await import(
+      '@/app/(app)/app/questions/[slug]/page'
+    );
+
+    const choice = createChoice({
+      id: 'c1',
+      questionId: 'q_1',
+      label: 'A',
+      textMd: 'Choice A',
+    });
+    const question = createQuestion({
+      id: 'q_1',
+      slug: 'q-1',
+      stemMd: 'Stem',
+      difficulty: 'easy',
+      choices: [choice],
+    });
+
+    const html = renderToStaticMarkup(
+      <QuestionView
+        loadState={{ status: 'loading' }}
+        question={toGetQuestionBySlugOutput(question)}
+        selectedChoiceId="c1"
+        submitResult={null}
+        canSubmit
+        isPending={false}
+        onTryAgain={() => undefined}
+        onSelectChoice={() => undefined}
+        onSubmit={() => undefined}
+        onReattempt={() => undefined}
+      />,
+    );
+
+    expect(html).toMatch(/<button[^>]*disabled=""[^>]*>Submit<\/button>/);
+  });
 });

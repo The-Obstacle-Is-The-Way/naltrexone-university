@@ -109,7 +109,11 @@ export function QuestionView(props: QuestionViewProps) {
         <Button
           type="button"
           className="rounded-full"
-          disabled={!props.canSubmit || props.isPending}
+          disabled={
+            !props.canSubmit ||
+            props.isPending ||
+            props.loadState.status === 'loading'
+          }
           onClick={props.onSubmit}
         >
           Submit
