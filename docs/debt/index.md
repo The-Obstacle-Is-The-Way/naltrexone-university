@@ -1,7 +1,7 @@
 # Technical Debt Register
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-02-04
+**Last Updated:** 2026-02-05
 
 ---
 
@@ -18,7 +18,6 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 | ID | Title | Priority | Date |
 |----|-------|----------|------|
 | [DEBT-100](debt-100-adversarial-audit-2026-02-04.md) | Adversarial Codebase Audit Backlog (2026-02-04) | P0 | 2026-02-04 |
-| [DEBT-101](debt-101-add-sentry-error-tracking.md) | Add Sentry Error Tracking (Next.js, Free Tier) | P1 | 2026-02-04 |
 
 **Next Debt ID:** DEBT-102
 
@@ -26,6 +25,7 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 | ID | Title | Priority | Resolved |
 |----|-------|----------|----------|
+| [DEBT-101](../_archive/debt/debt-101-add-sentry-error-tracking.md) | Add Sentry Error Tracking (Next.js, Free Tier) | P1 | 2026-02-05 |
 | [DEBT-084](../_archive/debt/debt-084-user-email-race-condition.md) | User Email Race Condition in Concurrent Webhook Handling | P3 | 2026-02-04 |
 | [DEBT-090](../_archive/debt/debt-090-missing-use-cases-business-logic-in-controllers.md) | Missing Application Use Cases (Business Logic Lives in Controllers) | P1 | 2026-02-04 |
 | [DEBT-096](../_archive/debt/debt-096-repository-mapper-duplication.md) | Repository Row→Domain Mapping Duplicated (DRY Violation) | P3 | 2026-02-04 |

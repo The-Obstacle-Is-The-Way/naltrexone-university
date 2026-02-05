@@ -1,8 +1,9 @@
 # DEBT-101: Add Sentry Error Tracking (Next.js, Free Tier)
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P1
 **Date:** 2026-02-04
+**Resolved:** 2026-02-05
 
 ---
 
@@ -32,8 +33,13 @@ Then configure **without committing secrets**.
 
 Recommended approach (minimal, explicit):
 
-- Add `sentry.client.config.ts`, `sentry.server.config.ts`, and `sentry.edge.config.ts` with a small `Sentry.init({ ... })`.
+- Create `sentry.client.config.ts` to initialize the browser SDK.
+- Import `sentry.client.config.ts` from `instrumentation-client.ts` so the browser SDK initializes without modifying `next.config.ts`.
+- Initialize server/edge in `instrumentation.ts` by calling `Sentry.init({ ... })` inside `register()`.
+- Implement Next.js `onRequestError` hook via `Sentry.captureRequestError` (required for Next 15+ to capture request-time errors reliably).
 - Optionally add source map upload later (requires `SENTRY_AUTH_TOKEN` in CI only).
+
+**Note (SDK behavior):** In `@sentry/nextjs` v10+, `sentry.server.config.ts` and `sentry.edge.config.ts` are considered legacy and the SDK will warn if they exist. Prefer `instrumentation.ts` for server/edge initialization.
 
 Alternative approach (wizard):
 

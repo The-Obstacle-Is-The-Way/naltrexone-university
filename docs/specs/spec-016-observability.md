@@ -12,9 +12,9 @@
 ✅ **Implemented:**
 - `lib/logger.ts` - Pino structured JSON logger with redaction
 - `pino` package installed (v10.3.0)
+- Sentry error tracking (errors only) via `@sentry/nextjs` + Next instrumentation hooks
 
 ❌ **Not Yet Implemented:**
-- Error tracking service (Sentry recommended)
 - `pino-pretty` for dev (optional, logs are readable without it)
 
 ---
@@ -32,7 +32,7 @@ Production systems need observability to:
 ## Goals
 
 1. **Structured logging** for server-side code (searchable, parseable) ✅
-2. **Error tracking** with stack traces and context (client + server) ❌
+2. **Error tracking** with stack traces and context (client + server) ✅
 3. **Request tracing** to follow requests across async boundaries (future)
 4. **Business event logging** for audit trails
 5. **Zero logging in domain layer** (preserve purity)
@@ -59,16 +59,16 @@ We use [pino](https://github.com/pinojs/pino) - the fastest Node.js logger, opti
 - Supports log levels, child loggers, redaction
 - First-class Vercel/serverless support
 
-### Error Tracking: Sentry (Optional, Post-MVP)
+### Error Tracking: Sentry ✅ IMPLEMENTED (Errors Only)
 
-Consider [Sentry](https://sentry.io) for error tracking:
+We use [Sentry](https://sentry.io) for error tracking:
 
 - Captures unhandled exceptions with full stack traces
 - Works on both client (React) and server (Node.js)
 - Groups similar errors, tracks resolution
 - Free tier sufficient for MVP
 
-**Note:** Sentry is NOT currently installed. For MVP, rely on Vercel's built-in error logging. Add Sentry when error volume justifies it.
+**Scope:** Errors only — performance tracing, replay, profiling, and source map upload are intentionally omitted for now.
 
 ---
 
@@ -78,10 +78,12 @@ Consider [Sentry](https://sentry.io) for error tracking:
 
 ```text
 ┌─────────────────────────────────────────────────────────────────┐
-│                    INFRASTRUCTURE (lib/)                         │
+│           INFRASTRUCTURE (lib/ + framework config)               │
 │                                                                  │
 │   lib/logger.ts  ─── Pino instance, exported for use            │
-│   lib/sentry.ts  ─── Sentry initialization                      │
+│   instrumentation.ts         ─── Next server/edge instrumentation│
+│   instrumentation-client.ts  ─── Next client instrumentation     │
+│   sentry.client.config.ts    ─── Browser SDK initialization      │
 │                                                                  │
 │   ┌──────────────────────────────────────────────────────────┐  │
 │   │                    ADAPTERS                               │  │
@@ -167,42 +169,23 @@ export const stripeLogger = logger.child({ module: 'stripe' });
 export const webhookLogger = logger.child({ module: 'webhook' });
 ```
 
-### Optional: `lib/sentry.ts` (Post-MVP)
+### Sentry (Error Tracking)
 
-Sentry is **not currently installed**. If added later:
+Sentry is installed and configured for **error tracking only** (no performance tracing, replay, or profiling). Initialization is done manually to avoid committing secrets and to keep the setup minimal.
 
-```bash
-pnpm add @sentry/nextjs
-npx @sentry/wizard@latest -i nextjs
-```
+**Implementation:**
+- Browser: `sentry.client.config.ts`
+- Server/Edge: `instrumentation.ts` (`register()` calls `Sentry.init`, and `onRequestError` is wired via `Sentry.captureRequestError`)
+- Client entry: `instrumentation-client.ts` (imports `sentry.client.config.ts`)
 
-Then create:
+**Environment variables (do not commit real DSNs):**
+- `NEXT_PUBLIC_SENTRY_DSN` (client)
+- `SENTRY_DSN` (server; optional if using one DSN everywhere)
 
-```typescript
-import * as Sentry from '@sentry/nextjs';
-
-export function initSentry() {
-  if (!process.env.NEXT_PUBLIC_SENTRY_DSN) {
-    return;
-  }
-
-  Sentry.init({
-    dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
-    environment: process.env.VERCEL_ENV ?? process.env.NODE_ENV,
-    tracesSampleRate: 0.1,
-    enabled: process.env.NODE_ENV === 'production',
-  });
-}
-
-export function captureError(error: Error, context?: Record<string, unknown>) {
-  Sentry.captureException(error, { extra: context });
-}
-
-// Helper to add user context (call after auth)
-export function setUserContext(userId: string, email?: string) {
-  Sentry.setUser({ id: userId, email });
-}
-```
+**Out of scope (future work):**
+- source map upload (`SENTRY_AUTH_TOKEN` in CI only)
+- performance tracing, replay, profiling
+- attaching user PII (email, request bodies, tokens)
 
 ### Usage Examples
 
@@ -300,13 +283,10 @@ Currently in `.env.example`:
 ```bash
 # LOG_LEVEL is supported but not documented in .env.example yet
 LOG_LEVEL=debug                     # debug | info | warn | error (optional)
-```
 
-If Sentry is added later:
-
-```bash
+# SENTRY (Error Tracking)
 NEXT_PUBLIC_SENTRY_DSN=             # Sentry DSN (from sentry.io)
-SENTRY_AUTH_TOKEN=                  # For source map upload in CI
+SENTRY_DSN=                         # Server DSN (optional)
 ```
 
 ---
@@ -314,9 +294,12 @@ SENTRY_AUTH_TOKEN=                  # For source map upload in CI
 ## Files
 
 ```text
-lib/
-├── logger.ts         # ✅ EXISTS - Pino logger instance with redaction
-└── sentry.ts         # ❌ NOT YET - Add when Sentry is needed
+.
+├── instrumentation.ts         # ✅ EXISTS - Sentry.init + onRequestError for server/edge
+├── instrumentation-client.ts  # ✅ EXISTS - loads sentry.client.config.ts on the client
+├── sentry.client.config.ts    # ✅ EXISTS - browser Sentry.init (errors only)
+└── lib/
+    └── logger.ts              # ✅ EXISTS - Pino logger instance with redaction
 ```
 
 ---
@@ -326,12 +309,12 @@ lib/
 **Already Installed:**
 ```bash
 pnpm add pino                        # ✅ v10.3.0 installed
+pnpm add @sentry/nextjs              # ✅ Error tracking
 ```
 
 **Optional (add when needed):**
 ```bash
 pnpm add -D pino-pretty              # Pretty logs in dev terminal
-pnpm add @sentry/nextjs              # Error tracking
 ```
 
 ---
@@ -343,10 +326,10 @@ pnpm add @sentry/nextjs              # Error tracking
 - [x] JSON logs in production
 - [x] Sensitive fields are redacted (`remove: true`)
 - [x] No logging calls in `src/domain/**`
+- [x] Sentry is initialized (client + server) when DSNs are configured
 
 **Not Yet Done (Optional):**
 - [ ] Pretty logs in dev (requires `pino-pretty`)
-- [ ] Sentry captures unhandled errors (requires `@sentry/nextjs`)
 - [ ] LOG_LEVEL documented in .env.example
 
 ---
