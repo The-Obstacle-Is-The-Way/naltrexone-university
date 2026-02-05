@@ -105,7 +105,10 @@ function contrastRatio(foreground: Rgba, background: Rgba): number {
 }
 
 test.describe('marketing contrast', () => {
-  test.use({ colorScheme: 'light' });
+  test.use({
+    colorScheme: 'light',
+    contextOptions: { reducedMotion: 'reduce' },
+  });
 
   test('homepage maintains readable hero and stat cards in light mode', async ({
     page,
