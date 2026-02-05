@@ -1,8 +1,9 @@
 # DEBT-108: Hardcoded Zinc Colors Break Light/Dark Mode Toggle
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P2
 **Date:** 2026-02-05
+**Resolved:** 2026-02-05
 
 ---
 
@@ -36,7 +37,7 @@ These hardcoded values look correct in light mode but are visually broken in dar
 
 | File | Lines | Pattern | Why OK |
 |------|-------|---------|--------|
-| `components/question/ChoiceButton.tsx` | 31-55 | `dark:bg-emerald-950/20` | Has explicit `dark:` variants |
+| `components/question/ChoiceButton.tsx` | 32-55 | `dark:bg-emerald-950/20` | Correctness states have `dark:` variants; selected state (`border-zinc-400`) fixed to `border-ring` |
 | `components/question/Feedback.tsx` | 16-19 | `dark:border-emerald-900/50` | Has explicit `dark:` variants |
 | `components/marketing/marketing-home.tsx` | 232 | `border-primary` | Uses semantic token |
 
@@ -75,11 +76,12 @@ hover:border-border hover:bg-muted/50
 
 ## Verification
 
-1. Toggle between light and dark mode on all affected pages
-2. Verify CTA buttons are readable in both modes (WCAG AA: 4.5:1 contrast minimum)
-3. Verify annual plan card border is visible in dark mode
-4. Verify dashboard card hover states don't obscure text
-5. Consider adding a dark-mode contrast E2E test (`marketing-contrast-dark.spec.ts`)
+1. [x] Replaced hardcoded zinc CTA/background classes with semantic tokens across pricing and marketing CTAs.
+2. [x] Replaced annual pricing border styling with tokenized `border-primary`.
+3. [x] Replaced dashboard hover hardcodes with semantic token hover styles.
+4. [x] Updated theme toggle hover styling to semantic `hover:bg-muted`.
+5. [x] Added regression coverage in `components/theme-token-regression.test.tsx`.
+6. [x] Fixed ChoiceButton selected-state `border-zinc-400` → `border-ring` (lines 31, 51). Added regression test.
 
 ## Related
 

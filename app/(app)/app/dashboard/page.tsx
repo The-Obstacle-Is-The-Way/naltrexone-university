@@ -23,28 +23,28 @@ export function DashboardView({ stats }: { stats: UserStatsOutput }) {
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="rounded-2xl border border-border bg-card p-6 shadow-sm hover:border-zinc-700/50 hover:bg-zinc-900/80 transition-all">
+        <div className="rounded-2xl border border-border bg-card p-6 shadow-sm hover:border-border/80 hover:bg-muted/50 transition-all">
           <div className="text-sm text-muted-foreground">Total answered</div>
           <div className="mt-2 text-3xl font-bold font-display text-foreground">
             {stats.totalAnswered}
           </div>
         </div>
 
-        <div className="rounded-2xl border border-border bg-card p-6 shadow-sm hover:border-zinc-700/50 hover:bg-zinc-900/80 transition-all">
+        <div className="rounded-2xl border border-border bg-card p-6 shadow-sm hover:border-border/80 hover:bg-muted/50 transition-all">
           <div className="text-sm text-muted-foreground">Overall accuracy</div>
           <div className="mt-2 text-3xl font-bold font-display text-foreground">
             {formatPercent(stats.accuracyOverall)}
           </div>
         </div>
 
-        <div className="rounded-2xl border border-border bg-card p-6 shadow-sm hover:border-zinc-700/50 hover:bg-zinc-900/80 transition-all">
+        <div className="rounded-2xl border border-border bg-card p-6 shadow-sm hover:border-border/80 hover:bg-muted/50 transition-all">
           <div className="text-sm text-muted-foreground">Answered (7 days)</div>
           <div className="mt-2 text-3xl font-bold font-display text-foreground">
             {stats.answeredLast7Days}
           </div>
         </div>
 
-        <div className="rounded-2xl border border-border bg-card p-6 shadow-sm hover:border-zinc-700/50 hover:bg-zinc-900/80 transition-all">
+        <div className="rounded-2xl border border-border bg-card p-6 shadow-sm hover:border-border/80 hover:bg-muted/50 transition-all">
           <div className="text-sm text-muted-foreground">Accuracy (7 days)</div>
           <div className="mt-2 text-3xl font-bold font-display text-foreground">
             {formatPercent(stats.accuracyLast7Days)}
@@ -53,7 +53,7 @@ export function DashboardView({ stats }: { stats: UserStatsOutput }) {
       </div>
 
       <div className="grid gap-4 lg:grid-cols-3">
-        <div className="rounded-2xl border border-border bg-card p-6 shadow-sm hover:border-zinc-700/50 hover:bg-zinc-900/80 transition-all">
+        <div className="rounded-2xl border border-border bg-card p-6 shadow-sm hover:border-border/80 hover:bg-muted/50 transition-all">
           <div className="text-sm text-muted-foreground">Current streak</div>
           <div className="mt-2 text-3xl font-bold font-display text-foreground">
             {stats.currentStreakDays}

@@ -20,7 +20,7 @@ export function ThemeToggle() {
     <button
       type="button"
       onClick={() => setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')}
-      className="relative rounded-full p-2 transition-colors hover:bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background dark:hover:bg-[#1F1F23]"
+      className="relative rounded-full p-2 transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
     >
       <Sun
         aria-hidden="true"

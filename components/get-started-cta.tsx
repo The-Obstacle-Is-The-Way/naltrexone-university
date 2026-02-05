@@ -31,7 +31,7 @@ export async function GetStartedCta({
     return (
       <Link
         href="/pricing"
-        className="inline-block rounded-full bg-zinc-100 px-8 py-3 text-base font-medium text-zinc-900 hover:bg-white transition-colors"
+        className="inline-block rounded-full bg-primary px-8 py-3 text-base font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
       >
         Get Started
       </Link>
@@ -44,7 +44,7 @@ export async function GetStartedCta({
     return (
       <Link
         href="/pricing"
-        className="inline-block rounded-full bg-zinc-100 px-8 py-3 text-base font-medium text-zinc-900 hover:bg-white transition-colors"
+        className="inline-block rounded-full bg-primary px-8 py-3 text-base font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
       >
         Get Started
       </Link>
@@ -61,7 +61,7 @@ export async function GetStartedCta({
   return (
     <Link
       href={href}
-      className="inline-block rounded-full bg-zinc-100 px-8 py-3 text-base font-medium text-zinc-900 hover:bg-white transition-colors"
+      className="inline-block rounded-full bg-primary px-8 py-3 text-base font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
     >
       {label}
     </Link>

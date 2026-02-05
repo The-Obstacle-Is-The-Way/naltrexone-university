@@ -19,6 +19,7 @@ describe('ChoiceButton', () => {
     expect(html).toContain('Choice A');
     expect(html).toContain('type="radio"');
     expect(html).toContain('name="choices"');
+    expect(html).toContain('aria-label="Choice A"');
     expect(html).not.toContain('checked=""');
   });
 

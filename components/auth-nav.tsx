@@ -46,7 +46,7 @@ export async function AuthNav({
       </Link>
       <Link
         href="/sign-in"
-        className="rounded-full bg-zinc-100 px-4 py-2 text-sm font-medium text-zinc-900 hover:bg-white transition-colors"
+        className="rounded-full bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
       >
         Sign In
       </Link>

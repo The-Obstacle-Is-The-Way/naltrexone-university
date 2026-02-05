@@ -152,13 +152,21 @@ export function BillingPageView(props: BillingPageViewProps) {
 
 export type BillingPageProps = {
   deps?: BillingPageDeps;
-  searchParams?: { error?: string | string[] };
+  searchParams?:
+    | { error?: string | string[] }
+    | Promise<{ error?: string | string[] }>;
 };
 
 export default async function BillingPage(props?: BillingPageProps) {
   const { subscription } = await loadBillingData(props?.deps);
+  const resolvedSearchParams =
+    typeof props?.searchParams === 'object' &&
+    props?.searchParams !== null &&
+    'then' in props.searchParams
+      ? await props.searchParams
+      : props?.searchParams;
   const banner = getBillingBanner(
-    parseBillingErrorCode(props?.searchParams?.error),
+    parseBillingErrorCode(resolvedSearchParams?.error),
   );
 
   if (!subscription) {

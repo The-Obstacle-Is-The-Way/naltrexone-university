@@ -28,7 +28,7 @@ export function ChoiceButton({
         'block w-full rounded-xl border border-border bg-background p-4 text-left shadow-sm transition-colors focus-within:border-ring focus-within:ring-ring/50 focus-within:ring-[3px]',
         !disabled && 'cursor-pointer hover:bg-muted',
         disabled && 'cursor-not-allowed opacity-60',
-        selected && correctness === null && 'border-zinc-400',
+        selected && correctness === null && 'border-ring',
         correctness === 'correct' &&
           'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/20',
         correctness === 'incorrect' &&
@@ -38,6 +38,7 @@ export function ChoiceButton({
       <input
         type="radio"
         name={name}
+        aria-label={`Choice ${label}`}
         checked={selected}
         onChange={() => onClick()}
         disabled={disabled}
@@ -47,7 +48,7 @@ export function ChoiceButton({
         <div
           className={cn(
             'flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-border bg-background text-xs font-semibold leading-none text-foreground',
-            selected && correctness === null && 'border-zinc-400',
+            selected && correctness === null && 'border-ring',
             correctness === 'correct' &&
               'border-emerald-500 bg-emerald-50 text-emerald-700 dark:bg-emerald-950/20',
             correctness === 'incorrect' &&
