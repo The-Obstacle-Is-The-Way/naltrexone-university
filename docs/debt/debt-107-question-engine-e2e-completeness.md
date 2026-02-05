@@ -53,11 +53,12 @@ The following specs are marked "Implemented" but have E2E test gaps:
 ┌─────────────────────────────────────────────────────────────────┐
 │                        DATABASE TABLES                          │
 ├─────────────────────────────────────────────────────────────────┤
-│ questions        │ 958 published questions (stem, explanation)  │
+│ questions        │ Published questions (stem, explanation)       │
 │ choices          │ 4 choices per question (one correct)         │
 │ attempts         │ Every user answer (userId, questionId,       │
 │                  │ isCorrect, timestamp, sessionId nullable)    │
-│ practice_sessions│ Session metadata (mode, questionIds array)   │
+│ practice_sessions│ Session metadata (mode, params_json incl.    │
+│                  │ immutable questionIds list)                  │
 │ bookmarks        │ User-saved questions                         │
 │ tags             │ Multi-taxonomy (domain/topic/substance/etc)  │
 └─────────────────────────────────────────────────────────────────┘
@@ -109,7 +110,7 @@ Getting it right removes it from Review. Getting it wrong again re-adds it.
 ### Gap 1: No E2E Test Coverage for Question Engine
 **Impact:** Regressions can silently break the core user journey.
 
-The question engine has unit tests but NO Playwright E2E tests that verify:
+The question engine has unit tests, but authenticated Playwright E2E coverage is currently blocked (tests SKIP without credentials) and key scenarios are not yet covered end-to-end:
 - [ ] Session creation → answering → completion flow
 - [ ] Review page population after incorrect answers
 - [ ] Question disappears from Review after correct reattempt

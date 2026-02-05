@@ -34,13 +34,12 @@ This means critical user flows cannot be automatically tested:
 
 2. **E2E Test User Created:**
    - Email: `e2e-test@addictionboards.com`
-   - Password: `E2eTest123!`
    - Created in Clerk Development instance
 
 3. **Credentials Added to `.env.local`:**
    ```
-   E2E_CLERK_USER_USERNAME="e2e-test@addictionboards.com"
-   E2E_CLERK_USER_PASSWORD="E2eTest123!"
+    E2E_CLERK_USER_USERNAME="e2e-test@addictionboards.com"
+    E2E_CLERK_USER_PASSWORD="<set locally>"
    ```
 
 4. **`@clerk/testing` Package Installed:**
@@ -54,6 +53,7 @@ This means critical user flows cannot be automatically tested:
    - Currently the user has no Stripe subscription
    - Tests that require subscription will fail or need to handle checkout
    - **Action needed:** Manually subscribe the E2E user via the app
+   - Note: This was previously blocked by a Stripe SDK `this`-binding bug (fixed in BUG-069 / BUG-070).
 
 2. **Update E2E Tests to Use `@clerk/testing`:**
    - Current tests use manual UI interaction (fill email, click Continue, etc.)

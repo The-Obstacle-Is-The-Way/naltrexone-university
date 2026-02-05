@@ -30,7 +30,7 @@ export async function createStripeCustomer({
     },
   } satisfies CustomerCreateParams;
 
-  const customersSearch = stripe.customers.search;
+  const customersSearch = stripe.customers.search?.bind(stripe.customers);
   if (customersSearch) {
     const query = `metadata['user_id']:'${input.userId}'`;
     const existing = await callStripeWithRetry({
