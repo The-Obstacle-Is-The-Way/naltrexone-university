@@ -77,37 +77,37 @@ We use [Sentry](https://sentry.io) for error tracking:
 ### Clean Architecture Placement
 
 ```text
-┌─────────────────────────────────────────────────────────────────┐
+┌──────────────────────────────────────────────────────────────────┐
 │           INFRASTRUCTURE (lib/ + framework config)               │
 │                                                                  │
-│   lib/logger.ts  ─── Pino instance, exported for use            │
+│   lib/logger.ts  ─── Pino instance, exported for use             │
 │   instrumentation.ts         ─── Next server/edge instrumentation│
 │   instrumentation-client.ts  ─── Next client instrumentation     │
 │   sentry.client.config.ts    ─── Browser SDK initialization      │
 │                                                                  │
-│   ┌──────────────────────────────────────────────────────────┐  │
-│   │                    ADAPTERS                               │  │
-│   │                                                           │  │
-│   │   Repositories: Log DB errors, slow queries              │  │
-│   │   Gateways: Log external API calls (Stripe, Clerk)       │  │
-│   │   Controllers: Log request/response, user context         │  │
-│   │                                                           │  │
-│   │   ┌──────────────────────────────────────────────────┐   │  │
-│   │   │              APPLICATION (Use Cases)              │   │  │
-│   │   │                                                   │   │  │
-│   │   │   Log use case start/end for audit trail         │   │  │
-│   │   │   Log business events (subscription created)      │   │  │
-│   │   │                                                   │   │  │
-│   │   │   ┌──────────────────────────────────────────┐   │   │  │
-│   │   │   │              DOMAIN                       │   │   │  │
-│   │   │   │                                           │   │   │  │
-│   │   │   │   ⚠️  NO LOGGING HERE                    │   │   │  │
-│   │   │   │   Pure functions, no side effects        │   │   │  │
-│   │   │   │                                           │   │   │  │
-│   │   │   └──────────────────────────────────────────┘   │   │  │
-│   │   └──────────────────────────────────────────────────┘   │  │
-│   └──────────────────────────────────────────────────────────┘  │
-└─────────────────────────────────────────────────────────────────┘
+│   ┌──────────────────────────────────────────────────────────┐   │
+│   │                    ADAPTERS                              │   │
+│   │                                                          │   │
+│   │   Repositories: Log DB errors, slow queries              │   │
+│   │   Gateways: Log external API calls (Stripe, Clerk)       │   │
+│   │   Controllers: Log request/response, user context        │   │
+│   │                                                          │   │
+│   │   ┌──────────────────────────────────────────────────┐   │   │
+│   │   │              APPLICATION (Use Cases)             │   │   │
+│   │   │                                                  │   │   │
+│   │   │   Log use case start/end for audit trail         │   │   │
+│   │   │   Log business events (subscription created)     │   │   │
+│   │   │                                                  │   │   │
+│   │   │   ┌──────────────────────────────────────────┐   │   │   │
+│   │   │   │              DOMAIN                      │   │   │   │
+│   │   │   │                                          │   │   │   │
+│   │   │   │   ⚠️  NO LOGGING HERE                    │   │   │   │
+│   │   │   │   Pure functions, no side effects        │   │   │   │
+│   │   │   │                                          │   │   │   │
+│   │   │   └──────────────────────────────────────────┘   │   │   │
+│   │   └──────────────────────────────────────────────────┘   │   │
+│   └──────────────────────────────────────────────────────────┘   │
+└──────────────────────────────────────────────────────────────────┘
 ```
 
 **Key rule:** Domain layer has ZERO logging. It's pure TypeScript with no side effects.
