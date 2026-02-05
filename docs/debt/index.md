@@ -15,8 +15,6 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 ## Debt Index (Active)
 
-_No active debt items._
-
 | ID | Title | Priority | Date |
 |----|-------|----------|------|
 | [DEBT-102](debt-102-question-content-pipeline-hardening.md) | Question Content Pipeline Hardening (Tags, Publishing, and Prod Seeding) | P2 | 2026-02-05 |

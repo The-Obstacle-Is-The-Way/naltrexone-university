@@ -18,7 +18,7 @@ Bug reports document issues discovered in the codebase along with their root cau
 | ID | Title | Status | Priority | Date |
 |----|-------|--------|----------|------|
 
-**Next Bug ID:** BUG-058
+**Next Bug ID:** BUG-062
 
 ## Foundation Audit
 
@@ -29,6 +29,10 @@ See: [Foundation Audit Report](foundation-audit-report.md)
 
 | ID | Title | Priority | Resolved |
 |----|-------|----------|----------|
+| [BUG-061](../_archive/bugs/bug-061-debt-index-claims-no-active-items-while-listing-debt-102.md) | Debt Index Claims No Active Items While Listing DEBT-102 | P4 | 2026-02-05 |
+| [BUG-060](../_archive/bugs/bug-060-question-reattempt-submit-not-disabled-while-loading.md) | Question Reattempt Submit Not Disabled While Loading | P3 | 2026-02-05 |
+| [BUG-059](../_archive/bugs/bug-059-marketing-homepage-low-contrast-in-light-mode.md) | Marketing Homepage Low Contrast in Light Mode | P1 | 2026-02-05 |
+| [BUG-058](../_archive/bugs/bug-058-theme-toggle-does-not-work-without-themeprovider.md) | Theme Toggle Does Not Work Without ThemeProvider | P3 | 2026-02-05 |
 | [BUG-057](../_archive/bugs/bug-057-choice-label-badges-render-clipped.md) | Choice Label Badges Render Clipped | P3 | 2026-02-05 |
 | [BUG-056](../_archive/bugs/bug-056-shuffled-choice-labels-out-of-order.md) | Shuffled Choice Labels Display Out of Order | P3 | 2026-02-05 |
 | [BUG-055](../_archive/bugs/bug-055-post-login-redirects-to-landing-page.md) | Authenticated Subscribers Redirected to Landing Page After Sign-In | P2 | 2026-02-04 |
