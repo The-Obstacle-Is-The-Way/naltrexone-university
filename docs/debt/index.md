@@ -19,8 +19,9 @@ _No active debt items._
 
 | ID | Title | Priority | Date |
 |----|-------|----------|------|
+| [DEBT-102](debt-102-question-content-pipeline-hardening.md) | Question Content Pipeline Hardening (Tags, Publishing, and Prod Seeding) | P2 | 2026-02-05 |
 
-**Next Debt ID:** DEBT-102
+**Next Debt ID:** DEBT-103
 
 ## Archived Debt
 
