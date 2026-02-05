@@ -1,15 +1,40 @@
 import matter from 'gray-matter';
 import { z } from 'zod';
+import {
+  DRAFT_SUBSTANCE_SLUGS,
+  DRAFT_TOPIC_SLUGS,
+} from '../lib/content/draftTaxonomy';
 import { canonicalizeMarkdown } from '../lib/content/parseMdxQuestion';
 import { QuestionFrontmatterSchema } from '../lib/content/schemas';
+
+const DraftTagSlugSchema = z
+  .string()
+  .min(1)
+  .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, 'tag slugs must be kebab-case');
+
+const DraftSubstanceSlugSchema = DraftTagSlugSchema.refine(
+  (slug) => (DRAFT_SUBSTANCE_SLUGS as readonly string[]).includes(slug),
+  {
+    message: `substances must be one of: ${DRAFT_SUBSTANCE_SLUGS.join(', ')}`,
+  },
+);
+
+const DraftTopicSlugSchema = DraftTagSlugSchema.refine(
+  (slug) => (DRAFT_TOPIC_SLUGS as readonly string[]).includes(slug),
+  {
+    message: `topics must be one of: ${DRAFT_TOPIC_SLUGS.join(', ')}`,
+  },
+);
 
 const DraftFrontmatterSchema = z
   .object({
     qid: z.string().min(1),
     type: z.enum(['recall', 'vignette']),
     difficulty: z.enum(['easy', 'medium', 'hard']),
-    substances: z.array(z.string()).default([]),
-    topics: z.array(z.string()).default([]),
+    substances: z.array(DraftSubstanceSlugSchema).default([]),
+    topics: z.array(DraftTopicSlugSchema).default([]),
+    treatments: z.array(DraftTagSlugSchema).default([]),
+    diagnoses: z.array(DraftTagSlugSchema).default([]),
     source: z.string().min(1),
     answer: z.string().regex(/^[A-E]$/, 'answer must be A-E'),
   })
@@ -205,6 +230,14 @@ export function convertDraftQuestionToMdx(input: {
 
   for (const slug of draft.frontmatter.topics) {
     tags.push({ slug, name: titleCaseFromSlug(slug), kind: 'topic' });
+  }
+
+  for (const slug of draft.frontmatter.treatments) {
+    tags.push({ slug, name: titleCaseFromSlug(slug), kind: 'treatment' });
+  }
+
+  for (const slug of draft.frontmatter.diagnoses) {
+    tags.push({ slug, name: titleCaseFromSlug(slug), kind: 'diagnosis' });
   }
 
   const uniqueTags = new Map<string, (typeof tags)[number]>();

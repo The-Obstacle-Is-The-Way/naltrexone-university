@@ -126,4 +126,90 @@ describe('draft question import', () => {
 
     FullQuestionSchema.parse({ frontmatter, stemMd, explanationMd });
   });
+
+  it('maps draft treatments and diagnoses to the corresponding MDX tag kinds', () => {
+    const block = [
+      '---',
+      'qid: demo-003',
+      'type: recall',
+      'difficulty: easy',
+      'substances: [opioids]',
+      'topics: [treatment]',
+      'treatments: [buprenorphine]',
+      'diagnoses: [opioid-use-disorder]',
+      'source: demo-source',
+      'answer: A',
+      '---',
+      '',
+      '## Question',
+      '',
+      'Which statement is correct?',
+      '',
+      '## Choices',
+      '',
+      '- A) Correct',
+      '- B) Incorrect',
+      '',
+      '## Explanation',
+      '',
+      'Because.',
+      '',
+      '---',
+    ].join('\n');
+
+    const draft = parseDraftQuestionBlock(block);
+    const mdx = convertDraftQuestionToMdx({
+      draft,
+      status: 'draft',
+      domainTagSlug: 'cochrane',
+    });
+
+    const { data } = matter(mdx);
+    const frontmatter = QuestionFrontmatterSchema.parse(data);
+
+    expect(frontmatter.tags).toEqual(
+      expect.arrayContaining([
+        { slug: 'cochrane', name: 'Cochrane', kind: 'domain' },
+        { slug: 'opioids', name: 'Opioids', kind: 'substance' },
+        { slug: 'treatment', name: 'Treatment', kind: 'topic' },
+        { slug: 'buprenorphine', name: 'Buprenorphine', kind: 'treatment' },
+        {
+          slug: 'opioid-use-disorder',
+          name: 'Opioid Use Disorder',
+          kind: 'diagnosis',
+        },
+      ]),
+    );
+  });
+
+  it('rejects non-canonical topic slugs to prevent tag fragmentation', () => {
+    const block = [
+      '---',
+      'qid: demo-004',
+      'type: recall',
+      'difficulty: easy',
+      'substances: [alcohol]',
+      'topics: [made-up-topic]',
+      'source: demo-source',
+      'answer: A',
+      '---',
+      '',
+      '## Question',
+      '',
+      'Question?',
+      '',
+      '## Choices',
+      '',
+      '- A) Correct',
+      '- B) Incorrect',
+      '',
+      '## Explanation',
+      '',
+      'Because.',
+      '',
+      '---',
+    ].join('\n');
+
+    expect(() => parseDraftQuestionBlock(block)).toThrow(/topic/i);
+  });
 });

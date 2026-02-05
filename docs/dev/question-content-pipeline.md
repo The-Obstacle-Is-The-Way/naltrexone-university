@@ -30,10 +30,16 @@ Draft question sets live under `content/drafts/questions/**` and are usually sto
 Each file contains multiple question blocks. Each block:
 
 - Starts with YAML frontmatter containing `qid`, `difficulty`, `substances`, `topics`, `source`, and `answer`
+  - Optional: `treatments[]`, `diagnoses[]` for more specific tagging (mapped to MDX `kind: treatment|diagnosis`)
 - Uses headings in this order:
   - `## Question` (or `## Stem`)
   - `## Choices`
   - `## Explanation`
+
+Notes:
+
+- Draft `substances[]` and `topics[]` are validated against the canonical taxonomy in `lib/content/draftTaxonomy.ts`.
+- All draft tag slugs must be **kebab-case** (`lowercase-with-dashes`).
 
 ## Import Drafts → MDX (Generated)
 
