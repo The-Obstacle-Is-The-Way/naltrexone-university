@@ -97,7 +97,7 @@ Recommended end-to-end sanity check:
 pnpm db:test:reset
 DATABASE_URL=postgresql://postgres:postgres@localhost:5434/addiction_boards_test pnpm db:migrate
 pnpm content:import:drafts -- --status published
-DATABASE_URL=postgresql://postgres:postgres@localhost:5434/addiction_boards_test pnpm db:seed
+SEED_INCLUDE_PLACEHOLDERS=false DATABASE_URL=postgresql://postgres:postgres@localhost:5434/addiction_boards_test pnpm db:seed
 pnpm dev
 ```
 
@@ -114,5 +114,15 @@ Because real content is gitignored, you must ensure the environment running `pnp
 
 Keep `content/questions/placeholder/` as committed templates and pipeline smoke-test content.
 
-If you do not want placeholders to appear in production sessions, archive them by changing their MDX frontmatter to `status: "archived"` and re-running `pnpm db:seed` against the target database.
+To keep CI/E2E stable, placeholders remain committed and `published` in the repo.
 
+If you do not want placeholders to appear in your **runtime database** (local/staging/prod), seed with:
+
+```bash
+SEED_INCLUDE_PLACEHOLDERS=false pnpm db:seed
+```
+
+This does two things:
+
+- Excludes `content/questions/placeholder/**/*.mdx` from the seed input.
+- Archives any existing placeholder rows in the DB (`slug LIKE 'placeholder-%'`) so the app won’t serve them (the app only serves `status='published'`).
