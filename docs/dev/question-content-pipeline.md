@@ -110,6 +110,12 @@ Seeding requires two things:
 
 Because real content is gitignored, you must ensure the environment running `pnpm db:seed` has the MDX files available (for example, by syncing from a private content repo, or running the seed from your local machine against the remote database).
 
+Before seeding, ensure the target database schema is up to date:
+
+```bash
+DATABASE_URL="<target-db-url>" pnpm db:migrate
+```
+
 ## Placeholder Questions
 
 Keep `content/questions/placeholder/` as committed templates and pipeline smoke-test content.
@@ -126,3 +132,15 @@ This does two things:
 
 - Excludes `content/questions/placeholder/**/*.mdx` from the seed input.
 - Archives any existing placeholder rows in the DB (`slug LIKE 'placeholder-%'`) so the app won’t serve them (the app only serves `status='published'`).
+
+## Troubleshooting
+
+### Practice shows “Internal error” on Start session / Submit
+
+This usually means the database is missing newer tables required by server actions (for example `rate_limits` or `idempotency_keys`).
+
+Fix:
+
+```bash
+pnpm db:migrate
+```
