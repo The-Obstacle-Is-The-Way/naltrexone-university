@@ -17,7 +17,6 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 | ID | Title | Status | Priority | Date |
 |----|-------|--------|----------|------|
-| [BUG-066](./bug-066-clerk-development-keys-in-production.md) | Clerk Development Keys Used in Production | Blocked - Manual Action Required | P1 | 2026-02-05 |
 | [BUG-067](./bug-067-clerk-shows-ntx-university-name.md) | Clerk Sign-in Shows "NTX University" Instead of "Addiction Boards" | Blocked - Manual Action Required | P3 | 2026-02-05 |
 
 **Next Bug ID:** BUG-069
@@ -26,8 +25,7 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 | ID | Title | Status | Resolution |
 |----|-------|--------|------------|
-| [BUG-062](./bug-062-practice-session-modes-not-working.md) | Practice Session Modes (Tutor/Exam) Not Working | Resolved | Works on production |
-| [BUG-064](./bug-064-clerk-key-mismatch-warning.md) | Clerk Key Mismatch Warning | Won't Fix | False alarm, keys verified correct |
+| (none currently) | | | |
 
 ## Foundation Audit
 
@@ -38,6 +36,9 @@ See: [Foundation Audit Report](foundation-audit-report.md)
 
 | ID | Title | Priority | Resolved |
 |----|-------|----------|----------|
+| [BUG-066](../_archive/bugs/bug-066-clerk-development-keys-in-production.md) | Clerk Development Keys in Production | P1 | 2026-02-05 |
+| [BUG-064](../_archive/bugs/bug-064-clerk-key-mismatch-warning.md) | Clerk Key Mismatch Warning (False Alarm) | P4 | 2026-02-05 |
+| [BUG-062](../_archive/bugs/bug-062-practice-session-modes-not-working.md) | Practice Session Modes Not Working (False Alarm) | P1 | 2026-02-05 |
 | [BUG-063](../_archive/bugs/bug-063-csp-blocks-clerk-blob-workers.md) | CSP Blocks Clerk Blob Workers | P3 | 2026-02-05 |
 | [BUG-068](../_archive/bugs/bug-068-reattempt-page-ux-confusion.md) | Reattempt Page UX Confusion - Buttons After Submit | P3 | 2026-02-05 |
 | [BUG-065](../_archive/bugs/bug-065-explanation-not-available-some-questions.md) | Exam Mode Shows Feedback When It Shouldn't | P2 | 2026-02-05 |
