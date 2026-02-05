@@ -167,42 +167,22 @@ export const stripeLogger = logger.child({ module: 'stripe' });
 export const webhookLogger = logger.child({ module: 'webhook' });
 ```
 
-### Optional: `lib/sentry.ts` (Post-MVP)
+### Sentry (Error Tracking)
 
-Sentry is **not currently installed**. If added later:
+Sentry is installed and configured for **error tracking only** (no performance tracing, replay, or profiling). Initialization is done manually to avoid committing secrets and to keep the setup minimal.
 
-```bash
-pnpm add @sentry/nextjs
-npx @sentry/wizard@latest -i nextjs
-```
+**Implementation:**
+- Browser: `sentry.client.config.ts`
+- Server/Edge: `instrumentation.ts` (`register()` calls `Sentry.init`, and `onRequestError` is wired via `Sentry.captureRequestError`)
 
-Then create:
+**Environment variables (do not commit real DSNs):**
+- `NEXT_PUBLIC_SENTRY_DSN` (client)
+- `SENTRY_DSN` (server; optional if using one DSN everywhere)
 
-```typescript
-import * as Sentry from '@sentry/nextjs';
-
-export function initSentry() {
-  if (!process.env.NEXT_PUBLIC_SENTRY_DSN) {
-    return;
-  }
-
-  Sentry.init({
-    dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
-    environment: process.env.VERCEL_ENV ?? process.env.NODE_ENV,
-    tracesSampleRate: 0.1,
-    enabled: process.env.NODE_ENV === 'production',
-  });
-}
-
-export function captureError(error: Error, context?: Record<string, unknown>) {
-  Sentry.captureException(error, { extra: context });
-}
-
-// Helper to add user context (call after auth)
-export function setUserContext(userId: string, email?: string) {
-  Sentry.setUser({ id: userId, email });
-}
-```
+**Out of scope (future work):**
+- source map upload (`SENTRY_AUTH_TOKEN` in CI only)
+- performance tracing, replay, profiling
+- attaching user PII (email, request bodies, tokens)
 
 ### Usage Examples
 
