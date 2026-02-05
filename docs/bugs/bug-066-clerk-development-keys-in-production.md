@@ -1,6 +1,6 @@
 # BUG-066: Clerk Development Keys Used in Production
 
-**Status:** Open
+**Status:** Blocked - Manual Action Required
 **Priority:** P1
 **Date:** 2026-02-05
 
@@ -40,19 +40,22 @@ The production site (addictionboards.com) is using Clerk development keys instea
 Vercel environment variables for Clerk are set to development keys instead of production keys, OR the production Clerk instance hasn't been configured.
 
 **Files involved:**
-- Vercel dashboard → Environment Variables
+- Vercel dashboard → Environment Variables (Production scope)
 - `.env.local` (if deploying from local)
 
 ---
 
 ## Fix
 
-1. In Clerk dashboard, ensure you have a **Production** instance (not just Development)
-2. Get the production publishable key and secret key from Clerk
-3. Update Vercel environment variables:
+This cannot be fixed in-repo. It requires updating the deployed environment configuration.
+
+1. In Clerk dashboard, ensure you have a **Production** instance (not just Development).
+2. Copy the production publishable key and secret key from Clerk.
+3. In Vercel → Project → Settings → Environment Variables, update **Production** values:
    - `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` → production key (starts with `pk_live_`)
    - `CLERK_SECRET_KEY` → production key (starts with `sk_live_`)
-4. Redeploy the application
+4. If you use Clerk webhooks in production, confirm the webhook signing secret matches the production instance.
+5. Redeploy the application (trigger a production deployment).
 
 **Important:** Development keys start with `pk_test_` / `sk_test_`, production keys start with `pk_live_` / `sk_live_`.
 
@@ -60,10 +63,10 @@ Vercel environment variables for Clerk are set to development keys instead of pr
 
 ## Verification
 
-- [ ] Sign-in page shows no "Development mode" badge
+- [ ] Production sign-in page shows no "Development mode" badge
 - [ ] Console has no Clerk development key warnings
-- [ ] Authentication still works correctly
-- [ ] Webhooks still function (may need to update webhook signing secret)
+- [ ] Authentication still works correctly in production
+- [ ] Production Clerk webhooks still function (if configured)
 
 ---
 

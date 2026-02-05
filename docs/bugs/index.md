@@ -17,7 +17,7 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 | ID | Title | Status | Priority | Date |
 |----|-------|--------|----------|------|
-| [BUG-066](./bug-066-clerk-development-keys-in-production.md) | Clerk Development Keys Used in Production | Open | P1 | 2026-02-05 |
+| [BUG-066](./bug-066-clerk-development-keys-in-production.md) | Clerk Development Keys Used in Production | Blocked - Manual Action Required | P1 | 2026-02-05 |
 | [BUG-067](./bug-067-clerk-shows-ntx-university-name.md) | Clerk Sign-in Shows "NTX University" Instead of "Addiction Boards" | Open | P3 | 2026-02-05 |
 
 **Next Bug ID:** BUG-069
