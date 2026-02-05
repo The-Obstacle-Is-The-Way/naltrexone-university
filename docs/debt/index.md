@@ -15,17 +15,25 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 ## Debt Index (Active)
 
-| ID | Title | Priority | Date |
-|----|-------|----------|------|
-| [DEBT-100](debt-100-adversarial-audit-2026-02-04.md) | Adversarial Codebase Audit Backlog (2026-02-04) | P0 | 2026-02-04 |
+| ID | Title | Status | Priority | Date |
+|----|-------|--------|----------|------|
+| [DEBT-103](./debt-103-nextjs-scroll-behavior-warning.md) | Next.js Scroll Behavior Warning | Open | P4 | 2026-02-05 |
+| [DEBT-104](./debt-104-missing-e2e-test-credentials.md) | Missing E2E Test Credentials for Authenticated Flows | In Progress | P1 | 2026-02-05 |
+| [DEBT-105](./debt-105-missing-session-resume-functionality.md) | Missing Session Resume Functionality | Open | P2 | 2026-02-05 |
+| [DEBT-106](./debt-106-exam-mode-mark-for-review.md) | Exam Mode Missing "Mark for Review" Feature | Open | P2 | 2026-02-05 |
+| [DEBT-107](./debt-107-question-engine-e2e-completeness.md) | Question Engine E2E Completeness and State Management | Open | P1 | 2026-02-05 |
+| [DEBT-108](./debt-108-hardcoded-zinc-colors-break-light-dark-toggle.md) | Hardcoded Zinc Colors Break Light/Dark Mode Toggle | Open | P2 | 2026-02-05 |
+| [DEBT-109](./debt-109-inline-vi-fn-logger-mocks.md) | Inline vi.fn() Logger Mocks Violate Fakes-Over-Mocks Rule | Open | P2 | 2026-02-05 |
 
-**Next Debt ID:** DEBT-102
+**Next Debt ID:** DEBT-110
 
 ## Archived Debt
 
 | ID | Title | Priority | Resolved |
 |----|-------|----------|----------|
+| [DEBT-100](../_archive/debt/debt-100-adversarial-audit-2026-02-04.md) | Adversarial Codebase Audit Backlog (2026-02-04) | P0 | 2026-02-05 |
 | [DEBT-101](../_archive/debt/debt-101-add-sentry-error-tracking.md) | Add Sentry Error Tracking (Next.js, Free Tier) | P1 | 2026-02-05 |
+| [DEBT-102](../_archive/debt/debt-102-question-content-pipeline-hardening.md) | Question Content Pipeline Hardening (Tags, Publishing, and Prod Seeding) | P2 | 2026-02-05 |
 | [DEBT-084](../_archive/debt/debt-084-user-email-race-condition.md) | User Email Race Condition in Concurrent Webhook Handling | P3 | 2026-02-04 |
 | [DEBT-090](../_archive/debt/debt-090-missing-use-cases-business-logic-in-controllers.md) | Missing Application Use Cases (Business Logic Lives in Controllers) | P1 | 2026-02-04 |
 | [DEBT-096](../_archive/debt/debt-096-repository-mapper-duplication.md) | Repository Row→Domain Mapping Duplicated (DRY Violation) | P3 | 2026-02-04 |

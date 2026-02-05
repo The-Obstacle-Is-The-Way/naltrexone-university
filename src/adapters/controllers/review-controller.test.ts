@@ -49,7 +49,12 @@ function createDeps(overrides?: {
   );
 
   const getMissedQuestionsUseCase = new FakeGetMissedQuestionsUseCase(
-    overrides?.useCaseOutput ?? { rows: [], limit: 10, offset: 0 },
+    overrides?.useCaseOutput ?? {
+      rows: [],
+      limit: 10,
+      offset: 0,
+      totalCount: 0,
+    },
     overrides?.useCaseThrows,
   );
 
@@ -100,14 +105,14 @@ describe('review-controller', () => {
 
     it('returns ok result from the use case', async () => {
       const deps = createDeps({
-        useCaseOutput: { rows: [], limit: 10, offset: 0 },
+        useCaseOutput: { rows: [], limit: 10, offset: 0, totalCount: 0 },
       });
 
       const result = await getMissedQuestions({ limit: 10, offset: 0 }, deps);
 
       expect(result).toEqual({
         ok: true,
-        data: { rows: [], limit: 10, offset: 0 },
+        data: { rows: [], limit: 10, offset: 0, totalCount: 0 },
       });
       expect(deps.getMissedQuestionsUseCase.inputs).toEqual([
         { userId: 'user_1', limit: 10, offset: 0 },
@@ -129,7 +134,7 @@ describe('review-controller', () => {
 
     it('loads dependencies from the container when deps are omitted', async () => {
       const deps = createDeps({
-        useCaseOutput: { rows: [], limit: 10, offset: 0 },
+        useCaseOutput: { rows: [], limit: 10, offset: 0, totalCount: 0 },
       });
 
       const result = await getMissedQuestions(
@@ -144,7 +149,7 @@ describe('review-controller', () => {
 
       expect(result).toEqual({
         ok: true,
-        data: { rows: [], limit: 10, offset: 0 },
+        data: { rows: [], limit: 10, offset: 0, totalCount: 0 },
       });
     });
   });

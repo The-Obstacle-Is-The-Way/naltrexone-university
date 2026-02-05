@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { Button } from '@/components/ui/button';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import {
   getUserStats,
@@ -72,12 +73,9 @@ export function DashboardView({ stats }: { stats: UserStatsOutput }) {
                 Start answering questions in tutor mode.
               </div>
             </div>
-            <Link
-              href="/app/practice"
-              className="inline-flex items-center justify-center rounded-full bg-zinc-100 px-4 py-2 text-sm font-medium text-zinc-900 hover:bg-white transition-colors"
-            >
-              Go to Practice
-            </Link>
+            <Button asChild className="rounded-full">
+              <Link href="/app/practice">Go to Practice</Link>
+            </Button>
           </div>
         </div>
       </div>
@@ -129,12 +127,9 @@ export function renderDashboard(result: ActionResult<UserStatsOutput>) {
         >
           {result.error.message}
         </div>
-        <Link
-          href="/app/practice"
-          className="inline-flex items-center justify-center rounded-full bg-zinc-100 px-4 py-2 text-sm font-medium text-zinc-900 hover:bg-white transition-colors"
-        >
-          Go to Practice
-        </Link>
+        <Button asChild className="rounded-full">
+          <Link href="/app/practice">Go to Practice</Link>
+        </Button>
       </div>
     );
   }

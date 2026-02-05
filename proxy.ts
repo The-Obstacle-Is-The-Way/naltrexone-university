@@ -6,6 +6,15 @@ import {
 } from 'next/server';
 import { PUBLIC_ROUTE_PATTERNS } from '@/lib/public-routes';
 
+const CLERK_CSP_DIRECTIVES = {
+  'base-uri': ['self'],
+  'connect-src': ['ws:', 'wss:'],
+  'font-src': ['self', 'data:', 'https:'],
+  'frame-ancestors': ['none'],
+  'img-src': ['self', 'data:', 'blob:', 'https:'],
+  'object-src': ['none'],
+} satisfies Record<string, string[]>;
+
 let cachedClerkMiddleware: NextMiddleware | null = null;
 
 async function getClerkMiddleware(): Promise<NextMiddleware> {
@@ -17,11 +26,18 @@ async function getClerkMiddleware(): Promise<NextMiddleware> {
 
   const isPublicRoute = createRouteMatcher(PUBLIC_ROUTE_PATTERNS);
 
-  const middleware = clerkMiddleware(async (auth, request) => {
-    if (!isPublicRoute(request)) {
-      await auth.protect();
-    }
-  });
+  const middleware = clerkMiddleware(
+    async (auth, request) => {
+      if (!isPublicRoute(request)) {
+        await auth.protect();
+      }
+    },
+    {
+      contentSecurityPolicy: {
+        directives: CLERK_CSP_DIRECTIVES,
+      },
+    },
+  );
 
   cachedClerkMiddleware = middleware;
   return middleware;

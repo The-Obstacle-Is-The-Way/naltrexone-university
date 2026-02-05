@@ -27,10 +27,10 @@ describe('CheckEntitlementUseCase', () => {
     expect(result).toEqual({ isEntitled: true });
   });
 
-  it('returns true when subscription is trialing', async () => {
+  it('returns true when subscription is inTrial', async () => {
     const sub = createSubscription({
       userId: 'user-1',
-      status: 'trialing',
+      status: 'inTrial',
       currentPeriodEnd: new Date('2026-03-01T00:00:00Z'),
     });
     const useCase = new CheckEntitlementUseCase(

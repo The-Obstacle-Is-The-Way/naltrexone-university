@@ -1,7 +1,7 @@
 # Bug Reports
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-02-04
+**Last Updated:** 2026-02-05
 
 ---
 
@@ -17,8 +17,17 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 | ID | Title | Status | Priority | Date |
 |----|-------|--------|----------|------|
+| (none) | All active bugs resolved | | | |
 
-**Next Bug ID:** BUG-056
+**Next Bug ID:** BUG-072
+
+## Recently Resolved
+
+| ID | Title | Status | Resolution |
+|----|-------|--------|------------|
+| [BUG-071](../_archive/bugs/bug-071-nextjs-preview-blank-page-csp.md) | Preview Deployment Rendered Blank Page After CSP Tightening | Resolved | Delegate CSP to Clerk middleware |
+| [BUG-070](../_archive/bugs/bug-070-e2e-test-user-checkout-fails.md) | E2E Test User Checkout Failed (Stripe `this` Binding Bug) | Resolved | Bind `stripe.customers.search` to preserve `this` |
+| [BUG-069](../_archive/bugs/bug-069-stripe-checkout-fails-localhost.md) | Stripe Checkout Fails for New Users (Lost `this` Binding) | Resolved | Bind `stripe.customers.search` to preserve `this` |
 
 ## Foundation Audit
 
@@ -29,6 +38,22 @@ See: [Foundation Audit Report](foundation-audit-report.md)
 
 | ID | Title | Priority | Resolved |
 |----|-------|----------|----------|
+| [BUG-071](../_archive/bugs/bug-071-nextjs-preview-blank-page-csp.md) | Preview Deployment Rendered Blank Page After CSP Tightening | P0 | 2026-02-05 |
+| [BUG-070](../_archive/bugs/bug-070-e2e-test-user-checkout-fails.md) | E2E Test User Checkout Failed (Stripe `this` Binding Bug) | P1 | 2026-02-05 |
+| [BUG-069](../_archive/bugs/bug-069-stripe-checkout-fails-localhost.md) | Stripe Checkout Fails for New Users (Lost `this` Binding) | P1 | 2026-02-05 |
+| [BUG-067](../_archive/bugs/bug-067-clerk-shows-ntx-university-name.md) | Clerk Shows Wrong App Name | P3 | 2026-02-05 |
+| [BUG-066](../_archive/bugs/bug-066-clerk-development-keys-in-production.md) | Clerk Development Keys in Production | P1 | 2026-02-05 |
+| [BUG-064](../_archive/bugs/bug-064-clerk-key-mismatch-warning.md) | Clerk Key Mismatch Warning (False Alarm) | P4 | 2026-02-05 |
+| [BUG-062](../_archive/bugs/bug-062-practice-session-modes-not-working.md) | Practice Session Modes Not Working (False Alarm) | P1 | 2026-02-05 |
+| [BUG-063](../_archive/bugs/bug-063-csp-blocks-clerk-blob-workers.md) | CSP Blocks Clerk Blob Workers | P3 | 2026-02-05 |
+| [BUG-068](../_archive/bugs/bug-068-reattempt-page-ux-confusion.md) | Reattempt Page UX Confusion - Buttons After Submit | P3 | 2026-02-05 |
+| [BUG-065](../_archive/bugs/bug-065-explanation-not-available-some-questions.md) | Exam Mode Shows Feedback When It Shouldn't | P2 | 2026-02-05 |
+| [BUG-061](../_archive/bugs/bug-061-debt-index-claims-no-active-items-while-listing-debt-102.md) | Debt Index Claims No Active Items While Listing DEBT-102 | P4 | 2026-02-05 |
+| [BUG-060](../_archive/bugs/bug-060-question-reattempt-submit-not-disabled-while-loading.md) | Question Reattempt Submit Not Disabled While Loading | P3 | 2026-02-05 |
+| [BUG-059](../_archive/bugs/bug-059-marketing-homepage-low-contrast-in-light-mode.md) | Marketing Homepage Low Contrast in Light Mode | P1 | 2026-02-05 |
+| [BUG-058](../_archive/bugs/bug-058-theme-toggle-does-not-work-without-themeprovider.md) | Theme Toggle Does Not Work Without ThemeProvider | P3 | 2026-02-05 |
+| [BUG-057](../_archive/bugs/bug-057-choice-label-badges-render-clipped.md) | Choice Label Badges Render Clipped | P3 | 2026-02-05 |
+| [BUG-056](../_archive/bugs/bug-056-shuffled-choice-labels-out-of-order.md) | Shuffled Choice Labels Display Out of Order | P3 | 2026-02-05 |
 | [BUG-055](../_archive/bugs/bug-055-post-login-redirects-to-landing-page.md) | Authenticated Subscribers Redirected to Landing Page After Sign-In | P2 | 2026-02-04 |
 | [BUG-054](../_archive/bugs/bug-054-async-state-updates-after-unmount-in-page-logic.md) | Async State Updates After Component Unmount in Page Logic | P2 | 2026-02-03 |
 | [BUG-053](../_archive/bugs/bug-053-checkout-success-missing-user-id-metadata.md) | Checkout Success Accepts Missing `metadata.user_id` | P1 | 2026-02-03 |
@@ -89,6 +114,7 @@ See: [Foundation Audit Report](foundation-audit-report.md)
 
 - **Open** — Bug confirmed, not yet fixed
 - **In Progress** — Fix being developed
+- **Blocked - Manual Action Required** — Requires external configuration (Clerk/Vercel/etc) not fixable in-repo
 - **Resolved** — Fix merged and verified
 - **Won't Fix** — Decided not to fix (with justification)
 
@@ -114,7 +140,7 @@ See: [Foundation Audit Report](foundation-audit-report.md)
 ```markdown
 # BUG-NNN: Short Title
 
-**Status:** Open | In Progress | Resolved | Won't Fix
+**Status:** Open | In Progress | Blocked - Manual Action Required | Resolved | Won't Fix
 **Priority:** P0 | P1 | P2 | P3 | P4
 **Date:** YYYY-MM-DD
 

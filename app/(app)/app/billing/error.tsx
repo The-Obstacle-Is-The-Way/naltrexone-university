@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { ROUTES } from '@/lib/routes';
+import { REPORT_ISSUE_URL } from '@/lib/support';
 
 export default function BillingError({
   error,
@@ -35,6 +36,15 @@ export default function BillingError({
           </Button>
           <Button asChild variant="outline">
             <Link href={ROUTES.APP_DASHBOARD}>Back to Dashboard</Link>
+          </Button>
+          <Button asChild variant="outline">
+            <a
+              href={REPORT_ISSUE_URL}
+              target="_blank"
+              rel="noreferrer noopener"
+            >
+              Report issue
+            </a>
           </Button>
         </div>
       </div>

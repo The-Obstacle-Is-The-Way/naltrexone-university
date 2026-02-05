@@ -136,7 +136,7 @@ describe('DrizzleSubscriptionRepository', () => {
     await expect(
       repo.upsert({
         userId: 'user_1',
-        stripeSubscriptionId: 'sub_123',
+        externalSubscriptionId: 'sub_123',
         plan: 'monthly',
         status: 'active',
         currentPeriodEnd: new Date('2026-12-31T00:00:00.000Z'),
@@ -178,7 +178,7 @@ describe('DrizzleSubscriptionRepository', () => {
     await expect(
       repo.upsert({
         userId: 'user_1',
-        stripeSubscriptionId: 'sub_123',
+        externalSubscriptionId: 'sub_123',
         plan: 'monthly',
         status: 'active',
         currentPeriodEnd: new Date('2026-12-31T00:00:00.000Z'),
@@ -219,7 +219,7 @@ describe('DrizzleSubscriptionRepository', () => {
     await expect(
       repo.upsert({
         userId: 'user_1',
-        stripeSubscriptionId: 'sub_123',
+        externalSubscriptionId: 'sub_123',
         plan: 'monthly',
         status: 'active',
         currentPeriodEnd: new Date('2026-12-31T00:00:00.000Z'),
@@ -228,7 +228,7 @@ describe('DrizzleSubscriptionRepository', () => {
     ).rejects.toMatchObject({ code: 'INTERNAL_ERROR' });
   });
 
-  it('findByStripeSubscriptionId returns null when missing', async () => {
+  it('findByExternalSubscriptionId returns null when missing', async () => {
     const db = {
       query: {
         stripeSubscriptions: {
@@ -254,11 +254,11 @@ describe('DrizzleSubscriptionRepository', () => {
     );
 
     await expect(
-      repo.findByStripeSubscriptionId('sub_123'),
+      repo.findByExternalSubscriptionId('sub_123'),
     ).resolves.toBeNull();
   });
 
-  it('findByStripeSubscriptionId maps priceId → plan when found', async () => {
+  it('findByExternalSubscriptionId maps priceId → plan when found', async () => {
     const db = {
       query: {
         stripeSubscriptions: {
@@ -294,14 +294,14 @@ describe('DrizzleSubscriptionRepository', () => {
     );
 
     await expect(
-      repo.findByStripeSubscriptionId('sub_123'),
+      repo.findByExternalSubscriptionId('sub_123'),
     ).resolves.toMatchObject({
       userId: 'user_1',
       plan: 'annual',
     });
   });
 
-  it('findByStripeSubscriptionId throws INTERNAL_ERROR when the stored priceId is unknown', async () => {
+  it('findByExternalSubscriptionId throws INTERNAL_ERROR when the stored priceId is unknown', async () => {
     const db = {
       query: {
         stripeSubscriptions: {
@@ -337,10 +337,10 @@ describe('DrizzleSubscriptionRepository', () => {
     );
 
     await expect(
-      repo.findByStripeSubscriptionId('sub_123'),
+      repo.findByExternalSubscriptionId('sub_123'),
     ).rejects.toBeInstanceOf(ApplicationError);
     await expect(
-      repo.findByStripeSubscriptionId('sub_123'),
+      repo.findByExternalSubscriptionId('sub_123'),
     ).rejects.toMatchObject({
       code: 'INTERNAL_ERROR',
     });

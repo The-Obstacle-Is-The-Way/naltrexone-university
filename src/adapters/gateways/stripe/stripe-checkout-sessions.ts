@@ -32,7 +32,7 @@ export async function createStripeCheckoutSession({
     operation: 'checkout.sessions.list',
     fn: () =>
       stripe.checkout.sessions.list({
-        customer: input.stripeCustomerId,
+        customer: input.externalCustomerId,
         status: 'open',
         limit: 1,
       }),
@@ -90,7 +90,7 @@ export async function createStripeCheckoutSession({
 
   const params = {
     mode: 'subscription',
-    customer: input.stripeCustomerId,
+    customer: input.externalCustomerId,
     line_items: [{ price: priceId, quantity: 1 }],
     allow_promotion_codes: false,
     billing_address_collection: 'auto',

@@ -1,4 +1,3 @@
-import 'dotenv/config';
 import { randomUUID } from 'node:crypto';
 import { eq, inArray } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/postgres-js';
@@ -552,8 +551,8 @@ describe('stripe webhook controller (integration)', () => {
 
     const subscriptionUpdate = {
       userId: user.id,
-      stripeCustomerId: `cus_${randomUUID().replaceAll('-', '')}`,
-      stripeSubscriptionId: `sub_${randomUUID().replaceAll('-', '')}`,
+      externalCustomerId: `cus_${randomUUID().replaceAll('-', '')}`,
+      externalSubscriptionId: `sub_${randomUUID().replaceAll('-', '')}`,
       plan: 'monthly' as const,
       status: 'active' as const,
       currentPeriodEnd: new Date('2026-03-01T00:00:00.000Z'),
@@ -561,7 +560,7 @@ describe('stripe webhook controller (integration)', () => {
     };
 
     const paymentGateway = new FakePaymentGateway({
-      stripeCustomerId: 'cus_unused',
+      externalCustomerId: 'cus_unused',
       checkoutUrl: 'https://stripe.test/checkout',
       portalUrl: 'https://stripe.test/portal',
       webhookResult: {
@@ -596,7 +595,7 @@ describe('stripe webhook controller (integration)', () => {
 
     const stripeCustomers = new DrizzleStripeCustomerRepository(db);
     await expect(stripeCustomers.findByUserId(user.id)).resolves.toEqual({
-      stripeCustomerId: subscriptionUpdate.stripeCustomerId,
+      stripeCustomerId: subscriptionUpdate.externalCustomerId,
     });
 
     const subscriptions = new DrizzleSubscriptionRepository(db, priceIds);

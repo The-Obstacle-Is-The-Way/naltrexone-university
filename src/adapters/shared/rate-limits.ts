@@ -38,3 +38,8 @@ export const BOOKMARK_MUTATION_RATE_LIMIT = {
   limit: 60,
   windowMs: ONE_MINUTE_MS,
 } as const;
+
+export const HEALTH_CHECK_RATE_LIMIT = {
+  limit: 600,
+  windowMs: ONE_MINUTE_MS,
+} as const;

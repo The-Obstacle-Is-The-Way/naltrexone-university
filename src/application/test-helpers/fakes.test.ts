@@ -66,12 +66,12 @@ describe('FakePracticeSessionRepository', () => {
 });
 
 describe('FakeSubscriptionRepository', () => {
-  it('upserts subscriptions and supports lookup by stripeSubscriptionId', async () => {
+  it('upserts subscriptions and supports lookup by externalSubscriptionId', async () => {
     const repo = new FakeSubscriptionRepository();
 
     await repo.upsert({
       userId: 'user_1',
-      stripeSubscriptionId: 'sub_123',
+      externalSubscriptionId: 'sub_123',
       plan: 'monthly',
       status: 'active',
       currentPeriodEnd: new Date('2026-12-31T00:00:00.000Z'),
@@ -85,14 +85,14 @@ describe('FakeSubscriptionRepository', () => {
     });
 
     await expect(
-      repo.findByStripeSubscriptionId('sub_123'),
+      repo.findByExternalSubscriptionId('sub_123'),
     ).resolves.toMatchObject({
       userId: 'user_1',
     });
 
     await repo.upsert({
       userId: 'user_1',
-      stripeSubscriptionId: 'sub_456',
+      externalSubscriptionId: 'sub_456',
       plan: 'annual',
       status: 'canceled',
       currentPeriodEnd: new Date('2027-01-31T00:00:00.000Z'),
@@ -100,21 +100,21 @@ describe('FakeSubscriptionRepository', () => {
     });
 
     await expect(
-      repo.findByStripeSubscriptionId('sub_123'),
+      repo.findByExternalSubscriptionId('sub_123'),
     ).resolves.toBeNull();
     await expect(
-      repo.findByStripeSubscriptionId('sub_456'),
+      repo.findByExternalSubscriptionId('sub_456'),
     ).resolves.toMatchObject({
       userId: 'user_1',
     });
   });
 
-  it('throws CONFLICT when a stripeSubscriptionId is reused for a different user', async () => {
+  it('throws CONFLICT when an externalSubscriptionId is reused for a different user', async () => {
     const repo = new FakeSubscriptionRepository();
 
     await repo.upsert({
       userId: 'user_1',
-      stripeSubscriptionId: 'sub_123',
+      externalSubscriptionId: 'sub_123',
       plan: 'monthly',
       status: 'active',
       currentPeriodEnd: new Date('2026-12-31T00:00:00.000Z'),
@@ -124,7 +124,7 @@ describe('FakeSubscriptionRepository', () => {
     await expect(
       repo.upsert({
         userId: 'user_2',
-        stripeSubscriptionId: 'sub_123',
+        externalSubscriptionId: 'sub_123',
         plan: 'monthly',
         status: 'active',
         currentPeriodEnd: new Date('2026-12-31T00:00:00.000Z'),
@@ -133,7 +133,7 @@ describe('FakeSubscriptionRepository', () => {
     ).rejects.toEqual(
       new ApplicationError(
         'CONFLICT',
-        'Stripe subscription id is already mapped to a different user',
+        'External subscription id is already mapped to a different user',
       ),
     );
   });
@@ -156,7 +156,7 @@ describe('FakeAuthGateway', () => {
 describe('FakePaymentGateway', () => {
   it('returns configured checkout/portal URLs and records inputs', async () => {
     const gateway = new FakePaymentGateway({
-      stripeCustomerId: 'cus_test',
+      externalCustomerId: 'cus_test',
       checkoutUrl: 'https://fake/checkout',
       portalUrl: 'https://fake/portal',
       webhookResult: { eventId: 'evt_1', type: 'checkout.session.completed' },
@@ -168,12 +168,12 @@ describe('FakePaymentGateway', () => {
         clerkUserId: 'clerk_1',
         email: 'user@example.com',
       }),
-    ).resolves.toEqual({ stripeCustomerId: 'cus_test' });
+    ).resolves.toEqual({ externalCustomerId: 'cus_test' });
 
     await expect(
       gateway.createCheckoutSession({
         userId: 'user_1',
-        stripeCustomerId: 'cus_123',
+        externalCustomerId: 'cus_123',
         plan: 'monthly',
         successUrl: 'https://app/success',
         cancelUrl: 'https://app/cancel',
@@ -182,7 +182,7 @@ describe('FakePaymentGateway', () => {
 
     await expect(
       gateway.createPortalSession({
-        stripeCustomerId: 'cus_123',
+        externalCustomerId: 'cus_123',
         returnUrl: 'https://app/return',
       }),
     ).resolves.toEqual({ url: 'https://fake/portal' });

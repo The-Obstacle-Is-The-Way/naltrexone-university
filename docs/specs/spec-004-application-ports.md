@@ -99,7 +99,7 @@ export interface AuthGateway {
 
 export type CheckoutSessionInput = {
   userId: string; // internal UUID
-  stripeCustomerId: string; // opaque external id
+  externalCustomerId: string; // opaque external id
   plan: SubscriptionPlan; // domain plan (monthly/annual)
   successUrl: string;
   cancelUrl: string;
@@ -108,11 +108,19 @@ export type CheckoutSessionInput = {
 export type CheckoutSessionOutput = { url: string };
 
 export type PortalSessionInput = {
-  stripeCustomerId: string; // opaque external id
+  externalCustomerId: string; // opaque external id
   returnUrl: string;
 };
 
 export type PortalSessionOutput = { url: string };
+
+export type CreateCustomerInput = {
+  userId: string; // internal UUID
+  clerkUserId: string; // opaque external id
+  email: string;
+};
+
+export type CreateCustomerOutput = { externalCustomerId: string };
 
 export type WebhookEventResult = {
   eventId: string;
@@ -124,8 +132,8 @@ export type WebhookEventResult = {
     | (string & {});
   subscriptionUpdate?: {
     userId: string; // internal UUID
-    stripeCustomerId: string; // opaque external id
-    stripeSubscriptionId: string; // opaque external id
+    externalCustomerId: string; // opaque external id
+    externalSubscriptionId: string; // opaque external id
     plan: SubscriptionPlan; // domain plan (monthly/annual)
     status: SubscriptionStatus;
     currentPeriodEnd: Date;
@@ -133,12 +141,31 @@ export type WebhookEventResult = {
   };
 };
 
+export type PaymentGatewayRequestOptions = {
+  /**
+   * Optional idempotency key provided by the client for this logical operation.
+   *
+   * Adapters may forward this to external providers (e.g., Stripe idempotency keys)
+   * to make retries safe and avoid duplicate external side effects.
+   */
+  idempotencyKey?: string;
+};
+
 export interface PaymentGateway {
+  createCustomer(
+    input: CreateCustomerInput,
+    options?: PaymentGatewayRequestOptions,
+  ): Promise<CreateCustomerOutput>;
+
   createCheckoutSession(
     input: CheckoutSessionInput,
+    options?: PaymentGatewayRequestOptions,
   ): Promise<CheckoutSessionOutput>;
 
-  createPortalSession(input: PortalSessionInput): Promise<PortalSessionOutput>;
+  createPortalSession(
+    input: PortalSessionInput,
+    options?: PaymentGatewayRequestOptions,
+  ): Promise<PortalSessionOutput>;
 
   /**
    * Verifies signature and normalizes the Stripe event for the use case/controller.
@@ -147,6 +174,23 @@ export interface PaymentGateway {
     rawBody: string,
     signature: string,
   ): Promise<WebhookEventResult>;
+}
+
+export type RateLimitInput = {
+  key: string;
+  limit: number;
+  windowMs: number;
+};
+
+export type RateLimitResult = {
+  success: boolean;
+  limit: number;
+  remaining: number;
+  retryAfterSeconds: number;
+};
+
+export interface RateLimiter {
+  limit(input: RateLimitInput): Promise<RateLimitResult>;
 }
 ```
 
@@ -240,7 +284,7 @@ export interface TagRepository {
 
 export type SubscriptionUpsertInput = {
   userId: string;
-  stripeSubscriptionId: string; // opaque external id
+  externalSubscriptionId: string; // opaque external id
   plan: SubscriptionPlan; // domain plan (monthly/annual)
   status: SubscriptionStatus;
   currentPeriodEnd: Date;
@@ -249,7 +293,7 @@ export type SubscriptionUpsertInput = {
 
 export interface SubscriptionRepository {
   findByUserId(userId: string): Promise<Subscription | null>;
-  findByStripeSubscriptionId(stripeSubscriptionId: string): Promise<Subscription | null>;
+  findByExternalSubscriptionId(externalSubscriptionId: string): Promise<Subscription | null>;
   upsert(input: SubscriptionUpsertInput): Promise<void>;
 }
 

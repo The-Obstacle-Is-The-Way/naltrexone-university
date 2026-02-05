@@ -4,10 +4,21 @@ import type { UserRepository } from '@/src/application/ports/repositories';
 import { ClerkAuthGateway } from './clerk-auth-gateway';
 
 function createFakeUserRepository(): UserRepository & {
-  _calls: { upsertByClerkId: Array<{ clerkId: string; email: string }> };
+  _calls: {
+    upsertByClerkId: Array<{
+      clerkId: string;
+      email: string;
+      observedAt: Date | null;
+    }>;
+  };
 } {
-  const calls: { upsertByClerkId: Array<{ clerkId: string; email: string }> } =
-    { upsertByClerkId: [] };
+  const calls: {
+    upsertByClerkId: Array<{
+      clerkId: string;
+      email: string;
+      observedAt: Date | null;
+    }>;
+  } = { upsertByClerkId: [] };
   const baseUser = {
     id: 'user_1',
     createdAt: new Date('2026-02-01T00:00:00Z'),
@@ -17,8 +28,12 @@ function createFakeUserRepository(): UserRepository & {
   return {
     _calls: calls,
     findByClerkId: async () => null,
-    upsertByClerkId: async (clerkId: string, email: string) => {
-      calls.upsertByClerkId.push({ clerkId, email });
+    upsertByClerkId: async (clerkId, email, options) => {
+      calls.upsertByClerkId.push({
+        clerkId,
+        email,
+        observedAt: options?.observedAt ?? null,
+      });
       return {
         id: baseUser.id,
         email,
@@ -31,6 +46,8 @@ function createFakeUserRepository(): UserRepository & {
 }
 
 describe('ClerkAuthGateway', () => {
+  const clerkUpdatedAt = new Date('2026-02-02T00:00:00Z');
+
   it('returns null from getCurrentUser when unauthenticated', async () => {
     const userRepository = createFakeUserRepository();
 
@@ -83,6 +100,7 @@ describe('ClerkAuthGateway', () => {
       userRepository,
       getClerkUser: async () => ({
         id: 'clerk_1',
+        updatedAt: clerkUpdatedAt.getTime(),
         primaryEmailAddressId: 'email_2',
         emailAddresses: [
           { id: 'email_1', emailAddress: 'secondary@example.com' },
@@ -95,7 +113,11 @@ describe('ClerkAuthGateway', () => {
 
     expect(user.email).toBe('primary@example.com');
     expect(userRepository._calls.upsertByClerkId).toEqual([
-      { clerkId: 'clerk_1', email: 'primary@example.com' },
+      {
+        clerkId: 'clerk_1',
+        email: 'primary@example.com',
+        observedAt: clerkUpdatedAt,
+      },
     ]);
   });
 
@@ -106,6 +128,7 @@ describe('ClerkAuthGateway', () => {
       userRepository,
       getClerkUser: async () => ({
         id: 'clerk_1',
+        updatedAt: clerkUpdatedAt.getTime(),
         primaryEmailAddressId: null,
         emailAddresses: [
           { id: 'email_1', emailAddress: 'first@example.com' },
@@ -118,7 +141,11 @@ describe('ClerkAuthGateway', () => {
 
     expect(user.email).toBe('first@example.com');
     expect(userRepository._calls.upsertByClerkId).toEqual([
-      { clerkId: 'clerk_1', email: 'first@example.com' },
+      {
+        clerkId: 'clerk_1',
+        email: 'first@example.com',
+        observedAt: clerkUpdatedAt,
+      },
     ]);
   });
 
@@ -129,6 +156,7 @@ describe('ClerkAuthGateway', () => {
       userRepository,
       getClerkUser: async () => ({
         id: 'clerk_1',
+        updatedAt: clerkUpdatedAt.getTime(),
         emailAddresses: [{ emailAddress: 'user@example.com' }],
       }),
     });
@@ -153,6 +181,7 @@ describe('ClerkAuthGateway', () => {
       userRepository,
       getClerkUser: async () => ({
         id: 'clerk_1',
+        updatedAt: clerkUpdatedAt.getTime(),
         emailAddresses: [{ emailAddress: 'user@example.com' }],
       }),
     });
@@ -172,6 +201,7 @@ describe('ClerkAuthGateway', () => {
       )
       .mockResolvedValueOnce({
         id: 'clerk_1',
+        updatedAt: clerkUpdatedAt.getTime(),
         emailAddresses: [{ emailAddress: 'user@example.com' }],
       });
 

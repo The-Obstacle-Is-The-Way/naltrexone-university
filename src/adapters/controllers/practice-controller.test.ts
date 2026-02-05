@@ -73,13 +73,15 @@ function createDeps(overrides?: {
     overrides?.rateLimiter ?? new FakeRateLimiter();
 
   const startPracticeSessionUseCase = new FakeStartPracticeSessionUseCase(
-    overrides?.startOutput ?? { sessionId: 'session_123' },
+    overrides?.startOutput ?? {
+      sessionId: '22222222-2222-2222-2222-222222222222',
+    },
     overrides?.startThrows,
   );
 
   const endPracticeSessionUseCase = new FakeEndPracticeSessionUseCase(
     overrides?.endOutput ?? {
-      sessionId: 'session_123',
+      sessionId: '22222222-2222-2222-2222-222222222222',
       endedAt: '2026-02-01T00:00:00.000Z',
       totals: { answered: 0, correct: 0, accuracy: 0, durationSeconds: 0 },
     },
@@ -167,7 +169,9 @@ describe('practice-controller', () => {
     });
 
     it('returns sessionId when use case succeeds', async () => {
-      const deps = createDeps({ startOutput: { sessionId: 'session_123' } });
+      const deps = createDeps({
+        startOutput: { sessionId: '22222222-2222-2222-2222-222222222222' },
+      });
 
       const result = await startPracticeSession(
         {
@@ -179,7 +183,10 @@ describe('practice-controller', () => {
         deps,
       );
 
-      expect(result).toEqual({ ok: true, data: { sessionId: 'session_123' } });
+      expect(result).toEqual({
+        ok: true,
+        data: { sessionId: '22222222-2222-2222-2222-222222222222' },
+      });
       expect(deps.startPracticeSessionUseCase.inputs).toEqual([
         {
           userId: 'user_1',
@@ -192,7 +199,9 @@ describe('practice-controller', () => {
     });
 
     it('returns the cached result when idempotencyKey is reused', async () => {
-      const deps = createDeps({ startOutput: { sessionId: 'session_123' } });
+      const deps = createDeps({
+        startOutput: { sessionId: '22222222-2222-2222-2222-222222222222' },
+      });
 
       const input = {
         mode: 'tutor',
@@ -205,7 +214,10 @@ describe('practice-controller', () => {
       const first = await startPracticeSession(input, deps);
       const second = await startPracticeSession(input, deps);
 
-      expect(first).toEqual({ ok: true, data: { sessionId: 'session_123' } });
+      expect(first).toEqual({
+        ok: true,
+        data: { sessionId: '22222222-2222-2222-2222-222222222222' },
+      });
       expect(second).toEqual(first);
       expect(deps.startPracticeSessionUseCase.inputs).toHaveLength(1);
     });

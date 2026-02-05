@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { Button } from '@/components/ui/button';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import {
   type GetMissedQuestionsOutput,
@@ -23,9 +24,17 @@ function parseLimit(value: string | undefined): number {
   return Math.min(Math.max(limit, 1), 100);
 }
 
-export function ReviewView({ rows, limit, offset }: GetMissedQuestionsOutput) {
+export function ReviewView({
+  rows,
+  limit,
+  offset,
+  totalCount,
+}: GetMissedQuestionsOutput) {
   const prevOffset = Math.max(0, offset - limit);
   const nextOffset = offset + limit;
+  const hasNextPage = offset + rows.length < totalCount;
+  const showingStart = rows.length > 0 ? offset + 1 : 0;
+  const showingEnd = offset + rows.length;
 
   return (
     <div className="space-y-6">
@@ -47,11 +56,28 @@ export function ReviewView({ rows, limit, offset }: GetMissedQuestionsOutput) {
       </div>
 
       {rows.length === 0 ? (
-        <div className="rounded-2xl border border-border bg-card p-6 text-sm text-muted-foreground shadow-sm">
-          No missed questions yet.
-        </div>
+        totalCount === 0 ? (
+          <div className="rounded-2xl border border-border bg-card p-6 text-sm text-muted-foreground shadow-sm">
+            No missed questions yet.
+          </div>
+        ) : (
+          <div className="rounded-2xl border border-border bg-card p-6 text-sm text-muted-foreground shadow-sm">
+            No more missed questions on this page.
+            <div className="mt-4">
+              <Link
+                href={`/app/review?offset=0&limit=${limit}`}
+                className="text-sm font-medium text-muted-foreground hover:text-foreground"
+              >
+                Back to first page
+              </Link>
+            </div>
+          </div>
+        )
       ) : (
         <div className="space-y-3">
+          <div className="text-sm text-muted-foreground">
+            Showing {showingStart}–{showingEnd} of {totalCount}
+          </div>
           <ul className="space-y-3">
             {rows.map((row) => (
               <li
@@ -92,12 +118,9 @@ export function ReviewView({ rows, limit, offset }: GetMissedQuestionsOutput) {
                   </div>
 
                   {row.isAvailable ? (
-                    <Link
-                      href={`/app/questions/${row.slug}`}
-                      className="inline-flex items-center justify-center rounded-full border border-border bg-background px-4 py-2 text-sm font-medium text-foreground hover:bg-muted"
-                    >
-                      Reattempt
-                    </Link>
+                    <Button asChild variant="outline" className="rounded-full">
+                      <Link href={`/app/questions/${row.slug}`}>Reattempt</Link>
+                    </Button>
                   ) : null}
                 </div>
               </li>
@@ -116,7 +139,7 @@ export function ReviewView({ rows, limit, offset }: GetMissedQuestionsOutput) {
               <span />
             )}
 
-            {rows.length === limit ? (
+            {hasNextPage ? (
               <Link
                 href={`/app/review?offset=${nextOffset}&limit=${limit}`}
                 className="text-sm font-medium text-muted-foreground hover:text-foreground"
@@ -149,12 +172,9 @@ export function renderReview(result: ActionResult<GetMissedQuestionsOutput>) {
         >
           {result.error.message}
         </div>
-        <Link
-          href="/app/practice"
-          className="inline-flex items-center justify-center rounded-full bg-zinc-100 px-4 py-2 text-sm font-medium text-zinc-900 hover:bg-white transition-colors"
-        >
-          Go to Practice
-        </Link>
+        <Button asChild className="rounded-full">
+          <Link href="/app/practice">Go to Practice</Link>
+        </Button>
       </div>
     );
   }
@@ -164,6 +184,7 @@ export function renderReview(result: ActionResult<GetMissedQuestionsOutput>) {
       rows={result.data.rows}
       limit={result.data.limit}
       offset={result.data.offset}
+      totalCount={result.data.totalCount}
     />
   );
 }

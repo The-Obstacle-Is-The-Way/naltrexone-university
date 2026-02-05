@@ -1,4 +1,3 @@
-import 'dotenv/config';
 import postgres from 'postgres';
 import { afterAll, describe, expect, it } from 'vitest';
 

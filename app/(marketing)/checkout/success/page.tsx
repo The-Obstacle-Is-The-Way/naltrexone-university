@@ -5,6 +5,10 @@ import {
   getSubscriptionPlanFromPriceId,
   type StripePriceIds,
 } from '@/src/adapters/config/stripe-prices';
+import {
+  isValidStripeSubscriptionStatus,
+  stripeSubscriptionStatusToSubscriptionStatus,
+} from '@/src/adapters/gateways/stripe/stripe-subscription-status';
 import { isTransientExternalError, retry } from '@/src/adapters/shared/retry';
 import type { AuthGateway } from '@/src/application/ports/gateways';
 import type {
@@ -13,7 +17,6 @@ import type {
 } from '@/src/application/ports/repositories';
 import {
   isEntitledStatus,
-  isValidSubscriptionStatus,
   type SubscriptionStatus,
 } from '@/src/domain/value-objects';
 
@@ -203,12 +206,14 @@ export async function syncCheckoutSuccess(
     }
   }
 
-  function assertSubscriptionStatus(
+  function assertStripeSubscriptionStatus(
     value: string,
     reason: string,
     context: Record<string, unknown>,
-  ): asserts value is SubscriptionStatus {
-    if (!isValidSubscriptionStatus(value)) {
+  ): asserts value is Parameters<
+    typeof stripeSubscriptionStatusToSubscriptionStatus
+  >[0] {
+    if (!isValidStripeSubscriptionStatus(value)) {
       fail(reason, context);
     }
   }
@@ -298,16 +303,18 @@ export async function syncCheckoutSuccess(
     });
   }
 
-  const status = subscription.status;
+  const stripeStatus = subscription.status;
   // Reject malformed subscription objects and unexpected statuses.
-  assertNonEmptyString(status, 'invalid_subscription_status', {
+  assertNonEmptyString(stripeStatus, 'invalid_subscription_status', {
     sessionId,
-    status: status ?? null,
+    status: stripeStatus ?? null,
   });
-  assertSubscriptionStatus(status, 'invalid_subscription_status', {
+  assertStripeSubscriptionStatus(stripeStatus, 'invalid_subscription_status', {
     sessionId,
-    status,
+    status: stripeStatus,
   });
+  const status: SubscriptionStatus =
+    stripeSubscriptionStatusToSubscriptionStatus(stripeStatus);
 
   const subscriptionItem = subscription.items?.data?.[0];
 
@@ -346,7 +353,7 @@ export async function syncCheckoutSuccess(
     await stripeCustomers.insert(user.id, stripeCustomerId);
     await subscriptions.upsert({
       userId: user.id,
-      stripeSubscriptionId: subscriptionId,
+      externalSubscriptionId: subscriptionId,
       plan,
       status,
       currentPeriodEnd,
@@ -359,7 +366,7 @@ export async function syncCheckoutSuccess(
 
   if (!isEntitled) {
     const reason =
-      status === 'incomplete' || status === 'incomplete_expired'
+      status === 'paymentProcessing' || status === 'paymentFailed'
         ? 'payment_processing'
         : 'manage_billing';
 

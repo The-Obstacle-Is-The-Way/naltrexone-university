@@ -10,6 +10,7 @@ import {
 } from '@/app/(app)/app/questions/[slug]/question-page-logic';
 import { Feedback } from '@/components/question/Feedback';
 import { QuestionCard } from '@/components/question/QuestionCard';
+import { Button } from '@/components/ui/button';
 import { useIsMounted } from '@/lib/use-is-mounted';
 import { submitAnswer } from '@/src/adapters/controllers/question-controller';
 import {
@@ -59,13 +60,14 @@ export function QuestionView(props: QuestionViewProps) {
           role="alert"
         >
           <div>{props.loadState.message}</div>
-          <button
+          <Button
             type="button"
-            className="mt-4 inline-flex items-center justify-center rounded-full border border-border bg-background px-4 py-2 text-sm font-medium text-foreground hover:bg-muted"
+            variant="outline"
+            className="mt-4 rounded-full"
             onClick={props.onTryAgain}
           >
             Try again
-          </button>
+          </Button>
         </div>
       ) : null}
 
@@ -104,24 +106,36 @@ export function QuestionView(props: QuestionViewProps) {
       ) : null}
 
       <div className="flex flex-col gap-3 sm:flex-row">
-        <button
-          type="button"
-          className="inline-flex items-center justify-center rounded-full bg-zinc-100 px-4 py-2 text-sm font-medium text-zinc-900 hover:bg-white transition-colors disabled:cursor-not-allowed disabled:opacity-60"
-          disabled={!props.canSubmit || props.isPending}
-          onClick={props.onSubmit}
-        >
-          Submit
-        </button>
+        {!props.submitResult ? (
+          <Button
+            type="button"
+            className="rounded-full"
+            disabled={
+              !props.canSubmit ||
+              props.isPending ||
+              props.loadState.status === 'loading'
+            }
+            onClick={props.onSubmit}
+          >
+            Submit
+          </Button>
+        ) : null}
 
         {props.submitResult ? (
-          <button
-            type="button"
-            className="inline-flex items-center justify-center rounded-full border border-border bg-background px-4 py-2 text-sm font-medium text-foreground hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60"
-            disabled={props.isPending}
-            onClick={props.onReattempt}
-          >
-            Reattempt
-          </button>
+          <>
+            <Button
+              type="button"
+              variant="outline"
+              className="rounded-full"
+              disabled={props.isPending}
+              onClick={props.onReattempt}
+            >
+              Try Again
+            </Button>
+            <Button asChild variant="ghost" className="rounded-full">
+              <Link href="/app/review">Back to Review</Link>
+            </Button>
+          </>
         ) : null}
       </div>
     </div>

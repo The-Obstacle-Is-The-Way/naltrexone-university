@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { createQuestionSeed, shuffleWithSeed } from '@/src/domain/services';
 import {
   createChoice,
   createPracticeSession,
@@ -329,6 +330,59 @@ describe('GetNextQuestionUseCase', () => {
     expect(result1?.choices.map((c) => c.id)).toEqual(
       result2?.choices.map((c) => c.id),
     );
+  });
+
+  it('assigns sequential labels (A-E) in presented order after shuffling', async () => {
+    const questionId = 'q1';
+    const question = createQuestion({
+      id: questionId,
+      status: 'published',
+      choices: [
+        createChoice({ id: 'c1', questionId, label: 'A', sortOrder: 1 }),
+        createChoice({ id: 'c2', questionId, label: 'B', sortOrder: 2 }),
+        createChoice({ id: 'c3', questionId, label: 'C', sortOrder: 3 }),
+        createChoice({ id: 'c4', questionId, label: 'D', sortOrder: 4 }),
+      ],
+    });
+
+    const stableInput = question.choices.slice().sort((a, b) => {
+      const bySortOrder = a.sortOrder - b.sortOrder;
+      if (bySortOrder !== 0) return bySortOrder;
+      return a.id.localeCompare(b.id);
+    });
+
+    const originalOrder = stableInput.map((c) => c.id).join(',');
+
+    const userId =
+      Array.from({ length: 50 }, (_, i) => `user-${i + 1}`).find(
+        (candidate) => {
+          const seed = createQuestionSeed(candidate, questionId);
+          const shuffledOrder = shuffleWithSeed(stableInput, seed)
+            .map((c) => c.id)
+            .join(',');
+          return shuffledOrder !== originalOrder;
+        },
+      ) ?? null;
+
+    if (!userId) {
+      throw new Error(
+        'Test setup failure: expected to find a userId that changes shuffle order',
+      );
+    }
+
+    const useCase = new GetNextQuestionUseCase(
+      new FakeQuestionRepository([question]),
+      new FakeAttemptRepository([]),
+      new FakePracticeSessionRepository([]),
+    );
+
+    const result = await useCase.execute({
+      userId,
+      filters: { tagSlugs: [], difficulties: [] },
+    });
+
+    expect(result?.choices.map((c) => c.label)).toEqual(['A', 'B', 'C', 'D']);
+    expect(result?.choices.map((c) => c.sortOrder)).toEqual([1, 2, 3, 4]);
   });
 
   it('produces the same shuffle order regardless of initial choice ordering', async () => {

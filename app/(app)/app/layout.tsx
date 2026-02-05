@@ -1,7 +1,9 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
+import { AppDesktopNav } from '@/components/app-desktop-nav';
 import { AuthNav } from '@/components/auth-nav';
 import { MobileNav } from '@/components/mobile-nav';
+import { ThemeToggle } from '@/components/theme-toggle';
 import type { AuthGateway } from '@/src/application/ports/gateways';
 import type { CheckEntitlementUseCase } from '@/src/application/ports/use-cases';
 
@@ -63,41 +65,11 @@ export function AppLayoutShell({
             >
               Addiction Boards
             </Link>
-            <nav className="hidden items-center gap-4 text-sm sm:flex">
-              <Link
-                href="/app/dashboard"
-                className="text-muted-foreground hover:text-foreground"
-              >
-                Dashboard
-              </Link>
-              <Link
-                href="/app/practice"
-                className="text-muted-foreground hover:text-foreground"
-              >
-                Practice
-              </Link>
-              <Link
-                href="/app/review"
-                className="text-muted-foreground hover:text-foreground"
-              >
-                Review
-              </Link>
-              <Link
-                href="/app/bookmarks"
-                className="text-muted-foreground hover:text-foreground"
-              >
-                Bookmarks
-              </Link>
-              <Link
-                href="/app/billing"
-                className="text-muted-foreground hover:text-foreground"
-              >
-                Billing
-              </Link>
-            </nav>
+            <AppDesktopNav />
           </div>
           <div className="flex items-center gap-2">
             {mobileNav}
+            <ThemeToggle />
             {authNav}
           </div>
         </div>

@@ -81,7 +81,8 @@ If Stripe does not return a `session.url`, throw `ApplicationError('STRIPE_ERROR
 
 - For subscription events, `subscriptionUpdate` MUST include:
   - `userId` (internal UUID from metadata)
-  - `stripeSubscriptionId`
+  - `externalCustomerId` (Stripe customer id)
+  - `externalSubscriptionId` (Stripe subscription id)
   - `plan` (domain plan mapped from Stripe price id)
   - `status`
   - `currentPeriodEnd`

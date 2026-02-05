@@ -11,6 +11,10 @@ import {
   getSubscriptionPlanFromPriceId,
   type StripePriceIds,
 } from '../config/stripe-prices';
+import {
+  stripeSubscriptionStatusToSubscriptionStatus,
+  subscriptionStatusToStripeSubscriptionStatus,
+} from '../gateways/stripe/stripe-subscription-status';
 import type { DrizzleDb } from '../shared/database-types';
 import { isPostgresUniqueViolation } from './postgres-errors';
 
@@ -36,7 +40,7 @@ export class DrizzleSubscriptionRepository implements SubscriptionRepository {
       id: row.id,
       userId: row.userId,
       plan,
-      status: row.status,
+      status: stripeSubscriptionStatusToSubscriptionStatus(row.status),
       currentPeriodEnd: row.currentPeriodEnd,
       cancelAtPeriodEnd: row.cancelAtPeriodEnd,
       createdAt: row.createdAt,
@@ -52,9 +56,12 @@ export class DrizzleSubscriptionRepository implements SubscriptionRepository {
     return row ? this.toDomain(row) : null;
   }
 
-  async findByStripeSubscriptionId(stripeSubscriptionId: string) {
+  async findByExternalSubscriptionId(externalSubscriptionId: string) {
     const row = await this.db.query.stripeSubscriptions.findFirst({
-      where: eq(stripeSubscriptions.stripeSubscriptionId, stripeSubscriptionId),
+      where: eq(
+        stripeSubscriptions.stripeSubscriptionId,
+        externalSubscriptionId,
+      ),
     });
 
     return row ? this.toDomain(row) : null;
@@ -62,14 +69,17 @@ export class DrizzleSubscriptionRepository implements SubscriptionRepository {
 
   async upsert(input: SubscriptionUpsertInput): Promise<void> {
     const priceId = getStripePriceId(input.plan, this.priceIds);
+    const stripeStatus = subscriptionStatusToStripeSubscriptionStatus(
+      input.status,
+    );
 
     try {
       await this.db
         .insert(stripeSubscriptions)
         .values({
           userId: input.userId,
-          stripeSubscriptionId: input.stripeSubscriptionId,
-          status: input.status,
+          stripeSubscriptionId: input.externalSubscriptionId,
+          status: stripeStatus,
           priceId,
           currentPeriodEnd: input.currentPeriodEnd,
           cancelAtPeriodEnd: input.cancelAtPeriodEnd,
@@ -78,8 +88,8 @@ export class DrizzleSubscriptionRepository implements SubscriptionRepository {
         .onConflictDoUpdate({
           target: stripeSubscriptions.userId,
           set: {
-            stripeSubscriptionId: input.stripeSubscriptionId,
-            status: input.status,
+            stripeSubscriptionId: input.externalSubscriptionId,
+            status: stripeStatus,
             priceId,
             currentPeriodEnd: input.currentPeriodEnd,
             cancelAtPeriodEnd: input.cancelAtPeriodEnd,
@@ -90,7 +100,7 @@ export class DrizzleSubscriptionRepository implements SubscriptionRepository {
       if (isPostgresUniqueViolation(error)) {
         throw new ApplicationError(
           'CONFLICT',
-          'Stripe subscription id is already mapped to a different user',
+          'External subscription id is already mapped to a different user',
         );
       }
 

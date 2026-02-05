@@ -23,6 +23,39 @@ describe('withIdempotency', () => {
     expect(execute).toHaveBeenCalledTimes(1);
   });
 
+  it('parses cached results when parseResult is provided', async () => {
+    const now = () => new Date();
+    const repo = new FakeIdempotencyKeyRepository(now);
+    const execute = vi.fn(async () => ({ ok: true }));
+    const parseResult = vi.fn((value: unknown) => {
+      if (typeof value !== 'object' || value === null) {
+        throw new Error('invalid');
+      }
+
+      const record = value as { ok?: unknown };
+      if (record.ok !== true) {
+        throw new Error('invalid');
+      }
+
+      return { ok: true };
+    });
+
+    const input = {
+      repo,
+      userId: 'user_1',
+      action: 'billing:createCheckoutSession',
+      key: '11111111-1111-1111-1111-111111111111',
+      now,
+      parseResult,
+      execute,
+    } as const;
+
+    await expect(withIdempotency(input)).resolves.toEqual({ ok: true });
+    await expect(withIdempotency(input)).resolves.toEqual({ ok: true });
+    expect(execute).toHaveBeenCalledTimes(1);
+    expect(parseResult).toHaveBeenCalledTimes(1);
+  });
+
   it('waits for an in-progress request and returns the stored result', async () => {
     const now = () => new Date();
     const repo = new FakeIdempotencyKeyRepository(now);

@@ -9,6 +9,13 @@ export type CustomerCreateParams = {
 
 export type StripeCustomer = { id?: string };
 
+export type CustomerSearchParams = {
+  query: string;
+  limit?: number;
+};
+
+export type StripeCustomerSearchResult = { data: StripeCustomer[] };
+
 export type CheckoutSessionCreateParams = {
   mode: 'subscription' | 'payment' | 'setup';
   customer: string;
@@ -50,6 +57,10 @@ export type StripeClient = {
       params: CustomerCreateParams,
       options?: StripeRequestOptions,
     ): Promise<StripeCustomer>;
+    search?: (
+      params: CustomerSearchParams,
+      options?: StripeRequestOptions,
+    ) => Promise<StripeCustomerSearchResult>;
   };
   checkout: {
     sessions: {

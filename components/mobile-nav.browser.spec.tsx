@@ -1,5 +1,6 @@
 import type { ComponentPropsWithoutRef, PropsWithChildren } from 'react';
 import { expect, test, vi } from 'vitest';
+import { userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
 import { MobileNav } from './mobile-nav';
 
@@ -32,4 +33,27 @@ test('toggles open/close and renders navigation links', async () => {
 
   await screen.getByRole('button', { name: 'Close navigation menu' }).click();
   await expect.element(screen.getByText('Dashboard')).not.toBeInTheDocument();
+});
+
+test('traps focus inside the menu and supports escape-to-close', async () => {
+  const screen = await render(<MobileNav />);
+
+  await screen.getByRole('button', { name: 'Open navigation menu' }).click();
+
+  const firstLink = screen.getByRole('link', { name: 'Dashboard' });
+  const lastLink = screen.getByRole('link', { name: 'Billing' });
+
+  await expect.element(firstLink).toHaveFocus();
+
+  await userEvent.tab({ shift: true });
+  await expect.element(lastLink).toHaveFocus();
+
+  await userEvent.tab();
+  await expect.element(firstLink).toHaveFocus();
+
+  await userEvent.keyboard('{Escape}');
+  await expect.element(screen.getByText('Dashboard')).not.toBeInTheDocument();
+  await expect
+    .element(screen.getByRole('button', { name: 'Open navigation menu' }))
+    .toHaveFocus();
 });

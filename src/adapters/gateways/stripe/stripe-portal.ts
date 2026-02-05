@@ -22,7 +22,7 @@ export async function createStripePortalSession({
   logger: Logger;
 }): Promise<{ url: string }> {
   const params = {
-    customer: input.stripeCustomerId,
+    customer: input.externalCustomerId,
     return_url: input.returnUrl,
   } satisfies BillingPortalSessionCreateParams;
 

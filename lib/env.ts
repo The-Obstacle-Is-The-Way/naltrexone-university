@@ -60,6 +60,9 @@ const envSchema = z.object({
 
   // App
   NEXT_PUBLIC_APP_URL: z.string().url(),
+
+  // Cron / Jobs
+  CRON_SECRET: z.string().min(1).optional(),
 });
 
 export type Env = Omit<

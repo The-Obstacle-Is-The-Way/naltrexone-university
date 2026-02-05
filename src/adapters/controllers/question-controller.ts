@@ -74,6 +74,15 @@ const SubmitAnswerInputSchema = z
   })
   .strict();
 
+const SubmitAnswerOutputSchema = z
+  .object({
+    attemptId: zUuid,
+    isCorrect: z.boolean(),
+    correctChoiceId: zUuid,
+    explanationMd: z.string().nullable(),
+  })
+  .strict();
+
 type GetNextQuestionUseCase = {
   execute: (input: GetNextQuestionInput) => Promise<GetNextQuestionOutput>;
 };
@@ -165,6 +174,7 @@ export const submitAnswer = createAction({
       action: 'question:submitAnswer',
       key: idempotencyKey,
       now: () => new Date(),
+      parseResult: (value) => SubmitAnswerOutputSchema.parse(value),
       execute: submitOnce,
     });
   },

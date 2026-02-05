@@ -46,6 +46,9 @@ postgres_data/
 .env*.local
 
 # Question content (proprietary)
-content/questions/
+content/questions/*
+!content/questions/placeholder/
+!content/questions/placeholder/**/*
+!content/questions/README.md
 content/drafts/
 content/imports/

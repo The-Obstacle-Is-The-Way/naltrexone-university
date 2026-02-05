@@ -34,6 +34,7 @@ export type GetMissedQuestionsOutput = {
   rows: MissedQuestionRow[];
   limit: number;
   offset: number;
+  totalCount: number;
 };
 
 export class GetMissedQuestionsUseCase {
@@ -46,14 +47,22 @@ export class GetMissedQuestionsUseCase {
   async execute(
     input: GetMissedQuestionsInput,
   ): Promise<GetMissedQuestionsOutput> {
-    const page = await this.attempts.listMissedQuestionsByUserId(
-      input.userId,
-      input.limit,
-      input.offset,
-    );
+    const [totalCount, page] = await Promise.all([
+      this.attempts.countMissedQuestionsByUserId(input.userId),
+      this.attempts.listMissedQuestionsByUserId(
+        input.userId,
+        input.limit,
+        input.offset,
+      ),
+    ]);
 
-    if (page.length === 0) {
-      return { rows: [], limit: input.limit, offset: input.offset };
+    if (totalCount === 0 || page.length === 0) {
+      return {
+        rows: [],
+        limit: input.limit,
+        offset: input.offset,
+        totalCount,
+      };
     }
 
     const questionIds = page.map((m) => m.questionId);
@@ -91,6 +100,7 @@ export class GetMissedQuestionsUseCase {
       rows,
       limit: input.limit,
       offset: input.offset,
+      totalCount,
     };
   }
 }

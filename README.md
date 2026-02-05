@@ -19,7 +19,7 @@ The technical source of truth is `docs/specs/master_spec.md`.
 
 ```bash
 pnpm install
-cp .env.example .env
+cp .env.example .env.local
 pnpm db:migrate
 pnpm dev
 ```

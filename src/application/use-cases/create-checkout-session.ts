@@ -46,8 +46,8 @@ export class CreateCheckoutSessionUseCase {
       { idempotencyKey: `stripe_customer:${input.userId}` },
     );
 
-    await this.stripeCustomers.insert(input.userId, created.stripeCustomerId);
-    return created.stripeCustomerId;
+    await this.stripeCustomers.insert(input.userId, created.externalCustomerId);
+    return created.externalCustomerId;
   }
 
   async execute(
@@ -69,7 +69,7 @@ export class CreateCheckoutSessionUseCase {
 
     const checkoutSessionInput = {
       userId: input.userId,
-      stripeCustomerId,
+      externalCustomerId: stripeCustomerId,
       plan: input.plan,
       successUrl: input.successUrl,
       cancelUrl: input.cancelUrl,

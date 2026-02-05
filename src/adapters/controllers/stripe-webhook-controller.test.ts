@@ -17,7 +17,7 @@ class FailingStripeEventRepository extends FakeStripeEventRepository {
 describe('processStripeWebhook', () => {
   it('claims, processes, and marks subscription events idempotently', async () => {
     const paymentGateway = new FakePaymentGateway({
-      stripeCustomerId: 'cus_test',
+      externalCustomerId: 'cus_test',
       checkoutUrl: 'https://stripe/checkout',
       portalUrl: 'https://stripe/portal',
       webhookResult: {
@@ -25,8 +25,8 @@ describe('processStripeWebhook', () => {
         type: 'customer.subscription.updated',
         subscriptionUpdate: {
           userId: 'user_1',
-          stripeCustomerId: 'cus_123',
-          stripeSubscriptionId: 'sub_123',
+          externalCustomerId: 'cus_123',
+          externalSubscriptionId: 'sub_123',
           plan: 'monthly',
           status: 'active',
           currentPeriodEnd: new Date('2026-03-01T00:00:00.000Z'),
@@ -57,7 +57,7 @@ describe('processStripeWebhook', () => {
       status: 'active',
     });
     await expect(
-      subscriptions.findByStripeSubscriptionId('sub_123'),
+      subscriptions.findByExternalSubscriptionId('sub_123'),
     ).resolves.toMatchObject({
       userId: 'user_1',
     });
@@ -79,7 +79,7 @@ describe('processStripeWebhook', () => {
 
   it('marks non-subscription events as processed (no subscription update)', async () => {
     const paymentGateway = new FakePaymentGateway({
-      stripeCustomerId: 'cus_test',
+      externalCustomerId: 'cus_test',
       checkoutUrl: 'https://stripe/checkout',
       portalUrl: 'https://stripe/portal',
       webhookResult: {
@@ -116,7 +116,7 @@ describe('processStripeWebhook', () => {
       vi.setSystemTime(now);
 
       const paymentGateway = new FakePaymentGateway({
-        stripeCustomerId: 'cus_test',
+        externalCustomerId: 'cus_test',
         checkoutUrl: 'https://stripe/checkout',
         portalUrl: 'https://stripe/portal',
         webhookResult: {
@@ -153,7 +153,7 @@ describe('processStripeWebhook', () => {
 
   it('logs a warning when pruning processed stripe events fails', async () => {
     const paymentGateway = new FakePaymentGateway({
-      stripeCustomerId: 'cus_test',
+      externalCustomerId: 'cus_test',
       checkoutUrl: 'https://stripe/checkout',
       portalUrl: 'https://stripe/portal',
       webhookResult: {
@@ -192,7 +192,7 @@ describe('processStripeWebhook', () => {
 
   it('still succeeds when pruning processed stripe events fails', async () => {
     const paymentGateway = new FakePaymentGateway({
-      stripeCustomerId: 'cus_test',
+      externalCustomerId: 'cus_test',
       checkoutUrl: 'https://stripe/checkout',
       portalUrl: 'https://stripe/portal',
       webhookResult: {
@@ -223,7 +223,7 @@ describe('processStripeWebhook', () => {
 
   it('returns early when the event was already processed', async () => {
     const paymentGateway = new FakePaymentGateway({
-      stripeCustomerId: 'cus_test',
+      externalCustomerId: 'cus_test',
       checkoutUrl: 'https://stripe/checkout',
       portalUrl: 'https://stripe/portal',
       webhookResult: {
@@ -231,8 +231,8 @@ describe('processStripeWebhook', () => {
         type: 'customer.subscription.updated',
         subscriptionUpdate: {
           userId: 'user_1',
-          stripeCustomerId: 'cus_123',
-          stripeSubscriptionId: 'sub_123',
+          externalCustomerId: 'cus_123',
+          externalSubscriptionId: 'sub_123',
           plan: 'monthly',
           status: 'active',
           currentPeriodEnd: new Date('2026-03-01T00:00:00.000Z'),
@@ -270,7 +270,7 @@ describe('processStripeWebhook', () => {
       vi.setSystemTime(now);
 
       const paymentGateway = new FakePaymentGateway({
-        stripeCustomerId: 'cus_test',
+        externalCustomerId: 'cus_test',
         checkoutUrl: 'https://stripe/checkout',
         portalUrl: 'https://stripe/portal',
         webhookResult: {
@@ -312,7 +312,7 @@ describe('processStripeWebhook', () => {
 
   it('marks the event failed when processing throws', async () => {
     const paymentGateway = new FakePaymentGateway({
-      stripeCustomerId: 'cus_test',
+      externalCustomerId: 'cus_test',
       checkoutUrl: 'https://stripe/checkout',
       portalUrl: 'https://stripe/portal',
       webhookResult: {
@@ -320,8 +320,8 @@ describe('processStripeWebhook', () => {
         type: 'customer.subscription.updated',
         subscriptionUpdate: {
           userId: 'user_1',
-          stripeCustomerId: 'cus_123',
-          stripeSubscriptionId: 'sub_123',
+          externalCustomerId: 'cus_123',
+          externalSubscriptionId: 'sub_123',
           plan: 'monthly',
           status: 'active',
           currentPeriodEnd: new Date('2026-03-01T00:00:00.000Z'),

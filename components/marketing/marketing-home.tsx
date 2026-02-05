@@ -4,6 +4,7 @@ import type { ReactElement, ReactNode } from 'react';
 import { AuthNav } from '@/components/auth-nav';
 import { GetStartedCta } from '@/components/get-started-cta';
 import { MetallicCtaButton } from '@/components/ui/metallic-cta-button';
+import { cn } from '@/lib/utils';
 
 export type MarketingHomeShellProps = {
   authNav: ReactNode;
@@ -89,16 +90,16 @@ export function MarketingHomeShell({
         {/* Hero */}
         <section className="py-20 lg:py-32">
           <div className="mx-auto max-w-4xl px-4 text-center sm:px-6 lg:px-8">
-            <p className="inline-flex items-center rounded-full border border-zinc-800 bg-zinc-900/80 px-3 py-1 text-xs font-medium text-muted-foreground">
+            <p className="inline-flex items-center rounded-full border border-border bg-muted px-3 py-1 text-xs font-medium text-muted-foreground">
               Board prep, built for outcomes
             </p>
             <h1 className="mt-6 font-display text-5xl font-bold tracking-tight md:text-7xl">
-              <span className="block text-zinc-100">Master Your</span>
-              <span className="bg-gradient-to-r from-zinc-500 via-zinc-300 to-zinc-500 bg-clip-text text-transparent">
+              <span className="block text-foreground">Master Your</span>
+              <span className="bg-gradient-to-r from-muted-foreground via-foreground to-muted-foreground bg-clip-text text-transparent">
                 Board Exams.
               </span>
             </h1>
-            <p className="mx-auto mt-6 max-w-2xl text-balance text-lg text-zinc-500 leading-relaxed md:text-xl">
+            <p className="mx-auto mt-6 max-w-2xl text-balance text-lg text-muted-foreground leading-relaxed md:text-xl">
               High-yield questions with detailed explanations for Addiction
               Psychiatry and Addiction Medicine. Practice with confidence and
               track your progress.
@@ -108,7 +109,7 @@ export function MarketingHomeShell({
               {primaryCta}
               <Link
                 href="/pricing"
-                className="rounded-full border border-zinc-800 bg-zinc-900 px-6 py-3 text-sm font-medium text-zinc-300 hover:bg-zinc-800 transition-colors"
+                className="rounded-full border border-border bg-card px-6 py-3 text-sm font-medium text-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
               >
                 View pricing
               </Link>
@@ -120,19 +121,32 @@ export function MarketingHomeShell({
         <section className="border-t border-border py-16">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              {impactStats.map((stat) => (
-                <div
-                  key={stat.label}
-                  className="rounded-2xl border border-zinc-800/50 bg-zinc-900/50 p-6 text-center animate-fade-in-up"
-                >
-                  <div className="font-display text-3xl font-bold text-foreground md:text-4xl">
-                    {stat.value}
+              {impactStats.map((stat) => {
+                const testIdSlug = stat.label
+                  .replace(/[^a-z0-9]+/gi, '-')
+                  .toLowerCase();
+                const testId = `impact-stat-${testIdSlug}`;
+                return (
+                  <div
+                    key={stat.label}
+                    className="rounded-2xl border border-border bg-card p-6 text-center shadow-sm animate-fade-in-up"
+                    data-testid={testId}
+                  >
+                    <div
+                      data-testid={`${testId}-value`}
+                      className="font-display text-3xl font-bold text-foreground md:text-4xl"
+                    >
+                      {stat.value}
+                    </div>
+                    <div
+                      data-testid={`${testId}-label`}
+                      className="mt-2 text-sm text-muted-foreground"
+                    >
+                      {stat.label}
+                    </div>
                   </div>
-                  <div className="mt-2 text-sm text-muted-foreground">
-                    {stat.label}
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         </section>
@@ -156,11 +170,14 @@ export function MarketingHomeShell({
                 return (
                   <div
                     key={feature.title}
-                    className={`rounded-2xl border border-zinc-800/50 bg-zinc-900/50 p-6 transition-all hover:border-zinc-700/50 hover:bg-zinc-900/80${feature.wide ? ' md:col-span-2' : ''}`}
+                    className={cn(
+                      'rounded-2xl border border-border bg-card p-6 shadow-sm transition-colors hover:bg-muted',
+                      feature.wide && 'md:col-span-2',
+                    )}
                   >
                     <Icon
                       aria-hidden="true"
-                      className="h-6 w-6 text-zinc-400"
+                      className="h-6 w-6 text-muted-foreground"
                     />
                     <h3 className="mt-4 font-heading font-semibold">
                       {feature.title}
@@ -189,7 +206,7 @@ export function MarketingHomeShell({
             </div>
 
             <div className="mx-auto mt-10 grid max-w-3xl gap-6 md:grid-cols-2">
-              <div className="rounded-2xl border border-zinc-800 bg-zinc-900/50 p-8">
+              <div className="rounded-2xl border border-border bg-card p-8 shadow-sm">
                 <h3 className="font-heading font-semibold text-foreground">
                   Pro Monthly
                 </h3>
@@ -206,13 +223,13 @@ export function MarketingHomeShell({
                 </ul>
                 <Link
                   href="/pricing"
-                  className="mt-8 block w-full rounded-full border border-zinc-700 bg-zinc-800 py-3 text-center text-sm font-medium text-zinc-100 hover:bg-zinc-700 transition-colors"
+                  className="mt-8 block w-full rounded-full bg-secondary py-3 text-center text-sm font-medium text-secondary-foreground transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                 >
                   Get Started
                 </Link>
               </div>
 
-              <div className="rounded-2xl border-2 border-zinc-500 bg-zinc-900/50 p-8">
+              <div className="rounded-2xl border-2 border-primary bg-card p-8 shadow-sm">
                 <h3 className="font-heading font-semibold text-foreground">
                   Pro Annual
                 </h3>
@@ -222,14 +239,16 @@ export function MarketingHomeShell({
                     /yr
                   </span>
                 </p>
-                <p className="text-sm text-emerald-400">Save $149 per year</p>
+                <p className="text-sm text-emerald-600 dark:text-emerald-400">
+                  Save $149 per year
+                </p>
                 <ul className="mt-6 space-y-3 text-sm text-muted-foreground">
                   <li>Everything in Pro Monthly</li>
                   <li>Best value</li>
                 </ul>
                 <Link
                   href="/pricing"
-                  className="mt-8 block w-full rounded-full bg-zinc-100 py-3 text-center text-sm font-medium text-zinc-900 hover:bg-white transition-colors"
+                  className="mt-8 block w-full rounded-full bg-foreground py-3 text-center text-sm font-medium text-background transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                 >
                   Get Started
                 </Link>
@@ -252,7 +271,7 @@ export function MarketingHomeShell({
               <MetallicCtaButton href="/pricing">Get Started</MetallicCtaButton>
               <Link
                 href="/sign-in"
-                className="rounded-full border border-zinc-800 bg-zinc-900 px-6 py-3 text-sm font-medium text-zinc-300 hover:bg-zinc-800 transition-colors"
+                className="rounded-full border border-border bg-card px-6 py-3 text-sm font-medium text-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
               >
                 Sign In
               </Link>

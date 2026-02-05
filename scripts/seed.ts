@@ -1,7 +1,7 @@
-import 'dotenv/config';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
-import { and, eq, inArray } from 'drizzle-orm';
+import dotenv from 'dotenv';
+import { and, eq, inArray, like } from 'drizzle-orm';
 import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import fg from 'fast-glob';
@@ -25,6 +25,9 @@ type SeedTag = {
   name: string;
   kind: schema.TagKind;
 };
+
+dotenv.config({ path: '.env.local' });
+dotenv.config({ path: '.env' });
 
 type SeedChoice = {
   label: string;
@@ -154,7 +157,12 @@ const sql = postgres(databaseUrl, { max: 1 });
 const db = drizzle(sql, { schema });
 
 async function main(): Promise<void> {
-  const files = await fg(['content/questions/**/*.mdx'], {
+  const includePlaceholders = process.env.SEED_INCLUDE_PLACEHOLDERS !== 'false';
+  const patterns = includePlaceholders
+    ? ['content/questions/**/*.mdx']
+    : ['content/questions/**/*.mdx', '!content/questions/placeholder/**/*.mdx'];
+
+  const files = await fg(patterns, {
     onlyFiles: true,
     unique: true,
     absolute: true,
@@ -163,7 +171,9 @@ async function main(): Promise<void> {
 
   if (files.length === 0) {
     throw new Error(
-      'No question files found at content/questions/**/*.mdx. Seed requires at least one MDX file.',
+      includePlaceholders
+        ? 'No question files found at content/questions/**/*.mdx. Seed requires at least one MDX file.'
+        : 'No question files found after excluding placeholders. Re-run with SEED_INCLUDE_PLACEHOLDERS=true or generate imported content under content/questions/imported/.',
     );
   }
 
@@ -361,6 +371,17 @@ async function main(): Promise<void> {
     `Seed complete: inserted=${inserted} updated=${updated} skipped=${skipped} (files=${files.length})`,
   );
   console.info(`Content root: ${path.resolve('content/questions')}`);
+
+  if (!includePlaceholders) {
+    const archived = await db
+      .update(schema.questions)
+      .set({ status: 'archived', updatedAt: new Date() })
+      .where(like(schema.questions.slug, 'placeholder-%'))
+      .returning({ id: schema.questions.id });
+    console.info(
+      `Archived placeholders: ${archived.length} (slug LIKE "placeholder-%")`,
+    );
+  }
 }
 
 main()

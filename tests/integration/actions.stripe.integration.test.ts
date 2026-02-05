@@ -1,4 +1,3 @@
-import 'dotenv/config';
 import { randomUUID } from 'node:crypto';
 import { inArray } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/postgres-js';
@@ -84,7 +83,7 @@ describe('billing controllers (integration)', () => {
   it('creates a checkout session and persists a stripe customer mapping', async () => {
     const user = await createUser();
     const paymentGateway = new FakePaymentGateway({
-      stripeCustomerId: 'cus_test_1',
+      externalCustomerId: 'cus_test_1',
       checkoutUrl: 'https://stripe.test/checkout',
       portalUrl: 'https://stripe.test/portal',
       webhookResult: { eventId: 'evt_1', type: 'checkout.session.completed' },
@@ -139,7 +138,7 @@ describe('billing controllers (integration)', () => {
 
     expect(paymentGateway.checkoutInputs[0]).toMatchObject({
       userId: user.id,
-      stripeCustomerId: 'cus_test_1',
+      externalCustomerId: 'cus_test_1',
       plan: 'monthly',
     });
     expect(paymentGateway.checkoutInputs[0]?.cancelUrl).toContain(
@@ -156,7 +155,7 @@ describe('billing controllers (integration)', () => {
   it('creates a portal session for an existing stripe customer mapping', async () => {
     const user = await createUser();
     const paymentGateway = new FakePaymentGateway({
-      stripeCustomerId: 'cus_test_2',
+      externalCustomerId: 'cus_test_2',
       checkoutUrl: 'https://stripe.test/checkout2',
       portalUrl: 'https://stripe.test/portal2',
       webhookResult: { eventId: 'evt_2', type: 'checkout.session.completed' },
@@ -226,7 +225,7 @@ describe('billing controllers (integration)', () => {
     });
     expect(paymentGateway.portalInputs).toHaveLength(1);
     expect(paymentGateway.portalInputs[0]).toMatchObject({
-      stripeCustomerId: 'cus_test_2',
+      externalCustomerId: 'cus_test_2',
     });
     expect(paymentGateway.portalInputs[0]?.returnUrl).toBe(
       'http://localhost:3000/app/billing',

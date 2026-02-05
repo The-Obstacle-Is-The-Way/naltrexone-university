@@ -216,14 +216,14 @@ export function isVisibleStatus(status: QuestionStatus): boolean {
 ```typescript
 // src/domain/value-objects/subscription-status.ts
 export const AllSubscriptionStatuses = [
-  'incomplete',
-  'incomplete_expired',
-  'trialing',
+  'paymentProcessing',
+  'paymentFailed',
+  'inTrial',
   'active',
-  'past_due',
   'canceled',
   'unpaid',
   'paused',
+  'pastDue',
 ] as const;
 
 export type SubscriptionStatus = typeof AllSubscriptionStatuses[number];
@@ -236,7 +236,7 @@ export function isValidSubscriptionStatus(
 
 export const EntitledStatuses: readonly SubscriptionStatus[] = [
   'active',
-  'trialing',
+  'inTrial',
 ];
 
 export function isEntitledStatus(status: SubscriptionStatus): boolean {

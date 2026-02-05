@@ -164,9 +164,11 @@ export class FakeAuthGateway implements AuthGateway {
 
 export class FakeRateLimiter implements RateLimiter {
   readonly inputs: RateLimitInput[] = [];
-  private readonly results: RateLimitResult[];
+  private readonly results: Array<RateLimitResult | Error>;
 
-  constructor(result?: RateLimitResult | readonly RateLimitResult[]) {
+  constructor(
+    result?: RateLimitResult | Error | readonly (RateLimitResult | Error)[],
+  ) {
     this.results = result
       ? Array.isArray(result)
         ? [...result]
@@ -177,6 +179,7 @@ export class FakeRateLimiter implements RateLimiter {
   async limit(input: RateLimitInput): Promise<RateLimitResult> {
     this.inputs.push(input);
     const next = this.results.shift();
+    if (next instanceof Error) throw next;
     if (next) return next;
 
     return {
@@ -199,18 +202,18 @@ export class FakePaymentGateway implements PaymentGateway {
   readonly portalOptions: Array<PaymentGatewayRequestOptions | undefined> = [];
   readonly webhookInputs: Array<{ rawBody: string; signature: string }> = [];
 
-  private readonly stripeCustomerId: string;
+  private readonly externalCustomerId: string;
   private readonly checkoutUrl: string;
   private readonly portalUrl: string;
   private readonly webhookResult: WebhookEventResult;
 
   constructor(input: {
-    stripeCustomerId: string;
+    externalCustomerId: string;
     checkoutUrl: string;
     portalUrl: string;
     webhookResult: WebhookEventResult;
   }) {
-    this.stripeCustomerId = input.stripeCustomerId;
+    this.externalCustomerId = input.externalCustomerId;
     this.checkoutUrl = input.checkoutUrl;
     this.portalUrl = input.portalUrl;
     this.webhookResult = input.webhookResult;
@@ -222,7 +225,7 @@ export class FakePaymentGateway implements PaymentGateway {
   ): Promise<CreateCustomerOutput> {
     this.customerInputs.push(input);
     this.customerOptions.push(options);
-    return { stripeCustomerId: this.stripeCustomerId };
+    return { externalCustomerId: this.externalCustomerId };
   }
 
   async createCheckoutSession(
@@ -666,6 +669,20 @@ export class FakeAttemptRepository implements AttemptRepository {
       .map((a) => ({ questionId: a.questionId, answeredAt: a.answeredAt }));
   }
 
+  async countMissedQuestionsByUserId(userId: string): Promise<number> {
+    const mostRecentByQuestionId = new Map<string, InMemoryAttempt>();
+    for (const attempt of this.attempts) {
+      if (attempt.userId !== userId) continue;
+      const existing = mostRecentByQuestionId.get(attempt.questionId);
+      if (!existing || attempt.answeredAt > existing.answeredAt) {
+        mostRecentByQuestionId.set(attempt.questionId, attempt);
+      }
+    }
+
+    return [...mostRecentByQuestionId.values()].filter((a) => !a.isCorrect)
+      .length;
+  }
+
   async findMostRecentAnsweredAtByQuestionIds(
     userId: string,
     questionIds: readonly string[],
@@ -763,8 +780,8 @@ export class FakePracticeSessionRepository
 
 export class FakeSubscriptionRepository implements SubscriptionRepository {
   private readonly byUserId = new Map<string, Subscription>();
-  private readonly stripeSubscriptionIdByUserId = new Map<string, string>();
-  private readonly userIdByStripeSubscriptionId = new Map<string, string>();
+  private readonly externalSubscriptionIdByUserId = new Map<string, string>();
+  private readonly userIdByExternalSubscriptionId = new Map<string, string>();
 
   constructor(subscriptions: readonly Subscription[] = []) {
     for (const sub of subscriptions) {
@@ -776,23 +793,25 @@ export class FakeSubscriptionRepository implements SubscriptionRepository {
     return this.byUserId.get(userId) ?? null;
   }
 
-  async findByStripeSubscriptionId(
-    stripeSubscriptionId: string,
+  async findByExternalSubscriptionId(
+    externalSubscriptionId: string,
   ): Promise<Subscription | null> {
-    const userId = this.userIdByStripeSubscriptionId.get(stripeSubscriptionId);
+    const userId = this.userIdByExternalSubscriptionId.get(
+      externalSubscriptionId,
+    );
     if (!userId) return null;
     return this.byUserId.get(userId) ?? null;
   }
 
   async upsert(input: SubscriptionUpsertInput): Promise<void> {
-    const mappedUserId = this.userIdByStripeSubscriptionId.get(
-      input.stripeSubscriptionId,
+    const mappedUserId = this.userIdByExternalSubscriptionId.get(
+      input.externalSubscriptionId,
     );
 
     if (mappedUserId && mappedUserId !== input.userId) {
       throw new ApplicationError(
         'CONFLICT',
-        'Stripe subscription id is already mapped to a different user',
+        'External subscription id is already mapped to a different user',
       );
     }
 
@@ -809,23 +828,24 @@ export class FakeSubscriptionRepository implements SubscriptionRepository {
       updatedAt: now,
     };
 
-    const previousStripeSubscriptionId = this.stripeSubscriptionIdByUserId.get(
-      input.userId,
-    );
+    const previousExternalSubscriptionId =
+      this.externalSubscriptionIdByUserId.get(input.userId);
     if (
-      previousStripeSubscriptionId &&
-      previousStripeSubscriptionId !== input.stripeSubscriptionId
+      previousExternalSubscriptionId &&
+      previousExternalSubscriptionId !== input.externalSubscriptionId
     ) {
-      this.userIdByStripeSubscriptionId.delete(previousStripeSubscriptionId);
+      this.userIdByExternalSubscriptionId.delete(
+        previousExternalSubscriptionId,
+      );
     }
 
     this.byUserId.set(input.userId, subscription);
-    this.stripeSubscriptionIdByUserId.set(
+    this.externalSubscriptionIdByUserId.set(
       input.userId,
-      input.stripeSubscriptionId,
+      input.externalSubscriptionId,
     );
-    this.userIdByStripeSubscriptionId.set(
-      input.stripeSubscriptionId,
+    this.userIdByExternalSubscriptionId.set(
+      input.externalSubscriptionId,
       input.userId,
     );
   }

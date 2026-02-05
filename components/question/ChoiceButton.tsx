@@ -25,7 +25,8 @@ export function ChoiceButton({
   return (
     <label
       className={cn(
-        'w-full rounded-xl border border-border bg-background p-4 text-left shadow-sm transition-colors hover:bg-muted focus-within:border-ring focus-within:ring-ring/50 focus-within:ring-[3px]',
+        'block w-full rounded-xl border border-border bg-background p-4 text-left shadow-sm transition-colors focus-within:border-ring focus-within:ring-ring/50 focus-within:ring-[3px]',
+        !disabled && 'cursor-pointer hover:bg-muted',
         disabled && 'cursor-not-allowed opacity-60',
         selected && correctness === null && 'border-zinc-400',
         correctness === 'correct' &&
@@ -45,10 +46,12 @@ export function ChoiceButton({
       <div className="flex items-start gap-3">
         <div
           className={cn(
-            'flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-border text-xs font-semibold text-foreground',
+            'flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-border bg-background text-xs font-semibold leading-none text-foreground',
             selected && correctness === null && 'border-zinc-400',
-            correctness === 'correct' && 'border-emerald-500 text-emerald-700',
-            correctness === 'incorrect' && 'border-red-500 text-red-700',
+            correctness === 'correct' &&
+              'border-emerald-500 bg-emerald-50 text-emerald-700 dark:bg-emerald-950/20',
+            correctness === 'incorrect' &&
+              'border-red-500 bg-red-50 text-red-700 dark:bg-red-950/20',
           )}
         >
           {label}

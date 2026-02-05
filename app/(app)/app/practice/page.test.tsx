@@ -130,7 +130,7 @@ describe('app/(app)/app/practice', () => {
       />,
     );
 
-    expect(html).toContain('Bookmarked');
+    expect(html).toContain('Remove bookmark');
   });
 
   it('renders feedback when submitResult is present', async () => {
@@ -160,6 +160,43 @@ describe('app/(app)/app/practice', () => {
     );
 
     expect(html).toContain('Explanation');
+  });
+
+  it('does not render feedback in exam mode', async () => {
+    const { PracticeView } = await import('@/app/(app)/app/practice/page');
+
+    const html = renderToStaticMarkup(
+      <PracticeView
+        sessionInfo={{
+          sessionId: 'session-1',
+          mode: 'exam',
+          index: 0,
+          total: 10,
+        }}
+        loadState={{ status: 'ready' }}
+        question={null}
+        selectedChoiceId={null}
+        submitResult={{
+          attemptId: 'attempt-1',
+          isCorrect: false,
+          correctChoiceId: 'choice-1',
+          explanationMd: null,
+        }}
+        isPending={false}
+        bookmarkStatus="idle"
+        isBookmarked={false}
+        canSubmit={false}
+        onEndSession={() => undefined}
+        onTryAgain={() => undefined}
+        onToggleBookmark={() => undefined}
+        onSelectChoice={() => undefined}
+        onSubmit={() => undefined}
+        onNextQuestion={() => undefined}
+      />,
+    );
+
+    expect(html).not.toContain('Explanation not available.');
+    expect(html).not.toContain('Incorrect');
   });
 
   it('renders a bookmark warning when bookmarkStatus is error', async () => {
@@ -256,6 +293,32 @@ describe('app/(app)/app/practice', () => {
     );
 
     expect(html).toContain('No questions');
+  });
+
+  it('renders loading text when starter is in loading state', async () => {
+    const { PracticeSessionStarter } = await import(
+      '@/app/(app)/app/practice/page'
+    );
+
+    const html = renderToStaticMarkup(
+      <PracticeSessionStarter
+        sessionMode="tutor"
+        sessionCount={20}
+        filters={{ tagSlugs: [], difficulties: [] }}
+        tagLoadStatus="idle"
+        availableTags={[]}
+        sessionStartStatus="loading"
+        sessionStartError={null}
+        isPending={false}
+        onToggleDifficulty={() => undefined}
+        onTagSlugsChange={() => undefined}
+        onSessionModeChange={() => undefined}
+        onSessionCountChange={() => undefined}
+        onStartSession={() => undefined}
+      />,
+    );
+
+    expect(html).toContain('Starting…');
   });
 
   it('renders tag optgroups when tags are available', async () => {

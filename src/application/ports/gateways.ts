@@ -29,7 +29,7 @@ export type PaymentGatewayRequestOptions = {
 
 export type CheckoutSessionInput = {
   userId: string; // internal UUID
-  stripeCustomerId: string; // opaque external id
+  externalCustomerId: string; // opaque external id
   plan: SubscriptionPlan; // domain plan (monthly/annual)
   successUrl: string;
   cancelUrl: string;
@@ -38,7 +38,7 @@ export type CheckoutSessionInput = {
 export type CheckoutSessionOutput = { url: string };
 
 export type PortalSessionInput = {
-  stripeCustomerId: string; // opaque external id
+  externalCustomerId: string; // opaque external id
   returnUrl: string;
 };
 
@@ -50,7 +50,7 @@ export type CreateCustomerInput = {
   email: string;
 };
 
-export type CreateCustomerOutput = { stripeCustomerId: string };
+export type CreateCustomerOutput = { externalCustomerId: string };
 
 export type WebhookEventResult = {
   eventId: string;
@@ -62,8 +62,8 @@ export type WebhookEventResult = {
     | (string & {});
   subscriptionUpdate?: {
     userId: string; // internal UUID
-    stripeCustomerId: string; // opaque external id
-    stripeSubscriptionId: string; // opaque external id
+    externalCustomerId: string; // opaque external id
+    externalSubscriptionId: string; // opaque external id
     plan: SubscriptionPlan; // domain plan (monthly/annual)
     status: SubscriptionStatus;
     currentPeriodEnd: Date;

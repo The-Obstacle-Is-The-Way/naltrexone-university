@@ -108,6 +108,11 @@ export interface AttemptMissedQuestionsReader {
     limit: number,
     offset: number,
   ): Promise<readonly MissedQuestionAttempt[]>;
+
+  /**
+   * Total missed question count based on the user's most recent attempt per question.
+   */
+  countMissedQuestionsByUserId(userId: string): Promise<number>;
 }
 
 export interface AttemptMostRecentAnsweredAtReader {
@@ -162,7 +167,7 @@ export interface TagRepository {
 
 export type SubscriptionUpsertInput = {
   userId: string;
-  stripeSubscriptionId: string; // opaque external id
+  externalSubscriptionId: string; // opaque external id
   plan: SubscriptionPlan; // domain plan (monthly/annual)
   status: SubscriptionStatus;
   currentPeriodEnd: Date;
@@ -172,8 +177,8 @@ export type SubscriptionUpsertInput = {
 export interface SubscriptionRepository {
   findByUserId(userId: string): Promise<Subscription | null>;
 
-  findByStripeSubscriptionId(
-    stripeSubscriptionId: string,
+  findByExternalSubscriptionId(
+    externalSubscriptionId: string,
   ): Promise<Subscription | null>;
 
   upsert(input: SubscriptionUpsertInput): Promise<void>;

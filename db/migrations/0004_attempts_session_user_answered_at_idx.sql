@@ -1,0 +1,1 @@
+CREATE INDEX "attempts_session_user_answered_at_idx" ON "attempts" USING btree ("practice_session_id","user_id","answered_at" desc);

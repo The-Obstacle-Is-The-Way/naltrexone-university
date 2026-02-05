@@ -5,6 +5,7 @@ import type { GetBookmarksOutput } from '@/src/application/ports/bookmarks';
 import {
   FakeAuthGateway,
   FakeGetBookmarksUseCase,
+  FakeRateLimiter,
   FakeSubscriptionRepository,
   FakeToggleBookmarkUseCase,
 } from '@/src/application/test-helpers/fakes';
@@ -21,11 +22,13 @@ import {
 type BookmarkControllerTestDeps = BookmarkControllerDeps & {
   toggleBookmarkUseCase: FakeToggleBookmarkUseCase;
   getBookmarksUseCase: FakeGetBookmarksUseCase;
+  rateLimiter: FakeRateLimiter;
 };
 
 function createDeps(overrides?: {
   user?: User | null;
   isEntitled?: boolean;
+  rateLimitResult?: ConstructorParameters<typeof FakeRateLimiter>[0];
   toggleBookmarkOutput?: ToggleBookmarkOutput;
   toggleBookmarkThrows?: unknown;
   getBookmarksOutput?: GetBookmarksOutput;
@@ -62,6 +65,8 @@ function createDeps(overrides?: {
     () => now,
   );
 
+  const rateLimiter = new FakeRateLimiter(overrides?.rateLimitResult);
+
   const toggleBookmarkUseCase = new FakeToggleBookmarkUseCase(
     overrides?.toggleBookmarkOutput ?? { bookmarked: true },
     overrides?.toggleBookmarkThrows,
@@ -74,6 +79,7 @@ function createDeps(overrides?: {
 
   return {
     authGateway,
+    rateLimiter,
     checkEntitlementUseCase,
     toggleBookmarkUseCase,
     getBookmarksUseCase,
@@ -140,6 +146,35 @@ describe('bookmark-controller', () => {
         {
           userId: 'user_1',
           questionId: '11111111-1111-1111-1111-111111111111',
+        },
+      ]);
+    });
+
+    it('returns RATE_LIMITED when rate limiter denies request', async () => {
+      const deps = createDeps({
+        rateLimitResult: {
+          success: false,
+          limit: 60,
+          remaining: 0,
+          retryAfterSeconds: 30,
+        },
+      });
+
+      const result = await toggleBookmark(
+        { questionId: '11111111-1111-1111-1111-111111111111' },
+        deps,
+      );
+
+      expect(result).toMatchObject({
+        ok: false,
+        error: { code: 'RATE_LIMITED' },
+      });
+      expect(deps.toggleBookmarkUseCase.inputs).toEqual([]);
+      expect(deps.rateLimiter.inputs).toEqual([
+        {
+          key: 'bookmark:toggleBookmark:user_1',
+          limit: 60,
+          windowMs: 60_000,
         },
       ]);
     });

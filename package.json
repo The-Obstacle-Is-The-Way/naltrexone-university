@@ -26,7 +26,8 @@
     "db:studio": "drizzle-kit studio",
     "db:test:up": "docker compose up -d --wait",
     "db:test:down": "docker compose down",
-    "db:test:reset": "docker compose down -v && docker compose up -d --wait"
+    "db:test:reset": "docker compose down -v && docker compose up -d --wait",
+    "content:import:drafts": "tsx scripts/import-draft-questions.ts"
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx,json}": [
@@ -69,6 +70,7 @@
   },
   "devDependencies": {
     "@biomejs/biome": "^2.3.13",
+    "@clerk/testing": "^1.13.35",
     "@playwright/test": "^1.58.1",
     "@types/node": "^22.15.18",
     "@types/react": "19.2.10",
