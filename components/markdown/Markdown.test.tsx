@@ -12,4 +12,20 @@ describe('Markdown', () => {
     expect(html).toContain('<h1>Title</h1>');
     expect(html).not.toContain('<script>');
   });
+
+  it('sanitizes javascript: URLs in links', () => {
+    const html = renderToStaticMarkup(
+      <Markdown content={'[click me](javascript:alert(1))'} />,
+    );
+
+    expect(html.toLowerCase()).not.toContain('javascript:');
+  });
+
+  it('sanitizes javascript: URLs in images', () => {
+    const html = renderToStaticMarkup(
+      <Markdown content={'![alt](javascript:alert(1))'} />,
+    );
+
+    expect(html.toLowerCase()).not.toContain('javascript:');
+  });
 });
