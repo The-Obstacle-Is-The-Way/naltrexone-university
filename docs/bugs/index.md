@@ -17,8 +17,17 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 | ID | Title | Status | Priority | Date |
 |----|-------|--------|----------|------|
+| [BUG-063](./bug-063-csp-blocks-clerk-blob-workers.md) | CSP Blocks Clerk Blob Workers | Open | P3 | 2026-02-05 |
+| [BUG-065](./bug-065-explanation-not-available-some-questions.md) | Confusing "Explanation not available" in Exam Mode | Open | P3 | 2026-02-05 |
 
-**Next Bug ID:** BUG-062
+**Next Bug ID:** BUG-066
+
+## Recently Resolved
+
+| ID | Title | Status | Resolution |
+|----|-------|--------|------------|
+| [BUG-062](./bug-062-practice-session-modes-not-working.md) | Practice Session Modes (Tutor/Exam) Not Working | Resolved | Works on production |
+| [BUG-064](./bug-064-clerk-key-mismatch-warning.md) | Clerk Key Mismatch Warning | Won't Fix | False alarm, keys verified correct |
 
 ## Foundation Audit
 

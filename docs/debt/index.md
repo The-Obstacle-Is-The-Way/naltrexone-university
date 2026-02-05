@@ -15,9 +15,13 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 ## Debt Index (Active)
 
-_No active debt items._
+| ID | Title | Status | Priority | Date |
+|----|-------|--------|----------|------|
+| [DEBT-103](./debt-103-nextjs-scroll-behavior-warning.md) | Next.js Scroll Behavior Warning | Open | P4 | 2026-02-05 |
+| [DEBT-104](./debt-104-missing-e2e-test-credentials.md) | Missing E2E Test Credentials for Authenticated Flows | Open | P1 | 2026-02-05 |
+| [DEBT-105](./debt-105-missing-session-resume-functionality.md) | Missing Session Resume Functionality | Open | P2 | 2026-02-05 |
 
-**Next Debt ID:** DEBT-103
+**Next Debt ID:** DEBT-106
 
 ## Archived Debt
 
