@@ -64,6 +64,7 @@ className="bg-secondary text-secondary-foreground hover:bg-secondary/80"
 For the annual plan border, replace `border-zinc-500` with `border-primary` or a `MetallicBorder` wrapper.
 
 For dashboard hover states, use semantic tokens:
+
 ```tsx
 // Before:
 hover:border-zinc-700/50 hover:bg-zinc-900/80

@@ -1,3 +1,4 @@
+import type { Locator } from '@playwright/test';
 import { expect, test } from '@playwright/test';
 
 type Rgba = { r: number; g: number; b: number; a: number };
@@ -16,19 +17,23 @@ function parseRgba(raw: string): Rgba {
             .join('')
         : hex;
 
-    if (normalized.length !== 6) {
+    if (normalized.length !== 6 && normalized.length !== 8) {
       throw new Error(`Unsupported hex color format: ${raw}`);
     }
 
     const r = Number.parseInt(normalized.slice(0, 2), 16);
     const g = Number.parseInt(normalized.slice(2, 4), 16);
     const b = Number.parseInt(normalized.slice(4, 6), 16);
+    const a =
+      normalized.length === 8
+        ? Number.parseInt(normalized.slice(6, 8), 16) / 255
+        : 1;
 
-    if ([r, g, b].some((value) => Number.isNaN(value))) {
+    if ([r, g, b, a].some((value) => Number.isNaN(value))) {
       throw new Error(`Failed to parse color: ${raw}`);
     }
 
-    return { r, g, b, a: 1 };
+    return { r, g, b, a };
   }
 
   if (!trimmed.startsWith('rgb')) {
@@ -104,6 +109,25 @@ function contrastRatio(foreground: Rgba, background: Rgba): number {
   return (lighter + 0.05) / (darker + 0.05);
 }
 
+/** Reads an element's computed color and cumulative ancestor opacity in a single browser round-trip. */
+async function getColorWithOpacity(
+  locator: Locator,
+): Promise<{ color: string; opacity: number }> {
+  return locator.evaluate((el) => {
+    const option = new Option();
+    option.style.color = getComputedStyle(el).color;
+
+    let opacity = 1;
+    let current: Element | null = el;
+    while (current) {
+      opacity *= Number(getComputedStyle(current).opacity);
+      current = current.parentElement;
+    }
+
+    return { color: option.style.color, opacity };
+  });
+}
+
 test.describe('marketing contrast', () => {
   test.use({
     colorScheme: 'light',
@@ -134,19 +158,7 @@ test.describe('marketing contrast', () => {
       .first();
     await expect(heroSpan).toBeVisible();
 
-    const heroColorResult = await heroSpan.evaluate((el) => {
-      const option = new Option();
-      option.style.color = getComputedStyle(el).color;
-
-      let opacity = 1;
-      let current: Element | null = el;
-      while (current) {
-        opacity *= Number(getComputedStyle(current).opacity);
-        current = current.parentElement;
-      }
-
-      return { color: option.style.color, opacity };
-    });
+    const heroColorResult = await getColorWithOpacity(heroSpan);
     const heroColorRaw = parseRgba(heroColorResult.color);
     const heroColor = composite(
       { ...heroColorRaw, a: heroColorRaw.a * heroColorResult.opacity },
@@ -160,19 +172,7 @@ test.describe('marketing contrast', () => {
     await expect(statsCard).toBeVisible();
 
     const statsValue = statsCard.getByTestId(`${statsCardTestId}-value`);
-    const statsValueColorResult = await statsValue.evaluate((el) => {
-      const option = new Option();
-      option.style.color = getComputedStyle(el).color;
-
-      let opacity = 1;
-      let current: Element | null = el;
-      while (current) {
-        opacity *= Number(getComputedStyle(current).opacity);
-        current = current.parentElement;
-      }
-
-      return { color: option.style.color, opacity };
-    });
+    const statsValueColorResult = await getColorWithOpacity(statsValue);
     const statsValueColorRaw = parseRgba(statsValueColorResult.color);
     const statsCardBg = parseRgba(
       await statsCard.evaluate((el) => {
@@ -190,14 +190,14 @@ test.describe('marketing contrast', () => {
       effectiveStatsCardBg,
     );
 
-    const statsFontSizePx = await statsValue.evaluate((el) =>
-      Number.parseFloat(getComputedStyle(el).fontSize),
-    );
-    const statsFontWeightValue = await statsValue.evaluate(
-      (el) => getComputedStyle(el).fontWeight,
-    );
-    const statsFontWeight =
-      Number.parseInt(statsFontWeightValue, 10) || statsFontWeightValue;
+    const { fontSize: statsFontSizePx, fontWeight: statsFontWeight } =
+      await statsValue.evaluate((el) => {
+        const style = getComputedStyle(el);
+        return {
+          fontSize: Number.parseFloat(style.fontSize),
+          fontWeight: Number.parseInt(style.fontWeight, 10) || style.fontWeight,
+        };
+      });
     const isBold =
       typeof statsFontWeight === 'number'
         ? statsFontWeight >= 700
