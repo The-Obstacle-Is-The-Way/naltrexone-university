@@ -21,6 +21,30 @@ This debt document serves as the **connective tissue** that ties together the qu
 
 ---
 
+## Spec Alignment Audit
+
+The following specs are marked "Implemented" but have E2E test gaps:
+
+| Spec | Claims E2E Test | Reality |
+|------|-----------------|---------|
+| SPEC-012 | `tests/e2e/practice.spec.ts` | EXISTS but SKIPPED (missing credentials) |
+| SPEC-013 | `tests/e2e/practice.spec.ts` session flow | Partial - no session lifecycle test |
+| SPEC-014 | `tests/e2e/review.spec.ts` | **FILE DOES NOT EXIST** |
+| SPEC-014 | `tests/e2e/bookmarks.spec.ts` | **FILE DOES NOT EXIST** |
+| SPEC-015 | `tests/e2e/practice.spec.ts` dashboard updates | Not verified |
+
+**Root Cause:** DEBT-104 (Missing E2E Test Credentials) blocks all authenticated E2E tests.
+
+**Existing E2E files:**
+- `practice.spec.ts` - Has tests but SKIPS due to missing credentials
+- `subscribe.spec.ts` - Has tests but SKIPS
+- `core-app-pages.spec.ts` - Has tests but SKIPS
+- `session-continuation.spec.ts` - Has tests but SKIPS
+- `review.spec.ts` - **DOES NOT EXIST** (spec claims it should)
+- `bookmarks.spec.ts` - **DOES NOT EXIST** (spec claims it should)
+
+---
+
 ## Current Architecture
 
 ### How State is Tracked
@@ -201,27 +225,34 @@ And total answered should show "10"
 
 ## Resolution Checklist
 
-### Phase 1: E2E Test Infrastructure
-- [ ] Set up authenticated E2E test user (DEBT-104 dependency)
-- [ ] Create test fixtures for question bank scenarios
-- [ ] Implement test helpers for session management
+### Phase 0: Unblock E2E Tests (DEBT-104)
+- [ ] Create dedicated E2E test user in Clerk Production
+- [ ] Set `E2E_CLERK_USER_USERNAME` and `E2E_CLERK_USER_PASSWORD` in CI secrets
+- [ ] Verify existing E2E tests run (currently all SKIP)
+
+### Phase 1: Missing E2E Test Files
+Per SPEC-014, these files should exist but DON'T:
+- [ ] Create `tests/e2e/review.spec.ts` — Test review page population + reattempt
+- [ ] Create `tests/e2e/bookmarks.spec.ts` — Test bookmark toggle + persistence
 
 ### Phase 2: Core Flow E2E Tests
-- [ ] Test: Start session → answer questions → complete
-- [ ] Test: Tutor mode shows explanation immediately
-- [ ] Test: Exam mode hides explanation until end
-- [ ] Test: Review shows incorrect questions only
-- [ ] Test: Reattempt removes from Review when correct
+Verify existing tests cover per specs:
+- [ ] SPEC-012: `practice.spec.ts` verifies answer → feedback → explanation
+- [ ] SPEC-013: Add session lifecycle test (start → progress → end)
+- [ ] SPEC-013: Verify exam mode hides explanation until session ends
+- [ ] SPEC-014: `review.spec.ts` verifies missed questions appear/disappear correctly
+- [ ] SPEC-015: Verify dashboard stats update after practice
 
-### Phase 3: State Visibility Gaps
-- [ ] Add "X/Y questions attempted" to Dashboard
-- [ ] Add "Questions by category" breakdown
-- [ ] Consider "All Attempted" history page
+### Phase 3: State Visibility Gaps (Optional Enhancements)
+These are NOT in current specs — would require new specs:
+- [ ] Add "X/Y questions attempted" to Dashboard (SPEC-015 extension)
+- [ ] Add "Questions by category" breakdown (new feature)
+- [ ] Consider "All Attempted" history page (new feature)
 
-### Phase 4: Session Review
+### Phase 4: Session Review (Optional Enhancement)
+NOT in current specs — would require new spec:
 - [ ] Add `/app/sessions` list page
 - [ ] Add `/app/sessions/[id]` detail page
-- [ ] Show session summary with per-question results
 
 ---
 
@@ -236,13 +267,23 @@ And total answered should show "10"
 
 ## Related
 
-- DEBT-104: Missing E2E Test Credentials (blocks E2E tests)
+### Blocking Dependencies
+- **DEBT-104: Missing E2E Test Credentials** — MUST resolve first; all authenticated E2E tests skip without this
+
+### Related Debt
 - DEBT-105: Missing Session Resume Functionality
 - DEBT-106: Exam Mode Missing "Mark for Review"
-- SPEC-012: Core Question Loop
-- SPEC-013: Practice Sessions
-- SPEC-014: Review and Bookmarks
-- SPEC-015: Dashboard
+
+### Source Specs (SSOT)
+- **SPEC-012: Core Question Loop** — Defines answer submission, grading, explanation visibility
+- **SPEC-013: Practice Sessions** — Defines session lifecycle, tutor/exam modes, immutable question lists
+- **SPEC-014: Review + Bookmarks** — Defines missed question logic, bookmark toggle, reattempt flow
+- **SPEC-015: Dashboard** — Defines stats computation, streak calculation, recent activity
+
+### Architecture Decisions
+- ADR-001: Clean Architecture Layers
+- ADR-003: Testing Strategy (TDD mandate)
+- ADR-011: API Design Principles
 
 ---
 
