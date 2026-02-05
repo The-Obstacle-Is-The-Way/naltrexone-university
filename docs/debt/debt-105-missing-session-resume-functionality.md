@@ -32,10 +32,24 @@ Users cannot resume an interrupted practice session. If a user starts a 20-quest
 
 ## Resolution
 
-1. Add `getIncompleteSession()` use case to check for unfinished sessions
-2. Add UI on `/app/practice` to show "Resume session" button
-3. Navigate to `/app/practice/[sessionId]` with correct question index
-4. Consider adding session list page showing all past/active sessions
+### Backend
+
+1. Add `GetIncompleteSessionsUseCase` to fetch user's incomplete sessions
+   - Query: `practice_sessions WHERE user_id = ? AND ended_at IS NULL ORDER BY created_at DESC`
+   - Return session with progress info (answered count / total count)
+
+2. Add controller action `getIncompleteSessions()` in `practice-controller.ts`
+
+### Frontend
+
+3. On `/app/practice` page load, check for incomplete sessions
+4. If found, show "Resume Session" card:
+   - Session mode (Tutor/Exam)
+   - Progress (e.g., "5/20 questions answered")
+   - "Resume" button → navigates to `/app/practice/[sessionId]`
+   - "Abandon" button → ends session without completing
+
+5. Consider: Session history page showing all past sessions with scores
 
 ---
 

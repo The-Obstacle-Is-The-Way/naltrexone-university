@@ -39,22 +39,34 @@ Note that 'worker-src' was not explicitly set, so 'script-src' is used as a fall
 
 ## Root Cause
 
-The Content Security Policy in `next.config.ts` does not include `blob:` in the `worker-src` directive. Clerk's SDK attempts to create Web Workers from blob URLs for performance optimization.
+The Content Security Policy in `next.config.ts` (lines 8-20) does not include a `worker-src` directive. Without it, browsers fall back to `script-src`, which doesn't allow `blob:` URLs. Clerk's SDK attempts to create Web Workers from blob URLs for performance optimization.
+
+**File:** `next.config.ts:8-20`
 
 ---
 
-## Fix Options
+## Fix
 
-### Option 1: Add `blob:` to worker-src (Recommended)
+Add `worker-src 'self' blob:` to the CSP array in `next.config.ts`:
 
-Update `next.config.ts` CSP headers to include:
+```typescript
+const contentSecurityPolicy = [
+  "default-src 'self'",
+  "base-uri 'self'",
+  "form-action 'self'",
+  "frame-ancestors 'none'",
+  "object-src 'none'",
+  "img-src 'self' data: blob: https:",
+  "font-src 'self' data: https:",
+  `script-src ${scriptSrc.join(' ')}`,
+  "style-src 'self' 'unsafe-inline' https:",
+  "connect-src 'self' https: wss:",
+  "frame-src 'self' https:",
+  "worker-src 'self' blob:",  // <-- ADD THIS LINE
+].join('; ');
 ```
-worker-src 'self' blob:;
-```
 
-### Option 2: Accept as Known Limitation
-
-Document that these errors are expected in development and do not affect production functionality. Clerk falls back to main-thread execution when workers fail.
+**Alternative:** Accept as known limitation since Clerk falls back to main-thread execution when workers fail (no user impact).
 
 ---
 

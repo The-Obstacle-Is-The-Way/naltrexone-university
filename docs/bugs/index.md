@@ -18,7 +18,7 @@ Bug reports document issues discovered in the codebase along with their root cau
 | ID | Title | Status | Priority | Date |
 |----|-------|--------|----------|------|
 | [BUG-063](./bug-063-csp-blocks-clerk-blob-workers.md) | CSP Blocks Clerk Blob Workers | Open | P3 | 2026-02-05 |
-| [BUG-065](./bug-065-explanation-not-available-some-questions.md) | Confusing "Explanation not available" in Exam Mode | Open | P3 | 2026-02-05 |
+| [BUG-065](./bug-065-explanation-not-available-some-questions.md) | Exam Mode Shows Feedback When It Shouldn't | Open | P2 | 2026-02-05 |
 
 **Next Bug ID:** BUG-066
 

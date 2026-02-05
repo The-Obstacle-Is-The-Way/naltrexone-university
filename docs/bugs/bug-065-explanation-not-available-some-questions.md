@@ -1,26 +1,28 @@
-# BUG-065: Confusing "Explanation not available" Message in Exam Mode
+# BUG-065: Exam Mode Shows Feedback When It Shouldn't
 
 **Status:** Open
-**Priority:** P3
+**Priority:** P2
 **Date:** 2026-02-05
 
 ---
 
 ## Description
 
-In **EXAM mode**, the message "Explanation not available" is displayed after answering questions. While this is technically correct behavior (exam mode hides explanations until session ends), the message is confusing and makes users think the data is missing.
+In **EXAM mode**, the UI displays a feedback panel with "Explanation not available" after each answer. Real exam mode should show NO feedback at all until the session ends.
 
 **Current Behavior (EXAM mode):**
-- User answers a question
-- Message shows: "Explanation not available."
-- User thinks the question has no explanation
+1. User answers a question
+2. Feedback panel appears showing "Incorrect" or "Correct"
+3. Message shows: "Explanation not available."
+4. User must click "Next Question"
 
 **Expected Behavior (EXAM mode):**
-- User answers a question
-- Message shows: "Explanations will be shown after you complete the session."
-- User understands this is intentional
+1. User clicks an answer choice
+2. Answer is submitted silently
+3. Immediately advance to next question (no feedback panel)
+4. At session end: show summary with all results and explanations
 
-**Note:** TUTOR mode correctly shows explanations immediately. This is only a UX issue in EXAM mode.
+**Note:** TUTOR mode should continue showing immediate feedback with explanations. This bug is specifically about EXAM mode behavior.
 
 ---
 
@@ -29,55 +31,68 @@ In **EXAM mode**, the message "Explanation not available" is displayed after ans
 1. Sign in as subscribed user
 2. Start a practice session in **EXAM mode**
 3. Answer any question
-4. Observe "Explanation not available" message (confusing)
+4. Observe feedback panel appears (it shouldn't in exam mode)
 
 ---
 
 ## Root Cause
 
-The `Feedback.tsx` component shows a generic "Explanation not available" message when `explanationMd` is null. In EXAM mode, the backend intentionally returns `null` for explanations until the session ends. The message should clarify this is intentional, not a data problem.
+The practice session page renders the `Feedback` component regardless of mode. In exam mode, no feedback should be shown - the submit action should silently record the answer and immediately load the next question.
 
-**Code location:** `components/question/Feedback.tsx:31-33`
-
-```tsx
-// Current (confusing)
-<p className="mt-2 text-sm text-muted-foreground">
-  Explanation not available.
-</p>
-```
+**Code location:**
+- `app/(app)/app/practice/[sessionId]/practice-session-page-client.tsx`
+- `app/(app)/app/practice/page.tsx` (ad-hoc practice)
 
 ---
 
 ## Fix
 
-Update `Feedback.tsx` to accept a `mode` prop and show a contextual message:
+### Option 1: Hide Feedback in Exam Mode (Minimal)
+
+In the session page, conditionally render feedback:
 
 ```tsx
-// Proposed (clear)
-{mode === 'exam' ? (
-  <p className="mt-2 text-sm text-muted-foreground">
-    Explanations will be shown after you complete the session.
-  </p>
-) : (
-  <p className="mt-2 text-sm text-muted-foreground">
-    Explanation not available.
-  </p>
+{mode === 'tutor' && submitResult && (
+  <Feedback
+    isCorrect={submitResult.isCorrect}
+    explanationMd={submitResult.explanationMd}
+  />
 )}
 ```
+
+In exam mode, auto-advance after submit:
+```tsx
+// After successful submit in exam mode
+if (mode === 'exam') {
+  loadNextQuestion();
+}
+```
+
+### Option 2: Full Exam Mode Redesign (Better UX)
+
+1. Submit auto-advances to next question (no "Next Question" button)
+2. Show only question number progress (e.g., "Question 5 of 20")
+3. Add "Mark for Review" button to flag uncertain answers
+4. At session end, show:
+   - Summary stats (correct/incorrect/marked for review)
+   - List of all questions with your answers vs correct answers
+   - Full explanations for each question
 
 ---
 
 ## Verification
 
-- [ ] `Feedback` component updated with mode-aware message
-- [ ] EXAM mode shows "will be shown after session" message
-- [ ] TUTOR mode still shows explanations immediately
-- [ ] Session summary shows all explanations after exam ends
+- [ ] EXAM mode: No feedback panel after answering
+- [ ] EXAM mode: Auto-advance to next question after submit
+- [ ] EXAM mode: Session summary shows all results at end
+- [ ] TUTOR mode: Still shows immediate feedback (unchanged)
+- [ ] E2E test covers both modes
 
 ---
 
 ## Related
 
-- `components/question/Feedback.tsx` - UI component
+- SPEC-019: Practice UX Redesign
+- DEBT-105: Missing Session Resume Functionality
+- `components/question/Feedback.tsx` - Feedback component
 - `src/domain/value-objects/practice-mode.ts` - Mode logic
-- `src/application/use-cases/submit-answer.ts` - Returns null in exam mode
