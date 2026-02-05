@@ -19,7 +19,6 @@ Bug reports document issues discovered in the codebase along with their root cau
 |----|-------|--------|----------|------|
 | [BUG-066](./bug-066-clerk-development-keys-in-production.md) | Clerk Development Keys Used in Production | Open | P1 | 2026-02-05 |
 | [BUG-063](./bug-063-csp-blocks-clerk-blob-workers.md) | CSP Blocks Clerk Blob Workers | Open | P3 | 2026-02-05 |
-| [BUG-065](./bug-065-explanation-not-available-some-questions.md) | Exam Mode Shows Feedback When It Shouldn't | Open | P2 | 2026-02-05 |
 | [BUG-067](./bug-067-clerk-shows-ntx-university-name.md) | Clerk Sign-in Shows "NTX University" Instead of "Addiction Boards" | Open | P3 | 2026-02-05 |
 | [BUG-068](./bug-068-reattempt-page-ux-confusion.md) | Reattempt Page UX Confusion - Buttons After Submit | Open | P3 | 2026-02-05 |
 
@@ -41,6 +40,7 @@ See: [Foundation Audit Report](foundation-audit-report.md)
 
 | ID | Title | Priority | Resolved |
 |----|-------|----------|----------|
+| [BUG-065](../_archive/bugs/bug-065-explanation-not-available-some-questions.md) | Exam Mode Shows Feedback When It Shouldn't | P2 | 2026-02-05 |
 | [BUG-061](../_archive/bugs/bug-061-debt-index-claims-no-active-items-while-listing-debt-102.md) | Debt Index Claims No Active Items While Listing DEBT-102 | P4 | 2026-02-05 |
 | [BUG-060](../_archive/bugs/bug-060-question-reattempt-submit-not-disabled-while-loading.md) | Question Reattempt Submit Not Disabled While Loading | P3 | 2026-02-05 |
 | [BUG-059](../_archive/bugs/bug-059-marketing-homepage-low-contrast-in-light-mode.md) | Marketing Homepage Low Contrast in Light Mode | P1 | 2026-02-05 |

@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import {
   createLoadNextQuestionAction,
   endSession,
+  maybeAutoAdvanceAfterSubmit,
   submitAnswerForQuestion,
 } from '@/app/(app)/app/practice/[sessionId]/practice-session-page-logic';
 import { PracticeView } from '@/app/(app)/app/practice/page';
@@ -197,6 +198,14 @@ export default function PracticeSessionPageClient({
   );
 
   useEffect(loadNext, [loadNext]);
+
+  useEffect(() => {
+    maybeAutoAdvanceAfterSubmit({
+      mode: sessionInfo?.mode ?? null,
+      submitResult,
+      advance: loadNext,
+    });
+  }, [sessionInfo?.mode, submitResult, loadNext]);
 
   const bookmarksEffect = useMemo(
     () =>

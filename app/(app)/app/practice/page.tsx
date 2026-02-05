@@ -231,8 +231,11 @@ export function PracticeSessionStarter(props: PracticeSessionStarterProps) {
 }
 
 export function PracticeView(props: PracticeViewProps) {
-  const correctChoiceId = props.submitResult?.correctChoiceId ?? null;
   const sessionInfo = props.sessionInfo ?? null;
+  const isExamMode = sessionInfo?.mode === 'exam';
+  const correctChoiceId = isExamMode
+    ? null
+    : (props.submitResult?.correctChoiceId ?? null);
 
   return (
     <div className="space-y-6">
@@ -335,12 +338,16 @@ export function PracticeView(props: PracticeViewProps) {
           }))}
           selectedChoiceId={props.selectedChoiceId}
           correctChoiceId={correctChoiceId}
-          disabled={props.isPending || props.loadState.status === 'loading'}
+          disabled={
+            props.isPending ||
+            props.loadState.status === 'loading' ||
+            props.submitResult !== null
+          }
           onSelectChoice={props.onSelectChoice}
         />
       ) : null}
 
-      {props.submitResult ? (
+      {props.submitResult && !isExamMode ? (
         <Feedback
           isCorrect={props.submitResult.isCorrect}
           explanationMd={props.submitResult.explanationMd}

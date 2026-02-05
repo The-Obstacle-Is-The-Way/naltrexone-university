@@ -151,6 +151,16 @@ export async function submitAnswerForQuestion(input: {
   input.setLoadState({ status: 'ready' });
 }
 
+export function maybeAutoAdvanceAfterSubmit(input: {
+  mode: 'tutor' | 'exam' | null;
+  submitResult: SubmitAnswerOutput | null;
+  advance: () => void;
+}): void {
+  if (input.mode !== 'exam') return;
+  if (!input.submitResult) return;
+  input.advance();
+}
+
 export async function endSession(input: {
   sessionId: string;
   endPracticeSessionFn: (

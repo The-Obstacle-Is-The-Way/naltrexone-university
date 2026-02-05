@@ -4,6 +4,7 @@ import {
   createLoadNextQuestionAction,
   endSession,
   loadNextQuestion,
+  maybeAutoAdvanceAfterSubmit,
   submitAnswerForQuestion,
 } from '@/app/(app)/app/practice/[sessionId]/practice-session-page-logic';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
@@ -392,6 +393,54 @@ describe('practice-session-page-logic', () => {
 
       expect(setSubmitResult).not.toHaveBeenCalled();
       expect(setLoadState).not.toHaveBeenCalledWith({ status: 'ready' });
+    });
+  });
+
+  describe('maybeAutoAdvanceAfterSubmit', () => {
+    it('calls advance when mode is exam and submitResult exists', () => {
+      const advance = vi.fn();
+
+      maybeAutoAdvanceAfterSubmit({
+        mode: 'exam',
+        submitResult: {
+          attemptId: 'attempt_1',
+          isCorrect: true,
+          correctChoiceId: 'choice_1',
+          explanationMd: null,
+        },
+        advance,
+      });
+
+      expect(advance).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not call advance when mode is tutor', () => {
+      const advance = vi.fn();
+
+      maybeAutoAdvanceAfterSubmit({
+        mode: 'tutor',
+        submitResult: {
+          attemptId: 'attempt_1',
+          isCorrect: true,
+          correctChoiceId: 'choice_1',
+          explanationMd: null,
+        },
+        advance,
+      });
+
+      expect(advance).not.toHaveBeenCalled();
+    });
+
+    it('does not call advance when submitResult is null', () => {
+      const advance = vi.fn();
+
+      maybeAutoAdvanceAfterSubmit({
+        mode: 'exam',
+        submitResult: null,
+        advance,
+      });
+
+      expect(advance).not.toHaveBeenCalled();
     });
   });
 
