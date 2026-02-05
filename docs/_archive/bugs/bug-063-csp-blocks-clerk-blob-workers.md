@@ -41,22 +41,22 @@ Note that 'worker-src' was not explicitly set, so 'script-src' is used as a fall
 
 ## Root Cause
 
-The Content Security Policy in `next.config.ts` (lines 8-20) does not include a `worker-src` directive. Without it, browsers fall back to `script-src`, which doesn't allow `blob:` URLs. Clerk's SDK attempts to create Web Workers from blob URLs for performance optimization.
-
-**File:** `next.config.ts:8-20`
+The app’s CSP did not include a `worker-src` directive. Without it, browsers fall back to `script-src`, which doesn't allow `blob:` URLs. Clerk's SDK attempts to create Web Workers from blob URLs for performance optimization.
 
 ---
 
 ## Fix
 
-Add `worker-src 'self' blob:` to the Content Security Policy in `next.config.ts`.
+Ensure CSP includes `worker-src 'self' blob:`.
+
+**Current implementation (as of 2026-02-05):** CSP is generated via Clerk middleware in `proxy.ts` using `contentSecurityPolicy` options, and Clerk’s defaults include `worker-src blob:`.
 
 ---
 
 ## Verification
 
-- [x] CSP headers updated in `next.config.ts`
-- [x] Unit test covers CSP header output (`next.config.test.ts`)
+- [x] CSP includes `worker-src blob:` via Clerk middleware defaults (`proxy.ts`)
+- [x] Unit test asserts CSP options are configured on middleware (`proxy.test.ts`)
 - [x] `pnpm typecheck`
 - [x] `pnpm lint`
 - [x] `pnpm test --run`

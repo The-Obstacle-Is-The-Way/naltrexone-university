@@ -82,6 +82,55 @@ describe('proxy middleware', () => {
     expect(await second.text()).toBe('ok');
   });
 
+  it('configures Clerk-generated CSP directives on middleware responses', async () => {
+    process.env.NEXT_PUBLIC_SKIP_CLERK = 'false';
+
+    type ClerkMiddlewareCallback = (
+      auth: { protect: () => Promise<void> },
+      request: unknown,
+    ) => Promise<void> | void;
+
+    const protect = vi.fn(async () => undefined);
+    let capturedOptions: unknown;
+    const clerkMiddleware = vi.fn(
+      (cb: ClerkMiddlewareCallback, options?: unknown) => {
+        capturedOptions = options;
+        return vi.fn(async (req: unknown) => {
+          await cb({ protect }, req);
+          return new Response('ok');
+        });
+      },
+    );
+    const createRouteMatcher = vi.fn(() => () => false);
+
+    vi.doMock('@clerk/nextjs/server', () => ({
+      clerkMiddleware,
+      createRouteMatcher,
+    }));
+
+    const { default: middleware } = await import('./proxy');
+
+    const res = await middleware(
+      {} as unknown as NextRequest,
+      {} as unknown as NextFetchEvent,
+    );
+
+    if (!res) {
+      throw new Error('Expected middleware to return a response');
+    }
+
+    expect(capturedOptions).toMatchObject({
+      contentSecurityPolicy: {
+        directives: expect.objectContaining({
+          'base-uri': expect.arrayContaining(['self']),
+          'connect-src': expect.arrayContaining(['ws:', 'wss:']),
+          'frame-ancestors': expect.arrayContaining(['none']),
+          'object-src': expect.arrayContaining(['none']),
+        }),
+      },
+    });
+  });
+
   it('does not call auth.protect for public routes', async () => {
     process.env.NEXT_PUBLIC_SKIP_CLERK = 'false';
 
