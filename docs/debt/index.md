@@ -21,8 +21,9 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 | [DEBT-104](./debt-104-missing-e2e-test-credentials.md) | Missing E2E Test Credentials for Authenticated Flows | Open | P1 | 2026-02-05 |
 | [DEBT-105](./debt-105-missing-session-resume-functionality.md) | Missing Session Resume Functionality | Open | P2 | 2026-02-05 |
 | [DEBT-106](./debt-106-exam-mode-mark-for-review.md) | Exam Mode Missing "Mark for Review" Feature | Open | P2 | 2026-02-05 |
+| [DEBT-107](./debt-107-question-engine-e2e-completeness.md) | Question Engine E2E Completeness and State Management | Open | P1 | 2026-02-05 |
 
-**Next Debt ID:** DEBT-107
+**Next Debt ID:** DEBT-108
 
 ## Archived Debt
 
