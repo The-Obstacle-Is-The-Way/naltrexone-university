@@ -5,8 +5,11 @@ import type { StripeClient } from '@/src/adapters/shared/stripe-types';
 import { ApplicationError } from '@/src/application/errors';
 import type { WebhookEventResult } from '@/src/application/ports/gateways';
 import type { Logger } from '@/src/application/ports/logger';
-import { isValidSubscriptionStatus } from '@/src/domain/value-objects';
 import { callStripeWithRetry } from './stripe-retry';
+import {
+  isValidStripeSubscriptionStatus,
+  stripeSubscriptionStatusToSubscriptionStatus,
+} from './stripe-subscription-status';
 import {
   type StripeSubscriptionRef,
   stripeSubscriptionSchema,
@@ -40,13 +43,14 @@ export function normalizeStripeSubscriptionUpdate(input: {
   const stripeSubscriptionId = subscription.id;
   const stripeCustomerId = subscription.customer;
 
-  const status = subscription.status;
-  if (!status || !isValidSubscriptionStatus(status)) {
+  const stripeStatus = subscription.status;
+  if (!stripeStatus || !isValidStripeSubscriptionStatus(stripeStatus)) {
     throw new ApplicationError(
       'STRIPE_ERROR',
       'Stripe subscription status is invalid',
     );
   }
+  const status = stripeSubscriptionStatusToSubscriptionStatus(stripeStatus);
 
   const subscriptionItem = subscription.items.data[0];
   const currentPeriodEndSeconds = subscriptionItem.current_period_end;

@@ -542,11 +542,11 @@ export type NewBookmark = typeof bookmarks.$inferInsert;
 
 A user is **entitled** if and only if there exists a row in `stripe_subscriptions` for the user with:
 
-* `status` ∈ `{ "active", "trialing" }`
+* subscription `status` translates to domain `SubscriptionStatus` ∈ `{ "active", "inTrial" }` (Stripe: `{ "active", "trialing" }`)
 * AND `current_period_end > now()` (server UTC)
 * AND the subscription row corresponds to the **latest** known subscription for that user (enforced by `stripe_subscriptions.user_id` unique constraint: 1 row per user)
 
-All other statuses (`past_due`, `canceled`, `unpaid`, `paused`, `incomplete`, `incomplete_expired`) are **not entitled**.
+All other statuses are **not entitled** (Stripe: `past_due`, `canceled`, `unpaid`, `paused`, `incomplete`, `incomplete_expired`).
 
 ### 4.3 Standard Server Action Result Type (Used by Every Server Action)
 
@@ -1523,7 +1523,7 @@ Canonical JSON rules (Exact):
 │   │   │   ├── index.ts
 │   │   │   ├── question-difficulty.ts  # 'easy' | 'medium' | 'hard'
 │   │   │   ├── question-status.ts      # 'draft' | 'published' | 'archived'
-│   │   │   ├── subscription-status.ts  # Stripe statuses + EntitledStatuses
+│   │   │   ├── subscription-status.ts  # Provider-agnostic statuses + EntitledStatuses
 │   │   │   ├── practice-mode.ts        # 'tutor' | 'exam'
 │   │   │   ├── choice-label.ts         # 'A' | 'B' | 'C' | 'D' | 'E'
 │   │   │   └── tag-kind.ts             # 'domain' | 'topic' | 'substance' | etc.

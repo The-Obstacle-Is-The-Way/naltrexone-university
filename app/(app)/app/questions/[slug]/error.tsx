@@ -40,7 +40,11 @@ export default function QuestionError({
             <Link href={ROUTES.APP_PRACTICE}>Go to Practice</Link>
           </Button>
           <Button asChild variant="outline">
-            <a href={REPORT_ISSUE_URL} target="_blank" rel="noreferrer">
+            <a
+              href={REPORT_ISSUE_URL}
+              target="_blank"
+              rel="noreferrer noopener"
+            >
               Report issue
             </a>
           </Button>

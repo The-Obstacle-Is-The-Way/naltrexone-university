@@ -25,8 +25,8 @@ export function ChoiceButton({
   return (
     <label
       className={cn(
-        'block w-full rounded-xl border border-border bg-background p-4 text-left shadow-sm transition-colors hover:bg-muted focus-within:border-ring focus-within:ring-ring/50 focus-within:ring-[3px]',
-        !disabled && 'cursor-pointer',
+        'block w-full rounded-xl border border-border bg-background p-4 text-left shadow-sm transition-colors focus-within:border-ring focus-within:ring-ring/50 focus-within:ring-[3px]',
+        !disabled && 'cursor-pointer hover:bg-muted',
         disabled && 'cursor-not-allowed opacity-60',
         selected && correctness === null && 'border-zinc-400',
         correctness === 'correct' &&

@@ -412,7 +412,7 @@ describe('syncCheckoutSuccess', () => {
       await subscriptions.findByExternalSubscriptionId('sub_123'),
     ).toMatchObject({
       userId: 'user_1',
-      status: 'incomplete',
+      status: 'paymentProcessing',
       plan: 'monthly',
       cancelAtPeriodEnd: false,
     });
@@ -492,7 +492,7 @@ describe('syncCheckoutSuccess', () => {
       await subscriptions.findByExternalSubscriptionId('sub_123'),
     ).toMatchObject({
       userId: 'user_1',
-      status: 'past_due',
+      status: 'pastDue',
       plan: 'monthly',
       cancelAtPeriodEnd: false,
     });

@@ -45,6 +45,7 @@ ALTER TABLE attempts ADD COLUMN marked_for_review BOOLEAN DEFAULT FALSE;
 ```
 
 Or create new table for exam mode question state:
+
 ```sql
 CREATE TABLE session_question_states (
   session_id UUID REFERENCES practice_sessions(id),

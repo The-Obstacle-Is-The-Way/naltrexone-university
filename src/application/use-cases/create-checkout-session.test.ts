@@ -20,7 +20,7 @@ describe('CreateCheckoutSessionUseCase', () => {
     const subscriptions = new FakeSubscriptionRepository([
       createSubscription({
         userId: 'user-1',
-        status: 'past_due',
+        status: 'pastDue',
         currentPeriodEnd: new Date('2026-03-01T00:00:00Z'),
       }),
     ]);

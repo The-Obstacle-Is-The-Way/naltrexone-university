@@ -7,24 +7,25 @@ import {
 } from './subscription-status';
 
 describe('SubscriptionStatus', () => {
-  it('contains all 8 Stripe subscription statuses', () => {
+  it('contains all known subscription statuses', () => {
     expect(AllSubscriptionStatuses).toEqual([
-      'incomplete',
-      'incomplete_expired',
-      'trialing',
+      'paymentProcessing',
+      'paymentFailed',
+      'inTrial',
       'active',
-      'past_due',
       'canceled',
       'unpaid',
       'paused',
+      'pastDue',
     ]);
   });
 
   describe('isValidSubscriptionStatus', () => {
     it('returns true for known statuses', () => {
       expect(isValidSubscriptionStatus('active')).toBe(true);
-      expect(isValidSubscriptionStatus('trialing')).toBe(true);
+      expect(isValidSubscriptionStatus('inTrial')).toBe(true);
       expect(isValidSubscriptionStatus('canceled')).toBe(true);
+      expect(isValidSubscriptionStatus('paymentProcessing')).toBe(true);
     });
 
     it('returns false for unknown status', () => {
@@ -37,16 +38,16 @@ describe('SubscriptionStatus', () => {
       expect(isEntitledStatus('active')).toBe(true);
     });
 
-    it('returns true for trialing', () => {
-      expect(isEntitledStatus('trialing')).toBe(true);
+    it('returns true for inTrial', () => {
+      expect(isEntitledStatus('inTrial')).toBe(true);
     });
 
     it('returns false for canceled', () => {
       expect(isEntitledStatus('canceled')).toBe(false);
     });
 
-    it('returns false for past_due', () => {
-      expect(isEntitledStatus('past_due')).toBe(false);
+    it('returns false for pastDue', () => {
+      expect(isEntitledStatus('pastDue')).toBe(false);
     });
 
     it('returns false for unpaid', () => {
@@ -55,8 +56,8 @@ describe('SubscriptionStatus', () => {
   });
 
   describe('EntitledStatuses', () => {
-    it('contains exactly active and trialing', () => {
-      expect(EntitledStatuses).toEqual(['active', 'trialing']);
+    it('contains exactly active and inTrial', () => {
+      expect(EntitledStatuses).toEqual(['active', 'inTrial']);
     });
   });
 });

@@ -112,6 +112,9 @@ test.describe('marketing contrast', () => {
   }) => {
     await page.goto('/');
 
+    // Creating an Option element and reading option.style.* normalizes computed
+    // colors (named colors, hex, rgb(), rgba()) into a consistent rgba()/rgb()
+    // string format that parseRgba expects.
     const bodyBg = parseRgba(
       await page.evaluate(() => {
         const option = new Option();
@@ -138,10 +141,10 @@ test.describe('marketing contrast', () => {
 
     expect(contrastRatio(heroColor, bodyBg)).toBeGreaterThanOrEqual(3);
 
-    const statsCard = page.getByText('Board-Style Questions').locator('..');
+    const statsCard = page.getByTestId('impact-stat-board-style-questions');
     await expect(statsCard).toBeVisible();
 
-    const statsValue = statsCard.locator(':scope > div').first();
+    const statsValue = statsCard.getByTestId('impact-stat-value');
     const statsValueColor = parseRgba(
       await statsValue.evaluate((el) => {
         const option = new Option();
@@ -158,8 +161,26 @@ test.describe('marketing contrast', () => {
     );
     const effectiveStatsCardBg = composite(statsCardBg, bodyBg);
 
+    const statsFontSizePx = await statsValue.evaluate((el) =>
+      Number.parseFloat(getComputedStyle(el).fontSize),
+    );
+    const statsFontWeightValue = await statsValue.evaluate(
+      (el) => getComputedStyle(el).fontWeight,
+    );
+    const statsFontWeight =
+      Number.parseInt(statsFontWeightValue, 10) || statsFontWeightValue;
+    const isBold =
+      typeof statsFontWeight === 'number'
+        ? statsFontWeight >= 700
+        : statsFontWeight === 'bold';
+    const isLargeText =
+      statsFontSizePx >= 24 || (statsFontSizePx >= 18.66 && isBold);
+
+    // WCAG contrast: >=4.5:1 for normal text, >=3:1 for large text.
+    const minContrastRatio = isLargeText ? 3 : 4.5;
+
     expect(
       contrastRatio(statsValueColor, effectiveStatsCardBg),
-    ).toBeGreaterThanOrEqual(3);
+    ).toBeGreaterThanOrEqual(minContrastRatio);
   });
 });

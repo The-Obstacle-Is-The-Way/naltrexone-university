@@ -2,8 +2,10 @@ import type { NextConfig } from 'next';
 
 const isDevelopment = process.env.NODE_ENV !== 'production';
 
-const scriptSrc = ["'self'", "'unsafe-inline'", 'https:'];
-if (isDevelopment) scriptSrc.push("'unsafe-eval'");
+const scriptSrc = ["'self'", 'https:'];
+if (isDevelopment) {
+  scriptSrc.push("'unsafe-inline'", "'unsafe-eval'");
+}
 
 const contentSecurityPolicy = [
   "default-src 'self'",

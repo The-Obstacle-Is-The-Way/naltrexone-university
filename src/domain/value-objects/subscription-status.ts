@@ -2,17 +2,17 @@
  * Subscription status values used by the domain.
  *
  * The domain layer treats these as opaque states with entitlement rules defined
- * below. Provider-specific documentation must not be referenced from domain code.
+ * below. Provider-specific statuses must be translated at the adapter boundary.
  */
 export const AllSubscriptionStatuses = [
-  'incomplete',
-  'incomplete_expired',
-  'trialing',
+  'paymentProcessing',
+  'paymentFailed',
+  'inTrial',
   'active',
-  'past_due',
   'canceled',
   'unpaid',
   'paused',
+  'pastDue',
 ] as const;
 
 export type SubscriptionStatus = (typeof AllSubscriptionStatuses)[number];
@@ -28,7 +28,7 @@ export function isValidSubscriptionStatus(
  */
 export const EntitledStatuses: readonly SubscriptionStatus[] = [
   'active',
-  'trialing',
+  'inTrial',
 ];
 
 /**

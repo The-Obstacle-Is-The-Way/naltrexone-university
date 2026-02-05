@@ -35,4 +35,19 @@ describe('ChoiceButton', () => {
 
     expect(html).toContain('checked=""');
   });
+
+  it('does not include hover styles when disabled', () => {
+    const html = renderToStaticMarkup(
+      <ChoiceButton
+        name="choices"
+        label="A"
+        textMd="Choice A"
+        selected={false}
+        disabled
+        onClick={() => {}}
+      />,
+    );
+
+    expect(html).not.toContain('hover:bg-muted');
+  });
 });

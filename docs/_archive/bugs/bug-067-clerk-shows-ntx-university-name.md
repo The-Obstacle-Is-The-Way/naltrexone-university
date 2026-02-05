@@ -1,6 +1,6 @@
 # BUG-067: Clerk Sign-in Shows "NTX University" Instead of "Addiction Boards"
 
-**Status:** Resolved
+**Status:** Resolved (verification pending)
 **Priority:** P3
 **Date:** 2026-02-05
 **Resolved:** 2026-02-05

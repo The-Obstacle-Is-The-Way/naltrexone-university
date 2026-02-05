@@ -4,6 +4,7 @@ import type { ReactElement, ReactNode } from 'react';
 import { AuthNav } from '@/components/auth-nav';
 import { GetStartedCta } from '@/components/get-started-cta';
 import { MetallicCtaButton } from '@/components/ui/metallic-cta-button';
+import { cn } from '@/lib/utils';
 
 export type MarketingHomeShellProps = {
   authNav: ReactNode;
@@ -120,19 +121,32 @@ export function MarketingHomeShell({
         <section className="border-t border-border py-16">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              {impactStats.map((stat) => (
-                <div
-                  key={stat.label}
-                  className="rounded-2xl border border-border bg-card p-6 text-center shadow-sm animate-fade-in-up"
-                >
-                  <div className="font-display text-3xl font-bold text-foreground md:text-4xl">
-                    {stat.value}
+              {impactStats.map((stat) => {
+                const testIdSlug = stat.label
+                  .replace(/[^a-z0-9]+/gi, '-')
+                  .toLowerCase();
+                const testId = `impact-stat-${testIdSlug}`;
+                return (
+                  <div
+                    key={stat.label}
+                    className="rounded-2xl border border-border bg-card p-6 text-center shadow-sm animate-fade-in-up"
+                    data-testid={testId}
+                  >
+                    <div
+                      data-testid="impact-stat-value"
+                      className="font-display text-3xl font-bold text-foreground md:text-4xl"
+                    >
+                      {stat.value}
+                    </div>
+                    <div
+                      data-testid="impact-stat-label"
+                      className="mt-2 text-sm text-muted-foreground"
+                    >
+                      {stat.label}
+                    </div>
                   </div>
-                  <div className="mt-2 text-sm text-muted-foreground">
-                    {stat.label}
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         </section>
@@ -156,7 +170,10 @@ export function MarketingHomeShell({
                 return (
                   <div
                     key={feature.title}
-                    className={`rounded-2xl border border-border bg-card p-6 shadow-sm transition-colors hover:bg-muted${feature.wide ? ' md:col-span-2' : ''}`}
+                    className={cn(
+                      'rounded-2xl border border-border bg-card p-6 shadow-sm transition-colors hover:bg-muted',
+                      feature.wide && 'md:col-span-2',
+                    )}
                   >
                     <Icon
                       aria-hidden="true"

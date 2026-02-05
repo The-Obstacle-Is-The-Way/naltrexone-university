@@ -4,7 +4,7 @@ This folder contains MDX question files that seed into the database.
 
 ## Structure
 
-```
+```text
 questions/
 ├── placeholder/     ← Example questions (committed, public)
 ├── imported/        ← Generated from drafts (gitignored)

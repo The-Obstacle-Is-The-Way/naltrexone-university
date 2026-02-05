@@ -1,6 +1,6 @@
 # BUG-066: Clerk Development Keys Used in Production
 
-**Status:** Resolved
+**Status:** Resolved (verification pending)
 **Priority:** P1
 **Date:** 2026-02-05
 **Resolved:** 2026-02-05

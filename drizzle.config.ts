@@ -3,8 +3,8 @@ import type { Config } from 'drizzle-kit';
 
 // Prefer `.env.local` for developer-specific secrets, with `.env` as a fallback.
 // Never override explicitly provided environment variables.
-config({ path: '.env.local' });
-config({ path: '.env' });
+config({ path: '.env.local', override: false });
+config({ path: '.env', override: false });
 
 const databaseUrl = process.env.DATABASE_URL;
 if (!databaseUrl) {

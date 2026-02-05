@@ -17,12 +17,14 @@ This was initially observed on `localhost:3000` and appeared “environment-spec
 - **Fails** for users who require `payments.createCustomer()` (new users / missing mapping)
 
 **Error displayed to user:**
-```
+
+```text
 Checkout failed (INTERNAL_ERROR). Internal error
 ```
 
 **Server error:**
-```
+
+```text
 TypeError: Cannot read properties of undefined (reading '_makeRequest')
     at createStripeCustomer
     at StripePaymentGateway.createCustomer

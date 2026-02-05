@@ -11,6 +11,10 @@ import {
   getSubscriptionPlanFromPriceId,
   type StripePriceIds,
 } from '../config/stripe-prices';
+import {
+  stripeSubscriptionStatusToSubscriptionStatus,
+  subscriptionStatusToStripeSubscriptionStatus,
+} from '../gateways/stripe/stripe-subscription-status';
 import type { DrizzleDb } from '../shared/database-types';
 import { isPostgresUniqueViolation } from './postgres-errors';
 
@@ -36,7 +40,7 @@ export class DrizzleSubscriptionRepository implements SubscriptionRepository {
       id: row.id,
       userId: row.userId,
       plan,
-      status: row.status,
+      status: stripeSubscriptionStatusToSubscriptionStatus(row.status),
       currentPeriodEnd: row.currentPeriodEnd,
       cancelAtPeriodEnd: row.cancelAtPeriodEnd,
       createdAt: row.createdAt,
@@ -65,6 +69,9 @@ export class DrizzleSubscriptionRepository implements SubscriptionRepository {
 
   async upsert(input: SubscriptionUpsertInput): Promise<void> {
     const priceId = getStripePriceId(input.plan, this.priceIds);
+    const stripeStatus = subscriptionStatusToStripeSubscriptionStatus(
+      input.status,
+    );
 
     try {
       await this.db
@@ -72,7 +79,7 @@ export class DrizzleSubscriptionRepository implements SubscriptionRepository {
         .values({
           userId: input.userId,
           stripeSubscriptionId: input.externalSubscriptionId,
-          status: input.status,
+          status: stripeStatus,
           priceId,
           currentPeriodEnd: input.currentPeriodEnd,
           cancelAtPeriodEnd: input.cancelAtPeriodEnd,
@@ -82,7 +89,7 @@ export class DrizzleSubscriptionRepository implements SubscriptionRepository {
           target: stripeSubscriptions.userId,
           set: {
             stripeSubscriptionId: input.externalSubscriptionId,
-            status: input.status,
+            status: stripeStatus,
             priceId,
             currentPeriodEnd: input.currentPeriodEnd,
             cancelAtPeriodEnd: input.cancelAtPeriodEnd,

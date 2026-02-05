@@ -37,9 +37,10 @@ This means critical user flows cannot be automatically tested:
    - Created in Clerk Development instance
 
 3. **Credentials Added to `.env.local`:**
-   ```
-    E2E_CLERK_USER_USERNAME="e2e-test@addictionboards.com"
-    E2E_CLERK_USER_PASSWORD="<set locally>"
+
+   ```text
+   E2E_CLERK_USER_USERNAME="e2e-test@addictionboards.com"
+   E2E_CLERK_USER_PASSWORD="<set locally>"
    ```
 
 4. **`@clerk/testing` Package Installed:**
@@ -87,11 +88,13 @@ For E2E testing with `@clerk/testing`, these Clerk settings are **required**:
 ## Official Clerk E2E Testing Pattern
 
 ### 1. Install Package
+
 ```bash
 pnpm add -D @clerk/testing
 ```
 
 ### 2. Global Setup (`tests/e2e/global.setup.ts`)
+
 ```typescript
 import { clerkSetup } from '@clerk/testing/playwright';
 import { test as setup } from '@playwright/test';
@@ -104,6 +107,7 @@ setup('global clerk setup', async () => {
 ```
 
 ### 3. Playwright Config
+
 ```typescript
 projects: [
   { name: 'setup', testMatch: /global\.setup\.ts/ },
@@ -112,6 +116,7 @@ projects: [
 ```
 
 ### 4. Test Usage
+
 ```typescript
 import { clerk } from '@clerk/testing/playwright';
 

@@ -13,9 +13,9 @@ describe('isEntitled', () => {
     expect(isEntitled(sub, now)).toBe(true);
   });
 
-  it('returns true for trialing with future period end', () => {
+  it('returns true for inTrial with future period end', () => {
     const sub = createSubscription({
-      status: 'trialing',
+      status: 'inTrial',
       currentPeriodEnd: new Date('2026-02-15T00:00:00Z'),
     });
     expect(isEntitled(sub, now)).toBe(true);

@@ -408,6 +408,7 @@ describe('practice-session-page-logic', () => {
           correctChoiceId: 'choice_1',
           explanationMd: null,
         },
+        loadStateStatus: 'ready',
         advance,
       });
 
@@ -425,6 +426,7 @@ describe('practice-session-page-logic', () => {
           correctChoiceId: 'choice_1',
           explanationMd: null,
         },
+        loadStateStatus: 'ready',
         advance,
       });
 
@@ -437,6 +439,43 @@ describe('practice-session-page-logic', () => {
       maybeAutoAdvanceAfterSubmit({
         mode: 'exam',
         submitResult: null,
+        loadStateStatus: 'ready',
+        advance,
+      });
+
+      expect(advance).not.toHaveBeenCalled();
+    });
+
+    it('does not call advance when loadState is loading', () => {
+      const advance = vi.fn();
+
+      maybeAutoAdvanceAfterSubmit({
+        mode: 'exam',
+        submitResult: {
+          attemptId: 'attempt_1',
+          isCorrect: true,
+          correctChoiceId: 'choice_1',
+          explanationMd: null,
+        },
+        loadStateStatus: 'loading',
+        advance,
+      });
+
+      expect(advance).not.toHaveBeenCalled();
+    });
+
+    it('does not call advance when mode is null', () => {
+      const advance = vi.fn();
+
+      maybeAutoAdvanceAfterSubmit({
+        mode: null,
+        submitResult: {
+          attemptId: 'attempt_1',
+          isCorrect: true,
+          correctChoiceId: 'choice_1',
+          explanationMd: null,
+        },
+        loadStateStatus: 'ready',
         advance,
       });
 

@@ -69,24 +69,25 @@ import {
 } from './subscription-status';
 
 describe('SubscriptionStatus', () => {
-  it('contains all 8 Stripe subscription statuses', () => {
+  it('contains all known subscription statuses', () => {
     expect(AllSubscriptionStatuses).toEqual([
-      'incomplete',
-      'incomplete_expired',
-      'trialing',
+      'paymentProcessing',
+      'paymentFailed',
+      'inTrial',
       'active',
-      'past_due',
       'canceled',
       'unpaid',
       'paused',
+      'pastDue',
     ]);
   });
 
   describe('isValidSubscriptionStatus', () => {
     it('returns true for known statuses', () => {
       expect(isValidSubscriptionStatus('active')).toBe(true);
-      expect(isValidSubscriptionStatus('trialing')).toBe(true);
+      expect(isValidSubscriptionStatus('inTrial')).toBe(true);
       expect(isValidSubscriptionStatus('canceled')).toBe(true);
+      expect(isValidSubscriptionStatus('paymentProcessing')).toBe(true);
     });
 
     it('returns false for unknown status', () => {
@@ -99,16 +100,16 @@ describe('SubscriptionStatus', () => {
       expect(isEntitledStatus('active')).toBe(true);
     });
 
-    it('returns true for trialing', () => {
-      expect(isEntitledStatus('trialing')).toBe(true);
+    it('returns true for inTrial', () => {
+      expect(isEntitledStatus('inTrial')).toBe(true);
     });
 
     it('returns false for canceled', () => {
       expect(isEntitledStatus('canceled')).toBe(false);
     });
 
-    it('returns false for past_due', () => {
-      expect(isEntitledStatus('past_due')).toBe(false);
+    it('returns false for pastDue', () => {
+      expect(isEntitledStatus('pastDue')).toBe(false);
     });
 
     it('returns false for unpaid', () => {
@@ -117,8 +118,8 @@ describe('SubscriptionStatus', () => {
   });
 
   describe('EntitledStatuses', () => {
-    it('contains exactly active and trialing', () => {
-      expect(EntitledStatuses).toEqual(['active', 'trialing']);
+    it('contains exactly active and inTrial', () => {
+      expect(EntitledStatuses).toEqual(['active', 'inTrial']);
     });
   });
 });
@@ -299,18 +300,20 @@ export function isValidSubscriptionPlan(value: string): value is SubscriptionPla
 
 ```typescript
 /**
- * Stripe subscription status values
- * @see https://stripe.com/docs/api/subscriptions/object#subscription_object-status
+ * Subscription status values used by the domain.
+ *
+ * The domain layer treats these as opaque states with entitlement rules defined
+ * below. Provider-specific statuses must be translated at the adapter boundary.
  */
 export const AllSubscriptionStatuses = [
-  'incomplete',
-  'incomplete_expired',
-  'trialing',
+  'paymentProcessing',
+  'paymentFailed',
+  'inTrial',
   'active',
-  'past_due',
   'canceled',
   'unpaid',
   'paused',
+  'pastDue',
 ] as const;
 
 export type SubscriptionStatus = typeof AllSubscriptionStatuses[number];
@@ -322,7 +325,7 @@ export function isValidSubscriptionStatus(value: string): value is SubscriptionS
 /**
  * Statuses that grant access to premium features
  */
-export const EntitledStatuses: readonly SubscriptionStatus[] = ['active', 'trialing'];
+export const EntitledStatuses: readonly SubscriptionStatus[] = ['active', 'inTrial'];
 
 /**
  * Check if a status grants entitlement

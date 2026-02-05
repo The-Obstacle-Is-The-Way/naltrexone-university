@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 describe('next.config', () => {
-  it('includes worker-src blob: in the Content-Security-Policy', async () => {
+  it('returns a CSP header that includes worker-src blob: when headers are generated', async () => {
     const nextConfig = (await import('./next.config')).default;
 
     const headers = await nextConfig.headers?.();

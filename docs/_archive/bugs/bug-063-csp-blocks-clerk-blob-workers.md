@@ -12,7 +12,8 @@
 Clerk's SDK creates Web Workers from blob URLs, which are blocked by the Content Security Policy. This causes console errors but does not appear to block core functionality.
 
 **Error Message:**
-```
+
+```text
 Creating a worker from 'blob:http://localhost:3000/...' violates the following
 Content Security Policy directive: "script-src 'self' 'unsafe-inline' https: 'unsafe-eval'".
 Note that 'worker-src' was not explicitly set, so 'script-src' is used as a fallback.

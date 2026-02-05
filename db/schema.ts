@@ -362,6 +362,7 @@ export const attempts = pgTable(
       t.practiceSessionId,
       desc(t.answeredAt),
     ),
+    // Supports AttemptRepository.findBySessionId(sessionId, userId) ordered by answeredAt desc.
     sessionUserAnsweredAtIdx: index('attempts_session_user_answered_at_idx').on(
       t.practiceSessionId,
       t.userId,

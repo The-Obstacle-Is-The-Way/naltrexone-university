@@ -203,9 +203,10 @@ export default function PracticeSessionPageClient({
     maybeAutoAdvanceAfterSubmit({
       mode: sessionInfo?.mode ?? null,
       submitResult,
+      loadStateStatus: loadState.status,
       advance: loadNext,
     });
-  }, [sessionInfo?.mode, submitResult, loadNext]);
+  }, [sessionInfo?.mode, submitResult, loadState.status, loadNext]);
 
   const bookmarksEffect = useMemo(
     () =>

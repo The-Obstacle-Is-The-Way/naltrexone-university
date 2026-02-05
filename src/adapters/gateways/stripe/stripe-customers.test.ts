@@ -3,7 +3,7 @@ import { FakeLogger } from '@/src/application/test-helpers/fakes';
 import { createStripeCustomer } from './stripe-customers';
 
 describe('createStripeCustomer', () => {
-  it('calls stripe.customers.search with the correct `this` binding', async () => {
+  it('returns externalCustomerId when a matching Stripe customer exists', async () => {
     const makeRequest = vi.fn(async (_params: unknown) => ({
       data: [{ id: 'cus_123' }],
     }));

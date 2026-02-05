@@ -21,7 +21,7 @@ This spec proposes a **phased approach**:
 
 ### 2.1 Current Architecture
 
-```
+```text
 /app/practice                         ← Single page, BOTH modes
 ├── [Top] PracticeSessionStarter      ← Configure mode/count/tags/difficulty
 │   └── "Start session" button        ← Creates session → redirects
@@ -153,7 +153,7 @@ Following Uncle Bob's principles:
 
 ### 5.2 Proposed Page Architecture
 
-```
+```text
 /app/practice                         ← LANDING PAGE (decision point)
 ├── Hero: "Practice Mode"
 ├── [Card 1] "Start a Session" (Primary CTA)
@@ -325,7 +325,7 @@ Per SPEC-013 and master_spec.md section 4.5.4:
 4. Phase 1 is fast (< 1 day); Phase 2 is medium (2-3 days)
 
 **Sequence:**
-```
+```text
 [Current State] → [Phase 1: Fix & Verify] → [Phase 2: Redesign]
      Broken?           Working 100%           Clean UX
 ```
@@ -343,7 +343,7 @@ Per SPEC-013 and master_spec.md section 4.5.4:
 
 ## 13. Appendix: UWorld-Style Flow Diagram
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────────────┐
 │                        /app/practice                                │
 │                                                                     │

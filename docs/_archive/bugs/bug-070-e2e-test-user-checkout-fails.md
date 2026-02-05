@@ -11,7 +11,7 @@
 
 The E2E test user (`e2e-test@addictionboards.com`) can sign in to the Preview deployment but cannot complete Stripe checkout. Clicking "Subscribe Annual" or "Subscribe Monthly" results in:
 
-```
+```text
 Checkout failed. Please try again.
 ```
 
@@ -38,7 +38,7 @@ Gmail OAuth user checkout succeeded because they already had a local `stripe_cus
 
 ## Checkout Flow (for debugging)
 
-```
+```text
 Subscribe button click
   → subscribeAnnualAction (server action)
     → createCheckoutSession (billing controller)

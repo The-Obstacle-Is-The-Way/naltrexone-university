@@ -159,8 +159,8 @@ describe('isEntitled', () => {
     expect(isEntitled(sub, now)).toBe(true);
   });
 
-  it('returns true for trialing with future period end', () => {
-    const sub = makeSubscription('trialing', new Date('2026-02-15'));
+  it('returns true for inTrial with future period end', () => {
+    const sub = makeSubscription('inTrial', new Date('2026-02-15'));
     expect(isEntitled(sub, now)).toBe(true);
   });
 
@@ -174,8 +174,8 @@ describe('isEntitled', () => {
     expect(isEntitled(sub, now)).toBe(false);
   });
 
-  it('returns false for past_due status', () => {
-    const sub = makeSubscription('past_due', new Date('2026-03-01'));
+  it('returns false for pastDue status', () => {
+    const sub = makeSubscription('pastDue', new Date('2026-03-01'));
     expect(isEntitled(sub, now)).toBe(false);
   });
 

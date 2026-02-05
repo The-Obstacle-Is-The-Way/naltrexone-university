@@ -49,7 +49,7 @@ The following specs are marked "Implemented" but have E2E test gaps:
 
 ### How State is Tracked
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────────┐
 │                        DATABASE TABLES                          │
 ├─────────────────────────────────────────────────────────────────┤

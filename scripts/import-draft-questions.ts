@@ -54,7 +54,10 @@ function parseArgs(argv: string[]): {
 function domainFromPath(inRoot: string, filePath: string): string | undefined {
   const relative = path.relative(inRoot, filePath);
   const parts = relative.split(path.sep).filter(Boolean);
-  return parts.at(0);
+  const first = parts.at(0);
+  if (!first) return undefined;
+  if (first.endsWith('.md')) return undefined;
+  return first;
 }
 
 async function main(): Promise<void> {
@@ -78,7 +81,7 @@ async function main(): Promise<void> {
   for (const file of files) {
     const raw = await readFile(file, 'utf8');
     const blocks = splitDraftQuestionsFile(raw);
-    const domainTagSlug = domainFromPath(inRoot, file);
+    const domainTagSlug = domainFromPath(inRoot, file) ?? 'misc';
 
     for (const block of blocks) {
       const draft = parseDraftQuestionBlock(block);
@@ -90,7 +93,7 @@ async function main(): Promise<void> {
 
       const outDir = path.join(
         outRoot,
-        domainTagSlug ?? 'misc',
+        domainTagSlug,
         draft.frontmatter.source,
       );
       const outFile = path.join(outDir, `${draft.frontmatter.qid}.mdx`);

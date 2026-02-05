@@ -38,7 +38,11 @@ export default function ReviewError({
             <Link href={ROUTES.APP_DASHBOARD}>Back to Dashboard</Link>
           </Button>
           <Button asChild variant="outline">
-            <a href={REPORT_ISSUE_URL} target="_blank" rel="noreferrer">
+            <a
+              href={REPORT_ISSUE_URL}
+              target="_blank"
+              rel="noreferrer noopener"
+            >
               Report issue
             </a>
           </Button>
