@@ -222,6 +222,6 @@ Routes lacking contextual error boundaries include: review, bookmarks, questions
 
 ## Related
 
-- `DEBT-101` — Sentry error tracking (free tier)
+- ✅ `DEBT-101` — Sentry error tracking (resolved, archived)
 - `docs/specs/spec-016-observability.md`
 - `docs/_archive/debt/debt-084-user-email-race-condition.md`
