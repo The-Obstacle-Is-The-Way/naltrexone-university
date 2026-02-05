@@ -1,5 +1,10 @@
-import 'dotenv/config';
+import { config } from 'dotenv';
 import type { Config } from 'drizzle-kit';
+
+// Prefer `.env.local` for developer-specific secrets, with `.env` as a fallback.
+// Never override explicitly provided environment variables.
+config({ path: '.env.local' });
+config({ path: '.env' });
 
 const databaseUrl = process.env.DATABASE_URL;
 if (!databaseUrl) {
