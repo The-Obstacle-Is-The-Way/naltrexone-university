@@ -18,13 +18,14 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 | ID | Title | Status | Priority | Date |
 |----|-------|--------|----------|------|
 | [DEBT-103](./debt-103-nextjs-scroll-behavior-warning.md) | Next.js Scroll Behavior Warning | Open | P4 | 2026-02-05 |
-| [DEBT-104](./debt-104-missing-e2e-test-credentials.md) | Missing E2E Test Credentials for Authenticated Flows | Open | P1 | 2026-02-05 |
+| [DEBT-104](./debt-104-missing-e2e-test-credentials.md) | Missing E2E Test Credentials for Authenticated Flows | In Progress | P1 | 2026-02-05 |
 | [DEBT-105](./debt-105-missing-session-resume-functionality.md) | Missing Session Resume Functionality | Open | P2 | 2026-02-05 |
 | [DEBT-106](./debt-106-exam-mode-mark-for-review.md) | Exam Mode Missing "Mark for Review" Feature | Open | P2 | 2026-02-05 |
 | [DEBT-107](./debt-107-question-engine-e2e-completeness.md) | Question Engine E2E Completeness and State Management | Open | P1 | 2026-02-05 |
 | [DEBT-108](./debt-108-hardcoded-zinc-colors-break-light-dark-toggle.md) | Hardcoded Zinc Colors Break Light/Dark Mode Toggle | Open | P2 | 2026-02-05 |
+| [DEBT-109](./debt-109-inline-vi-fn-logger-mocks.md) | Inline vi.fn() Logger Mocks Violate Fakes-Over-Mocks Rule | Open | P2 | 2026-02-05 |
 
-**Next Debt ID:** DEBT-109
+**Next Debt ID:** DEBT-110
 
 ## Archived Debt
 
