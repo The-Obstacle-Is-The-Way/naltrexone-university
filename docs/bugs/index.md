@@ -17,10 +17,13 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 | ID | Title | Status | Priority | Date |
 |----|-------|--------|----------|------|
+| [BUG-066](./bug-066-clerk-development-keys-in-production.md) | Clerk Development Keys Used in Production | Open | P1 | 2026-02-05 |
 | [BUG-063](./bug-063-csp-blocks-clerk-blob-workers.md) | CSP Blocks Clerk Blob Workers | Open | P3 | 2026-02-05 |
 | [BUG-065](./bug-065-explanation-not-available-some-questions.md) | Exam Mode Shows Feedback When It Shouldn't | Open | P2 | 2026-02-05 |
+| [BUG-067](./bug-067-clerk-shows-ntx-university-name.md) | Clerk Sign-in Shows "NTX University" Instead of "Addiction Boards" | Open | P3 | 2026-02-05 |
+| [BUG-068](./bug-068-reattempt-page-ux-confusion.md) | Reattempt Page UX Confusion - Buttons After Submit | Open | P3 | 2026-02-05 |
 
-**Next Bug ID:** BUG-066
+**Next Bug ID:** BUG-069
 
 ## Recently Resolved
 
