@@ -26,7 +26,8 @@
     "db:studio": "drizzle-kit studio",
     "db:test:up": "docker compose up -d --wait",
     "db:test:down": "docker compose down",
-    "db:test:reset": "docker compose down -v && docker compose up -d --wait"
+    "db:test:reset": "docker compose down -v && docker compose up -d --wait",
+    "content:import:drafts": "tsx scripts/import-draft-questions.ts"
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx,json}": [

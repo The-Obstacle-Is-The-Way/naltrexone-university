@@ -1,6 +1,6 @@
-import 'dotenv/config';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
+import dotenv from 'dotenv';
 import { and, eq, inArray } from 'drizzle-orm';
 import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { drizzle } from 'drizzle-orm/postgres-js';
@@ -25,6 +25,9 @@ type SeedTag = {
   name: string;
   kind: schema.TagKind;
 };
+
+dotenv.config({ path: '.env.local' });
+dotenv.config({ path: '.env' });
 
 type SeedChoice = {
   label: string;
