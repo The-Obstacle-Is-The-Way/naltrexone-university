@@ -107,6 +107,7 @@ See: [Foundation Audit Report](foundation-audit-report.md)
 
 - **Open** — Bug confirmed, not yet fixed
 - **In Progress** — Fix being developed
+- **Blocked - Manual Action Required** — Requires external configuration (Clerk/Vercel/etc) not fixable in-repo
 - **Resolved** — Fix merged and verified
 - **Won't Fix** — Decided not to fix (with justification)
 
@@ -132,7 +133,7 @@ See: [Foundation Audit Report](foundation-audit-report.md)
 ```markdown
 # BUG-NNN: Short Title
 
-**Status:** Open | In Progress | Resolved | Won't Fix
+**Status:** Open | In Progress | Blocked - Manual Action Required | Resolved | Won't Fix
 **Priority:** P0 | P1 | P2 | P3 | P4
 **Date:** YYYY-MM-DD
 
