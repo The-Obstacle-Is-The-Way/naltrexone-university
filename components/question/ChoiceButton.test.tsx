@@ -48,6 +48,8 @@ describe('ChoiceButton', () => {
       />,
     );
 
+    // Guards against regression: hover styles must not apply when disabled.
+    // Coupled to class name 'hover:bg-muted' in ChoiceButton.tsx.
     expect(html).not.toContain('hover:bg-muted');
   });
 });

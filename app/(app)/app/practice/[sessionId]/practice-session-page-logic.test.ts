@@ -397,7 +397,7 @@ describe('practice-session-page-logic', () => {
   });
 
   describe('maybeAutoAdvanceAfterSubmit', () => {
-    it('calls advance when mode is exam and submitResult exists', () => {
+    it('returns advance invocation when mode is exam and submitResult exists', () => {
       const advance = vi.fn();
 
       maybeAutoAdvanceAfterSubmit({
@@ -415,7 +415,7 @@ describe('practice-session-page-logic', () => {
       expect(advance).toHaveBeenCalledTimes(1);
     });
 
-    it('does not call advance when mode is tutor', () => {
+    it('returns no advance invocation when mode is tutor', () => {
       const advance = vi.fn();
 
       maybeAutoAdvanceAfterSubmit({
@@ -433,7 +433,7 @@ describe('practice-session-page-logic', () => {
       expect(advance).not.toHaveBeenCalled();
     });
 
-    it('does not call advance when submitResult is null', () => {
+    it('returns no advance invocation when submitResult is null', () => {
       const advance = vi.fn();
 
       maybeAutoAdvanceAfterSubmit({
@@ -446,7 +446,7 @@ describe('practice-session-page-logic', () => {
       expect(advance).not.toHaveBeenCalled();
     });
 
-    it('does not call advance when loadState is loading', () => {
+    it('returns no advance invocation when loadState is loading', () => {
       const advance = vi.fn();
 
       maybeAutoAdvanceAfterSubmit({
@@ -464,7 +464,7 @@ describe('practice-session-page-logic', () => {
       expect(advance).not.toHaveBeenCalled();
     });
 
-    it('does not call advance when mode is null', () => {
+    it('returns no advance invocation when mode is null', () => {
       const advance = vi.fn();
 
       maybeAutoAdvanceAfterSubmit({

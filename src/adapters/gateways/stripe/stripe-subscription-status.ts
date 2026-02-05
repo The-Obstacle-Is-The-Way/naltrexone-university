@@ -29,9 +29,9 @@ const domainToStripe: Record<SubscriptionStatus, StripeSubscriptionStatus> = {
 export function isValidStripeSubscriptionStatus(
   value: string,
 ): value is StripeSubscriptionStatus {
-  return stripeSubscriptionStatusEnum.enumValues.includes(
-    value as StripeSubscriptionStatus,
-  );
+  return (
+    stripeSubscriptionStatusEnum.enumValues as readonly string[]
+  ).includes(value);
 }
 
 export function stripeSubscriptionStatusToSubscriptionStatus(

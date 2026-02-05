@@ -131,27 +131,46 @@ test.describe('marketing contrast', () => {
       .first();
     await expect(heroSpan).toBeVisible();
 
-    const heroColor = parseRgba(
-      await heroSpan.evaluate((el) => {
-        const option = new Option();
-        option.style.color = getComputedStyle(el).color;
-        return option.style.color;
-      }),
+    const heroColorResult = await heroSpan.evaluate((el) => {
+      const option = new Option();
+      option.style.color = getComputedStyle(el).color;
+
+      let opacity = 1;
+      let current: Element | null = el;
+      while (current) {
+        opacity *= Number(getComputedStyle(current).opacity);
+        current = current.parentElement;
+      }
+
+      return { color: option.style.color, opacity };
+    });
+    const heroColorRaw = parseRgba(heroColorResult.color);
+    const heroColor = composite(
+      { ...heroColorRaw, a: heroColorRaw.a * heroColorResult.opacity },
+      bodyBg,
     );
 
     expect(contrastRatio(heroColor, bodyBg)).toBeGreaterThanOrEqual(3);
 
-    const statsCard = page.getByTestId('impact-stat-board-style-questions');
+    const statsCardTestId = 'impact-stat-board-style-questions';
+    const statsCard = page.getByTestId(statsCardTestId);
     await expect(statsCard).toBeVisible();
 
-    const statsValue = statsCard.getByTestId('impact-stat-value');
-    const statsValueColor = parseRgba(
-      await statsValue.evaluate((el) => {
-        const option = new Option();
-        option.style.color = getComputedStyle(el).color;
-        return option.style.color;
-      }),
-    );
+    const statsValue = statsCard.getByTestId(`${statsCardTestId}-value`);
+    const statsValueColorResult = await statsValue.evaluate((el) => {
+      const option = new Option();
+      option.style.color = getComputedStyle(el).color;
+
+      let opacity = 1;
+      let current: Element | null = el;
+      while (current) {
+        opacity *= Number(getComputedStyle(current).opacity);
+        current = current.parentElement;
+      }
+
+      return { color: option.style.color, opacity };
+    });
+    const statsValueColorRaw = parseRgba(statsValueColorResult.color);
     const statsCardBg = parseRgba(
       await statsCard.evaluate((el) => {
         const option = new Option();
@@ -160,6 +179,13 @@ test.describe('marketing contrast', () => {
       }),
     );
     const effectiveStatsCardBg = composite(statsCardBg, bodyBg);
+    const statsValueColor = composite(
+      {
+        ...statsValueColorRaw,
+        a: statsValueColorRaw.a * statsValueColorResult.opacity,
+      },
+      effectiveStatsCardBg,
+    );
 
     const statsFontSizePx = await statsValue.evaluate((el) =>
       Number.parseFloat(getComputedStyle(el).fontSize),

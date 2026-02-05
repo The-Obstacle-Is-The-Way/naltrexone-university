@@ -133,13 +133,13 @@ export function MarketingHomeShell({
                     data-testid={testId}
                   >
                     <div
-                      data-testid="impact-stat-value"
+                      data-testid={`${testId}-value`}
                       className="font-display text-3xl font-bold text-foreground md:text-4xl"
                     >
                       {stat.value}
                     </div>
                     <div
-                      data-testid="impact-stat-label"
+                      data-testid={`${testId}-label`}
                       className="mt-2 text-sm text-muted-foreground"
                     >
                       {stat.label}
