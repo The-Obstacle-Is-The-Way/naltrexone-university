@@ -10,7 +10,7 @@
 
 A multi-agent adversarial audit (auth, UI/UX, architecture, data integrity, feature completeness) identified the following backlog items. This document records **verified** findings, corrects any inaccurate claims, and defines concrete next steps.
 
-**Scope note:** This is documentation only. Fixes should land in follow-up PRs after DEBT-097 PRs merge.
+**Scope note:** This is an evolving backlog document. Fixes land in follow-up PRs; this doc should be updated as items are resolved.
 
 ---
 
@@ -39,17 +39,20 @@ A multi-agent adversarial audit (auth, UI/UX, architecture, data integrity, feat
 **Verification:**
 - Add a unit test simulating DB failure after Stripe customer creation and ensure subsequent retries converge to a single mapping.
 
-#### 2) No `loading.tsx` anywhere
+#### 2) ✅ Route segment `loading.tsx` added
 
-**Evidence:** No `app/**/loading.tsx` files exist, so route segment loading states fall back to a blank UI during suspense/data fetch.
+**Previous evidence (resolved):** No `app/**/loading.tsx` files existed, so route segment loading states fell back to a blank UI during suspense/data fetch.
 
-**Resolution (proposed):**
-- Add minimal `loading.tsx` UIs for high-traffic routes at least:
+**Resolution (implemented, 2026-02-05):**
+- Added skeleton loading UIs:
   - `app/(app)/app/dashboard/loading.tsx`
   - `app/(app)/app/practice/loading.tsx`
+  - `app/(app)/app/practice/[sessionId]/loading.tsx`
   - `app/(app)/app/review/loading.tsx`
   - `app/(app)/app/bookmarks/loading.tsx`
   - `app/(app)/app/billing/loading.tsx`
+  - `app/(app)/app/questions/[slug]/loading.tsx`
+- Shared skeleton component: `components/loading/page-loading.tsx`
 
 **Verification:**
 - Manual: throttle network (e.g., Chrome “Fast 3G”) and confirm skeleton/spinner renders.
@@ -58,13 +61,16 @@ A multi-agent adversarial audit (auth, UI/UX, architecture, data integrity, feat
 
 ### P1 — Must fix before launch
 
-#### 3) Error tracking service not configured (Sentry recommended)
+#### 3) ✅ Error tracking configured (Sentry)
 
-**Evidence:** No Sentry SDK integration exists in code; errors rely on console + logs.
+**Previous evidence (resolved):** No Sentry SDK integration existed in code; errors relied on console + logs.
 
-**Resolution (proposed):**
-- Implement Sentry on Next.js (free tier is sufficient for MVP).
-- Track as separate work item: `DEBT-101`.
+**Resolution (implemented, 2026-02-05):**
+- Sentry configured for errors only via Next instrumentation:
+  - `instrumentation.ts`
+  - `instrumentation-client.ts`
+  - `sentry.client.config.ts`
+- Debt item resolved and archived: `docs/_archive/debt/debt-101-add-sentry-error-tracking.md`
 
 #### 4) Stripe webhook coverage missing `invoice.payment_succeeded`
 
@@ -216,6 +222,6 @@ Routes lacking contextual error boundaries include: review, bookmarks, questions
 
 ## Related
 
-- `DEBT-101` — Sentry error tracking (free tier)
+- ✅ `DEBT-101` — Sentry error tracking (resolved, archived)
 - `docs/specs/spec-016-observability.md`
 - `docs/_archive/debt/debt-084-user-email-race-condition.md`
