@@ -1,6 +1,6 @@
 # BUG-067: Clerk Sign-in Shows "NTX University" Instead of "Addiction Boards"
 
-**Status:** Open
+**Status:** Blocked - Manual Action Required
 **Priority:** P3
 **Date:** 2026-02-05
 
@@ -37,10 +37,13 @@ The application name in Clerk dashboard is set to "NTX University" instead of th
 
 ## Fix
 
+This cannot be fixed in-repo. It requires updating Clerk dashboard settings for the production instance.
+
 1. Go to Clerk Dashboard → Settings → General
-2. Update "Application name" to "Addiction Boards"
-3. Save changes
-4. No code changes or redeployment needed (Clerk updates dynamically)
+2. Select the **Production** instance (if applicable)
+3. Update "Application name" to "Addiction Boards"
+4. Save changes
+5. No code changes or redeployment needed (Clerk updates dynamically)
 
 ---
 
