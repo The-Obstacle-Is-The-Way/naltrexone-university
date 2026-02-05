@@ -1,27 +1,14 @@
 import { expect, test } from '@playwright/test';
-
-const clerkUsername = process.env.E2E_CLERK_USER_USERNAME;
-const clerkPassword = process.env.E2E_CLERK_USER_PASSWORD;
+import {
+  hasClerkCredentials,
+  signInWithClerkPassword,
+} from './helpers/clerk-auth';
 
 test.describe('subscribe', () => {
-  test.skip(!clerkUsername || !clerkPassword, 'Missing Clerk E2E credentials');
+  test.skip(!hasClerkCredentials, 'Missing Clerk E2E credentials');
 
   test('user can subscribe and reach dashboard', async ({ page }) => {
-    // Sign in via Clerk
-    await page.goto('/sign-in');
-
-    const identifierInput = page.getByLabel(/username|email/i);
-    await identifierInput.fill(clerkUsername ?? '');
-
-    const continueButton = page.getByRole('button', {
-      name: /continue|sign in/i,
-    });
-    await continueButton.click();
-
-    const passwordInput = page.getByLabel(/password/i);
-    await passwordInput.fill(clerkPassword ?? '');
-
-    await page.getByRole('button', { name: /continue|sign in/i }).click();
+    await signInWithClerkPassword(page);
 
     // Subscribe (monthly)
     await page.goto('/pricing');

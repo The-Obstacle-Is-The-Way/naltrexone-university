@@ -13,5 +13,5 @@ test('unauthenticated user is redirected to sign-up when starting checkout', asy
 
   await subscribeMonthly.click();
 
-  await expect(page).toHaveURL(/\/sign-up/);
+  await expect(page).toHaveURL(/\/sign-up/, { timeout: 15_000 });
 });

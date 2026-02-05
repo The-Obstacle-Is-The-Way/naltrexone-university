@@ -1,89 +1,71 @@
-import { expect, test } from '@playwright/test';
+import { expect, type Page, test } from '@playwright/test';
+import {
+  hasClerkCredentials,
+  signInWithClerkPassword,
+} from './helpers/clerk-auth';
+import { selectChoiceByLabel } from './helpers/question';
+import { ensureSubscribed } from './helpers/subscription';
 
-const clerkUsername = process.env.E2E_CLERK_USER_USERNAME;
-const clerkPassword = process.env.E2E_CLERK_USER_PASSWORD;
+async function startSession(page: Page, mode: 'tutor' | 'exam') {
+  await page.goto('/app/practice');
+  await expect(page.getByRole('heading', { name: 'Practice' })).toBeVisible();
+
+  await page.getByLabel('Mode').selectOption(mode);
+  await page.getByLabel('Count').fill('1');
+  await page.getByRole('button', { name: 'Start session' }).click();
+
+  await expect(page).toHaveURL(/\/app\/practice\/[^/]+$/, { timeout: 15_000 });
+  await expect(
+    page.getByText(new RegExp(`Session: ${mode}`, 'i')),
+  ).toBeVisible();
+}
 
 test.describe('practice', () => {
-  test.skip(!clerkUsername || !clerkPassword, 'Missing Clerk E2E credentials');
+  test.setTimeout(120_000);
+  test.skip(!hasClerkCredentials, 'Missing Clerk E2E credentials');
 
-  test('subscribed user can answer a question and see feedback', async ({
+  test('subscribed user can run a tutor session and end on summary', async ({
     page,
   }) => {
-    // Sign in via Clerk
-    await page.goto('/sign-in');
+    await signInWithClerkPassword(page);
+    await ensureSubscribed(page);
+    await startSession(page, 'tutor');
 
-    const identifierInput = page.getByLabel(/username|email/i);
-    await identifierInput.fill(clerkUsername ?? '');
-
-    const continueButton = page.getByRole('button', {
-      name: /continue|sign in/i,
-    });
-    await continueButton.click();
-
-    const passwordInput = page.getByLabel(/password/i);
-    await passwordInput.fill(clerkPassword ?? '');
-
-    await page.getByRole('button', { name: /continue|sign in/i }).click();
-
-    // Go to practice; if redirected to pricing, subscribe first
-    await page.goto('/app/practice');
-    await page.waitForURL(/\/(app\/practice|pricing)/);
-    if (page.url().includes('/pricing')) {
-      await expect(
-        page.getByRole('heading', { name: 'Pricing' }),
-      ).toBeVisible();
-
-      const alreadySubscribed = page.getByText("You're already subscribed");
-      if (await alreadySubscribed.count()) {
-        await page.getByRole('link', { name: 'Go to Dashboard' }).click();
-      } else {
-        await page.getByRole('button', { name: 'Subscribe Monthly' }).click();
-        await expect(page).toHaveURL(/stripe\.com/);
-
-        const cardNumber = page
-          .frameLocator('iframe[name^="__privateStripeFrame"]')
-          .locator('input[name="cardnumber"]');
-        const expDate = page
-          .frameLocator('iframe[name^="__privateStripeFrame"]')
-          .locator('input[name="exp-date"]');
-        const cvc = page
-          .frameLocator('iframe[name^="__privateStripeFrame"]')
-          .locator('input[name="cvc"]');
-        const postal = page
-          .frameLocator('iframe[name^="__privateStripeFrame"]')
-          .locator('input[name="postal"]');
-
-        if (await cardNumber.isVisible({ timeout: 10_000 })) {
-          await cardNumber.fill('4242424242424242');
-        }
-        if (await expDate.isVisible({ timeout: 10_000 })) {
-          await expDate.fill('1234');
-        }
-        if (await cvc.isVisible({ timeout: 10_000 })) {
-          await cvc.fill('123');
-        }
-        if (await postal.isVisible({ timeout: 10_000 })) {
-          await postal.fill('94107');
-        }
-
-        await page.getByRole('button', { name: /subscribe|pay/i }).click();
-        await expect(page).toHaveURL(/\/app\/dashboard/);
-      }
-
-      await page.goto('/app/practice');
-    }
-
-    await expect(page.getByRole('heading', { name: 'Practice' })).toBeVisible();
-
-    // Select first choice and submit
-    const firstChoiceButton = page.getByRole('button').filter({
-      has: page.getByText(/^A$/),
-    });
-    await firstChoiceButton.first().click();
-
+    await selectChoiceByLabel(page, 'A');
     await page.getByRole('button', { name: 'Submit' }).click();
 
     await expect(page.getByText(/Correct|Incorrect/)).toBeVisible();
-    await expect(page.getByText('Explanation')).toBeVisible();
+    await expect(page.getByText('Explanation', { exact: true })).toBeVisible();
+    await expect(
+      page.getByText('Explanation not available.', { exact: true }),
+    ).toHaveCount(0);
+
+    await page.getByRole('button', { name: 'End session' }).click();
+    await expect(
+      page.getByRole('heading', { name: 'Session Summary' }),
+    ).toBeVisible();
+  });
+
+  test('exam mode hides explanation content before session end', async ({
+    page,
+  }) => {
+    await signInWithClerkPassword(page);
+    await ensureSubscribed(page);
+    await startSession(page, 'exam');
+
+    await selectChoiceByLabel(page, 'A');
+    await page.getByRole('button', { name: 'Submit' }).click();
+
+    await expect(
+      page.getByText('No more questions found.', { exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByText('Explanation not available.', { exact: true }),
+    ).toHaveCount(0);
+
+    await page.getByRole('button', { name: 'End session' }).click();
+    await expect(
+      page.getByRole('heading', { name: 'Session Summary' }),
+    ).toBeVisible();
   });
 });
