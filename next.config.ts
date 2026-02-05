@@ -17,6 +17,7 @@ const contentSecurityPolicy = [
   "style-src 'self' 'unsafe-inline' https:",
   "connect-src 'self' https: wss:",
   "frame-src 'self' https:",
+  "worker-src 'self' blob:",
 ].join('; ');
 
 const nextConfig: NextConfig = {

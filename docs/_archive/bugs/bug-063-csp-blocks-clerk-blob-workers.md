@@ -1,8 +1,9 @@
 # BUG-063: CSP Blocks Clerk Blob Workers
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P3
 **Date:** 2026-02-05
+**Resolved:** 2026-02-05
 
 ---
 
@@ -47,35 +48,17 @@ The Content Security Policy in `next.config.ts` (lines 8-20) does not include a 
 
 ## Fix
 
-Add `worker-src 'self' blob:` to the CSP array in `next.config.ts`:
-
-```typescript
-const contentSecurityPolicy = [
-  "default-src 'self'",
-  "base-uri 'self'",
-  "form-action 'self'",
-  "frame-ancestors 'none'",
-  "object-src 'none'",
-  "img-src 'self' data: blob: https:",
-  "font-src 'self' data: https:",
-  `script-src ${scriptSrc.join(' ')}`,
-  "style-src 'self' 'unsafe-inline' https:",
-  "connect-src 'self' https: wss:",
-  "frame-src 'self' https:",
-  "worker-src 'self' blob:",  // <-- ADD THIS LINE
-].join('; ');
-```
-
-**Alternative:** Accept as known limitation since Clerk falls back to main-thread execution when workers fail (no user impact).
+Add `worker-src 'self' blob:` to the Content Security Policy in `next.config.ts`.
 
 ---
 
 ## Verification
 
-- [ ] CSP headers updated in next.config.ts
-- [ ] No CSP violation errors in console
-- [ ] Clerk authentication still works
-- [ ] Build passes (`pnpm build`)
+- [x] CSP headers updated in `next.config.ts`
+- [x] Unit test covers CSP header output (`next.config.test.ts`)
+- [x] `pnpm typecheck`
+- [x] `pnpm lint`
+- [x] `pnpm test --run`
 
 ---
 

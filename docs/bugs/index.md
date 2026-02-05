@@ -18,7 +18,6 @@ Bug reports document issues discovered in the codebase along with their root cau
 | ID | Title | Status | Priority | Date |
 |----|-------|--------|----------|------|
 | [BUG-066](./bug-066-clerk-development-keys-in-production.md) | Clerk Development Keys Used in Production | Open | P1 | 2026-02-05 |
-| [BUG-063](./bug-063-csp-blocks-clerk-blob-workers.md) | CSP Blocks Clerk Blob Workers | Open | P3 | 2026-02-05 |
 | [BUG-067](./bug-067-clerk-shows-ntx-university-name.md) | Clerk Sign-in Shows "NTX University" Instead of "Addiction Boards" | Open | P3 | 2026-02-05 |
 
 **Next Bug ID:** BUG-069
@@ -39,6 +38,7 @@ See: [Foundation Audit Report](foundation-audit-report.md)
 
 | ID | Title | Priority | Resolved |
 |----|-------|----------|----------|
+| [BUG-063](../_archive/bugs/bug-063-csp-blocks-clerk-blob-workers.md) | CSP Blocks Clerk Blob Workers | P3 | 2026-02-05 |
 | [BUG-068](../_archive/bugs/bug-068-reattempt-page-ux-confusion.md) | Reattempt Page UX Confusion - Buttons After Submit | P3 | 2026-02-05 |
 | [BUG-065](../_archive/bugs/bug-065-explanation-not-available-some-questions.md) | Exam Mode Shows Feedback When It Shouldn't | P2 | 2026-02-05 |
 | [BUG-061](../_archive/bugs/bug-061-debt-index-claims-no-active-items-while-listing-debt-102.md) | Debt Index Claims No Active Items While Listing DEBT-102 | P4 | 2026-02-05 |
