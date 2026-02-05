@@ -1,8 +1,9 @@
 # DEBT-103: Next.js Scroll Behavior Warning
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P4
 **Date:** 2026-02-05
+**Resolved:** 2026-02-05
 
 ---
 
@@ -42,10 +43,10 @@ This tells Next.js to preserve smooth scrolling while properly handling route tr
 
 ## Verification
 
-- [ ] `data-scroll-behavior="smooth"` added to `<html>` element
-- [ ] Warning no longer appears in console
-- [ ] Smooth scrolling still works for anchor links
-- [ ] Route transitions work correctly
+- [x] `data-scroll-behavior="smooth"` added to `<html>` element
+- [x] Warning no longer appears in console
+- [x] Smooth scrolling still works for anchor links
+- [x] Route transitions work correctly
 
 ---
 
