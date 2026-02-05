@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
 import { ApplicationError } from '@/src/application/errors';
+import { FakeLogger } from '@/src/application/test-helpers/fakes';
 
 vi.mock('server-only', () => ({}));
 
@@ -66,36 +67,32 @@ describe('action-result', () => {
   });
 
   it('handleError maps unknown errors to INTERNAL_ERROR, logs them, and does not leak details', async () => {
-    const { logger } = await import('@/lib/logger');
-    const spy = vi.spyOn(logger, 'error').mockImplementation(() => undefined);
-
     const { handleError } = await import('./action-result');
-    expect(handleError(new Error('boom'))).toEqual({
+    const fakeLogger = new FakeLogger();
+
+    expect(handleError(new Error('boom'), { logger: fakeLogger })).toEqual({
       ok: false,
       error: { code: 'INTERNAL_ERROR', message: 'Internal error' },
     });
 
-    expect(spy).toHaveBeenCalledTimes(1);
-    expect(spy.mock.calls[0]?.[0]).toMatchObject({ err: expect.any(Error) });
-
-    spy.mockRestore();
+    expect(fakeLogger.errorCalls).toHaveLength(1);
+    expect(fakeLogger.errorCalls[0]?.context).toMatchObject({
+      err: expect.any(Error),
+    });
+    expect(fakeLogger.errorCalls[0]?.msg).toBe('Unhandled error in controller');
   });
 
   it('handleError does not log Next.js dynamic server usage errors', async () => {
-    const { logger } = await import('@/lib/logger');
-    const spy = vi.spyOn(logger, 'error').mockImplementation(() => undefined);
-
     const { handleError } = await import('./action-result');
+    const fakeLogger = new FakeLogger();
     const error = Object.assign(new Error('Dynamic server usage'), {
       digest: 'DYNAMIC_SERVER_USAGE',
     });
 
-    expect(handleError(error)).toEqual({
+    expect(handleError(error, { logger: fakeLogger })).toEqual({
       ok: false,
       error: { code: 'INTERNAL_ERROR', message: 'Internal error' },
     });
-    expect(spy).not.toHaveBeenCalled();
-
-    spy.mockRestore();
+    expect(fakeLogger.errorCalls).toHaveLength(0);
   });
 });

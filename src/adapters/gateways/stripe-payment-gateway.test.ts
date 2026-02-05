@@ -1,13 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
+import { FakeLogger } from '@/src/application/test-helpers/fakes';
 import { loadJsonFixture } from '@/tests/shared/load-json-fixture';
 import { StripePaymentGateway } from './stripe-payment-gateway';
-
-class FakeLogger {
-  readonly debug = vi.fn();
-  readonly info = vi.fn();
-  readonly error = vi.fn();
-  readonly warn = vi.fn();
-}
 
 describe('StripePaymentGateway', () => {
   it('creates a Stripe customer with the correct Stripe parameters', async () => {
@@ -523,13 +517,13 @@ describe('StripePaymentGateway', () => {
     });
     expect(checkoutExpire).not.toHaveBeenCalled();
     expect(checkoutCreate).toHaveBeenCalledTimes(1);
-    expect(logger.warn).toHaveBeenCalledWith(
-      expect.objectContaining({
+    expect(logger.warnCalls).toContainEqual({
+      context: expect.objectContaining({
         sessionId: 'cs_existing',
         error: 'inspect failed',
       }),
-      'Failed to inspect existing checkout session',
-    );
+      msg: 'Failed to inspect existing checkout session',
+    });
   });
 
   it('throws STRIPE_ERROR when a checkout session URL is missing', async () => {
@@ -1112,13 +1106,13 @@ describe('StripePaymentGateway', () => {
       gateway.processWebhookEvent('raw_body', 'sig_1'),
     ).rejects.toMatchObject({ code: 'INVALID_WEBHOOK_PAYLOAD' });
 
-    expect(logger.error).toHaveBeenCalledWith(
-      expect.objectContaining({
+    expect(logger.errorCalls).toContainEqual({
+      context: expect.objectContaining({
         eventId: 'evt_bad_invoice_payload',
         type: 'invoice.payment_failed',
       }),
-      'Invalid Stripe invoice.payment_failed webhook payload',
-    );
+      msg: 'Invalid Stripe invoice.payment_failed webhook payload',
+    });
   });
 
   it('throws INVALID_WEBHOOK_PAYLOAD when invoice.payment_failed subscription payload is invalid', async () => {
@@ -1176,14 +1170,14 @@ describe('StripePaymentGateway', () => {
     ).rejects.toMatchObject({ code: 'INVALID_WEBHOOK_PAYLOAD' });
 
     expect(subscriptionsRetrieve).toHaveBeenCalledWith('sub_123');
-    expect(logger.error).toHaveBeenCalledWith(
-      expect.objectContaining({
+    expect(logger.errorCalls).toContainEqual({
+      context: expect.objectContaining({
         eventId: 'evt_bad_invoice_subscription_payload',
         type: 'invoice.payment_failed',
         stripeSubscriptionId: 'sub_123',
       }),
-      'Invalid Stripe subscription payload retrieved from invoice.payment_failed',
-    );
+      msg: 'Invalid Stripe subscription payload retrieved from invoice.payment_failed',
+    });
   });
 
   it('ignores invoice.payment_failed events when no subscription is present', async () => {
@@ -1336,13 +1330,13 @@ describe('StripePaymentGateway', () => {
       gateway.processWebhookEvent('raw_body', 'sig_1'),
     ).rejects.toMatchObject({ code: 'INVALID_WEBHOOK_PAYLOAD' });
 
-    expect(logger.error).toHaveBeenCalledWith(
-      expect.objectContaining({
+    expect(logger.errorCalls).toContainEqual({
+      context: expect.objectContaining({
         eventId: 'evt_bad_checkout_payload',
         type: 'checkout.session.completed',
       }),
-      'Invalid Stripe checkout.session.completed webhook payload',
-    );
+      msg: 'Invalid Stripe checkout.session.completed webhook payload',
+    });
   });
 
   it('throws INVALID_WEBHOOK_PAYLOAD when checkout.session.completed subscription payload is invalid', async () => {
@@ -1400,14 +1394,14 @@ describe('StripePaymentGateway', () => {
     ).rejects.toMatchObject({ code: 'INVALID_WEBHOOK_PAYLOAD' });
 
     expect(subscriptionsRetrieve).toHaveBeenCalledWith('sub_123');
-    expect(logger.error).toHaveBeenCalledWith(
-      expect.objectContaining({
+    expect(logger.errorCalls).toContainEqual({
+      context: expect.objectContaining({
         eventId: 'evt_bad_subscription_payload',
         type: 'checkout.session.completed',
         stripeSubscriptionId: 'sub_123',
       }),
-      'Invalid Stripe subscription payload retrieved from checkout.session.completed',
-    );
+      msg: 'Invalid Stripe subscription payload retrieved from checkout.session.completed',
+    });
   });
 
   it('throws INVALID_WEBHOOK_PAYLOAD when subscription payload shape is invalid', async () => {
@@ -1843,10 +1837,10 @@ describe('StripePaymentGateway', () => {
       code: 'INVALID_WEBHOOK_SIGNATURE',
     });
 
-    expect(logger.error).toHaveBeenCalledWith(
-      { error: 'Invalid signature' },
-      'Webhook signature verification failed',
-    );
+    expect(logger.errorCalls).toContainEqual({
+      context: { error: 'Invalid signature' },
+      msg: 'Webhook signature verification failed',
+    });
   });
 
   it('throws when a subscription update event is missing required metadata', async () => {
@@ -1979,14 +1973,14 @@ describe('StripePaymentGateway', () => {
       gateway.processWebhookEvent('raw_body', 'sig_1'),
     ).rejects.toMatchObject({ code: 'STRIPE_ERROR' });
 
-    expect(logger.error).toHaveBeenCalledWith(
-      expect.objectContaining({
+    expect(logger.errorCalls).toContainEqual({
+      context: expect.objectContaining({
         eventId: 'evt_1',
         stripeSubscriptionId: 'sub_123',
         stripeCustomerId: 'cus_123',
       }),
-      'Stripe subscription metadata.user_id is required',
-    );
+      msg: 'Stripe subscription metadata.user_id is required',
+    });
   });
 
   it('throws when checkout.session.completed subscription metadata.user_id is missing', async () => {
@@ -2056,14 +2050,14 @@ describe('StripePaymentGateway', () => {
     ).rejects.toMatchObject({ code: 'STRIPE_ERROR' });
 
     expect(subscriptionsRetrieve).toHaveBeenCalledWith('sub_123');
-    expect(logger.error).toHaveBeenCalledWith(
-      expect.objectContaining({
+    expect(logger.errorCalls).toContainEqual({
+      context: expect.objectContaining({
         eventId: 'evt_checkout_missing_meta_1',
         stripeSubscriptionId: 'sub_123',
         stripeCustomerId: 'cus_123',
       }),
-      'Stripe subscription metadata.user_id is required',
-    );
+      msg: 'Stripe subscription metadata.user_id is required',
+    });
   });
 
   it('ignores checkout.session.completed events (no subscription update extracted)', async () => {

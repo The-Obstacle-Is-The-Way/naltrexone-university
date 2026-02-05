@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { DrizzleDb } from '@/src/adapters/shared/database-types';
+import { FakeLogger } from '@/src/application/test-helpers/fakes';
 import {
   restoreProcessEnv,
   snapshotProcessEnv,
@@ -48,9 +49,7 @@ describe('container (skip clerk)', () => {
           STRIPE_WEBHOOK_SECRET: 'whsec',
           NEXT_PUBLIC_APP_URL: 'https://app.example.com',
         } as unknown as typeof import('./env').env,
-        logger: {
-          error: () => undefined,
-        } as unknown as typeof import('./logger').logger,
+        logger: new FakeLogger() as unknown as typeof import('./logger').logger,
         stripe: {} as unknown as typeof import('./stripe').stripe,
         now: () => new Date('2026-02-01T00:00:00Z'),
       },
@@ -97,9 +96,7 @@ describe('container (skip clerk)', () => {
           STRIPE_WEBHOOK_SECRET: 'whsec',
           NEXT_PUBLIC_APP_URL: 'https://app.example.com',
         } as unknown as typeof import('./env').env,
-        logger: {
-          error: () => undefined,
-        } as unknown as typeof import('./logger').logger,
+        logger: new FakeLogger() as unknown as typeof import('./logger').logger,
         stripe: {} as unknown as typeof import('./stripe').stripe,
         now: () => new Date('2026-02-01T00:00:00Z'),
       },
