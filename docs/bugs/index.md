@@ -18,7 +18,7 @@ Bug reports document issues discovered in the codebase along with their root cau
 | ID | Title | Status | Priority | Date |
 |----|-------|--------|----------|------|
 
-**Next Bug ID:** BUG-057
+**Next Bug ID:** BUG-058
 
 ## Foundation Audit
 
@@ -29,6 +29,7 @@ See: [Foundation Audit Report](foundation-audit-report.md)
 
 | ID | Title | Priority | Resolved |
 |----|-------|----------|----------|
+| [BUG-057](../_archive/bugs/bug-057-choice-label-badges-render-clipped.md) | Choice Label Badges Render Clipped | P3 | 2026-02-05 |
 | [BUG-056](../_archive/bugs/bug-056-shuffled-choice-labels-out-of-order.md) | Shuffled Choice Labels Display Out of Order | P3 | 2026-02-05 |
 | [BUG-055](../_archive/bugs/bug-055-post-login-redirects-to-landing-page.md) | Authenticated Subscribers Redirected to Landing Page After Sign-In | P2 | 2026-02-04 |
 | [BUG-054](../_archive/bugs/bug-054-async-state-updates-after-unmount-in-page-logic.md) | Async State Updates After Component Unmount in Page Logic | P2 | 2026-02-03 |
