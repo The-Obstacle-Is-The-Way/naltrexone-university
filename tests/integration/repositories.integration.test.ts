@@ -674,7 +674,7 @@ describe('Stripe repositories', () => {
     );
   });
 
-  it('upserts subscriptions per user and supports lookup by stripeSubscriptionId', async () => {
+  it('upserts subscriptions per user and supports lookup by externalSubscriptionId', async () => {
     const user = await createUser();
 
     const priceIds = {
@@ -689,7 +689,7 @@ describe('Stripe repositories', () => {
 
     await repo.upsert({
       userId: user.id,
-      stripeSubscriptionId: stripeSubscriptionId1,
+      externalSubscriptionId: stripeSubscriptionId1,
       status: 'active',
       plan: 'monthly',
       currentPeriodEnd: periodEnd1,
@@ -705,7 +705,7 @@ describe('Stripe repositories', () => {
       cancelAtPeriodEnd: false,
     });
 
-    const byStripeSubId1 = await repo.findByStripeSubscriptionId(
+    const byStripeSubId1 = await repo.findByExternalSubscriptionId(
       stripeSubscriptionId1,
     );
     expect(byStripeSubId1?.userId).toBe(user.id);
@@ -715,7 +715,7 @@ describe('Stripe repositories', () => {
 
     await repo.upsert({
       userId: user.id,
-      stripeSubscriptionId: stripeSubscriptionId2,
+      externalSubscriptionId: stripeSubscriptionId2,
       status: 'canceled',
       plan: 'annual',
       currentPeriodEnd: periodEnd2,
@@ -732,16 +732,16 @@ describe('Stripe repositories', () => {
     });
 
     await expect(
-      repo.findByStripeSubscriptionId(stripeSubscriptionId1),
+      repo.findByExternalSubscriptionId(stripeSubscriptionId1),
     ).resolves.toBeNull();
     await expect(
-      repo.findByStripeSubscriptionId(stripeSubscriptionId2),
+      repo.findByExternalSubscriptionId(stripeSubscriptionId2),
     ).resolves.toMatchObject({
       userId: user.id,
     });
   });
 
-  it('throws CONFLICT when stripeSubscriptionId is already mapped to a different user', async () => {
+  it('throws CONFLICT when externalSubscriptionId is already mapped to a different user', async () => {
     const userA = await createUser();
     const userB = await createUser();
 
@@ -755,7 +755,7 @@ describe('Stripe repositories', () => {
 
     await repo.upsert({
       userId: userA.id,
-      stripeSubscriptionId,
+      externalSubscriptionId: stripeSubscriptionId,
       status: 'active',
       plan: 'monthly',
       currentPeriodEnd: new Date('2026-12-31T00:00:00.000Z'),
@@ -765,7 +765,7 @@ describe('Stripe repositories', () => {
     await expect(
       repo.upsert({
         userId: userB.id,
-        stripeSubscriptionId,
+        externalSubscriptionId: stripeSubscriptionId,
         status: 'active',
         plan: 'monthly',
         currentPeriodEnd: new Date('2026-12-31T00:00:00.000Z'),

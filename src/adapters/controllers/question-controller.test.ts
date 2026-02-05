@@ -81,9 +81,9 @@ function createDeps(overrides?: {
 
   const submitAnswerUseCase = new FakeSubmitAnswerUseCase(
     overrides?.submitAnswerOutput ?? {
-      attemptId: 'attempt_1',
+      attemptId: '44444444-4444-4444-4444-444444444444',
       isCorrect: true,
-      correctChoiceId: 'choice_1',
+      correctChoiceId: '55555555-5555-5555-5555-555555555555',
       explanationMd: 'Because...',
     },
     overrides?.submitAnswerThrows,
@@ -272,9 +272,9 @@ describe('question-controller', () => {
     it('returns ok result when use case succeeds', async () => {
       const deps = createDeps({
         submitAnswerOutput: {
-          attemptId: 'attempt_2',
+          attemptId: '66666666-6666-6666-6666-666666666666',
           isCorrect: false,
-          correctChoiceId: 'choice_correct',
+          correctChoiceId: '77777777-7777-7777-7777-777777777777',
           explanationMd: null,
         },
       });
@@ -290,9 +290,9 @@ describe('question-controller', () => {
       expect(result).toEqual({
         ok: true,
         data: {
-          attemptId: 'attempt_2',
+          attemptId: '66666666-6666-6666-6666-666666666666',
           isCorrect: false,
-          correctChoiceId: 'choice_correct',
+          correctChoiceId: '77777777-7777-7777-7777-777777777777',
           explanationMd: null,
         },
       });
@@ -341,9 +341,9 @@ describe('question-controller', () => {
       expect(first).toEqual({
         ok: true,
         data: {
-          attemptId: 'attempt_1',
+          attemptId: '44444444-4444-4444-4444-444444444444',
           isCorrect: true,
-          correctChoiceId: 'choice_1',
+          correctChoiceId: '55555555-5555-5555-5555-555555555555',
           explanationMd: 'Because...',
         },
       });

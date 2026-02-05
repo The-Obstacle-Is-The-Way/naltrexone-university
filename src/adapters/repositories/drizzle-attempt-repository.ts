@@ -227,6 +227,33 @@ export class DrizzleAttemptRepository implements AttemptRepository {
     return result;
   }
 
+  async countMissedQuestionsByUserId(userId: string): Promise<number> {
+    const latestAttemptByQuestion = this.db
+      .select({
+        questionId: attempts.questionId,
+        answeredAt: max(attempts.answeredAt).as('max_answered_at'),
+      })
+      .from(attempts)
+      .where(eq(attempts.userId, userId))
+      .groupBy(attempts.questionId)
+      .as('latest_attempt_by_question');
+
+    const [row] = await this.db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(latestAttemptByQuestion)
+      .innerJoin(
+        attempts,
+        and(
+          eq(attempts.userId, userId),
+          eq(attempts.questionId, latestAttemptByQuestion.questionId),
+          eq(attempts.answeredAt, latestAttemptByQuestion.answeredAt),
+        ),
+      )
+      .where(eq(attempts.isCorrect, false));
+
+    return row?.count ?? 0;
+  }
+
   async findMostRecentAnsweredAtByQuestionIds(
     userId: string,
     questionIds: readonly string[],

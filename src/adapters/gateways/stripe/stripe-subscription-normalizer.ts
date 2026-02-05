@@ -18,7 +18,7 @@ export function normalizeStripeSubscriptionUpdate(input: {
   type: string;
   priceIds: StripePriceIds;
   logger: Logger;
-}): WebhookEventResult['subscriptionUpdate'] {
+}): NonNullable<WebhookEventResult['subscriptionUpdate']> {
   const { subscription } = input;
   const userId = subscription.metadata?.user_id;
   if (!userId) {
@@ -63,8 +63,8 @@ export function normalizeStripeSubscriptionUpdate(input: {
 
   return {
     userId,
-    stripeCustomerId,
-    stripeSubscriptionId,
+    externalCustomerId: stripeCustomerId,
+    externalSubscriptionId: stripeSubscriptionId,
     plan,
     status,
     currentPeriodEnd: new Date(currentPeriodEndSeconds * 1000),
@@ -78,7 +78,7 @@ export async function retrieveAndNormalizeStripeSubscription(input: {
   event: { id: string; type: string };
   priceIds: StripePriceIds;
   logger: Logger;
-}): Promise<WebhookEventResult['subscriptionUpdate']> {
+}): Promise<NonNullable<WebhookEventResult['subscriptionUpdate']>> {
   const stripeSubscriptionId =
     typeof input.subscriptionRef === 'string'
       ? input.subscriptionRef

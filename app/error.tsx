@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useEffect } from 'react';
 import { Button } from '@/components/ui/button';
+import { REPORT_ISSUE_URL } from '@/lib/support';
 
 export default function ErrorPage({
   error,
@@ -34,6 +35,11 @@ export default function ErrorPage({
           </Button>
           <Button asChild variant="outline">
             <Link href="/">Go home</Link>
+          </Button>
+          <Button asChild variant="outline">
+            <a href={REPORT_ISSUE_URL} target="_blank" rel="noreferrer">
+              Report issue
+            </a>
           </Button>
         </div>
       </div>

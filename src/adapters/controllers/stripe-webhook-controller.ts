@@ -75,12 +75,13 @@ export async function processStripeWebhook(
         if (event.subscriptionUpdate) {
           await stripeCustomers.insert(
             event.subscriptionUpdate.userId,
-            event.subscriptionUpdate.stripeCustomerId,
+            event.subscriptionUpdate.externalCustomerId,
           );
 
           await subscriptions.upsert({
             userId: event.subscriptionUpdate.userId,
-            stripeSubscriptionId: event.subscriptionUpdate.stripeSubscriptionId,
+            externalSubscriptionId:
+              event.subscriptionUpdate.externalSubscriptionId,
             plan: event.subscriptionUpdate.plan,
             status: event.subscriptionUpdate.status,
             currentPeriodEnd: event.subscriptionUpdate.currentPeriodEnd,

@@ -12,8 +12,9 @@ class FakeLogger {
 describe('StripePaymentGateway', () => {
   it('creates a Stripe customer with the correct Stripe parameters', async () => {
     const customersCreate = vi.fn(async () => ({ id: 'cus_123' }));
+    const customersSearch = vi.fn(async () => ({ data: [] }));
     const stripe = {
-      customers: { create: customersCreate },
+      customers: { create: customersCreate, search: customersSearch },
       checkout: {
         sessions: {
           create: vi.fn(async () => ({
@@ -57,12 +58,73 @@ describe('StripePaymentGateway', () => {
         clerkUserId: 'clerk_1',
         email: 'user@example.com',
       }),
-    ).resolves.toEqual({ stripeCustomerId: 'cus_123' });
+    ).resolves.toEqual({ externalCustomerId: 'cus_123' });
 
     expect(customersCreate).toHaveBeenCalledWith({
       email: 'user@example.com',
       metadata: { user_id: 'user_1', clerk_user_id: 'clerk_1' },
     });
+    expect(customersSearch).toHaveBeenCalledWith({
+      query: "metadata['user_id']:'user_1'",
+      limit: 2,
+    });
+  });
+
+  it('reuses an existing Stripe customer when one is found by metadata', async () => {
+    const customersCreate = vi.fn(async () => ({ id: 'cus_new' }));
+    const customersSearch = vi.fn(async () => ({ data: [{ id: 'cus_123' }] }));
+    const stripe = {
+      customers: { create: customersCreate, search: customersSearch },
+      checkout: {
+        sessions: {
+          create: vi.fn(async () => ({
+            id: 'cs_new',
+            url: 'https://stripe/checkout',
+          })),
+          list: vi.fn(async () => ({ data: [] })),
+          retrieve: vi.fn(async () => ({
+            id: 'cs_existing',
+            url: 'https://stripe/existing-checkout',
+            line_items: { data: [] },
+          })),
+          expire: vi.fn(async () => ({
+            id: 'cs_existing',
+            url: 'https://stripe/existing-checkout',
+          })),
+        },
+      },
+      billingPortal: {
+        sessions: {
+          create: vi.fn(async () => ({ url: 'https://stripe/portal' })),
+        },
+      },
+      webhooks: {
+        constructEvent: vi.fn(() => {
+          throw new Error('unexpected webhook call');
+        }),
+      },
+    } as const;
+
+    const gateway = new StripePaymentGateway({
+      stripe,
+      webhookSecret: 'whsec_1',
+      priceIds: { monthly: 'price_m', annual: 'price_a' },
+      logger: new FakeLogger(),
+    });
+
+    await expect(
+      gateway.createCustomer({
+        userId: 'user_1',
+        clerkUserId: 'clerk_1',
+        email: 'user@example.com',
+      }),
+    ).resolves.toEqual({ externalCustomerId: 'cus_123' });
+
+    expect(customersSearch).toHaveBeenCalledWith({
+      query: "metadata['user_id']:'user_1'",
+      limit: 2,
+    });
+    expect(customersCreate).toHaveBeenCalledTimes(0);
   });
 
   it('retries Stripe customer creation on transient errors when an idempotency key is provided', async () => {
@@ -72,9 +134,10 @@ describe('StripePaymentGateway', () => {
         Object.assign(new Error('reset'), { code: 'ECONNRESET' }),
       )
       .mockResolvedValueOnce({ id: 'cus_123' });
+    const customersSearch = vi.fn(async () => ({ data: [] }));
 
     const stripe = {
-      customers: { create: customersCreate },
+      customers: { create: customersCreate, search: customersSearch },
       checkout: {
         sessions: {
           create: vi.fn(async () => ({
@@ -121,14 +184,17 @@ describe('StripePaymentGateway', () => {
         },
         { idempotencyKey: '11111111-1111-1111-1111-111111111111' },
       ),
-    ).resolves.toEqual({ stripeCustomerId: 'cus_123' });
+    ).resolves.toEqual({ externalCustomerId: 'cus_123' });
 
     expect(customersCreate).toHaveBeenCalledTimes(2);
   });
 
   it('throws STRIPE_ERROR when a Stripe customer id is missing', async () => {
     const stripe = {
-      customers: { create: vi.fn(async () => ({ id: undefined })) },
+      customers: {
+        create: vi.fn(async () => ({ id: undefined })),
+        search: vi.fn(async () => ({ data: [] })),
+      },
       checkout: {
         sessions: {
           create: vi.fn(async () => ({
@@ -221,7 +287,7 @@ describe('StripePaymentGateway', () => {
     await expect(
       gateway.createCheckoutSession({
         userId: 'user_1',
-        stripeCustomerId: 'cus_123',
+        externalCustomerId: 'cus_123',
         plan: 'monthly',
         successUrl: 'https://app/success',
         cancelUrl: 'https://app/cancel',
@@ -300,7 +366,7 @@ describe('StripePaymentGateway', () => {
     await expect(
       gateway.createCheckoutSession({
         userId: 'user_1',
-        stripeCustomerId: 'cus_123',
+        externalCustomerId: 'cus_123',
         plan: 'annual',
         successUrl: 'https://app/success',
         cancelUrl: 'https://app/cancel',
@@ -371,7 +437,7 @@ describe('StripePaymentGateway', () => {
     await expect(
       gateway.createCheckoutSession({
         userId: 'user_1',
-        stripeCustomerId: 'cus_123',
+        externalCustomerId: 'cus_123',
         plan: 'monthly',
         successUrl: 'https://app/success',
         cancelUrl: 'https://app/cancel',
@@ -444,7 +510,7 @@ describe('StripePaymentGateway', () => {
 
     const result = await gateway.createCheckoutSession({
       userId: 'user_1',
-      stripeCustomerId: 'cus_123',
+      externalCustomerId: 'cus_123',
       plan: 'monthly',
       successUrl: 'https://app/success',
       cancelUrl: 'https://app/cancel',
@@ -508,7 +574,7 @@ describe('StripePaymentGateway', () => {
     await expect(
       gateway.createCheckoutSession({
         userId: 'user_1',
-        stripeCustomerId: 'cus_123',
+        externalCustomerId: 'cus_123',
         plan: 'monthly',
         successUrl: 'https://app/success',
         cancelUrl: 'https://app/cancel',
@@ -557,7 +623,7 @@ describe('StripePaymentGateway', () => {
 
     await expect(
       gateway.createPortalSession({
-        stripeCustomerId: 'cus_123',
+        externalCustomerId: 'cus_123',
         returnUrl: 'https://app/return',
       }),
     ).resolves.toEqual({ url: 'https://stripe/portal' });
@@ -616,8 +682,8 @@ describe('StripePaymentGateway', () => {
       type: 'customer.subscription.updated',
       subscriptionUpdate: {
         userId: 'user_1',
-        stripeCustomerId: 'cus_123',
-        stripeSubscriptionId: 'sub_123',
+        externalCustomerId: 'cus_123',
+        externalSubscriptionId: 'sub_123',
         plan: 'monthly',
         status: 'active',
         currentPeriodEnd: new Date(1_700_000_000 * 1000),
@@ -626,6 +692,73 @@ describe('StripePaymentGateway', () => {
     });
 
     expect(constructEvent).toHaveBeenCalledWith('raw_body', 'sig_1', 'whsec_1');
+  });
+
+  it('normalizes customer.subscription.trial_will_end events', async () => {
+    const event = loadJsonFixture<{
+      id: string;
+      type: string;
+      data: { object: unknown };
+      [key: string]: unknown;
+    }>('stripe/customer.subscription.updated.json');
+    const constructEvent = vi.fn(() => ({
+      ...event,
+      id: 'evt_trial_will_end_1',
+      type: 'customer.subscription.trial_will_end',
+    }));
+
+    const stripe = {
+      customers: {
+        create: vi.fn(async () => ({ id: 'cus_123' })),
+      },
+      checkout: {
+        sessions: {
+          create: vi.fn(async () => ({
+            id: 'cs_new',
+            url: 'https://stripe/checkout',
+          })),
+          list: vi.fn(async () => ({ data: [] })),
+          retrieve: vi.fn(async () => ({
+            id: 'cs_existing',
+            url: 'https://stripe/existing-checkout',
+            line_items: { data: [] },
+          })),
+          expire: vi.fn(async () => ({
+            id: 'cs_existing',
+            url: 'https://stripe/existing-checkout',
+          })),
+        },
+      },
+      billingPortal: {
+        sessions: {
+          create: vi.fn(async () => ({ url: 'https://stripe/portal' })),
+        },
+      },
+      webhooks: { constructEvent },
+    } as const;
+
+    const gateway = new StripePaymentGateway({
+      stripe,
+      webhookSecret: 'whsec_1',
+      priceIds: { monthly: 'price_m', annual: 'price_a' },
+      logger: new FakeLogger(),
+    });
+
+    await expect(
+      gateway.processWebhookEvent('raw_body', 'sig_1'),
+    ).resolves.toEqual({
+      eventId: 'evt_trial_will_end_1',
+      type: 'customer.subscription.trial_will_end',
+      subscriptionUpdate: {
+        userId: 'user_1',
+        externalCustomerId: 'cus_123',
+        externalSubscriptionId: 'sub_123',
+        plan: 'monthly',
+        status: 'active',
+        currentPeriodEnd: new Date(1_700_000_000 * 1000),
+        cancelAtPeriodEnd: false,
+      },
+    });
   });
 
   it('normalizes customer.subscription.deleted events', async () => {
@@ -689,8 +822,8 @@ describe('StripePaymentGateway', () => {
       type: 'customer.subscription.deleted',
       subscriptionUpdate: expect.objectContaining({
         userId: 'user_1',
-        stripeCustomerId: 'cus_123',
-        stripeSubscriptionId: 'sub_123',
+        externalCustomerId: 'cus_123',
+        externalSubscriptionId: 'sub_123',
         plan: 'monthly',
         status: 'canceled',
         currentPeriodEnd: new Date(1_700_000_000 * 1000),
@@ -764,8 +897,8 @@ describe('StripePaymentGateway', () => {
       type: 'checkout.session.completed',
       subscriptionUpdate: {
         userId: 'user_1',
-        stripeCustomerId: 'cus_123',
-        stripeSubscriptionId: 'sub_123',
+        externalCustomerId: 'cus_123',
+        externalSubscriptionId: 'sub_123',
         plan: 'monthly',
         status: 'active',
         currentPeriodEnd: new Date(1_700_000_000 * 1000),
@@ -841,8 +974,85 @@ describe('StripePaymentGateway', () => {
       type: 'invoice.payment_failed',
       subscriptionUpdate: {
         userId: 'user_1',
-        stripeCustomerId: 'cus_123',
-        stripeSubscriptionId: 'sub_123',
+        externalCustomerId: 'cus_123',
+        externalSubscriptionId: 'sub_123',
+        plan: 'monthly',
+        status: 'active',
+        currentPeriodEnd: new Date(1_700_000_000 * 1000),
+        cancelAtPeriodEnd: false,
+      },
+    });
+
+    expect(subscriptionsRetrieve).toHaveBeenCalledWith('sub_123');
+  });
+
+  it('normalizes invoice.payment_succeeded events by retrieving the subscription', async () => {
+    const subscriptionEvent = loadJsonFixture<{
+      data: { object: { id: string } };
+    }>('stripe/customer.subscription.updated.json');
+    const subscription = subscriptionEvent.data.object;
+
+    const constructEvent = vi.fn(() => ({
+      id: 'evt_invoice_success_1',
+      type: 'invoice.payment_succeeded',
+      data: {
+        object: {
+          subscription: subscription.id,
+        },
+      },
+    }));
+
+    const subscriptionsRetrieve = vi.fn(async () => subscription);
+
+    const stripe = {
+      customers: {
+        create: vi.fn(async () => ({ id: 'cus_123' })),
+      },
+      checkout: {
+        sessions: {
+          create: vi.fn(async () => ({
+            id: 'cs_new',
+            url: 'https://stripe/checkout',
+          })),
+          list: vi.fn(async () => ({ data: [] })),
+          retrieve: vi.fn(async () => ({
+            id: 'cs_existing',
+            url: 'https://stripe/existing-checkout',
+            line_items: { data: [] },
+          })),
+          expire: vi.fn(async () => ({
+            id: 'cs_existing',
+            url: 'https://stripe/existing-checkout',
+          })),
+        },
+      },
+      subscriptions: {
+        retrieve: subscriptionsRetrieve,
+      },
+      billingPortal: {
+        sessions: {
+          create: vi.fn(async () => ({ url: 'https://stripe/portal' })),
+        },
+      },
+      webhooks: { constructEvent },
+    } as const;
+
+    const gateway = new StripePaymentGateway({
+      stripe,
+      webhookSecret: 'whsec_1',
+      priceIds: { monthly: 'price_m', annual: 'price_a' },
+      logger: new FakeLogger(),
+    });
+
+    await expect(
+      gateway.processWebhookEvent('raw_body', 'sig_1'),
+    ).resolves.toEqual({
+      eventId: 'evt_invoice_success_1',
+      type: 'invoice.payment_succeeded',
+      subscriptionUpdate: {
+        userId: 'user_1',
+        externalCustomerId: 'cus_123',
+        externalSubscriptionId: 'sub_123',
         plan: 'monthly',
         status: 'active',
         currentPeriodEnd: new Date(1_700_000_000 * 1000),
@@ -1297,8 +1507,8 @@ describe('StripePaymentGateway', () => {
       type: 'customer.subscription.paused',
       subscriptionUpdate: {
         userId: 'user_2',
-        stripeCustomerId: 'cus_456',
-        stripeSubscriptionId: 'sub_456',
+        externalCustomerId: 'cus_456',
+        externalSubscriptionId: 'sub_456',
         plan: 'annual',
         status: 'paused',
         currentPeriodEnd: new Date(1_700_000_000 * 1000),
@@ -1355,8 +1565,8 @@ describe('StripePaymentGateway', () => {
       type: 'customer.subscription.resumed',
       subscriptionUpdate: {
         userId: 'user_3',
-        stripeCustomerId: 'cus_789',
-        stripeSubscriptionId: 'sub_789',
+        externalCustomerId: 'cus_789',
+        externalSubscriptionId: 'sub_789',
         plan: 'monthly',
         status: 'active',
         currentPeriodEnd: new Date(1_700_000_000 * 1000),
@@ -1415,8 +1625,8 @@ describe('StripePaymentGateway', () => {
       type: 'customer.subscription.pending_update_applied',
       subscriptionUpdate: {
         userId: 'user_4',
-        stripeCustomerId: 'cus_901',
-        stripeSubscriptionId: 'sub_901',
+        externalCustomerId: 'cus_901',
+        externalSubscriptionId: 'sub_901',
         plan: 'annual',
         status: 'active',
         currentPeriodEnd: new Date(1_700_000_000 * 1000),
@@ -1475,8 +1685,8 @@ describe('StripePaymentGateway', () => {
       type: 'customer.subscription.pending_update_expired',
       subscriptionUpdate: {
         userId: 'user_5',
-        stripeCustomerId: 'cus_902',
-        stripeSubscriptionId: 'sub_902',
+        externalCustomerId: 'cus_902',
+        externalSubscriptionId: 'sub_902',
         plan: 'monthly',
         status: 'active',
         currentPeriodEnd: new Date(1_700_000_000 * 1000),

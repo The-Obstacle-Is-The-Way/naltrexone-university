@@ -338,7 +338,7 @@ describe('container factories', () => {
     }));
     const createSubscriptionRepository = vi.fn(() => ({
       findByUserId: async () => null,
-      findByStripeSubscriptionId: async () => null,
+      findByExternalSubscriptionId: async () => null,
       upsert: async () => undefined,
     }));
     const createStripeCustomerRepository = vi.fn(() => ({
@@ -347,7 +347,7 @@ describe('container factories', () => {
     }));
 
     const paymentGateway = {
-      createCustomer: async () => ({ stripeCustomerId: 'cus_123' }),
+      createCustomer: async () => ({ externalCustomerId: 'cus_123' }),
       createCheckoutSession: async () => ({ url: 'https://stripe/checkout' }),
       createPortalSession: async () => ({ url: 'https://stripe/portal' }),
       processWebhookEvent: async () => ({ eventId: 'evt_1', type: 'test' }),

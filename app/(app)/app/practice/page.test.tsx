@@ -130,7 +130,7 @@ describe('app/(app)/app/practice', () => {
       />,
     );
 
-    expect(html).toContain('Bookmarked');
+    expect(html).toContain('Remove bookmark');
   });
 
   it('renders feedback when submitResult is present', async () => {
@@ -256,6 +256,32 @@ describe('app/(app)/app/practice', () => {
     );
 
     expect(html).toContain('No questions');
+  });
+
+  it('renders loading text when starter is in loading state', async () => {
+    const { PracticeSessionStarter } = await import(
+      '@/app/(app)/app/practice/page'
+    );
+
+    const html = renderToStaticMarkup(
+      <PracticeSessionStarter
+        sessionMode="tutor"
+        sessionCount={20}
+        filters={{ tagSlugs: [], difficulties: [] }}
+        tagLoadStatus="idle"
+        availableTags={[]}
+        sessionStartStatus="loading"
+        sessionStartError={null}
+        isPending={false}
+        onToggleDifficulty={() => undefined}
+        onTagSlugsChange={() => undefined}
+        onSessionModeChange={() => undefined}
+        onSessionCountChange={() => undefined}
+        onStartSession={() => undefined}
+      />,
+    );
+
+    expect(html).toContain('Starting…');
   });
 
   it('renders tag optgroups when tags are available', async () => {

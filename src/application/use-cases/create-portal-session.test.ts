@@ -9,7 +9,7 @@ import { CreatePortalSessionUseCase } from './create-portal-session';
 describe('CreatePortalSessionUseCase', () => {
   it('throws NOT_FOUND when the user has no Stripe customer mapping', async () => {
     const payments = new FakePaymentGateway({
-      stripeCustomerId: 'cus_new',
+      externalCustomerId: 'cus_new',
       checkoutUrl: 'https://stripe/checkout',
       portalUrl: 'https://stripe/portal',
       webhookResult: { eventId: 'evt_1', type: 'checkout.session.completed' },
@@ -32,7 +32,7 @@ describe('CreatePortalSessionUseCase', () => {
 
   it('creates a portal session using the existing Stripe customer mapping', async () => {
     const payments = new FakePaymentGateway({
-      stripeCustomerId: 'cus_new',
+      externalCustomerId: 'cus_new',
       checkoutUrl: 'https://stripe/checkout',
       portalUrl: 'https://stripe/portal',
       webhookResult: { eventId: 'evt_1', type: 'checkout.session.completed' },
@@ -52,7 +52,7 @@ describe('CreatePortalSessionUseCase', () => {
 
     expect(payments.portalInputs).toEqual([
       {
-        stripeCustomerId: 'cus_existing',
+        externalCustomerId: 'cus_existing',
         returnUrl: 'https://app.example.com/app/billing',
       },
     ]);

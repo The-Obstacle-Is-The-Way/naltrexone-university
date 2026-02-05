@@ -22,6 +22,7 @@ describe('GetMissedQuestionsUseCase', () => {
       rows: [],
       limit: 10,
       offset: 0,
+      totalCount: 0,
     });
   });
 
@@ -78,6 +79,7 @@ describe('GetMissedQuestionsUseCase', () => {
       ],
       limit: 10,
       offset: 0,
+      totalCount: 2,
     });
   });
 
@@ -110,6 +112,7 @@ describe('GetMissedQuestionsUseCase', () => {
       ],
       limit: 10,
       offset: 0,
+      totalCount: 1,
     });
     expect(logger.warnCalls).toEqual([
       {

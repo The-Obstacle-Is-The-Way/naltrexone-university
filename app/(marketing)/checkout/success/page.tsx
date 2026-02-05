@@ -346,7 +346,7 @@ export async function syncCheckoutSuccess(
     await stripeCustomers.insert(user.id, stripeCustomerId);
     await subscriptions.upsert({
       userId: user.id,
-      stripeSubscriptionId: subscriptionId,
+      externalSubscriptionId: subscriptionId,
       plan,
       status,
       currentPeriodEnd,

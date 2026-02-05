@@ -2,11 +2,16 @@
 
 import { z } from 'zod';
 import { createDepsResolver, loadAppContainer } from '@/lib/controller-helpers';
+import { BOOKMARK_MUTATION_RATE_LIMIT } from '@/src/adapters/shared/rate-limits';
+import { ApplicationError } from '@/src/application/errors';
 import type {
   GetBookmarksInput,
   GetBookmarksOutput,
 } from '@/src/application/ports/bookmarks';
-import type { AuthGateway } from '@/src/application/ports/gateways';
+import type {
+  AuthGateway,
+  RateLimiter,
+} from '@/src/application/ports/gateways';
 import type {
   ToggleBookmarkInput,
   ToggleBookmarkOutput,
@@ -34,6 +39,7 @@ export type { ToggleBookmarkOutput } from '@/src/application/use-cases';
 
 export type BookmarkControllerDeps = {
   authGateway: AuthGateway;
+  rateLimiter: RateLimiter;
   checkEntitlementUseCase: CheckEntitlementUseCase;
   toggleBookmarkUseCase: {
     execute: (input: ToggleBookmarkInput) => Promise<ToggleBookmarkOutput>;
@@ -57,6 +63,16 @@ export const toggleBookmark = createAction({
   getDeps,
   execute: async (input, d) => {
     const userId = await requireEntitledUserId(d);
+    const rate = await d.rateLimiter.limit({
+      key: `bookmark:toggleBookmark:${userId}`,
+      ...BOOKMARK_MUTATION_RATE_LIMIT,
+    });
+    if (!rate.success) {
+      throw new ApplicationError(
+        'RATE_LIMITED',
+        `Too many bookmark changes. Try again in ${rate.retryAfterSeconds}s.`,
+      );
+    }
     return d.toggleBookmarkUseCase.execute({
       userId,
       questionId: input.questionId,

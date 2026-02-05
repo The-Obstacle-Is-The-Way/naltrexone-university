@@ -1,6 +1,8 @@
 /**
- * Stripe subscription status values.
- * @see https://stripe.com/docs/api/subscriptions/object#subscription_object-status
+ * Subscription status values used by the domain.
+ *
+ * The domain layer treats these as opaque states with entitlement rules defined
+ * below. Provider-specific documentation must not be referenced from domain code.
  */
 export const AllSubscriptionStatuses = [
   'incomplete',

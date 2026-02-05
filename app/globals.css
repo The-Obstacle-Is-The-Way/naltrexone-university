@@ -163,6 +163,10 @@
   }
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 /* Metallic gradient animation */
 @keyframes metallic-shift {
   0%,
@@ -208,6 +212,10 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
   .metallic-border {
     animation: none;
   }

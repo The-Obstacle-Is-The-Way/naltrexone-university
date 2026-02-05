@@ -25,7 +25,7 @@ export class CreatePortalSessionUseCase {
     }
 
     const portalSessionInput = {
-      stripeCustomerId: stripeCustomer.stripeCustomerId,
+      externalCustomerId: stripeCustomer.stripeCustomerId,
       returnUrl: input.returnUrl,
     };
 

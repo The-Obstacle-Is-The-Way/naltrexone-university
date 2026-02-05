@@ -13,6 +13,8 @@ type ClerkUserLike = {
   id: string;
   primaryEmailAddressId?: string | null;
   emailAddresses: readonly ClerkEmailAddressLike[];
+  updatedAt?: unknown;
+  updated_at?: unknown;
 };
 
 export type ClerkAuthGatewayDeps = {
@@ -22,6 +24,13 @@ export type ClerkAuthGatewayDeps = {
 
 export class ClerkAuthGateway implements AuthGateway {
   constructor(private readonly deps: ClerkAuthGatewayDeps) {}
+
+  private getUpdatedAtOrNull(user: ClerkUserLike): Date | null {
+    const updatedAt = user.updatedAt ?? user.updated_at;
+    if (typeof updatedAt === 'number') return new Date(updatedAt);
+    if (updatedAt instanceof Date) return updatedAt;
+    return null;
+  }
 
   private getEmailOrNull(user: ClerkUserLike): string | null {
     if (user.emailAddresses.length === 0) return null;
@@ -50,7 +59,17 @@ export class ClerkAuthGateway implements AuthGateway {
       throw new ApplicationError('INTERNAL_ERROR', 'User has no email address');
     }
 
-    return this.deps.userRepository.upsertByClerkId(clerkUser.id, email);
+    const observedAt = this.getUpdatedAtOrNull(clerkUser);
+    if (!observedAt) {
+      throw new ApplicationError(
+        'INTERNAL_ERROR',
+        'Clerk user updatedAt is required',
+      );
+    }
+
+    return this.deps.userRepository.upsertByClerkId(clerkUser.id, email, {
+      observedAt,
+    });
   }
 
   async requireUser(): Promise<User> {

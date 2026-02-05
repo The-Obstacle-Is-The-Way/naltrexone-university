@@ -44,6 +44,7 @@ export async function withIdempotency<T>(input: {
   ttlMs?: number;
   maxWaitMs?: number;
   pollIntervalMs?: number;
+  parseResult?: (value: unknown) => T;
   execute: () => Promise<T>;
 }): Promise<T> {
   const ttlMs = input.ttlMs ?? DEFAULT_TTL_MS;
@@ -95,7 +96,18 @@ export async function withIdempotency<T>(input: {
     }
 
     if (existing.resultJson !== null) {
-      return existing.resultJson as T;
+      if (!input.parseResult) {
+        return existing.resultJson as T;
+      }
+
+      try {
+        return input.parseResult(existing.resultJson);
+      } catch {
+        throw new ApplicationError(
+          'INTERNAL_ERROR',
+          'Cached idempotency result is invalid',
+        );
+      }
     }
 
     await sleep(pollIntervalMs);

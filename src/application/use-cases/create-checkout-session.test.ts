@@ -11,7 +11,7 @@ import { CreateCheckoutSessionUseCase } from './create-checkout-session';
 describe('CreateCheckoutSessionUseCase', () => {
   it('returns ALREADY_SUBSCRIBED when a subscription is still current', async () => {
     const paymentGateway = new FakePaymentGateway({
-      stripeCustomerId: 'cus_new',
+      externalCustomerId: 'cus_new',
       checkoutUrl: 'https://stripe/checkout',
       portalUrl: 'https://stripe/portal',
       webhookResult: { eventId: 'evt_1', type: 'checkout.session.completed' },
@@ -50,7 +50,7 @@ describe('CreateCheckoutSessionUseCase', () => {
 
   it('returns checkout URL when stripe customer mapping exists', async () => {
     const paymentGateway = new FakePaymentGateway({
-      stripeCustomerId: 'cus_should_not_be_used',
+      externalCustomerId: 'cus_should_not_be_used',
       checkoutUrl: 'https://stripe/checkout',
       portalUrl: 'https://stripe/portal',
       webhookResult: { eventId: 'evt_1', type: 'checkout.session.completed' },
@@ -82,7 +82,7 @@ describe('CreateCheckoutSessionUseCase', () => {
     expect(paymentGateway.checkoutInputs).toEqual([
       {
         userId: 'user-1',
-        stripeCustomerId: 'cus_existing',
+        externalCustomerId: 'cus_existing',
         plan: 'annual',
         successUrl:
           'https://app.example.com/checkout/success?session_id={CHECKOUT_SESSION_ID}',
@@ -93,7 +93,7 @@ describe('CreateCheckoutSessionUseCase', () => {
 
   it('returns checkout URL and creates stripe customer mapping when missing', async () => {
     const paymentGateway = new FakePaymentGateway({
-      stripeCustomerId: 'cus_new',
+      externalCustomerId: 'cus_new',
       checkoutUrl: 'https://stripe/checkout',
       portalUrl: 'https://stripe/portal',
       webhookResult: { eventId: 'evt_1', type: 'checkout.session.completed' },
@@ -137,7 +137,7 @@ describe('CreateCheckoutSessionUseCase', () => {
     expect(paymentGateway.checkoutInputs).toEqual([
       {
         userId: 'user-1',
-        stripeCustomerId: 'cus_new',
+        externalCustomerId: 'cus_new',
         plan: 'monthly',
         successUrl:
           'https://app.example.com/checkout/success?session_id={CHECKOUT_SESSION_ID}',

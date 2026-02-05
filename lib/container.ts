@@ -334,6 +334,7 @@ export function createContainer(overrides: ContainerOverrides = {}) {
     }),
     createBookmarkControllerDeps: () => ({
       authGateway: gateways.createAuthGateway(),
+      rateLimiter: gateways.createRateLimiter(),
       checkEntitlementUseCase: useCases.createCheckEntitlementUseCase(),
       toggleBookmarkUseCase: useCases.createToggleBookmarkUseCase(),
       getBookmarksUseCase: useCases.createGetBookmarksUseCase(),

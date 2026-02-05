@@ -53,6 +53,12 @@ const EndPracticeSessionInputSchema = z
   })
   .strict();
 
+const StartPracticeSessionOutputSchema = z
+  .object({
+    sessionId: zUuid,
+  })
+  .strict();
+
 export type {
   EndPracticeSessionOutput,
   StartPracticeSessionOutput,
@@ -124,6 +130,7 @@ export const startPracticeSession = createAction({
       action: 'practice:startPracticeSession',
       key: idempotencyKey,
       now: d.now,
+      parseResult: (value) => StartPracticeSessionOutputSchema.parse(value),
       execute: createNewSession,
     });
   },

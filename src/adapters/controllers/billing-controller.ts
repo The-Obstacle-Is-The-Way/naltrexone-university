@@ -31,6 +31,12 @@ const CreateCheckoutSessionInputSchema = z
 
 const CreatePortalSessionInputSchema = z.object({}).strict();
 
+const CreateCheckoutSessionOutputSchema = z
+  .object({
+    url: z.string().min(1),
+  })
+  .strict();
+
 export type {
   CreateCheckoutSessionOutput,
   CreatePortalSessionOutput,
@@ -124,6 +130,7 @@ export const createCheckoutSession = createAction({
       action: 'billing:createCheckoutSession',
       key: idempotencyKey,
       now: d.now,
+      parseResult: (value) => CreateCheckoutSessionOutputSchema.parse(value),
       execute: createNewSession,
     });
   },

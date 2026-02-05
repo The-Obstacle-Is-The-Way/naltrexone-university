@@ -91,7 +91,9 @@ export async function processStripeWebhookEvent({
 
   if (
     event.type === 'checkout.session.completed' ||
-    event.type === 'invoice.payment_failed'
+    event.type === 'checkout.session.expired' ||
+    event.type === 'invoice.payment_failed' ||
+    event.type === 'invoice.payment_succeeded'
   ) {
     const subscriptionUpdate =
       await getSubscriptionUpdateForSubscriptionRefEvent({

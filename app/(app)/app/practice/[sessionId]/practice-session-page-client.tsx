@@ -15,6 +15,7 @@ import {
   selectChoiceIfAllowed,
   toggleBookmarkForQuestion,
 } from '@/app/(app)/app/practice/practice-page-logic';
+import { Button } from '@/components/ui/button';
 import { useIsMounted } from '@/lib/use-is-mounted';
 import {
   getBookmarks,
@@ -84,18 +85,12 @@ export function SessionSummaryView({
       </div>
 
       <div className="flex flex-col gap-3 sm:flex-row">
-        <Link
-          href="/app/dashboard"
-          className="inline-flex items-center justify-center rounded-full bg-foreground px-4 py-2 text-sm font-medium text-background transition-colors hover:bg-foreground/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-        >
-          Back to Dashboard
-        </Link>
-        <Link
-          href="/app/practice"
-          className="inline-flex items-center justify-center rounded-full border border-border bg-background px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-        >
-          Start another session
-        </Link>
+        <Button asChild className="rounded-full">
+          <Link href="/app/dashboard">Back to Dashboard</Link>
+        </Button>
+        <Button asChild variant="outline" className="rounded-full">
+          <Link href="/app/practice">Start another session</Link>
+        </Button>
       </div>
     </div>
   );

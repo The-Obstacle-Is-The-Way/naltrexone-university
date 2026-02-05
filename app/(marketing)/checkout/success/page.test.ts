@@ -409,7 +409,7 @@ describe('syncCheckoutSuccess', () => {
       stripeCustomerId: 'cus_123',
     });
     expect(
-      await subscriptions.findByStripeSubscriptionId('sub_123'),
+      await subscriptions.findByExternalSubscriptionId('sub_123'),
     ).toMatchObject({
       userId: 'user_1',
       status: 'incomplete',
@@ -489,7 +489,7 @@ describe('syncCheckoutSuccess', () => {
       stripeCustomerId: 'cus_123',
     });
     expect(
-      await subscriptions.findByStripeSubscriptionId('sub_123'),
+      await subscriptions.findByExternalSubscriptionId('sub_123'),
     ).toMatchObject({
       userId: 'user_1',
       status: 'past_due',

@@ -48,6 +48,7 @@ export const subscriptionEventTypes = new Set([
   'customer.subscription.deleted',
   'customer.subscription.paused',
   'customer.subscription.resumed',
+  'customer.subscription.trial_will_end',
   'customer.subscription.pending_update_applied',
   'customer.subscription.pending_update_expired',
 ]);

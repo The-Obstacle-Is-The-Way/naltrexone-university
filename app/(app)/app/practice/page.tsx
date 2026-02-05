@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import { Feedback } from '@/components/question/Feedback';
 import { QuestionCard } from '@/components/question/QuestionCard';
+import { Button } from '@/components/ui/button';
 import { useIsMounted } from '@/lib/use-is-mounted';
 import {
   getBookmarks,
@@ -135,14 +136,16 @@ export function PracticeSessionStarter(props: PracticeSessionStarterProps) {
             />
           </label>
 
-          <button
+          <Button
             type="button"
-            className="inline-flex items-center justify-center rounded-full bg-zinc-100 px-4 py-2 text-sm font-medium text-zinc-900 hover:bg-white transition-colors disabled:cursor-not-allowed disabled:opacity-60"
+            className="rounded-full"
             disabled={props.sessionStartStatus === 'loading' || props.isPending}
             onClick={props.onStartSession}
           >
-            Start session
-          </button>
+            {props.sessionStartStatus === 'loading' || props.isPending
+              ? 'Starting…'
+              : 'Start session'}
+          </Button>
         </div>
       </div>
 
@@ -252,14 +255,15 @@ export function PracticeView(props: PracticeViewProps) {
           </div>
           <div className="flex items-center gap-3">
             {props.onEndSession ? (
-              <button
+              <Button
                 type="button"
-                className="inline-flex items-center justify-center rounded-full border border-border bg-background px-4 py-2 text-sm font-medium text-foreground hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60"
+                variant="outline"
+                className="rounded-full"
                 disabled={props.isPending}
                 onClick={props.onEndSession}
               >
                 End session
-              </button>
+              </Button>
             ) : null}
             <Link
               href="/app/dashboard"
@@ -274,13 +278,14 @@ export function PracticeView(props: PracticeViewProps) {
       {props.loadState.status === 'error' ? (
         <div className="rounded-2xl border border-border bg-card p-6 text-sm text-destructive shadow-sm">
           <div>{props.loadState.message}</div>
-          <button
+          <Button
             type="button"
-            className="mt-4 inline-flex items-center justify-center rounded-full border border-border bg-background px-4 py-2 text-sm font-medium text-foreground hover:bg-muted"
+            variant="outline"
+            className="mt-4 rounded-full"
             onClick={props.onTryAgain}
           >
             Try again
-          </button>
+          </Button>
         </div>
       ) : null}
 
@@ -298,14 +303,15 @@ export function PracticeView(props: PracticeViewProps) {
 
       {props.question ? (
         <div className="flex flex-col items-end gap-2">
-          <button
+          <Button
             type="button"
-            className="inline-flex items-center justify-center rounded-full border border-border bg-background px-4 py-2 text-sm font-medium text-foreground hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60"
+            variant="outline"
+            className="rounded-full"
             disabled={props.bookmarkStatus === 'loading' || props.isPending}
             onClick={props.onToggleBookmark}
           >
-            {props.isBookmarked ? 'Bookmarked' : 'Bookmark'}
-          </button>
+            {props.isBookmarked ? 'Remove bookmark' : 'Bookmark'}
+          </Button>
           {props.bookmarkStatus === 'error' ? (
             <div className="text-xs text-destructive">
               Bookmarks unavailable.
@@ -342,23 +348,24 @@ export function PracticeView(props: PracticeViewProps) {
       ) : null}
 
       <div className="flex flex-col gap-3 sm:flex-row">
-        <button
+        <Button
           type="button"
-          className="inline-flex items-center justify-center rounded-full bg-zinc-100 px-4 py-2 text-sm font-medium text-zinc-900 hover:bg-white transition-colors disabled:cursor-not-allowed disabled:opacity-60"
+          className="rounded-full"
           disabled={!props.canSubmit || props.isPending}
           onClick={props.onSubmit}
         >
           Submit
-        </button>
+        </Button>
 
-        <button
+        <Button
           type="button"
-          className="inline-flex items-center justify-center rounded-full border border-border bg-background px-4 py-2 text-sm font-medium text-foreground hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60"
+          variant="outline"
+          className="rounded-full"
           disabled={props.isPending || props.loadState.status === 'loading'}
           onClick={props.onNextQuestion}
         >
           Next Question
-        </button>
+        </Button>
       </div>
     </div>
   );

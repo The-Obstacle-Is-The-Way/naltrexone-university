@@ -52,9 +52,12 @@ export class DrizzleSubscriptionRepository implements SubscriptionRepository {
     return row ? this.toDomain(row) : null;
   }
 
-  async findByStripeSubscriptionId(stripeSubscriptionId: string) {
+  async findByExternalSubscriptionId(externalSubscriptionId: string) {
     const row = await this.db.query.stripeSubscriptions.findFirst({
-      where: eq(stripeSubscriptions.stripeSubscriptionId, stripeSubscriptionId),
+      where: eq(
+        stripeSubscriptions.stripeSubscriptionId,
+        externalSubscriptionId,
+      ),
     });
 
     return row ? this.toDomain(row) : null;
@@ -68,7 +71,7 @@ export class DrizzleSubscriptionRepository implements SubscriptionRepository {
         .insert(stripeSubscriptions)
         .values({
           userId: input.userId,
-          stripeSubscriptionId: input.stripeSubscriptionId,
+          stripeSubscriptionId: input.externalSubscriptionId,
           status: input.status,
           priceId,
           currentPeriodEnd: input.currentPeriodEnd,
@@ -78,7 +81,7 @@ export class DrizzleSubscriptionRepository implements SubscriptionRepository {
         .onConflictDoUpdate({
           target: stripeSubscriptions.userId,
           set: {
-            stripeSubscriptionId: input.stripeSubscriptionId,
+            stripeSubscriptionId: input.externalSubscriptionId,
             status: input.status,
             priceId,
             currentPeriodEnd: input.currentPeriodEnd,
@@ -90,7 +93,7 @@ export class DrizzleSubscriptionRepository implements SubscriptionRepository {
       if (isPostgresUniqueViolation(error)) {
         throw new ApplicationError(
           'CONFLICT',
-          'Stripe subscription id is already mapped to a different user',
+          'External subscription id is already mapped to a different user',
         );
       }
 

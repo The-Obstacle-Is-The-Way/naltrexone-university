@@ -14,7 +14,7 @@ import { FakeLogger } from '@/src/application/test-helpers/fakes';
 
 function createPaymentGatewayStub(): PaymentGateway {
   return {
-    createCustomer: async () => ({ stripeCustomerId: 'cus_123' }),
+    createCustomer: async () => ({ externalCustomerId: 'cus_123' }),
     createCheckoutSession: async () => ({ url: 'https://stripe/checkout' }),
     createPortalSession: async () => ({ url: 'https://stripe/portal' }),
     processWebhookEvent: async () => ({ eventId: 'evt_1', type: 'test' }),
@@ -40,7 +40,7 @@ function createTestDeps() {
     },
     subscriptions: {
       findByUserId: async () => null,
-      findByStripeSubscriptionId: async () => null,
+      findByExternalSubscriptionId: async () => null,
       upsert: async () => undefined,
     },
     stripeCustomers: {

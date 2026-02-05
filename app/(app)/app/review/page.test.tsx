@@ -24,10 +24,12 @@ describe('app/(app)/app/review', () => {
         ]}
         limit={20}
         offset={0}
+        totalCount={1}
       />,
     );
 
     expect(html).toContain('Review');
+    expect(html).toContain('Showing 1–1 of 1');
     expect(html).toContain('q-1');
     expect(html).toContain('Stem for q1');
     expect(html).toContain('easy');
@@ -59,6 +61,7 @@ describe('app/(app)/app/review', () => {
         ]}
         limit={2}
         offset={2}
+        totalCount={10}
       />,
     );
 
@@ -70,7 +73,7 @@ describe('app/(app)/app/review', () => {
 
   it('renders empty state when no missed questions exist', () => {
     const html = renderToStaticMarkup(
-      <ReviewView rows={[]} limit={20} offset={0} />,
+      <ReviewView rows={[]} limit={20} offset={0} totalCount={0} />,
     );
 
     expect(html).toContain('Review');
@@ -89,6 +92,7 @@ describe('app/(app)/app/review', () => {
         ]}
         limit={20}
         offset={0}
+        totalCount={1}
       />,
     );
 
@@ -115,6 +119,7 @@ describe('app/(app)/app/review', () => {
         rows: [],
         limit: 20,
         offset: 0,
+        totalCount: 0,
       }),
     );
     const html = renderToStaticMarkup(element);
@@ -126,7 +131,12 @@ describe('app/(app)/app/review', () => {
   it('parses limit and offset from searchParams in createReviewPage', async () => {
     const getMissedQuestionsFn = vi.fn(async (input: unknown) => {
       const data = input as { limit: number; offset: number };
-      return ok({ rows: [], limit: data.limit, offset: data.offset });
+      return ok({
+        rows: [],
+        limit: data.limit,
+        offset: data.offset,
+        totalCount: 0,
+      });
     });
 
     const ReviewPage = createReviewPage({ getMissedQuestionsFn });
