@@ -33,9 +33,9 @@ Then configure **without committing secrets**.
 
 Recommended approach (minimal, explicit):
 
-- Add `sentry.client.config.ts` (browser init).
-- Add `instrumentation-client.ts` which imports `sentry.client.config.ts` (so the browser SDK initializes without modifying `next.config.ts`).
-- Add `instrumentation.ts` and call `Sentry.init({ ... })` inside `register()` (server + edge init).
+- Create `sentry.client.config.ts` to initialize the browser SDK.
+- Import `sentry.client.config.ts` from `instrumentation-client.ts` so the browser SDK initializes without modifying `next.config.ts`.
+- Initialize server/edge in `instrumentation.ts` by calling `Sentry.init({ ... })` inside `register()`.
 - Implement Next.js `onRequestError` hook via `Sentry.captureRequestError` (required for Next 15+ to capture request-time errors reliably).
 - Optionally add source map upload later (requires `SENTRY_AUTH_TOKEN` in CI only).
 
