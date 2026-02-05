@@ -32,7 +32,7 @@ import { act } from 'react';  // ✅ CORRECT
 
 ### @testing-library/react Compatibility Issue
 
-`@testing-library/react` internally still references the deprecated `react-dom/test-utils.act` for backwards compatibility. When Vitest loads the **production build** of `react-dom` (which happens in git hooks and CI where `NODE_ENV` isn't explicitly `development`), that deprecated export is `undefined`.
+`@testing-library/react` internally still references the deprecated `react-dom/test-utils.act` for backwards compatibility. When Vitest loads the **production build** of `react-dom` (which can happen when `NODE_ENV=production` leaks into the test process), that deprecated export is `undefined`.
 
 **This is a known issue with multiple open GitHub tickets:**
 - [#1392 - React.act is not a function in vitest](https://github.com/testing-library/react-testing-library/issues/1392)
@@ -42,7 +42,9 @@ import { act } from 'react';  // ✅ CORRECT
 
 ### Jest vs Vitest
 
-Jest users are largely unaffected because Jest has different module resolution behavior. This issue specifically affects **Vitest + React 19** in environments where `NODE_ENV=production` (like pre-push hooks and CI).
+Jest users are largely unaffected because Jest has different module resolution behavior. This issue specifically affects **Vitest + React 19** when the test process resolves production builds (commonly due to `NODE_ENV=production` leakage from the parent shell / GUI Git client).
+
+**Repo hardening:** We force `NODE_ENV=test` at Vitest config load time so `pnpm test --run` is deterministic even if the parent environment has `NODE_ENV=production`.
 
 ---
 
