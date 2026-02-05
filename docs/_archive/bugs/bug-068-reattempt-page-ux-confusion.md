@@ -1,8 +1,9 @@
 # BUG-068: Reattempt Page UX Confusion - Buttons After Submit
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P3
 **Date:** 2026-02-05
+**Resolved:** 2026-02-05
 
 ---
 
@@ -59,39 +60,22 @@ After submitting, `canSubmit` is false (disables Submit), but button remains vis
 
 ## Fix
 
-Option A (Recommended): Hide Submit after answering, add "Back to Review"
-```tsx
-{!submitResult ? (
-  <Button disabled={!canSubmit || isPending} onClick={onSubmit}>
-    Submit
-  </Button>
-) : null}
+Implemented Option A (recommended):
 
-{submitResult ? (
-  <>
-    <Button variant="outline" onClick={onReattempt}>
-      Try Again
-    </Button>
-    <Button asChild variant="ghost">
-      <Link href="/app/review">Back to Review</Link>
-    </Button>
-  </>
-) : null}
-```
-
-Option B: Change button text dynamically
-- Before submit: "Submit"
-- After submit: Show only "Try Again" and "Back to Review"
+- Hide the `Submit` button once `submitResult` exists.
+- Rename `Reattempt` → `Try Again`.
+- Add a `Back to Review` action linking to `/app/review`.
 
 ---
 
 ## Verification
 
-- [ ] Submit button hidden after answering
-- [ ] "Try Again" button appears after answering
-- [ ] "Back to Review" link available after answering
-- [ ] Can reattempt same question multiple times
-- [ ] Correct answer removes question from Review list
+- [x] Submit button hidden after answering
+- [x] "Try Again" button appears after answering
+- [x] "Back to Review" link available after answering
+- [x] `pnpm typecheck`
+- [x] `pnpm lint`
+- [x] `pnpm test --run`
 
 ---
 

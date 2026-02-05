@@ -138,7 +138,7 @@ describe('app/(app)/app/questions/[slug]', () => {
     expect(html).toContain('Choice A');
   });
 
-  it('renders feedback and reattempt button when submitResult exists', async () => {
+  it('renders feedback and post-submit actions when submitResult exists', async () => {
     const { QuestionView } = await import(
       '@/app/(app)/app/questions/[slug]/page'
     );
@@ -164,7 +164,9 @@ describe('app/(app)/app/questions/[slug]', () => {
     );
 
     expect(html).toContain('Explanation');
-    expect(html).toContain('Reattempt');
+    expect(html).toContain('Try Again');
+    expect(html).toContain('Back to Review');
+    expect(html).not.toContain('Submit');
   });
 
   it('disables submit while loading to prevent duplicate submissions', async () => {

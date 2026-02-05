@@ -106,29 +106,36 @@ export function QuestionView(props: QuestionViewProps) {
       ) : null}
 
       <div className="flex flex-col gap-3 sm:flex-row">
-        <Button
-          type="button"
-          className="rounded-full"
-          disabled={
-            !props.canSubmit ||
-            props.isPending ||
-            props.loadState.status === 'loading'
-          }
-          onClick={props.onSubmit}
-        >
-          Submit
-        </Button>
-
-        {props.submitResult ? (
+        {!props.submitResult ? (
           <Button
             type="button"
-            variant="outline"
             className="rounded-full"
-            disabled={props.isPending}
-            onClick={props.onReattempt}
+            disabled={
+              !props.canSubmit ||
+              props.isPending ||
+              props.loadState.status === 'loading'
+            }
+            onClick={props.onSubmit}
           >
-            Reattempt
+            Submit
           </Button>
+        ) : null}
+
+        {props.submitResult ? (
+          <>
+            <Button
+              type="button"
+              variant="outline"
+              className="rounded-full"
+              disabled={props.isPending}
+              onClick={props.onReattempt}
+            >
+              Try Again
+            </Button>
+            <Button asChild variant="ghost" className="rounded-full">
+              <Link href="/app/review">Back to Review</Link>
+            </Button>
+          </>
         ) : null}
       </div>
     </div>
