@@ -6,9 +6,10 @@ import {
   selectNextQuestionId,
   shuffleWithSeed,
 } from '@/src/domain/services';
-import type {
-  PracticeMode,
-  QuestionDifficulty,
+import {
+  AllChoiceLabels,
+  type PracticeMode,
+  type QuestionDifficulty,
 } from '@/src/domain/value-objects';
 import { ApplicationError } from '../errors';
 import type {
@@ -79,12 +80,22 @@ export class GetNextQuestionUseCase {
     });
     const shuffledChoices = shuffleWithSeed(stableInput, seed);
 
-    return shuffledChoices.map((c, index) => ({
-      id: c.id,
-      label: c.label,
-      textMd: c.textMd,
-      sortOrder: index + 1,
-    }));
+    return shuffledChoices.map((c, index) => {
+      const displayLabel = AllChoiceLabels[index];
+      if (!displayLabel) {
+        throw new ApplicationError(
+          'INTERNAL_ERROR',
+          `Question ${question.id} has too many choices`,
+        );
+      }
+
+      return {
+        id: c.id,
+        label: displayLabel,
+        textMd: c.textMd,
+        sortOrder: index + 1,
+      };
+    });
   }
 
   private async executeForSession(
