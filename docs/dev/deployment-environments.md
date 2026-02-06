@@ -1,6 +1,6 @@
 # Deployment Environments: Source of Truth
 
-**Last Verified:** 2026-02-06 (post database isolation + env scoping + Stripe single-account consolidation)
+**Last Verified:** 2026-02-06 (post database isolation + env scoping + Stripe single-account consolidation + Neon var cleanup + Clerk webhook fix)
 
 This document is the single source of truth for how Clerk, Stripe, Neon, and Vercel are configured across all environments.
 
@@ -73,11 +73,9 @@ This document is the single source of truth for how Clerk, Stripe, Neon, and Ver
 | `NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY` | Live price ID ($29/mo) | Test price ID ($29/mo) | Test price ID ($29/mo) | Correct |
 | `NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL` | Live price ID ($199/yr) | Test price ID ($199/yr) | Test price ID ($199/yr) | Correct |
 
-### Auto-Generated Neon Vars (Vercel integration — still shared, app doesn't use these)
+### Auto-Generated Neon Vars — REMOVED (2026-02-06)
 
-These were auto-created by the Vercel-Neon integration and still point to the main branch. Our app only reads `DATABASE_URL`, which is now properly scoped. These are harmless but could be cleaned up later:
-
-`POSTGRES_URL`, `POSTGRES_URL_NON_POOLING`, `DATABASE_URL_UNPOOLED`, `PGHOST`, `PGHOST_UNPOOLED`, `POSTGRES_HOST`, `POSTGRES_URL_NO_SSL`, `POSTGRES_DATABASE`, `PGDATABASE`, `POSTGRES_USER`, `PGUSER`, `PGPASSWORD`, `POSTGRES_PASSWORD`, `POSTGRES_PRISMA_URL`, `NEON_PROJECT_ID`
+15 auto-generated vars from the Vercel-Neon integration (`POSTGRES_URL`, `PGHOST`, `PGUSER`, `PGPASSWORD`, `PGDATABASE`, `POSTGRES_HOST`, `POSTGRES_DATABASE`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_URL_NON_POOLING`, `POSTGRES_URL_NO_SSL`, `POSTGRES_PRISMA_URL`, `DATABASE_URL_UNPOOLED`, `PGHOST_UNPOOLED`, `NEON_PROJECT_ID`) were removed via `vercel env rm`. They all pointed to the `main` (Production) branch across all environments — a latent risk if any dependency ever read `POSTGRES_URL` instead of `DATABASE_URL`. Our app only reads `DATABASE_URL`, which is properly scoped per environment.
 
 ---
 

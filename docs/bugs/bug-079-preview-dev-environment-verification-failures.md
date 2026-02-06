@@ -116,7 +116,7 @@ This happened because the initial Stripe setup (days earlier) used a separate te
 
 ### Env hygiene (non-blocking)
 - [ ] Evaluate whether `NEXT_PUBLIC_APP_URL` for Preview should use Vercel's `VERCEL_URL` system env var instead of a static value
-- [ ] Consider cleaning up shared Neon auto-generated vars (`POSTGRES_URL`, `PGHOST`, etc.) that still point to `main` across all environments
+- [x] ~~Consider cleaning up shared Neon auto-generated vars~~ — Removed all 15 vars via `vercel env rm` (2026-02-06). App only reads `DATABASE_URL`.
 - [ ] Deactivate or delete the orphan Stripe account (`51Svkj6KAPxQwR68A`) to avoid future confusion
 
 ### Systemic improvements (non-blocking)
