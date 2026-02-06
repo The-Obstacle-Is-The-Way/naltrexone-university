@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest';
+import { createQuestionSeed, shuffleWithSeed } from '@/src/domain/services';
 import {
   createChoice,
   createPracticeSession,
   createQuestion,
 } from '@/src/domain/test-helpers';
+import { AllChoiceLabels } from '@/src/domain/value-objects';
 import { ApplicationError } from '../errors';
 import {
   FakeAttemptRepository,
@@ -13,6 +15,88 @@ import {
 import { SubmitAnswerUseCase } from './submit-answer';
 
 describe('SubmitAnswerUseCase', () => {
+  it('returns choice explanations in deterministic display order', async () => {
+    const userId = 'user-1';
+    const questionId = 'q1';
+    const choices = [
+      createChoice({
+        id: 'c1',
+        questionId,
+        label: 'A',
+        textMd: 'Choice A',
+        isCorrect: false,
+        explanationMd: 'Why A is wrong',
+        sortOrder: 1,
+      }),
+      createChoice({
+        id: 'c2',
+        questionId,
+        label: 'B',
+        textMd: 'Choice B',
+        isCorrect: true,
+        explanationMd: 'Why B is correct',
+        sortOrder: 2,
+      }),
+      createChoice({
+        id: 'c3',
+        questionId,
+        label: 'C',
+        textMd: 'Choice C',
+        isCorrect: false,
+        explanationMd: 'Why C is wrong',
+        sortOrder: 3,
+      }),
+      createChoice({
+        id: 'c4',
+        questionId,
+        label: 'D',
+        textMd: 'Choice D',
+        isCorrect: false,
+        explanationMd: 'Why D is wrong',
+        sortOrder: 4,
+      }),
+    ];
+
+    const question = createQuestion({
+      id: questionId,
+      status: 'published',
+      explanationMd: 'General explanation',
+      choices,
+    });
+
+    const useCase = new SubmitAnswerUseCase(
+      new FakeQuestionRepository([question]),
+      new FakeAttemptRepository(),
+      new FakePracticeSessionRepository(),
+    );
+
+    const result = await useCase.execute({
+      userId,
+      questionId,
+      choiceId: 'c2',
+    });
+
+    const stableInput = choices.slice().sort((a, b) => {
+      const bySortOrder = a.sortOrder - b.sortOrder;
+      if (bySortOrder !== 0) return bySortOrder;
+      return a.id.localeCompare(b.id);
+    });
+    const shuffled = shuffleWithSeed(
+      stableInput,
+      createQuestionSeed(userId, questionId),
+    );
+
+    expect(result.choiceExplanations.map((choice) => choice.choiceId)).toEqual(
+      shuffled.map((choice) => choice.id),
+    );
+    expect(
+      result.choiceExplanations.map((choice) => choice.displayLabel),
+    ).toEqual(shuffled.map((_, index) => AllChoiceLabels[index]));
+    expect(
+      result.choiceExplanations.map((choice) => choice.explanationMd),
+    ).toEqual(shuffled.map((choice) => choice.explanationMd));
+  });
+
   it('inserts an attempt and returns explanation when not in an exam session', async () => {
     const userId = 'user-1';
 
@@ -41,6 +125,7 @@ describe('SubmitAnswerUseCase', () => {
     expect(result.isCorrect).toBe(true);
     expect(result.correctChoiceId).toBe('c2');
     expect(result.explanationMd).toBe('Because.');
+    expect(result.choiceExplanations).toHaveLength(2);
 
     const inserted = attempts.getAll();
     expect(inserted).toHaveLength(1);
@@ -291,6 +376,7 @@ describe('SubmitAnswerUseCase', () => {
     });
 
     expect(result.explanationMd).toBeNull();
+    expect(result.choiceExplanations).toEqual([]);
   });
 
   it('returns explanation when exam session has ended', async () => {

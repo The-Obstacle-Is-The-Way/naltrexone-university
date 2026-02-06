@@ -18,7 +18,7 @@ import {
   FullQuestionSchema,
   QuestionFrontmatterSchema,
 } from '../lib/content/schemas';
-import { computeChoiceSyncPlan } from './seed-helpers';
+import { computeChoiceSyncPlan, parseChoiceExplanations } from './seed-helpers';
 
 type SeedTag = {
   slug: string;
@@ -33,6 +33,7 @@ type SeedChoice = {
   label: string;
   text_md: string;
   is_correct: boolean;
+  explanation_md: string | null;
   sort_order: number;
 };
 
@@ -48,6 +49,8 @@ type SeedQuestionRep = {
 
 function buildSeedRepFromFile(full: unknown): SeedQuestionRep {
   const parsed = FullQuestionSchema.parse(full);
+  const parsedExplanations = parseChoiceExplanations(parsed.explanationMd);
+  const generalExplanation = parsedExplanations.generalExplanation;
 
   const sortedTags = [...parsed.frontmatter.tags].sort((a, b) =>
     a.slug.localeCompare(b.slug),
@@ -55,11 +58,19 @@ function buildSeedRepFromFile(full: unknown): SeedQuestionRep {
   const sortedChoices = [...parsed.frontmatter.choices].sort((a, b) =>
     a.label.localeCompare(b.label),
   );
+  const validLabels = new Set(sortedChoices.map((choice) => choice.label));
+  for (const label of parsedExplanations.perChoice.keys()) {
+    if (!validLabels.has(label)) {
+      throw new Error(
+        `Explanation references choice label "${label}" that is not present in choices for slug "${parsed.frontmatter.slug}"`,
+      );
+    }
+  }
 
   return {
     slug: parsed.frontmatter.slug,
     stem_md: canonicalizeMarkdown(parsed.stemMd),
-    explanation_md: canonicalizeMarkdown(parsed.explanationMd),
+    explanation_md: generalExplanation,
     difficulty: parsed.frontmatter.difficulty,
     status: parsed.frontmatter.status,
     tags: sortedTags.map((t) => ({
@@ -71,6 +82,7 @@ function buildSeedRepFromFile(full: unknown): SeedQuestionRep {
       label: c.label,
       text_md: canonicalizeMarkdown(c.text),
       is_correct: c.correct,
+      explanation_md: parsedExplanations.perChoice.get(c.label) ?? null,
       sort_order: index + 1,
     })),
   };
@@ -93,6 +105,9 @@ function buildSeedRepFromDb(
         label: c.label,
         text_md: canonicalizeMarkdown(c.textMd),
         is_correct: c.isCorrect,
+        explanation_md: c.explanationMd
+          ? canonicalizeMarkdown(c.explanationMd)
+          : null,
         sort_order: c.sortOrder,
       })),
     tags: [...tags].sort((a, b) => a.slug.localeCompare(b.slug)),
@@ -228,6 +243,7 @@ async function main(): Promise<void> {
             label: c.label,
             textMd: c.text_md,
             isCorrect: c.is_correct,
+            explanationMd: c.explanation_md,
             sortOrder: c.sort_order,
           })),
         );
@@ -335,6 +351,7 @@ async function main(): Promise<void> {
             label: choice.label,
             textMd: choice.text_md,
             isCorrect: choice.is_correct,
+            explanationMd: choice.explanation_md,
             sortOrder: choice.sort_order,
           })
           .onConflictDoUpdate({
@@ -342,6 +359,7 @@ async function main(): Promise<void> {
             set: {
               textMd: choice.text_md,
               isCorrect: choice.is_correct,
+              explanationMd: choice.explanation_md,
               sortOrder: choice.sort_order,
             },
           });

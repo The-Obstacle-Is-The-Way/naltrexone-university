@@ -1,9 +1,11 @@
 # DEBT-107: Question Engine E2E Completeness and State Management
 
-**Status:** In Progress
+**Status:** Accepted
 **Priority:** P1
 **Date:** 2026-02-05
-**Updated:** 2026-02-05
+**Updated:** 2026-02-06
+
+> **Accepted justification:** Core question-engine E2E coverage is complete (Phases 0-2). Remaining Phase 3 items (deterministic dashboard assertions, cross-browser matrix, long session scenarios) are optional hardening. Full CI portability depends on DEBT-104 external configuration.
 
 ---
 
@@ -30,7 +32,7 @@ Unit/integration coverage is strong, but E2E confidence was previously incomplet
   - Dashboard/review/bookmarks/billing navigation sanity
   - Recent activity visibility for attempted question
 - `tests/e2e/session-continuation.spec.ts`
-  - Session URL continuity/resume behavior smoke test
+  - Practice-page "Continue session" card + resume flow validation
 
 ### Supporting infrastructure added
 
@@ -56,7 +58,7 @@ Unit/integration coverage is strong, but E2E confidence was previously incomplet
    - No long-run scenario that validates progression over many questions in one session.
 
 4. **Depends on DEBT-104 external configuration**
-   - CI secret management and Clerk policy checks are still required for fully portable authenticated E2E in all environments.
+   - CI secret values and Clerk policy checks are still required for fully portable authenticated E2E in all environments.
 
 ---
 
@@ -79,6 +81,7 @@ Unit/integration coverage is strong, but E2E confidence was previously incomplet
 - [x] Review add/remove behavior covered
 - [x] Bookmark persistence/remove behavior covered
 - [x] Core app pages + dashboard visibility coverage added
+- [x] Session continuation card + resume flow covered
 
 ### Phase 3: Remaining hardening
 

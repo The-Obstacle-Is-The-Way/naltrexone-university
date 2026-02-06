@@ -250,6 +250,7 @@ export const choices = pgTable(
     label: varchar('label', { length: 4 }).notNull(), // A, B, C, D, E
     textMd: text('text_md').notNull(),
     isCorrect: boolean('is_correct').notNull(),
+    explanationMd: text('explanation_md'),
     sortOrder: integer('sort_order').notNull(), // 1..N
   },
   (t) => ({

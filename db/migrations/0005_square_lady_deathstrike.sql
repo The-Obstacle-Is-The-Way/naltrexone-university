@@ -1,0 +1,1 @@
+ALTER TABLE "choices" ADD COLUMN "explanation_md" text;

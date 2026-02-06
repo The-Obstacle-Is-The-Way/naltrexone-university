@@ -3,17 +3,18 @@
 **Status:** Open
 **Priority:** P2
 **Date:** 2026-02-05
+**Updated:** 2026-02-06
 
 ---
 
 ## Description
 
-In real board exams (USMLE, ABPN, etc.), test-takers can "mark" questions they're unsure about to review later before submitting. This feature is missing from our exam mode.
+Exam mode does not currently support a true mark-for-review workflow.
 
 **Current Behavior:**
-- User answers a question
-- User moves to next question
-- No way to flag uncertain answers for later review
+- Exam mode auto-advances after submit.
+- There is no persisted question-state model for "marked", "unanswered", or "changed answer".
+- Session summary is computed from attempts count, not per-question latest state.
 
 **Expected Behavior (like UWorld/Kaplan/real exams):**
 - "Mark for Review" button on each question
@@ -28,64 +29,67 @@ In real board exams (USMLE, ABPN, etc.), test-takers can "mark" questions they'r
 
 ## Impact
 
-- Users can't use effective test-taking strategies
-- Competitive disadvantage vs UWorld/Kaplan
-- Doesn't simulate real exam conditions
+- Users cannot flag uncertain questions for later pass-through.
+- Exam simulation remains weaker than production exam tools.
+- Implementing this incorrectly risks scoring bugs and duplicate-attempt inflation.
 
 ---
 
-## Resolution
+## Why This Is Still Open
 
-### Data Model
+This debt cannot be safely paid by a small UI-only patch. A correct implementation requires:
 
-Add `marked_for_review` boolean to attempts table (or session_questions junction):
+1. **Persisted session question state**
+   - Marked/unmarked state per `(sessionId, questionId)`.
+   - Ability to revisit and change answers without creating duplicate scoring artifacts.
+2. **Revised exam lifecycle**
+   - "End session" must transition to a review stage before final submit.
+   - Current `EndPracticeSessionUseCase` finalizes immediately.
+3. **Scoring semantics update**
+   - Current totals use attempts count; exam review requires latest-answer-per-question semantics.
+4. **SSOT update**
+   - `docs/specs/master_spec.md` and feature specs currently do not define mark-for-review behavior.
 
-```sql
-ALTER TABLE attempts ADD COLUMN marked_for_review BOOLEAN DEFAULT FALSE;
-```
+Implementing only a toggle in client state would be a half-measure and would not satisfy the required behavior.
 
-Or create new table for exam mode question state:
+---
 
-```sql
-CREATE TABLE session_question_states (
-  session_id UUID REFERENCES practice_sessions(id),
-  question_id UUID REFERENCES questions(id),
-  marked_for_review BOOLEAN DEFAULT FALSE,
-  PRIMARY KEY (session_id, question_id)
-);
-```
+## Resolution Plan (Next Iteration)
 
-### Backend
+### Step 1 — SSOT + Data Model
 
-1. Add `markQuestionForReview(sessionId, questionId)` action
-2. Add `getSessionReviewState(sessionId)` to get all question states
-3. Modify session summary to include marked questions
+- Add explicit exam review-stage requirements to specs.
+- Introduce a persisted `session_question_states` model (or equivalent) for marked + answer state.
 
-### Frontend (Exam Mode Only)
+### Step 2 — Backend
 
-1. Add "Mark for Review" toggle button (star/flag icon)
-2. Progress bar shows marked questions (different color)
-3. Before final submit, show review screen:
-   - All questions listed
-   - Status: Answered / Unanswered / Marked
-   - Click to jump to any question
-4. "Submit Exam" button only on review screen
+- Add use cases/controllers for:
+  - mark/unmark question
+  - review-state retrieval
+  - final exam submission
+- Update session finalization/scoring to latest-question-state semantics.
+
+### Step 3 — Frontend
+
+- Add mark-for-review toggle (exam mode only).
+- Add pre-submit review screen with question jump.
+- Gate final submit behind review stage.
 
 ---
 
 ## Verification
 
-- [ ] Can mark/unmark questions in exam mode
-- [ ] Progress indicator shows marked questions
-- [ ] Review screen shows all questions before submit
-- [ ] Can navigate to any question from review screen
-- [ ] Final results show which questions were marked
-- [ ] Tutor mode unchanged (no mark feature needed)
+- [ ] Can mark/unmark questions in exam mode (persisted)
+- [ ] Review screen shows answered/unanswered/marked across full session
+- [ ] Can navigate to any question from review stage
+- [ ] Final scoring uses latest answer per question (no attempt inflation)
+- [ ] Tutor mode remains unchanged
 
 ---
 
 ## Related
 
-- BUG-065: Exam Mode Shows Feedback When It Shouldn't
-- DEBT-105: Missing Session Resume Functionality
-- SPEC-019: Practice UX Redesign
+- `docs/specs/master_spec.md` (needs update before implementation)
+- `docs/specs/spec-013-practice-sessions.md`
+- `docs/specs/spec-019-practice-ux-redesign.md`
+- `src/application/use-cases/end-practice-session.ts`

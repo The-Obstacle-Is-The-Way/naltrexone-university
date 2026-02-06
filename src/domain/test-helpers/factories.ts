@@ -59,6 +59,7 @@ export function createChoice(overrides: Partial<Choice> = {}): Choice {
     label: 'A' satisfies ChoiceLabel,
     textMd: 'Choice A',
     isCorrect: false,
+    explanationMd: null,
     sortOrder: 1,
     ...overrides,
   };

@@ -153,6 +153,7 @@ describe('app/(app)/app/questions/[slug]', () => {
           isCorrect: false,
           correctChoiceId: 'c1',
           explanationMd: 'Explanation',
+          choiceExplanations: [],
         }}
         canSubmit={false}
         isPending={false}

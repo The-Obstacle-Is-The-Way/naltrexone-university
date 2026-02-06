@@ -96,6 +96,7 @@ describe('practice-logic', () => {
           isCorrect: true,
           correctChoiceId: 'choice_1',
           explanationMd: 'Because...',
+          choiceExplanations: [],
         }),
       );
 

@@ -1,7 +1,18 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useTransition,
+} from 'react';
+import {
+  getActionResultErrorMessage,
+  getThrownErrorMessage,
+} from '@/app/(app)/app/practice/practice-logic';
 import { Feedback } from '@/components/question/Feedback';
 import { QuestionCard } from '@/components/question/QuestionCard';
 import { Button } from '@/components/ui/button';
@@ -10,7 +21,12 @@ import {
   getBookmarks,
   toggleBookmark,
 } from '@/src/adapters/controllers/bookmark-controller';
-import { startPracticeSession } from '@/src/adapters/controllers/practice-controller';
+import {
+  endPracticeSession,
+  type GetIncompletePracticeSessionOutput,
+  getIncompletePracticeSession,
+  startPracticeSession,
+} from '@/src/adapters/controllers/practice-controller';
 import {
   getNextQuestion,
   submitAnswer,
@@ -75,6 +91,49 @@ export type PracticeSessionStarterProps = {
   onSessionCountChange: (event: { target: { value: string } }) => void;
   onStartSession: () => void;
 };
+
+type IncompletePracticeSession =
+  NonNullable<GetIncompletePracticeSessionOutput>;
+
+export function IncompleteSessionCard(input: {
+  session: IncompletePracticeSession;
+  isPending: boolean;
+  onAbandon: () => void;
+}) {
+  const modeLabel = input.session.mode === 'exam' ? 'Exam mode' : 'Tutor mode';
+
+  return (
+    <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="space-y-1">
+          <div className="text-sm font-medium text-foreground">
+            Continue session
+          </div>
+          <div className="text-sm text-muted-foreground">
+            {modeLabel} • {input.session.answeredCount}/
+            {input.session.totalCount} answered
+          </div>
+        </div>
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <Button asChild type="button" className="rounded-full">
+            <Link href={`/app/practice/${input.session.sessionId}`}>
+              Resume session
+            </Link>
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            className="rounded-full"
+            disabled={input.isPending}
+            onClick={input.onAbandon}
+          >
+            Abandon session
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export function PracticeSessionStarter(props: PracticeSessionStarterProps) {
   const difficulties = ['easy', 'medium', 'hard'] satisfies Array<
@@ -351,6 +410,7 @@ export function PracticeView(props: PracticeViewProps) {
         <Feedback
           isCorrect={props.submitResult.isCorrect}
           explanationMd={props.submitResult.explanationMd}
+          choiceExplanations={props.submitResult.choiceExplanations}
         />
       ) : null}
 
@@ -420,6 +480,14 @@ export default function PracticePage() {
   const [sessionStartError, setSessionStartError] = useState<string | null>(
     null,
   );
+  const [incompleteSessionStatus, setIncompleteSessionStatus] = useState<
+    'idle' | 'loading' | 'error'
+  >('loading');
+  const [incompleteSessionError, setIncompleteSessionError] = useState<
+    string | null
+  >(null);
+  const [incompleteSession, setIncompleteSession] =
+    useState<IncompletePracticeSession | null>(null);
   const isMounted = useIsMounted();
 
   const loadNext = useMemo(
@@ -458,6 +526,38 @@ export default function PracticePage() {
 
       setAvailableTags(res.data.rows);
       setTagLoadStatus('idle');
+    })();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    let mounted = true;
+    setIncompleteSessionStatus('loading');
+    setIncompleteSessionError(null);
+
+    void (async () => {
+      let res: Awaited<ReturnType<typeof getIncompletePracticeSession>>;
+      try {
+        res = await getIncompletePracticeSession({});
+      } catch (error) {
+        if (!mounted) return;
+        setIncompleteSessionStatus('error');
+        setIncompleteSessionError(getThrownErrorMessage(error));
+        return;
+      }
+      if (!mounted) return;
+
+      if (!res.ok) {
+        setIncompleteSessionStatus('error');
+        setIncompleteSessionError(getActionResultErrorMessage(res));
+        return;
+      }
+
+      setIncompleteSession(res.data);
+      setIncompleteSessionStatus('idle');
     })();
 
     return () => {
@@ -612,24 +712,73 @@ export default function PracticePage() {
     [filters, sessionMode, sessionCount, startSessionIdempotencyKey, isMounted],
   );
 
+  const onAbandonIncompleteSession = useCallback(async () => {
+    if (!incompleteSession) return;
+
+    setIncompleteSessionStatus('loading');
+    setIncompleteSessionError(null);
+
+    let res: Awaited<ReturnType<typeof endPracticeSession>>;
+    try {
+      res = await endPracticeSession({
+        sessionId: incompleteSession.sessionId,
+      });
+    } catch (error) {
+      if (!isMounted()) return;
+      setIncompleteSessionStatus('error');
+      setIncompleteSessionError(getThrownErrorMessage(error));
+      return;
+    }
+    if (!isMounted()) return;
+
+    if (!res.ok) {
+      setIncompleteSessionStatus('error');
+      setIncompleteSessionError(getActionResultErrorMessage(res));
+      return;
+    }
+
+    setIncompleteSession(null);
+    setIncompleteSessionStatus('idle');
+  }, [incompleteSession, isMounted]);
+
   return (
     <PracticeView
       topContent={
-        <PracticeSessionStarter
-          sessionMode={sessionMode}
-          sessionCount={sessionCount}
-          filters={filters}
-          tagLoadStatus={tagLoadStatus}
-          availableTags={availableTags}
-          sessionStartStatus={sessionStartStatus}
-          sessionStartError={sessionStartError}
-          isPending={isPending}
-          onToggleDifficulty={onToggleDifficulty}
-          onTagSlugsChange={onTagSlugsChange}
-          onSessionModeChange={onSessionModeChange}
-          onSessionCountChange={onSessionCountChange}
-          onStartSession={onStartSession}
-        />
+        <div className="space-y-4">
+          {incompleteSession ? (
+            <IncompleteSessionCard
+              session={incompleteSession}
+              isPending={isPending || incompleteSessionStatus === 'loading'}
+              onAbandon={() => {
+                void onAbandonIncompleteSession();
+              }}
+            />
+          ) : null}
+          {incompleteSessionStatus === 'error' && incompleteSessionError ? (
+            <div className="rounded-2xl border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive">
+              {incompleteSessionError}
+            </div>
+          ) : null}
+          {incompleteSessionStatus !== 'loading' &&
+            incompleteSessionStatus !== 'error' &&
+            !incompleteSession && (
+              <PracticeSessionStarter
+                sessionMode={sessionMode}
+                sessionCount={sessionCount}
+                filters={filters}
+                tagLoadStatus={tagLoadStatus}
+                availableTags={availableTags}
+                sessionStartStatus={sessionStartStatus}
+                sessionStartError={sessionStartError}
+                isPending={isPending}
+                onToggleDifficulty={onToggleDifficulty}
+                onTagSlugsChange={onTagSlugsChange}
+                onSessionModeChange={onSessionModeChange}
+                onSessionCountChange={onSessionCountChange}
+                onStartSession={onStartSession}
+              />
+            )}
+        </div>
       }
       loadState={loadState}
       question={question}

@@ -88,6 +88,7 @@ describe('practice-page-logic', () => {
             isCorrect: true,
             correctChoiceId: 'choice_1',
             explanationMd: 'Because…',
+            choiceExplanations: [],
           },
         }),
       ).toBe(false);
@@ -506,6 +507,7 @@ describe('practice-page-logic', () => {
           isCorrect: true,
           correctChoiceId: 'choice_1',
           explanationMd: 'Because...',
+          choiceExplanations: [],
         } satisfies SubmitAnswerOutput),
       );
 
@@ -540,6 +542,7 @@ describe('practice-page-logic', () => {
           isCorrect: true,
           correctChoiceId: 'choice_1',
           explanationMd: 'Because...',
+          choiceExplanations: [],
         } satisfies SubmitAnswerOutput),
       );
 
@@ -566,6 +569,7 @@ describe('practice-page-logic', () => {
           isCorrect: true,
           correctChoiceId: 'choice_1',
           explanationMd: 'Because...',
+          choiceExplanations: [],
         } satisfies SubmitAnswerOutput),
       );
 
@@ -653,6 +657,7 @@ describe('practice-page-logic', () => {
           isCorrect: true,
           correctChoiceId: 'choice_1',
           explanationMd: 'Because...',
+          choiceExplanations: [],
         } satisfies SubmitAnswerOutput),
       );
       await promise;
@@ -780,6 +785,7 @@ describe('practice-page-logic', () => {
           isCorrect: true,
           correctChoiceId: 'choice_1',
           explanationMd: 'Because...',
+          choiceExplanations: [],
         },
         setSelectedChoiceId,
         'choice_1',

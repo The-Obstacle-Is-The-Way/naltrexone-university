@@ -49,6 +49,7 @@ import {
   CreatePortalSessionUseCase,
   EndPracticeSessionUseCase,
   GetBookmarksUseCase,
+  GetIncompletePracticeSessionUseCase,
   GetMissedQuestionsUseCase,
   GetNextQuestionUseCase,
   GetUserStatsUseCase,
@@ -105,6 +106,7 @@ export type UseCaseFactories = {
   createEndPracticeSessionUseCase: () => EndPracticeSessionUseCase;
   createGetNextQuestionUseCase: () => GetNextQuestionUseCase;
   createGetBookmarksUseCase: () => GetBookmarksUseCase;
+  createGetIncompletePracticeSessionUseCase: () => GetIncompletePracticeSessionUseCase;
   createGetMissedQuestionsUseCase: () => GetMissedQuestionsUseCase;
   createGetUserStatsUseCase: () => GetUserStatsUseCase;
   createStartPracticeSessionUseCase: () => StartPracticeSessionUseCase;
@@ -259,6 +261,11 @@ export function createContainer(overrides: ContainerOverrides = {}) {
         repositories.createQuestionRepository(),
         primitives.logger,
       ),
+    createGetIncompletePracticeSessionUseCase: () =>
+      new GetIncompletePracticeSessionUseCase(
+        repositories.createPracticeSessionRepository(),
+        repositories.createAttemptRepository(),
+      ),
     createGetMissedQuestionsUseCase: () =>
       new GetMissedQuestionsUseCase(
         repositories.createAttemptRepository(),
@@ -344,6 +351,8 @@ export function createContainer(overrides: ContainerOverrides = {}) {
       rateLimiter: gateways.createRateLimiter(),
       idempotencyKeyRepository: repositories.createIdempotencyKeyRepository(),
       checkEntitlementUseCase: useCases.createCheckEntitlementUseCase(),
+      getIncompletePracticeSessionUseCase:
+        useCases.createGetIncompletePracticeSessionUseCase(),
       startPracticeSessionUseCase: useCases.createStartPracticeSessionUseCase(),
       endPracticeSessionUseCase: useCases.createEndPracticeSessionUseCase(),
       now: primitives.now,

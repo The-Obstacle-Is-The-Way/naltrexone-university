@@ -198,6 +198,7 @@ describe('question-page-logic', () => {
           isCorrect: true,
           correctChoiceId: 'choice_1',
           explanationMd: 'Because...',
+          choiceExplanations: [],
         } satisfies SubmitAnswerOutput),
       );
 
@@ -222,6 +223,7 @@ describe('question-page-logic', () => {
           isCorrect: true,
           correctChoiceId: 'choice_1',
           explanationMd: 'Because...',
+          choiceExplanations: [],
         } satisfies SubmitAnswerOutput),
       );
 
@@ -258,6 +260,7 @@ describe('question-page-logic', () => {
           isCorrect: true,
           correctChoiceId: 'choice_1',
           explanationMd: 'Because...',
+          choiceExplanations: [],
         } satisfies SubmitAnswerOutput),
       );
 
@@ -284,6 +287,7 @@ describe('question-page-logic', () => {
           isCorrect: true,
           correctChoiceId: 'choice_1',
           explanationMd: 'Because...',
+          choiceExplanations: [],
         } satisfies SubmitAnswerOutput),
       );
 
@@ -352,6 +356,7 @@ describe('question-page-logic', () => {
           isCorrect: true,
           correctChoiceId: 'choice_1',
           explanationMd: 'Because...',
+          choiceExplanations: [],
         } satisfies SubmitAnswerOutput),
       );
       await promise;

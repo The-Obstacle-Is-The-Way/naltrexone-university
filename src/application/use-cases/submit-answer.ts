@@ -1,7 +1,11 @@
+import type { Question } from '@/src/domain/entities';
 import {
+  createQuestionSeed,
   gradeAnswer,
   shouldShowExplanation as sessionShouldShowExplanation,
+  shuffleWithSeed,
 } from '@/src/domain/services';
+import { AllChoiceLabels } from '@/src/domain/value-objects';
 import { ApplicationError } from '../errors';
 import type {
   AttemptWriter,
@@ -22,6 +26,15 @@ export type SubmitAnswerOutput = {
   isCorrect: boolean;
   correctChoiceId: string;
   explanationMd: string | null;
+  choiceExplanations: ChoiceExplanation[];
+};
+
+export type ChoiceExplanation = {
+  choiceId: string;
+  displayLabel: string;
+  textMd: string;
+  isCorrect: boolean;
+  explanationMd: string | null;
 };
 
 export class SubmitAnswerUseCase {
@@ -30,6 +43,37 @@ export class SubmitAnswerUseCase {
     private readonly attempts: AttemptWriter,
     private readonly sessions: PracticeSessionRepository,
   ) {}
+
+  private mapChoiceExplanations(
+    question: Question,
+    userId: string,
+  ): ChoiceExplanation[] {
+    const seed = createQuestionSeed(userId, question.id);
+    const stableInput = question.choices.slice().sort((a, b) => {
+      const bySortOrder = a.sortOrder - b.sortOrder;
+      if (bySortOrder !== 0) return bySortOrder;
+      return a.id.localeCompare(b.id);
+    });
+    const shuffledChoices = shuffleWithSeed(stableInput, seed);
+
+    return shuffledChoices.map((choice, index) => {
+      const displayLabel = AllChoiceLabels[index];
+      if (!displayLabel) {
+        throw new ApplicationError(
+          'INTERNAL_ERROR',
+          `Question ${question.id} has too many choices`,
+        );
+      }
+
+      return {
+        choiceId: choice.id,
+        displayLabel,
+        textMd: choice.textMd,
+        isCorrect: choice.isCorrect,
+        explanationMd: choice.explanationMd,
+      };
+    });
+  }
 
   async execute(input: SubmitAnswerInput): Promise<SubmitAnswerOutput> {
     const question = await this.questions.findPublishedById(input.questionId);
@@ -68,16 +112,19 @@ export class SubmitAnswerUseCase {
       timeSpentSeconds,
     });
 
-    const explanationMd =
-      session && !sessionShouldShowExplanation(session)
-        ? null
-        : question.explanationMd;
+    const shouldShowExplanation =
+      !session || sessionShouldShowExplanation(session);
+    const explanationMd = shouldShowExplanation ? question.explanationMd : null;
+    const choiceExplanations = shouldShowExplanation
+      ? this.mapChoiceExplanations(question, input.userId)
+      : [];
 
     return {
       attemptId: attempt.id,
       isCorrect: grade.isCorrect,
       correctChoiceId: grade.correctChoiceId,
       explanationMd,
+      choiceExplanations,
     };
   }
 }
