@@ -38,7 +38,8 @@ describe('Feedback', () => {
     );
 
     expect(html).toContain('Why other answers are wrong:');
-    expect(html).toContain('A) First option');
+    expect(html).toContain('A)');
+    expect(html).toContain('First option');
     expect(html).toContain('First option is incorrect.');
     expect(html).not.toContain('B) Second option');
   });

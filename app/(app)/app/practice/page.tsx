@@ -156,6 +156,14 @@ export function PracticeSessionStarter(props: PracticeSessionStarterProps) {
     diagnosis: 'Diagnosis',
   };
 
+  const tagKindPluralLabels: Record<TagRow['kind'], string> = {
+    domain: 'sections',
+    topic: 'topics',
+    substance: 'substances',
+    treatment: 'treatments',
+    diagnosis: 'diagnoses',
+  };
+
   const tagKindOrder: TagRow['kind'][] = [
     'domain',
     'substance',
@@ -187,6 +195,7 @@ export function PracticeSessionStarter(props: PracticeSessionStarterProps) {
               ]}
               value={props.sessionMode}
               onChange={props.onSessionModeChange}
+              legend="Mode"
             />
           </div>
 
@@ -237,10 +246,7 @@ export function PracticeSessionStarter(props: PracticeSessionStarterProps) {
               .map((kind) => {
                 const tags = tagsByKind.get(kind);
                 if (!tags || tags.length === 0) return null;
-                const label =
-                  kind in tagKindLabels
-                    ? tagKindLabels[kind as TagRow['kind']]
-                    : kind;
+                const label = tagKindLabels[kind];
                 return (
                   <div key={kind}>
                     <div className="text-sm font-medium text-foreground">
@@ -257,11 +263,7 @@ export function PracticeSessionStarter(props: PracticeSessionStarterProps) {
                       ))}
                     </div>
                     <div className="mt-1 text-xs text-muted-foreground">
-                      Leave empty to include all{' '}
-                      {label.toLowerCase() === 'exam section'
-                        ? 'sections'
-                        : `${label.toLowerCase()}s`}
-                      .
+                      Leave empty to include all {tagKindPluralLabels[kind]}.
                     </div>
                   </div>
                 );

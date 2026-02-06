@@ -10,6 +10,7 @@ export type SegmentedControlProps = {
   value: string;
   onChange: (value: string) => void;
   disabled?: boolean;
+  legend?: string;
 };
 
 export function SegmentedControl({
@@ -17,9 +18,11 @@ export function SegmentedControl({
   value,
   onChange,
   disabled,
+  legend,
 }: SegmentedControlProps) {
   return (
     <fieldset className="inline-flex rounded-lg border border-border bg-muted p-1">
+      {legend ? <legend className="sr-only">{legend}</legend> : null}
       {options.map((option) => {
         const isActive = option.value === value;
         return (

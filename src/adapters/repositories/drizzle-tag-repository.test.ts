@@ -1,70 +1,63 @@
 import { describe, expect, it, vi } from 'vitest';
 import { DrizzleTagRepository } from './drizzle-tag-repository';
 
+function createMockDb(rows: readonly Record<string, unknown>[]) {
+  const chain = {
+    from: vi.fn().mockReturnThis(),
+    innerJoin: vi.fn().mockReturnThis(),
+    where: vi.fn().mockReturnThis(),
+    orderBy: vi.fn().mockResolvedValue(rows),
+  };
+
+  const db = {
+    selectDistinct: vi.fn().mockReturnValue(chain),
+  };
+
+  type RepoDb = ConstructorParameters<typeof DrizzleTagRepository>[0];
+  return { db: db as unknown as RepoDb, chain };
+}
+
 describe('DrizzleTagRepository', () => {
   describe('listAll', () => {
-    it('returns all tags mapped to domain entities', async () => {
+    it('returns tags mapped to domain entities', async () => {
       const rows = [
         {
           id: 'tag_1',
-          slug: 'addiction-medicine',
-          name: 'Addiction Medicine',
-          kind: 'topic',
+          slug: 'pharmacology-neuroscience',
+          name: 'Pharmacology & Neuroscience',
+          kind: 'domain',
         },
         {
           id: 'tag_2',
-          slug: 'pharmacology',
-          name: 'Pharmacology',
-          kind: 'topic',
+          slug: 'alcohol',
+          name: 'Alcohol',
+          kind: 'substance',
         },
-      ] as const;
+      ];
 
-      const findMany = vi.fn(async (_opts?: { orderBy?: unknown[] }) => rows);
-      const db = {
-        query: {
-          tags: {
-            findMany,
-          },
-        },
-      } as const;
-
-      type RepoDb = ConstructorParameters<typeof DrizzleTagRepository>[0];
-      const repo = new DrizzleTagRepository(db as unknown as RepoDb);
-
+      const { db } = createMockDb(rows);
+      const repo = new DrizzleTagRepository(db);
       const result = await repo.listAll();
-
-      expect(findMany).toHaveBeenCalledTimes(1);
-      const queryArgs = findMany.mock.calls[0]?.[0];
-      expect(queryArgs?.orderBy).toHaveLength(2);
 
       expect(result).toEqual([
         {
           id: 'tag_1',
-          slug: 'addiction-medicine',
-          name: 'Addiction Medicine',
-          kind: 'topic',
+          slug: 'pharmacology-neuroscience',
+          name: 'Pharmacology & Neuroscience',
+          kind: 'domain',
         },
         {
           id: 'tag_2',
-          slug: 'pharmacology',
-          name: 'Pharmacology',
-          kind: 'topic',
+          slug: 'alcohol',
+          name: 'Alcohol',
+          kind: 'substance',
         },
       ]);
     });
 
-    it('returns empty array when no tags exist', async () => {
-      const db = {
-        query: {
-          tags: {
-            findMany: async () => [],
-          },
-        },
-      } as const;
-
-      type RepoDb = ConstructorParameters<typeof DrizzleTagRepository>[0];
-      const repo = new DrizzleTagRepository(db as unknown as RepoDb);
-
+    it('returns empty array when no tags have published questions', async () => {
+      const { db } = createMockDb([]);
+      const repo = new DrizzleTagRepository(db);
       const result = await repo.listAll();
 
       expect(result).toEqual([]);
@@ -77,23 +70,12 @@ describe('DrizzleTagRepository', () => {
           slug: 'opioid-use-disorder',
           name: 'Opioid Use Disorder',
           kind: 'topic',
-          createdAt: new Date(),
-          updatedAt: new Date(),
           extraField: 'should not be included',
         },
       ];
 
-      const db = {
-        query: {
-          tags: {
-            findMany: async () => rows,
-          },
-        },
-      } as const;
-
-      type RepoDb = ConstructorParameters<typeof DrizzleTagRepository>[0];
-      const repo = new DrizzleTagRepository(db as unknown as RepoDb);
-
+      const { db } = createMockDb(rows);
+      const repo = new DrizzleTagRepository(db);
       const result = await repo.listAll();
 
       expect(result).toHaveLength(1);
@@ -103,8 +85,19 @@ describe('DrizzleTagRepository', () => {
         name: 'Opioid Use Disorder',
         kind: 'topic',
       });
-      expect(result[0]).not.toHaveProperty('createdAt');
       expect(result[0]).not.toHaveProperty('extraField');
+    });
+
+    it('uses selectDistinct with inner joins to filter by published questions', async () => {
+      const { db, chain } = createMockDb([]);
+      const repo = new DrizzleTagRepository(db);
+      await repo.listAll();
+
+      expect(db.selectDistinct).toHaveBeenCalledTimes(1);
+      expect(chain.from).toHaveBeenCalledTimes(1);
+      expect(chain.innerJoin).toHaveBeenCalledTimes(2);
+      expect(chain.where).toHaveBeenCalledTimes(1);
+      expect(chain.orderBy).toHaveBeenCalledTimes(1);
     });
   });
 });

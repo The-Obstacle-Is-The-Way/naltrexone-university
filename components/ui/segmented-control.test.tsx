@@ -102,6 +102,47 @@ describe('SegmentedControl', () => {
     expect(html).toContain('<fieldset');
   });
 
+  it('renders sr-only legend when legend prop is provided', async () => {
+    const { SegmentedControl } = await import(
+      '@/components/ui/segmented-control'
+    );
+
+    const html = renderToStaticMarkup(
+      <SegmentedControl
+        options={[
+          { value: 'tutor', label: 'Tutor' },
+          { value: 'exam', label: 'Exam' },
+        ]}
+        value="tutor"
+        onChange={() => undefined}
+        legend="Mode"
+      />,
+    );
+
+    expect(html).toContain('<legend');
+    expect(html).toContain('sr-only');
+    expect(html).toContain('Mode');
+  });
+
+  it('omits legend when legend prop is not provided', async () => {
+    const { SegmentedControl } = await import(
+      '@/components/ui/segmented-control'
+    );
+
+    const html = renderToStaticMarkup(
+      <SegmentedControl
+        options={[
+          { value: 'tutor', label: 'Tutor' },
+          { value: 'exam', label: 'Exam' },
+        ]}
+        value="tutor"
+        onChange={() => undefined}
+      />,
+    );
+
+    expect(html).not.toContain('<legend');
+  });
+
   it('disables all buttons when disabled', async () => {
     const { SegmentedControl } = await import(
       '@/components/ui/segmented-control'

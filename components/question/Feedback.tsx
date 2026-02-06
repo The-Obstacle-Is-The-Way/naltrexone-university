@@ -73,8 +73,9 @@ export function Feedback({
                 key={choice.choiceId}
                 className="rounded-xl border border-border/60 bg-background/50 p-3"
               >
-                <div className="text-sm font-medium text-foreground">
-                  {choice.displayLabel}) {choice.textMd}
+                <div className="flex items-start gap-1 text-sm font-medium text-foreground">
+                  <span className="shrink-0">{choice.displayLabel})</span>
+                  <Markdown content={choice.textMd} />
                 </div>
                 <Markdown
                   content={choice.explanationMd ?? ''}
