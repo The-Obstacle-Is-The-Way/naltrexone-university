@@ -287,7 +287,7 @@ describe('app/(app)/app/practice', () => {
         sessionStartError="No questions"
         isPending={false}
         onToggleDifficulty={() => undefined}
-        onTagSlugsChange={() => undefined}
+        onToggleTag={() => undefined}
         onSessionModeChange={() => undefined}
         onSessionCountChange={() => undefined}
         onStartSession={() => undefined}
@@ -313,7 +313,7 @@ describe('app/(app)/app/practice', () => {
         sessionStartError={null}
         isPending={false}
         onToggleDifficulty={() => undefined}
-        onTagSlugsChange={() => undefined}
+        onToggleTag={() => undefined}
         onSessionModeChange={() => undefined}
         onSessionCountChange={() => undefined}
         onStartSession={() => undefined}
@@ -349,7 +349,7 @@ describe('app/(app)/app/practice', () => {
     expect(html).toContain('Abandon session');
   });
 
-  it('renders tag optgroups when tags are available', async () => {
+  it('renders tag chips grouped by kind when tags are available', async () => {
     const { PracticeSessionStarter } = await import(
       '@/app/(app)/app/practice/page'
     );
@@ -368,17 +368,75 @@ describe('app/(app)/app/practice', () => {
         sessionStartError={null}
         isPending={false}
         onToggleDifficulty={() => undefined}
-        onTagSlugsChange={() => undefined}
+        onToggleTag={() => undefined}
         onSessionModeChange={() => undefined}
         onSessionCountChange={() => undefined}
         onStartSession={() => undefined}
       />,
     );
 
-    expect(html).toContain('Domain');
+    expect(html).toContain('Exam Section');
     expect(html).toContain('Topic');
     expect(html).toContain('Domain 1');
     expect(html).toContain('Topic 1');
+  });
+
+  it('renders segmented control for mode selection', async () => {
+    const { PracticeSessionStarter } = await import(
+      '@/app/(app)/app/practice/page'
+    );
+
+    const html = renderToStaticMarkup(
+      <PracticeSessionStarter
+        sessionMode="tutor"
+        sessionCount={20}
+        filters={{ tagSlugs: [], difficulties: [] }}
+        tagLoadStatus="idle"
+        availableTags={[]}
+        sessionStartStatus="idle"
+        sessionStartError={null}
+        isPending={false}
+        onToggleDifficulty={() => undefined}
+        onToggleTag={() => undefined}
+        onSessionModeChange={() => undefined}
+        onSessionCountChange={() => undefined}
+        onStartSession={() => undefined}
+      />,
+    );
+
+    expect(html).toContain('Tutor');
+    expect(html).toContain('Exam');
+    expect(html).toContain('<fieldset');
+  });
+
+  it('renders difficulty filter chips', async () => {
+    const { PracticeSessionStarter } = await import(
+      '@/app/(app)/app/practice/page'
+    );
+
+    const html = renderToStaticMarkup(
+      <PracticeSessionStarter
+        sessionMode="tutor"
+        sessionCount={20}
+        filters={{ tagSlugs: [], difficulties: ['easy'] }}
+        tagLoadStatus="idle"
+        availableTags={[]}
+        sessionStartStatus="idle"
+        sessionStartError={null}
+        isPending={false}
+        onToggleDifficulty={() => undefined}
+        onToggleTag={() => undefined}
+        onSessionModeChange={() => undefined}
+        onSessionCountChange={() => undefined}
+        onStartSession={() => undefined}
+      />,
+    );
+
+    expect(html).toContain('Easy');
+    expect(html).toContain('Medium');
+    expect(html).toContain('Hard');
+    expect(html).toContain('aria-pressed="true"');
+    expect(html).toContain('aria-pressed="false"');
   });
 
   it('navigateTo calls window.location.assign', async () => {

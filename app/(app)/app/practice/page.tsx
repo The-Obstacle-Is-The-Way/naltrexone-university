@@ -16,6 +16,8 @@ import {
 import { Feedback } from '@/components/question/Feedback';
 import { QuestionCard } from '@/components/question/QuestionCard';
 import { Button } from '@/components/ui/button';
+import { FilterChip } from '@/components/ui/filter-chip';
+import { SegmentedControl } from '@/components/ui/segmented-control';
 import { useIsMounted } from '@/lib/use-is-mounted';
 import {
   getBookmarks,
@@ -43,7 +45,6 @@ import {
   createBookmarksEffect,
   createLoadNextQuestionAction,
   handleSessionCountChange,
-  handleSessionModeChange,
   type LoadState,
   type PracticeFilters,
   SESSION_COUNT_MAX,
@@ -84,10 +85,8 @@ export type PracticeSessionStarterProps = {
   sessionStartError: string | null;
   isPending: boolean;
   onToggleDifficulty: (difficulty: NextQuestion['difficulty']) => void;
-  onTagSlugsChange: (event: {
-    target: { selectedOptions: ArrayLike<{ value: string }> };
-  }) => void;
-  onSessionModeChange: (event: { target: { value: string } }) => void;
+  onToggleTag: (slug: string) => void;
+  onSessionModeChange: (mode: string) => void;
   onSessionCountChange: (event: { target: { value: string } }) => void;
   onStartSession: () => void;
 };
@@ -150,41 +149,49 @@ export function PracticeSessionStarter(props: PracticeSessionStarterProps) {
   }, [props.availableTags]);
 
   const tagKindLabels: Record<TagRow['kind'], string> = {
-    domain: 'Domain',
+    domain: 'Exam Section',
     topic: 'Topic',
     substance: 'Substance',
     treatment: 'Treatment',
     diagnosis: 'Diagnosis',
   };
 
+  const tagKindOrder: TagRow['kind'][] = [
+    'domain',
+    'substance',
+    'topic',
+    'treatment',
+    'diagnosis',
+  ];
+
   return (
     <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div className="space-y-1">
-          <div className="text-sm font-medium text-foreground">
-            Start a session
-          </div>
-          <div className="text-sm text-muted-foreground">
-            Tutor mode shows explanations immediately. Exam mode hides
-            explanations until you end the session.
-          </div>
+      <div className="space-y-1">
+        <div className="text-sm font-medium text-foreground">
+          Start a session
         </div>
+        <div className="text-sm text-muted-foreground">
+          Tutor mode shows explanations immediately. Exam mode hides
+          explanations until you end the session.
+        </div>
+      </div>
 
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-          <label className="text-sm text-muted-foreground">
-            <span className="mr-2">Mode</span>
-            <select
-              className="rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground"
+      <div className="mt-5 space-y-5">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+          <div className="space-y-2">
+            <div className="text-sm font-medium text-foreground">Mode</div>
+            <SegmentedControl
+              options={[
+                { value: 'tutor', label: 'Tutor' },
+                { value: 'exam', label: 'Exam' },
+              ]}
               value={props.sessionMode}
               onChange={props.onSessionModeChange}
-            >
-              <option value="tutor">Tutor</option>
-              <option value="exam">Exam</option>
-            </select>
-          </label>
+            />
+          </div>
 
-          <label className="text-sm text-muted-foreground">
-            <span className="mr-2">Count</span>
+          <div className="space-y-2">
+            <div className="text-sm font-medium text-foreground">Questions</div>
             <input
               type="number"
               min={SESSION_COUNT_MIN}
@@ -193,40 +200,23 @@ export function PracticeSessionStarter(props: PracticeSessionStarterProps) {
               value={props.sessionCount}
               onChange={props.onSessionCountChange}
             />
-          </label>
-
-          <Button
-            type="button"
-            className="rounded-full"
-            disabled={props.sessionStartStatus === 'loading' || props.isPending}
-            onClick={props.onStartSession}
-          >
-            {props.sessionStartStatus === 'loading' || props.isPending
-              ? 'Starting…'
-              : 'Start session'}
-          </Button>
+          </div>
         </div>
-      </div>
 
-      <div className="mt-4 grid gap-4 md:grid-cols-2">
         <div>
           <div className="text-sm font-medium text-foreground">Difficulty</div>
-          <div className="mt-2 flex flex-wrap gap-3">
+          <div className="mt-2 flex flex-wrap gap-2">
             {difficulties.map((difficulty) => {
-              const checked = props.filters.difficulties.includes(difficulty);
+              const selected = props.filters.difficulties.includes(difficulty);
               return (
-                <label
+                <FilterChip
                   key={difficulty}
-                  className="inline-flex items-center gap-2 text-sm text-muted-foreground"
-                >
-                  <input
-                    type="checkbox"
-                    className="size-4"
-                    checked={checked}
-                    onChange={() => props.onToggleDifficulty(difficulty)}
-                  />
-                  <span className="capitalize">{difficulty}</span>
-                </label>
+                  label={
+                    difficulty.charAt(0).toUpperCase() + difficulty.slice(1)
+                  }
+                  selected={selected}
+                  onClick={() => props.onToggleDifficulty(difficulty)}
+                />
               );
             })}
           </div>
@@ -235,49 +225,61 @@ export function PracticeSessionStarter(props: PracticeSessionStarterProps) {
           </div>
         </div>
 
-        <div>
-          <div className="text-sm font-medium text-foreground">Tags</div>
-          {props.tagLoadStatus === 'loading' ? (
-            <div className="mt-2 text-sm text-muted-foreground">
-              Loading tags…
-            </div>
-          ) : null}
-          {props.tagLoadStatus === 'error' ? (
-            <div className="mt-2 text-sm text-destructive">
-              Tags unavailable.
-            </div>
-          ) : null}
-          {props.tagLoadStatus === 'idle' ? (
-            <>
-              <select
-                multiple
-                className="mt-2 h-28 w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground"
-                value={props.filters.tagSlugs}
-                onChange={props.onTagSlugsChange}
-              >
-                {Array.from(tagsByKind.entries()).map(([kind, tags]) => (
-                  <optgroup
-                    key={kind}
-                    label={
-                      kind in tagKindLabels
-                        ? tagKindLabels[kind as TagRow['kind']]
-                        : kind
-                    }
-                  >
-                    {tags.map((tag) => (
-                      <option key={tag.slug} value={tag.slug}>
-                        {tag.name}
-                      </option>
-                    ))}
-                  </optgroup>
-                ))}
-              </select>
-              <div className="mt-1 text-xs text-muted-foreground">
-                Leave empty to include all tags.
-              </div>
-            </>
-          ) : null}
-        </div>
+        {props.tagLoadStatus === 'loading' ? (
+          <div className="text-sm text-muted-foreground">Loading tags…</div>
+        ) : null}
+        {props.tagLoadStatus === 'error' ? (
+          <div className="text-sm text-destructive">Tags unavailable.</div>
+        ) : null}
+        {props.tagLoadStatus === 'idle'
+          ? tagKindOrder
+              .filter((kind) => tagsByKind.has(kind))
+              .map((kind) => {
+                const tags = tagsByKind.get(kind);
+                if (!tags || tags.length === 0) return null;
+                const label =
+                  kind in tagKindLabels
+                    ? tagKindLabels[kind as TagRow['kind']]
+                    : kind;
+                return (
+                  <div key={kind}>
+                    <div className="text-sm font-medium text-foreground">
+                      {label}
+                    </div>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {tags.map((tag) => (
+                        <FilterChip
+                          key={tag.slug}
+                          label={tag.name}
+                          selected={props.filters.tagSlugs.includes(tag.slug)}
+                          onClick={() => props.onToggleTag(tag.slug)}
+                        />
+                      ))}
+                    </div>
+                    <div className="mt-1 text-xs text-muted-foreground">
+                      Leave empty to include all{' '}
+                      {label.toLowerCase() === 'exam section'
+                        ? 'sections'
+                        : `${label.toLowerCase()}s`}
+                      .
+                    </div>
+                  </div>
+                );
+              })
+          : null}
+      </div>
+
+      <div className="mt-5 flex justify-end">
+        <Button
+          type="button"
+          className="rounded-full"
+          disabled={props.sessionStartStatus === 'loading' || props.isPending}
+          onClick={props.onStartSession}
+        >
+          {props.sessionStartStatus === 'loading' || props.isPending
+            ? 'Starting…'
+            : 'Start session'}
+        </Button>
       </div>
 
       {props.sessionStartStatus === 'error' && props.sessionStartError ? (
@@ -648,10 +650,12 @@ export default function PracticePage() {
 
   const onSessionModeChange = useMemo(
     () =>
-      handleSessionModeChange.bind(null, (mode) => {
-        setSessionMode(mode);
-        setStartSessionIdempotencyKey(crypto.randomUUID());
-      }),
+      ((mode: string) => {
+        if (mode === 'tutor' || mode === 'exam') {
+          setSessionMode(mode);
+          setStartSessionIdempotencyKey(crypto.randomUUID());
+        }
+      }) satisfies PracticeSessionStarterProps['onSessionModeChange'],
     [],
   );
 
@@ -664,17 +668,18 @@ export default function PracticePage() {
     [],
   );
 
-  const onTagSlugsChange = useMemo(
+  const onToggleTag = useMemo(
     () =>
-      ((event: {
-        target: { selectedOptions: ArrayLike<{ value: string }> };
-      }) => {
-        const selected = Array.from(event.target.selectedOptions).map(
-          (o) => o.value,
-        );
-        setFilters((prev) => ({ ...prev, tagSlugs: selected }));
+      ((slug: string) => {
+        setFilters((prev) => {
+          const existing = prev.tagSlugs;
+          const next = existing.includes(slug)
+            ? existing.filter((s) => s !== slug)
+            : [...existing, slug];
+          return { ...prev, tagSlugs: next };
+        });
         setStartSessionIdempotencyKey(crypto.randomUUID());
-      }) satisfies PracticeSessionStarterProps['onTagSlugsChange'],
+      }) satisfies PracticeSessionStarterProps['onToggleTag'],
     [],
   );
 
@@ -772,7 +777,7 @@ export default function PracticePage() {
                 sessionStartError={sessionStartError}
                 isPending={isPending}
                 onToggleDifficulty={onToggleDifficulty}
-                onTagSlugsChange={onTagSlugsChange}
+                onToggleTag={onToggleTag}
                 onSessionModeChange={onSessionModeChange}
                 onSessionCountChange={onSessionCountChange}
                 onStartSession={onStartSession}
