@@ -5,9 +5,27 @@ export async function selectChoiceByLabel(
   label: 'A' | 'B' | 'C' | 'D' = 'A',
 ): Promise<void> {
   const choice = page.getByRole('radio', { name: `Choice ${label}` }).first();
+  const choiceLabel = choice.locator('xpath=ancestor::label[1]');
   await expect(choice).toBeVisible({ timeout: 30_000 });
   await expect(choice).toBeEnabled({ timeout: 30_000 });
-  await choice.check({ force: true });
+  await expect(choiceLabel).toBeVisible({ timeout: 30_000 });
+  await choiceLabel.click();
+  await expect(choice).toBeChecked();
+}
+
+export async function assertQuestionSlugExists(
+  page: Page,
+  slug: string,
+): Promise<void> {
+  await page.goto(`/app/questions/${slug}`);
+  await expect(page.getByRole('heading', { name: 'Question' })).toBeVisible();
+
+  const notFound = page.getByText('Question not found.', { exact: true });
+  if (await notFound.isVisible().catch(() => false)) {
+    throw new Error(
+      `Seeded question '${slug}' not found — update seeds or tests`,
+    );
+  }
 }
 
 export async function submitQuestionForOutcome(
@@ -32,7 +50,7 @@ export async function submitQuestionForOutcome(
 
     const matchedOutcome = await page
       .getByText(outcome, { exact: true })
-      .isVisible({ timeout: 5_000 })
+      .isVisible()
       .catch(() => false);
     if (matchedOutcome) {
       return label;

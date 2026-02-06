@@ -61,14 +61,17 @@ Unit/integration coverage is strong, but E2E confidence was previously incomplet
 ## Resolution Checklist
 
 ### Phase 0: Authenticated E2E unblocked
+
 - [x] Clerk programmatic sign-in integrated in Playwright flows
 - [x] Global setup project (`clerkSetup`) wired into Playwright config
 
 ### Phase 1: Missing spec files
+
 - [x] `tests/e2e/review.spec.ts` added
 - [x] `tests/e2e/bookmarks.spec.ts` added
 
 ### Phase 2: Core question-engine flows
+
 - [x] Tutor flow covered end-to-end
 - [x] Exam-mode explanation gating covered in active session
 - [x] Review add/remove behavior covered
@@ -76,6 +79,7 @@ Unit/integration coverage is strong, but E2E confidence was previously incomplet
 - [x] Core app pages + dashboard visibility coverage added
 
 ### Phase 3: Remaining hardening
+
 - [ ] Deterministic numeric dashboard assertions
 - [ ] Optional cross-browser expansion (Firefox/WebKit)
 - [ ] Optional longer-session scenario

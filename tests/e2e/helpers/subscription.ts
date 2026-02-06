@@ -3,18 +3,11 @@ import { expect, type Page } from '@playwright/test';
 async function completeStripeCheckout(page: Page): Promise<void> {
   await expect(page).toHaveURL(/stripe\.com/);
 
-  const cardNumber = page
-    .frameLocator('iframe[name^="__privateStripeFrame"]')
-    .locator('input[name="cardnumber"]');
-  const expDate = page
-    .frameLocator('iframe[name^="__privateStripeFrame"]')
-    .locator('input[name="exp-date"]');
-  const cvc = page
-    .frameLocator('iframe[name^="__privateStripeFrame"]')
-    .locator('input[name="cvc"]');
-  const postal = page
-    .frameLocator('iframe[name^="__privateStripeFrame"]')
-    .locator('input[name="postal"]');
+  const stripeFrame = page.frameLocator('iframe[name^="__privateStripeFrame"]');
+  const cardNumber = stripeFrame.locator('input[name="cardnumber"]');
+  const expDate = stripeFrame.locator('input[name="exp-date"]');
+  const cvc = stripeFrame.locator('input[name="cvc"]');
+  const postal = stripeFrame.locator('input[name="postal"]');
 
   if (await cardNumber.isVisible({ timeout: 10_000 })) {
     await cardNumber.fill('4242424242424242');
@@ -30,7 +23,7 @@ async function completeStripeCheckout(page: Page): Promise<void> {
   }
 
   await page.getByRole('button', { name: /subscribe|pay/i }).click();
-  await expect(page).toHaveURL(/\/app\/dashboard/);
+  await expect(page).toHaveURL(/\/app\/dashboard/, { timeout: 30_000 });
 }
 
 export async function ensureSubscribed(page: Page): Promise<void> {

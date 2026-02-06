@@ -3,9 +3,13 @@ import {
   hasClerkCredentials,
   signInWithClerkPassword,
 } from './helpers/clerk-auth';
-import { submitQuestionForOutcome } from './helpers/question';
+import {
+  assertQuestionSlugExists,
+  submitQuestionForOutcome,
+} from './helpers/question';
 import { ensureSubscribed } from './helpers/subscription';
 
+// Seeded by content/questions/placeholder/placeholder-01-naltrexone-mechanism.mdx
 const QUESTION_SLUG = 'placeholder-01-naltrexone-mechanism';
 
 test.describe('review', () => {
@@ -17,6 +21,7 @@ test.describe('review', () => {
   }) => {
     await signInWithClerkPassword(page);
     await ensureSubscribed(page);
+    await assertQuestionSlugExists(page, QUESTION_SLUG);
 
     await submitQuestionForOutcome(page, QUESTION_SLUG, 'Incorrect');
 
@@ -29,7 +34,12 @@ test.describe('review', () => {
     await expect(reviewRow).toBeVisible();
 
     await reviewRow.getByRole('link', { name: 'Reattempt' }).click();
-    await expect(page).toHaveURL(new RegExp(`/app/questions/${QUESTION_SLUG}`));
+    await expect(page).toHaveURL(
+      new RegExp(`/app/questions/${QUESTION_SLUG}`),
+      {
+        timeout: 15_000,
+      },
+    );
 
     await submitQuestionForOutcome(page, QUESTION_SLUG, 'Correct');
 

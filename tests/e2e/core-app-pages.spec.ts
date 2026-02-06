@@ -4,9 +4,13 @@ import {
   hasClerkCredentials,
   signInWithClerkPassword,
 } from './helpers/clerk-auth';
-import { submitQuestionForOutcome } from './helpers/question';
+import {
+  assertQuestionSlugExists,
+  submitQuestionForOutcome,
+} from './helpers/question';
 import { ensureSubscribed } from './helpers/subscription';
 
+// Seeded by content/questions/placeholder/placeholder-01-naltrexone-mechanism.mdx
 const QUESTION_SLUG = 'placeholder-01-naltrexone-mechanism';
 
 test.describe('core app pages', () => {
@@ -18,6 +22,7 @@ test.describe('core app pages', () => {
   }) => {
     await signInWithClerkPassword(page);
     await ensureSubscribed(page);
+    await assertQuestionSlugExists(page, QUESTION_SLUG);
 
     await ensureBookmarkedQuestion(page);
 
@@ -35,7 +40,12 @@ test.describe('core app pages', () => {
     const missedRow = page.locator('li', { hasText: QUESTION_SLUG });
     await expect(missedRow).toBeVisible();
     await missedRow.getByRole('link', { name: 'Reattempt' }).click();
-    await expect(page).toHaveURL(new RegExp(`/app/questions/${QUESTION_SLUG}`));
+    await expect(page).toHaveURL(
+      new RegExp(`/app/questions/${QUESTION_SLUG}`),
+      {
+        timeout: 15_000,
+      },
+    );
 
     // Dashboard shows stats and recent activity (including the missed attempt).
     await page.goto('/app/dashboard');

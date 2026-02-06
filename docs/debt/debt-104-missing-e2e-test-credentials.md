@@ -96,20 +96,10 @@ projects: [
 ### 4. Test Usage
 
 ```typescript
-import { clerk } from '@clerk/testing/playwright';
+import { signInWithClerkPassword } from '@/tests/e2e/helpers/clerk-auth';
 
 test('authenticated flow', async ({ page }) => {
-  await page.goto('/');
-
-  await clerk.signIn({
-    page,
-    signInParams: {
-      strategy: 'password',
-      identifier: process.env.E2E_CLERK_USER_USERNAME!,
-      password: process.env.E2E_CLERK_USER_PASSWORD!,
-    },
-  });
-
+  await signInWithClerkPassword(page);
   await page.goto('/app/practice');
   // ... test continues
 });

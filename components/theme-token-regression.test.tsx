@@ -24,7 +24,7 @@ describe('theme token regression', () => {
     vi.restoreAllMocks();
   });
 
-  it('uses semantic CTA classes in get-started and pricing components', async () => {
+  it('uses semantic CTA classes in GetStartedCta', async () => {
     process.env.NEXT_PUBLIC_SKIP_CLERK = 'true';
     const { GetStartedCta } = await import('@/components/get-started-cta');
     const ctaHtml = renderToStaticMarkup(await GetStartedCta());
@@ -32,7 +32,9 @@ describe('theme token regression', () => {
     expect(ctaHtml).toContain('bg-primary');
     expect(ctaHtml).toContain('text-primary-foreground');
     expect(ctaHtml).not.toContain('bg-zinc-100');
+  });
 
+  it('uses semantic border tokens in PricingView', async () => {
     const { PricingView } = await import('@/app/pricing/pricing-view');
     const pricingHtml = renderToStaticMarkup(
       <PricingView

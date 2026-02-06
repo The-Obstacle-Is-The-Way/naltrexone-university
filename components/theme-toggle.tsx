@@ -24,11 +24,11 @@ export function ThemeToggle() {
     >
       <Sun
         aria-hidden="true"
-        className="h-5 w-5 text-gray-600 dark:text-gray-300 transition-colors dark:hidden"
+        className="h-5 w-5 text-muted-foreground transition-colors dark:hidden"
       />
       <Moon
         aria-hidden="true"
-        className="h-5 w-5 text-gray-600 dark:text-gray-300 transition-colors hidden dark:block"
+        className="h-5 w-5 text-muted-foreground transition-colors hidden dark:block"
       />
       <span className="sr-only">Toggle theme</span>
     </button>

@@ -5,6 +5,7 @@ import {
 } from './helpers/clerk-auth';
 
 test.describe('subscribe', () => {
+  test.setTimeout(120_000);
   test.skip(!hasClerkCredentials, 'Missing Clerk E2E credentials');
 
   test('user can subscribe and reach dashboard', async ({ page }) => {
@@ -53,7 +54,7 @@ test.describe('subscribe', () => {
       await page.getByRole('button', { name: /subscribe|pay/i }).click();
 
       // Success page syncs and redirects to dashboard
-      await expect(page).toHaveURL(/\/app\/dashboard/);
+      await expect(page).toHaveURL(/\/app\/dashboard/, { timeout: 30_000 });
     }
 
     await expect(

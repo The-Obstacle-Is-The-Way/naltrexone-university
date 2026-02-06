@@ -33,6 +33,16 @@ export async function ensureBookmarkedQuestion(page: Page): Promise<void> {
     }
 
     await page.getByRole('button', { name: 'Next Question' }).click();
+    await Promise.race([
+      page
+        .getByRole('button', { name: 'Bookmark' })
+        .first()
+        .waitFor({ state: 'visible', timeout: 10_000 }),
+      page
+        .getByRole('button', { name: 'Remove bookmark' })
+        .first()
+        .waitFor({ state: 'visible', timeout: 10_000 }),
+    ]).catch(() => undefined);
   }
 
   throw new Error('Unable to find a bookmarkable question in practice flow');

@@ -8,6 +8,7 @@ import { selectChoiceByLabel } from './helpers/question';
 import { ensureSubscribed } from './helpers/subscription';
 
 test.describe('subscribe and practice', () => {
+  test.setTimeout(120_000);
   test.skip(!hasClerkCredentials, 'Missing Clerk E2E credentials');
 
   test('user can subscribe and answer a question', async ({ page }) => {

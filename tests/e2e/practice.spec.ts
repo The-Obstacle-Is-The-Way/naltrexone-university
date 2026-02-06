@@ -1,24 +1,11 @@
-import { expect, type Page, test } from '@playwright/test';
+import { expect, test } from '@playwright/test';
 import {
   hasClerkCredentials,
   signInWithClerkPassword,
 } from './helpers/clerk-auth';
 import { selectChoiceByLabel } from './helpers/question';
+import { startSession } from './helpers/session';
 import { ensureSubscribed } from './helpers/subscription';
-
-async function startSession(page: Page, mode: 'tutor' | 'exam') {
-  await page.goto('/app/practice');
-  await expect(page.getByRole('heading', { name: 'Practice' })).toBeVisible();
-
-  await page.getByLabel('Mode').selectOption(mode);
-  await page.getByLabel('Count').fill('1');
-  await page.getByRole('button', { name: 'Start session' }).click();
-
-  await expect(page).toHaveURL(/\/app\/practice\/[^/]+$/, { timeout: 15_000 });
-  await expect(
-    page.getByText(new RegExp(`Session: ${mode}`, 'i')),
-  ).toBeVisible();
-}
 
 test.describe('practice', () => {
   test.setTimeout(120_000);
