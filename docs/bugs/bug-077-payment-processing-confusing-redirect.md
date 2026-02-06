@@ -1,14 +1,14 @@
 # BUG-077: Payment Processing Users See Wrong Error Message
 
 **Status:** Open
-**Priority:** P1
+**Priority:** P2
 **Date:** 2026-02-06
 
 ---
 
 ## Description
 
-When a user completes Stripe checkout but their payment is still processing (e.g., 3D Secure authentication pending, bank transfer), the subscription status is `incomplete` (mapped to `paymentProcessing` in domain). The checkout success page correctly handles this by redirecting to `/pricing?reason=payment_processing`.
+When a user completes Stripe checkout but their payment is still processing (e.g., 3D Secure pending), Stripe status `incomplete` maps to domain status `paymentProcessing`. The checkout success page correctly redirects to `/pricing?reason=payment_processing`.
 
 However, if the user navigates directly to any `/app/*` route (via bookmark, back button, or typing the URL), the layout's `enforceEntitledAppUser` check redirects them to `/pricing?reason=subscription_required` — the generic "you need a subscription" message. The user just paid and now sees a message implying they don't have a subscription at all.
 
@@ -19,25 +19,30 @@ However, if the user navigates directly to any `/app/*` route (via bookmark, bac
 2. Redirected to /pricing?reason=payment_processing ← correct
 3. User bookmarks /app/dashboard and navigates there later
 4. enforceEntitledAppUser → isEntitled = false (paymentProcessing not entitled)
-5. Redirects to /pricing?reason=subscription_required ← WRONG
+5. Redirects to /pricing?reason=subscription_required
 6. User sees: "Subscription required to access the app"
-7. User panics: "I just paid! Where's my subscription?!"
+7. Message is inconsistent with checkout-success messaging
 ```
 
 ### Expected Behavior
 
 ```
-5. Redirects to /pricing?reason=payment_processing ← should check status
+5. Redirects to /pricing?reason=payment_processing
 6. User sees: "Your payment is being processed. You'll have access shortly."
 ```
 
 ## Root Cause
 
-The `enforceEntitledAppUser` function in `app/(app)/app/layout.tsx` only knows `isEntitled: boolean`. It does not distinguish between "no subscription exists" and "subscription exists but in a non-entitled status." All non-entitled states produce the same generic redirect.
+`enforceEntitledAppUser` in `app/(app)/app/layout.tsx` receives only `isEntitled: boolean` from `CheckEntitlementUseCase`. It cannot distinguish:
+- no subscription
+- `paymentProcessing` / `paymentFailed`
+- `pastDue` / `canceled` / `unpaid` / `paused`
+
+All non-entitled states collapse to the same redirect reason.
 
 ## Fix
 
-### Option A: Return subscription status alongside entitlement (Recommended)
+### Option A: Return status context with entitlement (Recommended)
 
 Extend the entitlement check to return the subscription status:
 
@@ -45,7 +50,11 @@ Extend the entitlement check to return the subscription status:
 // check-entitlement.ts output
 {
   isEntitled: boolean;
-  reason?: 'no_subscription' | 'payment_processing' | 'past_due' | 'canceled' | 'expired';
+  reason:
+    | 'no_subscription'
+    | 'payment_processing'
+    | 'manage_billing'
+    | 'subscription_required';
 }
 ```
 
@@ -55,8 +64,8 @@ Then in the app layout:
 if (!entitlement.isEntitled) {
   if (entitlement.reason === 'payment_processing') {
     redirect('/pricing?reason=payment_processing');
-  } else if (entitlement.reason === 'past_due') {
-    redirect('/pricing?reason=payment_failed');
+  } else if (entitlement.reason === 'manage_billing') {
+    redirect('/pricing?reason=manage_billing');
   } else {
     redirect('/pricing?reason=subscription_required');
   }
@@ -69,9 +78,9 @@ Query the subscription status in the layout and use it for the redirect reason. 
 
 ## Verification
 
-- [ ] Unit test: `paymentProcessing` user redirected with `reason=payment_processing`
-- [ ] Unit test: `pastDue` user redirected with `reason=payment_failed`
-- [ ] Unit test: no-subscription user redirected with `reason=subscription_required`
+- [ ] Unit test: `paymentProcessing` or `paymentFailed` redirects with `reason=payment_processing`
+- [ ] Unit test: `pastDue`/`canceled`/`unpaid`/`paused` redirects with `reason=manage_billing`
+- [ ] Unit test: no-subscription redirects with `reason=subscription_required`
 - [ ] Pricing page renders appropriate message for each reason
 - [ ] Existing layout tests still pass
 

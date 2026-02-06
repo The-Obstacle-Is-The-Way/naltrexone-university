@@ -8,7 +8,7 @@
 
 ## Description
 
-A comprehensive audit of the entire billing/subscription flow uncovered multiple P2/P3 issues beyond the P1 bugs filed separately (BUG-075, BUG-076, BUG-077). These are edge cases, race conditions, and architectural gaps that are unlikely to hit most users today but will cause problems at scale or with certain payment methods.
+A comprehensive audit of the billing/subscription flow uncovered P2/P3 issues that are mostly edge-case correctness, recoverability, and observability gaps. These issues are unlikely to affect most users immediately, but they can cause incidents at scale or with specific payment-method/regional paths.
 
 ## Overall Assessment
 
@@ -41,18 +41,23 @@ For "subscription ref" events (`checkout.session.completed`, `invoice.payment_*`
 
 ---
 
-## Finding 2: Webhook `FOR UPDATE` Lock Can Cause Stripe Timeout Under Contention (P2)
+## Finding 2: Duplicate Webhook Lock Contention Can Inflate Latency (P2)
 
 **Files:**
 - `src/adapters/controllers/stripe-webhook-controller.ts:56-98`
 - `src/adapters/repositories/drizzle-stripe-event-repository.ts`
 
 **Problem:**
-When a duplicate webhook arrives while the original is still processing, the `SELECT ... FOR UPDATE` lock causes the duplicate to block until the first transaction completes. Stripe has a 20-second timeout for webhook responses. If processing takes >20s (or if multiple duplicates queue up), Stripe will time out, mark the delivery as failed, and retry — creating more contention.
+`processStripeWebhook` always calls `lock(eventId)` after `claim()`. For duplicate deliveries, that means an extra transaction can block on the same row lock while the first handler is still processing.
 
-**Impact:** Under burst conditions (Stripe retries rapidly after a brief outage), webhook processing could enter a feedback loop of timeouts and retries.
+This is correct for safety, but under high duplicate traffic it can increase response time and retry pressure.
 
-**Fix:** After `claim()` returns false (row already exists), return `200 OK` immediately instead of waiting for the lock. If the first handler fails, the event remains unprocessed, and Stripe will retry. Alternatively, add a short timeout on the `FOR UPDATE` lock attempt (e.g., `NOWAIT` or a 5-second timeout).
+**Impact:** Under burst conditions, webhook response latency can spike and increase Stripe retries, amplifying database contention.
+
+**Fix:** Keep idempotency semantics, but add a non-blocking fast path:
+- read current event state before lock; if already processed successfully, return early
+- for unprocessed duplicates, use short lock timeout / `NOWAIT` + retry strategy instead of unbounded blocking
+- do **not** simply skip when `claim()` is false, because failed rows must still be reprocessed
 
 ---
 
@@ -65,27 +70,30 @@ When a duplicate webhook arrives while the original is still processing, the `SE
 **Problem:**
 The webhook controller calls `stripeCustomers.insert(userId, externalCustomerId)` before upserting the subscription. If the user already has a different `stripeCustomerId` stored, the repository throws `ApplicationError('CONFLICT', ...)`. This aborts the entire webhook transaction and marks the event as errored.
 
-This could happen if: a user's Stripe customer is recreated (admin action, data migration), or if the Stripe search API returned a stale result during customer creation. Once this happens, **every subsequent webhook for this user fails permanently** — Stripe retries, hits the same CONFLICT, and the subscription state never updates.
+This could happen if a user's Stripe customer is recreated (admin action/migration) or metadata mappings drift. Once this happens, subsequent webhook updates for that user can continue failing until the mapping is repaired.
 
-**Impact:** A user whose Stripe customer ID changes has their subscription frozen in whatever state it was in before the conflict. They could lose access permanently until manual DB intervention.
+**Impact:** A user whose Stripe customer ID mapping drifts can have subscription state stuck until manual intervention.
 
 **Fix:** In the webhook context, the incoming `stripeCustomerId` is authoritative (it came from Stripe). Update the stored mapping instead of throwing CONFLICT. Alternatively, allow the subscription upsert to proceed even if the customer mapping fails (the subscription is the more important record).
 
 ---
 
-## Finding 4: Canceled User Can't Re-subscribe Until Period Ends (P2)
+## Finding 4: Pricing Lacks Context for Current Non-Entitled Subscriptions (P2)
 
 **Files:**
 - `src/application/use-cases/create-checkout-session.ts:56-62`
+- `src/application/use-cases/check-entitlement.ts`
+- `app/pricing/page.tsx`
+- `app/pricing/subscribe-action.ts`
 
 **Problem:**
-This is a UX subset of BUG-075. When a user cancels their subscription with `cancelAtPeriodEnd: true`, their status remains `active` until the period ends (so they retain access — correct). But if they change their mind and want to switch from monthly to annual (or vice versa), they can't create a new checkout because the guard sees an active subscription.
+Pricing loads only `{ isEntitled }`, not subscription status/context. Users in recoverable non-entitled states (for example `pastDue` or `paymentProcessing` with `currentPeriodEnd > now`) initially see subscribe CTAs. Submitting subscribe then redirects to `manage_billing` via `ALREADY_SUBSCRIBED`.
 
-The correct action for this user is to reactivate via the billing portal, not create a new checkout. But the error message says "Already subscribed" with no guidance.
+This is not a checkout-guard correctness bug (the strict guard is intentional from BUG-052), but it is a UX/context gap.
 
-**Impact:** Users who cancel and want to re-subscribe or change plans are confused by the error.
+**Impact:** Confusing subscribe-then-redirect loop and avoidable failed checkout attempts.
 
-**Fix:** When throwing `ALREADY_SUBSCRIBED`, check if the subscription has `cancelAtPeriodEnd: true`. If so, redirect to the billing portal with a message like "Your subscription is still active until [date]. Manage it here." In `subscribe-action.ts`, add a specific handler for this case alongside the existing `ALREADY_SUBSCRIBED` redirect.
+**Fix:** Return status/reason context from entitlement checks and render manage-billing guidance on initial pricing load for recoverable non-entitled states.
 
 ---
 
@@ -101,7 +109,11 @@ This means the old session remains open. If the user completes the old session (
 
 **Impact:** A user who clicked "Monthly," then went back and clicked "Annual" could have both sessions open. Completing the stale Monthly session would create the wrong subscription.
 
-**Fix:** If `expire()` fails, log at error level (not warn) and consider whether to proceed or fail. At minimum, add monitoring/alerting for this condition. The idempotency of the subscription upsert would eventually correct the plan on the next webhook, but there's a window of wrong state.
+**Fix:** If `expire()` fails, avoid silently falling through. Either:
+- fail fast and show a recoverable error, or
+- continue only with explicit error telemetry and alerting
+
+The current warning-only behavior makes wrong-plan completions harder to detect.
 
 ---
 
@@ -186,7 +198,6 @@ The `stripe_subscriptions` table has a UNIQUE constraint on `userId`. When a use
 ## Verification
 
 - [ ] Each finding assessed for whether it needs immediate fix vs. tracked as debt
-- [ ] P1 bugs (BUG-075, BUG-076, BUG-077) fixed first
 - [ ] P2 findings addressed before production launch with real payments
 - [ ] P3 findings tracked for post-launch
 
@@ -194,14 +205,12 @@ The `stripe_subscriptions` table has a UNIQUE constraint on `userId`. When a use
 
 ## Related
 
-- BUG-075: Checkout guard / entitlement mismatch (P1)
-- BUG-076: pastDue immediate lockout (P1)
-- BUG-077: paymentProcessing confusing redirect (P1)
+- BUG-075: pricing CTA mismatch for recoverable subscription states
+- BUG-077: payment-processing users see generic subscription-required redirect
 - `src/adapters/gateways/stripe/` (all Stripe gateway code)
 - `src/adapters/controllers/stripe-webhook-controller.ts`
 - `src/application/use-cases/create-checkout-session.ts`
 - `src/domain/services/entitlement.ts`
 - `app/api/stripe/webhook/handler.ts`
 - BUG-052 (archived — earlier checkout guard fix)
-- BUG-024 (archived — earlier entitlement race condition fix)
 - DEBT-069 (archived — document eager sync pattern)
