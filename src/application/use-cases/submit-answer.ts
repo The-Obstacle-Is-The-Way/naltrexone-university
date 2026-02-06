@@ -113,14 +113,40 @@ export class SubmitAnswerUseCase {
     });
 
     if (session && session.endedAt === null) {
-      await this.sessions.recordQuestionAnswer({
-        sessionId: session.id,
-        userId: input.userId,
-        questionId: question.id,
-        selectedChoiceId: input.choiceId,
-        isCorrect: grade.isCorrect,
-        answeredAt: attempt.answeredAt,
-      });
+      try {
+        await this.sessions.recordQuestionAnswer({
+          sessionId: session.id,
+          userId: input.userId,
+          questionId: question.id,
+          selectedChoiceId: input.choiceId,
+          isCorrect: grade.isCorrect,
+          answeredAt: attempt.answeredAt,
+        });
+      } catch (error) {
+        try {
+          const rolledBack = await this.attempts.deleteById(
+            attempt.id,
+            input.userId,
+          );
+          if (!rolledBack) {
+            throw new ApplicationError(
+              'INTERNAL_ERROR',
+              'Failed to roll back attempt after session state persistence error',
+            );
+          }
+        } catch (rollbackError) {
+          if (rollbackError instanceof ApplicationError) {
+            throw rollbackError;
+          }
+
+          throw new ApplicationError(
+            'INTERNAL_ERROR',
+            'Failed to roll back attempt after session state persistence error',
+          );
+        }
+
+        throw error;
+      }
     }
 
     const shouldShowExplanation =

@@ -66,4 +66,89 @@ describe('SetPracticeSessionQuestionMarkUseCase', () => {
       ),
     );
   });
+
+  it('persists unmarked state for exam sessions', async () => {
+    const userId = 'user-1';
+    const sessionId = 'session-1';
+    const questionId = 'q1';
+
+    const session = createPracticeSession({
+      id: sessionId,
+      userId,
+      mode: 'exam',
+      questionIds: [questionId],
+      questionStates: [
+        {
+          questionId,
+          markedForReview: true,
+          latestSelectedChoiceId: null,
+          latestIsCorrect: null,
+          latestAnsweredAt: null,
+        },
+      ],
+    });
+
+    const sessions = new FakePracticeSessionRepository([session]);
+    const useCase = new SetPracticeSessionQuestionMarkUseCase(sessions);
+
+    await expect(
+      useCase.execute({
+        userId,
+        sessionId,
+        questionId,
+        markedForReview: false,
+      }),
+    ).resolves.toEqual({
+      questionId,
+      markedForReview: false,
+    });
+
+    const updated = await sessions.findByIdAndUserId(sessionId, userId);
+    expect(updated?.questionStates[0]).toMatchObject({
+      questionId,
+      markedForReview: false,
+    });
+  });
+
+  it('throws NOT_FOUND when session does not exist', async () => {
+    const useCase = new SetPracticeSessionQuestionMarkUseCase(
+      new FakePracticeSessionRepository([]),
+    );
+
+    await expect(
+      useCase.execute({
+        userId: 'user-1',
+        sessionId: 'missing-session',
+        questionId: 'q1',
+        markedForReview: true,
+      }),
+    ).rejects.toEqual(
+      new ApplicationError('NOT_FOUND', 'Practice session not found'),
+    );
+  });
+
+  it('throws CONFLICT when session is already ended', async () => {
+    const useCase = new SetPracticeSessionQuestionMarkUseCase(
+      new FakePracticeSessionRepository([
+        createPracticeSession({
+          id: 'session-1',
+          userId: 'user-1',
+          mode: 'exam',
+          questionIds: ['q1'],
+          endedAt: new Date('2026-02-06T00:00:00Z'),
+        }),
+      ]),
+    );
+
+    await expect(
+      useCase.execute({
+        userId: 'user-1',
+        sessionId: 'session-1',
+        questionId: 'q1',
+        markedForReview: true,
+      }),
+    ).rejects.toEqual(
+      new ApplicationError('CONFLICT', 'Cannot modify a completed session'),
+    );
+  });
 });

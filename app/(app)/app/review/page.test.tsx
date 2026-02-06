@@ -37,6 +37,32 @@ describe('app/(app)/app/review', () => {
     expect(html).not.toContain('>q-1<');
   });
 
+  it('renders stem description as plain text (no raw markdown syntax)', () => {
+    const stemMd = '# Heading with [link](https://example.com) and **bold**';
+    const html = renderToStaticMarkup(
+      <ReviewView
+        rows={[
+          {
+            isAvailable: true,
+            questionId: 'q_1',
+            slug: 'q-1',
+            stemMd,
+            difficulty: 'easy',
+            lastAnsweredAt: '2026-02-01T00:00:00.000Z',
+          },
+        ]}
+        limit={20}
+        offset={0}
+        totalCount={1}
+      />,
+    );
+
+    expect(html).toContain('Heading with link and bold');
+    expect(html).not.toContain('# Heading');
+    expect(html).not.toContain('[link](https://example.com)');
+    expect(html).not.toContain('**bold**');
+  });
+
   it('renders missed questions', () => {
     const html = renderToStaticMarkup(
       <ReviewView

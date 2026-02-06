@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { describe, expect, it } from 'vitest';
+import type { PracticeSession } from '@/src/domain/entities';
 import {
   createPracticeSession,
   createQuestion,
@@ -10,6 +11,22 @@ import {
   FakeQuestionRepository,
 } from '../test-helpers/fakes';
 import { GetPracticeSessionReviewUseCase } from './get-practice-session-review';
+
+class MismatchedStatePracticeSessionRepository extends FakePracticeSessionRepository {
+  constructor(private readonly session: PracticeSession) {
+    super([]);
+  }
+
+  async findByIdAndUserId(
+    id: string,
+    userId: string,
+  ): Promise<PracticeSession | null> {
+    if (this.session.id !== id || this.session.userId !== userId) {
+      return null;
+    }
+    return this.session;
+  }
+}
 
 describe('GetPracticeSessionReviewUseCase', () => {
   it('returns ordered review rows with answered/marked state', async () => {
@@ -89,6 +106,76 @@ describe('GetPracticeSessionReviewUseCase', () => {
         ],
       },
     );
+  });
+
+  it('builds rows from questionIds even when questionStates is shorter', async () => {
+    const userId = 'user-1';
+    const sessionId = 'session-1';
+    const logger = new FakeLogger();
+    const questions = new FakeQuestionRepository([
+      createQuestion({
+        id: 'q1',
+        slug: 'q-1',
+        stemMd: 'Stem for q1',
+        difficulty: 'easy',
+      }),
+      createQuestion({
+        id: 'q2',
+        slug: 'q-2',
+        stemMd: 'Stem for q2',
+        difficulty: 'hard',
+      }),
+    ]);
+
+    const session = createPracticeSession({
+      id: sessionId,
+      userId,
+      mode: 'exam',
+      questionIds: ['q1', 'q2'],
+      questionStates: [
+        {
+          questionId: 'q1',
+          markedForReview: true,
+          latestSelectedChoiceId: 'choice-1',
+          latestIsCorrect: true,
+          latestAnsweredAt: new Date('2026-02-06T00:00:00Z'),
+        },
+      ],
+    });
+
+    const useCase = new GetPracticeSessionReviewUseCase(
+      new MismatchedStatePracticeSessionRepository(session),
+      questions,
+      logger,
+    );
+
+    await expect(useCase.execute({ userId, sessionId })).resolves.toMatchObject(
+      {
+        totalCount: 2,
+        answeredCount: 1,
+        markedCount: 1,
+        rows: [
+          {
+            isAvailable: true,
+            questionId: 'q1',
+            order: 1,
+            isAnswered: true,
+            isCorrect: true,
+            markedForReview: true,
+          },
+          {
+            isAvailable: true,
+            questionId: 'q2',
+            order: 2,
+            isAnswered: false,
+            isCorrect: null,
+            markedForReview: false,
+          },
+        ],
+      },
+    );
+    expect(questions.findPublishedByIdsCalls).toEqual([['q1', 'q2']]);
+    expect(logger.warnCalls).toEqual([]);
   });
 
   it('returns unavailable rows when a referenced question is missing and logs warning', async () => {

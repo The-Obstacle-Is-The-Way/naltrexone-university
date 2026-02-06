@@ -61,26 +61,38 @@ export class GetPracticeSessionReviewUseCase {
       throw new ApplicationError('NOT_FOUND', 'Practice session not found');
     }
 
-    const questionIds = [...session.questionIds];
-    const questions = await this.questions.findPublishedByIds(questionIds);
+    const questions = await this.questions.findPublishedByIds(
+      session.questionIds,
+    );
     const questionById = new Map(
       questions.map((question) => [question.id, question]),
     );
+    const stateByQuestionId = new Map(
+      session.questionStates.map((state) => [state.questionId, state]),
+    );
 
     const rows: PracticeSessionReviewRow[] = [];
-    for (let i = 0; i < session.questionStates.length; i += 1) {
-      const state = session.questionStates[i];
-      if (!state) continue;
+    for (let i = 0; i < session.questionIds.length; i += 1) {
+      const questionId = session.questionIds[i];
+      if (!questionId) continue;
 
-      const question = questionById.get(state.questionId);
+      const state = stateByQuestionId.get(questionId) ?? {
+        questionId,
+        markedForReview: false,
+        latestSelectedChoiceId: null,
+        latestIsCorrect: null,
+        latestAnsweredAt: null,
+      };
+
+      const question = questionById.get(questionId);
       if (!question) {
         this.logger.warn(
-          { questionId: state.questionId },
+          { questionId },
           'Practice session review references missing question',
         );
         rows.push({
           isAvailable: false,
-          questionId: state.questionId,
+          questionId,
           order: i + 1,
           isAnswered: state.latestSelectedChoiceId !== null,
           isCorrect: state.latestIsCorrect,
@@ -105,12 +117,8 @@ export class GetPracticeSessionReviewUseCase {
       sessionId: session.id,
       mode: session.mode,
       totalCount: session.questionIds.length,
-      answeredCount: session.questionStates.filter(
-        (state) => state.latestSelectedChoiceId !== null,
-      ).length,
-      markedCount: session.questionStates.filter(
-        (state) => state.markedForReview,
-      ).length,
+      answeredCount: rows.filter((row) => row.isAnswered).length,
+      markedCount: rows.filter((row) => row.markedForReview).length,
       rows,
     };
   }

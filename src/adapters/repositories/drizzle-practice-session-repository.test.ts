@@ -234,6 +234,75 @@ describe('DrizzlePracticeSessionRepository', () => {
     ).rejects.toMatchObject({ code: 'INTERNAL_ERROR' });
   });
 
+  it('logs a warning when persisted params include orphaned questionStates', async () => {
+    const row = {
+      id: 'session_1',
+      userId: 'user_1',
+      mode: 'tutor',
+      paramsJson: {
+        count: 1,
+        tagSlugs: [],
+        difficulties: [],
+        questionIds: ['q1'],
+        questionStates: [
+          {
+            questionId: 'q1',
+            markedForReview: false,
+            latestSelectedChoiceId: null,
+            latestIsCorrect: null,
+            latestAnsweredAt: null,
+          },
+          {
+            questionId: 'q-orphan',
+            markedForReview: true,
+            latestSelectedChoiceId: null,
+            latestIsCorrect: null,
+            latestAnsweredAt: null,
+          },
+        ],
+      },
+      startedAt: new Date('2026-02-01T00:00:00.000Z'),
+      endedAt: null,
+    } as const;
+
+    const warnSpy = vi
+      .spyOn(console, 'warn')
+      .mockImplementation(() => undefined);
+
+    const db = {
+      query: {
+        practiceSessions: {
+          findFirst: async () => row,
+        },
+      },
+      insert: () => {
+        throw new Error('unexpected insert');
+      },
+      update: () => {
+        throw new Error('unexpected update');
+      },
+    } as const;
+
+    type RepoDb = ConstructorParameters<
+      typeof DrizzlePracticeSessionRepository
+    >[0];
+    const repo = new DrizzlePracticeSessionRepository(db as unknown as RepoDb);
+
+    await expect(
+      repo.findByIdAndUserId('session_1', 'user_1'),
+    ).resolves.toBeTruthy();
+
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.stringContaining(
+        'DrizzlePracticeSessionRepository.normalizeParams: orphaned questionStates dropped',
+      ),
+      expect.objectContaining({
+        orphanCount: 1,
+        orphanQuestionIds: ['q-orphan'],
+      }),
+    );
+  });
+
   it('creates a practice session and returns a mapped PracticeSession', async () => {
     const startedAt = new Date('2026-02-01T00:00:00.000Z');
     const returningRow = {
@@ -436,6 +505,69 @@ describe('DrizzlePracticeSessionRepository', () => {
         ],
       }),
     });
+  });
+
+  it('retries question-state update when a concurrent write causes a stale write miss', async () => {
+    const row = {
+      id: 'session_1',
+      userId: 'user_1',
+      mode: 'exam',
+      paramsJson: {
+        count: 2,
+        tagSlugs: [],
+        difficulties: ['easy'],
+        questionIds: ['q1', 'q2'],
+      },
+      startedAt: new Date('2026-02-01T00:00:00.000Z'),
+      endedAt: null,
+    } as const;
+
+    const findFirst = vi.fn(async () => row);
+    const updateReturning = vi
+      .fn()
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([{ id: 'session_1' }]);
+    const updateWhere = vi.fn(() => ({ returning: updateReturning }));
+    const updateSet = vi.fn(() => ({ where: updateWhere }));
+    const update = vi.fn(() => ({ set: updateSet }));
+
+    const db = {
+      query: {
+        practiceSessions: {
+          findFirst,
+        },
+      },
+      update,
+      insert: () => {
+        throw new Error('unexpected insert');
+      },
+    } as const;
+
+    type RepoDb = ConstructorParameters<
+      typeof DrizzlePracticeSessionRepository
+    >[0];
+    const repo = new DrizzlePracticeSessionRepository(db as unknown as RepoDb);
+
+    const answeredAt = new Date('2026-02-01T00:10:00.000Z');
+    await expect(
+      repo.recordQuestionAnswer({
+        sessionId: 'session_1',
+        userId: 'user_1',
+        questionId: 'q1',
+        selectedChoiceId: 'choice_1',
+        isCorrect: true,
+        answeredAt,
+      }),
+    ).resolves.toMatchObject({
+      questionId: 'q1',
+      latestSelectedChoiceId: 'choice_1',
+      latestIsCorrect: true,
+      latestAnsweredAt: answeredAt,
+    });
+
+    expect(update).toHaveBeenCalledTimes(2);
+    expect(updateReturning).toHaveBeenCalledTimes(2);
+    expect(findFirst).toHaveBeenCalledTimes(2);
   });
 
   it('updates mark-for-review state for a session question', async () => {

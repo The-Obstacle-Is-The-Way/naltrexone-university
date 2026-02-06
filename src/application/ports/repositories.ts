@@ -64,6 +64,7 @@ export type MissedQuestionAttempt = {
 
 export interface AttemptWriter {
   insert(input: AttemptInsertInput): Promise<Attempt>;
+  deleteById(id: string, userId: string): Promise<boolean>;
 }
 
 export interface AttemptHistoryReader {

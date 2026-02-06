@@ -14,6 +14,15 @@ import {
 } from '../test-helpers/fakes';
 import { SubmitAnswerUseCase } from './submit-answer';
 
+class FailingRecordSessionRepository extends FakePracticeSessionRepository {
+  async recordQuestionAnswer(): Promise<never> {
+    throw new ApplicationError(
+      'INTERNAL_ERROR',
+      'Failed to persist practice session answer state',
+    );
+  }
+}
+
 describe('SubmitAnswerUseCase', () => {
   it('returns choice explanations in deterministic display order', async () => {
     const userId = 'user-1';
@@ -425,6 +434,52 @@ describe('SubmitAnswerUseCase', () => {
         latestAnsweredAt: expect.any(Date),
       },
     ]);
+  });
+
+  it('rolls back inserted attempt when session state persistence fails', async () => {
+    const userId = 'user-1';
+    const sessionId = 'session-1';
+    const questionId = 'q1';
+
+    const question = createQuestion({
+      id: questionId,
+      status: 'published',
+      choices: [
+        createChoice({ id: 'c1', questionId, label: 'A', isCorrect: false }),
+        createChoice({ id: 'c2', questionId, label: 'B', isCorrect: true }),
+      ],
+    });
+
+    const session = createPracticeSession({
+      id: sessionId,
+      userId,
+      mode: 'exam',
+      endedAt: null,
+      questionIds: [questionId],
+    });
+
+    const attempts = new FakeAttemptRepository();
+    const useCase = new SubmitAnswerUseCase(
+      new FakeQuestionRepository([question]),
+      attempts,
+      new FailingRecordSessionRepository([session]),
+    );
+
+    await expect(
+      useCase.execute({
+        userId,
+        questionId,
+        choiceId: 'c2',
+        sessionId,
+      }),
+    ).rejects.toEqual(
+      new ApplicationError(
+        'INTERNAL_ERROR',
+        'Failed to persist practice session answer state',
+      ),
+    );
+
+    expect(attempts.getAll()).toEqual([]);
   });
 
   it('returns explanation when exam session has ended', async () => {

@@ -571,6 +571,7 @@ export default function PracticeSessionPageClient({
   const onToggleMarkForReview = useCallback(async () => {
     if (!question) return;
     if (sessionMode !== 'exam') return;
+    if (isMarkingForReview) return;
 
     const markedForReview = !sessionInfo?.isMarkedForReview;
     setIsMarkingForReview(true);
@@ -620,6 +621,7 @@ export default function PracticeSessionPageClient({
   }, [
     question,
     sessionMode,
+    isMarkingForReview,
     sessionInfo?.isMarkedForReview,
     sessionId,
     isMounted,

@@ -55,6 +55,7 @@ type NormalizedPracticeSessionParams = Omit<
 > & {
   questionStates: PersistedQuestionState[];
 };
+const UPDATE_QUESTION_STATE_MAX_RETRIES = 3;
 
 export class DrizzlePracticeSessionRepository
   implements PracticeSessionRepository
@@ -92,6 +93,20 @@ export class DrizzlePracticeSessionRepository
   private normalizeParams(
     params: PracticeSessionParams,
   ): NormalizedPracticeSessionParams {
+    const expectedQuestionIds = new Set(params.questionIds);
+    const orphanQuestionIds = (params.questionStates ?? [])
+      .filter((state) => !expectedQuestionIds.has(state.questionId))
+      .map((state) => state.questionId);
+    if (orphanQuestionIds.length > 0) {
+      console.warn(
+        'DrizzlePracticeSessionRepository.normalizeParams: orphaned questionStates dropped',
+        {
+          orphanCount: orphanQuestionIds.length,
+          orphanQuestionIds,
+        },
+      );
+    }
+
     const byQuestionId = new Map(
       (params.questionStates ?? []).map((state) => [state.questionId, state]),
     );
@@ -185,66 +200,72 @@ export class DrizzlePracticeSessionRepository
     ) => PracticeSessionQuestionState,
     failureMessage: string,
   ): Promise<PracticeSessionQuestionState> {
-    const existing = await this.findByIdAndUserId(
-      input.sessionId,
-      input.userId,
-    );
-    if (!existing) {
-      throw new ApplicationError('NOT_FOUND', 'Practice session not found');
-    }
-
-    if (existing.endedAt) {
-      throw new ApplicationError('CONFLICT', 'Practice session already ended');
-    }
-
-    const found = existing.questionStates.find(
-      (state) => state.questionId === input.questionId,
-    );
-    if (!found) {
-      throw new ApplicationError(
-        'NOT_FOUND',
-        'Question is not part of this practice session',
-      );
-    }
-
-    const updatedState = updateFn(found);
-    const nextSession: PracticeSession = {
-      ...existing,
-      questionStates: existing.questionStates.map((state) =>
-        state.questionId === input.questionId ? updatedState : state,
-      ),
-    };
-
-    const [updated] = await this.db
-      .update(practiceSessions)
-      .set({ paramsJson: this.toParamsJson(nextSession) })
-      .where(
-        and(
-          eq(practiceSessions.id, input.sessionId),
-          eq(practiceSessions.userId, input.userId),
-          isNull(practiceSessions.endedAt),
-        ),
-      )
-      .returning({ id: practiceSessions.id });
-
-    if (!updated) {
-      const current = await this.findByIdAndUserId(
+    for (
+      let attempt = 0;
+      attempt < UPDATE_QUESTION_STATE_MAX_RETRIES;
+      attempt += 1
+    ) {
+      const existing = await this.findByIdAndUserId(
         input.sessionId,
         input.userId,
       );
-      if (!current) {
+      if (!existing) {
         throw new ApplicationError('NOT_FOUND', 'Practice session not found');
       }
-      if (current.endedAt) {
+      if (existing.endedAt) {
         throw new ApplicationError(
           'CONFLICT',
           'Practice session already ended',
         );
       }
-      throw new ApplicationError('INTERNAL_ERROR', failureMessage);
+
+      const found = existing.questionStates.find(
+        (state) => state.questionId === input.questionId,
+      );
+      if (!found) {
+        throw new ApplicationError(
+          'NOT_FOUND',
+          'Question is not part of this practice session',
+        );
+      }
+
+      const updatedState = updateFn(found);
+      const nextSession: PracticeSession = {
+        ...existing,
+        questionStates: existing.questionStates.map((state) =>
+          state.questionId === input.questionId ? updatedState : state,
+        ),
+      };
+      const expectedParamsJson = this.toParamsJson(existing);
+      const nextParamsJson = this.toParamsJson(nextSession);
+
+      const [updated] = await this.db
+        .update(practiceSessions)
+        .set({ paramsJson: nextParamsJson })
+        .where(
+          and(
+            eq(practiceSessions.id, input.sessionId),
+            eq(practiceSessions.userId, input.userId),
+            isNull(practiceSessions.endedAt),
+            eq(practiceSessions.paramsJson, expectedParamsJson),
+          ),
+        )
+        .returning({ id: practiceSessions.id });
+
+      if (updated) {
+        return updatedState;
+      }
     }
 
-    return updatedState;
+    const current = await this.findByIdAndUserId(input.sessionId, input.userId);
+    if (!current) {
+      throw new ApplicationError('NOT_FOUND', 'Practice session not found');
+    }
+    if (current.endedAt) {
+      throw new ApplicationError('CONFLICT', 'Practice session already ended');
+    }
+
+    throw new ApplicationError('INTERNAL_ERROR', failureMessage);
   }
 
   async findByIdAndUserId(id: string, userId: string) {

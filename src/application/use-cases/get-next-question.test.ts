@@ -55,18 +55,7 @@ describe('GetNextQuestionUseCase', () => {
     });
 
     const questions = new FakeQuestionRepository([q1, q2]);
-    const attempts = new FakeAttemptRepository([
-      {
-        id: 'attempt-1',
-        userId,
-        questionId: 'q1',
-        practiceSessionId: sessionId,
-        selectedChoiceId: 'c1',
-        isCorrect: false,
-        timeSpentSeconds: 0,
-        answeredAt: new Date('2026-01-31T00:00:00Z'),
-      },
-    ]);
+    const attempts = new FakeAttemptRepository([]);
     const sessions = new FakePracticeSessionRepository([session]);
 
     const useCase = new GetNextQuestionUseCase(questions, attempts, sessions);
@@ -248,18 +237,7 @@ describe('GetNextQuestionUseCase', () => {
     });
 
     const questions = new FakeQuestionRepository([q1, q2, q3]);
-    const attempts = new FakeAttemptRepository([
-      {
-        id: 'attempt-1',
-        userId,
-        questionId: 'q2',
-        practiceSessionId: sessionId,
-        selectedChoiceId: 'c2',
-        isCorrect: false,
-        timeSpentSeconds: 0,
-        answeredAt: new Date('2026-01-31T00:00:00Z'),
-      },
-    ]);
+    const attempts = new FakeAttemptRepository([]);
     const sessions = new FakePracticeSessionRepository([session]);
 
     const useCase = new GetNextQuestionUseCase(questions, attempts, sessions);
@@ -333,18 +311,7 @@ describe('GetNextQuestionUseCase', () => {
 
     const useCase = new GetNextQuestionUseCase(
       new FakeQuestionRepository([q1]),
-      new FakeAttemptRepository([
-        {
-          id: 'attempt-1',
-          userId,
-          questionId: 'q1',
-          practiceSessionId: sessionId,
-          selectedChoiceId: 'c1',
-          isCorrect: false,
-          timeSpentSeconds: 0,
-          answeredAt: new Date('2026-01-31T00:00:00Z'),
-        },
-      ]),
+      new FakeAttemptRepository([]),
       new FakePracticeSessionRepository([session]),
     );
 

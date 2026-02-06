@@ -481,6 +481,40 @@ describe('practice-controller', () => {
       expect(deps.getPracticeSessionReviewUseCase.inputs).toEqual([]);
     });
 
+    it('returns UNAUTHENTICATED when unauthenticated', async () => {
+      const deps = createDeps({ user: null });
+
+      const result = await getPracticeSessionReview(
+        { sessionId: '11111111-1111-1111-1111-111111111111' },
+        deps,
+      );
+
+      expect(result).toMatchObject({
+        ok: false,
+        error: { code: 'UNAUTHENTICATED' },
+      });
+      expect(deps.getPracticeSessionReviewUseCase.inputs).toEqual([]);
+    });
+
+    it('returns NOT_FOUND when use case throws ApplicationError', async () => {
+      const deps = createDeps({
+        reviewThrows: new ApplicationError(
+          'NOT_FOUND',
+          'Practice session not found',
+        ),
+      });
+
+      const result = await getPracticeSessionReview(
+        { sessionId: '11111111-1111-1111-1111-111111111111' },
+        deps,
+      );
+
+      expect(result).toEqual({
+        ok: false,
+        error: { code: 'NOT_FOUND', message: 'Practice session not found' },
+      });
+    });
+
     it('returns review payload when use case succeeds', async () => {
       const deps = createDeps({
         reviewOutput: {
@@ -541,6 +575,48 @@ describe('practice-controller', () => {
         },
       });
       expect(deps.setPracticeSessionQuestionMarkUseCase.inputs).toEqual([]);
+    });
+
+    it('returns UNAUTHENTICATED when unauthenticated', async () => {
+      const deps = createDeps({ user: null });
+
+      const result = await setPracticeSessionQuestionMark(
+        {
+          sessionId: '11111111-1111-1111-1111-111111111111',
+          questionId: '22222222-2222-2222-2222-222222222222',
+          markedForReview: true,
+        },
+        deps,
+      );
+
+      expect(result).toMatchObject({
+        ok: false,
+        error: { code: 'UNAUTHENTICATED' },
+      });
+      expect(deps.setPracticeSessionQuestionMarkUseCase.inputs).toEqual([]);
+    });
+
+    it('returns NOT_FOUND when use case throws ApplicationError', async () => {
+      const deps = createDeps({
+        setMarkThrows: new ApplicationError(
+          'NOT_FOUND',
+          'Practice session not found',
+        ),
+      });
+
+      const result = await setPracticeSessionQuestionMark(
+        {
+          sessionId: '11111111-1111-1111-1111-111111111111',
+          questionId: '22222222-2222-2222-2222-222222222222',
+          markedForReview: true,
+        },
+        deps,
+      );
+
+      expect(result).toEqual({
+        ok: false,
+        error: { code: 'NOT_FOUND', message: 'Practice session not found' },
+      });
     });
 
     it('returns updated mark state when use case succeeds', async () => {

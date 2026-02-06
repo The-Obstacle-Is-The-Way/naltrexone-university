@@ -34,6 +34,13 @@ export class SetPracticeSessionQuestionMarkUseCase {
       );
     }
 
+    if (session.endedAt) {
+      throw new ApplicationError(
+        'CONFLICT',
+        'Cannot modify a completed session',
+      );
+    }
+
     const state = await this.sessions.setQuestionMarkedForReview({
       sessionId: input.sessionId,
       userId: input.userId,

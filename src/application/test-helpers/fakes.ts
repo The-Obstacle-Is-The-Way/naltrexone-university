@@ -630,6 +630,14 @@ export class FakeAttemptRepository implements AttemptRepository {
     return attempt;
   }
 
+  async deleteById(id: string, userId: string): Promise<boolean> {
+    const before = this.attempts.length;
+    this.attempts = this.attempts.filter(
+      (attempt) => !(attempt.id === id && attempt.userId === userId),
+    );
+    return this.attempts.length < before;
+  }
+
   async findByUserId(
     userId: string,
     page: PageOptions,

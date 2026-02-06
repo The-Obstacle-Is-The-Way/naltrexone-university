@@ -8,7 +8,10 @@ import {
   getBookmarks,
   toggleBookmark,
 } from '@/src/adapters/controllers/bookmark-controller';
-import { getStemPreview } from '@/src/adapters/shared/stem-preview';
+import {
+  getStemPreview,
+  toPlainText,
+} from '@/src/adapters/shared/stem-preview';
 
 type RemoveBookmarkErrorCode =
   | 'missing_question_id'
@@ -109,7 +112,7 @@ export function BookmarksView({ rows }: { rows: GetBookmarksOutput['rows'] }) {
                         {getStemPreview(row.stemMd, 80)}
                       </div>
                       <div className="text-sm text-muted-foreground">
-                        {row.stemMd}
+                        {toPlainText(row.stemMd)}
                       </div>
                       <div className="text-xs text-muted-foreground">
                         <span className="capitalize">{row.difficulty}</span>

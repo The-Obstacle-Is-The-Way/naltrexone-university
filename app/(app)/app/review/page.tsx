@@ -5,7 +5,10 @@ import {
   type GetMissedQuestionsOutput,
   getMissedQuestions,
 } from '@/src/adapters/controllers/review-controller';
-import { getStemPreview } from '@/src/adapters/shared/stem-preview';
+import {
+  getStemPreview,
+  toPlainText,
+} from '@/src/adapters/shared/stem-preview';
 
 type ReviewSearchParams = {
   limit?: string;
@@ -93,7 +96,7 @@ export function ReviewView({
                           {getStemPreview(row.stemMd, 80)}
                         </div>
                         <div className="text-sm text-muted-foreground">
-                          {row.stemMd}
+                          {toPlainText(row.stemMd)}
                         </div>
                         <div className="text-xs text-muted-foreground">
                           <span className="capitalize">{row.difficulty}</span>

@@ -17,4 +17,10 @@ describe('getStemPreview', () => {
       getStemPreview('# Heading with [link](https://example.com)', 100),
     ).toBe('Heading with link');
   });
+
+  it('strips markdown image syntax without leaving a leading exclamation point', () => {
+    expect(
+      getStemPreview('![CT scan](https://example.com/image.png)', 100),
+    ).toBe('CT scan');
+  });
 });

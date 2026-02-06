@@ -1,5 +1,5 @@
-function toPlainText(markdown: string): string {
-  const withoutLinks = markdown.replace(/\[([^\]]+)\]\([^)]+\)/g, '$1');
+export function toPlainText(markdown: string): string {
+  const withoutLinks = markdown.replace(/!?\[([^\]]+)\]\([^)]+\)/g, '$1');
   const withoutFormatting = withoutLinks.replace(/[`*_>#]/g, '');
   return withoutFormatting.replace(/\s+/g, ' ').trim();
 }
