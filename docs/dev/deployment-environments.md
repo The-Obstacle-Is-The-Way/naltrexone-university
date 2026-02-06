@@ -1,256 +1,225 @@
 # Deployment Environments: Source of Truth
 
-This document establishes the relationship between Clerk instances, Vercel deployments, and environment configurations.
+**Last Verified:** 2026-02-06 (post-BUG-078 resolution)
+
+This document is the single source of truth for how Clerk, Stripe, Neon, and Vercel are configured across all environments.
 
 ---
 
-## The Two Clerk Instances (Completely Separate)
+## Current State Audit (2026-02-06)
 
-Clerk has **two entirely separate instances** with **no shared data**:
+### What's Working
 
-| Instance | Dashboard URL | Users | API Keys |
-|----------|---------------|-------|----------|
-| **Development** | clerk.com → "Development" tab | Test users, your Gmail | `pk_test_*`, `sk_test_*` |
-| **Production** | clerk.com → "Production" tab | Real paying users | `pk_live_*`, `sk_live_*` |
+- [x] **Production** (`addictionboards.com`) — sign-up, sign-in, dashboard all working
+- [ ] **Preview** (`*.vercel.app`, non-main branches) — BROKEN (shared database conflict)
+- [ ] **Local Development** (`localhost:3000`) — BROKEN (same shared database issue)
 
-**Key insight:** A user created in Development does NOT exist in Production. They are completely separate databases.
+### What's Broken and Why
 
----
-
-## The Three Vercel Environments
-
-| Environment | URL | Git Branch | Purpose |
-|-------------|-----|------------|---------|
-| **Production** | `addictionboards.com` | `main` | Real users, real payments |
-| **Preview** | `*.vercel.app` | Any branch | Testing before merge |
-| **Development** | `localhost:3000` | Local | Local development |
+| Problem | Root Cause | Impact | Fix |
+|---------|-----------|--------|-----|
+| Preview/Local auth fails with `CONFLICT` error | Single database shared across all envs; Clerk Dev + Prod IDs collide on same email | Can't test auth on Preview or locally | Neon database branching |
+| Stripe keys shared across all envs | One set of Stripe keys for Prod + Preview + Dev | Either can't charge real users OR test charges real cards | Separate Stripe keys per env |
 
 ---
 
-## Correct Key Mapping
+## Architecture: Three Environments, Three Isolation Boundaries
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                     CLERK DEVELOPMENT                            │
-│  (pk_test_*, sk_test_*)                                         │
-│                                                                  │
-│  ┌──────────────────┐    ┌──────────────────┐                   │
-│  │  localhost:3000  │    │  Vercel Preview  │                   │
-│  │  (pnpm dev)      │    │  (*.vercel.app)  │                   │
-│  └──────────────────┘    └──────────────────┘                   │
-│                                                                  │
-│  Users: Test accounts, your Gmail, E2E test user                │
-│  Stripe: Test mode (sk_test_*)                                  │
-└─────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────┐
+│                         PRODUCTION                                       │
+│  URL:      addictionboards.com                                          │
+│  Branch:   main                                                          │
+│  Clerk:    Production instance (pk_live_*, sk_live_*)                   │
+│  Stripe:   Live mode (sk_live_*, pk_live_*)                [NEEDS FIX]  │
+│  Database: Neon main branch                                              │
+│  Webhook:  addictionboards.com/api/webhooks/clerk                       │
+│  Webhook:  addictionboards.com/api/webhooks/stripe         [NEEDS CHECK]│
+│                                                                          │
+│  Users: Real paying customers only                                       │
+└─────────────────────────────────────────────────────────────────────────┘
 
-┌─────────────────────────────────────────────────────────────────┐
-│                     CLERK PRODUCTION                             │
-│  (pk_live_*, sk_live_*)                                         │
-│                                                                  │
-│  ┌──────────────────────────────────────────┐                   │
-│  │  addictionboards.com (Vercel Production) │                   │
-│  └──────────────────────────────────────────┘                   │
-│                                                                  │
-│  Users: Real paying customers only                              │
-│  Stripe: Live mode (sk_live_*)                                  │
-└─────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────┐
+│                     PREVIEW / DEVELOPMENT                                │
+│  URL:      *.vercel.app (Preview) / localhost:3000 (Local)              │
+│  Branch:   Any non-main branch / local                                   │
+│  Clerk:    Development instance (pk_test_*, sk_test_*)                  │
+│  Stripe:   Test mode (sk_test_*, pk_test_*)                             │
+│  Database: Neon dev branch (SEPARATE from Production)      [NEEDS FIX]  │
+│  Webhook:  Dev Clerk webhook (if configured)                             │
+│                                                                          │
+│  Users: Test accounts, E2E test user, your personal dev account         │
+└─────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## Current State Audit (2026-02-05)
+## Current Vercel Environment Variables (Verified 2026-02-06)
 
-### Verified Facts
+### Correctly Configured
 
-1. **Branch:** `codex/exploratory-e2e-theme-contrast`
-   - **27 commits ahead of main** (not merged)
-   - Contains: CSP headers, error boundaries, bug fixes, UI improvements
+| Variable | Production | Preview/Dev | Status |
+|----------|-----------|-------------|--------|
+| `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` | `pk_live_*` (1d ago) | `pk_test_*` (6d ago) | Correct |
+| `CLERK_SECRET_KEY` | `sk_live_*` (1d ago) | `sk_test_*` (6d ago) | Correct |
+| `CLERK_WEBHOOK_SIGNING_SECRET` | Production webhook (today) | Dev webhook (4d ago) | Correct |
+| `NEXT_PUBLIC_APP_URL` | `https://addictionboards.com` (22h ago) | Preview URL (22h ago) | Correct |
 
-2. **Vercel Environment Variables (VERIFIED):**
-   ```
-   Production:    Clerk Production keys (pk_live_*, sk_live_*) - set 2h ago
-   Preview:       Clerk Development keys (pk_test_*, sk_test_*) - set 5d ago
-   Development:   Clerk Development keys (pk_test_*, sk_test_*) - set 5d ago
-   ```
-   ✅ This configuration is CORRECT
+### PROBLEMS — Shared When They Shouldn't Be
 
-3. **Code Deployed:**
-   - **Production (`addictionboards.com`)**: Running OLD code from `main` branch
-   - **Preview (`*.vercel.app`)**: Running current branch code
-
-4. **Production Blank Screen Root Cause:**
-   - Clerk Production keys were added 2 hours ago
-   - But Production is running OLD code from `main`
-   - Likely cause: Clerk Production instance redirect URLs not configured, OR
-   - Clerk sign-in redirect breaks on old code
-
-### What Needs Verification (Manual - Clerk Dashboard)
-
-- [ ] Clerk Production instance → Settings → Redirect URLs
-  - Must include: `https://addictionboards.com/*`
-- [ ] Clerk Production instance → Settings → Allowed Origins
-  - Must include: `https://addictionboards.com`
+| Variable | Current Scope | Problem | Fix |
+|----------|--------------|---------|-----|
+| `DATABASE_URL` | All environments (shared) | Clerk Dev/Prod ID collisions | Create Neon branch for Preview/Dev |
+| `STRIPE_SECRET_KEY` | All environments (shared) | Can't separate test vs live payments | Set Production-only live Stripe key |
+| `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | All environments (shared) | Same | Set Production-only live Stripe key |
+| `STRIPE_WEBHOOK_SECRET` | All environments (shared) | Webhook verification mismatch | Separate per environment |
 
 ---
 
-## E2E Testing Strategy
+## Fix Plan
 
-### For Local E2E Tests (`pnpm test:e2e`)
+### Fix 1: Database Isolation (Neon Branching)
 
+**Problem:** One database for all environments → Clerk ID collisions on same email.
+
+**Solution:** Use [Neon database branching](https://neon.tech/docs/manage/branches) to create a `dev` branch.
+
+**Steps:**
+1. Create a Neon branch called `dev` from the main branch (this copies all data including questions)
+2. Get the `dev` branch connection string
+3. Set `DATABASE_URL` for **Preview** and **Development** scopes in Vercel to the dev branch URL
+4. Keep Production `DATABASE_URL` pointing to the main Neon branch
+5. Run migrations on the dev branch: `DATABASE_URL=<dev-branch-url> pnpm db:migrate`
+6. Verify: Preview deployment can sign in without conflicting with Production users
+
+**Result:**
 ```
-localhost:3000 → Clerk Development → Test users
-```
-
-- Use Clerk Development keys in `.env.local`
-- Create E2E test user in Clerk Development instance
-- Use `@clerk/testing` package with `clerk.signIn()` helper
-
-### For CI/CD E2E Tests (GitHub Actions)
-
-```
-Vercel Preview → Clerk Development → Test users
-```
-
-- Set Clerk Development keys in GitHub Secrets
-- Same E2E test user from Clerk Development
-- Tests run against Preview deployment URL
-
-### For Production Monitoring (if ever needed)
-
-```
-addictionboards.com → Clerk Production → Synthetic user
+Production (addictionboards.com) → Neon main branch → Production Clerk users
+Preview (*.vercel.app)           → Neon dev branch  → Development Clerk users
+Local (localhost:3000)           → Neon dev branch  → Development Clerk users
 ```
 
-- Would need separate Clerk Production test user
-- Would need Stripe Live mode test card
-- Usually NOT recommended - use Preview for E2E
+### Fix 2: Stripe Key Separation
+
+**Problem:** One set of Stripe keys shared across all environments.
+
+**Current state (NEEDS VERIFICATION):**
+- Are the current shared keys `sk_test_*` or `sk_live_*`?
+- If `sk_test_*`: Production can't process real payments (P0 if launching)
+- If `sk_live_*`: Preview/local would charge real cards (dangerous)
+
+**Steps:**
+1. Check current Stripe key type in Vercel (`sk_test_*` or `sk_live_*`)
+2. Set Production-only Stripe keys:
+   - `STRIPE_SECRET_KEY` = `sk_live_*` (Production scope only)
+   - `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` = `pk_live_*` (Production scope only)
+   - `STRIPE_WEBHOOK_SECRET` = Live webhook secret (Production scope only)
+3. Set Preview/Dev-only Stripe keys:
+   - `STRIPE_SECRET_KEY` = `sk_test_*` (Preview + Development scope)
+   - `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` = `pk_test_*` (Preview + Development scope)
+   - `STRIPE_WEBHOOK_SECRET` = Test webhook secret (Preview + Development scope)
+4. Set Production-specific Stripe Price IDs (already done — set 4d ago)
+
+### Fix 3: Stripe Webhook Endpoint (Production)
+
+**Check:** Is `https://addictionboards.com/api/webhooks/stripe` configured in Stripe Live mode dashboard?
+- If not, create it and set `STRIPE_WEBHOOK_SECRET` for Production
+
+### Fix 4: Wipe Dev Branch Users
+
+After creating the Neon dev branch (which copies Production data):
+1. Delete the Production user from the dev branch database
+2. Let Development Clerk re-create users on first sign-in
 
 ---
 
-## Action Plan
+## Clerk Production Configuration (Verified 2026-02-06)
 
-### ⚠️ IMMEDIATE: Fix Production Blank Screen (P0)
+All of these are confirmed working:
 
-**Diagnosis needed:** Go to Clerk Dashboard → Production instance → Settings
-
-Check these settings:
-1. **Allowed redirect URLs** - Must include `https://addictionboards.com/*`
-2. **Allowed origins** - Must include `https://addictionboards.com`
-3. **Sign-in/Sign-up URLs** - Should be `/sign-in` and `/sign-up`
-
-If these are missing, add them. This should fix the blank screen.
-
-If still broken after fixing redirect URLs, then:
-- Temporarily revert Production Clerk keys back to Development keys
-- This makes Production use Clerk Development (same as before)
-- Allows users to access site while we investigate
-
-### Phase 1: Stabilize Production (Today)
-
-1. **Fix Clerk Production redirect URLs** (manual in Clerk dashboard)
-2. **Verify Production site works** at `addictionboards.com`
-3. If still broken → Revert to Clerk Development keys temporarily
-
-### Phase 2: Clean Up Current Branch
-
-1. **Commit current uncommitted changes:**
-   - `docs/bugs/bug-069-stripe-checkout-fails-localhost.md`
-   - `docs/dev/deployment-environments.md`
-   - `docs/debt/debt-104-missing-e2e-test-credentials.md`
-   - `package.json` changes (`@clerk/testing`)
-
-2. **Run full test suite:**
-   ```bash
-   pnpm typecheck && pnpm lint && pnpm test --run && pnpm build
-   ```
-
-3. **Push to remote** (creates new Preview deployment)
-
-### Phase 3: Merge to Main
-
-1. **Create PR** from `codex/exploratory-e2e-theme-contrast` → `main`
-2. **Wait for CodeRabbit review** (mandatory per CLAUDE.md)
-3. **Address all CodeRabbit feedback**
-4. **Merge PR** - This deploys current branch code to Production
-
-### Phase 4: E2E Testing Setup (After Merge)
-
-1. E2E test user already exists in **Clerk Development** instance
-2. E2E tests run against **Preview deployments** (not Production)
-3. Configure CI to run E2E tests on Preview URLs
-4. Subscribe E2E test user via Preview deployment (uses Stripe Test mode)
-
-### What NOT to Do
-
-- ❌ Don't create E2E test users in Clerk Production
-- ❌ Don't run E2E tests against Production
-- ❌ Don't use Stripe Live mode for testing
-- ❌ Don't merge to main before Production is stable
+| Setting | Location | Value | Status |
+|---------|----------|-------|--------|
+| Domain | Developers → Domains | `addictionboards.com` | Verified |
+| DNS (Frontend API) | Developers → Domains | `clerk.addictionboards.com` → `frontend-api.clerk.services` | Verified |
+| DNS (Account Portal) | Developers → Domains | `accounts.addictionboards.com` → `accounts.clerk.services` | Verified |
+| DNS (Email DKIM) | Developers → Domains | 3 CNAME records | Verified |
+| SSL | Developers → Domains | Issued for both Frontend API + Account Portal | Verified |
+| Google OAuth | SSO Connections → Google | Client ID + Secret configured | Verified |
+| Google OAuth App | Google Cloud Console | Published (not Testing) | Verified |
+| Component Paths (SignIn) | Developers → Paths | Application domain: `addictionboards.com/sign-in` | Verified |
+| Component Paths (SignUp) | Developers → Paths | Application domain: `addictionboards.com/sign-up` | Verified |
+| Component Paths (SignOut) | Developers → Paths | Application domain: `addictionboards.com/sign-in` | Verified |
+| Webhook | Developers → Webhooks | `https://addictionboards.com/api/webhooks/clerk` | Verified |
+| Webhook Events | Developers → Webhooks | `user.created`, `user.updated`, `user.deleted` | Verified |
 
 ---
 
-## Environment Variable Checklist
+## Clerk Development Configuration
 
-### `.env.local` (localhost)
+| Setting | Status |
+|---------|--------|
+| Google OAuth | Configured (was working before BUG-066) |
+| Webhook | Needs verification — may need endpoint for Preview URLs |
+| Users | Your personal dev account exists here |
 
-```bash
-# Clerk Development keys
-NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_...
-CLERK_SECRET_KEY=sk_test_...
-
-# Stripe Test mode
-STRIPE_SECRET_KEY=sk_test_...
-NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_...
-
-# E2E Test credentials (Clerk Development user)
-E2E_CLERK_USER_USERNAME=e2e-test@addictionboards.com
-E2E_CLERK_USER_PASSWORD=...
-```
-
-### Vercel Preview Environment
-
-```bash
-# Same as .env.local - Clerk Development keys
-NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_...
-CLERK_SECRET_KEY=sk_test_...
-```
-
-### Vercel Production Environment
-
-```bash
-# Clerk Production keys (different instance!)
-NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_live_...
-CLERK_SECRET_KEY=sk_live_...
-
-# Stripe Live mode
-STRIPE_SECRET_KEY=sk_live_...
-```
+**Note:** Clerk Development webhooks are tricky with Preview deployments because the URL changes with each deploy. Options:
+1. Use [Clerk's Svix CLI](https://docs.svix.com/receiving/using-app-portal/replay) for local testing
+2. Rely on `ClerkAuthGateway.getCurrentUser()` upsert (works without webhook)
+3. Set a stable Preview URL (Vercel allows custom aliases)
 
 ---
 
-## Common Mistakes to Avoid
+## Neon Database
 
-1. **Creating test users in Production Clerk** - They should be in Development
-2. **Using Production keys for Preview deployments** - Breaks testing
-3. **Mixing up Vercel environments** - Preview ≠ Production
-4. **Merging to main before E2E tests pass** - Breaks Production
-5. **Setting Production Clerk keys before code is ready** - Current P0 bug
+| Property | Value |
+|----------|-------|
+| Database | `neondb` |
+| PostgreSQL | 17.7 |
+| Questions | 958 |
+| Users (Production) | 1 (your account) |
+| Branches | `main` only (dev branch NEEDS CREATION) |
 
 ---
 
-## Quick Reference Commands
+## URL Reference
 
-```bash
-# Check current branch
-git branch --show-current
+| URL | Environment | Clerk Keys | Auth Works? |
+|-----|-------------|-----------|-------------|
+| `addictionboards.com` | Production | `pk_live_*` | Yes |
+| `*.vercel.app` (main branch) | Production | `pk_live_*` | **No** (domain-locked, expected) |
+| `*.vercel.app` (non-main branch) | Preview | `pk_test_*` | **No** (shared DB conflict, FIXABLE) |
+| `localhost:3000` | Development | `pk_test_*` | **No** (shared DB conflict, FIXABLE) |
 
-# Check what's different from main
-git log main..HEAD --oneline
+After Fix 1 (Neon branching):
 
-# Check Vercel deployments
-vercel ls
+| URL | Environment | Clerk Keys | Database | Auth Works? |
+|-----|-------------|-----------|----------|-------------|
+| `addictionboards.com` | Production | `pk_live_*` | Neon main | Yes |
+| `*.vercel.app` (main) | Production | `pk_live_*` | Neon main | No (domain-locked, expected) |
+| `*.vercel.app` (non-main) | Preview | `pk_test_*` | Neon dev | **Yes** |
+| `localhost:3000` | Development | `pk_test_*` | Neon dev | **Yes** |
 
-# Check Vercel env vars (requires Vercel CLI login)
-vercel env ls production
-vercel env ls preview
-```
+---
+
+## Prevention Checklist
+
+When setting up a new service or changing environment configuration:
+
+1. [ ] Is the variable scoped correctly? (Production-only vs shared vs Preview-only)
+2. [ ] Does Production use live/production keys?
+3. [ ] Does Preview/Dev use test/development keys?
+4. [ ] Are databases isolated? (Production data never touched by test code)
+5. [ ] Are webhooks configured for the correct environment?
+6. [ ] Has end-to-end auth been tested on the target environment?
+7. [ ] Has payment flow been tested on the target environment?
+
+---
+
+## Related
+
+- [BUG-066](../_archive/bugs/bug-066-clerk-development-keys-in-production.md) — Original Production key switch
+- [BUG-078](../bugs/bug-078-clerk-production-google-oauth-not-configured.md) — Production auth broken (resolved)
+- `proxy.ts` — Clerk middleware
+- `lib/env.ts` — Environment validation
+- `app/api/webhooks/clerk/route.ts` — Clerk webhook handler
+- `app/api/webhooks/stripe/route.ts` — Stripe webhook handler
