@@ -19,18 +19,16 @@ No active debt items. All items resolved via [SPEC-020](../specs/spec-020-practi
 
 **Next Debt ID:** DEBT-126
 
-## Recently Resolved (SPEC-020)
-
-| ID | Title | Status | Priority | Resolved |
-|----|-------|--------|----------|----------|
-| [DEBT-115](debt-115-practice-page-god-component.md) | Practice Page God Component (823 → 114 Lines) | Resolved | P1 | 2026-02-06 |
-| [DEBT-116](debt-116-session-page-god-component.md) | Session Page God Component (670 → 21 Lines) | Resolved | P1 | 2026-02-06 |
-| [DEBT-122](debt-122-in-run-question-navigation-gap.md) | In-Run Question Navigation Gap | Resolved | P2 | 2026-02-06 |
-| [DEBT-123](debt-123-session-summary-missing-question-breakdown.md) | Session Summary Per-Question Breakdown | Resolved | P2 | 2026-02-06 |
-| [DEBT-113](debt-113-dashboard-review-lack-session-context.md) | Dashboard + Review Session Context | Resolved | P1 | 2026-02-06 |
-| [DEBT-114](debt-114-no-session-history-page.md) | Session History Page | Resolved | P2 | 2026-02-06 |
-
 ## Archived Debt
+
+| ID | Title | Priority | Resolved |
+|----|-------|----------|----------|
+| [DEBT-123](../_archive/debt/debt-123-session-summary-missing-question-breakdown.md) | Session Summary Per-Question Breakdown (SPEC-020) | P2 | 2026-02-06 |
+| [DEBT-122](../_archive/debt/debt-122-in-run-question-navigation-gap.md) | In-Run Question Navigation Gap (SPEC-020) | P2 | 2026-02-06 |
+| [DEBT-116](../_archive/debt/debt-116-session-page-god-component.md) | Session Page God Component 670 → 21 Lines (SPEC-020) | P1 | 2026-02-06 |
+| [DEBT-115](../_archive/debt/debt-115-practice-page-god-component.md) | Practice Page God Component 823 → 114 Lines (SPEC-020) | P1 | 2026-02-06 |
+| [DEBT-114](../_archive/debt/debt-114-no-session-history-page.md) | Session History Page (SPEC-020) | P2 | 2026-02-06 |
+| [DEBT-113](../_archive/debt/debt-113-dashboard-review-lack-session-context.md) | Dashboard + Review Session Context (SPEC-020) | P1 | 2026-02-06 |
 
 | ID | Title | Priority | Resolved |
 |----|-------|----------|----------|

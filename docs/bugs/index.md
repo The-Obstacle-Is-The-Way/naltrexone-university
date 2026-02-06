@@ -17,9 +17,7 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 | ID | Title | Status | Priority | Date |
 |----|-------|--------|----------|------|
-| [BUG-080](bug-080-vercel-env-var-deployment-issues.md) | Vercel Env Var Trailing Newlines + Deployment Protection Blocking Webhooks | Resolved | P1 | 2026-02-06 |
-| [BUG-079](bug-079-preview-dev-environment-verification-failures.md) | Preview/Dev Environment Verification Failures (Stale Data, Wrong Stripe Account) | Resolved | P1 | 2026-02-06 |
-| [BUG-078](bug-078-clerk-production-google-oauth-not-configured.md) | Clerk Production Sign-In Broken (Google OAuth Not Configured + Domain Lock) | Resolved | P0 | 2026-02-06 |
+| [BUG-076](bug-076-past-due-immediate-lockout.md) | Past-Due Immediate Lockout | Won't Fix | P1 | 2026-02-06 |
 
 **Next Bug ID:** BUG-081
 
@@ -31,8 +29,8 @@ Bug reports document issues discovered in the codebase along with their root cau
 | [BUG-075](../_archive/bugs/bug-075-checkout-guard-entitlement-mismatch.md) | Pricing CTA Mismatch for Recoverable Subscription States | Resolved | Pricing now consumes entitlement context and shows manage-billing guidance for recoverable non-entitled states while preserving strict checkout guard |
 | [BUG-076](bug-076-past-due-immediate-lockout.md) | Past-Due Immediate Lockout | Won't Fix | Current behavior matches SSOT entitlement policy (pastDue is non-entitled); re-open only with explicit spec change |
 | [BUG-074](../_archive/bugs/bug-074-missed-questions-timestamp-tie-misclassification.md) | Missed Questions Can Be Misclassified on `answered_at` Timestamp Ties | Resolved | Use deterministic latest-attempt ranking (`answered_at DESC, id DESC`) for missed-question list/count |
-| [BUG-073](bug-073-tutor-mode-missing-session-summary-detail.md) | Tutor Mode Missing Per-Question Session Summary at End | Resolved | Implemented in SPEC-020 Phase 2 / DEBT-123 (PR #63) |
-| [BUG-072](bug-072-no-question-navigation-in-practice-sessions.md) | No Question Navigation in Practice Sessions (Both Modes) | Resolved | Implemented in SPEC-020 Phase 2 / DEBT-122 (PR #63) |
+| [BUG-073](../_archive/bugs/bug-073-tutor-mode-missing-session-summary-detail.md) | Tutor Mode Missing Per-Question Session Summary at End | Resolved | Implemented in SPEC-020 Phase 2 / DEBT-123 (PR #63) |
+| [BUG-072](../_archive/bugs/bug-072-no-question-navigation-in-practice-sessions.md) | No Question Navigation in Practice Sessions (Both Modes) | Resolved | Implemented in SPEC-020 Phase 2 / DEBT-122 (PR #63) |
 | [BUG-071](../_archive/bugs/bug-071-nextjs-preview-blank-page-csp.md) | Preview Deployment Rendered Blank Page After CSP Tightening | Resolved | Delegate CSP to Clerk middleware |
 | [BUG-070](../_archive/bugs/bug-070-e2e-test-user-checkout-fails.md) | E2E Test User Checkout Failed (Stripe `this` Binding Bug) | Resolved | Bind `stripe.customers.search` to preserve `this` |
 | [BUG-069](../_archive/bugs/bug-069-stripe-checkout-fails-localhost.md) | Stripe Checkout Fails for New Users (Lost `this` Binding) | Resolved | Bind `stripe.customers.search` to preserve `this` |
@@ -46,6 +44,9 @@ See: [Foundation Audit Report](foundation-audit-report.md)
 
 | ID | Title | Priority | Resolved |
 |----|-------|----------|----------|
+| [BUG-080](../_archive/bugs/bug-080-vercel-env-var-deployment-issues.md) | Vercel Env Var Trailing Newlines + Deployment Protection | P1 | 2026-02-06 |
+| [BUG-079](../_archive/bugs/bug-079-preview-dev-environment-verification-failures.md) | Preview/Dev Environment Verification Failures | P1 | 2026-02-06 |
+| [BUG-078](../_archive/bugs/bug-078-clerk-production-google-oauth-not-configured.md) | Clerk Production Sign-In Broken | P0 | 2026-02-06 |
 | [BUG-077](../_archive/bugs/bug-077-payment-processing-confusing-redirect.md) | Payment Processing Users See Wrong Error Message | P2 | 2026-02-06 |
 | [BUG-075](../_archive/bugs/bug-075-checkout-guard-entitlement-mismatch.md) | Pricing CTA Mismatch for Recoverable Subscription States | P2 | 2026-02-06 |
 | [BUG-074](../_archive/bugs/bug-074-missed-questions-timestamp-tie-misclassification.md) | Missed Questions Can Be Misclassified on `answered_at` Timestamp Ties | P2 | 2026-02-06 |
