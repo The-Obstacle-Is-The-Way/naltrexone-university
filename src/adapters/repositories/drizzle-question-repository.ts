@@ -123,6 +123,7 @@ export class DrizzleQuestionRepository implements QuestionRepository {
         label: c.label,
         textMd: c.textMd,
         isCorrect: c.isCorrect,
+        explanationMd: c.explanationMd,
         sortOrder: c.sortOrder,
       };
     });

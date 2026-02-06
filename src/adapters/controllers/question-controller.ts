@@ -80,6 +80,17 @@ const SubmitAnswerOutputSchema = z
     isCorrect: z.boolean(),
     correctChoiceId: zUuid,
     explanationMd: z.string().nullable(),
+    choiceExplanations: z.array(
+      z
+        .object({
+          choiceId: zUuid,
+          displayLabel: z.enum(['A', 'B', 'C', 'D', 'E']),
+          textMd: z.string(),
+          isCorrect: z.boolean(),
+          explanationMd: z.string().nullable(),
+        })
+        .strict(),
+    ),
   })
   .strict();
 

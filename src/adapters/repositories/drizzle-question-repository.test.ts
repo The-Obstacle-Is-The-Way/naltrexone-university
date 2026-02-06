@@ -24,6 +24,7 @@ function createQuestionRow(
       label: 'A',
       textMd: 'Choice A',
       isCorrect: true,
+      explanationMd: 'Because A is correct.',
       sortOrder: 2,
     },
     {
@@ -32,6 +33,7 @@ function createQuestionRow(
       label: 'B',
       textMd: 'Choice B',
       isCorrect: false,
+      explanationMd: 'Because B is incorrect.',
       sortOrder: 1,
     },
   ],
@@ -90,6 +92,10 @@ describe('DrizzleQuestionRepository', () => {
         'choice_2',
         'choice_1',
       ]);
+      expect(result?.choices.map((c) => c.explanationMd)).toEqual([
+        'Because B is incorrect.',
+        'Because A is correct.',
+      ]);
       expect(result?.tags).toEqual([
         {
           id: 'tag_1',
@@ -108,6 +114,7 @@ describe('DrizzleQuestionRepository', () => {
           label: 'Z',
           textMd: 'Invalid',
           isCorrect: false,
+          explanationMd: 'Invalid explanation',
           sortOrder: 1,
         },
       ]);

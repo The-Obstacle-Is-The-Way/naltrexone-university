@@ -228,6 +228,7 @@ describe('practice-session-page-logic', () => {
           isCorrect: true,
           correctChoiceId: 'choice_1',
           explanationMd: 'Because...',
+          choiceExplanations: [],
         } satisfies SubmitAnswerOutput),
       );
       const setSubmitResult = vi.fn();
@@ -263,6 +264,7 @@ describe('practice-session-page-logic', () => {
           isCorrect: true,
           correctChoiceId: 'choice_1',
           explanationMd: 'Because...',
+          choiceExplanations: [],
         } satisfies SubmitAnswerOutput),
       );
 
@@ -293,6 +295,7 @@ describe('practice-session-page-logic', () => {
           isCorrect: true,
           correctChoiceId: 'choice_1',
           explanationMd: 'Because...',
+          choiceExplanations: [],
         } satisfies SubmitAnswerOutput),
       );
 
@@ -387,6 +390,7 @@ describe('practice-session-page-logic', () => {
           isCorrect: true,
           correctChoiceId: 'choice_1',
           explanationMd: 'Because...',
+          choiceExplanations: [],
         } satisfies SubmitAnswerOutput),
       );
       await promise;
@@ -407,6 +411,7 @@ describe('practice-session-page-logic', () => {
           isCorrect: true,
           correctChoiceId: 'choice_1',
           explanationMd: null,
+          choiceExplanations: [],
         },
         loadStateStatus: 'ready',
         advance,
@@ -425,6 +430,7 @@ describe('practice-session-page-logic', () => {
           isCorrect: true,
           correctChoiceId: 'choice_1',
           explanationMd: null,
+          choiceExplanations: [],
         },
         loadStateStatus: 'ready',
         advance,
@@ -456,6 +462,7 @@ describe('practice-session-page-logic', () => {
           isCorrect: true,
           correctChoiceId: 'choice_1',
           explanationMd: null,
+          choiceExplanations: [],
         },
         loadStateStatus: 'loading',
         advance,
@@ -474,6 +481,7 @@ describe('practice-session-page-logic', () => {
           isCorrect: true,
           correctChoiceId: 'choice_1',
           explanationMd: null,
+          choiceExplanations: [],
         },
         loadStateStatus: 'ready',
         advance,

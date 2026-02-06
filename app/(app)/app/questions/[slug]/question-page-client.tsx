@@ -102,6 +102,7 @@ export function QuestionView(props: QuestionViewProps) {
         <Feedback
           isCorrect={props.submitResult.isCorrect}
           explanationMd={props.submitResult.explanationMd}
+          choiceExplanations={props.submitResult.choiceExplanations}
         />
       ) : null}
 

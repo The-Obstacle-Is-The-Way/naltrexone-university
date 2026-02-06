@@ -3,12 +3,39 @@
 import { Markdown } from '@/components/markdown/Markdown';
 import { cn } from '@/lib/utils';
 
-export type FeedbackProps = {
+export type FeedbackChoiceExplanation = {
+  choiceId: string;
+  displayLabel: string;
+  textMd: string;
   isCorrect: boolean;
   explanationMd: string | null;
 };
 
-export function Feedback({ isCorrect, explanationMd }: FeedbackProps) {
+export type FeedbackProps = {
+  isCorrect: boolean;
+  explanationMd: string | null;
+  choiceExplanations?: readonly FeedbackChoiceExplanation[];
+};
+
+export function Feedback({
+  isCorrect,
+  explanationMd,
+  choiceExplanations = [],
+}: FeedbackProps) {
+  const visibleChoiceExplanations = choiceExplanations.filter(
+    (choice) =>
+      typeof choice.explanationMd === 'string' &&
+      choice.explanationMd.trim().length > 0,
+  );
+  const hasMissingIncorrectExplanation = choiceExplanations.some(
+    (choice) =>
+      !choice.isCorrect &&
+      (choice.explanationMd === null ||
+        choice.explanationMd.trim().length === 0),
+  );
+  const shouldRenderChoiceExplanations =
+    !hasMissingIncorrectExplanation && visibleChoiceExplanations.length > 0;
+
   return (
     <div
       className={cn(
@@ -33,6 +60,30 @@ export function Feedback({ isCorrect, explanationMd }: FeedbackProps) {
           </p>
         )}
       </div>
+
+      {shouldRenderChoiceExplanations ? (
+        <div className="mt-4">
+          <div className="text-sm font-medium text-foreground">
+            Why other answers are wrong:
+          </div>
+          <div className="mt-2 space-y-3">
+            {visibleChoiceExplanations.map((choice) => (
+              <div
+                key={choice.choiceId}
+                className="rounded-xl border border-border/60 bg-background/50 p-3"
+              >
+                <div className="text-sm font-medium text-foreground">
+                  {choice.displayLabel}) {choice.textMd}
+                </div>
+                <Markdown
+                  content={choice.explanationMd ?? ''}
+                  className="mt-2 text-sm"
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

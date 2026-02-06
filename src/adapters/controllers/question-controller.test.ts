@@ -85,6 +85,7 @@ function createDeps(overrides?: {
       isCorrect: true,
       correctChoiceId: '55555555-5555-5555-5555-555555555555',
       explanationMd: 'Because...',
+      choiceExplanations: [],
     },
     overrides?.submitAnswerThrows,
   );
@@ -276,6 +277,7 @@ describe('question-controller', () => {
           isCorrect: false,
           correctChoiceId: '77777777-7777-7777-7777-777777777777',
           explanationMd: null,
+          choiceExplanations: [],
         },
       });
 
@@ -294,6 +296,7 @@ describe('question-controller', () => {
           isCorrect: false,
           correctChoiceId: '77777777-7777-7777-7777-777777777777',
           explanationMd: null,
+          choiceExplanations: [],
         },
       });
       expect(deps.submitAnswerUseCase.inputs).toEqual([
@@ -345,6 +348,7 @@ describe('question-controller', () => {
           isCorrect: true,
           correctChoiceId: '55555555-5555-5555-5555-555555555555',
           explanationMd: 'Because...',
+          choiceExplanations: [],
         },
       });
       expect(second).toEqual(first);

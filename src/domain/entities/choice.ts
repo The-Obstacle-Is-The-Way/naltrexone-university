@@ -9,5 +9,6 @@ export type Choice = {
   readonly label: ChoiceLabel;
   readonly textMd: string;
   readonly isCorrect: boolean;
+  readonly explanationMd: string | null;
   readonly sortOrder: number;
 };
