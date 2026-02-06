@@ -28,8 +28,8 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 | [DEBT-111](../_archive/debt/debt-111-explanation-choice-label-mismatch.md) | Explanation Text References Original Choice Labels After Shuffle | P0 | 2026-02-06 |
 | [DEBT-110](../_archive/debt/debt-110-e2e-helper-anti-patterns.md) | E2E Test Helper Anti-Patterns (isVisible Timeout + Stripe Duplication) | P3 | 2026-02-05 |
 | [DEBT-107](../_archive/debt/debt-107-question-engine-e2e-completeness.md) | Question Engine E2E Completeness and State Management (Accepted) | P1 | 2026-02-06 |
-| [DEBT-104](../_archive/debt/debt-104-missing-e2e-test-credentials.md) | Missing E2E Test Credentials for Authenticated Flows (Accepted) | P1 | 2026-02-06 |
 | [DEBT-105](../_archive/debt/debt-105-missing-session-resume-functionality.md) | Missing Session Resume Functionality | P2 | 2026-02-06 |
+| [DEBT-104](../_archive/debt/debt-104-missing-e2e-test-credentials.md) | Missing E2E Test Credentials for Authenticated Flows (Accepted) | P1 | 2026-02-06 |
 | [DEBT-109](../_archive/debt/debt-109-inline-vi-fn-logger-mocks.md) | Inline vi.fn() Logger Mocks Violate Fakes-Over-Mocks Rule | P2 | 2026-02-05 |
 | [DEBT-108](../_archive/debt/debt-108-hardcoded-zinc-colors-break-light-dark-toggle.md) | Hardcoded Zinc Colors Break Light/Dark Mode Toggle | P2 | 2026-02-05 |
 | [DEBT-103](../_archive/debt/debt-103-nextjs-scroll-behavior-warning.md) | Next.js Scroll Behavior Warning | P4 | 2026-02-05 |

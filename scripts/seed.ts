@@ -50,9 +50,7 @@ type SeedQuestionRep = {
 function buildSeedRepFromFile(full: unknown): SeedQuestionRep {
   const parsed = FullQuestionSchema.parse(full);
   const parsedExplanations = parseChoiceExplanations(parsed.explanationMd);
-  const generalExplanation =
-    parsedExplanations.generalExplanation ||
-    canonicalizeMarkdown(parsed.explanationMd);
+  const generalExplanation = parsedExplanations.generalExplanation;
 
   const sortedTags = [...parsed.frontmatter.tags].sort((a, b) =>
     a.slug.localeCompare(b.slug),

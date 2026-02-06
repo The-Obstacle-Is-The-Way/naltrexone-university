@@ -23,6 +23,7 @@ import type {
   SubmitAnswerInput,
   SubmitAnswerOutput,
 } from '@/src/application/use-cases/submit-answer';
+import { AllChoiceLabels } from '@/src/domain/value-objects';
 import { createAction } from './create-action';
 import type { CheckEntitlementUseCase } from './require-entitled-user-id';
 import { requireEntitledUserId } from './require-entitled-user-id';
@@ -84,7 +85,7 @@ const SubmitAnswerOutputSchema = z
       z
         .object({
           choiceId: zUuid,
-          displayLabel: z.enum(['A', 'B', 'C', 'D', 'E']),
+          displayLabel: z.enum(AllChoiceLabels),
           textMd: z.string(),
           isCorrect: z.boolean(),
           explanationMd: z.string().nullable(),

@@ -24,6 +24,7 @@ export function Feedback({
 }: FeedbackProps) {
   const visibleChoiceExplanations = choiceExplanations.filter(
     (choice) =>
+      !choice.isCorrect &&
       typeof choice.explanationMd === 'string' &&
       choice.explanationMd.trim().length > 0,
   );
