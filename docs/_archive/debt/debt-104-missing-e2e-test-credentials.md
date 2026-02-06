@@ -1,9 +1,11 @@
 # DEBT-104: Missing E2E Test Credentials for Authenticated Flows
 
-**Status:** In Progress
+**Status:** Accepted
 **Priority:** P1
 **Date:** 2026-02-05
 **Updated:** 2026-02-06
+
+> **Accepted justification:** All code and infrastructure work is complete. Remaining items (CI secret values, Clerk dashboard policy verification) are external manual tasks that cannot be resolved via code.
 
 ---
 

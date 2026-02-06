@@ -1,9 +1,11 @@
 # DEBT-107: Question Engine E2E Completeness and State Management
 
-**Status:** In Progress
+**Status:** Accepted
 **Priority:** P1
 **Date:** 2026-02-05
 **Updated:** 2026-02-06
+
+> **Accepted justification:** Core question-engine E2E coverage is complete (Phases 0-2). Remaining Phase 3 items (deterministic dashboard assertions, cross-browser matrix, long session scenarios) are optional hardening. Full CI portability depends on DEBT-104 external configuration.
 
 ---
 

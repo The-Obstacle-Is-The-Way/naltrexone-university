@@ -1,8 +1,9 @@
 # DEBT-111: Explanation Text References Original Choice Labels After Shuffle
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P0
 **Date:** 2026-02-05
+**Resolved:** 2026-02-06
 
 ---
 
@@ -230,16 +231,16 @@ The "Why other answers are wrong" section is decomposed: each bullet becomes `ch
 
 ## Verification
 
-- [ ] DB migration adds `explanation_md` to `choices` table
-- [ ] Seed script correctly parses and splits explanations (unit tests for parser)
-- [ ] `Choice` domain entity includes `explanationMd`
-- [ ] `SubmitAnswerUseCase` returns per-choice explanations in shuffled display order
-- [ ] Feedback component renders choice explanations with correct display labels
-- [ ] Re-seeded database has per-choice explanations for all existing questions
-- [ ] Direct question view (`/app/questions/[slug]`) still works correctly
-- [ ] Practice session explanations show correct label→explanation mapping
-- [ ] All existing tests pass (795+)
-- [ ] New tests cover: seed parsing, use case output shape, component rendering
+- [x] DB migration adds `explanation_md` to `choices` table
+- [x] Seed script correctly parses and splits explanations (unit tests for parser)
+- [x] `Choice` domain entity includes `explanationMd`
+- [x] `SubmitAnswerUseCase` returns per-choice explanations in shuffled display order
+- [x] Feedback component renders choice explanations with correct display labels
+- [x] Re-seeded database has per-choice explanations for all existing questions
+- [x] Direct question view (`/app/questions/[slug]`) still works correctly
+- [x] Practice session explanations show correct label→explanation mapping
+- [x] All existing tests pass (801 tests, 132 files)
+- [x] New tests cover: seed parsing, use case output shape, component rendering
 
 ---
 
