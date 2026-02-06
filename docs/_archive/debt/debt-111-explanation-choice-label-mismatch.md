@@ -14,6 +14,7 @@ Question explanations embed hardcoded A/B/C/D labels that reference the **origin
 ### Concrete Example (stahls-zaleplon-003)
 
 **Original authored order:**
+
 | Label | Choice Text | Correct? |
 |-------|------------|----------|
 | A | Increase zaleplon dose to 20 mg | No |
@@ -22,6 +23,7 @@ Question explanations embed hardcoded A/B/C/D labels that reference the **origin
 | D | Cimetidine is contraindicated | No |
 
 **Shuffled display order (user sees):**
+
 | Display Label | Choice Text | Original Label |
 |---------------|------------|----------------|
 | A | Cimetidine is contraindicated | was D |
@@ -49,7 +51,7 @@ The explanation is teaching the wrong lesson for each labeled option.
 
 ### The Data Flow
 
-```
+```text
 Content (MDX)         →  Database           →  GetNextQuestion      →  SubmitAnswer       →  UI
 
 Choices: A,B,C,D         Choices stored        Choices SHUFFLED        Explanation          User sees
@@ -131,7 +133,7 @@ The clean architecture solution: make explanation a property of the **Choice**, 
 
 ### Target Architecture
 
-```
+```text
 Question
 ├── stemMd
 ├── explanationMd          ← General explanation (correct answer rationale, clinical pearl)

@@ -1,8 +1,8 @@
-import { computeSessionProgress } from '@/src/domain/services';
 import type {
   AttemptSessionReader,
   PracticeSessionRepository,
-} from '../ports/repositories';
+} from '@/src/application/ports/repositories';
+import { computeSessionProgress } from '@/src/domain/services';
 
 export type GetIncompletePracticeSessionInput = {
   userId: string;

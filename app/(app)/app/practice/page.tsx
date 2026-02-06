@@ -759,23 +759,25 @@ export default function PracticePage() {
               {incompleteSessionError}
             </div>
           ) : null}
-          {incompleteSessionStatus !== 'loading' && !incompleteSession && (
-            <PracticeSessionStarter
-              sessionMode={sessionMode}
-              sessionCount={sessionCount}
-              filters={filters}
-              tagLoadStatus={tagLoadStatus}
-              availableTags={availableTags}
-              sessionStartStatus={sessionStartStatus}
-              sessionStartError={sessionStartError}
-              isPending={isPending}
-              onToggleDifficulty={onToggleDifficulty}
-              onTagSlugsChange={onTagSlugsChange}
-              onSessionModeChange={onSessionModeChange}
-              onSessionCountChange={onSessionCountChange}
-              onStartSession={onStartSession}
-            />
-          )}
+          {incompleteSessionStatus !== 'loading' &&
+            incompleteSessionStatus !== 'error' &&
+            !incompleteSession && (
+              <PracticeSessionStarter
+                sessionMode={sessionMode}
+                sessionCount={sessionCount}
+                filters={filters}
+                tagLoadStatus={tagLoadStatus}
+                availableTags={availableTags}
+                sessionStartStatus={sessionStartStatus}
+                sessionStartError={sessionStartError}
+                isPending={isPending}
+                onToggleDifficulty={onToggleDifficulty}
+                onTagSlugsChange={onTagSlugsChange}
+                onSessionModeChange={onSessionModeChange}
+                onSessionCountChange={onSessionCountChange}
+                onStartSession={onStartSession}
+              />
+            )}
         </div>
       }
       loadState={loadState}
