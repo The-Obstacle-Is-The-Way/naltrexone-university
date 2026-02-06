@@ -5,6 +5,7 @@ import {
   getUserStats,
   type UserStatsOutput,
 } from '@/src/adapters/controllers/stats-controller';
+import { getStemPreview } from '@/src/adapters/shared/stem-preview';
 
 function formatPercent(value: number): string {
   return `${Math.round(value * 100)}%`;
@@ -90,7 +91,7 @@ export function DashboardView({ stats }: { stats: UserStatsOutput }) {
               <li key={row.attemptId} className="flex items-center gap-2">
                 <span className="font-medium text-foreground">
                   {row.isAvailable
-                    ? row.slug
+                    ? getStemPreview(row.stemMd, 100)
                     : '[Question no longer available]'}
                 </span>
                 <span className="text-muted-foreground">

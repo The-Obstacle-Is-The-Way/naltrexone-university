@@ -51,6 +51,13 @@ export class StartPracticeSessionUseCase {
         tagSlugs: input.tagSlugs,
         difficulties: input.difficulties,
         questionIds,
+        questionStates: questionIds.map((questionId) => ({
+          questionId,
+          markedForReview: false,
+          latestSelectedChoiceId: null,
+          latestIsCorrect: null,
+          latestAnsweredAt: null,
+        })),
       },
     });
 

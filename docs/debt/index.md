@@ -17,14 +17,16 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 | ID | Title | Status | Priority | Date |
 |----|-------|--------|----------|------|
-| [DEBT-106](./debt-106-exam-mode-mark-for-review.md) | Exam Mode Missing "Mark for Review" Feature | Open | P2 | 2026-02-05 |
+| _None_ | — | — | — | — |
 
-**Next Debt ID:** DEBT-112
+**Next Debt ID:** DEBT-113
 
 ## Archived Debt
 
 | ID | Title | Priority | Resolved |
 |----|-------|----------|----------|
+| [DEBT-112](../_archive/debt/debt-112-raw-slugs-exposed-in-ui.md) | Raw Content-Pipeline Slugs Exposed to Users in Dashboard, Review, and Bookmarks | P1 | 2026-02-06 |
+| [DEBT-106](../_archive/debt/debt-106-exam-mode-mark-for-review.md) | Exam Mode Missing "Mark for Review" Feature | P2 | 2026-02-06 |
 | [DEBT-111](../_archive/debt/debt-111-explanation-choice-label-mismatch.md) | Explanation Text References Original Choice Labels After Shuffle | P0 | 2026-02-06 |
 | [DEBT-110](../_archive/debt/debt-110-e2e-helper-anti-patterns.md) | E2E Test Helper Anti-Patterns (isVisible Timeout + Stripe Duplication) | P3 | 2026-02-05 |
 | [DEBT-107](../_archive/debt/debt-107-question-engine-e2e-completeness.md) | Question Engine E2E Completeness and State Management (Accepted) | P1 | 2026-02-06 |

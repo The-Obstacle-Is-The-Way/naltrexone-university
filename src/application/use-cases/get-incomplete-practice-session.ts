@@ -1,8 +1,4 @@
-import type {
-  AttemptSessionReader,
-  PracticeSessionRepository,
-} from '@/src/application/ports/repositories';
-import { computeSessionProgress } from '@/src/domain/services';
+import type { PracticeSessionRepository } from '@/src/application/ports/repositories';
 
 export type GetIncompletePracticeSessionInput = {
   userId: string;
@@ -17,10 +13,7 @@ export type GetIncompletePracticeSessionOutput = {
 } | null;
 
 export class GetIncompletePracticeSessionUseCase {
-  constructor(
-    private readonly sessions: PracticeSessionRepository,
-    private readonly attempts: AttemptSessionReader,
-  ) {}
+  constructor(private readonly sessions: PracticeSessionRepository) {}
 
   async execute(
     input: GetIncompletePracticeSessionInput,
@@ -30,23 +23,15 @@ export class GetIncompletePracticeSessionUseCase {
     );
     if (!session) return null;
 
-    const attempts = await this.attempts.findBySessionId(
-      session.id,
-      input.userId,
-    );
-    const sessionQuestionIds = new Set(session.questionIds);
-    const answeredCount = new Set(
-      attempts
-        .map((attempt) => attempt.questionId)
-        .filter((questionId) => sessionQuestionIds.has(questionId)),
-    ).size;
-    const progress = computeSessionProgress(session, answeredCount);
+    const answeredCount = session.questionStates.filter(
+      (state) => state.latestSelectedChoiceId !== null,
+    ).length;
 
     return {
       sessionId: session.id,
       mode: session.mode,
-      answeredCount: progress.current,
-      totalCount: progress.total,
+      answeredCount,
+      totalCount: session.questionIds.length,
       startedAt: session.startedAt.toISOString(),
     };
   }

@@ -1,9 +1,6 @@
 import { computeAccuracy } from '@/src/domain/services';
 import { ApplicationError } from '../errors';
-import type {
-  AttemptSessionReader,
-  PracticeSessionRepository,
-} from '../ports/repositories';
+import type { PracticeSessionRepository } from '../ports/repositories';
 
 export type EndPracticeSessionInput = {
   userId: string;
@@ -22,10 +19,7 @@ export type EndPracticeSessionOutput = {
 };
 
 export class EndPracticeSessionUseCase {
-  constructor(
-    private readonly sessions: PracticeSessionRepository,
-    private readonly attempts: AttemptSessionReader,
-  ) {}
+  constructor(private readonly sessions: PracticeSessionRepository) {}
 
   async execute(
     input: EndPracticeSessionInput,
@@ -40,13 +34,13 @@ export class EndPracticeSessionUseCase {
       );
     }
 
-    const attempts = await this.attempts.findBySessionId(
-      session.id,
-      input.userId,
+    const answeredStates = session.questionStates.filter(
+      (state) => state.latestSelectedChoiceId !== null,
     );
-
-    const answered = attempts.length;
-    const correct = attempts.filter((a) => a.isCorrect).length;
+    const answered = answeredStates.length;
+    const correct = answeredStates.filter(
+      (state) => state.latestIsCorrect === true,
+    ).length;
     const accuracy = computeAccuracy(answered, correct);
 
     const durationSeconds = Math.max(

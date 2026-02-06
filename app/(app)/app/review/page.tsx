@@ -5,6 +5,7 @@ import {
   type GetMissedQuestionsOutput,
   getMissedQuestions,
 } from '@/src/adapters/controllers/review-controller';
+import { getStemPreview } from '@/src/adapters/shared/stem-preview';
 
 type ReviewSearchParams = {
   limit?: string;
@@ -89,7 +90,7 @@ export function ReviewView({
                     {row.isAvailable ? (
                       <>
                         <div className="text-sm font-medium text-foreground">
-                          {row.slug}
+                          {getStemPreview(row.stemMd, 80)}
                         </div>
                         <div className="text-sm text-muted-foreground">
                           {row.stemMd}

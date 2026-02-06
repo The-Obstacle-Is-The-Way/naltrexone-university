@@ -112,6 +112,17 @@ export class SubmitAnswerUseCase {
       timeSpentSeconds,
     });
 
+    if (session && session.endedAt === null) {
+      await this.sessions.recordQuestionAnswer({
+        sessionId: session.id,
+        userId: input.userId,
+        questionId: question.id,
+        selectedChoiceId: input.choiceId,
+        isCorrect: grade.isCorrect,
+        answeredAt: attempt.answeredAt,
+      });
+    }
+
     const shouldShowExplanation =
       !session || sessionShouldShowExplanation(session);
     const explanationMd = shouldShowExplanation ? question.explanationMd : null;

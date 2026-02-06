@@ -65,11 +65,14 @@ export type PracticeViewProps = {
   isPending: boolean;
   bookmarkStatus: 'idle' | 'loading' | 'error';
   isBookmarked: boolean;
+  isMarkingForReview?: boolean;
   bookmarkMessage?: string | null;
   canSubmit: boolean;
+  endSessionLabel?: string;
   onEndSession?: () => void;
   onTryAgain: () => void;
   onToggleBookmark: () => void;
+  onToggleMarkForReview?: () => void;
   onSelectChoice: (choiceId: string) => void;
   onSubmit: () => void;
   onNextQuestion: () => void;
@@ -328,7 +331,7 @@ export function PracticeView(props: PracticeViewProps) {
                 disabled={props.isPending}
                 onClick={props.onEndSession}
               >
-                End session
+                {props.endSessionLabel ?? 'End session'}
               </Button>
             ) : null}
             <Link
@@ -369,6 +372,19 @@ export function PracticeView(props: PracticeViewProps) {
 
       {props.question ? (
         <div className="flex flex-col items-end gap-2">
+          {sessionInfo?.mode === 'exam' && props.onToggleMarkForReview ? (
+            <Button
+              type="button"
+              variant="outline"
+              className="rounded-full"
+              disabled={props.isMarkingForReview || props.isPending}
+              onClick={props.onToggleMarkForReview}
+            >
+              {sessionInfo.isMarkedForReview
+                ? 'Unmark review'
+                : 'Mark for review'}
+            </Button>
+          ) : null}
           <Button
             type="button"
             variant="outline"
@@ -794,6 +810,7 @@ export default function PracticePage() {
       isPending={isPending}
       bookmarkStatus={bookmarkStatus}
       isBookmarked={isBookmarked}
+      isMarkingForReview={false}
       bookmarkMessage={bookmarkMessage}
       canSubmit={canSubmit}
       onTryAgain={loadNext}

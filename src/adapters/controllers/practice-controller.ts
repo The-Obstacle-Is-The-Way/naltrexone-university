@@ -20,6 +20,10 @@ import type {
   EndPracticeSessionOutput,
   GetIncompletePracticeSessionInput,
   GetIncompletePracticeSessionOutput,
+  GetPracticeSessionReviewInput,
+  GetPracticeSessionReviewOutput,
+  SetPracticeSessionQuestionMarkInput,
+  SetPracticeSessionQuestionMarkOutput,
   StartPracticeSessionInput,
   StartPracticeSessionOutput,
 } from '@/src/application/use-cases';
@@ -55,6 +59,20 @@ const EndPracticeSessionInputSchema = z
   })
   .strict();
 
+const GetPracticeSessionReviewInputSchema = z
+  .object({
+    sessionId: zUuid,
+  })
+  .strict();
+
+const SetPracticeSessionQuestionMarkInputSchema = z
+  .object({
+    sessionId: zUuid,
+    questionId: zUuid,
+    markedForReview: z.boolean(),
+  })
+  .strict();
+
 const EmptyInputSchema = z.object({}).strict();
 
 const StartPracticeSessionOutputSchema = z
@@ -76,6 +94,8 @@ const GetIncompletePracticeSessionOutputSchema = z
 export type {
   EndPracticeSessionOutput,
   GetIncompletePracticeSessionOutput,
+  GetPracticeSessionReviewOutput,
+  SetPracticeSessionQuestionMarkOutput,
   StartPracticeSessionOutput,
 } from '@/src/application/use-cases';
 
@@ -98,6 +118,16 @@ export type PracticeControllerDeps = {
     execute: (
       input: EndPracticeSessionInput,
     ) => Promise<EndPracticeSessionOutput>;
+  };
+  getPracticeSessionReviewUseCase: {
+    execute: (
+      input: GetPracticeSessionReviewInput,
+    ) => Promise<GetPracticeSessionReviewOutput>;
+  };
+  setPracticeSessionQuestionMarkUseCase: {
+    execute: (
+      input: SetPracticeSessionQuestionMarkInput,
+    ) => Promise<SetPracticeSessionQuestionMarkOutput>;
   };
   now: () => Date;
 };
@@ -176,6 +206,32 @@ export const endPracticeSession = createAction({
     return d.endPracticeSessionUseCase.execute({
       userId,
       sessionId: input.sessionId,
+    });
+  },
+});
+
+export const getPracticeSessionReview = createAction({
+  schema: GetPracticeSessionReviewInputSchema,
+  getDeps,
+  execute: async (input, d) => {
+    const userId = await requireEntitledUserId(d);
+    return d.getPracticeSessionReviewUseCase.execute({
+      userId,
+      sessionId: input.sessionId,
+    });
+  },
+});
+
+export const setPracticeSessionQuestionMark = createAction({
+  schema: SetPracticeSessionQuestionMarkInputSchema,
+  getDeps,
+  execute: async (input, d) => {
+    const userId = await requireEntitledUserId(d);
+    return d.setPracticeSessionQuestionMarkUseCase.execute({
+      userId,
+      sessionId: input.sessionId,
+      questionId: input.questionId,
+      markedForReview: input.markedForReview,
     });
   },
 });

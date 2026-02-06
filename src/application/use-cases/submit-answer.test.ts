@@ -379,6 +379,54 @@ describe('SubmitAnswerUseCase', () => {
     expect(result.choiceExplanations).toEqual([]);
   });
 
+  it('updates the persisted session question state with the latest answer', async () => {
+    const userId = 'user-1';
+    const sessionId = 'session-1';
+    const questionId = 'q1';
+
+    const question = createQuestion({
+      id: questionId,
+      status: 'published',
+      choices: [
+        createChoice({ id: 'c1', questionId, label: 'A', isCorrect: false }),
+        createChoice({ id: 'c2', questionId, label: 'B', isCorrect: true }),
+      ],
+    });
+
+    const session = createPracticeSession({
+      id: sessionId,
+      userId,
+      mode: 'exam',
+      endedAt: null,
+      questionIds: [questionId],
+    });
+
+    const sessions = new FakePracticeSessionRepository([session]);
+    const useCase = new SubmitAnswerUseCase(
+      new FakeQuestionRepository([question]),
+      new FakeAttemptRepository(),
+      sessions,
+    );
+
+    await useCase.execute({
+      userId,
+      questionId,
+      choiceId: 'c2',
+      sessionId,
+    });
+
+    const updated = await sessions.findByIdAndUserId(sessionId, userId);
+    expect(updated?.questionStates).toEqual([
+      {
+        questionId,
+        markedForReview: false,
+        latestSelectedChoiceId: 'c2',
+        latestIsCorrect: true,
+        latestAnsweredAt: expect.any(Date),
+      },
+    ]);
+  });
+
   it('returns explanation when exam session has ended', async () => {
     const userId = 'user-1';
     const sessionId = 'session-1';

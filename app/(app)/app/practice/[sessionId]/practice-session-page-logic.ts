@@ -10,6 +10,7 @@ import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answ
 
 export async function loadNextQuestion(input: {
   sessionId: string;
+  questionId?: string;
   getNextQuestionFn: (
     input: unknown,
   ) => Promise<ActionResult<NextQuestion | null>>;
@@ -34,7 +35,10 @@ export async function loadNextQuestion(input: {
 
   let res: ActionResult<NextQuestion | null>;
   try {
-    res = await input.getNextQuestionFn({ sessionId: input.sessionId });
+    res = await input.getNextQuestionFn({
+      sessionId: input.sessionId,
+      questionId: input.questionId,
+    });
   } catch (error) {
     if (!isMounted()) return;
 

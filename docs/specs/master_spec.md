@@ -834,8 +834,16 @@ export const QuestionFiltersSchema = z.object({
 }).strict();
 
 export const GetNextQuestionInputSchema = z.union([
-  z.object({ sessionId: zUuid, filters: z.undefined().optional() }).strict(),
-  z.object({ sessionId: z.undefined().optional(), filters: QuestionFiltersSchema }).strict(),
+  z.object({
+    sessionId: zUuid,
+    questionId: zUuid.optional(),
+    filters: z.undefined().optional(),
+  }).strict(),
+  z.object({
+    sessionId: z.undefined().optional(),
+    questionId: z.undefined().optional(),
+    filters: QuestionFiltersSchema,
+  }).strict(),
 ]);
 ```
 
@@ -860,6 +868,7 @@ export type NextQuestion = {
     mode: 'tutor' | 'exam';
     index: number; // 0-based index within session
     total: number;
+    isMarkedForReview?: boolean;
   };
 };
 
@@ -880,15 +889,15 @@ export type GetNextQuestionOutput = NextQuestion | null; // null means no remain
 
 1. Load practice session by `id` AND `user_id`.
 2. Parse `params_json` as `PracticeSessionParams`.
-3. Determine which question IDs already attempted in this session:
+3. Determine target question:
 
-   * Query `attempts` where `practice_session_id = sessionId` AND `user_id = userId`.
-4. Find the first question in `params_json.questionIds` not yet attempted.
-5. If none found: return `null`.
-6. Fetch question + choices by that questionId:
+   * If `questionId` is provided, it must belong to `params_json.questionIds`.
+   * Else pick the first question in `params_json.questionIds` whose persisted state has `latestSelectedChoiceId = null`.
+4. If none found: return `null`.
+5. Fetch question + choices by target questionId:
 
    * Question must be `status='published'` (if not published => return `NOT_FOUND`)
-7. Return `NextQuestion` with `session` populated.
+6. Return `NextQuestion` with `session` populated, including `isMarkedForReview` from persisted session state.
    **Important:** `choices.isCorrect` MUST NOT be returned.
 
 ##### Case B: filters provided (no session)
@@ -927,6 +936,13 @@ export type SubmitAnswerOutput = {
   isCorrect: boolean;
   correctChoiceId: string;
   explanationMd: string | null; // null if session mode is 'exam' and session not ended
+  choiceExplanations: Array<{
+    choiceId: string;
+    displayLabel: 'A' | 'B' | 'C' | 'D' | 'E';
+    textMd: string;
+    isCorrect: boolean;
+    explanationMd: string | null;
+  }>;
 };
 ```
 
@@ -950,12 +966,21 @@ export type SubmitAnswerOutput = {
    * `practice_session_id = sessionId ?? null`
    * `selected_choice_id = choiceId`
    * `is_correct = (choiceId === correctChoiceId)`
-   * `time_spent_seconds = 0` (fixed for MVP)
-5. Determine whether explanation is returned:
+   * `time_spent_seconds` from validated input (defaults to 0 when omitted)
+5. If `sessionId` is provided and session is active (`ended_at IS NULL`), persist latest per-question session state:
+
+   * `latestSelectedChoiceId = choiceId`
+   * `latestIsCorrect = isCorrect`
+   * `latestAnsweredAt = attempts.answered_at`
+6. Determine whether explanation is returned:
 
    * If `sessionId` is provided AND session.mode === 'exam' AND session.ended_at IS NULL: `explanationMd = null`
    * Else: `explanationMd = questions.explanation_md`
-6. Return result including `correctChoiceId` always.
+7. Determine `choiceExplanations`:
+
+   * If explanation is hidden (active exam session), return `[]`.
+   * Else return explanations for displayed shuffled choices with stable display labels (`A`..`E`).
+8. Return result including `correctChoiceId` always.
 
 ---
 
@@ -1008,7 +1033,9 @@ export type StartPracticeSessionOutput = { sessionId: string };
 4. Insert `practice_sessions` row with:
 
    * `user_id`, `mode`
-   * `params_json = { count, tagSlugs, difficulties, questionIds }`
+   * `params_json = { count, tagSlugs, difficulties, questionIds, questionStates }`
+   * `questionStates` is initialized for each selected question:
+     * `{ questionId, markedForReview:false, latestSelectedChoiceId:null, latestIsCorrect:null, latestAnsweredAt:null }`
    * `started_at = now()`
 5. Return `sessionId`.
 
@@ -1060,8 +1087,8 @@ export type EndPracticeSessionOutput = {
 3. Set `ended_at = now()`.
 4. Compute summary:
 
-   * attempts in that session for that user
-   * correct count
+   * `answered` = count of persisted session question states where `latestSelectedChoiceId` is not null
+   * `correct` = count of persisted session question states where `latestIsCorrect === true`
    * duration = floor((ended_at - started_at)/1000)
 5. Return summary.
 
@@ -1089,12 +1116,23 @@ export type UserStatsOutput = {
   answeredLast7Days: number;
   accuracyLast7Days: number;   // 0..1
   currentStreakDays: number;   // consecutive UTC days with >=1 attempt, ending today
-  recentActivity: Array<{
-    answeredAt: string;        // ISO
-    questionId: string;
-    slug: string;
-    isCorrect: boolean;
-  }>;
+  recentActivity: Array<
+    | {
+        isAvailable: true;
+        answeredAt: string;        // ISO
+        questionId: string;
+        slug: string;              // internal navigation identifier
+        stemMd: string;
+        difficulty: 'easy' | 'medium' | 'hard';
+        isCorrect: boolean;
+      }
+    | {
+        isAvailable: false;
+        answeredAt: string;        // ISO
+        questionId: string;
+        isCorrect: boolean;
+      }
+  >;
 };
 ```
 
@@ -1113,7 +1151,9 @@ export type UserStatsOutput = {
 
   * create set of `YYYY-MM-DD` dates in UTC where attempts exist
   * starting from today UTC, count backward consecutive dates in set
-* recentActivity = 20 most recent attempts joined to questions (slug) ordered by answered_at desc
+* recentActivity = 20 most recent attempts joined to questions ordered by answered_at desc
+* available rows include `stemMd` and `difficulty` for user-facing display
+* unavailable rows are returned as `isAvailable:false` for graceful degradation when questions are unpublished/removed
 
 ---
 
@@ -1244,6 +1284,115 @@ export type GetBookmarksOutput = {
 * Select bookmarks for user ordered by created_at desc
 * Join to published questions
 * Return list
+
+---
+
+#### 4.5.11 Server Action: `getPracticeSessionReview(sessionId)`
+
+* **Name:** `getPracticeSessionReview`
+* **Type:** Server Action
+* **Auth:** subscribed
+* **File:** `src/adapters/controllers/practice-controller.ts`
+
+**Input (Zod):**
+
+```ts
+export const GetPracticeSessionReviewInputSchema = z.object({
+  sessionId: zUuid,
+}).strict();
+```
+
+**Output:**
+
+```ts
+export type PracticeSessionReviewRow =
+  | {
+      isAvailable: true;
+      questionId: string;
+      stemMd: string;
+      difficulty: 'easy' | 'medium' | 'hard';
+      order: number; // 1-based
+      isAnswered: boolean;
+      isCorrect: boolean | null;
+      markedForReview: boolean;
+    }
+  | {
+      isAvailable: false;
+      questionId: string;
+      order: number; // 1-based
+      isAnswered: boolean;
+      isCorrect: boolean | null;
+      markedForReview: boolean;
+    };
+
+export type GetPracticeSessionReviewOutput = {
+  sessionId: string;
+  mode: 'tutor' | 'exam';
+  totalCount: number;
+  answeredCount: number;
+  markedCount: number;
+  rows: PracticeSessionReviewRow[];
+};
+```
+
+**Errors:**
+
+* `UNAUTHENTICATED`
+* `UNSUBSCRIBED`
+* `VALIDATION_ERROR`
+* `NOT_FOUND` if session not found or not owned by user
+* `INTERNAL_ERROR`
+
+**Behavior (exact):**
+
+1. Load session by id and user_id.
+2. Build ordered review rows from persisted `questionStates`.
+3. Join question ids to published questions for stem/difficulty when available.
+4. Return aggregate counts (`totalCount`, `answeredCount`, `markedCount`) and ordered rows.
+
+---
+
+#### 4.5.12 Server Action: `setPracticeSessionQuestionMark(sessionId, questionId, markedForReview)`
+
+* **Name:** `setPracticeSessionQuestionMark`
+* **Type:** Server Action
+* **Auth:** subscribed
+* **File:** `src/adapters/controllers/practice-controller.ts`
+
+**Input (Zod):**
+
+```ts
+export const SetPracticeSessionQuestionMarkInputSchema = z.object({
+  sessionId: zUuid,
+  questionId: zUuid,
+  markedForReview: z.boolean(),
+}).strict();
+```
+
+**Output:**
+
+```ts
+export type SetPracticeSessionQuestionMarkOutput = {
+  questionId: string;
+  markedForReview: boolean;
+};
+```
+
+**Errors:**
+
+* `UNAUTHENTICATED`
+* `UNSUBSCRIBED`
+* `VALIDATION_ERROR`
+* `NOT_FOUND` if session not found/not owned or question not in session
+* `CONFLICT` if session mode is not exam or session already ended
+* `INTERNAL_ERROR`
+
+**Behavior (exact):**
+
+1. Load session by id and user_id.
+2. Reject if session is not in exam mode.
+3. Persist `markedForReview` for the target session question state.
+4. Return updated mark state for the question.
 
 ---
 
@@ -1959,7 +2108,9 @@ As a subscribed user, I can run a timed practice session with filters and get a 
 
 * Given I choose count/mode/tags, when I click Start, then a practice session is created.
 * When I proceed through questions, the app shows progress (e.g., 3/20).
-* When I end the session, I see score and total duration.
+* In exam mode, I can mark/unmark questions for review.
+* In exam mode, "End session" opens a review stage showing answered/unanswered/marked counts with jump-to-question.
+* When I submit from review stage, I see score and total duration.
 * In exam mode, explanations are hidden until the session ends.
 
 **Test Cases:**
@@ -1969,10 +2120,11 @@ As a subscribed user, I can run a timed practice session with filters and get a 
 
 **Implementation Checklist:**
 
-1. Implement `startPracticeSession` and persist `questionIds` in `params_json`.
+1. Implement `startPracticeSession` and persist `questionIds` + `questionStates` in `params_json`.
 2. Implement session runner route `/app/practice/[sessionId]`.
-3. Implement `endPracticeSession`.
-4. Enforce exam-mode explanation gating.
+3. Implement review-stage actions: `getPracticeSessionReview`, `setPracticeSessionQuestionMark`.
+4. Implement `endPracticeSession` finalization using latest per-question session state.
+5. Enforce exam-mode explanation gating.
 
 **Files to Create/Modify:**
 
@@ -1993,6 +2145,7 @@ As a subscribed user, I can run a timed practice session with filters and get a 
 **Definition of Done:**
 
 * Sessions create and complete reliably
+* Exam review stage + mark-for-review flow is correct and persisted
 * Exam vs tutor behavior is correct and tested
 
 ---

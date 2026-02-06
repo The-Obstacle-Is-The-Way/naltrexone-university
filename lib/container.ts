@@ -52,7 +52,9 @@ import {
   GetIncompletePracticeSessionUseCase,
   GetMissedQuestionsUseCase,
   GetNextQuestionUseCase,
+  GetPracticeSessionReviewUseCase,
   GetUserStatsUseCase,
+  SetPracticeSessionQuestionMarkUseCase,
   StartPracticeSessionUseCase,
   SubmitAnswerUseCase,
   ToggleBookmarkUseCase,
@@ -108,7 +110,9 @@ export type UseCaseFactories = {
   createGetBookmarksUseCase: () => GetBookmarksUseCase;
   createGetIncompletePracticeSessionUseCase: () => GetIncompletePracticeSessionUseCase;
   createGetMissedQuestionsUseCase: () => GetMissedQuestionsUseCase;
+  createGetPracticeSessionReviewUseCase: () => GetPracticeSessionReviewUseCase;
   createGetUserStatsUseCase: () => GetUserStatsUseCase;
+  createSetPracticeSessionQuestionMarkUseCase: () => SetPracticeSessionQuestionMarkUseCase;
   createStartPracticeSessionUseCase: () => StartPracticeSessionUseCase;
   createSubmitAnswerUseCase: () => SubmitAnswerUseCase;
   createToggleBookmarkUseCase: () => ToggleBookmarkUseCase;
@@ -247,7 +251,6 @@ export function createContainer(overrides: ContainerOverrides = {}) {
     createEndPracticeSessionUseCase: () =>
       new EndPracticeSessionUseCase(
         repositories.createPracticeSessionRepository(),
-        repositories.createAttemptRepository(),
       ),
     createGetNextQuestionUseCase: () =>
       new GetNextQuestionUseCase(
@@ -264,11 +267,16 @@ export function createContainer(overrides: ContainerOverrides = {}) {
     createGetIncompletePracticeSessionUseCase: () =>
       new GetIncompletePracticeSessionUseCase(
         repositories.createPracticeSessionRepository(),
-        repositories.createAttemptRepository(),
       ),
     createGetMissedQuestionsUseCase: () =>
       new GetMissedQuestionsUseCase(
         repositories.createAttemptRepository(),
+        repositories.createQuestionRepository(),
+        primitives.logger,
+      ),
+    createGetPracticeSessionReviewUseCase: () =>
+      new GetPracticeSessionReviewUseCase(
+        repositories.createPracticeSessionRepository(),
         repositories.createQuestionRepository(),
         primitives.logger,
       ),
@@ -278,6 +286,10 @@ export function createContainer(overrides: ContainerOverrides = {}) {
         repositories.createQuestionRepository(),
         primitives.logger,
         primitives.now,
+      ),
+    createSetPracticeSessionQuestionMarkUseCase: () =>
+      new SetPracticeSessionQuestionMarkUseCase(
+        repositories.createPracticeSessionRepository(),
       ),
     createStartPracticeSessionUseCase: () =>
       new StartPracticeSessionUseCase(
@@ -353,6 +365,10 @@ export function createContainer(overrides: ContainerOverrides = {}) {
       checkEntitlementUseCase: useCases.createCheckEntitlementUseCase(),
       getIncompletePracticeSessionUseCase:
         useCases.createGetIncompletePracticeSessionUseCase(),
+      getPracticeSessionReviewUseCase:
+        useCases.createGetPracticeSessionReviewUseCase(),
+      setPracticeSessionQuestionMarkUseCase:
+        useCases.createSetPracticeSessionQuestionMarkUseCase(),
       startPracticeSessionUseCase: useCases.createStartPracticeSessionUseCase(),
       endPracticeSessionUseCase: useCases.createEndPracticeSessionUseCase(),
       now: primitives.now,

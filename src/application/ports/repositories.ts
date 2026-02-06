@@ -3,6 +3,7 @@ import type {
   Attempt,
   Bookmark,
   PracticeSession,
+  PracticeSessionQuestionState,
   Question,
   Subscription,
   Tag,
@@ -145,6 +146,20 @@ export interface PracticeSessionRepository {
     mode: 'tutor' | 'exam';
     paramsJson: unknown; // adapter validates + persists exact shape
   }): Promise<PracticeSession>;
+  recordQuestionAnswer(input: {
+    sessionId: string;
+    userId: string;
+    questionId: string;
+    selectedChoiceId: string;
+    isCorrect: boolean;
+    answeredAt: Date;
+  }): Promise<PracticeSessionQuestionState>;
+  setQuestionMarkedForReview(input: {
+    sessionId: string;
+    userId: string;
+    questionId: string;
+    markedForReview: boolean;
+  }): Promise<PracticeSessionQuestionState>;
   end(id: string, userId: string): Promise<PracticeSession>;
 }
 

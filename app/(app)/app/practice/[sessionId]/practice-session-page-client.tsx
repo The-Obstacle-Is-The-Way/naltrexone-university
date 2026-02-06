@@ -1,14 +1,26 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useTransition,
+} from 'react';
 import {
   createLoadNextQuestionAction,
   endSession,
+  loadNextQuestion,
   maybeAutoAdvanceAfterSubmit,
   submitAnswerForQuestion,
 } from '@/app/(app)/app/practice/[sessionId]/practice-session-page-logic';
 import { PracticeView } from '@/app/(app)/app/practice/page';
+import {
+  getActionResultErrorMessage,
+  getThrownErrorMessage,
+} from '@/app/(app)/app/practice/practice-logic';
 import {
   canSubmitAnswer,
   createBookmarksEffect,
@@ -22,12 +34,18 @@ import {
   getBookmarks,
   toggleBookmark,
 } from '@/src/adapters/controllers/bookmark-controller';
-import type { EndPracticeSessionOutput } from '@/src/adapters/controllers/practice-controller';
-import { endPracticeSession } from '@/src/adapters/controllers/practice-controller';
+import {
+  type EndPracticeSessionOutput,
+  endPracticeSession,
+  type GetPracticeSessionReviewOutput,
+  getPracticeSessionReview,
+  setPracticeSessionQuestionMark,
+} from '@/src/adapters/controllers/practice-controller';
 import {
   getNextQuestion,
   submitAnswer,
 } from '@/src/adapters/controllers/question-controller';
+import { getStemPreview } from '@/src/adapters/shared/stem-preview';
 import type { NextQuestion } from '@/src/application/use-cases/get-next-question';
 import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
 
@@ -97,8 +115,110 @@ export function SessionSummaryView({
   );
 }
 
+export function ExamReviewView({
+  review,
+  isPending,
+  onOpenQuestion,
+  onFinalizeReview,
+}: {
+  review: GetPracticeSessionReviewOutput;
+  isPending: boolean;
+  onOpenQuestion: (questionId: string) => void;
+  onFinalizeReview: () => void;
+}) {
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold font-heading tracking-tight text-foreground">
+          Review Questions
+        </h1>
+        <p className="mt-1 text-muted-foreground">
+          Check answered, unanswered, and marked questions before final submit.
+        </p>
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-3">
+        <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
+          <div className="text-xs text-muted-foreground">Answered</div>
+          <div className="mt-1 text-2xl font-bold font-display text-foreground">
+            {review.answeredCount}
+          </div>
+        </div>
+        <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
+          <div className="text-xs text-muted-foreground">Unanswered</div>
+          <div className="mt-1 text-2xl font-bold font-display text-foreground">
+            {review.totalCount - review.answeredCount}
+          </div>
+        </div>
+        <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
+          <div className="text-xs text-muted-foreground">Marked</div>
+          <div className="mt-1 text-2xl font-bold font-display text-foreground">
+            {review.markedCount}
+          </div>
+        </div>
+      </div>
+
+      <ul className="space-y-3">
+        {review.rows.map((row) => (
+          <li
+            key={row.questionId}
+            className="rounded-2xl border border-border bg-card p-4 shadow-sm"
+          >
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div className="space-y-1">
+                <div className="text-sm font-medium text-foreground">
+                  {row.isAvailable
+                    ? `${row.order}. ${getStemPreview(row.stemMd, 96)}`
+                    : `${row.order}. [Question no longer available]`}
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  {row.isAnswered ? 'Answered' : 'Unanswered'}
+                  <span className="mx-2">•</span>
+                  <span>
+                    {row.markedForReview ? 'Marked for review' : 'Not marked'}
+                  </span>
+                  {row.isAnswered && row.isCorrect !== null ? (
+                    <>
+                      <span className="mx-2">•</span>
+                      <span>{row.isCorrect ? 'Correct' : 'Incorrect'}</span>
+                    </>
+                  ) : null}
+                </div>
+              </div>
+
+              {row.isAvailable ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="rounded-full"
+                  onClick={() => onOpenQuestion(row.questionId)}
+                >
+                  Open question
+                </Button>
+              ) : null}
+            </div>
+          </li>
+        ))}
+      </ul>
+
+      <div className="flex flex-col gap-3 sm:flex-row">
+        <Button
+          type="button"
+          className="rounded-full"
+          disabled={isPending}
+          onClick={onFinalizeReview}
+        >
+          Submit exam
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 export type PracticeSessionPageViewProps = {
   summary: EndPracticeSessionOutput | null;
+  review?: GetPracticeSessionReviewOutput | null;
+  reviewLoadState?: LoadState;
   sessionInfo: NextQuestion['session'];
   loadState: LoadState;
   question: NextQuestion | null;
@@ -107,19 +227,58 @@ export type PracticeSessionPageViewProps = {
   isPending: boolean;
   bookmarkStatus: 'idle' | 'loading' | 'error';
   isBookmarked: boolean;
+  isMarkingForReview?: boolean;
   bookmarkMessage?: string | null;
   canSubmit: boolean;
   onEndSession: () => void;
   onTryAgain: () => void;
   onToggleBookmark: () => void;
+  onToggleMarkForReview?: () => void;
   onSelectChoice: (choiceId: string) => void;
   onSubmit: () => void;
   onNextQuestion: () => void;
+  onOpenReviewQuestion?: (questionId: string) => void;
+  onFinalizeReview?: () => void;
 };
 
 export function PracticeSessionPageView(props: PracticeSessionPageViewProps) {
+  const review = props.review ?? null;
+  const reviewLoadState = props.reviewLoadState ?? { status: 'idle' };
+
   if (props.summary) {
     return <SessionSummaryView summary={props.summary} />;
+  }
+
+  if (reviewLoadState.status === 'loading' && !review) {
+    return (
+      <div className="rounded-2xl border border-border bg-card p-6 text-sm text-muted-foreground shadow-sm">
+        Loading review...
+      </div>
+    );
+  }
+
+  if (reviewLoadState.status === 'error' && !review) {
+    return (
+      <div className="space-y-4">
+        <div className="rounded-2xl border border-border bg-card p-6 text-sm text-destructive shadow-sm">
+          {reviewLoadState.message}
+        </div>
+        <Button type="button" variant="outline" onClick={props.onEndSession}>
+          Try again
+        </Button>
+      </div>
+    );
+  }
+
+  if (review) {
+    return (
+      <ExamReviewView
+        review={review}
+        isPending={props.isPending}
+        onOpenQuestion={props.onOpenReviewQuestion ?? (() => undefined)}
+        onFinalizeReview={props.onFinalizeReview ?? props.onEndSession}
+      />
+    );
   }
 
   return (
@@ -132,11 +291,16 @@ export function PracticeSessionPageView(props: PracticeSessionPageViewProps) {
       isPending={props.isPending}
       bookmarkStatus={props.bookmarkStatus}
       isBookmarked={props.isBookmarked}
+      isMarkingForReview={props.isMarkingForReview}
       bookmarkMessage={props.bookmarkMessage}
       canSubmit={props.canSubmit}
+      endSessionLabel={
+        props.sessionInfo?.mode === 'exam' ? 'Review answers' : 'End session'
+      }
       onEndSession={props.onEndSession}
       onTryAgain={props.onTryAgain}
       onToggleBookmark={props.onToggleBookmark}
+      onToggleMarkForReview={props.onToggleMarkForReview}
       onSelectChoice={props.onSelectChoice}
       onSubmit={props.onSubmit}
       onNextQuestion={props.onNextQuestion}
@@ -151,11 +315,20 @@ export default function PracticeSessionPageClient({
 }) {
   const [question, setQuestion] = useState<NextQuestion | null>(null);
   const [sessionInfo, setSessionInfo] = useState<NextQuestion['session']>(null);
+  const [sessionMode, setSessionMode] = useState<'tutor' | 'exam' | null>(null);
   const [selectedChoiceId, setSelectedChoiceId] = useState<string | null>(null);
   const [submitResult, setSubmitResult] = useState<SubmitAnswerOutput | null>(
     null,
   );
   const [summary, setSummary] = useState<EndPracticeSessionOutput | null>(null);
+  const [review, setReview] = useState<GetPracticeSessionReviewOutput | null>(
+    null,
+  );
+  const [reviewLoadState, setReviewLoadState] = useState<LoadState>({
+    status: 'idle',
+  });
+  const [isInReviewStage, setIsInReviewStage] = useState(false);
+  const [isMarkingForReview, setIsMarkingForReview] = useState(false);
 
   const [bookmarkedQuestionIds, setBookmarkedQuestionIds] = useState<
     Set<string>
@@ -200,13 +373,20 @@ export default function PracticeSessionPageClient({
   useEffect(loadNext, [loadNext]);
 
   useEffect(() => {
+    if (!sessionInfo?.mode) return;
+    setSessionMode(sessionInfo.mode);
+  }, [sessionInfo?.mode]);
+
+  useEffect(() => {
+    if (isInReviewStage) return;
+
     maybeAutoAdvanceAfterSubmit({
-      mode: sessionInfo?.mode ?? null,
+      mode: sessionMode,
       submitResult,
       loadStateStatus: loadState.status,
       advance: loadNext,
     });
-  }, [sessionInfo?.mode, submitResult, loadState.status, loadNext]);
+  }, [isInReviewStage, sessionMode, submitResult, loadState.status, loadNext]);
 
   const bookmarksEffect = useMemo(
     () =>
@@ -291,7 +471,7 @@ export default function PracticeSessionPageClient({
     [question, isMounted],
   );
 
-  const onEndSession = useMemo(
+  const finalizeSession = useMemo(
     () =>
       endSession.bind(null, {
         sessionId,
@@ -306,6 +486,153 @@ export default function PracticeSessionPageClient({
     [sessionId, isMounted],
   );
 
+  const loadReview = useCallback(async (): Promise<void> => {
+    setReviewLoadState({ status: 'loading' });
+
+    let res: Awaited<ReturnType<typeof getPracticeSessionReview>>;
+    try {
+      res = await getPracticeSessionReview({ sessionId });
+    } catch (error) {
+      if (!isMounted()) return;
+      setReviewLoadState({
+        status: 'error',
+        message: getThrownErrorMessage(error),
+      });
+      return;
+    }
+    if (!isMounted()) return;
+
+    if (!res.ok) {
+      setReviewLoadState({
+        status: 'error',
+        message: getActionResultErrorMessage(res),
+      });
+      return;
+    }
+
+    if (res.data.mode !== 'exam') {
+      setReview(null);
+      setReviewLoadState({ status: 'idle' });
+      setIsInReviewStage(false);
+      setSessionMode(res.data.mode);
+      void finalizeSession();
+      return;
+    }
+
+    setReview(res.data);
+    setReviewLoadState({ status: 'ready' });
+    setIsInReviewStage(true);
+    setSessionMode(res.data.mode);
+    setQuestion(null);
+    setSubmitResult(null);
+    setSelectedChoiceId(null);
+  }, [sessionId, isMounted, finalizeSession]);
+
+  const loadSpecificQuestion = useCallback(
+    (questionId: string): void => {
+      startTransition(() => {
+        void loadNextQuestion({
+          sessionId,
+          questionId,
+          getNextQuestionFn: getNextQuestion,
+          createIdempotencyKey: () => crypto.randomUUID(),
+          nowMs: Date.now,
+          setLoadState,
+          setSelectedChoiceId,
+          setSubmitResult,
+          setSubmitIdempotencyKey,
+          setQuestionLoadedAt,
+          setQuestion,
+          setSessionInfo,
+          isMounted,
+        });
+      });
+    },
+    [sessionId, isMounted],
+  );
+
+  const onOpenReviewQuestion = useCallback(
+    (questionId: string): void => {
+      setReview(null);
+      setReviewLoadState({ status: 'idle' });
+      setIsInReviewStage(true);
+      loadSpecificQuestion(questionId);
+    },
+    [loadSpecificQuestion],
+  );
+
+  const onFinalizeReview = useCallback(() => {
+    setReview(null);
+    setReviewLoadState({ status: 'idle' });
+    setIsInReviewStage(false);
+    void finalizeSession();
+  }, [finalizeSession]);
+
+  const onToggleMarkForReview = useCallback(async () => {
+    if (!question) return;
+    if (sessionMode !== 'exam') return;
+
+    const markedForReview = !sessionInfo?.isMarkedForReview;
+    setIsMarkingForReview(true);
+
+    let res: Awaited<ReturnType<typeof setPracticeSessionQuestionMark>>;
+    try {
+      res = await setPracticeSessionQuestionMark({
+        sessionId,
+        questionId: question.questionId,
+        markedForReview,
+      });
+    } catch (error) {
+      if (!isMounted()) return;
+      setLoadState({ status: 'error', message: getThrownErrorMessage(error) });
+      setIsMarkingForReview(false);
+      return;
+    }
+    if (!isMounted()) return;
+
+    if (!res.ok) {
+      setLoadState({
+        status: 'error',
+        message: getActionResultErrorMessage(res),
+      });
+      setIsMarkingForReview(false);
+      return;
+    }
+
+    setSessionInfo((prev) =>
+      prev ? { ...prev, isMarkedForReview: res.data.markedForReview } : prev,
+    );
+
+    setReview((prev) => {
+      if (!prev) return prev;
+      const rows = prev.rows.map((row) => {
+        if (row.questionId !== res.data.questionId) return row;
+        return { ...row, markedForReview: res.data.markedForReview };
+      });
+      return {
+        ...prev,
+        rows,
+        markedCount: rows.filter((row) => row.markedForReview).length,
+      };
+    });
+
+    setIsMarkingForReview(false);
+  }, [
+    question,
+    sessionMode,
+    sessionInfo?.isMarkedForReview,
+    sessionId,
+    isMounted,
+  ]);
+
+  const onEndSession = useCallback(() => {
+    if (sessionMode === 'exam' || isInReviewStage || sessionMode === null) {
+      void loadReview();
+      return;
+    }
+    void finalizeSession();
+  }, [sessionMode, isInReviewStage, loadReview, finalizeSession]);
+
   const onSelectChoice = useMemo(
     () => selectChoiceIfAllowed.bind(null, submitResult, setSelectedChoiceId),
     [submitResult],
@@ -314,6 +641,8 @@ export default function PracticeSessionPageClient({
   return (
     <PracticeSessionPageView
       summary={summary}
+      review={review}
+      reviewLoadState={reviewLoadState}
       sessionInfo={sessionInfo}
       loadState={loadState}
       question={question}
@@ -322,14 +651,18 @@ export default function PracticeSessionPageClient({
       isPending={isPending}
       bookmarkStatus={bookmarkStatus}
       isBookmarked={isBookmarked}
+      isMarkingForReview={isMarkingForReview}
       bookmarkMessage={bookmarkMessage}
       canSubmit={canSubmit}
       onEndSession={onEndSession}
       onTryAgain={loadNext}
       onToggleBookmark={onToggleBookmark}
+      onToggleMarkForReview={onToggleMarkForReview}
       onSelectChoice={onSelectChoice}
       onSubmit={onSubmit}
       onNextQuestion={loadNext}
+      onOpenReviewQuestion={onOpenReviewQuestion}
+      onFinalizeReview={onFinalizeReview}
     />
   );
 }

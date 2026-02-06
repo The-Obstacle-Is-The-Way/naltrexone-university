@@ -1,8 +1,6 @@
 import type { Question } from '@/src/domain/entities';
 import {
-  computeSessionProgress,
   createQuestionSeed,
-  getNextQuestionId,
   selectNextQuestionId,
   shuffleWithSeed,
 } from '@/src/domain/services';
@@ -14,7 +12,6 @@ import {
 import { ApplicationError } from '../errors';
 import type {
   AttemptMostRecentAnsweredAtReader,
-  AttemptSessionReader,
   PracticeSessionRepository,
   QuestionRepository,
 } from '../ports/repositories';
@@ -37,14 +34,16 @@ export type NextQuestion = {
     mode: PracticeMode;
     index: number; // 0-based index within session
     total: number;
+    isMarkedForReview?: boolean;
   };
 };
 
 export type GetNextQuestionInput =
-  | { userId: string; sessionId: string; filters?: never }
+  | { userId: string; sessionId: string; questionId?: string; filters?: never }
   | {
       userId: string;
       sessionId?: never;
+      questionId?: never;
       filters: { tagSlugs: string[]; difficulties: QuestionDifficulty[] };
     };
 
@@ -53,14 +52,17 @@ export type GetNextQuestionOutput = NextQuestion | null;
 export class GetNextQuestionUseCase {
   constructor(
     private readonly questions: QuestionRepository,
-    private readonly attempts: AttemptSessionReader &
-      AttemptMostRecentAnsweredAtReader,
+    private readonly attempts: AttemptMostRecentAnsweredAtReader,
     private readonly sessions: PracticeSessionRepository,
   ) {}
 
   async execute(input: GetNextQuestionInput): Promise<GetNextQuestionOutput> {
     if ('sessionId' in input && typeof input.sessionId === 'string') {
-      return this.executeForSession(input.userId, input.sessionId);
+      return this.executeForSession(
+        input.userId,
+        input.sessionId,
+        input.questionId,
+      );
     }
 
     return this.executeForFilters(input.userId, input.filters);
@@ -101,28 +103,50 @@ export class GetNextQuestionUseCase {
   private async executeForSession(
     userId: string,
     sessionId: string,
+    questionId?: string,
   ): Promise<GetNextQuestionOutput> {
     const session = await this.sessions.findByIdAndUserId(sessionId, userId);
     if (!session) {
       throw new ApplicationError('NOT_FOUND', 'Practice session not found');
     }
 
-    const attempts = await this.attempts.findBySessionId(sessionId, userId);
-    const answeredQuestionIds = attempts.map((a) => a.questionId);
+    const stateByQuestionId = new Map(
+      session.questionStates.map((state) => [state.questionId, state]),
+    );
+    const orderedStates = session.questionIds.map((id) => {
+      return (
+        stateByQuestionId.get(id) ?? {
+          questionId: id,
+          markedForReview: false,
+          latestSelectedChoiceId: null,
+          latestIsCorrect: null,
+          latestAnsweredAt: null,
+        }
+      );
+    });
 
-    const nextQuestionId = getNextQuestionId(session, answeredQuestionIds);
-    if (!nextQuestionId) return null;
+    const targetQuestionId =
+      typeof questionId === 'string'
+        ? questionId
+        : (orderedStates.find((state) => !state.latestSelectedChoiceId)
+            ?.questionId ?? null);
 
-    const question = await this.questions.findPublishedById(nextQuestionId);
-    if (!question) {
+    if (!targetQuestionId) return null;
+
+    const targetIndex = session.questionIds.indexOf(targetQuestionId);
+    if (targetIndex === -1) {
       throw new ApplicationError('NOT_FOUND', 'Question not found');
     }
 
-    const sessionQuestionIds = new Set(session.questionIds);
-    const answeredCount = new Set(
-      answeredQuestionIds.filter((id) => sessionQuestionIds.has(id)),
-    ).size;
-    const progress = computeSessionProgress(session, answeredCount);
+    const targetState = orderedStates[targetIndex];
+    if (!targetState) {
+      throw new ApplicationError('NOT_FOUND', 'Question not found');
+    }
+
+    const question = await this.questions.findPublishedById(targetQuestionId);
+    if (!question) {
+      throw new ApplicationError('NOT_FOUND', 'Question not found');
+    }
 
     return {
       questionId: question.id,
@@ -133,8 +157,9 @@ export class GetNextQuestionUseCase {
       session: {
         sessionId: session.id,
         mode: session.mode,
-        index: progress.current,
-        total: progress.total,
+        index: targetIndex,
+        total: session.questionIds.length,
+        isMarkedForReview: targetState.markedForReview,
       },
     };
   }

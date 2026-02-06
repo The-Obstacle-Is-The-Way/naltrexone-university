@@ -7,8 +7,36 @@ import {
   renderReview,
 } from '@/app/(app)/app/review/page';
 import { ok } from '@/src/adapters/controllers/action-result';
+import { getStemPreview } from '@/src/adapters/shared/stem-preview';
 
 describe('app/(app)/app/review', () => {
+  it('renders a truncated stem preview as the card title instead of raw slug text', () => {
+    const longStem =
+      'A very long stem that should be truncated in the card title for readability in review lists.';
+    const expectedPreview = getStemPreview(longStem, 80);
+    const html = renderToStaticMarkup(
+      <ReviewView
+        rows={[
+          {
+            isAvailable: true,
+            questionId: 'q_1',
+            slug: 'q-1',
+            stemMd: longStem,
+            difficulty: 'easy',
+            lastAnsweredAt: '2026-02-01T00:00:00.000Z',
+          },
+        ]}
+        limit={20}
+        offset={0}
+        totalCount={1}
+      />,
+    );
+
+    expect(html).toContain(expectedPreview);
+    expect(html).toContain(longStem);
+    expect(html).not.toContain('>q-1<');
+  });
+
   it('renders missed questions', () => {
     const html = renderToStaticMarkup(
       <ReviewView
@@ -30,7 +58,6 @@ describe('app/(app)/app/review', () => {
 
     expect(html).toContain('Review');
     expect(html).toContain('Showing 1–1 of 1');
-    expect(html).toContain('q-1');
     expect(html).toContain('Stem for q1');
     expect(html).toContain('easy');
     expect(html).toContain('Missed 2026-02-01');

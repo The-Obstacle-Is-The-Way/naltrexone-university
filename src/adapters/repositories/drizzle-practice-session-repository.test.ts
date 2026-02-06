@@ -73,6 +73,29 @@ describe('DrizzlePracticeSessionRepository', () => {
       userId: 'user_1',
       mode: 'exam',
       questionIds: ['q1', 'q2', 'q3'],
+      questionStates: [
+        {
+          questionId: 'q1',
+          markedForReview: false,
+          latestSelectedChoiceId: null,
+          latestIsCorrect: null,
+          latestAnsweredAt: null,
+        },
+        {
+          questionId: 'q2',
+          markedForReview: false,
+          latestSelectedChoiceId: null,
+          latestIsCorrect: null,
+          latestAnsweredAt: null,
+        },
+        {
+          questionId: 'q3',
+          markedForReview: false,
+          latestSelectedChoiceId: null,
+          latestIsCorrect: null,
+          latestAnsweredAt: null,
+        },
+      ],
       tagFilters: ['tag-1'],
       difficultyFilters: ['easy'],
       startedAt,
@@ -149,6 +172,22 @@ describe('DrizzlePracticeSessionRepository', () => {
       userId: 'user_1',
       mode: 'tutor',
       questionIds: ['q1', 'q2'],
+      questionStates: [
+        {
+          questionId: 'q1',
+          markedForReview: false,
+          latestSelectedChoiceId: null,
+          latestIsCorrect: null,
+          latestAnsweredAt: null,
+        },
+        {
+          questionId: 'q2',
+          markedForReview: false,
+          latestSelectedChoiceId: null,
+          latestIsCorrect: null,
+          latestAnsweredAt: null,
+        },
+      ],
       tagFilters: ['tag-1'],
       difficultyFilters: ['easy'],
       startedAt,
@@ -320,6 +359,157 @@ describe('DrizzlePracticeSessionRepository', () => {
     await expect(
       repo.create({ userId: 'user_1', mode: 'tutor', paramsJson }),
     ).rejects.toMatchObject({ code: 'INTERNAL_ERROR' });
+  });
+
+  it('records the latest answer state for a session question', async () => {
+    const row = {
+      id: 'session_1',
+      userId: 'user_1',
+      mode: 'exam',
+      paramsJson: {
+        count: 2,
+        tagSlugs: [],
+        difficulties: ['easy'],
+        questionIds: ['q1', 'q2'],
+      },
+      startedAt: new Date('2026-02-01T00:00:00.000Z'),
+      endedAt: null,
+    } as const;
+
+    const updateReturning = vi.fn(async () => [{ id: 'session_1' }]);
+    const updateWhere = vi.fn(() => ({ returning: updateReturning }));
+    const updateSet = vi.fn(() => ({ where: updateWhere }));
+    const update = vi.fn(() => ({ set: updateSet }));
+
+    const db = {
+      query: {
+        practiceSessions: {
+          findFirst: vi.fn(async () => row),
+        },
+      },
+      update,
+      insert: () => {
+        throw new Error('unexpected insert');
+      },
+    } as const;
+
+    type RepoDb = ConstructorParameters<
+      typeof DrizzlePracticeSessionRepository
+    >[0];
+    const repo = new DrizzlePracticeSessionRepository(db as unknown as RepoDb);
+
+    const answeredAt = new Date('2026-02-01T00:10:00.000Z');
+    await expect(
+      repo.recordQuestionAnswer({
+        sessionId: 'session_1',
+        userId: 'user_1',
+        questionId: 'q1',
+        selectedChoiceId: 'choice_1',
+        isCorrect: true,
+        answeredAt,
+      }),
+    ).resolves.toEqual({
+      questionId: 'q1',
+      markedForReview: false,
+      latestSelectedChoiceId: 'choice_1',
+      latestIsCorrect: true,
+      latestAnsweredAt: answeredAt,
+    });
+
+    expect(updateSet).toHaveBeenCalledWith({
+      paramsJson: expect.objectContaining({
+        questionStates: [
+          {
+            questionId: 'q1',
+            markedForReview: false,
+            latestSelectedChoiceId: 'choice_1',
+            latestIsCorrect: true,
+            latestAnsweredAt: answeredAt.toISOString(),
+          },
+          {
+            questionId: 'q2',
+            markedForReview: false,
+            latestSelectedChoiceId: null,
+            latestIsCorrect: null,
+            latestAnsweredAt: null,
+          },
+        ],
+      }),
+    });
+  });
+
+  it('updates mark-for-review state for a session question', async () => {
+    const row = {
+      id: 'session_1',
+      userId: 'user_1',
+      mode: 'exam',
+      paramsJson: {
+        count: 2,
+        tagSlugs: [],
+        difficulties: ['easy'],
+        questionIds: ['q1', 'q2'],
+      },
+      startedAt: new Date('2026-02-01T00:00:00.000Z'),
+      endedAt: null,
+    } as const;
+
+    const updateReturning = vi.fn(async () => [{ id: 'session_1' }]);
+    const updateWhere = vi.fn(() => ({ returning: updateReturning }));
+    const updateSet = vi.fn(() => ({ where: updateWhere }));
+    const update = vi.fn(() => ({ set: updateSet }));
+
+    const db = {
+      query: {
+        practiceSessions: {
+          findFirst: vi.fn(async () => row),
+        },
+      },
+      update,
+      insert: () => {
+        throw new Error('unexpected insert');
+      },
+    } as const;
+
+    type RepoDb = ConstructorParameters<
+      typeof DrizzlePracticeSessionRepository
+    >[0];
+    const repo = new DrizzlePracticeSessionRepository(db as unknown as RepoDb);
+
+    await expect(
+      repo.setQuestionMarkedForReview({
+        sessionId: 'session_1',
+        userId: 'user_1',
+        questionId: 'q2',
+        markedForReview: true,
+      }),
+    ).resolves.toEqual({
+      questionId: 'q2',
+      markedForReview: true,
+      latestSelectedChoiceId: null,
+      latestIsCorrect: null,
+      latestAnsweredAt: null,
+    });
+
+    expect(updateSet).toHaveBeenCalledWith({
+      paramsJson: expect.objectContaining({
+        questionStates: [
+          {
+            questionId: 'q1',
+            markedForReview: false,
+            latestSelectedChoiceId: null,
+            latestIsCorrect: null,
+            latestAnsweredAt: null,
+          },
+          {
+            questionId: 'q2',
+            markedForReview: true,
+            latestSelectedChoiceId: null,
+            latestIsCorrect: null,
+            latestAnsweredAt: null,
+          },
+        ],
+      }),
+    });
   });
 
   it('ends an active practice session', async () => {

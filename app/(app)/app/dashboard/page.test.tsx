@@ -21,6 +21,8 @@ describe('app/(app)/app/dashboard', () => {
               answeredAt: '2026-02-01T00:00:00.000Z',
               questionId: 'q_1',
               slug: 'q-1',
+              stemMd: 'Stem for q1',
+              difficulty: 'easy',
               isCorrect: true,
             },
           ],
@@ -34,7 +36,8 @@ describe('app/(app)/app/dashboard', () => {
     expect(html).toContain('5');
     expect(html).toContain('60%');
     expect(html).toContain('3');
-    expect(html).toContain('q-1');
+    expect(html).toContain('Stem for q1');
+    expect(html).not.toContain('q-1');
   });
 
   it('hides recent activity section when empty', () => {

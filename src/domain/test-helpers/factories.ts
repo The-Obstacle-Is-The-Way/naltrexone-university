@@ -107,11 +107,23 @@ export function createSubscription(
 export function createPracticeSession(
   overrides: Partial<PracticeSession> = {},
 ): PracticeSession {
+  const questionIds = overrides.questionIds ?? ['question-1'];
+  const questionStates =
+    overrides.questionStates ??
+    questionIds.map((questionId) => ({
+      questionId,
+      markedForReview: false,
+      latestSelectedChoiceId: null,
+      latestIsCorrect: null,
+      latestAnsweredAt: null,
+    }));
+
   return {
     id: 'session-1',
     userId: 'user-1',
     mode: 'tutor' satisfies PracticeMode,
-    questionIds: ['question-1'],
+    questionIds,
+    questionStates,
     tagFilters: [],
     difficultyFilters: [],
     startedAt: new Date(),

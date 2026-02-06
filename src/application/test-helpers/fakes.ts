@@ -59,7 +59,11 @@ import type {
   GetMissedQuestionsOutput,
   GetNextQuestionInput,
   GetNextQuestionOutput,
+  GetPracticeSessionReviewInput,
+  GetPracticeSessionReviewOutput,
   GetUserStatsInput,
+  SetPracticeSessionQuestionMarkInput,
+  SetPracticeSessionQuestionMarkOutput,
   StartPracticeSessionInput,
   StartPracticeSessionOutput,
   SubmitAnswerInput,
@@ -389,6 +393,23 @@ export class FakeGetIncompletePracticeSessionUseCase {
   }
 }
 
+export class FakeGetPracticeSessionReviewUseCase {
+  readonly inputs: GetPracticeSessionReviewInput[] = [];
+
+  constructor(
+    private readonly output: GetPracticeSessionReviewOutput,
+    private readonly toThrow?: unknown,
+  ) {}
+
+  async execute(
+    input: GetPracticeSessionReviewInput,
+  ): Promise<GetPracticeSessionReviewOutput> {
+    this.inputs.push(input);
+    if (this.toThrow) throw this.toThrow;
+    return this.output;
+  }
+}
+
 export class FakeGetUserStatsUseCase {
   readonly inputs: GetUserStatsInput[] = [];
 
@@ -428,6 +449,23 @@ export class FakeSubmitAnswerUseCase {
   ) {}
 
   async execute(input: SubmitAnswerInput): Promise<SubmitAnswerOutput> {
+    this.inputs.push(input);
+    if (this.toThrow) throw this.toThrow;
+    return this.output;
+  }
+}
+
+export class FakeSetPracticeSessionQuestionMarkUseCase {
+  readonly inputs: SetPracticeSessionQuestionMarkInput[] = [];
+
+  constructor(
+    private readonly output: SetPracticeSessionQuestionMarkOutput,
+    private readonly toThrow?: unknown,
+  ) {}
+
+  async execute(
+    input: SetPracticeSessionQuestionMarkInput,
+  ): Promise<SetPracticeSessionQuestionMarkOutput> {
     this.inputs.push(input);
     if (this.toThrow) throw this.toThrow;
     return this.output;
@@ -743,16 +781,79 @@ export class FakePracticeSessionRepository
   }> = [];
 
   constructor(seed: readonly PracticeSession[] = []) {
-    this.sessions = seed;
+    this.sessions = seed.map((session) =>
+      this.withNormalizedQuestionStates(session),
+    );
+  }
+
+  private withNormalizedQuestionStates(
+    session: PracticeSession,
+  ): PracticeSession {
+    const existingByQuestionId = new Map(
+      session.questionStates.map((state) => [state.questionId, state]),
+    );
+    return {
+      ...session,
+      questionStates: session.questionIds.map((questionId) => {
+        const existing = existingByQuestionId.get(questionId);
+        if (existing) return existing;
+        return {
+          questionId,
+          markedForReview: false,
+          latestSelectedChoiceId: null,
+          latestIsCorrect: null,
+          latestAnsweredAt: null,
+        };
+      }),
+    };
+  }
+
+  private updateSession(
+    id: string,
+    mapFn: (session: PracticeSession) => PracticeSession,
+  ): void {
+    this.sessions = this.sessions.map((session) =>
+      session.id === id ? mapFn(session) : session,
+    );
+  }
+
+  private async getActiveSession(
+    sessionId: string,
+    userId: string,
+  ): Promise<PracticeSession> {
+    const session = await this.findByIdAndUserId(sessionId, userId);
+    if (!session) {
+      throw new ApplicationError('NOT_FOUND', 'Practice session not found');
+    }
+    if (session.endedAt) {
+      throw new ApplicationError('CONFLICT', 'Practice session already ended');
+    }
+    return session;
+  }
+
+  private requireQuestionState(
+    session: PracticeSession,
+    questionId: string,
+  ): PracticeSession['questionStates'][number] {
+    const state = session.questionStates.find(
+      (s) => s.questionId === questionId,
+    );
+    if (!state) {
+      throw new ApplicationError(
+        'NOT_FOUND',
+        'Question is not part of this practice session',
+      );
+    }
+    return state;
   }
 
   async findByIdAndUserId(
     id: string,
     userId: string,
   ): Promise<PracticeSession | null> {
-    return (
-      this.sessions.find((s) => s.id === id && s.userId === userId) ?? null
-    );
+    const found = this.sessions.find((s) => s.id === id && s.userId === userId);
+    if (!found) return null;
+    return this.withNormalizedQuestionStates(found);
   }
 
   async findLatestIncompleteByUserId(
@@ -776,12 +877,34 @@ export class FakePracticeSessionRepository
       questionIds: string[];
       tagSlugs: string[];
       difficulties: QuestionDifficulty[];
+      questionStates?: Array<{
+        questionId: string;
+        markedForReview: boolean;
+        latestSelectedChoiceId: string | null;
+        latestIsCorrect: boolean | null;
+        latestAnsweredAt: string | null;
+      }>;
     };
+    const statesByQuestionId = new Map(
+      (params.questionStates ?? []).map((state) => [state.questionId, state]),
+    );
     const session: PracticeSession = {
       id: `session-${this.sessions.length + 1}`,
       userId: input.userId,
       mode: input.mode,
       questionIds: params.questionIds,
+      questionStates: params.questionIds.map((questionId) => {
+        const state = statesByQuestionId.get(questionId);
+        return {
+          questionId,
+          markedForReview: state?.markedForReview ?? false,
+          latestSelectedChoiceId: state?.latestSelectedChoiceId ?? null,
+          latestIsCorrect: state?.latestIsCorrect ?? null,
+          latestAnsweredAt: state?.latestAnsweredAt
+            ? new Date(state.latestAnsweredAt)
+            : null,
+        };
+      }),
       tagFilters: params.tagSlugs,
       difficultyFilters: params.difficulties,
       startedAt: new Date(),
@@ -790,6 +913,74 @@ export class FakePracticeSessionRepository
 
     this.sessions = [...this.sessions, session];
     return session;
+  }
+
+  async recordQuestionAnswer(input: {
+    sessionId: string;
+    userId: string;
+    questionId: string;
+    selectedChoiceId: string;
+    isCorrect: boolean;
+    answeredAt: Date;
+  }): Promise<PracticeSession['questionStates'][number]> {
+    const session = await this.getActiveSession(input.sessionId, input.userId);
+    this.requireQuestionState(session, input.questionId);
+
+    let updatedState: PracticeSession['questionStates'][number] | null = null;
+    this.updateSession(input.sessionId, (existing) => {
+      const next = this.withNormalizedQuestionStates(existing);
+      const questionStates = next.questionStates.map((state) => {
+        if (state.questionId !== input.questionId) return state;
+        updatedState = {
+          ...state,
+          latestSelectedChoiceId: input.selectedChoiceId,
+          latestIsCorrect: input.isCorrect,
+          latestAnsweredAt: input.answeredAt,
+        };
+        return updatedState;
+      });
+      return { ...next, questionStates };
+    });
+
+    if (!updatedState) {
+      throw new ApplicationError(
+        'INTERNAL_ERROR',
+        'Failed to persist practice session answer state',
+      );
+    }
+    return updatedState;
+  }
+
+  async setQuestionMarkedForReview(input: {
+    sessionId: string;
+    userId: string;
+    questionId: string;
+    markedForReview: boolean;
+  }): Promise<PracticeSession['questionStates'][number]> {
+    const session = await this.getActiveSession(input.sessionId, input.userId);
+    this.requireQuestionState(session, input.questionId);
+
+    let updatedState: PracticeSession['questionStates'][number] | null = null;
+    this.updateSession(input.sessionId, (existing) => {
+      const next = this.withNormalizedQuestionStates(existing);
+      const questionStates = next.questionStates.map((state) => {
+        if (state.questionId !== input.questionId) return state;
+        updatedState = {
+          ...state,
+          markedForReview: input.markedForReview,
+        };
+        return updatedState;
+      });
+      return { ...next, questionStates };
+    });
+
+    if (!updatedState) {
+      throw new ApplicationError(
+        'INTERNAL_ERROR',
+        'Failed to persist practice session review mark',
+      );
+    }
+    return updatedState;
   }
 
   async end(id: string, userId: string): Promise<PracticeSession> {

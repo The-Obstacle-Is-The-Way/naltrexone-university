@@ -36,6 +36,22 @@ describe('GetNextQuestionUseCase', () => {
       userId,
       mode: 'tutor',
       questionIds: ['q1', 'q2'],
+      questionStates: [
+        {
+          questionId: 'q1',
+          markedForReview: false,
+          latestSelectedChoiceId: 'c1',
+          latestIsCorrect: false,
+          latestAnsweredAt: new Date('2026-01-31T00:00:00Z'),
+        },
+        {
+          questionId: 'q2',
+          markedForReview: false,
+          latestSelectedChoiceId: null,
+          latestIsCorrect: null,
+          latestAnsweredAt: null,
+        },
+      ],
     });
 
     const questions = new FakeQuestionRepository([q1, q2]);
@@ -62,11 +78,126 @@ describe('GetNextQuestionUseCase', () => {
       mode: 'tutor',
       index: 1,
       total: 2,
+      isMarkedForReview: false,
     });
     expect(result?.choices[0]).not.toHaveProperty('isCorrect');
   });
 
-  it('computes session progress index from distinct answered questions', async () => {
+  it('uses persisted session question state (not attempts) to choose next question', async () => {
+    const userId = 'user-1';
+    const sessionId = 'session-1';
+
+    const q1 = createQuestion({
+      id: 'q1',
+      status: 'published',
+      choices: [createChoice({ id: 'c1', questionId: 'q1', label: 'A' })],
+    });
+    const q2 = createQuestion({
+      id: 'q2',
+      status: 'published',
+      choices: [createChoice({ id: 'c2', questionId: 'q2', label: 'A' })],
+    });
+
+    const session = createPracticeSession({
+      id: sessionId,
+      userId,
+      mode: 'exam',
+      questionIds: ['q1', 'q2'],
+      questionStates: [
+        {
+          questionId: 'q1',
+          markedForReview: false,
+          latestSelectedChoiceId: 'c1',
+          latestIsCorrect: true,
+          latestAnsweredAt: new Date('2026-01-31T00:00:00Z'),
+        },
+        {
+          questionId: 'q2',
+          markedForReview: false,
+          latestSelectedChoiceId: null,
+          latestIsCorrect: null,
+          latestAnsweredAt: null,
+        },
+      ],
+    });
+
+    const useCase = new GetNextQuestionUseCase(
+      new FakeQuestionRepository([q1, q2]),
+      new FakeAttemptRepository([]),
+      new FakePracticeSessionRepository([session]),
+    );
+
+    const result = await useCase.execute({ userId, sessionId });
+    expect(result?.questionId).toBe('q2');
+    expect(result?.session).toMatchObject({
+      sessionId,
+      mode: 'exam',
+      index: 1,
+      total: 2,
+      isMarkedForReview: false,
+    });
+  });
+
+  it('returns a specific session question when questionId is provided', async () => {
+    const userId = 'user-1';
+    const sessionId = 'session-1';
+
+    const q1 = createQuestion({
+      id: 'q1',
+      status: 'published',
+      choices: [createChoice({ id: 'c1', questionId: 'q1', label: 'A' })],
+    });
+    const q2 = createQuestion({
+      id: 'q2',
+      status: 'published',
+      choices: [createChoice({ id: 'c2', questionId: 'q2', label: 'A' })],
+    });
+
+    const session = createPracticeSession({
+      id: sessionId,
+      userId,
+      mode: 'exam',
+      questionIds: ['q1', 'q2'],
+      questionStates: [
+        {
+          questionId: 'q1',
+          markedForReview: true,
+          latestSelectedChoiceId: 'c1',
+          latestIsCorrect: false,
+          latestAnsweredAt: new Date('2026-01-31T00:00:00Z'),
+        },
+        {
+          questionId: 'q2',
+          markedForReview: false,
+          latestSelectedChoiceId: null,
+          latestIsCorrect: null,
+          latestAnsweredAt: null,
+        },
+      ],
+    });
+
+    const useCase = new GetNextQuestionUseCase(
+      new FakeQuestionRepository([q1, q2]),
+      new FakeAttemptRepository([]),
+      new FakePracticeSessionRepository([session]),
+    );
+
+    const result = await useCase.execute({
+      userId,
+      sessionId,
+      questionId: 'q1',
+    });
+    expect(result?.questionId).toBe('q1');
+    expect(result?.session).toMatchObject({
+      sessionId,
+      mode: 'exam',
+      index: 0,
+      total: 2,
+      isMarkedForReview: true,
+    });
+  });
+
+  it('returns session index using question order position', async () => {
     const userId = 'user-1';
     const sessionId = 'session-1';
 
@@ -91,6 +222,29 @@ describe('GetNextQuestionUseCase', () => {
       userId,
       mode: 'tutor',
       questionIds: ['q1', 'q2', 'q3'],
+      questionStates: [
+        {
+          questionId: 'q1',
+          markedForReview: false,
+          latestSelectedChoiceId: null,
+          latestIsCorrect: null,
+          latestAnsweredAt: null,
+        },
+        {
+          questionId: 'q2',
+          markedForReview: false,
+          latestSelectedChoiceId: 'c2',
+          latestIsCorrect: false,
+          latestAnsweredAt: new Date('2026-01-31T00:00:00Z'),
+        },
+        {
+          questionId: 'q3',
+          markedForReview: false,
+          latestSelectedChoiceId: null,
+          latestIsCorrect: null,
+          latestAnsweredAt: null,
+        },
+      ],
     });
 
     const questions = new FakeQuestionRepository([q1, q2, q3]);
@@ -116,8 +270,9 @@ describe('GetNextQuestionUseCase', () => {
     expect(result?.session).toEqual({
       sessionId,
       mode: 'tutor',
-      index: 1,
+      index: 0,
       total: 3,
+      isMarkedForReview: false,
     });
   });
 
@@ -165,6 +320,15 @@ describe('GetNextQuestionUseCase', () => {
       userId,
       mode: 'tutor',
       questionIds: ['q1'],
+      questionStates: [
+        {
+          questionId: 'q1',
+          markedForReview: false,
+          latestSelectedChoiceId: 'c1',
+          latestIsCorrect: false,
+          latestAnsweredAt: new Date('2026-01-31T00:00:00Z'),
+        },
+      ],
     });
 
     const useCase = new GetNextQuestionUseCase(
