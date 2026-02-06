@@ -1,6 +1,6 @@
 # Deployment Environments: Source of Truth
 
-**Last Verified:** 2026-02-06 (post-BUG-078 resolution)
+**Last Verified:** 2026-02-06 (post database isolation + env scoping + Stripe live mode)
 
 This document is the single source of truth for how Clerk, Stripe, Neon, and Vercel are configured across all environments.
 
@@ -11,15 +11,13 @@ This document is the single source of truth for how Clerk, Stripe, Neon, and Ver
 ### What's Working
 
 - [x] **Production** (`addictionboards.com`) — sign-up, sign-in, dashboard all working
-- [ ] **Preview** (`*.vercel.app`, non-main branches) — BROKEN (shared database conflict)
-- [ ] **Local Development** (`localhost:3000`) — BROKEN (same shared database issue)
-
-### What's Broken and Why
-
-| Problem | Root Cause | Impact | Fix |
-|---------|-----------|--------|-----|
-| Preview/Local auth fails with `CONFLICT` error | Single database shared across all envs; Clerk Dev + Prod IDs collide on same email | Can't test auth on Preview or locally | Neon database branching |
-| Stripe keys shared across all envs | One set of Stripe keys for Prod + Preview + Dev | Either can't charge real users OR test charges real cards | Separate Stripe keys per env |
+- [x] **Database isolation** — Neon `main` (Production) and `dev` (Preview/Local) branches created
+- [x] **Env var scoping** — DATABASE_URL, Stripe keys, Clerk keys all scoped per environment
+- [x] **Stripe Live Mode** — Production uses `sk_live_*` / `pk_live_*` keys (account review in progress)
+- [x] **Stripe Production Webhook** — `addictionboards.com/api/webhooks/stripe` configured with 5 events
+- [x] **Stripe Live Price IDs** — Monthly ($29) and Annual ($199) products created in live mode
+- [ ] **Preview** (`*.vercel.app`, non-main branches) — NEEDS END-TO-END VERIFICATION
+- [ ] **Local Development** (`localhost:3000`) — NEEDS END-TO-END VERIFICATION
 
 ---
 
@@ -31,10 +29,10 @@ This document is the single source of truth for how Clerk, Stripe, Neon, and Ver
 │  URL:      addictionboards.com                                          │
 │  Branch:   main                                                          │
 │  Clerk:    Production instance (pk_live_*, sk_live_*)                   │
-│  Stripe:   Live mode (sk_live_*, pk_live_*)                [NEEDS FIX]  │
-│  Database: Neon main branch                                              │
-│  Webhook:  addictionboards.com/api/webhooks/clerk                       │
-│  Webhook:  addictionboards.com/api/webhooks/stripe         [NEEDS CHECK]│
+│  Stripe:   Live mode (sk_live_*, pk_live_*)                  [WORKING] │
+│  Database: Neon main branch (ep-withered-cell-ah14ik13)                 │
+│  Webhook:  addictionboards.com/api/webhooks/clerk            [WORKING] │
+│  Webhook:  addictionboards.com/api/webhooks/stripe           [WORKING] │
 │                                                                          │
 │  Users: Real paying customers only                                       │
 └─────────────────────────────────────────────────────────────────────────┘
@@ -45,7 +43,7 @@ This document is the single source of truth for how Clerk, Stripe, Neon, and Ver
 │  Branch:   Any non-main branch / local                                   │
 │  Clerk:    Development instance (pk_test_*, sk_test_*)                  │
 │  Stripe:   Test mode (sk_test_*, pk_test_*)                             │
-│  Database: Neon dev branch (SEPARATE from Production)      [NEEDS FIX]  │
+│  Database: Neon dev branch (ep-still-frog-ahx7bp6y)                     │
 │  Webhook:  Dev Clerk webhook (if configured)                             │
 │                                                                          │
 │  Users: Test accounts, E2E test user, your personal dev account         │
@@ -56,80 +54,76 @@ This document is the single source of truth for how Clerk, Stripe, Neon, and Ver
 
 ## Current Vercel Environment Variables (Verified 2026-02-06)
 
-### Correctly Configured
+### Properly Scoped (each environment has its own value)
 
-| Variable | Production | Preview/Dev | Status |
-|----------|-----------|-------------|--------|
-| `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` | `pk_live_*` (1d ago) | `pk_test_*` (6d ago) | Correct |
-| `CLERK_SECRET_KEY` | `sk_live_*` (1d ago) | `sk_test_*` (6d ago) | Correct |
-| `CLERK_WEBHOOK_SIGNING_SECRET` | Production webhook (today) | Dev webhook (4d ago) | Correct |
-| `NEXT_PUBLIC_APP_URL` | `https://addictionboards.com` (22h ago) | Preview URL (22h ago) | Correct |
+| Variable | Production | Preview | Development | Status |
+|----------|-----------|---------|-------------|--------|
+| `DATABASE_URL` | Neon `main` branch | Neon `dev` branch | Neon `dev` branch | Correct |
+| `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` | `pk_live_*` | `pk_test_*` | `pk_test_*` | Correct |
+| `CLERK_SECRET_KEY` | `sk_live_*` | `sk_test_*` | `sk_test_*` | Correct |
+| `CLERK_WEBHOOK_SIGNING_SECRET` | Production webhook | Preview webhook | Dev webhook | Correct |
+| `NEXT_PUBLIC_APP_URL` | `https://addictionboards.com` | Preview URL | Dev URL | Correct |
+| `STRIPE_SECRET_KEY` | `sk_live_*` | `sk_test_*` | `sk_test_*` | Correct |
+| `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | `pk_live_*` | `pk_test_*` | `pk_test_*` | Correct |
+| `STRIPE_WEBHOOK_SECRET` | Live webhook secret | Test secret | Test secret | Correct |
+| `NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY` | Live price ID ($29/mo) | Test price ID | — | Correct |
+| `NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL` | Live price ID ($199/yr) | Test price ID | — | Correct |
 
-### PROBLEMS — Shared When They Shouldn't Be
+### Auto-Generated Neon Vars (Vercel integration — still shared, app doesn't use these)
 
-| Variable | Current Scope | Problem | Fix |
-|----------|--------------|---------|-----|
-| `DATABASE_URL` | All environments (shared) | Clerk Dev/Prod ID collisions | Create Neon branch for Preview/Dev |
-| `STRIPE_SECRET_KEY` | All environments (shared) | Can't separate test vs live payments | Set Production-only live Stripe key |
-| `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | All environments (shared) | Same | Set Production-only live Stripe key |
-| `STRIPE_WEBHOOK_SECRET` | All environments (shared) | Webhook verification mismatch | Separate per environment |
+These were auto-created by the Vercel-Neon integration and still point to the main branch. Our app only reads `DATABASE_URL`, which is now properly scoped. These are harmless but could be cleaned up later:
+
+`POSTGRES_URL`, `POSTGRES_URL_NON_POOLING`, `DATABASE_URL_UNPOOLED`, `PGHOST`, `PGHOST_UNPOOLED`, `POSTGRES_HOST`, `POSTGRES_URL_NO_SSL`, `POSTGRES_DATABASE`, `PGDATABASE`, `POSTGRES_USER`, `PGUSER`, `PGPASSWORD`, `POSTGRES_PASSWORD`, `POSTGRES_PRISMA_URL`, `NEON_PROJECT_ID`
 
 ---
 
-## Fix Plan
+## Stripe Live Mode (Configured 2026-02-06)
 
-### Fix 1: Database Isolation (Neon Branching)
+All completed:
 
-**Problem:** One database for all environments → Clerk ID collisions on same email.
+- [x] Stripe account activated (business verification in progress — 2-3 business days)
+- [x] Live API keys (`sk_live_*`, `pk_live_*`) set in Vercel Production
+- [x] Live webhook endpoint: `https://addictionboards.com/api/webhooks/stripe`
+  - Events: `checkout.session.completed`, `customer.subscription.updated`, `customer.subscription.deleted`, `invoice.payment_succeeded`, `invoice.payment_failed`
+- [x] Live webhook signing secret set in Vercel Production
+- [x] Live Price IDs created and set in Vercel Production:
+  - Monthly: `price_1SxttBKItmaHAwgUOYmmLy8o` ($29/mo)
+  - Annual: `price_1SxtuSKItmaHAwgUYUAl4Kxd` ($199/yr)
+- [ ] Test a real checkout flow on `addictionboards.com` (after Stripe review completes)
 
-**Solution:** Use [Neon database branching](https://neon.tech/docs/manage/branches) to create a `dev` branch.
+---
 
-**Steps:**
-1. Create a Neon branch called `dev` from the main branch (this copies all data including questions)
-2. Get the `dev` branch connection string
-3. Set `DATABASE_URL` for **Preview** and **Development** scopes in Vercel to the dev branch URL
-4. Keep Production `DATABASE_URL` pointing to the main Neon branch
-5. Run migrations on the dev branch: `DATABASE_URL=<dev-branch-url> pnpm db:migrate`
-6. Verify: Preview deployment can sign in without conflicting with Production users
+## Neon Database
 
-**Result:**
+| Property | Value |
+|----------|-------|
+| Project ID | `summer-math-94727887` |
+| Database | `neondb` |
+| PostgreSQL | 17.7 |
+| Questions | 958 (on both branches) |
+
+### Branches
+
+| Branch | Endpoint | Purpose | Created |
+|--------|----------|---------|---------|
+| `main` (default) | `ep-withered-cell-ah14ik13-pooler` | Production | 2026-01-31 |
+| `dev` | `ep-still-frog-ahx7bp6y-pooler` | Preview + Local Dev | 2026-02-06 |
+
+### Managing Branches via CLI
+
+```bash
+# List branches
+neonctl branches list --project-id summer-math-94727887
+
+# Create a new branch
+neonctl branches create --project-id summer-math-94727887 --name <name> --parent main
+
+# Get connection string (pooled)
+neonctl connection-string <branch-name> --project-id summer-math-94727887 --pooled
+
+# Run migrations against a specific branch
+DATABASE_URL="<branch-connection-string>" pnpm db:migrate
 ```
-Production (addictionboards.com) → Neon main branch → Production Clerk users
-Preview (*.vercel.app)           → Neon dev branch  → Development Clerk users
-Local (localhost:3000)           → Neon dev branch  → Development Clerk users
-```
-
-### Fix 2: Stripe Key Separation
-
-**Problem:** One set of Stripe keys shared across all environments.
-
-**Current state (NEEDS VERIFICATION):**
-- Are the current shared keys `sk_test_*` or `sk_live_*`?
-- If `sk_test_*`: Production can't process real payments (P0 if launching)
-- If `sk_live_*`: Preview/local would charge real cards (dangerous)
-
-**Steps:**
-1. Check current Stripe key type in Vercel (`sk_test_*` or `sk_live_*`)
-2. Set Production-only Stripe keys:
-   - `STRIPE_SECRET_KEY` = `sk_live_*` (Production scope only)
-   - `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` = `pk_live_*` (Production scope only)
-   - `STRIPE_WEBHOOK_SECRET` = Live webhook secret (Production scope only)
-3. Set Preview/Dev-only Stripe keys:
-   - `STRIPE_SECRET_KEY` = `sk_test_*` (Preview + Development scope)
-   - `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` = `pk_test_*` (Preview + Development scope)
-   - `STRIPE_WEBHOOK_SECRET` = Test webhook secret (Preview + Development scope)
-4. Set Production-specific Stripe Price IDs (already done — set 4d ago)
-
-### Fix 3: Stripe Webhook Endpoint (Production)
-
-**Check:** Is `https://addictionboards.com/api/webhooks/stripe` configured in Stripe Live mode dashboard?
-- If not, create it and set `STRIPE_WEBHOOK_SECRET` for Production
-
-### Fix 4: Wipe Dev Branch Users
-
-After creating the Neon dev branch (which copies Production data):
-1. Delete the Production user from the dev branch database
-2. Let Development Clerk re-create users on first sign-in
 
 ---
 
@@ -169,35 +163,14 @@ All of these are confirmed working:
 
 ---
 
-## Neon Database
-
-| Property | Value |
-|----------|-------|
-| Database | `neondb` |
-| PostgreSQL | 17.7 |
-| Questions | 958 |
-| Users (Production) | 1 (your account) |
-| Branches | `main` only (dev branch NEEDS CREATION) |
-
----
-
 ## URL Reference
-
-| URL | Environment | Clerk Keys | Auth Works? |
-|-----|-------------|-----------|-------------|
-| `addictionboards.com` | Production | `pk_live_*` | Yes |
-| `*.vercel.app` (main branch) | Production | `pk_live_*` | **No** (domain-locked, expected) |
-| `*.vercel.app` (non-main branch) | Preview | `pk_test_*` | **No** (shared DB conflict, FIXABLE) |
-| `localhost:3000` | Development | `pk_test_*` | **No** (shared DB conflict, FIXABLE) |
-
-After Fix 1 (Neon branching):
 
 | URL | Environment | Clerk Keys | Database | Auth Works? |
 |-----|-------------|-----------|----------|-------------|
-| `addictionboards.com` | Production | `pk_live_*` | Neon main | Yes |
-| `*.vercel.app` (main) | Production | `pk_live_*` | Neon main | No (domain-locked, expected) |
-| `*.vercel.app` (non-main) | Preview | `pk_test_*` | Neon dev | **Yes** |
-| `localhost:3000` | Development | `pk_test_*` | Neon dev | **Yes** |
+| `addictionboards.com` | Production | `pk_live_*` | Neon `main` | Yes |
+| `*.vercel.app` (main branch) | Production | `pk_live_*` | Neon `main` | No (domain-locked, expected) |
+| `*.vercel.app` (non-main branch) | Preview | `pk_test_*` | Neon `dev` | Needs verification |
+| `localhost:3000` | Development | `pk_test_*` | Neon `dev` | Needs verification |
 
 ---
 
