@@ -17,9 +17,10 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 | ID | Title | Status | Priority | Date |
 |----|-------|--------|----------|------|
-| [BUG-078](bug-078-clerk-production-google-oauth-not-configured.md) | Clerk Production Sign-In Broken (Google OAuth Not Configured + Domain Lock) | Open | P0 | 2026-02-06 |
+| [BUG-079](bug-079-preview-dev-environment-verification-failures.md) | Preview/Dev Environment Verification Failures (Stale Data, Wrong Stripe Account) | Resolved | P1 | 2026-02-06 |
+| [BUG-078](bug-078-clerk-production-google-oauth-not-configured.md) | Clerk Production Sign-In Broken (Google OAuth Not Configured + Domain Lock) | Resolved | P0 | 2026-02-06 |
 
-**Next Bug ID:** BUG-079
+**Next Bug ID:** BUG-080
 
 ## Recently Triaged
 
