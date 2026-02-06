@@ -531,6 +531,8 @@ describe('review controller (integration)', () => {
       {
         isAvailable: false,
         questionId: missedQuestion.id,
+        sessionId: null,
+        sessionMode: null,
         lastAnsweredAt: t2.toISOString(),
       },
     ]);

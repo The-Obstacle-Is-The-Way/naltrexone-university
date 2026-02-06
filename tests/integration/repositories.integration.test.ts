@@ -621,6 +621,8 @@ describe('DrizzlePracticeSessionRepository + DrizzleAttemptRepository', () => {
       {
         questionId: qMissed.id,
         answeredAt: new Date('2026-02-05T00:00:00.000Z'),
+        sessionId: null,
+        sessionMode: null,
       },
     ]);
     await expect(
