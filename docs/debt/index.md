@@ -21,8 +21,9 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 | [DEBT-105](./debt-105-missing-session-resume-functionality.md) | Missing Session Resume Functionality | Open | P2 | 2026-02-05 |
 | [DEBT-106](./debt-106-exam-mode-mark-for-review.md) | Exam Mode Missing "Mark for Review" Feature | Open | P2 | 2026-02-05 |
 | [DEBT-107](./debt-107-question-engine-e2e-completeness.md) | Question Engine E2E Completeness and State Management | In Progress | P1 | 2026-02-05 |
+| [DEBT-110](./debt-110-e2e-helper-anti-patterns.md) | E2E Test Helper Anti-Patterns (isVisible Timeout + Stripe Duplication) | Open | P3 | 2026-02-05 |
 
-**Next Debt ID:** DEBT-110
+**Next Debt ID:** DEBT-111
 
 ## Archived Debt
 
