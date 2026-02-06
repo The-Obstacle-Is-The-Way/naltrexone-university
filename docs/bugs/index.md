@@ -17,9 +17,11 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 | ID | Title | Status | Priority | Date |
 |----|-------|--------|----------|------|
-| _None_ | — | — | — | — |
+| [BUG-075](bug-075-checkout-guard-entitlement-mismatch.md) | Checkout Guard / Entitlement Check Mismatch | Open | P1 | 2026-02-06 |
+| [BUG-076](bug-076-past-due-immediate-lockout.md) | Past-Due Subscribers Lose Access Immediately | Open | P1 | 2026-02-06 |
+| [BUG-077](bug-077-payment-processing-confusing-redirect.md) | Payment Processing Users See Wrong Error Message | Open | P1 | 2026-02-06 |
 
-**Next Bug ID:** BUG-075
+**Next Bug ID:** BUG-078
 
 ## Recently Resolved
 

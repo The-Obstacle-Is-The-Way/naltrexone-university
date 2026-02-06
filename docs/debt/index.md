@@ -23,8 +23,9 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 | [DEBT-116](debt-116-session-page-god-component.md) | Session Page Client God Component (670 Lines) | Open | P1 | 2026-02-06 |
 | [DEBT-122](debt-122-in-run-question-navigation-gap.md) | In-Run Question Navigation Gap (Tutor + Exam Answering Stage) | Open | P2 | 2026-02-06 |
 | [DEBT-123](debt-123-session-summary-missing-question-breakdown.md) | Session Summary Is Aggregate-Only (No Per-Question Breakdown) | Open | P2 | 2026-02-06 |
+| [DEBT-125](debt-125-billing-system-audit-2026-02-06.md) | Billing System Audit — Webhook Ordering, Race Conditions, Edge Cases | Open | P2 | 2026-02-06 |
 
-**Next Debt ID:** DEBT-125
+**Next Debt ID:** DEBT-126
 
 ## Archived Debt
 
