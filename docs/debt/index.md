@@ -23,7 +23,6 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 | [DEBT-116](debt-116-session-page-god-component.md) | Session Page Client God Component (670 Lines) | Open | P1 | 2026-02-06 |
 | [DEBT-122](debt-122-in-run-question-navigation-gap.md) | In-Run Question Navigation Gap (Tutor + Exam Answering Stage) | Open | P2 | 2026-02-06 |
 | [DEBT-123](debt-123-session-summary-missing-question-breakdown.md) | Session Summary Is Aggregate-Only (No Per-Question Breakdown) | Open | P2 | 2026-02-06 |
-| [DEBT-125](debt-125-billing-system-audit-2026-02-06.md) | Billing System Audit — Webhook Ordering, Race Conditions, Edge Cases | Open | P2 | 2026-02-06 |
 
 **Next Debt ID:** DEBT-126
 
@@ -31,6 +30,7 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 | ID | Title | Priority | Resolved |
 |----|-------|----------|----------|
+| [DEBT-125](../_archive/debt/debt-125-billing-system-audit-2026-02-06.md) | Billing System Audit — Webhook Ordering, Race Conditions, Edge Cases | P2 | 2026-02-06 |
 | [DEBT-124](../_archive/debt/debt-124-e2e-question-helper-false-negative.md) | E2E Question Existence Helper Can Produce False Negatives | P2 | 2026-02-06 |
 | [DEBT-121](../_archive/debt/debt-121-use-case-fakes-lack-interfaces.md) | Use Case Fakes Don't Implement Interfaces (No Compile-Time Safety) | P2 | 2026-02-06 |
 | [DEBT-120](../_archive/debt/debt-120-composition-root-growing.md) | Composition Root Growing Toward God File (407 Lines) | P3 | 2026-02-06 |

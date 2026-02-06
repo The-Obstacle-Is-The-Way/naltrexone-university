@@ -42,6 +42,7 @@ export async function createStripeCheckoutSession({
   const existingSession = existing.data[0];
   const existingUrl = existingSession?.url;
   if (existingSession && existingUrl) {
+    let existingPriceId: string | undefined;
     try {
       const session = await callStripeWithRetry({
         operation: 'checkout.sessions.retrieve',
@@ -51,30 +52,7 @@ export async function createStripeCheckoutSession({
           }),
         logger,
       });
-      const existingPriceId = session.line_items?.data?.[0]?.price?.id;
-      if (existingPriceId === priceId) {
-        return { url: existingUrl };
-      }
-
-      // Avoid reusing a checkout session for a different plan. If the user
-      // changes plans, we expire the old session and create a new one so the
-      // Stripe UI matches their selection.
-      logger.warn(
-        {
-          sessionId: existingSession.id,
-          existingPriceId: existingPriceId ?? null,
-          requestedPriceId: priceId,
-        },
-        'Expiring mismatched checkout session',
-      );
-      await callStripeWithRetry({
-        operation: 'checkout.sessions.expire',
-        fn: () =>
-          stripe.checkout.sessions.expire(existingSession.id, {
-            idempotencyKey: `expire_checkout_session:${existingSession.id}`,
-          }),
-        logger,
-      });
+      existingPriceId = session.line_items?.data?.[0]?.price?.id;
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : 'Unknown error';
@@ -85,6 +63,51 @@ export async function createStripeCheckoutSession({
         },
         'Failed to inspect existing checkout session',
       );
+    }
+
+    if (existingPriceId === priceId) {
+      return { url: existingUrl };
+    }
+
+    if (existingPriceId) {
+      // Avoid reusing a checkout session for a different plan. If the user
+      // changes plans, we expire the old session and create a new one so the
+      // Stripe UI matches their selection.
+      logger.warn(
+        {
+          sessionId: existingSession.id,
+          existingPriceId,
+          requestedPriceId: priceId,
+        },
+        'Expiring mismatched checkout session',
+      );
+
+      try {
+        await callStripeWithRetry({
+          operation: 'checkout.sessions.expire',
+          fn: () =>
+            stripe.checkout.sessions.expire(existingSession.id, {
+              idempotencyKey: `expire_checkout_session:${existingSession.id}`,
+            }),
+          logger,
+        });
+      } catch (error) {
+        const errorMessage =
+          error instanceof Error ? error.message : 'Unknown error';
+        logger.error(
+          {
+            sessionId: existingSession.id,
+            existingPriceId,
+            requestedPriceId: priceId,
+            error: errorMessage,
+          },
+          'Failed to expire mismatched checkout session',
+        );
+        throw new ApplicationError(
+          'STRIPE_ERROR',
+          'Failed to expire existing checkout session',
+        );
+      }
     }
   }
 

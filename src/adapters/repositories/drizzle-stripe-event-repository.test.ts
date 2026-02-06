@@ -135,6 +135,44 @@ describe('DrizzleStripeEventRepository', () => {
     });
   });
 
+  describe('peek', () => {
+    it('returns null when event does not exist', async () => {
+      const db = {
+        select: () => ({
+          from: () => ({
+            where: () => ({
+              limit: async () => [],
+            }),
+          }),
+        }),
+      } as const;
+
+      const repo = new DrizzleStripeEventRepository(db as unknown as RepoDb);
+
+      await expect(repo.peek('evt_missing')).resolves.toBeNull();
+    });
+
+    it('returns event state without locking when found', async () => {
+      const processedAt = new Date('2026-02-01T12:00:00.000Z');
+      const db = {
+        select: () => ({
+          from: () => ({
+            where: () => ({
+              limit: async () => [{ processedAt, error: null }],
+            }),
+          }),
+        }),
+      } as const;
+
+      const repo = new DrizzleStripeEventRepository(db as unknown as RepoDb);
+
+      await expect(repo.peek('evt_123')).resolves.toEqual({
+        processedAt,
+        error: null,
+      });
+    });
+  });
+
   describe('markProcessed', () => {
     it('updates processedAt timestamp and clears error', async () => {
       const now = new Date('2026-02-01T13:00:00.000Z');

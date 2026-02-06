@@ -100,6 +100,32 @@ describe('DrizzleStripeCustomerRepository', () => {
     });
   });
 
+  it('updates user mapping when conflictStrategy is authoritative', async () => {
+    const db = {
+      insert: () => ({
+        values: () => ({
+          onConflictDoUpdate: () => ({
+            returning: async () => [{ stripeCustomerId: 'cus_new' }],
+          }),
+        }),
+      }),
+      query: {
+        stripeCustomers: {
+          findFirst: async () => null,
+        },
+      },
+    } as const;
+
+    type RepoDb = ConstructorParameters<
+      typeof DrizzleStripeCustomerRepository
+    >[0];
+    const repo = new DrizzleStripeCustomerRepository(db as unknown as RepoDb);
+
+    await expect(
+      repo.insert('user_1', 'cus_new', { conflictStrategy: 'authoritative' }),
+    ).resolves.toBeUndefined();
+  });
+
   it('throws INTERNAL_ERROR when the upsert returns no row', async () => {
     const db = {
       insert: () => ({

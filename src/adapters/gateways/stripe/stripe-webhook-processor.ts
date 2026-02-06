@@ -3,10 +3,7 @@ import type { StripeClient } from '@/src/adapters/shared/stripe-types';
 import { ApplicationError } from '@/src/application/errors';
 import type { WebhookEventResult } from '@/src/application/ports/gateways';
 import type { Logger } from '@/src/application/ports/logger';
-import {
-  normalizeStripeSubscriptionUpdate,
-  retrieveAndNormalizeStripeSubscription,
-} from './stripe-subscription-normalizer';
+import { retrieveAndNormalizeStripeSubscription } from './stripe-subscription-normalizer';
 import {
   stripeEventWithSubscriptionRefSchema,
   stripeSubscriptionSchema,
@@ -93,7 +90,8 @@ export async function processStripeWebhookEvent({
     event.type === 'checkout.session.completed' ||
     event.type === 'checkout.session.expired' ||
     event.type === 'invoice.payment_failed' ||
-    event.type === 'invoice.payment_succeeded'
+    event.type === 'invoice.payment_succeeded' ||
+    event.type === 'invoice.payment_action_required'
   ) {
     const subscriptionUpdate =
       await getSubscriptionUpdateForSubscriptionRefEvent({
@@ -129,10 +127,10 @@ export async function processStripeWebhookEvent({
     );
   }
 
-  const subscriptionUpdate = normalizeStripeSubscriptionUpdate({
-    subscription: parsedSubscription.data,
-    eventId: event.id,
-    type: event.type,
+  const subscriptionUpdate = await retrieveAndNormalizeStripeSubscription({
+    stripe,
+    subscriptionRef: parsedSubscription.data.id,
+    event,
     priceIds,
     logger,
   });

@@ -47,6 +47,10 @@ export function isTransientExternalError(error: unknown): boolean {
 
   const statusCode =
     getNumberProp(error, 'statusCode') ?? getNumberProp(error, 'status');
+  if (statusCode === 429) {
+    return true;
+  }
+
   if (typeof statusCode === 'number' && statusCode >= 500 && statusCode < 600) {
     return true;
   }

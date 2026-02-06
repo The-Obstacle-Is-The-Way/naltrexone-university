@@ -64,7 +64,17 @@ export async function processStripeWebhook(
 
   await deps.transaction(
     async ({ stripeEvents, subscriptions, stripeCustomers }) => {
-      await stripeEvents.claim(event.eventId, event.type);
+      const claimed = await stripeEvents.claim(event.eventId, event.type);
+      if (!claimed) {
+        const snapshot = await stripeEvents.peek(event.eventId);
+        if (
+          snapshot &&
+          snapshot.processedAt !== null &&
+          snapshot.error === null
+        ) {
+          return;
+        }
+      }
 
       const current = await stripeEvents.lock(event.eventId);
       if (current.processedAt !== null && current.error === null) {
@@ -76,6 +86,7 @@ export async function processStripeWebhook(
           await stripeCustomers.insert(
             event.subscriptionUpdate.userId,
             event.subscriptionUpdate.externalCustomerId,
+            { conflictStrategy: 'authoritative' },
           );
 
           await subscriptions.upsert({

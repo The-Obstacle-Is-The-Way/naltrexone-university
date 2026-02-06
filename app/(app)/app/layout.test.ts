@@ -33,7 +33,10 @@ describe('app/(app)/app/layout', () => {
     };
 
     const checkEntitlementUseCase = {
-      execute: vi.fn(async () => ({ isEntitled: false })),
+      execute: vi.fn(async () => ({
+        isEntitled: false,
+        reason: 'subscription_required' as const,
+      })),
     };
 
     const redirectFn = vi.fn((url: string) => {
@@ -66,7 +69,7 @@ describe('app/(app)/app/layout', () => {
     };
 
     const checkEntitlementUseCase = {
-      execute: vi.fn(async () => ({ isEntitled: true })),
+      execute: vi.fn(async () => ({ isEntitled: true, reason: null })),
     };
 
     const redirectFn = vi.fn(() => {
@@ -84,5 +87,69 @@ describe('app/(app)/app/layout', () => {
       userId: 'user_1',
     });
     expect(redirectFn).not.toHaveBeenCalled();
+  });
+
+  it('redirects paymentProcessing users to payment_processing reason', async () => {
+    const user = createUser();
+
+    const authGateway: AuthGateway = {
+      getCurrentUser: async () => user as never,
+      requireUser: async () => user as never,
+    };
+
+    const checkEntitlementUseCase = {
+      execute: vi.fn(async () => ({
+        isEntitled: false,
+        reason: 'payment_processing' as const,
+      })),
+    };
+
+    const redirectFn = vi.fn((url: string) => {
+      throw new Error(`redirect:${url}`);
+    });
+
+    await expect(
+      enforceEntitledAppUser(
+        { authGateway, checkEntitlementUseCase },
+        redirectFn as never,
+      ),
+    ).rejects.toMatchObject({
+      message: 'redirect:/pricing?reason=payment_processing',
+    });
+
+    expect(redirectFn).toHaveBeenCalledWith(
+      '/pricing?reason=payment_processing',
+    );
+  });
+
+  it('redirects non-entitled billing states to manage_billing reason', async () => {
+    const user = createUser();
+
+    const authGateway: AuthGateway = {
+      getCurrentUser: async () => user as never,
+      requireUser: async () => user as never,
+    };
+
+    const checkEntitlementUseCase = {
+      execute: vi.fn(async () => ({
+        isEntitled: false,
+        reason: 'manage_billing' as const,
+      })),
+    };
+
+    const redirectFn = vi.fn((url: string) => {
+      throw new Error(`redirect:${url}`);
+    });
+
+    await expect(
+      enforceEntitledAppUser(
+        { authGateway, checkEntitlementUseCase },
+        redirectFn as never,
+      ),
+    ).rejects.toMatchObject({
+      message: 'redirect:/pricing?reason=manage_billing',
+    });
+
+    expect(redirectFn).toHaveBeenCalledWith('/pricing?reason=manage_billing');
   });
 });

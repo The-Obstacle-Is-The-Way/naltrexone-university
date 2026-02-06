@@ -20,6 +20,23 @@ export class DrizzleStripeEventRepository implements StripeEventRepository {
     return !!row;
   }
 
+  async peek(
+    eventId: string,
+  ): Promise<{ processedAt: Date | null; error: string | null } | null> {
+    const [row] = await this.db
+      .select({
+        processedAt: stripeEvents.processedAt,
+        error: stripeEvents.error,
+      })
+      .from(stripeEvents)
+      .where(eq(stripeEvents.id, eventId))
+      .limit(1);
+
+    if (!row) return null;
+
+    return { processedAt: row.processedAt ?? null, error: row.error ?? null };
+  }
+
   async lock(
     eventId: string,
   ): Promise<{ processedAt: Date | null; error: string | null }> {

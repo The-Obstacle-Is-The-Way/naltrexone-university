@@ -17,8 +17,7 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 | ID | Title | Status | Priority | Date |
 |----|-------|--------|----------|------|
-| [BUG-075](bug-075-checkout-guard-entitlement-mismatch.md) | Pricing CTA Mismatch for Recoverable Subscription States | Open | P2 | 2026-02-06 |
-| [BUG-077](bug-077-payment-processing-confusing-redirect.md) | Payment Processing Users See Wrong Error Message | Open | P2 | 2026-02-06 |
+| _None_ | — | — | — | — |
 
 **Next Bug ID:** BUG-078
 
@@ -26,6 +25,8 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 | ID | Title | Status | Resolution |
 |----|-------|--------|------------|
+| [BUG-077](../_archive/bugs/bug-077-payment-processing-confusing-redirect.md) | Payment Processing Users See Wrong Error Message | Resolved | `CheckEntitlementUseCase` now returns redirect context; app layout redirects payment-processing and billing-recovery states with reason-specific messaging |
+| [BUG-075](../_archive/bugs/bug-075-checkout-guard-entitlement-mismatch.md) | Pricing CTA Mismatch for Recoverable Subscription States | Resolved | Pricing now consumes entitlement context and shows manage-billing guidance for recoverable non-entitled states while preserving strict checkout guard |
 | [BUG-076](bug-076-past-due-immediate-lockout.md) | Past-Due Immediate Lockout | Won't Fix | Current behavior matches SSOT entitlement policy (pastDue is non-entitled); re-open only with explicit spec change |
 | [BUG-074](../_archive/bugs/bug-074-missed-questions-timestamp-tie-misclassification.md) | Missed Questions Can Be Misclassified on `answered_at` Timestamp Ties | Resolved | Use deterministic latest-attempt ranking (`answered_at DESC, id DESC`) for missed-question list/count |
 | [BUG-073](bug-073-tutor-mode-missing-session-summary-detail.md) | Tutor Mode Missing Per-Question Session Summary at End | Won't Fix | Reclassified as [DEBT-123](../debt/debt-123-session-summary-missing-question-breakdown.md) (not an SSOT violation) |
@@ -43,6 +44,8 @@ See: [Foundation Audit Report](foundation-audit-report.md)
 
 | ID | Title | Priority | Resolved |
 |----|-------|----------|----------|
+| [BUG-077](../_archive/bugs/bug-077-payment-processing-confusing-redirect.md) | Payment Processing Users See Wrong Error Message | P2 | 2026-02-06 |
+| [BUG-075](../_archive/bugs/bug-075-checkout-guard-entitlement-mismatch.md) | Pricing CTA Mismatch for Recoverable Subscription States | P2 | 2026-02-06 |
 | [BUG-074](../_archive/bugs/bug-074-missed-questions-timestamp-tie-misclassification.md) | Missed Questions Can Be Misclassified on `answered_at` Timestamp Ties | P2 | 2026-02-06 |
 | [BUG-071](../_archive/bugs/bug-071-nextjs-preview-blank-page-csp.md) | Preview Deployment Rendered Blank Page After CSP Tightening | P0 | 2026-02-05 |
 | [BUG-070](../_archive/bugs/bug-070-e2e-test-user-checkout-fails.md) | E2E Test User Checkout Failed (Stripe `this` Binding Bug) | P1 | 2026-02-05 |

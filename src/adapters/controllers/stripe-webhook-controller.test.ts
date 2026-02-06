@@ -109,6 +109,48 @@ describe('processStripeWebhook', () => {
     });
   });
 
+  it('updates stale stripe customer mappings in webhook context instead of failing', async () => {
+    const paymentGateway = new FakePaymentGateway({
+      externalCustomerId: 'cus_test',
+      checkoutUrl: 'https://stripe/checkout',
+      portalUrl: 'https://stripe/portal',
+      webhookResult: {
+        eventId: 'evt_customer_remap',
+        type: 'customer.subscription.updated',
+        subscriptionUpdate: {
+          userId: 'user_1',
+          externalCustomerId: 'cus_new',
+          externalSubscriptionId: 'sub_123',
+          plan: 'monthly',
+          status: 'active',
+          currentPeriodEnd: new Date('2026-03-01T00:00:00.000Z'),
+          cancelAtPeriodEnd: false,
+        },
+      },
+    });
+
+    const stripeEvents = new FakeStripeEventRepository();
+    const subscriptions = new FakeSubscriptionRepository();
+    const stripeCustomers = new FakeStripeCustomerRepository();
+    await stripeCustomers.insert('user_1', 'cus_old');
+
+    await expect(
+      processStripeWebhook(
+        {
+          paymentGateway,
+          logger: new FakeLogger(),
+          transaction: async (fn) =>
+            fn({ stripeEvents, subscriptions, stripeCustomers }),
+        },
+        { rawBody: 'raw', signature: 'sig' },
+      ),
+    ).resolves.toBeUndefined();
+
+    await expect(stripeCustomers.findByUserId('user_1')).resolves.toEqual({
+      stripeCustomerId: 'cus_new',
+    });
+  });
+
   it('prunes old processed stripe events after successful processing', async () => {
     vi.useFakeTimers();
     try {
@@ -244,6 +286,7 @@ describe('processStripeWebhook', () => {
     const stripeEvents = new FakeStripeEventRepository();
     await stripeEvents.claim('evt_3', 'customer.subscription.updated');
     await stripeEvents.markProcessed('evt_3');
+    const lockSpy = vi.spyOn(stripeEvents, 'lock');
 
     const subscriptions = new FakeSubscriptionRepository();
     const stripeCustomers = new FakeStripeCustomerRepository();
@@ -261,6 +304,7 @@ describe('processStripeWebhook', () => {
     );
 
     expect(insertSpy).not.toHaveBeenCalled();
+    expect(lockSpy).not.toHaveBeenCalled();
   });
 
   it('returns call to prune processed stripe events when event already processed', async () => {

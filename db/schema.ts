@@ -170,6 +170,9 @@ export const stripeEvents = pgTable(
   {
     id: varchar('id', { length: 255 }).primaryKey(),
     type: varchar('type', { length: 255 }).notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
     processedAt: timestamp('processed_at', { withTimezone: true }),
     error: text('error'),
   },

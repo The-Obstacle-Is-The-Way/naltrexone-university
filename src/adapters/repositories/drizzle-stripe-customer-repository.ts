@@ -2,6 +2,7 @@ import { eq, sql } from 'drizzle-orm';
 import { stripeCustomers } from '@/db/schema';
 import { ApplicationError } from '@/src/application/errors';
 import type { StripeCustomerRepository } from '@/src/application/ports/repositories';
+import type { StripeCustomerInsertOptions } from '@/src/application/ports/stripe-customer-repository';
 import type { DrizzleDb } from '../shared/database-types';
 import { isPostgresUniqueViolation } from './postgres-errors';
 
@@ -21,7 +22,13 @@ export class DrizzleStripeCustomerRepository
     return { stripeCustomerId: row.stripeCustomerId };
   }
 
-  async insert(userId: string, stripeCustomerId: string): Promise<void> {
+  async insert(
+    userId: string,
+    stripeCustomerId: string,
+    options?: StripeCustomerInsertOptions,
+  ): Promise<void> {
+    const conflictStrategy = options?.conflictStrategy ?? 'strict';
+
     try {
       const [row] = await this.db
         .insert(stripeCustomers)
@@ -29,8 +36,11 @@ export class DrizzleStripeCustomerRepository
         .onConflictDoUpdate({
           target: stripeCustomers.userId,
           set: {
-            // No-op update to make the statement return the existing row.
-            stripeCustomerId: sql`${stripeCustomers.stripeCustomerId}`,
+            stripeCustomerId:
+              conflictStrategy === 'authoritative'
+                ? stripeCustomerId
+                : // No-op update to make the statement return the existing row.
+                  sql`${stripeCustomers.stripeCustomerId}`,
           },
         })
         .returning({ stripeCustomerId: stripeCustomers.stripeCustomerId });
@@ -42,7 +52,10 @@ export class DrizzleStripeCustomerRepository
         );
       }
 
-      if (row.stripeCustomerId !== stripeCustomerId) {
+      if (
+        conflictStrategy === 'strict' &&
+        row.stripeCustomerId !== stripeCustomerId
+      ) {
         throw new ApplicationError(
           'CONFLICT',
           'Stripe customer already exists with a different stripeCustomerId',

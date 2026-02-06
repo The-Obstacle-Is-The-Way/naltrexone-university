@@ -154,6 +154,15 @@ describe('app/pricing', () => {
     });
   });
 
+  it('builds the rate-limited banner when checkout=rate_limited', async () => {
+    const { getPricingBanner } = await import('@/app/pricing/page');
+
+    expect(getPricingBanner({ checkout: 'rate_limited' })).toMatchObject({
+      tone: 'info',
+      message: 'Too many checkout attempts. Please wait and try again.',
+    });
+  });
+
   it('returns null when no banner parameters are set', async () => {
     const { getPricingBanner } = await import('@/app/pricing/page');
 
@@ -171,12 +180,15 @@ describe('app/pricing', () => {
     };
 
     const checkEntitlementUseCase = {
-      execute: vi.fn(async () => ({ isEntitled: true })),
+      execute: vi.fn(async () => ({ isEntitled: true, reason: null })),
     };
 
     await expect(
       loadPricingData({ authGateway, checkEntitlementUseCase }),
-    ).resolves.toEqual({ isEntitled: false });
+    ).resolves.toEqual({
+      isEntitled: false,
+      reason: 'subscription_required',
+    });
     expect(checkEntitlementUseCase.execute).not.toHaveBeenCalled();
   });
 
@@ -196,12 +208,42 @@ describe('app/pricing', () => {
     };
 
     const checkEntitlementUseCase = {
-      execute: vi.fn(async () => ({ isEntitled: true })),
+      execute: vi.fn(async () => ({ isEntitled: true, reason: null })),
     };
 
     await expect(
       loadPricingData({ authGateway, checkEntitlementUseCase }),
-    ).resolves.toEqual({ isEntitled: true });
+    ).resolves.toEqual({ isEntitled: true, reason: null });
+  });
+
+  it('loadPricingData returns reason from entitlement check for non-entitled users', async () => {
+    const { loadPricingData } = await import('@/app/pricing/page');
+
+    const authGateway: AuthGateway = {
+      getCurrentUser: vi.fn(async () => ({
+        id: 'user_1',
+        email: 'user@example.com',
+        createdAt: new Date('2026-02-01T00:00:00Z'),
+        updatedAt: new Date('2026-02-01T00:00:00Z'),
+      })),
+      requireUser: vi.fn(async () => {
+        throw new Error('not used');
+      }),
+    };
+
+    const checkEntitlementUseCase = {
+      execute: vi.fn(async () => ({
+        isEntitled: false,
+        reason: 'manage_billing' as const,
+      })),
+    };
+
+    await expect(
+      loadPricingData({ authGateway, checkEntitlementUseCase }),
+    ).resolves.toEqual({
+      isEntitled: false,
+      reason: 'manage_billing',
+    });
   });
 
   it('runSubscribeAction redirects to checkout url on success', async () => {
@@ -294,6 +336,36 @@ describe('app/pricing', () => {
     });
   });
 
+  it('runSubscribeAction redirects to /pricing?checkout=rate_limited when rate limited', async () => {
+    const { runSubscribeAction } = await import('@/app/pricing/page');
+
+    const createCheckoutSessionFn = vi.fn<CreateCheckoutSessionFn>(
+      async () => ({
+        ok: false,
+        error: { code: 'RATE_LIMITED', message: 'Too many requests' },
+      }),
+    );
+
+    const redirectFn = (url: string): never => {
+      throw new Error(url);
+    };
+
+    const action = async () =>
+      runSubscribeAction(
+        { plan: 'monthly' },
+        {
+          createCheckoutSessionFn,
+          redirectFn,
+        },
+      );
+
+    await expect(action()).rejects.toThrow('/pricing?checkout=rate_limited');
+    expect(createCheckoutSessionFn).toHaveBeenCalledWith({
+      plan: 'monthly',
+      idempotencyKey: undefined,
+    });
+  });
+
   it('runSubscribeAction redirects to /pricing?checkout=error for other errors', async () => {
     const { runSubscribeAction } = await import('@/app/pricing/page');
 
@@ -344,6 +416,8 @@ describe('app/pricing', () => {
     );
 
     expect(html).toContain('Manage Billing');
+    expect(html).not.toContain('Subscribe Monthly');
+    expect(html).not.toContain('Subscribe Annual');
   });
 
   it('renders dismiss link when banner is present', async () => {
@@ -413,5 +487,36 @@ describe('app/pricing', () => {
 
     expect(html).toContain('Pricing');
     expect(html).toContain('Subscribe Monthly');
+  });
+
+  it('renders manage billing guidance when entitlement reason is manage_billing', async () => {
+    const PricingPage = (await import('@/app/pricing/page')).default;
+
+    const element = await PricingPage({
+      searchParams: Promise.resolve({}),
+      deps: {
+        authGateway: {
+          getCurrentUser: async () => ({
+            id: 'user_1',
+            email: 'user@example.com',
+            createdAt: new Date('2026-02-01T00:00:00Z'),
+            updatedAt: new Date('2026-02-01T00:00:00Z'),
+          }),
+          requireUser: async () => {
+            throw new Error('not used');
+          },
+        },
+        checkEntitlementUseCase: {
+          execute: async () => ({
+            isEntitled: false,
+            reason: 'manage_billing' as const,
+          }),
+        },
+      },
+    });
+    const html = renderToStaticMarkup(element);
+
+    expect(html).toContain('Manage Billing');
+    expect(html).not.toContain('Subscribe Monthly');
   });
 });

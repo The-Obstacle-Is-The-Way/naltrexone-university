@@ -1,8 +1,9 @@
 # DEBT-125: Billing System Audit — Webhook Ordering, Race Conditions, and Edge Cases
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P2
 **Date:** 2026-02-06
+**Resolved:** 2026-02-06
 
 ---
 
@@ -195,11 +196,31 @@ The `stripe_subscriptions` table has a UNIQUE constraint on `userId`. When a use
 
 ---
 
+## Resolution (2026-02-06)
+
+Implemented all actionable findings in this audit:
+
+- Finding 1: Direct subscription webhooks now retrieve canonical subscription state via `stripe.subscriptions.retrieve()` before normalization.
+- Finding 2: Added idempotency fast path (`claim` + `peek`) to skip lock acquisition for already-processed duplicates.
+- Finding 3: Added webhook-authoritative Stripe customer mapping updates (`conflictStrategy: 'authoritative'`) to avoid conflict aborts when customer ID drifts for the same user.
+- Finding 4: Resolved through BUG-075/BUG-077 entitlement-context changes.
+- Finding 5: Checkout session expiration failure now fails fast with `STRIPE_ERROR` instead of silently falling through.
+- Finding 6: Added `invoice.payment_action_required` handling in webhook normalization flow.
+- Finding 7: Subscribe action now handles `RATE_LIMITED` with a dedicated redirect/banner.
+- Finding 8: Added `stripe_events.created_at` with migration `db/migrations/0006_mushy_ghost_rider.sql`.
+- Finding 9: Retry classifier now treats HTTP 429 as transient.
+
+Deliberately unchanged:
+
+- Finding 10 remains an accepted MVP tradeoff (single current subscription row, no local history table).
+
+---
+
 ## Verification
 
-- [ ] Each finding assessed for whether it needs immediate fix vs. tracked as debt
-- [ ] P2 findings addressed before production launch with real payments
-- [ ] P3 findings tracked for post-launch
+- [x] Each finding assessed for whether it needs immediate fix vs. tracked as debt
+- [x] P2 findings addressed
+- [x] P3 findings either addressed or explicitly accepted with rationale
 
 ---
 
