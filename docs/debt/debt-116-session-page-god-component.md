@@ -1,4 +1,4 @@
-# DEBT-116: Session Page Client God Component (668 Lines)
+# DEBT-116: Session Page Client God Component (670 Lines)
 
 **Status:** Open
 **Priority:** P1
@@ -8,16 +8,16 @@
 
 ## Description
 
-`app/(app)/app/practice/[sessionId]/practice-session-page-client.tsx` is 668 lines with 16+ `useState` hooks managing session continuation, question progression, review stage transitions, bookmark management, mark-for-review (exam mode), and session finalization with auto-redirect.
+`app/(app)/app/practice/[sessionId]/practice-session-page-client.tsx` is 670 lines with 17 `useState` state variables managing session continuation, question progression, review stage transitions, bookmark management, mark-for-review (exam mode), and session finalization with auto-redirect.
 
-This is the second largest component in the codebase. Like DEBT-115, it's a combined UI + state machine + data orchestrator. The `PracticeSessionPageView` subcomponent receives 17 props.
+This is the second largest component in the codebase. Like DEBT-115, it's a combined UI + state machine + data orchestrator with a broad prop surface on `PracticeSessionPageView`.
 
 ## Impact
 
 - Complex state machine is difficult to reason about — effects interact in non-obvious ways
 - The `onEndSession` → review stage → finalize flow has subtle branching (tutor vs exam) buried in a giant component
 - Adding question navigation (BUG-072) and session summary (BUG-073) will push this past 1000 lines
-- 17-prop view component indicates excessive prop drilling
+- Broad view prop surface indicates excessive prop drilling
 
 ## Resolution
 
@@ -43,7 +43,7 @@ The session flow is genuinely a state machine (answering → reviewing → summa
 
 ## Related
 
-- `app/(app)/app/practice/[sessionId]/practice-session-page-client.tsx` (668 lines)
+- `app/(app)/app/practice/[sessionId]/practice-session-page-client.tsx` (670 lines)
 - DEBT-115 (practice page — same pattern)
 - BUG-072 (question navigation — must be added here)
 - BUG-073 (session summary — must be added here)

@@ -32,6 +32,7 @@ The pattern is structurally identical across all three — only the input/output
 ### Option A: Extract Helper Function (Recommended)
 
 Create `src/application/shared/enrich-with-question.ts`:
+
 ```typescript
 function enrichWithQuestion<T, R>(
   rows: T[],

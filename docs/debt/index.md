@@ -20,14 +20,16 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 | [DEBT-113](debt-113-dashboard-review-lack-session-context.md) | Dashboard and Review Pages Lack Session Context | Open | P1 | 2026-02-06 |
 | [DEBT-114](debt-114-no-session-history-page.md) | No Session History Page | Open | P2 | 2026-02-06 |
 | [DEBT-115](debt-115-practice-page-god-component.md) | Practice Page God Component (823 Lines) | Open | P1 | 2026-02-06 |
-| [DEBT-116](debt-116-session-page-god-component.md) | Session Page Client God Component (668 Lines) | Open | P1 | 2026-02-06 |
+| [DEBT-116](debt-116-session-page-god-component.md) | Session Page Client God Component (670 Lines) | Open | P1 | 2026-02-06 |
 | [DEBT-117](debt-117-choice-shuffling-dry-violation.md) | Choice Shuffling Logic Duplicated Across Use Cases | Open | P2 | 2026-02-06 |
 | [DEBT-118](debt-118-graceful-degradation-dry-violation.md) | Graceful Degradation Pattern Duplicated in 3 Use Cases | Open | P3 | 2026-02-06 |
-| [DEBT-119](debt-119-ports-file-god-module.md) | Ports File Is a God Module (352 Lines, 10+ Interfaces) | Open | P3 | 2026-02-06 |
+| [DEBT-119](debt-119-ports-file-god-module.md) | Ports File Is a God Module (353 Lines, 10+ Interfaces) | Open | P3 | 2026-02-06 |
 | [DEBT-120](debt-120-composition-root-growing.md) | Composition Root Growing Toward God File (407 Lines) | Open | P3 | 2026-02-06 |
 | [DEBT-121](debt-121-use-case-fakes-lack-interfaces.md) | Use Case Fakes Don't Implement Interfaces (No Compile-Time Safety) | Open | P2 | 2026-02-06 |
+| [DEBT-122](debt-122-in-run-question-navigation-gap.md) | In-Run Question Navigation Gap (Tutor + Exam Answering Stage) | Open | P2 | 2026-02-06 |
+| [DEBT-123](debt-123-session-summary-missing-question-breakdown.md) | Session Summary Is Aggregate-Only (No Per-Question Breakdown) | Open | P2 | 2026-02-06 |
 
-**Next Debt ID:** DEBT-122
+**Next Debt ID:** DEBT-124
 
 ## Archived Debt
 

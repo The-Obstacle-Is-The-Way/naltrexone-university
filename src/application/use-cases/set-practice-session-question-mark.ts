@@ -1,5 +1,5 @@
-import { ApplicationError } from '../errors';
-import type { PracticeSessionRepository } from '../ports/repositories';
+import { ApplicationError } from '@/src/application/errors';
+import type { PracticeSessionRepository } from '@/src/application/ports/repositories';
 
 export type SetPracticeSessionQuestionMarkInput = {
   userId: string;

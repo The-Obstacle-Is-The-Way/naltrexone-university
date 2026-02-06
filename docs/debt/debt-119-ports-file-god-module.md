@@ -1,4 +1,4 @@
-# DEBT-119: Ports File Is a God Module (352 Lines, 10+ Interfaces)
+# DEBT-119: Ports File Is a God Module (353 Lines, 10 Interfaces)
 
 **Status:** Open
 **Priority:** P3
@@ -8,7 +8,7 @@
 
 ## Description
 
-`src/application/ports/repositories.ts` is a 352-line file containing 10+ port interface definitions:
+`src/application/ports/repositories.ts` is a 353-line file containing 10 port interface definitions:
 
 - `QuestionRepository` (with composed sub-interfaces)
 - `AttemptRepository` (with composed sub-interfaces)
@@ -63,6 +63,6 @@ Split into:
 
 ## Related
 
-- `src/application/ports/repositories.ts` (352 lines)
+- `src/application/ports/repositories.ts` (353 lines)
 - `src/application/ports/gateways.ts` (smaller, acceptable size)
 - DEBT-091 (archived — AttemptRepository ISP violation, related concern)

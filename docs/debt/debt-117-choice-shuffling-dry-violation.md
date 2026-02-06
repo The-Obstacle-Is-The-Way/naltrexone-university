@@ -32,8 +32,13 @@ This is a textbook DRY violation. If the shuffling algorithm changes (e.g., to f
 ### Option A: Extract Domain Service (Recommended)
 
 Create `src/domain/services/choice-shuffler.ts`:
-```
-shuffleChoices(choices: Choice[], questionId: string, sessionSeed: string): ShuffledChoice[]
+
+```ts
+shuffleChoices(
+  choices: Choice[],
+  questionId: string,
+  sessionSeed: string
+): ShuffledChoice[]
 ```
 
 Both use cases call the shared service. Single source of truth for shuffle + label assignment.

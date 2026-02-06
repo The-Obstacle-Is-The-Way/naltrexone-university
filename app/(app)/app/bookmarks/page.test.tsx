@@ -58,6 +58,27 @@ describe('app/(app)/app/bookmarks', () => {
     expect(html).not.toContain('**bold**');
   });
 
+  it('hides body text when stem plain text is short enough to fit the title', () => {
+    const stemMd = 'Short stem question about pharmacology';
+    const html = renderToStaticMarkup(
+      <BookmarksView
+        rows={[
+          {
+            isAvailable: true,
+            questionId: 'q_1',
+            slug: 'q-1',
+            stemMd,
+            difficulty: 'easy',
+            bookmarkedAt: '2026-02-01T00:00:00.000Z',
+          },
+        ]}
+      />,
+    );
+
+    const titleOccurrences = html.split(stemMd).length - 1;
+    expect(titleOccurrences).toBe(1);
+  });
+
   it('renders bookmarks', () => {
     const html = renderToStaticMarkup(
       <BookmarksView

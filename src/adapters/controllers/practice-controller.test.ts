@@ -496,6 +496,21 @@ describe('practice-controller', () => {
       expect(deps.getPracticeSessionReviewUseCase.inputs).toEqual([]);
     });
 
+    it('returns UNSUBSCRIBED when not entitled', async () => {
+      const deps = createDeps({ isEntitled: false });
+
+      const result = await getPracticeSessionReview(
+        { sessionId: '11111111-1111-1111-1111-111111111111' },
+        deps,
+      );
+
+      expect(result).toMatchObject({
+        ok: false,
+        error: { code: 'UNSUBSCRIBED' },
+      });
+      expect(deps.getPracticeSessionReviewUseCase.inputs).toEqual([]);
+    });
+
     it('returns NOT_FOUND when use case throws ApplicationError', async () => {
       const deps = createDeps({
         reviewThrows: new ApplicationError(
@@ -592,6 +607,25 @@ describe('practice-controller', () => {
       expect(result).toMatchObject({
         ok: false,
         error: { code: 'UNAUTHENTICATED' },
+      });
+      expect(deps.setPracticeSessionQuestionMarkUseCase.inputs).toEqual([]);
+    });
+
+    it('returns UNSUBSCRIBED when not entitled', async () => {
+      const deps = createDeps({ isEntitled: false });
+
+      const result = await setPracticeSessionQuestionMark(
+        {
+          sessionId: '11111111-1111-1111-1111-111111111111',
+          questionId: '22222222-2222-2222-2222-222222222222',
+          markedForReview: true,
+        },
+        deps,
+      );
+
+      expect(result).toMatchObject({
+        ok: false,
+        error: { code: 'UNSUBSCRIBED' },
       });
       expect(deps.setPracticeSessionQuestionMarkUseCase.inputs).toEqual([]);
     });

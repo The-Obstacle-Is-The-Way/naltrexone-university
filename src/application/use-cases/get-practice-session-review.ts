@@ -1,9 +1,9 @@
+import { ApplicationError } from '@/src/application/errors';
 import type { Logger } from '@/src/application/ports/logger';
 import type {
   PracticeSessionRepository,
   QuestionRepository,
 } from '@/src/application/ports/repositories';
-import { ApplicationError } from '../errors';
 
 export type GetPracticeSessionReviewInput = {
   userId: string;

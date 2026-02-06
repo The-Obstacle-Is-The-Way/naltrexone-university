@@ -8,7 +8,7 @@
 
 ## Description
 
-`app/(app)/app/practice/page.tsx` is 823 lines with 16+ `useState` hooks managing question state, filters, tags, bookmarks, session lifecycle, error handling, and session abandonment in a single client component. The `PracticeView` subcomponent receives 19 props.
+`app/(app)/app/practice/page.tsx` is 823 lines with 21 `useState` state variables managing question state, filters, tags, bookmarks, session lifecycle, error handling, and session abandonment in a single client component. The `PracticeView` subcomponent also has a broad prop surface.
 
 This is the largest component in the codebase and violates Single Responsibility Principle — it's a UI component, a state machine, a data-fetching orchestrator, and a business logic coordinator rolled into one.
 
@@ -16,7 +16,7 @@ This is the largest component in the codebase and violates Single Responsibility
 
 - Extremely difficult to test individual behaviors in isolation
 - Any change to one concern risks breaking others (e.g., changing bookmark logic affects session state)
-- 19-prop `PracticeView` is a code smell for excessive prop drilling
+- Large `PracticeView` prop surface is a code smell for excessive prop drilling
 - New feature work (BUG-072 question navigation, BUG-073 session summary) will make this worse
 
 ## Resolution

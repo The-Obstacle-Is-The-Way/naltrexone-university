@@ -8,14 +8,14 @@
 
 ## Description
 
-`lib/container.ts` is 407 lines containing 50+ factory functions that wire all repositories, gateways, and use cases. While a composition root is an accepted pattern in Clean Architecture, the file is approaching the size where it becomes difficult to navigate and maintain.
+`lib/container.ts` is 407 lines and exposes a large factory surface (repository/gateway/use-case/controller creation methods) that wires all repositories, gateways, and use cases. While a composition root is an accepted pattern in Clean Architecture, the file is approaching the size where it becomes difficult to navigate and maintain.
 
 Currently manageable — this is a **warning** not an emergency.
 
 ## Impact
 
 - Any new use case, repository, or gateway requires editing this file
-- Navigation is becoming cumbersome with 50+ factory functions
+- Navigation is becoming cumbersome with a large factory surface in one file
 - Merge conflicts increasingly likely as features are added
 - At current growth rate (~5-10 new factories per feature), will exceed 600 lines within a few features
 
@@ -42,5 +42,5 @@ Currently manageable — this is a **warning** not an emergency.
 
 ## Related
 
-- `lib/container.ts` (407 lines, 50+ factories)
+- `lib/container.ts` (407 lines)
 - DEBT-119 (ports file — similar splitting rationale)

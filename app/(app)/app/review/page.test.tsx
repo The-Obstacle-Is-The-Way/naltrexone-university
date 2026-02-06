@@ -63,6 +63,30 @@ describe('app/(app)/app/review', () => {
     expect(html).not.toContain('**bold**');
   });
 
+  it('hides body text when stem plain text is short enough to fit the title', () => {
+    const stemMd = 'Short stem question about pharmacology';
+    const html = renderToStaticMarkup(
+      <ReviewView
+        rows={[
+          {
+            isAvailable: true,
+            questionId: 'q_1',
+            slug: 'q-1',
+            stemMd,
+            difficulty: 'easy',
+            lastAnsweredAt: '2026-02-01T00:00:00.000Z',
+          },
+        ]}
+        limit={20}
+        offset={0}
+        totalCount={1}
+      />,
+    );
+
+    const titleOccurrences = html.split(stemMd).length - 1;
+    expect(titleOccurrences).toBe(1);
+  });
+
   it('renders missed questions', () => {
     const html = renderToStaticMarkup(
       <ReviewView

@@ -51,6 +51,7 @@ export class SubmitAnswerUseCase implements ISubmitAnswerUseCase { ... }
 ```
 
 Then in fakes:
+
 ```typescript
 export class FakeSubmitAnswerUseCase implements ISubmitAnswerUseCase { ... }
 ```

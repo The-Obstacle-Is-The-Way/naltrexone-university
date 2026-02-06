@@ -1,16 +1,15 @@
-// @vitest-environment jsdom
 import { describe, expect, it } from 'vitest';
+import {
+  FakeLogger,
+  FakePracticeSessionRepository,
+  FakeQuestionRepository,
+} from '@/src/application/test-helpers/fakes';
+import { GetPracticeSessionReviewUseCase } from '@/src/application/use-cases/get-practice-session-review';
 import type { PracticeSession } from '@/src/domain/entities';
 import {
   createPracticeSession,
   createQuestion,
 } from '@/src/domain/test-helpers';
-import {
-  FakeLogger,
-  FakePracticeSessionRepository,
-  FakeQuestionRepository,
-} from '../test-helpers/fakes';
-import { GetPracticeSessionReviewUseCase } from './get-practice-session-review';
 
 class MismatchedStatePracticeSessionRepository extends FakePracticeSessionRepository {
   constructor(private readonly session: PracticeSession) {

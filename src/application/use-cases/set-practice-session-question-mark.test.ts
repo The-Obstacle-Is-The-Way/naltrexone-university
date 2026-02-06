@@ -1,9 +1,8 @@
-// @vitest-environment jsdom
 import { describe, expect, it } from 'vitest';
+import { ApplicationError } from '@/src/application/errors';
+import { FakePracticeSessionRepository } from '@/src/application/test-helpers/fakes';
+import { SetPracticeSessionQuestionMarkUseCase } from '@/src/application/use-cases/set-practice-session-question-mark';
 import { createPracticeSession } from '@/src/domain/test-helpers';
-import { ApplicationError } from '../errors';
-import { FakePracticeSessionRepository } from '../test-helpers/fakes';
-import { SetPracticeSessionQuestionMarkUseCase } from './set-practice-session-question-mark';
 
 describe('SetPracticeSessionQuestionMarkUseCase', () => {
   it('persists marked-for-review state for exam sessions', async () => {

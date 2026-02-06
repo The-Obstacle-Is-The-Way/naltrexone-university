@@ -95,9 +95,11 @@ export function ReviewView({
                         <div className="text-sm font-medium text-foreground">
                           {getStemPreview(row.stemMd, 80)}
                         </div>
-                        <div className="text-sm text-muted-foreground">
-                          {toPlainText(row.stemMd)}
-                        </div>
+                        {toPlainText(row.stemMd).length > 80 && (
+                          <div className="text-sm text-muted-foreground">
+                            {toPlainText(row.stemMd)}
+                          </div>
+                        )}
                         <div className="text-xs text-muted-foreground">
                           <span className="capitalize">{row.difficulty}</span>
                           <span className="mx-2">•</span>

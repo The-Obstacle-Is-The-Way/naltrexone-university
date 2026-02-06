@@ -288,9 +288,16 @@ describe('DrizzlePracticeSessionRepository', () => {
     >[0];
     const repo = new DrizzlePracticeSessionRepository(db as unknown as RepoDb);
 
-    await expect(
-      repo.findByIdAndUserId('session_1', 'user_1'),
-    ).resolves.toBeTruthy();
+    const session = await repo.findByIdAndUserId('session_1', 'user_1');
+    expect(session?.questionStates).toEqual([
+      {
+        questionId: 'q1',
+        markedForReview: false,
+        latestSelectedChoiceId: null,
+        latestIsCorrect: null,
+        latestAnsweredAt: null,
+      },
+    ]);
 
     expect(warnSpy).toHaveBeenCalledWith(
       expect.stringContaining(
@@ -568,6 +575,59 @@ describe('DrizzlePracticeSessionRepository', () => {
     expect(update).toHaveBeenCalledTimes(2);
     expect(updateReturning).toHaveBeenCalledTimes(2);
     expect(findFirst).toHaveBeenCalledTimes(2);
+  });
+
+  it('throws INTERNAL_ERROR when all CAS retries are exhausted', async () => {
+    const row = {
+      id: 'session_1',
+      userId: 'user_1',
+      mode: 'exam',
+      paramsJson: {
+        count: 2,
+        tagSlugs: [],
+        difficulties: ['easy'],
+        questionIds: ['q1', 'q2'],
+      },
+      startedAt: new Date('2026-02-01T00:00:00.000Z'),
+      endedAt: null,
+    } as const;
+
+    const findFirst = vi.fn(async () => row);
+    const updateReturning = vi.fn().mockResolvedValue([]);
+    const updateWhere = vi.fn(() => ({ returning: updateReturning }));
+    const updateSet = vi.fn(() => ({ where: updateWhere }));
+    const update = vi.fn(() => ({ set: updateSet }));
+
+    const db = {
+      query: {
+        practiceSessions: {
+          findFirst,
+        },
+      },
+      update,
+      insert: () => {
+        throw new Error('unexpected insert');
+      },
+    } as const;
+
+    type RepoDb = ConstructorParameters<
+      typeof DrizzlePracticeSessionRepository
+    >[0];
+    const repo = new DrizzlePracticeSessionRepository(db as unknown as RepoDb);
+
+    await expect(
+      repo.recordQuestionAnswer({
+        sessionId: 'session_1',
+        userId: 'user_1',
+        questionId: 'q1',
+        selectedChoiceId: 'choice_1',
+        isCorrect: true,
+        answeredAt: new Date('2026-02-01T00:10:00.000Z'),
+      }),
+    ).rejects.toMatchObject({ code: 'INTERNAL_ERROR' });
+
+    expect(update).toHaveBeenCalledTimes(3);
+    expect(findFirst).toHaveBeenCalledTimes(4);
   });
 
   it('updates mark-for-review state for a session question', async () => {
