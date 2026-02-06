@@ -1,8 +1,9 @@
 # DEBT-123: Session Summary Is Aggregate-Only (No Per-Question Breakdown)
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P2
 **Date:** 2026-02-06
+**Resolved:** 2026-02-06 (PR #63)
 **Spec Mandate:** [SPEC-020](../specs/spec-020-practice-engine-completion.md) Phase 2
 
 ---

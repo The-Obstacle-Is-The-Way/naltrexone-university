@@ -1,9 +1,10 @@
 # BUG-072: No Question Navigation in Practice Sessions (Both Modes)
 
-**Status:** Reclassified (Spec-Mandated in DEBT-122)
+**Status:** Resolved (via SPEC-020 / DEBT-122)
 **Priority:** P1
 **Date:** 2026-02-06
 **Reclassified:** 2026-02-06
+**Resolved:** 2026-02-06 (PR #63)
 
 ---
 

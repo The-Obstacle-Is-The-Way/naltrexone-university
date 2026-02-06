@@ -1,9 +1,10 @@
 # BUG-073: Tutor Mode Missing Per-Question Session Summary at End
 
-**Status:** Reclassified (Spec-Mandated in DEBT-123)
+**Status:** Resolved (via SPEC-020 / DEBT-123)
 **Priority:** P1
 **Date:** 2026-02-06
 **Reclassified:** 2026-02-06
+**Resolved:** 2026-02-06 (PR #63)
 
 ---
 
