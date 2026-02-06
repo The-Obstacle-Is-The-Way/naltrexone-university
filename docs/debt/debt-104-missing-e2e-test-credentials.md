@@ -3,7 +3,7 @@
 **Status:** In Progress
 **Priority:** P1
 **Date:** 2026-02-05
-**Updated:** 2026-02-05
+**Updated:** 2026-02-06
 
 ---
 
@@ -41,11 +41,13 @@ Without those, critical flows are skipped (practice, review, bookmarks, dashboar
 
 ### Remaining (manual/external)
 
-1. **CI secrets**
-   - Add `E2E_CLERK_USER_USERNAME` and `E2E_CLERK_USER_PASSWORD` in GitHub Actions/Vercel CI environments.
+1. **Secret values (external)**
+   - CI workflow already references `E2E_CLERK_USER_USERNAME` / `E2E_CLERK_USER_PASSWORD`.
+   - Repository/Vercel secret values must be set and maintained externally.
 
-2. **Production/preview Clerk policy verification**
+2. **Clerk dashboard policy verification (external)**
    - Confirm password sign-in strategy remains enabled for the environment used by E2E.
+   - Confirm the dedicated E2E user remains valid and not blocked by additional auth constraints.
 
 ---
 
@@ -114,7 +116,7 @@ test('authenticated flow', async ({ page }) => {
 - [x] Global setup file created (`tests/e2e/global.setup.ts`)
 - [x] Playwright config updated for Clerk setup dependency
 - [x] Subscription bootstrap helper added for authenticated flows
-- [ ] CI/CD secrets configured
+- [ ] CI/CD secret values configured
 - [ ] Production/preview Clerk password policy verified
 
 ---
