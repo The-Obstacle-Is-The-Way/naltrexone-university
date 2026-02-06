@@ -72,6 +72,30 @@ describe('practice-session-page-logic', () => {
       expect(setLoadState).toHaveBeenCalledWith({ status: 'ready' });
     });
 
+    it('forwards questionId when loading a specific session question', async () => {
+      const getNextQuestionFn = vi.fn(async () => ok(createNextQuestion()));
+
+      await loadNextQuestion({
+        sessionId: 'session-1',
+        questionId: 'question-9',
+        getNextQuestionFn,
+        createIdempotencyKey: () => 'idem_1',
+        nowMs: () => 1234,
+        setLoadState: vi.fn(),
+        setSelectedChoiceId: vi.fn(),
+        setSubmitResult: vi.fn(),
+        setSubmitIdempotencyKey: vi.fn(),
+        setQuestionLoadedAt: vi.fn(),
+        setQuestion: vi.fn(),
+        setSessionInfo: vi.fn(),
+      });
+
+      expect(getNextQuestionFn).toHaveBeenCalledWith({
+        sessionId: 'session-1',
+        questionId: 'question-9',
+      });
+    });
+
     it('clears sessionInfo when no next question is returned', async () => {
       const setSubmitIdempotencyKey = vi.fn();
       const setQuestionLoadedAt = vi.fn();

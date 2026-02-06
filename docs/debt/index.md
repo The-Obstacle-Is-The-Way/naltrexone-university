@@ -17,14 +17,27 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 | ID | Title | Status | Priority | Date |
 |----|-------|--------|----------|------|
-| [DEBT-106](./debt-106-exam-mode-mark-for-review.md) | Exam Mode Missing "Mark for Review" Feature | Open | P2 | 2026-02-05 |
+| [DEBT-113](debt-113-dashboard-review-lack-session-context.md) | Dashboard and Review Pages Lack Session Context | Open | P1 | 2026-02-06 |
+| [DEBT-114](debt-114-no-session-history-page.md) | No Session History Page | Open | P2 | 2026-02-06 |
+| [DEBT-115](debt-115-practice-page-god-component.md) | Practice Page God Component (823 Lines) | Open | P1 | 2026-02-06 |
+| [DEBT-116](debt-116-session-page-god-component.md) | Session Page Client God Component (670 Lines) | Open | P1 | 2026-02-06 |
+| [DEBT-117](debt-117-choice-shuffling-dry-violation.md) | Choice Shuffling Logic Duplicated Across Use Cases | Open | P2 | 2026-02-06 |
+| [DEBT-118](debt-118-graceful-degradation-dry-violation.md) | Graceful Degradation Pattern Duplicated in 3 Use Cases | Open | P3 | 2026-02-06 |
+| [DEBT-119](debt-119-ports-file-god-module.md) | Ports File Is a God Module (353 Lines, 10+ Interfaces) | Open | P3 | 2026-02-06 |
+| [DEBT-120](debt-120-composition-root-growing.md) | Composition Root Growing Toward God File (407 Lines) | Open | P3 | 2026-02-06 |
+| [DEBT-121](debt-121-use-case-fakes-lack-interfaces.md) | Use Case Fakes Don't Implement Interfaces (No Compile-Time Safety) | Open | P2 | 2026-02-06 |
+| [DEBT-122](debt-122-in-run-question-navigation-gap.md) | In-Run Question Navigation Gap (Tutor + Exam Answering Stage) | Open | P2 | 2026-02-06 |
+| [DEBT-123](debt-123-session-summary-missing-question-breakdown.md) | Session Summary Is Aggregate-Only (No Per-Question Breakdown) | Open | P2 | 2026-02-06 |
+| [DEBT-124](debt-124-e2e-question-helper-false-negative.md) | E2E Question Existence Helper Can Produce False Negatives | Open | P2 | 2026-02-06 |
 
-**Next Debt ID:** DEBT-112
+**Next Debt ID:** DEBT-125
 
 ## Archived Debt
 
 | ID | Title | Priority | Resolved |
 |----|-------|----------|----------|
+| [DEBT-112](../_archive/debt/debt-112-raw-slugs-exposed-in-ui.md) | Raw Content-Pipeline Slugs Exposed to Users in Dashboard, Review, and Bookmarks | P1 | 2026-02-06 |
+| [DEBT-106](../_archive/debt/debt-106-exam-mode-mark-for-review.md) | Exam Mode Missing "Mark for Review" Feature | P2 | 2026-02-06 |
 | [DEBT-111](../_archive/debt/debt-111-explanation-choice-label-mismatch.md) | Explanation Text References Original Choice Labels After Shuffle | P0 | 2026-02-06 |
 | [DEBT-110](../_archive/debt/debt-110-e2e-helper-anti-patterns.md) | E2E Test Helper Anti-Patterns (isVisible Timeout + Stripe Duplication) | P3 | 2026-02-05 |
 | [DEBT-107](../_archive/debt/debt-107-question-engine-e2e-completeness.md) | Question Engine E2E Completeness and State Management (Accepted) | P1 | 2026-02-06 |

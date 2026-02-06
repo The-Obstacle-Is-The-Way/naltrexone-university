@@ -84,6 +84,13 @@ describe('StartPracticeSessionUseCase', () => {
       userId,
       mode: 'exam',
       questionIds: expectedQuestionIds,
+      questionStates: expectedQuestionIds.map((questionId) => ({
+        questionId,
+        markedForReview: false,
+        latestSelectedChoiceId: null,
+        latestIsCorrect: null,
+        latestAnsweredAt: null,
+      })),
       tagFilters: ['opioids'],
       difficultyFilters: ['easy', 'medium'],
       endedAt: null,
@@ -136,10 +143,27 @@ describe('StartPracticeSessionUseCase', () => {
     const paramsJson = createInput?.paramsJson as {
       count: number;
       questionIds: string[];
+      questionStates: Array<{
+        questionId: string;
+        markedForReview: boolean;
+        latestSelectedChoiceId: string | null;
+        latestIsCorrect: boolean | null;
+        latestAnsweredAt: string | null;
+      }>;
     };
 
     expect(paramsJson.questionIds).toHaveLength(2);
     expect(paramsJson.count).toBe(2);
+    expect(paramsJson.questionStates).toHaveLength(2);
+    expect(paramsJson.questionStates).toEqual(
+      paramsJson.questionIds.map((questionId) => ({
+        questionId,
+        markedForReview: false,
+        latestSelectedChoiceId: null,
+        latestIsCorrect: null,
+        latestAnsweredAt: null,
+      })),
+    );
   });
 
   it('returns NOT_FOUND error when filters yield zero questions', async () => {

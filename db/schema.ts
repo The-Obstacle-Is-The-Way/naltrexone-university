@@ -74,6 +74,13 @@ export type PracticeSessionParams = {
   tagSlugs: string[]; // filter; empty = no tag filter
   difficulties: QuestionDifficulty[]; // filter; empty = no difficulty filter
   questionIds: string[]; // ordered UUID list selected at session start
+  questionStates?: Array<{
+    questionId: string;
+    markedForReview: boolean;
+    latestSelectedChoiceId: string | null;
+    latestIsCorrect: boolean | null;
+    latestAnsweredAt: string | null;
+  }>;
 };
 
 /**

@@ -1,12 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import {
-  FakeAttemptRepository,
-  FakePracticeSessionRepository,
-} from '@/src/application/test-helpers/fakes';
-import {
-  createAttempt,
-  createPracticeSession,
-} from '@/src/domain/test-helpers';
+import { FakePracticeSessionRepository } from '@/src/application/test-helpers/fakes';
+import { createPracticeSession } from '@/src/domain/test-helpers';
 import { GetIncompletePracticeSessionUseCase } from './get-incomplete-practice-session';
 
 describe('GetIncompletePracticeSessionUseCase', () => {
@@ -18,9 +12,7 @@ describe('GetIncompletePracticeSessionUseCase', () => {
         endedAt: new Date('2026-02-05T12:00:00Z'),
       }),
     ]);
-    const attempts = new FakeAttemptRepository([]);
-
-    const useCase = new GetIncompletePracticeSessionUseCase(sessions, attempts);
+    const useCase = new GetIncompletePracticeSessionUseCase(sessions);
 
     await expect(useCase.execute({ userId: 'user-1' })).resolves.toBeNull();
   });
@@ -40,43 +32,46 @@ describe('GetIncompletePracticeSessionUseCase', () => {
         userId: 'user-1',
         mode: 'exam',
         questionIds: ['q4', 'q5', 'q6', 'q7'],
+        questionStates: [
+          {
+            questionId: 'q4',
+            markedForReview: false,
+            latestSelectedChoiceId: 'choice-1',
+            latestIsCorrect: true,
+            latestAnsweredAt: new Date('2026-02-05T09:01:00Z'),
+          },
+          {
+            questionId: 'q5',
+            markedForReview: true,
+            latestSelectedChoiceId: null,
+            latestIsCorrect: null,
+            latestAnsweredAt: null,
+          },
+          {
+            questionId: 'q6',
+            markedForReview: false,
+            latestSelectedChoiceId: null,
+            latestIsCorrect: null,
+            latestAnsweredAt: null,
+          },
+          {
+            questionId: 'q7',
+            markedForReview: false,
+            latestSelectedChoiceId: null,
+            latestIsCorrect: null,
+            latestAnsweredAt: null,
+          },
+        ],
         startedAt: new Date('2026-02-05T09:00:00Z'),
         endedAt: null,
       }),
     ]);
-    const attempts = new FakeAttemptRepository([
-      createAttempt({
-        id: 'a1',
-        userId: 'user-1',
-        questionId: 'q4',
-        practiceSessionId: 'session-new',
-      }),
-      createAttempt({
-        id: 'a2',
-        userId: 'user-1',
-        questionId: 'q4',
-        practiceSessionId: 'session-new',
-      }),
-      createAttempt({
-        id: 'a3',
-        userId: 'user-1',
-        questionId: 'q5',
-        practiceSessionId: 'session-new',
-      }),
-      createAttempt({
-        id: 'a4',
-        userId: 'user-1',
-        questionId: 'q999',
-        practiceSessionId: 'session-new',
-      }),
-    ]);
-
-    const useCase = new GetIncompletePracticeSessionUseCase(sessions, attempts);
+    const useCase = new GetIncompletePracticeSessionUseCase(sessions);
 
     await expect(useCase.execute({ userId: 'user-1' })).resolves.toEqual({
       sessionId: 'session-new',
       mode: 'exam',
-      answeredCount: 2,
+      answeredCount: 1,
       totalCount: 4,
       startedAt: '2026-02-05T09:00:00.000Z',
     });

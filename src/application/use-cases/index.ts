@@ -43,16 +43,26 @@ export {
   type PublicChoice,
 } from './get-next-question';
 export {
+  type GetPracticeSessionReviewInput,
+  type GetPracticeSessionReviewOutput,
+  GetPracticeSessionReviewUseCase,
+  type PracticeSessionReviewRow,
+} from './get-practice-session-review';
+export {
   type GetUserStatsInput,
   GetUserStatsUseCase,
   type UserStatsOutput,
 } from './get-user-stats';
 export {
+  type SetPracticeSessionQuestionMarkInput,
+  type SetPracticeSessionQuestionMarkOutput,
+  SetPracticeSessionQuestionMarkUseCase,
+} from './set-practice-session-question-mark';
+export {
   type StartPracticeSessionInput,
   type StartPracticeSessionOutput,
   StartPracticeSessionUseCase,
 } from './start-practice-session';
-
 export {
   type SubmitAnswerInput,
   type SubmitAnswerOutput,

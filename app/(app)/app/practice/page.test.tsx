@@ -133,6 +133,54 @@ describe('app/(app)/app/practice', () => {
     expect(html).toContain('Remove bookmark');
   });
 
+  it('renders mark-for-review control in exam sessions', async () => {
+    const { PracticeView } = await import('@/app/(app)/app/practice/page');
+
+    const html = renderToStaticMarkup(
+      <PracticeView
+        sessionInfo={{
+          sessionId: 'session-1',
+          mode: 'exam',
+          index: 0,
+          total: 10,
+          isMarkedForReview: true,
+        }}
+        loadState={{ status: 'ready' }}
+        question={{
+          questionId: 'question-1',
+          slug: 'question-1',
+          stemMd: 'Stem',
+          difficulty: 'easy',
+          choices: [
+            {
+              id: 'choice-1',
+              label: 'A',
+              textMd: 'Choice',
+              sortOrder: 1,
+            },
+          ],
+          session: null,
+        }}
+        selectedChoiceId={null}
+        submitResult={null}
+        isPending={false}
+        bookmarkStatus="idle"
+        isBookmarked={false}
+        isMarkingForReview={false}
+        canSubmit={false}
+        onEndSession={() => undefined}
+        onTryAgain={() => undefined}
+        onToggleBookmark={() => undefined}
+        onToggleMarkForReview={() => undefined}
+        onSelectChoice={() => undefined}
+        onSubmit={() => undefined}
+        onNextQuestion={() => undefined}
+      />,
+    );
+
+    expect(html).toContain('Unmark review');
+  });
+
   it('renders feedback when submitResult is present', async () => {
     const { PracticeView } = await import('@/app/(app)/app/practice/page');
 

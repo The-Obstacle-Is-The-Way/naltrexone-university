@@ -189,6 +189,19 @@ describe('question-controller', () => {
       ]);
     });
 
+    it('forwards questionId when sessionId and questionId are provided', async () => {
+      const deps = createDeps({ getNextQuestionOutput: null });
+      const sessionId = '11111111-1111-1111-1111-111111111111';
+      const questionId = '22222222-2222-2222-2222-222222222222';
+
+      const result = await getNextQuestion({ sessionId, questionId }, deps);
+
+      expect(result).toEqual({ ok: true, data: null });
+      expect(deps.getNextQuestionUseCase.inputs).toEqual([
+        { userId: 'user_1', sessionId, questionId },
+      ]);
+    });
+
     it('returns NOT_FOUND when use case throws ApplicationError', async () => {
       const deps = createDeps({
         getNextQuestionThrows: new ApplicationError('NOT_FOUND', 'Not found'),

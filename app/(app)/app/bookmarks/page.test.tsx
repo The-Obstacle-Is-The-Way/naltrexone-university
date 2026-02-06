@@ -8,8 +8,77 @@ import {
   renderBookmarks,
 } from '@/app/(app)/app/bookmarks/page';
 import { err, ok } from '@/src/adapters/controllers/action-result';
+import { getStemPreview } from '@/src/adapters/shared/stem-preview';
 
 describe('app/(app)/app/bookmarks', () => {
+  it('renders a truncated stem preview as the card title instead of raw slug text', () => {
+    const longStem =
+      'A very long stem that should be truncated in the card title for readability in bookmarks lists.';
+    const expectedPreview = getStemPreview(longStem, 80);
+    const html = renderToStaticMarkup(
+      <BookmarksView
+        rows={[
+          {
+            isAvailable: true,
+            questionId: 'q_1',
+            slug: 'q-1',
+            stemMd: longStem,
+            difficulty: 'easy',
+            bookmarkedAt: '2026-02-01T00:00:00.000Z',
+          },
+        ]}
+      />,
+    );
+
+    expect(html).toContain(expectedPreview);
+    expect(html).toContain(longStem);
+    expect(html).not.toContain('>q-1<');
+  });
+
+  it('renders stem description as plain text (no raw markdown syntax)', () => {
+    const stemMd = '# Heading with [link](https://example.com) and **bold**';
+    const html = renderToStaticMarkup(
+      <BookmarksView
+        rows={[
+          {
+            isAvailable: true,
+            questionId: 'q_1',
+            slug: 'q-1',
+            stemMd,
+            difficulty: 'easy',
+            bookmarkedAt: '2026-02-01T00:00:00.000Z',
+          },
+        ]}
+      />,
+    );
+
+    expect(html).toContain('Heading with link and bold');
+    expect(html).not.toContain('# Heading');
+    expect(html).not.toContain('[link](https://example.com)');
+    expect(html).not.toContain('**bold**');
+  });
+
+  it('hides body text when stem plain text is short enough to fit the title', () => {
+    const stemMd = 'Short stem question about pharmacology';
+    const html = renderToStaticMarkup(
+      <BookmarksView
+        rows={[
+          {
+            isAvailable: true,
+            questionId: 'q_1',
+            slug: 'q-1',
+            stemMd,
+            difficulty: 'easy',
+            bookmarkedAt: '2026-02-01T00:00:00.000Z',
+          },
+        ]}
+      />,
+    );
+
+    const titleOccurrences = html.split(stemMd).length - 1;
+    expect(titleOccurrences).toBe(1);
+  });
+
   it('renders bookmarks', () => {
     const html = renderToStaticMarkup(
       <BookmarksView
@@ -27,7 +96,6 @@ describe('app/(app)/app/bookmarks', () => {
     );
 
     expect(html).toContain('Bookmarks');
-    expect(html).toContain('q-1');
     expect(html).toContain('Stem for q1');
     expect(html).toContain('easy');
     expect(html).toContain('Bookmarked 2026-02-01');
@@ -170,7 +238,7 @@ describe('app/(app)/app/bookmarks', () => {
     const html = renderToStaticMarkup(element);
 
     expect(getBookmarksFn).toHaveBeenCalledWith({});
-    expect(html).toContain('q-1');
+    expect(html).toContain('Stem for q1');
   });
 
   it('renders a banner when redirected back with an error code', async () => {
@@ -196,7 +264,7 @@ describe('app/(app)/app/bookmarks', () => {
     const html = renderToStaticMarkup(element);
 
     expect(html).toContain('Unable to remove bookmark.');
-    expect(html).toContain('q-1');
+    expect(html).toContain('Stem for q1');
   });
 
   it('renders a banner when redirected back with missing_question_id', async () => {
@@ -222,7 +290,7 @@ describe('app/(app)/app/bookmarks', () => {
     const html = renderToStaticMarkup(element);
 
     expect(html).toContain('Unable to remove bookmark: missing question id.');
-    expect(html).toContain('q-1');
+    expect(html).toContain('Stem for q1');
   });
 
   it('renders a banner when redirected back with remove_failed', async () => {
@@ -250,7 +318,7 @@ describe('app/(app)/app/bookmarks', () => {
     expect(html).toContain(
       'Unable to remove bookmark. Please refresh and try again.',
     );
-    expect(html).toContain('q-1');
+    expect(html).toContain('Stem for q1');
   });
 
   it('renders an error view when createBookmarksPage fails to load bookmarks', async () => {

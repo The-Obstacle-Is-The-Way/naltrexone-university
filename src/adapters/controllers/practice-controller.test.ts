@@ -6,13 +6,17 @@ import {
   FakeAuthGateway,
   FakeEndPracticeSessionUseCase,
   FakeGetIncompletePracticeSessionUseCase,
+  FakeGetPracticeSessionReviewUseCase,
   FakeIdempotencyKeyRepository,
   FakeRateLimiter,
+  FakeSetPracticeSessionQuestionMarkUseCase,
   FakeStartPracticeSessionUseCase,
   FakeSubscriptionRepository,
 } from '@/src/application/test-helpers/fakes';
 import type {
   EndPracticeSessionOutput,
+  GetPracticeSessionReviewOutput,
+  SetPracticeSessionQuestionMarkOutput,
   StartPracticeSessionOutput,
 } from '@/src/application/use-cases';
 import { CheckEntitlementUseCase } from '@/src/application/use-cases/check-entitlement';
@@ -21,7 +25,9 @@ import { createSubscription, createUser } from '@/src/domain/test-helpers';
 import {
   endPracticeSession,
   getIncompletePracticeSession,
+  getPracticeSessionReview,
   type PracticeControllerDeps,
+  setPracticeSessionQuestionMark,
   startPracticeSession,
 } from './practice-controller';
 
@@ -29,6 +35,8 @@ type PracticeControllerTestDeps = PracticeControllerDeps & {
   getIncompletePracticeSessionUseCase: FakeGetIncompletePracticeSessionUseCase;
   startPracticeSessionUseCase: FakeStartPracticeSessionUseCase;
   endPracticeSessionUseCase: FakeEndPracticeSessionUseCase;
+  getPracticeSessionReviewUseCase: FakeGetPracticeSessionReviewUseCase;
+  setPracticeSessionQuestionMarkUseCase: FakeSetPracticeSessionQuestionMarkUseCase;
 };
 
 function createDeps(overrides?: {
@@ -39,6 +47,10 @@ function createDeps(overrides?: {
   startThrows?: unknown;
   endOutput?: EndPracticeSessionOutput;
   endThrows?: unknown;
+  reviewOutput?: GetPracticeSessionReviewOutput;
+  reviewThrows?: unknown;
+  setMarkOutput?: SetPracticeSessionQuestionMarkOutput;
+  setMarkThrows?: unknown;
   incompleteOutput?: {
     sessionId: string;
     mode: 'tutor' | 'exam';
@@ -99,6 +111,28 @@ function createDeps(overrides?: {
     overrides?.endThrows,
   );
 
+  const getPracticeSessionReviewUseCase =
+    new FakeGetPracticeSessionReviewUseCase(
+      overrides?.reviewOutput ?? {
+        sessionId: '22222222-2222-2222-2222-222222222222',
+        mode: 'exam',
+        totalCount: 1,
+        answeredCount: 0,
+        markedCount: 0,
+        rows: [],
+      },
+      overrides?.reviewThrows,
+    );
+
+  const setPracticeSessionQuestionMarkUseCase =
+    new FakeSetPracticeSessionQuestionMarkUseCase(
+      overrides?.setMarkOutput ?? {
+        questionId: '33333333-3333-3333-3333-333333333333',
+        markedForReview: true,
+      },
+      overrides?.setMarkThrows,
+    );
+
   const getIncompletePracticeSessionUseCase =
     new FakeGetIncompletePracticeSessionUseCase(
       overrides?.incompleteOutput ?? null,
@@ -113,6 +147,8 @@ function createDeps(overrides?: {
     getIncompletePracticeSessionUseCase,
     startPracticeSessionUseCase,
     endPracticeSessionUseCase,
+    getPracticeSessionReviewUseCase,
+    setPracticeSessionQuestionMarkUseCase,
     now,
   };
 }
@@ -426,6 +462,228 @@ describe('practice-controller', () => {
         ok: false,
         error: { code: 'NOT_FOUND', message: 'Practice session not found' },
       });
+    });
+  });
+
+  describe('getPracticeSessionReview', () => {
+    it('returns VALIDATION_ERROR when input is invalid', async () => {
+      const deps = createDeps();
+
+      const result = await getPracticeSessionReview({ sessionId: 'bad' }, deps);
+
+      expect(result).toMatchObject({
+        ok: false,
+        error: {
+          code: 'VALIDATION_ERROR',
+          fieldErrors: { sessionId: expect.any(Array) },
+        },
+      });
+      expect(deps.getPracticeSessionReviewUseCase.inputs).toEqual([]);
+    });
+
+    it('returns UNAUTHENTICATED when unauthenticated', async () => {
+      const deps = createDeps({ user: null });
+
+      const result = await getPracticeSessionReview(
+        { sessionId: '11111111-1111-1111-1111-111111111111' },
+        deps,
+      );
+
+      expect(result).toMatchObject({
+        ok: false,
+        error: { code: 'UNAUTHENTICATED' },
+      });
+      expect(deps.getPracticeSessionReviewUseCase.inputs).toEqual([]);
+    });
+
+    it('returns UNSUBSCRIBED when not entitled', async () => {
+      const deps = createDeps({ isEntitled: false });
+
+      const result = await getPracticeSessionReview(
+        { sessionId: '11111111-1111-1111-1111-111111111111' },
+        deps,
+      );
+
+      expect(result).toMatchObject({
+        ok: false,
+        error: { code: 'UNSUBSCRIBED' },
+      });
+      expect(deps.getPracticeSessionReviewUseCase.inputs).toEqual([]);
+    });
+
+    it('returns NOT_FOUND when use case throws ApplicationError', async () => {
+      const deps = createDeps({
+        reviewThrows: new ApplicationError(
+          'NOT_FOUND',
+          'Practice session not found',
+        ),
+      });
+
+      const result = await getPracticeSessionReview(
+        { sessionId: '11111111-1111-1111-1111-111111111111' },
+        deps,
+      );
+
+      expect(result).toEqual({
+        ok: false,
+        error: { code: 'NOT_FOUND', message: 'Practice session not found' },
+      });
+    });
+
+    it('returns review payload when use case succeeds', async () => {
+      const deps = createDeps({
+        reviewOutput: {
+          sessionId: '11111111-1111-1111-1111-111111111111',
+          mode: 'exam',
+          totalCount: 2,
+          answeredCount: 1,
+          markedCount: 1,
+          rows: [
+            {
+              isAvailable: true,
+              questionId: '22222222-2222-2222-2222-222222222222',
+              stemMd: 'Stem',
+              difficulty: 'easy',
+              order: 1,
+              isAnswered: true,
+              isCorrect: false,
+              markedForReview: true,
+            },
+          ],
+        },
+      });
+
+      const sessionId = '11111111-1111-1111-1111-111111111111';
+      const result = await getPracticeSessionReview({ sessionId }, deps);
+
+      expect(result).toMatchObject({
+        ok: true,
+        data: { sessionId, markedCount: 1 },
+      });
+      expect(deps.getPracticeSessionReviewUseCase.inputs).toEqual([
+        { userId: 'user_1', sessionId },
+      ]);
+    });
+  });
+
+  describe('setPracticeSessionQuestionMark', () => {
+    it('returns VALIDATION_ERROR when input is invalid', async () => {
+      const deps = createDeps();
+
+      const result = await setPracticeSessionQuestionMark(
+        {
+          sessionId: 'bad',
+          questionId: 'bad',
+          markedForReview: true,
+        },
+        deps,
+      );
+
+      expect(result).toMatchObject({
+        ok: false,
+        error: {
+          code: 'VALIDATION_ERROR',
+          fieldErrors: {
+            sessionId: expect.any(Array),
+            questionId: expect.any(Array),
+          },
+        },
+      });
+      expect(deps.setPracticeSessionQuestionMarkUseCase.inputs).toEqual([]);
+    });
+
+    it('returns UNAUTHENTICATED when unauthenticated', async () => {
+      const deps = createDeps({ user: null });
+
+      const result = await setPracticeSessionQuestionMark(
+        {
+          sessionId: '11111111-1111-1111-1111-111111111111',
+          questionId: '22222222-2222-2222-2222-222222222222',
+          markedForReview: true,
+        },
+        deps,
+      );
+
+      expect(result).toMatchObject({
+        ok: false,
+        error: { code: 'UNAUTHENTICATED' },
+      });
+      expect(deps.setPracticeSessionQuestionMarkUseCase.inputs).toEqual([]);
+    });
+
+    it('returns UNSUBSCRIBED when not entitled', async () => {
+      const deps = createDeps({ isEntitled: false });
+
+      const result = await setPracticeSessionQuestionMark(
+        {
+          sessionId: '11111111-1111-1111-1111-111111111111',
+          questionId: '22222222-2222-2222-2222-222222222222',
+          markedForReview: true,
+        },
+        deps,
+      );
+
+      expect(result).toMatchObject({
+        ok: false,
+        error: { code: 'UNSUBSCRIBED' },
+      });
+      expect(deps.setPracticeSessionQuestionMarkUseCase.inputs).toEqual([]);
+    });
+
+    it('returns NOT_FOUND when use case throws ApplicationError', async () => {
+      const deps = createDeps({
+        setMarkThrows: new ApplicationError(
+          'NOT_FOUND',
+          'Practice session not found',
+        ),
+      });
+
+      const result = await setPracticeSessionQuestionMark(
+        {
+          sessionId: '11111111-1111-1111-1111-111111111111',
+          questionId: '22222222-2222-2222-2222-222222222222',
+          markedForReview: true,
+        },
+        deps,
+      );
+
+      expect(result).toEqual({
+        ok: false,
+        error: { code: 'NOT_FOUND', message: 'Practice session not found' },
+      });
+    });
+
+    it('returns updated mark state when use case succeeds', async () => {
+      const deps = createDeps({
+        setMarkOutput: {
+          questionId: '22222222-2222-2222-2222-222222222222',
+          markedForReview: false,
+        },
+      });
+
+      const input = {
+        sessionId: '11111111-1111-1111-1111-111111111111',
+        questionId: '22222222-2222-2222-2222-222222222222',
+        markedForReview: false,
+      };
+
+      const result = await setPracticeSessionQuestionMark(input, deps);
+
+      expect(result).toEqual({
+        ok: true,
+        data: {
+          questionId: input.questionId,
+          markedForReview: false,
+        },
+      });
+      expect(deps.setPracticeSessionQuestionMarkUseCase.inputs).toEqual([
+        {
+          userId: 'user_1',
+          sessionId: input.sessionId,
+          questionId: input.questionId,
+          markedForReview: false,
+        },
+      ]);
     });
   });
 });

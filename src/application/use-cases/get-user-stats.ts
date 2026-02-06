@@ -1,5 +1,6 @@
 import type { Logger } from '@/src/application/ports/logger';
 import { computeAccuracy, computeStreak } from '@/src/domain/services';
+import type { QuestionDifficulty } from '@/src/domain/value-objects';
 import type {
   AttemptStatsReader,
   QuestionRepository,
@@ -46,6 +47,8 @@ export type UserStatsOutput = {
         answeredAt: string; // ISO
         questionId: string;
         slug: string;
+        stemMd: string;
+        difficulty: QuestionDifficulty;
         isCorrect: boolean;
       }
     | {
@@ -104,12 +107,12 @@ export class GetUserStatsUseCase {
 
     const questions =
       await this.questions.findPublishedByIds(uniqueQuestionIds);
-    const slugByQuestionId = new Map(questions.map((q) => [q.id, q.slug]));
+    const questionById = new Map(questions.map((q) => [q.id, q]));
 
     const recentActivity: UserStatsOutput['recentActivity'] = [];
     for (const attempt of recentAttempts) {
-      const slug = slugByQuestionId.get(attempt.questionId);
-      if (!slug) {
+      const question = questionById.get(attempt.questionId);
+      if (!question) {
         // Graceful degradation: questions can be unpublished/deleted while attempts persist.
         this.logger.warn(
           { questionId: attempt.questionId },
@@ -130,7 +133,9 @@ export class GetUserStatsUseCase {
         attemptId: attempt.id,
         answeredAt: attempt.answeredAt.toISOString(),
         questionId: attempt.questionId,
-        slug,
+        slug: question.slug,
+        stemMd: question.stemMd,
+        difficulty: question.difficulty,
         isCorrect: attempt.isCorrect,
       });
     }

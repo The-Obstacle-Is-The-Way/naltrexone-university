@@ -34,7 +34,8 @@ This spec proposes a **phased approach**:
 /app/practice/[sessionId]             ← Dedicated session runner
 ├── Progress (3/20)
 ├── Tutor/Exam rules
-└── Summary after "End session"
+├── Exam review stage (answered/unanswered/marked + jump)
+└── Summary after final exam submit
 ```
 
 ### 2.2 User Confusion Points
@@ -93,7 +94,8 @@ The following components are **correctly implemented** and should be preserved:
 ### 3.4 Session Runner (`/app/practice/[sessionId]`) ✓
 - Progress indicator (X/N)
 - Exam mode explanation gating
-- "End session" → summary view
+- Exam mode mark/unmark + pre-submit review stage
+- Final submit from review → summary view
 - Bookmark toggle
 
 ---

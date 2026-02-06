@@ -3,6 +3,7 @@ import type {
   Attempt,
   Bookmark,
   PracticeSession,
+  PracticeSessionQuestionState,
   Question,
   Subscription,
   Tag,
@@ -63,6 +64,7 @@ export type MissedQuestionAttempt = {
 
 export interface AttemptWriter {
   insert(input: AttemptInsertInput): Promise<Attempt>;
+  deleteById(id: string, userId: string): Promise<boolean>;
 }
 
 export interface AttemptHistoryReader {
@@ -145,6 +147,20 @@ export interface PracticeSessionRepository {
     mode: 'tutor' | 'exam';
     paramsJson: unknown; // adapter validates + persists exact shape
   }): Promise<PracticeSession>;
+  recordQuestionAnswer(input: {
+    sessionId: string;
+    userId: string;
+    questionId: string;
+    selectedChoiceId: string;
+    isCorrect: boolean;
+    answeredAt: Date;
+  }): Promise<PracticeSessionQuestionState>;
+  setQuestionMarkedForReview(input: {
+    sessionId: string;
+    userId: string;
+    questionId: string;
+    markedForReview: boolean;
+  }): Promise<PracticeSessionQuestionState>;
   end(id: string, userId: string): Promise<PracticeSession>;
 }
 

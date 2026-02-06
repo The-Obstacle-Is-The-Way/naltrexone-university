@@ -50,7 +50,15 @@ export class StartPracticeSessionUseCase {
         count: questionIds.length,
         tagSlugs: input.tagSlugs,
         difficulties: input.difficulties,
+        // Keep ordered ids as canonical session sequence; questionStates holds mutable per-question state.
         questionIds,
+        questionStates: questionIds.map((questionId) => ({
+          questionId,
+          markedForReview: false,
+          latestSelectedChoiceId: null,
+          latestIsCorrect: null,
+          latestAnsweredAt: null,
+        })),
       },
     });
 

@@ -1,7 +1,7 @@
 # Bug Reports
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-02-05
+**Last Updated:** 2026-02-06
 
 ---
 
@@ -17,14 +17,16 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 | ID | Title | Status | Priority | Date |
 |----|-------|--------|----------|------|
-| (none) | All active bugs resolved | | | |
+| [BUG-074](bug-074-missed-questions-timestamp-tie-misclassification.md) | Missed Questions Can Be Misclassified on `answered_at` Timestamp Ties | Open | P2 | 2026-02-06 |
 
-**Next Bug ID:** BUG-072
+**Next Bug ID:** BUG-075
 
 ## Recently Resolved
 
 | ID | Title | Status | Resolution |
 |----|-------|--------|------------|
+| [BUG-073](bug-073-tutor-mode-missing-session-summary-detail.md) | Tutor Mode Missing Per-Question Session Summary at End | Won't Fix | Reclassified as [DEBT-123](../debt/debt-123-session-summary-missing-question-breakdown.md) (not an SSOT violation) |
+| [BUG-072](bug-072-no-question-navigation-in-practice-sessions.md) | No Question Navigation in Practice Sessions (Both Modes) | Won't Fix | Reclassified as [DEBT-122](../debt/debt-122-in-run-question-navigation-gap.md) (not an SSOT violation) |
 | [BUG-071](../_archive/bugs/bug-071-nextjs-preview-blank-page-csp.md) | Preview Deployment Rendered Blank Page After CSP Tightening | Resolved | Delegate CSP to Clerk middleware |
 | [BUG-070](../_archive/bugs/bug-070-e2e-test-user-checkout-fails.md) | E2E Test User Checkout Failed (Stripe `this` Binding Bug) | Resolved | Bind `stripe.customers.search` to preserve `this` |
 | [BUG-069](../_archive/bugs/bug-069-stripe-checkout-fails-localhost.md) | Stripe Checkout Fails for New Users (Lost `this` Binding) | Resolved | Bind `stripe.customers.search` to preserve `this` |

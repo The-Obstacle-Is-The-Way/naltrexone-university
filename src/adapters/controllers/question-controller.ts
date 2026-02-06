@@ -49,12 +49,14 @@ const GetNextQuestionInputSchema = z.union([
   z
     .object({
       sessionId: zUuid,
+      questionId: zUuid.optional(),
       filters: z.undefined().optional(),
     })
     .strict(),
   z
     .object({
       sessionId: z.undefined().optional(),
+      questionId: z.undefined().optional(),
       filters: QuestionFiltersSchema,
     })
     .strict(),
@@ -131,6 +133,7 @@ export const getNextQuestion = createAction({
       return d.getNextQuestionUseCase.execute({
         userId,
         sessionId: input.sessionId,
+        questionId: input.questionId,
       });
     }
 
