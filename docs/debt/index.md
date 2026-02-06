@@ -17,9 +17,10 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 | ID | Title | Status | Priority | Date |
 |----|-------|--------|----------|------|
-| _None_ | — | — | — | — |
+| [DEBT-113](debt-113-dashboard-review-lack-session-context.md) | Dashboard and Review Pages Lack Session Context | Open | P1 | 2026-02-06 |
+| [DEBT-114](debt-114-no-session-history-page.md) | No Session History Page | Open | P2 | 2026-02-06 |
 
-**Next Debt ID:** DEBT-113
+**Next Debt ID:** DEBT-115
 
 ## Archived Debt
 

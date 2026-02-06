@@ -17,9 +17,10 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 | ID | Title | Status | Priority | Date |
 |----|-------|--------|----------|------|
-| (none) | All active bugs resolved | | | |
+| [BUG-072](bug-072-no-question-navigation-in-practice-sessions.md) | No Question Navigation in Practice Sessions (Both Modes) | Open | P1 | 2026-02-06 |
+| [BUG-073](bug-073-tutor-mode-missing-session-summary-detail.md) | Tutor Mode Missing Per-Question Session Summary at End | Open | P1 | 2026-02-06 |
 
-**Next Bug ID:** BUG-072
+**Next Bug ID:** BUG-074
 
 ## Recently Resolved
 
