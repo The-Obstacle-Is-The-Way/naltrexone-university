@@ -62,7 +62,7 @@
 - Updated: `docs/bugs/index.md`
 - Updated: `docs/debt/index.md`
 - Updated: `docs/dev/stabilization-checklist.md`
-- Added: `docs/bugs/bug-074-missed-questions-timestamp-tie-misclassification.md`
+- Added (now archived): `docs/_archive/bugs/bug-074-missed-questions-timestamp-tie-misclassification.md`
 - Added: `docs/debt/debt-122-in-run-question-navigation-gap.md`
 - Added: `docs/debt/debt-123-session-summary-missing-question-breakdown.md`
 

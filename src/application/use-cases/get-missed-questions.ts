@@ -4,6 +4,7 @@ import type {
   QuestionRepository,
 } from '@/src/application/ports/repositories';
 import type { QuestionDifficulty } from '@/src/domain/value-objects';
+import { enrichWithQuestion } from '../shared/enrich-with-question';
 
 export type GetMissedQuestionsInput = {
   userId: string;
@@ -69,32 +70,26 @@ export class GetMissedQuestionsUseCase {
     const questions = await this.questions.findPublishedByIds(questionIds);
     const byId = new Map(questions.map((q) => [q.id, q]));
 
-    const rows: MissedQuestionRow[] = [];
-    for (const m of page) {
-      const question = byId.get(m.questionId);
-      if (!question) {
-        // Graceful degradation: questions can be unpublished/deleted while attempts persist.
-        this.logger.warn(
-          { questionId: m.questionId },
-          'Missed question references missing question',
-        );
-        rows.push({
-          isAvailable: false,
-          questionId: m.questionId,
-          lastAnsweredAt: m.answeredAt.toISOString(),
-        });
-        continue;
-      }
-
-      rows.push({
+    const rows = enrichWithQuestion({
+      rows: page,
+      getQuestionId: (missed) => missed.questionId,
+      questionsById: byId,
+      available: (missed, question): MissedQuestionRow => ({
         isAvailable: true,
         questionId: question.id,
         slug: question.slug,
         stemMd: question.stemMd,
         difficulty: question.difficulty,
-        lastAnsweredAt: m.answeredAt.toISOString(),
-      });
-    }
+        lastAnsweredAt: missed.answeredAt.toISOString(),
+      }),
+      unavailable: (missed): MissedQuestionRow => ({
+        isAvailable: false,
+        questionId: missed.questionId,
+        lastAnsweredAt: missed.answeredAt.toISOString(),
+      }),
+      logger: this.logger,
+      missingQuestionMessage: 'Missed question references missing question',
+    });
 
     return {
       rows,

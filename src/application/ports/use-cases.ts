@@ -3,6 +3,11 @@ import type {
   CheckEntitlementOutput,
 } from '@/src/application/use-cases/check-entitlement';
 
-export type CheckEntitlementUseCase = {
-  execute: (input: CheckEntitlementInput) => Promise<CheckEntitlementOutput>;
+export type UseCase<Input, Output> = {
+  execute: (input: Input) => Promise<Output>;
 };
+
+export type CheckEntitlementUseCase = UseCase<
+  CheckEntitlementInput,
+  CheckEntitlementOutput
+>;

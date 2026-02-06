@@ -9,7 +9,7 @@ type ClerkEmailAddressLike = {
   emailAddress: string;
 };
 
-type ClerkUserLike = {
+export type ClerkUserLike = {
   id: string;
   primaryEmailAddressId?: string | null;
   emailAddresses: readonly ClerkEmailAddressLike[];

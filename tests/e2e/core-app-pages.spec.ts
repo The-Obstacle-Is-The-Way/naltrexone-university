@@ -37,9 +37,11 @@ test.describe('core app pages', () => {
     });
     await expect(page.getByRole('heading', { name: 'Review' })).toBeVisible();
 
-    const missedRow = page.locator('li', { hasText: QUESTION_SLUG });
-    await expect(missedRow).toBeVisible();
-    await missedRow.getByRole('link', { name: 'Reattempt' }).click();
+    const reattemptLink = page
+      .locator(`a[href="/app/questions/${QUESTION_SLUG}"]`)
+      .first();
+    await expect(reattemptLink).toBeVisible();
+    await reattemptLink.click();
     await expect(page).toHaveURL(
       new RegExp(`/app/questions/${QUESTION_SLUG}`),
       {
@@ -55,7 +57,9 @@ test.describe('core app pages', () => {
     await expect(page.getByText('Total answered')).toBeVisible();
     await expect(page.getByText('Overall accuracy')).toBeVisible();
     await expect(page.getByText('Recent activity')).toBeVisible();
-    await expect(page.getByText(QUESTION_SLUG).first()).toBeVisible();
+    await expect(
+      page.getByText(/starting naltrexone for alcohol use disorder/i).first(),
+    ).toBeVisible();
 
     // Bookmarks view shows the bookmarked list.
     await page.goto('/app/bookmarks');

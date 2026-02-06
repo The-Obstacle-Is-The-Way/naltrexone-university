@@ -46,6 +46,7 @@ import type {
   UpsertUserByClerkIdOptions,
   UserRepository,
 } from '../ports/repositories';
+import type { UseCase } from '../ports/use-cases';
 import type {
   CreateCheckoutSessionInput,
   CreateCheckoutSessionOutput,
@@ -261,7 +262,9 @@ export class FakePaymentGateway implements PaymentGateway {
   }
 }
 
-export class FakeToggleBookmarkUseCase {
+export class FakeToggleBookmarkUseCase
+  implements UseCase<ToggleBookmarkInput, ToggleBookmarkOutput>
+{
   readonly inputs: ToggleBookmarkInput[] = [];
 
   constructor(
@@ -276,7 +279,9 @@ export class FakeToggleBookmarkUseCase {
   }
 }
 
-export class FakeGetBookmarksUseCase {
+export class FakeGetBookmarksUseCase
+  implements UseCase<GetBookmarksInput, GetBookmarksOutput>
+{
   readonly inputs: GetBookmarksInput[] = [];
 
   constructor(
@@ -291,7 +296,9 @@ export class FakeGetBookmarksUseCase {
   }
 }
 
-export class FakeStartPracticeSessionUseCase {
+export class FakeStartPracticeSessionUseCase
+  implements UseCase<StartPracticeSessionInput, StartPracticeSessionOutput>
+{
   readonly inputs: StartPracticeSessionInput[] = [];
 
   constructor(
@@ -308,7 +315,9 @@ export class FakeStartPracticeSessionUseCase {
   }
 }
 
-export class FakeEndPracticeSessionUseCase {
+export class FakeEndPracticeSessionUseCase
+  implements UseCase<EndPracticeSessionInput, EndPracticeSessionOutput>
+{
   readonly inputs: EndPracticeSessionInput[] = [];
 
   constructor(
@@ -325,7 +334,9 @@ export class FakeEndPracticeSessionUseCase {
   }
 }
 
-export class FakeCreateCheckoutSessionUseCase {
+export class FakeCreateCheckoutSessionUseCase
+  implements UseCase<CreateCheckoutSessionInput, CreateCheckoutSessionOutput>
+{
   readonly inputs: CreateCheckoutSessionInput[] = [];
 
   constructor(
@@ -342,7 +353,9 @@ export class FakeCreateCheckoutSessionUseCase {
   }
 }
 
-export class FakeCreatePortalSessionUseCase {
+export class FakeCreatePortalSessionUseCase
+  implements UseCase<CreatePortalSessionInput, CreatePortalSessionOutput>
+{
   readonly inputs: CreatePortalSessionInput[] = [];
 
   constructor(
@@ -359,7 +372,9 @@ export class FakeCreatePortalSessionUseCase {
   }
 }
 
-export class FakeGetMissedQuestionsUseCase {
+export class FakeGetMissedQuestionsUseCase
+  implements UseCase<GetMissedQuestionsInput, GetMissedQuestionsOutput>
+{
   readonly inputs: GetMissedQuestionsInput[] = [];
 
   constructor(
@@ -376,7 +391,13 @@ export class FakeGetMissedQuestionsUseCase {
   }
 }
 
-export class FakeGetIncompletePracticeSessionUseCase {
+export class FakeGetIncompletePracticeSessionUseCase
+  implements
+    UseCase<
+      GetIncompletePracticeSessionInput,
+      GetIncompletePracticeSessionOutput
+    >
+{
   readonly inputs: GetIncompletePracticeSessionInput[] = [];
 
   constructor(
@@ -393,7 +414,10 @@ export class FakeGetIncompletePracticeSessionUseCase {
   }
 }
 
-export class FakeGetPracticeSessionReviewUseCase {
+export class FakeGetPracticeSessionReviewUseCase
+  implements
+    UseCase<GetPracticeSessionReviewInput, GetPracticeSessionReviewOutput>
+{
   readonly inputs: GetPracticeSessionReviewInput[] = [];
 
   constructor(
@@ -410,7 +434,9 @@ export class FakeGetPracticeSessionReviewUseCase {
   }
 }
 
-export class FakeGetUserStatsUseCase {
+export class FakeGetUserStatsUseCase
+  implements UseCase<GetUserStatsInput, UserStatsOutput>
+{
   readonly inputs: GetUserStatsInput[] = [];
 
   constructor(
@@ -425,7 +451,9 @@ export class FakeGetUserStatsUseCase {
   }
 }
 
-export class FakeGetNextQuestionUseCase {
+export class FakeGetNextQuestionUseCase
+  implements UseCase<GetNextQuestionInput, GetNextQuestionOutput>
+{
   readonly inputs: GetNextQuestionInput[] = [];
 
   constructor(
@@ -440,7 +468,9 @@ export class FakeGetNextQuestionUseCase {
   }
 }
 
-export class FakeSubmitAnswerUseCase {
+export class FakeSubmitAnswerUseCase
+  implements UseCase<SubmitAnswerInput, SubmitAnswerOutput>
+{
   readonly inputs: SubmitAnswerInput[] = [];
 
   constructor(
@@ -455,7 +485,13 @@ export class FakeSubmitAnswerUseCase {
   }
 }
 
-export class FakeSetPracticeSessionQuestionMarkUseCase {
+export class FakeSetPracticeSessionQuestionMarkUseCase
+  implements
+    UseCase<
+      SetPracticeSessionQuestionMarkInput,
+      SetPracticeSessionQuestionMarkOutput
+    >
+{
   readonly inputs: SetPracticeSessionQuestionMarkInput[] = [];
 
   constructor(
@@ -722,7 +758,7 @@ export class FakeAttemptRepository implements AttemptRepository {
     for (const attempt of this.attempts) {
       if (attempt.userId !== userId) continue;
       const existing = mostRecentByQuestionId.get(attempt.questionId);
-      if (!existing || attempt.answeredAt > existing.answeredAt) {
+      if (!existing || this.isLaterAttempt(attempt, existing)) {
         mostRecentByQuestionId.set(attempt.questionId, attempt);
       }
     }
@@ -739,7 +775,7 @@ export class FakeAttemptRepository implements AttemptRepository {
     for (const attempt of this.attempts) {
       if (attempt.userId !== userId) continue;
       const existing = mostRecentByQuestionId.get(attempt.questionId);
-      if (!existing || attempt.answeredAt > existing.answeredAt) {
+      if (!existing || this.isLaterAttempt(attempt, existing)) {
         mostRecentByQuestionId.set(attempt.questionId, attempt);
       }
     }
@@ -775,6 +811,19 @@ export class FakeAttemptRepository implements AttemptRepository {
 
   getAll(): readonly InMemoryAttempt[] {
     return this.attempts;
+  }
+
+  private isLaterAttempt(
+    attempt: InMemoryAttempt,
+    existing: InMemoryAttempt,
+  ): boolean {
+    const attemptTimestamp = attempt.answeredAt.getTime();
+    const existingTimestamp = existing.answeredAt.getTime();
+    if (attemptTimestamp !== existingTimestamp) {
+      return attemptTimestamp > existingTimestamp;
+    }
+
+    return attempt.id.localeCompare(existing.id) > 0;
   }
 }
 

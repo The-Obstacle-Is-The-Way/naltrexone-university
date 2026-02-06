@@ -558,6 +558,75 @@ describe('DrizzlePracticeSessionRepository + DrizzleAttemptRepository', () => {
     expect(missed.map((m) => m.questionId)).toEqual([q1.id]);
     expect(missed[0]?.answeredAt.toISOString()).toBe(t2.toISOString());
   });
+
+  it('uses id desc as deterministic tie-breaker for latest missed-question attempt semantics', async () => {
+    const user = await createUser();
+
+    const qTie = await createQuestion({
+      slug: `it-missed-tie-${randomUUID()}`,
+      status: 'published',
+      difficulty: 'easy',
+    });
+    const qMissed = await createQuestion({
+      slug: `it-missed-keep-${randomUUID()}`,
+      status: 'published',
+      difficulty: 'easy',
+    });
+
+    const tieAnsweredAt = new Date('2026-02-06T00:00:00.000Z');
+    const tieIncorrectId = '00000000-0000-4000-8000-000000000001';
+    const tieCorrectId = 'ffffffff-ffff-4fff-bfff-ffffffffffff';
+
+    await db.insert(schema.attempts).values([
+      {
+        id: tieIncorrectId,
+        userId: user.id,
+        questionId: qTie.id,
+        practiceSessionId: null,
+        selectedChoiceId: qTie.correctChoiceId,
+        isCorrect: false,
+        timeSpentSeconds: 1,
+        answeredAt: tieAnsweredAt,
+      },
+      {
+        id: tieCorrectId,
+        userId: user.id,
+        questionId: qTie.id,
+        practiceSessionId: null,
+        selectedChoiceId: qTie.correctChoiceId,
+        isCorrect: true,
+        timeSpentSeconds: 1,
+        answeredAt: tieAnsweredAt,
+      },
+      {
+        id: '00000000-0000-4000-8000-000000000002',
+        userId: user.id,
+        questionId: qMissed.id,
+        practiceSessionId: null,
+        selectedChoiceId: qMissed.correctChoiceId,
+        isCorrect: false,
+        timeSpentSeconds: 1,
+        answeredAt: new Date('2026-02-05T00:00:00.000Z'),
+      },
+    ]);
+
+    const attemptRepo = new DrizzleAttemptRepository(db);
+    const missed = await attemptRepo.listMissedQuestionsByUserId(
+      user.id,
+      10,
+      0,
+    );
+
+    expect(missed).toEqual([
+      {
+        questionId: qMissed.id,
+        answeredAt: new Date('2026-02-05T00:00:00.000Z'),
+      },
+    ]);
+    await expect(
+      attemptRepo.countMissedQuestionsByUserId(user.id),
+    ).resolves.toBe(1);
+  });
 });
 
 describe('DrizzleBookmarkRepository', () => {

@@ -5,6 +5,7 @@ import type {
   AttemptStatsReader,
   QuestionRepository,
 } from '../ports/repositories';
+import { enrichWithQuestion } from '../shared/enrich-with-question';
 
 const DAY_MS = 86_400_000;
 
@@ -109,26 +110,14 @@ export class GetUserStatsUseCase {
       await this.questions.findPublishedByIds(uniqueQuestionIds);
     const questionById = new Map(questions.map((q) => [q.id, q]));
 
-    const recentActivity: UserStatsOutput['recentActivity'] = [];
-    for (const attempt of recentAttempts) {
-      const question = questionById.get(attempt.questionId);
-      if (!question) {
-        // Graceful degradation: questions can be unpublished/deleted while attempts persist.
-        this.logger.warn(
-          { questionId: attempt.questionId },
-          'Recent activity references missing question',
-        );
-        recentActivity.push({
-          isAvailable: false,
-          attemptId: attempt.id,
-          answeredAt: attempt.answeredAt.toISOString(),
-          questionId: attempt.questionId,
-          isCorrect: attempt.isCorrect,
-        });
-        continue;
-      }
-
-      recentActivity.push({
+    const recentActivity = enrichWithQuestion({
+      rows: recentAttempts,
+      getQuestionId: (attempt) => attempt.questionId,
+      questionsById: questionById,
+      available: (
+        attempt,
+        question,
+      ): UserStatsOutput['recentActivity'][number] => ({
         isAvailable: true,
         attemptId: attempt.id,
         answeredAt: attempt.answeredAt.toISOString(),
@@ -137,8 +126,17 @@ export class GetUserStatsUseCase {
         stemMd: question.stemMd,
         difficulty: question.difficulty,
         isCorrect: attempt.isCorrect,
-      });
-    }
+      }),
+      unavailable: (attempt): UserStatsOutput['recentActivity'][number] => ({
+        isAvailable: false,
+        attemptId: attempt.id,
+        answeredAt: attempt.answeredAt.toISOString(),
+        questionId: attempt.questionId,
+        isCorrect: attempt.isCorrect,
+      }),
+      logger: this.logger,
+      missingQuestionMessage: 'Recent activity references missing question',
+    });
 
     return {
       totalAnswered,

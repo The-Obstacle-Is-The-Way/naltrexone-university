@@ -1,8 +1,9 @@
 # DEBT-124: E2E Question Existence Helper Can Produce False Negatives
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P2
 **Date:** 2026-02-06
+**Resolved:** 2026-02-06
 
 ---
 
@@ -42,28 +43,32 @@ This confirms credential/auth worked and the helper produced the blocking false 
 
 ---
 
-## Resolution
+## Resolution (Implemented)
 
-Update `assertQuestionSlugExists()` to distinguish:
-- the helper's own explicit "seeded question missing" error, vs
-- Playwright timeout waiting for the "not found" banner.
+Updated `tests/e2e/helpers/question.ts` to distinguish explicit helper failures
+from Playwright timeout behavior:
 
-Recommended:
-- Use a sentinel error check (or explicit branch) for the helper-thrown error only.
-- Treat timeout as "question exists, continue".
+- Added `SeededQuestionMissingError` sentinel error class.
+- Added `isPlaywrightTimeoutError(error)` helper.
+- Added `rethrowIfQuestionMissingCheckError(error)` helper:
+  - rethrows only `SeededQuestionMissingError`
+  - treats Playwright `TimeoutError` as non-fatal
+  - rethrows unexpected errors
+- Refactored `assertQuestionSlugExists()` to use these helpers.
 
 ---
 
 ## Verification
 
-- [ ] Add targeted tests for `tests/e2e/helpers/question.ts`
-- [ ] `tests/e2e/core-app-pages.spec.ts` no longer fails at helper when question exists
-- [ ] Existing E2E specs still fail correctly when a slug is truly missing
+- [x] Added targeted tests: `tests/e2e/helpers/question.test.ts`
+- [x] `tests/e2e/core-app-pages.spec.ts` no longer fails at helper false negatives
+- [x] Existing helper semantics preserved for true missing-question paths
 
 ---
 
 ## Related
 
 - `tests/e2e/helpers/question.ts`
+- `tests/e2e/helpers/question.test.ts`
 - `tests/e2e/core-app-pages.spec.ts`
-- [DEBT-110](../_archive/debt/debt-110-e2e-helper-anti-patterns.md)
+- [DEBT-110](./debt-110-e2e-helper-anti-patterns.md)
