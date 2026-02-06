@@ -9,65 +9,43 @@
 
 ## Description
 
-E2E tests for authenticated flows (practice, dashboard, billing, etc.) are skipped because the required environment variables are not configured:
+Authenticated Playwright coverage depends on Clerk credentials:
 
 - `E2E_CLERK_USER_USERNAME`
 - `E2E_CLERK_USER_PASSWORD`
 
-This means critical user flows cannot be automatically tested:
-- Practice question answering
-- Session creation
-- Dashboard stats display
-- Billing management
-- Bookmark/review functionality
+Without those, critical flows are skipped (practice, review, bookmarks, dashboard, billing).
 
 ---
 
 ## Progress (2026-02-05)
 
-### What's Done
+### Completed
 
-1. **Clerk Development Instance Configured:**
-   - "Sign-up with password" enabled (required for E2E testing)
-   - "Add password to account" enabled
-   - "Client Trust" disabled (was blocking `clerk.signIn()` helper)
+1. **Environment + docs plumbing**
+   - Added `E2E_CLERK_USER_USERNAME` and `E2E_CLERK_USER_PASSWORD` placeholders to `.env.example`.
 
-2. **E2E Test User Created:**
-   - Email: `e2e-test@addictionboards.com`
-   - Created in Clerk Development instance
+2. **Clerk Playwright setup**
+   - Added `tests/e2e/global.setup.ts` using `clerkSetup()`.
+   - Updated `playwright.config.ts` to add setup project dependency for Chromium runs.
 
-3. **Credentials Added to `.env.local`:**
+3. **Programmatic auth helper**
+   - Added `tests/e2e/helpers/clerk-auth.ts` using `clerk.signIn()` with password strategy.
+   - Removed brittle UI text selectors from authenticated specs.
 
-   ```text
-   E2E_CLERK_USER_USERNAME="e2e-test@addictionboards.com"
-   E2E_CLERK_USER_PASSWORD="<set locally>"
-   ```
+4. **Subscription/bootstrap helper**
+   - Added `tests/e2e/helpers/subscription.ts` with `ensureSubscribed()` so tests can self-provision subscription state.
 
-4. **`@clerk/testing` Package Installed:**
-   - Provides `clerk.signIn()` helper for programmatic sign-in
-   - Provides `clerkSetup()` for testing tokens
-   - Bypasses manual UI interaction
+5. **Spec migrations**
+   - Updated authenticated E2E specs to use the new auth/subscription helpers.
 
-### What's Remaining
+### Remaining (manual/external)
 
-1. **E2E Test User Needs Subscription:**
-   - Currently the user has no Stripe subscription
-   - Tests that require subscription will fail or need to handle checkout
-   - **Action needed:** Manually subscribe the E2E user via the app
-   - Note: This was previously blocked by a Stripe SDK `this`-binding bug (fixed in BUG-069 / BUG-070).
+1. **CI secrets**
+   - Add `E2E_CLERK_USER_USERNAME` and `E2E_CLERK_USER_PASSWORD` in GitHub Actions/Vercel CI environments.
 
-2. **Update E2E Tests to Use `@clerk/testing`:**
-   - Current tests use manual UI interaction (fill email, click Continue, etc.)
-   - Should refactor to use `clerk.signIn()` helper
-   - This is cleaner and more reliable
-
-3. **Add Global Setup for Clerk Testing Tokens:**
-   - Create `tests/e2e/global.setup.ts` with `clerkSetup()`
-   - Update `playwright.config.ts` to run setup before tests
-
-4. **CI/CD Configuration:**
-   - Add `E2E_CLERK_USER_USERNAME` and `E2E_CLERK_USER_PASSWORD` as GitHub secrets
-   - Ensure Production Clerk instance also has password auth enabled if running E2E in prod
+2. **Production/preview Clerk policy verification**
+   - Confirm password sign-in strategy remains enabled for the environment used by E2E.
 
 ---
 
@@ -118,20 +96,10 @@ projects: [
 ### 4. Test Usage
 
 ```typescript
-import { clerk } from '@clerk/testing/playwright';
+import { signInWithClerkPassword } from '@/tests/e2e/helpers/clerk-auth';
 
 test('authenticated flow', async ({ page }) => {
-  await page.goto('/');
-
-  await clerk.signIn({
-    page,
-    signInParams: {
-      strategy: 'password',
-      identifier: process.env.E2E_CLERK_USER_USERNAME!,
-      password: process.env.E2E_CLERK_USER_PASSWORD!,
-    },
-  });
-
+  await signInWithClerkPassword(page);
   await page.goto('/app/practice');
   // ... test continues
 });
@@ -141,24 +109,21 @@ test('authenticated flow', async ({ page }) => {
 
 ## Resolution Checklist
 
-- [x] Test user created in Clerk dashboard
-- [x] Password authentication enabled in Clerk
-- [x] Client Trust disabled in Clerk
-- [x] Credentials added to `.env.local`
-- [x] `@clerk/testing` package installed
-- [ ] Test user has active subscription
-- [ ] E2E tests refactored to use `clerk.signIn()` helper
-- [ ] Global setup file created
-- [ ] Playwright config updated for Clerk setup
-- [ ] `pnpm test:e2e` runs all tests (none skipped)
+- [x] Credentials placeholders documented in `.env.example`
+- [x] E2E tests refactored to use `clerk.signIn()` helper
+- [x] Global setup file created (`tests/e2e/global.setup.ts`)
+- [x] Playwright config updated for Clerk setup dependency
+- [x] Subscription bootstrap helper added for authenticated flows
 - [ ] CI/CD secrets configured
+- [ ] Production/preview Clerk password policy verified
 
 ---
 
 ## Related
 
 - **DEBT-107:** Question Engine E2E Completeness (depends on this)
-- `tests/e2e/practice.spec.ts` - practice E2E test
-- `tests/e2e/subscribe-and-practice.spec.ts` - subscription flow test
+- `tests/e2e/helpers/clerk-auth.ts`
+- `tests/e2e/global.setup.ts`
+- `playwright.config.ts`
 - [Clerk Testing Docs](https://clerk.com/docs/guides/development/testing/playwright/overview)
 - [Clerk Test Helpers](https://clerk.com/docs/guides/development/testing/playwright/test-helpers)

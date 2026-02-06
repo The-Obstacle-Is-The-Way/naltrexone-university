@@ -82,6 +82,7 @@ This repo is frequently worked on in non-interactive shells (CI + AI agents). To
 - Never rely on an editor opening implicitly: always commit with `git commit -m "…"`.
 - Avoid pager-triggering patterns: use `git --no-pager log`, `git --no-pager diff`, etc.
 - **pnpm gotcha:** Never prefix a pnpm command with `-s`. `pnpm -s <cmd>` runs `<cmd>` as a package script/binary (e.g. `view` → Vim) instead of the pnpm subcommand, which hard-hangs in non-TTY runs.
+- **Port 3000 cleanup:** Before running E2E tests (`pnpm test:e2e`), kill stale dev servers that may be orphaned from previous runs: `lsof -ti:3000 | xargs kill -9 2>/dev/null`. Stale processes cause Playwright to hang indefinitely waiting for the web server.
 
 ## Commands
 

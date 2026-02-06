@@ -5,6 +5,7 @@ import {
 } from '@/src/adapters/controllers/tag-controller';
 import {
   FakeAuthGateway,
+  FakeLogger,
   FakeSubscriptionRepository,
   FakeTagRepository,
 } from '@/src/application/test-helpers/fakes';
@@ -56,12 +57,7 @@ function createDeps(overrides?: {
     authGateway,
     checkEntitlementUseCase,
     tagRepository,
-    logger: {
-      debug: () => {},
-      info: () => {},
-      warn: () => {},
-      error: () => {},
-    },
+    logger: new FakeLogger(),
   };
 }
 

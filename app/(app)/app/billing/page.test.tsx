@@ -57,7 +57,27 @@ describe('app/(app)/app/billing/page', () => {
 
       const element = await BillingPage({
         deps: { authGateway, subscriptionRepository },
-        searchParams: { error: 'portal_failed' },
+        searchParams: Promise.resolve({ error: 'portal_failed' }),
+      });
+      const html = renderToStaticMarkup(element);
+
+      expect(html).toContain('open the billing portal. Please try again.');
+      expect(html).toContain('Manage in Stripe');
+    });
+
+    it('supports array-valued errors in async searchParams', async () => {
+      const BillingPage = (await import('@/app/(app)/app/billing/page'))
+        .default;
+      const user = createUser({ id: 'user_1' });
+
+      const authGateway = new FakeAuthGateway(user);
+      const subscriptionRepository = new FakeSubscriptionRepository([
+        createSubscription({ userId: user.id }),
+      ]);
+
+      const element = await BillingPage({
+        deps: { authGateway, subscriptionRepository },
+        searchParams: Promise.resolve({ error: ['portal_failed'] }),
       });
       const html = renderToStaticMarkup(element);
 

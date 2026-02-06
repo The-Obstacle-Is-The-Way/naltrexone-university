@@ -14,7 +14,7 @@ export function SubscribeButton({ children }: { children: ReactNode }) {
     <button
       type="submit"
       disabled={pending}
-      className="mt-8 block w-full rounded-full bg-zinc-100 py-3 text-center text-sm font-medium text-zinc-900 hover:bg-white transition-colors disabled:cursor-not-allowed disabled:opacity-60"
+      className="mt-8 block w-full rounded-full bg-primary py-3 text-center text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors disabled:cursor-not-allowed disabled:opacity-60"
     >
       {pending ? 'Processing...' : children}
     </button>

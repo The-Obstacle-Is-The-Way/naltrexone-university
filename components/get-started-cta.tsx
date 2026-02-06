@@ -1,3 +1,4 @@
+import 'server-only';
 import Link from 'next/link';
 import type {
   AuthCheckDeps,
@@ -10,6 +11,8 @@ import {
 } from '@/lib/controller-helpers';
 
 export type GetStartedCtaDeps = AuthCheckDeps;
+const ctaClassName =
+  'inline-block rounded-full bg-primary px-8 py-3 text-base font-medium text-primary-foreground hover:bg-primary/90 transition-colors';
 
 const getDeps = createDepsResolver<GetStartedCtaDeps, AuthDepsContainer>(
   (container) => ({
@@ -29,10 +32,7 @@ export async function GetStartedCta({
   const skipClerk = process.env.NEXT_PUBLIC_SKIP_CLERK === 'true';
   if (skipClerk) {
     return (
-      <Link
-        href="/pricing"
-        className="inline-block rounded-full bg-zinc-100 px-8 py-3 text-base font-medium text-zinc-900 hover:bg-white transition-colors"
-      >
+      <Link href="/pricing" className={ctaClassName}>
         Get Started
       </Link>
     );
@@ -42,10 +42,7 @@ export async function GetStartedCta({
   const user = await d.authGateway.getCurrentUser();
   if (!user) {
     return (
-      <Link
-        href="/pricing"
-        className="inline-block rounded-full bg-zinc-100 px-8 py-3 text-base font-medium text-zinc-900 hover:bg-white transition-colors"
-      >
+      <Link href="/pricing" className={ctaClassName}>
         Get Started
       </Link>
     );
@@ -59,10 +56,7 @@ export async function GetStartedCta({
   const label = entitlement.isEntitled ? 'Go to Dashboard' : 'Get Started';
 
   return (
-    <Link
-      href={href}
-      className="inline-block rounded-full bg-zinc-100 px-8 py-3 text-base font-medium text-zinc-900 hover:bg-white transition-colors"
-    >
+    <Link href={href} className={ctaClassName}>
       {label}
     </Link>
   );

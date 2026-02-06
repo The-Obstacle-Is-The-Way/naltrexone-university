@@ -1,124 +1,51 @@
-import { expect, type Page, test } from '@playwright/test';
+import { expect, test } from '@playwright/test';
+import { ensureBookmarkedQuestion } from './helpers/bookmark';
+import {
+  hasClerkCredentials,
+  signInWithClerkPassword,
+} from './helpers/clerk-auth';
+import {
+  assertQuestionSlugExists,
+  submitQuestionForOutcome,
+} from './helpers/question';
+import { ensureSubscribed } from './helpers/subscription';
 
-const clerkUsername = process.env.E2E_CLERK_USER_USERNAME;
-const clerkPassword = process.env.E2E_CLERK_USER_PASSWORD;
-
+// Seeded by content/questions/placeholder/placeholder-01-naltrexone-mechanism.mdx
 const QUESTION_SLUG = 'placeholder-01-naltrexone-mechanism';
 
-async function signInWithClerk(page: Page) {
-  await page.goto('/sign-in');
-
-  const identifierInput = page.getByLabel(/username|email/i);
-  await identifierInput.fill(clerkUsername ?? '');
-
-  const continueButton = page.getByRole('button', {
-    name: /continue|sign in/i,
-  });
-  await continueButton.click();
-
-  const passwordInput = page.getByLabel(/password/i);
-  await passwordInput.fill(clerkPassword ?? '');
-
-  await page.getByRole('button', { name: /continue|sign in/i }).click();
-}
-
-async function completeStripeCheckout(page: Page) {
-  await expect(page).toHaveURL(/stripe\.com/);
-
-  const cardNumber = page
-    .frameLocator('iframe[name^="__privateStripeFrame"]')
-    .locator('input[name="cardnumber"]');
-  const expDate = page
-    .frameLocator('iframe[name^="__privateStripeFrame"]')
-    .locator('input[name="exp-date"]');
-  const cvc = page
-    .frameLocator('iframe[name^="__privateStripeFrame"]')
-    .locator('input[name="cvc"]');
-  const postal = page
-    .frameLocator('iframe[name^="__privateStripeFrame"]')
-    .locator('input[name="postal"]');
-
-  if (await cardNumber.isVisible({ timeout: 10_000 })) {
-    await cardNumber.fill('4242424242424242');
-  }
-  if (await expDate.isVisible({ timeout: 10_000 })) {
-    await expDate.fill('1234');
-  }
-  if (await cvc.isVisible({ timeout: 10_000 })) {
-    await cvc.fill('123');
-  }
-  if (await postal.isVisible({ timeout: 10_000 })) {
-    await postal.fill('94107');
-  }
-
-  await page.getByRole('button', { name: /subscribe|pay/i }).click();
-  await expect(page).toHaveURL(/\/app\/dashboard/);
-}
-
-async function ensureSubscribed(page: Page) {
-  await page.goto('/pricing');
-  await expect(page.getByRole('heading', { name: 'Pricing' })).toBeVisible();
-
-  const alreadySubscribed = page.getByText("You're already subscribed");
-  if (await alreadySubscribed.count()) {
-    await page.getByRole('link', { name: 'Go to Dashboard' }).click();
-    await expect(page).toHaveURL(/\/app\/dashboard/);
-    return;
-  }
-
-  await page.getByRole('button', { name: 'Subscribe Monthly' }).click();
-  await completeStripeCheckout(page);
-}
-
 test.describe('core app pages', () => {
-  test.skip(!clerkUsername || !clerkPassword, 'Missing Clerk E2E credentials');
+  test.setTimeout(120_000);
+  test.skip(!hasClerkCredentials, 'Missing Clerk E2E credentials');
 
   test('subscribed user can navigate dashboard, billing, bookmarks, and review', async ({
     page,
   }) => {
-    await signInWithClerk(page);
+    await signInWithClerkPassword(page);
     await ensureSubscribed(page);
+    await assertQuestionSlugExists(page, QUESTION_SLUG);
 
-    // Bookmark a question from practice so the bookmarks page is non-empty.
-    await page.goto('/app/practice');
-    await expect(page.getByRole('heading', { name: 'Practice' })).toBeVisible();
-
-    const bookmarkButton = page.getByRole('button', {
-      name: /Bookmark|Bookmarked/,
-    });
-    await expect(bookmarkButton).toBeVisible();
-
-    if (await page.getByRole('button', { name: 'Bookmark' }).count()) {
-      await page.getByRole('button', { name: 'Bookmark' }).click();
-    }
-    await expect(
-      page.getByRole('button', { name: 'Bookmarked' }),
-    ).toBeVisible();
+    await ensureBookmarkedQuestion(page);
 
     // Create a missed question attempt via a deterministic seeded slug.
-    await page.goto(`/app/questions/${QUESTION_SLUG}`);
-    await expect(page.getByRole('heading', { name: 'Question' })).toBeVisible();
-    await expect(page.getByText(/Loading question/i)).toBeHidden({
-      timeout: 15_000,
-    });
-
-    const choiceA = page.getByRole('button').filter({
-      has: page.getByText(/^A$/),
-    });
-    await choiceA.first().click();
-    await page.getByRole('button', { name: 'Submit' }).click();
-
-    await expect(page.getByText('Incorrect')).toBeVisible();
-    await expect(page.getByText('Explanation')).toBeVisible();
+    await submitQuestionForOutcome(page, QUESTION_SLUG, 'Incorrect');
+    await expect(page.getByText('Explanation', { exact: true })).toBeVisible();
 
     // Review lists missed questions and links to reattempt.
-    await page.goto('/app/review');
+    await page.goto('/app/review', {
+      timeout: 60_000,
+      waitUntil: 'domcontentloaded',
+    });
     await expect(page.getByRole('heading', { name: 'Review' })).toBeVisible();
 
     const missedRow = page.locator('li', { hasText: QUESTION_SLUG });
     await expect(missedRow).toBeVisible();
     await missedRow.getByRole('link', { name: 'Reattempt' }).click();
-    await expect(page).toHaveURL(new RegExp(`/app/questions/${QUESTION_SLUG}`));
+    await expect(page).toHaveURL(
+      new RegExp(`/app/questions/${QUESTION_SLUG}`),
+      {
+        timeout: 15_000,
+      },
+    );
 
     // Dashboard shows stats and recent activity (including the missed attempt).
     await page.goto('/app/dashboard');
@@ -128,14 +55,16 @@ test.describe('core app pages', () => {
     await expect(page.getByText('Total answered')).toBeVisible();
     await expect(page.getByText('Overall accuracy')).toBeVisible();
     await expect(page.getByText('Recent activity')).toBeVisible();
-    await expect(page.getByText(QUESTION_SLUG)).toBeVisible();
+    await expect(page.getByText(QUESTION_SLUG).first()).toBeVisible();
 
     // Bookmarks view shows the bookmarked list.
     await page.goto('/app/bookmarks');
     await expect(
       page.getByRole('heading', { name: 'Bookmarks' }),
     ).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Remove' })).toBeVisible();
+    await expect(
+      page.getByRole('button', { name: 'Remove' }).first(),
+    ).toBeVisible();
 
     // Billing shows the manage button for an active subscription.
     await page.goto('/app/billing');
