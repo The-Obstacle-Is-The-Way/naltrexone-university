@@ -373,6 +373,17 @@ describe('practice-controller', () => {
       expect(deps.getIncompletePracticeSessionUseCase.inputs).toEqual([]);
     });
 
+    it('returns null when no incomplete session exists', async () => {
+      const deps = createDeps({ incompleteOutput: null });
+
+      const result = await getIncompletePracticeSession({}, deps);
+
+      expect(result).toEqual({ ok: true, data: null });
+      expect(deps.getIncompletePracticeSessionUseCase.inputs).toEqual([
+        { userId: 'user_1' },
+      ]);
+    });
+
     it('returns incomplete session progress when use case succeeds', async () => {
       const deps = createDeps({
         incompleteOutput: {

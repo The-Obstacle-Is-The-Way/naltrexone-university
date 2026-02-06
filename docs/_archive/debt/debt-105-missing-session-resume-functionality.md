@@ -38,7 +38,7 @@ Users could start a multi-question practice session, leave the page, and lose di
 
 ### Frontend
 
-5. Added `IncompleteSessionCard` on `/app/practice`:
+1. Added `IncompleteSessionCard` on `/app/practice`:
    - Shows mode and progress.
    - `Resume session` navigates to `/app/practice/[sessionId]`.
    - `Abandon session` ends the session and removes the card.
@@ -46,7 +46,7 @@ Users could start a multi-question practice session, leave the page, and lose di
 
 ### E2E
 
-6. Updated session continuation E2E flow to validate the resume card:
+1. Updated session continuation E2E flow to validate the resume card:
    - `tests/e2e/session-continuation.spec.ts`
 
 ---

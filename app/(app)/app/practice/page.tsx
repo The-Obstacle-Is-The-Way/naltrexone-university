@@ -1,7 +1,14 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useTransition,
+} from 'react';
 import {
   getActionResultErrorMessage,
   getThrownErrorMessage,
@@ -704,38 +711,34 @@ export default function PracticePage() {
     [filters, sessionMode, sessionCount, startSessionIdempotencyKey, isMounted],
   );
 
-  const onAbandonIncompleteSession = useMemo(
-    () =>
-      (async () => {
-        if (!incompleteSession) return;
+  const onAbandonIncompleteSession = useCallback(async () => {
+    if (!incompleteSession) return;
 
-        setIncompleteSessionStatus('loading');
-        setIncompleteSessionError(null);
+    setIncompleteSessionStatus('loading');
+    setIncompleteSessionError(null);
 
-        let res: Awaited<ReturnType<typeof endPracticeSession>>;
-        try {
-          res = await endPracticeSession({
-            sessionId: incompleteSession.sessionId,
-          });
-        } catch (error) {
-          if (!isMounted()) return;
-          setIncompleteSessionStatus('error');
-          setIncompleteSessionError(getThrownErrorMessage(error));
-          return;
-        }
-        if (!isMounted()) return;
+    let res: Awaited<ReturnType<typeof endPracticeSession>>;
+    try {
+      res = await endPracticeSession({
+        sessionId: incompleteSession.sessionId,
+      });
+    } catch (error) {
+      if (!isMounted()) return;
+      setIncompleteSessionStatus('error');
+      setIncompleteSessionError(getThrownErrorMessage(error));
+      return;
+    }
+    if (!isMounted()) return;
 
-        if (!res.ok) {
-          setIncompleteSessionStatus('error');
-          setIncompleteSessionError(getActionResultErrorMessage(res));
-          return;
-        }
+    if (!res.ok) {
+      setIncompleteSessionStatus('error');
+      setIncompleteSessionError(getActionResultErrorMessage(res));
+      return;
+    }
 
-        setIncompleteSession(null);
-        setIncompleteSessionStatus('idle');
-      }) satisfies () => Promise<void>,
-    [incompleteSession, isMounted],
-  );
+    setIncompleteSession(null);
+    setIncompleteSessionStatus('idle');
+  }, [incompleteSession, isMounted]);
 
   return (
     <PracticeView
@@ -755,21 +758,23 @@ export default function PracticePage() {
               {incompleteSessionError}
             </div>
           ) : null}
-          <PracticeSessionStarter
-            sessionMode={sessionMode}
-            sessionCount={sessionCount}
-            filters={filters}
-            tagLoadStatus={tagLoadStatus}
-            availableTags={availableTags}
-            sessionStartStatus={sessionStartStatus}
-            sessionStartError={sessionStartError}
-            isPending={isPending}
-            onToggleDifficulty={onToggleDifficulty}
-            onTagSlugsChange={onTagSlugsChange}
-            onSessionModeChange={onSessionModeChange}
-            onSessionCountChange={onSessionCountChange}
-            onStartSession={onStartSession}
-          />
+          {!incompleteSession && (
+            <PracticeSessionStarter
+              sessionMode={sessionMode}
+              sessionCount={sessionCount}
+              filters={filters}
+              tagLoadStatus={tagLoadStatus}
+              availableTags={availableTags}
+              sessionStartStatus={sessionStartStatus}
+              sessionStartError={sessionStartError}
+              isPending={isPending}
+              onToggleDifficulty={onToggleDifficulty}
+              onTagSlugsChange={onTagSlugsChange}
+              onSessionModeChange={onSessionModeChange}
+              onSessionCountChange={onSessionCountChange}
+              onStartSession={onStartSession}
+            />
+          )}
         </div>
       }
       loadState={loadState}
