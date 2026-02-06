@@ -1,15 +1,16 @@
 import { expect, type Page } from '@playwright/test';
 
-async function isVisible(
+async function isButtonVisible(
   page: Page,
-  role: Parameters<Page['getByRole']>[0],
   name: string,
+  timeout: number,
 ): Promise<boolean> {
   try {
-    return await page
-      .getByRole(role, { name })
+    await page
+      .getByRole('button', { name })
       .first()
-      .isVisible({ timeout: 500 });
+      .waitFor({ state: 'visible', timeout });
+    return true;
   } catch {
     return false;
   }
@@ -20,11 +21,11 @@ export async function ensureBookmarkedQuestion(page: Page): Promise<void> {
   await expect(page.getByRole('heading', { name: 'Practice' })).toBeVisible();
 
   for (let attempt = 0; attempt < 8; attempt += 1) {
-    if (await isVisible(page, 'button', 'Remove bookmark')) {
+    if (await isButtonVisible(page, 'Remove bookmark', 500)) {
       return;
     }
 
-    if (await isVisible(page, 'button', 'Bookmark')) {
+    if (await isButtonVisible(page, 'Bookmark', 500)) {
       await page.getByRole('button', { name: 'Bookmark' }).first().click();
       await expect(
         page.getByRole('button', { name: 'Remove bookmark' }).first(),
@@ -55,8 +56,11 @@ export async function ensureBookmarkExistsOnBookmarksPage(
   await expect(page.getByRole('heading', { name: 'Bookmarks' })).toBeVisible();
 
   const removeButton = page.getByRole('button', { name: 'Remove' }).first();
-  if (await removeButton.isVisible({ timeout: 1_000 }).catch(() => false)) {
+  try {
+    await removeButton.waitFor({ state: 'visible', timeout: 1_000 });
     return;
+  } catch {
+    // No existing bookmarks — create one
   }
 
   await ensureBookmarkedQuestion(page);

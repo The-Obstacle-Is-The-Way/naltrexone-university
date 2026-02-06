@@ -21,10 +21,16 @@ export async function assertQuestionSlugExists(
   await expect(page.getByRole('heading', { name: 'Question' })).toBeVisible();
 
   const notFound = page.getByText('Question not found.', { exact: true });
-  if (await notFound.isVisible().catch(() => false)) {
+  try {
+    await notFound.waitFor({ state: 'visible', timeout: 2_000 });
     throw new Error(
       `Seeded question '${slug}' not found — update seeds or tests`,
     );
+  } catch (error) {
+    if (error instanceof Error && error.message.includes('not found')) {
+      throw error;
+    }
+    // waitFor timed out — question exists, proceed
   }
 }
 

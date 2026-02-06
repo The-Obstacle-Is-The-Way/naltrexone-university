@@ -3,6 +3,7 @@ import {
   hasClerkCredentials,
   signInWithClerkPassword,
 } from './helpers/clerk-auth';
+import { completeStripeCheckout } from './helpers/subscription';
 
 test.describe('subscribe', () => {
   test.setTimeout(120_000);
@@ -21,40 +22,7 @@ test.describe('subscribe', () => {
       await expect(page).toHaveURL(/\/app\/dashboard/);
     } else {
       await page.getByRole('button', { name: 'Subscribe Monthly' }).click();
-
-      await expect(page).toHaveURL(/stripe\.com/);
-
-      // Stripe Checkout (test card)
-      const cardNumber = page
-        .frameLocator('iframe[name^="__privateStripeFrame"]')
-        .locator('input[name="cardnumber"]');
-      const expDate = page
-        .frameLocator('iframe[name^="__privateStripeFrame"]')
-        .locator('input[name="exp-date"]');
-      const cvc = page
-        .frameLocator('iframe[name^="__privateStripeFrame"]')
-        .locator('input[name="cvc"]');
-      const postal = page
-        .frameLocator('iframe[name^="__privateStripeFrame"]')
-        .locator('input[name="postal"]');
-
-      if (await cardNumber.isVisible({ timeout: 10_000 })) {
-        await cardNumber.fill('4242424242424242');
-      }
-      if (await expDate.isVisible({ timeout: 10_000 })) {
-        await expDate.fill('1234');
-      }
-      if (await cvc.isVisible({ timeout: 10_000 })) {
-        await cvc.fill('123');
-      }
-      if (await postal.isVisible({ timeout: 10_000 })) {
-        await postal.fill('94107');
-      }
-
-      await page.getByRole('button', { name: /subscribe|pay/i }).click();
-
-      // Success page syncs and redirects to dashboard
-      await expect(page).toHaveURL(/\/app\/dashboard/, { timeout: 30_000 });
+      await completeStripeCheckout(page);
     }
 
     await expect(

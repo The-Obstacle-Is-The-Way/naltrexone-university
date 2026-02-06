@@ -33,7 +33,7 @@ test.describe('practice', () => {
     ).toBeVisible();
   });
 
-  test('exam mode hides explanation content before session end', async ({
+  test('exam mode completes session without showing explanation', async ({
     page,
   }) => {
     await signInWithClerkPassword(page);

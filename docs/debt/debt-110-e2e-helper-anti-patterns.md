@@ -1,72 +1,70 @@
 # DEBT-110: E2E Test Helper Anti-Patterns (isVisible Timeout + Stripe Duplication)
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P3
 **Date:** 2026-02-05
+**Resolved:** 2026-02-05
 
 ---
 
 ## Description
 
-Two related anti-patterns exist in E2E test helpers and specs, discovered during CodeRabbit review of PR #56.
+Two related anti-patterns existed in E2E test helpers and specs, discovered during CodeRabbit review of PR #56.
 
-### 1. `isVisible({ timeout })` is a silent no-op (11 instances)
+### 1. `isVisible({ timeout })` — timeout deprecated and ignored (was 11 instances)
 
-Playwright's `locator.isVisible()` does **not** accept a `timeout` parameter — it returns immediately. Passing `{ timeout }` is silently ignored. Every call that relies on timeout-based polling is actually a synchronous check that may return `false` before the element renders.
+Playwright's `locator.isVisible()` accepts a `timeout` parameter, but it is **deprecated and ignored** — the method returns immediately. Passing `{ timeout }` is silently dropped. Every call that relied on timeout-based polling was actually a synchronous check that could return `false` before the element rendered.
 
-**Affected files:**
+### 2. `subscribe.spec.ts` duplicated inline Stripe checkout (DRY violation)
 
-| File | Lines | Call | Impact |
-|------|-------|------|--------|
-| `tests/e2e/helpers/subscription.ts` | 12, 15, 18, 21 | `.isVisible({ timeout: 10_000 })` | Stripe card fields may not be detected if checkout form hasn't rendered |
-| `tests/e2e/helpers/subscription.ts` | 35 | `.isVisible({ timeout: 10_000 })` | "Already subscribed" check returns instantly — may miss slow-loading text |
-| `tests/e2e/helpers/bookmark.ts` | 12 | `.isVisible({ timeout: 500 })` | Bookmark/Remove button detection is instant, not 500ms polling |
-| `tests/e2e/helpers/bookmark.ts` | 58 | `.isVisible({ timeout: 1_000 })` | Remove button detection on bookmarks page is instant |
-| `tests/e2e/subscribe.spec.ts` | 41, 44, 47, 50 | `.isVisible({ timeout: 10_000 })` | Inline Stripe checkout has same issue as helper |
+`subscribe.spec.ts` contained an inline copy of the Stripe Checkout flow that already existed in `helpers/subscription.ts` as `completeStripeCheckout`.
 
-**Why this hasn't caused failures yet:** Stripe checkout and subscription pages tend to load before the test reaches them (preceding navigation assertions act as implicit waits). But this is luck-dependent, not correct.
+## Resolution (Applied)
 
-### 2. `subscribe.spec.ts` duplicates inline Stripe checkout (DRY violation)
+### Fix 1: Replaced `isVisible({ timeout })` with `waitFor`-based helpers
 
-`subscribe.spec.ts:28-52` contains an inline copy of the Stripe Checkout flow that already exists in `helpers/subscription.ts` as `completeStripeCheckout`. The helper was extracted and refactored (frameLocator extracted, timeout added to redirect assertion), but the inline copy in `subscribe.spec.ts` was not updated to use it.
-
-## Impact
-
-- **Flaky E2E tests** — `isVisible()` returning instantly means race conditions on slow CI runners
-- **Maintenance drift** — Stripe checkout improvements to the helper don't propagate to the inline copy
-- **False confidence** — Developers think there's a 10s wait; there isn't
-
-## Resolution
-
-### Fix 1: Replace `isVisible({ timeout })` with proper Playwright waits
+Introduced `waitVisible()` in `helpers/subscription.ts` and `isButtonVisible()` in `helpers/bookmark.ts`:
 
 ```typescript
-// Before (broken — timeout silently ignored):
-if (await cardNumber.isVisible({ timeout: 10_000 })) {
-
-// After (correct — waitFor respects timeout):
-const isCardVisible = await cardNumber
-  .waitFor({ state: 'visible', timeout: 10_000 })
-  .then(() => true)
-  .catch(() => false);
-if (isCardVisible) {
+// waitVisible — generic locator wait that returns boolean
+async function waitVisible(
+  locator: ReturnType<Page['locator']>,
+  timeout: number,
+): Promise<boolean> {
+  try {
+    await locator.waitFor({ state: 'visible', timeout });
+    return true;
+  } catch {
+    return false;
+  }
+}
 ```
 
-Or use `expect(...).toBeVisible({ timeout })` where appropriate.
+All 11 `isVisible({ timeout })` instances replaced:
 
-### Fix 2: Refactor `subscribe.spec.ts` to use shared helper
+| File | Instances | Fix |
+|------|-----------|-----|
+| `helpers/subscription.ts` | 5 (lines 12,15,18,21,35) | `waitVisible()` helper |
+| `helpers/bookmark.ts` | 2 (lines 12,58) | `isButtonVisible()` helper |
+| `subscribe.spec.ts` | 4 (lines 41,44,47,50) | Refactored to use `completeStripeCheckout` |
 
-Export `completeStripeCheckout` from `helpers/subscription.ts` and use it in `subscribe.spec.ts`, or restructure the test to use `ensureSubscribed`.
+### Fix 2: `assertQuestionSlugExists` timing
+
+Replaced immediate `isVisible()` with `waitFor({ timeout: 2_000 })` to give "Question not found." text time to render before checking.
+
+### Fix 3: Refactored `subscribe.spec.ts` to use shared helper
+
+Exported `completeStripeCheckout` from `helpers/subscription.ts`. `subscribe.spec.ts` now imports and calls the shared helper instead of duplicating inline Stripe checkout code.
 
 ## Verification
 
-1. [ ] All `isVisible({ timeout })` calls replaced with `waitFor` or `toBeVisible`
-2. [ ] `subscribe.spec.ts` no longer duplicates Stripe checkout logic
-3. [ ] `grep -rn 'isVisible({' tests/e2e/` returns zero results
-4. [ ] E2E tests still pass (if credentials available)
+1. [x] All `isVisible({ timeout })` calls replaced with `waitFor` or `toBeVisible`
+2. [x] `subscribe.spec.ts` no longer duplicates Stripe checkout logic
+3. [x] `grep -rn 'isVisible({.*timeout' tests/e2e/` returns zero results
+4. [ ] E2E tests still pass (requires Clerk/Stripe credentials — see DEBT-104)
 
 ## Related
 
-- PR #56 CodeRabbit review (flagged `question.ts:53` instance, which was fixed)
+- PR #56 CodeRabbit review (flagged multiple instances)
 - DEBT-107: Question Engine E2E Completeness
 - DEBT-104: Missing E2E Test Credentials
