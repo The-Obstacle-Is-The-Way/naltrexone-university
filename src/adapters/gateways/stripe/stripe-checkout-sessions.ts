@@ -60,6 +60,7 @@ export async function createStripeCheckoutSession({
         {
           sessionId: existingSession.id,
           error: errorMessage,
+          cause: error,
         },
         'Failed to inspect existing checkout session',
       );

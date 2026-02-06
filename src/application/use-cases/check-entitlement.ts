@@ -16,6 +16,17 @@ export type CheckEntitlementOutput = {
   hasActiveSubscriptionPeriod?: boolean;
 };
 
+function getNonEntitledReason(
+  status: SubscriptionStatus,
+  hasActiveSubscriptionPeriod: boolean,
+): NonEntitledReason {
+  if (!hasActiveSubscriptionPeriod) return 'subscription_required';
+  if (status === 'paymentProcessing' || status === 'paymentFailed') {
+    return 'payment_processing';
+  }
+  return 'manage_billing';
+}
+
 export class CheckEntitlementUseCase {
   constructor(
     private readonly subscriptions: SubscriptionRepository,
@@ -38,12 +49,7 @@ export class CheckEntitlementUseCase {
     const hasActiveSubscriptionPeriod = subscription.currentPeriodEnd > now;
     const reason: NonEntitledReason | null = entitled
       ? null
-      : hasActiveSubscriptionPeriod
-        ? subscription.status === 'paymentProcessing' ||
-          subscription.status === 'paymentFailed'
-          ? 'payment_processing'
-          : 'manage_billing'
-        : 'subscription_required';
+      : getNonEntitledReason(subscription.status, hasActiveSubscriptionPeriod);
 
     return {
       isEntitled: entitled,

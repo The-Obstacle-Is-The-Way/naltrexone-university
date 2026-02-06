@@ -31,8 +31,6 @@ export function PricingView({
   subscribeAnnualAction,
   SubscribeButtonComponent = DefaultButton,
 }: PricingViewProps) {
-  const showManageBillingOnly = !isEntitled && !!manageBillingAction;
-
   return (
     <div className="min-h-screen bg-background py-16">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -101,7 +99,7 @@ export function PricingView({
               </Link>
             </div>
           </div>
-        ) : showManageBillingOnly ? (
+        ) : !isEntitled && manageBillingAction ? (
           <div className="mx-auto mt-16 max-w-2xl rounded-2xl border border-border bg-card p-8 text-center shadow-sm">
             <div className="text-lg font-semibold text-foreground">
               Subscription needs attention

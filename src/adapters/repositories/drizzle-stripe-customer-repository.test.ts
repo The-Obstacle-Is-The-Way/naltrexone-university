@@ -101,11 +101,13 @@ describe('DrizzleStripeCustomerRepository', () => {
   });
 
   it('updates user mapping when conflictStrategy is authoritative', async () => {
+    // Return a *different* customer ID to prove authoritative mode skips
+    // the strict mismatch check that would otherwise throw CONFLICT.
     const db = {
       insert: () => ({
         values: () => ({
           onConflictDoUpdate: () => ({
-            returning: async () => [{ stripeCustomerId: 'cus_new' }],
+            returning: async () => [{ stripeCustomerId: 'cus_existing' }],
           }),
         }),
       }),
