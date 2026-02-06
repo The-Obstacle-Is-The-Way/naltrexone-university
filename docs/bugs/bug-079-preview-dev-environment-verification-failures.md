@@ -133,7 +133,7 @@ This happened because the initial Stripe setup (days earlier) used a separate te
 - [x] Neon `dev` branch has clean user tables (958 questions preserved)
 - [x] `.env.local` DATABASE_URL points to Neon `dev` branch (not `main`)
 - [x] Vercel Development environment has price IDs (was missing before)
-- [ ] End-to-end checkout flow on Preview deployment (pending redeploy)
+- [x] End-to-end checkout flow on Preview deployment — Verified 2026-02-06 (after [BUG-080](bug-080-vercel-env-var-deployment-issues.md) fixes)
 - [ ] End-to-end checkout flow on localhost
 
 ---
@@ -146,4 +146,5 @@ This happened because the initial Stripe setup (days earlier) used a separate te
 - [BUG-069](../_archive/bugs/bug-069-stripe-checkout-fails-localhost.md) / [BUG-070](../_archive/bugs/bug-070-e2e-test-user-checkout-fails.md) — Previous Stripe checkout failures (binding bug, different root cause)
 - `docs/dev/deployment-environments.md` — Environment key mapping SSOT
 - `src/adapters/controllers/action-result.ts:51-61` — Generic error handler that obscures Stripe errors
+- [BUG-080](bug-080-vercel-env-var-deployment-issues.md) — Successor: Additional Preview deployment issues discovered during E2E verification (Deployment Protection, trailing `\n`, `NEXT_PUBLIC_APP_URL`)
 - `lib/env.ts` — Environment validation

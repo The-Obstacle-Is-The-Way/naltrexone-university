@@ -1,6 +1,6 @@
 # Deployment Environments: Source of Truth
 
-**Last Verified:** 2026-02-06 (post database isolation + env scoping + Stripe single-account consolidation + Neon var cleanup + Clerk webhook fix)
+**Last Verified:** 2026-02-06 (post database isolation + env scoping + Stripe single-account consolidation + Neon var cleanup + Clerk webhook fix + Deployment Protection fix + env var trailing newline fix)
 
 This document is the single source of truth for how Clerk, Stripe, Neon, and Vercel are configured across all environments.
 
@@ -19,7 +19,7 @@ This document is the single source of truth for how Clerk, Stripe, Neon, and Ver
 - [x] **Stripe Single Account** — Test and live modes on same Stripe account (`51SvkizKItmaHAwgU`), fixed in [BUG-079](../bugs/bug-079-preview-dev-environment-verification-failures.md)
 - [x] **Stripe Test Webhook** — Test endpoint configured for Preview deployment with 5 events
 - [x] **Stripe Test Price IDs** — Monthly ($29) and Annual ($199) test products created
-- [ ] **Preview** (`*.vercel.app`, non-main branches) — NEEDS END-TO-END VERIFICATION (env vars fixed, pending redeploy)
+- [x] **Preview** (`*.vercel.app`, non-main branches) — E2E verified 2026-02-06: sign-in → paywall → Stripe test checkout → subscription active → full app access. See [BUG-080](../bugs/bug-080-vercel-env-var-deployment-issues.md) for issues resolved during verification.
 - [ ] **Local Development** (`localhost:3000`) — NEEDS END-TO-END VERIFICATION
 
 ---
@@ -104,7 +104,7 @@ This document is the single source of truth for how Clerk, Stripe, Neon, and Ver
 - [x] Test Price IDs created and set everywhere:
   - Monthly: `price_1SxuYAKItmaHAwgUWaePv0AC` ($29/mo)
   - Annual: `price_1SxuYXKItmaHAwgUjobv4lxY` ($199/yr)
-- [ ] Test checkout flow on Preview deployment (pending redeploy)
+- [x] Test checkout flow on Preview deployment — Verified 2026-02-06 (after [BUG-080](../bugs/bug-080-vercel-env-var-deployment-issues.md) fixes)
 
 ---
 
@@ -184,8 +184,47 @@ All of these are confirmed working:
 |-----|-------------|-----------|----------|-------------|
 | `addictionboards.com` | Production | `pk_live_*` | Neon `main` | Yes |
 | `*.vercel.app` (main branch) | Production | `pk_live_*` | Neon `main` | No (domain-locked, expected) |
-| `*.vercel.app` (non-main branch) | Preview | `pk_test_*` | Neon `dev` | Needs verification |
+| `*.vercel.app` (non-main branch) | Preview | `pk_test_*` | Neon `dev` | Verified (2026-02-06) |
 | `localhost:3000` | Development | `pk_test_*` | Neon `dev` | Needs verification |
+
+---
+
+## Known Gotchas (Learned the Hard Way)
+
+### Vercel Deployment Protection Blocks Webhooks
+
+Vercel's **Standard Protection** (Project Settings → Deployment Protection → Vercel Authentication) intercepts ALL unauthenticated requests to Preview URLs with a 401 + SSO redirect. This blocks server-to-server webhooks from Clerk and Stripe, which use signature verification, not session cookies.
+
+**Current state:** Disabled for this project. Preview deployments rely on Clerk/Stripe's own signature verification for webhook security.
+
+See [BUG-080](../bugs/bug-080-vercel-env-var-deployment-issues.md) Issue 1.
+
+### Trailing `\n` in Vercel Dashboard Env Vars
+
+When pasting values into the Vercel dashboard, invisible trailing newline characters can be stored. This silently breaks HTTP headers (e.g., `Authorization: Bearer sk_test_...\n` → transport error).
+
+**Prevention:**
+- Use CLI to set secrets: `printf '%s' "value" | vercel env add NAME env --yes --force`
+- Never use `echo` (appends `\n`). Always use `printf '%s'`.
+- After pasting in dashboard, pull back and verify: `vercel env pull /tmp/check && cat -A /tmp/check | grep VAR_NAME`
+
+See [BUG-080](../bugs/bug-080-vercel-env-var-deployment-issues.md) Issue 2.
+
+### `NEXT_PUBLIC_*` Vars Require Fresh Builds
+
+`NEXT_PUBLIC_*` variables are inlined at build time by Next.js's webpack DefinePlugin. Changing the Vercel env var alone is **not sufficient** — a fresh build is required.
+
+**Critical:** `vercel redeploy` reuses build cache and will serve stale `NEXT_PUBLIC_*` values. Push a commit (even `git commit --allow-empty`) to trigger a fresh GitHub-linked build.
+
+**`NEXT_PUBLIC_APP_URL` for Preview** must be set to the stable branch URL (e.g., `https://naltrexone-university-git-dev-john-h-jungs-projects.vercel.app`), not `localhost:3000`. This URL is used by the billing controller to construct Stripe `success_url` and `cancel_url`.
+
+See [BUG-080](../bugs/bug-080-vercel-env-var-deployment-issues.md) Issue 3.
+
+### Clerk Development Mode Re-Authentication After Stripe Checkout
+
+In Clerk Development mode, sessions use `__clerk_db_jwt` URL parameters (not HTTP-only cookies). When Stripe redirects back to `/checkout/success`, it doesn't carry the `__clerk_db_jwt` param, so Clerk's middleware sees an unauthenticated request and redirects to sign-in.
+
+**This is expected behavior in Development mode only.** In Production, Clerk uses HTTP-only cookies on `addictionboards.com`, so the redirect from Stripe automatically carries the auth cookie. No re-sign-in needed.
 
 ---
 
@@ -207,6 +246,7 @@ When setting up a new service or changing environment configuration:
 
 - [BUG-066](../_archive/bugs/bug-066-clerk-development-keys-in-production.md) — Original Production key switch
 - [BUG-078](../bugs/bug-078-clerk-production-google-oauth-not-configured.md) — Production auth broken (resolved)
+- [BUG-080](../bugs/bug-080-vercel-env-var-deployment-issues.md) — Vercel env var + Deployment Protection issues (resolved)
 - `proxy.ts` — Clerk middleware
 - `lib/env.ts` — Environment validation
 - `app/api/webhooks/clerk/route.ts` — Clerk webhook handler
