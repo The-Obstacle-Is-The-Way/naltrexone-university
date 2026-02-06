@@ -240,7 +240,7 @@ Per SPEC-013 and master_spec.md section 4.5.4:
 | Create `/app/practice/quick/page.tsx` for ad-hoc mode | P1 | 2 hr |
 | Redesign `/app/practice/page.tsx` as landing page | P1 | 2 hr |
 | Move session starter to modal or inline card | P2 | 1 hr |
-| Add session history section to landing page | P3 | 2 hr |
+| Add session history section to landing page (see [SPEC-020](./spec-020-practice-engine-completion.md) Phase 4) | P3 | 2 hr |
 | Remove ad-hoc question display from landing page | P1 | 30 min |
 
 **Acceptance Criteria for Phase 2:**
@@ -338,6 +338,7 @@ Per SPEC-013 and master_spec.md section 4.5.4:
 
 - [SPEC-012: Core Question Loop](./spec-012-core-question-loop.md)
 - [SPEC-013: Practice Sessions](./spec-013-practice-sessions.md)
+- [SPEC-020: Practice Engine Completion](./spec-020-practice-engine-completion.md) — formally specifies session history (previously P3 optional here), in-run navigation, enriched summary, and session context in existing views
 - [master_spec.md Section 4.5.3-4.5.5](./master_spec.md)
 - [ADR-011: Feature Slice Architecture](../adr/adr-011-feature-slices.md)
 
@@ -418,3 +419,4 @@ Per SPEC-013 and master_spec.md section 4.5.4:
 | Date | Author | Change |
 |------|--------|--------|
 | 2026-02-05 | Architecture Review | Initial draft |
+| 2026-02-06 | Architecture Review | Add SPEC-020 cross-references; session history now formally specified in SPEC-020 Phase 4 |

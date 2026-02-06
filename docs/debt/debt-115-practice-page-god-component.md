@@ -3,12 +3,23 @@
 **Status:** Open
 **Priority:** P1
 **Date:** 2026-02-06
+**Spec Mandate:** [SPEC-020](../specs/spec-020-practice-engine-completion.md) Phase 1
+
+---
+
+## SPEC-020 Reclassification
+
+This debt item has been promoted from discretionary tech debt to a **spec-mandated prerequisite**. SPEC-020 Phase 1 requires decomposing both god components (DEBT-115 and DEBT-116) before any feature work in Phases 2–4 can proceed. Navigation (DEBT-122) and enriched summary (DEBT-123) features cannot be cleanly added to an 823-line monolithic component.
+
+**Phase:** 1 (Structural Refactoring — PREREQUISITE)
+**Blocked by:** None
+**Blocks:** SPEC-020 Phases 2, 3, 4
 
 ---
 
 ## Description
 
-`app/(app)/app/practice/page.tsx` is 823 lines with 21 `useState` state variables managing question state, filters, tags, bookmarks, session lifecycle, error handling, and session abandonment in a single client component. The `PracticeView` subcomponent also has a broad prop surface.
+`app/(app)/app/practice/page.tsx` is 823 lines with 20 `useState` state variables managing question state, filters, tags, bookmarks, session lifecycle, error handling, and session abandonment in a single client component. The `PracticeView` subcomponent also has a broad prop surface.
 
 This is the largest component in the codebase and violates Single Responsibility Principle — it's a UI component, a state machine, a data-fetching orchestrator, and a business logic coordinator rolled into one.
 
@@ -43,6 +54,7 @@ Replace 16 `useState` calls with a single `useReducer` + React Context provider.
 
 ## Related
 
+- [SPEC-020: Practice Engine Completion](../specs/spec-020-practice-engine-completion.md) — Phase 1
 - `app/(app)/app/practice/page.tsx` (823 lines)
 - DEBT-116 (session page client component — same pattern)
 - BUG-072 (question navigation — will add more complexity here)

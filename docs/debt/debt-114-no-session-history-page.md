@@ -3,6 +3,19 @@
 **Status:** Open
 **Priority:** P2
 **Date:** 2026-02-06
+**Spec Mandate:** [SPEC-020](../specs/spec-020-practice-engine-completion.md) Phase 4
+
+---
+
+## SPEC-020 Reclassification
+
+This debt item has been promoted from discretionary UX debt to a **spec-mandated requirement**. SPEC-019 previously listed session history as a P3 optional feature ("Recent Sessions (optional)"); it is now a required deliverable under SPEC-020 Phase 4 with a formal server action definition in master_spec.md section 4.5.13.
+
+Implementation requires a new port method (`findCompletedByUserId`), a new use case (`GetSessionHistoryUseCase`), a new server action (`getSessionHistory`), and a UI section on the practice landing page.
+
+**Phase:** 4 (Session History)
+**Blocked by:** SPEC-020 Phase 3 (DEBT-113)
+**Blocks:** None
 
 ---
 
@@ -107,10 +120,11 @@ Add a "Sessions" card to the Dashboard alongside "Recent Activity" that shows se
 
 ## Related
 
+- [SPEC-020: Practice Engine Completion](../specs/spec-020-practice-engine-completion.md) — Phase 4
+- [SPEC-019: Practice UX Redesign](../specs/spec-019-practice-ux-redesign.md) (previously P3 optional; now required via SPEC-020)
 - DEBT-113 (Dashboard and Review lack session context)
 - BUG-072 (No question navigation in sessions)
 - BUG-073 (Tutor mode missing session summary)
 - `src/application/use-cases/get-practice-session-review.ts` (already supports per-question detail)
 - `src/adapters/repositories/drizzle-practice-session-repository.ts`
 - `app/(app)/app/practice/page.tsx`
-- `docs/specs/spec-019-practice-ux-redesign.md` (mentions this as P3 optional)

@@ -3,6 +3,17 @@
 **Status:** Open
 **Priority:** P2
 **Date:** 2026-02-06
+**Spec Mandate:** [SPEC-020](../specs/spec-020-practice-engine-completion.md) Phase 2
+
+---
+
+## SPEC-020 Reclassification
+
+This debt item has been promoted from discretionary UX debt to a **spec-mandated requirement**. Master spec SLICE-3 acceptance criteria now includes: "Session summary shows per-question breakdown alongside aggregate totals." Implementation calls `getPracticeSessionReview` after `endPracticeSession` — the data already exists via the existing review use case. No new use case needed.
+
+**Phase:** 2 (Core Navigation + Enriched Summary)
+**Blocked by:** SPEC-020 Phase 1 (DEBT-115, DEBT-116 refactoring)
+**Blocks:** SPEC-020 Phase 3
 
 ---
 
@@ -27,9 +38,9 @@ This affects:
 
 ## SSOT Alignment
 
-Current SSOT requires score and total duration after final submit and does not require per-question detail on the final summary screen.
+Master spec SLICE-3 acceptance criteria now includes: "Session summary shows per-question breakdown alongside aggregate totals. (SPEC-020 Phase 2)". This was added as part of the SPEC-020 master spec amendment.
 
-This is therefore product/UX debt, not a correctness bug.
+Previously, only score and total duration were required. The spec gap has been closed.
 
 ---
 
@@ -56,6 +67,7 @@ Redirect to a `results` page after finalization that loads both summary metrics 
 
 ## Related
 
+- [SPEC-020: Practice Engine Completion](../specs/spec-020-practice-engine-completion.md) — Phase 2
 - `app/(app)/app/practice/[sessionId]/practice-session-page-client.tsx`
 - `src/application/use-cases/end-practice-session.ts`
 - `src/application/use-cases/get-practice-session-review.ts`

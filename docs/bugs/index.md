@@ -17,11 +17,11 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 | ID | Title | Status | Priority | Date |
 |----|-------|--------|----------|------|
-| _None_ | — | — | — | — |
+| [BUG-078](bug-078-clerk-production-google-oauth-not-configured.md) | Clerk Production Sign-In Broken (Google OAuth Not Configured + Domain Lock) | Open | P0 | 2026-02-06 |
 
-**Next Bug ID:** BUG-078
+**Next Bug ID:** BUG-079
 
-## Recently Resolved
+## Recently Triaged
 
 | ID | Title | Status | Resolution |
 |----|-------|--------|------------|
@@ -29,8 +29,8 @@ Bug reports document issues discovered in the codebase along with their root cau
 | [BUG-075](../_archive/bugs/bug-075-checkout-guard-entitlement-mismatch.md) | Pricing CTA Mismatch for Recoverable Subscription States | Resolved | Pricing now consumes entitlement context and shows manage-billing guidance for recoverable non-entitled states while preserving strict checkout guard |
 | [BUG-076](bug-076-past-due-immediate-lockout.md) | Past-Due Immediate Lockout | Won't Fix | Current behavior matches SSOT entitlement policy (pastDue is non-entitled); re-open only with explicit spec change |
 | [BUG-074](../_archive/bugs/bug-074-missed-questions-timestamp-tie-misclassification.md) | Missed Questions Can Be Misclassified on `answered_at` Timestamp Ties | Resolved | Use deterministic latest-attempt ranking (`answered_at DESC, id DESC`) for missed-question list/count |
-| [BUG-073](bug-073-tutor-mode-missing-session-summary-detail.md) | Tutor Mode Missing Per-Question Session Summary at End | Won't Fix | Reclassified as [DEBT-123](../debt/debt-123-session-summary-missing-question-breakdown.md) (not an SSOT violation) |
-| [BUG-072](bug-072-no-question-navigation-in-practice-sessions.md) | No Question Navigation in Practice Sessions (Both Modes) | Won't Fix | Reclassified as [DEBT-122](../debt/debt-122-in-run-question-navigation-gap.md) (not an SSOT violation) |
+| [BUG-073](bug-073-tutor-mode-missing-session-summary-detail.md) | Tutor Mode Missing Per-Question Session Summary at End | Reclassified | SSOT amended in SPEC-020; implementation tracked in [DEBT-123](../debt/debt-123-session-summary-missing-question-breakdown.md) |
+| [BUG-072](bug-072-no-question-navigation-in-practice-sessions.md) | No Question Navigation in Practice Sessions (Both Modes) | Reclassified | SSOT amended in SPEC-020; implementation tracked in [DEBT-122](../debt/debt-122-in-run-question-navigation-gap.md) |
 | [BUG-071](../_archive/bugs/bug-071-nextjs-preview-blank-page-csp.md) | Preview Deployment Rendered Blank Page After CSP Tightening | Resolved | Delegate CSP to Clerk middleware |
 | [BUG-070](../_archive/bugs/bug-070-e2e-test-user-checkout-fails.md) | E2E Test User Checkout Failed (Stripe `this` Binding Bug) | Resolved | Bind `stripe.customers.search` to preserve `this` |
 | [BUG-069](../_archive/bugs/bug-069-stripe-checkout-fails-localhost.md) | Stripe Checkout Fails for New Users (Lost `this` Binding) | Resolved | Bind `stripe.customers.search` to preserve `this` |
@@ -126,6 +126,7 @@ See: [Foundation Audit Report](foundation-audit-report.md)
 - **Blocked - Manual Action Required** — Requires external configuration (Clerk/Vercel/etc) not fixable in-repo
 - **Resolved** — Fix merged and verified
 - **Won't Fix** — Decided not to fix (with justification)
+- **Reclassified** — Root cause accepted, ownership moved to another tracked item (for example technical debt or a feature spec)
 
 ## Priority Levels
 
@@ -149,7 +150,7 @@ See: [Foundation Audit Report](foundation-audit-report.md)
 ```markdown
 # BUG-NNN: Short Title
 
-**Status:** Open | In Progress | Blocked - Manual Action Required | Resolved | Won't Fix
+**Status:** Open | In Progress | Blocked - Manual Action Required | Resolved | Won't Fix | Reclassified
 **Priority:** P0 | P1 | P2 | P3 | P4
 **Date:** YYYY-MM-DD
 

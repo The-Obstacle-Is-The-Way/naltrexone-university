@@ -3,6 +3,17 @@
 **Status:** Open
 **Priority:** P1
 **Date:** 2026-02-06
+**Spec Mandate:** [SPEC-020](../specs/spec-020-practice-engine-completion.md) Phase 1
+
+---
+
+## SPEC-020 Reclassification
+
+This debt item has been promoted from discretionary tech debt to a **spec-mandated prerequisite**. SPEC-020 Phase 1 requires decomposing both god components (DEBT-115 and DEBT-116) before any feature work in Phases 2–4 can proceed. The session page must host the question navigator (DEBT-122) and enriched summary (DEBT-123) — adding these to a 670-line monolithic component is untenable.
+
+**Phase:** 1 (Structural Refactoring — PREREQUISITE)
+**Blocked by:** None
+**Blocks:** SPEC-020 Phases 2, 3, 4
 
 ---
 
@@ -43,6 +54,7 @@ The session flow is genuinely a state machine (answering → reviewing → summa
 
 ## Related
 
+- [SPEC-020: Practice Engine Completion](../specs/spec-020-practice-engine-completion.md) — Phase 1
 - `app/(app)/app/practice/[sessionId]/practice-session-page-client.tsx` (670 lines)
 - DEBT-115 (practice page — same pattern)
 - BUG-072 (question navigation — must be added here)

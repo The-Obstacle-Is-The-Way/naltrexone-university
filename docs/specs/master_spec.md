@@ -1099,6 +1099,8 @@ export type EndPracticeSessionOutput = {
    * duration = floor((ended_at - started_at)/1000)
 5. Return summary.
 
+> **SPEC-020 Note:** The UI MUST call `getPracticeSessionReview` after `endPracticeSession` to display per-question breakdown on the summary screen. See SPEC-020 Phase 2 (DEBT-123). No type change to `EndPracticeSessionOutput` — the review data comes from the existing review action (SRP).
+
 ---
 
 #### 4.5.7 Server Action: `getUserStats()`
@@ -1126,18 +1128,24 @@ export type UserStatsOutput = {
   recentActivity: Array<
     | {
         isAvailable: true;
+        attemptId: string;
         answeredAt: string;        // ISO
         questionId: string;
         slug: string;              // internal navigation identifier
         stemMd: string;
         difficulty: 'easy' | 'medium' | 'hard';
         isCorrect: boolean;
+        sessionId: string | null;               // NEW (SPEC-020 Phase 3)
+        sessionMode: 'tutor' | 'exam' | null;   // NEW (SPEC-020 Phase 3)
       }
     | {
         isAvailable: false;
+        attemptId: string;
         answeredAt: string;        // ISO
         questionId: string;
         isCorrect: boolean;
+        sessionId: string | null;               // NEW (SPEC-020 Phase 3)
+        sessionMode: 'tutor' | 'exam' | null;   // NEW (SPEC-020 Phase 3)
       }
   >;
 };
@@ -1161,6 +1169,7 @@ export type UserStatsOutput = {
 * recentActivity = 20 most recent attempts joined to questions ordered by answered_at desc
 * available rows include `stemMd` and `difficulty` for user-facing display
 * unavailable rows are returned as `isAvailable:false` for graceful degradation when questions are unpublished/removed
+* recentActivity items include `sessionId` and `sessionMode` from LEFT JOIN to `practice_sessions` (null for ad-hoc attempts). See SPEC-020 Phase 3.
 
 ---
 
@@ -1180,18 +1189,30 @@ export const GetMissedQuestionsInputSchema = zPagination;
 **Output:**
 
 ```ts
-export type MissedQuestionRow = {
-  questionId: string;
-  slug: string;
-  stemMd: string;
-  difficulty: 'easy' | 'medium' | 'hard';
-  lastAnsweredAt: string; // ISO
-};
+export type MissedQuestionRow =
+  | {
+      isAvailable: true;
+      questionId: string;
+      slug: string;
+      stemMd: string;
+      difficulty: 'easy' | 'medium' | 'hard';
+      lastAnsweredAt: string; // ISO
+      sessionId: string | null;               // NEW (SPEC-020 Phase 3)
+      sessionMode: 'tutor' | 'exam' | null;   // NEW (SPEC-020 Phase 3)
+    }
+  | {
+      isAvailable: false;
+      questionId: string;
+      lastAnsweredAt: string; // ISO
+      sessionId: string | null;               // NEW (SPEC-020 Phase 3)
+      sessionMode: 'tutor' | 'exam' | null;   // NEW (SPEC-020 Phase 3)
+    };
 
 export type GetMissedQuestionsOutput = {
   rows: MissedQuestionRow[];
   limit: number;
   offset: number;
+  totalCount: number;
 };
 ```
 
@@ -1206,9 +1227,12 @@ export type GetMissedQuestionsOutput = {
 
 * For each question the user has attempted, find the most recent attempt timestamp.
 * Join back to attempts and filter where that most recent attempt is `is_correct=false`.
-* Join to questions (published only).
+* Resolve question metadata from published questions when available.
+* Available rows return `isAvailable:true` with `slug`, `stemMd`, and `difficulty`; unavailable rows return `isAvailable:false` for graceful degradation when questions are unpublished/removed.
+* Include `sessionId` and `sessionMode` for each row from the attempt/session context (`null` for ad-hoc attempts).
 * Order by most recent incorrect attempt desc.
 * Apply limit/offset.
+* Return `totalCount` for pagination.
 
 ---
 
@@ -1400,6 +1424,64 @@ export type SetPracticeSessionQuestionMarkOutput = {
 2. Reject if session is not in exam mode.
 3. Persist `markedForReview` for the target session question state.
 4. Return updated mark state for the question.
+
+---
+
+#### 4.5.13 Server Action: `getSessionHistory(limit, offset)`
+
+* **Name:** `getSessionHistory`
+* **Type:** Server Action
+* **Auth:** subscribed
+* **File:** `src/adapters/controllers/practice-controller.ts`
+* **Added by:** SPEC-020 Phase 4
+
+**Input (Zod):**
+
+```ts
+export const GetSessionHistoryInputSchema = zPagination;
+```
+
+**Output:**
+
+```ts
+export type SessionHistoryRow = {
+  sessionId: string;
+  mode: 'tutor' | 'exam';
+  questionCount: number;
+  answered: number;
+  correct: number;
+  accuracy: number;       // 0..1
+  durationSeconds: number;
+  startedAt: string;      // ISO
+  endedAt: string;        // ISO
+};
+
+export type GetSessionHistoryOutput = {
+  rows: SessionHistoryRow[];
+  total: number;
+  limit: number;
+  offset: number;
+};
+```
+
+**Errors:**
+
+* `UNAUTHENTICATED`
+* `UNSUBSCRIBED`
+* `VALIDATION_ERROR`
+* `INTERNAL_ERROR`
+
+**Behavior (exact):**
+
+1. Load completed practice sessions (`ended_at IS NOT NULL`) for user, ordered by `ended_at DESC`.
+2. For each session, compute stats from persisted `questionStates` in `params_json`:
+   * `questionCount` = total questions in session
+   * `answered` = count where `latestSelectedChoiceId` is not null
+   * `correct` = count where `latestIsCorrect === true`
+   * `accuracy` = correct / questionCount (0 if questionCount = 0)
+   * `durationSeconds` = floor((ended_at - started_at) / 1000)
+3. Apply limit/offset pagination.
+4. Return rows with total count for pagination.
 
 ---
 
@@ -2119,6 +2201,8 @@ As a subscribed user, I can run a timed practice session with filters and get a 
 * In exam mode, "End session" opens a review stage showing answered/unanswered/marked counts with jump-to-question.
 * When I submit from review stage, I see score and total duration.
 * In exam mode, explanations are hidden until the session ends.
+* Users can navigate to any question during active answering (back/jump), not only forward. (SPEC-020 Phase 2)
+* Session summary shows per-question breakdown alongside aggregate totals. (SPEC-020 Phase 2)
 
 **Test Cases:**
 
@@ -2215,6 +2299,7 @@ As a subscribed user, I can see my stats and recent activity so that I can track
 
 * Dashboard shows total answered, overall accuracy, last 7 days accuracy, current streak.
 * Shows recent activity list.
+* Recent activity groups attempts by session when session context exists. (SPEC-020 Phase 3)
 
 **Test Cases:**
 

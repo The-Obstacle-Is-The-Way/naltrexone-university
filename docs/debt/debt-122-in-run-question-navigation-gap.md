@@ -3,6 +3,17 @@
 **Status:** Open
 **Priority:** P2
 **Date:** 2026-02-06
+**Spec Mandate:** [SPEC-020](../specs/spec-020-practice-engine-completion.md) Phase 2
+
+---
+
+## SPEC-020 Reclassification
+
+This debt item has been promoted from discretionary UX debt to a **spec-mandated requirement**. Master spec SLICE-3 acceptance criteria now includes: "Users can navigate to any question during active answering (back/jump), not only forward." The backend already supports `questionId` param in `getNextQuestion` (master_spec 4.5.3 Case A step 3) — only UI work is needed.
+
+**Phase:** 2 (Core Navigation + Enriched Summary)
+**Blocked by:** SPEC-020 Phase 1 (DEBT-115, DEBT-116 refactoring)
+**Blocks:** SPEC-020 Phase 3
 
 ---
 
@@ -10,7 +21,7 @@
 
 During active question answering, users can only move forward (`Next question`). They cannot navigate backward or jump to arbitrary questions until exam review.
 
-This is not a current SSOT correctness bug, but it is a meaningful UX/pedagogy gap for session-based study.
+This was originally treated as UX/pedagogy debt. With SPEC-020 amendments, it is now an explicit SSOT requirement that remains unimplemented.
 
 ---
 
@@ -24,9 +35,9 @@ This is not a current SSOT correctness bug, but it is a meaningful UX/pedagogy g
 
 ## SSOT Alignment
 
-`master_spec.md` currently requires jump-to-question in **exam review stage**, which is implemented. It does not require in-run jump/back navigation.
+`master_spec.md` SLICE-3 acceptance criteria now includes in-run navigation: "Users can navigate to any question during active answering (back/jump), not only forward. (SPEC-020 Phase 2)". This was added as part of the SPEC-020 master spec amendment.
 
-This item is therefore tracked as debt, not a bug.
+Previously, only exam review stage jump-to-question was required. The spec gap has been closed.
 
 ---
 
@@ -60,6 +71,7 @@ Add `Previous` and `Next` buttons with deterministic question index traversal.
 
 ## Related
 
+- [SPEC-020: Practice Engine Completion](../specs/spec-020-practice-engine-completion.md) — Phase 2
 - `app/(app)/app/practice/[sessionId]/practice-session-page-client.tsx`
 - `src/application/use-cases/get-next-question.ts`
 - `src/domain/entities/practice-session.ts`

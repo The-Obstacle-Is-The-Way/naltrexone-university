@@ -1,22 +1,21 @@
 # BUG-073: Tutor Mode Missing Per-Question Session Summary at End
 
-**Status:** Won't Fix
+**Status:** Reclassified (Spec-Mandated in DEBT-123)
 **Priority:** P1
 **Date:** 2026-02-06
-**Resolved:** 2026-02-06
+**Reclassified:** 2026-02-06
 
 ---
 
 ## Reclassification Decision
 
-This was reclassified from a bug to technical debt.
+**Original (2026-02-06):** Reclassified from bug to tech debt (DEBT-123) — master_spec.md did not require per-question breakdown on the summary screen at the time.
 
-Reason: current SSOT requires session summary totals and exam review-stage behavior, but does not require a per-question breakdown on the final summary screen for tutor or exam mode.
+**Updated (2026-02-06):** Promoted from Won't Fix to **Spec-Mandated**. Master spec SLICE-3 acceptance criteria now includes: "Session summary shows per-question breakdown alongside aggregate totals. (SPEC-020 Phase 2)". The spec was incomplete, not the implementation.
 
-- SSOT reference: `docs/specs/master_spec.md` SLICE-3 acceptance criteria
-- Implemented behavior: `app/(app)/app/practice/[sessionId]/practice-session-page-client.tsx`
-
-Tracked as debt: [DEBT-123](../debt/debt-123-session-summary-missing-question-breakdown.md)
+- SSOT reference: `docs/specs/master_spec.md` SLICE-3 acceptance criteria (amended)
+- Spec: [SPEC-020: Practice Engine Completion](../specs/spec-020-practice-engine-completion.md) — Phase 2
+- Debt tracking: [DEBT-123](../debt/debt-123-session-summary-missing-question-breakdown.md)
 
 ---
 
@@ -24,12 +23,13 @@ Tracked as debt: [DEBT-123](../debt/debt-123-session-summary-missing-question-br
 
 The final summary view currently shows aggregate totals only (`answered`, `correct`, `accuracy`, `durationSeconds`).
 
-This is a product/UX enhancement request, not a correctness defect against current spec requirements.
+Originally this was a product/UX enhancement request, not a correctness defect against SSOT. After the SPEC-020 amendments, it is now an explicit SSOT requirement and is tracked as implementation debt in DEBT-123.
 
 ---
 
 ## Related
 
+- [SPEC-020: Practice Engine Completion](../specs/spec-020-practice-engine-completion.md) — Phase 2
 - `docs/specs/master_spec.md`
 - `docs/specs/spec-013-practice-sessions.md`
 - `app/(app)/app/practice/[sessionId]/practice-session-page-client.tsx`

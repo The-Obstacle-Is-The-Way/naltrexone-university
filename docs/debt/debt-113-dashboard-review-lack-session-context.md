@@ -3,6 +3,19 @@
 **Status:** Open
 **Priority:** P1
 **Date:** 2026-02-06
+**Spec Mandate:** [SPEC-020](../specs/spec-020-practice-engine-completion.md) Phase 3
+
+---
+
+## SPEC-020 Reclassification
+
+This debt item has been promoted from discretionary UX debt to a **spec-mandated requirement**. Master spec sections 4.5.7 and 4.5.8 now include `sessionId` and `sessionMode` fields in `UserStatsOutput.recentActivity` and `MissedQuestionRow` respectively. SLICE-5 acceptance criteria now includes: "Recent activity groups attempts by session when session context exists."
+
+Implementation requires port-level type changes, SQL LEFT JOIN changes in repository queries, and UI updates to group/badge session context.
+
+**Phase:** 3 (Session Context in Existing Views)
+**Blocked by:** SPEC-020 Phases 1–2 (DEBT-115, DEBT-116, DEBT-122, DEBT-123)
+**Blocks:** SPEC-020 Phase 4
 
 ---
 
@@ -75,15 +88,15 @@ DashboardPage
   → getUserStats({})                              [stats-controller.ts]
     → GetUserStatsUseCase.execute()               [get-user-stats.ts]
       → attempts.listRecentByUserId(userId, 20)   [AttemptStatsReader port]
-        → SQL: SELECT * FROM attempts              [drizzle-attempt-repository.ts:161-172]
+        → SQL: SELECT * FROM attempts              [drizzle-attempt-repository.ts]
               WHERE userId = ?
               ORDER BY answeredAt DESC
               LIMIT 20
               -- NO JOIN to practice_sessions
-              -- practiceSessionId is SELECTED but NEVER USED
+              -- practiceSessionId exists on rows but is not surfaced in output
 ```
 
-**Gap:** `listRecentByUserId()` returns raw attempts. The use case deduplicates by `questionId` and enriches with question metadata, but never groups by session. `UserStatsOutput.recentActivity` has no `sessionId` field.
+**Gap:** `listRecentByUserId()` returns raw attempts (including `practiceSessionId`). The use case enriches rows with question metadata, but it does not expose `sessionId`/`sessionMode` in `UserStatsOutput.recentActivity`, so the UI cannot render session context.
 
 ### Data Flow — Review
 
@@ -92,12 +105,8 @@ ReviewPage
   → getMissedQuestions({ limit, offset })          [review-controller.ts]
     → GetMissedQuestionsUseCase.execute()          [get-missed-questions.ts]
       → attempts.listMissedQuestionsByUserId()     [AttemptMissedQuestionsReader port]
-        → SQL: SELECT questionId,                  [drizzle-attempt-repository.ts:187-228]
-                MAX(answeredAt),
-                ...
-              FROM attempts
-              WHERE userId = ? AND isCorrect = false
-              GROUP BY questionId
+        → SQL: ranked latest-attempt subquery       [drizzle-attempt-repository.ts]
+              where attemptRank = 1 and isCorrect = false
               -- NO JOIN to practice_sessions
               -- Session context completely absent
 ```
@@ -154,6 +163,7 @@ All the data is there. The Dashboard and Review views just don't query it.
 
 ## Related
 
+- [SPEC-020: Practice Engine Completion](../specs/spec-020-practice-engine-completion.md) — Phase 3
 - DEBT-114 (No session history page)
 - BUG-072 (No question navigation in sessions)
 - BUG-073 (Tutor mode missing session summary)
