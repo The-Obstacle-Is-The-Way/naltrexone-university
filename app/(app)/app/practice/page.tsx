@@ -758,7 +758,7 @@ export default function PracticePage() {
               {incompleteSessionError}
             </div>
           ) : null}
-          {!incompleteSession && (
+          {incompleteSessionStatus !== 'loading' && !incompleteSession && (
             <PracticeSessionStarter
               sessionMode={sessionMode}
               sessionCount={sessionCount}

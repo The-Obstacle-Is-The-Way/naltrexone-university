@@ -411,5 +411,21 @@ describe('practice-controller', () => {
         { userId: 'user_1' },
       ]);
     });
+
+    it('returns NOT_FOUND when use case throws ApplicationError', async () => {
+      const deps = createDeps({
+        incompleteThrows: new ApplicationError(
+          'NOT_FOUND',
+          'Practice session not found',
+        ),
+      });
+
+      const result = await getIncompletePracticeSession({}, deps);
+
+      expect(result).toEqual({
+        ok: false,
+        error: { code: 'NOT_FOUND', message: 'Practice session not found' },
+      });
+    });
   });
 });
