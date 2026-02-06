@@ -509,7 +509,7 @@ export class FakeSetPracticeSessionQuestionMarkUseCase
 }
 
 type InMemoryIdempotencyRecord = {
-  resultJson: unknown | null;
+  resultJson: unknown;
   error: IdempotencyKeyError | null;
   expiresAt: Date;
 };
