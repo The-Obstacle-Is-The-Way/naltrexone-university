@@ -100,6 +100,14 @@ describe('isTransientExternalError', () => {
     ).toBe(true);
   });
 
+  it('returns true for 429 rate limit errors', () => {
+    expect(
+      isTransientExternalError(
+        createError('rate limited', { statusCode: 429 }),
+      ),
+    ).toBe(true);
+  });
+
   it('returns false for 4xx errors', () => {
     expect(
       isTransientExternalError(createError('not found', { statusCode: 404 })),

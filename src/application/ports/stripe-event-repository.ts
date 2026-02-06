@@ -6,6 +6,15 @@ export interface StripeEventRepository {
   claim(eventId: string, type: string): Promise<boolean>;
 
   /**
+   * Read the event row without acquiring an update lock.
+   * Returns null when the row does not exist.
+   */
+  peek(eventId: string): Promise<{
+    processedAt: Date | null;
+    error: string | null;
+  } | null>;
+
+  /**
    * Lock the event row for exclusive processing and return its current state.
    *
    * IMPORTANT: This must be called inside a transaction.

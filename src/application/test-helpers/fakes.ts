@@ -509,7 +509,7 @@ export class FakeSetPracticeSessionQuestionMarkUseCase
 }
 
 type InMemoryIdempotencyRecord = {
-  resultJson: unknown | null;
+  resultJson: unknown;
   error: IdempotencyKeyError | null;
   expiresAt: Date;
 };
@@ -1276,7 +1276,12 @@ export class FakeStripeCustomerRepository implements StripeCustomerRepository {
     return { stripeCustomerId: customerId };
   }
 
-  async insert(userId: string, stripeCustomerId: string): Promise<void> {
+  async insert(
+    userId: string,
+    stripeCustomerId: string,
+    options?: { conflictStrategy?: 'strict' | 'authoritative' },
+  ): Promise<void> {
+    const conflictStrategy = options?.conflictStrategy ?? 'strict';
     const existingCustomerId = this.userIdToCustomerId.get(userId);
     const existingUserId = this.customerIdToUserId.get(stripeCustomerId);
 
@@ -1285,10 +1290,13 @@ export class FakeStripeCustomerRepository implements StripeCustomerRepository {
     }
 
     if (existingCustomerId && existingCustomerId !== stripeCustomerId) {
-      throw new ApplicationError(
-        'CONFLICT',
-        'User is already mapped to a different Stripe customer',
-      );
+      if (conflictStrategy !== 'authoritative') {
+        throw new ApplicationError(
+          'CONFLICT',
+          'User is already mapped to a different Stripe customer',
+        );
+      }
+      this.customerIdToUserId.delete(existingCustomerId);
     }
 
     if (existingUserId && existingUserId !== userId) {
@@ -1323,6 +1331,14 @@ export class FakeStripeEventRepository implements StripeEventRepository {
       error: null,
     });
     return true;
+  }
+
+  async peek(
+    eventId: string,
+  ): Promise<{ processedAt: Date | null; error: string | null } | null> {
+    const event = this.events.get(eventId);
+    if (!event) return null;
+    return { processedAt: event.processedAt, error: event.error };
   }
 
   async lock(

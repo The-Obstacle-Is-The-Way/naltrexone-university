@@ -1,3 +1,7 @@
+export type StripeCustomerInsertOptions = {
+  conflictStrategy?: 'strict' | 'authoritative';
+};
+
 export interface StripeCustomerRepository {
   findByUserId(userId: string): Promise<{ stripeCustomerId: string } | null>;
 
@@ -16,5 +20,9 @@ export interface StripeCustomerRepository {
    * - Throws `ApplicationError('CONFLICT', ...)` when the requested mapping
    *   conflicts with existing data.
    */
-  insert(userId: string, stripeCustomerId: string): Promise<void>;
+  insert(
+    userId: string,
+    stripeCustomerId: string,
+    options?: StripeCustomerInsertOptions,
+  ): Promise<void>;
 }

@@ -1,8 +1,9 @@
 # BUG-077: Payment Processing Users See Wrong Error Message
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P2
 **Date:** 2026-02-06
+**Resolved:** 2026-02-06
 
 ---
 
@@ -42,47 +43,22 @@ All non-entitled states collapse to the same redirect reason.
 
 ## Fix
 
-### Option A: Return status context with entitlement (Recommended)
+Implemented Option A.
 
-Extend the entitlement check to return the subscription status:
-
-```typescript
-// check-entitlement.ts output
-{
-  isEntitled: boolean;
-  reason:
-    | 'no_subscription'
-    | 'payment_processing'
-    | 'manage_billing'
-    | 'subscription_required';
-}
-```
-
-Then in the app layout:
-
-```typescript
-if (!entitlement.isEntitled) {
-  if (entitlement.reason === 'payment_processing') {
-    redirect('/pricing?reason=payment_processing');
-  } else if (entitlement.reason === 'manage_billing') {
-    redirect('/pricing?reason=manage_billing');
-  } else {
-    redirect('/pricing?reason=subscription_required');
-  }
-}
-```
-
-### Option B: Check subscription directly in layout
-
-Query the subscription status in the layout and use it for the redirect reason. Less clean architecturally but simpler to implement.
+- `CheckEntitlementUseCase` now returns redirect reason context for non-entitled states.
+- `enforceEntitledAppUser` now uses that reason instead of collapsing everything to `subscription_required`.
+- Redirect behavior now matches checkout-success messaging:
+  - `paymentProcessing` / `paymentFailed` -> `?reason=payment_processing`
+  - active-period non-entitled states (`pastDue`, `canceled`, `unpaid`, `paused`) -> `?reason=manage_billing`
+  - no subscription / expired period -> `?reason=subscription_required`
 
 ## Verification
 
-- [ ] Unit test: `paymentProcessing` or `paymentFailed` redirects with `reason=payment_processing`
-- [ ] Unit test: `pastDue`/`canceled`/`unpaid`/`paused` redirects with `reason=manage_billing`
-- [ ] Unit test: no-subscription redirects with `reason=subscription_required`
-- [ ] Pricing page renders appropriate message for each reason
-- [ ] Existing layout tests still pass
+- [x] Unit test: `paymentProcessing` or `paymentFailed` redirects with `reason=payment_processing`
+- [x] Unit test: active-period non-entitled billing states redirect with `reason=manage_billing`
+- [x] Unit test: no-subscription/expired redirects with `reason=subscription_required`
+- [x] Pricing page renders appropriate banner/action for each reason
+- [x] Existing layout tests pass
 
 ## Related
 

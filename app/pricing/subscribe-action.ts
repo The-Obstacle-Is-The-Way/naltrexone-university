@@ -35,6 +35,10 @@ export async function runSubscribeAction(
     return deps.redirectFn('/pricing?reason=manage_billing');
   }
 
+  if (result.error.code === 'RATE_LIMITED') {
+    return deps.redirectFn('/pricing?checkout=rate_limited');
+  }
+
   deps.logError?.(
     {
       plan: input.plan,

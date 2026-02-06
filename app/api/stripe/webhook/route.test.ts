@@ -33,6 +33,7 @@ function createTestDeps() {
   const tx = {
     stripeEvents: {
       claim: async () => true,
+      peek: async () => ({ processedAt: null, error: null }),
       lock: async () => ({ processedAt: null, error: null }),
       markProcessed: async () => undefined,
       markFailed: async () => undefined,

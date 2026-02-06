@@ -39,7 +39,8 @@ export async function enforceEntitledAppUser(
   });
 
   if (!entitlement.isEntitled) {
-    redirectFn('/pricing?reason=subscription_required');
+    const reason = entitlement.reason ?? 'subscription_required';
+    redirectFn(`/pricing?reason=${reason}`);
   }
 }
 

@@ -1,8 +1,9 @@
 # BUG-075: Pricing CTA Mismatch for Recoverable Subscription States
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P2
 **Date:** 2026-02-06
+**Resolved:** 2026-02-06
 
 ---
 
@@ -51,12 +52,26 @@ Instead:
 - render "Manage Billing" guidance immediately for recoverable current subscriptions
 - keep checkout guard strict to avoid duplicate Stripe subscriptions
 
+## Fix
+
+Implemented Option A (status-aware entitlement context) without relaxing checkout protections from BUG-052:
+
+1. Extended `CheckEntitlementUseCase` output with:
+   - `reason` (`subscription_required` | `payment_processing` | `manage_billing`)
+   - `subscriptionStatus`
+   - `hasActiveSubscriptionPeriod`
+2. Updated pricing data loader to consume entitlement context.
+3. Updated pricing rendering to:
+   - show immediate manage-billing guidance for recoverable non-entitled states
+   - hide subscribe forms in those states
+4. Kept `CreateCheckoutSessionUseCase` strict guard unchanged (`currentPeriodEnd > now` still blocks duplicate checkout).
+
 ## Verification
 
-- [ ] Unit test: pricing data distinguishes `no_subscription` vs `recoverable_non_entitled`
-- [ ] Unit test: pricing view hides subscribe forms for recoverable current subscriptions
-- [ ] Unit test: checkout guard still blocks `currentPeriodEnd > now` subscriptions
-- [ ] Existing BUG-052 protections remain intact
+- [x] Unit test: pricing data distinguishes subscription reasons
+- [x] Unit test: pricing view hides subscribe forms for recoverable current subscriptions
+- [x] Unit test: checkout guard still blocks `currentPeriodEnd > now` subscriptions
+- [x] Existing BUG-052 protections remain intact
 
 ## Related
 

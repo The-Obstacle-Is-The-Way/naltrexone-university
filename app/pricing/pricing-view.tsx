@@ -99,6 +99,25 @@ export function PricingView({
               </Link>
             </div>
           </div>
+        ) : !isEntitled && manageBillingAction ? (
+          <div className="mx-auto mt-16 max-w-2xl rounded-2xl border border-border bg-card p-8 text-center shadow-sm">
+            <div className="text-lg font-semibold text-foreground">
+              Subscription needs attention
+            </div>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Manage billing in Stripe to restore access.
+            </p>
+            <div className="mt-6">
+              <form action={manageBillingAction}>
+                <button
+                  type="submit"
+                  className="inline-flex items-center justify-center rounded-full bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                >
+                  Manage Billing
+                </button>
+              </form>
+            </div>
+          </div>
         ) : (
           <div className="mt-16 grid gap-8 md:grid-cols-2">
             <div className="rounded-2xl border border-border bg-card p-8 shadow-sm">
