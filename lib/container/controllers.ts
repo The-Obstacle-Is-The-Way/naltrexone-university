@@ -1,3 +1,4 @@
+import type { ClerkUserLike } from '@/src/adapters/gateways';
 import type {
   ContainerPrimitives,
   ControllerFactories,
@@ -11,13 +12,7 @@ export function createControllerFactories(input: {
   repositories: RepositoryFactories;
   gateways: GatewayFactories;
   useCases: UseCaseFactories;
-  getClerkUser: () => Promise<{
-    id: string;
-    primaryEmailAddressId?: string | null;
-    emailAddresses: readonly { id?: string; emailAddress: string }[];
-    updatedAt?: unknown;
-    updated_at?: unknown;
-  } | null>;
+  getClerkUser: () => Promise<ClerkUserLike | null>;
 }): ControllerFactories {
   const { primitives, repositories, gateways, useCases, getClerkUser } = input;
 

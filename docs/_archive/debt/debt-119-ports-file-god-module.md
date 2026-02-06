@@ -26,7 +26,7 @@ While the interfaces themselves are well-designed (properly segregated into read
 
 ## Impact
 
-- Any developer working on any repository port must open the same 352-line file
+- Any developer working on any repository port must open the same 353-line file
 - Merge conflicts more likely when multiple people modify different ports simultaneously
 - File will only grow as new entities are added
 - IDE navigation is cluttered — harder to jump to a specific port

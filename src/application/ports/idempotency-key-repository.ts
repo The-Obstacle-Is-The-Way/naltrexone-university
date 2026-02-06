@@ -6,7 +6,7 @@ export type IdempotencyKeyError = {
 };
 
 export type IdempotencyKeyRecord = {
-  resultJson: unknown | null;
+  resultJson: unknown;
   error: IdempotencyKeyError | null;
   expiresAt: Date;
 };
