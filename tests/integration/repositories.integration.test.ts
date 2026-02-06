@@ -935,22 +935,22 @@ describe('DrizzleRateLimiter', () => {
 });
 
 describe('DrizzleTagRepository', () => {
-  it('lists tags ordered by kind then slug', async () => {
+  it('lists tags ordered by kind then slug, excluding orphaned tags', async () => {
     const domainSlug = `a-domain-${randomUUID()}`;
     const topicSlugA = `a-topic-${randomUUID()}`;
     const topicSlugB = `b-topic-${randomUUID()}`;
+    const orphanSlug = `orphan-${randomUUID()}`;
 
-    await createTag({
-      slug: domainSlug,
-      kind: 'domain',
-    });
-    await createTag({
-      slug: topicSlugB,
-      kind: 'topic',
-    });
-    await createTag({
-      slug: topicSlugA,
-      kind: 'topic',
+    const domain = await createTag({ slug: domainSlug, kind: 'domain' });
+    const topicB = await createTag({ slug: topicSlugB, kind: 'topic' });
+    const topicA = await createTag({ slug: topicSlugA, kind: 'topic' });
+    await createTag({ slug: orphanSlug, kind: 'topic' });
+
+    await createQuestion({
+      slug: `q-${randomUUID()}`,
+      status: 'published',
+      difficulty: 'easy',
+      tagIds: [domain.id, topicA.id, topicB.id],
     });
 
     const repo = new DrizzleTagRepository(db);
@@ -967,5 +967,7 @@ describe('DrizzleTagRepository', () => {
 
     expect(domainIndex).toBeLessThan(topicIndexA);
     expect(topicIndexA).toBeLessThan(topicIndexB);
+
+    expect(slugs).not.toContain(orphanSlug);
   });
 });

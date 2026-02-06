@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import {
+  FakeAttemptRepository,
+  FakePracticeSessionRepository,
+} from '@/src/application/test-helpers/fakes';
+import {
   createAttempt,
   createPracticeSession,
 } from '@/src/domain/test-helpers';
-import {
-  FakeAttemptRepository,
-  FakePracticeSessionRepository,
-} from '../test-helpers/fakes';
 import { GetIncompletePracticeSessionUseCase } from './get-incomplete-practice-session';
 
 describe('GetIncompletePracticeSessionUseCase', () => {
