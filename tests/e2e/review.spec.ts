@@ -30,10 +30,12 @@ test.describe('review', () => {
       waitUntil: 'domcontentloaded',
     });
     await expect(page.getByRole('heading', { name: 'Review' })).toBeVisible();
-    const reviewRow = page.locator('li', { hasText: QUESTION_SLUG });
-    await expect(reviewRow).toBeVisible();
+    const reattemptLink = page
+      .locator(`a[href="/app/questions/${QUESTION_SLUG}"]`)
+      .first();
+    await expect(reattemptLink).toBeVisible();
 
-    await reviewRow.getByRole('link', { name: 'Reattempt' }).click();
+    await reattemptLink.click();
     await expect(page).toHaveURL(
       new RegExp(`/app/questions/${QUESTION_SLUG}`),
       {
@@ -47,11 +49,8 @@ test.describe('review', () => {
       timeout: 60_000,
       waitUntil: 'domcontentloaded',
     });
-    await expect(page.locator('li', { hasText: QUESTION_SLUG })).toHaveCount(
-      0,
-      {
-        timeout: 15_000,
-      },
-    );
+    await expect(
+      page.locator(`a[href="/app/questions/${QUESTION_SLUG}"]`),
+    ).toHaveCount(0, { timeout: 15_000 });
   });
 });

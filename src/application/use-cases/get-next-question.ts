@@ -1,13 +1,8 @@
 import type { Question } from '@/src/domain/entities';
-import {
-  createQuestionSeed,
-  selectNextQuestionId,
-  shuffleWithSeed,
-} from '@/src/domain/services';
-import {
-  AllChoiceLabels,
-  type PracticeMode,
-  type QuestionDifficulty,
+import { selectNextQuestionId } from '@/src/domain/services';
+import type {
+  PracticeMode,
+  QuestionDifficulty,
 } from '@/src/domain/value-objects';
 import { ApplicationError } from '../errors';
 import type {
@@ -15,6 +10,7 @@ import type {
   PracticeSessionRepository,
   QuestionRepository,
 } from '../ports/repositories';
+import { buildShuffledChoiceViews } from '../shared/shuffled-choice-views';
 
 export type PublicChoice = {
   id: string;
@@ -72,32 +68,12 @@ export class GetNextQuestionUseCase {
     question: Question,
     userId: string,
   ): PublicChoice[] {
-    // Deterministic shuffle: the same user sees a stable choice order for a given question.
-    // Stable pre-sort makes the shuffle reproducible regardless of DB row ordering.
-    const seed = createQuestionSeed(userId, question.id);
-    const stableInput = question.choices.slice().sort((a, b) => {
-      const bySortOrder = a.sortOrder - b.sortOrder;
-      if (bySortOrder !== 0) return bySortOrder;
-      return a.id.localeCompare(b.id);
-    });
-    const shuffledChoices = shuffleWithSeed(stableInput, seed);
-
-    return shuffledChoices.map((c, index) => {
-      const displayLabel = AllChoiceLabels[index];
-      if (!displayLabel) {
-        throw new ApplicationError(
-          'INTERNAL_ERROR',
-          `Question ${question.id} has too many choices`,
-        );
-      }
-
-      return {
-        id: c.id,
-        label: displayLabel,
-        textMd: c.textMd,
-        sortOrder: index + 1,
-      };
-    });
+    return buildShuffledChoiceViews(question, userId).map((choice) => ({
+      id: choice.choiceId,
+      label: choice.displayLabel,
+      textMd: choice.textMd,
+      sortOrder: choice.sortOrder,
+    }));
   }
 
   private async executeForSession(

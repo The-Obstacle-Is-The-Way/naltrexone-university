@@ -13,6 +13,22 @@ import type { DrizzleDb } from '../shared/database-types';
 export class DrizzleAttemptRepository implements AttemptRepository {
   constructor(private readonly db: DrizzleDb) {}
 
+  private latestAttemptRowsSubquery(userId: string) {
+    return this.db
+      .select({
+        questionId: attempts.questionId,
+        answeredAt: attempts.answeredAt,
+        isCorrect: attempts.isCorrect,
+        attemptRank:
+          sql<number>`row_number() over (partition by ${attempts.questionId} order by ${attempts.answeredAt} desc, ${attempts.id} desc)`.as(
+            'attempt_rank',
+          ),
+      })
+      .from(attempts)
+      .where(eq(attempts.userId, userId))
+      .as('latest_attempt_rows');
+  }
+
   private requireSelectedChoiceId(row: {
     id?: string | null;
     selectedChoiceId?: string | null;
@@ -198,32 +214,24 @@ export class DrizzleAttemptRepository implements AttemptRepository {
     limit: number,
     offset: number,
   ): Promise<readonly MissedQuestionAttempt[]> {
-    const latestAttemptByQuestion = this.db
-      .select({
-        questionId: attempts.questionId,
-        answeredAt: max(attempts.answeredAt).as('max_answered_at'),
-      })
-      .from(attempts)
-      .where(eq(attempts.userId, userId))
-      .groupBy(attempts.questionId)
-      .as('latest_attempt_by_question');
+    const latestAttemptRows = this.latestAttemptRowsSubquery(userId);
 
     const rows = await this.db
       .select({
-        questionId: latestAttemptByQuestion.questionId,
-        answeredAt: latestAttemptByQuestion.answeredAt,
+        questionId: latestAttemptRows.questionId,
+        answeredAt: latestAttemptRows.answeredAt,
       })
-      .from(latestAttemptByQuestion)
-      .innerJoin(
-        attempts,
+      .from(latestAttemptRows)
+      .where(
         and(
-          eq(attempts.userId, userId),
-          eq(attempts.questionId, latestAttemptByQuestion.questionId),
-          eq(attempts.answeredAt, latestAttemptByQuestion.answeredAt),
+          eq(latestAttemptRows.attemptRank, 1),
+          eq(latestAttemptRows.isCorrect, false),
         ),
       )
-      .where(eq(attempts.isCorrect, false))
-      .orderBy(desc(latestAttemptByQuestion.answeredAt))
+      .orderBy(
+        desc(latestAttemptRows.answeredAt),
+        desc(latestAttemptRows.questionId),
+      )
       .limit(limit)
       .offset(offset);
 
@@ -237,28 +245,17 @@ export class DrizzleAttemptRepository implements AttemptRepository {
   }
 
   async countMissedQuestionsByUserId(userId: string): Promise<number> {
-    const latestAttemptByQuestion = this.db
-      .select({
-        questionId: attempts.questionId,
-        answeredAt: max(attempts.answeredAt).as('max_answered_at'),
-      })
-      .from(attempts)
-      .where(eq(attempts.userId, userId))
-      .groupBy(attempts.questionId)
-      .as('latest_attempt_by_question');
+    const latestAttemptRows = this.latestAttemptRowsSubquery(userId);
 
     const [row] = await this.db
       .select({ count: sql<number>`count(*)::int` })
-      .from(latestAttemptByQuestion)
-      .innerJoin(
-        attempts,
+      .from(latestAttemptRows)
+      .where(
         and(
-          eq(attempts.userId, userId),
-          eq(attempts.questionId, latestAttemptByQuestion.questionId),
-          eq(attempts.answeredAt, latestAttemptByQuestion.answeredAt),
+          eq(latestAttemptRows.attemptRank, 1),
+          eq(latestAttemptRows.isCorrect, false),
         ),
-      )
-      .where(eq(attempts.isCorrect, false));
+      );
 
     return row?.count ?? 0;
   }

@@ -1,8 +1,9 @@
 # DEBT-121: Use Case Fakes Don't Implement Interfaces (No Compile-Time Safety)
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P2
 **Date:** 2026-02-06
+**Resolved:** 2026-02-06
 
 ---
 
@@ -35,40 +36,25 @@ If a real use case's `execute()` signature changes (e.g., new parameter added), 
 - Inconsistent with the repository/gateway fakes which properly implement interfaces
 - Violates Liskov Substitution Principle — fakes should be substitutable for real implementations
 
-## Resolution
+## Resolution (Implemented)
 
-### Option A: Extract Use Case Interfaces (Recommended)
+Implemented Option B (use-case port pattern):
 
-For each use case, export an interface from the use case file:
-
-```typescript
-// src/application/use-cases/submit-answer.ts
-export interface ISubmitAnswerUseCase {
-  execute(input: SubmitAnswerInput): Promise<SubmitAnswerOutput>;
-}
-
-export class SubmitAnswerUseCase implements ISubmitAnswerUseCase { ... }
-```
-
-Then in fakes:
-
-```typescript
-export class FakeSubmitAnswerUseCase implements ISubmitAnswerUseCase { ... }
-```
-
-### Option B: Use Case Port Pattern
-
-Define use case contracts in `src/application/ports/use-cases.ts` alongside repository ports. This is more formal but may feel heavy for use cases.
+- Added generic use-case contract:
+  - `src/application/ports/use-cases.ts`
+  - `UseCase<Input, Output> = { execute(input): Promise<Output> }`
+- Updated all fake use-case classes to implement `UseCase<...>` in:
+  - `src/application/test-helpers/fakes.ts`
+- Preserved existing fake behavior while adding compile-time signature checks.
 
 ## Verification
 
-- [ ] All 13 use-case fakes implement their corresponding interface
-- [ ] TypeScript compilation catches signature mismatches between real and fake use cases
-- [ ] Existing test suite passes
-- [ ] No behavioral changes
+- [x] All fake use-case classes implement a shared interface contract
+- [x] TypeScript catches execute-signature drift at compile time
+- [x] Existing test suite passes
+- [x] No runtime behavior changes
 
 ## Related
 
-- `src/application/test-helpers/fakes.ts` (lines 264-473)
-- Repository fakes (lines 474+) — correctly implement interfaces (good pattern to follow)
-- Gateway fakes — correctly implement interfaces
+- `src/application/ports/use-cases.ts`
+- `src/application/test-helpers/fakes.ts`

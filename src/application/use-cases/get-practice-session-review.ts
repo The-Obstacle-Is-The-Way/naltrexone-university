@@ -4,6 +4,7 @@ import type {
   PracticeSessionRepository,
   QuestionRepository,
 } from '@/src/application/ports/repositories';
+import { enrichWithQuestion } from '../shared/enrich-with-question';
 
 export type GetPracticeSessionReviewInput = {
   userId: string;
@@ -71,7 +72,15 @@ export class GetPracticeSessionReviewUseCase {
       session.questionStates.map((state) => [state.questionId, state]),
     );
 
-    const rows: PracticeSessionReviewRow[] = [];
+    type ReviewSeed = {
+      questionId: string;
+      order: number;
+      isAnswered: boolean;
+      isCorrect: boolean | null;
+      markedForReview: boolean;
+    };
+
+    const reviewSeeds: ReviewSeed[] = [];
     for (let i = 0; i < session.questionIds.length; i += 1) {
       const questionId = session.questionIds[i];
       if (!questionId) continue;
@@ -84,34 +93,41 @@ export class GetPracticeSessionReviewUseCase {
         latestAnsweredAt: null,
       };
 
-      const question = questionById.get(questionId);
-      if (!question) {
-        this.logger.warn(
-          { questionId },
-          'Practice session review references missing question',
-        );
-        rows.push({
-          isAvailable: false,
-          questionId,
-          order: i + 1,
-          isAnswered: state.latestSelectedChoiceId !== null,
-          isCorrect: state.latestIsCorrect,
-          markedForReview: state.markedForReview,
-        });
-        continue;
-      }
-
-      rows.push({
-        isAvailable: true,
-        questionId: question.id,
-        stemMd: question.stemMd,
-        difficulty: question.difficulty,
+      reviewSeeds.push({
+        questionId,
         order: i + 1,
         isAnswered: state.latestSelectedChoiceId !== null,
         isCorrect: state.latestIsCorrect,
         markedForReview: state.markedForReview,
       });
     }
+
+    const rows = enrichWithQuestion({
+      rows: reviewSeeds,
+      getQuestionId: (row) => row.questionId,
+      questionsById: questionById,
+      available: (row, question): PracticeSessionReviewRow => ({
+        isAvailable: true,
+        questionId: question.id,
+        stemMd: question.stemMd,
+        difficulty: question.difficulty,
+        order: row.order,
+        isAnswered: row.isAnswered,
+        isCorrect: row.isCorrect,
+        markedForReview: row.markedForReview,
+      }),
+      unavailable: (row): PracticeSessionReviewRow => ({
+        isAvailable: false,
+        questionId: row.questionId,
+        order: row.order,
+        isAnswered: row.isAnswered,
+        isCorrect: row.isCorrect,
+        markedForReview: row.markedForReview,
+      }),
+      logger: this.logger,
+      missingQuestionMessage:
+        'Practice session review references missing question',
+    });
 
     return {
       sessionId: session.id,

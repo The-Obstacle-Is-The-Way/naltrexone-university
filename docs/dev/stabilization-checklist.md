@@ -11,7 +11,7 @@
 
 - Session flow is implemented per current SSOT (`SLICE-3`): start, answer, exam review stage, finalize summary.
 - BUG-072 and BUG-073 were reclassified as debt (UX/product gaps, not SSOT violations).
-- One new correctness bug is open: [BUG-074](../bugs/bug-074-missed-questions-timestamp-tie-misclassification.md).
+- BUG-074 was resolved and archived: [BUG-074](../_archive/bugs/bug-074-missed-questions-timestamp-tie-misclassification.md).
 - Active architecture/product debt remains in `docs/debt/index.md` (DEBT-113+).
 
 ---
@@ -75,7 +75,7 @@
 
 ## Correctness Hotspots to Re-Check Before Merging
 
-- [ ] BUG-074 tie-case logic for missed-question latest-attempt query
+- [ ] BUG-074 regression check: tie-case logic for missed-question latest-attempt query
 - [ ] Session-state persistence integrity (`questionStates`) under concurrent updates
 - [ ] Idempotency behavior for session/question actions
 
@@ -86,4 +86,4 @@
 - `docs/specs/master_spec.md`
 - `docs/bugs/index.md`
 - `docs/debt/index.md`
-- [BUG-074](../bugs/bug-074-missed-questions-timestamp-tie-misclassification.md)
+- [BUG-074](../_archive/bugs/bug-074-missed-questions-timestamp-tie-misclassification.md)

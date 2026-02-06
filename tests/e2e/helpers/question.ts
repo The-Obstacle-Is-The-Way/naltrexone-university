@@ -1,5 +1,29 @@
 import { expect, type Page } from '@playwright/test';
 
+export class SeededQuestionMissingError extends Error {
+  constructor(slug: string) {
+    super(`Seeded question '${slug}' not found — update seeds or tests`);
+    this.name = 'SeededQuestionMissingError';
+  }
+}
+
+export function isPlaywrightTimeoutError(error: unknown): boolean {
+  return error instanceof Error && error.name === 'TimeoutError';
+}
+
+export function rethrowIfQuestionMissingCheckError(error: unknown): void {
+  if (error instanceof SeededQuestionMissingError) {
+    throw error;
+  }
+
+  if (isPlaywrightTimeoutError(error)) {
+    // waitFor timed out — question exists, proceed
+    return;
+  }
+
+  throw error;
+}
+
 export async function selectChoiceByLabel(
   page: Page,
   label: 'A' | 'B' | 'C' | 'D' = 'A',
@@ -23,14 +47,9 @@ export async function assertQuestionSlugExists(
   const notFound = page.getByText('Question not found.', { exact: true });
   try {
     await notFound.waitFor({ state: 'visible', timeout: 2_000 });
-    throw new Error(
-      `Seeded question '${slug}' not found — update seeds or tests`,
-    );
+    throw new SeededQuestionMissingError(slug);
   } catch (error) {
-    if (error instanceof Error && error.message.includes('not found')) {
-      throw error;
-    }
-    // waitFor timed out — question exists, proceed
+    rethrowIfQuestionMissingCheckError(error);
   }
 }
 

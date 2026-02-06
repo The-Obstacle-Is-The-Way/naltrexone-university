@@ -30,6 +30,15 @@ function createDbMock() {
     answeredAt: Symbol.for(`${alias}.answeredAt`),
   }));
 
+  const latestRowsAs = vi.fn((alias: string) => ({
+    __alias: alias,
+    __isLatestAttemptRows: true,
+    questionId: Symbol.for(`${alias}.questionId`),
+    answeredAt: Symbol.for(`${alias}.answeredAt`),
+    isCorrect: Symbol.for(`${alias}.isCorrect`),
+    attemptRank: Symbol.for(`${alias}.attemptRank`),
+  }));
+
   const groupBy = vi.fn(() => {
     const promise = groupByExecute();
     return Object.assign(promise, {
@@ -37,7 +46,7 @@ function createDbMock() {
     });
   });
 
-  const whereGroupBy = vi.fn(() => ({ groupBy }));
+  const whereGroupBy = vi.fn(() => ({ groupBy, as: latestRowsAs }));
 
   const offset = vi.fn(() => finalQueryExecute());
   const limit = vi.fn(() => ({ offset }));
@@ -46,6 +55,16 @@ function createDbMock() {
   const innerJoin = vi.fn(() => ({ where: whereFinal }));
 
   const from = vi.fn((table: unknown) => {
+    if (
+      typeof table === 'object' &&
+      table !== null &&
+      '__isLatestAttemptRows' in table
+    ) {
+      return {
+        where: whereFinal,
+      };
+    }
+
     if (
       typeof table === 'object' &&
       table !== null &&
@@ -89,6 +108,7 @@ function createDbMock() {
       from,
       countWhere,
       whereGroupBy,
+      latestRowsAs,
       groupBy,
       groupByAs,
       groupByExecute,

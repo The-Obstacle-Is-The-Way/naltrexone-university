@@ -852,6 +852,53 @@ describe('FakeAttemptRepository', () => {
         { questionId: 'q-3', answeredAt: new Date('2026-02-02T00:00:00Z') },
       ]);
     });
+
+    it('uses id desc as deterministic tie-breaker when answeredAt timestamps are equal', async () => {
+      const tiedAnsweredAt = new Date('2026-02-05T00:00:00Z');
+      const repo = new FakeAttemptRepository([
+        {
+          id: '00000000-0000-4000-8000-000000000001',
+          userId: 'user-1',
+          questionId: 'q-tie',
+          practiceSessionId: null,
+          selectedChoiceId: 'c-1',
+          isCorrect: false,
+          timeSpentSeconds: 0,
+          answeredAt: tiedAnsweredAt,
+        },
+        {
+          id: 'ffffffff-ffff-4fff-bfff-ffffffffffff',
+          userId: 'user-1',
+          questionId: 'q-tie',
+          practiceSessionId: null,
+          selectedChoiceId: 'c-2',
+          isCorrect: true,
+          timeSpentSeconds: 0,
+          answeredAt: tiedAnsweredAt,
+        },
+        {
+          id: 'attempt-keep-missed',
+          userId: 'user-1',
+          questionId: 'q-missed',
+          practiceSessionId: null,
+          selectedChoiceId: 'c-3',
+          isCorrect: false,
+          timeSpentSeconds: 0,
+          answeredAt: new Date('2026-02-04T00:00:00Z'),
+        },
+      ]);
+
+      const missed = await repo.listMissedQuestionsByUserId('user-1', 10, 0);
+      expect(missed).toEqual([
+        {
+          questionId: 'q-missed',
+          answeredAt: new Date('2026-02-04T00:00:00Z'),
+        },
+      ]);
+      await expect(repo.countMissedQuestionsByUserId('user-1')).resolves.toBe(
+        1,
+      );
+    });
   });
 
   describe('listAnsweredAtByUserIdSince', () => {

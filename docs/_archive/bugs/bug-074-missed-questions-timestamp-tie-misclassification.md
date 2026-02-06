@@ -1,8 +1,9 @@
 # BUG-074: Missed Questions Can Be Misclassified on `answered_at` Timestamp Ties
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P2
 **Date:** 2026-02-06
+**Resolved:** 2026-02-06
 
 ---
 
@@ -39,26 +40,23 @@ No deterministic tie-breaker exists (e.g., `id DESC`), so equal timestamps are a
 
 ## Fix
 
-### Option A: Window Function (Recommended)
+Implemented Option A:
 
-Use `ROW_NUMBER() OVER (PARTITION BY question_id ORDER BY answered_at DESC, id DESC)` and select `row_number = 1`, then filter `is_correct = false`.
-
-Apply the same strategy in both:
-- `listMissedQuestionsByUserId()`
-- `countMissedQuestionsByUserId()`
-
-### Option B: Add Stable Tie-Break Join Key
-
-Keep current shape but include a deterministic "latest attempt id" in the subquery and join by that id.
+- `DrizzleAttemptRepository.listMissedQuestionsByUserId()` now ranks attempts by
+  `ROW_NUMBER() OVER (PARTITION BY question_id ORDER BY answered_at DESC, id DESC)`
+  and only uses rank `1`.
+- `DrizzleAttemptRepository.countMissedQuestionsByUserId()` now uses the same
+  rank-based latest-attempt semantics.
+- `FakeAttemptRepository` now mirrors tie-break behavior with `answeredAt DESC, id DESC`.
 
 ---
 
 ## Verification
 
-- [ ] Integration test inserts same-timestamp attempts and verifies deterministic latest-attempt behavior
-- [ ] No duplicate question rows in missed list on tie scenarios
-- [ ] `countMissedQuestionsByUserId()` matches list semantics on tie scenarios
-- [ ] Existing review/bookmark tests still pass
+- [x] Integration test inserts same-timestamp attempts and verifies deterministic latest-attempt behavior (`tests/integration/repositories.integration.test.ts`)
+- [x] No duplicate question rows in missed list on tie scenarios
+- [x] `countMissedQuestionsByUserId()` matches list semantics on tie scenarios
+- [x] Existing review/bookmark tests still pass
 
 ---
 
