@@ -487,6 +487,90 @@ describe('app/(app)/app/practice', () => {
     expect(html).toContain('aria-pressed="false"');
   });
 
+  it('renders recent session history rows', async () => {
+    const { PracticeSessionHistoryPanel } = await import(
+      '@/app/(app)/app/practice/page'
+    );
+
+    const html = renderToStaticMarkup(
+      <PracticeSessionHistoryPanel
+        status="idle"
+        error={null}
+        rows={[
+          {
+            sessionId: 'session-1',
+            mode: 'exam',
+            questionCount: 20,
+            answered: 20,
+            correct: 15,
+            accuracy: 0.75,
+            durationSeconds: 1800,
+            startedAt: '2026-02-05T00:00:00.000Z',
+            endedAt: '2026-02-05T00:30:00.000Z',
+          },
+        ]}
+        selectedSessionId={null}
+        selectedReview={null}
+        reviewStatus={{ status: 'idle' }}
+        onOpenSession={() => undefined}
+      />,
+    );
+
+    expect(html).toContain('Recent sessions');
+    expect(html).toContain('Exam');
+    expect(html).toContain('15/20 correct (75%)');
+    expect(html).toContain('1800s');
+  });
+
+  it('renders selected session question breakdown', async () => {
+    const { PracticeSessionHistoryPanel } = await import(
+      '@/app/(app)/app/practice/page'
+    );
+
+    const html = renderToStaticMarkup(
+      <PracticeSessionHistoryPanel
+        status="idle"
+        error={null}
+        rows={[]}
+        selectedSessionId="session-1"
+        selectedReview={{
+          sessionId: 'session-1',
+          mode: 'exam',
+          totalCount: 2,
+          answeredCount: 1,
+          markedCount: 0,
+          rows: [
+            {
+              isAvailable: true,
+              questionId: 'q1',
+              stemMd: 'Stem for q1',
+              difficulty: 'easy',
+              order: 1,
+              isAnswered: true,
+              isCorrect: false,
+              markedForReview: false,
+            },
+            {
+              isAvailable: false,
+              questionId: 'q2',
+              order: 2,
+              isAnswered: false,
+              isCorrect: null,
+              markedForReview: false,
+            },
+          ],
+        }}
+        reviewStatus={{ status: 'ready' }}
+        onOpenSession={() => undefined}
+      />,
+    );
+
+    expect(html).toContain('Session breakdown');
+    expect(html).toContain('Stem for q1');
+    expect(html).toContain('[Question no longer available]');
+    expect(html).toContain('Incorrect');
+  });
+
   it('navigateTo calls window.location.assign', async () => {
     const { navigateTo } = await import(
       '@/app/(app)/app/practice/client-navigation'

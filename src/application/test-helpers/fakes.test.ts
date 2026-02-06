@@ -842,14 +842,29 @@ describe('FakeAttemptRepository', () => {
       await expect(
         repo.listMissedQuestionsByUserId('user-1', 10, 0),
       ).resolves.toEqual([
-        { questionId: 'q-2', answeredAt: new Date('2026-02-04T00:00:00Z') },
-        { questionId: 'q-3', answeredAt: new Date('2026-02-02T00:00:00Z') },
+        {
+          questionId: 'q-2',
+          answeredAt: new Date('2026-02-04T00:00:00Z'),
+          sessionId: null,
+          sessionMode: null,
+        },
+        {
+          questionId: 'q-3',
+          answeredAt: new Date('2026-02-02T00:00:00Z'),
+          sessionId: null,
+          sessionMode: null,
+        },
       ]);
 
       await expect(
         repo.listMissedQuestionsByUserId('user-1', 1, 1),
       ).resolves.toEqual([
-        { questionId: 'q-3', answeredAt: new Date('2026-02-02T00:00:00Z') },
+        {
+          questionId: 'q-3',
+          answeredAt: new Date('2026-02-02T00:00:00Z'),
+          sessionId: null,
+          sessionMode: null,
+        },
       ]);
     });
 
@@ -893,6 +908,8 @@ describe('FakeAttemptRepository', () => {
         {
           questionId: 'q-missed',
           answeredAt: new Date('2026-02-04T00:00:00Z'),
+          sessionId: null,
+          sessionMode: null,
         },
       ]);
       await expect(repo.countMissedQuestionsByUserId('user-1')).resolves.toBe(

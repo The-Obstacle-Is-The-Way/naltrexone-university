@@ -62,6 +62,8 @@ import type {
   GetNextQuestionOutput,
   GetPracticeSessionReviewInput,
   GetPracticeSessionReviewOutput,
+  GetSessionHistoryInput,
+  GetSessionHistoryOutput,
   GetUserStatsInput,
   SetPracticeSessionQuestionMarkInput,
   SetPracticeSessionQuestionMarkOutput,
@@ -74,7 +76,10 @@ import type {
   UserStatsOutput,
 } from '../use-cases';
 
-type InMemoryAttempt = Attempt & { practiceSessionId: string | null };
+type InMemoryAttempt = Attempt & {
+  practiceSessionId: string | null;
+  sessionMode?: 'tutor' | 'exam' | null;
+};
 
 type LoggerCall = { context: LoggerContext; msg: string };
 
@@ -434,6 +439,25 @@ export class FakeGetPracticeSessionReviewUseCase
   }
 }
 
+export class FakeGetSessionHistoryUseCase
+  implements UseCase<GetSessionHistoryInput, GetSessionHistoryOutput>
+{
+  readonly inputs: GetSessionHistoryInput[] = [];
+
+  constructor(
+    private readonly output: GetSessionHistoryOutput,
+    private readonly toThrow?: unknown,
+  ) {}
+
+  async execute(
+    input: GetSessionHistoryInput,
+  ): Promise<GetSessionHistoryOutput> {
+    this.inputs.push(input);
+    if (this.toThrow) throw this.toThrow;
+    return this.output;
+  }
+}
+
 export class FakeGetUserStatsUseCase
   implements UseCase<GetUserStatsInput, UserStatsOutput>
 {
@@ -657,6 +681,7 @@ export class FakeAttemptRepository implements AttemptRepository {
       userId: input.userId,
       questionId: input.questionId,
       practiceSessionId: input.practiceSessionId,
+      sessionMode: null,
       selectedChoiceId: input.selectedChoiceId,
       isCorrect: input.isCorrect,
       timeSpentSeconds: input.timeSpentSeconds,
@@ -730,12 +755,16 @@ export class FakeAttemptRepository implements AttemptRepository {
   async listRecentByUserId(
     userId: string,
     limit: number,
-  ): Promise<readonly Attempt[]> {
+  ): Promise<readonly (Attempt & { sessionMode: 'tutor' | 'exam' | null })[]> {
     return this.attempts
       .filter((a) => a.userId === userId)
       .slice()
       .sort((a, b) => b.answeredAt.getTime() - a.answeredAt.getTime())
-      .slice(0, limit);
+      .slice(0, limit)
+      .map((attempt) => ({
+        ...attempt,
+        sessionMode: attempt.sessionMode ?? null,
+      }));
   }
 
   async listAnsweredAtByUserIdSince(
@@ -767,7 +796,12 @@ export class FakeAttemptRepository implements AttemptRepository {
       .filter((a) => !a.isCorrect)
       .sort((a, b) => b.answeredAt.getTime() - a.answeredAt.getTime())
       .slice(offset, offset + limit)
-      .map((a) => ({ questionId: a.questionId, answeredAt: a.answeredAt }));
+      .map((a) => ({
+        questionId: a.questionId,
+        answeredAt: a.answeredAt,
+        sessionId: a.practiceSessionId,
+        sessionMode: a.sessionMode ?? null,
+      }));
   }
 
   async countMissedQuestionsByUserId(userId: string): Promise<number> {
@@ -922,6 +956,35 @@ export class FakePracticeSessionRepository
       .sort((a, b) => b.startedAt.getTime() - a.startedAt.getTime());
 
     return incomplete[0] ?? null;
+  }
+
+  async findCompletedByUserId(
+    userId: string,
+    limit: number,
+    offset: number,
+  ): Promise<{ rows: readonly PracticeSession[]; total: number }> {
+    const normalizedLimit = Number.isFinite(limit) ? Math.floor(limit) : 0;
+    const normalizedOffset = Number.isFinite(offset) ? Math.floor(offset) : 0;
+    const safeLimit = Math.max(0, normalizedLimit);
+    const safeOffset = Math.max(0, normalizedOffset);
+
+    const completed = this.sessions
+      .filter((s) => s.userId === userId && s.endedAt !== null)
+      .slice()
+      .sort((a, b) => {
+        const endedDelta =
+          (b.endedAt?.getTime() ?? 0) - (a.endedAt?.getTime() ?? 0);
+        if (endedDelta !== 0) return endedDelta;
+        return b.startedAt.getTime() - a.startedAt.getTime();
+      });
+
+    return {
+      rows:
+        safeLimit === 0
+          ? []
+          : completed.slice(safeOffset, safeOffset + safeLimit),
+      total: completed.length,
+    };
   }
 
   async create(input: {

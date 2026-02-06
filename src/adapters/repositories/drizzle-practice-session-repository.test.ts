@@ -105,6 +105,125 @@ describe('DrizzlePracticeSessionRepository', () => {
     expect(queryFindFirst).toHaveBeenCalledTimes(1);
   });
 
+  it('returns completed sessions with total count', async () => {
+    const endedAt = new Date('2026-02-02T00:00:00.000Z');
+    const startedAt = new Date('2026-02-01T23:00:00.000Z');
+    const findMany = vi.fn().mockResolvedValue([
+      {
+        id: 'session_1',
+        userId: 'user_1',
+        mode: 'exam',
+        paramsJson: {
+          count: 2,
+          tagSlugs: ['tag-1'],
+          difficulties: ['easy'],
+          questionIds: ['q1', 'q2'],
+        },
+        startedAt,
+        endedAt,
+      },
+    ]);
+    const countWhere = vi.fn().mockResolvedValue([{ count: 1 }]);
+    const select = vi.fn(() => ({
+      from: () => ({
+        where: countWhere,
+      }),
+    }));
+
+    const db = {
+      query: {
+        practiceSessions: {
+          findFirst: async () => null,
+          findMany,
+        },
+      },
+      select,
+      insert: () => {
+        throw new Error('unexpected insert');
+      },
+      update: () => {
+        throw new Error('unexpected update');
+      },
+    } as const;
+
+    type RepoDb = ConstructorParameters<
+      typeof DrizzlePracticeSessionRepository
+    >[0];
+    const repo = new DrizzlePracticeSessionRepository(db as unknown as RepoDb);
+
+    await expect(repo.findCompletedByUserId('user_1', 10, 0)).resolves.toEqual({
+      rows: [
+        {
+          id: 'session_1',
+          userId: 'user_1',
+          mode: 'exam',
+          questionIds: ['q1', 'q2'],
+          questionStates: [
+            {
+              questionId: 'q1',
+              markedForReview: false,
+              latestSelectedChoiceId: null,
+              latestIsCorrect: null,
+              latestAnsweredAt: null,
+            },
+            {
+              questionId: 'q2',
+              markedForReview: false,
+              latestSelectedChoiceId: null,
+              latestIsCorrect: null,
+              latestAnsweredAt: null,
+            },
+          ],
+          tagFilters: ['tag-1'],
+          difficultyFilters: ['easy'],
+          startedAt,
+          endedAt,
+        },
+      ],
+      total: 1,
+    });
+    expect(findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ limit: 10, offset: 0 }),
+    );
+  });
+
+  it('returns empty rows when limit is non-positive while preserving total', async () => {
+    const findMany = vi.fn();
+    const countWhere = vi.fn().mockResolvedValue([{ count: 3 }]);
+    const select = vi.fn(() => ({
+      from: () => ({
+        where: countWhere,
+      }),
+    }));
+
+    const db = {
+      query: {
+        practiceSessions: {
+          findFirst: async () => null,
+          findMany,
+        },
+      },
+      select,
+      insert: () => {
+        throw new Error('unexpected insert');
+      },
+      update: () => {
+        throw new Error('unexpected update');
+      },
+    } as const;
+
+    type RepoDb = ConstructorParameters<
+      typeof DrizzlePracticeSessionRepository
+    >[0];
+    const repo = new DrizzlePracticeSessionRepository(db as unknown as RepoDb);
+
+    await expect(repo.findCompletedByUserId('user_1', 0, 0)).resolves.toEqual({
+      rows: [],
+      total: 3,
+    });
+    expect(findMany).not.toHaveBeenCalled();
+  });
+
   it('returns null when no incomplete session exists for user', async () => {
     const db = {
       query: {

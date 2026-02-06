@@ -17,9 +17,29 @@ function createDbMock() {
       Array<{ questionId: string; answeredAt: Date | null }>
     > => [],
   );
+  const recentQueryExecute = vi.fn(
+    async (): Promise<
+      Array<{
+        id: string;
+        userId: string;
+        questionId: string;
+        practiceSessionId: string | null;
+        selectedChoiceId: string | null;
+        isCorrect: boolean;
+        timeSpentSeconds: number;
+        answeredAt: Date;
+        sessionMode: 'tutor' | 'exam' | null;
+      }>
+    > => [],
+  );
   const finalQueryExecute = vi.fn(
     async (): Promise<
-      Array<{ questionId: string; answeredAt: Date | null }>
+      Array<{
+        questionId: string;
+        answeredAt: Date | null;
+        sessionId: string | null;
+        sessionMode: 'tutor' | 'exam' | null;
+      }>
     > => [],
   );
 
@@ -35,6 +55,7 @@ function createDbMock() {
     __isLatestAttemptRows: true,
     questionId: Symbol.for(`${alias}.questionId`),
     answeredAt: Symbol.for(`${alias}.answeredAt`),
+    practiceSessionId: Symbol.for(`${alias}.practiceSessionId`),
     isCorrect: Symbol.for(`${alias}.isCorrect`),
     attemptRank: Symbol.for(`${alias}.attemptRank`),
   }));
@@ -52,6 +73,12 @@ function createDbMock() {
   const limit = vi.fn(() => ({ offset }));
   const orderBy = vi.fn(() => ({ limit }));
   const whereFinal = vi.fn(() => ({ orderBy }));
+  const leftJoinFinal = vi.fn(() => ({ where: whereFinal }));
+
+  const recentLimit = vi.fn(() => recentQueryExecute());
+  const recentOrderBy = vi.fn(() => ({ limit: recentLimit }));
+  const recentWhere = vi.fn(() => ({ orderBy: recentOrderBy }));
+  const leftJoinRecent = vi.fn(() => ({ where: recentWhere }));
   const innerJoin = vi.fn(() => ({ where: whereFinal }));
 
   const from = vi.fn((table: unknown) => {
@@ -61,7 +88,7 @@ function createDbMock() {
       '__isLatestAttemptRows' in table
     ) {
       return {
-        where: whereFinal,
+        leftJoin: leftJoinFinal,
       };
     }
 
@@ -76,6 +103,7 @@ function createDbMock() {
     }
 
     return {
+      leftJoin: leftJoinRecent,
       where: whereGroupBy,
     };
   });
@@ -112,7 +140,13 @@ function createDbMock() {
       groupBy,
       groupByAs,
       groupByExecute,
+      recentQueryExecute,
       innerJoin,
+      leftJoinFinal,
+      leftJoinRecent,
+      recentWhere,
+      recentOrderBy,
+      recentLimit,
       whereFinal,
       orderBy,
       limit,
@@ -402,7 +436,7 @@ describe('DrizzleAttemptRepository', () => {
     it('returns recent attempts mapped to domain objects', async () => {
       const db = createDbMock();
       const answeredAt = new Date('2026-02-02T00:00:00Z');
-      db._mocks.queryFindMany.mockResolvedValue([
+      db._mocks.recentQueryExecute.mockResolvedValue([
         {
           id: 'attempt_1',
           userId: 'user_1',
@@ -412,6 +446,7 @@ describe('DrizzleAttemptRepository', () => {
           isCorrect: true,
           timeSpentSeconds: 12,
           answeredAt,
+          sessionMode: null,
         },
       ]);
 
@@ -427,6 +462,7 @@ describe('DrizzleAttemptRepository', () => {
           isCorrect: true,
           timeSpentSeconds: 12,
           answeredAt,
+          sessionMode: null,
         },
       ]);
     });
@@ -455,15 +491,32 @@ describe('DrizzleAttemptRepository', () => {
       const answeredAt = new Date('2026-02-02T00:00:00Z');
 
       db._mocks.finalQueryExecute.mockResolvedValue([
-        { questionId: 'q1', answeredAt },
-        { questionId: 'q2', answeredAt: null },
+        {
+          questionId: 'q1',
+          answeredAt,
+          sessionId: 'session-1',
+          sessionMode: 'exam',
+        },
+        {
+          questionId: 'q2',
+          answeredAt: null,
+          sessionId: null,
+          sessionMode: null,
+        },
       ]);
 
       const repo = new DrizzleAttemptRepository(db as unknown as RepoDb);
 
       await expect(
         repo.listMissedQuestionsByUserId('user_1', 10, 0),
-      ).resolves.toEqual([{ questionId: 'q1', answeredAt }]);
+      ).resolves.toEqual([
+        {
+          questionId: 'q1',
+          answeredAt,
+          sessionId: 'session-1',
+          sessionMode: 'exam',
+        },
+      ]);
     });
   });
 });

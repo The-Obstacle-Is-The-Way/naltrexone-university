@@ -63,6 +63,8 @@ describe('GetMissedQuestionsUseCase', () => {
         {
           isAvailable: true,
           questionId: 'q1',
+          sessionId: null,
+          sessionMode: null,
           slug: 'q-1',
           stemMd: 'Stem for q1',
           difficulty: 'easy',
@@ -71,6 +73,8 @@ describe('GetMissedQuestionsUseCase', () => {
         {
           isAvailable: true,
           questionId: 'q2',
+          sessionId: null,
+          sessionMode: null,
           slug: 'q-2',
           stemMd: 'Stem for q2',
           difficulty: 'easy',
@@ -107,6 +111,8 @@ describe('GetMissedQuestionsUseCase', () => {
         {
           isAvailable: false,
           questionId: orphanedQuestionId,
+          sessionId: null,
+          sessionMode: null,
           lastAnsweredAt: '2026-02-01T12:00:00.000Z',
         },
       ],
@@ -120,5 +126,40 @@ describe('GetMissedQuestionsUseCase', () => {
         msg: 'Missed question references missing question',
       },
     ]);
+  });
+
+  it('includes session context on missed question rows when available', async () => {
+    const useCase = new GetMissedQuestionsUseCase(
+      new FakeAttemptRepository([
+        {
+          ...createAttempt({
+            userId: 'user-1',
+            questionId: 'q1',
+            practiceSessionId: 'session-1',
+            isCorrect: false,
+            answeredAt: new Date('2026-02-01T12:00:00Z'),
+          }),
+          sessionMode: 'exam',
+        },
+      ]),
+      new FakeQuestionRepository([
+        createQuestion({ id: 'q1', slug: 'q-1', stemMd: 'Stem for q1' }),
+      ]),
+      new FakeLogger(),
+    );
+
+    await expect(
+      useCase.execute({ userId: 'user-1', limit: 10, offset: 0 }),
+    ).resolves.toMatchObject({
+      rows: [
+        {
+          isAvailable: true,
+          questionId: 'q1',
+          sessionId: 'session-1',
+          sessionMode: 'exam',
+        },
+      ],
+      totalCount: 1,
+    });
   });
 });

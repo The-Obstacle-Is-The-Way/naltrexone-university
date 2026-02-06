@@ -20,6 +20,8 @@ describe('app/(app)/app/dashboard', () => {
               attemptId: 'attempt_1',
               answeredAt: '2026-02-01T00:00:00.000Z',
               questionId: 'q_1',
+              sessionId: null,
+              sessionMode: null,
               slug: 'q-1',
               stemMd: 'Stem for q1',
               difficulty: 'easy',
@@ -73,6 +75,8 @@ describe('app/(app)/app/dashboard', () => {
               attemptId: 'attempt_1',
               answeredAt: '2026-02-01T00:00:00.000Z',
               questionId: 'q_orphaned',
+              sessionId: null,
+              sessionMode: null,
               isCorrect: false,
             },
           ],
@@ -82,6 +86,49 @@ describe('app/(app)/app/dashboard', () => {
 
     expect(html).toContain('[Question no longer available]');
     expect(html).toContain('Incorrect');
+  });
+
+  it('groups consecutive recent activity rows by session context', () => {
+    const html = renderToStaticMarkup(
+      <DashboardView
+        stats={{
+          totalAnswered: 2,
+          accuracyOverall: 0.5,
+          answeredLast7Days: 2,
+          accuracyLast7Days: 0.5,
+          currentStreakDays: 1,
+          recentActivity: [
+            {
+              isAvailable: true,
+              attemptId: 'attempt_1',
+              answeredAt: '2026-02-01T00:00:00.000Z',
+              questionId: 'q_1',
+              sessionId: 'session_1',
+              sessionMode: 'exam',
+              slug: 'q-1',
+              stemMd: 'Stem for q1',
+              difficulty: 'easy',
+              isCorrect: true,
+            },
+            {
+              isAvailable: true,
+              attemptId: 'attempt_2',
+              answeredAt: '2026-01-31T00:00:00.000Z',
+              questionId: 'q_2',
+              sessionId: 'session_1',
+              sessionMode: 'exam',
+              slug: 'q-2',
+              stemMd: 'Stem for q2',
+              difficulty: 'easy',
+              isCorrect: false,
+            },
+          ],
+        }}
+      />,
+    );
+
+    expect(html).toContain('Exam session');
+    expect(html).toContain('1/2 correct');
   });
 
   it('renders an error state when stats load fails', () => {

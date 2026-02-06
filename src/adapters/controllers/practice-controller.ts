@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { createDepsResolver, loadAppContainer } from '@/lib/controller-helpers';
 import { START_PRACTICE_SESSION_RATE_LIMIT } from '@/src/adapters/shared/rate-limits';
 import {
+  MAX_PAGINATION_LIMIT,
   MAX_PRACTICE_SESSION_DIFFICULTY_FILTERS,
   MAX_PRACTICE_SESSION_QUESTIONS,
   MAX_PRACTICE_SESSION_TAG_FILTERS,
@@ -22,6 +23,8 @@ import type {
   GetIncompletePracticeSessionOutput,
   GetPracticeSessionReviewInput,
   GetPracticeSessionReviewOutput,
+  GetSessionHistoryInput,
+  GetSessionHistoryOutput,
   SetPracticeSessionQuestionMarkInput,
   SetPracticeSessionQuestionMarkOutput,
   StartPracticeSessionInput,
@@ -73,6 +76,13 @@ const SetPracticeSessionQuestionMarkInputSchema = z
   })
   .strict();
 
+const GetSessionHistoryInputSchema = z
+  .object({
+    limit: z.number().int().min(1).max(MAX_PAGINATION_LIMIT),
+    offset: z.number().int().min(0),
+  })
+  .strict();
+
 const EmptyInputSchema = z.object({}).strict();
 
 const StartPracticeSessionOutputSchema = z
@@ -95,6 +105,7 @@ export type {
   EndPracticeSessionOutput,
   GetIncompletePracticeSessionOutput,
   GetPracticeSessionReviewOutput,
+  GetSessionHistoryOutput,
   SetPracticeSessionQuestionMarkOutput,
   StartPracticeSessionOutput,
 } from '@/src/application/use-cases';
@@ -123,6 +134,11 @@ export type PracticeControllerDeps = {
     execute: (
       input: GetPracticeSessionReviewInput,
     ) => Promise<GetPracticeSessionReviewOutput>;
+  };
+  getSessionHistoryUseCase: {
+    execute: (
+      input: GetSessionHistoryInput,
+    ) => Promise<GetSessionHistoryOutput>;
   };
   setPracticeSessionQuestionMarkUseCase: {
     execute: (
@@ -218,6 +234,19 @@ export const getPracticeSessionReview = createAction({
     return d.getPracticeSessionReviewUseCase.execute({
       userId,
       sessionId: input.sessionId,
+    });
+  },
+});
+
+export const getSessionHistory = createAction({
+  schema: GetSessionHistoryInputSchema,
+  getDeps,
+  execute: async (input, d) => {
+    const userId = await requireEntitledUserId(d);
+    return d.getSessionHistoryUseCase.execute({
+      userId,
+      limit: input.limit,
+      offset: input.offset,
     });
   },
 });
