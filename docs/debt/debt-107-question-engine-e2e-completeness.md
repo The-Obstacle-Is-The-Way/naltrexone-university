@@ -38,6 +38,8 @@ Unit/integration coverage is strong, but E2E confidence was previously incomplet
 - `tests/e2e/helpers/clerk-auth.ts` with `clerk.signIn()`
 - `tests/e2e/helpers/subscription.ts` for subscription bootstrap
 - `tests/e2e/helpers/question.ts` + `tests/e2e/helpers/bookmark.ts` for reusable question-engine actions
+- `tests/e2e/helpers/session.ts` for shared `startSession()` practice session bootstrapping
+- All helpers use proper `waitFor`-based waits (DEBT-110 resolved)
 
 ---
 
