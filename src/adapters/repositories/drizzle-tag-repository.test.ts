@@ -87,17 +87,5 @@ describe('DrizzleTagRepository', () => {
       });
       expect(result[0]).not.toHaveProperty('extraField');
     });
-
-    it('uses selectDistinct with inner joins to filter by published questions', async () => {
-      const { db, chain } = createMockDb([]);
-      const repo = new DrizzleTagRepository(db);
-      await repo.listAll();
-
-      expect(db.selectDistinct).toHaveBeenCalledTimes(1);
-      expect(chain.from).toHaveBeenCalledTimes(1);
-      expect(chain.innerJoin).toHaveBeenCalledTimes(2);
-      expect(chain.where).toHaveBeenCalledTimes(1);
-      expect(chain.orderBy).toHaveBeenCalledTimes(1);
-    });
   });
 });

@@ -134,6 +134,30 @@ export function IncompleteSessionCard(input: {
   );
 }
 
+const tagKindLabels: Record<TagRow['kind'], string> = {
+  domain: 'Exam Section',
+  topic: 'Topic',
+  substance: 'Substance',
+  treatment: 'Treatment',
+  diagnosis: 'Diagnosis',
+};
+
+const tagKindPluralLabels: Record<TagRow['kind'], string> = {
+  domain: 'sections',
+  topic: 'topics',
+  substance: 'substances',
+  treatment: 'treatments',
+  diagnosis: 'diagnoses',
+};
+
+const tagKindOrder: TagRow['kind'][] = [
+  'domain',
+  'substance',
+  'topic',
+  'treatment',
+  'diagnosis',
+];
+
 export function PracticeSessionStarter(props: PracticeSessionStarterProps) {
   const difficulties = ['easy', 'medium', 'hard'] satisfies Array<
     NextQuestion['difficulty']
@@ -147,30 +171,6 @@ export function PracticeSessionStarter(props: PracticeSessionStarterProps) {
     }
     return map;
   }, [props.availableTags]);
-
-  const tagKindLabels: Record<TagRow['kind'], string> = {
-    domain: 'Exam Section',
-    topic: 'Topic',
-    substance: 'Substance',
-    treatment: 'Treatment',
-    diagnosis: 'Diagnosis',
-  };
-
-  const tagKindPluralLabels: Record<TagRow['kind'], string> = {
-    domain: 'sections',
-    topic: 'topics',
-    substance: 'substances',
-    treatment: 'treatments',
-    diagnosis: 'diagnoses',
-  };
-
-  const tagKindOrder: TagRow['kind'][] = [
-    'domain',
-    'substance',
-    'topic',
-    'treatment',
-    'diagnosis',
-  ];
 
   return (
     <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
