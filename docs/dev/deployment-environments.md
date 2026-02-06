@@ -1,6 +1,6 @@
 # Deployment Environments: Source of Truth
 
-**Last Verified:** 2026-02-06 (post database isolation + env scoping + Stripe live mode)
+**Last Verified:** 2026-02-06 (post database isolation + env scoping + Stripe single-account consolidation)
 
 This document is the single source of truth for how Clerk, Stripe, Neon, and Vercel are configured across all environments.
 
@@ -16,7 +16,10 @@ This document is the single source of truth for how Clerk, Stripe, Neon, and Ver
 - [x] **Stripe Live Mode** — Production uses `sk_live_*` / `pk_live_*` keys (account review in progress)
 - [x] **Stripe Production Webhook** — `addictionboards.com/api/webhooks/stripe` configured with 5 events
 - [x] **Stripe Live Price IDs** — Monthly ($29) and Annual ($199) products created in live mode
-- [ ] **Preview** (`*.vercel.app`, non-main branches) — NEEDS END-TO-END VERIFICATION
+- [x] **Stripe Single Account** — Test and live modes on same Stripe account (`51SvkizKItmaHAwgU`), fixed in [BUG-079](../bugs/bug-079-preview-dev-environment-verification-failures.md)
+- [x] **Stripe Test Webhook** — Test endpoint configured for Preview deployment with 5 events
+- [x] **Stripe Test Price IDs** — Monthly ($29) and Annual ($199) test products created
+- [ ] **Preview** (`*.vercel.app`, non-main branches) — NEEDS END-TO-END VERIFICATION (env vars fixed, pending redeploy)
 - [ ] **Local Development** (`localhost:3000`) — NEEDS END-TO-END VERIFICATION
 
 ---
@@ -42,9 +45,10 @@ This document is the single source of truth for how Clerk, Stripe, Neon, and Ver
 │  URL:      *.vercel.app (Preview) / localhost:3000 (Local)              │
 │  Branch:   Any non-main branch / local                                   │
 │  Clerk:    Development instance (pk_test_*, sk_test_*)                  │
-│  Stripe:   Test mode (sk_test_*, pk_test_*)                             │
+│  Stripe:   Test mode (sk_test_*, pk_test_*)              [CONFIGURED] │
 │  Database: Neon dev branch (ep-still-frog-ahx7bp6y)                     │
 │  Webhook:  Dev Clerk webhook (if configured)                             │
+│  Webhook:  Test Stripe webhook (Preview URL)             [CONFIGURED] │
 │                                                                          │
 │  Users: Test accounts, E2E test user, your personal dev account         │
 └─────────────────────────────────────────────────────────────────────────┘
@@ -63,11 +67,11 @@ This document is the single source of truth for how Clerk, Stripe, Neon, and Ver
 | `CLERK_SECRET_KEY` | `sk_live_*` | `sk_test_*` | `sk_test_*` | Correct |
 | `CLERK_WEBHOOK_SIGNING_SECRET` | Production webhook | Preview webhook | Dev webhook | Correct |
 | `NEXT_PUBLIC_APP_URL` | `https://addictionboards.com` | Preview URL | Dev URL | Correct |
-| `STRIPE_SECRET_KEY` | `sk_live_*` | `sk_test_*` | `sk_test_*` | Correct |
-| `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | `pk_live_*` | `pk_test_*` | `pk_test_*` | Correct |
-| `STRIPE_WEBHOOK_SECRET` | Live webhook secret | Test secret | Test secret | Correct |
-| `NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY` | Live price ID ($29/mo) | Test price ID | — | Correct |
-| `NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL` | Live price ID ($199/yr) | Test price ID | — | Correct |
+| `STRIPE_SECRET_KEY` | `sk_live_51SvkizK...` | `sk_test_51SvkizK...` | `sk_test_51SvkizK...` | Correct (same account) |
+| `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | `pk_live_51SvkizK...` | `pk_test_51SvkizK...` | `pk_test_51SvkizK...` | Correct (same account) |
+| `STRIPE_WEBHOOK_SECRET` | Live webhook secret | Test webhook secret | Test webhook secret | Correct |
+| `NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY` | Live price ID ($29/mo) | Test price ID ($29/mo) | Test price ID ($29/mo) | Correct |
+| `NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL` | Live price ID ($199/yr) | Test price ID ($199/yr) | Test price ID ($199/yr) | Correct |
 
 ### Auto-Generated Neon Vars (Vercel integration — still shared, app doesn't use these)
 
@@ -77,9 +81,11 @@ These were auto-created by the Vercel-Neon integration and still point to the ma
 
 ---
 
-## Stripe Live Mode (Configured 2026-02-06)
+## Stripe Configuration (Single Account — Configured 2026-02-06)
 
-All completed:
+**IMPORTANT:** Test mode and live mode MUST use the same Stripe account. Account ID: `51SvkizKItmaHAwgU`. See [BUG-079](../bugs/bug-079-preview-dev-environment-verification-failures.md) for what happens when they don't match.
+
+### Live Mode (Production)
 
 - [x] Stripe account activated (business verification in progress — 2-3 business days)
 - [x] Live API keys (`sk_live_*`, `pk_live_*`) set in Vercel Production
@@ -90,6 +96,17 @@ All completed:
   - Monthly: `price_1SxttBKItmaHAwgUOYmmLy8o` ($29/mo)
   - Annual: `price_1SxtuSKItmaHAwgUYUAl4Kxd` ($199/yr)
 - [ ] Test a real checkout flow on `addictionboards.com` (after Stripe review completes)
+
+### Test Mode (Preview / Development / Local)
+
+- [x] Test API keys (`sk_test_51SvkizK...`, `pk_test_51SvkizK...`) set in Vercel Preview + Development + `.env.local`
+- [x] Test webhook endpoint: Preview deployment URL + `/api/webhooks/stripe`
+  - Same 5 events as live
+- [x] Test webhook signing secret set in Vercel Preview + Development + `.env.local`
+- [x] Test Price IDs created and set everywhere:
+  - Monthly: `price_1SxuYAKItmaHAwgUWaePv0AC` ($29/mo)
+  - Annual: `price_1SxuYXKItmaHAwgUjobv4lxY` ($199/yr)
+- [ ] Test checkout flow on Preview deployment (pending redeploy)
 
 ---
 
