@@ -28,8 +28,9 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 | [DEBT-121](debt-121-use-case-fakes-lack-interfaces.md) | Use Case Fakes Don't Implement Interfaces (No Compile-Time Safety) | Open | P2 | 2026-02-06 |
 | [DEBT-122](debt-122-in-run-question-navigation-gap.md) | In-Run Question Navigation Gap (Tutor + Exam Answering Stage) | Open | P2 | 2026-02-06 |
 | [DEBT-123](debt-123-session-summary-missing-question-breakdown.md) | Session Summary Is Aggregate-Only (No Per-Question Breakdown) | Open | P2 | 2026-02-06 |
+| [DEBT-124](debt-124-e2e-question-helper-false-negative.md) | E2E Question Existence Helper Can Produce False Negatives | Open | P2 | 2026-02-06 |
 
-**Next Debt ID:** DEBT-124
+**Next Debt ID:** DEBT-125
 
 ## Archived Debt
 
