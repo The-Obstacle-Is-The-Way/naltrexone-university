@@ -321,6 +321,32 @@ describe('app/(app)/app/practice', () => {
     expect(html).toContain('Starting…');
   });
 
+  it('renders incomplete session card content', async () => {
+    const { IncompleteSessionCard } = await import(
+      '@/app/(app)/app/practice/page'
+    );
+
+    const html = renderToStaticMarkup(
+      <IncompleteSessionCard
+        session={{
+          sessionId: '11111111-1111-1111-1111-111111111111',
+          mode: 'exam',
+          answeredCount: 5,
+          totalCount: 20,
+          startedAt: '2026-02-05T00:00:00.000Z',
+        }}
+        isPending={false}
+        onAbandon={() => undefined}
+      />,
+    );
+
+    expect(html).toContain('Continue session');
+    expect(html).toContain('Exam mode');
+    expect(html).toContain('5/20 answered');
+    expect(html).toContain('Resume session');
+    expect(html).toContain('Abandon session');
+  });
+
   it('renders tag optgroups when tags are available', async () => {
     const { PracticeSessionStarter } = await import(
       '@/app/(app)/app/practice/page'

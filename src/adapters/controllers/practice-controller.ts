@@ -18,6 +18,8 @@ import type { IdempotencyKeyRepository } from '@/src/application/ports/repositor
 import type {
   EndPracticeSessionInput,
   EndPracticeSessionOutput,
+  GetIncompletePracticeSessionInput,
+  GetIncompletePracticeSessionOutput,
   StartPracticeSessionInput,
   StartPracticeSessionOutput,
 } from '@/src/application/use-cases';
@@ -53,14 +55,27 @@ const EndPracticeSessionInputSchema = z
   })
   .strict();
 
+const EmptyInputSchema = z.object({}).strict();
+
 const StartPracticeSessionOutputSchema = z
   .object({
     sessionId: zUuid,
   })
   .strict();
 
+const GetIncompletePracticeSessionOutputSchema = z
+  .object({
+    sessionId: zUuid,
+    mode: zPracticeMode,
+    answeredCount: z.number().int().min(0),
+    totalCount: z.number().int().min(1).max(MAX_PRACTICE_SESSION_QUESTIONS),
+    startedAt: z.string().datetime(),
+  })
+  .nullable();
+
 export type {
   EndPracticeSessionOutput,
+  GetIncompletePracticeSessionOutput,
   StartPracticeSessionOutput,
 } from '@/src/application/use-cases';
 
@@ -69,6 +84,11 @@ export type PracticeControllerDeps = {
   rateLimiter: RateLimiter;
   idempotencyKeyRepository: IdempotencyKeyRepository;
   checkEntitlementUseCase: CheckEntitlementUseCase;
+  getIncompletePracticeSessionUseCase: {
+    execute: (
+      input: GetIncompletePracticeSessionInput,
+    ) => Promise<GetIncompletePracticeSessionOutput>;
+  };
   startPracticeSessionUseCase: {
     execute: (
       input: StartPracticeSessionInput,
@@ -133,6 +153,18 @@ export const startPracticeSession = createAction({
       parseResult: (value) => StartPracticeSessionOutputSchema.parse(value),
       execute: createNewSession,
     });
+  },
+});
+
+export const getIncompletePracticeSession = createAction({
+  schema: EmptyInputSchema,
+  getDeps,
+  execute: async (_input, d) => {
+    const userId = await requireEntitledUserId(d);
+    const output = await d.getIncompletePracticeSessionUseCase.execute({
+      userId,
+    });
+    return GetIncompletePracticeSessionOutputSchema.parse(output);
   },
 });
 

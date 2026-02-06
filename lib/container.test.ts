@@ -25,6 +25,7 @@ import {
   CreatePortalSessionUseCase,
   EndPracticeSessionUseCase,
   GetBookmarksUseCase,
+  GetIncompletePracticeSessionUseCase,
   GetMissedQuestionsUseCase,
   GetNextQuestionUseCase,
   GetUserStatsUseCase,
@@ -91,6 +92,9 @@ describe('container factories', () => {
     expect(typeof container.createCheckEntitlementUseCase).toBe('function');
     expect(typeof container.createGetNextQuestionUseCase).toBe('function');
     expect(typeof container.createSubmitAnswerUseCase).toBe('function');
+    expect(typeof container.createGetIncompletePracticeSessionUseCase).toBe(
+      'function',
+    );
 
     expect(typeof container.createStripeWebhookDeps).toBe('function');
     expect(typeof container.createQuestionControllerDeps).toBe('function');
@@ -172,6 +176,9 @@ describe('container factories', () => {
     expect(container.createGetBookmarksUseCase()).toBeInstanceOf(
       GetBookmarksUseCase,
     );
+    expect(
+      container.createGetIncompletePracticeSessionUseCase(),
+    ).toBeInstanceOf(GetIncompletePracticeSessionUseCase);
     expect(container.createGetMissedQuestionsUseCase()).toBeInstanceOf(
       GetMissedQuestionsUseCase,
     );
@@ -256,6 +263,9 @@ describe('container factories', () => {
     );
     expect(practiceDeps.checkEntitlementUseCase).toBeInstanceOf(
       CheckEntitlementUseCase,
+    );
+    expect(practiceDeps.getIncompletePracticeSessionUseCase).toBeInstanceOf(
+      GetIncompletePracticeSessionUseCase,
     );
     expect(practiceDeps.startPracticeSessionUseCase).toBeInstanceOf(
       StartPracticeSessionUseCase,

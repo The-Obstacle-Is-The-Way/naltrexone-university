@@ -93,6 +93,23 @@ export class DrizzlePracticeSessionRepository
     return this.toDomain(row, params);
   }
 
+  async findLatestIncompleteByUserId(
+    userId: string,
+  ): Promise<PracticeSession | null> {
+    const row = await this.db.query.practiceSessions.findFirst({
+      where: and(
+        eq(practiceSessions.userId, userId),
+        isNull(practiceSessions.endedAt),
+      ),
+      orderBy: (table, { desc }) => [desc(table.startedAt)],
+    });
+
+    if (!row) return null;
+
+    const params = this.parseParams(row.paramsJson, 'INTERNAL_ERROR');
+    return this.toDomain(row, params);
+  }
+
   async create(input: {
     userId: string;
     mode: 'tutor' | 'exam';

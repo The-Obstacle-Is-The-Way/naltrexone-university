@@ -25,6 +25,11 @@ export {
   GetBookmarksUseCase,
 } from './get-bookmarks';
 export {
+  type GetIncompletePracticeSessionInput,
+  type GetIncompletePracticeSessionOutput,
+  GetIncompletePracticeSessionUseCase,
+} from './get-incomplete-practice-session';
+export {
   type GetMissedQuestionsInput,
   type GetMissedQuestionsOutput,
   GetMissedQuestionsUseCase,

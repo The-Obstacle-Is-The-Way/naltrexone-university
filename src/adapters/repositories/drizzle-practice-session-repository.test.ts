@@ -33,6 +33,80 @@ describe('DrizzlePracticeSessionRepository', () => {
     ).resolves.toBeNull();
   });
 
+  it('returns latest incomplete session for a user', async () => {
+    const startedAt = new Date('2026-02-01T00:00:00.000Z');
+    const queryFindFirst = vi.fn().mockResolvedValue({
+      id: 'session_2',
+      userId: 'user_1',
+      mode: 'exam',
+      paramsJson: {
+        count: 3,
+        tagSlugs: ['tag-1'],
+        difficulties: ['easy'],
+        questionIds: ['q1', 'q2', 'q3'],
+      },
+      startedAt,
+      endedAt: null,
+    });
+
+    const db = {
+      query: {
+        practiceSessions: {
+          findFirst: queryFindFirst,
+        },
+      },
+      insert: () => {
+        throw new Error('unexpected insert');
+      },
+      update: () => {
+        throw new Error('unexpected update');
+      },
+    } as const;
+
+    type RepoDb = ConstructorParameters<
+      typeof DrizzlePracticeSessionRepository
+    >[0];
+    const repo = new DrizzlePracticeSessionRepository(db as unknown as RepoDb);
+
+    await expect(repo.findLatestIncompleteByUserId('user_1')).resolves.toEqual({
+      id: 'session_2',
+      userId: 'user_1',
+      mode: 'exam',
+      questionIds: ['q1', 'q2', 'q3'],
+      tagFilters: ['tag-1'],
+      difficultyFilters: ['easy'],
+      startedAt,
+      endedAt: null,
+    });
+
+    expect(queryFindFirst).toHaveBeenCalledTimes(1);
+  });
+
+  it('returns null when no incomplete session exists for user', async () => {
+    const db = {
+      query: {
+        practiceSessions: {
+          findFirst: async () => null,
+        },
+      },
+      insert: () => {
+        throw new Error('unexpected insert');
+      },
+      update: () => {
+        throw new Error('unexpected update');
+      },
+    } as const;
+
+    type RepoDb = ConstructorParameters<
+      typeof DrizzlePracticeSessionRepository
+    >[0];
+    const repo = new DrizzlePracticeSessionRepository(db as unknown as RepoDb);
+
+    await expect(
+      repo.findLatestIncompleteByUserId('user_1'),
+    ).resolves.toBeNull();
+  });
+
   it('parses paramsJson and maps the row to a domain PracticeSession', async () => {
     const startedAt = new Date('2026-02-01T00:00:00.000Z');
     const row = {

@@ -10,7 +10,7 @@ test.describe('practice session continuation', () => {
   test.setTimeout(120_000);
   test.skip(!hasClerkCredentials, 'Missing Clerk E2E credentials');
 
-  test('user can resume a session via /app/practice/[sessionId]', async ({
+  test('practice page shows continue-session card and resumes session', async ({
     page,
   }) => {
     await signInWithClerkPassword(page);
@@ -27,7 +27,10 @@ test.describe('practice session continuation', () => {
       page.getByRole('heading', { name: 'Dashboard' }),
     ).toBeVisible();
 
-    await page.goto(sessionUrl);
+    await page.goto('/app/practice');
+    await expect(page.getByText('Continue session')).toBeVisible();
+    await expect(page.getByText(/Tutor mode|Exam mode/)).toBeVisible();
+    await page.getByRole('link', { name: 'Resume session' }).click();
     await expect(page).toHaveURL(sessionUrl);
     await expect(sessionInfo).toContainText('1/');
     await expect(page.getByRole('heading', { name: 'Practice' })).toBeVisible();

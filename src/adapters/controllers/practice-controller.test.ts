@@ -5,6 +5,7 @@ import type { RateLimiter } from '@/src/application/ports/gateways';
 import {
   FakeAuthGateway,
   FakeEndPracticeSessionUseCase,
+  FakeGetIncompletePracticeSessionUseCase,
   FakeIdempotencyKeyRepository,
   FakeRateLimiter,
   FakeStartPracticeSessionUseCase,
@@ -19,11 +20,13 @@ import type { User } from '@/src/domain/entities';
 import { createSubscription, createUser } from '@/src/domain/test-helpers';
 import {
   endPracticeSession,
+  getIncompletePracticeSession,
   type PracticeControllerDeps,
   startPracticeSession,
 } from './practice-controller';
 
 type PracticeControllerTestDeps = PracticeControllerDeps & {
+  getIncompletePracticeSessionUseCase: FakeGetIncompletePracticeSessionUseCase;
   startPracticeSessionUseCase: FakeStartPracticeSessionUseCase;
   endPracticeSessionUseCase: FakeEndPracticeSessionUseCase;
 };
@@ -36,6 +39,14 @@ function createDeps(overrides?: {
   startThrows?: unknown;
   endOutput?: EndPracticeSessionOutput;
   endThrows?: unknown;
+  incompleteOutput?: {
+    sessionId: string;
+    mode: 'tutor' | 'exam';
+    answeredCount: number;
+    totalCount: number;
+    startedAt: string;
+  } | null;
+  incompleteThrows?: unknown;
   now?: () => Date;
 }): PracticeControllerTestDeps {
   const user =
@@ -88,11 +99,18 @@ function createDeps(overrides?: {
     overrides?.endThrows,
   );
 
+  const getIncompletePracticeSessionUseCase =
+    new FakeGetIncompletePracticeSessionUseCase(
+      overrides?.incompleteOutput ?? null,
+      overrides?.incompleteThrows,
+    );
+
   return {
     authGateway,
     rateLimiter,
     idempotencyKeyRepository: new FakeIdempotencyKeyRepository(now),
     checkEntitlementUseCase,
+    getIncompletePracticeSessionUseCase,
     startPracticeSessionUseCase,
     endPracticeSessionUseCase,
     now,
@@ -327,6 +345,60 @@ describe('practice-controller', () => {
         ok: false,
         error: { code: 'NOT_FOUND', message: 'Practice session not found' },
       });
+    });
+  });
+
+  describe('getIncompletePracticeSession', () => {
+    it('returns UNAUTHENTICATED when unauthenticated', async () => {
+      const deps = createDeps({ user: null });
+
+      const result = await getIncompletePracticeSession({}, deps);
+
+      expect(result).toMatchObject({
+        ok: false,
+        error: { code: 'UNAUTHENTICATED' },
+      });
+      expect(deps.getIncompletePracticeSessionUseCase.inputs).toEqual([]);
+    });
+
+    it('returns UNSUBSCRIBED when not entitled', async () => {
+      const deps = createDeps({ isEntitled: false });
+
+      const result = await getIncompletePracticeSession({}, deps);
+
+      expect(result).toMatchObject({
+        ok: false,
+        error: { code: 'UNSUBSCRIBED' },
+      });
+      expect(deps.getIncompletePracticeSessionUseCase.inputs).toEqual([]);
+    });
+
+    it('returns incomplete session progress when use case succeeds', async () => {
+      const deps = createDeps({
+        incompleteOutput: {
+          sessionId: '11111111-1111-1111-1111-111111111111',
+          mode: 'exam',
+          answeredCount: 3,
+          totalCount: 20,
+          startedAt: '2026-02-05T00:00:00.000Z',
+        },
+      });
+
+      const result = await getIncompletePracticeSession({}, deps);
+
+      expect(result).toEqual({
+        ok: true,
+        data: {
+          sessionId: '11111111-1111-1111-1111-111111111111',
+          mode: 'exam',
+          answeredCount: 3,
+          totalCount: 20,
+          startedAt: '2026-02-05T00:00:00.000Z',
+        },
+      });
+      expect(deps.getIncompletePracticeSessionUseCase.inputs).toEqual([
+        { userId: 'user_1' },
+      ]);
     });
   });
 });

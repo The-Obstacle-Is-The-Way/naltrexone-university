@@ -139,6 +139,7 @@ export interface PracticeSessionRepository {
     id: string,
     userId: string,
   ): Promise<PracticeSession | null>;
+  findLatestIncompleteByUserId(userId: string): Promise<PracticeSession | null>;
   create(input: {
     userId: string;
     mode: 'tutor' | 'exam';

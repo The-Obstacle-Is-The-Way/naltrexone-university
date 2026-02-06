@@ -53,6 +53,8 @@ import type {
   CreatePortalSessionOutput,
   EndPracticeSessionInput,
   EndPracticeSessionOutput,
+  GetIncompletePracticeSessionInput,
+  GetIncompletePracticeSessionOutput,
   GetMissedQuestionsInput,
   GetMissedQuestionsOutput,
   GetNextQuestionInput,
@@ -364,6 +366,23 @@ export class FakeGetMissedQuestionsUseCase {
   async execute(
     input: GetMissedQuestionsInput,
   ): Promise<GetMissedQuestionsOutput> {
+    this.inputs.push(input);
+    if (this.toThrow) throw this.toThrow;
+    return this.output;
+  }
+}
+
+export class FakeGetIncompletePracticeSessionUseCase {
+  readonly inputs: GetIncompletePracticeSessionInput[] = [];
+
+  constructor(
+    private readonly output: GetIncompletePracticeSessionOutput,
+    private readonly toThrow?: unknown,
+  ) {}
+
+  async execute(
+    input: GetIncompletePracticeSessionInput,
+  ): Promise<GetIncompletePracticeSessionOutput> {
     this.inputs.push(input);
     if (this.toThrow) throw this.toThrow;
     return this.output;
@@ -734,6 +753,17 @@ export class FakePracticeSessionRepository
     return (
       this.sessions.find((s) => s.id === id && s.userId === userId) ?? null
     );
+  }
+
+  async findLatestIncompleteByUserId(
+    userId: string,
+  ): Promise<PracticeSession | null> {
+    const incomplete = this.sessions
+      .filter((s) => s.userId === userId && s.endedAt === null)
+      .slice()
+      .sort((a, b) => b.startedAt.getTime() - a.startedAt.getTime());
+
+    return incomplete[0] ?? null;
   }
 
   async create(input: {
