@@ -17,9 +17,13 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 | ID | Title | Status | Priority | Date |
 |----|-------|--------|----------|------|
+| [BUG-085](bug-085-out-of-order-question-load-overwrites-current-state.md) | Out-of-Order Question Loads Can Overwrite Current State | Open | P1 | 2026-02-07 |
+| [BUG-086](bug-086-session-history-drilldown-race-overwrites-selected-session.md) | Session History Drill-Down Race Can Show Wrong Session Details | Open | P2 | 2026-02-07 |
+| [BUG-087](bug-087-practice-tag-load-throw-stalls-page.md) | Practice Tag Load Throw Leaves Page Stuck in Loading | Open | P2 | 2026-02-07 |
+| [BUG-088](bug-088-clerk-webhook-invalid-payload-message-leak.md) | Clerk Webhook Invalid-Payload Response Leaks Internal Error Message | Open | P3 | 2026-02-07 |
 | [BUG-076](bug-076-past-due-immediate-lockout.md) | Past-Due Immediate Lockout | Won't Fix | P1 | 2026-02-06 |
 
-**Next Bug ID:** BUG-085
+**Next Bug ID:** BUG-089
 
 ## Recently Triaged
 
