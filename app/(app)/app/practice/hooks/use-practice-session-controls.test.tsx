@@ -109,4 +109,25 @@ describe('usePracticeSessionControls', () => {
       harness.unmount();
     }
   });
+
+  it('sets tag load status to error when getTags throws', async () => {
+    vi.spyOn(tagController, 'getTags').mockRejectedValue(
+      new Error('Tag service unavailable'),
+    );
+    vi.spyOn(
+      practiceController,
+      'getIncompletePracticeSession',
+    ).mockResolvedValue(ok(null));
+    vi.spyOn(practiceController, 'getSessionHistory').mockResolvedValue(
+      ok({ rows: [], total: 0, limit: 10, offset: 0 }),
+    );
+
+    const harness = renderLiveHook(() => usePracticeSessionControls());
+    try {
+      await harness.waitFor((output) => output.tagLoadStatus === 'error');
+      expect(harness.getCurrent().tagLoadStatus).toBe('error');
+    } finally {
+      harness.unmount();
+    }
+  });
 });

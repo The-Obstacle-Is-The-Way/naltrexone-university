@@ -17,7 +17,6 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 | ID | Title | Status | Priority | Date |
 |----|-------|--------|----------|------|
-| [BUG-087](bug-087-practice-tag-load-throw-stalls-page.md) | Practice Tag Load Throw Leaves Page Stuck in Loading | Open | P2 | 2026-02-07 |
 | [BUG-088](bug-088-clerk-webhook-invalid-payload-message-leak.md) | Clerk Webhook Invalid-Payload Response Leaks Internal Error Message | Open | P3 | 2026-02-07 |
 
 **Next Bug ID:** BUG-089
@@ -26,6 +25,7 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 | ID | Title | Status | Resolution |
 |----|-------|--------|------------|
+| [BUG-087](bug-087-practice-tag-load-throw-stalls-page.md) | Practice Tag Load Throw Leaves Page Stuck in Loading | Resolved | Added try/catch around tag loading and transitioned thrown failures to `tagLoadStatus: 'error'` with regression coverage |
 | [BUG-086](bug-086-session-history-drilldown-race-overwrites-selected-session.md) | Session History Drill-Down Race Can Show Wrong Session Details | Resolved | Added latest-request session guard in session-history drill-down so stale responses cannot overwrite selected session review |
 | [BUG-085](bug-085-out-of-order-question-load-overwrites-current-state.md) | Out-of-Order Question Loads Can Overwrite Current State | Resolved | Added request-sequencing guards to both question loaders and hooked request IDs in both practice flows so stale responses are discarded |
 | [BUG-077](../_archive/bugs/bug-077-payment-processing-confusing-redirect.md) | Payment Processing Users See Wrong Error Message | Resolved | `CheckEntitlementUseCase` now returns redirect context; app layout redirects payment-processing and billing-recovery states with reason-specific messaging |

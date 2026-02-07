@@ -101,7 +101,14 @@ export function usePracticeSessionControls(): UsePracticeSessionControlsOutput {
     setTagLoadStatus('loading');
 
     void (async () => {
-      const res = await getTags({});
+      let res: Awaited<ReturnType<typeof getTags>>;
+      try {
+        res = await getTags({});
+      } catch {
+        if (!mounted) return;
+        setTagLoadStatus('error');
+        return;
+      }
       if (!mounted) return;
 
       if (!res.ok) {

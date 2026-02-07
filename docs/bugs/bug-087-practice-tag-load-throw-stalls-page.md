@@ -1,6 +1,6 @@
 # BUG-087: Practice Tag Load Throw Leaves Page Stuck in Loading
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P2
 **Date:** 2026-02-07
 
@@ -34,17 +34,21 @@ In contrast, adjacent effects in the same hook already handle thrown errors expl
 
 ## Fix
 
-Pending.
+Wrapped initial tag loading in `usePracticeSessionControls` with `try/catch`
+and transitioned thrown failures to the existing error state:
 
-Recommended approach:
-- Wrap `getTags` call in `try/catch`.
-- Set `tagLoadStatus` to `'error'` on thrown failures.
-- Optionally surface a user-facing error message consistent with other controls.
+- `app/(app)/app/practice/hooks/use-practice-session-controls.ts`
+
+Added regression coverage:
+
+- `app/(app)/app/practice/hooks/use-practice-session-controls.test.tsx`
+  - `getTags` throw now produces `tagLoadStatus: 'error'`
+  - hook no longer hangs in loading on rejected tag load
 
 ## Verification
 
-- [ ] Hook test where `getTags` throws and `tagLoadStatus` becomes `'error'`
-- [ ] Hook test where successful call still sets `'idle'` and rows
+- [x] Hook test where `getTags` throws and `tagLoadStatus` becomes `'error'`
+- [x] Hook test where successful call still sets `'idle'` and rows
 - [ ] Manual verification by forcing server-action failure
 
 ## Related
