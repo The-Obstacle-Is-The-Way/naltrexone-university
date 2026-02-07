@@ -10,6 +10,7 @@ export const ROUTES = {
   APP_REVIEW: '/app/review',
   APP_BOOKMARKS: '/app/bookmarks',
   APP_BILLING: '/app/billing',
+  APP_QUESTIONS: '/app/questions/',
 } as const;
 
 export function toPracticeSessionRoute(sessionId: string): string {
@@ -17,5 +18,5 @@ export function toPracticeSessionRoute(sessionId: string): string {
 }
 
 export function toQuestionRoute(slug: string): string {
-  return `/app/questions/${slug}`;
+  return `${ROUTES.APP_QUESTIONS}${slug}`;
 }

@@ -602,22 +602,24 @@ describe('practice-session-page-logic', () => {
   });
 
   describe('endSession', () => {
+    const successfulEndSessionOutput: EndPracticeSessionOutput = {
+      sessionId: 'session-1',
+      endedAt: '2026-02-01T00:00:00.000Z',
+      totals: {
+        answered: 10,
+        correct: 7,
+        accuracy: 0.7,
+        durationSeconds: 123,
+      },
+    };
+
     it('sets summary and resets state on success', async () => {
       const setSummary = vi.fn();
       const setQuestion = vi.fn();
       const setSubmitResult = vi.fn();
       const setSelectedChoiceId = vi.fn();
       const endPracticeSessionFn = vi.fn(async () =>
-        ok({
-          sessionId: 'session-1',
-          endedAt: '2026-02-01T00:00:00.000Z',
-          totals: {
-            answered: 10,
-            correct: 7,
-            accuracy: 0.7,
-            durationSeconds: 123,
-          },
-        }),
+        ok(successfulEndSessionOutput),
       );
 
       await endSession({
@@ -729,17 +731,7 @@ describe('practice-session-page-logic', () => {
       await endSession({
         sessionId: 'session-1',
         endSessionIdempotencyKey: 'idem_1',
-        endPracticeSessionFn: async () =>
-          ok({
-            sessionId: 'session-1',
-            endedAt: '2026-02-01T00:00:00.000Z',
-            totals: {
-              answered: 10,
-              correct: 7,
-              accuracy: 0.7,
-              durationSeconds: 123,
-            },
-          }),
+        endPracticeSessionFn: async () => ok(successfulEndSessionOutput),
         setLoadState: vi.fn(),
         setSummary: vi.fn(),
         setQuestion: vi.fn(),

@@ -201,7 +201,7 @@ test('renders review error actions with retry and end session escape hatch', asy
   expect(onEndSession).toHaveBeenCalledTimes(1);
 });
 
-test('review error End session calls onFinalizeReview when provided', async () => {
+test('calls onFinalizeReview instead of onEndSession when both are provided', async () => {
   const onFinalizeReview = vi.fn();
   const onEndSession = vi.fn();
 
