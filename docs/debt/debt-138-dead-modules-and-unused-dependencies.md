@@ -23,6 +23,9 @@ Validated from first principles:
   - `src/domain/errors/index.ts`
 - `postcss.config.mjs` does not use `autoprefixer`
 - no usage of `swr` in `app/`, `src/`, `lib/`, `components/`
+- several build-time toolchain packages currently live in `dependencies`
+  (`typescript`, `tailwindcss`, `postcss`, `autoprefixer`, `drizzle-kit`) and should be reviewed for
+  `devDependencies` placement to keep runtime installs lean
 
 ## Impact
 
@@ -36,7 +39,8 @@ Validated from first principles:
    - remove it, or
    - wire it into live flows if it is intentionally part of current architecture
 2. Remove truly unused dependencies (`autoprefixer`, `swr`) or add explicit justification where required
-3. Add a static-analysis CI check (for example `knip`) with a small allowlist for intentional exceptions
+3. Reclassify build-only tooling packages to `devDependencies` where runtime usage is not required
+4. Add a static-analysis CI check (for example `knip`) with a small allowlist for intentional exceptions
 
 ## Verification
 
