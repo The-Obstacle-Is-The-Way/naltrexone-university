@@ -140,7 +140,7 @@ pnpm test:browser   # Runs *.browser.spec.tsx files in real Chromium
 
 ---
 
-## Hook Test Migration: `renderLiveHook` to Browser Mode
+## Hook Test Migration: `renderLiveHook` to Browser Mode (Completed)
 
 ### Background
 
@@ -148,22 +148,20 @@ Before Browser Mode was set up (Feb 4), we built `renderLiveHook` — a custom h
 
 **Browser Mode is the correct solution for these six suites.** `vitest-browser-react` runs in real Chromium and uses CDP + locator retries for synchronization. `renderHook()` still provides `act()` when explicit update boundaries are needed, but this migration removes the current jsdom `createRoot` warning pattern from these tests.
 
-### Files to Migrate (DEBT-141)
+### Migrated Files (DEBT-141)
 
-These 6 hook test files currently use `renderLiveHook` in jsdom and should be migrated to `*.browser.spec.tsx` using `vitest-browser-react`:
+These 6 async hook suites were migrated to Browser Mode `*.browser.spec.tsx`:
 
-| Current file (jsdom + renderLiveHook) | Migration target |
-|---------------------------------------|------------------|
-| `app/(app)/app/practice/hooks/use-practice-session-controls.test.tsx` | `*.browser.spec.tsx` |
-| `app/(app)/app/practice/hooks/use-practice-session-history.test.tsx` | `*.browser.spec.tsx` |
-| `app/(app)/app/practice/hooks/use-practice-question-flow.test.tsx` | `*.browser.spec.tsx` |
-| `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-page-controller.test.tsx` | `*.browser.spec.tsx` |
-| `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-mark-for-review.test.tsx` | `*.browser.spec.tsx` |
-| `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-review-stage.test.tsx` | `*.browser.spec.tsx` |
+- `app/(app)/app/practice/hooks/use-practice-session-controls.browser.spec.tsx`
+- `app/(app)/app/practice/hooks/use-practice-session-history.browser.spec.tsx`
+- `app/(app)/app/practice/hooks/use-practice-question-flow.browser.spec.tsx`
+- `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-page-controller.browser.spec.tsx`
+- `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-mark-for-review.browser.spec.tsx`
+- `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-review-stage.browser.spec.tsx`
 
-Supporting test infrastructure:
-- `src/application/test-helpers/render-live-hook.tsx` — retire after migration
-- `src/application/test-helpers/render-live-hook.test.tsx` — retire after migration
+Retired infrastructure:
+- `src/application/test-helpers/render-live-hook.tsx`
+- `src/application/test-helpers/render-live-hook.test.tsx`
 
 ### Migration Pattern
 
@@ -208,6 +206,14 @@ test('hook updates state correctly', async () => {
 
 The `renderHook` helper (not `renderLiveHook`) stays. It uses `renderToStaticMarkup` for synchronous hook capture and has zero act() warnings. 40+ test files use it correctly.
 
+### Browser Mode Mocking Note (Controller Boundaries)
+
+In Browser Mode hook specs, controller modules are often Node-only and cannot execute in Chromium runtime. For these suites, use top-level `vi.mock(modulePath, () => ({ ... }))` factories to provide explicit function stubs.
+
+This is a targeted exception for non-injectable module boundaries in browser tests. Prefer fakes via DI everywhere else.
+
+Also keep hook inputs/callback refs stable in tests (avoid recreating object/function dependencies on every render), or React effects can re-trigger indefinitely.
+
 ---
 
 ## The Ecosystem Reality
@@ -237,9 +243,9 @@ The `renderHook` helper (not `renderLiveHook`) stays. It uses `renderToStaticMar
 | `@testing-library/react` | **Avoid** (zombie maintenance, broken with Vitest + React 19) | [Issue #1392](https://github.com/testing-library/react-testing-library/issues/1392) |
 | `environmentMatchGlobs` | **Removed in Vitest 4** | [Vitest Migration Guide](https://vitest.dev/guide/migration.html) |
 
-### Legacy: `renderLiveHook` (internal)
+### Legacy: `renderLiveHook` (retired)
 
-`src/application/test-helpers/render-live-hook.tsx` was built on Feb 1 before Browser Mode was set up. It uses `createRoot` in jsdom, which produces act() warnings. It works but is superseded by `vitest-browser-react`'s `renderHook` / `render` in Browser Mode. Retire after migrating the 6 hook test files listed above.
+`src/application/test-helpers/render-live-hook.tsx` was built on Feb 1 before Browser Mode was set up. It used `createRoot` in jsdom and produced `act()` warnings. It has been retired after the DEBT-141 migration.
 
 ---
 
@@ -306,6 +312,7 @@ vi.mock('./user-repository');
 | 2026-02-04 | Added Vitest Browser Mode + vitest-browser-react (`pnpm test:browser`) |
 | 2026-02-07 | Clarified 3-tier testing strategy; renderLiveHook superseded by Browser Mode |
 | 2026-02-07 | Added hook test migration guide (DEBT-141) |
+| 2026-02-07 | Completed DEBT-141 migration and removed renderLiveHook harness |
 
 ---
 
