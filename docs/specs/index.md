@@ -37,7 +37,7 @@ Implementation specifications provide detailed technical guidance for building e
 | [SPEC-017](./spec-017-rate-limiting.md) | Rate Limiting | Partial | Infrastructure |
 | [SPEC-018](./spec-018-ui-integration.md) | UI Integration (v0 Templates) | Implemented | Feature |
 | [SPEC-019](./spec-019-practice-ux-redesign.md) | Practice & Navigation UX Redesign | Partial | Feature |
-| [SPEC-020](./spec-020-practice-engine-completion.md) | Practice Engine Completion | Partial | Feature |
+| [SPEC-020](./spec-020-practice-engine-completion.md) | Practice Engine Completion | Implemented | Feature |
 
 **Next Spec ID:** SPEC-021
 

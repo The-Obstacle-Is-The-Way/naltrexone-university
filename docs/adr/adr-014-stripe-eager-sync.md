@@ -66,6 +66,7 @@ Implementation lives at:
 ## Compliance
 
 - Unit tests verify eager sync redirects and writes expected DB state.
+- Implementation explicitly calls `stripe.subscriptions.retrieve(subscriptionId)` during success-page sync, ensuring canonical Stripe state is fetched instead of relying on stale local cache.
 - Webhook processing remains idempotent and durable.
 
 SSOT alignment:
@@ -79,4 +80,3 @@ SSOT alignment:
 - Stripe: Webhooks are eventually consistent; deliveries are not guaranteed to be immediate and can be retried.
 - `docs/specs/spec-011-paywall.md`
 - `docs/audits/audit-003-external-integrations.md` (Stripe section)
-

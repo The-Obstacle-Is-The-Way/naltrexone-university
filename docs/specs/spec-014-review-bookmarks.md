@@ -91,7 +91,7 @@ Once implemented:
 
 The core SLICE-4 functionality is complete. The following cross-page UX improvements are specified in [SPEC-019](./spec-019-practice-ux-redesign.md) Phase 3:
 
-- **Back-to-Bookmarks navigation:** The question detail page (`/app/questions/[slug]`) hard-codes "Back to Review" even when entered from Bookmarks. Needs referrer-aware link.
+- **Origin-aware question-detail navigation:** The question detail page (`/app/questions/[slug]`) uses static back links ("Back to Dashboard" in header, "Back to Review" after submit) and does not adapt to actual entry point (Bookmarks vs Review vs Dashboard).
 - **Cross-linking:** Review and Bookmarks pages should link to each other, not just to Practice.
 - **Review empty state:** When no missed questions exist, show helpful messaging with CTA.
 - **Review filtering:** Add tag/difficulty filter to the missed questions list.
