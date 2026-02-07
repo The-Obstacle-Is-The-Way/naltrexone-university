@@ -19,8 +19,9 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 |----|-------|--------|----------|------|
 | [DEBT-155](debt-155-stripe-legacy-duplicate-subscriptions-reconciliation.md) | Stripe Legacy Duplicate Subscription Reconciliation | In Progress | P1 | 2026-02-07 |
 | [DEBT-156](debt-156-stripe-payment-critical-adapter-test-gaps.md) | Stripe Payment-Critical Adapter Test Gaps | Open | P2 | 2026-02-07 |
+| [DEBT-157](debt-157-hot-path-prune-failures-are-not-observable.md) | Hot-Path Prune Failures Are Not Observable | Open | P2 | 2026-02-07 |
 
-**Next Debt ID:** DEBT-157
+**Next Debt ID:** DEBT-158
 
 ## Archived Debt
 

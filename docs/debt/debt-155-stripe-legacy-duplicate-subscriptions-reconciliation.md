@@ -37,7 +37,7 @@ This is operational debt: we need a repeatable reconciliation process to detect 
 1. Build and run a controlled reconciliation workflow for Stripe test + production:
    - Find customers with more than one blocking subscription (`active`, `trialing`, `past_due`, `unpaid`, `incomplete`, `paused`).
    - Keep the canonical subscription per customer and cancel extras safely.
-   - Canonical selection rule: newest non-canceled subscription with latest billing activity; if tied, prefer the subscription already mirrored in local `stripe_subscriptions`.
+   - Canonical selection rule implemented in code: if local `stripe_subscriptions` mapping is still blocking, keep it; otherwise choose the blocking subscription with latest `currentPeriodEnd` (tie-break by subscription id).
    - Execute in two phases: `dryRun=true` first, then `dryRun=false` after sign-off.
 2. Record an immutable audit trail for every affected customer.
    - Required fields: `customer_id`, `kept_subscription_id`, `canceled_subscription_ids[]`, `timestamp_utc`, `operator`, `reason`, `dry_run`.
