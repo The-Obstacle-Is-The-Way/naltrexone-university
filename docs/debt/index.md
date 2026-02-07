@@ -17,9 +17,14 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 | ID | Title | Status | Priority | Date |
 |----|-------|--------|----------|------|
+| [DEBT-137](debt-137-container-type-cycles.md) | Composition Root Type Cycles Between Container and Controllers | Open | P2 | 2026-02-07 |
+| [DEBT-139](debt-139-production-files-exceed-size-guardrail.md) | Production Files Exceed 300-Line Guardrail | Open | P2 | 2026-02-07 |
+| [DEBT-140](debt-140-request-correlation-not-wired-into-runtime-logs.md) | Request Correlation Is Defined but Not Wired Into Runtime Logs | Open | P2 | 2026-02-07 |
+| [DEBT-141](debt-141-practice-hook-tests-emit-react-act-warnings.md) | Practice Hook Tests Emit Repeated React act(...) Warnings | Open | P2 | 2026-02-07 |
 | [DEBT-136](debt-136-dunning-grace-period-for-past-due-subscribers.md) | Dunning Grace Period for Past-Due Subscribers | Open | P3 | 2026-02-07 |
+| [DEBT-138](debt-138-dead-modules-and-unused-dependencies.md) | Dead Modules and Unused Dependencies After Refactors | Open | P3 | 2026-02-07 |
 
-**Next Debt ID:** DEBT-137
+**Next Debt ID:** DEBT-142
 
 ## Archived Debt
 
