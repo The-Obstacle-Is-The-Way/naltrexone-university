@@ -17,7 +17,7 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 | ID | Title | Status | Priority | Date |
 |----|-------|--------|----------|------|
-| [DEBT-155](debt-155-stripe-legacy-duplicate-subscriptions-reconciliation.md) | Stripe Legacy Duplicate Subscription Reconciliation | Open | P1 | 2026-02-07 |
+| [DEBT-155](debt-155-stripe-legacy-duplicate-subscriptions-reconciliation.md) | Stripe Legacy Duplicate Subscription Reconciliation | In Progress | P1 | 2026-02-07 |
 
 **Next Debt ID:** DEBT-156
 

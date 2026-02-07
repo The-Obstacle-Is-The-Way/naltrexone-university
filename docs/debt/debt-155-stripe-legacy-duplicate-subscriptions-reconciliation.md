@@ -1,6 +1,6 @@
 # DEBT-155: Stripe Legacy Duplicate Subscription Reconciliation
 
-**Status:** Open
+**Status:** In Progress
 **Priority:** P1
 **Date:** 2026-02-07
 
@@ -11,6 +11,13 @@
 Checkout is now guarded against creating new duplicates, but existing Stripe customers may already have multiple active/trialing subscriptions from legacy behavior.
 
 This is operational debt: we need a repeatable reconciliation process to detect and remediate duplicate paid subscriptions already present in Stripe.
+
+## Current State
+
+- Reconciliation job implemented in `src/adapters/jobs/reconcile-stripe-subscriptions.ts`
+- Unit coverage in `src/adapters/jobs/reconcile-stripe-subscriptions.test.ts`
+- Duplicate-creation guardrails already in place at checkout (`ALREADY_SUBSCRIBED`)
+- Remaining work is operational execution + verification checklist completion
 
 ## Impact
 
