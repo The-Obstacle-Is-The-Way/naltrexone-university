@@ -2891,12 +2891,21 @@ Create in Stripe Dashboard (Test mode first, then Live mode):
 Configure webhook endpoint:
 
 * URL: `${NEXT_PUBLIC_APP_URL}/api/stripe/webhook`
-* Events:
+* Events (must match section 4.4.2):
 
   * `checkout.session.completed`
+  * `checkout.session.expired`
+  * `invoice.payment_failed`
+  * `invoice.payment_succeeded`
+  * `invoice.payment_action_required`
   * `customer.subscription.created`
   * `customer.subscription.updated`
   * `customer.subscription.deleted`
+  * `customer.subscription.paused`
+  * `customer.subscription.resumed`
+  * `customer.subscription.trial_will_end`
+  * `customer.subscription.pending_update_applied`
+  * `customer.subscription.pending_update_expired`
 
 ### 11.3 Customer Portal Configuration (Exact)
 

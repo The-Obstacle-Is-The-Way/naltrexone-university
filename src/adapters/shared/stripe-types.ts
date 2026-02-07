@@ -50,23 +50,23 @@ export type BillingPortalSessionCreateParams = {
 export type StripeBillingPortalSession = { url: string | null };
 
 export type StripeSubscription = unknown;
+export type StripeSubscriptionStatus =
+  | 'active'
+  | 'canceled'
+  | 'ended'
+  | 'incomplete'
+  | 'incomplete_expired'
+  | 'past_due'
+  | 'paused'
+  | 'trialing'
+  | 'unpaid';
 export type StripeListedSubscription = {
   id?: string;
-  status?: string;
+  status?: StripeSubscriptionStatus;
 };
 export type StripeSubscriptionListParams = {
   customer: string;
-  status?:
-    | 'active'
-    | 'all'
-    | 'canceled'
-    | 'ended'
-    | 'incomplete'
-    | 'incomplete_expired'
-    | 'past_due'
-    | 'paused'
-    | 'trialing'
-    | 'unpaid';
+  status?: StripeSubscriptionStatus | 'all';
   limit?: number;
 };
 export type StripeSubscriptionListResult = {

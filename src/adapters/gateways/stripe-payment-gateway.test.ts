@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { FakeLogger } from '@/src/application/test-helpers/fakes';
 import { loadJsonFixture } from '@/tests/shared/load-json-fixture';
+import { SUBSCRIPTION_LIST_LIMIT } from './stripe/stripe-checkout-sessions';
 import { StripePaymentGateway } from './stripe-payment-gateway';
 
 describe('StripePaymentGateway', () => {
@@ -314,7 +315,7 @@ describe('StripePaymentGateway', () => {
       url: 'https://stripe/checkout',
     }));
     const subscriptionsList = vi.fn(async () => ({
-      data: [{ id: 'sub_active_1', status: 'active' }],
+      data: [{ id: 'sub_active_1', status: 'active' as const }],
     }));
 
     const stripe = {
@@ -372,7 +373,7 @@ describe('StripePaymentGateway', () => {
     expect(subscriptionsList).toHaveBeenCalledWith({
       customer: 'cus_123',
       status: 'all',
-      limit: 10,
+      limit: SUBSCRIPTION_LIST_LIMIT,
     });
     expect(checkoutCreate).not.toHaveBeenCalled();
   });
@@ -384,8 +385,8 @@ describe('StripePaymentGateway', () => {
     }));
     const subscriptionsList = vi.fn(async () => ({
       data: [
-        { id: 'sub_ended_1', status: 'canceled' },
-        { id: 'sub_ended_2', status: 'incomplete_expired' },
+        { id: 'sub_ended_1', status: 'canceled' as const },
+        { id: 'sub_ended_2', status: 'incomplete_expired' as const },
       ],
     }));
 
@@ -444,7 +445,7 @@ describe('StripePaymentGateway', () => {
     expect(subscriptionsList).toHaveBeenCalledWith({
       customer: 'cus_123',
       status: 'all',
-      limit: 10,
+      limit: SUBSCRIPTION_LIST_LIMIT,
     });
     expect(checkoutCreate).toHaveBeenCalledTimes(1);
   });

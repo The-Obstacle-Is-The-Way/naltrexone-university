@@ -5,6 +5,7 @@ import type {
   CheckoutSessionCreateParams,
   StripeClient,
   StripeListedSubscription,
+  StripeSubscriptionStatus,
 } from '@/src/adapters/shared/stripe-types';
 import { ApplicationError } from '@/src/application/errors';
 import type {
@@ -14,7 +15,9 @@ import type {
 import type { Logger } from '@/src/application/ports/logger';
 import { callStripeWithRetry } from './stripe-retry';
 
-const BLOCKING_SUBSCRIPTION_STATUSES = new Set([
+export const SUBSCRIPTION_LIST_LIMIT = 10;
+
+const BLOCKING_SUBSCRIPTION_STATUSES = new Set<StripeSubscriptionStatus>([
   'active',
   'trialing',
   'past_due',
@@ -25,7 +28,7 @@ const BLOCKING_SUBSCRIPTION_STATUSES = new Set([
 
 function getBlockingSubscriptionStatus(
   subscription: StripeListedSubscription | undefined,
-): string | null {
+): StripeSubscriptionStatus | null {
   if (!subscription) return null;
   if (!subscription.status) return null;
   if (!BLOCKING_SUBSCRIPTION_STATUSES.has(subscription.status)) return null;
@@ -46,7 +49,9 @@ export async function createStripeCheckoutSession({
   logger: Logger;
 }): Promise<{ url: string }> {
   const priceId = getStripePriceId(input.plan, priceIds);
-  const subscriptionsList = stripe.subscriptions?.list;
+  const subscriptionsList = stripe.subscriptions?.list?.bind(
+    stripe.subscriptions,
+  );
   if (subscriptionsList) {
     const subscriptions = await callStripeWithRetry({
       operation: 'subscriptions.list',
@@ -54,13 +59,13 @@ export async function createStripeCheckoutSession({
         subscriptionsList({
           customer: input.externalCustomerId,
           status: 'all',
-          limit: 10,
+          limit: SUBSCRIPTION_LIST_LIMIT,
         }),
       logger,
     });
 
     let blockingSubscription: StripeListedSubscription | null = null;
-    let blockingStatus: string | null = null;
+    let blockingStatus: StripeSubscriptionStatus | null = null;
     for (const subscription of subscriptions.data) {
       const status = getBlockingSubscriptionStatus(subscription);
       if (!status) continue;
