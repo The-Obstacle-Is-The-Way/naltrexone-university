@@ -1,4 +1,5 @@
 import { ApplicationError, isApplicationError } from '@/src/application/errors';
+import type { Logger } from '@/src/application/ports/logger';
 import type { IdempotencyKeyRepository } from '@/src/application/ports/repositories';
 
 const DEFAULT_TTL_MS = 86_400_000; // 24 hours
@@ -38,6 +39,7 @@ function toErrorRecord(error: unknown): {
 
 export async function withIdempotency<T>(input: {
   repo: IdempotencyKeyRepository;
+  logger: Logger;
   userId: string;
   action: string;
   key: string;
@@ -56,7 +58,17 @@ export async function withIdempotency<T>(input: {
   // Pruning failures must not block the caller's request.
   try {
     await input.repo.pruneExpiredBefore(input.now(), PRUNE_BATCH_LIMIT);
-  } catch {}
+  } catch (error) {
+    input.logger.warn(
+      {
+        userId: input.userId,
+        action: input.action,
+        key: input.key,
+        error: error instanceof Error ? error.message : String(error),
+      },
+      'Idempotency prune failed',
+    );
+  }
 
   const expiresAt = new Date(input.now().getTime() + ttlMs);
   const claimed = await input.repo.claim({

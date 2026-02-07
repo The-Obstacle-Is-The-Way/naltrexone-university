@@ -12,6 +12,7 @@ import { DrizzleIdempotencyKeyRepository } from '@/src/adapters/repositories/dri
 import { DrizzleStripeCustomerRepository } from '@/src/adapters/repositories/drizzle-stripe-customer-repository';
 import {
   FakeAuthGateway,
+  FakeLogger,
   FakePaymentGateway,
   FakeSubscriptionRepository,
 } from '@/src/application/test-helpers/fakes';
@@ -109,6 +110,7 @@ describe('billing controllers (integration)', () => {
       { plan: 'monthly' },
       {
         authGateway: new FakeAuthGateway(user),
+        logger: new FakeLogger(),
         createCheckoutSessionUseCase,
         createPortalSessionUseCase,
         idempotencyKeyRepository,
@@ -182,6 +184,7 @@ describe('billing controllers (integration)', () => {
       { plan: 'annual' },
       {
         authGateway: new FakeAuthGateway(user),
+        logger: new FakeLogger(),
         createCheckoutSessionUseCase,
         createPortalSessionUseCase,
         idempotencyKeyRepository,
@@ -204,6 +207,7 @@ describe('billing controllers (integration)', () => {
       {},
       {
         authGateway: new FakeAuthGateway(user),
+        logger: new FakeLogger(),
         createCheckoutSessionUseCase,
         createPortalSessionUseCase,
         idempotencyKeyRepository,

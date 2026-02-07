@@ -10,6 +10,7 @@ import type {
   AuthGateway,
   RateLimiter,
 } from '@/src/application/ports/gateways';
+import type { Logger } from '@/src/application/ports/logger';
 import type { IdempotencyKeyRepository } from '@/src/application/ports/repositories';
 import type {
   CreateCheckoutSessionInput,
@@ -44,6 +45,7 @@ export type {
 
 export type BillingControllerDeps = {
   authGateway: AuthGateway;
+  logger: Logger;
   createCheckoutSessionUseCase: {
     execute: (
       input: CreateCheckoutSessionInput,
@@ -126,6 +128,7 @@ export const createCheckoutSession = createAction({
 
     return withIdempotency({
       repo: d.idempotencyKeyRepository,
+      logger: d.logger,
       userId: user.id,
       action: 'billing:createCheckoutSession',
       key: idempotencyKey,

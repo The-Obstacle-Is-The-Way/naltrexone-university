@@ -31,6 +31,7 @@ export function createControllerFactories(input: {
     }),
     createQuestionControllerDeps: () => ({
       authGateway: gateways.createAuthGateway(),
+      logger: primitives.logger,
       rateLimiter: gateways.createRateLimiter(),
       idempotencyKeyRepository: repositories.createIdempotencyKeyRepository(),
       checkEntitlementUseCase: useCases.createCheckEntitlementUseCase(),
@@ -44,6 +45,7 @@ export function createControllerFactories(input: {
     }),
     createBillingControllerDeps: () => ({
       authGateway: gateways.createAuthGateway(),
+      logger: primitives.logger,
       createCheckoutSessionUseCase: useCases.createCheckoutSessionUseCase(),
       createPortalSessionUseCase: useCases.createPortalSessionUseCase(),
       idempotencyKeyRepository: repositories.createIdempotencyKeyRepository(),
@@ -54,6 +56,7 @@ export function createControllerFactories(input: {
     }),
     createBookmarkControllerDeps: () => ({
       authGateway: gateways.createAuthGateway(),
+      logger: primitives.logger,
       rateLimiter: gateways.createRateLimiter(),
       idempotencyKeyRepository: repositories.createIdempotencyKeyRepository(),
       checkEntitlementUseCase: useCases.createCheckEntitlementUseCase(),
@@ -63,6 +66,7 @@ export function createControllerFactories(input: {
     }),
     createPracticeControllerDeps: () => ({
       authGateway: gateways.createAuthGateway(),
+      logger: primitives.logger,
       rateLimiter: gateways.createRateLimiter(),
       idempotencyKeyRepository: repositories.createIdempotencyKeyRepository(),
       checkEntitlementUseCase: useCases.createCheckEntitlementUseCase(),

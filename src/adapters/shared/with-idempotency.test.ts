@@ -1,12 +1,16 @@
 import { describe, expect, it, vi } from 'vitest';
 import { ApplicationError } from '@/src/application/errors';
-import { FakeIdempotencyKeyRepository } from '@/src/application/test-helpers/fakes';
+import {
+  FakeIdempotencyKeyRepository,
+  FakeLogger,
+} from '@/src/application/test-helpers/fakes';
 import { withIdempotency } from './with-idempotency';
 
 describe('withIdempotency', () => {
   it('executes once and returns cached result for subsequent calls', async () => {
     const now = () => new Date();
     const repo = new FakeIdempotencyKeyRepository(now);
+    const logger = new FakeLogger();
     const execute = vi.fn(async () => ({ ok: true }));
 
     const input = {
@@ -15,6 +19,7 @@ describe('withIdempotency', () => {
       action: 'billing:createCheckoutSession',
       key: '11111111-1111-1111-1111-111111111111',
       now,
+      logger,
       execute,
     } as const;
 
@@ -26,6 +31,7 @@ describe('withIdempotency', () => {
   it('parses cached results when parseResult is provided', async () => {
     const now = () => new Date();
     const repo = new FakeIdempotencyKeyRepository(now);
+    const logger = new FakeLogger();
     const execute = vi.fn(async () => ({ ok: true }));
     const parseResult = vi.fn((value: unknown) => {
       if (typeof value !== 'object' || value === null) {
@@ -46,6 +52,7 @@ describe('withIdempotency', () => {
       action: 'billing:createCheckoutSession',
       key: '11111111-1111-1111-1111-111111111111',
       now,
+      logger,
       parseResult,
       execute,
     } as const;
@@ -59,6 +66,7 @@ describe('withIdempotency', () => {
   it('waits for an in-progress request and returns the stored result', async () => {
     const now = () => new Date();
     const repo = new FakeIdempotencyKeyRepository(now);
+    const logger = new FakeLogger();
 
     let markStarted: (() => void) | undefined;
     const started = new Promise<void>((resolve) => {
@@ -80,6 +88,7 @@ describe('withIdempotency', () => {
       action: 'question:submitAnswer',
       key: '22222222-2222-2222-2222-222222222222',
       now,
+      logger,
       pollIntervalMs: 1,
       maxWaitMs: 200,
       execute,
@@ -100,6 +109,7 @@ describe('withIdempotency', () => {
   it('rethrows the stored ApplicationError for a repeated idempotency key', async () => {
     const now = () => new Date();
     const repo = new FakeIdempotencyKeyRepository(now);
+    const logger = new FakeLogger();
     const key = '33333333-3333-3333-3333-333333333333';
 
     const execute = vi.fn(async () => {
@@ -112,6 +122,7 @@ describe('withIdempotency', () => {
       action: 'practice:startPracticeSession',
       key,
       now,
+      logger,
       execute,
     } as const;
 
@@ -145,6 +156,7 @@ describe('withIdempotency', () => {
     });
 
     const execute = vi.fn(async () => ({ ok: true }));
+    const logger = new FakeLogger();
 
     await expect(
       withIdempotency({
@@ -153,6 +165,7 @@ describe('withIdempotency', () => {
         action: 'billing:createCheckoutSession',
         key: '44444444-4444-4444-4444-444444444444',
         now,
+        logger,
         maxWaitMs: 15,
         pollIntervalMs: 1,
         execute,
@@ -171,6 +184,7 @@ describe('withIdempotency', () => {
     const nowDate = new Date('2026-02-07T12:00:00.000Z');
     const now = () => nowDate;
     const repo = new FakeIdempotencyKeyRepository(now);
+    const logger = new FakeLogger();
     const pruneSpy = vi.spyOn(repo, 'pruneExpiredBefore');
     const execute = vi.fn(async () => ({ ok: true }));
 
@@ -181,6 +195,7 @@ describe('withIdempotency', () => {
         action: 'billing:createCheckoutSession',
         key: '55555555-5555-5555-5555-555555555555',
         now,
+        logger,
         execute,
       }),
     ).resolves.toEqual({ ok: true });
@@ -193,6 +208,7 @@ describe('withIdempotency', () => {
     const nowDate = new Date('2026-02-07T12:00:00.000Z');
     const now = () => nowDate;
     const repo = new FakeIdempotencyKeyRepository(now);
+    const logger = new FakeLogger();
     vi.spyOn(repo, 'pruneExpiredBefore').mockRejectedValue(
       new Error('prune failed'),
     );
@@ -206,10 +222,47 @@ describe('withIdempotency', () => {
         action: 'billing:createCheckoutSession',
         key: '66666666-6666-6666-6666-666666666666',
         now,
+        logger,
         execute,
       }),
     ).resolves.toEqual({ ok: true });
 
+    expect(execute).toHaveBeenCalledTimes(1);
+  });
+
+  it('logs a warning when idempotency pruning fails and continues', async () => {
+    const nowDate = new Date('2026-02-07T12:00:00.000Z');
+    const now = () => nowDate;
+    const repo = new FakeIdempotencyKeyRepository(now);
+    const logger = new FakeLogger();
+    vi.spyOn(repo, 'pruneExpiredBefore').mockRejectedValue(
+      new Error('prune failed'),
+    );
+
+    const execute = vi.fn(async () => ({ ok: true }));
+
+    await expect(
+      withIdempotency({
+        repo,
+        userId: 'user_1',
+        action: 'billing:createCheckoutSession',
+        key: '77777777-7777-7777-7777-777777777777',
+        now,
+        logger,
+        execute,
+      }),
+    ).resolves.toEqual({ ok: true });
+
+    expect(logger.warnCalls).toHaveLength(1);
+    expect(logger.warnCalls[0]).toMatchObject({
+      msg: 'Idempotency prune failed',
+      context: {
+        userId: 'user_1',
+        action: 'billing:createCheckoutSession',
+        key: '77777777-7777-7777-7777-777777777777',
+        error: 'prune failed',
+      },
+    });
     expect(execute).toHaveBeenCalledTimes(1);
   });
 });

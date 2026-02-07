@@ -6,6 +6,7 @@ import {
   FakeAuthGateway,
   FakeGetBookmarksUseCase,
   FakeIdempotencyKeyRepository,
+  FakeLogger,
   FakeRateLimiter,
   FakeSubscriptionRepository,
   FakeToggleBookmarkUseCase,
@@ -80,6 +81,7 @@ function createDeps(overrides?: {
 
   return {
     authGateway,
+    logger: new FakeLogger(),
     rateLimiter,
     idempotencyKeyRepository: new FakeIdempotencyKeyRepository(() => now),
     checkEntitlementUseCase,

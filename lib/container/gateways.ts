@@ -33,6 +33,6 @@ export function createGatewayFactories(input: {
         logger: primitives.logger,
       }),
     createRateLimiter: () =>
-      new DrizzleRateLimiter(primitives.db, primitives.now),
+      new DrizzleRateLimiter(primitives.db, primitives.now, primitives.logger),
   };
 }

@@ -9,6 +9,7 @@ import {
   FakeGetPracticeSessionReviewUseCase,
   FakeGetSessionHistoryUseCase,
   FakeIdempotencyKeyRepository,
+  FakeLogger,
   FakeRateLimiter,
   FakeSetPracticeSessionQuestionMarkUseCase,
   FakeStartPracticeSessionUseCase,
@@ -157,6 +158,7 @@ function createDeps(overrides?: {
 
   return {
     authGateway,
+    logger: new FakeLogger(),
     rateLimiter,
     idempotencyKeyRepository: new FakeIdempotencyKeyRepository(now),
     checkEntitlementUseCase,

@@ -15,6 +15,7 @@ import type {
   AuthGateway,
   RateLimiter,
 } from '@/src/application/ports/gateways';
+import type { Logger } from '@/src/application/ports/logger';
 import type { IdempotencyKeyRepository } from '@/src/application/ports/repositories';
 import type {
   EndPracticeSessionInput,
@@ -136,6 +137,7 @@ export type {
 
 export type PracticeControllerDeps = {
   authGateway: AuthGateway;
+  logger: Logger;
   rateLimiter: RateLimiter;
   idempotencyKeyRepository: IdempotencyKeyRepository;
   checkEntitlementUseCase: CheckEntitlementUseCase;
@@ -216,6 +218,7 @@ export const startPracticeSession = createAction({
 
     return withIdempotency({
       repo: d.idempotencyKeyRepository,
+      logger: d.logger,
       userId,
       action: 'practice:startPracticeSession',
       key: idempotencyKey,
@@ -259,6 +262,7 @@ export const endPracticeSession = createAction({
 
     return withIdempotency({
       repo: d.idempotencyKeyRepository,
+      logger: d.logger,
       userId,
       action: 'practice:endPracticeSession',
       key: idempotencyKey,
@@ -317,6 +321,7 @@ export const setPracticeSessionQuestionMark = createAction({
 
     return withIdempotency({
       repo: d.idempotencyKeyRepository,
+      logger: d.logger,
       userId,
       action: 'practice:setPracticeSessionQuestionMark',
       key: idempotencyKey,

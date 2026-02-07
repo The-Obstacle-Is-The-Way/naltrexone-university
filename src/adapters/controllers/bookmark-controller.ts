@@ -13,6 +13,7 @@ import type {
   AuthGateway,
   RateLimiter,
 } from '@/src/application/ports/gateways';
+import type { Logger } from '@/src/application/ports/logger';
 import type { IdempotencyKeyRepository } from '@/src/application/ports/repositories';
 import type {
   ToggleBookmarkInput,
@@ -48,6 +49,7 @@ export type { ToggleBookmarkOutput } from '@/src/application/use-cases';
 
 export type BookmarkControllerDeps = {
   authGateway: AuthGateway;
+  logger: Logger;
   rateLimiter: RateLimiter;
   idempotencyKeyRepository: IdempotencyKeyRepository;
   checkEntitlementUseCase: CheckEntitlementUseCase;
@@ -101,6 +103,7 @@ export const toggleBookmark = createAction({
 
     return withIdempotency({
       repo: d.idempotencyKeyRepository,
+      logger: d.logger,
       userId,
       action: 'bookmark:toggleBookmark',
       key: idempotencyKey,
