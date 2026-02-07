@@ -21,7 +21,7 @@ Bug reports document issues discovered in the codebase along with their root cau
 | [BUG-086](bug-086-session-history-drilldown-race-overwrites-selected-session.md) | Session History Drill-Down Race Can Show Wrong Session Details | Open | P2 | 2026-02-07 |
 | [BUG-087](bug-087-practice-tag-load-throw-stalls-page.md) | Practice Tag Load Throw Leaves Page Stuck in Loading | Open | P2 | 2026-02-07 |
 | [BUG-088](bug-088-clerk-webhook-invalid-payload-message-leak.md) | Clerk Webhook Invalid-Payload Response Leaks Internal Error Message | Open | P3 | 2026-02-07 |
-| [BUG-076](bug-076-past-due-immediate-lockout.md) | Past-Due Immediate Lockout | Won't Fix | P1 | 2026-02-06 |
+| [BUG-076](bug-076-past-due-immediate-lockout.md) | Past-Due Immediate Lockout | Reclassified → [DEBT-136](../debt/debt-136-dunning-grace-period-for-past-due-subscribers.md) | P1 | 2026-02-06 |
 
 **Next Bug ID:** BUG-089
 
@@ -31,7 +31,7 @@ Bug reports document issues discovered in the codebase along with their root cau
 |----|-------|--------|------------|
 | [BUG-077](../_archive/bugs/bug-077-payment-processing-confusing-redirect.md) | Payment Processing Users See Wrong Error Message | Resolved | `CheckEntitlementUseCase` now returns redirect context; app layout redirects payment-processing and billing-recovery states with reason-specific messaging |
 | [BUG-075](../_archive/bugs/bug-075-checkout-guard-entitlement-mismatch.md) | Pricing CTA Mismatch for Recoverable Subscription States | Resolved | Pricing now consumes entitlement context and shows manage-billing guidance for recoverable non-entitled states while preserving strict checkout guard |
-| [BUG-076](bug-076-past-due-immediate-lockout.md) | Past-Due Immediate Lockout | Won't Fix | Current behavior matches SSOT entitlement policy (pastDue is non-entitled); re-open only with explicit spec change |
+| [BUG-076](bug-076-past-due-immediate-lockout.md) | Past-Due Immediate Lockout | Reclassified | Reclassified to [DEBT-136](../debt/debt-136-dunning-grace-period-for-past-due-subscribers.md) — feature request (dunning grace period), not a bug |
 | [BUG-074](../_archive/bugs/bug-074-missed-questions-timestamp-tie-misclassification.md) | Missed Questions Can Be Misclassified on `answered_at` Timestamp Ties | Resolved | Use deterministic latest-attempt ranking (`answered_at DESC, id DESC`) for missed-question list/count |
 | [BUG-073](../_archive/bugs/bug-073-tutor-mode-missing-session-summary-detail.md) | Tutor Mode Missing Per-Question Session Summary at End | Resolved | Implemented in SPEC-020 Phase 2 / DEBT-123 (PR #63) |
 | [BUG-072](../_archive/bugs/bug-072-no-question-navigation-in-practice-sessions.md) | No Question Navigation in Practice Sessions (Both Modes) | Resolved | Implemented in SPEC-020 Phase 2 / DEBT-122 (PR #63) |

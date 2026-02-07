@@ -1,9 +1,10 @@
 # BUG-076: Past-Due Immediate Lockout
 
-**Status:** Won't Fix
+**Status:** Reclassified
 **Priority:** P1
 **Date:** 2026-02-06
-**Resolved:** 2026-02-06
+**Resolved:** 2026-02-07
+**Reclassified To:** [DEBT-136](../debt/debt-136-dunning-grace-period-for-past-due-subscribers.md)
 
 ---
 
