@@ -34,6 +34,7 @@ export type UsePracticeQuestionFlowOutput = {
   isPending: boolean;
   bookmarkStatus: 'idle' | 'loading' | 'error';
   bookmarkMessage: string | null;
+  bookmarkMessageVersion: number;
   canSubmit: boolean;
   isBookmarked: boolean;
   onTryAgain: () => void;
@@ -58,6 +59,7 @@ export function usePracticeQuestionFlow(
     'idle' | 'loading' | 'error'
   >('idle');
   const [bookmarkMessage, setBookmarkMessage] = useState<string | null>(null);
+  const [bookmarkMessageVersion, setBookmarkMessageVersion] = useState(0);
   const bookmarkMessageTimeoutId = useRef<ReturnType<typeof setTimeout> | null>(
     null,
   );
@@ -66,6 +68,9 @@ export function usePracticeQuestionFlow(
   const [isPending, startTransition] = useTransition();
   const [questionLoadedAt, setQuestionLoadedAt] = useState<number | null>(null);
   const [submitIdempotencyKey, setSubmitIdempotencyKey] = useState<
+    string | null
+  >(null);
+  const [bookmarkIdempotencyKey, setBookmarkIdempotencyKey] = useState<
     string | null
   >(null);
   const latestQuestionRequestId = useRef(0);
@@ -155,6 +160,9 @@ export function usePracticeQuestionFlow(
     () =>
       toggleBookmarkForQuestion.bind(null, {
         question,
+        bookmarkIdempotencyKey,
+        createIdempotencyKey: () => crypto.randomUUID(),
+        setBookmarkIdempotencyKey,
         toggleBookmarkFn: toggleBookmark,
         setBookmarkStatus,
         setBookmarkedQuestionIds,
@@ -162,6 +170,7 @@ export function usePracticeQuestionFlow(
           setBookmarkMessage(
             bookmarked ? 'Question bookmarked.' : 'Bookmark removed.',
           );
+          setBookmarkMessageVersion((prev) => prev + 1);
           scheduleBookmarkMessageAutoClear({
             timeoutIdRef: bookmarkMessageTimeoutId,
             setBookmarkMessage,
@@ -170,7 +179,7 @@ export function usePracticeQuestionFlow(
         },
         isMounted,
       }),
-    [question, isMounted],
+    [bookmarkIdempotencyKey, question, isMounted],
   );
 
   const onSelectChoice = useMemo(
@@ -186,6 +195,7 @@ export function usePracticeQuestionFlow(
     isPending,
     bookmarkStatus,
     bookmarkMessage,
+    bookmarkMessageVersion,
     canSubmit,
     isBookmarked,
     onTryAgain,

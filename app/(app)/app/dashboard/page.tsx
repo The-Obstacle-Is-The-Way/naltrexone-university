@@ -1,5 +1,8 @@
 import Link from 'next/link';
+import { ErrorCard } from '@/components/error-card';
 import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { ROUTES } from '@/lib/routes';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import {
   getUserStats,
@@ -75,37 +78,37 @@ export function DashboardView({ stats }: { stats: UserStatsOutput }) {
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="rounded-2xl border border-border bg-card p-6 shadow-sm hover:border-border/80 hover:bg-muted/50 transition-all">
+        <Card className="gap-0 rounded-2xl p-6 shadow-sm transition-all hover:border-border/80 hover:bg-muted/50">
           <div className="text-sm text-muted-foreground">Total answered</div>
           <div className="mt-2 text-3xl font-bold font-display text-foreground">
             {stats.totalAnswered}
           </div>
-        </div>
+        </Card>
 
-        <div className="rounded-2xl border border-border bg-card p-6 shadow-sm hover:border-border/80 hover:bg-muted/50 transition-all">
+        <Card className="gap-0 rounded-2xl p-6 shadow-sm transition-all hover:border-border/80 hover:bg-muted/50">
           <div className="text-sm text-muted-foreground">Overall accuracy</div>
           <div className="mt-2 text-3xl font-bold font-display text-foreground">
             {formatPercent(stats.accuracyOverall)}
           </div>
-        </div>
+        </Card>
 
-        <div className="rounded-2xl border border-border bg-card p-6 shadow-sm hover:border-border/80 hover:bg-muted/50 transition-all">
+        <Card className="gap-0 rounded-2xl p-6 shadow-sm transition-all hover:border-border/80 hover:bg-muted/50">
           <div className="text-sm text-muted-foreground">Answered (7 days)</div>
           <div className="mt-2 text-3xl font-bold font-display text-foreground">
             {stats.answeredLast7Days}
           </div>
-        </div>
+        </Card>
 
-        <div className="rounded-2xl border border-border bg-card p-6 shadow-sm hover:border-border/80 hover:bg-muted/50 transition-all">
+        <Card className="gap-0 rounded-2xl p-6 shadow-sm transition-all hover:border-border/80 hover:bg-muted/50">
           <div className="text-sm text-muted-foreground">Accuracy (7 days)</div>
           <div className="mt-2 text-3xl font-bold font-display text-foreground">
             {formatPercent(stats.accuracyLast7Days)}
           </div>
-        </div>
+        </Card>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-3">
-        <div className="rounded-2xl border border-border bg-card p-6 shadow-sm hover:border-border/80 hover:bg-muted/50 transition-all">
+        <Card className="gap-0 rounded-2xl p-6 shadow-sm transition-all hover:border-border/80 hover:bg-muted/50">
           <div className="text-sm text-muted-foreground">Current streak</div>
           <div className="mt-2 text-3xl font-bold font-display text-foreground">
             {stats.currentStreakDays}
@@ -113,9 +116,9 @@ export function DashboardView({ stats }: { stats: UserStatsOutput }) {
           <div className="mt-1 text-sm text-muted-foreground">
             Consecutive days with at least one answer.
           </div>
-        </div>
+        </Card>
 
-        <div className="lg:col-span-2 rounded-2xl border border-border bg-card p-6 shadow-sm">
+        <Card className="gap-0 rounded-2xl p-6 shadow-sm lg:col-span-2">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="space-y-1">
               <div className="text-sm font-medium text-foreground">
@@ -126,14 +129,14 @@ export function DashboardView({ stats }: { stats: UserStatsOutput }) {
               </div>
             </div>
             <Button asChild className="rounded-full">
-              <Link href="/app/practice">Go to Practice</Link>
+              <Link href={ROUTES.APP_PRACTICE}>Go to Practice</Link>
             </Button>
           </div>
-        </div>
+        </Card>
       </div>
 
       {recentActivityGroups.length > 0 ? (
-        <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
+        <Card className="gap-0 rounded-2xl p-6 shadow-sm">
           <div className="text-sm font-medium text-foreground">
             Recent activity
           </div>
@@ -195,7 +198,7 @@ export function DashboardView({ stats }: { stats: UserStatsOutput }) {
               );
             })}
           </ul>
-        </div>
+        </Card>
       ) : null}
     </div>
   );
@@ -217,14 +220,9 @@ export function renderDashboard(result: ActionResult<UserStatsOutput>) {
           </h1>
           <p className="mt-1 text-muted-foreground">Unable to load stats.</p>
         </div>
-        <div
-          className="rounded-2xl border border-border bg-card p-6 text-sm text-muted-foreground shadow-sm"
-          role="alert"
-        >
-          {result.error.message}
-        </div>
+        <ErrorCard className="p-6">{result.error.message}</ErrorCard>
         <Button asChild className="rounded-full">
-          <Link href="/app/practice">Go to Practice</Link>
+          <Link href={ROUTES.APP_PRACTICE}>Go to Practice</Link>
         </Button>
       </div>
     );

@@ -3,6 +3,7 @@ import {
   getThrownErrorMessage,
 } from '@/app/(app)/app/practice/practice-logic';
 import type { PracticeFilters } from '@/app/(app)/app/practice/practice-page-types';
+import { toPracticeSessionRoute } from '@/lib/routes';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import type { StartPracticeSessionOutput } from '@/src/adapters/controllers/practice-controller';
 
@@ -82,5 +83,5 @@ export async function startSession(input: {
     return;
   }
 
-  input.navigateTo(`/app/practice/${res.data.sessionId}`);
+  input.navigateTo(toPracticeSessionRoute(res.data.sessionId));
 }

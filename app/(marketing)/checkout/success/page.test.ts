@@ -497,4 +497,77 @@ describe('syncCheckoutSuccess', () => {
       cancelAtPeriodEnd: false,
     });
   });
+
+  it('treats existing webhook customer mapping as idempotent and still redirects to dashboard', async () => {
+    const stripeCustomers = new FakeStripeCustomerRepository();
+    const subscriptions = new FakeSubscriptionRepository();
+    const user = {
+      id: 'user_1',
+      email: 'user@example.com',
+      createdAt: new Date('2026-02-01T00:00:00Z'),
+      updatedAt: new Date('2026-02-01T00:00:00Z'),
+    };
+
+    // Simulates webhook processing first with an older customer mapping.
+    await stripeCustomers.insert(user.id, 'cus_webhook');
+
+    const deps = {
+      authGateway: new FakeAuthGateway(user),
+      getClerkAuth: async () => ({
+        userId: 'clerk_user_1',
+        redirectToSignIn: () => {
+          throw new Error('should not redirect to sign-in');
+        },
+      }),
+      logger: new FakeLogger(),
+      stripe: {
+        checkout: {
+          sessions: {
+            retrieve: async () => ({
+              customer: 'cus_checkout',
+              subscription: 'sub_123',
+            }),
+          },
+        },
+        subscriptions: {
+          retrieve: async () => ({
+            id: 'sub_123',
+            customer: 'cus_checkout',
+            status: 'active',
+            cancel_at_period_end: false,
+            metadata: { user_id: 'user_1' },
+            items: {
+              data: [
+                {
+                  current_period_end: 2_000_000_000,
+                  price: { id: 'price_monthly' },
+                },
+              ],
+            },
+          }),
+        },
+      },
+      priceIds: { monthly: 'price_monthly', annual: 'price_annual' },
+      appUrl: 'https://example.com',
+      transaction: async <T>(
+        fn: (tx: CheckoutSuccessTransaction) => Promise<T>,
+      ): Promise<T> =>
+        fn({
+          stripeCustomers,
+          subscriptions,
+        }),
+    };
+
+    const redirectFn = (url: string): never => {
+      throw new RedirectError(url);
+    };
+
+    await expect(
+      syncCheckoutSuccess({ sessionId: 'cs_test' }, deps as never, redirectFn),
+    ).rejects.toMatchObject({ url: ROUTES.APP_DASHBOARD });
+
+    expect(await stripeCustomers.findByUserId(user.id)).toEqual({
+      stripeCustomerId: 'cus_checkout',
+    });
+  });
 });

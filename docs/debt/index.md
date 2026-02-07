@@ -19,8 +19,11 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 |----|-------|--------|----------|------|
 | [DEBT-136](debt-136-dunning-grace-period-for-past-due-subscribers.md) | Dunning Grace Period for Past-Due Subscribers | Open | P3 | 2026-02-07 |
 | [DEBT-140](debt-140-request-correlation-not-wired-into-runtime-logs.md) | Request Correlation Not Wired (Blocked by SPEC-016) | Open | P3 | 2026-02-07 |
+| [DEBT-148](debt-148-minimal-aria-accessibility-app-pages.md) | Minimal ARIA Accessibility in App Pages | In Progress | P3 | 2026-02-07 |
+| [DEBT-153](debt-153-brittle-css-class-string-assertions.md) | Brittle CSS Class String Assertions in renderToStaticMarkup Tests | In Progress | P3 | 2026-02-07 |
+| [DEBT-154](debt-154-custom-notification-provider-vs-shadcn-sonner.md) | Custom NotificationProvider vs shadcn/sonner | Open | P4 | 2026-02-07 |
 
-**Next Debt ID:** DEBT-144
+**Next Debt ID:** DEBT-155
 
 ## Archived Debt
 
@@ -46,6 +49,14 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 | ID | Title | Priority | Resolved |
 |----|-------|----------|----------|
+| [DEBT-152](../_archive/debt/debt-152-home-route-literals-remain-outside-routes-constants.md) | Home Route Literals Remain Outside `ROUTES` Constants | P4 | 2026-02-07 |
+| [DEBT-151](../_archive/debt/debt-151-no-toast-notification-system.md) | No Toast/Notification System | P3 | 2026-02-07 |
+| [DEBT-150](../_archive/debt/debt-150-navigation-links-missing-transitions-hover.md) | Navigation Links Missing Transitions and Hover States | P3 | 2026-02-07 |
+| [DEBT-149](../_archive/debt/debt-149-heading-typography-system-inconsistent.md) | Heading Typography System Inconsistent | P2 | 2026-02-07 |
+| [DEBT-147](../_archive/debt/debt-147-error-state-ui-duplicated-across-pages.md) | Error State UI Duplicated Across 9+ Pages | P2 | 2026-02-07 |
+| [DEBT-146](../_archive/debt/debt-146-missing-semantic-success-warning-tokens.md) | Missing Semantic Success/Warning Color Tokens | P2 | 2026-02-07 |
+| [DEBT-145](../_archive/debt/debt-145-shadcn-card-input-components-never-used.md) | Shadcn Card Adoption Is Incomplete Across App Pages | P2 | 2026-02-07 |
+| [DEBT-144](../_archive/debt/debt-144-hardcoded-colors-bypass-design-system.md) | Hardcoded Colors Bypass Design System Tokens | P2 | 2026-02-07 |
 | [DEBT-138](../_archive/debt/debt-138-dead-modules-and-unused-dependencies.md) | Dead Modules and Unused Dependencies After Refactors | P3 | 2026-02-07 |
 | [DEBT-141](../_archive/debt/debt-141-practice-hook-tests-emit-react-act-warnings.md) | Migrate Practice Hook Tests from renderLiveHook to Browser Mode | P2 | 2026-02-07 |
 | [DEBT-142](../_archive/debt/debt-142-spec-020-practice-file-line-cap-regression.md) | SPEC-020 Line-Cap Regression in Practice Page Logic | P2 | 2026-02-07 |

@@ -6,6 +6,7 @@ import {
   ReviewView,
   renderReview,
 } from '@/app/(app)/app/review/page';
+import { ROUTES, toQuestionRoute } from '@/lib/routes';
 import { ok } from '@/src/adapters/controllers/action-result';
 import { getStemPreview } from '@/src/adapters/shared/stem-preview';
 
@@ -120,7 +121,8 @@ describe('app/(app)/app/review', () => {
     expect(html).toContain('easy');
     expect(html).toContain('Missed 2026-02-01');
     expect(html).toContain('Reattempt');
-    expect(html).toContain('/app/questions/q-1');
+    expect(html).toContain(toQuestionRoute('q-1'));
+    expect(html).toContain(`href="${ROUTES.APP_PRACTICE}"`);
   });
 
   it('renders pagination links when offset > 0 and rows length equals limit', () => {

@@ -41,10 +41,8 @@ export function Feedback({
     <div
       className={cn(
         'rounded-2xl border border-border bg-card p-6 shadow-sm',
-        isCorrect &&
-          'border-emerald-200 bg-emerald-50 dark:border-emerald-900/50 dark:bg-emerald-950/20',
-        !isCorrect &&
-          'border-red-200 bg-red-50 dark:border-red-900/50 dark:bg-red-950/20',
+        isCorrect && 'border-success bg-success/10',
+        !isCorrect && 'border-destructive bg-destructive/10',
       )}
     >
       <div className="text-sm font-semibold text-foreground">

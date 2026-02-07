@@ -31,6 +31,7 @@ describe('Providers', () => {
     );
 
     expect(html).toContain('child');
+    expect(html).toContain('data-testid="app-toast-region"');
   });
 
   it('wraps children when NEXT_PUBLIC_SKIP_CLERK is not true', async () => {
@@ -72,6 +73,7 @@ describe('Providers', () => {
 
     expect(html).toContain('data-testid="clerk-provider"');
     expect(html).toContain('child');
+    expect(html).toContain('data-testid="app-toast-region"');
     expect(html).toContain('data-sign-in-fallback="/app/dashboard"');
     expect(html).toContain('data-sign-up-fallback="/app/dashboard"');
   });

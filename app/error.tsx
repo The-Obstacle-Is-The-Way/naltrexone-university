@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useEffect } from 'react';
 import { Button } from '@/components/ui/button';
+import { ROUTES } from '@/lib/routes';
 import { REPORT_ISSUE_URL } from '@/lib/support';
 
 export default function ErrorPage({
@@ -17,9 +18,15 @@ export default function ErrorPage({
   }, [error]);
 
   return (
-    <div className="flex min-h-[50vh] items-center justify-center bg-background text-foreground">
+    <main
+      id="main-content"
+      tabIndex={-1}
+      className="flex min-h-[50vh] items-center justify-center bg-background text-foreground"
+    >
       <div className="w-full max-w-md space-y-4 px-4 text-center">
-        <h2 className="text-xl font-semibold">Something went wrong</h2>
+        <h2 className="text-xl font-semibold text-foreground">
+          Something went wrong
+        </h2>
         <p className="text-sm text-muted-foreground">
           Please try again. If the problem persists, contact support and share
           the error ID.
@@ -34,7 +41,7 @@ export default function ErrorPage({
             Try again
           </Button>
           <Button asChild variant="outline">
-            <Link href="/">Go home</Link>
+            <Link href={ROUTES.HOME}>Go home</Link>
           </Button>
           <Button asChild variant="outline">
             <a
@@ -47,6 +54,6 @@ export default function ErrorPage({
           </Button>
         </div>
       </div>
-    </div>
+    </main>
   );
 }

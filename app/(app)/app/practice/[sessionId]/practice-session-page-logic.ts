@@ -179,6 +179,7 @@ export function maybeAutoAdvanceAfterSubmit(input: {
 
 export async function endSession(input: {
   sessionId: string;
+  endSessionIdempotencyKey: string;
   endPracticeSessionFn: (
     input: unknown,
   ) => Promise<ActionResult<EndPracticeSessionOutput>>;
@@ -187,6 +188,7 @@ export async function endSession(input: {
   setQuestion: (question: NextQuestion | null) => void;
   setSubmitResult: (result: SubmitAnswerOutput | null) => void;
   setSelectedChoiceId: (choiceId: string | null) => void;
+  rotateIdempotencyKey?: () => void;
   isMounted?: () => boolean;
 }): Promise<void> {
   const isMounted = input.isMounted ?? (() => true);
@@ -195,10 +197,14 @@ export async function endSession(input: {
 
   let res: ActionResult<EndPracticeSessionOutput>;
   try {
-    res = await input.endPracticeSessionFn({ sessionId: input.sessionId });
+    res = await input.endPracticeSessionFn({
+      sessionId: input.sessionId,
+      idempotencyKey: input.endSessionIdempotencyKey,
+    });
   } catch (error) {
     if (!isMounted()) return;
 
+    input.rotateIdempotencyKey?.();
     input.setLoadState({
       status: 'error',
       message: getThrownErrorMessage(error),
@@ -207,6 +213,7 @@ export async function endSession(input: {
   }
   if (!isMounted()) return;
   if (!res.ok) {
+    input.rotateIdempotencyKey?.();
     input.setLoadState({
       status: 'error',
       message: getActionResultErrorMessage(res),

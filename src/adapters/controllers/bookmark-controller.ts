@@ -3,6 +3,7 @@
 import { z } from 'zod';
 import { createDepsResolver, loadAppContainer } from '@/lib/controller-helpers';
 import { BOOKMARK_MUTATION_RATE_LIMIT } from '@/src/adapters/shared/rate-limits';
+import { withIdempotency } from '@/src/adapters/shared/with-idempotency';
 import { ApplicationError } from '@/src/application/errors';
 import type {
   GetBookmarksInput,
@@ -12,6 +13,7 @@ import type {
   AuthGateway,
   RateLimiter,
 } from '@/src/application/ports/gateways';
+import type { IdempotencyKeyRepository } from '@/src/application/ports/repositories';
 import type {
   ToggleBookmarkInput,
   ToggleBookmarkOutput,
@@ -25,10 +27,17 @@ const zUuid = z.string().uuid();
 const ToggleBookmarkInputSchema = z
   .object({
     questionId: zUuid,
+    idempotencyKey: zUuid.optional(),
   })
   .strict();
 
 const GetBookmarksInputSchema = z.object({}).strict();
+
+const ToggleBookmarkOutputSchema = z
+  .object({
+    bookmarked: z.boolean(),
+  })
+  .strict();
 
 export type {
   BookmarkRow,
@@ -40,6 +49,7 @@ export type { ToggleBookmarkOutput } from '@/src/application/use-cases';
 export type BookmarkControllerDeps = {
   authGateway: AuthGateway;
   rateLimiter: RateLimiter;
+  idempotencyKeyRepository: IdempotencyKeyRepository;
   checkEntitlementUseCase: CheckEntitlementUseCase;
   toggleBookmarkUseCase: {
     execute: (input: ToggleBookmarkInput) => Promise<ToggleBookmarkOutput>;
@@ -47,6 +57,7 @@ export type BookmarkControllerDeps = {
   getBookmarksUseCase: {
     execute: (input: GetBookmarksInput) => Promise<GetBookmarksOutput>;
   };
+  now: () => Date;
 };
 
 type BookmarkControllerContainer = {
@@ -63,19 +74,39 @@ export const toggleBookmark = createAction({
   getDeps,
   execute: async (input, d) => {
     const userId = await requireEntitledUserId(d);
-    const rate = await d.rateLimiter.limit({
-      key: `bookmark:toggleBookmark:${userId}`,
-      ...BOOKMARK_MUTATION_RATE_LIMIT,
-    });
-    if (!rate.success) {
-      throw new ApplicationError(
-        'RATE_LIMITED',
-        `Too many bookmark changes. Try again in ${rate.retryAfterSeconds}s.`,
-      );
+
+    const { questionId, idempotencyKey } = input;
+
+    async function toggle(): Promise<ToggleBookmarkOutput> {
+      const rate = await d.rateLimiter.limit({
+        key: `bookmark:toggleBookmark:${userId}`,
+        ...BOOKMARK_MUTATION_RATE_LIMIT,
+      });
+      if (!rate.success) {
+        throw new ApplicationError(
+          'RATE_LIMITED',
+          `Too many bookmark changes. Try again in ${rate.retryAfterSeconds}s.`,
+        );
+      }
+
+      return d.toggleBookmarkUseCase.execute({
+        userId,
+        questionId,
+      });
     }
-    return d.toggleBookmarkUseCase.execute({
+
+    if (!idempotencyKey) {
+      return toggle();
+    }
+
+    return withIdempotency({
+      repo: d.idempotencyKeyRepository,
       userId,
-      questionId: input.questionId,
+      action: 'bookmark:toggleBookmark',
+      key: idempotencyKey,
+      now: d.now,
+      parseResult: (value) => ToggleBookmarkOutputSchema.parse(value),
+      execute: toggle,
     });
   },
 });

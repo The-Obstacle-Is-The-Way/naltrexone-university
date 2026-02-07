@@ -76,6 +76,13 @@ export class SubmitAnswerUseCase {
       throw new ApplicationError('NOT_FOUND', 'Practice session not found');
     }
 
+    if (session && !session.questionIds.includes(question.id)) {
+      throw new ApplicationError(
+        'NOT_FOUND',
+        'Question is not part of this practice session',
+      );
+    }
+
     const rawTimeSpentSeconds = input.timeSpentSeconds;
     const timeSpentSeconds =
       typeof rawTimeSpentSeconds === 'number' &&

@@ -5,6 +5,7 @@ import { AppDesktopNav } from '@/components/app-desktop-nav';
 import { AuthNav } from '@/components/auth-nav';
 import { MobileNav } from '@/components/mobile-nav';
 import { ThemeToggle } from '@/components/theme-toggle';
+import { ROUTES } from '@/lib/routes';
 import type { AuthGateway } from '@/src/application/ports/gateways';
 import type { CheckEntitlementUseCase } from '@/src/application/ports/use-cases';
 
@@ -41,7 +42,7 @@ export async function enforceEntitledAppUser(
 
   if (!entitlement.isEntitled) {
     const reason = entitlement.reason ?? 'subscription_required';
-    redirectFn(`/pricing?reason=${reason}`);
+    redirectFn(`${ROUTES.PRICING}?reason=${reason}`);
   }
 }
 
@@ -62,7 +63,7 @@ export function AppLayoutShell({
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
           <div className="flex items-center gap-6">
             <Link
-              href="/app/dashboard"
+              href={ROUTES.APP_DASHBOARD}
               className="text-sm font-semibold text-foreground"
             >
               Addiction Boards
@@ -76,7 +77,11 @@ export function AppLayoutShell({
           </div>
         </div>
       </header>
-      <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+      <main
+        id="main-content"
+        tabIndex={-1}
+        className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8"
+      >
         <Suspense
           fallback={
             <p className="text-sm text-muted-foreground">

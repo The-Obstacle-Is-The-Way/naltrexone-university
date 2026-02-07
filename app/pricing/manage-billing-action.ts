@@ -2,6 +2,7 @@ import type {
   CreatePortalSessionFn,
   RedirectFn,
 } from '@/app/pricing/manage-billing-types';
+import { ROUTES } from '@/lib/routes';
 
 export async function runManageBillingAction(deps: {
   createPortalSessionFn: CreatePortalSessionFn;
@@ -11,10 +12,10 @@ export async function runManageBillingAction(deps: {
   if (result.ok) return deps.redirectFn(result.data.url);
 
   if (result.error.code === 'UNAUTHENTICATED') {
-    return deps.redirectFn('/sign-up');
+    return deps.redirectFn(ROUTES.SIGN_UP);
   }
 
-  const url = new URL('/pricing', 'https://example.com');
+  const url = new URL(ROUTES.PRICING, 'https://example.com');
   url.searchParams.set('checkout', 'error');
   url.searchParams.set('error_code', result.error.code);
 

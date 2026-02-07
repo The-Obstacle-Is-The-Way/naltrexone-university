@@ -34,6 +34,9 @@ describe('app/pricing', () => {
 
     expect(html).toContain('Subscribe Monthly');
     expect(html).toContain('Subscribe Annual');
+    expect(html).toContain(
+      'rounded-md text-sm text-muted-foreground transition-colors hover:text-foreground',
+    );
   }, 10_000);
 
   it('shows an error banner when checkout=error', async () => {
@@ -52,6 +55,23 @@ describe('app/pricing', () => {
     );
 
     expect(html).toContain('Checkout failed. Please try again.');
+  });
+
+  it('uses font-heading for pricing plan titles', async () => {
+    const { PricingView } = await import('@/app/pricing/page');
+
+    const html = renderToStaticMarkup(
+      <PricingView
+        isEntitled={false}
+        banner={null}
+        subscribeMonthlyAction={async () => undefined}
+        subscribeAnnualAction={async () => undefined}
+      />,
+    );
+
+    expect(html).toContain('font-heading font-semibold text-foreground');
+    expect(html).toContain('Pro Monthly');
+    expect(html).toContain('Pro Annual');
   });
 
   it('shows a cancel banner when checkout=cancel', async () => {

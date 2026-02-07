@@ -350,7 +350,9 @@ export async function syncCheckoutSuccess(
   const currentPeriodEnd = new Date(currentPeriodEndSeconds * 1000);
 
   await d.transaction(async ({ stripeCustomers, subscriptions }) => {
-    await stripeCustomers.insert(user.id, stripeCustomerId);
+    await stripeCustomers.insert(user.id, stripeCustomerId, {
+      conflictStrategy: 'authoritative',
+    });
     await subscriptions.upsert({
       userId: user.id,
       externalSubscriptionId: subscriptionId,

@@ -24,6 +24,7 @@ describe('usePracticeSessionPageController', () => {
     expect(output.isBookmarked).toBe(false);
     expect(output.isMarkingForReview).toBe(false);
     expect(output.bookmarkMessage).toBeNull();
+    expect(output.bookmarkMessageVersion).toBe(0);
     expect(output.canSubmit).toBe(false);
     expect(output.summary).toBeNull();
     expect(output.summaryReview).toBeNull();

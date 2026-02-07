@@ -55,9 +55,11 @@ export function createControllerFactories(input: {
     createBookmarkControllerDeps: () => ({
       authGateway: gateways.createAuthGateway(),
       rateLimiter: gateways.createRateLimiter(),
+      idempotencyKeyRepository: repositories.createIdempotencyKeyRepository(),
       checkEntitlementUseCase: useCases.createCheckEntitlementUseCase(),
       toggleBookmarkUseCase: useCases.createToggleBookmarkUseCase(),
       getBookmarksUseCase: useCases.createGetBookmarksUseCase(),
+      now: primitives.now,
     }),
     createPracticeControllerDeps: () => ({
       authGateway: gateways.createAuthGateway(),

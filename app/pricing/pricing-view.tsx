@@ -2,6 +2,7 @@ import Link from 'next/link';
 import type { ComponentType, ReactNode } from 'react';
 import { IdempotencyKeyField } from '@/app/pricing/pricing-client';
 import type { PricingBanner } from '@/app/pricing/types';
+import { ROUTES } from '@/lib/routes';
 
 export type PricingViewProps = {
   isEntitled: boolean;
@@ -48,7 +49,7 @@ export function PricingView({
             className={[
               'mx-auto mt-8 max-w-2xl rounded-2xl border bg-card p-4 text-sm shadow-sm flex items-center justify-between',
               banner.tone === 'error'
-                ? 'border-red-200 text-red-700 dark:border-red-900/50 dark:text-red-200'
+                ? 'border-destructive text-destructive'
                 : 'border-border text-muted-foreground',
             ].join(' ')}
             role="alert"
@@ -66,7 +67,7 @@ export function PricingView({
                 </form>
               ) : null}
               <Link
-                href="/pricing"
+                href={ROUTES.PRICING}
                 className="ml-4 rounded-md text-current hover:opacity-70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                 aria-label="Dismiss"
               >
@@ -86,13 +87,13 @@ export function PricingView({
             </p>
             <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-center">
               <Link
-                href="/app/dashboard"
+                href={ROUTES.APP_DASHBOARD}
                 className="inline-flex items-center justify-center rounded-full bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
               >
                 Go to Dashboard
               </Link>
               <Link
-                href="/app/billing"
+                href={ROUTES.APP_BILLING}
                 className="inline-flex items-center justify-center rounded-full border border-border bg-background px-4 py-2 text-sm font-medium text-foreground hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
               >
                 Manage Billing
@@ -121,7 +122,7 @@ export function PricingView({
         ) : (
           <div className="mt-16 grid gap-8 md:grid-cols-2">
             <div className="rounded-2xl border border-border bg-card p-8 shadow-sm">
-              <h3 className="text-lg font-semibold text-foreground">
+              <h3 className="font-heading font-semibold text-foreground">
                 Pro Monthly
               </h3>
               <p className="mt-4 text-4xl font-bold text-foreground">
@@ -146,7 +147,7 @@ export function PricingView({
               </form>
             </div>
             <div className="rounded-2xl border-2 border-primary bg-card p-8 shadow-sm">
-              <h3 className="text-lg font-semibold text-foreground">
+              <h3 className="font-heading font-semibold text-foreground">
                 Pro Annual
               </h3>
               <p className="mt-4 text-4xl font-bold text-foreground">
@@ -155,9 +156,7 @@ export function PricingView({
                   /yr
                 </span>
               </p>
-              <p className="text-sm text-emerald-600 dark:text-emerald-400">
-                Save $149 per year
-              </p>
+              <p className="text-sm text-success">Save $149 per year</p>
               <ul className="mt-6 space-y-3 text-sm text-muted-foreground">
                 <li>Everything in Pro Monthly</li>
                 <li>Best value</li>
@@ -177,8 +176,8 @@ export function PricingView({
 
         <div className="mt-8 text-center">
           <Link
-            href="/"
-            className="rounded-md text-sm text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+            href={ROUTES.HOME}
+            className="rounded-md text-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
           >
             Back to Home
           </Link>

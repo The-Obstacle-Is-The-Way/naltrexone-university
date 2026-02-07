@@ -86,4 +86,87 @@ describe('theme token regression', () => {
     expect(html).not.toContain('border-zinc-400');
     expect(html).toContain('border-ring');
   });
+
+  it('uses semantic success/destructive tokens in question feedback components', async () => {
+    const { ChoiceButton } = await import('@/components/question/ChoiceButton');
+    const { Feedback } = await import('@/components/question/Feedback');
+
+    const choiceHtml = renderToStaticMarkup(
+      <div>
+        <ChoiceButton
+          name="choices"
+          label="A"
+          textMd="Choice A"
+          selected
+          correctness="correct"
+          onClick={() => {}}
+        />
+        <ChoiceButton
+          name="choices"
+          label="B"
+          textMd="Choice B"
+          selected
+          correctness="incorrect"
+          onClick={() => {}}
+        />
+      </div>,
+    );
+
+    const feedbackHtml = renderToStaticMarkup(
+      <div>
+        <Feedback isCorrect={true} explanationMd="Correct explanation" />
+        <Feedback isCorrect={false} explanationMd="Incorrect explanation" />
+      </div>,
+    );
+
+    expect(choiceHtml).toContain('border-success');
+    expect(choiceHtml).toContain('border-destructive');
+    expect(choiceHtml).not.toContain('emerald-');
+    expect(choiceHtml).not.toContain('red-');
+
+    expect(feedbackHtml).toContain('border-success');
+    expect(feedbackHtml).toContain('border-destructive');
+    expect(feedbackHtml).not.toContain('emerald-');
+    expect(feedbackHtml).not.toContain('red-');
+  });
+
+  it('uses semantic warning tokens in billing cancellation banner', async () => {
+    const { BillingContent } = await import('@/app/(app)/app/billing/page');
+
+    const billingHtml = renderToStaticMarkup(
+      <BillingContent
+        subscription={{
+          id: 'sub_1',
+          userId: 'user-1',
+          plan: 'annual',
+          status: 'active',
+          currentPeriodEnd: new Date('2026-12-31T00:00:00Z'),
+          cancelAtPeriodEnd: true,
+          createdAt: new Date('2026-01-01T00:00:00Z'),
+          updatedAt: new Date('2026-01-01T00:00:00Z'),
+        }}
+        manageBillingAction={async () => undefined}
+      />,
+    );
+
+    expect(billingHtml).toContain('border-warning');
+    expect(billingHtml).toContain('bg-warning');
+    expect(billingHtml).not.toContain('amber-');
+  });
+
+  it('uses semantic success tokens in pricing savings label', async () => {
+    const { PricingView } = await import('@/app/pricing/pricing-view');
+
+    const pricingHtml = renderToStaticMarkup(
+      <PricingView
+        isEntitled={false}
+        banner={null}
+        subscribeMonthlyAction={async () => undefined}
+        subscribeAnnualAction={async () => undefined}
+      />,
+    );
+
+    expect(pricingHtml).toContain('text-success');
+    expect(pricingHtml).not.toContain('emerald-');
+  });
 });

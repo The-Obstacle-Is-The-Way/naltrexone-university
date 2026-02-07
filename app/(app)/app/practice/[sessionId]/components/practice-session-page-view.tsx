@@ -1,5 +1,7 @@
 import { PracticeView } from '@/app/(app)/app/practice/components/practice-view';
+import { ErrorCard } from '@/components/error-card';
 import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
 import type { EndPracticeSessionOutput } from '@/src/adapters/controllers/practice-controller';
 import type { NextQuestion } from '@/src/application/use-cases/get-next-question';
 import type { GetPracticeSessionReviewOutput } from '@/src/application/use-cases/get-practice-session-review';
@@ -25,8 +27,10 @@ export type PracticeSessionPageViewProps = {
   isBookmarked: boolean;
   isMarkingForReview?: boolean;
   bookmarkMessage?: string | null;
+  bookmarkMessageVersion?: number;
   canSubmit: boolean;
   onEndSession: () => void;
+  onRetryReview?: () => void;
   onTryAgain: () => void;
   onToggleBookmark: () => void;
   onToggleMarkForReview?: () => void;
@@ -59,21 +63,32 @@ export function PracticeSessionPageView(props: PracticeSessionPageViewProps) {
 
   if (reviewLoadState.status === 'loading' && !review) {
     return (
-      <div className="rounded-2xl border border-border bg-card p-6 text-sm text-muted-foreground shadow-sm">
+      <Card className="gap-0 rounded-2xl p-6 text-sm text-muted-foreground shadow-sm">
         Loading review...
-      </div>
+      </Card>
     );
   }
 
   if (reviewLoadState.status === 'error' && !review) {
     return (
       <div className="space-y-4">
-        <div className="rounded-2xl border border-border bg-card p-6 text-sm text-destructive shadow-sm">
-          {reviewLoadState.message}
+        <ErrorCard className="p-6">{reviewLoadState.message}</ErrorCard>
+        <div className="flex flex-wrap gap-3">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={props.onRetryReview ?? props.onEndSession}
+          >
+            Try again
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={props.onFinalizeReview ?? props.onEndSession}
+          >
+            End session
+          </Button>
         </div>
-        <Button type="button" variant="outline" onClick={props.onEndSession}>
-          Try again
-        </Button>
       </div>
     );
   }
@@ -110,6 +125,7 @@ export function PracticeSessionPageView(props: PracticeSessionPageViewProps) {
       isBookmarked={props.isBookmarked}
       isMarkingForReview={props.isMarkingForReview}
       bookmarkMessage={props.bookmarkMessage}
+      bookmarkMessageVersion={props.bookmarkMessageVersion}
       canSubmit={props.canSubmit}
       endSessionLabel={
         props.sessionInfo?.mode === 'exam' ? 'Review answers' : 'End session'

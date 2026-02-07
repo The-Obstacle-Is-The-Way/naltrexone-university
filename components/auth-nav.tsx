@@ -8,6 +8,7 @@ import {
   type LoadContainerFn,
   loadAppContainer,
 } from '@/lib/controller-helpers';
+import { ROUTES } from '@/lib/routes';
 
 export type AuthNavDeps = AuthCheckDeps;
 
@@ -39,13 +40,13 @@ export async function AuthNav({
   const unauthenticatedNav = (
     <div className="flex items-center space-x-4">
       <Link
-        href="/pricing"
-        className="text-sm font-medium text-muted-foreground hover:text-foreground"
+        href={ROUTES.PRICING}
+        className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
       >
         Pricing
       </Link>
       <Link
-        href="/sign-in"
+        href={ROUTES.SIGN_IN}
         className="rounded-full bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
       >
         Sign In
@@ -69,8 +70,8 @@ export async function AuthNav({
     userId: user.id,
   });
   const primaryLink = entitlement.isEntitled
-    ? { href: '/app/dashboard', label: 'Dashboard' }
-    : { href: '/pricing', label: 'Pricing' };
+    ? { href: ROUTES.APP_DASHBOARD, label: 'Dashboard' }
+    : { href: ROUTES.PRICING, label: 'Pricing' };
 
   const { UserButton } = await import('@clerk/nextjs');
 
@@ -78,7 +79,7 @@ export async function AuthNav({
     <div className="flex items-center space-x-4">
       <Link
         href={primaryLink.href}
-        className="text-sm font-medium text-muted-foreground hover:text-foreground"
+        className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
       >
         {primaryLink.label}
       </Link>

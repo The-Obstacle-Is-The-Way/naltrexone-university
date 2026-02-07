@@ -33,6 +33,7 @@ describe('components/marketing/marketing-home', () => {
       // Hero gradient text
       expect(html).toContain('Master Your');
       expect(html).toContain('Board Exams.');
+      expect(html).toContain('<main id="main-content"');
     },
   );
 

@@ -727,7 +727,7 @@ describe('practice-page-logic', () => {
   });
 
   describe('toggleBookmarkForQuestion', () => {
-    it('toggles bookmark and updates IDs on success', async () => {
+    it('toggles bookmark, forwards idempotency key, and rotates key on success', async () => {
       let ids = new Set<string>(['other']);
       const setBookmarkedQuestionIds = vi.fn(
         (next: Set<string> | ((prev: Set<string>) => Set<string>)) => {
@@ -735,17 +735,27 @@ describe('practice-page-logic', () => {
         },
       );
       const onBookmarkToggled = vi.fn();
+      const setBookmarkIdempotencyKey = vi.fn();
+      const toggleBookmarkFn = vi.fn(async () => ok({ bookmarked: true }));
 
       await toggleBookmarkForQuestion({
         question: createNextQuestion(),
-        toggleBookmarkFn: async () => ok({ bookmarked: true }),
+        bookmarkIdempotencyKey: 'idem_1',
+        createIdempotencyKey: () => 'idem_2',
+        setBookmarkIdempotencyKey,
+        toggleBookmarkFn,
         setBookmarkStatus: vi.fn(),
         setBookmarkedQuestionIds,
         onBookmarkToggled,
       });
 
+      expect(toggleBookmarkFn).toHaveBeenCalledWith({
+        questionId: 'q_1',
+        idempotencyKey: 'idem_1',
+      });
       expect(ids.has('q_1')).toBe(true);
       expect(onBookmarkToggled).toHaveBeenCalledWith(true);
+      expect(setBookmarkIdempotencyKey).toHaveBeenCalledWith('idem_2');
     });
 
     it('sets error state when toggle fails', async () => {

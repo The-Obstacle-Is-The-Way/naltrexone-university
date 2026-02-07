@@ -20,7 +20,7 @@ export default function PricingError({
   return (
     <div className="flex min-h-[50vh] items-center justify-center bg-background text-foreground">
       <div className="w-full max-w-md space-y-4 px-4 text-center">
-        <h2 className="text-xl font-semibold">Pricing error</h2>
+        <h2 className="text-xl font-semibold text-foreground">Pricing error</h2>
         <p className="text-sm text-muted-foreground">
           We couldn&apos;t load pricing right now. Please try again.
         </p>

@@ -2,7 +2,9 @@
 
 import { useMemo } from 'react';
 import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
 import { FilterChip } from '@/components/ui/filter-chip';
+import { Input } from '@/components/ui/input';
 import { SegmentedControl } from '@/components/ui/segmented-control';
 import type { TagRow } from '@/src/adapters/controllers/tag-controller';
 import type { NextQuestion } from '@/src/application/use-cases/get-next-question';
@@ -64,7 +66,7 @@ export function PracticeSessionStarter(props: PracticeSessionStarterProps) {
   }, [props.availableTags]);
 
   return (
-    <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
+    <Card className="gap-0 rounded-2xl border-border p-6">
       <div className="space-y-1">
         <div className="text-sm font-medium text-foreground">
           Start a session
@@ -91,12 +93,18 @@ export function PracticeSessionStarter(props: PracticeSessionStarterProps) {
           </div>
 
           <div className="space-y-2">
-            <div className="text-sm font-medium text-foreground">Questions</div>
-            <input
+            <label
+              htmlFor="session-count-input"
+              className="text-sm font-medium text-foreground"
+            >
+              Questions
+            </label>
+            <Input
+              id="session-count-input"
               type="number"
               min={SESSION_COUNT_MIN}
               max={SESSION_COUNT_MAX}
-              className="w-24 rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground"
+              className="w-24"
               value={props.sessionCount}
               onChange={props.onSessionCountChange}
             />
@@ -126,10 +134,14 @@ export function PracticeSessionStarter(props: PracticeSessionStarterProps) {
         </div>
 
         {props.tagLoadStatus === 'loading' ? (
-          <div className="text-sm text-muted-foreground">Loading tags…</div>
+          <output className="text-sm text-muted-foreground" aria-live="polite">
+            Loading tags…
+          </output>
         ) : null}
         {props.tagLoadStatus === 'error' ? (
-          <div className="text-sm text-destructive">Tags unavailable.</div>
+          <div className="text-sm text-destructive" role="alert">
+            Tags unavailable.
+          </div>
         ) : null}
         {props.tagLoadStatus === 'idle'
           ? tagKindOrder
@@ -176,10 +188,10 @@ export function PracticeSessionStarter(props: PracticeSessionStarterProps) {
       </div>
 
       {props.sessionStartStatus === 'error' && props.sessionStartError ? (
-        <div className="mt-3 text-sm text-destructive">
+        <div className="mt-3 text-sm text-destructive" role="alert">
           {props.sessionStartError}
         </div>
       ) : null}
-    </div>
+    </Card>
   );
 }

@@ -1,9 +1,14 @@
 'use client';
 
 import Link from 'next/link';
+import { useEffect, useMemo } from 'react';
+import { ErrorCard } from '@/components/error-card';
 import { Feedback } from '@/components/question/Feedback';
 import { QuestionCard } from '@/components/question/QuestionCard';
 import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { useNotification } from '@/components/ui/notification-provider';
+import { ROUTES } from '@/lib/routes';
 import type { NextQuestion } from '@/src/application/use-cases/get-next-question';
 import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
 import type { LoadState } from '../practice-page-logic';
@@ -20,6 +25,7 @@ export type PracticeViewProps = {
   isBookmarked: boolean;
   isMarkingForReview?: boolean;
   bookmarkMessage?: string | null;
+  bookmarkMessageVersion?: number;
   canSubmit: boolean;
   endSessionLabel?: string;
   onEndSession?: () => void;
@@ -32,11 +38,25 @@ export type PracticeViewProps = {
 };
 
 export function PracticeView(props: PracticeViewProps) {
+  const { notify } = useNotification();
   const sessionInfo = props.sessionInfo ?? null;
   const isExamMode = sessionInfo?.mode === 'exam';
   const correctChoiceId = isExamMode
     ? null
     : (props.submitResult?.correctChoiceId ?? null);
+  const bookmarkFeedback = useMemo(
+    () => ({
+      message: props.bookmarkMessage ?? null,
+      version: props.bookmarkMessageVersion ?? 0,
+    }),
+    [props.bookmarkMessage, props.bookmarkMessageVersion],
+  );
+
+  useEffect(() => {
+    const message = bookmarkFeedback.message;
+    if (!message) return;
+    notify({ message, tone: 'success' });
+  }, [notify, bookmarkFeedback]);
 
   return (
     <div className="space-y-6">
@@ -70,8 +90,8 @@ export function PracticeView(props: PracticeViewProps) {
               </Button>
             ) : null}
             <Link
-              href="/app/dashboard"
-              className="text-sm font-medium text-muted-foreground hover:text-foreground"
+              href={ROUTES.APP_DASHBOARD}
+              className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
             >
               Back to Dashboard
             </Link>
@@ -80,35 +100,33 @@ export function PracticeView(props: PracticeViewProps) {
       </div>
 
       {props.loadState.status === 'error' ? (
-        <div className="rounded-2xl border border-border bg-card p-6 text-sm text-destructive shadow-sm">
+        <ErrorCard className="p-6">
           <div>{props.loadState.message}</div>
-          <Button
-            type="button"
-            variant="outline"
-            className="mt-4 rounded-full"
-            onClick={props.onTryAgain}
-          >
-            Try again
-          </Button>
-        </div>
+          <div className="mt-4 flex flex-wrap items-center gap-3">
+            <Button type="button" variant="outline" onClick={props.onTryAgain}>
+              Try again
+            </Button>
+            <Button asChild variant="outline">
+              <Link href={ROUTES.APP_DASHBOARD}>Return to dashboard</Link>
+            </Button>
+          </div>
+        </ErrorCard>
       ) : null}
 
       {props.loadState.status === 'loading' ? (
-        <div className="rounded-2xl border border-border bg-card p-6 text-sm text-muted-foreground shadow-sm">
+        <Card className="gap-0 rounded-2xl p-6 text-sm text-muted-foreground shadow-sm">
           Loading question…
-        </div>
+        </Card>
       ) : null}
 
       {props.bookmarkStatus === 'error' ? (
-        <div className="rounded-2xl border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive">
-          Bookmarks unavailable.
-        </div>
+        <ErrorCard>Bookmarks unavailable.</ErrorCard>
       ) : null}
 
       {props.loadState.status === 'ready' && props.question === null ? (
-        <div className="rounded-2xl border border-border bg-card p-6 text-sm text-muted-foreground shadow-sm">
+        <Card className="gap-0 rounded-2xl p-6 text-sm text-muted-foreground shadow-sm">
           No more questions found.
-        </div>
+        </Card>
       ) : null}
 
       {props.question ? (
@@ -135,11 +153,6 @@ export function PracticeView(props: PracticeViewProps) {
           >
             {props.isBookmarked ? 'Remove bookmark' : 'Bookmark'}
           </Button>
-          {props.bookmarkMessage ? (
-            <div className="text-xs text-muted-foreground" aria-live="polite">
-              {props.bookmarkMessage}
-            </div>
-          ) : null}
         </div>
       ) : null}
 

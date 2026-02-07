@@ -1,5 +1,6 @@
 import { expect, test, vi } from 'vitest';
 import { render } from 'vitest-browser-react';
+import { NotificationProvider } from '@/components/ui/notification-provider';
 import { PracticeView } from './practice-view';
 
 test('renders error state and retries when requested', async () => {
@@ -26,6 +27,9 @@ test('renders error state and retries when requested', async () => {
   await expect.element(screen.getByText('Question load failed.')).toBeVisible();
   await screen.getByRole('button', { name: 'Try again' }).click();
   expect(onTryAgain).toHaveBeenCalledTimes(1);
+  await expect
+    .element(screen.getByRole('link', { name: 'Return to dashboard' }))
+    .toBeVisible();
 });
 
 test('supports exam controls and question interactions', async () => {
@@ -87,4 +91,42 @@ test('supports exam controls and question interactions', async () => {
 
   await screen.getByRole('button', { name: 'Next Question' }).click();
   expect(onNextQuestion).toHaveBeenCalledTimes(1);
+});
+
+test('renders bookmark feedback in shared toast region', async () => {
+  const screen = await render(
+    <NotificationProvider>
+      <PracticeView
+        loadState={{ status: 'ready' }}
+        question={{
+          questionId: 'question-1',
+          slug: 'question-1',
+          stemMd: 'What is the next best step?',
+          difficulty: 'easy',
+          choices: [
+            { id: 'choice_a', label: 'A', textMd: 'Option A', sortOrder: 1 },
+          ],
+          session: null,
+        }}
+        selectedChoiceId={null}
+        submitResult={null}
+        isPending={false}
+        bookmarkStatus="idle"
+        isBookmarked
+        bookmarkMessage="Question bookmarked."
+        bookmarkMessageVersion={1}
+        canSubmit={false}
+        onTryAgain={() => undefined}
+        onToggleBookmark={() => undefined}
+        onSelectChoice={() => undefined}
+        onSubmit={() => undefined}
+        onNextQuestion={() => undefined}
+      />
+    </NotificationProvider>,
+  );
+
+  await expect
+    .element(screen.getByTestId('app-toast-region'))
+    .toBeInTheDocument();
+  await expect.element(screen.getByText('Question bookmarked.')).toBeVisible();
 });

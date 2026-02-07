@@ -4,6 +4,7 @@ import type { ReactElement, ReactNode } from 'react';
 import { AuthNav } from '@/components/auth-nav';
 import { GetStartedCta } from '@/components/get-started-cta';
 import { MetallicCtaButton } from '@/components/ui/metallic-cta-button';
+import { ROUTES } from '@/lib/routes';
 import { cn } from '@/lib/utils';
 
 export type MarketingHomeShellProps = {
@@ -59,7 +60,7 @@ export function MarketingHomeShell({
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:px-8">
           <div className="flex items-center gap-6">
             <Link
-              href="/"
+              href={ROUTES.HOME}
               className="rounded-md text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
             >
               Addiction Boards
@@ -70,13 +71,13 @@ export function MarketingHomeShell({
             >
               <Link
                 href="#features"
-                className="rounded-md text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                className="rounded-md text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
               >
                 Features
               </Link>
               <Link
-                href="/pricing"
-                className="rounded-md text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                href={ROUTES.PRICING}
+                className="rounded-md text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
               >
                 Pricing
               </Link>
@@ -86,7 +87,7 @@ export function MarketingHomeShell({
         </div>
       </header>
 
-      <main>
+      <main id="main-content" tabIndex={-1}>
         {/* Hero */}
         <section className="py-20 lg:py-32">
           <div className="mx-auto max-w-4xl px-4 text-center sm:px-6 lg:px-8">
@@ -108,7 +109,7 @@ export function MarketingHomeShell({
             <div className="mt-10 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
               {primaryCta}
               <Link
-                href="/pricing"
+                href={ROUTES.PRICING}
                 className="rounded-full border border-border bg-card px-6 py-3 text-sm font-medium text-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
               >
                 View pricing
@@ -222,7 +223,7 @@ export function MarketingHomeShell({
                   <li>Progress tracking</li>
                 </ul>
                 <Link
-                  href="/pricing"
+                  href={ROUTES.PRICING}
                   className="mt-8 block w-full rounded-full bg-secondary py-3 text-center text-sm font-medium text-secondary-foreground transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                 >
                   Get Started
@@ -239,15 +240,13 @@ export function MarketingHomeShell({
                     /yr
                   </span>
                 </p>
-                <p className="text-sm text-emerald-600 dark:text-emerald-400">
-                  Save $149 per year
-                </p>
+                <p className="text-sm text-success">Save $149 per year</p>
                 <ul className="mt-6 space-y-3 text-sm text-muted-foreground">
                   <li>Everything in Pro Monthly</li>
                   <li>Best value</li>
                 </ul>
                 <Link
-                  href="/pricing"
+                  href={ROUTES.PRICING}
                   className="mt-8 block w-full rounded-full bg-foreground py-3 text-center text-sm font-medium text-background transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                 >
                   Get Started
@@ -268,9 +267,11 @@ export function MarketingHomeShell({
               Full access, cancel anytime.
             </p>
             <div className="mt-8 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
-              <MetallicCtaButton href="/pricing">Get Started</MetallicCtaButton>
+              <MetallicCtaButton href={ROUTES.PRICING}>
+                Get Started
+              </MetallicCtaButton>
               <Link
-                href="/sign-in"
+                href={ROUTES.SIGN_IN}
                 className="rounded-full border border-border bg-card px-6 py-3 text-sm font-medium text-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
               >
                 Sign In
@@ -294,10 +295,16 @@ export function MarketingHomeShell({
               <div>
                 <p className="text-sm font-semibold text-foreground">Product</p>
                 <div className="mt-3 flex flex-col gap-2 text-sm text-muted-foreground">
-                  <Link href="#features" className="hover:text-foreground">
+                  <Link
+                    href="#features"
+                    className="transition-colors hover:text-foreground"
+                  >
                     Features
                   </Link>
-                  <Link href="/pricing" className="hover:text-foreground">
+                  <Link
+                    href={ROUTES.PRICING}
+                    className="transition-colors hover:text-foreground"
+                  >
                     Pricing
                   </Link>
                 </div>
@@ -305,10 +312,16 @@ export function MarketingHomeShell({
               <div>
                 <p className="text-sm font-semibold text-foreground">Account</p>
                 <div className="mt-3 flex flex-col gap-2 text-sm text-muted-foreground">
-                  <Link href="/sign-in" className="hover:text-foreground">
+                  <Link
+                    href={ROUTES.SIGN_IN}
+                    className="transition-colors hover:text-foreground"
+                  >
                     Sign in
                   </Link>
-                  <Link href="/sign-up" className="hover:text-foreground">
+                  <Link
+                    href={ROUTES.SIGN_UP}
+                    className="transition-colors hover:text-foreground"
+                  >
                     Sign up
                   </Link>
                 </div>

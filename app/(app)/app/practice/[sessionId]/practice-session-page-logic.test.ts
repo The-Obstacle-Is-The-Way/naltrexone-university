@@ -602,25 +602,30 @@ describe('practice-session-page-logic', () => {
   });
 
   describe('endSession', () => {
+    const successfulEndSessionOutput: EndPracticeSessionOutput = {
+      sessionId: 'session-1',
+      endedAt: '2026-02-01T00:00:00.000Z',
+      totals: {
+        answered: 10,
+        correct: 7,
+        accuracy: 0.7,
+        durationSeconds: 123,
+      },
+    };
+
     it('sets summary and resets state on success', async () => {
       const setSummary = vi.fn();
       const setQuestion = vi.fn();
       const setSubmitResult = vi.fn();
       const setSelectedChoiceId = vi.fn();
+      const endPracticeSessionFn = vi.fn(async () =>
+        ok(successfulEndSessionOutput),
+      );
 
       await endSession({
         sessionId: 'session-1',
-        endPracticeSessionFn: async () =>
-          ok({
-            sessionId: 'session-1',
-            endedAt: '2026-02-01T00:00:00.000Z',
-            totals: {
-              answered: 10,
-              correct: 7,
-              accuracy: 0.7,
-              durationSeconds: 123,
-            },
-          }),
+        endSessionIdempotencyKey: 'idem_1',
+        endPracticeSessionFn,
         setLoadState: vi.fn(),
         setSummary,
         setQuestion,
@@ -628,6 +633,10 @@ describe('practice-session-page-logic', () => {
         setSelectedChoiceId,
       });
 
+      expect(endPracticeSessionFn).toHaveBeenCalledWith({
+        sessionId: 'session-1',
+        idempotencyKey: 'idem_1',
+      });
       expect(setSummary).toHaveBeenCalledWith(
         expect.objectContaining({ sessionId: 'session-1' }),
       );
@@ -641,6 +650,7 @@ describe('practice-session-page-logic', () => {
 
       await endSession({
         sessionId: 'session-1',
+        endSessionIdempotencyKey: 'idem_1',
         endPracticeSessionFn: async () => err('INTERNAL_ERROR', 'Boom'),
         setLoadState,
         setSummary: vi.fn(),
@@ -655,11 +665,30 @@ describe('practice-session-page-logic', () => {
       });
     });
 
+    it('calls rotateIdempotencyKey when controller fails', async () => {
+      const rotateIdempotencyKey = vi.fn();
+
+      await endSession({
+        sessionId: 'session-1',
+        endSessionIdempotencyKey: 'idem_1',
+        endPracticeSessionFn: async () => err('INTERNAL_ERROR', 'Boom'),
+        setLoadState: vi.fn(),
+        setSummary: vi.fn(),
+        setQuestion: vi.fn(),
+        setSubmitResult: vi.fn(),
+        setSelectedChoiceId: vi.fn(),
+        rotateIdempotencyKey,
+      });
+
+      expect(rotateIdempotencyKey).toHaveBeenCalledTimes(1);
+    });
+
     it('sets error state when controller throws', async () => {
       const setLoadState = vi.fn();
 
       await endSession({
         sessionId: 'session-1',
+        endSessionIdempotencyKey: 'idem_1',
         endPracticeSessionFn: async () => {
           throw new Error('Boom');
         },
@@ -676,6 +705,44 @@ describe('practice-session-page-logic', () => {
       });
     });
 
+    it('calls rotateIdempotencyKey when controller throws', async () => {
+      const rotateIdempotencyKey = vi.fn();
+
+      await endSession({
+        sessionId: 'session-1',
+        endSessionIdempotencyKey: 'idem_1',
+        endPracticeSessionFn: async () => {
+          throw new Error('Boom');
+        },
+        setLoadState: vi.fn(),
+        setSummary: vi.fn(),
+        setQuestion: vi.fn(),
+        setSubmitResult: vi.fn(),
+        setSelectedChoiceId: vi.fn(),
+        rotateIdempotencyKey,
+      });
+
+      expect(rotateIdempotencyKey).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not call rotateIdempotencyKey on success', async () => {
+      const rotateIdempotencyKey = vi.fn();
+
+      await endSession({
+        sessionId: 'session-1',
+        endSessionIdempotencyKey: 'idem_1',
+        endPracticeSessionFn: async () => ok(successfulEndSessionOutput),
+        setLoadState: vi.fn(),
+        setSummary: vi.fn(),
+        setQuestion: vi.fn(),
+        setSubmitResult: vi.fn(),
+        setSelectedChoiceId: vi.fn(),
+        rotateIdempotencyKey,
+      });
+
+      expect(rotateIdempotencyKey).not.toHaveBeenCalled();
+    });
+
     it('returns no state updates when unmounted during endSession', async () => {
       const deferred = createDeferred<ActionResult<EndPracticeSessionOutput>>();
       let mounted = true;
@@ -685,6 +752,7 @@ describe('practice-session-page-logic', () => {
 
       const promise = endSession({
         sessionId: 'session-1',
+        endSessionIdempotencyKey: 'idem_1',
         endPracticeSessionFn: async () => deferred.promise,
         setLoadState,
         setSummary,

@@ -27,6 +27,7 @@ describe('MobileNav', () => {
     expect(html).toContain('Open navigation menu');
     // Should have the hamburger menu icon (Menu from lucide-react)
     expect(html).toContain('size-6');
+    expect(html).toContain('transition-colors');
   });
 
   it('does not render links when menu is closed (initial state)', async () => {

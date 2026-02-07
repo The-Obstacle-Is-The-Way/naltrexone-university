@@ -9,6 +9,7 @@ import {
   type LoadContainerFn,
   loadAppContainer,
 } from '@/lib/controller-helpers';
+import { ROUTES } from '@/lib/routes';
 
 export type GetStartedCtaDeps = AuthCheckDeps;
 const ctaClassName =
@@ -32,7 +33,7 @@ export async function GetStartedCta({
   const skipClerk = process.env.NEXT_PUBLIC_SKIP_CLERK === 'true';
   if (skipClerk) {
     return (
-      <Link href="/pricing" className={ctaClassName}>
+      <Link href={ROUTES.PRICING} className={ctaClassName}>
         Get Started
       </Link>
     );
@@ -42,7 +43,7 @@ export async function GetStartedCta({
   const user = await d.authGateway.getCurrentUser();
   if (!user) {
     return (
-      <Link href="/pricing" className={ctaClassName}>
+      <Link href={ROUTES.PRICING} className={ctaClassName}>
         Get Started
       </Link>
     );
@@ -52,7 +53,7 @@ export async function GetStartedCta({
     userId: user.id,
   });
 
-  const href = entitlement.isEntitled ? '/app/dashboard' : '/pricing';
+  const href = entitlement.isEntitled ? ROUTES.APP_DASHBOARD : ROUTES.PRICING;
   const label = entitlement.isEntitled ? 'Go to Dashboard' : 'Get Started';
 
   return (

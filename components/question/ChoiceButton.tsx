@@ -30,9 +30,9 @@ export function ChoiceButton({
         disabled && 'cursor-not-allowed opacity-60',
         selected && correctness === null && 'border-ring',
         correctness === 'correct' &&
-          'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/20',
+          'border-success bg-success/10 text-success-foreground',
         correctness === 'incorrect' &&
-          'border-red-500 bg-red-50 dark:bg-red-950/20',
+          'border-destructive bg-destructive/10 text-destructive',
       )}
     >
       <input
@@ -50,9 +50,9 @@ export function ChoiceButton({
             'flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-border bg-background text-xs font-semibold leading-none text-foreground',
             selected && correctness === null && 'border-ring',
             correctness === 'correct' &&
-              'border-emerald-500 bg-emerald-50 text-emerald-700 dark:bg-emerald-950/20',
+              'border-success bg-success/15 text-success',
             correctness === 'incorrect' &&
-              'border-red-500 bg-red-50 text-red-700 dark:bg-red-950/20',
+              'border-destructive bg-destructive/15 text-destructive',
           )}
         >
           {label}
