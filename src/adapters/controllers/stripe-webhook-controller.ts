@@ -1,7 +1,11 @@
 import { isApplicationError } from '@/src/application/errors';
-import type { PaymentGateway } from '@/src/application/ports/gateways';
+import type {
+  PaymentGateway,
+  RateLimiter,
+} from '@/src/application/ports/gateways';
 import type { Logger } from '@/src/application/ports/logger';
 import type {
+  IdempotencyKeyRepository,
   StripeCustomerRepository,
   StripeEventRepository,
   SubscriptionRepository,
@@ -24,12 +28,14 @@ export type StripeWebhookDeps = {
     fn: (tx: StripeWebhookTransaction) => Promise<T>,
   ) => Promise<T>;
   logger: Logger;
+  rateLimiter: RateLimiter;
+  idempotencyKeys: IdempotencyKeyRepository;
 };
 
 const STACK_TRACE_LIMIT = 1000;
 const DAY_MS = 86_400_000;
-const STRIPE_EVENT_RETENTION_DAYS = 90;
-const STRIPE_EVENT_PRUNE_LIMIT = 100;
+const PRUNE_RETENTION_DAYS = 90;
+const PRUNE_BATCH_LIMIT = 100;
 
 function toErrorData(error: unknown): string {
   if (isApplicationError(error)) {
@@ -108,23 +114,52 @@ export async function processStripeWebhook(
     },
   );
 
+  const cutoff = new Date(Date.now() - PRUNE_RETENTION_DAYS * DAY_MS);
+
+  // Best-effort cleanup: prune expired data from operational tables.
+  // Failures do not affect webhook processing.
+
   try {
     await deps.transaction(async ({ stripeEvents }) => {
-      await stripeEvents.pruneProcessedBefore(
-        new Date(Date.now() - STRIPE_EVENT_RETENTION_DAYS * DAY_MS),
-        STRIPE_EVENT_PRUNE_LIMIT,
-      );
+      await stripeEvents.pruneProcessedBefore(cutoff, PRUNE_BATCH_LIMIT);
     });
   } catch (error) {
-    // Best-effort cleanup: do not fail webhook processing if pruning fails.
     deps.logger.warn(
       {
         eventId: event.eventId,
         error: error instanceof Error ? error.message : String(error),
-        retentionDays: STRIPE_EVENT_RETENTION_DAYS,
-        pruneLimit: STRIPE_EVENT_PRUNE_LIMIT,
+        retentionDays: PRUNE_RETENTION_DAYS,
+        pruneLimit: PRUNE_BATCH_LIMIT,
       },
       'Stripe event pruning failed',
+    );
+  }
+
+  try {
+    await deps.idempotencyKeys.pruneExpiredBefore(cutoff, PRUNE_BATCH_LIMIT);
+  } catch (error) {
+    deps.logger.warn(
+      {
+        eventId: event.eventId,
+        error: error instanceof Error ? error.message : String(error),
+        retentionDays: PRUNE_RETENTION_DAYS,
+        pruneLimit: PRUNE_BATCH_LIMIT,
+      },
+      'Idempotency key pruning failed',
+    );
+  }
+
+  try {
+    await deps.rateLimiter.pruneExpiredWindows(cutoff, PRUNE_BATCH_LIMIT);
+  } catch (error) {
+    deps.logger.warn(
+      {
+        eventId: event.eventId,
+        error: error instanceof Error ? error.message : String(error),
+        retentionDays: PRUNE_RETENTION_DAYS,
+        pruneLimit: PRUNE_BATCH_LIMIT,
+      },
+      'Rate limit pruning failed',
     );
   }
 }

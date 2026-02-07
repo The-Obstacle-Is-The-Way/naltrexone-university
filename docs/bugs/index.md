@@ -17,10 +17,10 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 | ID | Title | Status | Priority | Date |
 |----|-------|--------|----------|------|
+| [BUG-102](bug-102-rate-limits-table-unbounded-growth.md) | Rate Limits Table Unbounded Growth | In Progress | P2 | 2026-02-07 |
+| [BUG-103](bug-103-idempotency-key-pruning-never-wired.md) | Idempotency Key Pruning Never Wired to Production | In Progress | P2 | 2026-02-07 |
 
-No active bugs.
-
-**Next Bug ID:** BUG-102
+**Next Bug ID:** BUG-104
 
 ## Recently Triaged
 

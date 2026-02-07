@@ -25,7 +25,11 @@ function createTestDeps() {
     remaining: 99,
     retryAfterSeconds: 0,
   }));
-  const rateLimiter: RateLimiter & { limit: typeof limit } = { limit };
+  const pruneExpiredWindows = vi.fn(async () => 0);
+  const rateLimiter: RateLimiter & { limit: typeof limit } = {
+    limit,
+    pruneExpiredWindows,
+  };
 
   const userRepository = new FakeUserRepository();
   const stripeCustomerRepository = new FakeStripeCustomerRepository();

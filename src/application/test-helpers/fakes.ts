@@ -177,6 +177,8 @@ export class FakeAuthGateway implements AuthGateway {
 export class FakeRateLimiter implements RateLimiter {
   readonly inputs: RateLimitInput[] = [];
   private readonly results: Array<RateLimitResult | Error>;
+  readonly windows: Map<string, Date> = new Map();
+  pruneCallCount = 0;
 
   constructor(
     result?: RateLimitResult | Error | readonly (RateLimitResult | Error)[],
@@ -194,12 +196,31 @@ export class FakeRateLimiter implements RateLimiter {
     if (next instanceof Error) throw next;
     if (next) return next;
 
+    const windowStart = new Date();
+    this.windows.set(`${input.key}:${windowStart.getTime()}`, windowStart);
+
     return {
       success: true,
       limit: input.limit,
       remaining: Math.max(0, input.limit - 1),
       retryAfterSeconds: 0,
     };
+  }
+
+  async pruneExpiredWindows(before: Date, limit: number): Promise<number> {
+    this.pruneCallCount++;
+    if (!Number.isInteger(limit) || limit <= 0) return 0;
+
+    const expired = Array.from(this.windows.entries())
+      .filter(([, windowStart]) => windowStart.getTime() < before.getTime())
+      .sort(([, a], [, b]) => a.getTime() - b.getTime())
+      .slice(0, limit);
+
+    for (const [key] of expired) {
+      this.windows.delete(key);
+    }
+
+    return expired.length;
   }
 }
 

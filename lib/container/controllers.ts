@@ -20,6 +20,8 @@ export function createControllerFactories(input: {
     createStripeWebhookDeps: () => ({
       paymentGateway: gateways.createPaymentGateway(),
       logger: primitives.logger,
+      rateLimiter: gateways.createRateLimiter(),
+      idempotencyKeys: repositories.createIdempotencyKeyRepository(),
       transaction: async (fn) =>
         primitives.db.transaction(async (tx) =>
           fn({

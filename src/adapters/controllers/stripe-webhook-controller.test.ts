@@ -1,8 +1,13 @@
 import { describe, expect, it, vi } from 'vitest';
-import { processStripeWebhook } from '@/src/adapters/controllers/stripe-webhook-controller';
 import {
+  processStripeWebhook,
+  type StripeWebhookDeps,
+} from '@/src/adapters/controllers/stripe-webhook-controller';
+import {
+  FakeIdempotencyKeyRepository,
   FakeLogger,
   FakePaymentGateway,
+  FakeRateLimiter,
   FakeStripeCustomerRepository,
   FakeStripeEventRepository,
   FakeSubscriptionRepository,
@@ -12,6 +17,52 @@ class FailingStripeEventRepository extends FakeStripeEventRepository {
   async pruneProcessedBefore(_cutoff: Date, _limit: number): Promise<number> {
     throw new Error('boom');
   }
+}
+
+function createDeps(overrides: {
+  paymentGateway: FakePaymentGateway;
+  stripeEvents?: FakeStripeEventRepository;
+  subscriptions?: FakeSubscriptionRepository;
+  stripeCustomers?: FakeStripeCustomerRepository;
+  logger?: FakeLogger;
+  rateLimiter?: FakeRateLimiter;
+  idempotencyKeys?: FakeIdempotencyKeyRepository;
+}): {
+  deps: StripeWebhookDeps;
+  stripeEvents: FakeStripeEventRepository;
+  subscriptions: FakeSubscriptionRepository;
+  stripeCustomers: FakeStripeCustomerRepository;
+  logger: FakeLogger;
+  rateLimiter: FakeRateLimiter;
+  idempotencyKeys: FakeIdempotencyKeyRepository;
+} {
+  const stripeEvents =
+    overrides.stripeEvents ?? new FakeStripeEventRepository();
+  const subscriptions =
+    overrides.subscriptions ?? new FakeSubscriptionRepository();
+  const stripeCustomers =
+    overrides.stripeCustomers ?? new FakeStripeCustomerRepository();
+  const logger = overrides.logger ?? new FakeLogger();
+  const rateLimiter = overrides.rateLimiter ?? new FakeRateLimiter();
+  const idempotencyKeys =
+    overrides.idempotencyKeys ?? new FakeIdempotencyKeyRepository();
+
+  return {
+    deps: {
+      paymentGateway: overrides.paymentGateway,
+      logger,
+      rateLimiter,
+      idempotencyKeys,
+      transaction: async (fn) =>
+        fn({ stripeEvents, subscriptions, stripeCustomers }),
+    },
+    stripeEvents,
+    subscriptions,
+    stripeCustomers,
+    logger,
+    rateLimiter,
+    idempotencyKeys,
+  };
 }
 
 describe('processStripeWebhook', () => {
@@ -35,21 +86,12 @@ describe('processStripeWebhook', () => {
       },
     });
 
-    const stripeEvents = new FakeStripeEventRepository();
-    const subscriptions = new FakeSubscriptionRepository();
-    const stripeCustomers = new FakeStripeCustomerRepository();
+    const { deps, subscriptions, stripeCustomers } = createDeps({
+      paymentGateway,
+    });
     const insertSpy = vi.spyOn(stripeCustomers, 'insert');
-    const logger = new FakeLogger();
 
-    await processStripeWebhook(
-      {
-        paymentGateway,
-        logger,
-        transaction: async (fn) =>
-          fn({ stripeEvents, subscriptions, stripeCustomers }),
-      },
-      { rawBody: 'raw', signature: 'sig' },
-    );
+    await processStripeWebhook(deps, { rawBody: 'raw', signature: 'sig' });
 
     await expect(subscriptions.findByUserId('user_1')).resolves.toMatchObject({
       userId: 'user_1',
@@ -64,15 +106,7 @@ describe('processStripeWebhook', () => {
     expect(insertSpy).toHaveBeenCalledTimes(1);
 
     // Second delivery of the same event should short-circuit (no double upsert).
-    await processStripeWebhook(
-      {
-        paymentGateway,
-        logger,
-        transaction: async (fn) =>
-          fn({ stripeEvents, subscriptions, stripeCustomers }),
-      },
-      { rawBody: 'raw', signature: 'sig' },
-    );
+    await processStripeWebhook(deps, { rawBody: 'raw', signature: 'sig' });
 
     expect(insertSpy).toHaveBeenCalledTimes(1);
   });
@@ -88,20 +122,9 @@ describe('processStripeWebhook', () => {
       },
     });
 
-    const stripeEvents = new FakeStripeEventRepository();
-    const subscriptions = new FakeSubscriptionRepository();
-    const stripeCustomers = new FakeStripeCustomerRepository();
-    const logger = new FakeLogger();
+    const { deps, stripeEvents } = createDeps({ paymentGateway });
 
-    await processStripeWebhook(
-      {
-        paymentGateway,
-        logger,
-        transaction: async (fn) =>
-          fn({ stripeEvents, subscriptions, stripeCustomers }),
-      },
-      { rawBody: 'raw', signature: 'sig' },
-    );
+    await processStripeWebhook(deps, { rawBody: 'raw', signature: 'sig' });
 
     await expect(stripeEvents.lock('evt_2')).resolves.toMatchObject({
       processedAt: expect.any(Date),
@@ -129,21 +152,11 @@ describe('processStripeWebhook', () => {
       },
     });
 
-    const stripeEvents = new FakeStripeEventRepository();
-    const subscriptions = new FakeSubscriptionRepository();
-    const stripeCustomers = new FakeStripeCustomerRepository();
+    const { deps, stripeCustomers } = createDeps({ paymentGateway });
     await stripeCustomers.insert('user_1', 'cus_old');
 
     await expect(
-      processStripeWebhook(
-        {
-          paymentGateway,
-          logger: new FakeLogger(),
-          transaction: async (fn) =>
-            fn({ stripeEvents, subscriptions, stripeCustomers }),
-        },
-        { rawBody: 'raw', signature: 'sig' },
-      ),
+      processStripeWebhook(deps, { rawBody: 'raw', signature: 'sig' }),
     ).resolves.toBeUndefined();
 
     await expect(stripeCustomers.findByUserId('user_1')).resolves.toEqual({
@@ -167,21 +180,10 @@ describe('processStripeWebhook', () => {
         },
       });
 
-      const stripeEvents = new FakeStripeEventRepository();
-      const subscriptions = new FakeSubscriptionRepository();
-      const stripeCustomers = new FakeStripeCustomerRepository();
+      const { deps, stripeEvents } = createDeps({ paymentGateway });
       const pruneSpy = vi.spyOn(stripeEvents, 'pruneProcessedBefore');
-      const logger = new FakeLogger();
 
-      await processStripeWebhook(
-        {
-          paymentGateway,
-          logger,
-          transaction: async (fn) =>
-            fn({ stripeEvents, subscriptions, stripeCustomers }),
-        },
-        { rawBody: 'raw', signature: 'sig' },
-      );
+      await processStripeWebhook(deps, { rawBody: 'raw', signature: 'sig' });
 
       const ninetyDaysMs = 86_400_000 * 90;
       expect(pruneSpy).toHaveBeenCalledWith(
@@ -205,20 +207,10 @@ describe('processStripeWebhook', () => {
     });
 
     const stripeEvents = new FailingStripeEventRepository();
-    const subscriptions = new FakeSubscriptionRepository();
-    const stripeCustomers = new FakeStripeCustomerRepository();
-    const logger = new FakeLogger();
+    const { deps, logger } = createDeps({ paymentGateway, stripeEvents });
 
     await expect(
-      processStripeWebhook(
-        {
-          paymentGateway,
-          logger,
-          transaction: async (fn) =>
-            fn({ stripeEvents, subscriptions, stripeCustomers }),
-        },
-        { rawBody: 'raw', signature: 'sig' },
-      ),
+      processStripeWebhook(deps, { rawBody: 'raw', signature: 'sig' }),
     ).resolves.toBeUndefined();
 
     expect(logger.warnCalls).toContainEqual({
@@ -244,18 +236,9 @@ describe('processStripeWebhook', () => {
     });
 
     const stripeEvents = new FailingStripeEventRepository();
-    const subscriptions = new FakeSubscriptionRepository();
-    const stripeCustomers = new FakeStripeCustomerRepository();
+    const { deps } = createDeps({ paymentGateway, stripeEvents });
 
-    await processStripeWebhook(
-      {
-        paymentGateway,
-        logger: new FakeLogger(),
-        transaction: async (fn) =>
-          fn({ stripeEvents, subscriptions, stripeCustomers }),
-      },
-      { rawBody: 'raw', signature: 'sig' },
-    );
+    await processStripeWebhook(deps, { rawBody: 'raw', signature: 'sig' });
 
     await expect(stripeEvents.lock('evt_prune_fail_2')).resolves.toMatchObject({
       processedAt: expect.any(Date),
@@ -288,20 +271,13 @@ describe('processStripeWebhook', () => {
     await stripeEvents.markProcessed('evt_3');
     const lockSpy = vi.spyOn(stripeEvents, 'lock');
 
-    const subscriptions = new FakeSubscriptionRepository();
-    const stripeCustomers = new FakeStripeCustomerRepository();
+    const { deps, stripeCustomers } = createDeps({
+      paymentGateway,
+      stripeEvents,
+    });
     const insertSpy = vi.spyOn(stripeCustomers, 'insert');
-    const logger = new FakeLogger();
 
-    await processStripeWebhook(
-      {
-        paymentGateway,
-        logger,
-        transaction: async (fn) =>
-          fn({ stripeEvents, subscriptions, stripeCustomers }),
-      },
-      { rawBody: 'raw', signature: 'sig' },
-    );
+    await processStripeWebhook(deps, { rawBody: 'raw', signature: 'sig' });
 
     expect(insertSpy).not.toHaveBeenCalled();
     expect(lockSpy).not.toHaveBeenCalled();
@@ -330,19 +306,10 @@ describe('processStripeWebhook', () => {
       );
       await stripeEvents.markProcessed('evt_already_processed_prune');
 
-      const subscriptions = new FakeSubscriptionRepository();
-      const stripeCustomers = new FakeStripeCustomerRepository();
+      const { deps } = createDeps({ paymentGateway, stripeEvents });
       const pruneSpy = vi.spyOn(stripeEvents, 'pruneProcessedBefore');
 
-      await processStripeWebhook(
-        {
-          paymentGateway,
-          logger: new FakeLogger(),
-          transaction: async (fn) =>
-            fn({ stripeEvents, subscriptions, stripeCustomers }),
-        },
-        { rawBody: 'raw', signature: 'sig' },
-      );
+      await processStripeWebhook(deps, { rawBody: 'raw', signature: 'sig' });
 
       const ninetyDaysMs = 86_400_000 * 90;
       expect(pruneSpy).toHaveBeenCalledWith(
@@ -380,20 +347,14 @@ describe('processStripeWebhook', () => {
       }
     }
 
-    const stripeEvents = new FakeStripeEventRepository();
     const subscriptions = new FailingSubscriptionRepository();
-    const stripeCustomers = new FakeStripeCustomerRepository();
+    const { deps, stripeEvents } = createDeps({
+      paymentGateway,
+      subscriptions,
+    });
 
     await expect(
-      processStripeWebhook(
-        {
-          paymentGateway,
-          logger: new FakeLogger(),
-          transaction: async (fn) =>
-            fn({ stripeEvents, subscriptions, stripeCustomers }),
-        },
-        { rawBody: 'raw', signature: 'sig' },
-      ),
+      processStripeWebhook(deps, { rawBody: 'raw', signature: 'sig' }),
     ).rejects.toMatchObject({ message: 'boom' });
 
     const stored = await stripeEvents.lock('evt_4');
@@ -410,6 +371,130 @@ describe('processStripeWebhook', () => {
     expect(errorData).toMatchObject({
       name: 'Error',
       message: 'boom',
+    });
+  });
+
+  it('prunes expired idempotency keys after successful processing', async () => {
+    vi.useFakeTimers();
+    try {
+      const now = new Date('2026-02-01T00:00:00Z');
+      vi.setSystemTime(now);
+
+      const paymentGateway = new FakePaymentGateway({
+        externalCustomerId: 'cus_test',
+        checkoutUrl: 'https://stripe/checkout',
+        portalUrl: 'https://stripe/portal',
+        webhookResult: {
+          eventId: 'evt_idem_prune',
+          type: 'checkout.session.completed',
+        },
+      });
+
+      const { deps, idempotencyKeys } = createDeps({ paymentGateway });
+      const pruneSpy = vi.spyOn(idempotencyKeys, 'pruneExpiredBefore');
+
+      await processStripeWebhook(deps, { rawBody: 'raw', signature: 'sig' });
+
+      const ninetyDaysMs = 86_400_000 * 90;
+      expect(pruneSpy).toHaveBeenCalledWith(
+        new Date(now.getTime() - ninetyDaysMs),
+        100,
+      );
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('prunes expired rate limit windows after successful processing', async () => {
+    vi.useFakeTimers();
+    try {
+      const now = new Date('2026-02-01T00:00:00Z');
+      vi.setSystemTime(now);
+
+      const paymentGateway = new FakePaymentGateway({
+        externalCustomerId: 'cus_test',
+        checkoutUrl: 'https://stripe/checkout',
+        portalUrl: 'https://stripe/portal',
+        webhookResult: {
+          eventId: 'evt_rate_prune',
+          type: 'checkout.session.completed',
+        },
+      });
+
+      const { deps, rateLimiter } = createDeps({ paymentGateway });
+      const pruneSpy = vi.spyOn(rateLimiter, 'pruneExpiredWindows');
+
+      await processStripeWebhook(deps, { rawBody: 'raw', signature: 'sig' });
+
+      const ninetyDaysMs = 86_400_000 * 90;
+      expect(pruneSpy).toHaveBeenCalledWith(
+        new Date(now.getTime() - ninetyDaysMs),
+        100,
+      );
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('logs a warning when idempotency key pruning fails', async () => {
+    const paymentGateway = new FakePaymentGateway({
+      externalCustomerId: 'cus_test',
+      checkoutUrl: 'https://stripe/checkout',
+      portalUrl: 'https://stripe/portal',
+      webhookResult: {
+        eventId: 'evt_idem_prune_fail',
+        type: 'checkout.session.completed',
+      },
+    });
+
+    const idempotencyKeys = new FakeIdempotencyKeyRepository();
+    vi.spyOn(idempotencyKeys, 'pruneExpiredBefore').mockRejectedValue(
+      new Error('idem boom'),
+    );
+
+    const { deps, logger } = createDeps({ paymentGateway, idempotencyKeys });
+
+    await expect(
+      processStripeWebhook(deps, { rawBody: 'raw', signature: 'sig' }),
+    ).resolves.toBeUndefined();
+
+    expect(logger.warnCalls).toContainEqual({
+      context: expect.objectContaining({
+        eventId: 'evt_idem_prune_fail',
+        error: 'idem boom',
+      }),
+      msg: 'Idempotency key pruning failed',
+    });
+  });
+
+  it('logs a warning when rate limit pruning fails', async () => {
+    const paymentGateway = new FakePaymentGateway({
+      externalCustomerId: 'cus_test',
+      checkoutUrl: 'https://stripe/checkout',
+      portalUrl: 'https://stripe/portal',
+      webhookResult: {
+        eventId: 'evt_rate_prune_fail',
+        type: 'checkout.session.completed',
+      },
+    });
+
+    const rateLimiter = new FakeRateLimiter();
+    vi.spyOn(rateLimiter, 'pruneExpiredWindows').mockRejectedValue(
+      new Error('rate boom'),
+    );
+
+    const { deps, logger } = createDeps({ paymentGateway, rateLimiter });
+
+    await expect(
+      processStripeWebhook(deps, { rawBody: 'raw', signature: 'sig' }),
+    ).resolves.toBeUndefined();
+
+    expect(logger.warnCalls).toContainEqual({
+      context: expect.objectContaining({
+        eventId: 'evt_rate_prune_fail',
+        error: 'rate boom',
+      }),
+      msg: 'Rate limit pruning failed',
     });
   });
 });

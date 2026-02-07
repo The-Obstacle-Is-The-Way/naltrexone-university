@@ -25,8 +25,10 @@ import { DrizzleSubscriptionRepository } from '@/src/adapters/repositories/drizz
 import { DrizzleUserRepository } from '@/src/adapters/repositories/drizzle-user-repository';
 import type { AuthGateway } from '@/src/application/ports/gateways';
 import {
+  FakeIdempotencyKeyRepository,
   FakeLogger,
   FakePaymentGateway,
+  FakeRateLimiter,
 } from '@/src/application/test-helpers/fakes';
 import { GetMissedQuestionsUseCase } from '@/src/application/use-cases/get-missed-questions';
 import { GetNextQuestionUseCase } from '@/src/application/use-cases/get-next-question';
@@ -261,6 +263,7 @@ describe('question controllers (integration)', () => {
           remaining: 119,
           retryAfterSeconds: 0,
         }),
+        pruneExpiredWindows: async () => 0,
       },
       idempotencyKeyRepository,
       checkEntitlementUseCase: { execute: async () => ({ isEntitled: true }) },
@@ -583,6 +586,8 @@ describe('stripe webhook controller (integration)', () => {
       {
         paymentGateway,
         logger: new FakeLogger(),
+        rateLimiter: new FakeRateLimiter(),
+        idempotencyKeys: new FakeIdempotencyKeyRepository(),
         transaction: async (fn) =>
           db.transaction(async (tx) =>
             fn({

@@ -111,4 +111,5 @@ export type RateLimitResult = {
 
 export interface RateLimiter {
   limit(input: RateLimitInput): Promise<RateLimitResult>;
+  pruneExpiredWindows(before: Date, limit: number): Promise<number>;
 }

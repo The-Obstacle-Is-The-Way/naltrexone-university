@@ -29,7 +29,11 @@ function createTestDeps() {
     remaining: 999,
     retryAfterSeconds: 0,
   }));
-  const rateLimiter: RateLimiter & { limit: typeof limit } = { limit };
+  const pruneExpiredWindows = vi.fn(async () => 0);
+  const rateLimiter: RateLimiter & { limit: typeof limit } = {
+    limit,
+    pruneExpiredWindows,
+  };
   const tx = {
     stripeEvents: {
       claim: async () => true,
@@ -51,9 +55,18 @@ function createTestDeps() {
   } satisfies StripeWebhookTransaction;
 
   const logger = new FakeLogger();
+  const idempotencyKeys = {
+    claim: async () => true,
+    find: async () => null,
+    storeResult: async () => undefined,
+    storeError: async () => undefined,
+    pruneExpiredBefore: async () => 0,
+  };
   const deps: StripeWebhookDeps = {
     paymentGateway: createPaymentGatewayStub(),
     logger,
+    rateLimiter,
+    idempotencyKeys,
     transaction: async (fn) => fn(tx),
   };
 
@@ -240,6 +253,22 @@ describe('POST /api/stripe/webhook', () => {
     const deps: StripeWebhookDeps = {
       paymentGateway: createPaymentGatewayStub(),
       logger: new FakeLogger(),
+      rateLimiter: {
+        limit: async () => ({
+          success: true,
+          limit: 1000,
+          remaining: 999,
+          retryAfterSeconds: 0,
+        }),
+        pruneExpiredWindows: async () => 0,
+      },
+      idempotencyKeys: {
+        claim: async () => true,
+        find: async () => null,
+        storeResult: async () => undefined,
+        storeError: async () => undefined,
+        pruneExpiredBefore: async () => 0,
+      },
       transaction:
         transactionSpy as unknown as StripeWebhookDeps['transaction'],
     };
@@ -252,6 +281,7 @@ describe('POST /api/stripe/webhook', () => {
         remaining: 999,
         retryAfterSeconds: 0,
       }),
+      pruneExpiredWindows: async () => 0,
     };
     const createContainer = vi.fn<() => StripeWebhookRouteContainer>(() => ({
       logger: { error: vi.fn() },

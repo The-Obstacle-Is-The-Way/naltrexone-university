@@ -201,6 +201,10 @@ describe('container factories', () => {
     const deps = container.createStripeWebhookDeps();
     expect(deps.paymentGateway).toBeInstanceOf(StripePaymentGateway);
     expect(typeof deps.transaction).toBe('function');
+    expect(deps.rateLimiter).toBeInstanceOf(DrizzleRateLimiter);
+    expect(deps.idempotencyKeys).toBeInstanceOf(
+      DrizzleIdempotencyKeyRepository,
+    );
 
     const questionDeps = container.createQuestionControllerDeps();
     expect(questionDeps.authGateway).toBeInstanceOf(ClerkAuthGateway);
