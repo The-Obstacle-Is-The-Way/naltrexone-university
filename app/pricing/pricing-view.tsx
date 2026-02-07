@@ -33,16 +33,20 @@ export function PricingView({
   SubscribeButtonComponent = DefaultButton,
 }: PricingViewProps) {
   return (
-    <div className="min-h-screen bg-background py-16">
+    <main
+      id="main-content"
+      tabIndex={-1}
+      className="min-h-screen bg-background py-16"
+    >
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="text-center">
+        <header className="text-center">
           <h1 className="text-4xl font-bold tracking-tight text-foreground">
             Pricing
           </h1>
           <p className="mx-auto mt-4 max-w-2xl text-lg text-muted-foreground">
             Choose the plan that works for you.
           </p>
-        </div>
+        </header>
 
         {banner ? (
           <div
@@ -183,6 +187,6 @@ export function PricingView({
           </Link>
         </div>
       </div>
-    </div>
+    </main>
   );
 }

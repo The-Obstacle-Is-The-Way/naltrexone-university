@@ -115,7 +115,7 @@ export function PracticeView(props: PracticeViewProps) {
 
       {props.loadState.status === 'loading' ? (
         <Card className="gap-0 rounded-2xl p-6 text-sm text-muted-foreground shadow-sm">
-          Loading question…
+          <output aria-live="polite">Loading question…</output>
         </Card>
       ) : null}
 

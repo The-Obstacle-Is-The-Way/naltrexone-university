@@ -64,7 +64,7 @@ export function PracticeSessionPageView(props: PracticeSessionPageViewProps) {
   if (reviewLoadState.status === 'loading' && !review) {
     return (
       <Card className="gap-0 rounded-2xl p-6 text-sm text-muted-foreground shadow-sm">
-        Loading review...
+        <output aria-live="polite">Loading review...</output>
       </Card>
     );
   }

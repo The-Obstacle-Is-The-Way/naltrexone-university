@@ -24,8 +24,10 @@ describe('app/sign-up/[[...sign-up]]', () => {
     const SignUpPage = (await import('@/app/sign-up/[[...sign-up]]/page'))
       .default;
     const html = renderToStaticMarkup(<SignUpPage />);
+    const doc = new DOMParser().parseFromString(html, 'text/html');
 
     expect(html).toContain('Sign Up');
     expect(html).toContain('Authentication unavailable in this environment.');
+    expect(doc.querySelector('main#main-content')).not.toBeNull();
   });
 });

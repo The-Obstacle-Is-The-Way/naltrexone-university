@@ -70,5 +70,6 @@ describe('app/(app)/app/layout (shell)', () => {
     );
 
     expect(html).toContain('Loading app content…');
+    expect(html).toContain('aria-live="polite"');
   });
 });

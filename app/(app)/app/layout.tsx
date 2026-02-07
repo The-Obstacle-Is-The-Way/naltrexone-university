@@ -84,9 +84,12 @@ export function AppLayoutShell({
       >
         <Suspense
           fallback={
-            <p className="text-sm text-muted-foreground">
+            <output
+              className="text-sm text-muted-foreground"
+              aria-live="polite"
+            >
               Loading app content…
-            </p>
+            </output>
           }
         >
           {children}

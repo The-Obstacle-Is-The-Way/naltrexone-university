@@ -37,6 +37,8 @@ describe('app/pricing', () => {
     expect(html).toContain('Subscribe Monthly');
     expect(html).toContain('Subscribe Annual');
     expect(backLink?.textContent?.trim()).toBe('Back to Home');
+    expect(doc.querySelector('main#main-content')).not.toBeNull();
+    expect(doc.querySelector('header')).not.toBeNull();
   }, 10_000);
 
   it('shows an error banner when checkout=error', async () => {
