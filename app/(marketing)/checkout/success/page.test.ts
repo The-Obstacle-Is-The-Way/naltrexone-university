@@ -418,7 +418,7 @@ describe('syncCheckoutSuccess', () => {
     });
   });
 
-  it('returns redirect to pricing with reason=manage_billing when subscription is not entitled', async () => {
+  it('returns redirect to dashboard when subscription is pastDue with active period (dunning grace)', async () => {
     const stripeCustomers = new FakeStripeCustomerRepository();
     const subscriptions = new FakeSubscriptionRepository();
     const user = {
@@ -482,7 +482,7 @@ describe('syncCheckoutSuccess', () => {
     await expect(
       syncCheckoutSuccess({ sessionId: 'cs_test' }, deps as never, redirectFn),
     ).rejects.toMatchObject({
-      url: `${ROUTES.PRICING}?reason=manage_billing`,
+      url: ROUTES.APP_DASHBOARD,
     });
 
     expect(await stripeCustomers.findByUserId('user_1')).toEqual({

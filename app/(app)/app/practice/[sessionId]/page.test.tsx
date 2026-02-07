@@ -123,6 +123,56 @@ describe('app/(app)/app/practice/[sessionId]', () => {
     expect(html).toContain('[Question no longer available]');
   });
 
+  it('announces summary breakdown loading with live semantics', async () => {
+    const { SessionSummaryView } = await import(
+      '@/app/(app)/app/practice/[sessionId]/page'
+    );
+
+    const loadingHtml = renderToStaticMarkup(
+      <SessionSummaryView
+        summary={{
+          sessionId: 'session-1',
+          endedAt: '2026-02-01T00:00:00.000Z',
+          totals: {
+            answered: 2,
+            correct: 1,
+            accuracy: 0.5,
+            durationSeconds: 120,
+          },
+        }}
+        reviewLoadState={{ status: 'loading' }}
+      />,
+    );
+
+    expect(loadingHtml).toContain('Loading question breakdown…');
+    expect(loadingHtml).toContain('aria-live="polite"');
+  });
+
+  it('announces summary breakdown errors with alert semantics', async () => {
+    const { SessionSummaryView } = await import(
+      '@/app/(app)/app/practice/[sessionId]/page'
+    );
+
+    const errorHtml = renderToStaticMarkup(
+      <SessionSummaryView
+        summary={{
+          sessionId: 'session-1',
+          endedAt: '2026-02-01T00:00:00.000Z',
+          totals: {
+            answered: 2,
+            correct: 1,
+            accuracy: 0.5,
+            durationSeconds: 120,
+          },
+        }}
+        reviewLoadState={{ status: 'error', message: 'Review failed' }}
+      />,
+    );
+
+    expect(errorHtml).toContain('Review failed');
+    expect(errorHtml).toContain('role="alert"');
+  });
+
   it('renders the session summary branch in PracticeSessionPageView', async () => {
     const { PracticeSessionPageView } = await import(
       '@/app/(app)/app/practice/[sessionId]/page'
@@ -260,6 +310,40 @@ describe('app/(app)/app/practice/[sessionId]', () => {
     expect(html).toContain('Marked for review');
   });
 
+  it('announces review loading state before exam review is available', async () => {
+    const { PracticeSessionPageView } = await import(
+      '@/app/(app)/app/practice/[sessionId]/page'
+    );
+
+    const html = renderToStaticMarkup(
+      <PracticeSessionPageView
+        summary={null}
+        review={null}
+        reviewLoadState={{ status: 'loading' }}
+        sessionInfo={null}
+        loadState={{ status: 'ready' }}
+        question={null}
+        selectedChoiceId={null}
+        submitResult={null}
+        isPending={false}
+        bookmarkStatus="idle"
+        isBookmarked={false}
+        isMarkingForReview={false}
+        canSubmit={false}
+        onEndSession={() => undefined}
+        onTryAgain={() => undefined}
+        onToggleBookmark={() => undefined}
+        onToggleMarkForReview={() => undefined}
+        onSelectChoice={() => undefined}
+        onSubmit={() => undefined}
+        onNextQuestion={() => undefined}
+      />,
+    );
+
+    expect(html).toContain('Loading review...');
+    expect(html).toContain('aria-live="polite"');
+  });
+
   it('renders in-run question navigator in PracticeSessionPageView', async () => {
     const { PracticeSessionPageView } = await import(
       '@/app/(app)/app/practice/[sessionId]/page'
@@ -341,8 +425,8 @@ describe('app/(app)/app/practice/[sessionId]', () => {
     );
 
     expect(html).toContain('Question navigator');
-    expect(html).toContain('Question 1: Correct');
-    expect(html).toContain('Question 2: Unanswered');
+    expect(html).toContain('Question 1: Current, Answered');
+    expect(html).toContain('Question 2: Marked for review, Unanswered');
   });
 
   it('isQuestionBookmarked returns true when questionId is in set', async () => {

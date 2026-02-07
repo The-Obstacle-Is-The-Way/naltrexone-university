@@ -24,28 +24,28 @@ Board-relevant questions with detailed explanations, fast practice workflows, an
 ## 2. Architecture Diagram
 
 ```text
-+-------------------+            +-----------------------------------------------+
-|    Browser (UI)   |            |             Vercel (Next.js 16+)              |
++-------------------+            +------------------------------------------------+
+|    Browser (UI)   |            |             Vercel (Next.js 16+)               |
 |  Next.js Client   |            |  App Router + Server Components + Actions      |
 +---------+---------+            |  Route Handlers (/app/api/*)                   |
-          |                      +-------------------+---------------------------+
+          |                      +-------------------+----------------------------+
           |  HTTPS requests                          |
           |  (pages, actions, APIs)                  |
           v                                          v
-+-------------------+                       +--------------------+
-| Clerk (Auth)      |<-- session cookies -->| Next.js Server      |
-| @clerk/nextjs     |                       | - auth() / currentUser()
-+-------------------+                       | - subscription checks
-                                            | - server actions
-                                            | - webhook handlers
-                                            +----------+---------+
++-------------------+                       +--------------------------+
+| Clerk (Auth)      |<-- session cookies -->| Next.js Server           |
+| @clerk/nextjs     |                       | - auth() / currentUser() |
++-------------------+                       | - subscription checks    |
+                                            | - server actions         |
+                                            | - webhook handlers       |
+                                            +----------+---------------+
                                                        |
                                                        | Drizzle ORM
                                                        v
-                                            +--------------------+
+                                            +---------------------+
                                             | Neon Postgres       |
                                             | (Vercel Marketplace)|
-                                            +--------------------+
+                                            +---------------------+
                                                        ^
                                                        |
                                                        | Stripe webhooks (HTTPS)
@@ -549,11 +549,17 @@ export type NewBookmark = typeof bookmarks.$inferInsert;
 
 A user is **entitled** if and only if there exists a row in `stripe_subscriptions` for the user with:
 
-* subscription `status` translates to domain `SubscriptionStatus` ∈ `{ "active", "inTrial" }` (Stripe: `{ "active", "trialing" }`)
+* subscription `status` translates to domain `SubscriptionStatus` ∈ `{ "active", "inTrial", "pastDue" }` (Stripe: `{ "active", "trialing", "past_due" }`)
 * AND `current_period_end > now()` (server UTC)
 * AND the subscription row corresponds to the **latest** known subscription for that user (enforced by `stripe_subscriptions.user_id` unique constraint: 1 row per user)
 
-All other statuses are **not entitled** (Stripe: `past_due`, `canceled`, `unpaid`, `paused`, `incomplete`, `incomplete_expired`).
+All other statuses are **not entitled** (Stripe: `canceled`, `unpaid`, `paused`, `incomplete`, `incomplete_expired`).
+
+#### 4.2.1 Dunning Grace Policy
+
+`pastDue` subscribers retain access while Stripe retries payment. Stripe manages the dunning lifecycle (Smart Retries, configurable retry schedule). When Stripe exhausts retries, it transitions the subscription to `canceled` or `unpaid`, at which point the existing entitlement logic locks the user out.
+
+**UI requirement:** When a `pastDue` subscriber accesses the app, the layout MUST display a non-blocking banner: "Your payment failed — please update your billing information." with a link to the Stripe billing portal. The user MUST NOT be redirected away from app content.
 
 ### 4.3 Standard Server Action Result Type (Used by Every Server Action)
 
@@ -563,11 +569,15 @@ All server actions MUST return a discriminated union to avoid leaking stack trac
 // src/adapters/controllers/action-result.ts
 export type ActionErrorCode =
   | 'UNAUTHENTICATED'
+  | 'ALREADY_SUBSCRIBED'
   | 'UNSUBSCRIBED'
   | 'VALIDATION_ERROR'
   | 'NOT_FOUND'
   | 'CONFLICT'
+  | 'RATE_LIMITED'
   | 'STRIPE_ERROR'
+  | 'INVALID_WEBHOOK_SIGNATURE'
+  | 'INVALID_WEBHOOK_PAYLOAD'
   | 'INTERNAL_ERROR';
 
 export type ActionResult<T> =
@@ -610,6 +620,8 @@ export type HealthResponse = {
 
 **Errors:**
 
+* `429` if health endpoint rate limit is exceeded
+* `503` if rate limiter is unavailable
 * `500` if DB query fails
 * Response body:
 
@@ -619,6 +631,12 @@ export type HealthErrorResponse = { ok: false; error: string };
 
 **Behavior:**
 
+* Applies fixed-window rate limiting by client IP (`health:${ip}`) before DB work.
+* On rate limit exceeded, returns `429` with headers:
+  * `Retry-After`
+  * `X-RateLimit-Limit`
+  * `X-RateLimit-Remaining`
+* If rate limiter fails, returns `503` with `{ ok:false, error:'Rate limiter unavailable' }`.
 * Runs `SELECT 1` via Drizzle
 * Returns 200 with `{ ok:true, db:true, timestamp:new Date().toISOString() }`
 
@@ -643,6 +661,8 @@ export type StripeWebhookResponse = { received: true };
 **Errors:**
 
 * `400` if signature verification fails
+* `429` if webhook endpoint rate limit is exceeded
+* `503` if rate limiter is unavailable
 * `500` if DB processing fails
 
 **Required Stripe verification:**
@@ -665,9 +685,18 @@ export type StripeWebhookResponse = { received: true };
 **Events handled (exact):**
 
 * `checkout.session.completed`
+* `checkout.session.expired`
+* `invoice.payment_failed`
+* `invoice.payment_succeeded`
+* `invoice.payment_action_required`
 * `customer.subscription.created`
 * `customer.subscription.updated`
 * `customer.subscription.deleted`
+* `customer.subscription.paused`
+* `customer.subscription.resumed`
+* `customer.subscription.trial_will_end`
+* `customer.subscription.pending_update_applied`
+* `customer.subscription.pending_update_expired`
 
 ---
 
@@ -690,6 +719,8 @@ export type ClerkWebhookResponse = { received: true };
 **Errors:**
 
 * `400` if signature verification fails
+* `429` if webhook endpoint rate limit is exceeded
+* `503` if rate limiter is unavailable
 * `500` if DB processing fails
 
 **Events handled:**
@@ -727,6 +758,36 @@ export const zPagination = z.object({
 }).strict();
 ```
 
+#### 4.5.0 Cross-Cutting Controller Policies (Required)
+
+**Idempotency (mutating server actions):**
+
+* Controllers accept optional `idempotencyKey?: UUID` and apply `withIdempotency(...)` when provided.
+* Supported actions:
+  * `billing:createCheckoutSession`
+  * `practice:startPracticeSession`
+  * `practice:endPracticeSession`
+  * `practice:setPracticeSessionQuestionMark`
+  * `question:submitAnswer`
+  * `bookmark:toggleBookmark`
+* Replayed requests with the same `(userId, action, idempotencyKey)` return cached prior results and must not re-run use-case side effects.
+
+**Server action rate limiting (fixed-window, 60s):**
+
+* `createCheckoutSession`: `10/min` per user key `billing:createCheckoutSession:${userId}`
+* `startPracticeSession`: `20/min` per user key `practice:startPracticeSession:${userId}`
+* `submitAnswer`: `120/min` per user key `question:submitAnswer:${userId}`
+* `toggleBookmark`: `60/min` per user key `bookmark:toggleBookmark:${userId}`
+* On limit exceeded: return `ActionResult` error code `RATE_LIMITED` with retry guidance in message text.
+
+**Route handler rate limiting (IP-scoped, fixed-window, 60s):**
+
+* `POST /api/health`: `600/min`
+* `POST /api/webhooks/clerk`: `100/min`
+* `POST /api/stripe/webhook`: `1000/min`
+* On limit exceeded: return `429` with headers `Retry-After`, `X-RateLimit-Limit`, `X-RateLimit-Remaining`.
+* On rate-limiter failure: return `503` fail-closed.
+
 ---
 
 #### 4.5.1 Server Action: `createCheckoutSession(plan)`
@@ -741,6 +802,7 @@ export const zPagination = z.object({
 ```ts
 export const CreateCheckoutSessionInputSchema = z.object({
   plan: zSubscriptionPlan,
+  idempotencyKey: zUuid.optional(),
 }).strict();
 ```
 
@@ -755,24 +817,31 @@ export type CreateCheckoutSessionOutput = {
 **Errors:**
 
 * `UNAUTHENTICATED` if no Clerk session
+* `ALREADY_SUBSCRIBED` if Stripe already has a blocking subscription for the customer
 * `VALIDATION_ERROR` if input invalid
+* `RATE_LIMITED` if checkout session creation limit is exceeded
 * `STRIPE_ERROR` on Stripe API failure
 * `INTERNAL_ERROR` on DB failure
 
 **Behavior (exact):**
 
-1. Ensure local `users` row exists for Clerk user (upsert by `clerk_user_id`).
-2. Ensure `stripe_customers` exists:
+1. Enforce per-user rate limit: max 10 checkout session attempts per 60s window.
+2. Ensure local `users` row exists for Clerk user (upsert by `clerk_user_id`).
+3. Ensure `stripe_customers` exists:
 
    * If none: create Stripe Customer with metadata `{ user_id, clerk_user_id }`.
    * Insert `stripe_customers` row.
-3. Determine the Stripe Price ID from the selected **domain plan**:
+4. Block duplicate subscriptions using Stripe as source-of-truth:
+
+   * Query `stripe.subscriptions.list({ customer, status: 'all', limit: 10 })`.
+   * If any subscription status is one of `{ active, trialing, past_due, unpaid, incomplete, paused }`, return `ALREADY_SUBSCRIBED`.
+5. Determine the Stripe Price ID from the selected **domain plan**:
 
    * If `plan === 'monthly'`: use `NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY`
    * If `plan === 'annual'`: use `NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL`
 
    **Important:** The controller MUST NOT accept arbitrary client-supplied Stripe price IDs.
-4. Create Stripe Checkout Session (subscription):
+6. Create Stripe Checkout Session (subscription):
 
    * `mode: 'subscription'`
    * `customer: <stripe_customer_id>`
@@ -783,7 +852,8 @@ export type CreateCheckoutSessionOutput = {
    * `cancel_url: ${NEXT_PUBLIC_APP_URL}/pricing?checkout=cancel`
    * `client_reference_id: <users.id>` (internal uuid)
    * `subscription_data.metadata.user_id = <users.id>`
-5. Return `{ url: session.url }` (must be non-null; if null => STRIPE_ERROR)
+7. Return `{ url: session.url }` (must be non-null; if null => STRIPE_ERROR)
+8. If `idempotencyKey` is provided, wrap the operation with application-level idempotency (`action='billing:createCheckoutSession'`) so retries replay cached results instead of re-executing the flow.
 
 ---
 
@@ -932,6 +1002,8 @@ export const SubmitAnswerInputSchema = z.object({
   questionId: zUuid,
   choiceId: zUuid,
   sessionId: zUuid.optional(),
+  idempotencyKey: zUuid.optional(),
+  timeSpentSeconds: z.number().int().min(0).max(86_400).optional(),
 }).strict();
 ```
 
@@ -959,14 +1031,16 @@ export type SubmitAnswerOutput = {
 * `UNSUBSCRIBED`
 * `VALIDATION_ERROR`
 * `NOT_FOUND` if question or choice not found / mismatch
+* `RATE_LIMITED` if answer submit limit is exceeded
 * `INTERNAL_ERROR`
 
 **Behavior (exact):**
 
-1. Validate question exists and `status='published'`.
-2. Validate the choice exists and belongs to the question.
-3. Determine correct choice for question (query `choices` where `question_id` and `is_correct=true`).
-4. Insert `attempts` row:
+1. Enforce per-user rate limit: max 120 submissions per 60s window.
+2. Validate question exists and `status='published'`.
+3. Validate the choice exists and belongs to the question.
+4. Determine correct choice for question (query `choices` where `question_id` and `is_correct=true`).
+5. Insert `attempts` row:
 
    * `user_id`
    * `question_id`
@@ -974,20 +1048,21 @@ export type SubmitAnswerOutput = {
    * `selected_choice_id = choiceId`
    * `is_correct = (choiceId === correctChoiceId)`
    * `time_spent_seconds` from validated input (defaults to 0 when omitted)
-5. If `sessionId` is provided and session is active (`ended_at IS NULL`), persist latest per-question session state:
+6. If `sessionId` is provided and session is active (`ended_at IS NULL`), persist latest per-question session state:
 
    * `latestSelectedChoiceId = choiceId`
    * `latestIsCorrect = isCorrect`
    * `latestAnsweredAt = attempts.answered_at`
-6. Determine whether explanation is returned:
+7. Determine whether explanation is returned:
 
    * If `sessionId` is provided AND session.mode === 'exam' AND session.ended_at IS NULL: `explanationMd = null`
    * Else: `explanationMd = questions.explanation_md`
-7. Determine `choiceExplanations`:
+8. Determine `choiceExplanations`:
 
    * If explanation is hidden (active exam session), return `[]`.
    * Else return explanations for displayed shuffled choices with stable display labels (`A`..`E`).
-8. Return result including `correctChoiceId` always.
+9. Return result including `correctChoiceId` always.
+10. If `idempotencyKey` is provided, wrap execution with application-level idempotency (`action='question:submitAnswer'`) to prevent duplicate attempt writes on retries.
 
 ---
 
@@ -1004,6 +1079,7 @@ export type SubmitAnswerOutput = {
 export const StartPracticeSessionInputSchema = z.object({
   mode: zPracticeMode,
   count: z.number().int().min(1).max(200),
+  idempotencyKey: zUuid.optional(),
   tagSlugs: z.array(z.string().min(1)).max(50).default([]),
   difficulties: z.array(zDifficulty).max(3).default([]),
 }).strict();
@@ -1021,30 +1097,33 @@ export type StartPracticeSessionOutput = { sessionId: string };
 * `UNSUBSCRIBED`
 * `VALIDATION_ERROR`
 * `NOT_FOUND` if filters yield zero published questions
+* `RATE_LIMITED` if session start limit is exceeded
 * `INTERNAL_ERROR`
 
 **Behavior (exact):**
 
-1. Compute candidate question IDs from DB using filters:
+1. Enforce per-user rate limit: max 20 session starts per 60s window.
+2. Compute candidate question IDs from DB using filters:
 
    * only `questions.status='published'`
    * if `tagSlugs` non-empty: question must have at least one matching tag slug
    * if `difficulties` non-empty: difficulty in list
-2. Shuffle deterministically in JavaScript using a seeded RNG:
+3. Shuffle deterministically in JavaScript using a seeded RNG:
 
    * seed = `createSeed(userId, Date.now())` (non-crypto rolling hash -> uint32; see `src/domain/services/shuffle.ts`)
    * shuffle algorithm = Fisher-Yates with seeded RNG
-3. Take first `count` IDs (or fewer if fewer candidates exist).
+4. Take first `count` IDs (or fewer if fewer candidates exist).
 
    * If zero: return `NOT_FOUND`
-4. Insert `practice_sessions` row with:
+5. Insert `practice_sessions` row with:
 
    * `user_id`, `mode`
    * `params_json = { count, tagSlugs, difficulties, questionIds, questionStates }`
    * `questionStates` is initialized for each selected question:
      * `{ questionId, markedForReview:false, latestSelectedChoiceId:null, latestIsCorrect:null, latestAnsweredAt:null }`
    * `started_at = now()`
-5. Return `sessionId`.
+6. Return `sessionId`.
+7. If `idempotencyKey` is provided, wrap execution with application-level idempotency (`action='practice:startPracticeSession'`) so retries replay the previously created session id.
 
 ---
 
@@ -1060,6 +1139,7 @@ export type StartPracticeSessionOutput = { sessionId: string };
 ```ts
 export const EndPracticeSessionInputSchema = z.object({
   sessionId: zUuid,
+  idempotencyKey: zUuid.optional(),
 }).strict();
 ```
 
@@ -1098,6 +1178,7 @@ export type EndPracticeSessionOutput = {
    * `correct` = count of persisted session question states where `latestIsCorrect === true`
    * duration = floor((ended_at - started_at)/1000)
 5. Return summary.
+6. If `idempotencyKey` is provided, wrap execution with application-level idempotency (`action='practice:endPracticeSession'`) so duplicate finalize requests replay the cached summary.
 
 > **SPEC-020 Note:** The UI MUST call `getPracticeSessionReview` after `endPracticeSession` to display per-question breakdown on the summary screen. See SPEC-020 Phase 2 (DEBT-123). No type change to `EndPracticeSessionOutput` — the review data comes from the existing review action (SRP).
 
@@ -1248,6 +1329,7 @@ export type GetMissedQuestionsOutput = {
 ```ts
 export const ToggleBookmarkInputSchema = z.object({
   questionId: zUuid,
+  idempotencyKey: zUuid.optional(),
 }).strict();
 ```
 
@@ -1265,13 +1347,16 @@ export type ToggleBookmarkOutput = {
 * `UNSUBSCRIBED`
 * `VALIDATION_ERROR`
 * `NOT_FOUND` if question not found or not published
+* `RATE_LIMITED` if bookmark mutation limit is exceeded
 * `INTERNAL_ERROR`
 
 **Behavior (exact):**
 
-1. Validate question exists and published.
-2. If bookmark exists (user_id, question_id): delete it, return `bookmarked=false`.
-3. Else insert bookmark with created_at now, return `bookmarked=true`.
+1. Enforce per-user rate limit: max 60 bookmark mutations per 60s window.
+2. Validate question exists and published.
+3. If bookmark exists (user_id, question_id): delete it, return `bookmarked=false`.
+4. Else insert bookmark with created_at now, return `bookmarked=true`.
+5. If `idempotencyKey` is provided, wrap execution with application-level idempotency (`action='bookmark:toggleBookmark'`) so retries replay the prior toggle result.
 
 ---
 
@@ -1291,13 +1376,20 @@ export const GetBookmarksInputSchema = z.object({}).strict();
 **Output:**
 
 ```ts
-export type BookmarkRow = {
-  questionId: string;
-  slug: string;
-  stemMd: string;
-  difficulty: 'easy' | 'medium' | 'hard';
-  bookmarkedAt: string; // ISO
-};
+export type BookmarkRow =
+  | {
+      isAvailable: true;
+      questionId: string;
+      slug: string;
+      stemMd: string;
+      difficulty: 'easy' | 'medium' | 'hard';
+      bookmarkedAt: string; // ISO
+    }
+  | {
+      isAvailable: false;
+      questionId: string;
+      bookmarkedAt: string; // ISO
+    };
 
 export type GetBookmarksOutput = {
   rows: BookmarkRow[];
@@ -1312,9 +1404,11 @@ export type GetBookmarksOutput = {
 
 **Behavior (exact):**
 
-* Select bookmarks for user ordered by created_at desc
-* Join to published questions
-* Return list
+* Select bookmarks for user ordered by `created_at DESC`.
+* Resolve question metadata from published questions when available.
+* Available rows return `isAvailable:true` with `slug`, `stemMd`, and `difficulty`.
+* Unavailable rows return `isAvailable:false` for graceful degradation when questions are unpublished/removed.
+* Return list preserving bookmark order.
 
 ---
 
@@ -1397,6 +1491,7 @@ export const SetPracticeSessionQuestionMarkInputSchema = z.object({
   sessionId: zUuid,
   questionId: zUuid,
   markedForReview: z.boolean(),
+  idempotencyKey: zUuid.optional(),
 }).strict();
 ```
 
@@ -1424,6 +1519,7 @@ export type SetPracticeSessionQuestionMarkOutput = {
 2. Reject if session is not in exam mode.
 3. Persist `markedForReview` for the target session question state.
 4. Return updated mark state for the question.
+5. If `idempotencyKey` is provided, wrap execution with application-level idempotency (`action='practice:setPracticeSessionQuestionMark'`).
 
 ---
 
@@ -1482,6 +1578,137 @@ export type GetSessionHistoryOutput = {
    * `durationSeconds` = floor((ended_at - started_at) / 1000)
 3. Apply limit/offset pagination.
 4. Return rows with total count for pagination.
+
+---
+
+#### 4.5.14 Server Action: `getIncompletePracticeSession()`
+
+* **Name:** `getIncompletePracticeSession`
+* **Type:** Server Action
+* **Auth:** subscribed
+* **File:** `src/adapters/controllers/practice-controller.ts`
+
+**Input (Zod):**
+
+```ts
+export const GetIncompletePracticeSessionInputSchema = z.object({}).strict();
+```
+
+**Output:**
+
+```ts
+export type GetIncompletePracticeSessionOutput =
+  | {
+      sessionId: string;
+      mode: 'tutor' | 'exam';
+      answeredCount: number;
+      totalCount: number;
+      startedAt: string; // ISO
+    }
+  | null;
+```
+
+**Errors:**
+
+* `UNAUTHENTICATED`
+* `UNSUBSCRIBED`
+* `INTERNAL_ERROR`
+
+**Behavior (exact):**
+
+1. Load the most recent in-progress session for user (`ended_at IS NULL`).
+2. If none exists, return `null`.
+3. Compute `answeredCount` from persisted `questionStates` where `latestSelectedChoiceId` is non-null.
+4. Return minimal resume metadata for UI continuation.
+
+---
+
+#### 4.5.15 Server Action: `getTags()`
+
+* **Name:** `getTags`
+* **Type:** Server Action
+* **Auth:** subscribed
+* **File:** `src/adapters/controllers/tag-controller.ts`
+
+**Input (Zod):**
+
+```ts
+export const GetTagsInputSchema = z.object({}).strict();
+```
+
+**Output:**
+
+```ts
+export type TagRow = {
+  id: string;
+  slug: string;
+  name: string;
+  kind: 'domain' | 'topic' | 'substance' | 'treatment' | 'diagnosis';
+};
+
+export type GetTagsOutput = {
+  rows: TagRow[];
+};
+```
+
+**Errors:**
+
+* `UNAUTHENTICATED`
+* `UNSUBSCRIBED`
+* `INTERNAL_ERROR`
+
+**Behavior (exact):**
+
+1. Enforce entitlement (subscribed user).
+2. Return all tags from repository for practice filter UI.
+3. Preserve canonical tag metadata (`slug`, `name`, `kind`) without UI-specific transformations.
+
+---
+
+#### 4.5.16 Server Action: `getQuestionBySlug(slug)`
+
+* **Name:** `getQuestionBySlug`
+* **Type:** Server Action
+* **Auth:** subscribed
+* **File:** `src/adapters/controllers/question-view-controller.ts`
+
+**Input (Zod):**
+
+```ts
+export const GetQuestionBySlugInputSchema = z.object({
+  slug: z.string().min(1).max(255),
+}).strict();
+```
+
+**Output:**
+
+```ts
+export type GetQuestionBySlugOutput = {
+  questionId: string;
+  slug: string;
+  stemMd: string;
+  difficulty: 'easy' | 'medium' | 'hard';
+  choices: Array<{
+    id: string;
+    label: string;
+    textMd: string;
+  }>;
+};
+```
+
+**Errors:**
+
+* `UNAUTHENTICATED`
+* `UNSUBSCRIBED`
+* `VALIDATION_ERROR`
+* `NOT_FOUND` if question slug does not map to a published question
+* `INTERNAL_ERROR`
+
+**Behavior (exact):**
+
+1. Enforce entitlement (subscribed user).
+2. Load question by slug from published questions only.
+3. Return public question payload for reattempt flow (`/app/questions/[slug]`), excluding correctness flags.
 
 ---
 
@@ -1841,11 +2068,15 @@ Canonical JSON rules (Exact):
 │       │   ├── index.ts
 │       │   ├── action-result.ts      # ActionResult<T>, ok(), err(), handleError()
 │       │   ├── question-controller.ts   # 'use server'; submitAnswer, getNextQuestion
-│       │   ├── practice-controller.ts   # 'use server'; startPracticeSession, endPracticeSession
+│       │   ├── practice-controller.ts   # 'use server'; start/end/review/history/marks/resume
 │       │   ├── stats-controller.ts      # 'use server'; getUserStats
 │       │   ├── billing-controller.ts    # 'use server'; createCheckoutSession, createPortalSession
 │       │   ├── review-controller.ts     # 'use server'; getMissedQuestions
-│       │   └── bookmark-controller.ts   # 'use server'; toggleBookmark, getBookmarks
+│       │   ├── bookmark-controller.ts   # 'use server'; toggleBookmark, getBookmarks
+│       │   ├── tag-controller.ts        # 'use server'; getTags
+│       │   ├── question-view-controller.ts # 'use server'; getQuestionBySlug
+│       │   ├── stripe-webhook-controller.ts # route-controller orchestration
+│       │   └── clerk-webhook-controller.ts  # route-controller orchestration
 │       │
 │       ├── presenters/               # Output formatting (optional)
 │       │   └── question-presenter.ts
@@ -2201,6 +2432,7 @@ As a subscribed user, I can run a timed practice session with filters and get a 
 * In exam mode, "End session" opens a review stage showing answered/unanswered/marked counts with jump-to-question.
 * When I submit from review stage, I see score and total duration.
 * In exam mode, explanations are hidden until the session ends.
+* During active answering in exam mode, per-question UI status is neutral (`answered`/`unanswered`/`current`/`marked`) and MUST NOT reveal correctness before review/summary.
 * Users can navigate to any question during active answering (back/jump), not only forward. (SPEC-020 Phase 2)
 * Session summary shows per-question breakdown alongside aggregate totals. (SPEC-020 Phase 2)
 
@@ -2659,12 +2891,21 @@ Create in Stripe Dashboard (Test mode first, then Live mode):
 Configure webhook endpoint:
 
 * URL: `${NEXT_PUBLIC_APP_URL}/api/stripe/webhook`
-* Events:
+* Events (must match section 4.4.2):
 
   * `checkout.session.completed`
+  * `checkout.session.expired`
+  * `invoice.payment_failed`
+  * `invoice.payment_succeeded`
+  * `invoice.payment_action_required`
   * `customer.subscription.created`
   * `customer.subscription.updated`
   * `customer.subscription.deleted`
+  * `customer.subscription.paused`
+  * `customer.subscription.resumed`
+  * `customer.subscription.trial_will_end`
+  * `customer.subscription.pending_update_applied`
+  * `customer.subscription.pending_update_expired`
 
 ### 11.3 Customer Portal Configuration (Exact)
 

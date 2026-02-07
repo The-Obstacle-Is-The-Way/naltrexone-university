@@ -69,6 +69,7 @@ describe('app/(app)/app/practice', () => {
     );
 
     expect(html).toContain('Loading question');
+    expect(html).toContain('aria-live="polite"');
   });
 
   it('renders empty state when no question remains', async () => {

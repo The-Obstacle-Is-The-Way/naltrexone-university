@@ -20,12 +20,13 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 No active bugs.
 
-**Next Bug ID:** BUG-101
+**Next Bug ID:** BUG-102
 
 ## Recently Triaged
 
 | ID | Title | Status | Resolution |
 |----|-------|--------|------------|
+| [BUG-101](../_archive/bugs/bug-101-stripe-checkout-allows-duplicate-subscriptions-when-db-stale.md) | Stripe Checkout Can Create Duplicate Subscriptions if DB State Drifts | Resolved | Added Stripe-side active-subscription guard (`subscriptions.list`) before checkout session creation so stale local state cannot create duplicate paid subscriptions |
 | [BUG-100](../_archive/bugs/bug-100-nested-main-landmarks-in-layouts.md) | Nested `<main>` Landmarks Across Root and Segment Layouts | Resolved | Root layout no longer wraps route trees in a global `<main>` and route-level shells now own `#main-content` landmarks |
 | [BUG-099](../_archive/bugs/bug-099-checkout-success-race-concurrent-webhook-conflict.md) | Checkout Success Race with Concurrent Webhook CONFLICT | Resolved | Checkout success now uses authoritative customer conflict strategy so webhook-first races remain idempotent and redirect users to dashboard |
 | [BUG-098](../_archive/bugs/bug-098-submit-answer-accepts-questions-not-in-session.md) | submitAnswer Accepts Questions Not in Session | Resolved | Added pre-insert session-question membership guard in `SubmitAnswerUseCase` to reject mismatches before persistence |
@@ -44,7 +45,7 @@ No active bugs.
 | [BUG-085](../_archive/bugs/bug-085-out-of-order-question-load-overwrites-current-state.md) | Out-of-Order Question Loads Can Overwrite Current State | Resolved | Added request-sequencing guards to both question loaders and hooked request IDs in both practice flows so stale responses are discarded |
 | [BUG-077](../_archive/bugs/bug-077-payment-processing-confusing-redirect.md) | Payment Processing Users See Wrong Error Message | Resolved | `CheckEntitlementUseCase` now returns redirect context; app layout redirects payment-processing and billing-recovery states with reason-specific messaging |
 | [BUG-075](../_archive/bugs/bug-075-checkout-guard-entitlement-mismatch.md) | Pricing CTA Mismatch for Recoverable Subscription States | Resolved | Pricing now consumes entitlement context and shows manage-billing guidance for recoverable non-entitled states while preserving strict checkout guard |
-| BUG-076 | Past-Due Immediate Lockout | Reclassified | Reclassified to [DEBT-136](../debt/debt-136-dunning-grace-period-for-past-due-subscribers.md) — feature request (dunning grace period), not a bug |
+| BUG-076 | Past-Due Immediate Lockout | Reclassified | Reclassified to [DEBT-136](../_archive/debt/debt-136-dunning-grace-period-for-past-due-subscribers.md) — feature request (dunning grace period), not a bug |
 | [BUG-074](../_archive/bugs/bug-074-missed-questions-timestamp-tie-misclassification.md) | Missed Questions Can Be Misclassified on `answered_at` Timestamp Ties | Resolved | Use deterministic latest-attempt ranking (`answered_at DESC, id DESC`) for missed-question list/count |
 | [BUG-073](../_archive/bugs/bug-073-tutor-mode-missing-session-summary-detail.md) | Tutor Mode Missing Per-Question Session Summary at End | Resolved | Implemented in SPEC-020 Phase 2 / DEBT-123 (PR #63) |
 | [BUG-072](../_archive/bugs/bug-072-no-question-navigation-in-practice-sessions.md) | No Question Navigation in Practice Sessions (Both Modes) | Resolved | Implemented in SPEC-020 Phase 2 / DEBT-122 (PR #63) |
@@ -61,6 +62,7 @@ See: [Foundation Audit Report](foundation-audit-report.md)
 
 | ID | Title | Priority | Resolved |
 |----|-------|----------|----------|
+| [BUG-101](../_archive/bugs/bug-101-stripe-checkout-allows-duplicate-subscriptions-when-db-stale.md) | Stripe Checkout Can Create Duplicate Subscriptions if DB State Drifts | P1 | 2026-02-07 |
 | [BUG-100](../_archive/bugs/bug-100-nested-main-landmarks-in-layouts.md) | Nested `<main>` Landmarks Across Root and Segment Layouts | P2 | 2026-02-07 |
 | [BUG-099](../_archive/bugs/bug-099-checkout-success-race-concurrent-webhook-conflict.md) | Checkout Success Race with Concurrent Webhook CONFLICT | P2 | 2026-02-07 |
 | [BUG-098](../_archive/bugs/bug-098-submit-answer-accepts-questions-not-in-session.md) | submitAnswer Accepts Questions Not in Session | P2 | 2026-02-07 |

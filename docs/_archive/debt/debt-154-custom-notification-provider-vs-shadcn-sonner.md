@@ -1,6 +1,6 @@
 # DEBT-154: Custom NotificationProvider vs shadcn/sonner
 
-**Status:** Open
+**Status:** Accepted
 **Priority:** P4
 **Date:** 2026-02-07
 

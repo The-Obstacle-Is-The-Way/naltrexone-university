@@ -23,11 +23,13 @@ describe('MobileNav', () => {
     const { MobileNav } = await import('@/components/mobile-nav');
 
     const html = renderToStaticMarkup(<MobileNav />);
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const button = doc.querySelector(
+      'button[aria-label="Open navigation menu"]',
+    );
 
-    expect(html).toContain('Open navigation menu');
-    // Should have the hamburger menu icon (Menu from lucide-react)
-    expect(html).toContain('size-6');
-    expect(html).toContain('transition-colors');
+    expect(button).not.toBeNull();
+    expect(button?.querySelector('svg[aria-hidden="true"]')).not.toBeNull();
   });
 
   it('does not render links when menu is closed (initial state)', async () => {

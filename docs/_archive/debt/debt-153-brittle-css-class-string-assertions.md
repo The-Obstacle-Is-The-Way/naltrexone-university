@@ -1,6 +1,6 @@
 # DEBT-153: Brittle CSS Class String Assertions in renderToStaticMarkup Tests
 
-**Status:** In Progress
+**Status:** Resolved
 **Priority:** P3
 **Date:** 2026-02-07
 
@@ -81,22 +81,46 @@ Browser mode tests (`*.browser.spec.tsx`) already use semantic selectors exclusi
 
 ## Progress Update (2026-02-07)
 
-- Adopted **Option C** as the baseline policy: testing guidance now explicitly prefers semantic assertions over full utility-class string checks (`.claude/rules/testing.md`).
-- Paid down a high-fragility subset by replacing exact class-string assertions with semantic checks in:
+**Phase 1** — Adopted Option C baseline policy: testing guidance updated in `.claude/rules/testing.md` to prefer semantic assertions over class-string checks.
+
+**Phase 2** — Migrated high-fragility presentational assertions to semantic DOM checks:
   - `app/(app)/app/bookmarks/page.test.tsx`
   - `app/(app)/app/review/page.test.tsx`
   - `app/(app)/app/practice/components/practice-view.test.tsx`
   - `app/(app)/app/billing/page.test.tsx`
   - `components/marketing/marketing-home.test.tsx`
-  - `app/error-heading-styles.test.tsx` (now per-component assertions)
+  - `app/error-heading-styles.test.tsx`
+
+**Phase 3** — Completed migration of all remaining brittle presentational assertions:
+  - `components/auth-nav.test.tsx`
+  - `components/app-desktop-nav.test.tsx`
+  - `app/(app)/app/questions/[slug]/question-page-client.test.tsx`
+  - `app/pricing/page.test.tsx`
+  - `components/mobile-nav.test.tsx`
+  - `components/error-card.test.tsx`
+  - `components/question/ChoiceButton.test.tsx`
+
+### Remaining class assertions (intentionally kept)
+
+Post-resolution audit confirmed all remaining class assertions in `*.test.tsx` files fall into explicitly exempt categories:
+
+| Category | Count | Examples | Rationale |
+|----------|-------|---------|-----------|
+| Behavior-meaningful | 7 | `sr-only`, `sm:hidden`, `focus-visible:ring-[3px]` | Encode accessibility/visibility behavior, not styling |
+| Active-state indication | 3 | `bg-primary` in filter-chip, segmented-control | Visual state alongside `aria-pressed` — listed as acceptable in this doc |
+| Design-system regression guards | 16 | `border-success` not `emerald-`, `bg-primary` not `bg-zinc-100` | `theme-token-regression.test.tsx` — guards semantic token usage, not presentational styling |
+| Component API contract | 3 | `border-radius:16px`, `padding:2px` in metallic-border | Inline style assertions verifying prop forwarding behavior, not Tailwind classes |
+
+No purely presentational Tailwind class-string assertions remain in jsdom tests.
 
 ## Verification
 
 - [x] Decision made on resolution approach (A, B, or C)
-- [ ] If A: Presentational class assertions migrated to `data-testid` pattern
+- [x] If A: Presentational class assertions migrated to semantic selectors (`data-testid`, role, href, text, or DOM semantics)
 - [ ] If B: Style-critical tests migrated to browser specs
 - [x] If C: Testing rule updated to guide new test authors
 - [x] No regressions in test suite
+- [x] Post-resolution audit confirmed remaining assertions are behavior-meaningful or design-system guards
 
 ## Related
 

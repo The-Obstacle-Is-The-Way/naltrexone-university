@@ -37,7 +37,7 @@ describe('ChoiceButton', () => {
     expect(html).toContain('checked=""');
   });
 
-  it('does not include hover styles when disabled', () => {
+  it('disables the choice input when disabled', () => {
     const html = renderToStaticMarkup(
       <ChoiceButton
         name="choices"
@@ -48,9 +48,9 @@ describe('ChoiceButton', () => {
         onClick={() => {}}
       />,
     );
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const input = doc.querySelector('input[type="radio"]');
 
-    // Guards against regression: hover styles must not apply when disabled.
-    // Coupled to class name 'hover:bg-muted' in ChoiceButton.tsx.
-    expect(html).not.toContain('hover:bg-muted');
+    expect(input?.hasAttribute('disabled')).toBe(true);
   });
 });

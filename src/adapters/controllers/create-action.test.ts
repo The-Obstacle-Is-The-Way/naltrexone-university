@@ -3,6 +3,7 @@ import { z } from 'zod';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import { createAction } from '@/src/adapters/controllers/create-action';
 import { ApplicationError } from '@/src/application/errors';
+import { FakeLogger } from '@/src/application/test-helpers/fakes';
 
 describe('createAction', () => {
   it('returns VALIDATION_ERROR when input fails schema', async () => {
@@ -86,5 +87,26 @@ describe('createAction', () => {
       ok: false,
       error: { code: 'INTERNAL_ERROR', message: 'Internal error' },
     });
+  });
+
+  it('uses options.logger when mapping unknown errors', async () => {
+    const fakeLogger = new FakeLogger();
+    const action = createAction({
+      schema: z.object({}).strict(),
+      getDeps: async () => ({}),
+      execute: async () => {
+        throw new Error('boom');
+      },
+    });
+
+    await expect(
+      action({}, undefined, { logger: fakeLogger }),
+    ).resolves.toMatchObject({
+      ok: false,
+      error: { code: 'INTERNAL_ERROR', message: 'Internal error' },
+    });
+
+    expect(fakeLogger.errorCalls).toHaveLength(1);
+    expect(fakeLogger.errorCalls[0]?.msg).toBe('Unhandled error in controller');
   });
 });

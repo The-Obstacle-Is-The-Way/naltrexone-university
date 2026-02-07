@@ -73,12 +73,15 @@ export function SessionSummaryView({
           Question breakdown
         </div>
         {summaryReviewLoadState.status === 'loading' ? (
-          <div className="mt-2 text-sm text-muted-foreground">
+          <output
+            className="mt-2 text-sm text-muted-foreground"
+            aria-live="polite"
+          >
             Loading question breakdown…
-          </div>
+          </output>
         ) : null}
         {summaryReviewLoadState.status === 'error' ? (
-          <div className="mt-2 text-sm text-destructive">
+          <div className="mt-2 text-sm text-destructive" role="alert">
             {summaryReviewLoadState.message}
           </div>
         ) : null}

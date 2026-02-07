@@ -20,25 +20,38 @@ export function QuestionNavigator({
       <div className="mt-3 grid grid-cols-5 gap-2 sm:grid-cols-8 lg:grid-cols-10">
         {review.rows.map((row) => {
           const isCurrent = row.questionId === currentQuestionId;
-          const statusLabel = row.isAnswered
-            ? row.isCorrect === null
-              ? 'Answered'
-              : row.isCorrect
+          const answeredLabel = row.isAnswered
+            ? review.mode === 'tutor'
+              ? row.isCorrect === true
                 ? 'Correct'
-                : 'Incorrect'
+                : row.isCorrect === false
+                  ? 'Incorrect'
+                  : 'Answered'
+              : 'Answered'
             : 'Unanswered';
+          const statusParts = [
+            ...(isCurrent ? (['Current'] as const) : []),
+            ...(row.markedForReview ? (['Marked for review'] as const) : []),
+            answeredLabel,
+          ];
 
           return (
             <Button
               key={row.questionId}
               type="button"
               variant={isCurrent ? 'default' : 'outline'}
-              className="rounded-full"
+              className="relative rounded-full"
               disabled={!row.isAvailable}
               onClick={() => onNavigateQuestion(row.questionId)}
-              aria-label={`Question ${row.order}: ${statusLabel}`}
+              aria-label={`Question ${row.order}: ${statusParts.join(', ')}`}
             >
               {row.order}
+              {row.markedForReview ? (
+                <span
+                  aria-hidden="true"
+                  className="absolute -right-0.5 -top-0.5 size-2 rounded-full bg-primary"
+                />
+              ) : null}
             </Button>
           );
         })}

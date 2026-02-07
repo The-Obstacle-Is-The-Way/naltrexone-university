@@ -6,7 +6,7 @@
 
 **Status:** Implemented
 **Layer:** Feature
-**Date:** 2026-02-06
+**Date:** 2026-02-06 (amended 2026-02-07)
 **Depends On:** SPEC-013, SPEC-014, SPEC-015
 **Addresses Debt:** DEBT-113, DEBT-114, DEBT-115, DEBT-116, DEBT-122, DEBT-123
 **Related Bugs:** BUG-072, BUG-073
@@ -392,21 +392,39 @@ describe('GetSessionHistoryUseCase', () => {
 - [ADR-003: Testing Strategy](../adr/adr-003-testing-strategy.md)
 
 ### Debt (Superseded)
-- [DEBT-113](../debt/debt-113-dashboard-review-lack-session-context.md) — Phase 3
-- [DEBT-114](../debt/debt-114-no-session-history-page.md) — Phase 4
-- [DEBT-115](../debt/debt-115-practice-page-god-component.md) — Phase 1
-- [DEBT-116](../debt/debt-116-session-page-god-component.md) — Phase 1
-- [DEBT-122](../debt/debt-122-in-run-question-navigation-gap.md) — Phase 2
-- [DEBT-123](../debt/debt-123-session-summary-missing-question-breakdown.md) — Phase 2
+- [DEBT-113](../_archive/debt/debt-113-dashboard-review-lack-session-context.md) — Phase 3
+- [DEBT-114](../_archive/debt/debt-114-no-session-history-page.md) — Phase 4
+- [DEBT-115](../_archive/debt/debt-115-practice-page-god-component.md) — Phase 1
+- [DEBT-116](../_archive/debt/debt-116-session-page-god-component.md) — Phase 1
+- [DEBT-122](../_archive/debt/debt-122-in-run-question-navigation-gap.md) — Phase 2
+- [DEBT-123](../_archive/debt/debt-123-session-summary-missing-question-breakdown.md) — Phase 2
 
 ### Bugs (Reclassified)
-- [BUG-072](../bugs/bug-072-no-question-navigation-in-practice-sessions.md) — Phase 2
-- [BUG-073](../bugs/bug-073-tutor-mode-missing-session-summary-detail.md) — Phase 2
+- [BUG-072](../_archive/bugs/bug-072-no-question-navigation-in-practice-sessions.md) — Phase 2
+- [BUG-073](../_archive/bugs/bug-073-tutor-mode-missing-session-summary-detail.md) — Phase 2
 
 ---
 
-## 10. Changelog
+## 10. Implementation Status (2026-02-07)
+
+| Phase | FR | Requirement | Status | Notes |
+|-------|-----|-------------|--------|-------|
+| 1 | FR-1 | Practice page ≤ 300 lines per file | **Done** | `page.tsx` = 115 lines; hooks extracted to `usePracticeSessionControls`, `usePracticeQuestionFlow` |
+| 1 | FR-2 | Session page ≤ 300 lines per file | **Done** | `practice-session-page-client.tsx` = 21 lines; hook extracted to `usePracticeSessionPageController` |
+| 2 | FR-3 | In-run question navigation (back/jump) | **Done** | `QuestionNavigator` is rendered in active session UI (`PracticeSessionPageView` topContent), wired to `getNextQuestion({ sessionId, questionId })` via `onNavigateQuestion`, and now enforces mode-correct status semantics (tutor: correct/incorrect labels; exam: neutral answered/unanswered/current/marked without correctness leakage). |
+| 2 | FR-4 | Per-question breakdown on session summary | **Done** | `SessionSummaryView` calls `getPracticeSessionReview` and displays per-question list with order, stem, status, correctness badge |
+| 3 | FR-5 | Dashboard/Review include session context | **Done** | `sessionId` and `sessionMode` fields present in `UserStatsOutput.recentActivity` and `MissedQuestionRow`. Dashboard groups by session. Review shows session origin badge. |
+| 4 | FR-6 | Session history list with drill-down | **Done** | `PracticeSessionHistoryPanel` on practice page. Rows clickable → per-question breakdown via `getPracticeSessionReview`. |
+
+**Remaining work for this spec:** none. Residual UX/navigation polish is tracked in [SPEC-019](./spec-019-practice-ux-redesign.md) Phase 2/3.
+
+---
+
+## 11. Changelog
 
 | Date | Author | Change |
 |------|--------|--------|
 | 2026-02-06 | Architecture Review | Initial draft |
+| 2026-02-07 | Architecture Review | **Status correction:** "Implemented" → "Partial". Added Section 10 (Implementation Status) documenting per-phase completion. FR-3 (in-run navigation) identified as sole remaining gap — navigator exists in exam review but not during active answering. |
+| 2026-02-07 | Engineering | **Status correction:** "Partial" → "Implemented" after verifying FR-3 wiring in active answering state. Updated superseded debt/bug links to archived locations. |
+| 2026-02-07 | Engineering | Hardened FR-3 compliance: active exam navigation now uses neutral status labels and explicit marked/current indicators; added browser/jsdom coverage for tutor+exam mode navigator semantics. |

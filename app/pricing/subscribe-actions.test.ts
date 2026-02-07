@@ -103,6 +103,29 @@ describe('app/pricing/subscribe-actions', () => {
     });
   });
 
+  it('redirects back to pricing when checkout session fails with default logError', async () => {
+    const createCheckoutSessionFn = vi.fn(async () =>
+      err('INTERNAL_ERROR', 'Boom'),
+    );
+
+    const redirectFn = createRedirectFn();
+
+    await expect(
+      subscribeMonthlyAction(new FormData(), {
+        createCheckoutSessionFn,
+        redirectFn,
+      }),
+    ).rejects.toMatchObject({
+      message:
+        'redirect:/pricing?checkout=error&plan=monthly&error_code=INTERNAL_ERROR',
+    });
+
+    expect(createCheckoutSessionFn).toHaveBeenCalledWith({
+      plan: 'monthly',
+      idempotencyKey: undefined,
+    });
+  });
+
   it('passes idempotencyKey from the form data to the checkout controller', async () => {
     const createCheckoutSessionFn = vi.fn(async () =>
       ok({ url: 'https://checkout/monthly' }),

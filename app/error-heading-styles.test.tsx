@@ -12,7 +12,7 @@ const ERROR_PROPS = {
 };
 
 describe('app error heading styles', () => {
-  it('uses explicit foreground heading color across all error pages', async () => {
+  it('renders semantic headings across all error pages', async () => {
     const AppError = (await import('@/app/error')).default;
     const GlobalError = (await import('@/app/global-error')).default;
     const PricingError = (await import('@/app/pricing/error')).default;
@@ -36,60 +36,79 @@ describe('app error heading styles', () => {
       {
         name: 'AppError',
         html: renderToStaticMarkup(<AppError {...ERROR_PROPS} />),
-        headingClass: 'text-xl font-semibold text-foreground',
+        headingTag: 'h2',
+        headingText: 'Something went wrong',
       },
       {
         name: 'GlobalError',
         html: renderToStaticMarkup(<GlobalError {...ERROR_PROPS} />),
-        headingClass: 'text-2xl font-bold text-foreground',
+        headingTag: 'h1',
+        headingText: 'Something went wrong',
       },
       {
         name: 'PricingError',
         html: renderToStaticMarkup(<PricingError {...ERROR_PROPS} />),
-        headingClass: 'text-xl font-semibold text-foreground',
+        headingTag: 'h2',
+        headingText: 'Pricing error',
       },
       {
         name: 'CheckoutSuccessError',
         html: renderToStaticMarkup(<CheckoutSuccessError {...ERROR_PROPS} />),
-        headingClass: 'text-xl font-semibold text-foreground',
+        headingTag: 'h2',
+        headingText: 'Checkout error',
       },
       {
         name: 'DashboardError',
         html: renderToStaticMarkup(<DashboardError {...ERROR_PROPS} />),
-        headingClass: 'text-xl font-semibold text-foreground',
+        headingTag: 'h2',
+        headingText: 'Dashboard error',
       },
       {
         name: 'BillingError',
         html: renderToStaticMarkup(<BillingError {...ERROR_PROPS} />),
-        headingClass: 'text-xl font-semibold text-foreground',
+        headingTag: 'h2',
+        headingText: 'Billing error',
       },
       {
         name: 'PracticeError',
         html: renderToStaticMarkup(<PracticeError {...ERROR_PROPS} />),
-        headingClass: 'text-xl font-semibold text-foreground',
+        headingTag: 'h2',
+        headingText: 'Practice error',
       },
       {
         name: 'BookmarksError',
         html: renderToStaticMarkup(<BookmarksError {...ERROR_PROPS} />),
-        headingClass: 'text-xl font-semibold text-foreground',
+        headingTag: 'h2',
+        headingText: 'Bookmarks error',
       },
       {
         name: 'ReviewError',
         html: renderToStaticMarkup(<ReviewError {...ERROR_PROPS} />),
-        headingClass: 'text-xl font-semibold text-foreground',
+        headingTag: 'h2',
+        headingText: 'Review error',
       },
       {
         name: 'QuestionError',
         html: renderToStaticMarkup(<QuestionError {...ERROR_PROPS} />),
-        headingClass: 'text-xl font-semibold text-foreground',
+        headingTag: 'h2',
+        headingText: 'Question error',
       },
     ];
 
     for (const item of errorComponents) {
+      const doc = new DOMParser().parseFromString(item.html, 'text/html');
+      const heading = doc.querySelector(item.headingTag);
       expect(
-        item.html,
-        `${item.name} should contain heading class "${item.headingClass}"`,
-      ).toContain(item.headingClass);
+        heading,
+        `${item.name} should render ${item.headingTag}`,
+      ).not.toBeNull();
+
+      expect(
+        heading?.textContent?.trim(),
+        `${item.name} should render ${item.headingTag} with the expected heading text`,
+      ).toBe(item.headingText);
+      expect(item.html).toContain('Error ID: digest_123');
+      expect(item.html).toContain('Try again');
     }
   });
 });

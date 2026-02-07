@@ -7,7 +7,7 @@ vi.mock('next/link', () => ({
 }));
 
 describe('QuestionView', () => {
-  it('applies transition-colors to the Back to Dashboard utility link', async () => {
+  it('renders a Back to Dashboard utility link', async () => {
     const { QuestionView } = await import('./question-page-client');
 
     const html = renderToStaticMarkup(
@@ -24,9 +24,9 @@ describe('QuestionView', () => {
         onReattempt={() => undefined}
       />,
     );
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const backLink = doc.querySelector('a[href="/app/dashboard"]');
 
-    expect(html).toContain(
-      'text-sm font-medium text-muted-foreground transition-colors hover:text-foreground',
-    );
+    expect(backLink?.textContent?.trim()).toBe('Back to Dashboard');
   });
 });

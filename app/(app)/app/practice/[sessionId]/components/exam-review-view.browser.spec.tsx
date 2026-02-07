@@ -49,11 +49,61 @@ test('renders navigator states and disables unavailable questions', async () => 
     />,
   );
 
-  await screen.getByRole('button', { name: 'Question 2: Incorrect' }).click();
+  await screen
+    .getByRole('button', { name: 'Question 2: Marked for review, Answered' })
+    .click();
   expect(onNavigateQuestion).toHaveBeenCalledWith('q2');
   await expect
     .element(screen.getByRole('button', { name: 'Question 3: Unanswered' }))
     .toBeDisabled();
+});
+
+test('uses correctness labels only in tutor mode', async () => {
+  const onNavigateQuestion = vi.fn();
+
+  const screen = await render(
+    <QuestionNavigator
+      review={{
+        sessionId: 'session-1',
+        mode: 'tutor',
+        totalCount: 2,
+        answeredCount: 2,
+        markedCount: 0,
+        rows: [
+          {
+            questionId: 'q1',
+            order: 1,
+            isAvailable: true,
+            stemMd: 'Stem 1',
+            difficulty: 'easy',
+            isAnswered: true,
+            isCorrect: true,
+            markedForReview: false,
+          },
+          {
+            questionId: 'q2',
+            order: 2,
+            isAvailable: true,
+            stemMd: 'Stem 2',
+            difficulty: 'medium',
+            isAnswered: true,
+            isCorrect: false,
+            markedForReview: false,
+          },
+        ],
+      }}
+      currentQuestionId="q1"
+      onNavigateQuestion={onNavigateQuestion}
+    />,
+  );
+
+  await expect
+    .element(
+      screen.getByRole('button', { name: 'Question 1: Current, Correct' }),
+    )
+    .toBeVisible();
+  await screen.getByRole('button', { name: 'Question 2: Incorrect' }).click();
+  expect(onNavigateQuestion).toHaveBeenCalledWith('q2');
 });
 
 test('opens a review question and finalizes the exam', async () => {

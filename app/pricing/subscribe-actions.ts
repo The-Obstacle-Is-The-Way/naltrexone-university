@@ -2,7 +2,7 @@
 
 import { redirect } from 'next/navigation';
 import { runSubscribeAction } from '@/app/pricing/subscribe-action';
-import { logger } from '@/lib/logger';
+import { createRequestContext, getRequestLogger } from '@/lib/request-context';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import { createCheckoutSession } from '@/src/adapters/controllers/billing-controller';
 
@@ -20,13 +20,21 @@ export type SubscribeActionsDeps = {
 async function getDeps(
   deps?: Partial<SubscribeActionsDeps>,
 ): Promise<SubscribeActionsDeps> {
+  const ctx = createRequestContext();
+  const requestLogger = getRequestLogger(ctx);
+
   const createCheckoutSessionFn: CreateCheckoutSessionFn =
-    deps?.createCheckoutSessionFn ?? createCheckoutSession;
+    deps?.createCheckoutSessionFn ??
+    ((input) =>
+      createCheckoutSession(input, undefined, { logger: requestLogger }));
 
   return {
     createCheckoutSessionFn,
     redirectFn: deps?.redirectFn ?? redirect,
-    logError: deps?.logError ?? ((context, msg) => logger.error(context, msg)),
+    logError:
+      deps?.logError ??
+      ((context: Record<string, unknown>, msg: string) =>
+        requestLogger.error(context, msg)),
   };
 }
 
