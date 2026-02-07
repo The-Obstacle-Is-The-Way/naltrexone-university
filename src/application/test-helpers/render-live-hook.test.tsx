@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { describe, expect, it } from 'vitest';
-import { renderLiveHook } from './render-live-hook';
+import { renderLiveHook } from '@/src/application/test-helpers/render-live-hook';
 
 describe('renderLiveHook', () => {
   it('returns undefined when the hook value is intentionally undefined', async () => {

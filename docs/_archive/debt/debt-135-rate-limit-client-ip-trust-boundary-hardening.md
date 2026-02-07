@@ -38,11 +38,15 @@ Hardened the trust model in `lib/request-ip.ts`:
 
 1. Production (`NODE_ENV=production`) now trusts only `x-vercel-forwarded-for`.
 2. Fallback parsing of `x-forwarded-for` and `x-real-ip` is limited to non-production environments.
-3. Added regression tests in `lib/request-ip.test.ts` for environment-specific behavior.
+3. When `x-vercel-forwarded-for` is missing in production, `getClientIp()` returns `'unknown'`.
+4. Rate limiters then key by `'unknown'` (for example `webhook:stripe:unknown`), which is a fail-safe posture: traffic without trusted client-IP attribution is throttled together instead of bypassing limits.
+5. Added regression tests in `lib/request-ip.test.ts` for environment-specific behavior.
 
 ## Verification
 
 - [x] Production mode ignores spoofable fallback headers
+- [x] Production mode with missing `x-vercel-forwarded-for` falls back to `'unknown'` keying
+- [x] Spoofed fallback headers cannot bypass production rate limits (they are ignored)
 - [x] Local dev behavior remains usable
 - [x] Route tests assert trust-boundary behavior for IP extraction
 
