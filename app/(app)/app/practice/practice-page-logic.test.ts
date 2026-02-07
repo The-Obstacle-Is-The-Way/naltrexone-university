@@ -16,42 +16,10 @@ import {
 } from '@/app/(app)/app/practice/practice-page-logic';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import { err, ok } from '@/src/adapters/controllers/action-result';
+import { createNextQuestion } from '@/src/application/test-helpers/create-next-question';
 import type { NextQuestion } from '@/src/application/use-cases/get-next-question';
 import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
-import { createChoice, createQuestion } from '@/src/domain/test-helpers';
 import { createDeferred } from '@/tests/test-helpers/create-deferred';
-
-function createNextQuestion(): NextQuestion {
-  const questionId = 'q_1';
-  const choice = createChoice({
-    id: 'choice_1',
-    questionId,
-    label: 'A',
-    textMd: 'Choice A',
-    sortOrder: 1,
-  });
-  const question = createQuestion({
-    id: questionId,
-    slug: 'q-1',
-    stemMd: '#',
-    difficulty: 'easy',
-    choices: [choice],
-  });
-
-  return {
-    questionId: question.id,
-    slug: question.slug,
-    stemMd: question.stemMd,
-    difficulty: question.difficulty,
-    choices: question.choices.map((c, index) => ({
-      id: c.id,
-      label: c.label,
-      textMd: c.textMd,
-      sortOrder: index + 1,
-    })),
-    session: null,
-  };
-}
 
 describe('practice-page-logic', () => {
   describe('canSubmitAnswer', () => {
@@ -96,6 +64,81 @@ describe('practice-page-logic', () => {
   });
 
   describe('loadNextQuestion', () => {
+    it('ignores stale responses when a newer request finishes first', async () => {
+      const first = createDeferred<ActionResult<NextQuestion | null>>();
+      const second = createDeferred<ActionResult<NextQuestion | null>>();
+      let latestRequestId = 0;
+      const responseQueue = [first.promise, second.promise];
+
+      const getNextQuestionFn = vi.fn(async () => {
+        const nextResponse = responseQueue.shift();
+        if (!nextResponse) {
+          throw new Error('Unexpected call to getNextQuestionFn');
+        }
+        return nextResponse;
+      });
+
+      const setQuestion = vi.fn();
+      const setLoadState = vi.fn();
+
+      const createRequestSequenceId = () => {
+        latestRequestId += 1;
+        return latestRequestId;
+      };
+
+      const isLatestRequest = (requestId: number) =>
+        requestId === latestRequestId;
+
+      const loadFirst = loadNextQuestion({
+        getNextQuestionFn,
+        filters: { tagSlugs: [], difficulties: [] },
+        createIdempotencyKey: () => 'idem_1',
+        nowMs: () => 1234,
+        setLoadState,
+        setSelectedChoiceId: vi.fn(),
+        setSubmitResult: vi.fn(),
+        setSubmitIdempotencyKey: vi.fn(),
+        setQuestionLoadedAt: vi.fn(),
+        setQuestion,
+        createRequestSequenceId,
+        isLatestRequest,
+      });
+
+      const loadSecond = loadNextQuestion({
+        getNextQuestionFn,
+        filters: { tagSlugs: [], difficulties: [] },
+        createIdempotencyKey: () => 'idem_2',
+        nowMs: () => 5678,
+        setLoadState,
+        setSelectedChoiceId: vi.fn(),
+        setSubmitResult: vi.fn(),
+        setSubmitIdempotencyKey: vi.fn(),
+        setQuestionLoadedAt: vi.fn(),
+        setQuestion,
+        createRequestSequenceId,
+        isLatestRequest,
+      });
+
+      second.resolve(
+        ok(
+          createNextQuestion({
+            questionId: 'q_2',
+            slug: 'q-2',
+          }),
+        ),
+      );
+      await loadSecond;
+
+      first.resolve(ok(createNextQuestion()));
+      await loadFirst;
+
+      expect(setQuestion).toHaveBeenCalledTimes(1);
+      expect(setQuestion).toHaveBeenCalledWith(
+        expect.objectContaining({ questionId: 'q_2' }),
+      );
+      expect(setLoadState.mock.calls.at(-1)?.[0]).toEqual({ status: 'ready' });
+    });
+
     it('loads next question and updates loadedAt when a question exists', async () => {
       const getNextQuestionFn = vi.fn(async () => ok(createNextQuestion()));
       const setLoadState = vi.fn();

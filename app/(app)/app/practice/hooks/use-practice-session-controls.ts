@@ -101,7 +101,18 @@ export function usePracticeSessionControls(): UsePracticeSessionControlsOutput {
     setTagLoadStatus('loading');
 
     void (async () => {
-      const res = await getTags({});
+      let res: Awaited<ReturnType<typeof getTags>>;
+      try {
+        res = await getTags({});
+      } catch (error) {
+        if (!mounted) return;
+        console.error(
+          '[PracticeSessionControls] Tag load failed:',
+          getThrownErrorMessage(error),
+        );
+        setTagLoadStatus('error');
+        return;
+      }
       if (!mounted) return;
 
       if (!res.ok) {

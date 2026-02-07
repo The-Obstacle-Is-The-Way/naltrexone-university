@@ -1,7 +1,7 @@
 # Architecture Decision Records
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-02-02
+**Last Updated:** 2026-02-07
 
 ---
 
@@ -31,6 +31,10 @@ Architecture Decision Records document significant architectural decisions along
 | [ADR-012](./adr-012-directory-structure.md) | Directory Structure | Accepted | 2026-01-31 |
 | [ADR-013](./adr-013-repository-organization.md) | Repository Organization by Aggregate | Accepted | 2026-02-01 |
 | [ADR-014](./adr-014-stripe-eager-sync.md) | Stripe Eager Sync on Checkout Success | Accepted | 2026-02-02 |
+| [ADR-015](./adr-015-idempotency-strategy.md) | Idempotency Strategy | Accepted | 2026-02-07 |
+| [ADR-016](./adr-016-rate-limiting.md) | Rate Limiting and Abuse Prevention | Accepted | 2026-02-07 |
+| [ADR-017](./adr-017-webhook-processing-lifecycle.md) | Webhook Processing Lifecycle | Accepted | 2026-02-07 |
+| [ADR-018](./adr-018-resilience-patterns.md) | Resilience Patterns (Retry and Backoff) | Accepted | 2026-02-07 |
 
 ## ADR Statuses
 
@@ -148,6 +152,35 @@ app/, components/, lib/, db/ → Frameworks & Drivers (Next.js)
 ```
 
 Server Actions live in `src/adapters/controllers/` (not `/app/_actions/`).
+
+### ADR-013: Repository Organization by Aggregate
+
+Flat structure for now, with aggregate boundaries defined (Content, Practice, Billing, User). Restructure when repository count grows or a new aggregate is added.
+
+### ADR-014: Stripe Eager Sync on Checkout Success
+
+On `/checkout/success`, eagerly fetch and upsert subscription state from Stripe API to eliminate the "paid but locked out" race condition. Webhooks remain source of truth for ongoing lifecycle.
+
+### ADR-015: Idempotency Strategy
+
+Claim-execute-store pattern backed by Postgres. Client provides a UUID key; first request claims and executes, duplicates receive cached result. TTL-based expiry with garbage collection.
+
+```text
+claim(key) → execute() → storeResult() → return
+     └── already claimed → poll for cached result
+```
+
+### ADR-016: Rate Limiting and Abuse Prevention
+
+Per-user/per-IP fixed-window rate limiting via Postgres. Centralized limit configuration per action. Atomic `INSERT ... ON CONFLICT DO UPDATE` for race-free counting.
+
+### ADR-017: Webhook Processing Lifecycle
+
+Signature verification → Zod payload validation → event type routing → subscription normalization (fetch latest from Stripe API) → exactly-once processing via `stripe_events` claim table.
+
+### ADR-018: Resilience Patterns (Retry and Backoff)
+
+Generic `retry()` with exponential backoff for transient external errors. Only retries network errors, 429s, and 5xx responses. Applied at the adapter boundary only; domain and application layers never retry.
 
 ---
 

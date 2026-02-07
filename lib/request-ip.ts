@@ -1,7 +1,12 @@
 export function getClientIp(headers: Pick<Headers, 'get'>): string {
   const vercelForwardedFor = headers.get('x-vercel-forwarded-for')?.trim();
-  const forwardedFor = headers.get('x-forwarded-for')?.trim();
-  const realIp = headers.get('x-real-ip')?.trim();
+  const allowFallbackForwardedHeaders = process.env.NODE_ENV !== 'production';
+  const forwardedFor = allowFallbackForwardedHeaders
+    ? headers.get('x-forwarded-for')?.trim()
+    : undefined;
+  const realIp = allowFallbackForwardedHeaders
+    ? headers.get('x-real-ip')?.trim()
+    : undefined;
 
   const headerValue = vercelForwardedFor || forwardedFor || realIp;
 

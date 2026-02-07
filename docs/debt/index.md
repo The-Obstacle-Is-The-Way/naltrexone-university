@@ -17,11 +17,14 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 | ID | Title | Status | Priority | Date |
 |----|-------|--------|----------|------|
-| [DEBT-134](debt-134-practice-hook-tests-are-contract-only.md) | Practice Hook Tests Are Contract-Only (Behavior Gaps) | Open | P1 | 2026-02-07 |
-| [DEBT-135](debt-135-rate-limit-client-ip-trust-boundary-hardening.md) | Rate-Limit Client IP Trust Boundary Is Not Explicitly Hardened | Open | P2 | 2026-02-07 |
+| [DEBT-141](debt-141-practice-hook-tests-emit-react-act-warnings.md) | Migrate Practice Hook Tests from renderLiveHook to Browser Mode | Open | P2 | 2026-02-07 |
+| [DEBT-142](debt-142-spec-020-practice-file-line-cap-regression.md) | SPEC-020 Line-Cap Regression in Practice Page Logic | Open | P2 | 2026-02-07 |
+| [DEBT-143](debt-143-practice-ui-components-missing-browser-specs.md) | Practice UI Components Missing Browser Specs (7 components, 0% coverage) | Open | P2 | 2026-02-07 |
 | [DEBT-136](debt-136-dunning-grace-period-for-past-due-subscribers.md) | Dunning Grace Period for Past-Due Subscribers | Open | P3 | 2026-02-07 |
+| [DEBT-138](debt-138-dead-modules-and-unused-dependencies.md) | Dead Modules and Unused Dependencies After Refactors | Open | P3 | 2026-02-07 |
+| [DEBT-140](debt-140-request-correlation-not-wired-into-runtime-logs.md) | Request Correlation Not Wired (Blocked by SPEC-016) | Open | P3 | 2026-02-07 |
 
-**Next Debt ID:** DEBT-137
+**Next Debt ID:** DEBT-144
 
 ## Archived Debt
 
@@ -36,10 +39,19 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 | [DEBT-114](../_archive/debt/debt-114-no-session-history-page.md) | Session History Page (SPEC-020) | P2 | 2026-02-06 |
 | [DEBT-113](../_archive/debt/debt-113-dashboard-review-lack-session-context.md) | Dashboard + Review Session Context (SPEC-020) | P1 | 2026-02-06 |
 
+### Invalidated (False Positives)
+
+| ID | Title | Priority | Invalidated |
+|----|-------|----------|-------------|
+| [DEBT-137](../_archive/debt/debt-137-container-type-cycles.md) | Container Type Cycles (madge false positive — type-only imports, not runtime cycles) | P2 | 2026-02-07 |
+| [DEBT-139](../_archive/debt/debt-139-production-files-exceed-size-guardrail.md) | Global 300-Line Guardrail (invalid as universal standard; SPEC-scoped case now tracked in DEBT-142) | P2 | 2026-02-07 |
+
 ### Previously Archived
 
 | ID | Title | Priority | Resolved |
 |----|-------|----------|----------|
+| [DEBT-135](../_archive/debt/debt-135-rate-limit-client-ip-trust-boundary-hardening.md) | Rate-Limit Client IP Trust Boundary Is Not Explicitly Hardened | P2 | 2026-02-07 |
+| [DEBT-134](../_archive/debt/debt-134-practice-hook-tests-are-contract-only.md) | Practice Hook Tests Are Contract-Only (Behavior Gaps) | P1 | 2026-02-07 |
 | [DEBT-132](../_archive/debt/debt-132-missing-practice-hook-tests.md) | Missing Tests for 6 Extracted Practice Hooks (SPEC-020) | P1 | 2026-02-07 |
 | [DEBT-131](../_archive/debt/debt-131-missing-use-case-error-path-tests.md) | Missing Error Path Tests for 6 Use Cases | P2 | 2026-02-07 |
 | [DEBT-130](../_archive/debt/debt-130-missing-suspense-boundary-app-layout.md) | Missing Suspense Boundary in App Layout | P3 | 2026-02-07 |

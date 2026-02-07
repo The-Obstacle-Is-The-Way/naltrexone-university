@@ -1,6 +1,6 @@
 # BUG-086: Session History Drill-Down Race Can Show Wrong Session Details
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P2
 **Date:** 2026-02-07
 
@@ -37,16 +37,21 @@ No request nonce/session-id equality check exists before calling:
 
 ## Fix
 
-Pending.
+`usePracticeSessionHistory` now tracks the latest requested session ID and
+discards stale response commits for earlier selections:
 
-Recommended approach:
-- Track latest requested session ID in a ref.
-- Only commit results when response session matches current requested ID.
-- Add race-condition regression test.
+- `app/(app)/app/practice/hooks/use-practice-session-history.ts`
+
+Added regression coverage:
+
+- `app/(app)/app/practice/hooks/use-practice-session-history.test.tsx`
+  - overlapping `onOpenSessionHistory` calls
+  - newer selection resolves first
+  - stale older response resolves later and is ignored
 
 ## Verification
 
-- [ ] Test that two overlapping requests cannot let the stale one overwrite state
+- [x] Test that two overlapping requests cannot let the stale one overwrite state
 - [ ] Manual rapid-click verification in session history panel
 
 ## Related

@@ -66,6 +66,7 @@ export function usePracticeSessionPageController(
   const [submitIdempotencyKey, setSubmitIdempotencyKey] = useState<
     string | null
   >(null);
+  const latestQuestionRequestId = useRef(0);
 
   const loadNext = useMemo(
     () =>
@@ -82,6 +83,12 @@ export function usePracticeSessionPageController(
         setQuestionLoadedAt,
         setQuestion,
         setSessionInfo,
+        createRequestSequenceId: () => {
+          latestQuestionRequestId.current += 1;
+          return latestQuestionRequestId.current;
+        },
+        isLatestRequest: (requestId) =>
+          requestId === latestQuestionRequestId.current,
         isMounted,
       }),
     [sessionId, isMounted],
@@ -110,6 +117,12 @@ export function usePracticeSessionPageController(
           setQuestionLoadedAt,
           setQuestion,
           setSessionInfo,
+          createRequestSequenceId: () => {
+            latestQuestionRequestId.current += 1;
+            return latestQuestionRequestId.current;
+          },
+          isLatestRequest: (requestId) =>
+            requestId === latestQuestionRequestId.current,
           isMounted,
         });
       });

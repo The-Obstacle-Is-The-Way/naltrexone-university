@@ -1,6 +1,6 @@
 # DEBT-135: Rate-Limit Client IP Trust Boundary Is Not Explicitly Hardened
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P2
 **Date:** 2026-02-07
 
@@ -34,18 +34,21 @@ While this is fine on trusted infrastructure that guarantees canonical forwarded
 
 ## Resolution
 
-Harden trust model explicitly:
+Hardened the trust model in `lib/request-ip.ts`:
 
-1. Prefer a deployment-trusted header only (for example, Vercel canonical header) in production.
-2. Gate fallback header parsing to local development/test environments.
-3. Document and test expected behavior per environment.
-4. Optionally support signed proxy headers when self-hosting.
+1. Production (`NODE_ENV=production`) now trusts only `x-vercel-forwarded-for`.
+2. Fallback parsing of `x-forwarded-for` and `x-real-ip` is limited to non-production environments.
+3. When `x-vercel-forwarded-for` is missing in production, `getClientIp()` returns `'unknown'`.
+4. Rate limiters then key by `'unknown'` (for example `webhook:stripe:unknown`), which is a fail-safe posture: traffic without trusted client-IP attribution is throttled together instead of bypassing limits.
+5. Added regression tests in `lib/request-ip.test.ts` for environment-specific behavior.
 
 ## Verification
 
-- [ ] Production mode ignores spoofable fallback headers
-- [ ] Local dev behavior remains usable
-- [ ] Route tests assert trust-boundary behavior for IP extraction
+- [x] Production mode ignores spoofable fallback headers
+- [x] Production mode with missing `x-vercel-forwarded-for` falls back to `'unknown'` keying
+- [x] Spoofed fallback headers cannot bypass production rate limits (they are ignored)
+- [x] Local dev behavior remains usable
+- [x] Route tests assert trust-boundary behavior for IP extraction
 
 ## Related
 

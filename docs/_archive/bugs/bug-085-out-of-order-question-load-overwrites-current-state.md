@@ -1,6 +1,6 @@
 # BUG-085: Out-of-Order Question Loads Can Overwrite Current State
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P1
 **Date:** 2026-02-07
 
@@ -39,17 +39,28 @@ Both loaders immediately commit whichever response arrives, with no request toke
 
 ## Fix
 
-Pending.
+Added request sequencing for both question-loading paths:
 
-Recommended approach:
-- Add request sequencing (`requestId`/version ref) in the calling hooks.
-- Commit state only when response matches the current latest request.
-- Add tests that force out-of-order resolution to verify stale responses are ignored.
+- `loadNextQuestion` in `app/(app)/app/practice/practice-page-logic.ts`
+- `loadNextQuestion` in `app/(app)/app/practice/[sessionId]/practice-session-page-logic.ts`
+
+Both loaders now accept optional request-sequencing callbacks and discard any
+response that is no longer the latest request when it resolves.
+
+Both calling hooks now provide request IDs from refs:
+
+- `app/(app)/app/practice/hooks/use-practice-question-flow.ts`
+- `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-page-controller.ts`
+
+Regression coverage was added for out-of-order completion in:
+
+- `app/(app)/app/practice/practice-page-logic.test.ts`
+- `app/(app)/app/practice/[sessionId]/practice-session-page-logic.test.ts`
 
 ## Verification
 
-- [ ] Unit test reproduces out-of-order completion and demonstrates stale overwrite pre-fix
-- [ ] Unit test confirms stale response is ignored post-fix
+- [x] Unit test reproduces out-of-order completion and demonstrates stale overwrite pre-fix
+- [x] Unit test confirms stale response is ignored post-fix
 - [ ] Manual verification in both `/app/practice` and `/app/practice/[sessionId]`
 
 ## Related
