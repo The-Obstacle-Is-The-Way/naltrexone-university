@@ -20,6 +20,8 @@ describe('app/(app)/app/review', () => {
           {
             isAvailable: true,
             questionId: 'q_1',
+            sessionId: null,
+            sessionMode: null,
             slug: 'q-1',
             stemMd: longStem,
             difficulty: 'easy',
@@ -45,6 +47,8 @@ describe('app/(app)/app/review', () => {
           {
             isAvailable: true,
             questionId: 'q_1',
+            sessionId: null,
+            sessionMode: null,
             slug: 'q-1',
             stemMd,
             difficulty: 'easy',
@@ -71,6 +75,8 @@ describe('app/(app)/app/review', () => {
           {
             isAvailable: true,
             questionId: 'q_1',
+            sessionId: null,
+            sessionMode: null,
             slug: 'q-1',
             stemMd,
             difficulty: 'easy',
@@ -94,6 +100,8 @@ describe('app/(app)/app/review', () => {
           {
             isAvailable: true,
             questionId: 'q_1',
+            sessionId: null,
+            sessionMode: null,
             slug: 'q-1',
             stemMd: 'Stem for q1',
             difficulty: 'easy',
@@ -122,6 +130,8 @@ describe('app/(app)/app/review', () => {
           {
             isAvailable: true,
             questionId: 'q_1',
+            sessionId: null,
+            sessionMode: null,
             slug: 'q-1',
             stemMd: 'Stem for q1',
             difficulty: 'easy',
@@ -130,6 +140,8 @@ describe('app/(app)/app/review', () => {
           {
             isAvailable: true,
             questionId: 'q_2',
+            sessionId: null,
+            sessionMode: null,
             slug: 'q-2',
             stemMd: 'Stem for q2',
             difficulty: 'easy',
@@ -164,6 +176,8 @@ describe('app/(app)/app/review', () => {
           {
             isAvailable: false,
             questionId: 'q_orphaned',
+            sessionId: null,
+            sessionMode: null,
             lastAnsweredAt: '2026-02-01T00:00:00.000Z',
           },
         ]}
@@ -176,6 +190,30 @@ describe('app/(app)/app/review', () => {
     expect(html).toContain('[Question no longer available]');
     expect(html).toContain('Missed 2026-02-01');
     expect(html).not.toContain('Reattempt');
+  });
+
+  it('renders session-origin metadata for missed questions', () => {
+    const html = renderToStaticMarkup(
+      <ReviewView
+        rows={[
+          {
+            isAvailable: true,
+            questionId: 'q_1',
+            sessionId: 'session-1',
+            sessionMode: 'exam',
+            slug: 'q-1',
+            stemMd: 'Stem for q1',
+            difficulty: 'easy',
+            lastAnsweredAt: '2026-02-01T00:00:00.000Z',
+          },
+        ]}
+        limit={20}
+        offset={0}
+        totalCount={1}
+      />,
+    );
+
+    expect(html).toContain('Exam session');
   });
 
   it('renders an error state when missed questions load fails', () => {

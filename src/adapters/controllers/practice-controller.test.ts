@@ -7,6 +7,7 @@ import {
   FakeEndPracticeSessionUseCase,
   FakeGetIncompletePracticeSessionUseCase,
   FakeGetPracticeSessionReviewUseCase,
+  FakeGetSessionHistoryUseCase,
   FakeIdempotencyKeyRepository,
   FakeRateLimiter,
   FakeSetPracticeSessionQuestionMarkUseCase,
@@ -16,6 +17,7 @@ import {
 import type {
   EndPracticeSessionOutput,
   GetPracticeSessionReviewOutput,
+  GetSessionHistoryOutput,
   SetPracticeSessionQuestionMarkOutput,
   StartPracticeSessionOutput,
 } from '@/src/application/use-cases';
@@ -26,6 +28,7 @@ import {
   endPracticeSession,
   getIncompletePracticeSession,
   getPracticeSessionReview,
+  getSessionHistory,
   type PracticeControllerDeps,
   setPracticeSessionQuestionMark,
   startPracticeSession,
@@ -36,6 +39,7 @@ type PracticeControllerTestDeps = PracticeControllerDeps & {
   startPracticeSessionUseCase: FakeStartPracticeSessionUseCase;
   endPracticeSessionUseCase: FakeEndPracticeSessionUseCase;
   getPracticeSessionReviewUseCase: FakeGetPracticeSessionReviewUseCase;
+  getSessionHistoryUseCase: FakeGetSessionHistoryUseCase;
   setPracticeSessionQuestionMarkUseCase: FakeSetPracticeSessionQuestionMarkUseCase;
 };
 
@@ -49,6 +53,8 @@ function createDeps(overrides?: {
   endThrows?: unknown;
   reviewOutput?: GetPracticeSessionReviewOutput;
   reviewThrows?: unknown;
+  sessionHistoryOutput?: GetSessionHistoryOutput;
+  sessionHistoryThrows?: unknown;
   setMarkOutput?: SetPracticeSessionQuestionMarkOutput;
   setMarkThrows?: unknown;
   incompleteOutput?: {
@@ -133,6 +139,16 @@ function createDeps(overrides?: {
       overrides?.setMarkThrows,
     );
 
+  const getSessionHistoryUseCase = new FakeGetSessionHistoryUseCase(
+    overrides?.sessionHistoryOutput ?? {
+      rows: [],
+      total: 0,
+      limit: 20,
+      offset: 0,
+    },
+    overrides?.sessionHistoryThrows,
+  );
+
   const getIncompletePracticeSessionUseCase =
     new FakeGetIncompletePracticeSessionUseCase(
       overrides?.incompleteOutput ?? null,
@@ -148,6 +164,7 @@ function createDeps(overrides?: {
     startPracticeSessionUseCase,
     endPracticeSessionUseCase,
     getPracticeSessionReviewUseCase,
+    getSessionHistoryUseCase,
     setPracticeSessionQuestionMarkUseCase,
     now,
   };
@@ -562,6 +579,70 @@ describe('practice-controller', () => {
       });
       expect(deps.getPracticeSessionReviewUseCase.inputs).toEqual([
         { userId: 'user_1', sessionId },
+      ]);
+    });
+  });
+
+  describe('getSessionHistory', () => {
+    it('returns VALIDATION_ERROR when input is invalid', async () => {
+      const deps = createDeps();
+
+      const result = await getSessionHistory({ limit: 0, offset: -1 }, deps);
+
+      expect(result).toMatchObject({
+        ok: false,
+        error: { code: 'VALIDATION_ERROR' },
+      });
+      expect(deps.getSessionHistoryUseCase.inputs).toEqual([]);
+    });
+
+    it('returns session history when use case succeeds', async () => {
+      const deps = createDeps({
+        sessionHistoryOutput: {
+          rows: [
+            {
+              sessionId: '11111111-1111-1111-1111-111111111111',
+              mode: 'exam',
+              questionCount: 20,
+              answered: 20,
+              correct: 15,
+              accuracy: 0.75,
+              durationSeconds: 1800,
+              startedAt: '2026-02-05T00:00:00.000Z',
+              endedAt: '2026-02-05T00:30:00.000Z',
+            },
+          ],
+          total: 1,
+          limit: 20,
+          offset: 0,
+        },
+      });
+
+      const result = await getSessionHistory({ limit: 20, offset: 0 }, deps);
+
+      expect(result).toEqual({
+        ok: true,
+        data: {
+          rows: [
+            {
+              sessionId: '11111111-1111-1111-1111-111111111111',
+              mode: 'exam',
+              questionCount: 20,
+              answered: 20,
+              correct: 15,
+              accuracy: 0.75,
+              durationSeconds: 1800,
+              startedAt: '2026-02-05T00:00:00.000Z',
+              endedAt: '2026-02-05T00:30:00.000Z',
+            },
+          ],
+          total: 1,
+          limit: 20,
+          offset: 0,
+        },
+      });
+      expect(deps.getSessionHistoryUseCase.inputs).toEqual([
+        { userId: 'user_1', limit: 20, offset: 0 },
       ]);
     });
   });

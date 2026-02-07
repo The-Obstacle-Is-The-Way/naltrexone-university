@@ -1,4 +1,5 @@
 import type { Attempt } from '@/src/domain/entities';
+import type { PracticeMode } from '@/src/domain/value-objects';
 
 export type PageOptions = {
   limit: number;
@@ -22,6 +23,12 @@ export type AttemptMostRecentAnsweredAt = {
 export type MissedQuestionAttempt = {
   questionId: string;
   answeredAt: Date;
+  sessionId: string | null;
+  sessionMode: PracticeMode | null;
+};
+
+export type RecentAttempt = Attempt & {
+  sessionMode: PracticeMode | null;
 };
 
 export interface AttemptWriter {
@@ -50,7 +57,7 @@ export interface AttemptStatsReader {
   listRecentByUserId(
     userId: string,
     limit: number,
-  ): Promise<readonly Attempt[]>;
+  ): Promise<readonly RecentAttempt[]>;
 
   /**
    * Return answeredAt timestamps for attempts within a date range.

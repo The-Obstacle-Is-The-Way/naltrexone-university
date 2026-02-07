@@ -49,6 +49,12 @@ export {
   type PracticeSessionReviewRow,
 } from './get-practice-session-review';
 export {
+  type GetSessionHistoryInput,
+  type GetSessionHistoryOutput,
+  GetSessionHistoryUseCase,
+  type SessionHistoryRow,
+} from './get-session-history';
+export {
   type GetUserStatsInput,
   GetUserStatsUseCase,
   type UserStatsOutput,

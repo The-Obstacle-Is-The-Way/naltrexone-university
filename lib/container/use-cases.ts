@@ -8,6 +8,7 @@ import {
   GetMissedQuestionsUseCase,
   GetNextQuestionUseCase,
   GetPracticeSessionReviewUseCase,
+  GetSessionHistoryUseCase,
   GetUserStatsUseCase,
   SetPracticeSessionQuestionMarkUseCase,
   StartPracticeSessionUseCase,
@@ -77,6 +78,10 @@ export function createUseCaseFactories(input: {
         repositories.createPracticeSessionRepository(),
         repositories.createQuestionRepository(),
         primitives.logger,
+      ),
+    createGetSessionHistoryUseCase: () =>
+      new GetSessionHistoryUseCase(
+        repositories.createPracticeSessionRepository(),
       ),
     createGetUserStatsUseCase: () =>
       new GetUserStatsUseCase(

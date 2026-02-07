@@ -47,6 +47,8 @@ export type UserStatsOutput = {
         attemptId: string;
         answeredAt: string; // ISO
         questionId: string;
+        sessionId: string | null;
+        sessionMode: 'tutor' | 'exam' | null;
         slug: string;
         stemMd: string;
         difficulty: QuestionDifficulty;
@@ -57,6 +59,8 @@ export type UserStatsOutput = {
         attemptId: string;
         answeredAt: string; // ISO
         questionId: string;
+        sessionId: string | null;
+        sessionMode: 'tutor' | 'exam' | null;
         isCorrect: boolean;
       }
   >;
@@ -122,6 +126,8 @@ export class GetUserStatsUseCase {
         attemptId: attempt.id,
         answeredAt: attempt.answeredAt.toISOString(),
         questionId: attempt.questionId,
+        sessionId: attempt.practiceSessionId,
+        sessionMode: attempt.sessionMode,
         slug: question.slug,
         stemMd: question.stemMd,
         difficulty: question.difficulty,
@@ -132,6 +138,8 @@ export class GetUserStatsUseCase {
         attemptId: attempt.id,
         answeredAt: attempt.answeredAt.toISOString(),
         questionId: attempt.questionId,
+        sessionId: attempt.practiceSessionId,
+        sessionMode: attempt.sessionMode,
         isCorrect: attempt.isCorrect,
       }),
       logger: this.logger,

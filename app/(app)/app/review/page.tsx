@@ -15,6 +15,16 @@ type ReviewSearchParams = {
   offset?: string;
 };
 
+function getSessionOriginLabel(input: {
+  sessionId: string | null;
+  sessionMode: 'tutor' | 'exam' | null;
+}): string {
+  if (input.sessionId && input.sessionMode) {
+    return `${input.sessionMode === 'exam' ? 'Exam' : 'Tutor'} session`;
+  }
+  return 'Ad-hoc practice';
+}
+
 function parsePositiveInt(value: string | undefined, fallback: number): number {
   const n = Number(value);
   if (!Number.isFinite(n)) return fallback;
@@ -104,6 +114,13 @@ export function ReviewView({
                           <span className="capitalize">{row.difficulty}</span>
                           <span className="mx-2">•</span>
                           <span>Missed {row.lastAnsweredAt.slice(0, 10)}</span>
+                          <span className="mx-2">•</span>
+                          <span>
+                            {getSessionOriginLabel({
+                              sessionId: row.sessionId,
+                              sessionMode: row.sessionMode,
+                            })}
+                          </span>
                         </div>
                       </>
                     ) : (
@@ -118,6 +135,13 @@ export function ReviewView({
                           <span>Unavailable</span>
                           <span className="mx-2">•</span>
                           <span>Missed {row.lastAnsweredAt.slice(0, 10)}</span>
+                          <span className="mx-2">•</span>
+                          <span>
+                            {getSessionOriginLabel({
+                              sessionId: row.sessionId,
+                              sessionMode: row.sessionMode,
+                            })}
+                          </span>
                         </div>
                       </>
                     )}

@@ -68,6 +68,7 @@ export function createControllerFactories(input: {
         useCases.createGetIncompletePracticeSessionUseCase(),
       getPracticeSessionReviewUseCase:
         useCases.createGetPracticeSessionReviewUseCase(),
+      getSessionHistoryUseCase: useCases.createGetSessionHistoryUseCase(),
       setPracticeSessionQuestionMarkUseCase:
         useCases.createSetPracticeSessionQuestionMarkUseCase(),
       startPracticeSessionUseCase: useCases.createStartPracticeSessionUseCase(),

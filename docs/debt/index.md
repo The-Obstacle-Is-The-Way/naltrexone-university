@@ -17,16 +17,31 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 | ID | Title | Status | Priority | Date |
 |----|-------|--------|----------|------|
-| [DEBT-113](debt-113-dashboard-review-lack-session-context.md) | Dashboard and Review Pages Lack Session Context | Open | P1 | 2026-02-06 |
-| [DEBT-114](debt-114-no-session-history-page.md) | No Session History Page | Open | P2 | 2026-02-06 |
-| [DEBT-115](debt-115-practice-page-god-component.md) | Practice Page God Component (823 Lines) | Open | P1 | 2026-02-06 |
-| [DEBT-116](debt-116-session-page-god-component.md) | Session Page Client God Component (670 Lines) | Open | P1 | 2026-02-06 |
-| [DEBT-122](debt-122-in-run-question-navigation-gap.md) | In-Run Question Navigation Gap (Tutor + Exam Answering Stage) | Open | P2 | 2026-02-06 |
-| [DEBT-123](debt-123-session-summary-missing-question-breakdown.md) | Session Summary Is Aggregate-Only (No Per-Question Breakdown) | Open | P2 | 2026-02-06 |
+| [DEBT-133](debt-133-idempotency-polling-timeout-message-misleading.md) | Idempotency Polling Timeout Message Is Misleading | Open | P3 | 2026-02-06 |
+| [DEBT-132](debt-132-missing-practice-hook-tests.md) | Missing Tests for 6 Extracted Practice Hooks (SPEC-020) | Open | P1 | 2026-02-06 |
+| [DEBT-131](debt-131-missing-use-case-error-path-tests.md) | Missing Error Path Tests for 6 Use Cases | Open | P2 | 2026-02-06 |
+| [DEBT-130](debt-130-missing-suspense-boundary-app-layout.md) | Missing Suspense Boundary in App Layout | Open | P3 | 2026-02-06 |
+| [DEBT-129](debt-129-skip-clerk-production-safety.md) | NEXT_PUBLIC_SKIP_CLERK Has No Production Safety Guard | Open | P1 | 2026-02-06 |
+| [DEBT-128](debt-128-bookmark-load-failure-not-shown-to-user.md) | Bookmark Load Failure Not Visible to User | Open | P2 | 2026-02-06 |
+| [DEBT-127](debt-127-missing-practice-sessions-ended-at-index.md) | Missing Index on practice_sessions (userId, endedAt) | Open | P2 | 2026-02-06 |
+| [DEBT-126](debt-126-console-warn-in-repository.md) | console.warn in Repository Bypasses Structured Logger | Open | P3 | 2026-02-06 |
 
-**Next Debt ID:** DEBT-126
+**Next Debt ID:** DEBT-134
 
 ## Archived Debt
+
+### Resolved in PR #64 (SPEC-020)
+
+| ID | Title | Priority | Resolved |
+|----|-------|----------|----------|
+| [DEBT-123](../_archive/debt/debt-123-session-summary-missing-question-breakdown.md) | Session Summary Per-Question Breakdown (SPEC-020) | P2 | 2026-02-06 |
+| [DEBT-122](../_archive/debt/debt-122-in-run-question-navigation-gap.md) | In-Run Question Navigation Gap (SPEC-020) | P2 | 2026-02-06 |
+| [DEBT-116](../_archive/debt/debt-116-session-page-god-component.md) | Session Page God Component 670 → 21 Lines (SPEC-020) | P1 | 2026-02-06 |
+| [DEBT-115](../_archive/debt/debt-115-practice-page-god-component.md) | Practice Page God Component 823 → 114 Lines (SPEC-020) | P1 | 2026-02-06 |
+| [DEBT-114](../_archive/debt/debt-114-no-session-history-page.md) | Session History Page (SPEC-020) | P2 | 2026-02-06 |
+| [DEBT-113](../_archive/debt/debt-113-dashboard-review-lack-session-context.md) | Dashboard + Review Session Context (SPEC-020) | P1 | 2026-02-06 |
+
+### Previously Archived
 
 | ID | Title | Priority | Resolved |
 |----|-------|----------|----------|

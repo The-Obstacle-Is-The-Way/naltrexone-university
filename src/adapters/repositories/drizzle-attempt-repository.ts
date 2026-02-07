@@ -1,11 +1,12 @@
 import { and, desc, eq, gte, inArray, max, sql } from 'drizzle-orm';
-import { attempts } from '@/db/schema';
+import { attempts, practiceSessions } from '@/db/schema';
 import { ApplicationError } from '@/src/application/errors';
 import type {
   AttemptMostRecentAnsweredAt,
   AttemptRepository,
   MissedQuestionAttempt,
   PageOptions,
+  RecentAttempt,
 } from '@/src/application/ports/repositories';
 import type { Attempt } from '@/src/domain/entities';
 import type { DrizzleDb } from '../shared/database-types';
@@ -18,6 +19,7 @@ export class DrizzleAttemptRepository implements AttemptRepository {
       .select({
         questionId: attempts.questionId,
         answeredAt: attempts.answeredAt,
+        practiceSessionId: attempts.practiceSessionId,
         isCorrect: attempts.isCorrect,
         attemptRank:
           sql<number>`row_number() over (partition by ${attempts.questionId} order by ${attempts.answeredAt} desc, ${attempts.id} desc)`.as(
@@ -65,6 +67,23 @@ export class DrizzleAttemptRepository implements AttemptRepository {
       isCorrect: row.isCorrect,
       timeSpentSeconds: row.timeSpentSeconds,
       answeredAt: row.answeredAt,
+    };
+  }
+
+  private toRecentAttempt(row: {
+    id: string;
+    userId: string;
+    questionId: string;
+    practiceSessionId: string | null;
+    selectedChoiceId: string | null;
+    isCorrect: boolean;
+    timeSpentSeconds: number;
+    answeredAt: Date;
+    sessionMode: 'tutor' | 'exam' | null;
+  }): RecentAttempt {
+    return {
+      ...this.toDomain(row),
+      sessionMode: row.sessionMode,
     };
   }
 
@@ -186,14 +205,29 @@ export class DrizzleAttemptRepository implements AttemptRepository {
   async listRecentByUserId(
     userId: string,
     limit: number,
-  ): Promise<readonly Attempt[]> {
-    const rows = await this.db.query.attempts.findMany({
-      where: eq(attempts.userId, userId),
-      orderBy: desc(attempts.answeredAt),
-      limit,
-    });
+  ): Promise<readonly RecentAttempt[]> {
+    const rows = await this.db
+      .select({
+        id: attempts.id,
+        userId: attempts.userId,
+        questionId: attempts.questionId,
+        practiceSessionId: attempts.practiceSessionId,
+        selectedChoiceId: attempts.selectedChoiceId,
+        isCorrect: attempts.isCorrect,
+        timeSpentSeconds: attempts.timeSpentSeconds,
+        answeredAt: attempts.answeredAt,
+        sessionMode: practiceSessions.mode,
+      })
+      .from(attempts)
+      .leftJoin(
+        practiceSessions,
+        eq(attempts.practiceSessionId, practiceSessions.id),
+      )
+      .where(eq(attempts.userId, userId))
+      .orderBy(desc(attempts.answeredAt), desc(attempts.id))
+      .limit(limit);
 
-    return rows.map((row) => this.toDomain(row));
+    return rows.map((row) => this.toRecentAttempt(row));
   }
 
   async listAnsweredAtByUserIdSince(
@@ -220,8 +254,14 @@ export class DrizzleAttemptRepository implements AttemptRepository {
       .select({
         questionId: latestAttemptRows.questionId,
         answeredAt: latestAttemptRows.answeredAt,
+        sessionId: latestAttemptRows.practiceSessionId,
+        sessionMode: practiceSessions.mode,
       })
       .from(latestAttemptRows)
+      .leftJoin(
+        practiceSessions,
+        eq(latestAttemptRows.practiceSessionId, practiceSessions.id),
+      )
       .where(
         and(
           eq(latestAttemptRows.attemptRank, 1),
@@ -238,7 +278,12 @@ export class DrizzleAttemptRepository implements AttemptRepository {
     const result: MissedQuestionAttempt[] = [];
     for (const row of rows) {
       if (!row.answeredAt) continue;
-      result.push({ questionId: row.questionId, answeredAt: row.answeredAt });
+      result.push({
+        questionId: row.questionId,
+        answeredAt: row.answeredAt,
+        sessionId: row.sessionId,
+        sessionMode: row.sessionMode,
+      });
     }
 
     return result;

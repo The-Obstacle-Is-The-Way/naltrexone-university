@@ -15,6 +15,8 @@ export type GetMissedQuestionsInput = {
 export type AvailableMissedQuestionRow = {
   isAvailable: true;
   questionId: string;
+  sessionId: string | null;
+  sessionMode: 'tutor' | 'exam' | null;
   slug: string;
   stemMd: string;
   difficulty: QuestionDifficulty;
@@ -24,6 +26,8 @@ export type AvailableMissedQuestionRow = {
 export type UnavailableMissedQuestionRow = {
   isAvailable: false;
   questionId: string;
+  sessionId: string | null;
+  sessionMode: 'tutor' | 'exam' | null;
   lastAnsweredAt: string; // ISO
 };
 
@@ -77,6 +81,8 @@ export class GetMissedQuestionsUseCase {
       available: (missed, question): MissedQuestionRow => ({
         isAvailable: true,
         questionId: question.id,
+        sessionId: missed.sessionId,
+        sessionMode: missed.sessionMode,
         slug: question.slug,
         stemMd: question.stemMd,
         difficulty: question.difficulty,
@@ -85,6 +91,8 @@ export class GetMissedQuestionsUseCase {
       unavailable: (missed): MissedQuestionRow => ({
         isAvailable: false,
         questionId: missed.questionId,
+        sessionId: missed.sessionId,
+        sessionMode: missed.sessionMode,
         lastAnsweredAt: missed.answeredAt.toISOString(),
       }),
       logger: this.logger,

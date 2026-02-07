@@ -1,4 +1,4 @@
-import { and, eq, isNull } from 'drizzle-orm';
+import { and, eq, isNotNull, isNull, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { practiceSessions } from '@/db/schema';
 import {
@@ -301,6 +301,51 @@ export class DrizzlePracticeSessionRepository
       this.parseParams(row.paramsJson, 'INTERNAL_ERROR'),
     );
     return this.toDomain(row, params);
+  }
+
+  async findCompletedByUserId(userId: string, limit: number, offset: number) {
+    const [countRow] = await this.db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(practiceSessions)
+      .where(
+        and(
+          eq(practiceSessions.userId, userId),
+          isNotNull(practiceSessions.endedAt),
+        ),
+      );
+    const total = countRow?.count ?? 0;
+
+    const normalizedLimit = Number.isFinite(limit) ? Math.floor(limit) : 0;
+    const normalizedOffset = Number.isFinite(offset) ? Math.floor(offset) : 0;
+    const safeLimit = Math.max(0, normalizedLimit);
+    const safeOffset = Math.max(0, normalizedOffset);
+
+    if (safeLimit === 0 || total === 0) {
+      return { rows: [], total };
+    }
+
+    const rows = await this.db.query.practiceSessions.findMany({
+      where: and(
+        eq(practiceSessions.userId, userId),
+        isNotNull(practiceSessions.endedAt),
+      ),
+      orderBy: (table, { desc }) => [
+        desc(table.endedAt),
+        desc(table.startedAt),
+      ],
+      limit: safeLimit,
+      offset: safeOffset,
+    });
+
+    return {
+      rows: rows.map((row) => {
+        const params = this.normalizeParams(
+          this.parseParams(row.paramsJson, 'INTERNAL_ERROR'),
+        );
+        return this.toDomain(row, params);
+      }),
+      total,
+    };
   }
 
   async create(input: {
