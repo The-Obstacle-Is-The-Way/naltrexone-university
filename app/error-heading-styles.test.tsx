@@ -34,49 +34,62 @@ describe('app error heading styles', () => {
 
     const errorComponents = [
       {
+        name: 'AppError',
         html: renderToStaticMarkup(<AppError {...ERROR_PROPS} />),
         headingClass: 'text-xl font-semibold text-foreground',
       },
       {
+        name: 'GlobalError',
         html: renderToStaticMarkup(<GlobalError {...ERROR_PROPS} />),
         headingClass: 'text-2xl font-bold text-foreground',
       },
       {
+        name: 'PricingError',
         html: renderToStaticMarkup(<PricingError {...ERROR_PROPS} />),
         headingClass: 'text-xl font-semibold text-foreground',
       },
       {
+        name: 'CheckoutSuccessError',
         html: renderToStaticMarkup(<CheckoutSuccessError {...ERROR_PROPS} />),
         headingClass: 'text-xl font-semibold text-foreground',
       },
       {
+        name: 'DashboardError',
         html: renderToStaticMarkup(<DashboardError {...ERROR_PROPS} />),
         headingClass: 'text-xl font-semibold text-foreground',
       },
       {
+        name: 'BillingError',
         html: renderToStaticMarkup(<BillingError {...ERROR_PROPS} />),
         headingClass: 'text-xl font-semibold text-foreground',
       },
       {
+        name: 'PracticeError',
         html: renderToStaticMarkup(<PracticeError {...ERROR_PROPS} />),
         headingClass: 'text-xl font-semibold text-foreground',
       },
       {
+        name: 'BookmarksError',
         html: renderToStaticMarkup(<BookmarksError {...ERROR_PROPS} />),
         headingClass: 'text-xl font-semibold text-foreground',
       },
       {
+        name: 'ReviewError',
         html: renderToStaticMarkup(<ReviewError {...ERROR_PROPS} />),
         headingClass: 'text-xl font-semibold text-foreground',
       },
       {
+        name: 'QuestionError',
         html: renderToStaticMarkup(<QuestionError {...ERROR_PROPS} />),
         headingClass: 'text-xl font-semibold text-foreground',
       },
     ];
 
     for (const item of errorComponents) {
-      expect(item.html).toContain(item.headingClass);
+      expect(
+        item.html,
+        `${item.name} should contain heading class "${item.headingClass}"`,
+      ).toContain(item.headingClass);
     }
   });
 });

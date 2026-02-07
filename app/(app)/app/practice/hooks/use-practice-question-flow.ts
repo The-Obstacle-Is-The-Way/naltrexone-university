@@ -72,7 +72,7 @@ export function usePracticeQuestionFlow(
   >(null);
   const [bookmarkIdempotencyKey, setBookmarkIdempotencyKey] = useState<
     string | null
-  >(() => crypto.randomUUID());
+  >(null);
   const latestQuestionRequestId = useRef(0);
   const isMounted = useIsMounted();
 

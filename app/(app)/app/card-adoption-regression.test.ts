@@ -19,7 +19,8 @@ function collectTsxFilesRecursively(directoryPath: string): string[] {
     if (
       entry.isFile() &&
       fullPath.endsWith('.tsx') &&
-      !fullPath.endsWith('.test.tsx')
+      !fullPath.endsWith('.test.tsx') &&
+      !fullPath.endsWith('.browser.spec.tsx')
     ) {
       files.push(fullPath);
     }

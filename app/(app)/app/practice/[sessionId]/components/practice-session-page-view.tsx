@@ -72,9 +72,7 @@ export function PracticeSessionPageView(props: PracticeSessionPageViewProps) {
   if (reviewLoadState.status === 'error' && !review) {
     return (
       <div className="space-y-4">
-        <ErrorCard className="border-border bg-card p-6">
-          {reviewLoadState.message}
-        </ErrorCard>
+        <ErrorCard className="p-6">{reviewLoadState.message}</ErrorCard>
         <div className="flex flex-wrap gap-3">
           <Button
             type="button"

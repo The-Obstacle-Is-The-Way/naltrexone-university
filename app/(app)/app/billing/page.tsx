@@ -140,11 +140,7 @@ export function BillingPageView(props: BillingPageViewProps) {
         </p>
       </div>
 
-      {banner ? (
-        <ErrorCard className="border-border bg-card text-destructive">
-          {banner.message}
-        </ErrorCard>
-      ) : null}
+      {banner ? <ErrorCard className="p-6">{banner.message}</ErrorCard> : null}
 
       <BillingContent {...contentProps} />
     </div>

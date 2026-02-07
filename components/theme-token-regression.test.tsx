@@ -130,9 +130,8 @@ describe('theme token regression', () => {
     expect(feedbackHtml).not.toContain('red-');
   });
 
-  it('uses semantic warning and success tokens in billing and pricing UI', async () => {
+  it('uses semantic warning tokens in billing cancellation banner', async () => {
     const { BillingContent } = await import('@/app/(app)/app/billing/page');
-    const { PricingView } = await import('@/app/pricing/pricing-view');
 
     const billingHtml = renderToStaticMarkup(
       <BillingContent
@@ -150,6 +149,14 @@ describe('theme token regression', () => {
       />,
     );
 
+    expect(billingHtml).toContain('border-warning');
+    expect(billingHtml).toContain('bg-warning');
+    expect(billingHtml).not.toContain('amber-');
+  });
+
+  it('uses semantic success tokens in pricing savings label', async () => {
+    const { PricingView } = await import('@/app/pricing/pricing-view');
+
     const pricingHtml = renderToStaticMarkup(
       <PricingView
         isEntitled={false}
@@ -158,10 +165,6 @@ describe('theme token regression', () => {
         subscribeAnnualAction={async () => undefined}
       />,
     );
-
-    expect(billingHtml).toContain('border-warning');
-    expect(billingHtml).toContain('bg-warning');
-    expect(billingHtml).not.toContain('amber-');
 
     expect(pricingHtml).toContain('text-success');
     expect(pricingHtml).not.toContain('emerald-');

@@ -53,9 +53,9 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 | [DEBT-151](../_archive/debt/debt-151-no-toast-notification-system.md) | No Toast/Notification System | P3 | 2026-02-07 |
 | [DEBT-150](../_archive/debt/debt-150-navigation-links-missing-transitions-hover.md) | Navigation Links Missing Transitions and Hover States | P3 | 2026-02-07 |
 | [DEBT-149](../_archive/debt/debt-149-heading-typography-system-inconsistent.md) | Heading Typography System Inconsistent | P2 | 2026-02-07 |
-| [DEBT-145](../_archive/debt/debt-145-shadcn-card-input-components-never-used.md) | Shadcn Card Adoption Is Incomplete Across App Pages | P2 | 2026-02-07 |
 | [DEBT-147](../_archive/debt/debt-147-error-state-ui-duplicated-across-pages.md) | Error State UI Duplicated Across 9+ Pages | P2 | 2026-02-07 |
 | [DEBT-146](../_archive/debt/debt-146-missing-semantic-success-warning-tokens.md) | Missing Semantic Success/Warning Color Tokens | P2 | 2026-02-07 |
+| [DEBT-145](../_archive/debt/debt-145-shadcn-card-input-components-never-used.md) | Shadcn Card Adoption Is Incomplete Across App Pages | P2 | 2026-02-07 |
 | [DEBT-144](../_archive/debt/debt-144-hardcoded-colors-bypass-design-system.md) | Hardcoded Colors Bypass Design System Tokens | P2 | 2026-02-07 |
 | [DEBT-138](../_archive/debt/debt-138-dead-modules-and-unused-dependencies.md) | Dead Modules and Unused Dependencies After Refactors | P3 | 2026-02-07 |
 | [DEBT-141](../_archive/debt/debt-141-practice-hook-tests-emit-react-act-warnings.md) | Migrate Practice Hook Tests from renderLiveHook to Browser Mode | P2 | 2026-02-07 |

@@ -12,7 +12,7 @@ The report claimed a circular dependency between `practice-page-logic.ts` and `p
 
 ## Root Cause
 
-This report was stale on current `dev`. `PracticeFilters` had already been extracted to a shared types module, removing the cycle candidate:
+This report was stale; the issue had already been resolved on the current `dev` branch. `PracticeFilters` had already been extracted to a shared types module, removing the cycle candidate:
 
 - `app/(app)/app/practice/practice-page-types.ts`
 - `app/(app)/app/practice/practice-page-logic.ts`

@@ -8,7 +8,7 @@ vi.mock('next/link', () => ({
 }));
 
 describe('PracticeView', () => {
-  it('applies transition-colors to the Back to Dashboard utility link', async () => {
+  it('renders Back to Dashboard link with correct href', async () => {
     const { PracticeView } = await import('./practice-view');
 
     const html = renderToStaticMarkup(

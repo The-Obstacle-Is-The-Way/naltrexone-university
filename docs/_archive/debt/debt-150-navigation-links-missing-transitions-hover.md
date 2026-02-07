@@ -61,7 +61,8 @@ Text-based navigation links often change color on hover but omit `transition-col
    - `app/(app)/app/questions/[slug]/question-page-client.test.tsx`
 
 Recommended standard for text links in the app:
-```
+
+```tsx
 className="text-muted-foreground transition-colors hover:text-foreground"
 ```
 

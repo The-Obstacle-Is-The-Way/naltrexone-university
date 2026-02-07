@@ -220,9 +220,7 @@ export function renderDashboard(result: ActionResult<UserStatsOutput>) {
           </h1>
           <p className="mt-1 text-muted-foreground">Unable to load stats.</p>
         </div>
-        <ErrorCard className="border-border bg-card p-6 text-muted-foreground">
-          {result.error.message}
-        </ErrorCard>
+        <ErrorCard className="p-6">{result.error.message}</ErrorCard>
         <Button asChild className="rounded-full">
           <Link href={ROUTES.APP_PRACTICE}>Go to Practice</Link>
         </Button>

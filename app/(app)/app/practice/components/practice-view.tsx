@@ -100,7 +100,7 @@ export function PracticeView(props: PracticeViewProps) {
       </div>
 
       {props.loadState.status === 'error' ? (
-        <ErrorCard className="border-border bg-card p-6">
+        <ErrorCard className="p-6">
           <div>{props.loadState.message}</div>
           <div className="mt-4 flex flex-wrap items-center gap-3">
             <Button type="button" variant="outline" onClick={props.onTryAgain}>

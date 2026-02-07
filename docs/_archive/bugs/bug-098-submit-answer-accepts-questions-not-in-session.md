@@ -25,7 +25,7 @@
 `submit-answer.ts` performed no explicit question-membership guard after loading session ownership. Attempt insertion happened for any owned session, including ended sessions where `recordQuestionAnswer` is intentionally skipped.
 
 **File:** `src/application/use-cases/submit-answer.ts`
-**Lines:** 67-86
+**Lines:** 71-84
 
 ## Fix
 

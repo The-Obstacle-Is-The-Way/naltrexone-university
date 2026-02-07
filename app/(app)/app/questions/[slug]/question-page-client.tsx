@@ -58,7 +58,7 @@ export function QuestionView(props: QuestionViewProps) {
       </div>
 
       {props.loadState.status === 'error' ? (
-        <ErrorCard className="border-border bg-card p-6">
+        <ErrorCard className="p-6">
           <div>{props.loadState.message}</div>
           <Button
             type="button"
