@@ -68,6 +68,6 @@ Covered behaviors now include:
 
 ## Related
 
-- `docs/bugs/bug-085-out-of-order-question-load-overwrites-current-state.md`
-- `docs/bugs/bug-086-session-history-drilldown-race-overwrites-selected-session.md`
-- `docs/bugs/bug-087-practice-tag-load-throw-stalls-page.md`
+- `docs/_archive/bugs/bug-085-out-of-order-question-load-overwrites-current-state.md`
+- `docs/_archive/bugs/bug-086-session-history-drilldown-race-overwrites-selected-session.md`
+- `docs/_archive/bugs/bug-087-practice-tag-load-throw-stalls-page.md`

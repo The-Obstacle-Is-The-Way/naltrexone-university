@@ -38,8 +38,8 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 | ID | Title | Priority | Resolved |
 |----|-------|----------|----------|
-| [DEBT-135](debt-135-rate-limit-client-ip-trust-boundary-hardening.md) | Rate-Limit Client IP Trust Boundary Is Not Explicitly Hardened | P2 | 2026-02-07 |
-| [DEBT-134](debt-134-practice-hook-tests-are-contract-only.md) | Practice Hook Tests Are Contract-Only (Behavior Gaps) | P1 | 2026-02-07 |
+| [DEBT-135](../_archive/debt/debt-135-rate-limit-client-ip-trust-boundary-hardening.md) | Rate-Limit Client IP Trust Boundary Is Not Explicitly Hardened | P2 | 2026-02-07 |
+| [DEBT-134](../_archive/debt/debt-134-practice-hook-tests-are-contract-only.md) | Practice Hook Tests Are Contract-Only (Behavior Gaps) | P1 | 2026-02-07 |
 | [DEBT-132](../_archive/debt/debt-132-missing-practice-hook-tests.md) | Missing Tests for 6 Extracted Practice Hooks (SPEC-020) | P1 | 2026-02-07 |
 | [DEBT-131](../_archive/debt/debt-131-missing-use-case-error-path-tests.md) | Missing Error Path Tests for 6 Use Cases | P2 | 2026-02-07 |
 | [DEBT-130](../_archive/debt/debt-130-missing-suspense-boundary-app-layout.md) | Missing Suspense Boundary in App Layout | P3 | 2026-02-07 |
