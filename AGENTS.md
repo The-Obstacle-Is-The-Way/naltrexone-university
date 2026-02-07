@@ -23,14 +23,19 @@ expect(html).toContain('Expected text');
 
 ### Why:
 - `@testing-library/react` has a [known bug](https://github.com/testing-library/react-testing-library/issues/1392) with React 19 + Vitest — **no fix coming**
-- `vitest-browser-react` has the **same bug** — it's not a replacement
 - Git hooks and CI load production builds where `act()` is undefined
 - `renderToStaticMarkup` is a stable first-party React API that works everywhere
 
-### DO NOT USE for component tests:
+### DO NOT USE for jsdom component tests:
+
 - `@testing-library/react` — broken, zombie maintenance
-- `vitest-browser-react` — intended successor, but has act() bug with suspense (use when fixed)
 - `react-test-renderer` — deprecated in React 19
+
+### Browser Mode for async hooks / interactive UI:
+
+- Use `vitest-browser-react` in `*.browser.spec.tsx`
+- Run with `pnpm test:browser`
+- This is the approved replacement for async hook/interaction tests (see DEBT-141 resolution)
 
 ### Full details: `docs/dev/react-vitest-testing.md`
 
@@ -109,7 +114,7 @@ See Robert C. Martin (Uncle Bob) - Clean Code, Clean Architecture, TDD principle
 ## Setup
 
 ```bash
-# Requirements: Node >=20.9.0, pnpm
+# Requirements: Node >=20.19.0, pnpm
 pnpm install                # Install dependencies
 cp .env.example .env.local  # Create env file (never commit .env.local)
 # Set DATABASE_URL, Clerk keys, and Stripe keys in .env.local
@@ -404,6 +409,13 @@ vi.mock('@clerk/nextjs', () => ({
 // ✅ OK - Next.js internals
 vi.mock('next/link', () => ({ default: (props) => <a {...props} /> }));
 vi.mock('server-only', () => ({}));
+
+// ✅ OK - Browser Mode: sealed ESM namespaces (vi.spyOn won't work)
+// Server-action controllers can't be dependency-injected into React hooks.
+// Use { spy: true } to wrap exports as spies without replacing them.
+// { spy: true } preserves unstubbed real exports; factory mocks replace all exports.
+vi.mock('@/src/adapters/controllers/practice-controller', { spy: true });
+vi.mocked(practiceController.getSessionHistory).mockResolvedValue(ok({...}));
 ```
 
 **Why Fakes > Inline vi.fn():**

@@ -17,11 +17,7 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 | ID | Title | Status | Priority | Date |
 |----|-------|--------|----------|------|
-| [DEBT-141](debt-141-practice-hook-tests-emit-react-act-warnings.md) | Migrate Practice Hook Tests from renderLiveHook to Browser Mode | Open | P2 | 2026-02-07 |
-| [DEBT-142](debt-142-spec-020-practice-file-line-cap-regression.md) | SPEC-020 Line-Cap Regression in Practice Page Logic | Open | P2 | 2026-02-07 |
-| [DEBT-143](debt-143-practice-ui-components-missing-browser-specs.md) | Practice UI Components Missing Browser Specs (7 components, 0% coverage) | Open | P2 | 2026-02-07 |
 | [DEBT-136](debt-136-dunning-grace-period-for-past-due-subscribers.md) | Dunning Grace Period for Past-Due Subscribers | Open | P3 | 2026-02-07 |
-| [DEBT-138](debt-138-dead-modules-and-unused-dependencies.md) | Dead Modules and Unused Dependencies After Refactors | Open | P3 | 2026-02-07 |
 | [DEBT-140](debt-140-request-correlation-not-wired-into-runtime-logs.md) | Request Correlation Not Wired (Blocked by SPEC-016) | Open | P3 | 2026-02-07 |
 
 **Next Debt ID:** DEBT-144
@@ -50,6 +46,10 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 | ID | Title | Priority | Resolved |
 |----|-------|----------|----------|
+| [DEBT-138](../_archive/debt/debt-138-dead-modules-and-unused-dependencies.md) | Dead Modules and Unused Dependencies After Refactors | P3 | 2026-02-07 |
+| [DEBT-141](../_archive/debt/debt-141-practice-hook-tests-emit-react-act-warnings.md) | Migrate Practice Hook Tests from renderLiveHook to Browser Mode | P2 | 2026-02-07 |
+| [DEBT-142](../_archive/debt/debt-142-spec-020-practice-file-line-cap-regression.md) | SPEC-020 Line-Cap Regression in Practice Page Logic | P2 | 2026-02-07 |
+| [DEBT-143](../_archive/debt/debt-143-practice-ui-components-missing-browser-specs.md) | Practice UI Components Missing Browser Specs | P2 | 2026-02-07 |
 | [DEBT-135](../_archive/debt/debt-135-rate-limit-client-ip-trust-boundary-hardening.md) | Rate-Limit Client IP Trust Boundary Is Not Explicitly Hardened | P2 | 2026-02-07 |
 | [DEBT-134](../_archive/debt/debt-134-practice-hook-tests-are-contract-only.md) | Practice Hook Tests Are Contract-Only (Behavior Gaps) | P1 | 2026-02-07 |
 | [DEBT-132](../_archive/debt/debt-132-missing-practice-hook-tests.md) | Missing Tests for 6 Extracted Practice Hooks (SPEC-020) | P1 | 2026-02-07 |

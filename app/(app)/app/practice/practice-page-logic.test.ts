@@ -1,4 +1,6 @@
 // @vitest-environment jsdom
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 import {
   canSubmitAnswer,
@@ -22,6 +24,18 @@ import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answ
 import { createDeferred } from '@/tests/test-helpers/create-deferred';
 
 describe('practice-page-logic', () => {
+  it('keeps practice-page-logic.ts within the SPEC-020 line cap', () => {
+    const filePath = path.resolve(
+      process.cwd(),
+      'app/(app)/app/practice/practice-page-logic.ts',
+    );
+    const lineCount = readFileSync(filePath, 'utf8')
+      .trimEnd()
+      .split('\n').length;
+
+    expect(lineCount).toBeLessThanOrEqual(300);
+  });
+
   describe('canSubmitAnswer', () => {
     it('returns true when question is loaded, choice is selected, and not loading', () => {
       expect(
@@ -335,7 +349,8 @@ describe('practice-page-logic', () => {
       expect(setBookmarkedQuestionIds).toHaveBeenCalledWith(
         new Set(['q_1', 'q_2']),
       );
-      expect(setBookmarkStatus).toHaveBeenCalledWith('idle');
+      expect(setBookmarkStatus).toHaveBeenNthCalledWith(1, 'loading');
+      expect(setBookmarkStatus).toHaveBeenNthCalledWith(2, 'idle');
 
       cleanup();
     });
@@ -501,7 +516,8 @@ describe('practice-page-logic', () => {
       await Promise.resolve();
 
       expect(setBookmarkedQuestionIds).not.toHaveBeenCalled();
-      expect(setBookmarkStatus).not.toHaveBeenCalled();
+      expect(setBookmarkStatus).toHaveBeenCalledTimes(1);
+      expect(setBookmarkStatus).toHaveBeenCalledWith('loading');
     });
 
     it('sets error state when getBookmarksFn throws', async () => {
