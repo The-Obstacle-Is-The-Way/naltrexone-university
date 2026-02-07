@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { describe, expect, it } from 'vitest';
+import { ApplicationError } from '@/src/application/errors';
 import { createAttempt, createQuestion } from '@/src/domain/test-helpers';
 import {
   FakeAttemptRepository,
@@ -179,6 +180,24 @@ describe('GetUserStatsUseCase', () => {
           sessionMode: 'exam',
         },
       ],
+    });
+  });
+
+  it('propagates repository failures when stats queries fail', async () => {
+    const attempts = new FakeAttemptRepository([]);
+    attempts.countByUserId = async () => {
+      throw new ApplicationError('INTERNAL_ERROR', 'Stats unavailable');
+    };
+
+    const useCase = new GetUserStatsUseCase(
+      attempts,
+      new FakeQuestionRepository([]),
+      new FakeLogger(),
+      () => new Date('2026-02-01T12:00:00Z'),
+    );
+
+    await expect(useCase.execute({ userId: 'user-1' })).rejects.toMatchObject({
+      code: 'INTERNAL_ERROR',
     });
   });
 });

@@ -1,8 +1,9 @@
 # DEBT-130: Missing Suspense Boundary in App Layout
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P3
 **Date:** 2026-02-06
+**Resolved:** 2026-02-07
 
 ---
 
@@ -21,8 +22,9 @@ Wrap `{children}` in a Suspense boundary with a minimal loading fallback.
 
 ## Verification
 
-- [ ] Layout has Suspense boundary around children
-- [ ] All existing pages render correctly
+- [x] Layout has Suspense boundary around children (`app/(app)/app/layout.tsx`)
+- [x] Suspense fallback is covered by test (`app/(app)/app/layout-shell.test.tsx`)
+- [x] All existing pages/tests render correctly (`pnpm typecheck && pnpm lint && pnpm test --run`)
 
 ## Related
 

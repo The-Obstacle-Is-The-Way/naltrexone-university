@@ -2,6 +2,8 @@
 
 Repository guidelines for AI coding agents (Codex CLI, Claude Code, etc.) working with this codebase.
 
+> **Parallel with CLAUDE.md** — All shared sections are identical to `CLAUDE.md`. Agent-specific additions are clearly marked.
+
 ---
 
 ## ⚠️ CRITICAL: React 19 + Vitest Testing Requirements
@@ -21,26 +23,20 @@ expect(html).toContain('Expected text');
 
 ### Why:
 - `@testing-library/react` has a [known bug](https://github.com/testing-library/react-testing-library/issues/1392) with React 19 + Vitest — **no fix coming**
+- `vitest-browser-react` has the **same bug** — it's not a replacement
 - Git hooks and CI load production builds where `act()` is undefined
 - `renderToStaticMarkup` is a stable first-party React API that works everywhere
 
 ### DO NOT USE for component tests:
 - `@testing-library/react` — broken, zombie maintenance
+- `vitest-browser-react` — intended successor, but has act() bug with suspense (use when fixed)
 - `react-test-renderer` — deprecated in React 19
 
 ### Full details: `docs/dev/react-vitest-testing.md`
 
-### Interactive UI tests (Browser Mode)
-
-For click/state/effect tests, use Vitest Browser Mode + `vitest-browser-react`:
-
-- File naming: `*.browser.spec.tsx`
-- Command: `pnpm test:browser`
-- Config: `vitest.browser.config.ts`
-
 ---
 
-## ⚠️ SLOT PROTECTION: Understand Before Changing
+## ⚠️ AGENT-SPECIFIC: Slot Protection — Understand Before Changing
 
 **BEFORE writing ANY code, you MUST study existing codebase patterns.**
 
@@ -154,7 +150,6 @@ pnpm typecheck              # TypeScript type checking
 # Testing
 pnpm test                   # Unit tests (Vitest, watch mode)
 pnpm test --run             # Unit tests (single run, CI-style)
-pnpm test:browser           # Interactive component tests (Vitest Browser Mode)
 pnpm test:integration       # Integration tests (uses .env.test, requires local DB)
 pnpm test:e2e               # E2E tests (Playwright)
 
@@ -206,14 +201,18 @@ app/, lib/, db/    → Next.js framework code, infrastructure (outermost layer)
 
 ### Current State
 
-Implemented so far:
-- `src/domain/entities/**` + tests (SPEC-001)
-- `src/domain/value-objects/**` + tests (SPEC-002)
+Implemented so far (see `docs/specs/index.md`):
+- **Domain:** entities, value objects, services, errors (`src/domain/**`) (SPEC-001 → SPEC-003)
+- **Application:** ports, core use cases, app errors (`src/application/**`) (SPEC-004 → SPEC-005)
+- **Adapters:** schema, repositories, gateways, controllers (`db/schema.ts`, `src/adapters/**`) (SPEC-006 → SPEC-010)
+- **Feature slices:** paywall + core question loop (`app/**`, `components/**`) (SPEC-011 → SPEC-012)
 
-Planned (per `docs/specs/master_spec.md` + ADR-012):
-- `src/domain/services/**`, `src/domain/errors/**`
-- `src/application/**` (use cases, ports, app errors)
-- `src/adapters/**` (repositories, gateways, controllers)
+Planned next (per `docs/specs/master_spec.md` + ADR-012):
+- SPEC-013 Practice Sessions
+- SPEC-014 Review + Bookmarks
+- SPEC-015 Dashboard
+- SPEC-016 Observability (partial)
+- SPEC-017 Rate Limiting (proposed)
 
 Framework code lives in:
 - `app/` - Next.js App Router pages, layouts, API routes
@@ -233,7 +232,7 @@ Framework code lives in:
 
 4. **Composition root** - Dependencies wired at entry points (Server Actions, Route Handlers), not global singletons.
 
-See `docs/adr/` for all Architecture Decision Records (ADR-001 through ADR-012).
+See `docs/adr/` for all Architecture Decision Records (ADR-001 through ADR-013).
 
 ## Tech Stack
 
@@ -468,6 +467,8 @@ git stash -m "Preserving work from another session"
 
 **Never assume uncommitted work is garbage. It's almost always intentional.**
 
+**When in doubt:** `git stash` to preserve work, then ask the user.
+
 ---
 
 ## ⚠️ MANDATORY: CodeRabbit Review Before Merge
@@ -513,12 +514,12 @@ gh pr view <PR_NUMBER> --comments
 
 - `docs/specs/master_spec.md` - Complete technical specification (SSOT)
 - `docs/specs/spec-001 to spec-010` - Clean Architecture layer specs
-- `docs/specs/spec-011 to spec-015` - Feature slice specs
-- `docs/adr/` - Architecture Decision Records (ADR-001 through ADR-012)
+- `docs/specs/spec-011 to spec-017` - Feature slice specs
+- `docs/adr/` - Architecture Decision Records (ADR-001 through ADR-013)
 
 ---
 
-## Quick Reference: Slot Protection Checklist
+## ⚠️ AGENT-SPECIFIC: Quick Reference — Slot Protection Checklist
 
 Before writing ANY code, verify you can answer:
 

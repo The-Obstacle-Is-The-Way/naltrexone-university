@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
+import { Suspense } from 'react';
 import { AppDesktopNav } from '@/components/app-desktop-nav';
 import { AuthNav } from '@/components/auth-nav';
 import { MobileNav } from '@/components/mobile-nav';
@@ -76,7 +77,15 @@ export function AppLayoutShell({
         </div>
       </header>
       <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        {children}
+        <Suspense
+          fallback={
+            <p className="text-sm text-muted-foreground">
+              Loading app content…
+            </p>
+          }
+        >
+          {children}
+        </Suspense>
       </main>
     </div>
   );

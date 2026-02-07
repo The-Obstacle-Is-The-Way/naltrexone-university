@@ -1,0 +1,1 @@
+CREATE INDEX "practice_sessions_user_ended_at_idx" ON "practice_sessions" USING btree ("user_id","ended_at" DESC);

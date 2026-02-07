@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { ApplicationError } from '@/src/application/errors';
 import { createPracticeSession } from '@/src/domain/test-helpers';
 import { FakePracticeSessionRepository } from '../test-helpers/fakes';
 import { GetSessionHistoryUseCase } from './get-session-history';
@@ -125,6 +126,46 @@ describe('GetSessionHistoryUseCase', () => {
       total: 2,
       limit: 10,
       offset: 0,
+    });
+  });
+
+  it('skips rows with missing endedAt even if a repository implementation returns them', async () => {
+    const sessionWithMissingEnd = createPracticeSession({
+      id: 'session-bad',
+      userId: 'user-1',
+      endedAt: null,
+    });
+
+    const sessions = new FakePracticeSessionRepository([]);
+    sessions.findCompletedByUserId = async () => ({
+      rows: [sessionWithMissingEnd],
+      total: 1,
+    });
+
+    const useCase = new GetSessionHistoryUseCase(sessions);
+
+    await expect(
+      useCase.execute({ userId: 'user-1', limit: 10, offset: 0 }),
+    ).resolves.toEqual({
+      rows: [],
+      total: 1,
+      limit: 10,
+      offset: 0,
+    });
+  });
+
+  it('propagates repository failures', async () => {
+    const sessions = new FakePracticeSessionRepository([]);
+    sessions.findCompletedByUserId = async () => {
+      throw new ApplicationError('INTERNAL_ERROR', 'Failed query');
+    };
+
+    const useCase = new GetSessionHistoryUseCase(sessions);
+
+    await expect(
+      useCase.execute({ userId: 'user-1', limit: 10, offset: 0 }),
+    ).rejects.toMatchObject({
+      code: 'INTERNAL_ERROR',
     });
   });
 });

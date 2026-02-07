@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { ApplicationError } from '@/src/application/errors';
 import { FakePracticeSessionRepository } from '@/src/application/test-helpers/fakes';
 import { createPracticeSession } from '@/src/domain/test-helpers';
 import { GetIncompletePracticeSessionUseCase } from './get-incomplete-practice-session';
@@ -74,6 +75,19 @@ describe('GetIncompletePracticeSessionUseCase', () => {
       answeredCount: 1,
       totalCount: 4,
       startedAt: '2026-02-05T09:00:00.000Z',
+    });
+  });
+
+  it('propagates repository failures', async () => {
+    const sessions = new FakePracticeSessionRepository([]);
+    sessions.findLatestIncompleteByUserId = async () => {
+      throw new ApplicationError('INTERNAL_ERROR', 'DB unavailable');
+    };
+
+    const useCase = new GetIncompletePracticeSessionUseCase(sessions);
+
+    await expect(useCase.execute({ userId: 'user-1' })).rejects.toMatchObject({
+      code: 'INTERNAL_ERROR',
     });
   });
 });

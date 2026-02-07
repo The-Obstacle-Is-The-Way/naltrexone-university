@@ -17,12 +17,10 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 | ID | Title | Status | Priority | Date |
 |----|-------|--------|----------|------|
-| [DEBT-132](debt-132-missing-practice-hook-tests.md) | Missing Tests for 6 Extracted Practice Hooks (SPEC-020) | Open | P1 | 2026-02-06 |
-| [DEBT-131](debt-131-missing-use-case-error-path-tests.md) | Missing Error Path Tests for 6 Use Cases | Open | P2 | 2026-02-06 |
-| [DEBT-130](debt-130-missing-suspense-boundary-app-layout.md) | Missing Suspense Boundary in App Layout | Open | P3 | 2026-02-06 |
-| [DEBT-127](debt-127-missing-practice-sessions-ended-at-index.md) | Missing Index on practice_sessions (userId, endedAt) | Open | P2 | 2026-02-06 |
+| [DEBT-134](debt-134-practice-hook-tests-are-contract-only.md) | Practice Hook Tests Are Contract-Only (Behavior Gaps) | Open | P1 | 2026-02-07 |
+| [DEBT-135](debt-135-rate-limit-client-ip-trust-boundary-hardening.md) | Rate-Limit Client IP Trust Boundary Is Not Explicitly Hardened | Open | P2 | 2026-02-07 |
 
-**Next Debt ID:** DEBT-134
+**Next Debt ID:** DEBT-136
 
 ## Archived Debt
 
@@ -41,6 +39,10 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 | ID | Title | Priority | Resolved |
 |----|-------|----------|----------|
+| [DEBT-132](../_archive/debt/debt-132-missing-practice-hook-tests.md) | Missing Tests for 6 Extracted Practice Hooks (SPEC-020) | P1 | 2026-02-07 |
+| [DEBT-131](../_archive/debt/debt-131-missing-use-case-error-path-tests.md) | Missing Error Path Tests for 6 Use Cases | P2 | 2026-02-07 |
+| [DEBT-130](../_archive/debt/debt-130-missing-suspense-boundary-app-layout.md) | Missing Suspense Boundary in App Layout | P3 | 2026-02-07 |
+| [DEBT-127](../_archive/debt/debt-127-missing-practice-sessions-ended-at-index.md) | Missing Index on practice_sessions (userId, endedAt) | P2 | 2026-02-07 |
 | [DEBT-133](../_archive/debt/debt-133-idempotency-polling-timeout-message-misleading.md) | Idempotency Polling Timeout Message Is Misleading | P3 | 2026-02-07 |
 | [DEBT-129](../_archive/debt/debt-129-skip-clerk-production-safety.md) | NEXT_PUBLIC_SKIP_CLERK Has No Production Safety Guard | P1 | 2026-02-07 |
 | [DEBT-128](../_archive/debt/debt-128-bookmark-load-failure-not-shown-to-user.md) | Bookmark Load Failure Not Visible to User | P2 | 2026-02-07 |
