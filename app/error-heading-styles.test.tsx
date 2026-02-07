@@ -32,20 +32,51 @@ describe('app error heading styles', () => {
       await import('@/app/(app)/app/questions/[slug]/error')
     ).default;
 
-    const html = [
-      renderToStaticMarkup(<AppError {...ERROR_PROPS} />),
-      renderToStaticMarkup(<GlobalError {...ERROR_PROPS} />),
-      renderToStaticMarkup(<PricingError {...ERROR_PROPS} />),
-      renderToStaticMarkup(<CheckoutSuccessError {...ERROR_PROPS} />),
-      renderToStaticMarkup(<DashboardError {...ERROR_PROPS} />),
-      renderToStaticMarkup(<BillingError {...ERROR_PROPS} />),
-      renderToStaticMarkup(<PracticeError {...ERROR_PROPS} />),
-      renderToStaticMarkup(<BookmarksError {...ERROR_PROPS} />),
-      renderToStaticMarkup(<ReviewError {...ERROR_PROPS} />),
-      renderToStaticMarkup(<QuestionError {...ERROR_PROPS} />),
-    ].join('\n');
+    const errorComponents = [
+      {
+        html: renderToStaticMarkup(<AppError {...ERROR_PROPS} />),
+        headingClass: 'text-xl font-semibold text-foreground',
+      },
+      {
+        html: renderToStaticMarkup(<GlobalError {...ERROR_PROPS} />),
+        headingClass: 'text-2xl font-bold text-foreground',
+      },
+      {
+        html: renderToStaticMarkup(<PricingError {...ERROR_PROPS} />),
+        headingClass: 'text-xl font-semibold text-foreground',
+      },
+      {
+        html: renderToStaticMarkup(<CheckoutSuccessError {...ERROR_PROPS} />),
+        headingClass: 'text-xl font-semibold text-foreground',
+      },
+      {
+        html: renderToStaticMarkup(<DashboardError {...ERROR_PROPS} />),
+        headingClass: 'text-xl font-semibold text-foreground',
+      },
+      {
+        html: renderToStaticMarkup(<BillingError {...ERROR_PROPS} />),
+        headingClass: 'text-xl font-semibold text-foreground',
+      },
+      {
+        html: renderToStaticMarkup(<PracticeError {...ERROR_PROPS} />),
+        headingClass: 'text-xl font-semibold text-foreground',
+      },
+      {
+        html: renderToStaticMarkup(<BookmarksError {...ERROR_PROPS} />),
+        headingClass: 'text-xl font-semibold text-foreground',
+      },
+      {
+        html: renderToStaticMarkup(<ReviewError {...ERROR_PROPS} />),
+        headingClass: 'text-xl font-semibold text-foreground',
+      },
+      {
+        html: renderToStaticMarkup(<QuestionError {...ERROR_PROPS} />),
+        headingClass: 'text-xl font-semibold text-foreground',
+      },
+    ];
 
-    expect(html).toContain('text-2xl font-bold text-foreground');
-    expect(html).toContain('text-xl font-semibold text-foreground');
+    for (const item of errorComponents) {
+      expect(item.html).toContain(item.headingClass);
+    }
   });
 });

@@ -8,7 +8,7 @@
 
 ## Description
 
-DEBT-151 was resolved by building a custom 129-line `NotificationProvider` (`components/ui/notification-provider.tsx`) instead of adopting `shadcn/sonner`, the ecosystem-standard toast library. The custom implementation is clean, tested, and working — but it adds a maintenance surface that grows with each new consumer.
+DEBT-151 was resolved by building a custom `NotificationProvider` (`components/ui/notification-provider.tsx`) instead of adopting `shadcn/sonner`, the ecosystem-standard toast library. The custom implementation is clean, tested, and working — but it adds a maintenance surface that grows with each new consumer.
 
 This is a tracking item, not a defect. The decision was reasonable at the time (1 consumer, zero dependencies). It becomes debt if/when the toast system needs features that sonner provides out of the box.
 
@@ -25,6 +25,7 @@ This is a tracking item, not a defect. The decision was reasonable at the time (
 | Promise toasts | No | Yes |
 | Action buttons in toasts | No | Yes |
 | Undo support | No | Yes |
+| Queue safety | Capped to 50 notifications | Built-in queueing |
 
 ## Trigger for migration
 

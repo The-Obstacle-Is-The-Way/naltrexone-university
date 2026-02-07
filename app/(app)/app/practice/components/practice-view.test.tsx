@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
+import { ROUTES } from '@/lib/routes';
 
 vi.mock('next/link', () => ({
   default: (props: Record<string, unknown>) => <a {...props} />,
@@ -28,8 +29,7 @@ describe('PracticeView', () => {
       />,
     );
 
-    expect(html).toContain(
-      'text-sm font-medium text-muted-foreground transition-colors hover:text-foreground',
-    );
+    expect(html).toContain('Back to Dashboard');
+    expect(html).toContain(`href="${ROUTES.APP_DASHBOARD}"`);
   });
 });

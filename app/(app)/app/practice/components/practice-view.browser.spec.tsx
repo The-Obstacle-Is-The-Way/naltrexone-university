@@ -114,6 +114,7 @@ test('renders bookmark feedback in shared toast region', async () => {
         bookmarkStatus="idle"
         isBookmarked
         bookmarkMessage="Question bookmarked."
+        bookmarkMessageVersion={1}
         canSubmit={false}
         onTryAgain={() => undefined}
         onToggleBookmark={() => undefined}

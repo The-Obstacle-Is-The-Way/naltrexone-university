@@ -34,6 +34,8 @@ const NotificationContext = createContext<NotificationContextValue>({
   dismiss: () => undefined,
 });
 
+const MAX_NOTIFICATIONS = 50;
+
 function createNotificationId(): string {
   return (
     globalThis.crypto?.randomUUID?.() ??
@@ -77,7 +79,23 @@ export function NotificationProvider({
   const notify = useCallback(
     ({ message, tone = 'info', durationMs = 2500 }: NotifyInput) => {
       const id = createNotificationId();
-      setNotifications((prev) => [...prev, { id, message, tone }]);
+      setNotifications((prev) => {
+        const next = [...prev, { id, message, tone }];
+        if (next.length <= MAX_NOTIFICATIONS) {
+          return next;
+        }
+
+        const dropped = next.slice(0, next.length - MAX_NOTIFICATIONS);
+        for (const notification of dropped) {
+          const timer = timersRef.current.get(notification.id);
+          if (timer) {
+            clearTimeout(timer);
+            timersRef.current.delete(notification.id);
+          }
+        }
+
+        return next.slice(-MAX_NOTIFICATIONS);
+      });
 
       if (durationMs > 0) {
         const timer = setTimeout(() => dismiss(id), durationMs);

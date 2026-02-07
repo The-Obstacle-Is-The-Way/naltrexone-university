@@ -7,6 +7,7 @@ import {
   removeBookmarkAction,
   renderBookmarks,
 } from '@/app/(app)/app/bookmarks/page';
+import { ROUTES, toQuestionRoute } from '@/lib/routes';
 import { err, ok } from '@/src/adapters/controllers/action-result';
 import { getStemPreview } from '@/src/adapters/shared/stem-preview';
 
@@ -100,11 +101,10 @@ describe('app/(app)/app/bookmarks', () => {
     expect(html).toContain('easy');
     expect(html).toContain('Bookmarked 2026-02-01');
     expect(html).toContain('Reattempt');
-    expect(html).toContain('/app/questions/q-1');
+    expect(html).toContain(toQuestionRoute('q-1'));
     expect(html).toContain('Remove');
-    expect(html).toContain(
-      'text-sm font-medium text-muted-foreground transition-colors hover:text-foreground',
-    );
+    expect(html).toContain('Go to Practice');
+    expect(html).toContain(`href="${ROUTES.APP_PRACTICE}"`);
   });
 
   it('renders empty state when no bookmarks exist', () => {
@@ -169,7 +169,7 @@ describe('app/(app)/app/bookmarks', () => {
     ).resolves.toBeUndefined();
 
     expect(toggleBookmarkFn).toHaveBeenCalledWith({ questionId: 'q_1' });
-    expect(revalidatePathFn).toHaveBeenCalledWith('/app/bookmarks');
+    expect(revalidatePathFn).toHaveBeenCalledWith(ROUTES.APP_BOOKMARKS);
   });
 
   it('redirects when removeBookmarkAction is missing questionId', async () => {
@@ -182,7 +182,7 @@ describe('app/(app)/app/bookmarks', () => {
         },
       }),
     ).rejects.toMatchObject({
-      message: 'redirect:/app/bookmarks?error=missing_question_id',
+      message: `redirect:${ROUTES.APP_BOOKMARKS}?error=missing_question_id`,
     });
   });
 
@@ -199,7 +199,7 @@ describe('app/(app)/app/bookmarks', () => {
         },
       }),
     ).rejects.toMatchObject({
-      message: 'redirect:/app/bookmarks?error=toggle_failed',
+      message: `redirect:${ROUTES.APP_BOOKMARKS}?error=toggle_failed`,
     });
   });
 
@@ -216,7 +216,7 @@ describe('app/(app)/app/bookmarks', () => {
         },
       }),
     ).rejects.toMatchObject({
-      message: 'redirect:/app/bookmarks?error=remove_failed',
+      message: `redirect:${ROUTES.APP_BOOKMARKS}?error=remove_failed`,
     });
   });
 

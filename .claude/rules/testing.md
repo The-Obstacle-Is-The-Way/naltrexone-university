@@ -38,6 +38,13 @@ Use existing fakes from `src/application/test-helpers/fakes.ts`. NEVER use `vi.m
 3. Arrange-Act-Assert pattern
 4. Use factories: `createQuestion()`, `createChoice()` from `src/domain/test-helpers/`
 5. Descriptive names: `it('returns isCorrect=false when incorrect choice selected')`
+6. Prefer semantic assertions over exact utility-class strings
+
+### Styling Assertions
+
+- Prefer stable markers (`role`, visible text, `href`, `data-testid`) for UI tests.
+- Exact Tailwind class-string assertions are allowed only when the class itself encodes behavior (e.g. `sr-only`, breakpoint visibility, focus-ring presence, active-state tokens).
+- Avoid asserting full space-delimited class strings for purely presentational styles.
 
 ## Test Locations
 

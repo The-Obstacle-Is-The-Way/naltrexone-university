@@ -1,6 +1,6 @@
 # DEBT-153: Brittle CSS Class String Assertions in renderToStaticMarkup Tests
 
-**Status:** Open
+**Status:** In Progress
 **Priority:** P3
 **Date:** 2026-02-07
 
@@ -79,13 +79,24 @@ Browser mode tests (`*.browser.spec.tsx`) already use semantic selectors exclusi
 - Add a rule in `.claude/rules/testing.md` noting that class string assertions are acceptable for regression guards but should prefer `data-testid` for new tests
 - When tests break from a refactor, fix them then
 
+## Progress Update (2026-02-07)
+
+- Adopted **Option C** as the baseline policy: testing guidance now explicitly prefers semantic assertions over full utility-class string checks (`.claude/rules/testing.md`).
+- Paid down a high-fragility subset by replacing exact class-string assertions with semantic checks in:
+  - `app/(app)/app/bookmarks/page.test.tsx`
+  - `app/(app)/app/review/page.test.tsx`
+  - `app/(app)/app/practice/components/practice-view.test.tsx`
+  - `app/(app)/app/billing/page.test.tsx`
+  - `components/marketing/marketing-home.test.tsx`
+  - `app/error-heading-styles.test.tsx` (now per-component assertions)
+
 ## Verification
 
-- [ ] Decision made on resolution approach (A, B, or C)
+- [x] Decision made on resolution approach (A, B, or C)
 - [ ] If A: Presentational class assertions migrated to `data-testid` pattern
 - [ ] If B: Style-critical tests migrated to browser specs
-- [ ] If C: Testing rule updated to guide new test authors
-- [ ] No regressions in test suite
+- [x] If C: Testing rule updated to guide new test authors
+- [x] No regressions in test suite
 
 ## Related
 

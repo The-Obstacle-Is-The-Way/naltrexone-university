@@ -34,9 +34,6 @@ describe('components/marketing/marketing-home', () => {
       expect(html).toContain('Master Your');
       expect(html).toContain('Board Exams.');
       expect(html).toContain('<main id="main-content"');
-      expect(html).toContain(
-        'rounded-md text-muted-foreground transition-colors hover:text-foreground',
-      );
     },
   );
 

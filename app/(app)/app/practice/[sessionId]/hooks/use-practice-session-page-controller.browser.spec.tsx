@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-react';
 import { ok } from '@/tests/test-helpers/ok';
@@ -62,23 +62,14 @@ function PracticeSessionPageControllerHookProbe() {
 function PracticeSessionPageControllerBookmarkProbe() {
   const output = usePracticeSessionPageController('session-1');
   const [bookmarkFeedbackCount, setBookmarkFeedbackCount] = useState(0);
-  const bookmarkMessageVersion = (
-    output as {
-      bookmarkMessageVersion?: number;
-    }
-  ).bookmarkMessageVersion;
-  const bookmarkFeedback = useMemo(
-    () => ({
-      message: output.bookmarkMessage,
-      version: bookmarkMessageVersion ?? 0,
-    }),
-    [output.bookmarkMessage, bookmarkMessageVersion],
-  );
+  const bookmarkMessage = output.bookmarkMessage;
+  const bookmarkMessageVersion = output.bookmarkMessageVersion ?? 0;
 
   useEffect(() => {
-    if (!bookmarkFeedback.message) return;
+    if (!bookmarkMessage) return;
+    if (bookmarkMessageVersion < 1) return;
     setBookmarkFeedbackCount((prev) => prev + 1);
-  }, [bookmarkFeedback]);
+  }, [bookmarkMessage, bookmarkMessageVersion]);
 
   return (
     <>

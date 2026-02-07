@@ -17,5 +17,7 @@ describe('app/error', () => {
     expect(html).toContain('Error ID');
     expect(html).toContain('digest_123');
     expect(html).toContain('focus-visible:ring-[3px]');
+    expect(html).toContain('<main id="main-content"');
+    expect(html).toContain('tabindex="-1"');
   }, 10_000);
 });

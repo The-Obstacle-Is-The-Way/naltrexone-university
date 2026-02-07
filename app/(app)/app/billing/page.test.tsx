@@ -153,9 +153,7 @@ describe('app/(app)/app/billing/page', () => {
       expect(html).toContain('Billing');
       expect(html).toContain('Manage your subscription');
       expect(html).toContain('Manage in Stripe');
-      expect(html).toContain(
-        'text-2xl font-bold font-heading tracking-tight text-foreground',
-      );
+      expect(html).toContain('<h1');
     });
 
     it('renders BillingContent without manage action when no subscription exists', async () => {
