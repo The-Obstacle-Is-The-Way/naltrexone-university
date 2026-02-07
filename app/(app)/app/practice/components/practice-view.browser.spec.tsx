@@ -26,6 +26,9 @@ test('renders error state and retries when requested', async () => {
   await expect.element(screen.getByText('Question load failed.')).toBeVisible();
   await screen.getByRole('button', { name: 'Try again' }).click();
   expect(onTryAgain).toHaveBeenCalledTimes(1);
+  await expect
+    .element(screen.getByRole('link', { name: 'Return to dashboard' }))
+    .toBeVisible();
 });
 
 test('supports exam controls and question interactions', async () => {

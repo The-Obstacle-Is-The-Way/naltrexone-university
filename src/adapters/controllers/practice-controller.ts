@@ -59,6 +59,7 @@ const StartPracticeSessionInputSchema = z
 const EndPracticeSessionInputSchema = z
   .object({
     sessionId: zUuid,
+    idempotencyKey: zUuid.optional(),
   })
   .strict();
 
@@ -73,6 +74,7 @@ const SetPracticeSessionQuestionMarkInputSchema = z
     sessionId: zUuid,
     questionId: zUuid,
     markedForReview: z.boolean(),
+    idempotencyKey: zUuid.optional(),
   })
   .strict();
 
@@ -88,6 +90,28 @@ const EmptyInputSchema = z.object({}).strict();
 const StartPracticeSessionOutputSchema = z
   .object({
     sessionId: zUuid,
+  })
+  .strict();
+
+const EndPracticeSessionOutputSchema = z
+  .object({
+    sessionId: zUuid,
+    endedAt: z.string().datetime(),
+    totals: z
+      .object({
+        answered: z.number().int().min(0),
+        correct: z.number().int().min(0),
+        accuracy: z.number().min(0).max(1),
+        durationSeconds: z.number().int().min(0),
+      })
+      .strict(),
+  })
+  .strict();
+
+const SetPracticeSessionQuestionMarkOutputSchema = z
+  .object({
+    questionId: zUuid,
+    markedForReview: z.boolean(),
   })
   .strict();
 
@@ -219,9 +243,28 @@ export const endPracticeSession = createAction({
   getDeps,
   execute: async (input, d) => {
     const userId = await requireEntitledUserId(d);
-    return d.endPracticeSessionUseCase.execute({
+
+    const { sessionId, idempotencyKey } = input;
+
+    async function endSession(): Promise<EndPracticeSessionOutput> {
+      return d.endPracticeSessionUseCase.execute({
+        userId,
+        sessionId,
+      });
+    }
+
+    if (!idempotencyKey) {
+      return endSession();
+    }
+
+    return withIdempotency({
+      repo: d.idempotencyKeyRepository,
       userId,
-      sessionId: input.sessionId,
+      action: 'practice:endPracticeSession',
+      key: idempotencyKey,
+      now: d.now,
+      parseResult: (value) => EndPracticeSessionOutputSchema.parse(value),
+      execute: endSession,
     });
   },
 });
@@ -256,11 +299,31 @@ export const setPracticeSessionQuestionMark = createAction({
   getDeps,
   execute: async (input, d) => {
     const userId = await requireEntitledUserId(d);
-    return d.setPracticeSessionQuestionMarkUseCase.execute({
+
+    const { sessionId, questionId, markedForReview, idempotencyKey } = input;
+
+    async function setMark(): Promise<SetPracticeSessionQuestionMarkOutput> {
+      return d.setPracticeSessionQuestionMarkUseCase.execute({
+        userId,
+        sessionId,
+        questionId,
+        markedForReview,
+      });
+    }
+
+    if (!idempotencyKey) {
+      return setMark();
+    }
+
+    return withIdempotency({
+      repo: d.idempotencyKeyRepository,
       userId,
-      sessionId: input.sessionId,
-      questionId: input.questionId,
-      markedForReview: input.markedForReview,
+      action: 'practice:setPracticeSessionQuestionMark',
+      key: idempotencyKey,
+      now: d.now,
+      parseResult: (value) =>
+        SetPracticeSessionQuestionMarkOutputSchema.parse(value),
+      execute: setMark,
     });
   },
 });

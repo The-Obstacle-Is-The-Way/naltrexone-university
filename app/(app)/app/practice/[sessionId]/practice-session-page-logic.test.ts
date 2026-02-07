@@ -607,20 +607,23 @@ describe('practice-session-page-logic', () => {
       const setQuestion = vi.fn();
       const setSubmitResult = vi.fn();
       const setSelectedChoiceId = vi.fn();
+      const endPracticeSessionFn = vi.fn(async () =>
+        ok({
+          sessionId: 'session-1',
+          endedAt: '2026-02-01T00:00:00.000Z',
+          totals: {
+            answered: 10,
+            correct: 7,
+            accuracy: 0.7,
+            durationSeconds: 123,
+          },
+        }),
+      );
 
       await endSession({
         sessionId: 'session-1',
-        endPracticeSessionFn: async () =>
-          ok({
-            sessionId: 'session-1',
-            endedAt: '2026-02-01T00:00:00.000Z',
-            totals: {
-              answered: 10,
-              correct: 7,
-              accuracy: 0.7,
-              durationSeconds: 123,
-            },
-          }),
+        endSessionIdempotencyKey: 'idem_1',
+        endPracticeSessionFn,
         setLoadState: vi.fn(),
         setSummary,
         setQuestion,
@@ -628,6 +631,10 @@ describe('practice-session-page-logic', () => {
         setSelectedChoiceId,
       });
 
+      expect(endPracticeSessionFn).toHaveBeenCalledWith({
+        sessionId: 'session-1',
+        idempotencyKey: 'idem_1',
+      });
       expect(setSummary).toHaveBeenCalledWith(
         expect.objectContaining({ sessionId: 'session-1' }),
       );
@@ -641,6 +648,7 @@ describe('practice-session-page-logic', () => {
 
       await endSession({
         sessionId: 'session-1',
+        endSessionIdempotencyKey: 'idem_1',
         endPracticeSessionFn: async () => err('INTERNAL_ERROR', 'Boom'),
         setLoadState,
         setSummary: vi.fn(),
@@ -660,6 +668,7 @@ describe('practice-session-page-logic', () => {
 
       await endSession({
         sessionId: 'session-1',
+        endSessionIdempotencyKey: 'idem_1',
         endPracticeSessionFn: async () => {
           throw new Error('Boom');
         },
@@ -685,6 +694,7 @@ describe('practice-session-page-logic', () => {
 
       const promise = endSession({
         sessionId: 'session-1',
+        endSessionIdempotencyKey: 'idem_1',
         endPracticeSessionFn: async () => deferred.promise,
         setLoadState,
         setSummary,

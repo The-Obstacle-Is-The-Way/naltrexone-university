@@ -23,6 +23,7 @@ type UsePracticeSessionMarkForReviewInput = {
   setLoadState: (state: LoadState) => void;
   setReview: Dispatch<SetStateAction<GetPracticeSessionReviewOutput | null>>;
   isMounted: () => boolean;
+  setPracticeSessionQuestionMarkFn?: typeof setPracticeSessionQuestionMark;
 };
 
 export function usePracticeSessionMarkForReview(
@@ -33,6 +34,9 @@ export function usePracticeSessionMarkForReview(
 } {
   const [isMarkingForReview, setIsMarkingForReview] = useState(false);
   const isMarkingRef = useRef(false);
+  const markRequestIdempotencyKeyRef = useRef<string | null>(null);
+  const setPracticeSessionQuestionMarkFn =
+    input.setPracticeSessionQuestionMarkFn ?? setPracticeSessionQuestionMark;
 
   const onToggleMarkForReview = useCallback(async () => {
     if (!input.question) return;
@@ -45,11 +49,18 @@ export function usePracticeSessionMarkForReview(
     setIsMarkingForReview(true);
 
     let res: Awaited<ReturnType<typeof setPracticeSessionQuestionMark>>;
+    if (!markRequestIdempotencyKeyRef.current) {
+      markRequestIdempotencyKeyRef.current = crypto.randomUUID();
+    }
+
+    const requestIdempotencyKey = markRequestIdempotencyKeyRef.current;
+
     try {
-      res = await setPracticeSessionQuestionMark({
+      res = await setPracticeSessionQuestionMarkFn({
         sessionId: input.sessionId,
         questionId: input.question.questionId,
         markedForReview,
+        idempotencyKey: requestIdempotencyKey,
       });
     } catch (error) {
       if (!input.isMounted()) return;
@@ -90,6 +101,7 @@ export function usePracticeSessionMarkForReview(
       };
     });
 
+    markRequestIdempotencyKeyRef.current = null;
     isMarkingRef.current = false;
     setIsMarkingForReview(false);
   }, [
@@ -101,6 +113,7 @@ export function usePracticeSessionMarkForReview(
     input.setLoadState,
     input.setReview,
     input.setSessionInfo,
+    setPracticeSessionQuestionMarkFn,
   ]);
 
   return { isMarkingForReview, onToggleMarkForReview };

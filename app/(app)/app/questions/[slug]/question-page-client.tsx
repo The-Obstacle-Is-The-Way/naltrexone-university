@@ -11,6 +11,7 @@ import {
 import { Feedback } from '@/components/question/Feedback';
 import { QuestionCard } from '@/components/question/QuestionCard';
 import { Button } from '@/components/ui/button';
+import { ROUTES } from '@/lib/routes';
 import { useIsMounted } from '@/lib/use-is-mounted';
 import { submitAnswer } from '@/src/adapters/controllers/question-controller';
 import {
@@ -47,7 +48,7 @@ export function QuestionView(props: QuestionViewProps) {
           </p>
         </div>
         <Link
-          href="/app/dashboard"
+          href={ROUTES.APP_DASHBOARD}
           className="text-sm font-medium text-muted-foreground hover:text-foreground"
         >
           Back to Dashboard
@@ -134,7 +135,7 @@ export function QuestionView(props: QuestionViewProps) {
               Try Again
             </Button>
             <Button asChild variant="ghost" className="rounded-full">
-              <Link href="/app/review">Back to Review</Link>
+              <Link href={ROUTES.APP_REVIEW}>Back to Review</Link>
             </Button>
           </>
         ) : null}

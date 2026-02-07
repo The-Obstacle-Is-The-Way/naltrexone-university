@@ -17,15 +17,7 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 | ID | Title | Status | Priority | Date |
 |----|-------|--------|----------|------|
-| [BUG-089](bug-089-bookmark-loading-effect-missing-loading-state.md) | Bookmark Loading Effect Missing Loading State | Open | P3 | 2026-02-07 |
-| [BUG-090](bug-090-practice-error-state-missing-escape-hatch.md) | Practice Error State Has No Escape Hatch | Open | P3 | 2026-02-07 |
-| [BUG-091](bug-091-end-practice-session-missing-idempotency-key.md) | `endPracticeSession` Missing Idempotency Key | Open | P3 | 2026-02-07 |
-| [BUG-092](bug-092-circular-module-dependency-practice-page-decomposition.md) | Circular Module Dependency in Practice Page Decomposition | Open | P4 | 2026-02-07 |
-| [BUG-093](bug-093-hard-coded-route-practice-view-navigation.md) | Hard-Coded Route in Practice View Navigation | Open | P4 | 2026-02-07 |
-| [BUG-094](bug-094-exam-review-error-misleading-try-again.md) | Exam Review Error State — Misleading "Try Again" Ends Session | Open | P3 | 2026-02-07 |
-| [BUG-095](bug-095-set-question-mark-missing-idempotency-key.md) | `setPracticeSessionQuestionMark` Missing Idempotency Key | Open | P4 | 2026-02-07 |
-| [BUG-096](bug-096-toggle-bookmark-missing-idempotency-key.md) | `toggleBookmark` Missing Idempotency Key | Open | P4 | 2026-02-07 |
-| [BUG-097](bug-097-widespread-hard-coded-route-strings.md) | Widespread Hard-Coded Route Strings Across Codebase | Open | P4 | 2026-02-07 |
+| _None_ | No open bugs currently tracked | — | — | — |
 
 **Next Bug ID:** BUG-098
 
@@ -33,6 +25,15 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 | ID | Title | Status | Resolution |
 |----|-------|--------|------------|
+| [BUG-097](../_archive/bugs/bug-097-widespread-hard-coded-route-strings.md) | Widespread Hard-Coded Route Strings Across Codebase | Resolved | Completed route-constant sweep and added missing `ROUTES.SIGN_IN`/`ROUTES.SIGN_UP` constants |
+| [BUG-096](../_archive/bugs/bug-096-toggle-bookmark-missing-idempotency-key.md) | `toggleBookmark` Missing Idempotency Key | Resolved | Wrapped bookmark toggle with `withIdempotency` and propagated client-generated keys |
+| [BUG-095](../_archive/bugs/bug-095-set-question-mark-missing-idempotency-key.md) | `setPracticeSessionQuestionMark` Missing Idempotency Key | Resolved | Added schema support + `withIdempotency` and hook-level key propagation |
+| [BUG-094](../_archive/bugs/bug-094-exam-review-error-misleading-try-again.md) | Exam Review Error State — Misleading "Try Again" Ends Session | Resolved | Split review-error actions into true retry path and explicit end-session path |
+| [BUG-093](../_archive/bugs/bug-093-hard-coded-route-practice-view-navigation.md) | Hard-Coded Route in Practice View Navigation | Reclassified | Closed as duplicate of BUG-097 (single-instance subset) |
+| [BUG-092](../_archive/bugs/bug-092-circular-module-dependency-practice-page-decomposition.md) | Circular Module Dependency in Practice Page Decomposition | Resolved | Stale report; cycle already removed via shared `practice-page-types.ts` extraction |
+| [BUG-091](../_archive/bugs/bug-091-end-practice-session-missing-idempotency-key.md) | `endPracticeSession` Missing Idempotency Key | Resolved | Added idempotency key schema + `withIdempotency` replay support |
+| [BUG-090](../_archive/bugs/bug-090-practice-error-state-missing-escape-hatch.md) | Practice Error State Has No Escape Hatch | Resolved | Added `Return to dashboard` escape hatch to practice error card |
+| [BUG-089](../_archive/bugs/bug-089-bookmark-loading-effect-missing-loading-state.md) | Bookmark Loading Effect Missing Loading State | Resolved | Stale report; loading transition already existed in production code |
 | [BUG-088](../_archive/bugs/bug-088-clerk-webhook-invalid-payload-message-leak.md) | Clerk Webhook Invalid-Payload Response Leaks Internal Error Message | Resolved | Clerk webhook now returns a generic validation failure message while logging internal context server-side |
 | [BUG-087](../_archive/bugs/bug-087-practice-tag-load-throw-stalls-page.md) | Practice Tag Load Throw Leaves Page Stuck in Loading | Resolved | Added try/catch around tag loading and transitioned thrown failures to `tagLoadStatus: 'error'` with regression coverage |
 | [BUG-086](../_archive/bugs/bug-086-session-history-drilldown-race-overwrites-selected-session.md) | Session History Drill-Down Race Can Show Wrong Session Details | Resolved | Added latest-request session guard in session-history drill-down so stale responses cannot overwrite selected session review |
@@ -56,6 +57,15 @@ See: [Foundation Audit Report](foundation-audit-report.md)
 
 | ID | Title | Priority | Resolved |
 |----|-------|----------|----------|
+| [BUG-097](../_archive/bugs/bug-097-widespread-hard-coded-route-strings.md) | Widespread Hard-Coded Route Strings Across Codebase | P4 | 2026-02-07 |
+| [BUG-096](../_archive/bugs/bug-096-toggle-bookmark-missing-idempotency-key.md) | `toggleBookmark` Missing Idempotency Key | P4 | 2026-02-07 |
+| [BUG-095](../_archive/bugs/bug-095-set-question-mark-missing-idempotency-key.md) | `setPracticeSessionQuestionMark` Missing Idempotency Key | P4 | 2026-02-07 |
+| [BUG-094](../_archive/bugs/bug-094-exam-review-error-misleading-try-again.md) | Exam Review Error State — Misleading "Try Again" Ends Session | P3 | 2026-02-07 |
+| [BUG-093](../_archive/bugs/bug-093-hard-coded-route-practice-view-navigation.md) | Hard-Coded Route in Practice View Navigation | P4 | 2026-02-07 (Reclassified) |
+| [BUG-092](../_archive/bugs/bug-092-circular-module-dependency-practice-page-decomposition.md) | Circular Module Dependency in Practice Page Decomposition | P4 | 2026-02-07 |
+| [BUG-091](../_archive/bugs/bug-091-end-practice-session-missing-idempotency-key.md) | `endPracticeSession` Missing Idempotency Key | P3 | 2026-02-07 |
+| [BUG-090](../_archive/bugs/bug-090-practice-error-state-missing-escape-hatch.md) | Practice Error State Has No Escape Hatch | P3 | 2026-02-07 |
+| [BUG-089](../_archive/bugs/bug-089-bookmark-loading-effect-missing-loading-state.md) | Bookmark Loading Effect Missing Loading State | P3 | 2026-02-07 |
 | [BUG-084](../_archive/bugs/bug-084-webhook-error-message-leaks-context.md) | Webhook Error Response Leaks Implementation Details | P2 | 2026-02-07 |
 | [BUG-083](../_archive/bugs/bug-083-stale-closure-mark-for-review.md) | Stale Closure Risk in usePracticeSessionMarkForReview | P3 | 2026-02-07 |
 | [BUG-082](../_archive/bugs/bug-082-void-promises-swallow-errors.md) | Void Promises Silently Swallow Errors in Practice Page | P2 | 2026-02-07 |

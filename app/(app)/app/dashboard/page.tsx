@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
+import { ROUTES } from '@/lib/routes';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import {
   getUserStats,
@@ -126,7 +127,7 @@ export function DashboardView({ stats }: { stats: UserStatsOutput }) {
               </div>
             </div>
             <Button asChild className="rounded-full">
-              <Link href="/app/practice">Go to Practice</Link>
+              <Link href={ROUTES.APP_PRACTICE}>Go to Practice</Link>
             </Button>
           </div>
         </div>
@@ -224,7 +225,7 @@ export function renderDashboard(result: ActionResult<UserStatsOutput>) {
           {result.error.message}
         </div>
         <Button asChild className="rounded-full">
-          <Link href="/app/practice">Go to Practice</Link>
+          <Link href={ROUTES.APP_PRACTICE}>Go to Practice</Link>
         </Button>
       </div>
     );

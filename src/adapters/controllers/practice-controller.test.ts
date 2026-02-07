@@ -399,6 +399,45 @@ describe('practice-controller', () => {
         error: { code: 'NOT_FOUND', message: 'Practice session not found' },
       });
     });
+
+    it('returns the cached summary when idempotencyKey is reused', async () => {
+      const deps = createDeps({
+        endOutput: {
+          sessionId: '22222222-2222-2222-2222-222222222222',
+          endedAt: '2026-02-01T00:00:00.000Z',
+          totals: {
+            answered: 2,
+            correct: 1,
+            accuracy: 0.5,
+            durationSeconds: 60,
+          },
+        },
+      });
+
+      const input = {
+        sessionId: '11111111-1111-1111-1111-111111111111',
+        idempotencyKey: '11111111-1111-1111-1111-111111111111',
+      } as const;
+
+      const first = await endPracticeSession(input, deps);
+      const second = await endPracticeSession(input, deps);
+
+      expect(first).toEqual({
+        ok: true,
+        data: {
+          sessionId: '22222222-2222-2222-2222-222222222222',
+          endedAt: '2026-02-01T00:00:00.000Z',
+          totals: {
+            answered: 2,
+            correct: 1,
+            accuracy: 0.5,
+            durationSeconds: 60,
+          },
+        },
+      });
+      expect(second).toEqual(first);
+      expect(deps.endPracticeSessionUseCase.inputs).toHaveLength(1);
+    });
   });
 
   describe('getIncompletePracticeSession', () => {
@@ -765,6 +804,35 @@ describe('practice-controller', () => {
           markedForReview: false,
         },
       ]);
+    });
+
+    it('returns the cached mark result when idempotencyKey is reused', async () => {
+      const deps = createDeps({
+        setMarkOutput: {
+          questionId: '22222222-2222-2222-2222-222222222222',
+          markedForReview: true,
+        },
+      });
+
+      const input = {
+        sessionId: '11111111-1111-1111-1111-111111111111',
+        questionId: '22222222-2222-2222-2222-222222222222',
+        markedForReview: true,
+        idempotencyKey: '11111111-1111-1111-1111-111111111111',
+      } as const;
+
+      const first = await setPracticeSessionQuestionMark(input, deps);
+      const second = await setPracticeSessionQuestionMark(input, deps);
+
+      expect(first).toEqual({
+        ok: true,
+        data: {
+          questionId: '22222222-2222-2222-2222-222222222222',
+          markedForReview: true,
+        },
+      });
+      expect(second).toEqual(first);
+      expect(deps.setPracticeSessionQuestionMarkUseCase.inputs).toHaveLength(1);
     });
   });
 });

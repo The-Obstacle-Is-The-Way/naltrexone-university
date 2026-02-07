@@ -2,6 +2,7 @@ import Link from 'next/link';
 import type { ComponentType, ReactNode } from 'react';
 import { IdempotencyKeyField } from '@/app/pricing/pricing-client';
 import type { PricingBanner } from '@/app/pricing/types';
+import { ROUTES } from '@/lib/routes';
 
 export type PricingViewProps = {
   isEntitled: boolean;
@@ -66,7 +67,7 @@ export function PricingView({
                 </form>
               ) : null}
               <Link
-                href="/pricing"
+                href={ROUTES.PRICING}
                 className="ml-4 rounded-md text-current hover:opacity-70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                 aria-label="Dismiss"
               >
@@ -86,13 +87,13 @@ export function PricingView({
             </p>
             <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-center">
               <Link
-                href="/app/dashboard"
+                href={ROUTES.APP_DASHBOARD}
                 className="inline-flex items-center justify-center rounded-full bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
               >
                 Go to Dashboard
               </Link>
               <Link
-                href="/app/billing"
+                href={ROUTES.APP_BILLING}
                 className="inline-flex items-center justify-center rounded-full border border-border bg-background px-4 py-2 text-sm font-medium text-foreground hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
               >
                 Manage Billing

@@ -5,6 +5,7 @@ import {
   type SetStateAction,
   useCallback,
   useEffect,
+  useRef,
   useState,
 } from 'react';
 import { endSession } from '@/app/(app)/app/practice/[sessionId]/practice-session-page-logic';
@@ -47,6 +48,7 @@ export type UsePracticeSessionReviewStageOutput = {
   navigator: GetPracticeSessionReviewOutput | null;
   isInReviewStage: boolean;
   onEndSession: () => void;
+  onRetryReview: () => void;
   onOpenReviewQuestion: (questionId: string) => void;
   onFinalizeReview: () => void;
 };
@@ -70,11 +72,13 @@ export function usePracticeSessionReviewStage(
     status: 'idle',
   });
   const [isInReviewStage, setIsInReviewStage] = useState(false);
+  const endSessionIdempotencyKeyRef = useRef(crypto.randomUUID());
 
   const finalizeSession = useCallback(
     () =>
       endSession({
         sessionId: input.sessionId,
+        endSessionIdempotencyKey: endSessionIdempotencyKeyRef.current,
         endPracticeSessionFn: endPracticeSession,
         setLoadState: input.setLoadState,
         setSummary,
@@ -172,6 +176,10 @@ export function usePracticeSessionReviewStage(
     void finalizeSession();
   }, [input.sessionMode, isInReviewStage, loadReview, finalizeSession]);
 
+  const onRetryReview = useCallback(() => {
+    void loadReview();
+  }, [loadReview]);
+
   useEffect(() => {
     if (!summary) {
       setSummaryReview(null);
@@ -257,6 +265,7 @@ export function usePracticeSessionReviewStage(
     navigator,
     isInReviewStage,
     onEndSession,
+    onRetryReview,
     onOpenReviewQuestion,
     onFinalizeReview,
   };

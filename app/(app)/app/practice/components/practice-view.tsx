@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { Feedback } from '@/components/question/Feedback';
 import { QuestionCard } from '@/components/question/QuestionCard';
 import { Button } from '@/components/ui/button';
+import { ROUTES } from '@/lib/routes';
 import type { NextQuestion } from '@/src/application/use-cases/get-next-question';
 import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
 import type { LoadState } from '../practice-page-logic';
@@ -70,7 +71,7 @@ export function PracticeView(props: PracticeViewProps) {
               </Button>
             ) : null}
             <Link
-              href="/app/dashboard"
+              href={ROUTES.APP_DASHBOARD}
               className="text-sm font-medium text-muted-foreground hover:text-foreground"
             >
               Back to Dashboard
@@ -82,14 +83,14 @@ export function PracticeView(props: PracticeViewProps) {
       {props.loadState.status === 'error' ? (
         <div className="rounded-2xl border border-border bg-card p-6 text-sm text-destructive shadow-sm">
           <div>{props.loadState.message}</div>
-          <Button
-            type="button"
-            variant="outline"
-            className="mt-4 rounded-full"
-            onClick={props.onTryAgain}
-          >
-            Try again
-          </Button>
+          <div className="mt-4 flex flex-wrap items-center gap-3">
+            <Button type="button" variant="outline" onClick={props.onTryAgain}>
+              Try again
+            </Button>
+            <Button asChild variant="outline">
+              <Link href={ROUTES.APP_DASHBOARD}>Return to dashboard</Link>
+            </Button>
+          </div>
         </div>
       ) : null}
 

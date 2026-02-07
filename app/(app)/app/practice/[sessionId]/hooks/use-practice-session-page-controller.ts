@@ -58,6 +58,9 @@ export function usePracticeSessionPageController(
     null,
   );
   const [bookmarkRetryCount, setBookmarkRetryCount] = useState(0);
+  const [bookmarkIdempotencyKey, setBookmarkIdempotencyKey] = useState<
+    string | null
+  >(() => crypto.randomUUID());
 
   const [loadState, setLoadState] = useState<LoadState>({ status: 'idle' });
   const [isPending, startTransition] = useTransition();
@@ -226,6 +229,9 @@ export function usePracticeSessionPageController(
     () =>
       toggleBookmarkForQuestion.bind(null, {
         question,
+        bookmarkIdempotencyKey,
+        createIdempotencyKey: () => crypto.randomUUID(),
+        setBookmarkIdempotencyKey,
         toggleBookmarkFn: toggleBookmark,
         setBookmarkStatus,
         setBookmarkedQuestionIds,
@@ -241,7 +247,7 @@ export function usePracticeSessionPageController(
         },
         isMounted,
       }),
-    [question, isMounted],
+    [bookmarkIdempotencyKey, question, isMounted],
   );
 
   const { isMarkingForReview, onToggleMarkForReview } =
@@ -280,6 +286,7 @@ export function usePracticeSessionPageController(
     bookmarkMessage,
     canSubmit,
     onEndSession: reviewStage.onEndSession,
+    onRetryReview: reviewStage.onRetryReview,
     onTryAgain: loadNext,
     onToggleBookmark,
     onToggleMarkForReview,

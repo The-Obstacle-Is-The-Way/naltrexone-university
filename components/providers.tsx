@@ -2,6 +2,7 @@
 
 import { dark } from '@clerk/themes';
 import dynamic from 'next/dynamic';
+import { ROUTES } from '@/lib/routes';
 
 const ClerkProvider = dynamic(
   () => import('@clerk/nextjs').then((m) => m.ClerkProvider),
@@ -35,8 +36,8 @@ export function Providers({ children }: { children: React.ReactNode }) {
 
   return (
     <ClerkProvider
-      signInFallbackRedirectUrl="/app/dashboard"
-      signUpFallbackRedirectUrl="/app/dashboard"
+      signInFallbackRedirectUrl={ROUTES.APP_DASHBOARD}
+      signUpFallbackRedirectUrl={ROUTES.APP_DASHBOARD}
       appearance={CLERK_APPEARANCE}
     >
       {children}

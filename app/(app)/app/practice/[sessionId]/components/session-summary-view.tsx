@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
+import { ROUTES } from '@/lib/routes';
 import type {
   EndPracticeSessionOutput,
   GetPracticeSessionReviewOutput,
@@ -107,10 +108,10 @@ export function SessionSummaryView({
 
       <div className="flex flex-col gap-3 sm:flex-row">
         <Button asChild className="rounded-full">
-          <Link href="/app/dashboard">Back to Dashboard</Link>
+          <Link href={ROUTES.APP_DASHBOARD}>Back to Dashboard</Link>
         </Button>
         <Button asChild variant="outline" className="rounded-full">
-          <Link href="/app/practice">Start another session</Link>
+          <Link href={ROUTES.APP_PRACTICE}>Start another session</Link>
         </Button>
       </div>
     </div>

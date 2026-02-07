@@ -187,6 +187,9 @@ export async function submitAnswerForQuestion(input: {
 
 export async function toggleBookmarkForQuestion(input: {
   question: NextQuestion | null;
+  bookmarkIdempotencyKey?: string | null;
+  createIdempotencyKey?: () => string;
+  setBookmarkIdempotencyKey?: (key: string) => void;
   toggleBookmarkFn: (
     input: unknown,
   ) => Promise<ActionResult<{ bookmarked: boolean }>>;
@@ -202,12 +205,17 @@ export async function toggleBookmarkForQuestion(input: {
   const isMounted = input.isMounted ?? (() => true);
 
   const questionId = input.question.questionId;
+  const requestIdempotencyKey =
+    input.bookmarkIdempotencyKey ?? input.createIdempotencyKey?.();
 
   input.setBookmarkStatus('loading');
 
   let res: ActionResult<{ bookmarked: boolean }>;
   try {
-    res = await input.toggleBookmarkFn({ questionId });
+    res = await input.toggleBookmarkFn({
+      questionId,
+      idempotencyKey: requestIdempotencyKey ?? undefined,
+    });
   } catch {
     if (!isMounted()) return;
     input.setBookmarkStatus('error');
@@ -227,6 +235,9 @@ export async function toggleBookmarkForQuestion(input: {
   });
 
   input.onBookmarkToggled?.(res.data.bookmarked);
+  if (input.setBookmarkIdempotencyKey && input.createIdempotencyKey) {
+    input.setBookmarkIdempotencyKey(input.createIdempotencyKey());
+  }
   input.setBookmarkStatus('idle');
 }
 

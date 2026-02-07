@@ -27,6 +27,7 @@ export type PracticeSessionPageViewProps = {
   bookmarkMessage?: string | null;
   canSubmit: boolean;
   onEndSession: () => void;
+  onRetryReview?: () => void;
   onTryAgain: () => void;
   onToggleBookmark: () => void;
   onToggleMarkForReview?: () => void;
@@ -71,9 +72,22 @@ export function PracticeSessionPageView(props: PracticeSessionPageViewProps) {
         <div className="rounded-2xl border border-border bg-card p-6 text-sm text-destructive shadow-sm">
           {reviewLoadState.message}
         </div>
-        <Button type="button" variant="outline" onClick={props.onEndSession}>
-          Try again
-        </Button>
+        <div className="flex flex-wrap gap-3">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={props.onRetryReview ?? props.onEndSession}
+          >
+            Try again
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={props.onFinalizeReview ?? props.onEndSession}
+          >
+            End session
+          </Button>
+        </div>
       </div>
     );
   }

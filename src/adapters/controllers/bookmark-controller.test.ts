@@ -5,6 +5,7 @@ import type { GetBookmarksOutput } from '@/src/application/ports/bookmarks';
 import {
   FakeAuthGateway,
   FakeGetBookmarksUseCase,
+  FakeIdempotencyKeyRepository,
   FakeRateLimiter,
   FakeSubscriptionRepository,
   FakeToggleBookmarkUseCase,
@@ -80,9 +81,11 @@ function createDeps(overrides?: {
   return {
     authGateway,
     rateLimiter,
+    idempotencyKeyRepository: new FakeIdempotencyKeyRepository(() => now),
     checkEntitlementUseCase,
     toggleBookmarkUseCase,
     getBookmarksUseCase,
+    now: () => now,
   };
 }
 
@@ -148,6 +151,21 @@ describe('bookmark-controller', () => {
           questionId: '11111111-1111-1111-1111-111111111111',
         },
       ]);
+    });
+
+    it('returns the cached bookmark result when idempotencyKey is reused', async () => {
+      const deps = createDeps({ toggleBookmarkOutput: { bookmarked: true } });
+      const input = {
+        questionId: '11111111-1111-1111-1111-111111111111',
+        idempotencyKey: '11111111-1111-1111-1111-111111111111',
+      } as const;
+
+      const first = await toggleBookmark(input, deps);
+      const second = await toggleBookmark(input, deps);
+
+      expect(first).toEqual({ ok: true, data: { bookmarked: true } });
+      expect(second).toEqual(first);
+      expect(deps.toggleBookmarkUseCase.inputs).toHaveLength(1);
     });
 
     it('returns RATE_LIMITED when rate limiter denies request', async () => {

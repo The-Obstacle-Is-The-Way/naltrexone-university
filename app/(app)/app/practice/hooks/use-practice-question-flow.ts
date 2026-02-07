@@ -68,6 +68,9 @@ export function usePracticeQuestionFlow(
   const [submitIdempotencyKey, setSubmitIdempotencyKey] = useState<
     string | null
   >(null);
+  const [bookmarkIdempotencyKey, setBookmarkIdempotencyKey] = useState<
+    string | null
+  >(() => crypto.randomUUID());
   const latestQuestionRequestId = useRef(0);
   const isMounted = useIsMounted();
 
@@ -155,6 +158,9 @@ export function usePracticeQuestionFlow(
     () =>
       toggleBookmarkForQuestion.bind(null, {
         question,
+        bookmarkIdempotencyKey,
+        createIdempotencyKey: () => crypto.randomUUID(),
+        setBookmarkIdempotencyKey,
         toggleBookmarkFn: toggleBookmark,
         setBookmarkStatus,
         setBookmarkedQuestionIds,
@@ -170,7 +176,7 @@ export function usePracticeQuestionFlow(
         },
         isMounted,
       }),
-    [question, isMounted],
+    [bookmarkIdempotencyKey, question, isMounted],
   );
 
   const onSelectChoice = useMemo(

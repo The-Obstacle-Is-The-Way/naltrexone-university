@@ -179,6 +179,7 @@ export function maybeAutoAdvanceAfterSubmit(input: {
 
 export async function endSession(input: {
   sessionId: string;
+  endSessionIdempotencyKey: string;
   endPracticeSessionFn: (
     input: unknown,
   ) => Promise<ActionResult<EndPracticeSessionOutput>>;
@@ -195,7 +196,10 @@ export async function endSession(input: {
 
   let res: ActionResult<EndPracticeSessionOutput>;
   try {
-    res = await input.endPracticeSessionFn({ sessionId: input.sessionId });
+    res = await input.endPracticeSessionFn({
+      sessionId: input.sessionId,
+      idempotencyKey: input.endSessionIdempotencyKey,
+    });
   } catch (error) {
     if (!isMounted()) return;
 

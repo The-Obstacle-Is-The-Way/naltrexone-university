@@ -2,6 +2,7 @@ import { revalidatePath } from 'next/cache';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { Button } from '@/components/ui/button';
+import { ROUTES } from '@/lib/routes';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import {
   type GetBookmarksOutput,
@@ -58,19 +59,19 @@ export async function removeBookmarkAction(
 
   const questionId = formData.get('questionId');
   if (typeof questionId !== 'string') {
-    return redirectFn('/app/bookmarks?error=missing_question_id');
+    return redirectFn(`${ROUTES.APP_BOOKMARKS}?error=missing_question_id`);
   }
 
   const result = await toggleBookmarkFn({ questionId });
   if (!result.ok) {
-    return redirectFn('/app/bookmarks?error=toggle_failed');
+    return redirectFn(`${ROUTES.APP_BOOKMARKS}?error=toggle_failed`);
   }
 
   if (result.data.bookmarked) {
-    return redirectFn('/app/bookmarks?error=remove_failed');
+    return redirectFn(`${ROUTES.APP_BOOKMARKS}?error=remove_failed`);
   }
 
-  revalidatePathFn('/app/bookmarks');
+  revalidatePathFn(ROUTES.APP_BOOKMARKS);
 }
 
 export function BookmarksView({ rows }: { rows: GetBookmarksOutput['rows'] }) {
@@ -86,7 +87,7 @@ export function BookmarksView({ rows }: { rows: GetBookmarksOutput['rows'] }) {
           </p>
         </div>
         <Link
-          href="/app/practice"
+          href={ROUTES.APP_PRACTICE}
           className="text-sm font-medium text-muted-foreground hover:text-foreground"
         >
           Go to Practice
@@ -189,7 +190,7 @@ export function renderBookmarks(result: ActionResult<GetBookmarksOutput>) {
           {result.error.message}
         </div>
         <Link
-          href="/app/practice"
+          href={ROUTES.APP_PRACTICE}
           className="text-sm font-medium text-muted-foreground hover:text-foreground"
         >
           Go to Practice

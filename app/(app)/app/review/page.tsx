@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
+import { ROUTES } from '@/lib/routes';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import {
   type GetMissedQuestionsOutput,
@@ -62,7 +63,7 @@ export function ReviewView({
           </p>
         </div>
         <Link
-          href="/app/practice"
+          href={ROUTES.APP_PRACTICE}
           className="text-sm font-medium text-muted-foreground hover:text-foreground"
         >
           Go to Practice
@@ -79,7 +80,7 @@ export function ReviewView({
             No more missed questions on this page.
             <div className="mt-4">
               <Link
-                href={`/app/review?offset=0&limit=${limit}`}
+                href={`${ROUTES.APP_REVIEW}?offset=0&limit=${limit}`}
                 className="text-sm font-medium text-muted-foreground hover:text-foreground"
               >
                 Back to first page
@@ -160,7 +161,7 @@ export function ReviewView({
           <div className="flex items-center justify-between">
             {offset > 0 ? (
               <Link
-                href={`/app/review?offset=${prevOffset}&limit=${limit}`}
+                href={`${ROUTES.APP_REVIEW}?offset=${prevOffset}&limit=${limit}`}
                 className="text-sm font-medium text-muted-foreground hover:text-foreground"
               >
                 Previous
@@ -171,7 +172,7 @@ export function ReviewView({
 
             {hasNextPage ? (
               <Link
-                href={`/app/review?offset=${nextOffset}&limit=${limit}`}
+                href={`${ROUTES.APP_REVIEW}?offset=${nextOffset}&limit=${limit}`}
                 className="text-sm font-medium text-muted-foreground hover:text-foreground"
               >
                 Next
@@ -203,7 +204,7 @@ export function renderReview(result: ActionResult<GetMissedQuestionsOutput>) {
           {result.error.message}
         </div>
         <Button asChild className="rounded-full">
-          <Link href="/app/practice">Go to Practice</Link>
+          <Link href={ROUTES.APP_PRACTICE}>Go to Practice</Link>
         </Button>
       </div>
     );
