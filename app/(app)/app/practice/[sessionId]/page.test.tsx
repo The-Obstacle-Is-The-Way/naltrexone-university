@@ -425,8 +425,8 @@ describe('app/(app)/app/practice/[sessionId]', () => {
     );
 
     expect(html).toContain('Question navigator');
-    expect(html).toContain('Question 1: Correct');
-    expect(html).toContain('Question 2: Unanswered');
+    expect(html).toContain('Question 1: Current, Answered');
+    expect(html).toContain('Question 2: Marked for review, Unanswered');
   });
 
   it('isQuestionBookmarked returns true when questionId is in set', async () => {

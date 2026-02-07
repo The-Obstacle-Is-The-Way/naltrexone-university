@@ -411,7 +411,7 @@ describe('GetSessionHistoryUseCase', () => {
 |-------|-----|-------------|--------|-------|
 | 1 | FR-1 | Practice page ≤ 300 lines per file | **Done** | `page.tsx` = 115 lines; hooks extracted to `usePracticeSessionControls`, `usePracticeQuestionFlow` |
 | 1 | FR-2 | Session page ≤ 300 lines per file | **Done** | `practice-session-page-client.tsx` = 21 lines; hook extracted to `usePracticeSessionPageController` |
-| 2 | FR-3 | In-run question navigation (back/jump) | **Done** | `QuestionNavigator` is rendered in active session UI (`PracticeSessionPageView` topContent) and wired to `getNextQuestion({ sessionId, questionId })` via `onNavigateQuestion` in `usePracticeSessionPageController`. |
+| 2 | FR-3 | In-run question navigation (back/jump) | **Done** | `QuestionNavigator` is rendered in active session UI (`PracticeSessionPageView` topContent), wired to `getNextQuestion({ sessionId, questionId })` via `onNavigateQuestion`, and now enforces mode-correct status semantics (tutor: correct/incorrect labels; exam: neutral answered/unanswered/current/marked without correctness leakage). |
 | 2 | FR-4 | Per-question breakdown on session summary | **Done** | `SessionSummaryView` calls `getPracticeSessionReview` and displays per-question list with order, stem, status, correctness badge |
 | 3 | FR-5 | Dashboard/Review include session context | **Done** | `sessionId` and `sessionMode` fields present in `UserStatsOutput.recentActivity` and `MissedQuestionRow`. Dashboard groups by session. Review shows session origin badge. |
 | 4 | FR-6 | Session history list with drill-down | **Done** | `PracticeSessionHistoryPanel` on practice page. Rows clickable → per-question breakdown via `getPracticeSessionReview`. |
@@ -427,3 +427,4 @@ describe('GetSessionHistoryUseCase', () => {
 | 2026-02-06 | Architecture Review | Initial draft |
 | 2026-02-07 | Architecture Review | **Status correction:** "Implemented" → "Partial". Added Section 10 (Implementation Status) documenting per-phase completion. FR-3 (in-run navigation) identified as sole remaining gap — navigator exists in exam review but not during active answering. |
 | 2026-02-07 | Engineering | **Status correction:** "Partial" → "Implemented" after verifying FR-3 wiring in active answering state. Updated superseded debt/bug links to archived locations. |
+| 2026-02-07 | Engineering | Hardened FR-3 compliance: active exam navigation now uses neutral status labels and explicit marked/current indicators; added browser/jsdom coverage for tutor+exam mode navigator semantics. |

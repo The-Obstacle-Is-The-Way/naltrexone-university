@@ -2432,6 +2432,7 @@ As a subscribed user, I can run a timed practice session with filters and get a 
 * In exam mode, "End session" opens a review stage showing answered/unanswered/marked counts with jump-to-question.
 * When I submit from review stage, I see score and total duration.
 * In exam mode, explanations are hidden until the session ends.
+* During active answering in exam mode, per-question UI status is neutral (`answered`/`unanswered`/`current`/`marked`) and MUST NOT reveal correctness before review/summary.
 * Users can navigate to any question during active answering (back/jump), not only forward. (SPEC-020 Phase 2)
 * Session summary shows per-question breakdown alongside aggregate totals. (SPEC-020 Phase 2)
 
