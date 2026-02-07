@@ -4,6 +4,7 @@ import { getStripePriceId } from '@/src/adapters/config/stripe-prices';
 import type {
   CheckoutSessionCreateParams,
   StripeClient,
+  StripeListedSubscription,
 } from '@/src/adapters/shared/stripe-types';
 import { ApplicationError } from '@/src/application/errors';
 import type {
@@ -12,6 +13,24 @@ import type {
 } from '@/src/application/ports/gateways';
 import type { Logger } from '@/src/application/ports/logger';
 import { callStripeWithRetry } from './stripe-retry';
+
+const BLOCKING_SUBSCRIPTION_STATUSES = new Set([
+  'active',
+  'trialing',
+  'past_due',
+  'unpaid',
+  'incomplete',
+  'paused',
+]);
+
+function getBlockingSubscriptionStatus(
+  subscription: StripeListedSubscription | undefined,
+): string | null {
+  if (!subscription) return null;
+  if (!subscription.status) return null;
+  if (!BLOCKING_SUBSCRIPTION_STATUSES.has(subscription.status)) return null;
+  return subscription.status;
+}
 
 export async function createStripeCheckoutSession({
   stripe,
@@ -27,6 +46,45 @@ export async function createStripeCheckoutSession({
   logger: Logger;
 }): Promise<{ url: string }> {
   const priceId = getStripePriceId(input.plan, priceIds);
+  const subscriptionsList = stripe.subscriptions?.list;
+  if (subscriptionsList) {
+    const subscriptions = await callStripeWithRetry({
+      operation: 'subscriptions.list',
+      fn: () =>
+        subscriptionsList({
+          customer: input.externalCustomerId,
+          status: 'all',
+          limit: 10,
+        }),
+      logger,
+    });
+
+    let blockingSubscription: StripeListedSubscription | null = null;
+    let blockingStatus: string | null = null;
+    for (const subscription of subscriptions.data) {
+      const status = getBlockingSubscriptionStatus(subscription);
+      if (!status) continue;
+      blockingSubscription = subscription;
+      blockingStatus = status;
+      break;
+    }
+
+    if (blockingSubscription && blockingStatus) {
+      logger.warn(
+        {
+          userId: input.userId,
+          externalCustomerId: input.externalCustomerId,
+          externalSubscriptionId: blockingSubscription.id ?? null,
+          subscriptionStatus: blockingStatus,
+        },
+        'Stripe already has a blocking subscription for customer',
+      );
+      throw new ApplicationError(
+        'ALREADY_SUBSCRIBED',
+        'Subscription already exists for this customer',
+      );
+    }
+  }
 
   const existing = await callStripeWithRetry({
     operation: 'checkout.sessions.list',

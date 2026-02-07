@@ -308,6 +308,147 @@ describe('StripePaymentGateway', () => {
     );
   });
 
+  it('throws ALREADY_SUBSCRIBED when Stripe already has an active subscription for the customer', async () => {
+    const checkoutCreate = vi.fn(async () => ({
+      id: 'cs_new',
+      url: 'https://stripe/checkout',
+    }));
+    const subscriptionsList = vi.fn(async () => ({
+      data: [{ id: 'sub_active_1', status: 'active' }],
+    }));
+
+    const stripe = {
+      customers: {
+        create: vi.fn(async () => ({ id: 'cus_123' })),
+      },
+      checkout: {
+        sessions: {
+          create: checkoutCreate,
+          list: vi.fn(async () => ({ data: [] })),
+          retrieve: vi.fn(async () => ({
+            id: 'cs_existing',
+            url: 'https://stripe/existing-checkout',
+            line_items: { data: [] },
+          })),
+          expire: vi.fn(async () => ({
+            id: 'cs_existing',
+            url: 'https://stripe/existing-checkout',
+          })),
+        },
+      },
+      subscriptions: {
+        retrieve: vi.fn(async () => ({})),
+        list: subscriptionsList,
+      },
+      billingPortal: {
+        sessions: {
+          create: vi.fn(async () => ({ url: 'https://stripe/portal' })),
+        },
+      },
+      webhooks: {
+        constructEvent: vi.fn(() => {
+          throw new Error('unexpected webhook call');
+        }),
+      },
+    } as const;
+
+    const gateway = new StripePaymentGateway({
+      stripe,
+      webhookSecret: 'whsec_1',
+      priceIds: { monthly: 'price_m', annual: 'price_a' },
+      logger: new FakeLogger(),
+    });
+
+    await expect(
+      gateway.createCheckoutSession({
+        userId: 'user_1',
+        externalCustomerId: 'cus_123',
+        plan: 'monthly',
+        successUrl: 'https://app/success',
+        cancelUrl: 'https://app/cancel',
+      }),
+    ).rejects.toMatchObject({ code: 'ALREADY_SUBSCRIBED' });
+
+    expect(subscriptionsList).toHaveBeenCalledWith({
+      customer: 'cus_123',
+      status: 'all',
+      limit: 10,
+    });
+    expect(checkoutCreate).not.toHaveBeenCalled();
+  });
+
+  it('creates a checkout session when Stripe subscriptions are only ended or canceled', async () => {
+    const checkoutCreate = vi.fn(async () => ({
+      id: 'cs_new',
+      url: 'https://stripe/checkout',
+    }));
+    const subscriptionsList = vi.fn(async () => ({
+      data: [
+        { id: 'sub_ended_1', status: 'canceled' },
+        { id: 'sub_ended_2', status: 'incomplete_expired' },
+      ],
+    }));
+
+    const stripe = {
+      customers: {
+        create: vi.fn(async () => ({ id: 'cus_123' })),
+      },
+      checkout: {
+        sessions: {
+          create: checkoutCreate,
+          list: vi.fn(async () => ({ data: [] })),
+          retrieve: vi.fn(async () => ({
+            id: 'cs_existing',
+            url: 'https://stripe/existing-checkout',
+            line_items: { data: [] },
+          })),
+          expire: vi.fn(async () => ({
+            id: 'cs_existing',
+            url: 'https://stripe/existing-checkout',
+          })),
+        },
+      },
+      subscriptions: {
+        retrieve: vi.fn(async () => ({})),
+        list: subscriptionsList,
+      },
+      billingPortal: {
+        sessions: {
+          create: vi.fn(async () => ({ url: 'https://stripe/portal' })),
+        },
+      },
+      webhooks: {
+        constructEvent: vi.fn(() => {
+          throw new Error('unexpected webhook call');
+        }),
+      },
+    } as const;
+
+    const gateway = new StripePaymentGateway({
+      stripe,
+      webhookSecret: 'whsec_1',
+      priceIds: { monthly: 'price_m', annual: 'price_a' },
+      logger: new FakeLogger(),
+    });
+
+    await expect(
+      gateway.createCheckoutSession({
+        userId: 'user_1',
+        externalCustomerId: 'cus_123',
+        plan: 'monthly',
+        successUrl: 'https://app/success',
+        cancelUrl: 'https://app/cancel',
+      }),
+    ).resolves.toEqual({ url: 'https://stripe/checkout' });
+
+    expect(subscriptionsList).toHaveBeenCalledWith({
+      customer: 'cus_123',
+      status: 'all',
+      limit: 10,
+    });
+    expect(checkoutCreate).toHaveBeenCalledTimes(1);
+  });
+
   it('reuses an existing open checkout session when present', async () => {
     const checkoutList = vi.fn(async () => ({
       data: [{ id: 'cs_existing', url: 'https://stripe/existing-checkout' }],
