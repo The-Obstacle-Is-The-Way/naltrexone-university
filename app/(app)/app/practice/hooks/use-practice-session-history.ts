@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useIsMounted } from '@/lib/use-is-mounted';
 import {
   type GetPracticeSessionReviewOutput,
@@ -41,6 +41,7 @@ export function usePracticeSessionHistory(): UsePracticeSessionHistoryOutput {
     useState<LoadState>({
       status: 'idle',
     });
+  const latestReviewSessionId = useRef<string | null>(null);
   const isMounted = useIsMounted();
 
   useEffect(() => {
@@ -77,6 +78,7 @@ export function usePracticeSessionHistory(): UsePracticeSessionHistoryOutput {
 
   const onOpenSessionHistory = useCallback(
     async (sessionId: string) => {
+      latestReviewSessionId.current = sessionId;
       setSelectedHistorySessionId(sessionId);
       setSelectedHistoryReview(null);
       setHistoryReviewLoadState({ status: 'loading' });
@@ -86,6 +88,7 @@ export function usePracticeSessionHistory(): UsePracticeSessionHistoryOutput {
         res = await getPracticeSessionReview({ sessionId });
       } catch (error) {
         if (!isMounted()) return;
+        if (latestReviewSessionId.current !== sessionId) return;
         setHistoryReviewLoadState({
           status: 'error',
           message: getThrownErrorMessage(error),
@@ -93,6 +96,7 @@ export function usePracticeSessionHistory(): UsePracticeSessionHistoryOutput {
         return;
       }
       if (!isMounted()) return;
+      if (latestReviewSessionId.current !== sessionId) return;
 
       if (!res.ok) {
         setHistoryReviewLoadState({
