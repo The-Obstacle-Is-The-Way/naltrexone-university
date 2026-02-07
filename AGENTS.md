@@ -1,8 +1,8 @@
 # AGENTS.md
 
-Repository guidelines for AI coding agents (Codex CLI, Claude Code, etc.) working with this codebase.
+Repository guidelines for AI coding agents (Codex CLI, Claude Code, Cursor, GitHub Copilot, etc.) working with this codebase.
 
-> **Parallel with CLAUDE.md** — All shared sections are identical to `CLAUDE.md`. Agent-specific additions are clearly marked.
+> **This is the single source of truth for all agents.** Claude Code also reads `CLAUDE.md` (slim, Claude-specific supplements) and `.claude/rules/` (path-scoped rules).
 
 ---
 
@@ -155,6 +155,7 @@ pnpm typecheck              # TypeScript type checking
 # Testing
 pnpm test                   # Unit tests (Vitest, watch mode)
 pnpm test --run             # Unit tests (single run, CI-style)
+pnpm test:browser           # Browser mode tests (vitest-browser-react, Chromium)
 pnpm test:integration       # Integration tests (uses .env.test, requires local DB)
 pnpm test:e2e               # E2E tests (Playwright)
 
@@ -206,18 +207,16 @@ app/, lib/, db/    → Next.js framework code, infrastructure (outermost layer)
 
 ### Current State
 
-Implemented so far (see `docs/specs/index.md`):
+Implemented (see `docs/specs/index.md`):
 - **Domain:** entities, value objects, services, errors (`src/domain/**`) (SPEC-001 → SPEC-003)
 - **Application:** ports, core use cases, app errors (`src/application/**`) (SPEC-004 → SPEC-005)
 - **Adapters:** schema, repositories, gateways, controllers (`db/schema.ts`, `src/adapters/**`) (SPEC-006 → SPEC-010)
-- **Feature slices:** paywall + core question loop (`app/**`, `components/**`) (SPEC-011 → SPEC-012)
+- **Feature slices:** paywall, question loop, practice sessions, review + bookmarks, dashboard, UI integration, practice engine (`app/**`, `components/**`) (SPEC-011 → SPEC-015, SPEC-018, SPEC-020)
 
-Planned next (per `docs/specs/master_spec.md` + ADR-012):
-- SPEC-013 Practice Sessions
-- SPEC-014 Review + Bookmarks
-- SPEC-015 Dashboard
+In progress / proposed:
 - SPEC-016 Observability (partial)
-- SPEC-017 Rate Limiting (proposed)
+- SPEC-017 Rate Limiting (partial)
+- SPEC-019 Practice & Navigation UX Redesign (proposed)
 
 Framework code lives in:
 - `app/` - Next.js App Router pages, layouts, API routes
@@ -327,21 +326,25 @@ describe('MyComponent', () => {
 });
 ```
 
-**For interactive tests** (clicking buttons, typing in forms), you'll need `@testing-library/react`. First add this to `vitest.config.ts`:
+**For interactive / async tests** (clicking buttons, hooks with `useEffect`/`useState` transitions), use `vitest-browser-react` in `*.browser.spec.tsx`:
 
-```typescript
-resolve: {
-  conditions: ['development'],  // Fixes act() bug in git hooks/CI
-  alias: { '@': path.resolve(__dirname, './') },
-},
+```tsx
+import { render } from 'vitest-browser-react';
+import { expect, test } from 'vitest';
+
+test('updates state after async operation', async () => {
+  const screen = await render(<MyComponent />);
+  await expect.element(screen.getByText('Loaded')).toBeVisible();
+});
 ```
 
-**Current state:** All our .test.tsx files only check render output, so we use `renderToStaticMarkup`.
+Run with: `pnpm test:browser` (real Chromium via Playwright — not jsdom).
 
 **DO NOT USE:**
+- `@testing-library/react` — broken with React 19 + Vitest, zombie maintenance
 - `react-test-renderer` — Deprecated in React 19
 - `react-dom/test-utils` — Removed in React 19
-- `environmentMatchGlobs` — Deprecated in Vitest 4
+- `environmentMatchGlobs` — Removed in Vitest 4
 
 See `docs/dev/react-vitest-testing.md` for full details.
 
