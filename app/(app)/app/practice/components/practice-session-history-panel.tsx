@@ -20,6 +20,13 @@ function formatSessionAccuracy(value: number): string {
   return `${Math.round(value * 100)}%`;
 }
 
+function formatDuration(seconds: number): string {
+  if (seconds < 60) return `${seconds}s`;
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return s > 0 ? `${m}m ${s}s` : `${m}m`;
+}
+
 function formatSessionMode(mode: 'tutor' | 'exam'): string {
   return mode === 'exam' ? 'Exam' : 'Tutor';
 }
@@ -68,7 +75,7 @@ export function PracticeSessionHistoryPanel(
                       {formatSessionAccuracy(row.accuracy)})
                     </span>
                     <span className="mx-2">•</span>
-                    <span>{row.durationSeconds}s</span>
+                    <span>{formatDuration(row.durationSeconds)}</span>
                   </div>
                   <Button
                     type="button"

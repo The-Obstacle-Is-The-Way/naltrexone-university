@@ -1,9 +1,10 @@
+'use client';
+
 import {
   type Dispatch,
   type SetStateAction,
   useCallback,
   useEffect,
-  useMemo,
   useState,
 } from 'react';
 import { endSession } from '@/app/(app)/app/practice/[sessionId]/practice-session-page-logic';
@@ -70,9 +71,9 @@ export function usePracticeSessionReviewStage(
   });
   const [isInReviewStage, setIsInReviewStage] = useState(false);
 
-  const finalizeSession = useMemo(
+  const finalizeSession = useCallback(
     () =>
-      endSession.bind(null, {
+      endSession({
         sessionId: input.sessionId,
         endPracticeSessionFn: endPracticeSession,
         setLoadState: input.setLoadState,

@@ -7,6 +7,13 @@ import type {
 import { getStemPreview } from '@/src/adapters/shared/stem-preview';
 import type { LoadState } from '../../practice-page-logic';
 
+function formatDuration(seconds: number): string {
+  if (seconds < 60) return `${seconds}s`;
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return s > 0 ? `${m}m ${s}s` : `${m}m`;
+}
+
 export function SessionSummaryView({
   summary,
   review,
@@ -54,7 +61,7 @@ export function SessionSummaryView({
         <div className="rounded-2xl border border-border bg-card p-6 shadow-sm transition-colors hover:border-border/50 hover:bg-muted">
           <div className="text-sm text-muted-foreground">Duration</div>
           <div className="mt-2 text-3xl font-bold font-display text-foreground">
-            {summary.totals.durationSeconds}s
+            {formatDuration(summary.totals.durationSeconds)}
           </div>
         </div>
       </div>

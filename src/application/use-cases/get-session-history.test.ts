@@ -1,4 +1,3 @@
-// @vitest-environment jsdom
 import { describe, expect, it } from 'vitest';
 import { createPracticeSession } from '@/src/domain/test-helpers';
 import { FakePracticeSessionRepository } from '../test-helpers/fakes';

@@ -1,7 +1,7 @@
 # BUG-084: Webhook Error Response Leaks Implementation Details
 
 **Status:** Open
-**Priority:** P3
+**Priority:** P2
 **Date:** 2026-02-06
 
 ---

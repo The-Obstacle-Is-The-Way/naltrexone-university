@@ -1,4 +1,4 @@
-import { PracticeView } from '@/app/(app)/app/practice/page';
+import { PracticeView } from '@/app/(app)/app/practice/components/practice-view';
 import { Button } from '@/components/ui/button';
 import type { EndPracticeSessionOutput } from '@/src/adapters/controllers/practice-controller';
 import type { NextQuestion } from '@/src/application/use-cases/get-next-question';

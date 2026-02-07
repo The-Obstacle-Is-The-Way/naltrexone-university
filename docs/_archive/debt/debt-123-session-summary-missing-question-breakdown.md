@@ -3,7 +3,7 @@
 **Status:** Resolved
 **Priority:** P2
 **Date:** 2026-02-06
-**Resolved:** 2026-02-06 (PR #63)
+**Resolved:** 2026-02-06 (PR #64)
 **Spec Mandate:** [SPEC-020](../specs/spec-020-practice-engine-completion.md) Phase 2
 
 ---

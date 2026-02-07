@@ -2,6 +2,7 @@ import {
   type Dispatch,
   type SetStateAction,
   useCallback,
+  useRef,
   useState,
 } from 'react';
 import {
@@ -31,13 +32,16 @@ export function usePracticeSessionMarkForReview(
   onToggleMarkForReview: () => Promise<void>;
 } {
   const [isMarkingForReview, setIsMarkingForReview] = useState(false);
+  const isMarkingRef = useRef(false);
 
   const onToggleMarkForReview = useCallback(async () => {
     if (!input.question) return;
     if (input.sessionMode !== 'exam') return;
-    if (isMarkingForReview) return;
+    if (isMarkingRef.current) return;
+    if (!input.sessionInfo) return;
 
-    const markedForReview = !input.sessionInfo?.isMarkedForReview;
+    const markedForReview = !input.sessionInfo.isMarkedForReview;
+    isMarkingRef.current = true;
     setIsMarkingForReview(true);
 
     let res: Awaited<ReturnType<typeof setPracticeSessionQuestionMark>>;
@@ -53,6 +57,7 @@ export function usePracticeSessionMarkForReview(
         status: 'error',
         message: getThrownErrorMessage(error),
       });
+      isMarkingRef.current = false;
       setIsMarkingForReview(false);
       return;
     }
@@ -63,6 +68,7 @@ export function usePracticeSessionMarkForReview(
         status: 'error',
         message: getActionResultErrorMessage(res),
       });
+      isMarkingRef.current = false;
       setIsMarkingForReview(false);
       return;
     }
@@ -84,17 +90,17 @@ export function usePracticeSessionMarkForReview(
       };
     });
 
+    isMarkingRef.current = false;
     setIsMarkingForReview(false);
   }, [
     input.isMounted,
     input.question,
     input.sessionId,
-    input.sessionInfo?.isMarkedForReview,
+    input.sessionInfo,
     input.sessionMode,
     input.setLoadState,
     input.setReview,
     input.setSessionInfo,
-    isMarkingForReview,
   ]);
 
   return { isMarkingForReview, onToggleMarkForReview };

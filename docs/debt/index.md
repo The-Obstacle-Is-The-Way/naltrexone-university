@@ -30,6 +30,8 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 ## Archived Debt
 
+### Resolved in PR #64 (SPEC-020)
+
 | ID | Title | Priority | Resolved |
 |----|-------|----------|----------|
 | [DEBT-123](../_archive/debt/debt-123-session-summary-missing-question-breakdown.md) | Session Summary Per-Question Breakdown (SPEC-020) | P2 | 2026-02-06 |
@@ -38,6 +40,8 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 | [DEBT-115](../_archive/debt/debt-115-practice-page-god-component.md) | Practice Page God Component 823 → 114 Lines (SPEC-020) | P1 | 2026-02-06 |
 | [DEBT-114](../_archive/debt/debt-114-no-session-history-page.md) | Session History Page (SPEC-020) | P2 | 2026-02-06 |
 | [DEBT-113](../_archive/debt/debt-113-dashboard-review-lack-session-context.md) | Dashboard + Review Session Context (SPEC-020) | P1 | 2026-02-06 |
+
+### Previously Archived
 
 | ID | Title | Priority | Resolved |
 |----|-------|----------|----------|

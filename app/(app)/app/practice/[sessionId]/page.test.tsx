@@ -65,7 +65,7 @@ describe('app/(app)/app/practice/[sessionId]', () => {
     expect(html).toContain('Accuracy');
     expect(html).toContain('70%');
     expect(html).toContain('Duration');
-    expect(html).toContain('123s');
+    expect(html).toContain('2m 3s');
     expect(html).toContain('Question breakdown');
     expect(html).toContain('Start another session');
   });

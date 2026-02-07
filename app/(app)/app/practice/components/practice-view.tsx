@@ -169,26 +169,28 @@ export function PracticeView(props: PracticeViewProps) {
         />
       ) : null}
 
-      <div className="flex flex-col gap-3 sm:flex-row">
-        <Button
-          type="button"
-          className="rounded-full"
-          disabled={!props.canSubmit || props.isPending}
-          onClick={props.onSubmit}
-        >
-          Submit
-        </Button>
+      {props.question ? (
+        <div className="flex flex-col gap-3 sm:flex-row">
+          <Button
+            type="button"
+            className="rounded-full"
+            disabled={!props.canSubmit || props.isPending}
+            onClick={props.onSubmit}
+          >
+            Submit
+          </Button>
 
-        <Button
-          type="button"
-          variant="outline"
-          className="rounded-full"
-          disabled={props.isPending || props.loadState.status === 'loading'}
-          onClick={props.onNextQuestion}
-        >
-          Next Question
-        </Button>
-      </div>
+          <Button
+            type="button"
+            variant="outline"
+            className="rounded-full"
+            disabled={props.isPending || props.loadState.status === 'loading'}
+            onClick={props.onNextQuestion}
+          >
+            Next Question
+          </Button>
+        </div>
+      ) : null}
     </div>
   );
 }

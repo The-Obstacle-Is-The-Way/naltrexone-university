@@ -519,7 +519,7 @@ describe('app/(app)/app/practice', () => {
     expect(html).toContain('Recent sessions');
     expect(html).toContain('Exam');
     expect(html).toContain('15/20 correct (75%)');
-    expect(html).toContain('1800s');
+    expect(html).toContain('30m');
   });
 
   it('renders selected session question breakdown', async () => {

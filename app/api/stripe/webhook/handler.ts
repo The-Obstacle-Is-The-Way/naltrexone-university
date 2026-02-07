@@ -80,7 +80,11 @@ export function createWebhookHandler(
         (error.code === 'INVALID_WEBHOOK_SIGNATURE' ||
           error.code === 'INVALID_WEBHOOK_PAYLOAD')
       ) {
-        return NextResponse.json({ error: error.message }, { status: 400 });
+        container.logger.error({ error }, 'Stripe webhook validation failed');
+        return NextResponse.json(
+          { error: 'Webhook validation failed' },
+          { status: 400 },
+        );
       }
 
       container.logger.error({ error }, 'Stripe webhook failed');

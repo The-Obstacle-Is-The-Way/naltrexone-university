@@ -17,7 +17,7 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 | ID | Title | Status | Priority | Date |
 |----|-------|--------|----------|------|
-| [BUG-084](bug-084-webhook-error-message-leaks-context.md) | Webhook Error Response Leaks Implementation Details | Open | P3 | 2026-02-06 |
+| [BUG-084](bug-084-webhook-error-message-leaks-context.md) | Webhook Error Response Leaks Implementation Details | Open | P2 | 2026-02-06 |
 | [BUG-083](bug-083-stale-closure-mark-for-review.md) | Stale Closure Risk in usePracticeSessionMarkForReview | Open | P3 | 2026-02-06 |
 | [BUG-082](bug-082-void-promises-swallow-errors.md) | Void Promises Silently Swallow Errors in Practice Page | Open | P2 | 2026-02-06 |
 | [BUG-081](bug-081-bookmark-timeout-race-condition.md) | Bookmark Message Timeout Fires After Component Unmount | Open | P2 | 2026-02-06 |

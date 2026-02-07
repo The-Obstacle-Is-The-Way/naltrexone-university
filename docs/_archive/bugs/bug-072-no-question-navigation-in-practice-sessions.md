@@ -4,7 +4,7 @@
 **Priority:** P1
 **Date:** 2026-02-06
 **Reclassified:** 2026-02-06
-**Resolved:** 2026-02-06 (PR #63)
+**Resolved:** 2026-02-06 (PR #64)
 
 ---
 

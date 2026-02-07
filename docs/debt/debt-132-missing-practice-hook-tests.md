@@ -29,7 +29,7 @@ SPEC-020 Phase 1 extracted 6 custom hooks from the god components. These hooks o
 
 ## Resolution
 
-Add tests for each hook. Since these hooks call server actions, tests should mock the server actions and verify state transitions.
+Add tests for each hook. Since these hooks call server actions, tests should inject server action dependencies (via props or parameters) and stub them with `vi.fn()` — do NOT use `vi.mock()` for internal code. Verify state transitions.
 
 Note: The extracted *logic functions* in `practice-page-logic.ts` and `practice-session-page-logic.ts` already have tests. The hooks primarily wire these functions together — tests should verify the wiring is correct.
 

@@ -18,15 +18,20 @@ When the idempotency polling loop times out, it throws `ApplicationError('CONFLI
 
 ## Affected File
 
-`src/adapters/shared/with-idempotency.ts` — Polling loop timeout throw
+`src/adapters/shared/with-idempotency.ts` — `withIdempotency()` polling loop timeout throw
 
 ## Resolution
 
-Improve the timeout error message to reflect both possible scenarios.
+Improve the timeout error message to distinguish between:
+1. Request is actively in progress (legitimate wait)
+2. Request may have crashed without storing a result
+
+Proposed message: `"Request timed out waiting for idempotency key. The concurrent request may still be in progress or may have failed."`
 
 ## Verification
 
-- [ ] Timeout message is accurate
+- [ ] Timeout message distinguishes between in-progress and crashed scenarios
+- [ ] Message explicitly acknowledges both possibilities
 - [ ] Existing idempotency tests pass
 
 ## Related

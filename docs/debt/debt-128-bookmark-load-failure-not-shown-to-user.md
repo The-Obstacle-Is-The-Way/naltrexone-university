@@ -29,7 +29,7 @@ Show a non-intrusive warning banner when bookmark loading fails after all retrie
 ## Verification
 
 - [ ] Warning visible when bookmarks fail to load
-- [ ] Doesn't block question answering flow
+- [ ] Doesn't block question-answering flow
 
 ## Related
 
