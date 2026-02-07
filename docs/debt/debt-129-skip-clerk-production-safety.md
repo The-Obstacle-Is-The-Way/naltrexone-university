@@ -55,7 +55,7 @@ The one-time guard flag (`hasLoggedSkipClerkProductionWarning`) ensures the CRIT
 
 ## Verification
 
-- [x] `SKIP_CLERK=true` is ignored in production NODE_ENV
+- [x] `NEXT_PUBLIC_SKIP_CLERK=true` is ignored in production NODE_ENV
 - [x] Still works in development
 - [x] Critical log emitted in production misconfiguration scenario
 
