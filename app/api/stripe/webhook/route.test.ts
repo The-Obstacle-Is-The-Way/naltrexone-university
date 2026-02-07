@@ -29,7 +29,11 @@ function createTestDeps() {
     remaining: 999,
     retryAfterSeconds: 0,
   }));
-  const rateLimiter: RateLimiter & { limit: typeof limit } = { limit };
+  const pruneExpiredWindows = vi.fn(async () => 0);
+  const rateLimiter: RateLimiter & { limit: typeof limit } = {
+    limit,
+    pruneExpiredWindows,
+  };
   const tx = {
     stripeEvents: {
       claim: async () => true,
@@ -252,6 +256,7 @@ describe('POST /api/stripe/webhook', () => {
         remaining: 999,
         retryAfterSeconds: 0,
       }),
+      pruneExpiredWindows: async () => 0,
     };
     const createContainer = vi.fn<() => StripeWebhookRouteContainer>(() => ({
       logger: { error: vi.fn() },

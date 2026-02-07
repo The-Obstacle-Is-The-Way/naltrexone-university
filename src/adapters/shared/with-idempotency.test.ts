@@ -166,4 +166,50 @@ describe('withIdempotency', () => {
 
     expect(execute).not.toHaveBeenCalled();
   });
+
+  it('prunes expired idempotency keys before processing requests', async () => {
+    const nowDate = new Date('2026-02-07T12:00:00.000Z');
+    const now = () => nowDate;
+    const repo = new FakeIdempotencyKeyRepository(now);
+    const pruneSpy = vi.spyOn(repo, 'pruneExpiredBefore');
+    const execute = vi.fn(async () => ({ ok: true }));
+
+    await expect(
+      withIdempotency({
+        repo,
+        userId: 'user_1',
+        action: 'billing:createCheckoutSession',
+        key: '55555555-5555-5555-5555-555555555555',
+        now,
+        execute,
+      }),
+    ).resolves.toEqual({ ok: true });
+
+    expect(pruneSpy).toHaveBeenCalledWith(nowDate, 100);
+    expect(execute).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not fail when idempotency pruning fails', async () => {
+    const nowDate = new Date('2026-02-07T12:00:00.000Z');
+    const now = () => nowDate;
+    const repo = new FakeIdempotencyKeyRepository(now);
+    vi.spyOn(repo, 'pruneExpiredBefore').mockRejectedValue(
+      new Error('prune failed'),
+    );
+
+    const execute = vi.fn(async () => ({ ok: true }));
+
+    await expect(
+      withIdempotency({
+        repo,
+        userId: 'user_1',
+        action: 'billing:createCheckoutSession',
+        key: '66666666-6666-6666-6666-666666666666',
+        now,
+        execute,
+      }),
+    ).resolves.toEqual({ ok: true });
+
+    expect(execute).toHaveBeenCalledTimes(1);
+  });
 });

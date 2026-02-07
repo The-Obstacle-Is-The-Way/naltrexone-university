@@ -1,3 +1,4 @@
+import { callStripeWithRetry } from '@/src/adapters/gateways/stripe/stripe-retry';
 import { retrieveAndNormalizeStripeSubscription } from '@/src/adapters/gateways/stripe/stripe-subscription-normalizer';
 import type { StripeClient } from '@/src/adapters/shared/stripe-types';
 import { ApplicationError } from '@/src/application/errors';
@@ -16,6 +17,7 @@ export type StripeSubscriptionRefRow = {
 export type ReconcileStripeSubscriptionsInput = {
   limit: number;
   offset: number;
+  dryRun?: boolean;
 };
 
 export type ReconcileStripeSubscriptionsOutput = {
@@ -42,6 +44,15 @@ export type ReconcileStripeSubscriptionsDeps = {
 
 const DEFAULT_LIMIT = 100;
 const MAX_LIMIT = 500;
+const SUBSCRIPTION_LIST_LIMIT = 100;
+const BLOCKING_STATUSES = new Set([
+  'active',
+  'trialing',
+  'past_due',
+  'unpaid',
+  'incomplete',
+  'paused',
+]);
 
 function toErrorMessage(error: unknown): string {
   if (error instanceof Error) return error.message || error.name;
@@ -54,6 +65,10 @@ function toSafeInt(value: number, fallback: number): number {
   return value;
 }
 
+function isBlockingStatus(status: unknown): status is string {
+  return typeof status === 'string' && BLOCKING_STATUSES.has(status);
+}
+
 export async function reconcileStripeSubscriptions(
   input: ReconcileStripeSubscriptionsInput,
   deps: ReconcileStripeSubscriptionsDeps,
@@ -63,6 +78,7 @@ export async function reconcileStripeSubscriptions(
     Math.max(1, toSafeInt(input.limit, DEFAULT_LIMIT)),
   );
   const safeOffset = Math.max(0, toSafeInt(input.offset, 0));
+  const dryRun = input.dryRun ?? true;
 
   const rows = await deps.listLocalSubscriptions({
     limit: safeLimit,
@@ -74,23 +90,24 @@ export async function reconcileStripeSubscriptions(
 
   for (const row of rows) {
     try {
-      const subscriptionUpdate = await retrieveAndNormalizeStripeSubscription({
-        stripe: deps.stripe,
-        subscriptionRef: row.stripeSubscriptionId,
-        event: {
-          id: `cron_reconcile:${row.stripeSubscriptionId}`,
-          type: 'cron.reconcile_stripe_subscriptions',
-        },
-        priceIds: deps.priceIds,
-        logger: deps.logger,
-      });
+      const localSubscriptionUpdate =
+        await retrieveAndNormalizeStripeSubscription({
+          stripe: deps.stripe,
+          subscriptionRef: row.stripeSubscriptionId,
+          event: {
+            id: `cron_reconcile:${row.stripeSubscriptionId}`,
+            type: 'cron.reconcile_stripe_subscriptions',
+          },
+          priceIds: deps.priceIds,
+          logger: deps.logger,
+        });
 
-      if (subscriptionUpdate.userId !== row.userId) {
+      if (localSubscriptionUpdate.userId !== row.userId) {
         deps.logger.error(
           {
             stripeSubscriptionId: row.stripeSubscriptionId,
             expectedUserId: row.userId,
-            actualUserId: subscriptionUpdate.userId,
+            actualUserId: localSubscriptionUpdate.userId,
           },
           'Stripe subscription metadata.user_id does not match local user id',
         );
@@ -100,18 +117,160 @@ export async function reconcileStripeSubscriptions(
         );
       }
 
+      const subscriptionsClient = deps.stripe.subscriptions;
+      const listSubscriptions =
+        subscriptionsClient?.list?.bind(subscriptionsClient);
+      if (!listSubscriptions) {
+        throw new ApplicationError(
+          'STRIPE_ERROR',
+          'Stripe subscriptions.list is unavailable for reconciliation',
+        );
+      }
+
+      const listedSubscriptions = await callStripeWithRetry({
+        operation: 'subscriptions.list',
+        fn: () =>
+          listSubscriptions({
+            customer: localSubscriptionUpdate.externalCustomerId,
+            status: 'all',
+            limit: SUBSCRIPTION_LIST_LIMIT,
+          }),
+        logger: deps.logger,
+      });
+
+      const blockingSubscriptionIds = listedSubscriptions.data
+        .filter((subscription) => isBlockingStatus(subscription.status))
+        .map((subscription) => subscription.id)
+        .filter((id): id is string => typeof id === 'string');
+
+      let canonical = localSubscriptionUpdate;
+      const canonicalById = new Map<string, typeof localSubscriptionUpdate>([
+        [
+          localSubscriptionUpdate.externalSubscriptionId,
+          localSubscriptionUpdate,
+        ],
+      ]);
+
+      for (const blockingId of blockingSubscriptionIds) {
+        if (canonicalById.has(blockingId)) continue;
+        const blockingUpdate = await retrieveAndNormalizeStripeSubscription({
+          stripe: deps.stripe,
+          subscriptionRef: blockingId,
+          event: {
+            id: `cron_reconcile:${blockingId}`,
+            type: 'cron.reconcile_stripe_subscriptions',
+          },
+          priceIds: deps.priceIds,
+          logger: deps.logger,
+        });
+
+        if (blockingUpdate.userId !== row.userId) {
+          deps.logger.error(
+            {
+              stripeSubscriptionId: blockingId,
+              expectedUserId: row.userId,
+              actualUserId: blockingUpdate.userId,
+            },
+            'Blocking Stripe subscription metadata.user_id mismatch during reconciliation',
+          );
+          throw new ApplicationError(
+            'CONFLICT',
+            'Blocking Stripe subscription user id mismatch',
+          );
+        }
+
+        canonicalById.set(blockingId, blockingUpdate);
+      }
+
+      if (blockingSubscriptionIds.length > 0) {
+        const keptSubscriptionId = blockingSubscriptionIds.includes(
+          row.stripeSubscriptionId,
+        )
+          ? row.stripeSubscriptionId
+          : blockingSubscriptionIds
+              .map((id) => canonicalById.get(id))
+              .filter((subscription): subscription is typeof canonical => {
+                return subscription !== undefined;
+              })
+              .sort((a, b) => {
+                const periodDiff =
+                  b.currentPeriodEnd.getTime() - a.currentPeriodEnd.getTime();
+                if (periodDiff !== 0) return periodDiff;
+                return a.externalSubscriptionId.localeCompare(
+                  b.externalSubscriptionId,
+                );
+              })[0]?.externalSubscriptionId;
+
+        if (!keptSubscriptionId) {
+          throw new ApplicationError(
+            'STRIPE_ERROR',
+            'Unable to determine canonical Stripe subscription',
+          );
+        }
+
+        const kept = canonicalById.get(keptSubscriptionId);
+        if (!kept) {
+          throw new ApplicationError(
+            'STRIPE_ERROR',
+            'Canonical Stripe subscription data is missing',
+          );
+        }
+        canonical = kept;
+
+        const duplicateIds = blockingSubscriptionIds.filter(
+          (id) => id !== keptSubscriptionId,
+        );
+
+        if (!dryRun && duplicateIds.length > 0) {
+          const cancelSubscription =
+            subscriptionsClient?.cancel?.bind(subscriptionsClient);
+          if (!cancelSubscription) {
+            throw new ApplicationError(
+              'STRIPE_ERROR',
+              'Stripe subscriptions.cancel is unavailable for reconciliation',
+            );
+          }
+
+          for (const duplicateId of duplicateIds) {
+            await callStripeWithRetry({
+              operation: 'subscriptions.cancel',
+              fn: () =>
+                cancelSubscription(duplicateId, {
+                  idempotencyKey: `reconcile_duplicate_subscription:${duplicateId}`,
+                }),
+              logger: deps.logger,
+            });
+          }
+        }
+
+        if (duplicateIds.length > 0) {
+          deps.logger.warn(
+            {
+              userId: row.userId,
+              stripeCustomerId: localSubscriptionUpdate.externalCustomerId,
+              keptSubscriptionId,
+              duplicateSubscriptionIds: duplicateIds,
+              dryRun,
+            },
+            dryRun
+              ? 'Detected duplicate Stripe subscriptions (dry-run)'
+              : 'Canceled duplicate Stripe subscriptions',
+          );
+        }
+      }
+
       await deps.transaction(async ({ stripeCustomers, subscriptions }) => {
         await stripeCustomers.insert(
-          subscriptionUpdate.userId,
-          subscriptionUpdate.externalCustomerId,
+          canonical.userId,
+          canonical.externalCustomerId,
         );
         await subscriptions.upsert({
-          userId: subscriptionUpdate.userId,
-          externalSubscriptionId: subscriptionUpdate.externalSubscriptionId,
-          plan: subscriptionUpdate.plan,
-          status: subscriptionUpdate.status,
-          currentPeriodEnd: subscriptionUpdate.currentPeriodEnd,
-          cancelAtPeriodEnd: subscriptionUpdate.cancelAtPeriodEnd,
+          userId: canonical.userId,
+          externalSubscriptionId: canonical.externalSubscriptionId,
+          plan: canonical.plan,
+          status: canonical.status,
+          currentPeriodEnd: canonical.currentPeriodEnd,
+          cancelAtPeriodEnd: canonical.cancelAtPeriodEnd,
         });
       });
 

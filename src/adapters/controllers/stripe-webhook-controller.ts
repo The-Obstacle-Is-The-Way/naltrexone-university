@@ -27,9 +27,8 @@ export type StripeWebhookDeps = {
 };
 
 const STACK_TRACE_LIMIT = 1000;
-const DAY_MS = 86_400_000;
-const STRIPE_EVENT_RETENTION_DAYS = 90;
-const STRIPE_EVENT_PRUNE_LIMIT = 100;
+const STRIPE_EVENTS_RETENTION_MS = 90 * 86_400_000;
+const STRIPE_EVENTS_PRUNE_LIMIT = 100;
 
 function toErrorData(error: unknown): string {
   if (isApplicationError(error)) {
@@ -108,21 +107,23 @@ export async function processStripeWebhook(
     },
   );
 
+  // Best-effort cleanup: prune old stripe events.
+  // Idempotency keys and rate limits are pruned in their own hot paths
+  // (withIdempotency and DrizzleRateLimiter.limit respectively).
+  const cutoff = new Date(Date.now() - STRIPE_EVENTS_RETENTION_MS);
+
   try {
     await deps.transaction(async ({ stripeEvents }) => {
       await stripeEvents.pruneProcessedBefore(
-        new Date(Date.now() - STRIPE_EVENT_RETENTION_DAYS * DAY_MS),
-        STRIPE_EVENT_PRUNE_LIMIT,
+        cutoff,
+        STRIPE_EVENTS_PRUNE_LIMIT,
       );
     });
   } catch (error) {
-    // Best-effort cleanup: do not fail webhook processing if pruning fails.
     deps.logger.warn(
       {
         eventId: event.eventId,
         error: error instanceof Error ? error.message : String(error),
-        retentionDays: STRIPE_EVENT_RETENTION_DAYS,
-        pruneLimit: STRIPE_EVENT_PRUNE_LIMIT,
       },
       'Stripe event pruning failed',
     );

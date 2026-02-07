@@ -31,6 +31,14 @@ function parseNonNegativeInt(value: string | null, fallback: number): number {
   return n;
 }
 
+function parseBoolean(value: string | null, fallback: boolean): boolean {
+  if (!value) return fallback;
+  const normalized = value.trim().toLowerCase();
+  if (normalized === 'true' || normalized === '1') return true;
+  if (normalized === 'false' || normalized === '0') return false;
+  return fallback;
+}
+
 export async function POST(req: Request) {
   const container = createContainer();
 
@@ -57,11 +65,12 @@ export async function POST(req: Request) {
     MAX_LIMIT,
   );
   const offset = parseNonNegativeInt(url.searchParams.get('offset'), 0);
+  const dryRun = parseBoolean(url.searchParams.get('dryRun'), true);
 
   let result: unknown;
   try {
     result = await reconcileStripeSubscriptions(
-      { limit, offset },
+      { limit, offset, dryRun },
       {
         stripe: container.stripe,
         priceIds: {

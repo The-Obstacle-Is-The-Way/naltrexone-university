@@ -261,6 +261,7 @@ describe('question controllers (integration)', () => {
           remaining: 119,
           retryAfterSeconds: 0,
         }),
+        pruneExpiredWindows: async () => 0,
       },
       idempotencyKeyRepository,
       checkEntitlementUseCase: { execute: async () => ({ isEntitled: true }) },

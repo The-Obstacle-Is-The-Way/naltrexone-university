@@ -14,10 +14,17 @@ This is operational debt: we need a repeatable reconciliation process to detect 
 
 ## Current State
 
-- Reconciliation job implemented in `src/adapters/jobs/reconcile-stripe-subscriptions.ts`
-- Unit coverage in `src/adapters/jobs/reconcile-stripe-subscriptions.test.ts`
+- Reconciliation job now detects duplicate blocking subscriptions per customer in `src/adapters/jobs/reconcile-stripe-subscriptions.ts`
+- Canonical selection implemented:
+  - Prefer the subscription already mirrored in local `stripe_subscriptions` when it is still blocking
+  - Otherwise choose the blocking subscription with latest `currentPeriodEnd` (tie-break by subscription id)
+- Duplicate remediation implemented:
+  - `dryRun=true` (default) reports duplicate sets without cancellation
+  - `dryRun=false` cancels duplicate blocking subscriptions with idempotency keys
+- API route supports safe execution controls: `POST /api/cron/reconcile-stripe-subscriptions?limit=...&offset=...&dryRun=true|false`
+- Unit coverage expanded in `src/adapters/jobs/reconcile-stripe-subscriptions.test.ts`
 - Duplicate-creation guardrails already in place at checkout (`ALREADY_SUBSCRIBED`)
-- Remaining work is operational execution + verification checklist completion
+- Remaining work is operational execution + audit/refund workflow + verification checklist completion
 
 ## Impact
 
@@ -27,10 +34,11 @@ This is operational debt: we need a repeatable reconciliation process to detect 
 
 ## Resolution
 
-1. Build and run a one-time reconciliation workflow for Stripe test + production:
+1. Build and run a controlled reconciliation workflow for Stripe test + production:
    - Find customers with more than one blocking subscription (`active`, `trialing`, `past_due`, `unpaid`, `incomplete`, `paused`).
    - Keep the canonical subscription per customer and cancel extras safely.
-   - Canonical selection rule: newest non-canceled subscription with latest billing activity; if tied, prefer the subscription already mirrored in local `stripe_subscriptions`.
+   - Canonical selection rule implemented in code: if local `stripe_subscriptions` mapping is still blocking, keep it; otherwise choose the blocking subscription with latest `currentPeriodEnd` (tie-break by subscription id).
+   - Execute in two phases: `dryRun=true` first, then `dryRun=false` after sign-off.
 2. Record an immutable audit trail for every affected customer.
    - Required fields: `customer_id`, `kept_subscription_id`, `canceled_subscription_ids[]`, `timestamp_utc`, `operator`, `reason`, `dry_run`.
    - Storage: append-only reconciliation artifact under secure ops storage plus a linked run summary in the internal incident/runbook ticket.
@@ -44,6 +52,9 @@ This is operational debt: we need a repeatable reconciliation process to detect 
 
 ## Verification
 
+- [x] Reconciliation code supports duplicate detection and canonical selection
+- [x] Reconciliation code supports `dryRun` and non-dry-run cancellation paths
+- [x] Unit tests cover duplicate cancellation and dry-run safety paths
 - [ ] Stripe test-mode run completed and signed off before production cutover (same day)
 - [ ] Stripe production run completed within 1 business day of test-mode sign-off
 - [ ] Quantitative success: affected customers with more than one blocking subscription reduced from baseline to `0`
@@ -55,3 +66,5 @@ This is operational debt: we need a repeatable reconciliation process to detect 
 
 - `docs/_archive/bugs/bug-101-stripe-checkout-allows-duplicate-subscriptions-when-db-stale.md`
 - `src/adapters/gateways/stripe/stripe-checkout-sessions.ts`
+- `src/adapters/jobs/reconcile-stripe-subscriptions.ts`
+- `app/api/cron/reconcile-stripe-subscriptions/route.ts`

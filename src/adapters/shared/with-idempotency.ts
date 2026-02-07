@@ -5,6 +5,7 @@ const DEFAULT_TTL_MS = 86_400_000; // 24 hours
 const DEFAULT_MAX_WAIT_MS = 2_000;
 const DEFAULT_POLL_INTERVAL_MS = 50;
 const ERROR_MESSAGE_LIMIT = 1000;
+const PRUNE_BATCH_LIMIT = 100;
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -50,6 +51,12 @@ export async function withIdempotency<T>(input: {
   const ttlMs = input.ttlMs ?? DEFAULT_TTL_MS;
   const maxWaitMs = input.maxWaitMs ?? DEFAULT_MAX_WAIT_MS;
   const pollIntervalMs = input.pollIntervalMs ?? DEFAULT_POLL_INTERVAL_MS;
+
+  // Best-effort cleanup so expired idempotency rows don't accumulate forever.
+  // Pruning failures must not block the caller's request.
+  try {
+    await input.repo.pruneExpiredBefore(input.now(), PRUNE_BATCH_LIMIT);
+  } catch {}
 
   const expiresAt = new Date(input.now().getTime() + ttlMs);
   const claimed = await input.repo.claim({
