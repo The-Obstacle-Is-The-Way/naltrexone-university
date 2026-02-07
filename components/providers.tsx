@@ -2,6 +2,7 @@
 
 import { dark } from '@clerk/themes';
 import dynamic from 'next/dynamic';
+import { NotificationProvider } from '@/components/ui/notification-provider';
 import { ROUTES } from '@/lib/routes';
 
 const ClerkProvider = dynamic(
@@ -31,16 +32,18 @@ export function Providers({ children }: { children: React.ReactNode }) {
 
   if (skipClerk) {
     // Return children unwrapped for CI builds
-    return <>{children}</>;
+    return <NotificationProvider>{children}</NotificationProvider>;
   }
 
   return (
-    <ClerkProvider
-      signInFallbackRedirectUrl={ROUTES.APP_DASHBOARD}
-      signUpFallbackRedirectUrl={ROUTES.APP_DASHBOARD}
-      appearance={CLERK_APPEARANCE}
-    >
-      {children}
-    </ClerkProvider>
+    <NotificationProvider>
+      <ClerkProvider
+        signInFallbackRedirectUrl={ROUTES.APP_DASHBOARD}
+        signUpFallbackRedirectUrl={ROUTES.APP_DASHBOARD}
+        appearance={CLERK_APPEARANCE}
+      >
+        {children}
+      </ClerkProvider>
+    </NotificationProvider>
   );
 }

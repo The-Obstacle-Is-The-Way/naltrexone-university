@@ -28,6 +28,7 @@ describe('app/(app)/app/layout (shell)', () => {
     expect(html).toContain('AuthNav');
     expect(html).toContain('MobileNav');
     expect(html).toContain('Child content');
+    expect(html).toContain('<main id="main-content"');
   }, 10_000);
 
   it('renders AppLayout via renderAppLayout with injected deps', async () => {

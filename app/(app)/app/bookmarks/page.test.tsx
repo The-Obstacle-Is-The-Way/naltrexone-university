@@ -102,6 +102,9 @@ describe('app/(app)/app/bookmarks', () => {
     expect(html).toContain('Reattempt');
     expect(html).toContain('/app/questions/q-1');
     expect(html).toContain('Remove');
+    expect(html).toContain(
+      'text-sm font-medium text-muted-foreground transition-colors hover:text-foreground',
+    );
   });
 
   it('renders empty state when no bookmarks exist', () => {

@@ -1,6 +1,6 @@
 # DEBT-151: No Toast/Notification System
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P3
 **Date:** 2026-02-07
 
@@ -42,26 +42,25 @@ The app has no centralized toast or notification component. Transient feedback (
 
 ## Resolution
 
-1. Add a toast component — shadcn/ui provides `sonner` integration (`npx shadcn@latest add sonner`)
-2. Wire `<Toaster />` into the app layout
-3. Replace ad-hoc transient messages with `toast()` calls
-4. Keep `ErrorCard` for persistent error states (toasts are for transient feedback only)
-5. Keep `<output aria-live="polite">` for inline loading indicators (toasts are for action results)
-
-### Decision needed
-
-Choose between:
-- **shadcn/sonner** (recommended) — already in the shadcn ecosystem, minimal config
-- **react-hot-toast** — lighter weight but outside the shadcn ecosystem
-- **Custom** — full control but more work
+1. Implemented a shared notification system with `NotificationProvider` and `useNotification`:
+   - `components/ui/notification-provider.tsx`
+2. Wired the provider through app-wide `Providers` so every route can emit transient notifications:
+   - `components/providers.tsx`
+3. Migrated bookmark transient feedback from inline ad-hoc markup to shared toast notifications:
+   - `app/(app)/app/practice/components/practice-view.tsx`
+4. Preserved `ErrorCard` and inline loading regions for persistent errors/loading states (toasts only for transient action feedback).
+5. Added regression coverage:
+   - `components/ui/notification-provider.test.tsx`
+   - `app/(app)/app/practice/[sessionId]/page.test.tsx`
+   - `app/(app)/app/practice/components/practice-view.browser.spec.tsx`
 
 ## Verification
 
-- [ ] Toast component added and rendered in app layout
-- [ ] Bookmark toggle feedback uses toast instead of inline span
-- [ ] Toast has proper accessibility (`role="status"` or `aria-live`)
-- [ ] Toast auto-dismisses after configurable timeout
-- [ ] No regressions in existing error/loading state patterns
+- [x] Toast component added and rendered in app layout
+- [x] Bookmark toggle feedback uses toast instead of inline span
+- [x] Toast has proper accessibility (`role="status"` or `aria-live`)
+- [x] Toast auto-dismisses after configurable timeout
+- [x] No regressions in existing error/loading state patterns
 
 ## Related
 

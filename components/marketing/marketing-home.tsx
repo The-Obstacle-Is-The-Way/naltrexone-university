@@ -71,13 +71,13 @@ export function MarketingHomeShell({
             >
               <Link
                 href="#features"
-                className="rounded-md text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                className="rounded-md text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
               >
                 Features
               </Link>
               <Link
                 href={ROUTES.PRICING}
-                className="rounded-md text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                className="rounded-md text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
               >
                 Pricing
               </Link>
@@ -87,7 +87,7 @@ export function MarketingHomeShell({
         </div>
       </header>
 
-      <main>
+      <main id="main-content" tabIndex={-1}>
         {/* Hero */}
         <section className="py-20 lg:py-32">
           <div className="mx-auto max-w-4xl px-4 text-center sm:px-6 lg:px-8">
@@ -295,10 +295,16 @@ export function MarketingHomeShell({
               <div>
                 <p className="text-sm font-semibold text-foreground">Product</p>
                 <div className="mt-3 flex flex-col gap-2 text-sm text-muted-foreground">
-                  <Link href="#features" className="hover:text-foreground">
+                  <Link
+                    href="#features"
+                    className="transition-colors hover:text-foreground"
+                  >
                     Features
                   </Link>
-                  <Link href={ROUTES.PRICING} className="hover:text-foreground">
+                  <Link
+                    href={ROUTES.PRICING}
+                    className="transition-colors hover:text-foreground"
+                  >
                     Pricing
                   </Link>
                 </div>
@@ -306,10 +312,16 @@ export function MarketingHomeShell({
               <div>
                 <p className="text-sm font-semibold text-foreground">Account</p>
                 <div className="mt-3 flex flex-col gap-2 text-sm text-muted-foreground">
-                  <Link href={ROUTES.SIGN_IN} className="hover:text-foreground">
+                  <Link
+                    href={ROUTES.SIGN_IN}
+                    className="transition-colors hover:text-foreground"
+                  >
                     Sign in
                   </Link>
-                  <Link href={ROUTES.SIGN_UP} className="hover:text-foreground">
+                  <Link
+                    href={ROUTES.SIGN_UP}
+                    className="transition-colors hover:text-foreground"
+                  >
                     Sign up
                   </Link>
                 </div>

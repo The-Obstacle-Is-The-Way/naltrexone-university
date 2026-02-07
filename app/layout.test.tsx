@@ -39,4 +39,17 @@ describe('app/layout', () => {
 
     expect(html).toContain('data-scroll-behavior="smooth"');
   });
+
+  it('does not nest a root main landmark around route-level content', async () => {
+    const RootLayout = (await import('@/app/layout')).default;
+
+    const html = renderToStaticMarkup(
+      <RootLayout>
+        <main id="main-content">Route content</main>
+      </RootLayout>,
+    );
+
+    const mainCount = (html.match(/<main\b/g) ?? []).length;
+    expect(mainCount).toBe(1);
+  });
 });

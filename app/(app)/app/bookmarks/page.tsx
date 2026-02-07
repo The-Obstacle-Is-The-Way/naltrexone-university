@@ -90,7 +90,7 @@ export function BookmarksView({ rows }: { rows: GetBookmarksOutput['rows'] }) {
         </div>
         <Link
           href={ROUTES.APP_PRACTICE}
-          className="text-sm font-medium text-muted-foreground hover:text-foreground"
+          className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
         >
           Go to Practice
         </Link>
@@ -197,7 +197,7 @@ export function renderBookmarks(result: ActionResult<GetBookmarksOutput>) {
         </ErrorCard>
         <Link
           href={ROUTES.APP_PRACTICE}
-          className="text-sm font-medium text-muted-foreground hover:text-foreground"
+          className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
         >
           Go to Practice
         </Link>

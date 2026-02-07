@@ -51,7 +51,7 @@ export function QuestionView(props: QuestionViewProps) {
         </div>
         <Link
           href={ROUTES.APP_DASHBOARD}
-          className="text-sm font-medium text-muted-foreground hover:text-foreground"
+          className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
         >
           Back to Dashboard
         </Link>

@@ -1,6 +1,6 @@
 # BUG-100: Nested `<main>` Landmarks Across Root and Segment Layouts
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P2
 **Date:** 2026-02-07
 
@@ -44,17 +44,20 @@ The current composition guarantees nested main landmarks for major route groups.
 
 ## Fix
 
-1. Keep exactly one `<main>` per rendered route tree
-2. Move `id="main-content"` to the route-level main container that owns page content
-3. Replace one of the current main wrappers with a semantic-neutral container (`div`) where appropriate
-4. Add regression tests that assert a single `<main>` landmark in rendered output for app and marketing routes
+1. Removed the root layout `<main>` wrapper from `app/layout.tsx` so route segments own the primary landmark.
+2. Added `id="main-content"` and `tabIndex={-1}` to the app-shell main landmark in `app/(app)/app/layout.tsx`.
+3. Added `id="main-content"` and `tabIndex={-1}` to the marketing-shell main landmark in `components/marketing/marketing-home.tsx`.
+4. Added regression coverage:
+   - `app/layout.test.tsx` verifies root layout no longer nests a second `<main>`.
+   - `app/(app)/app/layout-shell.test.tsx` verifies app shell owns `#main-content`.
+   - `components/marketing/marketing-home.test.tsx` verifies marketing shell owns `#main-content`.
 
 ## Verification
 
-- [ ] App route render contains exactly one `<main>` landmark
-- [ ] Marketing home render contains exactly one `<main>` landmark
-- [ ] Skip link still targets the active content landmark correctly
-- [ ] `pnpm typecheck && pnpm lint && pnpm test --run`
+- [x] App route render contains exactly one `<main>` landmark
+- [x] Marketing home render contains exactly one `<main>` landmark
+- [x] Skip link still targets the active content landmark correctly
+- [x] `pnpm typecheck && pnpm lint && pnpm test --run`
 
 ## Related
 

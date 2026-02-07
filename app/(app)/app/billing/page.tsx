@@ -132,7 +132,9 @@ export function BillingPageView(props: BillingPageViewProps) {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold text-foreground">Billing</h1>
+        <h1 className="text-2xl font-bold font-heading tracking-tight text-foreground">
+          Billing
+        </h1>
         <p className="mt-1 text-muted-foreground">
           Manage your subscription and billing details.
         </p>

@@ -17,7 +17,8 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 | ID | Title | Status | Priority | Date |
 |----|-------|--------|----------|------|
-| [BUG-100](bug-100-nested-main-landmarks-in-layouts.md) | Nested `<main>` Landmarks Across Root and Segment Layouts | Open | P2 | 2026-02-07 |
+
+No active bugs.
 
 **Next Bug ID:** BUG-101
 
@@ -25,6 +26,7 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 | ID | Title | Status | Resolution |
 |----|-------|--------|------------|
+| [BUG-100](../_archive/bugs/bug-100-nested-main-landmarks-in-layouts.md) | Nested `<main>` Landmarks Across Root and Segment Layouts | Resolved | Root layout no longer wraps route trees in a global `<main>` and route-level shells now own `#main-content` landmarks |
 | [BUG-099](../_archive/bugs/bug-099-checkout-success-race-concurrent-webhook-conflict.md) | Checkout Success Race with Concurrent Webhook CONFLICT | Resolved | Checkout success now uses authoritative customer conflict strategy so webhook-first races remain idempotent and redirect users to dashboard |
 | [BUG-098](../_archive/bugs/bug-098-submit-answer-accepts-questions-not-in-session.md) | submitAnswer Accepts Questions Not in Session | Resolved | Added pre-insert session-question membership guard in `SubmitAnswerUseCase` to reject mismatches before persistence |
 | [BUG-097](../_archive/bugs/bug-097-widespread-hard-coded-route-strings.md) | Widespread Hard-Coded Route Strings Across Codebase | Resolved | Completed route-constant sweep and added missing `ROUTES.SIGN_IN`/`ROUTES.SIGN_UP` constants |
@@ -59,6 +61,7 @@ See: [Foundation Audit Report](foundation-audit-report.md)
 
 | ID | Title | Priority | Resolved |
 |----|-------|----------|----------|
+| [BUG-100](../_archive/bugs/bug-100-nested-main-landmarks-in-layouts.md) | Nested `<main>` Landmarks Across Root and Segment Layouts | P2 | 2026-02-07 |
 | [BUG-099](../_archive/bugs/bug-099-checkout-success-race-concurrent-webhook-conflict.md) | Checkout Success Race with Concurrent Webhook CONFLICT | P2 | 2026-02-07 |
 | [BUG-098](../_archive/bugs/bug-098-submit-answer-accepts-questions-not-in-session.md) | submitAnswer Accepts Questions Not in Session | P2 | 2026-02-07 |
 | [BUG-097](../_archive/bugs/bug-097-widespread-hard-coded-route-strings.md) | Widespread Hard-Coded Route Strings Across Codebase | P4 | 2026-02-07 |

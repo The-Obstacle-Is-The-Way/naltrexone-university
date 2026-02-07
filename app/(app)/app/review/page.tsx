@@ -66,7 +66,7 @@ export function ReviewView({
         </div>
         <Link
           href={ROUTES.APP_PRACTICE}
-          className="text-sm font-medium text-muted-foreground hover:text-foreground"
+          className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
         >
           Go to Practice
         </Link>
@@ -83,7 +83,7 @@ export function ReviewView({
             <div className="mt-4">
               <Link
                 href={`${ROUTES.APP_REVIEW}?offset=0&limit=${limit}`}
-                className="text-sm font-medium text-muted-foreground hover:text-foreground"
+                className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
               >
                 Back to first page
               </Link>
@@ -171,7 +171,7 @@ export function ReviewView({
             {offset > 0 ? (
               <Link
                 href={`${ROUTES.APP_REVIEW}?offset=${prevOffset}&limit=${limit}`}
-                className="text-sm font-medium text-muted-foreground hover:text-foreground"
+                className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
               >
                 Previous
               </Link>
@@ -182,7 +182,7 @@ export function ReviewView({
             {hasNextPage ? (
               <Link
                 href={`${ROUTES.APP_REVIEW}?offset=${nextOffset}&limit=${limit}`}
-                className="text-sm font-medium text-muted-foreground hover:text-foreground"
+                className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
               >
                 Next
               </Link>

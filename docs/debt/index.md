@@ -20,10 +20,6 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 | [DEBT-136](debt-136-dunning-grace-period-for-past-due-subscribers.md) | Dunning Grace Period for Past-Due Subscribers | Open | P3 | 2026-02-07 |
 | [DEBT-140](debt-140-request-correlation-not-wired-into-runtime-logs.md) | Request Correlation Not Wired (Blocked by SPEC-016) | Open | P3 | 2026-02-07 |
 | [DEBT-148](debt-148-minimal-aria-accessibility-app-pages.md) | Minimal ARIA Accessibility in App Pages | In Progress | P3 | 2026-02-07 |
-| [DEBT-149](debt-149-heading-typography-system-inconsistent.md) | Heading Typography System Inconsistent | Open | P2 | 2026-02-07 |
-| [DEBT-150](debt-150-navigation-links-missing-transitions-hover.md) | Navigation Links Missing Transitions and Hover States | Open | P3 | 2026-02-07 |
-| [DEBT-151](debt-151-no-toast-notification-system.md) | No Toast/Notification System | Open | P3 | 2026-02-07 |
-| [DEBT-152](debt-152-home-route-literals-remain-outside-routes-constants.md) | Home Route Literals Remain Outside `ROUTES` Constants | Resolved | P4 | 2026-02-07 |
 
 **Next Debt ID:** DEBT-153
 
@@ -51,6 +47,10 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 | ID | Title | Priority | Resolved |
 |----|-------|----------|----------|
+| [DEBT-152](../_archive/debt/debt-152-home-route-literals-remain-outside-routes-constants.md) | Home Route Literals Remain Outside `ROUTES` Constants | P4 | 2026-02-07 |
+| [DEBT-151](../_archive/debt/debt-151-no-toast-notification-system.md) | No Toast/Notification System | P3 | 2026-02-07 |
+| [DEBT-150](../_archive/debt/debt-150-navigation-links-missing-transitions-hover.md) | Navigation Links Missing Transitions and Hover States | P3 | 2026-02-07 |
+| [DEBT-149](../_archive/debt/debt-149-heading-typography-system-inconsistent.md) | Heading Typography System Inconsistent | P2 | 2026-02-07 |
 | [DEBT-145](../_archive/debt/debt-145-shadcn-card-input-components-never-used.md) | Shadcn Card Adoption Is Incomplete Across App Pages | P2 | 2026-02-07 |
 | [DEBT-147](../_archive/debt/debt-147-error-state-ui-duplicated-across-pages.md) | Error State UI Duplicated Across 9+ Pages | P2 | 2026-02-07 |
 | [DEBT-146](../_archive/debt/debt-146-missing-semantic-success-warning-tokens.md) | Missing Semantic Success/Warning Color Tokens | P2 | 2026-02-07 |

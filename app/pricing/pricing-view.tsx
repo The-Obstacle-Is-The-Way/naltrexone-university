@@ -122,7 +122,7 @@ export function PricingView({
         ) : (
           <div className="mt-16 grid gap-8 md:grid-cols-2">
             <div className="rounded-2xl border border-border bg-card p-8 shadow-sm">
-              <h3 className="text-lg font-semibold text-foreground">
+              <h3 className="font-heading font-semibold text-foreground">
                 Pro Monthly
               </h3>
               <p className="mt-4 text-4xl font-bold text-foreground">
@@ -147,7 +147,7 @@ export function PricingView({
               </form>
             </div>
             <div className="rounded-2xl border-2 border-primary bg-card p-8 shadow-sm">
-              <h3 className="text-lg font-semibold text-foreground">
+              <h3 className="font-heading font-semibold text-foreground">
                 Pro Annual
               </h3>
               <p className="mt-4 text-4xl font-bold text-foreground">
@@ -177,7 +177,7 @@ export function PricingView({
         <div className="mt-8 text-center">
           <Link
             href={ROUTES.HOME}
-            className="rounded-md text-sm text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+            className="rounded-md text-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
           >
             Back to Home
           </Link>

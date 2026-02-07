@@ -77,7 +77,11 @@ export function AppLayoutShell({
           </div>
         </div>
       </header>
-      <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+      <main
+        id="main-content"
+        tabIndex={-1}
+        className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8"
+      >
         <Suspense
           fallback={
             <p className="text-sm text-muted-foreground">

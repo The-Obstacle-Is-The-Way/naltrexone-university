@@ -161,7 +161,7 @@ describe('app/(app)/app/practice/[sessionId]', () => {
     expect(html).toContain('Session Summary');
   });
 
-  it('renders bookmarkMessage when provided', async () => {
+  it('does not render bookmarkMessage inline when provided', async () => {
     const { PracticeSessionPageView } = await import(
       '@/app/(app)/app/practice/[sessionId]/page'
     );
@@ -202,7 +202,7 @@ describe('app/(app)/app/practice/[sessionId]', () => {
       />,
     );
 
-    expect(html).toContain('Question bookmarked.');
+    expect(html).not.toContain('Question bookmarked.');
   });
 
   it('renders exam review stage in PracticeSessionPageView', async () => {

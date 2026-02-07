@@ -36,7 +36,7 @@ Validated from first principles:
 
 - [x] No direct `href="/"` remains in production code except documented exceptions
 - [x] `ROUTES.HOME` used consistently for internal home navigation
-- [ ] Regression check/audit command documented in the bug/debt workflow
+- [x] Regression check/audit command documented in the bug/debt workflow (`rg -n 'href=\"/\"' app components`)
 - [x] `pnpm typecheck && pnpm lint && pnpm test --run`
 
 **Note:** `app/global-error.tsx` uses `<a href={ROUTES.HOME}>` (not `<Link>`) intentionally — global error replaces the root layout so the Next.js router may not be available. The `ROUTES.HOME` constant is still used for consistency.

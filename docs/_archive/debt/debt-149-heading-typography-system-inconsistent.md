@@ -1,6 +1,6 @@
 # DEBT-149: Heading Typography System Inconsistent
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P2
 **Date:** 2026-02-07
 
@@ -38,21 +38,30 @@ The app has multiple heading patterns with no clear rule governing which to use.
 
 ## Resolution
 
-1. Standardize all app-page h1s to Pattern A: `text-2xl font-bold font-heading tracking-tight text-foreground`
-   - Fix: `app/(app)/app/billing/page.tsx:135`
-2. Standardize all error-page headings to include explicit foreground color
-   - Fix: all route-level `error.tsx` h2 headings + `app/global-error.tsx` h1
-3. Standardize marketing h3s — decide whether pricing h3s should use `font-heading` (marketing h3s do)
-   - Fix: `app/pricing/pricing-view.tsx:125,150`
-4. Auth pages (Pattern C) can remain distinct — smaller `text-xl` is appropriate for centered auth cards
-5. Consider extracting a `PageTitle` component or Tailwind `@apply` class to prevent future drift
+1. Standardized Billing page title to canonical app heading classes in `app/(app)/app/billing/page.tsx`.
+2. Standardized pricing plan h3 titles to match marketing heading pattern in `app/pricing/pricing-view.tsx`.
+3. Added explicit `text-foreground` on all route-level error headings:
+   - `app/error.tsx`
+   - `app/global-error.tsx`
+   - `app/pricing/error.tsx`
+   - `app/(marketing)/checkout/success/error.tsx`
+   - `app/(app)/app/billing/error.tsx`
+   - `app/(app)/app/dashboard/error.tsx`
+   - `app/(app)/app/practice/error.tsx`
+   - `app/(app)/app/bookmarks/error.tsx`
+   - `app/(app)/app/review/error.tsx`
+   - `app/(app)/app/questions/[slug]/error.tsx`
+4. Added regression coverage in:
+   - `app/(app)/app/billing/page.test.tsx`
+   - `app/pricing/page.test.tsx`
+   - `app/error-heading-styles.test.tsx`
 
 ## Verification
 
-- [ ] All app-page h1s use identical classes (`text-2xl font-bold font-heading tracking-tight text-foreground`)
-- [ ] All error-page headings include explicit `text-foreground`
-- [ ] Pricing h3s match marketing h3 pattern (or decision documented)
-- [ ] Visual regression check across Dashboard, Billing, Practice, Review, Bookmarks
+- [x] All app-page h1s use identical classes (`text-2xl font-bold font-heading tracking-tight text-foreground`)
+- [x] All error-page headings include explicit `text-foreground`
+- [x] Pricing h3s match marketing h3 pattern (or decision documented)
+- [x] Visual regression check across Dashboard, Billing, Practice, Review, Bookmarks
 
 ## Related
 

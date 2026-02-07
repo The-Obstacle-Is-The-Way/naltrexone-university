@@ -35,7 +35,7 @@ export function AppDesktopNav() {
             className={
               isActive
                 ? `rounded-md text-foreground font-medium ${focusVisibleRing}`
-                : `rounded-md text-muted-foreground hover:text-foreground ${focusVisibleRing}`
+                : `rounded-md text-muted-foreground transition-colors hover:text-foreground ${focusVisibleRing}`
             }
           >
             {item.label}

@@ -1,6 +1,6 @@
 # DEBT-150: Navigation Links Missing Transitions and Hover States
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P3
 **Date:** 2026-02-07
 
@@ -38,9 +38,27 @@ Text-based navigation links often change color on hover but omit `transition-col
 
 ## Resolution
 
-1. Add `transition-colors` to all text links that change color on hover
-2. Standardize hover pattern for nav-style links: `hover:text-foreground transition-colors` (text-only) or `hover:bg-muted hover:text-foreground transition-colors` (with bg)
-3. Add `transition-colors` to "Back to Dashboard" and other practice/review/question utility links
+1. Added `transition-colors` to app/marketing/auth/nav utility links, including:
+   - `components/app-desktop-nav.tsx`
+   - `components/auth-nav.tsx`
+   - `components/mobile-nav.tsx`
+   - `components/marketing/marketing-home.tsx`
+   - `app/pricing/pricing-view.tsx`
+   - `app/(app)/app/bookmarks/page.tsx`
+   - `app/(app)/app/review/page.tsx`
+   - `app/(app)/app/practice/components/practice-view.tsx`
+   - `app/(app)/app/questions/[slug]/question-page-client.tsx`
+2. Standardized text-link hover behavior to `text-muted-foreground transition-colors hover:text-foreground`.
+3. Added regression coverage:
+   - `components/app-desktop-nav.test.tsx`
+   - `components/auth-nav.test.tsx`
+   - `components/mobile-nav.test.tsx`
+   - `components/marketing/marketing-home.test.tsx`
+   - `app/pricing/page.test.tsx`
+   - `app/(app)/app/bookmarks/page.test.tsx`
+   - `app/(app)/app/review/page.test.tsx`
+   - `app/(app)/app/practice/components/practice-view.test.tsx`
+   - `app/(app)/app/questions/[slug]/question-page-client.test.tsx`
 
 Recommended standard for text links in the app:
 ```
@@ -49,10 +67,10 @@ className="text-muted-foreground transition-colors hover:text-foreground"
 
 ## Verification
 
-- [ ] All nav links in `app-desktop-nav.tsx` and `auth-nav.tsx` have `transition-colors`
-- [ ] "Go to Practice" link in bookmarks has `transition-colors`
-- [ ] "Back to Dashboard" link in practice view has smooth transition on hover
-- [ ] Visual check: hover transitions feel smooth and consistent across all nav elements
+- [x] All nav links in `app-desktop-nav.tsx` and `auth-nav.tsx` have `transition-colors`
+- [x] "Go to Practice" link in bookmarks has `transition-colors`
+- [x] "Back to Dashboard" link in practice view has smooth transition on hover
+- [x] Visual check: hover transitions feel smooth and consistent across all nav elements
 
 ## Related
 

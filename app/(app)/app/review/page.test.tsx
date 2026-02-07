@@ -121,6 +121,9 @@ describe('app/(app)/app/review', () => {
     expect(html).toContain('Missed 2026-02-01');
     expect(html).toContain('Reattempt');
     expect(html).toContain('/app/questions/q-1');
+    expect(html).toContain(
+      'text-sm font-medium text-muted-foreground transition-colors hover:text-foreground',
+    );
   });
 
   it('renders pagination links when offset > 0 and rows length equals limit', () => {

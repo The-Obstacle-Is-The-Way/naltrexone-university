@@ -1,11 +1,13 @@
 'use client';
 
 import Link from 'next/link';
+import { useEffect, useRef } from 'react';
 import { ErrorCard } from '@/components/error-card';
 import { Feedback } from '@/components/question/Feedback';
 import { QuestionCard } from '@/components/question/QuestionCard';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { useNotification } from '@/components/ui/notification-provider';
 import { ROUTES } from '@/lib/routes';
 import type { NextQuestion } from '@/src/application/use-cases/get-next-question';
 import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
@@ -35,11 +37,28 @@ export type PracticeViewProps = {
 };
 
 export function PracticeView(props: PracticeViewProps) {
+  const { notify } = useNotification();
+  const lastBookmarkMessageRef = useRef<string | null>(null);
   const sessionInfo = props.sessionInfo ?? null;
   const isExamMode = sessionInfo?.mode === 'exam';
   const correctChoiceId = isExamMode
     ? null
     : (props.submitResult?.correctChoiceId ?? null);
+
+  useEffect(() => {
+    const message = props.bookmarkMessage ?? null;
+    if (!message) {
+      lastBookmarkMessageRef.current = null;
+      return;
+    }
+
+    if (lastBookmarkMessageRef.current === message) {
+      return;
+    }
+
+    lastBookmarkMessageRef.current = message;
+    notify({ message, tone: 'success' });
+  }, [notify, props.bookmarkMessage]);
 
   return (
     <div className="space-y-6">
@@ -74,7 +93,7 @@ export function PracticeView(props: PracticeViewProps) {
             ) : null}
             <Link
               href={ROUTES.APP_DASHBOARD}
-              className="text-sm font-medium text-muted-foreground hover:text-foreground"
+              className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
             >
               Back to Dashboard
             </Link>
@@ -136,11 +155,6 @@ export function PracticeView(props: PracticeViewProps) {
           >
             {props.isBookmarked ? 'Remove bookmark' : 'Bookmark'}
           </Button>
-          {props.bookmarkMessage ? (
-            <div className="text-xs text-muted-foreground" aria-live="polite">
-              {props.bookmarkMessage}
-            </div>
-          ) : null}
         </div>
       ) : null}
 
