@@ -181,6 +181,9 @@ describe('POST /api/webhooks/clerk', () => {
     );
 
     expect(res.status).toBe(400);
+    await expect(res.json()).resolves.toEqual({
+      error: 'Webhook validation failed',
+    });
   });
 
   it('returns 500 when processing fails unexpectedly', async () => {

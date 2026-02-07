@@ -1,6 +1,6 @@
 # BUG-088: Clerk Webhook Invalid-Payload Response Leaks Internal Error Message
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P3
 **Date:** 2026-02-07
 
@@ -29,18 +29,21 @@ if (isApplicationError(error) && error.code === 'INVALID_WEBHOOK_PAYLOAD') {
 
 ## Fix
 
-Pending.
+Updated Clerk webhook route handling for `INVALID_WEBHOOK_PAYLOAD` to return a
+generic response body while keeping full error detail in server logs:
 
-Recommended approach:
-- Return a generic 400 message (for example, `"Webhook validation failed"`).
-- Keep details in server logs only.
-- Add regression tests similar to Stripe webhook route tests.
+- `app/api/webhooks/clerk/handler.ts`
+
+Added regression coverage:
+
+- `app/api/webhooks/clerk/route.test.ts`
+  - payload validation failures now assert `{ error: 'Webhook validation failed' }`
 
 ## Verification
 
-- [ ] Invalid Clerk payload returns generic 400 message
-- [ ] Internal details remain available in structured logs only
-- [ ] Valid webhook processing unchanged
+- [x] Invalid Clerk payload returns generic 400 message
+- [x] Internal details remain available in structured logs only
+- [x] Valid webhook processing unchanged
 
 ## Related
 

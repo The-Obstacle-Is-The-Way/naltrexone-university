@@ -111,7 +111,10 @@ export function createWebhookHandler(
         error.code === 'INVALID_WEBHOOK_PAYLOAD'
       ) {
         container.logger.error({ error }, 'Clerk webhook payload invalid');
-        return NextResponse.json({ error: error.message }, { status: 400 });
+        return NextResponse.json(
+          { error: 'Webhook validation failed' },
+          { status: 400 },
+        );
       }
 
       container.logger.error({ error }, 'Clerk webhook failed');
