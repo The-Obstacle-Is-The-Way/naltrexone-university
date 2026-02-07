@@ -16,43 +16,10 @@ import {
 } from '@/app/(app)/app/practice/practice-page-logic';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import { err, ok } from '@/src/adapters/controllers/action-result';
+import { createNextQuestion } from '@/src/application/test-helpers/create-next-question';
 import type { NextQuestion } from '@/src/application/use-cases/get-next-question';
 import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
-import { createChoice, createQuestion } from '@/src/domain/test-helpers';
 import { createDeferred } from '@/tests/test-helpers/create-deferred';
-
-function createNextQuestion(overrides?: Partial<NextQuestion>): NextQuestion {
-  const questionId = 'q_1';
-  const choice = createChoice({
-    id: 'choice_1',
-    questionId,
-    label: 'A',
-    textMd: 'Choice A',
-    sortOrder: 1,
-  });
-  const question = createQuestion({
-    id: questionId,
-    slug: 'q-1',
-    stemMd: '#',
-    difficulty: 'easy',
-    choices: [choice],
-  });
-
-  return {
-    questionId: question.id,
-    slug: question.slug,
-    stemMd: question.stemMd,
-    difficulty: question.difficulty,
-    choices: question.choices.map((c, index) => ({
-      id: c.id,
-      label: c.label,
-      textMd: c.textMd,
-      sortOrder: index + 1,
-    })),
-    session: null,
-    ...overrides,
-  };
-}
 
 describe('practice-page-logic', () => {
   describe('canSubmitAnswer', () => {
@@ -100,12 +67,15 @@ describe('practice-page-logic', () => {
     it('ignores stale responses when a newer request finishes first', async () => {
       const first = createDeferred<ActionResult<NextQuestion | null>>();
       const second = createDeferred<ActionResult<NextQuestion | null>>();
-      let callCount = 0;
       let latestRequestId = 0;
+      const responseQueue = [first.promise, second.promise];
 
       const getNextQuestionFn = vi.fn(async () => {
-        callCount += 1;
-        return callCount === 1 ? first.promise : second.promise;
+        const nextResponse = responseQueue.shift();
+        if (!nextResponse) {
+          throw new Error('Unexpected call to getNextQuestionFn');
+        }
+        return nextResponse;
       });
 
       const setQuestion = vi.fn();

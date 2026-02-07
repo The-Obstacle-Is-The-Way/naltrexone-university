@@ -10,33 +10,25 @@ import {
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import { err, ok } from '@/src/adapters/controllers/action-result';
 import type { EndPracticeSessionOutput } from '@/src/adapters/controllers/practice-controller';
+import { createNextQuestion } from '@/src/application/test-helpers/create-next-question';
 import type { NextQuestion } from '@/src/application/use-cases/get-next-question';
 import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
 import { createDeferred } from '@/tests/test-helpers/create-deferred';
-
-function createNextQuestion(overrides?: Partial<NextQuestion>): NextQuestion {
-  return {
-    questionId: 'q_1',
-    slug: 'q-1',
-    stemMd: '#',
-    difficulty: 'easy',
-    choices: [],
-    session: null,
-    ...overrides,
-  };
-}
 
 describe('practice-session-page-logic', () => {
   describe('loadNextQuestion', () => {
     it('ignores stale responses when a newer request finishes first', async () => {
       const first = createDeferred<ActionResult<NextQuestion | null>>();
       const second = createDeferred<ActionResult<NextQuestion | null>>();
-      let callCount = 0;
       let latestRequestId = 0;
+      const responseQueue = [first.promise, second.promise];
 
       const getNextQuestionFn = vi.fn(async () => {
-        callCount += 1;
-        return callCount === 1 ? first.promise : second.promise;
+        const nextResponse = responseQueue.shift();
+        if (!nextResponse) {
+          throw new Error('Unexpected call to getNextQuestionFn');
+        }
+        return nextResponse;
       });
 
       const setQuestion = vi.fn();

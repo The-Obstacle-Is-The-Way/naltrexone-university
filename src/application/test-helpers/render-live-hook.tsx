@@ -16,15 +16,18 @@ export type LiveHookHarness<T> = {
   waitFor: (
     predicate: (value: T) => boolean,
     timeoutMs?: number,
+    pollIntervalMs?: number,
   ) => Promise<void>;
   unmount: () => void;
 };
+
+const UNSET = Symbol('UNSET_HOOK_VALUE');
 
 export function renderLiveHook<T>(useHook: () => T): LiveHookHarness<T> {
   const container = document.createElement('div');
   document.body.appendChild(container);
 
-  let current: T | undefined;
+  let current: T | typeof UNSET = UNSET;
   const root = createRoot(container);
   root.render(
     <HookProbe
@@ -36,7 +39,7 @@ export function renderLiveHook<T>(useHook: () => T): LiveHookHarness<T> {
   );
 
   const getCurrent = () => {
-    if (current === undefined) {
+    if (current === UNSET) {
       throw new Error('Hook result was not captured');
     }
     return current;
@@ -45,13 +48,29 @@ export function renderLiveHook<T>(useHook: () => T): LiveHookHarness<T> {
   const waitFor: LiveHookHarness<T>['waitFor'] = async (
     predicate,
     timeoutMs = 1_000,
+    pollIntervalMs = 10,
   ) => {
-    const deadline = Date.now() + timeoutMs;
-    while (Date.now() < deadline) {
-      if (current !== undefined && predicate(current)) return;
-      await new Promise((resolve) => setTimeout(resolve, 0));
+    let stopped = false;
+    const sleep = (ms: number) =>
+      new Promise<void>((resolve) => setTimeout(resolve, ms));
+
+    const pollPromise = (async () => {
+      while (!stopped) {
+        if (current !== UNSET && predicate(current)) return;
+        await sleep(pollIntervalMs);
+      }
+    })();
+
+    const timeoutPromise = (async () => {
+      await sleep(timeoutMs);
+      throw new Error('Timed out waiting for hook state');
+    })();
+
+    try {
+      await Promise.race([pollPromise, timeoutPromise]);
+    } finally {
+      stopped = true;
     }
-    throw new Error('Timed out waiting for hook state');
   };
 
   const unmount = () => {

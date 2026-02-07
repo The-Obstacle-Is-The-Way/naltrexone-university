@@ -9,6 +9,28 @@ import { createDeferred } from '@/tests/test-helpers/create-deferred';
 import { usePracticeSessionMarkForReview } from './use-practice-session-mark-for-review';
 
 describe('usePracticeSessionMarkForReview', () => {
+  type SessionInfoState = {
+    sessionId: string;
+    mode: 'exam' | 'tutor';
+    index: number;
+    total: number;
+    isMarkedForReview: boolean;
+  } | null;
+  type SessionInfoUpdater = (prev: SessionInfoState) => SessionInfoState;
+
+  type ReviewState = {
+    sessionId: string;
+    mode: 'exam' | 'tutor';
+    totalCount: number;
+    answeredCount: number;
+    markedCount: number;
+    rows: Array<{
+      questionId: string;
+      markedForReview: boolean;
+    }>;
+  } | null;
+  type ReviewUpdater = (prev: ReviewState) => ReviewState;
+
   afterEach(() => {
     vi.restoreAllMocks();
   });
@@ -98,24 +120,14 @@ describe('usePracticeSessionMarkForReview', () => {
         markedForReview: true,
       });
 
-      const sessionUpdater = setSessionInfo.mock.calls[0]?.[0] as (
-        prev: {
-          sessionId: string;
-          mode: 'exam' | 'tutor';
-          index: number;
-          total: number;
-          isMarkedForReview: boolean;
-        } | null,
-      ) => {
-        sessionId: string;
-        mode: 'exam' | 'tutor';
-        index: number;
-        total: number;
-        isMarkedForReview: boolean;
-      } | null;
+      expect(setSessionInfo).toHaveBeenCalled();
+      const sessionUpdater = setSessionInfo.mock.calls[0]?.[0] as
+        | SessionInfoUpdater
+        | undefined;
+      expect(sessionUpdater).toBeDefined();
 
       expect(
-        sessionUpdater({
+        sessionUpdater?.({
           sessionId: 'session-1',
           mode: 'exam',
           index: 0,
@@ -130,32 +142,14 @@ describe('usePracticeSessionMarkForReview', () => {
         isMarkedForReview: true,
       });
 
-      const reviewUpdater = setReview.mock.calls[0]?.[0] as (
-        prev: {
-          sessionId: string;
-          mode: 'exam' | 'tutor';
-          totalCount: number;
-          answeredCount: number;
-          markedCount: number;
-          rows: Array<{
-            questionId: string;
-            markedForReview: boolean;
-          }>;
-        } | null,
-      ) => {
-        sessionId: string;
-        mode: 'exam' | 'tutor';
-        totalCount: number;
-        answeredCount: number;
-        markedCount: number;
-        rows: Array<{
-          questionId: string;
-          markedForReview: boolean;
-        }>;
-      } | null;
+      expect(setReview).toHaveBeenCalled();
+      const reviewUpdater = setReview.mock.calls[0]?.[0] as
+        | ReviewUpdater
+        | undefined;
+      expect(reviewUpdater).toBeDefined();
 
       expect(
-        reviewUpdater({
+        reviewUpdater?.({
           sessionId: 'session-1',
           mode: 'exam',
           totalCount: 1,
