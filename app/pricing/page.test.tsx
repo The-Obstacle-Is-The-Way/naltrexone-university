@@ -31,12 +31,12 @@ describe('app/pricing', () => {
         subscribeAnnualAction={async () => undefined}
       />,
     );
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const backLink = doc.querySelector('a[href="/"]');
 
     expect(html).toContain('Subscribe Monthly');
     expect(html).toContain('Subscribe Annual');
-    expect(html).toContain(
-      'rounded-md text-sm text-muted-foreground transition-colors hover:text-foreground',
-    );
+    expect(backLink?.textContent?.trim()).toBe('Back to Home');
   }, 10_000);
 
   it('shows an error banner when checkout=error', async () => {
@@ -57,7 +57,7 @@ describe('app/pricing', () => {
     expect(html).toContain('Checkout failed. Please try again.');
   });
 
-  it('uses font-heading for pricing plan titles', async () => {
+  it('renders pricing plan headings', async () => {
     const { PricingView } = await import('@/app/pricing/page');
 
     const html = renderToStaticMarkup(
@@ -68,10 +68,13 @@ describe('app/pricing', () => {
         subscribeAnnualAction={async () => undefined}
       />,
     );
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const headings = Array.from(doc.querySelectorAll('h3')).map((heading) =>
+      heading.textContent?.trim(),
+    );
 
-    expect(html).toContain('font-heading font-semibold text-foreground');
-    expect(html).toContain('Pro Monthly');
-    expect(html).toContain('Pro Annual');
+    expect(headings).toContain('Pro Monthly');
+    expect(headings).toContain('Pro Annual');
   });
 
   it('shows a cancel banner when checkout=cancel', async () => {

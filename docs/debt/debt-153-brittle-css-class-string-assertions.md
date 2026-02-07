@@ -1,6 +1,6 @@
 # DEBT-153: Brittle CSS Class String Assertions in renderToStaticMarkup Tests
 
-**Status:** In Progress
+**Status:** Resolved
 **Priority:** P3
 **Date:** 2026-02-07
 
@@ -81,19 +81,22 @@ Browser mode tests (`*.browser.spec.tsx`) already use semantic selectors exclusi
 
 ## Progress Update (2026-02-07)
 
-- Adopted **Option C** as the baseline policy: testing guidance now explicitly prefers semantic assertions over full utility-class string checks (`.claude/rules/testing.md`).
-- Paid down a high-fragility subset by replacing exact class-string assertions with semantic checks in:
-  - `app/(app)/app/bookmarks/page.test.tsx`
-  - `app/(app)/app/review/page.test.tsx`
-  - `app/(app)/app/practice/components/practice-view.test.tsx`
-  - `app/(app)/app/billing/page.test.tsx`
-  - `components/marketing/marketing-home.test.tsx`
-  - `app/error-heading-styles.test.tsx` (now per-component assertions)
+- Completed migration of remaining brittle presentational class-string assertions to semantic assertions in:
+  - `components/auth-nav.test.tsx`
+  - `components/app-desktop-nav.test.tsx`
+  - `app/(app)/app/questions/[slug]/question-page-client.test.tsx`
+  - `app/pricing/page.test.tsx`
+  - `components/mobile-nav.test.tsx`
+  - `components/error-card.test.tsx`
+  - `components/question/ChoiceButton.test.tsx`
+  - `app/error-heading-styles.test.tsx`
+- Preserved behavior-meaningful class assertions (`sr-only`, `sm:hidden`, `bg-primary`, `focus-visible:ring-[3px]`) and semantic token-regression guards.
+- `*.test.tsx` jsdom render tests now avoid purely presentational Tailwind class-string assertions.
 
 ## Verification
 
 - [x] Decision made on resolution approach (A, B, or C)
-- [ ] If A: Presentational class assertions migrated to `data-testid` pattern
+- [x] If A: Presentational class assertions migrated to semantic selectors (`data-testid`, role, href, text, or DOM semantics)
 - [ ] If B: Style-critical tests migrated to browser specs
 - [x] If C: Testing rule updated to guide new test authors
 - [x] No regressions in test suite

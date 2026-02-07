@@ -11,13 +11,15 @@ vi.mock('next/navigation', () => ({
 }));
 
 describe('AppDesktopNav', () => {
-  it('applies transition-colors to inactive navigation links', async () => {
+  it('marks the current route link with aria-current', async () => {
     const { AppDesktopNav } = await import('./app-desktop-nav');
 
     const html = renderToStaticMarkup(<AppDesktopNav />);
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const dashboardLink = doc.querySelector('a[href="/app/dashboard"]');
+    const practiceLink = doc.querySelector('a[href="/app/practice"]');
 
-    expect(html).toContain(
-      'text-muted-foreground transition-colors hover:text-foreground',
-    );
+    expect(dashboardLink?.getAttribute('aria-current')).toBe('page');
+    expect(practiceLink?.getAttribute('aria-current')).toBeNull();
   });
 });

@@ -33,9 +33,8 @@ describe('AuthNav', () => {
 
     expect(html).toContain('href="/pricing"');
     expect(html).toContain('href="/sign-in"');
-    expect(html).toContain(
-      'text-sm font-medium text-muted-foreground transition-colors hover:text-foreground',
-    );
+    expect(html).toContain('Pricing');
+    expect(html).toContain('Sign In');
     expect(html).not.toContain('data-testid="user-button"');
   });
 
@@ -69,9 +68,7 @@ describe('AuthNav', () => {
     const html = renderToStaticMarkup(element);
 
     expect(html).toContain('href="/app/dashboard"');
-    expect(html).toContain(
-      'text-sm font-medium text-muted-foreground transition-colors hover:text-foreground',
-    );
+    expect(html).toContain('Dashboard');
     expect(html).toContain('data-testid="user-button"');
     expect(html).not.toContain('href="/pricing"');
   });

@@ -20,7 +20,7 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 | [DEBT-136](debt-136-dunning-grace-period-for-past-due-subscribers.md) | Dunning Grace Period for Past-Due Subscribers | Open | P3 | 2026-02-07 |
 | [DEBT-140](debt-140-request-correlation-not-wired-into-runtime-logs.md) | Request Correlation Not Wired (Blocked by SPEC-016) | Open | P3 | 2026-02-07 |
 | [DEBT-148](debt-148-minimal-aria-accessibility-app-pages.md) | Minimal ARIA Accessibility in App Pages | In Progress | P3 | 2026-02-07 |
-| [DEBT-153](debt-153-brittle-css-class-string-assertions.md) | Brittle CSS Class String Assertions in renderToStaticMarkup Tests | In Progress | P3 | 2026-02-07 |
+| [DEBT-153](debt-153-brittle-css-class-string-assertions.md) | Brittle CSS Class String Assertions in renderToStaticMarkup Tests | Resolved | P3 | 2026-02-07 |
 | [DEBT-154](debt-154-custom-notification-provider-vs-shadcn-sonner.md) | Custom NotificationProvider vs shadcn/sonner | Open | P4 | 2026-02-07 |
 
 **Next Debt ID:** DEBT-155
