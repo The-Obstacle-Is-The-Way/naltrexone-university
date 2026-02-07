@@ -4,9 +4,9 @@
 > Write tests FIRST. Red → Green → Refactor. No implementation without a failing test.
 > Principles: SOLID, DRY, Clean Code, Gang of Four patterns where appropriate.
 
-**Status:** Implemented
+**Status:** Partial
 **Layer:** Feature
-**Date:** 2026-02-06
+**Date:** 2026-02-06 (amended 2026-02-07)
 **Depends On:** SPEC-013, SPEC-014, SPEC-015
 **Addresses Debt:** DEBT-113, DEBT-114, DEBT-115, DEBT-116, DEBT-122, DEBT-123
 **Related Bugs:** BUG-072, BUG-073
@@ -405,8 +405,24 @@ describe('GetSessionHistoryUseCase', () => {
 
 ---
 
-## 10. Changelog
+## 10. Implementation Status (2026-02-07)
+
+| Phase | FR | Requirement | Status | Notes |
+|-------|-----|-------------|--------|-------|
+| 1 | FR-1 | Practice page ≤ 300 lines per file | **Done** | `page.tsx` = 115 lines; hooks extracted to `usePracticeSessionControls`, `usePracticeQuestionFlow` |
+| 1 | FR-2 | Session page ≤ 300 lines per file | **Done** | `practice-session-page-client.tsx` = 21 lines; hook extracted to `usePracticeSessionPageController` |
+| 2 | FR-3 | In-run question navigation (back/jump) | **Not Done** | `QuestionNavigator` component exists but is only used in the exam review stage. It is NOT available during active answering in either mode. This is the primary remaining work item. |
+| 2 | FR-4 | Per-question breakdown on session summary | **Done** | `SessionSummaryView` calls `getPracticeSessionReview` and displays per-question list with order, stem, status, correctness badge |
+| 3 | FR-5 | Dashboard/Review include session context | **Done** | `sessionId` and `sessionMode` fields present in `UserStatsOutput.recentActivity` and `MissedQuestionRow`. Dashboard groups by session. Review shows session origin badge. |
+| 4 | FR-6 | Session history list with drill-down | **Done** | `PracticeSessionHistoryPanel` on practice page. Rows clickable → per-question breakdown via `getPracticeSessionReview`. |
+
+**Remaining work:** FR-3 only. The `QuestionNavigator` component and `getNextQuestion({ sessionId, questionId })` backend support already exist — the gap is purely wiring the navigator into the active answering state for both tutor and exam modes. See SPEC-019 Phase 2 for the broader UX context in which this should be delivered.
+
+---
+
+## 11. Changelog
 
 | Date | Author | Change |
 |------|--------|--------|
 | 2026-02-06 | Architecture Review | Initial draft |
+| 2026-02-07 | Architecture Review | **Status correction:** "Implemented" → "Partial". Added Section 10 (Implementation Status) documenting per-phase completion. FR-3 (in-run navigation) identified as sole remaining gap — navigator exists in exam review but not during active answering. |

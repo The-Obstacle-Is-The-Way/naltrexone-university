@@ -1,6 +1,6 @@
 # SPEC-019: Practice & Navigation UX Redesign
 
-> **Status:** Proposed
+> **Status:** Partial
 > **Layer:** Feature
 > **Date:** 2026-02-05 (amended 2026-02-07)
 > **Author:** Architecture Review
@@ -619,10 +619,43 @@ Per SPEC-013 and master_spec.md section 4.5.4:
 
 ---
 
-## 14. Changelog
+## 14. Implementation Status (2026-02-07)
+
+### Phase 1: Stabilize Current Implementation — **Done**
+
+All Phase 1 acceptance criteria met:
+- Database seeded with published questions
+- Session creation, progress, and summary all functional
+- Tutor mode shows explanations immediately
+- Exam mode hides explanations until session end
+- Error messages improved via `ApplicationError` typed codes
+
+### Phase 2: UX Redesign — **Not Started**
+
+Primary remaining work. The practice page remains a hybrid combining session config, ad-hoc questions, and session history on one page. The `/app/practice/quick` route does not exist.
+
+### Phase 3: Cross-Page Information Architecture — **Not Started**
+
+Primary remaining work. From a live-app audit (2026-02-07), the following specific gaps were confirmed:
+
+| Gap | Location | Details |
+|-----|----------|---------|
+| Dashboard activity not clickable | `app/(app)/app/dashboard/page.tsx` | `slug` is fetched from DB but not used for navigation. `toQuestionRoute(slug)` helper exists in `lib/routes.ts` but is not called. |
+| Dashboard difficulty badge missing | Same file | `difficulty` field is fetched in `UserStatsOutput` but not rendered in the UI |
+| "Back to Bookmarks" navigation broken | `app/(app)/app/questions/[slug]/question-page-client.tsx` | Hard-coded `href={ROUTES.APP_REVIEW}` — always says "Back to Review" even when user came from Bookmarks. Needs `?from=bookmarks` query param or referrer-aware logic. |
+| Question detail subtitle hard-coded | Same file | Always says "Reattempt a question from your review list" regardless of entry point (bookmarks, dashboard, practice) |
+| No cross-links between Review and Bookmarks | `app/(app)/app/review/page.tsx`, `app/(app)/app/bookmarks/page.tsx` | Both pages link to "Go to Practice" but not to each other |
+| Tag filter shows 41 flat chips | `app/(app)/app/practice/components/practice-session-starter.tsx` | No progressive disclosure — all categories expanded by default |
+
+These gaps are already specified in Section 5.4 above. No new spec requirements needed — just implementation.
+
+---
+
+## 15. Changelog
 
 | Date | Author | Change |
 |------|--------|--------|
 | 2026-02-05 | Architecture Review | Initial draft |
 | 2026-02-06 | Architecture Review | Add SPEC-020 cross-references; session history now formally specified in SPEC-020 Phase 4 |
 | 2026-02-07 | Architecture Review | **Major amendment:** Add cross-page UX audit (Section 2.5) — dashboard activity not actionable, tag filter cognitive overload, review page ambiguity, fragmented IA. Add Phase 3 (Section 5.4 + Implementation Plan) for cross-page information architecture. Add tag filter progressive disclosure design. Add SPEC-014/015 to Related Documents. |
+| 2026-02-07 | Architecture Review | **Status:** "Proposed" → "Partial" (Phase 1 Done). Added Section 14 (Implementation Status) with per-phase tracking. Added specific audit findings for Phase 3 gaps: clickable dashboard activity, back-to-bookmarks navigation, question detail subtitle, difficulty badges, cross-links between Review/Bookmarks. |

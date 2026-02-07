@@ -24,28 +24,28 @@ Board-relevant questions with detailed explanations, fast practice workflows, an
 ## 2. Architecture Diagram
 
 ```text
-+-------------------+            +-----------------------------------------------+
-|    Browser (UI)   |            |             Vercel (Next.js 16+)              |
++-------------------+            +------------------------------------------------+
+|    Browser (UI)   |            |             Vercel (Next.js 16+)               |
 |  Next.js Client   |            |  App Router + Server Components + Actions      |
 +---------+---------+            |  Route Handlers (/app/api/*)                   |
-          |                      +-------------------+---------------------------+
+          |                      +-------------------+----------------------------+
           |  HTTPS requests                          |
           |  (pages, actions, APIs)                  |
           v                                          v
-+-------------------+                       +--------------------+
-| Clerk (Auth)      |<-- session cookies -->| Next.js Server      |
-| @clerk/nextjs     |                       | - auth() / currentUser()
-+-------------------+                       | - subscription checks
-                                            | - server actions
-                                            | - webhook handlers
-                                            +----------+---------+
++-------------------+                       +--------------------------+
+| Clerk (Auth)      |<-- session cookies -->| Next.js Server           |
+| @clerk/nextjs     |                       | - auth() / currentUser() |
++-------------------+                       | - subscription checks    |
+                                            | - server actions         |
+                                            | - webhook handlers       |
+                                            +----------+---------------+
                                                        |
                                                        | Drizzle ORM
                                                        v
-                                            +--------------------+
+                                            +---------------------+
                                             | Neon Postgres       |
                                             | (Vercel Marketplace)|
-                                            +--------------------+
+                                            +---------------------+
                                                        ^
                                                        |
                                                        | Stripe webhooks (HTTPS)
