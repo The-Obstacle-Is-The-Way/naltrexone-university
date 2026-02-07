@@ -132,10 +132,8 @@ describe('practice-page-logic', () => {
       first.resolve(ok(createNextQuestion()));
       await loadFirst;
 
+      expect(setQuestion).toHaveBeenCalledTimes(1);
       expect(setQuestion).toHaveBeenCalledWith(
-        expect.objectContaining({ questionId: 'q_2' }),
-      );
-      expect(setQuestion.mock.calls.at(-1)?.[0]).toEqual(
         expect.objectContaining({ questionId: 'q_2' }),
       );
       expect(setLoadState.mock.calls.at(-1)?.[0]).toEqual({ status: 'ready' });

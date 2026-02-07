@@ -104,10 +104,8 @@ describe('practice-session-page-logic', () => {
       );
       await loadFirst;
 
+      expect(setQuestion).toHaveBeenCalledTimes(1);
       expect(setQuestion).toHaveBeenCalledWith(
-        expect.objectContaining({ questionId: 'q_2' }),
-      );
-      expect(setQuestion.mock.calls.at(-1)?.[0]).toEqual(
         expect.objectContaining({ questionId: 'q_2' }),
       );
       expect(setSessionInfo.mock.calls.at(-1)?.[0]).toEqual(
