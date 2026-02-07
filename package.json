@@ -2,7 +2,7 @@
   "private": true,
   "packageManager": "pnpm@10.9.0",
   "engines": {
-    "node": ">=20.9.0",
+    "node": ">=20.19.0",
     "pnpm": ">=10.0.0"
   },
   "scripts": {
@@ -30,7 +30,7 @@
     "content:import:drafts": "tsx scripts/import-draft-questions.ts"
   },
   "lint-staged": {
-    "*.{js,jsx,ts,tsx,json}": [
+    "*.{js,jsx,ts,tsx,mjs,cjs,json}": [
       "biome check --write --no-errors-on-unmatched"
     ]
   },

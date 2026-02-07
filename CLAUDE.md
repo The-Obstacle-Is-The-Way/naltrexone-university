@@ -61,7 +61,7 @@ See Robert C. Martin (Uncle Bob) - Clean Code, Clean Architecture, TDD principle
 ## Setup
 
 ```bash
-# Requirements: Node >=20.9.0, pnpm
+# Requirements: Node >=20.19.0, pnpm
 pnpm install                # Install dependencies
 cp .env.example .env.local  # Create env file (never commit .env.local)
 # Set DATABASE_URL, Clerk keys, and Stripe keys in .env.local
