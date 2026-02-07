@@ -4,10 +4,8 @@ import {
   type StripeWebhookDeps,
 } from '@/src/adapters/controllers/stripe-webhook-controller';
 import {
-  FakeIdempotencyKeyRepository,
   FakeLogger,
   FakePaymentGateway,
-  FakeRateLimiter,
   FakeStripeCustomerRepository,
   FakeStripeEventRepository,
   FakeSubscriptionRepository,
@@ -25,16 +23,12 @@ function createDeps(overrides: {
   subscriptions?: FakeSubscriptionRepository;
   stripeCustomers?: FakeStripeCustomerRepository;
   logger?: FakeLogger;
-  rateLimiter?: FakeRateLimiter;
-  idempotencyKeys?: FakeIdempotencyKeyRepository;
 }): {
   deps: StripeWebhookDeps;
   stripeEvents: FakeStripeEventRepository;
   subscriptions: FakeSubscriptionRepository;
   stripeCustomers: FakeStripeCustomerRepository;
   logger: FakeLogger;
-  rateLimiter: FakeRateLimiter;
-  idempotencyKeys: FakeIdempotencyKeyRepository;
 } {
   const stripeEvents =
     overrides.stripeEvents ?? new FakeStripeEventRepository();
@@ -43,16 +37,11 @@ function createDeps(overrides: {
   const stripeCustomers =
     overrides.stripeCustomers ?? new FakeStripeCustomerRepository();
   const logger = overrides.logger ?? new FakeLogger();
-  const rateLimiter = overrides.rateLimiter ?? new FakeRateLimiter();
-  const idempotencyKeys =
-    overrides.idempotencyKeys ?? new FakeIdempotencyKeyRepository();
 
   return {
     deps: {
       paymentGateway: overrides.paymentGateway,
       logger,
-      rateLimiter,
-      idempotencyKeys,
       transaction: async (fn) =>
         fn({ stripeEvents, subscriptions, stripeCustomers }),
     },
@@ -60,8 +49,6 @@ function createDeps(overrides: {
     subscriptions,
     stripeCustomers,
     logger,
-    rateLimiter,
-    idempotencyKeys,
   };
 }
 
@@ -217,8 +204,6 @@ describe('processStripeWebhook', () => {
       context: expect.objectContaining({
         eventId: 'evt_prune_fail',
         error: 'boom',
-        retentionDays: 90,
-        pruneLimit: 100,
       }),
       msg: 'Stripe event pruning failed',
     });
@@ -371,130 +356,6 @@ describe('processStripeWebhook', () => {
     expect(errorData).toMatchObject({
       name: 'Error',
       message: 'boom',
-    });
-  });
-
-  it('prunes expired idempotency keys after successful processing', async () => {
-    vi.useFakeTimers();
-    try {
-      const now = new Date('2026-02-01T00:00:00Z');
-      vi.setSystemTime(now);
-
-      const paymentGateway = new FakePaymentGateway({
-        externalCustomerId: 'cus_test',
-        checkoutUrl: 'https://stripe/checkout',
-        portalUrl: 'https://stripe/portal',
-        webhookResult: {
-          eventId: 'evt_idem_prune',
-          type: 'checkout.session.completed',
-        },
-      });
-
-      const { deps, idempotencyKeys } = createDeps({ paymentGateway });
-      const pruneSpy = vi.spyOn(idempotencyKeys, 'pruneExpiredBefore');
-
-      await processStripeWebhook(deps, { rawBody: 'raw', signature: 'sig' });
-
-      const ninetyDaysMs = 86_400_000 * 90;
-      expect(pruneSpy).toHaveBeenCalledWith(
-        new Date(now.getTime() - ninetyDaysMs),
-        100,
-      );
-    } finally {
-      vi.useRealTimers();
-    }
-  });
-
-  it('prunes expired rate limit windows after successful processing', async () => {
-    vi.useFakeTimers();
-    try {
-      const now = new Date('2026-02-01T00:00:00Z');
-      vi.setSystemTime(now);
-
-      const paymentGateway = new FakePaymentGateway({
-        externalCustomerId: 'cus_test',
-        checkoutUrl: 'https://stripe/checkout',
-        portalUrl: 'https://stripe/portal',
-        webhookResult: {
-          eventId: 'evt_rate_prune',
-          type: 'checkout.session.completed',
-        },
-      });
-
-      const { deps, rateLimiter } = createDeps({ paymentGateway });
-      const pruneSpy = vi.spyOn(rateLimiter, 'pruneExpiredWindows');
-
-      await processStripeWebhook(deps, { rawBody: 'raw', signature: 'sig' });
-
-      const ninetyDaysMs = 86_400_000 * 90;
-      expect(pruneSpy).toHaveBeenCalledWith(
-        new Date(now.getTime() - ninetyDaysMs),
-        100,
-      );
-    } finally {
-      vi.useRealTimers();
-    }
-  });
-
-  it('logs a warning when idempotency key pruning fails', async () => {
-    const paymentGateway = new FakePaymentGateway({
-      externalCustomerId: 'cus_test',
-      checkoutUrl: 'https://stripe/checkout',
-      portalUrl: 'https://stripe/portal',
-      webhookResult: {
-        eventId: 'evt_idem_prune_fail',
-        type: 'checkout.session.completed',
-      },
-    });
-
-    const idempotencyKeys = new FakeIdempotencyKeyRepository();
-    vi.spyOn(idempotencyKeys, 'pruneExpiredBefore').mockRejectedValue(
-      new Error('idem boom'),
-    );
-
-    const { deps, logger } = createDeps({ paymentGateway, idempotencyKeys });
-
-    await expect(
-      processStripeWebhook(deps, { rawBody: 'raw', signature: 'sig' }),
-    ).resolves.toBeUndefined();
-
-    expect(logger.warnCalls).toContainEqual({
-      context: expect.objectContaining({
-        eventId: 'evt_idem_prune_fail',
-        error: 'idem boom',
-      }),
-      msg: 'Idempotency key pruning failed',
-    });
-  });
-
-  it('logs a warning when rate limit pruning fails', async () => {
-    const paymentGateway = new FakePaymentGateway({
-      externalCustomerId: 'cus_test',
-      checkoutUrl: 'https://stripe/checkout',
-      portalUrl: 'https://stripe/portal',
-      webhookResult: {
-        eventId: 'evt_rate_prune_fail',
-        type: 'checkout.session.completed',
-      },
-    });
-
-    const rateLimiter = new FakeRateLimiter();
-    vi.spyOn(rateLimiter, 'pruneExpiredWindows').mockRejectedValue(
-      new Error('rate boom'),
-    );
-
-    const { deps, logger } = createDeps({ paymentGateway, rateLimiter });
-
-    await expect(
-      processStripeWebhook(deps, { rawBody: 'raw', signature: 'sig' }),
-    ).resolves.toBeUndefined();
-
-    expect(logger.warnCalls).toContainEqual({
-      context: expect.objectContaining({
-        eventId: 'evt_rate_prune_fail',
-        error: 'rate boom',
-      }),
-      msg: 'Rate limit pruning failed',
     });
   });
 });
