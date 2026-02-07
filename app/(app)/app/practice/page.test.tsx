@@ -287,6 +287,30 @@ describe('app/(app)/app/practice', () => {
     expect(html).toContain('Bookmarks unavailable');
   });
 
+  it('renders bookmark warning even before a question is loaded', async () => {
+    const { PracticeView } = await import('@/app/(app)/app/practice/page');
+
+    const html = renderToStaticMarkup(
+      <PracticeView
+        loadState={{ status: 'ready' }}
+        question={null}
+        selectedChoiceId={null}
+        submitResult={null}
+        isPending={false}
+        bookmarkStatus="error"
+        isBookmarked={false}
+        canSubmit={false}
+        onTryAgain={() => undefined}
+        onToggleBookmark={() => undefined}
+        onSelectChoice={() => undefined}
+        onSubmit={() => undefined}
+        onNextQuestion={() => undefined}
+      />,
+    );
+
+    expect(html).toContain('Bookmarks unavailable');
+  });
+
   it('renders session info when sessionInfo is provided', async () => {
     const { PracticeView } = await import('@/app/(app)/app/practice/page');
 

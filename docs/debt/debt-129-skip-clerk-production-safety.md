@@ -1,8 +1,9 @@
 # DEBT-129: NEXT_PUBLIC_SKIP_CLERK Has No Production Safety Guard
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P1
 **Date:** 2026-02-06
+**Resolved:** 2026-02-07
 
 ---
 
@@ -28,7 +29,7 @@ if (process.env.NEXT_PUBLIC_SKIP_CLERK === 'true') {
 
 ## Resolution
 
-Add a production guard:
+Added production safety guard in `proxy.ts`:
 
 ```typescript
 if (process.env.NEXT_PUBLIC_SKIP_CLERK === 'true') {
@@ -40,11 +41,13 @@ if (process.env.NEXT_PUBLIC_SKIP_CLERK === 'true') {
 }
 ```
 
+Also added one-time logging to avoid per-request noise.
+
 ## Verification
 
-- [ ] `SKIP_CLERK=true` is ignored in production NODE_ENV
-- [ ] Still works in development
-- [ ] Build fails or logs critical error if set in production
+- [x] `SKIP_CLERK=true` is ignored in production NODE_ENV
+- [x] Still works in development
+- [x] Critical log emitted in production misconfiguration scenario
 
 ## Related
 

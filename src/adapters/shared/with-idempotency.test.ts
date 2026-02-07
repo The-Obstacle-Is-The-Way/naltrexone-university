@@ -126,4 +126,44 @@ describe('withIdempotency', () => {
     });
     expect(execute).toHaveBeenCalledTimes(1);
   });
+
+  it('returns a timeout message that acknowledges in-progress or crashed concurrent requests', async () => {
+    let tick = 0;
+    const now = () => {
+      const baseMs = Date.parse('2026-02-07T00:00:00.000Z');
+      const current = new Date(baseMs + tick * 10);
+      tick += 1;
+      return current;
+    };
+
+    const repo = new FakeIdempotencyKeyRepository(now);
+    await repo.claim({
+      userId: 'user_1',
+      action: 'billing:createCheckoutSession',
+      key: '44444444-4444-4444-4444-444444444444',
+      expiresAt: new Date('2026-02-08T00:00:00.000Z'),
+    });
+
+    const execute = vi.fn(async () => ({ ok: true }));
+
+    await expect(
+      withIdempotency({
+        repo,
+        userId: 'user_1',
+        action: 'billing:createCheckoutSession',
+        key: '44444444-4444-4444-4444-444444444444',
+        now,
+        maxWaitMs: 15,
+        pollIntervalMs: 1,
+        execute,
+      }),
+    ).rejects.toMatchObject({
+      code: 'CONFLICT',
+      message: expect.stringContaining(
+        'Request timed out waiting for idempotency key',
+      ),
+    });
+
+    expect(execute).not.toHaveBeenCalled();
+  });
 });

@@ -30,6 +30,7 @@ import {
 } from '@/src/adapters/controllers/question-controller';
 import type { NextQuestion } from '@/src/application/use-cases/get-next-question';
 import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
+import { scheduleBookmarkMessageAutoClear } from '../../hooks/bookmark-message-timeout';
 import type { PracticeSessionPageViewProps } from '../components/practice-session-page-view';
 import { isQuestionBookmarked } from '../practice-session-page-utils';
 import { usePracticeSessionMarkForReview } from './use-practice-session-mark-for-review';
@@ -219,12 +220,11 @@ export function usePracticeSessionPageController(
           setBookmarkMessage(
             bookmarked ? 'Question bookmarked.' : 'Bookmark removed.',
           );
-          if (bookmarkMessageTimeoutId.current) {
-            clearTimeout(bookmarkMessageTimeoutId.current);
-          }
-          bookmarkMessageTimeoutId.current = setTimeout(() => {
-            setBookmarkMessage(null);
-          }, 2000);
+          scheduleBookmarkMessageAutoClear({
+            timeoutIdRef: bookmarkMessageTimeoutId,
+            setBookmarkMessage,
+            isMounted,
+          });
         },
         isMounted,
       }),

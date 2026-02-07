@@ -1,8 +1,9 @@
 # DEBT-133: Idempotency Polling Timeout Error Message Is Misleading
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P3
 **Date:** 2026-02-06
+**Resolved:** 2026-02-07
 
 ---
 
@@ -26,13 +27,14 @@ Improve the timeout error message to distinguish between:
 1. Request is actively in progress (legitimate wait)
 2. Request may have crashed without storing a result
 
-Proposed message: `"Request timed out waiting for idempotency key. The concurrent request may still be in progress or may have failed."`
+Implemented message:
+`"Request timed out waiting for idempotency key. The concurrent request may still be in progress or may have failed."`
 
 ## Verification
 
-- [ ] Timeout message distinguishes between in-progress and crashed scenarios
-- [ ] Message explicitly acknowledges both possibilities
-- [ ] Existing idempotency tests pass
+- [x] Timeout message distinguishes between in-progress and crashed scenarios
+- [x] Message explicitly acknowledges both possibilities
+- [x] Regression coverage added in `with-idempotency.test.ts`
 
 ## Related
 

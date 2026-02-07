@@ -1,8 +1,9 @@
 # DEBT-126: console.warn in Repository Bypasses Structured Logger
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P3
 **Date:** 2026-02-06
+**Resolved:** 2026-02-07
 
 ---
 
@@ -22,12 +23,17 @@
 
 ## Resolution
 
-Either inject `Logger` into the repository constructor, silently handle, or throw `ApplicationError` if orphans indicate data corruption.
+Removed direct `console.warn` usage from `DrizzlePracticeSessionRepository.normalizeParams()`.
+
+Current behavior:
+- orphaned `questionStates` are silently filtered out
+- valid in-session question states are preserved
+- no global console logging in repository code
 
 ## Verification
 
-- [ ] No `console.warn` in repository code
-- [ ] Existing tests pass
+- [x] No `console.warn` in repository code
+- [x] Repository tests updated and passing (`drizzle-practice-session-repository.test.ts`)
 
 ## Related
 

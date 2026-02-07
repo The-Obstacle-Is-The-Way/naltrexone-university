@@ -353,7 +353,7 @@ describe('DrizzlePracticeSessionRepository', () => {
     ).rejects.toMatchObject({ code: 'INTERNAL_ERROR' });
   });
 
-  it('logs a warning when persisted params include orphaned questionStates', async () => {
+  it('drops orphaned questionStates without calling console.warn', async () => {
     const row = {
       id: 'session_1',
       userId: 'user_1',
@@ -418,15 +418,7 @@ describe('DrizzlePracticeSessionRepository', () => {
       },
     ]);
 
-    expect(warnSpy).toHaveBeenCalledWith(
-      expect.stringContaining(
-        'DrizzlePracticeSessionRepository.normalizeParams: orphaned questionStates dropped',
-      ),
-      expect.objectContaining({
-        orphanCount: 1,
-        orphanQuestionIds: ['q-orphan'],
-      }),
-    );
+    expect(warnSpy).not.toHaveBeenCalled();
   });
 
   it('creates a practice session and returns a mapped PracticeSession', async () => {

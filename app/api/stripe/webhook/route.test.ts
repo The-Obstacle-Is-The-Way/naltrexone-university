@@ -136,6 +136,9 @@ describe('POST /api/stripe/webhook', () => {
     );
 
     expect(res.status).toBe(400);
+    await expect(res.json()).resolves.toEqual({
+      error: 'Webhook validation failed',
+    });
   });
 
   it('returns 400 when payload validation fails', async () => {
@@ -154,6 +157,9 @@ describe('POST /api/stripe/webhook', () => {
     );
 
     expect(res.status).toBe(400);
+    await expect(res.json()).resolves.toEqual({
+      error: 'Webhook validation failed',
+    });
   });
 
   it('returns 429 when rate limited', async () => {

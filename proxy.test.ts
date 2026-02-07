@@ -38,6 +38,45 @@ describe('proxy middleware', () => {
     expect(res).toBeDefined();
   });
 
+  it('ignores NEXT_PUBLIC_SKIP_CLERK=true in production and still protects routes', async () => {
+    vi.stubEnv('NEXT_PUBLIC_SKIP_CLERK', 'true');
+    vi.stubEnv('NODE_ENV', 'production');
+
+    type ClerkMiddlewareCallback = (
+      auth: { protect: () => Promise<void> },
+      request: unknown,
+    ) => Promise<void> | void;
+
+    const protect = vi.fn(async () => undefined);
+    const clerkMiddleware = vi.fn((cb: ClerkMiddlewareCallback) =>
+      vi.fn(async (req: unknown) => {
+        await cb({ protect }, req);
+        return new Response('ok');
+      }),
+    );
+    const createRouteMatcher = vi.fn(() => () => false);
+
+    vi.doMock('@clerk/nextjs/server', () => ({
+      clerkMiddleware,
+      createRouteMatcher,
+    }));
+
+    const { default: middleware } = await import('./proxy');
+
+    const res = await middleware(
+      {} as unknown as NextRequest,
+      {} as unknown as NextFetchEvent,
+    );
+
+    if (!res) {
+      throw new Error('Expected middleware to return a response');
+    }
+
+    expect(clerkMiddleware).toHaveBeenCalledTimes(1);
+    expect(protect).toHaveBeenCalledTimes(1);
+    expect(await res.text()).toBe('ok');
+  });
+
   it('initializes and caches clerkMiddleware when NEXT_PUBLIC_SKIP_CLERK is not true', async () => {
     process.env.NEXT_PUBLIC_SKIP_CLERK = 'false';
 

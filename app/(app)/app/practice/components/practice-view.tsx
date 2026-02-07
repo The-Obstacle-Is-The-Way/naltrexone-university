@@ -99,6 +99,12 @@ export function PracticeView(props: PracticeViewProps) {
         </div>
       ) : null}
 
+      {props.bookmarkStatus === 'error' ? (
+        <div className="rounded-2xl border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive">
+          Bookmarks unavailable.
+        </div>
+      ) : null}
+
       {props.loadState.status === 'ready' && props.question === null ? (
         <div className="rounded-2xl border border-border bg-card p-6 text-sm text-muted-foreground shadow-sm">
           No more questions found.
@@ -129,11 +135,6 @@ export function PracticeView(props: PracticeViewProps) {
           >
             {props.isBookmarked ? 'Remove bookmark' : 'Bookmark'}
           </Button>
-          {props.bookmarkStatus === 'error' ? (
-            <div className="text-xs text-destructive">
-              Bookmarks unavailable.
-            </div>
-          ) : null}
           {props.bookmarkMessage ? (
             <div className="text-xs text-muted-foreground" aria-live="polite">
               {props.bookmarkMessage}

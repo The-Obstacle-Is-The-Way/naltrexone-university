@@ -1,8 +1,9 @@
 # BUG-084: Webhook Error Response Leaks Implementation Details
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P2
 **Date:** 2026-02-06
+**Resolved:** 2026-02-07
 
 ---
 
@@ -31,24 +32,21 @@ if (
 
 ## Fix
 
-Return a generic message and log the detail server-side:
+Handler already returned a generic 400 response and logged details server-side. Added explicit regression assertions in:
 
-```typescript
-if (
-  isApplicationError(error) &&
-  (error.code === 'INVALID_WEBHOOK_SIGNATURE' ||
-    error.code === 'INVALID_WEBHOOK_PAYLOAD')
-) {
-  container.logger.error({ error }, 'Stripe webhook validation failed');
-  return NextResponse.json({ error: 'Invalid webhook' }, { status: 400 });
-}
+- `app/api/stripe/webhook/route.test.ts`
+
+The tests now verify invalid signature and invalid payload both return:
+
+```json
+{ "error": "Webhook validation failed" }
 ```
 
 ## Verification
 
-- [ ] 400 response for invalid signature contains generic message only
-- [ ] Detailed error is logged server-side for debugging
-- [ ] Valid webhook requests still process correctly
+- [x] 400 response for invalid signature contains generic message only
+- [x] 400 response for invalid payload contains generic message only
+- [x] Valid webhook requests still process correctly
 
 ## Related
 
