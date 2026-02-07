@@ -1,22 +1,8 @@
 // @vitest-environment jsdom
-import { renderToStaticMarkup } from 'react-dom/server';
+
 import { describe, expect, it } from 'vitest';
+import { renderHook } from '@/src/application/test-helpers/render-hook';
 import { usePracticeSessionControls } from './use-practice-session-controls';
-
-function renderHook<T>(useHook: () => T): T {
-  let captured: T | null = null;
-
-  function Probe() {
-    captured = useHook();
-    return null;
-  }
-
-  renderToStaticMarkup(<Probe />);
-  if (captured === null) {
-    throw new Error('Hook result was not captured');
-  }
-  return captured;
-}
 
 describe('usePracticeSessionControls', () => {
   it('returns the expected initial state contract', () => {
@@ -36,6 +22,7 @@ describe('usePracticeSessionControls', () => {
     expect(output.incompleteSessionError).toBeNull();
     expect(output.incompleteSession).toBeNull();
     expect(output.sessionHistoryStatus).toBe('loading');
+    expect(output.sessionHistoryError).toBeNull();
     expect(output.sessionHistoryRows).toEqual([]);
     expect(output.selectedHistorySessionId).toBeNull();
     expect(output.selectedHistoryReview).toBeNull();

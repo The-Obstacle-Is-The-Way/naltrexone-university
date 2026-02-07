@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { practiceSessions } from './schema';
 
+// Drizzle stores extra config (indexes, constraints) behind internal Symbols.
+// This coupling is intentional: these helpers let us regression-test that
+// required indexes exist without spinning up a real database. If Drizzle
+// renames these symbols in a future version, the helpers will throw at test
+// time, signalling a needed update.
 type DrizzleTableSymbolName =
   | 'Symbol(drizzle:ExtraConfigBuilder)'
   | 'Symbol(drizzle:ExtraConfigColumns)';
@@ -52,6 +57,14 @@ function getPracticeSessionIndexes(): Record<
 }
 
 describe('practiceSessions schema indexes', () => {
+  it('defines a user + startedAt index for session ordering', () => {
+    const indexes = getPracticeSessionIndexes();
+
+    expect(indexes.userStartedAtIdx.config.name).toBe(
+      'practice_sessions_user_started_at_idx',
+    );
+  });
+
   it('defines a user + endedAt index for incomplete/completed session filters', () => {
     const indexes = getPracticeSessionIndexes();
 

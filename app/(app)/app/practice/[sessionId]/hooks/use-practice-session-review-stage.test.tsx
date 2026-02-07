@@ -1,22 +1,8 @@
 // @vitest-environment jsdom
-import { renderToStaticMarkup } from 'react-dom/server';
+
 import { describe, expect, it } from 'vitest';
+import { renderHook } from '@/src/application/test-helpers/render-hook';
 import { usePracticeSessionReviewStage } from './use-practice-session-review-stage';
-
-function renderHook<T>(useHook: () => T): T {
-  let captured: T | null = null;
-
-  function Probe() {
-    captured = useHook();
-    return null;
-  }
-
-  renderToStaticMarkup(<Probe />);
-  if (captured === null) {
-    throw new Error('Hook result was not captured');
-  }
-  return captured;
-}
 
 describe('usePracticeSessionReviewStage', () => {
   it('returns the expected initial state contract', () => {
@@ -41,6 +27,7 @@ describe('usePracticeSessionReviewStage', () => {
     expect(output.summaryReview).toBeNull();
     expect(output.summaryReviewLoadState).toEqual({ status: 'idle' });
     expect(output.review).toBeNull();
+    expect(typeof output.setReview).toBe('function');
     expect(output.reviewLoadState).toEqual({ status: 'idle' });
     expect(output.navigator).toBeNull();
     expect(output.isInReviewStage).toBe(false);
