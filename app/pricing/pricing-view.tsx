@@ -49,7 +49,7 @@ export function PricingView({
             className={[
               'mx-auto mt-8 max-w-2xl rounded-2xl border bg-card p-4 text-sm shadow-sm flex items-center justify-between',
               banner.tone === 'error'
-                ? 'border-red-200 text-red-700 dark:border-red-900/50 dark:text-red-200'
+                ? 'border-destructive text-destructive'
                 : 'border-border text-muted-foreground',
             ].join(' ')}
             role="alert"
@@ -156,9 +156,7 @@ export function PricingView({
                   /yr
                 </span>
               </p>
-              <p className="text-sm text-emerald-600 dark:text-emerald-400">
-                Save $149 per year
-              </p>
+              <p className="text-sm text-success">Save $149 per year</p>
               <ul className="mt-6 space-y-3 text-sm text-muted-foreground">
                 <li>Everything in Pro Monthly</li>
                 <li>Best value</li>

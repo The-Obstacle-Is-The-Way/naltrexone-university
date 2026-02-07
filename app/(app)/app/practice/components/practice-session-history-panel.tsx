@@ -1,4 +1,5 @@
 import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
 import type {
   GetPracticeSessionReviewOutput,
   GetSessionHistoryOutput,
@@ -35,7 +36,7 @@ export function PracticeSessionHistoryPanel(
   props: PracticeSessionHistoryPanelProps,
 ) {
   return (
-    <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
+    <Card className="gap-0 rounded-2xl p-6 shadow-sm">
       <div className="space-y-1">
         <div className="text-sm font-medium text-foreground">
           Recent sessions
@@ -47,10 +48,14 @@ export function PracticeSessionHistoryPanel(
 
       <div className="mt-4 space-y-3">
         {props.status === 'loading' ? (
-          <div className="text-sm text-muted-foreground">Loading sessions…</div>
+          <output className="text-sm text-muted-foreground" aria-live="polite">
+            Loading sessions…
+          </output>
         ) : null}
         {props.status === 'error' && props.error ? (
-          <div className="text-sm text-destructive">{props.error}</div>
+          <div className="text-sm text-destructive" role="alert">
+            {props.error}
+          </div>
         ) : null}
         {props.status === 'idle' && props.rows.length === 0 ? (
           <div className="text-sm text-muted-foreground">
@@ -100,12 +105,15 @@ export function PracticeSessionHistoryPanel(
             Session breakdown
           </div>
           {props.reviewStatus.status === 'loading' ? (
-            <div className="text-sm text-muted-foreground">
+            <output
+              className="text-sm text-muted-foreground"
+              aria-live="polite"
+            >
               Loading question breakdown…
-            </div>
+            </output>
           ) : null}
           {props.reviewStatus.status === 'error' ? (
-            <div className="text-sm text-destructive">
+            <div className="text-sm text-destructive" role="alert">
               {props.reviewStatus.message}
             </div>
           ) : null}
@@ -134,6 +142,6 @@ export function PracticeSessionHistoryPanel(
           ) : null}
         </div>
       ) : null}
-    </div>
+    </Card>
   );
 }

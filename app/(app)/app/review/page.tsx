@@ -1,5 +1,7 @@
 import Link from 'next/link';
+import { ErrorCard } from '@/components/error-card';
 import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
 import { ROUTES } from '@/lib/routes';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import {
@@ -72,11 +74,11 @@ export function ReviewView({
 
       {rows.length === 0 ? (
         totalCount === 0 ? (
-          <div className="rounded-2xl border border-border bg-card p-6 text-sm text-muted-foreground shadow-sm">
+          <Card className="gap-0 rounded-2xl p-6 text-sm text-muted-foreground shadow-sm">
             No missed questions yet.
-          </div>
+          </Card>
         ) : (
-          <div className="rounded-2xl border border-border bg-card p-6 text-sm text-muted-foreground shadow-sm">
+          <Card className="gap-0 rounded-2xl p-6 text-sm text-muted-foreground shadow-sm">
             No more missed questions on this page.
             <div className="mt-4">
               <Link
@@ -86,7 +88,7 @@ export function ReviewView({
                 Back to first page
               </Link>
             </div>
-          </div>
+          </Card>
         )
       ) : (
         <div className="space-y-3">
@@ -95,65 +97,74 @@ export function ReviewView({
           </div>
           <ul className="space-y-3">
             {rows.map((row) => (
-              <li
-                key={row.questionId}
-                className="rounded-2xl border border-border bg-card p-6 shadow-sm"
-              >
-                <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                  <div className="space-y-2">
-                    {row.isAvailable ? (
-                      <>
-                        <div className="text-sm font-medium text-foreground">
-                          {getStemPreview(row.stemMd, 80)}
-                        </div>
-                        {toPlainText(row.stemMd).length > 80 && (
-                          <div className="text-sm text-muted-foreground">
-                            {toPlainText(row.stemMd)}
+              <li key={row.questionId}>
+                <Card className="gap-0 rounded-2xl p-6 shadow-sm">
+                  <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                    <div className="space-y-2">
+                      {row.isAvailable ? (
+                        <>
+                          <div className="text-sm font-medium text-foreground">
+                            {getStemPreview(row.stemMd, 80)}
                           </div>
-                        )}
-                        <div className="text-xs text-muted-foreground">
-                          <span className="capitalize">{row.difficulty}</span>
-                          <span className="mx-2">•</span>
-                          <span>Missed {row.lastAnsweredAt.slice(0, 10)}</span>
-                          <span className="mx-2">•</span>
-                          <span>
-                            {getSessionOriginLabel({
-                              sessionId: row.sessionId,
-                              sessionMode: row.sessionMode,
-                            })}
-                          </span>
-                        </div>
-                      </>
-                    ) : (
-                      <>
-                        <div className="text-sm font-medium text-foreground">
-                          [Question no longer available]
-                        </div>
-                        <div className="text-sm text-muted-foreground">
-                          This question was removed or unpublished.
-                        </div>
-                        <div className="text-xs text-muted-foreground">
-                          <span>Unavailable</span>
-                          <span className="mx-2">•</span>
-                          <span>Missed {row.lastAnsweredAt.slice(0, 10)}</span>
-                          <span className="mx-2">•</span>
-                          <span>
-                            {getSessionOriginLabel({
-                              sessionId: row.sessionId,
-                              sessionMode: row.sessionMode,
-                            })}
-                          </span>
-                        </div>
-                      </>
-                    )}
-                  </div>
+                          {toPlainText(row.stemMd).length > 80 && (
+                            <div className="text-sm text-muted-foreground">
+                              {toPlainText(row.stemMd)}
+                            </div>
+                          )}
+                          <div className="text-xs text-muted-foreground">
+                            <span className="capitalize">{row.difficulty}</span>
+                            <span className="mx-2">•</span>
+                            <span>
+                              Missed {row.lastAnsweredAt.slice(0, 10)}
+                            </span>
+                            <span className="mx-2">•</span>
+                            <span>
+                              {getSessionOriginLabel({
+                                sessionId: row.sessionId,
+                                sessionMode: row.sessionMode,
+                              })}
+                            </span>
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <div className="text-sm font-medium text-foreground">
+                            [Question no longer available]
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            This question was removed or unpublished.
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            <span>Unavailable</span>
+                            <span className="mx-2">•</span>
+                            <span>
+                              Missed {row.lastAnsweredAt.slice(0, 10)}
+                            </span>
+                            <span className="mx-2">•</span>
+                            <span>
+                              {getSessionOriginLabel({
+                                sessionId: row.sessionId,
+                                sessionMode: row.sessionMode,
+                              })}
+                            </span>
+                          </div>
+                        </>
+                      )}
+                    </div>
 
-                  {row.isAvailable ? (
-                    <Button asChild variant="outline" className="rounded-full">
-                      <Link href={`/app/questions/${row.slug}`}>Reattempt</Link>
-                    </Button>
-                  ) : null}
-                </div>
+                    {row.isAvailable ? (
+                      <Button
+                        asChild
+                        variant="outline"
+                        className="rounded-full"
+                      >
+                        <Link href={`/app/questions/${row.slug}`}>
+                          Reattempt
+                        </Link>
+                      </Button>
+                    ) : null}
+                  </div>
+                </Card>
               </li>
             ))}
           </ul>
@@ -197,12 +208,9 @@ export function renderReview(result: ActionResult<GetMissedQuestionsOutput>) {
             Unable to load missed questions.
           </p>
         </div>
-        <div
-          className="rounded-2xl border border-border bg-card p-6 text-sm text-muted-foreground shadow-sm"
-          role="alert"
-        >
+        <ErrorCard className="border-border bg-card p-6 text-muted-foreground">
           {result.error.message}
-        </div>
+        </ErrorCard>
         <Button asChild className="rounded-full">
           <Link href={ROUTES.APP_PRACTICE}>Go to Practice</Link>
         </Button>

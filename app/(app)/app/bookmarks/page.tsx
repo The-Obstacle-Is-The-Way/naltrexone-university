@@ -1,7 +1,9 @@
 import { revalidatePath } from 'next/cache';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
+import { ErrorCard } from '@/components/error-card';
 import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
 import { ROUTES } from '@/lib/routes';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import {
@@ -95,74 +97,83 @@ export function BookmarksView({ rows }: { rows: GetBookmarksOutput['rows'] }) {
       </div>
 
       {rows.length === 0 ? (
-        <div className="rounded-2xl border border-border bg-card p-6 text-sm text-muted-foreground shadow-sm">
+        <Card className="gap-0 rounded-2xl p-6 text-sm text-muted-foreground shadow-sm">
           No bookmarks yet.
-        </div>
+        </Card>
       ) : (
         <ul className="space-y-3">
           {rows.map((row) => (
-            <li
-              key={row.questionId}
-              className="rounded-2xl border border-border bg-card p-6 shadow-sm"
-            >
-              <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                <div className="space-y-2">
-                  {row.isAvailable ? (
-                    <>
-                      <div className="text-sm font-medium text-foreground">
-                        {getStemPreview(row.stemMd, 80)}
-                      </div>
-                      {toPlainText(row.stemMd).length > 80 && (
-                        <div className="text-sm text-muted-foreground">
-                          {toPlainText(row.stemMd)}
+            <li key={row.questionId}>
+              <Card className="gap-0 rounded-2xl p-6 shadow-sm">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                  <div className="space-y-2">
+                    {row.isAvailable ? (
+                      <>
+                        <div className="text-sm font-medium text-foreground">
+                          {getStemPreview(row.stemMd, 80)}
                         </div>
-                      )}
-                      <div className="text-xs text-muted-foreground">
-                        <span className="capitalize">{row.difficulty}</span>
-                        <span className="mx-2">•</span>
-                        <span>Bookmarked {row.bookmarkedAt.slice(0, 10)}</span>
-                      </div>
-                    </>
-                  ) : (
-                    <>
-                      <div className="text-sm font-medium text-foreground">
-                        [Question no longer available]
-                      </div>
-                      <div className="text-sm text-muted-foreground">
-                        This question was removed or unpublished.
-                      </div>
-                      <div className="text-xs text-muted-foreground">
-                        <span>Unavailable</span>
-                        <span className="mx-2">•</span>
-                        <span>Bookmarked {row.bookmarkedAt.slice(0, 10)}</span>
-                      </div>
-                    </>
-                  )}
-                </div>
+                        {toPlainText(row.stemMd).length > 80 && (
+                          <div className="text-sm text-muted-foreground">
+                            {toPlainText(row.stemMd)}
+                          </div>
+                        )}
+                        <div className="text-xs text-muted-foreground">
+                          <span className="capitalize">{row.difficulty}</span>
+                          <span className="mx-2">•</span>
+                          <span>
+                            Bookmarked {row.bookmarkedAt.slice(0, 10)}
+                          </span>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div className="text-sm font-medium text-foreground">
+                          [Question no longer available]
+                        </div>
+                        <div className="text-sm text-muted-foreground">
+                          This question was removed or unpublished.
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          <span>Unavailable</span>
+                          <span className="mx-2">•</span>
+                          <span>
+                            Bookmarked {row.bookmarkedAt.slice(0, 10)}
+                          </span>
+                        </div>
+                      </>
+                    )}
+                  </div>
 
-                <div className="flex flex-col gap-2 sm:items-end">
-                  {row.isAvailable ? (
-                    <Button asChild variant="outline" className="rounded-full">
-                      <Link href={`/app/questions/${row.slug}`}>Reattempt</Link>
-                    </Button>
-                  ) : null}
+                  <div className="flex flex-col gap-2 sm:items-end">
+                    {row.isAvailable ? (
+                      <Button
+                        asChild
+                        variant="outline"
+                        className="rounded-full"
+                      >
+                        <Link href={`/app/questions/${row.slug}`}>
+                          Reattempt
+                        </Link>
+                      </Button>
+                    ) : null}
 
-                  <form action={removeBookmarkAction}>
-                    <input
-                      type="hidden"
-                      name="questionId"
-                      value={row.questionId}
-                    />
-                    <Button
-                      type="submit"
-                      variant="outline"
-                      className="rounded-full"
-                    >
-                      Remove
-                    </Button>
-                  </form>
+                    <form action={removeBookmarkAction}>
+                      <input
+                        type="hidden"
+                        name="questionId"
+                        value={row.questionId}
+                      />
+                      <Button
+                        type="submit"
+                        variant="outline"
+                        className="rounded-full"
+                      >
+                        Remove
+                      </Button>
+                    </form>
+                  </div>
                 </div>
-              </div>
+              </Card>
             </li>
           ))}
         </ul>
@@ -183,12 +194,9 @@ export function renderBookmarks(result: ActionResult<GetBookmarksOutput>) {
             Unable to load bookmarks.
           </p>
         </div>
-        <div
-          className="rounded-2xl border border-border bg-card p-6 text-sm text-muted-foreground shadow-sm"
-          role="alert"
-        >
+        <ErrorCard className="border-border bg-card p-6 text-muted-foreground">
           {result.error.message}
-        </div>
+        </ErrorCard>
         <Link
           href={ROUTES.APP_PRACTICE}
           className="text-sm font-medium text-muted-foreground hover:text-foreground"
@@ -222,12 +230,9 @@ export function createBookmarksPage(deps?: {
 
     return (
       <div className="space-y-6">
-        <div
-          className="rounded-2xl border border-border bg-card p-4 text-sm text-destructive shadow-sm"
-          role="alert"
-        >
+        <ErrorCard className="border-border bg-card text-destructive">
           {errorMessage}
-        </div>
+        </ErrorCard>
         <BookmarksView rows={result.data.rows} />
       </div>
     );

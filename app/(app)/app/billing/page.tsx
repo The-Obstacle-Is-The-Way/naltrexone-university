@@ -1,5 +1,7 @@
 import { ManageBillingButton } from '@/app/(app)/app/billing/billing-client';
 import { manageBillingAction } from '@/app/(app)/app/billing/manage-billing-actions';
+import { ErrorCard } from '@/components/error-card';
+import { Card } from '@/components/ui/card';
 import type { AuthGateway } from '@/src/application/ports/gateways';
 import type { SubscriptionRepository } from '@/src/application/ports/repositories';
 import type { Subscription } from '@/src/domain/entities';
@@ -53,7 +55,7 @@ export function BillingContent(props: BillingContentProps) {
   const subscription = props.subscription;
 
   return (
-    <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
+    <Card className="gap-0 rounded-2xl p-6 shadow-sm">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="space-y-1">
           <div className="text-sm font-medium text-foreground">
@@ -78,7 +80,7 @@ export function BillingContent(props: BillingContentProps) {
       </div>
 
       {subscription?.cancelAtPeriodEnd ? (
-        <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/20 dark:text-amber-100">
+        <div className="mt-4 rounded-xl border border-warning bg-warning/15 p-4 text-sm text-warning-foreground">
           <div className="font-medium">Cancellation scheduled</div>
           <div className="mt-1">
             Your subscription will cancel on{' '}
@@ -89,7 +91,7 @@ export function BillingContent(props: BillingContentProps) {
           </div>
         </div>
       ) : null}
-    </div>
+    </Card>
   );
 }
 
@@ -137,12 +139,9 @@ export function BillingPageView(props: BillingPageViewProps) {
       </div>
 
       {banner ? (
-        <div
-          className="rounded-2xl border border-border bg-card p-4 text-sm text-destructive shadow-sm"
-          role="alert"
-        >
+        <ErrorCard className="border-border bg-card text-destructive">
           {banner.message}
-        </div>
+        </ErrorCard>
       ) : null}
 
       <BillingContent {...contentProps} />

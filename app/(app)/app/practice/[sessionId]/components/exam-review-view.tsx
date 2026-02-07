@@ -1,4 +1,5 @@
 import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
 import { getStemPreview } from '@/src/adapters/shared/stem-preview';
 import type { GetPracticeSessionReviewOutput } from '@/src/application/use-cases/get-practice-session-review';
 
@@ -12,7 +13,7 @@ export function QuestionNavigator({
   onNavigateQuestion: (questionId: string) => void;
 }) {
   return (
-    <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
+    <Card className="gap-0 rounded-2xl p-4 shadow-sm">
       <div className="text-sm font-medium text-foreground">
         Question navigator
       </div>
@@ -42,7 +43,7 @@ export function QuestionNavigator({
           );
         })}
       </div>
-    </div>
+    </Card>
   );
 }
 
@@ -69,65 +70,64 @@ export function ExamReviewView({
       </div>
 
       <div className="grid gap-4 sm:grid-cols-3">
-        <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
+        <Card className="gap-0 rounded-2xl p-4 shadow-sm">
           <div className="text-xs text-muted-foreground">Answered</div>
           <div className="mt-1 text-2xl font-bold font-display text-foreground">
             {review.answeredCount}
           </div>
-        </div>
-        <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
+        </Card>
+        <Card className="gap-0 rounded-2xl p-4 shadow-sm">
           <div className="text-xs text-muted-foreground">Unanswered</div>
           <div className="mt-1 text-2xl font-bold font-display text-foreground">
             {review.totalCount - review.answeredCount}
           </div>
-        </div>
-        <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
+        </Card>
+        <Card className="gap-0 rounded-2xl p-4 shadow-sm">
           <div className="text-xs text-muted-foreground">Marked</div>
           <div className="mt-1 text-2xl font-bold font-display text-foreground">
             {review.markedCount}
           </div>
-        </div>
+        </Card>
       </div>
 
       <ul className="space-y-3">
         {review.rows.map((row) => (
-          <li
-            key={row.questionId}
-            className="rounded-2xl border border-border bg-card p-4 shadow-sm"
-          >
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-              <div className="space-y-1">
-                <div className="text-sm font-medium text-foreground">
-                  {row.isAvailable
-                    ? `${row.order}. ${getStemPreview(row.stemMd, 96)}`
-                    : `${row.order}. [Question no longer available]`}
+          <li key={row.questionId}>
+            <Card className="gap-0 rounded-2xl p-4 shadow-sm">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                <div className="space-y-1">
+                  <div className="text-sm font-medium text-foreground">
+                    {row.isAvailable
+                      ? `${row.order}. ${getStemPreview(row.stemMd, 96)}`
+                      : `${row.order}. [Question no longer available]`}
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    {row.isAnswered ? 'Answered' : 'Unanswered'}
+                    <span className="mx-2">•</span>
+                    <span>
+                      {row.markedForReview ? 'Marked for review' : 'Not marked'}
+                    </span>
+                    {row.isAnswered && row.isCorrect !== null ? (
+                      <>
+                        <span className="mx-2">•</span>
+                        <span>{row.isCorrect ? 'Correct' : 'Incorrect'}</span>
+                      </>
+                    ) : null}
+                  </div>
                 </div>
-                <div className="text-xs text-muted-foreground">
-                  {row.isAnswered ? 'Answered' : 'Unanswered'}
-                  <span className="mx-2">•</span>
-                  <span>
-                    {row.markedForReview ? 'Marked for review' : 'Not marked'}
-                  </span>
-                  {row.isAnswered && row.isCorrect !== null ? (
-                    <>
-                      <span className="mx-2">•</span>
-                      <span>{row.isCorrect ? 'Correct' : 'Incorrect'}</span>
-                    </>
-                  ) : null}
-                </div>
-              </div>
 
-              {row.isAvailable ? (
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="rounded-full"
-                  onClick={() => onOpenQuestion(row.questionId)}
-                >
-                  Open question
-                </Button>
-              ) : null}
-            </div>
+                {row.isAvailable ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="rounded-full"
+                    onClick={() => onOpenQuestion(row.questionId)}
+                  >
+                    Open question
+                  </Button>
+                ) : null}
+              </div>
+            </Card>
           </li>
         ))}
       </ul>

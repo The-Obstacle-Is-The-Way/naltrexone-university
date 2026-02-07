@@ -240,9 +240,7 @@ export function MarketingHomeShell({
                     /yr
                   </span>
                 </p>
-                <p className="text-sm text-emerald-600 dark:text-emerald-400">
-                  Save $149 per year
-                </p>
+                <p className="text-sm text-success">Save $149 per year</p>
                 <ul className="mt-6 space-y-3 text-sm text-muted-foreground">
                   <li>Everything in Pro Monthly</li>
                   <li>Best value</li>

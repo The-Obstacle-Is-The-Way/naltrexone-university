@@ -1,5 +1,6 @@
 'use client';
 
+import { ErrorCard } from '@/components/error-card';
 import { IncompleteSessionCard } from './components/incomplete-session-card';
 import {
   PracticeSessionHistoryPanel,
@@ -53,9 +54,7 @@ export default function PracticePage() {
           ) : null}
           {sessionControls.incompleteSessionStatus === 'error' &&
           sessionControls.incompleteSessionError ? (
-            <div className="rounded-2xl border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive">
-              {sessionControls.incompleteSessionError}
-            </div>
+            <ErrorCard>{sessionControls.incompleteSessionError}</ErrorCard>
           ) : null}
           {sessionControls.incompleteSessionStatus !== 'loading' &&
             sessionControls.incompleteSessionStatus !== 'error' &&

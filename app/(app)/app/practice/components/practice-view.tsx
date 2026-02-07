@@ -1,9 +1,11 @@
 'use client';
 
 import Link from 'next/link';
+import { ErrorCard } from '@/components/error-card';
 import { Feedback } from '@/components/question/Feedback';
 import { QuestionCard } from '@/components/question/QuestionCard';
 import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
 import { ROUTES } from '@/lib/routes';
 import type { NextQuestion } from '@/src/application/use-cases/get-next-question';
 import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
@@ -81,7 +83,7 @@ export function PracticeView(props: PracticeViewProps) {
       </div>
 
       {props.loadState.status === 'error' ? (
-        <div className="rounded-2xl border border-border bg-card p-6 text-sm text-destructive shadow-sm">
+        <ErrorCard className="border-border bg-card p-6">
           <div>{props.loadState.message}</div>
           <div className="mt-4 flex flex-wrap items-center gap-3">
             <Button type="button" variant="outline" onClick={props.onTryAgain}>
@@ -91,25 +93,23 @@ export function PracticeView(props: PracticeViewProps) {
               <Link href={ROUTES.APP_DASHBOARD}>Return to dashboard</Link>
             </Button>
           </div>
-        </div>
+        </ErrorCard>
       ) : null}
 
       {props.loadState.status === 'loading' ? (
-        <div className="rounded-2xl border border-border bg-card p-6 text-sm text-muted-foreground shadow-sm">
+        <Card className="gap-0 rounded-2xl p-6 text-sm text-muted-foreground shadow-sm">
           Loading question…
-        </div>
+        </Card>
       ) : null}
 
       {props.bookmarkStatus === 'error' ? (
-        <div className="rounded-2xl border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive">
-          Bookmarks unavailable.
-        </div>
+        <ErrorCard>Bookmarks unavailable.</ErrorCard>
       ) : null}
 
       {props.loadState.status === 'ready' && props.question === null ? (
-        <div className="rounded-2xl border border-border bg-card p-6 text-sm text-muted-foreground shadow-sm">
+        <Card className="gap-0 rounded-2xl p-6 text-sm text-muted-foreground shadow-sm">
           No more questions found.
-        </div>
+        </Card>
       ) : null}
 
       {props.question ? (

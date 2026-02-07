@@ -1,5 +1,7 @@
 import { PracticeView } from '@/app/(app)/app/practice/components/practice-view';
+import { ErrorCard } from '@/components/error-card';
 import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
 import type { EndPracticeSessionOutput } from '@/src/adapters/controllers/practice-controller';
 import type { NextQuestion } from '@/src/application/use-cases/get-next-question';
 import type { GetPracticeSessionReviewOutput } from '@/src/application/use-cases/get-practice-session-review';
@@ -60,18 +62,18 @@ export function PracticeSessionPageView(props: PracticeSessionPageViewProps) {
 
   if (reviewLoadState.status === 'loading' && !review) {
     return (
-      <div className="rounded-2xl border border-border bg-card p-6 text-sm text-muted-foreground shadow-sm">
+      <Card className="gap-0 rounded-2xl p-6 text-sm text-muted-foreground shadow-sm">
         Loading review...
-      </div>
+      </Card>
     );
   }
 
   if (reviewLoadState.status === 'error' && !review) {
     return (
       <div className="space-y-4">
-        <div className="rounded-2xl border border-border bg-card p-6 text-sm text-destructive shadow-sm">
+        <ErrorCard className="border-border bg-card p-6">
           {reviewLoadState.message}
-        </div>
+        </ErrorCard>
         <div className="flex flex-wrap gap-3">
           <Button
             type="button"

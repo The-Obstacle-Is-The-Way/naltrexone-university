@@ -671,4 +671,53 @@ describe('SubmitAnswerUseCase', () => {
 
     expect(attempts.getAll()).toHaveLength(0);
   });
+
+  it('throws NOT_FOUND when session exists but question is not part of the session', async () => {
+    const userId = 'user-1';
+    const sessionId = 'session-1';
+
+    const session = createPracticeSession({
+      id: sessionId,
+      userId,
+      mode: 'exam',
+      endedAt: new Date('2026-02-07T00:00:00Z'),
+      questionIds: ['q1'],
+    });
+
+    const question = createQuestion({
+      id: 'q2',
+      status: 'published',
+      choices: [
+        createChoice({
+          id: 'c2',
+          questionId: 'q2',
+          label: 'A',
+          isCorrect: true,
+        }),
+      ],
+    });
+
+    const attempts = new FakeAttemptRepository();
+    const useCase = new SubmitAnswerUseCase(
+      new FakeQuestionRepository([question]),
+      attempts,
+      new FakePracticeSessionRepository([session]),
+    );
+
+    await expect(
+      useCase.execute({
+        userId,
+        questionId: 'q2',
+        choiceId: 'c2',
+        sessionId,
+      }),
+    ).rejects.toEqual(
+      new ApplicationError(
+        'NOT_FOUND',
+        'Question is not part of this practice session',
+      ),
+    );
+
+    expect(attempts.getAll()).toHaveLength(0);
+  });
 });

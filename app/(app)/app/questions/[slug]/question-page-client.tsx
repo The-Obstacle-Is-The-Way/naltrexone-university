@@ -8,9 +8,11 @@ import {
   reattemptQuestion,
   submitSelectedAnswer,
 } from '@/app/(app)/app/questions/[slug]/question-page-logic';
+import { ErrorCard } from '@/components/error-card';
 import { Feedback } from '@/components/question/Feedback';
 import { QuestionCard } from '@/components/question/QuestionCard';
 import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
 import { ROUTES } from '@/lib/routes';
 import { useIsMounted } from '@/lib/use-is-mounted';
 import { submitAnswer } from '@/src/adapters/controllers/question-controller';
@@ -56,10 +58,7 @@ export function QuestionView(props: QuestionViewProps) {
       </div>
 
       {props.loadState.status === 'error' ? (
-        <div
-          className="rounded-2xl border border-border bg-card p-6 text-sm text-destructive shadow-sm"
-          role="alert"
-        >
+        <ErrorCard className="border-border bg-card p-6">
           <div>{props.loadState.message}</div>
           <Button
             type="button"
@@ -69,19 +68,19 @@ export function QuestionView(props: QuestionViewProps) {
           >
             Try again
           </Button>
-        </div>
+        </ErrorCard>
       ) : null}
 
       {props.loadState.status === 'loading' ? (
-        <div className="rounded-2xl border border-border bg-card p-6 text-sm text-muted-foreground shadow-sm">
+        <Card className="gap-0 rounded-2xl p-6 text-sm text-muted-foreground shadow-sm">
           Loading question…
-        </div>
+        </Card>
       ) : null}
 
       {props.loadState.status === 'ready' && props.question === null ? (
-        <div className="rounded-2xl border border-border bg-card p-6 text-sm text-muted-foreground shadow-sm">
+        <Card className="gap-0 rounded-2xl p-6 text-sm text-muted-foreground shadow-sm">
           Question not found.
-        </div>
+        </Card>
       ) : null}
 
       {props.question ? (

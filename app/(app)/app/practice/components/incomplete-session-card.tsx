@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
 import type { GetIncompletePracticeSessionOutput } from '@/src/adapters/controllers/practice-controller';
 
 type IncompletePracticeSession =
@@ -13,7 +14,7 @@ export function IncompleteSessionCard(input: {
   const modeLabel = input.session.mode === 'exam' ? 'Exam mode' : 'Tutor mode';
 
   return (
-    <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
+    <Card className="gap-0 rounded-2xl p-6 shadow-sm">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="space-y-1">
           <div className="text-sm font-medium text-foreground">
@@ -41,6 +42,6 @@ export function IncompleteSessionCard(input: {
           </Button>
         </div>
       </div>
-    </div>
+    </Card>
   );
 }

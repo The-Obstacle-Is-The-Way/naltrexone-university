@@ -6,7 +6,10 @@ export default function NotFound() {
     <div className="flex items-center justify-center min-h-[100dvh]">
       <div className="max-w-md space-y-8 p-4 text-center">
         <div className="flex justify-center">
-          <CircleIcon aria-hidden="true" className="size-12 text-zinc-500" />
+          <CircleIcon
+            aria-hidden="true"
+            className="size-12 text-muted-foreground"
+          />
         </div>
         <h1 className="text-4xl font-bold text-foreground tracking-tight">
           Page Not Found
