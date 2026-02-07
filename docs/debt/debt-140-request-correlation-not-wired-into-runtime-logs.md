@@ -1,7 +1,8 @@
 # DEBT-140: Request Correlation Is Defined but Not Wired Into Runtime Logs
 
 **Status:** Open
-**Priority:** P2
+**Priority:** P3
+**Blocked By:** SPEC-016 (Observability — request tracing marked as "future" work)
 **Date:** 2026-02-07
 
 ---

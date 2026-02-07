@@ -1,12 +1,64 @@
 # React 19 + Vitest Testing Guide
 
-**Last Updated:** 2026-02-04
+**Last Updated:** 2026-02-07
 
 This document exists because we got burned. Every claim is validated against official sources.
 
 ---
 
-## The Problem
+## Testing Decision Matrix
+
+**Use this to pick the right tool for every test you write.**
+
+| What you're testing | Tool | File pattern | Command | act() warnings? |
+|---------------------|------|-------------|---------|-----------------|
+| Render output (HTML content) | `renderToStaticMarkup` | `*.test.tsx` | `pnpm test` | No |
+| Pure logic (no React) | Direct function calls | `*.test.ts` | `pnpm test` | No |
+| Synchronous hook capture | `renderHook` (our helper) | `*.test.tsx` | `pnpm test` | No |
+| Hooks with async state (`useEffect`, `useState` transitions) | `vitest-browser-react` | `*.browser.spec.tsx` | `pnpm test:browser` | No |
+| Interactive UI (clicks, forms) | `vitest-browser-react` | `*.browser.spec.tsx` | `pnpm test:browser` | No |
+| Full user journeys (auth, payments) | Playwright | `*.spec.ts` | `pnpm test:e2e` | No |
+
+### The Three Harnesses
+
+**1. `renderToStaticMarkup`** — Render-output tests (jsdom, fast)
+```typescript
+// @vitest-environment jsdom
+import { renderToStaticMarkup } from 'react-dom/server';
+const html = renderToStaticMarkup(<MyComponent />);
+expect(html).toContain('Expected text');
+```
+- First-party React API, works everywhere, no act() dependency
+- Limitation: `useEffect` does not run, no interactivity
+
+**2. `renderHook`** — Synchronous hook capture (jsdom, fast)
+```typescript
+import { renderHook } from '@/src/application/test-helpers/render-hook';
+const output = renderHook(() => useMyHook());
+expect(output.someValue).toBe(42);
+```
+- Built on `renderToStaticMarkup` internally
+- Captures the hook's initial return value in a single render pass
+- Limitation: Cannot observe async state transitions (useEffect, setState after await)
+
+**3. `vitest-browser-react`** — Async hooks and interactive UI (real Chromium, slower)
+```tsx
+import { render } from 'vitest-browser-react';
+import { expect, test } from 'vitest';
+
+test('hook updates state after async operation', async () => {
+  const screen = await render(<ComponentThatUsesMyHook />);
+  await expect.element(screen.getByText('Loaded')).toBeVisible();
+});
+```
+- Runs in real Chromium via Playwright — no jsdom simulation
+- Does NOT expose `act()` — uses Chrome DevTools Protocol for synchronization
+- Has built-in retry-ability via `expect.element` (no manual polling)
+- Zero act() warnings because it bypasses React's test scheduler entirely
+
+---
+
+## The Problem (Historical Context)
 
 Tests pass locally but fail in git hooks / CI with:
 
@@ -14,20 +66,16 @@ Tests pass locally but fail in git hooks / CI with:
 TypeError: React.act is not a function
 ```
 
----
-
-## Root Cause (Validated)
-
 ### React 19 Breaking Change
 
 React 19 moved `act()` from `react-dom/test-utils` to the `react` package ([official upgrade guide](https://react.dev/blog/2024/04/25/react-19-upgrade-guide)).
 
 ```typescript
 // React 18 (old)
-import { act } from 'react-dom/test-utils';  // ❌ DEPRECATED
+import { act } from 'react-dom/test-utils';  // DEPRECATED
 
 // React 19 (new)
-import { act } from 'react';  // ✅ CORRECT
+import { act } from 'react';  // CORRECT
 ```
 
 ### @testing-library/react Compatibility Issue
@@ -48,37 +96,9 @@ Jest users are largely unaffected because Jest has different module resolution b
 
 ---
 
-## Our Solution: renderToStaticMarkup
-
-For tests that only verify render output (HTML content), we use `renderToStaticMarkup` from `react-dom/server`:
-
-```typescript
-// @vitest-environment jsdom
-import { renderToStaticMarkup } from 'react-dom/server';
-import { describe, expect, it } from 'vitest';
-
-describe('MyComponent', () => {
-  it('renders expected content', async () => {
-    const MyComponent = (await import('./MyComponent')).default;
-    const html = renderToStaticMarkup(<MyComponent />);
-    expect(html).toContain('Expected text');
-  });
-});
-```
-
-**Why this works:**
-- First-party React API from `react-dom/server`
-- NOT deprecated, NOT experimental
-- Does NOT depend on `act()` at all
-- Works reliably in all environments (node, jsdom, CI, git hooks)
-
-**Limitation:** Does not support interactive testing (clicks, form input, state changes). `useEffect` does not run during server-side rendering.
-
----
-
 ## Required Setup
 
-### 1. Install jsdom
+### 1. jsdom (for `pnpm test`)
 
 ```bash
 pnpm add -D jsdom
@@ -103,54 +123,98 @@ Every `.test.tsx` file must start with:
 
 **Why per-file?** Vitest 4 removed `environmentMatchGlobs` ([Vitest migration guide](https://vitest.dev/guide/migration.html)). The per-file directive is now the only way to set environment per test file.
 
+### 4. Browser Mode (for `pnpm test:browser`)
+
+Config: `vitest.browser.config.ts` — already configured with Playwright + Chromium.
+
+```bash
+pnpm test:browser   # Runs *.browser.spec.tsx files in real Chromium
+```
+
 ---
 
-## When You Need Interactive Tests
+## Hook Test Migration: `renderLiveHook` to Browser Mode
 
-### Preferred: Vitest Browser Mode + `vitest-browser-react`
+### Background
 
-For unit-level **interactive** UI tests (clicks, form input, state changes), use Vitest Browser Mode (Chromium via Playwright) with `vitest-browser-react`.
+Before Browser Mode was set up (Feb 4), we built `renderLiveHook` — a custom harness using `createRoot` in jsdom to test hooks with async state transitions. It works, but produces React act() warnings because jsdom's `createRoot` goes through React's concurrent scheduler.
 
-This repo is configured for it:
+**Browser Mode is the correct solution.** `vitest-browser-react` runs in real Chromium and uses CDP (Chrome DevTools Protocol) instead of `act()` for synchronization. Zero act() warnings.
 
-- Config: `vitest.browser.config.ts`
-- Setup: `vitest.browser.setup.ts`
-- Script: `pnpm test:browser`
-- Naming convention: `*.browser.spec.tsx` (kept separate from render-output `.test.tsx` files)
+### Files to Migrate (DEBT-141)
 
-Example:
+These 6 hook test files currently use `renderLiveHook` in jsdom and should be migrated to `*.browser.spec.tsx` using `vitest-browser-react`:
 
+| Current file (jsdom + renderLiveHook) | Migration target |
+|---------------------------------------|------------------|
+| `app/(app)/app/practice/hooks/use-practice-session-controls.test.tsx` | `*.browser.spec.tsx` |
+| `app/(app)/app/practice/hooks/use-practice-session-history.test.tsx` | `*.browser.spec.tsx` |
+| `app/(app)/app/practice/hooks/use-practice-question-flow.test.tsx` | `*.browser.spec.tsx` |
+| `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-page-controller.test.tsx` | `*.browser.spec.tsx` |
+| `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-mark-for-review.test.tsx` | `*.browser.spec.tsx` |
+| `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-review-stage.test.tsx` | `*.browser.spec.tsx` |
+
+Supporting test infrastructure:
+- `src/application/test-helpers/render-live-hook.tsx` — retire after migration
+- `src/application/test-helpers/render-live-hook.test.tsx` — retire after migration
+
+### Migration Pattern
+
+**Before** (jsdom + renderLiveHook — produces act() warnings):
+```typescript
+// @vitest-environment jsdom
+import { renderLiveHook } from '@/src/application/test-helpers/render-live-hook';
+
+const harness = renderLiveHook(() => useMyHook(props));
+try {
+  await harness.waitFor(() => true);
+  harness.getCurrent().doSomething();
+  await harness.waitFor((output) => output.status === 'done');
+  expect(harness.getCurrent().result).toBe('expected');
+} finally {
+  harness.unmount();
+}
+```
+
+**After** (Browser Mode + vitest-browser-react — zero act() warnings):
 ```tsx
 import { render } from 'vitest-browser-react';
-import { expect, test, vi } from 'vitest';
+import { expect, test } from 'vitest';
 
-test('fires onClick when clicked', async () => {
-  const onClick = vi.fn();
-  const screen = await render(<button onClick={onClick}>Click</button>);
-  await screen.getByRole('button', { name: 'Click' }).click();
-  expect(onClick).toHaveBeenCalledTimes(1);
+test('hook updates state correctly', async () => {
+  // Wrap hook in a minimal component
+  function HookConsumer() {
+    const output = useMyHook(props);
+    return <div data-testid="status">{output.status}</div>;
+  }
+
+  const screen = await render(<HookConsumer />);
+  // Built-in retry-ability — no manual polling needed
+  await expect.element(screen.getByTestId('status')).toHaveTextContent('done');
 });
 ```
 
-### Alternative: Playwright E2E
+### What stays in jsdom
 
-For full user journeys (auth, Stripe checkout, navigation), prefer Playwright (`pnpm test:e2e`). E2E tests are slower but validate real integrations end-to-end.
+The `renderHook` helper (not `renderLiveHook`) stays. It uses `renderToStaticMarkup` for synchronous hook capture and has zero act() warnings. 40+ test files use it correctly.
 
 ---
 
 ## The Ecosystem Reality
 
 **@testing-library/react is in zombie maintenance mode:**
-- The creator moved on and considers it "graduated"
+- The creator (Kent C. Dodds) moved on and considers it "graduated"
+- Kent himself endorses [vitest-browser-react as the successor](https://github.com/vitest-community/vitest-browser-react)
 - One part-time maintainer, no bandwidth for React 19 fixes
 - 63 open issues, 14 open PRs, core bugs sitting for almost a year
 - No timeline for fixes, no assigned developers
 
-**Our stance (2026-02-04):**
-- Avoid `@testing-library/react` in this repo (Vitest + React 19 + production resolution issues in hooks/CI).
-- Use `vitest-browser-react` **only in Browser Mode** (`pnpm test:browser`) for interactive tests.
-
-The goal is pragmatic stability: keep CI green, and still have a path to verify user interactions.
+**Our stance (2026-02-07):**
+- Do NOT use `@testing-library/react` (Vitest + React 19 compatibility broken, no fix coming)
+- Use `renderToStaticMarkup` for render-output tests (`pnpm test`)
+- Use `renderHook` for synchronous hook capture (`pnpm test`)
+- Use `vitest-browser-react` in Browser Mode for async hooks and interactive tests (`pnpm test:browser`)
+- Use Playwright for E2E user journeys (`pnpm test:e2e`)
 
 ---
 
@@ -160,17 +224,12 @@ The goal is pragmatic stability: keep CI green, and still have a path to verify 
 |---------|--------|--------|
 | `react-test-renderer` | **Deprecated in React 19** | [Official deprecation notice](https://react.dev/warnings/react-test-renderer) |
 | `react-dom/test-utils` | **Deprecated in React 19** | [React 19 Upgrade Guide](https://react.dev/blog/2024/04/25/react-19-upgrade-guide) |
+| `@testing-library/react` | **Avoid** (zombie maintenance, broken with Vitest + React 19) | [Issue #1392](https://github.com/testing-library/react-testing-library/issues/1392) |
 | `environmentMatchGlobs` | **Removed in Vitest 4** | [Vitest Migration Guide](https://vitest.dev/guide/migration.html) |
 
-### react-test-renderer Deprecation (Official Statement)
+### Legacy: `renderLiveHook` (internal)
 
-From [react.dev](https://react.dev/warnings/react-test-renderer):
-
-> react-test-renderer is deprecated. A warning will fire whenever calling ReactTestRenderer.create() or ReactShallowRender.render().
->
-> react-test-renderer is deprecated and no longer maintained. It will be removed in a future version.
-
-The React team recommends migrating to `@testing-library/react`. In this repo we route around the Vitest compatibility issue by using render-only tests for `.test.tsx` and Browser Mode for interactions.
+`src/application/test-helpers/render-live-hook.tsx` was built on Feb 1 before Browser Mode was set up. It uses `createRoot` in jsdom, which produces act() warnings. It works but is superseded by `vitest-browser-react`'s `renderHook` / `render` in Browser Mode. Retire after migrating the 6 hook test files listed above.
 
 ---
 
@@ -184,11 +243,11 @@ The React team recommends migrating to `@testing-library/react`. In this repo we
 | vi.mock() | External SDKs only (Clerk, Next.js, Stripe) |
 
 ```typescript
-// ✅ CORRECT
+// CORRECT
 const fakeRepo = new FakeUserRepository();
 const useCase = new CreateUserUseCase(fakeRepo);
 
-// ❌ WRONG
+// WRONG
 vi.mock('./user-repository');
 ```
 
@@ -196,24 +255,32 @@ vi.mock('./user-repository');
 
 ## Test File Locations
 
-| Type | Location | Pattern |
-|------|----------|---------|
-| Unit | Colocated | `*.test.ts` next to source |
-| Component | Colocated | `*.test.tsx` next to source |
-| Integration | Separate | `tests/integration/*.integration.test.ts` |
-| E2E | Separate | `tests/e2e/*.spec.ts` |
+| Type | Location | Pattern | Command |
+|------|----------|---------|---------|
+| Unit (logic) | Colocated | `*.test.ts` | `pnpm test` |
+| Component (render) | Colocated | `*.test.tsx` | `pnpm test` |
+| Hook (async/interactive) | Colocated | `*.browser.spec.tsx` | `pnpm test:browser` |
+| Integration | Separate | `tests/integration/*.integration.test.ts` | `pnpm test:integration` |
+| E2E | Separate | `tests/e2e/*.spec.ts` | `pnpm test:e2e` |
 
 ---
 
-## Checklist for New .test.tsx Files
+## Checklists
+
+### New `.test.tsx` (render-output)
 
 - [ ] First line: `// @vitest-environment jsdom`
 - [ ] Use `renderToStaticMarkup` for render-output tests
 - [ ] Use dynamic imports: `const Component = (await import('./Component')).default`
 - [ ] Assert on HTML content: `expect(html).toContain('text')`
 - [ ] Use fakes for DI, not vi.mock() for our code
-- [ ] **Do NOT use @testing-library/react** — zombie maintenance, no fix coming
-- [ ] For interactive tests: create `*.browser.spec.tsx` and run `pnpm test:browser`
+
+### New `.browser.spec.tsx` (async hooks / interactive)
+
+- [ ] Use `import { render } from 'vitest-browser-react'`
+- [ ] Use `await expect.element(locator)` for assertions (built-in retry)
+- [ ] Run with `pnpm test:browser`
+- [ ] Use fakes for DI, not vi.mock() for our code
 
 ---
 
@@ -225,9 +292,10 @@ vi.mock('./user-repository');
 | 2026-02-01 | Removed react-test-renderer (deprecated in React 19) |
 | 2026-02-01 | Standardized on renderToStaticMarkup for render-output tests |
 | 2026-02-01 | Validated all claims against official sources |
-| 2026-02-01 | Confirmed vitest-browser-react has same act() bug — not a fix |
+| 2026-02-01 | Built renderLiveHook workaround for async hook testing in jsdom |
 | 2026-02-04 | Added Vitest Browser Mode + vitest-browser-react (`pnpm test:browser`) |
-| 2026-02-01 | Documented ecosystem debt reality (Testing Library in zombie state) |
+| 2026-02-07 | Clarified 3-tier testing strategy; renderLiveHook superseded by Browser Mode |
+| 2026-02-07 | Added hook test migration guide (DEBT-141) |
 
 ---
 
@@ -239,6 +307,8 @@ All claims in this document are validated against these sources:
 - [React act() Documentation](https://react.dev/reference/react/act)
 - [react-test-renderer Deprecation Notice](https://react.dev/warnings/react-test-renderer)
 - [Vitest Migration Guide](https://vitest.dev/guide/migration.html)
+- [Vitest Browser Mode — Component Testing](https://vitest.dev/guide/browser/component-testing)
+- [vitest-browser-react (GitHub)](https://github.com/vitest-community/vitest-browser-react)
 - [testing-library/react-testing-library Issue #1392](https://github.com/testing-library/react-testing-library/issues/1392)
 - [testing-library/react-testing-library Issue #1061](https://github.com/testing-library/react-testing-library/issues/1061)
 - [testing-library/react-testing-library Issue #1413](https://github.com/testing-library/react-testing-library/issues/1413)
