@@ -1,8 +1,9 @@
 # DEBT-128: Bookmark Load Failure Not Visible to User Until Interaction
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P2
 **Date:** 2026-02-06
+**Resolved:** 2026-02-07
 
 ---
 
@@ -24,12 +25,18 @@ The bookmark button appears enabled and clickable, but clicking it reveals a fai
 
 ## Resolution
 
-Show a non-intrusive warning banner when bookmark loading fails after all retries. Optionally add a "Retry" button.
+Show a non-intrusive warning banner whenever `bookmarkStatus === 'error'`, even when no question card is currently rendered.
+
+Implemented in:
+- `app/(app)/app/practice/components/practice-view.tsx`
+
+Regression coverage added in:
+- `app/(app)/app/practice/page.test.tsx` (`renders bookmark warning even before a question is loaded`)
 
 ## Verification
 
-- [ ] Warning visible when bookmarks fail to load
-- [ ] Doesn't block question-answering flow
+- [x] Warning visible when bookmarks fail to load
+- [x] Does not block question-answering flow
 
 ## Related
 

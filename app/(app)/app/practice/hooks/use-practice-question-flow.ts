@@ -20,6 +20,7 @@ import {
   submitAnswerForQuestion,
   toggleBookmarkForQuestion,
 } from '../practice-page-logic';
+import { scheduleBookmarkMessageAutoClear } from './bookmark-message-timeout';
 
 export type UsePracticeQuestionFlowInput = {
   filters: PracticeFilters;
@@ -154,12 +155,11 @@ export function usePracticeQuestionFlow(
           setBookmarkMessage(
             bookmarked ? 'Question bookmarked.' : 'Bookmark removed.',
           );
-          if (bookmarkMessageTimeoutId.current) {
-            clearTimeout(bookmarkMessageTimeoutId.current);
-          }
-          bookmarkMessageTimeoutId.current = setTimeout(() => {
-            setBookmarkMessage(null);
-          }, 2000);
+          scheduleBookmarkMessageAutoClear({
+            timeoutIdRef: bookmarkMessageTimeoutId,
+            setBookmarkMessage,
+            isMounted,
+          });
         },
         isMounted,
       }),

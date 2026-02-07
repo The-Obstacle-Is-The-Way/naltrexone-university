@@ -113,5 +113,8 @@ export async function withIdempotency<T>(input: {
     await sleep(pollIntervalMs);
   }
 
-  throw new ApplicationError('CONFLICT', 'Request is already in progress');
+  throw new ApplicationError(
+    'CONFLICT',
+    'Request timed out waiting for idempotency key. The concurrent request may still be in progress or may have failed.',
+  );
 }

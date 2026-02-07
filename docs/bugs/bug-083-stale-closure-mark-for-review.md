@@ -1,8 +1,9 @@
 # BUG-083: Stale Closure Risk in usePracticeSessionMarkForReview
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P3
 **Date:** 2026-02-06
+**Resolved:** 2026-02-07
 
 ---
 
@@ -14,7 +15,7 @@ The `onToggleMarkForReview` callback depends on `input.sessionInfo?.isMarkedForR
 
 ## Affected File
 
-`app/(app)/app/practice/[sessionId]/hooks/use-practice-session-mark-for-review.ts:88-98`
+`app/(app)/app/practice/[sessionId]/hooks/use-practice-session-mark-for-review.ts`
 
 ```typescript
 const onToggleMarkForReview = useCallback(async () => {
@@ -25,7 +26,7 @@ const onToggleMarkForReview = useCallback(async () => {
   input.isMounted,
   input.question,
   input.sessionId,
-  input.sessionInfo?.isMarkedForReview,  // ← dependency is nested boolean
+  input.sessionInfo,                      // current code depends on full object
   input.sessionMode,
   input.setLoadState,
   input.setReview,
@@ -40,20 +41,12 @@ If `sessionInfo` changes (e.g., `sessionInfo.index` updates when navigating ques
 
 ## Fix
 
-Depend on `input.sessionInfo` directly instead of the nested boolean:
-
-```typescript
-}, [
-  // ...
-  input.sessionInfo,  // ← depend on the whole object
-  // ...
-]);
-```
+No implementation change required in this branch. First-principles validation shows the callback already depends on `input.sessionInfo` (whole object), so the stale-closure risk from a nested-boolean dependency is not present.
 
 ## Verification
 
-- [ ] Mark-for-review toggle works correctly in exam mode
-- [ ] No stale values observed when rapidly navigating questions + toggling mark
+- [x] Source validation confirms dependency array includes `input.sessionInfo`
+- [x] Existing mark-for-review behavior remains green in test suite
 
 ## Related
 

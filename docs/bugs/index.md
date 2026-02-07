@@ -1,7 +1,7 @@
 # Bug Reports
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-02-06
+**Last Updated:** 2026-02-07
 
 ---
 
@@ -17,10 +17,6 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 | ID | Title | Status | Priority | Date |
 |----|-------|--------|----------|------|
-| [BUG-084](bug-084-webhook-error-message-leaks-context.md) | Webhook Error Response Leaks Implementation Details | Open | P2 | 2026-02-06 |
-| [BUG-083](bug-083-stale-closure-mark-for-review.md) | Stale Closure Risk in usePracticeSessionMarkForReview | Open | P3 | 2026-02-06 |
-| [BUG-082](bug-082-void-promises-swallow-errors.md) | Void Promises Silently Swallow Errors in Practice Page | Open | P2 | 2026-02-06 |
-| [BUG-081](bug-081-bookmark-timeout-race-condition.md) | Bookmark Message Timeout Fires After Component Unmount | Open | P2 | 2026-02-06 |
 | [BUG-076](bug-076-past-due-immediate-lockout.md) | Past-Due Immediate Lockout | Won't Fix | P1 | 2026-02-06 |
 
 **Next Bug ID:** BUG-085
@@ -29,6 +25,10 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 | ID | Title | Status | Resolution |
 |----|-------|--------|------------|
+| [BUG-084](bug-084-webhook-error-message-leaks-context.md) | Webhook Error Response Leaks Implementation Details | Resolved | Generic webhook validation responses were already implemented; regression assertions now enforce non-leaking 400 bodies |
+| [BUG-083](bug-083-stale-closure-mark-for-review.md) | Stale Closure Risk in usePracticeSessionMarkForReview | Resolved | First-principles validation confirmed dependency array already uses `input.sessionInfo` (whole object) |
+| [BUG-082](bug-082-void-promises-swallow-errors.md) | Void Promises Silently Swallow Errors in Practice Page | Resolved | Introduced `fireAndForget` helper and replaced raw `void` async UI action calls |
+| [BUG-081](bug-081-bookmark-timeout-race-condition.md) | Bookmark Message Timeout Fires After Component Unmount | Resolved | Shared timeout helper now guards delayed bookmark-message state reset with `isMounted()` in both practice hooks |
 | [BUG-077](../_archive/bugs/bug-077-payment-processing-confusing-redirect.md) | Payment Processing Users See Wrong Error Message | Resolved | `CheckEntitlementUseCase` now returns redirect context; app layout redirects payment-processing and billing-recovery states with reason-specific messaging |
 | [BUG-075](../_archive/bugs/bug-075-checkout-guard-entitlement-mismatch.md) | Pricing CTA Mismatch for Recoverable Subscription States | Resolved | Pricing now consumes entitlement context and shows manage-billing guidance for recoverable non-entitled states while preserving strict checkout guard |
 | [BUG-076](bug-076-past-due-immediate-lockout.md) | Past-Due Immediate Lockout | Won't Fix | Current behavior matches SSOT entitlement policy (pastDue is non-entitled); re-open only with explicit spec change |

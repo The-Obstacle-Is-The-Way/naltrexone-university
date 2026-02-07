@@ -94,21 +94,10 @@ export class DrizzlePracticeSessionRepository
     params: PracticeSessionParams,
   ): NormalizedPracticeSessionParams {
     const expectedQuestionIds = new Set(params.questionIds);
-    const orphanQuestionIds = (params.questionStates ?? [])
-      .filter((state) => !expectedQuestionIds.has(state.questionId))
-      .map((state) => state.questionId);
-    if (orphanQuestionIds.length > 0) {
-      console.warn(
-        'DrizzlePracticeSessionRepository.normalizeParams: orphaned questionStates dropped',
-        {
-          orphanCount: orphanQuestionIds.length,
-          orphanQuestionIds,
-        },
-      );
-    }
-
     const byQuestionId = new Map(
-      (params.questionStates ?? []).map((state) => [state.questionId, state]),
+      (params.questionStates ?? [])
+        .filter((state) => expectedQuestionIds.has(state.questionId))
+        .map((state) => [state.questionId, state]),
     );
 
     return {

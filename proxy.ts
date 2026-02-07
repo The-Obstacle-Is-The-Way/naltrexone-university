@@ -16,6 +16,25 @@ const CLERK_CSP_DIRECTIVES = {
 } satisfies Record<string, string[]>;
 
 let cachedClerkMiddleware: NextMiddleware | null = null;
+let hasLoggedSkipClerkProductionWarning = false;
+
+function shouldBypassClerkAuth(): boolean {
+  if (process.env.NEXT_PUBLIC_SKIP_CLERK !== 'true') {
+    return false;
+  }
+
+  if (process.env.NODE_ENV === 'production') {
+    if (!hasLoggedSkipClerkProductionWarning) {
+      hasLoggedSkipClerkProductionWarning = true;
+      console.error(
+        'CRITICAL: NEXT_PUBLIC_SKIP_CLERK=true in production; ignoring and enforcing Clerk auth.',
+      );
+    }
+    return false;
+  }
+
+  return true;
+}
 
 async function getClerkMiddleware(): Promise<NextMiddleware> {
   if (cachedClerkMiddleware) return cachedClerkMiddleware;
@@ -47,7 +66,7 @@ export default async function middleware(
   request: NextRequest,
   event: NextFetchEvent,
 ) {
-  if (process.env.NEXT_PUBLIC_SKIP_CLERK === 'true') {
+  if (shouldBypassClerkAuth()) {
     return NextResponse.next();
   }
 

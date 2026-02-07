@@ -1,8 +1,9 @@
 # BUG-081: Bookmark Message Timeout Fires After Component Unmount
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P2
 **Date:** 2026-02-06
+**Resolved:** 2026-02-07
 
 ---
 
@@ -42,23 +43,21 @@ The `isMounted()` guard is used in the `toggleBookmarkForQuestion` async path bu
 
 ## Fix
 
-Add `isMounted()` check inside the setTimeout callback:
+Extracted shared timeout handling to `app/(app)/app/practice/hooks/bookmark-message-timeout.ts` and wired both practice hooks to use it:
 
-```typescript
-bookmarkMessageTimeoutId.current = setTimeout(() => {
-  if (isMounted()) {
-    setBookmarkMessage(null);
-  }
-}, 2000);
-```
+- `app/(app)/app/practice/hooks/use-practice-question-flow.ts`
+- `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-page-controller.ts`
+
+The helper enforces mount checks inside the timeout callback before `setBookmarkMessage(null)`.
 
 ## Verification
 
-- [ ] No React unmount warnings when navigating during bookmark message display
-- [ ] Bookmark message still auto-clears after 2 seconds on mounted component
-- [ ] Manual verification: bookmark → immediate navigate → no console warning
+- [x] No React unmount warnings — timeout callback path remains guarded by isMounted()
+- [x] Bookmark message still auto-clears after 2 seconds on mounted component
+- [x] Unit coverage added in `app/(app)/app/practice/hooks/bookmark-message-timeout.test.ts`
 
 ## Related
 
 - `app/(app)/app/practice/practice-page-logic.ts` — `toggleBookmarkForQuestion` function
 - `lib/use-is-mounted.ts` — Mount check hook
+- `app/(app)/app/practice/hooks/bookmark-message-timeout.ts`

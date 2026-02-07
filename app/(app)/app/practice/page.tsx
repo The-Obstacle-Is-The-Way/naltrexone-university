@@ -13,6 +13,7 @@ import {
   PracticeView,
   type PracticeViewProps,
 } from './components/practice-view';
+import { fireAndForget } from './fire-and-forget';
 import { usePracticeQuestionFlow } from './hooks/use-practice-question-flow';
 import { usePracticeSessionControls } from './hooks/use-practice-session-controls';
 
@@ -46,7 +47,7 @@ export default function PracticePage() {
                 sessionControls.incompleteSessionStatus === 'loading'
               }
               onAbandon={() => {
-                void sessionControls.onAbandonIncompleteSession();
+                fireAndForget(sessionControls.onAbandonIncompleteSession());
               }}
             />
           ) : null}
@@ -73,7 +74,7 @@ export default function PracticePage() {
                 onSessionModeChange={sessionControls.onSessionModeChange}
                 onSessionCountChange={sessionControls.onSessionCountChange}
                 onStartSession={() => {
-                  void sessionControls.onStartSession();
+                  fireAndForget(sessionControls.onStartSession());
                 }}
               />
             )}
@@ -85,7 +86,7 @@ export default function PracticePage() {
             selectedReview={sessionControls.selectedHistoryReview}
             reviewStatus={sessionControls.historyReviewLoadState}
             onOpenSession={(sessionId) => {
-              void sessionControls.onOpenSessionHistory(sessionId);
+              fireAndForget(sessionControls.onOpenSessionHistory(sessionId));
             }}
           />
         </div>
@@ -102,11 +103,11 @@ export default function PracticePage() {
       canSubmit={questionFlow.canSubmit}
       onTryAgain={questionFlow.onTryAgain}
       onToggleBookmark={() => {
-        void questionFlow.onToggleBookmark();
+        fireAndForget(questionFlow.onToggleBookmark());
       }}
       onSelectChoice={questionFlow.onSelectChoice}
       onSubmit={() => {
-        void questionFlow.onSubmit();
+        fireAndForget(questionFlow.onSubmit());
       }}
       onNextQuestion={questionFlow.onNextQuestion}
     />

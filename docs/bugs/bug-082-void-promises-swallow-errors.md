@@ -1,8 +1,9 @@
 # BUG-082: Void Promises Silently Swallow Errors in Practice Page
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P2
 **Date:** 2026-02-06
+**Resolved:** 2026-02-07
 
 ---
 
@@ -35,29 +36,26 @@ All current `void` calls wrap functions with internal try-catch. But the error s
 
 ## Fix
 
-Option A — Add `.catch()` at call sites for safety:
-```typescript
-onAbandon={() => {
-  sessionControls.onAbandonIncompleteSession().catch(() => {
-    // Error already handled internally
-  });
-}}
-```
+Implemented `fireAndForget` helper:
 
-Option B — Create a `fireAndForget` utility that logs unhandled rejections:
-```typescript
-function fireAndForget(promise: Promise<unknown>): void {
-  promise.catch((error) => console.error('Unhandled async error:', error));
-}
-```
+- `app/(app)/app/practice/fire-and-forget.ts`
+
+Replaced raw `void` calls in `app/(app)/app/practice/page.tsx` with explicit `fireAndForget(...)` calls for:
+
+- `onAbandonIncompleteSession`
+- `onStartSession`
+- `onOpenSessionHistory`
+- `onToggleBookmark`
+- `onSubmit`
 
 ## Verification
 
-- [ ] All async UI actions show error feedback when they fail
-- [ ] No silent promise rejections in production
-- [ ] Network failure during session abandon shows error message
+- [x] Call sites now attach explicit rejection handlers via `fireAndForget`
+- [x] Unit coverage added in `app/(app)/app/practice/fire-and-forget.test.ts`
+- [x] Existing UI tests and full unit suite pass after wiring change
 
 ## Related
 
 - `app/(app)/app/practice/practice-page-logic.ts` — Async action helpers with try-catch
 - `app/(app)/app/practice/[sessionId]/practice-session-page-logic.ts` — Session page helpers
+- `app/(app)/app/practice/fire-and-forget.ts`

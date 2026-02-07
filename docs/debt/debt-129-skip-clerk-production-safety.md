@@ -1,8 +1,9 @@
 # DEBT-129: NEXT_PUBLIC_SKIP_CLERK Has No Production Safety Guard
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P1
 **Date:** 2026-02-06
+**Resolved:** 2026-02-07
 
 ---
 
@@ -28,23 +29,35 @@ if (process.env.NEXT_PUBLIC_SKIP_CLERK === 'true') {
 
 ## Resolution
 
-Add a production guard:
+Added production safety guard in `proxy.ts`:
 
 ```typescript
-if (process.env.NEXT_PUBLIC_SKIP_CLERK === 'true') {
-  if (process.env.NODE_ENV === 'production') {
-    console.error('CRITICAL: NEXT_PUBLIC_SKIP_CLERK=true in production — ignoring');
-  } else {
-    return NextResponse.next();
+let hasLoggedSkipClerkProductionWarning = false;
+
+function shouldBypassClerkAuth(): boolean {
+  if (process.env.NEXT_PUBLIC_SKIP_CLERK !== 'true') {
+    return false;
   }
+  if (process.env.NODE_ENV === 'production') {
+    if (!hasLoggedSkipClerkProductionWarning) {
+      hasLoggedSkipClerkProductionWarning = true;
+      console.error(
+        'CRITICAL: NEXT_PUBLIC_SKIP_CLERK=true in production; ignoring and enforcing Clerk auth.',
+      );
+    }
+    return false;
+  }
+  return true;
 }
 ```
 
+The one-time guard flag (`hasLoggedSkipClerkProductionWarning`) ensures the CRITICAL log fires only once, not on every request.
+
 ## Verification
 
-- [ ] `SKIP_CLERK=true` is ignored in production NODE_ENV
-- [ ] Still works in development
-- [ ] Build fails or logs critical error if set in production
+- [x] `NEXT_PUBLIC_SKIP_CLERK=true` is ignored in production NODE_ENV
+- [x] Still works in development
+- [x] Critical log emitted in production misconfiguration scenario
 
 ## Related
 
