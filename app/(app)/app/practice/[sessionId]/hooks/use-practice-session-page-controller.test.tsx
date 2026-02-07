@@ -105,4 +105,38 @@ describe('usePracticeSessionPageController', () => {
       harness.unmount();
     }
   });
+
+  it('transitions to error when question loading throws', async () => {
+    vi.spyOn(questionController, 'getNextQuestion').mockRejectedValue(
+      new Error('Question load failed'),
+    );
+    vi.spyOn(bookmarkController, 'getBookmarks').mockResolvedValue(
+      ok({ rows: [] }),
+    );
+    vi.spyOn(practiceController, 'getPracticeSessionReview').mockResolvedValue(
+      ok({
+        sessionId: 'session-1',
+        mode: 'exam',
+        totalCount: 10,
+        answeredCount: 0,
+        markedCount: 0,
+        rows: [],
+      }),
+    );
+
+    const harness = renderLiveHook(() =>
+      usePracticeSessionPageController('session-1'),
+    );
+
+    try {
+      await harness.waitFor((output) => output.loadState.status === 'error');
+      expect(harness.getCurrent().question).toBeNull();
+      expect(harness.getCurrent().loadState).toEqual({
+        status: 'error',
+        message: 'Question load failed',
+      });
+    } finally {
+      harness.unmount();
+    }
+  });
 });

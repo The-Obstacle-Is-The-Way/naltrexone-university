@@ -175,4 +175,52 @@ describe('usePracticeSessionMarkForReview', () => {
       harness.unmount();
     }
   });
+
+  it('sets loadState error when mark-for-review request throws', async () => {
+    vi.spyOn(
+      practiceController,
+      'setPracticeSessionQuestionMark',
+    ).mockRejectedValue(new Error('Mark for review failed'));
+
+    const setLoadState = vi.fn();
+
+    const harness = renderLiveHook(() =>
+      usePracticeSessionMarkForReview({
+        question: {
+          questionId: 'question-1',
+          slug: 'question-1',
+          stemMd: 'Question',
+          difficulty: 'easy',
+          choices: [],
+          session: null,
+        },
+        sessionMode: 'exam',
+        sessionInfo: {
+          sessionId: 'session-1',
+          mode: 'exam',
+          index: 0,
+          total: 10,
+          isMarkedForReview: false,
+        },
+        sessionId: 'session-1',
+        setSessionInfo: vi.fn(),
+        setLoadState,
+        setReview: vi.fn(),
+        isMounted: () => true,
+      }),
+    );
+
+    try {
+      await harness.waitFor(() => true);
+      await harness.getCurrent().onToggleMarkForReview();
+      await harness.waitFor((output) => !output.isMarkingForReview);
+
+      expect(setLoadState).toHaveBeenCalledWith({
+        status: 'error',
+        message: 'Mark for review failed',
+      });
+    } finally {
+      harness.unmount();
+    }
+  });
 });

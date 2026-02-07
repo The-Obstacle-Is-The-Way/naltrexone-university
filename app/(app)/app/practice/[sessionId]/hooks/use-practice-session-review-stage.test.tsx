@@ -98,4 +98,41 @@ describe('usePracticeSessionReviewStage', () => {
       harness.unmount();
     }
   });
+
+  it('sets review load error when exam review loading throws', async () => {
+    vi.spyOn(practiceController, 'getPracticeSessionReview').mockRejectedValue(
+      new Error('Review load failed'),
+    );
+
+    const harness = renderLiveHook(() =>
+      usePracticeSessionReviewStage({
+        sessionId: 'session-1',
+        isMounted: () => true,
+        sessionInfo: null,
+        questionId: null,
+        submitResult: null,
+        sessionMode: 'exam',
+        setSessionMode: vi.fn(),
+        setLoadState: vi.fn(),
+        setQuestion: vi.fn(),
+        setSubmitResult: vi.fn(),
+        setSelectedChoiceId: vi.fn(),
+        loadSpecificQuestion: vi.fn(),
+      }),
+    );
+
+    try {
+      await harness.waitFor(() => true);
+      harness.getCurrent().onEndSession();
+      await harness.waitFor(
+        (output) => output.reviewLoadState.status === 'error',
+      );
+      expect(harness.getCurrent().reviewLoadState).toEqual({
+        status: 'error',
+        message: 'Review load failed',
+      });
+    } finally {
+      harness.unmount();
+    }
+  });
 });

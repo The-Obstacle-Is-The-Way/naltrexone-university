@@ -1,7 +1,11 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { getClientIp } from '@/lib/request-ip';
 
 describe('getClientIp', () => {
+  beforeEach(() => {
+    vi.stubEnv('NODE_ENV', 'test');
+  });
+
   afterEach(() => {
     vi.unstubAllEnvs();
   });

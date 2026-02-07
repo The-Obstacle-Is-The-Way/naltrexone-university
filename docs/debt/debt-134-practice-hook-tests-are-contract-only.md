@@ -54,6 +54,10 @@ Covered behaviors now include:
 2. Thrown server-action failures and error-state transitions
 3. Success-path transitions across idle/loading/ready/error states
 4. Session-history drill-down race handling
+5. Thrown error-path handling in the remaining extracted hooks:
+   - `usePracticeSessionPageController`
+   - `usePracticeSessionMarkForReview`
+   - `usePracticeSessionReviewStage`
 
 ## Verification
 
