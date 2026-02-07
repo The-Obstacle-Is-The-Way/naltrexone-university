@@ -54,9 +54,17 @@ export async function loadNextQuestion(input: {
   setSubmitIdempotencyKey: (key: string | null) => void;
   setQuestionLoadedAt: (loadedAtMs: number | null) => void;
   setQuestion: (question: NextQuestion | null) => void;
+  createRequestSequenceId?: () => number;
+  isLatestRequest?: (requestId: number) => boolean;
   isMounted?: () => boolean;
 }): Promise<void> {
   const isMounted = input.isMounted ?? (() => true);
+  const requestId = input.createRequestSequenceId?.();
+  const canCommit = () => {
+    if (!isMounted()) return false;
+    if (requestId === undefined) return true;
+    return input.isLatestRequest?.(requestId) ?? true;
+  };
 
   input.setLoadState({ status: 'loading' });
   input.setSelectedChoiceId(null);
@@ -70,7 +78,7 @@ export async function loadNextQuestion(input: {
       filters: input.filters,
     });
   } catch (error) {
-    if (!isMounted()) return;
+    if (!canCommit()) return;
 
     input.setLoadState({
       status: 'error',
@@ -83,7 +91,7 @@ export async function loadNextQuestion(input: {
     input.setQuestionLoadedAt(null);
     return;
   }
-  if (!isMounted()) return;
+  if (!canCommit()) return;
 
   if (!res.ok) {
     input.setLoadState({
@@ -114,6 +122,8 @@ export function createLoadNextQuestionAction(input: {
   setSubmitIdempotencyKey: (key: string | null) => void;
   setQuestionLoadedAt: (loadedAtMs: number | null) => void;
   setQuestion: (question: NextQuestion | null) => void;
+  createRequestSequenceId?: () => number;
+  isLatestRequest?: (requestId: number) => boolean;
   isMounted?: () => boolean;
 }): () => void {
   return () => {

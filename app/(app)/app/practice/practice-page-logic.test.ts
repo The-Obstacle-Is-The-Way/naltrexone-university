@@ -21,7 +21,7 @@ import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answ
 import { createChoice, createQuestion } from '@/src/domain/test-helpers';
 import { createDeferred } from '@/tests/test-helpers/create-deferred';
 
-function createNextQuestion(): NextQuestion {
+function createNextQuestion(overrides?: Partial<NextQuestion>): NextQuestion {
   const questionId = 'q_1';
   const choice = createChoice({
     id: 'choice_1',
@@ -50,6 +50,7 @@ function createNextQuestion(): NextQuestion {
       sortOrder: index + 1,
     })),
     session: null,
+    ...overrides,
   };
 }
 
@@ -96,6 +97,80 @@ describe('practice-page-logic', () => {
   });
 
   describe('loadNextQuestion', () => {
+    it('ignores stale responses when a newer request finishes first', async () => {
+      const first = createDeferred<ActionResult<NextQuestion | null>>();
+      const second = createDeferred<ActionResult<NextQuestion | null>>();
+      let callCount = 0;
+      let latestRequestId = 0;
+
+      const getNextQuestionFn = vi.fn(async () => {
+        callCount += 1;
+        return callCount === 1 ? first.promise : second.promise;
+      });
+
+      const setQuestion = vi.fn();
+      const setLoadState = vi.fn();
+
+      const createRequestSequenceId = () => {
+        latestRequestId += 1;
+        return latestRequestId;
+      };
+
+      const isLatestRequest = (requestId: number) =>
+        requestId === latestRequestId;
+
+      const loadFirst = loadNextQuestion({
+        getNextQuestionFn,
+        filters: { tagSlugs: [], difficulties: [] },
+        createIdempotencyKey: () => 'idem_1',
+        nowMs: () => 1234,
+        setLoadState,
+        setSelectedChoiceId: vi.fn(),
+        setSubmitResult: vi.fn(),
+        setSubmitIdempotencyKey: vi.fn(),
+        setQuestionLoadedAt: vi.fn(),
+        setQuestion,
+        createRequestSequenceId,
+        isLatestRequest,
+      });
+
+      const loadSecond = loadNextQuestion({
+        getNextQuestionFn,
+        filters: { tagSlugs: [], difficulties: [] },
+        createIdempotencyKey: () => 'idem_2',
+        nowMs: () => 5678,
+        setLoadState,
+        setSelectedChoiceId: vi.fn(),
+        setSubmitResult: vi.fn(),
+        setSubmitIdempotencyKey: vi.fn(),
+        setQuestionLoadedAt: vi.fn(),
+        setQuestion,
+        createRequestSequenceId,
+        isLatestRequest,
+      });
+
+      second.resolve(
+        ok(
+          createNextQuestion({
+            questionId: 'q_2',
+            slug: 'q-2',
+          }),
+        ),
+      );
+      await loadSecond;
+
+      first.resolve(ok(createNextQuestion()));
+      await loadFirst;
+
+      expect(setQuestion).toHaveBeenCalledWith(
+        expect.objectContaining({ questionId: 'q_2' }),
+      );
+      expect(setQuestion.mock.calls.at(-1)?.[0]).toEqual(
+        expect.objectContaining({ questionId: 'q_2' }),
+      );
+      expect(setLoadState.mock.calls.at(-1)?.[0]).toEqual({ status: 'ready' });
+    });
+
     it('loads next question and updates loadedAt when a question exists', async () => {
       const getNextQuestionFn = vi.fn(async () => ok(createNextQuestion()));
       const setLoadState = vi.fn();

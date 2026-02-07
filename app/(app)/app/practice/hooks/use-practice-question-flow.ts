@@ -68,6 +68,7 @@ export function usePracticeQuestionFlow(
   const [submitIdempotencyKey, setSubmitIdempotencyKey] = useState<
     string | null
   >(null);
+  const latestQuestionRequestId = useRef(0);
   const isMounted = useIsMounted();
 
   const onTryAgain = useMemo(
@@ -84,6 +85,12 @@ export function usePracticeQuestionFlow(
         setSubmitIdempotencyKey,
         setQuestionLoadedAt,
         setQuestion,
+        createRequestSequenceId: () => {
+          latestQuestionRequestId.current += 1;
+          return latestQuestionRequestId.current;
+        },
+        isLatestRequest: (requestId) =>
+          requestId === latestQuestionRequestId.current,
         isMounted,
       }),
     [input.filters, isMounted],

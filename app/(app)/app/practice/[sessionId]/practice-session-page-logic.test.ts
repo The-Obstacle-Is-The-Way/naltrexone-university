@@ -28,6 +28,102 @@ function createNextQuestion(overrides?: Partial<NextQuestion>): NextQuestion {
 
 describe('practice-session-page-logic', () => {
   describe('loadNextQuestion', () => {
+    it('ignores stale responses when a newer request finishes first', async () => {
+      const first = createDeferred<ActionResult<NextQuestion | null>>();
+      const second = createDeferred<ActionResult<NextQuestion | null>>();
+      let callCount = 0;
+      let latestRequestId = 0;
+
+      const getNextQuestionFn = vi.fn(async () => {
+        callCount += 1;
+        return callCount === 1 ? first.promise : second.promise;
+      });
+
+      const setQuestion = vi.fn();
+      const setSessionInfo = vi.fn();
+      const setLoadState = vi.fn();
+
+      const createRequestSequenceId = () => {
+        latestRequestId += 1;
+        return latestRequestId;
+      };
+      const isLatestRequest = (requestId: number) =>
+        requestId === latestRequestId;
+
+      const loadFirst = loadNextQuestion({
+        sessionId: 'session-1',
+        getNextQuestionFn,
+        createIdempotencyKey: () => 'idem_1',
+        nowMs: () => 1234,
+        setLoadState,
+        setSelectedChoiceId: vi.fn(),
+        setSubmitResult: vi.fn(),
+        setSubmitIdempotencyKey: vi.fn(),
+        setQuestionLoadedAt: vi.fn(),
+        setQuestion,
+        setSessionInfo,
+        createRequestSequenceId,
+        isLatestRequest,
+      });
+
+      const loadSecond = loadNextQuestion({
+        sessionId: 'session-1',
+        getNextQuestionFn,
+        createIdempotencyKey: () => 'idem_2',
+        nowMs: () => 5678,
+        setLoadState,
+        setSelectedChoiceId: vi.fn(),
+        setSubmitResult: vi.fn(),
+        setSubmitIdempotencyKey: vi.fn(),
+        setQuestionLoadedAt: vi.fn(),
+        setQuestion,
+        setSessionInfo,
+        createRequestSequenceId,
+        isLatestRequest,
+      });
+
+      second.resolve(
+        ok(
+          createNextQuestion({
+            questionId: 'q_2',
+            slug: 'q-2',
+            session: {
+              sessionId: 'session-1',
+              mode: 'tutor',
+              index: 1,
+              total: 2,
+            },
+          }),
+        ),
+      );
+      await loadSecond;
+
+      first.resolve(
+        ok(
+          createNextQuestion({
+            session: {
+              sessionId: 'session-1',
+              mode: 'tutor',
+              index: 0,
+              total: 2,
+            },
+          }),
+        ),
+      );
+      await loadFirst;
+
+      expect(setQuestion).toHaveBeenCalledWith(
+        expect.objectContaining({ questionId: 'q_2' }),
+      );
+      expect(setQuestion.mock.calls.at(-1)?.[0]).toEqual(
+        expect.objectContaining({ questionId: 'q_2' }),
+      );
+      expect(setSessionInfo.mock.calls.at(-1)?.[0]).toEqual(
+        expect.objectContaining({ index: 1 }),
+      );
+      expect(setLoadState.mock.calls.at(-1)?.[0]).toEqual({ status: 'ready' });
+    });
+
     it('loads the next question and updates sessionInfo when present', async () => {
       const setLoadState = vi.fn();
       const setSelectedChoiceId = vi.fn();
