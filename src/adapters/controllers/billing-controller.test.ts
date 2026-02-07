@@ -7,6 +7,7 @@ import {
   FakeCreateCheckoutSessionUseCase,
   FakeCreatePortalSessionUseCase,
   FakeIdempotencyKeyRepository,
+  FakeLogger,
   FakeRateLimiter,
 } from '@/src/application/test-helpers/fakes';
 import type {
@@ -75,6 +76,7 @@ function createDeps(overrides?: {
 
   return {
     authGateway,
+    logger: new FakeLogger(),
     createCheckoutSessionUseCase,
     createPortalSessionUseCase,
     idempotencyKeyRepository: new FakeIdempotencyKeyRepository(now),

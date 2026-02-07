@@ -254,6 +254,7 @@ describe('question controllers (integration)', () => {
 
     const deps: QuestionControllerDeps = {
       authGateway,
+      logger: new FakeLogger(),
       rateLimiter: {
         limit: async () => ({
           success: true,

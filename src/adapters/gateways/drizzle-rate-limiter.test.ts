@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
+import { FakeLogger } from '@/src/application/test-helpers/fakes';
 import { DrizzleRateLimiter } from './drizzle-rate-limiter';
 
 type RateLimiterDb = ConstructorParameters<typeof DrizzleRateLimiter>[0];
@@ -75,6 +76,31 @@ describe('DrizzleRateLimiter', () => {
       success: true,
       limit: 5,
       remaining: 4,
+    });
+  });
+
+  it('logs a warning when pruning fails', async () => {
+    const db = createDbMock(1);
+    const logger = new FakeLogger();
+    const rateLimiter = new DrizzleRateLimiter(
+      db as unknown as RateLimiterDb,
+      () => new Date('2026-02-07T12:00:00.000Z'),
+      logger,
+    );
+    vi.spyOn(rateLimiter, 'pruneExpiredWindows').mockRejectedValue(
+      new Error('prune failed'),
+    );
+
+    await rateLimiter.limit({ key: 'rate:test', limit: 5, windowMs: 60_000 });
+
+    expect(logger.warnCalls).toHaveLength(1);
+    expect(logger.warnCalls[0]).toMatchObject({
+      msg: 'Rate-limit window pruning failed',
+      context: {
+        key: 'rate:test',
+        limit: 5,
+        windowMs: 60_000,
+      },
     });
   });
 });

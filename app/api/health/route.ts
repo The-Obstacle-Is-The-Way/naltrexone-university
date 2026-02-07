@@ -1,9 +1,10 @@
 import { db } from '@/lib/db';
+import { logger } from '@/lib/logger';
 import { createRequestContext, getRequestLogger } from '@/lib/request-context';
 import { DrizzleRateLimiter } from '@/src/adapters/gateways/drizzle-rate-limiter';
 import { createHealthHandler } from './handler';
 
-const rateLimiter = new DrizzleRateLimiter(db);
+const rateLimiter = new DrizzleRateLimiter(db, () => new Date(), logger);
 
 export async function POST(req: Request) {
   const ctx = createRequestContext();

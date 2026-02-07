@@ -9,6 +9,7 @@ import {
   FakeAuthGateway,
   FakeGetNextQuestionUseCase,
   FakeIdempotencyKeyRepository,
+  FakeLogger,
   FakeRateLimiter,
   FakeSubmitAnswerUseCase,
   FakeSubscriptionRepository,
@@ -92,6 +93,7 @@ function createDeps(overrides?: {
 
   return {
     authGateway,
+    logger: new FakeLogger(),
     rateLimiter,
     idempotencyKeyRepository,
     checkEntitlementUseCase,

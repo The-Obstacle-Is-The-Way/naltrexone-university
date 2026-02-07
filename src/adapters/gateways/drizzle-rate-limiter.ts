@@ -5,12 +5,19 @@ import type {
   RateLimitInput,
   RateLimitResult,
 } from '@/src/application/ports/gateways';
+import type { Logger } from '@/src/application/ports/logger';
 import type { DrizzleDb } from '../shared/database-types';
 
 const SECOND_MS = 1000;
 const DAY_MS = 86_400_000;
 const PRUNE_RETENTION_DAYS = 90;
 const PRUNE_BATCH_LIMIT = 100;
+const NOOP_LOGGER: Logger = {
+  debug: () => undefined,
+  info: () => undefined,
+  warn: () => undefined,
+  error: () => undefined,
+};
 
 function isPositiveInteger(value: number): boolean {
   return Number.isInteger(value) && value > 0;
@@ -20,6 +27,7 @@ export class DrizzleRateLimiter implements RateLimiter {
   constructor(
     private readonly db: DrizzleDb,
     private readonly now: () => Date = () => new Date(),
+    private readonly logger: Logger = NOOP_LOGGER,
   ) {}
 
   async limit(input: RateLimitInput): Promise<RateLimitResult> {
@@ -64,7 +72,17 @@ export class DrizzleRateLimiter implements RateLimiter {
       const cutoff = new Date(nowMs - PRUNE_RETENTION_DAYS * DAY_MS);
       try {
         await this.pruneExpiredWindows(cutoff, PRUNE_BATCH_LIMIT);
-      } catch {}
+      } catch (error) {
+        this.logger.warn(
+          {
+            key: input.key,
+            limit: input.limit,
+            windowMs: input.windowMs,
+            error: error instanceof Error ? error.message : String(error),
+          },
+          'Rate-limit window pruning failed',
+        );
+      }
     }
 
     return {

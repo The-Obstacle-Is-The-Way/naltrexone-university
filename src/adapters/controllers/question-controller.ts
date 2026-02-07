@@ -14,6 +14,7 @@ import type {
   AuthGateway,
   RateLimiter,
 } from '@/src/application/ports/gateways';
+import type { Logger } from '@/src/application/ports/logger';
 import type { IdempotencyKeyRepository } from '@/src/application/ports/repositories';
 import type {
   GetNextQuestionInput,
@@ -107,6 +108,7 @@ type SubmitAnswerUseCase = {
 
 export type QuestionControllerDeps = {
   authGateway: AuthGateway;
+  logger: Logger;
   rateLimiter: RateLimiter;
   idempotencyKeyRepository: IdempotencyKeyRepository;
   checkEntitlementUseCase: CheckEntitlementUseCase;
@@ -185,6 +187,7 @@ export const submitAnswer = createAction({
 
     return withIdempotency({
       repo: d.idempotencyKeyRepository,
+      logger: d.logger,
       userId,
       action: 'question:submitAnswer',
       key: idempotencyKey,
