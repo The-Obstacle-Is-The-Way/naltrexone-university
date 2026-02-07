@@ -1,5 +1,6 @@
 import { verifyWebhook } from '@clerk/nextjs/webhooks';
 import { createContainer } from '@/lib/container';
+import { createRequestContext, getRequestLogger } from '@/lib/request-context';
 import type { ClerkWebhookEvent } from '@/src/adapters/controllers/clerk-webhook-controller';
 import { processClerkWebhook } from '@/src/adapters/controllers/clerk-webhook-controller';
 import { cancelStripeCustomerSubscriptions } from '@/src/adapters/gateways/stripe-subscription-canceler';
@@ -16,7 +17,11 @@ async function verifyClerkWebhook(req: Request): Promise<ClerkWebhookEvent> {
 }
 
 export const POST = createWebhookHandler(
-  createContainer,
+  () => {
+    const ctx = createRequestContext();
+    const logger = getRequestLogger(ctx);
+    return createContainer({ primitives: { logger } });
+  },
   verifyClerkWebhook,
   processClerkWebhook,
   cancelStripeCustomerSubscriptions,

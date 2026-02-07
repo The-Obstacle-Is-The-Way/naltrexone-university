@@ -549,11 +549,17 @@ export type NewBookmark = typeof bookmarks.$inferInsert;
 
 A user is **entitled** if and only if there exists a row in `stripe_subscriptions` for the user with:
 
-* subscription `status` translates to domain `SubscriptionStatus` ∈ `{ "active", "inTrial" }` (Stripe: `{ "active", "trialing" }`)
+* subscription `status` translates to domain `SubscriptionStatus` ∈ `{ "active", "inTrial", "pastDue" }` (Stripe: `{ "active", "trialing", "past_due" }`)
 * AND `current_period_end > now()` (server UTC)
 * AND the subscription row corresponds to the **latest** known subscription for that user (enforced by `stripe_subscriptions.user_id` unique constraint: 1 row per user)
 
-All other statuses are **not entitled** (Stripe: `past_due`, `canceled`, `unpaid`, `paused`, `incomplete`, `incomplete_expired`).
+All other statuses are **not entitled** (Stripe: `canceled`, `unpaid`, `paused`, `incomplete`, `incomplete_expired`).
+
+#### 4.2.1 Dunning Grace Policy
+
+`pastDue` subscribers retain access while Stripe retries payment. Stripe manages the dunning lifecycle (Smart Retries, configurable retry schedule). When Stripe exhausts retries, it transitions the subscription to `canceled` or `unpaid`, at which point the existing entitlement logic locks the user out.
+
+**UI requirement:** When a `pastDue` subscriber accesses the app, the layout MUST display a non-blocking banner: "Your payment failed — please update your billing information." with a link to the Stripe billing portal. The user MUST NOT be redirected away from app content.
 
 ### 4.3 Standard Server Action Result Type (Used by Every Server Action)
 

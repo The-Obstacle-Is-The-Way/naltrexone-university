@@ -17,15 +17,26 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 | ID | Title | Status | Priority | Date |
 |----|-------|--------|----------|------|
-| [DEBT-136](debt-136-dunning-grace-period-for-past-due-subscribers.md) | Dunning Grace Period for Past-Due Subscribers | Open | P3 | 2026-02-07 |
-| [DEBT-140](debt-140-request-correlation-not-wired-into-runtime-logs.md) | Request Correlation Not Wired (Blocked by SPEC-016) | Open | P3 | 2026-02-07 |
-| [DEBT-148](debt-148-minimal-aria-accessibility-app-pages.md) | Minimal ARIA Accessibility in App Pages | Resolved | P3 | 2026-02-07 |
-| [DEBT-153](debt-153-brittle-css-class-string-assertions.md) | Brittle CSS Class String Assertions in renderToStaticMarkup Tests | Resolved | P3 | 2026-02-07 |
-| [DEBT-154](debt-154-custom-notification-provider-vs-shadcn-sonner.md) | Custom NotificationProvider vs shadcn/sonner | Open | P4 | 2026-02-07 |
+| — | No active debt | — | — | — |
 
 **Next Debt ID:** DEBT-155
 
 ## Archived Debt
+
+### Resolved in Debt Cleanup (Billing, Observability, Notifications)
+
+| ID | Title | Priority | Resolved |
+|----|-------|----------|----------|
+| [DEBT-136](../_archive/debt/debt-136-dunning-grace-period-for-past-due-subscribers.md) | Dunning Grace Period for Past-Due Subscribers | P2 | 2026-02-07 |
+| [DEBT-140](../_archive/debt/debt-140-request-correlation-not-wired-into-runtime-logs.md) | Request Correlation Wired Into Runtime Logs | P3 | 2026-02-07 |
+| [DEBT-154](../_archive/debt/debt-154-custom-notification-provider-vs-shadcn-sonner.md) | Custom NotificationProvider vs shadcn/sonner (Accepted) | P4 | 2026-02-07 |
+
+### Resolved in Debt Cleanup (Testing + Accessibility)
+
+| ID | Title | Priority | Resolved |
+|----|-------|----------|----------|
+| [DEBT-153](../_archive/debt/debt-153-brittle-css-class-string-assertions.md) | Brittle CSS Class String Assertions in renderToStaticMarkup Tests | P3 | 2026-02-07 |
+| [DEBT-148](../_archive/debt/debt-148-minimal-aria-accessibility-app-pages.md) | Minimal ARIA Accessibility in App Pages | P3 | 2026-02-07 |
 
 ### Resolved in PR #64 (SPEC-020)
 

@@ -29,10 +29,14 @@ async function getDeps(deps?: AppLayoutDeps): Promise<AppLayoutDeps> {
   };
 }
 
+export type EntitledAppUser = {
+  subscriptionStatus: string | null;
+};
+
 export async function enforceEntitledAppUser(
   deps?: AppLayoutDeps,
   redirectFn: (url: string) => never = redirect,
-): Promise<void> {
+): Promise<EntitledAppUser> {
   const d = await getDeps(deps);
   const user = await d.authGateway.requireUser();
 
@@ -44,21 +48,26 @@ export async function enforceEntitledAppUser(
     const reason = entitlement.reason ?? 'subscription_required';
     redirectFn(`${ROUTES.PRICING}?reason=${reason}`);
   }
+
+  return { subscriptionStatus: entitlement.subscriptionStatus ?? null };
 }
 
 export type AppLayoutShellProps = {
   children: React.ReactNode;
   mobileNav: React.ReactNode;
   authNav: React.ReactNode;
+  banner?: React.ReactNode;
 };
 
 export function AppLayoutShell({
   children,
   mobileNav,
   authNav,
+  banner,
 }: AppLayoutShellProps) {
   return (
     <div className="min-h-screen bg-muted">
+      {banner}
       <header className="relative border-b border-border bg-background">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
           <div className="flex items-center gap-6">
@@ -99,9 +108,24 @@ export function AppLayoutShell({
   );
 }
 
+export function PastDueBanner() {
+  return (
+    <output className="block border-b border-warning bg-warning/10 px-4 py-3 text-center text-sm text-warning-foreground">
+      Your payment failed — please{' '}
+      <Link
+        href={ROUTES.APP_BILLING}
+        className="underline font-medium hover:text-foreground"
+      >
+        update your billing information
+      </Link>
+      .
+    </output>
+  );
+}
+
 export async function renderAppLayout(input: {
   children: React.ReactNode;
-  enforceEntitledAppUserFn?: () => Promise<void>;
+  enforceEntitledAppUserFn?: () => Promise<EntitledAppUser>;
   authNavFn?: () => Promise<React.ReactNode>;
   mobileNav?: React.ReactNode;
 }): Promise<React.ReactElement> {
@@ -110,11 +134,13 @@ export async function renderAppLayout(input: {
   const authNavFn = input.authNavFn ?? AuthNav;
   const mobileNav = input.mobileNav ?? <MobileNav />;
 
-  await enforceEntitledAppUserFn();
+  const { subscriptionStatus } = await enforceEntitledAppUserFn();
   const authNav = await authNavFn();
+  const banner =
+    subscriptionStatus === 'pastDue' ? <PastDueBanner /> : undefined;
 
   return (
-    <AppLayoutShell authNav={authNav} mobileNav={mobileNav}>
+    <AppLayoutShell authNav={authNav} mobileNav={mobileNav} banner={banner}>
       {input.children}
     </AppLayoutShell>
   );

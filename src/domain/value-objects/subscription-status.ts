@@ -29,6 +29,7 @@ export function isValidSubscriptionStatus(
 export const EntitledStatuses: readonly SubscriptionStatus[] = [
   'active',
   'inTrial',
+  'pastDue',
 ];
 
 /**

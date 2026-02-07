@@ -57,6 +57,26 @@ describe('CheckEntitlementUseCase', () => {
     });
   });
 
+  it('returns true and reason null when subscription is pastDue with active period', async () => {
+    const sub = createSubscription({
+      userId: 'user-1',
+      status: 'pastDue',
+      currentPeriodEnd: new Date('2026-03-01T00:00:00Z'),
+    });
+    const useCase = new CheckEntitlementUseCase(
+      new FakeSubscriptionRepository([sub]),
+      () => new Date('2026-01-31T12:00:00Z'),
+    );
+
+    const result = await useCase.execute({ userId: 'user-1' });
+    expect(result).toEqual({
+      isEntitled: true,
+      reason: null,
+      subscriptionStatus: 'pastDue',
+      hasActiveSubscriptionPeriod: true,
+    });
+  });
+
   it('returns manage_billing for non-entitled current subscriptions', async () => {
     const sub = createSubscription({
       userId: 'user-1',

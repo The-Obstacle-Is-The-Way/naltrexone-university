@@ -46,8 +46,8 @@ describe('SubscriptionStatus', () => {
       expect(isEntitledStatus('canceled')).toBe(false);
     });
 
-    it('returns false for pastDue', () => {
-      expect(isEntitledStatus('pastDue')).toBe(false);
+    it('returns true for pastDue', () => {
+      expect(isEntitledStatus('pastDue')).toBe(true);
     });
 
     it('returns false for unpaid', () => {
@@ -56,8 +56,8 @@ describe('SubscriptionStatus', () => {
   });
 
   describe('EntitledStatuses', () => {
-    it('contains exactly active and inTrial', () => {
-      expect(EntitledStatuses).toEqual(['active', 'inTrial']);
+    it('contains exactly active, inTrial, and pastDue', () => {
+      expect(EntitledStatuses).toEqual(['active', 'inTrial', 'pastDue']);
     });
   });
 });

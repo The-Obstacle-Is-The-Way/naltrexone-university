@@ -34,7 +34,9 @@ describe('app/(app)/app/layout (shell)', () => {
   it('renders AppLayout via renderAppLayout with injected deps', async () => {
     const { renderAppLayout } = await import('@/app/(app)/app/layout');
 
-    const enforceEntitledAppUserFn = vi.fn(async () => undefined);
+    const enforceEntitledAppUserFn = vi.fn(async () => ({
+      subscriptionStatus: 'active',
+    }));
     const authNavFn = vi.fn(async () => <div>AuthNav</div>);
 
     const element = await renderAppLayout({
@@ -50,6 +52,31 @@ describe('app/(app)/app/layout (shell)', () => {
     expect(authNavFn).toHaveBeenCalledTimes(1);
     expect(html).toContain('AuthNav');
     expect(html).toContain('MobileNav');
+    expect(html).toContain('Child content');
+    expect(html).not.toContain('payment failed');
+  });
+
+  it('renders payment-failed banner for pastDue subscribers', async () => {
+    const { renderAppLayout } = await import('@/app/(app)/app/layout');
+
+    const enforceEntitledAppUserFn = vi.fn(async () => ({
+      subscriptionStatus: 'pastDue',
+    }));
+    const authNavFn = vi.fn(async () => <div>AuthNav</div>);
+
+    const element = await renderAppLayout({
+      children: <div>Child content</div>,
+      enforceEntitledAppUserFn,
+      authNavFn,
+      mobileNav: <div>MobileNav</div>,
+    });
+
+    const html = renderToStaticMarkup(element);
+
+    expect(html).toContain('Your payment failed');
+    expect(html).toContain('update your billing information');
+    expect(html).toContain('href="/app/billing"');
+    expect(html).toContain('<output');
     expect(html).toContain('Child content');
   });
 

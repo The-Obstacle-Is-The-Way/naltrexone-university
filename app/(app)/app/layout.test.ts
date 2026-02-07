@@ -69,23 +69,55 @@ describe('app/(app)/app/layout', () => {
     };
 
     const checkEntitlementUseCase = {
-      execute: vi.fn(async () => ({ isEntitled: true, reason: null })),
+      execute: vi.fn(async () => ({
+        isEntitled: true,
+        reason: null,
+        subscriptionStatus: 'active' as const,
+      })),
     };
 
     const redirectFn = vi.fn(() => {
       throw new Error('unexpected redirect');
     });
 
-    await expect(
-      enforceEntitledAppUser(
-        { authGateway, checkEntitlementUseCase },
-        redirectFn as never,
-      ),
-    ).resolves.toBeUndefined();
+    const result = await enforceEntitledAppUser(
+      { authGateway, checkEntitlementUseCase },
+      redirectFn as never,
+    );
 
+    expect(result).toEqual({ subscriptionStatus: 'active' });
     expect(checkEntitlementUseCase.execute).toHaveBeenCalledWith({
       userId: 'user_1',
     });
+    expect(redirectFn).not.toHaveBeenCalled();
+  });
+
+  it('returns subscriptionStatus pastDue when pastDue user is entitled', async () => {
+    const user = createUser();
+
+    const authGateway: AuthGateway = {
+      getCurrentUser: async () => user as never,
+      requireUser: async () => user as never,
+    };
+
+    const checkEntitlementUseCase = {
+      execute: vi.fn(async () => ({
+        isEntitled: true,
+        reason: null,
+        subscriptionStatus: 'pastDue' as const,
+      })),
+    };
+
+    const redirectFn = vi.fn(() => {
+      throw new Error('unexpected redirect');
+    });
+
+    const result = await enforceEntitledAppUser(
+      { authGateway, checkEntitlementUseCase },
+      redirectFn as never,
+    );
+
+    expect(result).toEqual({ subscriptionStatus: 'pastDue' });
     expect(redirectFn).not.toHaveBeenCalled();
   });
 

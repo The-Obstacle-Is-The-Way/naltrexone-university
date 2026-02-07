@@ -2,7 +2,7 @@
 
 import { redirect } from 'next/navigation';
 import { runSubscribeAction } from '@/app/pricing/subscribe-action';
-import { logger } from '@/lib/logger';
+import { createRequestContext, getRequestLogger } from '@/lib/request-context';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import { createCheckoutSession } from '@/src/adapters/controllers/billing-controller';
 
@@ -26,7 +26,14 @@ async function getDeps(
   return {
     createCheckoutSessionFn,
     redirectFn: deps?.redirectFn ?? redirect,
-    logError: deps?.logError ?? ((context, msg) => logger.error(context, msg)),
+    logError:
+      deps?.logError ??
+      (() => {
+        const ctx = createRequestContext();
+        const logger = getRequestLogger(ctx);
+        return (context: Record<string, unknown>, msg: string) =>
+          logger.error(context, msg);
+      })(),
   };
 }
 
