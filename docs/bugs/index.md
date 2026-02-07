@@ -17,8 +17,17 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 | ID | Title | Status | Priority | Date |
 |----|-------|--------|----------|------|
+| [BUG-089](bug-089-bookmark-loading-effect-missing-loading-state.md) | Bookmark Loading Effect Missing Loading State | Open | P3 | 2026-02-07 |
+| [BUG-090](bug-090-practice-error-state-missing-escape-hatch.md) | Practice Error State Has No Escape Hatch | Open | P3 | 2026-02-07 |
+| [BUG-091](bug-091-end-practice-session-missing-idempotency-key.md) | `endPracticeSession` Missing Idempotency Key | Open | P3 | 2026-02-07 |
+| [BUG-092](bug-092-circular-module-dependency-practice-page-decomposition.md) | Circular Module Dependency in Practice Page Decomposition | Open | P4 | 2026-02-07 |
+| [BUG-093](bug-093-hard-coded-route-practice-view-navigation.md) | Hard-Coded Route in Practice View Navigation | Open | P4 | 2026-02-07 |
+| [BUG-094](bug-094-exam-review-error-misleading-try-again.md) | Exam Review Error State — Misleading "Try Again" Ends Session | Open | P3 | 2026-02-07 |
+| [BUG-095](bug-095-set-question-mark-missing-idempotency-key.md) | `setPracticeSessionQuestionMark` Missing Idempotency Key | Open | P4 | 2026-02-07 |
+| [BUG-096](bug-096-toggle-bookmark-missing-idempotency-key.md) | `toggleBookmark` Missing Idempotency Key | Open | P4 | 2026-02-07 |
+| [BUG-097](bug-097-widespread-hard-coded-route-strings.md) | Widespread Hard-Coded Route Strings Across Codebase | Open | P4 | 2026-02-07 |
 
-**Next Bug ID:** BUG-089
+**Next Bug ID:** BUG-098
 
 ## Recently Triaged
 
