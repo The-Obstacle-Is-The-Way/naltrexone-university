@@ -26,15 +26,6 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 ## Archived Debt
 
-### Recently Resolved (Current Branch)
-
-| ID | Title | Priority | Resolved |
-|----|-------|----------|----------|
-| [DEBT-133](debt-133-idempotency-polling-timeout-message-misleading.md) | Idempotency Polling Timeout Message Is Misleading | P3 | 2026-02-07 |
-| [DEBT-129](debt-129-skip-clerk-production-safety.md) | NEXT_PUBLIC_SKIP_CLERK Has No Production Safety Guard | P1 | 2026-02-07 |
-| [DEBT-128](debt-128-bookmark-load-failure-not-shown-to-user.md) | Bookmark Load Failure Not Visible to User | P2 | 2026-02-07 |
-| [DEBT-126](debt-126-console-warn-in-repository.md) | console.warn in Repository Bypasses Structured Logger | P3 | 2026-02-07 |
-
 ### Resolved in PR #64 (SPEC-020)
 
 | ID | Title | Priority | Resolved |
@@ -50,6 +41,10 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 | ID | Title | Priority | Resolved |
 |----|-------|----------|----------|
+| [DEBT-133](../_archive/debt/debt-133-idempotency-polling-timeout-message-misleading.md) | Idempotency Polling Timeout Message Is Misleading | P3 | 2026-02-07 |
+| [DEBT-129](../_archive/debt/debt-129-skip-clerk-production-safety.md) | NEXT_PUBLIC_SKIP_CLERK Has No Production Safety Guard | P1 | 2026-02-07 |
+| [DEBT-128](../_archive/debt/debt-128-bookmark-load-failure-not-shown-to-user.md) | Bookmark Load Failure Not Visible to User | P2 | 2026-02-07 |
+| [DEBT-126](../_archive/debt/debt-126-console-warn-in-repository.md) | console.warn in Repository Bypasses Structured Logger | P3 | 2026-02-07 |
 | [DEBT-125](../_archive/debt/debt-125-billing-system-audit-2026-02-06.md) | Billing System Audit — Webhook Ordering, Race Conditions, Edge Cases | P2 | 2026-02-06 |
 | [DEBT-124](../_archive/debt/debt-124-e2e-question-helper-false-negative.md) | E2E Question Existence Helper Can Produce False Negatives | P2 | 2026-02-06 |
 | [DEBT-121](../_archive/debt/debt-121-use-case-fakes-lack-interfaces.md) | Use Case Fakes Don't Implement Interfaces (No Compile-Time Safety) | P2 | 2026-02-06 |
