@@ -309,13 +309,20 @@ describe('StripePaymentGateway', () => {
     );
   });
 
-  it('throws ALREADY_SUBSCRIBED when Stripe already has an active subscription for the customer', async () => {
+  it.each([
+    'active',
+    'trialing',
+    'past_due',
+    'unpaid',
+    'incomplete',
+    'paused',
+  ] as const)('throws ALREADY_SUBSCRIBED when Stripe has a %s subscription for the customer', async (status) => {
     const checkoutCreate = vi.fn(async () => ({
       id: 'cs_new',
       url: 'https://stripe/checkout',
     }));
     const subscriptionsList = vi.fn(async () => ({
-      data: [{ id: 'sub_active_1', status: 'active' as const }],
+      data: [{ id: 'sub_blocking_1', status }],
     }));
 
     const stripe = {

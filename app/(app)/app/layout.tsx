@@ -112,7 +112,7 @@ export function AppLayoutShell({
 export function PastDueBanner() {
   return (
     // Server-rendered at page load; no live-region role needed.
-    <output className="block border-b border-warning bg-warning/10 px-4 py-3 text-center text-sm text-warning-foreground">
+    <div className="block border-b border-warning bg-warning/10 px-4 py-3 text-center text-sm text-warning-foreground">
       Your payment failed — please{' '}
       <Link
         href={ROUTES.APP_BILLING}
@@ -121,7 +121,7 @@ export function PastDueBanner() {
         update your billing information
       </Link>
       .
-    </output>
+    </div>
   );
 }
 

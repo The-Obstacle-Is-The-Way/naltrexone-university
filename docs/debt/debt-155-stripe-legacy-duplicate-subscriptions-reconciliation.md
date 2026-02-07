@@ -23,15 +23,26 @@ This is operational debt: we need a repeatable reconciliation process to detect 
 1. Build and run a one-time reconciliation workflow for Stripe test + production:
    - Find customers with more than one blocking subscription (`active`, `trialing`, `past_due`, `unpaid`, `incomplete`, `paused`).
    - Keep the canonical subscription per customer and cancel extras safely.
-2. Record an audit trail (customer id, canceled subscription ids, timestamp, operator).
+   - Canonical selection rule: newest non-canceled subscription with latest billing activity; if tied, prefer the subscription already mirrored in local `stripe_subscriptions`.
+2. Record an immutable audit trail for every affected customer.
+   - Required fields: `customer_id`, `kept_subscription_id`, `canceled_subscription_ids[]`, `timestamp_utc`, `operator`, `reason`, `dry_run`.
+   - Storage: append-only reconciliation artifact under secure ops storage plus a linked run summary in the internal incident/runbook ticket.
 3. Backfill/verify local `stripe_subscriptions` rows align with canonical Stripe state after reconciliation.
+4. Run customer impact workflow for any account with confirmed duplicate charges:
+   - Customer communication: send a billing correction notice within 1 business day of reconciliation, including support contact path.
+   - Refund process: issue refunds only for confirmed duplicate charges, using Stripe refund APIs with idempotency keys (`refund_duplicate_charge:<charge_id>`), and record refund ids in the audit trail.
+5. Define rollback/mitigation:
+   - If canonical selection is wrong, recreate canceled subscriptions only for affected customers and restore local mapping from the audit trail snapshot.
+   - Pause further reconciliation runs immediately if safety thresholds are breached (see verification).
 
 ## Verification
 
-- [ ] Reconciliation run completed in Stripe test mode
-- [ ] Reconciliation run completed in Stripe production mode
-- [ ] Spot-check billing portal for affected users shows one current subscription
-- [ ] No duplicate-billing support incidents after rollout window
+- [ ] Stripe test-mode run completed and signed off before production cutover (same day)
+- [ ] Stripe production run completed within 1 business day of test-mode sign-off
+- [ ] Quantitative success: affected customers with more than one blocking subscription reduced from baseline to `0`
+- [ ] Spot-check (minimum 20 affected customers or all, whichever is smaller) confirms billing portal shows one current subscription
+- [ ] 30-day post-run monitoring window completed with fewer than 5 duplicate-billing support incidents total
+- [ ] Rollback trigger remained inactive: no evidence of incorrect canonical selection affecting more than 0.5% of reconciled customers
 
 ## Related
 

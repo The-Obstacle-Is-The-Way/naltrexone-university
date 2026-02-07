@@ -72,11 +72,18 @@ describe('app/(app)/app/layout (shell)', () => {
     });
 
     const html = renderToStaticMarkup(element);
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const billingLink = doc.querySelector('a[href="/app/billing"]');
+
+    if (!billingLink) {
+      throw new Error('Expected billing link to be present in past-due banner');
+    }
+    const banner = billingLink.parentElement;
 
     expect(html).toContain('Your payment failed');
     expect(html).toContain('update your billing information');
-    expect(html).toContain('href="/app/billing"');
-    expect(html).toContain('<output');
+    expect(billingLink.getAttribute('href')).toBe('/app/billing');
+    expect(banner?.tagName).toBe('DIV');
     expect(html).toContain('Child content');
   });
 
