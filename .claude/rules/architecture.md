@@ -30,6 +30,20 @@ app/, lib/, db/    -> Outermost layer. Next.js framework code.
 - **ApplicationError** with typed error codes for all error handling
 - **Fakes over mocks** in tests (in-memory implementations of ports)
 
+## SDK method extraction
+
+When extracting SDK methods into variables (Stripe, Clerk, etc.), always `.bind()` to preserve `this` context. SDK internals use `this._makeRequest()` — detaching loses it.
+
+```typescript
+// WRONG — loses this, crashes at runtime
+const list = stripe.subscriptions?.list;
+
+// RIGHT — preserves this binding
+const list = stripe.subscriptions?.list?.bind(stripe.subscriptions);
+```
+
+Unit tests with `vi.fn()` mocks will NOT catch this — they have no `this` dependency. See BUG-069, BUG-070 for prior incidents.
+
 ## Domain entity purity
 
 - Domain entities (`User`, `Subscription`, `Question`) have NO vendor identifiers
