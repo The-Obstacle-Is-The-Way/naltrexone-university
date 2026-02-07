@@ -260,6 +260,7 @@ describe('withIdempotency', () => {
         userId: 'user_1',
         action: 'billing:createCheckoutSession',
         key: '77777777-7777-7777-7777-777777777777',
+        error: 'prune failed',
       },
     });
     expect(execute).toHaveBeenCalledTimes(1);

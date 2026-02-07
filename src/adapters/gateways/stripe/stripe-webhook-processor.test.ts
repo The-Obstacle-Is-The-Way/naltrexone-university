@@ -199,6 +199,42 @@ describe('processStripeWebhookEvent', () => {
     expect(stripe.subscriptions?.retrieve).toHaveBeenCalledWith('sub_123');
   });
 
+  it('normalizes and includes subscriptionUpdate for customer.subscription.updated events', async () => {
+    const logger = new FakeLogger();
+    const subscription = createSubscriptionFixture();
+    const stripe = createStripeClient({
+      eventFactory: () => ({
+        id: 'evt_sub_updated',
+        type: 'customer.subscription.updated',
+        data: { object: subscription },
+      }),
+    });
+
+    const result = await processStripeWebhookEvent({
+      stripe,
+      webhookSecret: 'whsec_test',
+      rawBody: '{}',
+      signature: 'sig_test',
+      priceIds,
+      logger,
+    });
+
+    expect(result).toEqual({
+      eventId: 'evt_sub_updated',
+      type: 'customer.subscription.updated',
+      subscriptionUpdate: {
+        userId: 'user_1',
+        externalCustomerId: 'cus_123',
+        externalSubscriptionId: 'sub_123',
+        plan: 'monthly',
+        status: 'active',
+        currentPeriodEnd: new Date(1_800_000_000 * 1000),
+        cancelAtPeriodEnd: false,
+      },
+    });
+    expect(stripe.subscriptions?.retrieve).toHaveBeenCalledWith('sub_123');
+  });
+
   it('throws INVALID_WEBHOOK_PAYLOAD for invalid subscription event payloads', async () => {
     const logger = new FakeLogger();
     const stripe = createStripeClient({

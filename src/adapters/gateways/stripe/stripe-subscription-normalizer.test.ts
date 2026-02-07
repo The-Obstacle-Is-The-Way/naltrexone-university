@@ -66,18 +66,15 @@ describe('normalizeStripeSubscriptionUpdate', () => {
   it('throws STRIPE_ERROR when metadata.user_id is missing', () => {
     const logger = new FakeLogger();
 
-    try {
+    expect(() =>
       normalizeStripeSubscriptionUpdate({
         subscription: createSubscriptionFixture({ userId: null }),
         eventId: 'evt_1',
         type: 'customer.subscription.updated',
         priceIds,
         logger,
-      });
-      throw new Error('Expected normalizeStripeSubscriptionUpdate to throw');
-    } catch (error) {
-      expect(error).toMatchObject({ code: 'STRIPE_ERROR' });
-    }
+      }),
+    ).toThrow(expect.objectContaining({ code: 'STRIPE_ERROR' }));
 
     expect(logger.errorCalls).toHaveLength(1);
     expect(logger.errorCalls[0]).toMatchObject({
@@ -94,35 +91,29 @@ describe('normalizeStripeSubscriptionUpdate', () => {
   it('throws STRIPE_ERROR when subscription status is invalid', () => {
     const logger = new FakeLogger();
 
-    try {
+    expect(() =>
       normalizeStripeSubscriptionUpdate({
         subscription: createSubscriptionFixture({ status: 'unknown_status' }),
         eventId: 'evt_1',
         type: 'customer.subscription.updated',
         priceIds,
         logger,
-      });
-      throw new Error('Expected normalizeStripeSubscriptionUpdate to throw');
-    } catch (error) {
-      expect(error).toMatchObject({ code: 'STRIPE_ERROR' });
-    }
+      }),
+    ).toThrow(expect.objectContaining({ code: 'STRIPE_ERROR' }));
   });
 
   it('throws STRIPE_ERROR when price id does not match configured plans', () => {
     const logger = new FakeLogger();
 
-    try {
+    expect(() =>
       normalizeStripeSubscriptionUpdate({
         subscription: createSubscriptionFixture({ priceId: 'price_other' }),
         eventId: 'evt_1',
         type: 'customer.subscription.updated',
         priceIds,
         logger,
-      });
-      throw new Error('Expected normalizeStripeSubscriptionUpdate to throw');
-    } catch (error) {
-      expect(error).toMatchObject({ code: 'STRIPE_ERROR' });
-    }
+      }),
+    ).toThrow(expect.objectContaining({ code: 'STRIPE_ERROR' }));
   });
 });
 
