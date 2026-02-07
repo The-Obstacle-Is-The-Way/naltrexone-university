@@ -41,6 +41,7 @@ describe('proxy middleware', () => {
   it('ignores NEXT_PUBLIC_SKIP_CLERK=true in production and still protects routes', async () => {
     vi.stubEnv('NEXT_PUBLIC_SKIP_CLERK', 'true');
     vi.stubEnv('NODE_ENV', 'production');
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
     type ClerkMiddlewareCallback = (
       auth: { protect: () => Promise<void> },
@@ -75,6 +76,7 @@ describe('proxy middleware', () => {
     expect(clerkMiddleware).toHaveBeenCalledTimes(1);
     expect(protect).toHaveBeenCalledTimes(1);
     expect(await res.text()).toBe('ok');
+    expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining('CRITICAL'));
   });
 
   it('initializes and caches clerkMiddleware when NEXT_PUBLIC_SKIP_CLERK is not true', async () => {

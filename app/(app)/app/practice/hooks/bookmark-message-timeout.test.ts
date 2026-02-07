@@ -1,6 +1,24 @@
 import { describe, expect, it, vi } from 'vitest';
 import { scheduleBookmarkMessageAutoClear } from './bookmark-message-timeout';
 
+function createCapturingSetTimeout() {
+  let captured: (() => void) | null = null;
+  const fn = ((cb: () => void, _delay: number) => {
+    captured = cb;
+    return 1 as unknown as ReturnType<typeof setTimeout>;
+  }) as (
+    callback: () => void,
+    delayMs: number,
+  ) => ReturnType<typeof setTimeout>;
+  return {
+    fn,
+    fire: () => {
+      if (!captured) throw new Error('No callback captured');
+      captured();
+    },
+  };
+}
+
 describe('scheduleBookmarkMessageAutoClear', () => {
   it('clears previous timeout before scheduling a new one', () => {
     const clearTimeoutFn = vi.fn();
@@ -29,29 +47,17 @@ describe('scheduleBookmarkMessageAutoClear', () => {
       current: null as ReturnType<typeof setTimeout> | null,
     };
     const setBookmarkMessage = vi.fn();
-    let timeoutCallback: (() => void) | null = null;
+    const timer = createCapturingSetTimeout();
 
     scheduleBookmarkMessageAutoClear({
       timeoutIdRef,
       setBookmarkMessage,
       isMounted: () => true,
-      setTimeoutFn: ((
-        fn: () => void,
-        _delayMs: number,
-      ): ReturnType<typeof setTimeout> => {
-        timeoutCallback = fn;
-        return 1 as unknown as ReturnType<typeof setTimeout>;
-      }) as (
-        callback: () => void,
-        delayMs: number,
-      ) => ReturnType<typeof setTimeout>,
+      setTimeoutFn: timer.fn,
       clearTimeoutFn: vi.fn(),
     });
 
-    if (!timeoutCallback) {
-      throw new Error('Expected timeout callback to be captured');
-    }
-    (timeoutCallback as () => void)();
+    timer.fire();
 
     expect(setBookmarkMessage).toHaveBeenCalledWith(null);
   });
@@ -61,29 +67,17 @@ describe('scheduleBookmarkMessageAutoClear', () => {
       current: null as ReturnType<typeof setTimeout> | null,
     };
     const setBookmarkMessage = vi.fn();
-    let timeoutCallback: (() => void) | null = null;
+    const timer = createCapturingSetTimeout();
 
     scheduleBookmarkMessageAutoClear({
       timeoutIdRef,
       setBookmarkMessage,
       isMounted: () => false,
-      setTimeoutFn: ((
-        fn: () => void,
-        _delayMs: number,
-      ): ReturnType<typeof setTimeout> => {
-        timeoutCallback = fn;
-        return 1 as unknown as ReturnType<typeof setTimeout>;
-      }) as (
-        callback: () => void,
-        delayMs: number,
-      ) => ReturnType<typeof setTimeout>,
+      setTimeoutFn: timer.fn,
       clearTimeoutFn: vi.fn(),
     });
 
-    if (!timeoutCallback) {
-      throw new Error('Expected timeout callback to be captured');
-    }
-    (timeoutCallback as () => void)();
+    timer.fire();
 
     expect(setBookmarkMessage).not.toHaveBeenCalled();
   });

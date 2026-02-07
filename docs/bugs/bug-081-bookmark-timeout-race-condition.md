@@ -52,7 +52,7 @@ The helper enforces mount checks inside the timeout callback before `setBookmark
 
 ## Verification
 
-- [x] No React unmount warnings path remains guarded in timeout callback
+- [x] No React unmount warnings — timeout callback path remains guarded by isMounted()
 - [x] Bookmark message still auto-clears after 2 seconds on mounted component
 - [x] Unit coverage added in `app/(app)/app/practice/hooks/bookmark-message-timeout.test.ts`
 

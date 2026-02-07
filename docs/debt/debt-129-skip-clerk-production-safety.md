@@ -32,16 +32,26 @@ if (process.env.NEXT_PUBLIC_SKIP_CLERK === 'true') {
 Added production safety guard in `proxy.ts`:
 
 ```typescript
-if (process.env.NEXT_PUBLIC_SKIP_CLERK === 'true') {
-  if (process.env.NODE_ENV === 'production') {
-    console.error('CRITICAL: NEXT_PUBLIC_SKIP_CLERK=true in production — ignoring');
-  } else {
-    return NextResponse.next();
+let hasLoggedSkipClerkProductionWarning = false;
+
+function shouldBypassClerkAuth(): boolean {
+  if (process.env.NEXT_PUBLIC_SKIP_CLERK !== 'true') {
+    return false;
   }
+  if (process.env.NODE_ENV === 'production') {
+    if (!hasLoggedSkipClerkProductionWarning) {
+      hasLoggedSkipClerkProductionWarning = true;
+      console.error(
+        'CRITICAL: NEXT_PUBLIC_SKIP_CLERK=true in production; ignoring and enforcing Clerk auth.',
+      );
+    }
+    return false;
+  }
+  return true;
 }
 ```
 
-Also added one-time logging to avoid per-request noise.
+The one-time guard flag (`hasLoggedSkipClerkProductionWarning`) ensures the CRITICAL log fires only once, not on every request.
 
 ## Verification
 
