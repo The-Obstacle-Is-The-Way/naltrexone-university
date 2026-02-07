@@ -1,14 +1,17 @@
 # DEBT-137: Composition Root Type Cycles Between Container and Controllers
 
-**Status:** Open
+**Status:** Invalidated (False Positive)
 **Priority:** P2
 **Date:** 2026-02-07
+**Invalidated:** 2026-02-07
 
 ---
 
 ## Description
 
 The current container typing setup creates circular dependencies between composition-root modules and controller modules.
+
+This finding was invalidated after verification that the reported cycle edges are `import type` only from `lib/container/types.ts`, which are erased at compile time and do not create runtime module cycles.
 
 Validated from first principles:
 

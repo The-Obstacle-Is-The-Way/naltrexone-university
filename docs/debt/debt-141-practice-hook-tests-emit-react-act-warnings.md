@@ -10,7 +10,7 @@
 
 Six practice hook test files use `renderLiveHook` — a custom jsdom harness built before Vitest Browser Mode was set up (Feb 1). This harness uses `createRoot` in jsdom, which produces repeated React act() warnings because jsdom's `createRoot` goes through React 19's concurrent scheduler without `act()` wrapping.
 
-**The fix is not to suppress act() warnings.** The fix is to migrate these tests to `vitest-browser-react` in Browser Mode, which runs in real Chromium and uses Chrome DevTools Protocol (CDP) instead of `act()` for synchronization. Zero act() warnings.
+**The fix is not to suppress act() warnings.** The fix is to migrate these tests to `vitest-browser-react` in Browser Mode, which runs in real Chromium and uses CDP + locator retry semantics for synchronization. `renderHook()` still exposes `act()` for explicit state transitions, but this migration removes the current jsdom warning pattern.
 
 Browser Mode infrastructure already exists in this repo (`vitest.browser.config.ts`, `pnpm test:browser`, 3 existing `.browser.spec.tsx` files).
 
@@ -40,9 +40,9 @@ Browser Mode infrastructure already exists in this repo (`vitest.browser.config.
 
 ## Resolution
 
-1. For each file, create a `*.browser.spec.tsx` counterpart using `vitest-browser-react`'s `render`
-2. Wrap hook under test in a minimal `<HookConsumer>` component that renders testable output
-3. Use `expect.element(locator)` for assertions (built-in retry-ability, no manual polling)
+1. For each file, create a `*.browser.spec.tsx` counterpart using `vitest-browser-react` (`render` or `renderHook`, whichever fits the test)
+2. For `render`, wrap the hook under test in a minimal `<HookConsumer>` component that renders testable output
+3. Use `expect.element(locator)` for async assertions; use returned `act` from `renderHook` when explicit update boundaries are needed
 4. Remove the original `*.test.tsx` once the browser spec has equivalent coverage
 5. After all 6 files are migrated, delete `render-live-hook.tsx` and its test
 

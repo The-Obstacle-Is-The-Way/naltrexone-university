@@ -52,9 +52,10 @@ test('hook updates state after async operation', async () => {
 });
 ```
 - Runs in real Chromium via Playwright — no jsdom simulation
-- Does NOT expose `act()` — uses Chrome DevTools Protocol for synchronization
+- `render()` does not expose `act()` to test code
+- `renderHook()` does expose `act()` for explicit state transitions
 - Has built-in retry-ability via `expect.element` (no manual polling)
-- Zero act() warnings because it bypasses React's test scheduler entirely
+- CDP events + locator retries reduce manual sync/polling work
 
 ---
 
@@ -139,7 +140,7 @@ pnpm test:browser   # Runs *.browser.spec.tsx files in real Chromium
 
 Before Browser Mode was set up (Feb 4), we built `renderLiveHook` — a custom harness using `createRoot` in jsdom to test hooks with async state transitions. It works, but produces React act() warnings because jsdom's `createRoot` goes through React's concurrent scheduler.
 
-**Browser Mode is the correct solution.** `vitest-browser-react` runs in real Chromium and uses CDP (Chrome DevTools Protocol) instead of `act()` for synchronization. Zero act() warnings.
+**Browser Mode is the correct solution for these six suites.** `vitest-browser-react` runs in real Chromium and uses CDP + locator retries for synchronization. `renderHook()` still provides `act()` when explicit update boundaries are needed, but this migration removes the current jsdom `createRoot` warning pattern from these tests.
 
 ### Files to Migrate (DEBT-141)
 

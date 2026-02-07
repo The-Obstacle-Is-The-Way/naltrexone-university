@@ -1,14 +1,17 @@
 # DEBT-139: Production Files Exceed 300-Line Guardrail
 
-**Status:** Open
+**Status:** Invalidated (Scope Corrected)
 **Priority:** P2
 **Date:** 2026-02-07
+**Invalidated:** 2026-02-07
 
 ---
 
 ## Description
 
 The repository has a practical guardrail that production modules should stay under 300 lines for readability and maintainability. A static file-size scan found several production files over this threshold.
+
+This debt item was invalidated as written because it framed a global file-length rule that is not defined in SSOT/ADR docs. The remaining valid line-cap concern is SPEC-scoped (SPEC-020 Phase 1 for practice-engine files) and is tracked separately in active DEBT-142.
 
 Validated from first principles (`wc -l` on tracked source files):
 

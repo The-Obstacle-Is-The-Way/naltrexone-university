@@ -18,11 +18,12 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 | ID | Title | Status | Priority | Date |
 |----|-------|--------|----------|------|
 | [DEBT-141](debt-141-practice-hook-tests-emit-react-act-warnings.md) | Migrate Practice Hook Tests from renderLiveHook to Browser Mode | Open | P2 | 2026-02-07 |
+| [DEBT-142](debt-142-spec-020-practice-file-line-cap-regression.md) | SPEC-020 Line-Cap Regression in Practice Page Logic | Open | P2 | 2026-02-07 |
 | [DEBT-136](debt-136-dunning-grace-period-for-past-due-subscribers.md) | Dunning Grace Period for Past-Due Subscribers | Open | P3 | 2026-02-07 |
 | [DEBT-138](debt-138-dead-modules-and-unused-dependencies.md) | Dead Modules and Unused Dependencies After Refactors | Open | P3 | 2026-02-07 |
 | [DEBT-140](debt-140-request-correlation-not-wired-into-runtime-logs.md) | Request Correlation Not Wired (Blocked by SPEC-016) | Open | P3 | 2026-02-07 |
 
-**Next Debt ID:** DEBT-142
+**Next Debt ID:** DEBT-143
 
 ## Archived Debt
 
@@ -42,7 +43,7 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 | ID | Title | Priority | Invalidated |
 |----|-------|----------|-------------|
 | [DEBT-137](../_archive/debt/debt-137-container-type-cycles.md) | Container Type Cycles (madge false positive — type-only imports, not runtime cycles) | P2 | 2026-02-07 |
-| [DEBT-139](../_archive/debt/debt-139-production-files-exceed-size-guardrail.md) | 300-Line Guardrail (invented standard — real cases already tracked in DEBT-115/116) | P2 | 2026-02-07 |
+| [DEBT-139](../_archive/debt/debt-139-production-files-exceed-size-guardrail.md) | Global 300-Line Guardrail (invalid as universal standard; SPEC-scoped case now tracked in DEBT-142) | P2 | 2026-02-07 |
 
 ### Previously Archived
 
