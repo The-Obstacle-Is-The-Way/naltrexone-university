@@ -155,6 +155,7 @@ pnpm typecheck              # TypeScript type checking
 # Testing
 pnpm test                   # Unit tests (Vitest, watch mode)
 pnpm test --run             # Unit tests (single run, CI-style)
+pnpm test:browser           # Browser mode tests (vitest-browser-react, Chromium)
 pnpm test:integration       # Integration tests (uses .env.test, requires local DB)
 pnpm test:e2e               # E2E tests (Playwright)
 
@@ -325,21 +326,25 @@ describe('MyComponent', () => {
 });
 ```
 
-**For interactive tests** (clicking buttons, typing in forms), you'll need `@testing-library/react`. First add this to `vitest.config.ts`:
+**For interactive / async tests** (clicking buttons, hooks with `useEffect`/`useState` transitions), use `vitest-browser-react` in `*.browser.spec.tsx`:
 
-```typescript
-resolve: {
-  conditions: ['development'],  // Fixes act() bug in git hooks/CI
-  alias: { '@': path.resolve(__dirname, './') },
-},
+```tsx
+import { render } from 'vitest-browser-react';
+import { expect, test } from 'vitest';
+
+test('updates state after async operation', async () => {
+  const screen = await render(<MyComponent />);
+  await expect.element(screen.getByText('Loaded')).toBeVisible();
+});
 ```
 
-**Current state:** All our .test.tsx files only check render output, so we use `renderToStaticMarkup`.
+Run with: `pnpm test:browser` (real Chromium via Playwright — not jsdom).
 
 **DO NOT USE:**
+- `@testing-library/react` — broken with React 19 + Vitest, zombie maintenance
 - `react-test-renderer` — Deprecated in React 19
 - `react-dom/test-utils` — Removed in React 19
-- `environmentMatchGlobs` — Deprecated in Vitest 4
+- `environmentMatchGlobs` — Removed in Vitest 4
 
 See `docs/dev/react-vitest-testing.md` for full details.
 
