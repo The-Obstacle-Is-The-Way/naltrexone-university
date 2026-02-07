@@ -9,16 +9,18 @@ import { renderToStaticMarkup } from 'react-dom/server';
  * See docs/dev/react-vitest-testing.md for rationale.
  */
 export function renderHook<T>(useHook: () => T): T {
-  let captured: T | null = null;
+  let captured: T | undefined;
+  let didCapture = false;
 
   function Probe() {
     captured = useHook();
+    didCapture = true;
     return null;
   }
 
   renderToStaticMarkup(<Probe />);
-  if (captured === null) {
+  if (!didCapture) {
     throw new Error('Hook result was not captured');
   }
-  return captured;
+  return captured as T;
 }
