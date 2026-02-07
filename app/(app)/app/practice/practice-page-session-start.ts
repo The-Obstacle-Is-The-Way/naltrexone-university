@@ -2,9 +2,9 @@ import {
   getActionResultErrorMessage,
   getThrownErrorMessage,
 } from '@/app/(app)/app/practice/practice-logic';
+import type { PracticeFilters } from '@/app/(app)/app/practice/practice-page-types';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import type { StartPracticeSessionOutput } from '@/src/adapters/controllers/practice-controller';
-import type { PracticeFilters } from './practice-page-logic';
 
 export const SESSION_COUNT_MIN = 1;
 export const SESSION_COUNT_MAX = 100;

@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { renderHook } from 'vitest-browser-react';
+import { ok } from '@/tests/test-helpers/ok';
 import { usePracticeSessionReviewStage } from './use-practice-session-review-stage';
 
 const { endPracticeSessionMock, getPracticeSessionReviewMock } = vi.hoisted(
@@ -13,10 +14,6 @@ vi.mock('@/src/adapters/controllers/practice-controller', () => ({
   endPracticeSession: endPracticeSessionMock,
   getPracticeSessionReview: getPracticeSessionReviewMock,
 }));
-
-function ok<T>(data: T) {
-  return { ok: true as const, data };
-}
 
 function createInput(sessionMode: 'tutor' | 'exam') {
   return {

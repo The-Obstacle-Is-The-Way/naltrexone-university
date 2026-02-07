@@ -1,23 +1,6 @@
-import type { ReactNode } from 'react';
 import { expect, test, vi } from 'vitest';
 import { render } from 'vitest-browser-react';
 import { IncompleteSessionCard } from './incomplete-session-card';
-
-vi.mock('next/link', () => ({
-  __esModule: true,
-  default: ({
-    href,
-    children,
-    ...props
-  }: {
-    href: string;
-    children: ReactNode;
-  }) => (
-    <a href={href} {...props}>
-      {children}
-    </a>
-  ),
-}));
 
 test('renders resume link and calls abandon handler', async () => {
   const onAbandon = vi.fn();

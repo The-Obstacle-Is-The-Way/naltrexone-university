@@ -1,6 +1,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { renderHook } from 'vitest-browser-react';
+import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import { createDeferred } from '@/tests/test-helpers/create-deferred';
+import { ok } from '@/tests/test-helpers/ok';
 import { usePracticeSessionMarkForReview } from './use-practice-session-mark-for-review';
 
 const { setPracticeSessionQuestionMarkMock } = vi.hoisted(() => ({
@@ -10,10 +12,6 @@ const { setPracticeSessionQuestionMarkMock } = vi.hoisted(() => ({
 vi.mock('@/src/adapters/controllers/practice-controller', () => ({
   setPracticeSessionQuestionMark: setPracticeSessionQuestionMarkMock,
 }));
-
-function ok<T>(data: T) {
-  return { ok: true as const, data };
-}
 
 type SessionInfoState = {
   sessionId: string;
@@ -45,14 +43,14 @@ describe('usePracticeSessionMarkForReview (browser)', () => {
   });
 
   it('marks the question for review and updates state callbacks', async () => {
-    const deferred = createDeferred<{
-      ok: true;
-      data: {
-        sessionId: string;
-        questionId: string;
-        markedForReview: boolean;
-      };
-    }>();
+    const deferred =
+      createDeferred<
+        ActionResult<{
+          sessionId: string;
+          questionId: string;
+          markedForReview: boolean;
+        }>
+      >();
 
     setPracticeSessionQuestionMarkMock.mockReturnValue(deferred.promise);
 

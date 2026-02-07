@@ -5,6 +5,7 @@ import {
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import type { NextQuestion } from '@/src/application/use-cases/get-next-question';
 import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
+import type { PracticeFilters } from './practice-page-types';
 
 export { createBookmarksEffect } from './practice-page-bookmarks';
 export {
@@ -14,17 +15,13 @@ export {
   SESSION_COUNT_MIN,
   startSession,
 } from './practice-page-session-start';
+export type { PracticeFilters } from './practice-page-types';
 
 export type LoadState =
   | { status: 'idle' }
   | { status: 'loading' }
   | { status: 'ready' }
   | { status: 'error'; message: string };
-
-export type PracticeFilters = {
-  tagSlugs: string[];
-  difficulties: Array<NextQuestion['difficulty']>;
-};
 
 export function canSubmitAnswer(input: {
   loadState: LoadState;

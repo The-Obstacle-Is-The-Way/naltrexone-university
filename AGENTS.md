@@ -27,10 +27,12 @@ expect(html).toContain('Expected text');
 - `renderToStaticMarkup` is a stable first-party React API that works everywhere
 
 ### DO NOT USE for jsdom component tests:
+
 - `@testing-library/react` — broken, zombie maintenance
 - `react-test-renderer` — deprecated in React 19
 
 ### Browser Mode for async hooks / interactive UI:
+
 - Use `vitest-browser-react` in `*.browser.spec.tsx`
 - Run with `pnpm test:browser`
 - This is the approved replacement for async hook/interaction tests (see DEBT-141 resolution)
@@ -411,6 +413,7 @@ vi.mock('server-only', () => ({}));
 // ✅ OK - Browser Mode: sealed ESM namespaces (vi.spyOn won't work)
 // Server-action controllers can't be dependency-injected into React hooks.
 // Use { spy: true } to wrap exports as spies without replacing them.
+// { spy: true } preserves unstubbed real exports; factory mocks replace all exports.
 vi.mock('@/src/adapters/controllers/practice-controller', { spy: true });
 vi.mocked(practiceController.getSessionHistory).mockResolvedValue(ok({...}));
 ```

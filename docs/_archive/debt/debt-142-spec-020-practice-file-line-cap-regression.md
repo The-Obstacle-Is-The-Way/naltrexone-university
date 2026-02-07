@@ -13,8 +13,8 @@ SPEC-020 Phase 1 defined a decomposition gate of `<= 300` lines per practice-rel
 
 Resolved by splitting responsibilities out of `practice-page-logic.ts` into dedicated modules:
 
-- `app/(app)/app/practice/practice-page-logic.ts` → `242` lines
-- `app/(app)/app/practice/practice-page-bookmarks.ts` → `92` lines
+- `app/(app)/app/practice/practice-page-logic.ts` → `240` lines
+- `app/(app)/app/practice/practice-page-bookmarks.ts` → `82` lines
 - `app/(app)/app/practice/practice-page-session-start.ts` → `86` lines
 
 A guard test now enforces the SPEC-020 line-cap requirement.

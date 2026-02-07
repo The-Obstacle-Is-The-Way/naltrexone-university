@@ -1,23 +1,6 @@
-import type { ReactNode } from 'react';
 import { expect, test, vi } from 'vitest';
 import { render } from 'vitest-browser-react';
 import { PracticeView } from './practice-view';
-
-vi.mock('next/link', () => ({
-  __esModule: true,
-  default: ({
-    href,
-    children,
-    ...props
-  }: {
-    href: string;
-    children: ReactNode;
-  }) => (
-    <a href={href} {...props}>
-      {children}
-    </a>
-  ),
-}));
 
 test('renders error state and retries when requested', async () => {
   const onTryAgain = vi.fn();

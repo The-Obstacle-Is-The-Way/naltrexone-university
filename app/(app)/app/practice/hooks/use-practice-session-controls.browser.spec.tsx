@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-react';
+import { ok } from '@/tests/test-helpers/ok';
 import { usePracticeSessionControls } from './use-practice-session-controls';
 
 const {
@@ -29,10 +30,6 @@ vi.mock('@/src/adapters/controllers/practice-controller', () => ({
   getSessionHistory: getSessionHistoryMock,
   getPracticeSessionReview: getPracticeSessionReviewMock,
 }));
-
-function ok<T>(data: T) {
-  return { ok: true as const, data };
-}
 
 function PracticeSessionControlsHookProbe() {
   const output = usePracticeSessionControls();

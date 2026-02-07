@@ -2,52 +2,61 @@ import { expect, test, vi } from 'vitest';
 import { render } from 'vitest-browser-react';
 import { PracticeSessionStarter } from './practice-session-starter';
 
-test('invokes callbacks for session setup interactions', async () => {
-  const onSessionModeChange = vi.fn();
-  const onSessionCountChange = vi.fn();
-  const onToggleDifficulty = vi.fn();
-  const onToggleTag = vi.fn();
-  const onStartSession = vi.fn();
+async function renderStarter() {
+  const props = {
+    sessionMode: 'tutor' as const,
+    sessionCount: 20,
+    filters: { tagSlugs: [], difficulties: [] },
+    tagLoadStatus: 'idle' as const,
+    availableTags: [
+      {
+        id: 'tag_1',
+        slug: 'opioids',
+        name: 'Opioids',
+        kind: 'substance' as const,
+      },
+    ],
+    sessionStartStatus: 'idle' as const,
+    sessionStartError: null,
+    isPending: false,
+    onToggleDifficulty: vi.fn(),
+    onToggleTag: vi.fn(),
+    onSessionModeChange: vi.fn(),
+    onSessionCountChange: vi.fn(),
+    onStartSession: vi.fn(),
+  };
+  const screen = await render(<PracticeSessionStarter {...props} />);
+  return { props, screen };
+}
 
-  const screen = await render(
-    <PracticeSessionStarter
-      sessionMode="tutor"
-      sessionCount={20}
-      filters={{ tagSlugs: [], difficulties: [] }}
-      tagLoadStatus="idle"
-      availableTags={[
-        {
-          id: 'tag_1',
-          slug: 'opioids',
-          name: 'Opioids',
-          kind: 'substance',
-        },
-      ]}
-      sessionStartStatus="idle"
-      sessionStartError={null}
-      isPending={false}
-      onToggleDifficulty={onToggleDifficulty}
-      onToggleTag={onToggleTag}
-      onSessionModeChange={onSessionModeChange}
-      onSessionCountChange={onSessionCountChange}
-      onStartSession={onStartSession}
-    />,
-  );
-
+test('invokes onSessionModeChange when selecting exam mode', async () => {
+  const { props, screen } = await renderStarter();
   await screen.getByRole('button', { name: 'Exam' }).click();
-  expect(onSessionModeChange).toHaveBeenCalledWith('exam');
+  expect(props.onSessionModeChange).toHaveBeenCalledWith('exam');
+});
 
+test('invokes onToggleDifficulty when selecting a difficulty', async () => {
+  const { props, screen } = await renderStarter();
   await screen.getByRole('button', { name: 'Easy' }).click();
-  expect(onToggleDifficulty).toHaveBeenCalledWith('easy');
+  expect(props.onToggleDifficulty).toHaveBeenCalledWith('easy');
+});
 
+test('invokes onToggleTag when selecting a tag', async () => {
+  const { props, screen } = await renderStarter();
   await screen.getByRole('button', { name: 'Opioids' }).click();
-  expect(onToggleTag).toHaveBeenCalledWith('opioids');
+  expect(props.onToggleTag).toHaveBeenCalledWith('opioids');
+});
 
+test('invokes onSessionCountChange when count input changes', async () => {
+  const { props, screen } = await renderStarter();
   await screen.getByRole('spinbutton').fill('35');
-  expect(onSessionCountChange).toHaveBeenCalled();
+  expect(props.onSessionCountChange).toHaveBeenCalled();
+});
 
+test('invokes onStartSession when start button is clicked', async () => {
+  const { props, screen } = await renderStarter();
   await screen.getByRole('button', { name: 'Start session' }).click();
-  expect(onStartSession).toHaveBeenCalledTimes(1);
+  expect(props.onStartSession).toHaveBeenCalledTimes(1);
 });
 
 test('shows loading and error states for tags and session start', async () => {

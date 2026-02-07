@@ -1,23 +1,6 @@
-import type { ReactNode } from 'react';
 import { expect, test, vi } from 'vitest';
 import { render } from 'vitest-browser-react';
 import { PracticeSessionPageView } from './practice-session-page-view';
-
-vi.mock('next/link', () => ({
-  __esModule: true,
-  default: ({
-    href,
-    children,
-    ...props
-  }: {
-    href: string;
-    children: ReactNode;
-  }) => (
-    <a href={href} {...props}>
-      {children}
-    </a>
-  ),
-}));
 
 test('renders session summary branch when summary is present', async () => {
   const screen = await render(

@@ -349,7 +349,8 @@ describe('practice-page-logic', () => {
       expect(setBookmarkedQuestionIds).toHaveBeenCalledWith(
         new Set(['q_1', 'q_2']),
       );
-      expect(setBookmarkStatus).toHaveBeenCalledWith('idle');
+      expect(setBookmarkStatus).toHaveBeenNthCalledWith(1, 'loading');
+      expect(setBookmarkStatus).toHaveBeenNthCalledWith(2, 'idle');
 
       cleanup();
     });
@@ -515,7 +516,8 @@ describe('practice-page-logic', () => {
       await Promise.resolve();
 
       expect(setBookmarkedQuestionIds).not.toHaveBeenCalled();
-      expect(setBookmarkStatus).not.toHaveBeenCalled();
+      expect(setBookmarkStatus).toHaveBeenCalledTimes(1);
+      expect(setBookmarkStatus).toHaveBeenCalledWith('loading');
     });
 
     it('sets error state when getBookmarksFn throws', async () => {

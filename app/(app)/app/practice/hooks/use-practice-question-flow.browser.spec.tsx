@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-react';
 import { createNextQuestion } from '@/src/application/test-helpers/create-next-question';
+import { ok } from '@/tests/test-helpers/ok';
 import { usePracticeQuestionFlow } from './use-practice-question-flow';
 
 const {
@@ -24,10 +25,6 @@ vi.mock('@/src/adapters/controllers/question-controller', () => ({
   getNextQuestion: getNextQuestionMock,
   submitAnswer: submitAnswerMock,
 }));
-
-function ok<T>(data: T) {
-  return { ok: true as const, data };
-}
 
 const TEST_FILTERS = { tagSlugs: [], difficulties: [] };
 

@@ -36,46 +36,36 @@ export function createBookmarksEffect(input: {
   let mounted = true;
   let timeoutId: ReturnType<typeof setTimeout> | undefined;
 
+  const handleBookmarkLoadFailure = (error: unknown) => {
+    logError('Failed to load bookmarks', error);
+    input.setBookmarkStatus('error');
+
+    if (input.bookmarkRetryCount < 2) {
+      timeoutId = setTimeoutFn(
+        () => {
+          if (mounted) {
+            input.setBookmarkRetryCount((prev) => prev + 1);
+          }
+        },
+        1000 * (input.bookmarkRetryCount + 1),
+      );
+    }
+  };
+
   void (async () => {
+    input.setBookmarkStatus('loading');
     let res: ActionResult<{ rows: Array<{ questionId: string }> }>;
     try {
       res = await input.getBookmarksFn({});
     } catch (error) {
       if (!mounted) return;
-
-      logError('Failed to load bookmarks', error);
-      input.setBookmarkStatus('error');
-
-      if (input.bookmarkRetryCount < 2) {
-        timeoutId = setTimeoutFn(
-          () => {
-            if (mounted) {
-              input.setBookmarkRetryCount((prev) => prev + 1);
-            }
-          },
-          1000 * (input.bookmarkRetryCount + 1),
-        );
-      }
-
+      handleBookmarkLoadFailure(error);
       return;
     }
     if (!mounted) return;
 
     if (!res.ok) {
-      logError('Failed to load bookmarks', res.error);
-      input.setBookmarkStatus('error');
-
-      if (input.bookmarkRetryCount < 2) {
-        timeoutId = setTimeoutFn(
-          () => {
-            if (mounted) {
-              input.setBookmarkRetryCount((prev) => prev + 1);
-            }
-          },
-          1000 * (input.bookmarkRetryCount + 1),
-        );
-      }
-
+      handleBookmarkLoadFailure(res.error);
       return;
     }
 

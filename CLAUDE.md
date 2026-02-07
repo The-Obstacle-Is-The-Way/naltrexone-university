@@ -23,10 +23,12 @@ expect(html).toContain('Expected text');
 - `renderToStaticMarkup` is a stable first-party React API that works everywhere
 
 ### DO NOT USE for jsdom component tests:
+
 - `@testing-library/react` — broken, zombie maintenance
 - `react-test-renderer` — deprecated in React 19
 
 ### Browser Mode for async hooks / interactive UI:
+
 - Use `vitest-browser-react` in `*.browser.spec.tsx`
 - Run with `pnpm test:browser`
 - This is the approved replacement for async hook/interaction tests (see DEBT-141 resolution)

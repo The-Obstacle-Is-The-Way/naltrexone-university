@@ -1,6 +1,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-react';
+import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import { createDeferred } from '@/tests/test-helpers/create-deferred';
+import { ok } from '@/tests/test-helpers/ok';
 import { usePracticeSessionHistory } from './use-practice-session-history';
 
 const { getSessionHistoryMock, getPracticeSessionReviewMock } = vi.hoisted(
@@ -14,10 +16,6 @@ vi.mock('@/src/adapters/controllers/practice-controller', () => ({
   getSessionHistory: getSessionHistoryMock,
   getPracticeSessionReview: getPracticeSessionReviewMock,
 }));
-
-function ok<T>(data: T) {
-  return { ok: true as const, data };
-}
 
 function PracticeSessionHistoryHookProbe() {
   const output = usePracticeSessionHistory();
@@ -124,28 +122,17 @@ describe('usePracticeSessionHistory (browser)', () => {
   });
 
   it('keeps the latest selected session when review responses resolve out of order', async () => {
-    const first = createDeferred<{
-      ok: true;
-      data: {
-        sessionId: string;
-        mode: 'exam';
-        totalCount: number;
-        answeredCount: number;
-        markedCount: number;
-        rows: [];
-      };
-    }>();
-    const second = createDeferred<{
-      ok: true;
-      data: {
-        sessionId: string;
-        mode: 'exam';
-        totalCount: number;
-        answeredCount: number;
-        markedCount: number;
-        rows: [];
-      };
-    }>();
+    type SessionReviewResult = ActionResult<{
+      sessionId: string;
+      mode: 'exam';
+      totalCount: number;
+      answeredCount: number;
+      markedCount: number;
+      rows: [];
+    }>;
+
+    const first = createDeferred<SessionReviewResult>();
+    const second = createDeferred<SessionReviewResult>();
     let callCount = 0;
 
     getSessionHistoryMock.mockResolvedValue(

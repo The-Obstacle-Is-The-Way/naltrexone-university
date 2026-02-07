@@ -46,10 +46,10 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 | ID | Title | Priority | Resolved |
 |----|-------|----------|----------|
-| [DEBT-141](../_archive/debt/debt-141-practice-hook-tests-emit-react-act-warnings.md) | Migrate Practice Hook Tests from renderLiveHook to Browser Mode | P2 | 2026-02-07 |
-| [DEBT-143](../_archive/debt/debt-143-practice-ui-components-missing-browser-specs.md) | Practice UI Components Missing Browser Specs | P2 | 2026-02-07 |
-| [DEBT-142](../_archive/debt/debt-142-spec-020-practice-file-line-cap-regression.md) | SPEC-020 Line-Cap Regression in Practice Page Logic | P2 | 2026-02-07 |
 | [DEBT-138](../_archive/debt/debt-138-dead-modules-and-unused-dependencies.md) | Dead Modules and Unused Dependencies After Refactors | P3 | 2026-02-07 |
+| [DEBT-141](../_archive/debt/debt-141-practice-hook-tests-emit-react-act-warnings.md) | Migrate Practice Hook Tests from renderLiveHook to Browser Mode | P2 | 2026-02-07 |
+| [DEBT-142](../_archive/debt/debt-142-spec-020-practice-file-line-cap-regression.md) | SPEC-020 Line-Cap Regression in Practice Page Logic | P2 | 2026-02-07 |
+| [DEBT-143](../_archive/debt/debt-143-practice-ui-components-missing-browser-specs.md) | Practice UI Components Missing Browser Specs | P2 | 2026-02-07 |
 | [DEBT-135](../_archive/debt/debt-135-rate-limit-client-ip-trust-boundary-hardening.md) | Rate-Limit Client IP Trust Boundary Is Not Explicitly Hardened | P2 | 2026-02-07 |
 | [DEBT-134](../_archive/debt/debt-134-practice-hook-tests-are-contract-only.md) | Practice Hook Tests Are Contract-Only (Behavior Gaps) | P1 | 2026-02-07 |
 | [DEBT-132](../_archive/debt/debt-132-missing-practice-hook-tests.md) | Missing Tests for 6 Extracted Practice Hooks (SPEC-020) | P1 | 2026-02-07 |
