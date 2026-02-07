@@ -669,9 +669,9 @@
               "nulls": "last"
             },
             {
-              "expression": "ended_at",
-              "isExpression": false,
+              "expression": "\"ended_at\" desc",
               "asc": true,
+              "isExpression": true,
               "nulls": "last"
             }
           ],

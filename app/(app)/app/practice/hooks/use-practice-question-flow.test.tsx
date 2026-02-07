@@ -1,22 +1,8 @@
 // @vitest-environment jsdom
-import { renderToStaticMarkup } from 'react-dom/server';
+
 import { describe, expect, it } from 'vitest';
+import { renderHook } from '@/src/application/test-helpers/render-hook';
 import { usePracticeQuestionFlow } from './use-practice-question-flow';
-
-function renderHook<T>(useHook: () => T): T {
-  let captured: T | null = null;
-
-  function Probe() {
-    captured = useHook();
-    return null;
-  }
-
-  renderToStaticMarkup(<Probe />);
-  if (captured === null) {
-    throw new Error('Hook result was not captured');
-  }
-  return captured;
-}
 
 describe('usePracticeQuestionFlow', () => {
   it('returns the expected initial state contract', () => {
@@ -30,6 +16,7 @@ describe('usePracticeQuestionFlow', () => {
     expect(output.selectedChoiceId).toBeNull();
     expect(output.submitResult).toBeNull();
     expect(output.loadState).toEqual({ status: 'idle' });
+    expect(output.isPending).toBe(false);
     expect(output.bookmarkStatus).toBe('idle');
     expect(output.bookmarkMessage).toBeNull();
     expect(output.canSubmit).toBe(false);

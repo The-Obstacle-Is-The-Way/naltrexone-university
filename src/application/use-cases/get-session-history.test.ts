@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import { ApplicationError } from '@/src/application/errors';
 import { createPracticeSession } from '@/src/domain/test-helpers';
-import { ApplicationError } from '../errors';
 import { FakePracticeSessionRepository } from '../test-helpers/fakes';
 import { GetSessionHistoryUseCase } from './get-session-history';
 
