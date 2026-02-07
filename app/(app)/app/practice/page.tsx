@@ -99,6 +99,7 @@ export default function PracticePage() {
       isBookmarked={questionFlow.isBookmarked}
       isMarkingForReview={false}
       bookmarkMessage={questionFlow.bookmarkMessage}
+      bookmarkMessageVersion={questionFlow.bookmarkMessageVersion}
       canSubmit={questionFlow.canSubmit}
       onTryAgain={questionFlow.onTryAgain}
       onToggleBookmark={() => {

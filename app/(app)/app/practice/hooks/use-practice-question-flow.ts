@@ -34,6 +34,7 @@ export type UsePracticeQuestionFlowOutput = {
   isPending: boolean;
   bookmarkStatus: 'idle' | 'loading' | 'error';
   bookmarkMessage: string | null;
+  bookmarkMessageVersion: number;
   canSubmit: boolean;
   isBookmarked: boolean;
   onTryAgain: () => void;
@@ -58,6 +59,7 @@ export function usePracticeQuestionFlow(
     'idle' | 'loading' | 'error'
   >('idle');
   const [bookmarkMessage, setBookmarkMessage] = useState<string | null>(null);
+  const [bookmarkMessageVersion, setBookmarkMessageVersion] = useState(0);
   const bookmarkMessageTimeoutId = useRef<ReturnType<typeof setTimeout> | null>(
     null,
   );
@@ -168,6 +170,7 @@ export function usePracticeQuestionFlow(
           setBookmarkMessage(
             bookmarked ? 'Question bookmarked.' : 'Bookmark removed.',
           );
+          setBookmarkMessageVersion((prev) => prev + 1);
           scheduleBookmarkMessageAutoClear({
             timeoutIdRef: bookmarkMessageTimeoutId,
             setBookmarkMessage,
@@ -192,6 +195,7 @@ export function usePracticeQuestionFlow(
     isPending,
     bookmarkStatus,
     bookmarkMessage,
+    bookmarkMessageVersion,
     canSubmit,
     isBookmarked,
     onTryAgain,

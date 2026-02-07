@@ -23,6 +23,7 @@ describe('usePracticeQuestionFlow', () => {
     expect(output.isPending).toBe(false);
     expect(output.bookmarkStatus).toBe('idle');
     expect(output.bookmarkMessage).toBeNull();
+    expect(output.bookmarkMessageVersion).toBe(0);
     expect(output.canSubmit).toBe(false);
     expect(output.isBookmarked).toBe(false);
     expect(typeof output.onTryAgain).toBe('function');

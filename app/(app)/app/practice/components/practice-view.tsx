@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useRef } from 'react';
+import { useEffect, useMemo } from 'react';
 import { ErrorCard } from '@/components/error-card';
 import { Feedback } from '@/components/question/Feedback';
 import { QuestionCard } from '@/components/question/QuestionCard';
@@ -25,6 +25,7 @@ export type PracticeViewProps = {
   isBookmarked: boolean;
   isMarkingForReview?: boolean;
   bookmarkMessage?: string | null;
+  bookmarkMessageVersion?: number;
   canSubmit: boolean;
   endSessionLabel?: string;
   onEndSession?: () => void;
@@ -38,27 +39,24 @@ export type PracticeViewProps = {
 
 export function PracticeView(props: PracticeViewProps) {
   const { notify } = useNotification();
-  const lastBookmarkMessageRef = useRef<string | null>(null);
   const sessionInfo = props.sessionInfo ?? null;
   const isExamMode = sessionInfo?.mode === 'exam';
   const correctChoiceId = isExamMode
     ? null
     : (props.submitResult?.correctChoiceId ?? null);
+  const bookmarkFeedback = useMemo(
+    () => ({
+      message: props.bookmarkMessage ?? null,
+      version: props.bookmarkMessageVersion ?? 0,
+    }),
+    [props.bookmarkMessage, props.bookmarkMessageVersion],
+  );
 
   useEffect(() => {
-    const message = props.bookmarkMessage ?? null;
-    if (!message) {
-      lastBookmarkMessageRef.current = null;
-      return;
-    }
-
-    if (lastBookmarkMessageRef.current === message) {
-      return;
-    }
-
-    lastBookmarkMessageRef.current = message;
+    const message = bookmarkFeedback.message;
+    if (!message) return;
     notify({ message, tone: 'success' });
-  }, [notify, props.bookmarkMessage]);
+  }, [notify, bookmarkFeedback]);
 
   return (
     <div className="space-y-6">

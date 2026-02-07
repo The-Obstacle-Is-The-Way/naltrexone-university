@@ -27,6 +27,7 @@ export type PracticeSessionPageViewProps = {
   isBookmarked: boolean;
   isMarkingForReview?: boolean;
   bookmarkMessage?: string | null;
+  bookmarkMessageVersion?: number;
   canSubmit: boolean;
   onEndSession: () => void;
   onRetryReview?: () => void;
@@ -126,6 +127,7 @@ export function PracticeSessionPageView(props: PracticeSessionPageViewProps) {
       isBookmarked={props.isBookmarked}
       isMarkingForReview={props.isMarkingForReview}
       bookmarkMessage={props.bookmarkMessage}
+      bookmarkMessageVersion={props.bookmarkMessageVersion}
       canSubmit={props.canSubmit}
       endSessionLabel={
         props.sessionInfo?.mode === 'exam' ? 'Review answers' : 'End session'

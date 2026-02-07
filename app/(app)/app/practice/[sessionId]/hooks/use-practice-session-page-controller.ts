@@ -54,6 +54,7 @@ export function usePracticeSessionPageController(
     'idle' | 'loading' | 'error'
   >('idle');
   const [bookmarkMessage, setBookmarkMessage] = useState<string | null>(null);
+  const [bookmarkMessageVersion, setBookmarkMessageVersion] = useState(0);
   const bookmarkMessageTimeoutId = useRef<ReturnType<typeof setTimeout> | null>(
     null,
   );
@@ -239,6 +240,7 @@ export function usePracticeSessionPageController(
           setBookmarkMessage(
             bookmarked ? 'Question bookmarked.' : 'Bookmark removed.',
           );
+          setBookmarkMessageVersion((prev) => prev + 1);
           scheduleBookmarkMessageAutoClear({
             timeoutIdRef: bookmarkMessageTimeoutId,
             setBookmarkMessage,
@@ -284,6 +286,7 @@ export function usePracticeSessionPageController(
     isBookmarked,
     isMarkingForReview,
     bookmarkMessage,
+    bookmarkMessageVersion,
     canSubmit,
     onEndSession: reviewStage.onEndSession,
     onRetryReview: reviewStage.onRetryReview,

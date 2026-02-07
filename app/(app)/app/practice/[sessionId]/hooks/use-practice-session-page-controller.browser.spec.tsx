@@ -1,3 +1,4 @@
+import { useEffect, useMemo, useState } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-react';
 import { ok } from '@/tests/test-helpers/ok';
@@ -53,6 +54,38 @@ function PracticeSessionPageControllerHookProbe() {
       <div data-testid="error-message">{errorMessage}</div>
       <button type="button" onClick={() => output.onSelectChoice('choice_1')}>
         select-choice-1
+      </button>
+    </>
+  );
+}
+
+function PracticeSessionPageControllerBookmarkProbe() {
+  const output = usePracticeSessionPageController('session-1');
+  const [bookmarkFeedbackCount, setBookmarkFeedbackCount] = useState(0);
+  const bookmarkMessageVersion = (
+    output as {
+      bookmarkMessageVersion?: number;
+    }
+  ).bookmarkMessageVersion;
+  const bookmarkFeedback = useMemo(
+    () => ({
+      message: output.bookmarkMessage,
+      version: bookmarkMessageVersion ?? 0,
+    }),
+    [output.bookmarkMessage, bookmarkMessageVersion],
+  );
+
+  useEffect(() => {
+    if (!bookmarkFeedback.message) return;
+    setBookmarkFeedbackCount((prev) => prev + 1);
+  }, [bookmarkFeedback]);
+
+  return (
+    <>
+      <div data-testid="load-status">{output.loadState.status}</div>
+      <div data-testid="bookmark-feedback-count">{bookmarkFeedbackCount}</div>
+      <button type="button" onClick={() => void output.onToggleBookmark()}>
+        toggle-bookmark
       </button>
     </>
   );
@@ -142,5 +175,59 @@ describe('usePracticeSessionPageController (browser)', () => {
     await expect
       .element(screen.getByTestId('error-message'))
       .toHaveTextContent('Question load failed');
+  });
+
+  it('emits bookmark feedback for repeated identical success messages', async () => {
+    getNextQuestionMock.mockResolvedValue(
+      ok({
+        questionId: 'question-1',
+        slug: 'question-1',
+        stemMd: 'Question 1',
+        difficulty: 'easy',
+        choices: [
+          {
+            id: 'choice_1',
+            label: 'A',
+            textMd: 'Option A',
+            sortOrder: 1,
+          },
+        ],
+        session: {
+          sessionId: 'session-1',
+          mode: 'tutor',
+          index: 0,
+          total: 10,
+          isMarkedForReview: false,
+        },
+      }),
+    );
+    getBookmarksMock.mockResolvedValue(ok({ rows: [] }));
+    getPracticeSessionReviewMock.mockResolvedValue(
+      ok({
+        sessionId: 'session-1',
+        mode: 'tutor',
+        totalCount: 10,
+        answeredCount: 0,
+        markedCount: 0,
+        rows: [],
+      }),
+    );
+    toggleBookmarkMock.mockResolvedValue(ok({ bookmarked: true }));
+
+    const screen = await render(<PracticeSessionPageControllerBookmarkProbe />);
+
+    await expect
+      .element(screen.getByTestId('load-status'))
+      .toHaveTextContent('ready');
+
+    await screen.getByRole('button', { name: 'toggle-bookmark' }).click();
+    await expect
+      .element(screen.getByTestId('bookmark-feedback-count'))
+      .toHaveTextContent('1');
+
+    await screen.getByRole('button', { name: 'toggle-bookmark' }).click();
+    await expect
+      .element(screen.getByTestId('bookmark-feedback-count'))
+      .toHaveTextContent('2');
   });
 });
