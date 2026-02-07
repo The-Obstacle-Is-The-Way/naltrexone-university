@@ -37,6 +37,14 @@ describe('isEntitled', () => {
     expect(isEntitled(sub, now)).toBe(true);
   });
 
+  it('returns false for pastDue with expired period', () => {
+    const sub = createSubscription({
+      status: 'pastDue',
+      currentPeriodEnd: new Date('2026-01-15T00:00:00Z'),
+    });
+    expect(isEntitled(sub, now)).toBe(false);
+  });
+
   it('returns false for canceled status', () => {
     const sub = createSubscription({
       status: 'canceled',

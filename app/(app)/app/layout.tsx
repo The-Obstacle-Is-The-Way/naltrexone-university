@@ -8,6 +8,7 @@ import { ThemeToggle } from '@/components/theme-toggle';
 import { ROUTES } from '@/lib/routes';
 import type { AuthGateway } from '@/src/application/ports/gateways';
 import type { CheckEntitlementUseCase } from '@/src/application/ports/use-cases';
+import type { SubscriptionStatus } from '@/src/domain/value-objects';
 
 // Auth-gated routes must be dynamic to avoid build-time prerendering.
 export const dynamic = 'force-dynamic';
@@ -30,7 +31,7 @@ async function getDeps(deps?: AppLayoutDeps): Promise<AppLayoutDeps> {
 }
 
 export type EntitledAppUser = {
-  subscriptionStatus: string | null;
+  subscriptionStatus: SubscriptionStatus | null;
 };
 
 export async function enforceEntitledAppUser(
@@ -110,6 +111,7 @@ export function AppLayoutShell({
 
 export function PastDueBanner() {
   return (
+    // Server-rendered at page load; no live-region role needed.
     <output className="block border-b border-warning bg-warning/10 px-4 py-3 text-center text-sm text-warning-foreground">
       Your payment failed — please{' '}
       <Link

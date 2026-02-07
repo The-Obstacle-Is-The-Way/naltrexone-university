@@ -19,7 +19,12 @@ describe('AppDesktopNav', () => {
     const dashboardLink = doc.querySelector('a[href="/app/dashboard"]');
     const practiceLink = doc.querySelector('a[href="/app/practice"]');
 
-    expect(dashboardLink?.getAttribute('aria-current')).toBe('page');
-    expect(practiceLink?.getAttribute('aria-current')).toBeNull();
+    expect(dashboardLink).not.toBeNull();
+    expect(practiceLink).not.toBeNull();
+    if (!dashboardLink || !practiceLink) {
+      throw new Error('Expected dashboard and practice links to exist');
+    }
+    expect(dashboardLink.getAttribute('aria-current')).toBe('page');
+    expect(practiceLink.getAttribute('aria-current')).toBeNull();
   });
 });

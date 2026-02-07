@@ -123,7 +123,7 @@ describe('app/(app)/app/practice/[sessionId]', () => {
     expect(html).toContain('[Question no longer available]');
   });
 
-  it('announces summary breakdown loading and errors with live/alert semantics', async () => {
+  it('announces summary breakdown loading with live semantics', async () => {
     const { SessionSummaryView } = await import(
       '@/app/(app)/app/practice/[sessionId]/page'
     );
@@ -144,6 +144,15 @@ describe('app/(app)/app/practice/[sessionId]', () => {
       />,
     );
 
+    expect(loadingHtml).toContain('Loading question breakdown…');
+    expect(loadingHtml).toContain('aria-live="polite"');
+  });
+
+  it('announces summary breakdown errors with alert semantics', async () => {
+    const { SessionSummaryView } = await import(
+      '@/app/(app)/app/practice/[sessionId]/page'
+    );
+
     const errorHtml = renderToStaticMarkup(
       <SessionSummaryView
         summary={{
@@ -160,8 +169,6 @@ describe('app/(app)/app/practice/[sessionId]', () => {
       />,
     );
 
-    expect(loadingHtml).toContain('Loading question breakdown…');
-    expect(loadingHtml).toContain('aria-live="polite"');
     expect(errorHtml).toContain('Review failed');
     expect(errorHtml).toContain('role="alert"');
   });

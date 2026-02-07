@@ -98,6 +98,10 @@ describe('app error heading styles', () => {
     for (const item of errorComponents) {
       const doc = new DOMParser().parseFromString(item.html, 'text/html');
       const heading = doc.querySelector(item.headingTag);
+      expect(
+        heading,
+        `${item.name} should render ${item.headingTag}`,
+      ).not.toBeNull();
 
       expect(
         heading?.textContent?.trim(),

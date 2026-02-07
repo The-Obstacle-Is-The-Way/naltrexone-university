@@ -20,20 +20,21 @@ export type SubscribeActionsDeps = {
 async function getDeps(
   deps?: Partial<SubscribeActionsDeps>,
 ): Promise<SubscribeActionsDeps> {
+  const ctx = createRequestContext();
+  const requestLogger = getRequestLogger(ctx);
+
   const createCheckoutSessionFn: CreateCheckoutSessionFn =
-    deps?.createCheckoutSessionFn ?? createCheckoutSession;
+    deps?.createCheckoutSessionFn ??
+    ((input) =>
+      createCheckoutSession(input, undefined, { logger: requestLogger }));
 
   return {
     createCheckoutSessionFn,
     redirectFn: deps?.redirectFn ?? redirect,
     logError:
       deps?.logError ??
-      (() => {
-        const ctx = createRequestContext();
-        const logger = getRequestLogger(ctx);
-        return (context: Record<string, unknown>, msg: string) =>
-          logger.error(context, msg);
-      })(),
+      ((context: Record<string, unknown>, msg: string) =>
+        requestLogger.error(context, msg)),
   };
 }
 

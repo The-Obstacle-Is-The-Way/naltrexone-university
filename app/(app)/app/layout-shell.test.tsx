@@ -35,7 +35,7 @@ describe('app/(app)/app/layout (shell)', () => {
     const { renderAppLayout } = await import('@/app/(app)/app/layout');
 
     const enforceEntitledAppUserFn = vi.fn(async () => ({
-      subscriptionStatus: 'active',
+      subscriptionStatus: 'active' as const,
     }));
     const authNavFn = vi.fn(async () => <div>AuthNav</div>);
 
@@ -60,7 +60,7 @@ describe('app/(app)/app/layout (shell)', () => {
     const { renderAppLayout } = await import('@/app/(app)/app/layout');
 
     const enforceEntitledAppUserFn = vi.fn(async () => ({
-      subscriptionStatus: 'pastDue',
+      subscriptionStatus: 'pastDue' as const,
     }));
     const authNavFn = vi.fn(async () => <div>AuthNav</div>);
 
