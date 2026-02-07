@@ -1,6 +1,6 @@
 # DEBT-134: Practice Hook Tests Are Contract-Only (Behavior Gaps)
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P1
 **Date:** 2026-02-07
 
@@ -35,7 +35,20 @@ No tests currently force overlapping async completions, thrown server-action fai
 
 ## Resolution
 
-Add behavior-focused tests for each hook’s critical paths:
+Added behavior-focused tests for all six extracted practice hooks using a live
+hook harness (`src/application/test-helpers/render-live-hook.tsx`) to verify
+real state transitions and async behavior.
+
+Updated test files:
+
+- `app/(app)/app/practice/hooks/use-practice-question-flow.test.tsx`
+- `app/(app)/app/practice/hooks/use-practice-session-controls.test.tsx`
+- `app/(app)/app/practice/hooks/use-practice-session-history.test.tsx`
+- `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-mark-for-review.test.tsx`
+- `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-page-controller.test.tsx`
+- `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-review-stage.test.tsx`
+
+Covered behaviors now include:
 
 1. Out-of-order response handling (latest request wins)
 2. Thrown server-action failures and error-state transitions
@@ -44,10 +57,10 @@ Add behavior-focused tests for each hook’s critical paths:
 
 ## Verification
 
-- [ ] Each hook has at least one success-path async transition test
-- [ ] Each hook has at least one thrown-error test
-- [ ] Race-sensitive hooks have out-of-order resolution tests
-- [ ] Tests fail before fix and pass after fix
+- [x] Each hook has at least one success-path async transition test
+- [x] Each hook has at least one thrown-error test
+- [x] Race-sensitive hooks have out-of-order resolution tests
+- [x] Tests fail before fix and pass after fix
 
 ## Related
 

@@ -1,10 +1,37 @@
 // @vitest-environment jsdom
 
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { ok } from '@/src/adapters/controllers/action-result';
+import * as bookmarkController from '@/src/adapters/controllers/bookmark-controller';
+import * as questionController from '@/src/adapters/controllers/question-controller';
 import { renderHook } from '@/src/application/test-helpers/render-hook';
+import { renderLiveHook } from '@/src/application/test-helpers/render-live-hook';
+import type { NextQuestion } from '@/src/application/use-cases/get-next-question';
 import { usePracticeQuestionFlow } from './use-practice-question-flow';
 
+function createNextQuestion(): NextQuestion {
+  return {
+    questionId: 'q_1',
+    slug: 'question-1',
+    stemMd: 'What is the best next step?',
+    difficulty: 'easy',
+    choices: [
+      {
+        id: 'choice_1',
+        label: 'A',
+        textMd: 'Option A',
+        sortOrder: 1,
+      },
+    ],
+    session: null,
+  };
+}
+
 describe('usePracticeQuestionFlow', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it('returns the expected initial state contract', () => {
     const output = renderHook(() =>
       usePracticeQuestionFlow({
@@ -26,5 +53,57 @@ describe('usePracticeQuestionFlow', () => {
     expect(typeof output.onSelectChoice).toBe('function');
     expect(typeof output.onSubmit).toBe('function');
     expect(typeof output.onNextQuestion).toBe('function');
+  });
+
+  it('loads question data and transitions to ready state', async () => {
+    vi.spyOn(questionController, 'getNextQuestion').mockResolvedValue(
+      ok(createNextQuestion()),
+    );
+    vi.spyOn(bookmarkController, 'getBookmarks').mockResolvedValue(
+      ok({ rows: [] }),
+    );
+
+    const harness = renderLiveHook(() =>
+      usePracticeQuestionFlow({
+        filters: { tagSlugs: [], difficulties: [] },
+      }),
+    );
+
+    try {
+      await harness.waitFor((output) => output.loadState.status === 'ready');
+
+      const output = harness.getCurrent();
+      expect(output.question?.questionId).toBe('q_1');
+      expect(output.loadState).toEqual({ status: 'ready' });
+      expect(output.bookmarkStatus).toBe('idle');
+      expect(output.canSubmit).toBe(false);
+    } finally {
+      harness.unmount();
+    }
+  });
+
+  it('transitions to error state when question loading throws', async () => {
+    vi.spyOn(questionController, 'getNextQuestion').mockRejectedValue(
+      new Error('Network down'),
+    );
+    vi.spyOn(bookmarkController, 'getBookmarks').mockResolvedValue(
+      ok({ rows: [] }),
+    );
+
+    const harness = renderLiveHook(() =>
+      usePracticeQuestionFlow({
+        filters: { tagSlugs: [], difficulties: [] },
+      }),
+    );
+
+    try {
+      await harness.waitFor((output) => output.loadState.status === 'error');
+      expect(harness.getCurrent().loadState).toEqual({
+        status: 'error',
+        message: 'Network down',
+      });
+    } finally {
+      harness.unmount();
+    }
   });
 });
