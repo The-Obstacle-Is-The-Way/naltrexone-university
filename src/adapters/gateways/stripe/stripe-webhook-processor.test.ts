@@ -262,6 +262,7 @@ describe('processStripeWebhookEvent', () => {
     expect(logger.errorCalls[0].msg).toBe(
       'Invalid Stripe subscription webhook payload',
     );
+    expect(logger.errorCalls[0].context).toHaveProperty('error');
     expect(stripe.subscriptions?.retrieve).not.toHaveBeenCalled();
   });
 });
