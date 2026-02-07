@@ -43,4 +43,4 @@ If the team wants dunning grace-period access:
 - `src/domain/services/entitlement.ts`
 - `app/(app)/app/layout.tsx`
 - `app/pricing/page.tsx`
-- Former BUG-076: `docs/bugs/bug-076-past-due-immediate-lockout.md`
+- Former BUG-076 (deleted — fully superseded by this document)
