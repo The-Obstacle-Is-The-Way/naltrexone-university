@@ -15,9 +15,18 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 ## Debt Index (Active)
 
-No active debt items. All items resolved via [SPEC-020](../specs/spec-020-practice-engine-completion.md) (PR #63).
+| ID | Title | Status | Priority | Date |
+|----|-------|--------|----------|------|
+| [DEBT-133](debt-133-idempotency-polling-timeout-message-misleading.md) | Idempotency Polling Timeout Message Is Misleading | Open | P3 | 2026-02-06 |
+| [DEBT-132](debt-132-missing-practice-hook-tests.md) | Missing Tests for 6 Extracted Practice Hooks (SPEC-020) | Open | P1 | 2026-02-06 |
+| [DEBT-131](debt-131-missing-use-case-error-path-tests.md) | Missing Error Path Tests for 6 Use Cases | Open | P2 | 2026-02-06 |
+| [DEBT-130](debt-130-missing-suspense-boundary-app-layout.md) | Missing Suspense Boundary in App Layout | Open | P3 | 2026-02-06 |
+| [DEBT-129](debt-129-skip-clerk-production-safety.md) | NEXT_PUBLIC_SKIP_CLERK Has No Production Safety Guard | Open | P1 | 2026-02-06 |
+| [DEBT-128](debt-128-bookmark-load-failure-not-shown-to-user.md) | Bookmark Load Failure Not Visible to User | Open | P2 | 2026-02-06 |
+| [DEBT-127](debt-127-missing-practice-sessions-ended-at-index.md) | Missing Index on practice_sessions (userId, endedAt) | Open | P2 | 2026-02-06 |
+| [DEBT-126](debt-126-console-warn-in-repository.md) | console.warn in Repository Bypasses Structured Logger | Open | P3 | 2026-02-06 |
 
-**Next Debt ID:** DEBT-126
+**Next Debt ID:** DEBT-134
 
 ## Archived Debt
 
