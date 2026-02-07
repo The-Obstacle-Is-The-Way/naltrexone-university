@@ -20,7 +20,7 @@ This is the innermost layer. It must be 100% pure.
 - **Value objects:** `SubscriptionPlan`, `QuestionDifficulty`, `GradingResult`
 - **Domain services:** Pure functions operating on entities
 - **Domain errors:** Typed error classes for domain-level failures
-- **Test helpers:** `createQuestion()`, `createChoice()` factories in `test-helpers/`
+- **Test helpers:** Shared factories (`createQuestion()`, `createChoice()`) in `src/domain/test-helpers/` (shared across modules)
 
 ## What does NOT belong here
 

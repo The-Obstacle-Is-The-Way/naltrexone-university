@@ -7,7 +7,7 @@ paths:
 
 ## Layer boundaries (dependencies point inward ONLY)
 
-```
+```text
 src/domain/        -> ZERO external imports. Pure business logic.
 src/application/   -> Depends only on domain. Use cases + port interfaces.
 src/adapters/      -> Depends on application. Repos, gateways, controllers.
