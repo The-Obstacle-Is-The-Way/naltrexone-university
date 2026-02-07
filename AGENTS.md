@@ -404,6 +404,12 @@ vi.mock('@clerk/nextjs', () => ({
 // ✅ OK - Next.js internals
 vi.mock('next/link', () => ({ default: (props) => <a {...props} /> }));
 vi.mock('server-only', () => ({}));
+
+// ✅ OK - Browser Mode: sealed ESM namespaces (vi.spyOn won't work)
+// Server-action controllers can't be dependency-injected into React hooks.
+// Use { spy: true } to wrap exports as spies without replacing them.
+vi.mock('@/src/adapters/controllers/practice-controller', { spy: true });
+vi.mocked(practiceController.getSessionHistory).mockResolvedValue(ok({...}));
 ```
 
 **Why Fakes > Inline vi.fn():**

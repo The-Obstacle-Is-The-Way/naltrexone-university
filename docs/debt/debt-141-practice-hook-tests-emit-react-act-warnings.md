@@ -38,13 +38,33 @@ Browser Mode infrastructure already exists in this repo (`vitest.browser.config.
 - False confidence: warnings suggest test synchronization is imprecise
 - Developer confusion: unclear which harness to use for new hook tests
 
+## Key Pattern: `vi.mock({ spy: true })` for Sealed ESM
+
+Browser Mode uses native ESM — namespace objects are **sealed** by the browser runtime.
+`vi.spyOn(controllerNamespace, 'method')` will throw. Use the Vitest-native `{ spy: true }` option instead:
+
+```typescript
+import * as practiceController from '@/src/adapters/controllers/practice-controller';
+
+// Hoisted before imports — wraps every export as a spy without replacing it
+vi.mock('@/src/adapters/controllers/practice-controller', { spy: true });
+
+// Per-test: use vi.mocked() to override the spy
+vi.mocked(practiceController.getSessionHistory).mockResolvedValue(ok({...}));
+```
+
+This is semantically identical to `vi.spyOn()` — it observes calls and allows per-test overrides — but works with sealed ESM namespaces. Supported since Vitest 3.1.0; we run 4.0.18.
+
+See: [Vitest — Mocking Modules (spy: true)](https://vitest.dev/guide/mocking/modules)
+
 ## Resolution
 
 1. For each file, create a `*.browser.spec.tsx` counterpart using `vitest-browser-react` (`render` or `renderHook`, whichever fits the test)
-2. For `render`, wrap the hook under test in a minimal `<HookConsumer>` component that renders testable output
-3. Use `expect.element(locator)` for async assertions; use returned `act` from `renderHook` when explicit update boundaries are needed
-4. Remove the original `*.test.tsx` once the browser spec has equivalent coverage
-5. After all 6 files are migrated, delete `render-live-hook.tsx` and its test
+2. Replace `vi.spyOn(ns, 'method')` calls with top-level `vi.mock(modulePath, { spy: true })` + per-test `vi.mocked(ns.method).mockResolvedValue(...)`
+3. For `render`, wrap the hook under test in a minimal `<HookConsumer>` component that renders testable output
+4. Use `expect.element(locator)` for async assertions; use returned `act` from `renderHook` when explicit update boundaries are needed
+5. Remove the original `*.test.tsx` once the browser spec has equivalent coverage
+6. After all 6 files are migrated, delete `render-live-hook.tsx` and its test
 
 ## Verification
 
