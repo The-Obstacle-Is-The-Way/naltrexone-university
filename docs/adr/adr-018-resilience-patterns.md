@@ -41,6 +41,7 @@ retry(fn, {
 ```
 
 **Backoff schedule example** (default Stripe config):
+
 ```text
 Attempt 1: execute immediately
 Attempt 2: wait 100ms, execute

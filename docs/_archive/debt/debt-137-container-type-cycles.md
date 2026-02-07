@@ -9,8 +9,6 @@
 
 ## Description
 
-The current container typing setup creates circular dependencies between composition-root modules and controller modules.
-
 This finding was invalidated after verification that the reported cycle edges are `import type` only from `lib/container/types.ts`, which are erased at compile time and do not create runtime module cycles.
 
 Validated from first principles:
@@ -24,23 +22,17 @@ Validated from first principles:
 
 ## Impact
 
-- Violates acyclic dependency expectations in Clean Architecture support code
-- Makes composition-root refactors risky (small import changes can create runtime cycles)
-- Increases cognitive load and slows dependency analysis/tooling
+- No runtime cycle bug was present.
+- No production behavior was at risk.
 
 ## Resolution
 
-1. Break the controller type dependency loop:
-   - Move controller dependency type contracts out of controller modules into a neutral type module (for example `src/adapters/controllers/types.ts` or `lib/container/controller-deps.ts`)
-   - Keep controllers importing those shared types instead of defining container-facing deps in each controller file
-2. Update `lib/container/types.ts` to import only neutral type modules
-3. Keep `lib/controller-helpers.ts` free of container type imports that point back into the same graph (prefer a narrow exported container interface type)
+No code change required. The debt was archived as a tooling false positive.
 
 ## Verification
 
-- [ ] `pnpm dlx madge --circular --extensions ts,tsx --ts-config tsconfig.json app src lib` reports zero cycles
-- [ ] `pnpm typecheck` passes
-- [ ] `pnpm test --run` passes
+- [x] Type-only edges were confirmed in `lib/container/types.ts`
+- [x] TypeScript transpilation confirms those imports erase from runtime output
 
 ## Related
 

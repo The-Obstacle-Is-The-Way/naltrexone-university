@@ -22,26 +22,31 @@ This document exists because we got burned. Every claim is validated against off
 ### The Three Harnesses
 
 **1. `renderToStaticMarkup`** — Render-output tests (jsdom, fast)
+
 ```typescript
 // @vitest-environment jsdom
 import { renderToStaticMarkup } from 'react-dom/server';
 const html = renderToStaticMarkup(<MyComponent />);
 expect(html).toContain('Expected text');
 ```
+
 - First-party React API, works everywhere, no act() dependency
 - Limitation: `useEffect` does not run, no interactivity
 
 **2. `renderHook`** — Synchronous hook capture (jsdom, fast)
+
 ```typescript
 import { renderHook } from '@/src/application/test-helpers/render-hook';
 const output = renderHook(() => useMyHook());
 expect(output.someValue).toBe(42);
 ```
+
 - Built on `renderToStaticMarkup` internally
 - Captures the hook's initial return value in a single render pass
 - Limitation: Cannot observe async state transitions (useEffect, setState after await)
 
 **3. `vitest-browser-react`** — Async hooks and interactive UI (real Chromium, slower)
+
 ```tsx
 import { render } from 'vitest-browser-react';
 import { expect, test } from 'vitest';
@@ -51,6 +56,7 @@ test('hook updates state after async operation', async () => {
   await expect.element(screen.getByText('Loaded')).toBeVisible();
 });
 ```
+
 - Runs in real Chromium via Playwright — no jsdom simulation
 - `render()` does not expose `act()` to test code
 - `renderHook()` does expose `act()` for explicit state transitions
@@ -162,6 +168,7 @@ Supporting test infrastructure:
 ### Migration Pattern
 
 **Before** (jsdom + renderLiveHook — produces act() warnings):
+
 ```typescript
 // @vitest-environment jsdom
 import { renderLiveHook } from '@/src/application/test-helpers/render-live-hook';
@@ -177,7 +184,9 @@ try {
 }
 ```
 
+
 **After** (Browser Mode + vitest-browser-react — zero act() warnings):
+
 ```tsx
 import { render } from 'vitest-browser-react';
 import { expect, test } from 'vitest';

@@ -119,7 +119,7 @@ Controllers call `rateLimiter.limit()` before executing the use case. On failure
   - `src/adapters/controllers/practice-controller.test.ts`
   - `src/adapters/controllers/question-controller.test.ts`
   - `src/adapters/controllers/bookmark-controller.test.ts`
-- SPEC-017 tracks the rate limiting feature with "Partial" status (Postgres MVP, Redis post-MVP).
+- SPEC-017 tracks the rate-limiting feature with "Partial" status (Postgres MVP, Redis post-MVP).
 
 ---
 
@@ -130,5 +130,5 @@ Controllers call `rateLimiter.limit()` before executing the use case. On failure
 - `src/adapters/shared/rate-limits.ts` — Centralized limit configuration
 - `lib/request-ip.ts` — IP extraction with trust boundary
 - `db/schema.ts` — `rate_limits` table
-- ADR-009 (Security Hardening) — Defense-in-depth context
+- ADR-009 (Security Hardening) — defense-in-depth context
 - SPEC-017 — Rate Limiting specification

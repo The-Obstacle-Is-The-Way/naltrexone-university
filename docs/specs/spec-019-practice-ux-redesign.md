@@ -328,11 +328,13 @@ Active filters: [Opioids ×] [Treatment ×]    ← removable chips
 
 1. **Rename in nav:** "Review" → "Missed Questions" (or keep "Review" with subtitle)
 2. **Empty state messaging:** When no missed questions exist, show:
+
    ```text
    No missed questions yet.
    Great work! As you practice, any questions you get wrong will appear here for review.
    [Go to Practice →]
    ```
+
 3. **Add filtering:** Allow filtering missed questions by tag, difficulty, date range
 4. **Link back to session:** Each missed question shows which session it came from (if applicable)
 
@@ -526,6 +528,7 @@ Per SPEC-013 and master_spec.md section 4.5.4:
 5. Phase 3 touches different pages (Dashboard, Review, Bookmarks) than Phase 2 (Practice), so they can run in parallel
 
 **Sequence:**
+
 ```text
                                     ┌─ [Phase 2: Practice Redesign]
 [Current State] → [Phase 1: Fix] → ┤
