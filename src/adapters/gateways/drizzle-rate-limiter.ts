@@ -8,6 +8,9 @@ import type {
 import type { DrizzleDb } from '../shared/database-types';
 
 const SECOND_MS = 1000;
+const DAY_MS = 86_400_000;
+const PRUNE_RETENTION_DAYS = 90;
+const PRUNE_BATCH_LIMIT = 100;
 
 function isPositiveInteger(value: number): boolean {
   return Number.isInteger(value) && value > 0;
@@ -54,6 +57,15 @@ export class DrizzleRateLimiter implements RateLimiter {
 
     const count = row?.count ?? 1;
     const remaining = Math.max(0, input.limit - count);
+
+    if (count === 1) {
+      // Best-effort cleanup so stale windows do not accumulate forever.
+      // Pruning failures must not block request handling.
+      const cutoff = new Date(nowMs - PRUNE_RETENTION_DAYS * DAY_MS);
+      try {
+        await this.pruneExpiredWindows(cutoff, PRUNE_BATCH_LIMIT);
+      } catch {}
+    }
 
     return {
       success: count <= input.limit,

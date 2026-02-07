@@ -114,6 +114,10 @@ export type StripeClient = {
       params: StripeSubscriptionListParams,
       options?: StripeRequestOptions,
     ): Promise<StripeSubscriptionListResult>;
+    cancel?(
+      subscriptionId: string,
+      options?: StripeRequestOptions,
+    ): Promise<StripeSubscription>;
   };
   billingPortal: {
     sessions: {
