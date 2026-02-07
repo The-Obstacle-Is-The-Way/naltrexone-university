@@ -15,13 +15,17 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 ## Debt Index (Active)
 
-| ID | Title | Status | Priority | Date |
-|----|-------|--------|----------|------|
-| [DEBT-155](debt-155-stripe-legacy-duplicate-subscriptions-reconciliation.md) | Stripe Legacy Duplicate Subscription Reconciliation | In Progress | P1 | 2026-02-07 |
+_No active debt items._
 
 **Next Debt ID:** DEBT-158
 
 ## Archived Debt
+
+### Resolved in Stripe Reconciliation
+
+| ID | Title | Priority | Resolved |
+|----|-------|----------|----------|
+| [DEBT-155](../_archive/debt/debt-155-stripe-legacy-duplicate-subscriptions-reconciliation.md) | Stripe Legacy Duplicate Subscription Reconciliation | P1 | 2026-02-07 |
 
 ### Resolved in Stripe Hardening Follow-Up
 
