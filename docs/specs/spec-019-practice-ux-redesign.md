@@ -1,19 +1,20 @@
-# SPEC-019: Practice UX Redesign
+# SPEC-019: Practice & Navigation UX Redesign
 
 > **Status:** Proposed
 > **Layer:** Feature
-> **Date:** 2026-02-05
+> **Date:** 2026-02-05 (amended 2026-02-07)
 > **Author:** Architecture Review
 
 ---
 
 ## 1. Executive Summary
 
-The current practice flow implementation is **functionally correct** but **UX-confusing**. Both ad-hoc ("one question at a time") and session-based (tutor/exam mode) practice are presented on the same page (`/app/practice`), creating ambiguity about which mode the user is in.
+The current practice flow implementation is **functionally correct** but **UX-confusing**. Both ad-hoc ("one question at a time") and session-based (tutor/exam mode) practice are presented on the same page (`/app/practice`), creating ambiguity about which mode the user is in. A cross-page UX audit (2026-02-07) revealed additional issues: dashboard activity is not actionable, the tag filter presents 41 simultaneous chips causing cognitive overload, the Review page scope is ambiguous, and user data is fragmented across four tabs with no cross-linking.
 
-This spec proposes a **phased approach**:
+This spec proposes a **three-phase approach**:
 1. **Phase 1:** Fix current implementation bugs (database seeding, error handling)
 2. **Phase 2:** Redesign UX to clearly separate practice modes
+3. **Phase 3:** Cross-page information architecture — actionable dashboard, progressive tag filters, review page clarity, unified navigation
 
 ---
 
@@ -46,6 +47,10 @@ This spec proposes a **phased approach**:
 | Question loads immediately | User sees a question before choosing to start a session |
 | No visual separation | Session config and live question compete for attention |
 | Ad-hoc has no clear branding | "One question at a time" feels like a leftover, not a feature |
+| Dashboard activity not actionable | Recent activity shows question text + "Correct" but nothing is clickable — no link to question or session |
+| Tag filter cognitive overload | 5 categories × 38 tags + 3 difficulty levels = 41 toggleable chips presented flat on screen; "Treatment & Pharmacotherapy" (exam section) next to "Treatment" (topic) next to specific meds looks redundant |
+| Review page ambiguous label | Nav says "Review"; page says "Review questions you've missed" — user with 100% accuracy sees empty page and wonders where their questions went |
+| No cross-page coherence | User data fragmented: attempts on Dashboard, sessions on Practice, missed on Review, saved on Bookmarks — no unified "my questions" view |
 
 ### 2.3 Comparison to Industry Standards
 
@@ -67,6 +72,83 @@ Professional medical question banks (UWorld, Amboss, Kaplan, MKSAP) use clear se
 | Neither | — | Page architecture, user flow between modes |
 
 **Conclusion:** The backend is correctly implemented per specs. The gap is in **presentation layer design**.
+
+### 2.5 Cross-Page UX Audit (2026-02-07)
+
+A live-app walkthrough revealed issues that extend beyond the Practice page into the broader information architecture.
+
+#### 2.5.1 Dashboard — Recent Activity Is Not Actionable
+
+**Current state:** The "Recent activity" section shows truncated question stems with a "Correct"/"Incorrect" label. Nothing is clickable.
+
+**What users expect:** Tap a question to review it. Tap a session to see the breakdown. This is standard in UWorld (click any question in performance tab to re-review).
+
+**Impact:** The dashboard becomes a dead-end — users see stats but can't act on them.
+
+#### 2.5.2 Tag Filter — Cognitive Overload
+
+**Current state:** The practice session starter presents ALL 38 tags across 5 categories as flat toggleable chips:
+
+```text
+Difficulty:      Easy | Medium | Hard                               (3)
+Exam Section:    Co-occurring... | Epidemiology... | Ethics... | ... (8)
+Substance:       Alcohol | Cannabis | Cocaine | ...                 (10)
+Topic:           Comorbidity | Diagnosis | Epidemiology | ...       (17)
+Treatment:       Buprenorphine | Naloxone | Naltrexone              (3)
+                                                          Total:    41 chips
+```
+
+**The redundancy perception problem:** The underlying taxonomy is NOT actually redundant — each kind serves a distinct purpose:
+
+| Kind | Purpose | Example |
+|------|---------|---------|
+| `domain` (Exam Section) | Board exam blueprint section | "Treatment & Pharmacotherapy" |
+| `topic` | Clinical concept | "Treatment", "Pharmacology" |
+| `substance` | Drug class | "Opioids", "Alcohol" |
+| `treatment` | Specific medication | "Naltrexone", "Buprenorphine" |
+
+But **users don't see the taxonomy** — they see "Treatment" in three different places and assume redundancy. The data model is sound; the **presentation** needs progressive disclosure.
+
+**Industry comparison:** UWorld uses a two-level filter: select subjects first, then topics within each subject. Amboss uses a search bar with autocomplete. Neither shows 41 simultaneous toggles.
+
+#### 2.5.3 Review Page — Ambiguous Scope
+
+**Current state:** The "Review" tab shows only questions the user answered incorrectly. The heading says "Review questions you've missed."
+
+**Problem:** The nav label "Review" doesn't communicate this scope. A user who answered all questions correctly sees an empty page with no explanation of why it's empty or where to find their answered questions.
+
+**What users expect from "Review":**
+- UWorld: "Review" means reviewing completed tests — all questions, with your answers and explanations
+- Amboss: "Review" means study mode for content
+- Our "Review": means only incorrect questions (more accurately: "Missed Questions")
+
+#### 2.5.4 Information Architecture — Four Tabs, Fragmented Data
+
+Current navigation and data distribution:
+
+```text
+Dashboard     Practice       Review          Bookmarks
+─────────     ────────       ──────          ─────────
+Stats cards   Session form   Missed Q's      Saved Q's
+Recent acts   Ad-hoc Q       (incorrect)     (bookmarked)
+(read-only)   Recent sessions
+              Session history
+```
+
+**Gap:** No single page answers "show me all questions I've answered." Data is split across tabs with no cross-linking:
+- Dashboard: recent activity (flat, not clickable)
+- Practice: recent sessions (clickable, has breakdown)
+- Review: only incorrect answers
+- Bookmarks: only bookmarked questions
+
+#### 2.5.5 Three Practice Domains Need Clear Separation
+
+The user perceives three distinct practice experiences:
+1. **Individual practice** — Answer one random question, see explanation, move on
+2. **Tutor mode** — Structured session with immediate feedback
+3. **Exam mode** — Structured session with deferred feedback
+
+Currently all three originate from the same Practice page. SPEC-019 Phase 2 already proposes separating Quick Practice from Sessions. This audit confirms that separation is essential.
 
 ---
 
@@ -193,7 +275,82 @@ Following Uncle Bob's principles:
 | **Attempts recorded** | Yes | Yes | Yes |
 | **Use case** | Quick review, warming up | Learning mode | Exam simulation |
 
-### 5.4 Tutor vs Exam Mode Clarification
+### 5.4 Phase 3 — Cross-Page Information Architecture
+
+#### 5.4.1 Dashboard Improvements
+
+**Make recent activity actionable:**
+
+```text
+Recent activity
+┌─────────────────────────────────────────────────────────┐
+│ Tutor session · 3/5 correct (60%) · 2 min ago          │
+│   ├─ Q: "A physician is reviewing the contra..." ✓     │ ← clickable → /app/questions/[slug]
+│   ├─ Q: "An elderly patient with insomnia..." ✓        │ ← clickable → /app/questions/[slug]
+│   └─ Q: "Which medication is first-line..." ✗          │ ← clickable → /app/questions/[slug]
+│                                          [View session →]│ ← links to session detail
+├─────────────────────────────────────────────────────────┤
+│ Quick practice · Correct · 5 min ago                    │
+│   Q: "The mechanism of action of naltrexone..." ✓      │ ← clickable → /app/questions/[slug]
+└─────────────────────────────────────────────────────────┘
+```
+
+- Session-grouped entries are collapsible with summary header
+- Individual questions are clickable links to the question review page
+- Session summary links to the session breakdown view
+
+#### 5.4.2 Tag Filter Progressive Disclosure
+
+Replace the flat 41-chip layout with progressive disclosure:
+
+**Option A — Collapsible categories (recommended for v1):**
+
+```text
+Difficulty:  [Easy] [Medium] [Hard]           ← always visible (only 3)
+
+▶ Exam Section (0 selected)                   ← collapsed by default
+▶ Substance (0 selected)                      ← collapsed by default
+▶ Topic (0 selected)                          ← collapsed by default
+▶ Treatment (0 selected)                      ← collapsed by default
+```
+
+Expanding a category shows its chips. Badge shows count of active filters.
+
+**Option B — Search-first filter (future consideration):**
+
+```text
+[🔍 Filter by tag...]                        ← autocomplete search
+                                                shows matching tags across all kinds
+Active filters: [Opioids ×] [Treatment ×]    ← removable chips
+```
+
+#### 5.4.3 Review Page Clarification
+
+1. **Rename in nav:** "Review" → "Missed Questions" (or keep "Review" with subtitle)
+2. **Empty state messaging:** When no missed questions exist, show:
+   ```text
+   No missed questions yet.
+   Great work! As you practice, any questions you get wrong will appear here for review.
+   [Go to Practice →]
+   ```
+3. **Add filtering:** Allow filtering missed questions by tag, difficulty, date range
+4. **Link back to session:** Each missed question shows which session it came from (if applicable)
+
+#### 5.4.4 Cross-Page Navigation Design
+
+| Page | Primary Role | Actionable Links |
+|------|-------------|-----------------|
+| **Dashboard** | Motivation + progress overview | Activity items → question review; Sessions → session detail; CTA → Practice |
+| **Practice** | Start sessions + history | Session config → runner; History → breakdown; Quick practice → ad-hoc |
+| **Review** | Remediate weak areas | Each question → question review page with explanation |
+| **Bookmarks** | Personal study list | Each question → question review page; Remove bookmark inline |
+
+**Cross-linking rules:**
+- Every question reference anywhere in the app should be clickable → `/app/questions/[slug]`
+- Every session reference should link to session detail view
+- Empty states always provide a clear CTA to the next logical action
+
+### 5.5 Tutor vs Exam Mode Clarification
 
 Per SPEC-013 and master_spec.md section 4.5.4:
 
@@ -250,6 +407,36 @@ Per SPEC-013 and master_spec.md section 4.5.4:
 - [ ] Session config is prominent and easy to understand
 - [ ] User flow matches UWorld/Kaplan mental model
 
+### Phase 3: Cross-Page Information Architecture
+
+**Goal:** Make all pages actionable and coherent across the app.
+
+| Task | Priority | Effort | Section |
+|------|----------|--------|---------|
+| Dashboard: make recent activity items clickable links | P1 | 2 hr | 5.4.1 |
+| Dashboard: group activity by session with collapsible headers | P1 | 3 hr | 5.4.1 |
+| Tag filter: implement collapsible categories (Option A) | P1 | 2 hr | 5.4.2 |
+| Tag filter: show active filter count badges | P2 | 1 hr | 5.4.2 |
+| Review page: update empty state with helpful messaging | P1 | 30 min | 5.4.3 |
+| Review page: add subtitle clarifying scope | P1 | 15 min | 5.4.3 |
+| Review page: add tag/difficulty filter to missed questions list | P2 | 2 hr | 5.4.3 |
+| Review page: show session origin per missed question | P2 | 1 hr | 5.4.3 |
+| Cross-page: ensure every question reference links to `/app/questions/[slug]` | P1 | 2 hr | 5.4.4 |
+| Cross-page: ensure every session reference links to session detail | P2 | 1 hr | 5.4.4 |
+| Cross-page: improve empty states on all pages with CTAs | P2 | 1 hr | 5.4.4 |
+
+**Acceptance Criteria for Phase 3:**
+- [ ] Dashboard recent activity items are clickable → navigate to question review
+- [ ] Dashboard sessions are grouped with mode badge and score summary
+- [ ] Tag filter categories are collapsed by default; expanding shows chips
+- [ ] Active filter count shown on collapsed categories
+- [ ] Review page empty state explains scope and provides CTA
+- [ ] Missed questions show session origin (mode + date) when applicable
+- [ ] All question references across all pages are clickable links
+- [ ] All session references link to session detail/breakdown
+
+**Dependencies:** Phase 3 can proceed independently of Phase 2. Many tasks require only UI changes (no backend work). Session origin on missed questions requires the `sessionId`/`sessionMode` fields from SPEC-020 Phase 3.
+
 ---
 
 ## 7. Files to Create/Modify
@@ -267,6 +454,13 @@ Per SPEC-013 and master_spec.md section 4.5.4:
 - `components/practice/PracticeLanding.tsx` — NEW: landing page component
 - `components/practice/QuickPractice.tsx` — NEW: ad-hoc component
 - `components/practice/SessionStarter.tsx` — extract from current page
+
+### Phase 3 (Cross-Page IA)
+- `app/(app)/app/dashboard/page.tsx` — make activity clickable, add session grouping
+- `app/(app)/app/practice/components/practice-session-starter.tsx` — collapsible tag categories
+- `app/(app)/app/review/page.tsx` — subtitle, filters, empty state, session origin
+- `app/(app)/app/bookmarks/page.tsx` — improve empty state
+- `components/ui/collapsible-filter-group.tsx` — NEW: reusable collapsible filter component
 
 ---
 
@@ -303,6 +497,8 @@ Per SPEC-013 and master_spec.md section 4.5.4:
 - `practice-landing.spec.ts` — user can navigate to both modes
 - `quick-practice.spec.ts` — answer question, see feedback, get another
 - `practice-session.spec.ts` — (existing) tutor and exam flows
+- `dashboard-activity-links.spec.ts` — clicking activity items navigates to question review
+- `tag-filter-collapse.spec.ts` — collapsible categories expand/collapse correctly
 
 ---
 
@@ -313,23 +509,27 @@ Per SPEC-013 and master_spec.md section 4.5.4:
 | Refactoring breaks existing session flow | High | Phase 1 stabilizes first; Phase 2 is additive |
 | Users confused by new layout | Medium | Clear labels, tooltips, onboarding hints |
 | Ad-hoc mode becomes orphaned | Low | Keep visible as "Quick Practice" with clear value prop |
+| Collapsible filters hide options users need | Medium | Show "N selected" badge; expand by default if filters already active |
+| Review page rename confuses returning users | Low | Keep URL `/app/review` unchanged; only update nav label and heading |
 
 ---
 
 ## 11. Decision: Fix First, Then Refactor
 
-**Recommendation:** Complete Phase 1 before starting Phase 2.
+**Recommendation:** Complete Phase 1 before starting Phase 2. Phase 3 can proceed in parallel with Phase 2.
 
 **Rationale:**
 1. Current session flow is architecturally sound but may have bugs
 2. Fixing bugs first ensures we understand what's working
 3. Refactoring on a broken foundation creates more bugs
-4. Phase 1 is fast (< 1 day); Phase 2 is medium (2-3 days)
+4. Phase 1 is fast (< 1 day); Phase 2 is medium (2-3 days); Phase 3 is medium (2-3 days)
+5. Phase 3 touches different pages (Dashboard, Review, Bookmarks) than Phase 2 (Practice), so they can run in parallel
 
 **Sequence:**
 ```text
-[Current State] → [Phase 1: Fix & Verify] → [Phase 2: Redesign]
-     Broken?           Working 100%           Clean UX
+                                    ┌─ [Phase 2: Practice Redesign]
+[Current State] → [Phase 1: Fix] → ┤
+                                    └─ [Phase 3: Cross-Page IA]
 ```
 
 ---
@@ -338,9 +538,11 @@ Per SPEC-013 and master_spec.md section 4.5.4:
 
 - [SPEC-012: Core Question Loop](./spec-012-core-question-loop.md)
 - [SPEC-013: Practice Sessions](./spec-013-practice-sessions.md)
+- [SPEC-014: Review & Bookmarks](./spec-014-review-bookmarks.md) — defines Review page scope (missed questions only)
+- [SPEC-015: Dashboard](./spec-015-dashboard.md) — defines dashboard stats and recent activity
 - [SPEC-020: Practice Engine Completion](./spec-020-practice-engine-completion.md) — formally specifies session history (previously P3 optional here), in-run navigation, enriched summary, and session context in existing views
 - [master_spec.md Section 4.5.3-4.5.5](./master_spec.md)
-- [ADR-011: Feature Slice Architecture](../adr/adr-011-feature-slices.md)
+- [ADR-001: Clean Architecture Layers](../adr/adr-001-clean-architecture-layers.md)
 
 ---
 
@@ -420,3 +622,4 @@ Per SPEC-013 and master_spec.md section 4.5.4:
 |------|--------|--------|
 | 2026-02-05 | Architecture Review | Initial draft |
 | 2026-02-06 | Architecture Review | Add SPEC-020 cross-references; session history now formally specified in SPEC-020 Phase 4 |
+| 2026-02-07 | Architecture Review | **Major amendment:** Add cross-page UX audit (Section 2.5) — dashboard activity not actionable, tag filter cognitive overload, review page ambiguity, fragmented IA. Add Phase 3 (Section 5.4 + Implementation Plan) for cross-page information architecture. Add tag filter progressive disclosure design. Add SPEC-014/015 to Related Documents. |
