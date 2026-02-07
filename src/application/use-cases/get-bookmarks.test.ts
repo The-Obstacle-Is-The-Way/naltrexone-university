@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { describe, expect, it } from 'vitest';
+import { ApplicationError } from '@/src/application/errors';
 import { createQuestion } from '@/src/domain/test-helpers';
 import {
   FakeBookmarkRepository,
@@ -110,5 +111,22 @@ describe('GetBookmarksUseCase', () => {
         msg: 'Bookmark references missing question',
       },
     ]);
+  });
+
+  it('propagates repository failures', async () => {
+    const bookmarks = new FakeBookmarkRepository();
+    bookmarks.listByUserId = async () => {
+      throw new ApplicationError('INTERNAL_ERROR', 'Bookmarks unavailable');
+    };
+
+    const useCase = new GetBookmarksUseCase(
+      bookmarks,
+      new FakeQuestionRepository([]),
+      new FakeLogger(),
+    );
+
+    await expect(useCase.execute({ userId: 'user-1' })).rejects.toMatchObject({
+      code: 'INTERNAL_ERROR',
+    });
   });
 });

@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { ApplicationError } from '@/src/application/errors';
 import {
   FakeAttemptRepository,
   FakeLogger,
@@ -159,6 +160,51 @@ describe('GetMissedQuestionsUseCase', () => {
         },
       ],
       totalCount: 1,
+    });
+  });
+
+  it('returns empty page rows while preserving totalCount when offset is beyond available rows', async () => {
+    const useCase = new GetMissedQuestionsUseCase(
+      new FakeAttemptRepository([
+        createAttempt({
+          userId: 'user-1',
+          questionId: 'q1',
+          isCorrect: false,
+          answeredAt: new Date('2026-02-01T12:00:00Z'),
+        }),
+      ]),
+      new FakeQuestionRepository([
+        createQuestion({ id: 'q1', slug: 'q-1', stemMd: 'Stem for q1' }),
+      ]),
+      new FakeLogger(),
+    );
+
+    await expect(
+      useCase.execute({ userId: 'user-1', limit: 10, offset: 10 }),
+    ).resolves.toEqual({
+      rows: [],
+      limit: 10,
+      offset: 10,
+      totalCount: 1,
+    });
+  });
+
+  it('propagates repository failures', async () => {
+    const attempts = new FakeAttemptRepository([]);
+    attempts.countMissedQuestionsByUserId = async () => {
+      throw new ApplicationError('INTERNAL_ERROR', 'Count failed');
+    };
+
+    const useCase = new GetMissedQuestionsUseCase(
+      attempts,
+      new FakeQuestionRepository([]),
+      new FakeLogger(),
+    );
+
+    await expect(
+      useCase.execute({ userId: 'user-1', limit: 10, offset: 0 }),
+    ).rejects.toMatchObject({
+      code: 'INTERNAL_ERROR',
     });
   });
 });

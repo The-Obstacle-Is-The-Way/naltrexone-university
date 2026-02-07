@@ -329,6 +329,10 @@ export const practiceSessions = pgTable(
       t.userId,
       desc(t.startedAt),
     ),
+    userEndedAtIdx: index('practice_sessions_user_ended_at_idx').on(
+      t.userId,
+      t.endedAt,
+    ),
   }),
 );
 

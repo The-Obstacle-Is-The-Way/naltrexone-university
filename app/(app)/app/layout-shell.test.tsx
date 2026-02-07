@@ -51,4 +51,23 @@ describe('app/(app)/app/layout (shell)', () => {
     expect(html).toContain('MobileNav');
     expect(html).toContain('Child content');
   });
+
+  it('renders a suspense fallback when child content suspends', async () => {
+    const { AppLayoutShell } = await import('@/app/(app)/app/layout');
+
+    function Suspends(): never {
+      throw Promise.resolve();
+    }
+
+    const html = renderToStaticMarkup(
+      <AppLayoutShell
+        authNav={<div>AuthNav</div>}
+        mobileNav={<div>MobileNav</div>}
+      >
+        <Suspends />
+      </AppLayoutShell>,
+    );
+
+    expect(html).toContain('Loading app content…');
+  });
 });

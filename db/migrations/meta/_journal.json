@@ -50,6 +50,13 @@
       "when": 1770389424248,
       "tag": "0006_mushy_ghost_rider",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1770440626177,
+      "tag": "0007_dapper_tenebrous",
+      "breakpoints": true
     }
   ]
 }

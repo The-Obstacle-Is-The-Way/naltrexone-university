@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import type { ApplicationError } from '@/src/application/errors';
 import { createPracticeSession } from '@/src/domain/test-helpers';
 import { FakePracticeSessionRepository } from '../test-helpers/fakes';
 import { EndPracticeSessionUseCase } from './end-practice-session';
@@ -54,5 +55,33 @@ describe('EndPracticeSessionUseCase', () => {
         durationSeconds: 600,
       },
     });
+  });
+
+  it('propagates NOT_FOUND when the session does not exist', async () => {
+    const sessions = new FakePracticeSessionRepository([]);
+    const useCase = new EndPracticeSessionUseCase(sessions);
+
+    await expect(
+      useCase.execute({ userId: 'user-1', sessionId: 'missing' }),
+    ).rejects.toMatchObject({
+      code: 'NOT_FOUND',
+    } satisfies Partial<ApplicationError>);
+  });
+
+  it('propagates CONFLICT when the session is already ended', async () => {
+    const sessions = new FakePracticeSessionRepository([
+      createPracticeSession({
+        id: 'session-ended',
+        userId: 'user-1',
+        endedAt: new Date('2026-02-01T00:05:00Z'),
+      }),
+    ]);
+    const useCase = new EndPracticeSessionUseCase(sessions);
+
+    await expect(
+      useCase.execute({ userId: 'user-1', sessionId: 'session-ended' }),
+    ).rejects.toMatchObject({
+      code: 'CONFLICT',
+    } satisfies Partial<ApplicationError>);
   });
 });

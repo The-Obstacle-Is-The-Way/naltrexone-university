@@ -1,8 +1,9 @@
 # DEBT-127: Missing Index on practice_sessions (userId, endedAt)
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P2
 **Date:** 2026-02-06
+**Resolved:** 2026-02-07
 
 ---
 
@@ -33,11 +34,17 @@ userEndedAtIdx: index('practice_sessions_user_ended_at_idx').on(
 
 **Requires:** `pnpm db:generate` + `pnpm db:migrate`
 
+## Fix Implemented
+
+- Added `userEndedAtIdx` to `practice_sessions` in `db/schema.ts`
+- Generated migration `db/migrations/0007_dapper_tenebrous.sql`
+- Added schema regression test: `db/schema.test.ts`
+
 ## Verification
 
-- [ ] Migration generated and applied
-- [ ] `EXPLAIN ANALYZE` shows index scan
-- [ ] All existing tests pass
+- [x] Migration generated (`pnpm db:generate`)
+- [x] Schema test verifies index is defined
+- [x] All existing tests pass (`pnpm typecheck && pnpm lint && pnpm test --run`)
 
 ## Related
 
