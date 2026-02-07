@@ -17,9 +17,9 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 | ID | Title | Status | Priority | Date |
 |----|-------|--------|----------|------|
-| _(none)_ | — | — | — | — |
+| [BUG-100](bug-100-nested-main-landmarks-in-layouts.md) | Nested `<main>` Landmarks Across Root and Segment Layouts | Open | P2 | 2026-02-07 |
 
-**Next Bug ID:** BUG-100
+**Next Bug ID:** BUG-101
 
 ## Recently Triaged
 

@@ -105,6 +105,7 @@ describe('usePracticeSessionMarkForReview (browser)', () => {
       sessionId: 'session-1',
       questionId: 'question-1',
       markedForReview: true,
+      idempotencyKey: expect.any(String),
     });
 
     expect(setSessionInfo).toHaveBeenCalled();

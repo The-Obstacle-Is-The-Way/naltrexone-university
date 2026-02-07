@@ -176,7 +176,7 @@ export function PricingView({
 
         <div className="mt-8 text-center">
           <Link
-            href="/"
+            href={ROUTES.HOME}
             className="rounded-md text-sm text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
           >
             Back to Home

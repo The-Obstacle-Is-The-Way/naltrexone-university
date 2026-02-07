@@ -200,3 +200,36 @@ test('renders review error actions with retry and end session escape hatch', asy
   await screen.getByRole('button', { name: 'End session' }).click();
   expect(onEndSession).toHaveBeenCalledTimes(1);
 });
+
+test('review error End session calls onFinalizeReview when provided', async () => {
+  const onFinalizeReview = vi.fn();
+  const onEndSession = vi.fn();
+
+  const screen = await render(
+    <PracticeSessionPageView
+      summary={null}
+      review={null}
+      reviewLoadState={{ status: 'error', message: 'Review unavailable.' }}
+      sessionInfo={null}
+      loadState={{ status: 'ready' }}
+      question={null}
+      selectedChoiceId={null}
+      submitResult={null}
+      isPending={false}
+      bookmarkStatus="idle"
+      isBookmarked={false}
+      canSubmit={false}
+      onEndSession={onEndSession}
+      onFinalizeReview={onFinalizeReview}
+      onTryAgain={() => undefined}
+      onToggleBookmark={() => undefined}
+      onSelectChoice={() => undefined}
+      onSubmit={() => undefined}
+      onNextQuestion={() => undefined}
+    />,
+  );
+
+  await screen.getByRole('button', { name: 'End session' }).click();
+  expect(onFinalizeReview).toHaveBeenCalledTimes(1);
+  expect(onEndSession).not.toHaveBeenCalled();
+});

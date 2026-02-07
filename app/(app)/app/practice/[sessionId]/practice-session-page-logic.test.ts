@@ -663,6 +663,24 @@ describe('practice-session-page-logic', () => {
       });
     });
 
+    it('calls rotateIdempotencyKey when controller fails', async () => {
+      const rotateIdempotencyKey = vi.fn();
+
+      await endSession({
+        sessionId: 'session-1',
+        endSessionIdempotencyKey: 'idem_1',
+        endPracticeSessionFn: async () => err('INTERNAL_ERROR', 'Boom'),
+        setLoadState: vi.fn(),
+        setSummary: vi.fn(),
+        setQuestion: vi.fn(),
+        setSubmitResult: vi.fn(),
+        setSelectedChoiceId: vi.fn(),
+        rotateIdempotencyKey,
+      });
+
+      expect(rotateIdempotencyKey).toHaveBeenCalledTimes(1);
+    });
+
     it('sets error state when controller throws', async () => {
       const setLoadState = vi.fn();
 
@@ -683,6 +701,54 @@ describe('practice-session-page-logic', () => {
         status: 'error',
         message: 'Boom',
       });
+    });
+
+    it('calls rotateIdempotencyKey when controller throws', async () => {
+      const rotateIdempotencyKey = vi.fn();
+
+      await endSession({
+        sessionId: 'session-1',
+        endSessionIdempotencyKey: 'idem_1',
+        endPracticeSessionFn: async () => {
+          throw new Error('Boom');
+        },
+        setLoadState: vi.fn(),
+        setSummary: vi.fn(),
+        setQuestion: vi.fn(),
+        setSubmitResult: vi.fn(),
+        setSelectedChoiceId: vi.fn(),
+        rotateIdempotencyKey,
+      });
+
+      expect(rotateIdempotencyKey).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not call rotateIdempotencyKey on success', async () => {
+      const rotateIdempotencyKey = vi.fn();
+
+      await endSession({
+        sessionId: 'session-1',
+        endSessionIdempotencyKey: 'idem_1',
+        endPracticeSessionFn: async () =>
+          ok({
+            sessionId: 'session-1',
+            endedAt: '2026-02-01T00:00:00.000Z',
+            totals: {
+              answered: 10,
+              correct: 7,
+              accuracy: 0.7,
+              durationSeconds: 123,
+            },
+          }),
+        setLoadState: vi.fn(),
+        setSummary: vi.fn(),
+        setQuestion: vi.fn(),
+        setSubmitResult: vi.fn(),
+        setSelectedChoiceId: vi.fn(),
+        rotateIdempotencyKey,
+      });
+
+      expect(rotateIdempotencyKey).not.toHaveBeenCalled();
     });
 
     it('returns no state updates when unmounted during endSession', async () => {

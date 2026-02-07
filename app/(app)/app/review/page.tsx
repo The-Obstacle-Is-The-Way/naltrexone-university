@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { ErrorCard } from '@/components/error-card';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { ROUTES } from '@/lib/routes';
+import { ROUTES, toQuestionRoute } from '@/lib/routes';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import {
   type GetMissedQuestionsOutput,
@@ -158,9 +158,7 @@ export function ReviewView({
                         variant="outline"
                         className="rounded-full"
                       >
-                        <Link href={`/app/questions/${row.slug}`}>
-                          Reattempt
-                        </Link>
+                        <Link href={toQuestionRoute(row.slug)}>Reattempt</Link>
                       </Button>
                     ) : null}
                   </div>

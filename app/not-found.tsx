@@ -1,5 +1,6 @@
 import { CircleIcon } from 'lucide-react';
 import Link from 'next/link';
+import { ROUTES } from '@/lib/routes';
 
 export default function NotFound() {
   return (
@@ -19,7 +20,7 @@ export default function NotFound() {
           changed, or is temporarily unavailable.
         </p>
         <Link
-          href="/"
+          href={ROUTES.HOME}
           className="max-w-48 mx-auto flex justify-center py-2 px-4 border border-border rounded-full shadow-sm text-sm font-medium text-foreground bg-background hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
         >
           Back to Home

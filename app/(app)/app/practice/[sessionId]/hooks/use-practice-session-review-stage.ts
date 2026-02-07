@@ -85,6 +85,9 @@ export function usePracticeSessionReviewStage(
         setQuestion: input.setQuestion,
         setSubmitResult: input.setSubmitResult,
         setSelectedChoiceId: input.setSelectedChoiceId,
+        rotateIdempotencyKey: () => {
+          endSessionIdempotencyKeyRef.current = crypto.randomUUID();
+        },
         isMounted: input.isMounted,
       }),
     [

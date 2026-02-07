@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useEffect } from 'react';
 import { Button } from '@/components/ui/button';
+import { ROUTES } from '@/lib/routes';
 import { REPORT_ISSUE_URL } from '@/lib/support';
 
 export default function ErrorPage({
@@ -34,7 +35,7 @@ export default function ErrorPage({
             Try again
           </Button>
           <Button asChild variant="outline">
-            <Link href="/">Go home</Link>
+            <Link href={ROUTES.HOME}>Go home</Link>
           </Button>
           <Button asChild variant="outline">
             <a

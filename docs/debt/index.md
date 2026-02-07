@@ -23,8 +23,9 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 | [DEBT-149](debt-149-heading-typography-system-inconsistent.md) | Heading Typography System Inconsistent | Open | P2 | 2026-02-07 |
 | [DEBT-150](debt-150-navigation-links-missing-transitions-hover.md) | Navigation Links Missing Transitions and Hover States | Open | P3 | 2026-02-07 |
 | [DEBT-151](debt-151-no-toast-notification-system.md) | No Toast/Notification System | Open | P3 | 2026-02-07 |
+| [DEBT-152](debt-152-home-route-literals-remain-outside-routes-constants.md) | Home Route Literals Remain Outside `ROUTES` Constants | Resolved | P4 | 2026-02-07 |
 
-**Next Debt ID:** DEBT-152
+**Next Debt ID:** DEBT-153
 
 ## Archived Debt
 

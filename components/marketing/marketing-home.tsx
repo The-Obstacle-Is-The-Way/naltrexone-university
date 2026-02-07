@@ -60,7 +60,7 @@ export function MarketingHomeShell({
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:px-8">
           <div className="flex items-center gap-6">
             <Link
-              href="/"
+              href={ROUTES.HOME}
               className="rounded-md text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
             >
               Addiction Boards

@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react';
 import { Button } from '@/components/ui/button';
+import { ROUTES } from '@/lib/routes';
 import { REPORT_ISSUE_URL } from '@/lib/support';
 
 export default function GlobalError({
@@ -35,7 +36,7 @@ export default function GlobalError({
                 Try again
               </Button>
               <Button asChild variant="outline">
-                <a href="/">Go home</a>
+                <a href={ROUTES.HOME}>Go home</a>
               </Button>
               <Button asChild variant="outline">
                 <a
