@@ -581,4 +581,4 @@ pnpm test src/domain/services/
 
 | Date | Change |
 |------|--------|
-| 2026-02-08 | Synced spec to implementation: (1) `DomainErrorCode` reduced from 5 to 2 codes — session-level errors handled at application layer via `ApplicationError`; (2) Added `createQuestionSeed()` and `hashString()` helper to `shuffle.ts`; (3) Added `selectNextQuestionId` and `AttemptHistory` exports to barrel; (4) Updated `isEntitled` test for `pastDue` change. See [Practice Engine](../practice-engine.md) Section 10.1. |
+| 2026-02-08 | Synced spec to implementation: (1) `DomainErrorCode` reduced from 5 to 2 codes — session-level errors handled at application layer via `ApplicationError`; (2) Added `createQuestionSeed()` and `hashString()` helper to `shuffle.ts`; (3) Added `selectNextQuestionId` and `AttemptHistory` exports to barrel; (4) Updated `isEntitled` test for `pastDue` change. See [Practice Engine](../practice-engine/index.md) Section 10.1. |

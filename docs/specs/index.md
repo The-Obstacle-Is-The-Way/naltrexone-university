@@ -125,7 +125,7 @@ Any additional guidance for implementers.
 
 ## Related Documentation
 
-- [Practice Engine](../practice-engine.md) — Canonical reference for the core practice feature (cross-cuts all specs)
+- [Practice Engine](../practice-engine/index.md) — Canonical reference for the core practice feature (cross-cuts all specs)
 - [Architecture Decision Records](../adr/index.md)
 - [Bug Reports](../bugs/index.md)
 - [Technical Debt](../debt/index.md)

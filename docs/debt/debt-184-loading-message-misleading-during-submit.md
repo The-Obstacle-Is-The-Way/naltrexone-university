@@ -42,5 +42,5 @@ Option 2 is simpler and aligns with the pattern used in session pages.
 - `app/(app)/app/practice/components/practice-view.tsx`
 - `app/(app)/app/practice/hooks/use-practice-question-answer-flow.ts`
 - `app/(app)/app/practice/shared/load-state.ts`
-- [Practice Engine](../practice-engine.md) Section 9.2
+- [Practice Engine](../practice-engine/index.md) Section 9.2
 - Frontend tracker: FE-044
