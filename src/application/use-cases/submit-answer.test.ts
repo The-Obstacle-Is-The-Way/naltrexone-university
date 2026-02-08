@@ -511,7 +511,7 @@ describe('SubmitAnswerUseCase', () => {
     expect(attempts.getAll()).toEqual([]);
   });
 
-  it('returns explanation when exam session has ended', async () => {
+  it('throws CONFLICT when submitting to an ended session', async () => {
     const userId = 'user-1';
     const sessionId = 'session-1';
 
@@ -534,20 +534,25 @@ describe('SubmitAnswerUseCase', () => {
       questionIds: [questionId],
     });
 
+    const attempts = new FakeAttemptRepository();
     const useCase = new SubmitAnswerUseCase(
       new FakeQuestionRepository([question]),
-      new FakeAttemptRepository(),
+      attempts,
       new FakePracticeSessionRepository([session]),
     );
 
-    const result = await useCase.execute({
-      userId,
-      questionId,
-      choiceId: 'c2',
-      sessionId,
-    });
+    await expect(
+      useCase.execute({
+        userId,
+        questionId,
+        choiceId: 'c2',
+        sessionId,
+      }),
+    ).rejects.toEqual(
+      new ApplicationError('CONFLICT', 'Practice session already ended'),
+    );
 
-    expect(result.explanationMd).toBe('Because.');
+    expect(attempts.getAll()).toEqual([]);
   });
 
   it('throws NOT_FOUND when question is not published', async () => {

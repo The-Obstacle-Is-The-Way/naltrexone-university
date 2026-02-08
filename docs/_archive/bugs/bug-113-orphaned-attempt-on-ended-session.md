@@ -1,8 +1,9 @@
 # BUG-113: Orphaned Attempt Persisted When Submitting to Ended Session
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P3
 **Date:** 2026-02-08
+**Resolved:** 2026-02-08
 
 ---
 
@@ -63,34 +64,24 @@ The rollback logic (lines 118-141) only handles failures in `recordQuestionAnswe
 - **Inaccurate statistics** — if analytics queries use session state rather than raw attempts, they'll undercount
 - **No test coverage** — there's no test for the ended-session code path, so the behavior is undocumented
 
-## Fix
+## Resolution
 
-**Option A (Recommended): Guard before insert**
-
-Add a guard that rejects submission to ended sessions _before_ inserting the attempt:
+Added an explicit ended-session guard in `SubmitAnswerUseCase` before attempt insertion:
 
 ```typescript
 if (session && session.endedAt !== null) {
-  throw new ApplicationError(
-    'CONFLICT',
-    'Cannot submit answer to ended session',
-  );
+  throw new ApplicationError('CONFLICT', 'Practice session already ended');
 }
 ```
 
-This should go before line 98. The controller/server-action layer can catch `CONFLICT` and return an appropriate response.
-
-**Option B: Remove the guard entirely**
-
-Always call `recordQuestionAnswer` regardless of `endedAt`. This may have downstream implications that need evaluation.
+This prevents orphan attempts by rejecting ended-session submissions before any write to `attempts`. The session-write branch now executes for all valid session submissions (guarded open sessions only).
 
 ## Verification
 
-- [ ] Submitting an answer to an ended session either throws `CONFLICT` or updates session state
-- [ ] No orphaned attempts can be created
-- [ ] Test covers the ended-session submission path
-- [ ] Existing tests still pass
-- [ ] `pnpm typecheck && pnpm lint && pnpm test --run` passes
+- [x] Submitting to an ended session throws `ApplicationError('CONFLICT')`
+- [x] Attempt insertion is skipped for ended sessions (no orphan writes)
+- [x] Unit test covers ended-session rejection and zero-attempt side effect
+- [x] Full quality gates pass (`pnpm typecheck && pnpm lint && pnpm test --run`)
 
 ## Related
 

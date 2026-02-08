@@ -85,6 +85,10 @@ export class SubmitAnswerUseCase {
       );
     }
 
+    if (session && session.endedAt !== null) {
+      throw new ApplicationError('CONFLICT', 'Practice session already ended');
+    }
+
     const rawTimeSpentSeconds = input.timeSpentSeconds;
     const timeSpentSeconds =
       typeof rawTimeSpentSeconds === 'number' &&
@@ -104,7 +108,7 @@ export class SubmitAnswerUseCase {
       timeSpentSeconds,
     });
 
-    if (session && session.endedAt === null) {
+    if (session) {
       try {
         await this.sessions.recordQuestionAnswer({
           sessionId: session.id,
