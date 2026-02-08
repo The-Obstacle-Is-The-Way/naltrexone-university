@@ -34,7 +34,7 @@ describe('PracticeView', () => {
     expect(html).toContain(`href="${ROUTES.APP_DASHBOARD}"`);
   });
 
-  it('shows submit-pending copy without rendering question-loading text', async () => {
+  it('renders submit pending copy without rendering question-loading text', async () => {
     const { PracticeView } = await import('./practice-view');
     const question = createNextQuestion({
       questionId: 'question-1',
@@ -42,16 +42,14 @@ describe('PracticeView', () => {
       stemMd: 'Stem',
       difficulty: 'easy',
     });
-    const [choice] = question.choices;
-    if (!choice) {
-      throw new Error('Expected question to have at least one choice');
-    }
+    const choice = question.choices[0];
+    expect(choice).toBeDefined();
 
     const html = renderToStaticMarkup(
       <PracticeView
         loadState={{ status: 'ready' }}
         question={question}
-        selectedChoiceId={choice.id}
+        selectedChoiceId={choice?.id ?? null}
         submitResult={null}
         isPending
         bookmarkStatus="idle"

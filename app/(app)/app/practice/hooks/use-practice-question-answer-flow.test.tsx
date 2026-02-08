@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { usePracticeQuestionAnswerFlow } from '@/app/(app)/app/practice/hooks/use-practice-question-answer-flow';
 import { renderHook } from '@/src/application/test-helpers/render-hook';
-import { usePracticeQuestionAnswerFlow } from './use-practice-question-answer-flow';
 
 describe('usePracticeQuestionAnswerFlow', () => {
   afterEach(() => {

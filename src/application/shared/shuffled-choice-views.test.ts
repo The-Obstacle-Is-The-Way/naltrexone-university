@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { createQuestionSeed, shuffleWithSeed } from '@/src/domain/services';
-import { createQuestion } from '@/src/domain/test-helpers';
+import { createChoice, createQuestion } from '@/src/domain/test-helpers';
 import { AllChoiceLabels } from '@/src/domain/value-objects';
 import { ApplicationError } from '../errors';
 import { buildShuffledChoiceViews } from './shuffled-choice-views';
@@ -10,7 +10,7 @@ describe('buildShuffledChoiceViews', () => {
     const question = createQuestion({
       id: 'question-1',
       choices: [
-        {
+        createChoice({
           id: 'choice-b',
           label: 'B',
           textMd: 'Choice B',
@@ -18,8 +18,8 @@ describe('buildShuffledChoiceViews', () => {
           explanationMd: null,
           sortOrder: 2,
           questionId: 'question-1',
-        },
-        {
+        }),
+        createChoice({
           id: 'choice-a',
           label: 'A',
           textMd: 'Choice A',
@@ -27,8 +27,8 @@ describe('buildShuffledChoiceViews', () => {
           explanationMd: 'A explanation',
           sortOrder: 1,
           questionId: 'question-1',
-        },
-        {
+        }),
+        createChoice({
           id: 'choice-c',
           label: 'C',
           textMd: 'Choice C',
@@ -36,7 +36,7 @@ describe('buildShuffledChoiceViews', () => {
           explanationMd: 'C explanation',
           sortOrder: 3,
           questionId: 'question-1',
-        },
+        }),
       ],
     });
 
@@ -66,7 +66,7 @@ describe('buildShuffledChoiceViews', () => {
     const question = createQuestion({
       id: 'question-1',
       choices: [
-        {
+        createChoice({
           id: 'choice-a',
           label: 'A',
           textMd: 'Choice A',
@@ -74,8 +74,8 @@ describe('buildShuffledChoiceViews', () => {
           explanationMd: null,
           sortOrder: 1,
           questionId: 'question-1',
-        },
-        {
+        }),
+        createChoice({
           id: 'choice-b',
           label: 'B',
           textMd: 'Choice B',
@@ -83,8 +83,8 @@ describe('buildShuffledChoiceViews', () => {
           explanationMd: null,
           sortOrder: 2,
           questionId: 'question-1',
-        },
-        {
+        }),
+        createChoice({
           id: 'choice-c',
           label: 'C',
           textMd: 'Choice C',
@@ -92,8 +92,8 @@ describe('buildShuffledChoiceViews', () => {
           explanationMd: null,
           sortOrder: 3,
           questionId: 'question-1',
-        },
-        {
+        }),
+        createChoice({
           id: 'choice-d',
           label: 'D',
           textMd: 'Choice D',
@@ -101,8 +101,8 @@ describe('buildShuffledChoiceViews', () => {
           explanationMd: null,
           sortOrder: 4,
           questionId: 'question-1',
-        },
-        {
+        }),
+        createChoice({
           id: 'choice-e',
           label: 'E',
           textMd: 'Choice E',
@@ -110,7 +110,7 @@ describe('buildShuffledChoiceViews', () => {
           explanationMd: null,
           sortOrder: 5,
           questionId: 'question-1',
-        },
+        }),
       ],
     });
 
@@ -136,7 +136,7 @@ describe('buildShuffledChoiceViews', () => {
     const question = createQuestion({
       id: 'question-ties',
       choices: [
-        {
+        createChoice({
           id: 'choice-c',
           label: 'C',
           textMd: 'Choice C',
@@ -144,8 +144,8 @@ describe('buildShuffledChoiceViews', () => {
           explanationMd: null,
           sortOrder: 1,
           questionId: 'question-ties',
-        },
-        {
+        }),
+        createChoice({
           id: 'choice-a',
           label: 'A',
           textMd: 'Choice A',
@@ -153,8 +153,8 @@ describe('buildShuffledChoiceViews', () => {
           explanationMd: 'Correct',
           sortOrder: 1,
           questionId: 'question-ties',
-        },
-        {
+        }),
+        createChoice({
           id: 'choice-b',
           label: 'B',
           textMd: 'Choice B',
@@ -162,8 +162,8 @@ describe('buildShuffledChoiceViews', () => {
           explanationMd: null,
           sortOrder: 1,
           questionId: 'question-ties',
-        },
-        {
+        }),
+        createChoice({
           id: 'choice-d',
           label: 'D',
           textMd: 'Choice D',
@@ -171,7 +171,7 @@ describe('buildShuffledChoiceViews', () => {
           explanationMd: null,
           sortOrder: 2,
           questionId: 'question-ties',
-        },
+        }),
       ],
     });
     const userId = 'user-1';
@@ -201,26 +201,30 @@ describe('buildShuffledChoiceViews', () => {
   it('throws INTERNAL_ERROR when question has more choices than available labels', () => {
     const question = createQuestion({
       id: 'question-many',
-      choices: [1, 2, 3, 4, 5, 6].map((index) => ({
-        id: `choice-${index}`,
-        label: 'A',
-        textMd: `Choice ${index}`,
-        isCorrect: index === 1,
-        explanationMd: null,
-        sortOrder: index,
-        questionId: 'question-many',
-      })),
+      choices: [1, 2, 3, 4, 5, 6].map((index) =>
+        createChoice({
+          id: `choice-${index}`,
+          label: 'A',
+          textMd: `Choice ${index}`,
+          isCorrect: index === 1,
+          explanationMd: null,
+          sortOrder: index,
+          questionId: 'question-many',
+        }),
+      ),
     });
 
+    expect(() => buildShuffledChoiceViews(question, 'user-1')).toThrow(
+      ApplicationError,
+    );
+
     let thrown: unknown = null;
-    expect(() => {
-      try {
-        buildShuffledChoiceViews(question, 'user-1');
-      } catch (error) {
-        thrown = error;
-        throw error;
-      }
-    }).toThrow(ApplicationError);
+    try {
+      buildShuffledChoiceViews(question, 'user-1');
+    } catch (error) {
+      thrown = error;
+    }
+    expect(thrown).toBeInstanceOf(ApplicationError);
     expect((thrown as ApplicationError).code).toBe('INTERNAL_ERROR');
   });
 });
