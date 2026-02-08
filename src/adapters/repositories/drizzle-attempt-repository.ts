@@ -10,6 +10,7 @@ import type {
 } from '@/src/application/ports/repositories';
 import type { Attempt } from '@/src/domain/entities';
 import type { DrizzleDb } from '../shared/database-types';
+import { isPostgresUniqueViolation } from './postgres-errors';
 
 export class DrizzleAttemptRepository implements AttemptRepository {
   constructor(private readonly db: DrizzleDb) {}
@@ -95,17 +96,28 @@ export class DrizzleAttemptRepository implements AttemptRepository {
     isCorrect: boolean;
     timeSpentSeconds: number;
   }) {
-    const [row] = await this.db
-      .insert(attempts)
-      .values({
-        userId: input.userId,
-        questionId: input.questionId,
-        practiceSessionId: input.practiceSessionId,
-        selectedChoiceId: input.selectedChoiceId,
-        isCorrect: input.isCorrect,
-        timeSpentSeconds: input.timeSpentSeconds,
-      })
-      .returning();
+    let row: (typeof attempts)['$inferSelect'] | undefined;
+    try {
+      [row] = await this.db
+        .insert(attempts)
+        .values({
+          userId: input.userId,
+          questionId: input.questionId,
+          practiceSessionId: input.practiceSessionId,
+          selectedChoiceId: input.selectedChoiceId,
+          isCorrect: input.isCorrect,
+          timeSpentSeconds: input.timeSpentSeconds,
+        })
+        .returning();
+    } catch (error) {
+      if (isPostgresUniqueViolation(error)) {
+        throw new ApplicationError(
+          'CONFLICT',
+          'This question has already been answered in this session',
+        );
+      }
+      throw error;
+    }
 
     if (!row) {
       throw new ApplicationError('INTERNAL_ERROR', 'Failed to insert attempt');

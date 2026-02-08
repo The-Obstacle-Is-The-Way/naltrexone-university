@@ -90,6 +90,7 @@ export default function PracticePage() {
           />
         </div>
       }
+      questionAreaRef={questionFlow.questionAreaRef}
       loadState={questionFlow.loadState}
       question={questionFlow.question}
       selectedChoiceId={questionFlow.selectedChoiceId}

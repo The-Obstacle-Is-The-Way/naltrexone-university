@@ -17,12 +17,6 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 | ID | Title | Status | Priority | Date |
 |----|-------|--------|----------|------|
-| [DEBT-163](debt-163-fakes-file-approaching-split-threshold.md) | Test Fakes File Approaching Split Threshold (1472 Lines) | Open | P2 | 2026-02-07 |
-| [DEBT-165](debt-165-stripe-gateway-barrel-file-inconsistency.md) | Stripe Gateway Modules Bypass Barrel File Pattern | Open | P2 | 2026-02-07 |
-| [DEBT-166](debt-166-practice-view-missing-focus-management-after-error.md) | Practice View Missing Focus Management After Error Recovery | Open | P3 | 2026-02-07 |
-| [DEBT-167](debt-167-idempotency-key-prune-select-delete-race.md) | Idempotency Key Prune Uses Non-Atomic SELECT→DELETE | Open | P3 | 2026-02-07 |
-| [DEBT-168](debt-168-stripe-event-table-missing-check-constraint.md) | Stripe Events Table Missing CHECK Constraint on processedAt/error State | Open | P3 | 2026-02-07 |
-
 **Next Debt ID:** DEBT-169
 
 ## Archived Debt
@@ -31,6 +25,10 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 | ID | Title | Priority | Resolved |
 |----|-------|----------|----------|
+| [DEBT-167](../_archive/debt/debt-167-idempotency-key-prune-select-delete-race.md) | Idempotency Key Prune Uses Non-Atomic SELECT→DELETE | P3 | 2026-02-08 |
+| [DEBT-165](../_archive/debt/debt-165-stripe-gateway-barrel-file-inconsistency.md) | Stripe Gateway Modules Bypass Barrel File Pattern | P2 | 2026-02-08 |
+| [DEBT-166](../_archive/debt/debt-166-practice-view-missing-focus-management-after-error.md) | Practice View Missing Focus Management After Error Recovery | P3 | 2026-02-08 |
+| [DEBT-163](../_archive/debt/debt-163-fakes-file-approaching-split-threshold.md) | Test Fakes File Approaching Split Threshold (1472 Lines) | P2 | 2026-02-08 |
 | [DEBT-162](../_archive/debt/debt-162-stripe-portal-missing-retry-consistency.md) | Stripe Portal Session Creation Has Inconsistent Retry Behavior | P2 | 2026-02-08 |
 | [DEBT-160](../_archive/debt/debt-160-cron-secret-not-required-in-production.md) | CRON_SECRET Not Enforced as Required in Production | P2 | 2026-02-08 |
 | [DEBT-159](../_archive/debt/debt-159-practice-session-review-missing-state-corruption-warning.md) | Practice Session Review Silently Backfills Missing Question States | P2 | 2026-02-08 |
@@ -79,6 +77,7 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 | ID | Title | Priority | Invalidated |
 |----|-------|----------|-------------|
+| [DEBT-168](../_archive/debt/debt-168-stripe-event-table-missing-check-constraint.md) | Stripe Events Table Missing CHECK Constraint (false positive; `markFailed()` intentionally writes `processedAt=NULL, error=NOT NULL` for retry) | P3 | 2026-02-08 |
 | [DEBT-164](../_archive/debt/debt-164-missing-suspense-boundary-practice-session-history.md) | Missing Suspense Boundary for Practice Session History Panel (client-rendered page already non-blocking) | P2 | 2026-02-08 |
 | [DEBT-161](../_archive/debt/debt-161-incomplete-csp-headers.md) | Incomplete CSP Headers (false positive; CSP baseline is owned by Clerk middleware) | P2 | 2026-02-08 |
 | [DEBT-137](../_archive/debt/debt-137-container-type-cycles.md) | Container Type Cycles (madge false positive — type-only imports, not runtime cycles) | P2 | 2026-02-07 |

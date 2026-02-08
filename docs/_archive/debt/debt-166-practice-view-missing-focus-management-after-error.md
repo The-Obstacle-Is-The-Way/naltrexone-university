@@ -1,6 +1,6 @@
 # DEBT-166: Practice View Missing Focus Management After Error Recovery
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P3
 **Date:** 2026-02-07
 

@@ -1,5 +1,7 @@
-import { callStripeWithRetry } from '@/src/adapters/gateways/stripe/stripe-retry';
-import { retrieveAndNormalizeStripeSubscription } from '@/src/adapters/gateways/stripe/stripe-subscription-normalizer';
+import {
+  callStripeWithRetry,
+  retrieveAndNormalizeStripeSubscription,
+} from '@/src/adapters/gateways/stripe';
 import type { StripeClient } from '@/src/adapters/shared/stripe-types';
 import { ApplicationError } from '@/src/application/errors';
 import type { Logger } from '@/src/application/ports/logger';

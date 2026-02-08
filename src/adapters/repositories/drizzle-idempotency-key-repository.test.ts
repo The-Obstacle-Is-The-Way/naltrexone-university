@@ -385,5 +385,61 @@ describe('DrizzleIdempotencyKeyRepository', () => {
       expect(deleteFn).toHaveBeenCalledTimes(1);
       expect(deleteWhere).toHaveBeenCalledTimes(1);
     });
+
+    it('includes expiration filter in delete conditions to prevent race with newly inserted keys', async () => {
+      const cutoff = new Date('2026-02-08T00:00:00.000Z');
+      const selectLimit = vi.fn(async () => [
+        {
+          userId: '11111111-1111-1111-1111-111111111111',
+          action: 'question:submitAnswer',
+          key: 'idem-1',
+          expiresAt: new Date('2026-02-01T00:00:00.000Z'),
+        },
+      ]);
+      const selectOrderBy = vi.fn(() => ({ limit: selectLimit }));
+      const selectWhere = vi.fn(() => ({ orderBy: selectOrderBy }));
+      const selectFrom = vi.fn(() => ({ where: selectWhere }));
+      const select = vi.fn(() => ({ from: selectFrom }));
+
+      const deleteReturning = vi.fn(async () => [{ key: 'idem-1' }]);
+      const deleteWhere = vi.fn(() => ({ returning: deleteReturning }));
+      const deleteFn = vi.fn(() => ({ where: deleteWhere }));
+
+      const db = {
+        select,
+        delete: deleteFn,
+      } as unknown as RepoDb;
+
+      const repo = new DrizzleIdempotencyKeyRepository(db);
+      await repo.pruneExpiredBefore(cutoff, 10);
+
+      // The WHERE clause passed to delete must include the expiresAt < cutoff
+      // filter alongside (userId, action, key) to prevent a race condition
+      // where a non-expired key inserted between SELECT and DELETE would be
+      // incorrectly deleted. We verify the condition's SQL representation
+      // includes the expires_at column reference.
+      const firstCall = deleteWhere.mock.calls[0] as unknown[];
+      const whereArg = firstCall?.[0];
+      expect(whereArg).toBeDefined();
+
+      // Drizzle conditions are deeply nested objects. Walk the entire tree
+      // looking for a column reference named 'expires_at' to verify the
+      // atomic prune guard is present in the DELETE WHERE clause.
+      function containsExpiresAt(obj: unknown, depth = 0): boolean {
+        if (depth > 20 || !obj || typeof obj !== 'object') return false;
+        const record = obj as Record<string, unknown>;
+        if (record.name === 'expires_at') return true;
+        for (const value of Object.values(record)) {
+          if (Array.isArray(value)) {
+            if (value.some((item) => containsExpiresAt(item, depth + 1)))
+              return true;
+          } else if (containsExpiresAt(value, depth + 1)) {
+            return true;
+          }
+        }
+        return false;
+      }
+      expect(containsExpiresAt(whereArg)).toBe(true);
+    });
   });
 });

@@ -8,7 +8,7 @@ import {
 import {
   isValidStripeSubscriptionStatus,
   stripeSubscriptionStatusToSubscriptionStatus,
-} from '@/src/adapters/gateways/stripe/stripe-subscription-status';
+} from '@/src/adapters/gateways/stripe';
 import { isTransientExternalError, retry } from '@/src/adapters/shared/retry';
 import type { AuthGateway } from '@/src/application/ports/gateways';
 import type {

@@ -14,7 +14,7 @@ import {
 import {
   stripeSubscriptionStatusToSubscriptionStatus,
   subscriptionStatusToStripeSubscriptionStatus,
-} from '../gateways/stripe/stripe-subscription-status';
+} from '../gateways/stripe';
 import type { DrizzleDb } from '../shared/database-types';
 import { isPostgresUniqueViolation } from './postgres-errors';
 

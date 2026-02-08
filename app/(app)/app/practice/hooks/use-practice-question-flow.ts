@@ -37,6 +37,7 @@ export type UsePracticeQuestionFlowOutput = {
   bookmarkMessageVersion: number;
   canSubmit: boolean;
   isBookmarked: boolean;
+  questionAreaRef: React.RefObject<HTMLDivElement | null>;
   onTryAgain: () => void;
   onToggleBookmark: () => Promise<void>;
   onSelectChoice: (choiceId: string) => void;
@@ -74,6 +75,8 @@ export function usePracticeQuestionFlow(
     string | null
   >(null);
   const latestQuestionRequestId = useRef(0);
+  const questionAreaRef = useRef<HTMLDivElement | null>(null);
+  const previousLoadStatus = useRef<LoadState['status']>('idle');
   const isMounted = useIsMounted();
 
   const onTryAgain = useMemo(
@@ -120,6 +123,15 @@ export function usePracticeQuestionFlow(
       }
     };
   }, []);
+
+  // DEBT-166: Focus the question area after error recovery
+  useEffect(() => {
+    const wasError = previousLoadStatus.current === 'error';
+    previousLoadStatus.current = loadState.status;
+    if (wasError && loadState.status === 'ready') {
+      questionAreaRef.current?.focus();
+    }
+  }, [loadState.status]);
 
   const canSubmit = useMemo(() => {
     return canSubmitAnswer({
@@ -198,6 +210,7 @@ export function usePracticeQuestionFlow(
     bookmarkMessageVersion,
     canSubmit,
     isBookmarked,
+    questionAreaRef,
     onTryAgain,
     onToggleBookmark,
     onSelectChoice,

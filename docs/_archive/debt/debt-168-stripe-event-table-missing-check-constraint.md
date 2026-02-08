@@ -1,6 +1,6 @@
 # DEBT-168: Stripe Events Table Missing CHECK Constraint on processedAt/error State
 
-**Status:** Open
+**Status:** Invalidated
 **Priority:** P3
 **Date:** 2026-02-07
 
@@ -27,19 +27,17 @@ Additionally, there's no composite index on `(processedAt, error)` for efficient
 - No efficient way to query "events that failed and need reprocessing"
 - Low severity: application code correctly manages state, this is defense-in-depth
 
-## Resolution
+## Why This Is a False Positive
 
-1. Add CHECK constraint: `CHECK (NOT (processed_at IS NULL AND error IS NOT NULL))`
-2. Consider partial index: `CREATE INDEX ON stripe_events (type) WHERE processed_at IS NULL` for efficient event reprocessing queries
+The state `processedAt IS NULL AND error IS NOT NULL` is **intentionally valid** — it represents a failed event eligible for retry:
 
-## Verification
-
-- [ ] Migration adding CHECK constraint
-- [ ] Optional: partial index for unprocessed events
-- [ ] Existing data validated against constraint before migration
+- `drizzle-stripe-event-repository.ts:markFailed()` deliberately writes `{ processedAt: null, error }` so failed events remain in the retry pool
+- `stripe-webhook-controller.ts` checks `processedAt !== null && error === null` for "successfully processed" skip; a failed event (`processedAt: null, error: non-null`) correctly falls through for retry
+- Adding the proposed CHECK constraint would cause `markFailed()` to violate it, breaking retry semantics
 
 ## Related
 
 - `db/schema.ts:167-183`
 - `db/migrations/0006_mushy_ghost_rider.sql`
 - `src/adapters/controllers/stripe-webhook-controller.ts:79`
+- `src/adapters/repositories/drizzle-stripe-event-repository.ts:74`

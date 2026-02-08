@@ -1,6 +1,6 @@
 # DEBT-167: Idempotency Key Prune Uses Non-Atomic SELECT→DELETE
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P3
 **Date:** 2026-02-07
 

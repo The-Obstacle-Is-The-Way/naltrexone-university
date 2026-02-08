@@ -1,6 +1,6 @@
 # BUG-105: Concurrent Answer Submission Can Create Duplicate Attempts
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P1
 **Date:** 2026-02-07
 

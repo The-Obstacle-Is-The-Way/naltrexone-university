@@ -28,6 +28,7 @@ export type PracticeViewProps = {
   bookmarkMessageVersion?: number;
   canSubmit: boolean;
   endSessionLabel?: string;
+  questionAreaRef?: React.RefObject<HTMLDivElement | null>;
   onEndSession?: () => void;
   onTryAgain: () => void;
   onToggleBookmark: () => void;
@@ -99,25 +100,36 @@ export function PracticeView(props: PracticeViewProps) {
         </div>
       </div>
 
-      {props.loadState.status === 'error' ? (
-        <ErrorCard className="p-6">
-          <div>{props.loadState.message}</div>
-          <div className="mt-4 flex flex-wrap items-center gap-3">
-            <Button type="button" variant="outline" onClick={props.onTryAgain}>
-              Try again
-            </Button>
-            <Button asChild variant="outline">
-              <Link href={ROUTES.APP_DASHBOARD}>Return to dashboard</Link>
-            </Button>
-          </div>
-        </ErrorCard>
-      ) : null}
+      <div
+        ref={props.questionAreaRef}
+        tabIndex={-1}
+        className="outline-none"
+        aria-live="polite"
+      >
+        {props.loadState.status === 'error' ? (
+          <ErrorCard className="p-6">
+            <div>{props.loadState.message}</div>
+            <div className="mt-4 flex flex-wrap items-center gap-3">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={props.onTryAgain}
+              >
+                Try again
+              </Button>
+              <Button asChild variant="outline">
+                <Link href={ROUTES.APP_DASHBOARD}>Return to dashboard</Link>
+              </Button>
+            </div>
+          </ErrorCard>
+        ) : null}
 
-      {props.loadState.status === 'loading' ? (
-        <Card className="gap-0 rounded-2xl p-6 text-sm text-muted-foreground shadow-sm">
-          <output aria-live="polite">Loading question…</output>
-        </Card>
-      ) : null}
+        {props.loadState.status === 'loading' ? (
+          <Card className="gap-0 rounded-2xl p-6 text-sm text-muted-foreground shadow-sm">
+            <output>Loading question…</output>
+          </Card>
+        ) : null}
+      </div>
 
       {props.bookmarkStatus === 'error' ? (
         <ErrorCard>Bookmarks unavailable.</ErrorCard>

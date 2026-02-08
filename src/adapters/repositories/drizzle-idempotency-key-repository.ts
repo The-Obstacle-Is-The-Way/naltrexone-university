@@ -184,6 +184,7 @@ export class DrizzleIdempotencyKeyRepository
         eq(idempotencyKeys.userId, row.userId),
         eq(idempotencyKeys.action, row.action),
         eq(idempotencyKeys.key, row.key),
+        lt(idempotencyKeys.expiresAt, cutoff),
       ),
     );
 
