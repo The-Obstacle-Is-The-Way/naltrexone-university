@@ -14,6 +14,8 @@ describe('usePracticeSessionQuestionFlow', () => {
       usePracticeSessionQuestionFlow({
         sessionId: 'session-1',
         isMounted: () => true,
+        getNextQuestionFn: vi.fn(),
+        submitAnswerFn: vi.fn(),
       }),
     );
 

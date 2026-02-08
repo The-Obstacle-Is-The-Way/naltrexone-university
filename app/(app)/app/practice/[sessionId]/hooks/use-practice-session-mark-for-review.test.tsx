@@ -48,17 +48,19 @@ describe('usePracticeSessionMarkForReview', () => {
       }),
     );
 
+    const sessionInfo = {
+      sessionId: 'session-1',
+      mode: 'exam' as const,
+      index: 0,
+      total: 10,
+      isMarkedForReview: false,
+    };
+
     const output = renderHook(() =>
       usePracticeSessionMarkForReview({
         question: createNextQuestion(),
         sessionMode: 'exam',
-        sessionInfo: {
-          sessionId: 'session-1',
-          mode: 'exam',
-          index: 0,
-          total: 10,
-          isMarkedForReview: false,
-        },
+        sessionInfo,
         sessionId: 'session-1',
         applySessionInfo,
         setLoadState,
@@ -75,6 +77,18 @@ describe('usePracticeSessionMarkForReview', () => {
       questionId: 'q_1',
       markedForReview: true,
       idempotencyKey: expect.any(String),
+    });
+
+    const update = applySessionInfo.mock.calls[0]?.[0];
+    if (typeof update !== 'function') {
+      throw new Error(
+        'Expected applySessionInfo to receive an updater function',
+      );
+    }
+
+    expect(update(sessionInfo)).toEqual({
+      ...sessionInfo,
+      isMarkedForReview: true,
     });
     expect(setLoadState).not.toHaveBeenCalledWith(
       expect.objectContaining({ status: 'error' }),

@@ -33,7 +33,11 @@ type UsePracticeSessionMarkForReviewInput = {
   sessionMode: 'tutor' | 'exam' | null;
   sessionInfo: NextQuestion['session'];
   sessionId: string;
-  applySessionInfo: (info: NextQuestion['session']) => void;
+  applySessionInfo: (
+    next:
+      | NextQuestion['session']
+      | ((prev: NextQuestion['session']) => NextQuestion['session']),
+  ) => void;
   setLoadState: (state: LoadState) => void;
   setReview: Dispatch<SetStateAction<GetPracticeSessionReviewOutput | null>>;
   isMounted: () => boolean;
@@ -49,8 +53,6 @@ export function usePracticeSessionMarkForReview(
   const [isMarkingForReview, setIsMarkingForReview] = useState(false);
   const isMarkingRef = useRef(false);
   const markRequestIdempotencyKeyRef = useRef<string | null>(null);
-  const setPracticeSessionQuestionMarkFn =
-    input.setPracticeSessionQuestionMarkFn;
 
   const onToggleMarkForReview = useCallback(async () => {
     if (!input.question) return;
@@ -70,7 +72,7 @@ export function usePracticeSessionMarkForReview(
     const requestIdempotencyKey = markRequestIdempotencyKeyRef.current;
 
     try {
-      res = await setPracticeSessionQuestionMarkFn({
+      res = await input.setPracticeSessionQuestionMarkFn({
         sessionId: input.sessionId,
         questionId: input.question.questionId,
         markedForReview,
@@ -98,9 +100,12 @@ export function usePracticeSessionMarkForReview(
       return;
     }
 
-    input.applySessionInfo({
-      ...input.sessionInfo,
-      isMarkedForReview: res.data.markedForReview,
+    input.applySessionInfo((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        isMarkedForReview: res.data.markedForReview,
+      };
     });
 
     input.setReview((prev) => {
@@ -128,7 +133,7 @@ export function usePracticeSessionMarkForReview(
     input.setLoadState,
     input.setReview,
     input.applySessionInfo,
-    setPracticeSessionQuestionMarkFn,
+    input.setPracticeSessionQuestionMarkFn,
   ]);
 
   return { isMarkingForReview, onToggleMarkForReview };

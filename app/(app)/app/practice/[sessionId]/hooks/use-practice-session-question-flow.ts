@@ -19,16 +19,17 @@ import {
   selectChoiceIfAllowed,
 } from '@/app/(app)/app/practice/practice-page-logic';
 import { runTransitionedAsyncAction } from '@/app/(app)/app/practice/shared/question-flow-actions';
-import {
-  getNextQuestion,
-  submitAnswer,
-} from '@/src/adapters/controllers/question-controller';
+import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import type { NextQuestion } from '@/src/application/use-cases/get-next-question';
 import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
 
 export type UsePracticeSessionQuestionFlowInput = {
   sessionId: string;
   isMounted: () => boolean;
+  getNextQuestionFn: (
+    input: unknown,
+  ) => Promise<ActionResult<NextQuestion | null>>;
+  submitAnswerFn: (input: unknown) => Promise<ActionResult<SubmitAnswerOutput>>;
 };
 
 export type UsePracticeSessionQuestionFlowOutput = {
@@ -40,7 +41,11 @@ export type UsePracticeSessionQuestionFlowOutput = {
   submitResult: SubmitAnswerOutput | null;
   isPending: boolean;
   canSubmit: boolean;
-  applySessionInfo: (info: NextQuestion['session']) => void;
+  applySessionInfo: (
+    next:
+      | NextQuestion['session']
+      | ((prev: NextQuestion['session']) => NextQuestion['session']),
+  ) => void;
   setSessionMode: (mode: 'tutor' | 'exam' | null) => void;
   setLoadState: (state: LoadState) => void;
   resetQuestionState: () => void;
@@ -68,6 +73,11 @@ export function usePracticeSessionQuestionFlow(
     string | null
   >(null);
   const latestQuestionRequestId = useRef(0);
+  const isMountedFnRef = useRef(input.isMounted);
+
+  useEffect(() => {
+    isMountedFnRef.current = input.isMounted;
+  }, [input.isMounted]);
 
   const createIdempotencyKey = useCallback(() => crypto.randomUUID(), []);
 
@@ -84,7 +94,7 @@ export function usePracticeSessionQuestionFlow(
   const loadQuestionConfig = useMemo(
     () => ({
       sessionId: input.sessionId,
-      getNextQuestionFn: getNextQuestion,
+      getNextQuestionFn: input.getNextQuestionFn,
       createIdempotencyKey,
       nowMs: Date.now,
       setLoadState,
@@ -96,11 +106,11 @@ export function usePracticeSessionQuestionFlow(
       setSessionInfo,
       createRequestSequenceId,
       isLatestRequest,
-      isMounted: input.isMounted,
+      isMounted: () => isMountedFnRef.current(),
     }),
     [
       input.sessionId,
-      input.isMounted,
+      input.getNextQuestionFn,
       createIdempotencyKey,
       createRequestSequenceId,
       isLatestRequest,
@@ -124,8 +134,10 @@ export function usePracticeSessionQuestionFlow(
     setSessionMode(sessionInfo.mode);
   }, [sessionInfo?.mode]);
 
-  const applySessionInfo = useCallback((info: NextQuestion['session']) => {
-    setSessionInfo(info);
+  const applySessionInfo = useCallback<
+    UsePracticeSessionQuestionFlowOutput['applySessionInfo']
+  >((next) => {
+    setSessionInfo(next);
   }, []);
 
   const resetQuestionState = useCallback(() => {
@@ -165,11 +177,11 @@ export function usePracticeSessionQuestionFlow(
           selectedChoiceId,
           questionLoadedAtMs: questionLoadedAt,
           submitIdempotencyKey,
-          submitAnswerFn: submitAnswer,
+          submitAnswerFn: input.submitAnswerFn,
           nowMs: Date.now,
           setLoadState,
           setSubmitResult,
-          isMounted: input.isMounted,
+          isMounted: () => isMountedFnRef.current(),
         }),
     });
   }, [
@@ -178,7 +190,7 @@ export function usePracticeSessionQuestionFlow(
     selectedChoiceId,
     input.sessionId,
     submitIdempotencyKey,
-    input.isMounted,
+    input.submitAnswerFn,
   ]);
 
   const onSelectChoice = useCallback(

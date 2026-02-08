@@ -4,6 +4,10 @@ import { maybeAutoAdvanceAfterSubmit } from '@/app/(app)/app/practice/[sessionId
 import { usePracticeQuestionBookmarks } from '@/app/(app)/app/practice/hooks/use-practice-question-bookmarks';
 import { useIsMounted } from '@/lib/use-is-mounted';
 import { setPracticeSessionQuestionMark } from '@/src/adapters/controllers/practice-controller';
+import {
+  getNextQuestion,
+  submitAnswer,
+} from '@/src/adapters/controllers/question-controller';
 import type { PracticeSessionPageViewProps } from '../components/practice-session-page-view';
 import { usePracticeSessionMarkForReview } from './use-practice-session-mark-for-review';
 import { usePracticeSessionReviewStage } from './use-practice-session-review-stage';
@@ -16,6 +20,8 @@ export function usePracticeSessionPageController(
   const questionFlow = usePracticeSessionQuestionFlow({
     sessionId,
     isMounted,
+    getNextQuestionFn: getNextQuestion,
+    submitAnswerFn: submitAnswer,
   });
 
   const bookmarks = usePracticeQuestionBookmarks({
