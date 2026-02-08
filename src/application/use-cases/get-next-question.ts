@@ -64,6 +64,13 @@ export class GetNextQuestionUseCase {
       );
     }
 
+    if (!('filters' in input) || !input.filters) {
+      throw new ApplicationError(
+        'VALIDATION_ERROR',
+        'Either sessionId or filters must be provided',
+      );
+    }
+
     return this.executeForFilters(input.userId, input.filters);
   }
 
