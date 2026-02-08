@@ -1,8 +1,10 @@
 import type { StripePriceIds } from '@/src/adapters/config/stripe-prices';
-import { createStripeCheckoutSession } from '@/src/adapters/gateways/stripe/stripe-checkout-sessions';
-import { createStripeCustomer } from '@/src/adapters/gateways/stripe/stripe-customers';
-import { createStripePortalSession } from '@/src/adapters/gateways/stripe/stripe-portal';
-import { processStripeWebhookEvent } from '@/src/adapters/gateways/stripe/stripe-webhook-processor';
+import {
+  createStripeCheckoutSession,
+  createStripeCustomer,
+  createStripePortalSession,
+  processStripeWebhookEvent,
+} from '@/src/adapters/gateways/stripe';
 import type { StripeClient } from '@/src/adapters/shared/stripe-types';
 import type {
   CheckoutSessionInput,

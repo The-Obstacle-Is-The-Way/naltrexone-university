@@ -29,13 +29,14 @@ export async function createStripePortalSession({
   const idempotencyKey = options?.idempotencyKey;
   const requestOptions = idempotencyKey ? { idempotencyKey } : undefined;
 
-  const session = requestOptions
-    ? await callStripeWithRetry({
-        operation: 'billingPortal.sessions.create',
-        fn: () => stripe.billingPortal.sessions.create(params, requestOptions),
-        logger,
-      })
-    : await stripe.billingPortal.sessions.create(params);
+  const session = await callStripeWithRetry({
+    operation: 'billingPortal.sessions.create',
+    fn: () =>
+      requestOptions
+        ? stripe.billingPortal.sessions.create(params, requestOptions)
+        : stripe.billingPortal.sessions.create(params),
+    logger,
+  });
 
   if (!session.url) {
     throw new ApplicationError(

@@ -35,6 +35,8 @@ export type ChoiceExplanation = {
   explanationMd: string | null;
 };
 
+export const SUBMIT_ANSWER_MAX_TIME_SPENT_SECONDS = 86_400;
+
 export class SubmitAnswerUseCase {
   constructor(
     private readonly questions: QuestionRepository,
@@ -87,7 +89,10 @@ export class SubmitAnswerUseCase {
     const timeSpentSeconds =
       typeof rawTimeSpentSeconds === 'number' &&
       Number.isFinite(rawTimeSpentSeconds)
-        ? Math.max(0, rawTimeSpentSeconds)
+        ? Math.min(
+            SUBMIT_ANSWER_MAX_TIME_SPENT_SECONDS,
+            Math.max(0, rawTimeSpentSeconds),
+          )
         : 0;
 
     const attempt = await this.attempts.insert({

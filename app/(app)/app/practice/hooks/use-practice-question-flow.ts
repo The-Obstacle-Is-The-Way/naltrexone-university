@@ -37,12 +37,34 @@ export type UsePracticeQuestionFlowOutput = {
   bookmarkMessageVersion: number;
   canSubmit: boolean;
   isBookmarked: boolean;
+  questionAreaRef: React.RefObject<HTMLDivElement | null>;
   onTryAgain: () => void;
   onToggleBookmark: () => Promise<void>;
   onSelectChoice: (choiceId: string) => void;
   onSubmit: () => Promise<void>;
   onNextQuestion: () => void;
 };
+
+export function getFocusRecoveryTransition(input: {
+  status: LoadState['status'];
+  pendingFocus: boolean;
+}): {
+  pendingFocus: boolean;
+  shouldFocus: boolean;
+} {
+  if (input.status === 'error') {
+    return { pendingFocus: true, shouldFocus: false };
+  }
+
+  if (input.status === 'ready' && input.pendingFocus) {
+    return { pendingFocus: false, shouldFocus: true };
+  }
+
+  return {
+    pendingFocus: input.pendingFocus,
+    shouldFocus: false,
+  };
+}
 
 export function usePracticeQuestionFlow(
   input: UsePracticeQuestionFlowInput,
@@ -74,6 +96,8 @@ export function usePracticeQuestionFlow(
     string | null
   >(null);
   const latestQuestionRequestId = useRef(0);
+  const questionAreaRef = useRef<HTMLDivElement | null>(null);
+  const pendingFocusAfterError = useRef(false);
   const isMounted = useIsMounted();
 
   const onTryAgain = useMemo(
@@ -120,6 +144,19 @@ export function usePracticeQuestionFlow(
       }
     };
   }, []);
+
+  // DEBT-166: Focus the question area after recovering from an error.
+  // Handles both direct error->ready and error->loading->ready transitions.
+  useEffect(() => {
+    const transition = getFocusRecoveryTransition({
+      status: loadState.status,
+      pendingFocus: pendingFocusAfterError.current,
+    });
+    pendingFocusAfterError.current = transition.pendingFocus;
+    if (transition.shouldFocus) {
+      questionAreaRef.current?.focus();
+    }
+  }, [loadState.status]);
 
   const canSubmit = useMemo(() => {
     return canSubmitAnswer({
@@ -198,6 +235,7 @@ export function usePracticeQuestionFlow(
     bookmarkMessageVersion,
     canSubmit,
     isBookmarked,
+    questionAreaRef,
     onTryAgain,
     onToggleBookmark,
     onSelectChoice,

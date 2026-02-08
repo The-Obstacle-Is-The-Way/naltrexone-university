@@ -41,4 +41,30 @@ describe('createStripeCustomer', () => {
     });
     expect(customers.create).not.toHaveBeenCalled();
   });
+
+  it('throws VALIDATION_ERROR when userId contains unsupported search characters', async () => {
+    const customers = {
+      create: vi.fn(async () => ({ id: 'cus_new' })),
+      search: vi.fn(async () => ({ data: [] })),
+    };
+
+    const stripe = { customers } as unknown as Parameters<
+      typeof createStripeCustomer
+    >[0]['stripe'];
+
+    await expect(
+      createStripeCustomer({
+        stripe,
+        input: {
+          userId: "user_'1",
+          clerkUserId: 'clerk_1',
+          email: 'user@example.com',
+        },
+        logger: new FakeLogger(),
+      }),
+    ).rejects.toMatchObject({ code: 'VALIDATION_ERROR' });
+
+    expect(customers.search).not.toHaveBeenCalled();
+    expect(customers.create).not.toHaveBeenCalled();
+  });
 });

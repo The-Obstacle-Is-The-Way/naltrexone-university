@@ -1,6 +1,6 @@
 // db/schema.ts
 
-import { desc, relations } from 'drizzle-orm';
+import { desc, relations, sql } from 'drizzle-orm';
 import {
   boolean,
   index,
@@ -337,6 +337,8 @@ export const practiceSessions = pgTable(
 );
 
 // attempts
+export const ATTEMPTS_SESSION_QUESTION_UQ = 'attempts_session_question_uq';
+
 export const attempts = pgTable(
   'attempts',
   {
@@ -384,6 +386,11 @@ export const attempts = pgTable(
       desc(t.answeredAt),
     ),
     questionIdIdx: index('attempts_question_id_idx').on(t.questionId),
+    // BUG-105: Prevent duplicate attempts for the same question within a session.
+    // Partial unique index — only enforced when practice_session_id IS NOT NULL.
+    sessionQuestionUq: uniqueIndex(ATTEMPTS_SESSION_QUESTION_UQ)
+      .on(t.practiceSessionId, t.questionId)
+      .where(sql`practice_session_id IS NOT NULL`),
   }),
 );
 

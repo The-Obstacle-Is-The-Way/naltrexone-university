@@ -85,7 +85,19 @@ export class GetPracticeSessionReviewUseCase {
       const questionId = session.questionIds[i];
       if (!questionId) continue;
 
-      const state = stateByQuestionId.get(questionId) ?? {
+      const existingState = stateByQuestionId.get(questionId);
+      if (!existingState) {
+        this.logger.warn(
+          {
+            sessionId: session.id,
+            userId: input.userId,
+            questionId,
+          },
+          'Practice session review missing question state; defaulting to unanswered',
+        );
+      }
+
+      const state = existingState ?? {
         questionId,
         markedForReview: false,
         latestSelectedChoiceId: null,

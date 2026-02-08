@@ -171,6 +171,35 @@ describe('SubmitAnswerUseCase', () => {
     expect(attempts.getAll()[0]?.timeSpentSeconds).toBe(42);
   });
 
+  it('caps timeSpentSeconds at 86_400 seconds (24h)', async () => {
+    const userId = 'user-1';
+
+    const questionId = 'q1';
+    const question = createQuestion({
+      id: questionId,
+      status: 'published',
+      choices: [
+        createChoice({ id: 'c1', questionId, label: 'A', isCorrect: true }),
+      ],
+    });
+
+    const attempts = new FakeAttemptRepository();
+    const useCase = new SubmitAnswerUseCase(
+      new FakeQuestionRepository([question]),
+      attempts,
+      new FakePracticeSessionRepository(),
+    );
+
+    await useCase.execute({
+      userId,
+      questionId,
+      choiceId: 'c1',
+      timeSpentSeconds: 999_999,
+    });
+
+    expect(attempts.getAll()[0]?.timeSpentSeconds).toBe(86_400);
+  });
+
   it('clamps negative timeSpentSeconds to 0', async () => {
     const userId = 'user-1';
 
@@ -670,6 +699,63 @@ describe('SubmitAnswerUseCase', () => {
     );
 
     expect(attempts.getAll()).toHaveLength(0);
+  });
+
+  it('throws CONFLICT when the same question is submitted twice in the same session', async () => {
+    const userId = 'user-1';
+    const sessionId = 'session-1';
+    const questionId = 'q1';
+
+    const question = createQuestion({
+      id: questionId,
+      status: 'published',
+      choices: [
+        createChoice({ id: 'c1', questionId, label: 'A', isCorrect: false }),
+        createChoice({ id: 'c2', questionId, label: 'B', isCorrect: true }),
+      ],
+    });
+
+    const session = createPracticeSession({
+      id: sessionId,
+      userId,
+      mode: 'tutor',
+      endedAt: null,
+      questionIds: [questionId],
+    });
+
+    const attempts = new FakeAttemptRepository();
+    const sessions = new FakePracticeSessionRepository([session]);
+    const useCase = new SubmitAnswerUseCase(
+      new FakeQuestionRepository([question]),
+      attempts,
+      sessions,
+    );
+
+    // First submission succeeds
+    await useCase.execute({
+      userId,
+      questionId,
+      choiceId: 'c2',
+      sessionId,
+    });
+
+    // Second submission to the same question in the same session should fail
+    await expect(
+      useCase.execute({
+        userId,
+        questionId,
+        choiceId: 'c1',
+        sessionId,
+      }),
+    ).rejects.toEqual(
+      new ApplicationError(
+        'CONFLICT',
+        'This question has already been answered in this session',
+      ),
+    );
+
+    // Only one attempt should exist
+    expect(attempts.getAll()).toHaveLength(1);
   });
 
   it('throws NOT_FOUND when session exists but question is not part of the session', async () => {

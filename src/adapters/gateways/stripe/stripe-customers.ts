@@ -11,6 +11,17 @@ import type {
 import type { Logger } from '@/src/application/ports/logger';
 import { callStripeWithRetry } from './stripe-retry';
 
+const SAFE_STRIPE_SEARCH_METADATA_VALUE = /^[A-Za-z0-9_-]+$/;
+
+function assertSafeStripeSearchMetadataValue(value: string): void {
+  if (!SAFE_STRIPE_SEARCH_METADATA_VALUE.test(value)) {
+    throw new ApplicationError(
+      'VALIDATION_ERROR',
+      'Invalid user id format for Stripe customer search',
+    );
+  }
+}
+
 export async function createStripeCustomer({
   stripe,
   input,
@@ -32,6 +43,7 @@ export async function createStripeCustomer({
 
   const customersSearch = stripe.customers.search?.bind(stripe.customers);
   if (customersSearch) {
+    assertSafeStripeSearchMetadataValue(input.userId);
     const query = `metadata['user_id']:'${input.userId}'`;
     const existing = await callStripeWithRetry({
       operation: 'customers.search',

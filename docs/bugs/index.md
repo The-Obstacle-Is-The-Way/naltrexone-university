@@ -1,7 +1,7 @@
 # Bug Reports
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-02-07
+**Last Updated:** 2026-02-08
 
 ---
 
@@ -17,14 +17,17 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 | ID | Title | Status | Priority | Date |
 |----|-------|--------|----------|------|
-| None | No active bugs | - | - | - |
-
-**Next Bug ID:** BUG-105
+**Next Bug ID:** BUG-110
 
 ## Recently Triaged
 
 | ID | Title | Status | Resolution |
 |----|-------|--------|------------|
+| [BUG-105](../_archive/bugs/bug-105-concurrent-answer-submission-race-condition.md) | Concurrent Answer Submission Can Create Duplicate Attempts | Resolved | Migration now deduplicates historical `(practice_session_id, question_id)` collisions before creating partial unique index; repository/fake both map duplicate submissions to `CONFLICT` |
+| [BUG-109](../_archive/bugs/bug-109-cron-route-limit-mismatch.md) | Cron Route MAX_LIMIT (1000) Exceeds Reconciliation MAX_LIMIT (500) | Resolved | Route and job now share `RECONCILE_STRIPE_SUBSCRIPTIONS_MAX_LIMIT` with route-level regression coverage |
+| [BUG-108](../_archive/bugs/bug-108-submit-answer-unbounded-time-spent-seconds.md) | submitAnswer Allows Unbounded timeSpentSeconds at Use-Case Layer | Resolved | Use case now enforces 24-hour max cap and controller/shared limit references remain aligned |
+| [BUG-107](../_archive/bugs/bug-107-hardcoded-route-incomplete-session-card.md) | Hardcoded Route Path in Incomplete Session Card | Resolved | Replaced hardcoded path with `toPracticeSessionRoute(sessionId)` |
+| [BUG-106](../_archive/bugs/bug-106-stripe-customer-search-query-interpolation.md) | Stripe Customer Search Query Uses String Interpolation | Resolved | Added defensive metadata-value validation before Stripe search query construction |
 | [BUG-104](../_archive/bugs/bug-104-double-pruning-webhook-and-hot-paths.md) | Double Pruning — Webhook Controller and Hot Paths Both Prune | Resolved | Removed redundant idempotency-key and rate-limit pruning from webhook controller; hot paths are the sole owners |
 | [BUG-103](../_archive/bugs/bug-103-idempotency-key-pruning-never-wired.md) | Idempotency Key Pruning Never Wired to Production | Resolved | Added hot-path pruning in `withIdempotency`; webhook-side duplicate pruning was later removed in BUG-104 |
 | [BUG-102](../_archive/bugs/bug-102-rate-limits-table-unbounded-growth.md) | Rate Limits Table Unbounded Growth | Resolved | Added `RateLimiter.pruneExpiredWindows` + Drizzle/Fake implementations and opportunistic pruning from `DrizzleRateLimiter.limit()` |
@@ -55,15 +58,20 @@ Bug reports document issues discovered in the codebase along with their root cau
 | [BUG-070](../_archive/bugs/bug-070-e2e-test-user-checkout-fails.md) | E2E Test User Checkout Failed (Stripe `this` Binding Bug) | Resolved | Bind `stripe.customers.search` to preserve `this` |
 | [BUG-069](../_archive/bugs/bug-069-stripe-checkout-fails-localhost.md) | Stripe Checkout Fails for New Users (Lost `this` Binding) | Resolved | Bind `stripe.customers.search` to preserve `this` |
 
-## Foundation Audit
+## Foundation Audits
 
-A comprehensive vertical/horizontal trace of all critical paths was conducted on 2026-02-02.
-See: [Foundation Audit Report](foundation-audit-report.md)
+- **2026-02-02:** [Foundation Audit Report #1](foundation-audit-report.md) — Vertical/horizontal trace of all critical paths
+- **2026-02-07:** [Foundation Audit Report #2](foundation-audit-report-2.md) — Six-axis deep audit (billing, practice, auth, UI, DB, code quality)
 
 ## Archived Bugs
 
 | ID | Title | Priority | Resolved |
 |----|-------|----------|----------|
+| [BUG-105](../_archive/bugs/bug-105-concurrent-answer-submission-race-condition.md) | Concurrent Answer Submission Can Create Duplicate Attempts | P1 | 2026-02-08 |
+| [BUG-109](../_archive/bugs/bug-109-cron-route-limit-mismatch.md) | Cron Route MAX_LIMIT (1000) Exceeds Reconciliation MAX_LIMIT (500) | P2 | 2026-02-08 |
+| [BUG-108](../_archive/bugs/bug-108-submit-answer-unbounded-time-spent-seconds.md) | submitAnswer Allows Unbounded timeSpentSeconds at Use-Case Layer | P2 | 2026-02-08 |
+| [BUG-107](../_archive/bugs/bug-107-hardcoded-route-incomplete-session-card.md) | Hardcoded Route Path in Incomplete Session Card | P2 | 2026-02-08 |
+| [BUG-106](../_archive/bugs/bug-106-stripe-customer-search-query-interpolation.md) | Stripe Customer Search Query Uses String Interpolation | P1 | 2026-02-08 |
 | [BUG-104](../_archive/bugs/bug-104-double-pruning-webhook-and-hot-paths.md) | Double Pruning — Webhook Controller and Hot Paths Both Prune | P2 | 2026-02-07 |
 | [BUG-103](../_archive/bugs/bug-103-idempotency-key-pruning-never-wired.md) | Idempotency Key Pruning Never Wired to Production | P2 | 2026-02-07 |
 | [BUG-102](../_archive/bugs/bug-102-rate-limits-table-unbounded-growth.md) | Rate Limits Table Unbounded Growth | P2 | 2026-02-07 |

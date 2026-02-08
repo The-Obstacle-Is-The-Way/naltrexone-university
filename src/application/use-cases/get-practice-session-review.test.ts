@@ -174,7 +174,16 @@ describe('GetPracticeSessionReviewUseCase', () => {
       },
     );
     expect(questions.findPublishedByIdsCalls).toEqual([['q1', 'q2']]);
-    expect(logger.warnCalls).toEqual([]);
+    expect(logger.warnCalls).toEqual([
+      {
+        context: {
+          sessionId,
+          userId,
+          questionId: 'q2',
+        },
+        msg: 'Practice session review missing question state; defaulting to unanswered',
+      },
+    ]);
   });
 
   it('returns unavailable rows when a referenced question is missing and logs warning', async () => {

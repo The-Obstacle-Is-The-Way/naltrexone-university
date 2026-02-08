@@ -1,5 +1,7 @@
-import { callStripeWithRetry } from '@/src/adapters/gateways/stripe/stripe-retry';
-import { retrieveAndNormalizeStripeSubscription } from '@/src/adapters/gateways/stripe/stripe-subscription-normalizer';
+import {
+  callStripeWithRetry,
+  retrieveAndNormalizeStripeSubscription,
+} from '@/src/adapters/gateways/stripe';
 import type { StripeClient } from '@/src/adapters/shared/stripe-types';
 import { ApplicationError } from '@/src/application/errors';
 import type { Logger } from '@/src/application/ports/logger';
@@ -43,7 +45,7 @@ export type ReconcileStripeSubscriptionsDeps = {
 };
 
 const DEFAULT_LIMIT = 100;
-const MAX_LIMIT = 500;
+export const RECONCILE_STRIPE_SUBSCRIPTIONS_MAX_LIMIT = 500;
 const SUBSCRIPTION_LIST_LIMIT = 100;
 const BLOCKING_STATUSES = new Set([
   'active',
@@ -74,7 +76,7 @@ export async function reconcileStripeSubscriptions(
   deps: ReconcileStripeSubscriptionsDeps,
 ): Promise<ReconcileStripeSubscriptionsOutput> {
   const safeLimit = Math.min(
-    MAX_LIMIT,
+    RECONCILE_STRIPE_SUBSCRIPTIONS_MAX_LIMIT,
     Math.max(1, toSafeInt(input.limit, DEFAULT_LIMIT)),
   );
   const safeOffset = Math.max(0, toSafeInt(input.offset, 0));

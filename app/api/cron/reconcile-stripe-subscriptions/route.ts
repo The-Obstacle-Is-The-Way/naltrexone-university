@@ -1,12 +1,13 @@
 import { createHash, timingSafeEqual } from 'node:crypto';
 import { NextResponse } from 'next/server';
 import { createContainer } from '@/lib/container';
-import { reconcileStripeSubscriptions } from '@/src/adapters/jobs/reconcile-stripe-subscriptions';
+import {
+  RECONCILE_STRIPE_SUBSCRIPTIONS_MAX_LIMIT,
+  reconcileStripeSubscriptions,
+} from '@/src/adapters/jobs/reconcile-stripe-subscriptions';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
-
-const MAX_LIMIT = 1000;
 
 function getAuthorizationToken(req: Request): string | null {
   const header = req.headers.get('authorization');
@@ -62,7 +63,7 @@ export async function POST(req: Request) {
   const url = new URL(req.url);
   const limit = Math.min(
     parseNonNegativeInt(url.searchParams.get('limit'), 100),
-    MAX_LIMIT,
+    RECONCILE_STRIPE_SUBSCRIPTIONS_MAX_LIMIT,
   );
   const offset = parseNonNegativeInt(url.searchParams.get('offset'), 0);
   const dryRun = parseBoolean(url.searchParams.get('dryRun'), true);

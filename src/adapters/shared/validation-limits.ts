@@ -1,3 +1,5 @@
+import { SUBMIT_ANSWER_MAX_TIME_SPENT_SECONDS } from '@/src/application/use-cases/submit-answer';
+
 /**
  * Shared validation limits used at adapter/controller boundaries.
  *
@@ -11,7 +13,7 @@
 export const MAX_PAGINATION_LIMIT = 100;
 
 /** Max time allowed for a single question attempt (seconds). */
-export const MAX_TIME_SPENT_SECONDS = 86_400; // 24 hours
+export const MAX_TIME_SPENT_SECONDS = SUBMIT_ANSWER_MAX_TIME_SPENT_SECONDS;
 
 /**
  * Practice session parameter limits.
