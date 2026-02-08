@@ -55,4 +55,69 @@ describe('enrichWithQuestion', () => {
       },
     ]);
   });
+
+  it('returns an empty array when rows are empty', () => {
+    const logger = new FakeLogger();
+    const rows: Array<{ questionId: string; value: number }> = [];
+
+    const result = enrichWithQuestion({
+      rows,
+      getQuestionId: (row) => row.questionId,
+      questionsById: new Map(),
+      available: (row, question) => ({
+        questionId: row.questionId,
+        stemMd: question.stemMd,
+      }),
+      unavailable: (row) => ({
+        questionId: row.questionId,
+        stemMd: null as string | null,
+      }),
+      logger,
+      missingQuestionMessage: 'Missing question',
+    });
+
+    expect(result).toEqual([]);
+    expect(logger.warnCalls).toEqual([]);
+  });
+
+  it('handles mixed found and missing questions in order', () => {
+    const logger = new FakeLogger();
+    const question1 = createQuestion({ id: 'q-1', stemMd: 'Stem 1' });
+    const question3 = createQuestion({ id: 'q-3', stemMd: 'Stem 3' });
+
+    const result = enrichWithQuestion({
+      rows: [
+        { questionId: 'q-1', rank: 1 },
+        { questionId: 'q-2', rank: 2 },
+        { questionId: 'q-3', rank: 3 },
+      ],
+      getQuestionId: (row) => row.questionId,
+      questionsById: new Map([
+        [question1.id, question1],
+        [question3.id, question3],
+      ]),
+      available: (row, question) => ({
+        questionId: row.questionId,
+        stemMd: question.stemMd,
+      }),
+      unavailable: (row) => ({
+        questionId: row.questionId,
+        stemMd: null as string | null,
+      }),
+      logger,
+      missingQuestionMessage: 'Missing question',
+    });
+
+    expect(result).toEqual([
+      { questionId: 'q-1', stemMd: 'Stem 1' },
+      { questionId: 'q-2', stemMd: null },
+      { questionId: 'q-3', stemMd: 'Stem 3' },
+    ]);
+    expect(logger.warnCalls).toEqual([
+      {
+        context: { questionId: 'q-2' },
+        msg: 'Missing question',
+      },
+    ]);
+  });
 });

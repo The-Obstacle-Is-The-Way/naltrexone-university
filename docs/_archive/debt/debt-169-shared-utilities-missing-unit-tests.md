@@ -1,8 +1,9 @@
 # DEBT-169: Shared Application Utilities Missing Unit Tests
 
-**Status:** Open
-**Priority:** P1
+**Status:** Resolved
+**Priority:** P2
 **Date:** 2026-02-08
+**Resolved:** 2026-02-08
 
 ---
 
@@ -41,30 +42,25 @@ Two shared utility modules in `src/application/shared/` have zero unit test cove
 
 ## Resolution
 
-Create colocated test files:
+Expanded and hardened the existing shared utility test suites:
 
 1. **`src/application/shared/shuffled-choice-views.test.ts`**
-   - Test deterministic output for same `(userId, questionId)`
-   - Test different output for different users/questions
-   - Test stable pre-shuffle sort (choices with same `sortOrder` use `id` tiebreaker)
-   - Test label assignment (`A`, `B`, `C`, `D`)
-   - Test overflow: question with >26 choices throws `INTERNAL_ERROR`
-   - Use domain test factories: `createQuestion()`, `createChoice()`
+   - Verifies deterministic output for same `(userId, questionId)`
+   - Verifies seed changes produce different orderings (different users)
+   - Verifies stable pre-shuffle sort with `sortOrder` then `id` tiebreaker
+   - Verifies output shape/labels and INTERNAL_ERROR overflow guard typing
 
 2. **`src/application/shared/enrich-with-question.test.ts`**
-   - Test all-found path
-   - Test missing-question path (calls `unavailable`, logs warning)
-   - Test empty input
-   - Test mixed found/missing
-   - Use `FakeLogger` from test helpers
+   - Covers all-found, all-missing, empty-input, and mixed found/missing paths
+   - Verifies warning logger calls with correct question IDs for missing rows
 
 ## Verification
 
-- [ ] `shuffled-choice-views.test.ts` created with full coverage
-- [ ] `enrich-with-question.test.ts` created with full coverage
-- [ ] All edge cases from the lists above are tested
-- [ ] `pnpm test --run` passes
-- [ ] `pnpm typecheck` passes
+- [x] `shuffled-choice-views.test.ts` covers deterministic, seed variance, tiebreak, and overflow paths
+- [x] `enrich-with-question.test.ts` covers all-found, missing, empty, and mixed paths
+- [x] Logger warning behavior is verified for missing-question cases
+- [x] `pnpm test --run` passes
+- [x] `pnpm typecheck` passes
 
 ## Related
 
