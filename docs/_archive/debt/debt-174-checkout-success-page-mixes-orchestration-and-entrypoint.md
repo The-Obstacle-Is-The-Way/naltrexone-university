@@ -1,8 +1,9 @@
 # DEBT-174: Checkout Success Page Mixes Orchestration and Route Entrypoint
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P2
 **Date:** 2026-02-08
+**Resolved:** 2026-02-08
 
 ---
 
@@ -35,10 +36,11 @@ Extract sync orchestration into a dedicated module and keep the route thin:
 
 ## Verification
 
-- [ ] Route file becomes a thin composition/entrypoint
-- [ ] Extracted module has focused unit coverage
-- [ ] Existing checkout success tests continue to pass
-- [ ] `pnpm typecheck && pnpm lint && pnpm test --run` passes
+- [x] Route file is now a thin entrypoint (`app/(marketing)/checkout/success/page.tsx`)
+- [x] Orchestration logic extracted to `app/(marketing)/checkout/success/checkout-success-sync.tsx`
+- [x] Extracted module has focused unit coverage (`checkout-success-sync.test.ts`)
+- [x] Existing checkout success tests continue to pass (`page.test.ts`)
+- [x] `pnpm typecheck && pnpm lint && pnpm test --run` passes
 
 ## Related
 
