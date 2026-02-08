@@ -29,6 +29,7 @@ describe('usePracticeQuestionFlow', () => {
     expect(output.bookmarkMessageVersion).toBe(0);
     expect(output.canSubmit).toBe(false);
     expect(output.isBookmarked).toBe(false);
+    expect(output.questionAreaRef).toBeDefined();
     expect(typeof output.onTryAgain).toBe('function');
     expect(typeof output.onToggleBookmark).toBe('function');
     expect(typeof output.onSelectChoice).toBe('function');

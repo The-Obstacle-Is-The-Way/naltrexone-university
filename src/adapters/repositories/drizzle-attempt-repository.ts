@@ -1,5 +1,9 @@
 import { and, desc, eq, gte, inArray, max, sql } from 'drizzle-orm';
-import { attempts, practiceSessions } from '@/db/schema';
+import {
+  ATTEMPTS_SESSION_QUESTION_UQ,
+  attempts,
+  practiceSessions,
+} from '@/db/schema';
 import { ApplicationError } from '@/src/application/errors';
 import type {
   AttemptMostRecentAnsweredAt,
@@ -115,7 +119,7 @@ export class DrizzleAttemptRepository implements AttemptRepository {
     } catch (error) {
       if (
         isPostgresUniqueViolation(error) &&
-        getPostgresConstraintName(error) === 'attempts_session_question_uq'
+        getPostgresConstraintName(error) === ATTEMPTS_SESSION_QUESTION_UQ
       ) {
         throw new ApplicationError(
           'CONFLICT',

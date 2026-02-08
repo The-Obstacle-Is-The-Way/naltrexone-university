@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
+import { ATTEMPTS_SESSION_QUESTION_UQ } from '@/db/schema';
 import { ApplicationError } from '@/src/application/errors';
 import { DrizzleAttemptRepository } from './drizzle-attempt-repository';
 
@@ -259,7 +260,7 @@ describe('DrizzleAttemptRepository', () => {
       const db = createDbMock();
       db._mocks.insertReturning.mockRejectedValue({
         code: '23505',
-        constraint: 'attempts_session_question_uq',
+        constraint: ATTEMPTS_SESSION_QUESTION_UQ,
       });
 
       const repo = new DrizzleAttemptRepository(db as unknown as RepoDb);
