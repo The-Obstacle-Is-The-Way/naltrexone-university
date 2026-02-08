@@ -5,6 +5,8 @@ export type SessionStats = {
   correct: number;
 };
 
+const MS_PER_SECOND = 1000;
+
 /**
  * Compute answered/correct counts from mutable per-question session state (pure function).
  */
@@ -33,7 +35,7 @@ export function computeSessionDurationSeconds(
   const endedAtMs = endedAt.getTime();
   if (!Number.isFinite(startedAtMs) || !Number.isFinite(endedAtMs)) return 0;
 
-  return Math.max(0, Math.floor((endedAtMs - startedAtMs) / 1000));
+  return Math.max(0, Math.floor((endedAtMs - startedAtMs) / MS_PER_SECOND));
 }
 
 export function createDefaultQuestionState(

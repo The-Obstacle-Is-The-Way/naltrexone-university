@@ -15,16 +15,17 @@ import {
   submitAnswerForQuestion,
 } from '@/app/(app)/app/practice/practice-page-logic';
 import { runTransitionedAsyncAction } from '@/app/(app)/app/practice/shared/question-flow-actions';
-import {
-  getNextQuestion,
-  submitAnswer,
-} from '@/src/adapters/controllers/question-controller';
+import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import type { NextQuestion } from '@/src/application/use-cases/get-next-question';
 import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
 
 export type UsePracticeQuestionAnswerFlowInput = {
   filters: PracticeFilters;
   isMounted: () => boolean;
+  getNextQuestionFn: (
+    input: unknown,
+  ) => Promise<ActionResult<NextQuestion | null>>;
+  submitAnswerFn: (input: unknown) => Promise<ActionResult<SubmitAnswerOutput>>;
 };
 
 export type UsePracticeQuestionAnswerFlowOutput = {
@@ -84,7 +85,7 @@ export function usePracticeQuestionAnswerFlow(
     () =>
       createLoadNextQuestionAction({
         startTransition,
-        getNextQuestionFn: getNextQuestion,
+        getNextQuestionFn: input.getNextQuestionFn,
         filters: input.filters,
         createIdempotencyKey: () => crypto.randomUUID(),
         nowMs: Date.now,
@@ -102,7 +103,7 @@ export function usePracticeQuestionAnswerFlow(
           requestId === latestQuestionRequestId.current,
         isMounted: input.isMounted,
       }),
-    [input.filters, input.isMounted],
+    [input.filters, input.isMounted, input.getNextQuestionFn],
   );
 
   useEffect(onTryAgain, [onTryAgain]);
@@ -138,7 +139,7 @@ export function usePracticeQuestionAnswerFlow(
           selectedChoiceId,
           questionLoadedAtMs: questionLoadedAt,
           submitIdempotencyKey,
-          submitAnswerFn: submitAnswer,
+          submitAnswerFn: input.submitAnswerFn,
           nowMs: Date.now,
           setLoadState,
           setSubmitResult,
@@ -151,6 +152,7 @@ export function usePracticeQuestionAnswerFlow(
     selectedChoiceId,
     submitIdempotencyKey,
     input.isMounted,
+    input.submitAnswerFn,
   ]);
 
   const onSelectChoice = useMemo(

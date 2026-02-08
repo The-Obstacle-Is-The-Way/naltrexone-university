@@ -71,7 +71,10 @@ export async function runLoadQuestionFlow<TQuestion>(input: {
       message: getActionResultErrorMessage(res),
     });
     input.setQuestion(null);
+    input.setSelectedChoiceId(null);
+    input.setSubmitResult(null);
     input.setSubmitIdempotencyKey(null);
+    input.setQuestionLoadedAt(null);
     input.onLoaded?.(null);
     return;
   }

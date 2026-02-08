@@ -136,6 +136,7 @@ export class SubmitAnswerUseCase {
           this.logger.error(
             {
               attemptId: attempt.id,
+              sessionError: error,
               rollbackError,
             },
             'Failed to roll back orphaned attempt after session update failure',

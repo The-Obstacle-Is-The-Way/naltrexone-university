@@ -2,6 +2,7 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
 import { ROUTES } from '@/lib/routes';
+import { createNextQuestion } from '@/src/application/test-helpers/create-next-question';
 
 vi.mock('next/link', () => ({
   default: (props: Record<string, unknown>) => <a {...props} />,
@@ -35,26 +36,22 @@ describe('PracticeView', () => {
 
   it('shows submit-pending copy without rendering question-loading text', async () => {
     const { PracticeView } = await import('./practice-view');
+    const question = createNextQuestion({
+      questionId: 'question-1',
+      slug: 'question-1',
+      stemMd: 'Stem',
+      difficulty: 'easy',
+    });
+    const [choice] = question.choices;
+    if (!choice) {
+      throw new Error('Expected question to have at least one choice');
+    }
 
     const html = renderToStaticMarkup(
       <PracticeView
         loadState={{ status: 'ready' }}
-        question={{
-          questionId: 'question-1',
-          slug: 'question-1',
-          stemMd: 'Stem',
-          difficulty: 'easy',
-          choices: [
-            {
-              id: 'choice-1',
-              label: 'A',
-              textMd: 'Choice',
-              sortOrder: 1,
-            },
-          ],
-          session: null,
-        }}
-        selectedChoiceId="choice-1"
+        question={question}
+        selectedChoiceId={choice.id}
         submitResult={null}
         isPending
         bookmarkStatus="idle"

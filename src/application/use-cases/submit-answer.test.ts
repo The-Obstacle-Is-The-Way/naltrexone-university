@@ -583,6 +583,7 @@ describe('SubmitAnswerUseCase', () => {
       msg: 'Failed to roll back orphaned attempt after session update failure',
       context: {
         attemptId: inserted[0]?.id,
+        sessionError: expect.any(Error),
         rollbackError: expect.any(Error),
       },
     });

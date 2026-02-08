@@ -5,6 +5,10 @@ import {
 import { usePracticeQuestionBookmarks } from '@/app/(app)/app/practice/hooks/use-practice-question-bookmarks';
 import type { PracticeFilters } from '@/app/(app)/app/practice/practice-page-logic';
 import { useIsMounted } from '@/lib/use-is-mounted';
+import {
+  getNextQuestion,
+  submitAnswer,
+} from '@/src/adapters/controllers/question-controller';
 import type { NextQuestion } from '@/src/application/use-cases/get-next-question';
 import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
 
@@ -41,6 +45,8 @@ export function usePracticeQuestionFlow(
   const answerFlow = usePracticeQuestionAnswerFlow({
     filters: input.filters,
     isMounted,
+    getNextQuestionFn: getNextQuestion,
+    submitAnswerFn: submitAnswer,
   });
 
   const bookmarks = usePracticeQuestionBookmarks({

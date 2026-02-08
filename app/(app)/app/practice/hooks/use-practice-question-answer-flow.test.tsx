@@ -17,6 +17,20 @@ describe('usePracticeQuestionAnswerFlow', () => {
           difficulties: [],
         },
         isMounted: () => true,
+        getNextQuestionFn: vi.fn(async () => ({
+          ok: true as const,
+          data: null,
+        })),
+        submitAnswerFn: vi.fn(async () => ({
+          ok: true as const,
+          data: {
+            attemptId: 'attempt-1',
+            isCorrect: false,
+            correctChoiceId: 'choice-1',
+            explanationMd: null,
+            choiceExplanations: [],
+          },
+        })),
       }),
     );
 

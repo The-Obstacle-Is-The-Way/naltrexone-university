@@ -44,9 +44,13 @@ export class GetSessionHistoryUseCase {
     );
 
     const rows: SessionHistoryRow[] = [];
+    let skippedCount = 0;
     for (const session of page.rows) {
       const endedAt = session.endedAt;
-      if (!endedAt) continue;
+      if (!endedAt) {
+        skippedCount += 1;
+        continue;
+      }
 
       const { answered, correct } = computeSessionStats(session.questionStates);
 
@@ -66,9 +70,10 @@ export class GetSessionHistoryUseCase {
       });
     }
 
+    const total = Math.max(0, page.total - skippedCount);
     return {
       rows,
-      total: page.total,
+      total,
       limit: input.limit,
       offset: input.offset,
     };

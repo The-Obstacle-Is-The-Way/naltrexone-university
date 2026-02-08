@@ -56,9 +56,7 @@ export class StartPracticeSessionUseCase {
         difficulties: input.difficulties,
         // Keep ordered ids as canonical session sequence; questionStates holds mutable per-question state.
         questionIds,
-        questionStates: questionIds.map((questionId) =>
-          createDefaultQuestionState(questionId),
-        ),
+        questionStates: questionIds.map(createDefaultQuestionState),
       },
     });
 

@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { StripeClient } from '@/src/adapters/shared/stripe-types';
 import { FakeLogger } from '@/src/application/test-helpers/fakes';
 import {
@@ -93,7 +93,11 @@ describe('createStripeCheckoutSession', () => {
     cancelUrl: 'https://app/cancel',
   };
   const priceIds = { monthly: 'price_m', annual: 'price_a' } as const;
-  const logger = new FakeLogger();
+  let logger: FakeLogger;
+
+  beforeEach(() => {
+    logger = new FakeLogger();
+  });
 
   it('preserves this-binding when calling subscriptions.list', async () => {
     const makeRequest = vi.fn(async (_params: unknown) => ({

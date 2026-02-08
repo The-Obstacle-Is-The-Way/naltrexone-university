@@ -148,7 +148,7 @@ describe('GetSessionHistoryUseCase', () => {
       useCase.execute({ userId: 'user-1', limit: 10, offset: 0 }),
     ).resolves.toEqual({
       rows: [],
-      total: 1,
+      total: 0,
       limit: 10,
       offset: 0,
     });
