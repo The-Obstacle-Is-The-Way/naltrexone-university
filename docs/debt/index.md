@@ -17,7 +17,6 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 | ID | Title | Status | Priority | Date |
 |----|-------|--------|----------|------|
-| [DEBT-170](debt-170-fake-rate-limiter-always-success-default.md) | FakeRateLimiter Always-Success Default Masks Rejection Paths | Open | P2 | 2026-02-08 |
 | [DEBT-171](debt-171-subscription-repo-and-postgres-errors-missing-tests.md) | Drizzle Subscription Repository and Postgres Error Helpers Missing Tests | Open | P2 | 2026-02-08 |
 | [DEBT-172](debt-172-duplicate-zod-schemas-across-controllers.md) | Duplicate Zod Schema Definitions Across Controllers | Open | P3 | 2026-02-08 |
 
@@ -29,6 +28,7 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 | ID | Title | Priority | Resolved |
 |----|-------|----------|----------|
+| [DEBT-170](../_archive/debt/debt-170-fake-rate-limiter-always-success-default.md) | FakeRateLimiter Always-Success Default Masks Rejection Paths | P2 | 2026-02-08 |
 | [DEBT-169](../_archive/debt/debt-169-shared-utilities-missing-unit-tests.md) | Shared Application Utilities Missing Unit Tests | P2 | 2026-02-08 |
 
 ### Resolved in Foundation Audit #2 Remediation

@@ -186,6 +186,8 @@ describe('POST /api/stripe/webhook', () => {
 
     expect(res.status).toBe(429);
     expect(res.headers.get('Retry-After')).toBe('60');
+    expect(res.headers.get('X-RateLimit-Limit')).toBe('1000');
+    expect(res.headers.get('X-RateLimit-Remaining')).toBe('0');
     expect(processStripeWebhook).not.toHaveBeenCalled();
   });
 

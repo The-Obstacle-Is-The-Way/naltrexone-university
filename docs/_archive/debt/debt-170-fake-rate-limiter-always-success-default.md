@@ -1,8 +1,9 @@
 # DEBT-170: FakeRateLimiter Always-Success Default Masks Rejection Paths
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P2
 **Date:** 2026-02-08
+**Resolved:** 2026-02-08
 
 ---
 
@@ -56,10 +57,11 @@ Endpoints to audit:
 
 ## Verification
 
-- [ ] All rate-limited endpoints identified
-- [ ] Each has at least one rejection-path test
-- [ ] Tests verify 429 status, `Retry-After`, and rate limit headers
-- [ ] `pnpm test --run` passes
+- [x] Rate-limited HTTP endpoints audited (health, Clerk webhook, Stripe webhook)
+- [x] Each audited route has explicit rejection-path coverage
+- [x] Route tests assert `429`, `Retry-After`, `X-RateLimit-Limit`, and `X-RateLimit-Remaining`
+- [x] Rate-limited server-action controllers already cover `RATE_LIMITED` error behavior
+- [x] `pnpm test --run` passes
 
 ## Related
 

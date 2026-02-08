@@ -146,6 +146,8 @@ describe('POST /api/webhooks/clerk', () => {
 
     expect(res.status).toBe(429);
     expect(res.headers.get('Retry-After')).toBe('60');
+    expect(res.headers.get('X-RateLimit-Limit')).toBe('100');
+    expect(res.headers.get('X-RateLimit-Remaining')).toBe('0');
     expect(verifyWebhook).not.toHaveBeenCalled();
     expect(processClerkWebhook).not.toHaveBeenCalled();
   });
