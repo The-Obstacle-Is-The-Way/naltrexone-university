@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 import { createQuestionSeed, shuffleWithSeed } from '@/src/domain/services';
 import { createChoice, createQuestion } from '@/src/domain/test-helpers';
 import { AllChoiceLabels } from '@/src/domain/value-objects';
-import { ApplicationError } from '../errors';
 import { buildShuffledChoiceViews } from './shuffled-choice-views';
 
 describe('buildShuffledChoiceViews', () => {
@@ -219,16 +218,9 @@ describe('buildShuffledChoiceViews', () => {
     });
 
     expect(() => buildShuffledChoiceViews(question, 'user-1')).toThrow(
-      ApplicationError,
+      expect.objectContaining({
+        code: 'INTERNAL_ERROR',
+      }),
     );
-
-    let thrown: unknown = null;
-    try {
-      buildShuffledChoiceViews(question, 'user-1');
-    } catch (error) {
-      thrown = error;
-    }
-    expect(thrown).toBeInstanceOf(ApplicationError);
-    expect((thrown as ApplicationError).code).toBe('INTERNAL_ERROR');
   });
 });

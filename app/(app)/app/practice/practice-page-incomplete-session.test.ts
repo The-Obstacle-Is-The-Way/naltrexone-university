@@ -1,30 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import { err, ok } from '@/src/adapters/controllers/action-result';
+import { createDeferred } from '@/tests/test-helpers/create-deferred';
 import {
   abandonIncompleteSession,
   createIncompleteSessionEffect,
 } from './practice-page-incomplete-session';
-
-function createDeferred<T>(): {
-  promise: Promise<T>;
-  resolve: (value: T) => void;
-} {
-  let capturedResolve: ((value: T | PromiseLike<T>) => void) | null = null;
-  const promise = new Promise<T>((r) => {
-    capturedResolve = r;
-  });
-
-  return {
-    promise,
-    resolve: (value) => {
-      if (!capturedResolve) {
-        throw new Error('Expected promise resolver to be captured');
-      }
-      capturedResolve(value);
-    },
-  };
-}
 
 describe('practice-page-incomplete-session', () => {
   describe('createIncompleteSessionEffect', () => {
