@@ -1,8 +1,9 @@
 # DEBT-175: Pricing View Bypasses Button Primitive and Skips Heading Hierarchy
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P3
 **Date:** 2026-02-08
+**Resolved:** 2026-02-08
 
 ---
 
@@ -33,10 +34,10 @@
 
 ## Verification
 
-- [ ] No raw `<button>` remains in `app/pricing/pricing-view.tsx`
-- [ ] Heading order is semantically sequential (`h1` then section `h2` then plan-level headings)
-- [ ] Pricing page tests remain green
-- [ ] `pnpm typecheck && pnpm lint && pnpm test --run` passes
+- [x] No raw `<button>` remains in `app/pricing/pricing-view.tsx`
+- [x] Heading order is semantically sequential (`h1` then section `h2` then plan-level headings)
+- [x] Pricing page tests remain green
+- [x] `pnpm typecheck && pnpm lint && pnpm test --run` passes
 
 ## Related
 

@@ -79,6 +79,54 @@ describe('app/pricing', () => {
     expect(headings).toContain('Pro Annual');
   });
 
+  it('uses a semantic heading hierarchy for pricing sections', async () => {
+    const { PricingView } = await import('@/app/pricing/page');
+
+    const html = renderToStaticMarkup(
+      <PricingView
+        isEntitled={false}
+        banner={null}
+        subscribeMonthlyAction={async () => undefined}
+        subscribeAnnualAction={async () => undefined}
+      />,
+    );
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const h1 = doc.querySelector('h1');
+    const h2 = doc.querySelector('h2');
+    const h3 = doc.querySelector('h3');
+
+    expect(h1?.textContent?.trim()).toBe('Pricing');
+    expect(h2?.textContent?.trim()).toBe('Plans');
+    expect(h3).not.toBeNull();
+  });
+
+  it('uses the shared Button primitive for pricing form submit actions', async () => {
+    const { PricingView } = await import('@/app/pricing/page');
+
+    const html = renderToStaticMarkup(
+      <PricingView
+        isEntitled={false}
+        banner={{
+          tone: 'error',
+          message: 'Checkout failed. Please try again.',
+        }}
+        manageBillingAction={async () => undefined}
+        subscribeMonthlyAction={async () => undefined}
+        subscribeAnnualAction={async () => undefined}
+      />,
+    );
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const submitButtons = Array.from(
+      doc.querySelectorAll('form button[type="submit"]'),
+    );
+    const nonPrimitiveButtons = submitButtons.filter(
+      (button) => button.getAttribute('data-slot') !== 'button',
+    );
+
+    expect(submitButtons.length).toBeGreaterThan(0);
+    expect(nonPrimitiveButtons).toHaveLength(0);
+  });
+
   it('shows a cancel banner when checkout=cancel', async () => {
     const { PricingView } = await import('@/app/pricing/page');
 
