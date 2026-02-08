@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { Button } from '@/components/ui/button';
 import type {
   AuthCheckDeps,
   AuthDepsContainer,
@@ -45,12 +46,9 @@ export async function AuthNav({
       >
         Pricing
       </Link>
-      <Link
-        href={ROUTES.SIGN_IN}
-        className="rounded-full bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
-      >
-        Sign In
-      </Link>
+      <Button asChild size="sm" className="rounded-full">
+        <Link href={ROUTES.SIGN_IN}>Sign In</Link>
+      </Button>
     </div>
   );
 

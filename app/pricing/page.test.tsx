@@ -545,6 +545,7 @@ describe('app/pricing', () => {
       <SubscribeButton>Subscribe Monthly</SubscribeButton>,
     );
 
+    expect(html).toContain('data-slot="button"');
     expect(html).toContain('Subscribe Monthly');
     expect(html).not.toContain('Processing...');
   });

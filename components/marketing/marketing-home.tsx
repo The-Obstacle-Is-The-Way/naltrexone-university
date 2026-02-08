@@ -3,6 +3,7 @@ import Link from 'next/link';
 import type { ReactElement, ReactNode } from 'react';
 import { AuthNav } from '@/components/auth-nav';
 import { GetStartedCta } from '@/components/get-started-cta';
+import { Button } from '@/components/ui/button';
 import { MetallicCtaButton } from '@/components/ui/metallic-cta-button';
 import { PRICING_DATA } from '@/lib/pricing-data';
 import { ROUTES } from '@/lib/routes';
@@ -109,12 +110,13 @@ export function MarketingHomeShell({
 
             <div className="mt-10 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
               {primaryCta}
-              <Link
-                href={ROUTES.PRICING}
-                className="rounded-full border border-border bg-card px-6 py-3 text-sm font-medium text-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+              <Button
+                asChild
+                variant="outline"
+                className="h-auto rounded-full border-border bg-card px-6 py-3 text-sm font-medium text-foreground hover:bg-muted"
               >
-                View pricing
-              </Link>
+                <Link href={ROUTES.PRICING}>View pricing</Link>
+              </Button>
             </div>
           </div>
         </section>
@@ -223,12 +225,13 @@ export function MarketingHomeShell({
                     <li key={feature}>{feature}</li>
                   ))}
                 </ul>
-                <Link
-                  href={ROUTES.PRICING}
-                  className="mt-8 block w-full rounded-full bg-secondary py-3 text-center text-sm font-medium text-secondary-foreground transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                <Button
+                  asChild
+                  variant="secondary"
+                  className="mt-8 h-auto w-full rounded-full py-3 text-sm font-medium"
                 >
-                  Get Started
-                </Link>
+                  <Link href={ROUTES.PRICING}>Get Started</Link>
+                </Button>
               </div>
 
               <div className="rounded-2xl border-2 border-primary bg-card p-8 shadow-sm">
@@ -249,12 +252,12 @@ export function MarketingHomeShell({
                     <li key={feature}>{feature}</li>
                   ))}
                 </ul>
-                <Link
-                  href={ROUTES.PRICING}
-                  className="mt-8 block w-full rounded-full bg-foreground py-3 text-center text-sm font-medium text-background transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                <Button
+                  asChild
+                  className="mt-8 h-auto w-full rounded-full bg-foreground py-3 text-sm font-medium text-background hover:bg-foreground/90"
                 >
-                  Get Started
-                </Link>
+                  <Link href={ROUTES.PRICING}>Get Started</Link>
+                </Button>
               </div>
             </div>
           </div>

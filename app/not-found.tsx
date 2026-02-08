@@ -1,5 +1,6 @@
 import { CircleIcon } from 'lucide-react';
 import Link from 'next/link';
+import { Button } from '@/components/ui/button';
 import { ROUTES } from '@/lib/routes';
 
 export default function NotFound() {
@@ -23,12 +24,14 @@ export default function NotFound() {
           The page you are looking for might have been removed, had its name
           changed, or is temporarily unavailable.
         </p>
-        <Link
-          href={ROUTES.HOME}
-          className="mx-auto flex max-w-48 justify-center rounded-full border border-border bg-background px-4 py-2 text-sm font-medium text-foreground shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background hover:bg-muted"
+        <Button
+          asChild
+          variant="outline"
+          size="sm"
+          className="mx-auto w-full max-w-48 rounded-full"
         >
-          Back to Home
-        </Link>
+          <Link href={ROUTES.HOME}>Back to Home</Link>
+        </Button>
       </div>
     </main>
   );

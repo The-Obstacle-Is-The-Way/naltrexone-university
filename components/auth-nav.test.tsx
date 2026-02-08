@@ -35,6 +35,7 @@ describe('AuthNav', () => {
     expect(html).toContain('href="/sign-in"');
     expect(html).toContain('Pricing');
     expect(html).toContain('Sign In');
+    expect(html).toContain('data-slot="button"');
     expect(html).not.toContain('data-testid="user-button"');
   });
 
