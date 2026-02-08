@@ -153,7 +153,7 @@ describe('app/pricing', () => {
     });
   });
 
-  it('includes error code details in development for checkout=error', async () => {
+  it('keeps checkout error banner generic in development', async () => {
     const { getPricingBanner } = await import('@/app/pricing/page');
 
     vi.stubEnv('NODE_ENV', 'development');
@@ -161,12 +161,10 @@ describe('app/pricing', () => {
     expect(
       getPricingBanner({
         checkout: 'error',
-        error_code: 'INTERNAL_ERROR',
-        error_message: 'Boom',
       }),
     ).toMatchObject({
       tone: 'error',
-      message: 'Checkout failed (INTERNAL_ERROR). Boom',
+      message: 'Checkout failed. Please try again.',
     });
   });
 
@@ -415,7 +413,7 @@ describe('app/pricing', () => {
       );
 
     await expect(action()).rejects.toThrow(
-      '/pricing?checkout=error&plan=monthly&error_code=INTERNAL_ERROR',
+      '/pricing?checkout=error&plan=monthly',
     );
     expect(createCheckoutSessionFn).toHaveBeenCalledWith({
       plan: 'monthly',

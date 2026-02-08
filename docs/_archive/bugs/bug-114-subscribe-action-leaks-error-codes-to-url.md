@@ -1,8 +1,9 @@
 # BUG-114: Subscribe Action Exposes Internal Error Codes in URL Params
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P3
 **Date:** 2026-02-08
+**Resolved:** 2026-02-08
 
 ---
 
@@ -52,31 +53,23 @@ The `error_code` is always set from `result.error.code`, which is an `Applicatio
 - **Non-exhaustive handling** — when new `ApplicationErrorCode` values are added, they automatically leak to URLs without explicit handling
 - **Dev mode message leak** — raw error messages (which may contain database details, Stripe API errors, etc.) appear in URLs during development, and could accidentally reach production if `NODE_ENV` is misconfigured
 
-## Fix
+## Resolution
 
-Replace the raw error code with a generic category or remove it entirely:
+Removed internal error taxonomy from pricing redirect URLs:
 
-```typescript
-// Option A: Remove error_code entirely (simplest)
-url.searchParams.set('checkout', 'error');
-url.searchParams.set('plan', input.plan);
-// error_code only used for logging, not in URL
-
-// Option B: Map to user-safe categories
-const userErrorCode = result.error.code === 'STRIPE_ERROR' ? 'payment_error' : 'error';
-url.searchParams.set('checkout', userErrorCode);
-```
-
-Also consider adding a `default` case or exhaustive handling so new error codes don't silently fall through.
+1. `runSubscribeAction()` now redirects generic failures to `/pricing?checkout=error&plan=<plan>` only.
+2. `runManageBillingAction()` now redirects generic failures to `/pricing?checkout=error` only.
+3. `getPricingBanner()` no longer renders development-only `error_code` / `error_message` query details; checkout error messaging is always user-safe and generic.
+4. Internal diagnostics remain server-side through structured logger calls (`logError`) so observability is preserved without URL leakage.
 
 ## Verification
 
-- [ ] Internal error codes no longer appear in URL params
-- [ ] Development error messages don't appear in URLs
-- [ ] Error is still logged server-side via `logError`
-- [ ] User still sees appropriate error UI
-- [ ] Existing subscribe-action tests updated
-- [ ] `pnpm typecheck && pnpm lint && pnpm test --run` passes
+- [x] Internal `ApplicationErrorCode` values are not appended to pricing URLs
+- [x] Development-mode URLs do not include `error_message`
+- [x] Checkout errors still log server-side with structured context
+- [x] User-facing checkout banner remains actionable and generic
+- [x] Subscribe/manage-billing pricing tests updated and passing
+- [x] Full quality gates pass (`pnpm typecheck && pnpm lint && pnpm test --run`)
 
 ## Related
 

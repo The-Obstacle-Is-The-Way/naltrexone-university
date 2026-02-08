@@ -17,7 +17,6 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 | ID | Title | Status | Priority | Date |
 |----|-------|--------|----------|------|
-| [BUG-114](bug-114-subscribe-action-leaks-error-codes-to-url.md) | Subscribe Action Exposes Internal Error Codes in URL Params | Open | P3 | 2026-02-08 |
 
 **Next Bug ID:** BUG-116
 
@@ -25,6 +24,7 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 | ID | Title | Status | Resolution |
 |----|-------|--------|------------|
+| [BUG-114](../_archive/bugs/bug-114-subscribe-action-leaks-error-codes-to-url.md) | Subscribe Action Exposes Internal Error Codes in URL Params | Resolved | Removed internal `error_code/error_message` URL params from pricing redirects and kept diagnostics server-side only |
 | [BUG-113](../_archive/bugs/bug-113-orphaned-attempt-on-ended-session.md) | Orphaned Attempt Persisted When Submitting to Ended Session | Resolved | `SubmitAnswerUseCase` now rejects ended-session submissions before insert, preventing orphan attempts and preserving session/attempt consistency |
 | [BUG-112](../_archive/bugs/bug-112-navigator-fetch-silent-error-swallowing.md) | Navigator Fetch Silently Swallows Errors with No Error State | Resolved | Added explicit navigator load/error state with retry action so failures are visible, logged, and recoverable |
 | [BUG-111](../_archive/bugs/bug-111-bookmark-toggle-silent-error-swallowing.md) | Bookmark Toggle Silently Swallows Errors | Resolved | Bookmark toggle now logs thrown failures before setting UI error state, preserving observability for production diagnostics |
@@ -74,6 +74,7 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 | ID | Title | Priority | Resolved |
 |----|-------|----------|----------|
+| [BUG-114](../_archive/bugs/bug-114-subscribe-action-leaks-error-codes-to-url.md) | Subscribe Action Exposes Internal Error Codes in URL Params | P3 | 2026-02-08 |
 | [BUG-113](../_archive/bugs/bug-113-orphaned-attempt-on-ended-session.md) | Orphaned Attempt Persisted When Submitting to Ended Session | P3 | 2026-02-08 |
 | [BUG-112](../_archive/bugs/bug-112-navigator-fetch-silent-error-swallowing.md) | Navigator Fetch Silently Swallows Errors with No Error State | P2 | 2026-02-08 |
 | [BUG-111](../_archive/bugs/bug-111-bookmark-toggle-silent-error-swallowing.md) | Bookmark Toggle Silently Swallows Errors | P2 | 2026-02-08 |
