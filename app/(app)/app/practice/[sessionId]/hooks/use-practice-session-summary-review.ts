@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   getActionResultErrorMessage,
   getThrownErrorMessage,
@@ -24,6 +24,9 @@ export type UsePracticeSessionSummaryReviewOutput = {
 export function usePracticeSessionSummaryReview(
   input: UsePracticeSessionSummaryReviewInput,
 ): UsePracticeSessionSummaryReviewOutput {
+  const isMountedRef = useRef(input.isMounted);
+  isMountedRef.current = input.isMounted;
+
   const [summaryReview, setSummaryReview] =
     useState<GetPracticeSessionReviewOutput | null>(null);
   const [summaryReviewLoadState, setSummaryReviewLoadState] =
@@ -47,14 +50,14 @@ export function usePracticeSessionSummaryReview(
       try {
         res = await getPracticeSessionReview({ sessionId: input.sessionId });
       } catch (error) {
-        if (!mounted || !input.isMounted()) return;
+        if (!mounted || !isMountedRef.current()) return;
         setSummaryReviewLoadState({
           status: 'error',
           message: getThrownErrorMessage(error),
         });
         return;
       }
-      if (!mounted || !input.isMounted()) return;
+      if (!mounted || !isMountedRef.current()) return;
       if (!res.ok) {
         setSummaryReviewLoadState({
           status: 'error',
@@ -70,7 +73,7 @@ export function usePracticeSessionSummaryReview(
     return () => {
       mounted = false;
     };
-  }, [input.summary, input.sessionId, input.isMounted]);
+  }, [input.summary, input.sessionId]);
 
   return {
     summaryReview,

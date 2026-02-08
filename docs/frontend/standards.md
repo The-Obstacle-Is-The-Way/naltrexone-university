@@ -187,17 +187,20 @@ Tones: `info` (default), `success`, `error`.
 **The project has ONE focus ring pattern. Use the Button component's built-in ring and do not hand-roll focus styles.**
 
 The `Button` component provides:
-```
+
+```text
 focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]
 ```
 
 For non-Button interactive elements that need focus rings, apply:
-```
+
+```text
 focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]
 ```
 
 **Do NOT use the legacy pattern:**
-```
+
+```text
 /* DEPRECATED — do not use */
 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2
 ```
@@ -242,9 +245,11 @@ Use `text-3xl font-bold font-display text-foreground` for prominent statistics. 
 ### Outer container
 
 All app pages use the layout-provided container:
-```
+
+```text
 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8
 ```
+
 Do NOT add your own container wrapper — the `(app)/app/layout.tsx` handles this.
 
 ### Card padding
@@ -261,7 +266,8 @@ Standard: `p-6`. Use `p-4` only for intentionally dense/compact views (e.g., exa
 ### Hoverable cards (stat cards)
 
 Standard hover treatment:
-```
+
+```text
 transition-colors hover:border-border/80 hover:bg-muted/50
 ```
 
@@ -457,7 +463,7 @@ After error recovery ("Try again"), focus SHOULD move to the result (the new con
 
 ### Size limits
 
-Hooks SHOULD NOT exceed 150 lines. Hooks over 200 lines are god hooks and must be split.
+Hooks SHOULD NOT exceed 150 lines. Hooks over 200 lines are godlike hooks and must be split.
 
 ### State pattern
 
@@ -511,9 +517,9 @@ Logic shared between `/practice` and `/practice/[sessionId]` (question loading, 
 | `components/ui/` | kebab-case | `button.tsx`, `filter-chip.tsx` |
 | `components/` (shared) | kebab-case | `error-card.tsx`, `theme-toggle.tsx` |
 | `components/question/` | kebab-case | `question-card.tsx`, `choice-button.tsx` |
-| `app/` pages | `page.tsx`, `layout.tsx`, `loading.tsx`, `error.tsx`, `not-found.tsx` |
+| `app/` pages | reserved entrypoint names | `page.tsx`, `layout.tsx`, `loading.tsx`, `error.tsx`, `not-found.tsx` |
 | Hooks | `use-kebab-case.ts` | `use-practice-session-controls.ts` |
-| Tests | Colocated, same name + `.test.ts(x)` or `.browser.spec.tsx` |
+| Tests | colocated, same name + suffix | `*.test.ts(x)`, `*.browser.spec.tsx` |
 
 **PascalCase filenames are NOT used in this project.** If you see `QuestionCard.tsx`, it should be `question-card.tsx`.
 
@@ -647,20 +653,20 @@ Issues documented below are tracked as tech debt in `docs/debt/index.md` (Fronte
 
 ### `components/ui/` (design system primitives)
 
-| File | Component(s) | Has `data-slot` | Uses `cn()` | Uses `cva` |
-|------|-------------|-----------------|-------------|-----------|
+| File | Component(s) | Has `data-slot` | Uses `cn()` | Uses `cva` | Notes |
+|------|-------------|-----------------|-------------|------------|-------|
 | `avatar.tsx` | Avatar, AvatarImage, AvatarFallback | Yes | Yes | No | **0 consumers — safe to remove** |
-| `button.tsx` | Button | Yes | Yes | Yes |
-| `card.tsx` | Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter, CardAction | Yes | Yes | No |
+| `button.tsx` | Button | Yes | Yes | Yes | |
+| `card.tsx` | Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter, CardAction | Yes | Yes | No | |
 | `dropdown-menu.tsx` | DropdownMenu, DropdownMenuTrigger, DropdownMenuItem, etc. | Yes | Yes | No | **0 consumers — KEEP (spec-mandated)** |
-| `filter-chip.tsx` | FilterChip | **No** | Yes | **No** |
-| `input.tsx` | Input | Yes | Yes | No |
+| `filter-chip.tsx` | FilterChip | **No** | Yes | **No** | |
+| `input.tsx` | Input | Yes | Yes | No | |
 | `label.tsx` | Label | Yes | Yes | No | **0 consumers — safe to remove** |
-| `metallic-border.tsx` | MetallicBorder | **No** | **No** | No |
-| `metallic-cta-button.tsx` | MetallicCtaButton | No | No | No |
-| `notification-provider.tsx` | NotificationProvider, useNotification | **No** | **No** | No |
+| `metallic-border.tsx` | MetallicBorder | **No** | **No** | No | |
+| `metallic-cta-button.tsx` | MetallicCtaButton | No | No | No | |
+| `notification-provider.tsx` | NotificationProvider, useNotification | **No** | **No** | No | |
 | `radio-group.tsx` | RadioGroup, RadioGroupItem | Yes | Yes | No | **0 consumers — safe to remove** |
-| `segmented-control.tsx` | SegmentedControl | **No** | Yes | **No** |
+| `segmented-control.tsx` | SegmentedControl | **No** | Yes | **No** | |
 
 ### `components/` (shared non-primitive)
 

@@ -3,6 +3,15 @@ import { ApplicationError } from '@/src/application/errors';
 import { DrizzleSubscriptionRepository } from './drizzle-subscription-repository';
 
 describe('DrizzleSubscriptionRepository', () => {
+  type RepoDb = ConstructorParameters<typeof DrizzleSubscriptionRepository>[0];
+
+  const createRepo = (
+    db: unknown,
+    priceIds: { monthly: string; annual: string },
+    nowFn?: () => Date,
+  ) =>
+    new DrizzleSubscriptionRepository(db as unknown as RepoDb, priceIds, nowFn);
+
   it('returns null from findByUserId when no subscription row exists', async () => {
     const db = {
       query: {
@@ -20,13 +29,7 @@ describe('DrizzleSubscriptionRepository', () => {
       annual: 'price_annual',
     } as const;
 
-    type RepoDb = ConstructorParameters<
-      typeof DrizzleSubscriptionRepository
-    >[0];
-    const repo = new DrizzleSubscriptionRepository(
-      db as unknown as RepoDb,
-      priceIds,
-    );
+    const repo = createRepo(db, priceIds);
 
     await expect(repo.findByUserId('user_1')).resolves.toBeNull();
   });
@@ -61,13 +64,7 @@ describe('DrizzleSubscriptionRepository', () => {
       annual: 'price_annual',
     } as const;
 
-    type RepoDb = ConstructorParameters<
-      typeof DrizzleSubscriptionRepository
-    >[0];
-    const repo = new DrizzleSubscriptionRepository(
-      db as unknown as RepoDb,
-      priceIds,
-    );
+    const repo = createRepo(db, priceIds);
 
     await expect(repo.findByUserId('user_1')).resolves.toMatchObject({
       id: 'sub_row_1',
@@ -108,13 +105,7 @@ describe('DrizzleSubscriptionRepository', () => {
       annual: 'price_annual',
     } as const;
 
-    type RepoDb = ConstructorParameters<
-      typeof DrizzleSubscriptionRepository
-    >[0];
-    const repo = new DrizzleSubscriptionRepository(
-      db as unknown as RepoDb,
-      priceIds,
-    );
+    const repo = createRepo(db, priceIds);
 
     await expect(repo.findByUserId('user_1')).rejects.toBeInstanceOf(
       ApplicationError,
@@ -160,14 +151,7 @@ describe('DrizzleSubscriptionRepository', () => {
       annual: 'price_annual',
     } as const;
 
-    type RepoDb = ConstructorParameters<
-      typeof DrizzleSubscriptionRepository
-    >[0];
-    const repo = new DrizzleSubscriptionRepository(
-      db as unknown as RepoDb,
-      priceIds,
-      nowFn,
-    );
+    const repo = createRepo(db, priceIds, nowFn);
 
     await expect(
       repo.upsert({
@@ -203,13 +187,7 @@ describe('DrizzleSubscriptionRepository', () => {
       annual: 'price_annual',
     } as const;
 
-    type RepoDb = ConstructorParameters<
-      typeof DrizzleSubscriptionRepository
-    >[0];
-    const repo = new DrizzleSubscriptionRepository(
-      db as unknown as RepoDb,
-      priceIds,
-    );
+    const repo = createRepo(db, priceIds);
 
     await expect(
       repo.upsert({
@@ -244,13 +222,7 @@ describe('DrizzleSubscriptionRepository', () => {
       annual: 'price_annual',
     } as const;
 
-    type RepoDb = ConstructorParameters<
-      typeof DrizzleSubscriptionRepository
-    >[0];
-    const repo = new DrizzleSubscriptionRepository(
-      db as unknown as RepoDb,
-      priceIds,
-    );
+    const repo = createRepo(db, priceIds);
 
     await expect(
       repo.upsert({
@@ -281,13 +253,7 @@ describe('DrizzleSubscriptionRepository', () => {
       annual: 'price_annual',
     } as const;
 
-    type RepoDb = ConstructorParameters<
-      typeof DrizzleSubscriptionRepository
-    >[0];
-    const repo = new DrizzleSubscriptionRepository(
-      db as unknown as RepoDb,
-      priceIds,
-    );
+    const repo = createRepo(db, priceIds);
 
     await expect(
       repo.findByExternalSubscriptionId('sub_123'),
@@ -321,13 +287,7 @@ describe('DrizzleSubscriptionRepository', () => {
       annual: 'price_annual',
     } as const;
 
-    type RepoDb = ConstructorParameters<
-      typeof DrizzleSubscriptionRepository
-    >[0];
-    const repo = new DrizzleSubscriptionRepository(
-      db as unknown as RepoDb,
-      priceIds,
-    );
+    const repo = createRepo(db, priceIds);
 
     await expect(
       repo.findByExternalSubscriptionId('sub_123'),
@@ -364,13 +324,7 @@ describe('DrizzleSubscriptionRepository', () => {
       annual: 'price_annual',
     } as const;
 
-    type RepoDb = ConstructorParameters<
-      typeof DrizzleSubscriptionRepository
-    >[0];
-    const repo = new DrizzleSubscriptionRepository(
-      db as unknown as RepoDb,
-      priceIds,
-    );
+    const repo = createRepo(db, priceIds);
 
     await expect(
       repo.findByExternalSubscriptionId('sub_123'),

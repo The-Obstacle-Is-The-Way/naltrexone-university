@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
+  getActionResultErrorMessage,
+  getThrownErrorMessage,
+} from '@/app/(app)/app/practice/practice-logic';
+import {
   endPracticeSession,
   type GetIncompletePracticeSessionOutput,
   getIncompletePracticeSession,
 } from '@/src/adapters/controllers/practice-controller';
-import {
-  getActionResultErrorMessage,
-  getThrownErrorMessage,
-} from '../practice-logic';
 
 type IncompletePracticeSession =
   NonNullable<GetIncompletePracticeSessionOutput>;
@@ -77,6 +77,7 @@ export function usePracticeIncompleteSession(
     try {
       res = await endPracticeSession({
         sessionId: incompleteSession.sessionId,
+        idempotencyKey: incompleteSession.sessionId,
       });
     } catch (error) {
       if (!input.isMounted()) return;
