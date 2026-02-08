@@ -105,6 +105,7 @@ export function createUseCaseFactories(input: {
         repositories.createQuestionRepository(),
         repositories.createAttemptRepository(),
         repositories.createPracticeSessionRepository(),
+        primitives.logger,
       ),
     createToggleBookmarkUseCase: () =>
       new ToggleBookmarkUseCase(

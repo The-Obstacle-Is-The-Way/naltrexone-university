@@ -1,3 +1,4 @@
+import type { Logger } from '@/src/application/ports/logger';
 import type { Question } from '@/src/domain/entities';
 import {
   gradeAnswer,
@@ -42,6 +43,7 @@ export class SubmitAnswerUseCase {
     private readonly questions: QuestionRepository,
     private readonly attempts: AttemptWriter,
     private readonly sessions: PracticeSessionRepository,
+    private readonly logger: Logger,
   ) {}
 
   private mapChoiceExplanations(
@@ -131,6 +133,14 @@ export class SubmitAnswerUseCase {
             );
           }
         } catch (rollbackError) {
+          this.logger.error(
+            {
+              attemptId: attempt.id,
+              rollbackError,
+            },
+            'Failed to roll back orphaned attempt after session update failure',
+          );
+
           if (rollbackError instanceof ApplicationError) {
             throw rollbackError;
           }
