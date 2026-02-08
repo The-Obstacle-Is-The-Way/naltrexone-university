@@ -1,8 +1,9 @@
 # BUG-112: Navigator Fetch Silently Swallows Errors with No Error State
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P2
 **Date:** 2026-02-08
+**Resolved:** 2026-02-08
 
 ---
 
@@ -46,31 +47,22 @@ Compare with the summary fetch in the same file (lines ~210-220) which has the s
 - **No retry path** — user can't retry because they don't know something failed
 - **Confusing UX** — looks like the feature doesn't exist rather than that it failed
 
-## Fix
+## Resolution
 
-1. Capture the error object and log it
-2. Add a navigator error state (e.g., `navigatorLoadError`) that the UI can use to show a retry option
+Implemented explicit navigator load-state handling in `usePracticeSessionReviewStage` and surfaced it in the page view:
 
-```typescript
-} catch (error) {
-  if (!mounted || !input.isMounted()) return;
-  console.error('Navigator fetch failed:', error);
-  // Set an error state so UI can show retry
-  setNavigatorError(true);
-  return;
-}
-```
-
-The component rendering the navigator should check for this error state and show a retry button or message.
+1. Added `navigatorLoadState` (`idle` / `loading` / `ready` / `error`) and `onRetryNavigator()` to the hook output contract.
+2. Navigator fetch now captures thrown errors, logs them, and sets `navigatorLoadState` to `{ status: 'error', message }`.
+3. Non-OK action results also transition navigator state to explicit error (instead of silent return).
+4. `PracticeSessionPageView` now renders a navigator error block with a `Retry navigator` action when navigator loading fails.
 
 ## Verification
 
-- [ ] `catch` block captures the error object
-- [ ] Error is logged (at minimum `console.error`)
-- [ ] An error state is set so the UI can distinguish "failed" from "no data"
-- [ ] UI shows error/retry state when navigator fetch fails
-- [ ] Unit test verifies error handling behavior
-- [ ] `pnpm typecheck && pnpm lint && pnpm test --run` passes
+- [x] Navigator fetch catch path captures and logs thrown errors
+- [x] Hook exposes explicit navigator error state (`navigatorLoadState`)
+- [x] UI displays navigator error with retry action instead of silently hiding navigator
+- [x] Browser + hook contract tests cover failure and retry behavior
+- [x] Full quality gates pass (`pnpm typecheck && pnpm lint && pnpm test --run`)
 
 ## Related
 

@@ -34,9 +34,11 @@ describe('usePracticeSessionReviewStage', () => {
     expect(typeof output.setReview).toBe('function');
     expect(output.reviewLoadState).toEqual({ status: 'idle' });
     expect(output.navigator).toBeNull();
+    expect(output.navigatorLoadState).toEqual({ status: 'idle' });
     expect(output.isInReviewStage).toBe(false);
     expect(typeof output.onEndSession).toBe('function');
     expect(typeof output.onOpenReviewQuestion).toBe('function');
     expect(typeof output.onFinalizeReview).toBe('function');
+    expect(typeof output.onRetryNavigator).toBe('function');
   });
 });

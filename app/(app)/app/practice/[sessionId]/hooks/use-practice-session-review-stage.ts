@@ -46,9 +46,11 @@ export type UsePracticeSessionReviewStageOutput = {
   setReview: Dispatch<SetStateAction<GetPracticeSessionReviewOutput | null>>;
   reviewLoadState: LoadState;
   navigator: GetPracticeSessionReviewOutput | null;
+  navigatorLoadState: LoadState;
   isInReviewStage: boolean;
   onEndSession: () => void;
   onRetryReview: () => void;
+  onRetryNavigator: () => void;
   onOpenReviewQuestion: (questionId: string) => void;
   onFinalizeReview: () => void;
 };
@@ -68,10 +70,14 @@ export function usePracticeSessionReviewStage(
   );
   const [navigator, setNavigator] =
     useState<GetPracticeSessionReviewOutput | null>(null);
+  const [navigatorLoadState, setNavigatorLoadState] = useState<LoadState>({
+    status: 'idle',
+  });
   const [reviewLoadState, setReviewLoadState] = useState<LoadState>({
     status: 'idle',
   });
   const [isInReviewStage, setIsInReviewStage] = useState(false);
+  const [navigatorReloadCount, setNavigatorReloadCount] = useState(0);
   const endSessionIdempotencyKeyRef = useRef(crypto.randomUUID());
 
   const finalizeSession = useCallback(
@@ -183,6 +189,10 @@ export function usePracticeSessionReviewStage(
     void loadReview();
   }, [loadReview]);
 
+  const onRetryNavigator = useCallback(() => {
+    setNavigatorReloadCount((prev) => prev + 1);
+  }, []);
+
   useEffect(() => {
     if (!summary) {
       setSummaryReview(null);
@@ -228,21 +238,37 @@ export function usePracticeSessionReviewStage(
   useEffect(() => {
     if (summary || isInReviewStage || !input.sessionInfo) {
       setNavigator(null);
+      setNavigatorLoadState({ status: 'idle' });
       return;
     }
 
     let mounted = true;
+    setNavigatorLoadState({ status: 'loading' });
     void (async () => {
       let res: Awaited<ReturnType<typeof getPracticeSessionReview>>;
       try {
         res = await getPracticeSessionReview({ sessionId: input.sessionId });
-      } catch {
+      } catch (error) {
         if (!mounted || !input.isMounted()) return;
+        console.error('Failed to load question navigator', error);
+        setNavigator(null);
+        setNavigatorLoadState({
+          status: 'error',
+          message: getThrownErrorMessage(error),
+        });
         return;
       }
       if (!mounted || !input.isMounted()) return;
-      if (!res.ok) return;
+      if (!res.ok) {
+        setNavigator(null);
+        setNavigatorLoadState({
+          status: 'error',
+          message: getActionResultErrorMessage(res),
+        });
+        return;
+      }
       setNavigator(res.data);
+      setNavigatorLoadState({ status: 'ready' });
     })();
 
     return () => {
@@ -255,6 +281,7 @@ export function usePracticeSessionReviewStage(
     input.sessionId,
     input.questionId,
     input.submitResult,
+    navigatorReloadCount,
     input.isMounted,
   ]);
 
@@ -266,9 +293,11 @@ export function usePracticeSessionReviewStage(
     setReview,
     reviewLoadState,
     navigator,
+    navigatorLoadState,
     isInReviewStage,
     onEndSession,
     onRetryReview,
+    onRetryNavigator,
     onOpenReviewQuestion,
     onFinalizeReview,
   };

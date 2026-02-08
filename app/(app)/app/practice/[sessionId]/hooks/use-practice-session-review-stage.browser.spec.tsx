@@ -19,7 +19,13 @@ function createInput(sessionMode: 'tutor' | 'exam') {
   return {
     sessionId: 'session-1',
     isMounted: () => true,
-    sessionInfo: null,
+    sessionInfo: null as {
+      sessionId: string;
+      mode: 'tutor' | 'exam';
+      index: number;
+      total: number;
+      isMarkedForReview?: boolean;
+    } | null,
     questionId: null,
     submitResult: null,
     sessionMode,
@@ -96,5 +102,71 @@ describe('usePracticeSessionReviewStage (browser)', () => {
       status: 'error',
       message: 'Review load failed',
     });
+  });
+
+  it('sets navigator error state and retries navigator fetch when requested', async () => {
+    getPracticeSessionReviewMock.mockRejectedValueOnce(
+      new Error('Navigator load failed'),
+    );
+    getPracticeSessionReviewMock.mockResolvedValueOnce(
+      ok({
+        sessionId: 'session-1',
+        mode: 'exam',
+        totalCount: 2,
+        answeredCount: 1,
+        markedCount: 0,
+        rows: [
+          {
+            isAvailable: true,
+            questionId: 'q1',
+            stemMd: 'Stem 1',
+            difficulty: 'easy',
+            order: 1,
+            isAnswered: true,
+            isCorrect: true,
+            markedForReview: false,
+          },
+          {
+            isAvailable: true,
+            questionId: 'q2',
+            stemMd: 'Stem 2',
+            difficulty: 'medium',
+            order: 2,
+            isAnswered: false,
+            isCorrect: null,
+            markedForReview: false,
+          },
+        ],
+      }),
+    );
+
+    const input = createInput('exam');
+    input.sessionInfo = {
+      sessionId: 'session-1',
+      mode: 'exam',
+      index: 0,
+      total: 2,
+      isMarkedForReview: false,
+    };
+
+    const harness = await renderHook(() =>
+      usePracticeSessionReviewStage(input),
+    );
+
+    await expect
+      .poll(() => harness.result.current.navigatorLoadState.status)
+      .toBe('error');
+    expect(harness.result.current.navigatorLoadState).toEqual({
+      status: 'error',
+      message: 'Navigator load failed',
+    });
+    expect(harness.result.current.navigator).toBeNull();
+
+    harness.result.current.onRetryNavigator();
+
+    await expect
+      .poll(() => harness.result.current.navigatorLoadState.status)
+      .toBe('ready');
+    expect(harness.result.current.navigator?.sessionId).toBe('session-1');
   });
 });

@@ -201,6 +201,50 @@ test('renders review error actions with retry and end session escape hatch', asy
   expect(onEndSession).toHaveBeenCalledTimes(1);
 });
 
+test('renders navigator error with retry action', async () => {
+  const onRetryNavigator = vi.fn();
+
+  const screen = await render(
+    <PracticeSessionPageView
+      summary={null}
+      review={null}
+      navigator={null}
+      navigatorLoadState={{
+        status: 'error',
+        message: 'Navigator unavailable.',
+      }}
+      sessionInfo={{
+        sessionId: 'session-1',
+        mode: 'exam',
+        index: 0,
+        total: 2,
+        isMarkedForReview: false,
+      }}
+      loadState={{ status: 'ready' }}
+      question={null}
+      selectedChoiceId={null}
+      submitResult={null}
+      isPending={false}
+      bookmarkStatus="idle"
+      isBookmarked={false}
+      canSubmit={false}
+      onEndSession={() => undefined}
+      onRetryNavigator={onRetryNavigator}
+      onTryAgain={() => undefined}
+      onToggleBookmark={() => undefined}
+      onSelectChoice={() => undefined}
+      onSubmit={() => undefined}
+      onNextQuestion={() => undefined}
+    />,
+  );
+
+  await expect
+    .element(screen.getByText('Navigator unavailable.'))
+    .toBeVisible();
+  await screen.getByRole('button', { name: 'Retry navigator' }).click();
+  expect(onRetryNavigator).toHaveBeenCalledTimes(1);
+});
+
 test('calls onFinalizeReview instead of onEndSession when both are provided', async () => {
   const onFinalizeReview = vi.fn();
   const onEndSession = vi.fn();
