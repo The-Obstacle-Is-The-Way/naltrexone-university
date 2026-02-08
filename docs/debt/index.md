@@ -17,9 +17,11 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 | ID | Title | Priority | Status |
 |----|-------|----------|--------|
-| — | No active DEBT items | — | — |
+| [DEBT-192](debt-192-source-reading-regression-tests-fragile.md) | Source-Reading Regression Tests Are Fragile (3 of 5 should be behavioral) | P3 | Open |
+| [DEBT-193](debt-193-backend-production-files-over-300-lines.md) | Backend Production Files Exceed 300-Line Guideline (5 files) | P3 | Open |
+| [DEBT-194](debt-194-console-error-default-in-utility-functions.md) | Default `console.error` in Utility Function Parameters (3 files) | P4 | Open |
 
-**Next Debt ID:** DEBT-192
+**Next Debt ID:** DEBT-195
 
 ---
 
@@ -64,7 +66,7 @@ All frontend-specific UI/UX debt. Items use `FE-XXX` IDs and are cross-reference
 | FE-032 | Clerk theme hardcoded to dark mode | `providers.tsx` | Open |
 | FE-033 | No shared marketing layout | `/pricing` vs `/` | Open |
 | FE-034 | Empty states lack helpful CTAs | Bookmarks, review, practice history | Open |
-| FE-035 | Checkout success inline Stripe logic (405 lines) | `checkout/success/checkout-success-sync.tsx` | Open |
+| FE-035 | Checkout success inline Stripe logic (437 lines) | `checkout/success/checkout-success-sync.tsx` | Open |
 | FE-036 | 3 unused shadcn/ui components (0 consumers, no spec need) | `avatar.tsx`, `radio-group.tsx`, `label.tsx` + test files. (`dropdown-menu.tsx` KEEP — spec-mandated) | Open |
 | FE-037 | `theme-toggle.tsx` uses raw `<button>` not `<Button>` | `theme-toggle.tsx` | Open |
 | FE-038 | Card sub-components: 0 imports but KEEP for SPEC-019 Phase 2 | `card.tsx` (CardHeader, CardTitle, etc.) — evaluate during UI/UX refactor | Open |
