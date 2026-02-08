@@ -92,15 +92,17 @@ function validateEnv(): Env {
   }
 
   const skipClerk = parsed.data.NEXT_PUBLIC_SKIP_CLERK === 'true';
-  // NOTE: Next.js sets NODE_ENV=production during `next build`, which we still
-  // need to support in CI without real Clerk keys. Treat "production runtime"
-  // as:
-  // - Vercel production deploys (VERCEL_ENV=production), OR
-  // - NODE_ENV=production when not running the build script.
-  const isProductionRuntime =
-    process.env.VERCEL_ENV === 'production' ||
-    (process.env.NODE_ENV === 'production' &&
-      process.env.npm_lifecycle_event !== 'build');
+  // VERCEL_ENV is a runtime-only variable injected by Vercel. Unlike NODE_ENV,
+  // it is never baked into the bundle by Next.js/Turbopack at build time.
+  // This makes it the only reliable signal for detecting production runtime.
+  //
+  // NODE_ENV is NOT reliable here because:
+  //   1. `next build` sets NODE_ENV='production' internally
+  //   2. Turbopack inlines process.env.NODE_ENV as 'production' in server bundles
+  //   3. At runtime the baked value overrides the actual process env
+  //   4. This causes CI E2E (NODE_ENV=test) and Vercel preview (VERCEL_ENV=preview)
+  //      to be misidentified as production
+  const isProductionRuntime = process.env.VERCEL_ENV === 'production';
   if (!skipClerk) {
     const missingClerkKeys: Record<string, string[]> = {};
     if (!parsed.data.CLERK_SECRET_KEY) {
