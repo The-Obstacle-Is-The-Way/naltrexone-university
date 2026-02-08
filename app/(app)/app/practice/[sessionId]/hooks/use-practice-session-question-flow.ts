@@ -70,30 +70,51 @@ export function usePracticeSessionQuestionFlow(
   >(null);
   const latestQuestionRequestId = useRef(0);
 
+  const createIdempotencyKey = useCallback(() => crypto.randomUUID(), []);
+
+  const createRequestSequenceId = useCallback(() => {
+    latestQuestionRequestId.current += 1;
+    return latestQuestionRequestId.current;
+  }, []);
+
+  const isLatestRequest = useCallback(
+    (requestId: number) => requestId === latestQuestionRequestId.current,
+    [],
+  );
+
+  const loadQuestionConfig = useMemo(
+    () => ({
+      sessionId: input.sessionId,
+      getNextQuestionFn: getNextQuestion,
+      createIdempotencyKey,
+      nowMs: Date.now,
+      setLoadState,
+      setSelectedChoiceId,
+      setSubmitResult,
+      setSubmitIdempotencyKey,
+      setQuestionLoadedAt,
+      setQuestion,
+      setSessionInfo,
+      createRequestSequenceId,
+      isLatestRequest,
+      isMounted: input.isMounted,
+    }),
+    [
+      input.sessionId,
+      input.isMounted,
+      createIdempotencyKey,
+      createRequestSequenceId,
+      isLatestRequest,
+    ],
+  );
+
   const onTryAgain = useMemo(
     () =>
       createLoadNextQuestionAction({
-        sessionId: input.sessionId,
         startTransition,
-        getNextQuestionFn: getNextQuestion,
-        createIdempotencyKey: () => crypto.randomUUID(),
-        nowMs: Date.now,
-        setLoadState,
-        setSelectedChoiceId,
-        setSubmitResult,
-        setSubmitIdempotencyKey,
-        setQuestionLoadedAt,
-        setQuestion,
-        setSessionInfo,
-        createRequestSequenceId: () => {
-          latestQuestionRequestId.current += 1;
-          return latestQuestionRequestId.current;
-        },
-        isLatestRequest: (requestId) =>
-          requestId === latestQuestionRequestId.current,
-        isMounted: input.isMounted,
+        ...loadQuestionConfig,
       }),
-    [input.sessionId, input.isMounted],
+    [loadQuestionConfig],
   );
 
   // Load the first question on mount and whenever the sessionId changes.
@@ -108,29 +129,12 @@ export function usePracticeSessionQuestionFlow(
     (questionId: string): void => {
       startTransition(() => {
         void loadNextQuestion({
-          sessionId: input.sessionId,
+          ...loadQuestionConfig,
           questionId,
-          getNextQuestionFn: getNextQuestion,
-          createIdempotencyKey: () => crypto.randomUUID(),
-          nowMs: Date.now,
-          setLoadState,
-          setSelectedChoiceId,
-          setSubmitResult,
-          setSubmitIdempotencyKey,
-          setQuestionLoadedAt,
-          setQuestion,
-          setSessionInfo,
-          createRequestSequenceId: () => {
-            latestQuestionRequestId.current += 1;
-            return latestQuestionRequestId.current;
-          },
-          isLatestRequest: (requestId) =>
-            requestId === latestQuestionRequestId.current,
-          isMounted: input.isMounted,
         });
       });
     },
-    [input.sessionId, input.isMounted],
+    [loadQuestionConfig],
   );
 
   const canSubmit = useMemo(() => {
@@ -142,32 +146,32 @@ export function usePracticeSessionQuestionFlow(
     });
   }, [loadState, question, selectedChoiceId, submitResult]);
 
-  const onSubmit = useMemo(
-    () =>
-      submitAnswerForQuestion.bind(null, {
-        sessionId: input.sessionId,
-        question,
-        selectedChoiceId,
-        questionLoadedAtMs: questionLoadedAt,
-        submitIdempotencyKey,
-        submitAnswerFn: submitAnswer,
-        nowMs: Date.now,
-        setLoadState,
-        setSubmitResult,
-        isMounted: input.isMounted,
-      }),
-    [
+  const onSubmit = useCallback(() => {
+    return submitAnswerForQuestion({
+      sessionId: input.sessionId,
       question,
-      questionLoadedAt,
       selectedChoiceId,
-      input.sessionId,
+      questionLoadedAtMs: questionLoadedAt,
       submitIdempotencyKey,
-      input.isMounted,
-    ],
-  );
+      submitAnswerFn: submitAnswer,
+      nowMs: Date.now,
+      setLoadState,
+      setSubmitResult,
+      isMounted: input.isMounted,
+    });
+  }, [
+    question,
+    questionLoadedAt,
+    selectedChoiceId,
+    input.sessionId,
+    submitIdempotencyKey,
+    input.isMounted,
+  ]);
 
-  const onSelectChoice = useMemo(
-    () => selectChoiceIfAllowed.bind(null, submitResult, setSelectedChoiceId),
+  const onSelectChoice = useCallback(
+    (choiceId: string) => {
+      selectChoiceIfAllowed(submitResult, setSelectedChoiceId, choiceId);
+    },
     [submitResult],
   );
 
