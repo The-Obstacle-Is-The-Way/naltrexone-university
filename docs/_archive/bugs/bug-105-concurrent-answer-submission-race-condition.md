@@ -37,18 +37,21 @@ If two concurrent `submitAnswer` requests arrive for the same practice session a
 - Session state and attempt table can diverge
 - Low probability in practice (requires sub-second concurrent submissions for same question), but possible under network retries or double-clicks
 
-## Fix Options
+## Fix
 
-1. **Database constraint:** Add a unique index on `attempts(practice_session_id, question_id)` to prevent duplicate attempts per question per session at the database level
-2. **Application lock:** Acquire a session-level advisory lock before the insert-update sequence
-3. **Reorder:** Move attempt insertion after session-state update (but this risks state updated without attempt record if insert fails)
+1. Added migration hardening in `db/migrations/0008_attempts_session_question_unique.sql`:
+   - Deletes historical duplicates per `(practice_session_id, question_id)`, keeping the latest (`answered_at DESC, id DESC`)
+   - Creates partial unique index `attempts_session_question_uq` for non-null `practice_session_id`
+2. Mapped Postgres unique-violation errors in `DrizzleAttemptRepository.insert()` to `ApplicationError('CONFLICT', 'This question has already been answered in this session')`
+3. Kept fake parity by enforcing the same session-question uniqueness in `FakeAttemptRepository.insert()`
 
 ## Verification
 
-- [ ] Unit test for concurrent submission scenario
-- [ ] Verify no duplicate attempts exist after concurrent requests
+- [x] Unit tests cover duplicate-submission conflict behavior at use-case and repository boundaries
+- [x] Migration enforces one-row invariant and removes historical duplicates before unique-index creation
 
 ## Related
 
-- `src/application/use-cases/submit-answer.ts:93-136`
-- `src/adapters/repositories/drizzle-practice-session-repository.ts:181-258`
+- `src/application/use-cases/submit-answer.ts`
+- `src/adapters/repositories/drizzle-attempt-repository.ts`
+- `db/migrations/0008_attempts_session_question_unique.sql`

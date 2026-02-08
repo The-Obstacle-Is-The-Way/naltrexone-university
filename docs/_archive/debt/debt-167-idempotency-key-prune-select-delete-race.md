@@ -32,13 +32,17 @@ Between the SELECT and DELETE, another process could:
 
 ## Resolution
 
-Use a single `DELETE ... WHERE expiresAt < cutoff LIMIT N` query instead of SELECT→DELETE, or wrap both in a transaction.
+Retained the select-then-delete shape (for compatibility with current Drizzle patterns), but hardened the delete conditions:
+
+- Delete WHERE now includes `expiresAt < cutoff` in addition to `(userId, action, key)`
+- This prevents deleting a reclaimed (non-expired) key if it is updated between SELECT and DELETE
 
 ## Verification
 
-- [ ] Single atomic DELETE query used
-- [ ] Unit test for pruning behavior
+- [x] DELETE conditions include `expiresAt < cutoff` guard
+- [x] Unit test verifies the guard is present in delete conditions
 
 ## Related
 
-- `src/adapters/repositories/drizzle-idempotency-key-repository.ts:163-196`
+- `src/adapters/repositories/drizzle-idempotency-key-repository.ts`
+- `src/adapters/repositories/drizzle-idempotency-key-repository.test.ts`

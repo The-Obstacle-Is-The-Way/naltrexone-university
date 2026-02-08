@@ -3,13 +3,13 @@
 **Date:** 2026-02-07
 **Auditor:** Comprehensive six-axis audit of all critical paths
 **Purpose:** Find all remaining bugs and debt before next feature sprint
-**Status:** Partially Addressed — follow-up remediation completed on 2026-02-08
+**Status:** Fully Addressed — all tracked findings resolved or invalidated as of 2026-02-08
 
 > [!NOTE]
 > This report is the second comprehensive audit. For the first, see `foundation-audit-report.md`.
 
 > [!UPDATE]
-> On 2026-02-08, follow-up remediation resolved BUG-106 through BUG-109 and DEBT-158 through DEBT-162. DEBT-161 and DEBT-164 were invalidated as false positives after first-principles review.
+> On 2026-02-08, follow-up remediation resolved BUG-105 through BUG-109 and DEBT-158 through DEBT-167. DEBT-161, DEBT-164, and DEBT-168 were invalidated as false positives after first-principles review.
 
 ---
 
@@ -56,7 +56,7 @@ Several audit findings were verified against source code and rejected:
 
 | ID | Title | Component |
 |----|-------|-----------|
-| [BUG-105](bug-105-concurrent-answer-submission-race-condition.md) | Concurrent Answer Submission Can Create Duplicate Attempts | Practice Engine |
+| [BUG-105](../_archive/bugs/bug-105-concurrent-answer-submission-race-condition.md) | Concurrent Answer Submission Can Create Duplicate Attempts | Practice Engine |
 | [BUG-106](../_archive/bugs/bug-106-stripe-customer-search-query-interpolation.md) | Stripe Customer Search Query Uses String Interpolation | Billing |
 
 ### P2 (Medium)
@@ -85,17 +85,17 @@ Several audit findings were verified against source code and rejected:
 | [DEBT-160](../_archive/debt/debt-160-cron-secret-not-required-in-production.md) | CRON_SECRET Not Enforced as Required in Production | Security |
 | [DEBT-161](../_archive/debt/debt-161-incomplete-csp-headers.md) | Incomplete CSP Headers (Missing script-src, style-src, default-src) | Security |
 | [DEBT-162](../_archive/debt/debt-162-stripe-portal-missing-retry-consistency.md) | Stripe Portal Session Creation Has Inconsistent Retry Behavior | Billing |
-| [DEBT-163](../debt/debt-163-fakes-file-approaching-split-threshold.md) | Test Fakes File Approaching Split Threshold (1472 Lines) | Testing |
+| [DEBT-163](../_archive/debt/debt-163-fakes-file-approaching-split-threshold.md) | Test Fakes File Approaching Split Threshold (1472 Lines) | Testing |
 | [DEBT-164](../_archive/debt/debt-164-missing-suspense-boundary-practice-session-history.md) | Missing Suspense Boundary for Practice Session History Panel | UI |
-| [DEBT-165](../debt/debt-165-stripe-gateway-barrel-file-inconsistency.md) | Stripe Gateway Modules Bypass Barrel File Pattern | Code Quality |
+| [DEBT-165](../_archive/debt/debt-165-stripe-gateway-barrel-file-inconsistency.md) | Stripe Gateway Modules Bypass Barrel File Pattern | Code Quality |
 
 ### P3 (Low)
 
 | ID | Title | Component |
 |----|-------|-----------|
-| [DEBT-166](../debt/debt-166-practice-view-missing-focus-management-after-error.md) | Practice View Missing Focus Management After Error Recovery | Accessibility |
-| [DEBT-167](../debt/debt-167-idempotency-key-prune-select-delete-race.md) | Idempotency Key Prune Uses Non-Atomic SELECT→DELETE | Database |
-| [DEBT-168](../debt/debt-168-stripe-event-table-missing-check-constraint.md) | Stripe Events Table Missing CHECK Constraint on processedAt/error State | Database |
+| [DEBT-166](../_archive/debt/debt-166-practice-view-missing-focus-management-after-error.md) | Practice View Missing Focus Management After Error Recovery | Accessibility |
+| [DEBT-167](../_archive/debt/debt-167-idempotency-key-prune-select-delete-race.md) | Idempotency Key Prune Uses Non-Atomic SELECT→DELETE | Database |
+| [DEBT-168](../_archive/debt/debt-168-stripe-event-table-missing-check-constraint.md) | Stripe Events Table Missing CHECK Constraint on processedAt/error State | Database |
 
 ---
 

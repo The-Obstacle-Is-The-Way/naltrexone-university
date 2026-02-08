@@ -254,6 +254,29 @@ describe('DrizzleAttemptRepository', () => {
       await expect(promise).rejects.toBeInstanceOf(ApplicationError);
       await expect(promise).rejects.toMatchObject({ code: 'INTERNAL_ERROR' });
     });
+
+    it('maps unique-constraint violations to CONFLICT', async () => {
+      const db = createDbMock();
+      db._mocks.insertReturning.mockRejectedValue({ code: '23505' });
+
+      const repo = new DrizzleAttemptRepository(db as unknown as RepoDb);
+
+      const promise = repo.insert({
+        userId: 'user_1',
+        questionId: 'question_1',
+        practiceSessionId: 'session_1',
+        selectedChoiceId: 'choice_1',
+        isCorrect: true,
+        timeSpentSeconds: 12,
+      });
+
+      await expect(promise).rejects.toEqual(
+        new ApplicationError(
+          'CONFLICT',
+          'This question has already been answered in this session',
+        ),
+      );
+    });
   });
 
   describe('findByUserId', () => {

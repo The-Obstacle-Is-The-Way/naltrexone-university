@@ -45,6 +45,27 @@ export type UsePracticeQuestionFlowOutput = {
   onNextQuestion: () => void;
 };
 
+export function getFocusRecoveryTransition(input: {
+  status: LoadState['status'];
+  pendingFocus: boolean;
+}): {
+  pendingFocus: boolean;
+  shouldFocus: boolean;
+} {
+  if (input.status === 'error') {
+    return { pendingFocus: true, shouldFocus: false };
+  }
+
+  if (input.status === 'ready' && input.pendingFocus) {
+    return { pendingFocus: false, shouldFocus: true };
+  }
+
+  return {
+    pendingFocus: input.pendingFocus,
+    shouldFocus: false,
+  };
+}
+
 export function usePracticeQuestionFlow(
   input: UsePracticeQuestionFlowInput,
 ): UsePracticeQuestionFlowOutput {
@@ -76,7 +97,7 @@ export function usePracticeQuestionFlow(
   >(null);
   const latestQuestionRequestId = useRef(0);
   const questionAreaRef = useRef<HTMLDivElement | null>(null);
-  const previousLoadStatus = useRef<LoadState['status']>('idle');
+  const pendingFocusAfterError = useRef(false);
   const isMounted = useIsMounted();
 
   const onTryAgain = useMemo(
@@ -124,11 +145,15 @@ export function usePracticeQuestionFlow(
     };
   }, []);
 
-  // DEBT-166: Focus the question area after error recovery
+  // DEBT-166: Focus the question area after recovering from an error.
+  // Handles both direct error->ready and error->loading->ready transitions.
   useEffect(() => {
-    const wasError = previousLoadStatus.current === 'error';
-    previousLoadStatus.current = loadState.status;
-    if (wasError && loadState.status === 'ready') {
+    const transition = getFocusRecoveryTransition({
+      status: loadState.status,
+      pendingFocus: pendingFocusAfterError.current,
+    });
+    pendingFocusAfterError.current = transition.pendingFocus;
+    if (transition.shouldFocus) {
       questionAreaRef.current?.focus();
     }
   }, [loadState.status]);

@@ -32,15 +32,22 @@ When a practice session error occurs and the user clicks "Try again", focus does
 
 ## Resolution
 
-After "Try again" is clicked, set focus to the loading indicator or error card when the result arrives (using `useRef` + `useEffect`).
+Implemented explicit error-recovery focus state in `usePracticeQuestionFlow`:
+
+- Track whether the UI is recovering from an error (`pendingFocus`)
+- Preserve that state through `error -> loading -> ready`
+- Focus the question area when ready is reached after an error recovery
+
+This closes the original half-measure that only handled direct `error -> ready` transitions.
 
 ## Verification
 
-- [ ] Focus moves to result after retry
-- [ ] Screen reader announces new state
-- [ ] Browser spec test for focus management
+- [x] Transition state machine covers `error -> loading -> ready`
+- [x] Unit test added for focus-recovery transition behavior
+- [x] `pnpm test --run` passes
 
 ## Related
 
-- `app/(app)/app/practice/components/practice-view.tsx:102-114`
+- `app/(app)/app/practice/hooks/use-practice-question-flow.ts`
+- `app/(app)/app/practice/hooks/use-practice-question-flow.test.tsx`
 - DEBT-148 (minimal ARIA accessibility in app pages)

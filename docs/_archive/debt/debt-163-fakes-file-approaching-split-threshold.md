@@ -33,10 +33,10 @@ src/application/test-helpers/
 
 ## Verification
 
-- [ ] Files split into logical groupings
-- [ ] All existing imports still work via barrel re-export
-- [ ] `pnpm test --run` passes
+- [x] Files split into logical groupings
+- [x] All existing imports still work via barrel re-export
+- [x] `pnpm test --run` passes
 
 ## Related
 
-- `src/application/test-helpers/fakes.ts`
+- `src/application/test-helpers/fakes/`

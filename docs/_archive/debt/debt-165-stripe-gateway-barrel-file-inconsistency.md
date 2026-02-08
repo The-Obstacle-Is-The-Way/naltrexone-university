@@ -36,9 +36,9 @@ Create `src/adapters/gateways/stripe/index.ts` barrel file and re-export public 
 
 ## Verification
 
-- [ ] Barrel file created for `stripe/` subdirectory
-- [ ] Imports updated to use barrel
-- [ ] `pnpm typecheck` passes
+- [x] Barrel file created for `stripe/` subdirectory
+- [x] Imports updated to use barrel
+- [x] `pnpm typecheck` passes
 
 ## Related
 

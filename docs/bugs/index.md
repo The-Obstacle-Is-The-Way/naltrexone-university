@@ -23,7 +23,7 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 | ID | Title | Status | Resolution |
 |----|-------|--------|------------|
-| [BUG-105](../_archive/bugs/bug-105-concurrent-answer-submission-race-condition.md) | Concurrent Answer Submission Can Create Duplicate Attempts | Resolved | Partial unique index on `attempts(practice_session_id, question_id)` prevents duplicate inserts at the DB level; FakeAttemptRepository enforces same constraint |
+| [BUG-105](../_archive/bugs/bug-105-concurrent-answer-submission-race-condition.md) | Concurrent Answer Submission Can Create Duplicate Attempts | Resolved | Migration now deduplicates historical `(practice_session_id, question_id)` collisions before creating partial unique index; repository/fake both map duplicate submissions to `CONFLICT` |
 | [BUG-109](../_archive/bugs/bug-109-cron-route-limit-mismatch.md) | Cron Route MAX_LIMIT (1000) Exceeds Reconciliation MAX_LIMIT (500) | Resolved | Route and job now share `RECONCILE_STRIPE_SUBSCRIPTIONS_MAX_LIMIT` with route-level regression coverage |
 | [BUG-108](../_archive/bugs/bug-108-submit-answer-unbounded-time-spent-seconds.md) | submitAnswer Allows Unbounded timeSpentSeconds at Use-Case Layer | Resolved | Use case now enforces 24-hour max cap and controller/shared limit references remain aligned |
 | [BUG-107](../_archive/bugs/bug-107-hardcoded-route-incomplete-session-card.md) | Hardcoded Route Path in Incomplete Session Card | Resolved | Replaced hardcoded path with `toPracticeSessionRoute(sessionId)` |
