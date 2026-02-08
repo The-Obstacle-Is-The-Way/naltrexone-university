@@ -137,9 +137,7 @@ export async function endSession(input: {
   ) => Promise<ActionResult<EndPracticeSessionOutput>>;
   setLoadState: (state: LoadState) => void;
   setSummary: (summary: EndPracticeSessionOutput | null) => void;
-  setQuestion: (question: NextQuestion | null) => void;
-  setSubmitResult: (result: SubmitAnswerOutput | null) => void;
-  setSelectedChoiceId: (choiceId: string | null) => void;
+  resetQuestionState: () => void;
   rotateIdempotencyKey?: () => void;
   isMounted?: () => boolean;
 }): Promise<void> {
@@ -174,8 +172,6 @@ export async function endSession(input: {
   }
 
   input.setSummary(res.data);
-  input.setQuestion(null);
-  input.setSubmitResult(null);
-  input.setSelectedChoiceId(null);
+  input.resetQuestionState();
   input.setLoadState({ status: 'ready' });
 }

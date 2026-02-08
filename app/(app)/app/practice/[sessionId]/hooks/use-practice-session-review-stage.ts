@@ -33,9 +33,7 @@ export type UsePracticeSessionReviewStageInput = {
   sessionMode: 'tutor' | 'exam' | null;
   setSessionMode: (mode: 'tutor' | 'exam' | null) => void;
   setLoadState: (state: LoadState) => void;
-  setQuestion: (question: NextQuestion | null) => void;
-  setSubmitResult: (result: SubmitAnswerOutput | null) => void;
-  setSelectedChoiceId: (choiceId: string | null) => void;
+  resetQuestionState: () => void;
   loadSpecificQuestion: (questionId: string) => void;
 };
 
@@ -78,9 +76,7 @@ export function usePracticeSessionReviewStage(
         endPracticeSessionFn: endPracticeSession,
         setLoadState: input.setLoadState,
         setSummary,
-        setQuestion: input.setQuestion,
-        setSubmitResult: input.setSubmitResult,
-        setSelectedChoiceId: input.setSelectedChoiceId,
+        resetQuestionState: input.resetQuestionState,
         rotateIdempotencyKey: () => {
           endSessionIdempotencyKeyRef.current = crypto.randomUUID();
         },
@@ -89,9 +85,7 @@ export function usePracticeSessionReviewStage(
     [
       input.sessionId,
       input.setLoadState,
-      input.setQuestion,
-      input.setSelectedChoiceId,
-      input.setSubmitResult,
+      input.resetQuestionState,
       input.isMounted,
     ],
   );
@@ -133,16 +127,12 @@ export function usePracticeSessionReviewStage(
     setReviewLoadState({ status: 'ready' });
     setIsInReviewStage(true);
     input.setSessionMode(res.data.mode);
-    input.setQuestion(null);
-    input.setSubmitResult(null);
-    input.setSelectedChoiceId(null);
+    input.resetQuestionState();
   }, [
     input.sessionId,
     input.isMounted,
-    input.setQuestion,
-    input.setSelectedChoiceId,
     input.setSessionMode,
-    input.setSubmitResult,
+    input.resetQuestionState,
     finalizeSession,
   ]);
 

@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useMemo } from 'react';
+import { useEffect, useRef } from 'react';
 import { ErrorCard } from '@/components/error-card';
 import { Feedback } from '@/components/question/Feedback';
 import { QuestionCard } from '@/components/question/QuestionCard';
@@ -50,22 +50,31 @@ export function PracticeView(props: PracticeViewProps) {
     props.loadState.status === 'ready' &&
     props.question !== null &&
     props.submitResult === null;
-  const bookmarkFeedback = useMemo(
-    () => ({
-      message: props.bookmarkMessage ?? null,
-      version: props.bookmarkMessageVersion ?? 0,
-    }),
-    [props.bookmarkMessage, props.bookmarkMessageVersion],
-  );
+  const lastNotifiedBookmarkKeyRef = useRef<string | null>(null);
 
   useEffect(() => {
-    const message = bookmarkFeedback.message;
-    if (!message) return;
+    const message = props.bookmarkMessage ?? null;
+    const version = props.bookmarkMessageVersion ?? 0;
+
+    if (!message) {
+      lastNotifiedBookmarkKeyRef.current = null;
+      return;
+    }
+
+    const feedbackKey = `${version}:${message}`;
+    if (lastNotifiedBookmarkKeyRef.current === feedbackKey) return;
+    lastNotifiedBookmarkKeyRef.current = feedbackKey;
+
     notify({
       message,
       tone: props.bookmarkStatus === 'error' ? 'error' : 'success',
     });
-  }, [notify, bookmarkFeedback, props.bookmarkStatus]);
+  }, [
+    notify,
+    props.bookmarkMessage,
+    props.bookmarkMessageVersion,
+    props.bookmarkStatus,
+  ]);
 
   return (
     <div className="space-y-6">

@@ -1,6 +1,4 @@
 import {
-  type Dispatch,
-  type SetStateAction,
   useCallback,
   useEffect,
   useMemo,
@@ -18,6 +16,7 @@ import {
   type LoadState,
   selectChoiceIfAllowed,
 } from '@/app/(app)/app/practice/practice-page-logic';
+import { runTransitionedAsyncAction } from '@/app/(app)/app/practice/shared/question-flow-actions';
 import {
   getNextQuestion,
   submitAnswer,
@@ -32,19 +31,17 @@ export type UsePracticeSessionQuestionFlowInput = {
 
 export type UsePracticeSessionQuestionFlowOutput = {
   sessionInfo: NextQuestion['session'];
-  setSessionInfo: Dispatch<SetStateAction<NextQuestion['session']>>;
   sessionMode: 'tutor' | 'exam' | null;
-  setSessionMode: Dispatch<SetStateAction<'tutor' | 'exam' | null>>;
   loadState: LoadState;
-  setLoadState: Dispatch<SetStateAction<LoadState>>;
   question: NextQuestion | null;
-  setQuestion: Dispatch<SetStateAction<NextQuestion | null>>;
   selectedChoiceId: string | null;
-  setSelectedChoiceId: Dispatch<SetStateAction<string | null>>;
   submitResult: SubmitAnswerOutput | null;
-  setSubmitResult: Dispatch<SetStateAction<SubmitAnswerOutput | null>>;
   isPending: boolean;
   canSubmit: boolean;
+  applySessionInfo: (info: NextQuestion['session']) => void;
+  setSessionMode: (mode: 'tutor' | 'exam' | null) => void;
+  setLoadState: (state: LoadState) => void;
+  resetQuestionState: () => void;
   onTryAgain: () => void;
   onNextQuestion: () => void;
   onNavigateQuestion: (questionId: string) => void;
@@ -125,6 +122,16 @@ export function usePracticeSessionQuestionFlow(
     setSessionMode(sessionInfo.mode);
   }, [sessionInfo?.mode]);
 
+  const applySessionInfo = useCallback((info: NextQuestion['session']) => {
+    setSessionInfo(info);
+  }, []);
+
+  const resetQuestionState = useCallback(() => {
+    setQuestion(null);
+    setSubmitResult(null);
+    setSelectedChoiceId(null);
+  }, []);
+
   const onNavigateQuestion = useCallback(
     (questionId: string): void => {
       startTransition(() => {
@@ -147,9 +154,10 @@ export function usePracticeSessionQuestionFlow(
   }, [loadState, question, selectedChoiceId, submitResult]);
 
   const onSubmit = useCallback(() => {
-    return new Promise<void>((resolve) => {
-      startTransition(async () => {
-        await submitAnswerForQuestion({
+    return runTransitionedAsyncAction({
+      startTransition,
+      run: () =>
+        submitAnswerForQuestion({
           sessionId: input.sessionId,
           question,
           selectedChoiceId,
@@ -160,9 +168,7 @@ export function usePracticeSessionQuestionFlow(
           setLoadState,
           setSubmitResult,
           isMounted: input.isMounted,
-        });
-        resolve();
-      });
+        }),
     });
   }, [
     question,
@@ -182,19 +188,17 @@ export function usePracticeSessionQuestionFlow(
 
   return {
     sessionInfo,
-    setSessionInfo,
     sessionMode,
     setSessionMode,
     loadState,
-    setLoadState,
     question,
-    setQuestion,
     selectedChoiceId,
-    setSelectedChoiceId,
     submitResult,
-    setSubmitResult,
     isPending,
     canSubmit,
+    applySessionInfo,
+    setLoadState,
+    resetQuestionState,
     onTryAgain,
     onNextQuestion: onTryAgain,
     onNavigateQuestion,

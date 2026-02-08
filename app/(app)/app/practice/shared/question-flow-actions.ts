@@ -94,6 +94,23 @@ export function createTransitionedLoadAction(input: {
   };
 }
 
+export function runTransitionedAsyncAction(input: {
+  startTransition: (fn: () => void) => void;
+  run: () => Promise<void>;
+}): Promise<void> {
+  return new Promise((resolve) => {
+    input.startTransition(async () => {
+      try {
+        await input.run();
+      } catch (_error) {
+        // The caller owns error state; this prevents unhandled rejections.
+      } finally {
+        resolve();
+      }
+    });
+  });
+}
+
 export async function runSubmitAnswerFlow<
   TQuestion extends { questionId: string },
 >(input: {

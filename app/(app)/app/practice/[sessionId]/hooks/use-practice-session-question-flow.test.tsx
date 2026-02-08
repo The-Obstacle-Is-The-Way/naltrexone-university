@@ -25,14 +25,13 @@ describe('usePracticeSessionQuestionFlow', () => {
     expect(output.submitResult).toBeNull();
     expect(output.isPending).toBe(false);
     expect(output.canSubmit).toBe(false);
+    expect(typeof output.applySessionInfo).toBe('function');
     expect(typeof output.onTryAgain).toBe('function');
     expect(typeof output.onSubmit).toBe('function');
     expect(typeof output.onSelectChoice).toBe('function');
     expect(typeof output.onNavigateQuestion).toBe('function');
     expect(typeof output.setSessionMode).toBe('function');
     expect(typeof output.setLoadState).toBe('function');
-    expect(typeof output.setQuestion).toBe('function');
-    expect(typeof output.setSubmitResult).toBe('function');
-    expect(typeof output.setSelectedChoiceId).toBe('function');
+    expect(typeof output.resetQuestionState).toBe('function');
   });
 });

@@ -1,6 +1,10 @@
 // @vitest-environment jsdom
 import { renderToStaticMarkup } from 'react-dom/server';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+
+vi.mock('next/link', () => ({
+  default: (props: Record<string, unknown>) => <a {...props} />,
+}));
 
 describe('checkout/success error page', () => {
   it('renders with a valid skip-link target landmark', async () => {

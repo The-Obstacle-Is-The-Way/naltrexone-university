@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   buildTimeSpentSeconds,
   createTransitionedLoadAction,
+  runTransitionedAsyncAction,
 } from './question-flow-actions';
 
 describe('question-flow-actions', () => {
@@ -38,5 +39,33 @@ describe('question-flow-actions', () => {
 
     expect(transitioned).toBe(true);
     expect(executed).toBe(true);
+  });
+
+  it('resolves transitioned async action after completion', async () => {
+    let transitioned = false;
+
+    const promise = runTransitionedAsyncAction({
+      startTransition: (fn) => {
+        transitioned = true;
+        fn();
+      },
+      run: async () => {},
+    });
+
+    await expect(promise).resolves.toBeUndefined();
+    expect(transitioned).toBe(true);
+  });
+
+  it('resolves transitioned async action even when it throws', async () => {
+    const promise = runTransitionedAsyncAction({
+      startTransition: (fn) => {
+        fn();
+      },
+      run: async () => {
+        throw new Error('boom');
+      },
+    });
+
+    await expect(promise).resolves.toBeUndefined();
   });
 });

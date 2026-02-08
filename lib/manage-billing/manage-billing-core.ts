@@ -21,7 +21,12 @@ export async function runManageBillingAction(deps: {
   redirectFn: RedirectFn;
   redirects: ManageBillingRedirects;
 }): Promise<void> {
-  const result = await deps.createPortalSessionFn({});
+  let result: Awaited<ReturnType<CreatePortalSessionFn>>;
+  try {
+    result = await deps.createPortalSessionFn({});
+  } catch {
+    return deps.redirectFn(deps.redirects.failure);
+  }
   if (result.ok) return deps.redirectFn(result.data.url);
 
   return deps.redirectFn(

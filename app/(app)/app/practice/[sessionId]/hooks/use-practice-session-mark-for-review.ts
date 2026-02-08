@@ -19,7 +19,7 @@ type UsePracticeSessionMarkForReviewInput = {
   sessionMode: 'tutor' | 'exam' | null;
   sessionInfo: NextQuestion['session'];
   sessionId: string;
-  setSessionInfo: Dispatch<SetStateAction<NextQuestion['session']>>;
+  applySessionInfo: (info: NextQuestion['session']) => void;
   setLoadState: (state: LoadState) => void;
   setReview: Dispatch<SetStateAction<GetPracticeSessionReviewOutput | null>>;
   isMounted: () => boolean;
@@ -84,9 +84,12 @@ export function usePracticeSessionMarkForReview(
       return;
     }
 
-    input.setSessionInfo((prev) =>
-      prev ? { ...prev, isMarkedForReview: res.data.markedForReview } : prev,
-    );
+    if (input.sessionInfo) {
+      input.applySessionInfo({
+        ...input.sessionInfo,
+        isMarkedForReview: res.data.markedForReview,
+      });
+    }
 
     input.setReview((prev) => {
       if (!prev) return prev;
@@ -112,7 +115,7 @@ export function usePracticeSessionMarkForReview(
     input.sessionMode,
     input.setLoadState,
     input.setReview,
-    input.setSessionInfo,
+    input.applySessionInfo,
     setPracticeSessionQuestionMarkFn,
   ]);
 

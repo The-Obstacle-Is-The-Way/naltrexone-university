@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { useEffect, useState } from 'react';
 import { expect, test, vi } from 'vitest';
 import { render } from 'vitest-browser-react';
 import { PracticeView } from './practice-view';
@@ -91,4 +92,49 @@ test('emits success-tone notification when bookmark feedback arrives in non-erro
     message: 'Question bookmarked.',
     tone: 'success',
   });
+});
+
+test('does not emit duplicate notifications when bookmark status changes without a new message version', async () => {
+  notifyMock.mockReset();
+
+  function Harness() {
+    const [status, setStatus] = useState<'idle' | 'loading' | 'error'>('error');
+
+    useEffect(() => {
+      setStatus('idle');
+    }, []);
+
+    return (
+      <PracticeView
+        loadState={{ status: 'ready' }}
+        question={{
+          questionId: 'question-1',
+          slug: 'question-1',
+          stemMd: 'What is the next best step?',
+          difficulty: 'easy',
+          choices: [
+            { id: 'choice_a', label: 'A', textMd: 'Option A', sortOrder: 1 },
+          ],
+          session: null,
+        }}
+        selectedChoiceId={null}
+        submitResult={null}
+        isPending={false}
+        bookmarkStatus={status}
+        isBookmarked
+        bookmarkMessage="Failed to save bookmark. Please try again."
+        bookmarkMessageVersion={1}
+        canSubmit={false}
+        onTryAgain={() => undefined}
+        onToggleBookmark={() => undefined}
+        onSelectChoice={() => undefined}
+        onSubmit={() => undefined}
+        onNextQuestion={() => undefined}
+      />
+    );
+  }
+
+  await render(<Harness />);
+
+  await expect.poll(() => notifyMock.mock.calls.length).toBe(1);
 });

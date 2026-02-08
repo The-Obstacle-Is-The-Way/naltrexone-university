@@ -80,4 +80,25 @@ describe('manage-billing-core', () => {
       url: '/app/billing?error=portal_failed',
     });
   });
+
+  it('redirects to configured failure route when portal session creation throws', async () => {
+    const redirectFn = (url: string): never => {
+      throw new RedirectError(url);
+    };
+
+    const action = async () =>
+      runManageBillingAction({
+        createPortalSessionFn: vi.fn(async () => {
+          throw new Error('network');
+        }),
+        redirectFn,
+        redirects: {
+          failure: '/app/billing?error=portal_failed',
+        },
+      });
+
+    await expect(action()).rejects.toMatchObject({
+      url: '/app/billing?error=portal_failed',
+    });
+  });
 });

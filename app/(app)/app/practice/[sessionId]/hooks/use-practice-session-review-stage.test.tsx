@@ -20,9 +20,7 @@ describe('usePracticeSessionReviewStage', () => {
         sessionMode: null,
         setSessionMode: () => undefined,
         setLoadState: () => undefined,
-        setQuestion: () => undefined,
-        setSubmitResult: () => undefined,
-        setSelectedChoiceId: () => undefined,
+        resetQuestionState: () => undefined,
         loadSpecificQuestion: () => undefined,
       }),
     );

@@ -31,9 +31,7 @@ function createInput(sessionMode: 'tutor' | 'exam') {
     sessionMode,
     setSessionMode: vi.fn(),
     setLoadState: vi.fn(),
-    setQuestion: vi.fn(),
-    setSubmitResult: vi.fn(),
-    setSelectedChoiceId: vi.fn(),
+    resetQuestionState: vi.fn(),
     loadSpecificQuestion: vi.fn(),
   };
 }

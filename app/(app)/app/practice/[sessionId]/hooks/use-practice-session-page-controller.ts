@@ -31,9 +31,7 @@ export function usePracticeSessionPageController(
     sessionMode: questionFlow.sessionMode,
     setSessionMode: questionFlow.setSessionMode,
     setLoadState: questionFlow.setLoadState,
-    setQuestion: questionFlow.setQuestion,
-    setSubmitResult: questionFlow.setSubmitResult,
-    setSelectedChoiceId: questionFlow.setSelectedChoiceId,
+    resetQuestionState: questionFlow.resetQuestionState,
     loadSpecificQuestion: questionFlow.onNavigateQuestion,
   });
 
@@ -60,7 +58,7 @@ export function usePracticeSessionPageController(
       sessionMode: questionFlow.sessionMode,
       sessionInfo: questionFlow.sessionInfo,
       sessionId,
-      setSessionInfo: questionFlow.setSessionInfo,
+      applySessionInfo: questionFlow.applySessionInfo,
       setLoadState: questionFlow.setLoadState,
       setReview: reviewStage.setReview,
       isMounted,

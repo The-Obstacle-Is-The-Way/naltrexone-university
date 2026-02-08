@@ -18,7 +18,7 @@ describe('usePracticeSessionMarkForReview', () => {
         sessionMode: null,
         sessionInfo: null,
         sessionId: 'session-1',
-        setSessionInfo: () => undefined,
+        applySessionInfo: () => undefined,
         setLoadState: () => undefined,
         setReview: () => undefined,
         isMounted: () => true,
@@ -33,7 +33,7 @@ describe('usePracticeSessionMarkForReview', () => {
 
   it('passes an idempotency key when marking for review', async () => {
     const setLoadState = vi.fn();
-    const setSessionInfo = vi.fn();
+    const applySessionInfo = vi.fn();
     const setReview = vi.fn();
     const setPracticeSessionQuestionMarkFn = vi.fn(async () =>
       ok({
@@ -54,7 +54,7 @@ describe('usePracticeSessionMarkForReview', () => {
           isMarkedForReview: false,
         },
         sessionId: 'session-1',
-        setSessionInfo,
+        applySessionInfo,
         setLoadState,
         setReview,
         isMounted: () => true,

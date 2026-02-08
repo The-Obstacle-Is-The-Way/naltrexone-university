@@ -14,6 +14,7 @@ import {
   selectChoiceIfAllowed,
   submitAnswerForQuestion,
 } from '@/app/(app)/app/practice/practice-page-logic';
+import { runTransitionedAsyncAction } from '@/app/(app)/app/practice/shared/question-flow-actions';
 import {
   getNextQuestion,
   submitAnswer,
@@ -129,9 +130,10 @@ export function usePracticeQuestionAnswerFlow(
   }, [loadState, question, selectedChoiceId, submitResult]);
 
   const onSubmit = useCallback(() => {
-    return new Promise<void>((resolve) => {
-      startTransition(async () => {
-        await submitAnswerForQuestion({
+    return runTransitionedAsyncAction({
+      startTransition,
+      run: () =>
+        submitAnswerForQuestion({
           question,
           selectedChoiceId,
           questionLoadedAtMs: questionLoadedAt,
@@ -141,9 +143,7 @@ export function usePracticeQuestionAnswerFlow(
           setLoadState,
           setSubmitResult,
           isMounted: input.isMounted,
-        });
-        resolve();
-      });
+        }),
     });
   }, [
     question,

@@ -617,9 +617,7 @@ describe('practice-session-page-logic', () => {
 
     it('sets summary and resets state on success', async () => {
       const setSummary = vi.fn();
-      const setQuestion = vi.fn();
-      const setSubmitResult = vi.fn();
-      const setSelectedChoiceId = vi.fn();
+      const resetQuestionState = vi.fn();
       const endPracticeSessionFn = vi.fn(async () =>
         ok(successfulEndSessionOutput),
       );
@@ -630,9 +628,7 @@ describe('practice-session-page-logic', () => {
         endPracticeSessionFn,
         setLoadState: vi.fn(),
         setSummary,
-        setQuestion,
-        setSubmitResult,
-        setSelectedChoiceId,
+        resetQuestionState,
       });
 
       expect(endPracticeSessionFn).toHaveBeenCalledWith({
@@ -642,9 +638,7 @@ describe('practice-session-page-logic', () => {
       expect(setSummary).toHaveBeenCalledWith(
         expect.objectContaining({ sessionId: 'session-1' }),
       );
-      expect(setQuestion).toHaveBeenCalledWith(null);
-      expect(setSubmitResult).toHaveBeenCalledWith(null);
-      expect(setSelectedChoiceId).toHaveBeenCalledWith(null);
+      expect(resetQuestionState).toHaveBeenCalledTimes(1);
     });
 
     it('sets error state when controller fails', async () => {
@@ -656,9 +650,7 @@ describe('practice-session-page-logic', () => {
         endPracticeSessionFn: async () => err('INTERNAL_ERROR', 'Boom'),
         setLoadState,
         setSummary: vi.fn(),
-        setQuestion: vi.fn(),
-        setSubmitResult: vi.fn(),
-        setSelectedChoiceId: vi.fn(),
+        resetQuestionState: vi.fn(),
       });
 
       expect(setLoadState).toHaveBeenCalledWith({
@@ -676,9 +668,7 @@ describe('practice-session-page-logic', () => {
         endPracticeSessionFn: async () => err('INTERNAL_ERROR', 'Boom'),
         setLoadState: vi.fn(),
         setSummary: vi.fn(),
-        setQuestion: vi.fn(),
-        setSubmitResult: vi.fn(),
-        setSelectedChoiceId: vi.fn(),
+        resetQuestionState: vi.fn(),
         rotateIdempotencyKey,
       });
 
@@ -696,9 +686,7 @@ describe('practice-session-page-logic', () => {
         },
         setLoadState,
         setSummary: vi.fn(),
-        setQuestion: vi.fn(),
-        setSubmitResult: vi.fn(),
-        setSelectedChoiceId: vi.fn(),
+        resetQuestionState: vi.fn(),
       });
 
       expect(setLoadState).toHaveBeenCalledWith({
@@ -718,9 +706,7 @@ describe('practice-session-page-logic', () => {
         },
         setLoadState: vi.fn(),
         setSummary: vi.fn(),
-        setQuestion: vi.fn(),
-        setSubmitResult: vi.fn(),
-        setSelectedChoiceId: vi.fn(),
+        resetQuestionState: vi.fn(),
         rotateIdempotencyKey,
       });
 
@@ -736,9 +722,7 @@ describe('practice-session-page-logic', () => {
         endPracticeSessionFn: async () => ok(successfulEndSessionOutput),
         setLoadState: vi.fn(),
         setSummary: vi.fn(),
-        setQuestion: vi.fn(),
-        setSubmitResult: vi.fn(),
-        setSelectedChoiceId: vi.fn(),
+        resetQuestionState: vi.fn(),
         rotateIdempotencyKey,
       });
 
@@ -758,9 +742,7 @@ describe('practice-session-page-logic', () => {
         endPracticeSessionFn: async () => deferred.promise,
         setLoadState,
         setSummary,
-        setQuestion: vi.fn(),
-        setSubmitResult: vi.fn(),
-        setSelectedChoiceId: vi.fn(),
+        resetQuestionState: vi.fn(),
         isMounted: () => mounted,
       });
 

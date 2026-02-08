@@ -13,16 +13,6 @@ vi.mock('@/src/adapters/controllers/practice-controller', () => ({
   setPracticeSessionQuestionMark: setPracticeSessionQuestionMarkMock,
 }));
 
-type SessionInfoState = {
-  sessionId: string;
-  mode: 'exam' | 'tutor';
-  index: number;
-  total: number;
-  isMarkedForReview: boolean;
-} | null;
-
-type SessionInfoUpdater = (prev: SessionInfoState) => SessionInfoState;
-
 type ReviewState = {
   sessionId: string;
   mode: 'exam' | 'tutor';
@@ -54,7 +44,7 @@ describe('usePracticeSessionMarkForReview (browser)', () => {
 
     setPracticeSessionQuestionMarkMock.mockReturnValue(deferred.promise);
 
-    const setSessionInfo = vi.fn();
+    const applySessionInfo = vi.fn();
     const setReview = vi.fn();
 
     const harness = await renderHook(() =>
@@ -76,7 +66,7 @@ describe('usePracticeSessionMarkForReview (browser)', () => {
           isMarkedForReview: false,
         },
         sessionId: 'session-1',
-        setSessionInfo,
+        applySessionInfo,
         setLoadState: vi.fn(),
         setReview,
         isMounted: () => true,
@@ -108,20 +98,7 @@ describe('usePracticeSessionMarkForReview (browser)', () => {
       idempotencyKey: expect.any(String),
     });
 
-    expect(setSessionInfo).toHaveBeenCalled();
-    const sessionUpdater = setSessionInfo.mock.calls[0]?.[0] as
-      | SessionInfoUpdater
-      | undefined;
-    expect(sessionUpdater).toBeDefined();
-    expect(
-      sessionUpdater?.({
-        sessionId: 'session-1',
-        mode: 'exam',
-        index: 0,
-        total: 10,
-        isMarkedForReview: false,
-      }),
-    ).toEqual({
+    expect(applySessionInfo).toHaveBeenCalledWith({
       sessionId: 'session-1',
       mode: 'exam',
       index: 0,
@@ -179,7 +156,7 @@ describe('usePracticeSessionMarkForReview (browser)', () => {
           isMarkedForReview: false,
         },
         sessionId: 'session-1',
-        setSessionInfo: vi.fn(),
+        applySessionInfo: vi.fn(),
         setLoadState,
         setReview: vi.fn(),
         isMounted: () => true,
