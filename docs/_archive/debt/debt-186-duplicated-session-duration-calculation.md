@@ -1,8 +1,9 @@
 # DEBT-186: Duplicated Session Duration Calculation
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P2
 **Date:** 2026-02-08
+**Resolved:** 2026-02-08
 
 ---
 
@@ -43,9 +44,9 @@ export function computeSessionDurationSeconds(startedAt: Date, endedAt: Date): n
 
 ## Verification
 
-- [ ] Both use cases use the shared function
-- [ ] No inline duration calculation remains
-- [ ] `pnpm typecheck && pnpm lint && pnpm test --run` passes
+- [x] Both use cases use the shared function
+- [x] No inline duration calculation remains
+- [x] `pnpm typecheck && pnpm lint && pnpm test --run` passes
 
 ## Related
 

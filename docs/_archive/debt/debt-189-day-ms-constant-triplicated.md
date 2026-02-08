@@ -1,8 +1,9 @@
 # DEBT-189: DAY_MS Constant Defined in Three Separate Files
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P3
 **Date:** 2026-02-08
+**Resolved:** 2026-02-08
 
 ---
 
@@ -30,6 +31,6 @@ Note: `drizzle-rate-limiter.ts` is in the adapters layer and can import from dom
 
 ## Verification
 
-- [ ] Single definition of `DAY_MS` in `src/domain/services/statistics.ts`
-- [ ] Both consumers import from domain
-- [ ] `pnpm typecheck && pnpm lint && pnpm test --run` passes
+- [x] Single definition of `DAY_MS` in `src/domain/services/statistics.ts`
+- [x] Both consumers import from domain
+- [x] `pnpm typecheck && pnpm lint && pnpm test --run` passes

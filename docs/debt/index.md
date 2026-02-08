@@ -17,13 +17,7 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 | ID | Title | Priority | Status |
 |----|-------|----------|--------|
-| [DEBT-185](debt-185-duplicated-session-stats-calculation.md) | Duplicated Session Stats Calculation Across 4 Use Cases | P2 | Open |
-| [DEBT-186](debt-186-duplicated-session-duration-calculation.md) | Duplicated Session Duration Calculation | P2 | Open |
-| [DEBT-187](debt-187-duplicated-default-question-state.md) | Duplicated Default PracticeSessionQuestionState Creation | P2 | Open |
-| [DEBT-188](debt-188-duplicated-count-query-attempt-repository.md) | Duplicated Count Query Pattern in Attempt Repository | P3 | Open |
-| [DEBT-189](debt-189-day-ms-constant-triplicated.md) | DAY_MS Constant Defined in Three Separate Files | P3 | Open |
-| [DEBT-190](debt-190-submit-answer-rollback-lacks-logger.md) | SubmitAnswerUseCase Rollback Error Handling Lacks Logger | P2 | Open |
-| [DEBT-191](debt-191-get-next-question-missing-runtime-validation.md) | Missing Runtime Validation in GetNextQuestion Discriminated Union | P2 | Open |
+| — | No active DEBT items | — | — |
 
 **Next Debt ID:** DEBT-192
 
@@ -108,6 +102,18 @@ All frontend-specific UI/UX debt. Items use `FE-XXX` IDs and are cross-reference
 |----|-------|----------|----------|
 | [DEBT-184](../_archive/debt/debt-184-loading-message-misleading-during-submit.md) | Loading Message Misleading During Answer Submission | P2 | 2026-02-08 |
 
+### Resolved in Practice Engine DRY Cleanup
+
+| ID | Title | Priority | Resolved |
+|----|-------|----------|----------|
+| [DEBT-185](../_archive/debt/debt-185-duplicated-session-stats-calculation.md) | Duplicated Session Stats Calculation Across 4 Use Cases | P2 | 2026-02-08 |
+| [DEBT-186](../_archive/debt/debt-186-duplicated-session-duration-calculation.md) | Duplicated Session Duration Calculation | P2 | 2026-02-08 |
+| [DEBT-187](../_archive/debt/debt-187-duplicated-default-question-state.md) | Duplicated Default PracticeSessionQuestionState Creation | P2 | 2026-02-08 |
+| [DEBT-188](../_archive/debt/debt-188-duplicated-count-query-attempt-repository.md) | Duplicated Count Query Pattern in Attempt Repository | P3 | 2026-02-08 |
+| [DEBT-189](../_archive/debt/debt-189-day-ms-constant-triplicated.md) | DAY_MS Constant Defined in Three Separate Files | P3 | 2026-02-08 |
+| [DEBT-190](../_archive/debt/debt-190-submit-answer-rollback-lacks-logger.md) | SubmitAnswerUseCase Rollback Error Handling Lacks Logger | P2 | 2026-02-08 |
+| [DEBT-191](../_archive/debt/debt-191-get-next-question-missing-runtime-validation.md) | Missing Runtime Validation in GetNextQuestion Discriminated Union | P2 | 2026-02-08 |
+
 ### Resolved in Frontend Baseline Hardening
 
 | ID | Title | Priority | Resolved |
@@ -129,7 +135,7 @@ All frontend-specific UI/UX debt. Items use `FE-XXX` IDs and are cross-reference
 | [DEBT-175](../_archive/debt/debt-175-pricing-view-design-system-and-heading-hierarchy-drift.md) | Pricing View Bypasses Button Primitive and Skips Heading Hierarchy | P3 | 2026-02-08 |
 | [DEBT-176](../_archive/debt/debt-176-theme-and-nav-modules-missing-direct-unit-tests.md) | Theme and Nav Modules Missing Direct Unit Tests | P3 | 2026-02-08 |
 
-### Resolved in Foundation Audit #3 Remediation
+### Resolved in Follow-Up Remediation
 
 | ID | Title | Priority | Resolved |
 |----|-------|----------|----------|

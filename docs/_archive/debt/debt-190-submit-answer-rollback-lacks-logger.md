@@ -1,8 +1,9 @@
 # DEBT-190: SubmitAnswerUseCase Rollback Error Handling Lacks Logger
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P2
 **Date:** 2026-02-08
+**Resolved:** 2026-02-08
 
 ---
 
@@ -55,6 +56,6 @@ try {
 
 ## Verification
 
-- [ ] Logger injected and used in rollback catch block
-- [ ] Rollback failure test verifies log output
-- [ ] `pnpm typecheck && pnpm lint && pnpm test --run` passes
+- [x] Logger injected and used in rollback catch block
+- [x] Rollback failure test verifies log output
+- [x] `pnpm typecheck && pnpm lint && pnpm test --run` passes

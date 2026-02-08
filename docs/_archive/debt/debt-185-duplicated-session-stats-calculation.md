@@ -1,8 +1,9 @@
 # DEBT-185: Duplicated Session Stats Calculation Across Use Cases
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P2
 **Date:** 2026-02-08
+**Resolved:** 2026-02-08
 
 ---
 
@@ -52,6 +53,6 @@ export function computeSessionStats(questionStates: PracticeSessionQuestionState
 
 ## Verification
 
-- [ ] All 4 use cases use the shared function
-- [ ] No inline answered/correct calculation remains
-- [ ] `pnpm typecheck && pnpm lint && pnpm test --run` passes
+- [x] All 4 use cases use the shared function
+- [x] No inline answered/correct calculation remains
+- [x] `pnpm typecheck && pnpm lint && pnpm test --run` passes

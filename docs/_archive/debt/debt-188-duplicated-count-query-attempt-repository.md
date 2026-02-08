@@ -1,8 +1,9 @@
 # DEBT-188: Duplicated Count Query Pattern in Attempt Repository
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P3
 **Date:** 2026-02-08
+**Resolved:** 2026-02-08
 
 ---
 
@@ -46,6 +47,6 @@ Then each method becomes a one-liner.
 
 ## Verification
 
-- [ ] All count methods delegate to shared helper
-- [ ] Existing tests pass unchanged
-- [ ] `pnpm typecheck && pnpm lint && pnpm test --run` passes
+- [x] All count methods delegate to shared helper
+- [x] Existing tests pass unchanged
+- [x] `pnpm typecheck && pnpm lint && pnpm test --run` passes

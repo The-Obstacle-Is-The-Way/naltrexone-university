@@ -1,8 +1,9 @@
 # DEBT-191: Missing Runtime Validation in GetNextQuestion Discriminated Union
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P2
 **Date:** 2026-02-08
+**Resolved:** 2026-02-08
 
 ---
 
@@ -50,6 +51,6 @@ return this.executeForFilters(input.userId, input.filters);
 
 ## Verification
 
-- [ ] Invalid input throws VALIDATION_ERROR at use case boundary
-- [ ] Test added for the guard
-- [ ] `pnpm typecheck && pnpm lint && pnpm test --run` passes
+- [x] Invalid input throws VALIDATION_ERROR at use case boundary
+- [x] Test added for the guard
+- [x] `pnpm typecheck && pnpm lint && pnpm test --run` passes

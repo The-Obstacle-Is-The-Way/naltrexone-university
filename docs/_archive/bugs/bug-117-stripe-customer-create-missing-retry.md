@@ -1,8 +1,9 @@
 # BUG-117: Stripe Customer Creation Non-Idempotent Path Missing Retry Wrapper
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P1
 **Date:** 2026-02-08
+**Resolved:** 2026-02-08
 
 ---
 
@@ -40,9 +41,9 @@ const customer = await callStripeWithRetry({
 
 ## Verification
 
-- [ ] Both paths (with and without idempotency key) use `callStripeWithRetry()`
-- [ ] Existing tests pass
-- [ ] `pnpm typecheck && pnpm lint && pnpm test --run` passes
+- [x] Both paths (with and without idempotency key) use `callStripeWithRetry()`
+- [x] Existing tests pass
+- [x] `pnpm typecheck && pnpm lint && pnpm test --run` passes
 
 ## Related
 
