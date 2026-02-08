@@ -17,9 +17,13 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 | ID | Title | Status | Priority | Date |
 |----|-------|--------|----------|------|
-| None | No active bugs | - | - | - |
+| [BUG-105](bug-105-concurrent-answer-submission-race-condition.md) | Concurrent Answer Submission Can Create Duplicate Attempts | Open | P1 | 2026-02-07 |
+| [BUG-106](bug-106-stripe-customer-search-query-interpolation.md) | Stripe Customer Search Query Uses String Interpolation | Open | P1 | 2026-02-07 |
+| [BUG-107](bug-107-hardcoded-route-incomplete-session-card.md) | Hardcoded Route Path in Incomplete Session Card | Open | P2 | 2026-02-07 |
+| [BUG-108](bug-108-submit-answer-unbounded-time-spent-seconds.md) | submitAnswer Allows Unbounded timeSpentSeconds at Use-Case Layer | Open | P2 | 2026-02-07 |
+| [BUG-109](bug-109-cron-route-limit-mismatch.md) | Cron Route MAX_LIMIT (1000) Exceeds Reconciliation MAX_LIMIT (500) | Open | P2 | 2026-02-07 |
 
-**Next Bug ID:** BUG-105
+**Next Bug ID:** BUG-110
 
 ## Recently Triaged
 
@@ -55,10 +59,10 @@ Bug reports document issues discovered in the codebase along with their root cau
 | [BUG-070](../_archive/bugs/bug-070-e2e-test-user-checkout-fails.md) | E2E Test User Checkout Failed (Stripe `this` Binding Bug) | Resolved | Bind `stripe.customers.search` to preserve `this` |
 | [BUG-069](../_archive/bugs/bug-069-stripe-checkout-fails-localhost.md) | Stripe Checkout Fails for New Users (Lost `this` Binding) | Resolved | Bind `stripe.customers.search` to preserve `this` |
 
-## Foundation Audit
+## Foundation Audits
 
-A comprehensive vertical/horizontal trace of all critical paths was conducted on 2026-02-02.
-See: [Foundation Audit Report](foundation-audit-report.md)
+- **2026-02-02:** [Foundation Audit Report #1](foundation-audit-report.md) — Vertical/horizontal trace of all critical paths
+- **2026-02-07:** [Foundation Audit Report #2](foundation-audit-report-2.md) — Six-axis deep audit (billing, practice, auth, UI, DB, code quality)
 
 ## Archived Bugs
 

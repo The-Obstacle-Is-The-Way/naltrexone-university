@@ -15,9 +15,21 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 ## Debt Index (Active)
 
-_No active debt items._
+| ID | Title | Status | Priority | Date |
+|----|-------|--------|----------|------|
+| [DEBT-158](debt-158-missing-idempotency-key-repository-tests.md) | Missing Tests for Idempotency Key Repository | Open | P1 | 2026-02-07 |
+| [DEBT-159](debt-159-practice-session-review-missing-state-corruption-warning.md) | Practice Session Review Silently Backfills Missing Question States | Open | P2 | 2026-02-07 |
+| [DEBT-160](debt-160-cron-secret-not-required-in-production.md) | CRON_SECRET Not Enforced as Required in Production | Open | P2 | 2026-02-07 |
+| [DEBT-161](debt-161-incomplete-csp-headers.md) | Incomplete CSP Headers (Missing script-src, style-src, default-src) | Open | P2 | 2026-02-07 |
+| [DEBT-162](debt-162-stripe-portal-missing-retry-consistency.md) | Stripe Portal Session Creation Has Inconsistent Retry Behavior | Open | P2 | 2026-02-07 |
+| [DEBT-163](debt-163-fakes-file-approaching-split-threshold.md) | Test Fakes File Approaching Split Threshold (1472 Lines) | Open | P2 | 2026-02-07 |
+| [DEBT-164](debt-164-missing-suspense-boundary-practice-session-history.md) | Missing Suspense Boundary for Practice Session History Panel | Open | P2 | 2026-02-07 |
+| [DEBT-165](debt-165-stripe-gateway-barrel-file-inconsistency.md) | Stripe Gateway Modules Bypass Barrel File Pattern | Open | P2 | 2026-02-07 |
+| [DEBT-166](debt-166-practice-view-missing-focus-management-after-error.md) | Practice View Missing Focus Management After Error Recovery | Open | P3 | 2026-02-07 |
+| [DEBT-167](debt-167-idempotency-key-prune-select-delete-race.md) | Idempotency Key Prune Uses Non-Atomic SELECT→DELETE | Open | P3 | 2026-02-07 |
+| [DEBT-168](debt-168-stripe-event-table-missing-check-constraint.md) | Stripe Events Table Missing CHECK Constraint on processedAt/error State | Open | P3 | 2026-02-07 |
 
-**Next Debt ID:** DEBT-158
+**Next Debt ID:** DEBT-169
 
 ## Archived Debt
 

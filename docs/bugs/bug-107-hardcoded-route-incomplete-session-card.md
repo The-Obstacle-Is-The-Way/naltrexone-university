@@ -1,0 +1,44 @@
+# BUG-107: Hardcoded Route Path in Incomplete Session Card
+
+**Status:** Open
+**Priority:** P2
+**Date:** 2026-02-07
+
+---
+
+## Description
+
+`IncompleteSessionCard` uses a hardcoded route path instead of the centralized `ROUTES` constants:
+
+```tsx
+<Link href={`/app/practice/${input.session.sessionId}`}>
+```
+
+All other route references in the codebase use `ROUTES.APP_PRACTICE` or `toPracticeSessionRoute()`. This component was likely created during or after BUG-097 route-constant sweep and was missed.
+
+**Observed:** Hardcoded `/app/practice/` string in component.
+
+**Expected:** Should use centralized route constant (e.g., `ROUTES.APP_PRACTICE` or a route builder).
+
+## Root Cause
+
+Component was added during SPEC-020 practice UX redesign and missed the BUG-097 route-constant sweep.
+
+## Impact
+
+- Route changes would require manual updates to this file
+- Inconsistent with codebase pattern established in BUG-097
+
+## Fix
+
+Replace the hardcoded path with the route constant or builder function.
+
+## Verification
+
+- [ ] Replace with `ROUTES` constant
+- [ ] Grep for remaining hardcoded `/app/practice/` strings
+
+## Related
+
+- `app/(app)/app/practice/components/incomplete-session-card.tsx:30`
+- BUG-097 (widespread hardcoded route strings)
