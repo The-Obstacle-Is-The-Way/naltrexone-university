@@ -174,8 +174,13 @@ describe('isEntitled', () => {
     expect(isEntitled(sub, now)).toBe(false);
   });
 
-  it('returns false for pastDue status', () => {
+  it('returns true for pastDue with future period end', () => {
     const sub = makeSubscription('pastDue', new Date('2026-03-01'));
+    expect(isEntitled(sub, now)).toBe(true);
+  });
+
+  it('returns false for pastDue with expired period', () => {
+    const sub = makeSubscription('pastDue', new Date('2026-01-15'));
     expect(isEntitled(sub, now)).toBe(false);
   });
 
@@ -287,12 +292,17 @@ describe('shuffleWithSeed', () => {
 ### File: `src/domain/errors/domain-errors.ts`
 
 ```typescript
-export type DomainErrorCode =
-  | 'INVALID_QUESTION'
-  | 'INVALID_CHOICE'
-  | 'INVALID_SESSION'
-  | 'SESSION_ALREADY_ENDED'
-  | 'NO_QUESTIONS_MATCH';
+/**
+ * Domain error codes.
+ *
+ * Only codes that are actually thrown by domain services are included.
+ * Session-level errors (INVALID_SESSION, SESSION_ALREADY_ENDED, NO_QUESTIONS_MATCH)
+ * were originally specified but are handled at the application layer via
+ * ApplicationError instead, so they were intentionally pruned here.
+ */
+export const DomainErrorCodes = ['INVALID_QUESTION', 'INVALID_CHOICE'] as const;
+
+export type DomainErrorCode = typeof DomainErrorCodes[number];
 
 export class DomainError extends Error {
   readonly _tag = 'DomainError' as const;
@@ -511,6 +521,19 @@ export function shuffleWithSeed<T>(items: readonly T[], seed: number): T[] {
  */
 export function createSeed(userId: string, timestamp: number): number {
   const str = `${userId}:${timestamp}`;
+  return hashString(str);
+}
+
+/**
+ * Create a deterministic numeric seed from user id + question id (pure function).
+ * Used for per-question choice shuffling so each user sees a stable choice order.
+ */
+export function createQuestionSeed(userId: string, questionId: string): number {
+  const str = `${userId}:${questionId}`;
+  return hashString(str);
+}
+
+function hashString(str: string): number {
   let hash = 0;
 
   for (let i = 0; i < str.length; i += 1) {
@@ -530,7 +553,8 @@ export { gradeAnswer, type GradeResult } from './grading';
 export { isEntitled } from './entitlement';
 export { computeAccuracy, computeStreak, filterAttemptsInWindow } from './statistics';
 export { computeSessionProgress, shouldShowExplanation, getNextQuestionId, type SessionProgress } from './session';
-export { createSeed, shuffleWithSeed } from './shuffle';
+export { createSeed, createQuestionSeed, shuffleWithSeed } from './shuffle';
+export { selectNextQuestionId, type AttemptHistory } from './question-selection';
 ```
 
 ---
@@ -550,3 +574,11 @@ pnpm test src/domain/services/
 - [x] 100% test coverage
 - [x] All tests pass without mocks
 - [x] Barrel export in index.ts
+
+---
+
+## Changelog
+
+| Date | Change |
+|------|--------|
+| 2026-02-08 | Synced spec to implementation: (1) `DomainErrorCode` reduced from 5 to 2 codes — session-level errors handled at application layer via `ApplicationError`; (2) Added `createQuestionSeed()` and `hashString()` helper to `shuffle.ts`; (3) Added `selectNextQuestionId` and `AttemptHistory` exports to barrel; (4) Updated `isEntitled` test for `pastDue` change. See [Practice Engine](../practice-engine/index.md) Section 10.1. |

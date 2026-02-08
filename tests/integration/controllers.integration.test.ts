@@ -251,10 +251,11 @@ describe('question controllers (integration)', () => {
       db,
       () => new Date(),
     );
+    const logger = new FakeLogger();
 
     const deps: QuestionControllerDeps = {
       authGateway,
-      logger: new FakeLogger(),
+      logger,
       rateLimiter: {
         limit: async () => ({
           success: true,
@@ -265,6 +266,7 @@ describe('question controllers (integration)', () => {
         pruneExpiredWindows: async () => 0,
       },
       idempotencyKeyRepository,
+      now: () => new Date(),
       checkEntitlementUseCase: { execute: async () => ({ isEntitled: true }) },
       getNextQuestionUseCase: new GetNextQuestionUseCase(
         questions,
@@ -275,6 +277,7 @@ describe('question controllers (integration)', () => {
         questions,
         attempts,
         sessions,
+        logger,
       ),
     };
 

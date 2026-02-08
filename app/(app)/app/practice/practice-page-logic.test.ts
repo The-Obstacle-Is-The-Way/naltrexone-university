@@ -6,6 +6,10 @@ import {
   canSubmitAnswer,
   createBookmarksEffect,
   createLoadNextQuestionAction,
+  createSessionCountChangeHandler,
+  createSessionModeChangeHandler,
+  createToggleDifficultyHandler,
+  createToggleTagHandler,
   handleSessionCountChange,
   handleSessionModeChange,
   loadNextQuestion,
@@ -570,6 +574,7 @@ describe('practice-page-logic', () => {
         } satisfies SubmitAnswerOutput),
       );
 
+      const setLoadState = vi.fn();
       const setSubmitResult = vi.fn();
 
       await submitAnswerForQuestion({
@@ -579,7 +584,7 @@ describe('practice-page-logic', () => {
         submitIdempotencyKey: 'idem_1',
         submitAnswerFn,
         nowMs: () => 6000,
-        setLoadState: vi.fn(),
+        setLoadState,
         setSubmitResult,
       });
 
@@ -592,6 +597,7 @@ describe('practice-page-logic', () => {
       expect(setSubmitResult).toHaveBeenCalledWith(
         expect.objectContaining({ isCorrect: true }),
       );
+      expect(setLoadState).not.toHaveBeenCalledWith({ status: 'loading' });
     });
 
     it('defaults timeSpentSeconds to 0 when loadedAt is null', async () => {
@@ -802,6 +808,7 @@ describe('practice-page-logic', () => {
     it('sets error state when toggle throws', async () => {
       const setBookmarkStatus = vi.fn();
       const onBookmarkToggled = vi.fn();
+      const onBookmarkError = vi.fn();
 
       await toggleBookmarkForQuestion({
         question: createNextQuestion(),
@@ -811,10 +818,34 @@ describe('practice-page-logic', () => {
         setBookmarkStatus,
         setBookmarkedQuestionIds: vi.fn(),
         onBookmarkToggled,
+        onBookmarkError,
       });
 
       expect(setBookmarkStatus).toHaveBeenLastCalledWith('error');
       expect(onBookmarkToggled).not.toHaveBeenCalled();
+      expect(onBookmarkError).toHaveBeenCalledTimes(1);
+      expect(onBookmarkError).toHaveBeenCalledWith(
+        'Failed to save bookmark. Please try again.',
+      );
+    });
+
+    it('invokes error callback when toggle controller returns an error result', async () => {
+      const setBookmarkStatus = vi.fn();
+      const onBookmarkError = vi.fn();
+
+      await toggleBookmarkForQuestion({
+        question: createNextQuestion(),
+        toggleBookmarkFn: async () => err('INTERNAL_ERROR', 'Boom'),
+        setBookmarkStatus,
+        setBookmarkedQuestionIds: vi.fn(),
+        onBookmarkError,
+      });
+
+      expect(setBookmarkStatus).toHaveBeenLastCalledWith('error');
+      expect(onBookmarkError).toHaveBeenCalledTimes(1);
+      expect(onBookmarkError).toHaveBeenCalledWith(
+        'Failed to save bookmark. Please try again.',
+      );
     });
 
     it('returns no state updates when unmounted during toggleBookmarkForQuestion', async () => {
@@ -1019,6 +1050,109 @@ describe('practice-page-logic', () => {
       await promise;
 
       expect(navigateTo).not.toHaveBeenCalled();
+    });
+  });
+});
+
+describe('practice-page-session-start handlers', () => {
+  it('rotates idempotency key when session mode changes', () => {
+    const setSessionMode = vi.fn();
+    const setIdempotencyKey = vi.fn();
+    const handler = createSessionModeChangeHandler({
+      setSessionMode,
+      setIdempotencyKey,
+      createIdempotencyKey: () => 'idem_2',
+    });
+
+    handler('exam');
+
+    expect(setSessionMode).toHaveBeenCalledWith('exam');
+    expect(setIdempotencyKey).toHaveBeenCalledWith('idem_2');
+  });
+
+  it('ignores invalid session mode values', () => {
+    const setSessionMode = vi.fn();
+    const setIdempotencyKey = vi.fn();
+    const handler = createSessionModeChangeHandler({
+      setSessionMode,
+      setIdempotencyKey,
+      createIdempotencyKey: () => 'idem_2',
+    });
+
+    handler('nope');
+
+    expect(setSessionMode).not.toHaveBeenCalled();
+    expect(setIdempotencyKey).not.toHaveBeenCalled();
+  });
+
+  it('rotates idempotency key when session count changes', () => {
+    const setSessionCount = vi.fn();
+    const setIdempotencyKey = vi.fn();
+    const handler = createSessionCountChangeHandler({
+      setSessionCount,
+      setIdempotencyKey,
+      createIdempotencyKey: () => 'idem_2',
+    });
+
+    handler({ target: { value: '12' } });
+
+    expect(setSessionCount).toHaveBeenCalledWith(12);
+    expect(setIdempotencyKey).toHaveBeenCalledWith('idem_2');
+  });
+
+  it('applies tag toggles and rotates idempotency key', () => {
+    const setIdempotencyKey = vi.fn();
+    const setFilters = vi.fn();
+    const handler = createToggleTagHandler({
+      setFilters,
+      setIdempotencyKey,
+      createIdempotencyKey: () => 'idem_2',
+    });
+
+    handler('opioids');
+
+    expect(setIdempotencyKey).toHaveBeenCalledWith('idem_2');
+    const update = setFilters.mock.calls[0]?.[0];
+    if (typeof update !== 'function') {
+      throw new Error('Expected setFilters to receive an updater function');
+    }
+
+    expect(update({ tagSlugs: [], difficulties: [] })).toEqual({
+      tagSlugs: ['opioids'],
+      difficulties: [],
+    });
+
+    expect(update({ tagSlugs: ['opioids'], difficulties: [] })).toEqual({
+      tagSlugs: [],
+      difficulties: [],
+    });
+  });
+
+  it('applies difficulty toggles and rotates idempotency key', () => {
+    const setIdempotencyKey = vi.fn();
+    const setFilters = vi.fn();
+    const handler = createToggleDifficultyHandler({
+      setFilters,
+      setIdempotencyKey,
+      createIdempotencyKey: () => 'idem_2',
+    });
+
+    handler('hard');
+
+    expect(setIdempotencyKey).toHaveBeenCalledWith('idem_2');
+    const update = setFilters.mock.calls[0]?.[0];
+    if (typeof update !== 'function') {
+      throw new Error('Expected setFilters to receive an updater function');
+    }
+
+    expect(update({ tagSlugs: [], difficulties: [] })).toEqual({
+      tagSlugs: [],
+      difficulties: ['hard'],
+    });
+
+    expect(update({ tagSlugs: [], difficulties: ['hard'] })).toEqual({
+      tagSlugs: [],
+      difficulties: [],
     });
   });
 });

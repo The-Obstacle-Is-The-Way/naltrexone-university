@@ -208,6 +208,7 @@ describe('container factories', () => {
     expect(questionDeps.idempotencyKeyRepository).toBeInstanceOf(
       DrizzleIdempotencyKeyRepository,
     );
+    expect(typeof questionDeps.now).toBe('function');
     expect(questionDeps.checkEntitlementUseCase).toBeInstanceOf(
       CheckEntitlementUseCase,
     );

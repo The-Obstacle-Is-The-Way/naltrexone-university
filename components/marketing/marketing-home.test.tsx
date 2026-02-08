@@ -1,4 +1,6 @@
 // @vitest-environment jsdom
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -7,6 +9,18 @@ vi.mock('next/link', () => ({
 }));
 
 describe('components/marketing/marketing-home', () => {
+  it('uses shared pricing data constants instead of duplicated inline values', () => {
+    const source = readFileSync(
+      path.resolve(process.cwd(), 'components/marketing/marketing-home.tsx'),
+      'utf8',
+    );
+
+    expect(source).toContain("from '@/lib/pricing-data'");
+    expect(source).not.toContain('$29');
+    expect(source).not.toContain('$199');
+    expect(source).not.toContain('Save $149 per year');
+  });
+
   it(
     'renders marketing sections with injected nav and cta',
     { timeout: 15_000 },

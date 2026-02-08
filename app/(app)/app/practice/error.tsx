@@ -18,9 +18,13 @@ export default function PracticeError({
   }, [error]);
 
   return (
-    <div className="flex min-h-[50vh] items-center justify-center bg-background text-foreground">
+    <main
+      id="main-content"
+      tabIndex={-1}
+      className="flex min-h-[50vh] items-center justify-center bg-background text-foreground"
+    >
       <div className="w-full max-w-md space-y-4 px-4 text-center">
-        <h2 className="text-xl font-semibold text-foreground">
+        <h2 className="text-xl font-semibold font-heading text-foreground">
           Practice error
         </h2>
         <p className="text-sm text-muted-foreground">
@@ -49,6 +53,6 @@ export default function PracticeError({
           </Button>
         </div>
       </div>
-    </div>
+    </main>
   );
 }

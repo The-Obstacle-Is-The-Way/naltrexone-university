@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useMemo } from 'react';
+import { useEffect, useRef } from 'react';
 import { ErrorCard } from '@/components/error-card';
 import { Feedback } from '@/components/question/Feedback';
 import { QuestionCard } from '@/components/question/QuestionCard';
@@ -38,6 +38,33 @@ export type PracticeViewProps = {
   onNextQuestion: () => void;
 };
 
+export function getBookmarkNotificationTransition(input: {
+  message: string | null;
+  version: number;
+  bookmarkStatus: PracticeViewProps['bookmarkStatus'];
+  lastKey: string | null;
+}): {
+  nextKey: string | null;
+  notification: { message: string; tone: 'success' | 'error' } | null;
+} {
+  if (!input.message) {
+    return { nextKey: null, notification: null };
+  }
+
+  const key = `${input.version}:${input.message}`;
+  if (input.lastKey === key) {
+    return { nextKey: key, notification: null };
+  }
+
+  return {
+    nextKey: key,
+    notification: {
+      message: input.message,
+      tone: input.bookmarkStatus === 'error' ? 'error' : 'success',
+    },
+  };
+}
+
 export function PracticeView(props: PracticeViewProps) {
   const { notify } = useNotification();
   const sessionInfo = props.sessionInfo ?? null;
@@ -45,19 +72,31 @@ export function PracticeView(props: PracticeViewProps) {
   const correctChoiceId = isExamMode
     ? null
     : (props.submitResult?.correctChoiceId ?? null);
-  const bookmarkFeedback = useMemo(
-    () => ({
-      message: props.bookmarkMessage ?? null,
-      version: props.bookmarkMessageVersion ?? 0,
-    }),
-    [props.bookmarkMessage, props.bookmarkMessageVersion],
-  );
+  const isSubmittingAnswer =
+    props.isPending &&
+    props.loadState.status === 'ready' &&
+    props.question !== null &&
+    props.submitResult === null;
+  const lastNotifiedBookmarkKeyRef = useRef<string | null>(null);
 
   useEffect(() => {
-    const message = bookmarkFeedback.message;
-    if (!message) return;
-    notify({ message, tone: 'success' });
-  }, [notify, bookmarkFeedback]);
+    const transition = getBookmarkNotificationTransition({
+      message: props.bookmarkMessage ?? null,
+      version: props.bookmarkMessageVersion ?? 0,
+      bookmarkStatus: props.bookmarkStatus,
+      lastKey: lastNotifiedBookmarkKeyRef.current,
+    });
+
+    lastNotifiedBookmarkKeyRef.current = transition.nextKey;
+    if (!transition.notification) return;
+
+    notify(transition.notification);
+  }, [
+    notify,
+    props.bookmarkMessage,
+    props.bookmarkMessageVersion,
+    props.bookmarkStatus,
+  ]);
 
   return (
     <div className="space-y-6">
@@ -72,7 +111,10 @@ export function PracticeView(props: PracticeViewProps) {
               Answer one question at a time.
             </p>
             {sessionInfo ? (
-              <p className="mt-2 text-xs text-muted-foreground">
+              <p
+                className="mt-2 text-xs text-muted-foreground"
+                aria-live="polite"
+              >
                 Session: {sessionInfo.mode} • {sessionInfo.index + 1}/
                 {sessionInfo.total}
               </p>
@@ -143,6 +185,7 @@ export function PracticeView(props: PracticeViewProps) {
               type="button"
               variant="outline"
               className="rounded-full"
+              aria-pressed={sessionInfo.isMarkedForReview}
               disabled={props.isMarkingForReview || props.isPending}
               onClick={props.onToggleMarkForReview}
             >
@@ -155,6 +198,7 @@ export function PracticeView(props: PracticeViewProps) {
             type="button"
             variant="outline"
             className="rounded-full"
+            aria-pressed={props.isBookmarked}
             disabled={props.bookmarkStatus === 'loading' || props.isPending}
             onClick={props.onToggleBookmark}
           >
@@ -198,7 +242,7 @@ export function PracticeView(props: PracticeViewProps) {
             disabled={!props.canSubmit || props.isPending}
             onClick={props.onSubmit}
           >
-            Submit
+            {isSubmittingAnswer ? 'Submitting…' : 'Submit'}
           </Button>
 
           <Button

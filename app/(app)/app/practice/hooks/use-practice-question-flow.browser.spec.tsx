@@ -1,7 +1,10 @@
 import { useEffect, useState } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-react';
+import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import { createNextQuestion } from '@/src/application/test-helpers/create-next-question';
+import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
+import { createDeferred } from '@/tests/test-helpers/create-deferred';
 import { ok } from '@/tests/test-helpers/ok';
 import { usePracticeQuestionFlow } from './use-practice-question-flow';
 
@@ -64,6 +67,23 @@ function PracticeQuestionFlowBookmarkProbe() {
       <div data-testid="bookmark-feedback-count">{bookmarkFeedbackCount}</div>
       <button type="button" onClick={() => void output.onToggleBookmark()}>
         toggle-bookmark
+      </button>
+    </>
+  );
+}
+
+function PracticeQuestionFlowSubmitProbe() {
+  const output = usePracticeQuestionFlow({ filters: TEST_FILTERS });
+
+  return (
+    <>
+      <div data-testid="load-status">{output.loadState.status}</div>
+      <div data-testid="is-pending">{String(output.isPending)}</div>
+      <button type="button" onClick={() => output.onSelectChoice('choice_1')}>
+        select-choice-1
+      </button>
+      <button type="button" onClick={() => void output.onSubmit()}>
+        submit-answer
       </button>
     </>
   );
@@ -142,5 +162,42 @@ describe('usePracticeQuestionFlow (browser)', () => {
     await expect
       .element(screen.getByTestId('bookmark-feedback-count'))
       .toHaveTextContent('2');
+  });
+
+  it('uses transition pending state for answer submit without switching to loading status', async () => {
+    const deferred = createDeferred<ActionResult<SubmitAnswerOutput>>();
+
+    getNextQuestionMock.mockResolvedValue(ok(createNextQuestion()));
+    getBookmarksMock.mockResolvedValue(ok({ rows: [] }));
+    submitAnswerMock.mockImplementation(async () => deferred.promise);
+
+    const screen = await render(<PracticeQuestionFlowSubmitProbe />);
+
+    await expect
+      .element(screen.getByTestId('load-status'))
+      .toHaveTextContent('ready');
+    await screen.getByRole('button', { name: 'select-choice-1' }).click();
+    await screen.getByRole('button', { name: 'submit-answer' }).click();
+
+    await expect
+      .element(screen.getByTestId('is-pending'))
+      .toHaveTextContent('true');
+    await expect
+      .element(screen.getByTestId('load-status'))
+      .toHaveTextContent('ready');
+
+    deferred.resolve(
+      ok({
+        attemptId: 'attempt-1',
+        isCorrect: true,
+        correctChoiceId: 'choice_1',
+        explanationMd: 'Because',
+        choiceExplanations: [],
+      } satisfies SubmitAnswerOutput),
+    );
+
+    await expect
+      .element(screen.getByTestId('is-pending'))
+      .toHaveTextContent('false');
   });
 });

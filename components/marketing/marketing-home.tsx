@@ -4,6 +4,7 @@ import type { ReactElement, ReactNode } from 'react';
 import { AuthNav } from '@/components/auth-nav';
 import { GetStartedCta } from '@/components/get-started-cta';
 import { MetallicCtaButton } from '@/components/ui/metallic-cta-button';
+import { PRICING_DATA } from '@/lib/pricing-data';
 import { ROUTES } from '@/lib/routes';
 import { cn } from '@/lib/utils';
 
@@ -209,18 +210,18 @@ export function MarketingHomeShell({
             <div className="mx-auto mt-10 grid max-w-3xl gap-6 md:grid-cols-2">
               <div className="rounded-2xl border border-border bg-card p-8 shadow-sm">
                 <h3 className="font-heading font-semibold text-foreground">
-                  Pro Monthly
+                  {PRICING_DATA.monthly.name}
                 </h3>
                 <p className="mt-4 font-display text-4xl font-bold text-foreground">
-                  $29
+                  {PRICING_DATA.monthly.price}
                   <span className="text-lg font-normal text-muted-foreground">
-                    /mo
+                    {PRICING_DATA.monthly.period}
                   </span>
                 </p>
                 <ul className="mt-6 space-y-3 text-sm text-muted-foreground">
-                  <li>Access to all questions</li>
-                  <li>Detailed explanations</li>
-                  <li>Progress tracking</li>
+                  {PRICING_DATA.monthly.features.map((feature) => (
+                    <li key={feature}>{feature}</li>
+                  ))}
                 </ul>
                 <Link
                   href={ROUTES.PRICING}
@@ -232,18 +233,21 @@ export function MarketingHomeShell({
 
               <div className="rounded-2xl border-2 border-primary bg-card p-8 shadow-sm">
                 <h3 className="font-heading font-semibold text-foreground">
-                  Pro Annual
+                  {PRICING_DATA.annual.name}
                 </h3>
                 <p className="mt-4 font-display text-4xl font-bold text-foreground">
-                  $199
+                  {PRICING_DATA.annual.price}
                   <span className="text-lg font-normal text-muted-foreground">
-                    /yr
+                    {PRICING_DATA.annual.period}
                   </span>
                 </p>
-                <p className="text-sm text-success">Save $149 per year</p>
+                <p className="text-sm text-success">
+                  {PRICING_DATA.annual.savings}
+                </p>
                 <ul className="mt-6 space-y-3 text-sm text-muted-foreground">
-                  <li>Everything in Pro Monthly</li>
-                  <li>Best value</li>
+                  {PRICING_DATA.annual.features.map((feature) => (
+                    <li key={feature}>{feature}</li>
+                  ))}
                 </ul>
                 <Link
                   href={ROUTES.PRICING}

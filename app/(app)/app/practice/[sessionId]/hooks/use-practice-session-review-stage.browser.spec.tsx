@@ -1,7 +1,10 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { renderHook } from 'vitest-browser-react';
 import { ok } from '@/tests/test-helpers/ok';
-import { usePracticeSessionReviewStage } from './use-practice-session-review-stage';
+import {
+  type UsePracticeSessionReviewStageInput,
+  usePracticeSessionReviewStage,
+} from './use-practice-session-review-stage';
 
 const { endPracticeSessionMock, getPracticeSessionReviewMock } = vi.hoisted(
   () => ({
@@ -19,15 +22,13 @@ function createInput(sessionMode: 'tutor' | 'exam') {
   return {
     sessionId: 'session-1',
     isMounted: () => true,
-    sessionInfo: null,
+    sessionInfo: null as UsePracticeSessionReviewStageInput['sessionInfo'],
     questionId: null,
     submitResult: null,
     sessionMode,
     setSessionMode: vi.fn(),
     setLoadState: vi.fn(),
-    setQuestion: vi.fn(),
-    setSubmitResult: vi.fn(),
-    setSelectedChoiceId: vi.fn(),
+    resetQuestionState: vi.fn(),
     loadSpecificQuestion: vi.fn(),
   };
 }
@@ -96,5 +97,75 @@ describe('usePracticeSessionReviewStage (browser)', () => {
       status: 'error',
       message: 'Review load failed',
     });
+  });
+
+  it('sets navigator error state and retries navigator fetch when requested', async () => {
+    const consoleErrorSpy = vi
+      .spyOn(console, 'error')
+      .mockImplementation(() => undefined);
+    getPracticeSessionReviewMock.mockRejectedValueOnce(
+      new Error('Navigator load failed'),
+    );
+    getPracticeSessionReviewMock.mockResolvedValueOnce(
+      ok({
+        sessionId: 'session-1',
+        mode: 'exam',
+        totalCount: 2,
+        answeredCount: 1,
+        markedCount: 0,
+        rows: [
+          {
+            isAvailable: true,
+            questionId: 'q1',
+            stemMd: 'Stem 1',
+            difficulty: 'easy',
+            order: 1,
+            isAnswered: true,
+            isCorrect: true,
+            markedForReview: false,
+          },
+          {
+            isAvailable: true,
+            questionId: 'q2',
+            stemMd: 'Stem 2',
+            difficulty: 'medium',
+            order: 2,
+            isAnswered: false,
+            isCorrect: null,
+            markedForReview: false,
+          },
+        ],
+      }),
+    );
+
+    const input = createInput('exam');
+    input.sessionInfo = {
+      sessionId: 'session-1',
+      mode: 'exam',
+      index: 0,
+      total: 2,
+      isMarkedForReview: false,
+    };
+
+    const harness = await renderHook(() =>
+      usePracticeSessionReviewStage(input),
+    );
+
+    await expect
+      .poll(() => harness.result.current.navigatorLoadState.status)
+      .toBe('error');
+    expect(harness.result.current.navigatorLoadState).toEqual({
+      status: 'error',
+      message: 'Navigator load failed',
+    });
+    expect(consoleErrorSpy).not.toHaveBeenCalled();
+    expect(harness.result.current.navigator).toBeNull();
+
+    harness.result.current.onRetryNavigator();
+
+    await expect
+      .poll(() => harness.result.current.navigatorLoadState.status)
+      .toBe('ready');
+    expect(harness.result.current.navigator?.sessionId).toBe('session-1');
   });
 });

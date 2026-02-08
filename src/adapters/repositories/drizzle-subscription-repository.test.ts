@@ -3,7 +3,41 @@ import { ApplicationError } from '@/src/application/errors';
 import { DrizzleSubscriptionRepository } from './drizzle-subscription-repository';
 
 describe('DrizzleSubscriptionRepository', () => {
+  type RepoDb = ConstructorParameters<typeof DrizzleSubscriptionRepository>[0];
+
+  const createRepo = (
+    db: unknown,
+    priceIds: { monthly: string; annual: string },
+    nowFn?: () => Date,
+  ) =>
+    new DrizzleSubscriptionRepository(db as unknown as RepoDb, priceIds, nowFn);
+
+  it('returns null from findByUserId when no subscription row exists', async () => {
+    const db = {
+      query: {
+        stripeSubscriptions: {
+          findFirst: async () => null,
+        },
+      },
+      insert: () => {
+        throw new Error('unexpected insert');
+      },
+    } as const;
+
+    const priceIds = {
+      monthly: 'price_monthly',
+      annual: 'price_annual',
+    } as const;
+
+    const repo = createRepo(db, priceIds);
+
+    await expect(repo.findByUserId('user_1')).resolves.toBeNull();
+  });
+
   it('maps Stripe price ids to domain plan when loading subscriptions', async () => {
+    const currentPeriodEnd = new Date('2026-12-31T00:00:00.000Z');
+    const createdAt = new Date('2026-01-01T00:00:00.000Z');
+    const updatedAt = new Date('2026-01-01T00:00:00.000Z');
     const db = {
       query: {
         stripeSubscriptions: {
@@ -13,10 +47,10 @@ describe('DrizzleSubscriptionRepository', () => {
             stripeSubscriptionId: 'sub_123',
             status: 'active',
             priceId: 'price_monthly',
-            currentPeriodEnd: new Date('2026-12-31T00:00:00.000Z'),
+            currentPeriodEnd,
             cancelAtPeriodEnd: false,
-            createdAt: new Date('2026-01-01T00:00:00.000Z'),
-            updatedAt: new Date('2026-01-01T00:00:00.000Z'),
+            createdAt,
+            updatedAt,
           }),
         },
       },
@@ -30,18 +64,17 @@ describe('DrizzleSubscriptionRepository', () => {
       annual: 'price_annual',
     } as const;
 
-    type RepoDb = ConstructorParameters<
-      typeof DrizzleSubscriptionRepository
-    >[0];
-    const repo = new DrizzleSubscriptionRepository(
-      db as unknown as RepoDb,
-      priceIds,
-    );
+    const repo = createRepo(db, priceIds);
 
     await expect(repo.findByUserId('user_1')).resolves.toMatchObject({
+      id: 'sub_row_1',
       userId: 'user_1',
       plan: 'monthly',
       status: 'active',
+      currentPeriodEnd,
+      cancelAtPeriodEnd: false,
+      createdAt,
+      updatedAt,
     });
   });
 
@@ -72,13 +105,7 @@ describe('DrizzleSubscriptionRepository', () => {
       annual: 'price_annual',
     } as const;
 
-    type RepoDb = ConstructorParameters<
-      typeof DrizzleSubscriptionRepository
-    >[0];
-    const repo = new DrizzleSubscriptionRepository(
-      db as unknown as RepoDb,
-      priceIds,
-    );
+    const repo = createRepo(db, priceIds);
 
     await expect(repo.findByUserId('user_1')).rejects.toBeInstanceOf(
       ApplicationError,
@@ -124,14 +151,7 @@ describe('DrizzleSubscriptionRepository', () => {
       annual: 'price_annual',
     } as const;
 
-    type RepoDb = ConstructorParameters<
-      typeof DrizzleSubscriptionRepository
-    >[0];
-    const repo = new DrizzleSubscriptionRepository(
-      db as unknown as RepoDb,
-      priceIds,
-      nowFn,
-    );
+    const repo = createRepo(db, priceIds, nowFn);
 
     await expect(
       repo.upsert({
@@ -167,13 +187,7 @@ describe('DrizzleSubscriptionRepository', () => {
       annual: 'price_annual',
     } as const;
 
-    type RepoDb = ConstructorParameters<
-      typeof DrizzleSubscriptionRepository
-    >[0];
-    const repo = new DrizzleSubscriptionRepository(
-      db as unknown as RepoDb,
-      priceIds,
-    );
+    const repo = createRepo(db, priceIds);
 
     await expect(
       repo.upsert({
@@ -208,13 +222,7 @@ describe('DrizzleSubscriptionRepository', () => {
       annual: 'price_annual',
     } as const;
 
-    type RepoDb = ConstructorParameters<
-      typeof DrizzleSubscriptionRepository
-    >[0];
-    const repo = new DrizzleSubscriptionRepository(
-      db as unknown as RepoDb,
-      priceIds,
-    );
+    const repo = createRepo(db, priceIds);
 
     await expect(
       repo.upsert({
@@ -245,13 +253,7 @@ describe('DrizzleSubscriptionRepository', () => {
       annual: 'price_annual',
     } as const;
 
-    type RepoDb = ConstructorParameters<
-      typeof DrizzleSubscriptionRepository
-    >[0];
-    const repo = new DrizzleSubscriptionRepository(
-      db as unknown as RepoDb,
-      priceIds,
-    );
+    const repo = createRepo(db, priceIds);
 
     await expect(
       repo.findByExternalSubscriptionId('sub_123'),
@@ -285,13 +287,7 @@ describe('DrizzleSubscriptionRepository', () => {
       annual: 'price_annual',
     } as const;
 
-    type RepoDb = ConstructorParameters<
-      typeof DrizzleSubscriptionRepository
-    >[0];
-    const repo = new DrizzleSubscriptionRepository(
-      db as unknown as RepoDb,
-      priceIds,
-    );
+    const repo = createRepo(db, priceIds);
 
     await expect(
       repo.findByExternalSubscriptionId('sub_123'),
@@ -328,13 +324,7 @@ describe('DrizzleSubscriptionRepository', () => {
       annual: 'price_annual',
     } as const;
 
-    type RepoDb = ConstructorParameters<
-      typeof DrizzleSubscriptionRepository
-    >[0];
-    const repo = new DrizzleSubscriptionRepository(
-      db as unknown as RepoDb,
-      priceIds,
-    );
+    const repo = createRepo(db, priceIds);
 
     await expect(
       repo.findByExternalSubscriptionId('sub_123'),

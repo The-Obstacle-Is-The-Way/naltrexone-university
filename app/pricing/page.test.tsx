@@ -1,4 +1,6 @@
 // @vitest-environment jsdom
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { AuthGateway } from '@/src/application/ports/gateways';
@@ -79,6 +81,90 @@ describe('app/pricing', () => {
     expect(headings).toContain('Pro Annual');
   });
 
+  it('uses shared pricing data constants instead of duplicated inline values', () => {
+    const source = readFileSync(
+      path.resolve(process.cwd(), 'app/pricing/pricing-view.tsx'),
+      'utf8',
+    );
+
+    expect(source).toContain("from '@/lib/pricing-data'");
+    expect(source).not.toContain('$29');
+    expect(source).not.toContain('$199');
+    expect(source).not.toContain('Save $149 per year');
+  });
+
+  it('uses a semantic heading hierarchy for pricing sections', async () => {
+    const { PricingView } = await import('@/app/pricing/page');
+
+    const html = renderToStaticMarkup(
+      <PricingView
+        isEntitled={false}
+        banner={null}
+        subscribeMonthlyAction={async () => undefined}
+        subscribeAnnualAction={async () => undefined}
+      />,
+    );
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const h1 = doc.querySelector('h1');
+    const h2 = doc.querySelector('h2');
+    const h3 = doc.querySelector('h3');
+
+    expect(h1?.textContent?.trim()).toBe('Pricing');
+    expect(h1?.getAttribute('class') ?? '').toContain('font-heading');
+    expect(h2?.textContent?.trim()).toBe('Plans');
+    expect(h3).not.toBeNull();
+  });
+
+  it('uses the shared Button primitive for manage-billing form submit actions', async () => {
+    const { PricingView } = await import('@/app/pricing/page');
+
+    const html = renderToStaticMarkup(
+      <PricingView
+        isEntitled={false}
+        banner={{
+          tone: 'error',
+          message: 'Checkout failed. Please try again.',
+        }}
+        manageBillingAction={async () => undefined}
+        subscribeMonthlyAction={async () => undefined}
+        subscribeAnnualAction={async () => undefined}
+      />,
+    );
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const submitButtons = Array.from(
+      doc.querySelectorAll('form button[type="submit"]'),
+    );
+    const nonPrimitiveButtons = submitButtons.filter(
+      (button) => button.getAttribute('data-slot') !== 'button',
+    );
+
+    expect(submitButtons.length).toBeGreaterThan(0);
+    expect(nonPrimitiveButtons).toHaveLength(0);
+  });
+
+  it('uses the shared Button primitive for subscribe form submit actions', async () => {
+    const { PricingView } = await import('@/app/pricing/page');
+
+    const html = renderToStaticMarkup(
+      <PricingView
+        isEntitled={false}
+        banner={null}
+        subscribeMonthlyAction={async () => undefined}
+        subscribeAnnualAction={async () => undefined}
+      />,
+    );
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const submitButtons = Array.from(
+      doc.querySelectorAll('form button[type="submit"]'),
+    );
+    const nonPrimitiveButtons = submitButtons.filter(
+      (button) => button.getAttribute('data-slot') !== 'button',
+    );
+
+    expect(submitButtons.length).toBeGreaterThan(0);
+    expect(nonPrimitiveButtons).toHaveLength(0);
+  });
+
   it('shows a cancel banner when checkout=cancel', async () => {
     const { PricingView } = await import('@/app/pricing/page');
 
@@ -150,23 +236,6 @@ describe('app/pricing', () => {
     expect(getPricingBanner({ checkout: 'error' })).toMatchObject({
       tone: 'error',
       message: 'Checkout failed. Please try again.',
-    });
-  });
-
-  it('includes error code details in development for checkout=error', async () => {
-    const { getPricingBanner } = await import('@/app/pricing/page');
-
-    vi.stubEnv('NODE_ENV', 'development');
-
-    expect(
-      getPricingBanner({
-        checkout: 'error',
-        error_code: 'INTERNAL_ERROR',
-        error_message: 'Boom',
-      }),
-    ).toMatchObject({
-      tone: 'error',
-      message: 'Checkout failed (INTERNAL_ERROR). Boom',
     });
   });
 
@@ -415,7 +484,7 @@ describe('app/pricing', () => {
       );
 
     await expect(action()).rejects.toThrow(
-      '/pricing?checkout=error&plan=monthly&error_code=INTERNAL_ERROR',
+      '/pricing?checkout=error&plan=monthly',
     );
     expect(createCheckoutSessionFn).toHaveBeenCalledWith({
       plan: 'monthly',

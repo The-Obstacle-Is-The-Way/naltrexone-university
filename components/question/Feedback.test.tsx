@@ -13,6 +13,15 @@ describe('Feedback', () => {
     expect(html).toContain('Because...');
   });
 
+  it('announces feedback for assistive tech', () => {
+    const html = renderToStaticMarkup(
+      <Feedback isCorrect={true} explanationMd="Because..." />,
+    );
+
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    expect(doc.querySelector('[role="alert"]')).not.toBeNull();
+  });
+
   it('renders non-null choice explanations in display-label order', () => {
     const html = renderToStaticMarkup(
       <Feedback

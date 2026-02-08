@@ -620,6 +620,20 @@ describe('GetNextQuestionUseCase', () => {
     expect(result?.questionId).toBe('q1');
   });
 
+  it('throws VALIDATION_ERROR when input is missing both sessionId and filters', async () => {
+    const useCase = new GetNextQuestionUseCase(
+      new FakeQuestionRepository([]),
+      new FakeAttemptRepository([]),
+      new FakePracticeSessionRepository([]),
+    );
+
+    await expect(
+      useCase.execute({ userId: 'user-1' } as unknown as Parameters<
+        typeof useCase.execute
+      >[0]),
+    ).rejects.toMatchObject({ code: 'VALIDATION_ERROR' });
+  });
+
   it('throws NOT_FOUND when repository returns a candidate id that cannot be loaded', async () => {
     const misbehavingQuestions: QuestionRepository = {
       async findPublishedById() {

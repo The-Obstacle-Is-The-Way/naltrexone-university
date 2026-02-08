@@ -15,12 +15,134 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 ## Debt Index (Active)
 
-| ID | Title | Status | Priority | Date |
-|----|-------|--------|----------|------|
+| ID | Title | Priority | Status |
+|----|-------|----------|--------|
+| — | No active DEBT items | — | — |
 
-**Next Debt ID:** DEBT-169
+**Next Debt ID:** DEBT-192
+
+---
+
+## Frontend Debt (Active)
+
+All frontend-specific UI/UX debt. Items use `FE-XXX` IDs and are cross-referenced in `docs/frontend/standards.md` Section 17 (Known Violations).
+
+### P2 — Fix during UI/UX refactor
+
+| ID | Summary | Files | Status |
+|----|---------|-------|--------|
+| FE-002 | `usePracticeSessionReviewStage` (221 lines, exceeds 150-line guideline; 1 owned LoadState + 2 delegated) | `[sessionId]/hooks/use-practice-session-review-stage.ts` | Open |
+| FE-007 | Raw `<button>` in pricing (1 instance) | `pricing-client.tsx` | Open |
+| FE-008 | Raw styled `<Link>` as buttons (11+ instances) | `get-started-cta.tsx`, `auth-nav.tsx`, `marketing-home.tsx`, `not-found.tsx`, `pricing-view.tsx` | Open |
+| FE-009 | Card-like divs in marketing (10 instances) | `marketing-home.tsx` | Open |
+| FE-010 | Card-like divs + PascalCase filenames in question components | `QuestionCard.tsx`, `ChoiceButton.tsx`, `Feedback.tsx` | Open |
+| FE-011 | Two competing focus ring patterns across codebase | 20+ files | Open |
+| FE-012 | Missing focus-visible rings on text links | 8+ files | Open |
+| FE-013 | Disabled opacity-60 instead of opacity-50 | `pricing-client.tsx`, `ChoiceButton.tsx` | Open |
+| FE-015 | 9 copy-pasted error boundary files | All `error.tsx` files | Open |
+| FE-016 | Card component defaults never used | `card.tsx` | Open |
+| FE-017 | Loading skeleton radius mismatch | `page-loading.tsx` | Open |
+| FE-018 | Missing `cn()` usage | `metallic-border.tsx`, `notification-provider.tsx` | Open |
+| FE-019 | External link missing `target="_blank"` | `metallic-cta-button.tsx` | Open |
+| FE-020 | Missing `error.tsx` for practice session route | `practice/[sessionId]/` | Open |
+| FE-021 | No per-page metadata (all tabs show same title) | All page.tsx files | Open |
+| FE-022 | Inconsistent stat card hover treatments | Dashboard vs session-summary | Open |
+| FE-023 | Hover without transition-colors | `not-found.tsx`, `pricing-view.tsx`, `layout.tsx` | Open |
+| FE-024 | Missing `font-display` on pricing page price numbers | `pricing-view.tsx` | Open |
+| FE-025 | Icon sizing `h-X w-X` instead of `size-X` | `metallic-cta-button.tsx`, `marketing-home.tsx`, `theme-toggle.tsx` | Open |
+| FE-045 | Structural duplication between `usePracticeQuestionAnswerFlow` (164 lines) and `usePracticeSessionQuestionFlow` (195 lines) — identical state shapes | `practice/hooks/`, `practice/[sessionId]/hooks/` | Open |
+
+### P3 — Fix as encountered
+
+| ID | Summary | Files | Status |
+|----|---------|-------|--------|
+| FE-026 | Repeated button labels missing `aria-label` context | `bookmarks/page.tsx`, `review/page.tsx`, `history-panel`, `exam-review` | Open |
+| FE-028 | No confirmation dialogs for destructive actions | App-wide | Open |
+| FE-029 | Toast system underused (1 consumer) | App-wide | Open |
+| FE-030 | Bookmark removal has no success feedback | `bookmarks/page.tsx` | Open |
+| FE-031 | Inline hook logic in QuestionPageClient (240 lines) | `question-page-client.tsx` | Open |
+| FE-032 | Clerk theme hardcoded to dark mode | `providers.tsx` | Open |
+| FE-033 | No shared marketing layout | `/pricing` vs `/` | Open |
+| FE-034 | Empty states lack helpful CTAs | Bookmarks, review, practice history | Open |
+| FE-035 | Checkout success inline Stripe logic (405 lines) | `checkout/success/checkout-success-sync.tsx` | Open |
+| FE-036 | 3 unused shadcn/ui components (0 consumers, no spec need) | `avatar.tsx`, `radio-group.tsx`, `label.tsx` + test files. (`dropdown-menu.tsx` KEEP — spec-mandated) | Open |
+| FE-037 | `theme-toggle.tsx` uses raw `<button>` not `<Button>` | `theme-toggle.tsx` | Open |
+| FE-038 | Card sub-components: 0 imports but KEEP for SPEC-019 Phase 2 | `card.tsx` (CardHeader, CardTitle, etc.) — evaluate during UI/UX refactor | Open |
+| FE-049 | Missing `createBookmark()` factory in domain test helpers | `src/domain/test-helpers/factories.ts` | Open |
+
+### Frontend Debt — Resolved
+
+| ID | Summary | Resolution |
+|----|---------|------------|
+| FE-001 | God hook: `usePracticeSessionPageController` (was 306 lines, 14 state vars) | Refactored to 102 lines; logic extracted to sub-hooks |
+| FE-003 | God hook: `usePracticeSessionControls` (was 288 lines, 26 return props) | Refactored to 79 lines; 4 sub-hooks extracted. Still 23 return props (composition hub). |
+| FE-004 | God hook: `usePracticeQuestionFlow` (was 246 lines) | Refactored to 55 lines; 2 sub-hooks extracted |
+| FE-005 | Duplicated logic: 3 copies of loadNextQuestion, submitAnswer | Core logic extracted to shared `question-flow-actions.ts` |
+| FE-006 | Two competing `LoadState` type definitions | Unified via shared `load-state.ts` |
+| FE-014 | Heading hierarchy skip (h1 to h3) in pricing | Fixed — now h1 > h2 > h3 |
+| FE-027 | Feedback component missing `role="alert"` | Added `role="alert"` to feedback banner and regression test coverage |
+| FE-039 / DEBT-179 | `global-error.tsx` missing `<head>` and `suppressHydrationWarning` | Fixed with full HTML shell metadata + hydration parity tests |
+| FE-040 / DEBT-180 | Duplicated manage-billing files across pricing and billing routes | Shared core/types extracted to `lib/manage-billing/*`; route wrappers preserved |
+| FE-041 / DEBT-181 | Hardcoded pricing data duplicated in marketing and pricing views | Shared constants extracted to `lib/pricing-data.ts` with regression guards |
+| FE-042 / DEBT-182 | Missing `font-heading` on error/not-found/pricing headings | `font-heading` applied consistently across targeted headings + style regression tests |
+| FE-043 / DEBT-183 | Bare `console.error` in client hooks (not observable) | Removed redundant client hook console logs; bookmark failures now surface as error notifications |
+| FE-044 / DEBT-184 | Loading message says "Loading question..." during answer submission | Submit flows now use transition pending state; loading card is fetch-only and submit button announces `Submitting…` |
+| FE-046 | Toggle buttons lack `aria-pressed` attribute | Added `aria-pressed` to bookmark + mark-for-review toggles |
+| FE-047 | Filter chip groups missing semantic grouping | Wrapped difficulty/tag chips in `<fieldset aria-label=...>` and added regression test |
+| FE-048 | Session progress counter not announced to screen readers | Added `aria-live="polite"` to session progress label and test coverage |
+| FE-050 | Exam review submit button missing pending label | Exam review submit button now shows `Submitting…` when pending, with test coverage |
+
+**Next frontend debt ID:** FE-051
 
 ## Archived Debt
+
+### Resolved in Practice Submit Loading Cleanup
+
+| ID | Title | Priority | Resolved |
+|----|-------|----------|----------|
+| [DEBT-184](../_archive/debt/debt-184-loading-message-misleading-during-submit.md) | Loading Message Misleading During Answer Submission | P2 | 2026-02-08 |
+
+### Resolved in Practice Engine DRY Cleanup
+
+| ID | Title | Priority | Resolved |
+|----|-------|----------|----------|
+| [DEBT-185](../_archive/debt/debt-185-duplicated-session-stats-calculation.md) | Duplicated Session Stats Calculation Across 4 Use Cases | P2 | 2026-02-08 |
+| [DEBT-186](../_archive/debt/debt-186-duplicated-session-duration-calculation.md) | Duplicated Session Duration Calculation | P2 | 2026-02-08 |
+| [DEBT-187](../_archive/debt/debt-187-duplicated-default-question-state.md) | Duplicated Default PracticeSessionQuestionState Creation | P2 | 2026-02-08 |
+| [DEBT-188](../_archive/debt/debt-188-duplicated-count-query-attempt-repository.md) | Duplicated Count Query Pattern in Attempt Repository | P3 | 2026-02-08 |
+| [DEBT-189](../_archive/debt/debt-189-day-ms-constant-triplicated.md) | DAY_MS Constant Defined in Three Separate Files | P3 | 2026-02-08 |
+| [DEBT-190](../_archive/debt/debt-190-submit-answer-rollback-lacks-logger.md) | SubmitAnswerUseCase Rollback Error Handling Lacks Logger | P2 | 2026-02-08 |
+| [DEBT-191](../_archive/debt/debt-191-get-next-question-missing-runtime-validation.md) | Missing Runtime Validation in GetNextQuestion Discriminated Union | P2 | 2026-02-08 |
+
+### Resolved in Frontend Baseline Hardening
+
+| ID | Title | Priority | Resolved |
+|----|-------|----------|----------|
+| [DEBT-179](../_archive/debt/debt-179-global-error-missing-head-and-hydration-warning.md) | `global-error.tsx` Missing `<head>` and `suppressHydrationWarning` | P2 | 2026-02-08 |
+| [DEBT-180](../_archive/debt/debt-180-duplicated-manage-billing-files.md) | Duplicated Manage-Billing Files Across Pricing and Billing Routes | P2 | 2026-02-08 |
+| [DEBT-181](../_archive/debt/debt-181-hardcoded-pricing-data-duplicated.md) | Hardcoded Pricing Data Duplicated in Marketing and Pricing Views | P2 | 2026-02-08 |
+| [DEBT-182](../_archive/debt/debt-182-missing-font-heading-on-headings.md) | Missing `font-heading` on Error Boundary, Not-Found, and Pricing Headings | P3 | 2026-02-08 |
+| [DEBT-183](../_archive/debt/debt-183-bare-console-error-in-client-hooks.md) | Bare `console.error` in Client Hooks (Not Observable) | P3 | 2026-02-08 |
+
+### Resolved in UI Foundation Hardening
+
+| ID | Title | Priority | Resolved |
+|----|-------|----------|----------|
+| [DEBT-173](../_archive/debt/debt-173-practice-hooks-multi-concern-state-machines.md) | Practice Hooks Are Multi-Concern State Machines | P1 | 2026-02-08 |
+| [DEBT-177](../_archive/debt/debt-177-duplicated-question-flow-logic-practice-modules.md) | Duplicated Question Flow Logic Across Practice Modules | P2 | 2026-02-08 |
+| [DEBT-174](../_archive/debt/debt-174-checkout-success-page-mixes-orchestration-and-entrypoint.md) | Checkout Success Page Mixes Orchestration and Route Entrypoint | P2 | 2026-02-08 |
+| [DEBT-178](../_archive/debt/debt-178-duplicated-loadstate-types-across-page-logic.md) | Duplicated LoadState Types Across Page Logic Modules | P3 | 2026-02-08 |
+| [DEBT-175](../_archive/debt/debt-175-pricing-view-design-system-and-heading-hierarchy-drift.md) | Pricing View Bypasses Button Primitive and Skips Heading Hierarchy | P3 | 2026-02-08 |
+| [DEBT-176](../_archive/debt/debt-176-theme-and-nav-modules-missing-direct-unit-tests.md) | Theme and Nav Modules Missing Direct Unit Tests | P3 | 2026-02-08 |
+
+### Resolved in Follow-Up Remediation
+
+| ID | Title | Priority | Resolved |
+|----|-------|----------|----------|
+| [DEBT-172](../_archive/debt/debt-172-duplicate-zod-schemas-across-controllers.md) | Duplicate Zod Schema Definitions Across Controllers | P3 | 2026-02-08 |
+| [DEBT-171](../_archive/debt/debt-171-subscription-repo-and-postgres-errors-missing-tests.md) | Drizzle Subscription Repository and Postgres Error Helpers Missing Tests | P2 | 2026-02-08 |
+| [DEBT-170](../_archive/debt/debt-170-fake-rate-limiter-always-success-default.md) | FakeRateLimiter Always-Success Default Masks Rejection Paths | P2 | 2026-02-08 |
+| [DEBT-169](../_archive/debt/debt-169-shared-utilities-missing-unit-tests.md) | Shared Application Utilities Missing Unit Tests | P2 | 2026-02-08 |
 
 ### Resolved in Foundation Audit #2 Remediation
 

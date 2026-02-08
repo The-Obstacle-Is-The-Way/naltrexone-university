@@ -1,5 +1,8 @@
 import type { Question } from '@/src/domain/entities';
-import { selectNextQuestionId } from '@/src/domain/services';
+import {
+  createDefaultQuestionState,
+  selectNextQuestionId,
+} from '@/src/domain/services';
 import type {
   PracticeMode,
   QuestionDifficulty,
@@ -61,6 +64,13 @@ export class GetNextQuestionUseCase {
       );
     }
 
+    if (!('filters' in input) || !input.filters) {
+      throw new ApplicationError(
+        'VALIDATION_ERROR',
+        'Either sessionId or filters must be provided',
+      );
+    }
+
     return this.executeForFilters(input.userId, input.filters);
   }
 
@@ -90,15 +100,7 @@ export class GetNextQuestionUseCase {
       session.questionStates.map((state) => [state.questionId, state]),
     );
     const orderedStates = session.questionIds.map((id) => {
-      return (
-        stateByQuestionId.get(id) ?? {
-          questionId: id,
-          markedForReview: false,
-          latestSelectedChoiceId: null,
-          latestIsCorrect: null,
-          latestAnsweredAt: null,
-        }
-      );
+      return stateByQuestionId.get(id) ?? createDefaultQuestionState(id);
     });
 
     const targetQuestionId =

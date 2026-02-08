@@ -310,6 +310,60 @@ describe('app/(app)/app/practice/[sessionId]', () => {
     expect(html).toContain('Marked for review');
   });
 
+  it('renders exam review submit pending label when isPending=true', async () => {
+    const { PracticeSessionPageView } = await import(
+      '@/app/(app)/app/practice/[sessionId]/page'
+    );
+
+    const html = renderToStaticMarkup(
+      <PracticeSessionPageView
+        summary={null}
+        review={{
+          sessionId: 'session-1',
+          mode: 'exam',
+          totalCount: 2,
+          answeredCount: 1,
+          markedCount: 1,
+          rows: [
+            {
+              isAvailable: true,
+              questionId: 'q1',
+              stemMd: 'A long stem for q1',
+              difficulty: 'easy',
+              order: 1,
+              isAnswered: true,
+              isCorrect: false,
+              markedForReview: true,
+            },
+          ],
+        }}
+        reviewLoadState={{ status: 'ready' }}
+        sessionInfo={null}
+        loadState={{ status: 'ready' }}
+        question={null}
+        selectedChoiceId={null}
+        submitResult={null}
+        isPending={true}
+        bookmarkStatus="idle"
+        isBookmarked={false}
+        isMarkingForReview={false}
+        canSubmit={false}
+        onEndSession={() => undefined}
+        onTryAgain={() => undefined}
+        onToggleBookmark={() => undefined}
+        onToggleMarkForReview={() => undefined}
+        onSelectChoice={() => undefined}
+        onSubmit={() => undefined}
+        onNextQuestion={() => undefined}
+        onOpenReviewQuestion={() => undefined}
+        onFinalizeReview={() => undefined}
+      />,
+    );
+
+    expect(html).toContain('Submitting…');
+    expect(html).not.toContain('Submit exam');
+  });
+
   it('announces review loading state before exam review is available', async () => {
     const { PracticeSessionPageView } = await import(
       '@/app/(app)/app/practice/[sessionId]/page'

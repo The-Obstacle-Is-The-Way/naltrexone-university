@@ -12,11 +12,15 @@ describe('app/(app)/app/practice/error', () => {
     const html = renderToStaticMarkup(
       <PracticeError error={error} reset={() => {}} />,
     );
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const main = doc.querySelector('main#main-content');
+    const tryAgainButton = doc.querySelector('button');
 
+    expect(main).not.toBeNull();
     expect(html).toContain('Practice');
     expect(html).toContain('Try again');
     expect(html).toContain('Error ID');
     expect(html).toContain('digest_123');
-    expect(html).toContain('focus-visible:ring-[3px]');
+    expect(tryAgainButton?.getAttribute('type')).toBe('button');
   }, 10_000);
 });

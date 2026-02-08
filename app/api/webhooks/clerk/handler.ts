@@ -85,7 +85,11 @@ export function createWebhookHandler(
     let event: ClerkWebhookEvent;
     try {
       event = await verifyWebhook(req);
-    } catch (_error) {
+    } catch (error) {
+      container.logger.error(
+        { route: '/api/webhooks/clerk', error },
+        'Clerk webhook signature verification failed',
+      );
       return NextResponse.json(
         { error: 'Invalid webhook signature' },
         { status: 400 },

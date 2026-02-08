@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { createDepsResolver, loadAppContainer } from '@/lib/controller-helpers';
 import { BOOKMARK_MUTATION_RATE_LIMIT } from '@/src/adapters/shared/rate-limits';
 import { withIdempotency } from '@/src/adapters/shared/with-idempotency';
+import { zUuid } from '@/src/adapters/shared/zod-schemas';
 import { ApplicationError } from '@/src/application/errors';
 import type {
   GetBookmarksInput,
@@ -22,8 +23,6 @@ import type {
 import { createAction } from './create-action';
 import type { CheckEntitlementUseCase } from './require-entitled-user-id';
 import { requireEntitledUserId } from './require-entitled-user-id';
-
-const zUuid = z.string().uuid();
 
 const ToggleBookmarkInputSchema = z
   .object({

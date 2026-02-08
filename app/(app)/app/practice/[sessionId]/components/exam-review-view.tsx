@@ -152,7 +152,7 @@ export function ExamReviewView({
           disabled={isPending}
           onClick={onFinalizeReview}
         >
-          Submit exam
+          {isPending ? 'Submitting…' : 'Submit exam'}
         </Button>
       </div>
     </div>

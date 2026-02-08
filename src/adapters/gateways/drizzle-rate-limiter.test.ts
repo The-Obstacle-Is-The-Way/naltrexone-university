@@ -103,4 +103,79 @@ describe('DrizzleRateLimiter', () => {
       },
     });
   });
+
+  it('treats invalid limit inputs as non-blocking', async () => {
+    const db = createDbMock(1);
+    const rateLimiter = new DrizzleRateLimiter(
+      db as unknown as RateLimiterDb,
+      () => new Date('2026-02-07T12:00:00.000Z'),
+    );
+
+    await expect(
+      rateLimiter.limit({ key: 'rate:test', limit: 0, windowMs: 60_000 }),
+    ).resolves.toEqual({
+      success: true,
+      limit: 0,
+      remaining: 0,
+      retryAfterSeconds: 0,
+    });
+  });
+
+  it('treats invalid windowMs inputs as non-blocking', async () => {
+    const db = createDbMock(1);
+    const rateLimiter = new DrizzleRateLimiter(
+      db as unknown as RateLimiterDb,
+      () => new Date('2026-02-07T12:00:00.000Z'),
+    );
+
+    await expect(
+      rateLimiter.limit({ key: 'rate:test', limit: 5, windowMs: -1 }),
+    ).resolves.toEqual({
+      success: true,
+      limit: 5,
+      remaining: 5,
+      retryAfterSeconds: 0,
+    });
+  });
+
+  it('clamps remaining count to zero when usage exceeds limit', async () => {
+    const db = createDbMock(7);
+    const rateLimiter = new DrizzleRateLimiter(
+      db as unknown as RateLimiterDb,
+      () => new Date('2026-02-07T12:00:00.000Z'),
+    );
+
+    await expect(
+      rateLimiter.limit({ key: 'rate:test', limit: 5, windowMs: 60_000 }),
+    ).resolves.toEqual({
+      success: false,
+      limit: 5,
+      remaining: 0,
+      retryAfterSeconds: expect.any(Number),
+    });
+  });
+
+  it('returns zero when prune limit is zero', async () => {
+    const db = createDbMock(1);
+    const rateLimiter = new DrizzleRateLimiter(
+      db as unknown as RateLimiterDb,
+      () => new Date('2026-02-07T12:00:00.000Z'),
+    );
+
+    await expect(
+      rateLimiter.pruneExpiredWindows(new Date('2026-02-07T12:00:00.000Z'), 0),
+    ).resolves.toBe(0);
+  });
+
+  it('returns zero when prune limit is negative', async () => {
+    const db = createDbMock(1);
+    const rateLimiter = new DrizzleRateLimiter(
+      db as unknown as RateLimiterDb,
+      () => new Date('2026-02-07T12:00:00.000Z'),
+    );
+
+    await expect(
+      rateLimiter.pruneExpiredWindows(new Date('2026-02-07T12:00:00.000Z'), -1),
+    ).resolves.toBe(0);
+  });
 });

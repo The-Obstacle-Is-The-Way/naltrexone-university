@@ -93,8 +93,7 @@ describe('app/pricing/subscribe-actions', () => {
         logError: () => undefined,
       }),
     ).rejects.toMatchObject({
-      message:
-        'redirect:/pricing?checkout=error&plan=monthly&error_code=INTERNAL_ERROR',
+      message: 'redirect:/pricing?checkout=error&plan=monthly',
     });
 
     expect(createCheckoutSessionFn).toHaveBeenCalledWith({
@@ -116,8 +115,7 @@ describe('app/pricing/subscribe-actions', () => {
         redirectFn,
       }),
     ).rejects.toMatchObject({
-      message:
-        'redirect:/pricing?checkout=error&plan=monthly&error_code=INTERNAL_ERROR',
+      message: 'redirect:/pricing?checkout=error&plan=monthly',
     });
 
     expect(createCheckoutSessionFn).toHaveBeenCalledWith({
@@ -147,7 +145,7 @@ describe('app/pricing/subscribe-actions', () => {
     });
   });
 
-  it('includes a truncated error_message when checkout fails in development', async () => {
+  it('does not include internal error params in redirect urls even in development', async () => {
     vi.stubEnv('NODE_ENV', 'development');
     try {
       const longMessage = 'x'.repeat(250);
@@ -182,8 +180,8 @@ describe('app/pricing/subscribe-actions', () => {
       expect(url.pathname).toBe('/pricing');
       expect(url.searchParams.get('checkout')).toBe('error');
       expect(url.searchParams.get('plan')).toBe('monthly');
-      expect(url.searchParams.get('error_code')).toBe('INTERNAL_ERROR');
-      expect(url.searchParams.get('error_message')).toBe(`${'x'.repeat(200)}…`);
+      expect(url.searchParams.get('error_code')).toBeNull();
+      expect(url.searchParams.get('error_message')).toBeNull();
 
       expect(logError).toHaveBeenCalledWith(
         expect.objectContaining({

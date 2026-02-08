@@ -70,11 +70,11 @@ describe('runManageBillingAction', () => {
       });
 
     await expect(action()).rejects.toMatchObject({
-      url: '/pricing?checkout=error&error_code=INTERNAL_ERROR',
+      url: '/pricing?checkout=error',
     });
   });
 
-  it('returns redirect to /pricing?checkout=error with error_message when in development', async () => {
+  it('does not include internal error params in development redirects', async () => {
     vi.stubEnv('NODE_ENV', 'development');
     try {
       const redirectFn = (url: string): never => {
@@ -94,7 +94,7 @@ describe('runManageBillingAction', () => {
         });
 
       await expect(action()).rejects.toMatchObject({
-        url: '/pricing?checkout=error&error_code=INTERNAL_ERROR&error_message=Boom',
+        url: '/pricing?checkout=error',
       });
     } finally {
       vi.unstubAllEnvs();

@@ -32,7 +32,9 @@ describe('usePracticeSessionPageController', () => {
     expect(output.review).toBeNull();
     expect(output.reviewLoadState).toEqual({ status: 'idle' });
     expect(output.navigator).toBeNull();
+    expect(output.navigatorLoadState).toEqual({ status: 'idle' });
     expect(typeof output.onEndSession).toBe('function');
+    expect(typeof output.onRetryNavigator).toBe('function');
     expect(typeof output.onTryAgain).toBe('function');
     expect(typeof output.onToggleBookmark).toBe('function');
     expect(typeof output.onToggleMarkForReview).toBe('function');

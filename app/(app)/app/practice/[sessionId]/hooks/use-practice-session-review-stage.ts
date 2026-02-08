@@ -4,10 +4,11 @@ import {
   type Dispatch,
   type SetStateAction,
   useCallback,
-  useEffect,
   useRef,
   useState,
 } from 'react';
+import { usePracticeSessionNavigator } from '@/app/(app)/app/practice/[sessionId]/hooks/use-practice-session-navigator';
+import { usePracticeSessionSummaryReview } from '@/app/(app)/app/practice/[sessionId]/hooks/use-practice-session-summary-review';
 import { endSession } from '@/app/(app)/app/practice/[sessionId]/practice-session-page-logic';
 import {
   getActionResultErrorMessage,
@@ -32,9 +33,7 @@ export type UsePracticeSessionReviewStageInput = {
   sessionMode: 'tutor' | 'exam' | null;
   setSessionMode: (mode: 'tutor' | 'exam' | null) => void;
   setLoadState: (state: LoadState) => void;
-  setQuestion: (question: NextQuestion | null) => void;
-  setSubmitResult: (result: SubmitAnswerOutput | null) => void;
-  setSelectedChoiceId: (choiceId: string | null) => void;
+  resetQuestionState: () => void;
   loadSpecificQuestion: (questionId: string) => void;
 };
 
@@ -46,9 +45,11 @@ export type UsePracticeSessionReviewStageOutput = {
   setReview: Dispatch<SetStateAction<GetPracticeSessionReviewOutput | null>>;
   reviewLoadState: LoadState;
   navigator: GetPracticeSessionReviewOutput | null;
+  navigatorLoadState: LoadState;
   isInReviewStage: boolean;
   onEndSession: () => void;
   onRetryReview: () => void;
+  onRetryNavigator: () => void;
   onOpenReviewQuestion: (questionId: string) => void;
   onFinalizeReview: () => void;
 };
@@ -57,21 +58,14 @@ export function usePracticeSessionReviewStage(
   input: UsePracticeSessionReviewStageInput,
 ): UsePracticeSessionReviewStageOutput {
   const [summary, setSummary] = useState<EndPracticeSessionOutput | null>(null);
-  const [summaryReview, setSummaryReview] =
-    useState<GetPracticeSessionReviewOutput | null>(null);
-  const [summaryReviewLoadState, setSummaryReviewLoadState] =
-    useState<LoadState>({
-      status: 'idle',
-    });
   const [review, setReview] = useState<GetPracticeSessionReviewOutput | null>(
     null,
   );
-  const [navigator, setNavigator] =
-    useState<GetPracticeSessionReviewOutput | null>(null);
   const [reviewLoadState, setReviewLoadState] = useState<LoadState>({
     status: 'idle',
   });
   const [isInReviewStage, setIsInReviewStage] = useState(false);
+  const [navigatorReloadCount, setNavigatorReloadCount] = useState(0);
   const endSessionIdempotencyKeyRef = useRef(crypto.randomUUID());
 
   const finalizeSession = useCallback(
@@ -82,9 +76,7 @@ export function usePracticeSessionReviewStage(
         endPracticeSessionFn: endPracticeSession,
         setLoadState: input.setLoadState,
         setSummary,
-        setQuestion: input.setQuestion,
-        setSubmitResult: input.setSubmitResult,
-        setSelectedChoiceId: input.setSelectedChoiceId,
+        resetQuestionState: input.resetQuestionState,
         rotateIdempotencyKey: () => {
           endSessionIdempotencyKeyRef.current = crypto.randomUUID();
         },
@@ -93,9 +85,7 @@ export function usePracticeSessionReviewStage(
     [
       input.sessionId,
       input.setLoadState,
-      input.setQuestion,
-      input.setSelectedChoiceId,
-      input.setSubmitResult,
+      input.resetQuestionState,
       input.isMounted,
     ],
   );
@@ -137,16 +127,12 @@ export function usePracticeSessionReviewStage(
     setReviewLoadState({ status: 'ready' });
     setIsInReviewStage(true);
     input.setSessionMode(res.data.mode);
-    input.setQuestion(null);
-    input.setSubmitResult(null);
-    input.setSelectedChoiceId(null);
+    input.resetQuestionState();
   }, [
     input.sessionId,
     input.isMounted,
-    input.setQuestion,
-    input.setSelectedChoiceId,
     input.setSessionMode,
-    input.setSubmitResult,
+    input.resetQuestionState,
     finalizeSession,
   ]);
 
@@ -183,80 +169,29 @@ export function usePracticeSessionReviewStage(
     void loadReview();
   }, [loadReview]);
 
-  useEffect(() => {
-    if (!summary) {
-      setSummaryReview(null);
-      setSummaryReviewLoadState({ status: 'idle' });
-      return;
-    }
+  const onRetryNavigator = useCallback(() => {
+    setNavigatorReloadCount((prev) => prev + 1);
+  }, []);
 
-    let mounted = true;
-    setSummaryReview(null);
-    setSummaryReviewLoadState({ status: 'loading' });
+  const { summaryReview, summaryReviewLoadState } =
+    usePracticeSessionSummaryReview({
+      summary,
+      sessionId: input.sessionId,
+      isMounted: input.isMounted,
+      getPracticeSessionReviewFn: getPracticeSessionReview,
+    });
 
-    void (async () => {
-      let res: Awaited<ReturnType<typeof getPracticeSessionReview>>;
-      try {
-        res = await getPracticeSessionReview({ sessionId: input.sessionId });
-      } catch (error) {
-        if (!mounted || !input.isMounted()) return;
-        setSummaryReviewLoadState({
-          status: 'error',
-          message: getThrownErrorMessage(error),
-        });
-        return;
-      }
-      if (!mounted || !input.isMounted()) return;
-      if (!res.ok) {
-        setSummaryReviewLoadState({
-          status: 'error',
-          message: getActionResultErrorMessage(res),
-        });
-        return;
-      }
-
-      setSummaryReview(res.data);
-      setSummaryReviewLoadState({ status: 'ready' });
-    })();
-
-    return () => {
-      mounted = false;
-    };
-  }, [summary, input.sessionId, input.isMounted]);
-
-  // biome-ignore lint/correctness/useExhaustiveDependencies: navigator must refresh when the current question and answer state change.
-  useEffect(() => {
-    if (summary || isInReviewStage || !input.sessionInfo) {
-      setNavigator(null);
-      return;
-    }
-
-    let mounted = true;
-    void (async () => {
-      let res: Awaited<ReturnType<typeof getPracticeSessionReview>>;
-      try {
-        res = await getPracticeSessionReview({ sessionId: input.sessionId });
-      } catch {
-        if (!mounted || !input.isMounted()) return;
-        return;
-      }
-      if (!mounted || !input.isMounted()) return;
-      if (!res.ok) return;
-      setNavigator(res.data);
-    })();
-
-    return () => {
-      mounted = false;
-    };
-  }, [
+  const { navigator, navigatorLoadState } = usePracticeSessionNavigator({
     summary,
     isInReviewStage,
-    input.sessionInfo,
-    input.sessionId,
-    input.questionId,
-    input.submitResult,
-    input.isMounted,
-  ]);
+    sessionInfo: input.sessionInfo,
+    sessionId: input.sessionId,
+    questionId: input.questionId,
+    submitResult: input.submitResult,
+    navigatorReloadCount,
+    getPracticeSessionReviewFn: getPracticeSessionReview,
+    isMounted: input.isMounted,
+  });
 
   return {
     summary,
@@ -266,9 +201,11 @@ export function usePracticeSessionReviewStage(
     setReview,
     reviewLoadState,
     navigator,
+    navigatorLoadState,
     isInReviewStage,
     onEndSession,
     onRetryReview,
+    onRetryNavigator,
     onOpenReviewQuestion,
     onFinalizeReview,
   };

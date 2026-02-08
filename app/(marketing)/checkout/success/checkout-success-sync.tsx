@@ -1,0 +1,437 @@
+import { redirect } from 'next/navigation';
+import type { JSX } from 'react';
+import { ROUTES } from '@/lib/routes';
+import {
+  getSubscriptionPlanFromPriceId,
+  type StripePriceIds,
+} from '@/src/adapters/config/stripe-prices';
+import {
+  isValidStripeSubscriptionStatus,
+  stripeSubscriptionStatusToSubscriptionStatus,
+} from '@/src/adapters/gateways/stripe';
+import { isTransientExternalError, retry } from '@/src/adapters/shared/retry';
+import type { AuthGateway } from '@/src/application/ports/gateways';
+import type {
+  StripeCustomerRepository,
+  SubscriptionRepository,
+} from '@/src/application/ports/repositories';
+import {
+  isEntitledStatus,
+  type SubscriptionStatus,
+} from '@/src/domain/value-objects';
+
+type StripeCheckoutSessionLike = { customer?: unknown; subscription?: unknown };
+
+type StripeSubscriptionLike = {
+  id?: string;
+  customer?: unknown;
+  status?: string;
+  cancel_at_period_end?: boolean;
+  metadata?: Record<string, string>;
+  items?: {
+    data?: Array<{
+      current_period_end?: number;
+      price?: { id?: string };
+    }>;
+  };
+};
+
+type StripeClientLike = {
+  checkout: {
+    sessions: {
+      retrieve: (
+        sessionId: string,
+        params?: { expand?: string[] },
+      ) => Promise<StripeCheckoutSessionLike>;
+    };
+  };
+  subscriptions: {
+    retrieve: (subscriptionId: string) => Promise<StripeSubscriptionLike>;
+  };
+};
+
+type ClerkAuthLike = {
+  userId: string | null;
+  redirectToSignIn: (opts: { returnBackUrl: string | URL }) => never;
+};
+
+type CheckoutSuccessLogger = {
+  error: (context: Record<string, unknown>, message: string) => void;
+  warn?: (context: Record<string, unknown>, message: string) => void;
+};
+
+export type CheckoutSuccessTransaction = {
+  stripeCustomers: StripeCustomerRepository;
+  subscriptions: SubscriptionRepository;
+};
+
+export type CheckoutSuccessDeps = {
+  authGateway: AuthGateway;
+  getClerkAuth: () => Promise<ClerkAuthLike>;
+  logger: CheckoutSuccessLogger;
+  stripe: StripeClientLike;
+  priceIds: StripePriceIds;
+  appUrl: string;
+  transaction: <T>(
+    fn: (tx: CheckoutSuccessTransaction) => Promise<T>,
+  ) => Promise<T>;
+};
+
+type SyncCheckoutSuccessInput = {
+  sessionId: string | null;
+};
+
+const CHECKOUT_ERROR_ROUTE = `${ROUTES.PRICING}?checkout=error`;
+const STRIPE_RETRY_OPTIONS = {
+  maxAttempts: 3,
+  initialDelayMs: 100,
+  factor: 2,
+  maxDelayMs: 1000,
+} as const;
+
+type CheckoutSuccessSearchParams = {
+  session_id?: string;
+};
+
+type CheckoutSuccessContainerLike = {
+  createAuthGateway: () => AuthGateway;
+  logger: CheckoutSuccessLogger;
+  env: {
+    NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY: string;
+    NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL: string;
+    NEXT_PUBLIC_APP_URL: string;
+  };
+  db: {
+    transaction: <T>(fn: (tx: unknown) => Promise<T>) => Promise<T>;
+  };
+  createStripeCustomerRepository: (tx: unknown) => StripeCustomerRepository;
+  createSubscriptionRepository: (tx: unknown) => SubscriptionRepository;
+};
+
+export type CheckoutSuccessModuleLoaders = {
+  loadContainer: () => Promise<{ createContainer: () => unknown }>;
+  loadStripe: () => Promise<{ stripe: StripeClientLike }>;
+  loadClerkServer: () => Promise<{ auth: () => Promise<ClerkAuthLike> }>;
+};
+
+const defaultModuleLoaders: CheckoutSuccessModuleLoaders = {
+  loadContainer: () => import('@/lib/container'),
+  loadStripe: () => import('@/lib/stripe'),
+  loadClerkServer: () => import('@clerk/nextjs/server'),
+};
+
+export async function getCheckoutSuccessDeps(
+  deps?: CheckoutSuccessDeps,
+  loaders: CheckoutSuccessModuleLoaders = defaultModuleLoaders,
+): Promise<CheckoutSuccessDeps> {
+  if (deps) return deps;
+
+  const { createContainer } = await loaders.loadContainer();
+  const { stripe } = await loaders.loadStripe();
+  const { auth } = await loaders.loadClerkServer();
+
+  const container = createContainer() as CheckoutSuccessContainerLike;
+
+  return {
+    authGateway: container.createAuthGateway(),
+    getClerkAuth: auth,
+    logger: container.logger,
+    stripe,
+    priceIds: {
+      monthly: container.env.NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY,
+      annual: container.env.NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL,
+    },
+    appUrl: container.env.NEXT_PUBLIC_APP_URL,
+    transaction: async (fn) =>
+      container.db.transaction(async (tx) =>
+        fn({
+          stripeCustomers: container.createStripeCustomerRepository(tx),
+          subscriptions: container.createSubscriptionRepository(tx),
+        }),
+      ),
+  };
+}
+
+function getStripeId(value: unknown): string | null {
+  if (typeof value === 'string') return value;
+  if (typeof value !== 'object' || value === null) return null;
+
+  const record = value as { id?: unknown };
+  return typeof record.id === 'string' ? record.id : null;
+}
+
+/**
+ * Eagerly sync the user's subscription after checkout completion.
+ *
+ * Stripe webhooks are eventually consistent; users often reach the success page
+ * before the webhook updates our database. This function fetches the checkout
+ * session/subscription from Stripe and upserts the minimal subscription state
+ * before redirecting so entitlement is correct immediately.
+ *
+ * Webhooks remain necessary for lifecycle events when the user is not present
+ * (renewals, payment failures, admin actions).
+ *
+ * See ADR-014: Stripe eager sync pattern.
+ */
+export async function syncCheckoutSuccess(
+  input: SyncCheckoutSuccessInput,
+  deps?: CheckoutSuccessDeps,
+  redirectFn: (url: string) => never = redirect,
+): Promise<void> {
+  const d = await getCheckoutSuccessDeps(deps);
+
+  const fail = (
+    reason: string,
+    context: Record<string, unknown> = {},
+  ): never => {
+    d.logger.error(
+      {
+        reason,
+        ...context,
+      },
+      'Checkout success validation failed',
+    );
+    return redirectFn(CHECKOUT_ERROR_ROUTE);
+  };
+
+  function assertNotNull<T>(
+    value: T | null,
+    reason: string,
+    context: Record<string, unknown>,
+  ): asserts value is T {
+    if (value === null) {
+      fail(reason, context);
+    }
+  }
+
+  function assertNonEmptyString(
+    value: unknown,
+    reason: string,
+    context: Record<string, unknown>,
+  ): asserts value is string {
+    if (typeof value !== 'string' || value.length === 0) {
+      fail(reason, context);
+    }
+  }
+
+  function assertNumber(
+    value: unknown,
+    reason: string,
+    context: Record<string, unknown>,
+  ): asserts value is number {
+    if (typeof value !== 'number') {
+      fail(reason, context);
+    }
+  }
+
+  function assertBoolean(
+    value: unknown,
+    reason: string,
+    context: Record<string, unknown>,
+  ): asserts value is boolean {
+    if (typeof value !== 'boolean') {
+      fail(reason, context);
+    }
+  }
+
+  function assertStripeSubscriptionStatus(
+    value: string,
+    reason: string,
+    context: Record<string, unknown>,
+  ): asserts value is Parameters<
+    typeof stripeSubscriptionStatusToSubscriptionStatus
+  >[0] {
+    if (!isValidStripeSubscriptionStatus(value)) {
+      fail(reason, context);
+    }
+  }
+
+  const sessionId = input.sessionId;
+  // Users can land here via direct navigation or a tampered URL; treat missing
+  // session_id as an invalid checkout completion.
+  assertNonEmptyString(sessionId, 'missing_session_id', { sessionId });
+
+  const clerkAuth = await d.getClerkAuth();
+  if (!clerkAuth.userId) {
+    const returnBackUrl = new URL(ROUTES.CHECKOUT_SUCCESS, d.appUrl);
+    returnBackUrl.searchParams.set('session_id', sessionId);
+    return clerkAuth.redirectToSignIn({ returnBackUrl });
+  }
+
+  const user = await d.authGateway.requireUser();
+
+  const session = await retry(
+    () =>
+      d.stripe.checkout.sessions.retrieve(sessionId, {
+        expand: ['subscription'],
+      }),
+    {
+      ...STRIPE_RETRY_OPTIONS,
+      shouldRetry: isTransientExternalError,
+      onRetry: ({ attempt, maxAttempts, delayMs, error }) => {
+        d.logger.warn?.(
+          {
+            sessionId,
+            attempt,
+            maxAttempts,
+            delayMs,
+            error: error instanceof Error ? error.message : String(error),
+          },
+          'Retrying Stripe API call',
+        );
+      },
+    },
+  );
+
+  const stripeCustomerId = getStripeId(session.customer);
+  const subscriptionId = getStripeId(session.subscription);
+  // A completed subscription checkout must have both a customer and a subscription.
+  assertNonEmptyString(stripeCustomerId, 'missing_stripe_ids', {
+    sessionId,
+    stripeCustomerId,
+    subscriptionId,
+  });
+  assertNonEmptyString(subscriptionId, 'missing_stripe_ids', {
+    sessionId,
+    stripeCustomerId,
+    subscriptionId,
+  });
+
+  const subscription = await retry(
+    () => d.stripe.subscriptions.retrieve(subscriptionId),
+    {
+      ...STRIPE_RETRY_OPTIONS,
+      shouldRetry: isTransientExternalError,
+      onRetry: ({ attempt, maxAttempts, delayMs, error }) => {
+        d.logger.warn?.(
+          {
+            subscriptionId,
+            attempt,
+            maxAttempts,
+            delayMs,
+            error: error instanceof Error ? error.message : String(error),
+          },
+          'Retrying Stripe API call',
+        );
+      },
+    },
+  );
+
+  const metadataUserId = subscription.metadata?.user_id;
+  assertNonEmptyString(metadataUserId, 'missing_user_id', {
+    sessionId,
+    metadataUserId: metadataUserId ?? null,
+  });
+  // Prevent cross-account leakage if the user switches accounts mid-checkout.
+  if (metadataUserId !== user.id) {
+    fail('user_id_mismatch', {
+      sessionId,
+      metadataUserId,
+      userId: user.id,
+    });
+  }
+
+  const stripeStatus = subscription.status;
+  // Reject malformed subscription objects and unexpected statuses.
+  assertNonEmptyString(stripeStatus, 'invalid_subscription_status', {
+    sessionId,
+    status: stripeStatus ?? null,
+  });
+  assertStripeSubscriptionStatus(stripeStatus, 'invalid_subscription_status', {
+    sessionId,
+    status: stripeStatus,
+  });
+  const status: SubscriptionStatus =
+    stripeSubscriptionStatusToSubscriptionStatus(stripeStatus);
+
+  const subscriptionItem = subscription.items?.data?.[0];
+
+  const currentPeriodEndSeconds = subscriptionItem?.current_period_end;
+  // Entitlement depends on a current billing period end timestamp.
+  assertNumber(currentPeriodEndSeconds, 'missing_current_period_end', {
+    sessionId,
+    currentPeriodEndSeconds: currentPeriodEndSeconds ?? null,
+  });
+
+  const cancelAtPeriodEnd = subscription.cancel_at_period_end;
+  // We persist cancel-at-period-end to display accurately in billing UI.
+  assertBoolean(cancelAtPeriodEnd, 'missing_cancel_at_period_end', {
+    sessionId,
+    cancelAtPeriodEnd: cancelAtPeriodEnd ?? null,
+  });
+
+  const priceId = subscriptionItem?.price?.id;
+  // We map the Stripe price id back to a domain plan (monthly/annual).
+  assertNonEmptyString(priceId, 'missing_price_id', {
+    sessionId,
+    priceId: priceId ?? null,
+  });
+
+  const plan = getSubscriptionPlanFromPriceId(priceId, d.priceIds);
+  // Mismatched price IDs usually means environment misconfiguration.
+  assertNotNull(plan, 'unknown_plan', {
+    sessionId,
+    priceId,
+    configuredPriceIds: d.priceIds,
+  });
+
+  const currentPeriodEnd = new Date(currentPeriodEndSeconds * 1000);
+
+  await d.transaction(async ({ stripeCustomers, subscriptions }) => {
+    await stripeCustomers.insert(user.id, stripeCustomerId, {
+      conflictStrategy: 'authoritative',
+    });
+    await subscriptions.upsert({
+      userId: user.id,
+      externalSubscriptionId: subscriptionId,
+      plan,
+      status,
+      currentPeriodEnd,
+      cancelAtPeriodEnd,
+    });
+  });
+
+  const isEntitled =
+    isEntitledStatus(status) && currentPeriodEnd.getTime() > Date.now();
+
+  if (!isEntitled) {
+    const reason =
+      status === 'paymentProcessing' || status === 'paymentFailed'
+        ? 'payment_processing'
+        : 'manage_billing';
+
+    return redirectFn(`${ROUTES.PRICING}?reason=${reason}`);
+  }
+
+  return redirectFn(ROUTES.APP_DASHBOARD);
+}
+
+export async function runCheckoutSuccessPage(
+  { searchParams }: { searchParams: Promise<CheckoutSuccessSearchParams> },
+  deps?: CheckoutSuccessDeps,
+  redirectFn: (url: string) => never = redirect,
+): Promise<JSX.Element> {
+  const resolvedSearchParams = await searchParams;
+  await syncCheckoutSuccess(
+    { sessionId: resolvedSearchParams.session_id ?? null },
+    deps,
+    redirectFn,
+  );
+
+  return (
+    <main
+      id="main-content"
+      tabIndex={-1}
+      className="flex min-h-[60vh] items-center justify-center"
+    >
+      <div className="text-center">
+        <h1 className="text-xl font-semibold text-foreground">
+          Finalizing your subscription…
+        </h1>
+        <p className="mt-2 text-muted-foreground">
+          You’ll be redirected to your dashboard shortly.
+        </p>
+      </div>
+    </main>
+  );
+}

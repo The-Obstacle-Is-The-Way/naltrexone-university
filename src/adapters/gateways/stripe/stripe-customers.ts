@@ -80,17 +80,16 @@ export async function createStripeCustomer({
     }
   }
 
-  const idempotencyKey = options?.idempotencyKey;
-  const customer = idempotencyKey
-    ? await callStripeWithRetry({
-        operation: 'customers.create',
-        fn: () =>
-          stripe.customers.create(params, {
-            idempotencyKey,
-          }),
-        logger,
-      })
-    : await stripe.customers.create(params);
+  const idempotencyKey =
+    options?.idempotencyKey ?? `create_stripe_customer:${input.userId}`;
+  const customer = await callStripeWithRetry({
+    operation: 'customers.create',
+    fn: () =>
+      stripe.customers.create(params, {
+        idempotencyKey,
+      }),
+    logger,
+  });
 
   if (!customer.id) {
     throw new ApplicationError('STRIPE_ERROR', 'Stripe customer id is missing');

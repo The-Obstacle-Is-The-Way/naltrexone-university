@@ -1,4 +1,4 @@
-const DAY_MS = 86_400_000;
+export const DAY_MS = 86_400_000;
 
 function utcDayNumber(date: Date): number {
   return Math.floor(date.getTime() / DAY_MS);

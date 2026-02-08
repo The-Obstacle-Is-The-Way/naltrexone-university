@@ -1,4 +1,8 @@
-import { computeAccuracy } from '@/src/domain/services';
+import {
+  computeAccuracy,
+  computeSessionDurationSeconds,
+  computeSessionStats,
+} from '@/src/domain/services';
 import { ApplicationError } from '../errors';
 import type { PracticeSessionRepository } from '../ports/repositories';
 
@@ -34,18 +38,12 @@ export class EndPracticeSessionUseCase {
       );
     }
 
-    const answeredStates = session.questionStates.filter(
-      (state) => state.latestSelectedChoiceId !== null,
-    );
-    const answered = answeredStates.length;
-    const correct = answeredStates.filter(
-      (state) => state.latestIsCorrect === true,
-    ).length;
+    const { answered, correct } = computeSessionStats(session.questionStates);
     const accuracy = computeAccuracy(answered, correct);
 
-    const durationSeconds = Math.max(
-      0,
-      Math.floor((endedAt.getTime() - session.startedAt.getTime()) / 1000),
+    const durationSeconds = computeSessionDurationSeconds(
+      session.startedAt,
+      endedAt,
     );
 
     return {

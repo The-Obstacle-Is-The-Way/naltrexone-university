@@ -1,7 +1,7 @@
 # Implementation Specifications
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-02-07
+**Last Updated:** 2026-02-08
 
 ---
 
@@ -125,6 +125,8 @@ Any additional guidance for implementers.
 
 ## Related Documentation
 
+- [Practice Engine](../practice-engine/index.md) — Canonical reference for the core practice feature (cross-cuts all specs)
 - [Architecture Decision Records](../adr/index.md)
 - [Bug Reports](../bugs/index.md)
 - [Technical Debt](../debt/index.md)
+- [Frontend Standards](../frontend/standards.md)

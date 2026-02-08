@@ -17,6 +17,7 @@ export type PracticeSessionPageViewProps = {
   review?: GetPracticeSessionReviewOutput | null;
   reviewLoadState?: LoadState;
   navigator?: GetPracticeSessionReviewOutput | null;
+  navigatorLoadState?: LoadState;
   sessionInfo: NextQuestion['session'];
   loadState: LoadState;
   question: NextQuestion | null;
@@ -31,6 +32,7 @@ export type PracticeSessionPageViewProps = {
   canSubmit: boolean;
   onEndSession: () => void;
   onRetryReview?: () => void;
+  onRetryNavigator?: () => void;
   onTryAgain: () => void;
   onToggleBookmark: () => void;
   onToggleMarkForReview?: () => void;
@@ -50,6 +52,7 @@ export function PracticeSessionPageView(props: PracticeSessionPageViewProps) {
     status: 'idle',
   };
   const navigator = props.navigator ?? null;
+  const navigatorLoadState = props.navigatorLoadState ?? { status: 'idle' };
 
   if (props.summary) {
     return (
@@ -113,6 +116,21 @@ export function PracticeSessionPageView(props: PracticeSessionPageViewProps) {
             currentQuestionId={props.question?.questionId ?? null}
             onNavigateQuestion={props.onNavigateQuestion}
           />
+        ) : navigatorLoadState.status === 'error' ? (
+          <ErrorCard className="p-4">
+            <div>{navigatorLoadState.message}</div>
+            {props.onRetryNavigator ? (
+              <div className="mt-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={props.onRetryNavigator}
+                >
+                  Retry navigator
+                </Button>
+              </div>
+            ) : null}
+          </ErrorCard>
         ) : undefined
       }
       sessionInfo={props.sessionInfo}

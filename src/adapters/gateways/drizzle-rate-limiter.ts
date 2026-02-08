@@ -6,10 +6,10 @@ import type {
   RateLimitResult,
 } from '@/src/application/ports/gateways';
 import type { Logger } from '@/src/application/ports/logger';
+import { DAY_MS } from '@/src/domain/services';
 import type { DrizzleDb } from '../shared/database-types';
 
 const SECOND_MS = 1000;
-const DAY_MS = 86_400_000;
 const PRUNE_RETENTION_DAYS = 90;
 const PRUNE_BATCH_LIMIT = 100;
 const NOOP_LOGGER: Logger = {

@@ -5,24 +5,6 @@ import { createDeferred } from '@/tests/test-helpers/create-deferred';
 import { ok } from '@/tests/test-helpers/ok';
 import { usePracticeSessionMarkForReview } from './use-practice-session-mark-for-review';
 
-const { setPracticeSessionQuestionMarkMock } = vi.hoisted(() => ({
-  setPracticeSessionQuestionMarkMock: vi.fn(),
-}));
-
-vi.mock('@/src/adapters/controllers/practice-controller', () => ({
-  setPracticeSessionQuestionMark: setPracticeSessionQuestionMarkMock,
-}));
-
-type SessionInfoState = {
-  sessionId: string;
-  mode: 'exam' | 'tutor';
-  index: number;
-  total: number;
-  isMarkedForReview: boolean;
-} | null;
-
-type SessionInfoUpdater = (prev: SessionInfoState) => SessionInfoState;
-
 type ReviewState = {
   sessionId: string;
   mode: 'exam' | 'tutor';
@@ -52,9 +34,9 @@ describe('usePracticeSessionMarkForReview (browser)', () => {
         }>
       >();
 
-    setPracticeSessionQuestionMarkMock.mockReturnValue(deferred.promise);
+    const setPracticeSessionQuestionMarkFn = vi.fn(() => deferred.promise);
 
-    const setSessionInfo = vi.fn();
+    const applySessionInfo = vi.fn();
     const setReview = vi.fn();
 
     const harness = await renderHook(() =>
@@ -76,10 +58,11 @@ describe('usePracticeSessionMarkForReview (browser)', () => {
           isMarkedForReview: false,
         },
         sessionId: 'session-1',
-        setSessionInfo,
+        applySessionInfo,
         setLoadState: vi.fn(),
         setReview,
         isMounted: () => true,
+        setPracticeSessionQuestionMarkFn,
       }),
     );
 
@@ -101,20 +84,18 @@ describe('usePracticeSessionMarkForReview (browser)', () => {
       .poll(() => harness.result.current.isMarkingForReview)
       .toBe(false);
 
-    expect(setPracticeSessionQuestionMarkMock).toHaveBeenCalledWith({
+    expect(setPracticeSessionQuestionMarkFn).toHaveBeenCalledWith({
       sessionId: 'session-1',
       questionId: 'question-1',
       markedForReview: true,
       idempotencyKey: expect.any(String),
     });
 
-    expect(setSessionInfo).toHaveBeenCalled();
-    const sessionUpdater = setSessionInfo.mock.calls[0]?.[0] as
-      | SessionInfoUpdater
-      | undefined;
-    expect(sessionUpdater).toBeDefined();
+    expect(applySessionInfo).toHaveBeenCalledTimes(1);
+    const sessionUpdater = applySessionInfo.mock.calls[0]?.[0];
+    expect(sessionUpdater).toBeTypeOf('function');
     expect(
-      sessionUpdater?.({
+      (sessionUpdater as (prev: unknown) => unknown)({
         sessionId: 'session-1',
         mode: 'exam',
         index: 0,
@@ -154,9 +135,9 @@ describe('usePracticeSessionMarkForReview (browser)', () => {
   });
 
   it('sets loadState error when mark-for-review request throws', async () => {
-    setPracticeSessionQuestionMarkMock.mockRejectedValue(
-      new Error('Mark for review failed'),
-    );
+    const setPracticeSessionQuestionMarkFn = vi
+      .fn()
+      .mockRejectedValue(new Error('Mark for review failed'));
 
     const setLoadState = vi.fn();
 
@@ -179,10 +160,11 @@ describe('usePracticeSessionMarkForReview (browser)', () => {
           isMarkedForReview: false,
         },
         sessionId: 'session-1',
-        setSessionInfo: vi.fn(),
+        applySessionInfo: vi.fn(),
         setLoadState,
         setReview: vi.fn(),
         isMounted: () => true,
+        setPracticeSessionQuestionMarkFn,
       }),
     );
 

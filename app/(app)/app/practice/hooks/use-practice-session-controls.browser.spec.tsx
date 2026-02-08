@@ -56,6 +56,14 @@ function PracticeSessionControlsHookProbe() {
       <button type="button" onClick={() => output.onToggleTag('opioids')}>
         toggle-tag-opioids
       </button>
+      <button
+        type="button"
+        onClick={() => {
+          void output.onAbandonIncompleteSession();
+        }}
+      >
+        abandon-incomplete-session
+      </button>
     </>
   );
 }
@@ -128,6 +136,9 @@ describe('usePracticeSessionControls (browser)', () => {
   });
 
   it('sets tag load status to error when getTags throws', async () => {
+    const consoleErrorSpy = vi
+      .spyOn(console, 'error')
+      .mockImplementation(() => undefined);
     getTagsMock.mockRejectedValue(new Error('Tag service unavailable'));
     getIncompletePracticeSessionMock.mockResolvedValue(ok(null));
     getSessionHistoryMock.mockResolvedValue(
@@ -139,5 +150,51 @@ describe('usePracticeSessionControls (browser)', () => {
     await expect
       .element(screen.getByTestId('tag-load-status'))
       .toHaveTextContent('error');
+    expect(consoleErrorSpy).not.toHaveBeenCalled();
+  });
+
+  it('passes session id as idempotency key when abandoning an incomplete session', async () => {
+    const sessionId = '11111111-1111-1111-1111-111111111111';
+
+    getTagsMock.mockResolvedValue(ok({ rows: [] }));
+    getIncompletePracticeSessionMock.mockResolvedValue(
+      ok({
+        sessionId,
+        mode: 'tutor',
+        answeredCount: 2,
+        totalCount: 10,
+        startedAt: '2026-02-08T00:00:00.000Z',
+      }),
+    );
+    getSessionHistoryMock.mockResolvedValue(
+      ok({ rows: [], total: 0, limit: 10, offset: 0 }),
+    );
+    endPracticeSessionMock.mockResolvedValue(
+      ok({
+        sessionId,
+        endedAt: '2026-02-08T01:00:00.000Z',
+        totals: {
+          answered: 2,
+          correct: 1,
+          accuracy: 0.5,
+          durationSeconds: 120,
+        },
+      }),
+    );
+
+    const screen = await render(<PracticeSessionControlsHookProbe />);
+
+    await expect
+      .element(screen.getByTestId('incomplete-load-status'))
+      .toHaveTextContent('idle');
+
+    await screen
+      .getByRole('button', { name: 'abandon-incomplete-session' })
+      .click();
+
+    expect(endPracticeSessionMock).toHaveBeenCalledWith({
+      sessionId,
+      idempotencyKey: sessionId,
+    });
   });
 });

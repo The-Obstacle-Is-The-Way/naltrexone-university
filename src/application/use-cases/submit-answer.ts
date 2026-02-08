@@ -1,3 +1,4 @@
+import type { Logger } from '@/src/application/ports/logger';
 import type { Question } from '@/src/domain/entities';
 import {
   gradeAnswer,
@@ -42,6 +43,7 @@ export class SubmitAnswerUseCase {
     private readonly questions: QuestionRepository,
     private readonly attempts: AttemptWriter,
     private readonly sessions: PracticeSessionRepository,
+    private readonly logger: Logger,
   ) {}
 
   private mapChoiceExplanations(
@@ -85,6 +87,10 @@ export class SubmitAnswerUseCase {
       );
     }
 
+    if (session && session.endedAt !== null) {
+      throw new ApplicationError('CONFLICT', 'Practice session already ended');
+    }
+
     const rawTimeSpentSeconds = input.timeSpentSeconds;
     const timeSpentSeconds =
       typeof rawTimeSpentSeconds === 'number' &&
@@ -104,7 +110,7 @@ export class SubmitAnswerUseCase {
       timeSpentSeconds,
     });
 
-    if (session && session.endedAt === null) {
+    if (session) {
       try {
         await this.sessions.recordQuestionAnswer({
           sessionId: session.id,
@@ -127,6 +133,15 @@ export class SubmitAnswerUseCase {
             );
           }
         } catch (rollbackError) {
+          this.logger.error(
+            {
+              attemptId: attempt.id,
+              sessionError: error,
+              rollbackError,
+            },
+            'Failed to roll back orphaned attempt after session update failure',
+          );
+
           if (rollbackError instanceof ApplicationError) {
             throw rollbackError;
           }

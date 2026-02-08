@@ -9,6 +9,7 @@ import { AllChoiceLabels } from '@/src/domain/value-objects';
 import { ApplicationError } from '../errors';
 import {
   FakeAttemptRepository,
+  FakeLogger,
   FakePracticeSessionRepository,
   FakeQuestionRepository,
 } from '../test-helpers/fakes';
@@ -20,6 +21,12 @@ class FailingRecordSessionRepository extends FakePracticeSessionRepository {
       'INTERNAL_ERROR',
       'Failed to persist practice session answer state',
     );
+  }
+}
+
+class FailingRollbackAttemptRepository extends FakeAttemptRepository {
+  async deleteById(): Promise<boolean> {
+    throw new Error('Failed to delete attempt');
   }
 }
 
@@ -77,6 +84,7 @@ describe('SubmitAnswerUseCase', () => {
       new FakeQuestionRepository([question]),
       new FakeAttemptRepository(),
       new FakePracticeSessionRepository(),
+      new FakeLogger(),
     );
 
     const result = await useCase.execute({
@@ -123,7 +131,12 @@ describe('SubmitAnswerUseCase', () => {
     const questions = new FakeQuestionRepository([question]);
     const attempts = new FakeAttemptRepository();
     const sessions = new FakePracticeSessionRepository();
-    const useCase = new SubmitAnswerUseCase(questions, attempts, sessions);
+    const useCase = new SubmitAnswerUseCase(
+      questions,
+      attempts,
+      sessions,
+      new FakeLogger(),
+    );
 
     const result = await useCase.execute({
       userId,
@@ -159,6 +172,7 @@ describe('SubmitAnswerUseCase', () => {
       new FakeQuestionRepository([question]),
       attempts,
       new FakePracticeSessionRepository(),
+      new FakeLogger(),
     );
 
     await useCase.execute({
@@ -188,6 +202,7 @@ describe('SubmitAnswerUseCase', () => {
       new FakeQuestionRepository([question]),
       attempts,
       new FakePracticeSessionRepository(),
+      new FakeLogger(),
     );
 
     await useCase.execute({
@@ -217,6 +232,7 @@ describe('SubmitAnswerUseCase', () => {
       new FakeQuestionRepository([question]),
       attempts,
       new FakePracticeSessionRepository(),
+      new FakeLogger(),
     );
 
     await useCase.execute({
@@ -246,6 +262,7 @@ describe('SubmitAnswerUseCase', () => {
       new FakeQuestionRepository([question]),
       attempts,
       new FakePracticeSessionRepository(),
+      new FakeLogger(),
     );
 
     await useCase.execute({
@@ -275,6 +292,7 @@ describe('SubmitAnswerUseCase', () => {
       new FakeQuestionRepository([question]),
       attempts,
       new FakePracticeSessionRepository(),
+      new FakeLogger(),
     );
 
     await useCase.execute({
@@ -304,6 +322,7 @@ describe('SubmitAnswerUseCase', () => {
       new FakeQuestionRepository([question]),
       attempts,
       new FakePracticeSessionRepository(),
+      new FakeLogger(),
     );
 
     await useCase.execute({
@@ -333,6 +352,7 @@ describe('SubmitAnswerUseCase', () => {
       new FakeQuestionRepository([question]),
       attempts,
       new FakePracticeSessionRepository(),
+      new FakeLogger(),
     );
 
     await useCase.execute({
@@ -363,6 +383,7 @@ describe('SubmitAnswerUseCase', () => {
       new FakeQuestionRepository([question]),
       attempts,
       new FakePracticeSessionRepository(),
+      new FakeLogger(),
     );
 
     const result = await useCase.execute({
@@ -404,6 +425,7 @@ describe('SubmitAnswerUseCase', () => {
       new FakeQuestionRepository([question]),
       new FakeAttemptRepository(),
       new FakePracticeSessionRepository([session]),
+      new FakeLogger(),
     );
 
     const result = await useCase.execute({
@@ -444,6 +466,7 @@ describe('SubmitAnswerUseCase', () => {
       new FakeQuestionRepository([question]),
       new FakeAttemptRepository(),
       sessions,
+      new FakeLogger(),
     );
 
     await useCase.execute({
@@ -492,6 +515,7 @@ describe('SubmitAnswerUseCase', () => {
       new FakeQuestionRepository([question]),
       attempts,
       new FailingRecordSessionRepository([session]),
+      new FakeLogger(),
     );
 
     await expect(
@@ -511,7 +535,61 @@ describe('SubmitAnswerUseCase', () => {
     expect(attempts.getAll()).toEqual([]);
   });
 
-  it('returns explanation when exam session has ended', async () => {
+  it('logs rollback failures when attempt deletion throws after session persistence error', async () => {
+    const userId = 'user-1';
+    const sessionId = 'session-1';
+    const questionId = 'q1';
+
+    const question = createQuestion({
+      id: questionId,
+      status: 'published',
+      choices: [
+        createChoice({ id: 'c1', questionId, label: 'A', isCorrect: false }),
+        createChoice({ id: 'c2', questionId, label: 'B', isCorrect: true }),
+      ],
+    });
+
+    const session = createPracticeSession({
+      id: sessionId,
+      userId,
+      mode: 'exam',
+      endedAt: null,
+      questionIds: [questionId],
+    });
+
+    const attempts = new FailingRollbackAttemptRepository();
+    const logger = new FakeLogger();
+    const useCase = new SubmitAnswerUseCase(
+      new FakeQuestionRepository([question]),
+      attempts,
+      new FailingRecordSessionRepository([session]),
+      logger,
+    );
+
+    await expect(
+      useCase.execute({
+        userId,
+        questionId,
+        choiceId: 'c2',
+        sessionId,
+      }),
+    ).rejects.toMatchObject({ code: 'INTERNAL_ERROR' });
+
+    const inserted = attempts.getAll();
+    expect(inserted).toHaveLength(1);
+
+    expect(logger.errorCalls).toHaveLength(1);
+    expect(logger.errorCalls[0]).toMatchObject({
+      msg: 'Failed to roll back orphaned attempt after session update failure',
+      context: {
+        attemptId: inserted[0]?.id,
+        sessionError: expect.any(Error),
+        rollbackError: expect.any(Error),
+      },
+    });
+  });
+
+  it('throws CONFLICT when submitting to an ended session', async () => {
     const userId = 'user-1';
     const sessionId = 'session-1';
 
@@ -534,20 +612,26 @@ describe('SubmitAnswerUseCase', () => {
       questionIds: [questionId],
     });
 
+    const attempts = new FakeAttemptRepository();
     const useCase = new SubmitAnswerUseCase(
       new FakeQuestionRepository([question]),
-      new FakeAttemptRepository(),
+      attempts,
       new FakePracticeSessionRepository([session]),
+      new FakeLogger(),
     );
 
-    const result = await useCase.execute({
-      userId,
-      questionId,
-      choiceId: 'c2',
-      sessionId,
-    });
+    await expect(
+      useCase.execute({
+        userId,
+        questionId,
+        choiceId: 'c2',
+        sessionId,
+      }),
+    ).rejects.toEqual(
+      new ApplicationError('CONFLICT', 'Practice session already ended'),
+    );
 
-    expect(result.explanationMd).toBe('Because.');
+    expect(attempts.getAll()).toEqual([]);
   });
 
   it('throws NOT_FOUND when question is not published', async () => {
@@ -563,6 +647,7 @@ describe('SubmitAnswerUseCase', () => {
       ]),
       attempts,
       new FakePracticeSessionRepository(),
+      new FakeLogger(),
     );
 
     await expect(
@@ -582,6 +667,7 @@ describe('SubmitAnswerUseCase', () => {
       new FakeQuestionRepository([]),
       attempts,
       new FakePracticeSessionRepository(),
+      new FakeLogger(),
     );
 
     await expect(
@@ -607,6 +693,7 @@ describe('SubmitAnswerUseCase', () => {
       new FakeQuestionRepository([question]),
       attempts,
       new FakePracticeSessionRepository(),
+      new FakeLogger(),
     );
 
     await expect(
@@ -639,6 +726,7 @@ describe('SubmitAnswerUseCase', () => {
       new FakeQuestionRepository([question]),
       attempts,
       new FakePracticeSessionRepository(),
+      new FakeLogger(),
     );
 
     await expect(
@@ -685,6 +773,7 @@ describe('SubmitAnswerUseCase', () => {
       new FakeQuestionRepository([question]),
       attempts,
       new FakePracticeSessionRepository([session]),
+      new FakeLogger(),
     );
 
     await expect(
@@ -729,6 +818,7 @@ describe('SubmitAnswerUseCase', () => {
       new FakeQuestionRepository([question]),
       attempts,
       sessions,
+      new FakeLogger(),
     );
 
     // First submission succeeds
@@ -788,6 +878,7 @@ describe('SubmitAnswerUseCase', () => {
       new FakeQuestionRepository([question]),
       attempts,
       new FakePracticeSessionRepository([session]),
+      new FakeLogger(),
     );
 
     await expect(

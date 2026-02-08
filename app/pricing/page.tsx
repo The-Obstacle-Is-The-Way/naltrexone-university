@@ -60,8 +60,6 @@ type PricingSearchParams = {
   checkout?: string | undefined;
   reason?: string | undefined;
   plan?: string;
-  error_code?: string;
-  error_message?: string;
 };
 
 export function getPricingBanner(
@@ -75,22 +73,9 @@ export function getPricingBanner(
   }
 
   if (searchParams.checkout === 'error') {
-    const inDev = process.env.NODE_ENV === 'development';
-    const errorCode =
-      typeof searchParams.error_code === 'string'
-        ? searchParams.error_code
-        : null;
-    const errorMessage =
-      typeof searchParams.error_message === 'string'
-        ? searchParams.error_message
-        : null;
-
     return {
       tone: 'error',
-      message:
-        inDev && errorCode
-          ? `Checkout failed (${errorCode}). ${errorMessage ?? 'See server logs for details.'}`
-          : 'Checkout failed. Please try again.',
+      message: 'Checkout failed. Please try again.',
     };
   }
 

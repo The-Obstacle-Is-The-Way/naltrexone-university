@@ -49,4 +49,37 @@ describe('PracticeSessionStarter', () => {
     expect(html).toContain('for="session-count-input"');
     expect(html).toContain('id="session-count-input"');
   });
+
+  it('groups filter chip sets with accessible group roles', () => {
+    const html = renderToStaticMarkup(
+      <PracticeSessionStarter
+        sessionMode="tutor"
+        sessionCount={20}
+        filters={{ tagSlugs: [], difficulties: [] }}
+        tagLoadStatus="idle"
+        availableTags={[
+          {
+            id: 'tag-1',
+            slug: 'opioids',
+            name: 'Opioids',
+            kind: 'topic',
+          },
+        ]}
+        sessionStartStatus="idle"
+        sessionStartError={null}
+        isPending={false}
+        onToggleDifficulty={() => undefined}
+        onToggleTag={() => undefined}
+        onSessionModeChange={() => undefined}
+        onSessionCountChange={() => undefined}
+        onStartSession={() => undefined}
+      />,
+    );
+
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    expect(
+      doc.querySelector('fieldset[aria-label="Difficulty"]'),
+    ).not.toBeNull();
+    expect(doc.querySelector('fieldset[aria-label="Topic"]')).not.toBeNull();
+  });
 });

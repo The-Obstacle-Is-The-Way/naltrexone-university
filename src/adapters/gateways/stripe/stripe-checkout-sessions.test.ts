@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { StripeClient } from '@/src/adapters/shared/stripe-types';
 import { FakeLogger } from '@/src/application/test-helpers/fakes';
 import {
@@ -6,7 +6,99 @@ import {
   SUBSCRIPTION_LIST_LIMIT,
 } from './stripe-checkout-sessions';
 
+function createStripeMock(overrides?: {
+  subscriptionsListData?: Array<{ id?: string; status?: string }>;
+  openSessionsData?: Array<{ id: string; url: string | null }>;
+  retrievedSessionPriceId?: string;
+  shouldThrowOnRetrieve?: boolean;
+  shouldThrowOnExpire?: boolean;
+  createdSessionUrl?: string | null;
+}) {
+  const subscriptionsList = vi.fn(async () => ({
+    data: overrides?.subscriptionsListData ?? [],
+  }));
+  const sessionsList = vi.fn(async () => ({
+    data: overrides?.openSessionsData ?? [],
+  }));
+  const sessionsRetrieve = vi.fn(async () => {
+    if (overrides?.shouldThrowOnRetrieve) {
+      throw new Error('retrieve failed');
+    }
+
+    return {
+      line_items: {
+        data: [
+          {
+            price: {
+              id: overrides?.retrievedSessionPriceId ?? 'price_m',
+            },
+          },
+        ],
+      },
+    };
+  });
+  const sessionsExpire = vi.fn(async () => {
+    if (overrides?.shouldThrowOnExpire) {
+      throw new Error('expire failed');
+    }
+
+    return { id: 'cs_old', url: null };
+  });
+  const sessionsCreate = vi.fn(async () => ({
+    id: 'cs_new',
+    url:
+      overrides && 'createdSessionUrl' in overrides
+        ? overrides.createdSessionUrl
+        : 'https://stripe/checkout/new',
+  }));
+
+  const stripe = {
+    customers: { create: vi.fn(async () => ({ id: 'cus_1' })) },
+    checkout: {
+      sessions: {
+        list: sessionsList,
+        retrieve: sessionsRetrieve,
+        expire: sessionsExpire,
+        create: sessionsCreate,
+      },
+    },
+    subscriptions: {
+      list: subscriptionsList,
+      retrieve: vi.fn(async () => ({})),
+    },
+    billingPortal: {
+      sessions: {
+        create: vi.fn(async () => ({ url: 'https://stripe/portal' })),
+      },
+    },
+    webhooks: { constructEvent: vi.fn() },
+  } as unknown as StripeClient;
+
+  return {
+    stripe,
+    subscriptionsList,
+    sessionsList,
+    sessionsRetrieve,
+    sessionsExpire,
+    sessionsCreate,
+  };
+}
+
 describe('createStripeCheckoutSession', () => {
+  const input = {
+    userId: 'user_1',
+    externalCustomerId: 'cus_123',
+    plan: 'monthly' as const,
+    successUrl: 'https://app/success',
+    cancelUrl: 'https://app/cancel',
+  };
+  const priceIds = { monthly: 'price_m', annual: 'price_a' } as const;
+  let logger: FakeLogger;
+
+  beforeEach(() => {
+    logger = new FakeLogger();
+  });
+
   it('preserves this-binding when calling subscriptions.list', async () => {
     const makeRequest = vi.fn(async (_params: unknown) => ({
       data: [{ id: 'sub_active', status: 'active' as const }],
@@ -50,15 +142,9 @@ describe('createStripeCheckoutSession', () => {
     await expect(
       createStripeCheckoutSession({
         stripe,
-        input: {
-          userId: 'user_1',
-          externalCustomerId: 'cus_123',
-          plan: 'monthly',
-          successUrl: 'https://app/success',
-          cancelUrl: 'https://app/cancel',
-        },
-        priceIds: { monthly: 'price_m', annual: 'price_a' },
-        logger: new FakeLogger(),
+        input,
+        priceIds,
+        logger,
       }),
     ).rejects.toMatchObject({ code: 'ALREADY_SUBSCRIBED' });
 
@@ -66,6 +152,116 @@ describe('createStripeCheckoutSession', () => {
       customer: 'cus_123',
       status: 'all',
       limit: SUBSCRIPTION_LIST_LIMIT,
+    });
+  });
+
+  it('reuses an existing open checkout session when plan price matches', async () => {
+    const { stripe, sessionsCreate, sessionsRetrieve } = createStripeMock({
+      openSessionsData: [
+        { id: 'cs_open', url: 'https://stripe/checkout/open' },
+      ],
+      retrievedSessionPriceId: 'price_m',
+    });
+
+    await expect(
+      createStripeCheckoutSession({
+        stripe,
+        input,
+        priceIds,
+        logger,
+      }),
+    ).resolves.toEqual({ url: 'https://stripe/checkout/open' });
+
+    expect(sessionsRetrieve).toHaveBeenCalledWith('cs_open', {
+      expand: ['line_items'],
+    });
+    expect(sessionsCreate).not.toHaveBeenCalled();
+  });
+
+  it('expires mismatched open checkout session and creates a new session', async () => {
+    const { stripe, sessionsExpire, sessionsCreate } = createStripeMock({
+      openSessionsData: [
+        { id: 'cs_open', url: 'https://stripe/checkout/open' },
+      ],
+      retrievedSessionPriceId: 'price_a',
+      createdSessionUrl: 'https://stripe/checkout/new',
+    });
+
+    await expect(
+      createStripeCheckoutSession({
+        stripe,
+        input,
+        priceIds,
+        logger,
+      }),
+    ).resolves.toEqual({ url: 'https://stripe/checkout/new' });
+
+    expect(sessionsExpire).toHaveBeenCalledWith('cs_open', {
+      idempotencyKey: 'expire_checkout_session:cs_open',
+    });
+    expect(sessionsCreate).toHaveBeenCalledTimes(1);
+  });
+
+  it('throws STRIPE_ERROR when expiring mismatched session fails', async () => {
+    const { stripe } = createStripeMock({
+      openSessionsData: [
+        { id: 'cs_open', url: 'https://stripe/checkout/open' },
+      ],
+      retrievedSessionPriceId: 'price_a',
+      shouldThrowOnExpire: true,
+    });
+
+    await expect(
+      createStripeCheckoutSession({
+        stripe,
+        input,
+        priceIds,
+        logger,
+      }),
+    ).rejects.toMatchObject({
+      code: 'STRIPE_ERROR',
+      message: 'Failed to expire existing checkout session',
+    });
+  });
+
+  it('creates a new checkout session when existing session inspection fails', async () => {
+    const { stripe, sessionsCreate, sessionsRetrieve } = createStripeMock({
+      openSessionsData: [
+        { id: 'cs_open', url: 'https://stripe/checkout/open' },
+      ],
+      shouldThrowOnRetrieve: true,
+      createdSessionUrl: 'https://stripe/checkout/new',
+    });
+
+    await expect(
+      createStripeCheckoutSession({
+        stripe,
+        input,
+        priceIds,
+        logger,
+      }),
+    ).resolves.toEqual({ url: 'https://stripe/checkout/new' });
+
+    expect(sessionsRetrieve).toHaveBeenCalledTimes(1);
+    expect(sessionsCreate).toHaveBeenCalledTimes(1);
+  });
+
+  it('throws STRIPE_ERROR when created session is missing URL', async () => {
+    const { stripe } = createStripeMock({
+      openSessionsData: [],
+      createdSessionUrl: null,
+    });
+
+    await expect(
+      createStripeCheckoutSession({
+        stripe,
+        input,
+        priceIds,
+        logger,
+      }),
+    ).rejects.toMatchObject({
+      code: 'STRIPE_ERROR',
+      message: 'Stripe Checkout Session URL is missing',
     });
   });
 });
