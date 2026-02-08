@@ -4,6 +4,11 @@ import type {
   PracticeSessionRepository,
   QuestionRepository,
 } from '@/src/application/ports/repositories';
+import type { PracticeSessionQuestionState } from '@/src/domain/entities';
+import {
+  computeSessionStats,
+  createDefaultQuestionState,
+} from '@/src/domain/services';
 import { enrichWithQuestion } from '../shared/enrich-with-question';
 
 export type GetPracticeSessionReviewInput = {
@@ -72,6 +77,16 @@ export class GetPracticeSessionReviewUseCase {
       session.questionStates.map((state) => [state.questionId, state]),
     );
 
+    const orderedStates: PracticeSessionQuestionState[] = [];
+    for (const questionId of session.questionIds) {
+      if (!questionId) continue;
+      orderedStates.push(
+        stateByQuestionId.get(questionId) ??
+          createDefaultQuestionState(questionId),
+      );
+    }
+    const { answered: answeredCount } = computeSessionStats(orderedStates);
+
     type ReviewSeed = {
       questionId: string;
       order: number;
@@ -98,11 +113,7 @@ export class GetPracticeSessionReviewUseCase {
       }
 
       const state = existingState ?? {
-        questionId,
-        markedForReview: false,
-        latestSelectedChoiceId: null,
-        latestIsCorrect: null,
-        latestAnsweredAt: null,
+        ...createDefaultQuestionState(questionId),
       };
 
       reviewSeeds.push({
@@ -145,7 +156,7 @@ export class GetPracticeSessionReviewUseCase {
       sessionId: session.id,
       mode: session.mode,
       totalCount: session.questionIds.length,
-      answeredCount: rows.filter((row) => row.isAnswered).length,
+      answeredCount,
       markedCount: rows.filter((row) => row.markedForReview).length,
       rows,
     };

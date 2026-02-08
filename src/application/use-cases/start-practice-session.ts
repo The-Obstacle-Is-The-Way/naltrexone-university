@@ -1,4 +1,8 @@
-import { createSeed, shuffleWithSeed } from '@/src/domain/services';
+import {
+  createDefaultQuestionState,
+  createSeed,
+  shuffleWithSeed,
+} from '@/src/domain/services';
 import type {
   PracticeMode,
   QuestionDifficulty,
@@ -52,13 +56,9 @@ export class StartPracticeSessionUseCase {
         difficulties: input.difficulties,
         // Keep ordered ids as canonical session sequence; questionStates holds mutable per-question state.
         questionIds,
-        questionStates: questionIds.map((questionId) => ({
-          questionId,
-          markedForReview: false,
-          latestSelectedChoiceId: null,
-          latestIsCorrect: null,
-          latestAnsweredAt: null,
-        })),
+        questionStates: questionIds.map((questionId) =>
+          createDefaultQuestionState(questionId),
+        ),
       },
     });
 

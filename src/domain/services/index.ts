@@ -10,6 +10,12 @@ export {
   type SessionProgress,
   shouldShowExplanation,
 } from './session';
+export {
+  computeSessionDurationSeconds,
+  computeSessionStats,
+  createDefaultQuestionState,
+  type SessionStats,
+} from './session-stats';
 export { createQuestionSeed, createSeed, shuffleWithSeed } from './shuffle';
 export {
   computeAccuracy,

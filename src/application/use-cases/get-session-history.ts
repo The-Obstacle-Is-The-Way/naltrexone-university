@@ -1,4 +1,8 @@
-import { computeAccuracy } from '@/src/domain/services';
+import {
+  computeAccuracy,
+  computeSessionDurationSeconds,
+  computeSessionStats,
+} from '@/src/domain/services';
 import type { PracticeMode } from '@/src/domain/value-objects';
 import type { PracticeSessionRepository } from '../ports/repositories';
 
@@ -41,14 +45,10 @@ export class GetSessionHistoryUseCase {
 
     const rows: SessionHistoryRow[] = [];
     for (const session of page.rows) {
-      if (!session.endedAt) continue;
-      const answeredStates = session.questionStates.filter(
-        (state) => state.latestSelectedChoiceId !== null,
-      );
-      const answered = answeredStates.length;
-      const correct = answeredStates.filter(
-        (state) => state.latestIsCorrect === true,
-      ).length;
+      const endedAt = session.endedAt;
+      if (!endedAt) continue;
+
+      const { answered, correct } = computeSessionStats(session.questionStates);
 
       rows.push({
         sessionId: session.id,
@@ -57,14 +57,12 @@ export class GetSessionHistoryUseCase {
         answered,
         correct,
         accuracy: computeAccuracy(answered, correct),
-        durationSeconds: Math.max(
-          0,
-          Math.floor(
-            (session.endedAt.getTime() - session.startedAt.getTime()) / 1000,
-          ),
+        durationSeconds: computeSessionDurationSeconds(
+          session.startedAt,
+          endedAt,
         ),
         startedAt: session.startedAt.toISOString(),
-        endedAt: session.endedAt.toISOString(),
+        endedAt: endedAt.toISOString(),
       });
     }
 

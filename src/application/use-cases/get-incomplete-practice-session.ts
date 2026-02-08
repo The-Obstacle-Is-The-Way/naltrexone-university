@@ -1,4 +1,5 @@
 import type { PracticeSessionRepository } from '@/src/application/ports/repositories';
+import { computeSessionStats } from '@/src/domain/services';
 
 export type GetIncompletePracticeSessionInput = {
   userId: string;
@@ -23,9 +24,9 @@ export class GetIncompletePracticeSessionUseCase {
     );
     if (!session) return null;
 
-    const answeredCount = session.questionStates.filter(
-      (state) => state.latestSelectedChoiceId !== null,
-    ).length;
+    const { answered: answeredCount } = computeSessionStats(
+      session.questionStates,
+    );
 
     return {
       sessionId: session.id,
