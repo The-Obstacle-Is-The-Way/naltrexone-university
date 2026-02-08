@@ -43,6 +43,6 @@ Replaced the hardcoded path with the route builder:
 
 ## Related
 
-- `app/(app)/app/practice/components/incomplete-session-card.tsx:30`
+- `app/(app)/app/practice/components/incomplete-session-card.tsx:31`
 - `app/(app)/app/practice/components/incomplete-session-card.browser.spec.tsx`
 - BUG-097 (widespread hardcoded route strings)

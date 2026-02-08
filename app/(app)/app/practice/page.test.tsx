@@ -69,7 +69,10 @@ describe('app/(app)/app/practice', () => {
     );
 
     expect(html).toContain('Loading question');
-    expect(html).toContain('aria-live="polite"');
+    // Loading state uses <output> which has implicit role="status" (aria-live="polite").
+    // The parent wrapper no longer uses aria-live to avoid double announcements
+    // with ErrorCard's role="alert".
+    expect(html).toContain('<output>');
   });
 
   it('renders empty state when no question remains', async () => {

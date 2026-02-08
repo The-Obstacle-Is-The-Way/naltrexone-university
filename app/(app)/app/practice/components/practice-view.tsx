@@ -100,12 +100,7 @@ export function PracticeView(props: PracticeViewProps) {
         </div>
       </div>
 
-      <div
-        ref={props.questionAreaRef}
-        tabIndex={-1}
-        className="outline-none"
-        aria-live="polite"
-      >
+      <div ref={props.questionAreaRef} tabIndex={-1} className="outline-none">
         {props.loadState.status === 'error' ? (
           <ErrorCard className="p-6">
             <div>{props.loadState.message}</div>

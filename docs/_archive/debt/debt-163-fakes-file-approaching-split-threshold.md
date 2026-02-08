@@ -22,7 +22,7 @@ Current exports include: `FakeLogger`, `FakeQuestionRepository`, `FakeAttemptRep
 
 Consider splitting into domain-focused modules while maintaining a single re-export index:
 
-```
+```text
 src/application/test-helpers/
   fakes/
     index.ts           # re-exports everything

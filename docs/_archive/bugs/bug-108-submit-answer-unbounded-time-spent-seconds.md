@@ -37,7 +37,7 @@ Validation was added at the controller layer only, not at the use-case layer whe
 
 ## Fix
 
-Implemented use-case level cap in `SubmitAnswerUseCase`:
+Implemented use-case-level cap in `SubmitAnswerUseCase`:
 
 - added `SUBMIT_ANSWER_MAX_TIME_SPENT_SECONDS = 86_400`
 - clamped with `Math.min(max, Math.max(0, raw))`

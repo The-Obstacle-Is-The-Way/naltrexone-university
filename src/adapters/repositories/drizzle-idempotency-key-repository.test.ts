@@ -422,9 +422,12 @@ describe('DrizzleIdempotencyKeyRepository', () => {
       const whereArg = firstCall?.[0];
       expect(whereArg).toBeDefined();
 
-      // Drizzle conditions are deeply nested objects. Walk the entire tree
-      // looking for a column reference named 'expires_at' to verify the
-      // atomic prune guard is present in the DELETE WHERE clause.
+      // DEBT-167: This helper intentionally couples to Drizzle's internal
+      // condition-object shape to verify the atomic prune guard. It walks the
+      // entire AST looking for a column reference named 'expires_at' in the
+      // DELETE WHERE clause. If Drizzle changes its internal representation,
+      // this test will break — that's acceptable because the guard is
+      // safety-critical and must be re-verified after such changes.
       function containsExpiresAt(obj: unknown, depth = 0): boolean {
         if (depth > 20 || !obj || typeof obj !== 'object') return false;
         const record = obj as Record<string, unknown>;

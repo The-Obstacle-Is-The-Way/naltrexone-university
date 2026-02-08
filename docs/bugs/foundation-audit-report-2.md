@@ -34,7 +34,7 @@ Six parallel audits were conducted across the entire codebase:
 | UI / UX | 2 | 2 |
 | Database | 0 | 2 |
 | Testing | 0 | 2 |
-| **Total** | **5 bugs** | **11 debt items** |
+| **Total** | **5 bugs** | **11 debt items (3 invalidated)** |
 
 ### False Positives Rejected
 
@@ -47,6 +47,16 @@ Several audit findings were verified against source code and rejected:
 | `items.data[0]` without bounds check | Zod schema enforces `.min(1)` — validated before access |
 | Cron token timing attack | `timingSafeEqual` on hashed values is correct — hash comparison prevents timing leaks |
 | `.env.local` secrets exposed | File is gitignored and NOT in repository history |
+
+### Post-Audit Invalidations
+
+The following debt items were initially accepted as findings but invalidated during remediation after first-principles code review:
+
+| Finding | Why Invalidated |
+|---------|----------------|
+| DEBT-161: Incomplete CSP Headers | `CLERK_CSP_DIRECTIVES` are app-specific overrides merged into Clerk's CSP baseline — not the full emitted header |
+| DEBT-164: Missing Suspense Boundary | Page is client-rendered; session history loads via hooks after initial paint — not blocking |
+| DEBT-168: Missing CHECK Constraint | `markFailed()` intentionally writes `processedAt=NULL, error=NOT NULL` for retry semantics — CHECK would break this |
 
 ---
 
@@ -83,10 +93,10 @@ Several audit findings were verified against source code and rejected:
 |----|-------|-----------|
 | [DEBT-159](../_archive/debt/debt-159-practice-session-review-missing-state-corruption-warning.md) | Practice Session Review Silently Backfills Missing Question States | Practice Engine |
 | [DEBT-160](../_archive/debt/debt-160-cron-secret-not-required-in-production.md) | CRON_SECRET Not Enforced as Required in Production | Security |
-| [DEBT-161](../_archive/debt/debt-161-incomplete-csp-headers.md) | Incomplete CSP Headers (Missing script-src, style-src, default-src) | Security |
+| [DEBT-161](../_archive/debt/debt-161-incomplete-csp-headers.md) | ~~Incomplete CSP Headers~~ *(Invalidated)* | Security |
 | [DEBT-162](../_archive/debt/debt-162-stripe-portal-missing-retry-consistency.md) | Stripe Portal Session Creation Has Inconsistent Retry Behavior | Billing |
 | [DEBT-163](../_archive/debt/debt-163-fakes-file-approaching-split-threshold.md) | Test Fakes File Approaching Split Threshold (1472 Lines) | Testing |
-| [DEBT-164](../_archive/debt/debt-164-missing-suspense-boundary-practice-session-history.md) | Missing Suspense Boundary for Practice Session History Panel | UI |
+| [DEBT-164](../_archive/debt/debt-164-missing-suspense-boundary-practice-session-history.md) | ~~Missing Suspense Boundary for Practice Session History Panel~~ *(Invalidated)* | UI |
 | [DEBT-165](../_archive/debt/debt-165-stripe-gateway-barrel-file-inconsistency.md) | Stripe Gateway Modules Bypass Barrel File Pattern | Code Quality |
 
 ### P3 (Low)
@@ -95,7 +105,7 @@ Several audit findings were verified against source code and rejected:
 |----|-------|-----------|
 | [DEBT-166](../_archive/debt/debt-166-practice-view-missing-focus-management-after-error.md) | Practice View Missing Focus Management After Error Recovery | Accessibility |
 | [DEBT-167](../_archive/debt/debt-167-idempotency-key-prune-select-delete-race.md) | Idempotency Key Prune Uses Non-Atomic SELECT→DELETE | Database |
-| [DEBT-168](../_archive/debt/debt-168-stripe-event-table-missing-check-constraint.md) | Stripe Events Table Missing CHECK Constraint on processedAt/error State | Database |
+| [DEBT-168](../_archive/debt/debt-168-stripe-event-table-missing-check-constraint.md) | ~~Stripe Events Table Missing CHECK Constraint~~ *(Invalidated)* | Database |
 
 ---
 

@@ -39,5 +39,5 @@ Added an explicit warning in `GetPracticeSessionReviewUseCase` when a question I
 
 ## Related
 
-- `src/application/use-cases/get-practice-session-review.ts:83-103`
+- `src/application/use-cases/get-practice-session-review.ts` (`GetPracticeSessionReviewUseCase`)
 - BUG-105 (concurrent answer submission race condition)

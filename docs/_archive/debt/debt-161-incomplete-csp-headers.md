@@ -19,7 +19,7 @@ const CLERK_CSP_DIRECTIVES = {
   'frame-ancestors': ['none'],
   'img-src': ['self', 'data:', 'blob:', 'https:'],
   'object-src': ['none'],
-};
+} satisfies Record<string, string[]>;
 ```
 
 Missing directives:

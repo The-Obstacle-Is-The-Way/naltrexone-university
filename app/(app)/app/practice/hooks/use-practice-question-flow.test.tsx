@@ -61,6 +61,23 @@ describe('getFocusRecoveryTransition', () => {
     expect(ready.shouldFocus).toBe(true);
   });
 
+  it('focuses when transitioning directly from error to ready', () => {
+    let pendingFocus = false;
+
+    ({ pendingFocus } = getFocusRecoveryTransition({
+      status: 'error',
+      pendingFocus,
+    }));
+    expect(pendingFocus).toBe(true);
+
+    const ready = getFocusRecoveryTransition({
+      status: 'ready',
+      pendingFocus,
+    });
+    expect(ready.pendingFocus).toBe(false);
+    expect(ready.shouldFocus).toBe(true);
+  });
+
   it('does not focus when ready was not preceded by an error', () => {
     const ready = getFocusRecoveryTransition({
       status: 'ready',

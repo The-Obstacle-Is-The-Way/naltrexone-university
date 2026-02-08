@@ -17,6 +17,25 @@ export function getPostgresErrorCode(error: unknown): string | null {
   return null;
 }
 
+export function getPostgresConstraintName(error: unknown): string | null {
+  if (!error || typeof error !== 'object') return null;
+
+  if ('constraint' in error) {
+    const name = (error as { constraint?: unknown }).constraint;
+    if (typeof name === 'string') return name;
+  }
+
+  if ('cause' in error) {
+    const cause = (error as { cause?: unknown }).cause;
+    if (!cause || typeof cause !== 'object') return null;
+
+    const name = (cause as { constraint?: unknown }).constraint;
+    if (typeof name === 'string') return name;
+  }
+
+  return null;
+}
+
 export function isPostgresUniqueViolation(error: unknown): boolean {
   return getPostgresErrorCode(error) === '23505';
 }
