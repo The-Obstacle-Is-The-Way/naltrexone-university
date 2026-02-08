@@ -108,6 +108,7 @@ export type QuestionControllerDeps = {
   logger: Logger;
   rateLimiter: RateLimiter;
   idempotencyKeyRepository: IdempotencyKeyRepository;
+  now: () => Date;
   checkEntitlementUseCase: CheckEntitlementUseCase;
   getNextQuestionUseCase: GetNextQuestionUseCase;
   submitAnswerUseCase: SubmitAnswerUseCase;
@@ -188,7 +189,7 @@ export const submitAnswer = createAction({
       userId,
       action: 'question:submitAnswer',
       key: idempotencyKey,
-      now: () => new Date(),
+      now: d.now,
       parseResult: (value) => SubmitAnswerOutputSchema.parse(value),
       execute: submitOnce,
     });

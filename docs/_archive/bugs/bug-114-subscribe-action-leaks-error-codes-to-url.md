@@ -12,12 +12,14 @@
 `runSubscribeAction()` in `subscribe-action.ts` explicitly handles three error codes (`UNAUTHENTICATED`, `ALREADY_SUBSCRIBED`, `RATE_LIMITED`) but all other codes fall through to a default path that places the raw internal error code directly in the URL query params.
 
 **Observed:** When checkout fails with an unhandled code (e.g., `INTERNAL_ERROR`, `STRIPE_ERROR`, `CONFLICT`, `VALIDATION_ERROR`), the URL becomes:
-```
+
+```text
 /pricing?checkout=error&plan=monthly&error_code=INTERNAL_ERROR
 ```
 
 In development mode, the raw error message is also appended (truncated to 200 chars):
-```
+
+```text
 /pricing?checkout=error&plan=monthly&error_code=STRIPE_ERROR&error_message=Failed+to+create+checkout+session
 ```
 

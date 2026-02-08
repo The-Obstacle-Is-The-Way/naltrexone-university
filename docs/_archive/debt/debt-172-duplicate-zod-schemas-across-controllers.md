@@ -9,6 +9,9 @@
 
 ## Description
 
+**Audit scope:** All controller files in `src/adapters/controllers/`.
+**Duplicates found:** 2 schema types (`zUuid`, `zDifficulty`).
+
 Several Zod schema primitives are defined identically in multiple controller files instead of being shared from a single source:
 
 ### `zUuid` — defined 3 times
@@ -56,11 +59,23 @@ export const zDifficulty = z.enum(['easy', 'medium', 'hard']);
 
 Update all three controller files to import from the shared module.
 
+**Controller migration example:**
+
+```typescript
+// Before (inside controller)
+const zUuid = z.string().uuid();
+const zDifficulty = z.enum(['easy', 'medium', 'hard']);
+
+// After
+import { zDifficulty, zUuid } from '@/src/adapters/shared/zod-schemas';
+```
+
 ## Verification
 
 - [x] Shared schema module created (`src/adapters/shared/zod-schemas.ts`)
 - [x] Bookmark, practice, and question controllers import shared `zUuid`/`zDifficulty`
 - [x] Duplicate local definitions removed from all targeted controllers
+- [x] Validation behavior unchanged (existing schemas accept/reject the same inputs)
 - [x] `pnpm typecheck && pnpm lint && pnpm test --run` passes
 
 ## Related

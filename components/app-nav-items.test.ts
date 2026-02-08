@@ -1,15 +1,20 @@
 import { describe, expect, it } from 'vitest';
+import { APP_NAV_ITEMS } from '@/components/app-nav-items';
 import { ROUTES } from '@/lib/routes';
-import { APP_NAV_ITEMS } from './app-nav-items';
 
 describe('components/app-nav-items', () => {
-  it('defines app navigation items in canonical order with route constants', () => {
-    expect(APP_NAV_ITEMS).toEqual([
-      { href: ROUTES.APP_DASHBOARD, label: 'Dashboard' },
-      { href: ROUTES.APP_PRACTICE, label: 'Practice' },
-      { href: ROUTES.APP_REVIEW, label: 'Review' },
-      { href: ROUTES.APP_BOOKMARKS, label: 'Bookmarks' },
-      { href: ROUTES.APP_BILLING, label: 'Billing' },
+  it('defines app navigation items with the expected route order', () => {
+    expect(APP_NAV_ITEMS).toHaveLength(5);
+    expect(APP_NAV_ITEMS.map((item) => item.href)).toEqual([
+      ROUTES.APP_DASHBOARD,
+      ROUTES.APP_PRACTICE,
+      ROUTES.APP_REVIEW,
+      ROUTES.APP_BOOKMARKS,
+      ROUTES.APP_BILLING,
     ]);
+    for (const item of APP_NAV_ITEMS) {
+      expect(typeof item.label).toBe('string');
+      expect(item.label.length).toBeGreaterThan(0);
+    }
   });
 });

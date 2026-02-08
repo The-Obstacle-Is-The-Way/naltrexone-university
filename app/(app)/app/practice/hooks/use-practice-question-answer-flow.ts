@@ -1,18 +1,18 @@
 import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import {
-  getNextQuestion,
-  submitAnswer,
-} from '@/src/adapters/controllers/question-controller';
-import type { NextQuestion } from '@/src/application/use-cases/get-next-question';
-import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
-import {
   canSubmitAnswer,
   createLoadNextQuestionAction,
   type LoadState,
   type PracticeFilters,
   selectChoiceIfAllowed,
   submitAnswerForQuestion,
-} from '../practice-page-logic';
+} from '@/app/(app)/app/practice/practice-page-logic';
+import {
+  getNextQuestion,
+  submitAnswer,
+} from '@/src/adapters/controllers/question-controller';
+import type { NextQuestion } from '@/src/application/use-cases/get-next-question';
+import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
 
 export type UsePracticeQuestionAnswerFlowInput = {
   filters: PracticeFilters;

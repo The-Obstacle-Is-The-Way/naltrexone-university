@@ -11,7 +11,7 @@
 
 The Vercel production deployment fails during `next build`'s "Collecting page data" phase with:
 
-```
+```text
 Invalid environment variables: { CRON_SECRET: [ 'Required' ] }
 Error: Failed to collect page data for /api/health
 ```
@@ -45,7 +45,7 @@ For production deployments (pushes to `main`), Vercel sets `VERCEL_ENV=productio
 
 ### The import chain that triggers it
 
-```
+```text
 /api/health/route.ts  →  imports lib/db.ts  →  imports lib/env.ts  →  validateEnv() at module scope
 ```
 

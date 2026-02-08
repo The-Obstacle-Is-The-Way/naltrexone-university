@@ -7,6 +7,8 @@ import {
   useRef,
   useState,
 } from 'react';
+import { usePracticeSessionNavigator } from '@/app/(app)/app/practice/[sessionId]/hooks/use-practice-session-navigator';
+import { usePracticeSessionSummaryReview } from '@/app/(app)/app/practice/[sessionId]/hooks/use-practice-session-summary-review';
 import { endSession } from '@/app/(app)/app/practice/[sessionId]/practice-session-page-logic';
 import {
   getActionResultErrorMessage,
@@ -21,8 +23,6 @@ import {
 } from '@/src/adapters/controllers/practice-controller';
 import type { NextQuestion } from '@/src/application/use-cases/get-next-question';
 import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
-import { usePracticeSessionNavigator } from './use-practice-session-navigator';
-import { usePracticeSessionSummaryReview } from './use-practice-session-summary-review';
 
 export type UsePracticeSessionReviewStageInput = {
   sessionId: string;

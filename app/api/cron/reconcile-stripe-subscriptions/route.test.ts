@@ -184,6 +184,30 @@ describe('POST /api/cron/reconcile-stripe-subscriptions', () => {
     );
   });
 
+  it('falls back to safe defaults when query params are malformed', async () => {
+    const response = await POST(
+      new Request(
+        'http://localhost/api/cron/reconcile-stripe-subscriptions?limit=abc&offset=-1&dryRun=notbool',
+        {
+          method: 'POST',
+          headers: {
+            authorization: 'Bearer test-secret',
+          },
+        },
+      ),
+    );
+
+    expect(response.status).toBe(200);
+    expect(reconcileStripeSubscriptions).toHaveBeenCalledWith(
+      {
+        limit: 100,
+        offset: 0,
+        dryRun: true,
+      },
+      expect.any(Object),
+    );
+  });
+
   it('returns 500 when reconciliation throws', async () => {
     reconcileStripeSubscriptions.mockRejectedValueOnce(new Error('boom'));
 

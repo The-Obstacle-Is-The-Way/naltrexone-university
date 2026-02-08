@@ -66,7 +66,7 @@ describe('enrichWithQuestion', () => {
       questionsById: new Map(),
       available: (row, question) => ({
         questionId: row.questionId,
-        stemMd: question.stemMd,
+        stemMd: question.stemMd as string | null,
       }),
       unavailable: (row) => ({
         questionId: row.questionId,
@@ -98,7 +98,7 @@ describe('enrichWithQuestion', () => {
       ]),
       available: (row, question) => ({
         questionId: row.questionId,
-        stemMd: question.stemMd,
+        stemMd: question.stemMd as string | null,
       }),
       unavailable: (row) => ({
         questionId: row.questionId,

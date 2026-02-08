@@ -104,6 +104,13 @@ describe('POST /api/webhooks/clerk', () => {
     expect(createContainer).toHaveBeenCalledTimes(1);
     expect(processClerkWebhook).not.toHaveBeenCalled();
     expect(logger.errorCalls).toHaveLength(1);
+    expect(logger.errorCalls[0]).toMatchObject({
+      context: {
+        route: '/api/webhooks/clerk',
+        error: expect.any(Error),
+      },
+      msg: 'Clerk webhook signature verification failed',
+    });
   });
 
   it('returns 200 and received=true when processing succeeds', async () => {

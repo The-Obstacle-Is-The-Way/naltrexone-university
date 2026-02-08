@@ -96,6 +96,7 @@ export function usePracticeSessionQuestionFlow(
     [input.sessionId, input.isMounted],
   );
 
+  // Load the first question on mount and whenever the sessionId changes.
   useEffect(onTryAgain, [onTryAgain]);
 
   useEffect(() => {

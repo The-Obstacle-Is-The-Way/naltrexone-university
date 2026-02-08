@@ -13,7 +13,7 @@ Two shared utility modules in `src/application/shared/` have zero unit test cove
 
 ### 1. `shuffled-choice-views.ts` — `buildShuffledChoiceViews()`
 
-- **Used by:** `PracticeQuestionController`, `QuestionReviewController`, and any controller that presents shuffled choices to users
+- **Used by:** `GetNextQuestionUseCase`, `SubmitAnswerUseCase`, and any use case that returns shuffled choices
 - **Logic:** Sorts choices by `sortOrder` (with `id` tiebreaker), shuffles with a user-specific seed, maps to display labels (`A`, `B`, `C`, `D`)
 - **Untested behaviors:**
   - Deterministic shuffling: same `(userId, questionId)` always produces same order
@@ -24,7 +24,7 @@ Two shared utility modules in `src/application/shared/` have zero unit test cove
 
 ### 2. `enrich-with-question.ts` — `enrichWithQuestion()`
 
-- **Used by:** `GetMissedQuestionsUseCase`, `GetBookmarkedQuestionsUseCase`, and any use case that joins rows with question data
+- **Used by:** `GetUserStatsUseCase`, `GetPracticeSessionReviewUseCase`, `GetMissedQuestionsUseCase`, and any use case that joins rows with question data
 - **Logic:** Maps rows against a question lookup map, calling `available()` or `unavailable()` callbacks, and logs warnings for missing questions
 - **Untested behaviors:**
   - Happy path: all questions found, `available()` called for each

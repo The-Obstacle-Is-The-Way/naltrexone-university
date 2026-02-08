@@ -5,6 +5,10 @@ import {
 } from './question-flow-actions';
 
 describe('question-flow-actions', () => {
+  it('returns zero when questionLoadedAtMs is null', () => {
+    expect(buildTimeSpentSeconds(null, 1_000)).toBe(0);
+  });
+
   it('clamps computed time spent to zero when clock goes backwards', () => {
     expect(buildTimeSpentSeconds(2_000, 1_000)).toBe(0);
   });

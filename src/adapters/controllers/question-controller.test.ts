@@ -30,6 +30,7 @@ type QuestionControllerTestDeps = QuestionControllerDeps & {
 };
 
 function createDeps(overrides?: {
+  now?: Date;
   user?: ReturnType<typeof createUser> | null;
   authGateway?: AuthGateway;
   rateLimiter?: RateLimiter;
@@ -48,7 +49,7 @@ function createDeps(overrides?: {
       updatedAt: new Date('2026-02-01T00:00:00Z'),
     });
 
-  const now = new Date('2026-02-01T00:00:00Z');
+  const now = overrides?.now ?? new Date('2026-02-01T00:00:00Z');
 
   const authGateway: AuthGateway =
     overrides?.authGateway ?? new FakeAuthGateway(user);
@@ -96,6 +97,7 @@ function createDeps(overrides?: {
     logger: new FakeLogger(),
     rateLimiter,
     idempotencyKeyRepository,
+    now: () => now,
     checkEntitlementUseCase,
     getNextQuestionUseCase,
     submitAnswerUseCase,
@@ -368,6 +370,30 @@ describe('question-controller', () => {
       });
       expect(second).toEqual(first);
       expect(deps.submitAnswerUseCase.inputs).toHaveLength(1);
+    });
+
+    it('uses the injected clock for idempotency expiry timestamps', async () => {
+      const now = new Date('2026-02-10T08:00:00.000Z');
+      const deps = createDeps({ now });
+      const idempotencyKey = '33333333-3333-3333-3333-333333333333';
+
+      await submitAnswer(
+        {
+          questionId: '11111111-1111-1111-1111-111111111111',
+          choiceId: '22222222-2222-2222-2222-222222222222',
+          idempotencyKey,
+        },
+        deps,
+      );
+
+      const record = await deps.idempotencyKeyRepository.find(
+        'user_1',
+        'question:submitAnswer',
+        idempotencyKey,
+      );
+
+      expect(record).not.toBeNull();
+      expect(record?.expiresAt.getTime()).toBe(now.getTime() + 86_400_000);
     });
 
     it('returns VALIDATION_ERROR when timeSpentSeconds is negative', async () => {

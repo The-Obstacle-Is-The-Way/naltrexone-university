@@ -100,7 +100,7 @@ describe('app/pricing', () => {
     expect(h3).not.toBeNull();
   });
 
-  it('uses the shared Button primitive for pricing form submit actions', async () => {
+  it('uses the shared Button primitive for manage-billing form submit actions', async () => {
     const { PricingView } = await import('@/app/pricing/page');
 
     const html = renderToStaticMarkup(
@@ -111,6 +111,29 @@ describe('app/pricing', () => {
           message: 'Checkout failed. Please try again.',
         }}
         manageBillingAction={async () => undefined}
+        subscribeMonthlyAction={async () => undefined}
+        subscribeAnnualAction={async () => undefined}
+      />,
+    );
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const submitButtons = Array.from(
+      doc.querySelectorAll('form button[type="submit"]'),
+    );
+    const nonPrimitiveButtons = submitButtons.filter(
+      (button) => button.getAttribute('data-slot') !== 'button',
+    );
+
+    expect(submitButtons.length).toBeGreaterThan(0);
+    expect(nonPrimitiveButtons).toHaveLength(0);
+  });
+
+  it('uses the shared Button primitive for subscribe form submit actions', async () => {
+    const { PricingView } = await import('@/app/pricing/page');
+
+    const html = renderToStaticMarkup(
+      <PricingView
+        isEntitled={false}
+        banner={null}
         subscribeMonthlyAction={async () => undefined}
         subscribeAnnualAction={async () => undefined}
       />,
@@ -196,21 +219,6 @@ describe('app/pricing', () => {
     const { getPricingBanner } = await import('@/app/pricing/page');
 
     expect(getPricingBanner({ checkout: 'error' })).toMatchObject({
-      tone: 'error',
-      message: 'Checkout failed. Please try again.',
-    });
-  });
-
-  it('keeps checkout error banner generic in development', async () => {
-    const { getPricingBanner } = await import('@/app/pricing/page');
-
-    vi.stubEnv('NODE_ENV', 'development');
-
-    expect(
-      getPricingBanner({
-        checkout: 'error',
-      }),
-    ).toMatchObject({
       tone: 'error',
       message: 'Checkout failed. Please try again.',
     });

@@ -805,24 +805,27 @@ describe('practice-page-logic', () => {
       const consoleErrorSpy = vi
         .spyOn(console, 'error')
         .mockImplementation(() => undefined);
+      try {
+        await toggleBookmarkForQuestion({
+          question: createNextQuestion(),
+          toggleBookmarkFn: async () => {
+            throw new Error('Boom');
+          },
+          setBookmarkStatus,
+          setBookmarkedQuestionIds: vi.fn(),
+          onBookmarkToggled,
+        });
 
-      await toggleBookmarkForQuestion({
-        question: createNextQuestion(),
-        toggleBookmarkFn: async () => {
-          throw new Error('Boom');
-        },
-        setBookmarkStatus,
-        setBookmarkedQuestionIds: vi.fn(),
-        onBookmarkToggled,
-      });
-
-      expect(setBookmarkStatus).toHaveBeenLastCalledWith('error');
-      expect(onBookmarkToggled).not.toHaveBeenCalled();
-      expect(consoleErrorSpy).toHaveBeenCalledTimes(1);
-      expect(consoleErrorSpy).toHaveBeenCalledWith(
-        'Failed to toggle bookmark',
-        expect.any(Error),
-      );
+        expect(setBookmarkStatus).toHaveBeenLastCalledWith('error');
+        expect(onBookmarkToggled).not.toHaveBeenCalled();
+        expect(consoleErrorSpy).toHaveBeenCalledTimes(1);
+        expect(consoleErrorSpy).toHaveBeenCalledWith(
+          'Failed to toggle bookmark',
+          expect.any(Error),
+        );
+      } finally {
+        consoleErrorSpy.mockRestore();
+      }
     });
 
     it('returns no state updates when unmounted during toggleBookmarkForQuestion', async () => {

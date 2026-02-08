@@ -138,17 +138,16 @@ Use the shared `components/ui/input.tsx` for text inputs. Raw `<input>` is accep
 - `type="hidden"` fields
 - Visually-hidden semantic inputs (`className="sr-only"`)
 
-### Dead Components (DO NOT USE)
+### Unused Components (0 current consumers)
 
-The following shadcn/ui components were scaffolded but are **never imported** by any production code. They are dead code and should be removed:
-- `components/ui/avatar.tsx` — 0 consumers
-- `components/ui/dropdown-menu.tsx` — 0 consumers
-- `components/ui/radio-group.tsx` — 0 consumers (app uses custom `ChoiceButton` instead)
-- `components/ui/label.tsx` — 0 consumers (app uses plain HTML labels)
+The following shadcn/ui components have 0 production imports today. Context on each:
 
-Their colocated test files are also dead: `avatar.test.tsx`, `dropdown-menu.test.tsx`, `radio-group.test.tsx`, `label.test.tsx`.
+- `components/ui/dropdown-menu.tsx` — **KEEP.** Explicitly required in `master_spec.md` SLICE-0 checklist. Will be needed for SPEC-019 Phase 3 progressive-disclosure filters and app-shell navigation patterns.
+- `components/ui/avatar.tsx` — **Safe to remove.** No user identity display in any spec. Social features/leaderboards explicitly out of scope (`master_spec.md` Section 13).
+- `components/ui/radio-group.tsx` — **Safe to remove.** Quiz choices use custom `ChoiceButton`. No spec references radio-button forms. No settings/profile/admin pages exist.
+- `components/ui/label.tsx` — **Safe to remove.** No structured form UI in specs. All user input is via buttons/chips/third-party UIs (Clerk, Stripe Portal).
 
-The `buttonVariants` export from `button.tsx` is also never imported externally — only `Button` is used.
+The `buttonVariants` CVA export from `button.tsx` is intrinsic to the Button module (powers `asChild` pattern used in 20+ files). Do not remove.
 
 ### FilterChip / SegmentedControl
 
@@ -588,18 +587,17 @@ Dark mode is implemented via CSS custom properties in `.dark` class (globals.css
 
 ## 17. Known Violations
 
-Issues documented below are tracked as tech debt. Fix them as you encounter the files. Each is tagged with severity.
+Issues documented below are tracked as tech debt in `docs/debt/index.md` (Frontend Debt section). Items with individual resolution docs live at `docs/debt/debt-NNN-*.md`. Fix them as you encounter the files. Each is tagged with severity.
 
 ### P1 — Must fix before UI/UX refactor
 
-| ID | File(s) | Issue |
-|----|---------|-------|
-| FE-002 | `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-review-stage.ts` (304 lines) | God hook: 8 state vars, 3 LoadState trackers. Split summary, navigator, and review concerns. |
+*No P1 items. All god hooks have been decomposed.*
 
 ### P2 — Fix during UI/UX refactor
 
 | ID | File(s) | Issue |
 |----|---------|-------|
+| FE-002 | `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-review-stage.ts` (221 lines) | Reduced from 304 lines; summary and navigator delegated to sub-hooks. Still 221 lines with 5 useState + 1 useRef + 1 owned LoadState (2 more surfaced from sub-hooks). Exceeds 150-line guideline. |
 | FE-007 | `pricing-client.tsx` | 1 raw `<button>` element; replace with `Button` component. (`pricing-view.tsx` now uses `Button` throughout.) |
 | FE-008 | `components/get-started-cta.tsx`, `components/auth-nav.tsx`, `components/marketing/marketing-home.tsx`, `app/not-found.tsx`, `app/pricing/pricing-view.tsx` | 11+ raw styled `<Link>` elements as buttons; replace with `<Button asChild><Link>`. |
 | FE-009 | `components/marketing/marketing-home.tsx` | Card-like divs instead of `Card` component; 10 instances (4 stats, 4 features, 2 pricing). |
@@ -616,8 +614,11 @@ Issues documented below are tracked as tech debt. Fix them as you encounter the 
 | FE-021 | No page except root layout | No per-page metadata. All tabs show same title. |
 | FE-022 | Dashboard stat cards vs session-summary stat cards | Different hover treatments (`transition-all` vs `transition-colors`, `/80` vs `/50` opacity). |
 | FE-023 | `not-found.tsx` (line 28), `pricing-view.tsx` (lines 67, 75), `layout.tsx` (line 119) | `hover:` color changes without `transition-colors`. |
-| FE-024 | `pricing-view.tsx` | Missing `font-heading` on h1, missing `font-display` on price numbers. |
+| FE-024 | `pricing-view.tsx` | Missing `font-display` on price numbers. (The `font-heading` drift on the h1 is tracked in FE-042.) |
 | FE-025 | `metallic-cta-button.tsx`, `marketing-home.tsx`, `theme-toggle.tsx` | Icon sizing uses `h-X w-X` instead of `size-X`. |
+| FE-039 | `app/global-error.tsx` | Missing `<head>` element (no `<title>`, `<meta charset>`, viewport) and missing `suppressHydrationWarning` on `<html>`. Produces invalid HTML when global error fires. |
+| FE-040 | `app/pricing/manage-billing-*`, `app/(app)/app/billing/manage-billing-*` | Duplicated manage-billing files across two route groups. Types file is byte-for-byte identical; actions differ only in error redirect targets. Extract shared orchestration module. |
+| FE-041 | `components/marketing/marketing-home.tsx`, `app/pricing/pricing-view.tsx` | Pricing data (`$29/mo`, `$199/yr`, feature lists) hardcoded in two files that will drift. Extract to shared pricing constants. |
 
 ### P3 — Fix as encountered
 
@@ -633,9 +634,11 @@ Issues documented below are tracked as tech debt. Fix them as you encounter the 
 | FE-033 | No marketing layout | `/pricing` renders without marketing header/footer; `/` has its own shell. No shared marketing layout. |
 | FE-034 | Empty states (bookmarks, review, practice history) | No helpful CTA — just "No X yet." text without guiding user action. |
 | FE-035 | `app/(marketing)/checkout/success/checkout-success-sync.tsx` (405 lines) | Inline Stripe logic, type guards, validation, retry logic extracted from page.tsx but still not going through Clean Architecture layers. Extract to a server action or use case. |
-| FE-036 | `components/ui/avatar.tsx`, `dropdown-menu.tsx`, `radio-group.tsx`, `label.tsx` | 4 dead shadcn/ui components with 0 production consumers. Delete along with their colocated test files. |
+| FE-036 | `components/ui/avatar.tsx`, `radio-group.tsx`, `label.tsx` | 3 unused shadcn/ui components with 0 consumers and no spec-based need. Safe to remove along with colocated test files. (`dropdown-menu.tsx` is spec-mandated — KEEP.) |
 | FE-037 | `components/theme-toggle.tsx` | Uses raw `<button>` instead of `<Button>` component; violates the "ALWAYS use `<Button>` for interactive click targets" rule. |
-| FE-038 | `components/ui/card.tsx` sub-components | `CardHeader`, `CardTitle`, `CardDescription`, `CardContent`, `CardFooter`, `CardAction` are defined but never imported by any consumer — all 12 Card consumers use `Card` + direct children only. Consider removing unused sub-components. |
+| FE-038 | `components/ui/card.tsx` sub-components | `CardHeader`, `CardTitle`, `CardDescription`, `CardContent`, `CardFooter`, `CardAction` have 0 imports outside tests. KEEP — SPEC-019 Phase 2 card-based redesign will likely need structured card layouts. Evaluate during UI/UX refactor. |
+| FE-042 | `app/global-error.tsx`, `app/not-found.tsx`, 9 `error.tsx` files, `app/pricing/pricing-view.tsx` | Headings missing `font-heading` token — inconsistent with all other app page headings that use `font-heading`. |
+| FE-043 | `use-practice-session-tags.ts`, `use-practice-session-navigator.ts`, `practice-page-logic.ts`, `fire-and-forget.ts` | Bare `console.error` in client hooks with no structured logging or user-facing feedback. Should surface errors via notification system or accept a `logError` callback. |
 
 ---
 
@@ -645,17 +648,17 @@ Issues documented below are tracked as tech debt. Fix them as you encounter the 
 
 | File | Component(s) | Has `data-slot` | Uses `cn()` | Uses `cva` |
 |------|-------------|-----------------|-------------|-----------|
-| `avatar.tsx` | Avatar, AvatarImage, AvatarFallback | Yes | Yes | No | **DEAD — 0 consumers** |
+| `avatar.tsx` | Avatar, AvatarImage, AvatarFallback | Yes | Yes | No | **0 consumers — safe to remove** |
 | `button.tsx` | Button | Yes | Yes | Yes |
 | `card.tsx` | Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter, CardAction | Yes | Yes | No |
-| `dropdown-menu.tsx` | DropdownMenu, DropdownMenuTrigger, DropdownMenuItem, etc. | Yes | Yes | No | **DEAD — 0 consumers** |
+| `dropdown-menu.tsx` | DropdownMenu, DropdownMenuTrigger, DropdownMenuItem, etc. | Yes | Yes | No | **0 consumers — KEEP (spec-mandated)** |
 | `filter-chip.tsx` | FilterChip | **No** | Yes | **No** |
 | `input.tsx` | Input | Yes | Yes | No |
-| `label.tsx` | Label | Yes | Yes | No | **DEAD — 0 consumers** |
+| `label.tsx` | Label | Yes | Yes | No | **0 consumers — safe to remove** |
 | `metallic-border.tsx` | MetallicBorder | **No** | **No** | No |
 | `metallic-cta-button.tsx` | MetallicCtaButton | No | No | No |
 | `notification-provider.tsx` | NotificationProvider, useNotification | **No** | **No** | No |
-| `radio-group.tsx` | RadioGroup, RadioGroupItem | Yes | Yes | No | **DEAD — 0 consumers** |
+| `radio-group.tsx` | RadioGroup, RadioGroupItem | Yes | Yes | No | **0 consumers — safe to remove** |
 | `segmented-control.tsx` | SegmentedControl | **No** | Yes | **No** |
 
 ### `components/` (shared non-primitive)

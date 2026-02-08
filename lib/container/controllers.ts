@@ -34,6 +34,7 @@ export function createControllerFactories(input: {
       logger: primitives.logger,
       rateLimiter: gateways.createRateLimiter(),
       idempotencyKeyRepository: repositories.createIdempotencyKeyRepository(),
+      now: primitives.now,
       checkEntitlementUseCase: useCases.createCheckEntitlementUseCase(),
       getNextQuestionUseCase: useCases.createGetNextQuestionUseCase(),
       submitAnswerUseCase: useCases.createSubmitAnswerUseCase(),

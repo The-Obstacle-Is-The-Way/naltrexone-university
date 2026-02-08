@@ -3,15 +3,15 @@ import {
   getThrownErrorMessage,
 } from '@/app/(app)/app/practice/practice-logic';
 import type { LoadState } from '@/app/(app)/app/practice/practice-page-logic';
-import type { ActionResult } from '@/src/adapters/controllers/action-result';
-import type { EndPracticeSessionOutput } from '@/src/adapters/controllers/practice-controller';
-import type { NextQuestion } from '@/src/application/use-cases/get-next-question';
-import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
 import {
   createTransitionedLoadAction,
   runLoadQuestionFlow,
   runSubmitAnswerFlow,
-} from '../shared/question-flow-actions';
+} from '@/app/(app)/app/practice/shared/question-flow-actions';
+import type { ActionResult } from '@/src/adapters/controllers/action-result';
+import type { EndPracticeSessionOutput } from '@/src/adapters/controllers/practice-controller';
+import type { NextQuestion } from '@/src/application/use-cases/get-next-question';
+import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
 
 export async function loadNextQuestion(input: {
   sessionId: string;

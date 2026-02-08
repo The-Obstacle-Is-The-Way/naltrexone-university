@@ -1,12 +1,12 @@
-import { useIsMounted } from '@/lib/use-is-mounted';
-import type { NextQuestion } from '@/src/application/use-cases/get-next-question';
-import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
-import type { PracticeFilters } from '../practice-page-logic';
 import {
   getFocusRecoveryTransition,
   usePracticeQuestionAnswerFlow,
-} from './use-practice-question-answer-flow';
-import { usePracticeQuestionBookmarks } from './use-practice-question-bookmarks';
+} from '@/app/(app)/app/practice/hooks/use-practice-question-answer-flow';
+import { usePracticeQuestionBookmarks } from '@/app/(app)/app/practice/hooks/use-practice-question-bookmarks';
+import type { PracticeFilters } from '@/app/(app)/app/practice/practice-page-logic';
+import { useIsMounted } from '@/lib/use-is-mounted';
+import type { NextQuestion } from '@/src/application/use-cases/get-next-question';
+import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
 
 export type UsePracticeQuestionFlowInput = {
   filters: PracticeFilters;

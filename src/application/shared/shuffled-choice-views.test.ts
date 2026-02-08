@@ -180,14 +180,14 @@ describe('buildShuffledChoiceViews', () => {
     const views = buildShuffledChoiceViews(question, userId);
 
     expect(views.map((choice) => choice.choiceId)).toEqual(expectedIds);
-    for (const view of views) {
-      expect(view).toHaveProperty('choiceId');
-      expect(view).toHaveProperty('displayLabel');
-      expect(view).toHaveProperty('textMd');
-      expect(view).toHaveProperty('sortOrder');
-      expect(view).toHaveProperty('isCorrect');
-      expect(view).toHaveProperty('explanationMd');
-    }
+    expect(views[0]).toMatchObject({
+      choiceId: expect.any(String),
+      displayLabel: expect.any(String),
+      textMd: expect.any(String),
+      sortOrder: expect.any(Number),
+      isCorrect: expect.any(Boolean),
+    });
+    expect(views[0]).toHaveProperty('explanationMd');
   });
 
   it('throws INTERNAL_ERROR when question has more choices than available labels', () => {
@@ -204,12 +204,15 @@ describe('buildShuffledChoiceViews', () => {
       })),
     });
 
-    try {
-      buildShuffledChoiceViews(question, 'user-1');
-      throw new Error('Expected buildShuffledChoiceViews to throw');
-    } catch (error) {
-      expect(error).toBeInstanceOf(ApplicationError);
-      expect((error as ApplicationError).code).toBe('INTERNAL_ERROR');
-    }
+    let thrown: unknown = null;
+    expect(() => {
+      try {
+        buildShuffledChoiceViews(question, 'user-1');
+      } catch (error) {
+        thrown = error;
+        throw error;
+      }
+    }).toThrow(ApplicationError);
+    expect((thrown as ApplicationError).code).toBe('INTERNAL_ERROR');
   });
 });

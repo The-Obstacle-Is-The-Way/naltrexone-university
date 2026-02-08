@@ -25,8 +25,13 @@ describe('ChoiceButton', () => {
     const input = doc.querySelector('input[type="radio"]');
     const wrapperLabel = input?.closest('label');
 
-    expect(input?.getAttribute('aria-label')).toBeNull();
-    expect(wrapperLabel?.textContent).toContain('Choice A');
+    expect(input).not.toBeNull();
+    expect(wrapperLabel).not.toBeNull();
+    if (!input || !wrapperLabel) {
+      throw new Error('Expected radio input and wrapper label to exist.');
+    }
+    expect(input.getAttribute('aria-label')).toBeNull();
+    expect(wrapperLabel.textContent).toContain('Choice A');
   });
 
   it('exposes selected state via checked input', () => {
@@ -57,6 +62,10 @@ describe('ChoiceButton', () => {
     const doc = new DOMParser().parseFromString(html, 'text/html');
     const input = doc.querySelector('input[type="radio"]');
 
-    expect(input?.hasAttribute('disabled')).toBe(true);
+    expect(input).not.toBeNull();
+    if (!input) {
+      throw new Error('Expected radio input to exist.');
+    }
+    expect(input.hasAttribute('disabled')).toBe(true);
   });
 });

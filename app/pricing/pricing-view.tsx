@@ -90,18 +90,12 @@ export function PricingView({
               Go to your dashboard or manage billing in Stripe.
             </p>
             <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-center">
-              <Link
-                href={ROUTES.APP_DASHBOARD}
-                className="inline-flex items-center justify-center rounded-full bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-              >
-                Go to Dashboard
-              </Link>
-              <Link
-                href={ROUTES.APP_BILLING}
-                className="inline-flex items-center justify-center rounded-full border border-border bg-background px-4 py-2 text-sm font-medium text-foreground hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-              >
-                Manage Billing
-              </Link>
+              <Button asChild className="rounded-full">
+                <Link href={ROUTES.APP_DASHBOARD}>Go to Dashboard</Link>
+              </Button>
+              <Button asChild variant="outline" className="rounded-full">
+                <Link href={ROUTES.APP_BILLING}>Manage Billing</Link>
+              </Button>
             </div>
           </div>
         ) : !isEntitled && manageBillingAction ? (

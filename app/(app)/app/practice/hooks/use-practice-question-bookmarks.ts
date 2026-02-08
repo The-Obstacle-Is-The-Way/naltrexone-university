@@ -1,14 +1,14 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { scheduleBookmarkMessageAutoClear } from '@/app/(app)/app/practice/hooks/bookmark-message-timeout';
+import {
+  createBookmarksEffect,
+  toggleBookmarkForQuestion,
+} from '@/app/(app)/app/practice/practice-page-logic';
 import {
   getBookmarks,
   toggleBookmark,
 } from '@/src/adapters/controllers/bookmark-controller';
 import type { NextQuestion } from '@/src/application/use-cases/get-next-question';
-import {
-  createBookmarksEffect,
-  toggleBookmarkForQuestion,
-} from '../practice-page-logic';
-import { scheduleBookmarkMessageAutoClear } from './bookmark-message-timeout';
 
 export type UsePracticeQuestionBookmarksInput = {
   question: NextQuestion | null;
@@ -64,31 +64,29 @@ export function usePracticeQuestionBookmarks(
     ? bookmarkedQuestionIds.has(input.question.questionId)
     : false;
 
-  const onToggleBookmark = useMemo(
-    () =>
-      toggleBookmarkForQuestion.bind(null, {
-        question: input.question,
-        bookmarkIdempotencyKey,
-        createIdempotencyKey: () => crypto.randomUUID(),
-        setBookmarkIdempotencyKey,
-        toggleBookmarkFn: toggleBookmark,
-        setBookmarkStatus,
-        setBookmarkedQuestionIds,
-        onBookmarkToggled: (bookmarked: boolean) => {
-          setBookmarkMessage(
-            bookmarked ? 'Question bookmarked.' : 'Bookmark removed.',
-          );
-          setBookmarkMessageVersion((prev) => prev + 1);
-          scheduleBookmarkMessageAutoClear({
-            timeoutIdRef: bookmarkMessageTimeoutId,
-            setBookmarkMessage,
-            isMounted: input.isMounted,
-          });
-        },
-        isMounted: input.isMounted,
-      }),
-    [bookmarkIdempotencyKey, input.question, input.isMounted],
-  );
+  const onToggleBookmark = useCallback(async () => {
+    await toggleBookmarkForQuestion({
+      question: input.question,
+      bookmarkIdempotencyKey,
+      createIdempotencyKey: () => crypto.randomUUID(),
+      setBookmarkIdempotencyKey,
+      toggleBookmarkFn: toggleBookmark,
+      setBookmarkStatus,
+      setBookmarkedQuestionIds,
+      onBookmarkToggled: (bookmarked: boolean) => {
+        setBookmarkMessage(
+          bookmarked ? 'Question bookmarked.' : 'Bookmark removed.',
+        );
+        setBookmarkMessageVersion((prev) => prev + 1);
+        scheduleBookmarkMessageAutoClear({
+          timeoutIdRef: bookmarkMessageTimeoutId,
+          setBookmarkMessage,
+          isMounted: input.isMounted,
+        });
+      },
+      isMounted: input.isMounted,
+    });
+  }, [bookmarkIdempotencyKey, input.question, input.isMounted]);
 
   return {
     bookmarkStatus,

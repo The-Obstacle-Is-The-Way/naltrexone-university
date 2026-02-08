@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
+import { getThrownErrorMessage } from '@/app/(app)/app/practice/practice-logic';
 import {
   getTags,
   type TagRow,
 } from '@/src/adapters/controllers/tag-controller';
-import { getThrownErrorMessage } from '../practice-logic';
 
 export type UsePracticeSessionTagsOutput = {
   tagLoadStatus: 'idle' | 'loading' | 'error';
@@ -27,7 +27,7 @@ export function usePracticeSessionTags(): UsePracticeSessionTagsOutput {
       } catch (error) {
         if (!mounted) return;
         console.error(
-          '[PracticeSessionControls] Tag load failed:',
+          '[usePracticeSessionTags] Tag load failed:',
           getThrownErrorMessage(error),
         );
         setTagLoadStatus('error');
