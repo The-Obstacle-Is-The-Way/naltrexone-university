@@ -1,4 +1,4 @@
-import { and, desc, eq, gte, inArray, max, sql } from 'drizzle-orm';
+import { and, desc, eq, gte, inArray, max, type SQL, sql } from 'drizzle-orm';
 import {
   ATTEMPTS_SESSION_QUESTION_UQ,
   attempts,
@@ -179,49 +179,44 @@ export class DrizzleAttemptRepository implements AttemptRepository {
     return rows.map((row) => this.toDomain(row));
   }
 
-  async countByUserId(userId: string): Promise<number> {
+  private async countWhere(
+    userId: string,
+    ...conditions: SQL[]
+  ): Promise<number> {
+    const where =
+      conditions.length === 0
+        ? eq(attempts.userId, userId)
+        : and(eq(attempts.userId, userId), ...conditions);
+
     const [row] = await this.db
       .select({ count: sql<number>`count(*)::int` })
       .from(attempts)
-      .where(eq(attempts.userId, userId));
+      .where(where);
 
     return row?.count ?? 0;
+  }
+
+  async countByUserId(userId: string): Promise<number> {
+    return this.countWhere(userId);
   }
 
   async countCorrectByUserId(userId: string): Promise<number> {
-    const [row] = await this.db
-      .select({ count: sql<number>`count(*)::int` })
-      .from(attempts)
-      .where(and(eq(attempts.userId, userId), eq(attempts.isCorrect, true)));
-
-    return row?.count ?? 0;
+    return this.countWhere(userId, eq(attempts.isCorrect, true));
   }
 
   async countByUserIdSince(userId: string, since: Date): Promise<number> {
-    const [row] = await this.db
-      .select({ count: sql<number>`count(*)::int` })
-      .from(attempts)
-      .where(and(eq(attempts.userId, userId), gte(attempts.answeredAt, since)));
-
-    return row?.count ?? 0;
+    return this.countWhere(userId, gte(attempts.answeredAt, since));
   }
 
   async countCorrectByUserIdSince(
     userId: string,
     since: Date,
   ): Promise<number> {
-    const [row] = await this.db
-      .select({ count: sql<number>`count(*)::int` })
-      .from(attempts)
-      .where(
-        and(
-          eq(attempts.userId, userId),
-          eq(attempts.isCorrect, true),
-          gte(attempts.answeredAt, since),
-        ),
-      );
-
-    return row?.count ?? 0;
+    return this.countWhere(
+      userId,
+      eq(attempts.isCorrect, true),
+      gte(attempts.answeredAt, since),
+    );
   }
 
   async listRecentByUserId(
