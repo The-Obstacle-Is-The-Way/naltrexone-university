@@ -20,8 +20,15 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 | [DEBT-192](debt-192-source-reading-regression-tests-fragile.md) | Source-Reading Regression Tests Are Fragile (3 of 5 should be behavioral) | P3 | Open |
 | [DEBT-193](debt-193-backend-production-files-over-300-lines.md) | Backend Production Files Exceed 300-Line Guideline (5 files) | P3 | Open |
 | [DEBT-194](debt-194-console-error-default-in-utility-functions.md) | Default `console.error` in Utility Function Parameters (3 files) | P4 | Open |
+| [DEBT-195](debt-195-domain-service-defensive-gaps.md) | Domain Service Defensive Programming Gaps (`computeAccuracy` unclamped, `isEntitled` impure default) | P3 | Open |
+| [DEBT-196](debt-196-cron-endpoint-lacks-rate-limiting.md) | Cron Endpoint Lacks Rate Limiting | P2 | Open |
+| [DEBT-197](debt-197-skip-clerk-node-env-inconsistency.md) | SKIP_CLERK Middleware Check Uses `NODE_ENV` Inconsistently with `VERCEL_ENV` | P2 | Open |
+| [DEBT-198](debt-198-missing-baseline-csp-header.md) | Missing Baseline Content-Security-Policy Header | P3 | Open |
+| [DEBT-199](debt-199-button-missing-default-type.md) | Button Component Missing Default `type="button"` | P3 | Open |
+| [DEBT-200](debt-200-subscription-upsert-discards-error-details.md) | Subscription Repository Upsert Discards Original Error Details | P3 | Open |
+| [DEBT-201](debt-201-practice-session-end-returns-stale-data.md) | Practice Session `end()` Returns Pre-Read Stale Data | P4 | Open |
 
-**Next Debt ID:** DEBT-195
+**Next Debt ID:** DEBT-202
 
 ---
 

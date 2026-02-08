@@ -17,9 +17,11 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 | ID | Title | Status | Priority | Date |
 |----|-------|--------|----------|------|
-| — | No active bugs | — | — | — |
+| [BUG-118](bug-118-question-page-missing-shared-guards.md) | Question Page Missing Shared Practice-Page Guards | Open | P3 | 2026-02-08 |
+| [BUG-119](bug-119-stripe-ended-status-missing-from-db-enum.md) | Stripe 'ended' Subscription Status Missing from DB Enum | Open | P3 | 2026-02-08 |
+| [BUG-120](bug-120-reconciliation-missing-authoritative-conflict-strategy.md) | Reconciliation Job Missing Authoritative Conflict Strategy | Open | P3 | 2026-02-08 |
 
-**Next Bug ID:** BUG-118
+**Next Bug ID:** BUG-121
 
 ## Recently Triaged
 
