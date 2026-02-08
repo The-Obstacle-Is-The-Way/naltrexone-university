@@ -1,8 +1,9 @@
 # DEBT-171: Drizzle Subscription Repository and Postgres Error Helpers Missing Tests
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P2
 **Date:** 2026-02-08
+**Resolved:** 2026-02-08
 
 ---
 
@@ -81,11 +82,11 @@ Tests for:
 
 ## Verification
 
-- [ ] `postgres-errors.test.ts` created with full coverage
-- [ ] `drizzle-subscription-repository.test.ts` created with full coverage
-- [ ] All edge cases tested
-- [ ] `pnpm test --run` passes
-- [ ] `pnpm typecheck` passes
+- [x] `postgres-errors.test.ts` covers direct/nested code extraction and constraint-name extraction paths
+- [x] `drizzle-subscription-repository.test.ts` covers not-found + full field mapping + error mapping paths
+- [x] Unique-violation and non-unique error mappings are asserted
+- [x] `pnpm test --run` passes
+- [x] `pnpm typecheck` passes
 
 ## Related
 
