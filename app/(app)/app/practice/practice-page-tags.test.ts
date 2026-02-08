@@ -28,6 +28,7 @@ describe('practice-page-tags', () => {
     it('loads tags and transitions to idle', async () => {
       const setTagLoadStatus = vi.fn();
       const setAvailableTags = vi.fn();
+      const logError = vi.fn();
       const getTagsFn = vi.fn(
         async (): Promise<ActionResult<{ rows: Array<{ slug: string }> }>> =>
           ok({ rows: [{ slug: 'tag-1' }] }),
@@ -37,6 +38,7 @@ describe('practice-page-tags', () => {
         getTagsFn,
         setTagLoadStatus,
         setAvailableTags,
+        logError,
       });
 
       expect(setTagLoadStatus).toHaveBeenCalledWith('loading');
@@ -46,11 +48,13 @@ describe('practice-page-tags', () => {
       expect(getTagsFn).toHaveBeenCalledWith({});
       expect(setAvailableTags).toHaveBeenCalledWith([{ slug: 'tag-1' }]);
       expect(setTagLoadStatus).toHaveBeenLastCalledWith('idle');
+      expect(logError).not.toHaveBeenCalled();
     });
 
     it('sets error state when the request throws', async () => {
       const setTagLoadStatus = vi.fn();
       const setAvailableTags = vi.fn();
+      const logError = vi.fn();
       const getTagsFn = vi.fn(async () => {
         throw new Error('boom');
       });
@@ -59,34 +63,48 @@ describe('practice-page-tags', () => {
         getTagsFn,
         setTagLoadStatus,
         setAvailableTags,
+        logError,
       });
 
       await Promise.resolve();
 
       expect(setTagLoadStatus).toHaveBeenLastCalledWith('error');
       expect(setAvailableTags).not.toHaveBeenCalled();
+      expect(logError).toHaveBeenCalledTimes(1);
+      expect(logError).toHaveBeenCalledWith(
+        'Failed to load tags',
+        expect.any(Error),
+      );
     });
 
     it('sets error state when the request returns non-ok result', async () => {
       const setTagLoadStatus = vi.fn();
       const setAvailableTags = vi.fn();
+      const logError = vi.fn();
       const getTagsFn = vi.fn(async () => err('INTERNAL_ERROR', 'Nope'));
 
       createTagsEffect({
         getTagsFn,
         setTagLoadStatus,
         setAvailableTags,
+        logError,
       });
 
       await Promise.resolve();
 
       expect(setTagLoadStatus).toHaveBeenLastCalledWith('error');
       expect(setAvailableTags).not.toHaveBeenCalled();
+      expect(logError).toHaveBeenCalledTimes(1);
+      expect(logError).toHaveBeenCalledWith('Failed to load tags', {
+        code: 'INTERNAL_ERROR',
+        message: 'Nope',
+      });
     });
 
     it('does not update state after cleanup', async () => {
       const setTagLoadStatus = vi.fn();
       const setAvailableTags = vi.fn();
+      const logError = vi.fn();
 
       const deferred =
         createDeferred<ActionResult<{ rows: Array<{ slug: string }> }>>();
@@ -99,6 +117,7 @@ describe('practice-page-tags', () => {
         getTagsFn,
         setTagLoadStatus,
         setAvailableTags,
+        logError,
       });
 
       cleanup();
@@ -107,7 +126,9 @@ describe('practice-page-tags', () => {
       await Promise.resolve();
 
       expect(setAvailableTags).not.toHaveBeenCalled();
-      expect(setTagLoadStatus).not.toHaveBeenLastCalledWith('idle');
+      expect(setTagLoadStatus).toHaveBeenCalledTimes(1);
+      expect(setTagLoadStatus).toHaveBeenCalledWith('loading');
+      expect(logError).not.toHaveBeenCalled();
     });
   });
 });

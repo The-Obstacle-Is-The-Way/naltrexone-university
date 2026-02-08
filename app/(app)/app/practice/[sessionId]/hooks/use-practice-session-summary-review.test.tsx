@@ -15,6 +15,7 @@ describe('usePracticeSessionSummaryReview', () => {
         summary: null,
         sessionId: 'session-1',
         isMounted: () => true,
+        getPracticeSessionReviewFn: vi.fn(),
       }),
     );
 

@@ -53,6 +53,8 @@ export async function abandonIncompleteSession<T>(input: {
   setIncompleteSession: (session: T | null) => void;
   isMounted: () => boolean;
 }): Promise<void> {
+  if (!input.isMounted()) return;
+
   input.setIncompleteSessionStatus('loading');
   input.setIncompleteSessionError(null);
 

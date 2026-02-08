@@ -768,7 +768,7 @@ describe('practice-session-page-logic', () => {
 
 describe('practice-session-page-logic effects', () => {
   describe('createNavigatorEffect', () => {
-    it('sets idle state when summary exists or review stage is active', () => {
+    it('sets idle state when summary exists', () => {
       const getPracticeSessionReviewFn = vi.fn();
       const setNavigator = vi.fn();
       const setNavigatorLoadState = vi.fn();
@@ -790,6 +790,12 @@ describe('practice-session-page-logic effects', () => {
       expect(getPracticeSessionReviewFn).not.toHaveBeenCalled();
       expect(setNavigator).toHaveBeenCalledWith(null);
       expect(setNavigatorLoadState).toHaveBeenCalledWith({ status: 'idle' });
+    });
+
+    it('sets idle state when review stage is active', () => {
+      const getPracticeSessionReviewFn = vi.fn();
+      const setNavigator = vi.fn();
+      const setNavigatorLoadState = vi.fn();
 
       createNavigatorEffect({
         summary: null,
@@ -807,6 +813,7 @@ describe('practice-session-page-logic effects', () => {
       });
 
       expect(getPracticeSessionReviewFn).not.toHaveBeenCalled();
+      expect(setNavigator).toHaveBeenCalledWith(null);
       expect(setNavigatorLoadState).toHaveBeenCalledWith({ status: 'idle' });
     });
 

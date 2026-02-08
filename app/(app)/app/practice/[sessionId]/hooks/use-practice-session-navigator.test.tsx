@@ -19,6 +19,7 @@ describe('usePracticeSessionNavigator', () => {
         questionId: null,
         submitResult: null,
         navigatorReloadCount: 0,
+        getPracticeSessionReviewFn: vi.fn(),
         isMounted: () => true,
       }),
     );

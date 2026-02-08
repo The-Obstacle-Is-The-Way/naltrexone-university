@@ -178,6 +178,7 @@ export function usePracticeSessionReviewStage(
       summary,
       sessionId: input.sessionId,
       isMounted: input.isMounted,
+      getPracticeSessionReviewFn: getPracticeSessionReview,
     });
 
   const { navigator, navigatorLoadState } = usePracticeSessionNavigator({
@@ -188,6 +189,7 @@ export function usePracticeSessionReviewStage(
     questionId: input.questionId,
     submitResult: input.submitResult,
     navigatorReloadCount,
+    getPracticeSessionReviewFn: getPracticeSessionReview,
     isMounted: input.isMounted,
   });
 

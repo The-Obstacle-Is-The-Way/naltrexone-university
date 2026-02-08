@@ -104,7 +104,7 @@ describe('DrizzleRateLimiter', () => {
     });
   });
 
-  it('treats invalid limit/window inputs as non-blocking', async () => {
+  it('treats invalid limit inputs as non-blocking', async () => {
     const db = createDbMock(1);
     const rateLimiter = new DrizzleRateLimiter(
       db as unknown as RateLimiterDb,
@@ -119,6 +119,14 @@ describe('DrizzleRateLimiter', () => {
       remaining: 0,
       retryAfterSeconds: 0,
     });
+  });
+
+  it('treats invalid windowMs inputs as non-blocking', async () => {
+    const db = createDbMock(1);
+    const rateLimiter = new DrizzleRateLimiter(
+      db as unknown as RateLimiterDb,
+      () => new Date('2026-02-07T12:00:00.000Z'),
+    );
 
     await expect(
       rateLimiter.limit({ key: 'rate:test', limit: 5, windowMs: -1 }),

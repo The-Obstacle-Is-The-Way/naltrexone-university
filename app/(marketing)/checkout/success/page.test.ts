@@ -341,97 +341,99 @@ describe('syncCheckoutSuccess retry logging', () => {
   it('logs warn entries when Stripe calls are retried', async () => {
     vi.useFakeTimers();
 
-    const stripeCustomers = new FakeStripeCustomerRepository();
-    const subscriptions = new FakeSubscriptionRepository();
-    const user = {
-      id: 'user_1',
-      email: 'user@example.com',
-      createdAt: new Date('2026-02-01T00:00:00Z'),
-      updatedAt: new Date('2026-02-01T00:00:00Z'),
-    };
+    try {
+      const stripeCustomers = new FakeStripeCustomerRepository();
+      const subscriptions = new FakeSubscriptionRepository();
+      const user = {
+        id: 'user_1',
+        email: 'user@example.com',
+        createdAt: new Date('2026-02-01T00:00:00Z'),
+        updatedAt: new Date('2026-02-01T00:00:00Z'),
+      };
 
-    const logger = new FakeLogger();
-    let sessionCalls = 0;
-    let subscriptionCalls = 0;
+      const logger = new FakeLogger();
+      let sessionCalls = 0;
+      let subscriptionCalls = 0;
 
-    const deps = {
-      authGateway: new FakeAuthGateway(user),
-      getClerkAuth: async () => ({
-        userId: 'clerk_user_1',
-        redirectToSignIn: () => {
-          throw new Error('should not redirect to sign-in');
-        },
-      }),
-      logger,
-      stripe: {
-        checkout: {
-          sessions: {
+      const deps = {
+        authGateway: new FakeAuthGateway(user),
+        getClerkAuth: async () => ({
+          userId: 'clerk_user_1',
+          redirectToSignIn: () => {
+            throw new Error('should not redirect to sign-in');
+          },
+        }),
+        logger,
+        stripe: {
+          checkout: {
+            sessions: {
+              retrieve: async () => {
+                sessionCalls += 1;
+                if (sessionCalls === 1) {
+                  throw { code: 'ECONNRESET' };
+                }
+                return { customer: 'cus_123', subscription: 'sub_123' };
+              },
+            },
+          },
+          subscriptions: {
             retrieve: async () => {
-              sessionCalls += 1;
-              if (sessionCalls === 1) {
-                throw { code: 'ECONNRESET' };
+              subscriptionCalls += 1;
+              if (subscriptionCalls === 1) {
+                throw { statusCode: 502 };
               }
-              return { customer: 'cus_123', subscription: 'sub_123' };
+              return {
+                id: 'sub_123',
+                customer: 'cus_123',
+                status: 'active',
+                cancel_at_period_end: false,
+                metadata: { user_id: 'user_1' },
+                items: {
+                  data: [
+                    {
+                      current_period_end: 2_000_000_000,
+                      price: { id: 'price_monthly' },
+                    },
+                  ],
+                },
+              };
             },
           },
         },
-        subscriptions: {
-          retrieve: async () => {
-            subscriptionCalls += 1;
-            if (subscriptionCalls === 1) {
-              throw { statusCode: 502 };
-            }
-            return {
-              id: 'sub_123',
-              customer: 'cus_123',
-              status: 'active',
-              cancel_at_period_end: false,
-              metadata: { user_id: 'user_1' },
-              items: {
-                data: [
-                  {
-                    current_period_end: 2_000_000_000,
-                    price: { id: 'price_monthly' },
-                  },
-                ],
-              },
-            };
-          },
+        priceIds: { monthly: 'price_monthly', annual: 'price_annual' },
+        appUrl: 'https://example.com',
+        transaction: async <T>(
+          fn: (tx: CheckoutSuccessTransaction) => Promise<T>,
+        ): Promise<T> =>
+          fn({
+            stripeCustomers,
+            subscriptions,
+          }),
+      };
+
+      const redirectFn = (url: string): never => {
+        throw new RedirectError(url);
+      };
+
+      const promise = syncCheckoutSuccess(
+        { sessionId: 'cs_test' },
+        deps as never,
+        redirectFn,
+      ).then(
+        () => {
+          throw new Error('Expected syncCheckoutSuccess to redirect');
         },
-      },
-      priceIds: { monthly: 'price_monthly', annual: 'price_annual' },
-      appUrl: 'https://example.com',
-      transaction: async <T>(
-        fn: (tx: CheckoutSuccessTransaction) => Promise<T>,
-      ): Promise<T> =>
-        fn({
-          stripeCustomers,
-          subscriptions,
-        }),
-    };
+        (error) => error,
+      );
 
-    const redirectFn = (url: string): never => {
-      throw new RedirectError(url);
-    };
+      await vi.runAllTimersAsync();
 
-    const promise = syncCheckoutSuccess(
-      { sessionId: 'cs_test' },
-      deps as never,
-      redirectFn,
-    ).then(
-      () => {
-        throw new Error('Expected syncCheckoutSuccess to redirect');
-      },
-      (error) => error,
-    );
-
-    await vi.runAllTimersAsync();
-
-    const error = await promise;
-    expect(error).toMatchObject({ url: ROUTES.APP_DASHBOARD });
-    expect(logger.warnCalls.length).toBeGreaterThanOrEqual(2);
-
-    vi.useRealTimers();
+      const error = await promise;
+      expect(error).toMatchObject({ url: ROUTES.APP_DASHBOARD });
+      expect(logger.warnCalls.length).toBeGreaterThanOrEqual(2);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
 

@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import type { LoadState } from '@/app/(app)/app/practice/practice-page-logic';
-import {
-  type EndPracticeSessionOutput,
-  type GetPracticeSessionReviewOutput,
-  getPracticeSessionReview,
+import type { ActionResult } from '@/src/adapters/controllers/action-result';
+import type {
+  EndPracticeSessionOutput,
+  GetPracticeSessionReviewOutput,
 } from '@/src/adapters/controllers/practice-controller';
 import type { NextQuestion } from '@/src/application/use-cases/get-next-question';
 import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
@@ -17,6 +17,9 @@ export type UsePracticeSessionNavigatorInput = {
   questionId: string | null;
   submitResult: SubmitAnswerOutput | null;
   navigatorReloadCount: number;
+  getPracticeSessionReviewFn: (
+    input: unknown,
+  ) => Promise<ActionResult<GetPracticeSessionReviewOutput>>;
   isMounted: () => boolean;
 };
 
@@ -41,7 +44,7 @@ export function usePracticeSessionNavigator(
       isInReviewStage: input.isInReviewStage,
       sessionInfo: input.sessionInfo,
       sessionId: input.sessionId,
-      getPracticeSessionReviewFn: getPracticeSessionReview,
+      getPracticeSessionReviewFn: input.getPracticeSessionReviewFn,
       setNavigator,
       setNavigatorLoadState,
       isMounted: input.isMounted,
@@ -54,6 +57,7 @@ export function usePracticeSessionNavigator(
     input.questionId,
     input.submitResult,
     input.navigatorReloadCount,
+    input.getPracticeSessionReviewFn,
     input.isMounted,
   ]);
 

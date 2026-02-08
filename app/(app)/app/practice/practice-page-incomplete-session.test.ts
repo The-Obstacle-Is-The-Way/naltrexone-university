@@ -123,7 +123,10 @@ describe('practice-page-incomplete-session', () => {
       await Promise.resolve();
 
       expect(setSession).not.toHaveBeenCalled();
-      expect(setStatus).not.toHaveBeenLastCalledWith('idle');
+      expect(setStatus).toHaveBeenCalledTimes(1);
+      expect(setStatus).toHaveBeenCalledWith('loading');
+      expect(setError).toHaveBeenCalledTimes(1);
+      expect(setError).toHaveBeenCalledWith(null);
     });
   });
 
@@ -190,8 +193,9 @@ describe('practice-page-incomplete-session', () => {
         isMounted: () => false,
       });
 
-      expect(setStatus).not.toHaveBeenLastCalledWith('error');
-      expect(setError).not.toHaveBeenLastCalledWith('boom');
+      expect(endPracticeSessionFn).not.toHaveBeenCalled();
+      expect(setStatus).not.toHaveBeenCalled();
+      expect(setError).not.toHaveBeenCalled();
       expect(setSession).not.toHaveBeenCalled();
     });
 

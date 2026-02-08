@@ -114,22 +114,26 @@ describe('buildShuffledChoiceViews', () => {
       ],
     });
 
-    const baseline = buildShuffledChoiceViews(question, 'user-1').map(
-      (choice) => choice.choiceId,
+    const stableInput = question.choices.slice().sort((a, b) => {
+      const bySortOrder = a.sortOrder - b.sortOrder;
+      if (bySortOrder !== 0) return bySortOrder;
+      return a.id.localeCompare(b.id);
+    });
+
+    const seedUser1 = createQuestionSeed('user-1', question.id);
+    const seedUser2 = createQuestionSeed('user-2', question.id);
+    expect(seedUser1).not.toEqual(seedUser2);
+
+    expect(
+      buildShuffledChoiceViews(question, 'user-1').map((v) => v.choiceId),
+    ).toEqual(
+      shuffleWithSeed(stableInput, seedUser1).map((choice) => choice.id),
     );
-
-    let foundDifferent = false;
-    for (let i = 2; i <= 250; i += 1) {
-      const candidate = buildShuffledChoiceViews(question, `user-${i}`).map(
-        (choice) => choice.choiceId,
-      );
-      if (candidate.some((id, index) => id !== baseline[index])) {
-        foundDifferent = true;
-        break;
-      }
-    }
-
-    expect(foundDifferent).toBe(true);
+    expect(
+      buildShuffledChoiceViews(question, 'user-2').map((v) => v.choiceId),
+    ).toEqual(
+      shuffleWithSeed(stableInput, seedUser2).map((choice) => choice.id),
+    );
   });
 
   it('applies stable id tiebreak sorting before shuffling tied choices', () => {
