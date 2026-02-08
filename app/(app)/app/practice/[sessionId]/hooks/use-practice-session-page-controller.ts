@@ -1,273 +1,70 @@
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  useTransition,
-} from 'react';
-import {
-  createLoadNextQuestionAction,
-  loadNextQuestion,
-  maybeAutoAdvanceAfterSubmit,
-  submitAnswerForQuestion,
-} from '@/app/(app)/app/practice/[sessionId]/practice-session-page-logic';
-import {
-  canSubmitAnswer,
-  createBookmarksEffect,
-  type LoadState,
-  selectChoiceIfAllowed,
-  toggleBookmarkForQuestion,
-} from '@/app/(app)/app/practice/practice-page-logic';
+import { useEffect } from 'react';
+import { maybeAutoAdvanceAfterSubmit } from '@/app/(app)/app/practice/[sessionId]/practice-session-page-logic';
+import { usePracticeQuestionBookmarks } from '@/app/(app)/app/practice/hooks/use-practice-question-bookmarks';
 import { useIsMounted } from '@/lib/use-is-mounted';
-import {
-  getBookmarks,
-  toggleBookmark,
-} from '@/src/adapters/controllers/bookmark-controller';
-import {
-  getNextQuestion,
-  submitAnswer,
-} from '@/src/adapters/controllers/question-controller';
-import type { NextQuestion } from '@/src/application/use-cases/get-next-question';
-import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
-import { scheduleBookmarkMessageAutoClear } from '../../hooks/bookmark-message-timeout';
 import type { PracticeSessionPageViewProps } from '../components/practice-session-page-view';
-import { isQuestionBookmarked } from '../practice-session-page-utils';
 import { usePracticeSessionMarkForReview } from './use-practice-session-mark-for-review';
+import { usePracticeSessionQuestionFlow } from './use-practice-session-question-flow';
 import { usePracticeSessionReviewStage } from './use-practice-session-review-stage';
 
 export function usePracticeSessionPageController(
   sessionId: string,
 ): PracticeSessionPageViewProps {
-  const [question, setQuestion] = useState<NextQuestion | null>(null);
-  const [sessionInfo, setSessionInfo] = useState<NextQuestion['session']>(null);
-  const [sessionMode, setSessionMode] = useState<'tutor' | 'exam' | null>(null);
-  const [selectedChoiceId, setSelectedChoiceId] = useState<string | null>(null);
-  const [submitResult, setSubmitResult] = useState<SubmitAnswerOutput | null>(
-    null,
-  );
-
-  const [bookmarkedQuestionIds, setBookmarkedQuestionIds] = useState<
-    Set<string>
-  >(() => new Set());
-  const [bookmarkStatus, setBookmarkStatus] = useState<
-    'idle' | 'loading' | 'error'
-  >('idle');
-  const [bookmarkMessage, setBookmarkMessage] = useState<string | null>(null);
-  const [bookmarkMessageVersion, setBookmarkMessageVersion] = useState(0);
-  const bookmarkMessageTimeoutId = useRef<ReturnType<typeof setTimeout> | null>(
-    null,
-  );
-  const [bookmarkRetryCount, setBookmarkRetryCount] = useState(0);
-  const [bookmarkIdempotencyKey, setBookmarkIdempotencyKey] = useState<
-    string | null
-  >(() => crypto.randomUUID());
-
-  const [loadState, setLoadState] = useState<LoadState>({ status: 'idle' });
-  const [isPending, startTransition] = useTransition();
   const isMounted = useIsMounted();
-  const [questionLoadedAt, setQuestionLoadedAt] = useState<number | null>(null);
-  const [submitIdempotencyKey, setSubmitIdempotencyKey] = useState<
-    string | null
-  >(null);
-  const latestQuestionRequestId = useRef(0);
 
-  const loadNext = useMemo(
-    () =>
-      createLoadNextQuestionAction({
-        sessionId,
-        startTransition,
-        getNextQuestionFn: getNextQuestion,
-        createIdempotencyKey: () => crypto.randomUUID(),
-        nowMs: Date.now,
-        setLoadState,
-        setSelectedChoiceId,
-        setSubmitResult,
-        setSubmitIdempotencyKey,
-        setQuestionLoadedAt,
-        setQuestion,
-        setSessionInfo,
-        createRequestSequenceId: () => {
-          latestQuestionRequestId.current += 1;
-          return latestQuestionRequestId.current;
-        },
-        isLatestRequest: (requestId) =>
-          requestId === latestQuestionRequestId.current,
-        isMounted,
-      }),
-    [sessionId, isMounted],
-  );
+  const questionFlow = usePracticeSessionQuestionFlow({
+    sessionId,
+    isMounted,
+  });
 
-  useEffect(loadNext, [loadNext]);
-
-  useEffect(() => {
-    if (!sessionInfo?.mode) return;
-    setSessionMode(sessionInfo.mode);
-  }, [sessionInfo?.mode]);
-
-  const loadSpecificQuestion = useCallback(
-    (questionId: string): void => {
-      startTransition(() => {
-        void loadNextQuestion({
-          sessionId,
-          questionId,
-          getNextQuestionFn: getNextQuestion,
-          createIdempotencyKey: () => crypto.randomUUID(),
-          nowMs: Date.now,
-          setLoadState,
-          setSelectedChoiceId,
-          setSubmitResult,
-          setSubmitIdempotencyKey,
-          setQuestionLoadedAt,
-          setQuestion,
-          setSessionInfo,
-          createRequestSequenceId: () => {
-            latestQuestionRequestId.current += 1;
-            return latestQuestionRequestId.current;
-          },
-          isLatestRequest: (requestId) =>
-            requestId === latestQuestionRequestId.current,
-          isMounted,
-        });
-      });
-    },
-    [sessionId, isMounted],
-  );
+  const bookmarks = usePracticeQuestionBookmarks({
+    question: questionFlow.question,
+    isMounted,
+  });
 
   const reviewStage = usePracticeSessionReviewStage({
     sessionId,
     isMounted,
-    sessionInfo,
-    questionId: question?.questionId ?? null,
-    submitResult,
-    sessionMode,
-    setSessionMode,
-    setLoadState,
-    setQuestion,
-    setSubmitResult,
-    setSelectedChoiceId,
-    loadSpecificQuestion,
+    sessionInfo: questionFlow.sessionInfo,
+    questionId: questionFlow.question?.questionId ?? null,
+    submitResult: questionFlow.submitResult,
+    sessionMode: questionFlow.sessionMode,
+    setSessionMode: questionFlow.setSessionMode,
+    setLoadState: questionFlow.setLoadState,
+    setQuestion: questionFlow.setQuestion,
+    setSubmitResult: questionFlow.setSubmitResult,
+    setSelectedChoiceId: questionFlow.setSelectedChoiceId,
+    loadSpecificQuestion: questionFlow.onNavigateQuestion,
   });
 
   useEffect(() => {
     if (reviewStage.isInReviewStage) return;
 
     maybeAutoAdvanceAfterSubmit({
-      mode: sessionMode,
-      submitResult,
-      loadStateStatus: loadState.status,
-      advance: loadNext,
+      mode: questionFlow.sessionMode,
+      submitResult: questionFlow.submitResult,
+      loadStateStatus: questionFlow.loadState.status,
+      advance: questionFlow.onNextQuestion,
     });
   }, [
     reviewStage.isInReviewStage,
-    sessionMode,
-    submitResult,
-    loadState.status,
-    loadNext,
+    questionFlow.sessionMode,
+    questionFlow.submitResult,
+    questionFlow.loadState.status,
+    questionFlow.onNextQuestion,
   ]);
-
-  const bookmarksEffect = useMemo(
-    () =>
-      createBookmarksEffect.bind(null, {
-        bookmarkRetryCount,
-        getBookmarksFn: getBookmarks,
-        setBookmarkedQuestionIds,
-        setBookmarkStatus,
-        setBookmarkRetryCount,
-      }),
-    [bookmarkRetryCount],
-  );
-
-  useEffect(bookmarksEffect, [bookmarksEffect]);
-
-  useEffect(() => {
-    return () => {
-      if (bookmarkMessageTimeoutId.current) {
-        clearTimeout(bookmarkMessageTimeoutId.current);
-      }
-    };
-  }, []);
-
-  const canSubmit = useMemo(() => {
-    return canSubmitAnswer({
-      loadState,
-      question,
-      selectedChoiceId,
-      submitResult,
-    });
-  }, [loadState, question, selectedChoiceId, submitResult]);
-
-  const isBookmarked = useMemo(
-    () => isQuestionBookmarked(question, bookmarkedQuestionIds),
-    [bookmarkedQuestionIds, question],
-  );
-
-  const onSubmit = useMemo(
-    () =>
-      submitAnswerForQuestion.bind(null, {
-        sessionId,
-        question,
-        selectedChoiceId,
-        questionLoadedAtMs: questionLoadedAt,
-        submitIdempotencyKey,
-        submitAnswerFn: submitAnswer,
-        nowMs: Date.now,
-        setLoadState,
-        setSubmitResult,
-        isMounted,
-      }),
-    [
-      question,
-      questionLoadedAt,
-      selectedChoiceId,
-      sessionId,
-      submitIdempotencyKey,
-      isMounted,
-    ],
-  );
-
-  const onToggleBookmark = useMemo(
-    () =>
-      toggleBookmarkForQuestion.bind(null, {
-        question,
-        bookmarkIdempotencyKey,
-        createIdempotencyKey: () => crypto.randomUUID(),
-        setBookmarkIdempotencyKey,
-        toggleBookmarkFn: toggleBookmark,
-        setBookmarkStatus,
-        setBookmarkedQuestionIds,
-        onBookmarkToggled: (bookmarked: boolean) => {
-          setBookmarkMessage(
-            bookmarked ? 'Question bookmarked.' : 'Bookmark removed.',
-          );
-          setBookmarkMessageVersion((prev) => prev + 1);
-          scheduleBookmarkMessageAutoClear({
-            timeoutIdRef: bookmarkMessageTimeoutId,
-            setBookmarkMessage,
-            isMounted,
-          });
-        },
-        isMounted,
-      }),
-    [bookmarkIdempotencyKey, question, isMounted],
-  );
 
   const { isMarkingForReview, onToggleMarkForReview } =
     usePracticeSessionMarkForReview({
-      question,
-      sessionMode,
-      sessionInfo,
+      question: questionFlow.question,
+      sessionMode: questionFlow.sessionMode,
+      sessionInfo: questionFlow.sessionInfo,
       sessionId,
-      setSessionInfo,
-      setLoadState,
+      setSessionInfo: questionFlow.setSessionInfo,
+      setLoadState: questionFlow.setLoadState,
       setReview: reviewStage.setReview,
       isMounted,
     });
-
-  const onSelectChoice = useMemo(
-    () => selectChoiceIfAllowed.bind(null, submitResult, setSelectedChoiceId),
-    [submitResult],
-  );
 
   return {
     summary: reviewStage.summary,
@@ -277,28 +74,28 @@ export function usePracticeSessionPageController(
     reviewLoadState: reviewStage.reviewLoadState,
     navigator: reviewStage.navigator,
     navigatorLoadState: reviewStage.navigatorLoadState,
-    sessionInfo,
-    loadState,
-    question,
-    selectedChoiceId,
-    submitResult,
-    isPending,
-    bookmarkStatus,
-    isBookmarked,
+    sessionInfo: questionFlow.sessionInfo,
+    loadState: questionFlow.loadState,
+    question: questionFlow.question,
+    selectedChoiceId: questionFlow.selectedChoiceId,
+    submitResult: questionFlow.submitResult,
+    isPending: questionFlow.isPending,
+    bookmarkStatus: bookmarks.bookmarkStatus,
+    isBookmarked: bookmarks.isBookmarked,
     isMarkingForReview,
-    bookmarkMessage,
-    bookmarkMessageVersion,
-    canSubmit,
+    bookmarkMessage: bookmarks.bookmarkMessage,
+    bookmarkMessageVersion: bookmarks.bookmarkMessageVersion,
+    canSubmit: questionFlow.canSubmit,
     onEndSession: reviewStage.onEndSession,
     onRetryReview: reviewStage.onRetryReview,
     onRetryNavigator: reviewStage.onRetryNavigator,
-    onTryAgain: loadNext,
-    onToggleBookmark,
+    onTryAgain: questionFlow.onTryAgain,
+    onToggleBookmark: bookmarks.onToggleBookmark,
     onToggleMarkForReview,
-    onSelectChoice,
-    onSubmit,
-    onNextQuestion: loadNext,
-    onNavigateQuestion: loadSpecificQuestion,
+    onSelectChoice: questionFlow.onSelectChoice,
+    onSubmit: questionFlow.onSubmit,
+    onNextQuestion: questionFlow.onNextQuestion,
+    onNavigateQuestion: questionFlow.onNavigateQuestion,
     onOpenReviewQuestion: reviewStage.onOpenReviewQuestion,
     onFinalizeReview: reviewStage.onFinalizeReview,
   };

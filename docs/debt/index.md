@@ -17,7 +17,6 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 | ID | Title | Status | Priority | Date |
 |----|-------|--------|----------|------|
-| [DEBT-173](debt-173-practice-hooks-multi-concern-state-machines.md) | Practice Hooks Are Multi-Concern State Machines | Open | P1 | 2026-02-08 |
 
 **Next Debt ID:** DEBT-179
 
@@ -27,6 +26,7 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 | ID | Title | Priority | Resolved |
 |----|-------|----------|----------|
+| [DEBT-173](../_archive/debt/debt-173-practice-hooks-multi-concern-state-machines.md) | Practice Hooks Are Multi-Concern State Machines | P1 | 2026-02-08 |
 | [DEBT-177](../_archive/debt/debt-177-duplicated-question-flow-logic-practice-modules.md) | Duplicated Question Flow Logic Across Practice Modules | P2 | 2026-02-08 |
 | [DEBT-174](../_archive/debt/debt-174-checkout-success-page-mixes-orchestration-and-entrypoint.md) | Checkout Success Page Mixes Orchestration and Route Entrypoint | P2 | 2026-02-08 |
 | [DEBT-178](../_archive/debt/debt-178-duplicated-loadstate-types-across-page-logic.md) | Duplicated LoadState Types Across Page Logic Modules | P3 | 2026-02-08 |
