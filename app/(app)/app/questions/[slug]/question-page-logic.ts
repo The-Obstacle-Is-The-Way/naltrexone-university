@@ -2,14 +2,12 @@ import {
   getActionResultErrorMessage,
   getThrownErrorMessage,
 } from '@/app/(app)/app/practice/practice-logic';
+import type { AsyncLoadState } from '@/app/(app)/app/shared/load-state';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import type { GetQuestionBySlugOutput } from '@/src/adapters/controllers/question-view-controller';
 import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
 
-export type LoadState =
-  | { status: 'loading' }
-  | { status: 'ready' }
-  | { status: 'error'; message: string };
+export type LoadState = AsyncLoadState;
 
 export async function loadQuestion(input: {
   slug: string;

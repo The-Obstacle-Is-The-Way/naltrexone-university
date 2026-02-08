@@ -1,8 +1,9 @@
 # DEBT-178: Duplicated LoadState Types Across Page Logic Modules
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P3
 **Date:** 2026-02-08
+**Resolved:** 2026-02-08
 
 ---
 
@@ -29,9 +30,10 @@ Both represent the same state-machine concept (async page load + error), but wit
 
 ## Verification
 
-- [ ] One canonical `LoadState` type used by both logic modules
-- [ ] Existing logic/tests continue to pass without behavior regression
-- [ ] `pnpm typecheck && pnpm lint && pnpm test --run` passes
+- [x] One canonical shared load-state module introduced (`app/(app)/app/shared/load-state.ts`)
+- [x] Practice and question page logic modules now consume shared load-state types
+- [x] Existing logic/tests continue to pass without behavior regression
+- [x] `pnpm typecheck && pnpm lint && pnpm test --run` passes
 
 ## Related
 
