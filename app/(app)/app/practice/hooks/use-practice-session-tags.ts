@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { getThrownErrorMessage } from '@/app/(app)/app/practice/practice-logic';
 import {
   getTags,
   type TagRow,
@@ -24,12 +23,8 @@ export function usePracticeSessionTags(): UsePracticeSessionTagsOutput {
       let res: Awaited<ReturnType<typeof getTags>>;
       try {
         res = await getTags({});
-      } catch (error) {
+      } catch {
         if (!mounted) return;
-        console.error(
-          '[usePracticeSessionTags] Tag load failed:',
-          getThrownErrorMessage(error),
-        );
         setTagLoadStatus('error');
         return;
       }

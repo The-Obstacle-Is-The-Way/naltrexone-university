@@ -1,3 +1,6 @@
+// @vitest-environment jsdom
+
+import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
 import { ROUTES } from '@/lib/routes';
 import {
@@ -7,6 +10,7 @@ import {
   FakeSubscriptionRepository,
 } from '@/src/application/test-helpers/fakes';
 import {
+  type CheckoutSuccessDeps,
   type CheckoutSuccessTransaction,
   runCheckoutSuccessPage,
   syncCheckoutSuccess,
@@ -181,6 +185,78 @@ describe('runCheckoutSuccessPage', () => {
     expect(stripeRetrieveCalls).toEqual([
       { sessionId: 'cs_test', params: { expand: ['subscription'] } },
     ]);
+  });
+
+  it('renders a semantic fallback shell with main landmark when redirect is intercepted', async () => {
+    const user = {
+      id: 'user_1',
+      email: 'user@example.com',
+      createdAt: new Date('2026-02-01T00:00:00Z'),
+      updatedAt: new Date('2026-02-01T00:00:00Z'),
+    };
+
+    const stripeCustomers = new FakeStripeCustomerRepository();
+    const subscriptions = new FakeSubscriptionRepository();
+
+    const deps = {
+      authGateway: new FakeAuthGateway(user),
+      getClerkAuth: async () => ({
+        userId: 'clerk_user_1',
+        redirectToSignIn: () => {
+          throw new Error('should not redirect to sign-in');
+        },
+      }),
+      logger: new FakeLogger(),
+      stripe: {
+        checkout: {
+          sessions: {
+            retrieve: async () => ({
+              customer: 'cus_123',
+              subscription: { id: 'sub_123' },
+            }),
+          },
+        },
+        subscriptions: {
+          retrieve: async () => ({
+            id: 'sub_123',
+            customer: 'cus_123',
+            status: 'active',
+            cancel_at_period_end: false,
+            metadata: { user_id: 'user_1' },
+            items: {
+              data: [
+                {
+                  current_period_end: 2_000_000_000,
+                  price: { id: 'price_monthly' },
+                },
+              ],
+            },
+          }),
+        },
+      },
+      priceIds: { monthly: 'price_monthly', annual: 'price_annual' },
+      appUrl: 'https://example.com',
+      transaction: async <T>(
+        fn: (tx: CheckoutSuccessTransaction) => Promise<T>,
+      ): Promise<T> =>
+        fn({
+          stripeCustomers,
+          subscriptions,
+        }),
+    } satisfies CheckoutSuccessDeps;
+
+    const redirectFn = vi.fn((_: string): never => undefined as never);
+
+    const element = await runCheckoutSuccessPage(
+      { searchParams: Promise.resolve({ session_id: 'cs_test' }) },
+      deps,
+      redirectFn,
+    );
+
+    const html = renderToStaticMarkup(element);
+    expect(redirectFn).toHaveBeenCalledWith(ROUTES.APP_DASHBOARD);
+    expect(html).toContain('<main id="main-content"');
+    expect(html).toContain('Finalizing your subscription…');
   });
 });
 

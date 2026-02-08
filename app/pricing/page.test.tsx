@@ -1,4 +1,6 @@
 // @vitest-environment jsdom
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { AuthGateway } from '@/src/application/ports/gateways';
@@ -79,6 +81,18 @@ describe('app/pricing', () => {
     expect(headings).toContain('Pro Annual');
   });
 
+  it('uses shared pricing data constants instead of duplicated inline values', () => {
+    const source = readFileSync(
+      path.resolve(process.cwd(), 'app/pricing/pricing-view.tsx'),
+      'utf8',
+    );
+
+    expect(source).toContain("from '@/lib/pricing-data'");
+    expect(source).not.toContain('$29');
+    expect(source).not.toContain('$199');
+    expect(source).not.toContain('Save $149 per year');
+  });
+
   it('uses a semantic heading hierarchy for pricing sections', async () => {
     const { PricingView } = await import('@/app/pricing/page');
 
@@ -96,6 +110,7 @@ describe('app/pricing', () => {
     const h3 = doc.querySelector('h3');
 
     expect(h1?.textContent?.trim()).toBe('Pricing');
+    expect(h1?.getAttribute('class') ?? '').toContain('font-heading');
     expect(h2?.textContent?.trim()).toBe('Plans');
     expect(h3).not.toBeNull();
   });

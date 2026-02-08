@@ -17,13 +17,9 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 | ID | Title | Status | Priority | Date |
 |----|-------|--------|----------|------|
-| [DEBT-179](debt-179-global-error-missing-head-and-hydration-warning.md) | `global-error.tsx` Missing `<head>` and `suppressHydrationWarning` | Open | P2 | 2026-02-08 |
-| [DEBT-180](debt-180-duplicated-manage-billing-files.md) | Duplicated Manage-Billing Files Across Pricing and Billing Routes | Open | P2 | 2026-02-08 |
-| [DEBT-181](debt-181-hardcoded-pricing-data-duplicated.md) | Hardcoded Pricing Data Duplicated in Marketing and Pricing Views | Open | P2 | 2026-02-08 |
-| [DEBT-182](debt-182-missing-font-heading-on-headings.md) | Missing `font-heading` on Error Boundary, Not-Found, and Pricing Headings | Open | P3 | 2026-02-08 |
-| [DEBT-183](debt-183-bare-console-error-in-client-hooks.md) | Bare `console.error` in Client Hooks (Not Observable) | Open | P3 | 2026-02-08 |
+| [DEBT-184](debt-184-loading-message-misleading-during-submit.md) | Loading Message Misleading During Answer Submission | Open | P2 | 2026-02-08 |
 
-**Next Debt ID:** DEBT-184
+**Next Debt ID:** DEBT-185
 
 ---
 
@@ -54,9 +50,8 @@ All frontend-specific UI/UX debt. Items use `FE-XXX` IDs and are cross-reference
 | FE-023 | Hover without transition-colors | `not-found.tsx`, `pricing-view.tsx`, `layout.tsx` | Open |
 | FE-024 | Missing `font-display` on pricing page price numbers | `pricing-view.tsx` | Open |
 | FE-025 | Icon sizing `h-X w-X` instead of `size-X` | `metallic-cta-button.tsx`, `marketing-home.tsx`, `theme-toggle.tsx` | Open |
-| FE-039 / DEBT-179 | `global-error.tsx` missing `<head>` and `suppressHydrationWarning` | `app/global-error.tsx` | Open |
-| FE-040 / DEBT-180 | Duplicated manage-billing files across pricing and billing routes | `app/pricing/manage-billing-*`, `app/(app)/app/billing/manage-billing-*` | Open |
-| FE-041 / DEBT-181 | Hardcoded pricing data duplicated in marketing and pricing views | `marketing-home.tsx`, `pricing-view.tsx` | Open |
+| FE-044 / DEBT-184 | Loading message says "Loading question..." during answer submission (misleads screen readers) | `practice-view.tsx`, `use-practice-question-answer-flow.ts` | Open |
+| FE-045 | Structural duplication between `usePracticeQuestionAnswerFlow` (164 lines) and `usePracticeSessionQuestionFlow` (195 lines) — identical state shapes | `practice/hooks/`, `practice/[sessionId]/hooks/` | Open |
 
 ### P3 — Fix as encountered
 
@@ -75,8 +70,10 @@ All frontend-specific UI/UX debt. Items use `FE-XXX` IDs and are cross-reference
 | FE-036 | 3 unused shadcn/ui components (0 consumers, no spec need) | `avatar.tsx`, `radio-group.tsx`, `label.tsx` + test files. (`dropdown-menu.tsx` KEEP — spec-mandated) | Open |
 | FE-037 | `theme-toggle.tsx` uses raw `<button>` not `<Button>` | `theme-toggle.tsx` | Open |
 | FE-038 | Card sub-components: 0 imports but KEEP for SPEC-019 Phase 2 | `card.tsx` (CardHeader, CardTitle, etc.) — evaluate during UI/UX refactor | Open |
-| FE-042 / DEBT-182 | Missing `font-heading` on error boundary, not-found, and pricing h1 headings | `app/global-error.tsx`, `not-found.tsx`, 9 `error.tsx` files, `pricing-view.tsx` | Open |
-| FE-043 / DEBT-183 | Bare `console.error` in client hooks (not observable) | `use-practice-session-tags.ts`, `use-practice-session-navigator.ts`, `practice-page-logic.ts`, `fire-and-forget.ts` | Open |
+| FE-046 | Toggle buttons (bookmark, mark-for-review) lack `aria-pressed` attribute | `PracticeView`, `ExamReviewView` | Open |
+| FE-047 | Filter chip groups lack `role="group"` + `aria-label` | `PracticeSessionStarter` | Open |
+| FE-048 | Session progress counter not announced to screen readers (no `aria-live`) | `PracticeView` | Open |
+| FE-049 | Missing `createBookmark()` factory in domain test helpers | `src/domain/test-helpers/factories.ts` | Open |
 
 ### Frontend Debt — Resolved
 
@@ -88,10 +85,25 @@ All frontend-specific UI/UX debt. Items use `FE-XXX` IDs and are cross-reference
 | FE-005 | Duplicated logic: 3 copies of loadNextQuestion, submitAnswer | Core logic extracted to shared `question-flow-actions.ts` |
 | FE-006 | Two competing `LoadState` type definitions | Unified via shared `load-state.ts` |
 | FE-014 | Heading hierarchy skip (h1 to h3) in pricing | Fixed — now h1 > h2 > h3 |
+| FE-039 / DEBT-179 | `global-error.tsx` missing `<head>` and `suppressHydrationWarning` | Fixed with full HTML shell metadata + hydration parity tests |
+| FE-040 / DEBT-180 | Duplicated manage-billing files across pricing and billing routes | Shared core/types extracted to `lib/manage-billing/*`; route wrappers preserved |
+| FE-041 / DEBT-181 | Hardcoded pricing data duplicated in marketing and pricing views | Shared constants extracted to `lib/pricing-data.ts` with regression guards |
+| FE-042 / DEBT-182 | Missing `font-heading` on error/not-found/pricing headings | `font-heading` applied consistently across targeted headings + style regression tests |
+| FE-043 / DEBT-183 | Bare `console.error` in client hooks (not observable) | Removed redundant client hook console logs; bookmark failures now surface as error notifications |
 
-**Next frontend debt ID:** FE-044
+**Next frontend debt ID:** FE-050
 
 ## Archived Debt
+
+### Resolved in Frontend Baseline Hardening
+
+| ID | Title | Priority | Resolved |
+|----|-------|----------|----------|
+| [DEBT-179](../_archive/debt/debt-179-global-error-missing-head-and-hydration-warning.md) | `global-error.tsx` Missing `<head>` and `suppressHydrationWarning` | P2 | 2026-02-08 |
+| [DEBT-180](../_archive/debt/debt-180-duplicated-manage-billing-files.md) | Duplicated Manage-Billing Files Across Pricing and Billing Routes | P2 | 2026-02-08 |
+| [DEBT-181](../_archive/debt/debt-181-hardcoded-pricing-data-duplicated.md) | Hardcoded Pricing Data Duplicated in Marketing and Pricing Views | P2 | 2026-02-08 |
+| [DEBT-182](../_archive/debt/debt-182-missing-font-heading-on-headings.md) | Missing `font-heading` on Error Boundary, Not-Found, and Pricing Headings | P3 | 2026-02-08 |
+| [DEBT-183](../_archive/debt/debt-183-bare-console-error-in-client-hooks.md) | Bare `console.error` in Client Hooks (Not Observable) | P3 | 2026-02-08 |
 
 ### Resolved in UI Foundation Hardening
 

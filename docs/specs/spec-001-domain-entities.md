@@ -98,6 +98,7 @@ export type Choice = {
   readonly label: ChoiceLabel;
   readonly textMd: string;
   readonly isCorrect: boolean;
+  readonly explanationMd: string | null; // per-choice explanation (beyond question-level)
   readonly sortOrder: number;
 };
 ```
@@ -156,10 +157,23 @@ export type PracticeSession = {
   readonly userId: string;
   readonly mode: PracticeMode;
   readonly questionIds: readonly string[]; // ordered list (UUIDs)
+  readonly questionStates: readonly PracticeSessionQuestionState[]; // per-question session state
   readonly tagFilters: readonly string[]; // tag slugs used for selection
   readonly difficultyFilters: readonly QuestionDifficulty[]; // filters used for selection
   readonly startedAt: Date;
   readonly endedAt: Date | null;
+};
+
+/**
+ * Per-question state within a practice session.
+ * Tracks the latest answer and mark-for-review status.
+ */
+export type PracticeSessionQuestionState = {
+  readonly questionId: string;
+  readonly markedForReview: boolean;
+  readonly latestSelectedChoiceId: string | null;
+  readonly latestIsCorrect: boolean | null;
+  readonly latestAnsweredAt: Date | null;
 };
 ```
 
@@ -200,7 +214,7 @@ export type { Question } from './question';
 export type { Choice } from './choice';
 export type { Attempt } from './attempt';
 export type { Subscription } from './subscription';
-export type { PracticeSession } from './practice-session';
+export type { PracticeSession, PracticeSessionQuestionState } from './practice-session';
 export type { Bookmark } from './bookmark';
 export type { Tag } from './tag';
 ```
@@ -220,3 +234,11 @@ pnpm typecheck
 - [x] All entity types defined as readonly
 - [x] Zero external imports (only value-objects from same layer)
 - [x] Barrel export in index.ts
+
+---
+
+## Changelog
+
+| Date | Change |
+|------|--------|
+| 2026-02-08 | Synced spec to implementation: added `Choice.explanationMd` field (per-choice explanation), added `PracticeSessionQuestionState` type and `PracticeSession.questionStates` field, updated barrel export. See [Practice Engine](../practice-engine.md) Section 10.1. |

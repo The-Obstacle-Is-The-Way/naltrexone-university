@@ -5,7 +5,7 @@ import { runManageBillingAction } from '@/app/pricing/manage-billing-action';
 import type {
   CreatePortalSessionFn,
   RedirectFn,
-} from '@/app/pricing/manage-billing-types';
+} from '@/lib/manage-billing/manage-billing-types';
 import { createPortalSession } from '@/src/adapters/controllers/billing-controller';
 
 export type ManageBillingActionDeps = {

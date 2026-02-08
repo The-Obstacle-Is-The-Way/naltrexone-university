@@ -265,4 +265,73 @@ describe('withIdempotency', () => {
     });
     expect(execute).toHaveBeenCalledTimes(1);
   });
+
+  it('throws INTERNAL_ERROR when cached idempotency result fails parseResult', async () => {
+    const now = () => new Date();
+    const repo = new FakeIdempotencyKeyRepository(now);
+    const logger = new FakeLogger();
+
+    await expect(
+      withIdempotency({
+        repo,
+        userId: 'user_1',
+        action: 'billing:createCheckoutSession',
+        key: '88888888-8888-8888-8888-888888888888',
+        now,
+        logger,
+        execute: async () => ({ raw: true }),
+      }),
+    ).resolves.toEqual({ raw: true });
+
+    await expect(
+      withIdempotency({
+        repo,
+        userId: 'user_1',
+        action: 'billing:createCheckoutSession',
+        key: '88888888-8888-8888-8888-888888888888',
+        now,
+        logger,
+        execute: async () => ({ parsed: true }),
+        parseResult: (value: unknown) => {
+          if (
+            typeof value !== 'object' ||
+            value === null ||
+            (value as { parsed?: boolean }).parsed !== true
+          ) {
+            throw new Error('invalid cached result');
+          }
+
+          return { parsed: true };
+        },
+      }),
+    ).rejects.toMatchObject({
+      code: 'INTERNAL_ERROR',
+      message: 'Cached idempotency result is invalid',
+    });
+  });
+
+  it('stores non-ApplicationError failures as INTERNAL_ERROR for replay', async () => {
+    const now = () => new Date();
+    const repo = new FakeIdempotencyKeyRepository(now);
+    const logger = new FakeLogger();
+    const key = '99999999-9999-9999-9999-999999999999';
+
+    const input = {
+      repo,
+      userId: 'user_1',
+      action: 'billing:createCheckoutSession',
+      key,
+      now,
+      logger,
+      execute: async () => {
+        throw new Error('unexpected failure');
+      },
+    } as const;
+
+    await expect(withIdempotency(input)).rejects.toThrow('unexpected failure');
+    await expect(withIdempotency(input)).rejects.toMatchObject({
+      code: 'INTERNAL_ERROR',
+      message: 'unexpected failure',
+    });
+  });
 });

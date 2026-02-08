@@ -614,11 +614,10 @@ Issues documented below are tracked as tech debt in `docs/debt/index.md` (Fronte
 | FE-021 | No page except root layout | No per-page metadata. All tabs show same title. |
 | FE-022 | Dashboard stat cards vs session-summary stat cards | Different hover treatments (`transition-all` vs `transition-colors`, `/80` vs `/50` opacity). |
 | FE-023 | `not-found.tsx` (line 28), `pricing-view.tsx` (lines 67, 75), `layout.tsx` (line 119) | `hover:` color changes without `transition-colors`. |
-| FE-024 | `pricing-view.tsx` | Missing `font-display` on price numbers. (The `font-heading` drift on the h1 is tracked in FE-042.) |
+| FE-024 | `pricing-view.tsx` | Missing `font-display` on price numbers. (The `font-heading` drift on the h1 was FE-042, now resolved.) |
 | FE-025 | `metallic-cta-button.tsx`, `marketing-home.tsx`, `theme-toggle.tsx` | Icon sizing uses `h-X w-X` instead of `size-X`. |
-| FE-039 | `app/global-error.tsx` | Missing `<head>` element (no `<title>`, `<meta charset>`, viewport) and missing `suppressHydrationWarning` on `<html>`. Produces invalid HTML when global error fires. |
-| FE-040 | `app/pricing/manage-billing-*`, `app/(app)/app/billing/manage-billing-*` | Duplicated manage-billing files across two route groups. Types file is byte-for-byte identical; actions differ only in error redirect targets. Extract shared orchestration module. |
-| FE-041 | `components/marketing/marketing-home.tsx`, `app/pricing/pricing-view.tsx` | Pricing data (`$29/mo`, `$199/yr`, feature lists) hardcoded in two files that will drift. Extract to shared pricing constants. |
+| FE-044 | `practice-view.tsx`, `use-practice-question-answer-flow.ts` | Loading message says "Loading question..." during answer submission. Misleads screen readers and sighted users. Should distinguish between "fetching question" and "submitting answer" states. |
+| FE-045 | `practice/hooks/`, `practice/[sessionId]/hooks/` | Structural duplication between `usePracticeQuestionAnswerFlow` (164 lines) and `usePracticeSessionQuestionFlow` (195 lines) — 8 identical `useState` declarations. Shared logic partially extracted to `question-flow-actions.ts` but hook-level state setup remains duplicated. |
 
 ### P3 — Fix as encountered
 
@@ -637,8 +636,10 @@ Issues documented below are tracked as tech debt in `docs/debt/index.md` (Fronte
 | FE-036 | `components/ui/avatar.tsx`, `radio-group.tsx`, `label.tsx` | 3 unused shadcn/ui components with 0 consumers and no spec-based need. Safe to remove along with colocated test files. (`dropdown-menu.tsx` is spec-mandated — KEEP.) |
 | FE-037 | `components/theme-toggle.tsx` | Uses raw `<button>` instead of `<Button>` component; violates the "ALWAYS use `<Button>` for interactive click targets" rule. |
 | FE-038 | `components/ui/card.tsx` sub-components | `CardHeader`, `CardTitle`, `CardDescription`, `CardContent`, `CardFooter`, `CardAction` have 0 imports outside tests. KEEP — SPEC-019 Phase 2 card-based redesign will likely need structured card layouts. Evaluate during UI/UX refactor. |
-| FE-042 | `app/global-error.tsx`, `app/not-found.tsx`, 9 `error.tsx` files, `app/pricing/pricing-view.tsx` | Headings missing `font-heading` token — inconsistent with all other app page headings that use `font-heading`. |
-| FE-043 | `use-practice-session-tags.ts`, `use-practice-session-navigator.ts`, `practice-page-logic.ts`, `fire-and-forget.ts` | Bare `console.error` in client hooks with no structured logging or user-facing feedback. Should surface errors via notification system or accept a `logError` callback. |
+| FE-046 | `PracticeView`, `ExamReviewView` | Toggle buttons (bookmark, mark-for-review) lack `aria-pressed` attribute. Screen readers cannot communicate toggle state. |
+| FE-047 | `PracticeSessionStarter` | Filter chip groups (difficulty, tags) lack `role="group"` + `aria-label`. Currently flat `<div>` containers instead of fieldsets or group roles. |
+| FE-048 | `PracticeView` | Session progress counter (`<p>Session: tutor * 3/20</p>`) has no `aria-live` attribute. Counter changes are not announced to screen readers. |
+| FE-049 | `src/domain/test-helpers/factories.ts` | Missing `createBookmark()` factory. Every other entity (Question, Choice, Attempt, PracticeSession, Subscription, User, Tag) has a factory function. |
 
 ---
 

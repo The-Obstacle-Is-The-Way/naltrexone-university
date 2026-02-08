@@ -16,7 +16,7 @@ export default function NotFound() {
             className="size-12 text-muted-foreground"
           />
         </div>
-        <h1 className="text-4xl font-bold tracking-tight text-foreground">
+        <h1 className="text-4xl font-bold font-heading tracking-tight text-foreground">
           Page Not Found
         </h1>
         <p className="text-base text-muted-foreground">

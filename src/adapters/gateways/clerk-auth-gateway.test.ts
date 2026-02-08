@@ -171,6 +171,49 @@ describe('ClerkAuthGateway', () => {
     });
   });
 
+  it('accepts Date updatedAt values from Clerk payloads', async () => {
+    const userRepository = createFakeUserRepository();
+    const observedAt = new Date('2026-02-02T01:23:45.000Z');
+
+    const gateway = new ClerkAuthGateway({
+      userRepository,
+      getClerkUser: async () => ({
+        id: 'clerk_1',
+        updatedAt: observedAt,
+        emailAddresses: [{ emailAddress: 'user@example.com' }],
+      }),
+    });
+
+    await expect(gateway.requireUser()).resolves.toMatchObject({
+      email: 'user@example.com',
+    });
+    expect(userRepository._calls.upsertByClerkId).toEqual([
+      {
+        clerkId: 'clerk_1',
+        email: 'user@example.com',
+        observedAt,
+      },
+    ]);
+  });
+
+  it('throws INTERNAL_ERROR when Clerk updatedAt is missing', async () => {
+    const userRepository = createFakeUserRepository();
+
+    const gateway = new ClerkAuthGateway({
+      userRepository,
+      getClerkUser: async () => ({
+        id: 'clerk_1',
+        emailAddresses: [{ emailAddress: 'user@example.com' }],
+      }),
+    });
+
+    await expect(gateway.requireUser()).rejects.toMatchObject({
+      code: 'INTERNAL_ERROR',
+      message: 'Clerk user updatedAt is required',
+    });
+    expect(userRepository._calls.upsertByClerkId).toHaveLength(0);
+  });
+
   it('propagates repository errors', async () => {
     const userRepository = createFakeUserRepository();
     userRepository.upsertByClerkId = async () => {

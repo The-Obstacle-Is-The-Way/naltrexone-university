@@ -18,12 +18,13 @@ Bug reports document issues discovered in the codebase along with their root cau
 | ID | Title | Status | Priority | Date |
 |----|-------|--------|----------|------|
 
-**Next Bug ID:** BUG-116
+**Next Bug ID:** BUG-117
 
 ## Recently Triaged
 
 | ID | Title | Status | Resolution |
 |----|-------|--------|------------|
+| [BUG-116](../_archive/bugs/bug-116-cron-route-blocked-by-clerk-middleware.md) | Cron Reconcile Route Blocked by Clerk Middleware | Resolved | Added cron route to public route matcher list so cron-secret auth executes at the route boundary |
 | [BUG-115](../_archive/bugs/bug-115-cron-secret-validation-crashes-production-build.md) | DEBT-160 CRON_SECRET Startup Validation Crashes Production Build | Resolved | Removed import-time `CRON_SECRET` startup validation and scoped enforcement to request-time cron route checks to avoid build/runtime crashes |
 | [BUG-114](../_archive/bugs/bug-114-subscribe-action-leaks-error-codes-to-url.md) | Subscribe Action Exposes Internal Error Codes in URL Params | Resolved | Removed internal `error_code/error_message` URL params from pricing redirects and kept diagnostics server-side only |
 | [BUG-113](../_archive/bugs/bug-113-orphaned-attempt-on-ended-session.md) | Orphaned Attempt Persisted When Submitting to Ended Session | Resolved | `SubmitAnswerUseCase` now rejects ended-session submissions before insert, preventing orphan attempts and preserving session/attempt consistency |
@@ -74,6 +75,7 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 | ID | Title | Priority | Resolved |
 |----|-------|----------|----------|
+| [BUG-116](../_archive/bugs/bug-116-cron-route-blocked-by-clerk-middleware.md) | Cron Reconcile Route Blocked by Clerk Middleware | P2 | 2026-02-08 |
 | [BUG-115](../_archive/bugs/bug-115-cron-secret-validation-crashes-production-build.md) | DEBT-160 CRON_SECRET Startup Validation Crashes Production Build | P0 | 2026-02-08 |
 | [BUG-114](../_archive/bugs/bug-114-subscribe-action-leaks-error-codes-to-url.md) | Subscribe Action Exposes Internal Error Codes in URL Params | P3 | 2026-02-08 |
 | [BUG-113](../_archive/bugs/bug-113-orphaned-attempt-on-ended-session.md) | Orphaned Attempt Persisted When Submitting to Ended Session | P3 | 2026-02-08 |

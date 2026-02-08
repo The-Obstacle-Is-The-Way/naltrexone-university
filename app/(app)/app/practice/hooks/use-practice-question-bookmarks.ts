@@ -84,6 +84,15 @@ export function usePracticeQuestionBookmarks(
           isMounted: input.isMounted,
         });
       },
+      onBookmarkError: (message: string) => {
+        setBookmarkMessage(message);
+        setBookmarkMessageVersion((prev) => prev + 1);
+        scheduleBookmarkMessageAutoClear({
+          timeoutIdRef: bookmarkMessageTimeoutId,
+          setBookmarkMessage,
+          isMounted: input.isMounted,
+        });
+      },
       isMounted: input.isMounted,
     });
   }, [bookmarkIdempotencyKey, input.question, input.isMounted]);

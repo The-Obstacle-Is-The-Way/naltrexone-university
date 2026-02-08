@@ -128,6 +128,9 @@ describe('usePracticeSessionControls (browser)', () => {
   });
 
   it('sets tag load status to error when getTags throws', async () => {
+    const consoleErrorSpy = vi
+      .spyOn(console, 'error')
+      .mockImplementation(() => undefined);
     getTagsMock.mockRejectedValue(new Error('Tag service unavailable'));
     getIncompletePracticeSessionMock.mockResolvedValue(ok(null));
     getSessionHistoryMock.mockResolvedValue(
@@ -139,5 +142,6 @@ describe('usePracticeSessionControls (browser)', () => {
     await expect
       .element(screen.getByTestId('tag-load-status'))
       .toHaveTextContent('error');
+    expect(consoleErrorSpy).not.toHaveBeenCalled();
   });
 });

@@ -107,6 +107,10 @@ describe('app error heading styles', () => {
         heading?.textContent?.trim(),
         `${item.name} should render ${item.headingTag} with the expected heading text`,
       ).toBe(item.headingText);
+      expect(
+        heading?.getAttribute('class') ?? '',
+        `${item.name} heading should include font-heading`,
+      ).toContain('font-heading');
       expect(item.html).toContain('Error ID: digest_123');
       expect(item.html).toContain('Try again');
     }

@@ -83,7 +83,7 @@ test('supports exam controls and question interactions', async () => {
   await screen.getByRole('button', { name: 'Bookmark' }).click();
   expect(onToggleBookmark).toHaveBeenCalledTimes(1);
 
-  await screen.getByRole('radio', { name: 'Choice B' }).click();
+  await screen.getByRole('radio', { name: 'Option B' }).click();
   expect(onSelectChoice).toHaveBeenCalledWith('choice_b');
 
   await screen.getByRole('button', { name: 'Submit' }).click();

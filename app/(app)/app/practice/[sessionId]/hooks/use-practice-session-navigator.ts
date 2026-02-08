@@ -53,7 +53,6 @@ export function usePracticeSessionNavigator(
         res = await getPracticeSessionReview({ sessionId: input.sessionId });
       } catch (error) {
         if (!mounted || !input.isMounted()) return;
-        console.error('Failed to load question navigator', error);
         setNavigator(null);
         setNavigatorLoadState({
           status: 'error',

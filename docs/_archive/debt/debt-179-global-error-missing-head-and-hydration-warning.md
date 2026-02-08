@@ -1,8 +1,9 @@
 # DEBT-179: `global-error.tsx` Missing `<head>` and `suppressHydrationWarning`
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P2
 **Date:** 2026-02-08
+**Resolved:** 2026-02-08
 
 ---
 
@@ -20,21 +21,24 @@
 
 ## Resolution
 
-1. Add a `<head>` block to `app/global-error.tsx`:
+1. Added `suppressHydrationWarning` to `<html>` in `app/global-error.tsx`.
+2. Added a `<head>` block to `app/global-error.tsx`:
    ```tsx
    <html lang="en" suppressHydrationWarning>
      <head>
+       <meta charSet="utf-8" />
+       <meta name="viewport" content="width=device-width, initial-scale=1" />
        <title>Error - Addiction Boards</title>
      </head>
      <body className="min-h-[100dvh] bg-background text-foreground">
    ```
-2. Keep all existing error content and styling unchanged.
+3. Added regression coverage in `app/global-error.test.tsx` for `<head>` output and hydration-warning parity with layout.
 
 ## Verification
 
-- [ ] `app/global-error.tsx` renders `<html>` with `suppressHydrationWarning`
-- [ ] `app/global-error.tsx` has a `<head>` with at minimum `<title>`
-- [ ] `pnpm typecheck && pnpm lint && pnpm test --run && pnpm build` passes
+- [x] `app/global-error.tsx` renders `<html>` with `suppressHydrationWarning`
+- [x] `app/global-error.tsx` has a `<head>` with `<title>`, charset, and viewport
+- [x] `pnpm typecheck && pnpm lint && pnpm test --run && pnpm build` passes
 
 ## Related
 

@@ -1,8 +1,9 @@
 # DEBT-182: Missing `font-heading` on Error Boundary, Not-Found, and Pricing Headings
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P3
 **Date:** 2026-02-08
+**Resolved:** 2026-02-08
 
 ---
 
@@ -27,15 +28,18 @@ This creates inconsistent typographic hierarchy across the app.
 1. Add `font-heading` to the `<h1>` in `app/not-found.tsx` and `app/pricing/pricing-view.tsx`.
 2. Add `font-heading` to the heading in `app/global-error.tsx`.
 3. Add `font-heading` to the `<h2>` in all 9 `error.tsx` files.
-4. Since FE-015 tracks extracting a shared `ErrorBoundaryPage`, the error.tsx changes can be deferred until that extraction happens. Focus on `not-found.tsx`, `pricing-view.tsx`, and `global-error.tsx` first.
+4. Added regression coverage:
+   - `app/not-found.test.tsx`
+   - `app/pricing/page.test.tsx`
+   - `app/error-heading-styles.test.tsx`
 
 ## Verification
 
-- [ ] `not-found.tsx` h1 includes `font-heading`
-- [ ] `pricing-view.tsx` h1 includes `font-heading`
-- [ ] `global-error.tsx` heading includes `font-heading`
-- [ ] Error boundary headings include `font-heading` (or deferred to FE-015)
-- [ ] `pnpm typecheck && pnpm lint && pnpm test --run && pnpm build` passes
+- [x] `not-found.tsx` h1 includes `font-heading`
+- [x] `pricing-view.tsx` h1 includes `font-heading`
+- [x] `global-error.tsx` heading includes `font-heading`
+- [x] Error boundary headings include `font-heading`
+- [x] `pnpm typecheck && pnpm lint && pnpm test --run && pnpm build` passes
 
 ## Related
 

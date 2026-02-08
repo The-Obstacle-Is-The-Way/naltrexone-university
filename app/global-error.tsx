@@ -17,11 +17,16 @@ export default function GlobalError({
   }, [error]);
 
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        <meta charSet="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Error - Addiction Boards</title>
+      </head>
       <body className="min-h-[100dvh] bg-background text-foreground">
         <div className="flex min-h-[100dvh] items-center justify-center">
           <div className="w-full max-w-md space-y-4 px-4 text-center">
-            <h1 className="text-2xl font-bold text-foreground">
+            <h1 className="text-2xl font-bold font-heading text-foreground">
               Something went wrong
             </h1>
             <p className="text-sm text-muted-foreground">

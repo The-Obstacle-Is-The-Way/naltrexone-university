@@ -108,8 +108,8 @@ describe('SubscriptionStatus', () => {
       expect(isEntitledStatus('canceled')).toBe(false);
     });
 
-    it('returns false for pastDue', () => {
-      expect(isEntitledStatus('pastDue')).toBe(false);
+    it('returns true for pastDue', () => {
+      expect(isEntitledStatus('pastDue')).toBe(true);
     });
 
     it('returns false for unpaid', () => {
@@ -118,8 +118,8 @@ describe('SubscriptionStatus', () => {
   });
 
   describe('EntitledStatuses', () => {
-    it('contains exactly active and inTrial', () => {
-      expect(EntitledStatuses).toEqual(['active', 'inTrial']);
+    it('contains active, inTrial, and pastDue', () => {
+      expect(EntitledStatuses).toEqual(['active', 'inTrial', 'pastDue']);
     });
   });
 });
@@ -323,9 +323,14 @@ export function isValidSubscriptionStatus(value: string): value is SubscriptionS
 }
 
 /**
- * Statuses that grant access to premium features
+ * Statuses that grant access to premium features.
+ *
+ * `pastDue` is included because Stripe continues the subscription during
+ * the dunning/retry window. The entitlement service additionally checks
+ * `currentPeriodEnd > now`, so access expires naturally if payment
+ * ultimately fails and the period lapses.
  */
-export const EntitledStatuses: readonly SubscriptionStatus[] = ['active', 'inTrial'];
+export const EntitledStatuses: readonly SubscriptionStatus[] = ['active', 'inTrial', 'pastDue'];
 
 /**
  * Check if a status grants entitlement
@@ -506,3 +511,11 @@ pnpm test --run src/domain/value-objects/
 - [x] Business logic functions (isEntitledStatus, shouldShowExplanationForMode)
 - [x] Zero external dependencies
 - [x] All tests pass
+
+---
+
+## Changelog
+
+| Date | Change |
+|------|--------|
+| 2026-02-08 | Synced spec to implementation: added `pastDue` to `EntitledStatuses` (was `['active', 'inTrial']`, now `['active', 'inTrial', 'pastDue']`). Updated test expectations. Rationale: Stripe continues subscriptions during dunning; `currentPeriodEnd` check provides the actual access cutoff. See [Practice Engine](../practice-engine.md) Section 10.1. |

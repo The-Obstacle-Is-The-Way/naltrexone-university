@@ -391,7 +391,11 @@ export async function runCheckoutSuccessPage(
   );
 
   return (
-    <div className="flex min-h-[60vh] items-center justify-center">
+    <main
+      id="main-content"
+      tabIndex={-1}
+      className="flex min-h-[60vh] items-center justify-center"
+    >
       <div className="text-center">
         <h1 className="text-xl font-semibold text-foreground">
           Finalizing your subscription…
@@ -400,6 +404,6 @@ export async function runCheckoutSuccessPage(
           You’ll be redirected to your dashboard shortly.
         </p>
       </div>
-    </div>
+    </main>
   );
 }

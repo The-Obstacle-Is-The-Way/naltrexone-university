@@ -1,8 +1,9 @@
 # DEBT-183: Bare `console.error` in Client Hooks (Not Observable)
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P3
 **Date:** 2026-02-08
+**Resolved:** 2026-02-08
 
 ---
 
@@ -29,20 +30,22 @@ Note: `console.error` in `error.tsx` files is acceptable — those are last-reso
 
 For each file, choose the appropriate pattern:
 
-1. **`use-practice-session-tags.ts`:** Tags fail silently — the state already transitions to `tagLoadStatus: 'error'` which the UI can show. The `console.error` is redundant but harmless. Replace with no-op or keep as-is (lowest priority).
+1. **`use-practice-session-tags.ts`:** Removed bare `console.error`; hook now relies on explicit `tagLoadStatus: 'error'` state.
 
-2. **`use-practice-session-navigator.ts`:** Already sets error state. The `console.error` is redundant. Remove it.
+2. **`use-practice-session-navigator.ts`:** Removed bare `console.error`; navigator failures now set structured error state only.
 
-3. **`practice-page-logic.ts`:** Bookmark toggle failure. Should surface via the notification system (`notify({ message: 'Failed to save bookmark', tone: 'error' })`). Reference `practice-page-bookmarks.ts` which already does this correctly via a `logError` callback.
+3. **`practice-page-logic.ts`:** Added explicit bookmark-error callback path (`onBookmarkError`) so thrown/non-ok failures surface to UI state.
 
-4. **`fire-and-forget.ts`:** This is a catch-all for fire-and-forget async operations. Keep `console.error` here as a safety net — this is the equivalent of a global unhandled rejection handler for UI actions.
+4. **`use-practice-question-bookmarks.ts` + `practice-view.tsx`:** Wired bookmark error messaging into user-facing notifications with `tone: 'error'`.
+
+5. **`fire-and-forget.ts`:** Retained `console.error` intentionally as global client safety net for unhandled async action errors.
 
 ## Verification
 
-- [ ] `use-practice-session-navigator.ts` no longer has bare `console.error`
-- [ ] `practice-page-logic.ts` bookmark failure surfaces via notification or callback
-- [ ] `fire-and-forget.ts` `console.error` retained (intentional safety net)
-- [ ] `pnpm typecheck && pnpm lint && pnpm test --run && pnpm build` passes
+- [x] `use-practice-session-navigator.ts` no longer has bare `console.error`
+- [x] `practice-page-logic.ts` bookmark failure surfaces via callback and user-facing message
+- [x] `fire-and-forget.ts` `console.error` retained (intentional safety net)
+- [x] `pnpm typecheck && pnpm lint && pnpm test --run && pnpm build` passes
 
 ## Related
 

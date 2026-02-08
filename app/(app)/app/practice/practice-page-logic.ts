@@ -140,6 +140,7 @@ export async function toggleBookmarkForQuestion(input: {
     next: Set<string> | ((prev: Set<string>) => Set<string>),
   ) => void;
   onBookmarkToggled?: (bookmarked: boolean) => void;
+  onBookmarkError?: (message: string) => void;
   isMounted?: () => boolean;
 }): Promise<void> {
   if (!input.question) return;
@@ -158,14 +159,15 @@ export async function toggleBookmarkForQuestion(input: {
       questionId,
       idempotencyKey: requestIdempotencyKey ?? undefined,
     });
-  } catch (error) {
+  } catch (_error) {
     if (!isMounted()) return;
-    console.error('Failed to toggle bookmark', error);
+    input.onBookmarkError?.('Failed to save bookmark. Please try again.');
     input.setBookmarkStatus('error');
     return;
   }
   if (!isMounted()) return;
   if (!res.ok) {
+    input.onBookmarkError?.('Failed to save bookmark. Please try again.');
     input.setBookmarkStatus('error');
     return;
   }

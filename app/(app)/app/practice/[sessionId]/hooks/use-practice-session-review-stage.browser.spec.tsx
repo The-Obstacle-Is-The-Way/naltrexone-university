@@ -105,6 +105,9 @@ describe('usePracticeSessionReviewStage (browser)', () => {
   });
 
   it('sets navigator error state and retries navigator fetch when requested', async () => {
+    const consoleErrorSpy = vi
+      .spyOn(console, 'error')
+      .mockImplementation(() => undefined);
     getPracticeSessionReviewMock.mockRejectedValueOnce(
       new Error('Navigator load failed'),
     );
@@ -160,6 +163,7 @@ describe('usePracticeSessionReviewStage (browser)', () => {
       status: 'error',
       message: 'Navigator load failed',
     });
+    expect(consoleErrorSpy).not.toHaveBeenCalled();
     expect(harness.result.current.navigator).toBeNull();
 
     harness.result.current.onRetryNavigator();

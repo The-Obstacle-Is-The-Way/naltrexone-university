@@ -56,8 +56,11 @@ export function PracticeView(props: PracticeViewProps) {
   useEffect(() => {
     const message = bookmarkFeedback.message;
     if (!message) return;
-    notify({ message, tone: 'success' });
-  }, [notify, bookmarkFeedback]);
+    notify({
+      message,
+      tone: props.bookmarkStatus === 'error' ? 'error' : 'success',
+    });
+  }, [notify, bookmarkFeedback, props.bookmarkStatus]);
 
   return (
     <div className="space-y-6">

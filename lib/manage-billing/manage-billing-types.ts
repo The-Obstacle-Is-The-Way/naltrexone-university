@@ -5,3 +5,8 @@ export type RedirectFn = (url: string) => never;
 export type CreatePortalSessionFn = (
   input: Record<string, never>,
 ) => Promise<ActionResult<{ url: string }>>;
+
+export type ManageBillingRedirects = {
+  failure: string;
+  unauthenticated?: string;
+};

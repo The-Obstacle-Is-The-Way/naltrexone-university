@@ -67,4 +67,117 @@ describe('createStripeCustomer', () => {
     expect(customers.search).not.toHaveBeenCalled();
     expect(customers.create).not.toHaveBeenCalled();
   });
+
+  it('creates a new customer when metadata search returns no matches', async () => {
+    const customers = {
+      create: vi.fn(async () => ({ id: 'cus_new' })),
+      search: vi.fn(async () => ({ data: [] })),
+    };
+
+    const stripe = { customers } as unknown as Parameters<
+      typeof createStripeCustomer
+    >[0]['stripe'];
+
+    await expect(
+      createStripeCustomer({
+        stripe,
+        input: {
+          userId: 'user_1',
+          clerkUserId: 'clerk_1',
+          email: 'user@example.com',
+        },
+        logger: new FakeLogger(),
+      }),
+    ).resolves.toEqual({ externalCustomerId: 'cus_new' });
+
+    expect(customers.search).toHaveBeenCalledTimes(1);
+    expect(customers.create).toHaveBeenCalledTimes(1);
+  });
+
+  it('throws STRIPE_ERROR when metadata search returns multiple matches', async () => {
+    const customers = {
+      create: vi.fn(async () => ({ id: 'cus_new' })),
+      search: vi.fn(async () => ({ data: [{ id: 'cus_1' }, { id: 'cus_2' }] })),
+    };
+
+    const stripe = { customers } as unknown as Parameters<
+      typeof createStripeCustomer
+    >[0]['stripe'];
+
+    await expect(
+      createStripeCustomer({
+        stripe,
+        input: {
+          userId: 'user_1',
+          clerkUserId: 'clerk_1',
+          email: 'user@example.com',
+        },
+        logger: new FakeLogger(),
+      }),
+    ).rejects.toMatchObject({
+      code: 'STRIPE_ERROR',
+      message: 'Multiple Stripe customers found for this user',
+    });
+
+    expect(customers.create).not.toHaveBeenCalled();
+  });
+
+  it('throws STRIPE_ERROR when Stripe customer creation returns no id', async () => {
+    const customers = {
+      create: vi.fn(async () => ({ id: '' })),
+      search: vi.fn(async () => ({ data: [] })),
+    };
+
+    const stripe = { customers } as unknown as Parameters<
+      typeof createStripeCustomer
+    >[0]['stripe'];
+
+    await expect(
+      createStripeCustomer({
+        stripe,
+        input: {
+          userId: 'user_1',
+          clerkUserId: 'clerk_1',
+          email: 'user@example.com',
+        },
+        logger: new FakeLogger(),
+      }),
+    ).rejects.toMatchObject({
+      code: 'STRIPE_ERROR',
+      message: 'Stripe customer id is missing',
+    });
+  });
+
+  it('forwards idempotency key to Stripe customer creation', async () => {
+    const customers = {
+      create: vi.fn(async () => ({ id: 'cus_new' })),
+      search: vi.fn(async () => ({ data: [] })),
+    };
+
+    const stripe = { customers } as unknown as Parameters<
+      typeof createStripeCustomer
+    >[0]['stripe'];
+
+    await expect(
+      createStripeCustomer({
+        stripe,
+        input: {
+          userId: 'user_1',
+          clerkUserId: 'clerk_1',
+          email: 'user@example.com',
+        },
+        options: { idempotencyKey: 'idem_customer_create_1' },
+        logger: new FakeLogger(),
+      }),
+    ).resolves.toEqual({ externalCustomerId: 'cus_new' });
+
+    expect(customers.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        email: 'user@example.com',
+      }),
+      {
+        idempotencyKey: 'idem_customer_create_1',
+      },
+    );
+  });
 });

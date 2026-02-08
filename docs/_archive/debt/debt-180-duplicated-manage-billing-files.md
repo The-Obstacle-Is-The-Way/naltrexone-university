@@ -1,8 +1,9 @@
 # DEBT-180: Duplicated Manage-Billing Files Across Pricing and Billing Routes
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P2
 **Date:** 2026-02-08
+**Resolved:** 2026-02-08
 
 ---
 
@@ -30,19 +31,21 @@ The manage-billing infrastructure is duplicated across two route groups:
 
 ## Resolution
 
-1. Create a shared module at `lib/manage-billing/` (or `app/shared/`) containing:
-   - `manage-billing-types.ts` — the shared types (single source)
-   - `manage-billing-core.ts` — shared orchestration logic accepting an error-routing config parameter
-2. Reduce each route's `manage-billing-action.ts` to a thin wrapper that calls the shared core with route-specific error redirect targets.
-3. Delete duplicated types and actions files from both routes.
-4. Update imports in both routes and their tests.
+1. Created a shared manage-billing module in `lib/manage-billing/`:
+   - `manage-billing-types.ts` (single source of truth for action types)
+   - `manage-billing-core.ts` (shared orchestration and error-route mapping)
+2. Converted both route actions to thin wrappers:
+   - `app/pricing/manage-billing-action.ts`
+   - `app/(app)/app/billing/manage-billing-action.ts`
+3. Removed duplicated route-local types files and updated route action modules to import shared types.
+4. Added dedicated shared-core tests in `lib/manage-billing/manage-billing-core.test.ts` and verified existing route tests still pass.
 
 ## Verification
 
-- [ ] Only one `manage-billing-types.ts` exists (shared location)
-- [ ] Both routes still function correctly (pricing portal redirect, billing portal redirect)
-- [ ] Tests cover both error-routing paths
-- [ ] `pnpm typecheck && pnpm lint && pnpm test --run && pnpm build` passes
+- [x] Only one `manage-billing-types.ts` exists (shared location)
+- [x] Both routes still function correctly (pricing portal redirect, billing portal redirect)
+- [x] Tests cover both error-routing paths
+- [x] `pnpm typecheck && pnpm lint && pnpm test --run && pnpm build` passes
 
 ## Related
 

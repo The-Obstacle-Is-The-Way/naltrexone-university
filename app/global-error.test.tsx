@@ -1,4 +1,6 @@
 // @vitest-environment jsdom
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 
@@ -13,12 +15,24 @@ describe('app/global-error', () => {
     );
     const doc = new DOMParser().parseFromString(html, 'text/html');
     const tryAgainButton = doc.querySelector('button');
+    const title = doc.querySelector('head > title');
+    const viewportMeta = doc.querySelector('head > meta[name="viewport"]');
 
     expect(html).toContain('Something went wrong');
     expect(html).toContain('Try again');
     expect(html).toContain('Error ID');
     expect(html).toContain('digest_123');
     expect(html).toContain('<html');
+    expect(html).toContain('<head');
+    expect(title?.textContent?.trim()).toBe('Error - Addiction Boards');
+    expect(viewportMeta?.getAttribute('content')).toBe(
+      'width=device-width, initial-scale=1',
+    );
+    const source = readFileSync(
+      path.resolve(process.cwd(), 'app/global-error.tsx'),
+      'utf8',
+    );
+    expect(source).toContain('suppressHydrationWarning');
     expect(tryAgainButton?.getAttribute('type')).toBe('button');
   }, 10_000);
 });

@@ -802,30 +802,44 @@ describe('practice-page-logic', () => {
     it('sets error state when toggle throws', async () => {
       const setBookmarkStatus = vi.fn();
       const onBookmarkToggled = vi.fn();
-      const consoleErrorSpy = vi
-        .spyOn(console, 'error')
-        .mockImplementation(() => undefined);
-      try {
-        await toggleBookmarkForQuestion({
-          question: createNextQuestion(),
-          toggleBookmarkFn: async () => {
-            throw new Error('Boom');
-          },
-          setBookmarkStatus,
-          setBookmarkedQuestionIds: vi.fn(),
-          onBookmarkToggled,
-        });
+      const onBookmarkError = vi.fn();
 
-        expect(setBookmarkStatus).toHaveBeenLastCalledWith('error');
-        expect(onBookmarkToggled).not.toHaveBeenCalled();
-        expect(consoleErrorSpy).toHaveBeenCalledTimes(1);
-        expect(consoleErrorSpy).toHaveBeenCalledWith(
-          'Failed to toggle bookmark',
-          expect.any(Error),
-        );
-      } finally {
-        consoleErrorSpy.mockRestore();
-      }
+      await toggleBookmarkForQuestion({
+        question: createNextQuestion(),
+        toggleBookmarkFn: async () => {
+          throw new Error('Boom');
+        },
+        setBookmarkStatus,
+        setBookmarkedQuestionIds: vi.fn(),
+        onBookmarkToggled,
+        onBookmarkError,
+      });
+
+      expect(setBookmarkStatus).toHaveBeenLastCalledWith('error');
+      expect(onBookmarkToggled).not.toHaveBeenCalled();
+      expect(onBookmarkError).toHaveBeenCalledTimes(1);
+      expect(onBookmarkError).toHaveBeenCalledWith(
+        'Failed to save bookmark. Please try again.',
+      );
+    });
+
+    it('invokes error callback when toggle controller returns an error result', async () => {
+      const setBookmarkStatus = vi.fn();
+      const onBookmarkError = vi.fn();
+
+      await toggleBookmarkForQuestion({
+        question: createNextQuestion(),
+        toggleBookmarkFn: async () => err('INTERNAL_ERROR', 'Boom'),
+        setBookmarkStatus,
+        setBookmarkedQuestionIds: vi.fn(),
+        onBookmarkError,
+      });
+
+      expect(setBookmarkStatus).toHaveBeenLastCalledWith('error');
+      expect(onBookmarkError).toHaveBeenCalledTimes(1);
+      expect(onBookmarkError).toHaveBeenCalledWith(
+        'Failed to save bookmark. Please try again.',
+      );
     });
 
     it('returns no state updates when unmounted during toggleBookmarkForQuestion', async () => {
