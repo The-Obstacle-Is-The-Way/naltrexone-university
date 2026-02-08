@@ -1,8 +1,12 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { FakeLogger } from '@/src/application/test-helpers/fakes';
 import { createStripeCustomer } from './stripe-customers';
 
 describe('createStripeCustomer', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it('returns externalCustomerId when a matching Stripe customer exists', async () => {
     const makeRequest = vi.fn(async (_params: unknown) => ({
       data: [{ id: 'cus_123' }],
@@ -179,5 +183,39 @@ describe('createStripeCustomer', () => {
         idempotencyKey: 'idem_customer_create_1',
       },
     );
+  });
+
+  it('retries Stripe customer creation when no idempotency key is provided', async () => {
+    vi.useFakeTimers();
+
+    const customers = {
+      create: vi
+        .fn<() => Promise<{ id: string }>>()
+        .mockRejectedValueOnce(
+          Object.assign(new Error('upstream timeout'), { code: 'ETIMEDOUT' }),
+        )
+        .mockResolvedValueOnce({ id: 'cus_retry' }),
+    };
+
+    const stripe = { customers } as unknown as Parameters<
+      typeof createStripeCustomer
+    >[0]['stripe'];
+
+    const promise = createStripeCustomer({
+      stripe,
+      input: {
+        userId: 'user_1',
+        clerkUserId: 'clerk_1',
+        email: 'user@example.com',
+      },
+      logger: new FakeLogger(),
+    });
+
+    const expectation = expect(promise).resolves.toEqual({
+      externalCustomerId: 'cus_retry',
+    });
+
+    await Promise.all([vi.runAllTimersAsync(), expectation]);
+    expect(customers.create).toHaveBeenCalledTimes(2);
   });
 });
