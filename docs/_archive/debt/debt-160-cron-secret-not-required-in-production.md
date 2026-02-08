@@ -27,15 +27,17 @@ There is no startup-time validation that would prevent a deployment without `CRO
 
 Implemented both documentation and runtime enforcement:
 
-1. Updated `.env.example` to mark `CRON_SECRET` as required in production runtime
+1. Updated `.env.example` to mark `CRON_SECRET` as required on Vercel production deploys (`VERCEL_ENV=production`)
 2. Added import-time env validation in `lib/env.ts`:
    - when `isProductionRuntime === true`, missing `CRON_SECRET` now fails startup with `Invalid environment variables`
-3. Added regression test in `lib/env.test.ts` for non-Vercel production runtime
+3. Added regression coverage in `lib/env.test.ts`:
+   - missing `CRON_SECRET` rejects when `VERCEL_ENV=production`
+   - missing `CRON_SECRET` is allowed on preview/non-production runtimes
 
 ## Verification
 
 - [x] `.env.example` updated to mark CRON_SECRET as required
-- [x] Startup validation for production deployments
+- [x] Startup validation for Vercel production deployments
 
 ## Related
 
