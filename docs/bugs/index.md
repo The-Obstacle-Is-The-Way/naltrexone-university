@@ -21,7 +21,6 @@ Bug reports document issues discovered in the codebase along with their root cau
 | [BUG-112](bug-112-navigator-fetch-silent-error-swallowing.md) | Navigator Fetch Silently Swallows Errors with No Error State | Open | P2 | 2026-02-08 |
 | [BUG-113](bug-113-orphaned-attempt-on-ended-session.md) | Orphaned Attempt Persisted When Submitting to Ended Session | Open | P3 | 2026-02-08 |
 | [BUG-114](bug-114-subscribe-action-leaks-error-codes-to-url.md) | Subscribe Action Exposes Internal Error Codes in URL Params | Open | P3 | 2026-02-08 |
-| [BUG-115](bug-115-cron-secret-validation-crashes-production-build.md) | DEBT-160 CRON_SECRET Startup Validation Crashes Production Build | Open | P0 | 2026-02-08 |
 
 **Next Bug ID:** BUG-116
 
@@ -29,6 +28,7 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 | ID | Title | Status | Resolution |
 |----|-------|--------|------------|
+| [BUG-115](../_archive/bugs/bug-115-cron-secret-validation-crashes-production-build.md) | DEBT-160 CRON_SECRET Startup Validation Crashes Production Build | Resolved | Removed import-time `CRON_SECRET` startup validation and scoped enforcement to request-time cron route checks to avoid build/runtime crashes |
 | [BUG-110](../_archive/bugs/bug-110-choice-button-aria-label-overrides-answer-text.md) | ChoiceButton aria-label Overrides Full Answer Text | Resolved | Removed overriding `aria-label` so radios inherit full answer text from the wrapping label; added regression coverage |
 | [BUG-105](../_archive/bugs/bug-105-concurrent-answer-submission-race-condition.md) | Concurrent Answer Submission Can Create Duplicate Attempts | Resolved | Migration now deduplicates historical `(practice_session_id, question_id)` collisions before creating partial unique index; repository/fake both map duplicate submissions to `CONFLICT` |
 | [BUG-109](../_archive/bugs/bug-109-cron-route-limit-mismatch.md) | Cron Route MAX_LIMIT (1000) Exceeds Reconciliation MAX_LIMIT (500) | Resolved | Route and job now share `RECONCILE_STRIPE_SUBSCRIPTIONS_MAX_LIMIT` with route-level regression coverage |
@@ -74,6 +74,7 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 | ID | Title | Priority | Resolved |
 |----|-------|----------|----------|
+| [BUG-115](../_archive/bugs/bug-115-cron-secret-validation-crashes-production-build.md) | DEBT-160 CRON_SECRET Startup Validation Crashes Production Build | P0 | 2026-02-08 |
 | [BUG-110](../_archive/bugs/bug-110-choice-button-aria-label-overrides-answer-text.md) | ChoiceButton aria-label Overrides Full Answer Text | P1 | 2026-02-08 |
 | [BUG-105](../_archive/bugs/bug-105-concurrent-answer-submission-race-condition.md) | Concurrent Answer Submission Can Create Duplicate Attempts | P1 | 2026-02-08 |
 | [BUG-109](../_archive/bugs/bug-109-cron-route-limit-mismatch.md) | Cron Route MAX_LIMIT (1000) Exceeds Reconciliation MAX_LIMIT (500) | P2 | 2026-02-08 |
