@@ -1,6 +1,6 @@
 # BUG-120: Reconciliation Job Missing Authoritative Conflict Strategy
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P3
 **Date:** 2026-02-08
 
@@ -57,7 +57,7 @@ await stripeCustomers.insert(canonical.userId, canonical.externalCustomerId, {
 ## Verification
 
 - `pnpm typecheck && pnpm test --run`
-- Verify the reconciliation job test covers the conflict scenario
+- Reconciliation job test covers the conflict scenario (stale customer mapping is overwritten)
 
 ## Related
 

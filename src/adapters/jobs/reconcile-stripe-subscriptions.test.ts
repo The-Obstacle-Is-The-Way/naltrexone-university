@@ -356,4 +356,46 @@ describe('reconcileStripeSubscriptions', () => {
     await expect(stripeCustomers.findByUserId('user_1')).resolves.toBeNull();
     expect(logger.errorCalls.length).toBeGreaterThan(0);
   });
+
+  it('overrides an existing stripe customer mapping when reconciliation detects a new customer id', async () => {
+    const subscription = createSubscriptionFixture({
+      id: 'sub_123',
+      userId: 'user_1',
+      customerId: 'cus_new',
+    });
+    const stripe = createStripeStub({
+      subscriptionsById: { sub_123: subscription },
+      listedSubscriptions: [{ id: 'sub_123', status: 'active' }],
+    });
+
+    const stripeCustomers = new FakeStripeCustomerRepository();
+    await stripeCustomers.insert('user_1', 'cus_old');
+
+    const subscriptions = new FakeSubscriptionRepository();
+    const logger = new FakeLogger();
+
+    await expect(
+      reconcileStripeSubscriptions(
+        { limit: 10, offset: 0, dryRun: true },
+        {
+          stripe,
+          priceIds: { monthly: 'price_m', annual: 'price_a' },
+          logger,
+          listLocalSubscriptions: async () => [
+            { userId: 'user_1', stripeSubscriptionId: 'sub_123' },
+          ],
+          transaction: async (fn) => fn({ stripeCustomers, subscriptions }),
+        },
+      ),
+    ).resolves.toMatchObject({ updated: 1, failed: 0 });
+
+    await expect(stripeCustomers.findByUserId('user_1')).resolves.toEqual({
+      stripeCustomerId: 'cus_new',
+    });
+
+    // The old mapping should be cleared so the old customer id can be reused.
+    await expect(
+      stripeCustomers.insert('user_2', 'cus_old'),
+    ).resolves.toBeUndefined();
+  });
 });

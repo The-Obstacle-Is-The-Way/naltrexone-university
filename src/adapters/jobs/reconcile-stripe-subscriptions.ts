@@ -265,6 +265,7 @@ export async function reconcileStripeSubscriptions(
         await stripeCustomers.insert(
           canonical.userId,
           canonical.externalCustomerId,
+          { conflictStrategy: 'authoritative' },
         );
         await subscriptions.upsert({
           userId: canonical.userId,
