@@ -1,7 +1,7 @@
 # Bug Reports
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-02-07
+**Last Updated:** 2026-02-08
 
 ---
 
@@ -18,10 +18,6 @@ Bug reports document issues discovered in the codebase along with their root cau
 | ID | Title | Status | Priority | Date |
 |----|-------|--------|----------|------|
 | [BUG-105](bug-105-concurrent-answer-submission-race-condition.md) | Concurrent Answer Submission Can Create Duplicate Attempts | Open | P1 | 2026-02-07 |
-| [BUG-106](bug-106-stripe-customer-search-query-interpolation.md) | Stripe Customer Search Query Uses String Interpolation | Open | P1 | 2026-02-07 |
-| [BUG-107](bug-107-hardcoded-route-incomplete-session-card.md) | Hardcoded Route Path in Incomplete Session Card | Open | P2 | 2026-02-07 |
-| [BUG-108](bug-108-submit-answer-unbounded-time-spent-seconds.md) | submitAnswer Allows Unbounded timeSpentSeconds at Use-Case Layer | Open | P2 | 2026-02-07 |
-| [BUG-109](bug-109-cron-route-limit-mismatch.md) | Cron Route MAX_LIMIT (1000) Exceeds Reconciliation MAX_LIMIT (500) | Open | P2 | 2026-02-07 |
 
 **Next Bug ID:** BUG-110
 
@@ -29,6 +25,10 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 | ID | Title | Status | Resolution |
 |----|-------|--------|------------|
+| [BUG-109](../_archive/bugs/bug-109-cron-route-limit-mismatch.md) | Cron Route MAX_LIMIT (1000) Exceeds Reconciliation MAX_LIMIT (500) | Resolved | Route and job now share `RECONCILE_STRIPE_SUBSCRIPTIONS_MAX_LIMIT` with route-level regression coverage |
+| [BUG-108](../_archive/bugs/bug-108-submit-answer-unbounded-time-spent-seconds.md) | submitAnswer Allows Unbounded timeSpentSeconds at Use-Case Layer | Resolved | Use case now enforces 24-hour max cap and controller/shared limit references remain aligned |
+| [BUG-107](../_archive/bugs/bug-107-hardcoded-route-incomplete-session-card.md) | Hardcoded Route Path in Incomplete Session Card | Resolved | Replaced hardcoded path with `toPracticeSessionRoute(sessionId)` |
+| [BUG-106](../_archive/bugs/bug-106-stripe-customer-search-query-interpolation.md) | Stripe Customer Search Query Uses String Interpolation | Resolved | Added defensive metadata-value validation before Stripe search query construction |
 | [BUG-104](../_archive/bugs/bug-104-double-pruning-webhook-and-hot-paths.md) | Double Pruning — Webhook Controller and Hot Paths Both Prune | Resolved | Removed redundant idempotency-key and rate-limit pruning from webhook controller; hot paths are the sole owners |
 | [BUG-103](../_archive/bugs/bug-103-idempotency-key-pruning-never-wired.md) | Idempotency Key Pruning Never Wired to Production | Resolved | Added hot-path pruning in `withIdempotency`; webhook-side duplicate pruning was later removed in BUG-104 |
 | [BUG-102](../_archive/bugs/bug-102-rate-limits-table-unbounded-growth.md) | Rate Limits Table Unbounded Growth | Resolved | Added `RateLimiter.pruneExpiredWindows` + Drizzle/Fake implementations and opportunistic pruning from `DrizzleRateLimiter.limit()` |
@@ -68,6 +68,10 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 | ID | Title | Priority | Resolved |
 |----|-------|----------|----------|
+| [BUG-109](../_archive/bugs/bug-109-cron-route-limit-mismatch.md) | Cron Route MAX_LIMIT (1000) Exceeds Reconciliation MAX_LIMIT (500) | P2 | 2026-02-08 |
+| [BUG-108](../_archive/bugs/bug-108-submit-answer-unbounded-time-spent-seconds.md) | submitAnswer Allows Unbounded timeSpentSeconds at Use-Case Layer | P2 | 2026-02-08 |
+| [BUG-107](../_archive/bugs/bug-107-hardcoded-route-incomplete-session-card.md) | Hardcoded Route Path in Incomplete Session Card | P2 | 2026-02-08 |
+| [BUG-106](../_archive/bugs/bug-106-stripe-customer-search-query-interpolation.md) | Stripe Customer Search Query Uses String Interpolation | P1 | 2026-02-08 |
 | [BUG-104](../_archive/bugs/bug-104-double-pruning-webhook-and-hot-paths.md) | Double Pruning — Webhook Controller and Hot Paths Both Prune | P2 | 2026-02-07 |
 | [BUG-103](../_archive/bugs/bug-103-idempotency-key-pruning-never-wired.md) | Idempotency Key Pruning Never Wired to Production | P2 | 2026-02-07 |
 | [BUG-102](../_archive/bugs/bug-102-rate-limits-table-unbounded-growth.md) | Rate Limits Table Unbounded Growth | P2 | 2026-02-07 |

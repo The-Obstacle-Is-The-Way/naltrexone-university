@@ -1,14 +1,15 @@
 # DEBT-158: Missing Tests for Idempotency Key Repository
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P1
 **Date:** 2026-02-07
+**Resolved:** 2026-02-08
 
 ---
 
 ## Description
 
-`DrizzleIdempotencyKeyRepository` (197 lines, 6 public methods) has zero test coverage. This is the only Drizzle repository in the codebase without a dedicated test file. The idempotency system is critical for payment safety — `claim()`, `find()`, `storeResult()`, `storeError()`, and `pruneExpiredBefore()` all protect against duplicate charges, duplicate bookmarks, and duplicate session operations.
+`DrizzleIdempotencyKeyRepository` (197 lines, 5 public methods) had zero test coverage. This was the only Drizzle repository in the codebase without a dedicated test file. The idempotency system is critical for payment safety — `claim()`, `find()`, `storeResult()`, `storeError()`, and `pruneExpiredBefore()` all protect against duplicate charges, duplicate bookmarks, and duplicate session operations.
 
 ## Impact
 
@@ -20,7 +21,7 @@
 
 ## Resolution
 
-Create `src/adapters/repositories/drizzle-idempotency-key-repository.test.ts` with tests covering:
+Created `src/adapters/repositories/drizzle-idempotency-key-repository.test.ts` with direct coverage for all public methods:
 
 1. `claim()` — successful claim, duplicate claim rejection, expired key reclaim
 2. `find()` — found/not found, expired key boundary
@@ -29,10 +30,10 @@ Create `src/adapters/repositories/drizzle-idempotency-key-repository.test.ts` wi
 
 ## Verification
 
-- [ ] Test file created and passing
-- [ ] All 6 public methods covered
-- [ ] Edge cases for expiration boundaries tested
-- [ ] `pnpm test --run` passes
+- [x] Test file created and passing
+- [x] All public methods covered
+- [x] Edge cases for expiration boundaries tested
+- [x] `pnpm test --run` passes
 
 ## Related
 

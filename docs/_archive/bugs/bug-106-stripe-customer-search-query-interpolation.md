@@ -1,8 +1,9 @@
 # BUG-106: Stripe Customer Search Query Uses String Interpolation
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P1
 **Date:** 2026-02-07
+**Resolved:** 2026-02-08
 
 ---
 
@@ -37,19 +38,18 @@ Stripe's Search API does not support parameterized queries. The code assumes `us
 
 ## Fix
 
-Add a UUID format assertion before query construction:
+Added a defensive validation guard in `createStripeCustomer` before building the Stripe Search query:
 
-```typescript
-if (!/^[\w-]+$/.test(input.userId)) {
-  throw new ApplicationError('VALIDATION_ERROR', 'Invalid user ID format');
-}
-```
+- `SAFE_STRIPE_SEARCH_METADATA_VALUE` allows only `[A-Za-z0-9_-]`
+- invalid values now throw `ApplicationError('VALIDATION_ERROR', ...)`
+- search/create Stripe calls are not attempted when the guard fails
 
 ## Verification
 
-- [ ] Unit test for userId with special characters
-- [ ] Regex guard added before query construction
+- [x] Unit test for userId with special characters
+- [x] Regex guard added before query construction
 
 ## Related
 
 - `src/adapters/gateways/stripe/stripe-customers.ts:35`
+- `src/adapters/gateways/stripe/stripe-customers.test.ts`

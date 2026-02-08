@@ -1,8 +1,9 @@
 # DEBT-159: Practice Session Review Silently Backfills Missing Question States
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P2
 **Date:** 2026-02-07
+**Resolved:** 2026-02-08
 
 ---
 
@@ -25,12 +26,16 @@ If session state was partially lost (e.g., due to a CAS failure during `recordQu
 
 ## Resolution
 
-Add a `logger.warn()` call when a default state is created for a question that should have had state, so ops can detect and investigate corruption.
+Added an explicit warning in `GetPracticeSessionReviewUseCase` when a question ID exists in `questionIds` but has no corresponding `questionState`:
+
+- warning context includes `sessionId`, `userId`, and `questionId`
+- behavior remains fail-open (default unanswered state) but is now observable
+- unit coverage updated to assert warning emission on backfill path
 
 ## Verification
 
-- [ ] Warning log emitted when backfilling missing question state
-- [ ] Unit test for the backfill + warning path
+- [x] Warning log emitted when backfilling missing question state
+- [x] Unit test for the backfill + warning path
 
 ## Related
 

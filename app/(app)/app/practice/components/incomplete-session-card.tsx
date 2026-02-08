@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { toPracticeSessionRoute } from '@/lib/routes';
 import type { GetIncompletePracticeSessionOutput } from '@/src/adapters/controllers/practice-controller';
 
 type IncompletePracticeSession =
@@ -27,7 +28,7 @@ export function IncompleteSessionCard(input: {
         </div>
         <div className="flex flex-col gap-2 sm:flex-row">
           <Button asChild type="button" className="rounded-full">
-            <Link href={`/app/practice/${input.session.sessionId}`}>
+            <Link href={toPracticeSessionRoute(input.session.sessionId)}>
               Resume session
             </Link>
           </Button>

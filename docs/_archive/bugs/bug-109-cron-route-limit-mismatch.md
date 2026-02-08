@@ -1,8 +1,9 @@
 # BUG-109: Cron Route MAX_LIMIT (1000) Exceeds Reconciliation MAX_LIMIT (500)
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P2
 **Date:** 2026-02-07
+**Resolved:** 2026-02-08
 
 ---
 
@@ -39,16 +40,19 @@ Constants were defined independently in each layer without sharing a single sour
 
 ## Fix
 
-Either:
-1. Import and use the reconciliation `MAX_LIMIT` in the route handler
-2. Or reduce route `MAX_LIMIT` to match (500)
+Unified both layers to a single source of truth:
+
+- exported `RECONCILE_STRIPE_SUBSCRIPTIONS_MAX_LIMIT` from the reconciliation job module
+- route now imports and clamps to that constant (no separate route-only max)
+- added route-level regression test to verify `limit=750` clamps to `500` before job invocation
 
 ## Verification
 
-- [ ] Both limits consistent
-- [ ] Unit test verifying limit clamping behavior
+- [x] Both limits consistent
+- [x] Unit test verifying limit clamping behavior
 
 ## Related
 
 - `app/api/cron/reconcile-stripe-subscriptions/route.ts:9`
 - `src/adapters/jobs/reconcile-stripe-subscriptions.ts`
+- `app/api/cron/reconcile-stripe-subscriptions/route.test.ts`

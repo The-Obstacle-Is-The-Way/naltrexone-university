@@ -1,8 +1,9 @@
 # DEBT-162: Stripe Portal Session Creation Has Inconsistent Retry Behavior
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P2
 **Date:** 2026-02-07
+**Resolved:** 2026-02-08
 
 ---
 
@@ -30,13 +31,18 @@ This means:
 
 ## Resolution
 
-Always use `callStripeWithRetry` regardless of whether an idempotency key is provided. The retry wrapper is safe for non-idempotent calls (portal sessions are ephemeral).
+`createStripePortalSession` now always calls `callStripeWithRetry`, regardless of idempotency-key presence:
+
+- with idempotency key: forwards `{ idempotencyKey }` request options
+- without idempotency key: still uses retry wrapper and calls Stripe without request options
+- added direct unit coverage for retry behavior when no idempotency key is provided
 
 ## Verification
 
-- [ ] Both code paths use `callStripeWithRetry`
-- [ ] Unit test for retry behavior on portal session creation
+- [x] Both code paths use `callStripeWithRetry`
+- [x] Unit test for retry behavior on portal session creation
 
 ## Related
 
 - `src/adapters/gateways/stripe/stripe-portal.ts:32-44`
+- `src/adapters/gateways/stripe/stripe-portal.test.ts`

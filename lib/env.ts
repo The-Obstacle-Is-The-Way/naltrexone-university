@@ -159,6 +159,11 @@ function validateEnv(): Env {
     throw new Error('NEXT_PUBLIC_SKIP_CLERK must not be true in production');
   }
 
+  if (isProductionRuntime && !parsed.data.CRON_SECRET) {
+    logInvalidEnv({ CRON_SECRET: ['Required'] });
+    throw new Error('Invalid environment variables');
+  }
+
   // When Clerk is skipped (local/CI builds), allow missing Clerk keys by
   // providing dummy values. Production deploys forbid SKIP_CLERK above.
   return {

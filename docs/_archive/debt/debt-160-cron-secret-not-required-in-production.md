@@ -1,8 +1,9 @@
 # DEBT-160: CRON_SECRET Not Enforced as Required in Production
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P2
 **Date:** 2026-02-07
+**Resolved:** 2026-02-08
 
 ---
 
@@ -24,13 +25,17 @@ There is no startup-time validation that would prevent a deployment without `CRO
 
 ## Resolution
 
-1. Update `.env.example` to mark `CRON_SECRET` as required with clear instructions
-2. Consider adding startup validation (e.g., in `lib/env.ts`) that requires `CRON_SECRET` when the cron route is present, or at minimum in production
+Implemented both documentation and runtime enforcement:
+
+1. Updated `.env.example` to mark `CRON_SECRET` as required in production runtime
+2. Added import-time env validation in `lib/env.ts`:
+   - when `isProductionRuntime === true`, missing `CRON_SECRET` now fails startup with `Invalid environment variables`
+3. Added regression test in `lib/env.test.ts` for non-Vercel production runtime
 
 ## Verification
 
-- [ ] `.env.example` updated to mark CRON_SECRET as required
-- [ ] Optional: startup validation for production deployments
+- [x] `.env.example` updated to mark CRON_SECRET as required
+- [x] Startup validation for production deployments
 
 ## Related
 

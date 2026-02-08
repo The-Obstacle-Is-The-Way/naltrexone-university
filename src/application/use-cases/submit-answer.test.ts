@@ -171,6 +171,35 @@ describe('SubmitAnswerUseCase', () => {
     expect(attempts.getAll()[0]?.timeSpentSeconds).toBe(42);
   });
 
+  it('caps timeSpentSeconds at 86_400 seconds (24h)', async () => {
+    const userId = 'user-1';
+
+    const questionId = 'q1';
+    const question = createQuestion({
+      id: questionId,
+      status: 'published',
+      choices: [
+        createChoice({ id: 'c1', questionId, label: 'A', isCorrect: true }),
+      ],
+    });
+
+    const attempts = new FakeAttemptRepository();
+    const useCase = new SubmitAnswerUseCase(
+      new FakeQuestionRepository([question]),
+      attempts,
+      new FakePracticeSessionRepository(),
+    );
+
+    await useCase.execute({
+      userId,
+      questionId,
+      choiceId: 'c1',
+      timeSpentSeconds: 999_999,
+    });
+
+    expect(attempts.getAll()[0]?.timeSpentSeconds).toBe(86_400);
+  });
+
   it('clamps negative timeSpentSeconds to 0', async () => {
     const userId = 'user-1';
 
