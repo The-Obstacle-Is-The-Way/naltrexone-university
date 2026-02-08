@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { LoadState } from '@/app/(app)/app/practice/practice-page-logic';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import type {
@@ -31,6 +31,9 @@ export type UsePracticeSessionNavigatorOutput = {
 export function usePracticeSessionNavigator(
   input: UsePracticeSessionNavigatorInput,
 ): UsePracticeSessionNavigatorOutput {
+  const isMountedRef = useRef(input.isMounted);
+  isMountedRef.current = input.isMounted;
+
   const [navigator, setNavigator] =
     useState<GetPracticeSessionReviewOutput | null>(null);
   const [navigatorLoadState, setNavigatorLoadState] = useState<LoadState>({
@@ -47,7 +50,7 @@ export function usePracticeSessionNavigator(
       getPracticeSessionReviewFn: input.getPracticeSessionReviewFn,
       setNavigator,
       setNavigatorLoadState,
-      isMounted: input.isMounted,
+      isMounted: () => isMountedRef.current(),
     });
   }, [
     input.summary,
@@ -58,7 +61,6 @@ export function usePracticeSessionNavigator(
     input.submitResult,
     input.navigatorReloadCount,
     input.getPracticeSessionReviewFn,
-    input.isMounted,
   ]);
 
   return {

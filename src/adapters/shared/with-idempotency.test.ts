@@ -315,6 +315,9 @@ describe('withIdempotency', () => {
     const repo = new FakeIdempotencyKeyRepository(now);
     const logger = new FakeLogger();
     const key = '99999999-9999-9999-9999-999999999999';
+    const execute = vi.fn(async () => {
+      throw new Error('unexpected failure');
+    });
 
     const input = {
       repo,
@@ -323,9 +326,7 @@ describe('withIdempotency', () => {
       key,
       now,
       logger,
-      execute: async () => {
-        throw new Error('unexpected failure');
-      },
+      execute,
     } as const;
 
     await expect(withIdempotency(input)).rejects.toThrow('unexpected failure');
@@ -333,5 +334,6 @@ describe('withIdempotency', () => {
       code: 'INTERNAL_ERROR',
       message: 'unexpected failure',
     });
+    expect(execute).toHaveBeenCalledTimes(1);
   });
 });

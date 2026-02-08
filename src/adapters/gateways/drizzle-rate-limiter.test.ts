@@ -155,7 +155,7 @@ describe('DrizzleRateLimiter', () => {
     });
   });
 
-  it('returns zero when prune limit is invalid', async () => {
+  it('returns zero when prune limit is zero', async () => {
     const db = createDbMock(1);
     const rateLimiter = new DrizzleRateLimiter(
       db as unknown as RateLimiterDb,
@@ -165,6 +165,15 @@ describe('DrizzleRateLimiter', () => {
     await expect(
       rateLimiter.pruneExpiredWindows(new Date('2026-02-07T12:00:00.000Z'), 0),
     ).resolves.toBe(0);
+  });
+
+  it('returns zero when prune limit is negative', async () => {
+    const db = createDbMock(1);
+    const rateLimiter = new DrizzleRateLimiter(
+      db as unknown as RateLimiterDb,
+      () => new Date('2026-02-07T12:00:00.000Z'),
+    );
+
     await expect(
       rateLimiter.pruneExpiredWindows(new Date('2026-02-07T12:00:00.000Z'), -1),
     ).resolves.toBe(0);

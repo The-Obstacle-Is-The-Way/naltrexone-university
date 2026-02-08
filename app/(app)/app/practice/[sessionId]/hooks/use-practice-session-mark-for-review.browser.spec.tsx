@@ -91,7 +91,18 @@ describe('usePracticeSessionMarkForReview (browser)', () => {
       idempotencyKey: expect.any(String),
     });
 
-    expect(applySessionInfo).toHaveBeenCalledWith({
+    expect(applySessionInfo).toHaveBeenCalledTimes(1);
+    const sessionUpdater = applySessionInfo.mock.calls[0]?.[0];
+    expect(sessionUpdater).toBeTypeOf('function');
+    expect(
+      (sessionUpdater as (prev: unknown) => unknown)({
+        sessionId: 'session-1',
+        mode: 'exam',
+        index: 0,
+        total: 10,
+        isMarkedForReview: false,
+      }),
+    ).toEqual({
       sessionId: 'session-1',
       mode: 'exam',
       index: 0,

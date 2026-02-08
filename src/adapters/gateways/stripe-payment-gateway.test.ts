@@ -55,10 +55,15 @@ describe('StripePaymentGateway', () => {
       }),
     ).resolves.toEqual({ externalCustomerId: 'cus_123' });
 
-    expect(customersCreate).toHaveBeenCalledWith({
-      email: 'user@example.com',
-      metadata: { user_id: 'user_1', clerk_user_id: 'clerk_1' },
-    });
+    expect(customersCreate).toHaveBeenCalledWith(
+      {
+        email: 'user@example.com',
+        metadata: { user_id: 'user_1', clerk_user_id: 'clerk_1' },
+      },
+      {
+        idempotencyKey: 'create_stripe_customer:user_1',
+      },
+    );
     expect(customersSearch).toHaveBeenCalledWith({
       query: "metadata['user_id']:'user_1'",
       limit: 2,

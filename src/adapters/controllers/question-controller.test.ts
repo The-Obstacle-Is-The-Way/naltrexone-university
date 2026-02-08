@@ -17,6 +17,7 @@ import {
 import { CheckEntitlementUseCase } from '@/src/application/use-cases/check-entitlement';
 import type { GetNextQuestionOutput } from '@/src/application/use-cases/get-next-question';
 import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
+import { DAY_MS } from '@/src/domain/services/statistics';
 import { createSubscription, createUser } from '@/src/domain/test-helpers';
 import {
   getNextQuestion,
@@ -393,7 +394,7 @@ describe('question-controller', () => {
       );
 
       expect(record).not.toBeNull();
-      expect(record?.expiresAt.getTime()).toBe(now.getTime() + 86_400_000);
+      expect(record?.expiresAt.getTime()).toBe(now.getTime() + DAY_MS);
     });
 
     it('returns VALIDATION_ERROR when timeSpentSeconds is negative', async () => {

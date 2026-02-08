@@ -190,7 +190,12 @@ describe('createStripeCustomer', () => {
 
     const customers = {
       create: vi
-        .fn<() => Promise<{ id: string }>>()
+        .fn<
+          (
+            _params: unknown,
+            _options?: { idempotencyKey?: string },
+          ) => Promise<{ id: string }>
+        >()
         .mockRejectedValueOnce(
           Object.assign(new Error('upstream timeout'), { code: 'ETIMEDOUT' }),
         )
@@ -217,5 +222,17 @@ describe('createStripeCustomer', () => {
 
     await Promise.all([vi.runAllTimersAsync(), expectation]);
     expect(customers.create).toHaveBeenCalledTimes(2);
+
+    const firstOptions = customers.create.mock.calls[0]?.[1] as
+      | { idempotencyKey?: string }
+      | undefined;
+    const secondOptions = customers.create.mock.calls[1]?.[1] as
+      | { idempotencyKey?: string }
+      | undefined;
+
+    expect(firstOptions).toMatchObject({
+      idempotencyKey: 'create_stripe_customer:user_1',
+    });
+    expect(secondOptions).toEqual(firstOptions);
   });
 });

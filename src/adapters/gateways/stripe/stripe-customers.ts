@@ -80,15 +80,14 @@ export async function createStripeCustomer({
     }
   }
 
-  const idempotencyKey = options?.idempotencyKey;
+  const idempotencyKey =
+    options?.idempotencyKey ?? `create_stripe_customer:${input.userId}`;
   const customer = await callStripeWithRetry({
     operation: 'customers.create',
     fn: () =>
-      idempotencyKey
-        ? stripe.customers.create(params, {
-            idempotencyKey,
-          })
-        : stripe.customers.create(params),
+      stripe.customers.create(params, {
+        idempotencyKey,
+      }),
     logger,
   });
 
