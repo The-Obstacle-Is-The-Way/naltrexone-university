@@ -10,6 +10,7 @@ import {
   MAX_PRACTICE_SESSION_TAG_FILTERS,
 } from '@/src/adapters/shared/validation-limits';
 import { withIdempotency } from '@/src/adapters/shared/with-idempotency';
+import { zDifficulty, zUuid } from '@/src/adapters/shared/zod-schemas';
 import { ApplicationError } from '@/src/application/errors';
 import type {
   AuthGateway,
@@ -34,10 +35,6 @@ import type {
 import { createAction } from './create-action';
 import type { CheckEntitlementUseCase } from './require-entitled-user-id';
 import { requireEntitledUserId } from './require-entitled-user-id';
-
-const zUuid = z.string().uuid();
-
-const zDifficulty = z.enum(['easy', 'medium', 'hard']);
 
 const zPracticeMode = z.enum(['tutor', 'exam']);
 

@@ -1,8 +1,9 @@
 # DEBT-172: Duplicate Zod Schema Definitions Across Controllers
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P3
 **Date:** 2026-02-08
+**Resolved:** 2026-02-08
 
 ---
 
@@ -57,10 +58,10 @@ Update all three controller files to import from the shared module.
 
 ## Verification
 
-- [ ] Shared schemas file created
-- [ ] All controllers import from shared file
-- [ ] No duplicate definitions remain
-- [ ] `pnpm typecheck && pnpm lint && pnpm test --run` passes
+- [x] Shared schema module created (`src/adapters/shared/zod-schemas.ts`)
+- [x] Bookmark, practice, and question controllers import shared `zUuid`/`zDifficulty`
+- [x] Duplicate local definitions removed from all targeted controllers
+- [x] `pnpm typecheck && pnpm lint && pnpm test --run` passes
 
 ## Related
 
