@@ -57,7 +57,6 @@ All frontend-specific UI/UX debt. Items use `FE-XXX` IDs and are cross-reference
 | ID | Summary | Files | Status |
 |----|---------|-------|--------|
 | FE-026 | Repeated button labels missing `aria-label` context | `bookmarks/page.tsx`, `review/page.tsx`, `history-panel`, `exam-review` | Open |
-| FE-027 | Feedback component missing `role="alert"` | `Feedback.tsx` | Open |
 | FE-028 | No confirmation dialogs for destructive actions | App-wide | Open |
 | FE-029 | Toast system underused (1 consumer) | App-wide | Open |
 | FE-030 | Bookmark removal has no success feedback | `bookmarks/page.tsx` | Open |
@@ -69,11 +68,7 @@ All frontend-specific UI/UX debt. Items use `FE-XXX` IDs and are cross-reference
 | FE-036 | 3 unused shadcn/ui components (0 consumers, no spec need) | `avatar.tsx`, `radio-group.tsx`, `label.tsx` + test files. (`dropdown-menu.tsx` KEEP — spec-mandated) | Open |
 | FE-037 | `theme-toggle.tsx` uses raw `<button>` not `<Button>` | `theme-toggle.tsx` | Open |
 | FE-038 | Card sub-components: 0 imports but KEEP for SPEC-019 Phase 2 | `card.tsx` (CardHeader, CardTitle, etc.) — evaluate during UI/UX refactor | Open |
-| FE-046 | Toggle buttons (bookmark, mark-for-review) lack `aria-pressed` attribute | `PracticeView`, `ExamReviewView` | Open |
-| FE-047 | Filter chip groups lack `role="group"` + `aria-label` | `PracticeSessionStarter` | Open |
-| FE-048 | Session progress counter not announced to screen readers (no `aria-live`) | `PracticeView` | Open |
 | FE-049 | Missing `createBookmark()` factory in domain test helpers | `src/domain/test-helpers/factories.ts` | Open |
-| FE-050 | Exam review submit button missing pending label text (shows "Submit exam" while disabled, not "Submitting…") | `exam-review-view.tsx` | Open |
 
 ### Frontend Debt — Resolved
 
@@ -85,12 +80,17 @@ All frontend-specific UI/UX debt. Items use `FE-XXX` IDs and are cross-reference
 | FE-005 | Duplicated logic: 3 copies of loadNextQuestion, submitAnswer | Core logic extracted to shared `question-flow-actions.ts` |
 | FE-006 | Two competing `LoadState` type definitions | Unified via shared `load-state.ts` |
 | FE-014 | Heading hierarchy skip (h1 to h3) in pricing | Fixed — now h1 > h2 > h3 |
+| FE-027 | Feedback component missing `role="alert"` | Added `role="alert"` to feedback banner and regression test coverage |
 | FE-039 / DEBT-179 | `global-error.tsx` missing `<head>` and `suppressHydrationWarning` | Fixed with full HTML shell metadata + hydration parity tests |
 | FE-040 / DEBT-180 | Duplicated manage-billing files across pricing and billing routes | Shared core/types extracted to `lib/manage-billing/*`; route wrappers preserved |
 | FE-041 / DEBT-181 | Hardcoded pricing data duplicated in marketing and pricing views | Shared constants extracted to `lib/pricing-data.ts` with regression guards |
 | FE-042 / DEBT-182 | Missing `font-heading` on error/not-found/pricing headings | `font-heading` applied consistently across targeted headings + style regression tests |
 | FE-043 / DEBT-183 | Bare `console.error` in client hooks (not observable) | Removed redundant client hook console logs; bookmark failures now surface as error notifications |
 | FE-044 / DEBT-184 | Loading message says "Loading question..." during answer submission | Submit flows now use transition pending state; loading card is fetch-only and submit button announces `Submitting…` |
+| FE-046 | Toggle buttons lack `aria-pressed` attribute | Added `aria-pressed` to bookmark + mark-for-review toggles |
+| FE-047 | Filter chip groups missing semantic grouping | Wrapped difficulty/tag chips in `<fieldset aria-label=...>` and added regression test |
+| FE-048 | Session progress counter not announced to screen readers | Added `aria-live="polite"` to session progress label and test coverage |
+| FE-050 | Exam review submit button missing pending label | Exam review submit button now shows `Submitting…` when pending, with test coverage |
 
 **Next frontend debt ID:** FE-051
 

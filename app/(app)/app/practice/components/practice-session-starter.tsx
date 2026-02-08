@@ -113,7 +113,10 @@ export function PracticeSessionStarter(props: PracticeSessionStarterProps) {
 
         <div>
           <div className="text-sm font-medium text-foreground">Difficulty</div>
-          <div className="mt-2 flex flex-wrap gap-2">
+          <fieldset
+            className="mt-2 flex flex-wrap gap-2 border-0 p-0 m-0"
+            aria-label="Difficulty"
+          >
             {difficulties.map((difficulty) => {
               const selected = props.filters.difficulties.includes(difficulty);
               return (
@@ -127,7 +130,7 @@ export function PracticeSessionStarter(props: PracticeSessionStarterProps) {
                 />
               );
             })}
-          </div>
+          </fieldset>
           <div className="mt-1 text-xs text-muted-foreground">
             Leave empty to include all difficulties.
           </div>
@@ -155,7 +158,10 @@ export function PracticeSessionStarter(props: PracticeSessionStarterProps) {
                     <div className="text-sm font-medium text-foreground">
                       {label}
                     </div>
-                    <div className="mt-2 flex flex-wrap gap-2">
+                    <fieldset
+                      className="mt-2 flex flex-wrap gap-2 border-0 p-0 m-0"
+                      aria-label={label}
+                    >
                       {tags.map((tag) => (
                         <FilterChip
                           key={tag.slug}
@@ -164,7 +170,7 @@ export function PracticeSessionStarter(props: PracticeSessionStarterProps) {
                           onClick={() => props.onToggleTag(tag.slug)}
                         />
                       ))}
-                    </div>
+                    </fieldset>
                     <div className="mt-1 text-xs text-muted-foreground">
                       Leave empty to include all {tagKindPluralLabels[kind]}.
                     </div>

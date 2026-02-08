@@ -70,6 +70,70 @@ describe('PracticeView', () => {
     expect(html).toContain('Submitting…');
     expect(html).not.toContain('Loading question');
   });
+
+  it('announces session progress updates for assistive tech', async () => {
+    const { PracticeView } = await import('./practice-view');
+
+    const html = renderToStaticMarkup(
+      <PracticeView
+        sessionInfo={{
+          sessionId: 'session-1',
+          mode: 'exam',
+          index: 1,
+          total: 10,
+          isMarkedForReview: false,
+        }}
+        loadState={{ status: 'ready' }}
+        question={null}
+        selectedChoiceId={null}
+        submitResult={null}
+        isPending={false}
+        bookmarkStatus="idle"
+        isBookmarked={false}
+        canSubmit={false}
+        onTryAgain={() => undefined}
+        onToggleBookmark={() => undefined}
+        onSelectChoice={() => undefined}
+        onSubmit={() => undefined}
+        onNextQuestion={() => undefined}
+      />,
+    );
+
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const progress = doc.querySelector('p[aria-live="polite"]');
+    expect(progress).not.toBeNull();
+    expect(progress?.textContent).toContain('Session: exam');
+  });
+
+  it('exposes toggle state via aria-pressed for bookmark button', async () => {
+    const { PracticeView } = await import('./practice-view');
+    const question = createNextQuestion();
+
+    const html = renderToStaticMarkup(
+      <PracticeView
+        loadState={{ status: 'ready' }}
+        question={question}
+        selectedChoiceId={null}
+        submitResult={null}
+        isPending={false}
+        bookmarkStatus="idle"
+        isBookmarked={true}
+        canSubmit={false}
+        onTryAgain={() => undefined}
+        onToggleBookmark={() => undefined}
+        onSelectChoice={() => undefined}
+        onSubmit={() => undefined}
+        onNextQuestion={() => undefined}
+      />,
+    );
+
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const bookmarkButton = Array.from(doc.querySelectorAll('button')).find(
+      (button) => button.textContent?.includes('Remove bookmark'),
+    );
+    expect(bookmarkButton).not.toBeNull();
+    expect(bookmarkButton?.getAttribute('aria-pressed')).toBe('true');
+  });
 });
 
 describe('getBookmarkNotificationTransition', () => {

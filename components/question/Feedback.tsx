@@ -39,6 +39,7 @@ export function Feedback({
 
   return (
     <div
+      role="alert"
       className={cn(
         'rounded-2xl border border-border bg-card p-6 shadow-sm',
         isCorrect && 'border-success bg-success/10',

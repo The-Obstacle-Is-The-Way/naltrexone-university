@@ -629,7 +629,6 @@ Issues documented below are tracked as tech debt in `docs/debt/index.md` (Fronte
 | ID | File(s) | Issue |
 |----|---------|-------|
 | FE-026 | `bookmarks/page.tsx`, `review/page.tsx`, `practice-session-history-panel.tsx`, `exam-review-view.tsx` | Repeated button labels without `aria-label` context for screen readers. |
-| FE-027 | `components/question/Feedback.tsx` | Missing `role="alert"` — screen readers not notified of correct/incorrect result. |
 | FE-028 | Entire app | No confirmation dialogs for destructive actions (abandon session, remove bookmark, submit exam). |
 | FE-029 | Entire app | Toast system used by only 1 consumer; underused for success feedback. |
 | FE-030 | Bookmarks page | Bookmark removal has no success feedback (item silently disappears). |
@@ -641,9 +640,6 @@ Issues documented below are tracked as tech debt in `docs/debt/index.md` (Fronte
 | FE-036 | `components/ui/avatar.tsx`, `radio-group.tsx`, `label.tsx` | 3 unused shadcn/ui components with 0 consumers and no spec-based need. Safe to remove along with colocated test files. (`dropdown-menu.tsx` is spec-mandated — KEEP.) |
 | FE-037 | `components/theme-toggle.tsx` | Uses raw `<button>` instead of `<Button>` component; violates the "ALWAYS use `<Button>` for interactive click targets" rule. |
 | FE-038 | `components/ui/card.tsx` sub-components | `CardHeader`, `CardTitle`, `CardDescription`, `CardContent`, `CardFooter`, `CardAction` have 0 imports outside tests. KEEP — SPEC-019 Phase 2 card-based redesign will likely need structured card layouts. Evaluate during UI/UX refactor. |
-| FE-046 | `PracticeView`, `ExamReviewView` | Toggle buttons (bookmark, mark-for-review) lack `aria-pressed` attribute. Screen readers cannot communicate toggle state. |
-| FE-047 | `PracticeSessionStarter` | Filter chip groups (difficulty, tags) lack `role="group"` + `aria-label`. Currently flat `<div>` containers instead of fieldsets or group roles. |
-| FE-048 | `PracticeView` | Session progress counter (`<p>Session: tutor * 3/20</p>`) has no `aria-live` attribute. Counter changes are not announced to screen readers. |
 | FE-049 | `src/domain/test-helpers/factories.ts` | Missing `createBookmark()` factory. Every other entity (Question, Choice, Attempt, PracticeSession, Subscription, User, Tag) has a factory function. |
 
 ---

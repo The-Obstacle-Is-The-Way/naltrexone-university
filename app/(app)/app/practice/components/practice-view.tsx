@@ -111,7 +111,10 @@ export function PracticeView(props: PracticeViewProps) {
               Answer one question at a time.
             </p>
             {sessionInfo ? (
-              <p className="mt-2 text-xs text-muted-foreground">
+              <p
+                className="mt-2 text-xs text-muted-foreground"
+                aria-live="polite"
+              >
                 Session: {sessionInfo.mode} • {sessionInfo.index + 1}/
                 {sessionInfo.total}
               </p>
@@ -182,6 +185,7 @@ export function PracticeView(props: PracticeViewProps) {
               type="button"
               variant="outline"
               className="rounded-full"
+              aria-pressed={sessionInfo.isMarkedForReview}
               disabled={props.isMarkingForReview || props.isPending}
               onClick={props.onToggleMarkForReview}
             >
@@ -194,6 +198,7 @@ export function PracticeView(props: PracticeViewProps) {
             type="button"
             variant="outline"
             className="rounded-full"
+            aria-pressed={props.isBookmarked}
             disabled={props.bookmarkStatus === 'loading' || props.isPending}
             onClick={props.onToggleBookmark}
           >
