@@ -48,6 +48,9 @@ Canonical reference for all frontend patterns, component usage, accessibility, a
 | `border` | All borders |
 | `input` | Input field borders |
 | `ring` | Focus rings |
+| `popover` / `popover-foreground` | Popover surfaces (Radix) |
+| `chart-1` through `chart-5` | Chart color palette |
+| `sidebar-*` family | Sidebar backgrounds, text, accents, borders, rings |
 
 ### NEVER use
 
@@ -129,11 +132,23 @@ Has `role="alert"` built in. Do not add `role="alert"` manually.
 
 For links that should look like buttons, use `<Button asChild><Link>`.
 
-### Input / RadioGroup / Label
+### Input
 
-Use the shared `components/ui/input.tsx`, `components/ui/radio-group.tsx`, and `components/ui/label.tsx` components for form elements. Raw `<input>` is acceptable ONLY for:
+Use the shared `components/ui/input.tsx` for text inputs. Raw `<input>` is acceptable ONLY for:
 - `type="hidden"` fields
 - Visually-hidden semantic inputs (`className="sr-only"`)
+
+### Dead Components (DO NOT USE)
+
+The following shadcn/ui components were scaffolded but are **never imported** by any production code. They are dead code and should be removed:
+- `components/ui/avatar.tsx` — 0 consumers
+- `components/ui/dropdown-menu.tsx` — 0 consumers
+- `components/ui/radio-group.tsx` — 0 consumers (app uses custom `ChoiceButton` instead)
+- `components/ui/label.tsx` — 0 consumers (app uses plain HTML labels)
+
+Their colocated test files are also dead: `avatar.test.tsx`, `dropdown-menu.test.tsx`, `radio-group.test.tsx`, `label.test.tsx`.
+
+The `buttonVariants` export from `button.tsx` is also never imported externally — only `Button` is used.
 
 ### FilterChip / SegmentedControl
 
@@ -319,7 +334,7 @@ import Link from 'next/link';
 import { useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { ROUTES } from '@/lib/routes';
-import { REPORT_ISSUE_URL } from '@/lib/constants';
+import { REPORT_ISSUE_URL } from '@/lib/support';
 
 export default function ErrorPage({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
   useEffect(() => { console.error('[route/error]', error); }, [error]);
@@ -579,25 +594,19 @@ Issues documented below are tracked as tech debt. Fix them as you encounter the 
 
 | ID | File(s) | Issue |
 |----|---------|-------|
-| FE-001 | `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-page-controller.ts` (306 lines) | God hook: 14 state vars, 30+ return props. Split into question-flow, bookmark, and review sub-hooks. |
-| FE-002 | `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-review-stage.ts` (305 lines) | God hook: 8 state vars, 3 LoadState trackers. Split summary, navigator, and review concerns. |
-| FE-003 | `app/(app)/app/practice/hooks/use-practice-session-controls.ts` (288 lines) | God hook: 10 state vars, 26 return props. Split config, tags, incomplete session, and session start. |
-| FE-004 | `app/(app)/app/practice/hooks/use-practice-question-flow.ts` (246 lines) | God hook: 11 state vars, 5+ useEffects. Extract bookmark logic, deduplicate with session variant. |
-| FE-005 | `practice-page-logic.ts` + `practice-session-page-logic.ts` | Massive duplication: `loadNextQuestion`, `submitAnswerForQuestion`, `createLoadNextQuestionAction` are near-identical copies differing only by `sessionId`. Extract shared logic. |
-| FE-006 | Two competing `LoadState` types in `practice-page-logic.ts` (4-state) and `question-page-logic.ts` (3-state) | Consolidate to one canonical `LoadState` in a shared location. |
+| FE-002 | `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-review-stage.ts` (304 lines) | God hook: 8 state vars, 3 LoadState trackers. Split summary, navigator, and review concerns. |
 
 ### P2 — Fix during UI/UX refactor
 
 | ID | File(s) | Issue |
 |----|---------|-------|
-| FE-007 | `app/pricing/pricing-view.tsx`, `pricing-client.tsx` | 4 raw `<button>` elements; replace with `Button` component. |
-| FE-008 | `components/get-started-cta.tsx`, `components/auth-nav.tsx`, `components/marketing/marketing-home.tsx`, `app/not-found.tsx` | Raw styled `<Link>` elements as buttons; replace with `<Button asChild><Link>`. |
-| FE-009 | `components/marketing/marketing-home.tsx` | Card-like divs instead of `Card` component; 8+ instances. |
+| FE-007 | `pricing-client.tsx` | 1 raw `<button>` element; replace with `Button` component. (`pricing-view.tsx` now uses `Button` throughout.) |
+| FE-008 | `components/get-started-cta.tsx`, `components/auth-nav.tsx`, `components/marketing/marketing-home.tsx`, `app/not-found.tsx`, `app/pricing/pricing-view.tsx` | 11+ raw styled `<Link>` elements as buttons; replace with `<Button asChild><Link>`. |
+| FE-009 | `components/marketing/marketing-home.tsx` | Card-like divs instead of `Card` component; 10 instances (4 stats, 4 features, 2 pricing). |
 | FE-010 | `components/question/QuestionCard.tsx`, `ChoiceButton.tsx`, `Feedback.tsx` | Card-like divs instead of `Card`; also PascalCase filenames (should be kebab-case). |
 | FE-011 | Many files (see focus ring audit) | Two competing focus ring patterns: Button's `ring-[3px] ring-ring/50` vs hand-rolled `ring-2 ring-ring ring-offset-2`. Converge to one. |
 | FE-012 | `app/pricing/pricing-view.tsx` (line 65), `metallic-cta-button.tsx`, `auth-nav.tsx`, `get-started-cta.tsx`, `bookmarks/page.tsx`, `review/page.tsx`, `practice-view.tsx`, `question-page-client.tsx` | Missing focus-visible rings on interactive text links. |
 | FE-013 | `pricing-client.tsx`, `ChoiceButton.tsx` | Disabled opacity `60` instead of standard `50`. |
-| FE-014 | `app/pricing/pricing-view.tsx` | Heading skip: h1 to h3 with no h2. |
 | FE-015 | 9 error boundary files | Copy-pasted template; extract shared `ErrorBoundaryPage` component. |
 | FE-016 | `components/ui/card.tsx` | Default `rounded-xl gap-6 py-6` is never used; every consumer overrides to `rounded-2xl gap-0 p-6`. Update defaults. |
 | FE-017 | `components/loading/page-loading.tsx` | Skeleton uses `rounded-xl`; actual cards use `rounded-2xl`. Mismatch. |
@@ -619,11 +628,14 @@ Issues documented below are tracked as tech debt. Fix them as you encounter the 
 | FE-028 | Entire app | No confirmation dialogs for destructive actions (abandon session, remove bookmark, submit exam). |
 | FE-029 | Entire app | Toast system used by only 1 consumer; underused for success feedback. |
 | FE-030 | Bookmarks page | Bookmark removal has no success feedback (item silently disappears). |
-| FE-031 | `app/questions/[slug]/question-page-client.tsx` | 241 lines with ~90 lines of inline hook logic; should extract to a `useQuestionPageController` hook. |
+| FE-031 | `app/questions/[slug]/question-page-client.tsx` | 240 lines with ~90 lines of inline hook logic; should extract to a `useQuestionPageController` hook. |
 | FE-032 | `components/providers.tsx` | Clerk theme hardcoded to dark mode; won't adapt to light mode toggle. |
 | FE-033 | No marketing layout | `/pricing` renders without marketing header/footer; `/` has its own shell. No shared marketing layout. |
 | FE-034 | Empty states (bookmarks, review, practice history) | No helpful CTA — just "No X yet." text without guiding user action. |
-| FE-035 | `app/(marketing)/checkout/success/page.tsx` | 413 lines with inline Stripe logic, type guards, validation, retry logic. Extract to a server action or use case. |
+| FE-035 | `app/(marketing)/checkout/success/checkout-success-sync.tsx` (405 lines) | Inline Stripe logic, type guards, validation, retry logic extracted from page.tsx but still not going through Clean Architecture layers. Extract to a server action or use case. |
+| FE-036 | `components/ui/avatar.tsx`, `dropdown-menu.tsx`, `radio-group.tsx`, `label.tsx` | 4 dead shadcn/ui components with 0 production consumers. Delete along with their colocated test files. |
+| FE-037 | `components/theme-toggle.tsx` | Uses raw `<button>` instead of `<Button>` component; violates the "ALWAYS use `<Button>` for interactive click targets" rule. |
+| FE-038 | `components/ui/card.tsx` sub-components | `CardHeader`, `CardTitle`, `CardDescription`, `CardContent`, `CardFooter`, `CardAction` are defined but never imported by any consumer — all 12 Card consumers use `Card` + direct children only. Consider removing unused sub-components. |
 
 ---
 
@@ -633,17 +645,17 @@ Issues documented below are tracked as tech debt. Fix them as you encounter the 
 
 | File | Component(s) | Has `data-slot` | Uses `cn()` | Uses `cva` |
 |------|-------------|-----------------|-------------|-----------|
-| `avatar.tsx` | Avatar, AvatarImage, AvatarFallback | Yes | Yes | No |
+| `avatar.tsx` | Avatar, AvatarImage, AvatarFallback | Yes | Yes | No | **DEAD — 0 consumers** |
 | `button.tsx` | Button | Yes | Yes | Yes |
 | `card.tsx` | Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter, CardAction | Yes | Yes | No |
-| `dropdown-menu.tsx` | DropdownMenu, DropdownMenuTrigger, DropdownMenuItem, etc. | Yes | Yes | No |
+| `dropdown-menu.tsx` | DropdownMenu, DropdownMenuTrigger, DropdownMenuItem, etc. | Yes | Yes | No | **DEAD — 0 consumers** |
 | `filter-chip.tsx` | FilterChip | **No** | Yes | **No** |
 | `input.tsx` | Input | Yes | Yes | No |
-| `label.tsx` | Label | Yes | Yes | No |
+| `label.tsx` | Label | Yes | Yes | No | **DEAD — 0 consumers** |
 | `metallic-border.tsx` | MetallicBorder | **No** | **No** | No |
 | `metallic-cta-button.tsx` | MetallicCtaButton | No | No | No |
 | `notification-provider.tsx` | NotificationProvider, useNotification | **No** | **No** | No |
-| `radio-group.tsx` | RadioGroup, RadioGroupItem | Yes | Yes | No |
+| `radio-group.tsx` | RadioGroup, RadioGroupItem | Yes | Yes | No | **DEAD — 0 consumers** |
 | `segmented-control.tsx` | SegmentedControl | **No** | Yes | **No** |
 
 ### `components/` (shared non-primitive)
@@ -653,7 +665,8 @@ Issues documented below are tracked as tech debt. Fix them as you encounter the 
 | `error-card.tsx` | ErrorCard | Inline error alert |
 | `get-started-cta.tsx` | GetStartedCta | Marketing CTA |
 | `auth-nav.tsx` | AuthNav | Auth-aware nav buttons |
-| `app-desktop-nav.tsx` | AppDesktopNav | Desktop sidebar nav |
+| `app-nav-items.ts` | APP_NAV_ITEMS | Nav link definitions (shared by desktop + mobile) |
+| `app-desktop-nav.tsx` | AppDesktopNav | Desktop horizontal top nav |
 | `mobile-nav.tsx` | MobileNav | Mobile hamburger nav |
 | `theme-toggle.tsx` | ThemeToggle | Dark/light mode toggle |
 | `providers.tsx` | Providers | ClerkProvider + NotificationProvider wrapper |
@@ -663,4 +676,4 @@ Issues documented below are tracked as tech debt. Fix them as you encounter the 
 | `question/QuestionCard.tsx` | QuestionCard | Question stem + choices display |
 | `question/ChoiceButton.tsx` | ChoiceButton | Radio-style answer choice |
 | `question/Feedback.tsx` | Feedback | Correct/incorrect answer feedback |
-| `Markdown.tsx` | Markdown | Markdown renderer |
+| `markdown/Markdown.tsx` | Markdown | Markdown renderer |
