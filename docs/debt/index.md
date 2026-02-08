@@ -15,9 +15,17 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 ## Debt Index (Active)
 
-No active `DEBT-###` items.
+| ID | Title | Priority | Status |
+|----|-------|----------|--------|
+| [DEBT-185](debt-185-duplicated-session-stats-calculation.md) | Duplicated Session Stats Calculation Across 4 Use Cases | P2 | Open |
+| [DEBT-186](debt-186-duplicated-session-duration-calculation.md) | Duplicated Session Duration Calculation | P2 | Open |
+| [DEBT-187](debt-187-duplicated-default-question-state.md) | Duplicated Default PracticeSessionQuestionState Creation | P2 | Open |
+| [DEBT-188](debt-188-duplicated-count-query-attempt-repository.md) | Duplicated Count Query Pattern in Attempt Repository | P3 | Open |
+| [DEBT-189](debt-189-day-ms-constant-triplicated.md) | DAY_MS Constant Defined in Three Separate Files | P3 | Open |
+| [DEBT-190](debt-190-submit-answer-rollback-lacks-logger.md) | SubmitAnswerUseCase Rollback Error Handling Lacks Logger | P2 | Open |
+| [DEBT-191](debt-191-get-next-question-missing-runtime-validation.md) | Missing Runtime Validation in GetNextQuestion Discriminated Union | P2 | Open |
 
-**Next Debt ID:** DEBT-185
+**Next Debt ID:** DEBT-192
 
 ---
 
@@ -71,6 +79,7 @@ All frontend-specific UI/UX debt. Items use `FE-XXX` IDs and are cross-reference
 | FE-047 | Filter chip groups lack `role="group"` + `aria-label` | `PracticeSessionStarter` | Open |
 | FE-048 | Session progress counter not announced to screen readers (no `aria-live`) | `PracticeView` | Open |
 | FE-049 | Missing `createBookmark()` factory in domain test helpers | `src/domain/test-helpers/factories.ts` | Open |
+| FE-050 | Exam review submit button missing pending label text (shows "Submit exam" while disabled, not "Submitting…") | `exam-review-view.tsx` | Open |
 
 ### Frontend Debt — Resolved
 
@@ -89,7 +98,7 @@ All frontend-specific UI/UX debt. Items use `FE-XXX` IDs and are cross-reference
 | FE-043 / DEBT-183 | Bare `console.error` in client hooks (not observable) | Removed redundant client hook console logs; bookmark failures now surface as error notifications |
 | FE-044 / DEBT-184 | Loading message says "Loading question..." during answer submission | Submit flows now use transition pending state; loading card is fetch-only and submit button announces `Submitting…` |
 
-**Next frontend debt ID:** FE-050
+**Next frontend debt ID:** FE-051
 
 ## Archived Debt
 

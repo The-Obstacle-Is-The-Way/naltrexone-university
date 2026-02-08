@@ -17,8 +17,9 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 | ID | Title | Status | Priority | Date |
 |----|-------|--------|----------|------|
+| [BUG-117](bug-117-stripe-customer-create-missing-retry.md) | Stripe Customer Creation Non-Idempotent Path Missing Retry Wrapper | Open | P1 | 2026-02-08 |
 
-**Next Bug ID:** BUG-117
+**Next Bug ID:** BUG-118
 
 ## Recently Triaged
 
