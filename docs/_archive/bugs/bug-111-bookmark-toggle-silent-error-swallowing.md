@@ -1,8 +1,9 @@
 # BUG-111: Bookmark Toggle Silently Swallows Errors
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P2
 **Date:** 2026-02-08
+**Resolved:** 2026-02-08
 
 ---
 
@@ -43,28 +44,26 @@ This is a bare catch anti-pattern: the error is created, thrown, caught, and imm
 - **Debugging difficulty** — when users report "bookmarks don't work," there's no error trail to investigate
 - **Silent data loss** — the error may contain actionable information (e.g., `CONFLICT` from idempotency, `UNAUTHORIZED` from expired session) that would inform the correct recovery strategy
 
-## Fix
+## Resolution
 
-Capture the error object and log it. The function already receives `input` which could carry a logger, or at minimum use `console.error` for client-side observability:
+`toggleBookmarkForQuestion()` now captures thrown errors and logs them before transitioning the UI to the existing `'error'` bookmark status:
 
 ```typescript
 } catch (error) {
   if (!isMounted()) return;
-  console.error('Bookmark toggle failed:', error);
+  console.error('Failed to toggle bookmark', error);
   input.setBookmarkStatus('error');
   return;
 }
 ```
 
-A more robust fix would thread a logger through the input parameter, consistent with the project's `Logger` port pattern.
-
 ## Verification
 
-- [ ] `catch` block captures the error object
-- [ ] Error is logged (at minimum `console.error`, ideally via a logger)
-- [ ] Bookmark still transitions to `'error'` status on failure
-- [ ] Unit test verifies error is logged when toggle throws
-- [ ] `pnpm typecheck && pnpm lint && pnpm test --run` passes
+- [x] `catch` block captures the thrown error object
+- [x] Error is logged via `console.error`
+- [x] Bookmark still transitions to `'error'` status on failure
+- [x] Unit test asserts logging behavior for thrown toggle errors
+- [x] Quality gates pass (`pnpm typecheck && pnpm lint && pnpm test --run`)
 
 ## Related
 

@@ -802,6 +802,9 @@ describe('practice-page-logic', () => {
     it('sets error state when toggle throws', async () => {
       const setBookmarkStatus = vi.fn();
       const onBookmarkToggled = vi.fn();
+      const consoleErrorSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => undefined);
 
       await toggleBookmarkForQuestion({
         question: createNextQuestion(),
@@ -815,6 +818,11 @@ describe('practice-page-logic', () => {
 
       expect(setBookmarkStatus).toHaveBeenLastCalledWith('error');
       expect(onBookmarkToggled).not.toHaveBeenCalled();
+      expect(consoleErrorSpy).toHaveBeenCalledTimes(1);
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        'Failed to toggle bookmark',
+        expect.any(Error),
+      );
     });
 
     it('returns no state updates when unmounted during toggleBookmarkForQuestion', async () => {

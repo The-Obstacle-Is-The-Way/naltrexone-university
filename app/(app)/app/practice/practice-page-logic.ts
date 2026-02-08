@@ -216,8 +216,9 @@ export async function toggleBookmarkForQuestion(input: {
       questionId,
       idempotencyKey: requestIdempotencyKey ?? undefined,
     });
-  } catch {
+  } catch (error) {
     if (!isMounted()) return;
+    console.error('Failed to toggle bookmark', error);
     input.setBookmarkStatus('error');
     return;
   }
