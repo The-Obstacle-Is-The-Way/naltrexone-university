@@ -1,13 +1,11 @@
 import type { Logger } from '@/src/application/ports/logger';
-import { computeAccuracy, computeStreak } from '@/src/domain/services';
+import { computeAccuracy, computeStreak, DAY_MS } from '@/src/domain/services';
 import type { QuestionDifficulty } from '@/src/domain/value-objects';
 import type {
   AttemptStatsReader,
   QuestionRepository,
 } from '../ports/repositories';
 import { enrichWithQuestion } from '../shared/enrich-with-question';
-
-const DAY_MS = 86_400_000;
 
 /**
  * Dashboard "last 7 days" accuracy window.

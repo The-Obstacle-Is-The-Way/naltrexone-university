@@ -20,5 +20,6 @@ export { createQuestionSeed, createSeed, shuffleWithSeed } from './shuffle';
 export {
   computeAccuracy,
   computeStreak,
+  DAY_MS,
   filterAttemptsInWindow,
 } from './statistics';
