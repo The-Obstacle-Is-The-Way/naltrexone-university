@@ -622,7 +622,6 @@ Issues documented below are tracked as tech debt in `docs/debt/index.md` (Fronte
 | FE-023 | `not-found.tsx` (line 28), `pricing-view.tsx` (lines 67, 75), `layout.tsx` (line 119) | `hover:` color changes without `transition-colors`. |
 | FE-024 | `pricing-view.tsx` | Missing `font-display` on price numbers. (The `font-heading` drift on the h1 was FE-042, now resolved.) |
 | FE-025 | `metallic-cta-button.tsx`, `marketing-home.tsx`, `theme-toggle.tsx` | Icon sizing uses `h-X w-X` instead of `size-X`. |
-| FE-044 | `practice-view.tsx`, `use-practice-question-answer-flow.ts` | Loading message says "Loading question..." during answer submission. Misleads screen readers and sighted users. Should distinguish between "fetching question" and "submitting answer" states. |
 | FE-045 | `practice/hooks/`, `practice/[sessionId]/hooks/` | Structural duplication between `usePracticeQuestionAnswerFlow` (164 lines) and `usePracticeSessionQuestionFlow` (195 lines) — 8 identical `useState` declarations. Shared logic partially extracted to `question-flow-actions.ts` but hook-level state setup remains duplicated. |
 
 ### P3 — Fix as encountered

@@ -1,4 +1,11 @@
-import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useTransition,
+} from 'react';
 import {
   canSubmitAnswer,
   createLoadNextQuestionAction,
@@ -121,27 +128,30 @@ export function usePracticeQuestionAnswerFlow(
     });
   }, [loadState, question, selectedChoiceId, submitResult]);
 
-  const onSubmit = useMemo(
-    () =>
-      submitAnswerForQuestion.bind(null, {
-        question,
-        selectedChoiceId,
-        questionLoadedAtMs: questionLoadedAt,
-        submitIdempotencyKey,
-        submitAnswerFn: submitAnswer,
-        nowMs: Date.now,
-        setLoadState,
-        setSubmitResult,
-        isMounted: input.isMounted,
-      }),
-    [
-      question,
-      questionLoadedAt,
-      selectedChoiceId,
-      submitIdempotencyKey,
-      input.isMounted,
-    ],
-  );
+  const onSubmit = useCallback(() => {
+    return new Promise<void>((resolve) => {
+      startTransition(async () => {
+        await submitAnswerForQuestion({
+          question,
+          selectedChoiceId,
+          questionLoadedAtMs: questionLoadedAt,
+          submitIdempotencyKey,
+          submitAnswerFn: submitAnswer,
+          nowMs: Date.now,
+          setLoadState,
+          setSubmitResult,
+          isMounted: input.isMounted,
+        });
+        resolve();
+      });
+    });
+  }, [
+    question,
+    questionLoadedAt,
+    selectedChoiceId,
+    submitIdempotencyKey,
+    input.isMounted,
+  ]);
 
   const onSelectChoice = useMemo(
     () => selectChoiceIfAllowed.bind(null, submitResult, setSelectedChoiceId),

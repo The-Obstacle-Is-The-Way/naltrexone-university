@@ -15,9 +15,7 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 ## Debt Index (Active)
 
-| ID | Title | Status | Priority | Date |
-|----|-------|--------|----------|------|
-| [DEBT-184](debt-184-loading-message-misleading-during-submit.md) | Loading Message Misleading During Answer Submission | Open | P2 | 2026-02-08 |
+No active `DEBT-###` items.
 
 **Next Debt ID:** DEBT-185
 
@@ -50,7 +48,6 @@ All frontend-specific UI/UX debt. Items use `FE-XXX` IDs and are cross-reference
 | FE-023 | Hover without transition-colors | `not-found.tsx`, `pricing-view.tsx`, `layout.tsx` | Open |
 | FE-024 | Missing `font-display` on pricing page price numbers | `pricing-view.tsx` | Open |
 | FE-025 | Icon sizing `h-X w-X` instead of `size-X` | `metallic-cta-button.tsx`, `marketing-home.tsx`, `theme-toggle.tsx` | Open |
-| FE-044 / DEBT-184 | Loading message says "Loading question..." during answer submission (misleads screen readers) | `practice-view.tsx`, `use-practice-question-answer-flow.ts` | Open |
 | FE-045 | Structural duplication between `usePracticeQuestionAnswerFlow` (164 lines) and `usePracticeSessionQuestionFlow` (195 lines) — identical state shapes | `practice/hooks/`, `practice/[sessionId]/hooks/` | Open |
 
 ### P3 — Fix as encountered
@@ -90,10 +87,17 @@ All frontend-specific UI/UX debt. Items use `FE-XXX` IDs and are cross-reference
 | FE-041 / DEBT-181 | Hardcoded pricing data duplicated in marketing and pricing views | Shared constants extracted to `lib/pricing-data.ts` with regression guards |
 | FE-042 / DEBT-182 | Missing `font-heading` on error/not-found/pricing headings | `font-heading` applied consistently across targeted headings + style regression tests |
 | FE-043 / DEBT-183 | Bare `console.error` in client hooks (not observable) | Removed redundant client hook console logs; bookmark failures now surface as error notifications |
+| FE-044 / DEBT-184 | Loading message says "Loading question..." during answer submission | Submit flows now use transition pending state; loading card is fetch-only and submit button announces `Submitting…` |
 
 **Next frontend debt ID:** FE-050
 
 ## Archived Debt
+
+### Resolved in Practice Submit Loading Cleanup
+
+| ID | Title | Priority | Resolved |
+|----|-------|----------|----------|
+| [DEBT-184](../_archive/debt/debt-184-loading-message-misleading-during-submit.md) | Loading Message Misleading During Answer Submission | P2 | 2026-02-08 |
 
 ### Resolved in Frontend Baseline Hardening
 

@@ -45,6 +45,11 @@ export function PracticeView(props: PracticeViewProps) {
   const correctChoiceId = isExamMode
     ? null
     : (props.submitResult?.correctChoiceId ?? null);
+  const isSubmittingAnswer =
+    props.isPending &&
+    props.loadState.status === 'ready' &&
+    props.question !== null &&
+    props.submitResult === null;
   const bookmarkFeedback = useMemo(
     () => ({
       message: props.bookmarkMessage ?? null,
@@ -201,7 +206,7 @@ export function PracticeView(props: PracticeViewProps) {
             disabled={!props.canSubmit || props.isPending}
             onClick={props.onSubmit}
           >
-            Submit
+            {isSubmittingAnswer ? 'Submitting…' : 'Submit'}
           </Button>
 
           <Button

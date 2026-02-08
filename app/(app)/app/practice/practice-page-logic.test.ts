@@ -570,6 +570,7 @@ describe('practice-page-logic', () => {
         } satisfies SubmitAnswerOutput),
       );
 
+      const setLoadState = vi.fn();
       const setSubmitResult = vi.fn();
 
       await submitAnswerForQuestion({
@@ -579,7 +580,7 @@ describe('practice-page-logic', () => {
         submitIdempotencyKey: 'idem_1',
         submitAnswerFn,
         nowMs: () => 6000,
-        setLoadState: vi.fn(),
+        setLoadState,
         setSubmitResult,
       });
 
@@ -592,6 +593,7 @@ describe('practice-page-logic', () => {
       expect(setSubmitResult).toHaveBeenCalledWith(
         expect.objectContaining({ isCorrect: true }),
       );
+      expect(setLoadState).not.toHaveBeenCalledWith({ status: 'loading' });
     });
 
     it('defaults timeSpentSeconds to 0 when loadedAt is null', async () => {

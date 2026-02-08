@@ -147,17 +147,22 @@ export function usePracticeSessionQuestionFlow(
   }, [loadState, question, selectedChoiceId, submitResult]);
 
   const onSubmit = useCallback(() => {
-    return submitAnswerForQuestion({
-      sessionId: input.sessionId,
-      question,
-      selectedChoiceId,
-      questionLoadedAtMs: questionLoadedAt,
-      submitIdempotencyKey,
-      submitAnswerFn: submitAnswer,
-      nowMs: Date.now,
-      setLoadState,
-      setSubmitResult,
-      isMounted: input.isMounted,
+    return new Promise<void>((resolve) => {
+      startTransition(async () => {
+        await submitAnswerForQuestion({
+          sessionId: input.sessionId,
+          question,
+          selectedChoiceId,
+          questionLoadedAtMs: questionLoadedAt,
+          submitIdempotencyKey,
+          submitAnswerFn: submitAnswer,
+          nowMs: Date.now,
+          setLoadState,
+          setSubmitResult,
+          isMounted: input.isMounted,
+        });
+        resolve();
+      });
     });
   }, [
     question,

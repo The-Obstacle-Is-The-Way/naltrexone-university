@@ -118,8 +118,6 @@ export async function runSubmitAnswerFlow<
 
   const isMounted = input.isMounted ?? (() => true);
 
-  input.setLoadState({ status: 'loading' });
-
   const timeSpentSeconds = buildTimeSpentSeconds(
     input.questionLoadedAtMs,
     input.nowMs(),

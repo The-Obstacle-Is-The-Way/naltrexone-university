@@ -417,7 +417,6 @@ For ad-hoc mode, `selectNextQuestionId()` picks the least-recently-seen question
 |----|-------|----------|-------|
 | FE-002 | `usePracticeSessionReviewStage` at 220 lines | P2 | Exceeds 150-line hook guideline |
 | FE-020 | Missing `error.tsx` for practice session route | P2 | `/practice/[sessionId]/` has no error boundary |
-| DEBT-184 | Loading message says "Loading question..." during answer submission | P2 | Should say "Submitting answer..." — misleads screen readers |
 | — | Structural duplication between `usePracticeQuestionAnswerFlow` (164 lines) and `usePracticeSessionQuestionFlow` (195 lines) | P2 | Same state shape, partially extracted to `shared/question-flow-actions.ts` but hook-level setup duplicated |
 | — | Toggle buttons (bookmark, mark-for-review) lack `aria-pressed` | P3 | Screen readers can't communicate toggle state |
 | — | Filter chip groups lack `role="group"` + `aria-label` | P3 | Not fieldsets or group roles |

@@ -1,8 +1,9 @@
 # DEBT-184: Loading Message Misleading During Answer Submission
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P2
 **Date:** 2026-02-08
+**Resolved:** 2026-02-08
 
 ---
 
@@ -29,18 +30,24 @@ Distinguish between "loading a question" and "submitting an answer" in the loadi
 1. **Add a `loadingReason` to the `LoadState` type:** `{ status: 'loading', reason: 'fetching' | 'submitting' }`. Render different text based on reason.
 2. **Use `isPending` from `useTransition` for submit loading:** The submit already uses `useTransition`'s `isPending`. Show a spinner on the submit button instead of replacing the question card with a loading card.
 
-Option 2 is simpler and aligns with the pattern used in session pages.
+Implemented Option 2:
+
+1. Submit flows now run inside `startTransition` in both:
+   - `use-practice-question-answer-flow.ts`
+   - `use-practice-session-question-flow.ts`
+2. Shared submit action no longer sets `loadState` to `'loading'` during answer submission.
+3. `PracticeView` now shows `Submitting…` on the submit button while submit is pending.
 
 ## Verification
 
-- [ ] Submitting an answer does NOT show "Loading question..." text
-- [ ] Screen readers announce appropriate status during submission
-- [ ] `pnpm typecheck && pnpm lint && pnpm test --run && pnpm build` passes
+- [x] Submitting an answer does NOT show "Loading question..." text
+- [x] Screen readers announce appropriate status during submission via submit button text (`Submitting…`)
+- [x] `pnpm typecheck && pnpm lint && pnpm test --run && pnpm build` passes
 
 ## Related
 
 - `app/(app)/app/practice/components/practice-view.tsx`
 - `app/(app)/app/practice/hooks/use-practice-question-answer-flow.ts`
-- `app/(app)/app/practice/shared/load-state.ts`
-- [Practice Engine](../practice-engine/index.md) Section 9.2
+- `app/(app)/app/shared/load-state.ts`
+- [Practice Engine](../../practice-engine/index.md) Section 9.2
 - Frontend tracker: FE-044

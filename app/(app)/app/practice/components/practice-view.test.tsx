@@ -32,4 +32,43 @@ describe('PracticeView', () => {
     expect(html).toContain('Back to Dashboard');
     expect(html).toContain(`href="${ROUTES.APP_DASHBOARD}"`);
   });
+
+  it('shows submit-pending copy without rendering question-loading text', async () => {
+    const { PracticeView } = await import('./practice-view');
+
+    const html = renderToStaticMarkup(
+      <PracticeView
+        loadState={{ status: 'ready' }}
+        question={{
+          questionId: 'question-1',
+          slug: 'question-1',
+          stemMd: 'Stem',
+          difficulty: 'easy',
+          choices: [
+            {
+              id: 'choice-1',
+              label: 'A',
+              textMd: 'Choice',
+              sortOrder: 1,
+            },
+          ],
+          session: null,
+        }}
+        selectedChoiceId="choice-1"
+        submitResult={null}
+        isPending
+        bookmarkStatus="idle"
+        isBookmarked={false}
+        canSubmit
+        onTryAgain={() => undefined}
+        onToggleBookmark={() => undefined}
+        onSelectChoice={() => undefined}
+        onSubmit={() => undefined}
+        onNextQuestion={() => undefined}
+      />,
+    );
+
+    expect(html).toContain('Submitting…');
+    expect(html).not.toContain('Loading question');
+  });
 });
