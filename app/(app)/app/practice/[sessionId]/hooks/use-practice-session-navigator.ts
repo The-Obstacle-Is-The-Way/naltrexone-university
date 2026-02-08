@@ -1,8 +1,4 @@
 import { useEffect, useState } from 'react';
-import {
-  getActionResultErrorMessage,
-  getThrownErrorMessage,
-} from '@/app/(app)/app/practice/practice-logic';
 import type { LoadState } from '@/app/(app)/app/practice/practice-page-logic';
 import {
   type EndPracticeSessionOutput,
@@ -11,6 +7,7 @@ import {
 } from '@/src/adapters/controllers/practice-controller';
 import type { NextQuestion } from '@/src/application/use-cases/get-next-question';
 import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
+import { createNavigatorEffect } from '../practice-session-page-logic';
 
 export type UsePracticeSessionNavigatorInput = {
   summary: EndPracticeSessionOutput | null;
@@ -39,43 +36,16 @@ export function usePracticeSessionNavigator(
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: navigator must refresh when the current question and answer state change.
   useEffect(() => {
-    if (input.summary || input.isInReviewStage || !input.sessionInfo) {
-      setNavigator(null);
-      setNavigatorLoadState({ status: 'idle' });
-      return;
-    }
-
-    let mounted = true;
-    setNavigatorLoadState({ status: 'loading' });
-    void (async () => {
-      let res: Awaited<ReturnType<typeof getPracticeSessionReview>>;
-      try {
-        res = await getPracticeSessionReview({ sessionId: input.sessionId });
-      } catch (error) {
-        if (!mounted || !input.isMounted()) return;
-        setNavigator(null);
-        setNavigatorLoadState({
-          status: 'error',
-          message: getThrownErrorMessage(error),
-        });
-        return;
-      }
-      if (!mounted || !input.isMounted()) return;
-      if (!res.ok) {
-        setNavigator(null);
-        setNavigatorLoadState({
-          status: 'error',
-          message: getActionResultErrorMessage(res),
-        });
-        return;
-      }
-      setNavigator(res.data);
-      setNavigatorLoadState({ status: 'ready' });
-    })();
-
-    return () => {
-      mounted = false;
-    };
+    return createNavigatorEffect({
+      summary: input.summary,
+      isInReviewStage: input.isInReviewStage,
+      sessionInfo: input.sessionInfo,
+      sessionId: input.sessionId,
+      getPracticeSessionReviewFn: getPracticeSessionReview,
+      setNavigator,
+      setNavigatorLoadState,
+      isMounted: input.isMounted,
+    });
   }, [
     input.summary,
     input.isInReviewStage,

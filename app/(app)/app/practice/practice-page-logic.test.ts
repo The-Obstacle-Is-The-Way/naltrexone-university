@@ -6,6 +6,10 @@ import {
   canSubmitAnswer,
   createBookmarksEffect,
   createLoadNextQuestionAction,
+  createSessionCountChangeHandler,
+  createSessionModeChangeHandler,
+  createToggleDifficultyHandler,
+  createToggleTagHandler,
   handleSessionCountChange,
   handleSessionModeChange,
   loadNextQuestion,
@@ -1046,6 +1050,109 @@ describe('practice-page-logic', () => {
       await promise;
 
       expect(navigateTo).not.toHaveBeenCalled();
+    });
+  });
+});
+
+describe('practice-page-session-start handlers', () => {
+  it('rotates idempotency key when session mode changes', () => {
+    const setSessionMode = vi.fn();
+    const setIdempotencyKey = vi.fn();
+    const handler = createSessionModeChangeHandler({
+      setSessionMode,
+      setIdempotencyKey,
+      createIdempotencyKey: () => 'idem_2',
+    });
+
+    handler('exam');
+
+    expect(setSessionMode).toHaveBeenCalledWith('exam');
+    expect(setIdempotencyKey).toHaveBeenCalledWith('idem_2');
+  });
+
+  it('ignores invalid session mode values', () => {
+    const setSessionMode = vi.fn();
+    const setIdempotencyKey = vi.fn();
+    const handler = createSessionModeChangeHandler({
+      setSessionMode,
+      setIdempotencyKey,
+      createIdempotencyKey: () => 'idem_2',
+    });
+
+    handler('nope');
+
+    expect(setSessionMode).not.toHaveBeenCalled();
+    expect(setIdempotencyKey).not.toHaveBeenCalled();
+  });
+
+  it('rotates idempotency key when session count changes', () => {
+    const setSessionCount = vi.fn();
+    const setIdempotencyKey = vi.fn();
+    const handler = createSessionCountChangeHandler({
+      setSessionCount,
+      setIdempotencyKey,
+      createIdempotencyKey: () => 'idem_2',
+    });
+
+    handler({ target: { value: '12' } });
+
+    expect(setSessionCount).toHaveBeenCalledWith(12);
+    expect(setIdempotencyKey).toHaveBeenCalledWith('idem_2');
+  });
+
+  it('applies tag toggles and rotates idempotency key', () => {
+    const setIdempotencyKey = vi.fn();
+    const setFilters = vi.fn();
+    const handler = createToggleTagHandler({
+      setFilters,
+      setIdempotencyKey,
+      createIdempotencyKey: () => 'idem_2',
+    });
+
+    handler('opioids');
+
+    expect(setIdempotencyKey).toHaveBeenCalledWith('idem_2');
+    const update = setFilters.mock.calls[0]?.[0];
+    if (typeof update !== 'function') {
+      throw new Error('Expected setFilters to receive an updater function');
+    }
+
+    expect(update({ tagSlugs: [], difficulties: [] })).toEqual({
+      tagSlugs: ['opioids'],
+      difficulties: [],
+    });
+
+    expect(update({ tagSlugs: ['opioids'], difficulties: [] })).toEqual({
+      tagSlugs: [],
+      difficulties: [],
+    });
+  });
+
+  it('applies difficulty toggles and rotates idempotency key', () => {
+    const setIdempotencyKey = vi.fn();
+    const setFilters = vi.fn();
+    const handler = createToggleDifficultyHandler({
+      setFilters,
+      setIdempotencyKey,
+      createIdempotencyKey: () => 'idem_2',
+    });
+
+    handler('hard');
+
+    expect(setIdempotencyKey).toHaveBeenCalledWith('idem_2');
+    const update = setFilters.mock.calls[0]?.[0];
+    if (typeof update !== 'function') {
+      throw new Error('Expected setFilters to receive an updater function');
+    }
+
+    expect(update({ tagSlugs: [], difficulties: [] })).toEqual({
+      tagSlugs: [],
+      difficulties: ['hard'],
+    });
+
+    expect(update({ tagSlugs: [], difficulties: ['hard'] })).toEqual({
+      tagSlugs: [],
+      difficulties: [],
     });
   });
 });

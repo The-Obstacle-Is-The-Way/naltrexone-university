@@ -9,7 +9,10 @@ import {
   runSubmitAnswerFlow,
 } from '@/app/(app)/app/practice/shared/question-flow-actions';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
-import type { EndPracticeSessionOutput } from '@/src/adapters/controllers/practice-controller';
+import type {
+  EndPracticeSessionOutput,
+  GetPracticeSessionReviewOutput,
+} from '@/src/adapters/controllers/practice-controller';
 import type { NextQuestion } from '@/src/application/use-cases/get-next-question';
 import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
 
@@ -174,4 +177,115 @@ export async function endSession(input: {
   input.setSummary(res.data);
   input.resetQuestionState();
   input.setLoadState({ status: 'ready' });
+}
+
+export function createNavigatorEffect(input: {
+  summary: EndPracticeSessionOutput | null;
+  isInReviewStage: boolean;
+  sessionInfo: NextQuestion['session'];
+  sessionId: string;
+  getPracticeSessionReviewFn: (
+    input: unknown,
+  ) => Promise<ActionResult<GetPracticeSessionReviewOutput>>;
+  setNavigator: (navigator: GetPracticeSessionReviewOutput | null) => void;
+  setNavigatorLoadState: (state: LoadState) => void;
+  isMounted?: () => boolean;
+}): () => void {
+  const isMounted = input.isMounted ?? (() => true);
+
+  if (input.summary || input.isInReviewStage || !input.sessionInfo) {
+    input.setNavigator(null);
+    input.setNavigatorLoadState({ status: 'idle' });
+    return () => {};
+  }
+
+  let mounted = true;
+  input.setNavigatorLoadState({ status: 'loading' });
+
+  void (async () => {
+    let res: Awaited<ReturnType<typeof input.getPracticeSessionReviewFn>>;
+    try {
+      res = await input.getPracticeSessionReviewFn({
+        sessionId: input.sessionId,
+      });
+    } catch (error) {
+      if (!mounted || !isMounted()) return;
+      input.setNavigator(null);
+      input.setNavigatorLoadState({
+        status: 'error',
+        message: getThrownErrorMessage(error),
+      });
+      return;
+    }
+    if (!mounted || !isMounted()) return;
+    if (!res.ok) {
+      input.setNavigator(null);
+      input.setNavigatorLoadState({
+        status: 'error',
+        message: getActionResultErrorMessage(res),
+      });
+      return;
+    }
+
+    input.setNavigator(res.data);
+    input.setNavigatorLoadState({ status: 'ready' });
+  })();
+
+  return () => {
+    mounted = false;
+  };
+}
+
+export function createSummaryReviewEffect(input: {
+  summary: EndPracticeSessionOutput | null;
+  sessionId: string;
+  getPracticeSessionReviewFn: (
+    input: unknown,
+  ) => Promise<ActionResult<GetPracticeSessionReviewOutput>>;
+  setSummaryReview: (review: GetPracticeSessionReviewOutput | null) => void;
+  setSummaryReviewLoadState: (state: LoadState) => void;
+  isMounted?: () => boolean;
+}): () => void {
+  const isMounted = input.isMounted ?? (() => true);
+
+  if (!input.summary) {
+    input.setSummaryReview(null);
+    input.setSummaryReviewLoadState({ status: 'idle' });
+    return () => {};
+  }
+
+  let mounted = true;
+  input.setSummaryReview(null);
+  input.setSummaryReviewLoadState({ status: 'loading' });
+
+  void (async () => {
+    let res: Awaited<ReturnType<typeof input.getPracticeSessionReviewFn>>;
+    try {
+      res = await input.getPracticeSessionReviewFn({
+        sessionId: input.sessionId,
+      });
+    } catch (error) {
+      if (!mounted || !isMounted()) return;
+      input.setSummaryReviewLoadState({
+        status: 'error',
+        message: getThrownErrorMessage(error),
+      });
+      return;
+    }
+    if (!mounted || !isMounted()) return;
+    if (!res.ok) {
+      input.setSummaryReviewLoadState({
+        status: 'error',
+        message: getActionResultErrorMessage(res),
+      });
+      return;
+    }
+
+    input.setSummaryReview(res.data);
+    input.setSummaryReviewLoadState({ status: 'ready' });
+  })();
+
+  return () => {
+    mounted = false;
+  };
 }

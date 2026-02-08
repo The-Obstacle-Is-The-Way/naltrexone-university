@@ -93,16 +93,44 @@ type CheckoutSuccessSearchParams = {
   session_id?: string;
 };
 
-async function getDeps(
+type CheckoutSuccessContainerLike = {
+  createAuthGateway: () => AuthGateway;
+  logger: CheckoutSuccessLogger;
+  env: {
+    NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY: string;
+    NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL: string;
+    NEXT_PUBLIC_APP_URL: string;
+  };
+  db: {
+    transaction: <T>(fn: (tx: unknown) => Promise<T>) => Promise<T>;
+  };
+  createStripeCustomerRepository: (tx: unknown) => StripeCustomerRepository;
+  createSubscriptionRepository: (tx: unknown) => SubscriptionRepository;
+};
+
+export type CheckoutSuccessModuleLoaders = {
+  loadContainer: () => Promise<{ createContainer: () => unknown }>;
+  loadStripe: () => Promise<{ stripe: StripeClientLike }>;
+  loadClerkServer: () => Promise<{ auth: () => Promise<ClerkAuthLike> }>;
+};
+
+const defaultModuleLoaders: CheckoutSuccessModuleLoaders = {
+  loadContainer: () => import('@/lib/container'),
+  loadStripe: () => import('@/lib/stripe'),
+  loadClerkServer: () => import('@clerk/nextjs/server'),
+};
+
+export async function getCheckoutSuccessDeps(
   deps?: CheckoutSuccessDeps,
+  loaders: CheckoutSuccessModuleLoaders = defaultModuleLoaders,
 ): Promise<CheckoutSuccessDeps> {
   if (deps) return deps;
 
-  const { createContainer } = await import('@/lib/container');
-  const { stripe } = await import('@/lib/stripe');
-  const { auth } = await import('@clerk/nextjs/server');
+  const { createContainer } = await loaders.loadContainer();
+  const { stripe } = await loaders.loadStripe();
+  const { auth } = await loaders.loadClerkServer();
 
-  const container = createContainer();
+  const container = createContainer() as CheckoutSuccessContainerLike;
 
   return {
     authGateway: container.createAuthGateway(),
@@ -150,7 +178,7 @@ export async function syncCheckoutSuccess(
   deps?: CheckoutSuccessDeps,
   redirectFn: (url: string) => never = redirect,
 ): Promise<void> {
-  const d = await getDeps(deps);
+  const d = await getCheckoutSuccessDeps(deps);
 
   const fail = (
     reason: string,

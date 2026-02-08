@@ -1,6 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
   createLoadNextQuestionAction,
+  createNavigatorEffect,
+  createSummaryReviewEffect,
   endSession,
   loadNextQuestion,
   maybeAutoAdvanceAfterSubmit,
@@ -8,7 +10,10 @@ import {
 } from '@/app/(app)/app/practice/[sessionId]/practice-session-page-logic';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import { err, ok } from '@/src/adapters/controllers/action-result';
-import type { EndPracticeSessionOutput } from '@/src/adapters/controllers/practice-controller';
+import type {
+  EndPracticeSessionOutput,
+  GetPracticeSessionReviewOutput,
+} from '@/src/adapters/controllers/practice-controller';
 import { createNextQuestion } from '@/src/application/test-helpers/create-next-question';
 import type { NextQuestion } from '@/src/application/use-cases/get-next-question';
 import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
@@ -757,6 +762,265 @@ describe('practice-session-page-logic', () => {
 
       expect(setSummary).not.toHaveBeenCalled();
       expect(setLoadState).not.toHaveBeenCalledWith({ status: 'ready' });
+    });
+  });
+});
+
+describe('practice-session-page-logic effects', () => {
+  describe('createNavigatorEffect', () => {
+    it('sets idle state when summary exists or review stage is active', () => {
+      const getPracticeSessionReviewFn = vi.fn();
+      const setNavigator = vi.fn();
+      const setNavigatorLoadState = vi.fn();
+
+      createNavigatorEffect({
+        summary: {
+          sessionId: 'session-1',
+          endedAt: '2026-02-01T00:00:00.000Z',
+          totals: { answered: 1, correct: 1, accuracy: 1, durationSeconds: 1 },
+        },
+        isInReviewStage: false,
+        sessionInfo: null,
+        sessionId: 'session-1',
+        getPracticeSessionReviewFn,
+        setNavigator,
+        setNavigatorLoadState,
+      });
+
+      expect(getPracticeSessionReviewFn).not.toHaveBeenCalled();
+      expect(setNavigator).toHaveBeenCalledWith(null);
+      expect(setNavigatorLoadState).toHaveBeenCalledWith({ status: 'idle' });
+
+      createNavigatorEffect({
+        summary: null,
+        isInReviewStage: true,
+        sessionInfo: {
+          sessionId: 'session-1',
+          mode: 'tutor',
+          index: 0,
+          total: 2,
+        },
+        sessionId: 'session-1',
+        getPracticeSessionReviewFn,
+        setNavigator,
+        setNavigatorLoadState,
+      });
+
+      expect(getPracticeSessionReviewFn).not.toHaveBeenCalled();
+      expect(setNavigatorLoadState).toHaveBeenCalledWith({ status: 'idle' });
+    });
+
+    it('loads navigator and transitions to ready on success', async () => {
+      const deferred =
+        createDeferred<ActionResult<GetPracticeSessionReviewOutput>>();
+      const getPracticeSessionReviewFn = vi.fn(async () => deferred.promise);
+      const setNavigator = vi.fn();
+      const setNavigatorLoadState = vi.fn();
+      const navigator = {
+        ok: true,
+      } as unknown as GetPracticeSessionReviewOutput;
+
+      createNavigatorEffect({
+        summary: null,
+        isInReviewStage: false,
+        sessionInfo: {
+          sessionId: 'session-1',
+          mode: 'tutor',
+          index: 0,
+          total: 2,
+        },
+        sessionId: 'session-1',
+        getPracticeSessionReviewFn,
+        setNavigator,
+        setNavigatorLoadState,
+        isMounted: () => true,
+      });
+
+      expect(setNavigatorLoadState).toHaveBeenCalledWith({ status: 'loading' });
+
+      deferred.resolve(ok(navigator));
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      expect(setNavigator).toHaveBeenCalledWith(navigator);
+      expect(setNavigatorLoadState).toHaveBeenLastCalledWith({
+        status: 'ready',
+      });
+    });
+
+    it('sets error state on non-ok result', async () => {
+      const getPracticeSessionReviewFn = vi.fn(async () =>
+        err('INTERNAL_ERROR', 'Nope'),
+      );
+      const setNavigator = vi.fn();
+      const setNavigatorLoadState = vi.fn();
+
+      createNavigatorEffect({
+        summary: null,
+        isInReviewStage: false,
+        sessionInfo: {
+          sessionId: 'session-1',
+          mode: 'tutor',
+          index: 0,
+          total: 2,
+        },
+        sessionId: 'session-1',
+        getPracticeSessionReviewFn,
+        setNavigator,
+        setNavigatorLoadState,
+      });
+
+      await Promise.resolve();
+
+      expect(setNavigator).toHaveBeenCalledWith(null);
+      expect(setNavigatorLoadState).toHaveBeenLastCalledWith({
+        status: 'error',
+        message: 'Nope',
+      });
+    });
+
+    it('sets error state when the request throws', async () => {
+      const getPracticeSessionReviewFn = vi.fn(async () => {
+        throw new Error('boom');
+      });
+      const setNavigator = vi.fn();
+      const setNavigatorLoadState = vi.fn();
+
+      createNavigatorEffect({
+        summary: null,
+        isInReviewStage: false,
+        sessionInfo: {
+          sessionId: 'session-1',
+          mode: 'tutor',
+          index: 0,
+          total: 2,
+        },
+        sessionId: 'session-1',
+        getPracticeSessionReviewFn,
+        setNavigator,
+        setNavigatorLoadState,
+      });
+
+      await Promise.resolve();
+
+      expect(setNavigator).toHaveBeenCalledWith(null);
+      expect(setNavigatorLoadState).toHaveBeenLastCalledWith({
+        status: 'error',
+        message: 'boom',
+      });
+    });
+  });
+
+  describe('createSummaryReviewEffect', () => {
+    it('sets idle state when summary is null', () => {
+      const getPracticeSessionReviewFn = vi.fn();
+      const setSummaryReview = vi.fn();
+      const setSummaryReviewLoadState = vi.fn();
+
+      createSummaryReviewEffect({
+        summary: null,
+        sessionId: 'session-1',
+        getPracticeSessionReviewFn,
+        setSummaryReview,
+        setSummaryReviewLoadState,
+      });
+
+      expect(getPracticeSessionReviewFn).not.toHaveBeenCalled();
+      expect(setSummaryReview).toHaveBeenCalledWith(null);
+      expect(setSummaryReviewLoadState).toHaveBeenCalledWith({
+        status: 'idle',
+      });
+    });
+
+    it('loads review and transitions to ready on success', async () => {
+      const deferred =
+        createDeferred<ActionResult<GetPracticeSessionReviewOutput>>();
+      const getPracticeSessionReviewFn = vi.fn(async () => deferred.promise);
+      const setSummaryReview = vi.fn();
+      const setSummaryReviewLoadState = vi.fn();
+      const summaryReview = {
+        ok: true,
+      } as unknown as GetPracticeSessionReviewOutput;
+
+      createSummaryReviewEffect({
+        summary: {
+          sessionId: 'session-1',
+          endedAt: '2026-02-01T00:00:00.000Z',
+          totals: { answered: 1, correct: 1, accuracy: 1, durationSeconds: 1 },
+        },
+        sessionId: 'session-1',
+        getPracticeSessionReviewFn,
+        setSummaryReview,
+        setSummaryReviewLoadState,
+        isMounted: () => true,
+      });
+
+      expect(setSummaryReviewLoadState).toHaveBeenCalledWith({
+        status: 'loading',
+      });
+
+      deferred.resolve(ok(summaryReview));
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      expect(setSummaryReview).toHaveBeenLastCalledWith(summaryReview);
+      expect(setSummaryReviewLoadState).toHaveBeenLastCalledWith({
+        status: 'ready',
+      });
+    });
+
+    it('sets error state when request throws', async () => {
+      const getPracticeSessionReviewFn = vi.fn(async () => {
+        throw new Error('boom');
+      });
+      const setSummaryReview = vi.fn();
+      const setSummaryReviewLoadState = vi.fn();
+
+      createSummaryReviewEffect({
+        summary: {
+          sessionId: 'session-1',
+          endedAt: '2026-02-01T00:00:00.000Z',
+          totals: { answered: 1, correct: 1, accuracy: 1, durationSeconds: 1 },
+        },
+        sessionId: 'session-1',
+        getPracticeSessionReviewFn,
+        setSummaryReview,
+        setSummaryReviewLoadState,
+      });
+
+      await Promise.resolve();
+
+      expect(setSummaryReviewLoadState).toHaveBeenLastCalledWith({
+        status: 'error',
+        message: 'boom',
+      });
+    });
+
+    it('sets error state on non-ok result', async () => {
+      const getPracticeSessionReviewFn = vi.fn(async () =>
+        err('INTERNAL_ERROR', 'Nope'),
+      );
+      const setSummaryReview = vi.fn();
+      const setSummaryReviewLoadState = vi.fn();
+
+      createSummaryReviewEffect({
+        summary: {
+          sessionId: 'session-1',
+          endedAt: '2026-02-01T00:00:00.000Z',
+          totals: { answered: 1, correct: 1, accuracy: 1, durationSeconds: 1 },
+        },
+        sessionId: 'session-1',
+        getPracticeSessionReviewFn,
+        setSummaryReview,
+        setSummaryReviewLoadState,
+      });
+
+      await Promise.resolve();
+
+      expect(setSummaryReviewLoadState).toHaveBeenLastCalledWith({
+        status: 'error',
+        message: 'Nope',
+      });
+      expect(setSummaryReview).toHaveBeenCalledTimes(1);
+      expect(setSummaryReview).toHaveBeenLastCalledWith(null);
     });
   });
 });

@@ -1,14 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
-import {
-  getActionResultErrorMessage,
-  getThrownErrorMessage,
-} from '@/app/(app)/app/practice/practice-logic';
 import type { LoadState } from '@/app/(app)/app/practice/practice-page-logic';
 import {
   type EndPracticeSessionOutput,
   type GetPracticeSessionReviewOutput,
   getPracticeSessionReview,
 } from '@/src/adapters/controllers/practice-controller';
+import { createSummaryReviewEffect } from '../practice-session-page-logic';
 
 export type UsePracticeSessionSummaryReviewInput = {
   summary: EndPracticeSessionOutput | null;
@@ -35,44 +32,14 @@ export function usePracticeSessionSummaryReview(
     });
 
   useEffect(() => {
-    if (!input.summary) {
-      setSummaryReview(null);
-      setSummaryReviewLoadState({ status: 'idle' });
-      return;
-    }
-
-    let mounted = true;
-    setSummaryReview(null);
-    setSummaryReviewLoadState({ status: 'loading' });
-
-    void (async () => {
-      let res: Awaited<ReturnType<typeof getPracticeSessionReview>>;
-      try {
-        res = await getPracticeSessionReview({ sessionId: input.sessionId });
-      } catch (error) {
-        if (!mounted || !isMountedRef.current()) return;
-        setSummaryReviewLoadState({
-          status: 'error',
-          message: getThrownErrorMessage(error),
-        });
-        return;
-      }
-      if (!mounted || !isMountedRef.current()) return;
-      if (!res.ok) {
-        setSummaryReviewLoadState({
-          status: 'error',
-          message: getActionResultErrorMessage(res),
-        });
-        return;
-      }
-
-      setSummaryReview(res.data);
-      setSummaryReviewLoadState({ status: 'ready' });
-    })();
-
-    return () => {
-      mounted = false;
-    };
+    return createSummaryReviewEffect({
+      summary: input.summary,
+      sessionId: input.sessionId,
+      getPracticeSessionReviewFn: getPracticeSessionReview,
+      setSummaryReview,
+      setSummaryReviewLoadState,
+      isMounted: () => isMountedRef.current(),
+    });
   }, [input.summary, input.sessionId]);
 
   return {

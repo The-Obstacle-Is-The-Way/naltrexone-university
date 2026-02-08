@@ -43,13 +43,17 @@ describe('PracticeView', () => {
       difficulty: 'easy',
     });
     const choice = question.choices[0];
-    expect(choice).toBeDefined();
+    if (!choice) {
+      throw new Error(
+        'Expected createNextQuestion to include at least one choice',
+      );
+    }
 
     const html = renderToStaticMarkup(
       <PracticeView
         loadState={{ status: 'ready' }}
         question={question}
-        selectedChoiceId={choice?.id ?? null}
+        selectedChoiceId={choice.id}
         submitResult={null}
         isPending
         bookmarkStatus="idle"
@@ -65,5 +69,76 @@ describe('PracticeView', () => {
 
     expect(html).toContain('Submitting…');
     expect(html).not.toContain('Loading question');
+  });
+});
+
+describe('getBookmarkNotificationTransition', () => {
+  it('resets last key and returns no notification when message is null', async () => {
+    const { getBookmarkNotificationTransition } = await import(
+      './practice-view'
+    );
+
+    const transition = getBookmarkNotificationTransition({
+      message: null,
+      version: 1,
+      bookmarkStatus: 'idle',
+      lastKey: '1:hi',
+    });
+
+    expect(transition.nextKey).toBeNull();
+    expect(transition.notification).toBeNull();
+  });
+
+  it('returns a success notification for new messages when status is not error', async () => {
+    const { getBookmarkNotificationTransition } = await import(
+      './practice-view'
+    );
+
+    const transition = getBookmarkNotificationTransition({
+      message: 'Question bookmarked.',
+      version: 2,
+      bookmarkStatus: 'idle',
+      lastKey: null,
+    });
+
+    expect(transition.nextKey).toBe('2:Question bookmarked.');
+    expect(transition.notification).toEqual({
+      message: 'Question bookmarked.',
+      tone: 'success',
+    });
+  });
+
+  it('returns an error notification when bookmarkStatus is error', async () => {
+    const { getBookmarkNotificationTransition } = await import(
+      './practice-view'
+    );
+
+    const transition = getBookmarkNotificationTransition({
+      message: 'Failed.',
+      version: 3,
+      bookmarkStatus: 'error',
+      lastKey: null,
+    });
+
+    expect(transition.notification).toEqual({
+      message: 'Failed.',
+      tone: 'error',
+    });
+  });
+
+  it('returns no notification for duplicate messages', async () => {
+    const { getBookmarkNotificationTransition } = await import(
+      './practice-view'
+    );
+
+    const transition = getBookmarkNotificationTransition({
+      message: 'Question bookmarked.',
+      version: 2,
+      bookmarkStatus: 'idle',
+      lastKey: '2:Question bookmarked.',
+    });
+
+    expect(transition.nextKey).toBe('2:Question bookmarked.');
+    expect(transition.notification).toBeNull();
   });
 });

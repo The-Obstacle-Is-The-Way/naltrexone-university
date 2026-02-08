@@ -1,10 +1,12 @@
 import { useMemo, useState } from 'react';
 import { startPracticeSession } from '@/src/adapters/controllers/practice-controller';
-import type { NextQuestion } from '@/src/application/use-cases/get-next-question';
 import { navigateTo } from '../client-navigation';
 import type { PracticeSessionStarterProps } from '../components/practice-session-starter';
 import {
-  handleSessionCountChange,
+  createSessionCountChangeHandler,
+  createSessionModeChangeHandler,
+  createToggleDifficultyHandler,
+  createToggleTagHandler,
   type PracticeFilters,
   startSession,
 } from '../practice-page-logic';
@@ -47,51 +49,40 @@ export function usePracticeSessionStart(
 
   const onSessionModeChange = useMemo(
     () =>
-      ((mode: string) => {
-        if (mode === 'tutor' || mode === 'exam') {
-          setSessionMode(mode);
-          setStartSessionIdempotencyKey(crypto.randomUUID());
-        }
+      createSessionModeChangeHandler({
+        setSessionMode,
+        setIdempotencyKey: setStartSessionIdempotencyKey,
+        createIdempotencyKey: () => crypto.randomUUID(),
       }) satisfies PracticeSessionStarterProps['onSessionModeChange'],
     [],
   );
 
   const onSessionCountChange = useMemo(
     () =>
-      handleSessionCountChange.bind(null, (count) => {
-        setSessionCount(count);
-        setStartSessionIdempotencyKey(crypto.randomUUID());
+      createSessionCountChangeHandler({
+        setSessionCount,
+        setIdempotencyKey: setStartSessionIdempotencyKey,
+        createIdempotencyKey: () => crypto.randomUUID(),
       }),
     [],
   );
 
   const onToggleTag = useMemo(
     () =>
-      ((slug: string) => {
-        setFilters((prev) => {
-          const existing = prev.tagSlugs;
-          const next = existing.includes(slug)
-            ? existing.filter((s) => s !== slug)
-            : [...existing, slug];
-          return { ...prev, tagSlugs: next };
-        });
-        setStartSessionIdempotencyKey(crypto.randomUUID());
+      createToggleTagHandler({
+        setFilters,
+        setIdempotencyKey: setStartSessionIdempotencyKey,
+        createIdempotencyKey: () => crypto.randomUUID(),
       }) satisfies PracticeSessionStarterProps['onToggleTag'],
     [],
   );
 
   const onToggleDifficulty = useMemo(
     () =>
-      ((difficulty: NextQuestion['difficulty']) => {
-        setFilters((prev) => {
-          const existing = prev.difficulties;
-          const next = existing.includes(difficulty)
-            ? existing.filter((d) => d !== difficulty)
-            : [...existing, difficulty];
-
-          return { ...prev, difficulties: next };
-        });
-        setStartSessionIdempotencyKey(crypto.randomUUID());
+      createToggleDifficultyHandler({
+        setFilters,
+        setIdempotencyKey: setStartSessionIdempotencyKey,
+        createIdempotencyKey: () => crypto.randomUUID(),
       }) satisfies PracticeSessionStarterProps['onToggleDifficulty'],
     [],
   );

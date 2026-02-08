@@ -11,6 +11,10 @@ import {
 
 export { createBookmarksEffect } from './practice-page-bookmarks';
 export {
+  createSessionCountChangeHandler,
+  createSessionModeChangeHandler,
+  createToggleDifficultyHandler,
+  createToggleTagHandler,
   handleSessionCountChange,
   handleSessionModeChange,
   SESSION_COUNT_MAX,

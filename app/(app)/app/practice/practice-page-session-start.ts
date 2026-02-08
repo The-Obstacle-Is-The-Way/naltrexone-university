@@ -85,3 +85,65 @@ export async function startSession(input: {
 
   input.navigateTo(toPracticeSessionRoute(res.data.sessionId));
 }
+
+function toggleInArray<T>(array: readonly T[], value: T): T[] {
+  return array.includes(value)
+    ? array.filter((item) => item !== value)
+    : [...array, value];
+}
+
+export function createSessionModeChangeHandler(input: {
+  setSessionMode: (mode: 'tutor' | 'exam') => void;
+  setIdempotencyKey: (key: string) => void;
+  createIdempotencyKey: () => string;
+}): (mode: string) => void {
+  return (mode) => {
+    if (mode === 'tutor' || mode === 'exam') {
+      input.setSessionMode(mode);
+      input.setIdempotencyKey(input.createIdempotencyKey());
+    }
+  };
+}
+
+export function createSessionCountChangeHandler(input: {
+  setSessionCount: (count: number) => void;
+  setIdempotencyKey: (key: string) => void;
+  createIdempotencyKey: () => string;
+}): (event: { target: { value: string } }) => void {
+  return handleSessionCountChange.bind(null, (count) => {
+    input.setSessionCount(count);
+    input.setIdempotencyKey(input.createIdempotencyKey());
+  });
+}
+
+export function createToggleTagHandler(input: {
+  setFilters: (
+    next: PracticeFilters | ((prev: PracticeFilters) => PracticeFilters),
+  ) => void;
+  setIdempotencyKey: (key: string) => void;
+  createIdempotencyKey: () => string;
+}): (slug: string) => void {
+  return (slug) => {
+    input.setFilters((prev) => ({
+      ...prev,
+      tagSlugs: toggleInArray(prev.tagSlugs, slug),
+    }));
+    input.setIdempotencyKey(input.createIdempotencyKey());
+  };
+}
+
+export function createToggleDifficultyHandler(input: {
+  setFilters: (
+    next: PracticeFilters | ((prev: PracticeFilters) => PracticeFilters),
+  ) => void;
+  setIdempotencyKey: (key: string) => void;
+  createIdempotencyKey: () => string;
+}): (difficulty: PracticeFilters['difficulties'][number]) => void {
+  return (difficulty) => {
+    input.setFilters((prev) => ({
+      ...prev,
+      difficulties: toggleInArray(prev.difficulties, difficulty),
+    }));
+    input.setIdempotencyKey(input.createIdempotencyKey());
+  };
+}

@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
-  getActionResultErrorMessage,
-  getThrownErrorMessage,
-} from '@/app/(app)/app/practice/practice-logic';
-import {
   endPracticeSession,
   type GetIncompletePracticeSessionOutput,
   getIncompletePracticeSession,
 } from '@/src/adapters/controllers/practice-controller';
+import {
+  abandonIncompleteSession,
+  createIncompleteSessionEffect,
+} from '../practice-page-incomplete-session';
 
 type IncompletePracticeSession =
   NonNullable<GetIncompletePracticeSessionOutput>;
@@ -36,65 +36,25 @@ export function usePracticeIncompleteSession(
     useState<IncompletePracticeSession | null>(null);
 
   useEffect(() => {
-    let mounted = true;
-    setIncompleteSessionStatus('loading');
-    setIncompleteSessionError(null);
-
-    void (async () => {
-      let res: Awaited<ReturnType<typeof getIncompletePracticeSession>>;
-      try {
-        res = await getIncompletePracticeSession({});
-      } catch (error) {
-        if (!mounted) return;
-        setIncompleteSessionStatus('error');
-        setIncompleteSessionError(getThrownErrorMessage(error));
-        return;
-      }
-      if (!mounted) return;
-
-      if (!res.ok) {
-        setIncompleteSessionStatus('error');
-        setIncompleteSessionError(getActionResultErrorMessage(res));
-        return;
-      }
-
-      setIncompleteSession(res.data);
-      setIncompleteSessionStatus('idle');
-    })();
-
-    return () => {
-      mounted = false;
-    };
+    return createIncompleteSessionEffect({
+      getIncompletePracticeSessionFn: getIncompletePracticeSession,
+      setIncompleteSessionStatus,
+      setIncompleteSessionError,
+      setIncompleteSession,
+    });
   }, []);
 
   const onAbandonIncompleteSession = useCallback(async () => {
     if (!incompleteSession) return;
 
-    setIncompleteSessionStatus('loading');
-    setIncompleteSessionError(null);
-
-    let res: Awaited<ReturnType<typeof endPracticeSession>>;
-    try {
-      res = await endPracticeSession({
-        sessionId: incompleteSession.sessionId,
-        idempotencyKey: incompleteSession.sessionId,
-      });
-    } catch (error) {
-      if (!input.isMounted()) return;
-      setIncompleteSessionStatus('error');
-      setIncompleteSessionError(getThrownErrorMessage(error));
-      return;
-    }
-    if (!input.isMounted()) return;
-
-    if (!res.ok) {
-      setIncompleteSessionStatus('error');
-      setIncompleteSessionError(getActionResultErrorMessage(res));
-      return;
-    }
-
-    setIncompleteSession(null);
-    setIncompleteSessionStatus('idle');
+    await abandonIncompleteSession({
+      sessionId: incompleteSession.sessionId,
+      endPracticeSessionFn: endPracticeSession,
+      setIncompleteSessionStatus,
+      setIncompleteSessionError,
+      setIncompleteSession,
+      isMounted: input.isMounted,
+    });
   }, [incompleteSession, input.isMounted]);
 
   return {

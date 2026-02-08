@@ -38,6 +38,33 @@ export type PracticeViewProps = {
   onNextQuestion: () => void;
 };
 
+export function getBookmarkNotificationTransition(input: {
+  message: string | null;
+  version: number;
+  bookmarkStatus: PracticeViewProps['bookmarkStatus'];
+  lastKey: string | null;
+}): {
+  nextKey: string | null;
+  notification: { message: string; tone: 'success' | 'error' } | null;
+} {
+  if (!input.message) {
+    return { nextKey: null, notification: null };
+  }
+
+  const key = `${input.version}:${input.message}`;
+  if (input.lastKey === key) {
+    return { nextKey: key, notification: null };
+  }
+
+  return {
+    nextKey: key,
+    notification: {
+      message: input.message,
+      tone: input.bookmarkStatus === 'error' ? 'error' : 'success',
+    },
+  };
+}
+
 export function PracticeView(props: PracticeViewProps) {
   const { notify } = useNotification();
   const sessionInfo = props.sessionInfo ?? null;
@@ -53,22 +80,17 @@ export function PracticeView(props: PracticeViewProps) {
   const lastNotifiedBookmarkKeyRef = useRef<string | null>(null);
 
   useEffect(() => {
-    const message = props.bookmarkMessage ?? null;
-    const version = props.bookmarkMessageVersion ?? 0;
-
-    if (!message) {
-      lastNotifiedBookmarkKeyRef.current = null;
-      return;
-    }
-
-    const feedbackKey = `${version}:${message}`;
-    if (lastNotifiedBookmarkKeyRef.current === feedbackKey) return;
-    lastNotifiedBookmarkKeyRef.current = feedbackKey;
-
-    notify({
-      message,
-      tone: props.bookmarkStatus === 'error' ? 'error' : 'success',
+    const transition = getBookmarkNotificationTransition({
+      message: props.bookmarkMessage ?? null,
+      version: props.bookmarkMessageVersion ?? 0,
+      bookmarkStatus: props.bookmarkStatus,
+      lastKey: lastNotifiedBookmarkKeyRef.current,
     });
+
+    lastNotifiedBookmarkKeyRef.current = transition.nextKey;
+    if (!transition.notification) return;
+
+    notify(transition.notification);
   }, [
     notify,
     props.bookmarkMessage,
