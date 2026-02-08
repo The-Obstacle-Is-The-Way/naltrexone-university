@@ -3,6 +3,7 @@ import { usePracticeSessionQuestionFlow } from '@/app/(app)/app/practice/[sessio
 import { maybeAutoAdvanceAfterSubmit } from '@/app/(app)/app/practice/[sessionId]/practice-session-page-logic';
 import { usePracticeQuestionBookmarks } from '@/app/(app)/app/practice/hooks/use-practice-question-bookmarks';
 import { useIsMounted } from '@/lib/use-is-mounted';
+import { setPracticeSessionQuestionMark } from '@/src/adapters/controllers/practice-controller';
 import type { PracticeSessionPageViewProps } from '../components/practice-session-page-view';
 import { usePracticeSessionMarkForReview } from './use-practice-session-mark-for-review';
 import { usePracticeSessionReviewStage } from './use-practice-session-review-stage';
@@ -62,6 +63,7 @@ export function usePracticeSessionPageController(
       setLoadState: questionFlow.setLoadState,
       setReview: reviewStage.setReview,
       isMounted,
+      setPracticeSessionQuestionMarkFn: setPracticeSessionQuestionMark,
     });
 
   return {

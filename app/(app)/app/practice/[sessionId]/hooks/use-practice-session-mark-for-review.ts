@@ -1,3 +1,5 @@
+'use client';
+
 import {
   type Dispatch,
   type SetStateAction,
@@ -10,9 +12,21 @@ import {
   getThrownErrorMessage,
 } from '@/app/(app)/app/practice/practice-logic';
 import type { LoadState } from '@/app/(app)/app/practice/practice-page-logic';
-import { setPracticeSessionQuestionMark } from '@/src/adapters/controllers/practice-controller';
+import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import type { NextQuestion } from '@/src/application/use-cases/get-next-question';
 import type { GetPracticeSessionReviewOutput } from '@/src/application/use-cases/get-practice-session-review';
+
+export type SetPracticeSessionQuestionMarkFn = (input: {
+  sessionId: string;
+  questionId: string;
+  markedForReview: boolean;
+  idempotencyKey?: string;
+}) => Promise<
+  ActionResult<{
+    questionId: string;
+    markedForReview: boolean;
+  }>
+>;
 
 type UsePracticeSessionMarkForReviewInput = {
   question: NextQuestion | null;
@@ -23,7 +37,7 @@ type UsePracticeSessionMarkForReviewInput = {
   setLoadState: (state: LoadState) => void;
   setReview: Dispatch<SetStateAction<GetPracticeSessionReviewOutput | null>>;
   isMounted: () => boolean;
-  setPracticeSessionQuestionMarkFn?: typeof setPracticeSessionQuestionMark;
+  setPracticeSessionQuestionMarkFn: SetPracticeSessionQuestionMarkFn;
 };
 
 export function usePracticeSessionMarkForReview(
@@ -36,7 +50,7 @@ export function usePracticeSessionMarkForReview(
   const isMarkingRef = useRef(false);
   const markRequestIdempotencyKeyRef = useRef<string | null>(null);
   const setPracticeSessionQuestionMarkFn =
-    input.setPracticeSessionQuestionMarkFn ?? setPracticeSessionQuestionMark;
+    input.setPracticeSessionQuestionMarkFn;
 
   const onToggleMarkForReview = useCallback(async () => {
     if (!input.question) return;
@@ -48,7 +62,7 @@ export function usePracticeSessionMarkForReview(
     isMarkingRef.current = true;
     setIsMarkingForReview(true);
 
-    let res: Awaited<ReturnType<typeof setPracticeSessionQuestionMark>>;
+    let res: Awaited<ReturnType<SetPracticeSessionQuestionMarkFn>>;
     if (!markRequestIdempotencyKeyRef.current) {
       markRequestIdempotencyKeyRef.current = crypto.randomUUID();
     }
@@ -84,12 +98,10 @@ export function usePracticeSessionMarkForReview(
       return;
     }
 
-    if (input.sessionInfo) {
-      input.applySessionInfo({
-        ...input.sessionInfo,
-        isMarkedForReview: res.data.markedForReview,
-      });
-    }
+    input.applySessionInfo({
+      ...input.sessionInfo,
+      isMarkedForReview: res.data.markedForReview,
+    });
 
     input.setReview((prev) => {
       if (!prev) return prev;

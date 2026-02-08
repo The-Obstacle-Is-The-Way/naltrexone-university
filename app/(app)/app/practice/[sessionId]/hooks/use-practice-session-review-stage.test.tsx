@@ -38,5 +38,6 @@ describe('usePracticeSessionReviewStage', () => {
     expect(typeof output.onOpenReviewQuestion).toBe('function');
     expect(typeof output.onFinalizeReview).toBe('function');
     expect(typeof output.onRetryNavigator).toBe('function');
+    expect(typeof output.onRetryReview).toBe('function');
   });
 });

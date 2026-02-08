@@ -366,7 +366,7 @@ describe('practice-session-page-logic', () => {
       expect(setSubmitResult).toHaveBeenCalledWith(
         expect.objectContaining({ isCorrect: true }),
       );
-      expect(setLoadState).not.toHaveBeenCalledWith({ status: 'loading' });
+      expect(setLoadState).toHaveBeenCalledWith({ status: 'ready' });
     });
 
     it('does nothing when question is null', async () => {

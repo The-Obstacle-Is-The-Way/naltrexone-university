@@ -27,6 +27,7 @@ describe('usePracticeSessionQuestionFlow', () => {
     expect(output.canSubmit).toBe(false);
     expect(typeof output.applySessionInfo).toBe('function');
     expect(typeof output.onTryAgain).toBe('function');
+    expect(typeof output.onNextQuestion).toBe('function');
     expect(typeof output.onSubmit).toBe('function');
     expect(typeof output.onSelectChoice).toBe('function');
     expect(typeof output.onNavigateQuestion).toBe('function');

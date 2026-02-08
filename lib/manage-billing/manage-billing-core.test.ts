@@ -12,11 +12,11 @@ class RedirectError extends Error {
 }
 
 describe('manage-billing-core', () => {
-  it('redirects to Stripe portal URL on success', async () => {
-    const redirectFn = (url: string): never => {
-      throw new RedirectError(url);
-    };
+  const redirectFn = (url: string): never => {
+    throw new RedirectError(url);
+  };
 
+  it('redirects to Stripe portal URL on success', async () => {
     const action = async () =>
       runManageBillingAction({
         createPortalSessionFn: vi.fn(async () =>
@@ -31,6 +31,24 @@ describe('manage-billing-core', () => {
 
     await expect(action()).rejects.toMatchObject({
       url: 'https://stripe.test/portal',
+    });
+  });
+
+  it('redirects to configured unauthenticated route when portal session creation returns UNAUTHENTICATED', async () => {
+    const action = async () =>
+      runManageBillingAction({
+        createPortalSessionFn: vi.fn(async () =>
+          err('UNAUTHENTICATED', 'Not signed in'),
+        ),
+        redirectFn,
+        redirects: {
+          failure: '/app/billing?error=portal_failed',
+          unauthenticated: '/app/login?reason=auth',
+        },
+      });
+
+    await expect(action()).rejects.toMatchObject({
+      url: '/app/login?reason=auth',
     });
   });
 
@@ -61,10 +79,6 @@ describe('manage-billing-core', () => {
   });
 
   it('redirects to configured failure route when portal session creation fails', async () => {
-    const redirectFn = (url: string): never => {
-      throw new RedirectError(url);
-    };
-
     const action = async () =>
       runManageBillingAction({
         createPortalSessionFn: vi.fn(async () =>
@@ -82,10 +96,6 @@ describe('manage-billing-core', () => {
   });
 
   it('redirects to configured failure route when portal session creation throws', async () => {
-    const redirectFn = (url: string): never => {
-      throw new RedirectError(url);
-    };
-
     const action = async () =>
       runManageBillingAction({
         createPortalSessionFn: vi.fn(async () => {

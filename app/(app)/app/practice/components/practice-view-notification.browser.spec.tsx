@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { useEffect, useState } from 'react';
 import { expect, test, vi } from 'vitest';
 import { render } from 'vitest-browser-react';
+import { createNextQuestion } from '@/src/application/test-helpers/create-next-question';
 import { PracticeView } from './practice-view';
 
 const { notifyMock } = vi.hoisted(() => ({
@@ -16,35 +17,40 @@ vi.mock('@/components/ui/notification-provider', () => ({
   }),
 }));
 
+function createBaseProps() {
+  const question = createNextQuestion({
+    questionId: 'question-1',
+    slug: 'question-1',
+    stemMd: 'What is the next best step?',
+    difficulty: 'easy',
+  });
+
+  return {
+    loadState: { status: 'ready' as const },
+    question,
+    selectedChoiceId: null,
+    submitResult: null,
+    isPending: false,
+    isBookmarked: true,
+    canSubmit: false,
+    onTryAgain: () => undefined,
+    onToggleBookmark: () => undefined,
+    onSelectChoice: () => undefined,
+    onSubmit: () => undefined,
+    onNextQuestion: () => undefined,
+  };
+}
+
 test('emits error-tone notification when bookmark feedback arrives in error state', async () => {
   notifyMock.mockReset();
+  const baseProps = createBaseProps();
 
   await render(
     <PracticeView
-      loadState={{ status: 'ready' }}
-      question={{
-        questionId: 'question-1',
-        slug: 'question-1',
-        stemMd: 'What is the next best step?',
-        difficulty: 'easy',
-        choices: [
-          { id: 'choice_a', label: 'A', textMd: 'Option A', sortOrder: 1 },
-        ],
-        session: null,
-      }}
-      selectedChoiceId={null}
-      submitResult={null}
-      isPending={false}
+      {...baseProps}
       bookmarkStatus="error"
-      isBookmarked
       bookmarkMessage="Failed to save bookmark. Please try again."
       bookmarkMessageVersion={1}
-      canSubmit={false}
-      onTryAgain={() => undefined}
-      onToggleBookmark={() => undefined}
-      onSelectChoice={() => undefined}
-      onSubmit={() => undefined}
-      onNextQuestion={() => undefined}
     />,
   );
 
@@ -57,33 +63,14 @@ test('emits error-tone notification when bookmark feedback arrives in error stat
 
 test('emits success-tone notification when bookmark feedback arrives in non-error state', async () => {
   notifyMock.mockReset();
+  const baseProps = createBaseProps();
 
   await render(
     <PracticeView
-      loadState={{ status: 'ready' }}
-      question={{
-        questionId: 'question-1',
-        slug: 'question-1',
-        stemMd: 'What is the next best step?',
-        difficulty: 'easy',
-        choices: [
-          { id: 'choice_a', label: 'A', textMd: 'Option A', sortOrder: 1 },
-        ],
-        session: null,
-      }}
-      selectedChoiceId={null}
-      submitResult={null}
-      isPending={false}
+      {...baseProps}
       bookmarkStatus="idle"
-      isBookmarked
       bookmarkMessage="Question bookmarked."
       bookmarkMessageVersion={1}
-      canSubmit={false}
-      onTryAgain={() => undefined}
-      onToggleBookmark={() => undefined}
-      onSelectChoice={() => undefined}
-      onSubmit={() => undefined}
-      onNextQuestion={() => undefined}
     />,
   );
 
@@ -96,6 +83,7 @@ test('emits success-tone notification when bookmark feedback arrives in non-erro
 
 test('does not emit duplicate notifications when bookmark status changes without a new message version', async () => {
   notifyMock.mockReset();
+  const baseProps = createBaseProps();
 
   function Harness() {
     const [status, setStatus] = useState<'idle' | 'loading' | 'error'>('error');
@@ -105,36 +93,22 @@ test('does not emit duplicate notifications when bookmark status changes without
     }, []);
 
     return (
-      <PracticeView
-        loadState={{ status: 'ready' }}
-        question={{
-          questionId: 'question-1',
-          slug: 'question-1',
-          stemMd: 'What is the next best step?',
-          difficulty: 'easy',
-          choices: [
-            { id: 'choice_a', label: 'A', textMd: 'Option A', sortOrder: 1 },
-          ],
-          session: null,
-        }}
-        selectedChoiceId={null}
-        submitResult={null}
-        isPending={false}
-        bookmarkStatus={status}
-        isBookmarked
-        bookmarkMessage="Failed to save bookmark. Please try again."
-        bookmarkMessageVersion={1}
-        canSubmit={false}
-        onTryAgain={() => undefined}
-        onToggleBookmark={() => undefined}
-        onSelectChoice={() => undefined}
-        onSubmit={() => undefined}
-        onNextQuestion={() => undefined}
-      />
+      <>
+        <div data-testid="bookmark-status">{status}</div>
+        <PracticeView
+          {...baseProps}
+          bookmarkStatus={status}
+          bookmarkMessage="Failed to save bookmark. Please try again."
+          bookmarkMessageVersion={1}
+        />
+      </>
     );
   }
 
-  await render(<Harness />);
-
+  const screen = await render(<Harness />);
   await expect.poll(() => notifyMock.mock.calls.length).toBe(1);
+  await expect
+    .element(screen.getByTestId('bookmark-status'))
+    .toHaveTextContent('idle');
+  expect(notifyMock.mock.calls.length).toBe(1);
 });

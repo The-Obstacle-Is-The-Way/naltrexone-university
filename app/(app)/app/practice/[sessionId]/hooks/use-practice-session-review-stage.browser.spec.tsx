@@ -1,7 +1,10 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { renderHook } from 'vitest-browser-react';
 import { ok } from '@/tests/test-helpers/ok';
-import { usePracticeSessionReviewStage } from './use-practice-session-review-stage';
+import {
+  type UsePracticeSessionReviewStageInput,
+  usePracticeSessionReviewStage,
+} from './use-practice-session-review-stage';
 
 const { endPracticeSessionMock, getPracticeSessionReviewMock } = vi.hoisted(
   () => ({
@@ -19,13 +22,7 @@ function createInput(sessionMode: 'tutor' | 'exam') {
   return {
     sessionId: 'session-1',
     isMounted: () => true,
-    sessionInfo: null as {
-      sessionId: string;
-      mode: 'tutor' | 'exam';
-      index: number;
-      total: number;
-      isMarkedForReview?: boolean;
-    } | null,
+    sessionInfo: null as UsePracticeSessionReviewStageInput['sessionInfo'],
     questionId: null,
     submitResult: null,
     sessionMode,

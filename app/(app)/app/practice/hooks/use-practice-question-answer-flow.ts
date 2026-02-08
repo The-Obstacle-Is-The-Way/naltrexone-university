@@ -80,6 +80,11 @@ export function usePracticeQuestionAnswerFlow(
   const latestQuestionRequestId = useRef(0);
   const questionAreaRef = useRef<HTMLDivElement | null>(null);
   const pendingFocusAfterError = useRef(false);
+  const isMountedFnRef = useRef(input.isMounted);
+
+  useEffect(() => {
+    isMountedFnRef.current = input.isMounted;
+  }, [input.isMounted]);
 
   const onTryAgain = useMemo(
     () =>
@@ -101,9 +106,9 @@ export function usePracticeQuestionAnswerFlow(
         },
         isLatestRequest: (requestId) =>
           requestId === latestQuestionRequestId.current,
-        isMounted: input.isMounted,
+        isMounted: () => isMountedFnRef.current(),
       }),
-    [input.filters, input.isMounted, input.getNextQuestionFn],
+    [input.filters, input.getNextQuestionFn],
   );
 
   useEffect(onTryAgain, [onTryAgain]);
@@ -143,7 +148,7 @@ export function usePracticeQuestionAnswerFlow(
           nowMs: Date.now,
           setLoadState,
           setSubmitResult,
-          isMounted: input.isMounted,
+          isMounted: () => isMountedFnRef.current(),
         }),
     });
   }, [
@@ -151,7 +156,6 @@ export function usePracticeQuestionAnswerFlow(
     questionLoadedAt,
     selectedChoiceId,
     submitIdempotencyKey,
-    input.isMounted,
     input.submitAnswerFn,
   ]);
 

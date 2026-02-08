@@ -5,14 +5,6 @@ import { createDeferred } from '@/tests/test-helpers/create-deferred';
 import { ok } from '@/tests/test-helpers/ok';
 import { usePracticeSessionMarkForReview } from './use-practice-session-mark-for-review';
 
-const { setPracticeSessionQuestionMarkMock } = vi.hoisted(() => ({
-  setPracticeSessionQuestionMarkMock: vi.fn(),
-}));
-
-vi.mock('@/src/adapters/controllers/practice-controller', () => ({
-  setPracticeSessionQuestionMark: setPracticeSessionQuestionMarkMock,
-}));
-
 type ReviewState = {
   sessionId: string;
   mode: 'exam' | 'tutor';
@@ -42,7 +34,7 @@ describe('usePracticeSessionMarkForReview (browser)', () => {
         }>
       >();
 
-    setPracticeSessionQuestionMarkMock.mockReturnValue(deferred.promise);
+    const setPracticeSessionQuestionMarkFn = vi.fn(() => deferred.promise);
 
     const applySessionInfo = vi.fn();
     const setReview = vi.fn();
@@ -70,6 +62,7 @@ describe('usePracticeSessionMarkForReview (browser)', () => {
         setLoadState: vi.fn(),
         setReview,
         isMounted: () => true,
+        setPracticeSessionQuestionMarkFn,
       }),
     );
 
@@ -91,7 +84,7 @@ describe('usePracticeSessionMarkForReview (browser)', () => {
       .poll(() => harness.result.current.isMarkingForReview)
       .toBe(false);
 
-    expect(setPracticeSessionQuestionMarkMock).toHaveBeenCalledWith({
+    expect(setPracticeSessionQuestionMarkFn).toHaveBeenCalledWith({
       sessionId: 'session-1',
       questionId: 'question-1',
       markedForReview: true,
@@ -131,9 +124,9 @@ describe('usePracticeSessionMarkForReview (browser)', () => {
   });
 
   it('sets loadState error when mark-for-review request throws', async () => {
-    setPracticeSessionQuestionMarkMock.mockRejectedValue(
-      new Error('Mark for review failed'),
-    );
+    const setPracticeSessionQuestionMarkFn = vi
+      .fn()
+      .mockRejectedValue(new Error('Mark for review failed'));
 
     const setLoadState = vi.fn();
 
@@ -160,6 +153,7 @@ describe('usePracticeSessionMarkForReview (browser)', () => {
         setLoadState,
         setReview: vi.fn(),
         isMounted: () => true,
+        setPracticeSessionQuestionMarkFn,
       }),
     );
 

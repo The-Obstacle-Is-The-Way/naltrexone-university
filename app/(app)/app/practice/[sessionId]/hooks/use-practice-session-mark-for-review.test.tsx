@@ -22,6 +22,12 @@ describe('usePracticeSessionMarkForReview', () => {
         setLoadState: () => undefined,
         setReview: () => undefined,
         isMounted: () => true,
+        setPracticeSessionQuestionMarkFn: vi.fn(async () =>
+          ok({
+            questionId: 'q_1',
+            markedForReview: false,
+          }),
+        ),
       }),
     );
 
