@@ -2,11 +2,13 @@
 
 import Link from 'next/link';
 import { useEffect, useMemo, useState, useTransition } from 'react';
+import { selectChoiceIfAllowed } from '@/app/(app)/app/practice/practice-page-logic';
 import {
+  canSubmitQuestionAnswer,
   createLoadQuestionAction,
+  createSubmitSelectedAnswerAction,
   type LoadState,
   reattemptQuestion,
-  submitSelectedAnswer,
 } from '@/app/(app)/app/questions/[slug]/question-page-logic';
 import { ErrorCard } from '@/components/error-card';
 import { Feedback } from '@/components/question/Feedback';
@@ -183,14 +185,23 @@ export default function QuestionPageClient({ slug }: { slug: string }) {
   useEffect(loadQuestion, [loadQuestion]);
 
   const canSubmit = useMemo(() => {
-    return (
-      question !== null && selectedChoiceId !== null && submitResult === null
-    );
-  }, [question, selectedChoiceId, submitResult]);
+    return canSubmitQuestionAnswer({
+      loadState,
+      question,
+      selectedChoiceId,
+      submitResult,
+    });
+  }, [loadState, question, selectedChoiceId, submitResult]);
+
+  const onSelectChoice = useMemo(
+    () => selectChoiceIfAllowed.bind(null, submitResult, setSelectedChoiceId),
+    [submitResult],
+  );
 
   const onSubmit = useMemo(
     () =>
-      submitSelectedAnswer.bind(null, {
+      createSubmitSelectedAnswerAction({
+        startTransition,
         question,
         selectedChoiceId,
         questionLoadedAtMs: questionLoadedAt,
@@ -232,7 +243,7 @@ export default function QuestionPageClient({ slug }: { slug: string }) {
       canSubmit={canSubmit}
       isPending={isPending}
       onTryAgain={loadQuestion}
-      onSelectChoice={setSelectedChoiceId}
+      onSelectChoice={onSelectChoice}
       onSubmit={onSubmit}
       onReattempt={onReattempt}
     />

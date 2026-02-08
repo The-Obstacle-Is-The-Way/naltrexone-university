@@ -1,6 +1,6 @@
 # BUG-118: Question Page Missing Shared Practice-Page Guards
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P3
 **Date:** 2026-02-08
 
