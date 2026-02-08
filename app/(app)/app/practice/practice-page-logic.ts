@@ -1,12 +1,13 @@
-import {
-  getActionResultErrorMessage,
-  getThrownErrorMessage,
-} from '@/app/(app)/app/practice/practice-logic';
 import type { AsyncLoadStateWithIdle } from '@/app/(app)/app/shared/load-state';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import type { NextQuestion } from '@/src/application/use-cases/get-next-question';
 import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
 import type { PracticeFilters } from './practice-page-types';
+import {
+  createTransitionedLoadAction,
+  runLoadQuestionFlow,
+  runSubmitAnswerFlow,
+} from './shared/question-flow-actions';
 
 export { createBookmarksEffect } from './practice-page-bookmarks';
 export {
@@ -50,54 +51,21 @@ export async function loadNextQuestion(input: {
   isLatestRequest?: (requestId: number) => boolean;
   isMounted?: () => boolean;
 }): Promise<void> {
-  const isMounted = input.isMounted ?? (() => true);
-  const requestId = input.createRequestSequenceId?.();
-  const canCommit = () => {
-    if (!isMounted()) return false;
-    if (requestId === undefined) return true;
-    return input.isLatestRequest?.(requestId) ?? true;
-  };
-
-  input.setLoadState({ status: 'loading' });
-  input.setSelectedChoiceId(null);
-  input.setSubmitResult(null);
-  input.setSubmitIdempotencyKey(null);
-  input.setQuestionLoadedAt(null);
-
-  let res: ActionResult<NextQuestion | null>;
-  try {
-    res = await input.getNextQuestionFn({
-      filters: input.filters,
-    });
-  } catch (error) {
-    if (!canCommit()) return;
-
-    input.setLoadState({
-      status: 'error',
-      message: getThrownErrorMessage(error),
-    });
-    input.setQuestion(null);
-    input.setSelectedChoiceId(null);
-    input.setSubmitResult(null);
-    input.setSubmitIdempotencyKey(null);
-    input.setQuestionLoadedAt(null);
-    return;
-  }
-  if (!canCommit()) return;
-
-  if (!res.ok) {
-    input.setLoadState({
-      status: 'error',
-      message: getActionResultErrorMessage(res),
-    });
-    input.setQuestion(null);
-    return;
-  }
-
-  input.setQuestion(res.data);
-  input.setQuestionLoadedAt(res.data ? input.nowMs() : null);
-  input.setSubmitIdempotencyKey(res.data ? input.createIdempotencyKey() : null);
-  input.setLoadState({ status: 'ready' });
+  return runLoadQuestionFlow({
+    requestInput: { filters: input.filters },
+    getQuestionFn: input.getNextQuestionFn,
+    createIdempotencyKey: input.createIdempotencyKey,
+    nowMs: input.nowMs,
+    setLoadState: input.setLoadState,
+    setSelectedChoiceId: input.setSelectedChoiceId,
+    setSubmitResult: input.setSubmitResult,
+    setSubmitIdempotencyKey: input.setSubmitIdempotencyKey,
+    setQuestionLoadedAt: input.setQuestionLoadedAt,
+    setQuestion: input.setQuestion,
+    createRequestSequenceId: input.createRequestSequenceId,
+    isLatestRequest: input.isLatestRequest,
+    isMounted: input.isMounted,
+  });
 }
 
 export function createLoadNextQuestionAction(input: {
@@ -118,11 +86,10 @@ export function createLoadNextQuestionAction(input: {
   isLatestRequest?: (requestId: number) => boolean;
   isMounted?: () => boolean;
 }): () => void {
-  return () => {
-    input.startTransition(() => {
-      void loadNextQuestion(input);
-    });
-  };
+  return createTransitionedLoadAction({
+    startTransition: input.startTransition,
+    run: () => loadNextQuestion(input),
+  });
 }
 
 export async function submitAnswerForQuestion(input: {
@@ -136,50 +103,28 @@ export async function submitAnswerForQuestion(input: {
   setSubmitResult: (result: SubmitAnswerOutput | null) => void;
   isMounted?: () => boolean;
 }): Promise<void> {
-  if (!input.question) return;
-  if (!input.selectedChoiceId) return;
-
-  const isMounted = input.isMounted ?? (() => true);
-
-  input.setLoadState({ status: 'loading' });
-
-  const timeSpentSeconds =
-    input.questionLoadedAtMs === null
-      ? 0
-      : Math.max(
-          0,
-          Math.floor((input.nowMs() - input.questionLoadedAtMs) / 1000),
-        );
-
-  let res: ActionResult<SubmitAnswerOutput>;
-  try {
-    res = await input.submitAnswerFn({
-      questionId: input.question.questionId,
-      choiceId: input.selectedChoiceId,
-      idempotencyKey: input.submitIdempotencyKey ?? undefined,
+  return runSubmitAnswerFlow({
+    question: input.question,
+    selectedChoiceId: input.selectedChoiceId,
+    questionLoadedAtMs: input.questionLoadedAtMs,
+    submitIdempotencyKey: input.submitIdempotencyKey,
+    submitAnswerFn: input.submitAnswerFn,
+    buildSubmitInput: ({
+      question,
+      selectedChoiceId,
+      idempotencyKey,
       timeSpentSeconds,
-    });
-  } catch (error) {
-    if (!isMounted()) return;
-
-    input.setLoadState({
-      status: 'error',
-      message: getThrownErrorMessage(error),
-    });
-    return;
-  }
-  if (!isMounted()) return;
-
-  if (!res.ok) {
-    input.setLoadState({
-      status: 'error',
-      message: getActionResultErrorMessage(res),
-    });
-    return;
-  }
-
-  input.setSubmitResult(res.data);
-  input.setLoadState({ status: 'ready' });
+    }) => ({
+      questionId: question.questionId,
+      choiceId: selectedChoiceId,
+      idempotencyKey: idempotencyKey ?? undefined,
+      timeSpentSeconds,
+    }),
+    nowMs: input.nowMs,
+    setLoadState: input.setLoadState,
+    setSubmitResult: input.setSubmitResult,
+    isMounted: input.isMounted,
+  });
 }
 
 export async function toggleBookmarkForQuestion(input: {
