@@ -159,8 +159,10 @@ export function usePracticeQuestionAnswerFlow(
     input.submitAnswerFn,
   ]);
 
-  const onSelectChoice = useMemo(
-    () => selectChoiceIfAllowed.bind(null, submitResult, setSelectedChoiceId),
+  const onSelectChoice = useCallback(
+    (choiceId: string) => {
+      selectChoiceIfAllowed(submitResult, setSelectedChoiceId, choiceId);
+    },
     [submitResult],
   );
 

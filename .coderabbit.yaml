@@ -101,7 +101,6 @@ reviews:
     - "!**/dist/**"
     - "!db/migrations/**"
     - "!docs/**"
-    - "!docs/_archive/**"
 
   # Focus on these tools
   tools:
