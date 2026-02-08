@@ -38,7 +38,6 @@ export function ChoiceButton({
       <input
         type="radio"
         name={name}
-        aria-label={`Choice ${label}`}
         checked={selected}
         onChange={() => onClick()}
         disabled={disabled}

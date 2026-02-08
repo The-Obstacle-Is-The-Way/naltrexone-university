@@ -92,9 +92,9 @@ function validateEnv(): Env {
   }
 
   const skipClerk = parsed.data.NEXT_PUBLIC_SKIP_CLERK === 'true';
-  // VERCEL_ENV is a runtime-only variable injected by Vercel. Unlike NODE_ENV,
-  // it is never baked into the bundle by Next.js/Turbopack at build time.
-  // This makes it the only reliable signal for detecting production runtime.
+  // VERCEL_ENV is injected by Vercel and available during both the Build Step
+  // and Function execution. Unlike NODE_ENV, it is never inlined into the
+  // JavaScript bundle by Turbopack — it remains a live process.env lookup.
   //
   // NODE_ENV is NOT reliable here because:
   //   1. `next build` sets NODE_ENV='production' internally
@@ -102,6 +102,13 @@ function validateEnv(): Env {
   //   3. At runtime the baked value overrides the actual process env
   //   4. This causes CI E2E (NODE_ENV=test) and Vercel preview (VERCEL_ENV=preview)
   //      to be misidentified as production
+  //
+  // IMPORTANT: Because VERCEL_ENV is available at build time, any validation
+  // gated on isProductionRuntime also runs during `next build`'s "Collecting
+  // page data" phase. Only gate env vars here that MUST be present for the
+  // build to succeed (e.g., Clerk keys for auth middleware). Secrets only
+  // needed at request time (e.g., CRON_SECRET) should be validated at their
+  // point of use, not here.
   const isProductionRuntime = process.env.VERCEL_ENV === 'production';
   if (!skipClerk) {
     const missingClerkKeys: Record<string, string[]> = {};
@@ -159,11 +166,6 @@ function validateEnv(): Env {
 
   if (isProductionRuntime && skipClerk) {
     throw new Error('NEXT_PUBLIC_SKIP_CLERK must not be true in production');
-  }
-
-  if (isProductionRuntime && !parsed.data.CRON_SECRET) {
-    logInvalidEnv({ CRON_SECRET: ['Required'] });
-    throw new Error('Invalid environment variables');
   }
 
   // When Clerk is skipped (local/CI builds), allow missing Clerk keys by

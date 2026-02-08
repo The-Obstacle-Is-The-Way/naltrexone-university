@@ -19,8 +19,14 @@ describe('ChoiceButton', () => {
     expect(html).toContain('Choice A');
     expect(html).toContain('type="radio"');
     expect(html).toContain('name="choices"');
-    expect(html).toContain('aria-label="Choice A"');
     expect(html).not.toContain('checked=""');
+
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const input = doc.querySelector('input[type="radio"]');
+    const wrapperLabel = input?.closest('label');
+
+    expect(input?.getAttribute('aria-label')).toBeNull();
+    expect(wrapperLabel?.textContent).toContain('Choice A');
   });
 
   it('exposes selected state via checked input', () => {

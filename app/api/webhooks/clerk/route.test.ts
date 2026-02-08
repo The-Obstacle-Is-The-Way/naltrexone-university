@@ -83,8 +83,13 @@ function createTestDeps() {
 
 describe('POST /api/webhooks/clerk', () => {
   it('returns 400 when signature verification fails', async () => {
-    const { POST, createContainer, verifyWebhook, processClerkWebhook } =
-      createTestDeps();
+    const {
+      POST,
+      createContainer,
+      verifyWebhook,
+      processClerkWebhook,
+      logger,
+    } = createTestDeps();
 
     verifyWebhook.mockRejectedValue(new Error('bad signature'));
 
@@ -98,6 +103,7 @@ describe('POST /api/webhooks/clerk', () => {
     expect(res.status).toBe(400);
     expect(createContainer).toHaveBeenCalledTimes(1);
     expect(processClerkWebhook).not.toHaveBeenCalled();
+    expect(logger.errorCalls).toHaveLength(1);
   });
 
   it('returns 200 and received=true when processing succeeds', async () => {
