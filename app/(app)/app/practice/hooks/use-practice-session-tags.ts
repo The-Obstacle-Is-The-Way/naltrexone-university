@@ -21,6 +21,7 @@ export function usePracticeSessionTags(): UsePracticeSessionTagsOutput {
       getTagsFn: getTags,
       setTagLoadStatus,
       setAvailableTags,
+      logError: () => undefined,
     });
   }, []);
 
