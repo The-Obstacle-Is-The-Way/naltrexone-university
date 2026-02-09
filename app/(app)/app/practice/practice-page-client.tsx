@@ -13,28 +13,6 @@ import {
 import { fireAndForget, logUnhandledAsyncError } from './fire-and-forget';
 import { usePracticeSessionControls } from './hooks/use-practice-session-controls';
 
-function QuickPracticeCard() {
-  return (
-    <Card className="gap-0 rounded-2xl border-border p-6">
-      <div className="space-y-1">
-        <div className="text-sm font-medium text-foreground">
-          Quick Practice
-        </div>
-        <div className="text-sm text-muted-foreground">
-          Answer one question at a time. No session tracking — just jump in and
-          practice.
-        </div>
-      </div>
-
-      <div className="mt-5 flex justify-end">
-        <Button asChild className="rounded-full">
-          <Link href={ROUTES.APP_PRACTICE_QUICK}>Quick Practice →</Link>
-        </Button>
-      </div>
-    </Card>
-  );
-}
-
 export default function PracticePageClient() {
   const sessionControls = usePracticeSessionControls();
   const shouldShowSessionStarter =
@@ -84,44 +62,41 @@ export default function PracticePageClient() {
           <ErrorCard>{sessionControls.incompleteSessionError}</ErrorCard>
         ) : null}
 
-        <div className="grid gap-4 lg:grid-cols-2">
-          {shouldShowSessionStarter ? (
-            <PracticeSessionStarter
-              sessionMode={sessionControls.sessionMode}
-              sessionCount={sessionControls.sessionCount}
-              filters={sessionControls.filters}
-              tagLoadStatus={sessionControls.tagLoadStatus}
-              availableTags={sessionControls.availableTags}
-              sessionStartStatus={sessionControls.sessionStartStatus}
-              sessionStartError={sessionControls.sessionStartError}
-              isPending={false}
-              onToggleDifficulty={sessionControls.onToggleDifficulty}
-              onToggleTag={sessionControls.onToggleTag}
-              onSessionModeChange={sessionControls.onSessionModeChange}
-              onSessionCountChange={sessionControls.onSessionCountChange}
-              onStartSession={() => {
-                fireAndForget(
-                  sessionControls.onStartSession(),
-                  logUnhandledAsyncError,
-                );
-              }}
-            />
-          ) : (
-            <Card className="gap-0 rounded-2xl border-border p-6">
-              <div className="space-y-1">
-                <div className="text-sm font-medium text-foreground">
-                  Start a session
-                </div>
-                <div className="text-sm text-muted-foreground">
-                  {sessionControls.incompleteSession
-                    ? 'Resume or abandon your current session to start a new one.'
-                    : 'Loading session status…'}
-                </div>
+        {shouldShowSessionStarter ? (
+          <PracticeSessionStarter
+            sessionMode={sessionControls.sessionMode}
+            sessionCount={sessionControls.sessionCount}
+            filters={sessionControls.filters}
+            tagLoadStatus={sessionControls.tagLoadStatus}
+            availableTags={sessionControls.availableTags}
+            sessionStartStatus={sessionControls.sessionStartStatus}
+            sessionStartError={sessionControls.sessionStartError}
+            isPending={false}
+            onToggleDifficulty={sessionControls.onToggleDifficulty}
+            onToggleTag={sessionControls.onToggleTag}
+            onSessionModeChange={sessionControls.onSessionModeChange}
+            onSessionCountChange={sessionControls.onSessionCountChange}
+            onStartSession={() => {
+              fireAndForget(
+                sessionControls.onStartSession(),
+                logUnhandledAsyncError,
+              );
+            }}
+          />
+        ) : (
+          <Card className="gap-0 rounded-2xl border-border p-6">
+            <div className="space-y-1">
+              <div className="text-sm font-medium text-foreground">
+                Start a session
               </div>
-            </Card>
-          )}
-          <QuickPracticeCard />
-        </div>
+              <div className="text-sm text-muted-foreground">
+                {sessionControls.incompleteSession
+                  ? 'Resume or abandon your current session to start a new one.'
+                  : 'Loading session status…'}
+              </div>
+            </div>
+          </Card>
+        )}
 
         <PracticeSessionHistoryPanel
           status={sessionControls.sessionHistoryStatus}
