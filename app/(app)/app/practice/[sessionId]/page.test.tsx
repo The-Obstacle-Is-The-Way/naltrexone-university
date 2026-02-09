@@ -32,9 +32,9 @@ describe('app/(app)/app/practice/[sessionId]', () => {
 
     const html = renderToStaticMarkup(element);
 
-    expect(html).toContain('Practice');
+    expect(html).toContain('Tutor Session');
     expect(html).toContain('End session');
-    expect(html).toContain('Back to Dashboard');
+    expect(html).not.toContain('Back to Dashboard');
   }, 20_000);
 
   it('renders the session summary view', async () => {

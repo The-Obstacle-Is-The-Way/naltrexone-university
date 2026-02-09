@@ -71,18 +71,12 @@ describe('PracticeView', () => {
     expect(html).not.toContain('Loading question');
   });
 
-  it('announces session progress updates for assistive tech', async () => {
+  it('announces description updates for assistive tech via aria-live', async () => {
     const { PracticeView } = await import('./practice-view');
 
     const html = renderToStaticMarkup(
       <PracticeView
-        sessionInfo={{
-          sessionId: 'session-1',
-          mode: 'exam',
-          index: 1,
-          total: 10,
-          isMarkedForReview: false,
-        }}
+        description="Question 2 of 10 — Explanations shown after you submit the exam."
         loadState={{ status: 'ready' }}
         question={null}
         selectedChoiceId={null}
@@ -102,7 +96,7 @@ describe('PracticeView', () => {
     const doc = new DOMParser().parseFromString(html, 'text/html');
     const progress = doc.querySelector('p[aria-live="polite"]');
     expect(progress).not.toBeNull();
-    expect(progress?.textContent).toContain('Session: exam');
+    expect(progress?.textContent).toContain('Question 2 of 10');
   });
 
   it('exposes toggle state via aria-pressed for bookmark button', async () => {

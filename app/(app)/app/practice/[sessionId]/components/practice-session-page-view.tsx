@@ -107,8 +107,21 @@ export function PracticeSessionPageView(props: PracticeSessionPageViewProps) {
     );
   }
 
+  const mode = props.sessionInfo?.mode ?? 'tutor';
+  const title = mode === 'exam' ? 'Exam Session' : 'Tutor Session';
+  const progress = props.sessionInfo
+    ? `Question ${props.sessionInfo.index + 1} of ${props.sessionInfo.total}`
+    : null;
+  const modeHint =
+    mode === 'exam'
+      ? 'Explanations shown after you submit the exam.'
+      : 'Explanations shown after each answer.';
+  const description = progress ? `${progress} — ${modeHint}` : modeHint;
+
   return (
     <PracticeView
+      title={title}
+      description={description}
       topContent={
         navigator && props.onNavigateQuestion ? (
           <QuestionNavigator
@@ -145,9 +158,7 @@ export function PracticeSessionPageView(props: PracticeSessionPageViewProps) {
       bookmarkMessage={props.bookmarkMessage}
       bookmarkMessageVersion={props.bookmarkMessageVersion}
       canSubmit={props.canSubmit}
-      endSessionLabel={
-        props.sessionInfo?.mode === 'exam' ? 'Review answers' : 'End session'
-      }
+      endSessionLabel={mode === 'exam' ? 'Review answers' : 'End session'}
       onEndSession={props.onEndSession}
       onTryAgain={props.onTryAgain}
       onToggleBookmark={props.onToggleBookmark}

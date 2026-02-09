@@ -121,7 +121,9 @@ Both use `PracticeSessionReviewRow` data. Both are non-interactive. Both will ne
 - `app/(app)/app/practice/components/practice-session-history-panel.tsx` — import and use shared component
 - `app/(app)/app/practice/[sessionId]/components/session-summary-view.tsx` — import and use shared component
 
-### Problem 5: Breakdown Renders Below ALL Sessions (Not Inline)
+### ~~Problem 5: Breakdown Renders Below ALL Sessions (Not Inline)~~ — DONE (dd51513)
+
+> Implemented: Breakdown now renders inline inside the selected session's `<li>`. "Session breakdown" heading removed.
 
 The "Session breakdown" section (lines 108-130 of `practice-session-history-panel.tsx`) renders **outside** the session list `<ul>`. When you click "View breakdown" on the first session, the breakdown list appears at the bottom of the entire card, below all 4 sessions. It should render **inside** the `<li>` of the selected session, directly beneath the session row you clicked.
 
@@ -153,7 +155,9 @@ The "Session breakdown" section (lines 108-130 of `practice-session-history-pane
 **Files:**
 - `app/(app)/app/practice/components/practice-session-history-panel.tsx` — move breakdown rendering inside the `.map()` loop, conditionally render when `selectedSessionId === row.sessionId`
 
-### Problem 6: Session Rows Have No Date
+### ~~Problem 6: Session Rows Have No Date~~ — DONE (dd51513)
+
+> Implemented: `formatDate(row.endedAt)` added as fourth bullet segment on every session row. Aria-label updated.
 
 `SessionHistoryRow` has `startedAt` and `endedAt` (ISO strings from backend) but neither is displayed. Users see `Exam • 0/20 correct (0%) • 1m 2s` with no indication of *when* the session occurred. For a history panel, this is critical context.
 
@@ -164,7 +168,9 @@ The "Session breakdown" section (lines 108-130 of `practice-session-history-pane
 - `app/(app)/app/practice/components/practice-session-history-panel.tsx` — add formatted date from `row.endedAt`
 - May need a `formatDate` utility (check if one already exists in `lib/`)
 
-### Problem 7: Breakdown Status Labels Are Unstyled and Flat
+### ~~Problem 7: Breakdown Status Labels Are Unstyled and Flat~~ — DONE (dd51513)
+
+> Implemented: "Answered" label dropped. Correct=`text-emerald-500`, Incorrect=`text-destructive`, Unanswered=`text-muted-foreground/60`. Propagates to SessionSummaryView for free.
 
 The breakdown list shows `Answered Incorrect` or `Unanswered` as plain gray text inline with the question stem. There's no visual differentiation — correct and incorrect look the same. The labels blend into the stem text rather than standing out as status indicators.
 
@@ -184,9 +190,9 @@ The breakdown list shows `Answered Incorrect` or `Unanswered` as plain gray text
 | 2. Breakdown questions not clickable | DONE | #83 |
 | 3. Breakdown can't be collapsed | DONE | #83 |
 | 4. Copy-pasted breakdown JSX | DONE | #83 |
-| 5. Breakdown below all sessions | **TODO** | — |
-| 6. No date on session rows | **TODO** | — |
-| 7. Breakdown labels unstyled | **TODO** | — |
+| 5. Breakdown below all sessions | DONE | dd51513 |
+| 6. No date on session rows | DONE | dd51513 |
+| 7. Breakdown labels unstyled | DONE | dd51513 |
 
 ---
 
@@ -300,18 +306,20 @@ After Phase 4 is implemented, verify NO vestigial slop remains:
 
 ---
 
-### Problem 8: Active Session View Has Vestigial Quick Practice Copy and Scattered Layout
+### ~~Problem 8: Active Session View Has Vestigial Quick Practice Copy and Scattered Layout~~ — DONE
 
-The active session page (`/app/practice/[sessionId]`) shows "Practice" / "Answer one question at a time" as the heading — these are Quick Practice defaults that don't apply to exam or tutor sessions. Additionally, action buttons are scattered across three zones (header, above question, below question), creating a disorienting layout.
+> Implemented: All 5 sub-problems resolved.
+
+The active session page (`/app/practice/[sessionId]`) had vestigial Quick Practice defaults and scattered button layout.
 
 **Full analysis:** See `session-view-layout-audit.md`
 
-**Sub-problems:**
-- A. "Practice" / "Answer one question at a time" copy shown in exam/tutor sessions
-- B. Mark for Review + Bookmark buttons floating above question, disconnected from Submit/Next
-- C. "Review answers" and "Back to Dashboard" both visible in header (redundant exit paths)
-- D. "Session: exam • 6/20" text is tiny and low-contrast
-- E. Question navigator doesn't distinguish answered vs unanswered
+**Sub-problems (all resolved):**
+- ~~A. "Practice" / "Answer one question at a time" copy shown in exam/tutor sessions~~ — DONE. Title now "Tutor Session" / "Exam Session". Description integrates progress: "Question 2 of 20 — Explanations shown after each answer."
+- ~~B. Mark for Review + Bookmark buttons floating above question~~ — DONE. Moved to bottom action bar alongside Submit/Next Question.
+- ~~C. "Review answers" and "Back to Dashboard" both visible~~ — DONE. "Back to Dashboard" hidden when session is active; only "End session" / "Review answers" shows.
+- ~~D. "Session: exam • 6/20" text is tiny and low-contrast~~ — DONE. Removed; progress integrated into description at normal text size.
+- ~~E. Question navigator doesn't distinguish answered vs unanswered~~ — DONE. Answered questions use `secondary` variant (filled), unanswered use `outline`.
 
 **Files:** `practice-view.tsx`, `practice-session-page-view.tsx`, `exam-review-view.tsx`
 
@@ -325,10 +333,10 @@ The active session page (`/app/practice/[sessionId]`) shows "Practice" / "Answer
 | 2. Breakdown questions not clickable | DONE | #83 | Practice page |
 | 3. Breakdown can't be collapsed | DONE | #83 | Practice page |
 | 4. Copy-pasted breakdown JSX | DONE | #83 | Practice page |
-| 5. Breakdown below all sessions | **TODO** | — | Recent sessions panel |
-| 6. No date on session rows | **TODO** | — | Recent sessions panel |
-| 7. Breakdown labels unstyled | **TODO** | — | SessionBreakdownList |
-| 8. Session view layout/copy | **TODO** | — | Active session page |
+| 5. Breakdown below all sessions | DONE | dd51513 | Recent sessions panel |
+| 6. No date on session rows | DONE | dd51513 | Recent sessions panel |
+| 7. Breakdown labels unstyled | DONE | dd51513 | SessionBreakdownList |
+| 8. Session view layout/copy | DONE | — | Active session page |
 
 ---
 

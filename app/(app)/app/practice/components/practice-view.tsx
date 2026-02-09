@@ -119,16 +119,9 @@ export function PracticeView(props: PracticeViewProps) {
             <h1 className="text-2xl font-bold font-heading tracking-tight text-foreground">
               {title}
             </h1>
-            <p className="mt-1 text-muted-foreground">{description}</p>
-            {sessionInfo ? (
-              <p
-                className="mt-2 text-xs text-muted-foreground"
-                aria-live="polite"
-              >
-                Session: {sessionInfo.mode} • {sessionInfo.index + 1}/
-                {sessionInfo.total}
-              </p>
-            ) : null}
+            <p className="mt-1 text-muted-foreground" aria-live="polite">
+              {description}
+            </p>
           </div>
           <div className="flex items-center gap-3">
             {props.onEndSession ? (
@@ -141,14 +134,15 @@ export function PracticeView(props: PracticeViewProps) {
               >
                 {props.endSessionLabel ?? 'End session'}
               </Button>
-            ) : null}
-            <Button
-              asChild
-              variant="link"
-              className="h-auto p-0 text-muted-foreground no-underline hover:text-foreground hover:no-underline"
-            >
-              <Link href={backLink.href}>{backLink.label}</Link>
-            </Button>
+            ) : (
+              <Button
+                asChild
+                variant="link"
+                className="h-auto p-0 text-muted-foreground no-underline hover:text-foreground hover:no-underline"
+              >
+                <Link href={backLink.href}>{backLink.label}</Link>
+              </Button>
+            )}
           </div>
         </div>
       </div>
@@ -190,35 +184,6 @@ export function PracticeView(props: PracticeViewProps) {
       ) : null}
 
       {props.question ? (
-        <div className="flex flex-col items-end gap-2">
-          {sessionInfo?.mode === 'exam' && props.onToggleMarkForReview ? (
-            <Button
-              type="button"
-              variant="outline"
-              className="rounded-full"
-              aria-pressed={sessionInfo.isMarkedForReview}
-              disabled={props.isMarkingForReview || props.isPending}
-              onClick={props.onToggleMarkForReview}
-            >
-              {sessionInfo.isMarkedForReview
-                ? 'Unmark review'
-                : 'Mark for review'}
-            </Button>
-          ) : null}
-          <Button
-            type="button"
-            variant="outline"
-            className="rounded-full"
-            aria-pressed={props.isBookmarked}
-            disabled={props.bookmarkStatus === 'loading' || props.isPending}
-            onClick={props.onToggleBookmark}
-          >
-            {props.isBookmarked ? 'Remove bookmark' : 'Bookmark'}
-          </Button>
-        </div>
-      ) : null}
-
-      {props.question ? (
         <QuestionCard
           stemMd={props.question.stemMd}
           choices={props.question.choices.map((c) => ({
@@ -246,7 +211,7 @@ export function PracticeView(props: PracticeViewProps) {
       ) : null}
 
       {props.question ? (
-        <div className="flex flex-col gap-3 sm:flex-row">
+        <div className="flex flex-wrap items-center gap-3">
           <Button
             type="button"
             className="rounded-full"
@@ -265,6 +230,32 @@ export function PracticeView(props: PracticeViewProps) {
           >
             Next Question
           </Button>
+
+          <Button
+            type="button"
+            variant="outline"
+            className="rounded-full"
+            aria-pressed={props.isBookmarked}
+            disabled={props.bookmarkStatus === 'loading' || props.isPending}
+            onClick={props.onToggleBookmark}
+          >
+            {props.isBookmarked ? 'Remove bookmark' : 'Bookmark'}
+          </Button>
+
+          {sessionInfo?.mode === 'exam' && props.onToggleMarkForReview ? (
+            <Button
+              type="button"
+              variant="outline"
+              className="rounded-full"
+              aria-pressed={sessionInfo.isMarkedForReview}
+              disabled={props.isMarkingForReview || props.isPending}
+              onClick={props.onToggleMarkForReview}
+            >
+              {sessionInfo.isMarkedForReview
+                ? 'Unmark review'
+                : 'Mark for review'}
+            </Button>
+          ) : null}
         </div>
       ) : null}
     </div>

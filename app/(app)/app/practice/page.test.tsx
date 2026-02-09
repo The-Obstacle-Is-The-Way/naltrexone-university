@@ -326,17 +326,13 @@ describe('app/(app)/app/practice', () => {
     expect(html).toContain('Bookmarks unavailable');
   });
 
-  it('renders session info when sessionInfo is provided', async () => {
+  it('renders custom title and description when provided', async () => {
     const { PracticeView } = await import('@/app/(app)/app/practice/page');
 
     const html = renderToStaticMarkup(
       <PracticeView
-        sessionInfo={{
-          sessionId: 'session-1',
-          mode: 'tutor',
-          index: 0,
-          total: 10,
-        }}
+        title="Tutor Session"
+        description="Question 1 of 10 — Explanations shown after each answer."
         loadState={{ status: 'ready' }}
         question={null}
         selectedChoiceId={null}
@@ -354,8 +350,8 @@ describe('app/(app)/app/practice', () => {
       />,
     );
 
-    expect(html).toContain('Session: tutor');
-    expect(html).toContain('1/10');
+    expect(html).toContain('Tutor Session');
+    expect(html).toContain('Question 1 of 10');
   });
 
   it('renders session start error when starter is in error state', async () => {

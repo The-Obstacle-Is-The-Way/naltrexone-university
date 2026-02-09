@@ -48,11 +48,17 @@ export function QuestionNavigator({
             answeredLabel,
           ];
 
+          const variant = isCurrent
+            ? 'default'
+            : row.isAnswered
+              ? 'secondary'
+              : 'outline';
+
           return (
             <Button
               key={row.questionId}
               type="button"
-              variant={isCurrent ? 'default' : 'outline'}
+              variant={variant}
               className="relative rounded-full"
               disabled={!row.isAvailable}
               onClick={() => onNavigateQuestion(row.questionId)}

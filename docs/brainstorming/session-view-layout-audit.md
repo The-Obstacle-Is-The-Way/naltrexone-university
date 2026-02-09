@@ -111,28 +111,25 @@ The session page (`practice-session-page-view.tsx`) adds session-specific UI aro
 
 ## Severity Assessment
 
-| Problem | Severity | Effort | Dependencies |
-|---------|----------|--------|-------------|
-| A. Wrong copy for session mode | **High** — misleading text | Small — pass props | None |
-| B. Scattered button zones | **Medium** — confusing layout | Medium — restructure JSX | None |
-| C. Redundant exit paths | **Medium** — decision paralysis | Small — conditional rendering | Depends on B |
-| D. Tiny session progress text | **Low** — cosmetic | Small — CSS change | Could be solved by A |
-| E. Navigator answered/unanswered | **Low** — nice-to-have | Medium — state tracking | None |
+| Problem | Severity | Effort | Status |
+|---------|----------|--------|--------|
+| A. Wrong copy for session mode | **High** — misleading text | Small — pass props | **DONE** |
+| B. Scattered button zones | **Medium** — confusing layout | Medium — restructure JSX | **DONE** |
+| C. Redundant exit paths | **Medium** — decision paralysis | Small — conditional rendering | **DONE** |
+| D. Tiny session progress text | **Low** — cosmetic | Small — CSS change | **DONE** (solved by A) |
+| E. Navigator answered/unanswered | **Low** — nice-to-have | Medium — state tracking | **DONE** |
+
+All problems resolved.
 
 ---
 
-## Recommended Fix Order
+## Implementation Summary
 
-**Phase 1 (quick wins, high impact):**
-1. Fix heading/subtitle text per session mode (Problem A)
-2. Integrate session progress into heading (fixes Problem D for free)
+**Phase 1 (A+D):** `PracticeSessionPageView` now passes mode-aware `title` ("Tutor Session" / "Exam Session") and `description` ("Question X of Y — Explanations shown after...") to `PracticeView`. The separate tiny `Session: exam • 6/20` progress line was removed.
 
-**Phase 2 (layout restructure):**
-3. Move Mark for Review + Bookmark to the bottom action bar (Problem B)
-4. Simplify header exit actions per mode (Problem C)
+**Phase 2 (B+C):** Mark for Review and Bookmark buttons moved from floating zone above question to bottom action bar alongside Submit/Next Question. "Back to Dashboard" link hidden when session is active (only "End session" / "Review answers" shows).
 
-**Phase 3 (polish):**
-5. Navigator visual states for answered/unanswered (Problem E)
+**Phase 3 (E):** Navigator buttons use `secondary` variant for answered questions, `outline` for unanswered, `default` for current question.
 
 ---
 

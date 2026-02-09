@@ -82,15 +82,15 @@
 - Difficulty: NO
 - Correct/Incorrect: YES — "Correct" / "Incorrect" text (only if answered)
 - Answered/Unanswered: YES
-- Date: NO (session row has no date — **tracked as Problem 6 in `practice-ux-audit.md`**)
+- Date: NO (session row now shows date — **Problem 6 DONE, dd51513**)
 - Session origin: Implicit (parent session row shows mode)
 - Order number: YES — `{order}.`
 
 **Actions:** Full question row is a `<Link>` → `/app/questions/[slug]?from=practice` (added in PR #83)
 **Unavailable:** `[Question no longer available]` text, no link
-**Known issues:**
-- Breakdown renders below ALL sessions, not inline under selected session — **tracked as Problem 5**
-- Status labels unstyled — **tracked as Problem 7**
+**Known issues:** All resolved.
+- ~~Breakdown renders below ALL sessions~~ — **Problem 5 DONE (dd51513)**
+- ~~Status labels unstyled~~ — **Problem 7 DONE (dd51513)**
 
 ### Location 6: Practice — Session Summary Breakdown (Post-Session) (UPDATED after PR #83)
 
@@ -231,15 +231,13 @@ All 5 items completed:
 4. ~~Make breakdown questions clickable (`<Link>`)~~ DONE
 5. ~~Toggle breakdown collapse~~ DONE
 
-### Now (Practice Page Fix — Phase 2): see `practice-recent-sessions-v2.md`
+### ~~Now (Practice Page Fix — Phase 2)~~ — DONE (dd51513)
 
-Three remaining Practice page issues, all scoped to the "Recent sessions" panel:
+All three items completed:
 
-1. Move breakdown inline under selected session (not at bottom of list)
-2. Add date to session rows
-3. Style breakdown status labels (Correct/Incorrect/Unanswered)
-
-**Still does NOT touch Dashboard, Review, or Bookmarks.** Zero cross-page risk.
+1. ~~Move breakdown inline under selected session~~ DONE
+2. ~~Add date to session rows~~ DONE
+3. ~~Style breakdown status labels~~ DONE
 
 ### Later (Cross-Page Consistency — this doc):
 
