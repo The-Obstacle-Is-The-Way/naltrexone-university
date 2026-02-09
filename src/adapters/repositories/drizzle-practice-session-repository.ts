@@ -441,6 +441,9 @@ export class DrizzlePracticeSessionRepository
       );
     }
 
-    return { ...existing, endedAt };
+    const params = this.normalizeParams(
+      this.parseParams(updated.paramsJson, 'INTERNAL_ERROR'),
+    );
+    return this.toDomain(updated, params);
   }
 }

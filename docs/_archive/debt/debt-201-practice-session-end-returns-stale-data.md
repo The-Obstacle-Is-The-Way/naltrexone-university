@@ -1,8 +1,9 @@
 # DEBT-201: Practice Session end() Returns Pre-Read Data Instead of Fresh DB Row
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P4
 **Date:** 2026-02-08
+**Resolved:** 2026-02-09
 
 ---
 
@@ -55,8 +56,8 @@ return { ...existing, endedAt, questionStates: parseQuestionStates(updated.param
 
 ## Verification
 
-- `pnpm typecheck && pnpm test --run`
-- The existing CAS test should still pass
+- [x] `pnpm typecheck && pnpm test --run`
+- [x] Repository regression test asserts `end()` returns question state from the updated DB row
 
 ## Related
 
