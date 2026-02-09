@@ -73,28 +73,31 @@
 **Actions:** Stem title is `<Link>` + "Reattempt" `<Button>` + "Remove" `<Button>` (with AlertDialog) → `/app/questions/[slug]?from=bookmarks`
 **Unavailable:** Same pattern as Review but no session origin. Remove button still available.
 
-### Location 5: Practice — Recent Sessions Breakdown
+### Location 5: Practice — Recent Sessions Breakdown (UPDATED after PR #83)
 
-**File:** `app/(app)/app/practice/components/practice-session-history-panel.tsx` (lines 132-154)
-**Container:** `<li>` (plain text, no card, no link)
+**File:** `app/(app)/app/practice/components/practice-session-history-panel.tsx` → delegates to `session-breakdown-list.tsx`
+**Container:** `<li>` → `<Link>` (clickable row via shared `SessionBreakdownList`)
 **Data shown:**
 - Stem preview: **80 chars**
 - Difficulty: NO
 - Correct/Incorrect: YES — "Correct" / "Incorrect" text (only if answered)
 - Answered/Unanswered: YES
-- Date: NO
+- Date: NO (session row has no date — **tracked as Problem 6 in `practice-ux-audit.md`**)
 - Session origin: Implicit (parent session row shows mode)
 - Order number: YES — `{order}.`
 
-**Actions:** NONE — plain text, not clickable
-**Unavailable:** `[Question no longer available]` text only
+**Actions:** Full question row is a `<Link>` → `/app/questions/[slug]?from=practice` (added in PR #83)
+**Unavailable:** `[Question no longer available]` text, no link
+**Known issues:**
+- Breakdown renders below ALL sessions, not inline under selected session — **tracked as Problem 5**
+- Status labels unstyled — **tracked as Problem 7**
 
-### Location 6: Practice — Session Summary Breakdown (Post-Session)
+### Location 6: Practice — Session Summary Breakdown (Post-Session) (UPDATED after PR #83)
 
-**File:** `app/(app)/app/practice/[sessionId]/components/session-summary-view.tsx` (lines 88-110)
-**Container:** Same as Location 5 — `<li>` plain text
+**File:** `app/(app)/app/practice/[sessionId]/components/session-summary-view.tsx` → delegates to `session-breakdown-list.tsx`
+**Container:** Same as Location 5 — shared `SessionBreakdownList`
 **Data shown:** IDENTICAL to Location 5
-**Actions:** NONE — plain text, not clickable
+**Actions:** Same as Location 5 — clickable links via shared component (added in PR #83)
 **Unavailable:** Same as Location 5
 
 ### Location 7: Practice — Exam Review (Pre-Submit)
@@ -128,8 +131,8 @@
 | Session origin | - | Implicit | YES | - | Implicit | - | - |
 | Order # | - | - | - | - | YES | YES | YES |
 | Marked | - | - | - | - | - | - | YES |
-| Container | Link row | Link row | Card | Card | Plain li | Plain li | Card |
-| Clickable | YES | YES | YES (2 paths) | YES (2 paths) | **NO** | **NO** | YES (button) |
+| Container | Link row | Link row | Card | Card | Link row | Link row | Card |
+| Clickable | YES | YES | YES (2 paths) | YES (2 paths) | YES (PR #83) | YES (PR #83) | YES (button) |
 
 ---
 
@@ -149,9 +152,9 @@ Five different stem lengths across 7 locations: 100, 90, 80, 96, 80. No rational
 
 **Recommendation:** When difficulty is shown, use the same display approach everywhere. The Dashboard badge pattern is more scannable. But this is cosmetic — not blocking.
 
-### I3: Practice Breakdowns Are Non-Interactive Dead Ends
+### ~~I3: Practice Breakdowns Are Non-Interactive Dead Ends~~ — FIXED (PR #83)
 
-This is the #1 problem (covered in `practice-ux-audit.md`). Being fixed in the Practice page work (Phase 1).
+Questions in breakdowns are now clickable `<Link>` elements via shared `SessionBreakdownList`. Both Practice history panel and Session summary view use the shared component. Remaining issues: breakdown placement (Problem 5), date display (Problem 6), label styling (Problem 7) — tracked in `practice-ux-audit.md`.
 
 ### I4: Question Page Is a Single-Question Dead End
 
@@ -218,17 +221,25 @@ This would DRY up Review and Bookmarks. The Dashboard's compact row pattern is d
 
 ## What Should Be Done (And When)
 
-### Now (Practice Page Fix — see `practice-ux-audit.md`):
+### ~~Now (Practice Page Fix — Phase 1)~~ — DONE (PR #83)
 
-These fixes happen first and are self-contained:
+All 5 items completed:
 
-1. Remove Quick Practice card from Practice page
-2. Add `slug` to `PracticeSessionReviewRow` (backend)
-3. Extract `SessionBreakdownList` shared component (Practice + Summary)
-4. Make breakdown questions clickable (`<Link>`)
-5. Toggle breakdown collapse
+1. ~~Remove Quick Practice card from Practice page~~ DONE
+2. ~~Add `slug` to `PracticeSessionReviewRow` (backend)~~ DONE
+3. ~~Extract `SessionBreakdownList` shared component (Practice + Summary)~~ DONE
+4. ~~Make breakdown questions clickable (`<Link>`)~~ DONE
+5. ~~Toggle breakdown collapse~~ DONE
 
-**These fixes do NOT touch Dashboard, Review, or Bookmarks.** Zero risk of cross-page slop.
+### Now (Practice Page Fix — Phase 2): see `practice-recent-sessions-v2.md`
+
+Three remaining Practice page issues, all scoped to the "Recent sessions" panel:
+
+1. Move breakdown inline under selected session (not at bottom of list)
+2. Add date to session rows
+3. Style breakdown status labels (Correct/Incorrect/Unanswered)
+
+**Still does NOT touch Dashboard, Review, or Bookmarks.** Zero cross-page risk.
 
 ### Later (Cross-Page Consistency — this doc):
 

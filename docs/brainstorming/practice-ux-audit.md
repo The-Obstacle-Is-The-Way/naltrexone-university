@@ -51,7 +51,9 @@ Quick Practice (`/app/practice/quick`) works as intended:
 
 ## Problems (Practice Page Only)
 
-### Problem 1: Quick Practice Card Is Redundant
+### ~~Problem 1: Quick Practice Card Is Redundant~~ — DONE (PR #83)
+
+> Implemented: Quick Practice card removed, session starter fills full width.
 
 Quick Practice has its own nav tab. The card on the Practice page takes 50% of the page width to show a single link button. The Session Starter should use the full width.
 
@@ -60,7 +62,9 @@ Quick Practice has its own nav tab. The card on the Practice page takes 50% of t
 **Files:**
 - `app/(app)/app/practice/practice-page-client.tsx` — remove `QuickPracticeCard` and the 2-column grid layout, let session starter fill full width
 
-### Problem 2: Breakdown Questions Are Not Clickable
+### ~~Problem 2: Breakdown Questions Are Not Clickable~~ — DONE (PR #83)
+
+> Implemented: `slug` added to `PracticeSessionReviewRow`, questions now render as `<Link>` via shared `SessionBreakdownList`.
 
 Every other page in the app (Dashboard, Review, Bookmarks) lets you click a question to navigate to it. The Practice page's session breakdown renders questions as plain `<li>` text with no links. This is the most visible UX dead-end.
 
@@ -81,7 +85,9 @@ Every other page in the app (Dashboard, Review, Bookmarks) lets you click a ques
 - `app/(app)/app/practice/components/practice-session-history-panel.tsx` — add `<Link>` to question rows
 - `app/(app)/app/practice/[sessionId]/components/session-summary-view.tsx` — add `<Link>` to question rows
 
-### Problem 3: Breakdown Cannot Be Collapsed
+### ~~Problem 3: Breakdown Cannot Be Collapsed~~ — DONE (PR #83)
+
+> Implemented: Toggle behavior added. Button shows "View breakdown" / "Hide breakdown".
 
 Clicking "View breakdown" opens the question list. Clicking the same button again (now labeled "Refresh breakdown") just re-fetches the same data. There's no way to collapse/hide the breakdown once opened.
 
@@ -91,7 +97,9 @@ Clicking "View breakdown" opens the question list. Clicking the same button agai
 - `app/(app)/app/practice/hooks/use-practice-session-history.ts` — toggle logic in `onOpenSessionHistory`
 - `app/(app)/app/practice/components/practice-session-history-panel.tsx` — button label: show "View breakdown" when collapsed, "Hide breakdown" when expanded
 
-### Problem 4: Session History Panel and Session Summary View Are Copy-Pasted
+### ~~Problem 4: Session History Panel and Session Summary View Are Copy-Pasted~~ — DONE (PR #83)
+
+> Implemented: Shared `SessionBreakdownList` extracted. Both `PracticeSessionHistoryPanel` and `SessionSummaryView` use it.
 
 These two components render **identical** JSX for the question breakdown list:
 
@@ -113,9 +121,76 @@ Both use `PracticeSessionReviewRow` data. Both are non-interactive. Both will ne
 - `app/(app)/app/practice/components/practice-session-history-panel.tsx` — import and use shared component
 - `app/(app)/app/practice/[sessionId]/components/session-summary-view.tsx` — import and use shared component
 
+### Problem 5: Breakdown Renders Below ALL Sessions (Not Inline)
+
+The "Session breakdown" section (lines 108-130 of `practice-session-history-panel.tsx`) renders **outside** the session list `<ul>`. When you click "View breakdown" on the first session, the breakdown list appears at the bottom of the entire card, below all 4 sessions. It should render **inside** the `<li>` of the selected session, directly beneath the session row you clicked.
+
+**Current structure (broken):**
+```
+<ul>
+  <li>Exam session row [Hide breakdown]</li>
+  <li>Tutor session row [View breakdown]</li>
+  <li>Tutor session row [View breakdown]</li>
+  <li>Tutor session row [View breakdown]</li>
+</ul>
+<div>Session breakdown</div>   ← always at the bottom
+<SessionBreakdownList />       ← disconnected from clicked session
+```
+
+**Target structure (fixed):**
+```
+<ul>
+  <li>
+    Exam session row [Hide breakdown]
+    <SessionBreakdownList />   ← directly beneath this session
+  </li>
+  <li>Tutor session row [View breakdown]</li>
+  <li>Tutor session row [View breakdown]</li>
+  <li>Tutor session row [View breakdown]</li>
+</ul>
+```
+
+**Files:**
+- `app/(app)/app/practice/components/practice-session-history-panel.tsx` — move breakdown rendering inside the `.map()` loop, conditionally render when `selectedSessionId === row.sessionId`
+
+### Problem 6: Session Rows Have No Date
+
+`SessionHistoryRow` has `startedAt` and `endedAt` (ISO strings from backend) but neither is displayed. Users see `Exam • 0/20 correct (0%) • 1m 2s` with no indication of *when* the session occurred. For a history panel, this is critical context.
+
+**Current:** `Exam • 0/20 correct (0%) • 1m 2s`
+**Target:** `Exam • 0/20 correct (0%) • 1m 2s • Feb 9, 2026`
+
+**Files:**
+- `app/(app)/app/practice/components/practice-session-history-panel.tsx` — add formatted date from `row.endedAt`
+- May need a `formatDate` utility (check if one already exists in `lib/`)
+
+### Problem 7: Breakdown Status Labels Are Unstyled and Flat
+
+The breakdown list shows `Answered Incorrect` or `Unanswered` as plain gray text inline with the question stem. There's no visual differentiation — correct and incorrect look the same. The labels blend into the stem text rather than standing out as status indicators.
+
+**Current:** `1. In the COMBINE study, patients who received only a specialist behavioral inte... Answered Incorrect`
+**Target:** Status labels should be visually distinct from stem text — consider subtle color or badge treatment for Correct (green) vs Incorrect (red/destructive) vs Unanswered (muted).
+
+**Files:**
+- `app/(app)/app/practice/components/session-breakdown-list.tsx` — add color/style differentiation to status labels
+
 ---
 
-## Implementation Plan
+## Status Summary
+
+| Problem | Status | PR |
+|---------|--------|-----|
+| 1. Quick Practice card redundant | DONE | #83 |
+| 2. Breakdown questions not clickable | DONE | #83 |
+| 3. Breakdown can't be collapsed | DONE | #83 |
+| 4. Copy-pasted breakdown JSX | DONE | #83 |
+| 5. Breakdown below all sessions | **TODO** | — |
+| 6. No date on session rows | **TODO** | — |
+| 7. Breakdown labels unstyled | **TODO** | — |
+
+---
+
+## Implementation Plan (Phase 1-4: DONE)
 
 ### Phase 1: Backend — Add `slug` to PracticeSessionReviewRow
 
@@ -225,8 +300,41 @@ After Phase 4 is implemented, verify NO vestigial slop remains:
 
 ---
 
+### Problem 8: Active Session View Has Vestigial Quick Practice Copy and Scattered Layout
+
+The active session page (`/app/practice/[sessionId]`) shows "Practice" / "Answer one question at a time" as the heading — these are Quick Practice defaults that don't apply to exam or tutor sessions. Additionally, action buttons are scattered across three zones (header, above question, below question), creating a disorienting layout.
+
+**Full analysis:** See `session-view-layout-audit.md`
+
+**Sub-problems:**
+- A. "Practice" / "Answer one question at a time" copy shown in exam/tutor sessions
+- B. Mark for Review + Bookmark buttons floating above question, disconnected from Submit/Next
+- C. "Review answers" and "Back to Dashboard" both visible in header (redundant exit paths)
+- D. "Session: exam • 6/20" text is tiny and low-contrast
+- E. Question navigator doesn't distinguish answered vs unanswered
+
+**Files:** `practice-view.tsx`, `practice-session-page-view.tsx`, `exam-review-view.tsx`
+
+---
+
+## Status Summary (Updated)
+
+| Problem | Status | PR | Scope |
+|---------|--------|-----|-------|
+| 1. Quick Practice card redundant | DONE | #83 | Practice page |
+| 2. Breakdown questions not clickable | DONE | #83 | Practice page |
+| 3. Breakdown can't be collapsed | DONE | #83 | Practice page |
+| 4. Copy-pasted breakdown JSX | DONE | #83 | Practice page |
+| 5. Breakdown below all sessions | **TODO** | — | Recent sessions panel |
+| 6. No date on session rows | **TODO** | — | Recent sessions panel |
+| 7. Breakdown labels unstyled | **TODO** | — | SessionBreakdownList |
+| 8. Session view layout/copy | **TODO** | — | Active session page |
+
+---
+
 ## Open Questions (Deferred)
 
-1. Should breakdown show green/red color coding for correct/incorrect? (UX polish, can add later)
+1. ~~Should breakdown show green/red color coding for correct/incorrect?~~ → Promoted to Problem 7 (TODO)
 2. Should Recent Sessions show more than 10 sessions or add "Load more"? (Low priority)
 3. Should the shared `SessionBreakdownList` also be used in ExamReviewView? (Different enough — has "Open question" button + marked-for-review, so probably not)
+4. **Session Review Mode:** Should clicking a session breakdown open a "session replay" page that mirrors the tutor/exam experience but in review mode — showing all questions in context with navigation, rather than linking to individual question pages one at a time? This would be a new route like `/app/practice/[sessionId]/review` that shows each question in sequence with the user's original answer and the explanation. This is a larger feature that would require a new page and data flow, but it's the natural evolution of the breakdown panel. (See also `review-consistency-audit.md` I5: Session Context Is Lost on Question Detail Page.)
