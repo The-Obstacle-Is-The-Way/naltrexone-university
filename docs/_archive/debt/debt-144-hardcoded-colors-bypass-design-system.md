@@ -20,8 +20,8 @@ Multiple components use hardcoded Tailwind color classes (`emerald-*`, `red-*`, 
 
 | File | Lines | Hardcoded Colors |
 |------|-------|-----------------|
-| `components/question/ChoiceButton.tsx` | 33, 35, 53, 55 | `emerald-500`, `emerald-50`, `red-500`, `red-50` |
-| `components/question/Feedback.tsx` | 45, 47 | `emerald-200`, `emerald-50`, `red-200`, `red-50` |
+| `components/question/choice-button.tsx` | 33, 35, 53, 55 | `emerald-500`, `emerald-50`, `red-500`, `red-50` |
+| `components/question/feedback.tsx` | 45, 47 | `emerald-200`, `emerald-50`, `red-200`, `red-50` |
 | `app/(app)/app/billing/page.tsx` | 81 | `amber-200`, `amber-50`, `amber-900` |
 | `app/pricing/pricing-view.tsx` | 52, 159 | `red-200`, `red-700`, `emerald-600` |
 | `app/not-found.tsx` | 9 | `zinc-500` (should be `muted-foreground`) |
@@ -30,8 +30,8 @@ Multiple components use hardcoded Tailwind color classes (`emerald-*`, `red-*`, 
 
 1. Added semantic `success`/`warning` tokens in `app/globals.css` (`--color-success`, `--color-warning`, foreground variants) for light/dark themes
 2. Replaced hardcoded `emerald/red/amber/zinc` classes with semantic tokens in:
-   - `components/question/ChoiceButton.tsx`
-   - `components/question/Feedback.tsx`
+   - `components/question/choice-button.tsx`
+   - `components/question/feedback.tsx`
    - `app/(app)/app/billing/page.tsx`
    - `app/pricing/pricing-view.tsx`
    - `components/marketing/marketing-home.tsx`
@@ -49,4 +49,4 @@ Multiple components use hardcoded Tailwind color classes (`emerald-*`, `red-*`, 
 - DEBT-146: Missing semantic success/warning tokens
 - DEBT-108 (archived): Hardcoded zinc colors break light/dark toggle
 - `tailwind.config.ts` — theme configuration
-- `globals.css` — CSS custom properties
+- `app/globals.css` — CSS custom properties

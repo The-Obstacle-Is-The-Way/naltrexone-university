@@ -42,11 +42,11 @@ Implemented coverage additions:
 ## Verification
 
 - [x] Each use case has at least one added error-path test
-- [x] Uses existing `Fake*` classes from `src/application/test-helpers/fakes.ts`
+- [x] Uses existing `Fake*` classes from `src/application/test-helpers/fakes/index.ts`
 - [x] Full quality gates pass (`pnpm typecheck && pnpm lint && pnpm test --run`)
 
 ## Related
 
 - `src/application/use-cases/` — Use case implementations
-- `src/application/test-helpers/fakes.ts` — Test fakes
+- `src/application/test-helpers/fakes/` — Test fakes
 - ADR-003 — Testing Strategy

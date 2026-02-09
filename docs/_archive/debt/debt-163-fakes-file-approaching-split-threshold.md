@@ -1,4 +1,4 @@
-# DEBT-163: Test Fakes File Approaching Split Threshold (1472 Lines)
+# DEBT-163: Test Fakes Split Into Modules (Was ~1,500 LOC)
 
 **Status:** Resolved
 **Priority:** P2
@@ -8,9 +8,9 @@
 
 ## Description
 
-`src/application/test-helpers/fakes.ts` is 1,472 lines long and contains 30+ fake implementations. While well-structured and correctly implementing interfaces, the file is becoming difficult to navigate and maintain.
+The test-fakes surface grew large enough that a single-file approach became hard to navigate and prone to merge conflicts. The original monolithic `fakes.ts` was split into modules under `src/application/test-helpers/fakes/`, with a single barrel re-export (`src/application/test-helpers/fakes/index.ts`) to preserve import ergonomics.
 
-Current exports include: `FakeLogger`, `FakeQuestionRepository`, `FakeAttemptRepository`, `FakePracticeSessionRepository`, `FakeSubscriptionRepository`, `FakeUserRepository`, `FakeBookmarkRepository`, `FakeTagRepository`, `FakeStripeCustomerRepository`, `FakeStripeEventRepository`, `FakeAuthGateway`, `FakePaymentGateway`, `FakeRateLimiter`, `FakeIdempotencyKeyRepository`, and many more.
+Current exports still include `FakeLogger`, `FakeQuestionRepository`, `FakeAttemptRepository`, `FakePracticeSessionRepository`, `FakeSubscriptionRepository`, `FakeUserRepository`, `FakeBookmarkRepository`, `FakeTagRepository`, `FakeStripeCustomerRepository`, `FakeStripeEventRepository`, `FakeAuthGateway`, `FakePaymentGateway`, `FakeRateLimiter`, `FakeIdempotencyKeyRepository`, and others.
 
 ## Impact
 
@@ -20,15 +20,16 @@ Current exports include: `FakeLogger`, `FakeQuestionRepository`, `FakeAttemptRep
 
 ## Resolution
 
-Consider splitting into domain-focused modules while maintaining a single re-export index:
+Split into domain-focused modules while maintaining a single re-export index:
 
 ```text
 src/application/test-helpers/
   fakes/
-    index.ts           # re-exports everything
-    repositories.ts    # FakeXxxRepository implementations
-    gateways.ts        # FakeAuthGateway, FakePaymentGateway
-    infrastructure.ts  # FakeLogger, FakeRateLimiter, FakeIdempotencyKeyRepository
+    index.ts               # re-exports everything
+    fake-repositories.ts   # Fake*Repository implementations (and idempotency fakes)
+    fake-gateways.ts       # FakeAuthGateway, FakePaymentGateway, FakeRateLimiter
+    fake-use-cases.ts      # Fake*UseCase implementations (where appropriate)
+    fake-logger.ts         # FakeLogger
 ```
 
 ## Verification

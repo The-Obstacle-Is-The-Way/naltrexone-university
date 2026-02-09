@@ -51,8 +51,8 @@ The manage-billing infrastructure is duplicated across two route groups:
 
 - `app/pricing/manage-billing-action.ts`
 - `app/pricing/manage-billing-actions.ts`
-- `app/pricing/manage-billing-types.ts`
 - `app/(app)/app/billing/manage-billing-action.ts`
 - `app/(app)/app/billing/manage-billing-actions.ts`
-- `app/(app)/app/billing/manage-billing-types.ts`
+- `lib/manage-billing/manage-billing-types.ts`
+- `lib/manage-billing/manage-billing-core.ts`
 - Frontend tracker: FE-040

@@ -26,7 +26,7 @@ The input used an explicit `aria-label` despite already being wrapped in a `<lab
 
 ## Fix
 
-- Removed `aria-label` from `components/question/ChoiceButton.tsx` so the radio input uses the wrapping `<label>` text as its accessible name.
+- Removed `aria-label` from `components/question/choice-button.tsx` so the radio input uses the wrapping `<label>` text as its accessible name.
 - Added regression coverage in `components/question/ChoiceButton.test.tsx` asserting the radio input has no overriding `aria-label` and that the wrapping label contains full choice text.
 
 ## Verification
@@ -37,5 +37,5 @@ The input used an explicit `aria-label` despite already being wrapped in a `<lab
 
 ## Related
 
-- `components/question/ChoiceButton.tsx`
+- `components/question/choice-button.tsx`
 - `components/question/ChoiceButton.test.tsx`
