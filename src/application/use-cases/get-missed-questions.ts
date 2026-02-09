@@ -20,6 +20,7 @@ export type AvailableMissedQuestionRow = {
   slug: string;
   stemMd: string;
   difficulty: QuestionDifficulty;
+  tagSlugs: string[];
   lastAnsweredAt: string; // ISO
 };
 
@@ -86,6 +87,7 @@ export class GetMissedQuestionsUseCase {
         slug: question.slug,
         stemMd: question.stemMd,
         difficulty: question.difficulty,
+        tagSlugs: question.tags.map((tag) => tag.slug),
         lastAnsweredAt: missed.answeredAt.toISOString(),
       }),
       unavailable: (missed): MissedQuestionRow => ({

@@ -25,6 +25,15 @@ const headerLinkButtonClasses =
 type ReviewSearchParams = {
   limit?: string;
   offset?: string;
+  difficulty?: string;
+  tag?: string;
+};
+
+type DifficultyFilter = 'easy' | 'medium' | 'hard';
+
+export type ReviewFilters = {
+  difficulty?: DifficultyFilter | null;
+  tagSlug?: string | null;
 };
 
 function getSessionOriginLabel(input: {
@@ -53,17 +62,69 @@ function parseLimit(value: string | undefined): number {
   return Math.min(Math.max(limit, 1), 100);
 }
 
+function parseDifficultyFilter(
+  value: string | undefined,
+): DifficultyFilter | null {
+  if (value === 'easy') return value;
+  if (value === 'medium') return value;
+  if (value === 'hard') return value;
+  return null;
+}
+
+function parseTagSlugFilter(value: string | undefined): string | null {
+  const trimmed = value?.trim();
+  return trimmed ? trimmed : null;
+}
+
+function buildReviewHref(input: {
+  limit: number;
+  offset: number;
+  filters?: ReviewFilters;
+}): string {
+  const params = new URLSearchParams();
+  params.set('offset', String(input.offset));
+  params.set('limit', String(input.limit));
+
+  const difficulty = input.filters?.difficulty ?? null;
+  const tagSlug = input.filters?.tagSlug ?? null;
+
+  if (difficulty) params.set('difficulty', difficulty);
+  if (tagSlug) params.set('tag', tagSlug);
+
+  return `${ROUTES.APP_REVIEW}?${params.toString()}`;
+}
+
 export function ReviewView({
   rows,
   limit,
   offset,
   totalCount,
-}: GetMissedQuestionsOutput) {
+  filters,
+}: GetMissedQuestionsOutput & { filters?: ReviewFilters }) {
+  const selectedDifficulty = filters?.difficulty ?? null;
+  const selectedTagSlug = filters?.tagSlug ?? null;
+  const hasActiveFilters = Boolean(selectedDifficulty || selectedTagSlug);
+
+  const displayRows = hasActiveFilters
+    ? rows.filter((row) => {
+        if (!row.isAvailable) return false;
+        if (selectedDifficulty && row.difficulty !== selectedDifficulty)
+          return false;
+        if (selectedTagSlug && !row.tagSlugs.includes(selectedTagSlug))
+          return false;
+        return true;
+      })
+    : rows;
+
   const prevOffset = Math.max(0, offset - limit);
   const nextOffset = offset + limit;
   const hasNextPage = offset + rows.length < totalCount;
   const showingStart = rows.length > 0 ? offset + 1 : 0;
   const showingEnd = offset + rows.length;
+
+  const tagOptions = Array.from(
+    new Set(rows.flatMap((row) => (row.isAvailable ? row.tagSlugs : []))),
+  ).sort((a, b) => a.localeCompare(b));
 
   return (
     <div className="space-y-6">
@@ -81,6 +142,65 @@ export function ReviewView({
           <Link href={ROUTES.APP_PRACTICE}>Go to Practice</Link>
         </Button>
       </div>
+
+      {totalCount > 0 ? (
+        <Card className="gap-0 rounded-2xl border-border p-4 shadow-sm">
+          <form method="get" className="grid gap-3 sm:grid-cols-3">
+            <input type="hidden" name="limit" value={limit} />
+            <input type="hidden" name="offset" value="0" />
+
+            <label className="space-y-2 text-sm">
+              <div className="font-medium text-foreground">Difficulty</div>
+              <select
+                name="difficulty"
+                defaultValue={selectedDifficulty ?? ''}
+                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground shadow-sm outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]"
+              >
+                <option value="">All difficulties</option>
+                <option value="easy">Easy</option>
+                <option value="medium">Medium</option>
+                <option value="hard">Hard</option>
+              </select>
+            </label>
+
+            <label className="space-y-2 text-sm">
+              <div className="font-medium text-foreground">Tag</div>
+              <select
+                name="tag"
+                defaultValue={selectedTagSlug ?? ''}
+                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground shadow-sm outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]"
+              >
+                <option value="">All tags</option>
+                {tagOptions.map((tagSlug) => (
+                  <option key={tagSlug} value={tagSlug}>
+                    {tagSlug}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <div className="flex items-end justify-between gap-3 sm:justify-end">
+              {hasActiveFilters ? (
+                <Button
+                  asChild
+                  variant="link"
+                  className={headerLinkButtonClasses}
+                >
+                  <Link href={buildReviewHref({ limit, offset: 0 })}>
+                    Clear filters
+                  </Link>
+                </Button>
+              ) : (
+                <span />
+              )}
+
+              <Button type="submit" variant="outline" className="rounded-full">
+                Apply
+              </Button>
+            </div>
+          </form>
+        </Card>
+      ) : null}
 
       {rows.length === 0 ? (
         totalCount === 0 ? (
@@ -105,20 +225,33 @@ export function ReviewView({
                 variant="link"
                 className={headerLinkButtonClasses}
               >
-                <Link href={`${ROUTES.APP_REVIEW}?offset=0&limit=${limit}`}>
+                <Link href={buildReviewHref({ limit, offset: 0, filters })}>
                   Back to first page
                 </Link>
               </Button>
             </div>
           </Card>
         )
+      ) : hasActiveFilters && displayRows.length === 0 ? (
+        <Card className="gap-0 rounded-2xl p-6 text-sm text-muted-foreground shadow-sm">
+          No missed questions match these filters.
+          <div className="mt-4">
+            <Button asChild variant="outline" className="rounded-full">
+              <Link href={buildReviewHref({ limit, offset: 0 })}>
+                Clear filters
+              </Link>
+            </Button>
+          </div>
+        </Card>
       ) : (
         <div className="space-y-3">
           <div className="text-sm text-muted-foreground">
-            Showing {showingStart}–{showingEnd} of {totalCount}
+            {hasActiveFilters
+              ? `Showing ${displayRows.length} of ${rows.length} on this page`
+              : `Showing ${showingStart}–${showingEnd} of ${totalCount}`}
           </div>
           <ul className="space-y-3">
-            {rows.map((row) => {
+            {displayRows.map((row) => {
               const plainStem = row.isAvailable ? toPlainText(row.stemMd) : '';
 
               return (
@@ -129,7 +262,14 @@ export function ReviewView({
                         {row.isAvailable ? (
                           <>
                             <div className="text-sm font-medium text-foreground">
-                              {getStemPreview(row.stemMd, 80)}
+                              <Link
+                                href={toQuestionRoute(row.slug, {
+                                  from: 'review',
+                                })}
+                                className="hover:underline"
+                              >
+                                {getStemPreview(row.stemMd, 80)}
+                              </Link>
                             </div>
                             {plainStem.length > 80 && (
                               <div className="text-sm text-muted-foreground">
@@ -186,7 +326,9 @@ export function ReviewView({
                           className="rounded-full"
                         >
                           <Link
-                            href={toQuestionRoute(row.slug)}
+                            href={toQuestionRoute(row.slug, {
+                              from: 'review',
+                            })}
                             aria-label={`Reattempt question: ${getStemPreview(
                               row.stemMd,
                               80,
@@ -211,7 +353,11 @@ export function ReviewView({
                 className={headerLinkButtonClasses}
               >
                 <Link
-                  href={`${ROUTES.APP_REVIEW}?offset=${prevOffset}&limit=${limit}`}
+                  href={buildReviewHref({
+                    limit,
+                    offset: prevOffset,
+                    filters,
+                  })}
                 >
                   Previous
                 </Link>
@@ -227,7 +373,11 @@ export function ReviewView({
                 className={headerLinkButtonClasses}
               >
                 <Link
-                  href={`${ROUTES.APP_REVIEW}?offset=${nextOffset}&limit=${limit}`}
+                  href={buildReviewHref({
+                    limit,
+                    offset: nextOffset,
+                    filters,
+                  })}
                 >
                   Next
                 </Link>
@@ -240,7 +390,10 @@ export function ReviewView({
   );
 }
 
-export function renderReview(result: ActionResult<GetMissedQuestionsOutput>) {
+export function renderReview(
+  result: ActionResult<GetMissedQuestionsOutput>,
+  options?: { filters?: ReviewFilters },
+) {
   if (!result.ok) {
     return (
       <div className="space-y-6">
@@ -266,6 +419,7 @@ export function renderReview(result: ActionResult<GetMissedQuestionsOutput>) {
       limit={result.data.limit}
       offset={result.data.offset}
       totalCount={result.data.totalCount}
+      filters={options?.filters}
     />
   );
 }
@@ -283,9 +437,13 @@ export function createReviewPage(deps?: {
     const params = await searchParams;
     const limit = parseLimit(params.limit);
     const offset = parseNonNegativeInt(params.offset, 0);
+    const filters: ReviewFilters = {
+      difficulty: parseDifficultyFilter(params.difficulty),
+      tagSlug: parseTagSlugFilter(params.tag),
+    };
 
     const result = await getMissedQuestionsFn({ limit, offset });
-    return renderReview(result);
+    return renderReview(result, { filters });
   };
 }
 

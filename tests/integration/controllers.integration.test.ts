@@ -518,6 +518,7 @@ describe('review controller (integration)', () => {
       slug: missedSlug,
       stemMd: '# Stem',
       difficulty: 'easy',
+      tagSlugs: [],
       lastAnsweredAt: t2.toISOString(),
     });
     expect(logger.warnCalls).toHaveLength(0);

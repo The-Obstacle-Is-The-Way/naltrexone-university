@@ -5,7 +5,11 @@ import {
   FakeLogger,
   FakeQuestionRepository,
 } from '@/src/application/test-helpers/fakes';
-import { createAttempt, createQuestion } from '@/src/domain/test-helpers';
+import {
+  createAttempt,
+  createQuestion,
+  createTag,
+} from '@/src/domain/test-helpers';
 import { GetMissedQuestionsUseCase } from './get-missed-questions';
 
 describe('GetMissedQuestionsUseCase', () => {
@@ -68,6 +72,7 @@ describe('GetMissedQuestionsUseCase', () => {
           slug: 'q-1',
           stemMd: 'Stem for q1',
           difficulty: 'easy',
+          tagSlugs: [],
           lastAnsweredAt: '2026-02-01T12:00:00.000Z',
         },
         {
@@ -78,6 +83,7 @@ describe('GetMissedQuestionsUseCase', () => {
           slug: 'q-2',
           stemMd: 'Stem for q2',
           difficulty: 'easy',
+          tagSlugs: [],
           lastAnsweredAt: '2026-02-01T10:00:00.000Z',
         },
       ],
@@ -205,6 +211,41 @@ describe('GetMissedQuestionsUseCase', () => {
       useCase.execute({ userId: 'user-1', limit: 10, offset: 0 }),
     ).rejects.toMatchObject({
       code: 'INTERNAL_ERROR',
+    });
+  });
+
+  it('includes tag slugs for available missed questions', async () => {
+    const useCase = new GetMissedQuestionsUseCase(
+      new FakeAttemptRepository([
+        createAttempt({
+          userId: 'user-1',
+          questionId: 'q1',
+          isCorrect: false,
+          answeredAt: new Date('2026-02-01T12:00:00Z'),
+        }),
+      ]),
+      new FakeQuestionRepository([
+        createQuestion({
+          id: 'q1',
+          slug: 'q-1',
+          stemMd: 'Stem for q1',
+          tags: [createTag({ slug: 'opioids', name: 'Opioids' })],
+        }),
+      ]),
+      new FakeLogger(),
+    );
+
+    await expect(
+      useCase.execute({ userId: 'user-1', limit: 10, offset: 0 }),
+    ).resolves.toMatchObject({
+      rows: [
+        {
+          isAvailable: true,
+          questionId: 'q1',
+          slug: 'q-1',
+          tagSlugs: ['opioids'],
+        },
+      ],
     });
   });
 });

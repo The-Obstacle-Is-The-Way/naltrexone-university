@@ -36,6 +36,7 @@ describe('app/(app)/app/review', () => {
             slug: 'q-1',
             stemMd: longStem,
             difficulty: 'easy',
+            tagSlugs: [],
             lastAnsweredAt: '2026-02-01T00:00:00.000Z',
           },
         ]}
@@ -63,6 +64,7 @@ describe('app/(app)/app/review', () => {
             slug: 'q-1',
             stemMd,
             difficulty: 'easy',
+            tagSlugs: [],
             lastAnsweredAt: '2026-02-01T00:00:00.000Z',
           },
         ]}
@@ -91,6 +93,7 @@ describe('app/(app)/app/review', () => {
             slug: 'q-1',
             stemMd,
             difficulty: 'easy',
+            tagSlugs: [],
             lastAnsweredAt: '2026-02-01T00:00:00.000Z',
           },
         ]}
@@ -119,6 +122,7 @@ describe('app/(app)/app/review', () => {
             slug: 'q-1',
             stemMd: 'Stem for q1',
             difficulty: 'easy',
+            tagSlugs: [],
             lastAnsweredAt: '2026-02-01T00:00:00.000Z',
           },
         ]}
@@ -134,9 +138,47 @@ describe('app/(app)/app/review', () => {
     expect(html).toContain('easy');
     expect(html).toContain('Missed Feb 1, 2026');
     expect(html).toContain('Reattempt');
-    expect(html).toContain(toQuestionRoute('q-1'));
+    expect(html).toContain(toQuestionRoute('q-1', { from: 'review' }));
     expect(html).toContain('aria-label="Reattempt question: Stem for q1"');
     expect(html).toContain(`href="${ROUTES.APP_PRACTICE}"`);
+  });
+
+  it('filters missed questions by difficulty and tag', () => {
+    const html = renderToStaticMarkup(
+      <ReviewView
+        rows={[
+          {
+            isAvailable: true,
+            questionId: 'q_1',
+            sessionId: null,
+            sessionMode: null,
+            slug: 'q-1',
+            stemMd: 'Stem for q1',
+            difficulty: 'easy',
+            tagSlugs: ['opioids'],
+            lastAnsweredAt: '2026-02-01T00:00:00.000Z',
+          },
+          {
+            isAvailable: true,
+            questionId: 'q_2',
+            sessionId: null,
+            sessionMode: null,
+            slug: 'q-2',
+            stemMd: 'Stem for q2',
+            difficulty: 'hard',
+            tagSlugs: ['alcohol'],
+            lastAnsweredAt: '2026-02-01T00:00:00.000Z',
+          },
+        ]}
+        limit={20}
+        offset={0}
+        totalCount={2}
+        filters={{ difficulty: 'hard', tagSlug: 'alcohol' }}
+      />,
+    );
+
+    expect(html).toContain('Stem for q2');
+    expect(html).not.toContain('Stem for q1');
   });
 
   it('renders pagination links when offset > 0 and rows length equals limit', () => {
@@ -151,6 +193,7 @@ describe('app/(app)/app/review', () => {
             slug: 'q-1',
             stemMd: 'Stem for q1',
             difficulty: 'easy',
+            tagSlugs: [],
             lastAnsweredAt: '2026-02-01T00:00:00.000Z',
           },
           {
@@ -161,6 +204,7 @@ describe('app/(app)/app/review', () => {
             slug: 'q-2',
             stemMd: 'Stem for q2',
             difficulty: 'easy',
+            tagSlugs: [],
             lastAnsweredAt: '2026-02-01T00:00:00.000Z',
           },
         ]}
@@ -225,6 +269,7 @@ describe('app/(app)/app/review', () => {
             slug: 'q-1',
             stemMd: 'Stem for q1',
             difficulty: 'easy',
+            tagSlugs: [],
             lastAnsweredAt: '2026-02-01T00:00:00.000Z',
           },
         ]}
