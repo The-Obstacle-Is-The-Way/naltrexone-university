@@ -1,4 +1,15 @@
 import Link from 'next/link';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { toPracticeSessionRoute } from '@/lib/routes';
@@ -32,15 +43,39 @@ export function IncompleteSessionCard(input: {
               Resume session
             </Link>
           </Button>
-          <Button
-            type="button"
-            variant="outline"
-            className="rounded-full"
-            disabled={input.isPending}
-            onClick={input.onAbandon}
-          >
-            Abandon session
-          </Button>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button
+                type="button"
+                variant="outline"
+                className="rounded-full"
+                disabled={input.isPending}
+              >
+                Abandon session
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Abandon session?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This will discard the in-progress session and you will need to
+                  start over.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel type="button">
+                  Keep session
+                </AlertDialogCancel>
+                <AlertDialogAction
+                  type="button"
+                  variant="destructive"
+                  onClick={input.onAbandon}
+                >
+                  Abandon anyway
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
       </div>
     </Card>

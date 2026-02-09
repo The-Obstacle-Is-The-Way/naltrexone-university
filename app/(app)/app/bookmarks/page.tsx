@@ -3,6 +3,17 @@ import { revalidatePath } from 'next/cache';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { ErrorCard } from '@/components/error-card';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { ROUTES, toQuestionRoute } from '@/lib/routes';
@@ -117,6 +128,7 @@ export function BookmarksView({ rows }: { rows: GetBookmarksOutput['rows'] }) {
             const ariaLabelStem = row.isAvailable
               ? getStemPreview(row.stemMd, 80)
               : 'unavailable question';
+            const removeFormId = `remove-bookmark-${row.questionId}`;
 
             return (
               <li key={row.questionId}>
@@ -176,21 +188,48 @@ export function BookmarksView({ rows }: { rows: GetBookmarksOutput['rows'] }) {
                         </Button>
                       ) : null}
 
-                      <form action={removeBookmarkAction}>
+                      <form id={removeFormId} action={removeBookmarkAction}>
                         <input
                           type="hidden"
                           name="questionId"
                           value={row.questionId}
                         />
-                        <Button
-                          type="submit"
-                          variant="outline"
-                          className="rounded-full"
-                          aria-label={`Remove bookmark: ${ariaLabelStem}`}
-                        >
-                          Remove
-                        </Button>
                       </form>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            className="rounded-full"
+                            aria-label={`Remove bookmark: ${ariaLabelStem}`}
+                          >
+                            Remove
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>
+                              Remove bookmark?
+                            </AlertDialogTitle>
+                            <AlertDialogDescription>
+                              This removes the question from your bookmarks
+                              list.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel type="button">
+                              Cancel
+                            </AlertDialogCancel>
+                            <AlertDialogAction
+                              type="submit"
+                              form={removeFormId}
+                              variant="destructive"
+                            >
+                              Remove bookmark
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
                     </div>
                   </div>
                 </Card>

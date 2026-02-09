@@ -27,6 +27,10 @@ test('renders resume link and calls abandon handler', async () => {
     .toHaveAttribute('href', '/app/practice/session-1');
 
   await screen.getByRole('button', { name: 'Abandon session' }).click();
+  await expect
+    .element(screen.getByRole('alertdialog', { name: 'Abandon session?' }))
+    .toBeVisible();
+  await screen.getByRole('button', { name: 'Abandon anyway' }).click();
   expect(onAbandon).toHaveBeenCalledTimes(1);
 });
 
