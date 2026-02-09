@@ -19,6 +19,15 @@ Four locations in the bookmarks and review pages use `.slice(0, 10)` on ISO date
 | `app/(app)/app/review/page.tsx` | 126 | `Missed {row.lastAnsweredAt.slice(0, 10)}` |
 | `app/(app)/app/review/page.tsx` | 149 | `Missed {row.lastAnsweredAt.slice(0, 10)}` |
 
+## Data Flow
+
+The ISO strings originate in the application use cases:
+
+- `bookmarkedAt` — `src/application/use-cases/get-bookmarks.ts:50,61` → `bookmark.createdAt.toISOString()`
+- `lastAnsweredAt` — `src/application/use-cases/get-missed-questions.ts:89,96` → `missed.answeredAt.toISOString()`
+
+Both pages are React Server Components (RSC), so date formatting runs on the server, not in the browser.
+
 ## Impact
 
 - **Fragility:** If the backend ever returns a non-ISO date string or a `Date` object, `.slice(0, 10)` silently produces wrong output
@@ -28,19 +37,18 @@ Four locations in the bookmarks and review pages use `.slice(0, 10)` on ISO date
 
 ## Resolution
 
-Replace `.slice(0, 10)` with a proper date formatting utility. Options:
+Replace `.slice(0, 10)` with a proper date formatting utility. Since both pages are server components, formatting runs on the server — hardcoding `en-US` locale is appropriate (no user locale detection possible without a client component wrapper).
 
-1. **Intl.DateTimeFormat** (built-in, locale-aware):
-   ```typescript
-   new Intl.DateTimeFormat('en-US', { dateStyle: 'medium' }).format(new Date(dateString))
-   ```
+**Recommended — shared utility function:**
+```typescript
+// lib/format-date.ts
+export function formatDate(isoString: string): string {
+  return new Date(isoString).toLocaleDateString('en-US', { dateStyle: 'medium' });
+}
+// "Jan 15, 2026" — more readable than "2026-01-15", still UTC date
+```
 
-2. **Shared utility function** (project-wide):
-   ```typescript
-   function formatDate(isoString: string): string {
-     return new Date(isoString).toLocaleDateString('en-US', { dateStyle: 'medium' });
-   }
-   ```
+No existing `formatDate` utility exists in the codebase — this would be a new file.
 
 ## Verification
 

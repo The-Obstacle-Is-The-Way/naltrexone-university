@@ -14,9 +14,9 @@ Three utility functions accept a `logError` callback parameter that defaults to 
 
 | File | Default Pattern |
 |------|----------------|
-| `app/(app)/app/practice/fire-and-forget.ts` | `logError = console.error` |
-| `app/(app)/app/practice/practice-page-bookmarks.ts` | `logError = console.error` |
-| `app/(app)/app/practice/practice-page-tags.ts` | `logError = console.error` |
+| `app/(app)/app/practice/fire-and-forget.ts` | `onError` parameter defaults to `logUnhandledAsyncError` which wraps `console.error` (line 7) |
+| `app/(app)/app/practice/practice-page-bookmarks.ts` | Optional `logError` param, falls back via `??` to inline `console.error` wrapper (line 30-34) |
+| `app/(app)/app/practice/practice-page-tags.ts` | Optional `logError` param, falls back via `??` to inline `console.error` wrapper (line 10-14) |
 
 ## Impact
 

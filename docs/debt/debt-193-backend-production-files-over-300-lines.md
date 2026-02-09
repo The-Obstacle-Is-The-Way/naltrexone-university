@@ -8,17 +8,17 @@
 
 ## Description
 
-Four backend production files exceed the 300-line guideline. While test files are exempt from the cap, these are implementation files that could benefit from decomposition.
+Five production files exceed the 300-line guideline — four backend and one frontend. While test files are exempt from the cap, these are implementation files that could benefit from decomposition.
 
 ## Affected Files
 
 | File | Lines | Notes |
 |------|-------|-------|
-| `src/adapters/repositories/drizzle-practice-session-repository.ts` | 446 | Complex JSON params parsing, CAS retry, question state serialization |
+| `src/adapters/repositories/drizzle-practice-session-repository.ts` | ~449 | Complex JSON params parsing, CAS retry, question state serialization |
 | `src/adapters/repositories/drizzle-attempt-repository.ts` | 353 | Multiple query methods, row-to-domain mapping |
 | `src/adapters/controllers/practice-controller.ts` | 331 | 8 server actions, Zod validation per action |
-| `src/adapters/jobs/reconcile-stripe-subscriptions.ts` | 302 | Barely over; reconciliation + normalization logic |
-| `components/marketing/marketing-home.tsx` | 357 | Marketing landing page with stats, features, pricing, footer |
+| `src/adapters/jobs/reconcile-stripe-subscriptions.ts` | ~303 | Barely over; reconciliation + normalization logic |
+| `components/marketing/marketing-home.tsx` | ~361 | Marketing landing page with stats, features, pricing, footer (frontend) |
 
 Note: `checkout-success-sync.tsx` (437 lines) is already tracked as FE-035.
 

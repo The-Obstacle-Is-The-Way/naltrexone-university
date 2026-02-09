@@ -27,13 +27,34 @@ The `_journal.json` records the migration (idx 8), and `db/schema.ts` correctly 
 
 ## Resolution
 
-Run `pnpm db:generate` to create snapshot 0008, or manually create the snapshot by running `drizzle-kit introspect` against the current database state and saving as `0008_snapshot.json`. Verify that `pnpm db:generate` produces no new migrations afterward (confirming schema.ts and snapshot are in sync).
+Manually create `0008_snapshot.json` by copying the previous snapshot and adding the missing index:
+
+1. Copy `db/migrations/meta/0007_snapshot.json` → `db/migrations/meta/0008_snapshot.json`
+2. Update the `id` field to a new UUID and set `prevId` to `0007`'s `id` value (`9991b358-8e1c-42bb-a097-eb01e1f08ccf`)
+3. Add the `attempts_session_question_uq` index entry to the `public.attempts.indexes` block:
+   ```json
+   "attempts_session_question_uq": {
+     "name": "attempts_session_question_uq",
+     "columns": [
+       { "expression": "practice_session_id", "isExpression": false, "asc": true, "nulls": "last" },
+       { "expression": "question_id", "isExpression": false, "asc": true, "nulls": "last" }
+     ],
+     "isUnique": true,
+     "concurrently": false,
+     "method": "btree",
+     "with": {},
+     "where": "practice_session_id IS NOT NULL"
+   }
+   ```
+4. Verify `pnpm db:generate` produces no new migrations afterward
+
+**Important:** Do NOT run `pnpm db:generate` without the snapshot fix — it will diff against snapshot 0007 (which lacks the index), see the index in `schema.ts`, and generate a duplicate migration attempting to recreate the same index.
 
 ## Verification
 
 ```bash
-pnpm db:generate   # Should produce "No changes detected" after fix
-ls db/migrations/meta/0008_snapshot.json  # Should exist
+ls db/migrations/meta/0008_snapshot.json  # Should exist after fix
+pnpm db:generate                          # Should produce "No schema changes" (no new migration)
 ```
 
 ## Related
