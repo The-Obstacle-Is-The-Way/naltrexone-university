@@ -18,6 +18,13 @@ export function toPracticeSessionRoute(sessionId: string): string {
   return `${ROUTES.APP_PRACTICE}/${sessionId}`;
 }
 
-export function toQuestionRoute(slug: string): string {
-  return `${ROUTES.APP_QUESTIONS}/${slug}`;
+export function toQuestionRoute(
+  slug: string,
+  options?: {
+    from?: string;
+  },
+): string {
+  const base = `${ROUTES.APP_QUESTIONS}/${slug}`;
+  if (!options?.from) return base;
+  return `${base}?from=${encodeURIComponent(options.from)}`;
 }

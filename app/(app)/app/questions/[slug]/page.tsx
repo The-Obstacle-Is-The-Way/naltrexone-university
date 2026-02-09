@@ -13,9 +13,15 @@ export type { QuestionViewProps };
 
 export default async function QuestionPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ slug: string }>;
+  searchParams?: {
+    from?: string | string[];
+  };
 }) {
   const { slug } = await params;
-  return <QuestionPageClient slug={slug} />;
+  const from =
+    typeof searchParams?.from === 'string' ? searchParams.from : undefined;
+  return <QuestionPageClient slug={slug} from={from} />;
 }

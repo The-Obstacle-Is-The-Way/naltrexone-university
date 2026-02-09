@@ -9,6 +9,12 @@ describe('lib/routes', () => {
     );
   });
 
+  it('supports origin query parameters for question routes', () => {
+    expect(toQuestionRoute('opioid-use-disorder', { from: 'review' })).toBe(
+      '/app/questions/opioid-use-disorder?from=review',
+    );
+  });
+
   it('exports a quick practice route constant', () => {
     expect(ROUTES.APP_PRACTICE_QUICK).toBe('/app/practice/quick');
   });
