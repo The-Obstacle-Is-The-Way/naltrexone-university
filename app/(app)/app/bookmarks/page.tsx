@@ -103,7 +103,12 @@ export function BookmarksView({ rows }: { rows: GetBookmarksOutput['rows'] }) {
 
       {rows.length === 0 ? (
         <Card className="gap-0 rounded-2xl p-6 text-sm text-muted-foreground shadow-sm">
-          No bookmarks yet.
+          <div>No bookmarks yet.</div>
+          <div className="mt-4">
+            <Button asChild variant="outline" className="rounded-full">
+              <Link href={ROUTES.APP_PRACTICE}>Start practicing</Link>
+            </Button>
+          </div>
         </Card>
       ) : (
         <ul className="space-y-3">

@@ -117,6 +117,8 @@ describe('app/(app)/app/bookmarks', () => {
 
     expect(html).toContain('Bookmarks');
     expect(html).toContain('No bookmarks yet.');
+    expect(html).toContain('Start practicing');
+    expect(html).toContain(`href="${ROUTES.APP_PRACTICE}"`);
   });
 
   it('renders unavailable bookmarks without a reattempt link', () => {

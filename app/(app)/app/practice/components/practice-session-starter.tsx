@@ -66,7 +66,10 @@ export function PracticeSessionStarter(props: PracticeSessionStarterProps) {
   }, [props.availableTags]);
 
   return (
-    <Card className="gap-0 rounded-2xl border-border p-6">
+    <Card
+      id="practice-session-starter"
+      className="gap-0 rounded-2xl border-border p-6"
+    >
       <div className="space-y-1">
         <div className="text-sm font-medium text-foreground">
           Start a session

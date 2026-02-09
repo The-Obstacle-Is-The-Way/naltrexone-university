@@ -173,6 +173,8 @@ describe('app/(app)/app/review', () => {
 
     expect(html).toContain('Review');
     expect(html).toContain('No missed questions yet.');
+    expect(html).toContain('Practice a question');
+    expect(html).toContain(`href="${ROUTES.APP_PRACTICE}"`);
   });
 
   it('renders unavailable missed questions without a reattempt link', () => {

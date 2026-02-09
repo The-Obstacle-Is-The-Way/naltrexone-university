@@ -83,7 +83,12 @@ export function ReviewView({
       {rows.length === 0 ? (
         totalCount === 0 ? (
           <Card className="gap-0 rounded-2xl p-6 text-sm text-muted-foreground shadow-sm">
-            No missed questions yet.
+            <div>No missed questions yet.</div>
+            <div className="mt-4">
+              <Button asChild variant="outline" className="rounded-full">
+                <Link href={ROUTES.APP_PRACTICE}>Practice a question</Link>
+              </Button>
+            </div>
           </Card>
         ) : (
           <Card className="gap-0 rounded-2xl p-6 text-sm text-muted-foreground shadow-sm">

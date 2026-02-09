@@ -59,7 +59,12 @@ export function PracticeSessionHistoryPanel(
         ) : null}
         {props.status === 'idle' && props.rows.length === 0 ? (
           <div className="text-sm text-muted-foreground">
-            No completed sessions yet.
+            <div>No completed sessions yet.</div>
+            <div className="mt-3">
+              <Button asChild variant="outline" className="rounded-full">
+                <a href="#practice-session-starter">Start a session</a>
+              </Button>
+            </div>
           </div>
         ) : null}
         {props.status === 'idle' && props.rows.length > 0 ? (

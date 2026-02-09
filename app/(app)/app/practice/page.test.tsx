@@ -602,6 +602,28 @@ describe('app/(app)/app/practice', () => {
     expect(html).toContain('Incorrect');
   });
 
+  it('renders a CTA when no completed sessions exist yet', async () => {
+    const { PracticeSessionHistoryPanel } = await import(
+      '@/app/(app)/app/practice/page'
+    );
+
+    const html = renderToStaticMarkup(
+      <PracticeSessionHistoryPanel
+        status="idle"
+        error={null}
+        rows={[]}
+        selectedSessionId={null}
+        selectedReview={null}
+        reviewStatus={{ status: 'idle' }}
+        onOpenSession={() => undefined}
+      />,
+    );
+
+    expect(html).toContain('No completed sessions yet.');
+    expect(html).toContain('Start a session');
+    expect(html).toContain('href="#practice-session-starter"');
+  });
+
   it('navigateTo calls window.location.assign', async () => {
     const { navigateTo } = await import(
       '@/app/(app)/app/practice/client-navigation'
