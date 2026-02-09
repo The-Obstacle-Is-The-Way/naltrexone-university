@@ -55,6 +55,6 @@ Unit tests with `vi.fn()` mocks will NOT catch this — they have no `this` depe
 Before creating new types, check:
 - `src/adapters/shared/` for shared adapter types
 - `src/application/ports/` for port interfaces
-- `src/application/test-helpers/fakes.ts` for existing fakes
+- `src/application/test-helpers/fakes/` for existing fakes
 
-## ADRs: `docs/adr/` (ADR-001 through ADR-013)
+## ADRs: `docs/adr/` (ADR-001 through ADR-018)

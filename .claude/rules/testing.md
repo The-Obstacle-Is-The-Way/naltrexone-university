@@ -18,14 +18,14 @@ ALL code MUST be test-driven. No exceptions.
 
 ## Fakes Over Mocks
 
-Use existing fakes from `src/application/test-helpers/fakes.ts`. NEVER use `vi.mock()` for our own code.
+Use existing fakes from `src/application/test-helpers/fakes/`. NEVER use `vi.mock()` for our own code.
 
-**Available fakes:** `FakeQuestionRepository`, `FakeAttemptRepository`, `FakePracticeSessionRepository`, `FakeSubscriptionRepository`, `FakeUserRepository`, `FakeBookmarkRepository`, `FakeTagRepository`, `FakeStripeCustomerRepository`, `FakeStripeEventRepository`, `FakeAuthGateway`, `FakePaymentGateway`
+**Available fakes:** `FakeQuestionRepository`, `FakeAttemptRepository`, `FakePracticeSessionRepository`, `FakeSubscriptionRepository`, `FakeUserRepository`, `FakeBookmarkRepository`, `FakeTagRepository`, `FakeStripeCustomerRepository`, `FakeStripeEventRepository`, `FakeIdempotencyKeyRepository`, `FakeAuthGateway`, `FakePaymentGateway`, `FakeRateLimiter`
 
 **Decision tree:**
 - Fake exists? Use it.
 - External dependency (Drizzle, Clerk, Stripe SDK)? Use `vi.fn()` inline or `vi.mock()`.
-- No fake exists for our code? Create one in `fakes.ts`, then use it.
+- No fake exists for our code? Create one in `fakes/`, then use it.
 
 **`vi.mock()` is ONLY acceptable for:**
 - External SDKs: `@clerk/nextjs`, `next/link`, `server-only`

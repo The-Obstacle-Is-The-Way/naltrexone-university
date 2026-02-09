@@ -33,7 +33,7 @@ These are the rules that matter most for Claude Code sessions. Full details in `
 - `*.test.tsx` → `renderToStaticMarkup` + `// @vitest-environment jsdom` as first line
 - `*.browser.spec.tsx` → `vitest-browser-react` + `pnpm test:browser`
 - `*.test.ts` → Plain Vitest, no environment directive needed
-- **Fakes over mocks** — use `FakeXxxRepository` from `src/application/test-helpers/fakes.ts`
+- **Fakes over mocks** — use `FakeXxxRepository` from `src/application/test-helpers/fakes/`
 - **TDD mandatory** — write the test first, always
 
 ### Architecture

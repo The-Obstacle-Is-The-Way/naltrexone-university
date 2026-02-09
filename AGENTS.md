@@ -375,7 +375,7 @@ Does a Fake* class exist in `src/application/test-helpers/fakes/` for this depen
   YES → Use it: new FakeAttemptRepository()
   NO  → Is it an external dependency (Drizzle db, Clerk, Stripe SDK)?
     YES → Use vi.fn() inline object OR vi.mock()
-    NO  → Add a new Fake* class under `src/application/test-helpers/fakes/`, then use it
+    NO  → Add a new Fake* class in `src/application/test-helpers/fakes/`, then use it
 ```
 
 **NEVER use `vi.mock()` for our own code.** Only for external packages you can't inject.
