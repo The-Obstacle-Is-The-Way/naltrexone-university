@@ -14,6 +14,7 @@ import type {
 } from '@/src/application/ports/repositories';
 import type { Attempt } from '@/src/domain/entities';
 import type { DrizzleDb } from '../shared/database-types';
+import { toAttemptDomain, toRecentAttempt } from './attempt-row-mappers';
 import {
   getPostgresConstraintName,
   isPostgresUniqueViolation,
@@ -37,62 +38,6 @@ export class DrizzleAttemptRepository implements AttemptRepository {
       .from(attempts)
       .where(eq(attempts.userId, userId))
       .as('latest_attempt_rows');
-  }
-
-  private requireSelectedChoiceId(row: {
-    id?: string | null;
-    selectedChoiceId?: string | null;
-  }): string {
-    if (!row.selectedChoiceId) {
-      const idPart = row.id ? ` ${row.id}` : '';
-      throw new ApplicationError(
-        'INTERNAL_ERROR',
-        `Attempt${idPart} selectedChoiceId must not be null`,
-      );
-    }
-
-    return row.selectedChoiceId;
-  }
-
-  private toDomain(row: {
-    id: string;
-    userId: string;
-    questionId: string;
-    practiceSessionId: string | null;
-    selectedChoiceId: string | null;
-    isCorrect: boolean;
-    timeSpentSeconds: number;
-    answeredAt: Date;
-  }): Attempt {
-    const selectedChoiceId = this.requireSelectedChoiceId(row);
-
-    return {
-      id: row.id,
-      userId: row.userId,
-      questionId: row.questionId,
-      practiceSessionId: row.practiceSessionId ?? null,
-      selectedChoiceId,
-      isCorrect: row.isCorrect,
-      timeSpentSeconds: row.timeSpentSeconds,
-      answeredAt: row.answeredAt,
-    };
-  }
-
-  private toRecentAttempt(row: {
-    id: string;
-    userId: string;
-    questionId: string;
-    practiceSessionId: string | null;
-    selectedChoiceId: string | null;
-    isCorrect: boolean;
-    timeSpentSeconds: number;
-    answeredAt: Date;
-    sessionMode: 'tutor' | 'exam' | null;
-  }): RecentAttempt {
-    return {
-      ...this.toDomain(row),
-      sessionMode: row.sessionMode,
-    };
   }
 
   async insert(input: {
@@ -133,7 +78,7 @@ export class DrizzleAttemptRepository implements AttemptRepository {
       throw new ApplicationError('INTERNAL_ERROR', 'Failed to insert attempt');
     }
 
-    return this.toDomain(row);
+    return toAttemptDomain(row);
   }
 
   async deleteById(id: string, userId: string): Promise<boolean> {
@@ -164,7 +109,7 @@ export class DrizzleAttemptRepository implements AttemptRepository {
       offset: safeOffset,
     });
 
-    return rows.map((row) => this.toDomain(row));
+    return rows.map((row) => toAttemptDomain(row));
   }
 
   async findBySessionId(sessionId: string, userId: string) {
@@ -176,7 +121,7 @@ export class DrizzleAttemptRepository implements AttemptRepository {
       orderBy: desc(attempts.answeredAt),
     });
 
-    return rows.map((row) => this.toDomain(row));
+    return rows.map((row) => toAttemptDomain(row));
   }
 
   private async countWhere(
@@ -244,7 +189,7 @@ export class DrizzleAttemptRepository implements AttemptRepository {
       .orderBy(desc(attempts.answeredAt), desc(attempts.id))
       .limit(limit);
 
-    return rows.map((row) => this.toRecentAttempt(row));
+    return rows.map((row) => toRecentAttempt(row));
   }
 
   async listAnsweredAtByUserIdSince(
