@@ -1,10 +1,13 @@
 'use client';
 
 import { PracticeView } from '@/app/(app)/app/practice/components';
+import {
+  fireAndForget,
+  logUnhandledAsyncError,
+} from '@/app/(app)/app/practice/fire-and-forget';
+import { usePracticeQuestionFlow } from '@/app/(app)/app/practice/hooks/use-practice-question-flow';
 import type { PracticeFilters } from '@/app/(app)/app/practice/practice-page-logic';
 import { ROUTES } from '@/lib/routes';
-import { fireAndForget, logUnhandledAsyncError } from '../fire-and-forget';
-import { usePracticeQuestionFlow } from '../hooks/use-practice-question-flow';
 
 const QUICK_PRACTICE_FILTERS: PracticeFilters = {
   tagSlugs: [],

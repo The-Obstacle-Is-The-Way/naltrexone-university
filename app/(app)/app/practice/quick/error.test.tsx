@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
+import { ROUTES } from '@/lib/routes';
 
 describe('app/(app)/app/practice/quick/error', () => {
   it('renders a contextual error boundary', async () => {
@@ -19,7 +20,9 @@ describe('app/(app)/app/practice/quick/error', () => {
     expect(html).toContain('Quick Practice');
     expect(html).toContain('Try again');
     expect(html).toContain('Back to Practice');
-    expect(doc.querySelector('a[href="/app/practice"]')).not.toBeNull();
+    expect(
+      doc.querySelector(`a[href="${ROUTES.APP_PRACTICE}"]`),
+    ).not.toBeNull();
     expect(tryAgainButton?.getAttribute('type')).toBe('button');
   }, 10_000);
 });

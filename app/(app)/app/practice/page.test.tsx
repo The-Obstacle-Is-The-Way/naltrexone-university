@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
+import { ROUTES } from '@/lib/routes';
 
 vi.mock('next/link', () => ({
   default: (props: Record<string, unknown>) => <a {...props} />,
@@ -28,7 +29,7 @@ describe('app/(app)/app/practice', () => {
 
     const html = renderToStaticMarkup(<PracticePage />);
     expect(html).toContain('Quick Practice');
-    expect(html).toContain('href="/app/practice/quick"');
+    expect(html).toContain(`href="${ROUTES.APP_PRACTICE_QUICK}"`);
   }, 20_000);
 
   it('renders an error banner when loadState is error', async () => {
