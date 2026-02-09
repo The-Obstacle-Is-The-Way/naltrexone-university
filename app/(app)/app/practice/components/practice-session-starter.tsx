@@ -55,6 +55,10 @@ export function PracticeSessionStarter(props: PracticeSessionStarterProps) {
   const difficulties = ['easy', 'medium', 'hard'] satisfies Array<
     NextQuestion['difficulty']
   >;
+  const selectedTagSlugs = useMemo(
+    () => new Set(props.filters.tagSlugs),
+    [props.filters.tagSlugs],
+  );
   const tagsByKind = useMemo(() => {
     const map = new Map<string, TagRow[]>();
     for (const tag of props.availableTags) {
@@ -156,28 +160,39 @@ export function PracticeSessionStarter(props: PracticeSessionStarterProps) {
                 const tags = tagsByKind.get(kind);
                 if (!tags || tags.length === 0) return null;
                 const label = tagKindLabels[kind];
+                const selectedCount = tags.filter((tag) =>
+                  selectedTagSlugs.has(tag.slug),
+                ).length;
                 return (
-                  <div key={kind}>
-                    <div className="text-sm font-medium text-foreground">
-                      {label}
+                  <details
+                    key={kind}
+                    className="rounded-xl border border-border/60 bg-muted/20 px-4 py-3"
+                  >
+                    <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-sm font-medium text-foreground outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]">
+                      <span>{label}</span>
+                      <span className="text-xs font-normal text-muted-foreground">
+                        ({selectedCount} selected)
+                      </span>
+                    </summary>
+                    <div className="mt-3">
+                      <fieldset
+                        className="flex flex-wrap gap-2 border-0 p-0 m-0"
+                        aria-label={label}
+                      >
+                        {tags.map((tag) => (
+                          <FilterChip
+                            key={tag.slug}
+                            label={tag.name}
+                            selected={selectedTagSlugs.has(tag.slug)}
+                            onClick={() => props.onToggleTag(tag.slug)}
+                          />
+                        ))}
+                      </fieldset>
+                      <div className="mt-1 text-xs text-muted-foreground">
+                        Leave empty to include all {tagKindPluralLabels[kind]}.
+                      </div>
                     </div>
-                    <fieldset
-                      className="mt-2 flex flex-wrap gap-2 border-0 p-0 m-0"
-                      aria-label={label}
-                    >
-                      {tags.map((tag) => (
-                        <FilterChip
-                          key={tag.slug}
-                          label={tag.name}
-                          selected={props.filters.tagSlugs.includes(tag.slug)}
-                          onClick={() => props.onToggleTag(tag.slug)}
-                        />
-                      ))}
-                    </fieldset>
-                    <div className="mt-1 text-xs text-muted-foreground">
-                      Leave empty to include all {tagKindPluralLabels[kind]}.
-                    </div>
-                  </div>
+                  </details>
                 );
               })
           : null}

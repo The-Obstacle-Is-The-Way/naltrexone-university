@@ -43,6 +43,7 @@ test('invokes onToggleDifficulty when selecting a difficulty', async () => {
 
 test('invokes onToggleTag when selecting a tag', async () => {
   const { props, screen } = await renderStarter();
+  await screen.getByText('Substance', { exact: true }).click();
   await screen.getByRole('button', { name: 'Opioids' }).click();
   expect(props.onToggleTag).toHaveBeenCalledWith('opioids');
 });

@@ -6,11 +6,57 @@ import { Feedback } from '@/components/question/feedback';
 import { QuestionCard } from '@/components/question/question-card';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { ROUTES } from '@/lib/routes';
+import { type QuestionOrigin, ROUTES } from '@/lib/routes';
 import type { GetQuestionBySlugOutput } from '@/src/adapters/controllers/question-view-controller';
 import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
 import type { LoadState } from './question-page-logic';
 import { useQuestionPageController } from './use-question-page-controller';
+
+function parseQuestionOrigin(value: string | undefined): QuestionOrigin | null {
+  if (value === 'dashboard') return value;
+  if (value === 'review') return value;
+  if (value === 'bookmarks') return value;
+  if (value === 'practice') return value;
+  return null;
+}
+
+function getOriginUi(origin: QuestionOrigin | null): {
+  backHref: string;
+  backLabel: string;
+  subtitle: string;
+} {
+  const resolvedOrigin = origin ?? 'dashboard';
+
+  if (resolvedOrigin === 'review') {
+    return {
+      backHref: ROUTES.APP_REVIEW,
+      backLabel: 'Back to Review',
+      subtitle: 'Reattempt a question from your review list.',
+    };
+  }
+
+  if (resolvedOrigin === 'bookmarks') {
+    return {
+      backHref: ROUTES.APP_BOOKMARKS,
+      backLabel: 'Back to Bookmarks',
+      subtitle: 'Reattempt a question from your bookmarks.',
+    };
+  }
+
+  if (resolvedOrigin === 'practice') {
+    return {
+      backHref: ROUTES.APP_PRACTICE,
+      backLabel: 'Back to Practice',
+      subtitle: 'Review a question from your practice history.',
+    };
+  }
+
+  return {
+    backHref: ROUTES.APP_DASHBOARD,
+    backLabel: 'Back to Dashboard',
+    subtitle: 'Review a question from your recent activity.',
+  };
+}
 
 export type QuestionViewProps = {
   loadState: LoadState;
@@ -19,6 +65,7 @@ export type QuestionViewProps = {
   submitResult: SubmitAnswerOutput | null;
   canSubmit: boolean;
   isPending: boolean;
+  origin?: QuestionOrigin | null;
   onTryAgain: () => void;
   onSelectChoice: (choiceId: string) => void;
   onSubmit: () => void;
@@ -27,6 +74,7 @@ export type QuestionViewProps = {
 
 export function QuestionView(props: QuestionViewProps) {
   const correctChoiceId = props.submitResult?.correctChoiceId ?? null;
+  const originUi = getOriginUi(props.origin ?? null);
 
   return (
     <div className="space-y-6">
@@ -35,15 +83,13 @@ export function QuestionView(props: QuestionViewProps) {
           <h1 className="text-2xl font-bold font-heading tracking-tight text-foreground">
             Question
           </h1>
-          <p className="mt-1 text-muted-foreground">
-            Reattempt a question from your review list.
-          </p>
+          <p className="mt-1 text-muted-foreground">{originUi.subtitle}</p>
         </div>
         <Link
-          href={ROUTES.APP_DASHBOARD}
+          href={originUi.backHref}
           className="rounded-md text-sm font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]"
         >
-          Back to Dashboard
+          {originUi.backLabel}
         </Link>
       </div>
 
@@ -124,7 +170,7 @@ export function QuestionView(props: QuestionViewProps) {
               Try Again
             </Button>
             <Button asChild variant="ghost" className="rounded-full">
-              <Link href={ROUTES.APP_REVIEW}>Back to Review</Link>
+              <Link href={originUi.backHref}>{originUi.backLabel}</Link>
             </Button>
           </>
         ) : null}
@@ -133,7 +179,13 @@ export function QuestionView(props: QuestionViewProps) {
   );
 }
 
-export default function QuestionPageClient({ slug }: { slug: string }) {
+export default function QuestionPageClient({
+  slug,
+  from,
+}: {
+  slug: string;
+  from?: string;
+}) {
   const controller = useQuestionPageController({ slug });
-  return <QuestionView {...controller} />;
+  return <QuestionView {...controller} origin={parseQuestionOrigin(from)} />;
 }

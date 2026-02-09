@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { ErrorCard } from '@/components/error-card';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { ROUTES } from '@/lib/routes';
+import { ROUTES, toPracticeSessionRoute, toQuestionRoute } from '@/lib/routes';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import {
   getUserStats,
@@ -33,7 +33,7 @@ type RecentActivityGroup =
       row: RecentActivityRow;
     };
 
-function toSentenceCase(value: 'tutor' | 'exam'): string {
+function toSentenceCase(value: string): string {
   return value.charAt(0).toUpperCase() + value.slice(1);
 }
 
@@ -140,27 +140,61 @@ export function DashboardView({ stats }: { stats: UserStatsOutput }) {
         </Card>
       </div>
 
-      {recentActivityGroups.length > 0 ? (
-        <Card className="gap-0 rounded-2xl p-6 shadow-sm">
-          <div className="text-sm font-medium text-foreground">
-            Recent activity
+      <Card className="gap-0 rounded-2xl p-6 shadow-sm">
+        <div className="text-sm font-medium text-foreground">
+          Recent activity
+        </div>
+
+        {recentActivityGroups.length === 0 ? (
+          <div className="mt-4 text-sm text-muted-foreground">
+            <div>No activity yet.</div>
+            <div className="mt-2">
+              Start practicing to see your recent answers here.
+            </div>
+            <div className="mt-4">
+              <Button asChild variant="outline" className="rounded-full">
+                <Link href={ROUTES.APP_PRACTICE}>Go to Practice →</Link>
+              </Button>
+            </div>
           </div>
+        ) : (
           <ul className="mt-4 space-y-3 text-sm text-muted-foreground">
             {recentActivityGroups.map((group) => {
               if (group.kind === 'single') {
+                if (!group.row.isAvailable) {
+                  return (
+                    <li
+                      key={group.row.attemptId}
+                      className="flex items-center gap-2"
+                    >
+                      <span className="font-medium text-foreground">
+                        [Question no longer available]
+                      </span>
+                      <span className="text-muted-foreground">
+                        {group.row.isCorrect ? 'Correct' : 'Incorrect'}
+                      </span>
+                    </li>
+                  );
+                }
+
                 return (
-                  <li
-                    key={group.row.attemptId}
-                    className="flex items-center gap-2"
-                  >
-                    <span className="font-medium text-foreground">
-                      {group.row.isAvailable
-                        ? getStemPreview(group.row.stemMd, 100)
-                        : '[Question no longer available]'}
-                    </span>
-                    <span className="text-muted-foreground">
-                      {group.row.isCorrect ? 'Correct' : 'Incorrect'}
-                    </span>
+                  <li key={group.row.attemptId}>
+                    <Link
+                      href={toQuestionRoute(group.row.slug, {
+                        from: 'dashboard',
+                      })}
+                      className="flex items-center gap-3 rounded-xl px-2 py-1 transition-colors hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]"
+                    >
+                      <span className="min-w-0 flex-1 font-medium text-foreground">
+                        {getStemPreview(group.row.stemMd, 100)}
+                      </span>
+                      <span className="inline-flex items-center rounded-full border border-border/60 px-2 py-0.5 text-xs font-medium text-muted-foreground">
+                        {toSentenceCase(group.row.difficulty)}
+                      </span>
+                      <span className="shrink-0 text-muted-foreground">
+                        {group.row.isCorrect ? 'Correct' : 'Incorrect'}
+                      </span>
+                    </Link>
                   </li>
                 );
               }
@@ -175,36 +209,62 @@ export function DashboardView({ stats }: { stats: UserStatsOutput }) {
                   className="rounded-xl border border-border/60 bg-muted/20 p-3"
                 >
                   <div className="flex items-center justify-between gap-2">
-                    <span className="text-xs font-medium uppercase tracking-wide text-foreground">
+                    <Link
+                      href={toPracticeSessionRoute(group.sessionId)}
+                      className="text-xs font-medium uppercase tracking-wide text-foreground transition-colors hover:text-foreground/90 hover:underline focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]"
+                    >
                       {toSentenceCase(group.sessionMode)} session
-                    </span>
+                    </Link>
                     <span className="text-xs text-muted-foreground">
                       {correctCount}/{group.rows.length} correct
                     </span>
                   </div>
                   <ul className="mt-2 space-y-1">
-                    {group.rows.map((row) => (
-                      <li
-                        key={row.attemptId}
-                        className="flex items-center gap-2"
-                      >
-                        <span className="font-medium text-foreground">
-                          {row.isAvailable
-                            ? getStemPreview(row.stemMd, 90)
-                            : '[Question no longer available]'}
-                        </span>
-                        <span className="text-muted-foreground">
-                          {row.isCorrect ? 'Correct' : 'Incorrect'}
-                        </span>
-                      </li>
-                    ))}
+                    {group.rows.map((row) => {
+                      if (!row.isAvailable) {
+                        return (
+                          <li
+                            key={row.attemptId}
+                            className="flex items-center gap-2"
+                          >
+                            <span className="font-medium text-foreground">
+                              [Question no longer available]
+                            </span>
+                            <span className="text-muted-foreground">
+                              {row.isCorrect ? 'Correct' : 'Incorrect'}
+                            </span>
+                          </li>
+                        );
+                      }
+
+                      return (
+                        <li key={row.attemptId}>
+                          <Link
+                            href={toQuestionRoute(row.slug, {
+                              from: 'dashboard',
+                            })}
+                            className="flex items-center gap-3 rounded-xl px-2 py-1 transition-colors hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]"
+                          >
+                            <span className="min-w-0 flex-1 font-medium text-foreground">
+                              {getStemPreview(row.stemMd, 90)}
+                            </span>
+                            <span className="inline-flex items-center rounded-full border border-border/60 px-2 py-0.5 text-xs font-medium text-muted-foreground">
+                              {toSentenceCase(row.difficulty)}
+                            </span>
+                            <span className="shrink-0 text-muted-foreground">
+                              {row.isCorrect ? 'Correct' : 'Incorrect'}
+                            </span>
+                          </Link>
+                        </li>
+                      );
+                    })}
                   </ul>
                 </li>
               );
             })}
           </ul>
-        </Card>
-      ) : null}
+        )}
+      </Card>
     </div>
   );
 }

@@ -107,10 +107,10 @@ Once implemented:
 
 The core SLICE-4 functionality is complete. The following cross-page UX improvements are specified in [SPEC-019](./spec-019-practice-ux-redesign.md) Phase 3:
 
-- **Origin-aware question-detail navigation:** The question detail page (`/app/questions/[slug]`) uses static back links ("Back to Dashboard" in header, "Back to Review" after submit) and does not adapt to actual entry point (Bookmarks vs Review vs Dashboard).
-- **Cross-linking:** Review and Bookmarks pages should link to each other, not just to Practice.
-- **Review empty state:** When no missed questions exist, show helpful messaging with CTA.
-- **Review filtering:** Add tag/difficulty filter to the missed questions list.
+- **Origin-aware question-detail navigation:** **Done** (SPEC-019 Phase 3) — question detail back links + subtitle adapt based on `?from=dashboard|review|bookmarks|practice`.
+- **Review empty state:** **Done** (SPEC-019 Phase 3) — clarified missed-only scope with CTA to Practice.
+- **Review filtering:** **Done** (SPEC-019 Phase 3) — tag/difficulty filters supported on `/app/review`.
+- **Cross-linking (optional):** Review and Bookmarks could link to each other as an additional navigation affordance, but this is not required for core SLICE-4.
 
 ---
 

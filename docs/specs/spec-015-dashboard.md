@@ -99,9 +99,9 @@ Once implemented:
 The core SLICE-5 functionality is complete. Session grouping was delivered by SPEC-020 Phase 3. The following UX improvements remain, specified in [SPEC-019](./spec-019-practice-ux-redesign.md) Phase 3:
 
 - **Session grouping:** **Done** (SPEC-020 Phase 3) — activity groups by `sessionId`/`sessionMode` with mode badge + score headers.
-- **Clickable activity items (Pending):** `slug` is fetched as an "internal navigation identifier" (master_spec 4.5.7) but not yet wired to `toQuestionRoute(slug)` links in the UI. Every question reference should link to `/app/questions/[slug]`.
-- **Difficulty badges (Pending):** `difficulty` field is in `UserStatsOutput.recentActivity` but not rendered.
-- **Session drill-down (Pending):** Session headers should link to session detail/breakdown view.
+- **Clickable activity items:** **Done** (SPEC-019 Phase 3) — question stems link to `/app/questions/[slug]` using `toQuestionRoute(slug, { from: 'dashboard' })`.
+- **Difficulty badges:** **Done** (SPEC-019 Phase 3) — activity rows render an Easy/Medium/Hard pill.
+- **Session drill-down:** **Done** (SPEC-019 Phase 3) — session headers link to session detail/breakdown view.
 
 ---
 

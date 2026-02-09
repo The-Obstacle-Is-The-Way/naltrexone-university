@@ -30,10 +30,25 @@ describe('app/(app)/app/questions/[slug]', () => {
 
     const element = await QuestionPage({
       params: Promise.resolve({ slug: 'q-1' }),
+      searchParams: Promise.resolve({}),
     } as never);
 
     expect(element).toMatchObject({
       props: { slug: 'q-1' },
+    });
+  }, 20_000);
+
+  it('passes origin searchParams into the client page', async () => {
+    const QuestionPage = (await import('@/app/(app)/app/questions/[slug]/page'))
+      .default;
+
+    const element = await QuestionPage({
+      params: Promise.resolve({ slug: 'q-1' }),
+      searchParams: Promise.resolve({ from: 'review' }),
+    } as never);
+
+    expect(element).toMatchObject({
+      props: { slug: 'q-1', from: 'review' },
     });
   }, 20_000);
 
@@ -43,6 +58,7 @@ describe('app/(app)/app/questions/[slug]', () => {
 
     const element = await QuestionPage({
       params: Promise.resolve({ slug: 'q-1' }),
+      searchParams: Promise.resolve({}),
     } as never);
 
     const html = renderToStaticMarkup(element);
@@ -167,7 +183,7 @@ describe('app/(app)/app/questions/[slug]', () => {
 
     expect(html).toContain('Explanation');
     expect(html).toContain('Try Again');
-    expect(html).toContain('Back to Review');
+    expect(html).toContain('Back to Dashboard');
     expect(html).not.toContain('Submit');
   });
 

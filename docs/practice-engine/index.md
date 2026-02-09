@@ -422,7 +422,7 @@ For ad-hoc mode, `selectNextQuestionId()` picks the least-recently-seen question
 |-------|--------|------------|
 | **Phase 1: Stabilize** | Done | All acceptance criteria met |
 | **Phase 2: UX Redesign** | **Implemented** (2026-02-09) | Done — `/app/practice/quick` created; `/app/practice` refactored into landing page; `APP_PRACTICE_QUICK` route constant added |
-| **Phase 3: Cross-Page IA** | Partial (2 of 13 tasks done) | Dashboard activity clickable; difficulty badges; collapsible tag filters; review subtitle + empty state; origin-aware back links on question detail page |
+| **Phase 3: Cross-Page IA** | **Implemented** (2026-02-09) | Done — actionable dashboard activity + session drill-down; progressive tag filters; review clarification + filters; origin-aware question navigation; improved empty states |
 
 ### 9.4 Product Decisions (2026-02-09)
 
@@ -450,10 +450,10 @@ This section maps each part of the Practice Engine to the spec that defines it.
 | Server actions / controllers | SPEC-010 | Implemented | Synced to implementation (`ActionErrorCode` = `ApplicationErrorCode`; `createAction` + `handleError`) |
 | Core question loop (fetch → render → submit → grade → explain) | SPEC-012 | Implemented | Fully compliant |
 | Practice sessions (start → answer → navigate → review → end → summary) | SPEC-013 | Implemented | Fully compliant |
-| Review + bookmarks | SPEC-014 | Implemented | Cross-page UX improvements deferred to SPEC-019 Phase 3 |
-| Dashboard stats | SPEC-015 | Implemented | Clickable activity items deferred to SPEC-019 Phase 3 |
+| Review + bookmarks | SPEC-014 | Implemented | Cross-page UX improvements completed via SPEC-019 Phase 3 |
+| Dashboard stats | SPEC-015 | Implemented | Activity items clickable + difficulty badges via SPEC-019 Phase 3 |
 | UI integration patterns | SPEC-018 | Implemented | No architecture violations |
-| Practice UX redesign | SPEC-019 | Partial | Phase 1 done; Phase 2 implemented (2026-02-09); Phase 3 partial |
+| Practice UX redesign | SPEC-019 | Implemented | All 3 phases complete (2026-02-09) |
 | Practice engine completion (decomposition, navigation, enriched summary, session history) | SPEC-020 | Implemented | All 4 phases complete |
 
 ### 10.1 Spec Drift Summary
@@ -550,7 +550,7 @@ controllers/
 | [SPEC-013](specs/spec-013-practice-sessions.md) | Practice session requirements |
 | [SPEC-014](specs/spec-014-review-bookmarks.md) | Review + bookmarks requirements |
 | [SPEC-015](specs/spec-015-dashboard.md) | Dashboard requirements |
-| [SPEC-019](specs/spec-019-practice-ux-redesign.md) | UX redesign (Phase 2 implemented; Phase 3 partial) |
+| [SPEC-019](specs/spec-019-practice-ux-redesign.md) | UX redesign (all phases implemented) |
 | [SPEC-020](specs/spec-020-practice-engine-completion.md) | Practice engine completion (all done) |
 | [ADR-001](adr/adr-001-clean-architecture-layers.md) | Clean Architecture decision |
 | [ADR-003](adr/adr-003-testing-strategy.md) | Testing strategy (TDD, fakes over mocks) |
@@ -568,3 +568,4 @@ controllers/
 | 2026-02-08 | Initial version — created from full vertical audit of domain → application → adapters → frontend layers. Cross-referenced against SPEC-001 through SPEC-020. |
 | 2026-02-09 | Synced with SPEC-019 updates: Phase 2 now "Ready for Implementation"; routes table adds `/app/practice/quick` (pending); practice mode table updated; Section 9.4 added for product decisions (review = missed-only, session runner route stays, nav label stays "Review"). |
 | 2026-02-09 | Implemented SPEC-019 Phase 2: `/app/practice` is now landing-only, `/app/practice/quick` hosts ad-hoc question flow, and the route/status tables updated accordingly. |
+| 2026-02-09 | Implemented SPEC-019 Phase 3: actionable dashboard activity + difficulty badges; progressive tag filter disclosure; review clarification + filters; origin-aware question navigation; improved empty states. |

@@ -11,6 +11,16 @@ import { ok } from '@/src/adapters/controllers/action-result';
 import { getStemPreview } from '@/src/adapters/shared/stem-preview';
 
 describe('app/(app)/app/review', () => {
+  it('renders missed-only subtitle copy', () => {
+    const html = renderToStaticMarkup(
+      <ReviewView rows={[]} limit={20} offset={0} totalCount={0} />,
+    );
+
+    expect(html).toContain(
+      'Questions you answered incorrectly — review and reattempt to strengthen weak areas.',
+    );
+  });
+
   it('renders a truncated stem preview as the card title instead of raw slug text', () => {
     const longStem =
       'A very long stem that should be truncated in the card title for readability in review lists.';
@@ -26,6 +36,7 @@ describe('app/(app)/app/review', () => {
             slug: 'q-1',
             stemMd: longStem,
             difficulty: 'easy',
+            tagSlugs: [],
             lastAnsweredAt: '2026-02-01T00:00:00.000Z',
           },
         ]}
@@ -53,6 +64,7 @@ describe('app/(app)/app/review', () => {
             slug: 'q-1',
             stemMd,
             difficulty: 'easy',
+            tagSlugs: [],
             lastAnsweredAt: '2026-02-01T00:00:00.000Z',
           },
         ]}
@@ -81,6 +93,7 @@ describe('app/(app)/app/review', () => {
             slug: 'q-1',
             stemMd,
             difficulty: 'easy',
+            tagSlugs: [],
             lastAnsweredAt: '2026-02-01T00:00:00.000Z',
           },
         ]}
@@ -109,6 +122,7 @@ describe('app/(app)/app/review', () => {
             slug: 'q-1',
             stemMd: 'Stem for q1',
             difficulty: 'easy',
+            tagSlugs: [],
             lastAnsweredAt: '2026-02-01T00:00:00.000Z',
           },
         ]}
@@ -124,9 +138,47 @@ describe('app/(app)/app/review', () => {
     expect(html).toContain('easy');
     expect(html).toContain('Missed Feb 1, 2026');
     expect(html).toContain('Reattempt');
-    expect(html).toContain(toQuestionRoute('q-1'));
+    expect(html).toContain(toQuestionRoute('q-1', { from: 'review' }));
     expect(html).toContain('aria-label="Reattempt question: Stem for q1"');
     expect(html).toContain(`href="${ROUTES.APP_PRACTICE}"`);
+  });
+
+  it('filters missed questions by difficulty and tag', () => {
+    const html = renderToStaticMarkup(
+      <ReviewView
+        rows={[
+          {
+            isAvailable: true,
+            questionId: 'q_1',
+            sessionId: null,
+            sessionMode: null,
+            slug: 'q-1',
+            stemMd: 'Stem for q1',
+            difficulty: 'easy',
+            tagSlugs: ['opioids'],
+            lastAnsweredAt: '2026-02-01T00:00:00.000Z',
+          },
+          {
+            isAvailable: true,
+            questionId: 'q_2',
+            sessionId: null,
+            sessionMode: null,
+            slug: 'q-2',
+            stemMd: 'Stem for q2',
+            difficulty: 'hard',
+            tagSlugs: ['alcohol'],
+            lastAnsweredAt: '2026-02-01T00:00:00.000Z',
+          },
+        ]}
+        limit={20}
+        offset={0}
+        totalCount={2}
+        filters={{ difficulty: 'hard', tagSlug: 'alcohol' }}
+      />,
+    );
+
+    expect(html).toContain('Stem for q2');
+    expect(html).not.toContain('Stem for q1');
   });
 
   it('renders pagination links when offset > 0 and rows length equals limit', () => {
@@ -141,6 +193,7 @@ describe('app/(app)/app/review', () => {
             slug: 'q-1',
             stemMd: 'Stem for q1',
             difficulty: 'easy',
+            tagSlugs: [],
             lastAnsweredAt: '2026-02-01T00:00:00.000Z',
           },
           {
@@ -151,6 +204,7 @@ describe('app/(app)/app/review', () => {
             slug: 'q-2',
             stemMd: 'Stem for q2',
             difficulty: 'easy',
+            tagSlugs: [],
             lastAnsweredAt: '2026-02-01T00:00:00.000Z',
           },
         ]}
@@ -173,7 +227,10 @@ describe('app/(app)/app/review', () => {
 
     expect(html).toContain('Review');
     expect(html).toContain('No missed questions yet.');
-    expect(html).toContain('Practice a question');
+    expect(html).toContain(
+      'Great work! As you practice, any questions you get wrong will appear here for review.',
+    );
+    expect(html).toContain('Go to Practice →');
     expect(html).toContain(`href="${ROUTES.APP_PRACTICE}"`);
   });
 
@@ -212,6 +269,7 @@ describe('app/(app)/app/review', () => {
             slug: 'q-1',
             stemMd: 'Stem for q1',
             difficulty: 'easy',
+            tagSlugs: [],
             lastAnsweredAt: '2026-02-01T00:00:00.000Z',
           },
         ]}

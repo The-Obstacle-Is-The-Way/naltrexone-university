@@ -31,9 +31,7 @@ All frontend-specific UI/UX debt. Items use `FE-XXX` IDs and are cross-reference
 
 ### P3 — Fix as encountered
 
-| ID | Summary | Files | Status |
-|----|---------|-------|--------|
-| FE-038 | Card sub-components: 0 imports outside tests | `card.tsx` (CardHeader, CardTitle, etc.) — SPEC-019 Phase 2 complete, sub-components were not needed. Evaluate for removal unless Phase 3 requires them. | Accepted |
+*No active P3 items.*
 
 ### Frontend Debt — Resolved
 
@@ -46,6 +44,7 @@ All frontend-specific UI/UX debt. Items use `FE-XXX` IDs and are cross-reference
 | FE-006 | Two competing `LoadState` type definitions | Unified via shared `load-state.ts` |
 | FE-014 | Heading hierarchy skip (h1 to h3) in pricing | Fixed — now h1 > h2 > h3 |
 | FE-027 | Feedback component missing `role="alert"` | Added `role="alert"` to feedback banner and regression test coverage |
+| FE-038 | Card sub-components: 0 imports outside tests | Sub-components removed — zero production usage across 16 Card consumers confirmed. Project uses Card + direct children pattern per frontend standards. |
 | FE-039 / DEBT-179 | `global-error.tsx` missing `<head>` and `suppressHydrationWarning` | Fixed with full HTML shell metadata + hydration parity tests |
 | FE-040 / DEBT-180 | Duplicated manage-billing files across pricing and billing routes | Shared core/types extracted to `lib/manage-billing/*`; route wrappers preserved |
 | FE-041 / DEBT-181 | Hardcoded pricing data duplicated in marketing and pricing views | Shared constants extracted to `lib/pricing-data.ts` with regression guards |
