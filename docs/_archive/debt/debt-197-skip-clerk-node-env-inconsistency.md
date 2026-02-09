@@ -1,8 +1,9 @@
 # DEBT-197: SKIP_CLERK Middleware Check Uses NODE_ENV Inconsistently
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P2
 **Date:** 2026-02-08
+**Resolved:** 2026-02-09
 
 ---
 
@@ -39,8 +40,9 @@ if (process.env.VERCEL_ENV === 'production') {
 
 ## Verification
 
-- `pnpm test --run` — proxy tests pass
-- Review Vercel deployment logs to confirm `VERCEL_ENV` is set correctly
+- [x] Updated `proxy.ts` to gate the bypass with `VERCEL_ENV === 'production'` (aligns with `lib/env.ts`)
+- [x] Updated proxy regression coverage to assert production detection uses `VERCEL_ENV`
+- [x] `pnpm typecheck && pnpm test --run`
 
 ## Related
 

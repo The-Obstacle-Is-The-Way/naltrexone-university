@@ -23,7 +23,7 @@ function shouldBypassClerkAuth(): boolean {
     return false;
   }
 
-  if (process.env.NODE_ENV === 'production') {
+  if (process.env.VERCEL_ENV === 'production') {
     if (!hasLoggedSkipClerkProductionWarning) {
       hasLoggedSkipClerkProductionWarning = true;
       console.error(

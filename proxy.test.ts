@@ -40,7 +40,8 @@ describe('proxy middleware', () => {
 
   it('ignores NEXT_PUBLIC_SKIP_CLERK=true in production and still protects routes', async () => {
     vi.stubEnv('NEXT_PUBLIC_SKIP_CLERK', 'true');
-    vi.stubEnv('NODE_ENV', 'production');
+    vi.stubEnv('VERCEL_ENV', 'production');
+    vi.stubEnv('NODE_ENV', 'development');
     const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
     type ClerkMiddlewareCallback = (
