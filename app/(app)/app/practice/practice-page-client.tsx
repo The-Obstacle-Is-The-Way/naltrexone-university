@@ -14,7 +14,7 @@ import {
   PracticeView,
   type PracticeViewProps,
 } from './components/practice-view';
-import { fireAndForget } from './fire-and-forget';
+import { fireAndForget, logUnhandledAsyncError } from './fire-and-forget';
 import { usePracticeQuestionFlow } from './hooks/use-practice-question-flow';
 import { usePracticeSessionControls } from './hooks/use-practice-session-controls';
 
@@ -48,7 +48,10 @@ export default function PracticePageClient() {
                 sessionControls.incompleteSessionStatus === 'loading'
               }
               onAbandon={() => {
-                fireAndForget(sessionControls.onAbandonIncompleteSession());
+                fireAndForget(
+                  sessionControls.onAbandonIncompleteSession(),
+                  logUnhandledAsyncError,
+                );
               }}
             />
           ) : null}
@@ -73,7 +76,10 @@ export default function PracticePageClient() {
                 onSessionModeChange={sessionControls.onSessionModeChange}
                 onSessionCountChange={sessionControls.onSessionCountChange}
                 onStartSession={() => {
-                  fireAndForget(sessionControls.onStartSession());
+                  fireAndForget(
+                    sessionControls.onStartSession(),
+                    logUnhandledAsyncError,
+                  );
                 }}
               />
             )}
@@ -85,7 +91,10 @@ export default function PracticePageClient() {
             selectedReview={sessionControls.selectedHistoryReview}
             reviewStatus={sessionControls.historyReviewLoadState}
             onOpenSession={(sessionId) => {
-              fireAndForget(sessionControls.onOpenSessionHistory(sessionId));
+              fireAndForget(
+                sessionControls.onOpenSessionHistory(sessionId),
+                logUnhandledAsyncError,
+              );
             }}
           />
         </div>
@@ -104,11 +113,11 @@ export default function PracticePageClient() {
       canSubmit={questionFlow.canSubmit}
       onTryAgain={questionFlow.onTryAgain}
       onToggleBookmark={() => {
-        fireAndForget(questionFlow.onToggleBookmark());
+        fireAndForget(questionFlow.onToggleBookmark(), logUnhandledAsyncError);
       }}
       onSelectChoice={questionFlow.onSelectChoice}
       onSubmit={() => {
-        fireAndForget(questionFlow.onSubmit());
+        fireAndForget(questionFlow.onSubmit(), logUnhandledAsyncError);
       }}
       onNextQuestion={questionFlow.onNextQuestion}
     />

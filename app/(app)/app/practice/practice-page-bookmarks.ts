@@ -21,17 +21,13 @@ export function createBookmarksEffect(input: {
   setBookmarkRetryCount: (next: number | ((prev: number) => number)) => void;
   setTimeoutFn?: SetTimeoutFn;
   clearTimeoutFn?: ClearTimeoutFn;
-  logError?: (message: string, context: unknown) => void;
+  logError: (message: string, context: unknown) => void;
 }): () => void {
   const setTimeoutFn: SetTimeoutFn =
     input.setTimeoutFn ?? ((fn, ms) => setTimeout(fn, ms));
   const clearTimeoutFn: ClearTimeoutFn =
     input.clearTimeoutFn ?? ((id) => clearTimeout(id));
-  const logError =
-    input.logError ??
-    ((message: string, context: unknown) => {
-      console.error(message, context);
-    });
+  const logError = input.logError;
 
   let mounted = true;
   let timeoutId: ReturnType<typeof setTimeout> | undefined;
