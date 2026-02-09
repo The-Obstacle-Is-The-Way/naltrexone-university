@@ -208,6 +208,23 @@ All consumers already handle the available/unavailable discriminated union. Addi
 
 ---
 
+## Post-Implementation Cleanup Checklist
+
+After Phase 4 is implemented, verify NO vestigial slop remains:
+
+- [ ] `QuickPracticeCard` component file is deleted (not just unused)
+- [ ] No imports of `QuickPracticeCard` remain anywhere
+- [ ] The 2-column grid layout (`grid-cols-2` or similar) is removed from `practice-page-client.tsx`
+- [ ] `usePracticeSessionControls` or parent hooks don't wire up Quick Practice state that's no longer consumed
+- [ ] Tests that asserted Quick Practice card renders on the practice page are removed/updated
+- [ ] The inline breakdown JSX in `practice-session-history-panel.tsx` is fully replaced by `SessionBreakdownList` (not duplicated alongside it)
+- [ ] The inline breakdown JSX in `session-summary-view.tsx` is fully replaced by `SessionBreakdownList` (not duplicated alongside it)
+- [ ] No orphaned imports (`getStemPreview` in files that now delegate to the shared component, etc.)
+- [ ] `pnpm lint` catches any unused imports/variables (Biome enforces this)
+- [ ] `pnpm typecheck` catches any type mismatches from the `slug` addition
+
+---
+
 ## Open Questions (Deferred)
 
 1. Should breakdown show green/red color coding for correct/incorrect? (UX polish, can add later)
