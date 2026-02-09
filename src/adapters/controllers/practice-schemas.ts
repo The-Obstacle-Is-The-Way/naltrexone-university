@@ -5,6 +5,7 @@ import {
   MAX_PRACTICE_SESSION_DIFFICULTY_FILTERS,
   MAX_PRACTICE_SESSION_QUESTIONS,
   MAX_PRACTICE_SESSION_TAG_FILTERS,
+  MAX_TAG_SLUG_LENGTH,
 } from '@/src/adapters/shared/validation-limits';
 import { zDifficulty, zUuid } from '@/src/adapters/shared/zod-schemas';
 
@@ -16,7 +17,7 @@ export const StartPracticeSessionInputSchema = z
     count: z.number().int().min(1).max(MAX_PRACTICE_SESSION_QUESTIONS),
     idempotencyKey: zUuid.optional(),
     tagSlugs: z
-      .array(z.string().min(1))
+      .array(z.string().min(1).max(MAX_TAG_SLUG_LENGTH))
       .max(MAX_PRACTICE_SESSION_TAG_FILTERS)
       .default([]),
     difficulties: z

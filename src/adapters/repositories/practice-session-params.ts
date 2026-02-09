@@ -3,6 +3,7 @@ import {
   MAX_PRACTICE_SESSION_DIFFICULTY_FILTERS,
   MAX_PRACTICE_SESSION_QUESTIONS,
   MAX_PRACTICE_SESSION_TAG_FILTERS,
+  MAX_TAG_SLUG_LENGTH,
 } from '@/src/adapters/shared/validation-limits';
 import {
   ApplicationError,
@@ -28,7 +29,9 @@ const practiceSessionQuestionStateSchema = z
 const practiceSessionParamsSchema = z
   .object({
     count: z.number().int().min(1).max(MAX_PRACTICE_SESSION_QUESTIONS),
-    tagSlugs: z.array(z.string().min(1)).max(MAX_PRACTICE_SESSION_TAG_FILTERS),
+    tagSlugs: z
+      .array(z.string().min(1).max(MAX_TAG_SLUG_LENGTH))
+      .max(MAX_PRACTICE_SESSION_TAG_FILTERS),
     difficulties: z
       .array(questionDifficultySchema)
       .max(MAX_PRACTICE_SESSION_DIFFICULTY_FILTERS),
