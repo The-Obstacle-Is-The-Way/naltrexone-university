@@ -144,7 +144,7 @@ test('renders active question branch with navigator and navigation callback', as
       loadState={{ status: 'ready' }}
       question={{
         questionId: 'q1',
-        slug: 'q1',
+        slug: 'q-1',
         stemMd: 'Stem 1',
         difficulty: 'easy',
         choices: [{ id: 'c1', label: 'A', textMd: 'Choice A', sortOrder: 1 }],

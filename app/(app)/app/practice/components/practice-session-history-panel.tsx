@@ -1,5 +1,6 @@
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { formatDuration } from '@/lib/format-duration';
 import type {
   GetPracticeSessionReviewOutput,
   GetSessionHistoryOutput,
@@ -19,13 +20,6 @@ export type PracticeSessionHistoryPanelProps = {
 
 function formatSessionAccuracy(value: number): string {
   return `${Math.round(value * 100)}%`;
-}
-
-function formatDuration(seconds: number): string {
-  if (seconds < 60) return `${seconds}s`;
-  const m = Math.floor(seconds / 60);
-  const s = seconds % 60;
-  return s > 0 ? `${m}m ${s}s` : `${m}m`;
 }
 
 function formatSessionMode(mode: 'tutor' | 'exam'): string {

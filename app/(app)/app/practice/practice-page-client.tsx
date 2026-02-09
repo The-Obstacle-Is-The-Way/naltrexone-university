@@ -92,7 +92,9 @@ export default function PracticePageClient() {
               <div className="text-sm text-muted-foreground">
                 {sessionControls.incompleteSession
                   ? 'Resume or abandon your current session to start a new one.'
-                  : 'Loading session status…'}
+                  : sessionControls.incompleteSessionStatus === 'error'
+                    ? 'Unable to load session status.'
+                    : 'Loading session status…'}
               </div>
             </div>
           </Card>

@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { formatDuration } from '@/lib/format-duration';
 import { ROUTES } from '@/lib/routes';
 import type {
   EndPracticeSessionOutput,
@@ -8,13 +9,6 @@ import type {
 } from '@/src/adapters/controllers/practice-controller';
 import { SessionBreakdownList } from '../../components/session-breakdown-list';
 import type { LoadState } from '../../practice-page-logic';
-
-function formatDuration(seconds: number): string {
-  if (seconds < 60) return `${seconds}s`;
-  const m = Math.floor(seconds / 60);
-  const s = seconds % 60;
-  return s > 0 ? `${m}m ${s}s` : `${m}m`;
-}
 
 export function SessionSummaryView({
   summary,
