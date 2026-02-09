@@ -19,6 +19,9 @@ export const metadata: Metadata = {
   title: 'Review - Addiction Boards',
 };
 
+const headerLinkButtonClasses =
+  'h-auto p-0 text-muted-foreground no-underline hover:text-foreground hover:no-underline';
+
 type ReviewSearchParams = {
   limit?: string;
   offset?: string;
@@ -73,12 +76,9 @@ export function ReviewView({
             Review questions you&apos;ve missed.
           </p>
         </div>
-        <Link
-          href={ROUTES.APP_PRACTICE}
-          className="rounded-md text-sm font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]"
-        >
-          Go to Practice
-        </Link>
+        <Button asChild variant="link" className={headerLinkButtonClasses}>
+          <Link href={ROUTES.APP_PRACTICE}>Go to Practice</Link>
+        </Button>
       </div>
 
       {rows.length === 0 ? (
@@ -95,12 +95,15 @@ export function ReviewView({
           <Card className="gap-0 rounded-2xl p-6 text-sm text-muted-foreground shadow-sm">
             No more missed questions on this page.
             <div className="mt-4">
-              <Link
-                href={`${ROUTES.APP_REVIEW}?offset=0&limit=${limit}`}
-                className="rounded-md text-sm font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]"
+              <Button
+                asChild
+                variant="link"
+                className={headerLinkButtonClasses}
               >
-                Back to first page
-              </Link>
+                <Link href={`${ROUTES.APP_REVIEW}?offset=0&limit=${limit}`}>
+                  Back to first page
+                </Link>
+              </Button>
             </div>
           </Card>
         )
@@ -197,23 +200,33 @@ export function ReviewView({
 
           <div className="flex items-center justify-between">
             {offset > 0 ? (
-              <Link
-                href={`${ROUTES.APP_REVIEW}?offset=${prevOffset}&limit=${limit}`}
-                className="rounded-md text-sm font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]"
+              <Button
+                asChild
+                variant="link"
+                className={headerLinkButtonClasses}
               >
-                Previous
-              </Link>
+                <Link
+                  href={`${ROUTES.APP_REVIEW}?offset=${prevOffset}&limit=${limit}`}
+                >
+                  Previous
+                </Link>
+              </Button>
             ) : (
               <span />
             )}
 
             {hasNextPage ? (
-              <Link
-                href={`${ROUTES.APP_REVIEW}?offset=${nextOffset}&limit=${limit}`}
-                className="rounded-md text-sm font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]"
+              <Button
+                asChild
+                variant="link"
+                className={headerLinkButtonClasses}
               >
-                Next
-              </Link>
+                <Link
+                  href={`${ROUTES.APP_REVIEW}?offset=${nextOffset}&limit=${limit}`}
+                >
+                  Next
+                </Link>
+              </Button>
             ) : null}
           </div>
         </div>

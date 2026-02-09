@@ -132,12 +132,13 @@ export function PracticeView(props: PracticeViewProps) {
                 {props.endSessionLabel ?? 'End session'}
               </Button>
             ) : null}
-            <Link
-              href={ROUTES.APP_DASHBOARD}
-              className="rounded-md text-sm font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]"
+            <Button
+              asChild
+              variant="link"
+              className="h-auto p-0 text-muted-foreground no-underline hover:text-foreground hover:no-underline"
             >
-              Back to Dashboard
-            </Link>
+              <Link href={ROUTES.APP_DASHBOARD}>Back to Dashboard</Link>
+            </Button>
           </div>
         </div>
       </div>

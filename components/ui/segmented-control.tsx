@@ -34,7 +34,7 @@ export function SegmentedControl({
             onClick={() => onChange(option.value)}
             className={cn(
               'rounded-md px-4 py-1.5 text-sm font-medium transition-colors',
-              'focus-visible:outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]',
+              'focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]',
               'disabled:pointer-events-none disabled:opacity-50',
               isActive
                 ? 'bg-primary text-primary-foreground shadow-sm'
