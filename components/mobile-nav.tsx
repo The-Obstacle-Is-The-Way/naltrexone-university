@@ -4,7 +4,10 @@ import { Menu, X } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { type RefObject, useEffect, useId, useRef, useState } from 'react';
-import { APP_NAV_ITEMS } from '@/components/app-nav-items';
+import {
+  APP_NAV_ITEMS,
+  getActiveAppNavItemHref,
+} from '@/components/app-nav-items';
 
 function MobileNavLinks({
   id,
@@ -17,7 +20,7 @@ function MobileNavLinks({
   pathname: string | null;
   navRef: RefObject<HTMLElement | null>;
 }) {
-  const normalizedPathname = pathname?.split(/[?#]/)[0] ?? null;
+  const activeHref = getActiveAppNavItemHref(pathname);
 
   return (
     <nav
@@ -59,10 +62,7 @@ function MobileNavLinks({
       }}
     >
       {APP_NAV_ITEMS.map((item) => {
-        const isActive =
-          normalizedPathname !== null &&
-          (normalizedPathname === item.href ||
-            normalizedPathname.startsWith(`${item.href}/`));
+        const isActive = activeHref !== null && activeHref === item.href;
 
         return (
           <Link

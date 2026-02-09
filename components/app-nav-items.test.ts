@@ -4,10 +4,11 @@ import { ROUTES } from '@/lib/routes';
 
 describe('components/app-nav-items', () => {
   it('defines app navigation items with the expected route order', () => {
-    expect(APP_NAV_ITEMS).toHaveLength(5);
+    expect(APP_NAV_ITEMS).toHaveLength(6);
     expect(APP_NAV_ITEMS.map((item) => item.href)).toEqual([
       ROUTES.APP_DASHBOARD,
       ROUTES.APP_PRACTICE,
+      ROUTES.APP_PRACTICE_QUICK,
       ROUTES.APP_REVIEW,
       ROUTES.APP_BOOKMARKS,
       ROUTES.APP_BILLING,
