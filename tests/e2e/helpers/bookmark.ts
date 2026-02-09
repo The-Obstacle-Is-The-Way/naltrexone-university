@@ -17,8 +17,14 @@ async function isButtonVisible(
 }
 
 export async function ensureBookmarkedQuestion(page: Page): Promise<void> {
-  await page.goto('/app/practice');
-  await expect(page.getByRole('heading', { name: 'Practice' })).toBeVisible();
+  await page.goto('/app/practice/quick');
+  await expect(
+    page.getByRole('heading', { name: 'Quick Practice' }),
+  ).toBeVisible();
+  await page
+    .getByRole('button', { name: 'Next Question' })
+    .first()
+    .waitFor({ state: 'visible', timeout: 15_000 });
 
   for (let attempt = 0; attempt < 8; attempt += 1) {
     if (await isButtonVisible(page, 'Remove bookmark', 500)) {
