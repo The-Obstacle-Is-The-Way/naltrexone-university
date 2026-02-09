@@ -85,6 +85,7 @@ describe('GetPracticeSessionReviewUseCase', () => {
           {
             isAvailable: true,
             questionId: 'q1',
+            slug: 'q-1',
             stemMd: 'Stem for q1',
             difficulty: 'easy',
             order: 1,
@@ -95,6 +96,7 @@ describe('GetPracticeSessionReviewUseCase', () => {
           {
             isAvailable: true,
             questionId: 'q2',
+            slug: 'q-2',
             stemMd: 'Stem for q2',
             difficulty: 'hard',
             order: 2,
@@ -157,6 +159,7 @@ describe('GetPracticeSessionReviewUseCase', () => {
           {
             isAvailable: true,
             questionId: 'q1',
+            slug: 'q-1',
             order: 1,
             isAnswered: true,
             isCorrect: true,
@@ -165,6 +168,7 @@ describe('GetPracticeSessionReviewUseCase', () => {
           {
             isAvailable: true,
             questionId: 'q2',
+            slug: 'q-2',
             order: 2,
             isAnswered: false,
             isCorrect: null,

@@ -16,6 +16,7 @@ test('renders navigator states and disables unavailable questions', async () => 
         rows: [
           {
             questionId: 'q1',
+            slug: 'q-1',
             order: 1,
             isAvailable: true,
             stemMd: 'Stem 1',
@@ -26,6 +27,7 @@ test('renders navigator states and disables unavailable questions', async () => 
           },
           {
             questionId: 'q2',
+            slug: 'q-2',
             order: 2,
             isAvailable: true,
             stemMd: 'Stem 2',
@@ -72,6 +74,7 @@ test('uses correctness labels only in tutor mode', async () => {
         rows: [
           {
             questionId: 'q1',
+            slug: 'q-1',
             order: 1,
             isAvailable: true,
             stemMd: 'Stem 1',
@@ -82,6 +85,7 @@ test('uses correctness labels only in tutor mode', async () => {
           },
           {
             questionId: 'q2',
+            slug: 'q-2',
             order: 2,
             isAvailable: true,
             stemMd: 'Stem 2',
@@ -121,6 +125,7 @@ test('opens a review question and finalizes the exam', async () => {
         rows: [
           {
             questionId: 'q1',
+            slug: 'q-1',
             order: 1,
             isAvailable: true,
             stemMd: 'A long stem for q1',
@@ -177,6 +182,7 @@ test('omits the stem preview in the open question aria-label when stem is empty'
         rows: [
           {
             questionId: 'q1',
+            slug: 'q-1',
             order: 1,
             isAvailable: true,
             stemMd: '',

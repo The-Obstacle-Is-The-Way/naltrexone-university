@@ -53,6 +53,7 @@ test('renders exam review branch and triggers review actions', async () => {
         rows: [
           {
             questionId: 'q1',
+            slug: 'q-1',
             order: 1,
             isAvailable: true,
             stemMd: 'A sample exam review question stem',
@@ -111,6 +112,7 @@ test('renders active question branch with navigator and navigation callback', as
         rows: [
           {
             questionId: 'q1',
+            slug: 'q-1',
             order: 1,
             isAvailable: true,
             stemMd: 'Stem 1',
@@ -121,6 +123,7 @@ test('renders active question branch with navigator and navigation callback', as
           },
           {
             questionId: 'q2',
+            slug: 'q-2',
             order: 2,
             isAvailable: true,
             stemMd: 'Stem 2',

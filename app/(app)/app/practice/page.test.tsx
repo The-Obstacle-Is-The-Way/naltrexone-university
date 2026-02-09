@@ -584,6 +584,7 @@ describe('app/(app)/app/practice', () => {
             {
               isAvailable: true,
               questionId: 'q1',
+              slug: 'q-1',
               stemMd: 'Stem for q1',
               difficulty: 'easy',
               order: 1,

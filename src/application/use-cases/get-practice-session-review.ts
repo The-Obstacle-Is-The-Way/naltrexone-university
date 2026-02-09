@@ -15,6 +15,7 @@ export type GetPracticeSessionReviewInput = {
 export type AvailablePracticeSessionReviewRow = {
   isAvailable: true;
   questionId: string;
+  slug: string;
   stemMd: string;
   difficulty: 'easy' | 'medium' | 'hard';
   order: number; // 1-based
@@ -119,6 +120,7 @@ export class GetPracticeSessionReviewUseCase {
       available: (row, question): PracticeSessionReviewRow => ({
         isAvailable: true,
         questionId: question.id,
+        slug: question.slug,
         stemMd: question.stemMd,
         difficulty: question.difficulty,
         order: row.order,

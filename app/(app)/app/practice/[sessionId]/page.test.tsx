@@ -97,6 +97,7 @@ describe('app/(app)/app/practice/[sessionId]', () => {
             {
               isAvailable: true,
               questionId: 'q1',
+              slug: 'q-1',
               stemMd: 'Stem for q1',
               difficulty: 'easy',
               order: 1,
@@ -273,6 +274,7 @@ describe('app/(app)/app/practice/[sessionId]', () => {
             {
               isAvailable: true,
               questionId: 'q1',
+              slug: 'q-1',
               stemMd: 'A long stem for q1',
               difficulty: 'easy',
               order: 1,
@@ -328,6 +330,7 @@ describe('app/(app)/app/practice/[sessionId]', () => {
             {
               isAvailable: true,
               questionId: 'q1',
+              slug: 'q-1',
               stemMd: 'A long stem for q1',
               difficulty: 'easy',
               order: 1,
@@ -418,6 +421,7 @@ describe('app/(app)/app/practice/[sessionId]', () => {
             {
               isAvailable: true,
               questionId: 'q1',
+              slug: 'q-1',
               stemMd: 'Stem for q1',
               difficulty: 'easy',
               order: 1,
@@ -428,6 +432,7 @@ describe('app/(app)/app/practice/[sessionId]', () => {
             {
               isAvailable: true,
               questionId: 'q2',
+              slug: 'q-2',
               stemMd: 'Stem for q2',
               difficulty: 'easy',
               order: 2,
