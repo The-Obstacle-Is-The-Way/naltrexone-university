@@ -102,15 +102,13 @@ Canonical reference for all frontend patterns, component usage, accessibility, a
 **ALWAYS** use the `Card` component for card-like containers. Never build card-like divs manually.
 
 ```tsx
-// Standard card (note: override defaults to match project convention)
-<Card className="gap-0 rounded-2xl p-6 shadow-sm">
+// Standard card
+<Card>
   <content />
 </Card>
 ```
 
-The Card component's built-in defaults (`gap-6 rounded-xl py-6`) differ from how the project actually uses cards. Until the Card defaults are updated, always apply `className="gap-0 rounded-2xl p-6 shadow-sm"`.
-
-**Sub-components:** `CardHeader`, `CardTitle`, `CardDescription`, `CardContent`, `CardFooter`, `CardAction` — use when appropriate, but most cards in this project use `Card` + direct children without sub-components.
+Cards in this project generally use `Card` + direct children, with layout/spacing handled via Tailwind classes.
 
 ### ErrorCard
 
@@ -605,9 +603,7 @@ Issues documented below are tracked as tech debt in `docs/debt/index.md` (Fronte
 
 ### P3 — Fix as encountered
 
-| ID | File(s) | Issue |
-|----|---------|-------|
-| FE-038 | `components/ui/card.tsx` sub-components | `CardHeader`, `CardTitle`, `CardDescription`, `CardContent`, `CardFooter`, `CardAction` have 0 imports outside tests. SPEC-019 Phase 2 complete — sub-components were not needed. Evaluate for removal unless Phase 3 requires them. |
+*No active P3 items.*
 
 ---
 
@@ -618,7 +614,7 @@ Issues documented below are tracked as tech debt in `docs/debt/index.md` (Fronte
 | File | Component(s) | Has `data-slot` | Uses `cn()` | Uses `cva` | Notes |
 |------|-------------|-----------------|-------------|------------|-------|
 | `button.tsx` | Button | Yes | Yes | Yes | |
-| `card.tsx` | Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter, CardAction | Yes | Yes | No | |
+| `card.tsx` | Card | Yes | Yes | No | |
 | `dropdown-menu.tsx` | DropdownMenu, DropdownMenuTrigger, DropdownMenuItem, etc. | Yes | Yes | No | **0 consumers — KEEP (spec-mandated)** |
 | `filter-chip.tsx` | FilterChip | **No** | Yes | **No** | |
 | `input.tsx` | Input | Yes | Yes | No | |
