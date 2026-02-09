@@ -9,6 +9,10 @@ describe('lib/routes', () => {
     );
   });
 
+  it('exports a quick practice route constant', () => {
+    expect(ROUTES.APP_PRACTICE_QUICK).toBe('/app/practice/quick');
+  });
+
   it('builds practice session routes from the practice base path', () => {
     expect(toPracticeSessionRoute('session_123')).toBe(
       '/app/practice/session_123',
