@@ -1,7 +1,7 @@
 # Technical Debt Register
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-02-08
+**Last Updated:** 2026-02-09
 
 ---
 
@@ -17,7 +17,6 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 | ID | Title | Priority | Status |
 |----|-------|----------|--------|
-| [DEBT-192](debt-192-source-reading-regression-tests-fragile.md) | Source-Reading Regression Tests Are Fragile (3 of 5 should be behavioral) | P3 | Open |
 | [DEBT-193](debt-193-backend-production-files-over-300-lines.md) | Backend Production Files Exceed 300-Line Guideline (5 files) | P3 | Open |
 | [DEBT-194](debt-194-console-error-default-in-utility-functions.md) | Default `console.error` in Utility Function Parameters (3 files) | P4 | Open |
 
@@ -34,8 +33,6 @@ All frontend-specific UI/UX debt. Items use `FE-XXX` IDs and are cross-reference
 | ID | Summary | Files | Status |
 |----|---------|-------|--------|
 | FE-002 | `usePracticeSessionReviewStage` (221 lines, exceeds 150-line guideline; 1 owned LoadState + 2 delegated) | `[sessionId]/hooks/use-practice-session-review-stage.ts` | Open |
-| FE-007 | Raw `<button>` in pricing (1 instance) | `pricing-client.tsx` | Open |
-| FE-008 | Raw styled `<Link>` as buttons (11+ instances) | `get-started-cta.tsx`, `auth-nav.tsx`, `marketing-home.tsx`, `not-found.tsx`, `pricing-view.tsx` | Open |
 | FE-009 | Card-like divs in marketing (10 instances) | `marketing-home.tsx` | Open |
 | FE-010 | Card-like divs + PascalCase filenames in question components | `QuestionCard.tsx`, `ChoiceButton.tsx`, `Feedback.tsx` | Open |
 | FE-011 | Two competing focus ring patterns across codebase | 20+ files | Open |
@@ -68,7 +65,6 @@ All frontend-specific UI/UX debt. Items use `FE-XXX` IDs and are cross-reference
 | FE-034 | Empty states lack helpful CTAs | Bookmarks, review, practice history | Open |
 | FE-035 | Checkout success inline Stripe logic (437 lines) | `checkout/success/checkout-success-sync.tsx` | Open |
 | FE-036 | 3 unused shadcn/ui components (0 consumers, no spec need) | `avatar.tsx`, `radio-group.tsx`, `label.tsx` + test files. (`dropdown-menu.tsx` KEEP — spec-mandated) | Open |
-| FE-037 | `theme-toggle.tsx` uses raw `<button>` not `<Button>` | `theme-toggle.tsx` | Open |
 | FE-038 | Card sub-components: 0 imports but KEEP for SPEC-019 Phase 2 | `card.tsx` (CardHeader, CardTitle, etc.) — evaluate during UI/UX refactor | Open |
 | FE-049 | Missing `createBookmark()` factory in domain test helpers | `src/domain/test-helpers/factories.ts` | Open |
 
@@ -111,6 +107,12 @@ All frontend-specific UI/UX debt. Items use `FE-XXX` IDs and are cross-reference
 | [DEBT-185](../_archive/debt/debt-185-duplicated-session-stats-calculation.md) | Duplicated Session Stats Calculation Across 4 Use Cases | P2 | 2026-02-08 |
 | [DEBT-186](../_archive/debt/debt-186-duplicated-session-duration-calculation.md) | Duplicated Session Duration Calculation | P2 | 2026-02-08 |
 | [DEBT-187](../_archive/debt/debt-187-duplicated-default-question-state.md) | Duplicated Default PracticeSessionQuestionState Creation | P2 | 2026-02-08 |
+
+### Resolved in Regression Test Cleanup
+
+| ID | Title | Priority | Resolved |
+|----|-------|----------|----------|
+| [DEBT-192](../_archive/debt/debt-192-source-reading-regression-tests-fragile.md) | Source-Reading Regression Tests Are Fragile (3 of 5 should be behavioral) | P3 | 2026-02-09 |
 
 ### Resolved in Cron Endpoint Hardening
 

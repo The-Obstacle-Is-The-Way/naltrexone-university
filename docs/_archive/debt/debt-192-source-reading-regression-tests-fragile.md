@@ -1,8 +1,9 @@
 # DEBT-192: Source-Reading Regression Tests Are Fragile
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P3
 **Date:** 2026-02-08
+**Resolved:** 2026-02-09
 
 ---
 
@@ -35,9 +36,9 @@ Replace each fragile source-reading test with a behavioral render test:
 
 ## Verification
 
-- `pnpm test --run` passes
-- No `readFileSync` calls remain in the three affected test files
-- The two legitimate guardrail tests (line-count, card-adoption) are unchanged
+- [x] `pnpm test --run` passes
+- [x] No `readFileSync` calls remain in the three affected test files
+- [x] The two legitimate guardrail tests (line-count, card-adoption) are unchanged
 
 ## Related
 
