@@ -15,9 +15,13 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 ## Debt Index (Active)
 
-*No active DEBT items.*
+### P2 — Fix during next refactor
 
-**Next Debt ID:** DEBT-204
+| ID | Summary | Files | Status |
+|----|---------|-------|--------|
+| [DEBT-204](debt-204-stripe-payment-gateway-test-god-file.md) | God test file: Stripe SDK mock duplicated ~25x (2,468 lines → ~1,000) | `stripe-payment-gateway.test.ts` | Open |
+
+**Next Debt ID:** DEBT-205
 
 ---
 
