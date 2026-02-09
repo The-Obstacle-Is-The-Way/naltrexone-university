@@ -2,6 +2,7 @@
 import type { AnchorHTMLAttributes, ReactNode } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
+import { ROUTES } from '@/lib/routes';
 
 type NextLinkMockProps = AnchorHTMLAttributes<HTMLAnchorElement> & {
   href: string;
@@ -31,12 +32,14 @@ describe('MarketingLayout', () => {
       'nav[aria-label="Marketing navigation (mobile)"]',
     );
 
-    expect(mobileNav).toBeDefined();
-    if (!mobileNav) {
-      throw new Error('Expected a mobile marketing nav');
-    }
+    expect(mobileNav).not.toBeNull();
+    const mobileNavElement = mobileNav as HTMLElement;
 
-    expect(mobileNav.querySelector('a[href="/#features"]')).not.toBeNull();
-    expect(mobileNav.querySelector('a[href="/pricing"]')).not.toBeNull();
+    expect(
+      mobileNavElement.querySelector('a[href="/#features"]'),
+    ).not.toBeNull();
+    expect(
+      mobileNavElement.querySelector(`a[href="${ROUTES.PRICING}"]`),
+    ).not.toBeNull();
   });
 });

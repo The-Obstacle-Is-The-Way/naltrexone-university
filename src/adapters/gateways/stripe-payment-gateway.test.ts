@@ -22,6 +22,7 @@ type StripeWebhookEventFixture<TObject> = {
   id: string;
   type: string;
   data: { object: TObject };
+  [key: string]: unknown;
 };
 
 function createGateway(
@@ -569,13 +570,10 @@ describe('StripePaymentGateway', () => {
   });
 
   it('normalizes customer.subscription.trial_will_end events', async () => {
-    const event = loadJsonFixture<{
-      id: string;
-      type: string;
-      data: { object: unknown };
-      [key: string]: unknown;
-    }>('stripe/customer.subscription.updated.json');
-    const subscription = event.data.object as { id: string };
+    const event = loadJsonFixture<
+      StripeWebhookEventFixture<{ id: string; [key: string]: unknown }>
+    >('stripe/customer.subscription.updated.json');
+    const subscription = event.data.object;
     const constructedEvent = {
       ...event,
       id: 'evt_trial_will_end_1',
@@ -1138,34 +1136,52 @@ describe('StripePaymentGateway', () => {
     });
   });
 
-  it('throws when a subscription update event is missing required metadata', async () => {
-    const { stripe, constructEvent } = createStripeMock();
+  it('throws when a subscription update event is missing required metadata.user_id', async () => {
+    const subscription = {
+      id: 'sub_123',
+      customer: 'cus_123',
+      status: 'active',
+      cancel_at_period_end: false,
+      metadata: {},
+      items: {
+        data: [
+          {
+            current_period_end: 1_700_000_000,
+            price: { id: 'price_m' },
+          },
+        ],
+      },
+    };
+    const logger = new FakeLogger();
+    const { stripe, constructEvent, subscriptionsRetrieve } = createStripeMock({
+      withSubscriptions: true,
+    });
     constructEvent.mockReturnValue({
       id: 'evt_1',
       type: 'customer.subscription.updated',
       data: {
-        object: {
-          id: 'sub_123',
-          customer: 'cus_123',
-          status: 'active',
-          cancel_at_period_end: false,
-          metadata: {},
-          items: {
-            data: [
-              {
-                current_period_end: 1_700_000_000,
-                price: { id: 'price_m' },
-              },
-            ],
-          },
-        },
+        object: subscription,
       },
     });
-    const gateway = createGateway(stripe);
+    subscriptionsRetrieve.mockResolvedValue(subscription);
+    const gateway = createGateway(stripe, { logger });
 
     await expect(
       gateway.processWebhookEvent('raw_body', 'sig_1'),
-    ).rejects.toMatchObject({ code: 'STRIPE_ERROR' });
+    ).rejects.toMatchObject({
+      code: 'STRIPE_ERROR',
+      message: 'Stripe subscription metadata.user_id is required',
+    });
+    expect(subscriptionsRetrieve).toHaveBeenCalledWith('sub_123');
+    expect(logger.errorCalls).toContainEqual({
+      context: expect.objectContaining({
+        eventId: 'evt_1',
+        type: 'customer.subscription.updated',
+        stripeSubscriptionId: 'sub_123',
+        stripeCustomerId: 'cus_123',
+      }),
+      msg: 'Stripe subscription metadata.user_id is required',
+    });
   });
 
   it('throws when customer.subscription.created events are missing metadata.user_id', async () => {
