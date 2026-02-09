@@ -11,8 +11,8 @@ import {
 import {
   canSubmitAnswer,
   type LoadState,
-  selectChoiceIfAllowed,
 } from '@/app/(app)/app/practice/practice-page-logic';
+import { selectChoiceIfAllowed } from '@/app/(app)/app/shared/question-guards';
 import type { NextQuestion } from '@/src/application/use-cases/get-next-question';
 import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
 
@@ -20,6 +20,12 @@ export type UseQuestionFlowCoreInput = {
   isMounted: () => boolean;
 };
 
+/**
+ * Shared state for question flows.
+ *
+ * Low-level setters are intentionally exposed for advanced consumers; prefer
+ * driving state through higher-level helpers where available.
+ */
 export type UseQuestionFlowCoreOutput = {
   question: NextQuestion | null;
   setQuestion: (question: NextQuestion | null) => void;

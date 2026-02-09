@@ -199,12 +199,9 @@ export function renderBookmarks(result: ActionResult<GetBookmarksOutput>) {
           </p>
         </div>
         <ErrorCard className="p-6">{result.error.message}</ErrorCard>
-        <Link
-          href={ROUTES.APP_PRACTICE}
-          className="rounded-md text-sm font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]"
-        >
-          Go to Practice
-        </Link>
+        <Button asChild className="rounded-full">
+          <Link href={ROUTES.APP_PRACTICE}>Go to Practice</Link>
+        </Button>
       </div>
     );
   }

@@ -7,12 +7,23 @@ import { QuestionCard } from '@/components/question/question-card';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { ROUTES } from '@/lib/routes';
-import {
-  type UseQuestionPageControllerOutput,
-  useQuestionPageController,
-} from './use-question-page-controller';
+import type { GetQuestionBySlugOutput } from '@/src/adapters/controllers/question-view-controller';
+import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
+import type { LoadState } from './question-page-logic';
+import { useQuestionPageController } from './use-question-page-controller';
 
-export type QuestionViewProps = UseQuestionPageControllerOutput;
+export type QuestionViewProps = {
+  loadState: LoadState;
+  question: GetQuestionBySlugOutput | null;
+  selectedChoiceId: string | null;
+  submitResult: SubmitAnswerOutput | null;
+  canSubmit: boolean;
+  isPending: boolean;
+  onTryAgain: () => void;
+  onSelectChoice: (choiceId: string) => void;
+  onSubmit: () => void;
+  onReattempt: () => void;
+};
 
 export function QuestionView(props: QuestionViewProps) {
   const correctChoiceId = props.submitResult?.correctChoiceId ?? null;

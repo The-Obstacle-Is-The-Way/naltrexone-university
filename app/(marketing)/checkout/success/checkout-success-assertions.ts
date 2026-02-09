@@ -61,7 +61,7 @@ export function createCheckoutSuccessAssertions(
     reason: string,
     context: Record<string, unknown>,
   ): asserts value is number {
-    if (typeof value !== 'number') {
+    if (typeof value !== 'number' || !Number.isFinite(value)) {
       fail(reason, context);
     }
   }

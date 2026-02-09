@@ -30,6 +30,31 @@ const STRIPE_RETRY_OPTIONS = {
   maxDelayMs: 1000,
 } as const;
 
+type RetryLogInput = {
+  attempt: number;
+  maxAttempts: number;
+  delayMs: number;
+  error: unknown;
+};
+
+function createStripeOnRetry(
+  logger: CheckoutSuccessDeps['logger'],
+  context: Record<string, unknown>,
+): (input: RetryLogInput) => void {
+  return ({ attempt, maxAttempts, delayMs, error }) => {
+    logger.warn?.(
+      {
+        ...context,
+        attempt,
+        maxAttempts,
+        delayMs,
+        error: error instanceof Error ? error.message : String(error),
+      },
+      'Retrying Stripe API call',
+    );
+  };
+}
+
 function getStripeId(value: unknown): string | null {
   if (typeof value === 'string') return value;
   if (typeof value !== 'object' || value === null) return null;
@@ -99,18 +124,7 @@ export async function syncCheckoutSuccess(
     {
       ...STRIPE_RETRY_OPTIONS,
       shouldRetry: isTransientExternalError,
-      onRetry: ({ attempt, maxAttempts, delayMs, error }) => {
-        d.logger.warn?.(
-          {
-            sessionId,
-            attempt,
-            maxAttempts,
-            delayMs,
-            error: error instanceof Error ? error.message : String(error),
-          },
-          'Retrying Stripe API call',
-        );
-      },
+      onRetry: createStripeOnRetry(d.logger, { sessionId }),
     },
   );
 
@@ -133,18 +147,7 @@ export async function syncCheckoutSuccess(
     {
       ...STRIPE_RETRY_OPTIONS,
       shouldRetry: isTransientExternalError,
-      onRetry: ({ attempt, maxAttempts, delayMs, error }) => {
-        d.logger.warn?.(
-          {
-            subscriptionId,
-            attempt,
-            maxAttempts,
-            delayMs,
-            error: error instanceof Error ? error.message : String(error),
-          },
-          'Retrying Stripe API call',
-        );
-      },
+      onRetry: createStripeOnRetry(d.logger, { subscriptionId }),
     },
   );
 

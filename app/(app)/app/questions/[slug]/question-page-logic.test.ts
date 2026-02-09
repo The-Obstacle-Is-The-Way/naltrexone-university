@@ -60,6 +60,45 @@ describe('question-page-logic', () => {
         }),
       ).toBe(true);
     });
+
+    it('returns false when question is null', () => {
+      expect(
+        canSubmitQuestionAnswer({
+          loadState: { status: 'ready' },
+          question: null,
+          selectedChoiceId: 'choice_1',
+          submitResult: null,
+        }),
+      ).toBe(false);
+    });
+
+    it('returns false when no choice is selected', () => {
+      expect(
+        canSubmitQuestionAnswer({
+          loadState: { status: 'ready' },
+          question: createQuestionOutput(),
+          selectedChoiceId: null,
+          submitResult: null,
+        }),
+      ).toBe(false);
+    });
+
+    it('returns false when a submit result already exists', () => {
+      expect(
+        canSubmitQuestionAnswer({
+          loadState: { status: 'ready' },
+          question: createQuestionOutput(),
+          selectedChoiceId: 'choice_1',
+          submitResult: {
+            attemptId: 'attempt_1',
+            isCorrect: true,
+            correctChoiceId: 'choice_1',
+            explanationMd: null,
+            choiceExplanations: [],
+          } satisfies SubmitAnswerOutput,
+        }),
+      ).toBe(false);
+    });
   });
 
   describe('loadQuestion', () => {

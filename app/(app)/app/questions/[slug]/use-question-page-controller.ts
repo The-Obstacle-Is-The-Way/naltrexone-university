@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useMemo, useState, useTransition } from 'react';
-import { selectChoiceIfAllowed } from '@/app/(app)/app/practice/practice-page-logic';
 import {
   canSubmitQuestionAnswer,
   createLoadQuestionAction,
@@ -9,6 +8,7 @@ import {
   type LoadState,
   reattemptQuestion,
 } from '@/app/(app)/app/questions/[slug]/question-page-logic';
+import { selectChoiceIfAllowed } from '@/app/(app)/app/shared/question-guards';
 import { useIsMounted } from '@/lib/use-is-mounted';
 import { submitAnswer } from '@/src/adapters/controllers/question-controller';
 import {

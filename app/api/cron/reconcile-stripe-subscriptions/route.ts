@@ -82,7 +82,10 @@ export async function POST(req: Request) {
     }
   } catch (error) {
     container.logger.error(
-      { route: '/api/cron/reconcile-stripe-subscriptions', error },
+      {
+        route: '/api/cron/reconcile-stripe-subscriptions',
+        error: error instanceof Error ? error.message : String(error),
+      },
       'Cron reconciliation rate limiter failed',
     );
     return NextResponse.json(

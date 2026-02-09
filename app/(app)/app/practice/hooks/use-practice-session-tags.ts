@@ -21,7 +21,9 @@ export function usePracticeSessionTags(): UsePracticeSessionTagsOutput {
       getTagsFn: getTags,
       setTagLoadStatus,
       setAvailableTags,
-      logError: () => undefined,
+      logError: (error) => {
+        console.error('createTagsEffect failed:', error);
+      },
     });
   }, []);
 

@@ -278,12 +278,13 @@ export function MarketingHomeShell({
               <MetallicCtaButton href={ROUTES.PRICING}>
                 Get Started
               </MetallicCtaButton>
-              <Link
-                href={ROUTES.SIGN_IN}
-                className="rounded-full border border-border bg-card px-6 py-3 text-sm font-medium text-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]"
+              <Button
+                asChild
+                variant="outline"
+                className="h-auto rounded-full border-border bg-card px-6 py-3 text-sm font-medium text-foreground hover:bg-muted"
               >
-                Sign In
-              </Link>
+                <Link href={ROUTES.SIGN_IN}>Sign In</Link>
+              </Button>
             </div>
           </div>
         </section>
