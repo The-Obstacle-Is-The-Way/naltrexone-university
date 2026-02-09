@@ -39,7 +39,9 @@ describe('app/(app)/app/dashboard', () => {
     expect(html).toContain('60%');
     expect(html).toContain('3');
     expect(html).toContain('Stem for q1');
-    expect(html).toContain(`href="${toQuestionRoute('q-1')}"`);
+    expect(html).toContain(
+      `href="${toQuestionRoute('q-1', { from: 'dashboard' })}"`,
+    );
     expect(html).toContain('Easy');
     expect(html).not.toContain('>q-1<');
   });

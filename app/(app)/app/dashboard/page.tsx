@@ -190,7 +190,9 @@ export function DashboardView({ stats }: { stats: UserStatsOutput }) {
                 return (
                   <li key={group.row.attemptId}>
                     <Link
-                      href={toQuestionRoute(group.row.slug)}
+                      href={toQuestionRoute(group.row.slug, {
+                        from: 'dashboard',
+                      })}
                       className="flex items-center gap-3 rounded-xl px-2 py-1 transition-colors hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]"
                     >
                       <span className="min-w-0 flex-1 font-medium text-foreground">
@@ -248,7 +250,9 @@ export function DashboardView({ stats }: { stats: UserStatsOutput }) {
                       return (
                         <li key={row.attemptId}>
                           <Link
-                            href={toQuestionRoute(row.slug)}
+                            href={toQuestionRoute(row.slug, {
+                              from: 'dashboard',
+                            })}
                             className="flex items-center gap-3 rounded-xl px-2 py-1 transition-colors hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]"
                           >
                             <span className="min-w-0 flex-1 font-medium text-foreground">
