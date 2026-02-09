@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
-import { QuestionCard } from './QuestionCard';
+import { QuestionCard } from './question-card';
 
 describe('QuestionCard', () => {
   it('renders stem and choices', () => {

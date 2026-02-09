@@ -4,6 +4,7 @@ import type { ReactElement, ReactNode } from 'react';
 import { AuthNav } from '@/components/auth-nav';
 import { GetStartedCta } from '@/components/get-started-cta';
 import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
 import { MetallicCtaButton } from '@/components/ui/metallic-cta-button';
 import { PRICING_DATA } from '@/lib/pricing-data';
 import { ROUTES } from '@/lib/routes';
@@ -131,9 +132,9 @@ export function MarketingHomeShell({
                   .toLowerCase();
                 const testId = `impact-stat-${testIdSlug}`;
                 return (
-                  <div
+                  <Card
                     key={stat.label}
-                    className="rounded-2xl border border-border bg-card p-6 text-center shadow-sm animate-fade-in-up"
+                    className="text-center animate-fade-in-up"
                     data-testid={testId}
                   >
                     <div
@@ -148,7 +149,7 @@ export function MarketingHomeShell({
                     >
                       {stat.label}
                     </div>
-                  </div>
+                  </Card>
                 );
               })}
             </div>
@@ -172,10 +173,10 @@ export function MarketingHomeShell({
               {features.map((feature) => {
                 const Icon = feature.icon;
                 return (
-                  <div
+                  <Card
                     key={feature.title}
                     className={cn(
-                      'rounded-2xl border border-border bg-card p-6 shadow-sm transition-colors hover:bg-muted',
+                      'transition-colors hover:bg-muted',
                       feature.wide && 'md:col-span-2',
                     )}
                   >
@@ -189,7 +190,7 @@ export function MarketingHomeShell({
                     <p className="mt-2 text-sm text-muted-foreground">
                       {feature.description}
                     </p>
-                  </div>
+                  </Card>
                 );
               })}
             </div>
@@ -210,7 +211,7 @@ export function MarketingHomeShell({
             </div>
 
             <div className="mx-auto mt-10 grid max-w-3xl gap-6 md:grid-cols-2">
-              <div className="rounded-2xl border border-border bg-card p-8 shadow-sm">
+              <Card className="p-8">
                 <h3 className="font-heading font-semibold text-foreground">
                   {PRICING_DATA.monthly.name}
                 </h3>
@@ -232,9 +233,9 @@ export function MarketingHomeShell({
                 >
                   <Link href={ROUTES.PRICING}>Get Started</Link>
                 </Button>
-              </div>
+              </Card>
 
-              <div className="rounded-2xl border-2 border-primary bg-card p-8 shadow-sm">
+              <Card className="border-2 border-primary p-8">
                 <h3 className="font-heading font-semibold text-foreground">
                   {PRICING_DATA.annual.name}
                 </h3>
@@ -258,7 +259,7 @@ export function MarketingHomeShell({
                 >
                   <Link href={ROUTES.PRICING}>Get Started</Link>
                 </Button>
-              </div>
+              </Card>
             </div>
           </div>
         </section>

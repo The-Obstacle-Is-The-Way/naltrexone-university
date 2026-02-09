@@ -3,8 +3,8 @@
 import Link from 'next/link';
 import { useEffect, useRef } from 'react';
 import { ErrorCard } from '@/components/error-card';
-import { Feedback } from '@/components/question/Feedback';
-import { QuestionCard } from '@/components/question/QuestionCard';
+import { Feedback } from '@/components/question/feedback';
+import { QuestionCard } from '@/components/question/question-card';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { useNotification } from '@/components/ui/notification-provider';

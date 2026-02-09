@@ -11,8 +11,8 @@ import {
   reattemptQuestion,
 } from '@/app/(app)/app/questions/[slug]/question-page-logic';
 import { ErrorCard } from '@/components/error-card';
-import { Feedback } from '@/components/question/Feedback';
-import { QuestionCard } from '@/components/question/QuestionCard';
+import { Feedback } from '@/components/question/feedback';
+import { QuestionCard } from '@/components/question/question-card';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { ROUTES } from '@/lib/routes';

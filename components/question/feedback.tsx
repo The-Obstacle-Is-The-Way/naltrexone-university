@@ -1,6 +1,7 @@
 'use client';
 
 import { Markdown } from '@/components/markdown/Markdown';
+import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 
 export type FeedbackChoiceExplanation = {
@@ -38,10 +39,9 @@ export function Feedback({
     !hasMissingIncorrectExplanation && visibleChoiceExplanations.length > 0;
 
   return (
-    <div
+    <Card
       role="alert"
       className={cn(
-        'rounded-2xl border border-border bg-card p-6 shadow-sm',
         isCorrect && 'border-success bg-success/10',
         !isCorrect && 'border-destructive bg-destructive/10',
       )}
@@ -85,6 +85,6 @@ export function Feedback({
           </div>
         </div>
       ) : null}
-    </div>
+    </Card>
   );
 }

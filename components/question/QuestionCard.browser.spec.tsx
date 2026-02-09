@@ -1,6 +1,6 @@
 import { expect, test, vi } from 'vitest';
 import { render } from 'vitest-browser-react';
-import { QuestionCard } from './QuestionCard';
+import { QuestionCard } from './question-card';
 
 test('calls onSelectChoice with the clicked choice id', async () => {
   const onSelectChoice = vi.fn();

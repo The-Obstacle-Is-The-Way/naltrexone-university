@@ -300,9 +300,9 @@ Components import only **types** from controllers. All server action calls flow 
 
 | Component | File | Purpose |
 |-----------|------|---------|
-| `QuestionCard` | `components/question/QuestionCard.tsx` | Renders question stem + choice buttons with `<fieldset>` a11y |
-| `ChoiceButton` | `components/question/ChoiceButton.tsx` | Radio-style choice with correctness states |
-| `Feedback` | `components/question/Feedback.tsx` | Correct/incorrect banner with explanation markdown |
+| `QuestionCard` | `components/question/question-card.tsx` | Renders question stem + choice buttons with `<fieldset>` a11y |
+| `ChoiceButton` | `components/question/choice-button.tsx` | Radio-style choice with correctness states |
+| `Feedback` | `components/question/feedback.tsx` | Correct/incorrect banner with explanation markdown |
 | `ErrorCard` | `components/error-card.tsx` | Styled error alert with `role="alert"` |
 | `Markdown` | `components/markdown/Markdown.tsx` | `react-markdown` + `remark-gfm` + `rehype-sanitize` |
 

@@ -1,6 +1,6 @@
 import { expect, test, vi } from 'vitest';
 import { render } from 'vitest-browser-react';
-import { ChoiceButton } from './ChoiceButton';
+import { ChoiceButton } from './choice-button';
 
 test('calls onClick when selected', async () => {
   const onClick = vi.fn();

@@ -72,7 +72,9 @@ describe('theme token regression', () => {
   });
 
   it('uses semantic border token for ChoiceButton selected state', async () => {
-    const { ChoiceButton } = await import('@/components/question/ChoiceButton');
+    const { ChoiceButton } = await import(
+      '@/components/question/choice-button'
+    );
     const html = renderToStaticMarkup(
       <ChoiceButton
         name="choices"
@@ -88,8 +90,10 @@ describe('theme token regression', () => {
   });
 
   it('uses semantic success/destructive tokens in question feedback components', async () => {
-    const { ChoiceButton } = await import('@/components/question/ChoiceButton');
-    const { Feedback } = await import('@/components/question/Feedback');
+    const { ChoiceButton } = await import(
+      '@/components/question/choice-button'
+    );
+    const { Feedback } = await import('@/components/question/feedback');
 
     const choiceHtml = renderToStaticMarkup(
       <div>
