@@ -21,6 +21,14 @@ describe('computeAccuracy', () => {
   it('calculates ratio correctly', () => {
     expect(computeAccuracy(4, 3)).toBeCloseTo(0.75);
   });
+
+  it('clamps above 1 when correct exceeds total', () => {
+    expect(computeAccuracy(10, 11)).toBe(1);
+  });
+
+  it('clamps below 0 when correct is negative', () => {
+    expect(computeAccuracy(10, -1)).toBe(0);
+  });
 });
 
 describe('computeStreak', () => {

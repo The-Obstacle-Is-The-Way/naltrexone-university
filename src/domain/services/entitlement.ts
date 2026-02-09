@@ -6,7 +6,7 @@ import { isEntitledStatus } from '../value-objects';
  */
 export function isEntitled(
   subscription: Subscription | null,
-  now: Date = new Date(),
+  now: Date,
 ): boolean {
   if (!subscription) return false;
   if (!isEntitledStatus(subscription.status)) return false;

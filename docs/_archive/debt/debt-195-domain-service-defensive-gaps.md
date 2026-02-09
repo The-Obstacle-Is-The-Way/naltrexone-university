@@ -1,8 +1,9 @@
 # DEBT-195: Domain Service Defensive Programming Gaps
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P3
 **Date:** 2026-02-08
+**Resolved:** 2026-02-09
 
 ---
 
@@ -57,8 +58,10 @@ The `currentPeriodEnd <= now` comparison means a user loses access at the exact 
 
 ## Verification
 
-- `pnpm test --run` — all tests pass after adding clamp and removing default
-- `pnpm typecheck` — all callers provide `now` explicitly
+- [x] `pnpm typecheck && pnpm test --run`
+- [x] `computeAccuracy` clamps output to `[0, 1]`
+- [x] `isEntitled` requires explicit `now` parameter (no default clock read)
+- [x] Added entitlement boundary test for `currentPeriodEnd === now`
 
 ## Related
 

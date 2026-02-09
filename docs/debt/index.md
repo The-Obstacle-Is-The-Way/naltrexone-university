@@ -20,7 +20,6 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 | [DEBT-192](debt-192-source-reading-regression-tests-fragile.md) | Source-Reading Regression Tests Are Fragile (3 of 5 should be behavioral) | P3 | Open |
 | [DEBT-193](debt-193-backend-production-files-over-300-lines.md) | Backend Production Files Exceed 300-Line Guideline (5 files) | P3 | Open |
 | [DEBT-194](debt-194-console-error-default-in-utility-functions.md) | Default `console.error` in Utility Function Parameters (3 files) | P4 | Open |
-| [DEBT-195](debt-195-domain-service-defensive-gaps.md) | Domain Service Defensive Programming Gaps (`computeAccuracy` unclamped, `isEntitled` impure default) | P3 | Open |
 | [DEBT-198](debt-198-missing-baseline-csp-header.md) | Missing Baseline Content-Security-Policy Header | P3 | Open |
 | [DEBT-199](debt-199-button-missing-default-type.md) | Button Component Missing Default `type="button"` | P3 | Open |
 | [DEBT-200](debt-200-subscription-upsert-discards-error-details.md) | Subscription Repository Upsert Discards Original Error Details | P3 | Open |
@@ -128,6 +127,12 @@ All frontend-specific UI/UX debt. Items use `FE-XXX` IDs and are cross-reference
 | ID | Title | Priority | Resolved |
 |----|-------|----------|----------|
 | [DEBT-197](../_archive/debt/debt-197-skip-clerk-node-env-inconsistency.md) | SKIP_CLERK Middleware Check Uses `NODE_ENV` Inconsistently with `VERCEL_ENV` | P2 | 2026-02-09 |
+
+### Resolved in Domain Defensive Cleanup
+
+| ID | Title | Priority | Resolved |
+|----|-------|----------|----------|
+| [DEBT-195](../_archive/debt/debt-195-domain-service-defensive-gaps.md) | Domain Service Defensive Programming Gaps (`computeAccuracy` unclamped, `isEntitled` impure default) | P3 | 2026-02-09 |
 | [DEBT-188](../_archive/debt/debt-188-duplicated-count-query-attempt-repository.md) | Duplicated Count Query Pattern in Attempt Repository | P3 | 2026-02-08 |
 | [DEBT-189](../_archive/debt/debt-189-day-ms-constant-triplicated.md) | DAY_MS Constant Defined in Three Separate Files | P3 | 2026-02-08 |
 | [DEBT-190](../_archive/debt/debt-190-submit-answer-rollback-lacks-logger.md) | SubmitAnswerUseCase Rollback Error Handling Lacks Logger | P2 | 2026-02-08 |

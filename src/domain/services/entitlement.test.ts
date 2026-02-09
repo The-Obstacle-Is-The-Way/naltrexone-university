@@ -1,9 +1,16 @@
 import { describe, expect, it } from 'vitest';
+import type { Subscription } from '../entities';
 import { createSubscription } from '../test-helpers';
 import { isEntitled } from './entitlement';
 
 describe('isEntitled', () => {
   const now = new Date('2026-01-31T12:00:00Z');
+
+  it('requires now parameter to be explicit', () => {
+    // @ts-expect-error isEntitled should require a now parameter for purity.
+    const oneArg: (subscription: Subscription | null) => boolean = isEntitled;
+    expect(oneArg).toBeTypeOf('function');
+  });
 
   it('returns true for active with future period end', () => {
     const sub = createSubscription({
@@ -25,6 +32,14 @@ describe('isEntitled', () => {
     const sub = createSubscription({
       status: 'active',
       currentPeriodEnd: new Date('2026-01-15T00:00:00Z'),
+    });
+    expect(isEntitled(sub, now)).toBe(false);
+  });
+
+  it('returns false when currentPeriodEnd is exactly now', () => {
+    const sub = createSubscription({
+      status: 'active',
+      currentPeriodEnd: now,
     });
     expect(isEntitled(sub, now)).toBe(false);
   });
