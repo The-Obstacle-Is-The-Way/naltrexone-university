@@ -12,4 +12,25 @@ describe('components/ui/button', () => {
     expect(html).toContain('Click');
     expect(html).toContain('type="button"');
   });
+
+  it('defaults to type="button" when type is omitted', async () => {
+    const { Button } = await import('@/components/ui/button');
+
+    const html = renderToStaticMarkup(<Button>Click</Button>);
+
+    expect(html).toContain('type="button"');
+  });
+
+  it('does not add a default type when rendered asChild', async () => {
+    const { Button } = await import('@/components/ui/button');
+
+    const html = renderToStaticMarkup(
+      <Button asChild>
+        <a href="/pricing">Pricing</a>
+      </Button>,
+    );
+
+    expect(html).toContain('href="/pricing"');
+    expect(html).not.toContain('type="button"');
+  });
 });

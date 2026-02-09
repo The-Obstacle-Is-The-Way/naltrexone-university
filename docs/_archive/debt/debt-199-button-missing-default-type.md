@@ -1,8 +1,9 @@
 # DEBT-199: Button Component Missing Default `type="button"`
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P3
 **Date:** 2026-02-08
+**Resolved:** 2026-02-09
 
 ---
 
@@ -40,8 +41,9 @@ Note: when `asChild` is true, the `Comp` is `Slot` and `type` should not be set 
 
 ## Verification
 
-- `pnpm typecheck && pnpm test --run`
-- Verify existing `<Button type="submit">` usages (e.g., `SubscribeButton`) still work
+- [x] `pnpm typecheck && pnpm test --run`
+- [x] Added regression coverage: `<Button>` defaults to `type="button"` and does not force a type when `asChild`
+- [x] Verified explicit `<Button type="submit">` usages still override the default
 
 ## Related
 
