@@ -1,5 +1,6 @@
 export {
   createAttempt,
+  createBookmark,
   createChoice,
   createPracticeSession,
   createQuestion,
