@@ -20,7 +20,7 @@ ALL code MUST be test-driven. No exceptions.
 
 Use existing fakes from `src/application/test-helpers/fakes/`. NEVER use `vi.mock()` for our own code.
 
-**Available fakes:** `FakeQuestionRepository`, `FakeAttemptRepository`, `FakePracticeSessionRepository`, `FakeSubscriptionRepository`, `FakeUserRepository`, `FakeBookmarkRepository`, `FakeTagRepository`, `FakeStripeCustomerRepository`, `FakeStripeEventRepository`, `FakeIdempotencyKeyRepository`, `FakeAuthGateway`, `FakePaymentGateway`, `FakeRateLimiter`
+**Available fakes:** `FakeQuestionRepository`, `FakeAttemptRepository`, `FakePracticeSessionRepository`, `FakeSubscriptionRepository`, `FakeUserRepository`, `FakeBookmarkRepository`, `FakeTagRepository`, `FakeStripeCustomerRepository`, `FakeStripeEventRepository`, `FakeIdempotencyKeyRepository`, `FakeLogger`, `FakeAuthGateway`, `FakePaymentGateway`, `FakeRateLimiter`
 
 **Decision tree:**
 - Fake exists? Use it.

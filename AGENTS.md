@@ -365,6 +365,7 @@ If a fake class exists (e.g., `FakeAttemptRepository`), you MUST use it. Do NOT 
 - `FakeStripeCustomerRepository`
 - `FakeStripeEventRepository`
 - `FakeIdempotencyKeyRepository`
+- `FakeLogger`
 - `FakeAuthGateway`
 - `FakePaymentGateway`
 - `FakeRateLimiter`
