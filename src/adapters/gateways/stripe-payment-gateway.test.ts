@@ -36,7 +36,7 @@ function createGateway(
   });
 }
 
-function createStripeMock(withSubscriptions = false) {
+function createStripeMockBase() {
   const customersCreate = vi.fn(
     async () => ({ id: 'cus_123' }) as StripeCustomer,
   );
@@ -78,12 +78,6 @@ function createStripeMock(withSubscriptions = false) {
     },
   );
 
-  const subscriptionsRetrieve = vi.fn(async () => ({}) as StripeSubscription);
-  const subscriptionsList = vi.fn(
-    async () => ({ data: [] }) as StripeSubscriptionListResult,
-  );
-  const subscriptionsCancel = vi.fn(async () => ({}) as StripeSubscription);
-
   const stripe = {
     customers: { create: customersCreate, search: customersSearch },
     checkout: {
@@ -94,15 +88,6 @@ function createStripeMock(withSubscriptions = false) {
         expire: sessionsExpire,
       },
     },
-    ...(withSubscriptions
-      ? {
-          subscriptions: {
-            retrieve: subscriptionsRetrieve,
-            list: subscriptionsList,
-            cancel: subscriptionsCancel,
-          },
-        }
-      : {}),
     billingPortal: { sessions: { create: portalSessionsCreate } },
     webhooks: { constructEvent },
   } satisfies StripeClient;
@@ -117,10 +102,50 @@ function createStripeMock(withSubscriptions = false) {
     sessionsExpire,
     portalSessionsCreate,
     constructEvent,
+  };
+}
+
+function createStripeMockWithSubscriptions() {
+  const base = createStripeMockBase();
+
+  const subscriptionsRetrieve = vi.fn(async () => ({}) as StripeSubscription);
+  const subscriptionsList = vi.fn(
+    async () => ({ data: [] }) as StripeSubscriptionListResult,
+  );
+  const subscriptionsCancel = vi.fn(async () => ({}) as StripeSubscription);
+
+  const stripe = {
+    ...base.stripe,
+    subscriptions: {
+      retrieve: subscriptionsRetrieve,
+      list: subscriptionsList,
+      cancel: subscriptionsCancel,
+    },
+  } satisfies StripeClient;
+
+  return {
+    ...base,
+    stripe,
     subscriptionsRetrieve,
     subscriptionsList,
     subscriptionsCancel,
   };
+}
+
+function createStripeMock(options?: {
+  withSubscriptions?: false;
+}): ReturnType<typeof createStripeMockBase>;
+function createStripeMock(options: {
+  withSubscriptions: true;
+}): ReturnType<typeof createStripeMockWithSubscriptions>;
+function createStripeMock({
+  withSubscriptions = false,
+}: {
+  withSubscriptions?: boolean;
+} = {}) {
+  return withSubscriptions
+    ? createStripeMockWithSubscriptions()
+    : createStripeMockBase();
 }
 
 describe('StripePaymentGateway', () => {
@@ -251,8 +276,9 @@ describe('StripePaymentGateway', () => {
     'incomplete',
     'paused',
   ] as const)('throws ALREADY_SUBSCRIBED when Stripe has a %s subscription for the customer', async (status) => {
-    const { stripe, sessionsCreate, subscriptionsList } =
-      createStripeMock(true);
+    const { stripe, sessionsCreate, subscriptionsList } = createStripeMock({
+      withSubscriptions: true,
+    });
     subscriptionsList.mockResolvedValue({
       data: [{ id: 'sub_blocking_1', status }],
     });
@@ -277,8 +303,9 @@ describe('StripePaymentGateway', () => {
   });
 
   it('creates a checkout session when Stripe subscriptions are only ended or canceled', async () => {
-    const { stripe, sessionsCreate, subscriptionsList } =
-      createStripeMock(true);
+    const { stripe, sessionsCreate, subscriptionsList } = createStripeMock({
+      withSubscriptions: true,
+    });
     subscriptionsList.mockResolvedValue({
       data: [
         { id: 'sub_ended_1', status: 'canceled' as const },
@@ -514,8 +541,9 @@ describe('StripePaymentGateway', () => {
       StripeWebhookEventFixture<{ id: string; [key: string]: unknown }>
     >('stripe/customer.subscription.updated.json');
     const subscription = event.data.object;
-    const { stripe, constructEvent, subscriptionsRetrieve } =
-      createStripeMock(true);
+    const { stripe, constructEvent, subscriptionsRetrieve } = createStripeMock({
+      withSubscriptions: true,
+    });
     constructEvent.mockReturnValue(event);
     subscriptionsRetrieve.mockResolvedValue(subscription);
     const gateway = createGateway(stripe);
@@ -553,8 +581,9 @@ describe('StripePaymentGateway', () => {
       id: 'evt_trial_will_end_1',
       type: 'customer.subscription.trial_will_end',
     };
-    const { stripe, constructEvent, subscriptionsRetrieve } =
-      createStripeMock(true);
+    const { stripe, constructEvent, subscriptionsRetrieve } = createStripeMock({
+      withSubscriptions: true,
+    });
     constructEvent.mockReturnValue(constructedEvent);
     subscriptionsRetrieve.mockResolvedValue(event.data.object);
     const gateway = createGateway(stripe);
@@ -596,8 +625,9 @@ describe('StripePaymentGateway', () => {
         object: subscription,
       },
     };
-    const { stripe, constructEvent, subscriptionsRetrieve } =
-      createStripeMock(true);
+    const { stripe, constructEvent, subscriptionsRetrieve } = createStripeMock({
+      withSubscriptions: true,
+    });
     constructEvent.mockReturnValue(constructedEvent);
     subscriptionsRetrieve.mockResolvedValue(subscription);
     const gateway = createGateway(stripe);
@@ -636,8 +666,9 @@ describe('StripePaymentGateway', () => {
         },
       },
     };
-    const { stripe, constructEvent, subscriptionsRetrieve } =
-      createStripeMock(true);
+    const { stripe, constructEvent, subscriptionsRetrieve } = createStripeMock({
+      withSubscriptions: true,
+    });
     constructEvent.mockReturnValue(constructedEvent);
     subscriptionsRetrieve.mockResolvedValue(subscription);
     const gateway = createGateway(stripe);
@@ -676,8 +707,9 @@ describe('StripePaymentGateway', () => {
         },
       },
     };
-    const { stripe, constructEvent, subscriptionsRetrieve } =
-      createStripeMock(true);
+    const { stripe, constructEvent, subscriptionsRetrieve } = createStripeMock({
+      withSubscriptions: true,
+    });
     constructEvent.mockReturnValue(constructedEvent);
     subscriptionsRetrieve.mockResolvedValue(subscription);
     const gateway = createGateway(stripe);
@@ -716,8 +748,9 @@ describe('StripePaymentGateway', () => {
         },
       },
     };
-    const { stripe, constructEvent, subscriptionsRetrieve } =
-      createStripeMock(true);
+    const { stripe, constructEvent, subscriptionsRetrieve } = createStripeMock({
+      withSubscriptions: true,
+    });
     constructEvent.mockReturnValue(constructedEvent);
     subscriptionsRetrieve.mockResolvedValue(subscription);
     const gateway = createGateway(stripe);
@@ -756,8 +789,9 @@ describe('StripePaymentGateway', () => {
         },
       },
     };
-    const { stripe, constructEvent, subscriptionsRetrieve } =
-      createStripeMock(true);
+    const { stripe, constructEvent, subscriptionsRetrieve } = createStripeMock({
+      withSubscriptions: true,
+    });
     constructEvent.mockReturnValue(constructedEvent);
     subscriptionsRetrieve.mockResolvedValue(subscription);
     const gateway = createGateway(stripe);
@@ -812,8 +846,9 @@ describe('StripePaymentGateway', () => {
       data: { object: { subscription: 'sub_123' } },
     };
     const logger = new FakeLogger();
-    const { stripe, constructEvent, subscriptionsRetrieve } =
-      createStripeMock(true);
+    const { stripe, constructEvent, subscriptionsRetrieve } = createStripeMock({
+      withSubscriptions: true,
+    });
     constructEvent.mockReturnValue(constructedEvent);
     subscriptionsRetrieve.mockResolvedValue({ id: 123 });
     const gateway = createGateway(stripe, { logger });
@@ -897,8 +932,9 @@ describe('StripePaymentGateway', () => {
       data: { object: { subscription: 'sub_123' } },
     };
     const logger = new FakeLogger();
-    const { stripe, constructEvent, subscriptionsRetrieve } =
-      createStripeMock(true);
+    const { stripe, constructEvent, subscriptionsRetrieve } = createStripeMock({
+      withSubscriptions: true,
+    });
     constructEvent.mockReturnValue(constructedEvent);
     subscriptionsRetrieve.mockResolvedValue({ id: 123 });
     const gateway = createGateway(stripe, { logger });
@@ -937,8 +973,9 @@ describe('StripePaymentGateway', () => {
     const event = loadJsonFixture<
       StripeWebhookEventFixture<{ id: string; [key: string]: unknown }>
     >('stripe/customer.subscription.paused.json');
-    const { stripe, constructEvent, subscriptionsRetrieve } =
-      createStripeMock(true);
+    const { stripe, constructEvent, subscriptionsRetrieve } = createStripeMock({
+      withSubscriptions: true,
+    });
     constructEvent.mockReturnValue(event);
     subscriptionsRetrieve.mockResolvedValue(event.data.object);
     const gateway = createGateway(stripe);
@@ -966,8 +1003,9 @@ describe('StripePaymentGateway', () => {
     const event = loadJsonFixture<
       StripeWebhookEventFixture<{ id: string; [key: string]: unknown }>
     >('stripe/customer.subscription.resumed.json');
-    const { stripe, constructEvent, subscriptionsRetrieve } =
-      createStripeMock(true);
+    const { stripe, constructEvent, subscriptionsRetrieve } = createStripeMock({
+      withSubscriptions: true,
+    });
     constructEvent.mockReturnValue(event);
     subscriptionsRetrieve.mockResolvedValue(event.data.object);
     const gateway = createGateway(stripe);
@@ -995,8 +1033,9 @@ describe('StripePaymentGateway', () => {
     const event = loadJsonFixture<
       StripeWebhookEventFixture<{ id: string; [key: string]: unknown }>
     >('stripe/customer.subscription.pending_update_applied.json');
-    const { stripe, constructEvent, subscriptionsRetrieve } =
-      createStripeMock(true);
+    const { stripe, constructEvent, subscriptionsRetrieve } = createStripeMock({
+      withSubscriptions: true,
+    });
     constructEvent.mockReturnValue(event);
     subscriptionsRetrieve.mockResolvedValue(event.data.object);
     const gateway = createGateway(stripe);
@@ -1024,8 +1063,9 @@ describe('StripePaymentGateway', () => {
     const event = loadJsonFixture<
       StripeWebhookEventFixture<{ id: string; [key: string]: unknown }>
     >('stripe/customer.subscription.pending_update_expired.json');
-    const { stripe, constructEvent, subscriptionsRetrieve } =
-      createStripeMock(true);
+    const { stripe, constructEvent, subscriptionsRetrieve } = createStripeMock({
+      withSubscriptions: true,
+    });
     constructEvent.mockReturnValue(event);
     subscriptionsRetrieve.mockResolvedValue(event.data.object);
     const gateway = createGateway(stripe);
@@ -1144,8 +1184,9 @@ describe('StripePaymentGateway', () => {
         ],
       },
     };
-    const { stripe, constructEvent, subscriptionsRetrieve } =
-      createStripeMock(true);
+    const { stripe, constructEvent, subscriptionsRetrieve } = createStripeMock({
+      withSubscriptions: true,
+    });
     constructEvent.mockReturnValue({
       id: 'evt_1',
       type: 'customer.subscription.created',
@@ -1190,8 +1231,9 @@ describe('StripePaymentGateway', () => {
         },
       },
     };
-    const { stripe, constructEvent, subscriptionsRetrieve } =
-      createStripeMock(true);
+    const { stripe, constructEvent, subscriptionsRetrieve } = createStripeMock({
+      withSubscriptions: true,
+    });
     constructEvent.mockReturnValue(constructedEvent);
     subscriptionsRetrieve.mockResolvedValue(subscription);
     const logger = new FakeLogger();

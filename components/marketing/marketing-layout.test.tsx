@@ -1,9 +1,19 @@
 // @vitest-environment jsdom
+import type { AnchorHTMLAttributes, ReactNode } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
 
+type NextLinkMockProps = AnchorHTMLAttributes<HTMLAnchorElement> & {
+  href: string;
+  children?: ReactNode;
+};
+
 vi.mock('next/link', () => ({
-  default: (props: Record<string, unknown>) => <a {...props} />,
+  default: ({ href, children, ...rest }: NextLinkMockProps) => (
+    <a href={href} {...rest}>
+      {children}
+    </a>
+  ),
 }));
 
 describe('MarketingLayout', () => {
@@ -17,11 +27,8 @@ describe('MarketingLayout', () => {
     );
 
     const doc = new DOMParser().parseFromString(html, 'text/html');
-    const navs = Array.from(
-      doc.querySelectorAll('nav[aria-label="Marketing navigation"]'),
-    );
-    const mobileNav = navs.find((nav) =>
-      (nav.getAttribute('class') ?? '').includes('sm:hidden'),
+    const mobileNav = doc.querySelector(
+      'nav[aria-label="Marketing navigation (mobile)"]',
     );
 
     expect(mobileNav).toBeDefined();

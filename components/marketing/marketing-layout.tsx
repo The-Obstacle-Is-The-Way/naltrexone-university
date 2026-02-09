@@ -13,32 +13,28 @@ export function MarketingLayout({
   featuresHref,
   children,
 }: MarketingLayoutProps) {
+  const brandLinkClass =
+    'rounded-md text-sm font-semibold focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]';
+  const navLinkClass =
+    'rounded-md text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]';
+
   return (
     <div className="min-h-[100dvh] bg-background text-foreground">
       <header className="border-b border-border bg-background">
         <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-6">
-              <Link
-                href={ROUTES.HOME}
-                className="rounded-md text-sm font-semibold focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]"
-              >
+              <Link href={ROUTES.HOME} className={brandLinkClass}>
                 Addiction Boards
               </Link>
               <nav
-                aria-label="Marketing navigation"
+                aria-label="Marketing navigation (desktop)"
                 className="hidden items-center gap-4 text-sm sm:flex"
               >
-                <Link
-                  href={featuresHref}
-                  className="rounded-md text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]"
-                >
+                <Link href={featuresHref} className={navLinkClass}>
                   Features
                 </Link>
-                <Link
-                  href={ROUTES.PRICING}
-                  className="rounded-md text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]"
-                >
+                <Link href={ROUTES.PRICING} className={navLinkClass}>
                   Pricing
                 </Link>
               </nav>
@@ -47,19 +43,13 @@ export function MarketingLayout({
           </div>
 
           <nav
-            aria-label="Marketing navigation"
+            aria-label="Marketing navigation (mobile)"
             className="mt-3 flex items-center gap-4 text-sm sm:hidden"
           >
-            <Link
-              href={featuresHref}
-              className="rounded-md text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]"
-            >
+            <Link href={featuresHref} className={navLinkClass}>
               Features
             </Link>
-            <Link
-              href={ROUTES.PRICING}
-              className="rounded-md text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]"
-            >
+            <Link href={ROUTES.PRICING} className={navLinkClass}>
               Pricing
             </Link>
           </nav>
@@ -80,16 +70,10 @@ export function MarketingLayout({
             <div>
               <p className="text-sm font-semibold text-foreground">Product</p>
               <div className="mt-3 flex flex-col gap-2 text-sm text-muted-foreground">
-                <Link
-                  href={featuresHref}
-                  className="rounded-md transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]"
-                >
+                <Link href={featuresHref} className={navLinkClass}>
                   Features
                 </Link>
-                <Link
-                  href={ROUTES.PRICING}
-                  className="rounded-md transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]"
-                >
+                <Link href={ROUTES.PRICING} className={navLinkClass}>
                   Pricing
                 </Link>
               </div>
@@ -97,16 +81,10 @@ export function MarketingLayout({
             <div>
               <p className="text-sm font-semibold text-foreground">Account</p>
               <div className="mt-3 flex flex-col gap-2 text-sm text-muted-foreground">
-                <Link
-                  href={ROUTES.SIGN_IN}
-                  className="rounded-md transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]"
-                >
+                <Link href={ROUTES.SIGN_IN} className={navLinkClass}>
                   Sign in
                 </Link>
-                <Link
-                  href={ROUTES.SIGN_UP}
-                  className="rounded-md transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]"
-                >
+                <Link href={ROUTES.SIGN_UP} className={navLinkClass}>
                   Sign up
                 </Link>
               </div>
