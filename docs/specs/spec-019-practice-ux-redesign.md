@@ -1,6 +1,6 @@
 # SPEC-019: Practice & Navigation UX Redesign
 
-> **Status:** Partial
+> **Status:** Done
 > **Layer:** Feature
 > **Date:** 2026-02-05 (amended 2026-02-07)
 > **Author:** Architecture Review
@@ -559,30 +559,30 @@ APP_PRACTICE_QUICK: '/app/practice/quick',
 |------|----------|--------|---------|
 | Dashboard: group activity by session with mode badge + score | P1 | **Done** (SPEC-020 Phase 3) | 5.4.1 |
 | Review page: show session origin per missed question | P2 | **Done** (SPEC-020 Phase 3) | 5.4.3 |
-| Dashboard: make recent activity items clickable links → `/app/questions/[slug]` | P1 | Pending | 5.4.1 |
-| Dashboard: render difficulty badge on activity items | P2 | Pending | 5.4.1 |
-| Dashboard: session headers link to session detail/breakdown | P2 | Pending | 5.4.1 |
-| Tag filter: implement collapsible categories (Option A) | P1 | Pending | 5.4.2 |
-| Tag filter: show active filter count badges on collapsed headers | P2 | Pending | 5.4.2 |
-| Review page: update subtitle to clarify missed-only scope | P1 | Pending | 5.4.3 |
-| Review page: update empty state with helpful messaging + CTA | P1 | Pending | 5.4.3 |
-| Review page: add tag/difficulty filter to missed questions list | P2 | Pending | 5.4.3 |
-| Cross-page: make every question reference a clickable link → `/app/questions/[slug]` | P1 | Pending | 5.4.4 |
-| Cross-page: origin-aware back links on `/app/questions/[slug]` (adapt to entry point) | P2 | Pending | 5.4.4 |
-| Cross-page: improve empty states on all pages with CTAs | P2 | Pending | 5.4.4 |
+| Dashboard: make recent activity items clickable links → `/app/questions/[slug]` | P1 | **Done** | 5.4.1 |
+| Dashboard: render difficulty badge on activity items | P2 | **Done** | 5.4.1 |
+| Dashboard: session headers link to session detail/breakdown | P2 | **Done** | 5.4.1 |
+| Tag filter: implement collapsible categories (Option A) | P1 | **Done** | 5.4.2 |
+| Tag filter: show active filter count badges on collapsed headers | P2 | **Done** | 5.4.2 |
+| Review page: update subtitle to clarify missed-only scope | P1 | **Done** | 5.4.3 |
+| Review page: update empty state with helpful messaging + CTA | P1 | **Done** | 5.4.3 |
+| Review page: add tag/difficulty filter to missed questions list | P2 | **Done** | 5.4.3 |
+| Cross-page: make every question reference a clickable link → `/app/questions/[slug]` | P1 | **Done** | 5.4.4 |
+| Cross-page: origin-aware back links on `/app/questions/[slug]` (adapt to entry point) | P2 | **Done** | 5.4.4 |
+| Cross-page: improve empty states on all pages with CTAs | P2 | **Done** | 5.4.4 |
 
 **Acceptance Criteria for Phase 3:**
 - [x] Dashboard sessions are grouped with mode badge and score summary
 - [x] Missed questions show session origin (mode + date) when applicable
-- [ ] Dashboard recent activity items are clickable → navigate to question review
-- [ ] Dashboard renders difficulty badge on activity items
-- [ ] Tag filter categories are collapsed by default; expanding shows chips
-- [ ] Active filter count shown on collapsed categories
-- [ ] Review page subtitle clarifies scope: _"Questions you answered incorrectly — review and reattempt to strengthen weak areas."_
-- [ ] Review page empty state explains scope and provides CTA
-- [ ] All question references across all pages are clickable links
-- [ ] Question detail page back links adapt to entry point (Dashboard, Review, Bookmarks, Practice)
-- [ ] `pnpm typecheck && pnpm lint && pnpm test --run && pnpm build` all pass
+- [x] Dashboard recent activity items are clickable → navigate to question review
+- [x] Dashboard renders difficulty badge on activity items
+- [x] Tag filter categories are collapsed by default; expanding shows chips
+- [x] Active filter count shown on collapsed categories
+- [x] Review page subtitle clarifies scope: _"Questions you answered incorrectly — review and reattempt to strengthen weak areas."_
+- [x] Review page empty state explains scope and provides CTA
+- [x] All question references across all pages are clickable links
+- [x] Question detail page back links adapt to entry point (Dashboard, Review, Bookmarks, Practice)
+- [x] `pnpm typecheck && pnpm lint && pnpm test --run && pnpm build` all pass
 
 **Dependencies:** Phase 3 can proceed independently of Phase 2. Many tasks require only UI changes (no backend work). Session grouping and origin badges are already done via SPEC-020 Phase 3.
 
@@ -609,7 +609,10 @@ APP_PRACTICE_QUICK: '/app/practice/quick',
 - `app/(app)/app/practice/components/practice-session-starter.tsx` — collapsible tag categories
 - `app/(app)/app/review/page.tsx` — subtitle, filters, empty state, session origin
 - `app/(app)/app/bookmarks/page.tsx` — improve empty state
-- `components/ui/collapsible-filter-group.tsx` — NEW: reusable collapsible filter component
+- `app/(app)/app/questions/[slug]/page.tsx` — pass origin search param through to client
+- `app/(app)/app/questions/[slug]/question-page-client.tsx` — origin-aware back links + subtitle
+- `lib/routes.ts` — support `toQuestionRoute(slug, { from })`
+- `src/application/use-cases/get-missed-questions.ts` — include `tagSlugs` for review filtering
 
 ---
 
@@ -791,26 +794,20 @@ All Phase 2 acceptance criteria met:
 3. Add "Quick Practice" card to landing page with link to new route
 4. Add `APP_PRACTICE_QUICK` to `lib/routes.ts`
 
-### Phase 3: Cross-Page Information Architecture — **In Progress (Partial)**
+### Phase 3: Cross-Page Information Architecture — **Done**
 
 **Completed** via SPEC-020 Phase 3:
 - Dashboard groups activity by `sessionId` / `sessionMode` ✓
 - Review rows display session origin (`Tutor session`, `Exam session`, `Ad-hoc practice`) ✓
 
-**Product decision (2026-02-09):** Review page stays **missed-only** (per SPEC-014). Clarify via subtitle text, not scope expansion. See Section 5.4.3.
+**Completed** via SPEC-019 Phase 3:
+- Dashboard recent activity items are clickable links to question detail (`/app/questions/[slug]?from=dashboard`), show difficulty badges, and session headers link to session detail.
+- Practice tag filters use collapsible categories with active selection counts.
+- Review page subtitle and empty state clarify missed-only scope; tag/difficulty filters added.
+- Bookmarks empty state provides a clear CTA; question stems in Review/Bookmarks are clickable.
+- Question detail back links and subtitle adapt based on origin (`?from=dashboard|review|bookmarks|practice`).
 
-**Remaining work:**
-
-| Gap | Location | Details |
-|-----|----------|---------|
-| Dashboard activity not clickable | `app/(app)/app/dashboard/page.tsx` | `slug` is fetched from DB but not used for navigation. `toQuestionRoute(slug)` helper exists in `lib/routes.ts` but is not called. |
-| Dashboard difficulty badge missing | Same file | `difficulty` field is fetched in `UserStatsOutput` but not rendered in the UI |
-| Origin-aware question-detail navigation missing | `app/(app)/app/questions/[slug]/question-page-client.tsx` | Back links are static (`Back to Dashboard` header link, `Back to Review` post-submit link) and do not adapt to actual entry point (Bookmarks, Dashboard, Practice). |
-| Question detail subtitle hard-coded | Same file | Always says "Reattempt a question from your review list" regardless of entry point (bookmarks, dashboard, practice) |
-| No cross-links between Review and Bookmarks | `app/(app)/app/review/page.tsx`, `app/(app)/app/bookmarks/page.tsx` | Both pages link to "Go to Practice" but not to each other |
-| Tag filter shows 41 flat chips | `app/(app)/app/practice/components/practice-session-starter.tsx` | No progressive disclosure — all categories expanded by default |
-
-These gaps are already specified in Section 5.4 above. No new spec requirements needed — just implementation.
+**Verification:** `pnpm typecheck && pnpm lint && pnpm test --run && pnpm build` all pass.
 
 ---
 
@@ -825,3 +822,4 @@ These gaps are already specified in Section 5.4 above. No new spec requirements 
 | 2026-02-07 | Engineering | Updated Phase 3 status to **In Progress (Partial)** to reflect completed session-context work (dashboard grouping + review session-origin badges). Refined navigation gap language to match current `question-page-client` behavior. |
 | 2026-02-09 | Engineering | **Phase 2 fully specified.** Expanded Section 6.2 with component-level detail: route structure, landing page layout, quick practice page spec, hook/component reuse mapping, implementation order, file paths. Fixed stale route paths (`/app/practice/sessions/[id]` → `/app/practice/[sessionId]` to match actual codebase). **Product decision:** Review = missed-only (SPEC-014 unchanged, clarify via subtitle). Updated Phase 3 task table with Done/Pending status. Updated Section 14 status from "Not Started" to "Ready for Implementation". |
 | 2026-02-09 | Engineering | **Phase 2 implemented.** Added `/app/practice/quick`, refactored `/app/practice` into a decision-point landing page, added `ROUTES.APP_PRACTICE_QUICK`, and exposed Quick Practice in app navigation. |
+| 2026-02-09 | Engineering | **Phase 3 implemented.** Made dashboard activity actionable (question links + difficulty badges + session drill-down), added progressive tag filter disclosure, clarified Review scope (subtitle + empty state + filters), made question detail origin-aware via `?from=`, and improved empty states with CTAs. |
