@@ -20,10 +20,6 @@ function formatPercent(value: number): string {
 }
 
 type RecentActivityRow = UserStatsOutput['recentActivity'][number];
-type AvailableRecentActivityRow = Extract<
-  RecentActivityRow,
-  { isAvailable: true }
->;
 
 type RecentActivityGroup =
   | {
@@ -37,13 +33,7 @@ type RecentActivityGroup =
       row: RecentActivityRow;
     };
 
-function toSentenceCase(value: 'tutor' | 'exam'): string {
-  return value.charAt(0).toUpperCase() + value.slice(1);
-}
-
-function formatDifficultyLabel(
-  value: AvailableRecentActivityRow['difficulty'],
-): string {
+function toSentenceCase(value: string): string {
   return value.charAt(0).toUpperCase() + value.slice(1);
 }
 
@@ -199,7 +189,7 @@ export function DashboardView({ stats }: { stats: UserStatsOutput }) {
                         {getStemPreview(group.row.stemMd, 100)}
                       </span>
                       <span className="inline-flex items-center rounded-full border border-border/60 px-2 py-0.5 text-xs font-medium text-muted-foreground">
-                        {formatDifficultyLabel(group.row.difficulty)}
+                        {toSentenceCase(group.row.difficulty)}
                       </span>
                       <span className="shrink-0 text-muted-foreground">
                         {group.row.isCorrect ? 'Correct' : 'Incorrect'}
@@ -259,7 +249,7 @@ export function DashboardView({ stats }: { stats: UserStatsOutput }) {
                               {getStemPreview(row.stemMd, 90)}
                             </span>
                             <span className="inline-flex items-center rounded-full border border-border/60 px-2 py-0.5 text-xs font-medium text-muted-foreground">
-                              {formatDifficultyLabel(row.difficulty)}
+                              {toSentenceCase(row.difficulty)}
                             </span>
                             <span className="shrink-0 text-muted-foreground">
                               {row.isCorrect ? 'Correct' : 'Incorrect'}

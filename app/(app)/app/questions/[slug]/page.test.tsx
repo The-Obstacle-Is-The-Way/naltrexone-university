@@ -30,6 +30,7 @@ describe('app/(app)/app/questions/[slug]', () => {
 
     const element = await QuestionPage({
       params: Promise.resolve({ slug: 'q-1' }),
+      searchParams: Promise.resolve({}),
     } as never);
 
     expect(element).toMatchObject({
@@ -43,7 +44,7 @@ describe('app/(app)/app/questions/[slug]', () => {
 
     const element = await QuestionPage({
       params: Promise.resolve({ slug: 'q-1' }),
-      searchParams: { from: 'review' },
+      searchParams: Promise.resolve({ from: 'review' }),
     } as never);
 
     expect(element).toMatchObject({
@@ -57,6 +58,7 @@ describe('app/(app)/app/questions/[slug]', () => {
 
     const element = await QuestionPage({
       params: Promise.resolve({ slug: 'q-1' }),
+      searchParams: Promise.resolve({}),
     } as never);
 
     const html = renderToStaticMarkup(element);

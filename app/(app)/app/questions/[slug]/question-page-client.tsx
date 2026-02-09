@@ -6,13 +6,11 @@ import { Feedback } from '@/components/question/feedback';
 import { QuestionCard } from '@/components/question/question-card';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { ROUTES } from '@/lib/routes';
+import { type QuestionOrigin, ROUTES } from '@/lib/routes';
 import type { GetQuestionBySlugOutput } from '@/src/adapters/controllers/question-view-controller';
 import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
 import type { LoadState } from './question-page-logic';
 import { useQuestionPageController } from './use-question-page-controller';
-
-type QuestionOrigin = 'dashboard' | 'review' | 'bookmarks' | 'practice';
 
 function parseQuestionOrigin(value: string | undefined): QuestionOrigin | null {
   if (value === 'dashboard') return value;

@@ -442,6 +442,7 @@ export function createReviewPage(deps?: {
       tagSlug: parseTagSlugFilter(params.tag),
     };
 
+    // Filters are applied client-side in ReviewView; server-side filtering tracked in GH #80.
     const result = await getMissedQuestionsFn({ limit, offset });
     return renderReview(result, { filters });
   };

@@ -16,12 +16,13 @@ export default async function QuestionPage({
   searchParams,
 }: {
   params: Promise<{ slug: string }>;
-  searchParams?: {
-    from?: string | string[];
-  };
+  searchParams: Promise<{ from?: string | string[] }>;
 }) {
   const { slug } = await params;
+  const resolvedSearchParams = await searchParams;
   const from =
-    typeof searchParams?.from === 'string' ? searchParams.from : undefined;
+    typeof resolvedSearchParams?.from === 'string'
+      ? resolvedSearchParams.from
+      : undefined;
   return <QuestionPageClient slug={slug} from={from} />;
 }
