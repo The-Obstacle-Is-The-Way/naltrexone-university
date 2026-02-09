@@ -1,6 +1,6 @@
 # SPEC-019: Practice & Navigation UX Redesign
 
-> **Status:** Partial (Phase 4 pending)
+> **Status:** Implemented
 > **Layer:** Feature
 > **Date:** 2026-02-05 (amended 2026-02-07)
 > **Author:** Architecture Review
@@ -11,10 +11,11 @@
 
 The current practice flow implementation is **functionally correct** but **UX-confusing**. Both ad-hoc ("one question at a time") and session-based (tutor/exam mode) practice are presented on the same page (`/app/practice`), creating ambiguity about which mode the user is in. A cross-page UX audit (2026-02-07) revealed additional issues: dashboard activity is not actionable, the tag filter presents 41 simultaneous chips causing cognitive overload, the Review page scope is ambiguous, and user data is fragmented across four tabs with no cross-linking.
 
-This spec proposes a **three-phase approach**:
+This spec proposes a **four-phase approach**:
 1. **Phase 1:** Fix current implementation bugs (database seeding, error handling)
 2. **Phase 2:** Redesign UX to clearly separate practice modes
 3. **Phase 3:** Cross-page information architecture — actionable dashboard, progressive tag filters, review page clarity, unified navigation
+4. **Phase 4:** Practice page polish — clickable session breakdowns, remove redundant CTA card, breakdown collapse toggle
 
 ---
 
@@ -536,13 +537,13 @@ APP_PRACTICE_QUICK: '/app/practice/quick',
 | 2 | Create `/app/practice/quick/` route files (page, client, loading, error) | P1 | Step 1 |
 | 3 | Wire quick practice page to reuse `usePracticeQuestionFlow` + `PracticeView` | P1 | Step 2 |
 | 4 | Remove question flow from `/app/practice/practice-page-client.tsx` | P1 | Step 3 (quick page works first) |
-| 5 | Update landing page layout: add "Quick Practice" card with link | P1 | Step 4 |
+| 5 | Expose Quick Practice entry point in app navigation (desktop + mobile) | P1 | Step 4 |
 | 6 | Update tests for landing page (no longer renders question flow) | P1 | Step 4 |
 | 7 | Add tests for quick practice page | P1 | Step 3 |
 
 **Acceptance Criteria for Phase 2:**
 - [x] `/app/practice` does NOT load any question on mount — only shows session controls + history
-- [x] `/app/practice` shows two clear mode options: "Start a Session" card + "Quick Practice" card
+- [x] `/app/practice` is a sessions landing page (starter + history); Quick Practice is accessible via `/app/practice/quick` in app navigation
 - [x] `/app/practice/quick` loads a random question on mount, allows submit → feedback → next
 - [x] `/app/practice/quick` has "Back to Practice" link and page heading
 - [x] `/app/practice/[sessionId]` is unchanged (no regressions)
@@ -567,7 +568,7 @@ APP_PRACTICE_QUICK: '/app/practice/quick',
 | Review page: update subtitle to clarify missed-only scope | P1 | **Done** | 5.4.3 |
 | Review page: update empty state with helpful messaging + CTA | P1 | **Done** | 5.4.3 |
 | Review page: add tag/difficulty filter to missed questions list | P2 | **Done** | 5.4.3 |
-| Cross-page: make every question reference a clickable link → `/app/questions/[slug]` | P1 | **Partial** — Practice session breakdowns (history panel + summary) still non-interactive; see Phase 4 | 5.4.4 |
+| Cross-page: make every question reference a clickable link → `/app/questions/[slug]` | P1 | **Done** | 5.4.4 |
 | Cross-page: origin-aware back links on `/app/questions/[slug]` (adapt to entry point) | P2 | **Done** | 5.4.4 |
 | Cross-page: improve empty states on all pages with CTAs | P2 | **Done** | 5.4.4 |
 
@@ -580,7 +581,7 @@ APP_PRACTICE_QUICK: '/app/practice/quick',
 - [x] Active filter count shown on collapsed categories
 - [x] Review page subtitle clarifies scope: _"Questions you answered incorrectly — review and reattempt to strengthen weak areas."_
 - [x] Review page empty state explains scope and provides CTA
-- [ ] All question references across all pages are clickable links *(Practice session breakdowns are still non-interactive — see Phase 4)*
+- [x] All question references across all pages are clickable links
 - [x] Question detail page back links adapt to entry point (Dashboard, Review, Bookmarks, Practice)
 - [x] `pnpm typecheck && pnpm lint && pnpm test --run && pnpm build` all pass
 
@@ -598,7 +599,7 @@ APP_PRACTICE_QUICK: '/app/practice/quick',
 ### Phase 2 (Redesign)
 - `lib/routes.ts` — add `APP_PRACTICE_QUICK`
 - `app/(app)/app/practice/page.tsx` — remove question flow rendering
-- `app/(app)/app/practice/practice-page-client.tsx` — remove question flow orchestration, add "Quick Practice" card
+- `app/(app)/app/practice/practice-page-client.tsx` — remove question flow orchestration; render sessions landing page (starter + history)
 - `app/(app)/app/practice/quick/page.tsx` — NEW: server component renders `QuickPracticeClient`
 - `app/(app)/app/practice/quick/quick-practice-client.tsx` — NEW: client component composing `usePracticeQuestionFlow` + `PracticeView`
 - `app/(app)/app/practice/quick/loading.tsx` — NEW: loading state
@@ -791,7 +792,7 @@ All Phase 2 acceptance criteria met:
 **Summary of changes:**
 1. Create `/app/practice/quick/` route (reuses existing `usePracticeQuestionFlow` + `PracticeView`)
 2. Remove ad-hoc question flow from `/app/practice` landing page
-3. Add "Quick Practice" card to landing page with link to new route
+3. Expose Quick Practice in app navigation (desktop + mobile)
 4. Add `APP_PRACTICE_QUICK` to `lib/routes.ts`
 
 ### Phase 3: Cross-Page Information Architecture — **Done**
@@ -806,6 +807,17 @@ All Phase 2 acceptance criteria met:
 - Review page subtitle and empty state clarify missed-only scope; tag/difficulty filters added.
 - Bookmarks empty state provides a clear CTA; question stems in Review/Bookmarks are clickable.
 - Question detail back links and subtitle adapt based on origin (`?from=dashboard|review|bookmarks|practice`).
+
+**Verification:** `pnpm typecheck && pnpm lint && pnpm test --run && pnpm build` all pass.
+
+### Phase 4: Practice Page Polish — **Done**
+
+All Phase 4 acceptance criteria met:
+- `PracticeSessionReviewRow` (available variant) includes `slug: string`
+- Practice breakdown questions link to `/app/questions/[slug]?from=practice`
+- Shared `SessionBreakdownList` used by both history panel + session summary
+- Practice landing page no longer renders a redundant Quick Practice CTA card; session starter fills full width
+- Clicking "View breakdown" toggles: open on first click, close on second click; button label toggles View/Hide
 
 **Verification:** `pnpm typecheck && pnpm lint && pnpm test --run && pnpm build` all pass.
 
@@ -824,6 +836,7 @@ All Phase 2 acceptance criteria met:
 | 2026-02-09 | Engineering | **Phase 2 implemented.** Added `/app/practice/quick`, refactored `/app/practice` into a decision-point landing page, added `ROUTES.APP_PRACTICE_QUICK`, and exposed Quick Practice in app navigation. |
 | 2026-02-09 | Engineering | **Phase 3 implemented.** Made dashboard activity actionable (question links + difficulty badges + session drill-down), added progressive tag filter disclosure, clarified Review scope (subtitle + empty state + filters), made question detail origin-aware via `?from=`, and improved empty states with CTAs. |
 | 2026-02-09 | Architecture Review | **Phase 4 added.** Post-implementation UX audit found: (1) Practice session breakdowns (history panel + post-session summary) render questions as non-interactive text while every other page has clickable links — violates Phase 3 cross-linking rule. Root cause: `PracticeSessionReviewRow` lacks `slug` field. (2) Quick Practice card on Practice page is redundant (QP has its own nav tab). (3) Breakdown toggle is stuck-open (no collapse). Added Phase 4 to resolve. Corrected Phase 3 status from Done to Partial. See `docs/brainstorming/practice-ux-audit.md` for full analysis. |
+| 2026-02-09 | Engineering | **Phase 4 implemented.** Added `slug` to practice session review rows, extracted shared `SessionBreakdownList`, made breakdown questions clickable, removed redundant Quick Practice CTA card, and made breakdown collapsible (View/Hide toggle). |
 
 ---
 
@@ -893,13 +906,13 @@ In `usePracticeSessionHistory.ts`: if `selectedSessionId === sessionId` on click
 
 ### 4.4 Acceptance Criteria
 
-- [ ] `PracticeSessionReviewRow` (available variant) includes `slug: string`
-- [ ] Practice page session breakdown questions are clickable → `/app/questions/[slug]?from=practice`
-- [ ] Session summary breakdown questions are clickable → `/app/questions/[slug]?from=practice`
-- [ ] Unavailable questions in breakdowns render `[Question no longer available]` with no link
-- [ ] `SessionBreakdownList` is a shared component used by both history panel and session summary
-- [ ] Quick Practice card is removed from Practice page; session starter fills full width
-- [ ] Quick Practice nav tab and `/app/practice/quick` route are unchanged
-- [ ] Clicking "View breakdown" toggles: open on first click, close on second click
-- [ ] Button label: "View breakdown" (collapsed) / "Hide breakdown" (expanded)
-- [ ] `pnpm typecheck && pnpm lint && pnpm test --run && pnpm build` all pass
+- [x] `PracticeSessionReviewRow` (available variant) includes `slug: string`
+- [x] Practice page session breakdown questions are clickable → `/app/questions/[slug]?from=practice`
+- [x] Session summary breakdown questions are clickable → `/app/questions/[slug]?from=practice`
+- [x] Unavailable questions in breakdowns render `[Question no longer available]` with no link
+- [x] `SessionBreakdownList` is a shared component used by both history panel and session summary
+- [x] Quick Practice card is removed from Practice page; session starter fills full width
+- [x] Quick Practice nav tab and `/app/practice/quick` route are unchanged
+- [x] Clicking "View breakdown" toggles: open on first click, close on second click
+- [x] Button label: "View breakdown" (collapsed) / "Hide breakdown" (expanded)
+- [x] `pnpm typecheck && pnpm lint && pnpm test --run && pnpm build` all pass
