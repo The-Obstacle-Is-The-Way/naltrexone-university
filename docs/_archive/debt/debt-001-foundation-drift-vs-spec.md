@@ -1,6 +1,7 @@
 # DEBT-001: Foundation Drift vs SSOT (Missing Composition/Observability Primitives)
 
 **Status:** Resolved
+**Priority:** P2
 **Date:** 2026-02-01
 
 ## Summary

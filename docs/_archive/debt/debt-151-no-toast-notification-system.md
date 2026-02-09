@@ -14,11 +14,11 @@ The app has no centralized toast or notification component. Transient feedback (
 
 | Pattern | Example Location | Usage |
 |---------|-----------------|-------|
-| `<output aria-live="polite">` | `practice-session-history-panel.tsx:51-52` | Loading states |
-| `<span aria-live="polite">` | `practice-view.tsx:140` | Bookmark toggle feedback ("Bookmarked!" / "Removed") |
-| `<div role="alert">` | `practice-session-starter.tsx:191` | Session start error |
-| `ErrorCard` component | `bookmarks/page.tsx`, `billing/page.tsx` | Persistent error states |
-| Inline text with timeout | `practice-view.tsx:140` | Auto-dismissing success message |
+| `<output aria-live="polite">` | `app/(app)/app/practice/components/practice-session-history-panel.tsx:51-52` | Loading states |
+| `<span aria-live="polite">` | `app/(app)/app/practice/components/practice-view.tsx:140` | Bookmark toggle feedback ("Bookmarked!" / "Removed") |
+| `<div role="alert">` | `app/(app)/app/practice/components/practice-session-starter.tsx:191` | Session start error |
+| `ErrorCard` component | `app/(app)/app/bookmarks/page.tsx`, `app/(app)/app/billing/page.tsx` | Persistent error states |
+| Inline text with timeout | `app/(app)/app/practice/components/practice-view.tsx:140` | Auto-dismissing success message |
 
 ### What works well
 

@@ -120,7 +120,7 @@ export function usePracticeQuestionAnswerFlow(
 
   useEffect(onTryAgain, [onTryAgain]);
 
-  // DEBT-166: Focus the question area after recovering from an error.
+  // Focus the question area after recovering from an error.
   // Handles both direct error->ready and error->loading->ready transitions.
   useEffect(() => {
     const transition = getFocusRecoveryTransition({

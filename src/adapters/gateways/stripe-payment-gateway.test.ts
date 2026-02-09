@@ -1,51 +1,132 @@
 import { describe, expect, it, vi } from 'vitest';
+import type {
+  StripeBillingPortalSession,
+  StripeCheckoutSession,
+  StripeCheckoutSessionList,
+  StripeCheckoutSessionRetrieved,
+  StripeClient,
+  StripeCustomer,
+  StripeCustomerSearchResult,
+  StripeSubscription,
+  StripeSubscriptionListResult,
+} from '@/src/adapters/shared/stripe-types';
 import { FakeLogger } from '@/src/application/test-helpers/fakes';
 import { loadJsonFixture } from '@/tests/shared/load-json-fixture';
 import { SUBSCRIPTION_LIST_LIMIT } from './stripe/stripe-checkout-sessions';
 import { StripePaymentGateway } from './stripe-payment-gateway';
 
+const TEST_WEBHOOK_SECRET = 'whsec_1';
+const TEST_PRICE_IDS = { monthly: 'price_m', annual: 'price_a' } as const;
+
+type StripeWebhookEventFixture<TObject> = {
+  id: string;
+  type: string;
+  data: { object: TObject };
+};
+
+function createGateway(
+  stripe: StripeClient,
+  options?: { logger?: FakeLogger },
+) {
+  return new StripePaymentGateway({
+    stripe,
+    webhookSecret: TEST_WEBHOOK_SECRET,
+    priceIds: TEST_PRICE_IDS,
+    logger: options?.logger ?? new FakeLogger(),
+  });
+}
+
+function createStripeMock(withSubscriptions = false) {
+  const customersCreate = vi.fn(
+    async () => ({ id: 'cus_123' }) as StripeCustomer,
+  );
+  const customersSearch = vi.fn(
+    async () => ({ data: [] }) as StripeCustomerSearchResult,
+  );
+  const sessionsCreate = vi.fn(
+    async () =>
+      ({
+        id: 'cs_new',
+        url: 'https://stripe/checkout',
+      }) as StripeCheckoutSession,
+  );
+  const sessionsList = vi.fn(
+    async () => ({ data: [] }) as StripeCheckoutSessionList,
+  );
+  const sessionsRetrieve = vi.fn(
+    async () =>
+      ({
+        id: 'cs_existing',
+        url: 'https://stripe/existing-checkout',
+        line_items: { data: [] },
+      }) as StripeCheckoutSessionRetrieved,
+  );
+  const sessionsExpire = vi.fn(
+    async () =>
+      ({
+        id: 'cs_existing',
+        url: 'https://stripe/existing-checkout',
+      }) as StripeCheckoutSession,
+  );
+  const portalSessionsCreate = vi.fn(
+    async () =>
+      ({ url: 'https://stripe/portal' }) as StripeBillingPortalSession,
+  );
+  const constructEvent = vi.fn<StripeClient['webhooks']['constructEvent']>(
+    () => {
+      throw new Error('unexpected webhook call');
+    },
+  );
+
+  const subscriptionsRetrieve = vi.fn(async () => ({}) as StripeSubscription);
+  const subscriptionsList = vi.fn(
+    async () => ({ data: [] }) as StripeSubscriptionListResult,
+  );
+  const subscriptionsCancel = vi.fn(async () => ({}) as StripeSubscription);
+
+  const stripe = {
+    customers: { create: customersCreate, search: customersSearch },
+    checkout: {
+      sessions: {
+        create: sessionsCreate,
+        list: sessionsList,
+        retrieve: sessionsRetrieve,
+        expire: sessionsExpire,
+      },
+    },
+    ...(withSubscriptions
+      ? {
+          subscriptions: {
+            retrieve: subscriptionsRetrieve,
+            list: subscriptionsList,
+            cancel: subscriptionsCancel,
+          },
+        }
+      : {}),
+    billingPortal: { sessions: { create: portalSessionsCreate } },
+    webhooks: { constructEvent },
+  } satisfies StripeClient;
+
+  return {
+    stripe,
+    customersCreate,
+    customersSearch,
+    sessionsCreate,
+    sessionsList,
+    sessionsRetrieve,
+    sessionsExpire,
+    portalSessionsCreate,
+    constructEvent,
+    subscriptionsRetrieve,
+    subscriptionsList,
+    subscriptionsCancel,
+  };
+}
+
 describe('StripePaymentGateway', () => {
   it('creates a Stripe customer with the correct Stripe parameters', async () => {
-    const customersCreate = vi.fn(async () => ({ id: 'cus_123' }));
-    const customersSearch = vi.fn(async () => ({ data: [] }));
-    const stripe = {
-      customers: { create: customersCreate, search: customersSearch },
-      checkout: {
-        sessions: {
-          create: vi.fn(async () => ({
-            id: 'cs_new',
-            url: 'https://stripe/checkout',
-          })),
-          list: vi.fn(async () => ({ data: [] })),
-          retrieve: vi.fn(async () => ({
-            id: 'cs_existing',
-            url: 'https://stripe/existing-checkout',
-            line_items: { data: [] },
-          })),
-          expire: vi.fn(async () => ({
-            id: 'cs_existing',
-            url: 'https://stripe/existing-checkout',
-          })),
-        },
-      },
-      billingPortal: {
-        sessions: {
-          create: vi.fn(async () => ({ url: 'https://stripe/portal' })),
-        },
-      },
-      webhooks: {
-        constructEvent: vi.fn(() => {
-          throw new Error('unexpected webhook call');
-        }),
-      },
-    } as const;
-
-    const gateway = new StripePaymentGateway({
-      stripe,
-      webhookSecret: 'whsec_1',
-      priceIds: { monthly: 'price_m', annual: 'price_a' },
-      logger: new FakeLogger(),
-    });
+    const { stripe, customersCreate, customersSearch } = createStripeMock();
+    const gateway = createGateway(stripe);
 
     await expect(
       gateway.createCustomer({
@@ -71,46 +152,10 @@ describe('StripePaymentGateway', () => {
   });
 
   it('reuses an existing Stripe customer when one is found by metadata', async () => {
-    const customersCreate = vi.fn(async () => ({ id: 'cus_new' }));
-    const customersSearch = vi.fn(async () => ({ data: [{ id: 'cus_123' }] }));
-    const stripe = {
-      customers: { create: customersCreate, search: customersSearch },
-      checkout: {
-        sessions: {
-          create: vi.fn(async () => ({
-            id: 'cs_new',
-            url: 'https://stripe/checkout',
-          })),
-          list: vi.fn(async () => ({ data: [] })),
-          retrieve: vi.fn(async () => ({
-            id: 'cs_existing',
-            url: 'https://stripe/existing-checkout',
-            line_items: { data: [] },
-          })),
-          expire: vi.fn(async () => ({
-            id: 'cs_existing',
-            url: 'https://stripe/existing-checkout',
-          })),
-        },
-      },
-      billingPortal: {
-        sessions: {
-          create: vi.fn(async () => ({ url: 'https://stripe/portal' })),
-        },
-      },
-      webhooks: {
-        constructEvent: vi.fn(() => {
-          throw new Error('unexpected webhook call');
-        }),
-      },
-    } as const;
-
-    const gateway = new StripePaymentGateway({
-      stripe,
-      webhookSecret: 'whsec_1',
-      priceIds: { monthly: 'price_m', annual: 'price_a' },
-      logger: new FakeLogger(),
-    });
+    const { stripe, customersCreate, customersSearch } = createStripeMock();
+    customersCreate.mockResolvedValue({ id: 'cus_new' });
+    customersSearch.mockResolvedValue({ data: [{ id: 'cus_123' }] });
+    const gateway = createGateway(stripe);
 
     await expect(
       gateway.createCustomer({
@@ -128,52 +173,13 @@ describe('StripePaymentGateway', () => {
   });
 
   it('retries Stripe customer creation on transient errors when an idempotency key is provided', async () => {
-    const customersCreate = vi
-      .fn()
+    const { stripe, customersCreate } = createStripeMock();
+    customersCreate
       .mockRejectedValueOnce(
         Object.assign(new Error('reset'), { code: 'ECONNRESET' }),
       )
       .mockResolvedValueOnce({ id: 'cus_123' });
-    const customersSearch = vi.fn(async () => ({ data: [] }));
-
-    const stripe = {
-      customers: { create: customersCreate, search: customersSearch },
-      checkout: {
-        sessions: {
-          create: vi.fn(async () => ({
-            id: 'cs_new',
-            url: 'https://stripe/checkout',
-          })),
-          list: vi.fn(async () => ({ data: [] })),
-          retrieve: vi.fn(async () => ({
-            id: 'cs_existing',
-            url: 'https://stripe/existing-checkout',
-            line_items: { data: [] },
-          })),
-          expire: vi.fn(async () => ({
-            id: 'cs_existing',
-            url: 'https://stripe/existing-checkout',
-          })),
-        },
-      },
-      billingPortal: {
-        sessions: {
-          create: vi.fn(async () => ({ url: 'https://stripe/portal' })),
-        },
-      },
-      webhooks: {
-        constructEvent: vi.fn(() => {
-          throw new Error('unexpected webhook call');
-        }),
-      },
-    } as const;
-
-    const gateway = new StripePaymentGateway({
-      stripe,
-      webhookSecret: 'whsec_1',
-      priceIds: { monthly: 'price_m', annual: 'price_a' },
-      logger: new FakeLogger(),
-    });
+    const gateway = createGateway(stripe);
 
     await expect(
       gateway.createCustomer(
@@ -190,47 +196,9 @@ describe('StripePaymentGateway', () => {
   });
 
   it('throws STRIPE_ERROR when a Stripe customer id is missing', async () => {
-    const stripe = {
-      customers: {
-        create: vi.fn(async () => ({ id: undefined })),
-        search: vi.fn(async () => ({ data: [] })),
-      },
-      checkout: {
-        sessions: {
-          create: vi.fn(async () => ({
-            id: 'cs_new',
-            url: 'https://stripe/checkout',
-          })),
-          list: vi.fn(async () => ({ data: [] })),
-          retrieve: vi.fn(async () => ({
-            id: 'cs_existing',
-            url: 'https://stripe/existing-checkout',
-            line_items: { data: [] },
-          })),
-          expire: vi.fn(async () => ({
-            id: 'cs_existing',
-            url: 'https://stripe/existing-checkout',
-          })),
-        },
-      },
-      billingPortal: {
-        sessions: {
-          create: vi.fn(async () => ({ url: 'https://stripe/portal' })),
-        },
-      },
-      webhooks: {
-        constructEvent: vi.fn(() => {
-          throw new Error('unexpected webhook call');
-        }),
-      },
-    } as const;
-
-    const gateway = new StripePaymentGateway({
-      stripe,
-      webhookSecret: 'whsec_1',
-      priceIds: { monthly: 'price_m', annual: 'price_a' },
-      logger: new FakeLogger(),
-    });
+    const { stripe, customersCreate } = createStripeMock();
+    customersCreate.mockResolvedValue({ id: undefined });
+    const gateway = createGateway(stripe);
 
     await expect(
       gateway.createCustomer({
@@ -242,47 +210,8 @@ describe('StripePaymentGateway', () => {
   });
 
   it('creates a subscription checkout session with the correct Stripe parameters', async () => {
-    const checkoutCreate = vi.fn(async () => ({
-      id: 'cs_new',
-      url: 'https://stripe/checkout',
-    }));
-    const stripe = {
-      customers: {
-        create: vi.fn(async () => ({ id: 'cus_123' })),
-      },
-      checkout: {
-        sessions: {
-          create: checkoutCreate,
-          list: vi.fn(async () => ({ data: [] })),
-          retrieve: vi.fn(async () => ({
-            id: 'cs_existing',
-            url: 'https://stripe/existing-checkout',
-            line_items: { data: [] },
-          })),
-          expire: vi.fn(async () => ({
-            id: 'cs_existing',
-            url: 'https://stripe/existing-checkout',
-          })),
-        },
-      },
-      billingPortal: {
-        sessions: {
-          create: vi.fn(async () => ({ url: 'https://stripe/portal' })),
-        },
-      },
-      webhooks: {
-        constructEvent: vi.fn(() => {
-          throw new Error('unexpected webhook call');
-        }),
-      },
-    } as const;
-
-    const gateway = new StripePaymentGateway({
-      stripe,
-      webhookSecret: 'whsec_1',
-      priceIds: { monthly: 'price_m', annual: 'price_a' },
-      logger: new FakeLogger(),
-    });
+    const { stripe, sessionsCreate } = createStripeMock();
+    const gateway = createGateway(stripe);
 
     await expect(
       gateway.createCheckoutSession({
@@ -294,7 +223,7 @@ describe('StripePaymentGateway', () => {
       }),
     ).resolves.toEqual({ url: 'https://stripe/checkout' });
 
-    expect(checkoutCreate).toHaveBeenCalledWith(
+    expect(sessionsCreate).toHaveBeenCalledWith(
       expect.objectContaining({
         mode: 'subscription',
         customer: 'cus_123',
@@ -322,55 +251,12 @@ describe('StripePaymentGateway', () => {
     'incomplete',
     'paused',
   ] as const)('throws ALREADY_SUBSCRIBED when Stripe has a %s subscription for the customer', async (status) => {
-    const checkoutCreate = vi.fn(async () => ({
-      id: 'cs_new',
-      url: 'https://stripe/checkout',
-    }));
-    const subscriptionsList = vi.fn(async () => ({
+    const { stripe, sessionsCreate, subscriptionsList } =
+      createStripeMock(true);
+    subscriptionsList.mockResolvedValue({
       data: [{ id: 'sub_blocking_1', status }],
-    }));
-
-    const stripe = {
-      customers: {
-        create: vi.fn(async () => ({ id: 'cus_123' })),
-      },
-      checkout: {
-        sessions: {
-          create: checkoutCreate,
-          list: vi.fn(async () => ({ data: [] })),
-          retrieve: vi.fn(async () => ({
-            id: 'cs_existing',
-            url: 'https://stripe/existing-checkout',
-            line_items: { data: [] },
-          })),
-          expire: vi.fn(async () => ({
-            id: 'cs_existing',
-            url: 'https://stripe/existing-checkout',
-          })),
-        },
-      },
-      subscriptions: {
-        retrieve: vi.fn(async () => ({})),
-        list: subscriptionsList,
-      },
-      billingPortal: {
-        sessions: {
-          create: vi.fn(async () => ({ url: 'https://stripe/portal' })),
-        },
-      },
-      webhooks: {
-        constructEvent: vi.fn(() => {
-          throw new Error('unexpected webhook call');
-        }),
-      },
-    } as const;
-
-    const gateway = new StripePaymentGateway({
-      stripe,
-      webhookSecret: 'whsec_1',
-      priceIds: { monthly: 'price_m', annual: 'price_a' },
-      logger: new FakeLogger(),
     });
+    const gateway = createGateway(stripe);
 
     await expect(
       gateway.createCheckoutSession({
@@ -387,62 +273,19 @@ describe('StripePaymentGateway', () => {
       status: 'all',
       limit: SUBSCRIPTION_LIST_LIMIT,
     });
-    expect(checkoutCreate).not.toHaveBeenCalled();
+    expect(sessionsCreate).not.toHaveBeenCalled();
   });
 
   it('creates a checkout session when Stripe subscriptions are only ended or canceled', async () => {
-    const checkoutCreate = vi.fn(async () => ({
-      id: 'cs_new',
-      url: 'https://stripe/checkout',
-    }));
-    const subscriptionsList = vi.fn(async () => ({
+    const { stripe, sessionsCreate, subscriptionsList } =
+      createStripeMock(true);
+    subscriptionsList.mockResolvedValue({
       data: [
         { id: 'sub_ended_1', status: 'canceled' as const },
         { id: 'sub_ended_2', status: 'incomplete_expired' as const },
       ],
-    }));
-
-    const stripe = {
-      customers: {
-        create: vi.fn(async () => ({ id: 'cus_123' })),
-      },
-      checkout: {
-        sessions: {
-          create: checkoutCreate,
-          list: vi.fn(async () => ({ data: [] })),
-          retrieve: vi.fn(async () => ({
-            id: 'cs_existing',
-            url: 'https://stripe/existing-checkout',
-            line_items: { data: [] },
-          })),
-          expire: vi.fn(async () => ({
-            id: 'cs_existing',
-            url: 'https://stripe/existing-checkout',
-          })),
-        },
-      },
-      subscriptions: {
-        retrieve: vi.fn(async () => ({})),
-        list: subscriptionsList,
-      },
-      billingPortal: {
-        sessions: {
-          create: vi.fn(async () => ({ url: 'https://stripe/portal' })),
-        },
-      },
-      webhooks: {
-        constructEvent: vi.fn(() => {
-          throw new Error('unexpected webhook call');
-        }),
-      },
-    } as const;
-
-    const gateway = new StripePaymentGateway({
-      stripe,
-      webhookSecret: 'whsec_1',
-      priceIds: { monthly: 'price_m', annual: 'price_a' },
-      logger: new FakeLogger(),
     });
+    const gateway = createGateway(stripe);
 
     await expect(
       gateway.createCheckoutSession({
@@ -459,57 +302,26 @@ describe('StripePaymentGateway', () => {
       status: 'all',
       limit: SUBSCRIPTION_LIST_LIMIT,
     });
-    expect(checkoutCreate).toHaveBeenCalledTimes(1);
+    expect(sessionsCreate).toHaveBeenCalledTimes(1);
   });
 
   it('reuses an existing open checkout session when present', async () => {
-    const checkoutList = vi.fn(async () => ({
+    const {
+      stripe,
+      sessionsCreate,
+      sessionsExpire,
+      sessionsList,
+      sessionsRetrieve,
+    } = createStripeMock();
+    sessionsList.mockResolvedValue({
       data: [{ id: 'cs_existing', url: 'https://stripe/existing-checkout' }],
-    }));
-    const checkoutRetrieve = vi.fn(async () => ({
+    });
+    sessionsRetrieve.mockResolvedValue({
       id: 'cs_existing',
       url: 'https://stripe/existing-checkout',
       line_items: { data: [{ price: { id: 'price_a' } }] },
-    }));
-    const checkoutExpire = vi.fn(async () => ({
-      id: 'cs_existing',
-      url: 'https://stripe/existing-checkout',
-    }));
-    const checkoutCreate = vi.fn(async () => ({
-      id: 'cs_new',
-      url: 'https://stripe/new-checkout',
-    }));
-
-    const stripe = {
-      customers: {
-        create: vi.fn(async () => ({ id: 'cus_123' })),
-      },
-      checkout: {
-        sessions: {
-          create: checkoutCreate,
-          list: checkoutList,
-          retrieve: checkoutRetrieve,
-          expire: checkoutExpire,
-        },
-      },
-      billingPortal: {
-        sessions: {
-          create: vi.fn(async () => ({ url: 'https://stripe/portal' })),
-        },
-      },
-      webhooks: {
-        constructEvent: vi.fn(() => {
-          throw new Error('unexpected webhook call');
-        }),
-      },
-    } as const;
-
-    const gateway = new StripePaymentGateway({
-      stripe,
-      webhookSecret: 'whsec_1',
-      priceIds: { monthly: 'price_m', annual: 'price_a' },
-      logger: new FakeLogger(),
     });
+    const gateway = createGateway(stripe);
 
     await expect(
       gateway.createCheckoutSession({
@@ -521,66 +333,39 @@ describe('StripePaymentGateway', () => {
       }),
     ).resolves.toEqual({ url: 'https://stripe/existing-checkout' });
 
-    expect(checkoutList).toHaveBeenCalledWith({
+    expect(sessionsList).toHaveBeenCalledWith({
       customer: 'cus_123',
       status: 'open',
       limit: 1,
     });
-    expect(checkoutRetrieve).toHaveBeenCalledWith('cs_existing', {
+    expect(sessionsRetrieve).toHaveBeenCalledWith('cs_existing', {
       expand: ['line_items'],
     });
-    expect(checkoutExpire).not.toHaveBeenCalled();
-    expect(checkoutCreate).not.toHaveBeenCalled();
+    expect(sessionsExpire).not.toHaveBeenCalled();
+    expect(sessionsCreate).not.toHaveBeenCalled();
   });
 
   it('expires an existing open checkout session when the plan does not match', async () => {
-    const checkoutList = vi.fn(async () => ({
+    const {
+      stripe,
+      sessionsCreate,
+      sessionsExpire,
+      sessionsList,
+      sessionsRetrieve,
+    } = createStripeMock();
+    sessionsList.mockResolvedValue({
       data: [{ id: 'cs_existing', url: 'https://stripe/existing-checkout' }],
-    }));
-    const checkoutRetrieve = vi.fn(async () => ({
+    });
+    sessionsRetrieve.mockResolvedValue({
       id: 'cs_existing',
       url: 'https://stripe/existing-checkout',
       line_items: { data: [{ price: { id: 'price_a' } }] },
-    }));
-    const checkoutExpire = vi.fn(async () => ({
-      id: 'cs_existing',
-      url: 'https://stripe/existing-checkout',
-    }));
-    const checkoutCreate = vi.fn(async () => ({
+    });
+    sessionsCreate.mockResolvedValue({
       id: 'cs_new',
       url: 'https://stripe/new-checkout',
-    }));
-
-    const stripe = {
-      customers: {
-        create: vi.fn(async () => ({ id: 'cus_123' })),
-      },
-      checkout: {
-        sessions: {
-          create: checkoutCreate,
-          list: checkoutList,
-          retrieve: checkoutRetrieve,
-          expire: checkoutExpire,
-        },
-      },
-      billingPortal: {
-        sessions: {
-          create: vi.fn(async () => ({ url: 'https://stripe/portal' })),
-        },
-      },
-      webhooks: {
-        constructEvent: vi.fn(() => {
-          throw new Error('unexpected webhook call');
-        }),
-      },
-    } as const;
-
-    const gateway = new StripePaymentGateway({
-      stripe,
-      webhookSecret: 'whsec_1',
-      priceIds: { monthly: 'price_m', annual: 'price_a' },
-      logger: new FakeLogger(),
     });
+    const gateway = createGateway(stripe);
 
     await expect(
       gateway.createCheckoutSession({
@@ -592,13 +377,13 @@ describe('StripePaymentGateway', () => {
       }),
     ).resolves.toEqual({ url: 'https://stripe/new-checkout' });
 
-    expect(checkoutRetrieve).toHaveBeenCalledWith('cs_existing', {
+    expect(sessionsRetrieve).toHaveBeenCalledWith('cs_existing', {
       expand: ['line_items'],
     });
-    expect(checkoutExpire).toHaveBeenCalledWith('cs_existing', {
+    expect(sessionsExpire).toHaveBeenCalledWith('cs_existing', {
       idempotencyKey: 'expire_checkout_session:cs_existing',
     });
-    expect(checkoutCreate).toHaveBeenCalledWith(
+    expect(sessionsCreate).toHaveBeenCalledWith(
       expect.objectContaining({
         line_items: [{ price: 'price_m', quantity: 1 }],
       }),
@@ -609,52 +394,23 @@ describe('StripePaymentGateway', () => {
   });
 
   it('returns a new checkout session when inspecting an existing session fails', async () => {
-    const checkoutList = vi.fn(async () => ({
+    const logger = new FakeLogger();
+    const {
+      stripe,
+      sessionsCreate,
+      sessionsExpire,
+      sessionsList,
+      sessionsRetrieve,
+    } = createStripeMock();
+    sessionsList.mockResolvedValue({
       data: [{ id: 'cs_existing', url: 'https://stripe/existing-checkout' }],
-    }));
-    const checkoutRetrieve = vi.fn(async () => {
-      throw new Error('inspect failed');
     });
-    const checkoutExpire = vi.fn(async () => ({
-      id: 'cs_existing',
-      url: 'https://stripe/existing-checkout',
-    }));
-    const checkoutCreate = vi.fn(async () => ({
+    sessionsRetrieve.mockRejectedValue(new Error('inspect failed'));
+    sessionsCreate.mockResolvedValue({
       id: 'cs_new',
       url: 'https://stripe/new-checkout',
-    }));
-    const logger = new FakeLogger();
-
-    const stripe = {
-      customers: {
-        create: vi.fn(async () => ({ id: 'cus_123' })),
-      },
-      checkout: {
-        sessions: {
-          create: checkoutCreate,
-          list: checkoutList,
-          retrieve: checkoutRetrieve,
-          expire: checkoutExpire,
-        },
-      },
-      billingPortal: {
-        sessions: {
-          create: vi.fn(async () => ({ url: 'https://stripe/portal' })),
-        },
-      },
-      webhooks: {
-        constructEvent: vi.fn(() => {
-          throw new Error('unexpected webhook call');
-        }),
-      },
-    } as const;
-
-    const gateway = new StripePaymentGateway({
-      stripe,
-      webhookSecret: 'whsec_1',
-      priceIds: { monthly: 'price_m', annual: 'price_a' },
-      logger,
     });
+    const gateway = createGateway(stripe, { logger });
 
     const result = await gateway.createCheckoutSession({
       userId: 'user_1',
@@ -666,11 +422,11 @@ describe('StripePaymentGateway', () => {
 
     expect(result).toEqual({ url: 'https://stripe/new-checkout' });
 
-    expect(checkoutRetrieve).toHaveBeenCalledWith('cs_existing', {
+    expect(sessionsRetrieve).toHaveBeenCalledWith('cs_existing', {
       expand: ['line_items'],
     });
-    expect(checkoutExpire).not.toHaveBeenCalled();
-    expect(checkoutCreate).toHaveBeenCalledTimes(1);
+    expect(sessionsExpire).not.toHaveBeenCalled();
+    expect(sessionsCreate).toHaveBeenCalledTimes(1);
     expect(logger.warnCalls).toContainEqual({
       context: expect.objectContaining({
         sessionId: 'cs_existing',
@@ -681,55 +437,30 @@ describe('StripePaymentGateway', () => {
   });
 
   it('throws STRIPE_ERROR when expiring a mismatched checkout session fails', async () => {
-    const checkoutList = vi.fn(async () => ({
+    const logger = new FakeLogger();
+    const {
+      stripe,
+      sessionsCreate,
+      sessionsExpire,
+      sessionsList,
+      sessionsRetrieve,
+    } = createStripeMock();
+    sessionsList.mockResolvedValue({
       data: [{ id: 'cs_existing', url: 'https://stripe/existing-checkout' }],
-    }));
-    const checkoutRetrieve = vi.fn(async () => ({
+    });
+    sessionsRetrieve.mockResolvedValue({
       id: 'cs_existing',
       url: 'https://stripe/existing-checkout',
       line_items: {
         data: [{ price: { id: 'price_a' } }],
       },
-    }));
-    const checkoutExpire = vi.fn(async () => {
-      throw new Error('expire failed');
     });
-    const checkoutCreate = vi.fn(async () => ({
+    sessionsExpire.mockRejectedValue(new Error('expire failed'));
+    sessionsCreate.mockResolvedValue({
       id: 'cs_new',
       url: 'https://stripe/new-checkout',
-    }));
-    const logger = new FakeLogger();
-
-    const stripe = {
-      customers: {
-        create: vi.fn(async () => ({ id: 'cus_123' })),
-      },
-      checkout: {
-        sessions: {
-          create: checkoutCreate,
-          list: checkoutList,
-          retrieve: checkoutRetrieve,
-          expire: checkoutExpire,
-        },
-      },
-      billingPortal: {
-        sessions: {
-          create: vi.fn(async () => ({ url: 'https://stripe/portal' })),
-        },
-      },
-      webhooks: {
-        constructEvent: vi.fn(() => {
-          throw new Error('unexpected webhook call');
-        }),
-      },
-    } as const;
-
-    const gateway = new StripePaymentGateway({
-      stripe,
-      webhookSecret: 'whsec_1',
-      priceIds: { monthly: 'price_m', annual: 'price_a' },
-      logger,
     });
+    const gateway = createGateway(stripe, { logger });
 
     await expect(
       gateway.createCheckoutSession({
@@ -741,48 +472,14 @@ describe('StripePaymentGateway', () => {
       }),
     ).rejects.toMatchObject({ code: 'STRIPE_ERROR' });
 
-    expect(checkoutExpire).toHaveBeenCalledTimes(1);
-    expect(checkoutCreate).not.toHaveBeenCalled();
+    expect(sessionsExpire).toHaveBeenCalledTimes(1);
+    expect(sessionsCreate).not.toHaveBeenCalled();
   });
 
   it('throws STRIPE_ERROR when a checkout session URL is missing', async () => {
-    const stripe = {
-      customers: {
-        create: vi.fn(async () => ({ id: 'cus_123' })),
-      },
-      checkout: {
-        sessions: {
-          create: vi.fn(async () => ({ id: 'cs_new', url: null })),
-          list: vi.fn(async () => ({ data: [] })),
-          retrieve: vi.fn(async () => ({
-            id: 'cs_existing',
-            url: 'https://stripe/existing-checkout',
-            line_items: { data: [] },
-          })),
-          expire: vi.fn(async () => ({
-            id: 'cs_existing',
-            url: 'https://stripe/existing-checkout',
-          })),
-        },
-      },
-      billingPortal: {
-        sessions: {
-          create: vi.fn(async () => ({ url: 'https://stripe/portal' })),
-        },
-      },
-      webhooks: {
-        constructEvent: vi.fn(() => {
-          throw new Error('unexpected webhook call');
-        }),
-      },
-    } as const;
-
-    const gateway = new StripePaymentGateway({
-      stripe,
-      webhookSecret: 'whsec_1',
-      priceIds: { monthly: 'price_m', annual: 'price_a' },
-      logger: new FakeLogger(),
-    });
+    const { stripe, sessionsCreate } = createStripeMock();
+    sessionsCreate.mockResolvedValue({ id: 'cs_new', url: null });
+    const gateway = createGateway(stripe);
 
     await expect(
       gateway.createCheckoutSession({
@@ -796,43 +493,8 @@ describe('StripePaymentGateway', () => {
   });
 
   it('creates a billing portal session with the correct Stripe parameters', async () => {
-    const portalCreate = vi.fn(async () => ({ url: 'https://stripe/portal' }));
-    const stripe = {
-      customers: {
-        create: vi.fn(async () => ({ id: 'cus_123' })),
-      },
-      checkout: {
-        sessions: {
-          create: vi.fn(async () => ({
-            id: 'cs_new',
-            url: 'https://stripe/checkout',
-          })),
-          list: vi.fn(async () => ({ data: [] })),
-          retrieve: vi.fn(async () => ({
-            id: 'cs_existing',
-            url: 'https://stripe/existing-checkout',
-            line_items: { data: [] },
-          })),
-          expire: vi.fn(async () => ({
-            id: 'cs_existing',
-            url: 'https://stripe/existing-checkout',
-          })),
-        },
-      },
-      billingPortal: { sessions: { create: portalCreate } },
-      webhooks: {
-        constructEvent: vi.fn(() => {
-          throw new Error('unexpected webhook call');
-        }),
-      },
-    } as const;
-
-    const gateway = new StripePaymentGateway({
-      stripe,
-      webhookSecret: 'whsec_1',
-      priceIds: { monthly: 'price_m', annual: 'price_a' },
-      logger: new FakeLogger(),
-    });
+    const { stripe, portalSessionsCreate } = createStripeMock();
+    const gateway = createGateway(stripe);
 
     await expect(
       gateway.createPortalSession({
@@ -841,59 +503,22 @@ describe('StripePaymentGateway', () => {
       }),
     ).resolves.toEqual({ url: 'https://stripe/portal' });
 
-    expect(portalCreate).toHaveBeenCalledWith({
+    expect(portalSessionsCreate).toHaveBeenCalledWith({
       customer: 'cus_123',
       return_url: 'https://app/return',
     });
   });
 
   it('verifies webhook signatures and normalizes subscription update events', async () => {
-    const event = loadJsonFixture<{
-      data: { object: { id: string; [key: string]: unknown } };
-    }>('stripe/customer.subscription.updated.json');
+    const event = loadJsonFixture<
+      StripeWebhookEventFixture<{ id: string; [key: string]: unknown }>
+    >('stripe/customer.subscription.updated.json');
     const subscription = event.data.object;
-    const constructEvent = vi.fn(() => event as never);
-    const subscriptionsRetrieve = vi.fn(async () => subscription);
-
-    const stripe = {
-      customers: {
-        create: vi.fn(async () => ({ id: 'cus_123' })),
-      },
-      checkout: {
-        sessions: {
-          create: vi.fn(async () => ({
-            id: 'cs_new',
-            url: 'https://stripe/checkout',
-          })),
-          list: vi.fn(async () => ({ data: [] })),
-          retrieve: vi.fn(async () => ({
-            id: 'cs_existing',
-            url: 'https://stripe/existing-checkout',
-            line_items: { data: [] },
-          })),
-          expire: vi.fn(async () => ({
-            id: 'cs_existing',
-            url: 'https://stripe/existing-checkout',
-          })),
-        },
-      },
-      subscriptions: {
-        retrieve: subscriptionsRetrieve,
-      },
-      billingPortal: {
-        sessions: {
-          create: vi.fn(async () => ({ url: 'https://stripe/portal' })),
-        },
-      },
-      webhooks: { constructEvent },
-    } as const;
-
-    const gateway = new StripePaymentGateway({
-      stripe,
-      webhookSecret: 'whsec_1',
-      priceIds: { monthly: 'price_m', annual: 'price_a' },
-      logger: new FakeLogger(),
-    });
+    const { stripe, constructEvent, subscriptionsRetrieve } =
+      createStripeMock(true);
+    constructEvent.mockReturnValue(event);
+    subscriptionsRetrieve.mockResolvedValue(subscription);
+    const gateway = createGateway(stripe);
 
     await expect(
       gateway.processWebhookEvent('raw_body', 'sig_1'),
@@ -923,52 +548,16 @@ describe('StripePaymentGateway', () => {
       [key: string]: unknown;
     }>('stripe/customer.subscription.updated.json');
     const subscription = event.data.object as { id: string };
-    const constructEvent = vi.fn(() => ({
+    const constructedEvent = {
       ...event,
       id: 'evt_trial_will_end_1',
       type: 'customer.subscription.trial_will_end',
-    }));
-    const subscriptionsRetrieve = vi.fn(async () => event.data.object);
-
-    const stripe = {
-      customers: {
-        create: vi.fn(async () => ({ id: 'cus_123' })),
-      },
-      checkout: {
-        sessions: {
-          create: vi.fn(async () => ({
-            id: 'cs_new',
-            url: 'https://stripe/checkout',
-          })),
-          list: vi.fn(async () => ({ data: [] })),
-          retrieve: vi.fn(async () => ({
-            id: 'cs_existing',
-            url: 'https://stripe/existing-checkout',
-            line_items: { data: [] },
-          })),
-          expire: vi.fn(async () => ({
-            id: 'cs_existing',
-            url: 'https://stripe/existing-checkout',
-          })),
-        },
-      },
-      subscriptions: {
-        retrieve: subscriptionsRetrieve,
-      },
-      billingPortal: {
-        sessions: {
-          create: vi.fn(async () => ({ url: 'https://stripe/portal' })),
-        },
-      },
-      webhooks: { constructEvent },
-    } as const;
-
-    const gateway = new StripePaymentGateway({
-      stripe,
-      webhookSecret: 'whsec_1',
-      priceIds: { monthly: 'price_m', annual: 'price_a' },
-      logger: new FakeLogger(),
-    });
+    };
+    const { stripe, constructEvent, subscriptionsRetrieve } =
+      createStripeMock(true);
+    constructEvent.mockReturnValue(constructedEvent);
+    subscriptionsRetrieve.mockResolvedValue(event.data.object);
+    const gateway = createGateway(stripe);
 
     await expect(
       gateway.processWebhookEvent('raw_body', 'sig_1'),
@@ -999,55 +588,19 @@ describe('StripePaymentGateway', () => {
       status: 'canceled',
     };
 
-    const constructEvent = vi.fn(() => ({
+    const constructedEvent = {
       ...subscriptionEvent,
       id: 'evt_deleted_1',
       type: 'customer.subscription.deleted',
       data: {
         object: subscription,
       },
-    }));
-    const subscriptionsRetrieve = vi.fn(async () => subscription);
-
-    const stripe = {
-      customers: {
-        create: vi.fn(async () => ({ id: 'cus_123' })),
-      },
-      checkout: {
-        sessions: {
-          create: vi.fn(async () => ({
-            id: 'cs_new',
-            url: 'https://stripe/checkout',
-          })),
-          list: vi.fn(async () => ({ data: [] })),
-          retrieve: vi.fn(async () => ({
-            id: 'cs_existing',
-            url: 'https://stripe/existing-checkout',
-            line_items: { data: [] },
-          })),
-          expire: vi.fn(async () => ({
-            id: 'cs_existing',
-            url: 'https://stripe/existing-checkout',
-          })),
-        },
-      },
-      subscriptions: {
-        retrieve: subscriptionsRetrieve,
-      },
-      billingPortal: {
-        sessions: {
-          create: vi.fn(async () => ({ url: 'https://stripe/portal' })),
-        },
-      },
-      webhooks: { constructEvent },
-    } as const;
-
-    const gateway = new StripePaymentGateway({
-      stripe,
-      webhookSecret: 'whsec_1',
-      priceIds: { monthly: 'price_m', annual: 'price_a' },
-      logger: new FakeLogger(),
-    });
+    };
+    const { stripe, constructEvent, subscriptionsRetrieve } =
+      createStripeMock(true);
+    constructEvent.mockReturnValue(constructedEvent);
+    subscriptionsRetrieve.mockResolvedValue(subscription);
+    const gateway = createGateway(stripe);
 
     await expect(
       gateway.processWebhookEvent('raw_body', 'sig_1'),
@@ -1074,7 +627,7 @@ describe('StripePaymentGateway', () => {
     }>('stripe/customer.subscription.updated.json');
     const subscription = subscriptionEvent.data.object;
 
-    const constructEvent = vi.fn(() => ({
+    const constructedEvent = {
       id: 'evt_checkout_1',
       type: 'checkout.session.completed',
       data: {
@@ -1082,49 +635,12 @@ describe('StripePaymentGateway', () => {
           subscription: subscription.id,
         },
       },
-    }));
-
-    const subscriptionsRetrieve = vi.fn(async () => subscription);
-
-    const stripe = {
-      customers: {
-        create: vi.fn(async () => ({ id: 'cus_123' })),
-      },
-      checkout: {
-        sessions: {
-          create: vi.fn(async () => ({
-            id: 'cs_new',
-            url: 'https://stripe/checkout',
-          })),
-          list: vi.fn(async () => ({ data: [] })),
-          retrieve: vi.fn(async () => ({
-            id: 'cs_existing',
-            url: 'https://stripe/existing-checkout',
-            line_items: { data: [] },
-          })),
-          expire: vi.fn(async () => ({
-            id: 'cs_existing',
-            url: 'https://stripe/existing-checkout',
-          })),
-        },
-      },
-      subscriptions: {
-        retrieve: subscriptionsRetrieve,
-      },
-      billingPortal: {
-        sessions: {
-          create: vi.fn(async () => ({ url: 'https://stripe/portal' })),
-        },
-      },
-      webhooks: { constructEvent },
-    } as const;
-
-    const gateway = new StripePaymentGateway({
-      stripe,
-      webhookSecret: 'whsec_1',
-      priceIds: { monthly: 'price_m', annual: 'price_a' },
-      logger: new FakeLogger(),
-    });
+    };
+    const { stripe, constructEvent, subscriptionsRetrieve } =
+      createStripeMock(true);
+    constructEvent.mockReturnValue(constructedEvent);
+    subscriptionsRetrieve.mockResolvedValue(subscription);
+    const gateway = createGateway(stripe);
 
     await expect(
       gateway.processWebhookEvent('raw_body', 'sig_1'),
@@ -1151,7 +667,7 @@ describe('StripePaymentGateway', () => {
     }>('stripe/customer.subscription.updated.json');
     const subscription = subscriptionEvent.data.object;
 
-    const constructEvent = vi.fn(() => ({
+    const constructedEvent = {
       id: 'evt_invoice_1',
       type: 'invoice.payment_failed',
       data: {
@@ -1159,49 +675,12 @@ describe('StripePaymentGateway', () => {
           subscription: subscription.id,
         },
       },
-    }));
-
-    const subscriptionsRetrieve = vi.fn(async () => subscription);
-
-    const stripe = {
-      customers: {
-        create: vi.fn(async () => ({ id: 'cus_123' })),
-      },
-      checkout: {
-        sessions: {
-          create: vi.fn(async () => ({
-            id: 'cs_new',
-            url: 'https://stripe/checkout',
-          })),
-          list: vi.fn(async () => ({ data: [] })),
-          retrieve: vi.fn(async () => ({
-            id: 'cs_existing',
-            url: 'https://stripe/existing-checkout',
-            line_items: { data: [] },
-          })),
-          expire: vi.fn(async () => ({
-            id: 'cs_existing',
-            url: 'https://stripe/existing-checkout',
-          })),
-        },
-      },
-      subscriptions: {
-        retrieve: subscriptionsRetrieve,
-      },
-      billingPortal: {
-        sessions: {
-          create: vi.fn(async () => ({ url: 'https://stripe/portal' })),
-        },
-      },
-      webhooks: { constructEvent },
-    } as const;
-
-    const gateway = new StripePaymentGateway({
-      stripe,
-      webhookSecret: 'whsec_1',
-      priceIds: { monthly: 'price_m', annual: 'price_a' },
-      logger: new FakeLogger(),
-    });
+    };
+    const { stripe, constructEvent, subscriptionsRetrieve } =
+      createStripeMock(true);
+    constructEvent.mockReturnValue(constructedEvent);
+    subscriptionsRetrieve.mockResolvedValue(subscription);
+    const gateway = createGateway(stripe);
 
     await expect(
       gateway.processWebhookEvent('raw_body', 'sig_1'),
@@ -1228,7 +707,7 @@ describe('StripePaymentGateway', () => {
     }>('stripe/customer.subscription.updated.json');
     const subscription = subscriptionEvent.data.object;
 
-    const constructEvent = vi.fn(() => ({
+    const constructedEvent = {
       id: 'evt_invoice_success_1',
       type: 'invoice.payment_succeeded',
       data: {
@@ -1236,49 +715,12 @@ describe('StripePaymentGateway', () => {
           subscription: subscription.id,
         },
       },
-    }));
-
-    const subscriptionsRetrieve = vi.fn(async () => subscription);
-
-    const stripe = {
-      customers: {
-        create: vi.fn(async () => ({ id: 'cus_123' })),
-      },
-      checkout: {
-        sessions: {
-          create: vi.fn(async () => ({
-            id: 'cs_new',
-            url: 'https://stripe/checkout',
-          })),
-          list: vi.fn(async () => ({ data: [] })),
-          retrieve: vi.fn(async () => ({
-            id: 'cs_existing',
-            url: 'https://stripe/existing-checkout',
-            line_items: { data: [] },
-          })),
-          expire: vi.fn(async () => ({
-            id: 'cs_existing',
-            url: 'https://stripe/existing-checkout',
-          })),
-        },
-      },
-      subscriptions: {
-        retrieve: subscriptionsRetrieve,
-      },
-      billingPortal: {
-        sessions: {
-          create: vi.fn(async () => ({ url: 'https://stripe/portal' })),
-        },
-      },
-      webhooks: { constructEvent },
-    } as const;
-
-    const gateway = new StripePaymentGateway({
-      stripe,
-      webhookSecret: 'whsec_1',
-      priceIds: { monthly: 'price_m', annual: 'price_a' },
-      logger: new FakeLogger(),
-    });
+    };
+    const { stripe, constructEvent, subscriptionsRetrieve } =
+      createStripeMock(true);
+    constructEvent.mockReturnValue(constructedEvent);
+    subscriptionsRetrieve.mockResolvedValue(subscription);
+    const gateway = createGateway(stripe);
 
     await expect(
       gateway.processWebhookEvent('raw_body', 'sig_1'),
@@ -1305,7 +747,7 @@ describe('StripePaymentGateway', () => {
     }>('stripe/customer.subscription.updated.json');
     const subscription = subscriptionEvent.data.object;
 
-    const constructEvent = vi.fn(() => ({
+    const constructedEvent = {
       id: 'evt_invoice_action_required_1',
       type: 'invoice.payment_action_required',
       data: {
@@ -1313,49 +755,12 @@ describe('StripePaymentGateway', () => {
           subscription: subscription.id,
         },
       },
-    }));
-
-    const subscriptionsRetrieve = vi.fn(async () => subscription);
-
-    const stripe = {
-      customers: {
-        create: vi.fn(async () => ({ id: 'cus_123' })),
-      },
-      checkout: {
-        sessions: {
-          create: vi.fn(async () => ({
-            id: 'cs_new',
-            url: 'https://stripe/checkout',
-          })),
-          list: vi.fn(async () => ({ data: [] })),
-          retrieve: vi.fn(async () => ({
-            id: 'cs_existing',
-            url: 'https://stripe/existing-checkout',
-            line_items: { data: [] },
-          })),
-          expire: vi.fn(async () => ({
-            id: 'cs_existing',
-            url: 'https://stripe/existing-checkout',
-          })),
-        },
-      },
-      subscriptions: {
-        retrieve: subscriptionsRetrieve,
-      },
-      billingPortal: {
-        sessions: {
-          create: vi.fn(async () => ({ url: 'https://stripe/portal' })),
-        },
-      },
-      webhooks: { constructEvent },
-    } as const;
-
-    const gateway = new StripePaymentGateway({
-      stripe,
-      webhookSecret: 'whsec_1',
-      priceIds: { monthly: 'price_m', annual: 'price_a' },
-      logger: new FakeLogger(),
-    });
+    };
+    const { stripe, constructEvent, subscriptionsRetrieve } =
+      createStripeMock(true);
+    constructEvent.mockReturnValue(constructedEvent);
+    subscriptionsRetrieve.mockResolvedValue(subscription);
+    const gateway = createGateway(stripe);
 
     await expect(
       gateway.processWebhookEvent('raw_body', 'sig_1'),
@@ -1377,49 +782,15 @@ describe('StripePaymentGateway', () => {
   });
 
   it('throws INVALID_WEBHOOK_PAYLOAD when invoice.payment_failed payload shape is invalid', async () => {
-    const constructEvent = vi.fn(() => ({
+    const constructedEvent = {
       id: 'evt_bad_invoice_payload',
       type: 'invoice.payment_failed',
       data: { object: { subscription: 123 } },
-    }));
-
-    const stripe = {
-      customers: {
-        create: vi.fn(async () => ({ id: 'cus_123' })),
-      },
-      checkout: {
-        sessions: {
-          create: vi.fn(async () => ({
-            id: 'cs_new',
-            url: 'https://stripe/checkout',
-          })),
-          list: vi.fn(async () => ({ data: [] })),
-          retrieve: vi.fn(async () => ({
-            id: 'cs_existing',
-            url: 'https://stripe/existing-checkout',
-            line_items: { data: [] },
-          })),
-          expire: vi.fn(async () => ({
-            id: 'cs_existing',
-            url: 'https://stripe/existing-checkout',
-          })),
-        },
-      },
-      billingPortal: {
-        sessions: {
-          create: vi.fn(async () => ({ url: 'https://stripe/portal' })),
-        },
-      },
-      webhooks: { constructEvent },
-    } as const;
-
+    };
     const logger = new FakeLogger();
-    const gateway = new StripePaymentGateway({
-      stripe,
-      webhookSecret: 'whsec_1',
-      priceIds: { monthly: 'price_m', annual: 'price_a' },
-      logger,
-    });
+    const { stripe, constructEvent } = createStripeMock();
+    constructEvent.mockReturnValue(constructedEvent);
+    const gateway = createGateway(stripe, { logger });
 
     await expect(
       gateway.processWebhookEvent('raw_body', 'sig_1'),
@@ -1435,54 +806,17 @@ describe('StripePaymentGateway', () => {
   });
 
   it('throws INVALID_WEBHOOK_PAYLOAD when invoice.payment_failed subscription payload is invalid', async () => {
-    const constructEvent = vi.fn(() => ({
+    const constructedEvent = {
       id: 'evt_bad_invoice_subscription_payload',
       type: 'invoice.payment_failed',
       data: { object: { subscription: 'sub_123' } },
-    }));
-
-    const subscriptionsRetrieve = vi.fn(async () => ({ id: 123 }));
-
-    const stripe = {
-      customers: {
-        create: vi.fn(async () => ({ id: 'cus_123' })),
-      },
-      checkout: {
-        sessions: {
-          create: vi.fn(async () => ({
-            id: 'cs_new',
-            url: 'https://stripe/checkout',
-          })),
-          list: vi.fn(async () => ({ data: [] })),
-          retrieve: vi.fn(async () => ({
-            id: 'cs_existing',
-            url: 'https://stripe/existing-checkout',
-            line_items: { data: [] },
-          })),
-          expire: vi.fn(async () => ({
-            id: 'cs_existing',
-            url: 'https://stripe/existing-checkout',
-          })),
-        },
-      },
-      subscriptions: {
-        retrieve: subscriptionsRetrieve,
-      },
-      billingPortal: {
-        sessions: {
-          create: vi.fn(async () => ({ url: 'https://stripe/portal' })),
-        },
-      },
-      webhooks: { constructEvent },
-    } as const;
-
+    };
     const logger = new FakeLogger();
-    const gateway = new StripePaymentGateway({
-      stripe,
-      webhookSecret: 'whsec_1',
-      priceIds: { monthly: 'price_m', annual: 'price_a' },
-      logger,
-    });
+    const { stripe, constructEvent, subscriptionsRetrieve } =
+      createStripeMock(true);
+    constructEvent.mockReturnValue(constructedEvent);
+    subscriptionsRetrieve.mockResolvedValue({ id: 123 });
+    const gateway = createGateway(stripe, { logger });
 
     await expect(
       gateway.processWebhookEvent('raw_body', 'sig_1'),
@@ -1500,48 +834,14 @@ describe('StripePaymentGateway', () => {
   });
 
   it('ignores invoice.payment_failed events when no subscription is present', async () => {
-    const constructEvent = vi.fn(() => ({
+    const constructedEvent = {
       id: 'evt_invoice_no_subscription',
       type: 'invoice.payment_failed',
       data: { object: { subscription: null } },
-    }));
-
-    const stripe = {
-      customers: {
-        create: vi.fn(async () => ({ id: 'cus_123' })),
-      },
-      checkout: {
-        sessions: {
-          create: vi.fn(async () => ({
-            id: 'cs_new',
-            url: 'https://stripe/checkout',
-          })),
-          list: vi.fn(async () => ({ data: [] })),
-          retrieve: vi.fn(async () => ({
-            id: 'cs_existing',
-            url: 'https://stripe/existing-checkout',
-            line_items: { data: [] },
-          })),
-          expire: vi.fn(async () => ({
-            id: 'cs_existing',
-            url: 'https://stripe/existing-checkout',
-          })),
-        },
-      },
-      billingPortal: {
-        sessions: {
-          create: vi.fn(async () => ({ url: 'https://stripe/portal' })),
-        },
-      },
-      webhooks: { constructEvent },
-    } as const;
-
-    const gateway = new StripePaymentGateway({
-      stripe,
-      webhookSecret: 'whsec_1',
-      priceIds: { monthly: 'price_m', annual: 'price_a' },
-      logger: new FakeLogger(),
-    });
+    };
+    const { stripe, constructEvent } = createStripeMock();
+    constructEvent.mockReturnValue(constructedEvent);
+    const gateway = createGateway(stripe);
 
     await expect(
       gateway.processWebhookEvent('raw_body', 'sig_1'),
@@ -1552,48 +852,14 @@ describe('StripePaymentGateway', () => {
   });
 
   it('throws STRIPE_ERROR when invoice.payment_failed is missing the subscriptions client', async () => {
-    const constructEvent = vi.fn(() => ({
+    const constructedEvent = {
       id: 'evt_invoice_no_subscriptions_client',
       type: 'invoice.payment_failed',
       data: { object: { subscription: 'sub_123' } },
-    }));
-
-    const stripe = {
-      customers: {
-        create: vi.fn(async () => ({ id: 'cus_123' })),
-      },
-      checkout: {
-        sessions: {
-          create: vi.fn(async () => ({
-            id: 'cs_new',
-            url: 'https://stripe/checkout',
-          })),
-          list: vi.fn(async () => ({ data: [] })),
-          retrieve: vi.fn(async () => ({
-            id: 'cs_existing',
-            url: 'https://stripe/existing-checkout',
-            line_items: { data: [] },
-          })),
-          expire: vi.fn(async () => ({
-            id: 'cs_existing',
-            url: 'https://stripe/existing-checkout',
-          })),
-        },
-      },
-      billingPortal: {
-        sessions: {
-          create: vi.fn(async () => ({ url: 'https://stripe/portal' })),
-        },
-      },
-      webhooks: { constructEvent },
-    } as const;
-
-    const gateway = new StripePaymentGateway({
-      stripe,
-      webhookSecret: 'whsec_1',
-      priceIds: { monthly: 'price_m', annual: 'price_a' },
-      logger: new FakeLogger(),
-    });
+    };
+    const { stripe, constructEvent } = createStripeMock();
+    constructEvent.mockReturnValue(constructedEvent);
+    const gateway = createGateway(stripe);
 
     await expect(
       gateway.processWebhookEvent('raw_body', 'sig_1'),
@@ -1601,49 +867,15 @@ describe('StripePaymentGateway', () => {
   });
 
   it('throws INVALID_WEBHOOK_PAYLOAD when checkout.session.completed payload shape is invalid', async () => {
-    const constructEvent = vi.fn(() => ({
+    const constructedEvent = {
       id: 'evt_bad_checkout_payload',
       type: 'checkout.session.completed',
       data: { object: { subscription: 123 } },
-    }));
-
-    const stripe = {
-      customers: {
-        create: vi.fn(async () => ({ id: 'cus_123' })),
-      },
-      checkout: {
-        sessions: {
-          create: vi.fn(async () => ({
-            id: 'cs_new',
-            url: 'https://stripe/checkout',
-          })),
-          list: vi.fn(async () => ({ data: [] })),
-          retrieve: vi.fn(async () => ({
-            id: 'cs_existing',
-            url: 'https://stripe/existing-checkout',
-            line_items: { data: [] },
-          })),
-          expire: vi.fn(async () => ({
-            id: 'cs_existing',
-            url: 'https://stripe/existing-checkout',
-          })),
-        },
-      },
-      billingPortal: {
-        sessions: {
-          create: vi.fn(async () => ({ url: 'https://stripe/portal' })),
-        },
-      },
-      webhooks: { constructEvent },
-    } as const;
-
+    };
     const logger = new FakeLogger();
-    const gateway = new StripePaymentGateway({
-      stripe,
-      webhookSecret: 'whsec_1',
-      priceIds: { monthly: 'price_m', annual: 'price_a' },
-      logger,
-    });
+    const { stripe, constructEvent } = createStripeMock();
+    constructEvent.mockReturnValue(constructedEvent);
+    const gateway = createGateway(stripe, { logger });
 
     await expect(
       gateway.processWebhookEvent('raw_body', 'sig_1'),
@@ -1659,54 +891,17 @@ describe('StripePaymentGateway', () => {
   });
 
   it('throws INVALID_WEBHOOK_PAYLOAD when checkout.session.completed subscription payload is invalid', async () => {
-    const constructEvent = vi.fn(() => ({
+    const constructedEvent = {
       id: 'evt_bad_subscription_payload',
       type: 'checkout.session.completed',
       data: { object: { subscription: 'sub_123' } },
-    }));
-
-    const subscriptionsRetrieve = vi.fn(async () => ({ id: 123 }));
-
-    const stripe = {
-      customers: {
-        create: vi.fn(async () => ({ id: 'cus_123' })),
-      },
-      checkout: {
-        sessions: {
-          create: vi.fn(async () => ({
-            id: 'cs_new',
-            url: 'https://stripe/checkout',
-          })),
-          list: vi.fn(async () => ({ data: [] })),
-          retrieve: vi.fn(async () => ({
-            id: 'cs_existing',
-            url: 'https://stripe/existing-checkout',
-            line_items: { data: [] },
-          })),
-          expire: vi.fn(async () => ({
-            id: 'cs_existing',
-            url: 'https://stripe/existing-checkout',
-          })),
-        },
-      },
-      subscriptions: {
-        retrieve: subscriptionsRetrieve,
-      },
-      billingPortal: {
-        sessions: {
-          create: vi.fn(async () => ({ url: 'https://stripe/portal' })),
-        },
-      },
-      webhooks: { constructEvent },
-    } as const;
-
+    };
     const logger = new FakeLogger();
-    const gateway = new StripePaymentGateway({
-      stripe,
-      webhookSecret: 'whsec_1',
-      priceIds: { monthly: 'price_m', annual: 'price_a' },
-      logger,
-    });
+    const { stripe, constructEvent, subscriptionsRetrieve } =
+      createStripeMock(true);
+    constructEvent.mockReturnValue(constructedEvent);
+    subscriptionsRetrieve.mockResolvedValue({ id: 123 });
+    const gateway = createGateway(stripe, { logger });
 
     await expect(
       gateway.processWebhookEvent('raw_body', 'sig_1'),
@@ -1724,48 +919,14 @@ describe('StripePaymentGateway', () => {
   });
 
   it('throws INVALID_WEBHOOK_PAYLOAD when subscription payload shape is invalid', async () => {
-    const constructEvent = vi.fn(() => ({
+    const constructedEvent = {
       id: 'evt_bad',
       type: 'customer.subscription.updated',
       data: { object: { id: 123 } },
-    }));
-
-    const stripe = {
-      customers: {
-        create: vi.fn(async () => ({ id: 'cus_123' })),
-      },
-      checkout: {
-        sessions: {
-          create: vi.fn(async () => ({
-            id: 'cs_new',
-            url: 'https://stripe/checkout',
-          })),
-          list: vi.fn(async () => ({ data: [] })),
-          retrieve: vi.fn(async () => ({
-            id: 'cs_existing',
-            url: 'https://stripe/existing-checkout',
-            line_items: { data: [] },
-          })),
-          expire: vi.fn(async () => ({
-            id: 'cs_existing',
-            url: 'https://stripe/existing-checkout',
-          })),
-        },
-      },
-      billingPortal: {
-        sessions: {
-          create: vi.fn(async () => ({ url: 'https://stripe/portal' })),
-        },
-      },
-      webhooks: { constructEvent },
-    } as const;
-
-    const gateway = new StripePaymentGateway({
-      stripe,
-      webhookSecret: 'whsec_1',
-      priceIds: { monthly: 'price_m', annual: 'price_a' },
-      logger: new FakeLogger(),
-    });
+    };
+    const { stripe, constructEvent } = createStripeMock();
+    constructEvent.mockReturnValue(constructedEvent);
+    const gateway = createGateway(stripe);
 
     await expect(
       gateway.processWebhookEvent('raw_body', 'sig_1'),
@@ -1773,51 +934,14 @@ describe('StripePaymentGateway', () => {
   });
 
   it('normalizes customer.subscription.paused events', async () => {
-    const event = loadJsonFixture<{
-      data: { object: { id: string; [key: string]: unknown } };
-    }>('stripe/customer.subscription.paused.json');
-    const constructEvent = vi.fn(() => event as never);
-    const subscriptionsRetrieve = vi.fn(async () => event.data.object);
-
-    const stripe = {
-      customers: {
-        create: vi.fn(async () => ({ id: 'cus_123' })),
-      },
-      checkout: {
-        sessions: {
-          create: vi.fn(async () => ({
-            id: 'cs_new',
-            url: 'https://stripe/checkout',
-          })),
-          list: vi.fn(async () => ({ data: [] })),
-          retrieve: vi.fn(async () => ({
-            id: 'cs_existing',
-            url: 'https://stripe/existing-checkout',
-            line_items: { data: [] },
-          })),
-          expire: vi.fn(async () => ({
-            id: 'cs_existing',
-            url: 'https://stripe/existing-checkout',
-          })),
-        },
-      },
-      subscriptions: {
-        retrieve: subscriptionsRetrieve,
-      },
-      billingPortal: {
-        sessions: {
-          create: vi.fn(async () => ({ url: 'https://stripe/portal' })),
-        },
-      },
-      webhooks: { constructEvent },
-    } as const;
-
-    const gateway = new StripePaymentGateway({
-      stripe,
-      webhookSecret: 'whsec_1',
-      priceIds: { monthly: 'price_m', annual: 'price_a' },
-      logger: new FakeLogger(),
-    });
+    const event = loadJsonFixture<
+      StripeWebhookEventFixture<{ id: string; [key: string]: unknown }>
+    >('stripe/customer.subscription.paused.json');
+    const { stripe, constructEvent, subscriptionsRetrieve } =
+      createStripeMock(true);
+    constructEvent.mockReturnValue(event);
+    subscriptionsRetrieve.mockResolvedValue(event.data.object);
+    const gateway = createGateway(stripe);
 
     await expect(
       gateway.processWebhookEvent('raw_body', 'sig_1'),
@@ -1839,51 +963,14 @@ describe('StripePaymentGateway', () => {
   });
 
   it('normalizes customer.subscription.resumed events', async () => {
-    const event = loadJsonFixture<{
-      data: { object: { id: string; [key: string]: unknown } };
-    }>('stripe/customer.subscription.resumed.json');
-    const constructEvent = vi.fn(() => event as never);
-    const subscriptionsRetrieve = vi.fn(async () => event.data.object);
-
-    const stripe = {
-      customers: {
-        create: vi.fn(async () => ({ id: 'cus_123' })),
-      },
-      checkout: {
-        sessions: {
-          create: vi.fn(async () => ({
-            id: 'cs_new',
-            url: 'https://stripe/checkout',
-          })),
-          list: vi.fn(async () => ({ data: [] })),
-          retrieve: vi.fn(async () => ({
-            id: 'cs_existing',
-            url: 'https://stripe/existing-checkout',
-            line_items: { data: [] },
-          })),
-          expire: vi.fn(async () => ({
-            id: 'cs_existing',
-            url: 'https://stripe/existing-checkout',
-          })),
-        },
-      },
-      subscriptions: {
-        retrieve: subscriptionsRetrieve,
-      },
-      billingPortal: {
-        sessions: {
-          create: vi.fn(async () => ({ url: 'https://stripe/portal' })),
-        },
-      },
-      webhooks: { constructEvent },
-    } as const;
-
-    const gateway = new StripePaymentGateway({
-      stripe,
-      webhookSecret: 'whsec_1',
-      priceIds: { monthly: 'price_m', annual: 'price_a' },
-      logger: new FakeLogger(),
-    });
+    const event = loadJsonFixture<
+      StripeWebhookEventFixture<{ id: string; [key: string]: unknown }>
+    >('stripe/customer.subscription.resumed.json');
+    const { stripe, constructEvent, subscriptionsRetrieve } =
+      createStripeMock(true);
+    constructEvent.mockReturnValue(event);
+    subscriptionsRetrieve.mockResolvedValue(event.data.object);
+    const gateway = createGateway(stripe);
 
     await expect(
       gateway.processWebhookEvent('raw_body', 'sig_1'),
@@ -1905,51 +992,14 @@ describe('StripePaymentGateway', () => {
   });
 
   it('normalizes customer.subscription.pending_update_applied events', async () => {
-    const event = loadJsonFixture<{
-      data: { object: { id: string; [key: string]: unknown } };
-    }>('stripe/customer.subscription.pending_update_applied.json');
-    const constructEvent = vi.fn(() => event as never);
-    const subscriptionsRetrieve = vi.fn(async () => event.data.object);
-
-    const stripe = {
-      customers: {
-        create: vi.fn(async () => ({ id: 'cus_123' })),
-      },
-      checkout: {
-        sessions: {
-          create: vi.fn(async () => ({
-            id: 'cs_new',
-            url: 'https://stripe/checkout',
-          })),
-          list: vi.fn(async () => ({ data: [] })),
-          retrieve: vi.fn(async () => ({
-            id: 'cs_existing',
-            url: 'https://stripe/existing-checkout',
-            line_items: { data: [] },
-          })),
-          expire: vi.fn(async () => ({
-            id: 'cs_existing',
-            url: 'https://stripe/existing-checkout',
-          })),
-        },
-      },
-      subscriptions: {
-        retrieve: subscriptionsRetrieve,
-      },
-      billingPortal: {
-        sessions: {
-          create: vi.fn(async () => ({ url: 'https://stripe/portal' })),
-        },
-      },
-      webhooks: { constructEvent },
-    } as const;
-
-    const gateway = new StripePaymentGateway({
-      stripe,
-      webhookSecret: 'whsec_1',
-      priceIds: { monthly: 'price_m', annual: 'price_a' },
-      logger: new FakeLogger(),
-    });
+    const event = loadJsonFixture<
+      StripeWebhookEventFixture<{ id: string; [key: string]: unknown }>
+    >('stripe/customer.subscription.pending_update_applied.json');
+    const { stripe, constructEvent, subscriptionsRetrieve } =
+      createStripeMock(true);
+    constructEvent.mockReturnValue(event);
+    subscriptionsRetrieve.mockResolvedValue(event.data.object);
+    const gateway = createGateway(stripe);
 
     await expect(
       gateway.processWebhookEvent('raw_body', 'sig_1'),
@@ -1971,51 +1021,14 @@ describe('StripePaymentGateway', () => {
   });
 
   it('normalizes customer.subscription.pending_update_expired events', async () => {
-    const event = loadJsonFixture<{
-      data: { object: { id: string; [key: string]: unknown } };
-    }>('stripe/customer.subscription.pending_update_expired.json');
-    const constructEvent = vi.fn(() => event as never);
-    const subscriptionsRetrieve = vi.fn(async () => event.data.object);
-
-    const stripe = {
-      customers: {
-        create: vi.fn(async () => ({ id: 'cus_123' })),
-      },
-      checkout: {
-        sessions: {
-          create: vi.fn(async () => ({
-            id: 'cs_new',
-            url: 'https://stripe/checkout',
-          })),
-          list: vi.fn(async () => ({ data: [] })),
-          retrieve: vi.fn(async () => ({
-            id: 'cs_existing',
-            url: 'https://stripe/existing-checkout',
-            line_items: { data: [] },
-          })),
-          expire: vi.fn(async () => ({
-            id: 'cs_existing',
-            url: 'https://stripe/existing-checkout',
-          })),
-        },
-      },
-      subscriptions: {
-        retrieve: subscriptionsRetrieve,
-      },
-      billingPortal: {
-        sessions: {
-          create: vi.fn(async () => ({ url: 'https://stripe/portal' })),
-        },
-      },
-      webhooks: { constructEvent },
-    } as const;
-
-    const gateway = new StripePaymentGateway({
-      stripe,
-      webhookSecret: 'whsec_1',
-      priceIds: { monthly: 'price_m', annual: 'price_a' },
-      logger: new FakeLogger(),
-    });
+    const event = loadJsonFixture<
+      StripeWebhookEventFixture<{ id: string; [key: string]: unknown }>
+    >('stripe/customer.subscription.pending_update_expired.json');
+    const { stripe, constructEvent, subscriptionsRetrieve } =
+      createStripeMock(true);
+    constructEvent.mockReturnValue(event);
+    subscriptionsRetrieve.mockResolvedValue(event.data.object);
+    const gateway = createGateway(stripe);
 
     await expect(
       gateway.processWebhookEvent('raw_body', 'sig_1'),
@@ -2037,46 +1050,11 @@ describe('StripePaymentGateway', () => {
   });
 
   it('throws INVALID_WEBHOOK_SIGNATURE when webhook signature verification fails', async () => {
-    const stripe = {
-      customers: {
-        create: vi.fn(async () => ({ id: 'cus_123' })),
-      },
-      checkout: {
-        sessions: {
-          create: vi.fn(async () => ({
-            id: 'cs_new',
-            url: 'https://stripe/checkout',
-          })),
-          list: vi.fn(async () => ({ data: [] })),
-          retrieve: vi.fn(async () => ({
-            id: 'cs_existing',
-            url: 'https://stripe/existing-checkout',
-            line_items: { data: [] },
-          })),
-          expire: vi.fn(async () => ({
-            id: 'cs_existing',
-            url: 'https://stripe/existing-checkout',
-          })),
-        },
-      },
-      billingPortal: {
-        sessions: {
-          create: vi.fn(async () => ({ url: 'https://stripe/portal' })),
-        },
-      },
-      webhooks: {
-        constructEvent: vi.fn(() => {
-          throw new Error('Invalid signature');
-        }),
-      },
-    } as const;
-
-    const gateway = new StripePaymentGateway({
-      stripe,
-      webhookSecret: 'whsec_1',
-      priceIds: { monthly: 'price_m', annual: 'price_a' },
-      logger: new FakeLogger(),
+    const { stripe, constructEvent } = createStripeMock();
+    constructEvent.mockImplementation(() => {
+      throw new Error('Invalid signature');
     });
+    const gateway = createGateway(stripe);
 
     await expect(
       gateway.processWebhookEvent('raw_body', 'sig_1'),
@@ -2086,46 +1064,11 @@ describe('StripePaymentGateway', () => {
   });
 
   it('includes original error message when webhook signature verification fails', async () => {
-    const stripe = {
-      customers: {
-        create: vi.fn(async () => ({ id: 'cus_123' })),
-      },
-      checkout: {
-        sessions: {
-          create: vi.fn(async () => ({
-            id: 'cs_new',
-            url: 'https://stripe/checkout',
-          })),
-          list: vi.fn(async () => ({ data: [] })),
-          retrieve: vi.fn(async () => ({
-            id: 'cs_existing',
-            url: 'https://stripe/existing-checkout',
-            line_items: { data: [] },
-          })),
-          expire: vi.fn(async () => ({
-            id: 'cs_existing',
-            url: 'https://stripe/existing-checkout',
-          })),
-        },
-      },
-      billingPortal: {
-        sessions: {
-          create: vi.fn(async () => ({ url: 'https://stripe/portal' })),
-        },
-      },
-      webhooks: {
-        constructEvent: vi.fn(() => {
-          throw new Error('Signature timestamp too old');
-        }),
-      },
-    } as const;
-
-    const gateway = new StripePaymentGateway({
-      stripe,
-      webhookSecret: 'whsec_1',
-      priceIds: { monthly: 'price_m', annual: 'price_a' },
-      logger: new FakeLogger(),
+    const { stripe, constructEvent } = createStripeMock();
+    constructEvent.mockImplementation(() => {
+      throw new Error('Signature timestamp too old');
     });
+    const gateway = createGateway(stripe);
 
     await expect(
       gateway.processWebhookEvent('raw_body', 'sig_1'),
@@ -2136,47 +1079,12 @@ describe('StripePaymentGateway', () => {
   });
 
   it('calls logger.error when webhook verification fails', async () => {
-    const stripe = {
-      customers: {
-        create: vi.fn(async () => ({ id: 'cus_123' })),
-      },
-      checkout: {
-        sessions: {
-          create: vi.fn(async () => ({
-            id: 'cs_new',
-            url: 'https://stripe/checkout',
-          })),
-          list: vi.fn(async () => ({ data: [] })),
-          retrieve: vi.fn(async () => ({
-            id: 'cs_existing',
-            url: 'https://stripe/existing-checkout',
-            line_items: { data: [] },
-          })),
-          expire: vi.fn(async () => ({
-            id: 'cs_existing',
-            url: 'https://stripe/existing-checkout',
-          })),
-        },
-      },
-      billingPortal: {
-        sessions: {
-          create: vi.fn(async () => ({ url: 'https://stripe/portal' })),
-        },
-      },
-      webhooks: {
-        constructEvent: vi.fn(() => {
-          throw new Error('Invalid signature');
-        }),
-      },
-    } as const;
-
-    const logger = new FakeLogger();
-    const gateway = new StripePaymentGateway({
-      stripe,
-      webhookSecret: 'whsec_1',
-      priceIds: { monthly: 'price_m', annual: 'price_a' },
-      logger,
+    const { stripe, constructEvent } = createStripeMock();
+    constructEvent.mockImplementation(() => {
+      throw new Error('Invalid signature');
     });
+    const logger = new FakeLogger();
+    const gateway = createGateway(stripe, { logger });
 
     await expect(
       gateway.processWebhookEvent('raw_body', 'sig_1'),
@@ -2191,64 +1099,29 @@ describe('StripePaymentGateway', () => {
   });
 
   it('throws when a subscription update event is missing required metadata', async () => {
-    const stripe = {
-      customers: {
-        create: vi.fn(async () => ({ id: 'cus_123' })),
-      },
-      checkout: {
-        sessions: {
-          create: vi.fn(async () => ({
-            id: 'cs_new',
-            url: 'https://stripe/checkout',
-          })),
-          list: vi.fn(async () => ({ data: [] })),
-          retrieve: vi.fn(async () => ({
-            id: 'cs_existing',
-            url: 'https://stripe/existing-checkout',
-            line_items: { data: [] },
-          })),
-          expire: vi.fn(async () => ({
-            id: 'cs_existing',
-            url: 'https://stripe/existing-checkout',
-          })),
-        },
-      },
-      billingPortal: {
-        sessions: {
-          create: vi.fn(async () => ({ url: 'https://stripe/portal' })),
-        },
-      },
-      webhooks: {
-        constructEvent: vi.fn(() => ({
-          id: 'evt_1',
-          type: 'customer.subscription.updated',
-          data: {
-            object: {
-              id: 'sub_123',
-              customer: 'cus_123',
-              status: 'active',
-              cancel_at_period_end: false,
-              metadata: {},
-              items: {
-                data: [
-                  {
-                    current_period_end: 1_700_000_000,
-                    price: { id: 'price_m' },
-                  },
-                ],
+    const { stripe, constructEvent } = createStripeMock();
+    constructEvent.mockReturnValue({
+      id: 'evt_1',
+      type: 'customer.subscription.updated',
+      data: {
+        object: {
+          id: 'sub_123',
+          customer: 'cus_123',
+          status: 'active',
+          cancel_at_period_end: false,
+          metadata: {},
+          items: {
+            data: [
+              {
+                current_period_end: 1_700_000_000,
+                price: { id: 'price_m' },
               },
-            },
+            ],
           },
-        })),
+        },
       },
-    } as const;
-
-    const gateway = new StripePaymentGateway({
-      stripe,
-      webhookSecret: 'whsec_1',
-      priceIds: { monthly: 'price_m', annual: 'price_a' },
-      logger: new FakeLogger(),
     });
+    const gateway = createGateway(stripe);
 
     await expect(
       gateway.processWebhookEvent('raw_body', 'sig_1'),
@@ -2271,56 +1144,18 @@ describe('StripePaymentGateway', () => {
         ],
       },
     };
-    const subscriptionsRetrieve = vi.fn(async () => subscription);
-
-    const stripe = {
-      customers: {
-        create: vi.fn(async () => ({ id: 'cus_123' })),
+    const { stripe, constructEvent, subscriptionsRetrieve } =
+      createStripeMock(true);
+    constructEvent.mockReturnValue({
+      id: 'evt_1',
+      type: 'customer.subscription.created',
+      data: {
+        object: subscription,
       },
-      checkout: {
-        sessions: {
-          create: vi.fn(async () => ({
-            id: 'cs_new',
-            url: 'https://stripe/checkout',
-          })),
-          list: vi.fn(async () => ({ data: [] })),
-          retrieve: vi.fn(async () => ({
-            id: 'cs_existing',
-            url: 'https://stripe/existing-checkout',
-            line_items: { data: [] },
-          })),
-          expire: vi.fn(async () => ({
-            id: 'cs_existing',
-            url: 'https://stripe/existing-checkout',
-          })),
-        },
-      },
-      subscriptions: {
-        retrieve: subscriptionsRetrieve,
-      },
-      billingPortal: {
-        sessions: {
-          create: vi.fn(async () => ({ url: 'https://stripe/portal' })),
-        },
-      },
-      webhooks: {
-        constructEvent: vi.fn(() => ({
-          id: 'evt_1',
-          type: 'customer.subscription.created',
-          data: {
-            object: subscription,
-          },
-        })),
-      },
-    } as const;
-
-    const logger = new FakeLogger();
-    const gateway = new StripePaymentGateway({
-      stripe,
-      webhookSecret: 'whsec_1',
-      priceIds: { monthly: 'price_m', annual: 'price_a' },
-      logger,
     });
+    subscriptionsRetrieve.mockResolvedValue(subscription);
+    const logger = new FakeLogger();
+    const gateway = createGateway(stripe, { logger });
 
     await expect(
       gateway.processWebhookEvent('raw_body', 'sig_1'),
@@ -2346,7 +1181,7 @@ describe('StripePaymentGateway', () => {
       metadata: {},
     };
 
-    const constructEvent = vi.fn(() => ({
+    const constructedEvent = {
       id: 'evt_checkout_missing_meta_1',
       type: 'checkout.session.completed',
       data: {
@@ -2354,50 +1189,13 @@ describe('StripePaymentGateway', () => {
           subscription: subscription.id,
         },
       },
-    }));
-
-    const subscriptionsRetrieve = vi.fn(async () => subscription);
-
-    const stripe = {
-      customers: {
-        create: vi.fn(async () => ({ id: 'cus_123' })),
-      },
-      checkout: {
-        sessions: {
-          create: vi.fn(async () => ({
-            id: 'cs_new',
-            url: 'https://stripe/checkout',
-          })),
-          list: vi.fn(async () => ({ data: [] })),
-          retrieve: vi.fn(async () => ({
-            id: 'cs_existing',
-            url: 'https://stripe/existing-checkout',
-            line_items: { data: [] },
-          })),
-          expire: vi.fn(async () => ({
-            id: 'cs_existing',
-            url: 'https://stripe/existing-checkout',
-          })),
-        },
-      },
-      subscriptions: {
-        retrieve: subscriptionsRetrieve,
-      },
-      billingPortal: {
-        sessions: {
-          create: vi.fn(async () => ({ url: 'https://stripe/portal' })),
-        },
-      },
-      webhooks: { constructEvent },
-    } as const;
-
+    };
+    const { stripe, constructEvent, subscriptionsRetrieve } =
+      createStripeMock(true);
+    constructEvent.mockReturnValue(constructedEvent);
+    subscriptionsRetrieve.mockResolvedValue(subscription);
     const logger = new FakeLogger();
-    const gateway = new StripePaymentGateway({
-      stripe,
-      webhookSecret: 'whsec_1',
-      priceIds: { monthly: 'price_m', annual: 'price_a' },
-      logger,
-    });
+    const gateway = createGateway(stripe, { logger });
 
     await expect(
       gateway.processWebhookEvent('raw_body', 'sig_1'),
@@ -2415,48 +1213,13 @@ describe('StripePaymentGateway', () => {
   });
 
   it('ignores checkout.session.completed events (no subscription update extracted)', async () => {
-    const stripe = {
-      customers: {
-        create: vi.fn(async () => ({ id: 'cus_123' })),
-      },
-      checkout: {
-        sessions: {
-          create: vi.fn(async () => ({
-            id: 'cs_new',
-            url: 'https://stripe/checkout',
-          })),
-          list: vi.fn(async () => ({ data: [] })),
-          retrieve: vi.fn(async () => ({
-            id: 'cs_existing',
-            url: 'https://stripe/existing-checkout',
-            line_items: { data: [] },
-          })),
-          expire: vi.fn(async () => ({
-            id: 'cs_existing',
-            url: 'https://stripe/existing-checkout',
-          })),
-        },
-      },
-      billingPortal: {
-        sessions: {
-          create: vi.fn(async () => ({ url: 'https://stripe/portal' })),
-        },
-      },
-      webhooks: {
-        constructEvent: vi.fn(() => ({
-          id: 'evt_1',
-          type: 'checkout.session.completed',
-          data: { object: { id: 'cs_test_1' } },
-        })),
-      },
-    } as const;
-
-    const gateway = new StripePaymentGateway({
-      stripe,
-      webhookSecret: 'whsec_1',
-      priceIds: { monthly: 'price_m', annual: 'price_a' },
-      logger: new FakeLogger(),
+    const { stripe, constructEvent } = createStripeMock();
+    constructEvent.mockReturnValue({
+      id: 'evt_1',
+      type: 'checkout.session.completed',
+      data: { object: { id: 'cs_test_1' } },
     });
+    const gateway = createGateway(stripe);
 
     await expect(
       gateway.processWebhookEvent('raw_body', 'sig_1'),

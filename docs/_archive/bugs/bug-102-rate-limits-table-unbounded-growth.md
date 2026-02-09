@@ -22,7 +22,7 @@ This is the same class of issue as BUG-027 (Stripe Events Table Unbounded Growth
 
 - `src/application/ports/gateways.ts` — `RateLimiter` interface (no prune method)
 - `src/adapters/gateways/drizzle-rate-limiter.ts` — Implementation (no prune method)
-- `src/application/test-helpers/fakes.ts` — `FakeRateLimiter` (no prune method)
+- `src/application/test-helpers/fakes/fake-gateways.ts` — `FakeRateLimiter` (no prune method)
 
 ## Root Cause
 

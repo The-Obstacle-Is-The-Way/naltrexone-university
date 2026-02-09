@@ -422,7 +422,7 @@ describe('DrizzleIdempotencyKeyRepository', () => {
       const whereArg = firstCall?.[0];
       expect(whereArg).toBeDefined();
 
-      // DEBT-167: This helper intentionally couples to Drizzle's internal
+      // NOTE: This helper intentionally couples to Drizzle's internal
       // condition-object shape to verify the atomic prune guard. It walks the
       // entire AST looking for a column reference named 'expires_at' in the
       // DELETE WHERE clause. If Drizzle changes its internal representation,

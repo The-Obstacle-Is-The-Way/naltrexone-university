@@ -16,34 +16,53 @@ export function MarketingLayout({
   return (
     <div className="min-h-[100dvh] bg-background text-foreground">
       <header className="border-b border-border bg-background">
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:px-8">
-          <div className="flex items-center gap-6">
-            <Link
-              href={ROUTES.HOME}
-              className="rounded-md text-sm font-semibold focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]"
-            >
-              Addiction Boards
-            </Link>
-            <nav
-              aria-label="Marketing navigation"
-              className="hidden items-center gap-4 text-sm sm:flex"
-            >
-              {/* TODO: add a mobile menu so Features/Pricing are reachable on small screens. */}
+        <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-6">
               <Link
-                href={featuresHref}
-                className="rounded-md text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]"
+                href={ROUTES.HOME}
+                className="rounded-md text-sm font-semibold focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]"
               >
-                Features
+                Addiction Boards
               </Link>
-              <Link
-                href={ROUTES.PRICING}
-                className="rounded-md text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]"
+              <nav
+                aria-label="Marketing navigation"
+                className="hidden items-center gap-4 text-sm sm:flex"
               >
-                Pricing
-              </Link>
-            </nav>
+                <Link
+                  href={featuresHref}
+                  className="rounded-md text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]"
+                >
+                  Features
+                </Link>
+                <Link
+                  href={ROUTES.PRICING}
+                  className="rounded-md text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]"
+                >
+                  Pricing
+                </Link>
+              </nav>
+            </div>
+            <div className="flex items-center gap-2">{authNav}</div>
           </div>
-          <div className="flex items-center gap-2">{authNav}</div>
+
+          <nav
+            aria-label="Marketing navigation"
+            className="mt-3 flex items-center gap-4 text-sm sm:hidden"
+          >
+            <Link
+              href={featuresHref}
+              className="rounded-md text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]"
+            >
+              Features
+            </Link>
+            <Link
+              href={ROUTES.PRICING}
+              className="rounded-md text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]"
+            >
+              Pricing
+            </Link>
+          </nav>
         </div>
       </header>
 

@@ -1,6 +1,7 @@
 # BUG-001: `pnpm -s …` Can Launch Vim and Hang Non-Interactive Sessions
 
 **Status:** Resolved
+**Priority:** P2
 **Date:** 2026-02-01
 
 ## Summary
@@ -28,4 +29,3 @@ Some agents attempted to run commands like `pnpm -s view next version` to query 
 - Prefer `pnpm view <pkg> version` (no `-s`).
 - For quiet output, use `pnpm --loglevel silent …` (or no flags).
 - Prefer `git --no-pager …` when inspecting history/diffs in agent contexts.
-

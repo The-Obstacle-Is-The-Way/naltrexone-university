@@ -26,7 +26,7 @@ The design existed, but practical call-site wiring was incomplete.
 
 - `src/application/ports/idempotency-key-repository.ts:56` — Port defines `pruneExpiredBefore` (never called)
 - `src/adapters/repositories/drizzle-idempotency-key-repository.ts:163` — Implementation exists (never called)
-- `src/application/test-helpers/fakes.ts:624` — Fake exists (never called)
+- `src/application/test-helpers/fakes/fake-repositories.ts` — Fake exists (never called)
 - `src/adapters/controllers/stripe-webhook-controller.ts` — webhook cleanup wiring
 - `src/adapters/shared/with-idempotency.ts` — idempotent request hot path
 

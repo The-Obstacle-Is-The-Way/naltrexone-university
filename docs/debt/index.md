@@ -17,7 +17,7 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 *No active DEBT items.*
 
-**Next Debt ID:** DEBT-204
+**Next Debt ID:** DEBT-205
 
 ---
 
@@ -91,6 +91,12 @@ All frontend-specific UI/UX debt. Items use `FE-XXX` IDs and are cross-reference
 **Next frontend debt ID:** FE-051
 
 ## Archived Debt
+
+### Resolved in Stripe Gateway Test Refactor
+
+| ID | Title | Priority | Resolved |
+|----|-------|----------|----------|
+| [DEBT-204](../_archive/debt/debt-204-stripe-payment-gateway-test-god-file.md) | Stripe Payment Gateway Test God File (Was 2,468 Lines) | P2 | 2026-02-09 |
 
 ### Resolved in Debt Register Cleanup
 

@@ -64,4 +64,4 @@ The current composition guarantees nested main landmarks for major route groups.
 - `app/layout.tsx`
 - `app/(app)/app/layout.tsx`
 - `components/marketing/marketing-home.tsx`
-- `docs/debt/debt-148-minimal-aria-accessibility-app-pages.md`
+- `docs/_archive/debt/debt-148-minimal-aria-accessibility-app-pages.md`
