@@ -216,7 +216,7 @@ Implemented (see `docs/specs/index.md`):
 In progress / proposed:
 - SPEC-016 Observability (partial)
 - SPEC-017 Rate Limiting (partial)
-- SPEC-019 Practice & Navigation UX Redesign (partial — Phase 1 done, Phase 2 ready)
+- SPEC-019 Practice & Navigation UX Redesign (partial — Phase 1 done, Phase 2 ready, Phase 3 in progress)
 
 Framework code lives in:
 - `app/` - Next.js App Router pages, layouts, API routes

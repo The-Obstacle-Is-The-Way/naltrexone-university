@@ -2244,9 +2244,11 @@ As a subscribed user, I can answer questions and see explanations so that I can 
 
 **Acceptance Criteria:**
 
-* Given I am subscribed, when I open `/app/practice` and start, then I see a question stem and choices rendered as sanitized markdown.
+* Given I am subscribed, when I start practice and open a question, then I see a question stem and choices rendered as sanitized markdown.
 * When I select an answer and submit, then I see correct/incorrect feedback and explanation (tutor mode).
 * When I submit, then an `attempts` row is created.
+
+> **Route note:** `/app/practice` is the practice landing page. Question answering happens in the session runner (`/app/practice/[sessionId]`). Ad-hoc practice moves to `/app/practice/quick` in SPEC-019 Phase 2.
 
 **Test Cases:**
 
@@ -2263,7 +2265,7 @@ As a subscribed user, I can answer questions and see explanations so that I can 
 4. Build use cases: `src/application/use-cases/submit-answer.ts`, `get-next-question.ts`
 5. Build repositories: `src/adapters/repositories/drizzle-question-repository.ts`, `drizzle-attempt-repository.ts`
 6. Build controllers: `src/adapters/controllers/question-controller.ts` — 'use server' exports
-7. Build practice runner UI for single-question flow (no sessions yet):
+7. Build the question loop UI (stem + choices + submit + feedback) as reusable components (consumed by Practice Sessions and Quick Practice):
 
    * fetch next question via controller
    * select choice
@@ -2283,7 +2285,7 @@ As a subscribed user, I can answer questions and see explanations so that I can 
 * `src/adapters/repositories/drizzle-question-repository.ts`, `drizzle-attempt-repository.ts`
 * `src/adapters/controllers/question-controller.ts`, `bookmark-controller.ts`
 * `lib/container.ts` (add new factories)
-* `app/(app)/app/practice/page.tsx`
+* `app/(app)/app/practice/page.tsx` (landing page; Quick Practice moves to `app/(app)/app/practice/quick/page.tsx` in SPEC-019 Phase 2)
 
 **Migrations:** none
 

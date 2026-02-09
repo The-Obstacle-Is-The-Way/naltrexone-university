@@ -1,6 +1,6 @@
 # Testing Infrastructure
 
-**Last Updated:** 2026-02-01
+**Last Updated:** 2026-02-09
 
 This document covers our E2E testing tools: Playwright and Vercel's agent-browser.
 
@@ -37,9 +37,19 @@ workers: process.env.CI ? 1 : undefined,
 
 | File | Purpose |
 | ---- | ------- |
-| `tests/e2e/smoke.spec.ts` | Public pages load (home, pricing) |
+| `tests/e2e/global.setup.ts` | Shared setup (Playwright project dependency) |
+| `tests/e2e/smoke.spec.ts` | Marketing smoke (home, pricing) |
+| `tests/e2e/pricing-unauthenticated.spec.ts` | Pricing behavior for signed-out users |
+| `tests/e2e/theme-preference.spec.ts` | Theme preference persistence |
 | `tests/e2e/dark-mode.spec.ts` | Dark mode toggle and OS preference |
-| `tests/e2e/subscribe-and-practice.spec.ts` | Full user journey (subscribe → practice) |
+| `tests/e2e/marketing-contrast.spec.ts` | Marketing contrast regression checks |
+| `tests/e2e/subscribe.spec.ts` | Subscription checkout (Stripe test mode) |
+| `tests/e2e/subscribe-and-practice.spec.ts` | Subscribe + answer a question |
+| `tests/e2e/practice.spec.ts` | Practice session answering flow |
+| `tests/e2e/session-continuation.spec.ts` | Resume incomplete session |
+| `tests/e2e/review.spec.ts` | Missed questions review flow |
+| `tests/e2e/bookmarks.spec.ts` | Bookmarks CRUD flow |
+| `tests/e2e/core-app-pages.spec.ts` | Entitled app pages load |
 
 ### Running E2E Tests
 
@@ -66,7 +76,7 @@ E2E_CLERK_USER_USERNAME=test@example.com
 E2E_CLERK_USER_PASSWORD=your-password
 ```
 
-The `subscribe-and-practice.spec.ts` test skips if these aren't set.
+These can be provided via `.env.local` (loaded by `playwright.config.ts`) or CI secrets. Tests that require auth will `test.skip()` when these are missing.
 
 ### Writing New E2E Tests
 
@@ -189,10 +199,10 @@ python .agents/skills/webapp-testing/scripts/with_server.py \
 
 ### GitHub Actions
 
-E2E tests run in CI via Playwright:
+E2E tests run in CI via Playwright (see `.github/workflows/ci.yml`):
 
 ```yaml
-# .github/workflows/ci.yml (example)
+# .github/workflows/ci.yml (excerpt)
 - name: Run E2E tests
   run: pnpm test:e2e
   env:
@@ -211,16 +221,14 @@ E2E tests run in CI via Playwright:
 
 ## Test Coverage Gaps
 
-The following specs need E2E test coverage:
+Playwright coverage intentionally focuses on user-facing regression paths:
 
-| Spec | Current Status | E2E Test Needed |
-| ---- | -------------- | --------------- |
-| SPEC-010 Server Actions | Implemented | Controllers integration |
-| SPEC-011 Paywall | Partial | Subscription gating |
-| SPEC-012 Question Loop | Partial | Full practice flow |
-| SPEC-013 Practice Sessions | Ready | Session management |
-| SPEC-014 Review + Bookmarks | Ready | Bookmark CRUD |
-| SPEC-015 Dashboard | Ready | Stats display |
+- Marketing pages + theme/dark-mode
+- Auth + subscription (Stripe test mode) when E2E Clerk creds are present
+- Practice sessions + continuation
+- Review + bookmarks
+
+For feature-level acceptance criteria and planned routes (e.g., Quick Practice at `/app/practice/quick`), track expected E2E additions in the relevant specs (e.g., SPEC-019 Phase 2 acceptance criteria).
 
 ---
 

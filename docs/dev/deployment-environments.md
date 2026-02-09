@@ -1,6 +1,7 @@
 # Deployment Environments: Source of Truth
 
 **Last Verified:** 2026-02-06 (post database isolation + env scoping + Stripe single-account consolidation + Neon var cleanup + Clerk webhook fix + Deployment Protection fix + env var trailing newline fix)
+**Last Reviewed (docs/code):** 2026-02-09 (no config changes required; pending verification items remain pending)
 
 This document is the single source of truth for how Clerk, Stripe, Neon, and Vercel are configured across all environments.
 
@@ -20,7 +21,7 @@ This document is the single source of truth for how Clerk, Stripe, Neon, and Ver
 - [x] **Stripe Test Webhook** — Test endpoint configured for Preview deployment with 5 events
 - [x] **Stripe Test Price IDs** — Monthly ($29) and Annual ($199) test products created
 - [x] **Preview** (`*.vercel.app`, non-main branches) — E2E verified 2026-02-06: sign-in → paywall → Stripe test checkout → subscription active → full app access. See [BUG-080](../_archive/bugs/bug-080-vercel-env-var-deployment-issues.md) for issues resolved during verification.
-- [ ] **Local Development** (`localhost:3000`) — NEEDS END-TO-END VERIFICATION
+- [ ] **Local Development** (`localhost:3000`) — not yet E2E verified (run `pnpm test:e2e` locally with a valid `.env.local`)
 
 ---
 
@@ -93,7 +94,7 @@ This document is the single source of truth for how Clerk, Stripe, Neon, and Ver
 - [x] Live Price IDs created and set in Vercel Production:
   - Monthly: `price_1SxttBKItmaHAwgUOYmmLy8o` ($29/mo)
   - Annual: `price_1SxtuSKItmaHAwgUYUAl4Kxd` ($199/yr)
-- [ ] Test a real checkout flow on `addictionboards.com` (after Stripe review completes)
+- [ ] Verify a real checkout flow on `addictionboards.com` (after Stripe review completes)
 
 ### Test Mode (Preview / Development / Local)
 
