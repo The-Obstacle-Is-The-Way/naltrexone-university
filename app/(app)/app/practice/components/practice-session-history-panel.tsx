@@ -71,7 +71,7 @@ export function PracticeSessionHistoryPanel(
           <ul className="space-y-2">
             {props.rows.map((row) => {
               const actionLabel =
-                props.selectedSessionId === row.sessionId ? 'Refresh' : 'View';
+                props.selectedSessionId === row.sessionId ? 'Hide' : 'View';
               const sessionSummary = `${formatSessionMode(row.mode)} session: ${row.correct}/${row.questionCount} correct (${formatSessionAccuracy(row.accuracy)}), ${formatDuration(row.durationSeconds)}`;
 
               return (
@@ -100,7 +100,7 @@ export function PracticeSessionHistoryPanel(
                       onClick={() => props.onOpenSession(row.sessionId)}
                     >
                       {props.selectedSessionId === row.sessionId
-                        ? 'Refresh breakdown'
+                        ? 'Hide breakdown'
                         : 'View breakdown'}
                     </Button>
                   </div>

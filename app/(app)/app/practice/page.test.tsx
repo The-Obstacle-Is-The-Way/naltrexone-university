@@ -564,6 +564,41 @@ describe('app/(app)/app/practice', () => {
     );
   });
 
+  it('renders a Hide breakdown button when a session breakdown is expanded', async () => {
+    const { PracticeSessionHistoryPanel } = await import(
+      '@/app/(app)/app/practice/page'
+    );
+
+    const html = renderToStaticMarkup(
+      <PracticeSessionHistoryPanel
+        status="idle"
+        error={null}
+        rows={[
+          {
+            sessionId: 'session-1',
+            mode: 'exam',
+            questionCount: 20,
+            answered: 20,
+            correct: 15,
+            accuracy: 0.75,
+            durationSeconds: 1800,
+            startedAt: '2026-02-05T00:00:00.000Z',
+            endedAt: '2026-02-05T00:30:00.000Z',
+          },
+        ]}
+        selectedSessionId="session-1"
+        selectedReview={null}
+        reviewStatus={{ status: 'idle' }}
+        onOpenSession={() => undefined}
+      />,
+    );
+
+    expect(html).toContain('Hide breakdown');
+    expect(html).toContain(
+      'aria-label="Hide breakdown for Exam session: 15/20 correct (75%), 30m"',
+    );
+  });
+
   it('renders selected session question breakdown', async () => {
     const { PracticeSessionHistoryPanel } = await import(
       '@/app/(app)/app/practice/page'
