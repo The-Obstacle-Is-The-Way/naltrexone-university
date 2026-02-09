@@ -27,7 +27,7 @@ function QuickPracticeCard() {
       </div>
 
       <div className="mt-5 flex justify-end">
-        <Button asChild type="button" className="rounded-full">
+        <Button asChild className="rounded-full">
           <Link href={ROUTES.APP_PRACTICE_QUICK}>Quick Practice →</Link>
         </Button>
       </div>
