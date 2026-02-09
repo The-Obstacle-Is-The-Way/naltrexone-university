@@ -219,7 +219,7 @@ For each new component file `X.tsx`:
 
 ### Fakes
 
-- If a `Fake*` exists in `src/application/test-helpers/fakes.ts`, use it.
+- If a `Fake*` exists in `src/application/test-helpers/fakes/`, use it.
 - Do not `vi.mock()` internal modules for dependency injection. Prefer passing explicit deps into render helpers/components.
 
 ---

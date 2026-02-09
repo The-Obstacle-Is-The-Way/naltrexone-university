@@ -111,6 +111,12 @@ Once implemented:
 
 ---
 
+## Route Note (SPEC-019 Phase 2)
+
+The session configuration form (`PracticeSessionStarter`) remains on `/app/practice` after the Phase 2 redesign. The landing page becomes a decision point — the session starter is one of two cards (the other being "Quick Practice" → `/app/practice/quick`). The session runner route (`/app/practice/[sessionId]`) is unchanged.
+
+---
+
 ## Definition of Done
 
 - Behavior matches SLICE-3 in `docs/specs/master_spec.md`.

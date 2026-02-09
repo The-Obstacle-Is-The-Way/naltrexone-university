@@ -17,7 +17,7 @@ Implement Application-layer repository ports using Drizzle + Postgres.
 
 Repositories live in the **Adapters** layer:
 
-- They implement interfaces defined in `src/application/ports/repositories.ts`
+- They implement interfaces defined in `src/application/ports/*.ts` (with a barrel re-export at `src/application/ports/repositories.ts`)
 - They map DB rows (`db/schema.ts`) ⇄ domain entities (`src/domain/**`)
 - They contain **no business rules** (business logic belongs to domain/use cases)
 
@@ -31,6 +31,7 @@ src/adapters/repositories/
 ├── drizzle-attempt-repository.ts
 ├── drizzle-practice-session-repository.ts
 ├── drizzle-bookmark-repository.ts
+├── drizzle-idempotency-key-repository.ts
 ├── drizzle-tag-repository.ts
 ├── drizzle-user-repository.ts
 ├── drizzle-subscription-repository.ts
@@ -52,7 +53,12 @@ src/adapters/repositories/
 
 ## Testing Strategy
 
-Repository implementations are tested as **integration tests** against a real Postgres instance:
+Repository implementations are tested at two levels:
+
+1. **Unit tests (preferred for mapping/validation):** colocated `*.test.ts` files inject a minimal Drizzle-like DB object to validate row→domain mapping, defensive validation, and error mapping without requiring a real database.
+2. **Integration tests (required for SQL semantics):** `tests/integration/**/*.test.ts` runs against a real Postgres database to validate query correctness, indexes/constraints, and migration invariants.
+
+Integration tests run against a real Postgres instance:
 
 - Local: a dedicated test database (`DATABASE_URL`)
 - CI: service container (see `.github/workflows/ci.yml`)
@@ -77,12 +83,21 @@ Tests should validate:
 
 ## Notes on Idempotency Tables
 
-Stripe webhook idempotency uses `stripe_events`:
+There are two idempotency tables with different scopes:
+
+### Webhook idempotency — `stripe_events`
 
 - `stripe_events.id` = Stripe event id (primary key)
 - Repositories must support: `claim`, `lock`, `markProcessed`, `markFailed`
 
 See `docs/specs/master_spec.md` Section 4.4.2 for exact behavior.
+
+### Application idempotency — `idempotency_keys`
+
+User-triggered server actions that create side effects (start session, submit answer, billing flows) use `idempotency_keys` (ADR-015).
+
+- Repository: `src/adapters/repositories/drizzle-idempotency-key-repository.ts`
+- Port: `src/application/ports/idempotency-key-repository.ts`
 
 ---
 
@@ -99,6 +114,7 @@ These integration tests are required before any slice that depends on these repo
 - `AttemptRepository.insert` creates an attempt row with correct FK wiring.
 - `BookmarkRepository.add/remove/exists/listByUserId` round-trips correctly.
 - `StripeEventRepository.claim/lock/markProcessed/markFailed` is idempotent and concurrency-safe (unique PK on `stripe_events.id`).
+- `IdempotencyKeyRepository.claim/find/storeResult/storeError` is concurrency-safe and replays stored results (unique composite PK on `idempotency_keys`).
 
 ---
 

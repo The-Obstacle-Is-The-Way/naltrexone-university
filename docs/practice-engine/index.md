@@ -1,7 +1,7 @@
 # Practice Engine
 
 > **Type:** Canonical Reference Document (Living)
-> **Last Verified:** 2026-02-08
+> **Last Verified:** 2026-02-09
 > **Scope:** Everything related to practicing questions — the core product feature
 
 ---
@@ -21,8 +21,9 @@ The Practice Engine is the core feature of Naltrexone University. It's the syste
 ```text
 ┌─────────────────────────────────────────────────────────────────────┐
 │                         Frontend (app/)                             │
-│  /app/practice          — Landing page + ad-hoc question flow       │
-│  /app/practice/[id]     — Session runner (tutor/exam)               │
+│  /app/practice          — Practice landing (sessions + history)     │
+│  /app/practice/quick    — Quick Practice (ad-hoc, no session)       │
+│  /app/practice/[sessionId] — Session runner (tutor/exam)            │
 │  /app/dashboard         — Stats + recent activity (consumer)        │
 │  /app/review            — Missed questions (consumer)               │
 │  /app/bookmarks         — Saved questions (consumer)                │
@@ -87,7 +88,7 @@ All entities are pure TypeScript type aliases with no runtime behavior. They liv
 | `PracticeSession` | `id`, `userId`, `mode`, `questionIds[]`, `questionStates[]`, `tagFilters[]`, `difficultyFilters[]`, `startedAt`, `endedAt?` | A structured practice session (tutor or exam) |
 | `PracticeSessionQuestionState` | `questionId`, `markedForReview`, `latestSelectedChoiceId?`, `latestIsCorrect?`, `latestAnsweredAt?` | Per-question state within a session |
 | `Bookmark` | `userId`, `questionId`, `createdAt` | A user-saved question |
-| `Tag` | `id`, `slug`, `name`, `kind` | A categorization label (exam section, topic, substance, treatment) |
+| `Tag` | `id`, `slug`, `name`, `kind` | A categorization label (domain/exam section, topic, substance, treatment, diagnosis) |
 
 ### 3.2 Value Objects
 
@@ -99,8 +100,8 @@ All value objects provide branded string types, validation functions, and "All" 
 | `QuestionDifficulty` | `'easy'` \| `'medium'` \| `'hard'` | `isValidDifficulty()` |
 | `QuestionStatus` | `'draft'` \| `'published'` \| `'archived'` | `isVisibleStatus()` |
 | `ChoiceLabel` | `'A'` \| `'B'` \| `'C'` \| `'D'` | `isValidChoiceLabel()` |
-| `TagKind` | `'domain'` \| `'topic'` \| `'substance'` \| `'treatment'` | `isValidTagKind()` |
-| `SubscriptionStatus` | 6 statuses | `isEntitledStatus()` — includes `'active'`, `'inTrial'`, `'pastDue'` |
+| `TagKind` | `'domain'` \| `'topic'` \| `'substance'` \| `'treatment'` \| `'diagnosis'` | `isValidTagKind()` |
+| `SubscriptionStatus` | 8 statuses | `isEntitledStatus()` — includes `'active'`, `'inTrial'`, `'pastDue'` |
 
 ### 3.3 Domain Services
 
@@ -224,7 +225,7 @@ Practice-related tables in `db/schema.ts`:
 |-------|---------|-------|
 | `questions` | `slug` (unique), `status+difficulty`, `status+createdAt` | Published questions only served to users |
 | `choices` | `questionId`, `question+label` (unique), `question+sortOrder` (unique) | Always 4 choices per question (A/B/C/D) |
-| `tags` | `slug` (unique), `kind+slug` | 4 kinds: domain, topic, substance, treatment |
+| `tags` | `slug` (unique), `kind+slug` | 5 kinds: domain, topic, substance, treatment, diagnosis |
 | `question_tags` | Composite PK, `tagId`, `questionId` | Many-to-many |
 | `practice_sessions` | `user+startedAt`, `user+endedAt` | `paramsJson` stores questionIds + questionStates |
 | `attempts` | 7 indexes covering all query patterns | Partial unique on `(sessionId, questionId)` prevents duplicate session answers |
@@ -240,14 +241,15 @@ All 5 repositories have colocated unit tests (48 test cases total) plus shared i
 
 ### 6.1 Routes
 
-| Route | Type | Purpose |
-|-------|------|---------|
-| `/app/practice` | Client Component | Landing page — session starter, incomplete session card, session history, ad-hoc question flow |
-| `/app/practice/[sessionId]` | Server → Client | Session runner — progress, question flow, exam review stage, summary |
-| `/app/dashboard` | Server Component | Stats cards + recent activity (consumer of `getUserStats`) |
-| `/app/review` | Server Component | Missed questions list (consumer of `getMissedQuestions`) |
-| `/app/bookmarks` | Server Component | Bookmarked questions (consumer of `getBookmarks`) |
-| `/app/questions/[slug]` | Client Component | Individual question reattempt |
+| Route | Type | Purpose | Status |
+|-------|------|---------|--------|
+| `/app/practice` | Client Component | Landing page — session starter, incomplete session card, session history. **After SPEC-019 Phase 2:** decision point only (no question loads on mount). | Implemented (Phase 2 pending) |
+| `/app/practice/quick` | Client Component | Quick Practice — ad-hoc question flow, random question, immediate feedback, no session tracking. | **Not yet created** (SPEC-019 Phase 2) |
+| `/app/practice/[sessionId]` | Server → Client | Session runner — progress, question flow, exam review stage, summary | Implemented |
+| `/app/dashboard` | Server Component | Stats cards + recent activity (consumer of `getUserStats`) | Implemented |
+| `/app/review` | Server Component | Missed questions list — shows only questions whose most recent attempt is incorrect (consumer of `getMissedQuestions`) | Implemented |
+| `/app/bookmarks` | Server Component | Bookmarked questions (consumer of `getBookmarks`) | Implemented |
+| `/app/questions/[slug]` | Client Component | Individual question reattempt | Implemented |
 
 ### 6.2 Practice Page Hook Architecture
 
@@ -329,7 +331,7 @@ The Practice Engine supports three distinct user experiences:
 
 | Mode | Route | Session? | Explanation Timing | Progress | Summary |
 |------|-------|----------|-------------------|----------|---------|
-| **Ad-hoc (Quick Practice)** | `/app/practice` | No | Immediate | No | No |
+| **Ad-hoc (Quick Practice)** | `/app/practice/quick` (pending SPEC-019 Phase 2; currently on `/app/practice`) | No | Immediate | No | No |
 | **Tutor** | `/app/practice/[sessionId]` | Yes | Immediate after each answer | X/N counter | Yes (totals + per-question) |
 | **Exam** | `/app/practice/[sessionId]` | Yes | Hidden until session ends | X/N counter + mark-for-review | Yes (totals + per-question + explanations revealed) |
 
@@ -417,8 +419,16 @@ For ad-hoc mode, `selectNextQuestionId()` picks the least-recently-seen question
 | Phase | Status | What's Left |
 |-------|--------|------------|
 | **Phase 1: Stabilize** | Done | All acceptance criteria met |
-| **Phase 2: UX Redesign** | Not Started | Separate quick practice to `/app/practice/quick`; convert landing page to decision point; remove question-on-mount |
-| **Phase 3: Cross-Page IA** | Partial | Dashboard activity not clickable; tag filter shows 41 flat chips (needs collapsible categories); review page empty state; cross-page question/session linking |
+| **Phase 2: UX Redesign** | **Ready for Implementation** (fully specified 2026-02-09) | Create `/app/practice/quick` route (reuse existing hooks + components); remove ad-hoc from landing page; add "Quick Practice" card; add `APP_PRACTICE_QUICK` route constant |
+| **Phase 3: Cross-Page IA** | Partial (2 of 13 tasks done) | Dashboard activity clickable; difficulty badges; collapsible tag filters; review subtitle + empty state; origin-aware back links on question detail page |
+
+### 9.4 Product Decisions (2026-02-09)
+
+| Decision | Outcome | Reference |
+|----------|---------|-----------|
+| **Review page scope** | Missed-only (most recent attempt incorrect). NOT an "all questions" library. Clarify via subtitle text, not scope expansion. | SPEC-014 |
+| **Session runner route** | Stays at `/app/practice/[sessionId]` (NOT renamed to `/app/practice/sessions/[id]`). Static `quick` segment takes priority over dynamic `[sessionId]` in Next.js routing. | SPEC-019 §5.2 |
+| **Nav label** | Keep "Review" in nav (not "Missed Questions"). Shorter, cleaner — subtitle disambiguates on the page itself. | SPEC-019 §5.4.3 |
 
 ---
 
@@ -428,35 +438,27 @@ This section maps each part of the Practice Engine to the spec that defines it.
 
 | Component | Primary Spec | Status | Notes |
 |-----------|-------------|--------|-------|
-| Domain entities (Question, Choice, Attempt, PracticeSession, Bookmark, Tag) | SPEC-001 | Implemented | `Choice.explanationMd` and `PracticeSessionQuestionState` exist in code but not spec |
-| Value objects (PracticeMode, QuestionDifficulty, etc.) | SPEC-002 | Implemented | `pastDue` added to `EntitledStatuses` — spec says 2, code has 3 |
-| Domain services (grading, session, statistics, shuffle, question-selection) | SPEC-003 | Implemented | `createQuestionSeed()` and `selectNextQuestionId()` not detailed in spec body |
-| Application ports (all repository interfaces) | SPEC-004 | Implemented | `AttemptRepository` expanded from 4 → 14 methods via ISP |
-| Core use cases (GetNextQuestion, SubmitAnswer, CheckEntitlement) | SPEC-005 | Implemented | 12 additional use cases exist beyond spec |
-| Database schema | SPEC-006 | Implemented | `rate_limits` and `idempotency_keys` tables added beyond spec |
-| Repository implementations | SPEC-007 | Implemented | `DrizzleIdempotencyKeyRepository` added beyond spec |
-| Server actions / controllers | SPEC-010 | Implemented | 4 additional `ActionErrorCode` values; `createAction` helper |
+| Domain entities (Question, Choice, Attempt, PracticeSession, Bookmark, Tag) | SPEC-001 | Implemented | Fully compliant |
+| Value objects (PracticeMode, QuestionDifficulty, etc.) | SPEC-002 | Implemented | Synced to implementation (EntitledStatuses includes `pastDue`) |
+| Domain services (grading, session, statistics, shuffle, question-selection) | SPEC-003 | Implemented | Synced to implementation (`createQuestionSeed()`, `selectNextQuestionId()`) |
+| Application ports (all repository interfaces) | SPEC-004 | Implemented | Synced to implementation (ISP composite `AttemptRepository`, port-per-module structure) |
+| Core use cases (application orchestration) | SPEC-005 | Implemented | Synced to implementation (full use-case inventory documented) |
+| Database schema | SPEC-006 | Implemented | Synced to implementation (`rate_limits`, `idempotency_keys`, partial unique attempt index) |
+| Repository implementations | SPEC-007 | Implemented | Synced to implementation (includes `DrizzleIdempotencyKeyRepository`; unit + integration testing strategy) |
+| Server actions / controllers | SPEC-010 | Implemented | Synced to implementation (`ActionErrorCode` = `ApplicationErrorCode`; `createAction` + `handleError`) |
 | Core question loop (fetch → render → submit → grade → explain) | SPEC-012 | Implemented | Fully compliant |
 | Practice sessions (start → answer → navigate → review → end → summary) | SPEC-013 | Implemented | Fully compliant |
 | Review + bookmarks | SPEC-014 | Implemented | Cross-page UX improvements deferred to SPEC-019 Phase 3 |
 | Dashboard stats | SPEC-015 | Implemented | Clickable activity items deferred to SPEC-019 Phase 3 |
 | UI integration patterns | SPEC-018 | Implemented | No architecture violations |
-| Practice UX redesign | SPEC-019 | Partial | Phase 1 done; Phase 2 not started; Phase 3 partial |
+| Practice UX redesign | SPEC-019 | Partial | Phase 1 done; Phase 2 ready for implementation; Phase 3 partial |
 | Practice engine completion (decomposition, navigation, enriched summary, session history) | SPEC-020 | Implemented | All 4 phases complete |
 
 ### 10.1 Spec Drift Summary
 
-The code has **evolved beyond the specs** in several areas. The specs need to be updated to reflect reality:
+As of **2026-02-09**, the previously identified spec drift items for the Practice Engine have been paid down by syncing the core specs (ports, use cases, schema, repositories, controllers) to the current implementation.
 
-| Spec | Drift | Type |
-|------|-------|------|
-| SPEC-001 | `Choice.explanationMd` field, `PracticeSessionQuestionState` type | Code added features not in spec |
-| SPEC-002 | `pastDue` in `EntitledStatuses` | Business rule change |
-| SPEC-003 | 3 error codes specified but pruned; `createQuestionSeed()` added; `selectNextQuestionId()` body empty | YAGNI pruning + spec incomplete |
-| SPEC-004 | `AttemptRepository` expanded with ISP sub-interfaces | Architectural improvement |
-| SPEC-005 | 12 use cases beyond the original 3 | Incremental feature development |
-
-**None of this drift represents bugs.** The code is correct; the specs are stale.
+When behavior changes introduce new public contracts (ports/use case IO/controller outputs), update the corresponding spec and add a changelog entry.
 
 ---
 
@@ -523,6 +525,8 @@ controllers/
   hooks/ (8 hook files)
   components/ (practice-view.tsx, practice-session-starter.tsx, incomplete-session-card.tsx, practice-session-history-panel.tsx)
   shared/ (question-flow-actions.ts, load-state.ts)
+  quick/ (pending SPEC-019 Phase 2)
+    page.tsx, loading.tsx, error.tsx, quick-practice-client.tsx
   [sessionId]/
     page.tsx, loading.tsx
     hooks/ (6 hook files)
@@ -544,7 +548,7 @@ controllers/
 | [SPEC-013](specs/spec-013-practice-sessions.md) | Practice session requirements |
 | [SPEC-014](specs/spec-014-review-bookmarks.md) | Review + bookmarks requirements |
 | [SPEC-015](specs/spec-015-dashboard.md) | Dashboard requirements |
-| [SPEC-019](specs/spec-019-practice-ux-redesign.md) | UX redesign (Phase 2/3 pending) |
+| [SPEC-019](specs/spec-019-practice-ux-redesign.md) | UX redesign (Phase 2 ready; Phase 3 pending) |
 | [SPEC-020](specs/spec-020-practice-engine-completion.md) | Practice engine completion (all done) |
 | [ADR-001](adr/adr-001-clean-architecture-layers.md) | Clean Architecture decision |
 | [ADR-003](adr/adr-003-testing-strategy.md) | Testing strategy (TDD, fakes over mocks) |
@@ -560,3 +564,4 @@ controllers/
 | Date | Change |
 |------|--------|
 | 2026-02-08 | Initial version — created from full vertical audit of domain → application → adapters → frontend layers. Cross-referenced against SPEC-001 through SPEC-020. |
+| 2026-02-09 | Synced with SPEC-019 updates: Phase 2 now "Ready for Implementation"; routes table adds `/app/practice/quick` (pending); practice mode table updated; Section 9.4 added for product decisions (review = missed-only, session runner route stays, nav label stays "Review"). |

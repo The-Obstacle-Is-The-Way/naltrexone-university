@@ -41,9 +41,12 @@ src/adapters/controllers/
 ├── billing-controller.ts
 ├── bookmark-controller.ts
 ├── clerk-webhook-controller.ts
+├── create-action.ts
 ├── practice-controller.ts
+├── practice-schemas.ts
 ├── question-controller.ts
 ├── question-view-controller.ts
+├── require-entitled-user-id.ts
 ├── review-controller.ts
 ├── stats-controller.ts
 ├── stripe-webhook-controller.ts
@@ -103,14 +106,13 @@ export async function getNextQuestion(
 This matches `docs/specs/master_spec.md` Section 4.3.
 
 ```ts
-export type ActionErrorCode =
-  | 'UNAUTHENTICATED'
-  | 'UNSUBSCRIBED'
-  | 'VALIDATION_ERROR'
-  | 'NOT_FOUND'
-  | 'CONFLICT'
-  | 'STRIPE_ERROR'
-  | 'INTERNAL_ERROR';
+import { ZodError } from 'zod';
+import type { ApplicationErrorCode } from '@/src/application/errors';
+import { isApplicationError } from '@/src/application/errors';
+import { logger } from '@/lib/logger';
+import type { Logger } from '@/src/application/ports/logger';
+
+export type ActionErrorCode = ApplicationErrorCode;
 
 export type ActionResult<T> =
   | { ok: true; data: T }
@@ -135,8 +137,26 @@ export function err(
   return { ok: false, error: { code, message, fieldErrors } };
 }
 
-export function handleError(error: unknown): ActionResult<never> {
-  // Controllers should call this in their catch blocks to avoid leaking stacks.
+export function handleError(
+  error: unknown,
+  options?: { logger?: Logger },
+): ActionResult<never> {
+  const errorLogger = options?.logger ?? logger;
+
+  if (isApplicationError(error)) {
+    return err(error.code, error.message, error.fieldErrors);
+  }
+
+  if (error instanceof ZodError) {
+    const flat = error.flatten().fieldErrors;
+    const fieldErrors: Record<string, string[]> = {};
+    for (const [key, value] of Object.entries(flat)) {
+      if (value) fieldErrors[key] = value;
+    }
+    return err('VALIDATION_ERROR', 'Invalid input', fieldErrors);
+  }
+
+  errorLogger.error({ err: error }, 'Unhandled error in controller');
   return err('INTERNAL_ERROR', 'Internal error');
 }
 ```

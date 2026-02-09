@@ -47,6 +47,8 @@ The schema MUST define these tables (names are part of the contract):
 - `stripe_customers`
 - `stripe_subscriptions`
 - `stripe_events` (idempotency)
+- `rate_limits` (fixed-window counters for abuse prevention)
+- `idempotency_keys` (application-level idempotency for server actions)
 - `questions`
 - `choices`
 - `tags`
@@ -61,7 +63,8 @@ The schema MUST define these tables (names are part of the contract):
 
 - **UUIDs:** Primary keys are UUIDs with database defaults (not client-generated for MVP).
 - **Time zones:** Persist timestamps as `timestamptz` (`timestamp with time zone`).
-- **Idempotency:** Stripe webhooks MUST be idempotent via `stripe_events` (see master spec Section 4.4.2).
+- **Idempotency:** Stripe webhooks MUST be idempotent via `stripe_events` (master spec Section 4.4.2). User-triggered server actions with side effects MUST support application-level idempotency via `idempotency_keys` (ADR-015).
+- **Rate limiting:** Public endpoints and mutation-heavy server actions MUST be rate limited via `rate_limits` (ADR-016, SPEC-017).
 - **FK integrity:** All foreign keys must be explicit and use `onDelete` behavior as specified in `docs/specs/master_spec.md`.
 - **Indexes:** `db/schema.ts` must include the indexes described in master spec Section 3 (query patterns).
 

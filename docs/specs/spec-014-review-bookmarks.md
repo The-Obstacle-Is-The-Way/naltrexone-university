@@ -70,9 +70,25 @@ Implement review workflows for subscribed users:
 
 ## Non-Negotiable Requirements
 
-- **Missed definition:** a question is “missed” if the most recent attempt for that question by the user is incorrect.
+- **Missed definition:** a question is "missed" if the most recent attempt for that question by the user is incorrect.
 - **No client trust:** lists are computed server-side from persisted attempts/bookmarks.
 - **Pagination:** lists must support pagination (limit/offset for MVP).
+
+---
+
+## Product Decision: Review = Missed-Only (2026-02-09)
+
+**Decision:** The `/app/review` page shows **only questions whose most recent attempt is incorrect**. This is NOT an "all questions" library or a general question history view.
+
+**Rationale:**
+- Missed-only review is the highest-value remediation workflow for board prep (cf. UWorld's "Incorrect" filter, which is the most-used review mode).
+- An "all answered questions" view is a separate feature with different UX requirements (filtering, sorting by date/topic/session). If needed in the future, it would be a new page — not an expansion of Review.
+- Keeping Review focused on missed questions makes the nav label meaningful: users learn "Review = things I got wrong."
+
+**UI clarification (SPEC-019 Phase 3):**
+- Update page subtitle to: _"Questions you answered incorrectly — review and reattempt to strengthen weak areas."_
+- Update empty state to explain scope: _"No missed questions yet. Great work! As you practice, any questions you get wrong will appear here for review."_
+- Keep nav label as "Review" (not "Missed Questions") — shorter, cleaner, and the subtitle disambiguates.
 
 ---
 

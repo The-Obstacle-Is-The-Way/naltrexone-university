@@ -28,9 +28,20 @@ These ports MUST:
 ```text
 src/application/
 ├── ports/
-│   ├── repositories.ts
+│   ├── attempt-repository.ts
+│   ├── bookmark-repository.ts
 │   ├── gateways.ts
-│   └── index.ts
+│   ├── idempotency-key-repository.ts
+│   ├── logger.ts
+│   ├── practice-session-repository.ts
+│   ├── question-repository.ts
+│   ├── repositories.ts              # Barrel re-export for repository ports
+│   ├── stripe-customer-repository.ts
+│   ├── stripe-event-repository.ts
+│   ├── subscription-repository.ts
+│   ├── tag-repository.ts
+│   ├── user-repository.ts
+│   └── index.ts                     # Barrel re-export for ports
 └── errors/
     └── application-errors.ts
 ```
@@ -51,14 +62,21 @@ src/application/
 **File:** `src/application/errors/application-errors.ts`
 
 ```ts
-export type ApplicationErrorCode =
-  | 'UNAUTHENTICATED'
-  | 'UNSUBSCRIBED'
-  | 'VALIDATION_ERROR'
-  | 'NOT_FOUND'
-  | 'CONFLICT'
-  | 'STRIPE_ERROR'
-  | 'INTERNAL_ERROR';
+export const ApplicationErrorCodes = [
+  'UNAUTHENTICATED',
+  'ALREADY_SUBSCRIBED',
+  'UNSUBSCRIBED',
+  'VALIDATION_ERROR',
+  'NOT_FOUND',
+  'CONFLICT',
+  'RATE_LIMITED',
+  'STRIPE_ERROR',
+  'INVALID_WEBHOOK_SIGNATURE',
+  'INVALID_WEBHOOK_PAYLOAD',
+  'INTERNAL_ERROR',
+] as const;
+
+export type ApplicationErrorCode = (typeof ApplicationErrorCodes)[number];
 
 export class ApplicationError extends Error {
   readonly _tag = 'ApplicationError' as const;
@@ -67,10 +85,18 @@ export class ApplicationError extends Error {
     public readonly code: ApplicationErrorCode,
     message: string,
     public readonly fieldErrors?: Record<string, string[]>,
+    options?: { cause?: unknown },
   ) {
-    super(message);
+    super(
+      message,
+      options?.cause !== undefined ? { cause: options.cause } : undefined,
+    );
     this.name = 'ApplicationError';
   }
+}
+
+export function isApplicationError(error: unknown): error is ApplicationError {
+  return error instanceof ApplicationError;
 }
 ```
 
@@ -191,6 +217,7 @@ export type RateLimitResult = {
 
 export interface RateLimiter {
   limit(input: RateLimitInput): Promise<RateLimitResult>;
+  pruneExpiredWindows(before: Date, limit: number): Promise<number>;
 }
 ```
 
@@ -198,150 +225,43 @@ export interface RateLimiter {
 
 ## Repository Ports
 
-**File:** `src/application/ports/repositories.ts`
+**SSOT:** `src/application/ports/*.ts` (one port per module). `src/application/ports/repositories.ts` is a barrel re-export for convenience.
+
+| Port | File | Notes |
+|------|------|-------|
+| `QuestionRepository` | `src/application/ports/question-repository.ts` | Published question reads + candidate ID listing |
+| `AttemptRepository` | `src/application/ports/attempt-repository.ts` | **ISP composite** (writer + history + stats + missed-questions + most-recent timestamps) |
+| `PracticeSessionRepository` | `src/application/ports/practice-session-repository.ts` | Session lifecycle + CAS-style state updates (record answer, mark for review) |
+| `BookmarkRepository` | `src/application/ports/bookmark-repository.ts` | Exists/add/remove/list |
+| `TagRepository` | `src/application/ports/tag-repository.ts` | `listAll()` |
+| `SubscriptionRepository` | `src/application/ports/subscription-repository.ts` | Find/upsert subscription (domain projection) |
+| `StripeCustomerRepository` | `src/application/ports/stripe-customer-repository.ts` | Stripe customer mapping |
+| `StripeEventRepository` | `src/application/ports/stripe-event-repository.ts` | Webhook idempotency claim/lock/mark |
+| `IdempotencyKeyRepository` | `src/application/ports/idempotency-key-repository.ts` | Application-level idempotency (ADR-015) |
+| `UserRepository` | `src/application/ports/user-repository.ts` | Upsert/find/delete by Clerk ID |
+
+### AttemptRepository (ISP composite)
+
+`AttemptRepository` is intentionally split into small interfaces and then composed (Interface Segregation). Excerpt:
 
 ```ts
-import type {
-  Attempt,
-  Bookmark,
-  PracticeSession,
-  Question,
-  Subscription,
-  Tag,
-  User,
-} from '@/src/domain/entities';
-import type { QuestionDifficulty, SubscriptionPlan, SubscriptionStatus } from '@/src/domain/value-objects';
-
-export interface QuestionRepository {
-  findPublishedById(id: string): Promise<Question | null>;
-  findPublishedBySlug(slug: string): Promise<Question | null>;
-  findPublishedByIds(ids: readonly string[]): Promise<readonly Question[]>;
-
-  /**
-   * Return candidate question ids for deterministic "next question" selection.
-   *
-   * Requirements:
-   * - Only returns `questions.status='published'`.
-   * - Applies tag/difficulty filters.
-   * - Returns ids in a deterministic order (repository defines ordering).
-   */
-  listPublishedCandidateIds(filters: {
-    tagSlugs: readonly string[];
-    difficulties: readonly QuestionDifficulty[];
-  }): Promise<readonly string[]>;
+export interface AttemptWriter {
+  insert(input: AttemptInsertInput): Promise<Attempt>;
+  deleteById(id: string, userId: string): Promise<boolean>;
 }
 
-export interface AttemptRepository {
-  insert(input: {
-    userId: string;
-    questionId: string;
-    practiceSessionId: string | null;
-    selectedChoiceId: string;
-    isCorrect: boolean;
-    timeSpentSeconds: number;
-  }): Promise<Attempt>;
-
-  findByUserId(
-    userId: string,
-    page: { limit: number; offset: number },
-  ): Promise<readonly Attempt[]>;
-  findBySessionId(sessionId: string, userId: string): Promise<readonly Attempt[]>;
-
-  /**
-   * For each question id, return the most recent answeredAt (max) for this user.
-   * Missing entries imply "never attempted".
-   */
-  findMostRecentAnsweredAtByQuestionIds(
-    userId: string,
-    questionIds: readonly string[],
-  ): Promise<readonly { questionId: string; answeredAt: Date }[]>;
+export interface AttemptStatsReader {
+  countByUserId(userId: string): Promise<number>;
+  // ...
 }
 
-export interface PracticeSessionRepository {
-  findByIdAndUserId(id: string, userId: string): Promise<PracticeSession | null>;
-  create(input: {
-    userId: string;
-    mode: 'tutor' | 'exam';
-    paramsJson: unknown; // adapter validates + persists exact shape
-  }): Promise<PracticeSession>;
-  end(id: string, userId: string): Promise<PracticeSession>;
-}
-
-export interface BookmarkRepository {
-  exists(userId: string, questionId: string): Promise<boolean>;
-  add(userId: string, questionId: string): Promise<Bookmark>;
-  /**
-   * Remove the bookmark if it exists.
-   * Returns true when removed, false when already absent.
-   */
-  remove(userId: string, questionId: string): Promise<boolean>;
-  listByUserId(userId: string): Promise<readonly Bookmark[]>;
-}
-
-export interface TagRepository {
-  listAll(): Promise<readonly Tag[]>;
-}
-
-export type SubscriptionUpsertInput = {
-  userId: string;
-  externalSubscriptionId: string; // opaque external id
-  plan: SubscriptionPlan; // domain plan (monthly/annual)
-  status: SubscriptionStatus;
-  currentPeriodEnd: Date;
-  cancelAtPeriodEnd: boolean;
-};
-
-export interface SubscriptionRepository {
-  findByUserId(userId: string): Promise<Subscription | null>;
-  findByExternalSubscriptionId(externalSubscriptionId: string): Promise<Subscription | null>;
-  upsert(input: SubscriptionUpsertInput): Promise<void>;
-}
-
-export interface StripeCustomerRepository {
-  findByUserId(userId: string): Promise<{ stripeCustomerId: string } | null>;
-  insert(userId: string, stripeCustomerId: string): Promise<void>;
-}
-
-export interface StripeEventRepository {
-  /**
-   * Insert the event row if missing (idempotent).
-   * Returns true if the row was inserted (claimed), false if it already existed.
-   */
-  claim(eventId: string, type: string): Promise<boolean>;
-
-  /**
-   * Lock the event row for exclusive processing and return its current state.
-   *
-   * IMPORTANT: This must be called inside a transaction.
-   */
-  lock(eventId: string): Promise<{
-    processedAt: Date | null;
-    error: string | null;
-  }>;
-
-  markProcessed(eventId: string): Promise<void>;
-  markFailed(eventId: string, error: string): Promise<void>;
-}
-
-export type UpsertUserByClerkIdOptions = {
-  observedAt?: Date;
-};
-
-export interface UserRepository {
-  /**
-   * Find a user by their external Clerk ID.
-   */
-  findByClerkId(clerkId: string): Promise<User | null>;
-
-  /**
-   * Upsert a user by their Clerk ID.
-   */
-  upsertByClerkId(
-    clerkId: string,
-    email: string,
-    options?: UpsertUserByClerkIdOptions,
-  ): Promise<User>;
-}
+export interface AttemptRepository
+  extends AttemptWriter,
+    AttemptHistoryReader,
+    AttemptSessionReader,
+    AttemptStatsReader,
+    AttemptMissedQuestionsReader,
+    AttemptMostRecentAnsweredAtReader {}
 ```
 
 ---

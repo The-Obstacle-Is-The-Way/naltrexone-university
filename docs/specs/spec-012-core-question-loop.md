@@ -116,6 +116,12 @@ Once implemented:
 
 ---
 
+## Route Note (SPEC-019 Phase 2)
+
+The ad-hoc question flow originally built on `/app/practice` will move to `/app/practice/quick` as part of [SPEC-019](./spec-019-practice-ux-redesign.md) Phase 2. The core question loop (fetch → render → submit → grade → explain) is unchanged — only its location in the routing tree changes. The existing hooks (`usePracticeQuestionFlow`, `usePracticeQuestionBookmarks`) and components (`PracticeView`, `QuestionCard`, `Feedback`) are reused on the new route.
+
+---
+
 ## Definition of Done
 
 - Behavior matches SLICE-2 in `docs/specs/master_spec.md`.

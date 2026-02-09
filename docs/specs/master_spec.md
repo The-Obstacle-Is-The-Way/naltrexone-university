@@ -93,8 +93,7 @@ import {
   uuid,
   varchar,
 } from 'drizzle-orm/pg-core';
-import { relations } from 'drizzle-orm';
-import { desc } from 'drizzle-orm';
+import { desc, relations, sql } from 'drizzle-orm';
 
 /**
  * ENUMS
@@ -232,12 +231,48 @@ export const stripeEvents = pgTable(
   {
     id: varchar('id', { length: 255 }).primaryKey(),
     type: varchar('type', { length: 255 }).notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     processedAt: timestamp('processed_at', { withTimezone: true }),
     error: text('error'),
   },
   (t) => ({
     typeIdx: index('stripe_events_type_idx').on(t.type),
     processedAtIdx: index('stripe_events_processed_at_idx').on(t.processedAt),
+  }),
+);
+
+// rate_limits (composite PK: key + window_start)
+export const rateLimits = pgTable(
+  'rate_limits',
+  {
+    key: varchar('key', { length: 255 }).notNull(),
+    windowStart: timestamp('window_start', { withTimezone: true }).notNull(),
+    count: integer('count').notNull(),
+  },
+  (t) => ({
+    pk: primaryKey({ columns: [t.key, t.windowStart] }),
+    windowStartIdx: index('rate_limits_window_start_idx').on(t.windowStart),
+  }),
+);
+
+// idempotency_keys (composite PK: user_id + action + key)
+export const idempotencyKeys = pgTable(
+  'idempotency_keys',
+  {
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    action: varchar('action', { length: 255 }).notNull(),
+    key: varchar('key', { length: 255 }).notNull(),
+    resultJson: jsonb('result_json').$type<unknown>(),
+    errorCode: varchar('error_code', { length: 255 }),
+    errorMessage: text('error_message'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+  },
+  (t) => ({
+    pk: primaryKey({ columns: [t.userId, t.action, t.key] }),
+    expiresAtIdx: index('idempotency_keys_expires_at_idx').on(t.expiresAt),
   }),
 );
 
@@ -278,6 +313,7 @@ export const choices = pgTable(
     label: varchar('label', { length: 4 }).notNull(), // A, B, C, D, E
     textMd: text('text_md').notNull(),
     isCorrect: boolean('is_correct').notNull(),
+    explanationMd: text('explanation_md'),
     sortOrder: integer('sort_order').notNull(), // 1..N
   },
   (t) => ({
@@ -344,6 +380,10 @@ export const practiceSessions = pgTable(
       t.userId,
       desc(t.startedAt),
     ),
+    userEndedAtIdx: index('practice_sessions_user_ended_at_idx').on(
+      t.userId,
+      desc(t.endedAt),
+    ),
   }),
 );
 
@@ -387,7 +427,15 @@ export const attempts = pgTable(
       t.practiceSessionId,
       desc(t.answeredAt),
     ),
+    sessionUserAnsweredAtIdx: index('attempts_session_user_answered_at_idx').on(
+      t.practiceSessionId,
+      t.userId,
+      desc(t.answeredAt),
+    ),
     questionIdIdx: index('attempts_question_id_idx').on(t.questionId),
+    sessionQuestionUq: uniqueIndex('attempts_session_question_uq')
+      .on(t.practiceSessionId, t.questionId)
+      .where(sql`practice_session_id IS NOT NULL`),
   }),
 );
 

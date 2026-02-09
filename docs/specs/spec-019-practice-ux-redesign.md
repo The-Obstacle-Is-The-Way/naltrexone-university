@@ -239,35 +239,40 @@ Following Uncle Bob's principles:
 
 ```text
 /app/practice                         ← LANDING PAGE (decision point)
-├── Hero: "Practice Mode"
+├── [Section] Incomplete Session       (if exists — resume/abandon)
 ├── [Card 1] "Start a Session" (Primary CTA)
 │   └── Configure: mode, count, tags, difficulty
-│   └── "Start" → /app/practice/sessions/[id]
+│   └── "Start" → /app/practice/[sessionId]
 ├── [Card 2] "Quick Practice" (Secondary CTA)
 │   └── "Answer questions without session tracking"
 │   └── → /app/practice/quick
-└── [Section] Recent Sessions (optional)
-    └── List of past sessions with scores
+└── [Section] Recent Sessions
+    └── List of past sessions with scores + "View breakdown"
 
-/app/practice/sessions/[id]           ← SESSION RUNNER (immersive)
+/app/practice/[sessionId]             ← SESSION RUNNER (immersive, unchanged)
 ├── Header: "Tutor Mode • 3/20"       [End Session]
-├── Question + Choices
+├── Question Navigator (numbered grid)
+├── Question + Choices + Bookmark toggle
 ├── Submit → Feedback (tutor) or Stored (exam)
+├── Mark for Review (exam only)
 ├── "Next" → advance
-└── After all questions OR "End Session" → Summary
+├── Exam Review Stage → answered/unanswered/marked grid
+└── After finalize → Summary (totals + per-question breakdown)
 
 /app/practice/quick                   ← QUICK PRACTICE (no session)
-├── Header: "Quick Practice"          [Back to Practice]
-├── Random question (filters optional)
-├── Submit → Feedback immediately
-└── "Another Question" or "Done"
+├── Header: "Quick Practice"          [← Back to Practice]
+├── Random question (no session tracking)
+├── Submit → Feedback immediately + Bookmark toggle
+└── "Next Question" or "Back to Practice"
 ```
+
+> **Route note:** The session runner route remains `/app/practice/[sessionId]` (existing, NOT `/app/practice/sessions/[id]`). Since `[sessionId]` is always a UUID and `quick` is a static segment, Next.js resolves `/app/practice/quick` statically before the dynamic `[sessionId]` catch — no collision possible.
 
 ### 5.3 Mode Comparison Table
 
 | Aspect | Quick Practice | Tutor Session | Exam Session |
 |--------|----------------|---------------|--------------|
-| **Route** | `/app/practice/quick` | `/app/practice/sessions/[id]` | `/app/practice/sessions/[id]` |
+| **Route** | `/app/practice/quick` | `/app/practice/[sessionId]` | `/app/practice/[sessionId]` |
 | **Progress tracking** | No | Yes (X/N) | Yes (X/N) |
 | **Explanation timing** | Immediate | Immediate | After session ends |
 | **Question selection** | Random, no commitment | Fixed at start | Fixed at start |
@@ -326,7 +331,11 @@ Active filters: [Opioids ×] [Treatment ×]    ← removable chips
 
 #### 5.4.3 Review Page Clarification
 
-1. **Rename in nav:** "Review" → "Missed Questions" (or keep "Review" with subtitle)
+**Product Decision (2026-02-09):** Review = **missed-only**. The `/app/review` page shows only questions whose most recent attempt is incorrect (per SPEC-014). This is NOT an "all questions" library. Rationale: missed-only review is the highest-value remediation workflow for board prep; an "all answered" view is lower priority and can be added later as a separate feature if needed.
+
+**UI clarifications to implement:**
+
+1. **Keep "Review" in nav** but update the page subtitle to: _"Questions you answered incorrectly — review and reattempt to strengthen weak areas."_
 2. **Empty state messaging:** When no missed questions exist, show:
 
    ```text
@@ -335,8 +344,8 @@ Active filters: [Opioids ×] [Treatment ×]    ← removable chips
    [Go to Practice →]
    ```
 
-3. **Add filtering:** Allow filtering missed questions by tag, difficulty, date range
-4. **Link back to session:** Each missed question shows which session it came from (if applicable)
+3. **Add filtering (P2):** Allow filtering missed questions by tag, difficulty, date range
+4. **Session origin (Done):** Each missed question already shows session origin badge (`Tutor session`, `Exam session`, or `Ad-hoc practice`) via SPEC-020 Phase 3
 
 #### 5.4.4 Cross-Page Navigation Design
 
@@ -392,52 +401,192 @@ Per SPEC-013 and master_spec.md section 4.5.4:
 
 ### Phase 2: UX Redesign
 
-**Goal:** Clear separation between quick practice and sessions.
+**Goal:** Clear separation between quick practice and sessions. No question loads until the user explicitly chooses a mode.
 
-| Task | Priority | Effort |
-|------|----------|--------|
-| Create `/app/practice/quick/page.tsx` for ad-hoc mode | P1 | 2 hr |
-| Redesign `/app/practice/page.tsx` as landing page | P1 | 2 hr |
-| Move session starter to modal or inline card | P2 | 1 hr |
-| Add session history section to landing page (see [SPEC-020](./spec-020-practice-engine-completion.md) Phase 4) | P3 | 2 hr |
-| Remove ad-hoc question display from landing page | P1 | 30 min |
+#### 6.2.1 Route Changes
+
+| Route | Before | After |
+|-------|--------|-------|
+| `/app/practice` | Landing + ad-hoc question flow on same page | **Landing page only** — mode selection + session history |
+| `/app/practice/quick` | Does not exist | **New** — ad-hoc question flow (random question, immediate feedback) |
+| `/app/practice/[sessionId]` | Session runner | **Unchanged** |
+
+Add to `lib/routes.ts`:
+```typescript
+APP_PRACTICE_QUICK: '/app/practice/quick',
+```
+
+#### 6.2.2 Landing Page Refactor (`/app/practice`)
+
+**What changes:** Remove the ad-hoc question flow (`usePracticeQuestionFlow`, `PracticeView`). The landing page becomes a pure decision point.
+
+**Layout (top to bottom):**
+
+```text
+┌────────────────────────────────────────────────────────────┐
+│ Practice                                [Back to Dashboard] │
+│ Choose how you want to practice.                            │
+├────────────────────────────────────────────────────────────┤
+│ ┌─ Incomplete Session Card (if exists) ─────────────────┐  │
+│ │ Tutor · 5/20 answered     [Resume session] [Abandon]  │  │
+│ └────────────────────────────────────────────────────────┘  │
+│                                                              │
+│ ┌─ Start a Session ──────────┐  ┌─ Quick Practice ────────┐ │
+│ │ Structured practice with   │  │ Answer one question at  │ │
+│ │ progress tracking.         │  │ a time. No session      │ │
+│ │                            │  │ tracking — just jump    │ │
+│ │ Mode: [Tutor] [Exam]      │  │ in and practice.        │ │
+│ │ Questions: [20]            │  │                         │ │
+│ │ Difficulty: [E] [M] [H]   │  │                         │ │
+│ │ ▶ Exam Section (0)         │  │                         │ │
+│ │ ▶ Substance (0)            │  │                         │ │
+│ │ ▶ Topic (0)                │  │                         │ │
+│ │ ▶ Treatment (0)            │  │                         │ │
+│ │                            │  │                         │ │
+│ │ [Start session]            │  │ [Quick Practice →]      │ │
+│ └────────────────────────────┘  └─────────────────────────┘ │
+│                                                              │
+│ ┌─ Recent Sessions ─────────────────────────────────────┐   │
+│ │ Tutor · 1/20 correct (100%) · 1m 20s  [View breakdown]│   │
+│ │ Tutor · 0/20 correct (0%) · 31s       [View breakdown]│   │
+│ └────────────────────────────────────────────────────────┘   │
+└──────────────────────────────────────────────────────────────┘
+```
+
+**Responsive:** On mobile, the two mode cards stack vertically (Session on top, Quick Practice below).
+
+**Component reuse:**
+- `IncompleteSessionCard` — unchanged, stays on landing page
+- `PracticeSessionStarter` — unchanged, embedded in "Start a Session" card
+- `PracticeSessionHistoryPanel` — unchanged, stays on landing page
+- `PracticeView` — **removed from landing page**, moves to quick practice page
+
+**Hook reuse:**
+- `usePracticeSessionControls` — stays (orchestrates starter + incomplete + history + tags)
+- `usePracticeSessionStart` — stays
+- `usePracticeSessionTags` — stays
+- `usePracticeIncompleteSession` — stays
+- `usePracticeSessionHistory` — stays
+- `usePracticeQuestionFlow` — **removed from landing page** (moves to quick practice)
+- `usePracticeQuestionBookmarks` — **removed from landing page** (moves to quick practice)
+
+**Files to modify:**
+- `app/(app)/app/practice/page.tsx` — remove question flow, keep session controls only
+- `app/(app)/app/practice/practice-page-client.tsx` — remove question flow orchestration
+- `app/(app)/app/practice/components/practice-view.tsx` — no changes (will be imported by quick practice)
+- `lib/routes.ts` — add `APP_PRACTICE_QUICK`
+
+#### 6.2.3 Quick Practice Page (`/app/practice/quick`)
+
+**New route** that houses the ad-hoc question flow currently living on `/app/practice`.
+
+**Layout:**
+
+```text
+┌────────────────────────────────────────────────────────────┐
+│ Quick Practice                          [← Back to Practice]│
+│ Answer one question at a time.                              │
+├────────────────────────────────────────────────────────────┤
+│                                              [Bookmark]     │
+│ ┌─ Question Card ──────────────────────────────────────┐   │
+│ │ A patient who had been taking zolpidem nightly...     │   │
+│ │                                                       │   │
+│ │ (A) Choice A                                          │   │
+│ │ (B) Choice B                                          │   │
+│ │ (C) Choice C                                          │   │
+│ │ (D) Choice D                                          │   │
+│ └───────────────────────────────────────────────────────┘   │
+│                                                              │
+│ [Submit]  [Next Question]                                    │
+│                                                              │
+│ (After submit: feedback + explanation shown immediately)     │
+└──────────────────────────────────────────────────────────────┘
+```
+
+**Component reuse:**
+- `PracticeView` — reused as-is (renders question card + feedback + submit + next)
+- `QuestionCard` — reused (shared component)
+- `Feedback` — reused (shared component)
+- `ErrorCard` — reused for error states
+
+**Hook reuse:**
+- `usePracticeQuestionFlow` — reused as-is (composite hook for question fetch + answer + next)
+- `usePracticeQuestionBookmarks` — reused as-is
+- `shared/question-flow-actions.ts` — reused (shared actions for question fetch/submit)
+- `shared/use-question-flow-core.ts` — reused (shared core hook)
+
+**New files to create:**
+- `app/(app)/app/practice/quick/page.tsx` — server component, renders `QuickPracticeClient`
+- `app/(app)/app/practice/quick/quick-practice-client.tsx` — client component, composes hooks + view
+- `app/(app)/app/practice/quick/loading.tsx` — loading state (consistent with practice/loading.tsx)
+- `app/(app)/app/practice/quick/error.tsx` — error boundary (consistent with practice/error.tsx)
+
+**What `QuickPracticeClient` does:**
+```text
+1. Calls usePracticeQuestionFlow() — fetches random question on mount
+2. Calls usePracticeQuestionBookmarks() — bookmark toggle state
+3. Renders page heading ("Quick Practice") + back link
+4. Renders PracticeView with question flow props
+5. No session controls, no progress counter, no session history
+```
+
+#### 6.2.4 Implementation Order
+
+| Step | Task | Priority | Depends On |
+|------|------|----------|-----------|
+| 1 | Add `APP_PRACTICE_QUICK` to `lib/routes.ts` | P1 | — |
+| 2 | Create `/app/practice/quick/` route files (page, client, loading, error) | P1 | Step 1 |
+| 3 | Wire quick practice page to reuse `usePracticeQuestionFlow` + `PracticeView` | P1 | Step 2 |
+| 4 | Remove question flow from `/app/practice/practice-page-client.tsx` | P1 | Step 3 (quick page works first) |
+| 5 | Update landing page layout: add "Quick Practice" card with link | P1 | Step 4 |
+| 6 | Update tests for landing page (no longer renders question flow) | P1 | Step 4 |
+| 7 | Add tests for quick practice page | P1 | Step 3 |
 
 **Acceptance Criteria for Phase 2:**
-- [ ] `/app/practice` shows two clear options: Session vs Quick Practice
-- [ ] No question is shown until user explicitly chooses a mode
-- [ ] `/app/practice/quick` works independently for ad-hoc practice
-- [ ] Session config is prominent and easy to understand
-- [ ] User flow matches UWorld/Kaplan mental model
+- [ ] `/app/practice` does NOT load any question on mount — only shows session controls + history
+- [ ] `/app/practice` shows two clear mode options: "Start a Session" card + "Quick Practice" card
+- [ ] `/app/practice/quick` loads a random question on mount, allows submit → feedback → next
+- [ ] `/app/practice/quick` has "Back to Practice" link and page heading
+- [ ] `/app/practice/[sessionId]` is unchanged (no regressions)
+- [ ] `ROUTES.APP_PRACTICE_QUICK` exists in `lib/routes.ts`
+- [ ] All existing practice page tests pass (updated for new layout)
+- [ ] New tests cover quick practice page rendering and question flow
+- [ ] `pnpm typecheck && pnpm lint && pnpm test --run && pnpm build` all pass
 
 ### Phase 3: Cross-Page Information Architecture
 
 **Goal:** Make all pages actionable and coherent across the app.
 
-| Task | Priority | Effort | Section |
+| Task | Priority | Status | Section |
 |------|----------|--------|---------|
-| Dashboard: make recent activity items clickable links | P1 | 2 hr | 5.4.1 |
-| Dashboard: group activity by session with collapsible headers | P1 | 3 hr | 5.4.1 |
-| Tag filter: implement collapsible categories (Option A) | P1 | 2 hr | 5.4.2 |
-| Tag filter: show active filter count badges | P2 | 1 hr | 5.4.2 |
-| Review page: update empty state with helpful messaging | P1 | 30 min | 5.4.3 |
-| Review page: add subtitle clarifying scope | P1 | 15 min | 5.4.3 |
-| Review page: add tag/difficulty filter to missed questions list | P2 | 2 hr | 5.4.3 |
-| Review page: show session origin per missed question | P2 | 1 hr | 5.4.3 |
-| Cross-page: ensure every question reference links to `/app/questions/[slug]` | P1 | 2 hr | 5.4.4 |
-| Cross-page: ensure every session reference links to session detail | P2 | 1 hr | 5.4.4 |
-| Cross-page: improve empty states on all pages with CTAs | P2 | 1 hr | 5.4.4 |
+| Dashboard: group activity by session with mode badge + score | P1 | **Done** (SPEC-020 Phase 3) | 5.4.1 |
+| Review page: show session origin per missed question | P2 | **Done** (SPEC-020 Phase 3) | 5.4.3 |
+| Dashboard: make recent activity items clickable links → `/app/questions/[slug]` | P1 | Pending | 5.4.1 |
+| Dashboard: render difficulty badge on activity items | P2 | Pending | 5.4.1 |
+| Dashboard: session headers link to session detail/breakdown | P2 | Pending | 5.4.1 |
+| Tag filter: implement collapsible categories (Option A) | P1 | Pending | 5.4.2 |
+| Tag filter: show active filter count badges on collapsed headers | P2 | Pending | 5.4.2 |
+| Review page: update subtitle to clarify missed-only scope | P1 | Pending | 5.4.3 |
+| Review page: update empty state with helpful messaging + CTA | P1 | Pending | 5.4.3 |
+| Review page: add tag/difficulty filter to missed questions list | P2 | Pending | 5.4.3 |
+| Cross-page: make every question reference a clickable link → `/app/questions/[slug]` | P1 | Pending | 5.4.4 |
+| Cross-page: origin-aware back links on `/app/questions/[slug]` (adapt to entry point) | P2 | Pending | 5.4.4 |
+| Cross-page: improve empty states on all pages with CTAs | P2 | Pending | 5.4.4 |
 
 **Acceptance Criteria for Phase 3:**
+- [x] Dashboard sessions are grouped with mode badge and score summary
+- [x] Missed questions show session origin (mode + date) when applicable
 - [ ] Dashboard recent activity items are clickable → navigate to question review
-- [ ] Dashboard sessions are grouped with mode badge and score summary
+- [ ] Dashboard renders difficulty badge on activity items
 - [ ] Tag filter categories are collapsed by default; expanding shows chips
 - [ ] Active filter count shown on collapsed categories
+- [ ] Review page subtitle clarifies scope: _"Questions you answered incorrectly — review and reattempt to strengthen weak areas."_
 - [ ] Review page empty state explains scope and provides CTA
-- [ ] Missed questions show session origin (mode + date) when applicable
 - [ ] All question references across all pages are clickable links
-- [ ] All session references link to session detail/breakdown
+- [ ] Question detail page back links adapt to entry point (Dashboard, Review, Bookmarks, Practice)
+- [ ] `pnpm typecheck && pnpm lint && pnpm test --run && pnpm build` all pass
 
-**Dependencies:** Phase 3 can proceed independently of Phase 2. Many tasks require only UI changes (no backend work). Session origin on missed questions requires the `sessionId`/`sessionMode` fields from SPEC-020 Phase 3.
+**Dependencies:** Phase 3 can proceed independently of Phase 2. Many tasks require only UI changes (no backend work). Session grouping and origin badges are already done via SPEC-020 Phase 3.
 
 ---
 
@@ -449,13 +598,13 @@ Per SPEC-013 and master_spec.md section 4.5.4:
 - `app/(app)/app/practice/page.tsx` — better error display
 
 ### Phase 2 (Redesign)
-- `app/(app)/app/practice/page.tsx` — convert to landing page
-- `app/(app)/app/practice/quick/page.tsx` — NEW: ad-hoc practice
-- `app/(app)/app/practice/quick/loading.tsx` — NEW
-- `app/(app)/app/practice/quick/error.tsx` — NEW
-- `components/practice/PracticeLanding.tsx` — NEW: landing page component
-- `components/practice/QuickPractice.tsx` — NEW: ad-hoc component
-- `components/practice/SessionStarter.tsx` — extract from current page
+- `lib/routes.ts` — add `APP_PRACTICE_QUICK`
+- `app/(app)/app/practice/page.tsx` — remove question flow rendering
+- `app/(app)/app/practice/practice-page-client.tsx` — remove question flow orchestration, add "Quick Practice" card
+- `app/(app)/app/practice/quick/page.tsx` — NEW: server component renders `QuickPracticeClient`
+- `app/(app)/app/practice/quick/quick-practice-client.tsx` — NEW: client component composing `usePracticeQuestionFlow` + `PracticeView`
+- `app/(app)/app/practice/quick/loading.tsx` — NEW: loading state
+- `app/(app)/app/practice/quick/error.tsx` — NEW: error boundary
 
 ### Phase 3 (Cross-Page IA)
 - `app/(app)/app/dashboard/page.tsx` — make activity clickable, add session grouping
@@ -592,7 +741,7 @@ Per SPEC-013 and master_spec.md section 4.5.4:
                     ▼                           ▼
 
 ┌───────────────────────────────┐   ┌───────────────────────────────┐
-│ /app/practice/sessions/[id]   │   │ /app/practice/quick           │
+│ /app/practice/[sessionId]     │   │ /app/practice/quick           │
 │                               │   │                               │
 │ ┌───────────────────────────┐ │   │ Quick Practice    [← Back]    │
 │ │ Tutor • 3/20  [End]       │ │   │                               │
@@ -619,7 +768,7 @@ Per SPEC-013 and master_spec.md section 4.5.4:
 
 ---
 
-## 14. Implementation Status (2026-02-07)
+## 14. Implementation Status (2026-02-09)
 
 ### Phase 1: Stabilize Current Implementation — **Done**
 
@@ -630,17 +779,25 @@ All Phase 1 acceptance criteria met:
 - Exam mode hides explanations until session end
 - Error messages improved via `ApplicationError` typed codes
 
-### Phase 2: UX Redesign — **Not Started**
+### Phase 2: UX Redesign — **Ready for Implementation**
 
-Primary remaining work. The practice page remains a hybrid combining session config, ad-hoc questions, and session history on one page. The `/app/practice/quick` route does not exist.
+Fully specified in Section 6.2 above (as of 2026-02-09). The practice page remains a hybrid combining session config, ad-hoc questions, and session history on one page. The `/app/practice/quick` route does not exist yet.
+
+**Summary of changes:**
+1. Create `/app/practice/quick/` route (reuses existing `usePracticeQuestionFlow` + `PracticeView`)
+2. Remove ad-hoc question flow from `/app/practice` landing page
+3. Add "Quick Practice" card to landing page with link to new route
+4. Add `APP_PRACTICE_QUICK` to `lib/routes.ts`
 
 ### Phase 3: Cross-Page Information Architecture — **In Progress (Partial)**
 
-Part of this phase is complete via SPEC-020 work:
-- Dashboard now groups activity by `sessionId` / `sessionMode`.
-- Review rows now display session origin (`Tutor session`, `Exam session`, or `Ad-hoc practice`).
+**Completed** via SPEC-020 Phase 3:
+- Dashboard groups activity by `sessionId` / `sessionMode` ✓
+- Review rows display session origin (`Tutor session`, `Exam session`, `Ad-hoc practice`) ✓
 
-Primary remaining work from the live-app audit (2026-02-07):
+**Product decision (2026-02-09):** Review page stays **missed-only** (per SPEC-014). Clarify via subtitle text, not scope expansion. See Section 5.4.3.
+
+**Remaining work:**
 
 | Gap | Location | Details |
 |-----|----------|---------|
@@ -664,3 +821,4 @@ These gaps are already specified in Section 5.4 above. No new spec requirements 
 | 2026-02-07 | Architecture Review | **Major amendment:** Added cross-page UX audit (Section 2.5) — dashboard activity not actionable, tag filter cognitive overload, review page ambiguity, fragmented IA. Introduced Phase 3 (Section 5.4 + Implementation Plan) for cross-page information architecture, including tag filter progressive disclosure design. Included SPEC-014/015 in Related Documents. |
 | 2026-02-07 | Architecture Review | **Status:** "Proposed" → "Partial" (Phase 1 Done). Added Section 14 (Implementation Status) with per-phase tracking. Added specific audit findings for Phase 3 gaps: clickable dashboard activity, origin-aware question-detail navigation, question detail subtitle, difficulty badges, cross-links between Review/Bookmarks. |
 | 2026-02-07 | Engineering | Updated Phase 3 status to **In Progress (Partial)** to reflect completed session-context work (dashboard grouping + review session-origin badges). Refined navigation gap language to match current `question-page-client` behavior. |
+| 2026-02-09 | Engineering | **Phase 2 fully specified.** Expanded Section 6.2 with component-level detail: route structure, landing page layout, quick practice page spec, hook/component reuse mapping, implementation order, file paths. Fixed stale route paths (`/app/practice/sessions/[id]` → `/app/practice/[sessionId]` to match actual codebase). **Product decision:** Review = missed-only (SPEC-014 unchanged, clarify via subtitle). Updated Phase 3 task table with Done/Pending status. Updated Section 14 status from "Not Started" to "Ready for Implementation". |

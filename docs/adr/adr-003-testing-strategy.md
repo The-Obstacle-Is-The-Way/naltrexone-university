@@ -27,18 +27,18 @@ We adopt a **Testing Pyramid** aligned with our architecture layers:
                     │(Playwright)│
                     ├────────────┤
                     │            │
-               ┌────┤Integration├────┐  Some, medium speed
-               │    │ (Vitest)  │    │
-               │    ├───────────┤    │
-               │    │           │    │
-          ┌────┤    │   Unit    │    ├────┐  Many, fast
-          │    │    │ (Vitest)  │    │    │
-          │    │    └───────────┘    │    │
-          │    │                     │    │
-    ┌─────┴────┴─────────────────────┴────┴───────┐
-    │                 Domain                      │  100% unit testable
-    │           (Zero dependencies)               │  NO MOCKS
-    └─────────────────────────────────────────────┘
+               ┌────┤Integration ├────┐  Some, medium speed
+               │    │ (Vitest)   │    │
+               │    ├────────────┤    │
+               │    │            │    │
+          ┌────┤    │   Unit     │    ├────┐  Many, fast
+          │    │    │ (Vitest)   │    │    │
+          │    │    └────────────┘    │    │
+          │    │                      │    │
+    ┌─────┴────┴──────────────────────┴────┴───────┐
+    │                 Domain                       │  100% unit testable
+    │           (Zero dependencies)                │  NO MOCKS
+    └──────────────────────────────────────────────┘
 ```
 
 ### Test Categories

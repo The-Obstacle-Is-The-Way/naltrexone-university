@@ -97,12 +97,12 @@ Once implemented:
 
 ## Actionable Activity (SPEC-019 Phase 3)
 
-The core SLICE-5 functionality is complete. The following UX improvements are specified in [SPEC-019](./spec-019-practice-ux-redesign.md) Phase 3:
+The core SLICE-5 functionality is complete. Session grouping was delivered by SPEC-020 Phase 3. The following UX improvements remain, specified in [SPEC-019](./spec-019-practice-ux-redesign.md) Phase 3:
 
-- **Clickable activity items:** `slug` is fetched as an "internal navigation identifier" (master_spec 4.5.7) but not yet wired to `toQuestionRoute(slug)` links in the UI. Every question reference should link to `/app/questions/[slug]`.
-- **Difficulty badges:** `difficulty` field is in `UserStatsOutput.recentActivity` but not rendered.
-- **Session grouping:** Already implemented — activity groups by `sessionId`/`sessionMode` with headers.
-- **Session drill-down:** Session headers should link to session detail/breakdown view.
+- **Session grouping:** **Done** (SPEC-020 Phase 3) — activity groups by `sessionId`/`sessionMode` with mode badge + score headers.
+- **Clickable activity items (Pending):** `slug` is fetched as an "internal navigation identifier" (master_spec 4.5.7) but not yet wired to `toQuestionRoute(slug)` links in the UI. Every question reference should link to `/app/questions/[slug]`.
+- **Difficulty badges (Pending):** `difficulty` field is in `UserStatsOutput.recentActivity` but not rendered.
+- **Session drill-down (Pending):** Session headers should link to session detail/breakdown view.
 
 ---
 
