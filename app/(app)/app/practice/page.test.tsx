@@ -22,6 +22,15 @@ describe('app/(app)/app/practice', () => {
     expect(html).toContain('Back to Dashboard');
   }, 20_000);
 
+  it('links to quick practice from the landing page', async () => {
+    const PracticePage = (await import('@/app/(app)/app/practice/page'))
+      .default;
+
+    const html = renderToStaticMarkup(<PracticePage />);
+    expect(html).toContain('Quick Practice');
+    expect(html).toContain('href="/app/practice/quick"');
+  }, 20_000);
+
   it('renders an error banner when loadState is error', async () => {
     const { PracticeView } = await import('@/app/(app)/app/practice/page');
 
