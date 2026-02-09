@@ -570,6 +570,7 @@ describe('app/pricing', () => {
 
     const element = await PricingPage({
       searchParams: Promise.resolve({}),
+      authNavFn: async () => <div>AuthNav</div>,
       deps: {
         authGateway: {
           getCurrentUser: async () => null,
@@ -593,6 +594,7 @@ describe('app/pricing', () => {
 
     const element = await PricingPage({
       searchParams: Promise.resolve({}),
+      authNavFn: async () => <div>AuthNav</div>,
       deps: {
         authGateway: {
           getCurrentUser: async () => ({
