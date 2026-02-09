@@ -37,7 +37,7 @@ Deliver the core learning loop for subscribed users:
 
 ## Acceptance Criteria
 
-- Given I am subscribed, when I open `/app/practice` and start, then I see a question stem and choices rendered as sanitized markdown.
+- Given I am subscribed, when I open `/app/practice/quick`, then I see a question stem and choices rendered as sanitized markdown.
 - When I select an answer and submit, then I see correct/incorrect feedback and explanation (tutor mode).
 - When I submit, then an `attempts` row is created.
 
@@ -48,7 +48,7 @@ Deliver the core learning loop for subscribed users:
 - `src/domain/services/grading.test.ts`: gradeAnswer() pure function tests (colocated).
 - `src/application/use-cases/submit-answer.test.ts`: use case tests with fakes (colocated).
 - `tests/integration/controllers.integration.test.ts`: submitAnswer inserts attempts and grades correctly.
-- `tests/e2e/practice.spec.ts`: UI flow for answering one question.
+- `tests/e2e/subscribe-and-practice.spec.ts`: UI flow for answering one ad-hoc question.
 
 ---
 
@@ -68,7 +68,7 @@ Deliver the core learning loop for subscribed users:
    - `src/adapters/repositories/drizzle-attempt-repository.ts`
 6. Build controllers:
    - `src/adapters/controllers/question-controller.ts`
-7. Build `/app/practice` UI for single-question flow (no sessions yet):
+7. Build `/app/practice/quick` UI for single-question flow (no sessions yet):
    - fetch next question via controller
    - select choice
    - submit and show explanation (tutor mode)
@@ -89,7 +89,7 @@ Deliver the core learning loop for subscribed users:
 - `src/adapters/repositories/drizzle-question-repository.ts`, `drizzle-attempt-repository.ts`
 - `src/adapters/controllers/question-controller.ts`, `bookmark-controller.ts`
 - `lib/container.ts` (add new factories)
-- `app/(app)/app/practice/page.tsx`
+- `app/(app)/app/practice/quick/page.tsx`
 
 ---
 
@@ -108,7 +108,7 @@ Once implemented:
 
 1. Ensure you have an entitled user (complete SLICE-1 in Stripe test mode).
 2. `pnpm db:seed` and `pnpm dev`.
-3. Visit `/app/practice` → answer one question.
+3. Visit `/app/practice/quick` → answer one question.
 4. Verify:
    - feedback shows correct/incorrect
    - explanation is visible in tutor mode
@@ -118,7 +118,7 @@ Once implemented:
 
 ## Route Note (SPEC-019 Phase 2)
 
-The ad-hoc question flow originally built on `/app/practice` will move to `/app/practice/quick` as part of [SPEC-019](./spec-019-practice-ux-redesign.md) Phase 2. The core question loop (fetch → render → submit → grade → explain) is unchanged — only its location in the routing tree changes. The existing hooks (`usePracticeQuestionFlow`, `usePracticeQuestionBookmarks`) and components (`PracticeView`, `QuestionCard`, `Feedback`) are reused on the new route.
+The ad-hoc question flow originally built on `/app/practice` has moved to `/app/practice/quick` as part of [SPEC-019](./spec-019-practice-ux-redesign.md) Phase 2. The core question loop (fetch → render → submit → grade → explain) is unchanged — only its location in the routing tree changed. The existing hooks (`usePracticeQuestionFlow`, `usePracticeQuestionBookmarks`) and components (`PracticeView`, `QuestionCard`, `Feedback`) are reused on the new route.
 
 ---
 

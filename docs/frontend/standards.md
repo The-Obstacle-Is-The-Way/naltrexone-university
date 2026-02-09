@@ -607,7 +607,7 @@ Issues documented below are tracked as tech debt in `docs/debt/index.md` (Fronte
 
 | ID | File(s) | Issue |
 |----|---------|-------|
-| FE-038 | `components/ui/card.tsx` sub-components | `CardHeader`, `CardTitle`, `CardDescription`, `CardContent`, `CardFooter`, `CardAction` have 0 imports outside tests. KEEP — SPEC-019 Phase 2 card-based redesign will likely need structured card layouts. Evaluate during UI/UX refactor. |
+| FE-038 | `components/ui/card.tsx` sub-components | `CardHeader`, `CardTitle`, `CardDescription`, `CardContent`, `CardFooter`, `CardAction` have 0 imports outside tests. SPEC-019 Phase 2 complete — sub-components were not needed. Evaluate for removal unless Phase 3 requires them. |
 
 ---
 

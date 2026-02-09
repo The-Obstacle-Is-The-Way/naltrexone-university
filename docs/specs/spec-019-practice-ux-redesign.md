@@ -473,7 +473,7 @@ APP_PRACTICE_QUICK: '/app/practice/quick',
 **Files to modify:**
 - `app/(app)/app/practice/page.tsx` — remove question flow, keep session controls only
 - `app/(app)/app/practice/practice-page-client.tsx` — remove question flow orchestration
-- `app/(app)/app/practice/components/practice-view.tsx` — no changes (will be imported by quick practice)
+- `app/(app)/app/practice/components/practice-view.tsx` — small additive change: allow `title`/`description`/`backLink` overrides for Quick Practice reuse (defaults preserve existing output)
 - `lib/routes.ts` — add `APP_PRACTICE_QUICK`
 
 #### 6.2.3 Quick Practice Page (`/app/practice/quick`)
@@ -523,11 +523,9 @@ APP_PRACTICE_QUICK: '/app/practice/quick',
 
 **What `QuickPracticeClient` does:**
 ```text
-1. Calls usePracticeQuestionFlow() — fetches random question on mount
-2. Calls usePracticeQuestionBookmarks() — bookmark toggle state
-3. Renders page heading ("Quick Practice") + back link
-4. Renders PracticeView with question flow props
-5. No session controls, no progress counter, no session history
+1. Calls usePracticeQuestionFlow() — fetches random question on mount (composes answer flow + bookmark state)
+2. Renders PracticeView with title "Quick Practice" and a "Back to Practice" link
+3. No session controls, no progress counter, no session history
 ```
 
 #### 6.2.4 Implementation Order
@@ -543,15 +541,15 @@ APP_PRACTICE_QUICK: '/app/practice/quick',
 | 7 | Add tests for quick practice page | P1 | Step 3 |
 
 **Acceptance Criteria for Phase 2:**
-- [ ] `/app/practice` does NOT load any question on mount — only shows session controls + history
-- [ ] `/app/practice` shows two clear mode options: "Start a Session" card + "Quick Practice" card
-- [ ] `/app/practice/quick` loads a random question on mount, allows submit → feedback → next
-- [ ] `/app/practice/quick` has "Back to Practice" link and page heading
-- [ ] `/app/practice/[sessionId]` is unchanged (no regressions)
-- [ ] `ROUTES.APP_PRACTICE_QUICK` exists in `lib/routes.ts`
-- [ ] All existing practice page tests pass (updated for new layout)
-- [ ] New tests cover quick practice page rendering and question flow
-- [ ] `pnpm typecheck && pnpm lint && pnpm test --run && pnpm build` all pass
+- [x] `/app/practice` does NOT load any question on mount — only shows session controls + history
+- [x] `/app/practice` shows two clear mode options: "Start a Session" card + "Quick Practice" card
+- [x] `/app/practice/quick` loads a random question on mount, allows submit → feedback → next
+- [x] `/app/practice/quick` has "Back to Practice" link and page heading
+- [x] `/app/practice/[sessionId]` is unchanged (no regressions)
+- [x] `ROUTES.APP_PRACTICE_QUICK` exists in `lib/routes.ts`
+- [x] All existing practice page tests pass (updated for new layout)
+- [x] New tests cover quick practice page rendering and question flow
+- [x] `pnpm typecheck && pnpm lint && pnpm test --run && pnpm build` all pass
 
 ### Phase 3: Cross-Page Information Architecture
 
@@ -779,9 +777,13 @@ All Phase 1 acceptance criteria met:
 - Exam mode hides explanations until session end
 - Error messages improved via `ApplicationError` typed codes
 
-### Phase 2: UX Redesign — **Ready for Implementation**
+### Phase 2: UX Redesign — **Done**
 
-Fully specified in Section 6.2 above (as of 2026-02-09). The practice page remains a hybrid combining session config, ad-hoc questions, and session history on one page. The `/app/practice/quick` route does not exist yet.
+All Phase 2 acceptance criteria met:
+- `/app/practice` is now a landing page only (session controls + history; no ad-hoc question flow)
+- `/app/practice/quick` exists and renders the ad-hoc question flow (reuses existing hooks + components)
+- `ROUTES.APP_PRACTICE_QUICK` added to `lib/routes.ts`
+- "Quick Practice" entry point added to app navigation (desktop + mobile)
 
 **Summary of changes:**
 1. Create `/app/practice/quick/` route (reuses existing `usePracticeQuestionFlow` + `PracticeView`)
@@ -822,3 +824,4 @@ These gaps are already specified in Section 5.4 above. No new spec requirements 
 | 2026-02-07 | Architecture Review | **Status:** "Proposed" → "Partial" (Phase 1 Done). Added Section 14 (Implementation Status) with per-phase tracking. Added specific audit findings for Phase 3 gaps: clickable dashboard activity, origin-aware question-detail navigation, question detail subtitle, difficulty badges, cross-links between Review/Bookmarks. |
 | 2026-02-07 | Engineering | Updated Phase 3 status to **In Progress (Partial)** to reflect completed session-context work (dashboard grouping + review session-origin badges). Refined navigation gap language to match current `question-page-client` behavior. |
 | 2026-02-09 | Engineering | **Phase 2 fully specified.** Expanded Section 6.2 with component-level detail: route structure, landing page layout, quick practice page spec, hook/component reuse mapping, implementation order, file paths. Fixed stale route paths (`/app/practice/sessions/[id]` → `/app/practice/[sessionId]` to match actual codebase). **Product decision:** Review = missed-only (SPEC-014 unchanged, clarify via subtitle). Updated Phase 3 task table with Done/Pending status. Updated Section 14 status from "Not Started" to "Ready for Implementation". |
+| 2026-02-09 | Engineering | **Phase 2 implemented.** Added `/app/practice/quick`, refactored `/app/practice` into a decision-point landing page, added `ROUTES.APP_PRACTICE_QUICK`, and exposed Quick Practice in app navigation. |

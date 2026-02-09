@@ -7,6 +7,7 @@ export const ROUTES = {
 
   APP_DASHBOARD: '/app/dashboard',
   APP_PRACTICE: '/app/practice',
+  APP_PRACTICE_QUICK: '/app/practice/quick',
   APP_REVIEW: '/app/review',
   APP_BOOKMARKS: '/app/bookmarks',
   APP_BILLING: '/app/billing',

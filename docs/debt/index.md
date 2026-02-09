@@ -33,7 +33,7 @@ All frontend-specific UI/UX debt. Items use `FE-XXX` IDs and are cross-reference
 
 | ID | Summary | Files | Status |
 |----|---------|-------|--------|
-| FE-038 | Card sub-components: 0 imports but KEEP for SPEC-019 Phase 2 | `card.tsx` (CardHeader, CardTitle, etc.) — evaluate during UI/UX refactor | Accepted |
+| FE-038 | Card sub-components: 0 imports outside tests | `card.tsx` (CardHeader, CardTitle, etc.) — SPEC-019 Phase 2 complete, sub-components were not needed. Evaluate for removal unless Phase 3 requires them. | Accepted |
 
 ### Frontend Debt — Resolved
 

@@ -35,7 +35,7 @@ We adopt a **hybrid structure** that places Clean Architecture layers under `src
 │   │   ├── dashboard/
 │   │   ├── practice/
 │   │   │   ├── [sessionId]/          # Session runner (tutor/exam)
-│   │   │   └── quick/                # Quick Practice (SPEC-019 Phase 2, pending)
+│   │   │   └── quick/                # Quick Practice (SPEC-019 Phase 2)
 │   │   ├── review/
 │   │   ├── bookmarks/
 │   │   └── billing/
