@@ -73,7 +73,8 @@ export function ReviewView({
             Review
           </h1>
           <p className="mt-1 text-muted-foreground">
-            Review questions you&apos;ve missed.
+            Questions you answered incorrectly — review and reattempt to
+            strengthen weak areas.
           </p>
         </div>
         <Button asChild variant="link" className={headerLinkButtonClasses}>
@@ -85,9 +86,13 @@ export function ReviewView({
         totalCount === 0 ? (
           <Card className="gap-0 rounded-2xl p-6 text-sm text-muted-foreground shadow-sm">
             <div>No missed questions yet.</div>
+            <div className="mt-2">
+              Great work! As you practice, any questions you get wrong will
+              appear here for review.
+            </div>
             <div className="mt-4">
               <Button asChild variant="outline" className="rounded-full">
-                <Link href={ROUTES.APP_PRACTICE}>Practice a question</Link>
+                <Link href={ROUTES.APP_PRACTICE}>Go to Practice →</Link>
               </Button>
             </div>
           </Card>

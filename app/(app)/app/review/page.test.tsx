@@ -11,6 +11,16 @@ import { ok } from '@/src/adapters/controllers/action-result';
 import { getStemPreview } from '@/src/adapters/shared/stem-preview';
 
 describe('app/(app)/app/review', () => {
+  it('renders missed-only subtitle copy', () => {
+    const html = renderToStaticMarkup(
+      <ReviewView rows={[]} limit={20} offset={0} totalCount={0} />,
+    );
+
+    expect(html).toContain(
+      'Questions you answered incorrectly — review and reattempt to strengthen weak areas.',
+    );
+  });
+
   it('renders a truncated stem preview as the card title instead of raw slug text', () => {
     const longStem =
       'A very long stem that should be truncated in the card title for readability in review lists.';
@@ -173,7 +183,10 @@ describe('app/(app)/app/review', () => {
 
     expect(html).toContain('Review');
     expect(html).toContain('No missed questions yet.');
-    expect(html).toContain('Practice a question');
+    expect(html).toContain(
+      'Great work! As you practice, any questions you get wrong will appear here for review.',
+    );
+    expect(html).toContain('Go to Practice →');
     expect(html).toContain(`href="${ROUTES.APP_PRACTICE}"`);
   });
 
