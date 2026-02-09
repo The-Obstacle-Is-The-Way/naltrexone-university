@@ -14,6 +14,12 @@ import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answ
 import type { LoadState } from '../practice-page-logic';
 
 export type PracticeViewProps = {
+  title?: string;
+  description?: string;
+  backLink?: {
+    href: string;
+    label: string;
+  };
   topContent?: React.ReactNode;
   sessionInfo?: NextQuestion['session'];
   loadState: LoadState;
@@ -69,6 +75,12 @@ export function PracticeView(props: PracticeViewProps) {
   const { notify } = useNotification();
   const sessionInfo = props.sessionInfo ?? null;
   const isExamMode = sessionInfo?.mode === 'exam';
+  const title = props.title ?? 'Practice';
+  const description = props.description ?? 'Answer one question at a time.';
+  const backLink = props.backLink ?? {
+    href: ROUTES.APP_DASHBOARD,
+    label: 'Back to Dashboard',
+  };
   const correctChoiceId = isExamMode
     ? null
     : (props.submitResult?.correctChoiceId ?? null);
@@ -105,11 +117,9 @@ export function PracticeView(props: PracticeViewProps) {
         <div className="flex flex-col gap-3 sm:flex-row sm:items-baseline sm:justify-between">
           <div>
             <h1 className="text-2xl font-bold font-heading tracking-tight text-foreground">
-              Practice
+              {title}
             </h1>
-            <p className="mt-1 text-muted-foreground">
-              Answer one question at a time.
-            </p>
+            <p className="mt-1 text-muted-foreground">{description}</p>
             {sessionInfo ? (
               <p
                 className="mt-2 text-xs text-muted-foreground"
@@ -137,7 +147,7 @@ export function PracticeView(props: PracticeViewProps) {
               variant="link"
               className="h-auto p-0 text-muted-foreground no-underline hover:text-foreground hover:no-underline"
             >
-              <Link href={ROUTES.APP_DASHBOARD}>Back to Dashboard</Link>
+              <Link href={backLink.href}>{backLink.label}</Link>
             </Button>
           </div>
         </div>
