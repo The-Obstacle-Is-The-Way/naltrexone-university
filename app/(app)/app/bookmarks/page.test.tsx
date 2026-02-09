@@ -76,8 +76,11 @@ describe('app/(app)/app/bookmarks', () => {
       />,
     );
 
-    const titleOccurrences = html.split(stemMd).length - 1;
-    expect(titleOccurrences).toBe(1);
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const text = doc.body.textContent ?? '';
+
+    const occurrences = text.split(stemMd).length - 1;
+    expect(occurrences).toBe(1);
   });
 
   it('renders bookmarks', () => {
@@ -102,7 +105,9 @@ describe('app/(app)/app/bookmarks', () => {
     expect(html).toContain('Bookmarked 2026-02-01');
     expect(html).toContain('Reattempt');
     expect(html).toContain(toQuestionRoute('q-1'));
+    expect(html).toContain('aria-label="Reattempt question: Stem for q1"');
     expect(html).toContain('Remove');
+    expect(html).toContain('aria-label="Remove bookmark: Stem for q1"');
     expect(html).toContain('Go to Practice');
     expect(html).toContain(`href="${ROUTES.APP_PRACTICE}"`);
   });

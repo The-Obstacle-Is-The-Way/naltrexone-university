@@ -90,8 +90,11 @@ describe('app/(app)/app/review', () => {
       />,
     );
 
-    const titleOccurrences = html.split(stemMd).length - 1;
-    expect(titleOccurrences).toBe(1);
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const text = doc.body.textContent ?? '';
+
+    const occurrences = text.split(stemMd).length - 1;
+    expect(occurrences).toBe(1);
   });
 
   it('renders missed questions', () => {
@@ -122,6 +125,7 @@ describe('app/(app)/app/review', () => {
     expect(html).toContain('Missed 2026-02-01');
     expect(html).toContain('Reattempt');
     expect(html).toContain(toQuestionRoute('q-1'));
+    expect(html).toContain('aria-label="Reattempt question: Stem for q1"');
     expect(html).toContain(`href="${ROUTES.APP_PRACTICE}"`);
   });
 

@@ -134,6 +134,7 @@ export function ExamReviewView({
                     type="button"
                     variant="outline"
                     className="rounded-full"
+                    aria-label={`Open question ${row.order}: ${getStemPreview(row.stemMd, 60)}`}
                     onClick={() => onOpenQuestion(row.questionId)}
                   >
                     Open question

@@ -25,7 +25,7 @@ export function MetallicCtaButton({
     href.startsWith('/') ? (
       <Link href={href}>{inner}</Link>
     ) : (
-      <a href={href} rel="noopener noreferrer">
+      <a href={href} target="_blank" rel="noreferrer noopener">
         {inner}
       </a>
     )

@@ -171,7 +171,13 @@ export function ReviewView({
                           variant="outline"
                           className="rounded-full"
                         >
-                          <Link href={toQuestionRoute(row.slug)}>
+                          <Link
+                            href={toQuestionRoute(row.slug)}
+                            aria-label={`Reattempt question: ${getStemPreview(
+                              row.stemMd,
+                              80,
+                            )}`}
+                          >
                             Reattempt
                           </Link>
                         </Button>

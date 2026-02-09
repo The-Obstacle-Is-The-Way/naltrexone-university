@@ -548,6 +548,9 @@ describe('app/(app)/app/practice', () => {
     expect(html).toContain('Exam');
     expect(html).toContain('15/20 correct (75%)');
     expect(html).toContain('30m');
+    expect(html).toContain(
+      'aria-label="View breakdown for Exam session: 15/20 correct (75%), 30m"',
+    );
   });
 
   it('renders selected session question breakdown', async () => {

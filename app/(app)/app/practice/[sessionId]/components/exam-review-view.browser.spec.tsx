@@ -1,5 +1,6 @@
 import { expect, test, vi } from 'vitest';
 import { render } from 'vitest-browser-react';
+import { getStemPreview } from '@/src/adapters/shared/stem-preview';
 import { ExamReviewView, QuestionNavigator } from './exam-review-view';
 
 test('renders navigator states and disables unavailable questions', async () => {
@@ -149,7 +150,10 @@ test('opens a review question and finalizes the exam', async () => {
   await expect
     .element(screen.getByText('Marked', { exact: true }))
     .toBeVisible();
-  await screen.getByRole('button', { name: 'Open question' }).click();
+  const expectedPreview = getStemPreview('A long stem for q1', 60);
+  await screen
+    .getByRole('button', { name: `Open question 1: ${expectedPreview}` })
+    .click();
   expect(onOpenQuestion).toHaveBeenCalledWith('q1');
 
   await screen.getByRole('button', { name: 'Submit exam' }).click();

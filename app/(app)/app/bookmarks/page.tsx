@@ -109,6 +109,9 @@ export function BookmarksView({ rows }: { rows: GetBookmarksOutput['rows'] }) {
         <ul className="space-y-3">
           {rows.map((row) => {
             const plainStem = row.isAvailable ? toPlainText(row.stemMd) : '';
+            const ariaLabelStem = row.isAvailable
+              ? getStemPreview(row.stemMd, 80)
+              : 'unavailable question';
 
             return (
               <li key={row.questionId}>
@@ -159,7 +162,10 @@ export function BookmarksView({ rows }: { rows: GetBookmarksOutput['rows'] }) {
                           variant="outline"
                           className="rounded-full"
                         >
-                          <Link href={toQuestionRoute(row.slug)}>
+                          <Link
+                            href={toQuestionRoute(row.slug)}
+                            aria-label={`Reattempt question: ${ariaLabelStem}`}
+                          >
                             Reattempt
                           </Link>
                         </Button>
@@ -175,6 +181,7 @@ export function BookmarksView({ rows }: { rows: GetBookmarksOutput['rows'] }) {
                           type="submit"
                           variant="outline"
                           className="rounded-full"
+                          aria-label={`Remove bookmark: ${ariaLabelStem}`}
                         >
                           Remove
                         </Button>
