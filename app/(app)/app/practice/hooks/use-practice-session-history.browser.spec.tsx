@@ -53,6 +53,8 @@ function PracticeSessionHistoryHookProbe() {
 describe('usePracticeSessionHistory (browser)', () => {
   afterEach(() => {
     vi.restoreAllMocks();
+    getSessionHistoryMock.mockReset();
+    getPracticeSessionReviewMock.mockReset();
   });
 
   it('loads history rows and opens a selected session review', async () => {
@@ -106,6 +108,67 @@ describe('usePracticeSessionHistory (browser)', () => {
     await expect
       .element(screen.getByTestId('selected-review-session-id'))
       .toHaveTextContent('session-1');
+  });
+
+  it('collapses the selected session when clicking the same session twice without re-fetching', async () => {
+    getSessionHistoryMock.mockResolvedValue(
+      ok({
+        rows: [
+          {
+            sessionId: 'session-1',
+            mode: 'exam',
+            questionCount: 10,
+            answered: 10,
+            correct: 8,
+            accuracy: 80,
+            durationSeconds: 1200,
+            startedAt: '2026-02-07T00:00:00.000Z',
+            endedAt: '2026-02-07T00:20:00.000Z',
+          },
+        ],
+        total: 1,
+        limit: 10,
+        offset: 0,
+      }),
+    );
+    getPracticeSessionReviewMock.mockResolvedValue(
+      ok({
+        sessionId: 'session-1',
+        mode: 'exam',
+        totalCount: 10,
+        answeredCount: 10,
+        markedCount: 1,
+        rows: [],
+      }),
+    );
+
+    const screen = await render(<PracticeSessionHistoryHookProbe />);
+
+    await expect
+      .element(screen.getByTestId('history-status'))
+      .toHaveTextContent('idle');
+
+    await screen.getByRole('button', { name: 'open-session-1' }).click();
+    await expect
+      .element(screen.getByTestId('review-status'))
+      .toHaveTextContent('ready');
+    await expect
+      .element(screen.getByTestId('selected-session-id'))
+      .toHaveTextContent('session-1');
+
+    await screen.getByRole('button', { name: 'open-session-1' }).click();
+
+    await expect
+      .element(screen.getByTestId('review-status'))
+      .toHaveTextContent('idle');
+    await expect
+      .element(screen.getByTestId('selected-session-id'))
+      .toHaveTextContent('');
+    await expect
+      .element(screen.getByTestId('selected-review-session-id'))
+      .toHaveTextContent('');
+
+    expect(getPracticeSessionReviewMock).toHaveBeenCalledTimes(1);
   });
 
   it('transitions to error when loading history throws', async () => {

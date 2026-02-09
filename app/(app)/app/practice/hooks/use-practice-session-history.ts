@@ -78,6 +78,14 @@ export function usePracticeSessionHistory(): UsePracticeSessionHistoryOutput {
 
   const onOpenSessionHistory = useCallback(
     async (sessionId: string) => {
+      if (selectedHistorySessionId === sessionId) {
+        latestReviewSessionId.current = null;
+        setSelectedHistorySessionId(null);
+        setSelectedHistoryReview(null);
+        setHistoryReviewLoadState({ status: 'idle' });
+        return;
+      }
+
       latestReviewSessionId.current = sessionId;
       setSelectedHistorySessionId(sessionId);
       setSelectedHistoryReview(null);
@@ -109,7 +117,7 @@ export function usePracticeSessionHistory(): UsePracticeSessionHistoryOutput {
       setSelectedHistoryReview(res.data);
       setHistoryReviewLoadState({ status: 'ready' });
     },
-    [isMounted],
+    [isMounted, selectedHistorySessionId],
   );
 
   return {

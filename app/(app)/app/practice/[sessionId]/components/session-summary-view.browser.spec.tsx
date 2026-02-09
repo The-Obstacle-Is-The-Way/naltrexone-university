@@ -24,6 +24,7 @@ test('renders summary totals and per-question breakdown', async () => {
         rows: [
           {
             questionId: 'q1',
+            slug: 'q-1',
             order: 1,
             isAvailable: true,
             stemMd: 'Stem for q1',

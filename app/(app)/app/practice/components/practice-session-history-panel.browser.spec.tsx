@@ -52,6 +52,7 @@ test('renders selected session breakdown and review status', async () => {
         rows: [
           {
             questionId: 'q1',
+            slug: 'q-1',
             order: 1,
             isAvailable: true,
             stemMd: 'The patient presents with opioid withdrawal symptoms.',

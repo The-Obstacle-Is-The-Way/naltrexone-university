@@ -1,7 +1,6 @@
 // @vitest-environment jsdom
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
-import { ROUTES } from '@/lib/routes';
 
 vi.mock('next/link', () => ({
   default: (props: Record<string, unknown>) => <a {...props} />,
@@ -23,13 +22,15 @@ describe('app/(app)/app/practice', () => {
     expect(html).toContain('Back to Dashboard');
   }, 20_000);
 
-  it('links to quick practice from the landing page', async () => {
+  it('does not render a Quick Practice CTA card on the landing page', async () => {
     const PracticePage = (await import('@/app/(app)/app/practice/page'))
       .default;
 
     const html = renderToStaticMarkup(<PracticePage />);
-    expect(html).toContain('Quick Practice');
-    expect(html).toContain(`href="${ROUTES.APP_PRACTICE_QUICK}"`);
+    expect(html).not.toContain(
+      'No session tracking — just jump in and practice.',
+    );
+    expect(html).not.toContain('Quick Practice →');
   }, 20_000);
 
   it('renders an error banner when loadState is error', async () => {
@@ -563,6 +564,41 @@ describe('app/(app)/app/practice', () => {
     );
   });
 
+  it('renders a Hide breakdown button when a session breakdown is expanded', async () => {
+    const { PracticeSessionHistoryPanel } = await import(
+      '@/app/(app)/app/practice/page'
+    );
+
+    const html = renderToStaticMarkup(
+      <PracticeSessionHistoryPanel
+        status="idle"
+        error={null}
+        rows={[
+          {
+            sessionId: 'session-1',
+            mode: 'exam',
+            questionCount: 20,
+            answered: 20,
+            correct: 15,
+            accuracy: 0.75,
+            durationSeconds: 1800,
+            startedAt: '2026-02-05T00:00:00.000Z',
+            endedAt: '2026-02-05T00:30:00.000Z',
+          },
+        ]}
+        selectedSessionId="session-1"
+        selectedReview={null}
+        reviewStatus={{ status: 'idle' }}
+        onOpenSession={() => undefined}
+      />,
+    );
+
+    expect(html).toContain('Hide breakdown');
+    expect(html).toContain(
+      'aria-label="Hide breakdown for Exam session: 15/20 correct (75%), 30m"',
+    );
+  });
+
   it('renders selected session question breakdown', async () => {
     const { PracticeSessionHistoryPanel } = await import(
       '@/app/(app)/app/practice/page'
@@ -584,6 +620,7 @@ describe('app/(app)/app/practice', () => {
             {
               isAvailable: true,
               questionId: 'q1',
+              slug: 'q-1',
               stemMd: 'Stem for q1',
               difficulty: 'easy',
               order: 1,
@@ -608,6 +645,7 @@ describe('app/(app)/app/practice', () => {
 
     expect(html).toContain('Session breakdown');
     expect(html).toContain('Stem for q1');
+    expect(html).toContain('href="/app/questions/q-1?from=practice"');
     expect(html).toContain('[Question no longer available]');
     expect(html).toContain('Incorrect');
   });
