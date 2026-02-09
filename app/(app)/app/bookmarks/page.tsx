@@ -119,6 +119,9 @@ export function BookmarksView({ rows }: { rows: GetBookmarksOutput['rows'] }) {
       {rows.length === 0 ? (
         <Card className="gap-0 rounded-2xl p-6 text-sm text-muted-foreground shadow-sm">
           <div>No bookmarks yet.</div>
+          <div className="mt-2">
+            Bookmark questions as you practice to review them later.
+          </div>
           <div className="mt-4">
             <Button asChild variant="outline" className="rounded-full">
               <Link href={ROUTES.APP_PRACTICE}>Start practicing</Link>
@@ -142,7 +145,14 @@ export function BookmarksView({ rows }: { rows: GetBookmarksOutput['rows'] }) {
                       {row.isAvailable ? (
                         <>
                           <div className="text-sm font-medium text-foreground">
-                            {getStemPreview(row.stemMd, 80)}
+                            <Link
+                              href={toQuestionRoute(row.slug, {
+                                from: 'bookmarks',
+                              })}
+                              className="hover:underline"
+                            >
+                              {getStemPreview(row.stemMd, 80)}
+                            </Link>
                           </div>
                           {plainStem.length > 80 && (
                             <div className="text-sm text-muted-foreground">
@@ -184,7 +194,9 @@ export function BookmarksView({ rows }: { rows: GetBookmarksOutput['rows'] }) {
                           className="rounded-full"
                         >
                           <Link
-                            href={toQuestionRoute(row.slug)}
+                            href={toQuestionRoute(row.slug, {
+                              from: 'bookmarks',
+                            })}
                             aria-label={`Reattempt question: ${ariaLabelStem}`}
                           >
                             Reattempt

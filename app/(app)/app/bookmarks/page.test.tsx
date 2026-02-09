@@ -104,7 +104,7 @@ describe('app/(app)/app/bookmarks', () => {
     expect(html).toContain('easy');
     expect(html).toContain('Bookmarked Feb 1, 2026');
     expect(html).toContain('Reattempt');
-    expect(html).toContain(toQuestionRoute('q-1'));
+    expect(html).toContain(toQuestionRoute('q-1', { from: 'bookmarks' }));
     expect(html).toContain('aria-label="Reattempt question: Stem for q1"');
     expect(html).toContain('Remove');
     expect(html).toContain('aria-label="Remove bookmark: Stem for q1"');
@@ -117,6 +117,9 @@ describe('app/(app)/app/bookmarks', () => {
 
     expect(html).toContain('Bookmarks');
     expect(html).toContain('No bookmarks yet.');
+    expect(html).toContain(
+      'Bookmark questions as you practice to review them later.',
+    );
     expect(html).toContain('Start practicing');
     expect(html).toContain(`href="${ROUTES.APP_PRACTICE}"`);
   });
