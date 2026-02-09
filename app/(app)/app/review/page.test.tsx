@@ -122,7 +122,7 @@ describe('app/(app)/app/review', () => {
     expect(html).toContain('Showing 1–1 of 1');
     expect(html).toContain('Stem for q1');
     expect(html).toContain('easy');
-    expect(html).toContain('Missed 2026-02-01');
+    expect(html).toContain('Missed Feb 1, 2026');
     expect(html).toContain('Reattempt');
     expect(html).toContain(toQuestionRoute('q-1'));
     expect(html).toContain('aria-label="Reattempt question: Stem for q1"');
@@ -196,7 +196,7 @@ describe('app/(app)/app/review', () => {
     );
 
     expect(html).toContain('[Question no longer available]');
-    expect(html).toContain('Missed 2026-02-01');
+    expect(html).toContain('Missed Feb 1, 2026');
     expect(html).not.toContain('Reattempt');
   });
 

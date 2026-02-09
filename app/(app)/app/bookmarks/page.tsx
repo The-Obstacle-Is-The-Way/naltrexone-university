@@ -16,6 +16,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { formatDate } from '@/lib/format-date';
 import { ROUTES, toQuestionRoute } from '@/lib/routes';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import {
@@ -151,7 +152,7 @@ export function BookmarksView({ rows }: { rows: GetBookmarksOutput['rows'] }) {
                             <span className="capitalize">{row.difficulty}</span>
                             <span className="mx-2">•</span>
                             <span>
-                              Bookmarked {row.bookmarkedAt.slice(0, 10)}
+                              Bookmarked {formatDate(row.bookmarkedAt)}
                             </span>
                           </div>
                         </>
@@ -167,7 +168,7 @@ export function BookmarksView({ rows }: { rows: GetBookmarksOutput['rows'] }) {
                             <span>Unavailable</span>
                             <span className="mx-2">•</span>
                             <span>
-                              Bookmarked {row.bookmarkedAt.slice(0, 10)}
+                              Bookmarked {formatDate(row.bookmarkedAt)}
                             </span>
                           </div>
                         </>

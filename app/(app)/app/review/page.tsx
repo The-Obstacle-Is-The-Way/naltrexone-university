@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { ErrorCard } from '@/components/error-card';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { formatDate } from '@/lib/format-date';
 import { ROUTES, toQuestionRoute } from '@/lib/routes';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import {
@@ -133,7 +134,7 @@ export function ReviewView({
                               </span>
                               <span className="mx-2">•</span>
                               <span>
-                                Missed {row.lastAnsweredAt.slice(0, 10)}
+                                Missed {formatDate(row.lastAnsweredAt)}
                               </span>
                               <span className="mx-2">•</span>
                               <span>
@@ -156,7 +157,7 @@ export function ReviewView({
                               <span>Unavailable</span>
                               <span className="mx-2">•</span>
                               <span>
-                                Missed {row.lastAnsweredAt.slice(0, 10)}
+                                Missed {formatDate(row.lastAnsweredAt)}
                               </span>
                               <span className="mx-2">•</span>
                               <span>
