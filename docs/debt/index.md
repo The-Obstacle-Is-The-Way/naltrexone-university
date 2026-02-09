@@ -19,8 +19,10 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 |----|-------|----------|--------|
 | [DEBT-193](debt-193-backend-production-files-over-300-lines.md) | Backend Production Files Exceed 300-Line Guideline (5 files) | P3 | Open |
 | [DEBT-194](debt-194-console-error-default-in-utility-functions.md) | Default `console.error` in Utility Function Parameters (3 files) | P4 | Open |
+| [DEBT-202](debt-202-missing-migration-0008-snapshot.md) | Missing Drizzle Migration 0008 Snapshot File (manual BUG-105 migration breaks `db:generate` diffing) | P3 | Open |
+| [DEBT-203](debt-203-fragile-date-display-string-slicing.md) | Fragile Date Display Using `.slice(0, 10)` in Bookmarks and Review Pages (4 locations) | P4 | Open |
 
-**Next Debt ID:** DEBT-202
+**Next Debt ID:** DEBT-204
 
 ---
 
