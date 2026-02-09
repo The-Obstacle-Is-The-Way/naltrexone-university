@@ -15,7 +15,7 @@ describe('app/(app)/app/practice/error', () => {
     const doc = new DOMParser().parseFromString(html, 'text/html');
     const tryAgainButton = doc.querySelector('button');
 
-    expect(doc.querySelector('main#main-content')).toBeNull();
+    expect(doc.querySelector('main#main-content')).not.toBeNull();
     expect(html).toContain('Practice');
     expect(html).toContain('Try again');
     expect(html).toContain('Error ID');

@@ -17,6 +17,7 @@ export default function PracticeError({
       title="Practice error"
       description="We couldn't load practice right now. Please try again."
       links={[{ href: ROUTES.APP_DASHBOARD, label: 'Back to Dashboard' }]}
+      includeMainLandmark
       logPrefix="app/(app)/app/practice/error.tsx:"
     />
   );

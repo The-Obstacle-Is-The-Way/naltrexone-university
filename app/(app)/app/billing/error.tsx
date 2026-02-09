@@ -17,6 +17,7 @@ export default function BillingError({
       title="Billing error"
       description="We couldn't load billing details right now. Your subscription is not affected."
       links={[{ href: ROUTES.APP_DASHBOARD, label: 'Back to Dashboard' }]}
+      includeMainLandmark
       logPrefix="app/(app)/app/billing/error.tsx:"
     />
   );

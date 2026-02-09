@@ -42,13 +42,22 @@ function createStripeOnRetry(
   context: Record<string, unknown>,
 ): (input: RetryLogInput) => void {
   return ({ attempt, maxAttempts, delayMs, error }) => {
-    logger.warn?.(
+    const logContext = {
+      ...context,
+      attempt,
+      maxAttempts,
+      delayMs,
+      error: error instanceof Error ? error.message : String(error),
+    };
+
+    if (logger.warn) {
+      logger.warn(logContext, 'Retrying Stripe API call');
+      return;
+    }
+
+    logger.error(
       {
-        ...context,
-        attempt,
-        maxAttempts,
-        delayMs,
-        error: error instanceof Error ? error.message : String(error),
+        ...logContext,
       },
       'Retrying Stripe API call',
     );

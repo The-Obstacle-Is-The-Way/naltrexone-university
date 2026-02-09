@@ -17,6 +17,7 @@ export default function PracticeSessionError({
       title="Practice session error"
       description="We couldn't load this practice session right now. Please try again."
       links={[{ href: ROUTES.APP_PRACTICE, label: 'Back to Practice' }]}
+      includeMainLandmark
       logPrefix="app/(app)/app/practice/[sessionId]/error.tsx:"
     />
   );

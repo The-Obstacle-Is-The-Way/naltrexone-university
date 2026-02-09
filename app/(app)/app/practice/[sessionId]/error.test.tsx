@@ -15,7 +15,7 @@ describe('app/(app)/app/practice/[sessionId]/error', () => {
     const doc = new DOMParser().parseFromString(html, 'text/html');
     const tryAgainButton = doc.querySelector('button');
 
-    expect(doc.querySelector('main#main-content')).toBeNull();
+    expect(doc.querySelector('main#main-content')).not.toBeNull();
     expect(html).toContain('Practice session');
     expect(html).toContain('Try again');
     expect(html).toContain('Back to Practice');

@@ -23,12 +23,11 @@ export class ApplicationError extends Error {
     public readonly fieldErrors?: Record<string, string[]>,
     options?: { cause?: unknown },
   ) {
-    super(message);
+    super(
+      message,
+      options?.cause !== undefined ? { cause: options.cause } : undefined,
+    );
     this.name = 'ApplicationError';
-
-    if (options?.cause !== undefined) {
-      (this as unknown as { cause: unknown }).cause = options.cause;
-    }
   }
 }
 

@@ -107,12 +107,9 @@ export function BookmarksView({ rows }: { rows: GetBookmarksOutput['rows'] }) {
             Review questions you&apos;ve bookmarked.
           </p>
         </div>
-        <Link
-          href={ROUTES.APP_PRACTICE}
-          className="rounded-md text-sm font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]"
-        >
-          Go to Practice
-        </Link>
+        <Button asChild variant="link" className="text-muted-foreground">
+          <Link href={ROUTES.APP_PRACTICE}>Go to Practice</Link>
+        </Button>
       </div>
 
       {rows.length === 0 ? (

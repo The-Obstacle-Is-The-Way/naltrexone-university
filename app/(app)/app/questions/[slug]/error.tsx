@@ -20,6 +20,7 @@ export default function QuestionError({
         { href: ROUTES.APP_REVIEW, label: 'Back to Review' },
         { href: ROUTES.APP_PRACTICE, label: 'Go to Practice' },
       ]}
+      includeMainLandmark
       logPrefix="app/(app)/app/questions/[slug]/error.tsx:"
     />
   );

@@ -17,6 +17,7 @@ export default function BookmarksError({
       title="Bookmarks error"
       description="We couldn't load your bookmarks right now. Please try again."
       links={[{ href: ROUTES.APP_DASHBOARD, label: 'Back to Dashboard' }]}
+      includeMainLandmark
       logPrefix="app/(app)/app/bookmarks/error.tsx:"
     />
   );

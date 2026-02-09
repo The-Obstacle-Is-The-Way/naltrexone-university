@@ -235,6 +235,7 @@ describe('DrizzleSubscriptionRepository', () => {
         currentPeriodEnd: new Date('2026-12-31T00:00:00.000Z'),
         cancelAtPeriodEnd: false,
       });
+      expect.unreachable('Expected upsert to throw');
     } catch (error) {
       thrown = error;
     }

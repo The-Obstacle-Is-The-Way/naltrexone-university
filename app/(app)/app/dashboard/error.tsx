@@ -17,6 +17,7 @@ export default function DashboardError({
       title="Dashboard error"
       description="We couldn't load your dashboard right now. Please try again."
       links={[{ href: ROUTES.APP_PRACTICE, label: 'Go to Practice' }]}
+      includeMainLandmark
       logPrefix="app/(app)/app/dashboard/error.tsx:"
     />
   );

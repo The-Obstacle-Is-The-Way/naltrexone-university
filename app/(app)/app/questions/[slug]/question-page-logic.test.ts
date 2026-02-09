@@ -259,6 +259,14 @@ describe('question-page-logic', () => {
     it('runs submit inside startTransition', async () => {
       const startTransition = vi.fn((fn: () => void) => fn());
       const setLoadState = vi.fn();
+      const setSubmitResult = vi.fn();
+      const submitResult = {
+        attemptId: 'attempt_1',
+        isCorrect: true,
+        correctChoiceId: 'choice_1',
+        explanationMd: null,
+        choiceExplanations: [],
+      } satisfies SubmitAnswerOutput;
 
       const action = createSubmitSelectedAnswerAction({
         startTransition,
@@ -266,23 +274,18 @@ describe('question-page-logic', () => {
         selectedChoiceId: 'choice_1',
         questionLoadedAtMs: 0,
         submitIdempotencyKey: 'idem_1',
-        submitAnswerFn: async () =>
-          ok({
-            attemptId: 'attempt_1',
-            isCorrect: true,
-            correctChoiceId: 'choice_1',
-            explanationMd: null,
-            choiceExplanations: [],
-          } satisfies SubmitAnswerOutput),
+        submitAnswerFn: async () => ok(submitResult),
         nowMs: () => 1000,
         setLoadState,
-        setSubmitResult: vi.fn(),
+        setSubmitResult,
       });
 
       await action();
 
       expect(startTransition).toHaveBeenCalledTimes(1);
       expect(setLoadState).toHaveBeenCalledWith({ status: 'loading' });
+      expect(setSubmitResult).toHaveBeenCalledWith(submitResult);
+      expect(setLoadState).toHaveBeenCalledWith({ status: 'ready' });
     });
   });
 

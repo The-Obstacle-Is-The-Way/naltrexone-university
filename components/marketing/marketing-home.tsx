@@ -54,6 +54,9 @@ const features = [
   },
 ];
 
+const outlinePillClasses =
+  'h-auto rounded-full border-border bg-card px-6 py-3 text-sm font-medium text-foreground hover:bg-muted';
+
 export function MarketingHomeShell({
   authNav,
   primaryCta,
@@ -81,11 +84,7 @@ export function MarketingHomeShell({
 
             <div className="mt-10 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
               {primaryCta}
-              <Button
-                asChild
-                variant="outline"
-                className="h-auto rounded-full border-border bg-card px-6 py-3 text-sm font-medium text-foreground hover:bg-muted"
-              >
+              <Button asChild variant="outline" className={outlinePillClasses}>
                 <Link href={ROUTES.PRICING}>View pricing</Link>
               </Button>
             </div>
@@ -248,11 +247,7 @@ export function MarketingHomeShell({
               <MetallicCtaButton href={ROUTES.PRICING}>
                 Get Started
               </MetallicCtaButton>
-              <Button
-                asChild
-                variant="outline"
-                className="h-auto rounded-full border-border bg-card px-6 py-3 text-sm font-medium text-foreground hover:bg-muted"
-              >
+              <Button asChild variant="outline" className={outlinePillClasses}>
                 <Link href={ROUTES.SIGN_IN}>Sign In</Link>
               </Button>
             </div>
