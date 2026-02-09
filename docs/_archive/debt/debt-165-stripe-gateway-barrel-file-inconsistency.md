@@ -11,15 +11,15 @@
 The `src/adapters/gateways/` directory has an `index.ts` barrel file, but most Stripe gateway modules are imported directly rather than re-exported through it:
 
 **Not re-exported from barrel:**
-- `stripe/stripe-portal.ts`
-- `stripe/stripe-client.ts`
-- `stripe/stripe-webhook-schemas.ts`
-- `stripe/stripe-webhook-processor.ts`
-- `stripe/stripe-retry.ts`
-- `stripe/stripe-checkout-sessions.ts`
-- `stripe/stripe-subscription-status.ts`
-- `stripe/stripe-customers.ts`
-- `stripe/stripe-subscription-normalizer.ts`
+- `src/adapters/gateways/stripe/stripe-portal.ts`
+- `src/adapters/gateways/stripe/stripe-client.ts`
+- `src/adapters/gateways/stripe/stripe-webhook-schemas.ts`
+- `src/adapters/gateways/stripe/stripe-webhook-processor.ts`
+- `src/adapters/gateways/stripe/stripe-retry.ts`
+- `src/adapters/gateways/stripe/stripe-checkout-sessions.ts`
+- `src/adapters/gateways/stripe/stripe-subscription-status.ts`
+- `src/adapters/gateways/stripe/stripe-customers.ts`
+- `src/adapters/gateways/stripe/stripe-subscription-normalizer.ts`
 
 These are imported directly across the codebase (e.g., `from '@/src/adapters/gateways/stripe/stripe-portal'`).
 
@@ -36,7 +36,7 @@ Create `src/adapters/gateways/stripe/index.ts` barrel file and re-export public 
 
 ## Verification
 
-- [x] Barrel file created for `stripe/` subdirectory
+- [x] Barrel file created for `src/adapters/gateways/stripe/` subdirectory (`src/adapters/gateways/stripe/index.ts`)
 - [x] Imports updated to use barrel
 - [x] `pnpm typecheck` passes
 

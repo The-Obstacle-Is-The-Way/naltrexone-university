@@ -43,4 +43,4 @@ Validated from first principles on this branch:
 - `postcss.config.mjs`
 - `package.json`
 - `pnpm-lock.yaml`
-- `docs/debt/debt-140-request-correlation-not-wired-into-runtime-logs.md`
+- `docs/_archive/debt/debt-140-request-correlation-not-wired-into-runtime-logs.md`

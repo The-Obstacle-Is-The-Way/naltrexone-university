@@ -35,29 +35,23 @@ No tests currently force overlapping async completions, thrown server-action fai
 
 ## Resolution
 
-Added behavior-focused tests for all six extracted practice hooks using a live
-hook harness (`src/application/test-helpers/render-live-hook.tsx`) to verify
-real state transitions and async behavior.
+Kept the jsdom `*.test.tsx` suites as synchronous “contract” tests (initial return-shape and non-async helpers), using `renderHook` (`src/application/test-helpers/render-hook.tsx`).
 
-Updated test files:
+Migrated async behavior/race coverage into Browser Mode (`vitest-browser-react`) suites so real state transitions are validated without React 19 `act()` issues:
 
-- `app/(app)/app/practice/hooks/use-practice-question-flow.test.tsx`
-- `app/(app)/app/practice/hooks/use-practice-session-controls.test.tsx`
-- `app/(app)/app/practice/hooks/use-practice-session-history.test.tsx`
-- `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-mark-for-review.test.tsx`
-- `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-page-controller.test.tsx`
-- `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-review-stage.test.tsx`
+- `app/(app)/app/practice/hooks/use-practice-question-flow.browser.spec.tsx`
+- `app/(app)/app/practice/hooks/use-practice-session-controls.browser.spec.tsx`
+- `app/(app)/app/practice/hooks/use-practice-session-history.browser.spec.tsx`
+- `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-page-controller.browser.spec.tsx`
+- `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-mark-for-review.browser.spec.tsx`
+- `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-review-stage.browser.spec.tsx`
 
-Covered behaviors now include:
+Covered behaviors include:
 
 1. Out-of-order response handling (latest request wins)
 2. Thrown server-action failures and error-state transitions
 3. Success-path transitions across idle/loading/ready/error states
 4. Session-history drill-down race handling
-5. Thrown error-path handling in the remaining extracted hooks:
-   - `usePracticeSessionPageController`
-   - `usePracticeSessionMarkForReview`
-   - `usePracticeSessionReviewStage`
 
 ## Verification
 

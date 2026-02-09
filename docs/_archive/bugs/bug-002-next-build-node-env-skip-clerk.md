@@ -1,6 +1,7 @@
 # BUG-002: `NEXT_PUBLIC_SKIP_CLERK` blocked `next build` due to `NODE_ENV` override
 
 **Status:** Resolved
+**Priority:** P1
 **Date:** 2026-02-01
 
 ## Summary

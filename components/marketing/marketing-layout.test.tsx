@@ -1,0 +1,45 @@
+// @vitest-environment jsdom
+import type { AnchorHTMLAttributes, ReactNode } from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
+import { describe, expect, it, vi } from 'vitest';
+import { ROUTES } from '@/lib/routes';
+
+type NextLinkMockProps = AnchorHTMLAttributes<HTMLAnchorElement> & {
+  href: string;
+  children?: ReactNode;
+};
+
+vi.mock('next/link', () => ({
+  default: ({ href, children, ...rest }: NextLinkMockProps) => (
+    <a href={href} {...rest}>
+      {children}
+    </a>
+  ),
+}));
+
+describe('MarketingLayout', () => {
+  it('renders a mobile marketing nav so Features/Pricing are reachable', async () => {
+    const { MarketingLayout } = await import('./marketing-layout');
+
+    const html = renderToStaticMarkup(
+      <MarketingLayout authNav={<div>Auth</div>} featuresHref="/#features">
+        <div>Content</div>
+      </MarketingLayout>,
+    );
+
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const mobileNav = doc.querySelector(
+      'nav[aria-label="Marketing navigation (mobile)"]',
+    );
+
+    expect(mobileNav).not.toBeNull();
+    const mobileNavElement = mobileNav as HTMLElement;
+
+    expect(
+      mobileNavElement.querySelector('a[href="/#features"]'),
+    ).not.toBeNull();
+    expect(
+      mobileNavElement.querySelector(`a[href="${ROUTES.PRICING}"]`),
+    ).not.toBeNull();
+  });
+});

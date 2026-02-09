@@ -9,7 +9,9 @@
 
 ## Description
 
-When `createStripeCustomer()` is called without an `idempotencyKey`, the Stripe API call is made directly without `callStripeWithRetry()`. The idempotent path (with key) correctly uses the retry wrapper, but the non-idempotent fallback path does not.
+Stripe customer creation should be retried on transient Stripe/network errors. Historically, `createStripeCustomer()` had a path that could call `stripe.customers.create()` without `callStripeWithRetry()` when no idempotency key was supplied, so transient errors would fail without retry.
+
+The fix ensures customer creation is always wrapped in `callStripeWithRetry()` and always uses an idempotency key (caller-provided or a deterministic fallback) so retries are safe.
 
 ## Steps to Reproduce
 
@@ -19,33 +21,32 @@ When `createStripeCustomer()` is called without an `idempotencyKey`, the Stripe 
 
 ## Root Cause
 
-Conditional logic at `stripe-customers.ts:83-93` only wraps the idempotent branch in `callStripeWithRetry()`:
-
-```typescript
-const customer = idempotencyKey
-  ? await callStripeWithRetry({ ... })      // ← has retry
-  : await stripe.customers.create(params);  // ← NO retry
-```
+`createStripeCustomer()` previously treated `options.idempotencyKey` as a strict switch: the keyed path used the retry wrapper, while the non-keyed fallback did not. That meant transient errors in the non-keyed path were not retried.
 
 ## Fix
 
-Wrap both branches in `callStripeWithRetry()`:
+Always provide an idempotency key and always wrap the call in `callStripeWithRetry()`:
 
 ```typescript
+const idempotencyKey =
+  options?.idempotencyKey ?? `create_stripe_customer:${input.userId}`;
 const customer = await callStripeWithRetry({
   operation: 'customers.create',
-  fn: () => stripe.customers.create(params, idempotencyKey ? { idempotencyKey } : undefined),
+  fn: () => stripe.customers.create(params, { idempotencyKey }),
   logger,
 });
 ```
 
 ## Verification
 
-- [x] Both paths (with and without idempotency key) use `callStripeWithRetry()`
+- [x] Customer creation always uses `callStripeWithRetry()`
+- [x] Missing `options.idempotencyKey` falls back to a deterministic idempotency key
+- [x] Unit test asserts retry behavior for transient errors
 - [x] Existing tests pass
 - [x] `pnpm typecheck && pnpm lint && pnpm test --run` passes
 
 ## Related
 
 - `src/adapters/gateways/stripe/stripe-customers.ts:83-93`
+- `src/adapters/gateways/stripe/stripe-customers.test.ts`
 - DEBT-162 (resolved) — Similar issue in Stripe portal session creation
