@@ -12,6 +12,9 @@ import { SUBMIT_ANSWER_MAX_TIME_SPENT_SECONDS } from '@/src/application/use-case
 /** Max number of rows per page in paginated controller outputs. */
 export const MAX_PAGINATION_LIMIT = 100;
 
+/** Upper bound for pagination offsets to avoid pathological DB skips. */
+export const MAX_PAGINATION_OFFSET = 10_000;
+
 /** Max time allowed for a single question attempt (seconds). */
 export const MAX_TIME_SPENT_SECONDS = SUBMIT_ANSWER_MAX_TIME_SPENT_SECONDS;
 

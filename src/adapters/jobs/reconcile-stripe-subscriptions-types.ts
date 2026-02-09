@@ -1,10 +1,10 @@
+import type { StripePriceIds } from '@/src/adapters/config/stripe-prices';
 import type { StripeClient } from '@/src/adapters/shared/stripe-types';
 import type { Logger } from '@/src/application/ports/logger';
 import type {
   StripeCustomerRepository,
   SubscriptionRepository,
 } from '@/src/application/ports/repositories';
-import type { StripePriceIds } from '../config/stripe-prices';
 
 export type StripeSubscriptionRefRow = {
   userId: string;

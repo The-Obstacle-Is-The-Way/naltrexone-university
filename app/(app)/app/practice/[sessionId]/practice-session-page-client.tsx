@@ -24,7 +24,6 @@ export default function PracticeSessionPageClient({
 
   useEffect(() => {
     if (hasNotifiedRef.current) return;
-    if (typeof window === 'undefined') return;
 
     const url = new URL(window.location.href);
     if (url.searchParams.get('toast') !== 'session_started') return;

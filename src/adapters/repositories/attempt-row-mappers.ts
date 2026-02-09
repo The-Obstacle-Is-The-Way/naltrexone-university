@@ -2,6 +2,17 @@ import { ApplicationError } from '@/src/application/errors';
 import type { RecentAttempt } from '@/src/application/ports/repositories';
 import type { Attempt } from '@/src/domain/entities';
 
+type AttemptRowBase = {
+  id: string;
+  userId: string;
+  questionId: string;
+  practiceSessionId: string | null;
+  selectedChoiceId: string | null;
+  isCorrect: boolean;
+  timeSpentSeconds: number;
+  answeredAt: Date;
+};
+
 export function requireSelectedChoiceId(row: {
   id?: string | null;
   selectedChoiceId?: string | null;
@@ -17,16 +28,7 @@ export function requireSelectedChoiceId(row: {
   return row.selectedChoiceId;
 }
 
-export function toAttemptDomain(row: {
-  id: string;
-  userId: string;
-  questionId: string;
-  practiceSessionId: string | null;
-  selectedChoiceId: string | null;
-  isCorrect: boolean;
-  timeSpentSeconds: number;
-  answeredAt: Date;
-}): Attempt {
+export function toAttemptDomain(row: AttemptRowBase): Attempt {
   const selectedChoiceId = requireSelectedChoiceId(row);
 
   return {
@@ -41,17 +43,9 @@ export function toAttemptDomain(row: {
   };
 }
 
-export function toRecentAttempt(row: {
-  id: string;
-  userId: string;
-  questionId: string;
-  practiceSessionId: string | null;
-  selectedChoiceId: string | null;
-  isCorrect: boolean;
-  timeSpentSeconds: number;
-  answeredAt: Date;
-  sessionMode: 'tutor' | 'exam' | null;
-}): RecentAttempt {
+export function toRecentAttempt(
+  row: AttemptRowBase & { sessionMode: 'tutor' | 'exam' | null },
+): RecentAttempt {
   return {
     ...toAttemptDomain(row),
     sessionMode: row.sessionMode,

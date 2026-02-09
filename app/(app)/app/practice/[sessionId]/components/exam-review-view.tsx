@@ -1,3 +1,5 @@
+'use client';
+
 import {
   AlertDialog,
   AlertDialogAction,
@@ -178,7 +180,11 @@ export function ExamReviewView({
               <AlertDialogAction
                 type="button"
                 variant="destructive"
-                onClick={onFinalizeReview}
+                disabled={isPending}
+                onClick={() => {
+                  if (isPending) return;
+                  onFinalizeReview();
+                }}
               >
                 Confirm submit
               </AlertDialogAction>

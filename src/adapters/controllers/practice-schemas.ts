@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import {
   MAX_PAGINATION_LIMIT,
+  MAX_PAGINATION_OFFSET,
   MAX_PRACTICE_SESSION_DIFFICULTY_FILTERS,
   MAX_PRACTICE_SESSION_QUESTIONS,
   MAX_PRACTICE_SESSION_TAG_FILTERS,
@@ -50,7 +51,7 @@ export const SetPracticeSessionQuestionMarkInputSchema = z
 export const GetSessionHistoryInputSchema = z
   .object({
     limit: z.number().int().min(1).max(MAX_PAGINATION_LIMIT),
-    offset: z.number().int().min(0),
+    offset: z.number().int().min(0).max(MAX_PAGINATION_OFFSET),
   })
   .strict();
 

@@ -2,12 +2,12 @@ import {
   callStripeWithRetry,
   retrieveAndNormalizeStripeSubscription,
 } from '@/src/adapters/gateways/stripe';
-import { ApplicationError } from '@/src/application/errors';
 import type {
   ReconcileStripeSubscriptionsDeps,
   ReconcileStripeSubscriptionsInput,
   ReconcileStripeSubscriptionsOutput,
-} from './reconcile-stripe-subscriptions-types';
+} from '@/src/adapters/jobs/reconcile-stripe-subscriptions-types';
+import { ApplicationError } from '@/src/application/errors';
 
 const DEFAULT_LIMIT = 100;
 export const RECONCILE_STRIPE_SUBSCRIPTIONS_MAX_LIMIT = 500;

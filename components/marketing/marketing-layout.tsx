@@ -28,6 +28,7 @@ export function MarketingLayout({
               aria-label="Marketing navigation"
               className="hidden items-center gap-4 text-sm sm:flex"
             >
+              {/* TODO: add a mobile menu so Features/Pricing are reachable on small screens. */}
               <Link
                 href={featuresHref}
                 className="rounded-md text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]"

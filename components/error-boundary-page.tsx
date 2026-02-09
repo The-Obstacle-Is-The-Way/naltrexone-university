@@ -54,8 +54,12 @@ export function ErrorBoundaryPage({
         <Button type="button" onClick={reset}>
           Try again
         </Button>
-        {links.map((link) => (
-          <Button key={`${link.href}_${link.label}`} asChild variant="outline">
+        {links.map((link, index) => (
+          <Button
+            key={`${link.href}_${link.label}_${index}`}
+            asChild
+            variant="outline"
+          >
             <Link href={link.href}>{link.label}</Link>
           </Button>
         ))}

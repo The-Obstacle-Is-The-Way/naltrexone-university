@@ -55,12 +55,7 @@ function createStripeOnRetry(
       return;
     }
 
-    logger.error(
-      {
-        ...logContext,
-      },
-      'Retrying Stripe API call',
-    );
+    logger.error(logContext, 'Retrying Stripe API call');
   };
 }
 

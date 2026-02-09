@@ -7,6 +7,10 @@ export function fireAndForget(
   onError: (error: unknown) => void,
 ): void {
   promise.catch((error) => {
-    onError(error);
+    try {
+      onError(error);
+    } catch (handlerError) {
+      console.error('onError handler threw', handlerError);
+    }
   });
 }

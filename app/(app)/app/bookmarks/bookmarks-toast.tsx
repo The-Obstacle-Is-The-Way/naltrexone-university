@@ -14,19 +14,16 @@ function parseBookmarksToastCode(
 
 export function BookmarksToast({ code }: { code: string | undefined }) {
   const { notify } = useNotification();
-  const notifiedRef = useRef(false);
+  const lastHandledToastRef = useRef<BookmarksToastCode | null>(null);
 
   useEffect(() => {
-    if (notifiedRef.current) return;
-
     const toast = parseBookmarksToastCode(code);
     if (!toast) return;
 
-    notifiedRef.current = true;
+    if (lastHandledToastRef.current === toast) return;
+    lastHandledToastRef.current = toast;
 
     notify({ message: 'Bookmark removed.', tone: 'success' });
-
-    if (typeof window === 'undefined') return;
 
     const url = new URL(window.location.href);
     url.searchParams.delete('toast');
