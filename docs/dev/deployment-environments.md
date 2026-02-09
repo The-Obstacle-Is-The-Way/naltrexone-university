@@ -14,7 +14,7 @@ This document is the single source of truth for how Clerk, Stripe, Neon, and Ver
 - [x] **Database isolation** — Neon `main` (Production) and `dev` (Preview/Local) branches created
 - [x] **Env var scoping** — DATABASE_URL, Stripe keys, Clerk keys all scoped per environment
 - [x] **Stripe Live Mode** — Production uses `sk_live_*` / `pk_live_*` keys (account review in progress)
-- [x] **Stripe Production Webhook** — `addictionboards.com/api/webhooks/stripe` configured with 5 events
+- [x] **Stripe Production Webhook** — `addictionboards.com/api/stripe/webhook` configured with 5 events
 - [x] **Stripe Live Price IDs** — Monthly ($29) and Annual ($199) products created in live mode
 - [x] **Stripe Single Account** — Test and live modes on same Stripe account (`51SvkizKItmaHAwgU`), fixed in [BUG-079](../_archive/bugs/bug-079-preview-dev-environment-verification-failures.md)
 - [x] **Stripe Test Webhook** — Test endpoint configured for Preview deployment with 5 events
@@ -35,7 +35,7 @@ This document is the single source of truth for how Clerk, Stripe, Neon, and Ver
 │  Stripe:   Live mode (sk_live_*, pk_live_*)                  [WORKING] │
 │  Database: Neon main branch (ep-withered-cell-ah14ik13)                 │
 │  Webhook:  addictionboards.com/api/webhooks/clerk            [WORKING] │
-│  Webhook:  addictionboards.com/api/webhooks/stripe           [WORKING] │
+│  Webhook:  addictionboards.com/api/stripe/webhook            [WORKING] │
 │                                                                          │
 │  Users: Real paying customers only                                       │
 └─────────────────────────────────────────────────────────────────────────┘
@@ -87,7 +87,7 @@ This document is the single source of truth for how Clerk, Stripe, Neon, and Ver
 
 - [x] Stripe account activated (business verification in progress — 2-3 business days)
 - [x] Live API keys (`sk_live_*`, `pk_live_*`) set in Vercel Production
-- [x] Live webhook endpoint: `https://addictionboards.com/api/webhooks/stripe`
+- [x] Live webhook endpoint: `https://addictionboards.com/api/stripe/webhook`
   - Events: `checkout.session.completed`, `customer.subscription.updated`, `customer.subscription.deleted`, `invoice.payment_succeeded`, `invoice.payment_failed`
 - [x] Live webhook signing secret set in Vercel Production
 - [x] Live Price IDs created and set in Vercel Production:
@@ -98,7 +98,7 @@ This document is the single source of truth for how Clerk, Stripe, Neon, and Ver
 ### Test Mode (Preview / Development / Local)
 
 - [x] Test API keys (`sk_test_51SvkizK...`, `pk_test_51SvkizK...`) set in Vercel Preview + Development + `.env.local`
-- [x] Test webhook endpoint: Preview deployment URL + `/api/webhooks/stripe`
+- [x] Test webhook endpoint: Preview deployment URL + `/api/stripe/webhook`
   - Same 5 events as live
 - [x] Test webhook signing secret set in Vercel Preview + Development + `.env.local`
 - [x] Test Price IDs created and set everywhere:
@@ -250,4 +250,4 @@ When setting up a new service or changing environment configuration:
 - `proxy.ts` — Clerk middleware
 - `lib/env.ts` — Environment validation
 - `app/api/webhooks/clerk/route.ts` — Clerk webhook handler
-- `app/api/webhooks/stripe/route.ts` — Stripe webhook handler
+- `app/api/stripe/webhook/route.ts` — Stripe webhook handler
