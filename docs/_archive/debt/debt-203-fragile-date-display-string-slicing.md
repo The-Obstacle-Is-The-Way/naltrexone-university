@@ -1,6 +1,6 @@
 # DEBT-203: Fragile Date Display Using String Slicing
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P4
 **Date:** 2026-02-09
 
@@ -43,7 +43,10 @@ Replace `.slice(0, 10)` with a proper date formatting utility. Since both pages 
 ```typescript
 // lib/format-date.ts
 export function formatDate(isoString: string): string {
-  return new Date(isoString).toLocaleDateString('en-US', { dateStyle: 'medium' });
+  return new Date(isoString).toLocaleDateString('en-US', {
+    dateStyle: 'medium',
+    timeZone: 'UTC',
+  });
 }
 // "Jan 15, 2026" — more readable than "2026-01-15", still UTC date
 ```

@@ -1,6 +1,6 @@
 # DEBT-202: Missing Drizzle Migration 0008 Snapshot File
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P3
 **Date:** 2026-02-09
 

@@ -15,12 +15,7 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 ## Debt Index (Active)
 
-| ID | Title | Priority | Status |
-|----|-------|----------|--------|
-| [DEBT-193](debt-193-backend-production-files-over-300-lines.md) | Backend Production Files Exceed 300-Line Guideline (5 files) | P3 | Open |
-| [DEBT-194](debt-194-console-error-default-in-utility-functions.md) | Default `console.error` in Utility Function Parameters (3 files) | P4 | Open |
-| [DEBT-202](debt-202-missing-migration-0008-snapshot.md) | Missing Drizzle Migration 0008 Snapshot File (manual BUG-105 migration breaks `db:generate` diffing) | P3 | Open |
-| [DEBT-203](debt-203-fragile-date-display-string-slicing.md) | Fragile Date Display Using `.slice(0, 10)` in Bookmarks and Review Pages (4 locations) | P4 | Open |
+*No active DEBT items.*
 
 **Next Debt ID:** DEBT-204
 
@@ -32,43 +27,13 @@ All frontend-specific UI/UX debt. Items use `FE-XXX` IDs and are cross-reference
 
 ### P2 — Fix during UI/UX refactor
 
-| ID | Summary | Files | Status |
-|----|---------|-------|--------|
-| FE-002 | `usePracticeSessionReviewStage` (221 lines, exceeds 150-line guideline; 1 owned LoadState + 2 delegated) | `[sessionId]/hooks/use-practice-session-review-stage.ts` | Open |
-| FE-009 | Card-like divs in marketing (10 instances) | `marketing-home.tsx` | Open |
-| FE-010 | Card-like divs + PascalCase filenames in question components | `QuestionCard.tsx`, `ChoiceButton.tsx`, `Feedback.tsx` | Open |
-| FE-011 | Two competing focus ring patterns across codebase | 20+ files | Open |
-| FE-012 | Missing focus-visible rings on text links | 8+ files | Open |
-| FE-013 | Disabled opacity-60 instead of opacity-50 | `pricing-client.tsx`, `ChoiceButton.tsx` | Open |
-| FE-015 | 9 copy-pasted error boundary files | All `error.tsx` files | Open |
-| FE-016 | Card component defaults never used | `card.tsx` | Open |
-| FE-017 | Loading skeleton radius mismatch | `page-loading.tsx` | Open |
-| FE-018 | Missing `cn()` usage | `metallic-border.tsx`, `notification-provider.tsx` | Open |
-| FE-019 | External link missing `target="_blank"` | `metallic-cta-button.tsx` | Open |
-| FE-020 | Missing `error.tsx` for practice session route | `practice/[sessionId]/` | Open |
-| FE-021 | No per-page metadata (all tabs show same title) | All page.tsx files | Open |
-| FE-022 | Inconsistent stat card hover treatments | Dashboard vs session-summary | Open |
-| FE-023 | Hover without transition-colors | `not-found.tsx`, `pricing-view.tsx`, `layout.tsx` | Open |
-| FE-024 | Missing `font-display` on pricing page price numbers | `pricing-view.tsx` | Open |
-| FE-025 | Icon sizing `h-X w-X` instead of `size-X` | `metallic-cta-button.tsx`, `marketing-home.tsx`, `theme-toggle.tsx` | Open |
-| FE-045 | Structural duplication between `usePracticeQuestionAnswerFlow` (164 lines) and `usePracticeSessionQuestionFlow` (195 lines) — identical state shapes | `practice/hooks/`, `practice/[sessionId]/hooks/` | Open |
+*No active P2 items.*
 
 ### P3 — Fix as encountered
 
 | ID | Summary | Files | Status |
 |----|---------|-------|--------|
-| FE-026 | Repeated button labels missing `aria-label` context | `bookmarks/page.tsx`, `review/page.tsx`, `history-panel`, `exam-review` | Open |
-| FE-028 | No confirmation dialogs for destructive actions | App-wide | Open |
-| FE-029 | Toast system underused (1 consumer) | App-wide | Open |
-| FE-030 | Bookmark removal has no success feedback | `bookmarks/page.tsx` | Open |
-| FE-031 | Inline hook logic in QuestionPageClient (240 lines) | `question-page-client.tsx` | Open |
-| FE-032 | Clerk theme hardcoded to dark mode | `providers.tsx` | Open |
-| FE-033 | No shared marketing layout | `/pricing` vs `/` | Open |
-| FE-034 | Empty states lack helpful CTAs | Bookmarks, review, practice history | Open |
-| FE-035 | Checkout success inline Stripe logic (437 lines) | `checkout/success/checkout-success-sync.tsx` | Open |
-| FE-036 | 3 unused shadcn/ui components (0 consumers, no spec need) | `avatar.tsx`, `radio-group.tsx`, `label.tsx` + test files. (`dropdown-menu.tsx` KEEP — spec-mandated) | Open |
-| FE-038 | Card sub-components: 0 imports but KEEP for SPEC-019 Phase 2 | `card.tsx` (CardHeader, CardTitle, etc.) — evaluate during UI/UX refactor | Open |
-| FE-049 | Missing `createBookmark()` factory in domain test helpers | `src/domain/test-helpers/factories.ts` | Open |
+| FE-038 | Card sub-components: 0 imports but KEEP for SPEC-019 Phase 2 | `card.tsx` (CardHeader, CardTitle, etc.) — evaluate during UI/UX refactor | Accepted |
 
 ### Frontend Debt — Resolved
 
@@ -91,10 +56,50 @@ All frontend-specific UI/UX debt. Items use `FE-XXX` IDs and are cross-reference
 | FE-047 | Filter chip groups missing semantic grouping | Wrapped difficulty/tag chips in `<fieldset aria-label=...>` and added regression test |
 | FE-048 | Session progress counter not announced to screen readers | Added `aria-live="polite"` to session progress label and test coverage |
 | FE-050 | Exam review submit button missing pending label | Exam review submit button now shows `Submitting…` when pending, with test coverage |
+| FE-002 | `usePracticeSessionReviewStage` exceeds 150-line guideline | Refactored to 212 lines; summary + navigator extracted to sub-hooks |
+| FE-007 | Raw `<button>` in pricing client | Replaced with `Button` component and preserved pending state |
+| FE-008 | Raw styled links used as buttons | Adopted `Button asChild` and standardized focus rings |
+| FE-009 | Card-like divs in marketing | Adopted `Card` component across all marketing sections |
+| FE-010 | PascalCase filenames + card-like divs in question components | Renamed to kebab-case and adopted `Card` component |
+| FE-011 | Two competing focus ring patterns | Unified to `ring-[3px] ring-ring/50` standard |
+| FE-012 | Missing focus-visible rings on text links | Added focus-visible rings where missing |
+| FE-013 | Disabled opacity uses 60 instead of 50 | Standardized disabled opacity to 50 |
+| FE-015 | Copy-pasted error boundaries | Extracted shared `ErrorBoundaryPage` component |
+| FE-016 | Card defaults unused | Updated Card defaults to match consumer expectations |
+| FE-017 | Loading skeleton radius mismatch | Standardized skeleton radius to match cards |
+| FE-018 | Missing `cn()` usage | Converted manual class concat to `cn()` |
+| FE-019 | External CTA link missing `target="_blank"` | Added `target="_blank"` + `rel="noreferrer noopener"` |
+| FE-020 | Missing practice session `error.tsx` | Added route error boundary |
+| FE-021 | Missing per-page metadata | Added `metadata` to pages for distinct titles |
+| FE-022 | Inconsistent stat card hover | Unified hover/transition treatment |
+| FE-023 | Hover color changes missing transitions | Added `transition-colors` where needed |
+| FE-024 | Missing font styling on pricing numbers | Standardized pricing typography |
+| FE-025 | Icon sizing uses `h-X w-X` instead of `size-X` | Standardized icons to `size-X` |
+| FE-026 | Buttons missing accessible context labels | Added contextual `aria-label`s where needed |
+| FE-028 | No confirmation dialogs for destructive actions | Added AlertDialog confirmations for abandon/remove/submit |
+| FE-029 | Toast system underused | Added success toasts for key flows |
+| FE-030 | Bookmark removal lacks success feedback | Added removal toast and URL param clearing |
+| FE-031 | Inline hook logic in QuestionPageClient | Extracted controller hook for page client |
+| FE-032 | Clerk theme hardcoded | Made Clerk appearance follow app theme |
+| FE-033 | No shared marketing layout | Introduced shared `MarketingLayout` for `/` and `/pricing` |
+| FE-034 | Empty states lack helpful CTAs | Added CTAs across empty states |
+| FE-035 | Checkout success sync file too large | Decomposed into focused modules under cap |
+| FE-036 | Unused shadcn/ui components | Removed `avatar`, `label`, and `radio-group` primitives + tests |
+| FE-045 | Duplicate question flow hooks | Extracted shared core hook for both flows |
+| FE-049 | Missing `createBookmark()` factory | Added factory + barrel export + unit test |
 
 **Next frontend debt ID:** FE-051
 
 ## Archived Debt
+
+### Resolved in Debt Register Cleanup
+
+| ID | Title | Priority | Resolved |
+|----|-------|----------|----------|
+| [DEBT-193](../_archive/debt/debt-193-backend-production-files-over-300-lines.md) | Backend Production Files Exceed 300-Line Guideline (5 files) | P3 | 2026-02-09 |
+| [DEBT-194](../_archive/debt/debt-194-console-error-default-in-utility-functions.md) | Default `console.error` in Utility Function Parameters (3 files) | P4 | 2026-02-09 |
+| [DEBT-202](../_archive/debt/debt-202-missing-migration-0008-snapshot.md) | Missing Drizzle Migration 0008 Snapshot File | P3 | 2026-02-09 |
+| [DEBT-203](../_archive/debt/debt-203-fragile-date-display-string-slicing.md) | Fragile Date Display Using `.slice(0, 10)` in Bookmarks and Review Pages (4 locations) | P4 | 2026-02-09 |
 
 ### Resolved in Practice Submit Loading Cleanup
 
