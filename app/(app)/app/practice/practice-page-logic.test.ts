@@ -996,7 +996,9 @@ describe('practice-page-logic', () => {
         tagSlugs: ['opioids'],
         difficulties: ['hard'],
       });
-      expect(navigateTo).toHaveBeenCalledWith('/app/practice/session-1');
+      expect(navigateTo).toHaveBeenCalledWith(
+        '/app/practice/session-1?toast=session_started',
+      );
       expect(setIdempotencyKey).not.toHaveBeenCalled();
     });
 

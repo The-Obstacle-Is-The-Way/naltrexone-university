@@ -27,6 +27,7 @@ import {
   getStemPreview,
   toPlainText,
 } from '@/src/adapters/shared/stem-preview';
+import { BookmarksToast } from './bookmarks-toast';
 
 export const metadata: Metadata = {
   title: 'Bookmarks - Addiction Boards',
@@ -90,6 +91,7 @@ export async function removeBookmarkAction(
   }
 
   revalidatePathFn(ROUTES.APP_BOOKMARKS);
+  return redirectFn(`${ROUTES.APP_BOOKMARKS}?toast=bookmark_removed`);
 }
 
 export function BookmarksView({ rows }: { rows: GetBookmarksOutput['rows'] }) {
@@ -277,14 +279,23 @@ export function createBookmarksPage(deps?: {
     const errorMessage = getRemoveBookmarkErrorMessage(
       parseRemoveBookmarkErrorCode(searchParams?.error),
     );
+    const toast = searchParams?.toast;
 
     const result = await getBookmarksFn({});
     if (!result.ok) return renderBookmarks(result);
 
-    if (!errorMessage) return <BookmarksView rows={result.data.rows} />;
+    if (!errorMessage) {
+      return (
+        <>
+          <BookmarksToast code={toast} />
+          <BookmarksView rows={result.data.rows} />
+        </>
+      );
+    }
 
     return (
       <div className="space-y-6">
+        <BookmarksToast code={toast} />
         <ErrorCard className="p-6">{errorMessage}</ErrorCard>
         <BookmarksView rows={result.data.rows} />
       </div>

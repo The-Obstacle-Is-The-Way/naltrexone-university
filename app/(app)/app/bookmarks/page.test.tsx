@@ -172,8 +172,16 @@ describe('app/(app)/app/bookmarks', () => {
     formData.set('questionId', 'q_1');
 
     await expect(
-      removeBookmarkAction(formData, { toggleBookmarkFn, revalidatePathFn }),
-    ).resolves.toBeUndefined();
+      removeBookmarkAction(formData, {
+        toggleBookmarkFn,
+        revalidatePathFn,
+        redirectFn: (url: string): never => {
+          throw new Error(`redirect:${url}`);
+        },
+      }),
+    ).rejects.toMatchObject({
+      message: `redirect:${ROUTES.APP_BOOKMARKS}?toast=bookmark_removed`,
+    });
 
     expect(toggleBookmarkFn).toHaveBeenCalledWith({ questionId: 'q_1' });
     expect(revalidatePathFn).toHaveBeenCalledWith(ROUTES.APP_BOOKMARKS);
