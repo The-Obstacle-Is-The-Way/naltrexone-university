@@ -154,7 +154,7 @@ Five different stem lengths across 7 locations: 100, 90, 80, 96, 80. No rational
 
 ### ~~I3: Practice Breakdowns Are Non-Interactive Dead Ends~~ — FIXED (PR #83)
 
-Questions in breakdowns are now clickable `<Link>` elements via shared `SessionBreakdownList`. Both Practice history panel and Session summary view use the shared component. Remaining issues: breakdown placement (Problem 5), date display (Problem 6), label styling (Problem 7) — tracked in `practice-ux-audit.md`.
+Questions in breakdowns are now clickable `<Link>` elements via shared `SessionBreakdownList`. Both Practice history panel and Session summary view use the shared component. Inline placement, date display, and styled status labels were completed in dd51513 (Problems 5–7).
 
 ### I4: Question Page Is a Single-Question Dead End
 

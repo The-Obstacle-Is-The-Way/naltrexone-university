@@ -342,7 +342,7 @@ The active session page (`/app/practice/[sessionId]`) had vestigial Quick Practi
 
 ## Open Questions (Deferred)
 
-1. ~~Should breakdown show green/red color coding for correct/incorrect?~~ → Promoted to Problem 7 (TODO)
+1. ~~Should breakdown show green/red color coding for correct/incorrect?~~ → Resolved in Problem 7 (dd51513)
 2. Should Recent Sessions show more than 10 sessions or add "Load more"? (Low priority)
 3. Should the shared `SessionBreakdownList` also be used in ExamReviewView? (Different enough — has "Open question" button + marked-for-review, so probably not)
 4. **Session Review Mode:** Should clicking a session breakdown open a "session replay" page that mirrors the tutor/exam experience but in review mode — showing all questions in context with navigation, rather than linking to individual question pages one at a time? This would be a new route like `/app/practice/[sessionId]/review` that shows each question in sequence with the user's original answer and the explanation. This is a larger feature that would require a new page and data flow, but it's the natural evolution of the breakdown panel. (See also `review-consistency-audit.md` I5: Session Context Is Lost on Question Detail Page.)
