@@ -1,4 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { RateLimiter } from '@/src/application/ports/gateways';
+import { FakeRateLimiter } from '@/src/application/test-helpers/fakes';
 
 const { reconcileStripeSubscriptions, createContainer } = vi.hoisted(() => ({
   reconcileStripeSubscriptions: vi.fn(),
@@ -36,6 +38,7 @@ type CronContainer = {
   logger: {
     error: ReturnType<typeof vi.fn>;
   };
+  createRateLimiter: () => RateLimiter;
   stripe: object;
   db: {
     query: {
@@ -50,6 +53,8 @@ type CronContainer = {
 };
 
 function createMockContainer(): CronContainer {
+  const rateLimiter = new FakeRateLimiter();
+
   return {
     env: {
       CRON_SECRET: 'test-secret',
@@ -59,6 +64,7 @@ function createMockContainer(): CronContainer {
     logger: {
       error: vi.fn(),
     },
+    createRateLimiter: () => rateLimiter,
     stripe: {},
     db: {
       query: {
@@ -182,6 +188,62 @@ describe('POST /api/cron/reconcile-stripe-subscriptions', () => {
       },
       expect.any(Object),
     );
+  });
+
+  it('returns 429 when rate limited', async () => {
+    const rateLimiter = new FakeRateLimiter({
+      success: false,
+      limit: 5,
+      remaining: 0,
+      retryAfterSeconds: 42,
+    });
+    container.createRateLimiter = () => rateLimiter;
+
+    const response = await POST(
+      new Request('http://localhost/api/cron/reconcile-stripe-subscriptions', {
+        method: 'POST',
+        headers: {
+          authorization: 'Bearer test-secret',
+        },
+      }),
+    );
+
+    expect(response.status).toBe(429);
+    await expect(response.json()).resolves.toEqual({
+      error: 'Too many requests',
+    });
+    expect(response.headers.get('Retry-After')).toBe('42');
+    expect(response.headers.get('X-RateLimit-Limit')).toBe('5');
+    expect(response.headers.get('X-RateLimit-Remaining')).toBe('0');
+    expect(rateLimiter.inputs).toEqual([
+      {
+        key: 'cron:reconcile-stripe-subscriptions',
+        limit: 5,
+        windowMs: 60_000,
+      },
+    ]);
+    expect(reconcileStripeSubscriptions).not.toHaveBeenCalled();
+  });
+
+  it('returns 503 when the rate limiter fails', async () => {
+    const rateLimiter = new FakeRateLimiter(new Error('rate limiter down'));
+    container.createRateLimiter = () => rateLimiter;
+
+    const response = await POST(
+      new Request('http://localhost/api/cron/reconcile-stripe-subscriptions', {
+        method: 'POST',
+        headers: {
+          authorization: 'Bearer test-secret',
+        },
+      }),
+    );
+
+    expect(response.status).toBe(503);
+    await expect(response.json()).resolves.toEqual({
+      error: 'Rate limiter unavailable',
+    });
+    expect(reconcileStripeSubscriptions).not.toHaveBeenCalled();
+    expect(container.logger.error).toHaveBeenCalledTimes(1);
   });
 
   it('falls back to safe defaults when query params are malformed', async () => {
