@@ -17,7 +17,7 @@ export function MetallicCtaButton({
   const inner = (
     <span className="flex items-center gap-2 px-8 py-3 text-base font-medium text-foreground">
       {children}
-      <ArrowRight aria-hidden="true" className="h-4 w-4" />
+      <ArrowRight aria-hidden="true" className="size-4" />
     </span>
   );
 
@@ -25,7 +25,7 @@ export function MetallicCtaButton({
     href.startsWith('/') ? (
       <Link href={href}>{inner}</Link>
     ) : (
-      <a href={href} rel="noopener noreferrer">
+      <a href={href} target="_blank" rel="noreferrer noopener">
         {inner}
       </a>
     )

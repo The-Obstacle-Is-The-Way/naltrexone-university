@@ -2,7 +2,8 @@
 
 import { useId } from 'react';
 import { Markdown } from '@/components/markdown/Markdown';
-import { ChoiceButton } from './ChoiceButton';
+import { Card } from '@/components/ui/card';
+import { ChoiceButton } from './choice-button';
 
 export type QuestionCardChoice = {
   id: string;
@@ -30,7 +31,7 @@ export function QuestionCard({
   const choiceGroupName = useId();
 
   return (
-    <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
+    <Card>
       <Markdown content={stemMd} className="text-sm text-foreground" />
 
       <fieldset className="mt-6 space-y-3">
@@ -60,6 +61,6 @@ export function QuestionCard({
           );
         })}
       </fieldset>
-    </div>
+    </Card>
   );
 }

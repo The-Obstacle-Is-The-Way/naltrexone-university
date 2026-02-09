@@ -59,42 +59,54 @@ export function PracticeSessionHistoryPanel(
         ) : null}
         {props.status === 'idle' && props.rows.length === 0 ? (
           <div className="text-sm text-muted-foreground">
-            No completed sessions yet.
+            <div>No completed sessions yet.</div>
+            <div className="mt-3">
+              <Button asChild variant="outline" className="rounded-full">
+                <a href="#practice-session-starter">Start a session</a>
+              </Button>
+            </div>
           </div>
         ) : null}
         {props.status === 'idle' && props.rows.length > 0 ? (
           <ul className="space-y-2">
-            {props.rows.map((row) => (
-              <li
-                key={row.sessionId}
-                className="rounded-xl border border-border/60 bg-muted/20 p-3"
-              >
-                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                  <div className="text-sm text-foreground">
-                    <span className="font-medium">
-                      {formatSessionMode(row.mode)}
-                    </span>
-                    <span className="mx-2">•</span>
-                    <span>
-                      {row.correct}/{row.questionCount} correct (
-                      {formatSessionAccuracy(row.accuracy)})
-                    </span>
-                    <span className="mx-2">•</span>
-                    <span>{formatDuration(row.durationSeconds)}</span>
+            {props.rows.map((row) => {
+              const actionLabel =
+                props.selectedSessionId === row.sessionId ? 'Refresh' : 'View';
+              const sessionSummary = `${formatSessionMode(row.mode)} session: ${row.correct}/${row.questionCount} correct (${formatSessionAccuracy(row.accuracy)}), ${formatDuration(row.durationSeconds)}`;
+
+              return (
+                <li
+                  key={row.sessionId}
+                  className="rounded-xl border border-border/60 bg-muted/20 p-3"
+                >
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="text-sm text-foreground">
+                      <span className="font-medium">
+                        {formatSessionMode(row.mode)}
+                      </span>
+                      <span className="mx-2">•</span>
+                      <span>
+                        {row.correct}/{row.questionCount} correct (
+                        {formatSessionAccuracy(row.accuracy)})
+                      </span>
+                      <span className="mx-2">•</span>
+                      <span>{formatDuration(row.durationSeconds)}</span>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="rounded-full"
+                      aria-label={`${actionLabel} breakdown for ${sessionSummary}`}
+                      onClick={() => props.onOpenSession(row.sessionId)}
+                    >
+                      {props.selectedSessionId === row.sessionId
+                        ? 'Refresh breakdown'
+                        : 'View breakdown'}
+                    </Button>
                   </div>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="rounded-full"
-                    onClick={() => props.onOpenSession(row.sessionId)}
-                  >
-                    {props.selectedSessionId === row.sessionId
-                      ? 'Refresh breakdown'
-                      : 'View breakdown'}
-                  </Button>
-                </div>
-              </li>
-            ))}
+                </li>
+              );
+            })}
           </ul>
         ) : null}
       </div>

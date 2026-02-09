@@ -16,6 +16,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest",
     "test:browser": "vitest run --config vitest.browser.config.ts",
+    "test:browser:coverage": "vitest run --config vitest.browser.config.ts --coverage",
     "test:coverage": "vitest run --coverage",
     "test:integration": "vitest run --config vitest.integration.config.ts",
     "test:integration:coverage": "vitest run --config vitest.integration.config.ts --coverage",

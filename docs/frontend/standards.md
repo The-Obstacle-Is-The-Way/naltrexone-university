@@ -587,7 +587,7 @@ Dark mode is implemented via CSS custom properties in `.dark` class (globals.css
 **Rules:**
 - Use semantic tokens (`bg-background`, `text-foreground`, `bg-card`, etc.) — they adapt automatically
 - Do NOT add explicit `dark:` variants in page/component code — only in `components/ui/` primitives
-- The Clerk theme (`providers.tsx`) is hardcoded to dark — this is a known limitation
+- Clerk appearance follows the app theme via `providers.tsx`
 
 ---
 
@@ -601,46 +601,13 @@ Issues documented below are tracked as tech debt in `docs/debt/index.md` (Fronte
 
 ### P2 — Fix during UI/UX refactor
 
-| ID | File(s) | Issue |
-|----|---------|-------|
-| FE-002 | `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-review-stage.ts` (221 lines) | Reduced from 304 lines; summary and navigator delegated to sub-hooks. Still 221 lines with 5 useState + 1 useRef + 1 owned LoadState (2 more surfaced from sub-hooks). Exceeds 150-line guideline. |
-| FE-007 | `pricing-client.tsx` | 1 raw `<button>` element; replace with `Button` component. (`pricing-view.tsx` now uses `Button` throughout.) |
-| FE-008 | `components/get-started-cta.tsx`, `components/auth-nav.tsx`, `components/marketing/marketing-home.tsx`, `app/not-found.tsx`, `app/pricing/pricing-view.tsx` | 11+ raw styled `<Link>` elements as buttons; replace with `<Button asChild><Link>`. |
-| FE-009 | `components/marketing/marketing-home.tsx` | Card-like divs instead of `Card` component; 10 instances (4 stats, 4 features, 2 pricing). |
-| FE-010 | `components/question/QuestionCard.tsx`, `ChoiceButton.tsx`, `Feedback.tsx` | Card-like divs instead of `Card`; also PascalCase filenames (should be kebab-case). |
-| FE-011 | Many files (see focus ring audit) | Two competing focus ring patterns: Button's `ring-[3px] ring-ring/50` vs hand-rolled `ring-2 ring-ring ring-offset-2`. Converge to one. |
-| FE-012 | `app/pricing/pricing-view.tsx` (line 65), `metallic-cta-button.tsx`, `auth-nav.tsx`, `get-started-cta.tsx`, `bookmarks/page.tsx`, `review/page.tsx`, `practice-view.tsx`, `question-page-client.tsx` | Missing focus-visible rings on interactive text links. |
-| FE-013 | `pricing-client.tsx`, `ChoiceButton.tsx` | Disabled opacity `60` instead of standard `50`. |
-| FE-015 | 9 error boundary files | Copy-pasted template; extract shared `ErrorBoundaryPage` component. |
-| FE-016 | `components/ui/card.tsx` | Default `rounded-xl gap-6 py-6` is never used; every consumer overrides to `rounded-2xl gap-0 p-6`. Update defaults. |
-| FE-017 | `components/loading/page-loading.tsx` | Skeleton uses `rounded-xl`; actual cards use `rounded-2xl`. Mismatch. |
-| FE-018 | `components/ui/metallic-border.tsx`, `notification-provider.tsx` | Manual string concatenation instead of `cn()`. |
-| FE-019 | `components/ui/metallic-cta-button.tsx` | External `<a>` missing `target="_blank"`. |
-| FE-020 | `app/(app)/app/practice/[sessionId]/` | Missing `error.tsx` — errors bubble to parent with misleading message. |
-| FE-021 | No page except root layout | No per-page metadata. All tabs show same title. |
-| FE-022 | Dashboard stat cards vs session-summary stat cards | Different hover treatments (`transition-all` vs `transition-colors`, `/80` vs `/50` opacity). |
-| FE-023 | `not-found.tsx` (line 28), `pricing-view.tsx` (lines 67, 75), `layout.tsx` (line 119) | `hover:` color changes without `transition-colors`. |
-| FE-024 | `pricing-view.tsx` | Missing `font-display` on price numbers. (The `font-heading` drift on the h1 was FE-042, now resolved.) |
-| FE-025 | `metallic-cta-button.tsx`, `marketing-home.tsx`, `theme-toggle.tsx` | Icon sizing uses `h-X w-X` instead of `size-X`. |
-| FE-045 | `practice/hooks/`, `practice/[sessionId]/hooks/` | Structural duplication between `usePracticeQuestionAnswerFlow` (164 lines) and `usePracticeSessionQuestionFlow` (195 lines) — 8 identical `useState` declarations. Shared logic partially extracted to `question-flow-actions.ts` but hook-level state setup remains duplicated. |
+*No active P2 items.*
 
 ### P3 — Fix as encountered
 
 | ID | File(s) | Issue |
 |----|---------|-------|
-| FE-026 | `bookmarks/page.tsx`, `review/page.tsx`, `practice-session-history-panel.tsx`, `exam-review-view.tsx` | Repeated button labels without `aria-label` context for screen readers. |
-| FE-028 | Entire app | No confirmation dialogs for destructive actions (abandon session, remove bookmark, submit exam). |
-| FE-029 | Entire app | Toast system used by only 1 consumer; underused for success feedback. |
-| FE-030 | Bookmarks page | Bookmark removal has no success feedback (item silently disappears). |
-| FE-031 | `app/questions/[slug]/question-page-client.tsx` | 240 lines with ~90 lines of inline hook logic; should extract to a `useQuestionPageController` hook. |
-| FE-032 | `components/providers.tsx` | Clerk theme hardcoded to dark mode; won't adapt to light mode toggle. |
-| FE-033 | No marketing layout | `/pricing` renders without marketing header/footer; `/` has its own shell. No shared marketing layout. |
-| FE-034 | Empty states (bookmarks, review, practice history) | No helpful CTA — just "No X yet." text without guiding user action. |
-| FE-035 | `app/(marketing)/checkout/success/checkout-success-sync.tsx` (405 lines) | Inline Stripe logic, type guards, validation, retry logic extracted from page.tsx but still not going through Clean Architecture layers. Extract to a server action or use case. |
-| FE-036 | `components/ui/avatar.tsx`, `radio-group.tsx`, `label.tsx` | 3 unused shadcn/ui components with 0 consumers and no spec-based need. Safe to remove along with colocated test files. (`dropdown-menu.tsx` is spec-mandated — KEEP.) |
-| FE-037 | `components/theme-toggle.tsx` | Uses raw `<button>` instead of `<Button>` component; violates the "ALWAYS use `<Button>` for interactive click targets" rule. |
 | FE-038 | `components/ui/card.tsx` sub-components | `CardHeader`, `CardTitle`, `CardDescription`, `CardContent`, `CardFooter`, `CardAction` have 0 imports outside tests. KEEP — SPEC-019 Phase 2 card-based redesign will likely need structured card layouts. Evaluate during UI/UX refactor. |
-| FE-049 | `src/domain/test-helpers/factories.ts` | Missing `createBookmark()` factory. Every other entity (Question, Choice, Attempt, PracticeSession, Subscription, User, Tag) has a factory function. |
 
 ---
 
@@ -650,17 +617,14 @@ Issues documented below are tracked as tech debt in `docs/debt/index.md` (Fronte
 
 | File | Component(s) | Has `data-slot` | Uses `cn()` | Uses `cva` | Notes |
 |------|-------------|-----------------|-------------|------------|-------|
-| `avatar.tsx` | Avatar, AvatarImage, AvatarFallback | Yes | Yes | No | **0 consumers — safe to remove** |
 | `button.tsx` | Button | Yes | Yes | Yes | |
 | `card.tsx` | Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter, CardAction | Yes | Yes | No | |
 | `dropdown-menu.tsx` | DropdownMenu, DropdownMenuTrigger, DropdownMenuItem, etc. | Yes | Yes | No | **0 consumers — KEEP (spec-mandated)** |
 | `filter-chip.tsx` | FilterChip | **No** | Yes | **No** | |
 | `input.tsx` | Input | Yes | Yes | No | |
-| `label.tsx` | Label | Yes | Yes | No | **0 consumers — safe to remove** |
-| `metallic-border.tsx` | MetallicBorder | **No** | **No** | No | |
+| `metallic-border.tsx` | MetallicBorder | **No** | Yes | No | |
 | `metallic-cta-button.tsx` | MetallicCtaButton | No | No | No | |
-| `notification-provider.tsx` | NotificationProvider, useNotification | **No** | **No** | No | |
-| `radio-group.tsx` | RadioGroup, RadioGroupItem | Yes | Yes | No | **0 consumers — safe to remove** |
+| `notification-provider.tsx` | NotificationProvider, useNotification | **No** | Yes | No | |
 | `segmented-control.tsx` | SegmentedControl | **No** | Yes | **No** | |
 
 ### `components/` (shared non-primitive)
@@ -678,7 +642,7 @@ Issues documented below are tracked as tech debt in `docs/debt/index.md` (Fronte
 | `theme-provider.tsx` | ThemeProvider | next-themes wrapper |
 | `loading/page-loading.tsx` | PageLoading | Skeleton loading for pages |
 | `marketing/marketing-home.tsx` | MarketingHome shell + sections | Landing page |
-| `question/QuestionCard.tsx` | QuestionCard | Question stem + choices display |
-| `question/ChoiceButton.tsx` | ChoiceButton | Radio-style answer choice |
-| `question/Feedback.tsx` | Feedback | Correct/incorrect answer feedback |
+| `question/question-card.tsx` | QuestionCard | Question stem + choices display |
+| `question/choice-button.tsx` | ChoiceButton | Radio-style answer choice |
+| `question/feedback.tsx` | Feedback | Correct/incorrect answer feedback |
 | `markdown/Markdown.tsx` | Markdown | Markdown renderer |

@@ -149,9 +149,50 @@ test('opens a review question and finalizes the exam', async () => {
   await expect
     .element(screen.getByText('Marked', { exact: true }))
     .toBeVisible();
-  await screen.getByRole('button', { name: 'Open question' }).click();
+  await screen
+    .getByRole('button', { name: 'Open question 1: A long stem for q1' })
+    .click();
   expect(onOpenQuestion).toHaveBeenCalledWith('q1');
 
   await screen.getByRole('button', { name: 'Submit exam' }).click();
+  await expect
+    .element(screen.getByRole('alertdialog', { name: 'Submit exam?' }))
+    .toBeVisible();
+  await screen.getByRole('button', { name: 'Confirm submit' }).click();
   expect(onFinalizeReview).toHaveBeenCalledTimes(1);
+});
+
+test('omits the stem preview in the open question aria-label when stem is empty', async () => {
+  const onOpenQuestion = vi.fn();
+  const onFinalizeReview = vi.fn();
+
+  const screen = await render(
+    <ExamReviewView
+      review={{
+        sessionId: 'session-1',
+        mode: 'exam',
+        totalCount: 1,
+        answeredCount: 0,
+        markedCount: 0,
+        rows: [
+          {
+            questionId: 'q1',
+            order: 1,
+            isAvailable: true,
+            stemMd: '',
+            difficulty: 'easy',
+            isAnswered: false,
+            isCorrect: null,
+            markedForReview: false,
+          },
+        ],
+      }}
+      isPending={false}
+      onOpenQuestion={onOpenQuestion}
+      onFinalizeReview={onFinalizeReview}
+    />,
+  );
+
+  await screen.getByRole('button', { name: 'Open question 1' }).click();
+  expect(onOpenQuestion).toHaveBeenCalledWith('q1');
 });

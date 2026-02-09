@@ -1,3 +1,16 @@
+'use client';
+
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { getStemPreview } from '@/src/adapters/shared/stem-preview';
@@ -134,6 +147,14 @@ export function ExamReviewView({
                     type="button"
                     variant="outline"
                     className="rounded-full"
+                    aria-label={
+                      row.stemMd.trim()
+                        ? `Open question ${row.order}: ${getStemPreview(
+                            row.stemMd,
+                            60,
+                          )}`
+                        : `Open question ${row.order}`
+                    }
                     onClick={() => onOpenQuestion(row.questionId)}
                   >
                     Open question
@@ -146,14 +167,37 @@ export function ExamReviewView({
       </ul>
 
       <div className="flex flex-col gap-3 sm:flex-row">
-        <Button
-          type="button"
-          className="rounded-full"
-          disabled={isPending}
-          onClick={onFinalizeReview}
-        >
-          {isPending ? 'Submitting…' : 'Submit exam'}
-        </Button>
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <Button type="button" className="rounded-full" disabled={isPending}>
+              {isPending ? 'Submitting…' : 'Submit exam'}
+            </Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Submit exam?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This will end the session and save your results.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel type="button">
+                Keep reviewing
+              </AlertDialogCancel>
+              <AlertDialogAction
+                type="button"
+                variant="destructive"
+                disabled={isPending}
+                onClick={() => {
+                  if (isPending) return;
+                  onFinalizeReview();
+                }}
+              >
+                Confirm submit
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </div>
   );

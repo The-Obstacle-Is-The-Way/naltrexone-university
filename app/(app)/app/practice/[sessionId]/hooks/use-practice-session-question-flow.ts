@@ -1,24 +1,14 @@
 'use client';
 
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  useTransition,
-} from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   createLoadNextQuestionAction,
   loadNextQuestion,
   submitAnswerForQuestion,
 } from '@/app/(app)/app/practice/[sessionId]/practice-session-page-logic';
-import {
-  canSubmitAnswer,
-  type LoadState,
-  selectChoiceIfAllowed,
-} from '@/app/(app)/app/practice/practice-page-logic';
+import type { LoadState } from '@/app/(app)/app/practice/practice-page-logic';
 import { runTransitionedAsyncAction } from '@/app/(app)/app/practice/shared/question-flow-actions';
+import { useQuestionFlowCore } from '@/app/(app)/app/practice/shared/use-question-flow-core';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import type { NextQuestion } from '@/src/application/use-cases/get-next-question';
 import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
@@ -59,37 +49,31 @@ export type UsePracticeSessionQuestionFlowOutput = {
 export function usePracticeSessionQuestionFlow(
   input: UsePracticeSessionQuestionFlowInput,
 ): UsePracticeSessionQuestionFlowOutput {
-  const [question, setQuestion] = useState<NextQuestion | null>(null);
+  const {
+    question,
+    setQuestion,
+    selectedChoiceId,
+    setSelectedChoiceId,
+    submitResult,
+    setSubmitResult,
+    loadState,
+    setLoadState,
+    isPending,
+    startTransition,
+    questionLoadedAt,
+    submitIdempotencyKey,
+    setQuestionLoadedAt,
+    setSubmitIdempotencyKey,
+    createIdempotencyKey,
+    createRequestSequenceId,
+    isLatestRequest,
+    isMounted,
+    canSubmit,
+    onSelectChoice,
+  } = useQuestionFlowCore({ isMounted: input.isMounted });
+
   const [sessionInfo, setSessionInfo] = useState<NextQuestion['session']>(null);
   const [sessionMode, setSessionMode] = useState<'tutor' | 'exam' | null>(null);
-  const [selectedChoiceId, setSelectedChoiceId] = useState<string | null>(null);
-  const [submitResult, setSubmitResult] = useState<SubmitAnswerOutput | null>(
-    null,
-  );
-  const [loadState, setLoadState] = useState<LoadState>({ status: 'idle' });
-  const [isPending, startTransition] = useTransition();
-  const [questionLoadedAt, setQuestionLoadedAt] = useState<number | null>(null);
-  const [submitIdempotencyKey, setSubmitIdempotencyKey] = useState<
-    string | null
-  >(null);
-  const latestQuestionRequestId = useRef(0);
-  const isMountedFnRef = useRef(input.isMounted);
-
-  useEffect(() => {
-    isMountedFnRef.current = input.isMounted;
-  }, [input.isMounted]);
-
-  const createIdempotencyKey = useCallback(() => crypto.randomUUID(), []);
-
-  const createRequestSequenceId = useCallback(() => {
-    latestQuestionRequestId.current += 1;
-    return latestQuestionRequestId.current;
-  }, []);
-
-  const isLatestRequest = useCallback(
-    (requestId: number) => requestId === latestQuestionRequestId.current,
-    [],
-  );
 
   const loadQuestionConfig = useMemo(
     () => ({
@@ -106,7 +90,7 @@ export function usePracticeSessionQuestionFlow(
       setSessionInfo,
       createRequestSequenceId,
       isLatestRequest,
-      isMounted: () => isMountedFnRef.current(),
+      isMounted,
     }),
     [
       input.sessionId,
@@ -114,6 +98,13 @@ export function usePracticeSessionQuestionFlow(
       createIdempotencyKey,
       createRequestSequenceId,
       isLatestRequest,
+      isMounted,
+      setLoadState,
+      setQuestion,
+      setQuestionLoadedAt,
+      setSelectedChoiceId,
+      setSubmitIdempotencyKey,
+      setSubmitResult,
     ],
   );
 
@@ -123,7 +114,7 @@ export function usePracticeSessionQuestionFlow(
         startTransition,
         ...loadQuestionConfig,
       }),
-    [loadQuestionConfig],
+    [loadQuestionConfig, startTransition],
   );
 
   // Load the first question on mount and whenever the sessionId changes.
@@ -144,7 +135,7 @@ export function usePracticeSessionQuestionFlow(
     setQuestion(null);
     setSubmitResult(null);
     setSelectedChoiceId(null);
-  }, []);
+  }, [setQuestion, setSelectedChoiceId, setSubmitResult]);
 
   const onNavigateQuestion = useCallback(
     (questionId: string): void => {
@@ -155,17 +146,8 @@ export function usePracticeSessionQuestionFlow(
         });
       });
     },
-    [loadQuestionConfig],
+    [loadQuestionConfig, startTransition],
   );
-
-  const canSubmit = useMemo(() => {
-    return canSubmitAnswer({
-      loadState,
-      question,
-      selectedChoiceId,
-      submitResult,
-    });
-  }, [loadState, question, selectedChoiceId, submitResult]);
 
   const onSubmit = useCallback(() => {
     return runTransitionedAsyncAction({
@@ -181,24 +163,21 @@ export function usePracticeSessionQuestionFlow(
           nowMs: Date.now,
           setLoadState,
           setSubmitResult,
-          isMounted: () => isMountedFnRef.current(),
+          isMounted,
         }),
     });
   }, [
+    input.sessionId,
+    input.submitAnswerFn,
+    isMounted,
     question,
     questionLoadedAt,
     selectedChoiceId,
-    input.sessionId,
     submitIdempotencyKey,
-    input.submitAnswerFn,
+    setLoadState,
+    setSubmitResult,
+    startTransition,
   ]);
-
-  const onSelectChoice = useCallback(
-    (choiceId: string) => {
-      selectChoiceIfAllowed(submitResult, setSelectedChoiceId, choiceId);
-    },
-    [submitResult],
-  );
 
   return {
     sessionInfo,

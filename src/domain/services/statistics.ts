@@ -9,7 +9,7 @@ function utcDayNumber(date: Date): number {
  */
 export function computeAccuracy(total: number, correct: number): number {
   if (total <= 0) return 0;
-  return correct / total;
+  return Math.min(1, Math.max(0, correct / total));
 }
 
 /**

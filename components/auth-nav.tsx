@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { Button } from '@/components/ui/button';
 import type {
   AuthCheckDeps,
   AuthDepsContainer,
@@ -41,16 +42,13 @@ export async function AuthNav({
     <div className="flex items-center space-x-4">
       <Link
         href={ROUTES.PRICING}
-        className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+        className="rounded-md text-sm font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]"
       >
         Pricing
       </Link>
-      <Link
-        href={ROUTES.SIGN_IN}
-        className="rounded-full bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
-      >
-        Sign In
-      </Link>
+      <Button asChild size="sm" className="rounded-full">
+        <Link href={ROUTES.SIGN_IN}>Sign In</Link>
+      </Button>
     </div>
   );
 
@@ -79,7 +77,7 @@ export async function AuthNav({
     <div className="flex items-center space-x-4">
       <Link
         href={primaryLink.href}
-        className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+        className="rounded-md text-sm font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]"
       >
         {primaryLink.label}
       </Link>

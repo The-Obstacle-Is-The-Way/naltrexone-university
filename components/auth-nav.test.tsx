@@ -35,6 +35,7 @@ describe('AuthNav', () => {
     expect(html).toContain('href="/sign-in"');
     expect(html).toContain('Pricing');
     expect(html).toContain('Sign In');
+    expect(html).toContain('data-slot="button"');
     expect(html).not.toContain('data-testid="user-button"');
   });
 
@@ -100,6 +101,7 @@ describe('AuthNav', () => {
     expect(html).toContain('href="/pricing"');
     expect(html).toContain('href="/sign-in"');
     expect(html).not.toContain('data-testid="user-button"');
+    expect(html).toContain('data-slot="button"');
     expect(checkEntitlementUseCase.execute).not.toHaveBeenCalled();
   });
 

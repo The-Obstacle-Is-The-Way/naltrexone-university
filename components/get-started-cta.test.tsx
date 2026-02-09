@@ -44,6 +44,7 @@ describe('GetStartedCta', () => {
     });
     const html = renderToStaticMarkup(element);
 
+    expect(html).toContain('data-slot="button"');
     expect(html).toContain('href="/pricing"');
     expect(html).toContain('Get Started');
   });
@@ -67,6 +68,7 @@ describe('GetStartedCta', () => {
     });
     const html = renderToStaticMarkup(element);
 
+    expect(html).toContain('data-slot="button"');
     expect(html).toContain('href="/pricing"');
     expect(html).toContain('Get Started');
     expect(checkEntitlementUseCase.execute).not.toHaveBeenCalled();
@@ -96,6 +98,7 @@ describe('GetStartedCta', () => {
     });
     const html = renderToStaticMarkup(element);
 
+    expect(html).toContain('data-slot="button"');
     expect(html).toContain('href="/app/dashboard"');
     expect(html).toContain('Go to Dashboard');
   });
@@ -108,6 +111,7 @@ describe('GetStartedCta', () => {
     const element = await GetStartedCta({ deps: undefined });
     const html = renderToStaticMarkup(element);
 
+    expect(html).toContain('data-slot="button"');
     expect(html).toContain('href="/pricing"');
     expect(html).toContain('Get Started');
   });
@@ -137,6 +141,7 @@ describe('GetStartedCta', () => {
     });
     const html = renderToStaticMarkup(element);
 
+    expect(html).toContain('data-slot="button"');
     expect(html).toContain('href="/pricing"');
     expect(html).toContain('Get Started');
   });

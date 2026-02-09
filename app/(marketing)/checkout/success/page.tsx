@@ -1,3 +1,4 @@
+import type { Metadata } from 'next';
 import type { JSX } from 'react';
 import {
   type CheckoutSuccessDeps,
@@ -5,6 +6,10 @@ import {
   runCheckoutSuccessPage,
   syncCheckoutSuccess,
 } from './checkout-success-sync';
+
+export const metadata: Metadata = {
+  title: 'Checkout Success - Addiction Boards',
+};
 
 export {
   runCheckoutSuccessPage,

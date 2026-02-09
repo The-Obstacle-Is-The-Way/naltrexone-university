@@ -346,6 +346,7 @@ describe('practice-page-logic', () => {
         setBookmarkedQuestionIds,
         setBookmarkStatus,
         setBookmarkRetryCount: vi.fn(),
+        logError: vi.fn(),
       });
 
       await Promise.resolve();
@@ -452,38 +453,6 @@ describe('practice-page-logic', () => {
       }
     });
 
-    it('logs via console.error when bookmarks load fails and no logError is provided', async () => {
-      vi.useFakeTimers();
-      const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {
-        // swallow expected error logs
-      });
-
-      try {
-        const setBookmarkStatus = vi.fn();
-
-        const cleanup = createBookmarksEffect({
-          bookmarkRetryCount: 0,
-          getBookmarksFn: async () => err('INTERNAL_ERROR', 'Boom'),
-          setBookmarkedQuestionIds: vi.fn(),
-          setBookmarkStatus,
-          setBookmarkRetryCount: vi.fn(),
-        });
-
-        await Promise.resolve();
-
-        expect(consoleError).toHaveBeenCalledWith('Failed to load bookmarks', {
-          code: 'INTERNAL_ERROR',
-          message: 'Boom',
-        });
-        expect(setBookmarkStatus).toHaveBeenCalledWith('error');
-
-        cleanup();
-      } finally {
-        consoleError.mockRestore();
-        vi.useRealTimers();
-      }
-    });
-
     it('returns no state updates when cleaned up before resolve', async () => {
       const setBookmarkedQuestionIds = vi.fn();
       const setBookmarkStatus = vi.fn();
@@ -508,6 +477,7 @@ describe('practice-page-logic', () => {
         setBookmarkedQuestionIds,
         setBookmarkStatus,
         setBookmarkRetryCount: vi.fn(),
+        logError: vi.fn(),
       });
 
       cleanup();
@@ -996,7 +966,9 @@ describe('practice-page-logic', () => {
         tagSlugs: ['opioids'],
         difficulties: ['hard'],
       });
-      expect(navigateTo).toHaveBeenCalledWith('/app/practice/session-1');
+      expect(navigateTo).toHaveBeenCalledWith(
+        '/app/practice/session-1?toast=session_started',
+      );
       expect(setIdempotencyKey).not.toHaveBeenCalled();
     });
 

@@ -548,6 +548,9 @@ describe('app/(app)/app/practice', () => {
     expect(html).toContain('Exam');
     expect(html).toContain('15/20 correct (75%)');
     expect(html).toContain('30m');
+    expect(html).toContain(
+      'aria-label="View breakdown for Exam session: 15/20 correct (75%), 30m"',
+    );
   });
 
   it('renders selected session question breakdown', async () => {
@@ -597,6 +600,28 @@ describe('app/(app)/app/practice', () => {
     expect(html).toContain('Stem for q1');
     expect(html).toContain('[Question no longer available]');
     expect(html).toContain('Incorrect');
+  });
+
+  it('renders a CTA when no completed sessions exist yet', async () => {
+    const { PracticeSessionHistoryPanel } = await import(
+      '@/app/(app)/app/practice/page'
+    );
+
+    const html = renderToStaticMarkup(
+      <PracticeSessionHistoryPanel
+        status="idle"
+        error={null}
+        rows={[]}
+        selectedSessionId={null}
+        selectedReview={null}
+        reviewStatus={{ status: 'idle' }}
+        onOpenSession={() => undefined}
+      />,
+    );
+
+    expect(html).toContain('No completed sessions yet.');
+    expect(html).toContain('Start a session');
+    expect(html).toContain('href="#practice-session-starter"');
   });
 
   it('navigateTo calls window.location.assign', async () => {

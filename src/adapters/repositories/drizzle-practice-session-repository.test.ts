@@ -833,7 +833,24 @@ describe('DrizzlePracticeSessionRepository', () => {
       endedAt: null,
     } as const;
 
-    const updateReturning = vi.fn(async () => [{ id: 'session_1' }]);
+    const updateReturning = vi.fn(async () => [
+      {
+        ...row,
+        endedAt: now,
+        paramsJson: {
+          ...row.paramsJson,
+          questionStates: [
+            {
+              questionId: 'q1',
+              markedForReview: false,
+              latestSelectedChoiceId: 'choice_1',
+              latestIsCorrect: true,
+              latestAnsweredAt: '2026-02-01T00:00:01.000Z',
+            },
+          ],
+        },
+      },
+    ]);
     const updateWhere = vi.fn(() => ({ returning: updateReturning }));
     const updateSet = vi.fn(() => ({ where: updateWhere }));
     const update = vi.fn(() => ({ set: updateSet }));
@@ -858,10 +875,21 @@ describe('DrizzlePracticeSessionRepository', () => {
       nowFn,
     );
 
-    await expect(repo.end('session_1', 'user_1')).resolves.toMatchObject({
-      id: 'session_1',
-      endedAt: now,
+    const ended = await repo.end('session_1', 'user_1');
+    expect(ended).toMatchObject({ id: 'session_1', endedAt: now });
+    expect(ended.questionStates).toHaveLength(2);
+    expect(
+      ended.questionStates.find((state) => state.questionId === 'q1'),
+    ).toMatchObject({
+      questionId: 'q1',
+      markedForReview: false,
+      latestSelectedChoiceId: 'choice_1',
+      latestIsCorrect: true,
     });
+    expect(
+      ended.questionStates.find((state) => state.questionId === 'q1')
+        ?.latestAnsweredAt,
+    ).toEqual(new Date('2026-02-01T00:00:01.000Z'));
     expect(nowFn).toHaveBeenCalledTimes(1);
   });
 

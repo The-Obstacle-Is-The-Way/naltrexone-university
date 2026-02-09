@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
-import { ChoiceButton } from './ChoiceButton';
+import { ChoiceButton } from './choice-button';
 
 describe('ChoiceButton', () => {
   it('renders label and text', () => {

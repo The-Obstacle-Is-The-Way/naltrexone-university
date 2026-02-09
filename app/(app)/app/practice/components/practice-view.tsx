@@ -3,8 +3,8 @@
 import Link from 'next/link';
 import { useEffect, useRef } from 'react';
 import { ErrorCard } from '@/components/error-card';
-import { Feedback } from '@/components/question/Feedback';
-import { QuestionCard } from '@/components/question/QuestionCard';
+import { Feedback } from '@/components/question/feedback';
+import { QuestionCard } from '@/components/question/question-card';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { useNotification } from '@/components/ui/notification-provider';
@@ -132,12 +132,13 @@ export function PracticeView(props: PracticeViewProps) {
                 {props.endSessionLabel ?? 'End session'}
               </Button>
             ) : null}
-            <Link
-              href={ROUTES.APP_DASHBOARD}
-              className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+            <Button
+              asChild
+              variant="link"
+              className="h-auto p-0 text-muted-foreground no-underline hover:text-foreground hover:no-underline"
             >
-              Back to Dashboard
-            </Link>
+              <Link href={ROUTES.APP_DASHBOARD}>Back to Dashboard</Link>
+            </Button>
           </div>
         </div>
       </div>

@@ -12,6 +12,9 @@ import { SUBMIT_ANSWER_MAX_TIME_SPENT_SECONDS } from '@/src/application/use-case
 /** Max number of rows per page in paginated controller outputs. */
 export const MAX_PAGINATION_LIMIT = 100;
 
+/** Upper bound for pagination offsets to avoid pathological DB skips. */
+export const MAX_PAGINATION_OFFSET = 10_000;
+
 /** Max time allowed for a single question attempt (seconds). */
 export const MAX_TIME_SPENT_SECONDS = SUBMIT_ANSWER_MAX_TIME_SPENT_SECONDS;
 
@@ -28,6 +31,9 @@ export const MAX_PRACTICE_SESSION_QUESTIONS = 200;
 
 /** Max tag filters per practice session. */
 export const MAX_PRACTICE_SESSION_TAG_FILTERS = 50;
+
+/** Max length for tag slugs (matches db/schema.ts tags.slug varchar length). */
+export const MAX_TAG_SLUG_LENGTH = 255;
 
 /** Max difficulty filters per practice session (easy/medium/hard). */
 export const MAX_PRACTICE_SESSION_DIFFICULTY_FILTERS = 3;

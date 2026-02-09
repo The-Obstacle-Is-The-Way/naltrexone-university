@@ -1,3 +1,4 @@
+import type { Metadata } from 'next';
 import Link from 'next/link';
 import { ErrorCard } from '@/components/error-card';
 import { Button } from '@/components/ui/button';
@@ -9,6 +10,10 @@ import {
   type UserStatsOutput,
 } from '@/src/adapters/controllers/stats-controller';
 import { getStemPreview } from '@/src/adapters/shared/stem-preview';
+
+export const metadata: Metadata = {
+  title: 'Dashboard - Addiction Boards',
+};
 
 function formatPercent(value: number): string {
   return `${Math.round(value * 100)}%`;
@@ -78,28 +83,28 @@ export function DashboardView({ stats }: { stats: UserStatsOutput }) {
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Card className="gap-0 rounded-2xl p-6 shadow-sm transition-all hover:border-border/80 hover:bg-muted/50">
+        <Card className="gap-0 rounded-2xl p-6 shadow-sm transition-colors hover:border-border/80 hover:bg-muted/50">
           <div className="text-sm text-muted-foreground">Total answered</div>
           <div className="mt-2 text-3xl font-bold font-display text-foreground">
             {stats.totalAnswered}
           </div>
         </Card>
 
-        <Card className="gap-0 rounded-2xl p-6 shadow-sm transition-all hover:border-border/80 hover:bg-muted/50">
+        <Card className="gap-0 rounded-2xl p-6 shadow-sm transition-colors hover:border-border/80 hover:bg-muted/50">
           <div className="text-sm text-muted-foreground">Overall accuracy</div>
           <div className="mt-2 text-3xl font-bold font-display text-foreground">
             {formatPercent(stats.accuracyOverall)}
           </div>
         </Card>
 
-        <Card className="gap-0 rounded-2xl p-6 shadow-sm transition-all hover:border-border/80 hover:bg-muted/50">
+        <Card className="gap-0 rounded-2xl p-6 shadow-sm transition-colors hover:border-border/80 hover:bg-muted/50">
           <div className="text-sm text-muted-foreground">Answered (7 days)</div>
           <div className="mt-2 text-3xl font-bold font-display text-foreground">
             {stats.answeredLast7Days}
           </div>
         </Card>
 
-        <Card className="gap-0 rounded-2xl p-6 shadow-sm transition-all hover:border-border/80 hover:bg-muted/50">
+        <Card className="gap-0 rounded-2xl p-6 shadow-sm transition-colors hover:border-border/80 hover:bg-muted/50">
           <div className="text-sm text-muted-foreground">Accuracy (7 days)</div>
           <div className="mt-2 text-3xl font-bold font-display text-foreground">
             {formatPercent(stats.accuracyLast7Days)}
@@ -108,7 +113,7 @@ export function DashboardView({ stats }: { stats: UserStatsOutput }) {
       </div>
 
       <div className="grid gap-4 lg:grid-cols-3">
-        <Card className="gap-0 rounded-2xl p-6 shadow-sm transition-all hover:border-border/80 hover:bg-muted/50">
+        <Card className="gap-0 rounded-2xl p-6 shadow-sm transition-colors hover:border-border/80 hover:bg-muted/50">
           <div className="text-sm text-muted-foreground">Current streak</div>
           <div className="mt-2 text-3xl font-bold font-display text-foreground">
             {stats.currentStreakDays}

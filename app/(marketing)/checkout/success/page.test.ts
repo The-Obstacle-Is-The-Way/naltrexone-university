@@ -435,6 +435,106 @@ describe('syncCheckoutSuccess retry logging', () => {
       vi.useRealTimers();
     }
   });
+
+  it('logs retry entries via error when warn is undefined', async () => {
+    vi.useFakeTimers();
+
+    try {
+      const stripeCustomers = new FakeStripeCustomerRepository();
+      const subscriptions = new FakeSubscriptionRepository();
+      const user = {
+        id: 'user_1',
+        email: 'user@example.com',
+        createdAt: new Date('2026-02-01T00:00:00Z'),
+        updatedAt: new Date('2026-02-01T00:00:00Z'),
+      };
+
+      const error = vi.fn();
+      let sessionCalls = 0;
+
+      const deps = {
+        authGateway: new FakeAuthGateway(user),
+        getClerkAuth: async () => ({
+          userId: 'clerk_user_1',
+          redirectToSignIn: () => {
+            throw new Error('should not redirect to sign-in');
+          },
+        }),
+        logger: { error },
+        stripe: {
+          checkout: {
+            sessions: {
+              retrieve: async () => {
+                sessionCalls += 1;
+                if (sessionCalls === 1) {
+                  throw { code: 'ECONNRESET' };
+                }
+                return { customer: 'cus_123', subscription: 'sub_123' };
+              },
+            },
+          },
+          subscriptions: {
+            retrieve: async () => ({
+              id: 'sub_123',
+              customer: 'cus_123',
+              status: 'active',
+              cancel_at_period_end: false,
+              metadata: { user_id: 'user_1' },
+              items: {
+                data: [
+                  {
+                    current_period_end: 2_000_000_000,
+                    price: { id: 'price_monthly' },
+                  },
+                ],
+              },
+            }),
+          },
+        },
+        priceIds: { monthly: 'price_monthly', annual: 'price_annual' },
+        appUrl: 'https://example.com',
+        transaction: async <T>(
+          fn: (tx: CheckoutSuccessTransaction) => Promise<T>,
+        ): Promise<T> =>
+          fn({
+            stripeCustomers,
+            subscriptions,
+          }),
+      };
+
+      const redirectFn = (url: string): never => {
+        throw new RedirectError(url);
+      };
+
+      const promise = syncCheckoutSuccess(
+        { sessionId: 'cs_test' },
+        deps as never,
+        redirectFn,
+      ).then(
+        () => {
+          throw new Error('Expected syncCheckoutSuccess to redirect');
+        },
+        (thrown) => thrown,
+      );
+
+      await vi.runAllTimersAsync();
+
+      const thrown = await promise;
+      expect(thrown).toMatchObject({ url: ROUTES.APP_DASHBOARD });
+      expect(error).toHaveBeenCalledWith(
+        expect.objectContaining({
+          sessionId: 'cs_test',
+          attempt: 1,
+          maxAttempts: expect.any(Number),
+          delayMs: expect.any(Number),
+          error: expect.any(String),
+        }),
+        'Retrying Stripe API call',
+      );
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });
 
 describe('syncCheckoutSuccess', () => {

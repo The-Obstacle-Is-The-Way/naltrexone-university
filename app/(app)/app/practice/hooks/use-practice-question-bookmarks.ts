@@ -49,6 +49,9 @@ export function usePracticeQuestionBookmarks(
       setBookmarkedQuestionIds,
       setBookmarkStatus,
       setBookmarkRetryCount,
+      logError: (message: string, context: unknown) => {
+        console.error('createBookmarksEffect failed:', message, context);
+      },
     });
   }, [bookmarkRetryCount]);
 

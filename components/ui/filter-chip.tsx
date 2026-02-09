@@ -21,7 +21,7 @@ export function FilterChip({
       onClick={onClick}
       className={cn(
         'inline-flex items-center rounded-full border px-3 py-1.5 text-sm font-medium transition-colors',
-        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+        'outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]',
         'disabled:pointer-events-none disabled:opacity-50',
         selected
           ? 'border-primary bg-primary text-primary-foreground'

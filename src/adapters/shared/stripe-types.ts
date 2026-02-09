@@ -53,7 +53,6 @@ export type StripeSubscription = unknown;
 export type StripeSubscriptionStatus =
   | 'active'
   | 'canceled'
-  | 'ended'
   | 'incomplete'
   | 'incomplete_expired'
   | 'past_due'

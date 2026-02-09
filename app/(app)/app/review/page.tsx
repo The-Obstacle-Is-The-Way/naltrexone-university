@@ -1,7 +1,9 @@
+import type { Metadata } from 'next';
 import Link from 'next/link';
 import { ErrorCard } from '@/components/error-card';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { formatDate } from '@/lib/format-date';
 import { ROUTES, toQuestionRoute } from '@/lib/routes';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import {
@@ -12,6 +14,13 @@ import {
   getStemPreview,
   toPlainText,
 } from '@/src/adapters/shared/stem-preview';
+
+export const metadata: Metadata = {
+  title: 'Review - Addiction Boards',
+};
+
+const headerLinkButtonClasses =
+  'h-auto p-0 text-muted-foreground no-underline hover:text-foreground hover:no-underline';
 
 type ReviewSearchParams = {
   limit?: string;
@@ -67,29 +76,34 @@ export function ReviewView({
             Review questions you&apos;ve missed.
           </p>
         </div>
-        <Link
-          href={ROUTES.APP_PRACTICE}
-          className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
-        >
-          Go to Practice
-        </Link>
+        <Button asChild variant="link" className={headerLinkButtonClasses}>
+          <Link href={ROUTES.APP_PRACTICE}>Go to Practice</Link>
+        </Button>
       </div>
 
       {rows.length === 0 ? (
         totalCount === 0 ? (
           <Card className="gap-0 rounded-2xl p-6 text-sm text-muted-foreground shadow-sm">
-            No missed questions yet.
+            <div>No missed questions yet.</div>
+            <div className="mt-4">
+              <Button asChild variant="outline" className="rounded-full">
+                <Link href={ROUTES.APP_PRACTICE}>Practice a question</Link>
+              </Button>
+            </div>
           </Card>
         ) : (
           <Card className="gap-0 rounded-2xl p-6 text-sm text-muted-foreground shadow-sm">
             No more missed questions on this page.
             <div className="mt-4">
-              <Link
-                href={`${ROUTES.APP_REVIEW}?offset=0&limit=${limit}`}
-                className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+              <Button
+                asChild
+                variant="link"
+                className={headerLinkButtonClasses}
               >
-                Back to first page
-              </Link>
+                <Link href={`${ROUTES.APP_REVIEW}?offset=0&limit=${limit}`}>
+                  Back to first page
+                </Link>
+              </Button>
             </div>
           </Card>
         )
@@ -123,7 +137,7 @@ export function ReviewView({
                               </span>
                               <span className="mx-2">•</span>
                               <span>
-                                Missed {row.lastAnsweredAt.slice(0, 10)}
+                                Missed {formatDate(row.lastAnsweredAt)}
                               </span>
                               <span className="mx-2">•</span>
                               <span>
@@ -146,7 +160,7 @@ export function ReviewView({
                               <span>Unavailable</span>
                               <span className="mx-2">•</span>
                               <span>
-                                Missed {row.lastAnsweredAt.slice(0, 10)}
+                                Missed {formatDate(row.lastAnsweredAt)}
                               </span>
                               <span className="mx-2">•</span>
                               <span>
@@ -166,7 +180,13 @@ export function ReviewView({
                           variant="outline"
                           className="rounded-full"
                         >
-                          <Link href={toQuestionRoute(row.slug)}>
+                          <Link
+                            href={toQuestionRoute(row.slug)}
+                            aria-label={`Reattempt question: ${getStemPreview(
+                              row.stemMd,
+                              80,
+                            )}`}
+                          >
                             Reattempt
                           </Link>
                         </Button>
@@ -180,23 +200,33 @@ export function ReviewView({
 
           <div className="flex items-center justify-between">
             {offset > 0 ? (
-              <Link
-                href={`${ROUTES.APP_REVIEW}?offset=${prevOffset}&limit=${limit}`}
-                className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+              <Button
+                asChild
+                variant="link"
+                className={headerLinkButtonClasses}
               >
-                Previous
-              </Link>
+                <Link
+                  href={`${ROUTES.APP_REVIEW}?offset=${prevOffset}&limit=${limit}`}
+                >
+                  Previous
+                </Link>
+              </Button>
             ) : (
               <span />
             )}
 
             {hasNextPage ? (
-              <Link
-                href={`${ROUTES.APP_REVIEW}?offset=${nextOffset}&limit=${limit}`}
-                className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+              <Button
+                asChild
+                variant="link"
+                className={headerLinkButtonClasses}
               >
-                Next
-              </Link>
+                <Link
+                  href={`${ROUTES.APP_REVIEW}?offset=${nextOffset}&limit=${limit}`}
+                >
+                  Next
+                </Link>
+              </Button>
             ) : null}
           </div>
         </div>

@@ -1,5 +1,6 @@
 import 'server-only';
 import Link from 'next/link';
+import { Button } from '@/components/ui/button';
 import type {
   AuthCheckDeps,
   AuthDepsContainer,
@@ -12,8 +13,7 @@ import {
 import { ROUTES } from '@/lib/routes';
 
 export type GetStartedCtaDeps = AuthCheckDeps;
-const ctaClassName =
-  'inline-block rounded-full bg-primary px-8 py-3 text-base font-medium text-primary-foreground hover:bg-primary/90 transition-colors';
+const ctaClassName = 'rounded-full px-8 py-3 text-base';
 
 const getDeps = createDepsResolver<GetStartedCtaDeps, AuthDepsContainer>(
   (container) => ({
@@ -33,9 +33,9 @@ export async function GetStartedCta({
   const skipClerk = process.env.NEXT_PUBLIC_SKIP_CLERK === 'true';
   if (skipClerk) {
     return (
-      <Link href={ROUTES.PRICING} className={ctaClassName}>
-        Get Started
-      </Link>
+      <Button asChild className={ctaClassName}>
+        <Link href={ROUTES.PRICING}>Get Started</Link>
+      </Button>
     );
   }
 
@@ -43,9 +43,9 @@ export async function GetStartedCta({
   const user = await d.authGateway.getCurrentUser();
   if (!user) {
     return (
-      <Link href={ROUTES.PRICING} className={ctaClassName}>
-        Get Started
-      </Link>
+      <Button asChild className={ctaClassName}>
+        <Link href={ROUTES.PRICING}>Get Started</Link>
+      </Button>
     );
   }
 
@@ -57,8 +57,8 @@ export async function GetStartedCta({
   const label = entitlement.isEntitled ? 'Go to Dashboard' : 'Get Started';
 
   return (
-    <Link href={href} className={ctaClassName}>
-      {label}
-    </Link>
+    <Button asChild className={ctaClassName}>
+      <Link href={href}>{label}</Link>
+    </Button>
   );
 }

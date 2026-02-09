@@ -90,8 +90,11 @@ describe('app/(app)/app/review', () => {
       />,
     );
 
-    const titleOccurrences = html.split(stemMd).length - 1;
-    expect(titleOccurrences).toBe(1);
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const text = doc.body.textContent ?? '';
+
+    const occurrences = text.split(stemMd).length - 1;
+    expect(occurrences).toBe(1);
   });
 
   it('renders missed questions', () => {
@@ -119,9 +122,10 @@ describe('app/(app)/app/review', () => {
     expect(html).toContain('Showing 1–1 of 1');
     expect(html).toContain('Stem for q1');
     expect(html).toContain('easy');
-    expect(html).toContain('Missed 2026-02-01');
+    expect(html).toContain('Missed Feb 1, 2026');
     expect(html).toContain('Reattempt');
     expect(html).toContain(toQuestionRoute('q-1'));
+    expect(html).toContain('aria-label="Reattempt question: Stem for q1"');
     expect(html).toContain(`href="${ROUTES.APP_PRACTICE}"`);
   });
 
@@ -169,6 +173,8 @@ describe('app/(app)/app/review', () => {
 
     expect(html).toContain('Review');
     expect(html).toContain('No missed questions yet.');
+    expect(html).toContain('Practice a question');
+    expect(html).toContain(`href="${ROUTES.APP_PRACTICE}"`);
   });
 
   it('renders unavailable missed questions without a reattempt link', () => {
@@ -190,7 +196,7 @@ describe('app/(app)/app/review', () => {
     );
 
     expect(html).toContain('[Question no longer available]');
-    expect(html).toContain('Missed 2026-02-01');
+    expect(html).toContain('Missed Feb 1, 2026');
     expect(html).not.toContain('Reattempt');
   });
 

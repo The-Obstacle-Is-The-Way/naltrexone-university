@@ -71,8 +71,8 @@ function MobileNavLinks({
             aria-current={isActive ? 'page' : undefined}
             className={
               isActive
-                ? 'block rounded-md bg-muted px-3 py-3 text-sm font-medium text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background'
-                : 'block rounded-md px-3 py-3 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background'
+                ? 'block rounded-md bg-muted px-3 py-3 text-sm font-medium text-foreground focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]'
+                : 'block rounded-md px-3 py-3 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]'
             }
             onClick={onClose}
           >
@@ -108,7 +108,7 @@ export function MobileNav() {
         ref={buttonRef}
         type="button"
         onClick={onToggleOpen}
-        className="p-2 text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+        className="p-2 text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]"
         aria-label={isOpen ? 'Close navigation menu' : 'Open navigation menu'}
         aria-expanded={isOpen}
         aria-controls={navId}

@@ -107,6 +107,8 @@ export class DrizzleSubscriptionRepository implements SubscriptionRepository {
       throw new ApplicationError(
         'INTERNAL_ERROR',
         'Failed to upsert subscription',
+        undefined,
+        { cause: error },
       );
     }
   }

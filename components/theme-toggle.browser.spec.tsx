@@ -22,6 +22,9 @@ test('renders toggle button after mount', async () => {
   await expect
     .element(screen.getByRole('button', { name: 'Toggle theme' }))
     .toBeVisible();
+  await expect
+    .element(screen.getByRole('button', { name: 'Toggle theme' }))
+    .toHaveAttribute('data-slot', 'button');
 });
 
 test('click switches from dark to light', async () => {
@@ -36,6 +39,9 @@ test('click switches from dark to light', async () => {
   await expect
     .element(screen.getByRole('button', { name: 'Toggle theme' }))
     .toBeVisible();
+  await expect
+    .element(screen.getByRole('button', { name: 'Toggle theme' }))
+    .toHaveAttribute('data-slot', 'button');
   await screen.getByRole('button', { name: 'Toggle theme' }).click();
 
   expect(setThemeMock).toHaveBeenCalledWith('light');

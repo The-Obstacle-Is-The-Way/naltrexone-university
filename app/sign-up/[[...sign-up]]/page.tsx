@@ -1,38 +1,10 @@
-'use client';
+import type { Metadata } from 'next';
+import SignUpPageClient from './sign-up-page-client';
 
-import dynamic from 'next/dynamic';
-
-const SignUp = dynamic(() => import('@clerk/nextjs').then((m) => m.SignUp), {
-  ssr: false,
-});
+export const metadata: Metadata = {
+  title: 'Sign Up - Addiction Boards',
+};
 
 export default function SignUpPage() {
-  const skipClerk = process.env.NEXT_PUBLIC_SKIP_CLERK === 'true';
-
-  if (skipClerk) {
-    return (
-      <main
-        id="main-content"
-        tabIndex={-1}
-        className="flex min-h-screen items-center justify-center bg-background"
-      >
-        <div className="text-center">
-          <h1 className="text-xl font-semibold text-foreground">Sign Up</h1>
-          <p className="mt-2 text-muted-foreground">
-            Authentication unavailable in this environment.
-          </p>
-        </div>
-      </main>
-    );
-  }
-
-  return (
-    <main
-      id="main-content"
-      tabIndex={-1}
-      className="flex min-h-screen items-center justify-center bg-background"
-    >
-      <SignUp />
-    </main>
-  );
+  return <SignUpPageClient />;
 }

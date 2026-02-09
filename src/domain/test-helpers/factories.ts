@@ -1,4 +1,5 @@
 import type { Attempt } from '../entities/attempt';
+import type { Bookmark } from '../entities/bookmark';
 import type { Choice } from '../entities/choice';
 import type { PracticeSession } from '../entities/practice-session';
 import type { Question } from '../entities/question';
@@ -39,6 +40,17 @@ export function createAttempt(overrides: Partial<Attempt> = {}): Attempt {
     isCorrect: overrides.isCorrect ?? false,
     timeSpentSeconds: overrides.timeSpentSeconds ?? 0,
     answeredAt: overrides.answeredAt ?? now,
+  };
+}
+
+export function createBookmark(overrides: Partial<Bookmark> = {}): Bookmark {
+  const now = new Date();
+
+  return {
+    userId: 'user-1',
+    questionId: 'question-1',
+    createdAt: now,
+    ...overrides,
   };
 }
 

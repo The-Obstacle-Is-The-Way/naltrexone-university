@@ -126,9 +126,7 @@ Pure functions with zero side effects. They live in `src/domain/services/`.
 
 ### 3.5 Test Coverage
 
-Every service and value object has colocated `.test.ts` files (14 test files total). Entity files are pure types with no runtime behavior, so they correctly have no tests. Domain test helpers provide factories: `createQuestion()`, `createChoice()`, `createAttempt()`, `createPracticeSession()`, `createSubscription()`, `createUser()`, `createTag()`.
-
-**Gap:** No `createBookmark()` factory exists (every other entity has one).
+Every service and value object has colocated `.test.ts` files (14 test files total). Entity files are pure types with no runtime behavior, so they correctly have no tests. Domain test helpers provide factories: `createQuestion()`, `createChoice()`, `createAttempt()`, `createBookmark()`, `createPracticeSession()`, `createSubscription()`, `createUser()`, `createTag()`.
 
 ---
 
@@ -300,9 +298,9 @@ Components import only **types** from controllers. All server action calls flow 
 
 | Component | File | Purpose |
 |-----------|------|---------|
-| `QuestionCard` | `components/question/QuestionCard.tsx` | Renders question stem + choice buttons with `<fieldset>` a11y |
-| `ChoiceButton` | `components/question/ChoiceButton.tsx` | Radio-style choice with correctness states |
-| `Feedback` | `components/question/Feedback.tsx` | Correct/incorrect banner with explanation markdown |
+| `QuestionCard` | `components/question/question-card.tsx` | Renders question stem + choice buttons with `<fieldset>` a11y |
+| `ChoiceButton` | `components/question/choice-button.tsx` | Radio-style choice with correctness states |
+| `Feedback` | `components/question/feedback.tsx` | Correct/incorrect banner with explanation markdown |
 | `ErrorCard` | `components/error-card.tsx` | Styled error alert with `role="alert"` |
 | `Markdown` | `components/markdown/Markdown.tsx` | `react-markdown` + `remark-gfm` + `rehype-sanitize` |
 
@@ -412,16 +410,7 @@ For ad-hoc mode, `selectNextQuestionId()` picks the least-recently-seen question
 - Idempotency and rate limiting on all mutations
 
 ### 9.2 Open Debt (Practice-Specific)
-
-| ID | Issue | Priority | Notes |
-|----|-------|----------|-------|
-| FE-002 | `usePracticeSessionReviewStage` at 220 lines | P2 | Exceeds 150-line hook guideline |
-| FE-020 | Missing `error.tsx` for practice session route | P2 | `/practice/[sessionId]/` has no error boundary |
-| — | Structural duplication between `usePracticeQuestionAnswerFlow` (164 lines) and `usePracticeSessionQuestionFlow` (195 lines) | P2 | Same state shape, partially extracted to `shared/question-flow-actions.ts` but hook-level setup duplicated |
-| — | Toggle buttons (bookmark, mark-for-review) lack `aria-pressed` | P3 | Screen readers can't communicate toggle state |
-| — | Filter chip groups lack `role="group"` + `aria-label` | P3 | Not fieldsets or group roles |
-| — | Session progress counter not announced to screen readers | P3 | `<p>` with no `aria-live` |
-| — | Missing `createBookmark()` factory in domain test helpers | P3 | Every other entity has one |
+*No practice-specific open debt items as of 2026-02-09.*
 
 ### 9.3 SPEC-019 Status (UX Redesign)
 

@@ -1,38 +1,10 @@
-'use client';
+import type { Metadata } from 'next';
+import SignInPageClient from './sign-in-page-client';
 
-import dynamic from 'next/dynamic';
-
-const SignIn = dynamic(() => import('@clerk/nextjs').then((m) => m.SignIn), {
-  ssr: false,
-});
+export const metadata: Metadata = {
+  title: 'Sign In - Addiction Boards',
+};
 
 export default function SignInPage() {
-  const skipClerk = process.env.NEXT_PUBLIC_SKIP_CLERK === 'true';
-
-  if (skipClerk) {
-    return (
-      <main
-        id="main-content"
-        tabIndex={-1}
-        className="flex min-h-screen items-center justify-center bg-background"
-      >
-        <div className="text-center">
-          <h1 className="text-xl font-semibold text-foreground">Sign In</h1>
-          <p className="mt-2 text-muted-foreground">
-            Authentication unavailable in this environment.
-          </p>
-        </div>
-      </main>
-    );
-  }
-
-  return (
-    <main
-      id="main-content"
-      tabIndex={-1}
-      className="flex min-h-screen items-center justify-center bg-background"
-    >
-      <SignIn />
-    </main>
-  );
+  return <SignInPageClient />;
 }

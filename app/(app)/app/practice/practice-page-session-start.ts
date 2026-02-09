@@ -83,7 +83,9 @@ export async function startSession(input: {
     return;
   }
 
-  input.navigateTo(toPracticeSessionRoute(res.data.sessionId));
+  input.navigateTo(
+    `${toPracticeSessionRoute(res.data.sessionId)}?toast=session_started`,
+  );
 }
 
 function toggleInArray<T>(array: readonly T[], value: T): T[] {

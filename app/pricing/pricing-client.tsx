@@ -2,6 +2,7 @@
 
 import { type ReactNode, useState } from 'react';
 import { useFormStatus } from 'react-dom';
+import { Button } from '@/components/ui/button';
 
 export function IdempotencyKeyField() {
   const [key] = useState(() => crypto.randomUUID());
@@ -11,12 +12,12 @@ export function IdempotencyKeyField() {
 export function SubscribeButton({ children }: { children: ReactNode }) {
   const { pending } = useFormStatus();
   return (
-    <button
+    <Button
       type="submit"
       disabled={pending}
-      className="mt-8 block w-full rounded-full bg-primary py-3 text-center text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors disabled:cursor-not-allowed disabled:opacity-60"
+      className="mt-8 h-auto w-full rounded-full py-3 text-base"
     >
       {pending ? 'Processing...' : children}
-    </button>
+    </Button>
   );
 }

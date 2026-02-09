@@ -5,6 +5,7 @@ import {
   RECONCILE_STRIPE_SUBSCRIPTIONS_MAX_LIMIT,
   reconcileStripeSubscriptions,
 } from '@/src/adapters/jobs/reconcile-stripe-subscriptions';
+import { CRON_RECONCILE_STRIPE_SUBSCRIPTIONS_RATE_LIMIT } from '@/src/adapters/shared/rate-limits';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -58,6 +59,39 @@ export async function POST(req: Request) {
   const token = getAuthorizationToken(req);
   if (!token || !isValidCronToken(token, cronSecret)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  try {
+    const rate = await container.createRateLimiter().limit({
+      key: 'cron:reconcile-stripe-subscriptions',
+      ...CRON_RECONCILE_STRIPE_SUBSCRIPTIONS_RATE_LIMIT,
+    });
+
+    if (!rate.success) {
+      return NextResponse.json(
+        { error: 'Too many requests' },
+        {
+          status: 429,
+          headers: {
+            'Retry-After': String(rate.retryAfterSeconds),
+            'X-RateLimit-Limit': String(rate.limit),
+            'X-RateLimit-Remaining': String(rate.remaining),
+          },
+        },
+      );
+    }
+  } catch (error) {
+    container.logger.error(
+      {
+        route: '/api/cron/reconcile-stripe-subscriptions',
+        error: error instanceof Error ? error.message : String(error),
+      },
+      'Cron reconciliation rate limiter failed',
+    );
+    return NextResponse.json(
+      { error: 'Rate limiter unavailable' },
+      { status: 503 },
+    );
   }
 
   const url = new URL(req.url);

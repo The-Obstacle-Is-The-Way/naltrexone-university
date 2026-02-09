@@ -1,7 +1,7 @@
 # Bug Reports
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-02-08
+**Last Updated:** 2026-02-09
 
 ---
 
@@ -17,14 +17,16 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 | ID | Title | Status | Priority | Date |
 |----|-------|--------|----------|------|
-| — | No active bugs | — | — | — |
 
-**Next Bug ID:** BUG-118
+**Next Bug ID:** BUG-121
 
 ## Recently Triaged
 
 | ID | Title | Status | Resolution |
 |----|-------|--------|------------|
+| [BUG-120](../_archive/bugs/bug-120-reconciliation-missing-authoritative-conflict-strategy.md) | Reconciliation Job Missing Authoritative Conflict Strategy | Resolved | Reconciliation job now uses authoritative Stripe customer conflict strategy with regression coverage |
+| [BUG-119](../_archive/bugs/bug-119-stripe-ended-status-missing-from-db-enum.md) | Stripe 'ended' Subscription Status Missing from DB Enum | Resolved | Removed invalid `'ended'` from Stripe subscription status union and added type-level regression coverage |
+| [BUG-118](../_archive/bugs/bug-118-question-page-missing-shared-guards.md) | Question Page Missing Shared Practice-Page Guards | Resolved | Question page now uses shared guard helpers for choice selection, submit transitions, and canSubmit gating |
 | [BUG-117](../_archive/bugs/bug-117-stripe-customer-create-missing-retry.md) | Stripe Customer Creation Non-Idempotent Path Missing Retry Wrapper | Resolved | Wrapped both idempotent and non-idempotent `customers.create` calls in `callStripeWithRetry()` and added regression coverage |
 | [BUG-116](../_archive/bugs/bug-116-cron-route-blocked-by-clerk-middleware.md) | Cron Reconcile Route Blocked by Clerk Middleware | Resolved | Added cron route to public route matcher list so cron-secret auth executes at the route boundary |
 | [BUG-115](../_archive/bugs/bug-115-cron-secret-validation-crashes-production-build.md) | DEBT-160 CRON_SECRET Startup Validation Crashes Production Build | Resolved | Removed import-time `CRON_SECRET` startup validation and scoped enforcement to request-time cron route checks to avoid build/runtime crashes |

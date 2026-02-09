@@ -1,24 +1,26 @@
 // @vitest-environment jsdom
-import { readFileSync } from 'node:fs';
-import path from 'node:path';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
+import { PRICING_DATA } from '@/lib/pricing-data';
 
 vi.mock('next/link', () => ({
   default: (props: Record<string, unknown>) => <a {...props} />,
 }));
 
 describe('components/marketing/marketing-home', () => {
-  it('uses shared pricing data constants instead of duplicated inline values', () => {
-    const source = readFileSync(
-      path.resolve(process.cwd(), 'components/marketing/marketing-home.tsx'),
-      'utf8',
+  it('renders shared pricing values', async () => {
+    const { MarketingHomeShell } = await import('./marketing-home');
+
+    const html = renderToStaticMarkup(
+      <MarketingHomeShell
+        authNav={<div>AuthNav</div>}
+        primaryCta={<a href="/pricing">Get Started</a>}
+      />,
     );
 
-    expect(source).toContain("from '@/lib/pricing-data'");
-    expect(source).not.toContain('$29');
-    expect(source).not.toContain('$199');
-    expect(source).not.toContain('Save $149 per year');
+    expect(html).toContain(PRICING_DATA.monthly.price);
+    expect(html).toContain(PRICING_DATA.annual.price);
+    expect(html).toContain(PRICING_DATA.annual.savings);
   });
 
   it(

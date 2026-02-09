@@ -54,4 +54,19 @@ describe('MetallicCtaButton', () => {
     expect(html).toContain('href="/pricing"');
     expect(html).toContain('<a');
   });
+
+  it('opens external links in a new tab with safe rel attributes', async () => {
+    const { MetallicCtaButton } = await import(
+      '@/components/ui/metallic-cta-button'
+    );
+    const html = renderToStaticMarkup(
+      <MetallicCtaButton href="https://example.com">
+        Get Started
+      </MetallicCtaButton>,
+    );
+
+    expect(html).toContain('href="https://example.com"');
+    expect(html).toContain('target="_blank"');
+    expect(html).toContain('rel="noreferrer noopener"');
+  });
 });

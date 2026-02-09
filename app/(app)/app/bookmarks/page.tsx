@@ -1,9 +1,22 @@
+import type { Metadata } from 'next';
 import { revalidatePath } from 'next/cache';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { ErrorCard } from '@/components/error-card';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { formatDate } from '@/lib/format-date';
 import { ROUTES, toQuestionRoute } from '@/lib/routes';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import {
@@ -15,6 +28,11 @@ import {
   getStemPreview,
   toPlainText,
 } from '@/src/adapters/shared/stem-preview';
+import { BookmarksToast } from './bookmarks-toast';
+
+export const metadata: Metadata = {
+  title: 'Bookmarks - Addiction Boards',
+};
 
 type RemoveBookmarkErrorCode =
   | 'missing_question_id'
@@ -74,6 +92,7 @@ export async function removeBookmarkAction(
   }
 
   revalidatePathFn(ROUTES.APP_BOOKMARKS);
+  return redirectFn(`${ROUTES.APP_BOOKMARKS}?toast=bookmark_removed`);
 }
 
 export function BookmarksView({ rows }: { rows: GetBookmarksOutput['rows'] }) {
@@ -88,22 +107,32 @@ export function BookmarksView({ rows }: { rows: GetBookmarksOutput['rows'] }) {
             Review questions you&apos;ve bookmarked.
           </p>
         </div>
-        <Link
-          href={ROUTES.APP_PRACTICE}
-          className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+        <Button
+          asChild
+          variant="link"
+          className="h-auto p-0 text-muted-foreground no-underline hover:text-foreground hover:no-underline"
         >
-          Go to Practice
-        </Link>
+          <Link href={ROUTES.APP_PRACTICE}>Go to Practice</Link>
+        </Button>
       </div>
 
       {rows.length === 0 ? (
         <Card className="gap-0 rounded-2xl p-6 text-sm text-muted-foreground shadow-sm">
-          No bookmarks yet.
+          <div>No bookmarks yet.</div>
+          <div className="mt-4">
+            <Button asChild variant="outline" className="rounded-full">
+              <Link href={ROUTES.APP_PRACTICE}>Start practicing</Link>
+            </Button>
+          </div>
         </Card>
       ) : (
         <ul className="space-y-3">
           {rows.map((row) => {
             const plainStem = row.isAvailable ? toPlainText(row.stemMd) : '';
+            const ariaLabelStem = row.isAvailable
+              ? getStemPreview(row.stemMd, 80)
+              : 'unavailable question';
+            const removeFormId = `remove-bookmark-${row.questionId}`;
 
             return (
               <li key={row.questionId}>
@@ -124,7 +153,7 @@ export function BookmarksView({ rows }: { rows: GetBookmarksOutput['rows'] }) {
                             <span className="capitalize">{row.difficulty}</span>
                             <span className="mx-2">•</span>
                             <span>
-                              Bookmarked {row.bookmarkedAt.slice(0, 10)}
+                              Bookmarked {formatDate(row.bookmarkedAt)}
                             </span>
                           </div>
                         </>
@@ -140,7 +169,7 @@ export function BookmarksView({ rows }: { rows: GetBookmarksOutput['rows'] }) {
                             <span>Unavailable</span>
                             <span className="mx-2">•</span>
                             <span>
-                              Bookmarked {row.bookmarkedAt.slice(0, 10)}
+                              Bookmarked {formatDate(row.bookmarkedAt)}
                             </span>
                           </div>
                         </>
@@ -154,26 +183,57 @@ export function BookmarksView({ rows }: { rows: GetBookmarksOutput['rows'] }) {
                           variant="outline"
                           className="rounded-full"
                         >
-                          <Link href={toQuestionRoute(row.slug)}>
+                          <Link
+                            href={toQuestionRoute(row.slug)}
+                            aria-label={`Reattempt question: ${ariaLabelStem}`}
+                          >
                             Reattempt
                           </Link>
                         </Button>
                       ) : null}
 
-                      <form action={removeBookmarkAction}>
+                      <form id={removeFormId} action={removeBookmarkAction}>
                         <input
                           type="hidden"
                           name="questionId"
                           value={row.questionId}
                         />
-                        <Button
-                          type="submit"
-                          variant="outline"
-                          className="rounded-full"
-                        >
-                          Remove
-                        </Button>
                       </form>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            className="rounded-full"
+                            aria-label={`Remove bookmark: ${ariaLabelStem}`}
+                          >
+                            Remove
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>
+                              Remove bookmark?
+                            </AlertDialogTitle>
+                            <AlertDialogDescription>
+                              This removes the question from your bookmarks
+                              list.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel type="button">
+                              Cancel
+                            </AlertDialogCancel>
+                            <AlertDialogAction
+                              type="submit"
+                              form={removeFormId}
+                              variant="destructive"
+                            >
+                              Remove bookmark
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
                     </div>
                   </div>
                 </Card>
@@ -199,12 +259,9 @@ export function renderBookmarks(result: ActionResult<GetBookmarksOutput>) {
           </p>
         </div>
         <ErrorCard className="p-6">{result.error.message}</ErrorCard>
-        <Link
-          href={ROUTES.APP_PRACTICE}
-          className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
-        >
-          Go to Practice
-        </Link>
+        <Button asChild className="rounded-full">
+          <Link href={ROUTES.APP_PRACTICE}>Go to Practice</Link>
+        </Button>
       </div>
     );
   }
@@ -224,14 +281,23 @@ export function createBookmarksPage(deps?: {
     const errorMessage = getRemoveBookmarkErrorMessage(
       parseRemoveBookmarkErrorCode(searchParams?.error),
     );
+    const toast = searchParams?.toast;
 
     const result = await getBookmarksFn({});
     if (!result.ok) return renderBookmarks(result);
 
-    if (!errorMessage) return <BookmarksView rows={result.data.rows} />;
+    if (!errorMessage) {
+      return (
+        <>
+          <BookmarksToast code={toast} />
+          <BookmarksView rows={result.data.rows} />
+        </>
+      );
+    }
 
     return (
       <div className="space-y-6">
+        <BookmarksToast code={toast} />
         <ErrorCard className="p-6">{errorMessage}</ErrorCard>
         <BookmarksView rows={result.data.rows} />
       </div>

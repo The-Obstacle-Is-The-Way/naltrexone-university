@@ -2,12 +2,26 @@ import {
   getActionResultErrorMessage,
   getThrownErrorMessage,
 } from '@/app/(app)/app/practice/practice-logic';
+import { runTransitionedAsyncAction } from '@/app/(app)/app/practice/shared/question-flow-actions';
 import type { AsyncLoadState } from '@/app/(app)/app/shared/load-state';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import type { GetQuestionBySlugOutput } from '@/src/adapters/controllers/question-view-controller';
 import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
 
 export type LoadState = AsyncLoadState;
+
+export function canSubmitQuestionAnswer(input: {
+  loadState: LoadState;
+  question: GetQuestionBySlugOutput | null;
+  selectedChoiceId: string | null;
+  submitResult: SubmitAnswerOutput | null;
+}): boolean {
+  if (input.loadState.status === 'loading') return false;
+  if (!input.question) return false;
+  if (!input.selectedChoiceId) return false;
+  if (input.submitResult) return false;
+  return true;
+}
 
 export async function loadQuestion(input: {
   slug: string;
@@ -140,6 +154,25 @@ export async function submitSelectedAnswer(input: {
 
   input.setSubmitResult(res.data);
   input.setLoadState({ status: 'ready' });
+}
+
+export function createSubmitSelectedAnswerAction(input: {
+  startTransition: (fn: () => void) => void;
+  question: GetQuestionBySlugOutput | null;
+  selectedChoiceId: string | null;
+  questionLoadedAtMs: number | null;
+  submitIdempotencyKey: string | null;
+  submitAnswerFn: (input: unknown) => Promise<ActionResult<SubmitAnswerOutput>>;
+  nowMs: () => number;
+  setLoadState: (state: LoadState) => void;
+  setSubmitResult: (result: SubmitAnswerOutput | null) => void;
+  isMounted?: () => boolean;
+}): () => Promise<void> {
+  return () =>
+    runTransitionedAsyncAction({
+      startTransition: input.startTransition,
+      run: () => submitSelectedAnswer(input),
+    });
 }
 
 export function reattemptQuestion(input: {

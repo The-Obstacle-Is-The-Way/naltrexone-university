@@ -73,7 +73,7 @@ export function PricingView({
               ) : null}
               <Link
                 href={ROUTES.PRICING}
-                className="ml-4 rounded-md text-current hover:opacity-70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                className="ml-4 rounded-md text-current hover:opacity-70 focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]"
                 aria-label="Dismiss"
               >
                 ×
@@ -128,7 +128,7 @@ export function PricingView({
                 <h3 className="font-heading font-semibold text-foreground">
                   {PRICING_DATA.monthly.name}
                 </h3>
-                <p className="mt-4 text-4xl font-bold text-foreground">
+                <p className="mt-4 font-display text-4xl font-bold text-foreground">
                   {PRICING_DATA.monthly.price}
                   <span className="text-lg font-normal text-muted-foreground">
                     {PRICING_DATA.monthly.period}
@@ -153,7 +153,7 @@ export function PricingView({
                 <h3 className="font-heading font-semibold text-foreground">
                   {PRICING_DATA.annual.name}
                 </h3>
-                <p className="mt-4 text-4xl font-bold text-foreground">
+                <p className="mt-4 font-display text-4xl font-bold text-foreground">
                   {PRICING_DATA.annual.price}
                   <span className="text-lg font-normal text-muted-foreground">
                     {PRICING_DATA.annual.period}
@@ -184,7 +184,7 @@ export function PricingView({
         <div className="mt-8 text-center">
           <Link
             href={ROUTES.HOME}
-            className="rounded-md text-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+            className="rounded-md text-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]"
           >
             Back to Home
           </Link>

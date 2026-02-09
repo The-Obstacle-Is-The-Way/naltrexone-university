@@ -1,26 +1,16 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useMemo, useState, useTransition } from 'react';
-import {
-  createLoadQuestionAction,
-  type LoadState,
-  reattemptQuestion,
-  submitSelectedAnswer,
-} from '@/app/(app)/app/questions/[slug]/question-page-logic';
 import { ErrorCard } from '@/components/error-card';
-import { Feedback } from '@/components/question/Feedback';
-import { QuestionCard } from '@/components/question/QuestionCard';
+import { Feedback } from '@/components/question/feedback';
+import { QuestionCard } from '@/components/question/question-card';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { ROUTES } from '@/lib/routes';
-import { useIsMounted } from '@/lib/use-is-mounted';
-import { submitAnswer } from '@/src/adapters/controllers/question-controller';
-import {
-  type GetQuestionBySlugOutput,
-  getQuestionBySlug,
-} from '@/src/adapters/controllers/question-view-controller';
+import type { GetQuestionBySlugOutput } from '@/src/adapters/controllers/question-view-controller';
 import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
+import type { LoadState } from './question-page-logic';
+import { useQuestionPageController } from './use-question-page-controller';
 
 export type QuestionViewProps = {
   loadState: LoadState;
@@ -51,7 +41,7 @@ export function QuestionView(props: QuestionViewProps) {
         </div>
         <Link
           href={ROUTES.APP_DASHBOARD}
-          className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+          className="rounded-md text-sm font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]"
         >
           Back to Dashboard
         </Link>
@@ -144,97 +134,6 @@ export function QuestionView(props: QuestionViewProps) {
 }
 
 export default function QuestionPageClient({ slug }: { slug: string }) {
-  const [question, setQuestion] = useState<GetQuestionBySlugOutput | null>(
-    null,
-  );
-  const [selectedChoiceId, setSelectedChoiceId] = useState<string | null>(null);
-  const [submitResult, setSubmitResult] = useState<SubmitAnswerOutput | null>(
-    null,
-  );
-  const [questionLoadedAt, setQuestionLoadedAt] = useState<number | null>(null);
-  const [submitIdempotencyKey, setSubmitIdempotencyKey] = useState<
-    string | null
-  >(null);
-  const [loadState, setLoadState] = useState<LoadState>({
-    status: 'loading',
-  });
-  const [isPending, startTransition] = useTransition();
-  const isMounted = useIsMounted();
-
-  const loadQuestion = useMemo(
-    () =>
-      createLoadQuestionAction({
-        slug,
-        startTransition,
-        getQuestionBySlugFn: getQuestionBySlug,
-        createIdempotencyKey: () => crypto.randomUUID(),
-        nowMs: Date.now,
-        setLoadState,
-        setSelectedChoiceId,
-        setSubmitResult,
-        setSubmitIdempotencyKey,
-        setQuestionLoadedAt,
-        setQuestion,
-        isMounted,
-      }),
-    [slug, isMounted],
-  );
-
-  useEffect(loadQuestion, [loadQuestion]);
-
-  const canSubmit = useMemo(() => {
-    return (
-      question !== null && selectedChoiceId !== null && submitResult === null
-    );
-  }, [question, selectedChoiceId, submitResult]);
-
-  const onSubmit = useMemo(
-    () =>
-      submitSelectedAnswer.bind(null, {
-        question,
-        selectedChoiceId,
-        questionLoadedAtMs: questionLoadedAt,
-        submitIdempotencyKey,
-        submitAnswerFn: submitAnswer,
-        nowMs: Date.now,
-        setLoadState,
-        setSubmitResult,
-        isMounted,
-      }),
-    [
-      question,
-      questionLoadedAt,
-      selectedChoiceId,
-      submitIdempotencyKey,
-      isMounted,
-    ],
-  );
-
-  const onReattempt = useMemo(
-    () =>
-      reattemptQuestion.bind(null, {
-        createIdempotencyKey: () => crypto.randomUUID(),
-        nowMs: Date.now,
-        setSelectedChoiceId,
-        setSubmitResult,
-        setSubmitIdempotencyKey,
-        setQuestionLoadedAt,
-      }),
-    [],
-  );
-
-  return (
-    <QuestionView
-      loadState={loadState}
-      question={question}
-      selectedChoiceId={selectedChoiceId}
-      submitResult={submitResult}
-      canSubmit={canSubmit}
-      isPending={isPending}
-      onTryAgain={loadQuestion}
-      onSelectChoice={setSelectedChoiceId}
-      onSubmit={onSubmit}
-      onReattempt={onReattempt}
-    />
-  );
+  const controller = useQuestionPageController({ slug });
+  return <QuestionView {...controller} />;
 }

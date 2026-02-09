@@ -9,6 +9,7 @@ import {
   useRef,
   useState,
 } from 'react';
+import { cn } from '@/lib/utils';
 
 type NotificationTone = 'info' | 'success' | 'error';
 
@@ -131,7 +132,10 @@ export function NotificationProvider({
               key={notification.id}
               data-testid="app-toast"
               role={notification.tone === 'error' ? 'alert' : 'status'}
-              className={`block rounded-xl border px-4 py-3 text-sm shadow-sm ${getToastClasses(notification.tone)}`}
+              className={cn(
+                'block rounded-xl border px-4 py-3 text-sm shadow-sm',
+                getToastClasses(notification.tone),
+              )}
             >
               {notification.message}
             </output>

@@ -89,6 +89,10 @@ test('renders exam review branch and triggers review actions', async () => {
   expect(onOpenReviewQuestion).toHaveBeenCalledWith('q1');
 
   await screen.getByRole('button', { name: 'Submit exam' }).click();
+  await expect
+    .element(screen.getByRole('alertdialog', { name: 'Submit exam?' }))
+    .toBeVisible();
+  await screen.getByRole('button', { name: 'Confirm submit' }).click();
   expect(onFinalizeReview).toHaveBeenCalledTimes(1);
 });
 

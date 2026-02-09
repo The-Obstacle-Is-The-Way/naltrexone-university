@@ -1,7 +1,8 @@
-// @vitest-environment jsdom
 import { describe, expect, it, vi } from 'vitest';
 import {
+  canSubmitQuestionAnswer,
   createLoadQuestionAction,
+  createSubmitSelectedAnswerAction,
   loadQuestion,
   reattemptQuestion,
   submitSelectedAnswer,
@@ -36,6 +37,69 @@ function createQuestionOutput(): GetQuestionBySlugOutput {
 }
 
 describe('question-page-logic', () => {
+  describe('canSubmitQuestionAnswer', () => {
+    it('returns false when loadState is loading', () => {
+      expect(
+        canSubmitQuestionAnswer({
+          loadState: { status: 'loading' },
+          question: createQuestionOutput(),
+          selectedChoiceId: 'choice_1',
+          submitResult: null,
+        }),
+      ).toBe(false);
+    });
+
+    it('returns true when question is loaded, a choice is selected, and no submit result exists', () => {
+      expect(
+        canSubmitQuestionAnswer({
+          loadState: { status: 'ready' },
+          question: createQuestionOutput(),
+          selectedChoiceId: 'choice_1',
+          submitResult: null,
+        }),
+      ).toBe(true);
+    });
+
+    it('returns false when question is null', () => {
+      expect(
+        canSubmitQuestionAnswer({
+          loadState: { status: 'ready' },
+          question: null,
+          selectedChoiceId: 'choice_1',
+          submitResult: null,
+        }),
+      ).toBe(false);
+    });
+
+    it('returns false when no choice is selected', () => {
+      expect(
+        canSubmitQuestionAnswer({
+          loadState: { status: 'ready' },
+          question: createQuestionOutput(),
+          selectedChoiceId: null,
+          submitResult: null,
+        }),
+      ).toBe(false);
+    });
+
+    it('returns false when a submit result already exists', () => {
+      expect(
+        canSubmitQuestionAnswer({
+          loadState: { status: 'ready' },
+          question: createQuestionOutput(),
+          selectedChoiceId: 'choice_1',
+          submitResult: {
+            attemptId: 'attempt_1',
+            isCorrect: true,
+            correctChoiceId: 'choice_1',
+            explanationMd: null,
+            choiceExplanations: [],
+          } satisfies SubmitAnswerOutput,
+        }),
+      ).toBe(false);
+    });
+  });
+
   describe('loadQuestion', () => {
     it('loads question and resets state on success', async () => {
       const setLoadState = vi.fn();
@@ -187,6 +251,40 @@ describe('question-page-logic', () => {
 
       expect(startTransition).toHaveBeenCalledTimes(1);
       expect(setLoadState).toHaveBeenCalledWith({ status: 'loading' });
+    });
+  });
+
+  describe('createSubmitSelectedAnswerAction', () => {
+    it('runs submit inside startTransition', async () => {
+      const startTransition = vi.fn((fn: () => void) => fn());
+      const setLoadState = vi.fn();
+      const setSubmitResult = vi.fn();
+      const submitResult = {
+        attemptId: 'attempt_1',
+        isCorrect: true,
+        correctChoiceId: 'choice_1',
+        explanationMd: null,
+        choiceExplanations: [],
+      } satisfies SubmitAnswerOutput;
+
+      const action = createSubmitSelectedAnswerAction({
+        startTransition,
+        question: createQuestionOutput(),
+        selectedChoiceId: 'choice_1',
+        questionLoadedAtMs: 0,
+        submitIdempotencyKey: 'idem_1',
+        submitAnswerFn: async () => ok(submitResult),
+        nowMs: () => 1000,
+        setLoadState,
+        setSubmitResult,
+      });
+
+      await action();
+
+      expect(startTransition).toHaveBeenCalledTimes(1);
+      expect(setLoadState).toHaveBeenCalledWith({ status: 'loading' });
+      expect(setSubmitResult).toHaveBeenCalledWith(submitResult);
+      expect(setLoadState).toHaveBeenCalledWith({ status: 'ready' });
     });
   });
 

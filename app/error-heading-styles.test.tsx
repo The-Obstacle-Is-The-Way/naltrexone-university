@@ -36,7 +36,7 @@ describe('app error heading styles', () => {
       {
         name: 'AppError',
         html: renderToStaticMarkup(<AppError {...ERROR_PROPS} />),
-        headingTag: 'h2',
+        headingTag: 'h1',
         headingText: 'Something went wrong',
       },
       {
@@ -48,49 +48,49 @@ describe('app error heading styles', () => {
       {
         name: 'PricingError',
         html: renderToStaticMarkup(<PricingError {...ERROR_PROPS} />),
-        headingTag: 'h2',
+        headingTag: 'h1',
         headingText: 'Pricing error',
       },
       {
         name: 'CheckoutSuccessError',
         html: renderToStaticMarkup(<CheckoutSuccessError {...ERROR_PROPS} />),
-        headingTag: 'h2',
+        headingTag: 'h1',
         headingText: 'Checkout error',
       },
       {
         name: 'DashboardError',
         html: renderToStaticMarkup(<DashboardError {...ERROR_PROPS} />),
-        headingTag: 'h2',
+        headingTag: 'h1',
         headingText: 'Dashboard error',
       },
       {
         name: 'BillingError',
         html: renderToStaticMarkup(<BillingError {...ERROR_PROPS} />),
-        headingTag: 'h2',
+        headingTag: 'h1',
         headingText: 'Billing error',
       },
       {
         name: 'PracticeError',
         html: renderToStaticMarkup(<PracticeError {...ERROR_PROPS} />),
-        headingTag: 'h2',
+        headingTag: 'h1',
         headingText: 'Practice error',
       },
       {
         name: 'BookmarksError',
         html: renderToStaticMarkup(<BookmarksError {...ERROR_PROPS} />),
-        headingTag: 'h2',
+        headingTag: 'h1',
         headingText: 'Bookmarks error',
       },
       {
         name: 'ReviewError',
         html: renderToStaticMarkup(<ReviewError {...ERROR_PROPS} />),
-        headingTag: 'h2',
+        headingTag: 'h1',
         headingText: 'Review error',
       },
       {
         name: 'QuestionError',
         html: renderToStaticMarkup(<QuestionError {...ERROR_PROPS} />),
-        headingTag: 'h2',
+        headingTag: 'h1',
         headingText: 'Question error',
       },
     ];

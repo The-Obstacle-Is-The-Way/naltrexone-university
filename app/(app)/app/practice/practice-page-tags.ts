@@ -4,14 +4,10 @@ export function createTagsEffect<T>(input: {
   getTagsFn: (input: unknown) => Promise<ActionResult<{ rows: T[] }>>;
   setTagLoadStatus: (status: 'idle' | 'loading' | 'error') => void;
   setAvailableTags: (tags: T[]) => void;
-  logError?: (message: string, context: unknown) => void;
+  logError: (message: string, context: unknown) => void;
 }): () => void {
   let mounted = true;
-  const logError =
-    input.logError ??
-    ((message: string, context: unknown) => {
-      console.error(message, context);
-    });
+  const logError = input.logError;
 
   input.setTagLoadStatus('loading');
 

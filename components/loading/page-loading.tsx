@@ -30,7 +30,7 @@ export function PageLoading({
         {cardKeys.map((key) => (
           <div
             key={key}
-            className="space-y-4 rounded-xl border border-border bg-background p-6"
+            className="space-y-4 rounded-2xl border border-border bg-background p-6"
           >
             <div className="space-y-3">
               <div className="h-4 w-1/2 rounded bg-muted" />

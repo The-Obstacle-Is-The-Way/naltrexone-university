@@ -1,3 +1,5 @@
+import type { Metadata } from 'next';
+import type { ReactNode } from 'react';
 import { manageBillingAction } from '@/app/pricing/manage-billing-actions';
 import { SubscribeButton } from '@/app/pricing/pricing-client';
 import { PricingView } from '@/app/pricing/pricing-view';
@@ -6,9 +8,16 @@ import {
   subscribeMonthlyAction,
 } from '@/app/pricing/subscribe-actions';
 import type { PricingBanner } from '@/app/pricing/types';
+import { AuthNav } from '@/components/auth-nav';
+import { MarketingLayout } from '@/components/marketing/marketing-layout';
+import { ROUTES } from '@/lib/routes';
 import type { AuthGateway } from '@/src/application/ports/gateways';
 import type { CheckEntitlementUseCase } from '@/src/application/ports/use-cases';
 import type { NonEntitledReason } from '@/src/application/use-cases/check-entitlement';
+
+export const metadata: Metadata = {
+  title: 'Pricing - Addiction Boards',
+};
 
 export type { PricingViewProps } from '@/app/pricing/pricing-view';
 export { runSubscribeAction } from '@/app/pricing/subscribe-action';
@@ -114,9 +123,11 @@ export function getPricingBanner(
 export default async function PricingPage({
   searchParams,
   deps,
+  authNavFn,
 }: {
   searchParams: Promise<PricingSearchParams>;
   deps?: PricingPageDeps;
+  authNavFn?: () => Promise<ReactNode>;
 }) {
   const pricingData = await loadPricingData(deps);
   const resolvedSearchParams = await searchParams;
@@ -131,16 +142,21 @@ export default async function PricingPage({
     effectiveReason === 'manage_billing' ||
     effectiveReason === 'payment_processing';
 
+  const resolvedAuthNavFn = authNavFn ?? (() => AuthNav());
+  const authNav = await resolvedAuthNavFn();
+
   return (
-    <PricingView
-      isEntitled={pricingData.isEntitled}
-      banner={banner}
-      manageBillingAction={
-        showManageBillingAction ? manageBillingAction : undefined
-      }
-      subscribeMonthlyAction={subscribeMonthlyAction}
-      subscribeAnnualAction={subscribeAnnualAction}
-      SubscribeButtonComponent={SubscribeButton}
-    />
+    <MarketingLayout authNav={authNav} featuresHref={`${ROUTES.HOME}#features`}>
+      <PricingView
+        isEntitled={pricingData.isEntitled}
+        banner={banner}
+        manageBillingAction={
+          showManageBillingAction ? manageBillingAction : undefined
+        }
+        subscribeMonthlyAction={subscribeMonthlyAction}
+        subscribeAnnualAction={subscribeAnnualAction}
+        SubscribeButtonComponent={SubscribeButton}
+      />
+    </MarketingLayout>
   );
 }
