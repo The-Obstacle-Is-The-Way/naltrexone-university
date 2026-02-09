@@ -649,15 +649,20 @@ describe('StripePaymentGateway', () => {
     expect(subscriptionsRetrieve).toHaveBeenCalledWith(subscription.id);
   });
 
-  it('normalizes checkout.session.completed events by retrieving the subscription', async () => {
+  it.each([
+    ['checkout.session.completed', 'evt_checkout_1'],
+    ['invoice.payment_failed', 'evt_invoice_1'],
+    ['invoice.payment_succeeded', 'evt_invoice_success_1'],
+    ['invoice.payment_action_required', 'evt_invoice_action_required_1'],
+  ] as const)('normalizes %s events by retrieving the subscription', async (type, eventId) => {
     const subscriptionEvent = loadJsonFixture<{
       data: { object: { id: string } };
     }>('stripe/customer.subscription.updated.json');
     const subscription = subscriptionEvent.data.object;
 
     const constructedEvent = {
-      id: 'evt_checkout_1',
-      type: 'checkout.session.completed',
+      id: eventId,
+      type,
       data: {
         object: {
           subscription: subscription.id,
@@ -674,8 +679,8 @@ describe('StripePaymentGateway', () => {
     await expect(
       gateway.processWebhookEvent('raw_body', 'sig_1'),
     ).resolves.toEqual({
-      eventId: 'evt_checkout_1',
-      type: 'checkout.session.completed',
+      eventId,
+      type,
       subscriptionUpdate: {
         userId: 'user_1',
         externalCustomerId: 'cus_123',
@@ -687,130 +692,7 @@ describe('StripePaymentGateway', () => {
       },
     });
 
-    expect(subscriptionsRetrieve).toHaveBeenCalledWith('sub_123');
-  });
-
-  it('normalizes invoice.payment_failed events by retrieving the subscription', async () => {
-    const subscriptionEvent = loadJsonFixture<{
-      data: { object: { id: string } };
-    }>('stripe/customer.subscription.updated.json');
-    const subscription = subscriptionEvent.data.object;
-
-    const constructedEvent = {
-      id: 'evt_invoice_1',
-      type: 'invoice.payment_failed',
-      data: {
-        object: {
-          subscription: subscription.id,
-        },
-      },
-    };
-    const { stripe, constructEvent, subscriptionsRetrieve } = createStripeMock({
-      withSubscriptions: true,
-    });
-    constructEvent.mockReturnValue(constructedEvent);
-    subscriptionsRetrieve.mockResolvedValue(subscription);
-    const gateway = createGateway(stripe);
-
-    await expect(
-      gateway.processWebhookEvent('raw_body', 'sig_1'),
-    ).resolves.toEqual({
-      eventId: 'evt_invoice_1',
-      type: 'invoice.payment_failed',
-      subscriptionUpdate: {
-        userId: 'user_1',
-        externalCustomerId: 'cus_123',
-        externalSubscriptionId: 'sub_123',
-        plan: 'monthly',
-        status: 'active',
-        currentPeriodEnd: new Date(1_700_000_000 * 1000),
-        cancelAtPeriodEnd: false,
-      },
-    });
-
-    expect(subscriptionsRetrieve).toHaveBeenCalledWith('sub_123');
-  });
-
-  it('normalizes invoice.payment_succeeded events by retrieving the subscription', async () => {
-    const subscriptionEvent = loadJsonFixture<{
-      data: { object: { id: string } };
-    }>('stripe/customer.subscription.updated.json');
-    const subscription = subscriptionEvent.data.object;
-
-    const constructedEvent = {
-      id: 'evt_invoice_success_1',
-      type: 'invoice.payment_succeeded',
-      data: {
-        object: {
-          subscription: subscription.id,
-        },
-      },
-    };
-    const { stripe, constructEvent, subscriptionsRetrieve } = createStripeMock({
-      withSubscriptions: true,
-    });
-    constructEvent.mockReturnValue(constructedEvent);
-    subscriptionsRetrieve.mockResolvedValue(subscription);
-    const gateway = createGateway(stripe);
-
-    await expect(
-      gateway.processWebhookEvent('raw_body', 'sig_1'),
-    ).resolves.toEqual({
-      eventId: 'evt_invoice_success_1',
-      type: 'invoice.payment_succeeded',
-      subscriptionUpdate: {
-        userId: 'user_1',
-        externalCustomerId: 'cus_123',
-        externalSubscriptionId: 'sub_123',
-        plan: 'monthly',
-        status: 'active',
-        currentPeriodEnd: new Date(1_700_000_000 * 1000),
-        cancelAtPeriodEnd: false,
-      },
-    });
-
-    expect(subscriptionsRetrieve).toHaveBeenCalledWith('sub_123');
-  });
-
-  it('normalizes invoice.payment_action_required events by retrieving the subscription', async () => {
-    const subscriptionEvent = loadJsonFixture<{
-      data: { object: { id: string } };
-    }>('stripe/customer.subscription.updated.json');
-    const subscription = subscriptionEvent.data.object;
-
-    const constructedEvent = {
-      id: 'evt_invoice_action_required_1',
-      type: 'invoice.payment_action_required',
-      data: {
-        object: {
-          subscription: subscription.id,
-        },
-      },
-    };
-    const { stripe, constructEvent, subscriptionsRetrieve } = createStripeMock({
-      withSubscriptions: true,
-    });
-    constructEvent.mockReturnValue(constructedEvent);
-    subscriptionsRetrieve.mockResolvedValue(subscription);
-    const gateway = createGateway(stripe);
-
-    await expect(
-      gateway.processWebhookEvent('raw_body', 'sig_1'),
-    ).resolves.toEqual({
-      eventId: 'evt_invoice_action_required_1',
-      type: 'invoice.payment_action_required',
-      subscriptionUpdate: {
-        userId: 'user_1',
-        externalCustomerId: 'cus_123',
-        externalSubscriptionId: 'sub_123',
-        plan: 'monthly',
-        status: 'active',
-        currentPeriodEnd: new Date(1_700_000_000 * 1000),
-        cancelAtPeriodEnd: false,
-      },
-    });
-
-    expect(subscriptionsRetrieve).toHaveBeenCalledWith('sub_123');
+    expect(subscriptionsRetrieve).toHaveBeenCalledWith(subscription.id);
   });
 
   it('throws INVALID_WEBHOOK_PAYLOAD when invoice.payment_failed payload shape is invalid', async () => {
