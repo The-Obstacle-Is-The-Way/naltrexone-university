@@ -1,3 +1,4 @@
+import type { Metadata } from 'next';
 import { revalidatePath } from 'next/cache';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
@@ -15,6 +16,10 @@ import {
   getStemPreview,
   toPlainText,
 } from '@/src/adapters/shared/stem-preview';
+
+export const metadata: Metadata = {
+  title: 'Bookmarks - Addiction Boards',
+};
 
 type RemoveBookmarkErrorCode =
   | 'missing_question_id'

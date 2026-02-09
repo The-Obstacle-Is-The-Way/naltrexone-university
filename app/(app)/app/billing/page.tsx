@@ -1,3 +1,4 @@
+import type { Metadata } from 'next';
 import { ManageBillingButton } from '@/app/(app)/app/billing/billing-client';
 import { manageBillingAction } from '@/app/(app)/app/billing/manage-billing-actions';
 import { ErrorCard } from '@/components/error-card';
@@ -5,6 +6,10 @@ import { Card } from '@/components/ui/card';
 import type { AuthGateway } from '@/src/application/ports/gateways';
 import type { SubscriptionRepository } from '@/src/application/ports/repositories';
 import type { Subscription } from '@/src/domain/entities';
+
+export const metadata: Metadata = {
+  title: 'Billing - Addiction Boards',
+};
 
 const billingDateFormatter = new Intl.DateTimeFormat('en-US', {
   year: 'numeric',

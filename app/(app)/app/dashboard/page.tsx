@@ -1,3 +1,4 @@
+import type { Metadata } from 'next';
 import Link from 'next/link';
 import { ErrorCard } from '@/components/error-card';
 import { Button } from '@/components/ui/button';
@@ -9,6 +10,10 @@ import {
   type UserStatsOutput,
 } from '@/src/adapters/controllers/stats-controller';
 import { getStemPreview } from '@/src/adapters/shared/stem-preview';
+
+export const metadata: Metadata = {
+  title: 'Dashboard - Addiction Boards',
+};
 
 function formatPercent(value: number): string {
   return `${Math.round(value * 100)}%`;

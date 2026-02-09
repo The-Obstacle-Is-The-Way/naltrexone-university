@@ -1,3 +1,4 @@
+import type { Metadata } from 'next';
 import Link from 'next/link';
 import { ErrorCard } from '@/components/error-card';
 import { Button } from '@/components/ui/button';
@@ -12,6 +13,10 @@ import {
   getStemPreview,
   toPlainText,
 } from '@/src/adapters/shared/stem-preview';
+
+export const metadata: Metadata = {
+  title: 'Review - Addiction Boards',
+};
 
 type ReviewSearchParams = {
   limit?: string;

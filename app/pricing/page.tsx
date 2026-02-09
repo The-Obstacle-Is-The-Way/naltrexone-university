@@ -1,3 +1,4 @@
+import type { Metadata } from 'next';
 import { manageBillingAction } from '@/app/pricing/manage-billing-actions';
 import { SubscribeButton } from '@/app/pricing/pricing-client';
 import { PricingView } from '@/app/pricing/pricing-view';
@@ -9,6 +10,10 @@ import type { PricingBanner } from '@/app/pricing/types';
 import type { AuthGateway } from '@/src/application/ports/gateways';
 import type { CheckEntitlementUseCase } from '@/src/application/ports/use-cases';
 import type { NonEntitledReason } from '@/src/application/use-cases/check-entitlement';
+
+export const metadata: Metadata = {
+  title: 'Pricing - Addiction Boards',
+};
 
 export type { PricingViewProps } from '@/app/pricing/pricing-view';
 export { runSubscribeAction } from '@/app/pricing/subscribe-action';
