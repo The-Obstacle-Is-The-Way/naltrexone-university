@@ -116,7 +116,7 @@ export function PastDueBanner() {
       Your payment failed — please{' '}
       <Link
         href={ROUTES.APP_BILLING}
-        className="underline font-medium hover:text-foreground"
+        className="underline font-medium transition-colors hover:text-foreground"
       >
         update your billing information
       </Link>

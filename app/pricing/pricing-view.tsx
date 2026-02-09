@@ -128,7 +128,7 @@ export function PricingView({
                 <h3 className="font-heading font-semibold text-foreground">
                   {PRICING_DATA.monthly.name}
                 </h3>
-                <p className="mt-4 text-4xl font-bold text-foreground">
+                <p className="mt-4 font-display text-4xl font-bold text-foreground">
                   {PRICING_DATA.monthly.price}
                   <span className="text-lg font-normal text-muted-foreground">
                     {PRICING_DATA.monthly.period}
@@ -153,7 +153,7 @@ export function PricingView({
                 <h3 className="font-heading font-semibold text-foreground">
                   {PRICING_DATA.annual.name}
                 </h3>
-                <p className="mt-4 text-4xl font-bold text-foreground">
+                <p className="mt-4 font-display text-4xl font-bold text-foreground">
                   {PRICING_DATA.annual.price}
                   <span className="text-lg font-normal text-muted-foreground">
                     {PRICING_DATA.annual.period}

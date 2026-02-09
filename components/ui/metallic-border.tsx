@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { cn } from '@/lib/utils';
 
 interface MetallicBorderProps {
   children: ReactNode;
@@ -19,7 +20,7 @@ export function MetallicBorder({
 
   return (
     <div
-      className={`metallic-border inline-flex${className ? ` ${className}` : ''}`}
+      className={cn('metallic-border inline-flex', className)}
       style={{
         borderRadius: `${safeBorderRadius}px`,
         padding: `${safeBorderWidth}px`,

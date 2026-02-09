@@ -182,7 +182,7 @@ export function MarketingHomeShell({
                   >
                     <Icon
                       aria-hidden="true"
-                      className="h-6 w-6 text-muted-foreground"
+                      className="size-6 text-muted-foreground"
                     />
                     <h3 className="mt-4 font-heading font-semibold">
                       {feature.title}
