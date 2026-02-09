@@ -20,7 +20,6 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 | [DEBT-192](debt-192-source-reading-regression-tests-fragile.md) | Source-Reading Regression Tests Are Fragile (3 of 5 should be behavioral) | P3 | Open |
 | [DEBT-193](debt-193-backend-production-files-over-300-lines.md) | Backend Production Files Exceed 300-Line Guideline (5 files) | P3 | Open |
 | [DEBT-194](debt-194-console-error-default-in-utility-functions.md) | Default `console.error` in Utility Function Parameters (3 files) | P4 | Open |
-| [DEBT-198](debt-198-missing-baseline-csp-header.md) | Missing Baseline Content-Security-Policy Header | P3 | Open |
 | [DEBT-199](debt-199-button-missing-default-type.md) | Button Component Missing Default `type="button"` | P3 | Open |
 | [DEBT-200](debt-200-subscription-upsert-discards-error-details.md) | Subscription Repository Upsert Discards Original Error Details | P3 | Open |
 | [DEBT-201](debt-201-practice-session-end-returns-stale-data.md) | Practice Session `end()` Returns Pre-Read Stale Data | P4 | Open |
@@ -227,6 +226,7 @@ All frontend-specific UI/UX debt. Items use `FE-XXX` IDs and are cross-reference
 | [DEBT-168](../_archive/debt/debt-168-stripe-event-table-missing-check-constraint.md) | Stripe Events Table Missing CHECK Constraint (false positive; `markFailed()` intentionally writes `processedAt=NULL, error=NOT NULL` for retry) | P3 | 2026-02-08 |
 | [DEBT-164](../_archive/debt/debt-164-missing-suspense-boundary-practice-session-history.md) | Missing Suspense Boundary for Practice Session History Panel (client-rendered page already non-blocking) | P2 | 2026-02-08 |
 | [DEBT-161](../_archive/debt/debt-161-incomplete-csp-headers.md) | Incomplete CSP Headers (false positive; CSP baseline is owned by Clerk middleware) | P2 | 2026-02-08 |
+| [DEBT-198](../_archive/debt/debt-198-missing-baseline-csp-header.md) | Missing Baseline Content-Security-Policy Header (invalidated; static CSP is owned by Clerk middleware and previously caused Preview outage in BUG-071) | P3 | 2026-02-09 |
 | [DEBT-137](../_archive/debt/debt-137-container-type-cycles.md) | Container Type Cycles (madge false positive — type-only imports, not runtime cycles) | P2 | 2026-02-07 |
 | [DEBT-139](../_archive/debt/debt-139-production-files-exceed-size-guardrail.md) | Global 300-Line Guardrail (invalid as universal standard; SPEC-scoped case now tracked in DEBT-142) | P2 | 2026-02-07 |
 
