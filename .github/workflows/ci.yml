@@ -99,19 +99,23 @@ jobs:
       - name: Integration tests
         run: pnpm test:integration:coverage
 
+      - name: Install Playwright browsers
+        if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
+        run: pnpm exec playwright install --with-deps
+
+      - name: Browser tests with coverage
+        if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
+        run: pnpm test:browser:coverage
+
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          files: ./coverage/coverage-final.json,./coverage/integration/coverage-final.json
+          files: ./coverage/coverage-final.json,./coverage/integration/coverage-final.json,./coverage/browser/coverage-final.json
           fail_ci_if_error: false
 
       - name: Build
         run: pnpm build
-
-      - name: Install Playwright browsers
-        if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
-        run: pnpm exec playwright install --with-deps
 
       - name: E2E smoke
         if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)

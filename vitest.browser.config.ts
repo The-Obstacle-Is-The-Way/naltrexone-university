@@ -8,7 +8,7 @@ import { defineConfig } from 'vitest/config';
 export default defineConfig({
   plugins: [react()],
   optimizeDeps: {
-    include: ['server-only'],
+    include: ['server-only', 'zod', 'pino'],
   },
   test: {
     env: {
@@ -21,6 +21,10 @@ export default defineConfig({
       instances: [{ browser: 'chromium' }],
     },
     include: ['**/*.browser.spec.tsx'],
+    coverage: {
+      reporter: ['json'],
+      reportsDirectory: './coverage/browser',
+    },
   },
   resolve: {
     alias: {
