@@ -2028,7 +2028,7 @@ This master spec documents the directory structure at the directory-boundary lev
 │   │   ├── dashboard/
 │   │   ├── practice/
 │   │   │   ├── [sessionId]/          # Session runner (tutor/exam)
-│   │   │   └── quick/                # Quick Practice (SPEC-019 Phase 2, pending)
+│   │   │   └── quick/                # Quick Practice (ad-hoc question flow)
 │   │   ├── review/
 │   │   ├── bookmarks/
 │   │   └── billing/
@@ -2248,7 +2248,7 @@ As a subscribed user, I can answer questions and see explanations so that I can 
 * When I select an answer and submit, then I see correct/incorrect feedback and explanation (tutor mode).
 * When I submit, then an `attempts` row is created.
 
-> **Route note:** `/app/practice` is the practice landing page. Question answering happens in the session runner (`/app/practice/[sessionId]`). Ad-hoc practice moves to `/app/practice/quick` in SPEC-019 Phase 2.
+> **Route note:** `/app/practice` is the practice landing page. Question answering happens in the session runner (`/app/practice/[sessionId]`). Ad-hoc practice lives at `/app/practice/quick` (SPEC-019 Phase 2).
 
 **Test Cases:**
 
@@ -2285,7 +2285,7 @@ As a subscribed user, I can answer questions and see explanations so that I can 
 * `src/adapters/repositories/drizzle-question-repository.ts`, `drizzle-attempt-repository.ts`
 * `src/adapters/controllers/question-controller.ts`, `bookmark-controller.ts`
 * `lib/container.ts` (add new factories)
-* `app/(app)/app/practice/page.tsx` (landing page; Quick Practice moves to `app/(app)/app/practice/quick/page.tsx` in SPEC-019 Phase 2)
+* `app/(app)/app/practice/page.tsx` (landing page; Quick Practice lives at `app/(app)/app/practice/quick/page.tsx` in SPEC-019 Phase 2)
 
 **Migrations:** none
 

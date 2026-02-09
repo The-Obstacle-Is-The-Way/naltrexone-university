@@ -243,23 +243,25 @@ All 5 repositories have colocated unit tests (48 test cases total) plus shared i
 
 | Route | Type | Purpose | Status |
 |-------|------|---------|--------|
-| `/app/practice` | Client Component | Landing page — session starter, incomplete session card, session history. **After SPEC-019 Phase 2:** decision point only (no question loads on mount). | Implemented (Phase 2 pending) |
-| `/app/practice/quick` | Client Component | Quick Practice — ad-hoc question flow, random question, immediate feedback, no session tracking. | **Not yet created** (SPEC-019 Phase 2) |
+| `/app/practice` | Server → Client | Landing page — decision point (session starter, incomplete session card, session history). No question loads on mount. | Implemented (SPEC-019 Phase 2) |
+| `/app/practice/quick` | Server → Client | Quick Practice — ad-hoc question flow, random question, immediate feedback, no session tracking. | Implemented (SPEC-019 Phase 2) |
 | `/app/practice/[sessionId]` | Server → Client | Session runner — progress, question flow, exam review stage, summary | Implemented |
 | `/app/dashboard` | Server Component | Stats cards + recent activity (consumer of `getUserStats`) | Implemented |
 | `/app/review` | Server Component | Missed questions list — shows only questions whose most recent attempt is incorrect (consumer of `getMissedQuestions`) | Implemented |
 | `/app/bookmarks` | Server Component | Bookmarked questions (consumer of `getBookmarks`) | Implemented |
 | `/app/questions/[slug]` | Client Component | Individual question reattempt | Implemented |
 
-### 6.2 Practice Page Hook Architecture
+### 6.2 Practice Route Hook Architecture
 
 ```text
-PracticePage
-├── usePracticeSessionControls (81 lines, composite)
+PracticePageClient (/app/practice)
+└── usePracticeSessionControls (81 lines, composite)
 │   ├── usePracticeSessionStart (135 lines)
 │   ├── usePracticeSessionTags (51 lines)
 │   ├── usePracticeIncompleteSession (105 lines)
 │   └── usePracticeSessionHistory (124 lines)
+
+QuickPracticeClient (/app/practice/quick)
 └── usePracticeQuestionFlow (55 lines, composite)
     ├── usePracticeQuestionAnswerFlow (164 lines) ← over 150-line guideline
     └── usePracticeQuestionBookmarks (107 lines)
@@ -331,7 +333,7 @@ The Practice Engine supports three distinct user experiences:
 
 | Mode | Route | Session? | Explanation Timing | Progress | Summary |
 |------|-------|----------|-------------------|----------|---------|
-| **Ad-hoc (Quick Practice)** | `/app/practice/quick` (pending SPEC-019 Phase 2; currently on `/app/practice`) | No | Immediate | No | No |
+| **Ad-hoc (Quick Practice)** | `/app/practice/quick` | No | Immediate | No | No |
 | **Tutor** | `/app/practice/[sessionId]` | Yes | Immediate after each answer | X/N counter | Yes (totals + per-question) |
 | **Exam** | `/app/practice/[sessionId]` | Yes | Hidden until session ends | X/N counter + mark-for-review | Yes (totals + per-question + explanations revealed) |
 
@@ -419,7 +421,7 @@ For ad-hoc mode, `selectNextQuestionId()` picks the least-recently-seen question
 | Phase | Status | What's Left |
 |-------|--------|------------|
 | **Phase 1: Stabilize** | Done | All acceptance criteria met |
-| **Phase 2: UX Redesign** | **Ready for Implementation** (fully specified 2026-02-09) | Create `/app/practice/quick` route (reuse existing hooks + components); remove ad-hoc from landing page; add "Quick Practice" card; add `APP_PRACTICE_QUICK` route constant |
+| **Phase 2: UX Redesign** | **Implemented** (2026-02-09) | Done — `/app/practice/quick` created; `/app/practice` refactored into landing page; `APP_PRACTICE_QUICK` route constant added |
 | **Phase 3: Cross-Page IA** | Partial (2 of 13 tasks done) | Dashboard activity clickable; difficulty badges; collapsible tag filters; review subtitle + empty state; origin-aware back links on question detail page |
 
 ### 9.4 Product Decisions (2026-02-09)
@@ -451,7 +453,7 @@ This section maps each part of the Practice Engine to the spec that defines it.
 | Review + bookmarks | SPEC-014 | Implemented | Cross-page UX improvements deferred to SPEC-019 Phase 3 |
 | Dashboard stats | SPEC-015 | Implemented | Clickable activity items deferred to SPEC-019 Phase 3 |
 | UI integration patterns | SPEC-018 | Implemented | No architecture violations |
-| Practice UX redesign | SPEC-019 | Partial | Phase 1 done; Phase 2 ready for implementation; Phase 3 partial |
+| Practice UX redesign | SPEC-019 | Partial | Phase 1 done; Phase 2 implemented (2026-02-09); Phase 3 partial |
 | Practice engine completion (decomposition, navigation, enriched summary, session history) | SPEC-020 | Implemented | All 4 phases complete |
 
 ### 10.1 Spec Drift Summary
@@ -525,7 +527,7 @@ controllers/
   hooks/ (8 hook files)
   components/ (practice-view.tsx, practice-session-starter.tsx, incomplete-session-card.tsx, practice-session-history-panel.tsx)
   shared/ (question-flow-actions.ts, load-state.ts)
-  quick/ (pending SPEC-019 Phase 2)
+  quick/
     page.tsx, loading.tsx, error.tsx, quick-practice-client.tsx
   [sessionId]/
     page.tsx, loading.tsx
@@ -548,7 +550,7 @@ controllers/
 | [SPEC-013](specs/spec-013-practice-sessions.md) | Practice session requirements |
 | [SPEC-014](specs/spec-014-review-bookmarks.md) | Review + bookmarks requirements |
 | [SPEC-015](specs/spec-015-dashboard.md) | Dashboard requirements |
-| [SPEC-019](specs/spec-019-practice-ux-redesign.md) | UX redesign (Phase 2 ready; Phase 3 pending) |
+| [SPEC-019](specs/spec-019-practice-ux-redesign.md) | UX redesign (Phase 2 implemented; Phase 3 partial) |
 | [SPEC-020](specs/spec-020-practice-engine-completion.md) | Practice engine completion (all done) |
 | [ADR-001](adr/adr-001-clean-architecture-layers.md) | Clean Architecture decision |
 | [ADR-003](adr/adr-003-testing-strategy.md) | Testing strategy (TDD, fakes over mocks) |
@@ -565,3 +567,4 @@ controllers/
 |------|--------|
 | 2026-02-08 | Initial version — created from full vertical audit of domain → application → adapters → frontend layers. Cross-referenced against SPEC-001 through SPEC-020. |
 | 2026-02-09 | Synced with SPEC-019 updates: Phase 2 now "Ready for Implementation"; routes table adds `/app/practice/quick` (pending); practice mode table updated; Section 9.4 added for product decisions (review = missed-only, session runner route stays, nav label stays "Review"). |
+| 2026-02-09 | Implemented SPEC-019 Phase 2: `/app/practice` is now landing-only, `/app/practice/quick` hosts ad-hoc question flow, and the route/status tables updated accordingly. |
