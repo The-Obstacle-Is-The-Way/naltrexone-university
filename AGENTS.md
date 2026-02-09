@@ -216,7 +216,7 @@ Implemented (see `docs/specs/index.md`):
 In progress / proposed:
 - SPEC-016 Observability (partial)
 - SPEC-017 Rate Limiting (partial)
-- SPEC-019 Practice & Navigation UX Redesign (proposed)
+- SPEC-019 Practice & Navigation UX Redesign (partial — Phase 1 done, Phase 2 ready)
 
 Framework code lives in:
 - `app/` - Next.js App Router pages, layouts, API routes
@@ -236,7 +236,7 @@ Framework code lives in:
 
 4. **Composition root** - Dependencies wired at entry points (Server Actions, Route Handlers), not global singletons.
 
-See `docs/adr/` for all Architecture Decision Records (ADR-001 through ADR-013).
+See `docs/adr/` for all Architecture Decision Records (ADR-001 through ADR-018).
 
 ## Tech Stack
 
@@ -350,7 +350,7 @@ See `docs/dev/react-vitest-testing.md` for full details.
 
 ### FAKES OVER MOCKS — MANDATORY
 
-**The Golden Rule: USE EXISTING FAKES FROM `src/application/test-helpers/fakes.ts`**
+**The Golden Rule: USE EXISTING FAKES FROM `src/application/test-helpers/fakes/`**
 
 If a fake class exists (e.g., `FakeAttemptRepository`), you MUST use it. Do NOT create inline objects with `vi.fn()`.
 
@@ -364,16 +364,18 @@ If a fake class exists (e.g., `FakeAttemptRepository`), you MUST use it. Do NOT 
 - `FakeTagRepository`
 - `FakeStripeCustomerRepository`
 - `FakeStripeEventRepository`
+- `FakeIdempotencyKeyRepository`
 - `FakeAuthGateway`
 - `FakePaymentGateway`
+- `FakeRateLimiter`
 
 **The Decision Tree:**
 ```
-Does a Fake* class exist in fakes.ts for this dependency?
+Does a Fake* class exist in `src/application/test-helpers/fakes/` for this dependency?
   YES → Use it: new FakeAttemptRepository()
   NO  → Is it an external dependency (Drizzle db, Clerk, Stripe SDK)?
     YES → Use vi.fn() inline object OR vi.mock()
-    NO  → Create a new Fake* class in fakes.ts, then use it
+    NO  → Add a new Fake* class under `src/application/test-helpers/fakes/`, then use it
 ```
 
 **NEVER use `vi.mock()` for our own code.** Only for external packages you can't inject.
@@ -529,8 +531,8 @@ gh pr view <PR_NUMBER> --comments
 
 - `docs/specs/master_spec.md` - Complete technical specification (SSOT)
 - `docs/specs/spec-001 to spec-010` - Clean Architecture layer specs
-- `docs/specs/spec-011 to spec-017` - Feature slice specs
-- `docs/adr/` - Architecture Decision Records (ADR-001 through ADR-013)
+- `docs/specs/spec-011 to spec-020` - Feature/infrastructure specs
+- `docs/adr/` - Architecture Decision Records (ADR-001 through ADR-018)
 
 ---
 
@@ -542,7 +544,7 @@ Before writing ANY code, verify you can answer:
 - [ ] **Style:** Have I read 2-3 source files? Do I understand constructor injection?
 - [ ] **Shared Types:** Have I checked `src/adapters/shared/` for existing types?
 - [ ] **Ports:** Have I checked `src/application/ports/` for existing interfaces?
-- [ ] **Fakes:** Have I checked `src/application/test-helpers/fakes.ts` for existing fakes?
+- [ ] **Fakes:** Have I checked `src/application/test-helpers/fakes/` for existing fakes?
 - [ ] **Layer:** Do I know which Clean Architecture layer I'm working in?
 
 **If you can't check all boxes, study existing code before proceeding.**

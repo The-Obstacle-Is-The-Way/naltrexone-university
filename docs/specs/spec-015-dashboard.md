@@ -67,7 +67,6 @@ Provide a fast, motivating dashboard for subscribed users:
 - `src/application/use-cases/get-user-stats.ts`
 - `src/adapters/controllers/stats-controller.ts`
 - `app/(app)/app/dashboard/page.tsx`
-- `components/stats/*`
 - `lib/container.ts` (add stats factories)
 
 ---

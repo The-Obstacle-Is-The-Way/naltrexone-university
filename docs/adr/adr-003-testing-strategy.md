@@ -338,43 +338,26 @@ export function createSubscription(overrides: Partial<Subscription> = {}): Subsc
 #### Fakes (Application)
 
 ```typescript
-// src/application/test-helpers/fakes.ts
-import type { QuestionRepository, AttemptRepository, UserRepository } from '../ports/repositories';
-import type { Question, Attempt, User } from '../../domain/entities';
+// SSOT: src/application/test-helpers/fakes/ (barrel export: index.ts)
+import {
+  FakeAttemptRepository,
+  FakePracticeSessionRepository,
+  FakeQuestionRepository,
+} from '@/src/application/test-helpers/fakes';
+import { GetNextQuestionUseCase } from '@/src/application/use-cases/get-next-question';
+import { createPracticeSession, createQuestion } from '@/src/domain/test-helpers';
 
-export class FakeQuestionRepository implements QuestionRepository {
-  private questions = new Map<string, Question>();
+const userId = 'user-1';
+const sessionId = 'session-1';
 
-  constructor(initial: Question[] = []) {
-    initial.forEach(q => this.questions.set(q.id, q));
-  }
+const q1 = createQuestion({ id: 'q1', status: 'published' });
+const session = createPracticeSession({ id: sessionId, userId, questionIds: [q1.id] });
 
-  async findById(id: string): Promise<Question | null> {
-    return this.questions.get(id) ?? null;
-  }
+const questions = new FakeQuestionRepository([q1]);
+const attempts = new FakeAttemptRepository([]);
+const sessions = new FakePracticeSessionRepository([session]);
 
-  async findPublishedByFilters(/* ... */): Promise<Question[]> {
-    return [...this.questions.values()].filter(q => q.status === 'published');
-  }
-
-  // Test helper
-  add(question: Question) {
-    this.questions.set(question.id, question);
-  }
-}
-
-export class FakeAttemptRepository implements AttemptRepository {
-  savedAttempts: Attempt[] = [];
-
-  async save(attempt: Attempt): Promise<Attempt> {
-    this.savedAttempts.push(attempt);
-    return attempt;
-  }
-
-  async findByUserId(userId: string): Promise<Attempt[]> {
-    return this.savedAttempts.filter(a => a.userId === userId);
-  }
-}
+const useCase = new GetNextQuestionUseCase(questions, attempts, sessions);
 ```
 
 ### CI and Tooling Configuration (SSOT)

@@ -29,208 +29,69 @@ We adopt a **hybrid structure** that places Clean Architecture layers under `src
 
 ```
 /
-├── app/                              # FRAMEWORKS LAYER (Next.js)
-│   ├── (marketing)/                  # Marketing route group
-│   │   ├── layout.tsx
-│   │   ├── page.tsx                  # Homepage
-│   │   ├── pricing/page.tsx
-│   │   ├── checkout/success/page.tsx
-│   │   ├── sign-in/[[...sign-in]]/page.tsx
-│   │   └── sign-up/[[...sign-up]]/page.tsx
-│   │
-│   ├── (app)/                        # App route group
-│   │   └── app/
-│   │       ├── layout.tsx            # Subscription gate
-│   │       ├── dashboard/page.tsx
-│   │       ├── practice/
-│   │       │   ├── page.tsx
-│   │       │   └── [sessionId]/page.tsx
-│   │       ├── review/page.tsx
-│   │       ├── bookmarks/page.tsx
-│   │       └── billing/page.tsx
-│   │
-│   ├── api/                          # Route handlers
-│   │   ├── health/route.ts
-│   │   └── stripe/webhook/route.ts
-│   │
-│   ├── layout.tsx                    # Root layout
-│   ├── globals.css
-│   └── error.tsx                     # Global error boundary
+├── app/                              # FRAMEWORKS LAYER (Next.js App Router)
+│   ├── (marketing)/                  # Marketing pages
+│   ├── (app)/app/                    # Entitled app shell + core routes
+│   │   ├── dashboard/
+│   │   ├── practice/
+│   │   │   ├── [sessionId]/          # Session runner (tutor/exam)
+│   │   │   └── quick/                # Quick Practice (SPEC-019 Phase 2, pending)
+│   │   ├── review/
+│   │   ├── bookmarks/
+│   │   └── billing/
+│   └── api/                          # Route handlers (webhooks, health, cron)
 │
 ├── src/                              # CLEAN ARCHITECTURE LAYERS
-│   ├── domain/                       # LAYER 1: ENTITIES
-│   │   ├── entities/
-│   │   │   ├── index.ts              # Barrel export
-│   │   │   ├── question.ts
-│   │   │   ├── choice.ts
-│   │   │   ├── attempt.ts
-│   │   │   ├── user.ts
-│   │   │   ├── subscription.ts
-│   │   │   ├── practice-session.ts
-│   │   │   ├── bookmark.ts
-│   │   │   └── tag.ts
-│   │   │
-│   │   ├── value-objects/
-│   │   │   ├── index.ts
-│   │   │   ├── question-difficulty.ts
-│   │   │   ├── question-status.ts
-│   │   │   ├── subscription-status.ts
-│   │   │   ├── practice-mode.ts
-│   │   │   ├── choice-label.ts
-│   │   │   └── tag-kind.ts
-│   │   │
-│   │   ├── services/                 # Pure domain functions
-│   │   │   ├── index.ts
-│   │   │   ├── grading.ts            # gradeAnswer()
-│   │   │   ├── grading.test.ts       # Colocated unit test
-│   │   │   ├── entitlement.ts        # isEntitled()
-│   │   │   ├── entitlement.test.ts
-│   │   │   ├── statistics.ts         # computeAccuracy(), computeStreak()
-│   │   │   ├── statistics.test.ts
-│   │   │   ├── session.ts            # computeSessionProgress()
-│   │   │   ├── session.test.ts
-│   │   │   ├── shuffle.ts            # shuffleWithSeed()
-│   │   │   └── shuffle.test.ts
-│   │   │
-│   │   ├── errors/
-│   │   │   └── domain-errors.ts
-│   │   │
-│   │   ├── test-helpers/             # Factories for unit tests
-│   │   │   └── factories.ts
-│   │   │
-│   │   └── index.ts                  # Domain barrel export
-│   │
-│   ├── application/                  # LAYER 2: USE CASES
+│   ├── domain/                       # Entities, value objects, services (pure)
+│   ├── application/                  # Use cases + ports (interfaces)
+│   │   ├── ports/                    # Port-per-module + barrels (ports/index.ts, ports/repositories.ts)
 │   │   ├── use-cases/
-│   │   │   ├── index.ts
-│   │   │   ├── submit-answer.ts
-│   │   │   ├── submit-answer.test.ts
-│   │   │   ├── get-next-question.ts
-│   │   │   ├── get-next-question.test.ts
-│   │   │   ├── start-practice-session.ts
-│   │   │   ├── end-practice-session.ts
-│   │   │   ├── get-user-stats.ts
-│   │   │   ├── get-missed-questions.ts
-│   │   │   ├── toggle-bookmark.ts
-│   │   │   ├── get-bookmarks.ts
-│   │   │   ├── create-checkout-session.ts
-│   │   │   ├── create-portal-session.ts
-│   │   │   └── check-entitlement.ts
-│   │   │
-│   │   ├── ports/                    # Interface definitions
-│   │   │   ├── repositories.ts       # QuestionRepository, AttemptRepository, etc.
-│   │   │   └── gateways.ts           # AuthGateway, PaymentGateway
-│   │   │
 │   │   ├── errors/
-│   │   │   └── application-errors.ts
-│   │   │
-│   │   ├── test-helpers/
-│   │   │   └── fakes.ts              # FakeQuestionRepository, FakeAttemptRepository
-│   │   │
-│   │   └── index.ts
-│   │
-│   └── adapters/                     # LAYER 3: INTERFACE ADAPTERS
-│       ├── repositories/             # Drizzle implementations
-│       │   ├── index.ts
-│       │   ├── drizzle-question-repository.ts
-│       │   ├── drizzle-attempt-repository.ts
-│       │   ├── drizzle-user-repository.ts
-│       │   ├── drizzle-subscription-repository.ts
-│       │   ├── drizzle-session-repository.ts
-│       │   └── drizzle-bookmark-repository.ts
-│       │
-│       ├── gateways/                 # External service implementations
-│       │   ├── index.ts
-│       │   ├── clerk-auth-gateway.ts
-│       │   └── stripe-payment-gateway.ts
-│       │
-│       ├── controllers/              # Server Actions (entry points)
-│       │   ├── index.ts
-│       │   ├── action-result.ts      # ActionResult<T>, ok(), err()
-│       │   ├── question-controller.ts
-│       │   ├── practice-controller.ts
-│       │   ├── stats-controller.ts
-│       │   ├── billing-controller.ts
-│       │   ├── review-controller.ts
-│       │   └── bookmark-controller.ts
-│       │
-│       ├── presenters/               # Output formatting (optional)
-│       │   └── question-presenter.ts
-│       │
-│       └── index.ts
+│   │   └── test-helpers/
+│   │       └── fakes/                # Canonical fakes for unit/controller tests
+│   └── adapters/                     # Controllers, repositories, gateways
+│       ├── controllers/              # Server actions + controller helpers
+│       ├── repositories/             # Drizzle implementations + mappers
+│       ├── gateways/                 # Clerk/Stripe + rate limiter implementations
+│       └── shared/                   # Adapter-only helpers (idempotency, rate limits, DB types)
 │
-├── components/                       # FRAMEWORKS LAYER (React)
-│   ├── ui/                           # shadcn/ui components
-│   │   ├── button.tsx
-│   │   ├── card.tsx
-│   │   └── ...
-│   │
-│   ├── layout/
-│   │   ├── app-header.tsx
-│   │   └── marketing-header.tsx
-│   │
-│   ├── markdown/
-│   │   └── markdown.tsx              # ReactMarkdown wrapper
-│   │
+├── components/                       # FRAMEWORKS LAYER (React components)
+│   ├── ui/                           # shadcn/ui primitives
 │   ├── question/
-│   │   ├── question-card.tsx
-│   │   ├── choice-radio-group.tsx
-│   │   ├── answer-feedback.tsx
-│   │   └── explanation-panel.tsx
-│   │
-│   └── stats/
-│       ├── stat-card.tsx
-│       └── recent-activity-list.tsx
+│   ├── markdown/
+│   ├── marketing/
+│   └── loading/
 │
 ├── lib/                              # FRAMEWORKS LAYER (Infrastructure)
 │   ├── container.ts                  # Composition root (DI)
 │   ├── db.ts                         # Drizzle client singleton
 │   ├── env.ts                        # Zod-validated env vars
+│   ├── routes.ts                     # Route constants + helpers
 │   ├── stripe.ts                     # Stripe SDK init
-│   ├── logger.ts                     # Pino logger (ADR-008)
-│   ├── request-context.ts            # Request ID correlation
-│   └── markdown-config.ts            # rehype-sanitize schema
+│   └── logger.ts                     # Logger implementation (ADR-008)
 │
 ├── db/                               # FRAMEWORKS LAYER (Database)
 │   ├── schema.ts                     # Drizzle schema
 │   └── migrations/
-│       ├── 0000_init.sql
-│       └── meta/
+│       └── ...
 │
 ├── content/                          # Static content
 │   └── questions/
-│       ├── opioids/
-│       ├── alcohol/
-│       └── general/
+│       └── ...
 │
 ├── scripts/
 │   └── seed.ts                       # Content seeding
 │
 ├── tests/                            # Integration + E2E tests
 │   ├── integration/
-│   │   ├── setup.ts
-│   │   ├── db.integration.test.ts
-│   │   ├── repositories.integration.test.ts
-│   │   └── actions.integration.test.ts
-│   │
 │   └── e2e/
-│       ├── global.setup.ts
-│       ├── auth.spec.ts
-│       ├── subscribe.spec.ts
-│       ├── practice.spec.ts
-│       ├── review.spec.ts
-│       └── bookmarks.spec.ts
-│
-├── proxy.ts                          # Clerk middleware
-├── next.config.ts
-├── drizzle.config.ts
-├── vitest.config.ts
-├── playwright.config.ts
-├── biome.json
-├── tsconfig.json
-├── package.json
-└── pnpm-lock.yaml
 ```
+
+This ADR is authoritative at the **directory boundary** level. For file-level indexes that evolve with refactors, prefer:
+
+- `docs/specs/index.md` (spec index)
+- `docs/adr/index.md` (ADR index)
+- `docs/practice-engine/index.md` (practice-engine file index + status)
 
 ### Layer Mapping
 

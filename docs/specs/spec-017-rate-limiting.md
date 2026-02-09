@@ -4,25 +4,28 @@
 > **Priority:** P2 (Important for Production)
 > **Author:** Claude
 > **Created:** 2026-02-01
-> **Updated:** 2026-02-03
+> **Updated:** 2026-02-09
 
 ---
 
 ## Current State
 
 ✅ **Implemented:**
-- `src/adapters/gateways/drizzle-rate-limiter.ts` — Postgres-backed sliding window rate limiter
+- `src/adapters/gateways/drizzle-rate-limiter.ts` — Postgres-backed **fixed-window** rate limiter (atomic `INSERT ... ON CONFLICT DO UPDATE`)
 - `src/application/ports/gateways.ts` — `RateLimiter` interface
+- `src/adapters/shared/rate-limits.ts` — Centralized limit configuration (no magic numbers)
 - Rate limiting applied to:
   - Checkout session creation (`billing-controller.ts`)
   - Practice session start (`practice-controller.ts`)
   - Answer submission (`question-controller.ts`)
+  - Bookmark toggle (`bookmark-controller.ts`)
+  - Public route handlers: Stripe webhook, Clerk webhook, health check (IP-based keys + 429 responses with rate-limit headers)
+  - Cron routes (e.g., reconcile Stripe subscriptions)
 - `db/schema.ts` — `rateLimits` table for tracking
 
 ❌ **Not Yet Implemented:**
 - Redis-backed rate limiter (Upstash) for edge performance
-- IP-based rate limiting for webhooks
-- Rate limit headers in responses
+- Sliding-window / token-bucket semantics (fixed-window is acceptable for MVP)
 
 ---
 
@@ -40,7 +43,7 @@ Without rate limiting, our APIs are vulnerable to:
 
 ### Current Implementation: Postgres-Backed Rate Limiter
 
-We implemented a custom rate limiter using Postgres for durability:
+We implemented a custom rate limiter using Postgres for durability (fixed-window counters):
 
 | Layer | Protection | Notes |
 |-------|------------|-------|
@@ -49,9 +52,9 @@ We implemented a custom rate limiter using Postgres for durability:
 | **Stripe** | API rate limits | Stripe enforces 100 req/sec |
 | **Neon** | Connection pooling limits | Serverless driver has built-in limits |
 
-### Post-MVP: Add Custom Rate Limiting
+### Post-MVP: Redis-Backed Rate Limiting (Optional Upgrade)
 
-When usage grows, add custom rate limiting using **Upstash Redis** + `@upstash/ratelimit`:
+When usage grows (or multi-region deployments require shared counters), consider migrating to **Upstash Redis** + `@upstash/ratelimit`:
 
 ```typescript
 // lib/rate-limit.ts (Post-MVP)
@@ -88,12 +91,14 @@ export const apiRateLimiter = new Ratelimit({
 
 ## MVP Implementation
 
-For MVP, we ship a Postgres-backed sliding-window rate limiter via
+For MVP, we ship a Postgres-backed fixed-window rate limiter via
 `src/adapters/gateways/drizzle-rate-limiter.ts` and apply it to:
 
 1. Checkout session creation (`billing-controller.ts`)
 2. Practice session start (`practice-controller.ts`)
 3. Answer submission (`question-controller.ts`)
+4. Bookmark toggle (`bookmark-controller.ts`)
+5. Public route handlers (Stripe/Clerk webhooks, health)
 
 ### Historical Note (Pre-Implementation)
 
@@ -109,9 +114,7 @@ kept here for context:
 
 ### Potentially Vulnerable (Accept Risk for MVP)
 
-1. **Question fetching** - Could be scraped, but content isn't secret (medical knowledge)
-2. **Answer submission** - Rate limited by natural user behavior
-3. **Health check** - Public, but cheap operation
+1. **Question fetching** — Not rate limited today; could be scraped, but content isn't secret (medical knowledge). If abuse is observed, add a read-rate limit key (userId/IP) and tune separately from mutation limits.
 
 ---
 

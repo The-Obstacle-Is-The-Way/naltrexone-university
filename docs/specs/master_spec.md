@@ -1989,21 +1989,21 @@ Canonical JSON rules (Exact):
 
 ```text
 ┌─────────────────────────────────────────────────────────────────────────┐
-│                    FRAMEWORKS & DRIVERS (Outermost)                      │
+│                    FRAMEWORKS & DRIVERS (Outermost)                     │
 │  app/, components/, lib/, db/ — Next.js, React, Drizzle, External SDKs  │
-│                                                                          │
+│                                                                         │
 │  ┌───────────────────────────────────────────────────────────────────┐  │
-│  │                    INTERFACE ADAPTERS                              │  │
+│  │                    INTERFACE ADAPTERS                             │  │
 │  │  src/adapters/ — Repositories, Gateways, Controllers              │  │
-│  │                                                                    │  │
+│  │                                                                   │  │
 │  │  ┌─────────────────────────────────────────────────────────────┐  │  │
-│  │  │                    USE CASES                                 │  │  │
+│  │  │                    USE CASES                                │  │  │
 │  │  │  src/application/ — Use Case classes, Port interfaces       │  │  │
-│  │  │                                                              │  │  │
+│  │  │                                                             │  │  │
 │  │  │  ┌─────────────────────────────────────────────────────┐    │  │  │
-│  │  │  │                    ENTITIES (Core)                   │    │  │  │
+│  │  │  │                    ENTITIES (Core)                  │    │  │  │
 │  │  │  │  src/domain/ — Entities, Value Objects, Services    │    │  │  │
-│  │  │  │  ZERO external dependencies                          │    │  │  │
+│  │  │  │  ZERO external dependencies                         │    │  │  │
 │  │  │  └─────────────────────────────────────────────────────┘    │  │  │
 │  │  └─────────────────────────────────────────────────────────────┘  │  │
 │  └───────────────────────────────────────────────────────────────────┘  │
@@ -2012,216 +2012,48 @@ Canonical JSON rules (Exact):
 
 **The Dependency Rule:** Dependencies point inward ONLY. Inner layers know nothing about outer layers.
 
-### Complete Directory Tree
+### Directory Tree (Boundary-Level)
+
+This master spec documents the directory structure at the directory-boundary level to avoid drift as files are refactored. For file-level indexes, prefer:
+
+* `docs/specs/index.md`
+* `docs/adr/index.md`
+* `docs/practice-engine/index.md`
 
 ```text
 /
-├── src/                              # CLEAN ARCHITECTURE LAYERS
-│   │
-│   ├── domain/                       # LAYER 1: ENTITIES (Innermost)
-│   │   │                             # ZERO external dependencies
-│   │   │
-│   │   ├── entities/
-│   │   │   ├── index.ts              # Barrel export
-│   │   │   ├── question.ts           # Question entity type
-│   │   │   ├── choice.ts             # Choice entity type
-│   │   │   ├── attempt.ts            # Attempt entity type
-│   │   │   ├── user.ts               # User entity type
-│   │   │   ├── subscription.ts       # Subscription entity type
-│   │   │   ├── practice-session.ts   # PracticeSession entity type
-│   │   │   ├── bookmark.ts           # Bookmark entity type
-│   │   │   └── tag.ts                # Tag entity type
-│   │   │
-│   │   ├── value-objects/
-│   │   │   ├── index.ts
-│   │   │   ├── question-difficulty.ts  # 'easy' | 'medium' | 'hard'
-│   │   │   ├── question-status.ts      # 'draft' | 'published' | 'archived'
-│   │   │   ├── subscription-status.ts  # Provider-agnostic statuses + EntitledStatuses
-│   │   │   ├── practice-mode.ts        # 'tutor' | 'exam'
-│   │   │   ├── choice-label.ts         # 'A' | 'B' | 'C' | 'D' | 'E'
-│   │   │   └── tag-kind.ts             # 'domain' | 'topic' | 'substance' | etc.
-│   │   │
-│   │   ├── services/                 # Pure business logic functions
-│   │   │   ├── index.ts
-│   │   │   ├── grading.ts            # gradeAnswer(question, choiceId)
-│   │   │   ├── grading.test.ts       # Colocated unit test (NO MOCKS)
-│   │   │   ├── entitlement.ts        # isEntitled(subscription, now)
-│   │   │   ├── entitlement.test.ts
-│   │   │   ├── statistics.ts         # computeAccuracy(), computeStreak()
-│   │   │   ├── statistics.test.ts
-│   │   │   ├── session.ts            # computeSessionProgress(), shouldShowExplanation()
-│   │   │   ├── session.test.ts
-│   │   │   ├── shuffle.ts            # shuffleWithSeed() for deterministic randomization
-│   │   │   └── shuffle.test.ts
-│   │   │
-│   │   ├── errors/
-│   │   │   └── domain-errors.ts      # DomainError class + codes
-│   │   │
-│   │   ├── test-helpers/
-│   │   │   └── factories.ts          # createQuestion(), createUser(), etc.
-│   │   │
-│   │   └── index.ts                  # Domain barrel export
-│   │
-│   ├── application/                  # LAYER 2: USE CASES
-│   │   │                             # Depends only on domain
-│   │   │
+├── app/                              # Frameworks layer (Next.js App Router)
+│   ├── (marketing)/                  # Marketing pages
+│   ├── (app)/app/                    # Entitled app shell + core routes
+│   │   ├── dashboard/
+│   │   ├── practice/
+│   │   │   ├── [sessionId]/          # Session runner (tutor/exam)
+│   │   │   └── quick/                # Quick Practice (SPEC-019 Phase 2, pending)
+│   │   ├── review/
+│   │   ├── bookmarks/
+│   │   └── billing/
+│   └── api/                          # Route handlers (webhooks, health, cron)
+│
+├── src/                              # Clean Architecture layers
+│   ├── domain/                       # Entities, value objects, services (pure)
+│   ├── application/                  # Use cases + ports (interfaces)
+│   │   ├── ports/                    # Port-per-module + barrels (ports/index.ts, ports/repositories.ts)
 │   │   ├── use-cases/
-│   │   │   ├── index.ts
-│   │   │   ├── submit-answer.ts      # SubmitAnswerUseCase class
-│   │   │   ├── submit-answer.test.ts # Uses fakes, not mocks
-│   │   │   ├── get-next-question.ts
-│   │   │   ├── get-next-question.test.ts
-│   │   │   ├── start-practice-session.ts
-│   │   │   ├── start-practice-session.test.ts
-│   │   │   ├── end-practice-session.ts
-│   │   │   ├── end-practice-session.test.ts
-│   │   │   ├── get-user-stats.ts
-│   │   │   ├── get-missed-questions.ts
-│   │   │   ├── toggle-bookmark.ts
-│   │   │   ├── get-bookmarks.ts
-│   │   │   ├── create-checkout-session.ts
-│   │   │   ├── create-portal-session.ts
-│   │   │   └── check-entitlement.ts
-│   │   │
-│   │   ├── ports/                    # Interface definitions (Dependency Inversion)
-│   │   │   ├── repositories.ts       # QuestionRepository, AttemptRepository, etc.
-│   │   │   └── gateways.ts           # AuthGateway, PaymentGateway interfaces
-│   │   │
 │   │   ├── errors/
-│   │   │   └── application-errors.ts # ApplicationError class + codes
-│   │   │
-│   │   ├── test-helpers/
-│   │   │   └── fakes.ts              # FakeQuestionRepository, FakeAttemptRepository
-│   │   │
-│   │   └── index.ts
-│   │
-│   └── adapters/                     # LAYER 3: INTERFACE ADAPTERS
-│       │                             # Depends on application + domain
-│       │
-│       ├── repositories/             # Drizzle ORM implementations
-│       │   ├── index.ts
-│       │   ├── drizzle-question-repository.ts
-│       │   ├── drizzle-attempt-repository.ts
-│       │   ├── drizzle-user-repository.ts
-│       │   ├── drizzle-subscription-repository.ts
-│       │   ├── drizzle-practice-session-repository.ts
-│       │   └── drizzle-bookmark-repository.ts
-│       │
-│       ├── gateways/                 # External service wrappers
-│       │   ├── index.ts
-│       │   ├── clerk-auth-gateway.ts    # Implements AuthGateway
-│       │   └── stripe-payment-gateway.ts # Implements PaymentGateway
-│       │
-│       ├── controllers/              # Server Actions (entry points from Next.js)
-│       │   ├── index.ts
-│       │   ├── action-result.ts      # ActionResult<T>, ok(), err(), handleError()
-│       │   ├── question-controller.ts   # 'use server'; submitAnswer, getNextQuestion
-│       │   ├── practice-controller.ts   # 'use server'; start/end/review/history/marks/resume
-│       │   ├── stats-controller.ts      # 'use server'; getUserStats
-│       │   ├── billing-controller.ts    # 'use server'; createCheckoutSession, createPortalSession
-│       │   ├── review-controller.ts     # 'use server'; getMissedQuestions
-│       │   ├── bookmark-controller.ts   # 'use server'; toggleBookmark, getBookmarks
-│       │   ├── tag-controller.ts        # 'use server'; getTags
-│       │   ├── question-view-controller.ts # 'use server'; getQuestionBySlug
-│       │   ├── stripe-webhook-controller.ts # route-controller orchestration
-│       │   └── clerk-webhook-controller.ts  # route-controller orchestration
-│       │
-│       ├── presenters/               # Output formatting (optional)
-│       │   └── question-presenter.ts
-│       │
-│       └── index.ts
+│   │   └── test-helpers/
+│   │       └── fakes/                # Canonical fakes for unit/controller tests
+│   └── adapters/                     # Controllers, repositories, gateways
+│       ├── controllers/              # Server actions + controller helpers
+│       ├── repositories/             # Drizzle implementations + mappers
+│       ├── gateways/                 # Clerk/Stripe + rate limiter implementations
+│       └── shared/                   # Adapter-only helpers (idempotency, rate limits, DB types)
 │
-├── app/                              # LAYER 4: FRAMEWORKS (Next.js App Router)
-│   │
-│   ├── (marketing)/                  # Marketing route group
-│   │   ├── layout.tsx                # Public layout with <ClerkProvider>
-│   │   ├── page.tsx                  # Homepage with CTA
-│   │   ├── pricing/page.tsx          # Pricing cards
-│   │   ├── checkout/success/page.tsx # Post-checkout success
-│   │   ├── sign-in/[[...sign-in]]/page.tsx
-│   │   └── sign-up/[[...sign-up]]/page.tsx
-│   │
-│   ├── (app)/                        # App route group
-│   │   └── app/
-│   │       ├── layout.tsx            # Subscription gate (server-side)
-│   │       ├── dashboard/page.tsx
-│   │       ├── practice/page.tsx
-│   │       ├── practice/[sessionId]/page.tsx
-│   │       ├── review/page.tsx
-│   │       ├── bookmarks/page.tsx
-│   │       └── billing/page.tsx
-│   │
-│   ├── api/                          # Route handlers
-│   │   ├── health/route.ts
-│   │   └── stripe/webhook/route.ts
-│   │
-│   ├── layout.tsx                    # Root layout
-│   ├── globals.css
-│   └── error.tsx                     # Global error boundary
-│
-├── components/                       # LAYER 4: FRAMEWORKS (React Components)
-│   ├── ui/                           # shadcn/ui generated components
-│   ├── layout/
-│   │   ├── app-header.tsx
-│   │   └── marketing-header.tsx
-│   ├── markdown/
-│   │   └── markdown.tsx              # ReactMarkdown wrapper
-│   ├── question/
-│   │   ├── question-card.tsx
-│   │   ├── choice-radio-group.tsx
-│   │   ├── answer-feedback.tsx
-│   │   └── explanation-panel.tsx
-│   └── stats/
-│       ├── stat-card.tsx
-│       └── recent-activity-list.tsx
-│
-├── lib/                              # LAYER 4: FRAMEWORKS (Infrastructure)
-│   ├── container.ts                  # COMPOSITION ROOT — wires all dependencies
-│   ├── db.ts                         # Drizzle client singleton
-│   ├── env.ts                        # Zod-validated environment variables
-│   ├── stripe.ts                     # Stripe SDK init (server-only)
-│   ├── logger.ts                     # Pino structured logging
-│   ├── request-context.ts            # Request ID correlation
-│   └── markdown-config.ts            # rehype-sanitize schema
-│
-├── db/                               # LAYER 4: FRAMEWORKS (Database)
-│   ├── schema.ts                     # Drizzle schema (Section 3)
-│   └── migrations/
-│       ├── 0000_init.sql
-│       └── meta/
-│
+├── components/                       # Frameworks layer (React components)
+├── lib/                              # Frameworks layer (Infrastructure)
+├── db/                               # Frameworks layer (Database)
 ├── content/                          # Static content (MDX questions)
-│   └── questions/
-│       ├── opioids/
-│       ├── alcohol/
-│       └── general/
-│
 ├── scripts/
-│   └── seed.ts                       # Content seeding script
-│
-├── tests/                            # Integration + E2E tests
-│   ├── integration/
-│   │   ├── setup.ts                  # DB reset, test fixtures
-│   │   ├── db.integration.test.ts
-│   │   ├── repositories.integration.test.ts
-│   │   └── controllers.integration.test.ts
-│   └── e2e/
-│       ├── global.setup.ts           # Clerk auth state
-│       ├── auth.spec.ts
-│       ├── subscribe.spec.ts
-│       ├── practice.spec.ts
-│       ├── review.spec.ts
-│       └── bookmarks.spec.ts
-│
-├── proxy.ts                          # Clerk middleware
-├── next.config.ts
-├── drizzle.config.ts
-├── vitest.config.ts
-├── playwright.config.ts
-├── biome.json
-├── tsconfig.json
-├── package.json
-└── pnpm-lock.yaml
+└── tests/                            # Integration + E2E tests
 ```
 
 ### Import Rules (Enforced by Architecture)
@@ -2446,7 +2278,7 @@ As a subscribed user, I can answer questions and see explanations so that I can 
 * `components/question/*`
 * `src/domain/entities/question.ts`, `choice.ts`, `attempt.ts`
 * `src/domain/services/grading.ts` — gradeAnswer() pure function
-* `src/application/ports/repositories.ts` — QuestionRepository, AttemptRepository interfaces
+* `src/application/ports/*.ts` (re-exported via `src/application/ports/repositories.ts`) — QuestionRepository, AttemptRepository interfaces
 * `src/application/use-cases/submit-answer.ts`, `get-next-question.ts`, `toggle-bookmark.ts`
 * `src/adapters/repositories/drizzle-question-repository.ts`, `drizzle-attempt-repository.ts`
 * `src/adapters/controllers/question-controller.ts`, `bookmark-controller.ts`
@@ -2600,7 +2432,6 @@ As a subscribed user, I can see my stats and recent activity so that I can track
 * `src/application/use-cases/get-user-stats.ts`
 * `src/adapters/controllers/stats-controller.ts` — 'use server' exports
 * `app/(app)/app/dashboard/page.tsx`
-* `components/stats/*`
 * `lib/container.ts` (add stats factories)
 
 **Migrations:** none

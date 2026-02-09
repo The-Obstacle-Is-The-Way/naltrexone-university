@@ -52,8 +52,13 @@ We will **keep the flat structure for now** to avoid churn. We will restructure
 by aggregate when:
 
 - A new aggregate is introduced **or**
-- The repository count grows beyond the current 9 and the flat list starts to
-  hinder navigation.
+- The flat list starts to hinder navigation and we have a dedicated refactor
+  window (to avoid wide import churn during feature work).
+
+**Status note (2026-02-09):** `src/adapters/repositories/` is now well beyond
+single digits. We are intentionally **still** deferring the aggregate-folder
+restructure until it is scheduled as a focused refactor with strict
+API‑compatibility guarantees (barrel exports preserved).
 
 ### Compatibility Guarantee
 

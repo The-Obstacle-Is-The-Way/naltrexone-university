@@ -84,7 +84,7 @@ Deliver the core learning loop for subscribed users:
 - `components/question/*`
 - `src/domain/entities/question.ts`, `src/domain/entities/choice.ts`, `src/domain/entities/attempt.ts`
 - `src/domain/services/grading.ts`
-- `src/application/ports/repositories.ts` (QuestionRepository, AttemptRepository)
+- `src/application/ports/*.ts` (re-exported via `src/application/ports/repositories.ts`) — QuestionRepository, AttemptRepository
 - `src/application/use-cases/submit-answer.ts`, `get-next-question.ts`, `toggle-bookmark.ts`
 - `src/adapters/repositories/drizzle-question-repository.ts`, `drizzle-attempt-repository.ts`
 - `src/adapters/controllers/question-controller.ts`, `bookmark-controller.ts`
