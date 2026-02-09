@@ -47,7 +47,7 @@ export function MarketingLayout({
         </div>
       </header>
 
-      {children}
+      <main>{children}</main>
 
       <footer className="border-t border-border">
         <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
@@ -94,7 +94,7 @@ export function MarketingLayout({
             </div>
           </div>
           <div className="mt-8 border-t border-border pt-8 text-sm text-muted-foreground">
-            <p>&copy; Addiction Boards</p>
+            <p>&copy; {new Date().getFullYear()} Addiction Boards</p>
           </div>
         </div>
       </footer>

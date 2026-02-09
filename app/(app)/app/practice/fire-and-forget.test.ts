@@ -1,7 +1,11 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { fireAndForget } from './fire-and-forget';
 
 describe('fireAndForget', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it('does not call onError when promise resolves', async () => {
     const onError = vi.fn();
 

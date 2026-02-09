@@ -2,33 +2,12 @@
 
 import { ErrorCard } from '@/components/error-card';
 import { IncompleteSessionCard } from './components/incomplete-session-card';
-import {
-  PracticeSessionHistoryPanel,
-  type PracticeSessionHistoryPanelProps,
-} from './components/practice-session-history-panel';
-import {
-  PracticeSessionStarter,
-  type PracticeSessionStarterProps,
-} from './components/practice-session-starter';
-import {
-  PracticeView,
-  type PracticeViewProps,
-} from './components/practice-view';
+import { PracticeSessionHistoryPanel } from './components/practice-session-history-panel';
+import { PracticeSessionStarter } from './components/practice-session-starter';
+import { PracticeView } from './components/practice-view';
 import { fireAndForget, logUnhandledAsyncError } from './fire-and-forget';
 import { usePracticeQuestionFlow } from './hooks/use-practice-question-flow';
 import { usePracticeSessionControls } from './hooks/use-practice-session-controls';
-
-export {
-  IncompleteSessionCard,
-  PracticeSessionHistoryPanel,
-  PracticeSessionStarter,
-  PracticeView,
-};
-export type {
-  PracticeSessionHistoryPanelProps,
-  PracticeSessionStarterProps,
-  PracticeViewProps,
-};
 
 export default function PracticePageClient() {
   const sessionControls = usePracticeSessionControls();

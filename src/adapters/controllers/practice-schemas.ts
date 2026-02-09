@@ -93,4 +93,5 @@ export const GetIncompletePracticeSessionOutputSchema = z
     totalCount: z.number().int().min(1).max(MAX_PRACTICE_SESSION_QUESTIONS),
     startedAt: z.string().datetime(),
   })
+  .strict()
   .nullable();

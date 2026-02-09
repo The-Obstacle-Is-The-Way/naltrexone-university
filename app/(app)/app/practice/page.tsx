@@ -9,13 +9,13 @@ export type {
   PracticeSessionHistoryPanelProps,
   PracticeSessionStarterProps,
   PracticeViewProps,
-} from './practice-page-client';
+} from './components';
 export {
   IncompleteSessionCard,
   PracticeSessionHistoryPanel,
   PracticeSessionStarter,
   PracticeView,
-} from './practice-page-client';
+} from './components';
 
 export default function PracticePage() {
   return <PracticePageClient />;
