@@ -8,12 +8,9 @@ import {
   useState,
 } from 'react';
 import { usePracticeSessionNavigator } from '@/app/(app)/app/practice/[sessionId]/hooks/use-practice-session-navigator';
+import { usePracticeSessionReviewStageState } from '@/app/(app)/app/practice/[sessionId]/hooks/use-practice-session-review-stage-state';
 import { usePracticeSessionSummaryReview } from '@/app/(app)/app/practice/[sessionId]/hooks/use-practice-session-summary-review';
 import { endSession } from '@/app/(app)/app/practice/[sessionId]/practice-session-page-logic';
-import {
-  getActionResultErrorMessage,
-  getThrownErrorMessage,
-} from '@/app/(app)/app/practice/practice-logic';
 import type { LoadState } from '@/app/(app)/app/practice/practice-page-logic';
 import {
   type EndPracticeSessionOutput,
@@ -58,13 +55,6 @@ export function usePracticeSessionReviewStage(
   input: UsePracticeSessionReviewStageInput,
 ): UsePracticeSessionReviewStageOutput {
   const [summary, setSummary] = useState<EndPracticeSessionOutput | null>(null);
-  const [review, setReview] = useState<GetPracticeSessionReviewOutput | null>(
-    null,
-  );
-  const [reviewLoadState, setReviewLoadState] = useState<LoadState>({
-    status: 'idle',
-  });
-  const [isInReviewStage, setIsInReviewStage] = useState(false);
   const [navigatorReloadCount, setNavigatorReloadCount] = useState(0);
   const endSessionIdempotencyKeyRef = useRef(crypto.randomUUID());
 
@@ -90,84 +80,15 @@ export function usePracticeSessionReviewStage(
     ],
   );
 
-  const loadReview = useCallback(async (): Promise<void> => {
-    setReviewLoadState({ status: 'loading' });
-
-    let res: Awaited<ReturnType<typeof getPracticeSessionReview>>;
-    try {
-      res = await getPracticeSessionReview({ sessionId: input.sessionId });
-    } catch (error) {
-      if (!input.isMounted()) return;
-      setReviewLoadState({
-        status: 'error',
-        message: getThrownErrorMessage(error),
-      });
-      return;
-    }
-    if (!input.isMounted()) return;
-
-    if (!res.ok) {
-      setReviewLoadState({
-        status: 'error',
-        message: getActionResultErrorMessage(res),
-      });
-      return;
-    }
-
-    if (res.data.mode !== 'exam') {
-      setReview(null);
-      setReviewLoadState({ status: 'idle' });
-      setIsInReviewStage(false);
-      input.setSessionMode(res.data.mode);
-      void finalizeSession();
-      return;
-    }
-
-    setReview(res.data);
-    setReviewLoadState({ status: 'ready' });
-    setIsInReviewStage(true);
-    input.setSessionMode(res.data.mode);
-    input.resetQuestionState();
-  }, [
-    input.sessionId,
-    input.isMounted,
-    input.setSessionMode,
-    input.resetQuestionState,
+  const reviewStage = usePracticeSessionReviewStageState({
+    sessionId: input.sessionId,
+    isMounted: input.isMounted,
+    sessionMode: input.sessionMode,
+    setSessionMode: input.setSessionMode,
+    resetQuestionState: input.resetQuestionState,
+    loadSpecificQuestion: input.loadSpecificQuestion,
     finalizeSession,
-  ]);
-
-  const onOpenReviewQuestion = useCallback(
-    (questionId: string): void => {
-      setReview(null);
-      setReviewLoadState({ status: 'idle' });
-      setIsInReviewStage(true);
-      input.loadSpecificQuestion(questionId);
-    },
-    [input.loadSpecificQuestion],
-  );
-
-  const onFinalizeReview = useCallback(() => {
-    setReview(null);
-    setReviewLoadState({ status: 'idle' });
-    setIsInReviewStage(false);
-    void finalizeSession();
-  }, [finalizeSession]);
-
-  const onEndSession = useCallback(() => {
-    if (
-      input.sessionMode === 'exam' ||
-      isInReviewStage ||
-      input.sessionMode === null
-    ) {
-      void loadReview();
-      return;
-    }
-    void finalizeSession();
-  }, [input.sessionMode, isInReviewStage, loadReview, finalizeSession]);
-
-  const onRetryReview = useCallback(() => {
-    void loadReview();
-  }, [loadReview]);
+  });
 
   const onRetryNavigator = useCallback(() => {
     setNavigatorReloadCount((prev) => prev + 1);
@@ -183,7 +104,7 @@ export function usePracticeSessionReviewStage(
 
   const { navigator, navigatorLoadState } = usePracticeSessionNavigator({
     summary,
-    isInReviewStage,
+    isInReviewStage: reviewStage.isInReviewStage,
     sessionInfo: input.sessionInfo,
     sessionId: input.sessionId,
     questionId: input.questionId,
@@ -197,16 +118,16 @@ export function usePracticeSessionReviewStage(
     summary,
     summaryReview,
     summaryReviewLoadState,
-    review,
-    setReview,
-    reviewLoadState,
+    review: reviewStage.review,
+    setReview: reviewStage.setReview,
+    reviewLoadState: reviewStage.reviewLoadState,
     navigator,
     navigatorLoadState,
-    isInReviewStage,
-    onEndSession,
-    onRetryReview,
+    isInReviewStage: reviewStage.isInReviewStage,
+    onEndSession: reviewStage.onEndSession,
+    onRetryReview: reviewStage.onRetryReview,
     onRetryNavigator,
-    onOpenReviewQuestion,
-    onFinalizeReview,
+    onOpenReviewQuestion: reviewStage.onOpenReviewQuestion,
+    onFinalizeReview: reviewStage.onFinalizeReview,
   };
 }
