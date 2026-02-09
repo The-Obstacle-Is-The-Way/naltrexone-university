@@ -42,7 +42,7 @@ export async function AuthNav({
     <div className="flex items-center space-x-4">
       <Link
         href={ROUTES.PRICING}
-        className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+        className="rounded-md text-sm font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]"
       >
         Pricing
       </Link>
@@ -77,7 +77,7 @@ export async function AuthNav({
     <div className="flex items-center space-x-4">
       <Link
         href={primaryLink.href}
-        className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+        className="rounded-md text-sm font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]"
       >
         {primaryLink.label}
       </Link>

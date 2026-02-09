@@ -64,7 +64,7 @@ export function MarketingHomeShell({
           <div className="flex items-center gap-6">
             <Link
               href={ROUTES.HOME}
-              className="rounded-md text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+              className="rounded-md text-sm font-semibold focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]"
             >
               Addiction Boards
             </Link>
@@ -74,13 +74,13 @@ export function MarketingHomeShell({
             >
               <Link
                 href="#features"
-                className="rounded-md text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                className="rounded-md text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]"
               >
                 Features
               </Link>
               <Link
                 href={ROUTES.PRICING}
-                className="rounded-md text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                className="rounded-md text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]"
               >
                 Pricing
               </Link>
@@ -280,7 +280,7 @@ export function MarketingHomeShell({
               </MetallicCtaButton>
               <Link
                 href={ROUTES.SIGN_IN}
-                className="rounded-full border border-border bg-card px-6 py-3 text-sm font-medium text-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                className="rounded-full border border-border bg-card px-6 py-3 text-sm font-medium text-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]"
               >
                 Sign In
               </Link>
@@ -305,13 +305,13 @@ export function MarketingHomeShell({
                 <div className="mt-3 flex flex-col gap-2 text-sm text-muted-foreground">
                   <Link
                     href="#features"
-                    className="transition-colors hover:text-foreground"
+                    className="rounded-md transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]"
                   >
                     Features
                   </Link>
                   <Link
                     href={ROUTES.PRICING}
-                    className="transition-colors hover:text-foreground"
+                    className="rounded-md transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]"
                   >
                     Pricing
                   </Link>
@@ -322,13 +322,13 @@ export function MarketingHomeShell({
                 <div className="mt-3 flex flex-col gap-2 text-sm text-muted-foreground">
                   <Link
                     href={ROUTES.SIGN_IN}
-                    className="transition-colors hover:text-foreground"
+                    className="rounded-md transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]"
                   >
                     Sign in
                   </Link>
                   <Link
                     href={ROUTES.SIGN_UP}
-                    className="transition-colors hover:text-foreground"
+                    className="rounded-md transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]"
                   >
                     Sign up
                   </Link>

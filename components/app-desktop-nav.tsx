@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation';
 import { APP_NAV_ITEMS } from '@/components/app-nav-items';
 
 const focusVisibleRing =
-  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background';
+  'focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]';
 
 function normalizePathname(pathname: string | null): string | null {
   if (!pathname) return null;
