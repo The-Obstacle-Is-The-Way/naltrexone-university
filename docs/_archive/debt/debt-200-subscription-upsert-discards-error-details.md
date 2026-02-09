@@ -1,8 +1,9 @@
 # DEBT-200: Subscription Repository Upsert Discards Original Error Details
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P3
 **Date:** 2026-02-08
+**Resolved:** 2026-02-09
 
 ---
 
@@ -34,22 +35,29 @@ The `DrizzleSubscriptionRepository.upsert` method catches non-unique-violation e
 
 ## Resolution
 
-Include the original error as the `cause`:
+Preserve the original error as the `cause` on the thrown `ApplicationError`.
+
+This repo's `ApplicationError` previously only supported `fieldErrors`. The fix
+adds an optional `cause` to `ApplicationError` while keeping the existing
+constructor signature compatible (fieldErrors remains the third parameter).
 
 ```typescript
-throw new ApplicationError('INTERNAL_ERROR', 'Failed to upsert subscription', { cause: error });
+throw new ApplicationError(
+  'INTERNAL_ERROR',
+  'Failed to upsert subscription',
+  undefined,
+  { cause: error },
+);
 ```
 
-Or, better, log the original error before re-throwing:
-
-```typescript
-this.logger.error({ error }, 'Subscription upsert failed');
-throw new ApplicationError('INTERNAL_ERROR', 'Failed to upsert subscription');
-```
+This preserves diagnostic context for operators without changing the outward
+error contract.
 
 ## Verification
 
-- `pnpm typecheck && pnpm test --run`
+- [x] `pnpm typecheck && pnpm test --run`
+- [x] Repository regression test asserts `ApplicationError.cause` is the original DB error
+- [x] `ApplicationError` unit test asserts cause is preserved
 
 ## Related
 

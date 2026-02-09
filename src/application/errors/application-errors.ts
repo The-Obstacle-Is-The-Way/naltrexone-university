@@ -21,9 +21,14 @@ export class ApplicationError extends Error {
     public readonly code: ApplicationErrorCode,
     message: string,
     public readonly fieldErrors?: Record<string, string[]>,
+    options?: { cause?: unknown },
   ) {
     super(message);
     this.name = 'ApplicationError';
+
+    if (options?.cause !== undefined) {
+      (this as unknown as { cause: unknown }).cause = options.cause;
+    }
   }
 }
 

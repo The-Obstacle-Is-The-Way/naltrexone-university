@@ -202,11 +202,12 @@ describe('DrizzleSubscriptionRepository', () => {
   });
 
   it('throws INTERNAL_ERROR on unexpected database failures during upsert', async () => {
+    const dbError = new Error('db down');
     const db = {
       insert: () => ({
         values: () => ({
           onConflictDoUpdate: async () => {
-            throw new Error('db down');
+            throw dbError;
           },
         }),
       }),
@@ -234,6 +235,22 @@ describe('DrizzleSubscriptionRepository', () => {
         cancelAtPeriodEnd: false,
       }),
     ).rejects.toMatchObject({ code: 'INTERNAL_ERROR' });
+
+    try {
+      await repo.upsert({
+        userId: 'user_1',
+        externalSubscriptionId: 'sub_123',
+        plan: 'monthly',
+        status: 'active',
+        currentPeriodEnd: new Date('2026-12-31T00:00:00.000Z'),
+        cancelAtPeriodEnd: false,
+      });
+      throw new Error('Expected upsert to throw');
+    } catch (error) {
+      expect(error).toBeInstanceOf(ApplicationError);
+      expect(error).toMatchObject({ code: 'INTERNAL_ERROR' });
+      expect((error as Error).cause).toBe(dbError);
+    }
   });
 
   it('findByExternalSubscriptionId returns null when missing', async () => {

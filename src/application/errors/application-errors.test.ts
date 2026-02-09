@@ -36,6 +36,15 @@ describe('ApplicationError', () => {
 
     expect(error.fieldErrors).toEqual({ email: ['Required'] });
   });
+
+  it('preserves cause when provided', () => {
+    const cause = new Error('db down');
+    const error = new ApplicationError('INTERNAL_ERROR', 'Boom', undefined, {
+      cause,
+    });
+
+    expect((error as Error).cause).toBe(cause);
+  });
 });
 
 describe('isApplicationError', () => {
