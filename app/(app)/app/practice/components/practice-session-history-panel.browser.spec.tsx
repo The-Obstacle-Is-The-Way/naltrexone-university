@@ -31,6 +31,7 @@ test('renders completed sessions and opens selected session', async () => {
   await expect.element(screen.getByText('Exam')).toBeVisible();
   await expect.element(screen.getByText('80%')).toBeVisible();
   await expect.element(screen.getByText('20m')).toBeVisible();
+  await expect.element(screen.getByText('Feb 7, 2026')).toBeVisible();
   await screen.getByRole('button', { name: 'View breakdown' }).click();
 
   expect(onOpenSession).toHaveBeenCalledWith('session-1');
@@ -41,7 +42,30 @@ test('renders selected session breakdown and review status', async () => {
     <PracticeSessionHistoryPanel
       status="idle"
       error={null}
-      rows={[]}
+      rows={[
+        {
+          sessionId: 'session-1',
+          mode: 'exam',
+          questionCount: 10,
+          answered: 10,
+          correct: 8,
+          accuracy: 0.8,
+          durationSeconds: 1200,
+          startedAt: '2026-02-07T00:00:00.000Z',
+          endedAt: '2026-02-07T00:20:00.000Z',
+        },
+        {
+          sessionId: 'session-2',
+          mode: 'tutor',
+          questionCount: 10,
+          answered: 10,
+          correct: 8,
+          accuracy: 0.8,
+          durationSeconds: 1200,
+          startedAt: '2026-02-08T00:00:00.000Z',
+          endedAt: '2026-02-08T00:20:00.000Z',
+        },
+      ]}
       selectedSessionId="session-1"
       selectedReview={{
         sessionId: 'session-1',
@@ -76,13 +100,14 @@ test('renders selected session breakdown and review status', async () => {
     />,
   );
 
-  await expect.element(screen.getByText('Session breakdown')).toBeVisible();
-  await expect
-    .element(
-      screen.getByText('The patient presents with opioid withdrawal symptoms.'),
-    )
-    .toBeVisible();
-  await expect
-    .element(screen.getByText('[Question no longer available]'))
-    .toBeVisible();
+  const hideBreakdownButton = screen
+    .getByRole('button', { name: 'Hide breakdown' })
+    .element();
+  const selectedRow = hideBreakdownButton.closest('li');
+
+  expect(selectedRow).not.toBeNull();
+  expect(selectedRow?.textContent).toContain(
+    'The patient presents with opioid withdrawal symptoms.',
+  );
+  expect(selectedRow?.textContent).toContain('[Question no longer available]');
 });

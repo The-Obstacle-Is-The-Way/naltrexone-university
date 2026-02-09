@@ -33,10 +33,15 @@ export function SessionBreakdownList({
               </span>
             </>
           )}
-          <span>{row.isAnswered ? 'Answered' : 'Unanswered'}</span>
-          {row.isAnswered && row.isCorrect !== null ? (
-            <span>{row.isCorrect ? 'Correct' : 'Incorrect'}</span>
-          ) : null}
+          {row.isAnswered ? (
+            row.isCorrect === true ? (
+              <span className="text-emerald-500">Correct</span>
+            ) : row.isCorrect === false ? (
+              <span className="text-destructive">Incorrect</span>
+            ) : null
+          ) : (
+            <span className="text-muted-foreground/60">Unanswered</span>
+          )}
         </li>
       ))}
     </ul>
