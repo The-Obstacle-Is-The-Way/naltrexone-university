@@ -1,85 +1,26 @@
 import { redirect } from 'next/navigation';
 import type { JSX } from 'react';
 import { ROUTES } from '@/lib/routes';
-import {
-  getSubscriptionPlanFromPriceId,
-  type StripePriceIds,
-} from '@/src/adapters/config/stripe-prices';
-import {
-  isValidStripeSubscriptionStatus,
-  stripeSubscriptionStatusToSubscriptionStatus,
-} from '@/src/adapters/gateways/stripe';
+import { getSubscriptionPlanFromPriceId } from '@/src/adapters/config/stripe-prices';
+import { stripeSubscriptionStatusToSubscriptionStatus } from '@/src/adapters/gateways/stripe';
 import { isTransientExternalError, retry } from '@/src/adapters/shared/retry';
-import type { AuthGateway } from '@/src/application/ports/gateways';
-import type {
-  StripeCustomerRepository,
-  SubscriptionRepository,
-} from '@/src/application/ports/repositories';
 import {
   isEntitledStatus,
   type SubscriptionStatus,
 } from '@/src/domain/value-objects';
-
-type StripeCheckoutSessionLike = { customer?: unknown; subscription?: unknown };
-
-type StripeSubscriptionLike = {
-  id?: string;
-  customer?: unknown;
-  status?: string;
-  cancel_at_period_end?: boolean;
-  metadata?: Record<string, string>;
-  items?: {
-    data?: Array<{
-      current_period_end?: number;
-      price?: { id?: string };
-    }>;
-  };
-};
-
-type StripeClientLike = {
-  checkout: {
-    sessions: {
-      retrieve: (
-        sessionId: string,
-        params?: { expand?: string[] },
-      ) => Promise<StripeCheckoutSessionLike>;
-    };
-  };
-  subscriptions: {
-    retrieve: (subscriptionId: string) => Promise<StripeSubscriptionLike>;
-  };
-};
-
-type ClerkAuthLike = {
-  userId: string | null;
-  redirectToSignIn: (opts: { returnBackUrl: string | URL }) => never;
-};
-
-type CheckoutSuccessLogger = {
-  error: (context: Record<string, unknown>, message: string) => void;
-  warn?: (context: Record<string, unknown>, message: string) => void;
-};
-
-export type CheckoutSuccessTransaction = {
-  stripeCustomers: StripeCustomerRepository;
-  subscriptions: SubscriptionRepository;
-};
-
-export type CheckoutSuccessDeps = {
-  authGateway: AuthGateway;
-  getClerkAuth: () => Promise<ClerkAuthLike>;
-  logger: CheckoutSuccessLogger;
-  stripe: StripeClientLike;
-  priceIds: StripePriceIds;
-  appUrl: string;
-  transaction: <T>(
-    fn: (tx: CheckoutSuccessTransaction) => Promise<T>,
-  ) => Promise<T>;
-};
-
-type SyncCheckoutSuccessInput = {
-  sessionId: string | null;
-};
+import {
+  type CheckoutSuccessAssertions,
+  createCheckoutSuccessAssertions,
+} from './checkout-success-assertions';
+import { getCheckoutSuccessDeps } from './checkout-success-deps';
+import type {
+  CheckoutSuccessDeps,
+  CheckoutSuccessSearchParams,
+  CheckoutSuccessTransaction,
+  SyncCheckoutSuccessInput,
+} from './checkout-success-types';
+export type { CheckoutSuccessDeps, CheckoutSuccessTransaction };
+export { getCheckoutSuccessDeps };
 
 const CHECKOUT_ERROR_ROUTE = `${ROUTES.PRICING}?checkout=error`;
 const STRIPE_RETRY_OPTIONS = {
@@ -88,69 +29,6 @@ const STRIPE_RETRY_OPTIONS = {
   factor: 2,
   maxDelayMs: 1000,
 } as const;
-
-type CheckoutSuccessSearchParams = {
-  session_id?: string;
-};
-
-type CheckoutSuccessContainerLike = {
-  createAuthGateway: () => AuthGateway;
-  logger: CheckoutSuccessLogger;
-  env: {
-    NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY: string;
-    NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL: string;
-    NEXT_PUBLIC_APP_URL: string;
-  };
-  db: {
-    transaction: <T>(fn: (tx: unknown) => Promise<T>) => Promise<T>;
-  };
-  createStripeCustomerRepository: (tx: unknown) => StripeCustomerRepository;
-  createSubscriptionRepository: (tx: unknown) => SubscriptionRepository;
-};
-
-export type CheckoutSuccessModuleLoaders = {
-  loadContainer: () => Promise<{ createContainer: () => unknown }>;
-  loadStripe: () => Promise<{ stripe: StripeClientLike }>;
-  loadClerkServer: () => Promise<{ auth: () => Promise<ClerkAuthLike> }>;
-};
-
-const defaultModuleLoaders: CheckoutSuccessModuleLoaders = {
-  loadContainer: () => import('@/lib/container'),
-  loadStripe: () => import('@/lib/stripe'),
-  loadClerkServer: () => import('@clerk/nextjs/server'),
-};
-
-export async function getCheckoutSuccessDeps(
-  deps?: CheckoutSuccessDeps,
-  loaders: CheckoutSuccessModuleLoaders = defaultModuleLoaders,
-): Promise<CheckoutSuccessDeps> {
-  if (deps) return deps;
-
-  const { createContainer } = await loaders.loadContainer();
-  const { stripe } = await loaders.loadStripe();
-  const { auth } = await loaders.loadClerkServer();
-
-  const container = createContainer() as CheckoutSuccessContainerLike;
-
-  return {
-    authGateway: container.createAuthGateway(),
-    getClerkAuth: auth,
-    logger: container.logger,
-    stripe,
-    priceIds: {
-      monthly: container.env.NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY,
-      annual: container.env.NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL,
-    },
-    appUrl: container.env.NEXT_PUBLIC_APP_URL,
-    transaction: async (fn) =>
-      container.db.transaction(async (tx) =>
-        fn({
-          stripeCustomers: container.createStripeCustomerRepository(tx),
-          subscriptions: container.createSubscriptionRepository(tx),
-        }),
-      ),
-  };
-}
 
 function getStripeId(value: unknown): string | null {
   if (typeof value === 'string') return value;
@@ -194,62 +72,15 @@ export async function syncCheckoutSuccess(
     return redirectFn(CHECKOUT_ERROR_ROUTE);
   };
 
-  function assertNotNull<T>(
-    value: T | null,
-    reason: string,
-    context: Record<string, unknown>,
-  ): asserts value is T {
-    if (value === null) {
-      fail(reason, context);
-    }
-  }
-
-  function assertNonEmptyString(
-    value: unknown,
-    reason: string,
-    context: Record<string, unknown>,
-  ): asserts value is string {
-    if (typeof value !== 'string' || value.length === 0) {
-      fail(reason, context);
-    }
-  }
-
-  function assertNumber(
-    value: unknown,
-    reason: string,
-    context: Record<string, unknown>,
-  ): asserts value is number {
-    if (typeof value !== 'number') {
-      fail(reason, context);
-    }
-  }
-
-  function assertBoolean(
-    value: unknown,
-    reason: string,
-    context: Record<string, unknown>,
-  ): asserts value is boolean {
-    if (typeof value !== 'boolean') {
-      fail(reason, context);
-    }
-  }
-
-  function assertStripeSubscriptionStatus(
-    value: string,
-    reason: string,
-    context: Record<string, unknown>,
-  ): asserts value is Parameters<
-    typeof stripeSubscriptionStatusToSubscriptionStatus
-  >[0] {
-    if (!isValidStripeSubscriptionStatus(value)) {
-      fail(reason, context);
-    }
-  }
+  const assertions: CheckoutSuccessAssertions =
+    createCheckoutSuccessAssertions(fail);
 
   const sessionId = input.sessionId;
   // Users can land here via direct navigation or a tampered URL; treat missing
   // session_id as an invalid checkout completion.
-  assertNonEmptyString(sessionId, 'missing_session_id', { sessionId });
+  assertions.assertNonEmptyString(sessionId, 'missing_session_id', {
+    sessionId,
+  });
 
   const clerkAuth = await d.getClerkAuth();
   if (!clerkAuth.userId) {
@@ -286,12 +117,12 @@ export async function syncCheckoutSuccess(
   const stripeCustomerId = getStripeId(session.customer);
   const subscriptionId = getStripeId(session.subscription);
   // A completed subscription checkout must have both a customer and a subscription.
-  assertNonEmptyString(stripeCustomerId, 'missing_stripe_ids', {
+  assertions.assertNonEmptyString(stripeCustomerId, 'missing_stripe_ids', {
     sessionId,
     stripeCustomerId,
     subscriptionId,
   });
-  assertNonEmptyString(subscriptionId, 'missing_stripe_ids', {
+  assertions.assertNonEmptyString(subscriptionId, 'missing_stripe_ids', {
     sessionId,
     stripeCustomerId,
     subscriptionId,
@@ -318,7 +149,7 @@ export async function syncCheckoutSuccess(
   );
 
   const metadataUserId = subscription.metadata?.user_id;
-  assertNonEmptyString(metadataUserId, 'missing_user_id', {
+  assertions.assertNonEmptyString(metadataUserId, 'missing_user_id', {
     sessionId,
     metadataUserId: metadataUserId ?? null,
   });
@@ -333,14 +164,18 @@ export async function syncCheckoutSuccess(
 
   const stripeStatus = subscription.status;
   // Reject malformed subscription objects and unexpected statuses.
-  assertNonEmptyString(stripeStatus, 'invalid_subscription_status', {
+  assertions.assertNonEmptyString(stripeStatus, 'invalid_subscription_status', {
     sessionId,
     status: stripeStatus ?? null,
   });
-  assertStripeSubscriptionStatus(stripeStatus, 'invalid_subscription_status', {
-    sessionId,
-    status: stripeStatus,
-  });
+  assertions.assertStripeSubscriptionStatus(
+    stripeStatus,
+    'invalid_subscription_status',
+    {
+      sessionId,
+      status: stripeStatus,
+    },
+  );
   const status: SubscriptionStatus =
     stripeSubscriptionStatusToSubscriptionStatus(stripeStatus);
 
@@ -348,28 +183,32 @@ export async function syncCheckoutSuccess(
 
   const currentPeriodEndSeconds = subscriptionItem?.current_period_end;
   // Entitlement depends on a current billing period end timestamp.
-  assertNumber(currentPeriodEndSeconds, 'missing_current_period_end', {
-    sessionId,
-    currentPeriodEndSeconds: currentPeriodEndSeconds ?? null,
-  });
+  assertions.assertNumber(
+    currentPeriodEndSeconds,
+    'missing_current_period_end',
+    {
+      sessionId,
+      currentPeriodEndSeconds: currentPeriodEndSeconds ?? null,
+    },
+  );
 
   const cancelAtPeriodEnd = subscription.cancel_at_period_end;
   // We persist cancel-at-period-end to display accurately in billing UI.
-  assertBoolean(cancelAtPeriodEnd, 'missing_cancel_at_period_end', {
+  assertions.assertBoolean(cancelAtPeriodEnd, 'missing_cancel_at_period_end', {
     sessionId,
     cancelAtPeriodEnd: cancelAtPeriodEnd ?? null,
   });
 
   const priceId = subscriptionItem?.price?.id;
   // We map the Stripe price id back to a domain plan (monthly/annual).
-  assertNonEmptyString(priceId, 'missing_price_id', {
+  assertions.assertNonEmptyString(priceId, 'missing_price_id', {
     sessionId,
     priceId: priceId ?? null,
   });
 
   const plan = getSubscriptionPlanFromPriceId(priceId, d.priceIds);
   // Mismatched price IDs usually means environment misconfiguration.
-  assertNotNull(plan, 'unknown_plan', {
+  assertions.assertNotNull(plan, 'unknown_plan', {
     sessionId,
     priceId,
     configuredPriceIds: d.priceIds,
