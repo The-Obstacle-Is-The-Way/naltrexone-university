@@ -75,7 +75,16 @@ export const EndPracticeSessionOutputSchema = z
         accuracy: z.number().min(0).max(1),
         durationSeconds: z.number().int().min(0),
       })
-      .strict(),
+      .strict()
+      .superRefine((totals, ctx) => {
+        if (totals.correct > totals.answered) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: 'correct must be <= answered',
+            path: ['correct'],
+          });
+        }
+      }),
   })
   .strict();
 

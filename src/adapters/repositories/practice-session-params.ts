@@ -35,7 +35,15 @@ const practiceSessionParamsSchema = z
     difficulties: z
       .array(questionDifficultySchema)
       .max(MAX_PRACTICE_SESSION_DIFFICULTY_FILTERS),
-    questionIds: z.array(z.string().min(1)).max(MAX_PRACTICE_SESSION_QUESTIONS),
+    questionIds: z
+      .array(z.string().min(1))
+      .max(MAX_PRACTICE_SESSION_QUESTIONS)
+      .refine(
+        (questionIds) => new Set(questionIds).size === questionIds.length,
+        {
+          message: 'questionIds must be unique',
+        },
+      ),
     questionStates: z
       .array(practiceSessionQuestionStateSchema)
       .max(MAX_PRACTICE_SESSION_QUESTIONS)

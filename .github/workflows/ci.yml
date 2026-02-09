@@ -111,7 +111,7 @@ jobs:
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          files: ./coverage/coverage-final.json,./coverage/integration/coverage-final.json,./coverage/browser/coverage-final.json
+          files: ./coverage/**/coverage-final.json
           fail_ci_if_error: false
 
       - name: Build

@@ -170,6 +170,6 @@ describe('usePracticeSessionReviewStageState (browser)', () => {
     await expect
       .poll(() => vi.mocked(input.finalizeSession).mock.calls.length)
       .toBe(1);
-    expect(harness.result.current.isInReviewStage).toBe(false);
+    await expect.poll(() => harness.result.current.isInReviewStage).toBe(false);
   });
 });
