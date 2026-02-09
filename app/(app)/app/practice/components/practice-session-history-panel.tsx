@@ -4,8 +4,8 @@ import type {
   GetPracticeSessionReviewOutput,
   GetSessionHistoryOutput,
 } from '@/src/adapters/controllers/practice-controller';
-import { getStemPreview } from '@/src/adapters/shared/stem-preview';
 import type { LoadState } from '../practice-page-logic';
+import { SessionBreakdownList } from './session-breakdown-list';
 
 export type PracticeSessionHistoryPanelProps = {
   status: 'idle' | 'loading' | 'error';
@@ -130,27 +130,7 @@ export function PracticeSessionHistoryPanel(
             </div>
           ) : null}
           {props.selectedReview ? (
-            <ul className="space-y-2">
-              {props.selectedReview.rows.map((row) => (
-                <li
-                  key={row.questionId}
-                  className="text-sm text-muted-foreground flex items-center gap-2"
-                >
-                  <span className="font-medium text-foreground">
-                    {row.order}.
-                  </span>
-                  <span className="font-medium text-foreground">
-                    {row.isAvailable
-                      ? getStemPreview(row.stemMd, 80)
-                      : '[Question no longer available]'}
-                  </span>
-                  <span>{row.isAnswered ? 'Answered' : 'Unanswered'}</span>
-                  {row.isAnswered && row.isCorrect !== null ? (
-                    <span>{row.isCorrect ? 'Correct' : 'Incorrect'}</span>
-                  ) : null}
-                </li>
-              ))}
-            </ul>
+            <SessionBreakdownList rows={props.selectedReview.rows} />
           ) : null}
         </div>
       ) : null}

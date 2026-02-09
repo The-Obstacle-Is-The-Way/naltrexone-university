@@ -609,6 +609,7 @@ describe('app/(app)/app/practice', () => {
 
     expect(html).toContain('Session breakdown');
     expect(html).toContain('Stem for q1');
+    expect(html).toContain('href="/app/questions/q-1?from=practice"');
     expect(html).toContain('[Question no longer available]');
     expect(html).toContain('Incorrect');
   });

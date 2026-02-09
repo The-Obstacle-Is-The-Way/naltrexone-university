@@ -121,6 +121,7 @@ describe('app/(app)/app/practice/[sessionId]', () => {
 
     expect(html).toContain('Question breakdown');
     expect(html).toContain('Stem for q1');
+    expect(html).toContain('href="/app/questions/q-1?from=practice"');
     expect(html).toContain('[Question no longer available]');
   });
 

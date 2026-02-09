@@ -6,7 +6,7 @@ import type {
   EndPracticeSessionOutput,
   GetPracticeSessionReviewOutput,
 } from '@/src/adapters/controllers/practice-controller';
-import { getStemPreview } from '@/src/adapters/shared/stem-preview';
+import { SessionBreakdownList } from '../../components/session-breakdown-list';
 import type { LoadState } from '../../practice-page-logic';
 
 function formatDuration(seconds: number): string {
@@ -86,27 +86,9 @@ export function SessionSummaryView({
           </div>
         ) : null}
         {summaryReview ? (
-          <ul className="mt-3 space-y-2">
-            {summaryReview.rows.map((row) => (
-              <li
-                key={row.questionId}
-                className="flex items-center gap-2 text-sm text-muted-foreground"
-              >
-                <span className="font-medium text-foreground">
-                  {row.order}.
-                </span>
-                <span className="font-medium text-foreground">
-                  {row.isAvailable
-                    ? getStemPreview(row.stemMd, 80)
-                    : '[Question no longer available]'}
-                </span>
-                <span>{row.isAnswered ? 'Answered' : 'Unanswered'}</span>
-                {row.isAnswered && row.isCorrect !== null ? (
-                  <span>{row.isCorrect ? 'Correct' : 'Incorrect'}</span>
-                ) : null}
-              </li>
-            ))}
-          </ul>
+          <div className="mt-3">
+            <SessionBreakdownList rows={summaryReview.rows} />
+          </div>
         ) : null}
       </Card>
 
