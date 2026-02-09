@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
-
+import { ROUTES, toPracticeSessionRoute, toQuestionRoute } from '@/lib/routes';
 import { DashboardView, renderDashboard } from './page';
 
 describe('app/(app)/app/dashboard', () => {
@@ -39,10 +39,12 @@ describe('app/(app)/app/dashboard', () => {
     expect(html).toContain('60%');
     expect(html).toContain('3');
     expect(html).toContain('Stem for q1');
-    expect(html).not.toContain('q-1');
+    expect(html).toContain(`href="${toQuestionRoute('q-1')}"`);
+    expect(html).toContain('Easy');
+    expect(html).not.toContain('>q-1<');
   });
 
-  it('hides recent activity section when empty', () => {
+  it('renders a helpful empty state when recent activity is empty', () => {
     const html = renderToStaticMarkup(
       <DashboardView
         stats={{
@@ -57,7 +59,9 @@ describe('app/(app)/app/dashboard', () => {
     );
 
     expect(html).toContain('Dashboard');
-    expect(html).not.toContain('Recent activity');
+    expect(html).toContain('Recent activity');
+    expect(html).toContain('No activity yet.');
+    expect(html).toContain(`href="${ROUTES.APP_PRACTICE}"`);
   });
 
   it('renders placeholder text for unavailable recent activity rows', () => {
@@ -129,6 +133,7 @@ describe('app/(app)/app/dashboard', () => {
 
     expect(html).toContain('Exam session');
     expect(html).toContain('1/2 correct');
+    expect(html).toContain(`href="${toPracticeSessionRoute('session_1')}"`);
   });
 
   it('renders an error state when stats load fails', () => {
