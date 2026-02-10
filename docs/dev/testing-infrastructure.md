@@ -168,9 +168,9 @@ agent-browser close
 
 ### Authenticated Exploration
 
-By default, `agent-browser` does **not** load `.env.local`. **Do NOT run `source .env.local`** — it will silently fail due to non-POSIX syntax. See [agent-browser.md](./agent-browser.md) for the full auth guide with multiple options.
+By default, `agent-browser` does **not** load `.env.local`. For authenticated exploration, the recommended approach is loading a Playwright `storageState` file (see below). For local-only workflows, you can also export env vars in your current shell session (e.g., `set -a && source .env.local && set +a`) and then run your `agent-browser …` commands in that same shell.
 
-The recommended approach is loading a Playwright `storageState` file:
+See [agent-browser.md](./agent-browser.md) for a focused quick reference and multiple auth options.
 
 1) Create a temporary script that signs in via Clerk and saves `storageState`:
 
