@@ -126,7 +126,7 @@ Dashboard
 1. **Is Quick Practice intended to be ephemeral?** If so, Option E is valid. If users expect to track all practice activity, Options A-D are needed.
 2. **Would a "Question Log" (Option B) confuse the "Missed Questions" mental model?** The current tab name is immediately clear — renaming it could hurt discoverability.
 3. **How many ad-hoc attempts exist relative to session attempts?** If Quick Practice is rarely used, the gap is low-impact.
-4. **Should the Dashboard show Quick Practice stats in the aggregate cards?** Currently "Total answered" and "Overall accuracy" — do these include ad-hoc? (Need to verify.)
+4. **Dashboard stats already include ad-hoc.** Verified: "Total answered", "Overall accuracy", "Answered (7 days)", "Accuracy (7 days)" all count Quick Practice attempts (no `practiceSessionId` filter in `countByUserId` / `countCorrectByUserId`). So aggregate numbers are honest — it's only the *detailed review* that has the gap.
 
 ---
 

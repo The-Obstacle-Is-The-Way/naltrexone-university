@@ -14,7 +14,6 @@ describe('PracticeSessionStarter', () => {
         availableTags={[]}
         sessionStartStatus="idle"
         sessionStartError={null}
-        isPending={false}
         onToggleDifficulty={() => undefined}
         onToggleTag={() => undefined}
         onSessionModeChange={() => undefined}
@@ -37,7 +36,6 @@ describe('PracticeSessionStarter', () => {
         availableTags={[]}
         sessionStartStatus="idle"
         sessionStartError={null}
-        isPending={false}
         onToggleDifficulty={() => undefined}
         onToggleTag={() => undefined}
         onSessionModeChange={() => undefined}
@@ -67,7 +65,6 @@ describe('PracticeSessionStarter', () => {
         ]}
         sessionStartStatus="idle"
         sessionStartError={null}
-        isPending={false}
         onToggleDifficulty={() => undefined}
         onToggleTag={() => undefined}
         onSessionModeChange={() => undefined}
@@ -106,7 +103,6 @@ describe('PracticeSessionStarter', () => {
         ]}
         sessionStartStatus="idle"
         sessionStartError={null}
-        isPending={false}
         onToggleDifficulty={() => undefined}
         onToggleTag={() => undefined}
         onSessionModeChange={() => undefined}

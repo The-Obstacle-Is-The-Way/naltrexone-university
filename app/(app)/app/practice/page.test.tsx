@@ -382,7 +382,6 @@ describe('app/(app)/app/practice', () => {
         availableTags={[]}
         sessionStartStatus="error"
         sessionStartError="No questions"
-        isPending={false}
         onToggleDifficulty={() => undefined}
         onToggleTag={() => undefined}
         onSessionModeChange={() => undefined}
@@ -408,7 +407,6 @@ describe('app/(app)/app/practice', () => {
         availableTags={[]}
         sessionStartStatus="loading"
         sessionStartError={null}
-        isPending={false}
         onToggleDifficulty={() => undefined}
         onToggleTag={() => undefined}
         onSessionModeChange={() => undefined}
@@ -463,7 +461,6 @@ describe('app/(app)/app/practice', () => {
         ]}
         sessionStartStatus="idle"
         sessionStartError={null}
-        isPending={false}
         onToggleDifficulty={() => undefined}
         onToggleTag={() => undefined}
         onSessionModeChange={() => undefined}
@@ -492,7 +489,6 @@ describe('app/(app)/app/practice', () => {
         availableTags={[]}
         sessionStartStatus="idle"
         sessionStartError={null}
-        isPending={false}
         onToggleDifficulty={() => undefined}
         onToggleTag={() => undefined}
         onSessionModeChange={() => undefined}
@@ -520,7 +516,6 @@ describe('app/(app)/app/practice', () => {
         availableTags={[]}
         sessionStartStatus="idle"
         sessionStartError={null}
-        isPending={false}
         onToggleDifficulty={() => undefined}
         onToggleTag={() => undefined}
         onSessionModeChange={() => undefined}
