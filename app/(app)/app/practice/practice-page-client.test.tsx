@@ -9,10 +9,17 @@ vi.mock('next/link', () => ({
 vi.mock('./components', () => ({
   IncompleteSessionCard: () => null,
   PracticeSessionHistoryPanel: () => null,
-  PracticeSessionStarter: (props: { isPending: boolean }) => (
-    <div data-testid="starter-pending">{String(props.isPending)}</div>
+  PracticeSessionStarter: (props: {
+    isPending: boolean;
+    sessionStartStatus: string;
+  }) => (
+    <div data-testid="starter-props">
+      {props.sessionStartStatus}:{String(props.isPending)}
+    </div>
   ),
 }));
+
+let sessionStartStatus: 'idle' | 'loading' | 'error' = 'loading';
 
 vi.mock('./hooks/use-practice-session-controls', () => ({
   usePracticeSessionControls: () => ({
@@ -21,7 +28,7 @@ vi.mock('./hooks/use-practice-session-controls', () => ({
     sessionCount: 20,
     tagLoadStatus: 'idle',
     availableTags: [],
-    sessionStartStatus: 'loading',
+    sessionStartStatus,
     sessionStartError: null,
     incompleteSessionStatus: 'idle',
     incompleteSessionError: null,
@@ -43,10 +50,19 @@ vi.mock('./hooks/use-practice-session-controls', () => ({
 }));
 
 describe('PracticePageClient', () => {
-  it('passes sessionStartStatus to PracticeSessionStarter isPending prop', async () => {
+  it('passes isPending=false to PracticeSessionStarter while sessionStartStatus is loading', async () => {
+    sessionStartStatus = 'loading';
     const PracticePageClient = (await import('./practice-page-client')).default;
 
     const html = renderToStaticMarkup(<PracticePageClient />);
-    expect(html).toContain('data-testid="starter-pending">true<');
+    expect(html).toContain('data-testid="starter-props">loading:false<');
+  });
+
+  it('passes isPending=false to PracticeSessionStarter while sessionStartStatus is idle', async () => {
+    sessionStartStatus = 'idle';
+    const PracticePageClient = (await import('./practice-page-client')).default;
+
+    const html = renderToStaticMarkup(<PracticePageClient />);
+    expect(html).toContain('data-testid="starter-props">idle:false<');
   });
 });

@@ -63,6 +63,7 @@ export function useQuestionFlowCore(
   const [draftSelectedChoices, setDraftSelectedChoices] = useState<
     Map<string, string>
   >(() => new Map());
+  const draftSelectedChoicesRef = useRef(draftSelectedChoices);
   const [loadState, setLoadState] = useState<LoadState>({ status: 'idle' });
   const [isPending, startTransition] = useTransition();
   const [questionLoadedAt, setQuestionLoadedAt] = useState<number | null>(null);
@@ -100,6 +101,17 @@ export function useQuestionFlowCore(
     });
   }, [isAnswered, loadState, question, selectedChoiceId, submitResult]);
 
+  const setDraftSelectedChoicesAndRef = useCallback(
+    (update: (prev: Map<string, string>) => Map<string, string>) => {
+      setDraftSelectedChoices((prev) => {
+        const next = update(prev);
+        draftSelectedChoicesRef.current = next;
+        return next;
+      });
+    },
+    [],
+  );
+
   useEffect(() => {
     if (!submitResult) return;
     setIsAnswered(true);
@@ -122,7 +134,7 @@ export function useQuestionFlowCore(
     if (typeof sessionSelectedChoiceId === 'string') {
       setSelectedChoiceId(sessionSelectedChoiceId);
       setIsAnswered(true);
-      setDraftSelectedChoices((prev) => {
+      setDraftSelectedChoicesAndRef((prev) => {
         if (!prev.has(question.questionId)) return prev;
         const next = new Map(prev);
         next.delete(question.questionId);
@@ -131,9 +143,11 @@ export function useQuestionFlowCore(
       return;
     }
 
-    setSelectedChoiceId(draftSelectedChoices.get(question.questionId) ?? null);
+    setSelectedChoiceId(
+      draftSelectedChoicesRef.current.get(question.questionId) ?? null,
+    );
     setIsAnswered(false);
-  }, [draftSelectedChoices, loadState.status, question]);
+  }, [loadState.status, question, setDraftSelectedChoicesAndRef]);
 
   const onSelectChoice = useCallback(
     (choiceId: string) => {
@@ -146,13 +160,13 @@ export function useQuestionFlowCore(
       );
       if (!changed) return;
 
-      setDraftSelectedChoices((prev) => {
+      setDraftSelectedChoicesAndRef((prev) => {
         const next = new Map(prev);
         next.set(question.questionId, choiceId);
         return next;
       });
     },
-    [isAnswered, question, submitResult],
+    [isAnswered, question, setDraftSelectedChoicesAndRef, submitResult],
   );
 
   return {
