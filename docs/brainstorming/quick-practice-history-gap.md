@@ -2,7 +2,7 @@
 
 **Date:** 2026-02-10
 **Triggered by:** Visual review of Dashboard, Practice, and History pages after SPEC-021
-**Scope:** The gap where correctly-answered Quick Practice (ad-hoc) questions are invisible in the entire review flow
+**Scope:** Correctly-answered Quick Practice (ad-hoc) questions are invisible in the entire review flow
 
 ---
 
@@ -20,6 +20,8 @@ The app has three practice modes:
 
 **User impact:** A user answers 50 Quick Practice questions, gets 45 right. Those 45 correct answers have no home — they can't be found, reviewed, or tracked anywhere. Only the 5 missed ones appear in History > Missed Questions (labeled "Ad-hoc practice").
 
+**Why this matters for our users:** A physician studying for addiction medicine boards isn't casually quizzing themselves — they're doing deliberate practice under time pressure. Quick Practice is the "I have 5 minutes between patients" mode. The fact that correctly-answered questions evaporate creates a trust problem: the aggregate Dashboard stats count them, but the user can't reconcile which questions produced those numbers. Board prep users also want to verify mastery — "I answered that zaleplon question correctly two weeks ago, let me re-read the explanation." Right now they can't unless they bookmarked it in the moment.
+
 ---
 
 ## Current Data Model
@@ -33,8 +35,9 @@ Session-based:  practiceSessionId = UUID → links to practice_sessions table
 ```
 
 - The `attempts` table already stores EVERY ad-hoc attempt (correct + incorrect)
-- `listMissedQuestionsByUserId` filters to `isCorrect = false` on the most recent attempt per question
-- No equivalent query exists for correct ad-hoc attempts or all ad-hoc attempts
+- `listMissedQuestionsByUserId` uses `row_number() OVER (PARTITION BY questionId ORDER BY answeredAt DESC)` to get the latest attempt per question, then filters `isCorrect = false`
+- No equivalent query exists for all attempted questions regardless of correctness
+- Dashboard stats (`countByUserId`, `countCorrectByUserId`) already include ad-hoc attempts — no `practiceSessionId` filter
 
 ---
 
@@ -43,91 +46,153 @@ Session-based:  practiceSessionId = UUID → links to practice_sessions table
 ### Dashboard
 - **Recent sessions** — Tutor/Exam sessions only (queries `practice_sessions`)
 - **Recent missed** — Missed questions from ALL modes (queries `attempts` where latest is incorrect)
+- **Stats cards** — Include ALL attempts including ad-hoc (Total answered, Overall accuracy, 7-day metrics)
 
 ### History Page
 - **Sessions tab** — All completed Tutor/Exam sessions with pagination
-- **Missed Questions tab** — All missed questions with difficulty/tag filters + "Reattempt" button
+- **Missed Questions tab** — All missed questions with client-side difficulty/tag filters + "Reattempt" button
 
 ### Quick Practice Page
 - Shows one question at a time, no history, no log of previous attempts
 
 ---
 
-## Design Options
+## Options Evaluated
 
 ### Option A: Add "Quick Practice" tab to History (3rd tab)
+**Rejected.** Fragments attention across more surfaces. Duplicates missed ad-hoc questions that already appear in the second tab. A third tab adds nav complexity without proportional value.
 
-```
-History
-  [Sessions] [Missed Questions] [Quick Practice]
-```
-
-- Shows all ad-hoc attempts (correct + incorrect) sorted by `answeredAt DESC`
-- Each row: question stem preview, difficulty, correct/incorrect badge, date
-- "Reattempt" button for incorrect, "Review" link for correct
-- Pagination like the other tabs
-- Filters: difficulty, tag, correct/incorrect
-
-**Pros:** Clean separation of concerns. Users who want to review their Quick Practice activity have a dedicated place.
-**Cons:** Third tab adds nav complexity. Duplicates missed questions that already appear in "Missed Questions" tab.
-
-### Option B: Expand "Missed Questions" to "Question Log" with filters
-
-```
-History
-  [Sessions] [Question Log]
-```
-
-- Rename "Missed Questions" → "Question Log"
-- Add status filter: All / Correct / Incorrect
-- Add source filter: All / Session / Quick Practice
-- Default view: Incorrect only (preserves current behavior)
-
-**Pros:** No new tab. More powerful. Users discover correct ad-hoc history naturally by changing filter.
-**Cons:** "Question Log" is less descriptive than "Missed Questions" for the primary use case. Changing defaults could confuse existing users.
+### Option B: Evolve "Missed Questions" into a filterable "Questions" tab
+**Recommended.** See detailed spec below.
 
 ### Option C: Add "Recent Quick Practice" card to Dashboard
+**Rejected as standalone.** Doesn't solve the History page gap by itself. Fragments the Dashboard with a third card when the existing two are sufficient.
 
-```
-Dashboard
-  [Stats cards]
-  [Recent sessions]  [Recent missed]
-  [Recent Quick Practice]   ← NEW
-```
+### Option D: Combine approaches
+**Rejected.** Over-engineering. One well-designed surface beats three partial ones.
 
-- Shows last N Quick Practice attempts (correct + incorrect)
-- "View all" links to History with appropriate filter
-
-**Pros:** Makes Quick Practice activity visible at a glance. Consistent with existing dashboard pattern.
-**Cons:** Doesn't solve the History page gap by itself — still need somewhere for the full list.
-
-### Option D: Combine A + C (Recommended for evaluation)
-
-- Add 3rd tab "Quick Practice" to History for the full log
-- Add "Recent Quick Practice" card to Dashboard for at-a-glance
-- "View all" on Dashboard card links to History > Quick Practice tab
-
-**Pros:** Complete coverage. Consistent with Sessions pattern (Dashboard summary + History full list).
-**Cons:** Most work. Need to evaluate if the additional surface area is worth it.
-
-### Option E: Do nothing (accept the gap)
-
-- Quick Practice is designed as ephemeral "drill and forget" — no review needed
-- Users who want trackable progress should use Tutor/Exam sessions
-- The missed questions already surface ad-hoc failures for reattempt
-
-**Pros:** Zero effort. Keeps the UI simple.
-**Cons:** Users lose visibility into correct ad-hoc work. Conflicts with "track your progress" value prop.
+### Option E: Do nothing
+**Rejected.** Quick Practice is the highest-frequency use case (5 minutes between patients), and its correctly-answered questions contributing to stats but being unreviewable erodes platform trust. Every competitive reference (UWorld, AMBOSS, Anki) provides a complete question ledger.
 
 ---
 
-## Questions to Resolve
+## Recommended Approach: Option B
 
-1. **Is Quick Practice intended to be ephemeral?** If so, Option E is valid. If users expect to track all practice activity, Options A-D are needed.
-2. **Would a "Question Log" (Option B) confuse the "Missed Questions" mental model?** The current tab name is immediately clear — renaming it could hurt discoverability.
-3. **How many ad-hoc attempts exist relative to session attempts?** If Quick Practice is rarely used, the gap is low-impact.
-4. **Dashboard stats already include ad-hoc.** Verified: "Total answered", "Overall accuracy", "Answered (7 days)", "Accuracy (7 days)" all count Quick Practice attempts (no `practiceSessionId` filter in `countByUserId` / `countCorrectByUserId`). So aggregate numbers are honest — it's only the *detailed review* that has the gap.
+### Summary
+
+Evolve History's "Missed Questions" tab into a complete, filterable record of every question ever attempted. The current "Missed Questions" view becomes one filter preset of this more powerful surface. Also rename Dashboard's "Recent missed" → "Recent activity" to surface all modes.
+
+### History Page Changes
+
+**Tab rename:** "Missed Questions" → "Questions"
+
+**New filters (added to existing Difficulty + Tag filters):**
+
+| Filter | Values | Default |
+|--------|--------|---------|
+| Result | All / Correct / Incorrect | All |
+| Source | All / Tutor / Exam / Quick Practice | All |
+| Difficulty | All difficulties / Easy / Medium / Hard | All (existing) |
+| Tag | All tags / [specific tags] | All (existing) |
+
+**Row layout (per question, most recent attempt):**
+
+| Field | Source | Notes |
+|-------|--------|-------|
+| Question stem preview | `stemMd` truncated | Already exists |
+| Result badge | `isCorrect` | **NEW** — "Correct" (green) / "Incorrect" (red) |
+| Difficulty badge | `difficulty` | Already exists |
+| Source label | `sessionId` + `sessionMode` | Already exists — "Tutor session" / "Exam session" / "Quick Practice" |
+| Date | `answeredAt` | Already exists |
+| Action button | — | "Reattempt" for incorrect, "Review" for correct (links to `/app/questions/[slug]`) |
+
+**Pagination:** Unchanged. Server-side limit/offset.
+
+### Dashboard Changes
+
+**Rename:** "Recent missed" → "Recent activity"
+
+**Content:** Last 3 questions attempted across ALL modes (correct + incorrect), each with a small correct/incorrect indicator badge.
+
+**"View all" link:** Points to History > Questions tab (no filters applied = shows everything).
+
+### What We're NOT Doing
+
+- No third History tab
+- No separate Quick Practice history page
+- No additional Dashboard card
+- No "Unanswered" filter (question bank progress tracking is a separate future feature)
+- No server-side filtering in v1 (client-side filtering on the paginated set is acceptable for our question bank size; can migrate to server-side later if performance requires it)
 
 ---
 
-## Status: OPEN — Awaiting UX evaluation
+## Backend Feasibility (Verified)
+
+### Repository Layer (Low effort)
+
+The existing `listMissedQuestionsByUserId` query in `drizzle-attempt-repository.ts` already does the hard work:
+- Window function `row_number() OVER (PARTITION BY questionId ORDER BY answeredAt DESC)` gets latest attempt per question
+- Joins to `practice_sessions` for `sessionMode`
+- Applies pagination with `limit`/`offset`
+
+**Change required:** Remove the `eq(latestAttemptRows.isCorrect, false)` WHERE clause. Add `isCorrect` to the returned columns. Rename method to `listAttemptedQuestionsByUserId`.
+
+### Type Chain (Low effort)
+
+```
+MissedQuestionAttempt → rename to AttemptedQuestionSummary
+  + add: isCorrect: boolean
+  (rest unchanged: questionId, answeredAt, sessionId, sessionMode)
+```
+
+All downstream types (`GetMissedQuestionsOutput` rows, controller output, component props) gain the `isCorrect` field. Structural shape unchanged.
+
+### Use Case Layer (Low effort)
+
+Rename `GetMissedQuestionsUseCase` → `GetAttemptedQuestionsUseCase`. The enrichment pipeline (fetch attempts → fetch questions → join) works identically regardless of correctness filter. No business logic changes.
+
+### Count Query (Low effort)
+
+`countMissedQuestionsByUserId` → `countAttemptedQuestionsByUserId`. Remove `isCorrect = false` filter.
+
+### Dashboard "Recent Activity" (Medium effort)
+
+Need a new query: `listRecentAttemptsByUserId(userId, limit)` returning the N most recent attempts (not partitioned by question — just raw recency). This is simpler than the partitioned missed questions query.
+
+### Test Impact (Medium effort)
+
+- Existing `get-missed-questions.test.ts` tests need updating (new type names, correct attempts now included)
+- New test cases for "all attempted" scenario, result filtering, source filtering
+- `history/page.test.tsx` needs tab name updates
+- Dashboard tests need "Recent activity" updates
+
+---
+
+## Open Questions for Spec Phase
+
+1. **Default filter state:** Should the Questions tab default to "All" (complete picture, new behavior) or "Incorrect" (preserves current Missed Questions behavior for existing users)? Recommendation: default to "All" — this is the whole point of the change.
+
+2. **Filter application:** Client-side filtering on paginated data means a page of 20 results filtered to "Correct only" might show fewer than 20 rows. Acceptable for v1 but should note as a known limitation. Server-side filtering is the eventual path.
+
+3. **"Review" action for correct questions:** Should link to `/app/questions/[slug]` (question detail page with explanation). Verify this page exists and works for standalone review (not just in-session context).
+
+4. **Migration path for "View all" links:** Dashboard "Recent missed" currently links to `History?tab=missed`. After rename, this becomes `History?tab=questions`. Need to handle the old URL gracefully (redirect or treat `tab=missed` as alias for `tab=questions&result=incorrect`).
+
+5. **Empty state copy:** Current empty state says "No missed questions yet." Needs updating for the broader scope — "No questions attempted yet. Start practicing to build your history."
+
+---
+
+## Competitive Reference
+
+| App | Approach | Notes |
+|-----|----------|-------|
+| **UWorld** | Full question performance log, filterable by subject, correctness, used/unused | Complete ledger, no black holes |
+| **AMBOSS** | Session history as complete ledger | Every attempt visible |
+| **Anki** | Browse mode shows every card with full review history | Per-card history, not just failures |
+| **Duolingo** | Progress tree with mastery indicators per skill | Different model but no hidden work |
+
+All competitive references provide complete visibility into practice activity. None have a mode where correctly-answered questions disappear.
+
+---
+
+## Status: RECOMMENDED — Option B selected, awaiting spec
