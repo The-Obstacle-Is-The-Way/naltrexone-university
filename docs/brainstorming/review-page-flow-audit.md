@@ -276,9 +276,11 @@ All recommendations in this doc remain **valid and unimplemented**:
 
 ---
 
-## Open Questions
+## Open Questions — RESOLVED
 
-1. Should "History" be the final name, or is "Performance" or "Results" better?
-2. Should the Sessions tab default-expand the most recent session?
-3. Should Quick Practice attempts appear in the Sessions tab (they're session-less) or only in Question Log?
-4. How aggressive should the Dashboard slim-down be — keep 3 recent sessions, or just 1 "last session" card?
+All open questions have been resolved in [SPEC-021: History Page Restructure](../specs/spec-021-history-page-restructure.md):
+
+1. ~~Should "History" be the final name?~~ → **History** (SPEC-021 §2)
+2. ~~Should Sessions tab auto-expand most recent session?~~ → **No** (SPEC-021 §2)
+3. ~~Should Quick Practice attempts appear in Sessions tab?~~ → **Missed Questions tab only** (SPEC-021 §2)
+4. ~~How aggressive should Dashboard slim-down be?~~ → **3 recent sessions + 3 recent missed questions** (SPEC-021 §2)

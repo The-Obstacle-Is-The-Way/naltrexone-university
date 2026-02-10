@@ -38,8 +38,9 @@ Implementation specifications provide detailed technical guidance for building e
 | [SPEC-018](./spec-018-ui-integration.md) | UI Integration (v0 Templates) | Implemented | Feature |
 | [SPEC-019](./spec-019-practice-ux-redesign.md) | Practice & Navigation UX Redesign | Partial (Phase 4) | Feature |
 | [SPEC-020](./spec-020-practice-engine-completion.md) | Practice Engine Completion | Implemented | Feature |
+| [SPEC-021](./spec-021-history-page-restructure.md) | History Page Restructure | Ready | Feature |
 
-**Next Spec ID:** SPEC-021
+**Next Spec ID:** SPEC-022
 
 ## Spec Statuses
 

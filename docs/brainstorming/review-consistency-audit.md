@@ -283,3 +283,9 @@ When implementing the Practice page fixes from `practice-ux-audit.md`, these rul
 - **GH #81**: E2E tests for Phase 3 — should cover the new breakdown behavior after Practice fixes
 
 **Recommendation:** These Practice page fixes should be tracked as a new GitHub issue (not a new spec). The cross-page consistency improvements documented here can become their own issue when we're ready to tackle them.
+
+---
+
+## Formal Spec
+
+The cross-page restructuring recommended by this audit has been formally specified in [SPEC-021: History Page Restructure](../specs/spec-021-history-page-restructure.md). SPEC-021 resolves all open design questions and provides a complete implementation plan covering the Review → History rename, session history consolidation, and Dashboard slim-down.
