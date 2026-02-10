@@ -132,11 +132,18 @@ export function maybeAutoAdvanceAfterSubmit(input: {
   mode: 'tutor' | 'exam' | null;
   submitResult: SubmitAnswerOutput | null;
   loadStateStatus: LoadState['status'];
+  sessionInfo: NextQuestion['session'];
   advance: () => void;
 }): void {
   if (input.mode !== 'exam') return;
   if (input.loadStateStatus !== 'ready') return;
   if (!input.submitResult) return;
+  const isLastQuestion =
+    input.sessionInfo !== null &&
+    typeof input.sessionInfo.index === 'number' &&
+    typeof input.sessionInfo.total === 'number' &&
+    input.sessionInfo.index >= input.sessionInfo.total - 1;
+  if (isLastQuestion) return;
   input.advance();
 }
 

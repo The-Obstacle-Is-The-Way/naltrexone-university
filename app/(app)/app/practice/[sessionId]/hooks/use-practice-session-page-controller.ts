@@ -49,6 +49,7 @@ export function usePracticeSessionPageController(
       mode: questionFlow.sessionMode,
       submitResult: questionFlow.submitResult,
       loadStateStatus: questionFlow.loadState.status,
+      sessionInfo: questionFlow.sessionInfo,
       advance: questionFlow.onNextQuestion,
     });
   }, [
@@ -56,6 +57,7 @@ export function usePracticeSessionPageController(
     questionFlow.sessionMode,
     questionFlow.submitResult,
     questionFlow.loadState.status,
+    questionFlow.sessionInfo,
     questionFlow.onNextQuestion,
   ]);
 

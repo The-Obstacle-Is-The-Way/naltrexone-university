@@ -310,6 +310,9 @@ export const questionTags = pgTable(
 );
 
 // practice_sessions
+export const PRACTICE_SESSIONS_USER_INCOMPLETE_UQ =
+  'practice_sessions_user_incomplete_uq';
+
 export const practiceSessions = pgTable(
   'practice_sessions',
   {
@@ -333,6 +336,9 @@ export const practiceSessions = pgTable(
       t.userId,
       desc(t.endedAt),
     ),
+    userIncompleteUq: uniqueIndex(PRACTICE_SESSIONS_USER_INCOMPLETE_UQ)
+      .on(t.userId)
+      .where(sql`ended_at IS NULL`),
   }),
 );
 

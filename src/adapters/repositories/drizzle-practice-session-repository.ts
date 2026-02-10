@@ -1,5 +1,8 @@
 import { and, eq, isNotNull, isNull, sql } from 'drizzle-orm';
-import { practiceSessions } from '@/db/schema';
+import {
+  PRACTICE_SESSIONS_USER_INCOMPLETE_UQ,
+  practiceSessions,
+} from '@/db/schema';
 import { ApplicationError } from '@/src/application/errors';
 import type { PracticeSessionRepository } from '@/src/application/ports/repositories';
 import type {
@@ -7,6 +10,10 @@ import type {
   PracticeSessionQuestionState,
 } from '@/src/domain/entities';
 import type { DrizzleDb } from '../shared/database-types';
+import {
+  getPostgresConstraintName,
+  isPostgresUniqueViolation,
+} from './postgres-errors';
 import {
   type NormalizedPracticeSessionParamsJson,
   parsePracticeSessionParamsJson,
@@ -134,14 +141,29 @@ export class DrizzlePracticeSessionRepository
       'VALIDATION_ERROR',
     );
 
-    const [row] = await this.db
-      .insert(practiceSessions)
-      .values({
-        userId: input.userId,
-        mode: input.mode,
-        paramsJson: params,
-      })
-      .returning();
+    let row: PracticeSessionRow | undefined;
+    try {
+      [row] = await this.db
+        .insert(practiceSessions)
+        .values({
+          userId: input.userId,
+          mode: input.mode,
+          paramsJson: params,
+        })
+        .returning();
+    } catch (error) {
+      if (
+        isPostgresUniqueViolation(error) &&
+        getPostgresConstraintName(error) ===
+          PRACTICE_SESSIONS_USER_INCOMPLETE_UQ
+      ) {
+        throw new ApplicationError(
+          'CONFLICT',
+          'You already have an incomplete practice session. Resume or abandon it before starting a new one.',
+        );
+      }
+      throw error;
+    }
 
     if (!row) {
       throw new ApplicationError(

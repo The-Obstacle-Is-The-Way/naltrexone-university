@@ -554,10 +554,41 @@ describe('practice-session-page-logic', () => {
           choiceExplanations: [],
         },
         loadStateStatus: 'ready',
+        sessionInfo: {
+          sessionId: 'session-1',
+          mode: 'exam',
+          index: 0,
+          total: 2,
+        },
         advance,
       });
 
       expect(advance).toHaveBeenCalledTimes(1);
+    });
+
+    it('returns no advance invocation when current question is the last question', () => {
+      const advance = vi.fn();
+
+      maybeAutoAdvanceAfterSubmit({
+        mode: 'exam',
+        submitResult: {
+          attemptId: 'attempt_1',
+          isCorrect: true,
+          correctChoiceId: 'choice_1',
+          explanationMd: null,
+          choiceExplanations: [],
+        },
+        loadStateStatus: 'ready',
+        sessionInfo: {
+          sessionId: 'session-1',
+          mode: 'exam',
+          index: 1,
+          total: 2,
+        },
+        advance,
+      });
+
+      expect(advance).not.toHaveBeenCalled();
     });
 
     it('returns no advance invocation when mode is tutor', () => {
@@ -573,6 +604,12 @@ describe('practice-session-page-logic', () => {
           choiceExplanations: [],
         },
         loadStateStatus: 'ready',
+        sessionInfo: {
+          sessionId: 'session-1',
+          mode: 'tutor',
+          index: 0,
+          total: 2,
+        },
         advance,
       });
 
@@ -586,6 +623,12 @@ describe('practice-session-page-logic', () => {
         mode: 'exam',
         submitResult: null,
         loadStateStatus: 'ready',
+        sessionInfo: {
+          sessionId: 'session-1',
+          mode: 'exam',
+          index: 0,
+          total: 2,
+        },
         advance,
       });
 
@@ -605,6 +648,12 @@ describe('practice-session-page-logic', () => {
           choiceExplanations: [],
         },
         loadStateStatus: 'loading',
+        sessionInfo: {
+          sessionId: 'session-1',
+          mode: 'exam',
+          index: 0,
+          total: 2,
+        },
         advance,
       });
 
@@ -624,6 +673,7 @@ describe('practice-session-page-logic', () => {
           choiceExplanations: [],
         },
         loadStateStatus: 'ready',
+        sessionInfo: null,
         advance,
       });
 
