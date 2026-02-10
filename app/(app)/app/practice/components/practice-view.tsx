@@ -77,8 +77,10 @@ export function PracticeView(props: PracticeViewProps) {
   const { notify } = useNotification();
   const sessionInfo = props.sessionInfo ?? null;
   const isExamMode = sessionInfo?.mode === 'exam';
+  const isMarkedForReview = !!sessionInfo?.isMarkedForReview;
   const title = props.title ?? 'Practice';
   const description = props.description ?? 'Answer one question at a time.';
+  const endSessionLabel = props.endSessionLabel ?? 'End session';
   const backLink = props.backLink ?? {
     href: ROUTES.APP_DASHBOARD,
     label: 'Back to Dashboard',
@@ -135,7 +137,7 @@ export function PracticeView(props: PracticeViewProps) {
                 disabled={props.isPending}
                 onClick={props.onEndSession}
               >
-                {props.endSessionLabel ?? 'End session'}
+                {endSessionLabel}
               </Button>
             ) : (
               <Button
@@ -204,7 +206,7 @@ export function PracticeView(props: PracticeViewProps) {
                 disabled={props.isPending}
                 onClick={props.onEndSession}
               >
-                {props.endSessionLabel ?? 'End session'}
+                {endSessionLabel}
               </Button>
             </div>
           ) : null}
@@ -275,13 +277,11 @@ export function PracticeView(props: PracticeViewProps) {
               type="button"
               variant="outline"
               className="rounded-full"
-              aria-pressed={sessionInfo.isMarkedForReview}
+              aria-pressed={isMarkedForReview}
               disabled={props.isMarkingForReview || props.isPending}
               onClick={props.onToggleMarkForReview}
             >
-              {sessionInfo.isMarkedForReview
-                ? 'Unmark review'
-                : 'Mark for review'}
+              {isMarkedForReview ? 'Unmark review' : 'Mark for review'}
             </Button>
           ) : null}
         </div>

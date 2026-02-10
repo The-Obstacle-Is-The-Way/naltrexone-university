@@ -121,7 +121,7 @@ export function ExamReviewView({
         <Card className="gap-0 rounded-2xl p-4 shadow-sm">
           <div className="text-xs text-muted-foreground">Unanswered</div>
           <div className="mt-1 text-2xl font-bold font-display text-foreground">
-            {review.totalCount - review.answeredCount}
+            {unansweredCount}
           </div>
         </Card>
         <Card className="gap-0 rounded-2xl p-4 shadow-sm">
