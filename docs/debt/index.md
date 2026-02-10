@@ -15,9 +15,11 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 ## Debt Index (Active)
 
-*No active DEBT items.*
+| ID | Title | Priority | Status |
+|----|-------|----------|--------|
+| [DEBT-205](./debt-205-e2e-selector-drift-from-ui-refactors.md) | E2E Test Selectors Drifted from UI Refactors (7/16 tests failing) | P1 | Open |
 
-**Next Debt ID:** DEBT-205
+**Next Debt ID:** DEBT-206
 
 ---
 

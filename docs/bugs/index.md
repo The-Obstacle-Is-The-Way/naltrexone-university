@@ -15,9 +15,13 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 ## Bug Index (Active)
 
-*No active bugs.*
+| ID | Title | Priority | Status |
+|----|-------|----------|--------|
+| [BUG-129](./bug-129-e2e-choice-radio-selector-mismatch.md) | E2E Choice Radio Selector Cannot Find Question Choices | P1 | Open |
+| [BUG-130](./bug-130-e2e-session-start-selector-mismatch.md) | E2E Session Start Selectors Don't Match Current UI | P1 | Open |
+| [BUG-131](./bug-131-e2e-bookmarks-empty-state-assertion-failure.md) | E2E Bookmarks Empty State Assertion Fails After Remove | P2 | Open |
 
-**Next Bug ID:** BUG-129
+**Next Bug ID:** BUG-132
 
 ## Recently Triaged
 
