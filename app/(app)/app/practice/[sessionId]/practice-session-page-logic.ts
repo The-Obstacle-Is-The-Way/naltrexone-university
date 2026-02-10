@@ -19,6 +19,7 @@ import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answ
 export async function loadNextQuestion(input: {
   sessionId: string;
   questionId?: string;
+  fromIndex?: number;
   getNextQuestionFn: (
     input: unknown,
   ) => Promise<ActionResult<NextQuestion | null>>;
@@ -38,7 +39,12 @@ export async function loadNextQuestion(input: {
   return runLoadQuestionFlow({
     requestInput: {
       sessionId: input.sessionId,
-      questionId: input.questionId,
+      ...(typeof input.questionId === 'string'
+        ? { questionId: input.questionId }
+        : {}),
+      ...(typeof input.fromIndex === 'number'
+        ? { fromIndex: input.fromIndex }
+        : {}),
     },
     getQuestionFn: input.getNextQuestionFn,
     createIdempotencyKey: input.createIdempotencyKey,
@@ -50,7 +56,8 @@ export async function loadNextQuestion(input: {
     setQuestionLoadedAt: input.setQuestionLoadedAt,
     setQuestion: input.setQuestion,
     onLoaded: (question) => {
-      input.setSessionInfo(question?.session ?? null);
+      if (!question?.session) return;
+      input.setSessionInfo(question.session);
     },
     createRequestSequenceId: input.createRequestSequenceId,
     isLatestRequest: input.isLatestRequest,
@@ -60,6 +67,7 @@ export async function loadNextQuestion(input: {
 
 export function createLoadNextQuestionAction(input: {
   sessionId: string;
+  fromIndex?: number;
   startTransition: (fn: () => void) => void;
   getNextQuestionFn: (
     input: unknown,
@@ -124,11 +132,18 @@ export function maybeAutoAdvanceAfterSubmit(input: {
   mode: 'tutor' | 'exam' | null;
   submitResult: SubmitAnswerOutput | null;
   loadStateStatus: LoadState['status'];
+  sessionInfo: NextQuestion['session'];
   advance: () => void;
 }): void {
   if (input.mode !== 'exam') return;
   if (input.loadStateStatus !== 'ready') return;
   if (!input.submitResult) return;
+  const isLastQuestion =
+    input.sessionInfo !== null &&
+    typeof input.sessionInfo.index === 'number' &&
+    typeof input.sessionInfo.total === 'number' &&
+    input.sessionInfo.index >= input.sessionInfo.total - 1;
+  if (isLastQuestion) return;
   input.advance();
 }
 

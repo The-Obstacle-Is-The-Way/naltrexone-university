@@ -29,11 +29,13 @@ export function canSubmitAnswer(input: {
   loadState: LoadState;
   question: NextQuestion | null;
   selectedChoiceId: string | null;
+  isAnswered: boolean;
   submitResult: SubmitAnswerOutput | null;
 }): boolean {
   if (input.loadState.status === 'loading') return false;
   if (!input.question) return false;
   if (!input.selectedChoiceId) return false;
+  if (input.isAnswered) return false;
   if (input.submitResult) return false;
   return true;
 }

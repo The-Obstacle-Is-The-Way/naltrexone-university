@@ -30,9 +30,7 @@ test.describe('review', () => {
       waitUntil: 'domcontentloaded',
     });
     await expect(page.getByRole('heading', { name: 'Review' })).toBeVisible();
-    const reattemptLink = page
-      .locator(`a[href="/app/questions/${QUESTION_SLUG}"]`)
-      .first();
+    const reattemptLink = page.locator(`a[href*="${QUESTION_SLUG}"]`).first();
     await expect(reattemptLink).toBeVisible();
 
     await reattemptLink.click();
@@ -49,8 +47,8 @@ test.describe('review', () => {
       timeout: 60_000,
       waitUntil: 'domcontentloaded',
     });
-    await expect(
-      page.locator(`a[href="/app/questions/${QUESTION_SLUG}"]`),
-    ).toHaveCount(0, { timeout: 15_000 });
+    await expect(page.locator(`a[href*="${QUESTION_SLUG}"]`)).toHaveCount(0, {
+      timeout: 15_000,
+    });
   });
 });

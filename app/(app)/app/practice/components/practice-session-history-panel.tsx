@@ -1,5 +1,6 @@
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { formatDate } from '@/lib/format-date';
 import { formatDuration } from '@/lib/format-duration';
 import type {
   GetPracticeSessionReviewOutput,
@@ -64,9 +65,10 @@ export function PracticeSessionHistoryPanel(
         {props.status === 'idle' && props.rows.length > 0 ? (
           <ul className="space-y-2">
             {props.rows.map((row) => {
-              const actionLabel =
-                props.selectedSessionId === row.sessionId ? 'Hide' : 'View';
-              const sessionSummary = `${formatSessionMode(row.mode)} session: ${row.correct}/${row.questionCount} correct (${formatSessionAccuracy(row.accuracy)}), ${formatDuration(row.durationSeconds)}`;
+              const isSelected = props.selectedSessionId === row.sessionId;
+              const actionLabel = isSelected ? 'Hide' : 'View';
+              const endedOn = formatDate(row.endedAt);
+              const sessionSummary = `${formatSessionMode(row.mode)} session: ${row.correct}/${row.questionCount} correct (${formatSessionAccuracy(row.accuracy)}), ${formatDuration(row.durationSeconds)}, ${endedOn}`;
 
               return (
                 <li
@@ -85,6 +87,8 @@ export function PracticeSessionHistoryPanel(
                       </span>
                       <span className="mx-2">•</span>
                       <span>{formatDuration(row.durationSeconds)}</span>
+                      <span className="mx-2">•</span>
+                      <span>{endedOn}</span>
                     </div>
                     <Button
                       type="button"
@@ -93,41 +97,38 @@ export function PracticeSessionHistoryPanel(
                       aria-label={`${actionLabel} breakdown for ${sessionSummary}`}
                       onClick={() => props.onOpenSession(row.sessionId)}
                     >
-                      {props.selectedSessionId === row.sessionId
-                        ? 'Hide breakdown'
-                        : 'View breakdown'}
+                      {isSelected ? 'Hide breakdown' : 'View breakdown'}
                     </Button>
                   </div>
+
+                  {isSelected ? (
+                    <div className="mt-3 space-y-2 border-t border-border/40 pt-3">
+                      {props.reviewStatus.status === 'loading' ? (
+                        <output
+                          className="text-sm text-muted-foreground"
+                          aria-live="polite"
+                        >
+                          Loading question breakdown…
+                        </output>
+                      ) : null}
+                      {props.reviewStatus.status === 'error' ? (
+                        <div className="text-sm text-destructive" role="alert">
+                          {props.reviewStatus.message}
+                        </div>
+                      ) : null}
+                      {props.selectedReview ? (
+                        <SessionBreakdownList
+                          rows={props.selectedReview.rows}
+                        />
+                      ) : null}
+                    </div>
+                  ) : null}
                 </li>
               );
             })}
           </ul>
         ) : null}
       </div>
-
-      {props.selectedSessionId ? (
-        <div className="mt-4 space-y-3">
-          <div className="text-sm font-medium text-foreground">
-            Session breakdown
-          </div>
-          {props.reviewStatus.status === 'loading' ? (
-            <output
-              className="text-sm text-muted-foreground"
-              aria-live="polite"
-            >
-              Loading question breakdown…
-            </output>
-          ) : null}
-          {props.reviewStatus.status === 'error' ? (
-            <div className="text-sm text-destructive" role="alert">
-              {props.reviewStatus.message}
-            </div>
-          ) : null}
-          {props.selectedReview ? (
-            <SessionBreakdownList rows={props.selectedReview.rows} />
-          ) : null}
-        </div>
-      ) : null}
     </Card>
   );
 }

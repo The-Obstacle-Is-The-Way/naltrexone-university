@@ -20,6 +20,7 @@ export type UsePracticeQuestionBookmarksOutput = {
   bookmarkMessage: string | null;
   bookmarkMessageVersion: number;
   isBookmarked: boolean;
+  onRetryBookmarks: () => void;
   onToggleBookmark: () => Promise<void>;
 };
 
@@ -100,11 +101,16 @@ export function usePracticeQuestionBookmarks(
     });
   }, [bookmarkIdempotencyKey, input.question, input.isMounted]);
 
+  const onRetryBookmarks = useCallback(() => {
+    setBookmarkRetryCount((prev) => prev + 1);
+  }, []);
+
   return {
     bookmarkStatus,
     bookmarkMessage,
     bookmarkMessageVersion,
     isBookmarked,
+    onRetryBookmarks,
     onToggleBookmark,
   };
 }

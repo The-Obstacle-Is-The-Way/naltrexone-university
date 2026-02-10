@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { PRACTICE_SESSIONS_USER_INCOMPLETE_UQ } from '@/db/schema';
 import { ApplicationError } from '@/src/application/errors';
 import { DrizzlePracticeSessionRepository } from './drizzle-practice-session-repository';
 
@@ -477,6 +478,52 @@ describe('DrizzlePracticeSessionRepository', () => {
 
     expect(insertValues).toHaveBeenCalledWith(
       expect.objectContaining({ userId: 'user_1', mode: 'exam' }),
+    );
+  });
+
+  it('maps unique incomplete-session constraint violations to CONFLICT', async () => {
+    const insertValues = vi.fn(() => ({
+      returning: async () => {
+        throw {
+          code: '23505',
+          constraint: PRACTICE_SESSIONS_USER_INCOMPLETE_UQ,
+        };
+      },
+    }));
+
+    const db = {
+      insert: () => ({
+        values: insertValues,
+      }),
+      query: {
+        practiceSessions: {
+          findFirst: async () => null,
+        },
+      },
+      update: () => {
+        throw new Error('unexpected update');
+      },
+    } as const;
+
+    type RepoDb = ConstructorParameters<
+      typeof DrizzlePracticeSessionRepository
+    >[0];
+    const repo = new DrizzlePracticeSessionRepository(db as unknown as RepoDb);
+
+    const paramsJson = {
+      count: 2,
+      tagSlugs: [],
+      difficulties: ['easy'],
+      questionIds: ['q1', 'q2'],
+    };
+
+    const promise = repo.create({ userId: 'user_1', mode: 'exam', paramsJson });
+
+    await expect(promise).rejects.toEqual(
+      new ApplicationError(
+        'CONFLICT',
+        'You already have an incomplete practice session. Resume or abandon it before starting a new one.',
+      ),
     );
   });
 

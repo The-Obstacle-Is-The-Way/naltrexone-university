@@ -90,6 +90,29 @@ subscription.items.data[0].current_period_end  // number
 
 ---
 
+## E2E Test Seeding (API-Based)
+
+**Never automate Stripe's hosted checkout UI.** Stripe frequently changes their checkout DOM (Link integration, accordion payment methods, iframe structure), permanently breaking iframe-based selectors. Per Stripe's own docs and industry consensus, use the Stripe API with test tokens instead.
+
+Our E2E tests seed subscriptions in `global.setup.ts` via `seedTestSubscription()` (`tests/e2e/helpers/seed-test-user.ts`), which:
+
+1. Creates or finds a Stripe customer via `stripe.customers.list({ email })` / `stripe.customers.create()`
+2. Attaches `pm_card_visa` (Stripe's built-in test payment method) as the default payment method
+3. Creates a subscription via `stripe.subscriptions.create()` with the monthly price ID
+4. Mirrors all data into `users`, `stripe_customers`, and `stripe_subscriptions` tables
+
+**Key test payment methods:**
+
+| Token | Card | Use Case |
+|-------|------|----------|
+| `pm_card_visa` | 4242 4242 4242 4242 | Succeeds immediately |
+| `pm_card_visa_debit` | 4000 0566 5566 5556 | Debit card |
+| `pm_card_chargeDeclined` | 4000 0000 0000 0002 | Decline testing |
+
+**Docs:** https://docs.stripe.com/testing#test-payment-methods
+
+---
+
 ## Test Mode vs Live Mode
 
 | Environment | API Key Prefix | Webhook Secret |

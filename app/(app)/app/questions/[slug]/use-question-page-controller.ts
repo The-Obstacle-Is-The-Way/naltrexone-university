@@ -84,10 +84,15 @@ export function useQuestionPageController(
     });
   }, [loadState, question, selectedChoiceId, submitResult]);
 
-  const onSelectChoice = useMemo(
-    () => selectChoiceIfAllowed.bind(null, submitResult, setSelectedChoiceId),
-    [submitResult],
-  );
+  const onSelectChoice = useMemo(() => {
+    return (choiceId: string) => {
+      selectChoiceIfAllowed(
+        { isAnswered: false, submitResult },
+        setSelectedChoiceId,
+        choiceId,
+      );
+    };
+  }, [submitResult]);
 
   const onSubmit = useMemo(
     () =>

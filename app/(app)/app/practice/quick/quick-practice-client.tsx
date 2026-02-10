@@ -28,6 +28,7 @@ export default function QuickPracticeClient() {
       loadState={questionFlow.loadState}
       question={questionFlow.question}
       selectedChoiceId={questionFlow.selectedChoiceId}
+      isAnswered={questionFlow.isAnswered}
       submitResult={questionFlow.submitResult}
       isPending={questionFlow.isPending}
       bookmarkStatus={questionFlow.bookmarkStatus}
@@ -38,6 +39,7 @@ export default function QuickPracticeClient() {
       bookmarkMessageVersion={questionFlow.bookmarkMessageVersion}
       canSubmit={questionFlow.canSubmit}
       onTryAgain={questionFlow.onTryAgain}
+      onRetryBookmarks={questionFlow.onRetryBookmarks}
       onToggleBookmark={() => {
         fireAndForget(questionFlow.onToggleBookmark(), logUnhandledAsyncError);
       }}

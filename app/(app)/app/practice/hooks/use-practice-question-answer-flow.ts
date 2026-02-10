@@ -23,6 +23,7 @@ export type UsePracticeQuestionAnswerFlowInput = {
 export type UsePracticeQuestionAnswerFlowOutput = {
   question: NextQuestion | null;
   selectedChoiceId: string | null;
+  isAnswered: boolean;
   submitResult: SubmitAnswerOutput | null;
   loadState: LoadState;
   isPending: boolean;
@@ -61,6 +62,7 @@ export function usePracticeQuestionAnswerFlow(
   const {
     question,
     selectedChoiceId,
+    isAnswered,
     submitResult,
     loadState,
     isPending,
@@ -164,6 +166,7 @@ export function usePracticeQuestionAnswerFlow(
   return {
     question,
     selectedChoiceId,
+    isAnswered,
     submitResult,
     loadState,
     isPending,

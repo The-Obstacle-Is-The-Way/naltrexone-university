@@ -23,7 +23,7 @@ export type SubmitAnswerInput = {
 export type SubmitAnswerOutput = {
   attemptId: string;
   isCorrect: boolean;
-  correctChoiceId: string;
+  correctChoiceId: string | null;
   explanationMd: string | null;
   choiceExplanations: ChoiceExplanation[];
 };
@@ -166,7 +166,7 @@ export class SubmitAnswerUseCase {
     return {
       attemptId: attempt.id,
       isCorrect: grade.isCorrect,
-      correctChoiceId: grade.correctChoiceId,
+      correctChoiceId: shouldShowExplanation ? grade.correctChoiceId : null,
       explanationMd,
       choiceExplanations,
     };

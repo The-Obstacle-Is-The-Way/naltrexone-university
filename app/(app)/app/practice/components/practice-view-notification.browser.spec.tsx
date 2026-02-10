@@ -29,6 +29,7 @@ function createBaseProps() {
     loadState: { status: 'ready' as const },
     question,
     selectedChoiceId: null,
+    isAnswered: false,
     submitResult: null,
     isPending: false,
     isBookmarked: true,

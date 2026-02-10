@@ -289,16 +289,16 @@ Following Uncle Bob's principles:
 
 ```text
 Recent activity
-┌─────────────────────────────────────────────────────────┐
-│ Tutor session · 3/5 correct (60%) · 2 min ago          │
-│   ├─ Q: "A physician is reviewing the contra..." ✓     │ ← clickable → /app/questions/[slug]
-│   ├─ Q: "An elderly patient with insomnia..." ✓        │ ← clickable → /app/questions/[slug]
-│   └─ Q: "Which medication is first-line..." ✗          │ ← clickable → /app/questions/[slug]
+┌──────────────────────────────────────────────────────────┐
+│ Tutor session · 3/5 correct (60%) · 2 min ago            │
+│   ├─ Q: "A physician is reviewing the contra..." ✓       │ ← clickable → /app/questions/[slug]
+│   ├─ Q: "An elderly patient with insomnia..." ✓          │ ← clickable → /app/questions/[slug]
+│   └─ Q: "Which medication is first-line..." ✗            │ ← clickable → /app/questions/[slug]
 │                                          [View session →]│ ← links to session detail
-├─────────────────────────────────────────────────────────┤
-│ Quick practice · Correct · 5 min ago                    │
-│   Q: "The mechanism of action of naltrexone..." ✓      │ ← clickable → /app/questions/[slug]
-└─────────────────────────────────────────────────────────┘
+├──────────────────────────────────────────────────────────┤
+│ Quick practice · Correct · 5 min ago                     │
+│   Q: "The mechanism of action of naltrexone..." ✓        │ ← clickable → /app/questions/[slug]
+└──────────────────────────────────────────────────────────┘
 ```
 
 - Session-grouped entries are collapsible with summary header
@@ -484,19 +484,19 @@ APP_PRACTICE_QUICK: '/app/practice/quick',
 **Layout:**
 
 ```text
-┌────────────────────────────────────────────────────────────┐
-│ Quick Practice                          [← Back to Practice]│
-│ Answer one question at a time.                              │
-├────────────────────────────────────────────────────────────┤
-│                                              [Bookmark]     │
-│ ┌─ Question Card ──────────────────────────────────────┐   │
-│ │ A patient who had been taking zolpidem nightly...     │   │
-│ │                                                       │   │
-│ │ (A) Choice A                                          │   │
-│ │ (B) Choice B                                          │   │
-│ │ (C) Choice C                                          │   │
-│ │ (D) Choice D                                          │   │
-│ └───────────────────────────────────────────────────────┘   │
+┌──────────────────────────────────────────────────────────────┐
+│ Quick Practice                         [← Back to Practice]  │
+│ Answer one question at a time.                               │
+├──────────────────────────────────────────────────────────────┤
+│                                              [Bookmark]      │
+│ ┌─ Question Card ───────────────────────────────────────┐    │
+│ │ A patient who had been taking zolpidem nightly...     │    │
+│ │                                                       │    │
+│ │ (A) Choice A                                          │    │
+│ │ (B) Choice B                                          │    │
+│ │ (C) Choice C                                          │    │
+│ │ (D) Choice D                                          │    │
+│ └───────────────────────────────────────────────────────┘    │
 │                                                              │
 │ [Submit]  [Next Question]                                    │
 │                                                              │
@@ -695,6 +695,7 @@ APP_PRACTICE_QUICK: '/app/practice/quick',
 - [SPEC-014: Review & Bookmarks](./spec-014-review-bookmarks.md) — defines Review page scope (missed questions only)
 - [SPEC-015: Dashboard](./spec-015-dashboard.md) — defines dashboard stats and recent activity
 - [SPEC-020: Practice Engine Completion](./spec-020-practice-engine-completion.md) — formally specifies session history (previously P3 optional here), in-run navigation, enriched summary, and session context in existing views
+- [SPEC-021: History Page Restructure](./spec-021-history-page-restructure.md) — restructures Review → History, moves session history from Practice to History, slims Dashboard. Supersedes the "Recent sessions" panel on Practice and the Review page routing.
 - [master_spec.md Section 4.5.3-4.5.5](./master_spec.md)
 - [ADR-001: Clean Architecture Layers](../adr/adr-001-clean-architecture-layers.md)
 
@@ -711,29 +712,29 @@ APP_PRACTICE_QUICK: '/app/practice/quick',
 │   │                                                             │   │
 │   │     Choose how you want to practice today:                  │   │
 │   │                                                             │   │
-│   │   ┌─────────────────────┐   ┌─────────────────────┐        │   │
-│   │   │                     │   │                     │        │   │
-│   │   │   📝 Session        │   │   ⚡ Quick          │        │   │
-│   │   │                     │   │                     │        │   │
-│   │   │   Structured        │   │   One question      │        │   │
-│   │   │   practice with     │   │   at a time,        │        │   │
-│   │   │   progress          │   │   no tracking       │        │   │
-│   │   │   tracking          │   │                     │        │   │
-│   │   │                     │   │                     │        │   │
-│   │   │   Mode: Tutor/Exam  │   │   Just jump in      │        │   │
-│   │   │   Count: 10-100     │   │   and practice      │        │   │
-│   │   │   Tags: Filter      │   │                     │        │   │
-│   │   │                     │   │                     │        │   │
-│   │   │   [Start Session]   │   │   [Quick Practice]  │        │   │
-│   │   │                     │   │                     │        │   │
-│   │   └─────────────────────┘   └─────────────────────┘        │   │
+│   │   ┌─────────────────────┐   ┌─────────────────────┐         │   │
+│   │   │                     │   │                     │         │   │
+│   │   │   📝 Session        │   │   ⚡ Quick           │         │   │
+│   │   │                     │   │                     │         │   │
+│   │   │   Structured        │   │   One question      │         │   │
+│   │   │   practice with     │   │   at a time,        │         │   │
+│   │   │   progress          │   │   no tracking       │         │   │
+│   │   │   tracking          │   │                     │         │   │
+│   │   │                     │   │                     │         │   │
+│   │   │   Mode: Tutor/Exam  │   │   Just jump in      │         │   │
+│   │   │   Count: 10-100     │   │   and practice      │         │   │
+│   │   │   Tags: Filter      │   │                     │         │   │
+│   │   │                     │   │                     │         │   │
+│   │   │   [Start Session]   │   │   [Quick Practice]  │         │   │
+│   │   │                     │   │                     │         │   │
+│   │   └─────────────────────┘   └─────────────────────┘         │   │
 │   │                                                             │   │
 │   └─────────────────────────────────────────────────────────────┘   │
 │                                                                     │
 │   ┌─────────────────────────────────────────────────────────────┐   │
 │   │   📊 Recent Sessions                                        │   │
-│   │   ├── Tutor • 85% • 20 questions • 2 days ago              │   │
-│   │   ├── Exam  • 72% • 15 questions • 5 days ago              │   │
+│   │   ├── Tutor • 85% • 20 questions • 2 days ago               │   │
+│   │   ├── Exam  • 72% • 15 questions • 5 days ago               │   │
 │   │   └── [View all →]                                          │   │
 │   └─────────────────────────────────────────────────────────────┘   │
 │                                                                     │

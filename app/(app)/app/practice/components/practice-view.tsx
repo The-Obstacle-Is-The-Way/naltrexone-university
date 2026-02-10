@@ -25,6 +25,7 @@ export type PracticeViewProps = {
   loadState: LoadState;
   question: NextQuestion | null;
   selectedChoiceId: string | null;
+  isAnswered: boolean;
   submitResult: SubmitAnswerOutput | null;
   isPending: boolean;
   bookmarkStatus: 'idle' | 'loading' | 'error';
@@ -36,6 +37,7 @@ export type PracticeViewProps = {
   endSessionLabel?: string;
   questionAreaRef?: React.RefObject<HTMLDivElement | null>;
   onEndSession?: () => void;
+  onRetryBookmarks?: () => void;
   onTryAgain: () => void;
   onToggleBookmark: () => void;
   onToggleMarkForReview?: () => void;
@@ -75,12 +77,15 @@ export function PracticeView(props: PracticeViewProps) {
   const { notify } = useNotification();
   const sessionInfo = props.sessionInfo ?? null;
   const isExamMode = sessionInfo?.mode === 'exam';
+  const isMarkedForReview = !!sessionInfo?.isMarkedForReview;
   const title = props.title ?? 'Practice';
   const description = props.description ?? 'Answer one question at a time.';
+  const endSessionLabel = props.endSessionLabel ?? 'End session';
   const backLink = props.backLink ?? {
     href: ROUTES.APP_DASHBOARD,
     label: 'Back to Dashboard',
   };
+  const isAnswerLocked = props.isAnswered || props.submitResult !== null;
   const correctChoiceId = isExamMode
     ? null
     : (props.submitResult?.correctChoiceId ?? null);
@@ -119,16 +124,9 @@ export function PracticeView(props: PracticeViewProps) {
             <h1 className="text-2xl font-bold font-heading tracking-tight text-foreground">
               {title}
             </h1>
-            <p className="mt-1 text-muted-foreground">{description}</p>
-            {sessionInfo ? (
-              <p
-                className="mt-2 text-xs text-muted-foreground"
-                aria-live="polite"
-              >
-                Session: {sessionInfo.mode} • {sessionInfo.index + 1}/
-                {sessionInfo.total}
-              </p>
-            ) : null}
+            <p className="mt-1 text-muted-foreground" aria-live="polite">
+              {description}
+            </p>
           </div>
           <div className="flex items-center gap-3">
             {props.onEndSession ? (
@@ -139,16 +137,17 @@ export function PracticeView(props: PracticeViewProps) {
                 disabled={props.isPending}
                 onClick={props.onEndSession}
               >
-                {props.endSessionLabel ?? 'End session'}
+                {endSessionLabel}
               </Button>
-            ) : null}
-            <Button
-              asChild
-              variant="link"
-              className="h-auto p-0 text-muted-foreground no-underline hover:text-foreground hover:no-underline"
-            >
-              <Link href={backLink.href}>{backLink.label}</Link>
-            </Button>
+            ) : (
+              <Button
+                asChild
+                variant="link"
+                className="h-auto p-0 text-muted-foreground no-underline hover:text-foreground hover:no-underline"
+              >
+                <Link href={backLink.href}>{backLink.label}</Link>
+              </Button>
+            )}
           </div>
         </div>
       </div>
@@ -174,48 +173,44 @@ export function PracticeView(props: PracticeViewProps) {
 
         {props.loadState.status === 'loading' ? (
           <Card className="gap-0 rounded-2xl p-6 text-sm text-muted-foreground shadow-sm">
-            <output>Loading question…</output>
+            <output aria-live="polite">Loading question…</output>
           </Card>
         ) : null}
       </div>
 
       {props.bookmarkStatus === 'error' ? (
-        <ErrorCard>Bookmarks unavailable.</ErrorCard>
+        <ErrorCard className="p-6">
+          <div>Bookmarks unavailable.</div>
+          {props.onRetryBookmarks ? (
+            <div className="mt-4">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={props.onRetryBookmarks}
+              >
+                Retry bookmarks
+              </Button>
+            </div>
+          ) : null}
+        </ErrorCard>
       ) : null}
 
       {props.loadState.status === 'ready' && props.question === null ? (
         <Card className="gap-0 rounded-2xl p-6 text-sm text-muted-foreground shadow-sm">
-          No more questions found.
-        </Card>
-      ) : null}
-
-      {props.question ? (
-        <div className="flex flex-col items-end gap-2">
-          {sessionInfo?.mode === 'exam' && props.onToggleMarkForReview ? (
-            <Button
-              type="button"
-              variant="outline"
-              className="rounded-full"
-              aria-pressed={sessionInfo.isMarkedForReview}
-              disabled={props.isMarkingForReview || props.isPending}
-              onClick={props.onToggleMarkForReview}
-            >
-              {sessionInfo.isMarkedForReview
-                ? 'Unmark review'
-                : 'Mark for review'}
-            </Button>
+          <div>No more questions found.</div>
+          {props.onEndSession ? (
+            <div className="mt-4">
+              <Button
+                type="button"
+                className="rounded-full"
+                disabled={props.isPending}
+                onClick={props.onEndSession}
+              >
+                {endSessionLabel}
+              </Button>
+            </div>
           ) : null}
-          <Button
-            type="button"
-            variant="outline"
-            className="rounded-full"
-            aria-pressed={props.isBookmarked}
-            disabled={props.bookmarkStatus === 'loading' || props.isPending}
-            onClick={props.onToggleBookmark}
-          >
-            {props.isBookmarked ? 'Remove bookmark' : 'Bookmark'}
-          </Button>
-        </div>
+        </Card>
       ) : null}
 
       {props.question ? (
@@ -231,7 +226,7 @@ export function PracticeView(props: PracticeViewProps) {
           disabled={
             props.isPending ||
             props.loadState.status === 'loading' ||
-            props.submitResult !== null
+            isAnswerLocked
           }
           onSelectChoice={props.onSelectChoice}
         />
@@ -246,7 +241,7 @@ export function PracticeView(props: PracticeViewProps) {
       ) : null}
 
       {props.question ? (
-        <div className="flex flex-col gap-3 sm:flex-row">
+        <div className="flex flex-wrap items-center gap-3">
           <Button
             type="button"
             className="rounded-full"
@@ -265,6 +260,30 @@ export function PracticeView(props: PracticeViewProps) {
           >
             Next Question
           </Button>
+
+          <Button
+            type="button"
+            variant="outline"
+            className="rounded-full"
+            aria-pressed={props.isBookmarked}
+            disabled={props.bookmarkStatus === 'loading' || props.isPending}
+            onClick={props.onToggleBookmark}
+          >
+            {props.isBookmarked ? 'Remove bookmark' : 'Bookmark'}
+          </Button>
+
+          {isExamMode && props.onToggleMarkForReview ? (
+            <Button
+              type="button"
+              variant="outline"
+              className="rounded-full"
+              aria-pressed={isMarkedForReview}
+              disabled={props.isMarkingForReview || props.isPending}
+              onClick={props.onToggleMarkForReview}
+            >
+              {isMarkedForReview ? 'Unmark review' : 'Mark for review'}
+            </Button>
+          ) : null}
         </div>
       ) : null}
     </div>

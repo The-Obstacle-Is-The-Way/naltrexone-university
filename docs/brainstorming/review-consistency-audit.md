@@ -82,15 +82,15 @@
 - Difficulty: NO
 - Correct/Incorrect: YES — "Correct" / "Incorrect" text (only if answered)
 - Answered/Unanswered: YES
-- Date: NO (session row has no date — **tracked as Problem 6 in `practice-ux-audit.md`**)
+- Date: NO (session row now shows date — **Problem 6 DONE, dd51513**)
 - Session origin: Implicit (parent session row shows mode)
 - Order number: YES — `{order}.`
 
 **Actions:** Full question row is a `<Link>` → `/app/questions/[slug]?from=practice` (added in PR #83)
 **Unavailable:** `[Question no longer available]` text, no link
-**Known issues:**
-- Breakdown renders below ALL sessions, not inline under selected session — **tracked as Problem 5**
-- Status labels unstyled — **tracked as Problem 7**
+**Known issues:** All resolved.
+- ~~Breakdown renders below ALL sessions~~ — **Problem 5 DONE (dd51513)**
+- ~~Status labels unstyled~~ — **Problem 7 DONE (dd51513)**
 
 ### Location 6: Practice — Session Summary Breakdown (Post-Session) (UPDATED after PR #83)
 
@@ -154,7 +154,7 @@ Five different stem lengths across 7 locations: 100, 90, 80, 96, 80. No rational
 
 ### ~~I3: Practice Breakdowns Are Non-Interactive Dead Ends~~ — FIXED (PR #83)
 
-Questions in breakdowns are now clickable `<Link>` elements via shared `SessionBreakdownList`. Both Practice history panel and Session summary view use the shared component. Remaining issues: breakdown placement (Problem 5), date display (Problem 6), label styling (Problem 7) — tracked in `practice-ux-audit.md`.
+Questions in breakdowns are now clickable `<Link>` elements via shared `SessionBreakdownList`. Both Practice history panel and Session summary view use the shared component. Inline placement, date display, and styled status labels were completed in dd51513 (Problems 5–7).
 
 ### I4: Question Page Is a Single-Question Dead End
 
@@ -219,6 +219,12 @@ This would DRY up Review and Bookmarks. The Dashboard's compact row pattern is d
 
 ---
 
+## Verification (2026-02-10)
+
+> Verified via Playwright E2E audit. All 7 locations confirmed against running app. The divergence matrix and inconsistency list remain accurate. I3 (non-interactive breakdowns) confirmed fixed via PR #83. All other inconsistencies (I1, I2, I4-I7) remain as documented.
+
+---
+
 ## What Should Be Done (And When)
 
 ### ~~Now (Practice Page Fix — Phase 1)~~ — DONE (PR #83)
@@ -231,15 +237,13 @@ All 5 items completed:
 4. ~~Make breakdown questions clickable (`<Link>`)~~ DONE
 5. ~~Toggle breakdown collapse~~ DONE
 
-### Now (Practice Page Fix — Phase 2): see `practice-recent-sessions-v2.md`
+### ~~Now (Practice Page Fix — Phase 2)~~ — DONE (dd51513)
 
-Three remaining Practice page issues, all scoped to the "Recent sessions" panel:
+All three items completed:
 
-1. Move breakdown inline under selected session (not at bottom of list)
-2. Add date to session rows
-3. Style breakdown status labels (Correct/Incorrect/Unanswered)
-
-**Still does NOT touch Dashboard, Review, or Bookmarks.** Zero cross-page risk.
+1. ~~Move breakdown inline under selected session~~ DONE
+2. ~~Add date to session rows~~ DONE
+3. ~~Style breakdown status labels~~ DONE
 
 ### Later (Cross-Page Consistency — this doc):
 
@@ -279,3 +283,9 @@ When implementing the Practice page fixes from `practice-ux-audit.md`, these rul
 - **GH #81**: E2E tests for Phase 3 — should cover the new breakdown behavior after Practice fixes
 
 **Recommendation:** These Practice page fixes should be tracked as a new GitHub issue (not a new spec). The cross-page consistency improvements documented here can become their own issue when we're ready to tackle them.
+
+---
+
+## Formal Spec
+
+The cross-page restructuring recommended by this audit has been formally specified in [SPEC-021: History Page Restructure](../specs/spec-021-history-page-restructure.md). SPEC-021 resolves all open design questions and provides a complete implementation plan covering the Review → History rename, session history consolidation, and Dashboard slim-down.

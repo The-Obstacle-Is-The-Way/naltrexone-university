@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useRef } from 'react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -48,11 +49,17 @@ export function QuestionNavigator({
             answeredLabel,
           ];
 
+          const variant = isCurrent
+            ? 'default'
+            : row.isAnswered
+              ? 'secondary'
+              : 'outline';
+
           return (
             <Button
               key={row.questionId}
               type="button"
-              variant={isCurrent ? 'default' : 'outline'}
+              variant={variant}
               className="relative rounded-full"
               disabled={!row.isAvailable}
               onClick={() => onNavigateQuestion(row.questionId)}
@@ -84,6 +91,15 @@ export function ExamReviewView({
   onOpenQuestion: (questionId: string) => void;
   onFinalizeReview: () => void;
 }) {
+  const unansweredCount = review.totalCount - review.answeredCount;
+  const isFinalizingRef = useRef(false);
+
+  useEffect(() => {
+    if (!isPending) {
+      isFinalizingRef.current = false;
+    }
+  }, [isPending]);
+
   return (
     <div className="space-y-6">
       <div>
@@ -105,7 +121,7 @@ export function ExamReviewView({
         <Card className="gap-0 rounded-2xl p-4 shadow-sm">
           <div className="text-xs text-muted-foreground">Unanswered</div>
           <div className="mt-1 text-2xl font-bold font-display text-foreground">
-            {review.totalCount - review.answeredCount}
+            {unansweredCount}
           </div>
         </Card>
         <Card className="gap-0 rounded-2xl p-4 shadow-sm">
@@ -178,6 +194,13 @@ export function ExamReviewView({
               <AlertDialogTitle>Submit exam?</AlertDialogTitle>
               <AlertDialogDescription>
                 This will end the session and save your results.
+                {unansweredCount > 0 ? (
+                  <span className="mt-2 block text-destructive">
+                    You have {unansweredCount} unanswered{' '}
+                    {unansweredCount === 1 ? 'question' : 'questions'} that will
+                    be scored as incorrect.
+                  </span>
+                ) : null}
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
@@ -190,6 +213,8 @@ export function ExamReviewView({
                 disabled={isPending}
                 onClick={() => {
                   if (isPending) return;
+                  if (isFinalizingRef.current) return;
+                  isFinalizingRef.current = true;
                   onFinalizeReview();
                 }}
               >

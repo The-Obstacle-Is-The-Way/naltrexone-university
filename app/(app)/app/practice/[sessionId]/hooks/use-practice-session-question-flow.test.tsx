@@ -24,6 +24,7 @@ describe('usePracticeSessionQuestionFlow', () => {
     expect(output.loadState).toEqual({ status: 'idle' });
     expect(output.question).toBeNull();
     expect(output.selectedChoiceId).toBeNull();
+    expect(output.isAnswered).toBe(false);
     expect(output.submitResult).toBeNull();
     expect(output.isPending).toBe(false);
     expect(output.canSubmit).toBe(false);

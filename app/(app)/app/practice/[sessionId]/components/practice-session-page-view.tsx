@@ -22,6 +22,7 @@ export type PracticeSessionPageViewProps = {
   loadState: LoadState;
   question: NextQuestion | null;
   selectedChoiceId: string | null;
+  isAnswered: boolean;
   submitResult: SubmitAnswerOutput | null;
   isPending: boolean;
   bookmarkStatus: 'idle' | 'loading' | 'error';
@@ -34,6 +35,7 @@ export type PracticeSessionPageViewProps = {
   onRetryReview?: () => void;
   onRetryNavigator?: () => void;
   onTryAgain: () => void;
+  onRetryBookmarks?: () => void;
   onToggleBookmark: () => void;
   onToggleMarkForReview?: () => void;
   onSelectChoice: (choiceId: string) => void;
@@ -107,8 +109,21 @@ export function PracticeSessionPageView(props: PracticeSessionPageViewProps) {
     );
   }
 
+  const mode = props.sessionInfo?.mode ?? 'tutor';
+  const title = mode === 'exam' ? 'Exam Session' : 'Tutor Session';
+  const progress = props.sessionInfo
+    ? `Question ${props.sessionInfo.index + 1} of ${props.sessionInfo.total}`
+    : null;
+  const modeHint =
+    mode === 'exam'
+      ? 'Explanations shown after you submit the exam.'
+      : 'Explanations shown after each answer.';
+  const description = progress ? `${progress} — ${modeHint}` : modeHint;
+
   return (
     <PracticeView
+      title={title}
+      description={description}
       topContent={
         navigator && props.onNavigateQuestion ? (
           <QuestionNavigator
@@ -137,6 +152,7 @@ export function PracticeSessionPageView(props: PracticeSessionPageViewProps) {
       loadState={props.loadState}
       question={props.question}
       selectedChoiceId={props.selectedChoiceId}
+      isAnswered={props.isAnswered}
       submitResult={props.submitResult}
       isPending={props.isPending}
       bookmarkStatus={props.bookmarkStatus}
@@ -145,11 +161,10 @@ export function PracticeSessionPageView(props: PracticeSessionPageViewProps) {
       bookmarkMessage={props.bookmarkMessage}
       bookmarkMessageVersion={props.bookmarkMessageVersion}
       canSubmit={props.canSubmit}
-      endSessionLabel={
-        props.sessionInfo?.mode === 'exam' ? 'Review answers' : 'End session'
-      }
+      endSessionLabel={mode === 'exam' ? 'Review answers' : 'End session'}
       onEndSession={props.onEndSession}
       onTryAgain={props.onTryAgain}
+      onRetryBookmarks={props.onRetryBookmarks}
       onToggleBookmark={props.onToggleBookmark}
       onToggleMarkForReview={props.onToggleMarkForReview}
       onSelectChoice={props.onSelectChoice}

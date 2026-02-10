@@ -20,6 +20,14 @@ const availableRow: PracticeSessionReviewRow = {
   markedForReview: false,
 };
 
+const correctRow: PracticeSessionReviewRow = {
+  ...availableRow,
+  questionId: 'q3',
+  slug: 'q-3',
+  order: 3,
+  isCorrect: true,
+};
+
 const unavailableRow: PracticeSessionReviewRow = {
   isAvailable: false,
   questionId: 'q2',
@@ -62,11 +70,36 @@ describe('SessionBreakdownList', () => {
     expect(doc.querySelectorAll('a')).toHaveLength(0);
   });
 
-  it('renders answered/unanswered and correct/incorrect status labels', async () => {
-    const html = await renderList([availableRow, unavailableRow]);
+  it('renders correct/incorrect/unanswered status labels', async () => {
+    const html = await renderList([availableRow, correctRow, unavailableRow]);
+    const doc = new DOMParser().parseFromString(html, 'text/html');
 
-    expect(html).toContain('Answered');
-    expect(html).toContain('Incorrect');
-    expect(html).toContain('Unanswered');
+    expect(html).not.toContain('Answered');
+
+    const incorrectLabel = Array.from(doc.querySelectorAll('span')).find(
+      (el) => el.textContent === 'Incorrect',
+    );
+    if (!incorrectLabel) {
+      throw new Error('Expected Incorrect label');
+    }
+    expect(incorrectLabel.getAttribute('class')).toContain('text-destructive');
+
+    const correctLabel = Array.from(doc.querySelectorAll('span')).find(
+      (el) => el.textContent === 'Correct',
+    );
+    if (!correctLabel) {
+      throw new Error('Expected Correct label');
+    }
+    expect(correctLabel.getAttribute('class')).toContain('text-emerald-500');
+
+    const unansweredLabel = Array.from(doc.querySelectorAll('span')).find(
+      (el) => el.textContent === 'Unanswered',
+    );
+    if (!unansweredLabel) {
+      throw new Error('Expected Unanswered label');
+    }
+    expect(unansweredLabel.getAttribute('class')).toContain(
+      'text-muted-foreground/60',
+    );
   });
 });

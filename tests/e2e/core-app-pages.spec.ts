@@ -37,9 +37,7 @@ test.describe('core app pages', () => {
     });
     await expect(page.getByRole('heading', { name: 'Review' })).toBeVisible();
 
-    const reattemptLink = page
-      .locator(`a[href="/app/questions/${QUESTION_SLUG}"]`)
-      .first();
+    const reattemptLink = page.locator(`a[href*="${QUESTION_SLUG}"]`).first();
     await expect(reattemptLink).toBeVisible();
     await reattemptLink.click();
     await expect(page).toHaveURL(

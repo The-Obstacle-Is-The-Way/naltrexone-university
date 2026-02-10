@@ -1,7 +1,10 @@
-// @vitest-environment jsdom
 import { describe, expect, it } from 'vitest';
 import { createSeed, shuffleWithSeed } from '@/src/domain/services';
-import { createQuestion, createTag } from '@/src/domain/test-helpers';
+import {
+  createPracticeSession,
+  createQuestion,
+  createTag,
+} from '@/src/domain/test-helpers';
 import { ApplicationError } from '../errors';
 import {
   FakePracticeSessionRepository,
@@ -181,5 +184,42 @@ describe('StartPracticeSessionUseCase', () => {
         difficulties: [],
       }),
     ).rejects.toEqual(new ApplicationError('NOT_FOUND', 'No questions found'));
+  });
+
+  it('throws CONFLICT when an incomplete session exists', async () => {
+    const userId = 'user-1';
+
+    const questionRepository = new FakeQuestionRepository([
+      createQuestion({
+        id: 'q1',
+        difficulty: 'easy',
+        tags: [createTag({ id: 'tag-opioids', slug: 'opioids' })],
+      }),
+    ]);
+
+    const practiceSessionRepository = new FakePracticeSessionRepository([
+      createPracticeSession({
+        id: 'session-incomplete',
+        userId,
+        endedAt: null,
+      }),
+    ]);
+
+    const useCase = new StartPracticeSessionUseCase(
+      questionRepository,
+      practiceSessionRepository,
+    );
+
+    await expect(
+      useCase.execute({
+        userId,
+        mode: 'tutor',
+        count: 10,
+        tagSlugs: ['opioids'],
+        difficulties: [],
+      }),
+    ).rejects.toMatchObject({
+      code: 'CONFLICT',
+    });
   });
 });

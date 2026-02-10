@@ -1,6 +1,6 @@
 # Testing Infrastructure
 
-**Last Updated:** 2026-02-09
+**Last Updated:** 2026-02-10
 
 This document covers our E2E testing tools: Playwright and Vercel's agent-browser.
 
@@ -26,12 +26,17 @@ This document covers our E2E testing tools: Playwright and Vercel's agent-browse
 testDir: './tests/e2e',
 fullyParallel: true,
 retries: process.env.CI ? 2 : 0,
-workers: process.env.CI ? 1 : undefined,
+workers: 1,
+webServer: {
+  command: process.env.CI ? 'pnpm start' : 'pnpm dev',
+  reuseExistingServer: !process.env.CI,
+},
 ```
 
 - Uses `NEXT_PUBLIC_APP_URL` or defaults to `http://127.0.0.1:3000`
 - Runs Chromium only (for now)
 - Auto-starts dev server (`pnpm dev`) or uses production build in CI (`pnpm start`)
+- Runs with **1 worker** to avoid shared-user state conflicts (bookmarks, session continuation)
 
 ### Existing Tests
 
@@ -43,7 +48,7 @@ workers: process.env.CI ? 1 : undefined,
 | `tests/e2e/theme-preference.spec.ts` | Theme preference persistence |
 | `tests/e2e/dark-mode.spec.ts` | Dark mode toggle and OS preference |
 | `tests/e2e/marketing-contrast.spec.ts` | Marketing contrast regression checks |
-| `tests/e2e/subscribe.spec.ts` | Subscription checkout (Stripe test mode) |
+| `tests/e2e/subscribe.spec.ts` | Subscription verification (API-seeded) |
 | `tests/e2e/subscribe-and-practice.spec.ts` | Subscribe + answer a question |
 | `tests/e2e/practice.spec.ts` | Practice session answering flow |
 | `tests/e2e/session-continuation.spec.ts` | Resume incomplete session |
@@ -77,6 +82,16 @@ E2E_CLERK_USER_PASSWORD=your-password
 ```
 
 These can be provided via `.env.local` (loaded by `playwright.config.ts`) or CI secrets. Tests that require auth will `test.skip()` when these are missing.
+
+### Test Data Seeding
+
+Subscription data is seeded via the Stripe API and direct DB writes in `global.setup.ts` — **no Stripe UI automation**. The `seedTestSubscription()` helper (in `tests/e2e/helpers/seed-test-user.ts`) runs before any test and idempotently ensures:
+
+1. The test user exists in the `users` table (matched by email, Clerk user ID resolved via Clerk API)
+2. A Stripe customer exists (checked in DB, then Stripe API, created if needed) and is mirrored in `stripe_customers`
+3. An active subscription exists (using `pm_card_visa` test payment method) and is mirrored in `stripe_subscriptions`
+
+Seeding is skipped when `E2E_CLERK_USER_USERNAME` or `STRIPE_SECRET_KEY` are missing. Tests that depend on subscription already skip when Clerk credentials are absent, so this is safe.
 
 ### Writing New E2E Tests
 
@@ -114,6 +129,11 @@ Vercel's agent-browser is an AI-powered CLI that lets AI agents control Chrome f
 npm install -g agent-browser
 ```
 
+**Install browser binaries (first time):**
+```bash
+agent-browser install
+```
+
 **Verify:**
 ```bash
 agent-browser --version  # Should show 0.8.x
@@ -128,40 +148,89 @@ agent-browser --version  # Should show 0.8.x
 ### Basic Usage
 
 ```bash
-# Start interactive session
-agent-browser
+# Open a page (starts the browser automatically)
+agent-browser open http://localhost:3000
 
-# Run a task
-agent-browser --task "Navigate to localhost:3000 and check if the pricing page loads"
+# Snapshot interactive elements (recommended)
+agent-browser snapshot -i
+
+# Interact using @refs from the snapshot
+agent-browser click @e1
+agent-browser fill @e2 "text"
+agent-browser wait --load networkidle
+
+# Evidence
+agent-browser screenshot /tmp/agent-browser.png --full
+
+# Cleanup
+agent-browser close
 ```
 
-### Using for Bug Discovery
+### Authenticated Exploration
+
+By default, `agent-browser` does **not** load `.env.local`. For authenticated exploration, the recommended approach is loading a Playwright `storageState` file (see below). For local-only workflows, you can also export env vars in your current shell session (e.g., `set -a && source .env.local && set +a`) and then run your `agent-browser …` commands in that same shell.
+
+See [agent-browser.md](./agent-browser.md) for a focused quick reference and multiple auth options.
+
+1) Create a temporary script that signs in via Clerk and saves `storageState`:
+
+```ts
+// scripts/tmp-create-agent-browser-state.ts (do not commit)
+import { clerkSetup, clerk } from '@clerk/testing/playwright';
+import { config } from 'dotenv';
+import { chromium } from '@playwright/test';
+
+async function main() {
+  config({ path: '.env.local' });
+  config({ path: '.env' });
+
+  const baseURL = process.env.NEXT_PUBLIC_APP_URL || 'http://127.0.0.1:3000';
+  const username = process.env.E2E_CLERK_USER_USERNAME;
+  const password = process.env.E2E_CLERK_USER_PASSWORD;
+
+  if (!username || !password) throw new Error('Missing Clerk E2E credentials');
+
+  await clerkSetup();
+  const browser = await chromium.launch();
+  const context = await browser.newContext({ baseURL });
+  const page = await context.newPage();
+
+  await page.goto('/sign-in');
+  await clerk.signIn({
+    page,
+    signInParams: { strategy: 'password', identifier: username, password },
+  });
+
+  await page.goto('/app/dashboard');
+  await context.storageState({ path: '/tmp/agent-browser-state.json' });
+  await browser.close();
+}
+
+main().catch((error) => {
+  console.error(error);
+  process.exit(1);
+});
+```
+
+2) Run it:
 
 ```bash
-# Exploratory testing prompt
-agent-browser --task "
-  Navigate to http://localhost:3000
-  Explore all navigation links
-  Check for:
-  - Broken links (404s)
-  - Missing content
-  - Console errors
-  - Accessibility issues
-  Report any bugs found
-"
+pnpm tsx scripts/tmp-create-agent-browser-state.ts
 ```
 
-### Integration with AI Agents
+3) Use agent-browser with the saved state:
 
-AI agents (Claude, Codex) can use agent-browser via the MCP tools:
-- `mcp__claude-in-chrome__*` — Browser automation tools
+```bash
+agent-browser --state /tmp/agent-browser-state.json open http://localhost:3000/app/dashboard
+```
 
-When these tools are available, agents can:
-- Navigate to pages
-- Click elements
-- Fill forms
-- Check console logs
-- Record GIFs of interactions
+If you prefer to log in “by hand”, you can also use `--profile` to persist cookies across sessions:
+
+```bash
+agent-browser --profile /tmp/agent-browser-profile open http://localhost:3000/sign-in
+```
+
+**Command reference:** `.agents/skills/agent-browser/SKILL.md`
 
 ---
 
@@ -214,8 +283,12 @@ E2E tests run in CI via Playwright (see `.github/workflows/ci.yml`):
 
 | Secret | Purpose |
 | ------ | ------- |
-| `E2E_CLERK_USER_USERNAME` | Test Clerk account username |
+| `E2E_CLERK_USER_USERNAME` | Test Clerk account username (email) |
 | `E2E_CLERK_USER_PASSWORD` | Test Clerk account password |
+| `CLERK_SECRET_KEY` | Clerk API key (used to resolve Clerk user ID during seeding) |
+| `STRIPE_SECRET_KEY` | Stripe API key (used to create test subscriptions during seeding) |
+| `DATABASE_URL` | Postgres connection string (used for direct DB writes during seeding) |
+| `NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY` | Stripe monthly price ID (used during subscription seeding) |
 
 ---
 
@@ -224,7 +297,7 @@ E2E tests run in CI via Playwright (see `.github/workflows/ci.yml`):
 Playwright coverage intentionally focuses on user-facing regression paths:
 
 - Marketing pages + theme/dark-mode
-- Auth + subscription (Stripe test mode) when E2E Clerk creds are present
+- Auth + subscription (API-seeded, verified in-app) when E2E Clerk creds are present
 - Practice sessions + continuation
 - Review + bookmarks
 
@@ -252,6 +325,11 @@ Ensure Chrome is installed and not running with restrictive flags:
 killall "Google Chrome"
 ```
 
+### Agent-browser says “Browser not launched”
+
+- Run `agent-browser install` (first-time setup)
+- Then run `agent-browser close` and retry your `agent-browser open …` command
+
 ### Tests flaky on CI
 
 - Increase `timeout` in playwright.config.ts
@@ -265,5 +343,8 @@ killall "Google Chrome"
 - [react-vitest-testing.md](./react-vitest-testing.md) — React 19 + Vitest component testing setup
 - [CLAUDE.md](../../CLAUDE.md) — Testing mandate and test locations
 - [SPEC-010](../specs/spec-010-server-actions.md) — Controller testing patterns
+- [Stripe vendor docs](../vendor-docs/stripe.md) — E2E test seeding pattern, test payment methods
+- [Clerk vendor docs](../vendor-docs/clerk.md) — REST API for user lookup in E2E seeding
 - [Playwright Docs](https://playwright.dev/docs/intro)
-- [Agent-Browser README](https://github.com/anthropics/agent-browser)
+- [agent-browser.md](./agent-browser.md) — Agent-browser quick reference, auth patterns, common pitfalls
+- `.agents/skills/agent-browser/SKILL.md` — Agent-browser CLI full command reference

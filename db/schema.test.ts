@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { practiceSessions } from './schema';
+import {
+  PRACTICE_SESSIONS_USER_INCOMPLETE_UQ,
+  practiceSessions,
+} from './schema';
 
 // Drizzle stores extra config (indexes, constraints) behind internal Symbols.
 // This coupling is intentional: these helpers let us regression-test that
@@ -70,6 +73,14 @@ describe('practiceSessions schema indexes', () => {
 
     expect(indexes.userEndedAtIdx.config.name).toBe(
       'practice_sessions_user_ended_at_idx',
+    );
+  });
+
+  it('defines a partial unique index enforcing one incomplete session per user', () => {
+    const indexes = getPracticeSessionIndexes();
+
+    expect(indexes.userIncompleteUq.config.name).toBe(
+      PRACTICE_SESSIONS_USER_INCOMPLETE_UQ,
     );
   });
 });

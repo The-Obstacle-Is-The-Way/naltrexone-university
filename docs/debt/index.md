@@ -1,7 +1,7 @@
 # Technical Debt Register
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-02-09
+**Last Updated:** 2026-02-10
 
 ---
 
@@ -15,9 +15,11 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 ## Debt Index (Active)
 
-*No active DEBT items.*
+| ID | Title | Priority | Status |
+|----|-------|----------|--------|
+| *(none)* | *(no active debt items)* | - | - |
 
-**Next Debt ID:** DEBT-205
+**Next Debt ID:** DEBT-206
 
 ---
 
@@ -55,6 +57,9 @@ All frontend-specific UI/UX debt. Items use `FE-XXX` IDs and are cross-reference
 | FE-047 | Filter chip groups missing semantic grouping | Wrapped difficulty/tag chips in `<fieldset aria-label=...>` and added regression test |
 | FE-048 | Session progress counter not announced to screen readers | Added `aria-live="polite"` to session progress label and test coverage |
 | FE-050 | Exam review submit button missing pending label | Exam review submit button now shows `Submitting…` when pending, with test coverage |
+| FE-051 | No warning when submitting exam with unanswered questions | Added unanswered warning copy in exam review confirmation dialog, with regression coverage |
+| FE-052 | Loading state `<output>` missing `aria-live` in `practice-view.tsx` | Added `aria-live="polite"` to practice loading output and updated tests |
+| FE-053 | Bookmark error card never auto-dismisses and has no retry button | Added `Retry bookmarks` action wired to reload bookmarks, with test coverage |
 | FE-002 | `usePracticeSessionReviewStage` exceeds 150-line guideline | Refactored to 212 lines; summary + navigator extracted to sub-hooks |
 | FE-007 | Raw `<button>` in pricing client | Replaced with `Button` component and preserved pending state |
 | FE-008 | Raw styled links used as buttons | Adopted `Button asChild` and standardized focus rings |
@@ -87,7 +92,7 @@ All frontend-specific UI/UX debt. Items use `FE-XXX` IDs and are cross-reference
 | FE-045 | Duplicate question flow hooks | Extracted shared core hook for both flows |
 | FE-049 | Missing `createBookmark()` factory | Added factory + barrel export + unit test |
 
-**Next frontend debt ID:** FE-051
+**Next frontend debt ID:** FE-054
 
 ## Archived Debt
 
@@ -263,6 +268,7 @@ All frontend-specific UI/UX debt. Items use `FE-XXX` IDs and are cross-reference
 
 | ID | Title | Priority | Resolved |
 |----|-------|----------|----------|
+| [DEBT-205](../_archive/debt/debt-205-e2e-selector-drift-from-ui-refactors.md) | E2E Test Selectors Drifted from UI Refactors (7/16 tests failing) | P1 | 2026-02-10 |
 | [DEBT-152](../_archive/debt/debt-152-home-route-literals-remain-outside-routes-constants.md) | Home Route Literals Remain Outside `ROUTES` Constants | P4 | 2026-02-07 |
 | [DEBT-151](../_archive/debt/debt-151-no-toast-notification-system.md) | No Toast/Notification System | P3 | 2026-02-07 |
 | [DEBT-150](../_archive/debt/debt-150-navigation-links-missing-transitions-hover.md) | Navigation Links Missing Transitions and Hover States | P3 | 2026-02-07 |

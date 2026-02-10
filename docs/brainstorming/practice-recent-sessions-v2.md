@@ -7,6 +7,10 @@
 
 ---
 
+> **Note (2026-02-10): Superseded by `docs/specs/spec-021-history-page-restructure.md`.**
+> SPEC-021 removes the Practice "Recent sessions" panel entirely in favor of `/app/history` (Sessions tab).
+> Keep this doc as historical context only; do not implement it as future work.
+
 ## What We're Fixing
 
 Three UX problems, all scoped to one component and its child:

@@ -19,6 +19,7 @@ export type UsePracticeQuestionFlowInput = {
 export type UsePracticeQuestionFlowOutput = {
   question: NextQuestion | null;
   selectedChoiceId: string | null;
+  isAnswered: boolean;
   submitResult: SubmitAnswerOutput | null;
   loadState: ReturnType<typeof usePracticeQuestionAnswerFlow>['loadState'];
   isPending: boolean;
@@ -29,6 +30,7 @@ export type UsePracticeQuestionFlowOutput = {
   isBookmarked: boolean;
   questionAreaRef: React.RefObject<HTMLDivElement | null>;
   onTryAgain: () => void;
+  onRetryBookmarks: () => void;
   onToggleBookmark: () => Promise<void>;
   onSelectChoice: (choiceId: string) => void;
   onSubmit: () => Promise<void>;

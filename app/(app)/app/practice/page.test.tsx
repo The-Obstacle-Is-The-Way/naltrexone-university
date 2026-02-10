@@ -41,6 +41,7 @@ describe('app/(app)/app/practice', () => {
         loadState={{ status: 'error', message: 'Nope' }}
         question={null}
         selectedChoiceId={null}
+        isAnswered={false}
         submitResult={null}
         isPending={false}
         bookmarkStatus="idle"
@@ -66,6 +67,7 @@ describe('app/(app)/app/practice', () => {
         loadState={{ status: 'loading' }}
         question={null}
         selectedChoiceId={null}
+        isAnswered={false}
         submitResult={null}
         isPending={false}
         bookmarkStatus="idle"
@@ -80,10 +82,10 @@ describe('app/(app)/app/practice', () => {
     );
 
     expect(html).toContain('Loading question');
-    // Loading state uses <output> which has implicit role="status" (aria-live="polite").
-    // The parent wrapper no longer uses aria-live to avoid double announcements
-    // with ErrorCard's role="alert".
-    expect(html).toContain('<output>');
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const output = doc.querySelector('output');
+    expect(output).not.toBeNull();
+    expect(output?.getAttribute('aria-live')).toBe('polite');
   });
 
   it('renders empty state when no question remains', async () => {
@@ -94,6 +96,7 @@ describe('app/(app)/app/practice', () => {
         loadState={{ status: 'ready' }}
         question={null}
         selectedChoiceId={null}
+        isAnswered={false}
         submitResult={null}
         isPending={false}
         bookmarkStatus="idle"
@@ -132,6 +135,7 @@ describe('app/(app)/app/practice', () => {
           session: null,
         }}
         selectedChoiceId={null}
+        isAnswered={false}
         submitResult={null}
         isPending={false}
         bookmarkStatus="idle"
@@ -177,6 +181,7 @@ describe('app/(app)/app/practice', () => {
           session: null,
         }}
         selectedChoiceId={null}
+        isAnswered={false}
         submitResult={null}
         isPending={false}
         bookmarkStatus="idle"
@@ -204,6 +209,7 @@ describe('app/(app)/app/practice', () => {
         loadState={{ status: 'ready' }}
         question={null}
         selectedChoiceId={null}
+        isAnswered={false}
         submitResult={{
           attemptId: 'attempt-1',
           isCorrect: false,
@@ -240,6 +246,7 @@ describe('app/(app)/app/practice', () => {
         loadState={{ status: 'ready' }}
         question={null}
         selectedChoiceId={null}
+        isAnswered={false}
         submitResult={{
           attemptId: 'attempt-1',
           isCorrect: false,
@@ -286,11 +293,13 @@ describe('app/(app)/app/practice', () => {
           session: null,
         }}
         selectedChoiceId={null}
+        isAnswered={false}
         submitResult={null}
         isPending={false}
         bookmarkStatus="error"
         isBookmarked={false}
         canSubmit={false}
+        onRetryBookmarks={() => undefined}
         onTryAgain={() => undefined}
         onToggleBookmark={() => undefined}
         onSelectChoice={() => undefined}
@@ -300,6 +309,7 @@ describe('app/(app)/app/practice', () => {
     );
 
     expect(html).toContain('Bookmarks unavailable');
+    expect(html).toContain('Retry bookmarks');
   });
 
   it('renders bookmark warning even before a question is loaded', async () => {
@@ -310,11 +320,13 @@ describe('app/(app)/app/practice', () => {
         loadState={{ status: 'ready' }}
         question={null}
         selectedChoiceId={null}
+        isAnswered={false}
         submitResult={null}
         isPending={false}
         bookmarkStatus="error"
         isBookmarked={false}
         canSubmit={false}
+        onRetryBookmarks={() => undefined}
         onTryAgain={() => undefined}
         onToggleBookmark={() => undefined}
         onSelectChoice={() => undefined}
@@ -324,22 +336,20 @@ describe('app/(app)/app/practice', () => {
     );
 
     expect(html).toContain('Bookmarks unavailable');
+    expect(html).toContain('Retry bookmarks');
   });
 
-  it('renders session info when sessionInfo is provided', async () => {
+  it('renders custom title and description when provided', async () => {
     const { PracticeView } = await import('@/app/(app)/app/practice/page');
 
     const html = renderToStaticMarkup(
       <PracticeView
-        sessionInfo={{
-          sessionId: 'session-1',
-          mode: 'tutor',
-          index: 0,
-          total: 10,
-        }}
+        title="Tutor Session"
+        description="Question 1 of 10 — Explanations shown after each answer."
         loadState={{ status: 'ready' }}
         question={null}
         selectedChoiceId={null}
+        isAnswered={false}
         submitResult={null}
         isPending={false}
         bookmarkStatus="idle"
@@ -354,8 +364,8 @@ describe('app/(app)/app/practice', () => {
       />,
     );
 
-    expect(html).toContain('Session: tutor');
-    expect(html).toContain('1/10');
+    expect(html).toContain('Tutor Session');
+    expect(html).toContain('Question 1 of 10');
   });
 
   it('renders session start error when starter is in error state', async () => {
@@ -559,8 +569,9 @@ describe('app/(app)/app/practice', () => {
     expect(html).toContain('Exam');
     expect(html).toContain('15/20 correct (75%)');
     expect(html).toContain('30m');
+    expect(html).toContain('Feb 5, 2026');
     expect(html).toContain(
-      'aria-label="View breakdown for Exam session: 15/20 correct (75%), 30m"',
+      'aria-label="View breakdown for Exam session: 15/20 correct (75%), 30m, Feb 5, 2026"',
     );
   });
 
@@ -595,7 +606,7 @@ describe('app/(app)/app/practice', () => {
 
     expect(html).toContain('Hide breakdown');
     expect(html).toContain(
-      'aria-label="Hide breakdown for Exam session: 15/20 correct (75%), 30m"',
+      'aria-label="Hide breakdown for Exam session: 15/20 correct (75%), 30m, Feb 5, 2026"',
     );
   });
 
@@ -608,7 +619,19 @@ describe('app/(app)/app/practice', () => {
       <PracticeSessionHistoryPanel
         status="idle"
         error={null}
-        rows={[]}
+        rows={[
+          {
+            sessionId: 'session-1',
+            mode: 'exam',
+            questionCount: 20,
+            answered: 20,
+            correct: 15,
+            accuracy: 0.75,
+            durationSeconds: 1800,
+            startedAt: '2026-02-05T00:00:00.000Z',
+            endedAt: '2026-02-05T00:30:00.000Z',
+          },
+        ]}
         selectedSessionId="session-1"
         selectedReview={{
           sessionId: 'session-1',
@@ -643,7 +666,6 @@ describe('app/(app)/app/practice', () => {
       />,
     );
 
-    expect(html).toContain('Session breakdown');
     expect(html).toContain('Stem for q1');
     expect(html).toContain('href="/app/questions/q-1?from=practice"');
     expect(html).toContain('[Question no longer available]');

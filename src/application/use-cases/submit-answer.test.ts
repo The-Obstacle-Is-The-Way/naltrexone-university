@@ -435,6 +435,7 @@ describe('SubmitAnswerUseCase', () => {
       sessionId,
     });
 
+    expect(result.correctChoiceId).toBeNull();
     expect(result.explanationMd).toBeNull();
     expect(result.choiceExplanations).toEqual([]);
   });

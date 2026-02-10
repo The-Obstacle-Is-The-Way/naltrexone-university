@@ -49,6 +49,7 @@ export function usePracticeSessionPageController(
       mode: questionFlow.sessionMode,
       submitResult: questionFlow.submitResult,
       loadStateStatus: questionFlow.loadState.status,
+      sessionInfo: questionFlow.sessionInfo,
       advance: questionFlow.onNextQuestion,
     });
   }, [
@@ -56,6 +57,7 @@ export function usePracticeSessionPageController(
     questionFlow.sessionMode,
     questionFlow.submitResult,
     questionFlow.loadState.status,
+    questionFlow.sessionInfo,
     questionFlow.onNextQuestion,
   ]);
 
@@ -84,6 +86,7 @@ export function usePracticeSessionPageController(
     loadState: questionFlow.loadState,
     question: questionFlow.question,
     selectedChoiceId: questionFlow.selectedChoiceId,
+    isAnswered: questionFlow.isAnswered,
     submitResult: questionFlow.submitResult,
     isPending: questionFlow.isPending,
     bookmarkStatus: bookmarks.bookmarkStatus,
@@ -96,6 +99,7 @@ export function usePracticeSessionPageController(
     onRetryReview: reviewStage.onRetryReview,
     onRetryNavigator: reviewStage.onRetryNavigator,
     onTryAgain: questionFlow.onTryAgain,
+    onRetryBookmarks: bookmarks.onRetryBookmarks,
     onToggleBookmark: bookmarks.onToggleBookmark,
     onToggleMarkForReview,
     onSelectChoice: questionFlow.onSelectChoice,

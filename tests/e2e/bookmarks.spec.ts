@@ -21,17 +21,26 @@ test.describe('bookmarks', () => {
     const countBefore = await removeButtons.count();
     expect(countBefore).toBeGreaterThan(0);
 
+    // Click "Remove" to open the confirmation dialog
     await removeButtons.first().click();
+
+    // Confirm removal in the AlertDialog
+    await page.getByRole('button', { name: 'Remove bookmark' }).click();
+
+    // After confirmation, the server action runs and redirects back to /app/bookmarks.
+    // Wait for the page to settle after the redirect.
+    await page.waitForURL(/\/app\/bookmarks/);
 
     if (countBefore > 1) {
       await expect(page.getByRole('button', { name: 'Remove' })).toHaveCount(
         countBefore - 1,
+        { timeout: 15_000 },
       );
       return;
     }
 
     await expect(
       page.getByText('No bookmarks yet.', { exact: true }),
-    ).toBeVisible();
+    ).toBeVisible({ timeout: 15_000 });
   });
 });

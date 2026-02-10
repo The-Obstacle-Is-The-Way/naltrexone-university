@@ -1,7 +1,7 @@
 # Bug Reports
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-02-09
+**Last Updated:** 2026-02-10
 
 ---
 
@@ -15,15 +15,27 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 ## Bug Index (Active)
 
-| ID | Title | Status | Priority | Date |
-|----|-------|--------|----------|------|
+| ID | Title | Priority | Status |
+|----|-------|----------|--------|
+| *(none)* | *(no open bugs)* | - | - |
 
-**Next Bug ID:** BUG-121
+**Next Bug ID:** BUG-132
 
 ## Recently Triaged
 
 | ID | Title | Status | Resolution |
 |----|-------|--------|------------|
+| [BUG-131](../_archive/bugs/bug-131-e2e-bookmarks-empty-state-assertion-failure.md) | E2E Bookmarks Empty State Assertion Fails After Remove | Resolved | Stabilized the test by asserting either count decrement or empty-state with increased timeout |
+| [BUG-130](../_archive/bugs/bug-130-e2e-session-start-selector-mismatch.md) | E2E Session Start Selectors Don't Match Current UI | Resolved | Updated `startSession()` to click SegmentedControl buttons and fill `Questions` input |
+| [BUG-129](../_archive/bugs/bug-129-e2e-choice-radio-selector-mismatch.md) | E2E Choice Radio Selector Cannot Find Question Choices | Resolved | Updated `selectChoiceByLabel()` to match ChoiceButton DOM and assert radio checked |
+| [BUG-128](../_archive/bugs/bug-128-sessioninfo-cleared-on-null-question.md) | sessionInfo Cleared on Null Question — Exam Defaults to Tutor, Navigator Drops | Resolved | Preserve sessionInfo when next question is null; added regression coverage |
+| [BUG-127](../_archive/bugs/bug-127-double-click-submit-exam-race.md) | Double-Click "Submit Exam" Race in Review | Resolved | Ref-based guard + unanswered warning in confirm dialog; added browser regression coverage |
+| [BUG-126](../_archive/bugs/bug-126-end-session-blocked-by-bookmark-pending.md) | End Session Blocked During Bookmark Operations | Reclassified | Not reproducible in current implementation; added regression guard |
+| [BUG-125](../_archive/bugs/bug-125-no-more-questions-dead-end.md) | "No More Questions" Dead-End — No Action Buttons | Resolved | Add explicit session CTA in empty state; add regression coverage |
+| [BUG-124](../_archive/bugs/bug-124-exam-review-stale-after-review-answer.md) | Exam Review Data Stale After Changing Answer from Review | Resolved | Verified reload path and added browser regression coverage |
+| [BUG-123](../_archive/bugs/bug-123-exam-mode-correctchoiceid-leak.md) | Server Returns `correctChoiceId` to Client in Exam Mode | Resolved | Return `correctChoiceId: null` when explanations are hidden; update runtime schema + tests |
+| [BUG-122](../_archive/bugs/bug-122-exam-choices-clickable-after-submit.md) | Choices Still Clickable After Exam Mode Submit | Resolved | Restore authoritative answered state and keep choices locked; add regression coverage |
+| [BUG-121](../_archive/bugs/bug-121-session-start-button-missing-loading-state.md) | Session Start Button Never Shows Loading State | Resolved | Wire session start status to pending UI; add regression coverage |
 | [BUG-120](../_archive/bugs/bug-120-reconciliation-missing-authoritative-conflict-strategy.md) | Reconciliation Job Missing Authoritative Conflict Strategy | Resolved | Reconciliation job now uses authoritative Stripe customer conflict strategy with regression coverage |
 | [BUG-119](../_archive/bugs/bug-119-stripe-ended-status-missing-from-db-enum.md) | Stripe 'ended' Subscription Status Missing from DB Enum | Resolved | Removed invalid `'ended'` from Stripe subscription status union and added type-level regression coverage |
 | [BUG-118](../_archive/bugs/bug-118-question-page-missing-shared-guards.md) | Question Page Missing Shared Practice-Page Guards | Resolved | Question page now uses shared guard helpers for choice selection, submit transitions, and canSubmit gating |

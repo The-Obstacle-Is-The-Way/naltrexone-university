@@ -11,6 +11,7 @@ test('renders error state and retries when requested', async () => {
       loadState={{ status: 'error', message: 'Question load failed.' }}
       question={null}
       selectedChoiceId={null}
+      isAnswered={false}
       submitResult={null}
       isPending={false}
       bookmarkStatus="idle"
@@ -61,6 +62,7 @@ test('supports exam controls and question interactions', async () => {
         session: null,
       }}
       selectedChoiceId={null}
+      isAnswered={false}
       submitResult={null}
       isPending={false}
       bookmarkStatus="idle"
@@ -93,6 +95,59 @@ test('supports exam controls and question interactions', async () => {
   expect(onNextQuestion).toHaveBeenCalledTimes(1);
 });
 
+test('disables choice selection after a submit in exam mode', async () => {
+  const screen = await render(
+    <PracticeView
+      sessionInfo={{
+        sessionId: 'session-1',
+        mode: 'exam',
+        index: 0,
+        total: 10,
+        isMarkedForReview: false,
+      }}
+      loadState={{ status: 'ready' }}
+      question={{
+        questionId: 'question-1',
+        slug: 'question-1',
+        stemMd: 'What is the next best step?',
+        difficulty: 'easy',
+        choices: [
+          { id: 'choice_a', label: 'A', textMd: 'Option A', sortOrder: 1 },
+          { id: 'choice_b', label: 'B', textMd: 'Option B', sortOrder: 2 },
+        ],
+        session: null,
+      }}
+      selectedChoiceId="choice_a"
+      isAnswered={false}
+      submitResult={{
+        attemptId: 'attempt-1',
+        isCorrect: true,
+        correctChoiceId: 'choice_a',
+        explanationMd: 'Because',
+        choiceExplanations: [],
+      }}
+      isPending={false}
+      bookmarkStatus="idle"
+      isBookmarked={false}
+      canSubmit={false}
+      onEndSession={() => undefined}
+      onTryAgain={() => undefined}
+      onToggleBookmark={() => undefined}
+      onToggleMarkForReview={() => undefined}
+      onSelectChoice={() => undefined}
+      onSubmit={() => undefined}
+      onNextQuestion={() => undefined}
+    />,
+  );
+
+  await expect
+    .element(screen.getByRole('radio', { name: 'Option A' }))
+    .toBeDisabled();
+  await expect
+    .element(screen.getByRole('radio', { name: 'Option B' }))
+    .toBeDisabled();
+});
+
 test('renders bookmark feedback in shared toast region', async () => {
   const screen = await render(
     <NotificationProvider>
@@ -109,6 +164,7 @@ test('renders bookmark feedback in shared toast region', async () => {
           session: null,
         }}
         selectedChoiceId={null}
+        isAnswered={false}
         submitResult={null}
         isPending={false}
         bookmarkStatus="idle"

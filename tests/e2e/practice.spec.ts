@@ -43,16 +43,25 @@ test.describe('practice', () => {
     await selectChoiceByLabel(page, 'A');
     await page.getByRole('button', { name: 'Submit' }).click();
 
+    // Exam mode does not show explanation after submit
     await expect(
-      page.getByText('No more questions found.', { exact: true }),
-    ).toBeVisible();
-    await expect(
-      page.getByText('Explanation not available.', { exact: true }),
-    ).toHaveCount(0);
+      page.getByText('Explanation', { exact: true }),
+    ).not.toBeVisible();
 
-    await page.getByRole('button', { name: 'End session' }).click();
+    // Click "Review answers" to enter exam review view
+    await page.getByRole('button', { name: 'Review answers' }).click();
+
+    // Wait for exam review to load with the "Submit exam" button
+    const submitExamButton = page.getByRole('button', { name: 'Submit exam' });
+    await expect(submitExamButton).toBeVisible({ timeout: 15_000 });
+
+    // Submit the exam via confirmation dialog
+    await submitExamButton.click();
+    await page.getByRole('button', { name: 'Confirm submit' }).click();
+
+    // Wait for session to end and summary to appear
     await expect(
       page.getByRole('heading', { name: 'Session Summary' }),
-    ).toBeVisible();
+    ).toBeVisible({ timeout: 30_000 });
   });
 });
