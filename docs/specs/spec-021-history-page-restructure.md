@@ -8,7 +8,7 @@
 **Layer:** Feature
 **Date:** 2026-02-10
 **Depends On:** SPEC-013 (Practice Sessions), SPEC-014 (Review + Bookmarks), SPEC-019 (Practice UX Redesign), SPEC-020 (Practice Engine Completion)
-**Brainstorming:** `docs/brainstorming/review-page-flow-audit.md`, `docs/brainstorming/review-consistency-audit.md`
+**Brainstorming:** `docs/brainstorming/review-page-flow-audit.md`, `docs/brainstorming/review-consistency-audit.md`, `docs/brainstorming/practice-ux-audit.md`, `docs/brainstorming/practice-recent-sessions-v2.md`
 
 ---
 
@@ -166,7 +166,7 @@ With:
 ```typescript
 import type { Metadata } from 'next';
 
-export const metadata: Metadata = { title: 'History' };
+export const metadata: Metadata = { title: 'History - Addiction Boards' };
 
 type HistorySearchParams = {
   tab?: string;
@@ -194,14 +194,65 @@ type HistorySearchParams = {
 
 **File:** `app/(app)/app/history/loading.tsx`
 
-Add a simple loading UI consistent with other app pages (e.g., "Loading history…", `aria-live="polite"`).
+Match the existing app-route pattern used by Dashboard/Review:
+
+```typescript
+import { PageLoading } from '@/components/loading/page-loading';
+
+export default function Loading() {
+  return <PageLoading label="Loading history" cardCount={6} />;
+}
+```
 
 **File:** `app/(app)/app/history/error.tsx`
 
-Add an error boundary using `ErrorBoundaryPage`, with:
+Mirror the existing error-boundary pattern used by `/app/review`:
+- `'use client';` at the top
+- Use `ErrorBoundaryPage`, with:
 - Title: "History error"
 - Description: "We couldn't load your history right now. Please try again."
 - Links: at least `{ href: ROUTES.APP_DASHBOARD, label: 'Back to Dashboard' }`
+- `includeMainLandmark`
+- `logPrefix="app/(app)/app/history/error.tsx:"`
+
+#### 4.1.4.2 History Search Params + Href Builders (SSOT Helper Module)
+
+**File:** `app/(app)/app/history/history-search-params.ts`
+
+**Goal:** Keep parsing + link-building behavior identical to the existing Review page by extracting the current helpers from `app/(app)/app/review/page.tsx`.
+
+**Exports (required):**
+
+```typescript
+export type HistoryTab = 'sessions' | 'missed';
+export type DifficultyFilter = 'easy' | 'medium' | 'hard';
+
+export type MissedFilters = {
+  difficulty?: DifficultyFilter | null;
+  tagSlug?: string | null;
+};
+
+export function parseHistoryTab(value: string | undefined): HistoryTab;
+export function parseNonNegativeInt(value: string | undefined, fallback: number): number;
+export function parseLimit(value: string | undefined): number; // default 20, clamp 1..100
+export function parseDifficultyFilter(value: string | undefined): DifficultyFilter | null;
+export function parseTagSlugFilter(value: string | undefined): string | null;
+
+export function buildHistorySessionsHref(input: {
+  limit: number;
+  offset: number;
+}): string;
+
+export function buildHistoryMissedHref(input: {
+  limit: number;
+  offset: number;
+  filters?: MissedFilters;
+}): string;
+```
+
+**Href rules:**
+- Sessions hrefs always include `tab=sessions` and pagination params.
+- Missed hrefs always include `tab=missed`, pagination params, and include `difficulty`/`tag` only when present.
 
 #### 4.1.5 History Page — Client Component
 
@@ -216,7 +267,7 @@ export type HistoryPageClientProps = {
   sessionsResult?: ActionResult<GetSessionHistoryOutput>;
   // Missed data (when tab=missed):
   missedResult?: ActionResult<GetMissedQuestionsOutput>;
-  missedFilters?: ReviewFilters;
+  missedFilters?: MissedFilters;
 };
 ```
 
@@ -277,17 +328,11 @@ This is the current `ReviewView` from `app/(app)/app/review/page.tsx`, extracted
 
 - Same card layout, same filters, same pagination
 - `toQuestionRoute(row.slug, { from: 'history' })` instead of `{ from: 'review' }`
-- `buildReviewHref` becomes `buildMissedHref` pointing to `/app/history?tab=missed&...`
+- All pagination/filter links use `buildHistoryMissedHref()` (hrefs point to `/app/history?tab=missed&...`)
 - Same `getSessionOriginLabel` helper
 - All pagination links use `/app/history?tab=missed&offset=...&limit=...`
 
-**Helpers to extract from `review/page.tsx`:** Move the existing helper functions into `app/(app)/app/history/history-search-params.ts` so they can be reused by both the History server component and the Missed tab:
-- `ReviewFilters` type (rename to something History-scoped if desired, e.g. `MissedFilters`)
-- `parseNonNegativeInt`, `parseLimit`, `parseDifficultyFilter`, `parseTagSlugFilter`
-- `buildReviewHref` → replace with History-scoped href builders:
-  - `buildHistorySessionsHref({ limit, offset })` → `/app/history?tab=sessions&...`
-  - `buildHistoryMissedHref({ limit, offset, filters })` → `/app/history?tab=missed&...`
-- `getSessionOriginLabel`
+**Helpers source of truth:** Use `app/(app)/app/history/history-search-params.ts` for all parsing + href building (see §4.1.4.2).
 
 In `app/(app)/app/history/page.tsx`, call these parsers and pass the parsed `limit`, `offset`, and filters down as props.
 
@@ -719,5 +764,5 @@ Phase 4: E2E
 
 - **SPEC-014** (Review + Bookmarks) — The original Review page spec. This spec supersedes the Review page portion. Bookmarks page is unchanged.
 - **SPEC-019** (Practice UX Redesign) — Phase 3 cross-page IA improvements are partially addressed here. Phase 4 practice page polish is complete.
-- **Brainstorming:** `review-page-flow-audit.md` (vision), `review-consistency-audit.md` (inventory), `practice-engine-state-audit.md` (engine bugs — orthogonal to this spec)
+- **Brainstorming:** `review-page-flow-audit.md` (vision), `review-consistency-audit.md` (inventory), `practice-ux-audit.md` + `practice-recent-sessions-v2.md` (Practice recent-sessions panel is superseded by this spec), `practice-engine-state-audit.md` + `session-view-layout-audit.md` (orthogonal to this spec)
 - **BUG-129, BUG-130, BUG-131** — E2E selector fixes (committed, not related to this spec)
