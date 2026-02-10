@@ -8,7 +8,6 @@ vi.mock('next/link', () => ({
 
 vi.mock('./components', () => ({
   IncompleteSessionCard: () => null,
-  PracticeSessionHistoryPanel: () => null,
   PracticeSessionStarter: (props: {
     isPending: boolean;
     sessionStartStatus: string;
@@ -33,19 +32,12 @@ vi.mock('./hooks/use-practice-session-controls', () => ({
     incompleteSessionStatus: 'idle',
     incompleteSessionError: null,
     incompleteSession: null,
-    sessionHistoryStatus: 'idle',
-    sessionHistoryError: null,
-    sessionHistoryRows: [],
-    selectedHistorySessionId: null,
-    selectedHistoryReview: null,
-    historyReviewLoadState: { status: 'idle' },
     onSessionModeChange: () => undefined,
     onSessionCountChange: () => undefined,
     onToggleTag: () => undefined,
     onToggleDifficulty: () => undefined,
     onStartSession: async () => undefined,
     onAbandonIncompleteSession: async () => undefined,
-    onOpenSessionHistory: async () => undefined,
   }),
 }));
 

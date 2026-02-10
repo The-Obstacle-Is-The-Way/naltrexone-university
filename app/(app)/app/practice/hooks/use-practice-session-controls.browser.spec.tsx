@@ -8,15 +8,11 @@ const {
   startPracticeSessionMock,
   endPracticeSessionMock,
   getIncompletePracticeSessionMock,
-  getSessionHistoryMock,
-  getPracticeSessionReviewMock,
 } = vi.hoisted(() => ({
   getTagsMock: vi.fn(),
   startPracticeSessionMock: vi.fn(),
   endPracticeSessionMock: vi.fn(),
   getIncompletePracticeSessionMock: vi.fn(),
-  getSessionHistoryMock: vi.fn(),
-  getPracticeSessionReviewMock: vi.fn(),
 }));
 
 vi.mock('@/src/adapters/controllers/tag-controller', () => ({
@@ -27,8 +23,6 @@ vi.mock('@/src/adapters/controllers/practice-controller', () => ({
   startPracticeSession: startPracticeSessionMock,
   endPracticeSession: endPracticeSessionMock,
   getIncompletePracticeSession: getIncompletePracticeSessionMock,
-  getSessionHistory: getSessionHistoryMock,
-  getPracticeSessionReview: getPracticeSessionReviewMock,
 }));
 
 function PracticeSessionControlsHookProbe() {
@@ -40,7 +34,6 @@ function PracticeSessionControlsHookProbe() {
       <div data-testid="incomplete-load-status">
         {output.incompleteSessionStatus}
       </div>
-      <div data-testid="history-load-status">{output.sessionHistoryStatus}</div>
       <div data-testid="available-tags">{output.availableTags.length}</div>
       <div data-testid="session-mode">{output.sessionMode}</div>
       <div data-testid="selected-tags">{output.filters.tagSlugs.join(',')}</div>
@@ -87,9 +80,6 @@ describe('usePracticeSessionControls (browser)', () => {
       }),
     );
     getIncompletePracticeSessionMock.mockResolvedValue(ok(null));
-    getSessionHistoryMock.mockResolvedValue(
-      ok({ rows: [], total: 0, limit: 10, offset: 0 }),
-    );
 
     const screen = await render(<PracticeSessionControlsHookProbe />);
 
@@ -98,9 +88,6 @@ describe('usePracticeSessionControls (browser)', () => {
       .toHaveTextContent('idle');
     await expect
       .element(screen.getByTestId('incomplete-load-status'))
-      .toHaveTextContent('idle');
-    await expect
-      .element(screen.getByTestId('history-load-status'))
       .toHaveTextContent('idle');
     await expect
       .element(screen.getByTestId('available-tags'))
@@ -120,9 +107,6 @@ describe('usePracticeSessionControls (browser)', () => {
   it('ignores unsupported session mode changes', async () => {
     getTagsMock.mockResolvedValue(ok({ rows: [] }));
     getIncompletePracticeSessionMock.mockResolvedValue(ok(null));
-    getSessionHistoryMock.mockResolvedValue(
-      ok({ rows: [], total: 0, limit: 10, offset: 0 }),
-    );
 
     const screen = await render(<PracticeSessionControlsHookProbe />);
 
@@ -138,9 +122,6 @@ describe('usePracticeSessionControls (browser)', () => {
   it('sets tag load status to error when getTags throws', async () => {
     getTagsMock.mockRejectedValue(new Error('Tag service unavailable'));
     getIncompletePracticeSessionMock.mockResolvedValue(ok(null));
-    getSessionHistoryMock.mockResolvedValue(
-      ok({ rows: [], total: 0, limit: 10, offset: 0 }),
-    );
 
     const screen = await render(<PracticeSessionControlsHookProbe />);
 
@@ -161,9 +142,6 @@ describe('usePracticeSessionControls (browser)', () => {
         totalCount: 10,
         startedAt: '2026-02-08T00:00:00.000Z',
       }),
-    );
-    getSessionHistoryMock.mockResolvedValue(
-      ok({ rows: [], total: 0, limit: 10, offset: 0 }),
     );
     endPracticeSessionMock.mockResolvedValue(
       ok({

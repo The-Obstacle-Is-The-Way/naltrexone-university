@@ -67,6 +67,8 @@ describe('app/(app)/app/practice/[sessionId]', () => {
     expect(html).toContain('Duration');
     expect(html).toContain('2m 3s');
     expect(html).toContain('Question breakdown');
+    expect(html).toContain('View in History');
+    expect(html).toContain('href="/app/history"');
     expect(html).toContain('Start another session');
   });
 

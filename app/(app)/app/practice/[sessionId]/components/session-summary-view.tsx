@@ -91,6 +91,9 @@ export function SessionSummaryView({
           <Link href={ROUTES.APP_DASHBOARD}>Back to Dashboard</Link>
         </Button>
         <Button asChild variant="outline" className="rounded-full">
+          <Link href={ROUTES.APP_HISTORY}>View in History</Link>
+        </Button>
+        <Button asChild variant="outline" className="rounded-full">
           <Link href={ROUTES.APP_PRACTICE}>Start another session</Link>
         </Button>
       </div>
