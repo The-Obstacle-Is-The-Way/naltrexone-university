@@ -22,7 +22,7 @@ describe('app/(app)/app/layout (shell)', () => {
     expect(html).toContain('Addiction Boards');
     expect(html).toContain('href="/app/dashboard"');
     expect(html).toContain('href="/app/practice"');
-    expect(html).toContain('href="/app/review"');
+    expect(html).toContain('href="/app/history"');
     expect(html).toContain('href="/app/bookmarks"');
     expect(html).toContain('href="/app/billing"');
     expect(html).toContain('AuthNav');
