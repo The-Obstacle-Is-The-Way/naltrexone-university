@@ -28,13 +28,22 @@ export async function selectChoiceByLabel(
   page: Page,
   label: 'A' | 'B' | 'C' | 'D' = 'A',
 ): Promise<void> {
-  const choice = page.getByRole('radio', { name: `Choice ${label}` }).first();
-  const choiceLabel = choice.locator('xpath=ancestor::label[1]');
-  await expect(choice).toBeVisible({ timeout: 30_000 });
-  await expect(choice).toBeEnabled({ timeout: 30_000 });
+  // ChoiceButton renders: <label> wrapping an sr-only <input type="radio">
+  // and a flex div containing a circle indicator (with just the letter A/B/C/D)
+  // followed by the choice text in Markdown.
+  //
+  // Locate the label that contains a child div with the exact letter text.
+  // The circle indicator is the only element with just the single letter.
+  const choiceLabel = page
+    .locator('label')
+    .filter({
+      has: page.locator(`div.rounded-full:text-is("${label}")`),
+    })
+    .first();
   await expect(choiceLabel).toBeVisible({ timeout: 30_000 });
   await choiceLabel.click();
-  await expect(choice).toBeChecked();
+  const radio = choiceLabel.locator('input[type="radio"]');
+  await expect(radio).toBeChecked();
 }
 
 export async function assertQuestionSlugExists(

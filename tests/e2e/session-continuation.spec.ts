@@ -17,9 +17,11 @@ test.describe('practice session continuation', () => {
     await ensureSubscribed(page);
 
     await startSession(page, 'tutor');
-    const sessionInfo = page.getByText(/Session: tutor/i);
-    await expect(sessionInfo).toBeVisible();
-    await expect(sessionInfo).toContainText('1/');
+    // Session page now shows "Tutor Session" heading and "Question X of Y" description
+    await expect(
+      page.getByRole('heading', { name: 'Tutor Session' }),
+    ).toBeVisible();
+    await expect(page.getByText(/Question 1 of/)).toBeVisible();
 
     const sessionUrl = page.url();
     await page.goto('/app/dashboard');
@@ -32,7 +34,9 @@ test.describe('practice session continuation', () => {
     await expect(page.getByText(/Tutor mode|Exam mode/)).toBeVisible();
     await page.getByRole('link', { name: 'Resume session' }).click();
     await expect(page).toHaveURL(sessionUrl);
-    await expect(sessionInfo).toContainText('1/');
-    await expect(page.getByRole('heading', { name: 'Practice' })).toBeVisible();
+    await expect(page.getByText(/Question 1 of/)).toBeVisible();
+    await expect(
+      page.getByRole('heading', { name: 'Tutor Session' }),
+    ).toBeVisible();
   });
 });
