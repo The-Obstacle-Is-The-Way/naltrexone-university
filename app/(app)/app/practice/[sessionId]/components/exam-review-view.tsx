@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -93,6 +93,12 @@ export function ExamReviewView({
 }) {
   const unansweredCount = review.totalCount - review.answeredCount;
   const isFinalizingRef = useRef(false);
+
+  useEffect(() => {
+    if (!isPending) {
+      isFinalizingRef.current = false;
+    }
+  }, [isPending]);
 
   return (
     <div className="space-y-6">

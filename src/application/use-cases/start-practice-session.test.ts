@@ -1,4 +1,3 @@
-// @vitest-environment jsdom
 import { describe, expect, it } from 'vitest';
 import { createSeed, shuffleWithSeed } from '@/src/domain/services';
 import {

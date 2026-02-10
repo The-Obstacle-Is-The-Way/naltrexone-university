@@ -270,7 +270,7 @@ export function PracticeView(props: PracticeViewProps) {
             {props.isBookmarked ? 'Remove bookmark' : 'Bookmark'}
           </Button>
 
-          {sessionInfo?.mode === 'exam' && props.onToggleMarkForReview ? (
+          {isExamMode && props.onToggleMarkForReview ? (
             <Button
               type="button"
               variant="outline"

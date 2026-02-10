@@ -47,7 +47,6 @@ describe('PracticePageClient', () => {
     const PracticePageClient = (await import('./practice-page-client')).default;
 
     const html = renderToStaticMarkup(<PracticePageClient />);
-    expect(html).toContain('starter-pending');
-    expect(html).toContain('true');
+    expect(html).toContain('data-testid="starter-pending">true<');
   });
 });

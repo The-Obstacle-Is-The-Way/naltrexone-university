@@ -79,16 +79,19 @@ describe('SessionBreakdownList', () => {
     const incorrectLabel = Array.from(doc.querySelectorAll('span')).find(
       (el) => el.textContent === 'Incorrect',
     );
+    expect(incorrectLabel).toBeDefined();
     expect(incorrectLabel?.getAttribute('class')).toContain('text-destructive');
 
     const correctLabel = Array.from(doc.querySelectorAll('span')).find(
       (el) => el.textContent === 'Correct',
     );
+    expect(correctLabel).toBeDefined();
     expect(correctLabel?.getAttribute('class')).toContain('text-emerald-500');
 
     const unansweredLabel = Array.from(doc.querySelectorAll('span')).find(
       (el) => el.textContent === 'Unanswered',
     );
+    expect(unansweredLabel).toBeDefined();
     expect(unansweredLabel?.getAttribute('class')).toContain(
       'text-muted-foreground/60',
     );
