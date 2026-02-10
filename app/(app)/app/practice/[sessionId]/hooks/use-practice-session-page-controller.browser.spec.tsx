@@ -171,7 +171,6 @@ function PracticeSessionPageControllerReviewProbe() {
 
 describe('usePracticeSessionPageController (browser)', () => {
   afterEach(() => {
-    vi.restoreAllMocks();
     getNextQuestionMock.mockReset();
     submitAnswerMock.mockReset();
     getBookmarksMock.mockReset();

@@ -10,7 +10,7 @@ const baseURL = process.env.NEXT_PUBLIC_APP_URL || 'http://127.0.0.1:3000';
 
 export default defineConfig({
   testDir: './tests/e2e',
-  fullyParallel: true,
+  fullyParallel: false,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
   // All authenticated E2E tests share a single test user, so concurrent workers

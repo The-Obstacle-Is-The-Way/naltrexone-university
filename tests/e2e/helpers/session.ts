@@ -12,8 +12,8 @@ export async function startSession(
 
   // If an incomplete session exists, abandon it first
   const abandonButton = page.getByRole('button', { name: 'Abandon session' });
-  try {
-    await abandonButton.waitFor({ state: 'visible', timeout: 2_000 });
+  const abandonCount = await abandonButton.count();
+  if (abandonCount > 0) {
     await abandonButton.click();
     // Confirm the abandon dialog
     await page.getByRole('button', { name: 'Abandon anyway' }).click();
@@ -21,8 +21,6 @@ export async function startSession(
     await expect(
       page.getByRole('button', { name: 'Start session' }),
     ).toBeVisible({ timeout: 10_000 });
-  } catch {
-    // No incomplete session — proceed normally
   }
 
   // Mode: SegmentedControl with buttons (not a <select>).
