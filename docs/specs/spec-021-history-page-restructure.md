@@ -34,7 +34,7 @@ Every open question from the brainstorming docs is resolved here.
 | Dashboard slim-down aggressiveness | **3 most recent sessions + 3 most recent missed questions** | Enough recency signal to answer "what did I do?" without becoming a shadow review page. Links to History for details. |
 | Post-session redirect | **Stay on summary, add "View in History" link** | Redirecting away from summary is disorienting. The summary is useful on its own. A prominent link bridges to History without forcing navigation. |
 | Route for History | **`/app/history`** (no session sub-routes for now) | Session detail stays as expandable in the tab, not a separate route. Less routing complexity. Can promote to `/app/history/[sessionId]` later if needed. |
-| `/app/review` after rename | **301 redirect to `/app/history?tab=missed`** | Bookmarked URLs and external links keep working. Redirect is in `next.config.ts`. |
+| `/app/review` after rename | **permanent redirect to `/app/history?tab=missed`** | Bookmarked URLs and external links keep working. Redirect is in `next.config.ts`. |
 | Tab URL persistence | **Query param: `/app/history?tab=sessions` or `/app/history?tab=missed`** | Default is `sessions`. URL-shareable, back button works, server-renderable. |
 | `SessionBreakdownList` `from` origin | **Add `'history'` to `QuestionOrigin`** | Clean provenance tracking. "Back to History" on question detail page. |
 
@@ -48,7 +48,7 @@ Every open question from the brainstorming docs is resolved here.
 /app/history                    ← NEW page (default tab: sessions)
 /app/history?tab=sessions       ← Sessions tab (explicit)
 /app/history?tab=missed         ← Missed Questions tab
-/app/review                     ← 301 redirect → /app/history?tab=missed
+/app/review                     ← permanent redirect → /app/history?tab=missed
 ```
 
 ### 3.2 Page Component Architecture
@@ -146,10 +146,9 @@ With:
 **Changes:**
 - Add `from` prop: `{ rows: PracticeSessionReviewRow[]; from?: QuestionOrigin }` (default `'practice'`)
 - Use `from` in `toQuestionRoute(row.slug, { from })`
-- Update all existing imports (3 files):
+- Update all existing imports (2 files):
   - `app/(app)/app/practice/components/practice-session-history-panel.tsx`
   - `app/(app)/app/practice/[sessionId]/components/session-summary-view.tsx`
-  - `app/(app)/app/practice/[sessionId]/components/exam-review-view.tsx` (if it imports it)
 
 **Move test file too:**
 **From:** `app/(app)/app/practice/components/session-breakdown-list.test.tsx`
@@ -238,8 +237,15 @@ export type HistorySessionsTabProps = {
 **Client state:** `useHistorySessions` hook manages:
 - `selectedSessionId: string | null`
 - `selectedReview: GetPracticeSessionReviewOutput | null`
-- `reviewLoadState: LoadState`
+- `reviewLoadState: LoadState` (import `AsyncLoadStateWithIdle` from `app/(app)/app/shared/load-state.ts`)
 - `onOpenSession(sessionId: string)` — toggles, calls `getPracticeSessionReview({ sessionId })` on expand
+
+**Implementation notes for `useHistorySessions`:**
+- Import `getPracticeSessionReview` from `@/src/adapters/controllers/practice-controller`
+- Mirror the `useIsMounted` guard pattern from `usePracticeSessionHistory` to prevent state updates after unmount
+- Toggle logic: if `selectedSessionId === sessionId`, set to `null` (collapse); otherwise fetch and expand
+
+**Pagination note:** `GetSessionHistoryOutput` uses field name `total` for the total count, while `GetMissedQuestionsOutput` uses `totalCount`. Watch for this asymmetry when building pagination UI.
 
 #### 4.1.8 Missed Questions Tab
 
@@ -253,7 +259,42 @@ This is the current `ReviewView` from `app/(app)/app/review/page.tsx`, extracted
 - Same `getSessionOriginLabel` helper
 - All pagination links use `/app/history?tab=missed&offset=...&limit=...`
 
-#### 4.1.9 Redirect
+**Helpers to extract from `review/page.tsx`:** The current Review page defines several helper functions that must be moved into the missed tab component (or a shared utils file within the history directory):
+- `ReviewFilters` type (the filter state shape)
+- `parseNonNegativeInt`, `parseLimit` (search param parsers)
+- `parseDifficultyFilter`, `parseTagSlugFilter` (filter-specific parsers)
+- `buildReviewHref` → rename to `buildMissedHref` (URL builder for pagination + filter links)
+- `getSessionOriginLabel` (maps session mode to display string)
+
+These live in the server component portion of the Review page. In the History page, the server component (`page.tsx`) will call the parsers and pass the results to the client component as props.
+
+#### 4.1.9 Question Detail — Origin Support
+
+**Files:**
+- `app/(app)/app/questions/[slug]/question-page-client.tsx`
+- `app/(app)/app/questions/[slug]/question-page-client.test.tsx`
+- `app/(app)/app/questions/[slug]/error.tsx`
+
+**`parseQuestionOrigin`** (question-page-client.tsx, ~line 15): Add `if (value === 'history') return value;` to handle the new origin.
+
+**`getOriginUi`** (question-page-client.tsx, ~line 23): Add a `'history'` case:
+```typescript
+if (resolvedOrigin === 'history') {
+  return {
+    backHref: ROUTES.APP_HISTORY,
+    backLabel: 'Back to History',
+    subtitle: 'Reviewing a question from your session history.',
+  };
+}
+```
+
+**`error.tsx`** (~line 20): Replace `{ href: ROUTES.APP_REVIEW, label: 'Back to Review' }` with `{ href: ROUTES.APP_HISTORY, label: 'Back to History' }`.
+
+**Legacy `from=review` handling:** Keep the `'review'` case in `getOriginUi` but update its `backHref` from `ROUTES.APP_REVIEW` to `ROUTES.APP_HISTORY + '?tab=missed'` and label to `'Back to History'`. This avoids a redirect bounce when old `from=review` links are clicked.
+
+**Test updates** (question-page-client.test.tsx): Add test for `from=history` rendering `'Back to History'` back link. Update existing `from=review` test to assert `'Back to History'` (since the label changes).
+
+#### 4.1.10 Redirect
 
 **File:** `next.config.ts`
 
@@ -264,7 +305,7 @@ async redirects() {
     {
       source: '/app/review',
       destination: '/app/history?tab=missed',
-      permanent: true, // 301
+      permanent: true, // HTTP 308 (permanent redirect, equivalent to 301 for GET requests)
     },
   ];
 },
@@ -298,9 +339,9 @@ Remove the `usePracticeSessionHistory` composition and its return values.
 
 #### 4.2.5 Update Components Barrel
 
-**File:** `app/(app)/app/practice/components/index.ts` (if exists)
+**File:** `app/(app)/app/practice/components/index.ts`
 
-Remove `PracticeSessionHistoryPanel` export.
+Remove `PracticeSessionHistoryPanel` export. This barrel file exists and currently exports `PracticeSessionHistoryPanel` — it must be updated to avoid a broken import in `practice-page-client.tsx` (which imports from `'./components'`).
 
 #### 4.2.6 Add "View History" Link to Session Summary
 
@@ -355,6 +396,13 @@ export type DashboardSummaryOutput = {
 - `stats`: Same as current `UserStatsOutput` (minus `recentActivity`)
 
 **Rationale for new use case:** The current `GetUserStatsUseCase` returns `recentActivity` (individual attempts). The Dashboard needs session-level summaries + missed questions instead. Rather than bloating the existing use case, create a new one that composes existing use cases.
+
+**Construction:** Constructor injection per Clean Architecture. Takes:
+- `GetUserStatsUseCase` (for `stats` — call it and strip `recentActivity` from the result)
+- `GetSessionHistoryUseCase` (for `recentSessions` — call with `limit: 3`)
+- `GetMissedQuestionsUseCase` (for `recentMissed` — call with `limit: 3`)
+
+All three take `userId` as a parameter. The new use case takes `{ userId }` and composes the three calls.
 
 #### 4.3.2 Dashboard Page Update
 
@@ -416,11 +464,13 @@ The redirect in `next.config.ts` handles any lingering URLs.
 | `app/(app)/app/practice/practice-page-client.tsx` | Remove history panel |
 | `app/(app)/app/practice/hooks/use-practice-session-controls.ts` | Remove history hook composition |
 | `app/(app)/app/practice/[sessionId]/components/session-summary-view.tsx` | Add "View in History" link |
-| `app/(app)/app/practice/components/practice-session-history-panel.tsx` | Import path update for SessionBreakdownList (then delete in Phase 2) |
-| `app/(app)/app/practice/[sessionId]/components/session-summary-view.tsx` | Import path update for SessionBreakdownList |
+| `app/(app)/app/practice/components/practice-session-history-panel.tsx` | Import path update for `SessionBreakdownList` (temporary — deleted in Phase 2) |
+| `app/(app)/app/practice/[sessionId]/components/session-summary-view.tsx` | Import path update for `SessionBreakdownList` |
+| `app/(app)/app/questions/[slug]/question-page-client.tsx` | Add `'history'` to `parseQuestionOrigin` + `getOriginUi` (back link, subtitle) |
+| `app/(app)/app/questions/[slug]/question-page-client.test.tsx` | Add test for `from=history` back link |
+| `app/(app)/app/questions/[slug]/error.tsx` | Update `ROUTES.APP_REVIEW` → `ROUTES.APP_HISTORY` |
 | `app/(app)/app/dashboard/page.tsx` | Replace Recent Activity with compact cards |
-| `src/adapters/controllers/stats-controller.ts` | Add getDashboardSummary action |
-| `src/adapters/controllers/practice-controller.ts` | No changes (existing actions reused) |
+| `src/adapters/controllers/stats-controller.ts` | Add `getDashboardSummary` action |
 
 ### Deleted Files
 
@@ -554,7 +604,11 @@ Update existing tests:
 
 **File:** `tests/e2e/core-app-pages.spec.ts`
 
-Update the review page test to navigate to `/app/history` instead.
+Update the review page test:
+- Navigate to `/app/history` instead of `/app/review`
+- Update heading assertion from `'Review'` to `'History'`
+- Update any `a[href*="review"]` selectors to `a[href*="history"]`
+- Add assertion for `'Recent activity'` section removal from Dashboard (if the Dashboard test asserts its presence)
 
 **File:** `tests/e2e/practice.spec.ts`
 
