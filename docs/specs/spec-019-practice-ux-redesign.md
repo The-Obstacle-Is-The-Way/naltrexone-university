@@ -484,19 +484,19 @@ APP_PRACTICE_QUICK: '/app/practice/quick',
 **Layout:**
 
 ```text
-┌────────────────────────────────────────────────────────────┐
-│ Quick Practice                          [← Back to Practice]│
-│ Answer one question at a time.                              │
-├────────────────────────────────────────────────────────────┤
-│                                              [Bookmark]     │
-│ ┌─ Question Card ──────────────────────────────────────┐   │
-│ │ A patient who had been taking zolpidem nightly...     │   │
-│ │                                                       │   │
-│ │ (A) Choice A                                          │   │
-│ │ (B) Choice B                                          │   │
-│ │ (C) Choice C                                          │   │
-│ │ (D) Choice D                                          │   │
-│ └───────────────────────────────────────────────────────┘   │
+┌──────────────────────────────────────────────────────────────┐
+│ Quick Practice                         [← Back to Practice]  │
+│ Answer one question at a time.                               │
+├──────────────────────────────────────────────────────────────┤
+│                                              [Bookmark]      │
+│ ┌─ Question Card ───────────────────────────────────────┐    │
+│ │ A patient who had been taking zolpidem nightly...     │    │
+│ │                                                       │    │
+│ │ (A) Choice A                                          │    │
+│ │ (B) Choice B                                          │    │
+│ │ (C) Choice C                                          │    │
+│ │ (D) Choice D                                          │    │
+│ └───────────────────────────────────────────────────────┘    │
 │                                                              │
 │ [Submit]  [Next Question]                                    │
 │                                                              │
@@ -712,29 +712,29 @@ APP_PRACTICE_QUICK: '/app/practice/quick',
 │   │                                                             │   │
 │   │     Choose how you want to practice today:                  │   │
 │   │                                                             │   │
-│   │   ┌─────────────────────┐   ┌─────────────────────┐        │   │
-│   │   │                     │   │                     │        │   │
-│   │   │   📝 Session        │   │   ⚡ Quick          │        │   │
-│   │   │                     │   │                     │        │   │
-│   │   │   Structured        │   │   One question      │        │   │
-│   │   │   practice with     │   │   at a time,        │        │   │
-│   │   │   progress          │   │   no tracking       │        │   │
-│   │   │   tracking          │   │                     │        │   │
-│   │   │                     │   │                     │        │   │
-│   │   │   Mode: Tutor/Exam  │   │   Just jump in      │        │   │
-│   │   │   Count: 10-100     │   │   and practice      │        │   │
-│   │   │   Tags: Filter      │   │                     │        │   │
-│   │   │                     │   │                     │        │   │
-│   │   │   [Start Session]   │   │   [Quick Practice]  │        │   │
-│   │   │                     │   │                     │        │   │
-│   │   └─────────────────────┘   └─────────────────────┘        │   │
+│   │   ┌─────────────────────┐   ┌─────────────────────┐         │   │
+│   │   │                     │   │                     │         │   │
+│   │   │   📝 Session        │   │   ⚡ Quick           │         │   │
+│   │   │                     │   │                     │         │   │
+│   │   │   Structured        │   │   One question      │         │   │
+│   │   │   practice with     │   │   at a time,        │         │   │
+│   │   │   progress          │   │   no tracking       │         │   │
+│   │   │   tracking          │   │                     │         │   │
+│   │   │                     │   │                     │         │   │
+│   │   │   Mode: Tutor/Exam  │   │   Just jump in      │         │   │
+│   │   │   Count: 10-100     │   │   and practice      │         │   │
+│   │   │   Tags: Filter      │   │                     │         │   │
+│   │   │                     │   │                     │         │   │
+│   │   │   [Start Session]   │   │   [Quick Practice]  │         │   │
+│   │   │                     │   │                     │         │   │
+│   │   └─────────────────────┘   └─────────────────────┘         │   │
 │   │                                                             │   │
 │   └─────────────────────────────────────────────────────────────┘   │
 │                                                                     │
 │   ┌─────────────────────────────────────────────────────────────┐   │
 │   │   📊 Recent Sessions                                        │   │
-│   │   ├── Tutor • 85% • 20 questions • 2 days ago              │   │
-│   │   ├── Exam  • 72% • 15 questions • 5 days ago              │   │
+│   │   ├── Tutor • 85% • 20 questions • 2 days ago               │   │
+│   │   ├── Exam  • 72% • 15 questions • 5 days ago               │   │
 │   │   └── [View all →]                                          │   │
 │   └─────────────────────────────────────────────────────────────┘   │
 │                                                                     │

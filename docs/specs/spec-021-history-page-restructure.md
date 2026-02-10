@@ -259,7 +259,7 @@ export type HistorySessionsTabProps = {
 **Client state:** `useHistorySessions` hook manages:
 - `selectedSessionId: string | null`
 - `selectedReview: GetPracticeSessionReviewOutput | null`
-- `reviewLoadState: LoadState` (import `AsyncLoadStateWithIdle` from `app/(app)/app/shared/load-state.ts`)
+- `reviewLoadState: AsyncLoadStateWithIdle` (import from `app/(app)/app/shared/load-state.ts`; alias locally if desired)
 - `onOpenSession(sessionId: string)` — toggles, calls `getPracticeSessionReview({ sessionId })` on expand
 
 **Implementation notes for `useHistorySessions`:**
@@ -688,7 +688,7 @@ Phase 4: E2E
 - [ ] `/app/history` loads with Sessions tab showing all completed sessions
 - [ ] Clicking "View breakdown" expands a session inline showing question breakdown
 - [ ] Clicking "Missed Questions" tab shows missed questions with filters and pagination
-- [ ] `/app/review` 301-redirects to `/app/history?tab=missed`
+- [ ] `/app/review` permanently redirects (HTTP 308) to `/app/history?tab=missed`
 - [ ] Nav sidebar shows "History" instead of "Review"
 - [ ] Practice page has NO "Recent sessions" section
 - [ ] Session summary view has "View in History" link
@@ -697,7 +697,7 @@ Phase 4: E2E
 - [ ] Dashboard missed cards link to individual question pages
 - [ ] All question links from History use `?from=history`
 - [ ] Question detail page "Back to History" link works
-- [ ] `SessionBreakdownList` is in shared location, used by History, Practice summary, and exam review
+- [ ] `SessionBreakdownList` is in shared location and used by History breakdowns and the Practice session summary view
 - [ ] All existing E2E tests pass (with updates for new routes)
 - [ ] New E2E tests cover the History page flow
 - [ ] `pnpm typecheck && pnpm lint && pnpm test --run && pnpm test:browser && pnpm test:e2e` all pass
