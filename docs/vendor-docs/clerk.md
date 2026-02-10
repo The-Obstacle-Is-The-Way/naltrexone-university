@@ -112,6 +112,26 @@ function Component() {
 
 ---
 
+## REST API (Backend)
+
+For server-side operations outside Next.js (e.g., E2E test seeding), use the Clerk REST API directly instead of `@clerk/nextjs/server`. This avoids the `server-only` import restriction.
+
+**User lookup by email** (used in `tests/e2e/helpers/seed-test-user.ts`):
+```typescript
+const res = await fetch(
+  `https://api.clerk.com/v1/users?email_address=${encodeURIComponent(email)}&limit=1`,
+  { headers: { Authorization: `Bearer ${process.env.CLERK_SECRET_KEY}` } },
+);
+const [user] = await res.json();
+// user.id = "user_xxx"
+```
+
+**Docs:** https://clerk.com/docs/reference/backend-api
+
+**Note:** The `CLERK_SECRET_KEY` (`sk_test_*` / `sk_live_*`) works as a Bearer token for all Backend API endpoints.
+
+---
+
 ## Webhooks We Handle
 
 | Event | Handler | Purpose |

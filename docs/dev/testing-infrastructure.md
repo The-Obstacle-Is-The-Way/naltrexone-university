@@ -43,7 +43,7 @@ workers: process.env.CI ? 1 : undefined,
 | `tests/e2e/theme-preference.spec.ts` | Theme preference persistence |
 | `tests/e2e/dark-mode.spec.ts` | Dark mode toggle and OS preference |
 | `tests/e2e/marketing-contrast.spec.ts` | Marketing contrast regression checks |
-| `tests/e2e/subscribe.spec.ts` | Subscription checkout (Stripe test mode) |
+| `tests/e2e/subscribe.spec.ts` | Subscription verification (API-seeded) |
 | `tests/e2e/subscribe-and-practice.spec.ts` | Subscribe + answer a question |
 | `tests/e2e/practice.spec.ts` | Practice session answering flow |
 | `tests/e2e/session-continuation.spec.ts` | Resume incomplete session |
@@ -77,6 +77,16 @@ E2E_CLERK_USER_PASSWORD=your-password
 ```
 
 These can be provided via `.env.local` (loaded by `playwright.config.ts`) or CI secrets. Tests that require auth will `test.skip()` when these are missing.
+
+### Test Data Seeding
+
+Subscription data is seeded via the Stripe API and direct DB writes in `global.setup.ts` — **no Stripe UI automation**. The `seedTestSubscription()` helper (in `tests/e2e/helpers/seed-test-user.ts`) runs before any test and idempotently ensures:
+
+1. The test user exists in the `users` table (matched by email, Clerk user ID resolved via Clerk API)
+2. A Stripe customer exists (checked in DB, then Stripe API, created if needed) and is mirrored in `stripe_customers`
+3. An active subscription exists (using `pm_card_visa` test payment method) and is mirrored in `stripe_subscriptions`
+
+Seeding is skipped when `E2E_CLERK_USER_USERNAME` or `STRIPE_SECRET_KEY` are missing. Tests that depend on subscription already skip when Clerk credentials are absent, so this is safe.
 
 ### Writing New E2E Tests
 
@@ -214,8 +224,12 @@ E2E tests run in CI via Playwright (see `.github/workflows/ci.yml`):
 
 | Secret | Purpose |
 | ------ | ------- |
-| `E2E_CLERK_USER_USERNAME` | Test Clerk account username |
+| `E2E_CLERK_USER_USERNAME` | Test Clerk account username (email) |
 | `E2E_CLERK_USER_PASSWORD` | Test Clerk account password |
+| `CLERK_SECRET_KEY` | Clerk API key (used to resolve Clerk user ID during seeding) |
+| `STRIPE_SECRET_KEY` | Stripe API key (used to create test subscriptions during seeding) |
+| `DATABASE_URL` | Postgres connection string (used for direct DB writes during seeding) |
+| `NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY` | Stripe monthly price ID (used during subscription seeding) |
 
 ---
 
@@ -224,7 +238,7 @@ E2E tests run in CI via Playwright (see `.github/workflows/ci.yml`):
 Playwright coverage intentionally focuses on user-facing regression paths:
 
 - Marketing pages + theme/dark-mode
-- Auth + subscription (Stripe test mode) when E2E Clerk creds are present
+- Auth + subscription (API-seeded, verified in-app) when E2E Clerk creds are present
 - Practice sessions + continuation
 - Review + bookmarks
 
@@ -265,5 +279,7 @@ killall "Google Chrome"
 - [react-vitest-testing.md](./react-vitest-testing.md) — React 19 + Vitest component testing setup
 - [CLAUDE.md](../../CLAUDE.md) — Testing mandate and test locations
 - [SPEC-010](../specs/spec-010-server-actions.md) — Controller testing patterns
+- [Stripe vendor docs](../vendor-docs/stripe.md) — E2E test seeding pattern, test payment methods
+- [Clerk vendor docs](../vendor-docs/clerk.md) — REST API for user lookup in E2E seeding
 - [Playwright Docs](https://playwright.dev/docs/intro)
 - [Agent-Browser README](https://github.com/anthropics/agent-browser)

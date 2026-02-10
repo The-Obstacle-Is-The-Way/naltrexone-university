@@ -60,10 +60,7 @@ export function useQuestionFlowCore(
   const [submitResult, setSubmitResult] = useState<SubmitAnswerOutput | null>(
     null,
   );
-  const [draftSelectedChoices, setDraftSelectedChoices] = useState<
-    Map<string, string>
-  >(() => new Map());
-  const draftSelectedChoicesRef = useRef(draftSelectedChoices);
+  const draftSelectedChoicesRef = useRef<Map<string, string>>(new Map());
   const [loadState, setLoadState] = useState<LoadState>({ status: 'idle' });
   const [isPending, startTransition] = useTransition();
   const [questionLoadedAt, setQuestionLoadedAt] = useState<number | null>(null);
@@ -101,13 +98,9 @@ export function useQuestionFlowCore(
     });
   }, [isAnswered, loadState, question, selectedChoiceId, submitResult]);
 
-  const setDraftSelectedChoicesAndRef = useCallback(
+  const updateDraftSelectedChoices = useCallback(
     (update: (prev: Map<string, string>) => Map<string, string>) => {
-      setDraftSelectedChoices((prev) => {
-        const next = update(prev);
-        draftSelectedChoicesRef.current = next;
-        return next;
-      });
+      draftSelectedChoicesRef.current = update(draftSelectedChoicesRef.current);
     },
     [],
   );
@@ -134,7 +127,7 @@ export function useQuestionFlowCore(
     if (typeof sessionSelectedChoiceId === 'string') {
       setSelectedChoiceId(sessionSelectedChoiceId);
       setIsAnswered(true);
-      setDraftSelectedChoicesAndRef((prev) => {
+      updateDraftSelectedChoices((prev) => {
         if (!prev.has(question.questionId)) return prev;
         const next = new Map(prev);
         next.delete(question.questionId);
@@ -147,7 +140,7 @@ export function useQuestionFlowCore(
       draftSelectedChoicesRef.current.get(question.questionId) ?? null,
     );
     setIsAnswered(false);
-  }, [loadState.status, question, setDraftSelectedChoicesAndRef]);
+  }, [loadState.status, question, updateDraftSelectedChoices]);
 
   const onSelectChoice = useCallback(
     (choiceId: string) => {
@@ -160,13 +153,13 @@ export function useQuestionFlowCore(
       );
       if (!changed) return;
 
-      setDraftSelectedChoicesAndRef((prev) => {
+      updateDraftSelectedChoices((prev) => {
         const next = new Map(prev);
         next.set(question.questionId, choiceId);
         return next;
       });
     },
-    [isAnswered, question, setDraftSelectedChoicesAndRef, submitResult],
+    [isAnswered, question, submitResult, updateDraftSelectedChoices],
   );
 
   return {
