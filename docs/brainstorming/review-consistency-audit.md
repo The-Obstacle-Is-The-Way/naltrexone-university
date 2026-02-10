@@ -219,6 +219,12 @@ This would DRY up Review and Bookmarks. The Dashboard's compact row pattern is d
 
 ---
 
+## Verification (2026-02-10)
+
+> Verified via Playwright E2E audit. All 7 locations confirmed against running app. The divergence matrix and inconsistency list remain accurate. I3 (non-interactive breakdowns) confirmed fixed via PR #83. All other inconsistencies (I1, I2, I4-I7) remain as documented.
+
+---
+
 ## What Should Be Done (And When)
 
 ### ~~Now (Practice Page Fix — Phase 1)~~ — DONE (PR #83)

@@ -238,6 +238,44 @@ With this restructure, nav stays at 6 items but each has a clearer mandate. The 
 
 ---
 
+## Verification (2026-02-10)
+
+> Verified via Playwright E2E audit of running app with authenticated test user. Screenshots captured of all pages.
+
+### Current state confirmed
+
+| Claim | Verified | Notes |
+|-------|----------|-------|
+| Dashboard shows full clickable question stems with difficulty badges | **Yes** | Each question is a `<Link>` to `/app/questions/{slug}?from=dashboard`. Difficulty shown as pill badge (Easy/Medium/Hard). Correct/Incorrect label on right. |
+| Dashboard session groups link to `/app/practice/{sessionId}` | **Yes** | "EXAM SESSION" / "TUTOR SESSION" headers are clickable links. |
+| Review page shows only incorrectly answered questions | **Yes** | 13 missed questions visible. Difficulty/tag filter dropdowns present. Each card shows stem, difficulty, "Missed {date}", session origin, Reattempt button. |
+| Practice page has session config + recent sessions on same page | **Yes** | Session starter (Tutor/Exam toggle, question count, filters) at top. "Recent sessions" panel below with expandable breakdowns. |
+| Practice page "Recent sessions" shows dates | **Yes** | Each row: `Mode • X/Y correct (accuracy%) • duration • date`. **Problem 6 from practice-ux-audit.md confirmed fixed.** |
+| Practice breakdown renders inline under selected session | **Yes** | Breakdown appears directly under the clicked session row. **Problem 5 confirmed fixed.** |
+| Practice breakdown has colored status labels | **Yes** | "Incorrect" in red, "Unanswered" in muted gray. **Problem 7 confirmed fixed.** |
+| Quick Practice card removed from Practice page | **Yes** | Not visible. Session starter fills full width. **Problem 1 confirmed fixed.** |
+| Nav items: Dashboard, Practice, Quick Practice, Review, Bookmarks, Billing | **Yes** | Exactly 6 items. No rename to "History" yet. |
+| Session view shows "Tutor Session" / "Exam Session" heading | **Yes** | Tutor: "Tutor Session" + "Question 1 of 3 — Explanations shown after each answer." Exam: "Exam Session" + "Question 1 of 3 — Explanations shown after you submit the exam." |
+| Session view buttons consolidated in bottom action bar | **Yes** | Submit, Next Question, Bookmark (+ Mark for review in exam) all in one row at bottom. |
+| No "Back to Dashboard" during active session | **Yes** | Only "End session" (tutor) or "Review answers" (exam) button visible in header. |
+| Post-session stays on `/app/practice/{sessionId}` | **Yes** | Session Summary shown with "Back to Dashboard" and "Start another session" buttons. No redirect to History (as expected — History page doesn't exist yet). |
+
+### Recommendations status
+
+All recommendations in this doc remain **valid and unimplemented**:
+- Rename Review → History: **Not done**
+- Add Sessions tab to History: **Not done**
+- Clean up Practice page (remove Recent Sessions): **Not done** (sessions panel still there)
+- Slim down Dashboard (replace timeline with compact cards): **Not done**
+- Post-session redirect to History: **Not done** (blocked on History page)
+
+### Accuracy corrections
+
+1. **Section 1, Problem 3** mentions "scrolling past four filter categories and the Start session button" — since PR #83, the Quick Practice card was removed and the starter is full-width. The scroll distance is shorter. The core criticism (session config + history on same page) remains valid.
+2. The doc's wire-level description (Section 4) is aspirational and accurate as a design target. No corrections needed.
+
+---
+
 ## Open Questions
 
 1. Should "History" be the final name, or is "Performance" or "Results" better?

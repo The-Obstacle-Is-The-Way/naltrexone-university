@@ -238,9 +238,11 @@ The server already knows `questionIds` order and `session.questionStates`. Addin
 
 ---
 
-## Finding 4: Session Abandonment — Sessions Stay in_progress Forever
+## ~~Finding 4: Session Abandonment — Sessions Stay in_progress Forever~~ (FIXED)
 
 **Severity: P2 (Medium) — data integrity issue, no user-facing error**
+
+> **Status: FIXED (verified 2026-02-10).** Backend guard added in `start-practice-session.ts` — rejects with CONFLICT if an incomplete session exists. The UI incomplete session card + backend guard together prevent accumulation.
 
 ### What happens
 
@@ -307,9 +309,11 @@ On page refresh: all React state is destroyed. Page re-mounts, loads first unans
 
 ---
 
-## Finding 7: Exam Auto-Advance Fires Wasteful Server Call on Last Question
+## ~~Finding 7: Exam Auto-Advance Fires Wasteful Server Call on Last Question~~ (FIXED)
 
 **Severity: P3 (Low) — one wasted server round-trip, no user-facing error**
+
+> **Status: FIXED (verified 2026-02-10).** `isLastQuestion` guard added at `practice-session-page-logic.ts:141-146`. When `sessionInfo.index >= sessionInfo.total - 1`, auto-advance returns early — no wasteful server call.
 
 > **Correction (2026-02-09):** Originally described as a "loop." Verified that no loop occurs — `submitResult` is reset to `null` during the load (question-flow-actions.ts:44), which breaks the effect dependency chain. The auto-advance guard `if (!input.submitResult) return` (practice-session-page-logic.ts:131) prevents re-advancing. The issue is a single wasteful `getNextQuestion` call on the last question, not a loop.
 
@@ -416,9 +420,11 @@ Pass `sessionControls.sessionStartStatus === 'loading'` as the `isPending` prop.
 
 ---
 
-## Finding 12: Choices Still Clickable After Exam Mode Submit
+## ~~Finding 12: Choices Still Clickable After Exam Mode Submit~~ (FIXED)
 
 **Severity: P1 (High) — misleading UI, user thinks they can change answer**
+
+> **Status: FIXED (verified 2026-02-10).** `practice-view.tsx:88` now computes `isAnswerLocked = props.isAnswered || props.submitResult !== null` and passes it to `QuestionCard` disabled prop. Choices are disabled after submit in all modes.
 
 ### What happens
 
@@ -446,9 +452,11 @@ Add a `submitted` or `isAnswered` prop to `QuestionCard` that disables all choic
 
 ---
 
-## Finding 13: Server Returns `correctChoiceId` to Client in Exam Mode
+## ~~Finding 13: Server Returns `correctChoiceId` to Client in Exam Mode~~ (FIXED)
 
 **Severity: P1 (High) — exam integrity issue for medical education app**
+
+> **Status: FIXED (verified 2026-02-10).** `submit-answer.ts:169` now applies `shouldShowExplanation` guard: `correctChoiceId: shouldShowExplanation ? grade.correctChoiceId : null`. In exam mode, `correctChoiceId` is withheld from the HTTP response.
 
 ### What happens
 
@@ -708,36 +716,37 @@ These areas are solid and well-guarded:
 
 ## Priority Summary & Implementation Order
 
-| # | Finding | Severity | Recommended Fix | Effort |
-|---|---------|----------|-----------------|--------|
-| 2 | Already-answered question shows stale UI | **P1** | Return `latestSelectedChoiceId` + `latestIsCorrect` from server, restore with explicit `isAnswered` flag in client | Medium |
-| 1 | Unsubmitted selections silently lost | **P1** | Client-side draft map (`Map<questionId, choiceId>`) | Medium |
-| 21 | sessionInfo cleared when question is null | **P2** | Preserve sessionInfo when `getNextQuestion` returns null | Small |
-| 3 | "Next Question" shows same question | **P2** | Sequential advance (pass `fromIndex` hint to server) | Small |
-| 4 | Sessions stay in_progress forever | **P2** | Backend guard: reject new session if incomplete exists | Small |
-| ~~8~~ | ~~Navigator not updated after mark toggle~~ | ~~P2~~ | **INVALID** — navigator already refreshes via sessionInfo dependency | — |
-| 5 | Concurrent sessions not prevented | **P3** | Partial unique DB index | Small |
-| 7 | Auto-advance wasteful call on last question | **P3** | Guard: check `index < total - 1` before advance | Small |
-| 6 | Page refresh loses position | **P3** | Defer | — |
-| 9 | Client can attempt submit on ended session | **P3** | Defer (server guard is solid) | — |
-| 10 | Subscription expiry mid-session | **P3** | Defer (edge case) | — |
+> **Verified 2026-02-10** via Playwright E2E audit of running app. Findings 4, 7, 12, 13, and 21 have been fixed since this doc was written. Updated table below.
 
-### Recommended implementation order
+| # | Finding | Severity | Status | Notes |
+|---|---------|----------|--------|-------|
+| 2 | Already-answered question shows stale UI | **P1** | **OPEN** | Return `latestSelectedChoiceId` + `latestIsCorrect` from server |
+| 1 | Unsubmitted selections silently lost | **P1** | **OPEN** | Client-side draft map (`Map<questionId, choiceId>`) |
+| 11 | Session start button never shows loading | **P1** | **OPEN** | `isPending={false}` still hardcoded in `practice-page-client.tsx:74` |
+| ~~12~~ | ~~Choices clickable after exam submit~~ | ~~P1~~ | **FIXED** | `isAnswerLocked = isAnswered \|\| submitResult !== null` now disables choices |
+| ~~13~~ | ~~Server returns correctChoiceId in exam~~ | ~~P1~~ | **FIXED** | `correctChoiceId: shouldShowExplanation ? ... : null` in `submit-answer.ts:169` |
+| ~~21~~ | ~~sessionInfo cleared when question is null~~ | ~~P2~~ | **FIXED** | `if (!question?.session) return;` guard in `practice-session-page-logic.ts:59` |
+| 3 | "Next Question" shows same question | **P2** | **OPEN** | Sequential advance (pass `fromIndex` hint to server) |
+| ~~4~~ | ~~Sessions stay in_progress forever~~ | ~~P2~~ | **FIXED** | Backend guard in `start-practice-session.ts` rejects if incomplete exists |
+| ~~8~~ | ~~Navigator not updated after mark toggle~~ | ~~P2~~ | **INVALID** | Navigator already refreshes via sessionInfo dependency |
+| 5 | Concurrent sessions not prevented | **P3** | **OPEN** | Partial unique DB index still needed |
+| ~~7~~ | ~~Auto-advance wasteful call on last question~~ | ~~P3~~ | **FIXED** | `isLastQuestion` guard in `practice-session-page-logic.ts:141-146` |
+| 6 | Page refresh loses position | **P3** | Defer | — |
+| 9 | Client can attempt submit on ended session | **P3** | Defer | — |
+| 10 | Subscription expiry mid-session | **P3** | Defer | — |
+
+### Remaining implementation order
 
 **Phase 1 (P1 fixes — do together):**
 1. Finding 2: Return answer state from `getNextQuestion` (server change + client restore with explicit `isAnswered` flag)
 2. Finding 1: Add client-side draft map for unsubmitted selections
-
-These two fixes work together: Finding 2 handles the "already submitted" case, Finding 1 handles the "selected but not yet submitted" case. Together they mean: navigating away from any question and back always restores the user's state.
+3. Finding 11: Wire `isPending` to actual loading state for session start button
 
 **Phase 2 (P2 fixes):**
-3. Finding 21: Preserve sessionInfo when question is null (prerequisite for clean end-of-session)
 4. Finding 3: Sequential "Next Question" advance
-5. Finding 4: Backend guard on session start (reject if incomplete exists)
 
 **Phase 3 (P3 fixes — if time permits):**
-6. Finding 5: Partial unique DB index for concurrent sessions
-7. Finding 7: Auto-advance last-question guard
+5. Finding 5: Partial unique DB index for concurrent sessions
 
 ---
 
