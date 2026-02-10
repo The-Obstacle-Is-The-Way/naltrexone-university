@@ -27,7 +27,11 @@ All frontend-specific UI/UX debt. Items use `FE-XXX` IDs and are cross-reference
 
 ### P2 — Fix during UI/UX refactor
 
-*No active P2 items.*
+| ID | Summary | Source |
+|----|---------|--------|
+| FE-051 | No warning when submitting exam with unanswered questions | [F18](../brainstorming/practice-engine-state-audit.md#finding-18) |
+| FE-052 | Loading state `<output>` missing `aria-live` in `practice-view.tsx` | [F19](../brainstorming/practice-engine-state-audit.md#finding-19) |
+| FE-053 | Bookmark error card never auto-dismisses and has no retry button | [F20](../brainstorming/practice-engine-state-audit.md#finding-20) |
 
 ### P3 — Fix as encountered
 
@@ -87,7 +91,7 @@ All frontend-specific UI/UX debt. Items use `FE-XXX` IDs and are cross-reference
 | FE-045 | Duplicate question flow hooks | Extracted shared core hook for both flows |
 | FE-049 | Missing `createBookmark()` factory | Added factory + barrel export + unit test |
 
-**Next frontend debt ID:** FE-051
+**Next frontend debt ID:** FE-054
 
 ## Archived Debt
 

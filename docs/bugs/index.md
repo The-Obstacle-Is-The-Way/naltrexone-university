@@ -17,8 +17,16 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 | ID | Title | Status | Priority | Date |
 |----|-------|--------|----------|------|
+| BUG-121 | Session Start Button Never Shows Loading State | Open | P1 | 2026-02-09 |
+| BUG-122 | Choices Still Clickable After Exam Mode Submit | Open | P1 | 2026-02-09 |
+| BUG-123 | Server Returns `correctChoiceId` to Client in Exam Mode | Open | P1 | 2026-02-09 |
+| BUG-124 | Exam Review Data Stale After Changing Answer from Review | Open | P2 | 2026-02-09 |
+| BUG-125 | "No More Questions" Dead-End — No Action Buttons | Open | P2 | 2026-02-09 |
+| BUG-126 | End Session Blocked During Bookmark Operations | Open | P2 | 2026-02-09 |
+| BUG-127 | Double-Click "Submit Exam" Race in Review | Open | P2 | 2026-02-09 |
+| BUG-128 | sessionInfo Cleared on Null Question — Exam Defaults to Tutor, Navigator Drops | Open | P2 | 2026-02-09 |
 
-**Next Bug ID:** BUG-121
+**Next Bug ID:** BUG-129
 
 ## Recently Triaged
 
