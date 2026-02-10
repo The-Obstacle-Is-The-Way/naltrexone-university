@@ -52,7 +52,7 @@ export async function startSession(
 
   // Count: label is "Questions" (not "Count")
   await page.getByLabel('Questions').fill(String(count));
-  await page.getByRole('button', { name: 'Start session' }).click();
+  await startSessionButton.click();
 
   await expect(page).toHaveURL(/\/app\/practice\/[^/]+$/, { timeout: 15_000 });
   // Session page heading is "Tutor Session" or "Exam Session"

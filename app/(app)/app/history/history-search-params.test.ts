@@ -26,6 +26,7 @@ describe('app/(app)/app/history/history-search-params', () => {
   describe('parseNonNegativeInt', () => {
     it('returns fallback for invalid values', () => {
       expect(parseNonNegativeInt(undefined, 5)).toBe(5);
+      expect(parseNonNegativeInt('', 5)).toBe(5);
       expect(parseNonNegativeInt('nope', 5)).toBe(5);
       expect(parseNonNegativeInt('-1', 5)).toBe(5);
       expect(parseNonNegativeInt('1.5', 5)).toBe(5);

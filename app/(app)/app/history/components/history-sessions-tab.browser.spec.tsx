@@ -123,19 +123,13 @@ describe('HistorySessionsTab (browser)', () => {
     await screen.getByRole('button', { name: 'View breakdown' }).click();
     await expect.element(screen.getByText('Stem for q1')).toBeVisible();
 
-    const hideButton = screen
-      .getByRole('button', { name: 'Hide breakdown' })
-      .element();
-    const row = hideButton.closest('li');
-    expect(row?.textContent).toContain('Stem for q1');
+    await expect.element(screen.getByText('Stem for q1')).toBeVisible();
 
     await screen.getByRole('button', { name: 'Hide breakdown' }).click();
 
-    const viewButton = screen
-      .getByRole('button', { name: 'View breakdown' })
-      .element();
-    const collapsedRow = viewButton.closest('li');
-    expect(collapsedRow?.textContent).not.toContain('Stem for q1');
+    await expect
+      .element(screen.getByText('Stem for q1'))
+      .not.toBeInTheDocument();
   });
 
   it('clicking a different session collapses the previous breakdown', async () => {
@@ -234,20 +228,9 @@ describe('HistorySessionsTab (browser)', () => {
       .click();
     await expect.element(screen.getByText('Stem for session 2')).toBeVisible();
 
-    const session1Row = screen
-      .getByRole('button', {
-        name: 'View breakdown for Exam session: 8/10 correct (80%), 20m, Feb 7, 2026',
-      })
-      .element()
-      .closest('li');
-    expect(session1Row?.textContent).not.toContain('Stem for session 1');
-
-    const session2Row = screen
-      .getByRole('button', {
-        name: 'Hide breakdown for Tutor session: 7/10 correct (70%), 3m, Feb 8, 2026',
-      })
-      .element()
-      .closest('li');
-    expect(session2Row?.textContent).toContain('Stem for session 2');
+    await expect
+      .element(screen.getByText('Stem for session 1'))
+      .not.toBeInTheDocument();
+    await expect.element(screen.getByText('Stem for session 2')).toBeVisible();
   });
 });

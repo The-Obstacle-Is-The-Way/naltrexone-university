@@ -18,6 +18,7 @@ export function parseNonNegativeInt(
   value: string | undefined,
   fallback: number,
 ): number {
+  if (value === undefined || value === '') return fallback;
   const n = Number(value);
   if (!Number.isFinite(n)) return fallback;
   if (!Number.isInteger(n)) return fallback;

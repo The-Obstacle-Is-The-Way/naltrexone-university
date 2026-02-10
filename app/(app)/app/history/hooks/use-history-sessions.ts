@@ -27,12 +27,14 @@ export function useHistorySessions(): UseHistorySessionsOutput {
     useState<GetPracticeSessionReviewOutput | null>(null);
   const [reviewLoadState, setReviewLoadState] =
     useState<AsyncLoadStateWithIdle>({ status: 'idle' });
+  const selectedSessionIdRef = useRef<string | null>(null);
   const latestReviewSessionId = useRef<string | null>(null);
   const isMounted = useIsMounted();
 
   const onOpenSession = useCallback(
     async (sessionId: string) => {
-      if (selectedSessionId === sessionId) {
+      if (selectedSessionIdRef.current === sessionId) {
+        selectedSessionIdRef.current = null;
         latestReviewSessionId.current = null;
         setSelectedSessionId(null);
         setSelectedReview(null);
@@ -40,6 +42,7 @@ export function useHistorySessions(): UseHistorySessionsOutput {
         return;
       }
 
+      selectedSessionIdRef.current = sessionId;
       latestReviewSessionId.current = sessionId;
       setSelectedSessionId(sessionId);
       setSelectedReview(null);
@@ -71,7 +74,7 @@ export function useHistorySessions(): UseHistorySessionsOutput {
       setSelectedReview(res.data);
       setReviewLoadState({ status: 'ready' });
     },
-    [isMounted, selectedSessionId],
+    [isMounted],
   );
 
   return {

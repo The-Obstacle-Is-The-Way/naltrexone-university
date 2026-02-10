@@ -119,6 +119,58 @@ describe('app/(app)/app/dashboard', () => {
     expect(html).toContain('[Question no longer available]');
   });
 
+  it('renders per-section error when sessionHistoryResult fails', () => {
+    const html = renderToStaticMarkup(
+      <DashboardView
+        stats={{
+          totalAnswered: 1,
+          accuracyOverall: 1,
+          answeredLast7Days: 1,
+          accuracyLast7Days: 1,
+          currentStreakDays: 1,
+          recentActivity: [],
+        }}
+        sessionHistoryResult={{
+          ok: false,
+          error: { code: 'INTERNAL_ERROR', message: 'Sessions failed' },
+        }}
+        missedQuestionsResult={{
+          ok: true,
+          data: { rows: [], limit: 3, offset: 0, totalCount: 0 },
+        }}
+      />,
+    );
+
+    expect(html).toContain('Sessions failed');
+    expect(html).toContain('Recent sessions');
+  });
+
+  it('renders per-section error when missedQuestionsResult fails', () => {
+    const html = renderToStaticMarkup(
+      <DashboardView
+        stats={{
+          totalAnswered: 1,
+          accuracyOverall: 1,
+          answeredLast7Days: 1,
+          accuracyLast7Days: 1,
+          currentStreakDays: 1,
+          recentActivity: [],
+        }}
+        sessionHistoryResult={{
+          ok: true,
+          data: { rows: [], total: 0, limit: 3, offset: 0 },
+        }}
+        missedQuestionsResult={{
+          ok: false,
+          error: { code: 'INTERNAL_ERROR', message: 'Missed questions failed' },
+        }}
+      />,
+    );
+
+    expect(html).toContain('Missed questions failed');
+    expect(html).toContain('Recent missed');
+  });
+
   it('renders an error state when stats load fails', () => {
     const element = renderDashboard({
       statsResult: {

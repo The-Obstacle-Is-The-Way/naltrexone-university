@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
-import { toQuestionRoute } from '@/lib/routes';
+import { type QuestionOrigin, toQuestionRoute } from '@/lib/routes';
 import type { PracticeSessionReviewRow } from '@/src/application/use-cases';
 
 vi.mock('next/link', () => ({
@@ -37,9 +37,12 @@ const unavailableRow: PracticeSessionReviewRow = {
   markedForReview: false,
 };
 
-async function renderList(rows: PracticeSessionReviewRow[]) {
+async function renderList(
+  rows: PracticeSessionReviewRow[],
+  props?: { from?: QuestionOrigin },
+) {
   const { SessionBreakdownList } = await import('./session-breakdown-list');
-  return renderToStaticMarkup(<SessionBreakdownList rows={rows} />);
+  return renderToStaticMarkup(<SessionBreakdownList rows={rows} {...props} />);
 }
 
 describe('SessionBreakdownList', () => {
@@ -104,10 +107,7 @@ describe('SessionBreakdownList', () => {
   });
 
   it('supports configurable origin query parameters for question routes', async () => {
-    const { SessionBreakdownList } = await import('./session-breakdown-list');
-    const html = renderToStaticMarkup(
-      <SessionBreakdownList rows={[availableRow]} from="history" />,
-    );
+    const html = await renderList([availableRow], { from: 'history' });
 
     const doc = new DOMParser().parseFromString(html, 'text/html');
     const links = Array.from(doc.querySelectorAll('a'));
