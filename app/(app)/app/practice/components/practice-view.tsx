@@ -37,6 +37,7 @@ export type PracticeViewProps = {
   endSessionLabel?: string;
   questionAreaRef?: React.RefObject<HTMLDivElement | null>;
   onEndSession?: () => void;
+  onRetryBookmarks?: () => void;
   onTryAgain: () => void;
   onToggleBookmark: () => void;
   onToggleMarkForReview?: () => void;
@@ -170,18 +171,43 @@ export function PracticeView(props: PracticeViewProps) {
 
         {props.loadState.status === 'loading' ? (
           <Card className="gap-0 rounded-2xl p-6 text-sm text-muted-foreground shadow-sm">
-            <output>Loading question…</output>
+            <output aria-live="polite">Loading question…</output>
           </Card>
         ) : null}
       </div>
 
       {props.bookmarkStatus === 'error' ? (
-        <ErrorCard>Bookmarks unavailable.</ErrorCard>
+        <ErrorCard className="p-6">
+          <div>Bookmarks unavailable.</div>
+          {props.onRetryBookmarks ? (
+            <div className="mt-4">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={props.onRetryBookmarks}
+              >
+                Retry bookmarks
+              </Button>
+            </div>
+          ) : null}
+        </ErrorCard>
       ) : null}
 
       {props.loadState.status === 'ready' && props.question === null ? (
         <Card className="gap-0 rounded-2xl p-6 text-sm text-muted-foreground shadow-sm">
-          No more questions found.
+          <div>No more questions found.</div>
+          {props.onEndSession ? (
+            <div className="mt-4">
+              <Button
+                type="button"
+                className="rounded-full"
+                disabled={props.isPending}
+                onClick={props.onEndSession}
+              >
+                {props.endSessionLabel ?? 'End session'}
+              </Button>
+            </div>
+          ) : null}
         </Card>
       ) : null}
 

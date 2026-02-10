@@ -97,6 +97,7 @@ export function usePracticeSessionPageController(
     onRetryReview: reviewStage.onRetryReview,
     onRetryNavigator: reviewStage.onRetryNavigator,
     onTryAgain: questionFlow.onTryAgain,
+    onRetryBookmarks: bookmarks.onRetryBookmarks,
     onToggleBookmark: bookmarks.onToggleBookmark,
     onToggleMarkForReview,
     onSelectChoice: questionFlow.onSelectChoice,

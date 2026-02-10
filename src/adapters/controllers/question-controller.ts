@@ -48,6 +48,7 @@ const GetNextQuestionInputSchema = z.union([
     .object({
       sessionId: zUuid,
       questionId: zUuid.optional(),
+      fromIndex: z.number().int().min(0).optional(),
       filters: z.undefined().optional(),
     })
     .strict(),
@@ -55,6 +56,7 @@ const GetNextQuestionInputSchema = z.union([
     .object({
       sessionId: z.undefined().optional(),
       questionId: z.undefined().optional(),
+      fromIndex: z.undefined().optional(),
       filters: QuestionFiltersSchema,
     })
     .strict(),
@@ -79,7 +81,7 @@ const SubmitAnswerOutputSchema = z
   .object({
     attemptId: zUuid,
     isCorrect: z.boolean(),
-    correctChoiceId: zUuid,
+    correctChoiceId: zUuid.nullable(),
     explanationMd: z.string().nullable(),
     choiceExplanations: z.array(
       z
@@ -134,6 +136,7 @@ export const getNextQuestion = createAction({
         userId,
         sessionId: input.sessionId,
         questionId: input.questionId,
+        fromIndex: input.fromIndex,
       });
     }
 

@@ -30,6 +30,7 @@ export type UsePracticeQuestionFlowOutput = {
   isBookmarked: boolean;
   questionAreaRef: React.RefObject<HTMLDivElement | null>;
   onTryAgain: () => void;
+  onRetryBookmarks: () => void;
   onToggleBookmark: () => Promise<void>;
   onSelectChoice: (choiceId: string) => void;
   onSubmit: () => Promise<void>;

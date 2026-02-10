@@ -27,11 +27,7 @@ All frontend-specific UI/UX debt. Items use `FE-XXX` IDs and are cross-reference
 
 ### P2 — Fix during UI/UX refactor
 
-| ID | Summary | Source |
-|----|---------|--------|
-| FE-051 | No warning when submitting exam with unanswered questions | [F18](../brainstorming/practice-engine-state-audit.md#finding-18) |
-| FE-052 | Loading state `<output>` missing `aria-live` in `practice-view.tsx` | [F19](../brainstorming/practice-engine-state-audit.md#finding-19) |
-| FE-053 | Bookmark error card never auto-dismisses and has no retry button | [F20](../brainstorming/practice-engine-state-audit.md#finding-20) |
+*No active P2 items.*
 
 ### P3 — Fix as encountered
 
@@ -59,6 +55,9 @@ All frontend-specific UI/UX debt. Items use `FE-XXX` IDs and are cross-reference
 | FE-047 | Filter chip groups missing semantic grouping | Wrapped difficulty/tag chips in `<fieldset aria-label=...>` and added regression test |
 | FE-048 | Session progress counter not announced to screen readers | Added `aria-live="polite"` to session progress label and test coverage |
 | FE-050 | Exam review submit button missing pending label | Exam review submit button now shows `Submitting…` when pending, with test coverage |
+| FE-051 | No warning when submitting exam with unanswered questions | Added unanswered warning copy in exam review confirmation dialog, with regression coverage |
+| FE-052 | Loading state `<output>` missing `aria-live` in `practice-view.tsx` | Added `aria-live="polite"` to practice loading output and updated tests |
+| FE-053 | Bookmark error card never auto-dismisses and has no retry button | Added `Retry bookmarks` action wired to reload bookmarks, with test coverage |
 | FE-002 | `usePracticeSessionReviewStage` exceeds 150-line guideline | Refactored to 212 lines; summary + navigator extracted to sub-hooks |
 | FE-007 | Raw `<button>` in pricing client | Replaced with `Button` component and preserved pending state |
 | FE-008 | Raw styled links used as buttons | Adopted `Button asChild` and standardized focus rings |

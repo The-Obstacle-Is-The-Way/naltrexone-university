@@ -163,8 +163,65 @@ test('opens a review question and finalizes the exam', async () => {
   await expect
     .element(screen.getByRole('alertdialog', { name: 'Submit exam?' }))
     .toBeVisible();
+  await expect
+    .element(
+      screen.getByText(
+        'You have 1 unanswered question that will be scored as incorrect.',
+      ),
+    )
+    .toBeVisible();
   await screen.getByRole('button', { name: 'Confirm submit' }).click();
   expect(onFinalizeReview).toHaveBeenCalledTimes(1);
+});
+
+test('guards against double-clicking confirm submit before pending state updates', async () => {
+  const onFinalizeReview = vi.fn();
+
+  const screen = await render(
+    <ExamReviewView
+      review={{
+        sessionId: 'session-1',
+        mode: 'exam',
+        totalCount: 1,
+        answeredCount: 0,
+        markedCount: 0,
+        rows: [],
+      }}
+      isPending={false}
+      onOpenQuestion={() => undefined}
+      onFinalizeReview={onFinalizeReview}
+    />,
+  );
+
+  await screen.getByRole('button', { name: 'Submit exam' }).click();
+  await expect
+    .element(screen.getByRole('alertdialog', { name: 'Submit exam?' }))
+    .toBeVisible();
+  await screen.getByRole('button', { name: 'Confirm submit' }).dblClick();
+  expect(onFinalizeReview).toHaveBeenCalledTimes(1);
+});
+
+test('omits unanswered warning when all exam questions are answered', async () => {
+  const screen = await render(
+    <ExamReviewView
+      review={{
+        sessionId: 'session-1',
+        mode: 'exam',
+        totalCount: 2,
+        answeredCount: 2,
+        markedCount: 0,
+        rows: [],
+      }}
+      isPending={false}
+      onOpenQuestion={() => undefined}
+      onFinalizeReview={() => undefined}
+    />,
+  );
+
+  await screen.getByRole('button', { name: 'Submit exam' }).click();
+  await expect
+    .element(screen.getByText('unanswered question', { exact: false }))
+    .not.toBeInTheDocument();
 });
 
 test('omits the stem preview in the open question aria-label when stem is empty', async () => {

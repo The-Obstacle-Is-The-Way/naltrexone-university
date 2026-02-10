@@ -33,6 +33,16 @@ export class StartPracticeSessionUseCase {
   async execute(
     input: StartPracticeSessionInput,
   ): Promise<StartPracticeSessionOutput> {
+    const incomplete = await this.sessions.findLatestIncompleteByUserId(
+      input.userId,
+    );
+    if (incomplete) {
+      throw new ApplicationError(
+        'CONFLICT',
+        'You already have an incomplete practice session. Resume or abandon it before starting a new one.',
+      );
+    }
+
     const candidateIds = await this.questions.listPublishedCandidateIds({
       tagSlugs: input.tagSlugs,
       difficulties: input.difficulties,

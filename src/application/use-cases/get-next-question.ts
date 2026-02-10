@@ -40,7 +40,13 @@ export type NextQuestion = {
 };
 
 export type GetNextQuestionInput =
-  | { userId: string; sessionId: string; questionId?: string; filters?: never }
+  | {
+      userId: string;
+      sessionId: string;
+      questionId?: string;
+      fromIndex?: number;
+      filters?: never;
+    }
   | {
       userId: string;
       sessionId?: never;
@@ -63,6 +69,7 @@ export class GetNextQuestionUseCase {
         input.userId,
         input.sessionId,
         input.questionId,
+        input.fromIndex,
       );
     }
 
@@ -92,6 +99,7 @@ export class GetNextQuestionUseCase {
     userId: string,
     sessionId: string,
     questionId?: string,
+    fromIndex?: number,
   ): Promise<GetNextQuestionOutput> {
     const session = await this.sessions.findByIdAndUserId(sessionId, userId);
     if (!session) {
@@ -105,11 +113,28 @@ export class GetNextQuestionUseCase {
       return stateByQuestionId.get(id) ?? createDefaultQuestionState(id);
     });
 
-    const targetQuestionId =
-      typeof questionId === 'string'
-        ? questionId
-        : (orderedStates.find((state) => !state.latestSelectedChoiceId)
-            ?.questionId ?? null);
+    const targetQuestionId = (() => {
+      if (typeof questionId === 'string') return questionId;
+
+      const startIndex =
+        typeof fromIndex === 'number' && Number.isInteger(fromIndex)
+          ? Math.max(-1, Math.min(fromIndex, orderedStates.length - 1))
+          : -1;
+
+      const nextUnanswered =
+        orderedStates
+          .slice(startIndex + 1)
+          .find((state) => !state.latestSelectedChoiceId)?.questionId ?? null;
+
+      if (nextUnanswered) return nextUnanswered;
+      if (startIndex === -1) return null;
+
+      return (
+        orderedStates
+          .slice(0, startIndex)
+          .find((state) => !state.latestSelectedChoiceId)?.questionId ?? null
+      );
+    })();
 
     if (!targetQuestionId) return null;
 

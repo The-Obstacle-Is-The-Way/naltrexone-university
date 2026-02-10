@@ -35,6 +35,7 @@ export type PracticeSessionPageViewProps = {
   onRetryReview?: () => void;
   onRetryNavigator?: () => void;
   onTryAgain: () => void;
+  onRetryBookmarks?: () => void;
   onToggleBookmark: () => void;
   onToggleMarkForReview?: () => void;
   onSelectChoice: (choiceId: string) => void;
@@ -163,6 +164,7 @@ export function PracticeSessionPageView(props: PracticeSessionPageViewProps) {
       endSessionLabel={mode === 'exam' ? 'Review answers' : 'End session'}
       onEndSession={props.onEndSession}
       onTryAgain={props.onTryAgain}
+      onRetryBookmarks={props.onRetryBookmarks}
       onToggleBookmark={props.onToggleBookmark}
       onToggleMarkForReview={props.onToggleMarkForReview}
       onSelectChoice={props.onSelectChoice}

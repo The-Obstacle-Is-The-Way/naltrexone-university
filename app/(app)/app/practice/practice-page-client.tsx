@@ -71,7 +71,7 @@ export default function PracticePageClient() {
             availableTags={sessionControls.availableTags}
             sessionStartStatus={sessionControls.sessionStartStatus}
             sessionStartError={sessionControls.sessionStartError}
-            isPending={false}
+            isPending={sessionControls.sessionStartStatus === 'loading'}
             onToggleDifficulty={sessionControls.onToggleDifficulty}
             onToggleTag={sessionControls.onToggleTag}
             onSessionModeChange={sessionControls.onSessionModeChange}

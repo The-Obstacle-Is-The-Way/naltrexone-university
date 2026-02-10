@@ -132,6 +132,37 @@ describe('PracticeView', () => {
     expect(bookmarkButton).not.toBeNull();
     expect(bookmarkButton?.getAttribute('aria-pressed')).toBe('true');
   });
+
+  it('renders an explicit session action when no more questions remain', async () => {
+    const { PracticeView } = await import('./practice-view');
+
+    const html = renderToStaticMarkup(
+      <PracticeView
+        endSessionLabel="Review answers"
+        loadState={{ status: 'ready' }}
+        question={null}
+        selectedChoiceId={null}
+        isAnswered={false}
+        submitResult={null}
+        isPending={false}
+        bookmarkStatus="idle"
+        isBookmarked={false}
+        canSubmit={false}
+        onEndSession={() => undefined}
+        onTryAgain={() => undefined}
+        onToggleBookmark={() => undefined}
+        onSelectChoice={() => undefined}
+        onSubmit={() => undefined}
+        onNextQuestion={() => undefined}
+      />,
+    );
+
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const endButtons = Array.from(doc.querySelectorAll('button')).filter(
+      (button) => button.textContent?.includes('Review answers'),
+    );
+    expect(endButtons).toHaveLength(2);
+  });
 });
 
 describe('getBookmarkNotificationTransition', () => {

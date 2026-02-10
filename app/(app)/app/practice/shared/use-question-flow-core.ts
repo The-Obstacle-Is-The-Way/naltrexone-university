@@ -106,6 +106,13 @@ export function useQuestionFlowCore(
   }, [submitResult]);
 
   useEffect(() => {
+    if (loadState.status === 'loading') {
+      setIsAnswered(false);
+      return;
+    }
+
+    if (loadState.status !== 'ready') return;
+
     if (!question) {
       setIsAnswered(false);
       return;
@@ -126,7 +133,7 @@ export function useQuestionFlowCore(
 
     setSelectedChoiceId(draftSelectedChoices.get(question.questionId) ?? null);
     setIsAnswered(false);
-  }, [draftSelectedChoices, question]);
+  }, [draftSelectedChoices, loadState.status, question]);
 
   const onSelectChoice = useCallback(
     (choiceId: string) => {

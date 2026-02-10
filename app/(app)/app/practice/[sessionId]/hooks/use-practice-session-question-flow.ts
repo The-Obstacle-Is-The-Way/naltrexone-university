@@ -151,6 +151,29 @@ export function usePracticeSessionQuestionFlow(
     [loadQuestionConfig, startTransition],
   );
 
+  const onNextQuestion = useCallback((): void => {
+    const fromIndex = (() => {
+      const questionIndex = question?.session?.index;
+      if (typeof questionIndex === 'number') return questionIndex;
+
+      if (typeof sessionInfo?.index === 'number') return sessionInfo.index;
+
+      return undefined;
+    })();
+
+    startTransition(() => {
+      void loadNextQuestion({
+        ...loadQuestionConfig,
+        fromIndex,
+      });
+    });
+  }, [
+    loadQuestionConfig,
+    question?.session?.index,
+    sessionInfo?.index,
+    startTransition,
+  ]);
+
   const onSubmit = useCallback(() => {
     return runTransitionedAsyncAction({
       startTransition,
@@ -196,7 +219,7 @@ export function usePracticeSessionQuestionFlow(
     setLoadState,
     resetQuestionState,
     onTryAgain,
-    onNextQuestion: onTryAgain,
+    onNextQuestion,
     onNavigateQuestion,
     onSelectChoice,
     onSubmit,

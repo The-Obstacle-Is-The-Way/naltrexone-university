@@ -1,5 +1,6 @@
 'use client';
 
+import { useRef } from 'react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -90,6 +91,9 @@ export function ExamReviewView({
   onOpenQuestion: (questionId: string) => void;
   onFinalizeReview: () => void;
 }) {
+  const unansweredCount = review.totalCount - review.answeredCount;
+  const isFinalizingRef = useRef(false);
+
   return (
     <div className="space-y-6">
       <div>
@@ -184,6 +188,13 @@ export function ExamReviewView({
               <AlertDialogTitle>Submit exam?</AlertDialogTitle>
               <AlertDialogDescription>
                 This will end the session and save your results.
+                {unansweredCount > 0 ? (
+                  <span className="mt-2 block text-destructive">
+                    You have {unansweredCount} unanswered{' '}
+                    {unansweredCount === 1 ? 'question' : 'questions'} that will
+                    be scored as incorrect.
+                  </span>
+                ) : null}
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
@@ -196,6 +207,8 @@ export function ExamReviewView({
                 disabled={isPending}
                 onClick={() => {
                   if (isPending) return;
+                  if (isFinalizingRef.current) return;
+                  isFinalizingRef.current = true;
                   onFinalizeReview();
                 }}
               >

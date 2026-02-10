@@ -21,6 +21,7 @@ describe('usePracticeQuestionBookmarks', () => {
     expect(output.bookmarkMessage).toBeNull();
     expect(output.bookmarkMessageVersion).toBe(0);
     expect(output.isBookmarked).toBe(false);
+    expect(typeof output.onRetryBookmarks).toBe('function');
     expect(typeof output.onToggleBookmark).toBe('function');
   });
 });

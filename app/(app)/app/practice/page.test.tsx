@@ -82,10 +82,10 @@ describe('app/(app)/app/practice', () => {
     );
 
     expect(html).toContain('Loading question');
-    // Loading state uses <output> which has implicit role="status" (aria-live="polite").
-    // The parent wrapper no longer uses aria-live to avoid double announcements
-    // with ErrorCard's role="alert".
-    expect(html).toContain('<output>');
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const output = doc.querySelector('output');
+    expect(output).not.toBeNull();
+    expect(output?.getAttribute('aria-live')).toBe('polite');
   });
 
   it('renders empty state when no question remains', async () => {
@@ -299,6 +299,7 @@ describe('app/(app)/app/practice', () => {
         bookmarkStatus="error"
         isBookmarked={false}
         canSubmit={false}
+        onRetryBookmarks={() => undefined}
         onTryAgain={() => undefined}
         onToggleBookmark={() => undefined}
         onSelectChoice={() => undefined}
@@ -308,6 +309,7 @@ describe('app/(app)/app/practice', () => {
     );
 
     expect(html).toContain('Bookmarks unavailable');
+    expect(html).toContain('Retry bookmarks');
   });
 
   it('renders bookmark warning even before a question is loaded', async () => {
@@ -324,6 +326,7 @@ describe('app/(app)/app/practice', () => {
         bookmarkStatus="error"
         isBookmarked={false}
         canSubmit={false}
+        onRetryBookmarks={() => undefined}
         onTryAgain={() => undefined}
         onToggleBookmark={() => undefined}
         onSelectChoice={() => undefined}
@@ -333,6 +336,7 @@ describe('app/(app)/app/practice', () => {
     );
 
     expect(html).toContain('Bookmarks unavailable');
+    expect(html).toContain('Retry bookmarks');
   });
 
   it('renders custom title and description when provided', async () => {
