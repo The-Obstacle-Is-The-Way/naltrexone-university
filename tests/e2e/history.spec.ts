@@ -12,7 +12,7 @@ import { ensureSubscribed } from './helpers/subscription';
 // Seeded by content/questions/placeholder/placeholder-01-naltrexone-mechanism.mdx
 const QUESTION_SLUG = 'placeholder-01-naltrexone-mechanism';
 
-test.describe('review', () => {
+test.describe('history', () => {
   test.setTimeout(120_000);
   test.skip(!hasClerkCredentials, 'Missing Clerk E2E credentials');
 
@@ -25,11 +25,11 @@ test.describe('review', () => {
 
     await submitQuestionForOutcome(page, QUESTION_SLUG, 'Incorrect');
 
-    await page.goto('/app/review', {
+    await page.goto('/app/history?tab=missed', {
       timeout: 60_000,
       waitUntil: 'domcontentloaded',
     });
-    await expect(page.getByRole('heading', { name: 'Review' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'History' })).toBeVisible();
     const reattemptLink = page.locator(`a[href*="${QUESTION_SLUG}"]`).first();
     await expect(reattemptLink).toBeVisible();
 
@@ -43,7 +43,7 @@ test.describe('review', () => {
 
     await submitQuestionForOutcome(page, QUESTION_SLUG, 'Correct');
 
-    await page.goto('/app/review', {
+    await page.goto('/app/history?tab=missed', {
       timeout: 60_000,
       waitUntil: 'domcontentloaded',
     });

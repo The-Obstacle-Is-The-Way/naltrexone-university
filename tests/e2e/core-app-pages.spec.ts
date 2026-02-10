@@ -17,7 +17,7 @@ test.describe('core app pages', () => {
   test.setTimeout(120_000);
   test.skip(!hasClerkCredentials, 'Missing Clerk E2E credentials');
 
-  test('subscribed user can navigate dashboard, billing, bookmarks, and review', async ({
+  test('subscribed user can navigate dashboard, billing, bookmarks, and history', async ({
     page,
   }) => {
     await signInWithClerkPassword(page);
@@ -30,12 +30,12 @@ test.describe('core app pages', () => {
     await submitQuestionForOutcome(page, QUESTION_SLUG, 'Incorrect');
     await expect(page.getByText('Explanation', { exact: true })).toBeVisible();
 
-    // Review lists missed questions and links to reattempt.
-    await page.goto('/app/review', {
+    // History (missed tab) lists missed questions and links to reattempt.
+    await page.goto('/app/history?tab=missed', {
       timeout: 60_000,
       waitUntil: 'domcontentloaded',
     });
-    await expect(page.getByRole('heading', { name: 'Review' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'History' })).toBeVisible();
 
     const reattemptLink = page.locator(`a[href*="${QUESTION_SLUG}"]`).first();
     await expect(reattemptLink).toBeVisible();
@@ -47,14 +47,16 @@ test.describe('core app pages', () => {
       },
     );
 
-    // Dashboard shows stats and recent activity (including the missed attempt).
+    // Dashboard shows stats and the compact recent sections (including the missed attempt).
     await page.goto('/app/dashboard');
     await expect(
       page.getByRole('heading', { name: 'Dashboard' }),
     ).toBeVisible();
     await expect(page.getByText('Total answered')).toBeVisible();
     await expect(page.getByText('Overall accuracy')).toBeVisible();
-    await expect(page.getByText('Recent activity')).toBeVisible();
+    await expect(page.getByText('Recent sessions')).toBeVisible();
+    await expect(page.getByText('Recent missed')).toBeVisible();
+    await expect(page.getByText('Recent activity')).toHaveCount(0);
     await expect(
       page.getByText(/starting naltrexone for alcohol use disorder/i).first(),
     ).toBeVisible();

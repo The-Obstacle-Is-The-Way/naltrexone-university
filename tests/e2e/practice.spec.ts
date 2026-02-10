@@ -16,6 +16,11 @@ test.describe('practice', () => {
   }) => {
     await signInWithClerkPassword(page);
     await ensureSubscribed(page);
+
+    await page.goto('/app/practice');
+    await expect(page.getByRole('heading', { name: 'Practice' })).toBeVisible();
+    await expect(page.getByText('Recent sessions')).toHaveCount(0);
+
     await startSession(page, 'tutor');
 
     await selectChoiceByLabel(page, 'A');
@@ -31,6 +36,9 @@ test.describe('practice', () => {
     await expect(
       page.getByRole('heading', { name: 'Session Summary' }),
     ).toBeVisible();
+    await expect(
+      page.getByRole('link', { name: 'View in History' }),
+    ).toHaveAttribute('href', '/app/history');
   });
 
   test('exam mode completes session without showing explanation', async ({
