@@ -1,8 +1,9 @@
 # BUG-129: E2E Choice Radio Selector Cannot Find Question Choices
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P1
 **Date:** 2026-02-10
+**Resolved:** 2026-02-10
 
 ---
 
@@ -33,23 +34,17 @@ The choice component renders:
 
 The radio's accessible name is the entire label content including the choice text, not "Choice A".
 
-## Fix
+## Resolution (Implemented)
 
-Update `selectChoiceByLabel()` to match the actual DOM:
-```typescript
-// Option A: Match by the label badge text
-const choiceLabel = page.locator('label').filter({ hasText: new RegExp(`^${label}\\s`) }).first();
+Updated `selectChoiceByLabel()` to match the ChoiceButton DOM by locating the `<label>` that contains the round badge indicator for the requested letter (`A|B|C|D`) and clicking that label, then asserting the nested radio is checked.
 
-// Option B: Add aria-label="Choice A" to the radio input in the component
-```
+Key file:
 
-Option A is the lower-friction fix (test-only change). Option B improves accessibility and aligns the component with the test expectation.
+- `tests/e2e/helpers/question.ts`
 
 ## Verification
 
-- [ ] `pnpm test:e2e -- subscribe-and-practice.spec.ts` passes
-- [ ] `pnpm test:e2e -- core-app-pages.spec.ts` passes
-- [ ] `pnpm test:e2e -- review.spec.ts` passes
+- `pnpm test:e2e`
 
 ## Related
 

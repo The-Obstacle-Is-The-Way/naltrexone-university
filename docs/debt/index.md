@@ -17,7 +17,7 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 | ID | Title | Priority | Status |
 |----|-------|----------|--------|
-| [DEBT-205](./debt-205-e2e-selector-drift-from-ui-refactors.md) | E2E Test Selectors Drifted from UI Refactors (7/16 tests failing) | P1 | Open |
+| *(none)* | *(no active debt items)* | - | - |
 
 **Next Debt ID:** DEBT-206
 
@@ -268,6 +268,7 @@ All frontend-specific UI/UX debt. Items use `FE-XXX` IDs and are cross-reference
 
 | ID | Title | Priority | Resolved |
 |----|-------|----------|----------|
+| [DEBT-205](../_archive/debt/debt-205-e2e-selector-drift-from-ui-refactors.md) | E2E Test Selectors Drifted from UI Refactors (7/16 tests failing) | P1 | 2026-02-10 |
 | [DEBT-152](../_archive/debt/debt-152-home-route-literals-remain-outside-routes-constants.md) | Home Route Literals Remain Outside `ROUTES` Constants | P4 | 2026-02-07 |
 | [DEBT-151](../_archive/debt/debt-151-no-toast-notification-system.md) | No Toast/Notification System | P3 | 2026-02-07 |
 | [DEBT-150](../_archive/debt/debt-150-navigation-links-missing-transitions-hover.md) | Navigation Links Missing Transitions and Hover States | P3 | 2026-02-07 |

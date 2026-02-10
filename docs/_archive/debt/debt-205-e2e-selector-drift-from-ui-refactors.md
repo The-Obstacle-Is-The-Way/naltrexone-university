@@ -1,14 +1,15 @@
 # DEBT-205: E2E Test Selectors Drifted from UI Refactors
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P1
 **Date:** 2026-02-10
+**Resolved:** 2026-02-10
 
 ---
 
 ## Description
 
-7 of 16 E2E tests fail due to selector mismatches between Playwright test helpers and the current UI. The root cause is that UI components were refactored (choice buttons, practice start form, label copy) without updating the E2E selectors to match.
+Before resolution, 7 of 16 E2E tests failed due to selector mismatches between Playwright helpers and the current UI. The root cause was UI refactors (choice buttons, practice start form, label copy) without corresponding E2E selector updates.
 
 This was invisible until now because E2E tests were effectively not running — the old `completeStripeCheckout()` helper broke when Stripe changed their hosted checkout DOM, so any test that needed a subscription would fail at the checkout step, masking all downstream failures. With the new API-based subscription seeding (this PR), the subscription step passes and the selector mismatches are exposed.
 
@@ -38,20 +39,17 @@ This was invisible until now because E2E tests were effectively not running — 
 
 ## Resolution
 
-### Phase 1: Fix the selectors (BUG-129, BUG-130, BUG-131)
+Implemented selector fixes by updating:
 
-1. **`helpers/question.ts`** — Update `selectChoiceByLabel()` to match actual choice button DOM
-2. **`helpers/session.ts`** — Update `startSession()` to use button clicks for SegmentedControl and correct "Questions" label
-3. **`bookmarks.spec.ts`** — Fix timing/state issue in empty-state assertion
+1. `tests/e2e/helpers/question.ts` — `selectChoiceByLabel()` now matches the ChoiceButton DOM.
+2. `tests/e2e/helpers/session.ts` — `startSession()` now clicks SegmentedControl buttons and fills the `Questions` input.
+3. `tests/e2e/bookmarks.spec.ts` — stabilized empty-state assertion after removal.
 
-### Phase 2: Prevent future drift
-
-Consider adding a CI comment or lint rule that flags E2E helper changes when components they target are modified. Alternatively, ensure E2E tests run in CI with real credentials so drift is caught immediately.
+Prevent-future-drift ideas remain valid, but are out of scope for this resolved item.
 
 ## Verification
 
-- [ ] `pnpm test:e2e` — all 16 tests pass
-- [ ] Run twice to confirm idempotency
+- `pnpm test:e2e` — all E2E tests pass
 
 ## Related
 

@@ -1,8 +1,9 @@
 # BUG-130: E2E Session Start Selectors Don't Match Current UI
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P1
 **Date:** 2026-02-10
+**Resolved:** 2026-02-10
 
 ---
 
@@ -43,21 +44,20 @@ The practice form was refactored from a `<select>` dropdown to a `SegmentedContr
 <Input id="session-count-input" type="number" ... />
 ```
 
-## Fix
+## Resolution (Implemented)
 
-Update `startSession()` in `tests/e2e/helpers/session.ts`:
-```typescript
-// Mode: click the segmented button instead of selectOption
-await page.getByRole('button', { name: mode === 'tutor' ? 'Tutor' : 'Exam' }).click();
+Updated `startSession()` to:
 
-// Count: use correct label
-await page.getByLabel('Questions').fill(String(count));
-```
+- Click the SegmentedControl button (`Tutor` / `Exam`) instead of calling `selectOption()`.
+- Fill the count input by the correct label (`Questions`) instead of `Count`.
+
+Key file:
+
+- `tests/e2e/helpers/session.ts`
 
 ## Verification
 
-- [ ] `pnpm test:e2e -- practice.spec.ts` passes (both tutor and exam)
-- [ ] `pnpm test:e2e -- session-continuation.spec.ts` passes
+- `pnpm test:e2e`
 
 ## Related
 

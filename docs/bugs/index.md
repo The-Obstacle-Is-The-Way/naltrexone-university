@@ -17,9 +17,7 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 | ID | Title | Priority | Status |
 |----|-------|----------|--------|
-| [BUG-129](./bug-129-e2e-choice-radio-selector-mismatch.md) | E2E Choice Radio Selector Cannot Find Question Choices | P1 | Open |
-| [BUG-130](./bug-130-e2e-session-start-selector-mismatch.md) | E2E Session Start Selectors Don't Match Current UI | P1 | Open |
-| [BUG-131](./bug-131-e2e-bookmarks-empty-state-assertion-failure.md) | E2E Bookmarks Empty State Assertion Fails After Remove | P2 | Open |
+| *(none)* | *(no open bugs)* | - | - |
 
 **Next Bug ID:** BUG-132
 
@@ -27,6 +25,9 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 | ID | Title | Status | Resolution |
 |----|-------|--------|------------|
+| [BUG-131](../_archive/bugs/bug-131-e2e-bookmarks-empty-state-assertion-failure.md) | E2E Bookmarks Empty State Assertion Fails After Remove | Resolved | Stabilized the test by asserting either count decrement or empty-state with increased timeout |
+| [BUG-130](../_archive/bugs/bug-130-e2e-session-start-selector-mismatch.md) | E2E Session Start Selectors Don't Match Current UI | Resolved | Updated `startSession()` to click SegmentedControl buttons and fill `Questions` input |
+| [BUG-129](../_archive/bugs/bug-129-e2e-choice-radio-selector-mismatch.md) | E2E Choice Radio Selector Cannot Find Question Choices | Resolved | Updated `selectChoiceByLabel()` to match ChoiceButton DOM and assert radio checked |
 | [BUG-128](../_archive/bugs/bug-128-sessioninfo-cleared-on-null-question.md) | sessionInfo Cleared on Null Question — Exam Defaults to Tutor, Navigator Drops | Resolved | Preserve sessionInfo when next question is null; added regression coverage |
 | [BUG-127](../_archive/bugs/bug-127-double-click-submit-exam-race.md) | Double-Click "Submit Exam" Race in Review | Resolved | Ref-based guard + unanswered warning in confirm dialog; added browser regression coverage |
 | [BUG-126](../_archive/bugs/bug-126-end-session-blocked-by-bookmark-pending.md) | End Session Blocked During Bookmark Operations | Reclassified | Not reproducible in current implementation; added regression guard |
