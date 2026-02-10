@@ -289,16 +289,16 @@ Following Uncle Bob's principles:
 
 ```text
 Recent activity
-┌─────────────────────────────────────────────────────────┐
-│ Tutor session · 3/5 correct (60%) · 2 min ago          │
-│   ├─ Q: "A physician is reviewing the contra..." ✓     │ ← clickable → /app/questions/[slug]
-│   ├─ Q: "An elderly patient with insomnia..." ✓        │ ← clickable → /app/questions/[slug]
-│   └─ Q: "Which medication is first-line..." ✗          │ ← clickable → /app/questions/[slug]
+┌──────────────────────────────────────────────────────────┐
+│ Tutor session · 3/5 correct (60%) · 2 min ago            │
+│   ├─ Q: "A physician is reviewing the contra..." ✓       │ ← clickable → /app/questions/[slug]
+│   ├─ Q: "An elderly patient with insomnia..." ✓          │ ← clickable → /app/questions/[slug]
+│   └─ Q: "Which medication is first-line..." ✗            │ ← clickable → /app/questions/[slug]
 │                                          [View session →]│ ← links to session detail
-├─────────────────────────────────────────────────────────┤
-│ Quick practice · Correct · 5 min ago                    │
-│   Q: "The mechanism of action of naltrexone..." ✓      │ ← clickable → /app/questions/[slug]
-└─────────────────────────────────────────────────────────┘
+├──────────────────────────────────────────────────────────┤
+│ Quick practice · Correct · 5 min ago                     │
+│   Q: "The mechanism of action of naltrexone..." ✓        │ ← clickable → /app/questions/[slug]
+└──────────────────────────────────────────────────────────┘
 ```
 
 - Session-grouped entries are collapsible with summary header

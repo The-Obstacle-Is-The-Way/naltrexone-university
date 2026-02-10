@@ -7,7 +7,7 @@
 **Status:** Ready
 **Layer:** Feature
 **Date:** 2026-02-10
-**Depends On:** SPEC-014 (Review + Bookmarks), SPEC-013 (Practice Sessions), SPEC-019 (Practice UX Redesign)
+**Depends On:** SPEC-013 (Practice Sessions), SPEC-014 (Review + Bookmarks), SPEC-019 (Practice UX Redesign), SPEC-020 (Practice Engine Completion)
 **Brainstorming:** `docs/brainstorming/review-page-flow-audit.md`, `docs/brainstorming/review-consistency-audit.md`
 
 ---
@@ -57,6 +57,9 @@ Every open question from the brainstorming docs is resolved here.
 app/(app)/app/history/
 ├── page.tsx                    ← Server component (data fetching)
 ├── history-page-client.tsx     ← Client component (tab switching, session expand)
+├── history-search-params.ts    ← Search param parsing + href builders
+├── loading.tsx                 ← Loading state
+├── error.tsx                   ← Error boundary
 ├── components/
 │   ├── history-sessions-tab.tsx       ← Sessions list with expandable breakdowns
 │   ├── history-missed-tab.tsx         ← Missed questions list (extracted from current ReviewView)
@@ -70,10 +73,12 @@ app/(app)/app/history/
 ```
                     Server Component (page.tsx)
                    ┌─────────────────────────────┐
-                   │ Parse ?tab= search param    │
+                   │ Parse ?tab=, limit, offset  │
+                   │ Parse missed filters (opt): │
+                   │   difficulty, tag           │
                    │ Fetch initial data:         │
-                   │   tab=sessions → getSessionHistory({ limit: 20, offset: 0 })
-                   │   tab=missed  → getMissedQuestions({ limit: 20, offset: 0 })
+                   │   tab=sessions → getSessionHistory({ limit, offset })
+                   │   tab=missed  → getMissedQuestions({ limit, offset })
                    │ Pass to client component    │
                    └──────────┬──────────────────┘
                               │
@@ -172,14 +177,31 @@ type HistorySearchParams = {
 };
 
 // Parse tab from search params (default: 'sessions')
+// Parse pagination (default: limit=20, offset=0)
+// Parse missed filters (difficulty, tag) for client-side filtering
 // If tab === 'missed': fetch getMissedQuestions({ limit, offset })
-// If tab === 'sessions': fetch getSessionHistory({ limit: 20, offset: 0 })
-// Pass data + tab + searchParams to HistoryPageClient
+// If tab === 'sessions': fetch getSessionHistory({ limit, offset })
+// Pass results + parsed values to HistoryPageClient
 ```
+
+**Implementation note:** Put all search-param parsing and href-building helpers in `app/(app)/app/history/history-search-params.ts` by extracting the existing helpers from `app/(app)/app/review/page.tsx`.
 
 **Server actions used:**
 - `getSessionHistory` from `src/adapters/controllers/practice-controller.ts`
 - `getMissedQuestions` from `src/adapters/controllers/review-controller.ts`
+
+#### 4.1.4.1 History Page — Loading + Error
+
+**File:** `app/(app)/app/history/loading.tsx`
+
+Add a simple loading UI consistent with other app pages (e.g., "Loading history…", `aria-live="polite"`).
+
+**File:** `app/(app)/app/history/error.tsx`
+
+Add an error boundary using `ErrorBoundaryPage`, with:
+- Title: "History error"
+- Description: "We couldn't load your history right now. Please try again."
+- Links: at least `{ href: ROUTES.APP_DASHBOARD, label: 'Back to Dashboard' }`
 
 #### 4.1.5 History Page — Client Component
 
@@ -259,14 +281,15 @@ This is the current `ReviewView` from `app/(app)/app/review/page.tsx`, extracted
 - Same `getSessionOriginLabel` helper
 - All pagination links use `/app/history?tab=missed&offset=...&limit=...`
 
-**Helpers to extract from `review/page.tsx`:** The current Review page defines several helper functions that must be moved into the missed tab component (or a shared utils file within the history directory):
-- `ReviewFilters` type (the filter state shape)
-- `parseNonNegativeInt`, `parseLimit` (search param parsers)
-- `parseDifficultyFilter`, `parseTagSlugFilter` (filter-specific parsers)
-- `buildReviewHref` → rename to `buildMissedHref` (URL builder for pagination + filter links)
-- `getSessionOriginLabel` (maps session mode to display string)
+**Helpers to extract from `review/page.tsx`:** Move the existing helper functions into `app/(app)/app/history/history-search-params.ts` so they can be reused by both the History server component and the Missed tab:
+- `ReviewFilters` type (rename to something History-scoped if desired, e.g. `MissedFilters`)
+- `parseNonNegativeInt`, `parseLimit`, `parseDifficultyFilter`, `parseTagSlugFilter`
+- `buildReviewHref` → replace with History-scoped href builders:
+  - `buildHistorySessionsHref({ limit, offset })` → `/app/history?tab=sessions&...`
+  - `buildHistoryMissedHref({ limit, offset, filters })` → `/app/history?tab=missed&...`
+- `getSessionOriginLabel`
 
-These live in the server component portion of the Review page. In the History page, the server component (`page.tsx`) will call the parsers and pass the results to the client component as props.
+In `app/(app)/app/history/page.tsx`, call these parsers and pass the parsed `limit`, `offset`, and filters down as props.
 
 #### 4.1.9 Question Detail — Origin Support
 
@@ -283,7 +306,7 @@ if (resolvedOrigin === 'history') {
   return {
     backHref: ROUTES.APP_HISTORY,
     backLabel: 'Back to History',
-    subtitle: 'Reviewing a question from your session history.',
+    subtitle: 'Reviewing a question from your history.',
   };
 }
 ```
@@ -311,6 +334,8 @@ async redirects() {
 },
 ```
 
+**Order note:** Add this redirect only after `/app/history` (and the Missed tab) exists, otherwise `/app/review` will redirect to a 404 during incremental implementation/testing.
+
 ### Phase 2: Clean Up Practice Page
 
 **Goal:** Remove "Recent sessions" panel from Practice page. Practice page becomes a pure session launcher.
@@ -322,28 +347,40 @@ async redirects() {
 - Remove `PracticeSessionHistoryPanel` import and rendering
 - Remove `sessionControls.sessionHistoryStatus`, `sessionControls.sessionHistoryRows`, `sessionControls.selectedHistorySessionId`, `sessionControls.selectedHistoryReview`, `sessionControls.historyReviewLoadState` usage
 
-#### 4.2.2 Remove Practice Session History Hook
+#### 4.2.2 Update Practice Route Exports
+
+**File:** `app/(app)/app/practice/page.tsx`
+
+Remove re-exports of `PracticeSessionHistoryPanel` and `PracticeSessionHistoryPanelProps`, since the history panel is deleted in this phase. (This file currently re-exports components/types from `./components`.)
+
+#### 4.2.3 Remove Practice Session History Hook
 
 **File:** `app/(app)/app/practice/hooks/use-practice-session-history.ts` — **DELETE**
+**File:** `app/(app)/app/practice/hooks/use-practice-session-history.test.tsx` — **DELETE**
+**File:** `app/(app)/app/practice/hooks/use-practice-session-history.browser.spec.tsx` — **DELETE**
 
-#### 4.2.3 Remove Practice Session History Panel
+#### 4.2.4 Remove Practice Session History Panel
 
 **File:** `app/(app)/app/practice/components/practice-session-history-panel.tsx` — **DELETE**
 **File:** `app/(app)/app/practice/components/practice-session-history-panel.browser.spec.tsx` — **DELETE**
 
-#### 4.2.4 Update `usePracticeSessionControls`
+**File:** `app/(app)/app/practice/page.test.tsx`
+
+Remove (or move) the unit tests that directly render `PracticeSessionHistoryPanel`. Equivalent behavior will be covered by the History sessions tab tests.
+
+#### 4.2.5 Update `usePracticeSessionControls`
 
 **File:** `app/(app)/app/practice/hooks/use-practice-session-controls.ts`
 
 Remove the `usePracticeSessionHistory` composition and its return values.
 
-#### 4.2.5 Update Components Barrel
+#### 4.2.6 Update Components Barrel
 
 **File:** `app/(app)/app/practice/components/index.ts`
 
 Remove `PracticeSessionHistoryPanel` export. This barrel file exists and currently exports `PracticeSessionHistoryPanel` — it must be updated to avoid a broken import in `practice-page-client.tsx` (which imports from `'./components'`).
 
-#### 4.2.6 Add "View History" Link to Session Summary
+#### 4.2.7 Add "View History" Link to Session Summary
 
 **File:** `app/(app)/app/practice/[sessionId]/components/session-summary-view.tsx`
 
@@ -360,49 +397,16 @@ Button order: "Back to Dashboard" (primary), "View in History" (outline), "Start
 
 **Goal:** Replace verbose "Recent activity" timeline with compact summary cards pointing to History.
 
-#### 4.3.1 New Use Case: `GetDashboardSummaryUseCase`
+#### 4.3.1 Data Fetching (No New Backend Code)
 
-**File:** `src/application/use-cases/get-dashboard-summary.ts`
+**Decision:** Do **not** add a new application-layer use case just to reshape dashboard data. Compose existing server actions in the Dashboard server component (outermost layer) to keep the change surface small and avoid new container wiring.
 
-```typescript
-export type DashboardSummaryOutput = {
-  stats: {
-    totalAnswered: number;
-    accuracyOverall: number;
-    answeredLast7Days: number;
-    accuracyLast7Days: number;
-    currentStreakDays: number;
-  };
-  recentSessions: Array<{
-    sessionId: string;
-    mode: PracticeMode;
-    correct: number;
-    questionCount: number;
-    accuracy: number;
-    endedAt: string;
-  }>;
-  recentMissed: Array<{
-    questionId: string;
-    slug: string;
-    stemPreview: string;  // Pre-computed 80-char preview
-    difficulty: QuestionDifficulty;
-    lastAnsweredAt: string;
-  }>;
-};
-```
+Use these existing server actions:
+- `getUserStats({})` from `src/adapters/controllers/stats-controller.ts` (stats cards)
+- `getSessionHistory({ limit: 3, offset: 0 })` from `src/adapters/controllers/practice-controller.ts` (recent sessions)
+- `getMissedQuestions({ limit: 3, offset: 0 })` from `src/adapters/controllers/review-controller.ts` (recent missed)
 
-- `recentSessions`: Top 3 completed sessions (calls existing `getSessionHistory` with `limit: 3`)
-- `recentMissed`: Top 3 most recently missed questions (calls existing `getMissedQuestions` with `limit: 3`)
-- `stats`: Same as current `UserStatsOutput` (minus `recentActivity`)
-
-**Rationale for new use case:** The current `GetUserStatsUseCase` returns `recentActivity` (individual attempts). The Dashboard needs session-level summaries + missed questions instead. Rather than bloating the existing use case, create a new one that composes existing use cases.
-
-**Construction:** Constructor injection per Clean Architecture. Takes:
-- `GetUserStatsUseCase` (for `stats` — call it and strip `recentActivity` from the result)
-- `GetSessionHistoryUseCase` (for `recentSessions` — call with `limit: 3`)
-- `GetMissedQuestionsUseCase` (for `recentMissed` — call with `limit: 3`)
-
-All three take `userId` as a parameter. The new use case takes `{ userId }` and composes the three calls.
+Implementation note: call them in `Promise.all` to minimize total latency.
 
 #### 4.3.2 Dashboard Page Update
 
@@ -414,16 +418,10 @@ All three take `userId` as a parameter. The new use case takes `{ userId }` and 
 - The `<Card>` section rendering "Recent activity" with individual question rows
 
 **Replace with:**
-- "Recent sessions" section: 3 compact session cards (mode pill, score, date). Each links to `/app/history?tab=sessions`. "View all sessions" link at bottom.
-- "Recent missed" section: 3 compact question cards (stem preview, difficulty). Each links to `toQuestionRoute(slug, { from: 'dashboard' })`. "View all missed" link → `/app/history?tab=missed`.
+- "Recent sessions" section: 3 compact session cards (mode pill, score, date). Cards (or a "View all sessions" link) navigate to `/app/history?tab=sessions`.
+- "Recent missed" section: 3 compact question cards (stem preview, difficulty badge, missed date). Each available row links to `toQuestionRoute(slug, { from: 'dashboard' })`. Unavailable rows render `[Question no longer available]` with no link. "View all missed" link → `/app/history?tab=missed`.
 
-**Data source:** Switch from `getUserStats` to new `getDashboardSummary` server action (or compose both calls).
-
-#### 4.3.3 Controller + Server Action
-
-**File:** `src/adapters/controllers/stats-controller.ts`
-
-Add `getDashboardSummary` server action wrapping the new use case.
+**Data source:** Keep `getUserStats` for stats cards; add calls to `getSessionHistory` and `getMissedQuestions` for the new compact sections.
 
 ---
 
@@ -446,13 +444,15 @@ The redirect in `next.config.ts` handles any lingering URLs.
 |------|---------|
 | `app/(app)/app/history/page.tsx` | History server component |
 | `app/(app)/app/history/history-page-client.tsx` | History client component |
+| `app/(app)/app/history/history-search-params.ts` | Shared search-param parsing + href builders for History |
+| `app/(app)/app/history/loading.tsx` | History loading state |
+| `app/(app)/app/history/error.tsx` | History error boundary |
 | `app/(app)/app/history/components/history-tab-bar.tsx` | Tab bar |
 | `app/(app)/app/history/components/history-sessions-tab.tsx` | Sessions tab |
 | `app/(app)/app/history/components/history-missed-tab.tsx` | Missed questions tab |
 | `app/(app)/app/history/hooks/use-history-sessions.ts` | Session expand/collapse state |
 | `app/(app)/app/shared/components/session-breakdown-list.tsx` | Moved + enhanced shared component |
 | `app/(app)/app/shared/components/session-breakdown-list.test.tsx` | Moved test |
-| `src/application/use-cases/get-dashboard-summary.ts` | Dashboard summary use case |
 
 ### Modified Files
 
@@ -460,8 +460,11 @@ The redirect in `next.config.ts` handles any lingering URLs.
 |------|--------|
 | `lib/routes.ts` | Add `APP_HISTORY`, add `'history'` to `QuestionOrigin` |
 | `components/app-nav-items.ts` | Replace Review → History |
+| `components/app-nav-items.test.ts` | Update nav assertions for History |
 | `next.config.ts` | Add `/app/review` → `/app/history?tab=missed` redirect |
 | `app/(app)/app/practice/practice-page-client.tsx` | Remove history panel |
+| `app/(app)/app/practice/page.tsx` | Remove history panel re-exports |
+| `app/(app)/app/practice/page.test.tsx` | Remove history panel unit tests |
 | `app/(app)/app/practice/hooks/use-practice-session-controls.ts` | Remove history hook composition |
 | `app/(app)/app/practice/[sessionId]/components/session-summary-view.tsx` | Add "View in History" link |
 | `app/(app)/app/practice/components/practice-session-history-panel.tsx` | Import path update for `SessionBreakdownList` (temporary — deleted in Phase 2) |
@@ -470,16 +473,20 @@ The redirect in `next.config.ts` handles any lingering URLs.
 | `app/(app)/app/questions/[slug]/question-page-client.test.tsx` | Add test for `from=history` back link |
 | `app/(app)/app/questions/[slug]/error.tsx` | Update `ROUTES.APP_REVIEW` → `ROUTES.APP_HISTORY` |
 | `app/(app)/app/dashboard/page.tsx` | Replace Recent Activity with compact cards |
-| `src/adapters/controllers/stats-controller.ts` | Add `getDashboardSummary` action |
+| `app/(app)/app/dashboard/page.test.tsx` | Update for compact dashboard sections |
+| `app/(app)/app/layout-shell.test.tsx` | Update nav href assertions (History) |
+| `app/error-heading-styles.test.tsx` | Replace Review error coverage with History |
 
 ### Deleted Files
 
 | File | Phase |
 |------|-------|
-| `app/(app)/app/review/page.tsx` | Phase 1 (after History page is live) |
+| `app/(app)/app/review/` | Phase 1 (after History page is live) |
 | `app/(app)/app/practice/components/practice-session-history-panel.tsx` | Phase 2 |
 | `app/(app)/app/practice/components/practice-session-history-panel.browser.spec.tsx` | Phase 2 |
 | `app/(app)/app/practice/hooks/use-practice-session-history.ts` | Phase 2 |
+| `app/(app)/app/practice/hooks/use-practice-session-history.test.tsx` | Phase 2 |
+| `app/(app)/app/practice/hooks/use-practice-session-history.browser.spec.tsx` | Phase 2 |
 
 ---
 
@@ -549,17 +556,6 @@ Update existing tests:
 - links use from='history' when from prop is 'history'
 ```
 
-#### Dashboard Summary Use Case
-
-**File:** `src/application/use-cases/get-dashboard-summary.test.ts`
-
-```
-- returns stats, recentSessions (max 3), recentMissed (max 3)
-- recentSessions are sorted by endedAt descending
-- recentMissed are sorted by lastAnsweredAt descending
-- returns empty arrays when user has no data
-```
-
 #### Dashboard Page
 
 **File:** `app/(app)/app/dashboard/page.test.tsx`
@@ -572,6 +568,29 @@ Update existing tests:
 - renders "View all missed" link pointing to /app/history?tab=missed
 - does not render individual question attempt rows
 ```
+
+#### Navigation + Layout
+
+**File:** `components/app-nav-items.test.ts`
+
+- Update expected route order to include `ROUTES.APP_HISTORY` instead of `ROUTES.APP_REVIEW`
+- Update `getActiveAppNavItemHref` assertions for `/app/history`
+
+**File:** `app/(app)/app/layout-shell.test.tsx`
+
+- Update nav href assertions to include `href="/app/history"` and remove `href="/app/review"`
+
+**File:** `app/error-heading-styles.test.tsx`
+
+- Replace `ReviewError` import/expectations with `HistoryError` (new file: `app/(app)/app/history/error.tsx`)
+
+#### Practice Page Cleanup (Unit/Browser Specs)
+
+When removing the Practice "Recent sessions" panel, delete/update the tests that target it:
+- Delete: `app/(app)/app/practice/components/practice-session-history-panel.browser.spec.tsx`
+- Delete: `app/(app)/app/practice/hooks/use-practice-session-history.test.tsx`
+- Delete: `app/(app)/app/practice/hooks/use-practice-session-history.browser.spec.tsx`
+- Update: `app/(app)/app/practice/page.test.tsx` (remove `PracticeSessionHistoryPanel` render tests)
 
 ### 7.2 Browser Spec Tests (vitest-browser-react)
 
@@ -620,40 +639,46 @@ Update the review page test:
 ## 8. Implementation Order
 
 ```
-Phase 1A: Infrastructure
-  1. Add APP_HISTORY to routes.ts + 'history' to QuestionOrigin
-  2. Move SessionBreakdownList to shared location, add 'from' prop
-  3. Update all existing imports of SessionBreakdownList
-  4. Update nav items (Review → History)
-  5. Add /app/review redirect in next.config.ts
+Phase 1A: Shared Infrastructure
+  1. Add APP_HISTORY to lib/routes.ts + 'history' to QuestionOrigin
+  2. Move SessionBreakdownList to app/(app)/app/shared/components, add 'from' prop
+  3. Update SessionBreakdownList imports + moved test file
 
-Phase 1B: History Page
-  6. Create history-tab-bar.tsx (test first)
-  7. Create use-history-sessions.ts hook
-  8. Create history-sessions-tab.tsx (test first)
-  9. Create history-missed-tab.tsx (extract from ReviewView, test first)
-  10. Create history-page-client.tsx
-  11. Create history/page.tsx (server component)
-  12. Delete app/(app)/app/review/ directory
+Phase 1B: History Page (Keep /app/review working while building)
+  4. Create app/(app)/app/history/history-search-params.ts (extract helpers from Review page)
+  5. Create history-tab-bar.tsx (test first)
+  6. Create use-history-sessions.ts hook
+  7. Create history-sessions-tab.tsx (test first)
+  8. Create history-missed-tab.tsx (extract from ReviewView, test first)
+  9. Create history-page-client.tsx
+  10. Create history/page.tsx (server component)
+  11. Create history/loading.tsx + history/error.tsx
+
+Phase 1C: Rename + Redirect + Delete Review
+  12. Update nav items (Review → History) + update components/app-nav-items.test.ts and app/(app)/app/layout-shell.test.tsx
+  13. Update question detail origin UI for history + update app/(app)/app/questions/[slug]/question-page-client.test.tsx and app/(app)/app/questions/[slug]/error.tsx
+  14. Add /app/review redirect in next.config.ts (after /app/history exists)
+  15. Delete app/(app)/app/review/ directory + update app/error-heading-styles.test.tsx (Review → History)
 
 Phase 2: Clean Practice Page
-  13. Remove PracticeSessionHistoryPanel from practice-page-client.tsx
-  14. Remove usePracticeSessionHistory hook
-  15. Delete practice-session-history-panel.tsx + browser spec
-  16. Update usePracticeSessionControls
-  17. Add "View in History" link to SessionSummaryView
+  16. Remove PracticeSessionHistoryPanel from practice-page-client.tsx
+  17. Update app/(app)/app/practice/page.tsx exports
+  18. Update usePracticeSessionControls to drop history state
+  19. Update app/(app)/app/practice/components/index.ts exports
+  20. Delete practice-session-history-panel.tsx + browser spec
+  21. Delete use-practice-session-history.ts + its tests
+  22. Update app/(app)/app/practice/page.test.tsx (remove history panel tests)
+  23. Add "View in History" link to SessionSummaryView
 
-Phase 3: Slim Dashboard
-  18. Create GetDashboardSummaryUseCase (test first)
-  19. Add getDashboardSummary server action
-  20. Update Dashboard page to use compact cards
-  21. Remove groupRecentActivity + RecentActivityGroup types
+Phase 3: Slim Dashboard (No backend additions)
+  24. Update app/(app)/app/dashboard/page.tsx to render compact sections and call getSessionHistory/getMissedQuestions
+  25. Update app/(app)/app/dashboard/page.test.tsx (remove Recent activity assertions)
 
 Phase 4: E2E
-  22. Update review.spec.ts → history.spec.ts
-  23. Update core-app-pages.spec.ts
-  24. Update practice.spec.ts
-  25. Run full suite: pnpm typecheck && pnpm lint && pnpm test --run && pnpm test:e2e
+  26. Update review.spec.ts → history.spec.ts
+  27. Update core-app-pages.spec.ts
+  28. Update practice.spec.ts
+  29. Run full suite: pnpm typecheck && pnpm lint && pnpm test --run && pnpm test:e2e
 ```
 
 ---
