@@ -70,30 +70,30 @@ app/(app)/app/history/
 ```
                     Server Component (page.tsx)
                    ┌─────────────────────────────┐
-                   │ Parse ?tab= search param     │
-                   │ Fetch initial data:           │
+                   │ Parse ?tab= search param    │
+                   │ Fetch initial data:         │
                    │   tab=sessions → getSessionHistory({ limit: 20, offset: 0 })
                    │   tab=missed  → getMissedQuestions({ limit: 20, offset: 0 })
-                   │ Pass to client component      │
+                   │ Pass to client component    │
                    └──────────┬──────────────────┘
                               │
-                   ┌──────────▼──────────────────┐
-                   │ Client Component              │
-                   │ (history-page-client.tsx)      │
-                   │                               │
-                   │ Tab bar: Sessions | Missed     │
-                   │                               │
-                   │ Sessions tab:                  │
-                   │   - Render session rows        │
-                   │   - On expand: call            │
-                   │     getPracticeSessionReview() │
-                   │   - Render SessionBreakdownList│
-                   │                               │
-                   │ Missed tab:                    │
-                   │   - Render missed question cards│
-                   │   - Client-side filtering      │
-                   │   - Pagination via links       │
-                   └───────────────────────────────┘
+                   ┌──────────▼────────────────────────┐
+                   │ Client Component                  │
+                   │ (history-page-client.tsx)         │
+                   │                                   │
+                   │ Tab bar: Sessions | Missed        │
+                   │                                   │
+                   │ Sessions tab:                     │
+                   │   - Render session rows           │
+                   │   - On expand: call               │
+                   │     getPracticeSessionReview()    │
+                   │   - Render SessionBreakdownList   │
+                   │                                   │
+                   │ Missed tab:                       │
+                   │   - Render missed question cards  │
+                   │   - Client-side filtering         │
+                   │   - Pagination via links          │
+                   └───────────────────────────────────┘
 ```
 
 ### 3.4 Reuse Strategy
