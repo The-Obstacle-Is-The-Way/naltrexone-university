@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { SessionBreakdownList } from '@/app/(app)/app/shared/components/session-breakdown-list';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { formatDuration } from '@/lib/format-duration';
@@ -7,7 +8,6 @@ import type {
   EndPracticeSessionOutput,
   GetPracticeSessionReviewOutput,
 } from '@/src/adapters/controllers/practice-controller';
-import { SessionBreakdownList } from '../../components/session-breakdown-list';
 import type { LoadState } from '../../practice-page-logic';
 
 export function SessionSummaryView({

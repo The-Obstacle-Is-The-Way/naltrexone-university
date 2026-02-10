@@ -102,4 +102,18 @@ describe('SessionBreakdownList', () => {
       'text-muted-foreground/60',
     );
   });
+
+  it('supports configurable origin query parameters for question routes', async () => {
+    const { SessionBreakdownList } = await import('./session-breakdown-list');
+    const html = renderToStaticMarkup(
+      <SessionBreakdownList rows={[availableRow]} from="history" />,
+    );
+
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const links = Array.from(doc.querySelectorAll('a'));
+    expect(links).toHaveLength(1);
+    expect(links[0]?.getAttribute('href')).toBe(
+      toQuestionRoute('q-1', { from: 'history' }),
+    );
+  });
 });

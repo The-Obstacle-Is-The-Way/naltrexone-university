@@ -1,3 +1,4 @@
+import { SessionBreakdownList } from '@/app/(app)/app/shared/components/session-breakdown-list';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { formatDate } from '@/lib/format-date';
@@ -7,7 +8,6 @@ import type {
   GetSessionHistoryOutput,
 } from '@/src/adapters/controllers/practice-controller';
 import type { LoadState } from '../practice-page-logic';
-import { SessionBreakdownList } from './session-breakdown-list';
 
 export type PracticeSessionHistoryPanelProps = {
   status: 'idle' | 'loading' | 'error';

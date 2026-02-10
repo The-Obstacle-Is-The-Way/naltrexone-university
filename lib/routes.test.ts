@@ -19,9 +19,19 @@ describe('lib/routes', () => {
     expect(ROUTES.APP_PRACTICE_QUICK).toBe('/app/practice/quick');
   });
 
+  it('exports a history route constant', () => {
+    expect(ROUTES.APP_HISTORY).toBe('/app/history');
+  });
+
   it('builds practice session routes from the practice base path', () => {
     expect(toPracticeSessionRoute('session_123')).toBe(
       '/app/practice/session_123',
+    );
+  });
+
+  it('supports history origin query parameters for question routes', () => {
+    expect(toQuestionRoute('opioid-use-disorder', { from: 'history' })).toBe(
+      '/app/questions/opioid-use-disorder?from=history',
     );
   });
 });
