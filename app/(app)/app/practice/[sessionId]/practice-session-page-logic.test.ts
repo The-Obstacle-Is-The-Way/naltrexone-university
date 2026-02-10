@@ -591,6 +591,31 @@ describe('practice-session-page-logic', () => {
       expect(advance).not.toHaveBeenCalled();
     });
 
+    it('returns no advance invocation for a single-question session', () => {
+      const advance = vi.fn();
+
+      maybeAutoAdvanceAfterSubmit({
+        mode: 'exam',
+        submitResult: {
+          attemptId: 'attempt_1',
+          isCorrect: true,
+          correctChoiceId: 'choice_1',
+          explanationMd: null,
+          choiceExplanations: [],
+        },
+        loadStateStatus: 'ready',
+        sessionInfo: {
+          sessionId: 'session-1',
+          mode: 'exam',
+          index: 0,
+          total: 1,
+        },
+        advance,
+      });
+
+      expect(advance).not.toHaveBeenCalled();
+    });
+
     it('returns no advance invocation when mode is tutor', () => {
       const advance = vi.fn();
 
