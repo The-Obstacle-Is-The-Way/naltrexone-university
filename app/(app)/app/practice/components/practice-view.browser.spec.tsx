@@ -11,6 +11,7 @@ test('renders error state and retries when requested', async () => {
       loadState={{ status: 'error', message: 'Question load failed.' }}
       question={null}
       selectedChoiceId={null}
+      isAnswered={false}
       submitResult={null}
       isPending={false}
       bookmarkStatus="idle"
@@ -61,6 +62,7 @@ test('supports exam controls and question interactions', async () => {
         session: null,
       }}
       selectedChoiceId={null}
+      isAnswered={false}
       submitResult={null}
       isPending={false}
       bookmarkStatus="idle"
@@ -109,6 +111,7 @@ test('renders bookmark feedback in shared toast region', async () => {
           session: null,
         }}
         selectedChoiceId={null}
+        isAnswered={false}
         submitResult={null}
         isPending={false}
         bookmarkStatus="idle"

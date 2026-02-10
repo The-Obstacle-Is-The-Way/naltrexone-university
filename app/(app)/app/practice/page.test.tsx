@@ -41,6 +41,7 @@ describe('app/(app)/app/practice', () => {
         loadState={{ status: 'error', message: 'Nope' }}
         question={null}
         selectedChoiceId={null}
+        isAnswered={false}
         submitResult={null}
         isPending={false}
         bookmarkStatus="idle"
@@ -66,6 +67,7 @@ describe('app/(app)/app/practice', () => {
         loadState={{ status: 'loading' }}
         question={null}
         selectedChoiceId={null}
+        isAnswered={false}
         submitResult={null}
         isPending={false}
         bookmarkStatus="idle"
@@ -94,6 +96,7 @@ describe('app/(app)/app/practice', () => {
         loadState={{ status: 'ready' }}
         question={null}
         selectedChoiceId={null}
+        isAnswered={false}
         submitResult={null}
         isPending={false}
         bookmarkStatus="idle"
@@ -132,6 +135,7 @@ describe('app/(app)/app/practice', () => {
           session: null,
         }}
         selectedChoiceId={null}
+        isAnswered={false}
         submitResult={null}
         isPending={false}
         bookmarkStatus="idle"
@@ -177,6 +181,7 @@ describe('app/(app)/app/practice', () => {
           session: null,
         }}
         selectedChoiceId={null}
+        isAnswered={false}
         submitResult={null}
         isPending={false}
         bookmarkStatus="idle"
@@ -204,6 +209,7 @@ describe('app/(app)/app/practice', () => {
         loadState={{ status: 'ready' }}
         question={null}
         selectedChoiceId={null}
+        isAnswered={false}
         submitResult={{
           attemptId: 'attempt-1',
           isCorrect: false,
@@ -240,6 +246,7 @@ describe('app/(app)/app/practice', () => {
         loadState={{ status: 'ready' }}
         question={null}
         selectedChoiceId={null}
+        isAnswered={false}
         submitResult={{
           attemptId: 'attempt-1',
           isCorrect: false,
@@ -286,6 +293,7 @@ describe('app/(app)/app/practice', () => {
           session: null,
         }}
         selectedChoiceId={null}
+        isAnswered={false}
         submitResult={null}
         isPending={false}
         bookmarkStatus="error"
@@ -310,6 +318,7 @@ describe('app/(app)/app/practice', () => {
         loadState={{ status: 'ready' }}
         question={null}
         selectedChoiceId={null}
+        isAnswered={false}
         submitResult={null}
         isPending={false}
         bookmarkStatus="error"
@@ -336,6 +345,7 @@ describe('app/(app)/app/practice', () => {
         loadState={{ status: 'ready' }}
         question={null}
         selectedChoiceId={null}
+        isAnswered={false}
         submitResult={null}
         isPending={false}
         bookmarkStatus="idle"

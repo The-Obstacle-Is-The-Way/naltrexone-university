@@ -28,6 +28,7 @@ export default function QuickPracticeClient() {
       loadState={questionFlow.loadState}
       question={questionFlow.question}
       selectedChoiceId={questionFlow.selectedChoiceId}
+      isAnswered={questionFlow.isAnswered}
       submitResult={questionFlow.submitResult}
       isPending={questionFlow.isPending}
       bookmarkStatus={questionFlow.bookmarkStatus}

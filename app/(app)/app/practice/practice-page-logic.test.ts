@@ -47,6 +47,7 @@ describe('practice-page-logic', () => {
           loadState: { status: 'ready' },
           question: createNextQuestion(),
           selectedChoiceId: 'choice_1',
+          isAnswered: false,
           submitResult: null,
         }),
       ).toBe(true);
@@ -58,6 +59,7 @@ describe('practice-page-logic', () => {
           loadState: { status: 'loading' },
           question: createNextQuestion(),
           selectedChoiceId: 'choice_1',
+          isAnswered: false,
           submitResult: null,
         }),
       ).toBe(false);
@@ -69,6 +71,7 @@ describe('practice-page-logic', () => {
           loadState: { status: 'ready' },
           question: createNextQuestion(),
           selectedChoiceId: 'choice_1',
+          isAnswered: false,
           submitResult: {
             attemptId: 'attempt_1',
             isCorrect: true,
@@ -76,6 +79,18 @@ describe('practice-page-logic', () => {
             explanationMd: 'Because…',
             choiceExplanations: [],
           },
+        }),
+      ).toBe(false);
+    });
+
+    it('returns false when question is already answered', () => {
+      expect(
+        canSubmitAnswer({
+          loadState: { status: 'ready' },
+          question: createNextQuestion(),
+          selectedChoiceId: 'choice_1',
+          isAnswered: true,
+          submitResult: null,
         }),
       ).toBe(false);
     });
@@ -849,27 +864,49 @@ describe('practice-page-logic', () => {
     it('does nothing when submitResult exists', () => {
       const setSelectedChoiceId = vi.fn();
 
-      selectChoiceIfAllowed(
+      const changed = selectChoiceIfAllowed(
         {
-          attemptId: 'attempt_1',
-          isCorrect: true,
-          correctChoiceId: 'choice_1',
-          explanationMd: 'Because...',
-          choiceExplanations: [],
+          isAnswered: false,
+          submitResult: {
+            attemptId: 'attempt_1',
+            isCorrect: true,
+            correctChoiceId: 'choice_1',
+            explanationMd: 'Because...',
+            choiceExplanations: [],
+          },
         },
         setSelectedChoiceId,
         'choice_1',
       );
 
       expect(setSelectedChoiceId).not.toHaveBeenCalled();
+      expect(changed).toBe(false);
     });
 
     it('sets the choice when no submitResult exists', () => {
       const setSelectedChoiceId = vi.fn();
 
-      selectChoiceIfAllowed(null, setSelectedChoiceId, 'choice_1');
+      const changed = selectChoiceIfAllowed(
+        { isAnswered: false, submitResult: null },
+        setSelectedChoiceId,
+        'choice_1',
+      );
 
       expect(setSelectedChoiceId).toHaveBeenCalledWith('choice_1');
+      expect(changed).toBe(true);
+    });
+
+    it('does nothing when question is already answered', () => {
+      const setSelectedChoiceId = vi.fn();
+
+      const changed = selectChoiceIfAllowed(
+        { isAnswered: true, submitResult: null },
+        setSelectedChoiceId,
+        'choice_1',
+      );
+
+      expect(setSelectedChoiceId).not.toHaveBeenCalled();
+      expect(changed).toBe(false);
     });
   });
 

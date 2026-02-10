@@ -84,6 +84,7 @@ export function usePracticeSessionPageController(
     loadState: questionFlow.loadState,
     question: questionFlow.question,
     selectedChoiceId: questionFlow.selectedChoiceId,
+    isAnswered: questionFlow.isAnswered,
     submitResult: questionFlow.submitResult,
     isPending: questionFlow.isPending,
     bookmarkStatus: bookmarks.bookmarkStatus,

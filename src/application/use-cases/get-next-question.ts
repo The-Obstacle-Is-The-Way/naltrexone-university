@@ -34,6 +34,8 @@ export type NextQuestion = {
     index: number; // 0-based index within session
     total: number;
     isMarkedForReview?: boolean;
+    latestSelectedChoiceId?: string | null;
+    latestIsCorrect?: boolean | null;
   };
 };
 
@@ -138,6 +140,8 @@ export class GetNextQuestionUseCase {
         index: targetIndex,
         total: session.questionIds.length,
         isMarkedForReview: targetState.markedForReview,
+        latestSelectedChoiceId: targetState.latestSelectedChoiceId,
+        latestIsCorrect: targetState.latestIsCorrect,
       },
     };
   }

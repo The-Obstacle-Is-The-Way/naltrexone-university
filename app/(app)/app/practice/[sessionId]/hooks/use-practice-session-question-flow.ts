@@ -28,6 +28,7 @@ export type UsePracticeSessionQuestionFlowOutput = {
   loadState: LoadState;
   question: NextQuestion | null;
   selectedChoiceId: string | null;
+  isAnswered: boolean;
   submitResult: SubmitAnswerOutput | null;
   isPending: boolean;
   canSubmit: boolean;
@@ -54,6 +55,7 @@ export function usePracticeSessionQuestionFlow(
     setQuestion,
     selectedChoiceId,
     setSelectedChoiceId,
+    isAnswered,
     submitResult,
     setSubmitResult,
     loadState,
@@ -186,6 +188,7 @@ export function usePracticeSessionQuestionFlow(
     loadState,
     question,
     selectedChoiceId,
+    isAnswered,
     submitResult,
     isPending,
     canSubmit,

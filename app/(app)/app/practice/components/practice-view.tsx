@@ -25,6 +25,7 @@ export type PracticeViewProps = {
   loadState: LoadState;
   question: NextQuestion | null;
   selectedChoiceId: string | null;
+  isAnswered: boolean;
   submitResult: SubmitAnswerOutput | null;
   isPending: boolean;
   bookmarkStatus: 'idle' | 'loading' | 'error';
@@ -81,6 +82,7 @@ export function PracticeView(props: PracticeViewProps) {
     href: ROUTES.APP_DASHBOARD,
     label: 'Back to Dashboard',
   };
+  const isAnswerLocked = props.isAnswered || props.submitResult !== null;
   const correctChoiceId = isExamMode
     ? null
     : (props.submitResult?.correctChoiceId ?? null);
@@ -196,7 +198,7 @@ export function PracticeView(props: PracticeViewProps) {
           disabled={
             props.isPending ||
             props.loadState.status === 'loading' ||
-            props.submitResult !== null
+            isAnswerLocked
           }
           onSelectChoice={props.onSelectChoice}
         />

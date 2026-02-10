@@ -68,6 +68,8 @@ describe('GetNextQuestionUseCase', () => {
       index: 1,
       total: 2,
       isMarkedForReview: false,
+      latestSelectedChoiceId: null,
+      latestIsCorrect: null,
     });
     expect(result?.choices[0]).not.toHaveProperty('isCorrect');
   });
@@ -251,6 +253,8 @@ describe('GetNextQuestionUseCase', () => {
       index: 0,
       total: 3,
       isMarkedForReview: false,
+      latestSelectedChoiceId: null,
+      latestIsCorrect: null,
     });
   });
 

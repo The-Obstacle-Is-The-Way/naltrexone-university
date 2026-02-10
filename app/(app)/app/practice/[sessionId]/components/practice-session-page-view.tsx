@@ -22,6 +22,7 @@ export type PracticeSessionPageViewProps = {
   loadState: LoadState;
   question: NextQuestion | null;
   selectedChoiceId: string | null;
+  isAnswered: boolean;
   submitResult: SubmitAnswerOutput | null;
   isPending: boolean;
   bookmarkStatus: 'idle' | 'loading' | 'error';
@@ -150,6 +151,7 @@ export function PracticeSessionPageView(props: PracticeSessionPageViewProps) {
       loadState={props.loadState}
       question={props.question}
       selectedChoiceId={props.selectedChoiceId}
+      isAnswered={props.isAnswered}
       submitResult={props.submitResult}
       isPending={props.isPending}
       bookmarkStatus={props.bookmarkStatus}

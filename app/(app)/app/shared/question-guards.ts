@@ -1,10 +1,12 @@
 import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
 
 export function selectChoiceIfAllowed(
-  submitResult: SubmitAnswerOutput | null,
+  input: { isAnswered: boolean; submitResult: SubmitAnswerOutput | null },
   setSelectedChoiceId: (choiceId: string) => void,
   choiceId: string,
-): void {
-  if (submitResult) return;
+): boolean {
+  if (input.isAnswered) return false;
+  if (input.submitResult) return false;
   setSelectedChoiceId(choiceId);
+  return true;
 }

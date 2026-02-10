@@ -196,6 +196,7 @@ describe('app/(app)/app/practice/[sessionId]', () => {
         loadState={{ status: 'ready' }}
         question={null}
         selectedChoiceId={null}
+        isAnswered={false}
         submitResult={null}
         isPending={false}
         bookmarkStatus="idle"
@@ -239,6 +240,7 @@ describe('app/(app)/app/practice/[sessionId]', () => {
           session: null,
         }}
         selectedChoiceId={null}
+        isAnswered={false}
         submitResult={null}
         isPending={false}
         bookmarkStatus="idle"
@@ -290,6 +292,7 @@ describe('app/(app)/app/practice/[sessionId]', () => {
         loadState={{ status: 'ready' }}
         question={null}
         selectedChoiceId={null}
+        isAnswered={false}
         submitResult={null}
         isPending={false}
         bookmarkStatus="idle"
@@ -346,6 +349,7 @@ describe('app/(app)/app/practice/[sessionId]', () => {
         loadState={{ status: 'ready' }}
         question={null}
         selectedChoiceId={null}
+        isAnswered={false}
         submitResult={null}
         isPending={true}
         bookmarkStatus="idle"
@@ -382,6 +386,7 @@ describe('app/(app)/app/practice/[sessionId]', () => {
         loadState={{ status: 'ready' }}
         question={null}
         selectedChoiceId={null}
+        isAnswered={false}
         submitResult={null}
         isPending={false}
         bookmarkStatus="idle"
@@ -467,6 +472,7 @@ describe('app/(app)/app/practice/[sessionId]', () => {
           session: null,
         }}
         selectedChoiceId={null}
+        isAnswered={false}
         submitResult={null}
         isPending={false}
         bookmarkStatus="idle"

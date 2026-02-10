@@ -19,6 +19,7 @@ test('renders session summary branch when summary is present', async () => {
       loadState={{ status: 'ready' }}
       question={null}
       selectedChoiceId={null}
+      isAnswered={false}
       submitResult={null}
       isPending={false}
       bookmarkStatus="idle"
@@ -69,6 +70,7 @@ test('renders exam review branch and triggers review actions', async () => {
       loadState={{ status: 'ready' }}
       question={null}
       selectedChoiceId={null}
+      isAnswered={false}
       submitResult={null}
       isPending={false}
       bookmarkStatus="idle"
@@ -151,6 +153,7 @@ test('renders active question branch with navigator and navigation callback', as
         session: null,
       }}
       selectedChoiceId={null}
+      isAnswered={false}
       submitResult={null}
       isPending={false}
       bookmarkStatus="idle"
@@ -193,6 +196,7 @@ test('renders review error actions with retry and end session escape hatch', asy
       loadState={{ status: 'ready' }}
       question={null}
       selectedChoiceId={null}
+      isAnswered={false}
       submitResult={null}
       isPending={false}
       bookmarkStatus="idle"
@@ -238,6 +242,7 @@ test('renders navigator error with retry action', async () => {
       loadState={{ status: 'ready' }}
       question={null}
       selectedChoiceId={null}
+      isAnswered={false}
       submitResult={null}
       isPending={false}
       bookmarkStatus="idle"
@@ -273,6 +278,7 @@ test('calls onFinalizeReview instead of onEndSession when both are provided', as
       loadState={{ status: 'ready' }}
       question={null}
       selectedChoiceId={null}
+      isAnswered={false}
       submitResult={null}
       isPending={false}
       bookmarkStatus="idle"

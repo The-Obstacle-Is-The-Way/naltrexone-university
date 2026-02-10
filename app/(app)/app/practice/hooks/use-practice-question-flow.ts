@@ -19,6 +19,7 @@ export type UsePracticeQuestionFlowInput = {
 export type UsePracticeQuestionFlowOutput = {
   question: NextQuestion | null;
   selectedChoiceId: string | null;
+  isAnswered: boolean;
   submitResult: SubmitAnswerOutput | null;
   loadState: ReturnType<typeof usePracticeQuestionAnswerFlow>['loadState'];
   isPending: boolean;

@@ -66,6 +66,33 @@ function PracticeSessionPageControllerHookProbe() {
   );
 }
 
+function PracticeSessionPageControllerNavigationProbe() {
+  const output = usePracticeSessionPageController('session-1');
+
+  return (
+    <>
+      <div data-testid="load-status">{output.loadState.status}</div>
+      <div data-testid="question-id">{output.question?.questionId ?? ''}</div>
+      <div data-testid="selected-choice-id">
+        {output.selectedChoiceId ?? ''}
+      </div>
+      <div data-testid="can-submit">{String(output.canSubmit)}</div>
+      <button type="button" onClick={() => output.onSelectChoice('choice_1')}>
+        select-choice-1
+      </button>
+      <button type="button" onClick={() => output.onNextQuestion()}>
+        next-question
+      </button>
+      <button
+        type="button"
+        onClick={() => output.onNavigateQuestion?.('question-1')}
+      >
+        navigate-question-1
+      </button>
+    </>
+  );
+}
+
 function PracticeSessionPageControllerBookmarkProbe() {
   const output = usePracticeSessionPageController('session-1');
   const [bookmarkFeedbackCount, setBookmarkFeedbackCount] = useState(0);
@@ -297,5 +324,192 @@ describe('usePracticeSessionPageController (browser)', () => {
     await expect
       .element(screen.getByTestId('is-pending'))
       .toHaveTextContent('false');
+  });
+
+  it('restores draft selections when navigating away and back before submit', async () => {
+    getNextQuestionMock
+      .mockResolvedValueOnce(
+        ok({
+          questionId: 'question-1',
+          slug: 'question-1',
+          stemMd: 'Question 1',
+          difficulty: 'easy',
+          choices: [
+            {
+              id: 'choice_1',
+              label: 'A',
+              textMd: 'Option A',
+              sortOrder: 1,
+            },
+          ],
+          session: {
+            sessionId: 'session-1',
+            mode: 'tutor',
+            index: 0,
+            total: 2,
+            isMarkedForReview: false,
+            latestSelectedChoiceId: null,
+            latestIsCorrect: null,
+          },
+        }),
+      )
+      .mockResolvedValueOnce(
+        ok({
+          questionId: 'question-2',
+          slug: 'question-2',
+          stemMd: 'Question 2',
+          difficulty: 'easy',
+          choices: [
+            {
+              id: 'choice_2',
+              label: 'A',
+              textMd: 'Option A',
+              sortOrder: 1,
+            },
+          ],
+          session: {
+            sessionId: 'session-1',
+            mode: 'tutor',
+            index: 1,
+            total: 2,
+            isMarkedForReview: false,
+            latestSelectedChoiceId: null,
+            latestIsCorrect: null,
+          },
+        }),
+      )
+      .mockResolvedValueOnce(
+        ok({
+          questionId: 'question-1',
+          slug: 'question-1',
+          stemMd: 'Question 1',
+          difficulty: 'easy',
+          choices: [
+            {
+              id: 'choice_1',
+              label: 'A',
+              textMd: 'Option A',
+              sortOrder: 1,
+            },
+          ],
+          session: {
+            sessionId: 'session-1',
+            mode: 'tutor',
+            index: 0,
+            total: 2,
+            isMarkedForReview: false,
+            latestSelectedChoiceId: null,
+            latestIsCorrect: null,
+          },
+        }),
+      );
+    getBookmarksMock.mockResolvedValue(ok({ rows: [] }));
+    getPracticeSessionReviewMock.mockResolvedValue(
+      ok({
+        sessionId: 'session-1',
+        mode: 'tutor',
+        totalCount: 2,
+        answeredCount: 0,
+        markedCount: 0,
+        rows: [],
+      }),
+    );
+
+    const screen = await render(
+      <PracticeSessionPageControllerNavigationProbe />,
+    );
+
+    await expect
+      .element(screen.getByTestId('load-status'))
+      .toHaveTextContent('ready');
+    await expect
+      .element(screen.getByTestId('question-id'))
+      .toHaveTextContent('question-1');
+
+    await screen.getByRole('button', { name: 'select-choice-1' }).click();
+    await expect
+      .element(screen.getByTestId('selected-choice-id'))
+      .toHaveTextContent('choice_1');
+    await expect
+      .element(screen.getByTestId('can-submit'))
+      .toHaveTextContent('true');
+
+    await screen.getByRole('button', { name: 'next-question' }).click();
+    await expect
+      .element(screen.getByTestId('question-id'))
+      .toHaveTextContent('question-2');
+
+    await screen.getByRole('button', { name: 'navigate-question-1' }).click();
+    await expect
+      .element(screen.getByTestId('question-id'))
+      .toHaveTextContent('question-1');
+    await expect
+      .element(screen.getByTestId('selected-choice-id'))
+      .toHaveTextContent('choice_1');
+    await expect
+      .element(screen.getByTestId('can-submit'))
+      .toHaveTextContent('true');
+  });
+
+  it('locks selection when loading a previously answered question', async () => {
+    getNextQuestionMock.mockResolvedValue(
+      ok({
+        questionId: 'question-1',
+        slug: 'question-1',
+        stemMd: 'Question 1',
+        difficulty: 'easy',
+        choices: [
+          {
+            id: 'choice_1',
+            label: 'A',
+            textMd: 'Option A',
+            sortOrder: 1,
+          },
+          {
+            id: 'choice_2',
+            label: 'B',
+            textMd: 'Option B',
+            sortOrder: 2,
+          },
+        ],
+        session: {
+          sessionId: 'session-1',
+          mode: 'exam',
+          index: 0,
+          total: 2,
+          isMarkedForReview: false,
+          latestSelectedChoiceId: 'choice_2',
+          latestIsCorrect: false,
+        },
+      }),
+    );
+    getBookmarksMock.mockResolvedValue(ok({ rows: [] }));
+    getPracticeSessionReviewMock.mockResolvedValue(
+      ok({
+        sessionId: 'session-1',
+        mode: 'exam',
+        totalCount: 2,
+        answeredCount: 1,
+        markedCount: 0,
+        rows: [],
+      }),
+    );
+
+    const screen = await render(<PracticeSessionPageControllerHookProbe />);
+
+    await expect
+      .element(screen.getByTestId('load-status'))
+      .toHaveTextContent('ready');
+    await expect
+      .element(screen.getByTestId('selected-choice-id'))
+      .toHaveTextContent('choice_2');
+    await expect
+      .element(screen.getByTestId('can-submit'))
+      .toHaveTextContent('false');
+
+    await screen.getByRole('button', { name: 'select-choice-1' }).click();
+    await expect
+      .element(screen.getByTestId('selected-choice-id'))
+      .toHaveTextContent('choice_2');
   });
 });
