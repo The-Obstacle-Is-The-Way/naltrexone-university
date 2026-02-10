@@ -168,7 +168,9 @@ agent-browser close
 
 ### Authenticated Exploration
 
-By default, `agent-browser` does **not** load `.env.local`. If you want to explore authenticated pages, prefer loading a Playwright `storageState` file:
+By default, `agent-browser` does **not** load `.env.local`. **Do NOT run `source .env.local`** — it will silently fail due to non-POSIX syntax. See [agent-browser.md](./agent-browser.md) for the full auth guide with multiple options.
+
+The recommended approach is loading a Playwright `storageState` file:
 
 1) Create a temporary script that signs in via Clerk and saves `storageState`:
 
@@ -344,4 +346,5 @@ killall "Google Chrome"
 - [Stripe vendor docs](../vendor-docs/stripe.md) — E2E test seeding pattern, test payment methods
 - [Clerk vendor docs](../vendor-docs/clerk.md) — REST API for user lookup in E2E seeding
 - [Playwright Docs](https://playwright.dev/docs/intro)
-- `.agents/skills/agent-browser/SKILL.md` — Agent-browser CLI usage + workflow
+- [agent-browser.md](./agent-browser.md) — Agent-browser quick reference, auth patterns, common pitfalls
+- `.agents/skills/agent-browser/SKILL.md` — Agent-browser CLI full command reference
