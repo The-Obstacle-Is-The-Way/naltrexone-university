@@ -105,7 +105,7 @@ All frontend-specific UI/UX debt. Items use `FE-XXX` IDs and are cross-reference
 
 | ID | Title | Priority | Resolved |
 |----|-------|----------|----------|
-| [DEBT-211](./debt-211-spec-index-status-drift.md) | Spec Index Status Drift — 4 Specs Have Incorrect Status | P3 | 2026-02-11 |
+| [DEBT-211](../_archive/debt/debt-211-spec-index-status-drift.md) | Spec Index Status Drift — SPEC-021 and SPEC-022 Had Incorrect Status | P3 | 2026-02-11 |
 
 ### Resolved in Stripe Gateway Test Refactor
 

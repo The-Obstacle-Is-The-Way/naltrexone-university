@@ -116,7 +116,7 @@ The core SLICE-4 functionality is complete. The following cross-page UX improvem
 
 ## Superseded By (Partial)
 
-The Review page (`/app/review`) will be restructured into a History page (`/app/history`) in [SPEC-021: History Page Restructure](../../specs/spec-021-history-page-restructure.md). The current Review page's missed questions functionality moves to the "Missed Questions" tab within History. The Bookmarks page is unaffected.
+The Review page (`/app/review`) will be restructured into a History page (`/app/history`) in [SPEC-021: History Page Restructure](./spec-021-history-page-restructure.md). The current Review page's missed questions functionality moves to the "Missed Questions" tab within History. The Bookmarks page is unaffected.
 
 ---
 

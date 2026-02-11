@@ -4,7 +4,7 @@
 > Write tests FIRST. Red → Green → Refactor. No implementation without a failing test.
 > Principles: SOLID, DRY, Clean Code, Gang of Four patterns where appropriate.
 
-**Status:** Ready
+**Status:** Implemented
 **Layer:** Feature
 **Date:** 2026-02-10
 **Depends On:** SPEC-021 (History Page Restructure), SPEC-013 (Practice Sessions), SPEC-015 (Dashboard)

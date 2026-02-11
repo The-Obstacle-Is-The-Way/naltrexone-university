@@ -58,9 +58,9 @@ When `hasFewerQuestions` is true, display a brief informational toast:
 
 Use the existing toast/notification system. This is a non-blocking notice — the session still starts.
 
-### Alternative Approach: Pre-Start Count
+### Alternative Approach: Pre-Start Count (DEBT-209)
 
-Instead of post-creation notice, add a "preview" query before session creation that counts available questions for the current filters. Display the count next to the "Start" button: "42 questions available." This aligns with Issue #53 (question counts per tag).
+Instead of post-creation notice, add a "preview" query before session creation that counts available questions for the current filters. Display the count next to the "Start" button: "42 questions available." This aligns with Issue #53 (question counts per tag) and is tracked as DEBT-209. If DEBT-209 is implemented first, this warning becomes a best-effort fallback for edge cases rather than the primary UX fix.
 
 ## Verification
 

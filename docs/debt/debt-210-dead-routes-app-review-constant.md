@@ -54,6 +54,6 @@ The redirect uses a string literal, not `ROUTES.APP_REVIEW`, so the constant is 
 
 ## Related
 
-- SPEC-021 (History Page Restructure) — replaced all `APP_REVIEW` references
+- SPEC-021 (History Page Restructure, archived) — replaced all `APP_REVIEW` references
 - `next.config.ts:39` — hardcoded redirect (unaffected by constant removal)
 - `lib/routes.ts:24` — `QuestionOrigin = 'review'` is still active (different concept)

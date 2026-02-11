@@ -11,7 +11,16 @@
 
 SPEC-019 Phase 3 added cross-page navigation: clickable dashboard activity items, origin-aware question detail "Back to..." links, and review/bookmarks stem links. While comprehensive unit tests exist via `renderToStaticMarkup` (verifying `href` attributes and link text), no Playwright E2E tests cover the full click-through browser flows.
 
+### What Exists (Partial Coverage)
+
+- `tests/e2e/core-app-pages.spec.ts:58-66` — Tests History → Question forward navigation (click link, verify URL) but does NOT test the "Back to History" click
+- `tests/e2e/history.spec.ts:28-42` — Tests missed questions tab → question navigation, but no back-link verification
+- `tests/e2e/review-mode-audit.spec.ts` — Tests 5 entry points (dashboard, history correct/incorrect, session breakdown, bookmarks) reaching the question page, but never clicks the "Back to..." link
+- Unit tests in `question-page-client.test.tsx` verify correct `href` attributes and label text for all origins
+
 ### What's Missing
+
+The specific gap is **clicking the "Back to..." link and verifying return navigation** in a real browser:
 
 1. **Dashboard → Question detail → Back to Dashboard**: Click an activity item on the dashboard, verify the question detail page loads, click "Back to Dashboard" link, verify return
 2. **History → Question detail → Back to History**: Click a question stem in the Questions tab, verify navigation, click back link

@@ -94,5 +94,5 @@ If a full use case feels overweight for a single count, the practice controller 
 
 - `app/(app)/app/practice/components/practice-session-starter.tsx` (current UI)
 - `src/application/use-cases/start-practice-session.ts` (filter logic for question selection)
-- DEBT-207 (Missing session question count warning — complementary feature)
+- DEBT-207 (Missing session question count warning — complementary feature). Implementing DEBT-209 first is the recommended order: showing available counts pre-start prevents the surprise that DEBT-207 mitigates post-start.
 - Issue #82 (UX warning when fewer questions available)

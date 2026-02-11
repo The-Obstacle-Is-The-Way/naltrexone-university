@@ -20,9 +20,7 @@ Implementation specifications provide detailed technical guidance for building e
 | [Master Spec](./master_spec.md) | Complete Technical Specification (SSOT) | Living | All |
 | [SPEC-016](./spec-016-observability.md) | Observability (Logging, Error Tracking) | Partially Implemented | Infrastructure |
 | [SPEC-017](./spec-017-rate-limiting.md) | Rate Limiting | Partial (MVP done) | Infrastructure |
-| [SPEC-021](./spec-021-history-page-restructure.md) | History Page Restructure | Ready | Feature |
-| [SPEC-022](./spec-022-question-log.md) | Question Log (Quick Practice History Gap) | Ready | Feature |
-| [SPEC-023](./spec-023-question-review-mode.md) | Question Review Mode | Ready | Feature |
+| [SPEC-023](./spec-023-question-review-mode.md) | Question Review Mode | In Progress | Feature |
 
 **Next Spec ID:** SPEC-024
 
@@ -48,6 +46,8 @@ Implementation specifications provide detailed technical guidance for building e
 | [SPEC-018](../_archive/specs/spec-018-ui-integration.md) | UI Integration (v0 Templates) | Feature |
 | [SPEC-019](../_archive/specs/spec-019-practice-ux-redesign.md) | Practice & Navigation UX Redesign | Feature |
 | [SPEC-020](../_archive/specs/spec-020-practice-engine-completion.md) | Practice Engine Completion | Feature |
+| [SPEC-021](../_archive/specs/spec-021-history-page-restructure.md) | History Page Restructure | Feature |
+| [SPEC-022](../_archive/specs/spec-022-question-log.md) | Question Log (Quick Practice History Gap) | Feature |
 
 ## Spec Statuses
 

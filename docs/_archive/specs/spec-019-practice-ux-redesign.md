@@ -695,7 +695,7 @@ APP_PRACTICE_QUICK: '/app/practice/quick',
 - [SPEC-014: Review & Bookmarks](./spec-014-review-bookmarks.md) — defines Review page scope (missed questions only)
 - [SPEC-015: Dashboard](./spec-015-dashboard.md) — defines dashboard stats and recent activity
 - [SPEC-020: Practice Engine Completion](./spec-020-practice-engine-completion.md) — formally specifies session history (previously P3 optional here), in-run navigation, enriched summary, and session context in existing views
-- [SPEC-021: History Page Restructure](../../specs/spec-021-history-page-restructure.md) — restructures Review → History, moves session history from Practice to History, slims Dashboard. Supersedes the "Recent sessions" panel on Practice and the Review page routing.
+- [SPEC-021: History Page Restructure](./spec-021-history-page-restructure.md) — restructures Review → History, moves session history from Practice to History, slims Dashboard. Supersedes the "Recent sessions" panel on Practice and the Review page routing.
 - [master_spec.md Section 4.5.3-4.5.5](../../specs/master_spec.md)
 - [ADR-001: Clean Architecture Layers](../../adr/adr-001-clean-architecture-layers.md)
 
