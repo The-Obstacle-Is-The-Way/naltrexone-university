@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import { ok } from '@/src/adapters/controllers/action-result';
 import type { GetSessionHistoryOutput } from '@/src/adapters/controllers/practice-controller';
-import type { GetMissedQuestionsOutput } from '@/src/adapters/controllers/review-controller';
+import type { GetAttemptedQuestionsOutput } from '@/src/adapters/controllers/review-controller';
 import { createHistoryPage } from './page';
 
 vi.mock('next/link', () => ({
@@ -36,30 +36,67 @@ describe('app/(app)/app/history/page', () => {
 
     expect(html).toContain('History');
     expect(getTabLinkAriaCurrent(html, 'Sessions')).toBe('page');
-    expect(getTabLinkAriaCurrent(html, 'Missed Questions')).toBeNull();
+    expect(getTabLinkAriaCurrent(html, 'Questions')).toBeNull();
     expect(getSessionHistoryFn).toHaveBeenCalledWith({ limit: 20, offset: 0 });
   });
 
-  it('renders Missed Questions tab as active when tab=missed', async () => {
-    const output: GetMissedQuestionsOutput = {
+  it('renders Questions tab as active when tab=questions', async () => {
+    const output: GetAttemptedQuestionsOutput = {
       rows: [],
       totalCount: 0,
       limit: 20,
       offset: 0,
     };
 
-    const getMissedQuestionsFn = vi.fn(async (_input: unknown) => ok(output));
+    const getAttemptedQuestionsFn = vi.fn(async (_input: unknown) =>
+      ok(output),
+    );
 
-    const HistoryPage = createHistoryPage({ getMissedQuestionsFn });
+    const HistoryPage = createHistoryPage({ getAttemptedQuestionsFn });
+
+    const element = await HistoryPage({
+      searchParams: Promise.resolve({ tab: 'questions' }),
+    });
+    const html = renderToStaticMarkup(element);
+
+    expect(getTabLinkAriaCurrent(html, 'Questions')).toBe('page');
+    expect(getTabLinkAriaCurrent(html, 'Sessions')).toBeNull();
+    expect(getAttemptedQuestionsFn).toHaveBeenCalledWith(
+      expect.objectContaining({
+        limit: 20,
+        offset: 0,
+      }),
+    );
+  });
+
+  it('renders Questions tab as active when tab=missed (backward compat alias)', async () => {
+    const output: GetAttemptedQuestionsOutput = {
+      rows: [],
+      totalCount: 0,
+      limit: 20,
+      offset: 0,
+    };
+
+    const getAttemptedQuestionsFn = vi.fn(async (_input: unknown) =>
+      ok(output),
+    );
+
+    const HistoryPage = createHistoryPage({ getAttemptedQuestionsFn });
 
     const element = await HistoryPage({
       searchParams: Promise.resolve({ tab: 'missed' }),
     });
     const html = renderToStaticMarkup(element);
 
-    expect(getTabLinkAriaCurrent(html, 'Missed Questions')).toBe('page');
+    expect(getTabLinkAriaCurrent(html, 'Questions')).toBe('page');
     expect(getTabLinkAriaCurrent(html, 'Sessions')).toBeNull();
-    expect(getMissedQuestionsFn).toHaveBeenCalledWith({ limit: 20, offset: 0 });
+    expect(getAttemptedQuestionsFn).toHaveBeenCalledWith(
+      expect.objectContaining({
+        limit: 20,
+        offset: 0,
+        result: 'incorrect',
+      }),
+    );
   });
 
   it('passes session history data to the client component when tab=sessions', async () => {
@@ -95,12 +132,13 @@ describe('app/(app)/app/history/page', () => {
     expect(html).toContain('View breakdown');
   });
 
-  it('passes missed questions data to the client component when tab=missed', async () => {
-    const output: GetMissedQuestionsOutput = {
+  it('passes attempted questions data to the client component when tab=questions', async () => {
+    const output: GetAttemptedQuestionsOutput = {
       rows: [
         {
           isAvailable: true,
           questionId: 'q_1',
+          isCorrect: false,
           sessionId: null,
           sessionMode: null,
           slug: 'q-1',
@@ -115,12 +153,14 @@ describe('app/(app)/app/history/page', () => {
       offset: 0,
     };
 
-    const getMissedQuestionsFn = vi.fn(async (_input: unknown) => ok(output));
+    const getAttemptedQuestionsFn = vi.fn(async (_input: unknown) =>
+      ok(output),
+    );
 
-    const HistoryPage = createHistoryPage({ getMissedQuestionsFn });
+    const HistoryPage = createHistoryPage({ getAttemptedQuestionsFn });
 
     const element = await HistoryPage({
-      searchParams: Promise.resolve({ tab: 'missed' }),
+      searchParams: Promise.resolve({ tab: 'questions' }),
     });
     const html = renderToStaticMarkup(element);
 
@@ -149,24 +189,27 @@ describe('app/(app)/app/history/page', () => {
     expect(html).toContain('Session history failed');
   });
 
-  it('renders an error state when missed questions fetch returns not-ok', async () => {
-    const getMissedQuestionsFn = vi.fn(
+  it('renders an error state when attempted questions fetch returns not-ok', async () => {
+    const getAttemptedQuestionsFn = vi.fn(
       async (
         _input: unknown,
-      ): Promise<ActionResult<GetMissedQuestionsOutput>> => ({
+      ): Promise<ActionResult<GetAttemptedQuestionsOutput>> => ({
         ok: false,
-        error: { code: 'INTERNAL_ERROR', message: 'Missed questions failed' },
+        error: {
+          code: 'INTERNAL_ERROR',
+          message: 'Attempted questions failed',
+        },
       }),
     );
 
-    const HistoryPage = createHistoryPage({ getMissedQuestionsFn });
+    const HistoryPage = createHistoryPage({ getAttemptedQuestionsFn });
 
     const element = await HistoryPage({
-      searchParams: Promise.resolve({ tab: 'missed' }),
+      searchParams: Promise.resolve({ tab: 'questions' }),
     });
     const html = renderToStaticMarkup(element);
 
     expect(html).toContain('data-error-card="true"');
-    expect(html).toContain('Missed questions failed');
+    expect(html).toContain('Attempted questions failed');
   });
 });

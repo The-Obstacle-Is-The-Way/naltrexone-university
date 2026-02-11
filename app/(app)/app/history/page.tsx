@@ -5,17 +5,19 @@ import {
   getSessionHistory,
 } from '@/src/adapters/controllers/practice-controller';
 import {
-  type GetMissedQuestionsOutput,
-  getMissedQuestions,
+  type GetAttemptedQuestionsOutput,
+  getAttemptedQuestions,
 } from '@/src/adapters/controllers/review-controller';
 import { HistoryPageClient } from './history-page-client';
-import type { MissedFilters } from './history-search-params';
 import {
   parseDifficultyFilter,
   parseHistoryTab,
   parseLimit,
   parseNonNegativeInt,
+  parseResultFilter,
+  parseSourceFilter,
   parseTagSlugFilter,
+  type QuestionsFilters,
 } from './history-search-params';
 
 export const metadata: Metadata = {
@@ -28,14 +30,17 @@ type HistorySearchParams = {
   offset?: string;
   difficulty?: string;
   tag?: string;
+  result?: string;
+  source?: string;
 };
 
 export function createHistoryPage(deps?: {
   getSessionHistoryFn?: typeof getSessionHistory;
-  getMissedQuestionsFn?: typeof getMissedQuestions;
+  getAttemptedQuestionsFn?: typeof getAttemptedQuestions;
 }) {
   const getSessionHistoryFn = deps?.getSessionHistoryFn ?? getSessionHistory;
-  const getMissedQuestionsFn = deps?.getMissedQuestionsFn ?? getMissedQuestions;
+  const getAttemptedQuestionsFn =
+    deps?.getAttemptedQuestionsFn ?? getAttemptedQuestions;
 
   return async function HistoryPage({
     searchParams,
@@ -43,24 +48,35 @@ export function createHistoryPage(deps?: {
     searchParams: Promise<HistorySearchParams>;
   }) {
     const params = await searchParams;
-    const activeTab = parseHistoryTab(params.tab);
+    const rawTab = params.tab;
+    const activeTab = parseHistoryTab(rawTab);
     const limit = parseLimit(params.limit);
     const offset = parseNonNegativeInt(params.offset, 0);
 
-    const missedFilters: MissedFilters = {
+    const defaultResultFilter =
+      rawTab === 'missed' ? ('incorrect' as const) : null;
+
+    const questionsFilters: QuestionsFilters = {
       difficulty: parseDifficultyFilter(params.difficulty),
       tagSlug: parseTagSlugFilter(params.tag),
+      result: parseResultFilter(params.result) ?? defaultResultFilter,
+      source: parseSourceFilter(params.source),
     };
 
-    if (activeTab === 'missed') {
-      const result: ActionResult<GetMissedQuestionsOutput> =
-        await getMissedQuestionsFn({ limit, offset });
+    if (activeTab === 'questions') {
+      const result: ActionResult<GetAttemptedQuestionsOutput> =
+        await getAttemptedQuestionsFn({
+          limit,
+          offset,
+          result: questionsFilters.result ?? undefined,
+          source: questionsFilters.source ?? undefined,
+        });
 
       return (
         <HistoryPageClient
-          activeTab="missed"
-          missedResult={result}
-          missedFilters={missedFilters}
+          activeTab="questions"
+          questionsResult={result}
+          questionsFilters={questionsFilters}
         />
       );
     }
