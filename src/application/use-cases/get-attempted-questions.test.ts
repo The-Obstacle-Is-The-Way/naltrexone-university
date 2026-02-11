@@ -436,5 +436,41 @@ describe('GetAttemptedQuestionsUseCase', () => {
       rows: [{ questionId: 'q_adhoc', sessionId: null, sessionMode: null }],
       totalCount: 1,
     });
+
+    await expect(
+      useCase.execute({
+        userId: 'user-1',
+        limit: 10,
+        offset: 0,
+        source: 'tutor',
+      }),
+    ).resolves.toMatchObject({
+      rows: [
+        {
+          questionId: 'q_tutor',
+          sessionId: 'session-tutor',
+          sessionMode: 'tutor',
+        },
+      ],
+      totalCount: 1,
+    });
+
+    await expect(
+      useCase.execute({
+        userId: 'user-1',
+        limit: 10,
+        offset: 0,
+        source: 'exam',
+      }),
+    ).resolves.toMatchObject({
+      rows: [
+        {
+          questionId: 'q_exam',
+          sessionId: 'session-exam',
+          sessionMode: 'exam',
+        },
+      ],
+      totalCount: 1,
+    });
   });
 });

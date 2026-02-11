@@ -42,7 +42,7 @@ test.describe('core app pages', () => {
     await submitQuestionForOutcome(page, QUESTION_SLUG, 'Incorrect');
     await expect(page.getByText('Explanation', { exact: true })).toBeVisible();
 
-    // History (missed tab) lists missed questions and links to reattempt.
+    // Backward compat: `tab=missed` maps to `tab=questions` (incorrect) in the History page.
     await page.goto('/app/history?tab=missed', {
       timeout: 60_000,
       waitUntil: 'domcontentloaded',

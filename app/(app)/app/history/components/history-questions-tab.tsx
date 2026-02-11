@@ -20,6 +20,9 @@ import {
 const headerLinkButtonClasses =
   'h-auto p-0 text-muted-foreground no-underline hover:text-foreground hover:no-underline';
 
+const selectClasses =
+  'h-10 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground shadow-sm outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]';
+
 function getSessionOriginLabel(input: {
   sessionId: string | null;
   sessionMode: 'tutor' | 'exam' | null;
@@ -30,8 +33,8 @@ function getSessionOriginLabel(input: {
   return 'Ad-hoc practice';
 }
 
-function getResultBadge(row: { isCorrect: boolean }) {
-  if (row.isCorrect) {
+function getResultBadge(isCorrect: boolean) {
+  if (isCorrect) {
     return <span className="text-emerald-500">Correct</span>;
   }
   return <span className="text-destructive">Incorrect</span>;
@@ -53,7 +56,7 @@ function QuestionMetadata({
 }) {
   return (
     <div className="text-xs text-muted-foreground">
-      {getResultBadge(row)}
+      {getResultBadge(row.isCorrect)}
       <span className="mx-2">•</span>
       <span className={middleLabelClassName}>{middleLabel}</span>
       <span className="mx-2">•</span>
@@ -97,6 +100,10 @@ export function HistoryQuestionsTab({
     selectedDifficulty || selectedTagSlug,
   );
 
+  // Filter split: `result`/`source` are applied server-side (they affect `rows` and `totalCount`).
+  // `difficulty`/`tagSlug` are applied client-side because attempted-question rows do not include
+  // question metadata in the repository layer. Pagination counts reflect server totals, not
+  // post-filter visible rows.
   const displayRows = hasActiveDifficultyOrTagFilters
     ? rows.filter((row) => {
         if (!row.isAvailable) return false;
@@ -134,7 +141,7 @@ export function HistoryQuestionsTab({
               <select
                 name="result"
                 defaultValue={selectedResult ?? ''}
-                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground shadow-sm outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]"
+                className={selectClasses}
               >
                 <option value="">All</option>
                 <option value="correct">Correct</option>
@@ -147,7 +154,7 @@ export function HistoryQuestionsTab({
               <select
                 name="source"
                 defaultValue={selectedSource ?? ''}
-                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground shadow-sm outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]"
+                className={selectClasses}
               >
                 <option value="">All</option>
                 <option value="tutor">Tutor</option>
@@ -161,7 +168,7 @@ export function HistoryQuestionsTab({
               <select
                 name="difficulty"
                 defaultValue={selectedDifficulty ?? ''}
-                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground shadow-sm outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]"
+                className={selectClasses}
               >
                 <option value="">All difficulties</option>
                 <option value="easy">Easy</option>
@@ -175,7 +182,7 @@ export function HistoryQuestionsTab({
               <select
                 name="tag"
                 defaultValue={selectedTagSlug ?? ''}
-                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground shadow-sm outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]"
+                className={selectClasses}
               >
                 <option value="">All tags</option>
                 {tagOptions.map((tagSlug) => (

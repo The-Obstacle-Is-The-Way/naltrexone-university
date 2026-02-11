@@ -302,14 +302,19 @@ export class DrizzleAttemptRepository implements AttemptRepository {
       filters,
     );
 
-    const [row] = await this.db
+    const baseQuery = this.db
       .select({ count: sql<number>`count(*)::int` })
-      .from(latestAttemptRows)
-      .leftJoin(
-        practiceSessions,
-        eq(latestAttemptRows.practiceSessionId, practiceSessions.id),
-      )
-      .where(and(...conditions));
+      .from(latestAttemptRows);
+
+    const query =
+      filters?.source === 'tutor' || filters?.source === 'exam'
+        ? baseQuery.leftJoin(
+            practiceSessions,
+            eq(latestAttemptRows.practiceSessionId, practiceSessions.id),
+          )
+        : baseQuery;
+
+    const [row] = await query.where(and(...conditions));
 
     return row?.count ?? 0;
   }
