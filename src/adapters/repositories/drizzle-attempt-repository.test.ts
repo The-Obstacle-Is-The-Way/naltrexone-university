@@ -13,6 +13,11 @@ function createDbMock() {
   const queryFindMany = vi.fn();
 
   const countWhere = vi.fn(async (): Promise<Array<{ count: number }>> => []);
+  const countLeftJoin = vi.fn(() => ({ where: countWhere }));
+  const countFrom = vi.fn(() => ({
+    leftJoin: countLeftJoin,
+    where: countWhere,
+  }));
   const groupByExecute = vi.fn(
     async (): Promise<
       Array<{ questionId: string; answeredAt: Date | null }>
@@ -38,6 +43,7 @@ function createDbMock() {
       Array<{
         questionId: string;
         answeredAt: Date | null;
+        isCorrect: boolean;
         sessionId: string | null;
         sessionMode: 'tutor' | 'exam' | null;
       }>
@@ -112,9 +118,7 @@ function createDbMock() {
   const select = vi.fn((fields: Record<string, unknown>) => {
     if ('count' in fields) {
       return {
-        from: () => ({
-          where: countWhere,
-        }),
+        from: countFrom,
       };
     }
 
@@ -136,6 +140,8 @@ function createDbMock() {
       select,
       from,
       countWhere,
+      countLeftJoin,
+      countFrom,
       whereGroupBy,
       latestRowsAs,
       groupBy,
@@ -534,7 +540,7 @@ describe('DrizzleAttemptRepository', () => {
     });
   });
 
-  describe('listMissedQuestionsByUserId', () => {
+  describe('listAttemptedQuestionsByUserId', () => {
     it('returns only rows with answeredAt values', async () => {
       const db = createDbMock();
       const answeredAt = new Date('2026-02-02T00:00:00Z');
@@ -543,12 +549,14 @@ describe('DrizzleAttemptRepository', () => {
         {
           questionId: 'q1',
           answeredAt,
+          isCorrect: true,
           sessionId: 'session-1',
           sessionMode: 'exam',
         },
         {
           questionId: 'q2',
           answeredAt: null,
+          isCorrect: false,
           sessionId: null,
           sessionMode: null,
         },
@@ -557,15 +565,173 @@ describe('DrizzleAttemptRepository', () => {
       const repo = new DrizzleAttemptRepository(db as unknown as RepoDb);
 
       await expect(
-        repo.listMissedQuestionsByUserId('user_1', 10, 0),
+        repo.listAttemptedQuestionsByUserId('user_1', 10, 0),
       ).resolves.toEqual([
         {
           questionId: 'q1',
           answeredAt,
+          isCorrect: true,
           sessionId: 'session-1',
           sessionMode: 'exam',
         },
       ]);
+    });
+
+    it('supports result filter (correct)', async () => {
+      const db = createDbMock();
+      const answeredAt = new Date('2026-02-02T00:00:00Z');
+
+      db._mocks.finalQueryExecute.mockResolvedValue([
+        {
+          questionId: 'q_correct',
+          answeredAt,
+          isCorrect: true,
+          sessionId: null,
+          sessionMode: null,
+        },
+      ]);
+
+      const repo = new DrizzleAttemptRepository(db as unknown as RepoDb);
+
+      await expect(
+        repo.listAttemptedQuestionsByUserId('user_1', 10, 0, {
+          result: 'correct',
+        }),
+      ).resolves.toMatchObject([{ questionId: 'q_correct', isCorrect: true }]);
+    });
+
+    it('supports result filter (incorrect)', async () => {
+      const db = createDbMock();
+      const answeredAt = new Date('2026-02-02T00:00:00Z');
+
+      db._mocks.finalQueryExecute.mockResolvedValue([
+        {
+          questionId: 'q_incorrect',
+          answeredAt,
+          isCorrect: false,
+          sessionId: null,
+          sessionMode: null,
+        },
+      ]);
+
+      const repo = new DrizzleAttemptRepository(db as unknown as RepoDb);
+
+      await expect(
+        repo.listAttemptedQuestionsByUserId('user_1', 10, 0, {
+          result: 'incorrect',
+        }),
+      ).resolves.toMatchObject([
+        { questionId: 'q_incorrect', isCorrect: false },
+      ]);
+    });
+
+    it('supports source filter (adhoc)', async () => {
+      const db = createDbMock();
+      const answeredAt = new Date('2026-02-02T00:00:00Z');
+
+      db._mocks.finalQueryExecute.mockResolvedValue([
+        {
+          questionId: 'q_adhoc',
+          answeredAt,
+          isCorrect: true,
+          sessionId: null,
+          sessionMode: null,
+        },
+      ]);
+
+      const repo = new DrizzleAttemptRepository(db as unknown as RepoDb);
+
+      await expect(
+        repo.listAttemptedQuestionsByUserId('user_1', 10, 0, {
+          source: 'adhoc',
+        }),
+      ).resolves.toMatchObject([{ questionId: 'q_adhoc', sessionId: null }]);
+    });
+
+    it('supports source filter (tutor)', async () => {
+      const db = createDbMock();
+      const answeredAt = new Date('2026-02-02T00:00:00Z');
+
+      db._mocks.finalQueryExecute.mockResolvedValue([
+        {
+          questionId: 'q_tutor',
+          answeredAt,
+          isCorrect: true,
+          sessionId: 'session-1',
+          sessionMode: 'tutor',
+        },
+      ]);
+
+      const repo = new DrizzleAttemptRepository(db as unknown as RepoDb);
+
+      await expect(
+        repo.listAttemptedQuestionsByUserId('user_1', 10, 0, {
+          source: 'tutor',
+        }),
+      ).resolves.toMatchObject([
+        { questionId: 'q_tutor', sessionMode: 'tutor' },
+      ]);
+    });
+
+    it('supports source filter (exam)', async () => {
+      const db = createDbMock();
+      const answeredAt = new Date('2026-02-02T00:00:00Z');
+
+      db._mocks.finalQueryExecute.mockResolvedValue([
+        {
+          questionId: 'q_exam',
+          answeredAt,
+          isCorrect: true,
+          sessionId: 'session-2',
+          sessionMode: 'exam',
+        },
+      ]);
+
+      const repo = new DrizzleAttemptRepository(db as unknown as RepoDb);
+
+      await expect(
+        repo.listAttemptedQuestionsByUserId('user_1', 10, 0, {
+          source: 'exam',
+        }),
+      ).resolves.toMatchObject([{ questionId: 'q_exam', sessionMode: 'exam' }]);
+    });
+  });
+
+  describe('countAttemptedQuestionsByUserId', () => {
+    it('returns count values from the database', async () => {
+      const db = createDbMock();
+      db._mocks.countWhere.mockResolvedValueOnce([{ count: 3 }]);
+
+      const repo = new DrizzleAttemptRepository(db as unknown as RepoDb);
+
+      await expect(
+        repo.countAttemptedQuestionsByUserId('user_1'),
+      ).resolves.toBe(3);
+      expect(db._mocks.countLeftJoin).not.toHaveBeenCalled();
+    });
+
+    it('left-joins practiceSessions for source=tutor', async () => {
+      const db = createDbMock();
+      db._mocks.countWhere.mockResolvedValueOnce([{ count: 1 }]);
+
+      const repo = new DrizzleAttemptRepository(db as unknown as RepoDb);
+
+      await expect(
+        repo.countAttemptedQuestionsByUserId('user_1', { source: 'tutor' }),
+      ).resolves.toBe(1);
+      expect(db._mocks.countLeftJoin).toHaveBeenCalledTimes(1);
+    });
+
+    it('left-joins practiceSessions for source=exam', async () => {
+      const db = createDbMock();
+      db._mocks.countWhere.mockResolvedValueOnce([{ count: 2 }]);
+
+      const repo = new DrizzleAttemptRepository(db as unknown as RepoDb);
+
+      await expect(
+        repo.countAttemptedQuestionsByUserId('user_1', { source: 'exam' }),
+      ).resolves.toBe(2);
+      expect(db._mocks.countLeftJoin).toHaveBeenCalledTimes(1);
     });
   });
 });

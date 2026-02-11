@@ -1,20 +1,26 @@
 import type { Logger } from '@/src/application/ports/logger';
 import type {
-  AttemptMissedQuestionsReader,
+  AttemptAllQuestionsReader,
+  AttemptedQuestionsFilters,
+  AttemptedQuestionsResultFilter,
+  AttemptedQuestionsSourceFilter,
   QuestionRepository,
 } from '@/src/application/ports/repositories';
 import type { QuestionDifficulty } from '@/src/domain/value-objects';
 import { enrichWithQuestion } from '../shared/enrich-with-question';
 
-export type GetMissedQuestionsInput = {
+export type GetAttemptedQuestionsInput = {
   userId: string;
   limit: number;
   offset: number;
+  result?: AttemptedQuestionsResultFilter | null;
+  source?: AttemptedQuestionsSourceFilter | null;
 };
 
-export type AvailableMissedQuestionRow = {
+export type AvailableAttemptedQuestionRow = {
   isAvailable: true;
   questionId: string;
+  isCorrect: boolean;
   sessionId: string | null;
   sessionMode: 'tutor' | 'exam' | null;
   slug: string;
@@ -24,41 +30,48 @@ export type AvailableMissedQuestionRow = {
   lastAnsweredAt: string; // ISO
 };
 
-export type UnavailableMissedQuestionRow = {
+export type UnavailableAttemptedQuestionRow = {
   isAvailable: false;
   questionId: string;
+  isCorrect: boolean;
   sessionId: string | null;
   sessionMode: 'tutor' | 'exam' | null;
   lastAnsweredAt: string; // ISO
 };
 
-export type MissedQuestionRow =
-  | AvailableMissedQuestionRow
-  | UnavailableMissedQuestionRow;
+export type AttemptedQuestionRow =
+  | AvailableAttemptedQuestionRow
+  | UnavailableAttemptedQuestionRow;
 
-export type GetMissedQuestionsOutput = {
-  rows: MissedQuestionRow[];
+export type GetAttemptedQuestionsOutput = {
+  rows: AttemptedQuestionRow[];
   limit: number;
   offset: number;
   totalCount: number;
 };
 
-export class GetMissedQuestionsUseCase {
+export class GetAttemptedQuestionsUseCase {
   constructor(
-    private readonly attempts: AttemptMissedQuestionsReader,
+    private readonly attempts: AttemptAllQuestionsReader,
     private readonly questions: QuestionRepository,
     private readonly logger: Logger,
   ) {}
 
   async execute(
-    input: GetMissedQuestionsInput,
-  ): Promise<GetMissedQuestionsOutput> {
+    input: GetAttemptedQuestionsInput,
+  ): Promise<GetAttemptedQuestionsOutput> {
+    const filters: AttemptedQuestionsFilters = {
+      result: input.result ?? null,
+      source: input.source ?? null,
+    };
+
     const [totalCount, page] = await Promise.all([
-      this.attempts.countMissedQuestionsByUserId(input.userId),
-      this.attempts.listMissedQuestionsByUserId(
+      this.attempts.countAttemptedQuestionsByUserId(input.userId, filters),
+      this.attempts.listAttemptedQuestionsByUserId(
         input.userId,
         input.limit,
         input.offset,
+        filters,
       ),
     ]);
 
@@ -77,28 +90,30 @@ export class GetMissedQuestionsUseCase {
 
     const rows = enrichWithQuestion({
       rows: page,
-      getQuestionId: (missed) => missed.questionId,
+      getQuestionId: (attempted) => attempted.questionId,
       questionsById: byId,
-      available: (missed, question): MissedQuestionRow => ({
+      available: (attempted, question): AttemptedQuestionRow => ({
         isAvailable: true,
         questionId: question.id,
-        sessionId: missed.sessionId,
-        sessionMode: missed.sessionMode,
+        isCorrect: attempted.isCorrect,
+        sessionId: attempted.sessionId,
+        sessionMode: attempted.sessionMode,
         slug: question.slug,
         stemMd: question.stemMd,
         difficulty: question.difficulty,
         tagSlugs: question.tags.map((tag) => tag.slug),
-        lastAnsweredAt: missed.answeredAt.toISOString(),
+        lastAnsweredAt: attempted.answeredAt.toISOString(),
       }),
-      unavailable: (missed): MissedQuestionRow => ({
+      unavailable: (attempted): AttemptedQuestionRow => ({
         isAvailable: false,
-        questionId: missed.questionId,
-        sessionId: missed.sessionId,
-        sessionMode: missed.sessionMode,
-        lastAnsweredAt: missed.answeredAt.toISOString(),
+        questionId: attempted.questionId,
+        isCorrect: attempted.isCorrect,
+        sessionId: attempted.sessionId,
+        sessionMode: attempted.sessionMode,
+        lastAnsweredAt: attempted.answeredAt.toISOString(),
       }),
       logger: this.logger,
-      missingQuestionMessage: 'Missed question references missing question',
+      missingQuestionMessage: 'Attempted question references missing question',
     });
 
     return {

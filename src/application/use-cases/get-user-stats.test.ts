@@ -1,4 +1,3 @@
-// @vitest-environment jsdom
 import { describe, expect, it } from 'vitest';
 import { ApplicationError } from '@/src/application/errors';
 import { createAttempt, createQuestion } from '@/src/domain/test-helpers';
@@ -148,16 +147,14 @@ describe('GetUserStatsUseCase', () => {
 
     const useCase = new GetUserStatsUseCase(
       new FakeAttemptRepository([
-        {
-          ...createAttempt({
-            userId: 'user-1',
-            questionId: 'q1',
-            practiceSessionId: 'session-1',
-            isCorrect: false,
-            answeredAt: new Date('2026-02-01T11:00:00Z'),
-          }),
+        createAttempt({
+          userId: 'user-1',
+          questionId: 'q1',
+          practiceSessionId: 'session-1',
+          isCorrect: false,
+          answeredAt: new Date('2026-02-01T11:00:00Z'),
           sessionMode: 'exam',
-        },
+        }),
       ]),
       new FakeQuestionRepository([
         createQuestion({

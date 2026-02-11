@@ -7,7 +7,7 @@ const baseTabClasses =
 export function HistoryTabBar({
   activeTab,
 }: {
-  activeTab: 'sessions' | 'missed';
+  activeTab: 'sessions' | 'questions';
 }) {
   return (
     <nav aria-label="History tabs">
@@ -24,15 +24,15 @@ export function HistoryTabBar({
           Sessions
         </Link>
         <Link
-          href={`${ROUTES.APP_HISTORY}?tab=missed`}
-          aria-current={activeTab === 'missed' ? 'page' : undefined}
+          href={`${ROUTES.APP_HISTORY}?tab=questions`}
+          aria-current={activeTab === 'questions' ? 'page' : undefined}
           className={`${baseTabClasses} ${
-            activeTab === 'missed'
+            activeTab === 'questions'
               ? 'bg-background text-foreground shadow-sm'
               : 'text-muted-foreground hover:text-foreground'
           }`}
         >
-          Missed Questions
+          Questions
         </Link>
       </div>
     </nav>

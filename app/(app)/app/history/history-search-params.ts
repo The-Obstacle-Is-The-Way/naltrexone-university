@@ -1,16 +1,21 @@
 import { ROUTES } from '@/lib/routes';
 
-export type HistoryTab = 'sessions' | 'missed';
+export type HistoryTab = 'sessions' | 'questions';
 
 export type DifficultyFilter = 'easy' | 'medium' | 'hard';
 
-export type MissedFilters = {
+export type ResultFilter = 'correct' | 'incorrect';
+export type SourceFilter = 'tutor' | 'exam' | 'adhoc';
+
+export type QuestionsFilters = {
   difficulty?: DifficultyFilter | null;
   tagSlug?: string | null;
+  result?: ResultFilter | null;
+  source?: SourceFilter | null;
 };
 
 export function parseHistoryTab(value: string | undefined): HistoryTab {
-  if (value === 'missed') return 'missed';
+  if (value === 'questions' || value === 'missed') return 'questions';
   return 'sessions';
 }
 
@@ -45,6 +50,25 @@ export function parseTagSlugFilter(value: string | undefined): string | null {
   return trimmed ? trimmed : null;
 }
 
+export function parseResultFilter(
+  value: string | undefined,
+): ResultFilter | null {
+  if (value === 'correct') return value;
+  if (value === 'incorrect') return value;
+  return null;
+}
+
+export function parseSourceFilter(
+  value: string | undefined,
+): SourceFilter | null {
+  if (value === 'tutor') return value;
+  if (value === 'exam') return value;
+  if (value === 'adhoc') return value;
+  // Backward-compat: legacy URLs used `source=quick`. Tests cover this mapping.
+  if (value === 'quick') return 'adhoc';
+  return null;
+}
+
 export function buildHistorySessionsHref(input: {
   limit: number;
   offset: number;
@@ -56,21 +80,25 @@ export function buildHistorySessionsHref(input: {
   return `${ROUTES.APP_HISTORY}?${params.toString()}`;
 }
 
-export function buildHistoryMissedHref(input: {
+export function buildHistoryQuestionsHref(input: {
   limit: number;
   offset: number;
-  filters?: MissedFilters;
+  filters?: QuestionsFilters;
 }): string {
   const params = new URLSearchParams();
-  params.set('tab', 'missed');
+  params.set('tab', 'questions');
   params.set('offset', String(input.offset));
   params.set('limit', String(input.limit));
 
   const difficulty = input.filters?.difficulty ?? null;
   const tagSlug = input.filters?.tagSlug ?? null;
+  const result = input.filters?.result ?? null;
+  const source = input.filters?.source ?? null;
 
   if (difficulty) params.set('difficulty', difficulty);
   if (tagSlug) params.set('tag', tagSlug);
+  if (result) params.set('result', result);
+  if (source) params.set('source', source);
 
   return `${ROUTES.APP_HISTORY}?${params.toString()}`;
 }

@@ -2,11 +2,11 @@
 
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import type { GetSessionHistoryOutput } from '@/src/adapters/controllers/practice-controller';
-import type { GetMissedQuestionsOutput } from '@/src/adapters/controllers/review-controller';
-import { HistoryMissedTab } from './components/history-missed-tab';
+import type { GetAttemptedQuestionsOutput } from '@/src/adapters/controllers/review-controller';
+import { HistoryQuestionsTab } from './components/history-questions-tab';
 import { HistorySessionsTab } from './components/history-sessions-tab';
 import { HistoryTabBar } from './components/history-tab-bar';
-import type { MissedFilters } from './history-search-params';
+import type { QuestionsFilters } from './history-search-params';
 
 export type HistoryPageClientProps =
   | {
@@ -14,9 +14,9 @@ export type HistoryPageClientProps =
       sessionsResult: ActionResult<GetSessionHistoryOutput>;
     }
   | {
-      activeTab: 'missed';
-      missedResult: ActionResult<GetMissedQuestionsOutput>;
-      missedFilters?: MissedFilters;
+      activeTab: 'questions';
+      questionsResult: ActionResult<GetAttemptedQuestionsOutput>;
+      questionsFilters?: QuestionsFilters;
     };
 
 export function HistoryPageClient(props: HistoryPageClientProps) {
@@ -27,7 +27,7 @@ export function HistoryPageClient(props: HistoryPageClientProps) {
           History
         </h1>
         <p className="text-muted-foreground">
-          Review completed sessions and missed questions.
+          Review completed sessions and all attempted questions.
         </p>
       </div>
 
@@ -36,9 +36,9 @@ export function HistoryPageClient(props: HistoryPageClientProps) {
       {props.activeTab === 'sessions' ? (
         <HistorySessionsTab result={props.sessionsResult} />
       ) : (
-        <HistoryMissedTab
-          result={props.missedResult}
-          filters={props.missedFilters}
+        <HistoryQuestionsTab
+          result={props.questionsResult}
+          filters={props.questionsFilters}
         />
       )}
     </div>

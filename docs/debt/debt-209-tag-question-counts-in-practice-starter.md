@@ -1,0 +1,98 @@
+# DEBT-209: Practice Session Starter Missing Question Counts Per Tag
+
+**Status:** Open
+**Priority:** P3
+**Date:** 2026-02-11
+**GitHub Issue:** #53
+
+---
+
+## Description
+
+The practice session starter has multi-select tag filtering (FilterChip components with collapsible categories), but it doesn't show how many questions match the current filter combination. Users select difficulty + tags but have no way to know if 5 or 500 questions match before starting the session.
+
+### What's Implemented (Done)
+
+- Multi-select tag UI with `FilterChip` components
+- Tags grouped by kind (Domain, Subdomain, etc.) in collapsible `<details>` sections
+- Selected count display per category: "(3 selected)"
+- Difficulty multi-select with FilterChip
+- Deduplicated tags
+
+### What's Missing
+
+- **Question count for current filters**: e.g., "42 questions available" shown near the Start button
+- **Per-tag question counts**: e.g., "Pharmacology (15)" next to each tag chip (optional, lower priority)
+
+### Clean Architecture Analysis
+
+Uncle Bob's **Single Responsibility** principle says the practice session starter's job is to collect user preferences and initiate a session. Displaying available counts is a **read-model concern** — it should be a separate query (or lightweight use case) that returns a count based on the current filter state.
+
+The count should NOT be computed by loading all questions and counting client-side. It should be a dedicated `COUNT(*)` query in the repository layer, called from a use case, and returned to the UI via the controller.
+
+## Impact
+
+- **UX friction**: Users can't gauge session size before starting — they might get 3 questions when expecting 50
+- **Related to DEBT-207**: When `actual < requested`, users get no warning. A pre-start count would prevent this surprise entirely
+
+## Resolution
+
+### Step 1: Add a Count Query to the Port
+
+```typescript
+// src/application/ports/repositories.ts
+export interface QuestionCountReader {
+  countPublishedByFilters(filters: {
+    difficulties?: QuestionDifficulty[];
+    tagSlugs?: string[];
+    excludeQuestionIds?: string[];  // for excluding already-attempted
+  }): Promise<number>;
+}
+```
+
+### Step 2: Create a Lightweight Use Case
+
+```typescript
+// src/application/use-cases/count-available-questions.ts
+export class CountAvailableQuestionsUseCase {
+  constructor(private readonly questions: QuestionCountReader) {}
+
+  async execute(input: {
+    difficulties?: QuestionDifficulty[];
+    tagSlugs?: string[];
+  }): Promise<{ count: number }> {
+    return { count: await this.questions.countPublishedByFilters(input) };
+  }
+}
+```
+
+### Step 3: Add a Server Action
+
+Wire the use case through the practice controller as a `countAvailableQuestions` action.
+
+### Step 4: Call from the UI
+
+The practice session starter calls this action whenever filters change (debounced) and displays:
+
+```
+42 questions available     [Start Session]
+```
+
+If count is 0: disable the Start button and show "No questions match your filters."
+
+### Alternative: Lightweight Approach
+
+If a full use case feels overweight for a single count, the practice controller can inline the count query directly. This is pragmatic for a pure read-model concern with no business logic.
+
+## Verification
+
+1. New unit test: `CountAvailableQuestionsUseCase` returns correct count for various filter combos
+2. New component test: practice session starter displays count and disables Start when 0
+3. Manual: toggle difficulty/tag filters → count updates → start session matches expected count
+
+## Related
+
+- `app/(app)/app/practice/components/practice-session-starter.tsx` (current UI)
+- `src/application/use-cases/start-practice-session.ts` (filter logic for question selection)
+- DEBT-207 (Missing session question count warning — complementary feature)
+- Issue #82 (UX warning when fewer questions available)

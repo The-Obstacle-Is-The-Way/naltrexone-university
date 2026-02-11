@@ -1,12 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import { ROUTES } from '@/lib/routes';
 import {
-  buildHistoryMissedHref,
+  buildHistoryQuestionsHref,
   buildHistorySessionsHref,
   parseDifficultyFilter,
   parseHistoryTab,
   parseLimit,
   parseNonNegativeInt,
+  parseResultFilter,
+  parseSourceFilter,
   parseTagSlugFilter,
 } from './history-search-params';
 
@@ -17,9 +19,13 @@ describe('app/(app)/app/history/history-search-params', () => {
       expect(parseHistoryTab('nope')).toBe('sessions');
     });
 
-    it('parses sessions and missed values', () => {
+    it('parses sessions and questions values', () => {
       expect(parseHistoryTab('sessions')).toBe('sessions');
-      expect(parseHistoryTab('missed')).toBe('missed');
+      expect(parseHistoryTab('questions')).toBe('questions');
+    });
+
+    it('returns questions for missed value (backward compat alias)', () => {
+      expect(parseHistoryTab('missed')).toBe('questions');
     });
   });
 
@@ -78,6 +84,35 @@ describe('app/(app)/app/history/history-search-params', () => {
     });
   });
 
+  describe('parseResultFilter', () => {
+    it('returns null for missing or invalid values', () => {
+      expect(parseResultFilter(undefined)).toBeNull();
+      expect(parseResultFilter('nope')).toBeNull();
+    });
+
+    it('returns parsed result values', () => {
+      expect(parseResultFilter('correct')).toBe('correct');
+      expect(parseResultFilter('incorrect')).toBe('incorrect');
+    });
+  });
+
+  describe('parseSourceFilter', () => {
+    it('returns null for missing or invalid values', () => {
+      expect(parseSourceFilter(undefined)).toBeNull();
+      expect(parseSourceFilter('nope')).toBeNull();
+    });
+
+    it('returns parsed source values', () => {
+      expect(parseSourceFilter('tutor')).toBe('tutor');
+      expect(parseSourceFilter('exam')).toBe('exam');
+      expect(parseSourceFilter('adhoc')).toBe('adhoc');
+    });
+
+    it('returns adhoc for legacy quick alias', () => {
+      expect(parseSourceFilter('quick')).toBe('adhoc');
+    });
+  });
+
   describe('href builders', () => {
     it('builds sessions tab hrefs with pagination', () => {
       expect(buildHistorySessionsHref({ limit: 20, offset: 0 })).toBe(
@@ -85,22 +120,44 @@ describe('app/(app)/app/history/history-search-params', () => {
       );
     });
 
-    it('builds missed tab hrefs with optional filters', () => {
-      expect(
-        buildHistoryMissedHref({
-          limit: 20,
-          offset: 0,
-        }),
-      ).toBe(`${ROUTES.APP_HISTORY}?tab=missed&offset=0&limit=20`);
+    it('builds questions tab hrefs with pagination and optional filters', () => {
+      expect(buildHistoryQuestionsHref({ limit: 20, offset: 0 })).toBe(
+        `${ROUTES.APP_HISTORY}?tab=questions&offset=0&limit=20`,
+      );
 
       expect(
-        buildHistoryMissedHref({
+        buildHistoryQuestionsHref({
           limit: 20,
           offset: 0,
-          filters: { difficulty: 'hard', tagSlug: 'alcohol' },
+          filters: { result: 'correct' },
         }),
       ).toBe(
-        `${ROUTES.APP_HISTORY}?tab=missed&offset=0&limit=20&difficulty=hard&tag=alcohol`,
+        `${ROUTES.APP_HISTORY}?tab=questions&offset=0&limit=20&result=correct`,
+      );
+
+      expect(
+        buildHistoryQuestionsHref({
+          limit: 20,
+          offset: 0,
+          filters: { source: 'adhoc' },
+        }),
+      ).toBe(
+        `${ROUTES.APP_HISTORY}?tab=questions&offset=0&limit=20&source=adhoc`,
+      );
+
+      expect(
+        buildHistoryQuestionsHref({
+          limit: 20,
+          offset: 0,
+          filters: {
+            difficulty: 'hard',
+            tagSlug: 'alcohol',
+            result: 'incorrect',
+            source: 'exam',
+          },
+        }),
+      ).toBe(
+        `${ROUTES.APP_HISTORY}?tab=questions&offset=0&limit=20&difficulty=hard&tag=alcohol&result=incorrect&source=exam`,
       );
     });
   });

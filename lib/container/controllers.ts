@@ -85,7 +85,8 @@ export function createControllerFactories(input: {
     createReviewControllerDeps: () => ({
       authGateway: gateways.createAuthGateway(),
       checkEntitlementUseCase: useCases.createCheckEntitlementUseCase(),
-      getMissedQuestionsUseCase: useCases.createGetMissedQuestionsUseCase(),
+      getAttemptedQuestionsUseCase:
+        useCases.createGetAttemptedQuestionsUseCase(),
     }),
     createStatsControllerDeps: () => ({
       authGateway: gateways.createAuthGateway(),

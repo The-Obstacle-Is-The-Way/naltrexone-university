@@ -39,8 +39,9 @@ Implementation specifications provide detailed technical guidance for building e
 | [SPEC-019](./spec-019-practice-ux-redesign.md) | Practice & Navigation UX Redesign | Partial (Phase 4) | Feature |
 | [SPEC-020](./spec-020-practice-engine-completion.md) | Practice Engine Completion | Implemented | Feature |
 | [SPEC-021](./spec-021-history-page-restructure.md) | History Page Restructure | Ready | Feature |
+| [SPEC-022](./spec-022-question-log.md) | Question Log (Quick Practice History Gap) | Ready | Feature |
 
-**Next Spec ID:** SPEC-022
+**Next Spec ID:** SPEC-023
 
 ## Spec Statuses
 

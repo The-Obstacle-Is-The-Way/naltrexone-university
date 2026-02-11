@@ -3,26 +3,26 @@ import { describe, expect, it } from 'vitest';
 import { ApplicationError } from '@/src/application/errors';
 import {
   FakeAuthGateway,
-  FakeGetMissedQuestionsUseCase,
+  FakeGetAttemptedQuestionsUseCase,
   FakeSubscriptionRepository,
 } from '@/src/application/test-helpers/fakes';
-import type { GetMissedQuestionsOutput } from '@/src/application/use-cases';
+import type { GetAttemptedQuestionsOutput } from '@/src/application/use-cases';
 import { CheckEntitlementUseCase } from '@/src/application/use-cases/check-entitlement';
 import type { User } from '@/src/domain/entities';
 import { createSubscription, createUser } from '@/src/domain/test-helpers';
 import {
-  getMissedQuestions,
+  getAttemptedQuestions,
   type ReviewControllerDeps,
 } from './review-controller';
 
 type ReviewControllerTestDeps = ReviewControllerDeps & {
-  getMissedQuestionsUseCase: FakeGetMissedQuestionsUseCase;
+  getAttemptedQuestionsUseCase: FakeGetAttemptedQuestionsUseCase;
 };
 
 function createDeps(overrides?: {
   user?: User | null;
   isEntitled?: boolean;
-  useCaseOutput?: GetMissedQuestionsOutput;
+  useCaseOutput?: GetAttemptedQuestionsOutput;
   useCaseThrows?: unknown;
 }): ReviewControllerTestDeps {
   const user =
@@ -48,7 +48,7 @@ function createDeps(overrides?: {
     subscriptionRepository,
   );
 
-  const getMissedQuestionsUseCase = new FakeGetMissedQuestionsUseCase(
+  const getAttemptedQuestionsUseCase = new FakeGetAttemptedQuestionsUseCase(
     overrides?.useCaseOutput ?? {
       rows: [],
       limit: 10,
@@ -61,46 +61,55 @@ function createDeps(overrides?: {
   return {
     authGateway,
     checkEntitlementUseCase,
-    getMissedQuestionsUseCase,
+    getAttemptedQuestionsUseCase,
   };
 }
 
 describe('review-controller', () => {
-  describe('getMissedQuestions', () => {
+  describe('getAttemptedQuestions', () => {
     it('returns VALIDATION_ERROR when input is invalid', async () => {
       const deps = createDeps();
 
-      const result = await getMissedQuestions({ limit: 0, offset: -1 }, deps);
+      const result = await getAttemptedQuestions(
+        { limit: 0, offset: -1 },
+        deps,
+      );
 
       expect(result).toMatchObject({
         ok: false,
         error: { code: 'VALIDATION_ERROR' },
       });
-      expect(deps.getMissedQuestionsUseCase.inputs).toEqual([]);
+      expect(deps.getAttemptedQuestionsUseCase.inputs).toEqual([]);
     });
 
     it('returns UNAUTHENTICATED when unauthenticated', async () => {
       const deps = createDeps({ user: null });
 
-      const result = await getMissedQuestions({ limit: 10, offset: 0 }, deps);
+      const result = await getAttemptedQuestions(
+        { limit: 10, offset: 0 },
+        deps,
+      );
 
       expect(result).toMatchObject({
         ok: false,
         error: { code: 'UNAUTHENTICATED' },
       });
-      expect(deps.getMissedQuestionsUseCase.inputs).toEqual([]);
+      expect(deps.getAttemptedQuestionsUseCase.inputs).toEqual([]);
     });
 
     it('returns UNSUBSCRIBED when not entitled', async () => {
       const deps = createDeps({ isEntitled: false });
 
-      const result = await getMissedQuestions({ limit: 10, offset: 0 }, deps);
+      const result = await getAttemptedQuestions(
+        { limit: 10, offset: 0 },
+        deps,
+      );
 
       expect(result).toMatchObject({
         ok: false,
         error: { code: 'UNSUBSCRIBED' },
       });
-      expect(deps.getMissedQuestionsUseCase.inputs).toEqual([]);
+      expect(deps.getAttemptedQuestionsUseCase.inputs).toEqual([]);
     });
 
     it('returns ok result from the use case', async () => {
@@ -108,14 +117,37 @@ describe('review-controller', () => {
         useCaseOutput: { rows: [], limit: 10, offset: 0, totalCount: 0 },
       });
 
-      const result = await getMissedQuestions({ limit: 10, offset: 0 }, deps);
+      const result = await getAttemptedQuestions(
+        { limit: 10, offset: 0 },
+        deps,
+      );
 
       expect(result).toEqual({
         ok: true,
         data: { rows: [], limit: 10, offset: 0, totalCount: 0 },
       });
-      expect(deps.getMissedQuestionsUseCase.inputs).toEqual([
-        { userId: 'user_1', limit: 10, offset: 0 },
+      expect(deps.getAttemptedQuestionsUseCase.inputs).toEqual([
+        { userId: 'user_1', limit: 10, offset: 0, result: null, source: null },
+      ]);
+    });
+
+    it('passes through result and source filters', async () => {
+      const deps = createDeps();
+
+      const result = await getAttemptedQuestions(
+        { limit: 10, offset: 0, result: 'correct', source: 'adhoc' },
+        deps,
+      );
+
+      expect(result.ok).toBe(true);
+      expect(deps.getAttemptedQuestionsUseCase.inputs).toEqual([
+        {
+          userId: 'user_1',
+          limit: 10,
+          offset: 0,
+          result: 'correct',
+          source: 'adhoc',
+        },
       ]);
     });
 
@@ -124,7 +156,10 @@ describe('review-controller', () => {
         useCaseThrows: new ApplicationError('INTERNAL_ERROR', 'boom'),
       });
 
-      const result = await getMissedQuestions({ limit: 10, offset: 0 }, deps);
+      const result = await getAttemptedQuestions(
+        { limit: 10, offset: 0 },
+        deps,
+      );
 
       expect(result).toEqual({
         ok: false,
@@ -137,7 +172,7 @@ describe('review-controller', () => {
         useCaseOutput: { rows: [], limit: 10, offset: 0, totalCount: 0 },
       });
 
-      const result = await getMissedQuestions(
+      const result = await getAttemptedQuestions(
         { limit: 10, offset: 0 },
         undefined,
         {

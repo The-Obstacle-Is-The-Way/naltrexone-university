@@ -19,6 +19,12 @@ export {
   EndPracticeSessionUseCase,
 } from './end-practice-session';
 export {
+  type AttemptedQuestionRow,
+  type GetAttemptedQuestionsInput,
+  type GetAttemptedQuestionsOutput,
+  GetAttemptedQuestionsUseCase,
+} from './get-attempted-questions';
+export {
   type BookmarkRow,
   type GetBookmarksInput,
   type GetBookmarksOutput,
@@ -29,12 +35,6 @@ export {
   type GetIncompletePracticeSessionOutput,
   GetIncompletePracticeSessionUseCase,
 } from './get-incomplete-practice-session';
-export {
-  type GetMissedQuestionsInput,
-  type GetMissedQuestionsOutput,
-  GetMissedQuestionsUseCase,
-  type MissedQuestionRow,
-} from './get-missed-questions';
 export {
   type GetNextQuestionInput,
   type GetNextQuestionOutput,

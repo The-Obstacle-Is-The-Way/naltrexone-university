@@ -14,18 +14,18 @@ function getLinks(html: string) {
 }
 
 describe('HistoryTabBar', () => {
-  it('renders Sessions and Missed Questions links', () => {
+  it('renders Sessions and Questions links', () => {
     const html = renderToStaticMarkup(<HistoryTabBar activeTab="sessions" />);
     const links = getLinks(html);
 
     const sessions = links.find((l) => l.textContent === 'Sessions');
-    const missed = links.find((l) => l.textContent === 'Missed Questions');
+    const questions = links.find((l) => l.textContent === 'Questions');
 
     expect(sessions?.getAttribute('href')).toBe(
       `${ROUTES.APP_HISTORY}?tab=sessions`,
     );
-    expect(missed?.getAttribute('href')).toBe(
-      `${ROUTES.APP_HISTORY}?tab=missed`,
+    expect(questions?.getAttribute('href')).toBe(
+      `${ROUTES.APP_HISTORY}?tab=questions`,
     );
   });
 
@@ -35,23 +35,21 @@ describe('HistoryTabBar', () => {
     );
     const sessionsLinks = getLinks(sessionsHtml);
     const sessions = sessionsLinks.find((l) => l.textContent === 'Sessions');
-    const missed = sessionsLinks.find(
-      (l) => l.textContent === 'Missed Questions',
-    );
+    const questions = sessionsLinks.find((l) => l.textContent === 'Questions');
 
     expect(sessions?.getAttribute('aria-current')).toBe('page');
-    expect(missed?.getAttribute('aria-current')).toBeNull();
+    expect(questions?.getAttribute('aria-current')).toBeNull();
 
-    const missedHtml = renderToStaticMarkup(
-      <HistoryTabBar activeTab="missed" />,
+    const questionsHtml = renderToStaticMarkup(
+      <HistoryTabBar activeTab="questions" />,
     );
-    const missedLinks = getLinks(missedHtml);
-    const sessions2 = missedLinks.find((l) => l.textContent === 'Sessions');
-    const missed2 = missedLinks.find(
-      (l) => l.textContent === 'Missed Questions',
+    const questionsLinks = getLinks(questionsHtml);
+    const sessions2 = questionsLinks.find((l) => l.textContent === 'Sessions');
+    const questions2 = questionsLinks.find(
+      (l) => l.textContent === 'Questions',
     );
 
-    expect(missed2?.getAttribute('aria-current')).toBe('page');
+    expect(questions2?.getAttribute('aria-current')).toBe('page');
     expect(sessions2?.getAttribute('aria-current')).toBeNull();
   });
 });

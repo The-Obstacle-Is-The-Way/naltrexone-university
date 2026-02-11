@@ -11,10 +11,6 @@ import {
   getSessionHistory,
 } from '@/src/adapters/controllers/practice-controller';
 import {
-  type GetMissedQuestionsOutput,
-  getMissedQuestions,
-} from '@/src/adapters/controllers/review-controller';
-import {
   getUserStats,
   type UserStatsOutput,
 } from '@/src/adapters/controllers/stats-controller';
@@ -38,16 +34,15 @@ const headerLinkButtonClasses =
 type DashboardViewProps = {
   stats: UserStatsOutput;
   sessionHistoryResult: ActionResult<GetSessionHistoryOutput>;
-  missedQuestionsResult: ActionResult<GetMissedQuestionsOutput>;
 };
 
 export function DashboardView({
   stats,
   sessionHistoryResult,
-  missedQuestionsResult,
 }: DashboardViewProps) {
   const historySessionsHref = `${ROUTES.APP_HISTORY}?tab=sessions`;
-  const historyMissedHref = `${ROUTES.APP_HISTORY}?tab=missed`;
+  const historyQuestionsHref = `${ROUTES.APP_HISTORY}?tab=questions`;
+  const recentActivityRows = stats.recentActivity.slice(0, 8);
 
   return (
     <div className="space-y-6">
@@ -172,33 +167,36 @@ export function DashboardView({
         <Card className="gap-0 rounded-2xl p-6 shadow-sm">
           <div className="flex items-baseline justify-between gap-3">
             <div className="text-sm font-medium text-foreground">
-              Recent missed
+              Recent activity
             </div>
             <Button asChild variant="link" className={headerLinkButtonClasses}>
-              <Link href={historyMissedHref}>View all</Link>
+              <Link href={historyQuestionsHref}>View all</Link>
             </Button>
           </div>
 
-          {!missedQuestionsResult.ok ? (
-            <ErrorCard className="mt-4">
-              {missedQuestionsResult.error.message}
-            </ErrorCard>
-          ) : missedQuestionsResult.data.rows.length === 0 ? (
+          {recentActivityRows.length === 0 ? (
             <div className="mt-4 text-sm text-muted-foreground">
-              No missed questions yet.
+              No questions attempted yet.
             </div>
           ) : (
             <ul className="mt-4 space-y-2">
-              {missedQuestionsResult.data.rows.map((row) => {
+              {recentActivityRows.map((row) => {
+                const resultLabel = row.isCorrect ? 'Correct' : 'Incorrect';
+                const resultClass = row.isCorrect
+                  ? 'text-emerald-500'
+                  : 'text-destructive';
+
                 if (!row.isAvailable) {
                   return (
-                    <li key={row.questionId}>
+                    <li key={row.attemptId}>
                       <div className="rounded-xl border border-border/60 bg-muted/20 p-3">
                         <div className="text-sm font-medium text-foreground">
                           [Question no longer available]
                         </div>
                         <div className="mt-1 text-xs text-muted-foreground">
-                          Missed {formatDate(row.lastAnsweredAt)}
+                          <span className={resultClass}>{resultLabel}</span>
+                          <span className="mx-2">•</span>
+                          <span>Answered {formatDate(row.answeredAt)}</span>
                         </div>
                       </div>
                     </li>
@@ -206,7 +204,7 @@ export function DashboardView({
                 }
 
                 return (
-                  <li key={row.questionId}>
+                  <li key={row.attemptId}>
                     <Link
                       href={toQuestionRoute(row.slug, { from: 'dashboard' })}
                       className="block rounded-xl border border-border/60 bg-muted/20 p-3 transition-colors hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]"
@@ -220,7 +218,9 @@ export function DashboardView({
                         </span>
                       </div>
                       <div className="mt-1 text-xs text-muted-foreground">
-                        Missed {formatDate(row.lastAnsweredAt)}
+                        <span className={resultClass}>{resultLabel}</span>
+                        <span className="mx-2">•</span>
+                        <span>Answered {formatDate(row.answeredAt)}</span>
                       </div>
                     </Link>
                   </li>
@@ -235,28 +235,23 @@ export function DashboardView({
 }
 
 export default async function DashboardPage() {
-  const [statsResult, sessionHistoryResult, missedQuestionsResult] =
-    await Promise.all([
-      getUserStats({}),
-      getSessionHistory({ limit: 3, offset: 0 }),
-      getMissedQuestions({ limit: 3, offset: 0 }),
-    ]);
+  const [statsResult, sessionHistoryResult] = await Promise.all([
+    getUserStats({}),
+    getSessionHistory({ limit: 3, offset: 0 }),
+  ]);
 
   return renderDashboard({
     statsResult,
     sessionHistoryResult,
-    missedQuestionsResult,
   });
 }
 
 export function renderDashboard({
   statsResult,
   sessionHistoryResult,
-  missedQuestionsResult,
 }: {
   statsResult: ActionResult<UserStatsOutput>;
   sessionHistoryResult: ActionResult<GetSessionHistoryOutput>;
-  missedQuestionsResult: ActionResult<GetMissedQuestionsOutput>;
 }) {
   if (!statsResult.ok) {
     return (
@@ -279,7 +274,6 @@ export function renderDashboard({
     <DashboardView
       stats={statsResult.data}
       sessionHistoryResult={sessionHistoryResult}
-      missedQuestionsResult={missedQuestionsResult}
     />
   );
 }

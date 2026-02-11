@@ -30,7 +30,7 @@ Every open question from the brainstorming docs is resolved here.
 |----------|----------|-----------|
 | Page name: "History" vs "Performance" vs "Results" | **History** | "Performance" implies analytics (charts, trends) we don't have yet. "Results" is ambiguous. "History" says "everything you've done" — sessions, questions, reattempts. Unambiguous. |
 | Should Sessions tab auto-expand most recent session? | **No** | Clean list first. User clicks to expand. Auto-expanding pushes other sessions off-screen for users with many sessions. |
-| Where do Quick Practice (ad-hoc) attempts appear? | **Missed Questions tab only** | Ad-hoc attempts have no session. They appear in Missed Questions if incorrect (already the case). The Sessions tab is for session-based practice only. Quick Practice is ephemeral by design. |
+| Where do Quick Practice (ad-hoc) attempts appear? | **Missed Questions tab only (v1)** | Ad-hoc attempts have no session. They appear in Missed Questions if incorrect (already the case). The Sessions tab is for session-based practice only. **Note:** This is intentionally superseded by **SPEC-022**, which evolves "Missed Questions" into a complete "Questions" log including correct ad-hoc attempts. |
 | Dashboard slim-down aggressiveness | **3 most recent sessions + 3 most recent missed questions** | Enough recency signal to answer "what did I do?" without becoming a shadow review page. Links to History for details. |
 | Post-session redirect | **Stay on summary, add "View in History" link** | Redirecting away from summary is disorienting. The summary is useful on its own. A prominent link bridges to History without forcing navigation. |
 | Route for History | **`/app/history`** (no session sub-routes for now) | Session detail stays as expandable in the tab, not a separate route. Less routing complexity. Can promote to `/app/history/[sessionId]` later if needed. |
@@ -764,5 +764,6 @@ Phase 4: E2E
 
 - **SPEC-014** (Review + Bookmarks) — The original Review page spec. This spec supersedes the Review page portion. Bookmarks page is unchanged.
 - **SPEC-019** (Practice UX Redesign) — Phase 3 cross-page IA improvements are partially addressed here. Phase 4 practice page polish is complete.
-- **Brainstorming:** `review-page-flow-audit.md` (vision), `review-consistency-audit.md` (inventory), `practice-ux-audit.md` + `practice-recent-sessions-v2.md` (Practice recent-sessions panel is superseded by this spec), `practice-engine-state-audit.md` + `session-view-layout-audit.md` (orthogonal to this spec)
+- **SPEC-022** (Question Log) — Evolves the "Missed Questions" tab into a complete "Questions" tab with result/source filters. Depends on this spec.
+- **Brainstorming:** `review-page-flow-audit.md` (vision), `review-consistency-audit.md` (inventory), `practice-ux-audit.md` + `practice-recent-sessions-v2.md` (Practice recent-sessions panel is superseded by this spec), `practice-engine-state-audit.md` + `session-view-layout-audit.md` (orthogonal to this spec), `quick-practice-history-gap.md` (led to SPEC-022)
 - **BUG-129, BUG-130, BUG-131** — E2E selector fixes (committed, not related to this spec)

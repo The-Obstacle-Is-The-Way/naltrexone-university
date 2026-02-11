@@ -10,10 +10,10 @@ import type {
   CreatePortalSessionOutput,
   EndPracticeSessionInput,
   EndPracticeSessionOutput,
+  GetAttemptedQuestionsInput,
+  GetAttemptedQuestionsOutput,
   GetIncompletePracticeSessionInput,
   GetIncompletePracticeSessionOutput,
-  GetMissedQuestionsInput,
-  GetMissedQuestionsOutput,
   GetNextQuestionInput,
   GetNextQuestionOutput,
   GetPracticeSessionReviewInput,
@@ -142,19 +142,19 @@ export class FakeCreatePortalSessionUseCase
   }
 }
 
-export class FakeGetMissedQuestionsUseCase
-  implements UseCase<GetMissedQuestionsInput, GetMissedQuestionsOutput>
+export class FakeGetAttemptedQuestionsUseCase
+  implements UseCase<GetAttemptedQuestionsInput, GetAttemptedQuestionsOutput>
 {
-  readonly inputs: GetMissedQuestionsInput[] = [];
+  readonly inputs: GetAttemptedQuestionsInput[] = [];
 
   constructor(
-    private readonly output: GetMissedQuestionsOutput,
+    private readonly output: GetAttemptedQuestionsOutput,
     private readonly toThrow?: unknown,
   ) {}
 
   async execute(
-    input: GetMissedQuestionsInput,
-  ): Promise<GetMissedQuestionsOutput> {
+    input: GetAttemptedQuestionsInput,
+  ): Promise<GetAttemptedQuestionsOutput> {
     this.inputs.push(input);
     if (this.toThrow) throw this.toThrow;
     return this.output;

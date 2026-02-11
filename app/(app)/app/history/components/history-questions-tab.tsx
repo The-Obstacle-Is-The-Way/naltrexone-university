@@ -7,18 +7,24 @@ import { Card } from '@/components/ui/card';
 import { formatDate } from '@/lib/format-date';
 import { ROUTES, toQuestionRoute } from '@/lib/routes';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
-import type { GetMissedQuestionsOutput } from '@/src/adapters/controllers/review-controller';
+import type {
+  AttemptedQuestionRow,
+  GetAttemptedQuestionsOutput,
+} from '@/src/adapters/controllers/review-controller';
 import {
   getStemPreview,
   toPlainText,
 } from '@/src/adapters/shared/stem-preview';
 import {
-  buildHistoryMissedHref,
-  type MissedFilters,
+  buildHistoryQuestionsHref,
+  type QuestionsFilters,
 } from '../history-search-params';
 
 const headerLinkButtonClasses =
   'h-auto p-0 text-muted-foreground no-underline hover:text-foreground hover:no-underline';
+
+const selectClasses =
+  'h-10 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground shadow-sm outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]';
 
 function getSessionOriginLabel(input: {
   sessionId: string | null;
@@ -30,12 +36,54 @@ function getSessionOriginLabel(input: {
   return 'Ad-hoc practice';
 }
 
-export type HistoryMissedTabProps = {
-  result: ActionResult<GetMissedQuestionsOutput>;
-  filters?: MissedFilters;
+function getResultBadge(isCorrect: boolean) {
+  if (isCorrect) {
+    return <span className="text-emerald-500">Correct</span>;
+  }
+  return <span className="text-destructive">Incorrect</span>;
+}
+
+type QuestionMetadataRow = Pick<
+  AttemptedQuestionRow,
+  'isCorrect' | 'lastAnsweredAt' | 'sessionId' | 'sessionMode'
+>;
+
+function QuestionMetadata({
+  row,
+  middleLabel,
+  middleLabelClassName,
+}: {
+  row: QuestionMetadataRow;
+  middleLabel: string;
+  middleLabelClassName?: string;
+}) {
+  return (
+    <div className="text-xs text-muted-foreground">
+      {getResultBadge(row.isCorrect)}
+      <span className="mx-2">•</span>
+      <span className={middleLabelClassName}>{middleLabel}</span>
+      <span className="mx-2">•</span>
+      <span>{formatDate(row.lastAnsweredAt)}</span>
+      <span className="mx-2">•</span>
+      <span>
+        {getSessionOriginLabel({
+          sessionId: row.sessionId,
+          sessionMode: row.sessionMode,
+        })}
+      </span>
+    </div>
+  );
+}
+
+export type HistoryQuestionsTabProps = {
+  result: ActionResult<GetAttemptedQuestionsOutput>;
+  filters?: QuestionsFilters;
 };
 
-export function HistoryMissedTab({ result, filters }: HistoryMissedTabProps) {
+export function HistoryQuestionsTab({
+  result,
+  filters,
+}: HistoryQuestionsTabProps) {
   if (!result.ok) {
     return <ErrorCard>{result.error.message}</ErrorCard>;
   }
@@ -44,9 +92,22 @@ export function HistoryMissedTab({ result, filters }: HistoryMissedTabProps) {
 
   const selectedDifficulty = filters?.difficulty ?? null;
   const selectedTagSlug = filters?.tagSlug ?? null;
-  const hasActiveFilters = Boolean(selectedDifficulty || selectedTagSlug);
+  const selectedResult = filters?.result ?? null;
+  const selectedSource = filters?.source ?? null;
 
-  const displayRows = hasActiveFilters
+  const hasActiveFilters = Boolean(
+    selectedDifficulty || selectedTagSlug || selectedResult || selectedSource,
+  );
+
+  const hasActiveDifficultyOrTagFilters = Boolean(
+    selectedDifficulty || selectedTagSlug,
+  );
+
+  // Filter split: `result`/`source` are applied server-side (they affect `rows` and `totalCount`).
+  // `difficulty`/`tagSlug` are applied client-side because attempted-question rows do not include
+  // question metadata in the repository layer. Pagination counts reflect server totals, not
+  // post-filter visible rows.
+  const displayRows = hasActiveDifficultyOrTagFilters
     ? rows.filter((row) => {
         if (!row.isAvailable) return false;
         if (selectedDifficulty && row.difficulty !== selectedDifficulty)
@@ -63,25 +124,56 @@ export function HistoryMissedTab({ result, filters }: HistoryMissedTabProps) {
   const showingStart = rows.length > 0 ? offset + 1 : 0;
   const showingEnd = offset + rows.length;
 
+  // Tag options are derived from the current server page only. Tags that only
+  // appear on other pages will not be selectable in v1 (page-local filtering).
   const tagOptions = Array.from(
     new Set(rows.flatMap((row) => (row.isAvailable ? row.tagSlugs : []))),
   ).sort((a, b) => a.localeCompare(b));
 
+  const shouldShowFiltersCard = totalCount > 0 || hasActiveFilters;
+
   return (
     <div className="space-y-6">
-      {totalCount > 0 ? (
+      {shouldShowFiltersCard ? (
         <Card className="gap-0 rounded-2xl border-border p-4 shadow-sm">
-          <form method="get" className="grid gap-3 sm:grid-cols-3">
-            <input type="hidden" name="tab" value="missed" />
+          <form method="get" className="grid gap-3 sm:grid-cols-5">
+            <input type="hidden" name="tab" value="questions" />
             <input type="hidden" name="limit" value={limit} />
             <input type="hidden" name="offset" value="0" />
+
+            <label className="space-y-2 text-sm">
+              <div className="font-medium text-foreground">Result</div>
+              <select
+                name="result"
+                defaultValue={selectedResult ?? ''}
+                className={selectClasses}
+              >
+                <option value="">All</option>
+                <option value="correct">Correct</option>
+                <option value="incorrect">Incorrect</option>
+              </select>
+            </label>
+
+            <label className="space-y-2 text-sm">
+              <div className="font-medium text-foreground">Source</div>
+              <select
+                name="source"
+                defaultValue={selectedSource ?? ''}
+                className={selectClasses}
+              >
+                <option value="">All</option>
+                <option value="tutor">Tutor</option>
+                <option value="exam">Exam</option>
+                <option value="adhoc">Ad-hoc practice</option>
+              </select>
+            </label>
 
             <label className="space-y-2 text-sm">
               <div className="font-medium text-foreground">Difficulty</div>
               <select
                 name="difficulty"
                 defaultValue={selectedDifficulty ?? ''}
-                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground shadow-sm outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]"
+                className={selectClasses}
               >
                 <option value="">All difficulties</option>
                 <option value="easy">Easy</option>
@@ -95,7 +187,7 @@ export function HistoryMissedTab({ result, filters }: HistoryMissedTabProps) {
               <select
                 name="tag"
                 defaultValue={selectedTagSlug ?? ''}
-                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground shadow-sm outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]"
+                className={selectClasses}
               >
                 <option value="">All tags</option>
                 {tagOptions.map((tagSlug) => (
@@ -113,7 +205,7 @@ export function HistoryMissedTab({ result, filters }: HistoryMissedTabProps) {
                   variant="link"
                   className={headerLinkButtonClasses}
                 >
-                  <Link href={buildHistoryMissedHref({ limit, offset: 0 })}>
+                  <Link href={buildHistoryQuestionsHref({ limit, offset: 0 })}>
                     Clear filters
                   </Link>
                 </Button>
@@ -131,21 +223,33 @@ export function HistoryMissedTab({ result, filters }: HistoryMissedTabProps) {
 
       {rows.length === 0 ? (
         totalCount === 0 ? (
-          <Card className="gap-0 rounded-2xl p-6 text-sm text-muted-foreground shadow-sm">
-            <div>No missed questions yet.</div>
-            <div className="mt-2">
-              Great work! As you practice, any questions you get wrong will
-              appear here for review.
-            </div>
-            <div className="mt-4">
-              <Button asChild variant="outline" className="rounded-full">
-                <Link href={ROUTES.APP_PRACTICE}>Go to Practice →</Link>
-              </Button>
-            </div>
-          </Card>
+          hasActiveFilters ? (
+            <Card className="gap-0 rounded-2xl p-6 text-sm text-muted-foreground shadow-sm">
+              No questions match these filters.
+              <div className="mt-4">
+                <Button asChild variant="outline" className="rounded-full">
+                  <Link href={buildHistoryQuestionsHref({ limit, offset: 0 })}>
+                    Clear filters
+                  </Link>
+                </Button>
+              </div>
+            </Card>
+          ) : (
+            <Card className="gap-0 rounded-2xl p-6 text-sm text-muted-foreground shadow-sm">
+              <div>
+                No questions attempted yet. Start practicing to build your
+                question history.
+              </div>
+              <div className="mt-4">
+                <Button asChild variant="outline" className="rounded-full">
+                  <Link href={ROUTES.APP_PRACTICE}>Go to Practice →</Link>
+                </Button>
+              </div>
+            </Card>
+          )
         ) : (
           <Card className="gap-0 rounded-2xl p-6 text-sm text-muted-foreground shadow-sm">
-            No more missed questions on this page.
+            No more questions on this page.
             <div className="mt-4">
               <Button
                 asChild
@@ -153,7 +257,11 @@ export function HistoryMissedTab({ result, filters }: HistoryMissedTabProps) {
                 className={headerLinkButtonClasses}
               >
                 <Link
-                  href={buildHistoryMissedHref({ limit, offset: 0, filters })}
+                  href={buildHistoryQuestionsHref({
+                    limit,
+                    offset: 0,
+                    filters,
+                  })}
                 >
                   Back to first page
                 </Link>
@@ -161,12 +269,22 @@ export function HistoryMissedTab({ result, filters }: HistoryMissedTabProps) {
             </div>
           </Card>
         )
-      ) : hasActiveFilters && displayRows.length === 0 ? (
+      ) : hasActiveDifficultyOrTagFilters && displayRows.length === 0 ? (
         <Card className="gap-0 rounded-2xl p-6 text-sm text-muted-foreground shadow-sm">
-          No missed questions match these filters.
+          No questions on this page match the selected difficulty/tag filters.
+          Try another page or clear these filters.
           <div className="mt-4">
             <Button asChild variant="outline" className="rounded-full">
-              <Link href={buildHistoryMissedHref({ limit, offset: 0 })}>
+              <Link
+                href={buildHistoryQuestionsHref({
+                  limit,
+                  offset: 0,
+                  filters: {
+                    result: selectedResult,
+                    source: selectedSource,
+                  },
+                })}
+              >
                 Clear filters
               </Link>
             </Button>
@@ -178,6 +296,9 @@ export function HistoryMissedTab({ result, filters }: HistoryMissedTabProps) {
         <div className="space-y-4">
           <div className="text-sm text-muted-foreground">
             Showing {showingStart}–{showingEnd} of {totalCount}
+            {hasActiveDifficultyOrTagFilters && displayRows.length < rows.length
+              ? ` (${displayRows.length} visible after filters)`
+              : null}
           </div>
 
           <ul className="space-y-4">
@@ -216,42 +337,21 @@ export function HistoryMissedTab({ result, filters }: HistoryMissedTabProps) {
                                 {plainStem}
                               </div>
                             ) : null}
-                            <div className="text-xs text-muted-foreground">
-                              <span className="capitalize">
-                                {row.difficulty}
-                              </span>
-                              <span className="mx-2">•</span>
-                              <span>
-                                Missed {formatDate(row.lastAnsweredAt)}
-                              </span>
-                              <span className="mx-2">•</span>
-                              <span>
-                                {getSessionOriginLabel({
-                                  sessionId: row.sessionId,
-                                  sessionMode: row.sessionMode,
-                                })}
-                              </span>
-                            </div>
+                            <QuestionMetadata
+                              row={row}
+                              middleLabel={row.difficulty}
+                              middleLabelClassName="capitalize"
+                            />
                           </>
                         ) : (
                           <>
                             <div className="text-sm text-muted-foreground">
                               This question was removed or unpublished.
                             </div>
-                            <div className="text-xs text-muted-foreground">
-                              <span>Unavailable</span>
-                              <span className="mx-2">•</span>
-                              <span>
-                                Missed {formatDate(row.lastAnsweredAt)}
-                              </span>
-                              <span className="mx-2">•</span>
-                              <span>
-                                {getSessionOriginLabel({
-                                  sessionId: row.sessionId,
-                                  sessionMode: row.sessionMode,
-                                })}
-                              </span>
-                            </div>
+                            <QuestionMetadata
+                              row={row}
+                              middleLabel="Unavailable"
+                            />
                           </>
                         )}
                       </div>
@@ -266,12 +366,12 @@ export function HistoryMissedTab({ result, filters }: HistoryMissedTabProps) {
                             href={toQuestionRoute(row.slug, {
                               from: 'history',
                             })}
-                            aria-label={`Reattempt question: ${getStemPreview(
+                            aria-label={`${row.isCorrect ? 'Review' : 'Reattempt'} question: ${getStemPreview(
                               row.stemMd,
                               80,
                             )}`}
                           >
-                            Reattempt
+                            {row.isCorrect ? 'Review' : 'Reattempt'}
                           </Link>
                         </Button>
                       ) : null}
@@ -290,7 +390,7 @@ export function HistoryMissedTab({ result, filters }: HistoryMissedTabProps) {
                 className={headerLinkButtonClasses}
               >
                 <Link
-                  href={buildHistoryMissedHref({
+                  href={buildHistoryQuestionsHref({
                     limit,
                     offset: prevOffset,
                     filters,
@@ -310,7 +410,7 @@ export function HistoryMissedTab({ result, filters }: HistoryMissedTabProps) {
                 className={headerLinkButtonClasses}
               >
                 <Link
-                  href={buildHistoryMissedHref({
+                  href={buildHistoryQuestionsHref({
                     limit,
                     offset: nextOffset,
                     filters,

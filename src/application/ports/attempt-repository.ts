@@ -20,11 +20,20 @@ export type AttemptMostRecentAnsweredAt = {
   answeredAt: Date;
 };
 
-export type MissedQuestionAttempt = {
+export type AttemptedQuestionSummary = {
   questionId: string;
   answeredAt: Date;
+  isCorrect: boolean;
   sessionId: string | null;
   sessionMode: PracticeMode | null;
+};
+
+export type AttemptedQuestionsResultFilter = 'correct' | 'incorrect';
+export type AttemptedQuestionsSourceFilter = 'tutor' | 'exam' | 'adhoc';
+
+export type AttemptedQuestionsFilters = {
+  result?: AttemptedQuestionsResultFilter | null;
+  source?: AttemptedQuestionsSourceFilter | null;
 };
 
 export type RecentAttempt = Attempt & {
@@ -69,21 +78,25 @@ export interface AttemptStatsReader {
   ): Promise<readonly Date[]>;
 }
 
-export interface AttemptMissedQuestionsReader {
+export interface AttemptAllQuestionsReader {
   /**
-   * Paginated missed question IDs based on the user's most recent attempt
-   * per question (only included when the most recent attempt is incorrect).
+   * Paginated attempted question summaries based on the user's most recent
+   * attempt per question (all questions, not just incorrect).
    */
-  listMissedQuestionsByUserId(
+  listAttemptedQuestionsByUserId(
     userId: string,
     limit: number,
     offset: number,
-  ): Promise<readonly MissedQuestionAttempt[]>;
+    filters?: AttemptedQuestionsFilters,
+  ): Promise<readonly AttemptedQuestionSummary[]>;
 
   /**
-   * Total missed question count based on the user's most recent attempt per question.
+   * Total count of unique questions the user has attempted at least once.
    */
-  countMissedQuestionsByUserId(userId: string): Promise<number>;
+  countAttemptedQuestionsByUserId(
+    userId: string,
+    filters?: AttemptedQuestionsFilters,
+  ): Promise<number>;
 }
 
 export interface AttemptMostRecentAnsweredAtReader {
@@ -102,5 +115,5 @@ export interface AttemptRepository
     AttemptHistoryReader,
     AttemptSessionReader,
     AttemptStatsReader,
-    AttemptMissedQuestionsReader,
+    AttemptAllQuestionsReader,
     AttemptMostRecentAnsweredAtReader {}

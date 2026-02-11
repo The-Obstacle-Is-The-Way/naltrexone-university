@@ -5,32 +5,34 @@ import { createDepsResolver, loadAppContainer } from '@/lib/controller-helpers';
 import { MAX_PAGINATION_LIMIT } from '@/src/adapters/shared/validation-limits';
 import type { AuthGateway } from '@/src/application/ports/gateways';
 import type {
-  GetMissedQuestionsInput,
-  GetMissedQuestionsOutput,
+  GetAttemptedQuestionsInput,
+  GetAttemptedQuestionsOutput,
 } from '@/src/application/use-cases';
 import { createAction } from './create-action';
 import type { CheckEntitlementUseCase } from './require-entitled-user-id';
 import { requireEntitledUserId } from './require-entitled-user-id';
 
-const GetMissedQuestionsInputSchema = z
+const GetAttemptedQuestionsInputSchema = z
   .object({
     limit: z.number().int().min(1).max(MAX_PAGINATION_LIMIT),
     offset: z.number().int().min(0),
+    result: z.enum(['correct', 'incorrect']).optional(),
+    source: z.enum(['tutor', 'exam', 'adhoc']).optional(),
   })
   .strict();
 
 export type {
-  GetMissedQuestionsOutput,
-  MissedQuestionRow,
+  AttemptedQuestionRow,
+  GetAttemptedQuestionsOutput,
 } from '@/src/application/use-cases';
 
 export type ReviewControllerDeps = {
   authGateway: AuthGateway;
   checkEntitlementUseCase: CheckEntitlementUseCase;
-  getMissedQuestionsUseCase: {
+  getAttemptedQuestionsUseCase: {
     execute: (
-      input: GetMissedQuestionsInput,
-    ) => Promise<GetMissedQuestionsOutput>;
+      input: GetAttemptedQuestionsInput,
+    ) => Promise<GetAttemptedQuestionsOutput>;
   };
 };
 
@@ -43,15 +45,17 @@ const getDeps = createDepsResolver<
   ReviewControllerContainer
 >((container) => container.createReviewControllerDeps(), loadAppContainer);
 
-export const getMissedQuestions = createAction({
-  schema: GetMissedQuestionsInputSchema,
+export const getAttemptedQuestions = createAction({
+  schema: GetAttemptedQuestionsInputSchema,
   getDeps,
   execute: async (input, d) => {
     const userId = await requireEntitledUserId(d);
-    return d.getMissedQuestionsUseCase.execute({
+    return d.getAttemptedQuestionsUseCase.execute({
       userId,
       limit: input.limit,
       offset: input.offset,
+      result: input.result ?? null,
+      source: input.source ?? null,
     });
   },
 });

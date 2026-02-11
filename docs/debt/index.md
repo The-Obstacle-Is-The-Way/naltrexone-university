@@ -1,7 +1,7 @@
 # Technical Debt Register
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-02-10
+**Last Updated:** 2026-02-11
 
 ---
 
@@ -15,11 +15,14 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 ## Debt Index (Active)
 
-| ID | Title | Priority | Status |
-|----|-------|----------|--------|
-| *(none)* | *(no active debt items)* | - | - |
+| ID | Title | Priority | Status | GitHub Issue |
+|----|-------|----------|--------|--------------|
+| [DEBT-206](./debt-206-client-side-difficulty-tag-filters-history.md) | Client-Side Difficulty/Tag Filters Cause Inaccurate Pagination on History Questions Tab | P2 | Open | #87 |
+| [DEBT-207](./debt-207-missing-session-question-count-warning.md) | No Warning When Practice Session Has Fewer Questions Than Requested | P3 | Open | #82 |
+| [DEBT-208](./debt-208-e2e-cross-page-navigation-tests.md) | Missing E2E Tests for Cross-Page Navigation Flows | P3 | Open | #81 |
+| [DEBT-209](./debt-209-tag-question-counts-in-practice-starter.md) | Practice Session Starter Missing Question Counts Per Tag | P3 | Open | #53 |
 
-**Next Debt ID:** DEBT-206
+**Next Debt ID:** DEBT-210
 
 ---
 

@@ -16,7 +16,7 @@ describe('next.config', () => {
     expect(cspValue).toBeUndefined();
   });
 
-  it('redirects /app/review to the History missed tab', async () => {
+  it('redirects /app/review to the History Questions tab with result=incorrect', async () => {
     const nextConfig = (await import('./next.config')).default;
 
     const redirects = await nextConfig.redirects?.();
@@ -28,7 +28,7 @@ describe('next.config', () => {
       expect.arrayContaining([
         {
           source: '/app/review',
-          destination: '/app/history?tab=missed',
+          destination: '/app/history?tab=questions&result=incorrect',
           permanent: true,
         },
       ]),

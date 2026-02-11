@@ -24,9 +24,9 @@ import {
   CreateCheckoutSessionUseCase,
   CreatePortalSessionUseCase,
   EndPracticeSessionUseCase,
+  GetAttemptedQuestionsUseCase,
   GetBookmarksUseCase,
   GetIncompletePracticeSessionUseCase,
-  GetMissedQuestionsUseCase,
   GetNextQuestionUseCase,
   GetUserStatsUseCase,
   StartPracticeSessionUseCase,
@@ -92,6 +92,9 @@ describe('container factories', () => {
     expect(typeof container.createCheckEntitlementUseCase).toBe('function');
     expect(typeof container.createGetNextQuestionUseCase).toBe('function');
     expect(typeof container.createSubmitAnswerUseCase).toBe('function');
+    expect(typeof container.createGetAttemptedQuestionsUseCase).toBe(
+      'function',
+    );
     expect(typeof container.createGetIncompletePracticeSessionUseCase).toBe(
       'function',
     );
@@ -179,8 +182,8 @@ describe('container factories', () => {
     expect(
       container.createGetIncompletePracticeSessionUseCase(),
     ).toBeInstanceOf(GetIncompletePracticeSessionUseCase);
-    expect(container.createGetMissedQuestionsUseCase()).toBeInstanceOf(
-      GetMissedQuestionsUseCase,
+    expect(container.createGetAttemptedQuestionsUseCase()).toBeInstanceOf(
+      GetAttemptedQuestionsUseCase,
     );
     expect(container.createGetUserStatsUseCase()).toBeInstanceOf(
       GetUserStatsUseCase,
@@ -281,8 +284,8 @@ describe('container factories', () => {
     expect(reviewDeps.checkEntitlementUseCase).toBeInstanceOf(
       CheckEntitlementUseCase,
     );
-    expect(reviewDeps.getMissedQuestionsUseCase).toBeInstanceOf(
-      GetMissedQuestionsUseCase,
+    expect(reviewDeps.getAttemptedQuestionsUseCase).toBeInstanceOf(
+      GetAttemptedQuestionsUseCase,
     );
 
     const statsDeps = container.createStatsControllerDeps();
