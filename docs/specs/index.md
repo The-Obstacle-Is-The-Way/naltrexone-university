@@ -40,8 +40,9 @@ Implementation specifications provide detailed technical guidance for building e
 | [SPEC-020](./spec-020-practice-engine-completion.md) | Practice Engine Completion | Implemented | Feature |
 | [SPEC-021](./spec-021-history-page-restructure.md) | History Page Restructure | Ready | Feature |
 | [SPEC-022](./spec-022-question-log.md) | Question Log (Quick Practice History Gap) | Ready | Feature |
+| [SPEC-023](./spec-023-question-review-mode.md) | Question Review Mode | Ready | Feature |
 
-**Next Spec ID:** SPEC-023
+**Next Spec ID:** SPEC-024
 
 ## Spec Statuses
 
