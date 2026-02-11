@@ -27,6 +27,22 @@ export type MissedQuestionAttempt = {
   sessionMode: PracticeMode | null;
 };
 
+export type AttemptedQuestionSummary = {
+  questionId: string;
+  answeredAt: Date;
+  isCorrect: boolean;
+  sessionId: string | null;
+  sessionMode: PracticeMode | null;
+};
+
+export type AttemptedQuestionsResultFilter = 'correct' | 'incorrect';
+export type AttemptedQuestionsSourceFilter = 'tutor' | 'exam' | 'adhoc';
+
+export type AttemptedQuestionsFilters = {
+  result?: AttemptedQuestionsResultFilter | null;
+  source?: AttemptedQuestionsSourceFilter | null;
+};
+
 export type RecentAttempt = Attempt & {
   sessionMode: PracticeMode | null;
 };
@@ -86,6 +102,27 @@ export interface AttemptMissedQuestionsReader {
   countMissedQuestionsByUserId(userId: string): Promise<number>;
 }
 
+export interface AttemptAllQuestionsReader {
+  /**
+   * Paginated attempted question summaries based on the user's most recent
+   * attempt per question (all questions, not just incorrect).
+   */
+  listAttemptedQuestionsByUserId(
+    userId: string,
+    limit: number,
+    offset: number,
+    filters?: AttemptedQuestionsFilters,
+  ): Promise<readonly AttemptedQuestionSummary[]>;
+
+  /**
+   * Total count of unique questions the user has attempted at least once.
+   */
+  countAttemptedQuestionsByUserId(
+    userId: string,
+    filters?: AttemptedQuestionsFilters,
+  ): Promise<number>;
+}
+
 export interface AttemptMostRecentAnsweredAtReader {
   /**
    * For each question id, return the most recent answeredAt (max) for this user.
@@ -103,4 +140,5 @@ export interface AttemptRepository
     AttemptSessionReader,
     AttemptStatsReader,
     AttemptMissedQuestionsReader,
+    AttemptAllQuestionsReader,
     AttemptMostRecentAnsweredAtReader {}

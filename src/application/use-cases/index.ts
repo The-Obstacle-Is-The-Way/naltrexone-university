@@ -19,6 +19,12 @@ export {
   EndPracticeSessionUseCase,
 } from './end-practice-session';
 export {
+  type AttemptedQuestionRow,
+  type GetAttemptedQuestionsInput,
+  type GetAttemptedQuestionsOutput,
+  GetAttemptedQuestionsUseCase,
+} from './get-attempted-questions';
+export {
   type BookmarkRow,
   type GetBookmarksInput,
   type GetBookmarksOutput,

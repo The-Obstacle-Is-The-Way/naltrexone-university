@@ -1,5 +1,7 @@
 import { ApplicationError } from '@/src/application/errors';
 import type {
+  AttemptedQuestionSummary,
+  AttemptedQuestionsFilters,
   AttemptMostRecentAnsweredAt,
   AttemptRepository,
   BookmarkRepository,
@@ -280,6 +282,89 @@ export class FakeAttemptRepository implements AttemptRepository {
 
     return [...mostRecentByQuestionId.values()].filter((a) => !a.isCorrect)
       .length;
+  }
+
+  async listAttemptedQuestionsByUserId(
+    userId: string,
+    limit: number,
+    offset: number,
+    filters?: AttemptedQuestionsFilters,
+  ): Promise<readonly AttemptedQuestionSummary[]> {
+    const mostRecentByQuestionId = new Map<string, InMemoryAttempt>();
+    for (const attempt of this.attempts) {
+      if (attempt.userId !== userId) continue;
+      const existing = mostRecentByQuestionId.get(attempt.questionId);
+      if (!existing || this.isLaterAttempt(attempt, existing)) {
+        mostRecentByQuestionId.set(attempt.questionId, attempt);
+      }
+    }
+
+    const candidates = [...mostRecentByQuestionId.values()];
+
+    const result = filters?.result ?? null;
+    const filteredByResult =
+      result === 'correct'
+        ? candidates.filter((a) => a.isCorrect)
+        : result === 'incorrect'
+          ? candidates.filter((a) => !a.isCorrect)
+          : candidates;
+
+    const source = filters?.source ?? null;
+    const filteredBySource =
+      source === 'adhoc'
+        ? filteredByResult.filter((a) => a.practiceSessionId === null)
+        : source === 'tutor' || source === 'exam'
+          ? filteredByResult.filter(
+              (a) => a.practiceSessionId !== null && a.sessionMode === source,
+            )
+          : filteredByResult;
+
+    return filteredBySource
+      .sort((a, b) => b.answeredAt.getTime() - a.answeredAt.getTime())
+      .slice(offset, offset + limit)
+      .map((a) => ({
+        questionId: a.questionId,
+        answeredAt: a.answeredAt,
+        isCorrect: a.isCorrect,
+        sessionId: a.practiceSessionId,
+        sessionMode: a.sessionMode ?? null,
+      }));
+  }
+
+  async countAttemptedQuestionsByUserId(
+    userId: string,
+    filters?: AttemptedQuestionsFilters,
+  ): Promise<number> {
+    const mostRecentByQuestionId = new Map<string, InMemoryAttempt>();
+    for (const attempt of this.attempts) {
+      if (attempt.userId !== userId) continue;
+      const existing = mostRecentByQuestionId.get(attempt.questionId);
+      if (!existing || this.isLaterAttempt(attempt, existing)) {
+        mostRecentByQuestionId.set(attempt.questionId, attempt);
+      }
+    }
+
+    const candidates = [...mostRecentByQuestionId.values()];
+
+    const result = filters?.result ?? null;
+    const filteredByResult =
+      result === 'correct'
+        ? candidates.filter((a) => a.isCorrect)
+        : result === 'incorrect'
+          ? candidates.filter((a) => !a.isCorrect)
+          : candidates;
+
+    const source = filters?.source ?? null;
+    const filteredBySource =
+      source === 'adhoc'
+        ? filteredByResult.filter((a) => a.practiceSessionId === null)
+        : source === 'tutor' || source === 'exam'
+          ? filteredByResult.filter(
+              (a) => a.practiceSessionId !== null && a.sessionMode === source,
+            )
+          : filteredByResult;
+
+    return filteredBySource.length;
   }
 
   async findMostRecentAnsweredAtByQuestionIds(

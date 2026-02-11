@@ -3,6 +3,7 @@ import {
   CreateCheckoutSessionUseCase,
   CreatePortalSessionUseCase,
   EndPracticeSessionUseCase,
+  GetAttemptedQuestionsUseCase,
   GetBookmarksUseCase,
   GetIncompletePracticeSessionUseCase,
   GetMissedQuestionsUseCase,
@@ -66,6 +67,12 @@ export function createUseCaseFactories(input: {
     createGetIncompletePracticeSessionUseCase: () =>
       new GetIncompletePracticeSessionUseCase(
         repositories.createPracticeSessionRepository(),
+      ),
+    createGetAttemptedQuestionsUseCase: () =>
+      new GetAttemptedQuestionsUseCase(
+        repositories.createAttemptRepository(),
+        repositories.createQuestionRepository(),
+        primitives.logger,
       ),
     createGetMissedQuestionsUseCase: () =>
       new GetMissedQuestionsUseCase(

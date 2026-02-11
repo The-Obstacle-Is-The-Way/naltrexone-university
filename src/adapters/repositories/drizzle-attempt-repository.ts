@@ -1,4 +1,14 @@
-import { and, desc, eq, gte, inArray, max, type SQL, sql } from 'drizzle-orm';
+import {
+  and,
+  desc,
+  eq,
+  gte,
+  inArray,
+  isNull,
+  max,
+  type SQL,
+  sql,
+} from 'drizzle-orm';
 import {
   ATTEMPTS_SESSION_QUESTION_UQ,
   attempts,
@@ -6,6 +16,8 @@ import {
 } from '@/db/schema';
 import { ApplicationError } from '@/src/application/errors';
 import type {
+  AttemptedQuestionSummary,
+  AttemptedQuestionsFilters,
   AttemptMostRecentAnsweredAt,
   AttemptRepository,
   MissedQuestionAttempt,
@@ -263,6 +275,104 @@ export class DrizzleAttemptRepository implements AttemptRepository {
           eq(latestAttemptRows.isCorrect, false),
         ),
       );
+
+    return row?.count ?? 0;
+  }
+
+  async listAttemptedQuestionsByUserId(
+    userId: string,
+    limit: number,
+    offset: number,
+    filters?: AttemptedQuestionsFilters,
+  ): Promise<readonly AttemptedQuestionSummary[]> {
+    const latestAttemptRows = this.latestAttemptRowsSubquery(userId);
+
+    const conditions: SQL[] = [eq(latestAttemptRows.attemptRank, 1)];
+
+    const resultFilter = filters?.result ?? null;
+    if (resultFilter === 'correct') {
+      conditions.push(eq(latestAttemptRows.isCorrect, true));
+    }
+    if (resultFilter === 'incorrect') {
+      conditions.push(eq(latestAttemptRows.isCorrect, false));
+    }
+
+    const sourceFilter = filters?.source ?? null;
+    if (sourceFilter === 'adhoc') {
+      conditions.push(isNull(latestAttemptRows.practiceSessionId));
+    }
+    if (sourceFilter === 'tutor' || sourceFilter === 'exam') {
+      conditions.push(eq(practiceSessions.mode, sourceFilter));
+    }
+
+    const rows = await this.db
+      .select({
+        questionId: latestAttemptRows.questionId,
+        answeredAt: latestAttemptRows.answeredAt,
+        isCorrect: latestAttemptRows.isCorrect,
+        sessionId: latestAttemptRows.practiceSessionId,
+        sessionMode: practiceSessions.mode,
+      })
+      .from(latestAttemptRows)
+      .leftJoin(
+        practiceSessions,
+        eq(latestAttemptRows.practiceSessionId, practiceSessions.id),
+      )
+      .where(and(...conditions))
+      .orderBy(
+        desc(latestAttemptRows.answeredAt),
+        desc(latestAttemptRows.questionId),
+      )
+      .limit(limit)
+      .offset(offset);
+
+    const result: AttemptedQuestionSummary[] = [];
+    for (const row of rows) {
+      if (!row.answeredAt) continue;
+      result.push({
+        questionId: row.questionId,
+        answeredAt: row.answeredAt,
+        isCorrect: row.isCorrect,
+        sessionId: row.sessionId,
+        sessionMode: row.sessionMode,
+      });
+    }
+
+    return result;
+  }
+
+  async countAttemptedQuestionsByUserId(
+    userId: string,
+    filters?: AttemptedQuestionsFilters,
+  ): Promise<number> {
+    const latestAttemptRows = this.latestAttemptRowsSubquery(userId);
+
+    const conditions: SQL[] = [eq(latestAttemptRows.attemptRank, 1)];
+
+    const resultFilter = filters?.result ?? null;
+    if (resultFilter === 'correct') {
+      conditions.push(eq(latestAttemptRows.isCorrect, true));
+    }
+    if (resultFilter === 'incorrect') {
+      conditions.push(eq(latestAttemptRows.isCorrect, false));
+    }
+
+    const sourceFilter = filters?.source ?? null;
+    if (sourceFilter === 'adhoc') {
+      conditions.push(isNull(latestAttemptRows.practiceSessionId));
+    }
+    if (sourceFilter === 'tutor' || sourceFilter === 'exam') {
+      conditions.push(eq(practiceSessions.mode, sourceFilter));
+    }
+
+    const [row] = await this.db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(latestAttemptRows)
+      .leftJoin(
+        practiceSessions,
+        eq(latestAttemptRows.practiceSessionId, practiceSessions.id),
+      )
+      .where(and(...conditions));
 
     return row?.count ?? 0;
   }
