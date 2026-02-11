@@ -163,6 +163,24 @@ export class DrizzleAttemptRepository implements AttemptRepository {
     return rows.map((row) => toAttemptDomain(row));
   }
 
+  async findLatestByUserAndQuestion(
+    userId: string,
+    questionId: string,
+  ): Promise<Attempt | null> {
+    const [row] = await this.db
+      .select()
+      .from(attempts)
+      .where(
+        and(eq(attempts.userId, userId), eq(attempts.questionId, questionId)),
+      )
+      .orderBy(desc(attempts.answeredAt), desc(attempts.id))
+      .limit(1);
+
+    if (!row) return null;
+
+    return toAttemptDomain(row);
+  }
+
   private async countWhere(
     userId: string,
     ...conditions: SQL[]

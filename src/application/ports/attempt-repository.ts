@@ -99,6 +99,17 @@ export interface AttemptAllQuestionsReader {
   ): Promise<number>;
 }
 
+export interface AttemptSingleQuestionReader {
+  /**
+   * Return the user's most recent attempt for a specific question.
+   * Used by review mode to reconstruct the post-submit state.
+   */
+  findLatestByUserAndQuestion(
+    userId: string,
+    questionId: string,
+  ): Promise<Attempt | null>;
+}
+
 export interface AttemptMostRecentAnsweredAtReader {
   /**
    * For each question id, return the most recent answeredAt (max) for this user.
@@ -116,4 +127,5 @@ export interface AttemptRepository
     AttemptSessionReader,
     AttemptStatsReader,
     AttemptAllQuestionsReader,
+    AttemptSingleQuestionReader,
     AttemptMostRecentAnsweredAtReader {}

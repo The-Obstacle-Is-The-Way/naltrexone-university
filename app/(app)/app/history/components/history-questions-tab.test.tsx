@@ -48,6 +48,7 @@ describe('HistoryQuestionsTab', () => {
     };
 
     const html = renderToStaticMarkup(<HistoryQuestionsTab result={result} />);
+    const doc = new DOMParser().parseFromString(html, 'text/html');
 
     expect(html).toContain('Stem for correct');
     expect(html).toContain('Stem for incorrect');
@@ -60,8 +61,15 @@ describe('HistoryQuestionsTab', () => {
     expect(html).toContain('Ad-hoc practice');
     expect(html).toContain('Review');
     expect(html).toContain('Reattempt');
-    expect(html).toContain(toQuestionRoute('q-correct', { from: 'history' }));
-    expect(html).toContain(toQuestionRoute('q-incorrect', { from: 'history' }));
+
+    const correctHref = toQuestionRoute('q-correct', {
+      from: 'history',
+      mode: 'review',
+    });
+    const incorrectHref = toQuestionRoute('q-incorrect', { from: 'history' });
+
+    expect(doc.querySelectorAll(`a[href="${correctHref}"]`)).toHaveLength(2);
+    expect(doc.querySelectorAll(`a[href="${incorrectHref}"]`)).toHaveLength(2);
   });
 
   it('renders result and source filter dropdowns', () => {

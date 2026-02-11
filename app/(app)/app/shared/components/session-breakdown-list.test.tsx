@@ -61,7 +61,7 @@ describe('SessionBreakdownList', () => {
     const links = Array.from(doc.querySelectorAll('a'));
     expect(links).toHaveLength(1);
     expect(links[0]?.getAttribute('href')).toBe(
-      toQuestionRoute('q-1', { from: 'practice' }),
+      toQuestionRoute('q-1', { from: 'practice', mode: 'review' }),
     );
   });
 
@@ -113,7 +113,7 @@ describe('SessionBreakdownList', () => {
     const links = Array.from(doc.querySelectorAll('a'));
     expect(links).toHaveLength(1);
     expect(links[0]?.getAttribute('href')).toBe(
-      toQuestionRoute('q-1', { from: 'history' }),
+      toQuestionRoute('q-1', { from: 'history', mode: 'review' }),
     );
   });
 });

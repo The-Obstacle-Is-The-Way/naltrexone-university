@@ -5,6 +5,10 @@ import { createDepsResolver, loadAppContainer } from '@/lib/controller-helpers';
 import { ApplicationError } from '@/src/application/errors';
 import type { AuthGateway } from '@/src/application/ports/gateways';
 import type { QuestionRepository } from '@/src/application/ports/repositories';
+import type {
+  GetPreviousAttemptInput,
+  GetPreviousAttemptOutput,
+} from '@/src/application/use-cases';
 import { createAction } from './create-action';
 import type { CheckEntitlementUseCase } from './require-entitled-user-id';
 import { requireEntitledUserId } from './require-entitled-user-id';
@@ -33,6 +37,11 @@ export type QuestionViewControllerDeps = {
   authGateway: AuthGateway;
   checkEntitlementUseCase: CheckEntitlementUseCase;
   questionRepository: QuestionRepository;
+  getPreviousAttemptUseCase: {
+    execute: (
+      input: GetPreviousAttemptInput,
+    ) => Promise<GetPreviousAttemptOutput | null>;
+  };
 };
 
 type QuestionViewControllerContainer = {
@@ -69,5 +78,23 @@ export const getQuestionBySlug = createAction({
         textMd: choice.textMd,
       })),
     };
+  },
+});
+
+const GetPreviousAttemptInputSchema = z
+  .object({
+    questionId: z.string().min(1),
+  })
+  .strict();
+
+export const getPreviousAttempt = createAction({
+  schema: GetPreviousAttemptInputSchema,
+  getDeps,
+  execute: async (input, d) => {
+    const userId = await requireEntitledUserId(d);
+    return d.getPreviousAttemptUseCase.execute({
+      userId,
+      questionId: input.questionId,
+    });
   },
 });

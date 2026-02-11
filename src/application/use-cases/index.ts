@@ -49,6 +49,11 @@ export {
   type PracticeSessionReviewRow,
 } from './get-practice-session-review';
 export {
+  type GetPreviousAttemptInput,
+  type GetPreviousAttemptOutput,
+  GetPreviousAttemptUseCase,
+} from './get-previous-attempt';
+export {
   type GetSessionHistoryInput,
   type GetSessionHistoryOutput,
   GetSessionHistoryUseCase,

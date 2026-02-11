@@ -136,4 +136,61 @@ describe('QuestionView', () => {
     ).toBe('Back to Practice');
     expect(html).toContain('Review a question from your practice history.');
   });
+
+  it('renders Feedback when submitResult is pre-populated (review mode)', async () => {
+    const { QuestionView } = await import('./question-page-client');
+
+    const html = renderToStaticMarkup(
+      <QuestionView
+        loadState={{ status: 'ready' }}
+        question={null}
+        selectedChoiceId={null}
+        submitResult={{
+          attemptId: 'attempt_1',
+          isCorrect: true,
+          correctChoiceId: 'c1',
+          explanationMd: 'Explanation',
+          choiceExplanations: [],
+        }}
+        canSubmit={false}
+        isPending={false}
+        origin="history"
+        onTryAgain={() => undefined}
+        onSelectChoice={() => undefined}
+        onSubmit={() => undefined}
+        onReattempt={() => undefined}
+      />,
+    );
+
+    expect(html).toContain('Correct');
+    expect(html).toContain('Explanation');
+  });
+
+  it('renders "Try Again" instead of "Submit" when submitResult exists', async () => {
+    const { QuestionView } = await import('./question-page-client');
+
+    const html = renderToStaticMarkup(
+      <QuestionView
+        loadState={{ status: 'ready' }}
+        question={null}
+        selectedChoiceId={null}
+        submitResult={{
+          attemptId: 'attempt_1',
+          isCorrect: false,
+          correctChoiceId: 'c1',
+          explanationMd: 'Explanation',
+          choiceExplanations: [],
+        }}
+        canSubmit={false}
+        isPending={false}
+        onTryAgain={() => undefined}
+        onSelectChoice={() => undefined}
+        onSubmit={() => undefined}
+        onReattempt={() => undefined}
+      />,
+    );
+
+    expect(html).toContain('Try Again');
+    expect(html).not.toContain('>Submit<');
+  });
 });

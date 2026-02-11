@@ -303,78 +303,76 @@ export function HistoryQuestionsTab({
 
           <ul className="space-y-4">
             {displayRows.map((row) => {
-              const title = row.isAvailable
-                ? getStemPreview(row.stemMd, 80)
-                : '[Question no longer available]';
-              const plainStem = row.isAvailable ? toPlainText(row.stemMd) : '';
-              const shouldShowBodyText =
-                row.isAvailable && plainStem && plainStem !== title;
+              if (!row.isAvailable) {
+                return (
+                  <li key={row.questionId}>
+                    <Card className="gap-0 rounded-2xl border-border p-4 shadow-sm">
+                      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                        <div className="space-y-2">
+                          <div className="text-sm font-medium text-foreground">
+                            [Question no longer available]
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            This question was removed or unpublished.
+                          </div>
+                          <QuestionMetadata
+                            row={row}
+                            middleLabel="Unavailable"
+                          />
+                        </div>
+                      </div>
+                    </Card>
+                  </li>
+                );
+              }
+
+              const title = getStemPreview(row.stemMd, 80);
+              const plainStem = toPlainText(row.stemMd);
+              const shouldShowBodyText = plainStem && plainStem !== title;
+
+              const href = row.isCorrect
+                ? toQuestionRoute(row.slug, { from: 'history', mode: 'review' })
+                : toQuestionRoute(row.slug, { from: 'history' });
 
               return (
                 <li key={row.questionId}>
                   <Card className="gap-0 rounded-2xl border-border p-4 shadow-sm">
                     <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                       <div className="space-y-2">
-                        {row.isAvailable ? (
-                          <Link
-                            href={toQuestionRoute(row.slug, {
-                              from: 'history',
-                            })}
-                            className="text-sm font-medium text-foreground hover:underline"
-                          >
-                            {title}
-                          </Link>
-                        ) : (
-                          <div className="text-sm font-medium text-foreground">
-                            {title}
-                          </div>
-                        )}
+                        <Link
+                          href={href}
+                          className="text-sm font-medium text-foreground hover:underline"
+                        >
+                          {title}
+                        </Link>
 
-                        {row.isAvailable ? (
-                          <>
-                            {shouldShowBodyText ? (
-                              <div className="text-sm text-muted-foreground">
-                                {plainStem}
-                              </div>
-                            ) : null}
-                            <QuestionMetadata
-                              row={row}
-                              middleLabel={row.difficulty}
-                              middleLabelClassName="capitalize"
-                            />
-                          </>
-                        ) : (
-                          <>
-                            <div className="text-sm text-muted-foreground">
-                              This question was removed or unpublished.
-                            </div>
-                            <QuestionMetadata
-                              row={row}
-                              middleLabel="Unavailable"
-                            />
-                          </>
-                        )}
+                        {shouldShowBodyText ? (
+                          <div className="text-sm text-muted-foreground">
+                            {plainStem}
+                          </div>
+                        ) : null}
+                        <QuestionMetadata
+                          row={row}
+                          middleLabel={row.difficulty}
+                          middleLabelClassName="capitalize"
+                        />
                       </div>
 
-                      {row.isAvailable ? (
-                        <Button
-                          asChild
-                          variant="outline"
-                          className="rounded-full"
+                      <Button
+                        asChild
+                        variant="outline"
+                        className="rounded-full"
+                      >
+                        <Link
+                          href={href}
+                          aria-label={`${row.isCorrect ? 'Review' : 'Reattempt'} question: ${getStemPreview(
+                            row.stemMd,
+                            80,
+                          )}`}
                         >
-                          <Link
-                            href={toQuestionRoute(row.slug, {
-                              from: 'history',
-                            })}
-                            aria-label={`${row.isCorrect ? 'Review' : 'Reattempt'} question: ${getStemPreview(
-                              row.stemMd,
-                              80,
-                            )}`}
-                          >
-                            {row.isCorrect ? 'Review' : 'Reattempt'}
-                          </Link>
-                        </Button>
-                      ) : null}
+                          {row.isCorrect ? 'Review' : 'Reattempt'}
+                        </Link>
+                      </Button>
                     </div>
                   </Card>
                 </li>
