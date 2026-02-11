@@ -35,6 +35,7 @@ Session-based:  practiceSessionId = UUID → links to practice_sessions table
 ```
 
 - The `attempts` table already stores EVERY ad-hoc attempt (correct + incorrect)
+- **Important nuance:** `practiceSessionId = NULL` is an **"ad-hoc practice" bucket**, not a Quick Practice-only marker. It also includes attempts made on the question detail page (e.g., reattempting from History/Bookmarks). v1 should label this as **"Ad-hoc practice"** and treat it as "Quick Practice + reattempts".
 - `listMissedQuestionsByUserId` uses `row_number() OVER (PARTITION BY questionId ORDER BY answeredAt DESC)` to get the latest attempt per question, then filters `isCorrect = false`
 - No equivalent query exists for all attempted questions regardless of correctness
 - Dashboard stats (`countByUserId`, `countCorrectByUserId`) already include ad-hoc attempts — no `practiceSessionId` filter
@@ -91,7 +92,7 @@ Evolve History's "Missed Questions" tab into a complete, filterable record of ev
 | Filter | Values | Default |
 |--------|--------|---------|
 | Result | All / Correct / Incorrect | All |
-| Source | All / Tutor / Exam / Quick Practice | All |
+| Source | All / Tutor / Exam / Ad-hoc | All |
 | Difficulty | All difficulties / Easy / Medium / Hard | All (existing) |
 | Tag | All tags / [specific tags] | All (existing) |
 
@@ -102,7 +103,7 @@ Evolve History's "Missed Questions" tab into a complete, filterable record of ev
 | Question stem preview | `stemMd` truncated | Already exists |
 | Result badge | `isCorrect` | **NEW** — "Correct" (green) / "Incorrect" (red) |
 | Difficulty badge | `difficulty` | Already exists |
-| Source label | `sessionId` + `sessionMode` | Already exists — "Tutor session" / "Exam session" / "Quick Practice" |
+| Source label | `sessionId` + `sessionMode` | Already exists — "Tutor session" / "Exam session" / "Ad-hoc practice" (Quick Practice + reattempts) |
 | Date | `answeredAt` | Already exists |
 | Action button | — | "Reattempt" for incorrect, "Review" for correct (links to `/app/questions/[slug]`) |
 
@@ -122,7 +123,8 @@ Evolve History's "Missed Questions" tab into a complete, filterable record of ev
 - No separate Quick Practice history page
 - No additional Dashboard card
 - No "Unanswered" filter (question bank progress tracking is a separate future feature)
-- No server-side filtering in v1 (client-side filtering on the paginated set is acceptable for our question bank size; can migrate to server-side later if performance requires it)
+- No server-side filtering for difficulty/tag in v1 (keep the existing client-side pattern on the paginated set; can migrate later if needed)
+- No new "attempt origin" column in v1 (we cannot precisely isolate Quick Practice from other ad-hoc attempts without a schema change)
 
 ---
 
@@ -149,7 +151,11 @@ All downstream types (`GetMissedQuestionsOutput` rows, controller output, compon
 
 ### Use Case Layer (Low effort)
 
-Rename `GetMissedQuestionsUseCase` → `GetAttemptedQuestionsUseCase`. The enrichment pipeline (fetch attempts → fetch questions → join) works identically regardless of correctness filter. No business logic changes.
+Create a new `GetAttemptedQuestionsUseCase` (alongside the existing missed-only one) that:
+- lists **latest attempt per question** regardless of correctness
+- supports server-side filters for **result** (correct/incorrect) and **source** (tutor/exam/ad-hoc)
+
+The enrichment pipeline (fetch attempts → fetch questions → join) works identically regardless of correctness filter.
 
 ### Count Query (Low effort)
 
@@ -157,12 +163,15 @@ Rename `GetMissedQuestionsUseCase` → `GetAttemptedQuestionsUseCase`. The enric
 
 ### Dashboard "Recent Activity" (Medium effort)
 
-Need a new query: `listRecentAttemptsByUserId(userId, limit)` returning the N most recent attempts (not partitioned by question — just raw recency). This is simpler than the partitioned missed questions query.
+No new query needed:
+- `AttemptStatsReader.listRecentByUserId(userId, limit)` already exists
+- `GetUserStatsUseCase` already returns `recentActivity` (attempt-level recency across all modes)
+
+Dashboard can render `stats.recentActivity.slice(0, N)` with correct/incorrect indicators and a "View all" link to History > Questions.
 
 ### Test Impact (Medium effort)
 
-- Existing `get-missed-questions.test.ts` tests need updating (new type names, correct attempts now included)
-- New test cases for "all attempted" scenario, result filtering, source filtering
+- New unit tests for "all attempted" scenario + result/source filtering (`get-attempted-questions.test.ts`)
 - `history/page.test.tsx` needs tab name updates
 - Dashboard tests need "Recent activity" updates
 
@@ -172,11 +181,11 @@ Need a new query: `listRecentAttemptsByUserId(userId, limit)` returning the N mo
 
 1. **Default filter state:** Should the Questions tab default to "All" (complete picture, new behavior) or "Incorrect" (preserves current Missed Questions behavior for existing users)? Recommendation: default to "All" — this is the whole point of the change.
 
-2. **Filter application:** Client-side filtering on paginated data means a page of 20 results filtered to "Correct only" might show fewer than 20 rows. Acceptable for v1 but should note as a known limitation. Server-side filtering is the eventual path.
+2. **Filter application:** Implement **server-side filtering for Result + Source** (pagination-aware). Keep Difficulty + Tag as **client-side** (page-local) in v1 (matches existing Missed tab behavior).
 
-3. **"Review" action for correct questions:** Should link to `/app/questions/[slug]` (question detail page with explanation). Verify this page exists and works for standalone review (not just in-session context).
+3. **"Review" action for correct questions:** Links to `/app/questions/[slug]` (question detail page). Note: explanation is only shown after submitting an answer (current behavior).
 
-4. **Migration path for "View all" links:** Dashboard "Recent missed" currently links to `History?tab=missed`. After rename, this becomes `History?tab=questions`. Need to handle the old URL gracefully (redirect or treat `tab=missed` as alias for `tab=questions&result=incorrect`).
+4. **Migration path for old URLs:** Preserve `?tab=missed` as an alias for `?tab=questions&result=incorrect` so old links and the `/app/review` redirect chain keep working.
 
 5. **Empty state copy:** Current empty state says "No missed questions yet." Needs updating for the broader scope — "No questions attempted yet. Start practicing to build your history."
 
@@ -195,4 +204,4 @@ All competitive references provide complete visibility into practice activity. N
 
 ---
 
-## Status: RECOMMENDED — Option B selected, awaiting spec
+## Status: SPECCED — Option B selected → SPEC-022 (Question Log)

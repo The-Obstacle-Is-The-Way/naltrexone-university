@@ -110,3 +110,9 @@ The core SLICE-5 functionality is complete. Session grouping was delivered by SP
 - Behavior matches SLICE-5 in `docs/specs/master_spec.md`.
 - Dashboard renders server-side and loads fast for MVP data volumes.
 - Integration tests validate stats correctness; E2E smoke covers dashboard load.
+
+---
+
+## Upcoming Changes
+
+- **SPEC-022** (Question Log) will rename "Recent missed" → "Recent activity" and replace the missed-only list with a compact slice of `getUserStats({}).recentActivity` (correct + incorrect across all modes) with result badges. The "View all" link points to History → Questions.
