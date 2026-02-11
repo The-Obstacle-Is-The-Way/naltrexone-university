@@ -55,8 +55,8 @@ test.describe('core app pages', () => {
     await expect(page.getByText('Total answered')).toBeVisible();
     await expect(page.getByText('Overall accuracy')).toBeVisible();
     await expect(page.getByText('Recent sessions')).toBeVisible();
-    await expect(page.getByText('Recent missed')).toBeVisible();
-    await expect(page.getByText('Recent activity')).toHaveCount(0);
+    await expect(page.getByText('Recent activity')).toBeVisible();
+    await expect(page.getByText('Recent missed')).toHaveCount(0);
     await expect(
       page.getByText(/starting naltrexone for alcohol use disorder/i).first(),
     ).toBeVisible();

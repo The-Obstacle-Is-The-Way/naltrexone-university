@@ -189,7 +189,7 @@ Evolve History's "Missed Questions" tab into a complete, filterable record of ev
 
 **Rename:** "Recent missed" → "Recent activity"
 
-**Content:** Last 3 questions attempted across ALL modes (correct + incorrect), each with a small correct/incorrect indicator badge.
+**Content:** Up to 8 most recent questions attempted across ALL modes (correct + incorrect), each with a small correct/incorrect indicator badge.
 
 **"View all" link:** Points to History > Questions tab (no filters applied = shows everything).
 
