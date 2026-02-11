@@ -123,8 +123,6 @@ describe('HistorySessionsTab (browser)', () => {
     await screen.getByRole('button', { name: 'View breakdown' }).click();
     await expect.element(screen.getByText('Stem for q1')).toBeVisible();
 
-    await expect.element(screen.getByText('Stem for q1')).toBeVisible();
-
     await screen.getByRole('button', { name: 'Hide breakdown' }).click();
 
     await expect

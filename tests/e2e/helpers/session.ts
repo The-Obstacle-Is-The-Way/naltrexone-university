@@ -18,15 +18,7 @@ export async function startSession(
   // Practice page async-loads incomplete session state. Wait until either:
   // - the session starter is available ("Start session" button), or
   // - the continue-session card is available ("Abandon session" button).
-  await page.waitForFunction(() => {
-    const buttons = Array.from(document.querySelectorAll('button'));
-    return (
-      buttons.some(
-        (button) => button.textContent?.trim() === 'Start session',
-      ) ||
-      buttons.some((button) => button.textContent?.trim() === 'Abandon session')
-    );
-  });
+  await startSessionButton.or(abandonButton).waitFor({ state: 'visible' });
 
   // If an incomplete session exists, abandon it first
   const abandonCount = await abandonButton.count();
