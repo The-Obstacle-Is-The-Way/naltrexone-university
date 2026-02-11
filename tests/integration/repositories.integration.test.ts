@@ -344,6 +344,125 @@ describe('DrizzlePracticeSessionRepository + DrizzleAttemptRepository', () => {
     expect(attemptsForB).toHaveLength(0);
   });
 
+  it('returns null from findLatestByUserAndQuestion when no attempts exist', async () => {
+    const user = await createUser();
+    const question = await createQuestion({
+      slug: `it-q-${randomUUID()}`,
+      status: 'published',
+      difficulty: 'easy',
+    });
+
+    const attemptRepo = new DrizzleAttemptRepository(db);
+    await expect(
+      attemptRepo.findLatestByUserAndQuestion(user.id, question.id),
+    ).resolves.toBeNull();
+  });
+
+  it('returns the most recent attempt from findLatestByUserAndQuestion', async () => {
+    const user = await createUser();
+    const question = await createQuestion({
+      slug: `it-q-${randomUUID()}`,
+      status: 'published',
+      difficulty: 'easy',
+    });
+
+    const choices = await db
+      .select({ id: schema.choices.id })
+      .from(schema.choices)
+      .where(eq(schema.choices.questionId, question.id));
+
+    const incorrectChoiceId = choices.find(
+      (c) => c.id !== question.correctChoiceId,
+    )?.id;
+    if (!incorrectChoiceId) throw new Error('Missing incorrect choice');
+
+    const attemptRepo = new DrizzleAttemptRepository(db);
+
+    const first = await attemptRepo.insert({
+      userId: user.id,
+      questionId: question.id,
+      practiceSessionId: null,
+      selectedChoiceId: incorrectChoiceId,
+      isCorrect: false,
+      timeSpentSeconds: 1,
+    });
+
+    const second = await attemptRepo.insert({
+      userId: user.id,
+      questionId: question.id,
+      practiceSessionId: null,
+      selectedChoiceId: question.correctChoiceId,
+      isCorrect: true,
+      timeSpentSeconds: 1,
+    });
+
+    const t1 = new Date('2026-02-06T00:00:00.000Z');
+    const t2 = new Date('2026-02-07T00:00:00.000Z');
+
+    await db
+      .update(schema.attempts)
+      .set({ answeredAt: t1 })
+      .where(eq(schema.attempts.id, first.id));
+    await db
+      .update(schema.attempts)
+      .set({ answeredAt: t2 })
+      .where(eq(schema.attempts.id, second.id));
+
+    await expect(
+      attemptRepo.findLatestByUserAndQuestion(user.id, question.id),
+    ).resolves.toMatchObject({
+      id: second.id,
+      userId: user.id,
+      questionId: question.id,
+      selectedChoiceId: question.correctChoiceId,
+      isCorrect: true,
+    });
+  });
+
+  it('uses id desc as a deterministic tie-breaker for findLatestByUserAndQuestion', async () => {
+    const user = await createUser();
+    const question = await createQuestion({
+      slug: `it-q-${randomUUID()}`,
+      status: 'published',
+      difficulty: 'easy',
+    });
+
+    const tieAnsweredAt = new Date('2026-02-06T00:00:00.000Z');
+    const lowerId = '00000000-0000-4000-8000-000000000001';
+    const higherId = 'ffffffff-ffff-4fff-bfff-ffffffffffff';
+
+    await db.insert(schema.attempts).values([
+      {
+        id: lowerId,
+        userId: user.id,
+        questionId: question.id,
+        practiceSessionId: null,
+        selectedChoiceId: question.correctChoiceId,
+        isCorrect: false,
+        timeSpentSeconds: 1,
+        answeredAt: tieAnsweredAt,
+      },
+      {
+        id: higherId,
+        userId: user.id,
+        questionId: question.id,
+        practiceSessionId: null,
+        selectedChoiceId: question.correctChoiceId,
+        isCorrect: true,
+        timeSpentSeconds: 1,
+        answeredAt: tieAnsweredAt,
+      },
+    ]);
+
+    const attemptRepo = new DrizzleAttemptRepository(db);
+    await expect(
+      attemptRepo.findLatestByUserAndQuestion(user.id, question.id),
+    ).resolves.toMatchObject({
+      id: higherId,
+      isCorrect: true,
+    });
+  });
+
   it('rejects deleting a choice referenced by an attempt', async () => {
     const user = await createUser();
     const question = await createQuestion({
