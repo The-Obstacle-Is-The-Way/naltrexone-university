@@ -390,3 +390,57 @@ After implementation, verify with Playwright:
 ## Priority
 
 **P1 — Core user flow.** This directly impacts the core learning loop (answer → review → learn). Without it, the entire review infrastructure built across SPEC-021/022/023 is undermined by navigation friction. The data is there. The components are there. The *flow* is broken.
+
+---
+
+## Playwright Validation (2026-02-11)
+
+**Test:** `tests/e2e/audit-history-spec.spec.ts`
+**Screenshots:** `tests/e2e/screenshots/audit-01-*.png` through `audit-10-*.png`
+
+### Test Flow
+
+1. Sign in → ensure subscription
+2. Start a tutor session with 2 questions
+3. Answer both questions (both incorrect → 0/2, 0%)
+4. End session → Session Summary
+5. Click first question from the breakdown list
+6. Inspect back link, sequential navigation, session context
+7. Click back link → observe destination
+8. Navigate to History → Sessions → View breakdown
+9. Click question from History breakdown
+10. Inspect back link from History entry point
+11. Click back → observe whether breakdown stays expanded
+
+### Results
+
+| # | Check | Result | Evidence |
+|---|-------|--------|----------|
+| 1 | Breakdown link includes `sessionId` | **FAIL** | Href: `/app/questions/ciccarone-shoptaw-2022-002?from=practice&mode=review` — no `sessionId` param |
+| 2 | Question opens in review mode (SPEC-023) | **PASS** | URL includes `mode=review`, subtitle says "Review a question from your practice history." |
+| 3 | Back link goes to session summary | **FAIL** | Back link text: "Back to Practice", href: `/app/practice` — NOT `/app/practice/{sessionId}` |
+| 4 | Back link does NOT go to `/app/practice` landing | **FAIL** | Back link href is exactly `/app/practice` |
+| 5 | "Next question" sequential navigation present | **FAIL** | No session-aware next/prev navigation on question detail page |
+| 6 | "Previous question" sequential navigation present | **FAIL** | No previous question navigation |
+| 7 | Position indicator ("Question X of Y") present | **FAIL** | No position indicator rendered |
+| 8 | History breakdown link includes `sessionId` | **FAIL** | Href: `/app/questions/ciccarone-shoptaw-2022-002?from=history&mode=review` — no `sessionId` |
+| 9 | History back link goes to session breakdown | **FAIL** | Back link text: "Back to History", href: `/app/history` — generic History page |
+| 10 | History breakdown stays expanded after back | **FAIL** | Breakdown collapses — no question links visible after navigating back |
+
+### Summary
+
+**9 out of 10 checks FAILED.** Only SPEC-023 review mode (check #2) passed.
+
+Every gap described in this document is **confirmed by Playwright with screenshot evidence**:
+
+- **Screenshot `audit-03`**: Session Summary page showing 2 questions, both Incorrect, with clickable breakdown links.
+- **Screenshot `audit-04`/`audit-05`**: Question detail page after clicking breakdown link — shows "Back to Practice" link pointing to `/app/practice`, not session summary. No next/prev navigation. No position indicator.
+- **Screenshot `audit-06`**: After clicking "Back to Practice" — lands on question page, not the session summary (navigation context fully lost).
+- **Screenshot `audit-07`**: History → Sessions tab showing list of sessions with "View breakdown" buttons.
+- **Screenshot `audit-08`**: History session breakdown expanded showing question links with Correct/Incorrect labels.
+- **Screenshot `audit-09`**: Question from History breakdown — shows "Back to History" pointing to `/app/history` (generic). No session navigation.
+- **Screenshot `audit-10`**: After clicking "Back to History" — History page but breakdown is collapsed, session context lost.
+
+### Conclusion
+
+The brainstorming document's analysis is **fully validated**. The three root causes identified (wrong back-link destination, no sequential navigation, no session context in URL) are all confirmed by the live application. The proposed fix (Approach A: URL-driven sequential navigation with `sessionId` param) remains the correct approach.
