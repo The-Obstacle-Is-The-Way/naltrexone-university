@@ -33,7 +33,6 @@ function Probe({ mode }: { mode?: 'review' | null }) {
 
 describe('useQuestionPageController (browser)', () => {
   afterEach(() => {
-    vi.restoreAllMocks();
     getQuestionBySlugMock.mockReset();
     getPreviousAttemptMock.mockReset();
     submitAnswerMock.mockReset();

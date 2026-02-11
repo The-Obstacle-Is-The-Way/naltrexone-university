@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import { ApplicationError } from '@/src/application/errors';
-import { buildShuffledChoiceViews } from '@/src/application/shared/shuffled-choice-views';
 import {
   FakeAttemptRepository,
   FakeLogger,
@@ -296,6 +295,7 @@ describe('GetPreviousAttemptUseCase', () => {
           id: 'c1',
           questionId,
           label: 'A',
+          textMd: 'Choice 1',
           isCorrect: false,
           explanationMd: 'Why A is wrong',
           sortOrder: 1,
@@ -304,6 +304,7 @@ describe('GetPreviousAttemptUseCase', () => {
           id: 'c2',
           questionId,
           label: 'B',
+          textMd: 'Choice 2',
           isCorrect: true,
           explanationMd: 'Why B is correct',
           sortOrder: 2,
@@ -312,6 +313,7 @@ describe('GetPreviousAttemptUseCase', () => {
           id: 'c3',
           questionId,
           label: 'C',
+          textMd: 'Choice 3',
           isCorrect: false,
           explanationMd: 'Why C is wrong',
           sortOrder: 3,
@@ -320,6 +322,7 @@ describe('GetPreviousAttemptUseCase', () => {
           id: 'c4',
           questionId,
           label: 'D',
+          textMd: 'Choice 4',
           isCorrect: false,
           explanationMd: 'Why D is wrong',
           sortOrder: 4,
@@ -327,13 +330,36 @@ describe('GetPreviousAttemptUseCase', () => {
       ],
     });
 
-    const expected = buildShuffledChoiceViews(question, userId).map((view) => ({
-      choiceId: view.choiceId,
-      displayLabel: view.displayLabel,
-      textMd: view.textMd,
-      isCorrect: view.isCorrect,
-      explanationMd: view.explanationMd,
-    }));
+    const expected = [
+      {
+        choiceId: 'c1',
+        displayLabel: 'A',
+        textMd: 'Choice 1',
+        isCorrect: false,
+        explanationMd: 'Why A is wrong',
+      },
+      {
+        choiceId: 'c3',
+        displayLabel: 'B',
+        textMd: 'Choice 3',
+        isCorrect: false,
+        explanationMd: 'Why C is wrong',
+      },
+      {
+        choiceId: 'c4',
+        displayLabel: 'C',
+        textMd: 'Choice 4',
+        isCorrect: false,
+        explanationMd: 'Why D is wrong',
+      },
+      {
+        choiceId: 'c2',
+        displayLabel: 'D',
+        textMd: 'Choice 2',
+        isCorrect: true,
+        explanationMd: 'Why B is correct',
+      },
+    ];
 
     const useCase = new GetPreviousAttemptUseCase(
       new FakeAttemptRepository([
