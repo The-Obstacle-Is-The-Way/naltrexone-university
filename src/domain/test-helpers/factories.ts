@@ -27,7 +27,7 @@ export function createUser(overrides: Partial<User> = {}): User {
   };
 }
 
-type AttemptSessionMode = 'tutor' | 'exam' | null;
+type AttemptSessionMode = PracticeMode | null;
 
 export function createAttempt(
   overrides: Partial<Attempt> & { sessionMode?: AttemptSessionMode } = {},

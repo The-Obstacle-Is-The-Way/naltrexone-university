@@ -7,7 +7,10 @@ import { Card } from '@/components/ui/card';
 import { formatDate } from '@/lib/format-date';
 import { ROUTES, toQuestionRoute } from '@/lib/routes';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
-import type { GetAttemptedQuestionsOutput } from '@/src/adapters/controllers/review-controller';
+import type {
+  AttemptedQuestionRow,
+  GetAttemptedQuestionsOutput,
+} from '@/src/adapters/controllers/review-controller';
 import {
   getStemPreview,
   toPlainText,
@@ -40,17 +43,17 @@ function getResultBadge(isCorrect: boolean) {
   return <span className="text-destructive">Incorrect</span>;
 }
 
+type QuestionMetadataRow = Pick<
+  AttemptedQuestionRow,
+  'isCorrect' | 'lastAnsweredAt' | 'sessionId' | 'sessionMode'
+>;
+
 function QuestionMetadata({
   row,
   middleLabel,
   middleLabelClassName,
 }: {
-  row: {
-    isCorrect: boolean;
-    lastAnsweredAt: string;
-    sessionId: string | null;
-    sessionMode: 'tutor' | 'exam' | null;
-  };
+  row: QuestionMetadataRow;
   middleLabel: string;
   middleLabelClassName?: string;
 }) {
@@ -268,7 +271,8 @@ export function HistoryQuestionsTab({
         )
       ) : hasActiveDifficultyOrTagFilters && displayRows.length === 0 ? (
         <Card className="gap-0 rounded-2xl p-6 text-sm text-muted-foreground shadow-sm">
-          No questions match these filters.
+          No questions on this page match the selected difficulty/tag filters.
+          Try another page or clear these filters.
           <div className="mt-4">
             <Button asChild variant="outline" className="rounded-full">
               <Link

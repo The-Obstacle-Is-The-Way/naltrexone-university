@@ -300,8 +300,8 @@ describe('GetAttemptedQuestionsUseCase', () => {
     });
   });
 
-  it('supports result filter (correct)', async () => {
-    const useCase = new GetAttemptedQuestionsUseCase(
+  const createUseCaseWithResultAttempts = () =>
+    new GetAttemptedQuestionsUseCase(
       new FakeAttemptRepository([
         createAttempt({
           userId: 'user-1',
@@ -322,6 +322,9 @@ describe('GetAttemptedQuestionsUseCase', () => {
       ]),
       new FakeLogger(),
     );
+
+  it('supports result filter (correct)', async () => {
+    const useCase = createUseCaseWithResultAttempts();
 
     await expect(
       useCase.execute({
@@ -337,27 +340,7 @@ describe('GetAttemptedQuestionsUseCase', () => {
   });
 
   it('supports result filter (incorrect)', async () => {
-    const useCase = new GetAttemptedQuestionsUseCase(
-      new FakeAttemptRepository([
-        createAttempt({
-          userId: 'user-1',
-          questionId: 'q1',
-          isCorrect: true,
-          answeredAt: new Date('2026-02-01T12:00:00Z'),
-        }),
-        createAttempt({
-          userId: 'user-1',
-          questionId: 'q2',
-          isCorrect: false,
-          answeredAt: new Date('2026-02-01T10:00:00Z'),
-        }),
-      ]),
-      new FakeQuestionRepository([
-        createQuestion({ id: 'q1', slug: 'q-1', stemMd: 'Stem for q1' }),
-        createQuestion({ id: 'q2', slug: 'q-2', stemMd: 'Stem for q2' }),
-      ]),
-      new FakeLogger(),
-    );
+    const useCase = createUseCaseWithResultAttempts();
 
     await expect(
       useCase.execute({
@@ -475,6 +458,56 @@ describe('GetAttemptedQuestionsUseCase', () => {
           sessionMode: 'exam',
         },
       ],
+      totalCount: 1,
+    });
+  });
+
+  it('supports combined result and source filters', async () => {
+    const useCase = new GetAttemptedQuestionsUseCase(
+      new FakeAttemptRepository([
+        createAttempt({
+          userId: 'user-1',
+          questionId: 'q1',
+          practiceSessionId: 'session-tutor',
+          isCorrect: true,
+          answeredAt: new Date('2026-02-01T12:00:00Z'),
+          sessionMode: 'tutor',
+        }),
+        createAttempt({
+          userId: 'user-1',
+          questionId: 'q2',
+          practiceSessionId: 'session-tutor-2',
+          isCorrect: false,
+          answeredAt: new Date('2026-02-01T11:00:00Z'),
+          sessionMode: 'tutor',
+        }),
+        createAttempt({
+          userId: 'user-1',
+          questionId: 'q3',
+          practiceSessionId: 'session-exam',
+          isCorrect: false,
+          answeredAt: new Date('2026-02-01T10:00:00Z'),
+          sessionMode: 'exam',
+        }),
+      ]),
+      new FakeQuestionRepository([
+        createQuestion({ id: 'q1', slug: 'q-1', stemMd: 'Stem for q1' }),
+        createQuestion({ id: 'q2', slug: 'q-2', stemMd: 'Stem for q2' }),
+        createQuestion({ id: 'q3', slug: 'q-3', stemMd: 'Stem for q3' }),
+      ]),
+      new FakeLogger(),
+    );
+
+    await expect(
+      useCase.execute({
+        userId: 'user-1',
+        limit: 10,
+        offset: 0,
+        source: 'tutor',
+        result: 'incorrect',
+      }),
+    ).resolves.toMatchObject({
+      rows: [{ questionId: 'q2', isCorrect: false, sessionMode: 'tutor' }],
       totalCount: 1,
     });
   });
