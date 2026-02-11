@@ -58,6 +58,80 @@ Session-based:  practiceSessionId = UUID → links to practice_sessions table
 
 ---
 
+## Browser Audit (Verified 2026-02-11)
+
+**Environment:** Vercel preview `https://naltrexone-university-bx5q8fw7w-john-h-jungs-projects.vercel.app` (from `vercel ls`)  
+**Screenshots (gitignored):** `audit-screenshots/spec-022-audit-2026-02-11T02-19-13-316Z/`
+
+### 1) `/app/history?tab=missed` (current "Missed Questions" tab)
+
+- **Tabs:** `Sessions`, `Missed Questions`
+- **Filters:** `Difficulty` `<select name="difficulty">`, `Tag` `<select name="tag">`, `Apply` button, `Clear filters` link
+- **Row layout:**
+  - Title is a link to `/app/questions/[slug]?from=history`
+  - Metadata line includes: `{Difficulty} • Missed {date} • {source}`, where `{source}` is `"Tutor session" | "Exam session" | "Ad-hoc practice"`
+  - Action button: `Reattempt` (link with `aria-label="Reattempt question: …"`)
+
+Screenshots:
+- `01-history-missed.png`
+- `08-history-missed-after-quick-practice.png`
+
+### 2) `/app/history?tab=sessions` (sessions expand/collapse)
+
+- Each session row has a `View breakdown` button that toggles to `Hide breakdown`.
+- Breakdown renders inline under the session row.
+
+Screenshots:
+- `02-history-sessions.png`
+- `03-history-sessions-expanded.png`
+
+### 3) `/app/dashboard` (current behavior relevant to the gap)
+
+- Sections: `Recent sessions` and `Recent missed`
+- Both have `View all` links:
+  - `/app/history?tab=sessions`
+  - `/app/history?tab=missed`
+- **Stats cards count ad-hoc attempts** (Quick Practice + question-detail reattempts). Verified by the Quick Practice flow below.
+
+Screenshots:
+- `04-dashboard.png`
+- `07-dashboard-after-quick-practice.png`
+
+### 4) `/app/practice/quick` (Quick Practice, answered correctly)
+
+- Answered a question correctly in Quick Practice.
+- Dashboard `Total answered` increased (example observed: `81 → 82`).
+- The correctly answered Quick Practice question did **not** appear on `/app/history?tab=missed` (expected: this tab shows only missed).
+- The Dashboard `Recent missed` list did not surface this correct attempt.
+
+Screenshots:
+- `05-quick-practice-start.png`
+- `06-quick-practice-correct.png`
+
+### 5) Question detail via History Reattempt (attempt becomes ad-hoc)
+
+- Clicking `Reattempt` from History navigates to `/app/questions/[slug]?from=history` with subtitle `"Reviewing a question from your history."`
+- After answering incorrectly and returning to History, at least one row was labeled **"Ad-hoc practice"**, confirming the attempt was stored with `practiceSessionId = null`.
+
+Screenshots:
+- `09-question-detail-from-history.png`
+- `10-question-detail-incorrect.png`
+- `11-history-missed-after-reattempt.png`
+
+### 6) Difficulty + Tag filters + pagination param preservation
+
+- Applying filters updates the URL (example):
+  - `/app/history?tab=missed&limit=20&offset=0&difficulty=medium&tag=alcohol`
+- The page shows `Showing 1–20 of 31`.
+- The `Next` link exists and preserves filters in its `href` (example):
+  - `/app/history?tab=missed&offset=20&limit=20&difficulty=medium&tag=alcohol`
+
+Screenshots:
+- `12-history-missed-filtered.png`
+- `13-history-missed-filtered-next.png`
+
+---
+
 ## Options Evaluated
 
 ### Option A: Add "Quick Practice" tab to History (3rd tab)
@@ -92,9 +166,11 @@ Evolve History's "Missed Questions" tab into a complete, filterable record of ev
 | Filter | Values | Default |
 |--------|--------|---------|
 | Result | All / Correct / Incorrect | All |
-| Source | All / Tutor / Exam / Ad-hoc | All |
+| Source | All / Tutor / Exam / Ad-hoc practice | All |
 | Difficulty | All difficulties / Easy / Medium / Hard | All (existing) |
 | Tag | All tags / [specific tags] | All (existing) |
+
+**Filter application:** Apply **Result + Source server-side** (pagination-aware). Keep Difficulty + Tag as **page-local client-side** filtering in v1 (matching the existing History missed-tab UX from SPEC-021).
 
 **Row layout (per question, most recent attempt):**
 

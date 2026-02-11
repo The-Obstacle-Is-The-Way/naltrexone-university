@@ -1126,6 +1126,7 @@ Phase 5: Verification
 
 - **Server-side filtering for Difficulty/Tag** — Keep v1 behavior page-local (client-side filtering on the paginated set), matching the existing History missed-tab UX from SPEC-021.
 - **Tag options from full dataset** — Tag dropdown shows tags from the current page's rows only. Known v1 limitation documented in SPEC-021 CodeRabbit review.
+- **Attempt origin column** — We will not add a new `attemptOrigin`/`attemptSource` column in v1 to distinguish Quick Practice from other ad-hoc attempts. We only infer source from session context (`practiceSessionId` + `sessionMode`). Distinguishing Quick Practice vs question-detail reattempts would require a schema change.
 - **Per-question attempt history** — Only the most recent attempt per question is shown. Full attempt history (all attempts per question) is a future feature.
 - **Question bank progress tracking** — "Unanswered" filter / question coverage tracking is a separate future feature.
 - **Shared `QuestionListCard` component** — The Questions tab and Bookmarks page are similar but not identical enough to justify extraction in this pass.
@@ -1138,7 +1139,7 @@ Phase 5: Verification
 | Limitation | Description | Mitigation |
 |------------|-------------|------------|
 | Difficulty/tag filters are page-local | A page of 20 results filtered to a specific tag/difficulty may show fewer than 20 rows, and tag options come from the current page only | Acceptable v1 trade-off; add server-side filtering + global tag list later if needed. |
-| "Ad-hoc practice" is a bucket | `practiceSessionId = null` includes Quick Practice **and** question-detail reattempts (and any future non-session flows) | Add an explicit attempt-origin field only if/when we need to distinguish sources. |
+| No attempt-origin column ("Ad-hoc practice" is a bucket) | We do **not** have an `attemptOrigin`/`attemptSource` column today. `practiceSessionId = null` includes Quick Practice **and** question-detail reattempts (and any future non-session flows) | Add an explicit attempt-origin field only if/when we need to distinguish sources. |
 | No "All Questions" count in tab label | Tab says "Questions" not "Questions (45)" | Count would require an extra query on every page load. Deferred. |
 
 ---
