@@ -72,6 +72,39 @@ describe('HistoryQuestionsTab', () => {
     expect(doc.querySelectorAll(`a[href="${incorrectHref}"]`)).toHaveLength(2);
   });
 
+  it('caps long question stems in the body preview', () => {
+    const longStem = 'A'.repeat(300);
+    const expectedBodyPreview = `${'A'.repeat(237)}...`;
+
+    const result: ActionResult<GetAttemptedQuestionsOutput> = {
+      ok: true,
+      data: {
+        rows: [
+          {
+            isAvailable: true,
+            questionId: 'q_1',
+            isCorrect: false,
+            sessionId: null,
+            sessionMode: null,
+            slug: 'q-1',
+            stemMd: longStem,
+            difficulty: 'easy',
+            tagSlugs: [],
+            lastAnsweredAt: '2026-02-01T00:00:00.000Z',
+          },
+        ],
+        totalCount: 1,
+        limit: 20,
+        offset: 0,
+      },
+    };
+
+    const html = renderToStaticMarkup(<HistoryQuestionsTab result={result} />);
+
+    expect(html).toContain(expectedBodyPreview);
+    expect(html).not.toContain(longStem);
+  });
+
   it('renders result and source filter dropdowns', () => {
     const result: ActionResult<GetAttemptedQuestionsOutput> = {
       ok: true,

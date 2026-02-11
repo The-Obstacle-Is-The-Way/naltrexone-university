@@ -11,10 +11,7 @@ import type {
   AttemptedQuestionRow,
   GetAttemptedQuestionsOutput,
 } from '@/src/adapters/controllers/review-controller';
-import {
-  getStemPreview,
-  toPlainText,
-} from '@/src/adapters/shared/stem-preview';
+import { getStemPreview } from '@/src/adapters/shared/stem-preview';
 import {
   buildHistoryQuestionsHref,
   type QuestionsFilters,
@@ -327,8 +324,8 @@ export function HistoryQuestionsTab({
               }
 
               const title = getStemPreview(row.stemMd, 80);
-              const plainStem = toPlainText(row.stemMd);
-              const shouldShowBodyText = plainStem && plainStem !== title;
+              const bodyPreview = getStemPreview(row.stemMd, 240);
+              const shouldShowBodyText = bodyPreview && bodyPreview !== title;
 
               const href = row.isCorrect
                 ? toQuestionRoute(row.slug, { from: 'history', mode: 'review' })
@@ -348,7 +345,7 @@ export function HistoryQuestionsTab({
 
                         {shouldShowBodyText ? (
                           <div className="text-sm text-muted-foreground">
-                            {plainStem}
+                            {bodyPreview}
                           </div>
                         ) : null}
                         <QuestionMetadata

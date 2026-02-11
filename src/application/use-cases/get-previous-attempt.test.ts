@@ -137,6 +137,54 @@ describe('GetPreviousAttemptUseCase', () => {
     });
   });
 
+  it('breaks ties by id DESC when multiple attempts share the same answeredAt', async () => {
+    const answeredAt = new Date('2026-02-01T12:00:00Z');
+    const useCase = new GetPreviousAttemptUseCase(
+      new FakeAttemptRepository([
+        createAttempt({
+          id: 'attempt-a',
+          userId: 'user-1',
+          questionId: 'q1',
+          selectedChoiceId: 'c1',
+          isCorrect: false,
+          answeredAt,
+        }),
+        createAttempt({
+          id: 'attempt-b',
+          userId: 'user-1',
+          questionId: 'q1',
+          selectedChoiceId: 'c2',
+          isCorrect: true,
+          answeredAt,
+        }),
+      ]),
+      new FakeQuestionRepository([
+        createQuestion({
+          id: 'q1',
+          status: 'published',
+          choices: [
+            createChoice({ id: 'c1', questionId: 'q1', label: 'A' }),
+            createChoice({
+              id: 'c2',
+              questionId: 'q1',
+              label: 'B',
+              isCorrect: true,
+            }),
+          ],
+        }),
+      ]),
+      new FakeLogger(),
+    );
+
+    await expect(
+      useCase.execute({ userId: 'user-1', questionId: 'q1' }),
+    ).resolves.toMatchObject({
+      attemptId: 'attempt-b',
+      selectedChoiceId: 'c2',
+      isCorrect: true,
+    });
+  });
+
   it('returns null and logs warning when question is missing (orphaned attempt)', async () => {
     const logger = new FakeLogger();
     const orphanedQuestionId = 'q-orphaned';
@@ -164,6 +212,41 @@ describe('GetPreviousAttemptUseCase', () => {
         msg: 'Previous attempt references missing question',
       },
     ]);
+  });
+
+  it('throws INTERNAL_ERROR when the question has no correct choice', async () => {
+    const useCase = new GetPreviousAttemptUseCase(
+      new FakeAttemptRepository([
+        createAttempt({
+          userId: 'user-1',
+          questionId: 'q1',
+          selectedChoiceId: 'c1',
+          isCorrect: false,
+        }),
+      ]),
+      new FakeQuestionRepository([
+        createQuestion({
+          id: 'q1',
+          status: 'published',
+          choices: [
+            createChoice({
+              id: 'c1',
+              questionId: 'q1',
+              label: 'A',
+              isCorrect: false,
+            }),
+          ],
+        }),
+      ]),
+      new FakeLogger(),
+    );
+
+    await expect(
+      useCase.execute({ userId: 'user-1', questionId: 'q1' }),
+    ).rejects.toMatchObject({
+      code: 'INTERNAL_ERROR',
+      message: 'Question q1 has no correct choice',
+    } satisfies Partial<ApplicationError>);
   });
 
   it('returns explanationMd from the question entity', async () => {

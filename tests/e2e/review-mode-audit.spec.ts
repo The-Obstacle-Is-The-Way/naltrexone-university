@@ -46,6 +46,7 @@ async function expectChoiceChecked(
 
 async function expectNoChoicesChecked(page: Page): Promise<void> {
   const radios = page.locator('input[type="radio"]');
+  await expect(radios.first()).toBeVisible({ timeout: 15_000 });
   const count = await radios.count();
   expect(count).toBeGreaterThan(0);
   for (let i = 0; i < count; i++) {
@@ -191,6 +192,16 @@ test.describe('review mode audit', () => {
 
     await startSession(page, 'tutor', 1);
     await selectChoiceByLabel(page, 'A');
+    const selectedChoice = page
+      .locator('label')
+      .filter({ has: page.locator('input[type="radio"]:checked') })
+      .first();
+    await expect(selectedChoice).toBeVisible({ timeout: 15_000 });
+    const selectedChoiceText = (
+      await selectedChoice.locator('p').first().textContent()
+    )?.trim();
+    expect(selectedChoiceText).toBeTruthy();
+
     await page.getByRole('button', { name: 'Submit' }).click();
     await expect(page.getByText(/Correct|Incorrect/).first()).toBeVisible({
       timeout: 10_000,
@@ -213,7 +224,15 @@ test.describe('review mode audit', () => {
       timeout: 15_000,
     });
     await expectFeedbackVisible(page);
-    await expectChoiceChecked(page, 'A');
+    const reviewChoice = page
+      .locator('label')
+      .filter({ has: page.locator('input[type="radio"]:checked') })
+      .first();
+    await expect(reviewChoice).toBeVisible({ timeout: 15_000 });
+    const reviewChoiceText = (
+      await reviewChoice.locator('p').first().textContent()
+    )?.trim();
+    expect(reviewChoiceText).toBe(selectedChoiceText);
   });
 
   test('Try Again resets review mode back to a blank attempt form', async ({
@@ -288,6 +307,7 @@ test.describe('review mode audit', () => {
     await expect(correctChoice.first()).toBeVisible();
 
     const radios = page.locator('input[type="radio"]');
+    await expect(radios.first()).toBeVisible({ timeout: 15_000 });
     const radioCount = await radios.count();
     expect(radioCount).toBeGreaterThan(0);
     for (let i = 0; i < radioCount; i++) {

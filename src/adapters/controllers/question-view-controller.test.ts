@@ -13,7 +13,10 @@ import {
   createSubscription,
   createUser,
 } from '@/src/domain/test-helpers';
-import { getQuestionBySlug } from './question-view-controller';
+import {
+  getPreviousAttempt,
+  getQuestionBySlug,
+} from './question-view-controller';
 
 function createThrowingQuestionRepository(
   errorMessage = 'QuestionRepository should not be called',
@@ -33,6 +36,12 @@ function createDeps(overrides?: {
   isEntitled?: boolean;
   question?: ReturnType<typeof createQuestion> | null;
   questionRepository?: QuestionRepository;
+  getPreviousAttemptUseCase?: {
+    execute: (input: {
+      userId: string;
+      questionId: string;
+    }) => Promise<unknown>;
+  };
 }) {
   const user =
     overrides?.user === undefined
@@ -66,7 +75,25 @@ function createDeps(overrides?: {
     overrides?.questionRepository ??
     new FakeQuestionRepository(overrides?.question ? [overrides.question] : []);
 
-  return { authGateway, checkEntitlementUseCase, questionRepository };
+  const getPreviousAttemptUseCase =
+    overrides?.getPreviousAttemptUseCase ??
+    ({
+      execute: async () => {
+        throw new Error('getPreviousAttemptUseCase should not be called');
+      },
+    } satisfies {
+      execute: (input: {
+        userId: string;
+        questionId: string;
+      }) => Promise<unknown>;
+    });
+
+  return {
+    authGateway,
+    checkEntitlementUseCase,
+    questionRepository,
+    getPreviousAttemptUseCase,
+  };
 }
 
 describe('question-view-controller', () => {
@@ -161,6 +188,108 @@ describe('question-view-controller', () => {
           ],
         },
       });
+    });
+  });
+
+  describe('getPreviousAttempt', () => {
+    it('returns VALIDATION_ERROR when input is invalid', async () => {
+      const deps = createDeps();
+
+      const result = await getPreviousAttempt(
+        { questionId: '' },
+        deps as never,
+      );
+
+      expect(result).toMatchObject({
+        ok: false,
+        error: { code: 'VALIDATION_ERROR' },
+      });
+    });
+
+    it('returns UNAUTHENTICATED when unauthenticated', async () => {
+      const deps = createDeps({ user: null });
+
+      const result = await getPreviousAttempt(
+        { questionId: 'q1' },
+        deps as never,
+      );
+
+      expect(result).toMatchObject({
+        ok: false,
+        error: { code: 'UNAUTHENTICATED' },
+      });
+    });
+
+    it('returns UNSUBSCRIBED when not entitled', async () => {
+      const deps = createDeps({
+        isEntitled: false,
+        questionRepository: createThrowingQuestionRepository(),
+      });
+
+      const result = await getPreviousAttempt(
+        { questionId: 'q1' },
+        deps as never,
+      );
+
+      expect(result).toMatchObject({
+        ok: false,
+        error: { code: 'UNSUBSCRIBED' },
+      });
+    });
+
+    it('returns the previous attempt when found', async () => {
+      const userId = 'user_1';
+      const questionId = 'q1';
+
+      let receivedInput: { userId: string; questionId: string } | null = null;
+      const deps = createDeps({
+        getPreviousAttemptUseCase: {
+          execute: async (input) => {
+            receivedInput = input;
+            return {
+              attemptId: 'attempt_1',
+              selectedChoiceId: 'choice_1',
+              isCorrect: true,
+              correctChoiceId: 'choice_1',
+              explanationMd: 'Explanation',
+              choiceExplanations: [],
+              answeredAt: '2026-02-01T00:00:00.000Z',
+            };
+          },
+        },
+        user: createUser({ id: userId }),
+      });
+
+      const result = await getPreviousAttempt({ questionId }, deps as never);
+
+      expect(receivedInput).toEqual({ userId, questionId });
+      expect(result).toEqual({
+        ok: true,
+        data: {
+          attemptId: 'attempt_1',
+          selectedChoiceId: 'choice_1',
+          isCorrect: true,
+          correctChoiceId: 'choice_1',
+          explanationMd: 'Explanation',
+          choiceExplanations: [],
+          answeredAt: '2026-02-01T00:00:00.000Z',
+        },
+      });
+    });
+
+    it('returns null when there is no previous attempt', async () => {
+      const deps = createDeps({
+        getPreviousAttemptUseCase: {
+          execute: async () => null,
+        },
+      });
+
+      const result = await getPreviousAttempt(
+        { questionId: 'q1' },
+        deps as never,
+      );
+
+      expect(result).toEqual({ ok: true, data: null });
     });
   });
 });
