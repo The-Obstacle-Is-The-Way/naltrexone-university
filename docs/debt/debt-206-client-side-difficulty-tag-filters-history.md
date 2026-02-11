@@ -81,7 +81,7 @@ The tag filter dropdown currently builds its `<option>` list from tags present o
 ## Related
 
 - SPEC-022 §2 (Decision table, "Filter application" row)
-- `docs/brainstorming/quick-practice-history-gap.md` line 125–126
+- `docs/_archive/brainstorming/bs-007-quick-practice-history-gap.md` line 125–126
 - CodeRabbit PR #86 review (Major items)
 - `app/(app)/app/history/components/history-questions-tab.tsx` (lines 103–116)
 - `src/adapters/repositories/drizzle-attempt-repository.ts` (`buildAttemptedQuestionsConditions`)

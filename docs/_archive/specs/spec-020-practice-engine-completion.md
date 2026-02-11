@@ -388,20 +388,20 @@ describe('GetSessionHistoryUseCase', () => {
 - [SPEC-019: Practice UX Redesign](./spec-019-practice-ux-redesign.md) — page architecture
 
 ### ADRs
-- [ADR-001: Clean Architecture](../adr/adr-001-clean-architecture.md)
-- [ADR-003: Testing Strategy](../adr/adr-003-testing-strategy.md)
+- [ADR-001: Clean Architecture](../../adr/adr-001-clean-architecture.md)
+- [ADR-003: Testing Strategy](../../adr/adr-003-testing-strategy.md)
 
 ### Debt (Superseded)
-- [DEBT-113](../_archive/debt/debt-113-dashboard-review-lack-session-context.md) — Phase 3
-- [DEBT-114](../_archive/debt/debt-114-no-session-history-page.md) — Phase 4
-- [DEBT-115](../_archive/debt/debt-115-practice-page-god-component.md) — Phase 1
-- [DEBT-116](../_archive/debt/debt-116-session-page-god-component.md) — Phase 1
-- [DEBT-122](../_archive/debt/debt-122-in-run-question-navigation-gap.md) — Phase 2
-- [DEBT-123](../_archive/debt/debt-123-session-summary-missing-question-breakdown.md) — Phase 2
+- [DEBT-113](../debt/debt-113-dashboard-review-lack-session-context.md) — Phase 3
+- [DEBT-114](../debt/debt-114-no-session-history-page.md) — Phase 4
+- [DEBT-115](../debt/debt-115-practice-page-god-component.md) — Phase 1
+- [DEBT-116](../debt/debt-116-session-page-god-component.md) — Phase 1
+- [DEBT-122](../debt/debt-122-in-run-question-navigation-gap.md) — Phase 2
+- [DEBT-123](../debt/debt-123-session-summary-missing-question-breakdown.md) — Phase 2
 
 ### Bugs (Reclassified)
-- [BUG-072](../_archive/bugs/bug-072-no-question-navigation-in-practice-sessions.md) — Phase 2
-- [BUG-073](../_archive/bugs/bug-073-tutor-mode-missing-session-summary-detail.md) — Phase 2
+- [BUG-072](../bugs/bug-072-no-question-navigation-in-practice-sessions.md) — Phase 2
+- [BUG-073](../bugs/bug-073-tutor-mode-missing-session-summary-detail.md) — Phase 2
 
 ---
 

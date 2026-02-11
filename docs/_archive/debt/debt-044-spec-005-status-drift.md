@@ -11,7 +11,7 @@
 
 This debt was based on an outdated assumption about SPEC-005 scope.
 
-`docs/specs/spec-005-core-use-cases.md` defines **only three** core use cases (`CheckEntitlement`, `GetNextQuestion`, `SubmitAnswer`) and its "Files to Create" section lists only those files. The codebase matches that scope exactly.
+`docs/_archive/specs/spec-005-core-use-cases.md` defines **only three** core use cases (`CheckEntitlement`, `GetNextQuestion`, `SubmitAnswer`) and its "Files to Create" section lists only those files. The codebase matches that scope exactly.
 
 Additional use cases (practice sessions, bookmarks/review, dashboard stats, billing/checkout) are planned under later feature specs (e.g. SPEC-013 through SPEC-015) rather than SPEC-005.
 
@@ -23,7 +23,7 @@ Additional use cases (practice sessions, bookmarks/review, dashboard stats, bill
 
 ## Location
 
-- `docs/specs/spec-005-core-use-cases.md` (line 7, Status field)
+- `docs/_archive/specs/spec-005-core-use-cases.md` (line 7, Status field)
 - `docs/specs/index.md` (line 25, SPEC-005 row)
 
 ## Resolution

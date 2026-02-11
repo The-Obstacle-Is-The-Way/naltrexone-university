@@ -264,4 +264,4 @@ The "Why other answers are wrong" section is decomposed: each bullet becomes `ch
 - `scripts/seed.ts` — Content parsing and DB insertion
 - `components/question/Feedback.tsx` — Explanation rendering
 - `docs/_archive/debt/debt-024-shuffle-seed-spec-drift.md` — Related shuffle architecture decision
-- `docs/specs/spec-013-practice-sessions.md` — Practice session spec
+- `docs/_archive/specs/spec-013-practice-sessions.md` — Practice session spec

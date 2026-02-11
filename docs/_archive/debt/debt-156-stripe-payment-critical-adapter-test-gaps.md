@@ -41,6 +41,6 @@ Current behavior is covered indirectly through higher-level tests, but key norma
 
 ## Related
 
-- `docs/specs/spec-009-payment-gateway.md`
+- `docs/_archive/specs/spec-009-payment-gateway.md`
 - `docs/adr/adr-005-payment-boundary.md`
 - `docs/adr/adr-014-stripe-eager-sync.md`

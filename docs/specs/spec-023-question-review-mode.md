@@ -8,7 +8,7 @@
 **Layer:** Feature
 **Date:** 2026-02-11
 **Depends On:** SPEC-012 (Core Question Loop), SPEC-021 (History Page Restructure), SPEC-022 (Question Log)
-**Brainstorming:** `docs/brainstorming/question-review-mode-gap.md`
+**Brainstorming:** `docs/_archive/brainstorming/bs-008-question-review-mode-gap.md`
 
 ---
 
@@ -878,5 +878,5 @@ Phase 4: E2E + Verification
 - **SPEC-012** (Core Question Loop) — The question detail page, submit answer flow, and Feedback component. This spec extends its page with review mode.
 - **SPEC-021** (History Page Restructure) — History Sessions/Questions tabs and entry points.
 - **SPEC-022** (Question Log) — "Review"/"Reattempt" button differentiation in History Questions tab. This spec makes them produce different URLs.
-- **Brainstorming:** `question-review-mode-gap.md` — Problem discovery, code path trace, Chrome agent UX audit, Playwright validation. All findings in this spec are grounded in that validated analysis.
+- **Brainstorming:** `bs-008-question-review-mode-gap.md` (archived) — Problem discovery, code path trace, Chrome agent UX audit, Playwright validation. All findings in this spec are grounded in that validated analysis.
 - **E2E:** `tests/e2e/review-mode-audit.spec.ts` — Playwright tests validating the current gap (will be updated to validate the fix).

@@ -17,7 +17,7 @@ This drift was resolved by choosing a single, pure-domain seed algorithm and upd
 ## Locations
 
 - SSOT requirement: `docs/specs/master_spec.md` (StartPracticeSession shuffle seed: sha256)
-- Domain spec: `docs/specs/spec-003-domain-services.md` (documents `createSeed` and currently shows `Math.abs(hash)`)
+- Domain spec: `docs/_archive/specs/spec-003-domain-services.md` (documents `createSeed` and currently shows `Math.abs(hash)`)
 - Implementation: `src/domain/services/shuffle.ts` (`createSeed` uses non-crypto hash and returns `hash >>> 0`)
 
 ## Why This Matters

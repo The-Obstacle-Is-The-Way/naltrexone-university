@@ -13,36 +13,41 @@ Implementation specifications provide detailed technical guidance for building e
 2. **Contract** — Define interfaces and behaviors
 3. **TDD Guide** — Tests to write before implementation
 
-## Spec Index
+## Active Specs
 
 | ID | Title | Status | Layer |
 |----|-------|--------|-------|
 | [Master Spec](./master_spec.md) | Complete Technical Specification (SSOT) | Living | All |
-| [SPEC-001](./spec-001-domain-entities.md) | Domain Entities | Implemented | Domain |
-| [SPEC-002](./spec-002-value-objects.md) | Value Objects | Implemented | Domain |
-| [SPEC-003](./spec-003-domain-services.md) | Domain Services | Implemented | Domain |
-| [SPEC-004](./spec-004-application-ports.md) | Application Ports (Interfaces) | Implemented | Application |
-| [SPEC-005](./spec-005-core-use-cases.md) | Core Use Cases (Interactors) | Implemented | Application |
-| [SPEC-006](./spec-006-drizzle-schema.md) | Drizzle Schema | Implemented | Adapters |
-| [SPEC-007](./spec-007-repository-implementations.md) | Repository Implementations (Drizzle) | Implemented | Adapters |
-| [SPEC-008](./spec-008-auth-gateway.md) | Auth Gateway (Clerk) | Implemented | Adapters |
-| [SPEC-009](./spec-009-payment-gateway.md) | Payment Gateway (Stripe) | Implemented | Adapters |
-| [SPEC-010](./spec-010-server-actions.md) | Server Actions (Controllers) | Implemented | Adapters |
-| [SPEC-011](./spec-011-paywall.md) | Paywall (Stripe Subscriptions) | Implemented | Feature |
-| [SPEC-012](./spec-012-core-question-loop.md) | Core Question Loop | Implemented | Feature |
-| [SPEC-013](./spec-013-practice-sessions.md) | Practice Sessions | Implemented | Feature |
-| [SPEC-014](./spec-014-review-bookmarks.md) | Review + Bookmarks | Implemented | Feature |
-| [SPEC-015](./spec-015-dashboard.md) | Dashboard | Implemented | Feature |
-| [SPEC-016](./spec-016-observability.md) | Observability (Logging, Error Tracking) | Implemented | Infrastructure |
-| [SPEC-017](./spec-017-rate-limiting.md) | Rate Limiting | Implemented | Infrastructure |
-| [SPEC-018](./spec-018-ui-integration.md) | UI Integration (v0 Templates) | Implemented | Feature |
-| [SPEC-019](./spec-019-practice-ux-redesign.md) | Practice & Navigation UX Redesign | Implemented | Feature |
-| [SPEC-020](./spec-020-practice-engine-completion.md) | Practice Engine Completion | Implemented | Feature |
-| [SPEC-021](./spec-021-history-page-restructure.md) | History Page Restructure | Implemented | Feature |
-| [SPEC-022](./spec-022-question-log.md) | Question Log (Quick Practice History Gap) | Implemented | Feature |
+| [SPEC-016](./spec-016-observability.md) | Observability (Logging, Error Tracking) | Partially Implemented | Infrastructure |
+| [SPEC-017](./spec-017-rate-limiting.md) | Rate Limiting | Partial (MVP done) | Infrastructure |
+| [SPEC-021](./spec-021-history-page-restructure.md) | History Page Restructure | Ready | Feature |
+| [SPEC-022](./spec-022-question-log.md) | Question Log (Quick Practice History Gap) | Ready | Feature |
 | [SPEC-023](./spec-023-question-review-mode.md) | Question Review Mode | Ready | Feature |
 
 **Next Spec ID:** SPEC-024
+
+## Archived Specs
+
+| ID | Title | Layer |
+|----|-------|-------|
+| [SPEC-001](../_archive/specs/spec-001-domain-entities.md) | Domain Entities | Domain |
+| [SPEC-002](../_archive/specs/spec-002-value-objects.md) | Value Objects | Domain |
+| [SPEC-003](../_archive/specs/spec-003-domain-services.md) | Domain Services | Domain |
+| [SPEC-004](../_archive/specs/spec-004-application-ports.md) | Application Ports (Interfaces) | Application |
+| [SPEC-005](../_archive/specs/spec-005-core-use-cases.md) | Core Use Cases (Interactors) | Application |
+| [SPEC-006](../_archive/specs/spec-006-drizzle-schema.md) | Drizzle Schema | Adapters |
+| [SPEC-007](../_archive/specs/spec-007-repository-implementations.md) | Repository Implementations (Drizzle) | Adapters |
+| [SPEC-008](../_archive/specs/spec-008-auth-gateway.md) | Auth Gateway (Clerk) | Adapters |
+| [SPEC-009](../_archive/specs/spec-009-payment-gateway.md) | Payment Gateway (Stripe) | Adapters |
+| [SPEC-010](../_archive/specs/spec-010-server-actions.md) | Server Actions (Controllers) | Adapters |
+| [SPEC-011](../_archive/specs/spec-011-paywall.md) | Paywall (Stripe Subscriptions) | Feature |
+| [SPEC-012](../_archive/specs/spec-012-core-question-loop.md) | Core Question Loop | Feature |
+| [SPEC-013](../_archive/specs/spec-013-practice-sessions.md) | Practice Sessions | Feature |
+| [SPEC-014](../_archive/specs/spec-014-review-bookmarks.md) | Review + Bookmarks | Feature |
+| [SPEC-015](../_archive/specs/spec-015-dashboard.md) | Dashboard | Feature |
+| [SPEC-018](../_archive/specs/spec-018-ui-integration.md) | UI Integration (v0 Templates) | Feature |
+| [SPEC-019](../_archive/specs/spec-019-practice-ux-redesign.md) | Practice & Navigation UX Redesign | Feature |
+| [SPEC-020](../_archive/specs/spec-020-practice-engine-completion.md) | Practice Engine Completion | Feature |
 
 ## Spec Statuses
 
@@ -133,4 +138,4 @@ Any additional guidance for implementers.
 - [Bug Reports](../bugs/index.md)
 - [Technical Debt](../debt/index.md)
 - [Frontend Standards](../frontend/standards.md)
-- [Brainstorming](../brainstorming/) — UX audits and design explorations
+- [Brainstorming](../brainstorming/index.md) — UX audits, gap analyses, and design explorations

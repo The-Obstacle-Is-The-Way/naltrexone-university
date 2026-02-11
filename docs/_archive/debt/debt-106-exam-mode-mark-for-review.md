@@ -68,9 +68,9 @@ Implemented new server actions and client workflow:
 
 Updated specs to match implemented behavior:
 
-- `docs/specs/spec-013-practice-sessions.md`
+- `docs/_archive/specs/spec-013-practice-sessions.md`
 - `docs/specs/master_spec.md`
-- `docs/specs/spec-019-practice-ux-redesign.md`
+- `docs/_archive/specs/spec-019-practice-ux-redesign.md`
 
 ---
 

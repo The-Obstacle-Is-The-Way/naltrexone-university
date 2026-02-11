@@ -44,4 +44,4 @@ An earlier mitigation (BUG-041) allowed `customer.subscription.created` events w
 ## Related
 
 - `docs/_archive/bugs/bug-041-webhook-subscription-created-missing-metadata.md`
-- `docs/specs/spec-009-payment-gateway.md` — “do not silently ignore” required fields
+- `docs/_archive/specs/spec-009-payment-gateway.md` — "do not silently ignore" required fields

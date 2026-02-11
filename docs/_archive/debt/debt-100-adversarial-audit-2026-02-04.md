@@ -258,8 +258,8 @@ If we later want stricter uniformity, track it as a design-system follow-up rath
 - `src/application/ports/gateways.ts`
 - `src/application/ports/repositories.ts`
 - `src/domain/value-objects/subscription-status.ts`
-- `docs/specs/spec-004-application-ports.md`
-- `docs/specs/spec-009-payment-gateway.md`
+- `docs/_archive/specs/spec-004-application-ports.md`
+- `docs/_archive/specs/spec-009-payment-gateway.md`
 
 ---
 

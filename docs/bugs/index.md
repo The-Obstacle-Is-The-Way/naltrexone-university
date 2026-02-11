@@ -84,8 +84,8 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 ## Foundation Audits
 
-- **2026-02-02:** [Foundation Audit Report #1](../audits/foundation-audit-report.md) — Vertical/horizontal trace of all critical paths
-- **2026-02-07:** [Foundation Audit Report #2](../audits/foundation-audit-report-2.md) — Six-axis deep audit (billing, practice, auth, UI, DB, code quality)
+- **2026-02-02:** [Foundation Audit Report #1](../_archive/audits/audit-001-foundation-report.md) — Vertical/horizontal trace of all critical paths
+- **2026-02-07:** [Foundation Audit Report #2](../_archive/audits/audit-002-foundation-report-2.md) — Six-axis deep audit (billing, practice, auth, UI, DB, code quality)
 
 ## Archived Bugs
 

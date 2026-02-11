@@ -119,11 +119,11 @@ Back link goes to `/app/history` — not back to the specific session with its b
 
 | Source | Finding | Connection |
 |--------|---------|------------|
-| `review-consistency-audit.md` I4 | Question page is a single-question dead end — no "Next Question" | Direct — this is the same problem for History/Bookmarks flows |
-| `review-consistency-audit.md` I5 | Session context is lost on question detail page | Direct — the question page doesn't carry sessionId |
-| `practice-engine-state-audit.md` Finding 14 | Exam review data stale after answering from review | Related — reviewing a question and then returning to exam review shows old data |
-| `practice-engine-state-audit.md` Finding 15 | "No more questions found" dead-end state | Related — end-of-session UX gaps |
-| `practice-ux-audit.md` Open Question 4 | Session review mode — "Should clicking a session breakdown open a session replay page?" | This is exactly the feature we need |
+| `bs-006-review-consistency-audit.md` I4 (archived) | Question page is a single-question dead end — no "Next Question" | Direct — this is the same problem for History/Bookmarks flows |
+| `bs-006-review-consistency-audit.md` I5 (archived) | Session context is lost on question detail page | Direct — the question page doesn't carry sessionId |
+| `bs-002-practice-engine-state-audit.md` Finding 14 (archived) | Exam review data stale after answering from review | Related — reviewing a question and then returning to exam review shows old data |
+| `bs-002-practice-engine-state-audit.md` Finding 15 (archived) | "No more questions found" dead-end state | Related — end-of-session UX gaps |
+| `bs-001-practice-ux-audit.md` Open Question 4 (archived) | Session review mode — "Should clicking a session breakdown open a session replay page?" | This is exactly the feature we need |
 
 ---
 

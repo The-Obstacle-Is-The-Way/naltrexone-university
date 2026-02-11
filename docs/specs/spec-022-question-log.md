@@ -8,7 +8,7 @@
 **Layer:** Feature
 **Date:** 2026-02-10
 **Depends On:** SPEC-021 (History Page Restructure), SPEC-013 (Practice Sessions), SPEC-015 (Dashboard)
-**Brainstorming:** `docs/brainstorming/quick-practice-history-gap.md`
+**Brainstorming:** `docs/_archive/brainstorming/bs-007-quick-practice-history-gap.md`
 
 ---
 
@@ -1149,4 +1149,4 @@ Phase 5: Verification
 - **SPEC-021** (History Page Restructure) — This spec builds directly on SPEC-021's History page infrastructure. All SPEC-021 work must be merged before this begins.
 - **SPEC-014** (Review + Bookmarks) — The original Review page spec. SPEC-021 superseded the Review page. This spec evolves the remaining "Missed Questions" concept.
 - **SPEC-015** (Dashboard) — Dashboard "Recent missed" section evolves into "Recent activity."
-- **Brainstorming:** `quick-practice-history-gap.md` — The gap analysis and options evaluation that led to this spec.
+- **Brainstorming:** `bs-007-quick-practice-history-gap.md` (archived) — The gap analysis and options evaluation that led to this spec.

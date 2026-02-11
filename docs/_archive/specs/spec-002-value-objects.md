@@ -518,4 +518,4 @@ pnpm test --run src/domain/value-objects/
 
 | Date | Change |
 |------|--------|
-| 2026-02-08 | Synced spec to implementation: added `pastDue` to `EntitledStatuses` (was `['active', 'inTrial']`, now `['active', 'inTrial', 'pastDue']`). Updated test expectations. Rationale: Stripe continues subscriptions during dunning; `currentPeriodEnd` check provides the actual access cutoff. See [Practice Engine](../practice-engine/index.md) Section 10.1. |
+| 2026-02-08 | Synced spec to implementation: added `pastDue` to `EntitledStatuses` (was `['active', 'inTrial']`, now `['active', 'inTrial', 'pastDue']`). Updated test expectations. Rationale: Stripe continues subscriptions during dunning; `currentPeriodEnd` check provides the actual access cutoff. See [Practice Engine](../../practice-engine/index.md) Section 10.1. |

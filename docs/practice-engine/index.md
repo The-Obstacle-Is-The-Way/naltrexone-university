@@ -546,12 +546,12 @@ controllers/
 | Document | Purpose |
 |----------|---------|
 | [Master Spec](specs/master_spec.md) | Complete technical specification (SSOT) |
-| [SPEC-012](specs/spec-012-core-question-loop.md) | Core question loop requirements |
-| [SPEC-013](specs/spec-013-practice-sessions.md) | Practice session requirements |
-| [SPEC-014](specs/spec-014-review-bookmarks.md) | Review + bookmarks requirements |
-| [SPEC-015](specs/spec-015-dashboard.md) | Dashboard requirements |
-| [SPEC-019](specs/spec-019-practice-ux-redesign.md) | UX redesign (all phases implemented) |
-| [SPEC-020](specs/spec-020-practice-engine-completion.md) | Practice engine completion (all done) |
+| [SPEC-012](../_archive/specs/spec-012-core-question-loop.md) | Core question loop requirements |
+| [SPEC-013](../_archive/specs/spec-013-practice-sessions.md) | Practice session requirements |
+| [SPEC-014](../_archive/specs/spec-014-review-bookmarks.md) | Review + bookmarks requirements |
+| [SPEC-015](../_archive/specs/spec-015-dashboard.md) | Dashboard requirements |
+| [SPEC-019](../_archive/specs/spec-019-practice-ux-redesign.md) | UX redesign (all phases implemented) |
+| [SPEC-020](../_archive/specs/spec-020-practice-engine-completion.md) | Practice engine completion (all done) |
 | [ADR-001](adr/adr-001-clean-architecture-layers.md) | Clean Architecture decision |
 | [ADR-003](adr/adr-003-testing-strategy.md) | Testing strategy (TDD, fakes over mocks) |
 | [ADR-006](adr/adr-006-error-handling-strategy.md) | Error handling (ApplicationError) |

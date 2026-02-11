@@ -30,7 +30,7 @@ Provide a fast, motivating dashboard for subscribed users:
 - `docs/specs/master_spec.md`:
   - SLICE-5 (acceptance criteria + implementation checklist)
 - Domain computations:
-  - `docs/specs/spec-003-domain-services.md` (`computeAccuracy`, `computeStreak`, windowing helpers)
+  - `docs/_archive/specs/spec-003-domain-services.md` (`computeAccuracy`, `computeStreak`, windowing helpers)
 
 ---
 

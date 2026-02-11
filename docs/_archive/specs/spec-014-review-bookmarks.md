@@ -105,7 +105,7 @@ Once implemented:
 
 ## Cross-Page Navigation (SPEC-019 Phase 3)
 
-The core SLICE-4 functionality is complete. The following cross-page UX improvements are specified in [SPEC-019](./spec-019-practice-ux-redesign.md) Phase 3:
+The core SLICE-4 functionality is complete. The following cross-page UX improvements are specified in [SPEC-019](../../specs/spec-019-practice-ux-redesign.md) Phase 3:
 
 - **Origin-aware question-detail navigation:** **Done** (SPEC-019 Phase 3) — question detail back links + subtitle adapt based on `?from=dashboard|review|bookmarks|practice`.
 - **Review empty state:** **Done** (SPEC-019 Phase 3) — clarified missed-only scope with CTA to Practice.
@@ -116,7 +116,7 @@ The core SLICE-4 functionality is complete. The following cross-page UX improvem
 
 ## Superseded By (Partial)
 
-The Review page (`/app/review`) will be restructured into a History page (`/app/history`) in [SPEC-021: History Page Restructure](./spec-021-history-page-restructure.md). The current Review page's missed questions functionality moves to the "Missed Questions" tab within History. The Bookmarks page is unaffected.
+The Review page (`/app/review`) will be restructured into a History page (`/app/history`) in [SPEC-021: History Page Restructure](../../specs/spec-021-history-page-restructure.md). The current Review page's missed questions functionality moves to the "Missed Questions" tab within History. The Bookmarks page is unaffected.
 
 ---
 

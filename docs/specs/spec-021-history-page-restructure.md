@@ -8,7 +8,7 @@
 **Layer:** Feature
 **Date:** 2026-02-10
 **Depends On:** SPEC-013 (Practice Sessions), SPEC-014 (Review + Bookmarks), SPEC-019 (Practice UX Redesign), SPEC-020 (Practice Engine Completion)
-**Brainstorming:** `docs/brainstorming/review-page-flow-audit.md`, `docs/brainstorming/review-consistency-audit.md`, `docs/brainstorming/practice-ux-audit.md`, `docs/brainstorming/practice-recent-sessions-v2.md`
+**Brainstorming:** `docs/_archive/brainstorming/bs-004-review-page-flow-audit.md`, `docs/_archive/brainstorming/bs-006-review-consistency-audit.md`, `docs/_archive/brainstorming/bs-001-practice-ux-audit.md`, `docs/_archive/brainstorming/bs-005-practice-recent-sessions-v2.md`
 
 ---
 
@@ -752,11 +752,11 @@ Phase 4: E2E
 ## 10. Non-Goals (Explicitly Out of Scope)
 
 - **Session replay page** (`/app/history/[sessionId]`) — deferred to future spec. Session detail stays inline in the Sessions tab.
-- **"Next question" on question detail page** — deferred (see `review-consistency-audit.md` I4).
+- **"Next question" on question detail page** — deferred (see `bs-006-review-consistency-audit.md` I4).
 - **Server-side filtering for missed questions** — deferred (GH #80). Client-side filtering works for now.
 - **Analytics/performance charts** — deferred until we have enough data to justify a separate Analytics page.
-- **Standardizing stem preview lengths** — deferred cosmetic fix (see `review-consistency-audit.md` I1).
-- **Shared `QuestionListCard` component** — deferred (see `review-consistency-audit.md` I6). The Missed tab and Bookmarks page are similar but not identical enough to justify extraction in this pass.
+- **Standardizing stem preview lengths** — deferred cosmetic fix (see `bs-006-review-consistency-audit.md` I1).
+- **Shared `QuestionListCard` component** — deferred (see `bs-006-review-consistency-audit.md` I6). The Missed tab and Bookmarks page are similar but not identical enough to justify extraction in this pass.
 
 ---
 
@@ -765,5 +765,5 @@ Phase 4: E2E
 - **SPEC-014** (Review + Bookmarks) — The original Review page spec. This spec supersedes the Review page portion. Bookmarks page is unchanged.
 - **SPEC-019** (Practice UX Redesign) — Phase 3 cross-page IA improvements are partially addressed here. Phase 4 practice page polish is complete.
 - **SPEC-022** (Question Log) — Evolves the "Missed Questions" tab into a complete "Questions" tab with result/source filters. Depends on this spec.
-- **Brainstorming:** `review-page-flow-audit.md` (vision), `review-consistency-audit.md` (inventory), `practice-ux-audit.md` + `practice-recent-sessions-v2.md` (Practice recent-sessions panel is superseded by this spec), `practice-engine-state-audit.md` + `session-view-layout-audit.md` (orthogonal to this spec), `quick-practice-history-gap.md` (led to SPEC-022)
+- **Brainstorming (all archived):** `bs-004-review-page-flow-audit.md` (vision), `bs-006-review-consistency-audit.md` (inventory), `bs-001-practice-ux-audit.md` + `bs-005-practice-recent-sessions-v2.md` (Practice recent-sessions panel is superseded by this spec), `bs-002-practice-engine-state-audit.md` + `bs-003-session-view-layout-audit.md` (orthogonal to this spec), `bs-007-quick-practice-history-gap.md` (led to SPEC-022)
 - **BUG-129, BUG-130, BUG-131** — E2E selector fixes (committed, not related to this spec)

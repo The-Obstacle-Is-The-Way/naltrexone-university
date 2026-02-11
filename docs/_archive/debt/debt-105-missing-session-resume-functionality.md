@@ -70,4 +70,4 @@ Quality gates run for this change set:
 - `src/adapters/controllers/practice-controller.ts`
 - `app/(app)/app/practice/page.tsx`
 - `tests/e2e/session-continuation.spec.ts`
-- `docs/specs/spec-013-practice-sessions.md`
+- `docs/_archive/specs/spec-013-practice-sessions.md`

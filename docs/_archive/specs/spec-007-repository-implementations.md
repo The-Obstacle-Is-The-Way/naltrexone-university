@@ -120,7 +120,7 @@ These integration tests are required before any slice that depends on these repo
 
 ## Definition of Done
 
-- All repository ports in `docs/specs/spec-004-application-ports.md` have concrete Drizzle implementations.
+- All repository ports in `docs/_archive/specs/spec-004-application-ports.md` have concrete Drizzle implementations.
 - Integration tests pass on:
   - local Postgres (developer environment)
   - GitHub Actions Postgres service (CI)

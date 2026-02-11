@@ -3,7 +3,7 @@
 **Date:** 2026-02-11
 **Triggered by:** Post-SPEC-023 external review audit of review mode behavior
 **Scope:** Multi-attempt questions show the wrong attempt data in review mode because no attempt identifier is passed through the URL
-**Related:** `session-review-navigation-gap.md` (shares root cause: insufficient URL context), SPEC-023
+**Related:** `bs-009-session-review-navigation-gap.md` (shares root cause: insufficient URL context), SPEC-023
 
 ---
 
@@ -183,8 +183,8 @@ Session breakdown links unconditionally include `mode=review`, even for unanswer
 
 | Doc | Relationship |
 |-----|-------------|
-| `session-review-navigation-gap.md` | **Shared root cause** — both stem from insufficient URL context. That doc covers missing `sessionId` for sequential navigation. This doc covers missing `attemptId` for data correctness. Fixes could be combined (both add params to `toQuestionRoute`). |
-| `question-review-mode-gap.md` | **Predecessor** — this doc originally identified the need for review mode (SPEC-023). The attemptId gap is a refinement that SPEC-023 v1 intentionally deferred. |
+| `bs-009-session-review-navigation-gap.md` | **Shared root cause** — both stem from insufficient URL context. That doc covers missing `sessionId` for sequential navigation. This doc covers missing `attemptId` for data correctness. Fixes could be combined (both add params to `toQuestionRoute`). |
+| `bs-008-question-review-mode-gap.md` (archived) | **Predecessor** — this doc originally identified the need for review mode (SPEC-023). The attemptId gap is a refinement that SPEC-023 v1 intentionally deferred. |
 
 ---
 

@@ -44,7 +44,7 @@ Before this fix:
 
 ## Fix (Required)
 
-Implement `app/api/stripe/webhook/route.ts` per `docs/specs/master_spec.md` §4.4.2 and `docs/specs/spec-011-paywall.md`.
+Implement `app/api/stripe/webhook/route.ts` per `docs/specs/master_spec.md` §4.4.2 and `docs/_archive/specs/spec-011-paywall.md`.
 
 Important: SSOT requires robust idempotency + concurrency control; current `StripeEventRepository` port likely needs extension to support “claim + lock” semantics (track separately in DEBT-019).
 

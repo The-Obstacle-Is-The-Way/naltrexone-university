@@ -33,6 +33,6 @@ This violated the paywall SSOT requirement that **internal user identity mapping
 
 ## Related
 
-- SSOT: `docs/specs/spec-011-paywall.md` (“User identity mapping”)
+- SSOT: `docs/_archive/specs/spec-011-paywall.md` ("User identity mapping")
 - `app/(marketing)/checkout/success/page.tsx` — `syncCheckoutSuccess()`
 

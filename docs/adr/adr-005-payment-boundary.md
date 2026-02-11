@@ -63,7 +63,7 @@ Payment processing lives in the **Frameworks & Drivers** layer. Our domain deals
 The domain uses `SubscriptionPlan` (`monthly` / `annual`). Stripe price IDs are configuration and are mapped at the adapter boundary.
 
 - Stripe price IDs are stored in env (currently `NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY` / `NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL`).
-- The mapping between plan ↔ price ID lives in adapters config (`src/adapters/config/stripe-prices.ts`) and is referenced by adapters (see `docs/specs/spec-009-payment-gateway.md`).
+- The mapping between plan ↔ price ID lives in adapters config (`src/adapters/config/stripe-prices.ts`) and is referenced by adapters (see `docs/_archive/specs/spec-009-payment-gateway.md`).
 - Price IDs may be persisted in `stripe_subscriptions.price_id` for audit/debug, but they MUST NOT appear in domain entities.
 
 ### Stripe Customer Mapping (1:1)
@@ -79,8 +79,8 @@ This keeps Stripe identifiers out of the domain model while still supporting ide
 
 To avoid drift, the canonical interfaces and implementation guidance live in:
 
-- `docs/specs/spec-004-application-ports.md` (`PaymentGateway`, repositories)
-- `docs/specs/spec-009-payment-gateway.md` (Stripe adapter rules)
+- `docs/_archive/specs/spec-004-application-ports.md` (`PaymentGateway`, repositories)
+- `docs/_archive/specs/spec-009-payment-gateway.md` (Stripe adapter rules)
 - `docs/specs/master_spec.md` Section 4.4.2 (webhook idempotency via `stripe_events`)
 
 This ADR records the boundary decision; specs above define the exact contracts and behaviors.

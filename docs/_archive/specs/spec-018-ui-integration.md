@@ -41,7 +41,7 @@ This spec is intentionally UI-focused and should not require changes to:
 - UI is an **outer layer**. It may change freely as long as inner layers do not depend on it.
 - The UI **must not** import infrastructure details (DB client, Stripe SDK, Clerk SDK) directly.
 - UI reads/writes happen through:
-  - server actions/controllers (`'use server'`) per `docs/specs/spec-010-server-actions.md`, and/or
+  - server actions/controllers (`'use server'`) per `docs/_archive/specs/spec-010-server-actions.md`, and/or
   - server components that call the container to obtain a use case/gateway (composition-root pattern).
 
 ### Next.js App Router
@@ -238,6 +238,6 @@ For each new component file `X.tsx`:
 ## Related
 
 - `docs/specs/master_spec.md`
-- `docs/specs/spec-010-server-actions.md`
-- `docs/specs/spec-015-dashboard.md`
+- `docs/_archive/specs/spec-010-server-actions.md`
+- `docs/_archive/specs/spec-015-dashboard.md`
 - `docs/dev/react-vitest-testing.md`
