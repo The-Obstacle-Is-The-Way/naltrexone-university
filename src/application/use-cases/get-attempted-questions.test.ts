@@ -374,8 +374,8 @@ describe('GetAttemptedQuestionsUseCase', () => {
     });
   });
 
-  it('supports source filter (tutor/exam/adhoc)', async () => {
-    const useCase = new GetAttemptedQuestionsUseCase(
+  const createUseCaseWithSourceAttempts = () =>
+    new GetAttemptedQuestionsUseCase(
       new FakeAttemptRepository([
         {
           ...createAttempt({
@@ -425,6 +425,9 @@ describe('GetAttemptedQuestionsUseCase', () => {
       new FakeLogger(),
     );
 
+  it('supports source filter (adhoc)', async () => {
+    const useCase = createUseCaseWithSourceAttempts();
+
     await expect(
       useCase.execute({
         userId: 'user-1',
@@ -436,6 +439,10 @@ describe('GetAttemptedQuestionsUseCase', () => {
       rows: [{ questionId: 'q_adhoc', sessionId: null, sessionMode: null }],
       totalCount: 1,
     });
+  });
+
+  it('supports source filter (tutor)', async () => {
+    const useCase = createUseCaseWithSourceAttempts();
 
     await expect(
       useCase.execute({
@@ -454,6 +461,10 @@ describe('GetAttemptedQuestionsUseCase', () => {
       ],
       totalCount: 1,
     });
+  });
+
+  it('supports source filter (exam)', async () => {
+    const useCase = createUseCaseWithSourceAttempts();
 
     await expect(
       useCase.execute({

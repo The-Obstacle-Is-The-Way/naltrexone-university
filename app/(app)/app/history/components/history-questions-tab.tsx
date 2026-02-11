@@ -269,7 +269,16 @@ export function HistoryQuestionsTab({
           No questions match these filters.
           <div className="mt-4">
             <Button asChild variant="outline" className="rounded-full">
-              <Link href={buildHistoryQuestionsHref({ limit, offset: 0 })}>
+              <Link
+                href={buildHistoryQuestionsHref({
+                  limit,
+                  offset: 0,
+                  filters: {
+                    result: selectedResult,
+                    source: selectedSource,
+                  },
+                })}
+              >
                 Clear filters
               </Link>
             </Button>

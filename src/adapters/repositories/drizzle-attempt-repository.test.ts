@@ -13,6 +13,11 @@ function createDbMock() {
   const queryFindMany = vi.fn();
 
   const countWhere = vi.fn(async (): Promise<Array<{ count: number }>> => []);
+  const countLeftJoin = vi.fn(() => ({ where: countWhere }));
+  const countFrom = vi.fn(() => ({
+    leftJoin: countLeftJoin,
+    where: countWhere,
+  }));
   const groupByExecute = vi.fn(
     async (): Promise<
       Array<{ questionId: string; answeredAt: Date | null }>
@@ -113,9 +118,7 @@ function createDbMock() {
   const select = vi.fn((fields: Record<string, unknown>) => {
     if ('count' in fields) {
       return {
-        from: () => ({
-          where: countWhere,
-        }),
+        from: countFrom,
       };
     }
 
@@ -137,6 +140,8 @@ function createDbMock() {
       select,
       from,
       countWhere,
+      countLeftJoin,
+      countFrom,
       whereGroupBy,
       latestRowsAs,
       groupBy,
@@ -689,6 +694,44 @@ describe('DrizzleAttemptRepository', () => {
           source: 'exam',
         }),
       ).resolves.toMatchObject([{ questionId: 'q_exam', sessionMode: 'exam' }]);
+    });
+  });
+
+  describe('countAttemptedQuestionsByUserId', () => {
+    it('returns count values from the database', async () => {
+      const db = createDbMock();
+      db._mocks.countWhere.mockResolvedValueOnce([{ count: 3 }]);
+
+      const repo = new DrizzleAttemptRepository(db as unknown as RepoDb);
+
+      await expect(
+        repo.countAttemptedQuestionsByUserId('user_1'),
+      ).resolves.toBe(3);
+      expect(db._mocks.countLeftJoin).not.toHaveBeenCalled();
+    });
+
+    it('left-joins practiceSessions for source=tutor', async () => {
+      const db = createDbMock();
+      db._mocks.countWhere.mockResolvedValueOnce([{ count: 1 }]);
+
+      const repo = new DrizzleAttemptRepository(db as unknown as RepoDb);
+
+      await expect(
+        repo.countAttemptedQuestionsByUserId('user_1', { source: 'tutor' }),
+      ).resolves.toBe(1);
+      expect(db._mocks.countLeftJoin).toHaveBeenCalledTimes(1);
+    });
+
+    it('left-joins practiceSessions for source=exam', async () => {
+      const db = createDbMock();
+      db._mocks.countWhere.mockResolvedValueOnce([{ count: 2 }]);
+
+      const repo = new DrizzleAttemptRepository(db as unknown as RepoDb);
+
+      await expect(
+        repo.countAttemptedQuestionsByUserId('user_1', { source: 'exam' }),
+      ).resolves.toBe(2);
+      expect(db._mocks.countLeftJoin).toHaveBeenCalledTimes(1);
     });
   });
 });
