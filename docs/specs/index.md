@@ -1,7 +1,7 @@
 # Implementation Specifications
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-02-09
+**Last Updated:** 2026-02-11
 
 ---
 
@@ -33,13 +33,13 @@ Implementation specifications provide detailed technical guidance for building e
 | [SPEC-013](./spec-013-practice-sessions.md) | Practice Sessions | Implemented | Feature |
 | [SPEC-014](./spec-014-review-bookmarks.md) | Review + Bookmarks | Implemented | Feature |
 | [SPEC-015](./spec-015-dashboard.md) | Dashboard | Implemented | Feature |
-| [SPEC-016](./spec-016-observability.md) | Observability (Logging, Error Tracking) | Partial | Infrastructure |
-| [SPEC-017](./spec-017-rate-limiting.md) | Rate Limiting | Partial | Infrastructure |
+| [SPEC-016](./spec-016-observability.md) | Observability (Logging, Error Tracking) | Implemented | Infrastructure |
+| [SPEC-017](./spec-017-rate-limiting.md) | Rate Limiting | Implemented | Infrastructure |
 | [SPEC-018](./spec-018-ui-integration.md) | UI Integration (v0 Templates) | Implemented | Feature |
-| [SPEC-019](./spec-019-practice-ux-redesign.md) | Practice & Navigation UX Redesign | Partial (Phase 4) | Feature |
+| [SPEC-019](./spec-019-practice-ux-redesign.md) | Practice & Navigation UX Redesign | Implemented | Feature |
 | [SPEC-020](./spec-020-practice-engine-completion.md) | Practice Engine Completion | Implemented | Feature |
-| [SPEC-021](./spec-021-history-page-restructure.md) | History Page Restructure | Ready | Feature |
-| [SPEC-022](./spec-022-question-log.md) | Question Log (Quick Practice History Gap) | Ready | Feature |
+| [SPEC-021](./spec-021-history-page-restructure.md) | History Page Restructure | Implemented | Feature |
+| [SPEC-022](./spec-022-question-log.md) | Question Log (Quick Practice History Gap) | Implemented | Feature |
 | [SPEC-023](./spec-023-question-review-mode.md) | Question Review Mode | Ready | Feature |
 
 **Next Spec ID:** SPEC-024

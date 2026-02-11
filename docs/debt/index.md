@@ -21,8 +21,10 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 | [DEBT-207](./debt-207-missing-session-question-count-warning.md) | No Warning When Practice Session Has Fewer Questions Than Requested | P3 | Open | #82 |
 | [DEBT-208](./debt-208-e2e-cross-page-navigation-tests.md) | Missing E2E Tests for Cross-Page Navigation Flows | P3 | Open | #81 |
 | [DEBT-209](./debt-209-tag-question-counts-in-practice-starter.md) | Practice Session Starter Missing Question Counts Per Tag | P3 | Open | #53 |
+| [DEBT-210](./debt-210-dead-routes-app-review-constant.md) | Dead `ROUTES.APP_REVIEW` Constant in Route Definitions | P4 | Open | — |
+| [DEBT-212](./debt-212-duplicate-sleep-utility-adapter-shared.md) | Duplicate `sleep()` Utility in Adapter Shared Modules | P4 | Open | — |
 
-**Next Debt ID:** DEBT-210
+**Next Debt ID:** DEBT-213
 
 ---
 
@@ -98,6 +100,12 @@ All frontend-specific UI/UX debt. Items use `FE-XXX` IDs and are cross-reference
 **Next frontend debt ID:** FE-054
 
 ## Archived Debt
+
+### Resolved in Codebase Health Audit (2026-02-11)
+
+| ID | Title | Priority | Resolved |
+|----|-------|----------|----------|
+| [DEBT-211](./debt-211-spec-index-status-drift.md) | Spec Index Status Drift — 4 Specs Have Incorrect Status | P3 | 2026-02-11 |
 
 ### Resolved in Stripe Gateway Test Refactor
 
