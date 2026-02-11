@@ -1,5 +1,5 @@
 import { PageLoading } from '@/components/loading/page-loading';
 
 export default function Loading() {
-  return <PageLoading label="Loading review" cardCount={6} />;
+  return <PageLoading label="Loading history" cardCount={6} />;
 }

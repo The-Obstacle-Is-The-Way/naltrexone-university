@@ -12,7 +12,7 @@ describe('components/app-nav-items', () => {
       ROUTES.APP_DASHBOARD,
       ROUTES.APP_PRACTICE,
       ROUTES.APP_PRACTICE_QUICK,
-      ROUTES.APP_REVIEW,
+      ROUTES.APP_HISTORY,
       ROUTES.APP_BOOKMARKS,
       ROUTES.APP_BILLING,
     ]);
@@ -63,8 +63,8 @@ describe('getActiveAppNavItemHref', () => {
   });
 
   it('strips both query and hash before matching', () => {
-    expect(getActiveAppNavItemHref('/app/review?page=2#top')).toBe(
-      ROUTES.APP_REVIEW,
+    expect(getActiveAppNavItemHref('/app/history?page=2#top')).toBe(
+      ROUTES.APP_HISTORY,
     );
   });
 

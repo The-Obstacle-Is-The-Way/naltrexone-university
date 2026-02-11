@@ -81,9 +81,11 @@ The UI has no back/previous button. The only way to revisit a question is the na
 
 ---
 
-## Finding 1: Unsubmitted Answer Selections Are Silently Lost
+## ~~Finding 1: Unsubmitted Answer Selections Are Silently Lost~~ (FIXED)
 
 **Severity: P1 (High) — silent data loss from user's perspective**
+
+> **Status: FIXED (verified 2026-02-10).** Draft selections are preserved + restored via `draftSelectedChoicesRef` (`app/(app)/app/practice/shared/use-question-flow-core.ts:63,139-141,156-160`).
 
 ### What happens
 
@@ -148,11 +150,13 @@ Option C (server persistence) is over-engineered — it adds a round-trip on eve
 
 ---
 
-## Finding 2: Already-Answered Question Re-Navigation Shows Stale UI
+## ~~Finding 2: Already-Answered Question Re-Navigation Shows Stale UI~~ (FIXED)
 
 **Severity: P1 (High) — user hits cryptic CONFLICT error**
 
 > Upgraded from P2. This is the most user-facing bug: user sees a "fresh" question, tries to answer it, and gets an error.
+
+> **Status: FIXED (verified 2026-02-10).** `getNextQuestion` now returns `latestSelectedChoiceId` + `latestIsCorrect` in `NextQuestion.session` (`src/application/use-cases/get-next-question.ts:37-38,168-169`), and the client restores selection + answered state on load (`app/(app)/app/practice/shared/use-question-flow-core.ts:126-137`).
 
 ### What happens
 
@@ -202,9 +206,11 @@ Option B (block navigation) is too restrictive — users should be able to revie
 
 ---
 
-## Finding 3: "Next Question" Shows Same Question When User Hasn't Submitted
+## ~~Finding 3: "Next Question" Shows Same Question When User Hasn't Submitted~~ (FIXED)
 
 **Severity: P2 (Medium) — confusing behavior, not a data loss bug**
+
+> **Status: FIXED (verified 2026-02-10).** "Next Question" now advances sequentially by sending `fromIndex` (`app/(app)/app/practice/[sessionId]/hooks/use-practice-session-question-flow.ts:154-175`), which the server honors (`src/application/use-cases/get-next-question.ts:102,119-122`).
 
 ### What happens
 
@@ -387,9 +393,11 @@ If a session ends (from another tab, or session state becomes stale), the client
 
 ---
 
-## Finding 11: Session Start Button Never Shows Loading State
+## ~~Finding 11: Session Start Button Never Shows Loading State~~ (FIXED)
 
 **Severity: P1 (High) — allows double-click, no visual feedback**
+
+> **Status: FIXED (verified 2026-02-10).** `startSession()` sets `sessionStartStatus` to `loading` immediately (`app/(app)/app/practice/practice-page-session-start.ts:57`), and `PracticeSessionStarter` disables + shows "Starting…" based on `sessionStartStatus === 'loading'` (`app/(app)/app/practice/components/practice-session-starter.tsx:204-207`).
 
 ### What happens
 
@@ -397,26 +405,14 @@ If a session ends (from another tab, or session state becomes stale), the client
 2. Button never shows "Starting..." or becomes disabled
 3. User can click again (and again) before navigation completes
 
-### Root cause
+### Root cause (historical)
 
-In `practice-page-client.tsx:74`, `isPending` is **hardcoded to `false`**:
+The button state was not driven by the async session start flow, so users got no visual feedback that their click was registered.
 
-```
-<PracticeSessionStarter
-  isPending={false}  // ← hardcoded!
-  onStartSession={() => {
-    fireAndForget(sessionControls.onStartSession(), logUnhandledAsyncError);
-  }}
-/>
-```
+### Fix (implemented)
 
-The `PracticeSessionStarter` component correctly checks `isPending` for disabling and showing "Starting..." (line 205-211), but it's always false. Additionally, `fireAndForget()` doesn't integrate with React transitions — there's no `useTransition` or `startTransition` wrapping the async call.
-
-The idempotency key protects against duplicate sessions on the server, but the user sees zero feedback that their click was registered.
-
-### Recommended fix
-
-Pass `sessionControls.sessionStartStatus === 'loading'` as the `isPending` prop. Or better: wrap `onStartSession` in `useTransition` and use the `isPending` from the transition.
+- `startSession()` sets `sessionStartStatus` to `'loading'` immediately (`app/(app)/app/practice/practice-page-session-start.ts:57`).
+- `PracticeSessionStarter` uses `sessionStartStatus === 'loading'` to disable the button and render the loading label (`app/(app)/app/practice/components/practice-session-starter.tsx:204-207`).
 
 ---
 
@@ -716,20 +712,20 @@ These areas are solid and well-guarded:
 
 ## Priority Summary & Implementation Order
 
-> **Verified 2026-02-10** via Playwright E2E audit of running app. Findings 4, 7, 12, 13, and 21 have been fixed since this doc was written. Updated table below.
+> **Verified 2026-02-10** via source audit (and Playwright E2E audit of running app). Findings 1, 2, 3, 4, 7, 11, 12, 13, and 21 have been fixed since this doc was written. Updated table below.
 
 | # | Finding | Severity | Status | Notes |
 |---|---------|----------|--------|-------|
-| 2 | Already-answered question shows stale UI | **P1** | **OPEN** | Return `latestSelectedChoiceId` + `latestIsCorrect` from server |
-| 1 | Unsubmitted selections silently lost | **P1** | **OPEN** | Client-side draft map (`Map<questionId, choiceId>`) |
-| 11 | Session start button never shows loading | **P1** | **OPEN** | `isPending={false}` still hardcoded in `practice-page-client.tsx:74` |
+| ~~2~~ | ~~Already-answered question shows stale UI~~ | ~~P1~~ | **FIXED** | Answer state returned + restored (`latestSelectedChoiceId`, `latestIsCorrect`) |
+| ~~1~~ | ~~Unsubmitted selections silently lost~~ | ~~P1~~ | **FIXED** | Client-side draft map restores selection across navigation |
+| ~~11~~ | ~~Session start button never shows loading~~ | ~~P1~~ | **FIXED** | `sessionStartStatus === 'loading'` drives button disabled + label |
 | ~~12~~ | ~~Choices clickable after exam submit~~ | ~~P1~~ | **FIXED** | `isAnswerLocked = isAnswered \|\| submitResult !== null` now disables choices |
 | ~~13~~ | ~~Server returns correctChoiceId in exam~~ | ~~P1~~ | **FIXED** | `correctChoiceId: shouldShowExplanation ? ... : null` in `submit-answer.ts:169` |
 | ~~21~~ | ~~sessionInfo cleared when question is null~~ | ~~P2~~ | **FIXED** | `if (!question?.session) return;` guard in `practice-session-page-logic.ts:59` |
-| 3 | "Next Question" shows same question | **P2** | **OPEN** | Sequential advance (pass `fromIndex` hint to server) |
+| ~~3~~ | ~~"Next Question" shows same question~~ | ~~P2~~ | **FIXED** | Sequential advance via `fromIndex` hint |
 | ~~4~~ | ~~Sessions stay in_progress forever~~ | ~~P2~~ | **FIXED** | Backend guard in `start-practice-session.ts` rejects if incomplete exists |
 | ~~8~~ | ~~Navigator not updated after mark toggle~~ | ~~P2~~ | **INVALID** | Navigator already refreshes via sessionInfo dependency |
-| 5 | Concurrent sessions not prevented | **P3** | **OPEN** | Partial unique DB index still needed |
+| 5 | Concurrent sessions not prevented | **P3** | **OPEN** | Deferred — app-layer guard already prevents, DB hardening optional |
 | ~~7~~ | ~~Auto-advance wasteful call on last question~~ | ~~P3~~ | **FIXED** | `isLastQuestion` guard in `practice-session-page-logic.ts:141-146` |
 | 6 | Page refresh loses position | **P3** | Defer | — |
 | 9 | Client can attempt submit on ended session | **P3** | Defer | — |
@@ -737,16 +733,8 @@ These areas are solid and well-guarded:
 
 ### Remaining implementation order
 
-**Phase 1 (P1 fixes — do together):**
-1. Finding 2: Return answer state from `getNextQuestion` (server change + client restore with explicit `isAnswered` flag)
-2. Finding 1: Add client-side draft map for unsubmitted selections
-3. Finding 11: Wire `isPending` to actual loading state for session start button
-
-**Phase 2 (P2 fixes):**
-4. Finding 3: Sequential "Next Question" advance
-
-**Phase 3 (P3 fixes — if time permits):**
-5. Finding 5: Partial unique DB index for concurrent sessions
+**Phase 1 (P3 hardening — deferred):**
+1. Finding 5: Partial unique DB index for concurrent sessions (optional)
 
 ---
 
@@ -755,9 +743,9 @@ These areas are solid and well-guarded:
 ### Application Layer (use cases)
 | File | Role | Needs Change |
 |------|------|------|
-| `src/application/use-cases/get-next-question.ts` | Returns question data — does NOT include answer state | **Yes** (F2: add answer fields) |
+| `src/application/use-cases/get-next-question.ts` | Returns next question data (now includes answer state for session questions) | No (F2 fixed) |
 | `src/application/use-cases/submit-answer.ts` | Persists answer — has all guards | No |
-| `src/application/use-cases/start-practice-session.ts` | Creates session — no incomplete guard | **Yes** (F4: auto-end existing) |
+| `src/application/use-cases/start-practice-session.ts` | Creates session — rejects if incomplete exists | No (F4 fixed) |
 | `src/application/use-cases/get-incomplete-practice-session.ts` | Finds latest incomplete — returns only one | No |
 | `src/application/use-cases/end-practice-session.ts` | Ends session — fully guarded | No |
 | `src/application/use-cases/set-practice-session-question-mark.ts` | Mark for review — exam only | No |
@@ -765,11 +753,11 @@ These areas are solid and well-guarded:
 ### Client State Management
 | File | Role | Needs Change |
 |------|------|------|
-| `app/(app)/app/practice/shared/question-flow-actions.ts` | Core load/submit — resets `selectedChoiceId` on every load | **Yes** (F1: check draft map, F2: restore answer state, F21: preserve sessionInfo on null) |
-| `app/(app)/app/practice/shared/use-question-flow-core.ts` | Core state declarations | **Yes** (F1: add draft map state) |
-| `app/(app)/app/practice/[sessionId]/practice-session-page-logic.ts` | Session orchestration — auto-advance, navigator, review | **Yes** (F3: sequential advance, F7: last-question guard) |
-| `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-question-flow.ts` | Hook wiring — navigate handler | **Yes** (F3: pass current index) |
-| `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-page-controller.ts` | Controller — wires auto-advance | **Yes** (F7: guard last question) |
+| `app/(app)/app/practice/shared/question-flow-actions.ts` | Core load/submit orchestration | No (F1/F2/F21 fixed) |
+| `app/(app)/app/practice/shared/use-question-flow-core.ts` | Core state + draft/restore behavior | No (F1/F2 fixed) |
+| `app/(app)/app/practice/[sessionId]/practice-session-page-logic.ts` | Session orchestration — auto-advance, navigator, review | No (F3/F7 fixed) |
+| `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-question-flow.ts` | Hook wiring — navigate handler | No (F3 fixed) |
+| `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-page-controller.ts` | Controller — wires auto-advance | No (F7 fixed) |
 | `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-mark-for-review.ts` | Mark toggle handler | No (F8 invalidated — navigator already refreshes) |
 | `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-navigator.ts` | Navigator effect | No (F8 invalidated) |
 

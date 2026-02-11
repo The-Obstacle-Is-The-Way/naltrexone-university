@@ -3,7 +3,7 @@
 import { ErrorBoundaryPage } from '@/components/error-boundary-page';
 import { ROUTES } from '@/lib/routes';
 
-export default function ReviewError({
+export default function HistoryError({
   error,
   reset,
 }: {
@@ -14,11 +14,11 @@ export default function ReviewError({
     <ErrorBoundaryPage
       error={error}
       reset={reset}
-      title="Review error"
-      description="We couldn't load your missed questions right now. Please try again."
+      title="History error"
+      description="We couldn't load your history right now. Please try again."
       links={[{ href: ROUTES.APP_DASHBOARD, label: 'Back to Dashboard' }]}
       includeMainLandmark
-      logPrefix="app/(app)/app/review/error.tsx:"
+      logPrefix="app/(app)/app/history/error.tsx:"
     />
   );
 }

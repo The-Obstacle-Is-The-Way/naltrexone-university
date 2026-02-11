@@ -19,7 +19,6 @@ export type PracticeSessionStarterProps = {
   availableTags: TagRow[];
   sessionStartStatus: 'idle' | 'loading' | 'error';
   sessionStartError: string | null;
-  isPending: boolean;
   onToggleDifficulty: (difficulty: NextQuestion['difficulty']) => void;
   onToggleTag: (slug: string) => void;
   onSessionModeChange: (mode: string) => void;
@@ -202,10 +201,10 @@ export function PracticeSessionStarter(props: PracticeSessionStarterProps) {
         <Button
           type="button"
           className="rounded-full"
-          disabled={props.sessionStartStatus === 'loading' || props.isPending}
+          disabled={props.sessionStartStatus === 'loading'}
           onClick={props.onStartSession}
         >
-          {props.sessionStartStatus === 'loading' || props.isPending
+          {props.sessionStartStatus === 'loading'
             ? 'Starting…'
             : 'Start session'}
         </Button>

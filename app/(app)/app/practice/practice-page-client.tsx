@@ -5,11 +5,7 @@ import { ErrorCard } from '@/components/error-card';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { ROUTES } from '@/lib/routes';
-import {
-  IncompleteSessionCard,
-  PracticeSessionHistoryPanel,
-  PracticeSessionStarter,
-} from './components';
+import { IncompleteSessionCard, PracticeSessionStarter } from './components';
 import { fireAndForget, logUnhandledAsyncError } from './fire-and-forget';
 import { usePracticeSessionControls } from './hooks/use-practice-session-controls';
 
@@ -71,7 +67,6 @@ export default function PracticePageClient() {
             availableTags={sessionControls.availableTags}
             sessionStartStatus={sessionControls.sessionStartStatus}
             sessionStartError={sessionControls.sessionStartError}
-            isPending={false}
             onToggleDifficulty={sessionControls.onToggleDifficulty}
             onToggleTag={sessionControls.onToggleTag}
             onSessionModeChange={sessionControls.onSessionModeChange}
@@ -99,21 +94,6 @@ export default function PracticePageClient() {
             </div>
           </Card>
         )}
-
-        <PracticeSessionHistoryPanel
-          status={sessionControls.sessionHistoryStatus}
-          error={sessionControls.sessionHistoryError}
-          rows={sessionControls.sessionHistoryRows}
-          selectedSessionId={sessionControls.selectedHistorySessionId}
-          selectedReview={sessionControls.selectedHistoryReview}
-          reviewStatus={sessionControls.historyReviewLoadState}
-          onOpenSession={(sessionId) => {
-            fireAndForget(
-              sessionControls.onOpenSessionHistory(sessionId),
-              logUnhandledAsyncError,
-            );
-          }}
-        />
       </div>
     </div>
   );

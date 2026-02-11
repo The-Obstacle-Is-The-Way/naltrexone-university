@@ -57,6 +57,9 @@ test('renders summary totals and per-question breakdown', async () => {
   await expect
     .element(screen.getByRole('link', { name: 'Back to Dashboard' }))
     .toHaveAttribute('href', '/app/dashboard');
+  await expect
+    .element(screen.getByRole('link', { name: 'View in History' }))
+    .toHaveAttribute('href', '/app/history');
 });
 
 test('renders loading and error states for summary review', async () => {

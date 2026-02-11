@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { toQuestionRoute } from '@/lib/routes';
+import { type QuestionOrigin, toQuestionRoute } from '@/lib/routes';
 import { getStemPreview } from '@/src/adapters/shared/stem-preview';
 import type { PracticeSessionReviewRow } from '@/src/application/use-cases';
 
@@ -7,8 +7,10 @@ const STEM_PREVIEW_LENGTH = 80;
 
 export function SessionBreakdownList({
   rows,
+  from = 'practice',
 }: {
   rows: PracticeSessionReviewRow[];
+  from?: QuestionOrigin;
 }) {
   return (
     <ul className="space-y-2">
@@ -19,7 +21,7 @@ export function SessionBreakdownList({
         >
           {row.isAvailable ? (
             <Link
-              href={toQuestionRoute(row.slug, { from: 'practice' })}
+              href={toQuestionRoute(row.slug, { from })}
               className="flex items-center gap-2 font-medium text-foreground hover:underline"
             >
               <span>{row.order}.</span>

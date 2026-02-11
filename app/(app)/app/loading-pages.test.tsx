@@ -21,10 +21,10 @@ describe('App route loading UIs', () => {
     expect(html).toContain('Loading practice session');
   });
 
-  it('renders review loading UI', async () => {
-    const Loading = (await import('./review/loading')).default;
+  it('renders history loading UI', async () => {
+    const Loading = (await import('./history/loading')).default;
     const html = renderToStaticMarkup(<Loading />);
-    expect(html).toContain('Loading review');
+    expect(html).toContain('Loading history');
   });
 
   it('renders bookmarks loading UI', async () => {

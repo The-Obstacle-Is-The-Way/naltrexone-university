@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { SessionBreakdownList } from '@/app/(app)/app/shared/components/session-breakdown-list';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { formatDuration } from '@/lib/format-duration';
@@ -7,7 +8,6 @@ import type {
   EndPracticeSessionOutput,
   GetPracticeSessionReviewOutput,
 } from '@/src/adapters/controllers/practice-controller';
-import { SessionBreakdownList } from '../../components/session-breakdown-list';
 import type { LoadState } from '../../practice-page-logic';
 
 export function SessionSummaryView({
@@ -89,6 +89,9 @@ export function SessionSummaryView({
       <div className="flex flex-col gap-3 sm:flex-row">
         <Button asChild className="rounded-full">
           <Link href={ROUTES.APP_DASHBOARD}>Back to Dashboard</Link>
+        </Button>
+        <Button asChild variant="outline" className="rounded-full">
+          <Link href={ROUTES.APP_HISTORY}>View in History</Link>
         </Button>
         <Button asChild variant="outline" className="rounded-full">
           <Link href={ROUTES.APP_PRACTICE}>Start another session</Link>

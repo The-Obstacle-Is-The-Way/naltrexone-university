@@ -3,8 +3,17 @@ import Link from 'next/link';
 import { ErrorCard } from '@/components/error-card';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { ROUTES, toPracticeSessionRoute, toQuestionRoute } from '@/lib/routes';
+import { formatDate } from '@/lib/format-date';
+import { ROUTES, toQuestionRoute } from '@/lib/routes';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
+import {
+  type GetSessionHistoryOutput,
+  getSessionHistory,
+} from '@/src/adapters/controllers/practice-controller';
+import {
+  type GetMissedQuestionsOutput,
+  getMissedQuestions,
+} from '@/src/adapters/controllers/review-controller';
 import {
   getUserStats,
   type UserStatsOutput,
@@ -19,57 +28,26 @@ function formatPercent(value: number): string {
   return `${Math.round(value * 100)}%`;
 }
 
-type RecentActivityRow = UserStatsOutput['recentActivity'][number];
-
-type RecentActivityGroup =
-  | {
-      kind: 'session';
-      sessionId: string;
-      sessionMode: 'tutor' | 'exam';
-      rows: RecentActivityRow[];
-    }
-  | {
-      kind: 'single';
-      row: RecentActivityRow;
-    };
-
 function toSentenceCase(value: string): string {
   return value.charAt(0).toUpperCase() + value.slice(1);
 }
 
-function groupRecentActivity(
-  rows: readonly RecentActivityRow[],
-): RecentActivityGroup[] {
-  const groups: RecentActivityGroup[] = [];
+const headerLinkButtonClasses =
+  'h-auto p-0 text-muted-foreground no-underline hover:text-foreground hover:no-underline';
 
-  for (const row of rows) {
-    if (row.sessionId && row.sessionMode) {
-      const previous = groups[groups.length - 1];
-      if (
-        previous?.kind === 'session' &&
-        previous.sessionId === row.sessionId
-      ) {
-        previous.rows.push(row);
-        continue;
-      }
+type DashboardViewProps = {
+  stats: UserStatsOutput;
+  sessionHistoryResult: ActionResult<GetSessionHistoryOutput>;
+  missedQuestionsResult: ActionResult<GetMissedQuestionsOutput>;
+};
 
-      groups.push({
-        kind: 'session',
-        sessionId: row.sessionId,
-        sessionMode: row.sessionMode,
-        rows: [row],
-      });
-      continue;
-    }
-
-    groups.push({ kind: 'single', row });
-  }
-
-  return groups;
-}
-
-export function DashboardView({ stats }: { stats: UserStatsOutput }) {
-  const recentActivityGroups = groupRecentActivity(stats.recentActivity);
+export function DashboardView({
+  stats,
+  sessionHistoryResult,
+  missedQuestionsResult,
+}: DashboardViewProps) {
+  const historySessionsHref = `${ROUTES.APP_HISTORY}?tab=sessions`;
+  const historyMissedHref = `${ROUTES.APP_HISTORY}?tab=missed`;
 
   return (
     <div className="space-y-6">
@@ -140,143 +118,147 @@ export function DashboardView({ stats }: { stats: UserStatsOutput }) {
         </Card>
       </div>
 
-      <Card className="gap-0 rounded-2xl p-6 shadow-sm">
-        <div className="text-sm font-medium text-foreground">
-          Recent activity
-        </div>
-
-        {recentActivityGroups.length === 0 ? (
-          <div className="mt-4 text-sm text-muted-foreground">
-            <div>No activity yet.</div>
-            <div className="mt-2">
-              Start practicing to see your recent answers here.
+      <div className="grid gap-4 lg:grid-cols-2">
+        <Card className="gap-0 rounded-2xl p-6 shadow-sm">
+          <div className="flex items-baseline justify-between gap-3">
+            <div className="text-sm font-medium text-foreground">
+              Recent sessions
             </div>
-            <div className="mt-4">
-              <Button asChild variant="outline" className="rounded-full">
-                <Link href={ROUTES.APP_PRACTICE}>Go to Practice →</Link>
-              </Button>
-            </div>
+            <Button asChild variant="link" className={headerLinkButtonClasses}>
+              <Link href={historySessionsHref}>View all</Link>
+            </Button>
           </div>
-        ) : (
-          <ul className="mt-4 space-y-3 text-sm text-muted-foreground">
-            {recentActivityGroups.map((group) => {
-              if (group.kind === 'single') {
-                if (!group.row.isAvailable) {
-                  return (
-                    <li
-                      key={group.row.attemptId}
-                      className="flex items-center gap-2"
-                    >
-                      <span className="font-medium text-foreground">
-                        [Question no longer available]
+
+          {!sessionHistoryResult.ok ? (
+            <ErrorCard className="mt-4">
+              {sessionHistoryResult.error.message}
+            </ErrorCard>
+          ) : sessionHistoryResult.data.rows.length === 0 ? (
+            <div className="mt-4 text-sm text-muted-foreground">
+              No completed sessions yet.
+            </div>
+          ) : (
+            <ul className="mt-4 space-y-2">
+              {sessionHistoryResult.data.rows.map((row) => (
+                <li key={row.sessionId}>
+                  <Link
+                    href={historySessionsHref}
+                    className="block rounded-xl border border-border/60 bg-muted/20 p-3 transition-colors hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="inline-flex items-center rounded-full border border-border/60 px-2 py-0.5 text-xs font-medium text-muted-foreground">
+                        {toSentenceCase(row.mode)}
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        {formatDate(row.endedAt)}
+                      </span>
+                    </div>
+                    <div className="mt-2 text-sm text-foreground">
+                      <span className="font-medium">
+                        {row.correct}/{row.questionCount} correct
                       </span>
                       <span className="text-muted-foreground">
-                        {group.row.isCorrect ? 'Correct' : 'Incorrect'}
+                        {' '}
+                        ({formatPercent(row.accuracy)})
                       </span>
+                    </div>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Card>
+
+        <Card className="gap-0 rounded-2xl p-6 shadow-sm">
+          <div className="flex items-baseline justify-between gap-3">
+            <div className="text-sm font-medium text-foreground">
+              Recent missed
+            </div>
+            <Button asChild variant="link" className={headerLinkButtonClasses}>
+              <Link href={historyMissedHref}>View all</Link>
+            </Button>
+          </div>
+
+          {!missedQuestionsResult.ok ? (
+            <ErrorCard className="mt-4">
+              {missedQuestionsResult.error.message}
+            </ErrorCard>
+          ) : missedQuestionsResult.data.rows.length === 0 ? (
+            <div className="mt-4 text-sm text-muted-foreground">
+              No missed questions yet.
+            </div>
+          ) : (
+            <ul className="mt-4 space-y-2">
+              {missedQuestionsResult.data.rows.map((row) => {
+                if (!row.isAvailable) {
+                  return (
+                    <li key={row.questionId}>
+                      <div className="rounded-xl border border-border/60 bg-muted/20 p-3">
+                        <div className="text-sm font-medium text-foreground">
+                          [Question no longer available]
+                        </div>
+                        <div className="mt-1 text-xs text-muted-foreground">
+                          Missed {formatDate(row.lastAnsweredAt)}
+                        </div>
+                      </div>
                     </li>
                   );
                 }
 
                 return (
-                  <li key={group.row.attemptId}>
+                  <li key={row.questionId}>
                     <Link
-                      href={toQuestionRoute(group.row.slug, {
-                        from: 'dashboard',
-                      })}
-                      className="flex items-center gap-3 rounded-xl px-2 py-1 transition-colors hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]"
+                      href={toQuestionRoute(row.slug, { from: 'dashboard' })}
+                      className="block rounded-xl border border-border/60 bg-muted/20 p-3 transition-colors hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]"
                     >
-                      <span className="min-w-0 flex-1 font-medium text-foreground">
-                        {getStemPreview(group.row.stemMd, 100)}
-                      </span>
-                      <span className="inline-flex items-center rounded-full border border-border/60 px-2 py-0.5 text-xs font-medium text-muted-foreground">
-                        {toSentenceCase(group.row.difficulty)}
-                      </span>
-                      <span className="shrink-0 text-muted-foreground">
-                        {group.row.isCorrect ? 'Correct' : 'Incorrect'}
-                      </span>
+                      <div className="flex items-start justify-between gap-3">
+                        <span className="min-w-0 flex-1 text-sm font-medium text-foreground">
+                          {getStemPreview(row.stemMd, 110)}
+                        </span>
+                        <span className="inline-flex shrink-0 items-center rounded-full border border-border/60 px-2 py-0.5 text-xs font-medium text-muted-foreground">
+                          {toSentenceCase(row.difficulty)}
+                        </span>
+                      </div>
+                      <div className="mt-1 text-xs text-muted-foreground">
+                        Missed {formatDate(row.lastAnsweredAt)}
+                      </div>
                     </Link>
                   </li>
                 );
-              }
-
-              const correctCount = group.rows.filter(
-                (row) => row.isCorrect,
-              ).length;
-
-              return (
-                <li
-                  key={`session-${group.sessionId}`}
-                  className="rounded-xl border border-border/60 bg-muted/20 p-3"
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <Link
-                      href={toPracticeSessionRoute(group.sessionId)}
-                      className="text-xs font-medium uppercase tracking-wide text-foreground transition-colors hover:text-foreground/90 hover:underline focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]"
-                    >
-                      {toSentenceCase(group.sessionMode)} session
-                    </Link>
-                    <span className="text-xs text-muted-foreground">
-                      {correctCount}/{group.rows.length} correct
-                    </span>
-                  </div>
-                  <ul className="mt-2 space-y-1">
-                    {group.rows.map((row) => {
-                      if (!row.isAvailable) {
-                        return (
-                          <li
-                            key={row.attemptId}
-                            className="flex items-center gap-2"
-                          >
-                            <span className="font-medium text-foreground">
-                              [Question no longer available]
-                            </span>
-                            <span className="text-muted-foreground">
-                              {row.isCorrect ? 'Correct' : 'Incorrect'}
-                            </span>
-                          </li>
-                        );
-                      }
-
-                      return (
-                        <li key={row.attemptId}>
-                          <Link
-                            href={toQuestionRoute(row.slug, {
-                              from: 'dashboard',
-                            })}
-                            className="flex items-center gap-3 rounded-xl px-2 py-1 transition-colors hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]"
-                          >
-                            <span className="min-w-0 flex-1 font-medium text-foreground">
-                              {getStemPreview(row.stemMd, 90)}
-                            </span>
-                            <span className="inline-flex items-center rounded-full border border-border/60 px-2 py-0.5 text-xs font-medium text-muted-foreground">
-                              {toSentenceCase(row.difficulty)}
-                            </span>
-                            <span className="shrink-0 text-muted-foreground">
-                              {row.isCorrect ? 'Correct' : 'Incorrect'}
-                            </span>
-                          </Link>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </Card>
+              })}
+            </ul>
+          )}
+        </Card>
+      </div>
     </div>
   );
 }
 
 export default async function DashboardPage() {
-  const result = await getUserStats({});
+  const [statsResult, sessionHistoryResult, missedQuestionsResult] =
+    await Promise.all([
+      getUserStats({}),
+      getSessionHistory({ limit: 3, offset: 0 }),
+      getMissedQuestions({ limit: 3, offset: 0 }),
+    ]);
 
-  return renderDashboard(result);
+  return renderDashboard({
+    statsResult,
+    sessionHistoryResult,
+    missedQuestionsResult,
+  });
 }
 
-export function renderDashboard(result: ActionResult<UserStatsOutput>) {
-  if (!result.ok) {
+export function renderDashboard({
+  statsResult,
+  sessionHistoryResult,
+  missedQuestionsResult,
+}: {
+  statsResult: ActionResult<UserStatsOutput>;
+  sessionHistoryResult: ActionResult<GetSessionHistoryOutput>;
+  missedQuestionsResult: ActionResult<GetMissedQuestionsOutput>;
+}) {
+  if (!statsResult.ok) {
     return (
       <div className="space-y-6">
         <div>
@@ -285,7 +267,7 @@ export function renderDashboard(result: ActionResult<UserStatsOutput>) {
           </h1>
           <p className="mt-1 text-muted-foreground">Unable to load stats.</p>
         </div>
-        <ErrorCard className="p-6">{result.error.message}</ErrorCard>
+        <ErrorCard className="p-6">{statsResult.error.message}</ErrorCard>
         <Button asChild className="rounded-full">
           <Link href={ROUTES.APP_PRACTICE}>Go to Practice</Link>
         </Button>
@@ -293,5 +275,11 @@ export function renderDashboard(result: ActionResult<UserStatsOutput>) {
     );
   }
 
-  return <DashboardView stats={result.data} />;
+  return (
+    <DashboardView
+      stats={statsResult.data}
+      sessionHistoryResult={sessionHistoryResult}
+      missedQuestionsResult={missedQuestionsResult}
+    />
+  );
 }

@@ -33,6 +33,15 @@ const nextConfig: NextConfig = {
       },
     ];
   },
+  async redirects() {
+    return [
+      {
+        source: '/app/review',
+        destination: '/app/history?tab=missed',
+        permanent: true,
+      },
+    ];
+  },
 };
 
 export default nextConfig;

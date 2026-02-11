@@ -49,10 +49,35 @@ describe('QuestionView', () => {
       />,
     );
     const doc = new DOMParser().parseFromString(html, 'text/html');
-    const backLink = doc.querySelector('a[href="/app/review"]');
+    const backLink = doc.querySelector('a[href="/app/history?tab=missed"]');
 
-    expect(backLink?.textContent?.trim()).toBe('Back to Review');
+    expect(backLink?.textContent?.trim()).toBe('Back to History');
     expect(html).toContain('Reattempt a question from your review list.');
+  });
+
+  it('renders an origin-aware back link when origin=history', async () => {
+    const { QuestionView } = await import('./question-page-client');
+
+    const html = renderToStaticMarkup(
+      <QuestionView
+        loadState={{ status: 'ready' }}
+        question={null}
+        selectedChoiceId={null}
+        submitResult={null}
+        canSubmit={false}
+        isPending={false}
+        origin="history"
+        onTryAgain={() => undefined}
+        onSelectChoice={() => undefined}
+        onSubmit={() => undefined}
+        onReattempt={() => undefined}
+      />,
+    );
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const backLink = doc.querySelector('a[href="/app/history"]');
+
+    expect(backLink?.textContent?.trim()).toBe('Back to History');
+    expect(html).toContain('Reviewing a question from your history.');
   });
 
   it('renders an origin-aware back link when origin=bookmarks', async () => {

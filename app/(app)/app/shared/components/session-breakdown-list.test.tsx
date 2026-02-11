@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
-import { toQuestionRoute } from '@/lib/routes';
+import { type QuestionOrigin, toQuestionRoute } from '@/lib/routes';
 import type { PracticeSessionReviewRow } from '@/src/application/use-cases';
 
 vi.mock('next/link', () => ({
@@ -37,9 +37,12 @@ const unavailableRow: PracticeSessionReviewRow = {
   markedForReview: false,
 };
 
-async function renderList(rows: PracticeSessionReviewRow[]) {
+async function renderList(
+  rows: PracticeSessionReviewRow[],
+  props?: { from?: QuestionOrigin },
+) {
   const { SessionBreakdownList } = await import('./session-breakdown-list');
-  return renderToStaticMarkup(<SessionBreakdownList rows={rows} />);
+  return renderToStaticMarkup(<SessionBreakdownList rows={rows} {...props} />);
 }
 
 describe('SessionBreakdownList', () => {
@@ -100,6 +103,17 @@ describe('SessionBreakdownList', () => {
     }
     expect(unansweredLabel.getAttribute('class')).toContain(
       'text-muted-foreground/60',
+    );
+  });
+
+  it('supports configurable origin query parameters for question routes', async () => {
+    const html = await renderList([availableRow], { from: 'history' });
+
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const links = Array.from(doc.querySelectorAll('a'));
+    expect(links).toHaveLength(1);
+    expect(links[0]?.getAttribute('href')).toBe(
+      toQuestionRoute('q-1', { from: 'history' }),
     );
   });
 });

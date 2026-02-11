@@ -18,7 +18,6 @@ async function renderStarter() {
     ],
     sessionStartStatus: 'idle' as const,
     sessionStartError: null,
-    isPending: false,
     onToggleDifficulty: vi.fn(),
     onToggleTag: vi.fn(),
     onSessionModeChange: vi.fn(),
@@ -60,7 +59,7 @@ test('invokes onStartSession when start button is clicked', async () => {
   expect(props.onStartSession).toHaveBeenCalledTimes(1);
 });
 
-test('shows loading and error states for tags and session start', async () => {
+test('shows error states for tags and session start', async () => {
   const screen = await render(
     <PracticeSessionStarter
       sessionMode="tutor"
@@ -70,7 +69,6 @@ test('shows loading and error states for tags and session start', async () => {
       availableTags={[]}
       sessionStartStatus="error"
       sessionStartError="Could not start session."
-      isPending
       onToggleDifficulty={() => undefined}
       onToggleTag={() => undefined}
       onSessionModeChange={() => undefined}
@@ -83,6 +81,29 @@ test('shows loading and error states for tags and session start', async () => {
   await expect
     .element(screen.getByText('Could not start session.'))
     .toBeVisible();
+  await expect
+    .element(screen.getByRole('button', { name: 'Start session' }))
+    .toBeEnabled();
+});
+
+test('shows loading state for session start', async () => {
+  const screen = await render(
+    <PracticeSessionStarter
+      sessionMode="tutor"
+      sessionCount={20}
+      filters={{ tagSlugs: [], difficulties: [] }}
+      tagLoadStatus="idle"
+      availableTags={[]}
+      sessionStartStatus="loading"
+      sessionStartError={null}
+      onToggleDifficulty={() => undefined}
+      onToggleTag={() => undefined}
+      onSessionModeChange={() => undefined}
+      onSessionCountChange={() => undefined}
+      onStartSession={() => undefined}
+    />,
+  );
+
   await expect
     .element(screen.getByRole('button', { name: 'Starting…' }))
     .toBeDisabled();

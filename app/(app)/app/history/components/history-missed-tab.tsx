@@ -1,4 +1,5 @@
-import type { Metadata } from 'next';
+'use client';
+
 import Link from 'next/link';
 import { ErrorCard } from '@/components/error-card';
 import { Button } from '@/components/ui/button';
@@ -6,35 +7,18 @@ import { Card } from '@/components/ui/card';
 import { formatDate } from '@/lib/format-date';
 import { ROUTES, toQuestionRoute } from '@/lib/routes';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
-import {
-  type GetMissedQuestionsOutput,
-  getMissedQuestions,
-} from '@/src/adapters/controllers/review-controller';
+import type { GetMissedQuestionsOutput } from '@/src/adapters/controllers/review-controller';
 import {
   getStemPreview,
   toPlainText,
 } from '@/src/adapters/shared/stem-preview';
-
-export const metadata: Metadata = {
-  title: 'Review - Addiction Boards',
-};
+import {
+  buildHistoryMissedHref,
+  type MissedFilters,
+} from '../history-search-params';
 
 const headerLinkButtonClasses =
   'h-auto p-0 text-muted-foreground no-underline hover:text-foreground hover:no-underline';
-
-type ReviewSearchParams = {
-  limit?: string;
-  offset?: string;
-  difficulty?: string;
-  tag?: string;
-};
-
-type DifficultyFilter = 'easy' | 'medium' | 'hard';
-
-export type ReviewFilters = {
-  difficulty?: DifficultyFilter | null;
-  tagSlug?: string | null;
-};
 
 function getSessionOriginLabel(input: {
   sessionId: string | null;
@@ -46,61 +30,18 @@ function getSessionOriginLabel(input: {
   return 'Ad-hoc practice';
 }
 
-function parseNonNegativeInt(
-  value: string | undefined,
-  fallback: number,
-): number {
-  const n = Number(value);
-  if (!Number.isFinite(n)) return fallback;
-  if (!Number.isInteger(n)) return fallback;
-  if (n < 0) return fallback;
-  return n;
-}
+export type HistoryMissedTabProps = {
+  result: ActionResult<GetMissedQuestionsOutput>;
+  filters?: MissedFilters;
+};
 
-function parseLimit(value: string | undefined): number {
-  const limit = parseNonNegativeInt(value, 20);
-  return Math.min(Math.max(limit, 1), 100);
-}
+export function HistoryMissedTab({ result, filters }: HistoryMissedTabProps) {
+  if (!result.ok) {
+    return <ErrorCard>{result.error.message}</ErrorCard>;
+  }
 
-function parseDifficultyFilter(
-  value: string | undefined,
-): DifficultyFilter | null {
-  if (value === 'easy') return value;
-  if (value === 'medium') return value;
-  if (value === 'hard') return value;
-  return null;
-}
+  const { rows, limit, offset, totalCount } = result.data;
 
-function parseTagSlugFilter(value: string | undefined): string | null {
-  const trimmed = value?.trim();
-  return trimmed ? trimmed : null;
-}
-
-function buildReviewHref(input: {
-  limit: number;
-  offset: number;
-  filters?: ReviewFilters;
-}): string {
-  const params = new URLSearchParams();
-  params.set('offset', String(input.offset));
-  params.set('limit', String(input.limit));
-
-  const difficulty = input.filters?.difficulty ?? null;
-  const tagSlug = input.filters?.tagSlug ?? null;
-
-  if (difficulty) params.set('difficulty', difficulty);
-  if (tagSlug) params.set('tag', tagSlug);
-
-  return `${ROUTES.APP_REVIEW}?${params.toString()}`;
-}
-
-export function ReviewView({
-  rows,
-  limit,
-  offset,
-  totalCount,
-  filters,
-}: GetMissedQuestionsOutput & { filters?: ReviewFilters }) {
   const selectedDifficulty = filters?.difficulty ?? null;
   const selectedTagSlug = filters?.tagSlug ?? null;
   const hasActiveFilters = Boolean(selectedDifficulty || selectedTagSlug);
@@ -128,24 +69,10 @@ export function ReviewView({
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-baseline sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold font-heading tracking-tight text-foreground">
-            Review
-          </h1>
-          <p className="mt-1 text-muted-foreground">
-            Questions you answered incorrectly — review and reattempt to
-            strengthen weak areas.
-          </p>
-        </div>
-        <Button asChild variant="link" className={headerLinkButtonClasses}>
-          <Link href={ROUTES.APP_PRACTICE}>Go to Practice</Link>
-        </Button>
-      </div>
-
       {totalCount > 0 ? (
         <Card className="gap-0 rounded-2xl border-border p-4 shadow-sm">
           <form method="get" className="grid gap-3 sm:grid-cols-3">
+            <input type="hidden" name="tab" value="missed" />
             <input type="hidden" name="limit" value={limit} />
             <input type="hidden" name="offset" value="0" />
 
@@ -186,7 +113,7 @@ export function ReviewView({
                   variant="link"
                   className={headerLinkButtonClasses}
                 >
-                  <Link href={buildReviewHref({ limit, offset: 0 })}>
+                  <Link href={buildHistoryMissedHref({ limit, offset: 0 })}>
                     Clear filters
                   </Link>
                 </Button>
@@ -225,7 +152,9 @@ export function ReviewView({
                 variant="link"
                 className={headerLinkButtonClasses}
               >
-                <Link href={buildReviewHref({ limit, offset: 0, filters })}>
+                <Link
+                  href={buildHistoryMissedHref({ limit, offset: 0, filters })}
+                >
                   Back to first page
                 </Link>
               </Button>
@@ -237,45 +166,56 @@ export function ReviewView({
           No missed questions match these filters.
           <div className="mt-4">
             <Button asChild variant="outline" className="rounded-full">
-              <Link href={buildReviewHref({ limit, offset: 0 })}>
+              <Link href={buildHistoryMissedHref({ limit, offset: 0 })}>
                 Clear filters
               </Link>
             </Button>
           </div>
         </Card>
-      ) : (
-        <div className="space-y-3">
+      ) : null}
+
+      {displayRows.length > 0 ? (
+        <div className="space-y-4">
           <div className="text-sm text-muted-foreground">
-            {hasActiveFilters
-              ? `Showing ${displayRows.length} of ${rows.length} on this page`
-              : `Showing ${showingStart}–${showingEnd} of ${totalCount}`}
+            Showing {showingStart}–{showingEnd} of {totalCount}
           </div>
-          <ul className="space-y-3">
+
+          <ul className="space-y-4">
             {displayRows.map((row) => {
+              const title = row.isAvailable
+                ? getStemPreview(row.stemMd, 80)
+                : '[Question no longer available]';
               const plainStem = row.isAvailable ? toPlainText(row.stemMd) : '';
+              const shouldShowBodyText =
+                row.isAvailable && plainStem && plainStem !== title;
 
               return (
                 <li key={row.questionId}>
-                  <Card className="gap-0 rounded-2xl p-6 shadow-sm">
+                  <Card className="gap-0 rounded-2xl border-border p-4 shadow-sm">
                     <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                       <div className="space-y-2">
                         {row.isAvailable ? (
+                          <Link
+                            href={toQuestionRoute(row.slug, {
+                              from: 'history',
+                            })}
+                            className="text-sm font-medium text-foreground hover:underline"
+                          >
+                            {title}
+                          </Link>
+                        ) : (
+                          <div className="text-sm font-medium text-foreground">
+                            {title}
+                          </div>
+                        )}
+
+                        {row.isAvailable ? (
                           <>
-                            <div className="text-sm font-medium text-foreground">
-                              <Link
-                                href={toQuestionRoute(row.slug, {
-                                  from: 'review',
-                                })}
-                                className="hover:underline"
-                              >
-                                {getStemPreview(row.stemMd, 80)}
-                              </Link>
-                            </div>
-                            {plainStem.length > 80 && (
+                            {shouldShowBodyText ? (
                               <div className="text-sm text-muted-foreground">
                                 {plainStem}
                               </div>
-                            )}
+                            ) : null}
                             <div className="text-xs text-muted-foreground">
                               <span className="capitalize">
                                 {row.difficulty}
@@ -295,9 +235,6 @@ export function ReviewView({
                           </>
                         ) : (
                           <>
-                            <div className="text-sm font-medium text-foreground">
-                              [Question no longer available]
-                            </div>
                             <div className="text-sm text-muted-foreground">
                               This question was removed or unpublished.
                             </div>
@@ -327,7 +264,7 @@ export function ReviewView({
                         >
                           <Link
                             href={toQuestionRoute(row.slug, {
-                              from: 'review',
+                              from: 'history',
                             })}
                             aria-label={`Reattempt question: ${getStemPreview(
                               row.stemMd,
@@ -353,7 +290,7 @@ export function ReviewView({
                 className={headerLinkButtonClasses}
               >
                 <Link
-                  href={buildReviewHref({
+                  href={buildHistoryMissedHref({
                     limit,
                     offset: prevOffset,
                     filters,
@@ -373,7 +310,7 @@ export function ReviewView({
                 className={headerLinkButtonClasses}
               >
                 <Link
-                  href={buildReviewHref({
+                  href={buildHistoryMissedHref({
                     limit,
                     offset: nextOffset,
                     filters,
@@ -385,67 +322,7 @@ export function ReviewView({
             ) : null}
           </div>
         </div>
-      )}
+      ) : null}
     </div>
   );
 }
-
-export function renderReview(
-  result: ActionResult<GetMissedQuestionsOutput>,
-  options?: { filters?: ReviewFilters },
-) {
-  if (!result.ok) {
-    return (
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold font-heading tracking-tight text-foreground">
-            Review
-          </h1>
-          <p className="mt-1 text-muted-foreground">
-            Unable to load missed questions.
-          </p>
-        </div>
-        <ErrorCard className="p-6">{result.error.message}</ErrorCard>
-        <Button asChild className="rounded-full">
-          <Link href={ROUTES.APP_PRACTICE}>Go to Practice</Link>
-        </Button>
-      </div>
-    );
-  }
-
-  return (
-    <ReviewView
-      rows={result.data.rows}
-      limit={result.data.limit}
-      offset={result.data.offset}
-      totalCount={result.data.totalCount}
-      filters={options?.filters}
-    />
-  );
-}
-
-export function createReviewPage(deps?: {
-  getMissedQuestionsFn?: typeof getMissedQuestions;
-}) {
-  const getMissedQuestionsFn = deps?.getMissedQuestionsFn ?? getMissedQuestions;
-
-  return async function ReviewPage({
-    searchParams,
-  }: {
-    searchParams: Promise<ReviewSearchParams>;
-  }) {
-    const params = await searchParams;
-    const limit = parseLimit(params.limit);
-    const offset = parseNonNegativeInt(params.offset, 0);
-    const filters: ReviewFilters = {
-      difficulty: parseDifficultyFilter(params.difficulty),
-      tagSlug: parseTagSlugFilter(params.tag),
-    };
-
-    // Filters are applied client-side in ReviewView; server-side filtering tracked in GH #80.
-    const result = await getMissedQuestionsFn({ limit, offset });
-    return renderReview(result, { filters });
-  };
-}
-
-export default createReviewPage();

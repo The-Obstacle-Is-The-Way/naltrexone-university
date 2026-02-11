@@ -17,7 +17,7 @@ export default function QuestionError({
       title="Question error"
       description="We couldn't load this question right now. Please try again."
       links={[
-        { href: ROUTES.APP_REVIEW, label: 'Back to Review' },
+        { href: ROUTES.APP_HISTORY, label: 'Back to History' },
         { href: ROUTES.APP_PRACTICE, label: 'Go to Practice' },
       ]}
       includeMainLandmark

@@ -62,6 +62,14 @@ describe('theme token regression', () => {
           currentStreakDays: 3,
           recentActivity: [],
         }}
+        sessionHistoryResult={{
+          ok: true,
+          data: { rows: [], total: 0, limit: 3, offset: 0 },
+        }}
+        missedQuestionsResult={{
+          ok: true,
+          data: { rows: [], limit: 3, offset: 0, totalCount: 0 },
+        }}
       />,
     );
 

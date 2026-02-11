@@ -6,13 +6,11 @@ export const metadata: Metadata = {
 };
 
 export type {
-  PracticeSessionHistoryPanelProps,
   PracticeSessionStarterProps,
   PracticeViewProps,
 } from './components';
 export {
   IncompleteSessionCard,
-  PracticeSessionHistoryPanel,
   PracticeSessionStarter,
   PracticeView,
 } from './components';

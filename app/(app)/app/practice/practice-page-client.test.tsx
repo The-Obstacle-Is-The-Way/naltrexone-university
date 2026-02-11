@@ -8,14 +8,8 @@ vi.mock('next/link', () => ({
 
 vi.mock('./components', () => ({
   IncompleteSessionCard: () => null,
-  PracticeSessionHistoryPanel: () => null,
-  PracticeSessionStarter: (props: {
-    isPending: boolean;
-    sessionStartStatus: string;
-  }) => (
-    <div data-testid="starter-props">
-      {props.sessionStartStatus}:{String(props.isPending)}
-    </div>
+  PracticeSessionStarter: (props: { sessionStartStatus: string }) => (
+    <div data-testid="starter-props">{props.sessionStartStatus}</div>
   ),
 }));
 
@@ -33,36 +27,29 @@ vi.mock('./hooks/use-practice-session-controls', () => ({
     incompleteSessionStatus: 'idle',
     incompleteSessionError: null,
     incompleteSession: null,
-    sessionHistoryStatus: 'idle',
-    sessionHistoryError: null,
-    sessionHistoryRows: [],
-    selectedHistorySessionId: null,
-    selectedHistoryReview: null,
-    historyReviewLoadState: { status: 'idle' },
     onSessionModeChange: () => undefined,
     onSessionCountChange: () => undefined,
     onToggleTag: () => undefined,
     onToggleDifficulty: () => undefined,
     onStartSession: async () => undefined,
     onAbandonIncompleteSession: async () => undefined,
-    onOpenSessionHistory: async () => undefined,
   }),
 }));
 
 describe('PracticePageClient', () => {
-  it('passes isPending=false to PracticeSessionStarter while sessionStartStatus is loading', async () => {
+  it('passes sessionStartStatus to PracticeSessionStarter while sessionStartStatus is loading', async () => {
     sessionStartStatus = 'loading';
     const PracticePageClient = (await import('./practice-page-client')).default;
 
     const html = renderToStaticMarkup(<PracticePageClient />);
-    expect(html).toContain('data-testid="starter-props">loading:false<');
+    expect(html).toContain('data-testid="starter-props">loading<');
   });
 
-  it('passes isPending=false to PracticeSessionStarter while sessionStartStatus is idle', async () => {
+  it('passes sessionStartStatus to PracticeSessionStarter while sessionStartStatus is idle', async () => {
     sessionStartStatus = 'idle';
     const PracticePageClient = (await import('./practice-page-client')).default;
 
     const html = renderToStaticMarkup(<PracticePageClient />);
-    expect(html).toContain('data-testid="starter-props">idle:false<');
+    expect(html).toContain('data-testid="starter-props">idle<');
   });
 });

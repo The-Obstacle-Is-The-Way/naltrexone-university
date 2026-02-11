@@ -27,7 +27,8 @@ describe('app error heading styles', () => {
       .default;
     const BookmarksError = (await import('@/app/(app)/app/bookmarks/error'))
       .default;
-    const ReviewError = (await import('@/app/(app)/app/review/error')).default;
+    const HistoryError = (await import('@/app/(app)/app/history/error'))
+      .default;
     const QuestionError = (
       await import('@/app/(app)/app/questions/[slug]/error')
     ).default;
@@ -82,10 +83,10 @@ describe('app error heading styles', () => {
         headingText: 'Bookmarks error',
       },
       {
-        name: 'ReviewError',
-        html: renderToStaticMarkup(<ReviewError {...ERROR_PROPS} />),
+        name: 'HistoryError',
+        html: renderToStaticMarkup(<HistoryError {...ERROR_PROPS} />),
         headingTag: 'h1',
-        headingText: 'Review error',
+        headingText: 'History error',
       },
       {
         name: 'QuestionError',
