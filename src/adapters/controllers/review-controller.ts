@@ -7,8 +7,6 @@ import type { AuthGateway } from '@/src/application/ports/gateways';
 import type {
   GetAttemptedQuestionsInput,
   GetAttemptedQuestionsOutput,
-  GetMissedQuestionsInput,
-  GetMissedQuestionsOutput,
 } from '@/src/application/use-cases';
 import { createAction } from './create-action';
 import type { CheckEntitlementUseCase } from './require-entitled-user-id';
@@ -23,27 +21,14 @@ const GetAttemptedQuestionsInputSchema = z
   })
   .strict();
 
-const GetMissedQuestionsInputSchema = z
-  .object({
-    limit: z.number().int().min(1).max(MAX_PAGINATION_LIMIT),
-    offset: z.number().int().min(0),
-  })
-  .strict();
-
 export type {
+  AttemptedQuestionRow,
   GetAttemptedQuestionsOutput,
-  GetMissedQuestionsOutput,
-  MissedQuestionRow,
 } from '@/src/application/use-cases';
 
 export type ReviewControllerDeps = {
   authGateway: AuthGateway;
   checkEntitlementUseCase: CheckEntitlementUseCase;
-  getMissedQuestionsUseCase: {
-    execute: (
-      input: GetMissedQuestionsInput,
-    ) => Promise<GetMissedQuestionsOutput>;
-  };
   getAttemptedQuestionsUseCase: {
     execute: (
       input: GetAttemptedQuestionsInput,
@@ -71,19 +56,6 @@ export const getAttemptedQuestions = createAction({
       offset: input.offset,
       result: input.result ?? null,
       source: input.source ?? null,
-    });
-  },
-});
-
-export const getMissedQuestions = createAction({
-  schema: GetMissedQuestionsInputSchema,
-  getDeps,
-  execute: async (input, d) => {
-    const userId = await requireEntitledUserId(d);
-    return d.getMissedQuestionsUseCase.execute({
-      userId,
-      limit: input.limit,
-      offset: input.offset,
     });
   },
 });

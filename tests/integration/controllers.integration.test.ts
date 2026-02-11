@@ -11,7 +11,7 @@ import {
   getNextQuestion,
   submitAnswer,
 } from '@/src/adapters/controllers/question-controller';
-import { getMissedQuestions } from '@/src/adapters/controllers/review-controller';
+import { getAttemptedQuestions } from '@/src/adapters/controllers/review-controller';
 import { getUserStats } from '@/src/adapters/controllers/stats-controller';
 import type { StripeWebhookInput } from '@/src/adapters/controllers/stripe-webhook-controller';
 import { processStripeWebhook } from '@/src/adapters/controllers/stripe-webhook-controller';
@@ -28,7 +28,7 @@ import {
   FakeLogger,
   FakePaymentGateway,
 } from '@/src/application/test-helpers/fakes';
-import { GetMissedQuestionsUseCase } from '@/src/application/use-cases/get-missed-questions';
+import { GetAttemptedQuestionsUseCase } from '@/src/application/use-cases/get-attempted-questions';
 import { GetNextQuestionUseCase } from '@/src/application/use-cases/get-next-question';
 import { GetUserStatsUseCase } from '@/src/application/use-cases/get-user-stats';
 import { SubmitAnswerUseCase } from '@/src/application/use-cases/submit-answer';
@@ -499,14 +499,17 @@ describe('review controller (integration)', () => {
       checkEntitlementUseCase: {
         execute: async () => ({ isEntitled: true }),
       },
-      getMissedQuestionsUseCase: new GetMissedQuestionsUseCase(
+      getAttemptedQuestionsUseCase: new GetAttemptedQuestionsUseCase(
         new DrizzleAttemptRepository(db),
         new DrizzleQuestionRepository(db),
         logger,
       ),
     };
 
-    const first = await getMissedQuestions({ limit: 10, offset: 0 }, deps);
+    const first = await getAttemptedQuestions(
+      { limit: 10, offset: 0, result: 'incorrect' },
+      deps,
+    );
 
     expect(first.ok).toBe(true);
     if (!first.ok) return;
@@ -515,6 +518,9 @@ describe('review controller (integration)', () => {
     expect(first.data.rows[0]).toMatchObject({
       isAvailable: true,
       questionId: missedQuestion.id,
+      isCorrect: false,
+      sessionId: null,
+      sessionMode: null,
       slug: missedSlug,
       stemMd: '# Stem',
       difficulty: 'easy',
@@ -528,7 +534,10 @@ describe('review controller (integration)', () => {
       .set({ status: 'draft' })
       .where(eq(schema.questions.id, missedQuestion.id));
 
-    const second = await getMissedQuestions({ limit: 10, offset: 0 }, deps);
+    const second = await getAttemptedQuestions(
+      { limit: 10, offset: 0, result: 'incorrect' },
+      deps,
+    );
 
     expect(second.ok).toBe(true);
     if (!second.ok) return;
@@ -537,6 +546,7 @@ describe('review controller (integration)', () => {
       {
         isAvailable: false,
         questionId: missedQuestion.id,
+        isCorrect: false,
         sessionId: null,
         sessionMode: null,
         lastAnsweredAt: t2.toISOString(),
@@ -545,7 +555,7 @@ describe('review controller (integration)', () => {
     expect(logger.warnCalls).toEqual([
       {
         context: { questionId: missedQuestion.id },
-        msg: 'Missed question references missing question',
+        msg: 'Attempted question references missing question',
       },
     ]);
   });

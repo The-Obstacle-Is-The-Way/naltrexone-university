@@ -38,6 +38,7 @@ function createDbMock() {
       Array<{
         questionId: string;
         answeredAt: Date | null;
+        isCorrect: boolean;
         sessionId: string | null;
         sessionMode: 'tutor' | 'exam' | null;
       }>
@@ -534,7 +535,7 @@ describe('DrizzleAttemptRepository', () => {
     });
   });
 
-  describe('listMissedQuestionsByUserId', () => {
+  describe('listAttemptedQuestionsByUserId', () => {
     it('returns only rows with answeredAt values', async () => {
       const db = createDbMock();
       const answeredAt = new Date('2026-02-02T00:00:00Z');
@@ -543,12 +544,14 @@ describe('DrizzleAttemptRepository', () => {
         {
           questionId: 'q1',
           answeredAt,
+          isCorrect: true,
           sessionId: 'session-1',
           sessionMode: 'exam',
         },
         {
           questionId: 'q2',
           answeredAt: null,
+          isCorrect: false,
           sessionId: null,
           sessionMode: null,
         },
@@ -557,11 +560,12 @@ describe('DrizzleAttemptRepository', () => {
       const repo = new DrizzleAttemptRepository(db as unknown as RepoDb);
 
       await expect(
-        repo.listMissedQuestionsByUserId('user_1', 10, 0),
+        repo.listAttemptedQuestionsByUserId('user_1', 10, 0),
       ).resolves.toEqual([
         {
           questionId: 'q1',
           answeredAt,
+          isCorrect: true,
           sessionId: 'session-1',
           sessionMode: 'exam',
         },

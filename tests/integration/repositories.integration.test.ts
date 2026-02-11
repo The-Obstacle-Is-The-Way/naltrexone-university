@@ -471,7 +471,7 @@ describe('DrizzlePracticeSessionRepository + DrizzleAttemptRepository', () => {
     expect(byQuestionId.get(q2.id)?.toISOString()).toBe(t3.toISOString());
   });
 
-  it('lists missed questions by latest incorrect attempt', async () => {
+  it('lists attempted questions by latest attempt per question', async () => {
     const user = await createUser();
 
     const q1 = await createQuestion({
@@ -549,17 +549,38 @@ describe('DrizzlePracticeSessionRepository + DrizzleAttemptRepository', () => {
       .set({ answeredAt: t4 })
       .where(eq(schema.attempts.id, q2Correct.id));
 
-    const missed = await attemptRepo.listMissedQuestionsByUserId(
+    const attempted = await attemptRepo.listAttemptedQuestionsByUserId(
       user.id,
       10,
       0,
     );
 
-    expect(missed.map((m) => m.questionId)).toEqual([q1.id]);
-    expect(missed[0]?.answeredAt.toISOString()).toBe(t2.toISOString());
+    expect(attempted.map((m) => m.questionId)).toEqual([q2.id, q1.id]);
+    expect(attempted[0]).toMatchObject({
+      questionId: q2.id,
+      isCorrect: true,
+      sessionId: null,
+      sessionMode: null,
+    });
+    expect(attempted[0]?.answeredAt.toISOString()).toBe(t4.toISOString());
+    expect(attempted[1]).toMatchObject({
+      questionId: q1.id,
+      isCorrect: false,
+      sessionId: null,
+      sessionMode: null,
+    });
+    expect(attempted[1]?.answeredAt.toISOString()).toBe(t2.toISOString());
+
+    const incorrectOnly = await attemptRepo.listAttemptedQuestionsByUserId(
+      user.id,
+      10,
+      0,
+      { result: 'incorrect' },
+    );
+    expect(incorrectOnly.map((m) => m.questionId)).toEqual([q1.id]);
   });
 
-  it('uses id desc as deterministic tie-breaker for latest missed-question attempt semantics', async () => {
+  it('uses id desc as deterministic tie-breaker for latest attempted-question semantics', async () => {
     const user = await createUser();
 
     const qTie = await createQuestion({
@@ -611,22 +632,26 @@ describe('DrizzlePracticeSessionRepository + DrizzleAttemptRepository', () => {
     ]);
 
     const attemptRepo = new DrizzleAttemptRepository(db);
-    const missed = await attemptRepo.listMissedQuestionsByUserId(
+    const attemptedIncorrect = await attemptRepo.listAttemptedQuestionsByUserId(
       user.id,
       10,
       0,
+      { result: 'incorrect' },
     );
 
-    expect(missed).toEqual([
+    expect(attemptedIncorrect).toEqual([
       {
         questionId: qMissed.id,
         answeredAt: new Date('2026-02-05T00:00:00.000Z'),
+        isCorrect: false,
         sessionId: null,
         sessionMode: null,
       },
     ]);
     await expect(
-      attemptRepo.countMissedQuestionsByUserId(user.id),
+      attemptRepo.countAttemptedQuestionsByUserId(user.id, {
+        result: 'incorrect',
+      }),
     ).resolves.toBe(1);
   });
 });

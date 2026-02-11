@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { ROUTES } from '@/lib/routes';
 import {
-  buildHistoryMissedHref,
   buildHistoryQuestionsHref,
   buildHistorySessionsHref,
   parseDifficultyFilter,
@@ -159,25 +158,6 @@ describe('app/(app)/app/history/history-search-params', () => {
         }),
       ).toBe(
         `${ROUTES.APP_HISTORY}?tab=questions&offset=0&limit=20&difficulty=hard&tag=alcohol&result=incorrect&source=exam`,
-      );
-    });
-
-    it('builds missed tab hrefs with optional filters', () => {
-      expect(
-        buildHistoryMissedHref({
-          limit: 20,
-          offset: 0,
-        }),
-      ).toBe(`${ROUTES.APP_HISTORY}?tab=missed&offset=0&limit=20`);
-
-      expect(
-        buildHistoryMissedHref({
-          limit: 20,
-          offset: 0,
-          filters: { difficulty: 'hard', tagSlug: 'alcohol' },
-        }),
-      ).toBe(
-        `${ROUTES.APP_HISTORY}?tab=missed&offset=0&limit=20&difficulty=hard&tag=alcohol`,
       );
     });
   });

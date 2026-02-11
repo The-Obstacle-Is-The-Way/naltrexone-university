@@ -37,7 +37,7 @@ const nextConfig: NextConfig = {
     return [
       {
         source: '/app/review',
-        destination: '/app/history?tab=missed',
+        destination: '/app/history?tab=questions&result=incorrect',
         permanent: true,
       },
     ];

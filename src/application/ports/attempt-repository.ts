@@ -20,13 +20,6 @@ export type AttemptMostRecentAnsweredAt = {
   answeredAt: Date;
 };
 
-export type MissedQuestionAttempt = {
-  questionId: string;
-  answeredAt: Date;
-  sessionId: string | null;
-  sessionMode: PracticeMode | null;
-};
-
 export type AttemptedQuestionSummary = {
   questionId: string;
   answeredAt: Date;
@@ -85,23 +78,6 @@ export interface AttemptStatsReader {
   ): Promise<readonly Date[]>;
 }
 
-export interface AttemptMissedQuestionsReader {
-  /**
-   * Paginated missed question IDs based on the user's most recent attempt
-   * per question (only included when the most recent attempt is incorrect).
-   */
-  listMissedQuestionsByUserId(
-    userId: string,
-    limit: number,
-    offset: number,
-  ): Promise<readonly MissedQuestionAttempt[]>;
-
-  /**
-   * Total missed question count based on the user's most recent attempt per question.
-   */
-  countMissedQuestionsByUserId(userId: string): Promise<number>;
-}
-
 export interface AttemptAllQuestionsReader {
   /**
    * Paginated attempted question summaries based on the user's most recent
@@ -139,6 +115,5 @@ export interface AttemptRepository
     AttemptHistoryReader,
     AttemptSessionReader,
     AttemptStatsReader,
-    AttemptMissedQuestionsReader,
     AttemptAllQuestionsReader,
     AttemptMostRecentAnsweredAtReader {}

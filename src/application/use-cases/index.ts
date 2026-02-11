@@ -36,12 +36,6 @@ export {
   GetIncompletePracticeSessionUseCase,
 } from './get-incomplete-practice-session';
 export {
-  type GetMissedQuestionsInput,
-  type GetMissedQuestionsOutput,
-  GetMissedQuestionsUseCase,
-  type MissedQuestionRow,
-} from './get-missed-questions';
-export {
   type GetNextQuestionInput,
   type GetNextQuestionOutput,
   GetNextQuestionUseCase,

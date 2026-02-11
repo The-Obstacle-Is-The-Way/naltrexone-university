@@ -20,7 +20,6 @@ import type {
   AttemptedQuestionsFilters,
   AttemptMostRecentAnsweredAt,
   AttemptRepository,
-  MissedQuestionAttempt,
   PageOptions,
   RecentAttempt,
 } from '@/src/application/ports/repositories';
@@ -215,68 +214,6 @@ export class DrizzleAttemptRepository implements AttemptRepository {
     });
 
     return rows.map((row) => row.answeredAt);
-  }
-
-  async listMissedQuestionsByUserId(
-    userId: string,
-    limit: number,
-    offset: number,
-  ): Promise<readonly MissedQuestionAttempt[]> {
-    const latestAttemptRows = this.latestAttemptRowsSubquery(userId);
-
-    const rows = await this.db
-      .select({
-        questionId: latestAttemptRows.questionId,
-        answeredAt: latestAttemptRows.answeredAt,
-        sessionId: latestAttemptRows.practiceSessionId,
-        sessionMode: practiceSessions.mode,
-      })
-      .from(latestAttemptRows)
-      .leftJoin(
-        practiceSessions,
-        eq(latestAttemptRows.practiceSessionId, practiceSessions.id),
-      )
-      .where(
-        and(
-          eq(latestAttemptRows.attemptRank, 1),
-          eq(latestAttemptRows.isCorrect, false),
-        ),
-      )
-      .orderBy(
-        desc(latestAttemptRows.answeredAt),
-        desc(latestAttemptRows.questionId),
-      )
-      .limit(limit)
-      .offset(offset);
-
-    const result: MissedQuestionAttempt[] = [];
-    for (const row of rows) {
-      if (!row.answeredAt) continue;
-      result.push({
-        questionId: row.questionId,
-        answeredAt: row.answeredAt,
-        sessionId: row.sessionId,
-        sessionMode: row.sessionMode,
-      });
-    }
-
-    return result;
-  }
-
-  async countMissedQuestionsByUserId(userId: string): Promise<number> {
-    const latestAttemptRows = this.latestAttemptRowsSubquery(userId);
-
-    const [row] = await this.db
-      .select({ count: sql<number>`count(*)::int` })
-      .from(latestAttemptRows)
-      .where(
-        and(
-          eq(latestAttemptRows.attemptRank, 1),
-          eq(latestAttemptRows.isCorrect, false),
-        ),
-      );
-
-    return row?.count ?? 0;
   }
 
   async listAttemptedQuestionsByUserId(

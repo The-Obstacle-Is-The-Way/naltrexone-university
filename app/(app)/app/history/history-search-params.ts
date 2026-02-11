@@ -101,27 +101,3 @@ export function buildHistoryQuestionsHref(input: {
 
   return `${ROUTES.APP_HISTORY}?${params.toString()}`;
 }
-
-export type MissedFilters = {
-  difficulty?: DifficultyFilter | null;
-  tagSlug?: string | null;
-};
-
-export function buildHistoryMissedHref(input: {
-  limit: number;
-  offset: number;
-  filters?: MissedFilters;
-}): string {
-  const params = new URLSearchParams();
-  params.set('tab', 'missed');
-  params.set('offset', String(input.offset));
-  params.set('limit', String(input.limit));
-
-  const difficulty = input.filters?.difficulty ?? null;
-  const tagSlug = input.filters?.tagSlug ?? null;
-
-  if (difficulty) params.set('difficulty', difficulty);
-  if (tagSlug) params.set('tag', tagSlug);
-
-  return `${ROUTES.APP_HISTORY}?${params.toString()}`;
-}

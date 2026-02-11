@@ -8,7 +8,6 @@ import type {
   IdempotencyKeyError,
   IdempotencyKeyRecord,
   IdempotencyKeyRepository,
-  MissedQuestionAttempt,
   PageOptions,
   PracticeSessionRepository,
   QuestionFilters,
@@ -242,46 +241,6 @@ export class FakeAttemptRepository implements AttemptRepository {
       .slice()
       .sort((a, b) => b.answeredAt.getTime() - a.answeredAt.getTime())
       .map((a) => a.answeredAt);
-  }
-
-  async listMissedQuestionsByUserId(
-    userId: string,
-    limit: number,
-    offset: number,
-  ): Promise<readonly MissedQuestionAttempt[]> {
-    const mostRecentByQuestionId = new Map<string, InMemoryAttempt>();
-    for (const attempt of this.attempts) {
-      if (attempt.userId !== userId) continue;
-      const existing = mostRecentByQuestionId.get(attempt.questionId);
-      if (!existing || this.isLaterAttempt(attempt, existing)) {
-        mostRecentByQuestionId.set(attempt.questionId, attempt);
-      }
-    }
-
-    return [...mostRecentByQuestionId.values()]
-      .filter((a) => !a.isCorrect)
-      .sort((a, b) => b.answeredAt.getTime() - a.answeredAt.getTime())
-      .slice(offset, offset + limit)
-      .map((a) => ({
-        questionId: a.questionId,
-        answeredAt: a.answeredAt,
-        sessionId: a.practiceSessionId,
-        sessionMode: a.sessionMode ?? null,
-      }));
-  }
-
-  async countMissedQuestionsByUserId(userId: string): Promise<number> {
-    const mostRecentByQuestionId = new Map<string, InMemoryAttempt>();
-    for (const attempt of this.attempts) {
-      if (attempt.userId !== userId) continue;
-      const existing = mostRecentByQuestionId.get(attempt.questionId);
-      if (!existing || this.isLaterAttempt(attempt, existing)) {
-        mostRecentByQuestionId.set(attempt.questionId, attempt);
-      }
-    }
-
-    return [...mostRecentByQuestionId.values()].filter((a) => !a.isCorrect)
-      .length;
   }
 
   async listAttemptedQuestionsByUserId(
