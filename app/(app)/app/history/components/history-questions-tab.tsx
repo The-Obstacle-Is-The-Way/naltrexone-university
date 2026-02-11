@@ -23,7 +23,7 @@ import {
 const headerLinkButtonClasses =
   'h-auto p-0 text-muted-foreground no-underline hover:text-foreground hover:no-underline';
 
-const selectClasses =
+const selectClassName =
   'h-10 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground shadow-sm outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]';
 
 function getSessionOriginLabel(input: {
@@ -146,7 +146,7 @@ export function HistoryQuestionsTab({
               <select
                 name="result"
                 defaultValue={selectedResult ?? ''}
-                className={selectClasses}
+                className={selectClassName}
               >
                 <option value="">All</option>
                 <option value="correct">Correct</option>
@@ -159,7 +159,7 @@ export function HistoryQuestionsTab({
               <select
                 name="source"
                 defaultValue={selectedSource ?? ''}
-                className={selectClasses}
+                className={selectClassName}
               >
                 <option value="">All</option>
                 <option value="tutor">Tutor</option>
@@ -173,7 +173,7 @@ export function HistoryQuestionsTab({
               <select
                 name="difficulty"
                 defaultValue={selectedDifficulty ?? ''}
-                className={selectClasses}
+                className={selectClassName}
               >
                 <option value="">All difficulties</option>
                 <option value="easy">Easy</option>
@@ -187,7 +187,7 @@ export function HistoryQuestionsTab({
               <select
                 name="tag"
                 defaultValue={selectedTagSlug ?? ''}
-                className={selectClasses}
+                className={selectClassName}
               >
                 <option value="">All tags</option>
                 {tagOptions.map((tagSlug) => (

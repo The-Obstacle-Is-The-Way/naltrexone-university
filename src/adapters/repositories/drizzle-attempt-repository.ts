@@ -302,19 +302,16 @@ export class DrizzleAttemptRepository implements AttemptRepository {
       filters,
     );
 
-    const baseQuery = this.db
+    const [row] = await this.db
       .select({ count: sql<number>`count(*)::int` })
-      .from(latestAttemptRows);
-
-    const query =
-      filters?.source === 'tutor' || filters?.source === 'exam'
-        ? baseQuery.leftJoin(
-            practiceSessions,
-            eq(latestAttemptRows.practiceSessionId, practiceSessions.id),
-          )
-        : baseQuery;
-
-    const [row] = await query.where(and(...conditions));
+      .from(latestAttemptRows)
+      // leftJoin always applied for simplicity — the join is only needed when
+      // source filter is tutor/exam, but the overhead is negligible at current scale.
+      .leftJoin(
+        practiceSessions,
+        eq(latestAttemptRows.practiceSessionId, practiceSessions.id),
+      )
+      .where(and(...conditions));
 
     return row?.count ?? 0;
   }

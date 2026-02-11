@@ -25,10 +25,16 @@ test.describe('core app pages', () => {
     await assertQuestionSlugExists(page, QUESTION_SLUG);
 
     // Legacy /app/review permanently redirects to History (Questions, Incorrect).
+    const reviewRedirectResponsePromise = page.waitForResponse((response) => {
+      const url = new URL(response.url());
+      return url.pathname === '/app/review' && response.status() === 308;
+    });
     await page.goto('/app/review', {
       timeout: 60_000,
       waitUntil: 'domcontentloaded',
     });
+    const reviewRedirectResponse = await reviewRedirectResponsePromise;
+    expect(reviewRedirectResponse.status()).toBe(308);
     await expect(page).toHaveURL(
       /\/app\/history\?tab=questions&result=incorrect/,
       {
@@ -42,7 +48,7 @@ test.describe('core app pages', () => {
     await submitQuestionForOutcome(page, QUESTION_SLUG, 'Incorrect');
     await expect(page.getByText('Explanation', { exact: true })).toBeVisible();
 
-    // Backward compat: `tab=missed` maps to `tab=questions` (incorrect) in the History page.
+    // Backward-compat: `?tab=missed` maps to the Questions tab with `result=incorrect`.
     await page.goto('/app/history?tab=missed', {
       timeout: 60_000,
       waitUntil: 'domcontentloaded',
