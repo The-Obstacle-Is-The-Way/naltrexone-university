@@ -3,6 +3,7 @@
 **Status:** Open
 **Priority:** P4
 **Date:** 2026-02-11
+**GitHub Issue:** #90
 
 ---
 
