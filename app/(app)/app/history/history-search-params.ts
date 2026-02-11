@@ -64,6 +64,7 @@ export function parseSourceFilter(
   if (value === 'tutor') return value;
   if (value === 'exam') return value;
   if (value === 'adhoc') return value;
+  // Backward-compat: legacy URLs used `source=quick`. Tests cover this mapping.
   if (value === 'quick') return 'adhoc';
   return null;
 }

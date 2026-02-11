@@ -51,6 +51,34 @@ export class DrizzleAttemptRepository implements AttemptRepository {
       .as('latest_attempt_rows');
   }
 
+  private buildAttemptedQuestionsConditions(
+    latestAttemptRows: ReturnType<
+      DrizzleAttemptRepository['latestAttemptRowsSubquery']
+    >,
+    filters?: AttemptedQuestionsFilters,
+  ): SQL[] {
+    const conditions: SQL[] = [eq(latestAttemptRows.attemptRank, 1)];
+
+    const resultFilter = filters?.result ?? null;
+    if (resultFilter === 'correct') {
+      conditions.push(eq(latestAttemptRows.isCorrect, true));
+    }
+    if (resultFilter === 'incorrect') {
+      conditions.push(eq(latestAttemptRows.isCorrect, false));
+    }
+
+    const sourceFilter = filters?.source ?? null;
+    if (sourceFilter === 'adhoc') {
+      conditions.push(isNull(latestAttemptRows.practiceSessionId));
+    }
+    // The `practiceSessions.mode` filter requires the `leftJoin(practiceSessions, ...)` below.
+    if (sourceFilter === 'tutor' || sourceFilter === 'exam') {
+      conditions.push(eq(practiceSessions.mode, sourceFilter));
+    }
+
+    return conditions;
+  }
+
   async insert(input: {
     userId: string;
     questionId: string;
@@ -223,24 +251,10 @@ export class DrizzleAttemptRepository implements AttemptRepository {
     filters?: AttemptedQuestionsFilters,
   ): Promise<readonly AttemptedQuestionSummary[]> {
     const latestAttemptRows = this.latestAttemptRowsSubquery(userId);
-
-    const conditions: SQL[] = [eq(latestAttemptRows.attemptRank, 1)];
-
-    const resultFilter = filters?.result ?? null;
-    if (resultFilter === 'correct') {
-      conditions.push(eq(latestAttemptRows.isCorrect, true));
-    }
-    if (resultFilter === 'incorrect') {
-      conditions.push(eq(latestAttemptRows.isCorrect, false));
-    }
-
-    const sourceFilter = filters?.source ?? null;
-    if (sourceFilter === 'adhoc') {
-      conditions.push(isNull(latestAttemptRows.practiceSessionId));
-    }
-    if (sourceFilter === 'tutor' || sourceFilter === 'exam') {
-      conditions.push(eq(practiceSessions.mode, sourceFilter));
-    }
+    const conditions = this.buildAttemptedQuestionsConditions(
+      latestAttemptRows,
+      filters,
+    );
 
     const rows = await this.db
       .select({
@@ -283,24 +297,10 @@ export class DrizzleAttemptRepository implements AttemptRepository {
     filters?: AttemptedQuestionsFilters,
   ): Promise<number> {
     const latestAttemptRows = this.latestAttemptRowsSubquery(userId);
-
-    const conditions: SQL[] = [eq(latestAttemptRows.attemptRank, 1)];
-
-    const resultFilter = filters?.result ?? null;
-    if (resultFilter === 'correct') {
-      conditions.push(eq(latestAttemptRows.isCorrect, true));
-    }
-    if (resultFilter === 'incorrect') {
-      conditions.push(eq(latestAttemptRows.isCorrect, false));
-    }
-
-    const sourceFilter = filters?.source ?? null;
-    if (sourceFilter === 'adhoc') {
-      conditions.push(isNull(latestAttemptRows.practiceSessionId));
-    }
-    if (sourceFilter === 'tutor' || sourceFilter === 'exam') {
-      conditions.push(eq(practiceSessions.mode, sourceFilter));
-    }
+    const conditions = this.buildAttemptedQuestionsConditions(
+      latestAttemptRows,
+      filters,
+    );
 
     const [row] = await this.db
       .select({ count: sql<number>`count(*)::int` })

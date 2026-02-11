@@ -419,11 +419,11 @@ describe('stats controller (integration)', () => {
 });
 
 describe('review controller (integration)', () => {
-  it('lists missed questions and marks unavailable ones when they are no longer published', async () => {
+  it('lists attempted questions (incorrect) and marks unavailable ones when they are no longer published', async () => {
     const user = await createUser();
-    const missedSlug = `it-missed-${randomUUID()}`;
-    const missedQuestion = await createQuestion({
-      slug: missedSlug,
+    const incorrectSlug = `it-incorrect-${randomUUID()}`;
+    const incorrectQuestion = await createQuestion({
+      slug: incorrectSlug,
       status: 'published',
       difficulty: 'easy',
     });
@@ -441,18 +441,18 @@ describe('review controller (integration)', () => {
     await db.insert(schema.attempts).values([
       {
         userId: user.id,
-        questionId: missedQuestion.id,
+        questionId: incorrectQuestion.id,
         practiceSessionId: null,
-        selectedChoiceId: missedQuestion.correctChoiceId,
+        selectedChoiceId: incorrectQuestion.correctChoiceId,
         isCorrect: true,
         timeSpentSeconds: 1,
         answeredAt: t1,
       },
       {
         userId: user.id,
-        questionId: missedQuestion.id,
+        questionId: incorrectQuestion.id,
         practiceSessionId: null,
-        selectedChoiceId: missedQuestion.wrongChoiceId,
+        selectedChoiceId: incorrectQuestion.wrongChoiceId,
         isCorrect: false,
         timeSpentSeconds: 1,
         answeredAt: t2,
@@ -517,11 +517,11 @@ describe('review controller (integration)', () => {
     expect(first.data.rows).toHaveLength(1);
     expect(first.data.rows[0]).toMatchObject({
       isAvailable: true,
-      questionId: missedQuestion.id,
+      questionId: incorrectQuestion.id,
       isCorrect: false,
       sessionId: null,
       sessionMode: null,
-      slug: missedSlug,
+      slug: incorrectSlug,
       stemMd: '# Stem',
       difficulty: 'easy',
       tagSlugs: [],
@@ -532,7 +532,7 @@ describe('review controller (integration)', () => {
     await db
       .update(schema.questions)
       .set({ status: 'draft' })
-      .where(eq(schema.questions.id, missedQuestion.id));
+      .where(eq(schema.questions.id, incorrectQuestion.id));
 
     const second = await getAttemptedQuestions(
       { limit: 10, offset: 0, result: 'incorrect' },
@@ -545,7 +545,7 @@ describe('review controller (integration)', () => {
     expect(second.data.rows).toEqual([
       {
         isAvailable: false,
-        questionId: missedQuestion.id,
+        questionId: incorrectQuestion.id,
         isCorrect: false,
         sessionId: null,
         sessionMode: null,
@@ -554,7 +554,7 @@ describe('review controller (integration)', () => {
     ]);
     expect(logger.warnCalls).toEqual([
       {
-        context: { questionId: missedQuestion.id },
+        context: { questionId: incorrectQuestion.id },
         msg: 'Attempted question references missing question',
       },
     ]);

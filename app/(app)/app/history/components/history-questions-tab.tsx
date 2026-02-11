@@ -37,6 +37,38 @@ function getResultBadge(row: { isCorrect: boolean }) {
   return <span className="text-destructive">Incorrect</span>;
 }
 
+function QuestionMetadata({
+  row,
+  middleLabel,
+  middleLabelClassName,
+}: {
+  row: {
+    isCorrect: boolean;
+    lastAnsweredAt: string;
+    sessionId: string | null;
+    sessionMode: 'tutor' | 'exam' | null;
+  };
+  middleLabel: string;
+  middleLabelClassName?: string;
+}) {
+  return (
+    <div className="text-xs text-muted-foreground">
+      {getResultBadge(row)}
+      <span className="mx-2">•</span>
+      <span className={middleLabelClassName}>{middleLabel}</span>
+      <span className="mx-2">•</span>
+      <span>{formatDate(row.lastAnsweredAt)}</span>
+      <span className="mx-2">•</span>
+      <span>
+        {getSessionOriginLabel({
+          sessionId: row.sessionId,
+          sessionMode: row.sessionMode,
+        })}
+      </span>
+    </div>
+  );
+}
+
 export type HistoryQuestionsTabProps = {
   result: ActionResult<GetAttemptedQuestionsOutput>;
   filters?: QuestionsFilters;
@@ -280,42 +312,21 @@ export function HistoryQuestionsTab({
                                 {plainStem}
                               </div>
                             ) : null}
-                            <div className="text-xs text-muted-foreground">
-                              {getResultBadge(row)}
-                              <span className="mx-2">•</span>
-                              <span className="capitalize">
-                                {row.difficulty}
-                              </span>
-                              <span className="mx-2">•</span>
-                              <span>{formatDate(row.lastAnsweredAt)}</span>
-                              <span className="mx-2">•</span>
-                              <span>
-                                {getSessionOriginLabel({
-                                  sessionId: row.sessionId,
-                                  sessionMode: row.sessionMode,
-                                })}
-                              </span>
-                            </div>
+                            <QuestionMetadata
+                              row={row}
+                              middleLabel={row.difficulty}
+                              middleLabelClassName="capitalize"
+                            />
                           </>
                         ) : (
                           <>
                             <div className="text-sm text-muted-foreground">
                               This question was removed or unpublished.
                             </div>
-                            <div className="text-xs text-muted-foreground">
-                              {getResultBadge(row)}
-                              <span className="mx-2">•</span>
-                              <span>Unavailable</span>
-                              <span className="mx-2">•</span>
-                              <span>{formatDate(row.lastAnsweredAt)}</span>
-                              <span className="mx-2">•</span>
-                              <span>
-                                {getSessionOriginLabel({
-                                  sessionId: row.sessionId,
-                                  sessionMode: row.sessionMode,
-                                })}
-                              </span>
-                            </div>
+                            <QuestionMetadata
+                              row={row}
+                              middleLabel="Unavailable"
+                            />
                           </>
                         )}
                       </div>

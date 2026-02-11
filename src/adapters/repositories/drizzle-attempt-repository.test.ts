@@ -571,5 +571,93 @@ describe('DrizzleAttemptRepository', () => {
         },
       ]);
     });
+
+    it('supports result and source filters', async () => {
+      const db = createDbMock();
+      const answeredAt = new Date('2026-02-02T00:00:00Z');
+
+      db._mocks.finalQueryExecute
+        .mockResolvedValueOnce([
+          {
+            questionId: 'q_correct',
+            answeredAt,
+            isCorrect: true,
+            sessionId: null,
+            sessionMode: null,
+          },
+        ])
+        .mockResolvedValueOnce([
+          {
+            questionId: 'q_incorrect',
+            answeredAt,
+            isCorrect: false,
+            sessionId: null,
+            sessionMode: null,
+          },
+        ])
+        .mockResolvedValueOnce([
+          {
+            questionId: 'q_adhoc',
+            answeredAt,
+            isCorrect: true,
+            sessionId: null,
+            sessionMode: null,
+          },
+        ])
+        .mockResolvedValueOnce([
+          {
+            questionId: 'q_tutor',
+            answeredAt,
+            isCorrect: true,
+            sessionId: 'session-1',
+            sessionMode: 'tutor',
+          },
+        ])
+        .mockResolvedValueOnce([
+          {
+            questionId: 'q_exam',
+            answeredAt,
+            isCorrect: true,
+            sessionId: 'session-2',
+            sessionMode: 'exam',
+          },
+        ]);
+
+      const repo = new DrizzleAttemptRepository(db as unknown as RepoDb);
+
+      await expect(
+        repo.listAttemptedQuestionsByUserId('user_1', 10, 0, {
+          result: 'correct',
+        }),
+      ).resolves.toMatchObject([{ questionId: 'q_correct', isCorrect: true }]);
+
+      await expect(
+        repo.listAttemptedQuestionsByUserId('user_1', 10, 0, {
+          result: 'incorrect',
+        }),
+      ).resolves.toMatchObject([
+        { questionId: 'q_incorrect', isCorrect: false },
+      ]);
+
+      await expect(
+        repo.listAttemptedQuestionsByUserId('user_1', 10, 0, {
+          source: 'adhoc',
+        }),
+      ).resolves.toMatchObject([{ questionId: 'q_adhoc', sessionId: null }]);
+
+      await expect(
+        repo.listAttemptedQuestionsByUserId('user_1', 10, 0, {
+          source: 'tutor',
+        }),
+      ).resolves.toMatchObject([
+        { questionId: 'q_tutor', sessionMode: 'tutor' },
+      ]);
+
+      await expect(
+        repo.listAttemptedQuestionsByUserId('user_1', 10, 0, {
+          source: 'exam',
+        }),
+      ).resolves.toMatchObject([{ questionId: 'q_exam', sessionMode: 'exam' }]);
+    });
   });
 });

@@ -99,20 +99,29 @@ describe('app/(app)/app/dashboard', () => {
     const html = renderToStaticMarkup(
       <DashboardView
         stats={{
-          totalAnswered: 1,
+          totalAnswered: 2,
           accuracyOverall: 1,
-          answeredLast7Days: 1,
+          answeredLast7Days: 2,
           accuracyLast7Days: 1,
           currentStreakDays: 1,
           recentActivity: [
             {
               isAvailable: false,
-              attemptId: 'attempt_unavailable',
+              attemptId: 'attempt_unavailable_incorrect',
               answeredAt: '2026-02-01T00:00:00.000Z',
               questionId: 'q_orphaned',
               sessionId: null,
               sessionMode: null,
               isCorrect: false,
+            },
+            {
+              isAvailable: false,
+              attemptId: 'attempt_unavailable_correct',
+              answeredAt: '2026-02-02T00:00:00.000Z',
+              questionId: 'q_orphaned_2',
+              sessionId: null,
+              sessionMode: null,
+              isCorrect: true,
             },
           ],
         }}
@@ -124,6 +133,8 @@ describe('app/(app)/app/dashboard', () => {
     );
 
     expect(html).toContain('[Question no longer available]');
+    expect(html).toContain('Incorrect');
+    expect(html).toContain('Correct');
   });
 
   it('renders per-section error when sessionHistoryResult fails', () => {

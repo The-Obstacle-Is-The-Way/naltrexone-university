@@ -475,13 +475,13 @@ describe('DrizzlePracticeSessionRepository + DrizzleAttemptRepository', () => {
     const user = await createUser();
 
     const q1 = await createQuestion({
-      slug: `it-missed-q1-${randomUUID()}`,
+      slug: `it-attempted-q1-${randomUUID()}`,
       status: 'published',
       difficulty: 'easy',
     });
 
     const q2 = await createQuestion({
-      slug: `it-missed-q2-${randomUUID()}`,
+      slug: `it-attempted-q2-${randomUUID()}`,
       status: 'published',
       difficulty: 'easy',
     });
@@ -584,12 +584,12 @@ describe('DrizzlePracticeSessionRepository + DrizzleAttemptRepository', () => {
     const user = await createUser();
 
     const qTie = await createQuestion({
-      slug: `it-missed-tie-${randomUUID()}`,
+      slug: `it-attempted-tie-${randomUUID()}`,
       status: 'published',
       difficulty: 'easy',
     });
-    const qMissed = await createQuestion({
-      slug: `it-missed-keep-${randomUUID()}`,
+    const qIncorrect = await createQuestion({
+      slug: `it-attempted-incorrect-${randomUUID()}`,
       status: 'published',
       difficulty: 'easy',
     });
@@ -622,9 +622,9 @@ describe('DrizzlePracticeSessionRepository + DrizzleAttemptRepository', () => {
       {
         id: '00000000-0000-4000-8000-000000000002',
         userId: user.id,
-        questionId: qMissed.id,
+        questionId: qIncorrect.id,
         practiceSessionId: null,
-        selectedChoiceId: qMissed.correctChoiceId,
+        selectedChoiceId: qIncorrect.correctChoiceId,
         isCorrect: false,
         timeSpentSeconds: 1,
         answeredAt: new Date('2026-02-05T00:00:00.000Z'),
@@ -641,7 +641,7 @@ describe('DrizzlePracticeSessionRepository + DrizzleAttemptRepository', () => {
 
     expect(attemptedIncorrect).toEqual([
       {
-        questionId: qMissed.id,
+        questionId: qIncorrect.id,
         answeredAt: new Date('2026-02-05T00:00:00.000Z'),
         isCorrect: false,
         sessionId: null,

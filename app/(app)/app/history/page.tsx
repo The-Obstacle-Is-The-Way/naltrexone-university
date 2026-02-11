@@ -56,14 +56,14 @@ export function createHistoryPage(deps?: {
     const defaultResultFilter =
       rawTab === 'missed' ? ('incorrect' as const) : null;
 
-    const questionsFilters: QuestionsFilters = {
-      difficulty: parseDifficultyFilter(params.difficulty),
-      tagSlug: parseTagSlugFilter(params.tag),
-      result: parseResultFilter(params.result) ?? defaultResultFilter,
-      source: parseSourceFilter(params.source),
-    };
-
     if (activeTab === 'questions') {
+      const questionsFilters: QuestionsFilters = {
+        difficulty: parseDifficultyFilter(params.difficulty),
+        tagSlug: parseTagSlugFilter(params.tag),
+        result: parseResultFilter(params.result) ?? defaultResultFilter,
+        source: parseSourceFilter(params.source),
+      };
+
       const result: ActionResult<GetAttemptedQuestionsOutput> =
         await getAttemptedQuestionsFn({
           limit,

@@ -24,6 +24,18 @@ test.describe('core app pages', () => {
     await ensureSubscribed(page);
     await assertQuestionSlugExists(page, QUESTION_SLUG);
 
+    // Legacy /app/review permanently redirects to History (Questions, Incorrect).
+    await page.goto('/app/review', {
+      timeout: 60_000,
+      waitUntil: 'domcontentloaded',
+    });
+    await expect(page).toHaveURL(
+      /\/app\/history\?tab=questions&result=incorrect/,
+      {
+        timeout: 15_000,
+      },
+    );
+
     await ensureBookmarkedQuestion(page);
 
     // Create a missed question attempt via a deterministic seeded slug.

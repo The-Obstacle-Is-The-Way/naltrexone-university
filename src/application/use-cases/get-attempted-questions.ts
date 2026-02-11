@@ -1,6 +1,7 @@
 import type { Logger } from '@/src/application/ports/logger';
 import type {
   AttemptAllQuestionsReader,
+  AttemptedQuestionsFilters,
   AttemptedQuestionsResultFilter,
   AttemptedQuestionsSourceFilter,
   QuestionRepository,
@@ -59,7 +60,7 @@ export class GetAttemptedQuestionsUseCase {
   async execute(
     input: GetAttemptedQuestionsInput,
   ): Promise<GetAttemptedQuestionsOutput> {
-    const filters = {
+    const filters: AttemptedQuestionsFilters = {
       result: input.result ?? null,
       source: input.source ?? null,
     };

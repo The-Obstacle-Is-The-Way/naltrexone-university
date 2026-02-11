@@ -249,36 +249,7 @@ export class FakeAttemptRepository implements AttemptRepository {
     offset: number,
     filters?: AttemptedQuestionsFilters,
   ): Promise<readonly AttemptedQuestionSummary[]> {
-    const mostRecentByQuestionId = new Map<string, InMemoryAttempt>();
-    for (const attempt of this.attempts) {
-      if (attempt.userId !== userId) continue;
-      const existing = mostRecentByQuestionId.get(attempt.questionId);
-      if (!existing || this.isLaterAttempt(attempt, existing)) {
-        mostRecentByQuestionId.set(attempt.questionId, attempt);
-      }
-    }
-
-    const candidates = [...mostRecentByQuestionId.values()];
-
-    const result = filters?.result ?? null;
-    const filteredByResult =
-      result === 'correct'
-        ? candidates.filter((a) => a.isCorrect)
-        : result === 'incorrect'
-          ? candidates.filter((a) => !a.isCorrect)
-          : candidates;
-
-    const source = filters?.source ?? null;
-    const filteredBySource =
-      source === 'adhoc'
-        ? filteredByResult.filter((a) => a.practiceSessionId === null)
-        : source === 'tutor' || source === 'exam'
-          ? filteredByResult.filter(
-              (a) => a.practiceSessionId !== null && a.sessionMode === source,
-            )
-          : filteredByResult;
-
-    return filteredBySource
+    return this.getFilteredAttemptedCandidates(userId, filters)
       .sort((a, b) => b.answeredAt.getTime() - a.answeredAt.getTime())
       .slice(offset, offset + limit)
       .map((a) => ({
@@ -294,6 +265,13 @@ export class FakeAttemptRepository implements AttemptRepository {
     userId: string,
     filters?: AttemptedQuestionsFilters,
   ): Promise<number> {
+    return this.getFilteredAttemptedCandidates(userId, filters).length;
+  }
+
+  private getFilteredAttemptedCandidates(
+    userId: string,
+    filters?: AttemptedQuestionsFilters,
+  ): InMemoryAttempt[] {
     const mostRecentByQuestionId = new Map<string, InMemoryAttempt>();
     for (const attempt of this.attempts) {
       if (attempt.userId !== userId) continue;
@@ -314,16 +292,13 @@ export class FakeAttemptRepository implements AttemptRepository {
           : candidates;
 
     const source = filters?.source ?? null;
-    const filteredBySource =
-      source === 'adhoc'
-        ? filteredByResult.filter((a) => a.practiceSessionId === null)
-        : source === 'tutor' || source === 'exam'
-          ? filteredByResult.filter(
-              (a) => a.practiceSessionId !== null && a.sessionMode === source,
-            )
-          : filteredByResult;
-
-    return filteredBySource.length;
+    return source === 'adhoc'
+      ? filteredByResult.filter((a) => a.practiceSessionId === null)
+      : source === 'tutor' || source === 'exam'
+        ? filteredByResult.filter(
+            (a) => a.practiceSessionId !== null && a.sessionMode === source,
+          )
+        : filteredByResult;
   }
 
   async findMostRecentAnsweredAtByQuestionIds(

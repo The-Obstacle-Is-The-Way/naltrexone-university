@@ -302,7 +302,7 @@ describe('GetAttemptedQuestionsUseCase', () => {
     });
   });
 
-  it('supports result filter (correct/incorrect)', async () => {
+  it('supports result filter (correct)', async () => {
     const useCase = new GetAttemptedQuestionsUseCase(
       new FakeAttemptRepository([
         createAttempt({
@@ -334,6 +334,42 @@ describe('GetAttemptedQuestionsUseCase', () => {
       }),
     ).resolves.toMatchObject({
       rows: [{ questionId: 'q1', isCorrect: true }],
+      totalCount: 1,
+    });
+  });
+
+  it('supports result filter (incorrect)', async () => {
+    const useCase = new GetAttemptedQuestionsUseCase(
+      new FakeAttemptRepository([
+        createAttempt({
+          userId: 'user-1',
+          questionId: 'q1',
+          isCorrect: true,
+          answeredAt: new Date('2026-02-01T12:00:00Z'),
+        }),
+        createAttempt({
+          userId: 'user-1',
+          questionId: 'q2',
+          isCorrect: false,
+          answeredAt: new Date('2026-02-01T10:00:00Z'),
+        }),
+      ]),
+      new FakeQuestionRepository([
+        createQuestion({ id: 'q1', slug: 'q-1', stemMd: 'Stem for q1' }),
+        createQuestion({ id: 'q2', slug: 'q-2', stemMd: 'Stem for q2' }),
+      ]),
+      new FakeLogger(),
+    );
+
+    await expect(
+      useCase.execute({
+        userId: 'user-1',
+        limit: 10,
+        offset: 0,
+        result: 'incorrect',
+      }),
+    ).resolves.toMatchObject({
+      rows: [{ questionId: 'q2', isCorrect: false }],
       totalCount: 1,
     });
   });

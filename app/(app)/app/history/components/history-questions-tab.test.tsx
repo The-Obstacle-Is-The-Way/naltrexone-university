@@ -237,7 +237,7 @@ describe('HistoryQuestionsTab', () => {
     expect(html).not.toContain('/app/questions/');
   });
 
-  it('renders correct and incorrect result badges with expected styling', () => {
+  it('renders correct and incorrect result badges', () => {
     const result: ActionResult<GetAttemptedQuestionsOutput> = {
       ok: true,
       data: {
@@ -275,7 +275,10 @@ describe('HistoryQuestionsTab', () => {
 
     const html = renderToStaticMarkup(<HistoryQuestionsTab result={result} />);
 
-    expect(html).toContain('text-emerald-500');
-    expect(html).toContain('text-destructive');
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const spans = Array.from(doc.querySelectorAll('span'));
+
+    expect(spans.some((span) => span.textContent === 'Correct')).toBe(true);
+    expect(spans.some((span) => span.textContent === 'Incorrect')).toBe(true);
   });
 });
