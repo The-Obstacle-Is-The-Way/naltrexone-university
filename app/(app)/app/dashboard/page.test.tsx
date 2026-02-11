@@ -14,7 +14,32 @@ describe('app/(app)/app/dashboard', () => {
           answeredLast7Days: 5,
           accuracyLast7Days: 0.6,
           currentStreakDays: 3,
-          recentActivity: [],
+          recentActivity: [
+            {
+              isAvailable: true,
+              attemptId: 'attempt_1',
+              answeredAt: '2026-02-02T00:00:00.000Z',
+              questionId: 'q_correct',
+              sessionId: null,
+              sessionMode: null,
+              slug: 'q-correct',
+              stemMd: 'Stem for correct',
+              difficulty: 'easy',
+              isCorrect: true,
+            },
+            {
+              isAvailable: true,
+              attemptId: 'attempt_2',
+              answeredAt: '2026-02-03T00:00:00.000Z',
+              questionId: 'q_incorrect',
+              sessionId: null,
+              sessionMode: null,
+              slug: 'q-incorrect',
+              stemMd: 'Stem for incorrect',
+              difficulty: 'hard',
+              isCorrect: false,
+            },
+          ],
         }}
         sessionHistoryResult={{
           ok: true,
@@ -37,27 +62,6 @@ describe('app/(app)/app/dashboard', () => {
             offset: 0,
           },
         }}
-        missedQuestionsResult={{
-          ok: true,
-          data: {
-            rows: [
-              {
-                isAvailable: true,
-                questionId: 'q_1',
-                sessionId: null,
-                sessionMode: null,
-                slug: 'q-1',
-                stemMd: 'Stem for q1',
-                difficulty: 'easy',
-                tagSlugs: [],
-                lastAnsweredAt: '2026-02-02T00:00:00.000Z',
-              },
-            ],
-            limit: 3,
-            offset: 0,
-            totalCount: 1,
-          },
-        }}
       />,
     );
 
@@ -72,16 +76,26 @@ describe('app/(app)/app/dashboard', () => {
     expect(html).toContain('Exam');
     expect(html).toContain('15/20 correct');
     expect(html).toContain('Feb 1, 2026');
-    expect(html).toContain('Recent missed');
-    expect(html).toContain('Stem for q1');
+    expect(html).toContain('Recent activity');
+    expect(html).toContain(`href="${ROUTES.APP_HISTORY}?tab=questions"`);
+    expect(html).toContain('Stem for correct');
+    expect(html).toContain('Stem for incorrect');
     expect(html).toContain(
-      `href="${toQuestionRoute('q-1', { from: 'dashboard' })}"`,
+      `href="${toQuestionRoute('q-correct', { from: 'dashboard' })}"`,
+    );
+    expect(html).toContain(
+      `href="${toQuestionRoute('q-incorrect', { from: 'dashboard' })}"`,
     );
     expect(html).toContain('Easy');
-    expect(html).not.toContain('Recent activity');
+    expect(html).toContain('Hard');
+    expect(html).toContain('Correct');
+    expect(html).toContain('Incorrect');
+    expect(html).toContain('Answered Feb 2, 2026');
+    expect(html).toContain('Answered Feb 3, 2026');
+    expect(html).not.toContain('Recent missed');
   });
 
-  it('renders placeholder text for unavailable missed question rows', () => {
+  it('renders placeholder text for unavailable recent activity rows', () => {
     const html = renderToStaticMarkup(
       <DashboardView
         stats={{
@@ -90,28 +104,21 @@ describe('app/(app)/app/dashboard', () => {
           answeredLast7Days: 1,
           accuracyLast7Days: 1,
           currentStreakDays: 1,
-          recentActivity: [],
+          recentActivity: [
+            {
+              isAvailable: false,
+              attemptId: 'attempt_unavailable',
+              answeredAt: '2026-02-01T00:00:00.000Z',
+              questionId: 'q_orphaned',
+              sessionId: null,
+              sessionMode: null,
+              isCorrect: false,
+            },
+          ],
         }}
         sessionHistoryResult={{
           ok: true,
           data: { rows: [], total: 0, limit: 3, offset: 0 },
-        }}
-        missedQuestionsResult={{
-          ok: true,
-          data: {
-            rows: [
-              {
-                isAvailable: false,
-                questionId: 'q_orphaned',
-                sessionId: null,
-                sessionMode: null,
-                lastAnsweredAt: '2026-02-01T00:00:00.000Z',
-              },
-            ],
-            limit: 3,
-            offset: 0,
-            totalCount: 1,
-          },
         }}
       />,
     );
@@ -134,10 +141,6 @@ describe('app/(app)/app/dashboard', () => {
           ok: false,
           error: { code: 'INTERNAL_ERROR', message: 'Sessions failed' },
         }}
-        missedQuestionsResult={{
-          ok: true,
-          data: { rows: [], limit: 3, offset: 0, totalCount: 0 },
-        }}
       />,
     );
 
@@ -145,7 +148,7 @@ describe('app/(app)/app/dashboard', () => {
     expect(html).toContain('Recent sessions');
   });
 
-  it('renders per-section error when missedQuestionsResult fails', () => {
+  it('renders empty state when there is no recent activity', () => {
     const html = renderToStaticMarkup(
       <DashboardView
         stats={{
@@ -160,15 +163,11 @@ describe('app/(app)/app/dashboard', () => {
           ok: true,
           data: { rows: [], total: 0, limit: 3, offset: 0 },
         }}
-        missedQuestionsResult={{
-          ok: false,
-          error: { code: 'INTERNAL_ERROR', message: 'Missed questions failed' },
-        }}
       />,
     );
 
-    expect(html).toContain('Missed questions failed');
-    expect(html).toContain('Recent missed');
+    expect(html).toContain('Recent activity');
+    expect(html).toContain('No questions attempted yet.');
   });
 
   it('renders an error state when stats load fails', () => {
@@ -180,10 +179,6 @@ describe('app/(app)/app/dashboard', () => {
       sessionHistoryResult: {
         ok: true,
         data: { rows: [], total: 0, limit: 3, offset: 0 },
-      },
-      missedQuestionsResult: {
-        ok: true,
-        data: { rows: [], limit: 3, offset: 0, totalCount: 0 },
       },
     });
     const html = renderToStaticMarkup(element);
