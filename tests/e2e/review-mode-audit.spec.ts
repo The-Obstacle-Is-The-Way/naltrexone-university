@@ -125,6 +125,7 @@ test.describe('review mode audit', () => {
     const correctLinks = page.locator(
       `a[href^="/app/questions/${CORRECT_SLUG}"][href*="from=history"]`,
     );
+    await expect(correctLinks.first()).toBeVisible({ timeout: 15_000 });
     const correctLinkCount = await correctLinks.count();
     expect(correctLinkCount).toBeGreaterThanOrEqual(2);
     for (let i = 0; i < correctLinkCount; i++) {
@@ -154,6 +155,7 @@ test.describe('review mode audit', () => {
     const incorrectLinks = page.locator(
       `a[href^="/app/questions/${INCORRECT_SLUG}"][href*="from=history"]`,
     );
+    await expect(incorrectLinks.first()).toBeVisible({ timeout: 15_000 });
     const incorrectLinkCount = await incorrectLinks.count();
     expect(incorrectLinkCount).toBeGreaterThanOrEqual(2);
     for (let i = 0; i < incorrectLinkCount; i++) {
@@ -245,6 +247,7 @@ test.describe('review mode audit', () => {
     await ensureBookmarkExistsOnBookmarksPage(page);
 
     const questionLinks = page.locator('a[href^="/app/questions/"]');
+    await expect(questionLinks.first()).toBeVisible({ timeout: 15_000 });
     const count = await questionLinks.count();
     expect(count).toBeGreaterThan(0);
 

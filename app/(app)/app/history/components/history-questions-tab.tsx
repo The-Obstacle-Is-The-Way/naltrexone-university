@@ -365,10 +365,7 @@ export function HistoryQuestionsTab({
                       >
                         <Link
                           href={href}
-                          aria-label={`${row.isCorrect ? 'Review' : 'Reattempt'} question: ${getStemPreview(
-                            row.stemMd,
-                            80,
-                          )}`}
+                          aria-label={`${row.isCorrect ? 'Review' : 'Reattempt'} question: ${title}`}
                         >
                           {row.isCorrect ? 'Review' : 'Reattempt'}
                         </Link>

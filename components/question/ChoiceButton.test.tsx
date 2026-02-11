@@ -117,5 +117,6 @@ describe('ChoiceButton', () => {
     }
 
     expect(wrapperLabel.getAttribute('class')).toContain('opacity-50');
+    expect(wrapperLabel.getAttribute('class')).toContain('cursor-not-allowed');
   });
 });

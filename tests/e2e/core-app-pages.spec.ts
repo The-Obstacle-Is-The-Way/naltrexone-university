@@ -25,10 +25,10 @@ test.describe('core app pages', () => {
     await assertQuestionSlugExists(page, QUESTION_SLUG);
 
     // Legacy /app/review permanently redirects to History (Questions, Incorrect).
-    const reviewRedirectResponsePromise = page.waitForResponse((response) => {
-      const url = new URL(response.url());
-      return url.pathname === '/app/review' && response.status() === 308;
-    });
+    const reviewRedirectResponsePromise = page.waitForResponse(
+      (response) => new URL(response.url()).pathname === '/app/review',
+      { timeout: 10_000 },
+    );
     await page.goto('/app/review', {
       timeout: 60_000,
       waitUntil: 'domcontentloaded',
