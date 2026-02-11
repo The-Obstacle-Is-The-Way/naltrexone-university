@@ -27,11 +27,15 @@ export function createUser(overrides: Partial<User> = {}): User {
   };
 }
 
-export function createAttempt(overrides: Partial<Attempt> = {}): Attempt {
+type AttemptSessionMode = 'tutor' | 'exam' | null;
+
+export function createAttempt(
+  overrides: Partial<Attempt> & { sessionMode?: AttemptSessionMode } = {},
+): Attempt & { sessionMode?: AttemptSessionMode } {
   const now = new Date();
   const questionId = overrides.questionId ?? 'question-1';
 
-  return {
+  const base: Attempt = {
     id: overrides.id ?? `attempt-${questionId}`,
     userId: overrides.userId ?? 'user-1',
     questionId,
@@ -41,6 +45,10 @@ export function createAttempt(overrides: Partial<Attempt> = {}): Attempt {
     timeSpentSeconds: overrides.timeSpentSeconds ?? 0,
     answeredAt: overrides.answeredAt ?? now,
   };
+
+  return overrides.sessionMode !== undefined
+    ? { ...base, sessionMode: overrides.sessionMode }
+    : base;
 }
 
 export function createBookmark(overrides: Partial<Bookmark> = {}): Bookmark {

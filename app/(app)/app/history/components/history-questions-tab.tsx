@@ -121,6 +121,8 @@ export function HistoryQuestionsTab({
   const showingStart = rows.length > 0 ? offset + 1 : 0;
   const showingEnd = offset + rows.length;
 
+  // Tag options are derived from the current server page only. Tags that only
+  // appear on other pages will not be selectable in v1 (page-local filtering).
   const tagOptions = Array.from(
     new Set(rows.flatMap((row) => (row.isAvailable ? row.tagSlugs : []))),
   ).sort((a, b) => a.localeCompare(b));
@@ -290,6 +292,9 @@ export function HistoryQuestionsTab({
         <div className="space-y-4">
           <div className="text-sm text-muted-foreground">
             Showing {showingStart}–{showingEnd} of {totalCount}
+            {hasActiveDifficultyOrTagFilters && displayRows.length < rows.length
+              ? ` (${displayRows.length} visible after filters)`
+              : null}
           </div>
 
           <ul className="space-y-4">

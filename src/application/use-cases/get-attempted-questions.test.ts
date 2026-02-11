@@ -190,16 +190,14 @@ describe('GetAttemptedQuestionsUseCase', () => {
   it('includes session context (sessionId, sessionMode) on attempted question rows when available', async () => {
     const useCase = new GetAttemptedQuestionsUseCase(
       new FakeAttemptRepository([
-        {
-          ...createAttempt({
-            userId: 'user-1',
-            questionId: 'q1',
-            practiceSessionId: 'session-1',
-            isCorrect: true,
-            answeredAt: new Date('2026-02-01T12:00:00Z'),
-          }),
+        createAttempt({
+          userId: 'user-1',
+          questionId: 'q1',
+          practiceSessionId: 'session-1',
+          isCorrect: true,
+          answeredAt: new Date('2026-02-01T12:00:00Z'),
           sessionMode: 'exam',
-        },
+        }),
       ]),
       new FakeQuestionRepository([
         createQuestion({ id: 'q1', slug: 'q-1', stemMd: 'Stem for q1' }),
@@ -377,26 +375,22 @@ describe('GetAttemptedQuestionsUseCase', () => {
   const createUseCaseWithSourceAttempts = () =>
     new GetAttemptedQuestionsUseCase(
       new FakeAttemptRepository([
-        {
-          ...createAttempt({
-            userId: 'user-1',
-            questionId: 'q_tutor',
-            practiceSessionId: 'session-tutor',
-            isCorrect: true,
-            answeredAt: new Date('2026-02-01T12:00:00Z'),
-          }),
+        createAttempt({
+          userId: 'user-1',
+          questionId: 'q_tutor',
+          practiceSessionId: 'session-tutor',
+          isCorrect: true,
+          answeredAt: new Date('2026-02-01T12:00:00Z'),
           sessionMode: 'tutor',
-        },
-        {
-          ...createAttempt({
-            userId: 'user-1',
-            questionId: 'q_exam',
-            practiceSessionId: 'session-exam',
-            isCorrect: true,
-            answeredAt: new Date('2026-02-01T11:00:00Z'),
-          }),
+        }),
+        createAttempt({
+          userId: 'user-1',
+          questionId: 'q_exam',
+          practiceSessionId: 'session-exam',
+          isCorrect: true,
+          answeredAt: new Date('2026-02-01T11:00:00Z'),
           sessionMode: 'exam',
-        },
+        }),
         createAttempt({
           userId: 'user-1',
           questionId: 'q_adhoc',
