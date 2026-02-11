@@ -73,6 +73,7 @@ The `?from=` query param currently only controls the back-link destination and s
 | `from` | Back Link | Subtitle |
 |--------|-----------|----------|
 | `dashboard` | `/app/dashboard` | "Review a question from your recent activity." |
+| `review` | `/app/history?tab=missed` | "Reattempt a question from your review list." |
 | `history` | `/app/history` | "Reviewing a question from your history." |
 | `practice` | `/app/practice` | "Review a question from your practice history." |
 | `bookmarks` | `/app/bookmarks` | "Reattempt a question from your bookmarks." |
@@ -388,7 +389,7 @@ These are design opinions from the browser agent, included for brainstorming pur
 
 Automated E2E spec: `tests/e2e/review-mode-audit.spec.ts`
 Run against: `localhost:3000` (local dev server, same codebase as Vercel deployment)
-Result: **6/6 tests passed**
+Result: **4/4 tests passed**
 
 ### Test 1: Question page always shows blank form regardless of entry point
 **Status: PASS — gap confirmed**

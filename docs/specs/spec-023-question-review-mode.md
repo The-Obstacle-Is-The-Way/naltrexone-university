@@ -78,11 +78,15 @@ no mode param                           → ATTEMPT MODE (fresh form, current be
 | Entry Point | Current URL | New URL |
 |-------------|-------------|---------|
 | Dashboard Recent Activity | `?from=dashboard` | `?from=dashboard&mode=review` |
-| History Questions "Review" button | `?from=history` | `?from=history&mode=review` |
-| History Questions "Reattempt" button | `?from=history` | `?from=history` (unchanged) |
+| History Questions (correct question links) | `?from=history` | `?from=history&mode=review` |
+| History Questions (incorrect question links) | `?from=history` | `?from=history` (unchanged) |
 | History Sessions Breakdown click | `?from=history` | `?from=history&mode=review` |
 | Practice Session Summary click | `?from=practice` | `?from=practice&mode=review` |
 | Bookmarks click | `?from=bookmarks` | `?from=bookmarks` (unchanged) |
+
+**Note:** The History Questions tab has **two** links per row (stem/title link + action button). Keep them in sync:
+- Correct rows: both links include `mode=review`
+- Incorrect rows: both links omit `mode`
 
 ### 3.4 Reuse Strategy
 
@@ -365,6 +369,8 @@ createQuestionViewControllerDeps: () => ({
 
 Add mode type and update `toQuestionRoute`:
 
+**Back-compat note:** Keep the existing `QuestionOrigin` union members as-is (including the legacy `'review'` origin used by older bookmarked question URLs). `mode` is additive.
+
 ```typescript
 export type QuestionMode = 'review';
 
@@ -541,7 +547,9 @@ disabled && !correctness && 'opacity-50',
 
 This means:
 - Disabled during loading → `cursor-not-allowed opacity-50` (unchanged visual)
-- Disabled after submit (correctness set) → `cursor-not-allowed` only (green/red borders are sufficient)
+- Disabled after submit/review:
+  - choices with correctness highlighting (`correct`/`incorrect`) → `cursor-not-allowed` only (green/red borders are sufficient)
+  - neutral unselected choices may remain dimmed (acceptable v1)
 
 ### 4.13 Entry Point — Dashboard Recent Activity
 
@@ -557,16 +565,21 @@ href={toQuestionRoute(row.slug, { from: 'dashboard', mode: 'review' })}
 
 **File:** `app/(app)/app/history/components/history-questions-tab.tsx`
 
-Update the "Review" button (for correct questions) to include `mode: 'review'`:
+Update the History Questions row links to differentiate **Review** vs **Reattempt**:
+- **Correct rows:** both the **stem/title link** and the **"Review" button** include `mode: 'review'`
+- **Incorrect rows:** both links remain in attempt mode (no `mode` param)
 
 ```typescript
-// "Review" button (isCorrect === true):
-href={toQuestionRoute(row.slug, { from: 'history', mode: 'review' })}
-aria-label={`Review question: ${row.stemMd}`}
+const href = row.isCorrect
+  ? toQuestionRoute(row.slug, { from: 'history', mode: 'review' })
+  : toQuestionRoute(row.slug, { from: 'history' });
 
-// "Reattempt" button (isCorrect === false): unchanged
-href={toQuestionRoute(row.slug, { from: 'history' })}
-aria-label={`Reattempt question: ${row.stemMd}`}
+// Stem/title link:
+href={href}
+
+// Action button:
+href={href}
+aria-label={`${row.isCorrect ? 'Review' : 'Reattempt'} question: ${row.stemMd}`}
 ```
 
 ### 4.15 Entry Point — Session Breakdown List
@@ -612,10 +625,10 @@ href={toQuestionRoute(row.slug, { from, mode: 'review' })}
 | `app/(app)/app/questions/[slug]/question-page-logic.ts` | Add `loadPreviousAttempt` function |
 | `app/(app)/app/questions/[slug]/question-page-logic.test.ts` | Add tests for `loadPreviousAttempt` |
 | `components/question/choice-button.tsx` | Remove `opacity-50` when correctness borders shown |
-| `components/question/choice-button.test.tsx` | Update disabled styling assertions |
+| `components/question/ChoiceButton.test.tsx` | Update disabled styling assertions |
 | `app/(app)/app/dashboard/page.tsx` | Add `mode: 'review'` to Recent Activity links |
 | `app/(app)/app/dashboard/page.test.tsx` | Update link href assertions |
-| `app/(app)/app/history/components/history-questions-tab.tsx` | Add `mode: 'review'` to "Review" button only |
+| `app/(app)/app/history/components/history-questions-tab.tsx` | Add `mode: 'review'` to correct-question links (stem + "Review" action), keep incorrect links as reattempt |
 | `app/(app)/app/history/components/history-questions-tab.test.tsx` | Update link href assertions |
 | `app/(app)/app/shared/components/session-breakdown-list.tsx` | Add `mode: 'review'` to question links |
 | `app/(app)/app/shared/components/session-breakdown-list.test.tsx` | Update link href assertions |
@@ -689,7 +702,7 @@ QuestionView:
 
 #### Choice Button — Disabled Opacity
 
-**File:** `components/question/choice-button.test.tsx`
+**File:** `components/question/ChoiceButton.test.tsx`
 
 Update test:
 
@@ -710,8 +723,10 @@ Update test:
 **File:** `app/(app)/app/history/components/history-questions-tab.test.tsx`
 
 ```
-- "Review" button href includes mode=review
-- "Reattempt" button href does NOT include mode=review
+- Correct question stem/title link href includes mode=review
+- "Review" action link href includes mode=review
+- Incorrect question stem/title link href does NOT include mode=review
+- "Reattempt" action link href does NOT include mode=review
 ```
 
 **File:** `app/(app)/app/shared/components/session-breakdown-list.test.tsx`
@@ -795,12 +810,12 @@ Phase 2: Frontend — Routes + Question Page
   18. Update use-question-page-controller.ts (mode input, review effect)
   19. Update question-page-client.test.tsx for review mode rendering
   20. Update choice-button.tsx (remove opacity-50 in correctness state)
-  21. Update choice-button.test.tsx
+  21. Update ChoiceButton.test.tsx
 
 Phase 3: Entry Points
   22. Update dashboard/page.tsx (add mode: 'review' to Recent Activity links)
   23. Update dashboard/page.test.tsx
-  24. Update history-questions-tab.tsx ("Review" gets mode: 'review', "Reattempt" unchanged)
+  24. Update history-questions-tab.tsx (correct-question links use mode=review, incorrect-question links unchanged)
   25. Update history-questions-tab.test.tsx
   26. Update session-breakdown-list.tsx (add mode: 'review')
   27. Update session-breakdown-list.test.tsx
@@ -816,15 +831,15 @@ Phase 4: E2E + Verification
 ## 8. Acceptance Criteria
 
 - [ ] Clicking a question from Dashboard Recent Activity opens review mode with previous answer shown
-- [ ] Clicking "Review" in History Questions tab opens review mode
-- [ ] Clicking "Reattempt" in History Questions tab opens fresh attempt mode (no review)
+- [ ] Clicking a correct question in History Questions tab (stem/title link or "Review" action) opens review mode
+- [ ] Clicking an incorrect question in History Questions tab (stem/title link or "Reattempt" action) opens fresh attempt mode (no review)
 - [ ] Clicking a question from Session Breakdown opens review mode
 - [ ] Review mode shows: user's previous choice highlighted, correct choice with green border, Feedback component with explanation, "Try Again" button
 - [ ] Review mode does NOT show: Submit button
 - [ ] Review mode does NOT create a new attempt row
 - [ ] "Try Again" in review mode resets to fresh attempt form (blank choices, Submit button, no Feedback)
 - [ ] `?mode=review` with no previous attempt gracefully falls back to attempt mode
-- [ ] Disabled choices in post-submit / review state do NOT have `opacity-50`
+- [ ] Disabled choices with correctness highlighting (green/red state) do NOT have `opacity-50`
 - [ ] Disabled choices during loading still have `opacity-50`
 - [ ] Bookmarks entry point does NOT use review mode (stays as fresh attempt)
 - [ ] All existing E2E tests pass (with updates)
@@ -838,6 +853,7 @@ Phase 4: E2E + Verification
 - **Session-level review page** — A full page showing all questions + answers from a completed session. Separate future spec. This spec covers question-level review only.
 - **Date context in subtitle** — "You answered this incorrectly on Feb 11, 2026." Nice-to-have, deferred. Current subtitles are accurate enough once review mode shows actual review content.
 - **Attempt history per question** — Only the most recent attempt is shown. Full attempt history ("See all 3 attempts") is a separate feature.
+- **Session-scoped attempt selection** — Review mode always shows the most recent attempt for the question, even when entered from a specific session breakdown. Selecting a specific session’s answer (by `sessionId`/`attemptId`) is a separate feature.
 - **Question bank reset** — Clearing previous attempts to attempt fresh. Separate feature.
 - **Review mode for bookmarks** — Bookmarks are for re-practicing, not reviewing. `from=bookmarks` stays as attempt mode.
 - **Animated transition between review and attempt mode** — "Try Again" instantly resets state. No animation needed.
@@ -852,6 +868,8 @@ Phase 4: E2E + Verification
 | Two sequential server calls | `getQuestionBySlug` then `getPreviousAttempt` — not batched | Both are fast queries. Could combine into a single action later. Keeping them separate preserves single responsibility. |
 | Brief flash of blank form | In review mode, the form renders blank for a moment before previous attempt data loads | The loading state already shows "Loading question..." spinner. The previous attempt loads immediately after the question. Flash is minimal (<100ms on typical connections). |
 | No visual distinction for review mode page | The page looks identical to post-submit state | This is intentional — review mode IS the post-submit state, just pre-populated. The subtitle text provides context. |
+| Not session-scoped | Entering review mode from a session breakdown still shows the **most recent** attempt for that question (may differ from that session’s answer if the user reattempted later) | Future enhancement: allow `attemptId`/`sessionId` targeting to show a specific attempt instead of "latest". |
+| Exam-mode leakage | If the latest attempt was created inside an **active exam session**, review mode can reveal explanations (this spec does not check `PracticeSession.endedAt`) | Future enhancement: gate review mode when the latest attempt belongs to an un-ended exam session; v1 accepts this trade-off for simplicity. |
 
 ---
 
