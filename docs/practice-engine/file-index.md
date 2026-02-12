@@ -2,7 +2,7 @@
 
 > **Parent:** [Practice Engine Index](./index.md)
 > **Scope:** Directory listings for all practice-engine-related source files
-> **Last Verified:** 2026-02-09
+> **Last Verified:** 2026-02-11
 
 ---
 
@@ -16,7 +16,7 @@ value-objects/
   subscription-plan.ts, subscription-status.ts, index.ts
   (each with colocated .test.ts)
 services/
-  grading.ts, entitlement.ts, session.ts, statistics.ts, shuffle.ts, question-selection.ts, index.ts
+  grading.ts, entitlement.ts, session.ts, session-stats.ts, statistics.ts, shuffle.ts, question-selection.ts, index.ts
   (each with colocated .test.ts)
 errors/
   domain-errors.ts, index.ts (with .test.ts)
@@ -36,7 +36,7 @@ use-cases/
   get-next-question.ts, submit-answer.ts, start-practice-session.ts, end-practice-session.ts,
   get-incomplete-practice-session.ts, get-practice-session-review.ts,
   set-practice-session-question-mark.ts, get-session-history.ts,
-  toggle-bookmark.ts, get-bookmarks.ts, get-missed-questions.ts, get-user-stats.ts,
+  toggle-bookmark.ts, get-bookmarks.ts, get-attempted-questions.ts, get-previous-attempt.ts, get-user-stats.ts,
   check-entitlement.ts, create-checkout-session.ts, create-portal-session.ts
   (each with colocated .test.ts)
 errors/
@@ -64,17 +64,20 @@ controllers/
 ```
 (app)/app/practice/
   page.tsx, loading.tsx, error.tsx
-  hooks/ (8 hook files)
-  components/ (practice-view.tsx, practice-session-starter.tsx, incomplete-session-card.tsx, practice-session-history-panel.tsx)
+  hooks/ (7 hook files + 1 utility)
+  components/ (practice-view.tsx, practice-session-starter.tsx, incomplete-session-card.tsx)
   shared/ (question-flow-actions.ts, load-state.ts)
   quick/
     page.tsx, loading.tsx, error.tsx, quick-practice-client.tsx
   [sessionId]/
     page.tsx, loading.tsx
-    hooks/ (6 hook files)
+    hooks/ (7 hook files)
     components/ (practice-session-page-view.tsx, session-summary-view.tsx, exam-review-view.tsx, practice-session-page-client.tsx)
+(app)/app/history/
+  page.tsx, loading.tsx, error.tsx, history-page-client.tsx, history-search-params.ts
+  hooks/ (use-history-sessions.ts)
+  components/ (history-tab-bar.tsx, history-sessions-tab.tsx, history-questions-tab.tsx)
 (app)/app/dashboard/page.tsx
-(app)/app/review/page.tsx
 (app)/app/bookmarks/page.tsx
 (app)/app/questions/[slug]/ (question-page-client.tsx)
 ```

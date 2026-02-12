@@ -2,7 +2,7 @@
 
 > **Parent:** [Practice Engine Index](./index.md)
 > **Scope:** What's working, open debt, SPEC-019 status, product decisions
-> **Last Verified:** 2026-02-09
+> **Last Verified:** 2026-02-11
 
 ---
 
@@ -14,7 +14,7 @@
 - Per-question session summary with explanations
 - Bookmark toggle on question view
 - Dashboard stats with session context (grouping by session)
-- Review page with session origin badges
+- History page with tabbed Sessions + Questions views (SPEC-021)
 - Session history with drill-down to per-question breakdown
 - Error handling with visible recovery actions everywhere
 - Idempotency and rate limiting on all mutations

@@ -1,7 +1,7 @@
 # Practice Engine
 
 > **Type:** Canonical Reference Document (Living)
-> **Last Verified:** 2026-02-11
+> **Last Verified:** 2026-02-11 (synced to SPEC-021)
 > **Scope:** Everything related to practicing questions — the core product feature
 
 ---
@@ -25,7 +25,7 @@ The Practice Engine is the core feature of Naltrexone University. It's the syste
 │  /app/practice/quick    — Quick Practice (ad-hoc, no session)       │
 │  /app/practice/[sessionId] — Session runner (tutor/exam)            │
 │  /app/dashboard         — Stats + recent activity (consumer)        │
-│  /app/review            — Missed questions (consumer)               │
+│  /app/history           — History: sessions + questions (consumer)   │
 │  /app/bookmarks         — Saved questions (consumer)                │
 │  /app/questions/[slug]  — Individual question reattempt              │
 └──────────────────────────────┬──────────────────────────────────────┘
@@ -36,7 +36,7 @@ The Practice Engine is the core feature of Naltrexone University. It's the syste
 │  practice-controller    — start/end session, review, history, mark  │
 │  bookmark-controller    — toggle, list                              │
 │  tag-controller         — listAll                                   │
-│  review-controller      — getMissedQuestions                        │
+│  review-controller      — getAttemptedQuestions                     │
 │  stats-controller       — getUserStats                              │
 └──────────────────────────────┬──────────────────────────────────────┘
                                │ Use Case calls
@@ -46,13 +46,13 @@ The Practice Engine is the core feature of Naltrexone University. It's the syste
 │  SubmitAnswer            EndPracticeSession                         │
 │  ToggleBookmark          GetIncompletePracticeSession                │
 │  GetBookmarks            GetPracticeSessionReview                    │
-│  GetMissedQuestions      SetPracticeSessionQuestionMark              │
+│  GetAttemptedQuestions    SetPracticeSessionQuestionMark              │
 │  GetUserStats            GetSessionHistory                          │
 └──────────────────────────────┬──────────────────────────────────────┘
                                │ Port interfaces
 ┌──────────────────────────────┴──────────────────────────────────────┐
 │                      Ports (application/ports/)                     │
-│  QuestionRepository      AttemptRepository (6 sub-interfaces)       │
+│  QuestionRepository      AttemptRepository (7 sub-interfaces)       │
 │  PracticeSessionRepository  BookmarkRepository  TagRepository       │
 └──────────────────────────────┬──────────────────────────────────────┘
                                │ Implementations
@@ -100,6 +100,7 @@ Dependencies point **inward only** (Clean Architecture, ADR-001). The domain lay
 | [SPEC-015](../_archive/specs/spec-015-dashboard.md) | Dashboard requirements |
 | [SPEC-019](../_archive/specs/spec-019-practice-ux-redesign.md) | UX redesign (all phases implemented) |
 | [SPEC-020](../_archive/specs/spec-020-practice-engine-completion.md) | Practice engine completion (all done) |
+| [SPEC-021](../_archive/specs/spec-021-history-page-restructure.md) | History page restructure (replaces `/app/review`) |
 | [ADR-001](adr/adr-001-clean-architecture-layers.md) | Clean Architecture decision |
 | [ADR-003](adr/adr-003-testing-strategy.md) | Testing strategy (TDD, fakes over mocks) |
 | [ADR-006](adr/adr-006-error-handling-strategy.md) | Error handling (ApplicationError) |
@@ -119,3 +120,4 @@ Dependencies point **inward only** (Clean Architecture, ADR-001). The domain lay
 | 2026-02-09 | Implemented SPEC-019 Phase 2: `/app/practice` is now landing-only, `/app/practice/quick` hosts ad-hoc question flow, and the route/status tables updated accordingly. |
 | 2026-02-09 | Implemented SPEC-019 Phase 3: actionable dashboard activity + difficulty badges; progressive tag filter disclosure; review clarification + filters; origin-aware question navigation; improved empty states. |
 | 2026-02-11 | Decomposed monolith index into focused sub-documents. Added Content Pipeline (full end-to-end trace from MDX authoring through rendering, including BS-011 Bug B root cause). Absorbed `docs/dev/question-content-pipeline.md` into `content-pipeline.md`. |
+| 2026-02-11 | Synced all sub-documents to SPEC-021: `/app/review` → `/app/history`; `GetMissedQuestions` → `GetAttemptedQuestions`; AttemptRepository ISP updated (7 sub-interfaces); practice landing no longer embeds session history; added undocumented domain modules (`subscription-plan`, `session-stats`, `get-previous-attempt`). |

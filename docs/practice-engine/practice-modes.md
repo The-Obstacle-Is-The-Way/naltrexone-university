@@ -2,7 +2,7 @@
 
 > **Parent:** [Practice Engine Index](./index.md)
 > **Scope:** Ad-hoc, Tutor, and Exam modes — lifecycle, grading, concurrency
-> **Last Verified:** 2026-02-09
+> **Last Verified:** 2026-02-11
 
 ---
 

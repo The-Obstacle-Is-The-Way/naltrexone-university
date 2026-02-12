@@ -2,7 +2,7 @@
 
 > **Parent:** [Practice Engine Index](./index.md)
 > **Scope:** Routes, hooks, data flow, shared UI components, error handling
-> **Last Verified:** 2026-02-09
+> **Last Verified:** 2026-02-11
 
 ---
 
@@ -14,7 +14,7 @@
 | `/app/practice/quick` | Server → Client | Quick Practice — ad-hoc question flow, random question, immediate feedback, no session tracking. | Implemented (SPEC-019 Phase 2) |
 | `/app/practice/[sessionId]` | Server → Client | Session runner — progress, question flow, exam review stage, summary | Implemented |
 | `/app/dashboard` | Server Component | Stats cards + recent activity (consumer of `getUserStats`) | Implemented |
-| `/app/review` | Server Component | Missed questions list — shows only questions whose most recent attempt is incorrect (consumer of `getMissedQuestions`) | Implemented |
+| `/app/history` | Server → Client | History page — tabbed view of Sessions and Questions (consumer of `getSessionHistory` + `getAttemptedQuestions`) | Implemented (SPEC-021) |
 | `/app/bookmarks` | Server Component | Bookmarked questions (consumer of `getBookmarks`) | Implemented |
 | `/app/questions/[slug]` | Client Component | Individual question reattempt | Implemented |
 
@@ -24,17 +24,18 @@
 
 ```text
 PracticePageClient (/app/practice)
-└── usePracticeSessionControls (81 lines, composite)
-│   ├── usePracticeSessionStart (135 lines)
-│   ├── usePracticeSessionTags (51 lines)
-│   ├── usePracticeIncompleteSession (105 lines)
-│   └── usePracticeSessionHistory (124 lines)
+└── usePracticeSessionControls (53 lines, composite)
+    ├── usePracticeSessionStart (135 lines)
+    ├── usePracticeSessionTags (51 lines)
+    └── usePracticeIncompleteSession (105 lines)
 
 QuickPracticeClient (/app/practice/quick)
 └── usePracticeQuestionFlow (55 lines, composite)
     ├── usePracticeQuestionAnswerFlow (164 lines) ← over 150-line guideline
     └── usePracticeQuestionBookmarks (107 lines)
 ```
+
+Note: Session history was moved to the dedicated `/app/history` route (SPEC-021) and is no longer embedded in the practice landing page.
 
 ---
 
@@ -46,6 +47,7 @@ PracticeSessionPageClient
     ├── usePracticeSessionQuestionFlow (195 lines) ← over 150-line guideline
     ├── usePracticeQuestionBookmarks (107 lines, reused)
     ├── usePracticeSessionReviewStage (220 lines) ← over 150-line guideline
+    │   ├── usePracticeSessionReviewStageState (state machine for review stage)
     │   ├── usePracticeSessionNavigator (94 lines)
     │   └── usePracticeSessionSummaryReview (79 lines)
     └── usePracticeSessionMarkForReview (120 lines)

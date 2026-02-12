@@ -2,7 +2,7 @@
 
 > **Parent:** [Practice Engine Index](./index.md)
 > **Scope:** Authentication, authorization, rate limiting, idempotency, data isolation
-> **Last Verified:** 2026-02-09
+> **Last Verified:** 2026-02-11
 
 ---
 

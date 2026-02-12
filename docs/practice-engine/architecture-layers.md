@@ -2,7 +2,7 @@
 
 > **Parent:** [Practice Engine Index](./index.md)
 > **Scope:** Clean Architecture layers — Domain, Application, Adapters
-> **Last Verified:** 2026-02-09
+> **Last Verified:** 2026-02-11
 
 ---
 
@@ -33,6 +33,7 @@ All value objects provide branded string types, validation functions, and "All" 
 | `QuestionStatus` | `'draft'` \| `'published'` \| `'archived'` | `isVisibleStatus()` |
 | `ChoiceLabel` | `'A'` \| `'B'` \| `'C'` \| `'D'` | `isValidChoiceLabel()` |
 | `TagKind` | `'domain'` \| `'topic'` \| `'substance'` \| `'treatment'` \| `'diagnosis'` | `isValidTagKind()` |
+| `SubscriptionPlan` | `'monthly'` \| `'annual'` | `isValidSubscriptionPlan()` |
 | `SubscriptionStatus` | 8 statuses | `isEntitledStatus()` — includes `'active'`, `'inTrial'`, `'pastDue'` |
 
 ### 1.3 Domain Services
@@ -46,6 +47,7 @@ Pure functions with zero side effects. They live in `src/domain/services/`.
 | `session.ts` | `computeSessionProgress()`, `shouldShowExplanation()`, `getNextQuestionId()` | Session state machine helpers |
 | `statistics.ts` | `computeAccuracy()`, `computeStreak()`, `filterAttemptsInWindow()` | Dashboard stat computations |
 | `shuffle.ts` | `shuffleWithSeed()`, `createSeed()`, `createQuestionSeed()` | Deterministic question/choice ordering |
+| `session-stats.ts` | `computeSessionStats()`, `computeSessionDurationSeconds()`, `createDefaultQuestionState()` | Session-level stat computations |
 | `question-selection.ts` | `selectNextQuestionId(candidates, history)` | Picks next question prioritizing least-recently-seen |
 
 ### 1.4 Domain Errors
@@ -59,7 +61,7 @@ Pure functions with zero side effects. They live in `src/domain/services/`.
 
 ### 1.5 Test Coverage
 
-Every service and value object has colocated `.test.ts` files (14 test files total). Entity files are pure types with no runtime behavior, so they correctly have no tests. Domain test helpers provide factories: `createQuestion()`, `createChoice()`, `createAttempt()`, `createBookmark()`, `createPracticeSession()`, `createSubscription()`, `createUser()`, `createTag()`.
+Every service and value object has colocated `.test.ts` files (16 test files total). Entity files are pure types with no runtime behavior, so they correctly have no tests. Domain test helpers provide factories: `createQuestion()`, `createChoice()`, `createAttempt()`, `createBookmark()`, `createPracticeSession()`, `createSubscription()`, `createUser()`, `createTag()`.
 
 ---
 
@@ -93,7 +95,8 @@ All use cases follow the pattern: constructor injection of port interfaces, sing
 |----------|-------|--------|-------------|
 | `ToggleBookmark` | `{ userId, questionId }` | `{ bookmarked: boolean }` | `NOT_FOUND` |
 | `GetBookmarks` | `{ userId }` | Bookmarked questions with availability | (graceful degradation) |
-| `GetMissedQuestions` | `{ userId, limit, offset }` | Paginated missed questions with session context | (graceful degradation) |
+| `GetAttemptedQuestions` | `{ userId, limit, offset, filters? }` | Paginated attempted questions with result/source filters | (graceful degradation) |
+| `GetPreviousAttempt` | `{ userId, questionId }` | Previous attempt state with shuffled choice views, or `null` | `NOT_FOUND` |
 
 #### Dashboard
 
@@ -103,13 +106,14 @@ All use cases follow the pattern: constructor injection of port interfaces, sing
 
 ### 2.2 Ports (Interfaces)
 
-Ports define what the application layer needs from the outside world. The actual `AttemptRepository` is composed of 6 segregated sub-interfaces following ISP:
+Ports define what the application layer needs from the outside world. The actual `AttemptRepository` is composed of 7 segregated sub-interfaces following ISP:
 
 - `AttemptWriter` — `insert`, `deleteById`
 - `AttemptHistoryReader` — `findByUserId` (paginated)
 - `AttemptSessionReader` — `findBySessionId`
 - `AttemptStatsReader` — counts, recent, streak data
-- `AttemptMissedQuestionsReader` — missed questions with window function
+- `AttemptAllQuestionsReader` — paginated attempted question summaries with result/source filters
+- `AttemptSingleQuestionReader` — most recent attempt for a specific question (review mode)
 - `AttemptMostRecentAnsweredAtReader` — for question selection ordering
 
 Other ports: `QuestionRepository` (4 methods), `PracticeSessionRepository` (7 methods with CAS concurrency), `BookmarkRepository` (4 methods), `TagRepository` (1 method).
@@ -146,7 +150,7 @@ Every practice-related server action:
 | `practice-controller` | `startPracticeSession`, `getIncompletePracticeSession`, `endPracticeSession`, `getPracticeSessionReview`, `getSessionHistory`, `setPracticeSessionQuestionMark` | startPracticeSession: yes | start/end/mark: yes |
 | `bookmark-controller` | `toggleBookmark`, `getBookmarks` | toggleBookmark: yes | toggleBookmark: yes |
 | `tag-controller` | `getTags` | no | no |
-| `review-controller` | `getMissedQuestions` | no | no |
+| `review-controller` | `getAttemptedQuestions` | no | no |
 | `stats-controller` | `getUserStats` | no | no |
 
 ### 3.3 Database Schema

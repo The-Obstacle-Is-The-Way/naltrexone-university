@@ -2,7 +2,7 @@
 
 > **Parent:** [Practice Engine Index](./index.md)
 > **Scope:** Maps each part of the Practice Engine to the spec that defines it
-> **Last Verified:** 2026-02-09
+> **Last Verified:** 2026-02-11
 
 ---
 
@@ -20,16 +20,17 @@
 | Server actions / controllers | SPEC-010 | Implemented | Synced to implementation (`ActionErrorCode` = `ApplicationErrorCode`; `createAction` + `handleError`) |
 | Core question loop (fetch → render → submit → grade → explain) | SPEC-012 | Implemented | Fully compliant |
 | Practice sessions (start → answer → navigate → review → end → summary) | SPEC-013 | Implemented | Fully compliant |
-| Review + bookmarks | SPEC-014 | Implemented | Cross-page UX improvements completed via SPEC-019 Phase 3 |
+| History + bookmarks | SPEC-014 / SPEC-021 | Implemented | `/app/review` restructured to `/app/history` (SPEC-021); `GetMissedQuestions` → `GetAttemptedQuestions` with filters |
 | Dashboard stats | SPEC-015 | Implemented | Activity items clickable + difficulty badges via SPEC-019 Phase 3 |
 | UI integration patterns | SPEC-018 | Implemented | No architecture violations |
 | Practice UX redesign | SPEC-019 | Implemented | All 3 phases complete (2026-02-09) |
 | Practice engine completion (decomposition, navigation, enriched summary, session history) | SPEC-020 | Implemented | All 4 phases complete |
+| History page restructure (tabbed Sessions + Questions, filters, replaces old review page) | SPEC-021 | Implemented | `/app/review` → `/app/history`; `GetAttemptedQuestions` with result/source filters |
 
 ---
 
 ## 2. Spec Drift Summary
 
-As of **2026-02-09**, the previously identified spec drift items for the Practice Engine have been paid down by syncing the core specs (ports, use cases, schema, repositories, controllers) to the current implementation.
+As of **2026-02-11**, the previously identified spec drift items for the Practice Engine have been paid down by syncing the core specs (ports, use cases, schema, repositories, controllers) to the current implementation. SPEC-021 changes (History page restructure) are now reflected.
 
 When behavior changes introduce new public contracts (ports/use case IO/controller outputs), update the corresponding spec and add a changelog entry.
