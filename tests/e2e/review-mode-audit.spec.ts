@@ -191,6 +191,8 @@ test.describe('review mode audit', () => {
     await ensureSubscribed(page);
 
     await startSession(page, 'tutor', 1);
+    // Hardcoded 'A' is intentional: we verify the user's selected choice is
+    // restored in review mode, regardless of whether it was correct or not.
     await selectChoiceByLabel(page, 'A');
     const selectedChoice = page
       .locator('label')

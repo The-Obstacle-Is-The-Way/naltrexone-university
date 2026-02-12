@@ -136,6 +136,8 @@ describe('GetPreviousAttemptUseCase', () => {
     });
   });
 
+  // Tie-breaking relies on lexicographic DESC ordering: 'attempt-b' > 'attempt-a'.
+  // FakeAttemptRepository sorts by (answeredAt DESC, id DESC) matching Drizzle impl.
   it('breaks ties by id DESC when multiple attempts share the same answeredAt', async () => {
     const answeredAt = new Date('2026-02-01T12:00:00Z');
     const useCase = new GetPreviousAttemptUseCase(

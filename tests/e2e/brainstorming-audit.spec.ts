@@ -320,13 +320,14 @@ test.describe('brainstorming audit — validate documented issues', () => {
     );
     const hasReattempt = (await reattemptButton.count()) > 0;
 
-    if (hasReattempt) {
-      // Bug A: incorrect rows should include mode=review but don't
-      const reattemptHref = await reattemptButton.getAttribute('href');
-      expect(reattemptHref).not.toContain('mode=review');
+    // If we couldn't produce an incorrect attempt, skip rather than silently pass
+    test.skip(!hasReattempt, 'No reattempt row found — could not verify Bug A');
 
-      // Document the bug: this assertion will fail when Bug A is fixed
-      // (at which point mode=review should be present on ALL rows)
-    }
+    // Bug A: incorrect rows should include mode=review but don't
+    const reattemptHref = await reattemptButton.getAttribute('href');
+    expect(reattemptHref).not.toContain('mode=review');
+
+    // Document the bug: this assertion will fail when Bug A is fixed
+    // (at which point mode=review should be present on ALL rows)
   });
 });
