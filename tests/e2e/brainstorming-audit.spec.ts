@@ -338,7 +338,7 @@ test.describe('brainstorming audit — validate documented issues', () => {
     test.skip(!hasReattempt, 'No reattempt row found — could not verify Bug A');
 
     // Bug A: incorrect rows should include mode=review but don't
-    const reattemptHref = await reattemptButton.getAttribute('href');
+    const reattemptHref = await reattemptButton.first().getAttribute('href');
     expect(reattemptHref).not.toContain('mode=review');
 
     // Document the bug: this assertion will fail when Bug A is fixed
