@@ -391,7 +391,7 @@ describe('DrizzleQuestionRepository', () => {
         )
         .limit(1);
       if (!qLatestCorrectChoiceA) {
-        throw new Error('Failed to load incorrect choice for setup');
+        throw new Error('Failed to load choice for latest-correct setup');
       }
 
       await db.insert(schema.attempts).values([

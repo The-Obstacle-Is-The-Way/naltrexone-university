@@ -256,6 +256,84 @@ describe('DrizzleQuestionRepository', () => {
       expect(select).toHaveBeenCalledTimes(1);
     });
 
+    it('builds the incorrect status branch using latest-attempt window function subquery', async () => {
+      const rows = [{ id: 'q1' }, { id: 'q2' }];
+
+      const mainOrderBy = vi.fn(async () => rows);
+      const mainWhere = vi.fn(() => ({ orderBy: mainOrderBy }));
+      const mainFrom = vi.fn(() => ({ where: mainWhere }));
+
+      const latestAttemptRows = {
+        questionId: sql``,
+        attemptRank: sql``,
+        isCorrect: sql``,
+      };
+      const latestAs = vi.fn(() => latestAttemptRows);
+      const latestWhere = vi.fn(() => ({ as: latestAs }));
+      const latestFrom = vi.fn(() => ({ where: latestWhere }));
+
+      const incorrectWhere = vi.fn(() => sql``);
+      const incorrectFrom = vi.fn(() => ({ where: incorrectWhere }));
+
+      const select = vi
+        .fn()
+        // Status subquery (latestAttemptRowsSubquery)
+        .mockImplementationOnce(() => ({ from: latestFrom }))
+        // Status subquery (inArray select from latestAttemptRows)
+        .mockImplementationOnce(() => ({ from: incorrectFrom }))
+        // Main question selection
+        .mockImplementationOnce(() => ({ from: mainFrom }));
+
+      const db = { select } as const;
+
+      const repo = new DrizzleQuestionRepository(db as unknown as RepoDb);
+
+      await expect(
+        repo.listPublishedCandidateIds({
+          tagSlugs: [],
+          difficulties: [],
+          statuses: ['incorrect'],
+          userId: 'user_1',
+        }),
+      ).resolves.toEqual(['q1', 'q2']);
+
+      expect(latestAs).toHaveBeenCalledWith('latest_attempt_rows');
+      expect(incorrectFrom).toHaveBeenCalledWith(latestAttemptRows);
+    });
+
+    it('builds the marked status branch using a bookmarks subquery', async () => {
+      const rows = [{ id: 'q1' }, { id: 'q2' }];
+
+      const mainOrderBy = vi.fn(async () => rows);
+      const mainWhere = vi.fn(() => ({ orderBy: mainOrderBy }));
+      const mainFrom = vi.fn(() => ({ where: mainWhere }));
+
+      const markedWhere = vi.fn(() => sql``);
+      const markedFrom = vi.fn(() => ({ where: markedWhere }));
+
+      const select = vi
+        .fn()
+        // Status subquery (bookmarks)
+        .mockImplementationOnce(() => ({ from: markedFrom }))
+        // Main question selection
+        .mockImplementationOnce(() => ({ from: mainFrom }));
+
+      const db = { select } as const;
+
+      const repo = new DrizzleQuestionRepository(db as unknown as RepoDb);
+
+      await expect(
+        repo.listPublishedCandidateIds({
+          tagSlugs: [],
+          difficulties: [],
+          statuses: ['marked'],
+          userId: 'user_1',
+        }),
+      ).resolves.toEqual(['q1', 'q2']);
+
+      expect(markedWhere).toHaveBeenCalledTimes(1);
+    });
+
     it('returns ids when tag filters are applied', async () => {
       const rows = [{ id: 'q1', createdAt: new Date('2026-02-01T00:00:00Z') }];
       const orderBy = vi.fn(async () => rows);

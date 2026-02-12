@@ -19,6 +19,9 @@ import {
 
 type SearchParamsLike = Pick<URLSearchParams, 'get' | 'toString'>;
 
+const EMPTY_TAG_SLUGS: PracticeFilters['tagSlugs'] = [];
+const EMPTY_DIFFICULTIES: PracticeFilters['difficulties'] = [];
+
 export function parseStatusParams(
   searchParams: SearchParamsLike,
 ): QuestionProgressStatus[] {
@@ -65,8 +68,8 @@ export default function QuickPracticeClient() {
 
   const filters: PracticeFilters = useMemo(
     () => ({
-      tagSlugs: [],
-      difficulties: [],
+      tagSlugs: EMPTY_TAG_SLUGS,
+      difficulties: EMPTY_DIFFICULTIES,
       statuses,
     }),
     [statuses],
@@ -96,13 +99,12 @@ export default function QuickPracticeClient() {
                   label={statusDisplayLabel(status)}
                   selected={selected}
                   onClick={() => {
-                    router.push(
-                      buildQuickPracticeStatusHref({
-                        searchParams,
-                        currentStatuses: statuses,
-                        toggledStatus: status,
-                      }),
-                    );
+                    const href = buildQuickPracticeStatusHref({
+                      searchParams,
+                      currentStatuses: statuses,
+                      toggledStatus: status,
+                    });
+                    router.push(href, { scroll: false });
                   }}
                 />
               );
