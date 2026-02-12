@@ -384,6 +384,9 @@ export const practiceSessions = pgTable(
       t.userId,
       desc(t.endedAt),
     ),
+    userIncompleteUq: uniqueIndex('practice_sessions_user_incomplete_uq')
+      .on(t.userId)
+      .where(sql`ended_at IS NULL`),
   }),
 );
 
@@ -1260,21 +1263,21 @@ export type UserStatsOutput = {
         attemptId: string;
         answeredAt: string;        // ISO
         questionId: string;
-        slug: string;              // internal navigation identifier
+        sessionId: string | null;
+        sessionMode: 'tutor' | 'exam' | null;
+        slug: string;
         stemMd: string;
         difficulty: 'easy' | 'medium' | 'hard';
         isCorrect: boolean;
-        sessionId: string | null;               // NEW (SPEC-020 Phase 3)
-        sessionMode: 'tutor' | 'exam' | null;   // NEW (SPEC-020 Phase 3)
       }
     | {
         isAvailable: false;
         attemptId: string;
         answeredAt: string;        // ISO
         questionId: string;
+        sessionId: string | null;
+        sessionMode: 'tutor' | 'exam' | null;
         isCorrect: boolean;
-        sessionId: string | null;               // NEW (SPEC-020 Phase 3)
-        sessionMode: 'tutor' | 'exam' | null;   // NEW (SPEC-020 Phase 3)
       }
   >;
 };
@@ -1302,43 +1305,53 @@ export type UserStatsOutput = {
 
 ---
 
-#### 4.5.8 Server Action: `getMissedQuestions(limit, offset)`
+#### 4.5.8 Server Action: `getAttemptedQuestions(limit, offset, result?, source?)`
 
-* **Name:** `getMissedQuestions`
+* **Name:** `getAttemptedQuestions`
 * **Type:** Server Action
 * **Auth:** subscribed
 * **File:** `src/adapters/controllers/review-controller.ts`
 
+> **Note:** This action was originally `getMissedQuestions` (fixed-filter, incorrect-only). It was generalized to `getAttemptedQuestions` with optional `result` and `source` filters. The History > Questions tab uses this action with filters for correct/incorrect/all and practice/exam/adhoc source filtering.
+
 **Input (Zod):**
 
 ```ts
-export const GetMissedQuestionsInputSchema = zPagination;
+export const GetAttemptedQuestionsInputSchema = z.object({
+  limit: z.number().int().min(1).max(MAX_PAGINATION_LIMIT),
+  offset: z.number().int().min(0),
+  result: z.enum(['correct', 'incorrect']).optional(),
+  source: z.enum(['tutor', 'exam', 'adhoc']).optional(),
+}).strict();
 ```
 
 **Output:**
 
 ```ts
-export type MissedQuestionRow =
+export type AttemptedQuestionRow =
   | {
       isAvailable: true;
       questionId: string;
+      isCorrect: boolean;
+      sessionId: string | null;
+      sessionMode: 'tutor' | 'exam' | null;
       slug: string;
       stemMd: string;
       difficulty: 'easy' | 'medium' | 'hard';
+      tagSlugs: string[];
       lastAnsweredAt: string; // ISO
-      sessionId: string | null;               // NEW (SPEC-020 Phase 3)
-      sessionMode: 'tutor' | 'exam' | null;   // NEW (SPEC-020 Phase 3)
     }
   | {
       isAvailable: false;
       questionId: string;
+      isCorrect: boolean;
+      sessionId: string | null;
+      sessionMode: 'tutor' | 'exam' | null;
       lastAnsweredAt: string; // ISO
-      sessionId: string | null;               // NEW (SPEC-020 Phase 3)
-      sessionMode: 'tutor' | 'exam' | null;   // NEW (SPEC-020 Phase 3)
     };
 
-export type GetMissedQuestionsOutput = {
-  rows: MissedQuestionRow[];
+export type GetAttemptedQuestionsOutput = {
+  rows: AttemptedQuestionRow[];
   limit: number;
   offset: number;
   totalCount: number;
@@ -1354,12 +1367,13 @@ export type GetMissedQuestionsOutput = {
 
 **Behavior (exact):**
 
-* For each question the user has attempted, find the most recent attempt timestamp.
-* Join back to attempts and filter where that most recent attempt is `is_correct=false`.
+* For each question the user has attempted, find the most recent attempt per question.
+* If `result` filter is provided (`'correct'` or `'incorrect'`), only include questions where the most recent attempt matches.
+* If `source` filter is provided (`'tutor'`, `'exam'`, or `'adhoc'`), only include questions where the most recent attempt has the matching session context (`adhoc` = no session).
 * Resolve question metadata from published questions when available.
-* Available rows return `isAvailable:true` with `slug`, `stemMd`, and `difficulty`; unavailable rows return `isAvailable:false` for graceful degradation when questions are unpublished/removed.
+* Available rows return `isAvailable:true` with `slug`, `stemMd`, `difficulty`, `tagSlugs`, and `isCorrect`; unavailable rows return `isAvailable:false` for graceful degradation when questions are unpublished/removed.
 * Include `sessionId` and `sessionMode` for each row from the attempt/session context (`null` for ad-hoc attempts).
-* Order by most recent incorrect attempt desc.
+* Order by most recent attempt desc.
 * Apply limit/offset.
 * Return `totalCount` for pagination.
 
@@ -1482,6 +1496,7 @@ export type PracticeSessionReviewRow =
   | {
       isAvailable: true;
       questionId: string;
+      slug: string;
       stemMd: string;
       difficulty: 'easy' | 'medium' | 'hard';
       order: number; // 1-based
@@ -1756,7 +1771,56 @@ export type GetQuestionBySlugOutput = {
 
 1. Enforce entitlement (subscribed user).
 2. Load question by slug from published questions only.
-3. Return public question payload for reattempt flow (`/app/questions/[slug]`), excluding correctness flags.
+3. Return public question payload for the question detail page (`/app/questions/[slug]`), excluding correctness flags.
+
+---
+
+#### 4.5.17 Server Action: `getPreviousAttempt(questionId)`
+
+* **Name:** `getPreviousAttempt`
+* **Type:** Server Action
+* **Auth:** subscribed
+* **File:** `src/adapters/controllers/question-view-controller.ts`
+* **Added by:** SPEC-023 (Question Review Mode)
+
+**Input (Zod):**
+
+```ts
+export const GetPreviousAttemptInputSchema = z.object({
+  questionId: z.string().min(1),
+}).strict();
+```
+
+**Output:**
+
+```ts
+export type GetPreviousAttemptOutput = {
+  attemptId: string;
+  selectedChoiceId: string;
+  isCorrect: boolean;
+  correctChoiceId: string;
+  explanationMd: string | null;
+  choiceExplanations: ChoiceExplanation[]; // same type as submitAnswer output
+  answeredAt: string; // ISO 8601
+} | null; // null when no previous attempt exists
+```
+
+**Errors:**
+
+* `UNAUTHENTICATED`
+* `UNSUBSCRIBED`
+* `VALIDATION_ERROR`
+* `INTERNAL_ERROR`
+
+**Behavior (exact):**
+
+1. Enforce entitlement (subscribed user).
+2. Load the user's most recent attempt for the given question via `AttemptSingleQuestionReader.findLatestByUserAndQuestion`.
+3. If no attempt exists: return `null` (caller falls back to attempt mode).
+4. Load the question by `questionId` from published questions.
+5. If question is missing (orphaned attempt): log warning and return `null`.
+6. Build `choiceExplanations` using `buildShuffledChoiceViews(question, userId)` for consistent display labels.
+7. Return previous attempt data including `correctChoiceId`, `explanationMd`, and `choiceExplanations`.
 
 ---
 
@@ -2029,9 +2093,12 @@ This master spec documents the directory structure at the directory-boundary lev
 │   │   ├── practice/
 │   │   │   ├── [sessionId]/          # Session runner (tutor/exam)
 │   │   │   └── quick/                # Quick Practice (ad-hoc question flow)
-│   │   ├── review/
+│   │   ├── history/                  # History (Sessions + Questions tabs — SPEC-021)
+│   │   ├── questions/
+│   │   │   └── [slug]/               # Question detail page (attempt + review mode — SPEC-023)
 │   │   ├── bookmarks/
-│   │   └── billing/
+│   │   ├── billing/
+│   │   └── shared/                   # Shared components (SessionBreakdownList, etc.)
 │   └── api/                          # Route handlers (webhooks, health, cron)
 │
 ├── src/                              # Clean Architecture layers
@@ -2364,9 +2431,9 @@ As a subscribed user, I can review missed questions and bookmarked questions so 
 
 **Acceptance Criteria:**
 
-* Missed questions page shows questions whose most recent attempt is incorrect.
+* History Questions tab shows attempted questions with filters for correct/incorrect and session source.
 * Bookmark toggle persists; bookmarks page lists bookmarked questions.
-* From missed/bookmarked list, I can reattempt a question (records a new attempt).
+* From History or bookmarks list, I can open a question to reattempt or review a previous attempt.
 
 **Test Cases:**
 
@@ -2375,19 +2442,19 @@ As a subscribed user, I can review missed questions and bookmarked questions so 
 
 **Implementation Checklist:**
 
-1. Implement `getMissedQuestions(limit, offset)`.
-2. Build `/app/review` with pagination.
+1. Implement `getAttemptedQuestions(limit, offset, result?, source?)`.
+2. Build `/app/history` with Sessions and Questions tabs (SPEC-021).
 3. Build `/app/bookmarks`.
-4. Add reattempt flow: open question view from list and submit answer.
+4. Add question detail view: open question from list and submit answer or review previous attempt.
 
 **Files to Create/Modify:**
 
-* `src/application/use-cases/get-missed-questions.ts`, `get-bookmarks.ts`
+* `src/application/use-cases/get-attempted-questions.ts`, `get-bookmarks.ts`
 * `src/adapters/repositories/drizzle-bookmark-repository.ts`
 * `src/adapters/controllers/review-controller.ts`, `bookmark-controller.ts`, `question-view-controller.ts` — 'use server' exports
-* `app/(app)/app/review/page.tsx`
+* `app/(app)/app/history/page.tsx` — History page with Sessions/Questions tabs
 * `app/(app)/app/bookmarks/page.tsx`
-* `app/(app)/app/questions/[slug]/page.tsx` — direct question view for reattempt flow
+* `app/(app)/app/questions/[slug]/page.tsx` — question detail page (attempt + review mode)
 * `components/question/*`
 * `lib/container.ts` (add review/bookmark factories)
 
