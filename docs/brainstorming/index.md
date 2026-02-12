@@ -25,13 +25,17 @@ Brainstorming (BS-NNN) → Spec (SPEC-NNN) → Implementation → Archive
 
 ## Brainstorming Index (Active)
 
-| ID | Title | Status | Related Spec |
-|----|-------|--------|--------------|
-| [BS-009](./bs-009-session-review-navigation-gap.md) | Session Review Navigation Gap | Active | None yet |
-| [BS-010](./bs-010-review-mode-attempt-identity-gap.md) | Review Mode Attempt Identity Gap | Active | None yet |
-| [BS-011](./bs-011-history-review-wiring-and-choice-label-desync.md) | History Review Wiring Bug & Choice Label Desync | Active | None yet |
+| Priority | ID | Title | Status | Depends On | Related Spec |
+|----------|----|-------|--------|------------|--------------|
+| **P1** | [BS-012](./bs-012-question-status-filter.md) | Question Status Filter for Practice & Quick Practice | Active | — | [SPEC-024](../specs/spec-024-question-status-filter.md) |
+| **P2** | [BS-011](./bs-011-history-review-wiring-and-choice-label-desync.md) Bug B | Choice Label Desync (standalone question page) | Active | — | [SPEC-025](../specs/spec-025-choice-label-desync-fix.md) |
+| **P3** | [BS-011](./bs-011-history-review-wiring-and-choice-label-desync.md) Bug A | History Tab Review Wiring (review-only + reattempt path) | Active | BS-012 | [SPEC-026](../specs/spec-026-history-review-only.md) |
+| **P4** | [BS-009](./bs-009-session-review-navigation-gap.md) | Session Review Navigation Gap (sessionId + prev/next) | Active | — | [SPEC-027](../specs/spec-027-session-review-navigation.md) |
+| **P5** | [BS-010](./bs-010-review-mode-attempt-identity-gap.md) | Review Mode Attempt Identity Gap (attemptId) | Active | BS-009 | [SPEC-027](../specs/spec-027-session-review-navigation.md) |
 
-**Next Brainstorming ID:** BS-012
+> **Execution order rationale:** BS-012 is foundational — it provides the reattempt path through Practice, which unblocks making History review-only (BS-011 Bug A). BS-011 Bug B is an independent bug fix. BS-009 and BS-010 both extend `toQuestionRoute()` with URL params and could be combined into one spec; BS-010 depends on BS-009's `sessionId` infrastructure.
+
+**Next Brainstorming ID:** BS-013
 
 ---
 

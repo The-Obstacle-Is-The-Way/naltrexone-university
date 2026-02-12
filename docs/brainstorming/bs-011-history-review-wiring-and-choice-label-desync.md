@@ -120,6 +120,18 @@ These two issues together mean that a physician can hit inconsistent "review vs 
 4. Confirm every letter label in the feedback matches the same answer text in the question card
 5. Test across multiple questions to ensure consistent
 
+### Bug B Reproduction Examples (Chrome Agent Audit, 2026-02-12)
+
+**Palamar question** (via Dashboard `?from=dashboard&mode=review`):
+- Question card: A=Alcohol, B=Benzodiazepines, C=GHB, D=Cannabis
+- Feedback: B)Cannabis, C)Benzodiazepines, D)Alcohol
+- Letters B, C, D all point to different answer text across the two sections.
+
+**Cimetidine/Zaleplon question** (via Dashboard, Correct entry):
+- Same pattern — letter labels mismatch between question card and feedback.
+
+**Reproduction rate:** 100% across all questions tested. The mismatch is systematic, not intermittent.
+
 ---
 
 ## Relationship to Other Brainstorming Docs
@@ -140,3 +152,5 @@ These two issues together mean that a physician can hit inconsistent "review vs 
 | 2026-02-11 | Validated via live Chrome browser audit with screenshots | Both bugs confirmed visually on deployed application across multiple questions and entry points |
 | 2026-02-11 | Classified as two separate bugs in one doc | Discovered during the same audit session; both relate to History Questions tab review experience but have independent root causes |
 | 2026-02-12 | Re-audited against current code and corrected | Bug A clarified as explicit conditional wiring. Bug B root cause corrected to canonical-vs-shuffled label mismatch on the standalone question page. |
+| 2026-02-12 | Bug B confirmed 100% reproduction via Chrome browser agent | Palamar question and cimetidine/zaleplon question both show systematic letter label mismatch. Every tested question reproduced the issue. |
+| 2026-02-12 | Bug A and Bug B confirmed via Playwright E2E audit (`brainstorming-audit.spec.ts`) | Bug A: incorrect rows on History > Questions tab lack `mode=review` param. Bug B: `anton-2006-combine-001` — QuestionCard shows B=Naltrexone, C=Disulfiram, D=Topiramate while Feedback shows B=Disulfiram, C=Topiramate, D=Acamprosate. 3 of 3 non-correct labels mismatched. |
