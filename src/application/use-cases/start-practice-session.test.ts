@@ -36,8 +36,8 @@ describe('StartPracticeSessionUseCase', () => {
       count: 1,
       tagSlugs: [],
       difficulties: [],
-      statuses: ['incorrect'],
-    } as unknown as StartPracticeSessionInput);
+      statuses: ['incorrect'] as const,
+    });
 
     expect(questionRepository.listPublishedCandidateIdsCalls[0]).toEqual({
       tagSlugs: [],

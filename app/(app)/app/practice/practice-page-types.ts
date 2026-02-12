@@ -6,3 +6,14 @@ export type PracticeFilters = {
   difficulties: Array<NextQuestion['difficulty']>;
   statuses: QuestionProgressStatus[];
 };
+
+export function statusDisplayLabel(status: QuestionProgressStatus): string {
+  switch (status) {
+    case 'unanswered':
+      return 'Unanswered';
+    case 'incorrect':
+      return 'Incorrect';
+    case 'marked':
+      return 'Marked';
+  }
+}

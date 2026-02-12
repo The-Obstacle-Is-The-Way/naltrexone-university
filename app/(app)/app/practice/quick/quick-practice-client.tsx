@@ -9,6 +9,7 @@ import {
 } from '@/app/(app)/app/practice/fire-and-forget';
 import { usePracticeQuestionFlow } from '@/app/(app)/app/practice/hooks/use-practice-question-flow';
 import type { PracticeFilters } from '@/app/(app)/app/practice/practice-page-logic';
+import { statusDisplayLabel } from '@/app/(app)/app/practice/practice-page-types';
 import { FilterChip } from '@/components/ui/filter-chip';
 import { ROUTES } from '@/lib/routes';
 import {
@@ -122,15 +123,4 @@ export default function QuickPracticeClient() {
       onNextQuestion={questionFlow.onNextQuestion}
     />
   );
-}
-
-function statusDisplayLabel(status: QuestionProgressStatus): string {
-  switch (status) {
-    case 'unanswered':
-      return 'Unanswered';
-    case 'incorrect':
-      return 'Incorrect';
-    case 'marked':
-      return 'Marked';
-  }
 }

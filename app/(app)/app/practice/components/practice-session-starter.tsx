@@ -14,6 +14,7 @@ import {
 } from '@/src/domain/value-objects';
 import type { PracticeFilters } from '../practice-page-logic';
 import { SESSION_COUNT_MAX, SESSION_COUNT_MIN } from '../practice-page-logic';
+import { statusDisplayLabel } from '../practice-page-types';
 
 export type PracticeSessionStarterProps = {
   sessionMode: 'tutor' | 'exam';
@@ -245,15 +246,4 @@ export function PracticeSessionStarter(props: PracticeSessionStarterProps) {
       ) : null}
     </Card>
   );
-}
-
-function statusDisplayLabel(status: QuestionProgressStatus): string {
-  switch (status) {
-    case 'unanswered':
-      return 'Unanswered';
-    case 'incorrect':
-      return 'Incorrect';
-    case 'marked':
-      return 'Marked';
-  }
 }
