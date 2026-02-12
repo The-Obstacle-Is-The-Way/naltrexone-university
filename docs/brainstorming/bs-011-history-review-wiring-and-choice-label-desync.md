@@ -45,6 +45,12 @@ The History Questions tab intentionally chooses review vs reattempt based on `ro
 
 ### Proposed Fix (Product + UX)
 
+> **Spec status:** Bug A is specced as `docs/specs/spec-026-history-review-only.md`.
+> The v1 decision there is **review-only** History > Questions links (always `mode=review`,
+> always label "Review"), relying on Practice-based reattempt via the "Incorrect" status
+> filter (`docs/specs/spec-024-question-status-filter.md`). The multi-action approach below
+> is deferred.
+
 1. **Make the title link review-only:** Always include `mode=review` on the stem/title link for both Correct and Incorrect rows; keep the action button as "Review"/"Reattempt".
 2. **Offer both actions for Incorrect rows:** Add an explicit "Review" path (with `mode=review`) alongside "Reattempt" (without).
 3. **Subtitle copy:** Update the question page subtitle for `from=history` to reflect `mode` (review vs reattempt), not just `from`.

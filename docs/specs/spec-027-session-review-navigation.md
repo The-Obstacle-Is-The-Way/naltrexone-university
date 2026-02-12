@@ -7,7 +7,7 @@
 **Status:** Ready
 **Layer:** Feature
 **Date:** 2026-02-12
-**Depends On:** SPEC-023 (Question Review Mode)
+**Depends On:** SPEC-021 (History Page Restructure), SPEC-023 (Question Review Mode)
 **Brainstorming:**
 - `docs/brainstorming/bs-009-session-review-navigation-gap.md` — Session context, prev/next navigation
 - `docs/brainstorming/bs-010-review-mode-attempt-identity-gap.md` — Attempt identity in review mode
@@ -47,11 +47,12 @@ Both problems share the same root cause: **`toQuestionRoute()` carries insuffici
 | URL approach vs. dedicated review page? | **URL approach** | Reuses existing question page + SPEC-023 review mode. No new pages. Lower effort. |
 | Which params to add to `toQuestionRoute`? | **`sessionId` + `attemptId`** (both optional) | `sessionId` for sequential navigation, `attemptId` for correct attempt data |
 | Back link behavior with `sessionId`? | **`from=practice` → `/app/practice/{sessionId}`; `from=history` → `/app/history?tab=sessions`** | Returns to the originating session context, not the generic landing page |
-| How to fetch session question list? | **New controller action `getSessionQuestionList`** | Reuses `GetPracticeSessionReviewUseCase` data |
+| How to fetch session question list? | **Reuse existing `getPracticeSessionReview` controller action** | No new server action needed; question page maps `review.rows` to an ordered navigation list. |
 | Position indicator? | **"Question X of Y"** | Standard UX pattern; data is available from session |
 | "Next wrong answer" filter? | **Not in v1** | Nice-to-have; simple prev/next is sufficient for first iteration |
 | `attemptId` format in URL? | **UUID** | Same format as all other IDs. Acceptable URL length. |
-| Should `getPreviousAttempt` validate attempt ownership? | **Yes** | Verify `attempt.userId === input.userId` to prevent data leakage |
+| Previous attempt resolution order? | **`attemptId` → `sessionId` → latest** | Dashboard needs attempt-specific review; session review needs session-scoped attempts to avoid cross-session leakage; fallback preserves backward compatibility. |
+| Should `getPreviousAttempt` validate ownership? | **Yes** | Repository methods scope by `userId` (`findByIdAndUserId`, `findBySessionIdAndQuestionId`) to prevent data leakage. |
 
 ---
 
@@ -91,8 +92,8 @@ QuestionPageClient
   ↓ passes sessionId to useQuestionPageController
   ↓
 useQuestionPageController
-  ↓ if sessionId: calls getSessionQuestionList(sessionId) on mount
-  ↓ receives: ordered list of { slug, order, isCorrect } for the session
+  ↓ if sessionId: calls getPracticeSessionReview({ sessionId }) on mount
+  ↓ maps review.rows → ordered list of { slug, order, isCorrect } for navigation
   ↓
 QuestionView
   ↓ renders: "← Previous | Question 3 of 20 | Next →"
@@ -112,7 +113,9 @@ QuestionPageClient
   ↓ passes attemptId to useQuestionPageController
   ↓
 useQuestionPageController
-  ↓ calls getPreviousAttempt({ questionId, attemptId }) — fetches specific attempt
+  ↓ calls getPreviousAttempt({ questionId, attemptId?, sessionId? })
+      attemptId → fetch specific attempt (Dashboard)
+      sessionId → fetch attempt for that session+question (Session Breakdown)
   ↓
 QuestionView
   ↓ renders: the correct attempt's data (not the most recent)
@@ -211,30 +214,12 @@ export function SessionBreakdownList({
 Pass `sessionId` to `SessionBreakdownList`:
 
 ```tsx
-// The sessionId is available from the page's dynamic route params
-<SessionBreakdownList rows={summaryReview.rows} sessionId={sessionId} />
+// EndPracticeSessionOutput already includes sessionId
+<SessionBreakdownList rows={summaryReview.rows} sessionId={summary.sessionId} />
 ```
 
-This requires the `SessionSummaryView` component to receive `sessionId` as a prop. Currently it receives `summary: EndPracticeSessionOutput` which does not include `sessionId`. Two approaches:
-
-**Option A:** Add `sessionId` as a separate prop to `SessionSummaryView`.
-**Option B:** Include `sessionId` in `EndPracticeSessionOutput`.
-
-**Decision: Option A** — the session ID is already available from the URL route param (`/app/practice/[sessionId]`). The parent page component can pass it directly. No use case changes needed.
-
-```typescript
-export function SessionSummaryView({
-  summary,
-  review,
-  reviewLoadState,
-  sessionId,           // ← NEW
-}: {
-  summary: EndPracticeSessionOutput;
-  review?: GetPracticeSessionReviewOutput | null;
-  reviewLoadState?: LoadState;
-  sessionId?: string;  // ← NEW
-})
-```
+No additional props are required — `SessionSummaryView` already receives `summary: EndPracticeSessionOutput`
+and can use `summary.sessionId`.
 
 ### 4.4 History Sessions Tab
 
@@ -315,6 +300,7 @@ Pass to `useQuestionPageController`:
 const controller = useQuestionPageController({
   slug,
   mode: parseQuestionMode(mode),
+  from: parseQuestionOrigin(from),
   sessionId,
   attemptId,
 });
@@ -428,6 +414,7 @@ function SessionNavigationBar({ navigation }: { navigation: SessionNavigation })
 export type UseQuestionPageControllerInput = {
   slug: string;
   mode?: QuestionMode | null;
+  from?: QuestionOrigin | null;   // ← NEW (for prev/next href generation)
   sessionId?: string;       // ← NEW
   attemptId?: string;       // ← NEW
 };
@@ -445,21 +432,30 @@ useEffect(() => {
   if (!input.sessionId) return;
 
   startTransition(() => {
-    void getSessionQuestionList({ sessionId: input.sessionId! })
+    void getPracticeSessionReview({ sessionId: input.sessionId! })
       .then((result) => {
-        if (!result.ok || !isMounted.current) return;
-        const questions = result.data.questions;
+        if (!isMounted()) return;
+        if (!result.ok) return;
+
+        const questions = result.data.rows
+          .filter((row): row is AvailablePracticeSessionReviewRow => row.isAvailable)
+          .map((row) => ({
+            slug: row.slug,
+            order: row.order,
+            isCorrect: row.isCorrect,
+          }));
+
         const currentIndex = questions.findIndex((q) => q.slug === input.slug);
         if (currentIndex === -1) return;
         setSessionNavigation({
           questions,
           currentIndex,
           sessionId: input.sessionId!,
-          from: /* parsed from origin */ 'practice',
+          from: input.from ?? 'practice',
         });
       });
   });
-}, [input.sessionId, input.slug, isMounted]);
+}, [input.sessionId, input.slug, input.from, isMounted]);
 ```
 
 **Attempt-specific review:**
@@ -476,59 +472,28 @@ useEffect(() => {
     void loadPreviousAttempt({
       questionId: question.questionId,
       attemptId: input.attemptId,              // ← NEW (optional)
+      sessionId: input.sessionId,              // ← NEW (optional)
       getPreviousAttemptFn: getPreviousAttempt,
       setSelectedChoiceId,
       setSubmitResult,
       isMounted,
     });
   });
-}, [input.mode, input.attemptId, loadState.status, question, isMounted]);
+}, [
+  input.mode,
+  input.attemptId,
+  input.sessionId,
+  loadState.status,
+  question,
+  isMounted,
+]);
 ```
 
-### 4.9 Controller: `getSessionQuestionList`
+### 4.9 Controller: Session Question List
 
-**File:** `src/adapters/controllers/question-view-controller.ts` (or `practice-controller.ts`)
-
-New action that returns the session's ordered question list for navigation:
-
-```typescript
-const GetSessionQuestionListInputSchema = z
-  .object({
-    sessionId: z.string().min(1),
-  })
-  .strict();
-
-export type SessionQuestionListOutput = {
-  questions: Array<{
-    slug: string;
-    order: number;
-    isCorrect: boolean | null;
-  }>;
-};
-
-export const getSessionQuestionList = createAction({
-  schema: GetSessionQuestionListInputSchema,
-  getDeps,
-  execute: async (input, d) => {
-    const userId = await requireEntitledUserId(d);
-    const review = await d.getPracticeSessionReviewUseCase.execute({
-      userId,
-      sessionId: input.sessionId,
-    });
-    return {
-      questions: review.rows
-        .filter((row): row is AvailablePracticeSessionReviewRow => row.isAvailable)
-        .map((row) => ({
-          slug: row.slug,
-          order: row.order,
-          isCorrect: row.isCorrect,
-        })),
-    };
-  },
-});
-```
-
-This reuses the existing `GetPracticeSessionReviewUseCase` — no new use cases needed.
+**No new controller action in v1.** Reuse the existing `getPracticeSessionReview` server
+action from `src/adapters/controllers/practice-controller.ts`, and map `review.rows` into the
+minimal `{ slug, order, isCorrect }` list needed for session navigation.
 
 ### 4.10 Use Case: `GetPreviousAttemptUseCase` — Attempt-Specific Lookup
 
@@ -550,6 +515,7 @@ export type GetPreviousAttemptInput = {
   userId: string;
   questionId: string;
   attemptId?: string;          // ← NEW (optional)
+  sessionId?: string;          // ← NEW (optional)
 };
 ```
 
@@ -559,32 +525,61 @@ export type GetPreviousAttemptInput = {
 async execute(input: GetPreviousAttemptInput): Promise<GetPreviousAttemptOutput | null> {
   const attempt = input.attemptId
     ? await this.attempts.findByIdAndUserId(input.attemptId, input.userId)
-    : await this.attempts.findLatestByUserAndQuestion(input.userId, input.questionId);
+    : input.sessionId
+      ? await this.attempts.findBySessionIdAndQuestionId(
+          input.sessionId,
+          input.userId,
+          input.questionId,
+        )
+      : await this.attempts.findLatestByUserAndQuestion(
+          input.userId,
+          input.questionId,
+        );
 
   if (!attempt) return null;
+  if (attempt.questionId !== input.questionId) {
+    this.logger.warn(
+      {
+        attemptId: input.attemptId,
+        questionId: input.questionId,
+        attemptQuestionId: attempt.questionId,
+      },
+      'Previous attempt does not match requested question',
+    );
+    return null;
+  }
   // ... rest unchanged
 }
 ```
 
-**Authorization:** When `attemptId` is provided, the repository method `findByIdAndUserId` validates that the attempt belongs to the requesting user.
+**Authorization:** When `attemptId` or `sessionId` is provided, repository lookups are scoped
+by `userId` (`findByIdAndUserId`, `findBySessionIdAndQuestionId`).
 
 ### 4.11 Repository Port: Attempt Lookup by ID
 
 **File:** `src/application/ports/attempt-repository.ts`
 
-Add method to `AttemptSingleQuestionReader`:
+Add methods to `AttemptSingleQuestionReader`:
 
 ```typescript
+import type { Attempt } from '@/src/domain/entities';
+
 export interface AttemptSingleQuestionReader {
   findLatestByUserAndQuestion(
     userId: string,
     questionId: string,
-  ): Promise<AttemptRecord | null>;
+  ): Promise<Attempt | null>;
 
   findByIdAndUserId(                         // ← NEW
     attemptId: string,
     userId: string,
-  ): Promise<AttemptRecord | null>;
+  ): Promise<Attempt | null>;
+
+  findBySessionIdAndQuestionId(              // ← NEW
+    sessionId: string,
+    userId: string,
+    questionId: string,
+  ): Promise<Attempt | null>;
 }
 ```
 
@@ -592,23 +587,43 @@ export interface AttemptSingleQuestionReader {
 
 **File:** `src/adapters/repositories/drizzle-attempt-repository.ts`
 
-Add `findByIdAndUserId`:
+Add `findByIdAndUserId` and `findBySessionIdAndQuestionId` (both return domain `Attempt` via
+the existing `toAttemptDomain` mapper):
 
 ```typescript
 async findByIdAndUserId(
   attemptId: string,
   userId: string,
-): Promise<AttemptRecord | null> {
+): Promise<Attempt | null> {
   const [row] = await this.db
     .select()
     .from(attempts)
     .where(and(eq(attempts.id, attemptId), eq(attempts.userId, userId)))
     .limit(1);
-  return row ? this.toAttemptRecord(row) : null;
+  return row ? toAttemptDomain(row) : null;
+}
+
+async findBySessionIdAndQuestionId(
+  sessionId: string,
+  userId: string,
+  questionId: string,
+): Promise<Attempt | null> {
+  const [row] = await this.db
+    .select()
+    .from(attempts)
+    .where(
+      and(
+        eq(attempts.practiceSessionId, sessionId),
+        eq(attempts.userId, userId),
+        eq(attempts.questionId, questionId),
+      ),
+    )
+    .limit(1);
+  return row ? toAttemptDomain(row) : null;
 }
 ```
 
-### 4.13 Controller: `getPreviousAttempt` — Accept `attemptId`
+### 4.13 Controller: `getPreviousAttempt` — Accept `attemptId` + `sessionId`
 
 **File:** `src/adapters/controllers/question-view-controller.ts`
 
@@ -619,6 +634,7 @@ const GetPreviousAttemptInputSchema = z
   .object({
     questionId: z.string().min(1),
     attemptId: z.string().min(1).optional(),    // ← NEW
+    sessionId: z.string().min(1).optional(),    // ← NEW
   })
   .strict();
 ```
@@ -635,6 +651,7 @@ export const getPreviousAttempt = createAction({
       userId,
       questionId: input.questionId,
       attemptId: input.attemptId,              // ← NEW
+      sessionId: input.sessionId,              // ← NEW
     });
   },
 });
@@ -656,20 +673,20 @@ None. All changes are to existing files.
 | `lib/routes.test.ts` | Test new URL params |
 | `app/(app)/app/shared/components/session-breakdown-list.tsx` | Accept and pass `sessionId` prop |
 | `app/(app)/app/shared/components/session-breakdown-list.test.tsx` | Test `sessionId` in generated hrefs |
-| `app/(app)/app/practice/[sessionId]/components/session-summary-view.tsx` | Accept and pass `sessionId` prop |
+| `app/(app)/app/practice/[sessionId]/components/session-summary-view.tsx` | Pass `summary.sessionId` to `SessionBreakdownList` |
 | `app/(app)/app/history/components/history-sessions-tab.tsx` | Pass `sessionId` to `SessionBreakdownList` |
 | `app/(app)/app/dashboard/page.tsx` | Pass `attemptId` to `toQuestionRoute` |
 | `app/(app)/app/questions/[slug]/page.tsx` | Extract `sessionId`, `attemptId` from searchParams |
 | `app/(app)/app/questions/[slug]/question-page-client.tsx` | Accept `sessionId`/`attemptId`, render session navigation, fix back link |
-| `app/(app)/app/questions/[slug]/use-question-page-controller.ts` | Fetch session question list, pass `attemptId` to `getPreviousAttempt` |
-| `app/(app)/app/questions/[slug]/question-page-logic.ts` | Update `loadPreviousAttempt` to accept optional `attemptId` |
-| `src/adapters/controllers/question-view-controller.ts` | Add `getSessionQuestionList` action; update `getPreviousAttempt` schema |
-| `src/adapters/controllers/question-view-controller.test.ts` | Test new action and `attemptId` passthrough |
-| `src/application/use-cases/get-previous-attempt.ts` | Accept optional `attemptId`, fetch by ID when provided |
+| `app/(app)/app/questions/[slug]/use-question-page-controller.ts` | Accept `from`/`sessionId`/`attemptId`, fetch session list via `getPracticeSessionReview`, pass `attemptId`+`sessionId` to `getPreviousAttempt` |
+| `app/(app)/app/questions/[slug]/question-page-logic.ts` | Update `loadPreviousAttempt` to accept optional `attemptId` + `sessionId` |
+| `src/adapters/controllers/question-view-controller.ts` | Update `getPreviousAttempt` schema to accept `attemptId` + `sessionId` |
+| `src/adapters/controllers/question-view-controller.test.ts` | Test `attemptId`/`sessionId` passthrough |
+| `src/application/use-cases/get-previous-attempt.ts` | Accept optional `attemptId` + `sessionId`, resolve attempt via `attemptId → sessionId → latest` |
 | `src/application/use-cases/get-previous-attempt.test.ts` | Test attempt-specific lookup |
-| `src/application/ports/attempt-repository.ts` | Add `findByIdAndUserId` to `AttemptSingleQuestionReader` |
-| `src/adapters/repositories/drizzle-attempt-repository.ts` | Implement `findByIdAndUserId` |
-| `src/application/test-helpers/fakes/fake-repositories.ts` | Add `findByIdAndUserId` to `FakeAttemptRepository` |
+| `src/application/ports/attempt-repository.ts` | Add `findByIdAndUserId` and `findBySessionIdAndQuestionId` to `AttemptSingleQuestionReader` |
+| `src/adapters/repositories/drizzle-attempt-repository.ts` | Implement `findByIdAndUserId` and `findBySessionIdAndQuestionId` |
+| `src/application/test-helpers/fakes/fake-repositories.ts` | Add `findByIdAndUserId` and `findBySessionIdAndQuestionId` to `FakeAttemptRepository` |
 
 ---
 
@@ -723,10 +740,13 @@ SessionNavigationBar:
 **File:** `src/application/use-cases/get-previous-attempt.test.ts`
 
 ```
-- fetches latest attempt when attemptId is not provided (existing behavior)
+- resolves attempt by precedence: attemptId → sessionId → latest
 - fetches specific attempt when attemptId is provided
+- fetches session-scoped attempt when sessionId is provided (prevents cross-session leakage)
+- fetches latest attempt when neither attemptId nor sessionId is provided (backward compat)
 - returns null when attemptId does not exist
 - returns null when attemptId belongs to different user (authorization)
+- returns null when attemptId exists but does not match questionId (defense-in-depth)
 ```
 
 #### Question View Controller
@@ -734,14 +754,9 @@ SessionNavigationBar:
 **File:** `src/adapters/controllers/question-view-controller.test.ts`
 
 ```
-getSessionQuestionList:
-  - returns ordered question list for valid session
-  - returns UNAUTHENTICATED when not logged in
-  - returns NOT_FOUND when session does not exist
-  - excludes unavailable questions from list
-
 getPreviousAttempt:
   - passes attemptId to use case when provided
+  - passes sessionId to use case when provided
   - omits attemptId when not provided (backward compat)
 ```
 
@@ -754,6 +769,12 @@ findByIdAndUserId:
   - returns attempt when ID and userId match
   - returns null when ID exists but userId does not match
   - returns null when ID does not exist
+
+findBySessionIdAndQuestionId:
+  - returns attempt when (sessionId, questionId, userId) match
+  - returns null when sessionId exists but questionId does not match
+  - returns null when sessionId exists but userId does not match
+  - returns null when sessionId does not exist
 ```
 
 ### 6.3 E2E Tests (Playwright)
@@ -793,37 +814,36 @@ Phase 1: URL Infrastructure
   2. Write tests for toQuestionRoute with new params
 
 Phase 2: Attempt Identity (Application + Adapter Layer)
-  3. Add findByIdAndUserId to AttemptSingleQuestionReader port
-  4. Implement findByIdAndUserId in FakeAttemptRepository (RED → GREEN)
-  5. Write get-previous-attempt.test.ts for attemptId lookup (RED)
-  6. Update GetPreviousAttemptUseCase to accept attemptId (GREEN)
-  7. Implement findByIdAndUserId in DrizzleAttemptRepository
-  8. Write integration test for findByIdAndUserId (RED → GREEN)
+  3. Add findByIdAndUserId and findBySessionIdAndQuestionId to AttemptSingleQuestionReader port
+  4. Implement both methods in FakeAttemptRepository (RED → GREEN)
+  5. Write get-previous-attempt.test.ts for attemptId/sessionId precedence (RED)
+  6. Update GetPreviousAttemptUseCase to accept attemptId + sessionId (GREEN)
+  7. Implement both methods in DrizzleAttemptRepository
+  8. Write integration tests for both methods (RED → GREEN)
 
-Phase 3: Session Question List (Controller)
-  9. Write question-view-controller.test.ts for getSessionQuestionList (RED)
-  10. Implement getSessionQuestionList action (GREEN)
-  11. Update getPreviousAttempt controller to accept attemptId
+Phase 3: Controllers
+  9. Update question-view-controller getPreviousAttempt schema to accept attemptId + sessionId
+  10. Update question-view-controller tests for passthrough (RED → GREEN)
 
 Phase 4: Link Generation (Frontend — Entry Points)
-  12. Update SessionBreakdownList to accept/pass sessionId (RED → GREEN)
-  13. Update SessionSummaryView to pass sessionId
-  14. Update HistorySessionsTab to pass sessionId
-  15. Update Dashboard Recent Activity to pass attemptId
+  11. Update SessionBreakdownList to accept/pass sessionId (RED → GREEN)
+  12. Update SessionSummaryView to pass summary.sessionId
+  13. Update HistorySessionsTab to pass sessionId
+  14. Update Dashboard Recent Activity to pass attemptId
 
 Phase 5: Question Page (Frontend — Consumer)
-  16. Update question page server component to extract sessionId, attemptId
-  17. Update QuestionPageClient to accept and pass new params
-  18. Update useQuestionPageController to fetch session question list
-  19. Update loadPreviousAttempt to pass attemptId
-  20. Write tests for getOriginUi with sessionId (RED)
-  21. Update getOriginUi back link behavior (GREEN)
-  22. Write tests for SessionNavigationBar (RED)
-  23. Implement SessionNavigationBar (GREEN)
+  15. Update question page server component to extract sessionId, attemptId
+  16. Update QuestionPageClient to accept and pass new params (including from → useQuestionPageController)
+  17. Update useQuestionPageController to fetch session list via getPracticeSessionReview
+  18. Update loadPreviousAttempt to pass attemptId + sessionId
+  19. Write tests for getOriginUi with sessionId (RED)
+  20. Update getOriginUi back link behavior (GREEN)
+  21. Write tests for SessionNavigationBar (RED)
+  22. Implement SessionNavigationBar (GREEN)
 
 Phase 6: Verification
-  24. Run: pnpm typecheck && pnpm lint && pnpm test --run && pnpm test:browser && pnpm build
-  25. Run: pnpm test:e2e
+  23. Run: pnpm typecheck && pnpm lint && pnpm test --run && pnpm test:browser && pnpm build
+  24. Run: pnpm test:e2e
 ```
 
 ---
@@ -844,7 +864,8 @@ Phase 6: Verification
 
 - [ ] Dashboard Recent Activity links include `attemptId` in the URL
 - [ ] Clicking an older attempt shows that attempt's data (not the most recent)
-- [ ] When `attemptId` is absent, `getPreviousAttempt` still fetches the latest (backward compat)
+- [ ] Session breakdown review uses the attempt from that session when `sessionId` is present (prevents cross-session data leakage)
+- [ ] When neither `attemptId` nor `sessionId` is present, `getPreviousAttempt` fetches the latest (backward compat)
 - [ ] Attempt ownership is validated — cannot view another user's attempt via `attemptId`
 
 ### General
@@ -861,7 +882,7 @@ Phase 6: Verification
 - **Cross-session navigation** — "Next question" from Dashboard or History Questions tab. Out of scope; this is specifically for session-context review.
 - **Reattempt mode from session review** — Whether a "Try Again" from session review creates a new attempt associated with the session. Open design question for the future.
 - **Back-link state preservation for History** — Making "Back to History" re-expand the right session breakdown requires URL state management not worth the complexity in v1.
-- **Session Breakdown attempt IDs** — `PracticeSessionReviewRow` does not currently include per-question attempt IDs. Adding this (so session breakdown links carry `attemptId`) is a future enhancement that requires extending the use case. For v1, session breakdown links carry `sessionId` only — the review will show the latest attempt per question, which is acceptable because within a single session each question is typically attempted once.
+- **Session Breakdown attempt IDs** — `PracticeSessionReviewRow` does not include per-question attempt IDs, and v1 does **not** add them. Session-originated review is disambiguated via `sessionId` instead: `getPreviousAttempt` uses `findBySessionIdAndQuestionId` when `sessionId` is present, so the review shows the attempt from that session (not a newer attempt from a different session). Adding `attemptId` to session breakdown URLs is a possible future enhancement, but not required for correctness.
 
 ---
 
@@ -874,6 +895,7 @@ Phase 6: Verification
 | Reviewing 6 wrong answers: ~36 clicks | Reviewing 6 wrong answers: ~12 clicks (open first + 5 "Next") |
 | No position indication | "Question 3 of 20" shown during review |
 | Dashboard: click old attempt → see newest attempt's data | Dashboard: click old attempt → see that attempt's data |
+| Session breakdown: click question in old session → see newer session's attempt | Session breakdown review shows the attempt from that session (via `sessionId`) |
 
 ---
 
@@ -895,4 +917,4 @@ Phase 6: Verification
 - **BS-010** (Brainstorming) — Attempt identity gap analysis, root cause (Dashboard `row.attemptId` unused, `getPreviousAttempt` always fetches latest)
 - **SPEC-023** (Question Review Mode) — The review mode infrastructure that this spec builds on
 - **SPEC-024** (Question Status Filter) — Provides the Practice-based "Incorrect" reattempt path, making session review purely read-only
-- **E2E:** `tests/e2e/audit-history-spec.spec.ts` — Playwright audit confirming all 9 navigation gaps
+- **E2E:** `tests/e2e/brainstorming-audit.spec.ts` — Playwright audit confirming the current navigation + attempt-identity gaps

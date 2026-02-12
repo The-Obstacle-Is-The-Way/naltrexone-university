@@ -34,7 +34,7 @@ This spec adds a **Question Status** filter to both Practice session creation an
 | New repository method or extend existing? | **Extend `listPublishedCandidateIds`** | The existing method already accepts filters and returns candidate IDs. Adding status to the filter type is the natural extension. |
 | Quick Practice state persistence? | **URL search param (`?status=unanswered,incorrect`)** | Survives page refresh, shareable. Consistent with how other pages use URL params. |
 | Candidate count display before starting? | **Not in v1** | Nice-to-have. The "No questions match" empty state is sufficient for now. |
-| Does this affect the domain layer? | **No** | Status filtering is a query concern (which questions to include in a candidate pool), not a domain rule. The domain service `selectNextQuestionId` operates on whatever candidate IDs it receives. |
+| Does this affect the domain layer? | **Add a small value object enum only** | We need a shared, type-safe status union for ports + UI. This adds **no domain logic** (pure enum + validator). Filtering remains a repository/query concern. |
 
 ---
 
@@ -116,13 +116,29 @@ The existing index `attempts_user_question_answered_at_idx ON (userId, questionI
 
 ## 4. Detailed Design
 
-### 4.1 Value Object: Question Status Filter
+### 4.1 Value Object: Question Progress Status
 
-**File:** `src/domain/value-objects/question-status.ts` ← NEW
+**File:** `src/domain/value-objects/question-progress-status.ts` ← NEW
+
+> **Naming note:** This is a *user-relative* progress/status filter (unanswered/incorrect/marked).
+> The codebase already has `QuestionStatus` in `src/domain/value-objects/question-status.ts`,
+> which is the **publication status** (`draft | published | archived`). Do not reuse that type.
 
 ```typescript
-export const AllQuestionStatuses = ['unanswered', 'incorrect', 'marked'] as const;
-export type QuestionStatus = (typeof AllQuestionStatuses)[number];
+export const AllQuestionProgressStatuses = [
+  'unanswered',
+  'incorrect',
+  'marked',
+] as const;
+
+export type QuestionProgressStatus =
+  (typeof AllQuestionProgressStatuses)[number];
+
+export function isValidQuestionProgressStatus(
+  value: string,
+): value is QuestionProgressStatus {
+  return AllQuestionProgressStatuses.includes(value as QuestionProgressStatus);
+}
 ```
 
 Export from `src/domain/value-objects/index.ts`.
@@ -134,34 +150,28 @@ Export from `src/domain/value-objects/index.ts`.
 Extend `QuestionFilters`:
 
 ```typescript
-import type { QuestionDifficulty } from '@/src/domain/value-objects';
-import type { QuestionStatus } from '@/src/domain/value-objects';
+import type {
+  QuestionDifficulty,
+  QuestionProgressStatus,
+} from '@/src/domain/value-objects';
 
 export type QuestionFilters = {
   tagSlugs: readonly string[];
   difficulties: readonly QuestionDifficulty[];
-  statuses: readonly QuestionStatus[];  // ← NEW
-  userId?: string;                      // ← NEW — required when statuses is non-empty
+  statuses?: readonly QuestionProgressStatus[];  // ← NEW (default [])
+  userId?: string;                               // ← NEW — required when statuses is non-empty
 };
 ```
 
 **Why `userId` in filters?** Status filtering requires knowing which user's attempts/bookmarks to query. The current `listPublishedCandidateIds` doesn't need `userId` because difficulty and tag filters are user-independent. Status filters are user-dependent.
 
-### 4.3 Application Port: Bookmark Candidate Reader
+### 4.3 Application Port: BookmarkRepository
 
 **File:** `src/application/ports/bookmark-repository.ts`
 
-Add new reader method:
-
-```typescript
-export interface BookmarkRepository {
-  exists(userId: string, questionId: string): Promise<boolean>;
-  add(userId: string, questionId: string): Promise<Bookmark>;
-  remove(userId: string, questionId: string): Promise<boolean>;
-  listByUserId(userId: string): Promise<readonly Bookmark[]>;
-  listQuestionIdsByUserId(userId: string): Promise<readonly string[]>;  // ← NEW
-}
-```
+**No changes in v1.** "Marked" filtering is implemented inside
+`DrizzleQuestionRepository.listPublishedCandidateIds` via a SQL subquery on the `bookmarks`
+table (same DB connection), so the BookmarkRepository port does not need a new method.
 
 ### 4.4 Repository Implementation: Question Candidate Filtering
 
@@ -198,7 +208,7 @@ async listPublishedCandidateIds(filters: QuestionFilters) {
   // ... rest of existing tag filter logic unchanged
 }
 
-private buildStatusCondition(status: QuestionStatus, userId: string): SQL {
+private buildStatusCondition(status: QuestionProgressStatus, userId: string): SQL {
   switch (status) {
     case 'unanswered':
       return notInArray(
@@ -238,31 +248,21 @@ private buildStatusCondition(status: QuestionStatus, userId: string): SQL {
 
 **Note on "incorrect" implementation:** The exact Drizzle ORM syntax for `DISTINCT ON` varies. The implementer should use the pattern that Drizzle supports — either raw SQL via `sql` template, a subquery with window functions, or the approach that's most readable. The semantic requirement is: "question's most recent attempt (by `answeredAt DESC, id DESC`) has `isCorrect = false`."
 
-### 4.5 Repository Implementation: Bookmark Question IDs
+### 4.5 Repository Implementation: DrizzleBookmarkRepository
 
 **File:** `src/adapters/repositories/drizzle-bookmark-repository.ts`
 
-Add method:
-
-```typescript
-async listQuestionIdsByUserId(userId: string): Promise<readonly string[]> {
-  const rows = await this.db
-    .select({ questionId: bookmarks.questionId })
-    .from(bookmarks)
-    .where(eq(bookmarks.userId, userId))
-    .orderBy(desc(bookmarks.createdAt));
-
-  return rows.map((r) => r.questionId);
-}
-```
+**No changes in v1.** Bookmark data is queried via the `bookmarks` table subquery inside
+`DrizzleQuestionRepository.listPublishedCandidateIds` when `status='marked'`.
 
 ### 4.6 Fake Repositories
 
 **File:** `src/application/test-helpers/fakes/fake-repositories.ts`
 
-Update `FakeQuestionRepository.listPublishedCandidateIds` to handle status filters.
-
-Add `FakeBookmarkRepository.listQuestionIdsByUserId`.
+Update `FakeQuestionRepository.listPublishedCandidateIds` signature to accept the extended
+`QuestionFilters` type (including optional `statuses` and `userId`). For unit tests, it may
+**ignore** status filtering; the status semantics are validated in integration tests against
+`DrizzleQuestionRepository` (see §6.2).
 
 ### 4.7 Use Case: StartPracticeSessionUseCase
 
@@ -288,7 +288,7 @@ export type StartPracticeSessionInput = {
   count: number;
   tagSlugs: readonly string[];
   difficulties: readonly QuestionDifficulty[];
-  statuses?: readonly QuestionStatus[];  // ← NEW
+  statuses?: readonly QuestionProgressStatus[];  // ← NEW
 };
 ```
 
@@ -310,41 +310,35 @@ private async executeForFilters(userId: string, filters: QuestionFilters) {
 
 ### 4.9 Controller: Practice Controller
 
-**File:** `src/adapters/controllers/practice-controller.ts`
+**File:** `src/adapters/controllers/practice-schemas.ts`
 
-Update `QuestionFiltersSchema`:
+Update `StartPracticeSessionInputSchema` to accept `statuses`:
 
 ```typescript
-const zQuestionStatus = z.enum(['unanswered', 'incorrect', 'marked']);
+const zQuestionProgressStatus = z.enum(['unanswered', 'incorrect', 'marked']);
 
-const QuestionFiltersSchema = z
+export const StartPracticeSessionInputSchema = z
   .object({
-    tagSlugs: z
-      .array(z.string().min(1))
-      .max(MAX_PRACTICE_SESSION_TAG_FILTERS)
-      .default([]),
-    difficulties: z
-      .array(zDifficulty)
-      .max(MAX_PRACTICE_SESSION_DIFFICULTY_FILTERS)
-      .default([]),
-    statuses: z                                    // ← NEW
-      .array(zQuestionStatus)
-      .max(3)
-      .default([]),
+    // ... existing fields
+    statuses: z.array(zQuestionProgressStatus).max(3).default([]), // ← NEW
   })
   .strict();
 ```
 
-Update `startPracticeSession` action to pass `statuses`:
+**File:** `src/adapters/controllers/practice-controller.ts`
+
+Update `startPracticeSession` action to pass `statuses` through to the use case:
 
 ```typescript
+const { mode, count, tagSlugs, difficulties, statuses, idempotencyKey } = input;
+
 return d.startPracticeSessionUseCase.execute({
   userId,
   mode,
   count,
   tagSlugs,
   difficulties,
-  statuses,       // ← NEW
+  statuses, // ← NEW
 });
 ```
 
@@ -359,13 +353,13 @@ Update `getNextQuestion` action's filter schema to accept `statuses`. Same `Ques
 **File:** `app/(app)/app/practice/practice-page-types.ts`
 
 ```typescript
-import type { QuestionStatus } from '@/src/domain/value-objects';
 import type { NextQuestion } from '@/src/application/use-cases/get-next-question';
+import type { QuestionProgressStatus } from '@/src/domain/value-objects';
 
 export type PracticeFilters = {
   tagSlugs: string[];
   difficulties: Array<NextQuestion['difficulty']>;
-  statuses: QuestionStatus[];  // ← NEW
+  statuses: QuestionProgressStatus[];  // ← NEW
 };
 ```
 
@@ -380,7 +374,7 @@ Add a **Status** filter row between the Mode/Count row and the Difficulty row, u
 <div>
   <label className="text-sm font-medium text-foreground">Status</label>
   <div className="mt-2 flex flex-wrap gap-2">
-    {AllQuestionStatuses.map((status) => (
+    {AllQuestionProgressStatuses.map((status) => (
       <FilterChip
         key={status}
         label={statusDisplayLabel(status)}
@@ -398,7 +392,7 @@ Add a **Status** filter row between the Mode/Count row and the Difficulty row, u
 **Display labels:**
 
 ```typescript
-function statusDisplayLabel(status: QuestionStatus): string {
+function statusDisplayLabel(status: QuestionProgressStatus): string {
   switch (status) {
     case 'unanswered': return 'Unanswered';
     case 'incorrect': return 'Incorrect';
@@ -442,7 +436,7 @@ export function createToggleStatusHandler(input: {
   setFilters: (next: PracticeFilters | ((prev: PracticeFilters) => PracticeFilters)) => void;
   setIdempotencyKey: (key: string) => void;
   createIdempotencyKey: () => string;
-}): (status: QuestionStatus) => void {
+}): (status: QuestionProgressStatus) => void {
   return (status) => {
     input.setFilters((prev) => ({
       ...prev,
@@ -463,16 +457,16 @@ Replace hardcoded empty filters with URL-driven state:
 'use client';
 
 import { useSearchParams } from 'next/navigation';
-import type { QuestionStatus } from '@/src/domain/value-objects';
-import { AllQuestionStatuses } from '@/src/domain/value-objects';
+import type { QuestionProgressStatus } from '@/src/domain/value-objects';
+import { AllQuestionProgressStatuses } from '@/src/domain/value-objects';
 
-function parseStatusParams(searchParams: URLSearchParams): QuestionStatus[] {
+function parseStatusParams(searchParams: URLSearchParams): QuestionProgressStatus[] {
   const raw = searchParams.get('status');
   if (!raw) return [];
   return raw
     .split(',')
-    .filter((s): s is QuestionStatus =>
-      AllQuestionStatuses.includes(s as QuestionStatus),
+    .filter((s): s is QuestionProgressStatus =>
+      AllQuestionProgressStatuses.includes(s as QuestionProgressStatus),
     );
 }
 
@@ -507,24 +501,24 @@ No new empty state components are needed.
 
 | File | Purpose |
 |------|---------|
-| `src/domain/value-objects/question-status.ts` | `QuestionStatus` type + `AllQuestionStatuses` constant |
-| `src/domain/value-objects/question-status.test.ts` | Type-level validation (optional — may be covered by use case tests) |
+| `src/domain/value-objects/question-progress-status.ts` | `QuestionProgressStatus` type + `AllQuestionProgressStatuses` constant |
+| `src/domain/value-objects/question-progress-status.test.ts` | Enum/validator unit tests (mirrors other value objects) |
+| `app/(app)/app/practice/quick/quick-practice-client.test.tsx` | Quick Practice status filter parsing + rendering tests |
 
 ### Modified Files
 
 | File | Change |
 |------|--------|
-| `src/domain/value-objects/index.ts` | Export `QuestionStatus`, `AllQuestionStatuses` |
+| `src/domain/value-objects/index.ts` | Export `QuestionProgressStatus`, `AllQuestionProgressStatuses`, `isValidQuestionProgressStatus` |
 | `src/application/ports/question-repository.ts` | Add `statuses` and `userId` to `QuestionFilters` |
-| `src/application/ports/bookmark-repository.ts` | Add `listQuestionIdsByUserId` method |
 | `src/adapters/repositories/drizzle-question-repository.ts` | Add status filter logic to `listPublishedCandidateIds` |
-| `src/adapters/repositories/drizzle-bookmark-repository.ts` | Add `listQuestionIdsByUserId` |
-| `src/application/test-helpers/fakes/fake-repositories.ts` | Update fakes for new methods |
+| `src/application/test-helpers/fakes/fake-repositories.ts` | Accept extended `QuestionFilters` type in `FakeQuestionRepository` |
 | `src/application/use-cases/start-practice-session.ts` | Accept `statuses` in input, pass to repository |
 | `src/application/use-cases/start-practice-session.test.ts` | Add tests for status filtering |
 | `src/application/use-cases/get-next-question.ts` | Pass `userId` through to repository filters |
 | `src/application/use-cases/get-next-question.test.ts` | Add tests for status filtering |
-| `src/adapters/controllers/practice-controller.ts` | Add `statuses` to filter schema |
+| `src/adapters/controllers/practice-schemas.ts` | Add `statuses` to `StartPracticeSessionInputSchema` |
+| `src/adapters/controllers/practice-controller.ts` | Pass `statuses` to use case |
 | `src/adapters/controllers/question-controller.ts` | Add `statuses` to filter schema |
 | `app/(app)/app/practice/practice-page-types.ts` | Add `statuses` to `PracticeFilters` |
 | `app/(app)/app/practice/practice-page-session-start.ts` | Add `createToggleStatusHandler` |
@@ -540,10 +534,11 @@ No new empty state components are needed.
 
 #### Value Object
 
-**File:** `src/domain/value-objects/question-status.test.ts`
+**File:** `src/domain/value-objects/question-progress-status.test.ts`
 
 ```
-- AllQuestionStatuses contains exactly ['unanswered', 'incorrect', 'marked']
+- AllQuestionProgressStatuses contains exactly ['unanswered', 'incorrect', 'marked']
+- isValidQuestionProgressStatus validates known values and rejects unknown
 ```
 
 #### Start Practice Session Use Case
@@ -553,12 +548,9 @@ No new empty state components are needed.
 Add tests:
 
 ```
-- filters candidates to unanswered questions when statuses=['unanswered']
-- filters candidates to incorrect questions when statuses=['incorrect']
-- filters candidates to bookmarked questions when statuses=['marked']
-- combines multiple statuses with OR logic (unanswered + incorrect)
-- returns all candidates when statuses is empty (current behavior)
-- returns empty candidates when status filter matches no questions
+- passes statuses + userId through to listPublishedCandidateIds when statuses provided
+- passes empty/undefined statuses through without changing existing behavior
+- throws NOT_FOUND when listPublishedCandidateIds yields 0 candidates (status filter can cause this)
 ```
 
 #### Get Next Question Use Case
@@ -574,7 +566,7 @@ Add tests:
 
 #### Practice Page Logic
 
-**File:** `app/(app)/app/practice/practice-page-session-start.test.ts`
+**File:** `app/(app)/app/practice/practice-page-logic.test.ts`
 
 Add tests:
 
@@ -666,44 +658,41 @@ NEW: "quick practice respects status URL param"
 
 ```
 Phase 1: Domain + Application Layer
-  1. Create src/domain/value-objects/question-status.ts
+  1. Create src/domain/value-objects/question-progress-status.ts
   2. Export from src/domain/value-objects/index.ts
   3. Update QuestionFilters type (add statuses, userId)
-  4. Update BookmarkRepository interface (add listQuestionIdsByUserId)
-  5. Update FakeQuestionRepository to handle status filters (RED → GREEN)
-  6. Update FakeBookmarkRepository (RED → GREEN)
-  7. Write start-practice-session.test.ts status filter tests (RED)
-  8. Update StartPracticeSessionUseCase input + passthrough (GREEN)
-  9. Write get-next-question.test.ts status filter tests (RED)
-  10. Update GetNextQuestionUseCase passthrough (GREEN)
+  4. Update FakeQuestionRepository to accept extended QuestionFilters type (GREEN)
+  5. Write start-practice-session.test.ts pass-through tests (RED)
+  6. Update StartPracticeSessionUseCase input + passthrough (GREEN)
+  7. Write get-next-question.test.ts status filter tests (RED)
+  8. Update GetNextQuestionUseCase passthrough (GREEN)
 
 Phase 2: Adapter Layer (Repository SQL)
-  11. Implement listPublishedCandidateIds status filtering in DrizzleQuestionRepository
-  12. Implement listQuestionIdsByUserId in DrizzleBookmarkRepository
-  13. Write integration tests for status filtering (RED → GREEN)
+  9. Implement listPublishedCandidateIds status filtering in DrizzleQuestionRepository
+  10. Write integration tests for status filtering (RED → GREEN)
 
 Phase 3: Adapter Layer (Controllers)
-  14. Update QuestionFiltersSchema in practice-controller.ts (add statuses)
-  15. Update QuestionFiltersSchema in question-controller.ts (add statuses)
-  16. Update startPracticeSession action to pass statuses
-  17. Update getNextQuestion action to pass statuses
+  11. Update StartPracticeSessionInputSchema in practice-schemas.ts (add statuses)
+  12. Update QuestionFiltersSchema in question-controller.ts (add statuses)
+  13. Update startPracticeSession action to pass statuses
+  14. Update getNextQuestion action to pass statuses
 
 Phase 4: Frontend — Practice Session Creation
-  18. Update PracticeFilters type (add statuses)
-  19. Write createToggleStatusHandler test (RED)
-  20. Implement createToggleStatusHandler (GREEN)
-  21. Update usePracticeSessionStart hook (add statuses state + toggle)
-  22. Write practice-session-starter.test.tsx status filter tests (RED)
-  23. Add Status filter row to PracticeSessionStarter (GREEN)
+  15. Update PracticeFilters type (add statuses)
+  16. Write createToggleStatusHandler test (RED)
+  17. Implement createToggleStatusHandler (GREEN)
+  18. Update usePracticeSessionStart hook (add statuses state + toggle)
+  19. Write practice-session-starter.test.tsx status filter tests (RED)
+  20. Add Status filter row to PracticeSessionStarter (GREEN)
 
 Phase 5: Frontend — Quick Practice
-  24. Write quick-practice-client.test.tsx status filter tests (RED)
-  25. Add URL-driven status filter to QuickPracticeClient (GREEN)
+  21. Write quick-practice-client.test.tsx status filter tests (RED)
+  22. Add URL-driven status filter to QuickPracticeClient (GREEN)
 
 Phase 6: Verification
-  26. Update brainstorming-audit.spec.ts (flip assertions)
-  27. Run: pnpm typecheck && pnpm lint && pnpm test --run && pnpm test:browser && pnpm build
-  28. Run: pnpm test:e2e
+  23. Update brainstorming-audit.spec.ts (flip assertions)
+  24. Run: pnpm typecheck && pnpm lint && pnpm test --run && pnpm test:browser && pnpm build
+  25. Run: pnpm test:e2e
 ```
 
 ---

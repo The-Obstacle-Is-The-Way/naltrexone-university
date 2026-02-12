@@ -7,6 +7,9 @@
 
 ---
 
+> **Status note:** This doc captures discovery + early design exploration. The implementation-ready
+> decisions live in `docs/specs/spec-024-question-status-filter.md`.
+
 ## The Problem
 
 Users cannot target their practice to specific question statuses. There is no way to:
@@ -45,7 +48,7 @@ Missing: **Question Status filter** (and arguably difficulty/tag filters, but th
 
 ### Question Selection Logic
 
-- Sessions: `listPublishedCandidateIds(filters)` → currently accepts `tagIds[]` and `difficulty[]`
+- Sessions: `listPublishedCandidateIds(filters)` → currently accepts `tagSlugs[]` and `difficulties[]`
 - Quick Practice: `selectNextQuestionId()` → picks from all candidates, prioritizing least-recently-seen
 
 Both paths need to accept a `status` filter that pre-filters the candidate pool.
@@ -116,7 +119,14 @@ No domain changes needed. Status filtering is a query concern (which questions t
 
 The repository query for candidate IDs needs to:
 - **Unanswered:** `WHERE question.id NOT IN (SELECT questionId FROM attempts WHERE userId = ?)`
-- **Incorrect:** `WHERE question.id IN (SELECT questionId FROM attempts WHERE userId = ? AND isCorrect = false GROUP BY questionId HAVING MAX(createdAt))` — most recent attempt is incorrect
+- **Incorrect:** Latest-attempt-per-question for the user, filtered to `isCorrect = false` (most recent attempt is incorrect). For example, Postgres `DISTINCT ON`:
+  ```sql
+  SELECT DISTINCT ON (question_id)
+    question_id, is_correct
+  FROM attempts
+  WHERE user_id = ?
+  ORDER BY question_id, answered_at DESC, id DESC
+  ```
 - **Marked:** `WHERE question.id IN (SELECT questionId FROM bookmarks WHERE userId = ?)`
 - **All:** No additional filter (current behavior)
 

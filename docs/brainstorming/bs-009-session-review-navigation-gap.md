@@ -7,6 +7,8 @@
 
 ---
 
+> **Status note:** This gap is specced in `docs/specs/spec-027-session-review-navigation.md`.
+
 ## Why This Wasn't Found Earlier
 
 Before answering "what's the gap," a note on *why* this required manual intervention to surface.

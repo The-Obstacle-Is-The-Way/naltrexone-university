@@ -8,6 +8,11 @@
 
 ---
 
+> **Status note:** This gap is specced in `docs/specs/spec-027-session-review-navigation.md`.
+> V1 uses `attemptId` for Dashboard attempt-specific review and `sessionId` to scope session
+> breakdown review to the correct session attempt (avoids cross-session leakage without
+> adding per-row attempt IDs to the breakdown list).
+
 ## The Problem
 
 **When a user has attempted the same question multiple times, review mode always shows the most recent attempt — not the attempt the user clicked to review.**
