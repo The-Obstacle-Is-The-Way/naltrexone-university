@@ -4,6 +4,15 @@ import type {
   QuestionProgressStatus,
 } from '@/src/domain/value-objects';
 
+/**
+ * Filters for querying published question candidates.
+ *
+ * **Invariant:** When `statuses` is non-empty, `userId` MUST be provided.
+ * Status values (`unanswered`, `incorrect`, `marked`) are per-user concepts
+ * that require attempt/bookmark lookups scoped to a specific user.
+ * The repository implementation enforces this at runtime with a
+ * `VALIDATION_ERROR` throw.
+ */
 export type QuestionFilters = {
   tagSlugs: readonly string[];
   difficulties: readonly QuestionDifficulty[];

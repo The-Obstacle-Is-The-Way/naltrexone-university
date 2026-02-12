@@ -9,7 +9,11 @@ import {
   MAX_TIME_SPENT_SECONDS,
 } from '@/src/adapters/shared/validation-limits';
 import { withIdempotency } from '@/src/adapters/shared/with-idempotency';
-import { zDifficulty, zUuid } from '@/src/adapters/shared/zod-schemas';
+import {
+  zDifficulty,
+  zQuestionProgressStatus,
+  zUuid,
+} from '@/src/adapters/shared/zod-schemas';
 import { ApplicationError } from '@/src/application/errors';
 import type {
   AuthGateway,
@@ -32,8 +36,6 @@ import {
 import { createAction } from './create-action';
 import type { CheckEntitlementUseCase } from './require-entitled-user-id';
 import { requireEntitledUserId } from './require-entitled-user-id';
-
-const zQuestionProgressStatus = z.enum(AllQuestionProgressStatuses);
 
 const QuestionFiltersSchema = z
   .object({
