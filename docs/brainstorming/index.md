@@ -29,8 +29,9 @@ Brainstorming (BS-NNN) → Spec (SPEC-NNN) → Implementation → Archive
 |----|-------|--------|--------------|
 | [BS-009](./bs-009-session-review-navigation-gap.md) | Session Review Navigation Gap | Active | None yet |
 | [BS-010](./bs-010-review-mode-attempt-identity-gap.md) | Review Mode Attempt Identity Gap | Active | None yet |
+| [BS-011](./bs-011-history-review-wiring-and-choice-label-desync.md) | History Review Wiring Bug & Choice Label Desync | Active | None yet |
 
-**Next Brainstorming ID:** BS-011
+**Next Brainstorming ID:** BS-012
 
 ---
 
