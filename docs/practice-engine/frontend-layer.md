@@ -1,0 +1,103 @@
+# Practice Engine: Frontend Layer
+
+> **Parent:** [Practice Engine Index](./index.md)
+> **Scope:** Routes, hooks, data flow, shared UI components, error handling
+> **Last Verified:** 2026-02-09
+
+---
+
+## 1. Routes
+
+| Route | Type | Purpose | Status |
+|-------|------|---------|--------|
+| `/app/practice` | Server → Client | Landing page — decision point (session starter, incomplete session card, session history). No question loads on mount. | Implemented (SPEC-019 Phase 2) |
+| `/app/practice/quick` | Server → Client | Quick Practice — ad-hoc question flow, random question, immediate feedback, no session tracking. | Implemented (SPEC-019 Phase 2) |
+| `/app/practice/[sessionId]` | Server → Client | Session runner — progress, question flow, exam review stage, summary | Implemented |
+| `/app/dashboard` | Server Component | Stats cards + recent activity (consumer of `getUserStats`) | Implemented |
+| `/app/review` | Server Component | Missed questions list — shows only questions whose most recent attempt is incorrect (consumer of `getMissedQuestions`) | Implemented |
+| `/app/bookmarks` | Server Component | Bookmarked questions (consumer of `getBookmarks`) | Implemented |
+| `/app/questions/[slug]` | Client Component | Individual question reattempt | Implemented |
+
+---
+
+## 2. Practice Route Hook Architecture
+
+```text
+PracticePageClient (/app/practice)
+└── usePracticeSessionControls (81 lines, composite)
+│   ├── usePracticeSessionStart (135 lines)
+│   ├── usePracticeSessionTags (51 lines)
+│   ├── usePracticeIncompleteSession (105 lines)
+│   └── usePracticeSessionHistory (124 lines)
+
+QuickPracticeClient (/app/practice/quick)
+└── usePracticeQuestionFlow (55 lines, composite)
+    ├── usePracticeQuestionAnswerFlow (164 lines) ← over 150-line guideline
+    └── usePracticeQuestionBookmarks (107 lines)
+```
+
+---
+
+## 3. Session Page Hook Architecture
+
+```text
+PracticeSessionPageClient
+└── usePracticeSessionPageController (102 lines, composite)
+    ├── usePracticeSessionQuestionFlow (195 lines) ← over 150-line guideline
+    ├── usePracticeQuestionBookmarks (107 lines, reused)
+    ├── usePracticeSessionReviewStage (220 lines) ← over 150-line guideline
+    │   ├── usePracticeSessionNavigator (94 lines)
+    │   └── usePracticeSessionSummaryReview (79 lines)
+    └── usePracticeSessionMarkForReview (120 lines)
+```
+
+---
+
+## 4. Data Flow
+
+```text
+Server Actions (controllers)
+    ↓
+Pure Logic Modules (practice-page-logic.ts, practice-session-page-logic.ts, shared/question-flow-actions.ts)
+    ↓
+Hooks (state holders, compose logic + controller calls)
+    ↓
+Composite Hooks (orchestrate sub-hooks)
+    ↓
+Page Components (thin orchestrators)
+    ↓
+View Components (presentational, receive props, never call server actions)
+```
+
+Components import only **types** from controllers. All server action calls flow through hooks. This is architecturally correct.
+
+---
+
+## 5. Shared UI Components
+
+| Component | File | Purpose |
+|-----------|------|---------|
+| `QuestionCard` | `components/question/question-card.tsx` | Renders question stem + choice buttons with `<fieldset>` a11y |
+| `ChoiceButton` | `components/question/choice-button.tsx` | Radio-style choice with correctness states |
+| `Feedback` | `components/question/feedback.tsx` | Correct/incorrect banner with explanation markdown |
+| `ErrorCard` | `components/error-card.tsx` | Styled error alert with `role="alert"` |
+| `Markdown` | `components/markdown/Markdown.tsx` | `react-markdown` + `remark-gfm` + `rehype-sanitize` |
+
+---
+
+## 6. Error Handling
+
+Every async operation in every hook has try/catch + `ActionResult` error checking. Error display:
+
+| Error | Display | Recovery |
+|-------|---------|---------|
+| Question load failure | `ErrorCard` + "Try again" + "Return to dashboard" | Retry or navigate |
+| Answer submit failure | Same `ErrorCard` | Same |
+| Session start failure | `role="alert"` inline error | Retry |
+| Bookmark toggle failure | Toast notification | Auto-clears |
+| Tag load failure | "Tags unavailable." static text | No action needed |
+| Session end failure | `ErrorCard` + idempotency key rotation | Retry |
+| Navigator load failure | `ErrorCard` + "Retry navigator" | Retry |
+| Uncaught error | Next.js error boundary (`error.tsx`) | "Try again" / "Back to Dashboard" / "Report issue" |
+
+**No silent failures exist.** The `fireAndForget` utility catches unhandled promise rejections as a safety net.
