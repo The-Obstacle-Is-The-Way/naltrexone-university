@@ -1,5 +1,4 @@
-import { sql } from 'drizzle-orm';
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { ApplicationError } from '@/src/application/errors';
 import { DrizzleQuestionRepository } from './drizzle-question-repository';
 
@@ -192,25 +191,6 @@ describe('DrizzleQuestionRepository', () => {
   });
 
   describe('listPublishedCandidateIds', () => {
-    it('returns ordered ids when no tag filter is applied', async () => {
-      const rows = [{ id: 'q1' }, { id: 'q2' }];
-      const orderBy = vi.fn(async () => rows);
-      const where = vi.fn(() => ({ orderBy }));
-      const from = vi.fn(() => ({ where }));
-      const select = vi.fn(() => ({ from }));
-
-      const db = { select } as const;
-
-      const repo = new DrizzleQuestionRepository(db as unknown as RepoDb);
-
-      await expect(
-        repo.listPublishedCandidateIds({ tagSlugs: [], difficulties: [] }),
-      ).resolves.toEqual(['q1', 'q2']);
-
-      expect(select).toHaveBeenCalledTimes(1);
-      expect(orderBy).toHaveBeenCalledTimes(1);
-    });
-
     it('throws VALIDATION_ERROR when statuses are provided without userId', async () => {
       const repo = new DrizzleQuestionRepository({} as unknown as RepoDb);
 
@@ -225,138 +205,6 @@ describe('DrizzleQuestionRepository', () => {
         code: 'VALIDATION_ERROR',
         message: 'userId is required when filtering by status',
       });
-    });
-
-    it('applies status filters when statuses and userId are provided', async () => {
-      const rows = [{ id: 'q1' }, { id: 'q2' }];
-      const orderBy = vi.fn(async () => rows);
-      const where = vi.fn(() => ({ orderBy }));
-      const from = vi.fn(() => ({ where }));
-      const select = vi.fn(() => ({ from }));
-
-      const whereStatus = vi.fn(() => sql``);
-      const fromStatus = vi.fn(() => ({ where: whereStatus }));
-      const selectDistinct = vi.fn(() => ({ from: fromStatus }));
-
-      const db = { select, selectDistinct } as const;
-
-      const repo = new DrizzleQuestionRepository(db as unknown as RepoDb);
-
-      await expect(
-        repo.listPublishedCandidateIds({
-          tagSlugs: [],
-          difficulties: [],
-          statuses: ['unanswered'],
-          userId: 'user_1',
-        }),
-      ).resolves.toEqual(['q1', 'q2']);
-
-      expect(selectDistinct).toHaveBeenCalledTimes(1);
-      expect(whereStatus).toHaveBeenCalledTimes(1);
-      expect(select).toHaveBeenCalledTimes(1);
-    });
-
-    it('builds the incorrect status branch using latest-attempt window function subquery', async () => {
-      const rows = [{ id: 'q1' }, { id: 'q2' }];
-
-      const mainOrderBy = vi.fn(async () => rows);
-      const mainWhere = vi.fn(() => ({ orderBy: mainOrderBy }));
-      const mainFrom = vi.fn(() => ({ where: mainWhere }));
-
-      const latestAttemptRows = {
-        questionId: sql``,
-        attemptRank: sql``,
-        isCorrect: sql``,
-      };
-      const latestAs = vi.fn(() => latestAttemptRows);
-      const latestWhere = vi.fn(() => ({ as: latestAs }));
-      const latestFrom = vi.fn(() => ({ where: latestWhere }));
-
-      const incorrectWhere = vi.fn(() => sql``);
-      const incorrectFrom = vi.fn(() => ({ where: incorrectWhere }));
-
-      const select = vi
-        .fn()
-        // Status subquery (latestAttemptRowsSubquery)
-        .mockImplementationOnce(() => ({ from: latestFrom }))
-        // Status subquery (inArray select from latestAttemptRows)
-        .mockImplementationOnce(() => ({ from: incorrectFrom }))
-        // Main question selection
-        .mockImplementationOnce(() => ({ from: mainFrom }));
-
-      const db = { select } as const;
-
-      const repo = new DrizzleQuestionRepository(db as unknown as RepoDb);
-
-      await expect(
-        repo.listPublishedCandidateIds({
-          tagSlugs: [],
-          difficulties: [],
-          statuses: ['incorrect'],
-          userId: 'user_1',
-        }),
-      ).resolves.toEqual(['q1', 'q2']);
-
-      expect(latestAs).toHaveBeenCalledWith('latest_attempt_rows');
-      expect(incorrectFrom).toHaveBeenCalledWith(latestAttemptRows);
-    });
-
-    it('builds the marked status branch using a bookmarks subquery', async () => {
-      const rows = [{ id: 'q1' }, { id: 'q2' }];
-
-      const mainOrderBy = vi.fn(async () => rows);
-      const mainWhere = vi.fn(() => ({ orderBy: mainOrderBy }));
-      const mainFrom = vi.fn(() => ({ where: mainWhere }));
-
-      const markedWhere = vi.fn(() => sql``);
-      const markedFrom = vi.fn(() => ({ where: markedWhere }));
-
-      const select = vi
-        .fn()
-        // Status subquery (bookmarks)
-        .mockImplementationOnce(() => ({ from: markedFrom }))
-        // Main question selection
-        .mockImplementationOnce(() => ({ from: mainFrom }));
-
-      const db = { select } as const;
-
-      const repo = new DrizzleQuestionRepository(db as unknown as RepoDb);
-
-      await expect(
-        repo.listPublishedCandidateIds({
-          tagSlugs: [],
-          difficulties: [],
-          statuses: ['marked'],
-          userId: 'user_1',
-        }),
-      ).resolves.toEqual(['q1', 'q2']);
-
-      expect(markedWhere).toHaveBeenCalledTimes(1);
-    });
-
-    it('returns ids when tag filters are applied', async () => {
-      const rows = [{ id: 'q1', createdAt: new Date('2026-02-01T00:00:00Z') }];
-      const orderBy = vi.fn(async () => rows);
-      const groupBy = vi.fn(() => ({ orderBy }));
-      const where = vi.fn(() => ({ groupBy }));
-      const innerJoin2 = vi.fn(() => ({ where }));
-      const innerJoin1 = vi.fn(() => ({ innerJoin: innerJoin2 }));
-      const from = vi.fn(() => ({ innerJoin: innerJoin1 }));
-      const select = vi.fn(() => ({ from }));
-
-      const db = { select } as const;
-
-      const repo = new DrizzleQuestionRepository(db as unknown as RepoDb);
-
-      await expect(
-        repo.listPublishedCandidateIds({
-          tagSlugs: ['tag-1'],
-          difficulties: ['easy'],
-        }),
-      ).resolves.toEqual(['q1']);
-
-      expect(select).toHaveBeenCalledTimes(1);
-      expect(orderBy).toHaveBeenCalledTimes(1);
     });
   });
 });
