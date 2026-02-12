@@ -28,6 +28,7 @@ import {
   GetBookmarksUseCase,
   GetIncompletePracticeSessionUseCase,
   GetNextQuestionUseCase,
+  GetPreviousAttemptUseCase,
   GetUserStatsUseCase,
   StartPracticeSessionUseCase,
   SubmitAnswerUseCase,
@@ -91,6 +92,7 @@ describe('container factories', () => {
 
     expect(typeof container.createCheckEntitlementUseCase).toBe('function');
     expect(typeof container.createGetNextQuestionUseCase).toBe('function');
+    expect(typeof container.createGetPreviousAttemptUseCase).toBe('function');
     expect(typeof container.createSubmitAnswerUseCase).toBe('function');
     expect(typeof container.createGetAttemptedQuestionsUseCase).toBe(
       'function',
@@ -170,6 +172,9 @@ describe('container factories', () => {
     expect(container.createGetNextQuestionUseCase()).toBeInstanceOf(
       GetNextQuestionUseCase,
     );
+    expect(container.createGetPreviousAttemptUseCase()).toBeInstanceOf(
+      GetPreviousAttemptUseCase,
+    );
     expect(container.createSubmitAnswerUseCase()).toBeInstanceOf(
       SubmitAnswerUseCase,
     );
@@ -229,6 +234,9 @@ describe('container factories', () => {
     );
     expect(questionViewDeps.questionRepository).toBeInstanceOf(
       DrizzleQuestionRepository,
+    );
+    expect(questionViewDeps.getPreviousAttemptUseCase).toBeInstanceOf(
+      GetPreviousAttemptUseCase,
     );
 
     const billingDeps = container.createBillingControllerDeps();

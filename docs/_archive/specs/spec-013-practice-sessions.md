@@ -32,7 +32,7 @@ Implement structured practice sessions:
   - SLICE-3 (acceptance criteria + implementation checklist)
   - Section 4.5.5+ (session server actions + behavior)
 - Domain rules:
-  - `docs/specs/spec-003-domain-services.md` (session progress + explanation logic)
+  - `docs/_archive/specs/spec-003-domain-services.md` (session progress + explanation logic)
 
 ---
 

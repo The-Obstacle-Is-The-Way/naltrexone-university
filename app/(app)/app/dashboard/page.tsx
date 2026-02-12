@@ -206,7 +206,10 @@ export function DashboardView({
                 return (
                   <li key={row.attemptId}>
                     <Link
-                      href={toQuestionRoute(row.slug, { from: 'dashboard' })}
+                      href={toQuestionRoute(row.slug, {
+                        from: 'dashboard',
+                        mode: 'review',
+                      })}
                       className="block rounded-xl border border-border/60 bg-muted/20 p-3 transition-colors hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]"
                     >
                       <div className="flex items-start justify-between gap-3">

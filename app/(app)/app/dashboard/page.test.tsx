@@ -64,6 +64,7 @@ describe('app/(app)/app/dashboard', () => {
         }}
       />,
     );
+    const doc = new DOMParser().parseFromString(html, 'text/html');
 
     expect(html).toContain('Dashboard');
     expect(html).toContain('12');
@@ -80,12 +81,22 @@ describe('app/(app)/app/dashboard', () => {
     expect(html).toContain(`href="${ROUTES.APP_HISTORY}?tab=questions"`);
     expect(html).toContain('Stem for correct');
     expect(html).toContain('Stem for incorrect');
-    expect(html).toContain(
-      `href="${toQuestionRoute('q-correct', { from: 'dashboard' })}"`,
-    );
-    expect(html).toContain(
-      `href="${toQuestionRoute('q-incorrect', { from: 'dashboard' })}"`,
-    );
+    expect(
+      doc.querySelector(
+        `a[href="${toQuestionRoute('q-correct', {
+          from: 'dashboard',
+          mode: 'review',
+        })}"]`,
+      ),
+    ).not.toBeNull();
+    expect(
+      doc.querySelector(
+        `a[href="${toQuestionRoute('q-incorrect', {
+          from: 'dashboard',
+          mode: 'review',
+        })}"]`,
+      ),
+    ).not.toBeNull();
     expect(html).toContain('Easy');
     expect(html).toContain('Hard');
     expect(html).toContain('Correct');

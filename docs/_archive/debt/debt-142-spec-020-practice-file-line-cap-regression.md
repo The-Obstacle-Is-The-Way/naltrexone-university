@@ -43,7 +43,7 @@ This is not a global "all production files" rule. It is a scoped SPEC-020 requir
 
 ## Related
 
-- `docs/specs/spec-020-practice-engine-completion.md` (FR-1 / Phase 1 gate)
+- `docs/_archive/specs/spec-020-practice-engine-completion.md` (FR-1 / Phase 1 gate)
 - `docs/_archive/debt/debt-115-practice-page-god-component.md`
 - `app/(app)/app/practice/practice-page-logic.ts`
 - `app/(app)/app/practice/practice-page-bookmarks.ts`

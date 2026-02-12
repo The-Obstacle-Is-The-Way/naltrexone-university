@@ -3,6 +3,7 @@ import {
   canSubmitQuestionAnswer,
   createLoadQuestionAction,
   createSubmitSelectedAnswerAction,
+  loadPreviousAttempt,
   loadQuestion,
   reattemptQuestion,
   submitSelectedAnswer,
@@ -10,6 +11,7 @@ import {
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import { err, ok } from '@/src/adapters/controllers/action-result';
 import type { GetQuestionBySlugOutput } from '@/src/adapters/controllers/question-view-controller';
+import type { GetPreviousAttemptOutput } from '@/src/application/use-cases/get-previous-attempt';
 import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
 import { createQuestion } from '@/src/domain/test-helpers';
 import { createDeferred } from '@/tests/test-helpers/create-deferred';
@@ -285,6 +287,111 @@ describe('question-page-logic', () => {
       expect(setLoadState).toHaveBeenCalledWith({ status: 'loading' });
       expect(setSubmitResult).toHaveBeenCalledWith(submitResult);
       expect(setLoadState).toHaveBeenCalledWith({ status: 'ready' });
+    });
+  });
+
+  describe('loadPreviousAttempt', () => {
+    it('sets selectedChoiceId and submitResult when previous attempt exists', async () => {
+      const setSelectedChoiceId = vi.fn();
+      const setSubmitResult = vi.fn();
+
+      await loadPreviousAttempt({
+        questionId: 'q_1',
+        getPreviousAttemptFn: async () =>
+          ok({
+            attemptId: 'attempt_1',
+            selectedChoiceId: 'choice_1',
+            isCorrect: false,
+            correctChoiceId: 'choice_2',
+            explanationMd: 'Explanation',
+            choiceExplanations: [],
+            answeredAt: '2026-02-01T00:00:00.000Z',
+          } satisfies GetPreviousAttemptOutput),
+        setSelectedChoiceId,
+        setSubmitResult,
+      });
+
+      expect(setSelectedChoiceId).toHaveBeenCalledWith('choice_1');
+      expect(setSubmitResult).toHaveBeenCalledWith({
+        attemptId: 'attempt_1',
+        isCorrect: false,
+        correctChoiceId: 'choice_2',
+        explanationMd: 'Explanation',
+        choiceExplanations: [],
+      } satisfies SubmitAnswerOutput);
+    });
+
+    it('does not set state when previous attempt returns null', async () => {
+      const setSelectedChoiceId = vi.fn();
+      const setSubmitResult = vi.fn();
+
+      await loadPreviousAttempt({
+        questionId: 'q_1',
+        getPreviousAttemptFn: async () => ok(null),
+        setSelectedChoiceId,
+        setSubmitResult,
+      });
+
+      expect(setSelectedChoiceId).not.toHaveBeenCalled();
+      expect(setSubmitResult).not.toHaveBeenCalled();
+    });
+
+    it('does not set state when server action returns error', async () => {
+      const setSelectedChoiceId = vi.fn();
+      const setSubmitResult = vi.fn();
+
+      await loadPreviousAttempt({
+        questionId: 'q_1',
+        getPreviousAttemptFn: async () =>
+          err('INTERNAL_ERROR', 'Internal error'),
+        setSelectedChoiceId,
+        setSubmitResult,
+      });
+
+      expect(setSelectedChoiceId).not.toHaveBeenCalled();
+      expect(setSubmitResult).not.toHaveBeenCalled();
+    });
+
+    it('does not set state when server action throws', async () => {
+      const setSelectedChoiceId = vi.fn();
+      const setSubmitResult = vi.fn();
+
+      await loadPreviousAttempt({
+        questionId: 'q_1',
+        getPreviousAttemptFn: async () => {
+          throw new Error('Boom');
+        },
+        setSelectedChoiceId,
+        setSubmitResult,
+      });
+
+      expect(setSelectedChoiceId).not.toHaveBeenCalled();
+      expect(setSubmitResult).not.toHaveBeenCalled();
+    });
+
+    it('does not set state when component is unmounted', async () => {
+      const setSelectedChoiceId = vi.fn();
+      const setSubmitResult = vi.fn();
+
+      await loadPreviousAttempt({
+        questionId: 'q_1',
+        getPreviousAttemptFn: async () =>
+          ok({
+            attemptId: 'attempt_1',
+            selectedChoiceId: 'choice_1',
+            isCorrect: true,
+            correctChoiceId: 'choice_1',
+            explanationMd: 'Explanation',
+            choiceExplanations: [],
+            answeredAt: '2026-02-01T00:00:00.000Z',
+          } satisfies GetPreviousAttemptOutput),
+        setSelectedChoiceId,
+        setSubmitResult,
+        isMounted: () => false,
+      });
+
+      expect(setSelectedChoiceId).not.toHaveBeenCalled();
+      expect(setSubmitResult).not.toHaveBeenCalled();
     });
   });
 

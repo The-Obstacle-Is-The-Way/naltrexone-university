@@ -6,7 +6,7 @@ import { Feedback } from '@/components/question/feedback';
 import { QuestionCard } from '@/components/question/question-card';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { type QuestionOrigin, ROUTES } from '@/lib/routes';
+import { type QuestionMode, type QuestionOrigin, ROUTES } from '@/lib/routes';
 import type { GetQuestionBySlugOutput } from '@/src/adapters/controllers/question-view-controller';
 import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
 import type { LoadState } from './question-page-logic';
@@ -18,6 +18,11 @@ function parseQuestionOrigin(value: string | undefined): QuestionOrigin | null {
   if (value === 'bookmarks') return value;
   if (value === 'practice') return value;
   if (value === 'history') return value;
+  return null;
+}
+
+function parseQuestionMode(value: string | undefined): QuestionMode | null {
+  if (value === 'review') return value;
   return null;
 }
 
@@ -191,10 +196,15 @@ export function QuestionView(props: QuestionViewProps) {
 export default function QuestionPageClient({
   slug,
   from,
+  mode,
 }: {
   slug: string;
   from?: string;
+  mode?: string;
 }) {
-  const controller = useQuestionPageController({ slug });
+  const controller = useQuestionPageController({
+    slug,
+    mode: parseQuestionMode(mode),
+  });
   return <QuestionView {...controller} origin={parseQuestionOrigin(from)} />;
 }

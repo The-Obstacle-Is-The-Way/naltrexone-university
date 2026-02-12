@@ -68,4 +68,55 @@ describe('ChoiceButton', () => {
     }
     expect(input.hasAttribute('disabled')).toBe(true);
   });
+
+  it('does not apply opacity-50 when disabled with correctness', () => {
+    const html = renderToStaticMarkup(
+      <ChoiceButton
+        name="choices"
+        label="A"
+        textMd="Choice A"
+        selected
+        disabled
+        correctness="correct"
+        onClick={() => {}}
+      />,
+    );
+
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const input = doc.querySelector('input[type="radio"]');
+    const wrapperLabel = input?.closest('label');
+
+    expect(wrapperLabel).not.toBeNull();
+    if (!wrapperLabel) {
+      throw new Error('Expected wrapper label to exist.');
+    }
+
+    expect(wrapperLabel.getAttribute('class')).toContain('cursor-not-allowed');
+    expect(wrapperLabel.getAttribute('class')).not.toContain('opacity-50');
+  });
+
+  it('applies opacity-50 when disabled without correctness', () => {
+    const html = renderToStaticMarkup(
+      <ChoiceButton
+        name="choices"
+        label="A"
+        textMd="Choice A"
+        selected={false}
+        disabled
+        onClick={() => {}}
+      />,
+    );
+
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const input = doc.querySelector('input[type="radio"]');
+    const wrapperLabel = input?.closest('label');
+
+    expect(wrapperLabel).not.toBeNull();
+    if (!wrapperLabel) {
+      throw new Error('Expected wrapper label to exist.');
+    }
+
+    expect(wrapperLabel.getAttribute('class')).toContain('opacity-50');
+    expect(wrapperLabel.getAttribute('class')).toContain('cursor-not-allowed');
+  });
 });

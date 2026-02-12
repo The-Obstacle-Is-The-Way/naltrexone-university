@@ -696,8 +696,8 @@ APP_PRACTICE_QUICK: '/app/practice/quick',
 - [SPEC-015: Dashboard](./spec-015-dashboard.md) — defines dashboard stats and recent activity
 - [SPEC-020: Practice Engine Completion](./spec-020-practice-engine-completion.md) — formally specifies session history (previously P3 optional here), in-run navigation, enriched summary, and session context in existing views
 - [SPEC-021: History Page Restructure](./spec-021-history-page-restructure.md) — restructures Review → History, moves session history from Practice to History, slims Dashboard. Supersedes the "Recent sessions" panel on Practice and the Review page routing.
-- [master_spec.md Section 4.5.3-4.5.5](./master_spec.md)
-- [ADR-001: Clean Architecture Layers](../adr/adr-001-clean-architecture-layers.md)
+- [master_spec.md Section 4.5.3-4.5.5](../../specs/master_spec.md)
+- [ADR-001: Clean Architecture Layers](../../adr/adr-001-clean-architecture-layers.md)
 
 ---
 
@@ -836,7 +836,7 @@ All Phase 4 acceptance criteria met:
 | 2026-02-09 | Engineering | **Phase 2 fully specified.** Expanded Section 6.2 with component-level detail: route structure, landing page layout, quick practice page spec, hook/component reuse mapping, implementation order, file paths. Fixed stale route paths (`/app/practice/sessions/[id]` → `/app/practice/[sessionId]` to match actual codebase). **Product decision:** Review = missed-only (SPEC-014 unchanged, clarify via subtitle). Updated Phase 3 task table with Done/Pending status. Updated Section 14 status from "Not Started" to "Ready for Implementation". |
 | 2026-02-09 | Engineering | **Phase 2 implemented.** Added `/app/practice/quick`, refactored `/app/practice` into a decision-point landing page, added `ROUTES.APP_PRACTICE_QUICK`, and exposed Quick Practice in app navigation. |
 | 2026-02-09 | Engineering | **Phase 3 implemented.** Made dashboard activity actionable (question links + difficulty badges + session drill-down), added progressive tag filter disclosure, clarified Review scope (subtitle + empty state + filters), made question detail origin-aware via `?from=`, and improved empty states with CTAs. |
-| 2026-02-09 | Architecture Review | **Phase 4 added.** Post-implementation UX audit found: (1) Practice session breakdowns (history panel + post-session summary) render questions as non-interactive text while every other page has clickable links — violates Phase 3 cross-linking rule. Root cause: `PracticeSessionReviewRow` lacks `slug` field. (2) Quick Practice card on Practice page is redundant (QP has its own nav tab). (3) Breakdown toggle is stuck-open (no collapse). Added Phase 4 to resolve. Corrected Phase 3 status from Done to Partial. See `docs/brainstorming/practice-ux-audit.md` for full analysis. |
+| 2026-02-09 | Architecture Review | **Phase 4 added.** Post-implementation UX audit found: (1) Practice session breakdowns (history panel + post-session summary) render questions as non-interactive text while every other page has clickable links — violates Phase 3 cross-linking rule. Root cause: `PracticeSessionReviewRow` lacks `slug` field. (2) Quick Practice card on Practice page is redundant (QP has its own nav tab). (3) Breakdown toggle is stuck-open (no collapse). Added Phase 4 to resolve. Corrected Phase 3 status from Done to Partial. See `docs/_archive/brainstorming/bs-001-practice-ux-audit.md` for full analysis. |
 | 2026-02-09 | Engineering | **Phase 4 implemented.** Added `slug` to practice session review rows, extracted shared `SessionBreakdownList`, made breakdown questions clickable, removed redundant Quick Practice CTA card, and made breakdown collapsible (View/Hide toggle). |
 
 ---
@@ -845,7 +845,7 @@ All Phase 4 acceptance criteria met:
 
 ### 4.1 Problem Statement
 
-Post-implementation UX audit (see `docs/brainstorming/practice-ux-audit.md`) revealed three issues on the Practice page that weren't caught in Phase 3 acceptance testing:
+Post-implementation UX audit (see `docs/_archive/brainstorming/bs-001-practice-ux-audit.md`) revealed three issues on the Practice page that weren't caught in Phase 3 acceptance testing:
 
 1. **Session breakdown questions are non-interactive dead ends.** The `PracticeSessionHistoryPanel` (recent sessions) and `SessionSummaryView` (post-session) render question lists as plain `<li>` text with no links. Every other page (Dashboard, Review, Bookmarks) makes question references clickable. This violates the Phase 3 cross-linking rule (Section 5.4.4). Root cause: `PracticeSessionReviewRow` does not include `slug`, which is required by `toQuestionRoute()`.
 

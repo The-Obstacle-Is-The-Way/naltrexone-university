@@ -342,7 +342,7 @@ killall "Google Chrome"
 
 - [react-vitest-testing.md](./react-vitest-testing.md) — React 19 + Vitest component testing setup
 - [CLAUDE.md](../../CLAUDE.md) — Testing mandate and test locations
-- [SPEC-010](../specs/spec-010-server-actions.md) — Controller testing patterns
+- [SPEC-010](../_archive/specs/spec-010-server-actions.md) — Controller testing patterns
 - [Stripe vendor docs](../vendor-docs/stripe.md) — E2E test seeding pattern, test payment methods
 - [Clerk vendor docs](../vendor-docs/clerk.md) — REST API for user lookup in E2E seeding
 - [Playwright Docs](https://playwright.dev/docs/intro)

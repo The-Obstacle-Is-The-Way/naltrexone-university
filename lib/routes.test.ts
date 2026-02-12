@@ -15,6 +15,30 @@ describe('lib/routes', () => {
     );
   });
 
+  it('supports mode query parameters for question routes', () => {
+    expect(toQuestionRoute('opioid-use-disorder', { mode: 'review' })).toBe(
+      '/app/questions/opioid-use-disorder?mode=review',
+    );
+  });
+
+  it('supports combined origin and mode query parameters for question routes', () => {
+    expect(
+      toQuestionRoute('opioid-use-disorder', {
+        from: 'dashboard',
+        mode: 'review',
+      }),
+    ).toBe('/app/questions/opioid-use-disorder?from=dashboard&mode=review');
+  });
+
+  it('omits mode query parameter when mode is undefined', () => {
+    expect(
+      toQuestionRoute('opioid-use-disorder', {
+        from: 'dashboard',
+        mode: undefined,
+      }),
+    ).toBe('/app/questions/opioid-use-disorder?from=dashboard');
+  });
+
   it('exports a quick practice route constant', () => {
     expect(ROUTES.APP_PRACTICE_QUICK).toBe('/app/practice/quick');
   });

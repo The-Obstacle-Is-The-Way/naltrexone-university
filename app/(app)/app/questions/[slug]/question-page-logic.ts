@@ -6,6 +6,7 @@ import { runTransitionedAsyncAction } from '@/app/(app)/app/practice/shared/ques
 import type { AsyncLoadState } from '@/app/(app)/app/shared/load-state';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import type { GetQuestionBySlugOutput } from '@/src/adapters/controllers/question-view-controller';
+import type { GetPreviousAttemptOutput } from '@/src/application/use-cases/get-previous-attempt';
 import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
 
 export type LoadState = AsyncLoadState;
@@ -187,4 +188,42 @@ export function reattemptQuestion(input: {
   input.setSubmitResult(null);
   input.setSubmitIdempotencyKey(input.createIdempotencyKey());
   input.setQuestionLoadedAt(input.nowMs());
+}
+
+export async function loadPreviousAttempt(input: {
+  questionId: string;
+  getPreviousAttemptFn: (
+    input: unknown,
+  ) => Promise<ActionResult<GetPreviousAttemptOutput | null>>;
+  setSelectedChoiceId: (choiceId: string | null) => void;
+  setSubmitResult: (result: SubmitAnswerOutput | null) => void;
+  isMounted?: () => boolean;
+}): Promise<void> {
+  const isMounted = input.isMounted ?? (() => true);
+
+  let res: ActionResult<GetPreviousAttemptOutput | null>;
+  try {
+    res = await input.getPreviousAttemptFn({
+      questionId: input.questionId,
+    });
+  } catch {
+    // Silently fall back to attempt mode — review is best-effort
+    return;
+  }
+  if (!isMounted()) return;
+
+  if (!res.ok || !res.data) {
+    // No previous attempt or error — stay in attempt mode
+    return;
+  }
+
+  const data = res.data;
+  input.setSelectedChoiceId(data.selectedChoiceId);
+  input.setSubmitResult({
+    attemptId: data.attemptId,
+    isCorrect: data.isCorrect,
+    correctChoiceId: data.correctChoiceId,
+    explanationMd: data.explanationMd,
+    choiceExplanations: data.choiceExplanations,
+  });
 }

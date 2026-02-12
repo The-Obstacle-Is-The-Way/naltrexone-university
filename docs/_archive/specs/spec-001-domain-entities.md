@@ -241,4 +241,4 @@ pnpm typecheck
 
 | Date | Change |
 |------|--------|
-| 2026-02-08 | Synced spec to implementation: added `Choice.explanationMd` field (per-choice explanation), added `PracticeSessionQuestionState` type and `PracticeSession.questionStates` field, updated barrel export. See [Practice Engine](../practice-engine/index.md) Section 10.1. |
+| 2026-02-08 | Synced spec to implementation: added `Choice.explanationMd` field (per-choice explanation), added `PracticeSessionQuestionState` type and `PracticeSession.questionStates` field, updated barrel export. See [Practice Engine](../../practice-engine/index.md) Section 10.1. |

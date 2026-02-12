@@ -6,19 +6,23 @@ import {
   createLoadQuestionAction,
   createSubmitSelectedAnswerAction,
   type LoadState,
+  loadPreviousAttempt,
   reattemptQuestion,
 } from '@/app/(app)/app/questions/[slug]/question-page-logic';
 import { selectChoiceIfAllowed } from '@/app/(app)/app/shared/question-guards';
+import type { QuestionMode } from '@/lib/routes';
 import { useIsMounted } from '@/lib/use-is-mounted';
 import { submitAnswer } from '@/src/adapters/controllers/question-controller';
 import {
   type GetQuestionBySlugOutput,
+  getPreviousAttempt,
   getQuestionBySlug,
 } from '@/src/adapters/controllers/question-view-controller';
 import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
 
 export type UseQuestionPageControllerInput = {
   slug: string;
+  mode?: QuestionMode | null;
 };
 
 export type UseQuestionPageControllerOutput = {
@@ -74,6 +78,22 @@ export function useQuestionPageController(
   );
 
   useEffect(loadQuestion, [loadQuestion]);
+
+  useEffect(() => {
+    if (input.mode !== 'review') return;
+    if (loadState.status !== 'ready') return;
+    if (!question) return;
+
+    startTransition(() => {
+      void loadPreviousAttempt({
+        questionId: question.questionId,
+        getPreviousAttemptFn: getPreviousAttempt,
+        setSelectedChoiceId,
+        setSubmitResult,
+        isMounted,
+      });
+    });
+  }, [input.mode, loadState.status, question, isMounted]);
 
   const canSubmit = useMemo(() => {
     return canSubmitQuestionAnswer({

@@ -44,11 +44,11 @@ The `stripe-webhook-controller.ts` is a critical component that handles Stripe w
 
 ## Location
 
-- `docs/specs/spec-010-server-actions.md` (Files to Create section)
+- `docs/_archive/specs/spec-010-server-actions.md` (Files to Create section)
 
 ## Resolution
 
-Updated `docs/specs/spec-010-server-actions.md` to:
+Updated `docs/_archive/specs/spec-010-server-actions.md` to:
 
 1. Add `stripe-webhook-controller.ts` to the controller file list
 2. Document its route-handler usage and responsibilities (signature verification, idempotency, subscription updates, and transaction boundary)

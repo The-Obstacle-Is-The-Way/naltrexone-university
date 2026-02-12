@@ -105,7 +105,7 @@ Once implemented:
 
 ## Cross-Page Navigation (SPEC-019 Phase 3)
 
-The core SLICE-4 functionality is complete. The following cross-page UX improvements are specified in [SPEC-019](./spec-019-practice-ux-redesign.md) Phase 3:
+The core SLICE-4 functionality is complete. The following cross-page UX improvements are specified in [SPEC-019](../../specs/spec-019-practice-ux-redesign.md) Phase 3:
 
 - **Origin-aware question-detail navigation:** **Done** (SPEC-019 Phase 3) — question detail back links + subtitle adapt based on `?from=dashboard|review|bookmarks|practice`.
 - **Review empty state:** **Done** (SPEC-019 Phase 3) — clarified missed-only scope with CTA to Practice.

@@ -6,7 +6,7 @@
 **Status:** Fully Addressed — all tracked findings resolved or invalidated as of 2026-02-08
 
 > [!NOTE]
-> This report is the second comprehensive audit. For the first, see `foundation-audit-report.md`.
+> This report is the second comprehensive audit. For the first, see `audit-001-foundation-report.md`.
 
 > [!UPDATE]
 > On 2026-02-08, follow-up remediation resolved BUG-105 through BUG-109 and DEBT-158 through DEBT-167. DEBT-161, DEBT-164, and DEBT-168 were invalidated as false positives after first-principles review.
@@ -130,6 +130,6 @@ All critical findings were verified against source code before documentation. Th
 
 ## Related
 
-- [Foundation Audit Report #1](foundation-audit-report.md) — 2026-02-02
+- [Foundation Audit Report #1](audit-001-foundation-report.md) — 2026-02-02
 - `docs/bugs/index.md` — Active bug index
 - `docs/debt/index.md` — Active debt index

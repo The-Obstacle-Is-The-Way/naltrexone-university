@@ -52,6 +52,20 @@ describe('app/(app)/app/questions/[slug]', () => {
     });
   }, 20_000);
 
+  it('passes mode searchParams into the client page', async () => {
+    const QuestionPage = (await import('@/app/(app)/app/questions/[slug]/page'))
+      .default;
+
+    const element = await QuestionPage({
+      params: Promise.resolve({ slug: 'q-1' }),
+      searchParams: Promise.resolve({ mode: 'review' }),
+    } as never);
+
+    expect(element).toMatchObject({
+      props: { slug: 'q-1', mode: 'review' },
+    });
+  }, 20_000);
+
   it('renders a question shell', async () => {
     const QuestionPage = (await import('@/app/(app)/app/questions/[slug]/page'))
       .default;

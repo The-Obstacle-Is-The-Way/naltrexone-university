@@ -16,7 +16,7 @@ export default async function QuestionPage({
   searchParams,
 }: {
   params: Promise<{ slug: string }>;
-  searchParams: Promise<{ from?: string | string[] }>;
+  searchParams: Promise<{ from?: string | string[]; mode?: string | string[] }>;
 }) {
   const { slug } = await params;
   const resolvedSearchParams = await searchParams;
@@ -24,5 +24,9 @@ export default async function QuestionPage({
     typeof resolvedSearchParams?.from === 'string'
       ? resolvedSearchParams.from
       : undefined;
-  return <QuestionPageClient slug={slug} from={from} />;
+  const mode =
+    typeof resolvedSearchParams?.mode === 'string'
+      ? resolvedSearchParams.mode
+      : undefined;
+  return <QuestionPageClient slug={slug} from={from} mode={mode} />;
 }

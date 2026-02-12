@@ -29,8 +29,8 @@ Authentication is a framework concern (outer layer). We must:
 
 We expose authentication to the application layer via an `AuthGateway` interface (ports) implemented in adapters.
 
-- Interface: `docs/specs/spec-004-application-ports.md`
-- Implementation guidance: `docs/specs/spec-008-auth-gateway.md`
+- Interface: `docs/_archive/specs/spec-004-application-ports.md`
+- Implementation guidance: `docs/_archive/specs/spec-008-auth-gateway.md`
 
 `AuthGateway` returns a domain `User` with internal UUID + email only.
 

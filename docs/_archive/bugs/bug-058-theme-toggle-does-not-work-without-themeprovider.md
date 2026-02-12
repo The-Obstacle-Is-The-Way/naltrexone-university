@@ -54,5 +54,5 @@ Additionally, the site always applied theme based only on OS preference, ignorin
 - `app/layout.tsx`
 - `components/theme-toggle.tsx`
 - `components/theme-provider.tsx`
-- `docs/specs/spec-018-ui-integration.md` (Theme Strategy)
+- `docs/_archive/specs/spec-018-ui-integration.md` (Theme Strategy)
 

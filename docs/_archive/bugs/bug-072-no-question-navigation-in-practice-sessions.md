@@ -32,6 +32,6 @@ Originally this was a UX/product enhancement gap, not a correctness violation of
 
 - [SPEC-020: Practice Engine Completion](../specs/spec-020-practice-engine-completion.md) — Phase 2
 - `docs/specs/master_spec.md`
-- `docs/specs/spec-013-practice-sessions.md`
+- `docs/_archive/specs/spec-013-practice-sessions.md`
 - `app/(app)/app/practice/[sessionId]/practice-session-page-client.tsx`
 - [DEBT-122](../debt/debt-122-in-run-question-navigation-gap.md)

@@ -193,6 +193,24 @@ export class FakeAttemptRepository implements AttemptRepository {
     );
   }
 
+  async findLatestByUserAndQuestion(
+    userId: string,
+    questionId: string,
+  ): Promise<Attempt | null> {
+    const matching = this.attempts.filter(
+      (a) => a.userId === userId && a.questionId === questionId,
+    );
+    if (matching.length === 0) return null;
+
+    matching.sort((a, b) => {
+      const byDate = b.answeredAt.getTime() - a.answeredAt.getTime();
+      if (byDate !== 0) return byDate;
+      return b.id.localeCompare(a.id);
+    });
+
+    return matching[0] ?? null;
+  }
+
   async countByUserId(userId: string): Promise<number> {
     return this.attempts.filter((a) => a.userId === userId).length;
   }

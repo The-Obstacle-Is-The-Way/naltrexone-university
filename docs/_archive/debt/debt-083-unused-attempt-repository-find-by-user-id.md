@@ -147,7 +147,7 @@ Change the spec to document the paginated signature.
 ## Related
 
 - `docs/_archive/bugs/bug-016-memory-exhaustion-power-users.md` — Original memory issue
-- `docs/specs/spec-004-application-ports.md` — Port definition to update
+- `docs/_archive/specs/spec-004-application-ports.md` — Port definition to update
 - `src/application/ports/repositories.ts:62` — Current port definition
 - `src/adapters/repositories/drizzle-attempt-repository.ts:68` — Implementation
 - `src/application/test-helpers/fakes.ts:321` — Fake implementation

@@ -29,9 +29,9 @@ Deliver the core learning loop for subscribed users:
   - Sections 4.5.3–4.5.4 (exact server action behavior)
   - SLICE-2 (acceptance criteria + implementation checklist)
 - Contracts and boundaries:
-  - `docs/specs/spec-003-domain-services.md` (`gradeAnswer`, session explanation rules)
-  - `docs/specs/spec-005-core-use-cases.md` (use-case responsibilities)
-  - `docs/specs/spec-010-server-actions.md` (`ActionResult<T>`)
+  - `docs/_archive/specs/spec-003-domain-services.md` (`gradeAnswer`, session explanation rules)
+  - `docs/_archive/specs/spec-005-core-use-cases.md` (use-case responsibilities)
+  - `docs/_archive/specs/spec-010-server-actions.md` (`ActionResult<T>`)
 
 ---
 
@@ -118,7 +118,7 @@ Once implemented:
 
 ## Route Note (SPEC-019 Phase 2)
 
-The ad-hoc question flow originally built on `/app/practice` has moved to `/app/practice/quick` as part of [SPEC-019](./spec-019-practice-ux-redesign.md) Phase 2. The core question loop (fetch → render → submit → grade → explain) is unchanged — only its location in the routing tree changed. The existing hooks (`usePracticeQuestionFlow`, `usePracticeQuestionBookmarks`) and components (`PracticeView`, `QuestionCard`, `Feedback`) are reused on the new route.
+The ad-hoc question flow originally built on `/app/practice` has moved to `/app/practice/quick` as part of [SPEC-019](../../specs/spec-019-practice-ux-redesign.md) Phase 2. The core question loop (fetch → render → submit → grade → explain) is unchanged — only its location in the routing tree changed. The existing hooks (`usePracticeQuestionFlow`, `usePracticeQuestionBookmarks`) and components (`PracticeView`, `QuestionCard`, `Feedback`) are reused on the new route.
 
 ---
 

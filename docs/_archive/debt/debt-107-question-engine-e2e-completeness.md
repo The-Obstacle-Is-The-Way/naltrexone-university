@@ -105,7 +105,7 @@ Unit/integration coverage is strong, but E2E confidence was previously incomplet
 - **DEBT-104:** Missing E2E Test Credentials for Authenticated Flows
 - **DEBT-105:** Missing Session Resume Functionality
 - **DEBT-106:** Exam Mode Missing "Mark for Review" Feature
-- `docs/specs/spec-012-core-question-loop.md`
-- `docs/specs/spec-013-practice-sessions.md`
-- `docs/specs/spec-014-review-bookmarks.md`
-- `docs/specs/spec-015-dashboard.md`
+- `docs/_archive/specs/spec-012-core-question-loop.md`
+- `docs/_archive/specs/spec-013-practice-sessions.md`
+- `docs/_archive/specs/spec-014-review-bookmarks.md`
+- `docs/_archive/specs/spec-015-dashboard.md`

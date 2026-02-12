@@ -71,12 +71,12 @@ Implementation lives at:
 
 SSOT alignment:
 
-- `docs/specs/spec-011-paywall.md` describes syncing subscription state on `/checkout/success`.
+- `docs/_archive/specs/spec-011-paywall.md` describes syncing subscription state on `/checkout/success`.
 
 ---
 
 ## References
 
 - Stripe: Webhooks are eventually consistent; deliveries are not guaranteed to be immediate and can be retried.
-- `docs/specs/spec-011-paywall.md`
-- `docs/audits/audit-003-external-integrations.md` (Stripe section)
+- `docs/_archive/specs/spec-011-paywall.md`
+- `docs/_archive/audits/audit-003-external-integrations.md` (Stripe section)

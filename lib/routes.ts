@@ -26,13 +26,19 @@ export type QuestionOrigin =
   | 'practice'
   | 'history';
 
+export type QuestionMode = 'review';
+
 export function toQuestionRoute(
   slug: string,
   options?: {
     from?: QuestionOrigin;
+    mode?: QuestionMode;
   },
 ): string {
   const base = `${ROUTES.APP_QUESTIONS}/${slug}`;
-  if (!options?.from) return base;
-  return `${base}?from=${encodeURIComponent(options.from)}`;
+  const params = new URLSearchParams();
+  if (options?.from) params.set('from', options.from);
+  if (options?.mode) params.set('mode', options.mode);
+  const qs = params.toString();
+  return qs ? `${base}?${qs}` : base;
 }

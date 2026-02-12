@@ -32,6 +32,6 @@ Originally this was a product/UX enhancement request, not a correctness defect a
 
 - [SPEC-020: Practice Engine Completion](../specs/spec-020-practice-engine-completion.md) — Phase 2
 - `docs/specs/master_spec.md`
-- `docs/specs/spec-013-practice-sessions.md`
+- `docs/_archive/specs/spec-013-practice-sessions.md`
 - `app/(app)/app/practice/[sessionId]/practice-session-page-client.tsx`
 - [DEBT-123](../debt/debt-123-session-summary-missing-question-breakdown.md)

@@ -13,6 +13,8 @@ The History > Questions tab applies **Difficulty** and **Tag** filters client-si
 
 When a user filters by "Hard" difficulty, they might see 3 rows on the page but the pagination says "1–20 of 50." This is a known v1 trade-off documented in SPEC-022 §2.
 
+**Existing partial mitigation:** The UI already appends `(X visible after filters)` when client-side filters reduce the visible row count (lines 294–298 of `history-questions-tab.tsx`). This helps but doesn't fix the core problem: questions matching the filter on other pages are invisible.
+
 ### Root Cause
 
 The `AttemptedQuestionsFilters` type in the application ports layer only supports `result` and `source` fields. The repository query (`latestAttemptRowsSubquery`) operates on the `attempts` table, which has no direct access to question metadata (difficulty, tags). Adding these filters requires joining to the `questions` table at the database level.
@@ -80,8 +82,8 @@ The tag filter dropdown currently builds its `<option>` list from tags present o
 
 ## Related
 
-- SPEC-022 §2 (Decision table, "Filter application" row)
-- `docs/brainstorming/quick-practice-history-gap.md` line 125–126
+- SPEC-022 §2 (Decision table, "Filter application" row) — `docs/_archive/specs/spec-022-question-log.md`
+- `docs/_archive/brainstorming/bs-007-quick-practice-history-gap.md` line 125–126
 - CodeRabbit PR #86 review (Major items)
 - `app/(app)/app/history/components/history-questions-tab.tsx` (lines 103–116)
 - `src/adapters/repositories/drizzle-attempt-repository.ts` (`buildAttemptedQuestionsConditions`)

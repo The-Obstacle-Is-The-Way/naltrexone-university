@@ -21,7 +21,7 @@ export function SessionBreakdownList({
         >
           {row.isAvailable ? (
             <Link
-              href={toQuestionRoute(row.slug, { from })}
+              href={toQuestionRoute(row.slug, { from, mode: 'review' })}
               className="flex items-center gap-2 font-medium text-foreground hover:underline"
             >
               <span>{row.order}.</span>

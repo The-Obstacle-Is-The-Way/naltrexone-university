@@ -27,7 +27,8 @@ export function ChoiceButton({
       className={cn(
         'block w-full rounded-xl border border-border bg-background p-4 text-left shadow-sm transition-colors focus-within:border-ring focus-within:ring-ring/50 focus-within:ring-[3px]',
         !disabled && 'cursor-pointer hover:bg-muted',
-        disabled && 'cursor-not-allowed opacity-50',
+        disabled && 'cursor-not-allowed',
+        disabled && !correctness && 'opacity-50',
         selected && correctness === null && 'border-ring',
         correctness === 'correct' &&
           'border-success bg-success/10 text-success-foreground',

@@ -136,7 +136,7 @@ Server Actions are **controllers** in Clean Architecture terms.
 
 - They live in `src/adapters/controllers/`
 - They are implemented as `'use server'` entry points
-- They follow the controller conventions in `docs/specs/spec-010-server-actions.md`
+- They follow the controller conventions in `docs/_archive/specs/spec-010-server-actions.md`
 
 **Why not `/app/(app)/app/_actions/`?**
 
