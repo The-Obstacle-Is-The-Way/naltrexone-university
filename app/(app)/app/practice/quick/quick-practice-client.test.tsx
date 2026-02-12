@@ -1,0 +1,71 @@
+// @vitest-environment jsdom
+import { renderToStaticMarkup } from 'react-dom/server';
+import { describe, expect, it, vi } from 'vitest';
+import { parseStatusParams } from './quick-practice-client';
+
+vi.mock('next/link', () => ({
+  default: (props: Record<string, unknown>) => <a {...props} />,
+}));
+
+const { pushMock, useSearchParamsMock } = vi.hoisted(() => ({
+  pushMock: vi.fn(),
+  useSearchParamsMock: vi.fn(),
+}));
+
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ push: pushMock }),
+  useSearchParams: () => useSearchParamsMock(),
+}));
+
+describe('parseStatusParams', () => {
+  it('returns empty array when status param is missing', () => {
+    expect(parseStatusParams(new URLSearchParams(''))).toEqual([]);
+  });
+
+  it('parses comma-separated statuses and ignores unknown values', () => {
+    expect(
+      parseStatusParams(
+        new URLSearchParams('status=unanswered,unknown,incorrect'),
+      ),
+    ).toEqual(['unanswered', 'incorrect']);
+  });
+});
+
+describe('QuickPracticeClient', () => {
+  it('renders status filter chips and reflects selected values from URL', async () => {
+    useSearchParamsMock.mockReturnValue(
+      new URLSearchParams('status=incorrect'),
+    );
+
+    const QuickPracticeClient = (await import('./quick-practice-client'))
+      .default;
+
+    const html = renderToStaticMarkup(<QuickPracticeClient />);
+
+    expect(html).toContain('Status');
+    expect(html).toContain('Unanswered');
+    expect(html).toContain('Incorrect');
+    expect(html).toContain('Marked');
+
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const selected = doc.querySelector(
+      'fieldset[aria-label="Status"] button[aria-pressed="true"]',
+    );
+    expect(selected?.textContent).toBe('Incorrect');
+  });
+
+  it('renders no selected chips when status param is absent', async () => {
+    useSearchParamsMock.mockReturnValue(new URLSearchParams(''));
+
+    const QuickPracticeClient = (await import('./quick-practice-client'))
+      .default;
+
+    const html = renderToStaticMarkup(<QuickPracticeClient />);
+
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const selected = doc.querySelectorAll(
+      'fieldset[aria-label="Status"] button[aria-pressed="true"]',
+    );
+    expect(selected).toHaveLength(0);
+  });
+});

@@ -12,7 +12,7 @@ const { getNextQuestionMock, submitAnswerMock } = vi.hoisted(() => ({
   submitAnswerMock: vi.fn(),
 }));
 
-const TEST_FILTERS = { tagSlugs: [], difficulties: [] };
+const TEST_FILTERS = { tagSlugs: [], difficulties: [], statuses: [] };
 
 function PracticeQuestionAnswerFlowProbe() {
   const output = usePracticeQuestionAnswerFlow({

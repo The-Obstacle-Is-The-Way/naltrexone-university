@@ -174,12 +174,12 @@ test.describe('brainstorming audit — validate documented issues', () => {
   });
 
   /**
-   * BS-012: No Question Status filter on Practice session creation.
+   * BS-012: Question Status filter on Practice session creation.
    *
    * The Practice page currently has Mode, Count, Difficulty, and Tags —
-   * but no way to filter by question status (Unanswered/Incorrect/Marked/All).
+   * plus a status filter (Unanswered/Incorrect/Marked).
    */
-  test('BS-012: Practice page has no question status filter', async ({
+  test('BS-012: Practice page has a question status filter', async ({
     page,
   }) => {
     await signInWithClerkPassword(page);
@@ -200,27 +200,29 @@ test.describe('brainstorming audit — validate documented issues', () => {
       page.getByRole('button', { name: 'Tutor', exact: true }),
     ).toBeVisible();
 
-    // Assert that question status filter elements are ABSENT
-    // These are the status filter options that BS-012 proposes adding
+    // Assert that question status filter elements are PRESENT
     const statusLabels = ['Unanswered', 'Incorrect', 'Marked'];
     for (const label of statusLabels) {
-      // Check for both button and text variants
       await expect(
         page.getByRole('button', { name: label, exact: true }),
-      ).toHaveCount(0);
+      ).toBeVisible();
     }
 
-    // Also check there's no "Status" label/heading in the form
-    await expect(page.getByText('Status', { exact: true })).toHaveCount(0);
+    await expect(page.getByText('Status', { exact: true })).toBeVisible();
+    await expect(
+      page.getByText('Leave empty to include all questions', { exact: true }),
+    ).toBeVisible();
   });
 
   /**
-   * BS-012: Quick Practice has no filters at all.
+   * BS-012: Quick Practice has a Question Status filter.
    *
    * Quick Practice immediately serves a random question with no
-   * filtering capabilities — not even difficulty or tags.
+   * difficulty or tag filtering capabilities.
    */
-  test('BS-012: Quick Practice page has no filters', async ({ page }) => {
+  test('BS-012: Quick Practice page has a question status filter', async ({
+    page,
+  }) => {
     await signInWithClerkPassword(page);
     await ensureSubscribed(page);
 
@@ -237,18 +239,18 @@ test.describe('brainstorming audit — validate documented issues', () => {
       timeout: 30_000,
     });
 
-    // Assert no filter-related UI exists
-    const filterLabels = [
-      'Unanswered',
-      'Incorrect',
-      'Marked',
-      'Status',
-      'Difficulty',
-      'Easy',
-      'Medium',
-      'Hard',
-    ];
-    for (const label of filterLabels) {
+    const statusLabels = ['Unanswered', 'Incorrect', 'Marked'];
+    for (const label of statusLabels) {
+      await expect(
+        page.getByRole('button', { name: label, exact: true }),
+      ).toBeVisible();
+    }
+
+    await expect(page.getByText('Status', { exact: true })).toBeVisible();
+
+    // Difficulty filters are still out of scope in v1.
+    const absentLabels = ['Difficulty', 'Easy', 'Medium', 'Hard'];
+    for (const label of absentLabels) {
       await expect(
         page.getByRole('button', { name: label, exact: true }),
       ).toHaveCount(0);

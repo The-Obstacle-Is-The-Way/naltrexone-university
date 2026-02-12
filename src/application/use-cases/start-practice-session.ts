@@ -6,6 +6,7 @@ import {
 import type {
   PracticeMode,
   QuestionDifficulty,
+  QuestionProgressStatus,
 } from '@/src/domain/value-objects';
 import { ApplicationError } from '../errors';
 import type {
@@ -19,6 +20,7 @@ export type StartPracticeSessionInput = {
   count: number;
   tagSlugs: string[];
   difficulties: QuestionDifficulty[];
+  statuses?: readonly QuestionProgressStatus[];
 };
 
 export type StartPracticeSessionOutput = { sessionId: string };
@@ -46,6 +48,8 @@ export class StartPracticeSessionUseCase {
     const candidateIds = await this.questions.listPublishedCandidateIds({
       tagSlugs: input.tagSlugs,
       difficulties: input.difficulties,
+      statuses: input.statuses ?? [],
+      userId: input.userId,
     });
     if (candidateIds.length === 0) {
       throw new ApplicationError('NOT_FOUND', 'No questions found');

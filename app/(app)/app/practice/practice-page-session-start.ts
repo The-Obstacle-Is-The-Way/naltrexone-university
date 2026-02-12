@@ -65,6 +65,7 @@ export async function startSession(input: {
       idempotencyKey: input.idempotencyKey,
       tagSlugs: input.filters.tagSlugs,
       difficulties: input.filters.difficulties,
+      statuses: input.filters.statuses,
     });
   } catch (error) {
     if (!isMounted()) return;
@@ -145,6 +146,22 @@ export function createToggleDifficultyHandler(input: {
     input.setFilters((prev) => ({
       ...prev,
       difficulties: toggleInArray(prev.difficulties, difficulty),
+    }));
+    input.setIdempotencyKey(input.createIdempotencyKey());
+  };
+}
+
+export function createToggleStatusHandler(input: {
+  setFilters: (
+    next: PracticeFilters | ((prev: PracticeFilters) => PracticeFilters),
+  ) => void;
+  setIdempotencyKey: (key: string) => void;
+  createIdempotencyKey: () => string;
+}): (status: PracticeFilters['statuses'][number]) => void {
+  return (status) => {
+    input.setFilters((prev) => ({
+      ...prev,
+      statuses: toggleInArray(prev.statuses, status),
     }));
     input.setIdempotencyKey(input.createIdempotencyKey());
   };

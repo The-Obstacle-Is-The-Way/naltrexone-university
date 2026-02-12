@@ -1,9 +1,14 @@
 import type { Question } from '@/src/domain/entities';
-import type { QuestionDifficulty } from '@/src/domain/value-objects';
+import type {
+  QuestionDifficulty,
+  QuestionProgressStatus,
+} from '@/src/domain/value-objects';
 
 export type QuestionFilters = {
   tagSlugs: readonly string[];
   difficulties: readonly QuestionDifficulty[];
+  statuses?: readonly QuestionProgressStatus[];
+  userId?: string;
 };
 
 export interface QuestionRepository {

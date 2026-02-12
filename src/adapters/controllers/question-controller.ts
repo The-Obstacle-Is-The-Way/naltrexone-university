@@ -30,6 +30,8 @@ import { createAction } from './create-action';
 import type { CheckEntitlementUseCase } from './require-entitled-user-id';
 import { requireEntitledUserId } from './require-entitled-user-id';
 
+const zQuestionProgressStatus = z.enum(['unanswered', 'incorrect', 'marked']);
+
 const QuestionFiltersSchema = z
   .object({
     tagSlugs: z
@@ -40,6 +42,7 @@ const QuestionFiltersSchema = z
       .array(zDifficulty)
       .max(MAX_PRACTICE_SESSION_DIFFICULTY_FILTERS)
       .default([]),
+    statuses: z.array(zQuestionProgressStatus).max(3).default([]),
   })
   .strict();
 

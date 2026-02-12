@@ -471,6 +471,59 @@ describe('GetNextQuestionUseCase', () => {
     ).resolves.toBeNull();
   });
 
+  it('passes statuses + userId through to listPublishedCandidateIds', async () => {
+    const userId = 'user-1';
+
+    const questions = new FakeQuestionRepository([
+      createQuestion({
+        id: 'q1',
+        status: 'published',
+        choices: [createChoice({ id: 'c1', questionId: 'q1', label: 'A' })],
+      }),
+    ]);
+
+    const useCase = new GetNextQuestionUseCase(
+      questions,
+      new FakeAttemptRepository([]),
+      new FakePracticeSessionRepository([]),
+    );
+
+    await useCase.execute({
+      userId,
+      filters: {
+        tagSlugs: [],
+        difficulties: [],
+        statuses: ['incorrect'] as const,
+      },
+    });
+
+    expect(questions.listPublishedCandidateIdsCalls[0]).toEqual({
+      tagSlugs: [],
+      difficulties: [],
+      statuses: ['incorrect'],
+      userId,
+    });
+  });
+
+  it('returns null when status filters yield no candidates', async () => {
+    const useCase = new GetNextQuestionUseCase(
+      new FakeQuestionRepository([]),
+      new FakeAttemptRepository([]),
+      new FakePracticeSessionRepository([]),
+    );
+
+    await expect(
+      useCase.execute({
+        userId: 'user-1',
+        filters: {
+          tagSlugs: [],
+          difficulties: [],
+          statuses: ['unanswered'] as const,
+        },
+      }),
+    ).resolves.toBeNull();
+  });
+
   it('prefers never-attempted questions in filter mode', async () => {
     const userId = 'user-1';
 

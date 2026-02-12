@@ -53,6 +53,7 @@ function matchesTags(question: Question, tagSlugs: readonly string[]): boolean {
 export class FakeQuestionRepository implements QuestionRepository {
   private readonly questions: readonly Question[];
   readonly findPublishedByIdsCalls: string[][] = [];
+  readonly listPublishedCandidateIdsCalls: QuestionFilters[] = [];
 
   constructor(questions: readonly Question[]) {
     this.questions = questions;
@@ -87,6 +88,7 @@ export class FakeQuestionRepository implements QuestionRepository {
   async listPublishedCandidateIds(
     filters: QuestionFilters,
   ): Promise<readonly string[]> {
+    this.listPublishedCandidateIdsCalls.push(filters);
     const matches = this.questions
       .filter((q) => q.status === 'published')
       .filter((q) => matchesDifficulty(q.difficulty, filters.difficulties))

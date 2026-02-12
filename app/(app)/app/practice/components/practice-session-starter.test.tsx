@@ -9,12 +9,13 @@ describe('PracticeSessionStarter', () => {
       <PracticeSessionStarter
         sessionMode="tutor"
         sessionCount={20}
-        filters={{ tagSlugs: [], difficulties: [] }}
+        filters={{ tagSlugs: [], difficulties: [], statuses: [] }}
         tagLoadStatus="idle"
         availableTags={[]}
         sessionStartStatus="idle"
         sessionStartError={null}
         onToggleDifficulty={() => undefined}
+        onToggleStatus={() => undefined}
         onToggleTag={() => undefined}
         onSessionModeChange={() => undefined}
         onSessionCountChange={() => undefined}
@@ -31,12 +32,13 @@ describe('PracticeSessionStarter', () => {
       <PracticeSessionStarter
         sessionMode="tutor"
         sessionCount={20}
-        filters={{ tagSlugs: [], difficulties: [] }}
+        filters={{ tagSlugs: [], difficulties: [], statuses: [] }}
         tagLoadStatus="idle"
         availableTags={[]}
         sessionStartStatus="idle"
         sessionStartError={null}
         onToggleDifficulty={() => undefined}
+        onToggleStatus={() => undefined}
         onToggleTag={() => undefined}
         onSessionModeChange={() => undefined}
         onSessionCountChange={() => undefined}
@@ -53,7 +55,7 @@ describe('PracticeSessionStarter', () => {
       <PracticeSessionStarter
         sessionMode="tutor"
         sessionCount={20}
-        filters={{ tagSlugs: [], difficulties: [] }}
+        filters={{ tagSlugs: [], difficulties: [], statuses: [] }}
         tagLoadStatus="idle"
         availableTags={[
           {
@@ -66,6 +68,7 @@ describe('PracticeSessionStarter', () => {
         sessionStartStatus="idle"
         sessionStartError={null}
         onToggleDifficulty={() => undefined}
+        onToggleStatus={() => undefined}
         onToggleTag={() => undefined}
         onSessionModeChange={() => undefined}
         onSessionCountChange={() => undefined}
@@ -77,6 +80,7 @@ describe('PracticeSessionStarter', () => {
     expect(
       doc.querySelector('fieldset[aria-label="Difficulty"]'),
     ).not.toBeNull();
+    expect(doc.querySelector('fieldset[aria-label="Status"]')).not.toBeNull();
     expect(doc.querySelector('fieldset[aria-label="Topic"]')).not.toBeNull();
   });
 
@@ -85,7 +89,7 @@ describe('PracticeSessionStarter', () => {
       <PracticeSessionStarter
         sessionMode="tutor"
         sessionCount={20}
-        filters={{ tagSlugs: ['opioids'], difficulties: [] }}
+        filters={{ tagSlugs: ['opioids'], difficulties: [], statuses: [] }}
         tagLoadStatus="idle"
         availableTags={[
           {
@@ -104,6 +108,7 @@ describe('PracticeSessionStarter', () => {
         sessionStartStatus="idle"
         sessionStartError={null}
         onToggleDifficulty={() => undefined}
+        onToggleStatus={() => undefined}
         onToggleTag={() => undefined}
         onSessionModeChange={() => undefined}
         onSessionCountChange={() => undefined}
@@ -126,5 +131,41 @@ describe('PracticeSessionStarter', () => {
         (text) => text.includes('Substance') && text.includes('1 selected'),
       ),
     ).toBe(true);
+  });
+
+  it('renders status filter chips with hint text', () => {
+    const html = renderToStaticMarkup(
+      <PracticeSessionStarter
+        sessionMode="tutor"
+        sessionCount={20}
+        filters={{
+          tagSlugs: [],
+          difficulties: [],
+          statuses: ['incorrect'],
+        }}
+        tagLoadStatus="idle"
+        availableTags={[]}
+        sessionStartStatus="idle"
+        sessionStartError={null}
+        onToggleDifficulty={() => undefined}
+        onToggleStatus={() => undefined}
+        onToggleTag={() => undefined}
+        onSessionModeChange={() => undefined}
+        onSessionCountChange={() => undefined}
+        onStartSession={() => undefined}
+      />,
+    );
+
+    expect(html).toContain('Status');
+    expect(html).toContain('Unanswered');
+    expect(html).toContain('Incorrect');
+    expect(html).toContain('Marked');
+    expect(html).toContain('Leave empty to include all questions');
+
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const selected = doc.querySelector(
+      'fieldset[aria-label="Status"] button[aria-pressed="true"]',
+    );
+    expect(selected?.textContent).toBe('Incorrect');
   });
 });

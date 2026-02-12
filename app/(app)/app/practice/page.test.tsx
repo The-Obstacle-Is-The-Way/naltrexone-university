@@ -377,12 +377,13 @@ describe('app/(app)/app/practice', () => {
       <PracticeSessionStarter
         sessionMode="tutor"
         sessionCount={20}
-        filters={{ tagSlugs: [], difficulties: [] }}
+        filters={{ tagSlugs: [], difficulties: [], statuses: [] }}
         tagLoadStatus="idle"
         availableTags={[]}
         sessionStartStatus="error"
         sessionStartError="No questions"
         onToggleDifficulty={() => undefined}
+        onToggleStatus={() => undefined}
         onToggleTag={() => undefined}
         onSessionModeChange={() => undefined}
         onSessionCountChange={() => undefined}
@@ -402,12 +403,13 @@ describe('app/(app)/app/practice', () => {
       <PracticeSessionStarter
         sessionMode="tutor"
         sessionCount={20}
-        filters={{ tagSlugs: [], difficulties: [] }}
+        filters={{ tagSlugs: [], difficulties: [], statuses: [] }}
         tagLoadStatus="idle"
         availableTags={[]}
         sessionStartStatus="loading"
         sessionStartError={null}
         onToggleDifficulty={() => undefined}
+        onToggleStatus={() => undefined}
         onToggleTag={() => undefined}
         onSessionModeChange={() => undefined}
         onSessionCountChange={() => undefined}
@@ -453,7 +455,11 @@ describe('app/(app)/app/practice', () => {
       <PracticeSessionStarter
         sessionMode="tutor"
         sessionCount={20}
-        filters={{ tagSlugs: ['topic-1'], difficulties: ['easy'] }}
+        filters={{
+          tagSlugs: ['topic-1'],
+          difficulties: ['easy'],
+          statuses: [],
+        }}
         tagLoadStatus="idle"
         availableTags={[
           { id: 'tag-1', slug: 'domain-1', name: 'Domain 1', kind: 'domain' },
@@ -462,6 +468,7 @@ describe('app/(app)/app/practice', () => {
         sessionStartStatus="idle"
         sessionStartError={null}
         onToggleDifficulty={() => undefined}
+        onToggleStatus={() => undefined}
         onToggleTag={() => undefined}
         onSessionModeChange={() => undefined}
         onSessionCountChange={() => undefined}
@@ -484,12 +491,13 @@ describe('app/(app)/app/practice', () => {
       <PracticeSessionStarter
         sessionMode="tutor"
         sessionCount={20}
-        filters={{ tagSlugs: [], difficulties: [] }}
+        filters={{ tagSlugs: [], difficulties: [], statuses: [] }}
         tagLoadStatus="idle"
         availableTags={[]}
         sessionStartStatus="idle"
         sessionStartError={null}
         onToggleDifficulty={() => undefined}
+        onToggleStatus={() => undefined}
         onToggleTag={() => undefined}
         onSessionModeChange={() => undefined}
         onSessionCountChange={() => undefined}
@@ -511,12 +519,13 @@ describe('app/(app)/app/practice', () => {
       <PracticeSessionStarter
         sessionMode="tutor"
         sessionCount={20}
-        filters={{ tagSlugs: [], difficulties: ['easy'] }}
+        filters={{ tagSlugs: [], difficulties: ['easy'], statuses: [] }}
         tagLoadStatus="idle"
         availableTags={[]}
         sessionStartStatus="idle"
         sessionStartError={null}
         onToggleDifficulty={() => undefined}
+        onToggleStatus={() => undefined}
         onToggleTag={() => undefined}
         onSessionModeChange={() => undefined}
         onSessionCountChange={() => undefined}

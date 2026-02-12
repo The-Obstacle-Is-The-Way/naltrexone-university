@@ -268,6 +268,7 @@ describe('practice-controller', () => {
           count: 2,
           tagSlugs: ['opioids'],
           difficulties: ['easy', 'medium'],
+          statuses: [],
         },
       ]);
     });

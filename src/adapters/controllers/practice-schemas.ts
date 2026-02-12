@@ -10,6 +10,7 @@ import {
 import { zDifficulty, zUuid } from '@/src/adapters/shared/zod-schemas';
 
 export const zPracticeMode = z.enum(['tutor', 'exam']);
+const zQuestionProgressStatus = z.enum(['unanswered', 'incorrect', 'marked']);
 
 export const StartPracticeSessionInputSchema = z
   .object({
@@ -24,6 +25,7 @@ export const StartPracticeSessionInputSchema = z
       .array(zDifficulty)
       .max(MAX_PRACTICE_SESSION_DIFFICULTY_FILTERS)
       .default([]),
+    statuses: z.array(zQuestionProgressStatus).max(3).default([]),
   })
   .strict();
 

@@ -17,6 +17,12 @@ export {
 } from './question-difficulty';
 
 export {
+  AllQuestionProgressStatuses,
+  isValidQuestionProgressStatus,
+  type QuestionProgressStatus,
+} from './question-progress-status';
+
+export {
   AllQuestionStatuses,
   isValidQuestionStatus,
   isVisibleStatus,

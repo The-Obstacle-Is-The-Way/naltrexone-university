@@ -14,6 +14,7 @@ export {
   createSessionCountChangeHandler,
   createSessionModeChangeHandler,
   createToggleDifficultyHandler,
+  createToggleStatusHandler,
   createToggleTagHandler,
   handleSessionCountChange,
   handleSessionModeChange,

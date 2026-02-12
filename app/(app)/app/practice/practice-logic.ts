@@ -23,7 +23,7 @@ export async function loadNextQuestion(input: {
   { ok: true; question: NextQuestion | null } | { ok: false; message: string }
 > {
   const res = await input.getNextQuestionFn({
-    filters: { tagSlugs: [], difficulties: [] },
+    filters: { tagSlugs: [], difficulties: [], statuses: [] },
   });
 
   if (!res.ok) {

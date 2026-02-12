@@ -8,6 +8,10 @@ import { Input } from '@/components/ui/input';
 import { SegmentedControl } from '@/components/ui/segmented-control';
 import type { TagRow } from '@/src/adapters/controllers/tag-controller';
 import type { NextQuestion } from '@/src/application/use-cases/get-next-question';
+import {
+  AllQuestionProgressStatuses,
+  type QuestionProgressStatus,
+} from '@/src/domain/value-objects';
 import type { PracticeFilters } from '../practice-page-logic';
 import { SESSION_COUNT_MAX, SESSION_COUNT_MIN } from '../practice-page-logic';
 
@@ -20,6 +24,7 @@ export type PracticeSessionStarterProps = {
   sessionStartStatus: 'idle' | 'loading' | 'error';
   sessionStartError: string | null;
   onToggleDifficulty: (difficulty: NextQuestion['difficulty']) => void;
+  onToggleStatus: (status: QuestionProgressStatus) => void;
   onToggleTag: (slug: string) => void;
   onSessionModeChange: (mode: string) => void;
   onSessionCountChange: (event: { target: { value: string } }) => void;
@@ -114,6 +119,29 @@ export function PracticeSessionStarter(props: PracticeSessionStarterProps) {
               value={props.sessionCount}
               onChange={props.onSessionCountChange}
             />
+          </div>
+        </div>
+
+        <div>
+          <div className="text-sm font-medium text-foreground">Status</div>
+          <fieldset
+            className="mt-2 flex flex-wrap gap-2 border-0 p-0 m-0"
+            aria-label="Status"
+          >
+            {AllQuestionProgressStatuses.map((status) => {
+              const selected = props.filters.statuses.includes(status);
+              return (
+                <FilterChip
+                  key={status}
+                  label={statusDisplayLabel(status)}
+                  selected={selected}
+                  onClick={() => props.onToggleStatus(status)}
+                />
+              );
+            })}
+          </fieldset>
+          <div className="mt-1 text-xs text-muted-foreground">
+            Leave empty to include all questions
           </div>
         </div>
 
@@ -217,4 +245,15 @@ export function PracticeSessionStarter(props: PracticeSessionStarterProps) {
       ) : null}
     </Card>
   );
+}
+
+function statusDisplayLabel(status: QuestionProgressStatus): string {
+  switch (status) {
+    case 'unanswered':
+      return 'Unanswered';
+    case 'incorrect':
+      return 'Incorrect';
+    case 'marked':
+      return 'Marked';
+  }
 }

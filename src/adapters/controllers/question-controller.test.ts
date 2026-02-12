@@ -162,7 +162,10 @@ describe('question-controller', () => {
 
       expect(result).toEqual({ ok: true, data: null });
       expect(deps.getNextQuestionUseCase.inputs).toEqual([
-        { userId: 'user_1', filters: { tagSlugs: [], difficulties: [] } },
+        {
+          userId: 'user_1',
+          filters: { tagSlugs: [], difficulties: [], statuses: [] },
+        },
       ]);
     });
 

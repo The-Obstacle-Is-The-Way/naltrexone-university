@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { eq, inArray } from 'drizzle-orm';
+import { and, eq, inArray } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
 import { afterAll, afterEach, describe, expect, it } from 'vitest';
@@ -294,6 +294,344 @@ describe('DrizzleQuestionRepository', () => {
     });
 
     expect(allForTag).toEqual([q1.id, q2.id]);
+  });
+
+  describe('listPublishedCandidateIds with status filters', () => {
+    it('returns only unanswered questions when status=unanswered', async () => {
+      const user = await createUser();
+
+      const qAttempted = await createQuestion({
+        id: '00000000-0000-0000-0000-000000000011',
+        slug: `it-attempted-${randomUUID()}`,
+        status: 'published',
+        difficulty: 'easy',
+        createdAt: new Date('2026-01-01T00:00:00.000Z'),
+      });
+      const qUnanswered = await createQuestion({
+        id: '00000000-0000-0000-0000-000000000012',
+        slug: `it-unanswered-${randomUUID()}`,
+        status: 'published',
+        difficulty: 'easy',
+        createdAt: new Date('2026-01-02T00:00:00.000Z'),
+      });
+
+      await db.insert(schema.attempts).values({
+        userId: user.id,
+        questionId: qAttempted.id,
+        practiceSessionId: null,
+        selectedChoiceId: qAttempted.correctChoiceId,
+        isCorrect: true,
+        timeSpentSeconds: 0,
+        answeredAt: new Date('2026-02-01T00:00:00.000Z'),
+      });
+
+      const repo = new DrizzleQuestionRepository(db);
+      const result = await repo.listPublishedCandidateIds({
+        tagSlugs: [],
+        difficulties: [],
+        statuses: ['unanswered'],
+        userId: user.id,
+      });
+
+      expect(result).toEqual([qUnanswered.id]);
+    });
+
+    it('returns only questions with latest attempt incorrect when status=incorrect', async () => {
+      const user = await createUser();
+
+      const qLatestIncorrect = await createQuestion({
+        id: '00000000-0000-0000-0000-000000000021',
+        slug: `it-latest-incorrect-${randomUUID()}`,
+        status: 'published',
+        difficulty: 'easy',
+        createdAt: new Date('2026-01-01T00:00:00.000Z'),
+      });
+      const qLatestCorrect = await createQuestion({
+        id: '00000000-0000-0000-0000-000000000022',
+        slug: `it-latest-correct-${randomUUID()}`,
+        status: 'published',
+        difficulty: 'easy',
+        createdAt: new Date('2026-01-02T00:00:00.000Z'),
+      });
+
+      const [qLatestIncorrectChoiceA] = await db
+        .select({ id: schema.choices.id })
+        .from(schema.choices)
+        .where(
+          and(
+            eq(schema.choices.questionId, qLatestIncorrect.id),
+            eq(schema.choices.label, 'A'),
+          ),
+        )
+        .limit(1);
+      if (!qLatestIncorrectChoiceA) {
+        throw new Error('Failed to load incorrect choice for setup');
+      }
+
+      await db.insert(schema.attempts).values({
+        userId: user.id,
+        questionId: qLatestIncorrect.id,
+        practiceSessionId: null,
+        selectedChoiceId: qLatestIncorrectChoiceA.id,
+        isCorrect: false,
+        timeSpentSeconds: 0,
+        answeredAt: new Date('2026-02-01T00:00:00.000Z'),
+      });
+
+      const [qLatestCorrectChoiceA] = await db
+        .select({ id: schema.choices.id })
+        .from(schema.choices)
+        .where(
+          and(
+            eq(schema.choices.questionId, qLatestCorrect.id),
+            eq(schema.choices.label, 'A'),
+          ),
+        )
+        .limit(1);
+      if (!qLatestCorrectChoiceA) {
+        throw new Error('Failed to load incorrect choice for setup');
+      }
+
+      await db.insert(schema.attempts).values([
+        {
+          userId: user.id,
+          questionId: qLatestCorrect.id,
+          practiceSessionId: null,
+          selectedChoiceId: qLatestCorrectChoiceA.id,
+          isCorrect: false,
+          timeSpentSeconds: 0,
+          answeredAt: new Date('2026-01-01T00:00:00.000Z'),
+        },
+        {
+          userId: user.id,
+          questionId: qLatestCorrect.id,
+          practiceSessionId: null,
+          selectedChoiceId: qLatestCorrect.correctChoiceId,
+          isCorrect: true,
+          timeSpentSeconds: 0,
+          answeredAt: new Date('2026-02-02T00:00:00.000Z'),
+        },
+      ]);
+
+      const repo = new DrizzleQuestionRepository(db);
+      const result = await repo.listPublishedCandidateIds({
+        tagSlugs: [],
+        difficulties: [],
+        statuses: ['incorrect'],
+        userId: user.id,
+      });
+
+      expect(result).toEqual([qLatestIncorrect.id]);
+    });
+
+    it('returns only bookmarked questions when status=marked', async () => {
+      const user = await createUser();
+
+      const qMarked = await createQuestion({
+        id: '00000000-0000-0000-0000-000000000031',
+        slug: `it-marked-${randomUUID()}`,
+        status: 'published',
+        difficulty: 'easy',
+        createdAt: new Date('2026-01-01T00:00:00.000Z'),
+      });
+      const qUnmarked = await createQuestion({
+        id: '00000000-0000-0000-0000-000000000032',
+        slug: `it-unmarked-${randomUUID()}`,
+        status: 'published',
+        difficulty: 'easy',
+        createdAt: new Date('2026-01-02T00:00:00.000Z'),
+      });
+
+      await db.insert(schema.bookmarks).values({
+        userId: user.id,
+        questionId: qMarked.id,
+      });
+
+      const repo = new DrizzleQuestionRepository(db);
+      const result = await repo.listPublishedCandidateIds({
+        tagSlugs: [],
+        difficulties: [],
+        statuses: ['marked'],
+        userId: user.id,
+      });
+
+      expect(result).toEqual([qMarked.id]);
+      expect(result).not.toContain(qUnmarked.id);
+    });
+
+    it('combines unanswered and incorrect with OR logic', async () => {
+      const user = await createUser();
+
+      const qIncorrect = await createQuestion({
+        id: '00000000-0000-0000-0000-000000000041',
+        slug: `it-or-incorrect-${randomUUID()}`,
+        status: 'published',
+        difficulty: 'easy',
+        createdAt: new Date('2026-01-01T00:00:00.000Z'),
+      });
+      const qUnanswered = await createQuestion({
+        id: '00000000-0000-0000-0000-000000000042',
+        slug: `it-or-unanswered-${randomUUID()}`,
+        status: 'published',
+        difficulty: 'easy',
+        createdAt: new Date('2026-01-02T00:00:00.000Z'),
+      });
+      const qCorrect = await createQuestion({
+        id: '00000000-0000-0000-0000-000000000043',
+        slug: `it-or-correct-${randomUUID()}`,
+        status: 'published',
+        difficulty: 'easy',
+        createdAt: new Date('2026-01-03T00:00:00.000Z'),
+      });
+
+      const [qIncorrectChoiceA] = await db
+        .select({ id: schema.choices.id })
+        .from(schema.choices)
+        .where(
+          and(
+            eq(schema.choices.questionId, qIncorrect.id),
+            eq(schema.choices.label, 'A'),
+          ),
+        )
+        .limit(1);
+      if (!qIncorrectChoiceA) {
+        throw new Error('Failed to load incorrect choice for setup');
+      }
+
+      await db.insert(schema.attempts).values([
+        {
+          userId: user.id,
+          questionId: qIncorrect.id,
+          practiceSessionId: null,
+          selectedChoiceId: qIncorrectChoiceA.id,
+          isCorrect: false,
+          timeSpentSeconds: 0,
+          answeredAt: new Date('2026-02-01T00:00:00.000Z'),
+        },
+        {
+          userId: user.id,
+          questionId: qCorrect.id,
+          practiceSessionId: null,
+          selectedChoiceId: qCorrect.correctChoiceId,
+          isCorrect: true,
+          timeSpentSeconds: 0,
+          answeredAt: new Date('2026-02-02T00:00:00.000Z'),
+        },
+      ]);
+
+      const repo = new DrizzleQuestionRepository(db);
+      const result = await repo.listPublishedCandidateIds({
+        tagSlugs: [],
+        difficulties: [],
+        statuses: ['unanswered', 'incorrect'],
+        userId: user.id,
+      });
+
+      expect(new Set(result)).toEqual(new Set([qUnanswered.id, qIncorrect.id]));
+      expect(result).not.toContain(qCorrect.id);
+    });
+
+    it('returns all questions when statuses is empty', async () => {
+      const user = await createUser();
+
+      const q1 = await createQuestion({
+        id: '00000000-0000-0000-0000-000000000051',
+        slug: `it-all-1-${randomUUID()}`,
+        status: 'published',
+        difficulty: 'easy',
+        createdAt: new Date('2026-01-01T00:00:00.000Z'),
+      });
+      const q2 = await createQuestion({
+        id: '00000000-0000-0000-0000-000000000052',
+        slug: `it-all-2-${randomUUID()}`,
+        status: 'published',
+        difficulty: 'hard',
+        createdAt: new Date('2026-01-02T00:00:00.000Z'),
+      });
+
+      const repo = new DrizzleQuestionRepository(db);
+      const result = await repo.listPublishedCandidateIds({
+        tagSlugs: [],
+        difficulties: [],
+        statuses: [],
+        userId: user.id,
+      });
+
+      expect(result).toEqual([q2.id, q1.id]);
+    });
+
+    it('combines status filter with difficulty filter (AND logic)', async () => {
+      const user = await createUser();
+
+      const qMarkedEasy = await createQuestion({
+        id: '00000000-0000-0000-0000-000000000061',
+        slug: `it-marked-easy-${randomUUID()}`,
+        status: 'published',
+        difficulty: 'easy',
+        createdAt: new Date('2026-01-01T00:00:00.000Z'),
+      });
+      const qMarkedHard = await createQuestion({
+        id: '00000000-0000-0000-0000-000000000062',
+        slug: `it-marked-hard-${randomUUID()}`,
+        status: 'published',
+        difficulty: 'hard',
+        createdAt: new Date('2026-01-02T00:00:00.000Z'),
+      });
+
+      await db.insert(schema.bookmarks).values([
+        { userId: user.id, questionId: qMarkedEasy.id },
+        { userId: user.id, questionId: qMarkedHard.id },
+      ]);
+
+      const repo = new DrizzleQuestionRepository(db);
+      const result = await repo.listPublishedCandidateIds({
+        tagSlugs: [],
+        difficulties: ['easy'],
+        statuses: ['marked'],
+        userId: user.id,
+      });
+
+      expect(result).toEqual([qMarkedEasy.id]);
+    });
+
+    it('combines status filter with tag filter (AND logic)', async () => {
+      const user = await createUser();
+      const tag = await createTag({
+        slug: `it-tag-${randomUUID()}`,
+        kind: 'topic',
+      });
+
+      const qTagged = await createQuestion({
+        id: '00000000-0000-0000-0000-000000000071',
+        slug: `it-tagged-${randomUUID()}`,
+        status: 'published',
+        difficulty: 'easy',
+        createdAt: new Date('2026-01-01T00:00:00.000Z'),
+        tagIds: [tag.id],
+      });
+      const qUntagged = await createQuestion({
+        id: '00000000-0000-0000-0000-000000000072',
+        slug: `it-untagged-${randomUUID()}`,
+        status: 'published',
+        difficulty: 'easy',
+        createdAt: new Date('2026-01-02T00:00:00.000Z'),
+      });
+
+      await db.insert(schema.bookmarks).values([
+        { userId: user.id, questionId: qTagged.id },
+        { userId: user.id, questionId: qUntagged.id },
+      ]);
+
+      const repo = new DrizzleQuestionRepository(db);
+      const result = await repo.listPublishedCandidateIds({
+        tagSlugs: [tag.slug],
+        difficulties: [],
+        statuses: ['marked'],
+        userId: user.id,
+      });
+
+      expect(result).toEqual([qTagged.id]);
+    });
   });
 });
 
