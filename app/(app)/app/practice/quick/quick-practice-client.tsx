@@ -17,8 +17,10 @@ import {
   type QuestionProgressStatus,
 } from '@/src/domain/value-objects';
 
+type SearchParamsLike = Pick<URLSearchParams, 'get' | 'toString'>;
+
 export function parseStatusParams(
-  searchParams: URLSearchParams,
+  searchParams: SearchParamsLike,
 ): QuestionProgressStatus[] {
   const raw = searchParams.get('status');
   if (!raw) return [];
@@ -31,7 +33,7 @@ export function parseStatusParams(
 }
 
 export function buildQuickPracticeStatusHref(input: {
-  searchParams: URLSearchParams;
+  searchParams: SearchParamsLike;
   currentStatuses: readonly QuestionProgressStatus[];
   toggledStatus: QuestionProgressStatus;
 }): string {
@@ -57,7 +59,7 @@ export default function QuickPracticeClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const statuses = useMemo(
-    () => parseStatusParams(new URLSearchParams(searchParams.toString())),
+    () => parseStatusParams(searchParams),
     [searchParams],
   );
 
@@ -96,9 +98,7 @@ export default function QuickPracticeClient() {
                   onClick={() => {
                     router.push(
                       buildQuickPracticeStatusHref({
-                        searchParams: new URLSearchParams(
-                          searchParams.toString(),
-                        ),
+                        searchParams,
                         currentStatuses: statuses,
                         toggledStatus: status,
                       }),

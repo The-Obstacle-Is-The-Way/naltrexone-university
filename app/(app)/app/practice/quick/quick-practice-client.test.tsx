@@ -1,11 +1,11 @@
 // @vitest-environment jsdom
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
-import { ROUTES } from '@/lib/routes';
 import {
   buildQuickPracticeStatusHref,
   parseStatusParams,
-} from './quick-practice-client';
+} from '@/app/(app)/app/practice/quick/quick-practice-client';
+import { ROUTES } from '@/lib/routes';
 
 vi.mock('next/link', () => ({
   default: (props: Record<string, unknown>) => <a {...props} />,
@@ -83,8 +83,9 @@ describe('QuickPracticeClient', () => {
       new URLSearchParams('status=incorrect'),
     );
 
-    const QuickPracticeClient = (await import('./quick-practice-client'))
-      .default;
+    const QuickPracticeClient = (
+      await import('@/app/(app)/app/practice/quick/quick-practice-client')
+    ).default;
 
     const html = renderToStaticMarkup(<QuickPracticeClient />);
 
@@ -103,8 +104,9 @@ describe('QuickPracticeClient', () => {
   it('renders no selected chips when status param is absent', async () => {
     useSearchParamsMock.mockReturnValue(new URLSearchParams(''));
 
-    const QuickPracticeClient = (await import('./quick-practice-client'))
-      .default;
+    const QuickPracticeClient = (
+      await import('@/app/(app)/app/practice/quick/quick-practice-client')
+    ).default;
 
     const html = renderToStaticMarkup(<QuickPracticeClient />);
 

@@ -1,3 +1,4 @@
+import { sql } from 'drizzle-orm';
 import { describe, expect, it, vi } from 'vitest';
 import { ApplicationError } from '@/src/application/errors';
 import { DrizzleQuestionRepository } from './drizzle-question-repository';
@@ -213,16 +214,46 @@ describe('DrizzleQuestionRepository', () => {
     it('throws VALIDATION_ERROR when statuses are provided without userId', async () => {
       const repo = new DrizzleQuestionRepository({} as unknown as RepoDb);
 
+      const promise = repo.listPublishedCandidateIds({
+        tagSlugs: [],
+        difficulties: [],
+        statuses: ['unanswered'],
+      });
+
+      await expect(promise).rejects.toBeInstanceOf(ApplicationError);
+      await expect(promise).rejects.toMatchObject({
+        code: 'VALIDATION_ERROR',
+        message: 'userId is required when filtering by status',
+      });
+    });
+
+    it('applies status filters when statuses and userId are provided', async () => {
+      const rows = [{ id: 'q1' }, { id: 'q2' }];
+      const orderBy = vi.fn(async () => rows);
+      const where = vi.fn(() => ({ orderBy }));
+      const from = vi.fn(() => ({ where }));
+      const select = vi.fn(() => ({ from }));
+
+      const whereStatus = vi.fn(() => sql``);
+      const fromStatus = vi.fn(() => ({ where: whereStatus }));
+      const selectDistinct = vi.fn(() => ({ from: fromStatus }));
+
+      const db = { select, selectDistinct } as const;
+
+      const repo = new DrizzleQuestionRepository(db as unknown as RepoDb);
+
       await expect(
         repo.listPublishedCandidateIds({
           tagSlugs: [],
           difficulties: [],
           statuses: ['unanswered'],
+          userId: 'user_1',
         }),
-      ).rejects.toMatchObject({
-        code: 'VALIDATION_ERROR',
-        message: 'userId is required when filtering by status',
-      });
+      ).resolves.toEqual(['q1', 'q2']);
+
+      expect(selectDistinct).toHaveBeenCalledTimes(1);
+      expect(whereStatus).toHaveBeenCalledTimes(1);
+      expect(select).toHaveBeenCalledTimes(1);
     });
 
     it('returns ids when tag filters are applied', async () => {

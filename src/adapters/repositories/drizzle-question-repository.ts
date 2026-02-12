@@ -163,6 +163,10 @@ export class DrizzleQuestionRepository implements QuestionRepository {
   ): SQL {
     switch (status) {
       case 'unanswered':
+        // `attempts.questionId` is NOT NULL (db/schema.ts), so the NOT IN subquery
+        // cannot return NULL and is safe from NULL-related semantics. If
+        // `attempts.questionId` ever becomes nullable, prefer a NOT EXISTS / LEFT
+        // JOIN pattern instead.
         return notInArray(
           questions.id,
           this.db
@@ -193,6 +197,10 @@ export class DrizzleQuestionRepository implements QuestionRepository {
             .from(bookmarks)
             .where(eq(bookmarks.userId, userId)),
         );
+      default: {
+        const _exhaustive: never = status;
+        throw new Error(`Unhandled QuestionProgressStatus: ${_exhaustive}`);
+      }
     }
   }
 

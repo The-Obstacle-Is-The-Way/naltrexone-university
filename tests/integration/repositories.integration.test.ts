@@ -305,7 +305,6 @@ describe('DrizzleQuestionRepository', () => {
       });
 
       const qAttempted = await createQuestion({
-        id: '00000000-0000-0000-0000-000000000011',
         slug: `it-attempted-${randomUUID()}`,
         status: 'published',
         difficulty: 'easy',
@@ -313,7 +312,6 @@ describe('DrizzleQuestionRepository', () => {
         tagIds: [tag.id],
       });
       const qUnanswered = await createQuestion({
-        id: '00000000-0000-0000-0000-000000000012',
         slug: `it-unanswered-${randomUUID()}`,
         status: 'published',
         difficulty: 'easy',
@@ -346,14 +344,12 @@ describe('DrizzleQuestionRepository', () => {
       const user = await createUser();
 
       const qLatestIncorrect = await createQuestion({
-        id: '00000000-0000-0000-0000-000000000021',
         slug: `it-latest-incorrect-${randomUUID()}`,
         status: 'published',
         difficulty: 'easy',
         createdAt: new Date('2026-01-01T00:00:00.000Z'),
       });
       const qLatestCorrect = await createQuestion({
-        id: '00000000-0000-0000-0000-000000000022',
         slug: `it-latest-correct-${randomUUID()}`,
         status: 'published',
         difficulty: 'easy',
@@ -434,14 +430,12 @@ describe('DrizzleQuestionRepository', () => {
       const user = await createUser();
 
       const qMarked = await createQuestion({
-        id: '00000000-0000-0000-0000-000000000031',
         slug: `it-marked-${randomUUID()}`,
         status: 'published',
         difficulty: 'easy',
         createdAt: new Date('2026-01-01T00:00:00.000Z'),
       });
       const qUnmarked = await createQuestion({
-        id: '00000000-0000-0000-0000-000000000032',
         slug: `it-unmarked-${randomUUID()}`,
         status: 'published',
         difficulty: 'easy',
@@ -473,7 +467,6 @@ describe('DrizzleQuestionRepository', () => {
       });
 
       const qIncorrect = await createQuestion({
-        id: '00000000-0000-0000-0000-000000000041',
         slug: `it-or-incorrect-${randomUUID()}`,
         status: 'published',
         difficulty: 'easy',
@@ -481,7 +474,6 @@ describe('DrizzleQuestionRepository', () => {
         tagIds: [tag.id],
       });
       const qUnanswered = await createQuestion({
-        id: '00000000-0000-0000-0000-000000000042',
         slug: `it-or-unanswered-${randomUUID()}`,
         status: 'published',
         difficulty: 'easy',
@@ -489,7 +481,6 @@ describe('DrizzleQuestionRepository', () => {
         tagIds: [tag.id],
       });
       const qCorrect = await createQuestion({
-        id: '00000000-0000-0000-0000-000000000043',
         slug: `it-or-correct-${randomUUID()}`,
         status: 'published',
         difficulty: 'easy',
@@ -552,7 +543,6 @@ describe('DrizzleQuestionRepository', () => {
       });
 
       const q1 = await createQuestion({
-        id: '00000000-0000-0000-0000-000000000051',
         slug: `it-all-1-${randomUUID()}`,
         status: 'published',
         difficulty: 'easy',
@@ -560,7 +550,6 @@ describe('DrizzleQuestionRepository', () => {
         tagIds: [tag.id],
       });
       const q2 = await createQuestion({
-        id: '00000000-0000-0000-0000-000000000052',
         slug: `it-all-2-${randomUUID()}`,
         status: 'published',
         difficulty: 'hard',
@@ -583,14 +572,12 @@ describe('DrizzleQuestionRepository', () => {
       const user = await createUser();
 
       const qMarkedEasy = await createQuestion({
-        id: '00000000-0000-0000-0000-000000000061',
         slug: `it-marked-easy-${randomUUID()}`,
         status: 'published',
         difficulty: 'easy',
         createdAt: new Date('2026-01-01T00:00:00.000Z'),
       });
       const qMarkedHard = await createQuestion({
-        id: '00000000-0000-0000-0000-000000000062',
         slug: `it-marked-hard-${randomUUID()}`,
         status: 'published',
         difficulty: 'hard',
@@ -621,7 +608,6 @@ describe('DrizzleQuestionRepository', () => {
       });
 
       const qTagged = await createQuestion({
-        id: '00000000-0000-0000-0000-000000000071',
         slug: `it-tagged-${randomUUID()}`,
         status: 'published',
         difficulty: 'easy',
@@ -629,7 +615,6 @@ describe('DrizzleQuestionRepository', () => {
         tagIds: [tag.id],
       });
       const qUntagged = await createQuestion({
-        id: '00000000-0000-0000-0000-000000000072',
         slug: `it-untagged-${randomUUID()}`,
         status: 'published',
         difficulty: 'easy',
