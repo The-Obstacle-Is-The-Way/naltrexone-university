@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { QuestionRepository } from '@/src/application/ports/repositories';
+import { buildShuffledChoiceViews } from '@/src/application/shared/shuffled-choice-views';
 import {
   FakeAuthGateway,
   FakeQuestionRepository,
@@ -17,6 +18,48 @@ import {
   getPreviousAttempt,
   getQuestionBySlug,
 } from './question-view-controller';
+
+function mapChoicesForOutput(
+  question: ReturnType<typeof createQuestion>,
+  userId: string,
+) {
+  return buildShuffledChoiceViews(question, userId).map((choice) => ({
+    id: choice.choiceId,
+    label: choice.displayLabel,
+    textMd: choice.textMd,
+  }));
+}
+
+function findUserIdWithNonCanonicalShuffle(
+  question: ReturnType<typeof createQuestion>,
+) {
+  if (question.choices.length <= 1) {
+    throw new Error(
+      `Test setup requires at least 2 choices (received ${question.choices.length})`,
+    );
+  }
+
+  const canonicalChoices = question.choices.map((choice) => ({
+    id: choice.id,
+    label: choice.label,
+    textMd: choice.textMd,
+  }));
+
+  // buildShuffledChoiceViews uses a deterministic shuffle based on userId and questionId.
+  // To ensure the tests would fail if the controller returned canonical order, probe
+  // multiple userIds until we find one whose shuffle differs from the canonical mapping.
+  for (let i = 0; i < 50; i++) {
+    const userId = `user_${i + 1}`;
+    const shuffledChoices = mapChoicesForOutput(question, userId);
+    if (JSON.stringify(shuffledChoices) !== JSON.stringify(canonicalChoices)) {
+      return userId;
+    }
+  }
+
+  throw new Error(
+    'Test setup failed: no userId produced non-canonical shuffle output',
+  );
+}
 
 function createThrowingQuestionRepository(
   errorMessage = 'QuestionRepository should not be called',
@@ -171,7 +214,8 @@ describe('question-view-controller', () => {
         ],
       });
 
-      const deps = createDeps({ question });
+      const userId = findUserIdWithNonCanonicalShuffle(question);
+      const deps = createDeps({ question, user: createUser({ id: userId }) });
 
       const result = await getQuestionBySlug({ slug: 'q-1' }, deps as never);
 
@@ -182,10 +226,66 @@ describe('question-view-controller', () => {
           slug: 'q-1',
           stemMd: 'Stem for q1',
           difficulty: 'medium',
-          choices: [
-            { id: 'choice-1', label: 'A', textMd: 'Choice A' },
-            { id: 'choice-2', label: 'B', textMd: 'Choice B' },
-          ],
+          choices: mapChoicesForOutput(question, userId),
+        },
+      });
+    });
+
+    it('returns shuffled labels consistent with buildShuffledChoiceViews', async () => {
+      const question = createQuestion({
+        id: 'question-2',
+        slug: 'q-2',
+        stemMd: 'Stem for q2',
+        difficulty: 'hard',
+        choices: [
+          createChoice({
+            id: 'choice-a',
+            questionId: 'question-2',
+            label: 'A',
+            textMd: 'Choice A',
+            isCorrect: false,
+            sortOrder: 1,
+          }),
+          createChoice({
+            id: 'choice-b',
+            questionId: 'question-2',
+            label: 'B',
+            textMd: 'Choice B',
+            isCorrect: false,
+            sortOrder: 2,
+          }),
+          createChoice({
+            id: 'choice-c',
+            questionId: 'question-2',
+            label: 'C',
+            textMd: 'Choice C',
+            isCorrect: true,
+            sortOrder: 3,
+          }),
+          createChoice({
+            id: 'choice-d',
+            questionId: 'question-2',
+            label: 'D',
+            textMd: 'Choice D',
+            isCorrect: false,
+            sortOrder: 4,
+          }),
+        ],
+      });
+
+      const userId = findUserIdWithNonCanonicalShuffle(question);
+      const deps = createDeps({ question, user: createUser({ id: userId }) });
+
+      const result = await getQuestionBySlug({ slug: 'q-2' }, deps as never);
+
+      expect(result).toEqual({
+        ok: true,
+        data: {
+          questionId: 'question-2',
+          slug: 'q-2',
+          stemMd: 'Stem for q2',
+          difficulty: 'hard',
+          choices: mapChoicesForOutput(question, userId),
         },
       });
     });
