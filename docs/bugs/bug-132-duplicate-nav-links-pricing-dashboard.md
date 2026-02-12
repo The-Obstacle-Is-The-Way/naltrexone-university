@@ -20,13 +20,15 @@
 |---|-----------|------|--------------------|---------------------|-----------|
 | 1 | Unauthenticated | Landing `/` | Features, **Pricing** | **Pricing**, Sign In | Pricing |
 | 2 | Unauthenticated | Pricing `/pricing` | Features, **Pricing** | **Pricing**, Sign In | Pricing |
-| 3 | Auth + entitled | App `/app/*` | **Dashboard**, Practice… | **Dashboard**, UserButton | Dashboard |
+| 3 | Auth + entitled | App `/app/*` (sm+) | **Dashboard**, Practice… | **Dashboard**, UserButton | Dashboard |
 | 4 | Auth + entitled | Landing `/` | Features, Pricing | Dashboard, UserButton | None ✓ |
 | 5 | Auth + NOT entitled | Landing `/` | Features, **Pricing** | **Pricing**, UserButton | Pricing |
 | 6 | Auth + NOT entitled | App `/app/*` | — (redirected) | — (redirected) | N/A |
 | 7 | Auth + NOT entitled | Pricing `/pricing` | Features, **Pricing** | **Pricing**, UserButton | Pricing |
 
 Mobile is also affected: `MarketingLayout` renders a second nav row (`sm:hidden`, lines 46–55) with Features + Pricing, while AuthNav stays in the header row — so the Pricing duplicate persists across breakpoints.
+
+On app pages, the duplicate "Dashboard" link is a **desktop-only** issue: `AppDesktopNav` is hidden on mobile (`sm:flex`), so scenario #3 only reproduces at `sm+`.
 
 **Scenario 4 is uniquely correct and valuable** — it's the only header-level "Dashboard" link for entitled users visiting marketing pages. The brand link on marketing pages goes to `ROUTES.HOME`, not the dashboard.
 
