@@ -1,184 +1,104 @@
 # BS-011: History Review Wiring Bug & Choice Label Randomization Desync
 
 **Date:** 2026-02-11
+**Last Verified:** 2026-02-12 (code audit)
 **Triggered by:** Systematic Chrome browser audit of all review mode entry points and feedback rendering
 **Scope:** Two related-but-independent bugs found during the same audit session
 **Related:** BS-009 (session navigation gap), BS-010 (attempt identity gap), SPEC-023 (question review mode)
 
 ---
 
-## Bug A: History Questions Tab — Incorrect Questions Missing `&mode=review`
+## Bug A: History Questions Tab — Result-Dependent Review Wiring (`mode=review` only for Correct)
 
 ### The Problem
 
-On the History > Questions tab (`/app/history?tab=questions`), **all Incorrect questions are missing `&mode=review` in their URLs**. Both the question title link and the action button route users to a blank attempt form instead of review mode. Correct questions on the same tab work perfectly.
+On the History > Questions tab (`/app/history?tab=questions`), the question links are **result-dependent**:
 
-This is isolated to the History Questions tab. Dashboard Recent Activity and Sessions Breakdown entry points handle the same Incorrect questions correctly.
+- **Correct** rows include `mode=review` (label: **Review**)
+- **Incorrect** rows omit `mode=review` (label: **Reattempt**)
 
-### Evidence (Verified on Live Deployment)
+Both the question title link and the action button share the same `href` for a row.
 
-| Question | Status | History Questions Tab URL | Dashboard URL (same question) |
-|---|---|---|---|
-| palamar-2023-001 | Incorrect | `/app/questions/palamar-2023-001?from=history` | `/app/questions/palamar-2023-001?from=dashboard&mode=review` |
-| stahls-zaleplon-001 | Incorrect | `/app/questions/stahls-zaleplon-001?from=history` | `/app/questions/stahls-zaleplon-001?from=dashboard&mode=review` |
-| stahls-zaleplon-002 | Incorrect | `/app/questions/stahls-zaleplon-002?from=history` | N/A |
-| kelly-2020-010 | Incorrect | `/app/questions/kelly-2020-010?from=history` | N/A |
-| rimawi-hamlin-2025-009 | Incorrect | `/app/questions/rimawi-hamlin-2025-009?from=history` | N/A |
-| stahls-zaleplon-003 | Correct | `/app/questions/stahls-zaleplon-003?from=history&mode=review` | N/A |
-| stahls-zaleplon-004 | Correct | `/app/questions/stahls-zaleplon-004?from=history&mode=review` | N/A |
+This is isolated to the History Questions tab. Dashboard Recent Activity and Session Breakdown links always include `mode=review` for review entry points (regardless of correctness).
 
-Pattern: **100% of Incorrect questions are broken, 100% of Correct questions work.** There are zero paths to review mode for Incorrect questions from this tab — both the title link and the action button route to the same broken URL.
+### Evidence (Verified in Code)
+
+- History Questions tab conditional wiring: `app/(app)/app/history/components/history-questions-tab.tsx:330-368`
+- Dashboard uses review mode on links: `app/(app)/app/dashboard/page.tsx:208-213`
+- Session breakdown uses review mode on links: `app/(app)/app/shared/components/session-breakdown-list.tsx:23-25`
+- Question page subtitle for `from=history` does not vary by `mode`: `app/(app)/app/questions/[slug]/question-page-client.tsx:44-50`
 
 ### What the User Sees
 
-**Incorrect question (broken):**
-- Click title or "Reattempt" button
-- Page loads as a fresh attempt form: all choices neutral/unselected, "Submit" button at bottom
-- No feedback card, no indication of previous answer, no explanation
-- Subtitle misleadingly says "Reviewing a question from your history." despite being in attempt mode
+**Incorrect question (current behavior):**
+- Click title or "Reattempt"
+- Page loads as a fresh attempt form: all choices neutral/unselected, "Submit" visible
+- Subtitle still says "Reviewing a question from your history." despite being in attempt mode
 
-**Correct question (working):**
-- Click title or "Review" button
-- Page loads in review mode: choices locked, previous answer highlighted with green border, Feedback card renders immediately with badge, explanation, clinical pearl, per-choice breakdowns
+**Correct question (current behavior):**
+- Click title or "Review"
+- Page loads in review mode: previous answer pre-selected and Feedback renders on load
 
-### Root Cause (Suspected)
+### Root Cause (Confirmed)
 
-The component that renders the question list on the History Questions tab has a conditional branch based on result status:
+The History Questions tab intentionally chooses review vs reattempt based on `row.isCorrect`. The missing `mode=review` for incorrect rows is an explicit conditional, not a missing query param.
 
-```
-if (result === 'correct') {
-  buttonLabel = 'Review'
-  href = `/app/questions/${slug}?from=history&mode=review`
-} else {
-  buttonLabel = 'Reattempt'
-  href = `/app/questions/${slug}?from=history`  // BUG: missing &mode=review
-}
-```
+### Proposed Fix (Product + UX)
 
-The developer made a deliberate distinction — assuming "Incorrect = user wants to try again" — but that's backwards. A physician who got something wrong primarily wants to review *why* they got it wrong, not immediately reattempt blind.
-
-### Where to Look in Code
-
-- The History Questions tab component: `app/(app)/app/history/components/history-questions-tab.tsx`
-- Look for the link/href generation logic per question row
-- Compare with how Dashboard Recent Activity builds its links (correctly appends `&mode=review` for all items)
-- Compare with Sessions Breakdown links (also correct)
-
-### Proposed Fix
-
-1. **Question title link:** ALWAYS include `&mode=review` regardless of Correct/Incorrect status. Clicking a question title from history is a review action — "show me what happened."
-
-2. **Incorrect questions — button behavior (two options):**
-   - **Option A (minimal):** Keep "Reattempt" button as-is (no `&mode=review`), but make the title link include `&mode=review`. This gives Incorrect questions two paths: title = review, button = reattempt.
-   - **Option B (better UX):** Show TWO buttons for Incorrect questions — "Review" (with `&mode=review`) and "Reattempt" (without). Makes both actions explicitly available.
-
-3. **Subtitle text (minor polish):** When in reattempt mode (no `&mode=review`), the subtitle should say something like "Reattempting a question" rather than "Reviewing a question from your history."
+1. **Make the title link review-only:** Always include `mode=review` on the stem/title link for both Correct and Incorrect rows; keep the action button as "Review"/"Reattempt".
+2. **Offer both actions for Incorrect rows:** Add an explicit "Review" path (with `mode=review`) alongside "Reattempt" (without).
+3. **Subtitle copy:** Update the question page subtitle for `from=history` to reflect `mode` (review vs reattempt), not just `from`.
 
 ---
 
-## Bug B: Choice Letter Randomization Desync Between Question Card and Feedback Card
+## Bug B: Choice Label Desync Between Question Card and Feedback Card (Standalone Question Page)
 
 ### The Problem
 
-When a question's choices are randomized/shuffled for display, **the question card and the feedback card's "Why other answers are wrong" section use two different orderings.** The question card renders choices in the shuffled order and assigns A/B/C/D labels based on that position. But the feedback card assigns its letter labels using a different ordering — likely the original/canonical order from the database, or a second independent shuffle.
+On the standalone question page (`/app/questions/[slug]`), **QuestionCard and Feedback can receive different label semantics**:
 
-This affects **all questions**, **all entry points**, both Correct and Incorrect. It's a global rendering bug.
+- The question **choices** come from `getQuestionBySlug`, which returns canonical DB labels (`choice.label`, A–E in `sortOrder` order).
+- The feedback **choiceExplanations** come from `submitAnswer` / `getPreviousAttempt`, which uses `buildShuffledChoiceViews()` to assign **shuffled** `displayLabel` values (A=first shuffled choice, B=second, etc.).
 
-### Evidence
+Because QuestionCard renders `choice.label` while Feedback renders `choice.displayLabel`, the letter labels can refer to different answer text across the two sections.
 
-**Question: palamar-2023-001**
+This does **not** affect practice-session question flow (`GetNextQuestion`), because that use case also uses `buildShuffledChoiceViews()` and returns shuffled labels for the question card — so QuestionCard and Feedback stay in sync.
 
-Question card (shuffled display order):
-- A = Alcohol (red border — user's incorrect pick)
-- B = Benzodiazepines
-- C = Gamma-hydroxybutyrate/GHB (green border — correct answer)
-- D = Cannabis
+### Evidence (Verified in Code)
 
-Feedback card "Why other answers are wrong":
-- B) Cannabis — but Cannabis is **D** in the question card
-- C) Benzodiazepines — but Benzodiazepines is **B** in the question card
-- D) Alcohol — but Alcohol is **A** in the question card
+- Controller returns canonical labels for the question card: `src/adapters/controllers/question-view-controller.ts:70-80`
+- Question page passes labels straight into QuestionCard: `app/(app)/app/questions/[slug]/question-page-client.tsx:136-148`
+- Feedback choice explanations use shuffled display labels:
+  - `src/application/use-cases/submit-answer.ts:49-60`
+  - `src/application/use-cases/get-previous-attempt.ts:58-67`
+- Feedback renders displayLabel as received: `components/question/feedback.tsx:70-86`
 
-The explanation text for each answer is correct (the Cannabis explanation discusses Cannabis). Only the **letter labels are scrambled** relative to the question card.
+### Root Cause (Confirmed)
 
-**Question: stahls-zaleplon-003**
+There is no shared “label mapping” for `/app/questions/[slug]`. The page mixes:
+- canonical labels for QuestionCard (from `getQuestionBySlug`)
+- shuffled display labels for Feedback (from submit/review use cases)
 
-Question card (shuffled display order):
-- A = Increase zaleplon dose to 20 mg...
-- B = Reduce zaleplon to 5 mg... (green border — correct, user chose this)
-- C = No adjustment needed...
-- D = Cimetidine is contraindicated...
+### Proposed Fix (Design Direction)
 
-Feedback card "Why other answers are wrong":
-- B) No adjustment needed... — but "No adjustment" is **C** in the question card
-- C) Increase zaleplon dose to 20 mg... — but "Increase" is **A** in the question card
-- D) Cimetidine is contraindicated... — happens to match D (coincidence)
+Make QuestionCard and Feedback consume the **same** label mapping on the standalone question page. Options include:
 
-Same pattern. Confirmed on both Correct and Incorrect questions, from both Dashboard and History entry points.
-
-**Additional verification (re-verified live):**
-
-| Question | Status | Entry Point | Letter Desync? |
-|---|---|---|---|
-| palamar-2023-001 | Incorrect | Dashboard | Yes — mismatched |
-| stahls-zaleplon-003 | Correct | History Questions | Yes — mismatched |
-| stahls-zaleplon-004 | Correct | History Questions | Yes — mismatched |
-| stahls-serdexmethylphenidate-001 | Correct | Sessions Breakdown | Yes — mismatched |
-
-**4 out of 4 questions tested, 100% reproduction rate**, across Correct and Incorrect results, across Dashboard, History Questions, and Sessions Breakdown entry points. Zero were correct by coincidence. This is a **deterministic logic bug** — not random or intermittent.
-
-### Root Cause (Suspected)
-
-Two separate orderings exist and they're not synced:
-
-1. **Question card:** Shuffles the choices at some point (on attempt creation, on page load, or stored in the attempt record) and renders them as A/B/C/D in that shuffled order. This is what the user sees and interacts with.
-
-2. **Feedback card:** The "Why other answers are wrong" section iterates over the non-correct choices and labels them B/C/D sequentially — but it's iterating in a **different order**. Most likely it's pulling from the original question data (canonical authoring order) rather than using the shuffled order from the attempt.
-
-Pseudocode of the bug:
-```typescript
-// Question card component:
-const shuffledChoices = shuffle(question.choices, attemptSeed)
-// Renders A=shuffledChoices[0], B=shuffledChoices[1], etc.
-
-// Feedback component (WRONG):
-const wrongChoices = question.choices.filter(c => c.id !== correctId)
-// Labels them B, C, D in ORIGINAL order — doesn't know about the shuffle
-
-// Feedback component (CORRECT FIX):
-const wrongChoices = shuffledChoices.filter(c => c.id !== correctId)
-// Labels them using the same shuffled positions from the question card
-```
-
-### Where to Look in Code
-
-1. **Find how the question card renders its choices** — there's a shuffle/randomization step that maps original choice indices to displayed A/B/C/D positions. This shuffle mapping needs to be captured or passed down.
-
-2. **Find the Feedback component** that renders "Why other answers are wrong" — it's iterating over the incorrect choices and assigning letter labels. It needs to use the same shuffle mapping, not the original/canonical order.
-
-3. **The shuffle mapping is the key.** Either:
-   - It's stored in the attempt record (`shuffled_order` or `choice_map`) and the Feedback component isn't reading it
-   - It's computed at render time for the question card but not passed to the Feedback component
-   - It's computed independently in both places using different seeds or different logic
-
-### Proposed Fix
-
-Pass the shuffled choice order (or the shuffle mapping) from the question card context into the Feedback component. The "Why other answers are wrong" section must label each choice with the letter it was assigned in the question card's displayed order, not the database/canonical order.
-
-Alternatively, pass fully resolved data to the feedback component: "Here are the wrong answers, and here are their displayed letters." Don't let it recompute the letters independently.
+1. **Shuffle in `getQuestionBySlug`:** Return shuffled display labels for the question page (requires using `userId` inside the controller and calling `buildShuffledChoiceViews()`).
+2. **Return a mapping:** Extend the question view output to include the shuffled views (or a `choiceId → displayLabel` map) so QuestionCard can render with the same labels Feedback uses.
+3. **Make labels invariant:** Stop reassigning letter labels on shuffle and instead keep authored labels fixed (broader product decision; likely breaks "A=first row" mental model).
 
 ---
 
 ## Severity Assessment
 
-### Bug A (Missing `&mode=review`)
-**High.** This breaks the most common use case — physicians reviewing what they got wrong. Every single Incorrect question on the History Questions tab is affected. The History Questions tab is the primary entry point for "what did I get wrong across all my studying?"
+### Bug A (History Questions result-dependent wiring)
+**Medium.** The History Questions tab is the only review entry point that routes Incorrect rows to reattempt URLs (no `mode=review`) while other entry points route to review mode. Combined with subtitle copy that doesn’t reflect `mode`, this can confuse users and makes the experience inconsistent across entry points.
 
 ### Bug B (Choice Label Desync)
 **Medium-High.** The correct answer is still identifiable by border color, and the explanation text is accurate. But the letter labels create confusion: a user who reads "B) Cannabis" in the feedback and looks up at B in the question card sees "Benzodiazepines," not Cannabis. For a medical education platform, this kind of mislabeling is unacceptable.
 
 ### Combined Impact
-These two bugs together mean that even when a physician successfully reaches review mode, the feedback they see has scrambled letter labels. The "learn from mistakes" loop — the entire reason review mode exists — is doubly broken: hard to reach (Bug A) and confusing when you get there (Bug B).
+These two issues together mean that a physician can hit inconsistent "review vs reattempt" behavior across entry points (Bug A), and even when they are in review mode, the feedback letter labels may not match the question card (Bug B).
 
 ---
 
@@ -186,16 +106,16 @@ These two bugs together mean that even when a physician successfully reaches rev
 
 ### Bug A Verification
 1. Go to `/app/history?tab=questions`
-2. Find any Incorrect question
-3. Hover over the question title — confirm the href contains `&mode=review`
-4. Click the question title — confirm review mode loads (choices locked, previous answer shown, Feedback card visible)
-5. Go back, click the "Reattempt" button — confirm it loads as a fresh form (if Option A was chosen)
-6. Repeat for a Correct question to confirm no regression
-7. Test Dashboard and Sessions entry points to confirm no regression
+2. Confirm a Correct row’s title link includes `mode=review`
+3. Confirm an Incorrect row’s title link omits `mode=review`
+4. Confirm both the title link and action button share the same `href` for each row
+5. Verify Dashboard recent activity links include `mode=review` (regardless of correctness)
+6. Verify Session Breakdown links include `mode=review` (regardless of correctness)
+7. Verify the question page subtitle for `from=history` does not vary by `mode` (potential copy mismatch)
 
 ### Bug B Verification
 1. Open any question in review mode
-2. Note the A/B/C/D to answer text mapping in the question card
+2. Note the A/B/C/D(/E) to answer text mapping in the question card
 3. Scroll to "Why other answers are wrong" in the feedback card
 4. Confirm every letter label in the feedback matches the same answer text in the question card
 5. Test across multiple questions to ensure consistent
@@ -206,9 +126,9 @@ These two bugs together mean that even when a physician successfully reaches rev
 
 | Doc | Relationship |
 |-----|-------------|
-| BS-009 (Session Review Navigation Gap) | **Sibling issue.** BS-009 covers the broader session navigation flow (back links, sequential next/prev). Bug A here is a simpler, more targeted wiring bug on one specific entry point. BS-009's fix (adding `sessionId` to URLs) is additive and won't fix Bug A — they're independent. |
-| BS-010 (Review Mode Attempt Identity Gap) | **Sibling issue.** BS-010 covers multi-attempt questions showing the wrong attempt. Bug B here is about letter label ordering within a single attempt — different root cause entirely. |
-| SPEC-023 (Question Review Mode) | **Predecessor.** SPEC-023 built review mode. Both bugs are post-SPEC-023 issues: Bug A is a wiring gap in one entry point, Bug B is a rendering gap in the feedback component. |
+| BS-009 (Session Review Navigation Gap) | **Sibling issue.** BS-009 covers session-aware navigation (back links, next/prev) when reviewing multiple questions. Bug A here is a more narrow, entry-point-specific wiring inconsistency. |
+| BS-010 (Review Mode Attempt Identity Gap) | **Sibling issue.** BS-010 is about selecting which attempt to display. Bug B here is about label semantics mismatching between question and feedback data sources. |
+| SPEC-023 (Question Review Mode) | **Foundation.** SPEC-023 introduced `mode=review`. Bug A is about which entry points use it; Bug B is about label consistency once in review mode. |
 
 ---
 
@@ -219,4 +139,4 @@ These two bugs together mean that even when a physician successfully reaches rev
 | 2026-02-11 | Documented as brainstorming, not spec or bug report | User preference for cognitive consistency; these may be rolled into a broader fix spec alongside BS-009/BS-010 |
 | 2026-02-11 | Validated via live Chrome browser audit with screenshots | Both bugs confirmed visually on deployed application across multiple questions and entry points |
 | 2026-02-11 | Classified as two separate bugs in one doc | Discovered during the same audit session; both relate to History Questions tab review experience but have independent root causes |
-| 2026-02-11 | Re-verified by Chrome agent; BS-011 confirmed 100% accurate | Bug A: all details correct, zero paths to review for Incorrect questions confirmed. Bug B: 4/4 questions tested across all entry points, 100% deterministic reproduction rate. Subtitle text bug already captured. |
+| 2026-02-12 | Re-audited against current code and corrected | Bug A clarified as explicit conditional wiring. Bug B root cause corrected to canonical-vs-shuffled label mismatch on the standalone question page. |

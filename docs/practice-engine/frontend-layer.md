@@ -2,7 +2,7 @@
 
 > **Parent:** [Practice Engine Index](./index.md)
 > **Scope:** Routes, hooks, data flow, shared UI components, error handling
-> **Last Verified:** 2026-02-11
+> **Last Verified:** 2026-02-12
 
 ---
 
@@ -10,13 +10,13 @@
 
 | Route | Type | Purpose | Status |
 |-------|------|---------|--------|
-| `/app/practice` | Server → Client | Landing page — decision point (session starter, incomplete session card, session history). No question loads on mount. | Implemented (SPEC-019 Phase 2) |
+| `/app/practice` | Server → Client | Landing page — decision point (session starter, incomplete session card). No question loads on mount. History lives at `/app/history`. | Implemented (SPEC-019 Phase 2) |
 | `/app/practice/quick` | Server → Client | Quick Practice — ad-hoc question flow, random question, immediate feedback, no session tracking. | Implemented (SPEC-019 Phase 2) |
 | `/app/practice/[sessionId]` | Server → Client | Session runner — progress, question flow, exam review stage, summary | Implemented |
 | `/app/dashboard` | Server Component | Stats cards + recent activity (consumer of `getUserStats`) | Implemented |
 | `/app/history` | Server → Client | History page — tabbed view of Sessions and Questions (consumer of `getSessionHistory` + `getAttemptedQuestions`) | Implemented (SPEC-021) |
 | `/app/bookmarks` | Server Component | Bookmarked questions (consumer of `getBookmarks`) | Implemented |
-| `/app/questions/[slug]` | Client Component | Individual question reattempt | Implemented |
+| `/app/questions/[slug]` | Server → Client | Individual question page (attempt + review mode) | Implemented |
 
 ---
 
@@ -25,14 +25,14 @@
 ```text
 PracticePageClient (/app/practice)
 └── usePracticeSessionControls (53 lines, composite)
-    ├── usePracticeSessionStart (135 lines)
-    ├── usePracticeSessionTags (51 lines)
-    └── usePracticeIncompleteSession (105 lines)
+    ├── usePracticeSessionStart (126 lines)
+    ├── usePracticeSessionTags (34 lines)
+    └── usePracticeIncompleteSession (66 lines)
 
 QuickPracticeClient (/app/practice/quick)
-└── usePracticeQuestionFlow (55 lines, composite)
-    ├── usePracticeQuestionAnswerFlow (164 lines) ← over 150-line guideline
-    └── usePracticeQuestionBookmarks (107 lines)
+└── usePracticeQuestionFlow (63 lines, composite)
+    ├── usePracticeQuestionAnswerFlow (180 lines) ← over 150-line guideline
+    └── usePracticeQuestionBookmarks (116 lines)
 ```
 
 Note: Session history was moved to the dedicated `/app/history` route (SPEC-021) and is no longer embedded in the practice landing page.
@@ -43,14 +43,14 @@ Note: Session history was moved to the dedicated `/app/history` route (SPEC-021)
 
 ```text
 PracticeSessionPageClient
-└── usePracticeSessionPageController (102 lines, composite)
-    ├── usePracticeSessionQuestionFlow (195 lines) ← over 150-line guideline
-    ├── usePracticeQuestionBookmarks (107 lines, reused)
-    ├── usePracticeSessionReviewStage (220 lines) ← over 150-line guideline
+└── usePracticeSessionPageController (112 lines, composite)
+    ├── usePracticeSessionQuestionFlow (227 lines) ← over 150-line guideline
+    ├── usePracticeQuestionBookmarks (116 lines, reused)
+    ├── usePracticeSessionReviewStage (133 lines)
     │   ├── usePracticeSessionReviewStageState (state machine for review stage)
-    │   ├── usePracticeSessionNavigator (94 lines)
-    │   └── usePracticeSessionSummaryReview (79 lines)
-    └── usePracticeSessionMarkForReview (120 lines)
+    │   ├── usePracticeSessionNavigator (70 lines)
+    │   └── usePracticeSessionSummaryReview (52 lines)
+    └── usePracticeSessionMarkForReview (140 lines)
 ```
 
 ---
@@ -71,7 +71,7 @@ Page Components (thin orchestrators)
 View Components (presentational, receive props, never call server actions)
 ```
 
-Components import only **types** from controllers. All server action calls flow through hooks. This is architecturally correct.
+Client components import only **types** from controllers. Server actions are invoked either (a) directly in server components/pages, or (b) from client hooks for interactive flows. This is architecturally correct.
 
 ---
 
@@ -89,7 +89,7 @@ Components import only **types** from controllers. All server action calls flow 
 
 ## 6. Error Handling
 
-Every async operation in every hook has try/catch + `ActionResult` error checking. Error display:
+Interactive hooks typically wrap async calls in try/catch and check `ActionResult` for controller responses. Error display:
 
 | Error | Display | Recovery |
 |-------|---------|---------|
@@ -102,4 +102,4 @@ Every async operation in every hook has try/catch + `ActionResult` error checkin
 | Navigator load failure | `ErrorCard` + "Retry navigator" | Retry |
 | Uncaught error | Next.js error boundary (`error.tsx`) | "Try again" / "Back to Dashboard" / "Report issue" |
 
-**No silent failures exist.** The `fireAndForget` utility catches unhandled promise rejections as a safety net.
+Most failures surface via `ErrorCard`, inline error text, or toasts; a small number of fire-and-forget UI actions log errors to the console as a safety net (`fireAndForget`).

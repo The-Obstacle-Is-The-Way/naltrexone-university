@@ -1,6 +1,7 @@
 # Session Review Navigation Gap — Brainstorming
 
 **Date:** 2026-02-11
+**Last Verified:** 2026-02-12 (code audit)
 **Triggered by:** Systematic audit of core user flows after SPEC-021/022/023 implementation
 **Scope:** The "learn from mistakes" loop — what happens when a user finishes a session and wants to review their answers
 
@@ -63,7 +64,7 @@ This is the core learning loop. Every board prep platform (UWorld, AMBOSS, Anki)
 
 Three independent design decisions compound into a terrible experience:
 
-1. **"Back to Practice" goes to `/app/practice`, not back to the session summary.** The `from=practice` origin maps to `ROUTES.APP_PRACTICE` (the session starter page). The session summary lives at `/app/practice/[sessionId]` but is a client-side state — it's not a URL the user can return to.
+1. **"Back to Practice" goes to `/app/practice`, not back to the session summary.** The `from=practice` origin maps to `ROUTES.APP_PRACTICE` (the session starter page). The session summary is at `/app/practice/[sessionId]`, but the question page URL carries no `sessionId`, so it cannot link back to the session route.
 
 2. **The question page has no concept of sibling questions.** It loads one question by slug. It doesn't know what session it came from, what other questions are in that session, or what question comes next. There's no "Next question" or "Previous question" affordance.
 

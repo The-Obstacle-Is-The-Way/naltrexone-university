@@ -2,7 +2,7 @@
 
 > **Parent:** [Practice Engine Index](./index.md)
 > **Scope:** What's working, open debt, SPEC-019 status, product decisions
-> **Last Verified:** 2026-02-11
+> **Last Verified:** 2026-02-12
 
 ---
 
@@ -17,13 +17,16 @@
 - History page with tabbed Sessions + Questions views (SPEC-021)
 - Session history with drill-down to per-question breakdown
 - Error handling with visible recovery actions everywhere
-- Idempotency and rate limiting on all mutations
+- Rate limiting on mutation-heavy actions; optional idempotency keys supported for key mutations
 
 ---
 
 ## 2. Open Debt (Practice-Specific)
 
-*No practice-specific open debt items as of 2026-02-09.*
+- **BS-009:** Session Review Navigation Gap — review-mode back links lose session context; no session-aware next/prev navigation
+- **BS-010:** Review Mode Attempt Identity Gap — review mode always loads the latest attempt for a question (no `attemptId` in URL)
+- **BS-011 Bug A:** History Questions tab uses `mode=review` only for Correct rows (Incorrect rows route to reattempt URLs); inconsistent with other review entry points + subtitle copy
+- **BS-011 Bug B:** Choice label desync on standalone question page (QuestionCard labels vs Feedback choice explanations)
 
 ---
 
@@ -37,10 +40,11 @@
 
 ---
 
-## 4. Product Decisions (2026-02-09)
+## 4. Product Decisions (2026-02-12)
 
 | Decision | Outcome | Reference |
 |----------|---------|-----------|
-| **Review page scope** | Missed-only (most recent attempt incorrect). NOT an "all questions" library. Clarify via subtitle text, not scope expansion. | SPEC-014 |
+| **History IA** | `/app/review` replaced by `/app/history` with Sessions + Questions tabs. | SPEC-021 |
+| **Questions tab scope** | Questions tab is a filterable attempted-question log (result/source server-side filtering; difficulty/tag client-side in v1). | SPEC-022 |
 | **Session runner route** | Stays at `/app/practice/[sessionId]` (NOT renamed to `/app/practice/sessions/[id]`). Static `quick` segment takes priority over dynamic `[sessionId]` in Next.js routing. | SPEC-019 §5.2 |
-| **Nav label** | Keep "Review" in nav (not "Missed Questions"). Shorter, cleaner — subtitle disambiguates on the page itself. | SPEC-019 §5.4.3 |
+| **Nav label** | Nav item is **History** (not Review). | SPEC-021 |

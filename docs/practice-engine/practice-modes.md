@@ -2,7 +2,7 @@
 
 > **Parent:** [Practice Engine Index](./index.md)
 > **Scope:** Ad-hoc, Tutor, and Exam modes — lifecycle, grading, concurrency
-> **Last Verified:** 2026-02-11
+> **Last Verified:** 2026-02-12
 
 ---
 
@@ -52,7 +52,7 @@ For sessions, questions are selected at creation time:
 2. `shuffleWithSeed(candidates, createSeed(userId, now))` — deterministic shuffle
 3. Take first `count` questions → persist as `questionIds` in `paramsJson`
 
-For ad-hoc mode, `selectNextQuestionId()` picks the least-recently-seen question from candidates matching the user's attempt history.
+For ad-hoc mode, `selectNextQuestionId()` prefers the **first unattempted** candidate (in candidate order). If all candidates have been attempted, it selects the question with the **oldest** last-attempt timestamp.
 
 ---
 

@@ -1,6 +1,7 @@
 # Review Mode Attempt Identity Gap — Brainstorming
 
 **Date:** 2026-02-11
+**Last Verified:** 2026-02-12 (code audit)
 **Triggered by:** Post-SPEC-023 external review audit of review mode behavior
 **Scope:** Multi-attempt questions show the wrong attempt data in review mode because no attempt identifier is passed through the URL
 **Related:** `bs-009-session-review-navigation-gap.md` (shares root cause: insufficient URL context), SPEC-023
@@ -62,7 +63,7 @@ No `attemptId` parameter exists. All review links point to the same URL regardle
 | **Session Breakdown** | No — has `isAnswered` and `isCorrect` but no attempt ID | No |
 | **History Questions Tab** | No — groups by question, shows latest result only | N/A (no multi-attempt issue) |
 
-The Dashboard page (`app/(app)/app/dashboard/page.tsx:207-212`) uses `row.attemptId` as the list `key` but doesn't pass it to `toQuestionRoute()`:
+The Dashboard page (`app/(app)/app/dashboard/page.tsx:208-213`) uses `row.attemptId` as the list `key` but doesn't pass it to `toQuestionRoute()`:
 
 ```tsx
 <li key={row.attemptId}>

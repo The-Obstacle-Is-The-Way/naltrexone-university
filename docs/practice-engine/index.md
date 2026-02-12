@@ -1,7 +1,7 @@
 # Practice Engine
 
 > **Type:** Canonical Reference Document (Living)
-> **Last Verified:** 2026-02-11 (synced to SPEC-021)
+> **Last Verified:** 2026-02-12 (synced to SPEC-023)
 > **Scope:** Everything related to practicing questions — the core product feature
 
 ---
@@ -21,18 +21,19 @@ The Practice Engine is the core feature of Naltrexone University. It's the syste
 ```text
 ┌─────────────────────────────────────────────────────────────────────┐
 │                         Frontend (app/)                             │
-│  /app/practice          — Practice landing (sessions + history)     │
+│  /app/practice          — Practice landing (start/continue)         │
 │  /app/practice/quick    — Quick Practice (ad-hoc, no session)       │
 │  /app/practice/[sessionId] — Session runner (tutor/exam)            │
 │  /app/dashboard         — Stats + recent activity (consumer)        │
-│  /app/history           — History: sessions + questions (consumer)   │
+│  /app/history           — History: sessions + questions (consumer)  │
 │  /app/bookmarks         — Saved questions (consumer)                │
-│  /app/questions/[slug]  — Individual question reattempt              │
+│  /app/questions/[slug]  — Question detail (attempt/review)          │
 └──────────────────────────────┬──────────────────────────────────────┘
                                │ Server Actions ('use server')
 ┌──────────────────────────────┴──────────────────────────────────────┐
 │                      Controllers (adapters/)                        │
 │  question-controller    — getNextQuestion, submitAnswer             │
+│  question-view-controller — getQuestionBySlug, getPreviousAttempt    │
 │  practice-controller    — start/end session, review, history, mark  │
 │  bookmark-controller    — toggle, list                              │
 │  tag-controller         — listAll                                   │
@@ -44,10 +45,11 @@ The Practice Engine is the core feature of Naltrexone University. It's the syste
 │                      Use Cases (application/)                       │
 │  GetNextQuestion         StartPracticeSession                       │
 │  SubmitAnswer            EndPracticeSession                         │
+│  GetPreviousAttempt      GetPracticeSessionReview                   │
 │  ToggleBookmark          GetIncompletePracticeSession                │
-│  GetBookmarks            GetPracticeSessionReview                    │
-│  GetAttemptedQuestions    SetPracticeSessionQuestionMark              │
-│  GetUserStats            GetSessionHistory                          │
+│  GetBookmarks            SetPracticeSessionQuestionMark              │
+│  GetAttemptedQuestions   GetSessionHistory                          │
+│  GetUserStats                                                     │
 └──────────────────────────────┬──────────────────────────────────────┘
                                │ Port interfaces
 ┌──────────────────────────────┴──────────────────────────────────────┐
@@ -93,21 +95,23 @@ Dependencies point **inward only** (Clean Architecture, ADR-001). The domain lay
 
 | Document | Purpose |
 |----------|---------|
-| [Master Spec](specs/master_spec.md) | Complete technical specification (SSOT) |
-| [SPEC-012](../_archive/specs/spec-012-core-question-loop.md) | Core question loop requirements |
-| [SPEC-013](../_archive/specs/spec-013-practice-sessions.md) | Practice session requirements |
-| [SPEC-014](../_archive/specs/spec-014-review-bookmarks.md) | Review + bookmarks requirements |
-| [SPEC-015](../_archive/specs/spec-015-dashboard.md) | Dashboard requirements |
-| [SPEC-019](../_archive/specs/spec-019-practice-ux-redesign.md) | UX redesign (all phases implemented) |
-| [SPEC-020](../_archive/specs/spec-020-practice-engine-completion.md) | Practice engine completion (all done) |
-| [SPEC-021](../_archive/specs/spec-021-history-page-restructure.md) | History page restructure (replaces `/app/review`) |
-| [ADR-001](adr/adr-001-clean-architecture-layers.md) | Clean Architecture decision |
-| [ADR-003](adr/adr-003-testing-strategy.md) | Testing strategy (TDD, fakes over mocks) |
-| [ADR-006](adr/adr-006-error-handling-strategy.md) | Error handling (ApplicationError) |
-| [ADR-015](adr/adr-015-idempotency-strategy.md) | Idempotency strategy |
-| [Frontend Standards](frontend/standards.md) | UI/UX standards and known violations |
+| [Master Spec](../specs/master_spec.md) | Complete technical specification (SSOT) |
+| [SPEC-012](../specs/spec-012-core-question-loop.md) | Core question loop requirements |
+| [SPEC-013](../specs/spec-013-practice-sessions.md) | Practice session requirements |
+| [SPEC-014](../specs/spec-014-review-bookmarks.md) | Review + bookmarks requirements |
+| [SPEC-015](../specs/spec-015-dashboard.md) | Dashboard requirements |
+| [SPEC-019](../specs/spec-019-practice-ux-redesign.md) | UX redesign (all phases implemented) |
+| [SPEC-020](../specs/spec-020-practice-engine-completion.md) | Practice engine completion (all done) |
+| [SPEC-021](../specs/spec-021-history-page-restructure.md) | History page restructure (replaces `/app/review`) |
+| [SPEC-022](../specs/spec-022-question-log.md) | Question Log (History Questions tab = attempted-question log) |
+| [SPEC-023](../specs/spec-023-question-review-mode.md) | Question Review Mode (`?mode=review`) |
+| [ADR-001](../adr/adr-001-clean-architecture-layers.md) | Clean Architecture decision |
+| [ADR-003](../adr/adr-003-testing-strategy.md) | Testing strategy (TDD, fakes over mocks) |
+| [ADR-006](../adr/adr-006-error-handling-strategy.md) | Error handling (ApplicationError) |
+| [ADR-015](../adr/adr-015-idempotency-strategy.md) | Idempotency strategy |
+| [Frontend Standards](../frontend/standards.md) | UI/UX standards and known violations |
 | [BS-011](../brainstorming/bs-011-history-review-wiring-and-choice-label-desync.md) | History review wiring bug + choice label desync (active) |
-| [Debt Register](debt/index.md) | All open technical debt |
+| [Debt Register](../debt/index.md) | All open technical debt |
 
 ---
 
@@ -121,3 +125,4 @@ Dependencies point **inward only** (Clean Architecture, ADR-001). The domain lay
 | 2026-02-09 | Implemented SPEC-019 Phase 3: actionable dashboard activity + difficulty badges; progressive tag filter disclosure; review clarification + filters; origin-aware question navigation; improved empty states. |
 | 2026-02-11 | Decomposed monolith index into focused sub-documents. Added Content Pipeline (full end-to-end trace from MDX authoring through rendering, including BS-011 Bug B root cause). Absorbed `docs/dev/question-content-pipeline.md` into `content-pipeline.md`. |
 | 2026-02-11 | Synced all sub-documents to SPEC-021: `/app/review` → `/app/history`; `GetMissedQuestions` → `GetAttemptedQuestions`; AttemptRepository ISP updated (7 sub-interfaces); practice landing no longer embeds session history; added undocumented domain modules (`subscription-plan`, `session-stats`, `get-previous-attempt`). |
+| 2026-02-12 | Updated architecture diagram and related-links to reflect SPEC-022 and SPEC-023 implementations (History Questions = attempted-question log; question detail supports `?mode=review`). |

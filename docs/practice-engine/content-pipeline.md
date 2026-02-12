@@ -2,7 +2,7 @@
 
 > **Parent:** [Practice Engine Index](./index.md)
 > **Scope:** Full end-to-end trace from authored MDX files through seeding, database, shuffling, and UI rendering
-> **Last Verified:** 2026-02-11
+> **Last Verified:** 2026-02-12
 
 This document serves two purposes:
 1. **Architectural trace** — understanding where data flows and where bugs happen (e.g., BS-011 choice label desync)
@@ -123,7 +123,7 @@ General explanation of the correct answer.
 
 Draft question sets live under `content/drafts/questions/**` and are usually stored as `recall.md` or `vignettes.md`. Each file contains multiple question blocks. Each block:
 
-- Starts with YAML frontmatter containing `qid`, `difficulty`, `substances`, `topics`, `source`, and `answer`
+- Starts with YAML frontmatter containing `qid`, `type`, `difficulty`, `substances`, `topics`, `source`, and `answer`
   - Optional: `treatments[]`, `diagnoses[]` for more specific tagging (mapped to MDX `kind: treatment|diagnosis`)
 - Uses headings in this order: `## Question` (or `## Stem`), `## Choices`, `## Explanation`
 
@@ -172,17 +172,21 @@ Notes:
 | Hash | `sha256Hex(canonicalJsonString(seedRep))` | Change detection — skip unchanged questions |
 | Upsert | Transaction: insert/update question, choices, tags, question_tags | Into PostgreSQL via Drizzle |
 
-**Critical transformation:** The `sortOrder` assigned to each choice corresponds to its position in the YAML array:
+**Critical transformation:** The seed script **sorts choices by `label`** before assigning `sortOrder`:
 
 ```typescript
+const sortedChoices = [...frontmatter.choices].sort((a, b) =>
+  a.label.localeCompare(b.label),
+);
+
 choices: sortedChoices.map((c, index) => ({
-  label: c.label,      // "A", "B", "C", "D" — from YAML
-  sort_order: index + 1, // 1, 2, 3, 4 — positional
+  label: c.label,        // "A".."E" — canonical authored label
+  sort_order: index + 1, // 1..N — derived from sorted label order
   // ...
-}))
+}));
 ```
 
-Because the YAML always lists choices as A, B, C, D in order, `sortOrder` 1=A, 2=B, 3=C, 4=D in the database.
+Because labels are validated as `A`–`E` and then sorted, `sortOrder` is effectively canonical: `1=A`, `2=B`, `3=C`, `4=D`, `5=E` in the database (independent of the original YAML array order).
 
 ### Publishing Rule
 
@@ -214,11 +218,11 @@ This excludes `content/questions/placeholder/**/*.mdx` from the seed input and a
 |--------|------|---------|
 | `id` | uuid | Primary key |
 | `questionId` | uuid FK | Parent question |
-| `label` | varchar(4) | Canonical authored label: A, B, C, D |
+| `label` | varchar(4) | Canonical authored label: A–E |
 | `textMd` | text | Choice text (raw markdown) |
 | `isCorrect` | boolean | Correctness flag |
 | `explanationMd` | text (nullable) | Per-choice explanation (parsed from "Why other answers are wrong") |
-| `sortOrder` | integer | Canonical ordering: 1=A, 2=B, 3=C, 4=D |
+| `sortOrder` | integer | Canonical ordering: 1=A, 2=B, 3=C, 4=D, 5=E |
 
 **Unique constraints:** `(questionId, label)` and `(questionId, sortOrder)` — ensures no duplicate labels or ordering within a question.
 
@@ -233,7 +237,7 @@ This excludes `content/questions/placeholder/**/*.mdx` from the seed input and a
 The `toDomain()` method (line 106) converts DB rows to domain entities:
 - Validates each choice label with `isValidChoiceLabel()`
 - **Sorts choices by `sortOrder` ascending** (line 138): `mappedChoices.sort((a, b) => a.sortOrder - b.sortOrder)`
-- Returns choices in canonical/authored order: A(1), B(2), C(3), D(4)
+- Returns choices in canonical/authored order: A(1), B(2), C(3), D(4), E(5) (when present)
 
 The domain `Question` entity has `choices: Choice[]` always in this canonical order.
 
@@ -300,15 +304,15 @@ This is the controller that serves question data to the `/app/questions/[slug]` 
 ```typescript
 // question-view-controller.ts:70-80
 return {
-  choices: question.choices.map((choice) => ({
-    id: choice.id,
-    label: choice.label,    // ← ORIGINAL DB label (A, B, C, D in canonical order)
-    textMd: choice.textMd,
-  })),
-};
+	  choices: question.choices.map((choice) => ({
+	    id: choice.id,
+	    label: choice.label,    // ← ORIGINAL DB label (A–E in canonical order)
+	    textMd: choice.textMd,
+	  })),
+	};
 ```
 
-**This controller does NOT shuffle.** It returns choices in canonical DB order with the authored labels (A, B, C, D). It doesn't have access to `userId` to compute the shuffle seed.
+**This controller does NOT shuffle.** It returns choices in canonical DB order with the authored labels (A–E). It does not compute the shuffle seed — it returns canonical labels as stored.
 
 ### Path B: `SubmitAnswer` / `GetPreviousAttempt` (use-case layer)
 
@@ -341,9 +345,11 @@ STANDALONE QUESTION PAGE (BS-011 Bug B — inconsistent):
 
 `question-view-controller.ts:getQuestionBySlug` returns `choice.label` (the canonical/authored label from the database), while `submit-answer.ts:mapChoiceExplanations` and `get-previous-attempt.ts` return `choice.displayLabel` (the shuffled label). The QuestionCard on the `/app/questions/[slug]` page renders the original labels, but the Feedback card renders shuffled labels. Since the shuffle reorders choices, the letter assignments diverge.
 
-### Why this is 100% deterministic (not intermittent)
+### Why this is deterministic per user (not intermittent)
 
-The shuffle always produces a different order than the canonical order for any user (unless the seed happens to produce an identity permutation, which is a 1/24 chance for 4 choices). The bug reproduces on every question for every user from every entry point that uses `getQuestionBySlug` as the question data source.
+For a given `(userId, questionId)` pair, the shuffle is deterministic — the same user will see the same shuffled order on every load. That means the desync is not “flaky”: if a user sees a mismatch for a question once, it will keep happening for that user.
+
+An identity permutation *is* possible (probability `1 / N!` for `N` choices), which means some user+question pairs may not visibly reproduce the bug.
 
 ---
 
@@ -351,13 +357,13 @@ The shuffle always produces a different order than the canonical order for any u
 
 | Step | Location | Input | Output | Labels |
 |------|----------|-------|--------|--------|
-| **Author** | `content/questions/**/*.mdx` | Human writes | YAML + Markdown | A, B, C, D (canonical) |
+| **Author** | `content/questions/**/*.mdx` | Human writes | YAML + Markdown | A–E (canonical) |
 | **Validate** | `lib/content/schemas.ts` | Frontmatter | Parsed + validated | Preserved |
 | **Extract** | `lib/content/parseMdxQuestion.ts` | MDX body | `stemMd`, `explanationMd` | N/A (body text) |
 | **Parse per-choice** | `scripts/seed-helpers.ts` | Explanation markdown | General + per-choice Map | Label keys (A-E) |
 | **Canonicalize** | `lib/content/parseMdxQuestion.ts` | Raw markdown | Normalized markdown | Preserved |
 | **Seed to DB** | `scripts/seed.ts` | Canonical repr | DB rows | A=sortOrder 1, B=2, etc. |
-| **Query** | `drizzle-question-repository.ts` | DB rows | Domain entity | Sorted by sortOrder (A,B,C,D) |
+| **Query** | `drizzle-question-repository.ts` | DB rows | Domain entity | Sorted by sortOrder (A–E) |
 | **Shuffle** | `shuffled-choice-views.ts` | Domain entity + userId | Shuffled views | **New displayLabels** by position |
 | **Question Card** | `question-card.tsx` | Props from controller | Rendered choices | Whatever labels received |
 | **Feedback Card** | `feedback.tsx` | Props from use case output | Rendered explanations | Whatever labels received |
@@ -369,7 +375,7 @@ The shuffle always produces a different order than the canonical order for any u
 | Bug | Severity | Location in Pipeline | Reference |
 |-----|----------|---------------------|-----------|
 | **Bug B: Choice label desync** | Medium-High | Step 6 — controller returns original labels, use case returns shuffled labels | BS-011 §Bug B |
-| **Bug A: Missing `&mode=review`** | High | Not in content pipeline — wiring bug in `history-questions-tab.tsx:330-332` | BS-011 §Bug A |
+| **Bug A: Result-dependent `mode=review` wiring** | Medium | Not in content pipeline — History Questions tab uses `mode=review` only for Correct rows (`history-questions-tab.tsx:330-332`) | BS-011 §Bug A |
 
 ---
 
