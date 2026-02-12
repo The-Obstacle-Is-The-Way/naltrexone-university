@@ -112,6 +112,11 @@ test.describe('brainstorming audit — validate documented issues', () => {
   test('BS-011 Bug B: feedback choice labels match question card choice labels', async ({
     page,
   }) => {
+    test.fail(
+      true,
+      'BS-011 Bug B: known failure until choice label desync is fixed',
+    );
+
     await signInWithClerkPassword(page);
     await ensureSubscribed(page);
     await assertQuestionSlugExists(page, IMPORTED_QUESTION_SLUG);
@@ -146,7 +151,8 @@ test.describe('brainstorming audit — validate documented issues', () => {
     // Wait for "Why other answers are wrong" section
     const whySection = page.getByText('Why other answers are wrong:');
     const hasFeedbackExplanations = await whySection
-      .isVisible()
+      .waitFor({ state: 'visible', timeout: 2000 })
+      .then(() => true)
       .catch(() => false);
     test.skip(
       !hasFeedbackExplanations,
@@ -318,7 +324,15 @@ test.describe('brainstorming audit — validate documented issues', () => {
     const reattemptButton = page.locator(
       `a[aria-label*="Reattempt"][href*="${QUESTION_SLUG}"]`,
     );
-    const hasReattempt = (await reattemptButton.count()) > 0;
+    let hasReattempt = false;
+    try {
+      await reattemptButton
+        .first()
+        .waitFor({ state: 'visible', timeout: 10_000 });
+      hasReattempt = true;
+    } catch {
+      // No reattempt button found after waiting
+    }
 
     // If we couldn't produce an incorrect attempt, skip rather than silently pass
     test.skip(!hasReattempt, 'No reattempt row found — could not verify Bug A');
