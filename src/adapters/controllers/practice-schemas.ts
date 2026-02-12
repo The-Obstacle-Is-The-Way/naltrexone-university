@@ -8,9 +8,10 @@ import {
   MAX_TAG_SLUG_LENGTH,
 } from '@/src/adapters/shared/validation-limits';
 import { zDifficulty, zUuid } from '@/src/adapters/shared/zod-schemas';
+import { AllQuestionProgressStatuses } from '@/src/domain/value-objects';
 
 export const zPracticeMode = z.enum(['tutor', 'exam']);
-const zQuestionProgressStatus = z.enum(['unanswered', 'incorrect', 'marked']);
+const zQuestionProgressStatus = z.enum(AllQuestionProgressStatuses);
 
 export const StartPracticeSessionInputSchema = z
   .object({
@@ -25,7 +26,10 @@ export const StartPracticeSessionInputSchema = z
       .array(zDifficulty)
       .max(MAX_PRACTICE_SESSION_DIFFICULTY_FILTERS)
       .default([]),
-    statuses: z.array(zQuestionProgressStatus).max(3).default([]),
+    statuses: z
+      .array(zQuestionProgressStatus)
+      .max(AllQuestionProgressStatuses.length)
+      .default([]),
   })
   .strict();
 

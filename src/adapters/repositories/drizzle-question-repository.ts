@@ -99,7 +99,14 @@ export class DrizzleQuestionRepository implements QuestionRepository {
       whereParts.push(inArray(questions.difficulty, [...filters.difficulties]));
     }
 
-    if (hasStatusFilter && typeof filters.userId === 'string') {
+    if (hasStatusFilter) {
+      if (typeof filters.userId !== 'string') {
+        throw new ApplicationError(
+          'VALIDATION_ERROR',
+          'userId is required when filtering by status',
+        );
+      }
+
       const userId = filters.userId;
       const statusConditions = statuses.map((status) =>
         this.buildStatusCondition(status, userId),

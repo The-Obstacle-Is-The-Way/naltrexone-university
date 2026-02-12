@@ -25,12 +25,15 @@ import type {
   SubmitAnswerInput,
   SubmitAnswerOutput,
 } from '@/src/application/use-cases/submit-answer';
-import { AllChoiceLabels } from '@/src/domain/value-objects';
+import {
+  AllChoiceLabels,
+  AllQuestionProgressStatuses,
+} from '@/src/domain/value-objects';
 import { createAction } from './create-action';
 import type { CheckEntitlementUseCase } from './require-entitled-user-id';
 import { requireEntitledUserId } from './require-entitled-user-id';
 
-const zQuestionProgressStatus = z.enum(['unanswered', 'incorrect', 'marked']);
+const zQuestionProgressStatus = z.enum(AllQuestionProgressStatuses);
 
 const QuestionFiltersSchema = z
   .object({
@@ -42,7 +45,10 @@ const QuestionFiltersSchema = z
       .array(zDifficulty)
       .max(MAX_PRACTICE_SESSION_DIFFICULTY_FILTERS)
       .default([]),
-    statuses: z.array(zQuestionProgressStatus).max(3).default([]),
+    statuses: z
+      .array(zQuestionProgressStatus)
+      .max(AllQuestionProgressStatuses.length)
+      .default([]),
   })
   .strict();
 

@@ -15,6 +15,9 @@ const QUESTION_SLUG = 'placeholder-01-naltrexone-mechanism';
 // Imported question with per-choice explanations (for Bug B label desync test)
 const IMPORTED_QUESTION_SLUG = 'anton-2006-combine-001';
 
+/** Status filter labels expected on Practice and Quick Practice pages. */
+const STATUS_LABELS = ['Unanswered', 'Incorrect', 'Marked'] as const;
+
 /**
  * Extract the letter→text mapping from QuestionCard choices.
  *
@@ -201,8 +204,7 @@ test.describe('brainstorming audit — validate documented issues', () => {
     ).toBeVisible();
 
     // Assert that question status filter elements are PRESENT
-    const statusLabels = ['Unanswered', 'Incorrect', 'Marked'];
-    for (const label of statusLabels) {
+    for (const label of STATUS_LABELS) {
       await expect(
         page.getByRole('button', { name: label, exact: true }),
       ).toBeVisible();
@@ -239,8 +241,7 @@ test.describe('brainstorming audit — validate documented issues', () => {
       timeout: 30_000,
     });
 
-    const statusLabels = ['Unanswered', 'Incorrect', 'Marked'];
-    for (const label of statusLabels) {
+    for (const label of STATUS_LABELS) {
       await expect(
         page.getByRole('button', { name: label, exact: true }),
       ).toBeVisible();

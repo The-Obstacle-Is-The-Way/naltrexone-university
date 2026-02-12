@@ -5,7 +5,7 @@ import {
 } from './question-progress-status';
 
 describe('QuestionProgressStatus', () => {
-  it('has exactly 3 levels', () => {
+  it('has exactly 3 statuses', () => {
     expect(AllQuestionProgressStatuses).toEqual([
       'unanswered',
       'incorrect',

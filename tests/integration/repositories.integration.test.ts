@@ -299,6 +299,10 @@ describe('DrizzleQuestionRepository', () => {
   describe('listPublishedCandidateIds with status filters', () => {
     it('returns only unanswered questions when status=unanswered', async () => {
       const user = await createUser();
+      const tag = await createTag({
+        slug: `it-status-unanswered-${randomUUID()}`,
+        kind: 'topic',
+      });
 
       const qAttempted = await createQuestion({
         id: '00000000-0000-0000-0000-000000000011',
@@ -306,6 +310,7 @@ describe('DrizzleQuestionRepository', () => {
         status: 'published',
         difficulty: 'easy',
         createdAt: new Date('2026-01-01T00:00:00.000Z'),
+        tagIds: [tag.id],
       });
       const qUnanswered = await createQuestion({
         id: '00000000-0000-0000-0000-000000000012',
@@ -313,6 +318,7 @@ describe('DrizzleQuestionRepository', () => {
         status: 'published',
         difficulty: 'easy',
         createdAt: new Date('2026-01-02T00:00:00.000Z'),
+        tagIds: [tag.id],
       });
 
       await db.insert(schema.attempts).values({
@@ -327,7 +333,7 @@ describe('DrizzleQuestionRepository', () => {
 
       const repo = new DrizzleQuestionRepository(db);
       const result = await repo.listPublishedCandidateIds({
-        tagSlugs: [],
+        tagSlugs: [tag.slug],
         difficulties: [],
         statuses: ['unanswered'],
         userId: user.id,
@@ -461,6 +467,10 @@ describe('DrizzleQuestionRepository', () => {
 
     it('combines unanswered and incorrect with OR logic', async () => {
       const user = await createUser();
+      const tag = await createTag({
+        slug: `it-status-or-${randomUUID()}`,
+        kind: 'topic',
+      });
 
       const qIncorrect = await createQuestion({
         id: '00000000-0000-0000-0000-000000000041',
@@ -468,6 +478,7 @@ describe('DrizzleQuestionRepository', () => {
         status: 'published',
         difficulty: 'easy',
         createdAt: new Date('2026-01-01T00:00:00.000Z'),
+        tagIds: [tag.id],
       });
       const qUnanswered = await createQuestion({
         id: '00000000-0000-0000-0000-000000000042',
@@ -475,6 +486,7 @@ describe('DrizzleQuestionRepository', () => {
         status: 'published',
         difficulty: 'easy',
         createdAt: new Date('2026-01-02T00:00:00.000Z'),
+        tagIds: [tag.id],
       });
       const qCorrect = await createQuestion({
         id: '00000000-0000-0000-0000-000000000043',
@@ -482,6 +494,7 @@ describe('DrizzleQuestionRepository', () => {
         status: 'published',
         difficulty: 'easy',
         createdAt: new Date('2026-01-03T00:00:00.000Z'),
+        tagIds: [tag.id],
       });
 
       const [qIncorrectChoiceA] = await db
@@ -521,7 +534,7 @@ describe('DrizzleQuestionRepository', () => {
 
       const repo = new DrizzleQuestionRepository(db);
       const result = await repo.listPublishedCandidateIds({
-        tagSlugs: [],
+        tagSlugs: [tag.slug],
         difficulties: [],
         statuses: ['unanswered', 'incorrect'],
         userId: user.id,
@@ -533,6 +546,10 @@ describe('DrizzleQuestionRepository', () => {
 
     it('returns all questions when statuses is empty', async () => {
       const user = await createUser();
+      const tag = await createTag({
+        slug: `it-status-empty-${randomUUID()}`,
+        kind: 'topic',
+      });
 
       const q1 = await createQuestion({
         id: '00000000-0000-0000-0000-000000000051',
@@ -540,6 +557,7 @@ describe('DrizzleQuestionRepository', () => {
         status: 'published',
         difficulty: 'easy',
         createdAt: new Date('2026-01-01T00:00:00.000Z'),
+        tagIds: [tag.id],
       });
       const q2 = await createQuestion({
         id: '00000000-0000-0000-0000-000000000052',
@@ -547,11 +565,12 @@ describe('DrizzleQuestionRepository', () => {
         status: 'published',
         difficulty: 'hard',
         createdAt: new Date('2026-01-02T00:00:00.000Z'),
+        tagIds: [tag.id],
       });
 
       const repo = new DrizzleQuestionRepository(db);
       const result = await repo.listPublishedCandidateIds({
-        tagSlugs: [],
+        tagSlugs: [tag.slug],
         difficulties: [],
         statuses: [],
         userId: user.id,
