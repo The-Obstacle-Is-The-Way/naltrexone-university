@@ -5,6 +5,7 @@ import { createDepsResolver, loadAppContainer } from '@/lib/controller-helpers';
 import { ApplicationError } from '@/src/application/errors';
 import type { AuthGateway } from '@/src/application/ports/gateways';
 import type { QuestionRepository } from '@/src/application/ports/repositories';
+import { buildShuffledChoiceViews } from '@/src/application/shared/shuffled-choice-views';
 import type {
   GetPreviousAttemptInput,
   GetPreviousAttemptOutput,
@@ -60,7 +61,7 @@ export const getQuestionBySlug = createAction({
   schema: GetQuestionBySlugInputSchema,
   getDeps,
   execute: async (input, d) => {
-    await requireEntitledUserId(d);
+    const userId = await requireEntitledUserId(d);
 
     const question = await d.questionRepository.findPublishedBySlug(input.slug);
     if (!question) {
@@ -72,9 +73,9 @@ export const getQuestionBySlug = createAction({
       slug: question.slug,
       stemMd: question.stemMd,
       difficulty: question.difficulty,
-      choices: question.choices.map((choice) => ({
-        id: choice.id,
-        label: choice.label,
+      choices: buildShuffledChoiceViews(question, userId).map((choice) => ({
+        id: choice.choiceId,
+        label: choice.displayLabel,
         textMd: choice.textMd,
       })),
     };

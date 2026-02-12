@@ -97,12 +97,12 @@ test.describe('brainstorming audit — validate documented issues', () => {
   test.skip(!hasClerkCredentials, 'Missing Clerk E2E credentials');
 
   /**
-   * BS-011 Bug B: Choice Label Desync
+   * BS-011 Bug B: Choice Label Desync (regression)
    *
-   * QuestionCard renders canonical DB labels (choice.label).
-   * Feedback renders shuffled display labels (choice.displayLabel).
-   * On the standalone question page (/app/questions/[slug]), these
-   * should be the same — but they aren't.
+   * The standalone question page (/app/questions/[slug]) renders choices
+   * in QuestionCard and choice explanations in Feedback. Both must use the
+   * same deterministic shuffle (buildShuffledChoiceViews) so that letter
+   * labels map to the same answer text in both sections.
    *
    * This test submits a question, then compares the letter→text mapping
    * from QuestionCard vs Feedback. If the labels are consistent,
@@ -112,20 +112,10 @@ test.describe('brainstorming audit — validate documented issues', () => {
   test('BS-011 Bug B: feedback choice labels match question card choice labels', async ({
     page,
   }) => {
-    test.fail(
-      true,
-      'BS-011 Bug B: known failure until choice label desync is fixed',
-    );
-
     await signInWithClerkPassword(page);
     await ensureSubscribed(page);
     await assertQuestionSlugExists(page, IMPORTED_QUESTION_SLUG);
 
-    // Bug B only affects the STANDALONE question page (/app/questions/[slug]),
-    // not the practice session flow. The standalone page gets canonical labels
-    // for QuestionCard (via getQuestionBySlug) but shuffled display labels
-    // for Feedback (via submitAnswer/getPreviousAttempt → buildShuffledChoiceViews).
-    //
     // Use an imported question that has per-choice explanations so the
     // "Why other answers are wrong" section renders in Feedback.
     await page.goto(`/app/questions/${IMPORTED_QUESTION_SLUG}`);
@@ -175,9 +165,8 @@ test.describe('brainstorming audit — validate documented issues', () => {
       }
     }
 
-    // This assertion documents the bug. When Bug B is fixed, this test
-    // should pass (mismatches.length === 0). Currently it will fail,
-    // proving the label desync on the standalone question page.
+    // Regression assertion: letter labels must map to the same answer text
+    // in both QuestionCard and Feedback.
     expect(
       mismatches,
       `BS-011 Bug B: ${mismatches.length} label(s) mismatch between QuestionCard and Feedback on /app/questions/${IMPORTED_QUESTION_SLUG}.\n${mismatches.join('\n')}`,
