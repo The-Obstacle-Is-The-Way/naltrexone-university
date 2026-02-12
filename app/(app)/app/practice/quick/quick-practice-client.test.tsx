@@ -1,7 +1,11 @@
 // @vitest-environment jsdom
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
-import { parseStatusParams } from './quick-practice-client';
+import { ROUTES } from '@/lib/routes';
+import {
+  buildQuickPracticeStatusHref,
+  parseStatusParams,
+} from './quick-practice-client';
 
 vi.mock('next/link', () => ({
   default: (props: Record<string, unknown>) => <a {...props} />,
@@ -28,6 +32,48 @@ describe('parseStatusParams', () => {
         new URLSearchParams('status=unanswered,unknown,incorrect'),
       ),
     ).toEqual(['unanswered', 'incorrect']);
+  });
+});
+
+describe('buildQuickPracticeStatusHref', () => {
+  it('adds a status param when selecting a status', () => {
+    const href = buildQuickPracticeStatusHref({
+      searchParams: new URLSearchParams(''),
+      currentStatuses: [],
+      toggledStatus: 'incorrect',
+    });
+
+    expect(href).toBe(`${ROUTES.APP_PRACTICE_QUICK}?status=incorrect`);
+  });
+
+  it('removes the status param when toggling off the last selected status', () => {
+    const href = buildQuickPracticeStatusHref({
+      searchParams: new URLSearchParams('status=incorrect'),
+      currentStatuses: ['incorrect'],
+      toggledStatus: 'incorrect',
+    });
+
+    expect(href).toBe(ROUTES.APP_PRACTICE_QUICK);
+  });
+
+  it('preserves other query params when toggling off the last selected status', () => {
+    const href = buildQuickPracticeStatusHref({
+      searchParams: new URLSearchParams('foo=bar&status=incorrect'),
+      currentStatuses: ['incorrect'],
+      toggledStatus: 'incorrect',
+    });
+
+    expect(href).toBe(`${ROUTES.APP_PRACTICE_QUICK}?foo=bar`);
+  });
+
+  it('adds the toggled status to the end of the list', () => {
+    const href = buildQuickPracticeStatusHref({
+      searchParams: new URLSearchParams('status=incorrect'),
+      currentStatuses: ['incorrect'],
+      toggledStatus: 'marked',
+    });
+
+    expect(href).toBe(`${ROUTES.APP_PRACTICE_QUICK}?status=incorrect%2Cmarked`);
   });
 });
 

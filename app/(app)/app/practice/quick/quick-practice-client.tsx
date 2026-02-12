@@ -30,6 +30,29 @@ export function parseStatusParams(
     );
 }
 
+export function buildQuickPracticeStatusHref(input: {
+  searchParams: URLSearchParams;
+  currentStatuses: readonly QuestionProgressStatus[];
+  toggledStatus: QuestionProgressStatus;
+}): string {
+  const selected = input.currentStatuses.includes(input.toggledStatus);
+  const next = selected
+    ? input.currentStatuses.filter((s) => s !== input.toggledStatus)
+    : [...input.currentStatuses, input.toggledStatus];
+
+  const nextParams = new URLSearchParams(input.searchParams.toString());
+  if (next.length === 0) {
+    nextParams.delete('status');
+  } else {
+    nextParams.set('status', next.join(','));
+  }
+
+  const qs = nextParams.toString();
+  return qs.length > 0
+    ? `${ROUTES.APP_PRACTICE_QUICK}?${qs}`
+    : ROUTES.APP_PRACTICE_QUICK;
+}
+
 export default function QuickPracticeClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -71,24 +94,14 @@ export default function QuickPracticeClient() {
                   label={statusDisplayLabel(status)}
                   selected={selected}
                   onClick={() => {
-                    const next = selected
-                      ? statuses.filter((s) => s !== status)
-                      : [...statuses, status];
-
-                    const nextParams = new URLSearchParams(
-                      searchParams.toString(),
-                    );
-                    if (next.length === 0) {
-                      nextParams.delete('status');
-                    } else {
-                      nextParams.set('status', next.join(','));
-                    }
-
-                    const qs = nextParams.toString();
                     router.push(
-                      qs.length > 0
-                        ? `${ROUTES.APP_PRACTICE_QUICK}?${qs}`
-                        : ROUTES.APP_PRACTICE_QUICK,
+                      buildQuickPracticeStatusHref({
+                        searchParams: new URLSearchParams(
+                          searchParams.toString(),
+                        ),
+                        currentStatuses: statuses,
+                        toggledStatus: status,
+                      }),
                     );
                   }}
                 />

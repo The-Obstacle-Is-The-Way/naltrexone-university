@@ -210,6 +210,21 @@ describe('DrizzleQuestionRepository', () => {
       expect(orderBy).toHaveBeenCalledTimes(1);
     });
 
+    it('throws VALIDATION_ERROR when statuses are provided without userId', async () => {
+      const repo = new DrizzleQuestionRepository({} as unknown as RepoDb);
+
+      await expect(
+        repo.listPublishedCandidateIds({
+          tagSlugs: [],
+          difficulties: [],
+          statuses: ['unanswered'],
+        }),
+      ).rejects.toMatchObject({
+        code: 'VALIDATION_ERROR',
+        message: 'userId is required when filtering by status',
+      });
+    });
+
     it('returns ids when tag filters are applied', async () => {
       const rows = [{ id: 'q1', createdAt: new Date('2026-02-01T00:00:00Z') }];
       const orderBy = vi.fn(async () => rows);
