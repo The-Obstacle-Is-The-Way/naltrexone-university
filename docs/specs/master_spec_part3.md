@@ -361,7 +361,7 @@ As a user, I can load the site, sign up/sign in, and access the deployed app so 
 **Test Cases (file names + descriptions):**
 
 * `tests/integration/db.integration.test.ts`: applies migrations against test Postgres and verifies tables exist.
-* `tests/e2e/auth.spec.ts`: uses Clerk testing helpers to sign in and verify protected app route redirects correctly.
+* `tests/e2e/core-app-pages.spec.ts`: signs in via Clerk, ensures subscription, and verifies core app page navigation (Dashboard/Billing/Bookmarks/History), including legacy redirect behavior.
 
 **Implementation Checklist (ordered):**
 
@@ -577,7 +577,7 @@ As a subscribed user, I can run a timed practice session with filters and get a 
 
 **Test Cases:**
 
-* `tests/integration/actions.questions.integration.test.ts`: getNextQuestion(session) respects questionIds order and completion.
+* `src/application/use-cases/get-next-question.test.ts`: session question order + completion semantics (including `fromIndex` and persisted session state).
 * `tests/e2e/practice.spec.ts`: start session -> answer -> end -> summary.
 
 **Implementation Checklist:**
@@ -627,8 +627,9 @@ As a subscribed user, I can review missed questions and bookmarked questions so 
 
 **Test Cases:**
 
-* `tests/integration/actions.questions.integration.test.ts`: missed query logic.
-* `tests/e2e/review.spec.ts` and `tests/e2e/bookmarks.spec.ts`.
+* `src/application/use-cases/get-attempted-questions.test.ts`: attempted questions query logic (result + source filters, ordering).
+* `tests/integration/controllers.integration.test.ts`: attempted questions controller integration, including missing-question behavior.
+* `tests/e2e/history.spec.ts` and `tests/e2e/bookmarks.spec.ts`.
 
 **Implementation Checklist:**
 

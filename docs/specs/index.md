@@ -26,6 +26,13 @@ Implementation specifications provide detailed technical guidance for building e
 | [SPEC-026](./spec-026-history-review-only.md) | History Tab — Review-Only Question Links | Ready | Feature |
 | [SPEC-027](./spec-027-session-review-navigation.md) | Session Review Navigation (Sequential Nav + Attempt Identity) | Ready | Feature |
 
+**Master Spec split parts (readability):**
+
+- [Master Spec — Part 1](./master_spec_part1.md) — Overview, Architecture, Database Schema
+- [Master Spec — Part 2](./master_spec_part2.md) — API & Server Actions
+- [Master Spec — Part 3](./master_spec_part3.md) — Content Pipeline, Directory Structure, Vertical Slices
+- [Master Spec — Part 4](./master_spec_part4.md) — Testing, Security, Env Vars, Deployment
+
 **Next Spec ID:** SPEC-028
 
 ## Archived Specs
