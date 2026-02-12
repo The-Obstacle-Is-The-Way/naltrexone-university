@@ -33,12 +33,21 @@ function mapChoicesForOutput(
 function findUserIdWithNonCanonicalShuffle(
   question: ReturnType<typeof createQuestion>,
 ) {
+  if (question.choices.length <= 1) {
+    throw new Error(
+      `Test setup requires at least 2 choices (received ${question.choices.length})`,
+    );
+  }
+
   const canonicalChoices = question.choices.map((choice) => ({
     id: choice.id,
     label: choice.label,
     textMd: choice.textMd,
   }));
 
+  // buildShuffledChoiceViews uses a deterministic shuffle based on userId and questionId.
+  // To ensure the tests would fail if the controller returned canonical order, probe
+  // multiple userIds until we find one whose shuffle differs from the canonical mapping.
   for (let i = 0; i < 50; i++) {
     const userId = `user_${i + 1}`;
     const shuffledChoices = mapChoicesForOutput(question, userId);
