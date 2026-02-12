@@ -398,7 +398,7 @@ After implementation, verify with Playwright:
 
 ## Playwright Validation (2026-02-11)
 
-**Test:** `tests/e2e/audit-history-spec.spec.ts`
+**Test:** `tests/e2e/brainstorming-audit.spec.ts`
 **Screenshots:** `tests/e2e/screenshots/audit-01-*.png` through `audit-10-*.png`
 
 ### Test Flow
