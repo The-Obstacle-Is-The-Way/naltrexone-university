@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-react';
+import type { QuestionOrigin } from '@/lib/routes';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import type { GetPracticeSessionReviewOutput } from '@/src/application/use-cases/get-practice-session-review';
 import { createDeferred } from '@/tests/test-helpers/create-deferred';
@@ -43,7 +44,7 @@ function Probe({
   mode?: 'review' | null;
   sessionId?: string;
   attemptId?: string;
-  from?: 'practice' | 'history' | 'dashboard' | 'review' | 'bookmarks' | null;
+  from?: QuestionOrigin | null;
 }) {
   const output = useQuestionPageController({
     slug,
@@ -344,6 +345,103 @@ describe('useQuestionPageController (browser)', () => {
       .toHaveTextContent('2');
 
     await screen.getByTestId('clear-session').click();
+
+    await expect
+      .element(screen.getByTestId('session-nav-total'))
+      .toHaveTextContent(/^$/);
+    await expect
+      .element(screen.getByTestId('session-nav-index'))
+      .toHaveTextContent(/^$/);
+  });
+
+  it('clears session navigation when session review fails', async () => {
+    getQuestionBySlugMock.mockImplementation(async (input: unknown) => {
+      const slug = (input as { slug: string }).slug;
+      return ok({
+        questionId: `question-${slug}`,
+        slug,
+        stemMd: 'Stem',
+        difficulty: 'easy',
+        choices: [
+          { id: 'choice-1', label: 'A', textMd: 'Choice A' },
+          { id: 'choice-2', label: 'B', textMd: 'Choice B' },
+        ],
+      });
+    });
+
+    const sessionId1 = '00000000-0000-4000-8000-000000000007';
+    const sessionId2 = '00000000-0000-4000-8000-000000000008';
+
+    getPracticeSessionReviewMock
+      .mockResolvedValueOnce(
+        ok({
+          sessionId: sessionId1,
+          mode: 'exam',
+          totalCount: 2,
+          answeredCount: 2,
+          markedCount: 0,
+          rows: [
+            {
+              isAvailable: true,
+              questionId: 'question-q-1',
+              slug: 'q-1',
+              stemMd: 'Stem',
+              difficulty: 'easy',
+              order: 1,
+              isAnswered: true,
+              isCorrect: true,
+              markedForReview: false,
+            },
+            {
+              isAvailable: true,
+              questionId: 'question-q-2',
+              slug: 'q-2',
+              stemMd: 'Stem 2',
+              difficulty: 'easy',
+              order: 2,
+              isAnswered: true,
+              isCorrect: false,
+              markedForReview: false,
+            },
+          ],
+        }),
+      )
+      .mockResolvedValueOnce({
+        ok: false,
+        error: { code: 'INTERNAL_ERROR', message: 'Boom' },
+      });
+
+    function Wrapper() {
+      const [activeSessionId, setActiveSessionId] = useState(sessionId1);
+
+      return (
+        <>
+          <Probe sessionId={activeSessionId} />
+          <button
+            type="button"
+            data-testid="set-session-2"
+            onClick={() => setActiveSessionId(sessionId2)}
+          >
+            Set session 2
+          </button>
+        </>
+      );
+    }
+
+    const screen = await render(<Wrapper />);
+
+    await expect
+      .element(screen.getByTestId('session-nav-total'))
+      .toHaveTextContent('2');
+
+    await screen.getByTestId('set-session-2').click();
+
+    await expect
+      .poll(() => getPracticeSessionReviewMock.mock.calls.length)
+      .toBe(2);
+    expect(getPracticeSessionReviewMock.mock.calls[1]?.[0]).toEqual({
+      sessionId: sessionId2,
+    });
 
     await expect
       .element(screen.getByTestId('session-nav-total'))

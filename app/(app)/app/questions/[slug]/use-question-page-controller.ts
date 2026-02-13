@@ -97,11 +97,16 @@ export function useQuestionPageController(
 
     let isStale = false;
 
+    setSessionNavigation(null);
+
     startTransition(() => {
       void getPracticeSessionReview({ sessionId }).then((result) => {
         if (isStale) return;
         if (!isMounted()) return;
-        if (!result.ok) return;
+        if (!result.ok) {
+          setSessionNavigation(null);
+          return;
+        }
 
         const questions = result.data.rows
           .filter(

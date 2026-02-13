@@ -81,9 +81,19 @@ test.describe('session review navigation (SPEC-027)', () => {
     });
 
     // Click "Next →"
+    const urlBeforeNext = page.url();
     await nextLink.click();
 
     // Wait for navigation
+    await page.waitForURL(
+      (url) =>
+        url.toString() !== urlBeforeNext &&
+        url.pathname.startsWith('/app/questions/') &&
+        url.searchParams.get('sessionId') === sessionId &&
+        url.searchParams.get('from') === 'practice' &&
+        url.searchParams.get('mode') === 'review',
+      { timeout: 15_000 },
+    );
     await expect(page.getByText(/Loading question/i)).toBeHidden({
       timeout: 15_000,
     });
