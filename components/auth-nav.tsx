@@ -32,20 +32,16 @@ const getDeps = createDepsResolver<AuthNavDeps, AuthDepsContainer>(
 export async function AuthNav({
   deps,
   options,
+  showPrimaryLink = true,
 }: {
   deps?: AuthNavDeps;
   options?: { loadContainer?: LoadContainerFn<AuthDepsContainer> };
+  showPrimaryLink?: boolean;
 } = {}) {
   const skipClerk = process.env.NEXT_PUBLIC_SKIP_CLERK === 'true';
 
   const unauthenticatedNav = (
-    <div className="flex items-center space-x-4">
-      <Link
-        href={ROUTES.PRICING}
-        className="rounded-md text-sm font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]"
-      >
-        Pricing
-      </Link>
+    <div className="flex items-center">
       <Button asChild size="sm" className="rounded-full">
         <Link href={ROUTES.SIGN_IN}>Sign In</Link>
       </Button>
@@ -67,20 +63,23 @@ export async function AuthNav({
   const entitlement = await d.checkEntitlementUseCase.execute({
     userId: user.id,
   });
-  const primaryLink = entitlement.isEntitled
-    ? { href: ROUTES.APP_DASHBOARD, label: 'Dashboard' }
-    : { href: ROUTES.PRICING, label: 'Pricing' };
+  const primaryLink =
+    entitlement.isEntitled && showPrimaryLink
+      ? { href: ROUTES.APP_DASHBOARD, label: 'Dashboard' }
+      : null;
 
   const { UserButton } = await import('@clerk/nextjs');
 
   return (
     <div className="flex items-center space-x-4">
-      <Link
-        href={primaryLink.href}
-        className="rounded-md text-sm font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]"
-      >
-        {primaryLink.label}
-      </Link>
+      {primaryLink ? (
+        <Link
+          href={primaryLink.href}
+          className="rounded-md text-sm font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]"
+        >
+          {primaryLink.label}
+        </Link>
+      ) : null}
       <UserButton />
     </div>
   );

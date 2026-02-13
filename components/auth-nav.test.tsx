@@ -1,7 +1,9 @@
 // @vitest-environment jsdom
 import { renderToStaticMarkup } from 'react-dom/server';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { AuthGateway } from '@/src/application/ports/gateways';
+import { MarketingLayout } from '@/components/marketing/marketing-layout';
+import { FakeAuthGateway } from '@/src/application/test-helpers/fakes/fake-gateways';
+import { createUser } from '@/src/domain/test-helpers/factories';
 import {
   restoreProcessEnv,
   snapshotProcessEnv,
@@ -12,6 +14,27 @@ vi.mock('next/link', () => ({
 }));
 
 const ORIGINAL_ENV = snapshotProcessEnv();
+
+const MARKETING_LAYOUT_PRICING_LINK_COUNT = 2;
+const MARKETING_LAYOUT_FEATURES_LINK_COUNT = 2;
+
+function getHeader(html: string): HTMLElement {
+  const doc = new DOMParser().parseFromString(html, 'text/html');
+  const header = doc.querySelector('header');
+  if (!header) {
+    throw new Error('Expected <header> to be present');
+  }
+  return header;
+}
+
+function getLinksByHrefAndLabel(
+  header: HTMLElement,
+  input: { href: string; label: string },
+): HTMLAnchorElement[] {
+  return Array.from(
+    header.querySelectorAll<HTMLAnchorElement>(`a[href="${input.href}"]`),
+  ).filter((link) => (link.textContent ?? '').trim() === input.label);
+}
 
 describe('AuthNav', () => {
   afterEach(() => {
@@ -29,52 +52,144 @@ describe('AuthNav', () => {
     const { AuthNav } = await import('./auth-nav');
 
     const element = await AuthNav({ deps: undefined });
-    const html = renderToStaticMarkup(element);
+    const html = renderToStaticMarkup(
+      <MarketingLayout authNav={element} featuresHref="#features">
+        <div>Child content</div>
+      </MarketingLayout>,
+    );
 
-    expect(html).toContain('href="/pricing"');
-    expect(html).toContain('href="/sign-in"');
-    expect(html).toContain('Pricing');
-    expect(html).toContain('Sign In');
-    expect(html).toContain('data-slot="button"');
-    expect(html).not.toContain('data-testid="user-button"');
+    const header = getHeader(html);
+    const pricingLinks = getLinksByHrefAndLabel(header, {
+      href: '/pricing',
+      label: 'Pricing',
+    });
+
+    expect(pricingLinks).toHaveLength(MARKETING_LAYOUT_PRICING_LINK_COUNT);
+    expect(header.querySelector('a[href="/sign-in"]')?.textContent).toBe(
+      'Sign In',
+    );
+    expect(header.querySelector('[data-testid="user-button"]')).toBeNull();
   });
 
-  it('shows a Dashboard link when the user is entitled', async () => {
+  it('scenario 1: unauthenticated landing renders only one Pricing link per breakpoint', async () => {
+    process.env.NEXT_PUBLIC_SKIP_CLERK = 'false';
+
+    const authGateway = new FakeAuthGateway(null);
+    // Required by AuthNavDeps type but never reached — unauthenticated path returns early.
+    const checkEntitlementUseCase = {
+      execute: vi.fn(async () => {
+        throw new Error('Should not be called for unauthenticated user');
+      }),
+    };
+
+    const { AuthNav } = await import('./auth-nav');
+
+    const authNav = await AuthNav({
+      deps: { authGateway, checkEntitlementUseCase },
+    });
+
+    const html = renderToStaticMarkup(
+      <MarketingLayout authNav={authNav} featuresHref="#features">
+        <div>Child content</div>
+      </MarketingLayout>,
+    );
+
+    const header = getHeader(html);
+    const featuresLinks = getLinksByHrefAndLabel(header, {
+      href: '#features',
+      label: 'Features',
+    });
+    const pricingLinks = getLinksByHrefAndLabel(header, {
+      href: '/pricing',
+      label: 'Pricing',
+    });
+
+    expect(featuresLinks).toHaveLength(MARKETING_LAYOUT_FEATURES_LINK_COUNT);
+    expect(pricingLinks).toHaveLength(MARKETING_LAYOUT_PRICING_LINK_COUNT);
+    expect(header.querySelector('a[href="/sign-in"]')?.textContent).toBe(
+      'Sign In',
+    );
+    expect(header.querySelector('[data-testid="user-button"]')).toBeNull();
+  });
+
+  it('scenario 2: unauthenticated pricing page renders only one Pricing link per breakpoint', async () => {
+    process.env.NEXT_PUBLIC_SKIP_CLERK = 'false';
+
+    const authGateway = new FakeAuthGateway(null);
+    // Required by AuthNavDeps type but never reached — unauthenticated path returns early.
+    const checkEntitlementUseCase = {
+      execute: vi.fn(async () => {
+        throw new Error('Should not be called for unauthenticated user');
+      }),
+    };
+
+    const { AuthNav } = await import('./auth-nav');
+    const PricingPage = (await import('@/app/pricing/page')).default;
+
+    const element = await PricingPage({
+      searchParams: Promise.resolve({}),
+      deps: { authGateway, checkEntitlementUseCase },
+      authNavFn: () =>
+        AuthNav({ deps: { authGateway, checkEntitlementUseCase } }),
+    });
+
+    const html = renderToStaticMarkup(element);
+
+    const header = getHeader(html);
+    const featuresLinks = getLinksByHrefAndLabel(header, {
+      href: '/#features',
+      label: 'Features',
+    });
+    const pricingLinks = getLinksByHrefAndLabel(header, {
+      href: '/pricing',
+      label: 'Pricing',
+    });
+
+    expect(featuresLinks).toHaveLength(MARKETING_LAYOUT_FEATURES_LINK_COUNT);
+    expect(pricingLinks).toHaveLength(MARKETING_LAYOUT_PRICING_LINK_COUNT);
+    expect(header.querySelector('a[href="/sign-in"]')?.textContent).toBe(
+      'Sign In',
+    );
+    expect(header.querySelector('[data-testid="user-button"]')).toBeNull();
+  });
+
+  it('scenario 3: authenticated entitled app pages do not duplicate the Dashboard link', async () => {
     process.env.NEXT_PUBLIC_SKIP_CLERK = 'false';
     vi.doMock('@clerk/nextjs', () => ({
       UserButton: () => <div data-testid="user-button" />,
     }));
 
     const { AuthNav } = await import('./auth-nav');
+    const { AppLayoutShell } = await import('@/app/(app)/app/layout');
 
-    const authGateway: AuthGateway = {
-      getCurrentUser: vi.fn(async () => ({
-        id: 'user_1',
-        email: 'user@example.com',
-        createdAt: new Date('2026-02-01T00:00:00Z'),
-        updatedAt: new Date('2026-02-01T00:00:00Z'),
-      })),
-      requireUser: vi.fn(async () => {
-        throw new Error('not used');
-      }),
-    };
-
+    const user = createUser({ id: 'user_1' });
+    const authGateway = new FakeAuthGateway(user);
     const checkEntitlementUseCase = {
       execute: vi.fn(async () => ({ isEntitled: true })),
     };
 
-    const element = await AuthNav({
+    const authNav = await AuthNav({
       deps: { authGateway, checkEntitlementUseCase },
+      showPrimaryLink: false,
     });
-    const html = renderToStaticMarkup(element);
 
-    expect(html).toContain('href="/app/dashboard"');
-    expect(html).toContain('Dashboard');
-    expect(html).toContain('data-testid="user-button"');
-    expect(html).not.toContain('href="/pricing"');
+    const html = renderToStaticMarkup(
+      <AppLayoutShell authNav={authNav} mobileNav={<div />}>
+        <div>Child content</div>
+      </AppLayoutShell>,
+    );
+
+    const header = getHeader(html);
+    const dashboardLinks = getLinksByHrefAndLabel(header, {
+      href: '/app/dashboard',
+      label: 'Dashboard',
+    });
+
+    expect(dashboardLinks).toHaveLength(1);
+    expect(header.querySelector('[data-testid="user-button"]')).not.toBeNull();
   });
 
-  it('renders an unauthenticated UI when there is no current user', async () => {
+  it('scenario 4: authenticated entitled marketing pages keep a single Dashboard escape hatch', async () => {
     process.env.NEXT_PUBLIC_SKIP_CLERK = 'false';
     vi.doMock('@clerk/nextjs', () => ({
       UserButton: () => <div data-testid="user-button" />,
@@ -82,30 +197,39 @@ describe('AuthNav', () => {
 
     const { AuthNav } = await import('./auth-nav');
 
-    const authGateway: AuthGateway = {
-      getCurrentUser: vi.fn(async () => null),
-      requireUser: vi.fn(async () => {
-        throw new Error('not used');
-      }),
-    };
-
+    const user = createUser({ id: 'user_1' });
+    const authGateway = new FakeAuthGateway(user);
     const checkEntitlementUseCase = {
       execute: vi.fn(async () => ({ isEntitled: true })),
     };
 
-    const element = await AuthNav({
+    const authNav = await AuthNav({
       deps: { authGateway, checkEntitlementUseCase },
     });
-    const html = renderToStaticMarkup(element);
 
-    expect(html).toContain('href="/pricing"');
-    expect(html).toContain('href="/sign-in"');
-    expect(html).not.toContain('data-testid="user-button"');
-    expect(html).toContain('data-slot="button"');
-    expect(checkEntitlementUseCase.execute).not.toHaveBeenCalled();
+    const html = renderToStaticMarkup(
+      <MarketingLayout authNav={authNav} featuresHref="#features">
+        <div>Child content</div>
+      </MarketingLayout>,
+    );
+
+    const header = getHeader(html);
+    const pricingLinks = getLinksByHrefAndLabel(header, {
+      href: '/pricing',
+      label: 'Pricing',
+    });
+    const dashboardLinks = getLinksByHrefAndLabel(header, {
+      href: '/app/dashboard',
+      label: 'Dashboard',
+    });
+
+    expect(pricingLinks).toHaveLength(MARKETING_LAYOUT_PRICING_LINK_COUNT);
+    expect(dashboardLinks).toHaveLength(1);
+    expect(header.querySelector('[data-testid="user-button"]')).not.toBeNull();
+    expect(header.querySelector('a[href="/sign-in"]')).toBeNull();
   });
 
-  it('shows a Pricing link when the user is not entitled', async () => {
+  it('scenario 5: authenticated non-entitled marketing pages do not duplicate the Pricing link', async () => {
     process.env.NEXT_PUBLIC_SKIP_CLERK = 'false';
     vi.doMock('@clerk/nextjs', () => ({
       UserButton: () => <div data-testid="user-button" />,
@@ -113,63 +237,80 @@ describe('AuthNav', () => {
 
     const { AuthNav } = await import('./auth-nav');
 
-    const authGateway: AuthGateway = {
-      getCurrentUser: vi.fn(async () => ({
-        id: 'user_1',
-        email: 'user@example.com',
-        createdAt: new Date('2026-02-01T00:00:00Z'),
-        updatedAt: new Date('2026-02-01T00:00:00Z'),
-      })),
-      requireUser: vi.fn(async () => {
-        throw new Error('not used');
-      }),
-    };
-
+    const user = createUser({ id: 'user_1' });
+    const authGateway = new FakeAuthGateway(user);
     const checkEntitlementUseCase = {
       execute: vi.fn(async () => ({ isEntitled: false })),
     };
 
-    const element = await AuthNav({
+    const authNav = await AuthNav({
       deps: { authGateway, checkEntitlementUseCase },
     });
-    const html = renderToStaticMarkup(element);
 
-    expect(html).toContain('href="/pricing"');
-    expect(html).toContain('data-testid="user-button"');
-    expect(html).not.toContain('href="/app/dashboard"');
+    const html = renderToStaticMarkup(
+      <MarketingLayout authNav={authNav} featuresHref="#features">
+        <div>Child content</div>
+      </MarketingLayout>,
+    );
+
+    const header = getHeader(html);
+    const pricingLinks = getLinksByHrefAndLabel(header, {
+      href: '/pricing',
+      label: 'Pricing',
+    });
+    const dashboardLinks = getLinksByHrefAndLabel(header, {
+      href: '/app/dashboard',
+      label: 'Dashboard',
+    });
+
+    expect(pricingLinks).toHaveLength(MARKETING_LAYOUT_PRICING_LINK_COUNT);
+    expect(dashboardLinks).toHaveLength(0);
+    expect(header.querySelector('[data-testid="user-button"]')).not.toBeNull();
+    expect(header.querySelector('a[href="/sign-in"]')).toBeNull();
   });
 
-  it('loads dependencies from the container when deps are omitted', async () => {
+  it('scenario 6: authenticated non-entitled pricing page does not duplicate the Pricing link', async () => {
     process.env.NEXT_PUBLIC_SKIP_CLERK = 'false';
     vi.doMock('@clerk/nextjs', () => ({
       UserButton: () => <div data-testid="user-button" />,
     }));
 
     const { AuthNav } = await import('./auth-nav');
+    const PricingPage = (await import('@/app/pricing/page')).default;
 
-    const element = await AuthNav({
-      options: {
-        loadContainer: async () => ({
-          createAuthGateway: () => ({
-            getCurrentUser: async () => ({
-              id: 'user_1',
-              email: 'user@example.com',
-              createdAt: new Date('2026-02-01T00:00:00Z'),
-              updatedAt: new Date('2026-02-01T00:00:00Z'),
-            }),
-            requireUser: async () => {
-              throw new Error('not used');
-            },
-          }),
-          createCheckEntitlementUseCase: () => ({
-            execute: async () => ({ isEntitled: true }),
-          }),
-        }),
-      },
+    const user = createUser({ id: 'user_1' });
+    const authGateway = new FakeAuthGateway(user);
+    const checkEntitlementUseCase = {
+      execute: vi.fn(async () => ({ isEntitled: false })),
+    };
+
+    const element = await PricingPage({
+      searchParams: Promise.resolve({}),
+      deps: { authGateway, checkEntitlementUseCase },
+      authNavFn: () =>
+        AuthNav({ deps: { authGateway, checkEntitlementUseCase } }),
     });
+
     const html = renderToStaticMarkup(element);
 
-    expect(html).toContain('href="/app/dashboard"');
-    expect(html).toContain('data-testid="user-button"');
+    const header = getHeader(html);
+    const featuresLinks = getLinksByHrefAndLabel(header, {
+      href: '/#features',
+      label: 'Features',
+    });
+    const pricingLinks = getLinksByHrefAndLabel(header, {
+      href: '/pricing',
+      label: 'Pricing',
+    });
+    const dashboardLinks = getLinksByHrefAndLabel(header, {
+      href: '/app/dashboard',
+      label: 'Dashboard',
+    });
+
+    expect(featuresLinks).toHaveLength(MARKETING_LAYOUT_FEATURES_LINK_COUNT);
+    expect(pricingLinks).toHaveLength(MARKETING_LAYOUT_PRICING_LINK_COUNT);
+    expect(dashboardLinks).toHaveLength(0);
+    expect(header.querySelector('[data-testid="user-button"]')).not.toBeNull();
+    expect(header.querySelector('a[href="/sign-in"]')).toBeNull();
   });
 });
