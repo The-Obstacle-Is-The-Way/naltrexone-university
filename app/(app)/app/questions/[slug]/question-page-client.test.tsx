@@ -23,6 +23,17 @@ describe('QuestionView', () => {
     };
   }
 
+  const sharedSessionNavigation = {
+    questions: [
+      { slug: 'q1', order: 1, isCorrect: false },
+      { slug: 'q2', order: 2, isCorrect: true },
+      { slug: 'q3', order: 3, isCorrect: null },
+    ],
+    currentIndex: 1,
+    sessionId: 'session_123',
+    from: 'practice',
+  } as const;
+
   it('renders a Back to Dashboard utility link', async () => {
     const { QuestionView } = await import('./question-page-client');
 
@@ -245,21 +256,10 @@ describe('QuestionView', () => {
   it('renders a previous link when sessionNavigation is not on the first question', async () => {
     const { QuestionView } = await import('./question-page-client');
 
-    const sessionNavigation = {
-      questions: [
-        { slug: 'q1', order: 1, isCorrect: false },
-        { slug: 'q2', order: 2, isCorrect: true },
-        { slug: 'q3', order: 3, isCorrect: null },
-      ],
-      currentIndex: 1,
-      sessionId: 'session_123',
-      from: 'practice',
-    } as const;
-
     const html = renderToStaticMarkup(
       <QuestionView
         {...createBaseProps()}
-        sessionNavigation={sessionNavigation}
+        sessionNavigation={sharedSessionNavigation}
       />,
     );
 
@@ -280,21 +280,10 @@ describe('QuestionView', () => {
   it('renders a next link when sessionNavigation is not on the last question', async () => {
     const { QuestionView } = await import('./question-page-client');
 
-    const sessionNavigation = {
-      questions: [
-        { slug: 'q1', order: 1, isCorrect: false },
-        { slug: 'q2', order: 2, isCorrect: true },
-        { slug: 'q3', order: 3, isCorrect: null },
-      ],
-      currentIndex: 1,
-      sessionId: 'session_123',
-      from: 'practice',
-    } as const;
-
     const html = renderToStaticMarkup(
       <QuestionView
         {...createBaseProps()}
-        sessionNavigation={sessionNavigation}
+        sessionNavigation={sharedSessionNavigation}
       />,
     );
 
@@ -318,16 +307,7 @@ describe('QuestionView', () => {
     const html = renderToStaticMarkup(
       <QuestionView
         {...createBaseProps()}
-        sessionNavigation={{
-          questions: [
-            { slug: 'q1', order: 1, isCorrect: false },
-            { slug: 'q2', order: 2, isCorrect: true },
-            { slug: 'q3', order: 3, isCorrect: null },
-          ],
-          currentIndex: 1,
-          sessionId: 'session_123',
-          from: 'practice',
-        }}
+        sessionNavigation={sharedSessionNavigation}
       />,
     );
 

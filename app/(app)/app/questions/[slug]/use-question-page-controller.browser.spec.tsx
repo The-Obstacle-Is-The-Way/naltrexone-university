@@ -452,9 +452,10 @@ describe('useQuestionPageController (browser)', () => {
 
     // Resolve the first request (stale)
     deferred1.resolve(ok(reviewOutputStale));
+    await deferred1.promise;
+    await Promise.resolve();
 
     // Still shows q-2 index, not stale q-1 index
-    await new Promise((resolve) => setTimeout(resolve, 50));
     await expect
       .element(screen.getByTestId('session-nav-index'))
       .toHaveTextContent('1');
