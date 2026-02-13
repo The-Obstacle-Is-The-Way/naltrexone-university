@@ -6,6 +6,11 @@ vi.mock('next/link', () => ({
   default: (props: Record<string, unknown>) => <a {...props} />,
 }));
 
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ push: vi.fn() }),
+  useSearchParams: () => new URLSearchParams(),
+}));
+
 describe('app/(app)/app/practice/quick', () => {
   it('renders a quick practice shell', async () => {
     const QuickPracticePage = (

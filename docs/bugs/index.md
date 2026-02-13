@@ -1,7 +1,7 @@
 # Bug Reports
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-02-10
+**Last Updated:** 2026-02-12
 
 ---
 
@@ -17,9 +17,9 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 | ID | Title | Priority | Status |
 |----|-------|----------|--------|
-| *(none)* | *(no open bugs)* | - | - |
+| [BUG-132](./bug-132-duplicate-nav-links-pricing-dashboard.md) | Duplicate Nav Links — "Pricing" and "Dashboard" Appear Twice in Header | P3 | Open |
 
-**Next Bug ID:** BUG-132
+**Next Bug ID:** BUG-133
 
 ## Recently Triaged
 

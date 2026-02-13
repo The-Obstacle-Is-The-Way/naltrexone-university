@@ -1,13 +1,31 @@
-import type { SQL } from 'drizzle-orm';
-import { and, asc, desc, eq, inArray } from 'drizzle-orm';
+import {
+  and,
+  asc,
+  desc,
+  eq,
+  inArray,
+  notInArray,
+  or,
+  type SQL,
+  sql,
+} from 'drizzle-orm';
 import type { Choice, Question, QuestionTag, Tag } from '@/db/schema';
-import { questions, questionTags, tags } from '@/db/schema';
+import {
+  attempts,
+  bookmarks,
+  questions,
+  questionTags,
+  tags,
+} from '@/db/schema';
 import { ApplicationError } from '@/src/application/errors';
 import type {
   QuestionFilters,
   QuestionRepository,
 } from '@/src/application/ports/repositories';
-import { isValidChoiceLabel } from '@/src/domain/value-objects';
+import {
+  isValidChoiceLabel,
+  type QuestionProgressStatus,
+} from '@/src/domain/value-objects';
 import type { DrizzleDb } from '../shared/database-types';
 
 export class DrizzleQuestionRepository implements QuestionRepository {
@@ -72,11 +90,32 @@ export class DrizzleQuestionRepository implements QuestionRepository {
   async listPublishedCandidateIds(filters: QuestionFilters) {
     const hasDifficultyFilter = filters.difficulties.length > 0;
     const hasTagFilter = filters.tagSlugs.length > 0;
+    const statuses = filters.statuses ?? [];
+    const hasStatusFilter = statuses.length > 0;
 
     const whereParts: SQL[] = [eq(questions.status, 'published')];
 
     if (hasDifficultyFilter) {
       whereParts.push(inArray(questions.difficulty, [...filters.difficulties]));
+    }
+
+    if (hasStatusFilter) {
+      if (typeof filters.userId !== 'string') {
+        throw new ApplicationError(
+          'VALIDATION_ERROR',
+          'userId is required when filtering by status',
+        );
+      }
+
+      const userId = filters.userId;
+      const statusConditions = statuses.map((status) =>
+        this.buildStatusCondition(status, userId),
+      );
+      const statusCondition =
+        statusConditions.length === 1
+          ? statusConditions[0]
+          : or(...statusConditions);
+      if (statusCondition) whereParts.push(statusCondition);
     }
 
     const baseOrderBy = [desc(questions.createdAt), asc(questions.id)] as const;
@@ -101,6 +140,71 @@ export class DrizzleQuestionRepository implements QuestionRepository {
       .orderBy(desc(questions.createdAt), asc(questions.id));
 
     return rows.map((r) => r.id);
+  }
+
+  private latestAttemptRowsSubquery(userId: string) {
+    return this.db
+      .select({
+        questionId: attempts.questionId,
+        isCorrect: attempts.isCorrect,
+        attemptRank:
+          sql<number>`row_number() over (partition by ${attempts.questionId} order by ${attempts.answeredAt} desc, ${attempts.id} desc)`.as(
+            'attempt_rank',
+          ),
+      })
+      .from(attempts)
+      .where(eq(attempts.userId, userId))
+      .as('latest_attempt_rows');
+  }
+
+  private buildStatusCondition(
+    status: QuestionProgressStatus,
+    userId: string,
+  ): SQL {
+    switch (status) {
+      case 'unanswered':
+        // `attempts.questionId` is NOT NULL (db/schema.ts), so the NOT IN subquery
+        // cannot return NULL and is safe from NULL-related semantics. If
+        // `attempts.questionId` ever becomes nullable, prefer a NOT EXISTS / LEFT
+        // JOIN pattern instead.
+        return notInArray(
+          questions.id,
+          this.db
+            .selectDistinct({ questionId: attempts.questionId })
+            .from(attempts)
+            .where(eq(attempts.userId, userId)),
+        );
+      case 'incorrect': {
+        const latestAttemptRows = this.latestAttemptRowsSubquery(userId);
+        return inArray(
+          questions.id,
+          this.db
+            .select({ questionId: latestAttemptRows.questionId })
+            .from(latestAttemptRows)
+            .where(
+              and(
+                eq(latestAttemptRows.attemptRank, 1),
+                eq(latestAttemptRows.isCorrect, false),
+              ),
+            ),
+        );
+      }
+      case 'marked':
+        return inArray(
+          questions.id,
+          this.db
+            .select({ questionId: bookmarks.questionId })
+            .from(bookmarks)
+            .where(eq(bookmarks.userId, userId)),
+        );
+      default: {
+        const _exhaustive: never = status;
+        throw new ApplicationError(
+          'INTERNAL_ERROR',
+          `Unhandled QuestionProgressStatus: ${_exhaustive}`,
+        );
+      }
+    }
   }
 
   private toDomain(

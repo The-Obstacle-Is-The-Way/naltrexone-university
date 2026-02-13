@@ -6,7 +6,7 @@ async function renderStarter() {
   const props = {
     sessionMode: 'tutor' as const,
     sessionCount: 20,
-    filters: { tagSlugs: [], difficulties: [] },
+    filters: { tagSlugs: [], difficulties: [], statuses: [] },
     tagLoadStatus: 'idle' as const,
     availableTags: [
       {
@@ -19,6 +19,7 @@ async function renderStarter() {
     sessionStartStatus: 'idle' as const,
     sessionStartError: null,
     onToggleDifficulty: vi.fn(),
+    onToggleStatus: vi.fn(),
     onToggleTag: vi.fn(),
     onSessionModeChange: vi.fn(),
     onSessionCountChange: vi.fn(),
@@ -38,6 +39,12 @@ test('invokes onToggleDifficulty when selecting a difficulty', async () => {
   const { props, screen } = await renderStarter();
   await screen.getByRole('button', { name: 'Easy' }).click();
   expect(props.onToggleDifficulty).toHaveBeenCalledWith('easy');
+});
+
+test('invokes onToggleStatus when selecting a status', async () => {
+  const { props, screen } = await renderStarter();
+  await screen.getByRole('button', { name: 'Incorrect' }).click();
+  expect(props.onToggleStatus).toHaveBeenCalledWith('incorrect');
 });
 
 test('invokes onToggleTag when selecting a tag', async () => {
@@ -64,12 +71,13 @@ test('shows error states for tags and session start', async () => {
     <PracticeSessionStarter
       sessionMode="tutor"
       sessionCount={20}
-      filters={{ tagSlugs: [], difficulties: [] }}
+      filters={{ tagSlugs: [], difficulties: [], statuses: [] }}
       tagLoadStatus="error"
       availableTags={[]}
       sessionStartStatus="error"
       sessionStartError="Could not start session."
       onToggleDifficulty={() => undefined}
+      onToggleStatus={() => undefined}
       onToggleTag={() => undefined}
       onSessionModeChange={() => undefined}
       onSessionCountChange={() => undefined}
@@ -91,12 +99,13 @@ test('shows loading state for session start', async () => {
     <PracticeSessionStarter
       sessionMode="tutor"
       sessionCount={20}
-      filters={{ tagSlugs: [], difficulties: [] }}
+      filters={{ tagSlugs: [], difficulties: [], statuses: [] }}
       tagLoadStatus="idle"
       availableTags={[]}
       sessionStartStatus="loading"
       sessionStartError={null}
       onToggleDifficulty={() => undefined}
+      onToggleStatus={() => undefined}
       onToggleTag={() => undefined}
       onSessionModeChange={() => undefined}
       onSessionCountChange={() => undefined}

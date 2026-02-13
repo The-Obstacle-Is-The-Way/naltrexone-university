@@ -14,6 +14,7 @@ export {
   createSessionCountChangeHandler,
   createSessionModeChangeHandler,
   createToggleDifficultyHandler,
+  createToggleStatusHandler,
   createToggleTagHandler,
   handleSessionCountChange,
   handleSessionModeChange,
@@ -22,6 +23,7 @@ export {
   startSession,
 } from './practice-page-session-start';
 export type { PracticeFilters } from './practice-page-types';
+export { statusDisplayLabel } from './practice-page-types';
 
 export type LoadState = AsyncLoadStateWithIdle;
 

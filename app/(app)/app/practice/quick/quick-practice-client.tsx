@@ -1,5 +1,7 @@
 'use client';
 
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useMemo } from 'react';
 import { PracticeView } from '@/app/(app)/app/practice/components';
 import {
   fireAndForget,
@@ -7,16 +9,74 @@ import {
 } from '@/app/(app)/app/practice/fire-and-forget';
 import { usePracticeQuestionFlow } from '@/app/(app)/app/practice/hooks/use-practice-question-flow';
 import type { PracticeFilters } from '@/app/(app)/app/practice/practice-page-logic';
+import { statusDisplayLabel } from '@/app/(app)/app/practice/practice-page-types';
+import { FilterChip } from '@/components/ui/filter-chip';
 import { ROUTES } from '@/lib/routes';
+import {
+  AllQuestionProgressStatuses,
+  type QuestionProgressStatus,
+} from '@/src/domain/value-objects';
 
-const QUICK_PRACTICE_FILTERS: PracticeFilters = {
-  tagSlugs: [],
-  difficulties: [],
-};
+type SearchParamsLike = Pick<URLSearchParams, 'get' | 'toString'>;
+
+const EMPTY_TAG_SLUGS: PracticeFilters['tagSlugs'] = [];
+const EMPTY_DIFFICULTIES: PracticeFilters['difficulties'] = [];
+
+export function parseStatusParams(
+  searchParams: SearchParamsLike,
+): QuestionProgressStatus[] {
+  const raw = searchParams.get('status');
+  if (!raw) return [];
+
+  return raw
+    .split(',')
+    .filter((value): value is QuestionProgressStatus =>
+      AllQuestionProgressStatuses.includes(value as QuestionProgressStatus),
+    );
+}
+
+export function buildQuickPracticeStatusHref(input: {
+  searchParams: SearchParamsLike;
+  currentStatuses: readonly QuestionProgressStatus[];
+  toggledStatus: QuestionProgressStatus;
+}): string {
+  const selected = input.currentStatuses.includes(input.toggledStatus);
+  const next = selected
+    ? input.currentStatuses.filter((s) => s !== input.toggledStatus)
+    : [...input.currentStatuses, input.toggledStatus];
+
+  const nextParams = new URLSearchParams(input.searchParams.toString());
+  if (next.length === 0) {
+    nextParams.delete('status');
+  } else {
+    nextParams.set('status', next.join(','));
+  }
+
+  const qs = nextParams.toString();
+  return qs.length > 0
+    ? `${ROUTES.APP_PRACTICE_QUICK}?${qs}`
+    : ROUTES.APP_PRACTICE_QUICK;
+}
 
 export default function QuickPracticeClient() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const statuses = useMemo(
+    () => parseStatusParams(searchParams),
+    [searchParams],
+  );
+
+  const filters: PracticeFilters = useMemo(
+    () => ({
+      tagSlugs: EMPTY_TAG_SLUGS,
+      difficulties: EMPTY_DIFFICULTIES,
+      statuses,
+    }),
+    [statuses],
+  );
+
   const questionFlow = usePracticeQuestionFlow({
-    filters: QUICK_PRACTICE_FILTERS,
+    filters,
   });
 
   return (
@@ -24,6 +84,34 @@ export default function QuickPracticeClient() {
       title="Quick Practice"
       description="Answer one question at a time."
       backLink={{ href: ROUTES.APP_PRACTICE, label: 'Back to Practice' }}
+      topContent={
+        <div>
+          <div className="text-sm font-medium text-foreground">Status</div>
+          <fieldset
+            className="mt-2 flex flex-wrap gap-2 border-0 p-0 m-0"
+            aria-label="Status"
+          >
+            {AllQuestionProgressStatuses.map((status) => {
+              const selected = statuses.includes(status);
+              return (
+                <FilterChip
+                  key={status}
+                  label={statusDisplayLabel(status)}
+                  selected={selected}
+                  onClick={() => {
+                    const href = buildQuickPracticeStatusHref({
+                      searchParams,
+                      currentStatuses: statuses,
+                      toggledStatus: status,
+                    });
+                    router.push(href, { scroll: false });
+                  }}
+                />
+              );
+            })}
+          </fieldset>
+        </div>
+      }
       questionAreaRef={questionFlow.questionAreaRef}
       loadState={questionFlow.loadState}
       question={questionFlow.question}

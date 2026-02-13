@@ -22,6 +22,7 @@ export type UsePracticeSessionControlsOutput = {
   onSessionCountChange: PracticeSessionStarterProps['onSessionCountChange'];
   onToggleTag: PracticeSessionStarterProps['onToggleTag'];
   onToggleDifficulty: PracticeSessionStarterProps['onToggleDifficulty'];
+  onToggleStatus: PracticeSessionStarterProps['onToggleStatus'];
   onStartSession: () => Promise<void>;
   onAbandonIncompleteSession: () => Promise<void>;
 };
@@ -47,6 +48,7 @@ export function usePracticeSessionControls(): UsePracticeSessionControlsOutput {
     onSessionCountChange: sessionStart.onSessionCountChange,
     onToggleTag: sessionStart.onToggleTag,
     onToggleDifficulty: sessionStart.onToggleDifficulty,
+    onToggleStatus: sessionStart.onToggleStatus,
     onStartSession: sessionStart.onStartSession,
     onAbandonIncompleteSession: incomplete.onAbandonIncompleteSession,
   };

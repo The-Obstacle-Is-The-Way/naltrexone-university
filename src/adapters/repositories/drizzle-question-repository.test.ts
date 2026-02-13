@@ -1,5 +1,6 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { ApplicationError } from '@/src/application/errors';
+import type { QuestionProgressStatus } from '@/src/domain/value-objects';
 import { DrizzleQuestionRepository } from './drizzle-question-repository';
 
 type RepoDb = ConstructorParameters<typeof DrizzleQuestionRepository>[0];
@@ -191,48 +192,37 @@ describe('DrizzleQuestionRepository', () => {
   });
 
   describe('listPublishedCandidateIds', () => {
-    it('returns ordered ids when no tag filter is applied', async () => {
-      const rows = [{ id: 'q1' }, { id: 'q2' }];
-      const orderBy = vi.fn(async () => rows);
-      const where = vi.fn(() => ({ orderBy }));
-      const from = vi.fn(() => ({ where }));
-      const select = vi.fn(() => ({ from }));
+    it('throws VALIDATION_ERROR when statuses are provided without userId', async () => {
+      const repo = new DrizzleQuestionRepository({} as unknown as RepoDb);
 
-      const db = { select } as const;
+      const promise = repo.listPublishedCandidateIds({
+        tagSlugs: [],
+        difficulties: [],
+        statuses: ['unanswered'],
+      });
 
-      const repo = new DrizzleQuestionRepository(db as unknown as RepoDb);
-
-      await expect(
-        repo.listPublishedCandidateIds({ tagSlugs: [], difficulties: [] }),
-      ).resolves.toEqual(['q1', 'q2']);
-
-      expect(select).toHaveBeenCalledTimes(1);
-      expect(orderBy).toHaveBeenCalledTimes(1);
+      await expect(promise).rejects.toBeInstanceOf(ApplicationError);
+      await expect(promise).rejects.toMatchObject({
+        code: 'VALIDATION_ERROR',
+        message: 'userId is required when filtering by status',
+      });
     });
 
-    it('returns ids when tag filters are applied', async () => {
-      const rows = [{ id: 'q1', createdAt: new Date('2026-02-01T00:00:00Z') }];
-      const orderBy = vi.fn(async () => rows);
-      const groupBy = vi.fn(() => ({ orderBy }));
-      const where = vi.fn(() => ({ groupBy }));
-      const innerJoin2 = vi.fn(() => ({ where }));
-      const innerJoin1 = vi.fn(() => ({ innerJoin: innerJoin2 }));
-      const from = vi.fn(() => ({ innerJoin: innerJoin1 }));
-      const select = vi.fn(() => ({ from }));
+    it('throws INTERNAL_ERROR when an unknown status is provided', async () => {
+      const repo = new DrizzleQuestionRepository({} as unknown as RepoDb);
 
-      const db = { select } as const;
+      const promise = repo.listPublishedCandidateIds({
+        tagSlugs: [],
+        difficulties: [],
+        statuses: ['unknown' as unknown as QuestionProgressStatus],
+        userId: 'user_1',
+      });
 
-      const repo = new DrizzleQuestionRepository(db as unknown as RepoDb);
-
-      await expect(
-        repo.listPublishedCandidateIds({
-          tagSlugs: ['tag-1'],
-          difficulties: ['easy'],
-        }),
-      ).resolves.toEqual(['q1']);
-
-      expect(select).toHaveBeenCalledTimes(1);
-      expect(orderBy).toHaveBeenCalledTimes(1);
+      await expect(promise).rejects.toBeInstanceOf(ApplicationError);
+      await expect(promise).rejects.toMatchObject({
+        code: 'INTERNAL_ERROR',
+        message: 'Unhandled QuestionProgressStatus: unknown',
+      });
     });
   });
 });

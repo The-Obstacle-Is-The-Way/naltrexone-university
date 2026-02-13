@@ -7,7 +7,12 @@ import {
   MAX_PRACTICE_SESSION_TAG_FILTERS,
   MAX_TAG_SLUG_LENGTH,
 } from '@/src/adapters/shared/validation-limits';
-import { zDifficulty, zUuid } from '@/src/adapters/shared/zod-schemas';
+import {
+  zDifficulty,
+  zQuestionProgressStatus,
+  zUuid,
+} from '@/src/adapters/shared/zod-schemas';
+import { AllQuestionProgressStatuses } from '@/src/domain/value-objects';
 
 export const zPracticeMode = z.enum(['tutor', 'exam']);
 
@@ -23,6 +28,10 @@ export const StartPracticeSessionInputSchema = z
     difficulties: z
       .array(zDifficulty)
       .max(MAX_PRACTICE_SESSION_DIFFICULTY_FILTERS)
+      .default([]),
+    statuses: z
+      .array(zQuestionProgressStatus)
+      .max(AllQuestionProgressStatuses.length)
       .default([]),
   })
   .strict();

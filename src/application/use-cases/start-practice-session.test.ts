@@ -14,6 +14,71 @@ import type { StartPracticeSessionInput } from './start-practice-session';
 import { StartPracticeSessionUseCase } from './start-practice-session';
 
 describe('StartPracticeSessionUseCase', () => {
+  it('passes statuses + userId through to listPublishedCandidateIds when statuses are provided', async () => {
+    const userId = 'user-1';
+
+    const questionRepository = new FakeQuestionRepository([
+      createQuestion({
+        id: 'q1',
+        difficulty: 'easy',
+        tags: [],
+      }),
+    ]);
+
+    const useCase = new StartPracticeSessionUseCase(
+      questionRepository,
+      new FakePracticeSessionRepository(),
+    );
+
+    await useCase.execute({
+      userId,
+      mode: 'tutor',
+      count: 1,
+      tagSlugs: [],
+      difficulties: [],
+      statuses: ['incorrect'] as const,
+    });
+
+    expect(questionRepository.listPublishedCandidateIdsCalls[0]).toEqual({
+      tagSlugs: [],
+      difficulties: [],
+      statuses: ['incorrect'],
+      userId,
+    });
+  });
+
+  it('passes empty statuses + userId through to listPublishedCandidateIds when statuses are omitted', async () => {
+    const userId = 'user-1';
+
+    const questionRepository = new FakeQuestionRepository([
+      createQuestion({
+        id: 'q1',
+        difficulty: 'easy',
+        tags: [],
+      }),
+    ]);
+
+    const useCase = new StartPracticeSessionUseCase(
+      questionRepository,
+      new FakePracticeSessionRepository(),
+    );
+
+    await useCase.execute({
+      userId,
+      mode: 'tutor',
+      count: 1,
+      tagSlugs: [],
+      difficulties: [],
+    });
+
+    expect(questionRepository.listPublishedCandidateIdsCalls[0]).toEqual({
+      tagSlugs: [],
+      difficulties: [],
+      statuses: [],
+      userId,
+    });
+  });
+
   it('returns sessionId when creating a practice session with deterministically shuffled questions', async () => {
     const userId = 'user-1';
     const now = new Date('2026-02-01T00:00:00Z');

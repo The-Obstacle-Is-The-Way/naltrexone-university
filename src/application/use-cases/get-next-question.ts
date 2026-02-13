@@ -11,6 +11,7 @@ import { ApplicationError } from '../errors';
 import type {
   AttemptMostRecentAnsweredAtReader,
   PracticeSessionRepository,
+  QuestionFilters,
   QuestionRepository,
 } from '../ports/repositories';
 import { buildShuffledChoiceViews } from '../shared/shuffled-choice-views';
@@ -51,7 +52,7 @@ export type GetNextQuestionInput =
       userId: string;
       sessionId?: never;
       questionId?: never;
-      filters: { tagSlugs: string[]; difficulties: QuestionDifficulty[] };
+      filters: QuestionFilters;
     };
 
 export type GetNextQuestionOutput = NextQuestion | null;
@@ -173,10 +174,12 @@ export class GetNextQuestionUseCase {
 
   private async executeForFilters(
     userId: string,
-    filters: { tagSlugs: string[]; difficulties: QuestionDifficulty[] },
+    filters: QuestionFilters,
   ): Promise<GetNextQuestionOutput> {
-    const candidateIds =
-      await this.questions.listPublishedCandidateIds(filters);
+    const candidateIds = await this.questions.listPublishedCandidateIds({
+      ...filters,
+      userId,
+    });
     if (candidateIds.length === 0) return null;
 
     const mostRecent =

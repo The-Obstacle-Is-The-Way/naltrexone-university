@@ -30,7 +30,7 @@ vi.mock('@/src/adapters/controllers/question-controller', () => ({
   submitAnswer: submitAnswerMock,
 }));
 
-const TEST_FILTERS = { tagSlugs: [], difficulties: [] };
+const TEST_FILTERS = { tagSlugs: [], difficulties: [], statuses: [] };
 
 function PracticeQuestionFlowHookProbe() {
   const output = usePracticeQuestionFlow({ filters: TEST_FILTERS });

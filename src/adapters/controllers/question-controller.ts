@@ -9,7 +9,11 @@ import {
   MAX_TIME_SPENT_SECONDS,
 } from '@/src/adapters/shared/validation-limits';
 import { withIdempotency } from '@/src/adapters/shared/with-idempotency';
-import { zDifficulty, zUuid } from '@/src/adapters/shared/zod-schemas';
+import {
+  zDifficulty,
+  zQuestionProgressStatus,
+  zUuid,
+} from '@/src/adapters/shared/zod-schemas';
 import { ApplicationError } from '@/src/application/errors';
 import type {
   AuthGateway,
@@ -25,7 +29,10 @@ import type {
   SubmitAnswerInput,
   SubmitAnswerOutput,
 } from '@/src/application/use-cases/submit-answer';
-import { AllChoiceLabels } from '@/src/domain/value-objects';
+import {
+  AllChoiceLabels,
+  AllQuestionProgressStatuses,
+} from '@/src/domain/value-objects';
 import { createAction } from './create-action';
 import type { CheckEntitlementUseCase } from './require-entitled-user-id';
 import { requireEntitledUserId } from './require-entitled-user-id';
@@ -39,6 +46,10 @@ const QuestionFiltersSchema = z
     difficulties: z
       .array(zDifficulty)
       .max(MAX_PRACTICE_SESSION_DIFFICULTY_FILTERS)
+      .default([]),
+    statuses: z
+      .array(zQuestionProgressStatus)
+      .max(AllQuestionProgressStatuses.length)
       .default([]),
   })
   .strict();

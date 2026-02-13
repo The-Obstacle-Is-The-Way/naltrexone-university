@@ -103,7 +103,8 @@ export const startPracticeSession = createAction({
   execute: async (input, d) => {
     const userId = await requireEntitledUserId(d);
 
-    const { mode, count, tagSlugs, difficulties, idempotencyKey } = input;
+    const { mode, count, tagSlugs, difficulties, statuses, idempotencyKey } =
+      input;
 
     async function createNewSession(): Promise<StartPracticeSessionOutput> {
       const rate = await d.rateLimiter.limit({
@@ -123,6 +124,7 @@ export const startPracticeSession = createAction({
         count,
         tagSlugs,
         difficulties,
+        statuses,
       });
     }
 
