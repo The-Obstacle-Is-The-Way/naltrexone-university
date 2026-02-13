@@ -101,20 +101,9 @@ describe('QuestionView', () => {
 
     const html = renderToStaticMarkup(
       <QuestionView
-        {...({
-          loadState: { status: 'ready' },
-          question: null,
-          selectedChoiceId: null,
-          submitResult: null,
-          canSubmit: false,
-          isPending: false,
-          origin: 'practice',
-          sessionId: 'session_123',
-          onTryAgain: () => undefined,
-          onSelectChoice: () => undefined,
-          onSubmit: () => undefined,
-          onReattempt: () => undefined,
-        } as const)}
+        {...createBaseProps()}
+        origin="practice"
+        sessionId="session_123"
       />,
     );
     const doc = new DOMParser().parseFromString(html, 'text/html');
@@ -128,20 +117,9 @@ describe('QuestionView', () => {
 
     const html = renderToStaticMarkup(
       <QuestionView
-        {...({
-          loadState: { status: 'ready' },
-          question: null,
-          selectedChoiceId: null,
-          submitResult: null,
-          canSubmit: false,
-          isPending: false,
-          origin: 'history',
-          sessionId: 'session_123',
-          onTryAgain: () => undefined,
-          onSelectChoice: () => undefined,
-          onSubmit: () => undefined,
-          onReattempt: () => undefined,
-        } as const)}
+        {...createBaseProps()}
+        origin="history"
+        sessionId="session_123"
       />,
     );
     const doc = new DOMParser().parseFromString(html, 'text/html');

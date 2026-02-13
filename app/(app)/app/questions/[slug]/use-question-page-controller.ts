@@ -90,10 +90,16 @@ export function useQuestionPageController(
 
   useEffect(() => {
     const sessionId = input.sessionId;
-    if (!sessionId) return;
+    if (!sessionId) {
+      setSessionNavigation(null);
+      return;
+    }
+
+    let isStale = false;
 
     startTransition(() => {
       void getPracticeSessionReview({ sessionId }).then((result) => {
+        if (isStale) return;
         if (!isMounted()) return;
         if (!result.ok) return;
 
@@ -108,7 +114,10 @@ export function useQuestionPageController(
           }));
 
         const currentIndex = questions.findIndex((q) => q.slug === input.slug);
-        if (currentIndex === -1) return;
+        if (currentIndex === -1) {
+          setSessionNavigation(null);
+          return;
+        }
 
         setSessionNavigation({
           questions,
@@ -118,6 +127,10 @@ export function useQuestionPageController(
         });
       });
     });
+
+    return () => {
+      isStale = true;
+    };
   }, [input.sessionId, input.slug, input.from, isMounted]);
 
   useEffect(() => {

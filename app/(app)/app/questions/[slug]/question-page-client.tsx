@@ -99,6 +99,9 @@ function SessionNavigationBar({
   const next =
     currentIndex < questions.length - 1 ? questions[currentIndex + 1] : null;
 
+  const linkClassName =
+    'text-sm font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]';
+
   return (
     <div className="flex items-center justify-between">
       {prev ? (
@@ -108,7 +111,7 @@ function SessionNavigationBar({
             mode: 'review',
             sessionId,
           })}
-          className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]"
+          className={linkClassName}
         >
           ← Previous
         </Link>
@@ -127,7 +130,7 @@ function SessionNavigationBar({
             mode: 'review',
             sessionId,
           })}
-          className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]"
+          className={linkClassName}
         >
           Next →
         </Link>
