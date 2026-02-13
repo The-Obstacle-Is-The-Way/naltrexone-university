@@ -269,6 +269,92 @@ describe('useQuestionPageController (browser)', () => {
       .toHaveTextContent('q-2');
   });
 
+  it('does not refetch the session review when slug changes within the same session', async () => {
+    getQuestionBySlugMock.mockImplementation(async (input: unknown) => {
+      const slug = (input as { slug: string }).slug;
+      return ok({
+        questionId: `question-${slug}`,
+        slug,
+        stemMd: 'Stem',
+        difficulty: 'easy',
+        choices: [
+          { id: 'choice-1', label: 'A', textMd: 'Choice A' },
+          { id: 'choice-2', label: 'B', textMd: 'Choice B' },
+        ],
+      });
+    });
+
+    const sessionId = '00000000-0000-4000-8000-000000000009';
+    getPracticeSessionReviewMock.mockResolvedValue(
+      ok({
+        sessionId,
+        mode: 'exam',
+        totalCount: 2,
+        answeredCount: 2,
+        markedCount: 0,
+        rows: [
+          {
+            isAvailable: true,
+            questionId: 'question-q-1',
+            slug: 'q-1',
+            stemMd: 'Stem',
+            difficulty: 'easy',
+            order: 1,
+            isAnswered: true,
+            isCorrect: true,
+            markedForReview: false,
+          },
+          {
+            isAvailable: true,
+            questionId: 'question-q-2',
+            slug: 'q-2',
+            stemMd: 'Stem 2',
+            difficulty: 'easy',
+            order: 2,
+            isAnswered: true,
+            isCorrect: false,
+            markedForReview: false,
+          },
+        ],
+      }),
+    );
+
+    function Wrapper() {
+      const [slug, setSlug] = useState('q-1');
+
+      return (
+        <>
+          <Probe slug={slug} sessionId={sessionId} />
+          <button
+            type="button"
+            data-testid="set-slug-q-2"
+            onClick={() => setSlug('q-2')}
+          >
+            Set slug q-2
+          </button>
+        </>
+      );
+    }
+
+    const screen = await render(<Wrapper />);
+
+    await expect
+      .poll(() => getPracticeSessionReviewMock.mock.calls.length)
+      .toBe(1);
+    await expect
+      .element(screen.getByTestId('session-nav-index'))
+      .toHaveTextContent('0');
+
+    await screen.getByTestId('set-slug-q-2').click();
+
+    await expect
+      .element(screen.getByTestId('session-nav-index'))
+      .toHaveTextContent('1');
+    await expect
+      .poll(() => getPracticeSessionReviewMock.mock.calls.length)
+      .toBe(1);
+  });
+
   it('clears session navigation when sessionId is removed', async () => {
     getQuestionBySlugMock.mockImplementation(async (input: unknown) => {
       const slug = (input as { slug: string }).slug;

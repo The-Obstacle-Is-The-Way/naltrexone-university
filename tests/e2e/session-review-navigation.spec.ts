@@ -199,7 +199,7 @@ test.describe('session review navigation (SPEC-027)', () => {
 
     // Verify URL does NOT contain sessionId
     await expect(page).toHaveURL(/\/app\/questions\//, { timeout: 15_000 });
-    expect(page.url()).not.toContain('sessionId=');
+    await expect(page).not.toHaveURL(/sessionId=/);
 
     // Wait for question content to load
     await expect(page.getByText(/Loading question/i)).toBeHidden({

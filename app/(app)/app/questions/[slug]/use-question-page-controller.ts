@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState, useTransition } from 'react';
+import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import {
   canSubmitQuestionAnswer,
   createLoadQuestionAction,
@@ -66,6 +66,9 @@ export function useQuestionPageController(
     useState<SessionNavigation | null>(null);
   const [isPending, startTransition] = useTransition();
   const isMounted = useIsMounted();
+  const sessionQuestionsBySessionIdRef = useRef<
+    Map<string, SessionNavigation['questions']>
+  >(new Map());
 
   const loadQuestion = useMemo(
     () =>
@@ -97,6 +100,26 @@ export function useQuestionPageController(
 
     let isStale = false;
 
+    const cachedQuestions =
+      sessionQuestionsBySessionIdRef.current.get(sessionId) ?? null;
+    if (cachedQuestions) {
+      const currentIndex = cachedQuestions.findIndex(
+        (q) => q.slug === input.slug,
+      );
+      if (currentIndex === -1) {
+        setSessionNavigation(null);
+        return;
+      }
+
+      setSessionNavigation({
+        questions: cachedQuestions,
+        currentIndex,
+        sessionId,
+        from: input.from ?? 'practice',
+      });
+      return;
+    }
+
     setSessionNavigation(null);
 
     startTransition(() => {
@@ -123,6 +146,8 @@ export function useQuestionPageController(
           setSessionNavigation(null);
           return;
         }
+
+        sessionQuestionsBySessionIdRef.current.set(sessionId, questions);
 
         setSessionNavigation({
           questions,
