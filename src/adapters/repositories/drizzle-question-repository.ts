@@ -199,7 +199,10 @@ export class DrizzleQuestionRepository implements QuestionRepository {
         );
       default: {
         const _exhaustive: never = status;
-        throw new Error(`Unhandled QuestionProgressStatus: ${_exhaustive}`);
+        throw new ApplicationError(
+          'INTERNAL_ERROR',
+          `Unhandled QuestionProgressStatus: ${_exhaustive}`,
+        );
       }
     }
   }

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { ApplicationError } from '@/src/application/errors';
+import type { QuestionProgressStatus } from '@/src/domain/value-objects';
 import { DrizzleQuestionRepository } from './drizzle-question-repository';
 
 type RepoDb = ConstructorParameters<typeof DrizzleQuestionRepository>[0];
@@ -204,6 +205,23 @@ describe('DrizzleQuestionRepository', () => {
       await expect(promise).rejects.toMatchObject({
         code: 'VALIDATION_ERROR',
         message: 'userId is required when filtering by status',
+      });
+    });
+
+    it('throws INTERNAL_ERROR when an unknown status is provided', async () => {
+      const repo = new DrizzleQuestionRepository({} as unknown as RepoDb);
+
+      const promise = repo.listPublishedCandidateIds({
+        tagSlugs: [],
+        difficulties: [],
+        statuses: ['unknown' as unknown as QuestionProgressStatus],
+        userId: 'user_1',
+      });
+
+      await expect(promise).rejects.toBeInstanceOf(ApplicationError);
+      await expect(promise).rejects.toMatchObject({
+        code: 'INTERNAL_ERROR',
+        message: 'Unhandled QuestionProgressStatus: unknown',
       });
     });
   });

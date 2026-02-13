@@ -7,6 +7,10 @@ export type PracticeFilters = {
   statuses: QuestionProgressStatus[];
 };
 
+function assertUnreachable(value: never): never {
+  throw new Error(`Unhandled QuestionProgressStatus: ${value}`);
+}
+
 export function statusDisplayLabel(status: QuestionProgressStatus): string {
   switch (status) {
     case 'unanswered':
@@ -15,5 +19,7 @@ export function statusDisplayLabel(status: QuestionProgressStatus): string {
       return 'Incorrect';
     case 'marked':
       return 'Marked';
+    default:
+      return assertUnreachable(status);
   }
 }

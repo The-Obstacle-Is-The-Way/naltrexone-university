@@ -435,7 +435,7 @@ describe('DrizzleQuestionRepository', () => {
         difficulty: 'easy',
         createdAt: new Date('2026-01-01T00:00:00.000Z'),
       });
-      const qUnmarked = await createQuestion({
+      const _qUnmarked = await createQuestion({
         slug: `it-unmarked-${randomUUID()}`,
         status: 'published',
         difficulty: 'easy',
@@ -456,7 +456,6 @@ describe('DrizzleQuestionRepository', () => {
       });
 
       expect(result).toEqual([qMarked.id]);
-      expect(result).not.toContain(qUnmarked.id);
     });
 
     it('combines unanswered and incorrect with OR logic', async () => {
