@@ -15,6 +15,9 @@ vi.mock('next/link', () => ({
 
 const ORIGINAL_ENV = snapshotProcessEnv();
 
+const MARKETING_LAYOUT_PRICING_LINK_COUNT = 2;
+const MARKETING_LAYOUT_FEATURES_LINK_COUNT = 2;
+
 function getHeader(html: string): HTMLElement {
   const doc = new DOMParser().parseFromString(html, 'text/html');
   const header = doc.querySelector('header');
@@ -61,7 +64,7 @@ describe('AuthNav', () => {
       label: 'Pricing',
     });
 
-    expect(pricingLinks).toHaveLength(2);
+    expect(pricingLinks).toHaveLength(MARKETING_LAYOUT_PRICING_LINK_COUNT);
     expect(header.querySelector('a[href="/sign-in"]')?.textContent).toBe(
       'Sign In',
     );
@@ -89,16 +92,22 @@ describe('AuthNav', () => {
     );
 
     const header = getHeader(html);
+    const featuresLinks = getLinksByHrefAndLabel(header, {
+      href: '#features',
+      label: 'Features',
+    });
     const pricingLinks = getLinksByHrefAndLabel(header, {
       href: '/pricing',
       label: 'Pricing',
     });
 
-    expect(pricingLinks).toHaveLength(2);
+    expect(featuresLinks).toHaveLength(MARKETING_LAYOUT_FEATURES_LINK_COUNT);
+    expect(pricingLinks).toHaveLength(MARKETING_LAYOUT_PRICING_LINK_COUNT);
     expect(header.querySelector('a[href="/sign-in"]')?.textContent).toBe(
       'Sign In',
     );
     expect(header.querySelector('[data-testid="user-button"]')).toBeNull();
+    expect(checkEntitlementUseCase.execute).not.toHaveBeenCalled();
   });
 
   it('scenario 2: unauthenticated pricing page renders only one Pricing link per breakpoint', async () => {
@@ -116,22 +125,28 @@ describe('AuthNav', () => {
     });
 
     const html = renderToStaticMarkup(
-      <MarketingLayout authNav={authNav} featuresHref="#features">
+      <MarketingLayout authNav={authNav} featuresHref="/#features">
         <div>Child content</div>
       </MarketingLayout>,
     );
 
     const header = getHeader(html);
+    const featuresLinks = getLinksByHrefAndLabel(header, {
+      href: '/#features',
+      label: 'Features',
+    });
     const pricingLinks = getLinksByHrefAndLabel(header, {
       href: '/pricing',
       label: 'Pricing',
     });
 
-    expect(pricingLinks).toHaveLength(2);
+    expect(featuresLinks).toHaveLength(MARKETING_LAYOUT_FEATURES_LINK_COUNT);
+    expect(pricingLinks).toHaveLength(MARKETING_LAYOUT_PRICING_LINK_COUNT);
     expect(header.querySelector('a[href="/sign-in"]')?.textContent).toBe(
       'Sign In',
     );
     expect(header.querySelector('[data-testid="user-button"]')).toBeNull();
+    expect(checkEntitlementUseCase.execute).not.toHaveBeenCalled();
   });
 
   it('scenario 3: authenticated entitled app pages do not duplicate the Dashboard link', async () => {
@@ -204,7 +219,7 @@ describe('AuthNav', () => {
       label: 'Dashboard',
     });
 
-    expect(pricingLinks).toHaveLength(2);
+    expect(pricingLinks).toHaveLength(MARKETING_LAYOUT_PRICING_LINK_COUNT);
     expect(dashboardLinks).toHaveLength(1);
     expect(header.querySelector('[data-testid="user-button"]')).not.toBeNull();
     expect(header.querySelector('a[href="/sign-in"]')).toBeNull();
@@ -244,36 +259,10 @@ describe('AuthNav', () => {
       label: 'Dashboard',
     });
 
-    expect(pricingLinks).toHaveLength(2);
+    expect(pricingLinks).toHaveLength(MARKETING_LAYOUT_PRICING_LINK_COUNT);
     expect(dashboardLinks).toHaveLength(0);
     expect(header.querySelector('[data-testid="user-button"]')).not.toBeNull();
     expect(header.querySelector('a[href="/sign-in"]')).toBeNull();
-  });
-
-  it('scenario 6: non-entitled users are redirected away from app routes', async () => {
-    const { enforceEntitledAppUser } = await import('@/app/(app)/app/layout');
-
-    const user = createUser({ id: 'user_1' });
-    const authGateway = new FakeAuthGateway(user);
-    const checkEntitlementUseCase = {
-      execute: vi.fn(async () => ({
-        isEntitled: false,
-        reason: 'subscription_required' as const,
-      })),
-    };
-
-    const redirectFn = vi.fn((url: string) => {
-      throw new Error(`redirect:${url}`);
-    });
-
-    await expect(
-      enforceEntitledAppUser(
-        { authGateway, checkEntitlementUseCase },
-        redirectFn as never,
-      ),
-    ).rejects.toMatchObject({
-      message: 'redirect:/pricing?reason=subscription_required',
-    });
   });
 
   it('scenario 7: authenticated non-entitled pricing page does not duplicate the Pricing link', async () => {
@@ -295,18 +284,23 @@ describe('AuthNav', () => {
     });
 
     const html = renderToStaticMarkup(
-      <MarketingLayout authNav={authNav} featuresHref="#features">
+      <MarketingLayout authNav={authNav} featuresHref="/#features">
         <div>Child content</div>
       </MarketingLayout>,
     );
 
     const header = getHeader(html);
+    const featuresLinks = getLinksByHrefAndLabel(header, {
+      href: '/#features',
+      label: 'Features',
+    });
     const pricingLinks = getLinksByHrefAndLabel(header, {
       href: '/pricing',
       label: 'Pricing',
     });
 
-    expect(pricingLinks).toHaveLength(2);
+    expect(featuresLinks).toHaveLength(MARKETING_LAYOUT_FEATURES_LINK_COUNT);
+    expect(pricingLinks).toHaveLength(MARKETING_LAYOUT_PRICING_LINK_COUNT);
     expect(header.querySelector('[data-testid="user-button"]')).not.toBeNull();
     expect(header.querySelector('a[href="/sign-in"]')).toBeNull();
   });

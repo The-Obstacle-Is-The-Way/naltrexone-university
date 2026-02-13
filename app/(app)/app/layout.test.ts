@@ -24,7 +24,7 @@ describe('app/(app)/app/layout', () => {
     expect((mod as Record<string, unknown>).dynamic).toBe('force-dynamic');
   });
 
-  it('redirects to /pricing when user is not entitled', async () => {
+  it('scenario 6: redirects non-entitled users away from app routes', async () => {
     const user = createUser();
 
     const authGateway: AuthGateway = {
