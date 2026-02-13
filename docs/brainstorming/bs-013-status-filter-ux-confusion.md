@@ -17,7 +17,7 @@ The status filter (Unanswered / Incorrect / Marked) works correctly in code but 
 
 3. **"Marked" is a different dimension.** "Unanswered" and "Incorrect" are progress states (mutually exclusive per question). "Marked" is a bookmark (orthogonal — a question can be marked AND unanswered, or marked AND incorrect, or marked AND correct). Presenting all three as peer chips in the same row conflates two different concepts.
 
-4. **Empty-state ambiguity.** When nothing is selected, all questions are included — but there's no visual indication of this. The hint text "Leave empty to include all questions" (Practice page only) is easy to miss, and "nothing selected" is ambiguous: does it mean "no filter applied" or "I forgot to pick one"?
+4. **The "no filter" state is under-communicated.** "Nothing selected = all questions" is only explained via hint text ("Leave empty to include all questions"), which is easy to miss (and not shown on Quick Practice), so the empty state reads as either "no filter applied" or "I forgot to pick one".
 
 ## Evidence: BS-012 vs SPEC-024 Divergence
 
