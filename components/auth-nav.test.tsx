@@ -119,16 +119,16 @@ describe('AuthNav', () => {
     };
 
     const { AuthNav } = await import('./auth-nav');
+    const PricingPage = (await import('@/app/pricing/page')).default;
 
-    const authNav = await AuthNav({
+    const element = await PricingPage({
+      searchParams: Promise.resolve({}),
       deps: { authGateway, checkEntitlementUseCase },
+      authNavFn: () =>
+        AuthNav({ deps: { authGateway, checkEntitlementUseCase } }),
     });
 
-    const html = renderToStaticMarkup(
-      <MarketingLayout authNav={authNav} featuresHref="/#features">
-        <div>Child content</div>
-      </MarketingLayout>,
-    );
+    const html = renderToStaticMarkup(element);
 
     const header = getHeader(html);
     const featuresLinks = getLinksByHrefAndLabel(header, {
@@ -272,6 +272,7 @@ describe('AuthNav', () => {
     }));
 
     const { AuthNav } = await import('./auth-nav');
+    const PricingPage = (await import('@/app/pricing/page')).default;
 
     const user = createUser({ id: 'user_1' });
     const authGateway = new FakeAuthGateway(user);
@@ -279,15 +280,14 @@ describe('AuthNav', () => {
       execute: vi.fn(async () => ({ isEntitled: false })),
     };
 
-    const authNav = await AuthNav({
+    const element = await PricingPage({
+      searchParams: Promise.resolve({}),
       deps: { authGateway, checkEntitlementUseCase },
+      authNavFn: () =>
+        AuthNav({ deps: { authGateway, checkEntitlementUseCase } }),
     });
 
-    const html = renderToStaticMarkup(
-      <MarketingLayout authNav={authNav} featuresHref="/#features">
-        <div>Child content</div>
-      </MarketingLayout>,
-    );
+    const html = renderToStaticMarkup(element);
 
     const header = getHeader(html);
     const featuresLinks = getLinksByHrefAndLabel(header, {
