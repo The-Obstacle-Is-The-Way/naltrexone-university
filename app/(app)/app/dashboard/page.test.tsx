@@ -86,6 +86,7 @@ describe('app/(app)/app/dashboard', () => {
         `a[href="${toQuestionRoute('q-correct', {
           from: 'dashboard',
           mode: 'review',
+          attemptId: 'attempt_1',
         })}"]`,
       ),
     ).not.toBeNull();
@@ -94,6 +95,7 @@ describe('app/(app)/app/dashboard', () => {
         `a[href="${toQuestionRoute('q-incorrect', {
           from: 'dashboard',
           mode: 'review',
+          attemptId: 'attempt_2',
         })}"]`,
       ),
     ).not.toBeNull();

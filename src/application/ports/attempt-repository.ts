@@ -108,6 +108,14 @@ export interface AttemptSingleQuestionReader {
     userId: string,
     questionId: string,
   ): Promise<Attempt | null>;
+
+  findByIdAndUserId(attemptId: string, userId: string): Promise<Attempt | null>;
+
+  findBySessionIdAndQuestionId(
+    sessionId: string,
+    userId: string,
+    questionId: string,
+  ): Promise<Attempt | null>;
 }
 
 export interface AttemptMostRecentAnsweredAtReader {

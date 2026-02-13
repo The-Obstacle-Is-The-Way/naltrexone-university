@@ -729,6 +729,132 @@ describe('FakeAttemptRepository', () => {
     });
   });
 
+  describe('findByIdAndUserId', () => {
+    it('returns attempt when id and userId match', async () => {
+      const repo = new FakeAttemptRepository([
+        {
+          id: 'attempt-1',
+          userId: 'user-1',
+          questionId: 'q-1',
+          practiceSessionId: null,
+          selectedChoiceId: 'c-1',
+          isCorrect: true,
+          timeSpentSeconds: 0,
+          answeredAt: new Date('2026-02-01T00:00:00Z'),
+        },
+      ]);
+
+      await expect(repo.findByIdAndUserId('attempt-1', 'user-1')).resolves.toBe(
+        repo.getAll()[0],
+      );
+    });
+
+    it('returns null when attempt exists but belongs to a different user', async () => {
+      const repo = new FakeAttemptRepository([
+        {
+          id: 'attempt-1',
+          userId: 'user-1',
+          questionId: 'q-1',
+          practiceSessionId: null,
+          selectedChoiceId: 'c-1',
+          isCorrect: true,
+          timeSpentSeconds: 0,
+          answeredAt: new Date('2026-02-01T00:00:00Z'),
+        },
+      ]);
+
+      await expect(
+        repo.findByIdAndUserId('attempt-1', 'user-2'),
+      ).resolves.toBeNull();
+    });
+
+    it('returns null when attempt does not exist', async () => {
+      const repo = new FakeAttemptRepository([]);
+
+      await expect(
+        repo.findByIdAndUserId('attempt-missing', 'user-1'),
+      ).resolves.toBeNull();
+    });
+  });
+
+  describe('findBySessionIdAndQuestionId', () => {
+    it('returns attempt when sessionId, userId, and questionId match', async () => {
+      const repo = new FakeAttemptRepository([
+        {
+          id: 'attempt-1',
+          userId: 'user-1',
+          questionId: 'q-1',
+          practiceSessionId: 'session-1',
+          selectedChoiceId: 'c-1',
+          isCorrect: true,
+          timeSpentSeconds: 0,
+          answeredAt: new Date('2026-02-01T00:00:00Z'),
+        },
+      ]);
+
+      await expect(
+        repo.findBySessionIdAndQuestionId('session-1', 'user-1', 'q-1'),
+      ).resolves.toBe(repo.getAll()[0]);
+    });
+
+    it('returns null when sessionId matches but questionId differs', async () => {
+      const repo = new FakeAttemptRepository([
+        {
+          id: 'attempt-1',
+          userId: 'user-1',
+          questionId: 'q-1',
+          practiceSessionId: 'session-1',
+          selectedChoiceId: 'c-1',
+          isCorrect: true,
+          timeSpentSeconds: 0,
+          answeredAt: new Date('2026-02-01T00:00:00Z'),
+        },
+      ]);
+
+      await expect(
+        repo.findBySessionIdAndQuestionId('session-1', 'user-1', 'q-2'),
+      ).resolves.toBeNull();
+    });
+
+    it('returns null when sessionId matches but userId differs', async () => {
+      const repo = new FakeAttemptRepository([
+        {
+          id: 'attempt-1',
+          userId: 'user-1',
+          questionId: 'q-1',
+          practiceSessionId: 'session-1',
+          selectedChoiceId: 'c-1',
+          isCorrect: true,
+          timeSpentSeconds: 0,
+          answeredAt: new Date('2026-02-01T00:00:00Z'),
+        },
+      ]);
+
+      await expect(
+        repo.findBySessionIdAndQuestionId('session-1', 'user-2', 'q-1'),
+      ).resolves.toBeNull();
+    });
+
+    it('returns null when sessionId does not exist', async () => {
+      const repo = new FakeAttemptRepository([
+        {
+          id: 'attempt-1',
+          userId: 'user-1',
+          questionId: 'q-1',
+          practiceSessionId: 'session-1',
+          selectedChoiceId: 'c-1',
+          isCorrect: true,
+          timeSpentSeconds: 0,
+          answeredAt: new Date('2026-02-01T00:00:00Z'),
+        },
+      ]);
+
+      await expect(
+        repo.findBySessionIdAndQuestionId('session-missing', 'user-1', 'q-1'),
+      ).resolves.toBeNull();
+    });
+  });
+
   describe('listRecentByUserId', () => {
     it('returns attempts in descending answeredAt order (limited)', async () => {
       const repo = new FakeAttemptRepository([

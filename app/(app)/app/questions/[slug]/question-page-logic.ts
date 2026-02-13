@@ -4,12 +4,24 @@ import {
 } from '@/app/(app)/app/practice/practice-logic';
 import { runTransitionedAsyncAction } from '@/app/(app)/app/practice/shared/question-flow-actions';
 import type { AsyncLoadState } from '@/app/(app)/app/shared/load-state';
+import type { QuestionOrigin } from '@/lib/routes';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import type { GetQuestionBySlugOutput } from '@/src/adapters/controllers/question-view-controller';
 import type { GetPreviousAttemptOutput } from '@/src/application/use-cases/get-previous-attempt';
 import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
 
 export type LoadState = AsyncLoadState;
+
+export type SessionNavigation = {
+  questions: ReadonlyArray<{
+    slug: string;
+    order: number;
+    isCorrect: boolean | null;
+  }>;
+  currentIndex: number;
+  sessionId: string;
+  from: QuestionOrigin;
+};
 
 export function canSubmitQuestionAnswer(input: {
   loadState: LoadState;
@@ -192,6 +204,8 @@ export function reattemptQuestion(input: {
 
 export async function loadPreviousAttempt(input: {
   questionId: string;
+  attemptId?: string;
+  sessionId?: string;
   getPreviousAttemptFn: (
     input: unknown,
   ) => Promise<ActionResult<GetPreviousAttemptOutput | null>>;
@@ -205,6 +219,8 @@ export async function loadPreviousAttempt(input: {
   try {
     res = await input.getPreviousAttemptFn({
       questionId: input.questionId,
+      ...(input.attemptId ? { attemptId: input.attemptId } : {}),
+      ...(input.sessionId ? { sessionId: input.sessionId } : {}),
     });
   } catch {
     // Silently fall back to attempt mode — review is best-effort

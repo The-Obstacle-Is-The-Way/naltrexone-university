@@ -118,6 +118,7 @@ export function HistorySessionsTab({ result }: HistorySessionsTabProps) {
                     <SessionBreakdownList
                       rows={selectedReview.rows}
                       from="history"
+                      sessionId={row.sessionId}
                     />
                   ) : null}
                 </div>

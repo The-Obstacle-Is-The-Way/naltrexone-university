@@ -83,6 +83,8 @@ function createDeps(overrides?: {
     execute: (input: {
       userId: string;
       questionId: string;
+      attemptId?: string;
+      sessionId?: string;
     }) => Promise<unknown>;
   };
 }) {
@@ -128,6 +130,8 @@ function createDeps(overrides?: {
       execute: (input: {
         userId: string;
         questionId: string;
+        attemptId?: string;
+        sessionId?: string;
       }) => Promise<unknown>;
     });
 
@@ -337,11 +341,73 @@ describe('question-view-controller', () => {
       });
     });
 
+    it('passes attemptId to use case when provided', async () => {
+      const userId = 'user_1';
+      const questionId = 'q1';
+      const attemptId = '00000000-0000-4000-8000-000000000001';
+
+      let receivedInput: {
+        userId: string;
+        questionId: string;
+        attemptId?: string;
+      } | null = null;
+      const deps = createDeps({
+        getPreviousAttemptUseCase: {
+          execute: async (input) => {
+            receivedInput = input;
+            return null;
+          },
+        },
+        user: createUser({ id: userId }),
+      });
+
+      const result = await getPreviousAttempt(
+        { questionId, attemptId },
+        deps as never,
+      );
+
+      expect(receivedInput).toEqual({ userId, questionId, attemptId });
+      expect(result).toEqual({ ok: true, data: null });
+    });
+
+    it('passes sessionId to use case when provided', async () => {
+      const userId = 'user_1';
+      const questionId = 'q1';
+      const sessionId = '00000000-0000-4000-8000-000000000002';
+
+      let receivedInput: {
+        userId: string;
+        questionId: string;
+        sessionId?: string;
+      } | null = null;
+      const deps = createDeps({
+        getPreviousAttemptUseCase: {
+          execute: async (input) => {
+            receivedInput = input;
+            return null;
+          },
+        },
+        user: createUser({ id: userId }),
+      });
+
+      const result = await getPreviousAttempt(
+        { questionId, sessionId },
+        deps as never,
+      );
+
+      expect(receivedInput).toEqual({ userId, questionId, sessionId });
+      expect(result).toEqual({ ok: true, data: null });
+    });
+
     it('returns the previous attempt when found', async () => {
       const userId = 'user_1';
       const questionId = 'q1';
 
-      let receivedInput: { userId: string; questionId: string } | null = null;
+      let receivedInput: {
+        userId: string;
+        questionId: string;
+        attemptId?: string;
+      } | null = null;
       const deps = createDeps({
         getPreviousAttemptUseCase: {
           execute: async (input) => {

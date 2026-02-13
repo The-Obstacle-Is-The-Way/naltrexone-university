@@ -8,21 +8,27 @@ import {
   type LoadState,
   loadPreviousAttempt,
   reattemptQuestion,
+  type SessionNavigation,
 } from '@/app/(app)/app/questions/[slug]/question-page-logic';
 import { selectChoiceIfAllowed } from '@/app/(app)/app/shared/question-guards';
-import type { QuestionMode } from '@/lib/routes';
+import type { QuestionMode, QuestionOrigin } from '@/lib/routes';
 import { useIsMounted } from '@/lib/use-is-mounted';
+import { getPracticeSessionReview } from '@/src/adapters/controllers/practice-controller';
 import { submitAnswer } from '@/src/adapters/controllers/question-controller';
 import {
   type GetQuestionBySlugOutput,
   getPreviousAttempt,
   getQuestionBySlug,
 } from '@/src/adapters/controllers/question-view-controller';
+import type { AvailablePracticeSessionReviewRow } from '@/src/application/use-cases/get-practice-session-review';
 import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
 
 export type UseQuestionPageControllerInput = {
   slug: string;
   mode?: QuestionMode | null;
+  from?: QuestionOrigin | null;
+  sessionId?: string;
+  attemptId?: string;
 };
 
 export type UseQuestionPageControllerOutput = {
@@ -30,6 +36,7 @@ export type UseQuestionPageControllerOutput = {
   question: GetQuestionBySlugOutput | null;
   selectedChoiceId: string | null;
   submitResult: SubmitAnswerOutput | null;
+  sessionNavigation: SessionNavigation | null;
   canSubmit: boolean;
   isPending: boolean;
   onTryAgain: () => void;
@@ -55,6 +62,8 @@ export function useQuestionPageController(
   const [loadState, setLoadState] = useState<LoadState>({
     status: 'loading',
   });
+  const [sessionNavigation, setSessionNavigation] =
+    useState<SessionNavigation | null>(null);
   const [isPending, startTransition] = useTransition();
   const isMounted = useIsMounted();
 
@@ -80,6 +89,38 @@ export function useQuestionPageController(
   useEffect(loadQuestion, [loadQuestion]);
 
   useEffect(() => {
+    const sessionId = input.sessionId;
+    if (!sessionId) return;
+
+    startTransition(() => {
+      void getPracticeSessionReview({ sessionId }).then((result) => {
+        if (!isMounted()) return;
+        if (!result.ok) return;
+
+        const questions = result.data.rows
+          .filter(
+            (row): row is AvailablePracticeSessionReviewRow => row.isAvailable,
+          )
+          .map((row) => ({
+            slug: row.slug,
+            order: row.order,
+            isCorrect: row.isCorrect,
+          }));
+
+        const currentIndex = questions.findIndex((q) => q.slug === input.slug);
+        if (currentIndex === -1) return;
+
+        setSessionNavigation({
+          questions,
+          currentIndex,
+          sessionId,
+          from: input.from ?? 'practice',
+        });
+      });
+    });
+  }, [input.sessionId, input.slug, input.from, isMounted]);
+
+  useEffect(() => {
     if (input.mode !== 'review') return;
     if (loadState.status !== 'ready') return;
     if (!question) return;
@@ -87,13 +128,22 @@ export function useQuestionPageController(
     startTransition(() => {
       void loadPreviousAttempt({
         questionId: question.questionId,
+        attemptId: input.attemptId,
+        sessionId: input.sessionId,
         getPreviousAttemptFn: getPreviousAttempt,
         setSelectedChoiceId,
         setSubmitResult,
         isMounted,
       });
     });
-  }, [input.mode, loadState.status, question, isMounted]);
+  }, [
+    input.mode,
+    input.attemptId,
+    input.sessionId,
+    loadState.status,
+    question,
+    isMounted,
+  ]);
 
   const canSubmit = useMemo(() => {
     return canSubmitQuestionAnswer({
@@ -161,5 +211,6 @@ export function useQuestionPageController(
     onSelectChoice,
     onSubmit,
     onReattempt,
+    sessionNavigation,
   };
 }

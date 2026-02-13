@@ -8,6 +8,8 @@ import type { ChoiceExplanation } from './submit-answer';
 export type GetPreviousAttemptInput = {
   userId: string;
   questionId: string;
+  attemptId?: string;
+  sessionId?: string;
 };
 
 export type GetPreviousAttemptOutput = {
@@ -30,12 +32,31 @@ export class GetPreviousAttemptUseCase {
   async execute(
     input: GetPreviousAttemptInput,
   ): Promise<GetPreviousAttemptOutput | null> {
-    const attempt = await this.attempts.findLatestByUserAndQuestion(
-      input.userId,
-      input.questionId,
-    );
+    const attempt = input.attemptId
+      ? await this.attempts.findByIdAndUserId(input.attemptId, input.userId)
+      : input.sessionId
+        ? await this.attempts.findBySessionIdAndQuestionId(
+            input.sessionId,
+            input.userId,
+            input.questionId,
+          )
+        : await this.attempts.findLatestByUserAndQuestion(
+            input.userId,
+            input.questionId,
+          );
 
     if (!attempt) return null;
+    if (attempt.questionId !== input.questionId) {
+      this.logger.warn(
+        {
+          attemptId: input.attemptId,
+          questionId: input.questionId,
+          attemptQuestionId: attempt.questionId,
+        },
+        'Previous attempt does not match requested question',
+      );
+      return null;
+    }
 
     const question = await this.questions.findPublishedById(attempt.questionId);
 

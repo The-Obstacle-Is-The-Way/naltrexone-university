@@ -804,6 +804,209 @@ describe('DrizzlePracticeSessionRepository + DrizzleAttemptRepository', () => {
     });
   });
 
+  it('returns attempt from findByIdAndUserId when id and userId match', async () => {
+    const user = await createUser();
+    const question = await createQuestion({
+      slug: `it-q-${randomUUID()}`,
+      status: 'published',
+      difficulty: 'easy',
+    });
+
+    const attemptRepo = new DrizzleAttemptRepository(db);
+    const attempt = await attemptRepo.insert({
+      userId: user.id,
+      questionId: question.id,
+      practiceSessionId: null,
+      selectedChoiceId: question.correctChoiceId,
+      isCorrect: true,
+      timeSpentSeconds: 1,
+    });
+
+    await expect(
+      attemptRepo.findByIdAndUserId(attempt.id, user.id),
+    ).resolves.toMatchObject({
+      id: attempt.id,
+      userId: user.id,
+      questionId: question.id,
+      selectedChoiceId: question.correctChoiceId,
+      isCorrect: true,
+    });
+  });
+
+  it('returns null from findByIdAndUserId when id exists but userId does not match', async () => {
+    const userA = await createUser();
+    const userB = await createUser();
+    const question = await createQuestion({
+      slug: `it-q-${randomUUID()}`,
+      status: 'published',
+      difficulty: 'easy',
+    });
+
+    const attemptRepo = new DrizzleAttemptRepository(db);
+    const attempt = await attemptRepo.insert({
+      userId: userA.id,
+      questionId: question.id,
+      practiceSessionId: null,
+      selectedChoiceId: question.correctChoiceId,
+      isCorrect: true,
+      timeSpentSeconds: 1,
+    });
+
+    await expect(
+      attemptRepo.findByIdAndUserId(attempt.id, userB.id),
+    ).resolves.toBeNull();
+  });
+
+  it('returns null from findByIdAndUserId when id does not exist', async () => {
+    const user = await createUser();
+
+    const attemptRepo = new DrizzleAttemptRepository(db);
+    await expect(
+      attemptRepo.findByIdAndUserId(randomUUID(), user.id),
+    ).resolves.toBeNull();
+  });
+
+  it('returns attempt from findBySessionIdAndQuestionId when sessionId, questionId, and userId match', async () => {
+    const user = await createUser();
+    const question = await createQuestion({
+      slug: `it-q-${randomUUID()}`,
+      status: 'published',
+      difficulty: 'easy',
+    });
+
+    const sessionRepo = new DrizzlePracticeSessionRepository(db);
+    const session = await sessionRepo.create({
+      userId: user.id,
+      mode: 'tutor',
+      paramsJson: {
+        count: 1,
+        tagSlugs: [],
+        difficulties: [],
+        questionIds: [question.id],
+      },
+    });
+
+    const attemptRepo = new DrizzleAttemptRepository(db);
+    const attempt = await attemptRepo.insert({
+      userId: user.id,
+      questionId: question.id,
+      practiceSessionId: session.id,
+      selectedChoiceId: question.correctChoiceId,
+      isCorrect: true,
+      timeSpentSeconds: 1,
+    });
+
+    await expect(
+      attemptRepo.findBySessionIdAndQuestionId(
+        session.id,
+        user.id,
+        question.id,
+      ),
+    ).resolves.toMatchObject({
+      id: attempt.id,
+      userId: user.id,
+      questionId: question.id,
+    });
+  });
+
+  it('returns null from findBySessionIdAndQuestionId when sessionId exists but questionId does not match', async () => {
+    const user = await createUser();
+    const q1 = await createQuestion({
+      slug: `it-q1-${randomUUID()}`,
+      status: 'published',
+      difficulty: 'easy',
+    });
+    const q2 = await createQuestion({
+      slug: `it-q2-${randomUUID()}`,
+      status: 'published',
+      difficulty: 'easy',
+    });
+
+    const sessionRepo = new DrizzlePracticeSessionRepository(db);
+    const session = await sessionRepo.create({
+      userId: user.id,
+      mode: 'tutor',
+      paramsJson: {
+        count: 1,
+        tagSlugs: [],
+        difficulties: [],
+        questionIds: [q1.id],
+      },
+    });
+
+    const attemptRepo = new DrizzleAttemptRepository(db);
+    await attemptRepo.insert({
+      userId: user.id,
+      questionId: q1.id,
+      practiceSessionId: session.id,
+      selectedChoiceId: q1.correctChoiceId,
+      isCorrect: true,
+      timeSpentSeconds: 1,
+    });
+
+    await expect(
+      attemptRepo.findBySessionIdAndQuestionId(session.id, user.id, q2.id),
+    ).resolves.toBeNull();
+  });
+
+  it('returns null from findBySessionIdAndQuestionId when sessionId exists but userId does not match', async () => {
+    const userA = await createUser();
+    const userB = await createUser();
+    const question = await createQuestion({
+      slug: `it-q-${randomUUID()}`,
+      status: 'published',
+      difficulty: 'easy',
+    });
+
+    const sessionRepo = new DrizzlePracticeSessionRepository(db);
+    const session = await sessionRepo.create({
+      userId: userA.id,
+      mode: 'tutor',
+      paramsJson: {
+        count: 1,
+        tagSlugs: [],
+        difficulties: [],
+        questionIds: [question.id],
+      },
+    });
+
+    const attemptRepo = new DrizzleAttemptRepository(db);
+    await attemptRepo.insert({
+      userId: userA.id,
+      questionId: question.id,
+      practiceSessionId: session.id,
+      selectedChoiceId: question.correctChoiceId,
+      isCorrect: true,
+      timeSpentSeconds: 1,
+    });
+
+    await expect(
+      attemptRepo.findBySessionIdAndQuestionId(
+        session.id,
+        userB.id,
+        question.id,
+      ),
+    ).resolves.toBeNull();
+  });
+
+  it('returns null from findBySessionIdAndQuestionId when sessionId does not exist', async () => {
+    const user = await createUser();
+    const question = await createQuestion({
+      slug: `it-q-${randomUUID()}`,
+      status: 'published',
+      difficulty: 'easy',
+    });
+
+    const attemptRepo = new DrizzleAttemptRepository(db);
+    await expect(
+      attemptRepo.findBySessionIdAndQuestionId(
+        randomUUID(),
+        user.id,
+        question.id,
+      ),
+    ).resolves.toBeNull();
+  });
+
   it('rejects deleting a choice referenced by an attempt', async () => {
     const user = await createUser();
     const question = await createQuestion({

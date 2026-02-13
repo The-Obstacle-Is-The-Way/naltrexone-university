@@ -2,6 +2,7 @@
 
 import { z } from 'zod';
 import { createDepsResolver, loadAppContainer } from '@/lib/controller-helpers';
+import { zUuid } from '@/src/adapters/shared/zod-schemas';
 import { ApplicationError } from '@/src/application/errors';
 import type { AuthGateway } from '@/src/application/ports/gateways';
 import type { QuestionRepository } from '@/src/application/ports/repositories';
@@ -85,6 +86,8 @@ export const getQuestionBySlug = createAction({
 const GetPreviousAttemptInputSchema = z
   .object({
     questionId: z.string().min(1),
+    attemptId: zUuid.optional(),
+    sessionId: zUuid.optional(),
   })
   .strict();
 
@@ -96,6 +99,8 @@ export const getPreviousAttempt = createAction({
     return d.getPreviousAttemptUseCase.execute({
       userId,
       questionId: input.questionId,
+      ...(input.attemptId ? { attemptId: input.attemptId } : {}),
+      ...(input.sessionId ? { sessionId: input.sessionId } : {}),
     });
   },
 });

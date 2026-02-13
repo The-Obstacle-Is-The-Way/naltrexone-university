@@ -6,10 +6,16 @@ import { Feedback } from '@/components/question/feedback';
 import { QuestionCard } from '@/components/question/question-card';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { type QuestionMode, type QuestionOrigin, ROUTES } from '@/lib/routes';
+import {
+  type QuestionMode,
+  type QuestionOrigin,
+  ROUTES,
+  toPracticeSessionRoute,
+  toQuestionRoute,
+} from '@/lib/routes';
 import type { GetQuestionBySlugOutput } from '@/src/adapters/controllers/question-view-controller';
 import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
-import type { LoadState } from './question-page-logic';
+import type { LoadState, SessionNavigation } from './question-page-logic';
 import { useQuestionPageController } from './use-question-page-controller';
 
 function parseQuestionOrigin(value: string | undefined): QuestionOrigin | null {
@@ -26,7 +32,10 @@ function parseQuestionMode(value: string | undefined): QuestionMode | null {
   return null;
 }
 
-function getOriginUi(origin: QuestionOrigin | null): {
+function getOriginUi(
+  origin: QuestionOrigin | null,
+  sessionId?: string,
+): {
   backHref: string;
   backLabel: string;
   subtitle: string;
@@ -43,7 +52,9 @@ function getOriginUi(origin: QuestionOrigin | null): {
 
   if (resolvedOrigin === 'history') {
     return {
-      backHref: ROUTES.APP_HISTORY,
+      backHref: sessionId
+        ? `${ROUTES.APP_HISTORY}?tab=sessions`
+        : ROUTES.APP_HISTORY,
       backLabel: 'Back to History',
       subtitle: 'Reviewing a question from your history.',
     };
@@ -59,8 +70,10 @@ function getOriginUi(origin: QuestionOrigin | null): {
 
   if (resolvedOrigin === 'practice') {
     return {
-      backHref: ROUTES.APP_PRACTICE,
-      backLabel: 'Back to Practice',
+      backHref: sessionId
+        ? toPracticeSessionRoute(sessionId)
+        : ROUTES.APP_PRACTICE,
+      backLabel: sessionId ? 'Back to Session' : 'Back to Practice',
       subtitle: 'Review a question from your practice history.',
     };
   }
@@ -72,14 +85,69 @@ function getOriginUi(origin: QuestionOrigin | null): {
   };
 }
 
+function SessionNavigationBar({
+  navigation,
+}: {
+  navigation: SessionNavigation;
+}) {
+  const { questions, currentIndex, sessionId, from } = navigation;
+  const total = questions.length;
+  if (total === 0) return null;
+  if (currentIndex < 0 || currentIndex >= total) return null;
+
+  const prev = currentIndex > 0 ? questions[currentIndex - 1] : null;
+  const next =
+    currentIndex < questions.length - 1 ? questions[currentIndex + 1] : null;
+
+  return (
+    <div className="flex items-center justify-between">
+      {prev ? (
+        <Link
+          href={toQuestionRoute(prev.slug, {
+            from,
+            mode: 'review',
+            sessionId,
+          })}
+          className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]"
+        >
+          ← Previous
+        </Link>
+      ) : (
+        <span aria-hidden="true" />
+      )}
+
+      <span className="text-sm text-muted-foreground">
+        Question {currentIndex + 1} of {total}
+      </span>
+
+      {next ? (
+        <Link
+          href={toQuestionRoute(next.slug, {
+            from,
+            mode: 'review',
+            sessionId,
+          })}
+          className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]"
+        >
+          Next →
+        </Link>
+      ) : (
+        <span aria-hidden="true" />
+      )}
+    </div>
+  );
+}
+
 export type QuestionViewProps = {
   loadState: LoadState;
   question: GetQuestionBySlugOutput | null;
   selectedChoiceId: string | null;
   submitResult: SubmitAnswerOutput | null;
+  sessionNavigation?: SessionNavigation | null;
   canSubmit: boolean;
   isPending: boolean;
   origin?: QuestionOrigin | null;
+  sessionId?: string;
   onTryAgain: () => void;
   onSelectChoice: (choiceId: string) => void;
   onSubmit: () => void;
@@ -88,7 +156,7 @@ export type QuestionViewProps = {
 
 export function QuestionView(props: QuestionViewProps) {
   const correctChoiceId = props.submitResult?.correctChoiceId ?? null;
-  const originUi = getOriginUi(props.origin ?? null);
+  const originUi = getOriginUi(props.origin ?? null, props.sessionId);
 
   return (
     <div className="space-y-6">
@@ -106,6 +174,10 @@ export function QuestionView(props: QuestionViewProps) {
           {originUi.backLabel}
         </Link>
       </div>
+
+      {props.sessionNavigation ? (
+        <SessionNavigationBar navigation={props.sessionNavigation} />
+      ) : null}
 
       {props.loadState.status === 'error' ? (
         <ErrorCard className="p-6">
@@ -197,14 +269,22 @@ export default function QuestionPageClient({
   slug,
   from,
   mode,
+  sessionId,
+  attemptId,
 }: {
   slug: string;
   from?: string;
   mode?: string;
+  sessionId?: string;
+  attemptId?: string;
 }) {
+  const origin = parseQuestionOrigin(from);
   const controller = useQuestionPageController({
     slug,
     mode: parseQuestionMode(mode),
+    from: origin,
+    sessionId,
+    attemptId,
   });
-  return <QuestionView {...controller} origin={parseQuestionOrigin(from)} />;
+  return <QuestionView {...controller} origin={origin} sessionId={sessionId} />;
 }

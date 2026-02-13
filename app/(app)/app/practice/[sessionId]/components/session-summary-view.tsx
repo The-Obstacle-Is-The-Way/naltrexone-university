@@ -81,7 +81,10 @@ export function SessionSummaryView({
         ) : null}
         {summaryReview ? (
           <div className="mt-3">
-            <SessionBreakdownList rows={summaryReview.rows} />
+            <SessionBreakdownList
+              rows={summaryReview.rows}
+              sessionId={summary.sessionId}
+            />
           </div>
         ) : null}
       </Card>

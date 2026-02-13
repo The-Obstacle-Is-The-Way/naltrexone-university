@@ -30,6 +30,43 @@ describe('lib/routes', () => {
     ).toBe('/app/questions/opioid-use-disorder?from=dashboard&mode=review');
   });
 
+  it('supports sessionId query parameters for question routes', () => {
+    expect(
+      toQuestionRoute('opioid-use-disorder', {
+        from: 'practice',
+        mode: 'review',
+        sessionId: 'session_123',
+      }),
+    ).toBe(
+      '/app/questions/opioid-use-disorder?from=practice&mode=review&sessionId=session_123',
+    );
+  });
+
+  it('supports attemptId query parameters for question routes', () => {
+    expect(
+      toQuestionRoute('opioid-use-disorder', {
+        from: 'dashboard',
+        mode: 'review',
+        attemptId: 'attempt_123',
+      }),
+    ).toBe(
+      '/app/questions/opioid-use-disorder?from=dashboard&mode=review&attemptId=attempt_123',
+    );
+  });
+
+  it('supports combined sessionId and attemptId query parameters for question routes', () => {
+    expect(
+      toQuestionRoute('opioid-use-disorder', {
+        from: 'practice',
+        mode: 'review',
+        sessionId: 'session_123',
+        attemptId: 'attempt_123',
+      }),
+    ).toBe(
+      '/app/questions/opioid-use-disorder?from=practice&mode=review&sessionId=session_123&attemptId=attempt_123',
+    );
+  });
+
   it('omits mode query parameter when mode is undefined', () => {
     expect(
       toQuestionRoute('opioid-use-disorder', {
