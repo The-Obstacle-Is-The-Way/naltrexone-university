@@ -9,6 +9,8 @@
 
 > **Status note:** This doc captures discovery + early design exploration. The implementation-ready
 > decisions live in `docs/specs/spec-024-question-status-filter.md`.
+>
+> **UX caveat (2026-02-12):** The multi-select OR logic and "All" chip proposed here turned out to be confusing in practice. See [BS-013](./bs-013-status-filter-ux-confusion.md) for the open redesign discussion. Leading thought: default to unanswered, single-select Incorrect/Marked only, no "All" chip.
 
 ## The Problem
 
