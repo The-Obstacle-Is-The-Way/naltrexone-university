@@ -1,7 +1,7 @@
 # Implementation Specifications
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-02-12
+**Last Updated:** 2026-02-13
 
 ---
 
@@ -20,6 +20,7 @@ Implementation specifications provide detailed technical guidance for building e
 | [Master Spec](./master_spec.md) | Complete Technical Specification (SSOT) | Living | All |
 | [SPEC-016](./spec-016-observability.md) | Observability (Logging, Error Tracking) | Partially Implemented | Infrastructure |
 | [SPEC-017](./spec-017-rate-limiting.md) | Rate Limiting | Partial (MVP done) | Infrastructure |
+| [SPEC-028](./spec-028-status-filter-segmented-control.md) | Status & Difficulty Filter — Segmented Control Redesign | Ready | Feature |
 
 **Master Spec split parts (readability):**
 
@@ -28,7 +29,7 @@ Implementation specifications provide detailed technical guidance for building e
 - [Master Spec — Part 3](./master_spec_part3.md) — Content Pipeline, Directory Structure, Vertical Slices
 - [Master Spec — Part 4](./master_spec_part4.md) — Testing, Security, Env Vars, Deployment
 
-**Next Spec ID:** SPEC-028
+**Next Spec ID:** SPEC-029
 
 ## Archived Specs
 
