@@ -1,7 +1,7 @@
 # Technical Debt Register
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-02-11
+**Last Updated:** 2026-02-13
 
 ---
 
@@ -23,8 +23,9 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 | [DEBT-209](./debt-209-tag-question-counts-in-practice-starter.md) | Practice Session Starter Missing Question Counts Per Tag | P3 | Open | #53 |
 | [DEBT-210](./debt-210-dead-routes-app-review-constant.md) | Dead `ROUTES.APP_REVIEW` Constant in Route Definitions | P4 | Open | #90 |
 | [DEBT-212](./debt-212-duplicate-sleep-utility-adapter-shared.md) | Duplicate `sleep()` Utility in Adapter Shared Modules | P4 | Open | #91 |
+| [DEBT-213](./debt-213-useeffect-derived-state-sync-antipatterns.md) | useEffect Derived-State Sync Anti-Patterns in Practice Hooks (5 instances) | P4 | Open | — |
 
-**Next Debt ID:** DEBT-213
+**Next Debt ID:** DEBT-214
 
 ---
 
