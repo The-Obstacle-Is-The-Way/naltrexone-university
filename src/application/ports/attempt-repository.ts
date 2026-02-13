@@ -108,6 +108,22 @@ export interface AttemptSingleQuestionReader {
     userId: string,
     questionId: string,
   ): Promise<Attempt | null>;
+
+  /**
+   * Return a specific attempt by id, scoped to the given user.
+   * Used by dashboard review mode when an attemptId is provided in the URL.
+   */
+  findByIdAndUserId(attemptId: string, userId: string): Promise<Attempt | null>;
+
+  /**
+   * Return the attempt for a given session + question, scoped to the given user.
+   * Used by session review navigation to ensure the attempt is from that session.
+   */
+  findBySessionIdAndQuestionId(
+    sessionId: string,
+    userId: string,
+    questionId: string,
+  ): Promise<Attempt | null>;
 }
 
 export interface AttemptMostRecentAnsweredAtReader {

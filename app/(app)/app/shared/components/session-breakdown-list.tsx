@@ -8,9 +8,11 @@ const STEM_PREVIEW_LENGTH = 80;
 export function SessionBreakdownList({
   rows,
   from = 'practice',
+  sessionId,
 }: {
   rows: PracticeSessionReviewRow[];
   from?: QuestionOrigin;
+  sessionId?: string;
 }) {
   return (
     <ul className="space-y-2">
@@ -21,7 +23,11 @@ export function SessionBreakdownList({
         >
           {row.isAvailable ? (
             <Link
-              href={toQuestionRoute(row.slug, { from, mode: 'review' })}
+              href={toQuestionRoute(row.slug, {
+                from,
+                mode: 'review',
+                sessionId,
+              })}
               className="flex items-center gap-2 font-medium text-foreground hover:underline"
             >
               <span>{row.order}.</span>

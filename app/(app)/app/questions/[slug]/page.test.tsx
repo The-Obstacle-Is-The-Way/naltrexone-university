@@ -66,6 +66,44 @@ describe('app/(app)/app/questions/[slug]', () => {
     });
   }, 20_000);
 
+  it('passes sessionId searchParams into the client page', async () => {
+    const QuestionPage = (await import('@/app/(app)/app/questions/[slug]/page'))
+      .default;
+
+    const element = await QuestionPage({
+      params: Promise.resolve({ slug: 'q-1' }),
+      searchParams: Promise.resolve({
+        sessionId: '00000000-0000-4000-8000-000000000001',
+      }),
+    } as never);
+
+    expect(element).toMatchObject({
+      props: {
+        slug: 'q-1',
+        sessionId: '00000000-0000-4000-8000-000000000001',
+      },
+    });
+  }, 20_000);
+
+  it('passes attemptId searchParams into the client page', async () => {
+    const QuestionPage = (await import('@/app/(app)/app/questions/[slug]/page'))
+      .default;
+
+    const element = await QuestionPage({
+      params: Promise.resolve({ slug: 'q-1' }),
+      searchParams: Promise.resolve({
+        attemptId: '00000000-0000-4000-8000-000000000002',
+      }),
+    } as never);
+
+    expect(element).toMatchObject({
+      props: {
+        slug: 'q-1',
+        attemptId: '00000000-0000-4000-8000-000000000002',
+      },
+    });
+  }, 20_000);
+
   it('renders a question shell', async () => {
     const QuestionPage = (await import('@/app/(app)/app/questions/[slug]/page'))
       .default;
@@ -95,6 +133,7 @@ describe('app/(app)/app/questions/[slug]', () => {
         question={null}
         selectedChoiceId={null}
         submitResult={null}
+        sessionNavigation={null}
         canSubmit={false}
         isPending={false}
         onTryAgain={() => undefined}
@@ -119,6 +158,7 @@ describe('app/(app)/app/questions/[slug]', () => {
         question={null}
         selectedChoiceId={null}
         submitResult={null}
+        sessionNavigation={null}
         canSubmit={false}
         isPending={false}
         onTryAgain={() => undefined}
@@ -156,6 +196,7 @@ describe('app/(app)/app/questions/[slug]', () => {
         question={toGetQuestionBySlugOutput(question)}
         selectedChoiceId={null}
         submitResult={null}
+        sessionNavigation={null}
         canSubmit={false}
         isPending={false}
         onTryAgain={() => undefined}
@@ -186,6 +227,7 @@ describe('app/(app)/app/questions/[slug]', () => {
           explanationMd: 'Explanation',
           choiceExplanations: [],
         }}
+        sessionNavigation={null}
         canSubmit={false}
         isPending={false}
         onTryAgain={() => undefined}
@@ -226,6 +268,7 @@ describe('app/(app)/app/questions/[slug]', () => {
         question={toGetQuestionBySlugOutput(question)}
         selectedChoiceId="c1"
         submitResult={null}
+        sessionNavigation={null}
         canSubmit
         isPending={false}
         onTryAgain={() => undefined}

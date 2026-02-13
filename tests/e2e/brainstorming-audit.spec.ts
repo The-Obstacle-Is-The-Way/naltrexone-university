@@ -199,6 +199,14 @@ test.describe('brainstorming audit — validate documented issues', () => {
     });
     await startButton.or(abandonButton).waitFor({ state: 'visible' });
 
+    // If an incomplete session exists, abandon it first so the session starter form loads.
+    const abandonCount = await abandonButton.count();
+    if (abandonCount > 0) {
+      await abandonButton.click();
+      await page.getByRole('button', { name: 'Abandon anyway' }).click();
+      await expect(startButton).toBeVisible({ timeout: 10_000 });
+    }
+
     // Verify existing filters are present (so we know the form loaded)
     await expect(
       page.getByRole('button', { name: 'Tutor', exact: true }),

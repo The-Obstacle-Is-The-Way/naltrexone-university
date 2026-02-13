@@ -213,6 +213,31 @@ export class FakeAttemptRepository implements AttemptRepository {
     return matching[0] ?? null;
   }
 
+  async findByIdAndUserId(
+    attemptId: string,
+    userId: string,
+  ): Promise<Attempt | null> {
+    return (
+      this.attempts.find((a) => a.id === attemptId && a.userId === userId) ??
+      null
+    );
+  }
+
+  async findBySessionIdAndQuestionId(
+    sessionId: string,
+    userId: string,
+    questionId: string,
+  ): Promise<Attempt | null> {
+    return (
+      this.attempts.find(
+        (a) =>
+          a.practiceSessionId === sessionId &&
+          a.userId === userId &&
+          a.questionId === questionId,
+      ) ?? null
+    );
+  }
+
   async countByUserId(userId: string): Promise<number> {
     return this.attempts.filter((a) => a.userId === userId).length;
   }

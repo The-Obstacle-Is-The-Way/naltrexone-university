@@ -39,7 +39,7 @@ const unavailableRow: PracticeSessionReviewRow = {
 
 async function renderList(
   rows: PracticeSessionReviewRow[],
-  props?: { from?: QuestionOrigin },
+  props?: { from?: QuestionOrigin; sessionId?: string },
 ) {
   const { SessionBreakdownList } = await import('./session-breakdown-list');
   return renderToStaticMarkup(<SessionBreakdownList rows={rows} {...props} />);
@@ -54,7 +54,7 @@ describe('SessionBreakdownList', () => {
     expect(html).not.toContain('BBBB');
   });
 
-  it('renders available questions as clickable links', async () => {
+  it('omits sessionId from href when sessionId prop is not provided', async () => {
     const html = await renderList([availableRow]);
 
     const doc = new DOMParser().parseFromString(html, 'text/html');
@@ -62,6 +62,18 @@ describe('SessionBreakdownList', () => {
     expect(links).toHaveLength(1);
     expect(links[0]?.getAttribute('href')).toBe(
       toQuestionRoute('q-1', { from: 'practice', mode: 'review' }),
+    );
+  });
+
+  it('includes sessionId in href when sessionId prop is provided', async () => {
+    const sessionId = '00000000-0000-4000-8000-000000000001';
+    const html = await renderList([availableRow], { sessionId });
+
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const links = Array.from(doc.querySelectorAll('a'));
+    expect(links).toHaveLength(1);
+    expect(links[0]?.getAttribute('href')).toBe(
+      toQuestionRoute('q-1', { from: 'practice', mode: 'review', sessionId }),
     );
   });
 

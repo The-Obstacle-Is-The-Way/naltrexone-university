@@ -181,6 +181,39 @@ export class DrizzleAttemptRepository implements AttemptRepository {
     return toAttemptDomain(row);
   }
 
+  async findByIdAndUserId(
+    attemptId: string,
+    userId: string,
+  ): Promise<Attempt | null> {
+    const [row] = await this.db
+      .select()
+      .from(attempts)
+      .where(and(eq(attempts.id, attemptId), eq(attempts.userId, userId)))
+      .limit(1);
+
+    return row ? toAttemptDomain(row) : null;
+  }
+
+  async findBySessionIdAndQuestionId(
+    sessionId: string,
+    userId: string,
+    questionId: string,
+  ): Promise<Attempt | null> {
+    const [row] = await this.db
+      .select()
+      .from(attempts)
+      .where(
+        and(
+          eq(attempts.practiceSessionId, sessionId),
+          eq(attempts.userId, userId),
+          eq(attempts.questionId, questionId),
+        ),
+      )
+      .limit(1);
+
+    return row ? toAttemptDomain(row) : null;
+  }
+
   private async countWhere(
     userId: string,
     ...conditions: SQL[]

@@ -33,12 +33,16 @@ export function toQuestionRoute(
   options?: {
     from?: QuestionOrigin;
     mode?: QuestionMode;
+    sessionId?: string;
+    attemptId?: string;
   },
 ): string {
   const base = `${ROUTES.APP_QUESTIONS}/${slug}`;
   const params = new URLSearchParams();
   if (options?.from) params.set('from', options.from);
   if (options?.mode) params.set('mode', options.mode);
+  if (options?.sessionId) params.set('sessionId', options.sessionId);
+  if (options?.attemptId) params.set('attemptId', options.attemptId);
   const qs = params.toString();
   return qs ? `${base}?${qs}` : base;
 }
