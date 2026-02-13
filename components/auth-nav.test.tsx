@@ -75,8 +75,11 @@ describe('AuthNav', () => {
     process.env.NEXT_PUBLIC_SKIP_CLERK = 'false';
 
     const authGateway = new FakeAuthGateway(null);
+    // Required by AuthNavDeps type but never reached — unauthenticated path returns early.
     const checkEntitlementUseCase = {
-      execute: vi.fn(async () => ({ isEntitled: true })),
+      execute: vi.fn(async () => {
+        throw new Error('Should not be called for unauthenticated user');
+      }),
     };
 
     const { AuthNav } = await import('./auth-nav');
@@ -107,15 +110,17 @@ describe('AuthNav', () => {
       'Sign In',
     );
     expect(header.querySelector('[data-testid="user-button"]')).toBeNull();
-    expect(checkEntitlementUseCase.execute).not.toHaveBeenCalled();
   });
 
   it('scenario 2: unauthenticated pricing page renders only one Pricing link per breakpoint', async () => {
     process.env.NEXT_PUBLIC_SKIP_CLERK = 'false';
 
     const authGateway = new FakeAuthGateway(null);
+    // Required by AuthNavDeps type but never reached — unauthenticated path returns early.
     const checkEntitlementUseCase = {
-      execute: vi.fn(async () => ({ isEntitled: true })),
+      execute: vi.fn(async () => {
+        throw new Error('Should not be called for unauthenticated user');
+      }),
     };
 
     const { AuthNav } = await import('./auth-nav');
@@ -146,7 +151,6 @@ describe('AuthNav', () => {
       'Sign In',
     );
     expect(header.querySelector('[data-testid="user-button"]')).toBeNull();
-    expect(checkEntitlementUseCase.execute).not.toHaveBeenCalled();
   });
 
   it('scenario 3: authenticated entitled app pages do not duplicate the Dashboard link', async () => {
@@ -265,7 +269,7 @@ describe('AuthNav', () => {
     expect(header.querySelector('a[href="/sign-in"]')).toBeNull();
   });
 
-  it('scenario 7: authenticated non-entitled pricing page does not duplicate the Pricing link (scenario 6 redirect covered in app layout tests)', async () => {
+  it('scenario 6: authenticated non-entitled pricing page does not duplicate the Pricing link', async () => {
     process.env.NEXT_PUBLIC_SKIP_CLERK = 'false';
     vi.doMock('@clerk/nextjs', () => ({
       UserButton: () => <div data-testid="user-button" />,
