@@ -17,7 +17,7 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 | ID | Title | Priority | Status |
 |----|-------|----------|--------|
-| [BUG-132](./bug-132-duplicate-nav-links-pricing-dashboard.md) | Duplicate Nav Links — "Pricing" (Logged Out) and "Dashboard" (Logged In) | P3 | Resolved |
+| — | No active bugs | — | — |
 
 **Next Bug ID:** BUG-133
 
@@ -25,6 +25,7 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 | ID | Title | Status | Resolution |
 |----|-------|--------|------------|
+| [BUG-132](../_archive/bugs/bug-132-duplicate-nav-links-pricing-dashboard.md) | Duplicate Nav Links — "Pricing" and "Dashboard" Appear Twice in Header | Resolved | Removed duplicate links from AuthNav; layout owns left-nav links, AuthNav owns right-side auth controls |
 | [BUG-131](../_archive/bugs/bug-131-e2e-bookmarks-empty-state-assertion-failure.md) | E2E Bookmarks Empty State Assertion Fails After Remove | Resolved | Stabilized the test by asserting either count decrement or empty-state with increased timeout |
 | [BUG-130](../_archive/bugs/bug-130-e2e-session-start-selector-mismatch.md) | E2E Session Start Selectors Don't Match Current UI | Resolved | Updated `startSession()` to click SegmentedControl buttons and fill `Questions` input |
 | [BUG-129](../_archive/bugs/bug-129-e2e-choice-radio-selector-mismatch.md) | E2E Choice Radio Selector Cannot Find Question Choices | Resolved | Updated `selectChoiceByLabel()` to match ChoiceButton DOM and assert radio checked |
@@ -91,6 +92,7 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 | ID | Title | Priority | Resolved |
 |----|-------|----------|----------|
+| [BUG-132](../_archive/bugs/bug-132-duplicate-nav-links-pricing-dashboard.md) | Duplicate Nav Links — "Pricing" and "Dashboard" Appear Twice in Header | P3 | 2026-02-13 |
 | [BUG-116](../_archive/bugs/bug-116-cron-route-blocked-by-clerk-middleware.md) | Cron Reconcile Route Blocked by Clerk Middleware | P2 | 2026-02-08 |
 | [BUG-115](../_archive/bugs/bug-115-cron-secret-validation-crashes-production-build.md) | DEBT-160 CRON_SECRET Startup Validation Crashes Production Build | P0 | 2026-02-08 |
 | [BUG-114](../_archive/bugs/bug-114-subscribe-action-leaks-error-codes-to-url.md) | Subscribe Action Exposes Internal Error Codes in URL Params | P3 | 2026-02-08 |
