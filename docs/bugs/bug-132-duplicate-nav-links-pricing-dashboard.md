@@ -1,6 +1,6 @@
 # BUG-132: Duplicate Nav Links — "Pricing" and "Dashboard" Appear Twice in Header
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P3
 **Date:** 2026-02-12
 

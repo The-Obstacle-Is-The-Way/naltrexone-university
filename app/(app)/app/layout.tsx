@@ -133,7 +133,8 @@ export async function renderAppLayout(input: {
 }): Promise<React.ReactElement> {
   const enforceEntitledAppUserFn =
     input.enforceEntitledAppUserFn ?? enforceEntitledAppUser;
-  const authNavFn = input.authNavFn ?? AuthNav;
+  const authNavFn =
+    input.authNavFn ?? (() => AuthNav({ showPrimaryLink: false }));
   const mobileNav = input.mobileNav ?? <MobileNav />;
 
   const { subscriptionStatus } = await enforceEntitledAppUserFn();

@@ -1,7 +1,7 @@
 # Bug Reports
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-02-12
+**Last Updated:** 2026-02-13
 
 ---
 
@@ -17,7 +17,7 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 | ID | Title | Priority | Status |
 |----|-------|----------|--------|
-| [BUG-132](./bug-132-duplicate-nav-links-pricing-dashboard.md) | Duplicate Nav Links — "Pricing" (Logged Out) and "Dashboard" (Logged In) | P3 | Open |
+| [BUG-132](./bug-132-duplicate-nav-links-pricing-dashboard.md) | Duplicate Nav Links — "Pricing" (Logged Out) and "Dashboard" (Logged In) | P3 | Resolved |
 
 **Next Bug ID:** BUG-133
 
