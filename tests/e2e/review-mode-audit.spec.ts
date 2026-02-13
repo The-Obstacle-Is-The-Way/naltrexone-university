@@ -102,7 +102,7 @@ test.describe('review mode audit', () => {
     await expectChoiceChecked(page, selectedLabel);
   });
 
-  test('history questions: correct opens review mode, incorrect opens reattempt', async ({
+  test('history questions: correct and incorrect open review mode', async ({
     page,
   }) => {
     await signInWithClerkPassword(page);
@@ -115,7 +115,11 @@ test.describe('review mode audit', () => {
       CORRECT_SLUG,
       'Correct',
     );
-    await submitQuestionForOutcome(page, INCORRECT_SLUG, 'Incorrect');
+    const incorrectLabel = await submitQuestionForOutcome(
+      page,
+      INCORRECT_SLUG,
+      'Incorrect',
+    );
 
     await page.goto('/app/history?tab=questions', {
       timeout: 60_000,
@@ -160,28 +164,27 @@ test.describe('review mode audit', () => {
     const incorrectLinkCount = await incorrectLinks.count();
     expect(incorrectLinkCount).toBeGreaterThanOrEqual(2);
     for (let i = 0; i < incorrectLinkCount; i++) {
-      await expect(incorrectLinks.nth(i)).not.toHaveAttribute(
+      await expect(incorrectLinks.nth(i)).toHaveAttribute(
         'href',
         /mode=review/,
       );
     }
 
-    const reattemptAction = page.locator(
-      `a[aria-label^="Reattempt question:"][href^="/app/questions/${INCORRECT_SLUG}"]`,
+    const reviewIncorrectAction = page.locator(
+      `a[aria-label^="Review question:"][href^="/app/questions/${INCORRECT_SLUG}"]`,
     );
-    await expect(reattemptAction).toBeVisible({ timeout: 15_000 });
-    await reattemptAction.click();
+    await expect(reviewIncorrectAction).toBeVisible({ timeout: 15_000 });
+    await reviewIncorrectAction.click();
 
     await expect(page).toHaveURL(/from=history/);
-    await expect(page).not.toHaveURL(/mode=review/);
+    await expect(page).toHaveURL(/mode=review/);
     await expect(page.getByText(/Loading question/i)).toBeHidden({
       timeout: 15_000,
     });
-    await expectFeedbackHidden(page);
-    await expect(page.getByRole('button', { name: 'Submit' })).toBeVisible({
-      timeout: 15_000,
-    });
-    await expectNoChoicesChecked(page);
+    await expectFeedbackVisible(page);
+    await expectChoiceChecked(page, incorrectLabel);
+    await expect(page.getByRole('button', { name: 'Try Again' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Submit' })).toHaveCount(0);
   });
 
   test('session breakdown links open questions in review mode', async ({

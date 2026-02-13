@@ -327,9 +327,10 @@ export function HistoryQuestionsTab({
               const bodyPreview = getStemPreview(row.stemMd, 240);
               const shouldShowBodyText = bodyPreview && bodyPreview !== title;
 
-              const href = row.isCorrect
-                ? toQuestionRoute(row.slug, { from: 'history', mode: 'review' })
-                : toQuestionRoute(row.slug, { from: 'history' });
+              const href = toQuestionRoute(row.slug, {
+                from: 'history',
+                mode: 'review',
+              });
 
               return (
                 <li key={row.questionId}>
@@ -362,9 +363,9 @@ export function HistoryQuestionsTab({
                       >
                         <Link
                           href={href}
-                          aria-label={`${row.isCorrect ? 'Review' : 'Reattempt'} question: ${title}`}
+                          aria-label={`Review question: ${title}`}
                         >
-                          {row.isCorrect ? 'Review' : 'Reattempt'}
+                          Review
                         </Link>
                       </Button>
                     </div>

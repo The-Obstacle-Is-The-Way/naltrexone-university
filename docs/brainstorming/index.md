@@ -35,7 +35,9 @@ Brainstorming (BS-NNN) → Spec (SPEC-NNN) → Implementation → Archive
 
 > **Execution order rationale:** BS-012 is foundational — it provides the reattempt path through Practice, which unblocks making History review-only (BS-011 Bug A). BS-011 Bug B is an independent bug fix. BS-009 and BS-010 both extend `toQuestionRoute()` with URL params and could be combined into one spec; BS-010 depends on BS-009's `sessionId` infrastructure.
 
-**Next Brainstorming ID:** BS-013
+| **P6** | [BS-013](./bs-013-status-filter-ux-confusion.md) | Status Filter UX Confusion (multi-select OR not obvious) | Active | — | — |
+
+**Next Brainstorming ID:** BS-014
 
 ---
 

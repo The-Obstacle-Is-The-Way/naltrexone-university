@@ -6,6 +6,7 @@ import {
 import {
   assertQuestionSlugExists,
   selectChoiceByLabel,
+  submitQuestionForOutcome,
 } from './helpers/question';
 import { ensureSubscribed } from './helpers/subscription';
 
@@ -261,79 +262,43 @@ test.describe('brainstorming audit — validate documented issues', () => {
   /**
    * BS-011 Bug A: History Questions tab — Incorrect rows omit mode=review.
    *
-   * This is already tested in review-mode-audit.spec.ts (test: "history
-   * questions: correct opens review mode, incorrect opens reattempt").
-   * That test ASSERTS the current behavior as expected (incorrect opens
-   * reattempt). This test validates from the URL perspective that
-   * incorrect row hrefs lack the mode=review param.
-   *
-   * Note: this test documents the current behavior. When BS-011 Bug A
-   * is fixed, this test should be updated to expect mode=review on ALL rows.
+   * After SPEC-026, History is review-only: all question links include
+   * mode=review regardless of correctness.
    */
-  test('BS-011 Bug A: History Questions tab incorrect rows lack mode=review', async ({
+  test('BS-011 Bug A: History Questions tab incorrect rows include mode=review', async ({
     page,
   }) => {
     await signInWithClerkPassword(page);
     await ensureSubscribed(page);
     await assertQuestionSlugExists(page, QUESTION_SLUG);
 
-    // Ensure we have an incorrect attempt
-    const labels: Array<'A' | 'B' | 'C' | 'D'> = ['A', 'B', 'C', 'D'];
-    for (const label of labels) {
-      await page.goto(`/app/questions/${QUESTION_SLUG}`);
-      await expect(page.getByText(/Loading question/i)).toBeHidden({
-        timeout: 15_000,
-      });
-      await selectChoiceByLabel(page, label);
-      await page.getByRole('button', { name: 'Submit' }).click();
-      await expect(page.getByText(/Correct|Incorrect/).first()).toBeVisible({
-        timeout: 10_000,
-      });
+    // Ensure we have an incorrect attempt.
+    await submitQuestionForOutcome(page, QUESTION_SLUG, 'Incorrect');
 
-      const isIncorrect = await page
-        .getByText('Incorrect', { exact: true })
-        .isVisible()
-        .catch(() => false);
-      if (isIncorrect) break;
-    }
-
-    await page.goto('/app/history?tab=questions', {
+    await page.goto('/app/history?tab=questions&result=incorrect', {
       timeout: 60_000,
       waitUntil: 'domcontentloaded',
     });
     await expect(page.getByRole('heading', { name: 'History' })).toBeVisible();
 
-    // Find the link for our question
+    // Verify the question link includes mode=review.
     const questionLink = page
       .locator(`a[href*="${QUESTION_SLUG}"][href*="from=history"]`)
       .first();
     await expect(questionLink).toBeVisible({ timeout: 15_000 });
+    await expect(questionLink).toHaveAttribute('href', /mode=review/);
 
-    const href = await questionLink.getAttribute('href');
-    expect(href).toBeTruthy();
-
-    // Check if the question was answered incorrectly (reattempt button visible)
-    const reattemptButton = page.locator(
-      `a[aria-label*="Reattempt"][href*="${QUESTION_SLUG}"]`,
+    const reviewAction = page.locator(
+      `a[aria-label^="Review question:"][href^="/app/questions/${QUESTION_SLUG}"]`,
     );
-    let hasReattempt = false;
-    try {
-      await reattemptButton
-        .first()
-        .waitFor({ state: 'visible', timeout: 10_000 });
-      hasReattempt = true;
-    } catch {
-      // No reattempt button found after waiting
-    }
+    await expect(reviewAction).toBeVisible({ timeout: 15_000 });
+    await expect(reviewAction).toHaveAttribute('href', /mode=review/);
 
-    // If we couldn't produce an incorrect attempt, skip rather than silently pass
-    test.skip(!hasReattempt, 'No reattempt row found — could not verify Bug A');
-
-    // Bug A: incorrect rows should include mode=review but don't
-    const reattemptHref = await reattemptButton.first().getAttribute('href');
-    expect(reattemptHref).not.toContain('mode=review');
-
-    // Document the bug: this assertion will fail when Bug A is fixed
-    // (at which point mode=review should be present on ALL rows)
+    // Regression: History should not render reattempt links.
+    await expect(
+      page.locator(
+        `a[aria-label^="Reattempt question:"][href^="/app/questions/${QUESTION_SLUG}"]`,
+      ),
+    ).toHaveCount(0);
   });
 });

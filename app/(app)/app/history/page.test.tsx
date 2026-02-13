@@ -165,7 +165,8 @@ describe('app/(app)/app/history/page', () => {
     const html = renderToStaticMarkup(element);
 
     expect(html).toContain('Stem for q1');
-    expect(html).toContain('Reattempt');
+    expect(html).toContain('Review');
+    expect(html).not.toContain('Reattempt');
   });
 
   it('renders an error state when session history fetch returns not-ok', async () => {

@@ -17,7 +17,7 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 | ID | Title | Priority | Status |
 |----|-------|----------|--------|
-| [BUG-132](./bug-132-duplicate-nav-links-pricing-dashboard.md) | Duplicate Nav Links — "Pricing" and "Dashboard" Appear Twice in Header | P3 | Open |
+| [BUG-132](./bug-132-duplicate-nav-links-pricing-dashboard.md) | Duplicate Nav Links — "Pricing" (Logged Out) and "Dashboard" (Logged In) | P3 | Open |
 
 **Next Bug ID:** BUG-133
 
