@@ -20,8 +20,6 @@ Implementation specifications provide detailed technical guidance for building e
 | [Master Spec](./master_spec.md) | Complete Technical Specification (SSOT) | Living | All |
 | [SPEC-016](./spec-016-observability.md) | Observability (Logging, Error Tracking) | Partially Implemented | Infrastructure |
 | [SPEC-017](./spec-017-rate-limiting.md) | Rate Limiting | Partial (MVP done) | Infrastructure |
-| [SPEC-026](./spec-026-history-review-only.md) | History Tab — Review-Only Question Links | Ready | Feature |
-| [SPEC-027](./spec-027-session-review-navigation.md) | Session Review Navigation (Sequential Nav + Attempt Identity) | Ready | Feature |
 
 **Master Spec split parts (readability):**
 
@@ -59,6 +57,8 @@ Implementation specifications provide detailed technical guidance for building e
 | [SPEC-023](../_archive/specs/spec-023-question-review-mode.md) | Question Review Mode | Feature |
 | [SPEC-024](../_archive/specs/spec-024-question-status-filter.md) | Question Status Filter (Practice & Quick Practice) | Feature |
 | [SPEC-025](../_archive/specs/spec-025-choice-label-desync-fix.md) | Choice Label Desync Fix (Standalone Question Page) | Feature |
+| [SPEC-026](../_archive/specs/spec-026-history-review-only.md) | History Tab — Review-Only Question Links | Feature |
+| [SPEC-027](../_archive/specs/spec-027-session-review-navigation.md) | Session Review Navigation (Sequential Nav + Attempt Identity) | Feature |
 
 ## Spec Statuses
 
