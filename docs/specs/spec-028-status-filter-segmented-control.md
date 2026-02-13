@@ -24,8 +24,8 @@ The status filter on Practice (`/app/practice`) and Quick Practice (`/app/practi
 
 ### Bugs Found During Live Inspection (2026-02-13)
 
-- **Marked chip CSS bug:** On Quick Practice, "Marked" chip renders with near-white text (`rgb(237,237,237)`) vs muted gray on siblings — CSS variable resolution bug.
 - **Missing hint text:** Practice shows "Leave empty to include all questions"; Quick Practice shows nothing.
+- **Vocabulary mismatch:** "Marked" (chip), "Bookmark" (action button), "Bookmarks" (nav link) — three words for one concept.
 - **Filter above heading:** `topContent` renders at line 120 of `practice-view.tsx`, before the `<h1>` at line 124.
 
 All bugs are resolved naturally by this redesign.
@@ -45,7 +45,7 @@ All bugs are resolved naturally by this redesign.
 | Bookmark dimension | Flattened as peer segment | Two-row layout is over-engineered; `/app/bookmarks` page handles cross-filtering |
 | Difficulty control | Also segmented: `All \| Easy \| Medium \| Hard` | Consistency; "All" warranted because mixing difficulties IS valid |
 | Difficulty default | All | Default study intent for difficulty is "no preference" |
-| URL params | Single-value (`?status=unanswered`) | Multi-value no longer needed |
+| URL params (Quick Practice) | Single value (`?status=incorrect`); omit when Unanswered | Multi-value no longer needed |
 | Quick Practice layout | Filter below heading | Move from `topContent` to `belowHeadingContent` |
 | Hint text | Removed | Unnecessary when something is always selected |
 
@@ -194,7 +194,9 @@ Key changes:
         label: statusDisplayLabel(s),
       }))}
       value={props.filters.status}
-      onChange={props.onStatusChange}
+      onChange={(value) =>
+        props.onStatusChange(value as unknown as QuestionProgressStatus)
+      }
       legend="Status"
     />
   </div>
@@ -269,13 +271,16 @@ Before: toggles status in array (multi-select).
 
 After: sets a single status value:
 ```typescript
-export function createStatusChangeHandler(
-  setFilters: Dispatch<SetStateAction<PracticeFilters>>,
-  setIdempotencyKey: Dispatch<SetStateAction<string>>,
-) {
-  return (status: QuestionProgressStatus) => {
-    setFilters((prev) => ({ ...prev, status }));
-    setIdempotencyKey(crypto.randomUUID());
+export function createStatusChangeHandler(input: {
+  setFilters: (
+    next: PracticeFilters | ((prev: PracticeFilters) => PracticeFilters),
+  ) => void;
+  setIdempotencyKey: (key: string) => void;
+  createIdempotencyKey: () => string;
+}): (status: PracticeFilters['status']) => void {
+  return (status) => {
+    input.setFilters((prev) => ({ ...prev, status }));
+    input.setIdempotencyKey(input.createIdempotencyKey());
   };
 }
 ```
@@ -286,13 +291,16 @@ Before: toggles difficulty in array (multi-select).
 
 After: sets a single difficulty or null:
 ```typescript
-export function createDifficultyChangeHandler(
-  setFilters: Dispatch<SetStateAction<PracticeFilters>>,
-  setIdempotencyKey: Dispatch<SetStateAction<string>>,
-) {
-  return (difficulty: QuestionDifficulty | null) => {
-    setFilters((prev) => ({ ...prev, difficulty }));
-    setIdempotencyKey(crypto.randomUUID());
+export function createDifficultyChangeHandler(input: {
+  setFilters: (
+    next: PracticeFilters | ((prev: PracticeFilters) => PracticeFilters),
+  ) => void;
+  setIdempotencyKey: (key: string) => void;
+  createIdempotencyKey: () => string;
+}): (difficulty: PracticeFilters['difficulty']) => void {
+  return (difficulty) => {
+    input.setFilters((prev) => ({ ...prev, difficulty }));
+    input.setIdempotencyKey(input.createIdempotencyKey());
   };
 }
 ```
@@ -419,7 +427,7 @@ const filters: PracticeFilters = useMemo(() => ({
 }), [status]);
 ```
 
-### 3.12 PracticeView — Add `belowHeadingContent` Prop, Deprecate `topContent`
+### 3.12 PracticeView — Add `belowHeadingContent` Prop
 
 **File:** `app/(app)/app/practice/components/practice-view.tsx`
 
@@ -439,13 +447,13 @@ Add a new optional prop `belowHeadingContent?: React.ReactNode` to `PracticeView
 </div>
 ```
 
-Remove `topContent` once Quick Practice no longer uses it. If no other consumers exist, delete the prop entirely.
+Keep `topContent` as-is (it is used by the practice session page to render the question navigator above the heading). Quick Practice should move from `topContent` → `belowHeadingContent`.
 
-### 3.13 Practice Logic — Update Filters-to-Array Conversion for `usePracticeQuestionFlow`
+### 3.13 Practice Question Loading — Convert Filters for Controller
 
-**File:** `app/(app)/app/practice/hooks/use-practice-question-flow.ts` (or wherever filters are passed to the server action)
+**File:** `app/(app)/app/practice/practice-page-logic.ts` (in `loadNextQuestion` / `createLoadNextQuestionAction`)
 
-The `getNextQuestion` server action expects `filters.statuses` as an array. Add a conversion layer:
+The `getNextQuestion` server action expects `filters.statuses` and `filters.difficulties` as arrays (see `QuestionFiltersSchema` in `question-controller.ts`). Convert the single-select UI values at the call site:
 
 ```typescript
 const serverFilters = {
@@ -453,6 +461,9 @@ const serverFilters = {
   difficulties: filters.difficulty ? [filters.difficulty] : [],
   statuses: [filters.status],
 };
+
+// When calling getNextQuestion:
+requestInput: { filters: serverFilters },
 ```
 
 ### 3.14 Question Repository Port — Update JSDoc
@@ -482,10 +493,9 @@ Update the JSDoc comment that says `Status values (unanswered, incorrect, marked
 | `app/(app)/app/practice/components/practice-session-starter.test.tsx` | Update to expect segmented controls |
 | `app/(app)/app/practice/quick/quick-practice-client.tsx` | Replace chips with segmented control, fix layout, single-value URL params |
 | `app/(app)/app/practice/quick/quick-practice-client.test.tsx` | Update URL param tests, layout assertions |
-| `app/(app)/app/practice/components/practice-view.tsx` | Add `belowHeadingContent` prop, remove `topContent` if unused |
+| `app/(app)/app/practice/components/practice-view.tsx` | Add `belowHeadingContent` prop (keep existing `topContent`) |
 | `app/(app)/app/practice/components/practice-view.test.tsx` | Update layout assertions |
-| `app/(app)/app/practice/practice-page-logic.ts` | Re-export updated `PracticeFilters` (if re-exported here) |
-| `app/(app)/app/practice/hooks/use-practice-question-flow.ts` | Convert single filter values to arrays for server action |
+| `app/(app)/app/practice/practice-page-logic.ts` | Convert single filter values to arrays for `getNextQuestion` |
 | `src/adapters/controllers/practice-controller.test.ts` | Update `'marked'` → `'bookmarked'` in test data |
 | `src/adapters/controllers/question-controller.test.ts` | Update `'marked'` → `'bookmarked'` in test data |
 
@@ -558,7 +568,7 @@ The segmented control component already exists at `components/ui/segmented-contr
 - parseStatusParam returns 'unanswered' when no param present (default)
 - parseStatusParam returns 'incorrect' when ?status=incorrect
 - parseStatusParam returns 'unanswered' for invalid values
-- parseStatusParam ignores comma-separated values (takes first valid or default)
+- parseStatusParam treats comma-separated legacy values as invalid and defaults to 'unanswered'
 - buildQuickPracticeStatusHref omits ?status for 'unanswered' (default)
 - buildQuickPracticeStatusHref sets ?status=incorrect for 'incorrect'
 - buildQuickPracticeStatusHref sets ?status=bookmarked for 'bookmarked'
@@ -573,6 +583,7 @@ The segmented control component already exists at `components/ui/segmented-contr
 
 ```
 - renders belowHeadingContent after the heading, before question area
+- renders topContent above the heading when provided
 - does not render topContent if prop is not provided
 ```
 
@@ -621,7 +632,7 @@ Phase 4: Quick Practice — Segmented Control + Layout Fix (RED → GREEN)
   20. Replace FilterChips with SegmentedControl
   21. Add belowHeadingContent prop to PracticeView
   22. Move Quick Practice filter from topContent to belowHeadingContent
-  23. Remove topContent prop if no longer used
+  23. Keep topContent for session navigator
   24. Run pnpm test --run
 
 Phase 5: Full Verification
@@ -666,7 +677,7 @@ Phase 5: Full Verification
 - Reuses an existing, tested component (`SegmentedControl`)
 - No backend logic changes — only a domain value rename and frontend type narrowing
 - The `marked` → `bookmarked` rename is a global find-and-replace with TypeScript compiler verification
-- URL param change on Quick Practice is backwards-compatible: old `?status=marked` URLs will default to `unanswered` (graceful degradation, not a crash)
+- URL param change on Quick Practice is backwards-tolerant: old `?status=marked` URLs will default to `unanswered` (graceful degradation, not a crash)
 
 **Migration note:** Old bookmarked URLs (`?status=marked`) will silently reset to the default. This is acceptable because Quick Practice URLs are not persisted or shared — they're ephemeral navigation state.
 
