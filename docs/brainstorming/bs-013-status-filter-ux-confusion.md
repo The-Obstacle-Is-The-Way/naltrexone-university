@@ -116,16 +116,13 @@ Keep current OR logic, add "Matches any selected status" hint. **Rejected:** the
 
 These were discovered during a UX audit of the current implementation on 2026-02-13. All are resolved naturally by the segmented control redesign.
 
-### Bug 1: "Marked" chip renders differently on Quick Practice
-On `/app/practice/quick`, the "Marked" chip has near-white text (`rgb(237, 237, 237)`) and a lighter background (`rgb(28, 28, 28)`) compared to Unanswered/Incorrect which have muted gray text (`rgb(115, 115, 115)`) and near-black background (`rgb(9, 9, 9)`). All three share identical CSS classes — this is a CSS variable resolution bug, not intentional. On `/app/practice`, all three render identically. Effect: "Marked" looks semi-selected even when `aria-pressed="false"`.
-
-### Bug 2: Missing hint text on Quick Practice
+### Bug 1: Missing hint text on Quick Practice
 The Practice page shows "Leave empty to include all questions" below the chips. Quick Practice shows nothing. Same component, inconsistent behavior.
 
-### Bug 3: Vocabulary mismatch
+### Bug 2: Vocabulary mismatch
 Three different words for one concept: "Marked" (filter chip), "Bookmark" (action button), "Bookmarks" (nav link). Normalize: label = "Bookmarked", verb = "Bookmark", nav = "Bookmarks".
 
-### Bug 4: Filter placement above page title on Quick Practice
+### Bug 3: Filter placement above page title on Quick Practice
 The status chips sit above the "Quick Practice" heading, making them feel like a site-level control rather than a filter for the question stream below.
 
 ## Decision Log
