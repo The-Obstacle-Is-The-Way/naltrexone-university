@@ -42,6 +42,7 @@ test.describe('session review navigation (SPEC-027)', () => {
     ).toBeVisible({ timeout: 15_000 });
 
     // Extract sessionId from URL: /app/practice/{sessionId}
+    await page.waitForURL(/\/app\/practice\/[^/?]+$/, { timeout: 15_000 });
     const sessionUrl = page.url();
     const sessionIdMatch = sessionUrl.match(/\/app\/practice\/([^/?]+)/);
     expect(sessionIdMatch).toBeTruthy();
@@ -159,10 +160,20 @@ test.describe('session review navigation (SPEC-027)', () => {
 
     // Find a question link (from questions tab, not session-scoped)
     const questionLink = page.locator('a[href*="/app/questions/"]').first();
+    const noAttemptedQuestionsMessage = page.getByText(
+      /No questions attempted yet/i,
+    );
 
-    // Skip if no attempted questions exist
-    const linkCount = await questionLink.count();
-    if (linkCount === 0) {
+    // Wait for either the question list to load or for the empty state to appear.
+    await questionLink.or(noAttemptedQuestionsMessage).waitFor({
+      state: 'visible',
+      timeout: 15_000,
+    });
+
+    const hasNoAttemptedQuestions = await noAttemptedQuestionsMessage
+      .isVisible()
+      .catch(() => false);
+    if (hasNoAttemptedQuestions) {
       test.skip(true, 'No attempted questions in history to verify');
       return;
     }
