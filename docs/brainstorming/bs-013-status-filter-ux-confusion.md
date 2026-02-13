@@ -17,7 +17,7 @@ The status filter (Unanswered / Incorrect / Marked) works correctly in code but 
 
 3. **"Marked" is a different dimension.** "Unanswered" and "Incorrect" are progress states (mutually exclusive per question). "Marked" is a bookmark (orthogonal — a question can be marked AND unanswered, or marked AND incorrect, or marked AND correct). Presenting all three as peer chips in the same row conflates two different concepts.
 
-4. **No explicit "All" option.** BS-012 proposed an "All" chip. SPEC-024 replaced it with "Leave empty to include all questions" hint text, which is less discoverable and makes "nothing selected" ambiguous — does it mean "no filter" or "I forgot to pick one"?
+4. **Empty-state ambiguity.** When nothing is selected, all questions are included — but there's no visual indication of this. The hint text "Leave empty to include all questions" (Practice page only) is easy to miss, and "nothing selected" is ambiguous: does it mean "no filter applied" or "I forgot to pick one"?
 
 ## Evidence: BS-012 vs SPEC-024 Divergence
 
