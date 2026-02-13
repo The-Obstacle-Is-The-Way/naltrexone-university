@@ -56,45 +56,87 @@ A question is always in exactly one progress state AND exactly one bookmark stat
 
 This is a UX polish issue, not a blocker. It should not delay ongoing spec work.
 
-## Leading Thought
+## Decision: Single-Select Segmented Control
 
-Default to unanswered. No chip for it — that's just what you get. The only selectable chips are **Incorrect** and **Marked**, single-select (one at a time). No "All" option — "All" is not descriptive enough and doesn't map to a real study intent.
+Replace the multi-select chip group with a **single-select segmented control** defaulting to Unanswered. Reuse the existing Tutor/Exam mode segmented control component.
 
 ```
-Default (no chip active):  Unanswered questions
-Click "Incorrect":         Switch to incorrect-only
-Click "Marked":            Switch to marked-only
-Click active chip again:   Back to default (unanswered)
+Status:  [ Unanswered | Incorrect | Bookmarked ]
+                ↑ pre-selected on load
 ```
 
-This is the simplest mental model: you're always practicing one category of questions. No OR logic, no multi-select confusion, no ambiguous empty state.
+**Three segments, one active at a time.** The segmented control is inherently single-select, so OR/AND confusion is eliminated by the control type itself. The user is always practicing exactly one category.
 
-**But this is not settled.** Something about the whole interaction still feels off. The relationship between these categories, the chip UI pattern, how to communicate the default — it needs more thought. This is an open design question, not a solved problem.
+Key decisions:
+- **Default = Unanswered** (always one active, no ambiguous empty state)
+- **No "All" option** — not a real study intent; nobody sits down thinking "give me a random mix of everything"
+- **No "Correct" filter now** — add as a fourth segment later when reset-question-bank feature is built
+- **Rename "Marked" → "Bookmarked"** — matches the "Bookmark" action button and "Bookmarks" nav link
+- **Flatten into one dimension** — Bookmarked becomes a peer segment rather than a separate toggle row; the dedicated `/app/bookmarks` page serves users who need cross-filtered bookmark access
+- **URL params change** from multi-value (`?status=unanswered,incorrect,marked`) to single-value (`?status=unanswered`)
+- **Remove hint text** "Leave empty to include all questions" — no longer needed when something is always selected
+- **Quick Practice: move control below page heading** — currently sits above the title, making it feel like a site-level control
+- **Difficulty on Practice page** also converts to segmented control for visual consistency, but keeps an "All" default since mixing difficulties IS a valid study intent: `[ All | Easy | Medium | Hard ]`
 
-## Other Approaches Considered
+Why segmented control over other patterns:
+- The Tutor/Exam mode picker already teaches this interaction pattern on the same page — zero new learning
+- Canonical single-select-from-few-options component (Apple, Material Design)
+- Always-one-active behavior means the system is never in an ambiguous state
+- Eliminates the "ghost default" asymmetry problem where Unanswered as plain text looks different from interactive chips
 
-### Multi-select with clarity hints
-- Keep current OR logic, add "Matches any selected status" hint
-- Rejected: the fundamental confusion is mixing mutually exclusive progress states with orthogonal bookmark state — a hint doesn't fix that
+## Other Approaches Considered (Rejected)
 
-### Separate dimensions into two rows
-- Row 1 — Progress: Unanswered | Incorrect (single-select)
-- Row 2 — Bookmarked only: toggle checkbox
-- Most correct data model, but may feel heavy for the UI
+### A — "Ghost default" with two toggleable chips
+Unanswered as static text, Incorrect and Bookmarked as two clickable chips. Click one to switch, click again to return to default. **Rejected:** the visual asymmetry between plain text and interactive chips is confusing — a new user won't understand that "Unanswered" is the active state since it doesn't look like the other two. Needs extra label ("Showing: Unanswered") to communicate state.
 
-### Explicit "All" chip
-- Rejected: "All" is not descriptive — all what? All statuses? All questions? It's a non-concept for the user.
+### B — Segmented control + separate bookmark toggle (two rows)
+Row 1 — Progress: `[ Unanswered | Incorrect | Correct ]` (segmented control). Row 2 — `☐ Bookmarked only` (toggle). Most correct data model — separates orthogonal dimensions. **Rejected:** over-engineered for this product. The cross-filter use case ("incorrect AND bookmarked") is a power-user edge case. The dedicated Bookmarks page already serves bookmark-focused study. Two control rows for a simple filter adds visual weight without proportional value.
 
-## Open Questions
+### C — Dropdown/select menu
+`Filter by: Unanswered ▾` that opens to show three options. **Rejected:** hides options behind a click. For only three values, a dropdown adds friction and obscures the other modes. Dropdowns are for 5+ options.
 
-1. Is the "default = unanswered, chips = incorrect/marked" model actually the right framing, or is there a completely different UI pattern that fits better (e.g., a dropdown, a segmented control, a checkbox)?
-2. How do UWorld/AMBOSS/BoardVitals handle the "Marked" filter relative to progress filters? Are they separate controls?
-3. Should "Marked" even live in the same control as progress states, given it's a different dimension entirely?
-4. What does the user expect when they click "Marked" — only marked questions, or marked questions filtered by their progress state?
-5. Is this worth a standalone spec, or small enough to fold into a broader UX pass?
+### D — Three chips, single-select, Unanswered pre-selected
+Same visual as current chips but enforce single-select. **Rejected:** chips/pills are conventionally multi-select (tag filters on e-commerce sites). Even with single-select enforcement, the visual form factor creates a learned expectation of multi-select. Also looks identical to a segmented control without the container — so just use a proper segmented control.
+
+### E — Multi-select with clarity hints
+Keep current OR logic, add "Matches any selected status" hint. **Rejected:** the fundamental confusion is mixing mutually exclusive progress states with orthogonal bookmark state — a hint doesn't fix that.
+
+### F — Explicit "All" chip
+**Rejected:** "All" is not a study intent. Nobody sits down to practice thinking "give me a random mix of stuff I've never seen, stuff I got wrong, AND stuff I already nailed." It's a holdover from generic faceted search thinking that doesn't apply to a study tool.
+
+## Open Questions (Resolved)
+
+1. **Right UI pattern?** → **Segmented control.** Inherently single-select, already used for Tutor/Exam mode on the same page, canonical component for 2–5 mutually exclusive options.
+2. **How do UWorld/AMBOSS/BoardVitals handle it?** → They separate progress (checkboxes: Unused/Incorrect/Correct) from bookmarks (separate toggle or dedicated list). We're going simpler: flatten into one dimension with Bookmarked as a peer segment.
+3. **Should Bookmarked be separate?** → **No.** The data model is orthogonal, but the UI complexity of two control rows isn't justified. The dedicated Bookmarks page handles cross-filtered access.
+4. **What does clicking Bookmarked mean?** → **Only bookmarked questions**, regardless of progress state. No cross-filtering.
+5. **Standalone spec?** → **Yes.** DOM structure changes, URL param scheme changes, query logic changes, new component wiring, accessibility markup — this is a real spec.
+
+## Bugs Found During Live Inspection
+
+These were discovered during a UX audit of the current implementation on 2026-02-13. All are resolved naturally by the segmented control redesign.
+
+### Bug 1: "Marked" chip renders differently on Quick Practice
+On `/app/practice/quick`, the "Marked" chip has near-white text (`rgb(237, 237, 237)`) and a lighter background (`rgb(28, 28, 28)`) compared to Unanswered/Incorrect which have muted gray text (`rgb(115, 115, 115)`) and near-black background (`rgb(9, 9, 9)`). All three share identical CSS classes — this is a CSS variable resolution bug, not intentional. On `/app/practice`, all three render identically. Effect: "Marked" looks semi-selected even when `aria-pressed="false"`.
+
+### Bug 2: Missing hint text on Quick Practice
+The Practice page shows "Leave empty to include all questions" below the chips. Quick Practice shows nothing. Same component, inconsistent behavior.
+
+### Bug 3: Vocabulary mismatch
+Three different words for one concept: "Marked" (filter chip), "Bookmark" (action button), "Bookmarks" (nav link). Normalize: label = "Bookmarked", verb = "Bookmark", nav = "Bookmarks".
+
+### Bug 4: Filter placement above page title on Quick Practice
+The status chips sit above the "Quick Practice" heading, making them feel like a site-level control rather than a filter for the question stream below.
 
 ## Decision Log
 
 | Date | Decision | Rationale |
 |------|----------|-----------|
 | 2026-02-12 | Captured as BS-013 for future UX polish | Not a blocker; implementation is correct but UX is confusing. Defer until active specs are complete. |
+| 2026-02-13 | Single-select segmented control, 3 segments: Unanswered (default) / Incorrect / Bookmarked | Segmented control is inherently single-select (eliminates OR/AND confusion), reuses existing Tutor/Exam component pattern, always-one-active eliminates empty-state ambiguity |
+| 2026-02-13 | Flatten Bookmarked into same dimension as progress states | Two-row layout (progress + bookmark toggle) is over-engineered; `/app/bookmarks` page already serves cross-filtered bookmark access |
+| 2026-02-13 | Kill "All" option permanently | "All" is not a study intent — nobody deliberately practices a random mix of all statuses. Not needed for default (Unanswered covers it) |
+| 2026-02-13 | Defer "Correct" segment until reset-question-bank feature | Reinforcement review is a real use case but niche; add as 4th segment when there's demand |
+| 2026-02-13 | Rename "Marked" → "Bookmarked" app-wide | Vocabulary normalization: matches "Bookmark" (action verb) and "Bookmarks" (nav link) |
+| 2026-02-13 | Convert Difficulty to segmented control too, with "All" default | Consistency with Status control; mixing difficulties IS a valid study intent, so "All" is warranted here |
+| 2026-02-13 | Needs standalone spec (SPEC-028) | DOM structure, URL params, query logic, component wiring, a11y markup all change — not a CSS tweak |
