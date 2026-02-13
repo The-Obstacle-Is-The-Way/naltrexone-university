@@ -146,7 +146,7 @@ export type QuestionViewProps = {
   question: GetQuestionBySlugOutput | null;
   selectedChoiceId: string | null;
   submitResult: SubmitAnswerOutput | null;
-  sessionNavigation?: SessionNavigation | null;
+  sessionNavigation: SessionNavigation | null;
   canSubmit: boolean;
   isPending: boolean;
   origin?: QuestionOrigin | null;

@@ -14,6 +14,7 @@ describe('QuestionView', () => {
       question: null,
       selectedChoiceId: null,
       submitResult: null,
+      sessionNavigation: null,
       canSubmit: false,
       isPending: false,
       onTryAgain: () => undefined,
@@ -43,6 +44,7 @@ describe('QuestionView', () => {
         question={null}
         selectedChoiceId={null}
         submitResult={null}
+        sessionNavigation={null}
         canSubmit={false}
         isPending={false}
         onTryAgain={() => undefined}
@@ -66,6 +68,7 @@ describe('QuestionView', () => {
         question={null}
         selectedChoiceId={null}
         submitResult={null}
+        sessionNavigation={null}
         canSubmit={false}
         isPending={false}
         origin="review"
@@ -91,6 +94,7 @@ describe('QuestionView', () => {
         question={null}
         selectedChoiceId={null}
         submitResult={null}
+        sessionNavigation={null}
         canSubmit={false}
         isPending={false}
         origin="history"
@@ -148,6 +152,7 @@ describe('QuestionView', () => {
         question={null}
         selectedChoiceId={null}
         submitResult={null}
+        sessionNavigation={null}
         canSubmit={false}
         isPending={false}
         origin="bookmarks"
@@ -179,6 +184,7 @@ describe('QuestionView', () => {
           explanationMd: 'Explanation',
           choiceExplanations: [],
         }}
+        sessionNavigation={null}
         canSubmit={false}
         isPending={false}
         origin="practice"
@@ -211,6 +217,7 @@ describe('QuestionView', () => {
           explanationMd: 'Explanation',
           choiceExplanations: [],
         }}
+        sessionNavigation={null}
         canSubmit={false}
         isPending={false}
         origin="history"
@@ -240,6 +247,7 @@ describe('QuestionView', () => {
           explanationMd: 'Explanation',
           choiceExplanations: [],
         }}
+        sessionNavigation={null}
         canSubmit={false}
         isPending={false}
         onTryAgain={() => undefined}

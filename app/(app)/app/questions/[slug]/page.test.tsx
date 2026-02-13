@@ -133,6 +133,7 @@ describe('app/(app)/app/questions/[slug]', () => {
         question={null}
         selectedChoiceId={null}
         submitResult={null}
+        sessionNavigation={null}
         canSubmit={false}
         isPending={false}
         onTryAgain={() => undefined}
@@ -157,6 +158,7 @@ describe('app/(app)/app/questions/[slug]', () => {
         question={null}
         selectedChoiceId={null}
         submitResult={null}
+        sessionNavigation={null}
         canSubmit={false}
         isPending={false}
         onTryAgain={() => undefined}
@@ -194,6 +196,7 @@ describe('app/(app)/app/questions/[slug]', () => {
         question={toGetQuestionBySlugOutput(question)}
         selectedChoiceId={null}
         submitResult={null}
+        sessionNavigation={null}
         canSubmit={false}
         isPending={false}
         onTryAgain={() => undefined}
@@ -224,6 +227,7 @@ describe('app/(app)/app/questions/[slug]', () => {
           explanationMd: 'Explanation',
           choiceExplanations: [],
         }}
+        sessionNavigation={null}
         canSubmit={false}
         isPending={false}
         onTryAgain={() => undefined}
@@ -264,6 +268,7 @@ describe('app/(app)/app/questions/[slug]', () => {
         question={toGetQuestionBySlugOutput(question)}
         selectedChoiceId="c1"
         submitResult={null}
+        sessionNavigation={null}
         canSubmit
         isPending={false}
         onTryAgain={() => undefined}
