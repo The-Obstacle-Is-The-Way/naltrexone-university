@@ -60,16 +60,56 @@ describe('HistoryQuestionsTab', () => {
     expect(html).toContain('Exam session');
     expect(html).toContain('Ad-hoc practice');
     expect(html).toContain('Review');
-    expect(html).toContain('Reattempt');
+    expect(html).not.toContain('Reattempt');
 
     const correctHref = toQuestionRoute('q-correct', {
       from: 'history',
       mode: 'review',
     });
-    const incorrectHref = toQuestionRoute('q-incorrect', { from: 'history' });
+    const incorrectHref = toQuestionRoute('q-incorrect', {
+      from: 'history',
+      mode: 'review',
+    });
 
     expect(doc.querySelectorAll(`a[href="${correctHref}"]`)).toHaveLength(2);
     expect(doc.querySelectorAll(`a[href="${incorrectHref}"]`)).toHaveLength(2);
+  });
+
+  it('includes mode=review in incorrect question links', () => {
+    const result: ActionResult<GetAttemptedQuestionsOutput> = {
+      ok: true,
+      data: {
+        rows: [
+          {
+            isAvailable: true,
+            questionId: 'q_incorrect',
+            isCorrect: false,
+            sessionId: null,
+            sessionMode: null,
+            slug: 'q-incorrect',
+            stemMd: 'Stem for incorrect',
+            difficulty: 'hard',
+            tagSlugs: [],
+            lastAnsweredAt: '2026-02-02T00:00:00.000Z',
+          },
+        ],
+        totalCount: 1,
+        limit: 20,
+        offset: 0,
+      },
+    };
+
+    const html = renderToStaticMarkup(<HistoryQuestionsTab result={result} />);
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+
+    const incorrectHref = toQuestionRoute('q-incorrect', {
+      from: 'history',
+      mode: 'review',
+    });
+
+    expect(doc.querySelectorAll(`a[href="${incorrectHref}"]`)).toHaveLength(2);
+    expect(html).toContain('Review');
+    expect(html).not.toContain('Reattempt');
   });
 
   it('caps long question stems in the body preview', () => {
