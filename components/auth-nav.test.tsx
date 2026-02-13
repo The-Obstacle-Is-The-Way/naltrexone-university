@@ -302,9 +302,14 @@ describe('AuthNav', () => {
       href: '/pricing',
       label: 'Pricing',
     });
+    const dashboardLinks = getLinksByHrefAndLabel(header, {
+      href: '/app/dashboard',
+      label: 'Dashboard',
+    });
 
     expect(featuresLinks).toHaveLength(MARKETING_LAYOUT_FEATURES_LINK_COUNT);
     expect(pricingLinks).toHaveLength(MARKETING_LAYOUT_PRICING_LINK_COUNT);
+    expect(dashboardLinks).toHaveLength(0);
     expect(header.querySelector('[data-testid="user-button"]')).not.toBeNull();
     expect(header.querySelector('a[href="/sign-in"]')).toBeNull();
   });
