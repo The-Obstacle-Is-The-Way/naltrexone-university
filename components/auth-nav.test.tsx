@@ -265,7 +265,7 @@ describe('AuthNav', () => {
     expect(header.querySelector('a[href="/sign-in"]')).toBeNull();
   });
 
-  it('scenario 7: authenticated non-entitled pricing page does not duplicate the Pricing link', async () => {
+  it('scenario 7: authenticated non-entitled pricing page does not duplicate the Pricing link (scenario 6 redirect covered in app layout tests)', async () => {
     process.env.NEXT_PUBLIC_SKIP_CLERK = 'false';
     vi.doMock('@clerk/nextjs', () => ({
       UserButton: () => <div data-testid="user-button" />,
