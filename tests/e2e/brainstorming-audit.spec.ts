@@ -212,14 +212,18 @@ test.describe('brainstorming audit — validate documented issues', () => {
       page.getByRole('button', { name: 'Tutor', exact: true }),
     ).toBeVisible();
 
-    // Assert that question status filter elements are PRESENT
+    const statusFilter = page.getByRole('group', {
+      name: 'Status',
+      exact: true,
+    });
+    await expect(statusFilter).toBeVisible();
+
+    // Assert that question status filter elements are PRESENT.
     for (const label of STATUS_LABELS) {
       await expect(
-        page.getByRole('button', { name: label, exact: true }),
+        statusFilter.getByRole('button', { name: label, exact: true }),
       ).toBeVisible();
     }
-
-    await expect(page.getByText('Status', { exact: true })).toBeVisible();
     await expect(
       page.getByText('Leave empty to include all questions', { exact: true }),
     ).toHaveCount(0);
@@ -250,13 +254,17 @@ test.describe('brainstorming audit — validate documented issues', () => {
       timeout: 30_000,
     });
 
+    const statusFilter = page.getByRole('group', {
+      name: 'Status',
+      exact: true,
+    });
+    await expect(statusFilter).toBeVisible();
+
     for (const label of STATUS_LABELS) {
       await expect(
-        page.getByRole('button', { name: label, exact: true }),
+        statusFilter.getByRole('button', { name: label, exact: true }),
       ).toBeVisible();
     }
-
-    await expect(page.getByText('Status', { exact: true })).toBeVisible();
 
     // Difficulty filters are still out of scope in v1.
     const absentLabels = ['Difficulty', 'Easy', 'Medium', 'Hard'];
