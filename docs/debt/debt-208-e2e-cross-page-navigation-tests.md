@@ -67,10 +67,10 @@ import { ensureSubscribed } from './helpers/subscription';
 const QUESTION_SLUG = 'placeholder-01-naltrexone-mechanism';
 
 test.describe('cross-page navigation', () => {
-  test.setTimeout(120_000);
+  test.setTimeout(180_000);
   test.skip(!hasClerkCredentials, 'Missing Clerk E2E credentials');
 
-  test('dashboard activity item navigates to question detail and back', async ({
+  test('dashboard activity → question detail → back to dashboard', async ({
     page,
   }) => {
     await signInWithClerkPassword(page);
@@ -78,14 +78,22 @@ test.describe('cross-page navigation', () => {
     await assertQuestionSlugExists(page, QUESTION_SLUG);
     await submitQuestionForOutcome(page, QUESTION_SLUG, 'Correct');
 
-    await page.goto('/app/dashboard');
+    await page.goto('/app/dashboard', {
+      timeout: 60_000,
+      waitUntil: 'domcontentloaded',
+    });
+    await expect(
+      page.getByRole('heading', { name: 'Dashboard' }),
+    ).toBeVisible();
+
     const activityItem = page
       .locator(`a[href*="${QUESTION_SLUG}"][href*="from=dashboard"]`)
       .first();
     await expect(activityItem).toBeVisible({ timeout: 15_000 });
     await activityItem.click();
 
-    await expect(page).toHaveURL(/\/app\/questions\//);
+    await expect(page).toHaveURL(/\/app\/questions\//, { timeout: 15_000 });
+    await expect(page).toHaveURL(/from=dashboard/);
     await expect(page.getByRole('heading', { name: 'Question' })).toBeVisible();
     await expect(page.getByText(/Loading question/i)).toBeHidden({
       timeout: 15_000,
@@ -95,7 +103,7 @@ test.describe('cross-page navigation', () => {
     await expect(page).toHaveURL('/app/dashboard');
   });
 
-  test('history questions navigates to question detail and back', async ({
+  test('history questions → question detail → back to history', async ({
     page,
   }) => {
     await signInWithClerkPassword(page);
@@ -107,11 +115,18 @@ test.describe('cross-page navigation', () => {
       timeout: 60_000,
       waitUntil: 'domcontentloaded',
     });
-    const historyLink = page.locator(`a[href*="${QUESTION_SLUG}"]`).first();
+    await expect(page.getByRole('heading', { name: 'History' })).toBeVisible();
+
+    const historyLink = page
+      .locator(
+        `a[href^="/app/questions/${QUESTION_SLUG}"][href*="from=history"]`,
+      )
+      .first();
     await expect(historyLink).toBeVisible({ timeout: 15_000 });
     await historyLink.click();
 
     await expect(page).toHaveURL(new RegExp(`/app/questions/${QUESTION_SLUG}`));
+    await expect(page).toHaveURL(/from=history/);
     await expect(page.getByRole('heading', { name: 'Question' })).toBeVisible();
     await expect(page.getByText(/Loading question/i)).toBeHidden({
       timeout: 15_000,
@@ -126,11 +141,14 @@ test.describe('cross-page navigation', () => {
     await ensureSubscribed(page);
     await ensureBookmarkExistsOnBookmarksPage(page);
 
-    const bookmarksLink = page.locator('a[href^="/app/questions/"]').first();
+    const bookmarksLink = page
+      .locator('a[href^="/app/questions/"][href*="from=bookmarks"]')
+      .first();
     await expect(bookmarksLink).toBeVisible({ timeout: 15_000 });
     await bookmarksLink.click();
 
-    await expect(page).toHaveURL(/\/app\/questions\//);
+    await expect(page).toHaveURL(/\/app\/questions\//, { timeout: 15_000 });
+    await expect(page).toHaveURL(/from=bookmarks/);
     await expect(page.getByRole('heading', { name: 'Question' })).toBeVisible();
     await expect(page.getByText(/Loading question/i)).toBeHidden({
       timeout: 15_000,
