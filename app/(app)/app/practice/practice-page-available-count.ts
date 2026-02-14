@@ -1,16 +1,22 @@
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
+import type {
+  QuestionDifficulty,
+  QuestionProgressStatus,
+} from '@/src/domain/value-objects';
 
 export type AvailableQuestionsCountStatus = 'idle' | 'loading' | 'error';
 
+export type AvailableQuestionsCountFilters = {
+  tagSlugs: readonly string[];
+  difficulties: readonly QuestionDifficulty[];
+  statuses: readonly QuestionProgressStatus[];
+};
+
 export function createAvailableQuestionsCountEffect(input: {
   countAvailableQuestionsFn: (
-    input: unknown,
+    input: AvailableQuestionsCountFilters,
   ) => Promise<ActionResult<{ count: number }>>;
-  filters: {
-    tagSlugs: readonly string[];
-    difficulties: readonly string[];
-    statuses: readonly string[];
-  };
+  filters: AvailableQuestionsCountFilters;
   setAvailableCountStatus: (status: AvailableQuestionsCountStatus) => void;
   setAvailableCount: (count: number) => void;
   logError: (message: string, context: unknown) => void;
@@ -23,11 +29,7 @@ export function createAvailableQuestionsCountEffect(input: {
   void (async () => {
     let res: Awaited<ReturnType<typeof input.countAvailableQuestionsFn>>;
     try {
-      res = await input.countAvailableQuestionsFn({
-        tagSlugs: input.filters.tagSlugs,
-        difficulties: input.filters.difficulties,
-        statuses: input.filters.statuses,
-      });
+      res = await input.countAvailableQuestionsFn(input.filters);
     } catch (error) {
       if (!mounted) return;
       logError('Failed to count available questions', error);

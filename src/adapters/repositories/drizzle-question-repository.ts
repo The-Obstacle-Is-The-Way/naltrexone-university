@@ -32,6 +32,51 @@ import { latestAttemptRankSql } from './shared/latest-attempt-rank-sql';
 export class DrizzleQuestionRepository implements QuestionRepository {
   constructor(private readonly db: DrizzleDb) {}
 
+  private buildPublishedCandidateWhere(filters: QuestionFilters): {
+    hasTagFilter: boolean;
+    where: SQL;
+  } {
+    const hasDifficultyFilter = filters.difficulties.length > 0;
+    const hasTagFilter = filters.tagSlugs.length > 0;
+    const statuses = filters.statuses ?? [];
+    const hasStatusFilter = statuses.length > 0;
+
+    const whereParts: SQL[] = [eq(questions.status, 'published')];
+
+    if (hasDifficultyFilter) {
+      whereParts.push(inArray(questions.difficulty, [...filters.difficulties]));
+    }
+
+    if (hasStatusFilter) {
+      if (typeof filters.userId !== 'string') {
+        throw new ApplicationError(
+          'VALIDATION_ERROR',
+          'userId is required when filtering by status',
+        );
+      }
+
+      const userId = filters.userId;
+      const statusConditions = statuses.map((status) =>
+        this.buildStatusCondition(status, userId),
+      );
+      const statusCondition =
+        statusConditions.length === 1
+          ? statusConditions[0]
+          : (or(...statusConditions) ?? statusConditions[0]);
+      whereParts.push(statusCondition);
+    }
+
+    const baseWhere = and(...whereParts) ?? whereParts[0];
+
+    return {
+      hasTagFilter,
+      where: hasTagFilter
+        ? (and(baseWhere, inArray(tags.slug, [...filters.tagSlugs])) ??
+          baseWhere)
+        : baseWhere,
+    };
+  }
+
   async findPublishedById(id: string) {
     const row = await this.db.query.questions.findFirst({
       where: and(eq(questions.id, id), eq(questions.status, 'published')),
@@ -89,45 +134,13 @@ export class DrizzleQuestionRepository implements QuestionRepository {
   }
 
   async listPublishedCandidateIds(filters: QuestionFilters) {
-    const hasDifficultyFilter = filters.difficulties.length > 0;
-    const hasTagFilter = filters.tagSlugs.length > 0;
-    const statuses = filters.statuses ?? [];
-    const hasStatusFilter = statuses.length > 0;
-
-    const whereParts: SQL[] = [eq(questions.status, 'published')];
-
-    if (hasDifficultyFilter) {
-      whereParts.push(inArray(questions.difficulty, [...filters.difficulties]));
-    }
-
-    if (hasStatusFilter) {
-      if (typeof filters.userId !== 'string') {
-        throw new ApplicationError(
-          'VALIDATION_ERROR',
-          'userId is required when filtering by status',
-        );
-      }
-
-      const userId = filters.userId;
-      const statusConditions = statuses.map((status) =>
-        this.buildStatusCondition(status, userId),
-      );
-      const statusCondition =
-        statusConditions.length === 1
-          ? statusConditions[0]
-          : or(...statusConditions);
-      if (statusCondition) whereParts.push(statusCondition);
-    }
+    const { hasTagFilter, where } = this.buildPublishedCandidateWhere(filters);
 
     const baseOrderBy = [desc(questions.createdAt), asc(questions.id)] as const;
 
     const baseQuery = this.db
       .select({ id: questions.id, createdAt: questions.createdAt })
       .from(questions);
-
-    const where = hasTagFilter
-      ? and(...whereParts, inArray(tags.slug, [...filters.tagSlugs]))
-      : and(...whereParts);
 
     const query = hasTagFilter
       ? baseQuery
@@ -143,43 +156,11 @@ export class DrizzleQuestionRepository implements QuestionRepository {
   }
 
   async countPublishedCandidateIds(filters: QuestionFilters): Promise<number> {
-    const hasDifficultyFilter = filters.difficulties.length > 0;
-    const hasTagFilter = filters.tagSlugs.length > 0;
-    const statuses = filters.statuses ?? [];
-    const hasStatusFilter = statuses.length > 0;
-
-    const whereParts: SQL[] = [eq(questions.status, 'published')];
-
-    if (hasDifficultyFilter) {
-      whereParts.push(inArray(questions.difficulty, [...filters.difficulties]));
-    }
-
-    if (hasStatusFilter) {
-      if (typeof filters.userId !== 'string') {
-        throw new ApplicationError(
-          'VALIDATION_ERROR',
-          'userId is required when filtering by status',
-        );
-      }
-
-      const userId = filters.userId;
-      const statusConditions = statuses.map((status) =>
-        this.buildStatusCondition(status, userId),
-      );
-      const statusCondition =
-        statusConditions.length === 1
-          ? statusConditions[0]
-          : or(...statusConditions);
-      if (statusCondition) whereParts.push(statusCondition);
-    }
+    const { hasTagFilter, where } = this.buildPublishedCandidateWhere(filters);
 
     const baseQuery = this.db
       .select({ count: sql<number>`count(distinct ${questions.id})::int` })
       .from(questions);
-
-    const where = hasTagFilter
-      ? and(...whereParts, inArray(tags.slug, [...filters.tagSlugs]))
-      : and(...whereParts);
 
     const query = hasTagFilter
       ? baseQuery

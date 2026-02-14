@@ -675,6 +675,108 @@ describe('DrizzleQuestionRepository', () => {
       expect(result).toEqual([qTagged.id]);
     });
   });
+
+  describe('countPublishedCandidateIds with status filters', () => {
+    it('returns only bookmarked questions when status=bookmarked', async () => {
+      const user = await createUser();
+
+      const qBookmarked = await createQuestion({
+        slug: `it-count-bookmarked-${randomUUID()}`,
+        status: 'published',
+        difficulty: 'easy',
+        createdAt: new Date('2026-01-01T00:00:00.000Z'),
+      });
+      const _qUnbookmarked = await createQuestion({
+        slug: `it-count-unbookmarked-${randomUUID()}`,
+        status: 'published',
+        difficulty: 'easy',
+        createdAt: new Date('2026-01-02T00:00:00.000Z'),
+      });
+
+      await db.insert(schema.bookmarks).values({
+        userId: user.id,
+        questionId: qBookmarked.id,
+      });
+
+      const repo = new DrizzleQuestionRepository(db);
+      const result = await repo.countPublishedCandidateIds({
+        tagSlugs: [],
+        difficulties: [],
+        statuses: ['bookmarked'],
+        userId: user.id,
+      });
+
+      expect(result).toBe(1);
+    });
+
+    it('combines unanswered and incorrect with OR logic', async () => {
+      const user = await createUser();
+
+      const qIncorrect = await createQuestion({
+        slug: `it-count-or-incorrect-${randomUUID()}`,
+        status: 'published',
+        difficulty: 'easy',
+        createdAt: new Date('2026-01-01T00:00:00.000Z'),
+      });
+      const _qUnanswered = await createQuestion({
+        slug: `it-count-or-unanswered-${randomUUID()}`,
+        status: 'published',
+        difficulty: 'easy',
+        createdAt: new Date('2026-01-02T00:00:00.000Z'),
+      });
+      const qCorrect = await createQuestion({
+        slug: `it-count-or-correct-${randomUUID()}`,
+        status: 'published',
+        difficulty: 'easy',
+        createdAt: new Date('2026-01-03T00:00:00.000Z'),
+      });
+
+      const [qIncorrectChoiceA] = await db
+        .select({ id: schema.choices.id })
+        .from(schema.choices)
+        .where(
+          and(
+            eq(schema.choices.questionId, qIncorrect.id),
+            eq(schema.choices.label, 'A'),
+          ),
+        )
+        .limit(1);
+      if (!qIncorrectChoiceA) {
+        throw new Error('Failed to load incorrect choice for setup');
+      }
+
+      await db.insert(schema.attempts).values([
+        {
+          userId: user.id,
+          questionId: qIncorrect.id,
+          practiceSessionId: null,
+          selectedChoiceId: qIncorrectChoiceA.id,
+          isCorrect: false,
+          timeSpentSeconds: 0,
+          answeredAt: new Date('2026-02-01T00:00:00.000Z'),
+        },
+        {
+          userId: user.id,
+          questionId: qCorrect.id,
+          practiceSessionId: null,
+          selectedChoiceId: qCorrect.correctChoiceId,
+          isCorrect: true,
+          timeSpentSeconds: 0,
+          answeredAt: new Date('2026-02-02T00:00:00.000Z'),
+        },
+      ]);
+
+      const repo = new DrizzleQuestionRepository(db);
+      const result = await repo.countPublishedCandidateIds({
+        tagSlugs: [],
+        difficulties: [],
+        statuses: ['unanswered', 'incorrect'],
+        userId: user.id,
+      });
+
+      expect(result).toBe(2);
+    });
+  });
 });
 
 describe('DrizzlePracticeSessionRepository + DrizzleAttemptRepository', () => {

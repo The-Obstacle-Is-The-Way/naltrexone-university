@@ -995,6 +995,30 @@ describe('practice-controller', () => {
       expect(deps.countAvailableQuestionsUseCase.inputs).toEqual([]);
     });
 
+    it('returns NOT_FOUND when use case throws ApplicationError', async () => {
+      const deps = createDeps({
+        countThrows: new ApplicationError('NOT_FOUND', 'Questions not found'),
+      });
+
+      const result = await countAvailableQuestions(
+        { tagSlugs: [], difficulties: [], statuses: [] },
+        deps,
+      );
+
+      expect(result).toEqual({
+        ok: false,
+        error: { code: 'NOT_FOUND', message: 'Questions not found' },
+      });
+      expect(deps.countAvailableQuestionsUseCase.inputs).toEqual([
+        {
+          userId: 'user_1',
+          tagSlugs: [],
+          difficulties: [],
+          statuses: [],
+        },
+      ]);
+    });
+
     it('returns the count from the use case when successful', async () => {
       const deps = createDeps({ countOutput: { count: 42 } });
 

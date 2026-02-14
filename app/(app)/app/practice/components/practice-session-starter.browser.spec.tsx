@@ -152,3 +152,112 @@ test('disables start when no questions match the selected filters', async () => 
     .element(screen.getByRole('button', { name: 'Start session' }))
     .toBeDisabled();
 });
+
+test('shows available count loading state when counting questions', async () => {
+  const screen = await render(
+    <PracticeSessionStarter
+      sessionMode="tutor"
+      sessionCount={20}
+      filters={{ tagSlugs: [], difficulty: null, status: 'unanswered' }}
+      availableCountStatus="loading"
+      availableCount={null}
+      tagLoadStatus="idle"
+      availableTags={[]}
+      sessionStartStatus="idle"
+      sessionStartError={null}
+      onDifficultyChange={() => undefined}
+      onStatusChange={() => undefined}
+      onToggleTag={() => undefined}
+      onSessionModeChange={() => undefined}
+      onSessionCountChange={() => undefined}
+      onStartSession={() => undefined}
+    />,
+  );
+
+  await expect.element(screen.getByText('Counting questions…')).toBeVisible();
+});
+
+test('shows available count error state when count is unavailable', async () => {
+  const screen = await render(
+    <PracticeSessionStarter
+      sessionMode="tutor"
+      sessionCount={20}
+      filters={{ tagSlugs: [], difficulty: null, status: 'unanswered' }}
+      availableCountStatus="error"
+      availableCount={null}
+      tagLoadStatus="idle"
+      availableTags={[]}
+      sessionStartStatus="idle"
+      sessionStartError={null}
+      onDifficultyChange={() => undefined}
+      onStatusChange={() => undefined}
+      onToggleTag={() => undefined}
+      onSessionModeChange={() => undefined}
+      onSessionCountChange={() => undefined}
+      onStartSession={() => undefined}
+    />,
+  );
+
+  await expect
+    .element(screen.getByText('Question count unavailable.'))
+    .toBeVisible();
+});
+
+test('warns when session count exceeds available question count', async () => {
+  const screen = await render(
+    <PracticeSessionStarter
+      sessionMode="tutor"
+      sessionCount={20}
+      filters={{ tagSlugs: [], difficulty: null, status: 'unanswered' }}
+      availableCountStatus="idle"
+      availableCount={10}
+      tagLoadStatus="idle"
+      availableTags={[]}
+      sessionStartStatus="idle"
+      sessionStartError={null}
+      onDifficultyChange={() => undefined}
+      onStatusChange={() => undefined}
+      onToggleTag={() => undefined}
+      onSessionModeChange={() => undefined}
+      onSessionCountChange={() => undefined}
+      onStartSession={() => undefined}
+    />,
+  );
+
+  await expect
+    .element(
+      screen.getByText(
+        'Only 10 questions available. Starting session with 10.',
+      ),
+    )
+    .toBeVisible();
+  await expect
+    .element(screen.getByRole('button', { name: 'Start session' }))
+    .toBeEnabled();
+});
+
+test('shows available question count when count is ready', async () => {
+  const screen = await render(
+    <PracticeSessionStarter
+      sessionMode="tutor"
+      sessionCount={20}
+      filters={{ tagSlugs: [], difficulty: null, status: 'unanswered' }}
+      availableCountStatus="idle"
+      availableCount={50}
+      tagLoadStatus="idle"
+      availableTags={[]}
+      sessionStartStatus="idle"
+      sessionStartError={null}
+      onDifficultyChange={() => undefined}
+      onStatusChange={() => undefined}
+      onToggleTag={() => undefined}
+      onSessionModeChange={() => undefined}
+      onSessionCountChange={() => undefined}
+      onStartSession={() => undefined}
+    />,
+  );
+
+  await expect
+    .element(screen.getByText('50 questions available.'))
+    .toBeVisible();
+});

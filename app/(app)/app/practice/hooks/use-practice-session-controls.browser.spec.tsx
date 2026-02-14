@@ -146,6 +146,25 @@ describe('usePracticeSessionControls (browser)', () => {
       .toHaveTextContent('error');
   });
 
+  it('sets available count status to error when countAvailableQuestions throws', async () => {
+    const consoleError = vi
+      .spyOn(console, 'error')
+      .mockImplementation(() => undefined);
+
+    getTagsMock.mockResolvedValue(ok({ rows: [] }));
+    getIncompletePracticeSessionMock.mockResolvedValue(ok(null));
+    countAvailableQuestionsMock.mockRejectedValue(
+      new Error('Count service unavailable'),
+    );
+
+    const screen = await render(<PracticeSessionControlsHookProbe />);
+
+    await expect
+      .element(screen.getByTestId('available-count-status'))
+      .toHaveTextContent('error');
+    expect(consoleError).toHaveBeenCalled();
+  });
+
   it('passes session id as idempotency key when abandoning an incomplete session', async () => {
     const sessionId = '11111111-1111-1111-1111-111111111111';
 

@@ -2,7 +2,9 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { countAvailableQuestions } from '@/src/adapters/controllers/practice-controller';
+import { logUnhandledAsyncError } from '../fire-and-forget';
 import {
+  type AvailableQuestionsCountFilters,
   type AvailableQuestionsCountStatus,
   createAvailableQuestionsCountEffect,
 } from '../practice-page-available-count';
@@ -20,7 +22,7 @@ export function usePracticeAvailableQuestionsCount(input: {
     useState<AvailableQuestionsCountStatus>('loading');
   const [availableCount, setAvailableCount] = useState<number | null>(null);
 
-  const serverFilters = useMemo(
+  const serverFilters: AvailableQuestionsCountFilters = useMemo(
     () => ({
       tagSlugs: input.filters.tagSlugs,
       difficulties: input.filters.difficulty ? [input.filters.difficulty] : [],
@@ -36,11 +38,7 @@ export function usePracticeAvailableQuestionsCount(input: {
       setAvailableCountStatus,
       setAvailableCount,
       logError: (message: string, context: unknown) => {
-        console.error(
-          'createAvailableQuestionsCountEffect failed:',
-          message,
-          context,
-        );
+        logUnhandledAsyncError({ message, context });
       },
     });
   }, [serverFilters]);
