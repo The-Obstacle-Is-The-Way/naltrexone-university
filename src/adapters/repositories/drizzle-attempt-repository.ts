@@ -33,6 +33,7 @@ import {
   getPostgresConstraintName,
   isPostgresUniqueViolation,
 } from './postgres-errors';
+import { latestAttemptRankSql } from './shared/latest-attempt-rank-sql';
 
 export class DrizzleAttemptRepository implements AttemptRepository {
   constructor(private readonly db: DrizzleDb) {}
@@ -44,10 +45,11 @@ export class DrizzleAttemptRepository implements AttemptRepository {
         answeredAt: attempts.answeredAt,
         practiceSessionId: attempts.practiceSessionId,
         isCorrect: attempts.isCorrect,
-        attemptRank:
-          sql<number>`row_number() over (partition by ${attempts.questionId} order by ${attempts.answeredAt} desc, ${attempts.id} desc)`.as(
-            'attempt_rank',
-          ),
+        attemptRank: latestAttemptRankSql({
+          questionId: attempts.questionId,
+          answeredAt: attempts.answeredAt,
+          id: attempts.id,
+        }).as('attempt_rank'),
       })
       .from(attempts)
       .where(eq(attempts.userId, userId))
@@ -152,13 +154,13 @@ export class DrizzleAttemptRepository implements AttemptRepository {
     userId: string,
     page: PageOptions,
   ): Promise<readonly Attempt[]> {
-    const limit = Number.isFinite(page.limit) ? Math.floor(page.limit) : 0;
-    const offset = Number.isFinite(page.offset) ? Math.floor(page.offset) : 0;
-
-    const safeLimit = Math.max(0, limit);
+    const safeLimit =
+      Number.isInteger(page.limit) && page.limit > 0 ? page.limit : 0;
     if (safeLimit === 0) return [];
 
-    const safeOffset = Math.max(0, offset);
+    const safeOffset = Number.isInteger(page.offset)
+      ? Math.max(0, page.offset)
+      : 0;
 
     const rows = await this.db.query.attempts.findMany({
       where: eq(attempts.userId, userId),

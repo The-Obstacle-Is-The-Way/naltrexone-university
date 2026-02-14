@@ -1,4 +1,4 @@
-import { and, desc, eq } from 'drizzle-orm';
+import { and, desc, eq, sql } from 'drizzle-orm';
 import { bookmarks } from '@/db/schema';
 import { ApplicationError } from '@/src/application/errors';
 import type { BookmarkRepository } from '@/src/application/ports/repositories';
@@ -18,38 +18,23 @@ export class DrizzleBookmarkRepository implements BookmarkRepository {
   }
 
   async add(userId: string, questionId: string) {
-    const [inserted] = await this.db
+    const [row] = await this.db
       .insert(bookmarks)
       .values({ userId, questionId })
-      .onConflictDoNothing({ target: [bookmarks.userId, bookmarks.questionId] })
+      .onConflictDoUpdate({
+        target: [bookmarks.userId, bookmarks.questionId],
+        set: { createdAt: sql`${bookmarks.createdAt}` },
+      })
       .returning();
 
-    if (inserted) {
-      return {
-        userId: inserted.userId,
-        questionId: inserted.questionId,
-        createdAt: inserted.createdAt,
-      };
-    }
-
-    const existing = await this.db.query.bookmarks.findFirst({
-      where: and(
-        eq(bookmarks.userId, userId),
-        eq(bookmarks.questionId, questionId),
-      ),
-    });
-
-    if (!existing) {
-      throw new ApplicationError(
-        'INTERNAL_ERROR',
-        'Failed to insert bookmark (missing after conflict)',
-      );
+    if (!row) {
+      throw new ApplicationError('INTERNAL_ERROR', 'Failed to insert bookmark');
     }
 
     return {
-      userId: existing.userId,
-      questionId: existing.questionId,
-      createdAt: existing.createdAt,
+      userId: row.userId,
+      questionId: row.questionId,
+      createdAt: row.createdAt,
     };
   }
 

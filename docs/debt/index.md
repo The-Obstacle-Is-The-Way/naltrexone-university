@@ -22,7 +22,6 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 | [DEBT-212](./debt-212-duplicate-sleep-utility-adapter-shared.md) | Duplicate `sleep()` Utility in Adapter Shared Modules | P4 | Open | #91 |
 | [DEBT-213](./debt-213-useeffect-derived-state-sync-antipatterns.md) | useEffect Derived-State Sync Anti-Patterns in Practice Hooks (5 instances) | P4 | Open | — |
 | [DEBT-215](./debt-215-backwards-compatibility-shims-cleanup.md) | Backwards Compatibility Shims in a Greenfield Codebase | P3 | Open | — |
-| [DEBT-216](./debt-216-remaining-drizzle-dry-violations.md) | Remaining Drizzle Repository Violations (God Method, Race Condition, DRY) | P3 | Open | — |
 
 **Next Debt ID:** DEBT-217
 
@@ -32,6 +31,7 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 | ID | Title | Priority | Resolved | GitHub Issue |
 |----|-------|----------|----------|--------------|
+| [DEBT-216](../_archive/debt/debt-216-remaining-drizzle-dry-violations.md) | Remaining Drizzle Repository Violations (God Method, Race Condition, DRY) | P3 | 2026-02-14 | — |
 | [DEBT-214](../_archive/debt/debt-214-drizzle-query-duplication-attempt-repository.md) | Drizzle Query Duplication in Attempt Repository (Conditional JOINs via Copy-Paste) | P3 | 2026-02-14 | — |
 | [DEBT-206](./debt-206-client-side-difficulty-tag-filters-history.md) | Client-Side Difficulty/Tag Filters Cause Inaccurate Pagination on History Questions Tab | P2 | 2026-02-14 | #87 |
 

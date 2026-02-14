@@ -48,6 +48,13 @@ export class DrizzlePracticeSessionRepository
     };
   }
 
+  private completedSessionCondition(userId: string) {
+    return and(
+      eq(practiceSessions.userId, userId),
+      isNotNull(practiceSessions.endedAt),
+    );
+  }
+
   async findByIdAndUserId(id: string, userId: string) {
     const row = await this.db.query.practiceSessions.findFirst({
       where: and(
@@ -89,28 +96,18 @@ export class DrizzlePracticeSessionRepository
     const [countRow] = await this.db
       .select({ count: sql<number>`count(*)::int` })
       .from(practiceSessions)
-      .where(
-        and(
-          eq(practiceSessions.userId, userId),
-          isNotNull(practiceSessions.endedAt),
-        ),
-      );
+      .where(this.completedSessionCondition(userId));
     const total = countRow?.count ?? 0;
 
-    const normalizedLimit = Number.isFinite(limit) ? Math.floor(limit) : 0;
-    const normalizedOffset = Number.isFinite(offset) ? Math.floor(offset) : 0;
-    const safeLimit = Math.max(0, normalizedLimit);
-    const safeOffset = Math.max(0, normalizedOffset);
+    const safeLimit = Number.isInteger(limit) && limit > 0 ? limit : 0;
+    const safeOffset = Number.isInteger(offset) ? Math.max(0, offset) : 0;
 
     if (safeLimit === 0 || total === 0) {
       return { rows: [], total };
     }
 
     const rows = await this.db.query.practiceSessions.findMany({
-      where: and(
-        eq(practiceSessions.userId, userId),
-        isNotNull(practiceSessions.endedAt),
-      ),
+      where: this.completedSessionCondition(userId),
       orderBy: (table, { desc }) => [
         desc(table.endedAt),
         desc(table.startedAt),

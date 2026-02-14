@@ -1806,6 +1806,52 @@ describe('DrizzleUserRepository', () => {
     });
   });
 
+  it('applies observedAt clock-guard semantics when upserting', async () => {
+    const repo = new DrizzleUserRepository(db);
+    const clerkUserId = `user_${randomUUID().replaceAll('-', '')}`;
+
+    const t1 = new Date('2026-02-01T00:00:00.000Z');
+    const email1 = `it-${randomUUID()}@example.com`;
+    const first = await repo.upsertByClerkId(clerkUserId, email1, {
+      observedAt: t1,
+    });
+    cleanup.userIds.push(first.id);
+
+    const t0 = new Date('2026-01-31T23:00:00.000Z');
+    const email2 = `it-${randomUUID()}@example.com`;
+    const stale = await repo.upsertByClerkId(clerkUserId, email2, {
+      observedAt: t0,
+    });
+    expect(stale).toMatchObject({
+      id: first.id,
+      email: email1,
+      createdAt: t1,
+      updatedAt: t1,
+    });
+
+    const t2 = new Date('2026-02-01T01:00:00.000Z');
+    const updated = await repo.upsertByClerkId(clerkUserId, email2, {
+      observedAt: t2,
+    });
+    expect(updated).toMatchObject({
+      id: first.id,
+      email: email2,
+      createdAt: t1,
+      updatedAt: t2,
+    });
+
+    const t3 = new Date('2026-02-01T02:00:00.000Z');
+    const bumped = await repo.upsertByClerkId(clerkUserId, email2, {
+      observedAt: t3,
+    });
+    expect(bumped).toMatchObject({
+      id: first.id,
+      email: email2,
+      createdAt: t1,
+      updatedAt: t3,
+    });
+  });
+
   it('updates email when upserting an existing user', async () => {
     const repo = new DrizzleUserRepository(db);
     const clerkUserId = `user_${randomUUID().replaceAll('-', '')}`;
