@@ -1,6 +1,6 @@
 # DEBT-214: Drizzle Query Duplication in Attempt Repository (Conditional JOINs via Copy-Paste)
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P3
 **Date:** 2026-02-14
 
@@ -8,7 +8,7 @@
 
 ## Description
 
-The `DrizzleAttemptRepository` has ~80 lines of duplicated query construction in two methods: `listAttemptedQuestionsByUserId` and `countAttemptedQuestionsByUserId`. Both methods use a 3-way ternary that repeats nearly identical query construction, differing only in which JOINs are applied based on the current filter state.
+The `DrizzleAttemptRepository` had ~80 lines of duplicated query construction in two methods: `listAttemptedQuestionsByUserId` and `countAttemptedQuestionsByUserId`. Both methods used a 3-way ternary that repeated nearly identical query construction, differing only in which JOINs were applied based on the current filter state.
 
 This was introduced in the DEBT-206 fix (commit `f76dd0d`) to add server-side difficulty/tag filtering. The duplication exists because Drizzle's TypeScript type system returns a different type for each `.leftJoin()` call, making it impossible to chain JOINs conditionally with simple `if` statements.
 
@@ -17,7 +17,7 @@ This was introduced in the DEBT-206 fix (commit `f76dd0d`) to add server-side di
 1. Joining `questions` is **1:1** (`latest_attempt_rows.question_id → questions.id`). It does **not** change row cardinality and is always safe.
 2. Joining `question_tags`/`tags` is **1:N** (a question can have many tags). It is only safe **without deduplication** when the query includes a tag filter like `WHERE tags.slug = :tagSlug`, which guarantees at most one matching tag row per question (enforced by `tags.slug` uniqueness + `question_tags` composite PK).
 
-### What It Looks Like
+### What It Looked Like (Before)
 
 ```typescript
 // 3-way ternary repeated in BOTH list and count methods:
@@ -30,12 +30,12 @@ const rows = tagSlug
 
 The `.select()`, `.from()`, `.leftJoin(practiceSessions, ...)`, `.where(and(...conditions))`, `.orderBy()`, `.limit()`, `.offset()` are identical across all three branches. Only the additional JOINs (questions, questionTags, tags) differ.
 
-### Locations
+### Pre-Resolution Locations
 
-| Method | File | Lines | Branches |
-|--------|------|-------|----------|
-| `listAttemptedQuestionsByUserId` | `src/adapters/repositories/drizzle-attempt-repository.ts` | 331–396 | 3 branches, 6 shared clauses each |
-| `countAttemptedQuestionsByUserId` | `src/adapters/repositories/drizzle-attempt-repository.ts` | 425–460 | 3 branches, 4 shared clauses each |
+| Method | File | Notes |
+|--------|------|-------|
+| `listAttemptedQuestionsByUserId` | `src/adapters/repositories/drizzle-attempt-repository.ts` | Previously had 3 branches with copy-pasted query blocks |
+| `countAttemptedQuestionsByUserId` | `src/adapters/repositories/drizzle-attempt-repository.ts` | Previously had 3 branches with copy-pasted query blocks |
 
 ### Secondary Instance (Minor)
 
@@ -154,3 +154,7 @@ This debt doc is scoped to the Attempt Repository duplication, but an audit was 
 - `src/adapters/repositories/drizzle-attempt-repository.ts` — primary file
 - `src/adapters/repositories/drizzle-question-repository.ts` — minor secondary instance
 - Drizzle ORM `$dynamic()` API docs
+
+## Resolution Notes
+
+Refactored `DrizzleAttemptRepository` attempted-questions list/count queries to share a base query and conditionally add tag JOINs, eliminating copy-pasted Drizzle query construction.
