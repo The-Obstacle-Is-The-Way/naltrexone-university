@@ -3,7 +3,7 @@
 **Status:** Open
 **Priority:** P3
 **Date:** 2026-02-14
-**Prerequisite:** DEBT-214 (attempt repository refactor should land first)
+**Prerequisite:** ~~DEBT-214~~ (resolved 2026-02-14)
 
 ---
 

@@ -157,4 +157,14 @@ This debt doc is scoped to the Attempt Repository duplication, but an audit was 
 
 ## Resolution Notes
 
-Refactored `DrizzleAttemptRepository` attempted-questions list/count queries to share a base query and conditionally add tag JOINs, eliminating copy-pasted Drizzle query construction.
+**Approach:** Option A (Two-Tier Query Shape) without `$dynamic()`. Both `listAttemptedQuestionsByUserId` and `countAttemptedQuestionsByUserId` now:
+
+1. Build a `baseQuery` that always JOINs `practiceSessions` (for source filter) and `questions` (1:1, free — for difficulty filter)
+2. Branch only on `tagSlug`: if present, add the 1:N `questionTags`/`tags` JOINs; otherwise use `baseQuery` as-is
+3. Apply shared `.where(and(...conditions))` at the end
+
+The 3-way ternary (tag vs difficulty vs neither) is gone from both methods. The `queryWithQuestions()` helper and standalone `difficulty` variable are eliminated.
+
+**Commits:**
+- `7e5e0a1` — Initial fix: collapsed list method to 2-way; partially fixed count method (still had 3-way with `queryWithQuestions()` helper)
+- `c00f618` — Completed fix: made `questions` JOIN unconditional in count method, achieving full structural parity with list method
