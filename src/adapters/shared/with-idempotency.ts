@@ -1,7 +1,7 @@
+import { delay } from '@/src/adapters/shared/delay';
 import { ApplicationError, isApplicationError } from '@/src/application/errors';
 import type { Logger } from '@/src/application/ports/logger';
 import type { IdempotencyKeyRepository } from '@/src/application/ports/repositories';
-import { delay } from './delay';
 
 const DEFAULT_TTL_MS = 86_400_000; // 24 hours
 const DEFAULT_MAX_WAIT_MS = 2_000;

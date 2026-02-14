@@ -1,4 +1,4 @@
-import { delay } from './delay';
+import { delay } from '@/src/adapters/shared/delay';
 
 export type RetryAttemptInfo = {
   attempt: number;
