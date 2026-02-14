@@ -382,7 +382,6 @@ export class DrizzleAttemptRepository implements AttemptRepository {
       filters,
     );
 
-    const difficulty = filters?.difficulty ?? null;
     const tagSlug = filters?.tagSlug ?? null;
     const baseQuery = this.db
       .select({
@@ -392,21 +391,14 @@ export class DrizzleAttemptRepository implements AttemptRepository {
       .leftJoin(
         practiceSessions,
         eq(latestAttemptRows.practiceSessionId, practiceSessions.id),
-      );
-
-    const queryWithQuestions = () =>
-      baseQuery.leftJoin(
-        questions,
-        eq(latestAttemptRows.questionId, questions.id),
-      );
+      )
+      .leftJoin(questions, eq(latestAttemptRows.questionId, questions.id));
 
     const query = tagSlug
-      ? queryWithQuestions()
+      ? baseQuery
           .leftJoin(questionTags, eq(questions.id, questionTags.questionId))
           .leftJoin(tags, eq(questionTags.tagId, tags.id))
-      : difficulty
-        ? queryWithQuestions()
-        : baseQuery;
+      : baseQuery;
 
     const [row] = await query.where(and(...conditions));
 

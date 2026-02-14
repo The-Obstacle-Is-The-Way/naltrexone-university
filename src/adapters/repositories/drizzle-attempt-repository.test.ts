@@ -704,7 +704,7 @@ describe('DrizzleAttemptRepository', () => {
   });
 
   describe('countAttemptedQuestionsByUserId', () => {
-    it('left-joins practiceSessions and returns count values from the database', async () => {
+    it('left-joins practiceSessions and questions, returns count values from the database', async () => {
       const db = createDbMock();
       db._mocks.countWhere.mockResolvedValueOnce([{ count: 3 }]);
 
@@ -713,7 +713,7 @@ describe('DrizzleAttemptRepository', () => {
       await expect(
         repo.countAttemptedQuestionsByUserId('user_1'),
       ).resolves.toBe(3);
-      expect(db._mocks.countLeftJoin).toHaveBeenCalledTimes(1);
+      expect(db._mocks.countLeftJoin).toHaveBeenCalledTimes(2);
     });
 
     it('returns count when filtered by source=tutor', async () => {
@@ -725,7 +725,7 @@ describe('DrizzleAttemptRepository', () => {
       await expect(
         repo.countAttemptedQuestionsByUserId('user_1', { source: 'tutor' }),
       ).resolves.toBe(1);
-      expect(db._mocks.countLeftJoin).toHaveBeenCalledTimes(1);
+      expect(db._mocks.countLeftJoin).toHaveBeenCalledTimes(2);
     });
 
     it('returns count when filtered by source=exam', async () => {
@@ -737,7 +737,7 @@ describe('DrizzleAttemptRepository', () => {
       await expect(
         repo.countAttemptedQuestionsByUserId('user_1', { source: 'exam' }),
       ).resolves.toBe(2);
-      expect(db._mocks.countLeftJoin).toHaveBeenCalledTimes(1);
+      expect(db._mocks.countLeftJoin).toHaveBeenCalledTimes(2);
     });
   });
 });
