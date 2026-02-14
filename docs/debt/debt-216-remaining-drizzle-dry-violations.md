@@ -1,7 +1,7 @@
-# DEBT-216: Remaining Drizzle DRY Violations Across Repositories
+# DEBT-216: Remaining Drizzle Repository Violations
 
 **Status:** Open
-**Priority:** P4
+**Priority:** P3
 **Date:** 2026-02-14
 **Prerequisite:** DEBT-214 (attempt repository refactor should land first)
 
@@ -9,7 +9,7 @@
 
 ## Description
 
-After the primary Drizzle query duplication (DEBT-214) is resolved, four smaller DRY violations remain across the repository layer. Each one is minor in isolation, but together they represent drift risk, copy-paste maintenance burden, and inconsistency across the adapter layer.
+After the primary Drizzle query duplication (DEBT-214) is resolved, six violations remain across the repository layer — DRY issues, a god method, a race condition, and an inconsistency. Two of these (items #5 and #6) are not cosmetic: one is a 142-line method that should be ~15 lines, and the other is a race condition that the codebase itself already solved correctly in a different repo.
 
 ## Inventory
 
@@ -120,8 +120,122 @@ Or extract a shared `safePagination(limit, offset)` helper in `src/adapters/shar
 
 **Note:** The stripe-event and idempotency-key repos use `limit` for pruning, not user-facing pagination. They don't take offset at all. The fix for those two is just standardizing the limit validation to match the others (`Number.isFinite` instead of `Number.isInteger`).
 
+### 5. Bookmark `add()` — Race Condition and Unnecessary Second Query
+
+**File:** `src/adapters/repositories/drizzle-bookmark-repository.ts:20-54`
+
+```typescript
+// Current: INSERT → if conflict → SELECT → if missing → throw
+const [inserted] = await this.db
+  .insert(bookmarks)
+  .values({ userId, questionId })
+  .onConflictDoNothing({ target: [bookmarks.userId, bookmarks.questionId] })
+  .returning();
+
+if (inserted) { return ...; }
+
+// Second query — race window: row could be deleted between INSERT and SELECT
+const existing = await this.db.query.bookmarks.findFirst({
+  where: and(eq(bookmarks.userId, userId), eq(bookmarks.questionId, questionId)),
+});
+if (!existing) throw new ApplicationError('INTERNAL_ERROR', ...);
+```
+
+**The codebase already has the correct pattern.** The Stripe customer repo (`drizzle-stripe-customer-repository.ts:36-43`) uses `onConflictDoUpdate` with a no-op SET to always get a RETURNING row in one query:
+
+```typescript
+// Correct pattern (already in the codebase):
+.onConflictDoUpdate({
+  target: stripeCustomers.userId,
+  set: { stripeCustomerId: sql`${stripeCustomers.stripeCustomerId}` }, // no-op
+})
+.returning();
+```
+
+**Fix:** Replace `onConflictDoNothing()` + fallback SELECT with `onConflictDoUpdate()` + no-op SET + RETURNING:
+
+```typescript
+async add(userId: string, questionId: string) {
+  const [row] = await this.db
+    .insert(bookmarks)
+    .values({ userId, questionId })
+    .onConflictDoUpdate({
+      target: [bookmarks.userId, bookmarks.questionId],
+      set: { userId: sql`${bookmarks.userId}` }, // no-op to get RETURNING
+    })
+    .returning();
+
+  if (!row) {
+    throw new ApplicationError('INTERNAL_ERROR', 'Failed to insert bookmark');
+  }
+
+  return { userId: row.userId, questionId: row.questionId, createdAt: row.createdAt };
+}
+```
+
+One query. No race. No second SELECT. ~10 lines instead of 34.
+
+### 6. User `upsertByClerkId()` — God Method (142 Lines, Duplicated Recovery Logic)
+
+**File:** `src/adapters/repositories/drizzle-user-repository.ts:85-226`
+
+142 lines. 6+ code paths. The UPDATE-with-clock-guard-then-fetch-and-check recovery pattern is duplicated across lines 109-145 and 192-225 (~35 lines of copy-paste).
+
+The method's complexity comes from doing multiple round-trips to handle race conditions that Postgres can handle atomically in a single statement.
+
+**What Uncle Bob, Ousterhout, and Kent Beck would say:**
+
+- **Uncle Bob (Clean Code):** Functions should be short, ideally under 20 lines. This is 142.
+- **John Ousterhout (A Philosophy of Software Design):** Push complexity into the database. The SQL layer handles concurrency — don't re-implement it in application code.
+- **Kent Beck (Simple Design):** Remove duplication. The clock-guard-then-fetch pattern appears twice.
+
+**Fix:** Replace with a single atomic `INSERT ... ON CONFLICT DO UPDATE` with a clock guard in the SET clause:
+
+```typescript
+async upsertByClerkId(
+  clerkId: string,
+  email: string,
+  options?: UpsertUserByClerkIdOptions,
+): Promise<User> {
+  const observedAt = options?.observedAt ?? this.now();
+
+  try {
+    const [row] = await this.db
+      .insert(users)
+      .values({
+        clerkUserId: clerkId,
+        email,
+        createdAt: observedAt,
+        updatedAt: observedAt,
+      })
+      .onConflictDoUpdate({
+        target: users.clerkUserId,
+        set: {
+          email: sql`CASE WHEN ${users.updatedAt} < ${observedAt} THEN ${email} ELSE ${users.email} END`,
+          updatedAt: sql`GREATEST(${users.updatedAt}, ${observedAt})`,
+        },
+      })
+      .returning();
+
+    if (!row) {
+      throw new ApplicationError('INTERNAL_ERROR', 'Failed to ensure user row');
+    }
+
+    return this.toDomain(row);
+  } catch (error) {
+    throw this.mapDbError(error);
+  }
+}
+```
+
+~20 lines. One query. No races. Atomic clock-guard. The CASE expression only updates email when the incoming event is newer than what's stored. `GREATEST` always bumps `updatedAt` to the latest seen timestamp. The `bumpUpdatedAtIfStale` private method (lines 45-75) also becomes unnecessary.
+
+**Caution:** Verify that the existing integration tests and the `bumpUpdatedAtIfStale` tests cover the same semantics (stale event ignored, newer event wins, email updated only when newer). The refactored version should pass all existing tests with zero assertion changes.
+
 ## Impact
 
+- **Race condition (item #5):** Theoretical data loss — bookmark could disappear between INSERT and SELECT. Extremely unlikely in practice but trivially fixable since the correct pattern already exists in the codebase.
+- **God method (item #6):** 142 lines with duplicated recovery logic. Highest maintenance burden in the entire repository layer. Any change to clock-guard semantics requires updating two places.
 - **Drift risk (item #2):** The window function defines "latest attempt" semantics. If the two copies diverge, History and question status filters silently disagree on which attempt is "latest."
 - **Maintenance burden (items #1, #3):** Minor but real — anyone changing the query logic must remember to update both copies.
 - **Inconsistency (item #4):** Different repos have different robustness against malformed pagination input. Not a bug today (controllers validate upstream), but violates the principle that each layer should defend its own boundaries.
@@ -129,10 +243,12 @@ Or extract a shared `safePagination(limit, offset)` helper in `src/adapters/shar
 ## Verification
 
 1. `pnpm typecheck && pnpm lint && pnpm test --run && pnpm test:integration`
-2. All existing tests pass with zero assertion changes — the refactor is purely structural
-3. Grep for duplicated patterns to confirm elimination:
+2. All existing tests pass with zero assertion changes — the refactors are purely structural
+3. Grep for duplicated/eliminated patterns:
    - `rg "row_number.*partition by.*questionId" src/adapters/repositories/` — should appear once (shared helper) or twice (if accepted as-is with comments)
    - `rg "isNotNull.*endedAt" src/adapters/repositories/drizzle-practice-session-repository.ts` — should appear once (extracted helper)
+   - `rg "onConflictDoNothing" src/adapters/repositories/drizzle-bookmark-repository.ts` — should be zero (replaced with `onConflictDoUpdate`)
+   - `rg "bumpUpdatedAtIfStale" src/adapters/repositories/drizzle-user-repository.ts` — should be zero (method removed)
 
 ## Related
 
@@ -140,3 +256,5 @@ Or extract a shared `safePagination(limit, offset)` helper in `src/adapters/shar
 - `src/adapters/repositories/drizzle-question-repository.ts`
 - `src/adapters/repositories/drizzle-attempt-repository.ts`
 - `src/adapters/repositories/drizzle-practice-session-repository.ts`
+- `src/adapters/repositories/drizzle-bookmark-repository.ts`
+- `src/adapters/repositories/drizzle-user-repository.ts`
