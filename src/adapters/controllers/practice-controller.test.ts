@@ -190,6 +190,30 @@ describe('practice-controller', () => {
       expect(deps.startPracticeSessionUseCase.inputs).toEqual([]);
     });
 
+    it('returns VALIDATION_ERROR when statuses include legacy marked', async () => {
+      const deps = createDeps();
+
+      const result = await startPracticeSession(
+        {
+          mode: 'tutor',
+          count: 10,
+          tagSlugs: [],
+          difficulties: [],
+          statuses: ['marked'],
+        },
+        deps,
+      );
+
+      expect(result).toMatchObject({
+        ok: false,
+        error: {
+          code: 'VALIDATION_ERROR',
+          fieldErrors: { statuses: expect.any(Array) },
+        },
+      });
+      expect(deps.startPracticeSessionUseCase.inputs).toEqual([]);
+    });
+
     it('returns UNAUTHENTICATED when unauthenticated', async () => {
       const deps = createDeps({ user: null });
 
@@ -269,6 +293,38 @@ describe('practice-controller', () => {
           tagSlugs: ['opioids'],
           difficulties: ['easy', 'medium'],
           statuses: [],
+        },
+      ]);
+    });
+
+    it('forwards bookmarked status to the use case', async () => {
+      const deps = createDeps({
+        startOutput: { sessionId: '22222222-2222-2222-2222-222222222222' },
+      });
+
+      const result = await startPracticeSession(
+        {
+          mode: 'tutor',
+          count: 1,
+          tagSlugs: [],
+          difficulties: [],
+          statuses: ['bookmarked'],
+        },
+        deps,
+      );
+
+      expect(result).toEqual({
+        ok: true,
+        data: { sessionId: '22222222-2222-2222-2222-222222222222' },
+      });
+      expect(deps.startPracticeSessionUseCase.inputs).toEqual([
+        {
+          userId: 'user_1',
+          mode: 'tutor',
+          count: 1,
+          tagSlugs: [],
+          difficulties: [],
+          statuses: ['bookmarked'],
         },
       ]);
     });

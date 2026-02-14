@@ -1,7 +1,7 @@
 # Implementation Specifications
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-02-12
+**Last Updated:** 2026-02-13
 
 ---
 
@@ -28,7 +28,7 @@ Implementation specifications provide detailed technical guidance for building e
 - [Master Spec — Part 3](./master_spec_part3.md) — Content Pipeline, Directory Structure, Vertical Slices
 - [Master Spec — Part 4](./master_spec_part4.md) — Testing, Security, Env Vars, Deployment
 
-**Next Spec ID:** SPEC-028
+**Next Spec ID:** SPEC-029
 
 ## Archived Specs
 
@@ -59,6 +59,7 @@ Implementation specifications provide detailed technical guidance for building e
 | [SPEC-025](../_archive/specs/spec-025-choice-label-desync-fix.md) | Choice Label Desync Fix (Standalone Question Page) | Feature |
 | [SPEC-026](../_archive/specs/spec-026-history-review-only.md) | History Tab — Review-Only Question Links | Feature |
 | [SPEC-027](../_archive/specs/spec-027-session-review-navigation.md) | Session Review Navigation (Sequential Nav + Attempt Identity) | Feature |
+| [SPEC-028](../_archive/specs/spec-028-status-filter-segmented-control.md) | Status & Difficulty Filter — Segmented Control Redesign | Feature |
 
 ## Spec Statuses
 

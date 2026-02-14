@@ -9,18 +9,19 @@ describe('QuestionProgressStatus', () => {
     expect(AllQuestionProgressStatuses).toEqual([
       'unanswered',
       'incorrect',
-      'marked',
+      'bookmarked',
     ]);
   });
 
   it('validates known statuses', () => {
     expect(isValidQuestionProgressStatus('unanswered')).toBe(true);
     expect(isValidQuestionProgressStatus('incorrect')).toBe(true);
-    expect(isValidQuestionProgressStatus('marked')).toBe(true);
+    expect(isValidQuestionProgressStatus('bookmarked')).toBe(true);
   });
 
   it('rejects unknown statuses', () => {
     expect(isValidQuestionProgressStatus('all')).toBe(false);
     expect(isValidQuestionProgressStatus('correct')).toBe(false);
+    expect(isValidQuestionProgressStatus('marked')).toBe(false);
   });
 });

@@ -169,6 +169,50 @@ describe('question-controller', () => {
       ]);
     });
 
+    it('returns ok result when bookmarked status filter is provided', async () => {
+      const deps = createDeps({ getNextQuestionOutput: null });
+
+      const result = await getNextQuestion(
+        {
+          filters: {
+            tagSlugs: [],
+            difficulties: [],
+            statuses: ['bookmarked'],
+          },
+        },
+        deps,
+      );
+
+      expect(result).toEqual({ ok: true, data: null });
+      expect(deps.getNextQuestionUseCase.inputs).toEqual([
+        {
+          userId: 'user_1',
+          filters: { tagSlugs: [], difficulties: [], statuses: ['bookmarked'] },
+        },
+      ]);
+    });
+
+    it('returns VALIDATION_ERROR when statuses include legacy marked', async () => {
+      const deps = createDeps({ getNextQuestionOutput: null });
+
+      const result = await getNextQuestion(
+        {
+          filters: {
+            tagSlugs: [],
+            difficulties: [],
+            statuses: ['marked'],
+          },
+        },
+        deps,
+      );
+
+      expect(result).toMatchObject({
+        ok: false,
+        error: { code: 'VALIDATION_ERROR' },
+      });
+      expect(deps.getNextQuestionUseCase.inputs).toEqual([]);
+    });
+
     it('returns ok result when sessionId is provided', async () => {
       const deps = createDeps({
         getNextQuestionOutput: {

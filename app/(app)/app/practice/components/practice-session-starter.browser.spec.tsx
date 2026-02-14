@@ -6,7 +6,7 @@ async function renderStarter() {
   const props = {
     sessionMode: 'tutor' as const,
     sessionCount: 20,
-    filters: { tagSlugs: [], difficulties: [], statuses: [] },
+    filters: { tagSlugs: [], difficulty: null, status: 'unanswered' as const },
     tagLoadStatus: 'idle' as const,
     availableTags: [
       {
@@ -18,8 +18,8 @@ async function renderStarter() {
     ],
     sessionStartStatus: 'idle' as const,
     sessionStartError: null,
-    onToggleDifficulty: vi.fn(),
-    onToggleStatus: vi.fn(),
+    onDifficultyChange: vi.fn(),
+    onStatusChange: vi.fn(),
     onToggleTag: vi.fn(),
     onSessionModeChange: vi.fn(),
     onSessionCountChange: vi.fn(),
@@ -35,16 +35,16 @@ test('invokes onSessionModeChange when selecting exam mode', async () => {
   expect(props.onSessionModeChange).toHaveBeenCalledWith('exam');
 });
 
-test('invokes onToggleDifficulty when selecting a difficulty', async () => {
+test('invokes onDifficultyChange when selecting a difficulty', async () => {
   const { props, screen } = await renderStarter();
   await screen.getByRole('button', { name: 'Easy' }).click();
-  expect(props.onToggleDifficulty).toHaveBeenCalledWith('easy');
+  expect(props.onDifficultyChange).toHaveBeenCalledWith('easy');
 });
 
-test('invokes onToggleStatus when selecting a status', async () => {
+test('invokes onStatusChange when selecting a status', async () => {
   const { props, screen } = await renderStarter();
   await screen.getByRole('button', { name: 'Incorrect' }).click();
-  expect(props.onToggleStatus).toHaveBeenCalledWith('incorrect');
+  expect(props.onStatusChange).toHaveBeenCalledWith('incorrect');
 });
 
 test('invokes onToggleTag when selecting a tag', async () => {
@@ -71,13 +71,13 @@ test('shows error states for tags and session start', async () => {
     <PracticeSessionStarter
       sessionMode="tutor"
       sessionCount={20}
-      filters={{ tagSlugs: [], difficulties: [], statuses: [] }}
+      filters={{ tagSlugs: [], difficulty: null, status: 'unanswered' }}
       tagLoadStatus="error"
       availableTags={[]}
       sessionStartStatus="error"
       sessionStartError="Could not start session."
-      onToggleDifficulty={() => undefined}
-      onToggleStatus={() => undefined}
+      onDifficultyChange={() => undefined}
+      onStatusChange={() => undefined}
       onToggleTag={() => undefined}
       onSessionModeChange={() => undefined}
       onSessionCountChange={() => undefined}
@@ -99,13 +99,13 @@ test('shows loading state for session start', async () => {
     <PracticeSessionStarter
       sessionMode="tutor"
       sessionCount={20}
-      filters={{ tagSlugs: [], difficulties: [], statuses: [] }}
+      filters={{ tagSlugs: [], difficulty: null, status: 'unanswered' }}
       tagLoadStatus="idle"
       availableTags={[]}
       sessionStartStatus="loading"
       sessionStartError={null}
-      onToggleDifficulty={() => undefined}
-      onToggleStatus={() => undefined}
+      onDifficultyChange={() => undefined}
+      onStatusChange={() => undefined}
       onToggleTag={() => undefined}
       onSessionModeChange={() => undefined}
       onSessionCountChange={() => undefined}

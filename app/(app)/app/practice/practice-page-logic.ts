@@ -11,10 +11,10 @@ import {
 
 export { createBookmarksEffect } from './practice-page-bookmarks';
 export {
+  createDifficultyChangeHandler,
   createSessionCountChangeHandler,
   createSessionModeChangeHandler,
-  createToggleDifficultyHandler,
-  createToggleStatusHandler,
+  createStatusChangeHandler,
   createToggleTagHandler,
   handleSessionCountChange,
   handleSessionModeChange,
@@ -59,8 +59,14 @@ export async function loadNextQuestion(input: {
   isLatestRequest?: (requestId: number) => boolean;
   isMounted?: () => boolean;
 }): Promise<void> {
+  const serverFilters = {
+    tagSlugs: input.filters.tagSlugs,
+    difficulties: input.filters.difficulty ? [input.filters.difficulty] : [],
+    statuses: [input.filters.status],
+  };
+
   return runLoadQuestionFlow({
-    requestInput: { filters: input.filters },
+    requestInput: { filters: serverFilters },
     getQuestionFn: input.getNextQuestionFn,
     createIdempotencyKey: input.createIdempotencyKey,
     nowMs: input.nowMs,

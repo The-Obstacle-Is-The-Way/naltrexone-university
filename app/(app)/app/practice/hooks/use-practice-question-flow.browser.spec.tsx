@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-react';
+import type { PracticeFilters } from '@/app/(app)/app/practice/practice-page-logic';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import { createNextQuestion } from '@/src/application/test-helpers/create-next-question';
 import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
@@ -30,7 +31,11 @@ vi.mock('@/src/adapters/controllers/question-controller', () => ({
   submitAnswer: submitAnswerMock,
 }));
 
-const TEST_FILTERS = { tagSlugs: [], difficulties: [], statuses: [] };
+const TEST_FILTERS = {
+  tagSlugs: [],
+  difficulty: null,
+  status: 'unanswered',
+} satisfies PracticeFilters;
 
 function PracticeQuestionFlowHookProbe() {
   const output = usePracticeQuestionFlow({ filters: TEST_FILTERS });

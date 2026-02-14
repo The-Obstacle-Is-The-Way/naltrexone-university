@@ -21,8 +21,8 @@ export type UsePracticeSessionControlsOutput = {
   onSessionModeChange: PracticeSessionStarterProps['onSessionModeChange'];
   onSessionCountChange: PracticeSessionStarterProps['onSessionCountChange'];
   onToggleTag: PracticeSessionStarterProps['onToggleTag'];
-  onToggleDifficulty: PracticeSessionStarterProps['onToggleDifficulty'];
-  onToggleStatus: PracticeSessionStarterProps['onToggleStatus'];
+  onDifficultyChange: PracticeSessionStarterProps['onDifficultyChange'];
+  onStatusChange: PracticeSessionStarterProps['onStatusChange'];
   onStartSession: () => Promise<void>;
   onAbandonIncompleteSession: () => Promise<void>;
 };
@@ -47,8 +47,8 @@ export function usePracticeSessionControls(): UsePracticeSessionControlsOutput {
     onSessionModeChange: sessionStart.onSessionModeChange,
     onSessionCountChange: sessionStart.onSessionCountChange,
     onToggleTag: sessionStart.onToggleTag,
-    onToggleDifficulty: sessionStart.onToggleDifficulty,
-    onToggleStatus: sessionStart.onToggleStatus,
+    onDifficultyChange: sessionStart.onDifficultyChange,
+    onStatusChange: sessionStart.onStatusChange,
     onStartSession: sessionStart.onStartSession,
     onAbandonIncompleteSession: incomplete.onAbandonIncompleteSession,
   };

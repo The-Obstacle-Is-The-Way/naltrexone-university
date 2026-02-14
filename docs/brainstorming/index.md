@@ -1,7 +1,7 @@
 # Brainstorming Register
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-02-12
+**Last Updated:** 2026-02-13
 
 ---
 
@@ -25,17 +25,14 @@ Brainstorming (BS-NNN) → Spec (SPEC-NNN) → Implementation → Archive
 
 ## Brainstorming Index (Active)
 
-| Priority | ID | Title | Status | Depends On | Related Spec |
-|----------|----|-------|--------|------------|--------------|
-| **P1** | [BS-012](./bs-012-question-status-filter.md) | Question Status Filter for Practice & Quick Practice | Active | — | [SPEC-024](../specs/spec-024-question-status-filter.md) |
-| **P2** | [BS-011](./bs-011-history-review-wiring-and-choice-label-desync.md) Bug B | Choice Label Desync (standalone question page) | Active | — | [SPEC-025](../specs/spec-025-choice-label-desync-fix.md) |
-| **P3** | [BS-011](./bs-011-history-review-wiring-and-choice-label-desync.md) Bug A | History Tab Review Wiring (review-only + reattempt path) | Active | BS-012 | [SPEC-026](../specs/spec-026-history-review-only.md) |
-| **P4** | [BS-009](./bs-009-session-review-navigation-gap.md) | Session Review Navigation Gap (sessionId + prev/next) | Active | — | [SPEC-027](../specs/spec-027-session-review-navigation.md) |
-| **P5** | [BS-010](./bs-010-review-mode-attempt-identity-gap.md) | Review Mode Attempt Identity Gap (attemptId) | Active | BS-009 | [SPEC-027](../specs/spec-027-session-review-navigation.md) |
+| ID | Title | Status | Related Spec |
+|----|-------|--------|--------------|
+| [BS-011](./bs-011-history-review-wiring-and-choice-label-desync.md) Bug B | Choice Label Desync (standalone question page) | **Active** | [SPEC-025](../_archive/specs/spec-025-choice-label-desync-fix.md) (Ready) |
+| [BS-013](./bs-013-status-filter-ux-confusion.md) | Status Filter UX Confusion (multi-select OR not obvious) | **Active** | — |
+| [BS-012](./bs-012-question-status-filter.md) | Question Status Filter for Practice & Quick Practice | Resolved | [SPEC-024](../_archive/specs/spec-024-question-status-filter.md) (Implemented) |
+| [BS-011](./bs-011-history-review-wiring-and-choice-label-desync.md) Bug A | History Tab Review Wiring (review-only + reattempt path) | Resolved | [SPEC-026](../_archive/specs/spec-026-history-review-only.md) (Implemented) |
 
-> **Execution order rationale:** BS-012 is foundational — it provides the reattempt path through Practice, which unblocks making History review-only (BS-011 Bug A). BS-011 Bug B is an independent bug fix. BS-009 and BS-010 both extend `toQuestionRoute()` with URL params and could be combined into one spec; BS-010 depends on BS-009's `sessionId` infrastructure.
-
-| **P6** | [BS-013](./bs-013-status-filter-ux-confusion.md) | Status Filter UX Confusion (multi-select OR not obvious) | Active | — | — |
+> **Note:** BS-012 and BS-011 Bug A are resolved (specs implemented) but kept here because BS-013 is an open UX follow-up to BS-012, and BS-011 Bug B remains unimplemented.
 
 **Next Brainstorming ID:** BS-014
 
@@ -53,6 +50,8 @@ Brainstorming (BS-NNN) → Spec (SPEC-NNN) → Implementation → Archive
 | [BS-006](../_archive/brainstorming/bs-006-review-consistency-audit.md) | Review Consistency Audit | Resolved by SPEC-021; follow-up enhancements deferred |
 | [BS-007](../_archive/brainstorming/bs-007-quick-practice-history-gap.md) | Quick Practice History Gap | Specced as SPEC-022 (implemented) |
 | [BS-008](../_archive/brainstorming/bs-008-question-review-mode-gap.md) | Question Review Mode Gap | Specced as SPEC-023 (PR #92 implementing) |
+| [BS-009](../_archive/brainstorming/bs-009-session-review-navigation-gap.md) | Session Review Navigation Gap | Specced as SPEC-027 (Implemented) |
+| [BS-010](../_archive/brainstorming/bs-010-review-mode-attempt-identity-gap.md) | Review Mode Attempt Identity Gap | Specced as SPEC-027 (Implemented) |
 
 ---
 

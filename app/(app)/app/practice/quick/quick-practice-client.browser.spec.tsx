@@ -66,7 +66,7 @@ test('removes the status query param without scrolling when toggling off', async
 
   const screen = await render(<QuickPracticeClient />);
 
-  await screen.getByRole('button', { name: 'Incorrect' }).click();
+  await screen.getByRole('button', { name: 'Unanswered' }).click();
 
   expect(pushMock).toHaveBeenCalledWith(ROUTES.APP_PRACTICE_QUICK, {
     scroll: false,

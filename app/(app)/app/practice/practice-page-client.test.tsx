@@ -17,7 +17,7 @@ let sessionStartStatus: 'idle' | 'loading' | 'error' = 'loading';
 
 vi.mock('./hooks/use-practice-session-controls', () => ({
   usePracticeSessionControls: () => ({
-    filters: { tagSlugs: [], difficulties: [], statuses: [] },
+    filters: { tagSlugs: [], difficulty: null, status: 'unanswered' },
     sessionMode: 'tutor',
     sessionCount: 20,
     tagLoadStatus: 'idle',
@@ -30,8 +30,8 @@ vi.mock('./hooks/use-practice-session-controls', () => ({
     onSessionModeChange: () => undefined,
     onSessionCountChange: () => undefined,
     onToggleTag: () => undefined,
-    onToggleDifficulty: () => undefined,
-    onToggleStatus: () => undefined,
+    onDifficultyChange: () => undefined,
+    onStatusChange: () => undefined,
     onStartSession: async () => undefined,
     onAbandonIncompleteSession: async () => undefined,
   }),

@@ -15,7 +15,7 @@ describe('usePracticeQuestionFlow', () => {
   it('returns the expected initial state contract', () => {
     const output = renderHook(() =>
       usePracticeQuestionFlow({
-        filters: { tagSlugs: [], difficulties: [], statuses: [] },
+        filters: { tagSlugs: [], difficulty: null, status: 'unanswered' },
       }),
     );
 

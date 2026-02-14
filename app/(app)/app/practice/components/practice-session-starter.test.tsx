@@ -9,13 +9,13 @@ describe('PracticeSessionStarter', () => {
       <PracticeSessionStarter
         sessionMode="tutor"
         sessionCount={20}
-        filters={{ tagSlugs: [], difficulties: [], statuses: [] }}
+        filters={{ tagSlugs: [], difficulty: null, status: 'unanswered' }}
         tagLoadStatus="idle"
         availableTags={[]}
         sessionStartStatus="idle"
         sessionStartError={null}
-        onToggleDifficulty={() => undefined}
-        onToggleStatus={() => undefined}
+        onDifficultyChange={() => undefined}
+        onStatusChange={() => undefined}
         onToggleTag={() => undefined}
         onSessionModeChange={() => undefined}
         onSessionCountChange={() => undefined}
@@ -32,13 +32,13 @@ describe('PracticeSessionStarter', () => {
       <PracticeSessionStarter
         sessionMode="tutor"
         sessionCount={20}
-        filters={{ tagSlugs: [], difficulties: [], statuses: [] }}
+        filters={{ tagSlugs: [], difficulty: null, status: 'unanswered' }}
         tagLoadStatus="idle"
         availableTags={[]}
         sessionStartStatus="idle"
         sessionStartError={null}
-        onToggleDifficulty={() => undefined}
-        onToggleStatus={() => undefined}
+        onDifficultyChange={() => undefined}
+        onStatusChange={() => undefined}
         onToggleTag={() => undefined}
         onSessionModeChange={() => undefined}
         onSessionCountChange={() => undefined}
@@ -55,7 +55,7 @@ describe('PracticeSessionStarter', () => {
       <PracticeSessionStarter
         sessionMode="tutor"
         sessionCount={20}
-        filters={{ tagSlugs: [], difficulties: [], statuses: [] }}
+        filters={{ tagSlugs: [], difficulty: null, status: 'unanswered' }}
         tagLoadStatus="idle"
         availableTags={[
           {
@@ -67,8 +67,8 @@ describe('PracticeSessionStarter', () => {
         ]}
         sessionStartStatus="idle"
         sessionStartError={null}
-        onToggleDifficulty={() => undefined}
-        onToggleStatus={() => undefined}
+        onDifficultyChange={() => undefined}
+        onStatusChange={() => undefined}
         onToggleTag={() => undefined}
         onSessionModeChange={() => undefined}
         onSessionCountChange={() => undefined}
@@ -77,10 +77,12 @@ describe('PracticeSessionStarter', () => {
     );
 
     const doc = new DOMParser().parseFromString(html, 'text/html');
-    expect(
-      doc.querySelector('fieldset[aria-label="Difficulty"]'),
-    ).not.toBeNull();
-    expect(doc.querySelector('fieldset[aria-label="Status"]')).not.toBeNull();
+    const legends = Array.from(doc.querySelectorAll('legend')).map(
+      (el) => el.textContent ?? '',
+    );
+    expect(legends).toContain('Mode');
+    expect(legends).toContain('Status');
+    expect(legends).toContain('Difficulty');
     expect(doc.querySelector('fieldset[aria-label="Topic"]')).not.toBeNull();
   });
 
@@ -89,7 +91,11 @@ describe('PracticeSessionStarter', () => {
       <PracticeSessionStarter
         sessionMode="tutor"
         sessionCount={20}
-        filters={{ tagSlugs: ['opioids'], difficulties: [], statuses: [] }}
+        filters={{
+          tagSlugs: ['opioids'],
+          difficulty: null,
+          status: 'unanswered',
+        }}
         tagLoadStatus="idle"
         availableTags={[
           {
@@ -107,8 +113,8 @@ describe('PracticeSessionStarter', () => {
         ]}
         sessionStartStatus="idle"
         sessionStartError={null}
-        onToggleDifficulty={() => undefined}
-        onToggleStatus={() => undefined}
+        onDifficultyChange={() => undefined}
+        onStatusChange={() => undefined}
         onToggleTag={() => undefined}
         onSessionModeChange={() => undefined}
         onSessionCountChange={() => undefined}
@@ -133,22 +139,22 @@ describe('PracticeSessionStarter', () => {
     ).toBe(true);
   });
 
-  it('renders status filter chips with hint text', () => {
+  it('renders status and difficulty segmented controls without hint text', () => {
     const html = renderToStaticMarkup(
       <PracticeSessionStarter
         sessionMode="tutor"
         sessionCount={20}
         filters={{
           tagSlugs: [],
-          difficulties: [],
-          statuses: ['incorrect'],
+          difficulty: null,
+          status: 'incorrect',
         }}
         tagLoadStatus="idle"
         availableTags={[]}
         sessionStartStatus="idle"
         sessionStartError={null}
-        onToggleDifficulty={() => undefined}
-        onToggleStatus={() => undefined}
+        onDifficultyChange={() => undefined}
+        onStatusChange={() => undefined}
         onToggleTag={() => undefined}
         onSessionModeChange={() => undefined}
         onSessionCountChange={() => undefined}
@@ -159,13 +165,33 @@ describe('PracticeSessionStarter', () => {
     expect(html).toContain('Status');
     expect(html).toContain('Unanswered');
     expect(html).toContain('Incorrect');
-    expect(html).toContain('Marked');
-    expect(html).toContain('Leave empty to include all questions');
+    expect(html).toContain('Bookmarked');
+    expect(html).toContain('Difficulty');
+    expect(html).toContain('All');
+    expect(html).toContain('Easy');
+    expect(html).toContain('Medium');
+    expect(html).toContain('Hard');
+    expect(html).not.toContain('Leave empty to include all questions');
+    expect(html).not.toContain('Leave empty to include all difficulties');
 
     const doc = new DOMParser().parseFromString(html, 'text/html');
-    const selected = doc.querySelector(
-      'fieldset[aria-label="Status"] button[aria-pressed="true"]',
+    const statusControl = Array.from(doc.querySelectorAll('fieldset')).find(
+      (fieldset) => fieldset.querySelector('legend')?.textContent === 'Status',
     );
-    expect(selected?.textContent).toBe('Incorrect');
+    expect(statusControl).toBeTruthy();
+    const activeStatus = statusControl?.querySelector(
+      'button[aria-pressed="true"]',
+    );
+    expect(activeStatus?.textContent).toBe('Incorrect');
+
+    const difficultyControl = Array.from(doc.querySelectorAll('fieldset')).find(
+      (fieldset) =>
+        fieldset.querySelector('legend')?.textContent === 'Difficulty',
+    );
+    expect(difficultyControl).toBeTruthy();
+    const activeDifficulty = difficultyControl?.querySelector(
+      'button[aria-pressed="true"]',
+    );
+    expect(activeDifficulty?.textContent).toBe('All');
   });
 });

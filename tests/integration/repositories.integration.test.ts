@@ -426,17 +426,17 @@ describe('DrizzleQuestionRepository', () => {
       expect(result).toEqual([qLatestIncorrect.id]);
     });
 
-    it('returns only bookmarked questions when status=marked', async () => {
+    it('returns only bookmarked questions when status=bookmarked', async () => {
       const user = await createUser();
 
-      const qMarked = await createQuestion({
-        slug: `it-marked-${randomUUID()}`,
+      const qBookmarked = await createQuestion({
+        slug: `it-bookmarked-${randomUUID()}`,
         status: 'published',
         difficulty: 'easy',
         createdAt: new Date('2026-01-01T00:00:00.000Z'),
       });
-      const _qUnmarked = await createQuestion({
-        slug: `it-unmarked-${randomUUID()}`,
+      const _qUnbookmarked = await createQuestion({
+        slug: `it-unbookmarked-${randomUUID()}`,
         status: 'published',
         difficulty: 'easy',
         createdAt: new Date('2026-01-02T00:00:00.000Z'),
@@ -444,18 +444,18 @@ describe('DrizzleQuestionRepository', () => {
 
       await db.insert(schema.bookmarks).values({
         userId: user.id,
-        questionId: qMarked.id,
+        questionId: qBookmarked.id,
       });
 
       const repo = new DrizzleQuestionRepository(db);
       const result = await repo.listPublishedCandidateIds({
         tagSlugs: [],
         difficulties: [],
-        statuses: ['marked'],
+        statuses: ['bookmarked'],
         userId: user.id,
       });
 
-      expect(result).toEqual([qMarked.id]);
+      expect(result).toEqual([qBookmarked.id]);
     });
 
     it('combines unanswered and incorrect with OR logic', async () => {
@@ -570,33 +570,33 @@ describe('DrizzleQuestionRepository', () => {
     it('combines status filter with difficulty filter (AND logic)', async () => {
       const user = await createUser();
 
-      const qMarkedEasy = await createQuestion({
-        slug: `it-marked-easy-${randomUUID()}`,
+      const qBookmarkedEasy = await createQuestion({
+        slug: `it-bookmarked-easy-${randomUUID()}`,
         status: 'published',
         difficulty: 'easy',
         createdAt: new Date('2026-01-01T00:00:00.000Z'),
       });
-      const qMarkedHard = await createQuestion({
-        slug: `it-marked-hard-${randomUUID()}`,
+      const qBookmarkedHard = await createQuestion({
+        slug: `it-bookmarked-hard-${randomUUID()}`,
         status: 'published',
         difficulty: 'hard',
         createdAt: new Date('2026-01-02T00:00:00.000Z'),
       });
 
       await db.insert(schema.bookmarks).values([
-        { userId: user.id, questionId: qMarkedEasy.id },
-        { userId: user.id, questionId: qMarkedHard.id },
+        { userId: user.id, questionId: qBookmarkedEasy.id },
+        { userId: user.id, questionId: qBookmarkedHard.id },
       ]);
 
       const repo = new DrizzleQuestionRepository(db);
       const result = await repo.listPublishedCandidateIds({
         tagSlugs: [],
         difficulties: ['easy'],
-        statuses: ['marked'],
+        statuses: ['bookmarked'],
         userId: user.id,
       });
 
-      expect(result).toEqual([qMarkedEasy.id]);
+      expect(result).toEqual([qBookmarkedEasy.id]);
     });
 
     it('combines status filter with tag filter (AND logic)', async () => {
@@ -629,7 +629,7 @@ describe('DrizzleQuestionRepository', () => {
       const result = await repo.listPublishedCandidateIds({
         tagSlugs: [tag.slug],
         difficulties: [],
-        statuses: ['marked'],
+        statuses: ['bookmarked'],
         userId: user.id,
       });
 

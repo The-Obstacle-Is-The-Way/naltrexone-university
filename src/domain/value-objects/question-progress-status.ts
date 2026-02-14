@@ -1,7 +1,7 @@
 export const AllQuestionProgressStatuses = [
   'unanswered',
   'incorrect',
-  'marked',
+  'bookmarked',
 ] as const;
 
 export type QuestionProgressStatus =

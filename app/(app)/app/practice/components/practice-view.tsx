@@ -21,6 +21,7 @@ export type PracticeViewProps = {
     label: string;
   };
   topContent?: React.ReactNode;
+  belowHeadingContent?: React.ReactNode;
   sessionInfo?: NextQuestion['session'];
   loadState: LoadState;
   question: NextQuestion | null;
@@ -150,6 +151,7 @@ export function PracticeView(props: PracticeViewProps) {
             )}
           </div>
         </div>
+        {props.belowHeadingContent}
       </div>
 
       <div ref={props.questionAreaRef} tabIndex={-1} className="outline-none">

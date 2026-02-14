@@ -33,13 +33,13 @@ function Probe() {
 
   return (
     <>
-      <div data-testid="statuses">{output.filters.statuses.join(',')}</div>
+      <div data-testid="status">{output.filters.status}</div>
       <button
         type="button"
-        data-testid="toggle-incorrect"
-        onClick={() => output.onToggleStatus('incorrect')}
+        data-testid="set-incorrect"
+        onClick={() => output.onStatusChange('incorrect')}
       >
-        Toggle incorrect
+        Set incorrect
       </button>
       <button
         type="button"
@@ -57,7 +57,7 @@ afterEach(() => {
   navigateToMock.mockReset();
 });
 
-test('rotates the session start idempotency key when toggling status', async () => {
+test('rotates the session start idempotency key when changing status', async () => {
   startPracticeSessionMock.mockResolvedValue({
     ok: true,
     data: { sessionId: 'session_1' },
@@ -71,9 +71,9 @@ test('rotates the session start idempotency key when toggling status', async () 
     startPracticeSessionMock.mock.calls[0]?.[0],
   );
 
-  await screen.getByTestId('toggle-incorrect').click();
+  await screen.getByTestId('set-incorrect').click();
   await expect
-    .element(screen.getByTestId('statuses'))
+    .element(screen.getByTestId('status'))
     .toHaveTextContent('incorrect');
 
   await screen.getByTestId('start').click();

@@ -1,10 +1,13 @@
 import type { NextQuestion } from '@/src/application/use-cases/get-next-question';
-import type { QuestionProgressStatus } from '@/src/domain/value-objects';
+import type {
+  QuestionDifficulty,
+  QuestionProgressStatus,
+} from '@/src/domain/value-objects';
 
 export type PracticeFilters = {
   tagSlugs: string[];
-  difficulties: Array<NextQuestion['difficulty']>;
-  statuses: QuestionProgressStatus[];
+  difficulty: NextQuestion['difficulty'] | null;
+  status: QuestionProgressStatus;
 };
 
 function assertUnreachable(value: never): never {
@@ -17,9 +20,26 @@ export function statusDisplayLabel(status: QuestionProgressStatus): string {
       return 'Unanswered';
     case 'incorrect':
       return 'Incorrect';
-    case 'marked':
-      return 'Marked';
+    case 'bookmarked':
+      return 'Bookmarked';
     default:
       return assertUnreachable(status);
+  }
+}
+
+function assertUnreachableDifficulty(value: never): never {
+  throw new Error(`Unhandled QuestionDifficulty: ${value}`);
+}
+
+export function difficultyDisplayLabel(difficulty: QuestionDifficulty): string {
+  switch (difficulty) {
+    case 'easy':
+      return 'Easy';
+    case 'medium':
+      return 'Medium';
+    case 'hard':
+      return 'Hard';
+    default:
+      return assertUnreachableDifficulty(difficulty);
   }
 }
