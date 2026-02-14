@@ -237,7 +237,7 @@ Key changes:
 </div>
 ```
 
-Both hint texts are removed.
+Both hint texts are removed. Replace the local `difficulties` constant (line ~60) with `AllDifficulties` imported from `src/domain/value-objects`.
 
 ### 3.7 Practice Session Start Hook — Update State Shape
 
@@ -496,8 +496,9 @@ Update the JSDoc comment that says `Status values (unanswered, incorrect, marked
 | `app/(app)/app/practice/components/practice-view.tsx` | Add `belowHeadingContent` prop (keep existing `topContent`) |
 | `app/(app)/app/practice/components/practice-view.test.tsx` | Update layout assertions |
 | `app/(app)/app/practice/practice-page-logic.ts` | Convert single filter values to arrays for `getNextQuestion` |
-| `src/adapters/controllers/practice-controller.test.ts` | Update `'marked'` → `'bookmarked'` in test data |
-| `src/adapters/controllers/question-controller.test.ts` | Update `'marked'` → `'bookmarked'` in test data |
+| `tests/integration/repositories.integration.test.ts` | Update `'marked'` → `'bookmarked'` in status filter test data (3 occurrences) |
+| `src/adapters/controllers/practice-controller.test.ts` | Add test: Zod schema accepts `'bookmarked'`, rejects `'marked'` |
+| `src/adapters/controllers/question-controller.test.ts` | Add test: Zod schema accepts `'bookmarked'`, rejects `'marked'` |
 
 ### No New Files
 
