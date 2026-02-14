@@ -74,9 +74,11 @@ export function createHistoryPage(deps?: {
 
       const tagOptions = tagsResult.ok
         ? tagsResult.data.rows
-            .map((t) => t.slug)
-            .slice()
-            .sort((a, b) => a.localeCompare(b))
+            .map((t) => ({ slug: t.slug, name: t.name }))
+            .sort(
+              (a, b) =>
+                a.name.localeCompare(b.name) || a.slug.localeCompare(b.slug),
+            )
         : [];
 
       return (

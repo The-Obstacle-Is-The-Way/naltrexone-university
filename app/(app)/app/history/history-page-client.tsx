@@ -17,7 +17,7 @@ export type HistoryPageClientProps =
       activeTab: 'questions';
       questionsResult: ActionResult<GetAttemptedQuestionsOutput>;
       questionsFilters?: QuestionsFilters;
-      questionsTagOptions?: string[];
+      questionsTagOptions?: { slug: string; name: string }[];
     };
 
 export function HistoryPageClient(props: HistoryPageClientProps) {

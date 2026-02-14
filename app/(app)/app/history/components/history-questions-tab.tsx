@@ -75,7 +75,7 @@ function QuestionMetadata({
 export type HistoryQuestionsTabProps = {
   result: ActionResult<GetAttemptedQuestionsOutput>;
   filters?: QuestionsFilters;
-  tagOptions?: string[];
+  tagOptions?: { slug: string; name: string }[];
 };
 
 export function HistoryQuestionsTab({
@@ -104,13 +104,22 @@ export function HistoryQuestionsTab({
   const showingStart = rows.length > 0 ? offset + 1 : 0;
   const showingEnd = offset + rows.length;
 
-  const resolvedTagOptions = Array.from(
-    new Set(
-      [...(tagOptions ?? []), selectedTagSlug].filter((tag): tag is string =>
-        Boolean(tag),
-      ),
-    ),
-  ).sort((a, b) => a.localeCompare(b));
+  const resolvedTagOptions = (() => {
+    const optionsBySlug = new Map(
+      (tagOptions ?? []).map((tag) => [tag.slug, tag]),
+    );
+
+    if (selectedTagSlug && !optionsBySlug.has(selectedTagSlug)) {
+      optionsBySlug.set(selectedTagSlug, {
+        slug: selectedTagSlug,
+        name: selectedTagSlug,
+      });
+    }
+
+    return Array.from(optionsBySlug.values()).sort(
+      (a, b) => a.name.localeCompare(b.name) || a.slug.localeCompare(b.slug),
+    );
+  })();
 
   const shouldShowFiltersCard = totalCount > 0 || hasActiveFilters;
 
@@ -172,9 +181,9 @@ export function HistoryQuestionsTab({
                 className={selectClassName}
               >
                 <option value="">All tags</option>
-                {resolvedTagOptions.map((slug) => (
-                  <option key={slug} value={slug}>
-                    {slug}
+                {resolvedTagOptions.map((tag) => (
+                  <option key={tag.slug} value={tag.slug}>
+                    {tag.name}
                   </option>
                 ))}
               </select>

@@ -104,12 +104,6 @@ describe('DrizzleBookmarkRepository', () => {
         },
       ]);
 
-      db._mocks.queryFindFirst.mockResolvedValue({
-        userId: 'user_1',
-        questionId: 'question_1',
-        createdAt,
-      });
-
       const repo = new DrizzleBookmarkRepository(db as unknown as RepoDb);
 
       await expect(repo.add('user_1', 'question_1')).resolves.toEqual({

@@ -137,18 +137,18 @@ show_status() {
   fi
   echo ""
 
-  # docs/_ralphwiggum/PROGRESS.md status
-  if [[ -f "$PROJECT_ROOT/docs/_ralphwiggum/PROGRESS.md" ]]; then
-    local total
-    local done
-    local pending
-    total=$(grep -c "^\- \[" "$PROJECT_ROOT/docs/_ralphwiggum/PROGRESS.md" 2>/dev/null || echo "0")
-    done=$(grep -c "^\- \[x\]" "$PROJECT_ROOT/docs/_ralphwiggum/PROGRESS.md" 2>/dev/null || echo "0")
-    pending=$(grep -c "^\- \[ \]" "$PROJECT_ROOT/docs/_ralphwiggum/PROGRESS.md" 2>/dev/null || echo "0")
-    echo "docs/_ralphwiggum/PROGRESS.md: $done/$total complete ($pending pending)"
-  else
-    echo "docs/_ralphwiggum/PROGRESS.md: NOT FOUND"
-  fi
+    # docs/_ralphwiggum/PROGRESS.md status
+    if [[ -f "$PROJECT_ROOT/docs/_ralphwiggum/PROGRESS.md" ]]; then
+      local total
+      local completed
+      local pending
+      total=$(grep -c "^\- \[" "$PROJECT_ROOT/docs/_ralphwiggum/PROGRESS.md" 2>/dev/null || echo "0")
+      completed=$(grep -c "^\- \[x\]" "$PROJECT_ROOT/docs/_ralphwiggum/PROGRESS.md" 2>/dev/null || echo "0")
+      pending=$(grep -c "^\- \[ \]" "$PROJECT_ROOT/docs/_ralphwiggum/PROGRESS.md" 2>/dev/null || echo "0")
+      echo "docs/_ralphwiggum/PROGRESS.md: $completed/$total complete ($pending pending)"
+    else
+      echo "docs/_ralphwiggum/PROGRESS.md: NOT FOUND"
+    fi
   echo ""
 
   # Recent commits
