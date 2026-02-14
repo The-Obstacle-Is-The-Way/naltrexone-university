@@ -1,6 +1,6 @@
 # Integration Tests
 
-**Last Updated:** 2026-02-13
+**Last Updated:** 2026-02-14
 
 Integration tests run against a real PostgreSQL database to verify repository queries, controller actions, and database constraints.
 
@@ -92,3 +92,11 @@ The test setup checks database connectivity before running any tests. If you see
 **Stale containers on wrong ports**
 
 If you see a container on a port other than 5434, it may be from an old Docker Compose project. Stop it manually with `docker stop <name> && docker rm <name>`, then run `pnpm db:test:up` to start the correct one.
+
+**Wrong DATABASE_URL (shell overrides .env.test)**
+
+Integration tests load `.env.test` but do **not** override an already-set `DATABASE_URL` (this is required so CI can inject its own database URL). If your shell already exports `DATABASE_URL`, unset it or run tests with an explicit override:
+
+```bash
+DATABASE_URL=postgresql://postgres:postgres@localhost:5434/addiction_boards_test pnpm test:integration
+```
