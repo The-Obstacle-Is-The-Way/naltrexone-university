@@ -1,7 +1,7 @@
 import { expect, test } from 'vitest';
 import { render } from 'vitest-browser-react';
+import { useQuestionFlowCore } from '@/app/(app)/app/practice/shared/use-question-flow-core';
 import { createNextQuestion } from '@/src/application/test-helpers/create-next-question';
-import { useQuestionFlowCore } from './use-question-flow-core';
 
 function QuestionFlowCoreProbe() {
   const core = useQuestionFlowCore({ isMounted: () => true });
