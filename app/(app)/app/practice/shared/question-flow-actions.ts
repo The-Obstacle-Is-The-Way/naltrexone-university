@@ -131,6 +131,7 @@ export async function runSubmitAnswerFlow<
   nowMs: () => number;
   setLoadState: (state: AsyncLoadStateWithIdle) => void;
   setSubmitResult: (result: SubmitAnswerOutput | null) => void;
+  onSuccess?: (result: SubmitAnswerOutput) => void;
   isMounted?: () => boolean;
 }): Promise<void> {
   if (!input.question) return;
@@ -173,5 +174,6 @@ export async function runSubmitAnswerFlow<
   }
 
   input.setSubmitResult(res.data);
+  input.onSuccess?.(res.data);
   input.setLoadState({ status: 'ready' });
 }

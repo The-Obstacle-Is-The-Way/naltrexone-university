@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useRef } from 'react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -89,16 +89,10 @@ export function ExamReviewView({
   review: GetPracticeSessionReviewOutput;
   isPending: boolean;
   onOpenQuestion: (questionId: string) => void;
-  onFinalizeReview: () => void;
+  onFinalizeReview: () => Promise<void>;
 }) {
   const unansweredCount = review.totalCount - review.answeredCount;
   const isFinalizingRef = useRef(false);
-
-  useEffect(() => {
-    if (!isPending) {
-      isFinalizingRef.current = false;
-    }
-  }, [isPending]);
 
   return (
     <div className="space-y-6">
@@ -215,7 +209,16 @@ export function ExamReviewView({
                   if (isPending) return;
                   if (isFinalizingRef.current) return;
                   isFinalizingRef.current = true;
-                  onFinalizeReview();
+
+                  try {
+                    const finalizePromise = onFinalizeReview();
+                    void finalizePromise.finally(() => {
+                      isFinalizingRef.current = false;
+                    });
+                  } catch (error) {
+                    isFinalizingRef.current = false;
+                    throw error;
+                  }
                 }}
               >
                 Confirm submit

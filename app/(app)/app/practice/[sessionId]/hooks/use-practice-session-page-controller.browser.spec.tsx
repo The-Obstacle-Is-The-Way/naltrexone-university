@@ -443,6 +443,93 @@ describe('usePracticeSessionPageController (browser)', () => {
       .toHaveTextContent('false');
   });
 
+  it('auto-advances in exam mode after a successful submit when more questions remain', async () => {
+    getNextQuestionMock
+      .mockResolvedValueOnce(
+        ok({
+          questionId: 'question-1',
+          slug: 'question-1',
+          stemMd: 'Question 1',
+          difficulty: 'easy',
+          choices: [
+            {
+              id: 'choice_1',
+              label: 'A',
+              textMd: 'Option A',
+              sortOrder: 1,
+            },
+          ],
+          session: {
+            sessionId: 'session-1',
+            mode: 'exam',
+            index: 0,
+            total: 2,
+            isMarkedForReview: false,
+          },
+        }),
+      )
+      .mockResolvedValueOnce(
+        ok({
+          questionId: 'question-2',
+          slug: 'question-2',
+          stemMd: 'Question 2',
+          difficulty: 'easy',
+          choices: [
+            {
+              id: 'choice_1',
+              label: 'A',
+              textMd: 'Option A',
+              sortOrder: 1,
+            },
+          ],
+          session: {
+            sessionId: 'session-1',
+            mode: 'exam',
+            index: 1,
+            total: 2,
+            isMarkedForReview: false,
+          },
+        }),
+      );
+    getBookmarksMock.mockResolvedValue(ok({ rows: [] }));
+    getPracticeSessionReviewMock.mockResolvedValue(
+      ok({
+        sessionId: 'session-1',
+        mode: 'exam',
+        totalCount: 2,
+        answeredCount: 0,
+        markedCount: 0,
+        rows: [],
+      }),
+    );
+    submitAnswerMock.mockResolvedValue(
+      ok({
+        attemptId: 'attempt-1',
+        isCorrect: true,
+        correctChoiceId: null,
+        explanationMd: null,
+        choiceExplanations: [],
+      }),
+    );
+
+    const screen = await render(<PracticeSessionPageControllerHookProbe />);
+
+    await expect
+      .element(screen.getByTestId('load-status'))
+      .toHaveTextContent('ready');
+    await expect
+      .element(screen.getByTestId('question-id'))
+      .toHaveTextContent('question-1');
+
+    await screen.getByRole('button', { name: 'select-choice-1' }).click();
+    await screen.getByRole('button', { name: 'submit-answer' }).click();
+
+    await expect.poll(() => getNextQuestionMock.mock.calls.length).toBe(2);
+    await expect
+      .element(screen.getByTestId('question-id'))
+      .toHaveTextContent('question-2');
+  });
+
   it('restores draft selections when navigating away and back before submit', async () => {
     getNextQuestionMock
       .mockResolvedValueOnce(

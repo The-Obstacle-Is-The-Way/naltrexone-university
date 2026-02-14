@@ -30,7 +30,7 @@ export type UsePracticeSessionReviewStageStateOutput = {
   onEndSession: () => void;
   onRetryReview: () => void;
   onOpenReviewQuestion: (questionId: string) => void;
-  onFinalizeReview: () => void;
+  onFinalizeReview: () => Promise<void>;
 };
 
 export function usePracticeSessionReviewStageState(
@@ -100,11 +100,11 @@ export function usePracticeSessionReviewStageState(
     [input.loadSpecificQuestion],
   );
 
-  const onFinalizeReview = useCallback(() => {
+  const onFinalizeReview = useCallback((): Promise<void> => {
     setReview(null);
     setReviewLoadState({ status: 'idle' });
     setIsInReviewStage(false);
-    void input.finalizeSession();
+    return input.finalizeSession();
   }, [input.finalizeSession]);
 
   const onEndSession = useCallback(() => {

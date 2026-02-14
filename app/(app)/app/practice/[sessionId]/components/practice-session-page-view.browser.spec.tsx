@@ -40,7 +40,7 @@ test('renders session summary branch when summary is present', async () => {
 
 test('renders exam review branch and triggers review actions', async () => {
   const onOpenReviewQuestion = vi.fn();
-  const onFinalizeReview = vi.fn();
+  const onFinalizeReview = vi.fn(async () => undefined);
 
   const screen = await render(
     <PracticeSessionPageView
@@ -266,7 +266,7 @@ test('renders navigator error with retry action', async () => {
 });
 
 test('calls onFinalizeReview instead of onEndSession when both are provided', async () => {
-  const onFinalizeReview = vi.fn();
+  const onFinalizeReview = vi.fn(async () => undefined);
   const onEndSession = vi.fn();
 
   const screen = await render(

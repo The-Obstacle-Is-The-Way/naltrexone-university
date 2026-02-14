@@ -43,7 +43,7 @@ export type PracticeSessionPageViewProps = {
   onNextQuestion: () => void;
   onNavigateQuestion?: (questionId: string) => void;
   onOpenReviewQuestion?: (questionId: string) => void;
-  onFinalizeReview?: () => void;
+  onFinalizeReview?: () => Promise<void>;
 };
 
 export function PracticeSessionPageView(props: PracticeSessionPageViewProps) {
@@ -99,12 +99,18 @@ export function PracticeSessionPageView(props: PracticeSessionPageViewProps) {
   }
 
   if (review) {
+    const onFinalizeReview =
+      props.onFinalizeReview ??
+      (async () => {
+        props.onEndSession();
+      });
+
     return (
       <ExamReviewView
         review={review}
         isPending={props.isPending}
         onOpenQuestion={props.onOpenReviewQuestion ?? (() => undefined)}
-        onFinalizeReview={props.onFinalizeReview ?? props.onEndSession}
+        onFinalizeReview={onFinalizeReview}
       />
     );
   }
