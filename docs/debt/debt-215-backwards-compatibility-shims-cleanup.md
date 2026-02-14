@@ -14,17 +14,28 @@ Uncle Bob's Clean Code principle: **dead code is a lie**. It tells future reader
 
 ## Inventory
 
-### 1. `tab=missed` → `tab=questions` Alias
+### 1. `tab=missed` Backward-Compat Mode (Alias + Default `result=incorrect`)
 
-**File:** `app/(app)/app/history/history-search-params.ts:18`
+**Files:**
+- `app/(app)/app/history/history-search-params.ts:18`
+- `app/(app)/app/history/page.tsx:56-64`
 
 ```typescript
 if (value === 'questions' || value === 'missed') return 'questions';
 ```
 
-The `missed` tab name was renamed to `questions` in SPEC-022. No external system generates `?tab=missed` URLs. This alias exists only because old bookmarks might contain it.
+```typescript
+const defaultResultFilter =
+  rawTab === 'missed' ? ('incorrect' as const) : null;
+// ...
+result: parseResultFilter(params.result) ?? defaultResultFilter,
+```
 
-**Fix:** Remove `|| value === 'missed'`. Update any internal references that still generate `?tab=missed`.
+The `missed` tab name was renamed to `questions` in SPEC-022. Today, `?tab=missed` semantically means **Questions tab with `result=incorrect`** (i.e., “review incorrect questions”).
+
+No external system generates `?tab=missed` URLs. This exists only because old bookmarks (and some internal tests) might contain it.
+
+**Fix:** Remove the `missed` alias in `parseHistoryTab()` **and** remove the `rawTab === 'missed'` default-result behavior. Update any internal references/tests that still generate `?tab=missed` to use the canonical `?tab=questions&result=incorrect`.
 
 ### 2. `source=quick` → `source=adhoc` Alias
 
@@ -51,9 +62,12 @@ This generates a URL using the legacy alias instead of the canonical form. It wo
 
 **Fix:** Change to `?tab=questions&result=incorrect` (the canonical form for the "review incorrect questions" view).
 
-### 4. Legacy `origin=review` Handler
+### 4. Legacy `from=review` Handler (Dead Origin Value)
 
-**File:** `app/(app)/app/questions/[slug]/question-page-client.tsx:45-51`
+**Files:**
+- `lib/routes.ts:22-27` (type includes `'review'`)
+- `app/(app)/app/questions/[slug]/question-page-client.tsx:21-28` (parses `'review'`)
+- `app/(app)/app/questions/[slug]/question-page-client.tsx:45-51` (UI branch)
 
 ```typescript
 if (resolvedOrigin === 'review') {
@@ -65,11 +79,31 @@ if (resolvedOrigin === 'review') {
 }
 ```
 
-The `origin=review` value refers to the old `/app/review` route (now dead — see DEBT-210). This handler exists because old URLs might still have `?origin=review`. Since `/app/review` itself is dead, no flow generates this origin value anymore.
+The legacy value is `from=review` (query param name is `from`, not `origin`). This refers to the old “Review” concept/route (see `/app/review` redirect in item #5 and DEBT-210).
 
-**Fix:** Remove the `origin === 'review'` branch entirely. If someone lands on a question page with `?origin=review`, they'll get the default dashboard back-link, which is correct.
+No current production flow generates `from=review`, but old links/tests still rely on it.
 
-### 5. Backwards-Compat Tests
+**Fix:** Remove the `'review'` case entirely (type + parsing + UI branch). If someone lands on a question page with `?from=review`, they should get the default dashboard back-link (or whatever the new canonical behavior is).
+
+### 5. Legacy `/app/review` Redirect (Infrastructure Shim)
+
+**Files:**
+- `next.config.ts:39-42`
+- `next.config.test.ts:19-35`
+
+```typescript
+{
+  source: '/app/review',
+  destination: '/app/history?tab=questions&result=incorrect',
+  permanent: true,
+},
+```
+
+This is an explicit backwards-compat route shim. In a greenfield project, we should not preserve old routes unless there is a concrete consumer.
+
+**Fix:** Remove this redirect rule and its unit + E2E test coverage once `/app/review` is no longer considered supported.
+
+### 6. Backwards-Compat Tests
 
 These tests exist solely to verify the shims above work. Once the shims are removed, the tests should be removed too:
 
@@ -78,13 +112,17 @@ These tests exist solely to verify the shims above work. Once the shims are remo
 | `app/(app)/app/history/history-search-params.test.ts` | 27 | `parseHistoryTab('missed')` returns `'questions'` |
 | `app/(app)/app/history/page.test.tsx` | 78 | Page renders correctly with `tab=missed` |
 | `app/(app)/app/history/history-search-params.test.ts` | 111 | `parseSourceFilter('quick')` returns `'adhoc'` |
-| `tests/e2e/core-app-pages.spec.ts` | 51-52 | E2E test for `/app/review` 308 redirect |
+| `app/(app)/app/questions/[slug]/question-page-client.test.tsx` | 62 | `from=review` produces a back-link to `/app/history?tab=missed` |
+| `next.config.test.ts` | 19 | Redirect rule exists for `/app/review` |
+| `tests/e2e/core-app-pages.spec.ts` | 27 | `/app/review` returns HTTP 308 and lands on History (Questions, Incorrect) |
+| `tests/e2e/core-app-pages.spec.ts` | 51 | Visiting `/app/history?tab=missed` works (alias behavior) |
+| `tests/e2e/history.spec.ts` | 28, 46 | Uses `/app/history?tab=missed` as the “missed questions” view |
 
-### 6. Dead `ROUTES.APP_REVIEW` Constant
+### 7. Dead `ROUTES.APP_REVIEW` Constant
 
 **File:** `lib/routes.ts:12`
 
-Already tracked as **DEBT-210**. The constant has zero consumers in production code. The E2E test at `tests/e2e/core-app-pages.spec.ts:27-43` expects a 308 redirect from `/app/review` → `/app/history?tab=questions&result=incorrect`, but no redirect implementation exists in source code (may be in Vercel config or may be aspirational).
+Already tracked as **DEBT-210**. The constant has zero consumers in production code (grep shows only `lib/routes.ts` and docs/tests). Runtime backwards-compat for `/app/review` **does** exist today via `next.config.ts` (item #5), but the redirect uses a string literal, so `ROUTES.APP_REVIEW` is still truly orphaned.
 
 **Fix:** Covered by DEBT-210. This debt doc cross-references it for completeness.
 
@@ -93,29 +131,31 @@ Already tracked as **DEBT-210**. The constant has zero consumers in production c
 - **Cognitive overhead**: Each shim makes developers ask "can I remove this?" and then not remove it out of caution
 - **Compounding cruft**: Shims #3 and #4 depend on shim #1, creating a dependency chain of legacy code
 - **False maturity signal**: Makes the codebase look like it has external consumers when it doesn't
-- **Test maintenance**: ~4 tests exist solely to verify backwards compat that isn't needed
+- **Test maintenance**: Multiple unit + E2E tests exist solely to verify backwards compat that isn't needed (see inventory)
 
 ## Resolution
 
 Remove all shims in a single atomic commit:
 
-1. Remove `'missed'` from `parseHistoryTab()` — only accept `'questions'`
-2. Remove `'quick'` from `parseSourceFilter()` — only accept `'tutor'`, `'exam'`, `'adhoc'`
-3. Update `question-page-client.tsx` back link from `?tab=missed` to `?tab=questions&result=incorrect`
-4. Remove `origin === 'review'` branch from `question-page-client.tsx`
-5. Remove all backwards-compat tests
-6. Delete `ROUTES.APP_REVIEW` constant (DEBT-210) and update/remove its E2E test
+1. Update `question-page-client.tsx` back link from `?tab=missed` to `?tab=questions&result=incorrect` (stop generating legacy URLs)
+2. Update/remove E2E + unit tests that navigate to `?tab=missed` or assert it
+3. Remove the `rawTab === 'missed'` default-result behavior in `app/(app)/app/history/page.tsx`
+4. Remove `'missed'` from `parseHistoryTab()` — only accept `'questions'` and `'sessions'`
+5. Remove `'quick'` from `parseSourceFilter()` — only accept `'tutor'`, `'exam'`, `'adhoc'`
+6. Remove `from=review` support (type + parsing + UI branch)
+7. Remove `/app/review` redirect in `next.config.ts` and delete its unit + E2E test coverage
+8. Delete `ROUTES.APP_REVIEW` constant (DEBT-210)
 
 ### Order
 
-Do items 3 and 4 first (stop generating legacy values), then 1 and 2 (stop accepting them). This avoids a window where the app generates URLs it can't parse.
+Do item 1 first (stop generating legacy URLs), then 2 (stop relying on legacy URLs in tests), then 3–7 (stop accepting legacy inputs/routes). This avoids a window where the app generates URLs it can’t parse.
 
 ## Verification
 
 1. `pnpm typecheck` — no compile errors from removed branches
 2. `pnpm test --run` — all tests pass (after removing compat-specific tests)
 3. `pnpm lint` — no unused imports
-4. `grep -r "missed\|quick\|origin=review\|APP_REVIEW" app/ src/ lib/` — zero hits
+4. `rg -n "tab=missed|rawTab === 'missed'|source=quick|from=review|/app/review|\\bAPP_REVIEW\\b" app src lib components tests next.config.ts next.config.test.ts` — zero hits
 5. Manual: navigate History, Quick Practice, and question detail pages — all links work with canonical URLs
 
 ## Related
@@ -123,5 +163,7 @@ Do items 3 and 4 first (stop generating legacy values), then 1 and 2 (stop accep
 - DEBT-210 — Dead `ROUTES.APP_REVIEW` constant (overlapping item)
 - SPEC-022 — Original spec that renamed `missed` → `questions`
 - `app/(app)/app/history/history-search-params.ts`
+- `app/(app)/app/history/page.tsx`
 - `app/(app)/app/questions/[slug]/question-page-client.tsx`
 - `lib/routes.ts`
+- `next.config.ts`

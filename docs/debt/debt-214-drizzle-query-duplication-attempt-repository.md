@@ -12,6 +12,11 @@ The `DrizzleAttemptRepository` has ~80 lines of duplicated query construction in
 
 This was introduced in the DEBT-206 fix (commit `f76dd0d`) to add server-side difficulty/tag filtering. The duplication exists because Drizzle's TypeScript type system returns a different type for each `.leftJoin()` call, making it impossible to chain JOINs conditionally with simple `if` statements.
 
+**Key insight:** there are only **two structurally different query shapes**, not three.
+
+1. Joining `questions` is **1:1** (`latest_attempt_rows.question_id → questions.id`). It does **not** change row cardinality and is always safe.
+2. Joining `question_tags`/`tags` is **1:N** (a question can have many tags). It is only safe **without deduplication** when the query includes a tag filter like `WHERE tags.slug = :tagSlug`, which guarantees at most one matching tag row per question (enforced by `tags.slug` uniqueness + `question_tags` composite PK).
+
 ### What It Looks Like
 
 ```typescript
@@ -56,24 +61,43 @@ if (difficulty) query = query.leftJoin(B);  // TYPE ERROR: different types
 
 ## Resolution
 
-### Option A: Raw SQL Builder (Recommended)
+### Option A: Two-Tier Query Shape (Recommended)
 
-Use Drizzle's `sql` template tag to build the query as raw SQL with conditional JOIN clauses. This is the approach Kleppmann or any data-intensive application would use — the SQL is the source of truth, not the ORM's type wrapper.
+Collapse the 3-way branch into a 2-way branch by making the **1:1** join(s) unconditional and branching only on the **cardinality-changing** tag join.
 
 ```typescript
-private buildAttemptedQuestionsQuery(
-  userId: string,
-  filters: AttemptedQuestionsFilters,
-  mode: 'list' | 'count',
-  pagination?: { limit: number; offset: number },
-) {
-  // Build JOINs conditionally as SQL fragments
-  // Build SELECT as either columns or count(distinct ...)
-  // Single source of truth for the query structure
+// base query (always safe; does not change cardinality)
+const base = db
+  .select({ /* ... */ })
+  .from(latestAttemptRows)
+  .leftJoin(practiceSessions, /* ... */)
+  .leftJoin(questions, eq(latestAttemptRows.questionId, questions.id))
+  .$dynamic();
+
+// only add the 1:N join when tagSlug is present
+if (tagSlug) {
+  base
+    .leftJoin(questionTags, eq(questions.id, questionTags.questionId))
+    .leftJoin(tags, eq(questionTags.tagId, tags.id));
 }
+
+return base
+  .where(and(...conditions))
+  .orderBy(/* ... */)
+  .limit(limit)
+  .offset(offset);
 ```
 
-### Option B: Drizzle `$dynamic()` API
+Why this is correct:
+
+- `questions` join is 1:1 and can be always included (Kleppmann: “free join” at this scale).
+- `question_tags`/`tags` join is 1:N and must **not** be included unless either:
+  - You are filtering by a specific tag (`tags.slug = :tagSlug`) so each question matches at most one row, or
+  - You add explicit deduplication (`DISTINCT`, `GROUP BY`, or `DISTINCT ON`) and verify pagination correctness.
+
+Why this helps: it removes the “difficulty-only” branch entirely (that branch exists only to add the 1:1 `questions` join).
+
+### Option B: Drizzle `$dynamic()` API (Verified Available)
 
 Drizzle offers a `$dynamic()` method that allows building queries incrementally. This preserves type safety while avoiding duplication:
 
@@ -84,28 +108,45 @@ if (tagSlug) base.leftJoin(questionTags, ...).leftJoin(tags, ...);
 return base.where(and(...conditions)).orderBy(...).limit(limit).offset(offset);
 ```
 
-Research whether `$dynamic()` is stable and well-supported in the current Drizzle version before adopting.
+**Verified (2026-02-14):** This repo uses `drizzle-orm@^0.45.1` (`package.json`), and `$dynamic()` exists on Postgres select builders (and other builders) in that version (e.g. `node_modules/drizzle-orm/pg-core/query-builders/select.d.ts` declares `$dynamic(): PgSelectDynamic<this>`). This is a real, available API and is viable for eliminating the 3-way ternary duplication.
 
-### Option C: Extract Shared Query Fragment
+Why it helps: `$dynamic()` flips the query builder into “dynamic” mode, so subsequent `.leftJoin()` calls no longer change the *static* type in a way that prevents conditional reassignment/chaining.
 
-Factor the common structure into a helper that returns the base query with all possible JOINs applied unconditionally. The extra JOINs on unfiltered queries add negligible overhead (LEFT JOINs with no WHERE conditions on the joined tables are cheap).
+### Option C: Raw SQL Builder (Alternative)
+
+Use Drizzle's `sql` template tag to build the query as raw SQL with conditional JOIN clauses. This is a good escape hatch if Drizzle typing still blocks a clean refactor, but it’s more “manual SQL” than Option A.
 
 ```typescript
-// Always JOIN everything — the WHERE conditions handle filtering
-const base = db.select({...}).from(sub)
-  .leftJoin(practiceSessions, ...)
-  .leftJoin(questions, ...)
-  .leftJoin(questionTags, ...)
-  .leftJoin(tags, ...);
+private buildAttemptedQuestionsQuery(/* ... */) {
+  // Build JOINs conditionally as SQL fragments
+  // Build SELECT as either columns or count(distinct ...)
+  // Single source of truth for the query structure
+}
 ```
-
-This is the simplest fix. The performance cost of unnecessary LEFT JOINs is negligible at current scale. Profile before optimizing.
 
 ## Verification
 
 1. Refactored methods produce identical SQL for all filter combinations (unit test with query logging)
 2. All existing integration tests pass unchanged (`pnpm test:integration`)
 3. `pnpm typecheck && pnpm lint && pnpm test --run`
+
+## Audit Notes (2026-02-14)
+
+This debt doc is scoped to the Attempt Repository duplication, but an audit was performed across **all** `src/adapters/repositories/*.ts` and all production (non-test) Drizzle query construction outside repositories:
+
+- **Only one conditional-`leftJoin` copy-paste hotspot exists:** `DrizzleAttemptRepository` (primary) and `DrizzleQuestionRepository.listPublishedCandidateIds` (minor, already listed above). No other production `.leftJoin()` usage exists.
+- **Non-repo Drizzle usage (no similar duplication found):**
+  - `src/adapters/gateways/drizzle-rate-limiter.ts`
+  - `app/api/health/handler.ts`
+  - `scripts/seed.ts` (script-only)
+
+### Other (Low Severity) DRY Candidates Found
+
+| Instance | File | Lines | Notes |
+|----------|------|-------|-------|
+| Duplicate window-function SQL | `src/adapters/repositories/drizzle-attempt-repository.ts` | 48 | `row_number() over (partition by attempts.questionId ...)` |
+| Duplicate window-function SQL | `src/adapters/repositories/drizzle-question-repository.ts` | 151 | Same SQL fragment as above (risk: drift if one changes) |
+| Repeated completed-session WHERE | `src/adapters/repositories/drizzle-practice-session-repository.ts` | 93–97 and 110–113 | Same predicate appears in both count and list query paths |
 
 ## Related
 
