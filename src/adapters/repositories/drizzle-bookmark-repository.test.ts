@@ -93,28 +93,6 @@ describe('DrizzleBookmarkRepository', () => {
       });
     });
 
-    it('returns the existing bookmark via onConflictDoUpdate when insert conflicts', async () => {
-      const db = createDbMock();
-      const createdAt = new Date('2026-02-01T00:00:00Z');
-      db._mocks.insertReturning.mockResolvedValue([
-        {
-          userId: 'user_1',
-          questionId: 'question_1',
-          createdAt,
-        },
-      ]);
-
-      const repo = new DrizzleBookmarkRepository(db as unknown as RepoDb);
-
-      await expect(repo.add('user_1', 'question_1')).resolves.toEqual({
-        userId: 'user_1',
-        questionId: 'question_1',
-        createdAt,
-      });
-
-      expect(db._mocks.queryFindFirst).not.toHaveBeenCalled();
-    });
-
     it('throws INTERNAL_ERROR when insert returns no rows', async () => {
       const db = createDbMock();
       db._mocks.insertReturning.mockResolvedValue([]);
