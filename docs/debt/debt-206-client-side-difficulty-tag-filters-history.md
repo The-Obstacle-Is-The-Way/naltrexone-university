@@ -33,7 +33,7 @@ The current design violates the principle of **keeping presentation logic honest
 
 ### Step 1: Extend the Port Interface
 
-Add `difficulty` and `tagSlugs` to `AttemptedQuestionsFilters`:
+Add `difficulty` and `tagSlug` to `AttemptedQuestionsFilters`:
 
 ```typescript
 // src/application/ports/attempt-repository.ts
@@ -47,7 +47,7 @@ export type AttemptedQuestionsFilters = {
 
 ### Step 2: Update the Repository Implementation
 
-In `DrizzleAttemptRepository.buildAttemptedQuestionsConditions()`, add a LEFT JOIN from the `latestAttemptRows` subquery to the `questions` table, and add WHERE clauses for difficulty and tag:
+In `DrizzleAttemptRepository.listAttemptedQuestionsByUserId()` and `countAttemptedQuestionsByUserId()`, join the `latestAttemptRows` subquery to `questions` (and tag tables when filtering by tag), and extend `buildAttemptedQuestionsConditions()` to add WHERE clauses for difficulty and tag:
 
 ```sql
 LEFT JOIN questions ON latest_attempt_rows.question_id = questions.id
@@ -61,8 +61,8 @@ WHERE ...
 ### Step 3: Thread Through the Use Case and Controller
 
 - `GetAttemptedQuestionsInput`: Add optional `difficulty` and `tagSlug` fields
-- `GetAttemptedQuestionsInputSchema` (review-controller.ts): Add Zod validators
-- `page.tsx`: Pass difficulty/tagSlug from search params to the server action
+- `GetAttemptedQuestionsInputSchema` (`src/adapters/controllers/review-controller.ts`): Add Zod validators
+- `page.tsx` (`app/(app)/app/history/page.tsx`): Pass difficulty/tagSlug from search params to the server action
 
 ### Step 4: Remove Client-Side Filtering
 

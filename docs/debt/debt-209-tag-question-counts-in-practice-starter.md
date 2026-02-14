@@ -9,14 +9,16 @@
 
 ## Description
 
-The practice session starter has multi-select tag filtering (FilterChip components with collapsible categories), but it doesn't show how many questions match the current filter combination. Users select difficulty + tags but have no way to know if 5 or 500 questions match before starting the session.
+The practice session starter has multi-select tag filtering (FilterChip components with collapsible categories), but it doesn't show how many questions match the current filter combination. Users select **status + difficulty + tags** (and a desired question count) but have no way to know if 5 or 500 questions match before starting the session.
 
 ### What's Implemented (Done)
 
 - Multi-select tag UI with `FilterChip` components
-- Tags grouped by kind (Domain, Subdomain, etc.) in collapsible `<details>` sections
+- Tags grouped by kind in collapsible `<details>` sections
 - Selected count display per category: "(3 selected)"
-- Difficulty multi-select with FilterChip
+- Status filter segmented control (via `AllQuestionProgressStatuses`)
+- Difficulty filter segmented control (All/Easy/Medium/Hard)
+- Session mode segmented control (Tutor/Exam) + question count input
 - Deduplicated tags
 
 ### What's Missing
@@ -40,13 +42,10 @@ The count should NOT be computed by loading all questions and counting client-si
 ### Step 1: Add a Count Query to the Port
 
 ```typescript
-// src/application/ports/repositories.ts
-export interface QuestionCountReader {
-  countPublishedByFilters(filters: {
-    difficulties?: QuestionDifficulty[];
-    tagSlugs?: string[];
-    excludeQuestionIds?: string[];  // for excluding already-attempted
-  }): Promise<number>;
+// src/application/ports/question-repository.ts
+export interface QuestionRepository {
+  // ...
+  countPublishedCandidateIds(filters: QuestionFilters): Promise<number>;
 }
 ```
 
@@ -55,13 +54,22 @@ export interface QuestionCountReader {
 ```typescript
 // src/application/use-cases/count-available-questions.ts
 export class CountAvailableQuestionsUseCase {
-  constructor(private readonly questions: QuestionCountReader) {}
+  constructor(private readonly questions: QuestionRepository) {}
 
   async execute(input: {
-    difficulties?: QuestionDifficulty[];
-    tagSlugs?: string[];
+    userId: string;
+    tagSlugs: string[];
+    difficulties: QuestionDifficulty[];
+    statuses: QuestionProgressStatus[];
   }): Promise<{ count: number }> {
-    return { count: await this.questions.countPublishedByFilters(input) };
+    return {
+      count: await this.questions.countPublishedCandidateIds({
+        userId: input.userId,
+        tagSlugs: input.tagSlugs,
+        difficulties: input.difficulties,
+        statuses: input.statuses,
+      }),
+    };
   }
 }
 ```
@@ -87,12 +95,14 @@ If a full use case feels overweight for a single count, the practice controller 
 ## Verification
 
 1. New unit test: `CountAvailableQuestionsUseCase` returns correct count for various filter combos
-2. New component test: practice session starter displays count and disables Start when 0
+2. New browser-mode test (`*.browser.spec.tsx`): practice session starter displays count and disables Start when 0
 3. Manual: toggle difficulty/tag filters → count updates → start session matches expected count
 
 ## Related
 
 - `app/(app)/app/practice/components/practice-session-starter.tsx` (current UI)
 - `src/application/use-cases/start-practice-session.ts` (filter logic for question selection)
+- `src/application/ports/question-repository.ts` (existing `QuestionFilters` shape to reuse)
+- `src/adapters/repositories/drizzle-question-repository.ts` (candidate filter SQL already exists; mirror for COUNT)
 - DEBT-207 (Missing session question count warning — complementary feature). Implementing DEBT-209 first is the recommended order: showing available counts pre-start prevents the surprise that DEBT-207 mitigates post-start.
 - Issue #82 (UX warning when fewer questions available)
