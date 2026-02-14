@@ -131,7 +131,7 @@ export function PracticeSessionStarter(props: PracticeSessionStarterProps) {
               }))}
               value={props.filters.status}
               onChange={(value) =>
-                props.onStatusChange(value as unknown as QuestionProgressStatus)
+                props.onStatusChange(value as QuestionProgressStatus)
               }
               legend="Status"
             />
@@ -157,9 +157,7 @@ export function PracticeSessionStarter(props: PracticeSessionStarterProps) {
                   return;
                 }
 
-                props.onDifficultyChange(
-                  value as unknown as QuestionDifficulty,
-                );
+                props.onDifficultyChange(value as QuestionDifficulty);
               }}
               legend="Difficulty"
             />

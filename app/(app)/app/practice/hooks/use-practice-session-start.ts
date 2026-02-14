@@ -80,7 +80,7 @@ export function usePracticeSessionStart(
     [],
   );
 
-  const onToggleDifficulty = useMemo(
+  const onDifficultyChange = useMemo(
     () =>
       createDifficultyChangeHandler({
         setFilters,
@@ -133,7 +133,7 @@ export function usePracticeSessionStart(
     onSessionModeChange,
     onSessionCountChange,
     onToggleTag,
-    onDifficultyChange: onToggleDifficulty,
+    onDifficultyChange,
     onStatusChange,
     onStartSession,
   };

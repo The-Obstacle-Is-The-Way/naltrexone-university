@@ -81,7 +81,7 @@ export default function QuickPracticeClient() {
             onChange={(value) => {
               const href = buildQuickPracticeStatusHref({
                 searchParams,
-                status: value as unknown as QuestionProgressStatus,
+                status: value as QuestionProgressStatus,
               });
               router.push(href, { scroll: false });
             }}

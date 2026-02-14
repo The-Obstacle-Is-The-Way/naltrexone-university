@@ -21,7 +21,7 @@ vi.mock('next/navigation', () => ({
   useSearchParams: () => useSearchParamsMock(),
 }));
 
-describe('parseStatusParams', () => {
+describe('parseStatusParam', () => {
   it('returns unanswered when status param is missing', () => {
     expect(parseStatusParam(new URLSearchParams(''))).toBe('unanswered');
   });
