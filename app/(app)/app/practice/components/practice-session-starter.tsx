@@ -15,7 +15,10 @@ import {
 } from '@/src/domain/value-objects';
 import type { PracticeFilters } from '../practice-page-logic';
 import { SESSION_COUNT_MAX, SESSION_COUNT_MIN } from '../practice-page-logic';
-import { statusDisplayLabel } from '../practice-page-types';
+import {
+  difficultyDisplayLabel,
+  statusDisplayLabel,
+} from '../practice-page-types';
 
 export type PracticeSessionStarterProps = {
   sessionMode: 'tutor' | 'exam';
@@ -146,8 +149,7 @@ export function PracticeSessionStarter(props: PracticeSessionStarterProps) {
                 { value: 'all', label: 'All' },
                 ...AllDifficulties.map((difficulty) => ({
                   value: difficulty,
-                  label:
-                    difficulty.charAt(0).toUpperCase() + difficulty.slice(1),
+                  label: difficultyDisplayLabel(difficulty),
                 })),
               ]}
               value={props.filters.difficulty ?? 'all'}

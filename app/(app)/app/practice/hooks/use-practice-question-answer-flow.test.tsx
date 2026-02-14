@@ -2,7 +2,14 @@
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { usePracticeQuestionAnswerFlow } from '@/app/(app)/app/practice/hooks/use-practice-question-answer-flow';
+import type { PracticeFilters } from '@/app/(app)/app/practice/practice-page-logic';
 import { renderHook } from '@/src/application/test-helpers/render-hook';
+
+const TEST_FILTERS = {
+  tagSlugs: [],
+  difficulty: null,
+  status: 'unanswered',
+} satisfies PracticeFilters;
 
 describe('usePracticeQuestionAnswerFlow', () => {
   afterEach(() => {
@@ -12,11 +19,7 @@ describe('usePracticeQuestionAnswerFlow', () => {
   it('returns the expected initial state contract', () => {
     const output = renderHook(() =>
       usePracticeQuestionAnswerFlow({
-        filters: {
-          tagSlugs: [],
-          difficulty: null,
-          status: 'unanswered',
-        },
+        filters: TEST_FILTERS,
         isMounted: () => true,
         getNextQuestionFn: vi.fn(async () => ({
           ok: true as const,

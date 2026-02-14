@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-react';
+import type { PracticeFilters } from '@/app/(app)/app/practice/practice-page-logic';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import { createNextQuestion } from '@/src/application/test-helpers/create-next-question';
 import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
 import { createDeferred } from '@/tests/test-helpers/create-deferred';
 import { ok } from '@/tests/test-helpers/ok';
-import type { PracticeFilters } from '../practice-page-logic';
 import { usePracticeQuestionFlow } from './use-practice-question-flow';
 
 const {

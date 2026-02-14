@@ -4,6 +4,7 @@ import type {
   QuestionProgressStatus,
 } from '@/src/domain/value-objects';
 import {
+  difficultyDisplayLabel,
   type PracticeFilters,
   statusDisplayLabel,
 } from './practice-page-types';
@@ -25,6 +26,20 @@ describe('statusDisplayLabel', () => {
     // @ts-expect-error 'marked' is not a QuestionProgressStatus
     const status: QuestionProgressStatus = 'marked';
     void status;
+  });
+});
+
+describe('difficultyDisplayLabel', () => {
+  it('returns display labels for known difficulties', () => {
+    expect(difficultyDisplayLabel('easy')).toBe('Easy');
+    expect(difficultyDisplayLabel('medium')).toBe('Medium');
+    expect(difficultyDisplayLabel('hard')).toBe('Hard');
+  });
+
+  it('throws when given an unknown difficulty', () => {
+    expect(() =>
+      difficultyDisplayLabel('unknown' as unknown as never),
+    ).toThrowError('Unhandled QuestionDifficulty: unknown');
   });
 });
 
