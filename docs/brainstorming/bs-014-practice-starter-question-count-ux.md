@@ -1,13 +1,22 @@
-# DEBT-207: No Warning When Practice Session Has Fewer Questions Than Requested
+# BS-014: Practice Starter — Silent Truncation When Fewer Questions Available
 
-**Status:** Open
-**Priority:** P3
-**Date:** 2026-02-11
-**GitHub Issue:** #82
+**Date:** 2026-02-13
+**Triggered by:** UX review of practice session starter question count behavior
+**Scope:** Users can request more questions than their filters match, resulting in a silently truncated session
+**Related:** [BS-015](./bs-015-practice-starter-available-count-display.md), GitHub #82
+**Originally:** DEBT-207 (moved to brainstorming — the problem is real but the right UX fix needs design work before implementation)
 
 ---
 
-## Description
+## Open Questions
+
+1. **What's the right fix?** A post-creation toast ("Only 30 matched your filters") is reactive and easy to miss. A pre-start count display (BS-015) is better but still lets users type a number higher than what's available. Should the input be dynamically capped? Should Start be disabled when count > available?
+2. **How do professional question banks handle this?** UWorld, Amboss, Kaplan — do they show available counts? Cap the input? Both? Research needed.
+3. **Should BS-014 and BS-015 be combined into a single spec?** They're two facets of the same UX gap: the practice starter doesn't communicate how many questions match the current filter combination.
+
+---
+
+## The Problem
 
 When a user requests a 50-question practice session but their filter combination (status + difficulty + tags) only matches 30 questions, the session is silently created with 30 questions. The backend correctly truncates the shuffled candidate list (`shuffleWithSeed(...).slice(0, input.count)`) and persists `paramsJson.count = questionIds.length`, but the user receives no indication that their session is shorter than requested.
 
@@ -58,9 +67,9 @@ When `hasFewerQuestions` is true, display a brief informational toast:
 
 Use the existing toast/notification system. Today, the start flow navigates to the session page with `?toast=session_started` and the session page displays the toast (`app/(app)/app/practice/[sessionId]/practice-session-page-client.tsx`). The shortfall notice can reuse this pattern (e.g., add `requestedCount`/`actualCount` to the URL or add a distinct toast key). This is a non-blocking notice — the session still starts.
 
-### Alternative Approach: Pre-Start Count (DEBT-209)
+### Alternative Approach: Pre-Start Count (BS-015)
 
-Instead of post-creation notice, add a "preview" query before session creation that counts available questions for the current filters. Display the count next to the "Start" button: "42 questions available." This aligns with Issue #53 (question counts per tag) and is tracked as DEBT-209. If DEBT-209 is implemented first, this warning becomes a best-effort fallback for edge cases rather than the primary UX fix.
+Instead of post-creation notice, add a "preview" query before session creation that counts available questions for the current filters. Display the count next to the "Start" button: "42 questions available." This aligns with Issue #53 (question counts per tag) and is tracked as [BS-015](./bs-015-practice-starter-available-count-display.md). If BS-015 is implemented first, this warning becomes a best-effort fallback for edge cases rather than the primary UX fix.
 
 ## Verification
 

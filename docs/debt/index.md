@@ -18,9 +18,7 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 | ID | Title | Priority | Status | GitHub Issue |
 |----|-------|----------|--------|--------------|
 | [DEBT-206](./debt-206-client-side-difficulty-tag-filters-history.md) | Client-Side Difficulty/Tag Filters Cause Inaccurate Pagination on History Questions Tab | P2 | Open | #87 |
-| [DEBT-207](./debt-207-missing-session-question-count-warning.md) | No Warning When Practice Session Has Fewer Questions Than Requested | P3 | Open | #82 |
 | [DEBT-208](./debt-208-e2e-cross-page-navigation-tests.md) | Missing E2E Tests for Cross-Page Navigation Flows | P3 | Open | #81 |
-| [DEBT-209](./debt-209-tag-question-counts-in-practice-starter.md) | Practice Session Starter Missing Question Counts Per Tag | P3 | Open | #53 |
 | [DEBT-210](./debt-210-dead-routes-app-review-constant.md) | Dead `ROUTES.APP_REVIEW` Constant in Route Definitions | P4 | Open | #90 |
 | [DEBT-212](./debt-212-duplicate-sleep-utility-adapter-shared.md) | Duplicate `sleep()` Utility in Adapter Shared Modules | P4 | Open | #91 |
 | [DEBT-213](./debt-213-useeffect-derived-state-sync-antipatterns.md) | useEffect Derived-State Sync Anti-Patterns in Practice Hooks (5 instances) | P4 | Open | — |
@@ -264,6 +262,13 @@ All frontend-specific UI/UX debt. Items use `FE-XXX` IDs and are cross-reference
 | [DEBT-115](../_archive/debt/debt-115-practice-page-god-component.md) | Practice Page God Component 823 → 114 Lines (SPEC-020) | P1 | 2026-02-06 |
 | [DEBT-114](../_archive/debt/debt-114-no-session-history-page.md) | Session History Page (SPEC-020) | P2 | 2026-02-06 |
 | [DEBT-113](../_archive/debt/debt-113-dashboard-review-lack-session-context.md) | Dashboard + Review Session Context (SPEC-020) | P1 | 2026-02-06 |
+
+### Moved to Brainstorming (Needs Design)
+
+| ID | Title | Now | Reason |
+|----|-------|-----|--------|
+| DEBT-207 | No Warning When Practice Session Has Fewer Questions Than Requested | [BS-014](../brainstorming/bs-014-practice-starter-question-count-ux.md) | Problem is real but proposed fix (post-creation toast) needs UX design work; related to DEBT-209 |
+| DEBT-209 | Practice Session Starter Missing Question Counts Per Tag | [BS-015](../brainstorming/bs-015-practice-starter-available-count-display.md) | Problem is real but solution scope unclear — display only vs input constraint; needs design pass |
 
 ### Invalidated (False Positives)
 

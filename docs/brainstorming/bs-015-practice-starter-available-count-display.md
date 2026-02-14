@@ -1,13 +1,24 @@
-# DEBT-209: Practice Session Starter Missing Question Counts Per Tag
+# BS-015: Practice Starter — Show Available Question Count Before Session Start
 
-**Status:** Open
-**Priority:** P3
-**Date:** 2026-02-11
-**GitHub Issue:** #53
+**Date:** 2026-02-13
+**Triggered by:** UX review of practice session starter — no visibility into how many questions match current filters
+**Scope:** Users select filters and a question count but have no way to know if 5 or 500 questions match before starting
+**Related:** [BS-014](./bs-014-practice-starter-question-count-ux.md), GitHub #53
+**Originally:** DEBT-209 (moved to brainstorming — the problem is real but the UX approach needs more design thinking, especially around whether to just display the count or actively constrain the question count input)
 
 ---
 
-## Description
+## Open Questions
+
+1. **Display only, or constrain?** Showing "42 questions available" is informational, but users can still type "100" and get a silently truncated session. Should the input max be dynamically capped to the available count? Should the Start button show "Start (42 questions)" to set expectations?
+2. **Per-tag counts vs total count?** Showing "Pharmacology (15)" next to each tag chip is useful but adds complexity (one COUNT per tag per filter change). Is the total count sufficient for MVP?
+3. **Debounce strategy?** Filters change frequently as users click chips. How aggressively should we debounce the count query? What does the loading state look like?
+4. **How do professional question banks handle this?** UWorld, Amboss, Kaplan — research needed.
+5. **Should BS-014 and BS-015 be combined into a single spec?** They're two facets of the same UX gap.
+
+---
+
+## The Problem
 
 The practice session starter has multi-select tag filtering (FilterChip components with collapsible categories), but it doesn't show how many questions match the current filter combination. Users select **status + difficulty + tags** (and a desired question count) but have no way to know if 5 or 500 questions match before starting the session.
 
@@ -35,7 +46,7 @@ The count should NOT be computed by loading all questions and counting client-si
 ## Impact
 
 - **UX friction**: Users can't gauge session size before starting — they might get 3 questions when expecting 50
-- **Related to DEBT-207**: When `actual < requested`, users get no warning. A pre-start count would prevent this surprise entirely
+- **Related to BS-014**: When `actual < requested`, users get no warning. A pre-start count would prevent this surprise entirely
 
 ## Resolution
 
@@ -104,5 +115,5 @@ If a full use case feels overweight for a single count, the practice controller 
 - `src/application/use-cases/start-practice-session.ts` (filter logic for question selection)
 - `src/application/ports/question-repository.ts` (existing `QuestionFilters` shape to reuse)
 - `src/adapters/repositories/drizzle-question-repository.ts` (candidate filter SQL already exists; mirror for COUNT)
-- DEBT-207 (Missing session question count warning — complementary feature). Implementing DEBT-209 first is the recommended order: showing available counts pre-start prevents the surprise that DEBT-207 mitigates post-start.
+- [BS-014](./bs-014-practice-starter-question-count-ux.md) (Silent truncation warning — complementary feature). Implementing BS-015 first is the recommended order: showing available counts pre-start prevents the surprise that BS-014 mitigates post-start.
 - Issue #82 (UX warning when fewer questions available)

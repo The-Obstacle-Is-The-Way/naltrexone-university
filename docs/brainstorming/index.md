@@ -1,7 +1,7 @@
 # Brainstorming Register
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-02-13
+**Last Updated:** 2026-02-14
 
 ---
 
@@ -27,9 +27,10 @@ Brainstorming (BS-NNN) → Spec (SPEC-NNN) → Implementation → Archive
 
 | ID | Title | Status | Related Spec |
 |----|-------|--------|--------------|
-| — | No active brainstorming docs | — | — |
+| [BS-014](./bs-014-practice-starter-question-count-ux.md) | Practice Starter — Silent Truncation When Fewer Questions Available | Active | — |
+| [BS-015](./bs-015-practice-starter-available-count-display.md) | Practice Starter — Show Available Question Count Before Session Start | Active | — |
 
-**Next Brainstorming ID:** BS-014
+**Next Brainstorming ID:** BS-016
 
 ---
 
