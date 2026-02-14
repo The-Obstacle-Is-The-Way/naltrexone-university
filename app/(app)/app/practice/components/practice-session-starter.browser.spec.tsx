@@ -3,7 +3,7 @@ import { render } from 'vitest-browser-react';
 import {
   PracticeSessionStarter,
   type PracticeSessionStarterProps,
-} from './practice-session-starter';
+} from '@/app/(app)/app/practice/components/practice-session-starter';
 
 function starterProps(
   overrides: Partial<PracticeSessionStarterProps> = {},
@@ -86,16 +86,12 @@ test('invokes onStartSession when start button is clicked', async () => {
 });
 
 test('shows error states for tags and session start', async () => {
-  const screen = await render(
-    <PracticeSessionStarter
-      {...starterProps({
-        tagLoadStatus: 'error',
-        availableTags: [],
-        sessionStartStatus: 'error',
-        sessionStartError: 'Could not start session.',
-      })}
-    />,
-  );
+  const { screen } = await renderStarter({
+    tagLoadStatus: 'error',
+    availableTags: [],
+    sessionStartStatus: 'error',
+    sessionStartError: 'Could not start session.',
+  });
 
   await expect.element(screen.getByText('Tags unavailable.')).toBeVisible();
   await expect
@@ -107,11 +103,10 @@ test('shows error states for tags and session start', async () => {
 });
 
 test('shows loading state for session start', async () => {
-  const screen = await render(
-    <PracticeSessionStarter
-      {...starterProps({ availableTags: [], sessionStartStatus: 'loading' })}
-    />,
-  );
+  const { screen } = await renderStarter({
+    availableTags: [],
+    sessionStartStatus: 'loading',
+  });
 
   await expect
     .element(screen.getByRole('button', { name: 'Starting…' }))
@@ -119,11 +114,10 @@ test('shows loading state for session start', async () => {
 });
 
 test('disables start when no questions match the selected filters', async () => {
-  const screen = await render(
-    <PracticeSessionStarter
-      {...starterProps({ availableTags: [], availableCount: 0 })}
-    />,
-  );
+  const { screen } = await renderStarter({
+    availableTags: [],
+    availableCount: 0,
+  });
 
   await expect
     .element(screen.getByText('No questions match your filters.'))
@@ -134,14 +128,10 @@ test('disables start when no questions match the selected filters', async () => 
 });
 
 test('shows available count loading state when counting questions', async () => {
-  const screen = await render(
-    <PracticeSessionStarter
-      {...starterProps({
-        availableTags: [],
-        availableCountStatus: 'loading',
-      })}
-    />,
-  );
+  const { screen } = await renderStarter({
+    availableTags: [],
+    availableCountStatus: 'loading',
+  });
 
   await expect.element(screen.getByText('Counting questions…')).toBeVisible();
   await expect
@@ -150,14 +140,10 @@ test('shows available count loading state when counting questions', async () => 
 });
 
 test('shows available count error state when count is unavailable', async () => {
-  const screen = await render(
-    <PracticeSessionStarter
-      {...starterProps({
-        availableTags: [],
-        availableCountStatus: 'error',
-      })}
-    />,
-  );
+  const { screen } = await renderStarter({
+    availableTags: [],
+    availableCountStatus: 'error',
+  });
 
   await expect
     .element(screen.getByText('Question count unavailable.'))
@@ -165,11 +151,10 @@ test('shows available count error state when count is unavailable', async () => 
 });
 
 test('warns when session count exceeds available question count', async () => {
-  const screen = await render(
-    <PracticeSessionStarter
-      {...starterProps({ availableTags: [], availableCount: 10 })}
-    />,
-  );
+  const { screen } = await renderStarter({
+    availableTags: [],
+    availableCount: 10,
+  });
 
   await expect
     .element(
@@ -184,11 +169,10 @@ test('warns when session count exceeds available question count', async () => {
 });
 
 test('shows available question count when count is ready', async () => {
-  const screen = await render(
-    <PracticeSessionStarter
-      {...starterProps({ availableTags: [], availableCount: 50 })}
-    />,
-  );
+  const { screen } = await renderStarter({
+    availableTags: [],
+    availableCount: 50,
+  });
 
   await expect
     .element(screen.getByText('50 questions available.'))
