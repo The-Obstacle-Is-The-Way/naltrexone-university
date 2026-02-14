@@ -43,18 +43,17 @@ export function PracticeSessionToast({
     if (lastHandledToastRef.current === handledKey) return;
     lastHandledToastRef.current = handledKey;
 
-    if (typeof requested === 'number' && typeof actual === 'number') {
-      if (actual < requested) {
-        notify({
-          message: `Only ${actual} of ${requested} questions matched your filters. Starting session with ${actual} questions.`,
-          tone: 'info',
-        });
-      } else {
-        notify({ message: 'Session started.', tone: 'success' });
-      }
-    } else {
-      notify({ message: 'Session started.', tone: 'success' });
-    }
+    const payload =
+      typeof requested === 'number' &&
+      typeof actual === 'number' &&
+      actual < requested
+        ? {
+            message: `Only ${actual} of ${requested} questions matched your filters. Starting session with ${actual} questions.`,
+            tone: 'info' as const,
+          }
+        : { message: 'Session started.', tone: 'success' as const };
+
+    notify(payload);
 
     const url = new URL(window.location.href);
     url.searchParams.delete('toast');
