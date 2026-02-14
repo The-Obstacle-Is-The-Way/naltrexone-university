@@ -1,3 +1,5 @@
+import { delay } from './delay';
+
 export type RetryAttemptInfo = {
   attempt: number;
   maxAttempts: number;
@@ -14,10 +16,6 @@ export type RetryOptions = {
   onRetry?: (info: RetryAttemptInfo) => void;
   sleep?: (ms: number) => Promise<void>;
 };
-
-function sleepDefault(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
 
 function getStringProp(value: unknown, key: string): string | null {
   if (typeof value !== 'object' || value === null) return null;
@@ -74,7 +72,7 @@ export async function retry<T>(
     throw new Error('retry(): factor must be a positive number');
   }
 
-  const sleep = options.sleep ?? sleepDefault;
+  const sleep = options.sleep ?? delay;
   const maxDelayMs = options.maxDelayMs;
 
   let delayMs = options.initialDelayMs;

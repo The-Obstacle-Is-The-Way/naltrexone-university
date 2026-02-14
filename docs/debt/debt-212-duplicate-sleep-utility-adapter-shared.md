@@ -1,33 +1,16 @@
 # DEBT-212: Duplicate `sleep()` Utility in Adapter Shared Modules
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P4
 **Date:** 2026-02-11
+**Resolved:** 2026-02-14
 **GitHub Issue:** #91
 
 ---
 
 ## Description
 
-Two identical `sleep()` / `sleepDefault()` implementations exist in the adapter shared layer:
-
-### Location 1: `src/adapters/shared/retry.ts:18`
-
-```typescript
-function sleepDefault(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-```
-
-### Location 2: `src/adapters/shared/with-idempotency.ts:11`
-
-```typescript
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-```
-
-Both are private (`function`, not `export function`), used only within their respective modules. The implementations are byte-for-byte identical (modulo the name).
+Two identical `sleep()` implementations previously existed in the adapter shared layer (`retry.ts` and `with-idempotency.ts`). Both were private (`function`, not `export function`) and byte-for-byte identical.
 
 ## Impact
 
@@ -46,18 +29,20 @@ export function delay(ms: number): Promise<void> {
 }
 ```
 
-Then import from both `retry.ts` and `with-idempotency.ts`.
-
-### Alternative: Accept as-is
-
-Given the functions are 3 lines, private, and stable, this can reasonably be accepted as intentional encapsulation. The cost of abstraction may exceed the cost of duplication for such a trivial utility.
+Both `retry.ts` and `with-idempotency.ts` now import `delay()` instead of duplicating a local `sleep()` helper.
 
 ## Verification
 
 - `pnpm typecheck` passes
+- `pnpm lint` passes
 - `pnpm test --run` — all tests pass (retry and idempotency tests exercise both paths)
 
 ## Related
 
+- `src/adapters/shared/delay.ts` — Shared promise-based delay helper
 - `src/adapters/shared/retry.ts` — Shared retry helper for external calls (exponential backoff)
-- `src/adapters/shared/with-idempotency.ts` — Idempotency key polling with sleep between retries
+- `src/adapters/shared/with-idempotency.ts` — Idempotency key polling with delays between retries
+
+## Resolution Notes (2026-02-14)
+
+- Extracted `delay(ms)` into `src/adapters/shared/delay.ts` and replaced both internal `sleep()` implementations with an import.
