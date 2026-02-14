@@ -679,18 +679,24 @@ describe('DrizzleQuestionRepository', () => {
   describe('countPublishedCandidateIds with status filters', () => {
     it('returns only bookmarked questions when status=bookmarked', async () => {
       const user = await createUser();
+      const tag = await createTag({
+        slug: `it-count-bookmarked-tag-${randomUUID()}`,
+        kind: 'topic',
+      });
 
       const qBookmarked = await createQuestion({
         slug: `it-count-bookmarked-${randomUUID()}`,
         status: 'published',
         difficulty: 'easy',
         createdAt: new Date('2026-01-01T00:00:00.000Z'),
+        tagIds: [tag.id],
       });
       const _qUnbookmarked = await createQuestion({
         slug: `it-count-unbookmarked-${randomUUID()}`,
         status: 'published',
         difficulty: 'easy',
         createdAt: new Date('2026-01-02T00:00:00.000Z'),
+        tagIds: [tag.id],
       });
 
       await db.insert(schema.bookmarks).values({
@@ -700,7 +706,7 @@ describe('DrizzleQuestionRepository', () => {
 
       const repo = new DrizzleQuestionRepository(db);
       const result = await repo.countPublishedCandidateIds({
-        tagSlugs: [],
+        tagSlugs: [tag.slug],
         difficulties: [],
         statuses: ['bookmarked'],
         userId: user.id,
@@ -711,24 +717,31 @@ describe('DrizzleQuestionRepository', () => {
 
     it('combines unanswered and incorrect with OR logic', async () => {
       const user = await createUser();
+      const tag = await createTag({
+        slug: `it-count-or-tag-${randomUUID()}`,
+        kind: 'topic',
+      });
 
       const qIncorrect = await createQuestion({
         slug: `it-count-or-incorrect-${randomUUID()}`,
         status: 'published',
         difficulty: 'easy',
         createdAt: new Date('2026-01-01T00:00:00.000Z'),
+        tagIds: [tag.id],
       });
       const _qUnanswered = await createQuestion({
         slug: `it-count-or-unanswered-${randomUUID()}`,
         status: 'published',
         difficulty: 'easy',
         createdAt: new Date('2026-01-02T00:00:00.000Z'),
+        tagIds: [tag.id],
       });
       const qCorrect = await createQuestion({
         slug: `it-count-or-correct-${randomUUID()}`,
         status: 'published',
         difficulty: 'easy',
         createdAt: new Date('2026-01-03T00:00:00.000Z'),
+        tagIds: [tag.id],
       });
 
       const [qIncorrectChoiceA] = await db
@@ -768,7 +781,7 @@ describe('DrizzleQuestionRepository', () => {
 
       const repo = new DrizzleQuestionRepository(db);
       const result = await repo.countPublishedCandidateIds({
-        tagSlugs: [],
+        tagSlugs: [tag.slug],
         difficulties: [],
         statuses: ['unanswered', 'incorrect'],
         userId: user.id,

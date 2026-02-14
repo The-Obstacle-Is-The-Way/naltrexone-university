@@ -1,24 +1,29 @@
 import { expect, test, vi } from 'vitest';
 import { render } from 'vitest-browser-react';
-import { PracticeSessionStarter } from './practice-session-starter';
+import {
+  PracticeSessionStarter,
+  type PracticeSessionStarterProps,
+} from './practice-session-starter';
 
-async function renderStarter() {
-  const props = {
-    sessionMode: 'tutor' as const,
+function starterProps(
+  overrides: Partial<PracticeSessionStarterProps> = {},
+): PracticeSessionStarterProps {
+  const props: PracticeSessionStarterProps = {
+    sessionMode: 'tutor',
     sessionCount: 20,
-    filters: { tagSlugs: [], difficulty: null, status: 'unanswered' as const },
-    availableCountStatus: 'idle' as const,
+    filters: { tagSlugs: [], difficulty: null, status: 'unanswered' },
+    availableCountStatus: 'idle',
     availableCount: null,
-    tagLoadStatus: 'idle' as const,
+    tagLoadStatus: 'idle',
     availableTags: [
       {
         id: 'tag_1',
         slug: 'opioids',
         name: 'Opioids',
-        kind: 'substance' as const,
+        kind: 'substance',
       },
     ],
-    sessionStartStatus: 'idle' as const,
+    sessionStartStatus: 'idle',
     sessionStartError: null,
     onDifficultyChange: vi.fn(),
     onStatusChange: vi.fn(),
@@ -27,6 +32,18 @@ async function renderStarter() {
     onSessionCountChange: vi.fn(),
     onStartSession: vi.fn(),
   };
+
+  return {
+    ...props,
+    ...overrides,
+    filters: { ...props.filters, ...(overrides.filters ?? {}) },
+  };
+}
+
+async function renderStarter(
+  overrides: Partial<PracticeSessionStarterProps> = {},
+) {
+  const props = starterProps(overrides);
   const screen = await render(<PracticeSessionStarter {...props} />);
   return { props, screen };
 }
@@ -71,21 +88,12 @@ test('invokes onStartSession when start button is clicked', async () => {
 test('shows error states for tags and session start', async () => {
   const screen = await render(
     <PracticeSessionStarter
-      sessionMode="tutor"
-      sessionCount={20}
-      filters={{ tagSlugs: [], difficulty: null, status: 'unanswered' }}
-      availableCountStatus="idle"
-      availableCount={null}
-      tagLoadStatus="error"
-      availableTags={[]}
-      sessionStartStatus="error"
-      sessionStartError="Could not start session."
-      onDifficultyChange={() => undefined}
-      onStatusChange={() => undefined}
-      onToggleTag={() => undefined}
-      onSessionModeChange={() => undefined}
-      onSessionCountChange={() => undefined}
-      onStartSession={() => undefined}
+      {...starterProps({
+        tagLoadStatus: 'error',
+        availableTags: [],
+        sessionStartStatus: 'error',
+        sessionStartError: 'Could not start session.',
+      })}
     />,
   );
 
@@ -101,21 +109,7 @@ test('shows error states for tags and session start', async () => {
 test('shows loading state for session start', async () => {
   const screen = await render(
     <PracticeSessionStarter
-      sessionMode="tutor"
-      sessionCount={20}
-      filters={{ tagSlugs: [], difficulty: null, status: 'unanswered' }}
-      availableCountStatus="idle"
-      availableCount={null}
-      tagLoadStatus="idle"
-      availableTags={[]}
-      sessionStartStatus="loading"
-      sessionStartError={null}
-      onDifficultyChange={() => undefined}
-      onStatusChange={() => undefined}
-      onToggleTag={() => undefined}
-      onSessionModeChange={() => undefined}
-      onSessionCountChange={() => undefined}
-      onStartSession={() => undefined}
+      {...starterProps({ availableTags: [], sessionStartStatus: 'loading' })}
     />,
   );
 
@@ -127,21 +121,7 @@ test('shows loading state for session start', async () => {
 test('disables start when no questions match the selected filters', async () => {
   const screen = await render(
     <PracticeSessionStarter
-      sessionMode="tutor"
-      sessionCount={20}
-      filters={{ tagSlugs: [], difficulty: null, status: 'unanswered' }}
-      availableCountStatus="idle"
-      availableCount={0}
-      tagLoadStatus="idle"
-      availableTags={[]}
-      sessionStartStatus="idle"
-      sessionStartError={null}
-      onDifficultyChange={() => undefined}
-      onStatusChange={() => undefined}
-      onToggleTag={() => undefined}
-      onSessionModeChange={() => undefined}
-      onSessionCountChange={() => undefined}
-      onStartSession={() => undefined}
+      {...starterProps({ availableTags: [], availableCount: 0 })}
     />,
   );
 
@@ -156,45 +136,26 @@ test('disables start when no questions match the selected filters', async () => 
 test('shows available count loading state when counting questions', async () => {
   const screen = await render(
     <PracticeSessionStarter
-      sessionMode="tutor"
-      sessionCount={20}
-      filters={{ tagSlugs: [], difficulty: null, status: 'unanswered' }}
-      availableCountStatus="loading"
-      availableCount={null}
-      tagLoadStatus="idle"
-      availableTags={[]}
-      sessionStartStatus="idle"
-      sessionStartError={null}
-      onDifficultyChange={() => undefined}
-      onStatusChange={() => undefined}
-      onToggleTag={() => undefined}
-      onSessionModeChange={() => undefined}
-      onSessionCountChange={() => undefined}
-      onStartSession={() => undefined}
+      {...starterProps({
+        availableTags: [],
+        availableCountStatus: 'loading',
+      })}
     />,
   );
 
   await expect.element(screen.getByText('Counting questions…')).toBeVisible();
+  await expect
+    .element(screen.getByRole('button', { name: 'Start session' }))
+    .toBeEnabled();
 });
 
 test('shows available count error state when count is unavailable', async () => {
   const screen = await render(
     <PracticeSessionStarter
-      sessionMode="tutor"
-      sessionCount={20}
-      filters={{ tagSlugs: [], difficulty: null, status: 'unanswered' }}
-      availableCountStatus="error"
-      availableCount={null}
-      tagLoadStatus="idle"
-      availableTags={[]}
-      sessionStartStatus="idle"
-      sessionStartError={null}
-      onDifficultyChange={() => undefined}
-      onStatusChange={() => undefined}
-      onToggleTag={() => undefined}
-      onSessionModeChange={() => undefined}
-      onSessionCountChange={() => undefined}
-      onStartSession={() => undefined}
+      {...starterProps({
+        availableTags: [],
+        availableCountStatus: 'error',
+      })}
     />,
   );
 
@@ -206,21 +167,7 @@ test('shows available count error state when count is unavailable', async () => 
 test('warns when session count exceeds available question count', async () => {
   const screen = await render(
     <PracticeSessionStarter
-      sessionMode="tutor"
-      sessionCount={20}
-      filters={{ tagSlugs: [], difficulty: null, status: 'unanswered' }}
-      availableCountStatus="idle"
-      availableCount={10}
-      tagLoadStatus="idle"
-      availableTags={[]}
-      sessionStartStatus="idle"
-      sessionStartError={null}
-      onDifficultyChange={() => undefined}
-      onStatusChange={() => undefined}
-      onToggleTag={() => undefined}
-      onSessionModeChange={() => undefined}
-      onSessionCountChange={() => undefined}
-      onStartSession={() => undefined}
+      {...starterProps({ availableTags: [], availableCount: 10 })}
     />,
   );
 
@@ -239,21 +186,7 @@ test('warns when session count exceeds available question count', async () => {
 test('shows available question count when count is ready', async () => {
   const screen = await render(
     <PracticeSessionStarter
-      sessionMode="tutor"
-      sessionCount={20}
-      filters={{ tagSlugs: [], difficulty: null, status: 'unanswered' }}
-      availableCountStatus="idle"
-      availableCount={50}
-      tagLoadStatus="idle"
-      availableTags={[]}
-      sessionStartStatus="idle"
-      sessionStartError={null}
-      onDifficultyChange={() => undefined}
-      onStatusChange={() => undefined}
-      onToggleTag={() => undefined}
-      onSessionModeChange={() => undefined}
-      onSessionCountChange={() => undefined}
-      onStartSession={() => undefined}
+      {...starterProps({ availableTags: [], availableCount: 50 })}
     />,
   );
 
