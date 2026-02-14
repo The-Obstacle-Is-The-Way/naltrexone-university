@@ -35,6 +35,96 @@ describe('PracticeView', () => {
     expect(html).toContain(`href="${ROUTES.APP_DASHBOARD}"`);
   });
 
+  it('renders topContent above the page heading when provided', async () => {
+    const { PracticeView } = await import('./practice-view');
+
+    const html = renderToStaticMarkup(
+      <PracticeView
+        topContent={<div data-testid="top-content">Top</div>}
+        loadState={{ status: 'ready' }}
+        question={null}
+        selectedChoiceId={null}
+        isAnswered={false}
+        submitResult={null}
+        isPending={false}
+        bookmarkStatus="idle"
+        isBookmarked={false}
+        canSubmit={false}
+        onTryAgain={() => undefined}
+        onToggleBookmark={() => undefined}
+        onSelectChoice={() => undefined}
+        onSubmit={() => undefined}
+        onNextQuestion={() => undefined}
+      />,
+    );
+
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const heading = doc.querySelector('h1');
+    expect(heading?.textContent).toBe('Practice');
+
+    const top = doc.querySelector('[data-testid="top-content"]');
+    expect(top?.textContent).toBe('Top');
+
+    if (!heading) throw new Error('Expected heading');
+    if (!top) throw new Error('Expected top content');
+
+    const position = top.compareDocumentPosition(heading);
+    expect(position & Node.DOCUMENT_POSITION_FOLLOWING).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    );
+  });
+
+  it('renders belowHeadingContent after the heading and before the question area', async () => {
+    const { PracticeView } = await import('./practice-view');
+
+    const html = renderToStaticMarkup(
+      <PracticeView
+        belowHeadingContent={
+          <div data-testid="below-heading-content">Below</div>
+        }
+        loadState={{ status: 'ready' }}
+        question={null}
+        selectedChoiceId={null}
+        isAnswered={false}
+        submitResult={null}
+        isPending={false}
+        bookmarkStatus="idle"
+        isBookmarked={false}
+        canSubmit={false}
+        onTryAgain={() => undefined}
+        onToggleBookmark={() => undefined}
+        onSelectChoice={() => undefined}
+        onSubmit={() => undefined}
+        onNextQuestion={() => undefined}
+      />,
+    );
+
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const heading = doc.querySelector('h1');
+    expect(heading?.textContent).toBe('Practice');
+
+    const below = doc.querySelector('[data-testid="below-heading-content"]');
+    expect(below?.textContent).toBe('Below');
+
+    const questionArea = doc.querySelector('div[tabindex="-1"]');
+    expect(questionArea).not.toBeNull();
+
+    if (!heading) throw new Error('Expected heading');
+    if (!below) throw new Error('Expected below heading content');
+    if (!questionArea) throw new Error('Expected question area');
+
+    const positionAfterHeading = heading.compareDocumentPosition(below);
+    expect(positionAfterHeading & Node.DOCUMENT_POSITION_FOLLOWING).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    );
+
+    const positionBeforeQuestionArea =
+      below.compareDocumentPosition(questionArea);
+    expect(positionBeforeQuestionArea & Node.DOCUMENT_POSITION_FOLLOWING).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    );
+  });
+
   it('renders submit pending copy without rendering question-loading text', async () => {
     const { PracticeView } = await import('./practice-view');
     const question = createNextQuestion({

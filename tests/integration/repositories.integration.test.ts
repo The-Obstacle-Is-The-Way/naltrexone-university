@@ -426,7 +426,7 @@ describe('DrizzleQuestionRepository', () => {
       expect(result).toEqual([qLatestIncorrect.id]);
     });
 
-    it('returns only bookmarked questions when status=marked', async () => {
+    it('returns only bookmarked questions when status=bookmarked', async () => {
       const user = await createUser();
 
       const qMarked = await createQuestion({
@@ -451,7 +451,7 @@ describe('DrizzleQuestionRepository', () => {
       const result = await repo.listPublishedCandidateIds({
         tagSlugs: [],
         difficulties: [],
-        statuses: ['marked'],
+        statuses: ['bookmarked'],
         userId: user.id,
       });
 
@@ -592,7 +592,7 @@ describe('DrizzleQuestionRepository', () => {
       const result = await repo.listPublishedCandidateIds({
         tagSlugs: [],
         difficulties: ['easy'],
-        statuses: ['marked'],
+        statuses: ['bookmarked'],
         userId: user.id,
       });
 
@@ -629,7 +629,7 @@ describe('DrizzleQuestionRepository', () => {
       const result = await repo.listPublishedCandidateIds({
         tagSlugs: [tag.slug],
         difficulties: [],
-        statuses: ['marked'],
+        statuses: ['bookmarked'],
         userId: user.id,
       });
 

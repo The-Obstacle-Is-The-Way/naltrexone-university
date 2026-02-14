@@ -5,11 +5,11 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   canSubmitAnswer,
   createBookmarksEffect,
+  createDifficultyChangeHandler,
   createLoadNextQuestionAction,
   createSessionCountChangeHandler,
   createSessionModeChangeHandler,
-  createToggleDifficultyHandler,
-  createToggleStatusHandler,
+  createStatusChangeHandler,
   createToggleTagHandler,
   handleSessionCountChange,
   handleSessionModeChange,
@@ -125,7 +125,7 @@ describe('practice-page-logic', () => {
 
       const loadFirst = loadNextQuestion({
         getNextQuestionFn,
-        filters: { tagSlugs: [], difficulties: [], statuses: [] },
+        filters: { tagSlugs: [], difficulty: null, status: 'unanswered' },
         createIdempotencyKey: () => 'idem_1',
         nowMs: () => 1234,
         setLoadState,
@@ -140,7 +140,7 @@ describe('practice-page-logic', () => {
 
       const loadSecond = loadNextQuestion({
         getNextQuestionFn,
-        filters: { tagSlugs: [], difficulties: [], statuses: [] },
+        filters: { tagSlugs: [], difficulty: null, status: 'unanswered' },
         createIdempotencyKey: () => 'idem_2',
         nowMs: () => 5678,
         setLoadState,
@@ -186,8 +186,8 @@ describe('practice-page-logic', () => {
         getNextQuestionFn,
         filters: {
           tagSlugs: ['opioids'],
-          difficulties: ['easy'],
-          statuses: [],
+          difficulty: 'easy',
+          status: 'unanswered',
         },
         createIdempotencyKey: () => 'idem_1',
         nowMs: () => 1234,
@@ -203,7 +203,7 @@ describe('practice-page-logic', () => {
         filters: {
           tagSlugs: ['opioids'],
           difficulties: ['easy'],
-          statuses: [],
+          statuses: ['unanswered'],
         },
       });
       expect(setLoadState).toHaveBeenCalledWith({ status: 'loading' });
@@ -226,7 +226,7 @@ describe('practice-page-logic', () => {
 
       await loadNextQuestion({
         getNextQuestionFn: async () => ok(null),
-        filters: { tagSlugs: [], difficulties: [], statuses: [] },
+        filters: { tagSlugs: [], difficulty: null, status: 'unanswered' },
         createIdempotencyKey: () => 'idem_1',
         nowMs: () => 1234,
         setLoadState: vi.fn(),
@@ -249,7 +249,7 @@ describe('practice-page-logic', () => {
       await loadNextQuestion({
         getNextQuestionFn: async () =>
           err('UNSUBSCRIBED', 'Subscription required'),
-        filters: { tagSlugs: [], difficulties: [], statuses: [] },
+        filters: { tagSlugs: [], difficulty: null, status: 'unanswered' },
         createIdempotencyKey: () => 'idem_1',
         nowMs: () => 1234,
         setLoadState,
@@ -278,7 +278,7 @@ describe('practice-page-logic', () => {
         getNextQuestionFn: async () => {
           throw new Error('Network down');
         },
-        filters: { tagSlugs: [], difficulties: [], statuses: [] },
+        filters: { tagSlugs: [], difficulty: null, status: 'unanswered' },
         createIdempotencyKey: () => 'idem_1',
         nowMs: () => 1234,
         setLoadState,
@@ -309,7 +309,7 @@ describe('practice-page-logic', () => {
 
       const promise = loadNextQuestion({
         getNextQuestionFn: async () => deferred.promise,
-        filters: { tagSlugs: [], difficulties: [], statuses: [] },
+        filters: { tagSlugs: [], difficulty: null, status: 'unanswered' },
         createIdempotencyKey: () => 'idem_1',
         nowMs: () => 1234,
         setLoadState,
@@ -340,7 +340,7 @@ describe('practice-page-logic', () => {
       const action = createLoadNextQuestionAction({
         startTransition,
         getNextQuestionFn: async () => ok(createNextQuestion()),
-        filters: { tagSlugs: [], difficulties: [], statuses: [] },
+        filters: { tagSlugs: [], difficulty: null, status: 'unanswered' },
         createIdempotencyKey: () => 'idem_1',
         nowMs: () => 1234,
         setLoadState,
@@ -970,7 +970,11 @@ describe('practice-page-logic', () => {
       await startSession({
         sessionMode: 'tutor',
         sessionCount: 20,
-        filters: { tagSlugs: ['alcohol'], difficulties: [], statuses: [] },
+        filters: {
+          tagSlugs: ['alcohol'],
+          difficulty: null,
+          status: 'unanswered',
+        },
         idempotencyKey: 'idem_1',
         createIdempotencyKey: () => 'idem_2',
         setIdempotencyKey,
@@ -997,8 +1001,8 @@ describe('practice-page-logic', () => {
         sessionCount: 10,
         filters: {
           tagSlugs: ['opioids'],
-          difficulties: ['hard'],
-          statuses: [],
+          difficulty: 'hard',
+          status: 'unanswered',
         },
         idempotencyKey: 'idem_1',
         createIdempotencyKey: () => 'idem_2',
@@ -1015,7 +1019,7 @@ describe('practice-page-logic', () => {
         idempotencyKey: 'idem_1',
         tagSlugs: ['opioids'],
         difficulties: ['hard'],
-        statuses: [],
+        statuses: ['unanswered'],
       });
       expect(navigateTo).toHaveBeenCalledWith(
         '/app/practice/session-1?toast=session_started',
@@ -1031,7 +1035,11 @@ describe('practice-page-logic', () => {
       await startSession({
         sessionMode: 'tutor',
         sessionCount: 20,
-        filters: { tagSlugs: ['alcohol'], difficulties: [], statuses: [] },
+        filters: {
+          tagSlugs: ['alcohol'],
+          difficulty: null,
+          status: 'unanswered',
+        },
         idempotencyKey: 'idem_1',
         createIdempotencyKey: () => 'idem_2',
         setIdempotencyKey,
@@ -1059,8 +1067,8 @@ describe('practice-page-logic', () => {
         sessionCount: 10,
         filters: {
           tagSlugs: ['opioids'],
-          difficulties: ['hard'],
-          statuses: [],
+          difficulty: 'hard',
+          status: 'unanswered',
         },
         idempotencyKey: 'idem_1',
         createIdempotencyKey: () => 'idem_2',
@@ -1144,25 +1152,31 @@ describe('practice-page-session-start handlers', () => {
       throw new Error('Expected setFilters to receive an updater function');
     }
 
-    expect(update({ tagSlugs: [], difficulties: [], statuses: [] })).toEqual({
+    expect(
+      update({ tagSlugs: [], difficulty: null, status: 'unanswered' }),
+    ).toEqual({
       tagSlugs: ['opioids'],
-      difficulties: [],
-      statuses: [],
+      difficulty: null,
+      status: 'unanswered',
     });
 
     expect(
-      update({ tagSlugs: ['opioids'], difficulties: [], statuses: [] }),
+      update({
+        tagSlugs: ['opioids'],
+        difficulty: 'easy',
+        status: 'incorrect',
+      }),
     ).toEqual({
       tagSlugs: [],
-      difficulties: [],
-      statuses: [],
+      difficulty: 'easy',
+      status: 'incorrect',
     });
   });
 
-  it('applies difficulty toggles and rotates idempotency key', () => {
+  it('applies difficulty changes and rotates idempotency key', () => {
     const setIdempotencyKey = vi.fn();
     const setFilters = vi.fn();
-    const handler = createToggleDifficultyHandler({
+    const handler = createDifficultyChangeHandler({
       setFilters,
       setIdempotencyKey,
       createIdempotencyKey: () => 'idem_2',
@@ -1176,25 +1190,27 @@ describe('practice-page-session-start handlers', () => {
       throw new Error('Expected setFilters to receive an updater function');
     }
 
-    expect(update({ tagSlugs: [], difficulties: [], statuses: [] })).toEqual({
+    expect(
+      update({ tagSlugs: [], difficulty: null, status: 'unanswered' }),
+    ).toEqual({
       tagSlugs: [],
-      difficulties: ['hard'],
-      statuses: [],
+      difficulty: 'hard',
+      status: 'unanswered',
     });
 
     expect(
-      update({ tagSlugs: [], difficulties: ['hard'], statuses: [] }),
+      update({ tagSlugs: [], difficulty: 'hard', status: 'unanswered' }),
     ).toEqual({
       tagSlugs: [],
-      difficulties: [],
-      statuses: [],
+      difficulty: 'hard',
+      status: 'unanswered',
     });
   });
 
-  it('applies status toggles and rotates idempotency key', () => {
+  it('applies status changes and rotates idempotency key', () => {
     const setIdempotencyKey = vi.fn();
     const setFilters = vi.fn();
-    const handler = createToggleStatusHandler({
+    const handler = createStatusChangeHandler({
       setFilters,
       setIdempotencyKey,
       createIdempotencyKey: () => 'idem_2',
@@ -1208,18 +1224,20 @@ describe('practice-page-session-start handlers', () => {
       throw new Error('Expected setFilters to receive an updater function');
     }
 
-    expect(update({ tagSlugs: [], difficulties: [], statuses: [] })).toEqual({
+    expect(
+      update({ tagSlugs: [], difficulty: null, status: 'unanswered' }),
+    ).toEqual({
       tagSlugs: [],
-      difficulties: [],
-      statuses: ['incorrect'],
+      difficulty: null,
+      status: 'incorrect',
     });
 
     expect(
-      update({ tagSlugs: [], difficulties: [], statuses: ['incorrect'] }),
+      update({ tagSlugs: [], difficulty: null, status: 'incorrect' }),
     ).toEqual({
       tagSlugs: [],
-      difficulties: [],
-      statuses: [],
+      difficulty: null,
+      status: 'incorrect',
     });
   });
 });

@@ -17,7 +17,7 @@ const QUESTION_SLUG = 'placeholder-01-naltrexone-mechanism';
 const IMPORTED_QUESTION_SLUG = 'anton-2006-combine-001';
 
 /** Status filter labels expected on Practice and Quick Practice pages. */
-const STATUS_LABELS = ['Unanswered', 'Incorrect', 'Marked'] as const;
+const STATUS_LABELS = ['Unanswered', 'Incorrect', 'Bookmarked'] as const;
 
 /**
  * Extract the letter→text mapping from QuestionCard choices.
@@ -181,7 +181,7 @@ test.describe('brainstorming audit — validate documented issues', () => {
    * BS-012: Question Status filter on Practice session creation.
    *
    * The Practice page currently has Mode, Count, Difficulty, and Tags —
-   * plus a status filter (Unanswered/Incorrect/Marked).
+   * plus a status filter (Unanswered/Incorrect/Bookmarked).
    */
   test('BS-012: Practice page has a question status filter', async ({
     page,
@@ -222,7 +222,7 @@ test.describe('brainstorming audit — validate documented issues', () => {
     await expect(page.getByText('Status', { exact: true })).toBeVisible();
     await expect(
       page.getByText('Leave empty to include all questions', { exact: true }),
-    ).toBeVisible();
+    ).toHaveCount(0);
   });
 
   /**

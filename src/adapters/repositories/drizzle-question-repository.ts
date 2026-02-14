@@ -189,7 +189,7 @@ export class DrizzleQuestionRepository implements QuestionRepository {
             ),
         );
       }
-      case 'marked':
+      case 'bookmarked':
         return inArray(
           questions.id,
           this.db

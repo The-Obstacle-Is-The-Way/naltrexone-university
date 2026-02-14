@@ -14,8 +14,8 @@ describe('usePracticeQuestionAnswerFlow', () => {
       usePracticeQuestionAnswerFlow({
         filters: {
           tagSlugs: [],
-          difficulties: [],
-          statuses: [],
+          difficulty: null,
+          status: 'unanswered',
         },
         isMounted: () => true,
         getNextQuestionFn: vi.fn(async () => ({

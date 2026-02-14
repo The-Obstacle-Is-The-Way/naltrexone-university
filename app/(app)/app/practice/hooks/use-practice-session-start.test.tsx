@@ -18,8 +18,8 @@ describe('usePracticeSessionStart', () => {
 
     expect(output.filters).toEqual({
       tagSlugs: [],
-      difficulties: [],
-      statuses: [],
+      difficulty: null,
+      status: 'unanswered',
     });
     expect(output.sessionMode).toBe('tutor');
     expect(output.sessionCount).toBe(20);
@@ -28,8 +28,8 @@ describe('usePracticeSessionStart', () => {
     expect(typeof output.onSessionModeChange).toBe('function');
     expect(typeof output.onSessionCountChange).toBe('function');
     expect(typeof output.onToggleTag).toBe('function');
-    expect(typeof output.onToggleDifficulty).toBe('function');
-    expect(typeof output.onToggleStatus).toBe('function');
+    expect(typeof output.onDifficultyChange).toBe('function');
+    expect(typeof output.onStatusChange).toBe('function');
     expect(typeof output.onStartSession).toBe('function');
   });
 });

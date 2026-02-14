@@ -67,8 +67,8 @@ export default function PracticePageClient() {
             availableTags={sessionControls.availableTags}
             sessionStartStatus={sessionControls.sessionStartStatus}
             sessionStartError={sessionControls.sessionStartError}
-            onToggleDifficulty={sessionControls.onToggleDifficulty}
-            onToggleStatus={sessionControls.onToggleStatus}
+            onDifficultyChange={sessionControls.onDifficultyChange}
+            onStatusChange={sessionControls.onStatusChange}
             onToggleTag={sessionControls.onToggleTag}
             onSessionModeChange={sessionControls.onSessionModeChange}
             onSessionCountChange={sessionControls.onSessionCountChange}

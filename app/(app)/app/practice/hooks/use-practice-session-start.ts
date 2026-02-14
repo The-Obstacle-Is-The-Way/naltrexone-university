@@ -3,10 +3,10 @@ import { startPracticeSession } from '@/src/adapters/controllers/practice-contro
 import { navigateTo } from '../client-navigation';
 import type { PracticeSessionStarterProps } from '../components/practice-session-starter';
 import {
+  createDifficultyChangeHandler,
   createSessionCountChangeHandler,
   createSessionModeChangeHandler,
-  createToggleDifficultyHandler,
-  createToggleStatusHandler,
+  createStatusChangeHandler,
   createToggleTagHandler,
   type PracticeFilters,
   startSession,
@@ -25,8 +25,8 @@ export type UsePracticeSessionStartOutput = {
   onSessionModeChange: PracticeSessionStarterProps['onSessionModeChange'];
   onSessionCountChange: PracticeSessionStarterProps['onSessionCountChange'];
   onToggleTag: PracticeSessionStarterProps['onToggleTag'];
-  onToggleDifficulty: PracticeSessionStarterProps['onToggleDifficulty'];
-  onToggleStatus: PracticeSessionStarterProps['onToggleStatus'];
+  onDifficultyChange: PracticeSessionStarterProps['onDifficultyChange'];
+  onStatusChange: PracticeSessionStarterProps['onStatusChange'];
   onStartSession: () => Promise<void>;
 };
 
@@ -35,8 +35,8 @@ export function usePracticeSessionStart(
 ): UsePracticeSessionStartOutput {
   const [filters, setFilters] = useState<PracticeFilters>({
     tagSlugs: [],
-    difficulties: [],
-    statuses: [],
+    difficulty: null,
+    status: 'unanswered',
   });
   const [sessionMode, setSessionMode] = useState<'tutor' | 'exam'>('tutor');
   const [sessionCount, setSessionCount] = useState(20);
@@ -82,21 +82,21 @@ export function usePracticeSessionStart(
 
   const onToggleDifficulty = useMemo(
     () =>
-      createToggleDifficultyHandler({
+      createDifficultyChangeHandler({
         setFilters,
         setIdempotencyKey: setStartSessionIdempotencyKey,
         createIdempotencyKey: () => crypto.randomUUID(),
-      }) satisfies PracticeSessionStarterProps['onToggleDifficulty'],
+      }) satisfies PracticeSessionStarterProps['onDifficultyChange'],
     [],
   );
 
-  const onToggleStatus = useMemo(
+  const onStatusChange = useMemo(
     () =>
-      createToggleStatusHandler({
+      createStatusChangeHandler({
         setFilters,
         setIdempotencyKey: setStartSessionIdempotencyKey,
         createIdempotencyKey: () => crypto.randomUUID(),
-      }) satisfies PracticeSessionStarterProps['onToggleStatus'],
+      }) satisfies PracticeSessionStarterProps['onStatusChange'],
     [],
   );
 
@@ -133,8 +133,8 @@ export function usePracticeSessionStart(
     onSessionModeChange,
     onSessionCountChange,
     onToggleTag,
-    onToggleDifficulty,
-    onToggleStatus,
+    onDifficultyChange: onToggleDifficulty,
+    onStatusChange,
     onStartSession,
   };
 }

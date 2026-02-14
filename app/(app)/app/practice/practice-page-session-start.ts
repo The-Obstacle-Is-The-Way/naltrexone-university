@@ -64,8 +64,8 @@ export async function startSession(input: {
       count: input.sessionCount,
       idempotencyKey: input.idempotencyKey,
       tagSlugs: input.filters.tagSlugs,
-      difficulties: input.filters.difficulties,
-      statuses: input.filters.statuses,
+      difficulties: input.filters.difficulty ? [input.filters.difficulty] : [],
+      statuses: [input.filters.status],
     });
   } catch (error) {
     if (!isMounted()) return;
@@ -135,34 +135,28 @@ export function createToggleTagHandler(input: {
   };
 }
 
-export function createToggleDifficultyHandler(input: {
+export function createDifficultyChangeHandler(input: {
   setFilters: (
     next: PracticeFilters | ((prev: PracticeFilters) => PracticeFilters),
   ) => void;
   setIdempotencyKey: (key: string) => void;
   createIdempotencyKey: () => string;
-}): (difficulty: PracticeFilters['difficulties'][number]) => void {
+}): (difficulty: PracticeFilters['difficulty']) => void {
   return (difficulty) => {
-    input.setFilters((prev) => ({
-      ...prev,
-      difficulties: toggleInArray(prev.difficulties, difficulty),
-    }));
+    input.setFilters((prev) => ({ ...prev, difficulty }));
     input.setIdempotencyKey(input.createIdempotencyKey());
   };
 }
 
-export function createToggleStatusHandler(input: {
+export function createStatusChangeHandler(input: {
   setFilters: (
     next: PracticeFilters | ((prev: PracticeFilters) => PracticeFilters),
   ) => void;
   setIdempotencyKey: (key: string) => void;
   createIdempotencyKey: () => string;
-}): (status: PracticeFilters['statuses'][number]) => void {
+}): (status: PracticeFilters['status']) => void {
   return (status) => {
-    input.setFilters((prev) => ({
-      ...prev,
-      statuses: toggleInArray(prev.statuses, status),
-    }));
+    input.setFilters((prev) => ({ ...prev, status }));
     input.setIdempotencyKey(input.createIdempotencyKey());
   };
 }

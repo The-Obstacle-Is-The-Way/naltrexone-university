@@ -6,6 +6,7 @@ import { createNextQuestion } from '@/src/application/test-helpers/create-next-q
 import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
 import { createDeferred } from '@/tests/test-helpers/create-deferred';
 import { ok } from '@/tests/test-helpers/ok';
+import type { PracticeFilters } from '../practice-page-logic';
 import { usePracticeQuestionFlow } from './use-practice-question-flow';
 
 const {
@@ -30,7 +31,11 @@ vi.mock('@/src/adapters/controllers/question-controller', () => ({
   submitAnswer: submitAnswerMock,
 }));
 
-const TEST_FILTERS = { tagSlugs: [], difficulties: [], statuses: [] };
+const TEST_FILTERS = {
+  tagSlugs: [],
+  difficulty: null,
+  status: 'unanswered',
+} satisfies PracticeFilters;
 
 function PracticeQuestionFlowHookProbe() {
   const output = usePracticeQuestionFlow({ filters: TEST_FILTERS });

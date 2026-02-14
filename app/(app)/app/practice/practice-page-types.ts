@@ -3,8 +3,8 @@ import type { QuestionProgressStatus } from '@/src/domain/value-objects';
 
 export type PracticeFilters = {
   tagSlugs: string[];
-  difficulties: Array<NextQuestion['difficulty']>;
-  statuses: QuestionProgressStatus[];
+  difficulty: NextQuestion['difficulty'] | null;
+  status: QuestionProgressStatus;
 };
 
 function assertUnreachable(value: never): never {
@@ -17,8 +17,8 @@ export function statusDisplayLabel(status: QuestionProgressStatus): string {
       return 'Unanswered';
     case 'incorrect':
       return 'Incorrect';
-    case 'marked':
-      return 'Marked';
+    case 'bookmarked':
+      return 'Bookmarked';
     default:
       return assertUnreachable(status);
   }

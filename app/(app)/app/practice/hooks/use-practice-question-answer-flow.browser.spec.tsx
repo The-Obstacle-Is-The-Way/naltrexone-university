@@ -5,6 +5,7 @@ import { createNextQuestion } from '@/src/application/test-helpers/create-next-q
 import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
 import { createDeferred } from '@/tests/test-helpers/create-deferred';
 import { ok } from '@/tests/test-helpers/ok';
+import type { PracticeFilters } from '../practice-page-logic';
 import { usePracticeQuestionAnswerFlow } from './use-practice-question-answer-flow';
 
 const { getNextQuestionMock, submitAnswerMock } = vi.hoisted(() => ({
@@ -12,7 +13,11 @@ const { getNextQuestionMock, submitAnswerMock } = vi.hoisted(() => ({
   submitAnswerMock: vi.fn(),
 }));
 
-const TEST_FILTERS = { tagSlugs: [], difficulties: [], statuses: [] };
+const TEST_FILTERS = {
+  tagSlugs: [],
+  difficulty: null,
+  status: 'unanswered',
+} satisfies PracticeFilters;
 
 function PracticeQuestionAnswerFlowProbe() {
   const output = usePracticeQuestionAnswerFlow({
