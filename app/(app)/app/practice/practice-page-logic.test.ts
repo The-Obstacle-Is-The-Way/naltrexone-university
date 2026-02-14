@@ -991,7 +991,7 @@ describe('practice-page-logic', () => {
 
     it('navigates to the session route on success', async () => {
       const startPracticeSessionFn = vi.fn(async () =>
-        ok({ sessionId: 'session-1' }),
+        ok({ sessionId: 'session-1', requestedCount: 10, actualCount: 10 }),
       );
       const navigateTo = vi.fn();
       const setIdempotencyKey = vi.fn();
@@ -1027,6 +1027,30 @@ describe('practice-page-logic', () => {
       expect(setIdempotencyKey).not.toHaveBeenCalled();
     });
 
+    it('includes requested/actual counts in the session_started toast when fewer questions are available than requested', async () => {
+      const startPracticeSessionFn = vi.fn(async () =>
+        ok({ sessionId: 'session-1', requestedCount: 50, actualCount: 30 }),
+      );
+      const navigateTo = vi.fn();
+
+      await startSession({
+        sessionMode: 'exam',
+        sessionCount: 50,
+        filters: { tagSlugs: [], difficulty: null, status: 'unanswered' },
+        idempotencyKey: 'idem_1',
+        createIdempotencyKey: () => 'idem_2',
+        setIdempotencyKey: vi.fn(),
+        startPracticeSessionFn,
+        setSessionStartStatus: vi.fn(),
+        setSessionStartError: vi.fn(),
+        navigateTo,
+      });
+
+      expect(navigateTo).toHaveBeenCalledWith(
+        '/app/practice/session-1?toast=session_started&requestedCount=50&actualCount=30',
+      );
+    });
+
     it('sets error state when controller throws', async () => {
       const setSessionStartStatus = vi.fn();
       const setSessionStartError = vi.fn();
@@ -1057,7 +1081,14 @@ describe('practice-page-logic', () => {
     });
 
     it('returns without navigating when unmounted during startSession', async () => {
-      const deferred = createDeferred<ActionResult<{ sessionId: string }>>();
+      const deferred =
+        createDeferred<
+          ActionResult<{
+            sessionId: string;
+            requestedCount: number;
+            actualCount: number;
+          }>
+        >();
       let mounted = true;
 
       const navigateTo = vi.fn();
@@ -1081,7 +1112,9 @@ describe('practice-page-logic', () => {
       });
 
       mounted = false;
-      deferred.resolve(ok({ sessionId: 'session-1' }));
+      deferred.resolve(
+        ok({ sessionId: 'session-1', requestedCount: 10, actualCount: 10 }),
+      );
       await promise;
 
       expect(navigateTo).not.toHaveBeenCalled();

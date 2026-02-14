@@ -23,7 +23,11 @@ export type StartPracticeSessionInput = {
   statuses?: readonly QuestionProgressStatus[];
 };
 
-export type StartPracticeSessionOutput = { sessionId: string };
+export type StartPracticeSessionOutput = {
+  sessionId: string;
+  requestedCount: number;
+  actualCount: number;
+};
 
 export class StartPracticeSessionUseCase {
   constructor(
@@ -74,6 +78,10 @@ export class StartPracticeSessionUseCase {
       },
     });
 
-    return { sessionId: session.id };
+    return {
+      sessionId: session.id,
+      requestedCount: input.count,
+      actualCount: questionIds.length,
+    };
   }
 }

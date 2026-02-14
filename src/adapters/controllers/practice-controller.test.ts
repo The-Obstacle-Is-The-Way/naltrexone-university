@@ -106,6 +106,8 @@ function createDeps(overrides?: {
   const startPracticeSessionUseCase = new FakeStartPracticeSessionUseCase(
     overrides?.startOutput ?? {
       sessionId: '22222222-2222-2222-2222-222222222222',
+      requestedCount: 10,
+      actualCount: 10,
     },
     overrides?.startThrows,
   );
@@ -268,7 +270,11 @@ describe('practice-controller', () => {
 
     it('returns sessionId when use case succeeds', async () => {
       const deps = createDeps({
-        startOutput: { sessionId: '22222222-2222-2222-2222-222222222222' },
+        startOutput: {
+          sessionId: '22222222-2222-2222-2222-222222222222',
+          requestedCount: 2,
+          actualCount: 2,
+        },
       });
 
       const result = await startPracticeSession(
@@ -283,7 +289,11 @@ describe('practice-controller', () => {
 
       expect(result).toEqual({
         ok: true,
-        data: { sessionId: '22222222-2222-2222-2222-222222222222' },
+        data: {
+          sessionId: '22222222-2222-2222-2222-222222222222',
+          requestedCount: 2,
+          actualCount: 2,
+        },
       });
       expect(deps.startPracticeSessionUseCase.inputs).toEqual([
         {
@@ -299,7 +309,11 @@ describe('practice-controller', () => {
 
     it('forwards bookmarked status to the use case', async () => {
       const deps = createDeps({
-        startOutput: { sessionId: '22222222-2222-2222-2222-222222222222' },
+        startOutput: {
+          sessionId: '22222222-2222-2222-2222-222222222222',
+          requestedCount: 1,
+          actualCount: 1,
+        },
       });
 
       const result = await startPracticeSession(
@@ -315,7 +329,11 @@ describe('practice-controller', () => {
 
       expect(result).toEqual({
         ok: true,
-        data: { sessionId: '22222222-2222-2222-2222-222222222222' },
+        data: {
+          sessionId: '22222222-2222-2222-2222-222222222222',
+          requestedCount: 1,
+          actualCount: 1,
+        },
       });
       expect(deps.startPracticeSessionUseCase.inputs).toEqual([
         {
@@ -331,7 +349,11 @@ describe('practice-controller', () => {
 
     it('returns the cached result when idempotencyKey is reused', async () => {
       const deps = createDeps({
-        startOutput: { sessionId: '22222222-2222-2222-2222-222222222222' },
+        startOutput: {
+          sessionId: '22222222-2222-2222-2222-222222222222',
+          requestedCount: 1,
+          actualCount: 1,
+        },
       });
 
       const input = {
@@ -347,7 +369,11 @@ describe('practice-controller', () => {
 
       expect(first).toEqual({
         ok: true,
-        data: { sessionId: '22222222-2222-2222-2222-222222222222' },
+        data: {
+          sessionId: '22222222-2222-2222-2222-222222222222',
+          requestedCount: 1,
+          actualCount: 1,
+        },
       });
       expect(second).toEqual(first);
       expect(deps.startPracticeSessionUseCase.inputs).toHaveLength(1);

@@ -15,9 +15,19 @@ export type { PracticeSessionPageViewProps };
 
 export default async function PracticeSessionPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ sessionId: string }>;
+  searchParams?: Promise<Record<string, string | undefined>>;
 }) {
   const { sessionId } = await params;
-  return <PracticeSessionPageClient sessionId={sessionId} />;
+  const resolvedSearchParams = await searchParams;
+  return (
+    <PracticeSessionPageClient
+      sessionId={sessionId}
+      toast={resolvedSearchParams?.toast}
+      requestedCount={resolvedSearchParams?.requestedCount}
+      actualCount={resolvedSearchParams?.actualCount}
+    />
+  );
 }

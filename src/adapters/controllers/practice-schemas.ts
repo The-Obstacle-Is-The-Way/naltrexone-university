@@ -70,6 +70,8 @@ export const EmptyInputSchema = z.object({}).strict();
 export const StartPracticeSessionOutputSchema = z
   .object({
     sessionId: zUuid,
+    requestedCount: z.number().int().min(1).max(MAX_PRACTICE_SESSION_QUESTIONS),
+    actualCount: z.number().int().min(1).max(MAX_PRACTICE_SESSION_QUESTIONS),
   })
   .strict();
 
