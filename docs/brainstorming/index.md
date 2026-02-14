@@ -29,8 +29,9 @@ Brainstorming (BS-NNN) → Spec (SPEC-NNN) → Implementation → Archive
 |----|-------|--------|--------------|
 | [BS-014](./bs-014-practice-starter-question-count-ux.md) | Practice Starter — Silent Truncation When Fewer Questions Available | Active | — |
 | [BS-015](./bs-015-practice-starter-available-count-display.md) | Practice Starter — Show Available Question Count Before Session Start | Active | — |
+| [BS-016](./bs-016-review-mode-question-navigator.md) | Color-Coded Question Navigator in Review Mode | Active | — |
 
-**Next Brainstorming ID:** BS-016
+**Next Brainstorming ID:** BS-017
 
 ---
 
