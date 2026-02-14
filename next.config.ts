@@ -33,15 +33,6 @@ const nextConfig: NextConfig = {
       },
     ];
   },
-  async redirects() {
-    return [
-      {
-        source: '/app/review',
-        destination: '/app/history?tab=questions&result=incorrect',
-        permanent: true,
-      },
-    ];
-  },
 };
 
 export default nextConfig;

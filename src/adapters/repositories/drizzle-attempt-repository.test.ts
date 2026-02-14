@@ -13,7 +13,10 @@ function createDbMock() {
   const queryFindMany = vi.fn();
 
   const countWhere = vi.fn(async (): Promise<Array<{ count: number }>> => []);
-  const countLeftJoin = vi.fn(() => ({ where: countWhere }));
+  const countLeftJoin = vi.fn(() => ({
+    leftJoin: countLeftJoin,
+    where: countWhere,
+  }));
   const countFrom = vi.fn(() => ({
     leftJoin: countLeftJoin,
     where: countWhere,
@@ -80,7 +83,10 @@ function createDbMock() {
   const limit = vi.fn(() => ({ offset }));
   const orderBy = vi.fn(() => ({ limit }));
   const whereFinal = vi.fn(() => ({ orderBy }));
-  const leftJoinFinal = vi.fn(() => ({ where: whereFinal }));
+  const leftJoinFinal = vi.fn(() => ({
+    leftJoin: leftJoinFinal,
+    where: whereFinal,
+  }));
 
   const recentLimit = vi.fn(() => recentQueryExecute());
   const recentOrderBy = vi.fn(() => ({ limit: recentLimit }));
@@ -698,7 +704,7 @@ describe('DrizzleAttemptRepository', () => {
   });
 
   describe('countAttemptedQuestionsByUserId', () => {
-    it('left-joins practiceSessions and returns count values from the database', async () => {
+    it('left-joins practiceSessions and questions, returns count values from the database', async () => {
       const db = createDbMock();
       db._mocks.countWhere.mockResolvedValueOnce([{ count: 3 }]);
 
@@ -707,7 +713,7 @@ describe('DrizzleAttemptRepository', () => {
       await expect(
         repo.countAttemptedQuestionsByUserId('user_1'),
       ).resolves.toBe(3);
-      expect(db._mocks.countLeftJoin).toHaveBeenCalledTimes(1);
+      expect(db._mocks.countLeftJoin).toHaveBeenCalledTimes(2);
     });
 
     it('returns count when filtered by source=tutor', async () => {
@@ -719,7 +725,7 @@ describe('DrizzleAttemptRepository', () => {
       await expect(
         repo.countAttemptedQuestionsByUserId('user_1', { source: 'tutor' }),
       ).resolves.toBe(1);
-      expect(db._mocks.countLeftJoin).toHaveBeenCalledTimes(1);
+      expect(db._mocks.countLeftJoin).toHaveBeenCalledTimes(2);
     });
 
     it('returns count when filtered by source=exam', async () => {
@@ -731,7 +737,7 @@ describe('DrizzleAttemptRepository', () => {
       await expect(
         repo.countAttemptedQuestionsByUserId('user_1', { source: 'exam' }),
       ).resolves.toBe(2);
-      expect(db._mocks.countLeftJoin).toHaveBeenCalledTimes(1);
+      expect(db._mocks.countLeftJoin).toHaveBeenCalledTimes(2);
     });
   });
 });

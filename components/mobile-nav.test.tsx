@@ -40,7 +40,6 @@ describe('MobileNav', () => {
     // Links should NOT be visible when menu is closed
     expect(html).not.toContain('/app/dashboard');
     expect(html).not.toContain('/app/practice');
-    expect(html).not.toContain('/app/review');
     expect(html).not.toContain('/app/bookmarks');
     expect(html).not.toContain('/app/billing');
   });

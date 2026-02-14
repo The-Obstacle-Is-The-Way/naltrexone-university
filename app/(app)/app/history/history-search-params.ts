@@ -15,7 +15,7 @@ export type QuestionsFilters = {
 };
 
 export function parseHistoryTab(value: string | undefined): HistoryTab {
-  if (value === 'questions' || value === 'missed') return 'questions';
+  if (value === 'questions') return 'questions';
   return 'sessions';
 }
 
@@ -64,8 +64,6 @@ export function parseSourceFilter(
   if (value === 'tutor') return value;
   if (value === 'exam') return value;
   if (value === 'adhoc') return value;
-  // Backward-compat: legacy URLs used `source=quick`. Tests cover this mapping.
-  if (value === 'quick') return 'adhoc';
   return null;
 }
 

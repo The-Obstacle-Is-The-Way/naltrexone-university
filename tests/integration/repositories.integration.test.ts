@@ -1243,6 +1243,264 @@ describe('DrizzlePracticeSessionRepository + DrizzleAttemptRepository', () => {
     expect(incorrectOnly.map((m) => m.questionId)).toEqual([q1.id]);
   });
 
+  it('supports attempted-question difficulty filter and accurate counts', async () => {
+    const user = await createUser();
+
+    const qEasy = await createQuestion({
+      slug: `it-attempted-difficulty-easy-${randomUUID()}`,
+      status: 'published',
+      difficulty: 'easy',
+    });
+    const qHardA = await createQuestion({
+      slug: `it-attempted-difficulty-hard-a-${randomUUID()}`,
+      status: 'published',
+      difficulty: 'hard',
+    });
+    const qHardB = await createQuestion({
+      slug: `it-attempted-difficulty-hard-b-${randomUUID()}`,
+      status: 'published',
+      difficulty: 'hard',
+    });
+
+    const attemptRepo = new DrizzleAttemptRepository(db);
+
+    const aEasy = await attemptRepo.insert({
+      userId: user.id,
+      questionId: qEasy.id,
+      practiceSessionId: null,
+      selectedChoiceId: qEasy.correctChoiceId,
+      isCorrect: true,
+      timeSpentSeconds: 1,
+    });
+
+    const aHardA = await attemptRepo.insert({
+      userId: user.id,
+      questionId: qHardA.id,
+      practiceSessionId: null,
+      selectedChoiceId: qHardA.correctChoiceId,
+      isCorrect: true,
+      timeSpentSeconds: 1,
+    });
+
+    const aHardB = await attemptRepo.insert({
+      userId: user.id,
+      questionId: qHardB.id,
+      practiceSessionId: null,
+      selectedChoiceId: qHardB.correctChoiceId,
+      isCorrect: true,
+      timeSpentSeconds: 1,
+    });
+
+    const t1 = new Date('2026-02-01T00:00:00.000Z');
+    const t2 = new Date('2026-02-02T00:00:00.000Z');
+    const t3 = new Date('2026-02-03T00:00:00.000Z');
+
+    await db
+      .update(schema.attempts)
+      .set({ answeredAt: t1 })
+      .where(eq(schema.attempts.id, aEasy.id));
+    await db
+      .update(schema.attempts)
+      .set({ answeredAt: t2 })
+      .where(eq(schema.attempts.id, aHardA.id));
+    await db
+      .update(schema.attempts)
+      .set({ answeredAt: t3 })
+      .where(eq(schema.attempts.id, aHardB.id));
+
+    const hardOnly = await attemptRepo.listAttemptedQuestionsByUserId(
+      user.id,
+      10,
+      0,
+      { difficulty: 'hard' },
+    );
+    expect(hardOnly.map((m) => m.questionId)).toEqual([qHardB.id, qHardA.id]);
+
+    await expect(
+      attemptRepo.countAttemptedQuestionsByUserId(user.id, {
+        difficulty: 'hard',
+      }),
+    ).resolves.toBe(2);
+  });
+
+  it('supports attempted-question tagSlug filter and accurate counts', async () => {
+    const user = await createUser();
+
+    const tagPharm = await createTag({
+      slug: `it-tag-pharmacology-${randomUUID()}`,
+      kind: 'topic',
+      name: 'Pharmacology',
+    });
+
+    const tagOther = await createTag({
+      slug: `it-tag-other-${randomUUID()}`,
+      kind: 'topic',
+      name: 'Other',
+    });
+
+    const qPharmA = await createQuestion({
+      slug: `it-attempted-tag-pharm-a-${randomUUID()}`,
+      status: 'published',
+      difficulty: 'easy',
+      tagIds: [tagPharm.id],
+    });
+    const qPharmB = await createQuestion({
+      slug: `it-attempted-tag-pharm-b-${randomUUID()}`,
+      status: 'published',
+      difficulty: 'hard',
+      tagIds: [tagPharm.id],
+    });
+    const qOther = await createQuestion({
+      slug: `it-attempted-tag-other-${randomUUID()}`,
+      status: 'published',
+      difficulty: 'easy',
+      tagIds: [tagOther.id],
+    });
+
+    const attemptRepo = new DrizzleAttemptRepository(db);
+
+    const aOther = await attemptRepo.insert({
+      userId: user.id,
+      questionId: qOther.id,
+      practiceSessionId: null,
+      selectedChoiceId: qOther.correctChoiceId,
+      isCorrect: true,
+      timeSpentSeconds: 1,
+    });
+    const aPharmA = await attemptRepo.insert({
+      userId: user.id,
+      questionId: qPharmA.id,
+      practiceSessionId: null,
+      selectedChoiceId: qPharmA.correctChoiceId,
+      isCorrect: true,
+      timeSpentSeconds: 1,
+    });
+    const aPharmB = await attemptRepo.insert({
+      userId: user.id,
+      questionId: qPharmB.id,
+      practiceSessionId: null,
+      selectedChoiceId: qPharmB.correctChoiceId,
+      isCorrect: true,
+      timeSpentSeconds: 1,
+    });
+
+    const t1 = new Date('2026-02-01T00:00:00.000Z');
+    const t2 = new Date('2026-02-02T00:00:00.000Z');
+    const t3 = new Date('2026-02-03T00:00:00.000Z');
+
+    await db
+      .update(schema.attempts)
+      .set({ answeredAt: t1 })
+      .where(eq(schema.attempts.id, aOther.id));
+    await db
+      .update(schema.attempts)
+      .set({ answeredAt: t2 })
+      .where(eq(schema.attempts.id, aPharmA.id));
+    await db
+      .update(schema.attempts)
+      .set({ answeredAt: t3 })
+      .where(eq(schema.attempts.id, aPharmB.id));
+
+    const pharmOnly = await attemptRepo.listAttemptedQuestionsByUserId(
+      user.id,
+      10,
+      0,
+      { tagSlug: tagPharm.slug },
+    );
+    expect(pharmOnly.map((m) => m.questionId)).toEqual([
+      qPharmB.id,
+      qPharmA.id,
+    ]);
+
+    await expect(
+      attemptRepo.countAttemptedQuestionsByUserId(user.id, {
+        tagSlug: tagPharm.slug,
+      }),
+    ).resolves.toBe(2);
+  });
+
+  it('supports combined attempted-question result + difficulty filters', async () => {
+    const user = await createUser();
+
+    const qHardIncorrect = await createQuestion({
+      slug: `it-attempted-result-difficulty-hard-incorrect-${randomUUID()}`,
+      status: 'published',
+      difficulty: 'hard',
+    });
+    const qHardCorrect = await createQuestion({
+      slug: `it-attempted-result-difficulty-hard-correct-${randomUUID()}`,
+      status: 'published',
+      difficulty: 'hard',
+    });
+    const qEasyIncorrect = await createQuestion({
+      slug: `it-attempted-result-difficulty-easy-incorrect-${randomUUID()}`,
+      status: 'published',
+      difficulty: 'easy',
+    });
+
+    const attemptRepo = new DrizzleAttemptRepository(db);
+
+    const aHardIncorrect = await attemptRepo.insert({
+      userId: user.id,
+      questionId: qHardIncorrect.id,
+      practiceSessionId: null,
+      selectedChoiceId: qHardIncorrect.correctChoiceId,
+      isCorrect: false,
+      timeSpentSeconds: 1,
+    });
+
+    const aHardCorrect = await attemptRepo.insert({
+      userId: user.id,
+      questionId: qHardCorrect.id,
+      practiceSessionId: null,
+      selectedChoiceId: qHardCorrect.correctChoiceId,
+      isCorrect: true,
+      timeSpentSeconds: 1,
+    });
+
+    const aEasyIncorrect = await attemptRepo.insert({
+      userId: user.id,
+      questionId: qEasyIncorrect.id,
+      practiceSessionId: null,
+      selectedChoiceId: qEasyIncorrect.correctChoiceId,
+      isCorrect: false,
+      timeSpentSeconds: 1,
+    });
+
+    const t1 = new Date('2026-02-01T00:00:00.000Z');
+    const t2 = new Date('2026-02-02T00:00:00.000Z');
+    const t3 = new Date('2026-02-03T00:00:00.000Z');
+
+    await db
+      .update(schema.attempts)
+      .set({ answeredAt: t1 })
+      .where(eq(schema.attempts.id, aEasyIncorrect.id));
+    await db
+      .update(schema.attempts)
+      .set({ answeredAt: t2 })
+      .where(eq(schema.attempts.id, aHardCorrect.id));
+    await db
+      .update(schema.attempts)
+      .set({ answeredAt: t3 })
+      .where(eq(schema.attempts.id, aHardIncorrect.id));
+
+    const result = await attemptRepo.listAttemptedQuestionsByUserId(
+      user.id,
+      10,
+      0,
+      { result: 'incorrect', difficulty: 'hard' },
+    );
+
+    expect(result.map((m) => m.questionId)).toEqual([qHardIncorrect.id]);
+
+    await expect(
+      attemptRepo.countAttemptedQuestionsByUserId(user.id, {
+        result: 'incorrect',
+        difficulty: 'hard',
+      }),
+    ).resolves.toBe(1);
+  });
+
   it('uses id desc as deterministic tie-breaker for latest attempted-question semantics', async () => {
     const user = await createUser();
 
@@ -1545,6 +1803,52 @@ describe('DrizzleUserRepository', () => {
     await expect(repo.findByClerkId(clerkUserId)).resolves.toMatchObject({
       id: user.id,
       email,
+    });
+  });
+
+  it('applies observedAt clock-guard semantics when upserting', async () => {
+    const repo = new DrizzleUserRepository(db);
+    const clerkUserId = `user_${randomUUID().replaceAll('-', '')}`;
+
+    const t1 = new Date('2026-02-01T00:00:00.000Z');
+    const email1 = `it-${randomUUID()}@example.com`;
+    const first = await repo.upsertByClerkId(clerkUserId, email1, {
+      observedAt: t1,
+    });
+    cleanup.userIds.push(first.id);
+
+    const t0 = new Date('2026-01-31T23:00:00.000Z');
+    const email2 = `it-${randomUUID()}@example.com`;
+    const stale = await repo.upsertByClerkId(clerkUserId, email2, {
+      observedAt: t0,
+    });
+    expect(stale).toMatchObject({
+      id: first.id,
+      email: email1,
+      createdAt: t1,
+      updatedAt: t1,
+    });
+
+    const t2 = new Date('2026-02-01T01:00:00.000Z');
+    const updated = await repo.upsertByClerkId(clerkUserId, email2, {
+      observedAt: t2,
+    });
+    expect(updated).toMatchObject({
+      id: first.id,
+      email: email2,
+      createdAt: t1,
+      updatedAt: t2,
+    });
+
+    const t3 = new Date('2026-02-01T02:00:00.000Z');
+    const bumped = await repo.upsertByClerkId(clerkUserId, email2, {
+      observedAt: t3,
+    });
+    expect(bumped).toMatchObject({
+      id: first.id,
+      email: email2,
+      createdAt: t1,
+      updatedAt: t3,
     });
   });
 

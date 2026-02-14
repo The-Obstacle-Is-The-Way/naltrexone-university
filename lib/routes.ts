@@ -9,7 +9,6 @@ export const ROUTES = {
   APP_PRACTICE: '/app/practice',
   APP_PRACTICE_QUICK: '/app/practice/quick',
   APP_HISTORY: '/app/history',
-  APP_REVIEW: '/app/review',
   APP_BOOKMARKS: '/app/bookmarks',
   APP_BILLING: '/app/billing',
   APP_QUESTIONS: '/app/questions',
@@ -19,12 +18,7 @@ export function toPracticeSessionRoute(sessionId: string): string {
   return `${ROUTES.APP_PRACTICE}/${sessionId}`;
 }
 
-export type QuestionOrigin =
-  | 'dashboard'
-  | 'review'
-  | 'bookmarks'
-  | 'practice'
-  | 'history';
+export type QuestionOrigin = 'dashboard' | 'bookmarks' | 'practice' | 'history';
 
 export type QuestionMode = 'review';
 

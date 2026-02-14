@@ -9,9 +9,9 @@ describe('lib/routes', () => {
     );
   });
 
-  it('supports origin query parameters for question routes', () => {
-    expect(toQuestionRoute('opioid-use-disorder', { from: 'review' })).toBe(
-      '/app/questions/opioid-use-disorder?from=review',
+  it("supports 'history' origin query parameter for question routes", () => {
+    expect(toQuestionRoute('opioid-use-disorder', { from: 'history' })).toBe(
+      '/app/questions/opioid-use-disorder?from=history',
     );
   });
 
@@ -87,12 +87,6 @@ describe('lib/routes', () => {
   it('builds practice session routes from the practice base path', () => {
     expect(toPracticeSessionRoute('session_123')).toBe(
       '/app/practice/session_123',
-    );
-  });
-
-  it('supports history origin query parameters for question routes', () => {
-    expect(toQuestionRoute('opioid-use-disorder', { from: 'history' })).toBe(
-      '/app/questions/opioid-use-disorder?from=history',
     );
   });
 });

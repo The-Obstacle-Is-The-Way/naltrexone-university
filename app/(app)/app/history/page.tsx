@@ -4,10 +4,8 @@ import {
   type GetSessionHistoryOutput,
   getSessionHistory,
 } from '@/src/adapters/controllers/practice-controller';
-import {
-  type GetAttemptedQuestionsOutput,
-  getAttemptedQuestions,
-} from '@/src/adapters/controllers/review-controller';
+import { getAttemptedQuestions } from '@/src/adapters/controllers/review-controller';
+import { getTags } from '@/src/adapters/controllers/tag-controller';
 import { HistoryPageClient } from './history-page-client';
 import {
   parseDifficultyFilter,
@@ -37,10 +35,12 @@ type HistorySearchParams = {
 export function createHistoryPage(deps?: {
   getSessionHistoryFn?: typeof getSessionHistory;
   getAttemptedQuestionsFn?: typeof getAttemptedQuestions;
+  getTagsFn?: typeof getTags;
 }) {
   const getSessionHistoryFn = deps?.getSessionHistoryFn ?? getSessionHistory;
   const getAttemptedQuestionsFn =
     deps?.getAttemptedQuestionsFn ?? getAttemptedQuestions;
+  const getTagsFn = deps?.getTagsFn ?? getTags;
 
   return async function HistoryPage({
     searchParams,
@@ -48,35 +48,45 @@ export function createHistoryPage(deps?: {
     searchParams: Promise<HistorySearchParams>;
   }) {
     const params = await searchParams;
-    const rawTab = params.tab;
-    const activeTab = parseHistoryTab(rawTab);
+    const activeTab = parseHistoryTab(params.tab);
     const limit = parseLimit(params.limit);
     const offset = parseNonNegativeInt(params.offset, 0);
-
-    const defaultResultFilter =
-      rawTab === 'missed' ? ('incorrect' as const) : null;
 
     if (activeTab === 'questions') {
       const questionsFilters: QuestionsFilters = {
         difficulty: parseDifficultyFilter(params.difficulty),
         tagSlug: parseTagSlugFilter(params.tag),
-        result: parseResultFilter(params.result) ?? defaultResultFilter,
+        result: parseResultFilter(params.result),
         source: parseSourceFilter(params.source),
       };
 
-      const result: ActionResult<GetAttemptedQuestionsOutput> =
-        await getAttemptedQuestionsFn({
+      const [result, tagsResult] = await Promise.all([
+        getAttemptedQuestionsFn({
           limit,
           offset,
           result: questionsFilters.result ?? undefined,
           source: questionsFilters.source ?? undefined,
-        });
+          difficulty: questionsFilters.difficulty ?? undefined,
+          tagSlug: questionsFilters.tagSlug ?? undefined,
+        }),
+        getTagsFn({}),
+      ]);
+
+      const tagOptions = tagsResult.ok
+        ? tagsResult.data.rows
+            .map((t) => ({ slug: t.slug, name: t.name }))
+            .sort(
+              (a, b) =>
+                a.name.localeCompare(b.name) || a.slug.localeCompare(b.slug),
+            )
+        : [];
 
       return (
         <HistoryPageClient
           activeTab="questions"
           questionsResult={result}
           questionsFilters={questionsFilters}
+          questionsTagOptions={tagOptions}
         />
       );
     }

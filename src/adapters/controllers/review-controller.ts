@@ -18,6 +18,8 @@ const GetAttemptedQuestionsInputSchema = z
     offset: z.number().int().min(0),
     result: z.enum(['correct', 'incorrect']).optional(),
     source: z.enum(['tutor', 'exam', 'adhoc']).optional(),
+    difficulty: z.enum(['easy', 'medium', 'hard']).optional(),
+    tagSlug: z.string().min(1).optional(),
   })
   .strict();
 
@@ -56,6 +58,8 @@ export const getAttemptedQuestions = createAction({
       offset: input.offset,
       result: input.result ?? null,
       source: input.source ?? null,
+      difficulty: input.difficulty ?? null,
+      tagSlug: input.tagSlug ?? null,
     });
   },
 });

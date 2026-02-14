@@ -13,6 +13,9 @@ import {
   ATTEMPTS_SESSION_QUESTION_UQ,
   attempts,
   practiceSessions,
+  questions,
+  questionTags,
+  tags,
 } from '@/db/schema';
 import { ApplicationError } from '@/src/application/errors';
 import type {
@@ -30,6 +33,7 @@ import {
   getPostgresConstraintName,
   isPostgresUniqueViolation,
 } from './postgres-errors';
+import { latestAttemptRankSql } from './shared/latest-attempt-rank-sql';
 
 export class DrizzleAttemptRepository implements AttemptRepository {
   constructor(private readonly db: DrizzleDb) {}
@@ -41,10 +45,11 @@ export class DrizzleAttemptRepository implements AttemptRepository {
         answeredAt: attempts.answeredAt,
         practiceSessionId: attempts.practiceSessionId,
         isCorrect: attempts.isCorrect,
-        attemptRank:
-          sql<number>`row_number() over (partition by ${attempts.questionId} order by ${attempts.answeredAt} desc, ${attempts.id} desc)`.as(
-            'attempt_rank',
-          ),
+        attemptRank: latestAttemptRankSql({
+          questionId: attempts.questionId,
+          answeredAt: attempts.answeredAt,
+          id: attempts.id,
+        }).as('attempt_rank'),
       })
       .from(attempts)
       .where(eq(attempts.userId, userId))
@@ -74,6 +79,22 @@ export class DrizzleAttemptRepository implements AttemptRepository {
     // The `practiceSessions.mode` filter requires the `leftJoin(practiceSessions, ...)` below.
     if (sourceFilter === 'tutor' || sourceFilter === 'exam') {
       conditions.push(eq(practiceSessions.mode, sourceFilter));
+    }
+
+    const difficulty = filters?.difficulty ?? null;
+    const tagSlug = filters?.tagSlug ?? null;
+    if (difficulty || tagSlug) {
+      // Attempted-question difficulty/tags are derived from published question metadata.
+      // This matches History's available-row semantics (unpublished questions have no metadata).
+      conditions.push(eq(questions.status, 'published'));
+    }
+
+    if (difficulty) {
+      conditions.push(eq(questions.difficulty, difficulty));
+    }
+
+    if (tagSlug) {
+      conditions.push(eq(tags.slug, tagSlug));
     }
 
     return conditions;
@@ -133,13 +154,13 @@ export class DrizzleAttemptRepository implements AttemptRepository {
     userId: string,
     page: PageOptions,
   ): Promise<readonly Attempt[]> {
-    const limit = Number.isFinite(page.limit) ? Math.floor(page.limit) : 0;
-    const offset = Number.isFinite(page.offset) ? Math.floor(page.offset) : 0;
-
-    const safeLimit = Math.max(0, limit);
+    const safeLimit =
+      Number.isInteger(page.limit) && page.limit > 0 ? page.limit : 0;
     if (safeLimit === 0) return [];
 
-    const safeOffset = Math.max(0, offset);
+    const safeOffset = Number.isInteger(page.offset)
+      ? Math.max(0, page.offset)
+      : 0;
 
     const rows = await this.db.query.attempts.findMany({
       where: eq(attempts.userId, userId),
@@ -307,7 +328,8 @@ export class DrizzleAttemptRepository implements AttemptRepository {
       filters,
     );
 
-    const rows = await this.db
+    const tagSlug = filters?.tagSlug ?? null;
+    const baseQuery = this.db
       .select({
         questionId: latestAttemptRows.questionId,
         answeredAt: latestAttemptRows.answeredAt,
@@ -320,6 +342,15 @@ export class DrizzleAttemptRepository implements AttemptRepository {
         practiceSessions,
         eq(latestAttemptRows.practiceSessionId, practiceSessions.id),
       )
+      .leftJoin(questions, eq(latestAttemptRows.questionId, questions.id));
+
+    const query = tagSlug
+      ? baseQuery
+          .leftJoin(questionTags, eq(questions.id, questionTags.questionId))
+          .leftJoin(tags, eq(questionTags.tagId, tags.id))
+      : baseQuery;
+
+    const rows = await query
       .where(and(...conditions))
       .orderBy(
         desc(latestAttemptRows.answeredAt),
@@ -353,16 +384,25 @@ export class DrizzleAttemptRepository implements AttemptRepository {
       filters,
     );
 
-    const [row] = await this.db
-      .select({ count: sql<number>`count(*)::int` })
+    const tagSlug = filters?.tagSlug ?? null;
+    const baseQuery = this.db
+      .select({
+        count: sql<number>`count(distinct ${latestAttemptRows.questionId})::int`,
+      })
       .from(latestAttemptRows)
-      // leftJoin always applied for simplicity — the join is only needed when
-      // source filter is tutor/exam, but the overhead is negligible at current scale.
       .leftJoin(
         practiceSessions,
         eq(latestAttemptRows.practiceSessionId, practiceSessions.id),
       )
-      .where(and(...conditions));
+      .leftJoin(questions, eq(latestAttemptRows.questionId, questions.id));
+
+    const query = tagSlug
+      ? baseQuery
+          .leftJoin(questionTags, eq(questions.id, questionTags.questionId))
+          .leftJoin(tags, eq(questionTags.tagId, tags.id))
+      : baseQuery;
+
+    const [row] = await query.where(and(...conditions));
 
     return row?.count ?? 0;
   }

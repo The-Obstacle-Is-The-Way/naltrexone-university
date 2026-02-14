@@ -20,7 +20,6 @@ import { useQuestionPageController } from './use-question-page-controller';
 
 function parseQuestionOrigin(value: string | undefined): QuestionOrigin | null {
   if (value === 'dashboard') return value;
-  if (value === 'review') return value;
   if (value === 'bookmarks') return value;
   if (value === 'practice') return value;
   if (value === 'history') return value;
@@ -41,14 +40,6 @@ function getOriginUi(
   subtitle: string;
 } {
   const resolvedOrigin = origin ?? 'dashboard';
-
-  if (resolvedOrigin === 'review') {
-    return {
-      backHref: `${ROUTES.APP_HISTORY}?tab=missed`,
-      backLabel: 'Back to History',
-      subtitle: 'Reattempt a question from your review list.',
-    };
-  }
 
   if (resolvedOrigin === 'history') {
     return {

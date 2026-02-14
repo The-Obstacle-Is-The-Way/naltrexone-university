@@ -23,10 +23,6 @@ describe('app/(app)/app/history/history-search-params', () => {
       expect(parseHistoryTab('sessions')).toBe('sessions');
       expect(parseHistoryTab('questions')).toBe('questions');
     });
-
-    it('returns questions for missed value (backward compat alias)', () => {
-      expect(parseHistoryTab('missed')).toBe('questions');
-    });
   });
 
   describe('parseNonNegativeInt', () => {
@@ -106,10 +102,6 @@ describe('app/(app)/app/history/history-search-params', () => {
       expect(parseSourceFilter('tutor')).toBe('tutor');
       expect(parseSourceFilter('exam')).toBe('exam');
       expect(parseSourceFilter('adhoc')).toBe('adhoc');
-    });
-
-    it('returns adhoc for legacy quick alias', () => {
-      expect(parseSourceFilter('quick')).toBe('adhoc');
     });
   });
 

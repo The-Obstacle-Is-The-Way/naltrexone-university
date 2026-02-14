@@ -2,7 +2,7 @@
 
 **Last Updated:** _Not active_
 **Current Slice:** _None_
-**Purpose:** State file for Ralph Wiggum loop (see `docs/_ralphwiggum/protocol.md`)
+**Purpose:** State file for Ralph Wiggum loop (see `protocol.md` in this folder)
 
 > **Note:** This file is only used when running the Ralph Wiggum autonomous loop.
 > When active, the loop reads this file to find the next unchecked task.

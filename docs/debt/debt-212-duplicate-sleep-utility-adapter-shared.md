@@ -59,5 +59,5 @@ Given the functions are 3 lines, private, and stable, this can reasonably be acc
 
 ## Related
 
-- `src/adapters/shared/retry.ts` — Exponential backoff with jitter for Stripe SDK calls
+- `src/adapters/shared/retry.ts` — Shared retry helper for external calls (exponential backoff)
 - `src/adapters/shared/with-idempotency.ts` — Idempotency key polling with sleep between retries

@@ -10,36 +10,52 @@ vi.mock('next/link', () => ({
   default: (props: Record<string, unknown>) => <a {...props} />,
 }));
 
+type AttemptedQuestionRow = GetAttemptedQuestionsOutput['rows'][number];
+type AvailableAttemptedQuestionRow = Extract<
+  AttemptedQuestionRow,
+  { isAvailable: true }
+>;
+
+function createAvailableAttemptedQuestionRow(
+  overrides: Partial<AvailableAttemptedQuestionRow> = {},
+): AvailableAttemptedQuestionRow {
+  return {
+    isAvailable: true,
+    questionId: 'q_1',
+    isCorrect: false,
+    sessionId: null,
+    sessionMode: null,
+    slug: 'q-1',
+    stemMd: 'Stem for q1',
+    difficulty: 'easy',
+    tagSlugs: [],
+    lastAnsweredAt: '2026-02-01T00:00:00.000Z',
+    ...overrides,
+  };
+}
+
 describe('HistoryQuestionsTab', () => {
   it('renders attempted question cards with expected metadata and action links', () => {
     const result: ActionResult<GetAttemptedQuestionsOutput> = {
       ok: true,
       data: {
         rows: [
-          {
-            isAvailable: true,
+          createAvailableAttemptedQuestionRow({
             questionId: 'q_correct',
             isCorrect: true,
             sessionId: 'session-1',
             sessionMode: 'exam',
             slug: 'q-correct',
             stemMd: 'Stem for correct',
-            difficulty: 'easy',
             tagSlugs: ['opioids'],
-            lastAnsweredAt: '2026-02-01T00:00:00.000Z',
-          },
-          {
-            isAvailable: true,
+          }),
+          createAvailableAttemptedQuestionRow({
             questionId: 'q_incorrect',
-            isCorrect: false,
-            sessionId: null,
-            sessionMode: null,
             slug: 'q-incorrect',
             stemMd: 'Stem for incorrect',
             difficulty: 'hard',
-            tagSlugs: [],
             lastAnsweredAt: '2026-02-02T00:00:00.000Z',
-          },
+          }),
         ],
         totalCount: 2,
         limit: 20,
@@ -80,18 +96,13 @@ describe('HistoryQuestionsTab', () => {
       ok: true,
       data: {
         rows: [
-          {
-            isAvailable: true,
+          createAvailableAttemptedQuestionRow({
             questionId: 'q_incorrect',
-            isCorrect: false,
-            sessionId: null,
-            sessionMode: null,
             slug: 'q-incorrect',
             stemMd: 'Stem for incorrect',
             difficulty: 'hard',
-            tagSlugs: [],
             lastAnsweredAt: '2026-02-02T00:00:00.000Z',
-          },
+          }),
         ],
         totalCount: 1,
         limit: 20,
@@ -120,18 +131,9 @@ describe('HistoryQuestionsTab', () => {
       ok: true,
       data: {
         rows: [
-          {
-            isAvailable: true,
-            questionId: 'q_1',
-            isCorrect: false,
-            sessionId: null,
-            sessionMode: null,
-            slug: 'q-1',
+          createAvailableAttemptedQuestionRow({
             stemMd: longStem,
-            difficulty: 'easy',
-            tagSlugs: [],
-            lastAnsweredAt: '2026-02-01T00:00:00.000Z',
-          },
+          }),
         ],
         totalCount: 1,
         limit: 20,
@@ -150,18 +152,9 @@ describe('HistoryQuestionsTab', () => {
       ok: true,
       data: {
         rows: [
-          {
-            isAvailable: true,
-            questionId: 'q_1',
-            isCorrect: false,
-            sessionId: null,
-            sessionMode: null,
-            slug: 'q-1',
-            stemMd: 'Stem for q1',
-            difficulty: 'easy',
+          createAvailableAttemptedQuestionRow({
             tagSlugs: ['opioids'],
-            lastAnsweredAt: '2026-02-01T00:00:00.000Z',
-          },
+          }),
         ],
         totalCount: 1,
         limit: 20,
@@ -169,7 +162,12 @@ describe('HistoryQuestionsTab', () => {
       },
     };
 
-    const html = renderToStaticMarkup(<HistoryQuestionsTab result={result} />);
+    const html = renderToStaticMarkup(
+      <HistoryQuestionsTab
+        result={result}
+        tagOptions={[{ slug: 'opioids', name: 'Opioids' }]}
+      />,
+    );
     const doc = new DOMParser().parseFromString(html, 'text/html');
 
     const resultSelect = doc.querySelector('select[name="result"]');
@@ -223,7 +221,80 @@ describe('HistoryQuestionsTab', () => {
     ).toBe(true);
 
     expect(doc.querySelector('select[name="difficulty"]')).not.toBeNull();
-    expect(doc.querySelector('select[name="tag"]')).not.toBeNull();
+    const tagSelect = doc.querySelector('select[name="tag"]');
+    expect(tagSelect).not.toBeNull();
+    expect(
+      Array.from(tagSelect?.querySelectorAll('option') ?? []).some(
+        (option) =>
+          option.getAttribute('value') === 'opioids' &&
+          option.textContent === 'Opioids',
+      ),
+    ).toBe(true);
+  });
+
+  it('does not render a client-side filtering "(X visible after filters)" hint', () => {
+    const result: ActionResult<GetAttemptedQuestionsOutput> = {
+      ok: true,
+      data: {
+        rows: [
+          createAvailableAttemptedQuestionRow({
+            questionId: 'q_easy',
+            isCorrect: true,
+            slug: 'q-easy',
+            stemMd: 'Stem for easy',
+          }),
+          createAvailableAttemptedQuestionRow({
+            questionId: 'q_hard',
+            slug: 'q-hard',
+            stemMd: 'Stem for hard',
+            difficulty: 'hard',
+            lastAnsweredAt: '2026-02-02T00:00:00.000Z',
+          }),
+        ],
+        totalCount: 2,
+        limit: 20,
+        offset: 0,
+      },
+    };
+
+    const html = renderToStaticMarkup(
+      <HistoryQuestionsTab result={result} filters={{ difficulty: 'hard' }} />,
+    );
+
+    expect(html).not.toContain('visible after filters');
+  });
+
+  it('does not render the client-side mismatch empty-state card for difficulty/tag filters', () => {
+    const result: ActionResult<GetAttemptedQuestionsOutput> = {
+      ok: true,
+      data: {
+        rows: [
+          createAvailableAttemptedQuestionRow({
+            questionId: 'q_easy_1',
+            isCorrect: true,
+            slug: 'q-easy-1',
+            stemMd: 'Stem for easy 1',
+          }),
+          createAvailableAttemptedQuestionRow({
+            questionId: 'q_easy_2',
+            slug: 'q-easy-2',
+            stemMd: 'Stem for easy 2',
+            lastAnsweredAt: '2026-02-02T00:00:00.000Z',
+          }),
+        ],
+        totalCount: 2,
+        limit: 20,
+        offset: 0,
+      },
+    };
+
+    const html = renderToStaticMarkup(
+      <HistoryQuestionsTab result={result} filters={{ difficulty: 'hard' }} />,
+    );
+
+    expect(html).not.toContain(
+      'No questions on this page match the selected difficulty/tag filters.',
+    );
   });
 
   it('renders empty state when there are no attempted questions', () => {
@@ -247,30 +318,14 @@ describe('HistoryQuestionsTab', () => {
       ok: true,
       data: {
         rows: [
-          {
-            isAvailable: true,
+          createAvailableAttemptedQuestionRow({
             questionId: 'q_1',
-            isCorrect: false,
-            sessionId: null,
-            sessionMode: null,
-            slug: 'q-1',
-            stemMd: 'Stem for q1',
-            difficulty: 'easy',
-            tagSlugs: [],
-            lastAnsweredAt: '2026-02-01T00:00:00.000Z',
-          },
-          {
-            isAvailable: true,
+          }),
+          createAvailableAttemptedQuestionRow({
             questionId: 'q_2',
-            isCorrect: false,
-            sessionId: null,
-            sessionMode: null,
             slug: 'q-2',
             stemMd: 'Stem for q2',
-            difficulty: 'easy',
-            tagSlugs: [],
-            lastAnsweredAt: '2026-02-01T00:00:00.000Z',
-          },
+          }),
         ],
         totalCount: 10,
         limit: 2,
@@ -323,30 +378,17 @@ describe('HistoryQuestionsTab', () => {
       ok: true,
       data: {
         rows: [
-          {
-            isAvailable: true,
+          createAvailableAttemptedQuestionRow({
             questionId: 'q_correct',
             isCorrect: true,
-            sessionId: null,
-            sessionMode: null,
             slug: 'q-correct',
             stemMd: 'Stem for correct',
-            difficulty: 'easy',
-            tagSlugs: [],
-            lastAnsweredAt: '2026-02-01T00:00:00.000Z',
-          },
-          {
-            isAvailable: true,
+          }),
+          createAvailableAttemptedQuestionRow({
             questionId: 'q_incorrect',
-            isCorrect: false,
-            sessionId: null,
-            sessionMode: null,
             slug: 'q-incorrect',
             stemMd: 'Stem for incorrect',
-            difficulty: 'easy',
-            tagSlugs: [],
-            lastAnsweredAt: '2026-02-01T00:00:00.000Z',
-          },
+          }),
         ],
         totalCount: 2,
         limit: 20,

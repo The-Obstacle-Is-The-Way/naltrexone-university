@@ -1,5 +1,8 @@
 import type { Attempt } from '@/src/domain/entities';
-import type { PracticeMode } from '@/src/domain/value-objects';
+import type {
+  PracticeMode,
+  QuestionDifficulty,
+} from '@/src/domain/value-objects';
 
 export type PageOptions = {
   limit: number;
@@ -34,6 +37,8 @@ export type AttemptedQuestionsSourceFilter = 'tutor' | 'exam' | 'adhoc';
 export type AttemptedQuestionsFilters = {
   result?: AttemptedQuestionsResultFilter | null;
   source?: AttemptedQuestionsSourceFilter | null;
+  difficulty?: QuestionDifficulty | null;
+  tagSlug?: string | null;
 };
 
 export type RecentAttempt = Attempt & {

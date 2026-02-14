@@ -9,9 +9,11 @@ function createDbMock() {
   const queryFindMany = vi.fn();
 
   const insertReturning = vi.fn();
-  const insertOnConflict = vi.fn(() => ({ returning: insertReturning }));
+  const insertOnConflictDoUpdate = vi.fn(() => ({
+    returning: insertReturning,
+  }));
   const insertValues = vi.fn(() => ({
-    onConflictDoNothing: insertOnConflict,
+    onConflictDoUpdate: insertOnConflictDoUpdate,
   }));
   const insert = vi.fn(() => ({ values: insertValues }));
 
@@ -32,7 +34,7 @@ function createDbMock() {
       queryFindFirst,
       queryFindMany,
       insertReturning,
-      insertOnConflict,
+      insertOnConflictDoUpdate,
       insertValues,
       deleteReturning,
       deleteWhere,
@@ -91,29 +93,9 @@ describe('DrizzleBookmarkRepository', () => {
       });
     });
 
-    it('falls back to existing bookmark when insert conflicts', async () => {
-      const db = createDbMock();
-      const createdAt = new Date('2026-02-01T00:00:00Z');
-      db._mocks.insertReturning.mockResolvedValue([]);
-      db._mocks.queryFindFirst.mockResolvedValue({
-        userId: 'user_1',
-        questionId: 'question_1',
-        createdAt,
-      });
-
-      const repo = new DrizzleBookmarkRepository(db as unknown as RepoDb);
-
-      await expect(repo.add('user_1', 'question_1')).resolves.toEqual({
-        userId: 'user_1',
-        questionId: 'question_1',
-        createdAt,
-      });
-    });
-
-    it('throws INTERNAL_ERROR when insert conflicts and row is missing', async () => {
+    it('throws INTERNAL_ERROR when insert returns no rows', async () => {
       const db = createDbMock();
       db._mocks.insertReturning.mockResolvedValue([]);
-      db._mocks.queryFindFirst.mockResolvedValue(null);
 
       const repo = new DrizzleBookmarkRepository(db as unknown as RepoDb);
 

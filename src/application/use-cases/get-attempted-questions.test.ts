@@ -402,6 +402,108 @@ describe('GetAttemptedQuestionsUseCase', () => {
       new FakeLogger(),
     );
 
+  it('supports difficulty filter (hard)', async () => {
+    const questions = [
+      createQuestion({
+        id: 'q_easy',
+        slug: 'q-easy',
+        stemMd: 'Stem for easy',
+        difficulty: 'easy',
+      }),
+      createQuestion({
+        id: 'q_hard',
+        slug: 'q-hard',
+        stemMd: 'Stem for hard',
+        difficulty: 'hard',
+      }),
+    ];
+
+    const useCase = new GetAttemptedQuestionsUseCase(
+      new FakeAttemptRepository(
+        [
+          createAttempt({
+            userId: 'user-1',
+            questionId: 'q_easy',
+            isCorrect: true,
+            answeredAt: new Date('2026-02-01T10:00:00Z'),
+          }),
+          createAttempt({
+            userId: 'user-1',
+            questionId: 'q_hard',
+            isCorrect: true,
+            answeredAt: new Date('2026-02-01T12:00:00Z'),
+          }),
+        ],
+        { questions },
+      ),
+      new FakeQuestionRepository(questions),
+      new FakeLogger(),
+    );
+
+    await expect(
+      useCase.execute({
+        userId: 'user-1',
+        limit: 10,
+        offset: 0,
+        difficulty: 'hard',
+      }),
+    ).resolves.toMatchObject({
+      rows: [{ questionId: 'q_hard', difficulty: 'hard' }],
+      totalCount: 1,
+    });
+  });
+
+  it('supports tagSlug filter', async () => {
+    const questions = [
+      createQuestion({
+        id: 'q_opioids',
+        slug: 'q-opioids',
+        stemMd: 'Stem for opioids',
+        tags: [createTag({ slug: 'opioids', name: 'Opioids' })],
+      }),
+      createQuestion({
+        id: 'q_alcohol',
+        slug: 'q-alcohol',
+        stemMd: 'Stem for alcohol',
+        tags: [createTag({ slug: 'alcohol', name: 'Alcohol' })],
+      }),
+    ];
+
+    const useCase = new GetAttemptedQuestionsUseCase(
+      new FakeAttemptRepository(
+        [
+          createAttempt({
+            userId: 'user-1',
+            questionId: 'q_opioids',
+            isCorrect: true,
+            answeredAt: new Date('2026-02-01T10:00:00Z'),
+          }),
+          createAttempt({
+            userId: 'user-1',
+            questionId: 'q_alcohol',
+            isCorrect: true,
+            answeredAt: new Date('2026-02-01T12:00:00Z'),
+          }),
+        ],
+        { questions },
+      ),
+      new FakeQuestionRepository(questions),
+      new FakeLogger(),
+    );
+
+    await expect(
+      useCase.execute({
+        userId: 'user-1',
+        limit: 10,
+        offset: 0,
+        tagSlug: 'opioids',
+      }),
+    ).resolves.toMatchObject({
+      rows: [{ questionId: 'q_opioids', tagSlugs: ['opioids'] }],
+      totalCount: 1,
+    });
+  });
+
   it('supports source filter (adhoc)', async () => {
     const useCase = createUseCaseWithSourceAttempts();
 

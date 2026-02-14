@@ -62,7 +62,7 @@ This prompt runs headless via one of these agents:
 ### Claude Code (Default)
 ```bash
 while true; do
-  claude --dangerously-skip-permissions -p "$(cat PROMPT.md)"
+  claude --dangerously-skip-permissions -p "$(cat docs/_ralphwiggum/PROMPT.md)"
   sleep 2
 done
 ```
@@ -70,14 +70,14 @@ done
 ### Codex CLI (OpenAI Alternative)
 ```bash
 while true; do
-  codex exec --full-auto "$(cat PROMPT.md)"
+  codex exec --full-auto "$(cat docs/_ralphwiggum/PROMPT.md)"
   sleep 2
 done
 ```
 
 See `docs/_ralphwiggum/protocol.md` for full setup and agent options.
 
-If `PROGRESS.md` has no unchecked items, exit cleanly without making changes.
+If `docs/_ralphwiggum/PROGRESS.md` has no unchecked items, exit cleanly without making changes.
 
 ---
 
@@ -87,7 +87,7 @@ If `PROGRESS.md` has no unchecked items, exit cleanly without making changes.
 
 ### Step 1: Read State Files
 ```bash
-cat PROGRESS.md
+cat docs/_ralphwiggum/PROGRESS.md
 cat docs/specs/master_spec.md
 ```
 
@@ -133,7 +133,7 @@ Before implementing anything, examine existing code to understand:
 
 ## Your Task This Iteration
 
-1. Find the **FIRST** unchecked `[ ]` item in PROGRESS.md
+1. Find the **FIRST** unchecked `[ ]` item in `docs/_ralphwiggum/PROGRESS.md`
    - If there are no unchecked items, exit cleanly (do not invent new tasks)
 2. Read the corresponding section in `docs/specs/master_spec.md`
 3. Complete that ONE item fully
@@ -269,7 +269,7 @@ If you made no changes (no active tasks), exit without committing.
 
 1. **SLOT PROTECTION: Study existing code patterns BEFORE writing anything**
 2. **ONE task per iteration**
-3. **Read PROGRESS.md first**
+3. **Read `docs/_ralphwiggum/PROGRESS.md` first**
 4. **Read master_spec.md for task details**
 5. **TDD: Write tests BEFORE implementation (Red → Green → Refactor)**
 6. **SOLID/DRY/Clean Code principles always**
@@ -292,7 +292,7 @@ Before writing code, verify you understand:
 ## File Locations
 
 - Master Spec: `docs/specs/master_spec.md`
-- Progress: `PROGRESS.md` (root)
+- Progress: `docs/_ralphwiggum/PROGRESS.md`
 - Source: `app/`, `lib/`, `components/`
 - Tests: `__tests__/`, `*.test.ts`
 - Config: `biome.json`, `drizzle.config.ts`, `tailwind.config.ts`
@@ -301,7 +301,7 @@ Before writing code, verify you understand:
 
 ## Completion
 
-When ALL items in PROGRESS.md are checked AND all quality gates pass, exit cleanly.
+When ALL items in `docs/_ralphwiggum/PROGRESS.md` are checked AND all quality gates pass, exit cleanly.
 
 The loop operator verifies via PROGRESS.md state (checking for `[ ]`), not by parsing output.
 

@@ -7,7 +7,6 @@ import {
   notInArray,
   or,
   type SQL,
-  sql,
 } from 'drizzle-orm';
 import type { Choice, Question, QuestionTag, Tag } from '@/db/schema';
 import {
@@ -27,6 +26,7 @@ import {
   type QuestionProgressStatus,
 } from '@/src/domain/value-objects';
 import type { DrizzleDb } from '../shared/database-types';
+import { latestAttemptRankSql } from './shared/latest-attempt-rank-sql';
 
 export class DrizzleQuestionRepository implements QuestionRepository {
   constructor(private readonly db: DrizzleDb) {}
@@ -120,24 +120,23 @@ export class DrizzleQuestionRepository implements QuestionRepository {
 
     const baseOrderBy = [desc(questions.createdAt), asc(questions.id)] as const;
 
-    if (!hasTagFilter) {
-      const rows = await this.db
-        .select({ id: questions.id })
-        .from(questions)
-        .where(and(...whereParts))
-        .orderBy(...baseOrderBy);
-
-      return rows.map((r) => r.id);
-    }
-
-    const rows = await this.db
+    const baseQuery = this.db
       .select({ id: questions.id, createdAt: questions.createdAt })
-      .from(questions)
-      .innerJoin(questionTags, eq(questionTags.questionId, questions.id))
-      .innerJoin(tags, eq(tags.id, questionTags.tagId))
-      .where(and(...whereParts, inArray(tags.slug, [...filters.tagSlugs])))
-      .groupBy(questions.id, questions.createdAt)
-      .orderBy(desc(questions.createdAt), asc(questions.id));
+      .from(questions);
+
+    const where = hasTagFilter
+      ? and(...whereParts, inArray(tags.slug, [...filters.tagSlugs]))
+      : and(...whereParts);
+
+    const query = hasTagFilter
+      ? baseQuery
+          .innerJoin(questionTags, eq(questionTags.questionId, questions.id))
+          .innerJoin(tags, eq(tags.id, questionTags.tagId))
+          .where(where)
+          .groupBy(questions.id, questions.createdAt)
+      : baseQuery.where(where);
+
+    const rows = await query.orderBy(...baseOrderBy);
 
     return rows.map((r) => r.id);
   }
@@ -147,10 +146,11 @@ export class DrizzleQuestionRepository implements QuestionRepository {
       .select({
         questionId: attempts.questionId,
         isCorrect: attempts.isCorrect,
-        attemptRank:
-          sql<number>`row_number() over (partition by ${attempts.questionId} order by ${attempts.answeredAt} desc, ${attempts.id} desc)`.as(
-            'attempt_rank',
-          ),
+        attemptRank: latestAttemptRankSql({
+          questionId: attempts.questionId,
+          answeredAt: attempts.answeredAt,
+          id: attempts.id,
+        }).as('attempt_rank'),
       })
       .from(attempts)
       .where(eq(attempts.userId, userId))
