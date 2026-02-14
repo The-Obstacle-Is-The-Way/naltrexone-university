@@ -20,7 +20,6 @@ Implementation specifications provide detailed technical guidance for building e
 | [Master Spec](./master_spec.md) | Complete Technical Specification (SSOT) | Living | All |
 | [SPEC-016](./spec-016-observability.md) | Observability (Logging, Error Tracking) | Partially Implemented | Infrastructure |
 | [SPEC-017](./spec-017-rate-limiting.md) | Rate Limiting | Partial (MVP done) | Infrastructure |
-| [SPEC-028](./spec-028-status-filter-segmented-control.md) | Status & Difficulty Filter — Segmented Control Redesign | Ready | Feature |
 
 **Master Spec split parts (readability):**
 
@@ -60,6 +59,7 @@ Implementation specifications provide detailed technical guidance for building e
 | [SPEC-025](../_archive/specs/spec-025-choice-label-desync-fix.md) | Choice Label Desync Fix (Standalone Question Page) | Feature |
 | [SPEC-026](../_archive/specs/spec-026-history-review-only.md) | History Tab — Review-Only Question Links | Feature |
 | [SPEC-027](../_archive/specs/spec-027-session-review-navigation.md) | Session Review Navigation (Sequential Nav + Attempt Identity) | Feature |
+| [SPEC-028](../_archive/specs/spec-028-status-filter-segmented-control.md) | Status & Difficulty Filter — Segmented Control Redesign | Feature |
 
 ## Spec Statuses
 
