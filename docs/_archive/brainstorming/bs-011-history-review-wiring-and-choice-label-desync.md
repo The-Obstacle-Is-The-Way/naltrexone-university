@@ -5,6 +5,7 @@
 **Triggered by:** Systematic Chrome browser audit of all review mode entry points and feedback rendering
 **Scope:** Two related-but-independent bugs found during the same audit session
 **Related:** BS-009 (session navigation gap), BS-010 (attempt identity gap), SPEC-023 (question review mode)
+**Resolved:** Bug A by SPEC-026 (Implemented), Bug B by SPEC-025 (Implemented)
 
 ---
 
