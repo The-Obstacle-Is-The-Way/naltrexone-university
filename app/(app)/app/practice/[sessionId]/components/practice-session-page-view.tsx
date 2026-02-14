@@ -1,4 +1,8 @@
 import { PracticeView } from '@/app/(app)/app/practice/components/practice-view';
+import {
+  fireAndForget,
+  logUnhandledAsyncError,
+} from '@/app/(app)/app/practice/fire-and-forget';
 import { ErrorCard } from '@/components/error-card';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -89,7 +93,13 @@ export function PracticeSessionPageView(props: PracticeSessionPageViewProps) {
           <Button
             type="button"
             variant="outline"
-            onClick={props.onFinalizeReview ?? props.onEndSession}
+            onClick={() => {
+              if (props.onFinalizeReview) {
+                fireAndForget(props.onFinalizeReview(), logUnhandledAsyncError);
+                return;
+              }
+              props.onEndSession();
+            }}
           >
             End session
           </Button>

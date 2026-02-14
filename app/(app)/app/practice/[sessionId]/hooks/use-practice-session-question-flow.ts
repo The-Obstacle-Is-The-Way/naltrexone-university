@@ -81,6 +81,8 @@ export function usePracticeSessionQuestionFlow(
     UsePracticeSessionQuestionFlowOutput['applySessionInfo']
   >((next) => {
     setSessionInfo((prev) => {
+      // applySessionInfo supports updater functions; call setSessionMode inside the setSessionInfo updater
+      // to sync sessionMode with the resolved sessionInfo value.
       const resolved = typeof next === 'function' ? next(prev) : next;
       if (resolved?.mode) {
         setSessionMode(resolved.mode);
@@ -177,6 +179,8 @@ export function usePracticeSessionQuestionFlow(
   ]);
 
   const onSubmit = useCallback((): Promise<SubmitAnswerOutput | null> => {
+    // `onSuccess` is invoked synchronously within submitAnswerForQuestion before the promise resolves,
+    // ensuring `captured` is populated before `.then(() => captured)` runs.
     let captured: SubmitAnswerOutput | null = null;
 
     return runTransitionedAsyncAction({

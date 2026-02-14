@@ -46,6 +46,9 @@ export function usePracticeSessionPageController(
     const submitResult = await questionFlow.onSubmit();
     if (reviewStage.isInReviewStage) return;
 
+    // Note: `questionFlow.loadState.status`, `questionFlow.sessionInfo`, `questionFlow.sessionMode`,
+    // and `reviewStage.isInReviewStage` are closure-captured and may be stale after the await.
+    // Today this is safe because mode/info don't change during submit, and auto-advance is gated by `submitResult`.
     maybeAutoAdvanceAfterSubmit({
       mode: questionFlow.sessionMode,
       submitResult,

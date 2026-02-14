@@ -2,6 +2,10 @@
 
 import { useRef } from 'react';
 import {
+  fireAndForget,
+  logUnhandledAsyncError,
+} from '@/app/(app)/app/practice/fire-and-forget';
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -211,10 +215,12 @@ export function ExamReviewView({
                   isFinalizingRef.current = true;
 
                   try {
-                    const finalizePromise = onFinalizeReview();
-                    void finalizePromise.finally(() => {
-                      isFinalizingRef.current = false;
-                    });
+                    fireAndForget(
+                      onFinalizeReview().finally(() => {
+                        isFinalizingRef.current = false;
+                      }),
+                      logUnhandledAsyncError,
+                    );
                   } catch (error) {
                     isFinalizingRef.current = false;
                     throw error;
