@@ -72,8 +72,8 @@ cd "$PROJECT_ROOT"
 MAX=$RALPH_MAX_ITERATIONS
 for i in \$(seq 1 \$MAX); do
   echo "=== Iteration \$i/\$MAX ==="
-  $agent_cmd "\$(cat PROMPT.md)" $agent_flags
-  if ! grep -q "^- \[ \]" PROGRESS.md 2>/dev/null; then
+  $agent_cmd "\$(cat docs/_ralphwiggum/PROMPT.md)" $agent_flags
+  if ! grep -q "^- \[ \]" docs/_ralphwiggum/PROGRESS.md 2>/dev/null; then
     echo "All tasks complete!"
     break
   fi
@@ -85,14 +85,14 @@ EOF
 
 start_loop() {
   # Check prerequisites
-  if [[ ! -f "$PROJECT_ROOT/PROMPT.md" ]]; then
-    echo "Error: PROMPT.md not found in $PROJECT_ROOT"
+  if [[ ! -f "$PROJECT_ROOT/docs/_ralphwiggum/PROMPT.md" ]]; then
+    echo "Error: docs/_ralphwiggum/PROMPT.md not found in $PROJECT_ROOT"
     echo "Create it first. See docs/_ralphwiggum/protocol.md"
     exit 1
   fi
 
-  if [[ ! -f "$PROJECT_ROOT/PROGRESS.md" ]]; then
-    echo "Error: PROGRESS.md not found in $PROJECT_ROOT"
+  if [[ ! -f "$PROJECT_ROOT/docs/_ralphwiggum/PROGRESS.md" ]]; then
+    echo "Error: docs/_ralphwiggum/PROGRESS.md not found in $PROJECT_ROOT"
     echo "Create it first. See docs/_ralphwiggum/protocol.md"
     exit 1
   fi
@@ -137,17 +137,17 @@ show_status() {
   fi
   echo ""
 
-  # PROGRESS.md status
-  if [[ -f "$PROJECT_ROOT/PROGRESS.md" ]]; then
+  # docs/_ralphwiggum/PROGRESS.md status
+  if [[ -f "$PROJECT_ROOT/docs/_ralphwiggum/PROGRESS.md" ]]; then
     local total
     local done
     local pending
-    total=$(grep -c "^\- \[" "$PROJECT_ROOT/PROGRESS.md" 2>/dev/null || echo "0")
-    done=$(grep -c "^\- \[x\]" "$PROJECT_ROOT/PROGRESS.md" 2>/dev/null || echo "0")
-    pending=$(grep -c "^\- \[ \]" "$PROJECT_ROOT/PROGRESS.md" 2>/dev/null || echo "0")
-    echo "PROGRESS.md: $done/$total complete ($pending pending)"
+    total=$(grep -c "^\- \[" "$PROJECT_ROOT/docs/_ralphwiggum/PROGRESS.md" 2>/dev/null || echo "0")
+    done=$(grep -c "^\- \[x\]" "$PROJECT_ROOT/docs/_ralphwiggum/PROGRESS.md" 2>/dev/null || echo "0")
+    pending=$(grep -c "^\- \[ \]" "$PROJECT_ROOT/docs/_ralphwiggum/PROGRESS.md" 2>/dev/null || echo "0")
+    echo "docs/_ralphwiggum/PROGRESS.md: $done/$total complete ($pending pending)"
   else
-    echo "PROGRESS.md: NOT FOUND"
+    echo "docs/_ralphwiggum/PROGRESS.md: NOT FOUND"
   fi
   echo ""
 
