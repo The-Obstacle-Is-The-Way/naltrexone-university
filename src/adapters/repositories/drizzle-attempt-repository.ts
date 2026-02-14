@@ -13,6 +13,9 @@ import {
   ATTEMPTS_SESSION_QUESTION_UQ,
   attempts,
   practiceSessions,
+  questions,
+  questionTags,
+  tags,
 } from '@/db/schema';
 import { ApplicationError } from '@/src/application/errors';
 import type {
@@ -74,6 +77,22 @@ export class DrizzleAttemptRepository implements AttemptRepository {
     // The `practiceSessions.mode` filter requires the `leftJoin(practiceSessions, ...)` below.
     if (sourceFilter === 'tutor' || sourceFilter === 'exam') {
       conditions.push(eq(practiceSessions.mode, sourceFilter));
+    }
+
+    const difficulty = filters?.difficulty ?? null;
+    const tagSlug = filters?.tagSlug ?? null;
+    if (difficulty || tagSlug) {
+      // Attempted-question difficulty/tags are derived from published question metadata.
+      // This matches History's available-row semantics (unpublished questions have no metadata).
+      conditions.push(eq(questions.status, 'published'));
+    }
+
+    if (difficulty) {
+      conditions.push(eq(questions.difficulty, difficulty));
+    }
+
+    if (tagSlug) {
+      conditions.push(eq(tags.slug, tagSlug));
     }
 
     return conditions;
@@ -307,26 +326,74 @@ export class DrizzleAttemptRepository implements AttemptRepository {
       filters,
     );
 
-    const rows = await this.db
-      .select({
-        questionId: latestAttemptRows.questionId,
-        answeredAt: latestAttemptRows.answeredAt,
-        isCorrect: latestAttemptRows.isCorrect,
-        sessionId: latestAttemptRows.practiceSessionId,
-        sessionMode: practiceSessions.mode,
-      })
-      .from(latestAttemptRows)
-      .leftJoin(
-        practiceSessions,
-        eq(latestAttemptRows.practiceSessionId, practiceSessions.id),
-      )
-      .where(and(...conditions))
-      .orderBy(
-        desc(latestAttemptRows.answeredAt),
-        desc(latestAttemptRows.questionId),
-      )
-      .limit(limit)
-      .offset(offset);
+    const difficulty = filters?.difficulty ?? null;
+    const tagSlug = filters?.tagSlug ?? null;
+    const rows = tagSlug
+      ? await this.db
+          .select({
+            questionId: latestAttemptRows.questionId,
+            answeredAt: latestAttemptRows.answeredAt,
+            isCorrect: latestAttemptRows.isCorrect,
+            sessionId: latestAttemptRows.practiceSessionId,
+            sessionMode: practiceSessions.mode,
+          })
+          .from(latestAttemptRows)
+          .leftJoin(
+            practiceSessions,
+            eq(latestAttemptRows.practiceSessionId, practiceSessions.id),
+          )
+          .leftJoin(questions, eq(latestAttemptRows.questionId, questions.id))
+          .leftJoin(questionTags, eq(questions.id, questionTags.questionId))
+          .leftJoin(tags, eq(questionTags.tagId, tags.id))
+          .where(and(...conditions))
+          .orderBy(
+            desc(latestAttemptRows.answeredAt),
+            desc(latestAttemptRows.questionId),
+          )
+          .limit(limit)
+          .offset(offset)
+      : difficulty
+        ? await this.db
+            .select({
+              questionId: latestAttemptRows.questionId,
+              answeredAt: latestAttemptRows.answeredAt,
+              isCorrect: latestAttemptRows.isCorrect,
+              sessionId: latestAttemptRows.practiceSessionId,
+              sessionMode: practiceSessions.mode,
+            })
+            .from(latestAttemptRows)
+            .leftJoin(
+              practiceSessions,
+              eq(latestAttemptRows.practiceSessionId, practiceSessions.id),
+            )
+            .leftJoin(questions, eq(latestAttemptRows.questionId, questions.id))
+            .where(and(...conditions))
+            .orderBy(
+              desc(latestAttemptRows.answeredAt),
+              desc(latestAttemptRows.questionId),
+            )
+            .limit(limit)
+            .offset(offset)
+        : await this.db
+            .select({
+              questionId: latestAttemptRows.questionId,
+              answeredAt: latestAttemptRows.answeredAt,
+              isCorrect: latestAttemptRows.isCorrect,
+              sessionId: latestAttemptRows.practiceSessionId,
+              sessionMode: practiceSessions.mode,
+            })
+            .from(latestAttemptRows)
+            .leftJoin(
+              practiceSessions,
+              eq(latestAttemptRows.practiceSessionId, practiceSessions.id),
+            )
+            .where(and(...conditions))
+            .orderBy(
+              desc(latestAttemptRows.answeredAt),
+              desc(latestAttemptRows.questionId),
+            )
+            .limit(limit)
+            .offset(offset);
 
     const result: AttemptedQuestionSummary[] = [];
     for (const row of rows) {
@@ -353,16 +420,44 @@ export class DrizzleAttemptRepository implements AttemptRepository {
       filters,
     );
 
-    const [row] = await this.db
-      .select({ count: sql<number>`count(*)::int` })
-      .from(latestAttemptRows)
-      // leftJoin always applied for simplicity — the join is only needed when
-      // source filter is tutor/exam, but the overhead is negligible at current scale.
-      .leftJoin(
-        practiceSessions,
-        eq(latestAttemptRows.practiceSessionId, practiceSessions.id),
-      )
-      .where(and(...conditions));
+    const difficulty = filters?.difficulty ?? null;
+    const tagSlug = filters?.tagSlug ?? null;
+    const [row] = tagSlug
+      ? await this.db
+          .select({
+            count: sql<number>`count(distinct ${latestAttemptRows.questionId})::int`,
+          })
+          .from(latestAttemptRows)
+          .leftJoin(
+            practiceSessions,
+            eq(latestAttemptRows.practiceSessionId, practiceSessions.id),
+          )
+          .leftJoin(questions, eq(latestAttemptRows.questionId, questions.id))
+          .leftJoin(questionTags, eq(questions.id, questionTags.questionId))
+          .leftJoin(tags, eq(questionTags.tagId, tags.id))
+          .where(and(...conditions))
+      : difficulty
+        ? await this.db
+            .select({
+              count: sql<number>`count(distinct ${latestAttemptRows.questionId})::int`,
+            })
+            .from(latestAttemptRows)
+            .leftJoin(
+              practiceSessions,
+              eq(latestAttemptRows.practiceSessionId, practiceSessions.id),
+            )
+            .leftJoin(questions, eq(latestAttemptRows.questionId, questions.id))
+            .where(and(...conditions))
+        : await this.db
+            .select({
+              count: sql<number>`count(distinct ${latestAttemptRows.questionId})::int`,
+            })
+            .from(latestAttemptRows)
+            .leftJoin(
+              practiceSessions,
+              eq(latestAttemptRows.practiceSessionId, practiceSessions.id),
+            )
+            .where(and(...conditions));
 
     return row?.count ?? 0;
   }

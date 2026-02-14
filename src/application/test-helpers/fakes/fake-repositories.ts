@@ -108,9 +108,16 @@ export class FakeQuestionRepository implements QuestionRepository {
 export class FakeAttemptRepository implements AttemptRepository {
   private attempts: InMemoryAttempt[];
   private nextId = 1;
+  private readonly questionsById: Map<string, Question> | null;
 
-  constructor(seed: readonly InMemoryAttempt[] = []) {
+  constructor(
+    seed: readonly InMemoryAttempt[] = [],
+    deps?: { questions?: readonly Question[] },
+  ) {
     this.attempts = [...seed];
+    this.questionsById = deps?.questions
+      ? new Map(deps.questions.map((q) => [q.id, q]))
+      : null;
     for (const attempt of this.attempts) {
       const match = /^attempt-(\d+)$/.exec(attempt.id);
       if (match) {
@@ -337,13 +344,37 @@ export class FakeAttemptRepository implements AttemptRepository {
           : candidates;
 
     const source = filters?.source ?? null;
-    return source === 'adhoc'
-      ? filteredByResult.filter((a) => a.practiceSessionId === null)
-      : source === 'tutor' || source === 'exam'
-        ? filteredByResult.filter(
-            (a) => a.practiceSessionId !== null && a.sessionMode === source,
-          )
-        : filteredByResult;
+    const filteredBySource =
+      source === 'adhoc'
+        ? filteredByResult.filter((a) => a.practiceSessionId === null)
+        : source === 'tutor' || source === 'exam'
+          ? filteredByResult.filter(
+              (a) => a.practiceSessionId !== null && a.sessionMode === source,
+            )
+          : filteredByResult;
+
+    const difficulty = filters?.difficulty ?? null;
+    const tagSlug = filters?.tagSlug ?? null;
+    if (!difficulty && !tagSlug) return filteredBySource;
+
+    if (!this.questionsById) {
+      throw new ApplicationError(
+        'INTERNAL_ERROR',
+        'FakeAttemptRepository requires questions metadata to filter by difficulty or tagSlug',
+      );
+    }
+
+    return filteredBySource.filter((attempt) => {
+      const question = this.questionsById?.get(attempt.questionId);
+      if (!question) return false;
+      if (question.status !== 'published') return false;
+
+      if (difficulty && question.difficulty !== difficulty) return false;
+      if (tagSlug && !question.tags.some((tag) => tag.slug === tagSlug))
+        return false;
+
+      return true;
+    });
   }
 
   async findMostRecentAnsweredAtByQuestionIds(

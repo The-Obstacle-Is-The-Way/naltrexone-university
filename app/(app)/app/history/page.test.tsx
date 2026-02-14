@@ -5,6 +5,7 @@ import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import { ok } from '@/src/adapters/controllers/action-result';
 import type { GetSessionHistoryOutput } from '@/src/adapters/controllers/practice-controller';
 import type { GetAttemptedQuestionsOutput } from '@/src/adapters/controllers/review-controller';
+import type { GetTagsOutput } from '@/src/adapters/controllers/tag-controller';
 import { createHistoryPage } from './page';
 
 vi.mock('next/link', () => ({
@@ -51,8 +52,12 @@ describe('app/(app)/app/history/page', () => {
     const getAttemptedQuestionsFn = vi.fn(async (_input: unknown) =>
       ok(output),
     );
+    const getTagsFn = vi.fn(async (_input: unknown) => ok({ rows: [] }));
 
-    const HistoryPage = createHistoryPage({ getAttemptedQuestionsFn });
+    const HistoryPage = createHistoryPage({
+      getAttemptedQuestionsFn,
+      getTagsFn,
+    });
 
     const element = await HistoryPage({
       searchParams: Promise.resolve({ tab: 'questions' }),
@@ -67,6 +72,7 @@ describe('app/(app)/app/history/page', () => {
         offset: 0,
       }),
     );
+    expect(getTagsFn).toHaveBeenCalledWith({});
   });
 
   it('renders Questions tab as active when tab=missed (backward compat alias)', async () => {
@@ -80,8 +86,12 @@ describe('app/(app)/app/history/page', () => {
     const getAttemptedQuestionsFn = vi.fn(async (_input: unknown) =>
       ok(output),
     );
+    const getTagsFn = vi.fn(async (_input: unknown) => ok({ rows: [] }));
 
-    const HistoryPage = createHistoryPage({ getAttemptedQuestionsFn });
+    const HistoryPage = createHistoryPage({
+      getAttemptedQuestionsFn,
+      getTagsFn,
+    });
 
     const element = await HistoryPage({
       searchParams: Promise.resolve({ tab: 'missed' }),
@@ -97,6 +107,7 @@ describe('app/(app)/app/history/page', () => {
         result: 'incorrect',
       }),
     );
+    expect(getTagsFn).toHaveBeenCalledWith({});
   });
 
   it('passes session history data to the client component when tab=sessions', async () => {
@@ -156,8 +167,18 @@ describe('app/(app)/app/history/page', () => {
     const getAttemptedQuestionsFn = vi.fn(async (_input: unknown) =>
       ok(output),
     );
+    const getTagsFn = vi.fn(async (_input: unknown) =>
+      ok({
+        rows: [
+          { id: 'tag-1', slug: 'opioids', name: 'Opioids', kind: 'topic' },
+        ],
+      } satisfies GetTagsOutput),
+    );
 
-    const HistoryPage = createHistoryPage({ getAttemptedQuestionsFn });
+    const HistoryPage = createHistoryPage({
+      getAttemptedQuestionsFn,
+      getTagsFn,
+    });
 
     const element = await HistoryPage({
       searchParams: Promise.resolve({ tab: 'questions' }),
@@ -167,6 +188,40 @@ describe('app/(app)/app/history/page', () => {
     expect(html).toContain('Stem for q1');
     expect(html).toContain('Review');
     expect(html).not.toContain('Reattempt');
+  });
+
+  it('passes difficulty and tag filters to attempted questions fetch', async () => {
+    const output: GetAttemptedQuestionsOutput = {
+      rows: [],
+      totalCount: 0,
+      limit: 20,
+      offset: 0,
+    };
+
+    const getAttemptedQuestionsFn = vi.fn(async (_input: unknown) =>
+      ok(output),
+    );
+    const getTagsFn = vi.fn(async (_input: unknown) => ok({ rows: [] }));
+
+    const HistoryPage = createHistoryPage({
+      getAttemptedQuestionsFn,
+      getTagsFn,
+    });
+
+    await HistoryPage({
+      searchParams: Promise.resolve({
+        tab: 'questions',
+        difficulty: 'hard',
+        tag: 'opioids',
+      }),
+    });
+
+    expect(getAttemptedQuestionsFn).toHaveBeenCalledWith(
+      expect.objectContaining({
+        difficulty: 'hard',
+        tagSlug: 'opioids',
+      }),
+    );
   });
 
   it('renders an error state when session history fetch returns not-ok', async () => {
@@ -202,8 +257,12 @@ describe('app/(app)/app/history/page', () => {
         },
       }),
     );
+    const getTagsFn = vi.fn(async (_input: unknown) => ok({ rows: [] }));
 
-    const HistoryPage = createHistoryPage({ getAttemptedQuestionsFn });
+    const HistoryPage = createHistoryPage({
+      getAttemptedQuestionsFn,
+      getTagsFn,
+    });
 
     const element = await HistoryPage({
       searchParams: Promise.resolve({ tab: 'questions' }),

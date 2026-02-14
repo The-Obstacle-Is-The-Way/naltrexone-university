@@ -127,7 +127,15 @@ describe('review-controller', () => {
         data: { rows: [], limit: 10, offset: 0, totalCount: 0 },
       });
       expect(deps.getAttemptedQuestionsUseCase.inputs).toEqual([
-        { userId: 'user_1', limit: 10, offset: 0, result: null, source: null },
+        {
+          userId: 'user_1',
+          limit: 10,
+          offset: 0,
+          result: null,
+          source: null,
+          difficulty: null,
+          tagSlug: null,
+        },
       ]);
     });
 
@@ -147,6 +155,35 @@ describe('review-controller', () => {
           offset: 0,
           result: 'correct',
           source: 'adhoc',
+          difficulty: null,
+          tagSlug: null,
+        },
+      ]);
+    });
+
+    it('passes through difficulty and tagSlug filters', async () => {
+      const deps = createDeps();
+
+      const result = await getAttemptedQuestions(
+        {
+          limit: 10,
+          offset: 0,
+          difficulty: 'hard',
+          tagSlug: 'opioids',
+        },
+        deps,
+      );
+
+      expect(result.ok).toBe(true);
+      expect(deps.getAttemptedQuestionsUseCase.inputs).toEqual([
+        {
+          userId: 'user_1',
+          limit: 10,
+          offset: 0,
+          result: null,
+          source: null,
+          difficulty: 'hard',
+          tagSlug: 'opioids',
         },
       ]);
     });

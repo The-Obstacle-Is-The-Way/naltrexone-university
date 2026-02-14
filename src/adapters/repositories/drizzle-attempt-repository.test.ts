@@ -13,7 +13,10 @@ function createDbMock() {
   const queryFindMany = vi.fn();
 
   const countWhere = vi.fn(async (): Promise<Array<{ count: number }>> => []);
-  const countLeftJoin = vi.fn(() => ({ where: countWhere }));
+  const countLeftJoin = vi.fn(() => ({
+    leftJoin: countLeftJoin,
+    where: countWhere,
+  }));
   const countFrom = vi.fn(() => ({
     leftJoin: countLeftJoin,
     where: countWhere,
@@ -80,7 +83,10 @@ function createDbMock() {
   const limit = vi.fn(() => ({ offset }));
   const orderBy = vi.fn(() => ({ limit }));
   const whereFinal = vi.fn(() => ({ orderBy }));
-  const leftJoinFinal = vi.fn(() => ({ where: whereFinal }));
+  const leftJoinFinal = vi.fn(() => ({
+    leftJoin: leftJoinFinal,
+    where: whereFinal,
+  }));
 
   const recentLimit = vi.fn(() => recentQueryExecute());
   const recentOrderBy = vi.fn(() => ({ limit: recentLimit }));

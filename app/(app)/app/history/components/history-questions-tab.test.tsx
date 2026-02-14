@@ -226,6 +226,94 @@ describe('HistoryQuestionsTab', () => {
     expect(doc.querySelector('select[name="tag"]')).not.toBeNull();
   });
 
+  it('does not render a client-side filtering "(X visible after filters)" hint', () => {
+    const result: ActionResult<GetAttemptedQuestionsOutput> = {
+      ok: true,
+      data: {
+        rows: [
+          {
+            isAvailable: true,
+            questionId: 'q_easy',
+            isCorrect: true,
+            sessionId: null,
+            sessionMode: null,
+            slug: 'q-easy',
+            stemMd: 'Stem for easy',
+            difficulty: 'easy',
+            tagSlugs: [],
+            lastAnsweredAt: '2026-02-01T00:00:00.000Z',
+          },
+          {
+            isAvailable: true,
+            questionId: 'q_hard',
+            isCorrect: false,
+            sessionId: null,
+            sessionMode: null,
+            slug: 'q-hard',
+            stemMd: 'Stem for hard',
+            difficulty: 'hard',
+            tagSlugs: [],
+            lastAnsweredAt: '2026-02-02T00:00:00.000Z',
+          },
+        ],
+        totalCount: 2,
+        limit: 20,
+        offset: 0,
+      },
+    };
+
+    const html = renderToStaticMarkup(
+      <HistoryQuestionsTab result={result} filters={{ difficulty: 'hard' }} />,
+    );
+
+    expect(html).not.toContain('visible after filters');
+  });
+
+  it('does not render the client-side mismatch empty-state card for difficulty/tag filters', () => {
+    const result: ActionResult<GetAttemptedQuestionsOutput> = {
+      ok: true,
+      data: {
+        rows: [
+          {
+            isAvailable: true,
+            questionId: 'q_easy_1',
+            isCorrect: true,
+            sessionId: null,
+            sessionMode: null,
+            slug: 'q-easy-1',
+            stemMd: 'Stem for easy 1',
+            difficulty: 'easy',
+            tagSlugs: [],
+            lastAnsweredAt: '2026-02-01T00:00:00.000Z',
+          },
+          {
+            isAvailable: true,
+            questionId: 'q_easy_2',
+            isCorrect: false,
+            sessionId: null,
+            sessionMode: null,
+            slug: 'q-easy-2',
+            stemMd: 'Stem for easy 2',
+            difficulty: 'easy',
+            tagSlugs: [],
+            lastAnsweredAt: '2026-02-02T00:00:00.000Z',
+          },
+        ],
+        totalCount: 2,
+        limit: 20,
+        offset: 0,
+      },
+    };
+
+    const html = renderToStaticMarkup(
+      <HistoryQuestionsTab result={result} filters={{ difficulty: 'hard' }} />,
+    );
+
+    expect(html).not.toContain(
+      'No questions on this page match the selected difficulty/tag filters.',
+    );
+  });
+
   it('renders empty state when there are no attempted questions', () => {
     const result: ActionResult<GetAttemptedQuestionsOutput> = {
       ok: true,

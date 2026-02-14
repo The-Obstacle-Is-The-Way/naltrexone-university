@@ -15,6 +15,8 @@ export type GetAttemptedQuestionsInput = {
   offset: number;
   result?: AttemptedQuestionsResultFilter | null;
   source?: AttemptedQuestionsSourceFilter | null;
+  difficulty?: QuestionDifficulty | null;
+  tagSlug?: string | null;
 };
 
 export type AvailableAttemptedQuestionRow = {
@@ -63,6 +65,8 @@ export class GetAttemptedQuestionsUseCase {
     const filters: AttemptedQuestionsFilters = {
       result: input.result ?? null,
       source: input.source ?? null,
+      difficulty: input.difficulty ?? null,
+      tagSlug: input.tagSlug ?? null,
     };
 
     const [totalCount, page] = await Promise.all([

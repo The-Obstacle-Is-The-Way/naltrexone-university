@@ -17,13 +17,20 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 | ID | Title | Priority | Status | GitHub Issue |
 |----|-------|----------|--------|--------------|
-| [DEBT-206](./debt-206-client-side-difficulty-tag-filters-history.md) | Client-Side Difficulty/Tag Filters Cause Inaccurate Pagination on History Questions Tab | P2 | Open | #87 |
 | [DEBT-208](./debt-208-e2e-cross-page-navigation-tests.md) | Missing E2E Tests for Cross-Page Navigation Flows | P3 | Open | #81 |
 | [DEBT-210](./debt-210-dead-routes-app-review-constant.md) | Dead `ROUTES.APP_REVIEW` Constant in Route Definitions | P4 | Open | #90 |
 | [DEBT-212](./debt-212-duplicate-sleep-utility-adapter-shared.md) | Duplicate `sleep()` Utility in Adapter Shared Modules | P4 | Open | #91 |
 | [DEBT-213](./debt-213-useeffect-derived-state-sync-antipatterns.md) | useEffect Derived-State Sync Anti-Patterns in Practice Hooks (5 instances) | P4 | Open | — |
 
 **Next Debt ID:** DEBT-214
+
+---
+
+## Debt Index (Resolved)
+
+| ID | Title | Priority | Resolved | GitHub Issue |
+|----|-------|----------|----------|--------------|
+| [DEBT-206](./debt-206-client-side-difficulty-tag-filters-history.md) | Client-Side Difficulty/Tag Filters Cause Inaccurate Pagination on History Questions Tab | P2 | 2026-02-14 | #87 |
 
 ---
 

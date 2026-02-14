@@ -75,11 +75,13 @@ function QuestionMetadata({
 export type HistoryQuestionsTabProps = {
   result: ActionResult<GetAttemptedQuestionsOutput>;
   filters?: QuestionsFilters;
+  tagOptions?: string[];
 };
 
 export function HistoryQuestionsTab({
   result,
   filters,
+  tagOptions,
 }: HistoryQuestionsTabProps) {
   if (!result.ok) {
     return <ErrorCard>{result.error.message}</ErrorCard>;
@@ -96,35 +98,18 @@ export function HistoryQuestionsTab({
     selectedDifficulty || selectedTagSlug || selectedResult || selectedSource,
   );
 
-  const hasActiveDifficultyOrTagFilters = Boolean(
-    selectedDifficulty || selectedTagSlug,
-  );
-
-  // Filter split: `result`/`source` are applied server-side (they affect `rows` and `totalCount`).
-  // `difficulty`/`tagSlug` are applied client-side because attempted-question rows do not include
-  // question metadata in the repository layer. Pagination counts reflect server totals, not
-  // post-filter visible rows.
-  const displayRows = hasActiveDifficultyOrTagFilters
-    ? rows.filter((row) => {
-        if (!row.isAvailable) return false;
-        if (selectedDifficulty && row.difficulty !== selectedDifficulty)
-          return false;
-        if (selectedTagSlug && !row.tagSlugs.includes(selectedTagSlug))
-          return false;
-        return true;
-      })
-    : rows;
-
   const prevOffset = Math.max(0, offset - limit);
   const nextOffset = offset + limit;
   const hasNextPage = offset + rows.length < totalCount;
   const showingStart = rows.length > 0 ? offset + 1 : 0;
   const showingEnd = offset + rows.length;
 
-  // Tag options are derived from the current server page only. Tags that only
-  // appear on other pages will not be selectable in v1 (page-local filtering).
-  const tagOptions = Array.from(
-    new Set(rows.flatMap((row) => (row.isAvailable ? row.tagSlugs : []))),
+  const resolvedTagOptions = Array.from(
+    new Set(
+      [...(tagOptions ?? []), selectedTagSlug].filter((tag): tag is string =>
+        Boolean(tag),
+      ),
+    ),
   ).sort((a, b) => a.localeCompare(b));
 
   const shouldShowFiltersCard = totalCount > 0 || hasActiveFilters;
@@ -187,9 +172,9 @@ export function HistoryQuestionsTab({
                 className={selectClassName}
               >
                 <option value="">All tags</option>
-                {tagOptions.map((tagSlug) => (
-                  <option key={tagSlug} value={tagSlug}>
-                    {tagSlug}
+                {resolvedTagOptions.map((slug) => (
+                  <option key={slug} value={slug}>
+                    {slug}
                   </option>
                 ))}
               </select>
@@ -266,40 +251,16 @@ export function HistoryQuestionsTab({
             </div>
           </Card>
         )
-      ) : hasActiveDifficultyOrTagFilters && displayRows.length === 0 ? (
-        <Card className="gap-0 rounded-2xl p-6 text-sm text-muted-foreground shadow-sm">
-          No questions on this page match the selected difficulty/tag filters.
-          Try another page or clear these filters.
-          <div className="mt-4">
-            <Button asChild variant="outline" className="rounded-full">
-              <Link
-                href={buildHistoryQuestionsHref({
-                  limit,
-                  offset: 0,
-                  filters: {
-                    result: selectedResult,
-                    source: selectedSource,
-                  },
-                })}
-              >
-                Clear filters
-              </Link>
-            </Button>
-          </div>
-        </Card>
       ) : null}
 
-      {displayRows.length > 0 ? (
+      {rows.length > 0 ? (
         <div className="space-y-4">
           <div className="text-sm text-muted-foreground">
             Showing {showingStart}–{showingEnd} of {totalCount}
-            {hasActiveDifficultyOrTagFilters && displayRows.length < rows.length
-              ? ` (${displayRows.length} visible after filters)`
-              : null}
           </div>
 
           <ul className="space-y-4">
-            {displayRows.map((row) => {
+            {rows.map((row) => {
               if (!row.isAvailable) {
                 return (
                   <li key={row.questionId}>

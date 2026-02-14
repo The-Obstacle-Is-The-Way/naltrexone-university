@@ -14,7 +14,11 @@ import {
   FakeUserRepository,
 } from '@/src/application/test-helpers/fakes';
 import type { Tag } from '@/src/domain/entities';
-import { createPracticeSession } from '@/src/domain/test-helpers';
+import {
+  createPracticeSession,
+  createQuestion,
+  createTag,
+} from '@/src/domain/test-helpers';
 
 describe('FakeLogger', () => {
   it('records calls for each log level', () => {
@@ -950,6 +954,143 @@ describe('FakeAttemptRepository', () => {
         new Date('2026-02-03T00:00:00Z'),
         new Date('2026-02-01T00:00:00Z'),
       ]);
+    });
+  });
+
+  describe('listAttemptedQuestionsByUserId (attempted-question filters)', () => {
+    it('filters by difficulty and tagSlug using question metadata', async () => {
+      const qEasy = createQuestion({
+        id: 'q_easy',
+        difficulty: 'easy',
+        tags: [createTag({ slug: 'opioids', name: 'Opioids' })],
+      });
+      const qHardAlcohol = createQuestion({
+        id: 'q_hard_alcohol',
+        difficulty: 'hard',
+        tags: [createTag({ slug: 'alcohol', name: 'Alcohol' })],
+      });
+      const qHardOpioids = createQuestion({
+        id: 'q_hard_opioids',
+        difficulty: 'hard',
+        tags: [createTag({ slug: 'opioids', name: 'Opioids' })],
+      });
+      const qHardDraft = createQuestion({
+        id: 'q_hard_draft',
+        difficulty: 'hard',
+        status: 'draft',
+        tags: [createTag({ slug: 'opioids', name: 'Opioids' })],
+      });
+
+      const repo = new FakeAttemptRepository(
+        [
+          {
+            id: 'attempt-1',
+            userId: 'user-1',
+            questionId: qEasy.id,
+            practiceSessionId: null,
+            selectedChoiceId: 'choice-1',
+            isCorrect: true,
+            timeSpentSeconds: 0,
+            answeredAt: new Date('2026-02-01T00:00:00Z'),
+          },
+          {
+            id: 'attempt-2',
+            userId: 'user-1',
+            questionId: qHardAlcohol.id,
+            practiceSessionId: null,
+            selectedChoiceId: 'choice-2',
+            isCorrect: true,
+            timeSpentSeconds: 0,
+            answeredAt: new Date('2026-02-02T00:00:00Z'),
+          },
+          {
+            id: 'attempt-3',
+            userId: 'user-1',
+            questionId: qHardOpioids.id,
+            practiceSessionId: null,
+            selectedChoiceId: 'choice-3',
+            isCorrect: true,
+            timeSpentSeconds: 0,
+            answeredAt: new Date('2026-02-03T00:00:00Z'),
+          },
+          {
+            id: 'attempt-4',
+            userId: 'user-1',
+            questionId: qHardDraft.id,
+            practiceSessionId: null,
+            selectedChoiceId: 'choice-4',
+            isCorrect: true,
+            timeSpentSeconds: 0,
+            answeredAt: new Date('2026-02-04T00:00:00Z'),
+          },
+        ],
+        { questions: [qEasy, qHardAlcohol, qHardOpioids, qHardDraft] },
+      );
+
+      await expect(
+        repo.listAttemptedQuestionsByUserId('user-1', 10, 0, {
+          difficulty: 'hard',
+        }),
+      ).resolves.toMatchObject([
+        { questionId: qHardOpioids.id },
+        { questionId: qHardAlcohol.id },
+      ]);
+
+      await expect(
+        repo.listAttemptedQuestionsByUserId('user-1', 10, 0, {
+          tagSlug: 'opioids',
+        }),
+      ).resolves.toMatchObject([
+        { questionId: qHardOpioids.id },
+        { questionId: qEasy.id },
+      ]);
+
+      await expect(
+        repo.listAttemptedQuestionsByUserId('user-1', 10, 0, {
+          difficulty: 'hard',
+          tagSlug: 'opioids',
+        }),
+      ).resolves.toMatchObject([{ questionId: qHardOpioids.id }]);
+
+      await expect(
+        repo.countAttemptedQuestionsByUserId('user-1', {
+          difficulty: 'hard',
+        }),
+      ).resolves.toBe(2);
+      await expect(
+        repo.countAttemptedQuestionsByUserId('user-1', {
+          tagSlug: 'opioids',
+        }),
+      ).resolves.toBe(2);
+      await expect(
+        repo.countAttemptedQuestionsByUserId('user-1', {
+          difficulty: 'hard',
+          tagSlug: 'opioids',
+        }),
+      ).resolves.toBe(1);
+    });
+
+    it('throws when difficulty/tagSlug filters are used without questions metadata', async () => {
+      const repo = new FakeAttemptRepository([
+        {
+          id: 'attempt-1',
+          userId: 'user-1',
+          questionId: 'q-1',
+          practiceSessionId: null,
+          selectedChoiceId: 'c-1',
+          isCorrect: true,
+          timeSpentSeconds: 0,
+          answeredAt: new Date('2026-02-01T00:00:00Z'),
+        },
+      ]);
+
+      await expect(
+        repo.listAttemptedQuestionsByUserId('user-1', 10, 0, {
+          difficulty: 'hard',
+        }),
+      ).rejects.toMatchObject({
+        code: 'INTERNAL_ERROR',
+      });
     });
   });
 });
