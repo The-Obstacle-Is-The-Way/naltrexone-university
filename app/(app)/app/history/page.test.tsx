@@ -75,41 +75,6 @@ describe('app/(app)/app/history/page', () => {
     expect(getTagsFn).toHaveBeenCalledWith({});
   });
 
-  it('renders Questions tab as active when tab=missed (backward compat alias)', async () => {
-    const output: GetAttemptedQuestionsOutput = {
-      rows: [],
-      totalCount: 0,
-      limit: 20,
-      offset: 0,
-    };
-
-    const getAttemptedQuestionsFn = vi.fn(async (_input: unknown) =>
-      ok(output),
-    );
-    const getTagsFn = vi.fn(async (_input: unknown) => ok({ rows: [] }));
-
-    const HistoryPage = createHistoryPage({
-      getAttemptedQuestionsFn,
-      getTagsFn,
-    });
-
-    const element = await HistoryPage({
-      searchParams: Promise.resolve({ tab: 'missed' }),
-    });
-    const html = renderToStaticMarkup(element);
-
-    expect(getTabLinkAriaCurrent(html, 'Questions')).toBe('page');
-    expect(getTabLinkAriaCurrent(html, 'Sessions')).toBeNull();
-    expect(getAttemptedQuestionsFn).toHaveBeenCalledWith(
-      expect.objectContaining({
-        limit: 20,
-        offset: 0,
-        result: 'incorrect',
-      }),
-    );
-    expect(getTagsFn).toHaveBeenCalledWith({});
-  });
-
   it('passes session history data to the client component when tab=sessions', async () => {
     const output: GetSessionHistoryOutput = {
       rows: [

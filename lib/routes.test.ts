@@ -10,8 +10,8 @@ describe('lib/routes', () => {
   });
 
   it('supports origin query parameters for question routes', () => {
-    expect(toQuestionRoute('opioid-use-disorder', { from: 'review' })).toBe(
-      '/app/questions/opioid-use-disorder?from=review',
+    expect(toQuestionRoute('opioid-use-disorder', { from: 'history' })).toBe(
+      '/app/questions/opioid-use-disorder?from=history',
     );
   });
 

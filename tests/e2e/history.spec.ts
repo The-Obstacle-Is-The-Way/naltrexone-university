@@ -25,7 +25,7 @@ test.describe('history', () => {
 
     await submitQuestionForOutcome(page, QUESTION_SLUG, 'Incorrect');
 
-    await page.goto('/app/history?tab=missed', {
+    await page.goto('/app/history?tab=questions&result=incorrect', {
       timeout: 60_000,
       waitUntil: 'domcontentloaded',
     });
@@ -43,7 +43,7 @@ test.describe('history', () => {
 
     await submitQuestionForOutcome(page, QUESTION_SLUG, 'Correct');
 
-    await page.goto('/app/history?tab=missed', {
+    await page.goto('/app/history?tab=questions&result=incorrect', {
       timeout: 60_000,
       waitUntil: 'domcontentloaded',
     });

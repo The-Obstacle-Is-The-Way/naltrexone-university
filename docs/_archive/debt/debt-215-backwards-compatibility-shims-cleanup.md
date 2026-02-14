@@ -1,8 +1,9 @@
 # DEBT-215: Backwards Compatibility Shims in a Greenfield Codebase
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P3
 **Date:** 2026-02-14
+**Resolved:** 2026-02-14
 
 ---
 
@@ -117,6 +118,7 @@ These tests exist solely to verify the shims above work. Once the shims are remo
 | `tests/e2e/core-app-pages.spec.ts` | 27 | `/app/review` returns HTTP 308 and lands on History (Questions, Incorrect) |
 | `tests/e2e/core-app-pages.spec.ts` | 51 | Visiting `/app/history?tab=missed` works (alias behavior) |
 | `tests/e2e/history.spec.ts` | 28, 46 | Uses `/app/history?tab=missed` as the “missed questions” view |
+| `lib/routes.test.ts` | 12 | `toQuestionRoute` with `from: 'review'` builds correct URL |
 
 ### 7. Dead `ROUTES.APP_REVIEW` Constant
 

@@ -48,19 +48,15 @@ export function createHistoryPage(deps?: {
     searchParams: Promise<HistorySearchParams>;
   }) {
     const params = await searchParams;
-    const rawTab = params.tab;
-    const activeTab = parseHistoryTab(rawTab);
+    const activeTab = parseHistoryTab(params.tab);
     const limit = parseLimit(params.limit);
     const offset = parseNonNegativeInt(params.offset, 0);
-
-    const defaultResultFilter =
-      rawTab === 'missed' ? ('incorrect' as const) : null;
 
     if (activeTab === 'questions') {
       const questionsFilters: QuestionsFilters = {
         difficulty: parseDifficultyFilter(params.difficulty),
         tagSlug: parseTagSlugFilter(params.tag),
-        result: parseResultFilter(params.result) ?? defaultResultFilter,
+        result: parseResultFilter(params.result),
         source: parseSourceFilter(params.source),
       };
 

@@ -15,23 +15,4 @@ describe('next.config', () => {
 
     expect(cspValue).toBeUndefined();
   });
-
-  it('redirects /app/review to the History Questions tab with result=incorrect', async () => {
-    const nextConfig = (await import('./next.config')).default;
-
-    const redirects = await nextConfig.redirects?.();
-    if (!redirects) {
-      throw new Error('Expected next.config to define redirects()');
-    }
-
-    expect(redirects).toEqual(
-      expect.arrayContaining([
-        {
-          source: '/app/review',
-          destination: '/app/history?tab=questions&result=incorrect',
-          permanent: true,
-        },
-      ]),
-    );
-  });
 });
