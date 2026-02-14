@@ -4,6 +4,7 @@
 **Triggered by:** Product owner confusion during manual testing — selecting multiple status chips feels contradictory ("How can a question be both unanswered AND incorrect?") because the UI implies AND but the code implements OR
 **Scope:** The status filter chip UI on Practice and Quick Practice doesn't communicate its multi-select OR semantics, creating a confusing UX
 **Related:** BS-012 (original status filter brainstorming), SPEC-024 (implementation spec, archived)
+**Resolved by:** [SPEC-028](../_archive/specs/spec-028-status-filter-segmented-control.md) (Implemented 2026-02-13)
 
 ---
 

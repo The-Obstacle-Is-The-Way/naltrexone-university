@@ -28,11 +28,6 @@ Brainstorming (BS-NNN) → Spec (SPEC-NNN) → Implementation → Archive
 | ID | Title | Status | Related Spec |
 |----|-------|--------|--------------|
 | [BS-011](./bs-011-history-review-wiring-and-choice-label-desync.md) Bug B | Choice Label Desync (standalone question page) | **Active** | [SPEC-025](../_archive/specs/spec-025-choice-label-desync-fix.md) (Ready) |
-| [BS-013](./bs-013-status-filter-ux-confusion.md) | Status Filter UX Confusion (multi-select OR not obvious) | **Active** | — |
-| [BS-012](./bs-012-question-status-filter.md) | Question Status Filter for Practice & Quick Practice | Resolved | [SPEC-024](../_archive/specs/spec-024-question-status-filter.md) (Implemented) |
-| [BS-011](./bs-011-history-review-wiring-and-choice-label-desync.md) Bug A | History Tab Review Wiring (review-only + reattempt path) | Resolved | [SPEC-026](../_archive/specs/spec-026-history-review-only.md) (Implemented) |
-
-> **Note:** BS-012 and BS-011 Bug A are resolved (specs implemented) but kept here because BS-013 is an open UX follow-up to BS-012, and BS-011 Bug B remains unimplemented.
 
 **Next Brainstorming ID:** BS-014
 
@@ -52,6 +47,9 @@ Brainstorming (BS-NNN) → Spec (SPEC-NNN) → Implementation → Archive
 | [BS-008](../_archive/brainstorming/bs-008-question-review-mode-gap.md) | Question Review Mode Gap | Specced as SPEC-023 (PR #92 implementing) |
 | [BS-009](../_archive/brainstorming/bs-009-session-review-navigation-gap.md) | Session Review Navigation Gap | Specced as SPEC-027 (Implemented) |
 | [BS-010](../_archive/brainstorming/bs-010-review-mode-attempt-identity-gap.md) | Review Mode Attempt Identity Gap | Specced as SPEC-027 (Implemented) |
+| [BS-011](./bs-011-history-review-wiring-and-choice-label-desync.md) Bug A | History Tab Review Wiring | Specced as SPEC-026 (Implemented) |
+| [BS-012](../_archive/brainstorming/bs-012-question-status-filter.md) | Question Status Filter | Specced as SPEC-024 (Implemented) |
+| [BS-013](../_archive/brainstorming/bs-013-status-filter-ux-confusion.md) | Status Filter UX Confusion | Resolved by SPEC-028 (Implemented) |
 
 ---
 
