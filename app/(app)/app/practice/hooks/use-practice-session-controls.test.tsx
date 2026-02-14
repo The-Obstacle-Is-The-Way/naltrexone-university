@@ -19,6 +19,8 @@ describe('usePracticeSessionControls', () => {
     });
     expect(output.sessionMode).toBe('tutor');
     expect(output.sessionCount).toBe(20);
+    expect(output.availableCountStatus).toBe('loading');
+    expect(output.availableCount).toBeNull();
     expect(output.tagLoadStatus).toBe('loading');
     expect(output.availableTags).toEqual([]);
     expect(output.sessionStartStatus).toBe('idle');

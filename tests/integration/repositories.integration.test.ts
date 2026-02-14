@@ -296,6 +296,45 @@ describe('DrizzleQuestionRepository', () => {
     expect(allForTag).toEqual([q1.id, q2.id]);
   });
 
+  it('countPublishedCandidateIds returns accurate totals for difficulty + tags', async () => {
+    const tagSlug = `it-count-tag-${randomUUID()}`;
+    const tag = await createTag({ slug: tagSlug, kind: 'topic' });
+
+    const createdAt = new Date('2026-01-01T00:00:00.000Z');
+
+    await createQuestion({
+      slug: `it-count-q1-${randomUUID()}`,
+      status: 'published',
+      difficulty: 'easy',
+      createdAt,
+      tagIds: [tag.id],
+    });
+
+    await createQuestion({
+      slug: `it-count-q2-${randomUUID()}`,
+      status: 'published',
+      difficulty: 'hard',
+      createdAt,
+      tagIds: [tag.id],
+    });
+
+    const repo = new DrizzleQuestionRepository(db);
+
+    await expect(
+      repo.countPublishedCandidateIds({
+        tagSlugs: [tagSlug],
+        difficulties: ['easy'],
+      }),
+    ).resolves.toBe(1);
+
+    await expect(
+      repo.countPublishedCandidateIds({
+        tagSlugs: [tagSlug],
+        difficulties: [],
+      }),
+    ).resolves.toBe(2);
+  });
+
   describe('listPublishedCandidateIds with status filters', () => {
     it('returns only unanswered questions when status=unanswered', async () => {
       const user = await createUser();

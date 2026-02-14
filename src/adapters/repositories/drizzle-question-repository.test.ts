@@ -225,4 +225,39 @@ describe('DrizzleQuestionRepository', () => {
       });
     });
   });
+
+  describe('countPublishedCandidateIds', () => {
+    it('throws VALIDATION_ERROR when statuses are provided without userId', async () => {
+      const repo = new DrizzleQuestionRepository({} as unknown as RepoDb);
+
+      const promise = repo.countPublishedCandidateIds({
+        tagSlugs: [],
+        difficulties: [],
+        statuses: ['unanswered'],
+      });
+
+      await expect(promise).rejects.toBeInstanceOf(ApplicationError);
+      await expect(promise).rejects.toMatchObject({
+        code: 'VALIDATION_ERROR',
+        message: 'userId is required when filtering by status',
+      });
+    });
+
+    it('throws INTERNAL_ERROR when an unknown status is provided', async () => {
+      const repo = new DrizzleQuestionRepository({} as unknown as RepoDb);
+
+      const promise = repo.countPublishedCandidateIds({
+        tagSlugs: [],
+        difficulties: [],
+        statuses: ['unknown' as unknown as QuestionProgressStatus],
+        userId: 'user_1',
+      });
+
+      await expect(promise).rejects.toBeInstanceOf(ApplicationError);
+      await expect(promise).rejects.toMatchObject({
+        code: 'INTERNAL_ERROR',
+        message: 'Unhandled QuestionProgressStatus: unknown',
+      });
+    });
+  });
 });

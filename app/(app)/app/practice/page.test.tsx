@@ -378,6 +378,8 @@ describe('app/(app)/app/practice', () => {
         sessionMode="tutor"
         sessionCount={20}
         filters={{ tagSlugs: [], difficulty: null, status: 'unanswered' }}
+        availableCountStatus="idle"
+        availableCount={null}
         tagLoadStatus="idle"
         availableTags={[]}
         sessionStartStatus="error"
@@ -404,6 +406,8 @@ describe('app/(app)/app/practice', () => {
         sessionMode="tutor"
         sessionCount={20}
         filters={{ tagSlugs: [], difficulty: null, status: 'unanswered' }}
+        availableCountStatus="idle"
+        availableCount={null}
         tagLoadStatus="idle"
         availableTags={[]}
         sessionStartStatus="loading"
@@ -460,6 +464,8 @@ describe('app/(app)/app/practice', () => {
           difficulty: 'easy',
           status: 'unanswered',
         }}
+        availableCountStatus="idle"
+        availableCount={null}
         tagLoadStatus="idle"
         availableTags={[
           { id: 'tag-1', slug: 'domain-1', name: 'Domain 1', kind: 'domain' },
@@ -492,6 +498,8 @@ describe('app/(app)/app/practice', () => {
         sessionMode="tutor"
         sessionCount={20}
         filters={{ tagSlugs: [], difficulty: null, status: 'unanswered' }}
+        availableCountStatus="idle"
+        availableCount={null}
         tagLoadStatus="idle"
         availableTags={[]}
         sessionStartStatus="idle"
@@ -520,6 +528,8 @@ describe('app/(app)/app/practice', () => {
         sessionMode="tutor"
         sessionCount={20}
         filters={{ tagSlugs: [], difficulty: 'easy', status: 'unanswered' }}
+        availableCountStatus="idle"
+        availableCount={null}
         tagLoadStatus="idle"
         availableTags={[]}
         sessionStartStatus="idle"

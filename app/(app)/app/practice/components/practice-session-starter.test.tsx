@@ -10,6 +10,8 @@ describe('PracticeSessionStarter', () => {
         sessionMode="tutor"
         sessionCount={20}
         filters={{ tagSlugs: [], difficulty: null, status: 'unanswered' }}
+        availableCountStatus="idle"
+        availableCount={null}
         tagLoadStatus="idle"
         availableTags={[]}
         sessionStartStatus="idle"
@@ -33,6 +35,8 @@ describe('PracticeSessionStarter', () => {
         sessionMode="tutor"
         sessionCount={20}
         filters={{ tagSlugs: [], difficulty: null, status: 'unanswered' }}
+        availableCountStatus="idle"
+        availableCount={null}
         tagLoadStatus="idle"
         availableTags={[]}
         sessionStartStatus="idle"
@@ -56,6 +60,8 @@ describe('PracticeSessionStarter', () => {
         sessionMode="tutor"
         sessionCount={20}
         filters={{ tagSlugs: [], difficulty: null, status: 'unanswered' }}
+        availableCountStatus="idle"
+        availableCount={null}
         tagLoadStatus="idle"
         availableTags={[
           {
@@ -96,6 +102,8 @@ describe('PracticeSessionStarter', () => {
           difficulty: null,
           status: 'unanswered',
         }}
+        availableCountStatus="idle"
+        availableCount={null}
         tagLoadStatus="idle"
         availableTags={[
           {
@@ -149,6 +157,8 @@ describe('PracticeSessionStarter', () => {
           difficulty: null,
           status: 'incorrect',
         }}
+        availableCountStatus="idle"
+        availableCount={null}
         tagLoadStatus="idle"
         availableTags={[]}
         sessionStartStatus="idle"

@@ -27,6 +27,7 @@ import type {
 } from '@/src/application/ports/repositories';
 import type {
   CheckEntitlementUseCase,
+  CountAvailableQuestionsUseCase,
   CreateCheckoutSessionUseCase,
   CreatePortalSessionUseCase,
   EndPracticeSessionUseCase,
@@ -93,6 +94,7 @@ export type UseCaseFactories = {
   createCheckEntitlementUseCase: () => CheckEntitlementUseCase;
   createCheckoutSessionUseCase: () => CreateCheckoutSessionUseCase;
   createPortalSessionUseCase: () => CreatePortalSessionUseCase;
+  createCountAvailableQuestionsUseCase: () => CountAvailableQuestionsUseCase;
   createEndPracticeSessionUseCase: () => EndPracticeSessionUseCase;
   createGetNextQuestionUseCase: () => GetNextQuestionUseCase;
   createGetPreviousAttemptUseCase: () => GetPreviousAttemptUseCase;

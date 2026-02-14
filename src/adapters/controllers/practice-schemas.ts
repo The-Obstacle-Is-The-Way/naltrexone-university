@@ -36,6 +36,23 @@ export const StartPracticeSessionInputSchema = z
   })
   .strict();
 
+export const CountAvailableQuestionsInputSchema = z
+  .object({
+    tagSlugs: z
+      .array(z.string().min(1).max(MAX_TAG_SLUG_LENGTH))
+      .max(MAX_PRACTICE_SESSION_TAG_FILTERS)
+      .default([]),
+    difficulties: z
+      .array(zDifficulty)
+      .max(MAX_PRACTICE_SESSION_DIFFICULTY_FILTERS)
+      .default([]),
+    statuses: z
+      .array(zQuestionProgressStatus)
+      .max(AllQuestionProgressStatuses.length)
+      .default([]),
+  })
+  .strict();
+
 export const EndPracticeSessionInputSchema = z
   .object({
     sessionId: zUuid,
@@ -72,6 +89,12 @@ export const StartPracticeSessionOutputSchema = z
     sessionId: zUuid,
     requestedCount: z.number().int().min(1).max(MAX_PRACTICE_SESSION_QUESTIONS),
     actualCount: z.number().int().min(1).max(MAX_PRACTICE_SESSION_QUESTIONS),
+  })
+  .strict();
+
+export const CountAvailableQuestionsOutputSchema = z
+  .object({
+    count: z.number().int().min(0),
   })
   .strict();
 

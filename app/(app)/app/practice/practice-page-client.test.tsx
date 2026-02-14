@@ -20,6 +20,8 @@ vi.mock('./hooks/use-practice-session-controls', () => ({
     filters: { tagSlugs: [], difficulty: null, status: 'unanswered' },
     sessionMode: 'tutor',
     sessionCount: 20,
+    availableCountStatus: 'idle',
+    availableCount: null,
     tagLoadStatus: 'idle',
     availableTags: [],
     sessionStartStatus,

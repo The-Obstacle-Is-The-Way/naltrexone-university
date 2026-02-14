@@ -5,6 +5,7 @@ import { ApplicationError } from '@/src/application/errors';
 import type { RateLimiter } from '@/src/application/ports/gateways';
 import {
   FakeAuthGateway,
+  FakeCountAvailableQuestionsUseCase,
   FakeEndPracticeSessionUseCase,
   FakeGetIncompletePracticeSessionUseCase,
   FakeGetPracticeSessionReviewUseCase,
@@ -27,6 +28,7 @@ import { CheckEntitlementUseCase } from '@/src/application/use-cases/check-entit
 import type { User } from '@/src/domain/entities';
 import { createSubscription, createUser } from '@/src/domain/test-helpers';
 import {
+  countAvailableQuestions,
   endPracticeSession,
   getIncompletePracticeSession,
   getPracticeSessionReview,
@@ -37,6 +39,7 @@ import {
 } from './practice-controller';
 
 type PracticeControllerTestDeps = PracticeControllerDeps & {
+  countAvailableQuestionsUseCase: FakeCountAvailableQuestionsUseCase;
   getIncompletePracticeSessionUseCase: FakeGetIncompletePracticeSessionUseCase;
   startPracticeSessionUseCase: FakeStartPracticeSessionUseCase;
   endPracticeSessionUseCase: FakeEndPracticeSessionUseCase;
@@ -51,6 +54,8 @@ function createDeps(overrides?: {
   rateLimiter?: RateLimiter;
   startOutput?: StartPracticeSessionOutput;
   startThrows?: unknown;
+  countOutput?: { count: number };
+  countThrows?: unknown;
   endOutput?: EndPracticeSessionOutput;
   endThrows?: unknown;
   reviewOutput?: GetPracticeSessionReviewOutput;
@@ -112,6 +117,11 @@ function createDeps(overrides?: {
     overrides?.startThrows,
   );
 
+  const countAvailableQuestionsUseCase = new FakeCountAvailableQuestionsUseCase(
+    overrides?.countOutput ?? { count: 0 },
+    overrides?.countThrows,
+  );
+
   const endPracticeSessionUseCase = new FakeEndPracticeSessionUseCase(
     overrides?.endOutput ?? {
       sessionId: '22222222-2222-2222-2222-222222222222',
@@ -167,6 +177,7 @@ function createDeps(overrides?: {
     checkEntitlementUseCase,
     getIncompletePracticeSessionUseCase,
     startPracticeSessionUseCase,
+    countAvailableQuestionsUseCase,
     endPracticeSessionUseCase,
     getPracticeSessionReviewUseCase,
     getSessionHistoryUseCase,
@@ -935,6 +946,72 @@ describe('practice-controller', () => {
       });
       expect(second).toEqual(first);
       expect(deps.setPracticeSessionQuestionMarkUseCase.inputs).toHaveLength(1);
+    });
+  });
+
+  describe('countAvailableQuestions', () => {
+    it('returns VALIDATION_ERROR when input is invalid', async () => {
+      const deps = createDeps();
+
+      const result = await countAvailableQuestions(
+        { tagSlugs: [''], difficulties: [], statuses: [] },
+        deps,
+      );
+
+      expect(result).toMatchObject({
+        ok: false,
+        error: { code: 'VALIDATION_ERROR' },
+      });
+      expect(deps.countAvailableQuestionsUseCase.inputs).toEqual([]);
+    });
+
+    it('returns UNAUTHENTICATED when unauthenticated', async () => {
+      const deps = createDeps({ user: null });
+
+      const result = await countAvailableQuestions(
+        { tagSlugs: [], difficulties: [], statuses: [] },
+        deps,
+      );
+
+      expect(result).toMatchObject({
+        ok: false,
+        error: { code: 'UNAUTHENTICATED' },
+      });
+      expect(deps.countAvailableQuestionsUseCase.inputs).toEqual([]);
+    });
+
+    it('returns UNSUBSCRIBED when not entitled', async () => {
+      const deps = createDeps({ isEntitled: false });
+
+      const result = await countAvailableQuestions(
+        { tagSlugs: [], difficulties: [], statuses: [] },
+        deps,
+      );
+
+      expect(result).toMatchObject({
+        ok: false,
+        error: { code: 'UNSUBSCRIBED' },
+      });
+      expect(deps.countAvailableQuestionsUseCase.inputs).toEqual([]);
+    });
+
+    it('returns the count from the use case when successful', async () => {
+      const deps = createDeps({ countOutput: { count: 42 } });
+
+      const result = await countAvailableQuestions(
+        { tagSlugs: [], difficulties: [], statuses: ['unanswered'] },
+        deps,
+      );
+
+      expect(result).toEqual({ ok: true, data: { count: 42 } });
+      expect(deps.countAvailableQuestionsUseCase.inputs).toEqual([
+        {
+          userId: 'user_1',
+          tagSlugs: [],
+          difficulties: [],
+          statuses: ['unanswered'],
+        },
+      ]);
     });
   });
 });

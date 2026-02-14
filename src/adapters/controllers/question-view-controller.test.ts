@@ -71,6 +71,7 @@ function createThrowingQuestionRepository(
     },
     findPublishedByIds: async () => [],
     listPublishedCandidateIds: async () => [],
+    countPublishedCandidateIds: async () => 0,
   };
 }
 

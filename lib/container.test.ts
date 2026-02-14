@@ -21,6 +21,7 @@ import type { DrizzleDb } from '@/src/adapters/shared/database-types';
 import { FakeLogger } from '@/src/application/test-helpers/fakes';
 import {
   CheckEntitlementUseCase,
+  CountAvailableQuestionsUseCase,
   CreateCheckoutSessionUseCase,
   CreatePortalSessionUseCase,
   EndPracticeSessionUseCase,
@@ -278,6 +279,9 @@ describe('container factories', () => {
     );
     expect(practiceDeps.getIncompletePracticeSessionUseCase).toBeInstanceOf(
       GetIncompletePracticeSessionUseCase,
+    );
+    expect(practiceDeps.countAvailableQuestionsUseCase).toBeInstanceOf(
+      CountAvailableQuestionsUseCase,
     );
     expect(practiceDeps.startPracticeSessionUseCase).toBeInstanceOf(
       StartPracticeSessionUseCase,

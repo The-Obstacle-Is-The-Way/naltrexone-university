@@ -825,6 +825,9 @@ describe('GetNextQuestionUseCase', () => {
       async listPublishedCandidateIds() {
         return ['missing'];
       },
+      async countPublishedCandidateIds() {
+        return 0;
+      },
     };
 
     const useCase = new GetNextQuestionUseCase(

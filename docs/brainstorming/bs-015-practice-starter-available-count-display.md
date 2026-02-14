@@ -1,5 +1,7 @@
 # BS-015: Practice Starter — Show Available Question Count Before Session Start
 
+**Status:** Resolved
+**Resolved:** 2026-02-14
 **Date:** 2026-02-13
 **Triggered by:** UX review of practice session starter — no visibility into how many questions match current filters
 **Scope:** Users select filters and a question count but have no way to know if 5 or 500 questions match before starting
@@ -108,6 +110,12 @@ If a full use case feels overweight for a single count, the practice controller 
 1. New unit test: `CountAvailableQuestionsUseCase` returns correct count for various filter combos
 2. New browser-mode test (`*.browser.spec.tsx`): practice session starter displays count and disables Start when 0
 3. Manual: toggle difficulty/tag filters → count updates → start session matches expected count
+
+## Resolution Notes (2026-02-14)
+
+- Implemented a **display-only** total available count (no dynamic input max). When `availableCount === 0`, Start is disabled; when `requested > available`, the starter warns that the session will start with the available count.
+- Added `QuestionRepository.countPublishedCandidateIds()` and a matching Drizzle implementation to keep count semantics aligned with `listPublishedCandidateIds`.
+- Added `CountAvailableQuestionsUseCase` and a `countAvailableQuestions` practice controller action; the practice starter calls it and displays the result.
 
 ## Related
 

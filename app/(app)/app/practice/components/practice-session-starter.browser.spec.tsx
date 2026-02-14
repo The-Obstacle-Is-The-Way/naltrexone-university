@@ -7,6 +7,8 @@ async function renderStarter() {
     sessionMode: 'tutor' as const,
     sessionCount: 20,
     filters: { tagSlugs: [], difficulty: null, status: 'unanswered' as const },
+    availableCountStatus: 'idle' as const,
+    availableCount: null,
     tagLoadStatus: 'idle' as const,
     availableTags: [
       {
@@ -72,6 +74,8 @@ test('shows error states for tags and session start', async () => {
       sessionMode="tutor"
       sessionCount={20}
       filters={{ tagSlugs: [], difficulty: null, status: 'unanswered' }}
+      availableCountStatus="idle"
+      availableCount={null}
       tagLoadStatus="error"
       availableTags={[]}
       sessionStartStatus="error"
@@ -100,6 +104,8 @@ test('shows loading state for session start', async () => {
       sessionMode="tutor"
       sessionCount={20}
       filters={{ tagSlugs: [], difficulty: null, status: 'unanswered' }}
+      availableCountStatus="idle"
+      availableCount={null}
       tagLoadStatus="idle"
       availableTags={[]}
       sessionStartStatus="loading"
@@ -115,5 +121,34 @@ test('shows loading state for session start', async () => {
 
   await expect
     .element(screen.getByRole('button', { name: 'Starting…' }))
+    .toBeDisabled();
+});
+
+test('disables start when no questions match the selected filters', async () => {
+  const screen = await render(
+    <PracticeSessionStarter
+      sessionMode="tutor"
+      sessionCount={20}
+      filters={{ tagSlugs: [], difficulty: null, status: 'unanswered' }}
+      availableCountStatus="idle"
+      availableCount={0}
+      tagLoadStatus="idle"
+      availableTags={[]}
+      sessionStartStatus="idle"
+      sessionStartError={null}
+      onDifficultyChange={() => undefined}
+      onStatusChange={() => undefined}
+      onToggleTag={() => undefined}
+      onSessionModeChange={() => undefined}
+      onSessionCountChange={() => undefined}
+      onStartSession={() => undefined}
+    />,
+  );
+
+  await expect
+    .element(screen.getByText('No questions match your filters.'))
+    .toBeVisible();
+  await expect
+    .element(screen.getByRole('button', { name: 'Start session' }))
     .toBeDisabled();
 });
