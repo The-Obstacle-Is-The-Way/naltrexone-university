@@ -99,6 +99,61 @@ test('renders exam review branch and triggers review actions', async () => {
   expect(onFinalizeReview).toHaveBeenCalledTimes(1);
 });
 
+test('falls back to onEndSession when onFinalizeReview is omitted in the review stage', async () => {
+  const onEndSession = vi.fn();
+
+  const screen = await render(
+    <PracticeSessionPageView
+      summary={null}
+      review={{
+        sessionId: 'session-1',
+        mode: 'exam',
+        totalCount: 1,
+        answeredCount: 1,
+        markedCount: 0,
+        rows: [
+          {
+            questionId: 'q1',
+            slug: 'q-1',
+            order: 1,
+            isAvailable: true,
+            stemMd: 'A sample exam review question stem',
+            difficulty: 'easy',
+            isAnswered: true,
+            isCorrect: true,
+            markedForReview: false,
+          },
+        ],
+      }}
+      reviewLoadState={{ status: 'ready' }}
+      sessionInfo={null}
+      loadState={{ status: 'ready' }}
+      question={null}
+      selectedChoiceId={null}
+      isAnswered={false}
+      submitResult={null}
+      isPending={false}
+      bookmarkStatus="idle"
+      isBookmarked={false}
+      canSubmit={false}
+      onEndSession={onEndSession}
+      onTryAgain={() => undefined}
+      onToggleBookmark={() => undefined}
+      onSelectChoice={() => undefined}
+      onSubmit={() => undefined}
+      onNextQuestion={() => undefined}
+    />,
+  );
+
+  await expect.element(screen.getByText('Review Questions')).toBeVisible();
+  await screen.getByRole('button', { name: 'Submit exam' }).click();
+  await expect
+    .element(screen.getByRole('alertdialog', { name: 'Submit exam?' }))
+    .toBeVisible();
+  await screen.getByRole('button', { name: 'Confirm submit' }).click();
+  expect(onEndSession).toHaveBeenCalledTimes(1);
+});
+
 test('renders active question branch with navigator and navigation callback', async () => {
   const onNavigateQuestion = vi.fn();
   const screen = await render(

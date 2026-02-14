@@ -214,17 +214,14 @@ export function ExamReviewView({
                   if (isFinalizingRef.current) return;
                   isFinalizingRef.current = true;
 
-                  try {
-                    fireAndForget(
-                      onFinalizeReview().finally(() => {
+                  fireAndForget(
+                    Promise.resolve()
+                      .then(() => onFinalizeReview())
+                      .finally(() => {
                         isFinalizingRef.current = false;
                       }),
-                      logUnhandledAsyncError,
-                    );
-                  } catch (error) {
-                    isFinalizingRef.current = false;
-                    throw error;
-                  }
+                    logUnhandledAsyncError,
+                  );
                 }}
               >
                 Confirm submit
