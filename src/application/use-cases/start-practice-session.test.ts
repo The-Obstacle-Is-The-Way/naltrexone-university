@@ -140,6 +140,8 @@ describe('StartPracticeSessionUseCase', () => {
 
     await expect(useCase.execute(input)).resolves.toEqual({
       sessionId: 'session-1',
+      requestedCount: 2,
+      actualCount: 2,
     });
 
     const session = await practiceSessionRepository.findByIdAndUserId(
@@ -203,7 +205,11 @@ describe('StartPracticeSessionUseCase', () => {
         tagSlugs: ['opioids'],
         difficulties: ['easy', 'medium'],
       }),
-    ).resolves.toEqual({ sessionId: 'session-1' });
+    ).resolves.toEqual({
+      sessionId: 'session-1',
+      requestedCount: 10,
+      actualCount: 2,
+    });
 
     const createInput = practiceSessionRepository.createInputs[0];
     expect(createInput).toBeTruthy();

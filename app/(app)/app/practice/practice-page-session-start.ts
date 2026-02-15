@@ -84,9 +84,12 @@ export async function startSession(input: {
     return;
   }
 
-  input.navigateTo(
-    `${toPracticeSessionRoute(res.data.sessionId)}?toast=session_started`,
-  );
+  const params = new URLSearchParams({ toast: 'session_started' });
+  if (res.data.actualCount < res.data.requestedCount) {
+    params.set('requestedCount', String(res.data.requestedCount));
+    params.set('actualCount', String(res.data.actualCount));
+  }
+  input.navigateTo(`${toPracticeSessionRoute(res.data.sessionId)}?${params}`);
 }
 
 function toggleInArray<T>(array: readonly T[], value: T): T[] {
