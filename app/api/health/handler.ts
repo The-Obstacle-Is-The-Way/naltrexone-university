@@ -14,54 +14,59 @@ export type HealthHandlerDeps = {
   now: () => Date;
 };
 
-export function createHealthHandler(deps: HealthHandlerDeps) {
-  return async function POST(req: Request) {
-    try {
-      const ip = getClientIp(req.headers);
+async function handleHealthCheck(deps: HealthHandlerDeps, req: Request) {
+  try {
+    const ip = getClientIp(req.headers);
 
-      const rate = await deps.rateLimiter.limit({
-        key: `health:${ip}`,
-        ...HEALTH_CHECK_RATE_LIMIT,
-      });
+    const rate = await deps.rateLimiter.limit({
+      key: `health:${ip}`,
+      ...HEALTH_CHECK_RATE_LIMIT,
+    });
 
-      if (!rate.success) {
-        return NextResponse.json(
-          { ok: false, error: 'Too many requests' },
-          {
-            status: 429,
-            headers: {
-              'Retry-After': String(rate.retryAfterSeconds),
-              'X-RateLimit-Limit': String(rate.limit),
-              'X-RateLimit-Remaining': String(rate.remaining),
-            },
-          },
-        );
-      }
-    } catch (error) {
-      deps.logger.error({ error }, 'Health check rate limiter failed');
+    if (!rate.success) {
       return NextResponse.json(
-        { ok: false, error: 'Rate limiter unavailable' },
-        { status: 503 },
-      );
-    }
-
-    try {
-      await deps.db.execute(sql`SELECT 1`);
-
-      return NextResponse.json({
-        ok: true,
-        db: true,
-        timestamp: deps.now().toISOString(),
-      });
-    } catch (error) {
-      deps.logger.error({ error }, 'Health check failed');
-      return NextResponse.json(
+        { ok: false, error: 'Too many requests' },
         {
-          ok: false,
-          error: 'Database connection failed',
+          status: 429,
+          headers: {
+            'Retry-After': String(rate.retryAfterSeconds),
+            'X-RateLimit-Limit': String(rate.limit),
+            'X-RateLimit-Remaining': String(rate.remaining),
+          },
         },
-        { status: 500 },
       );
     }
+  } catch (error) {
+    deps.logger.error({ error }, 'Health check rate limiter failed');
+    return NextResponse.json(
+      { ok: false, error: 'Rate limiter unavailable' },
+      { status: 503 },
+    );
+  }
+
+  try {
+    await deps.db.execute(sql`SELECT 1`);
+
+    return NextResponse.json({
+      ok: true,
+      db: true,
+      timestamp: deps.now().toISOString(),
+    });
+  } catch (error) {
+    deps.logger.error({ error }, 'Health check failed');
+    return NextResponse.json(
+      {
+        ok: false,
+        error: 'Database connection failed',
+      },
+      { status: 500 },
+    );
+  }
+}
+
+export function createHealthHandler(deps: HealthHandlerDeps) {
+  return {
+    GET: (req: Request) => handleHealthCheck(deps, req),
+    POST: (req: Request) => handleHealthCheck(deps, req),
   };
 }

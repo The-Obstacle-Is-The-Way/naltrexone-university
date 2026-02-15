@@ -7,10 +7,13 @@ import {
 } from '@/app/(app)/app/practice/practice-logic';
 import type { AsyncLoadStateWithIdle } from '@/app/(app)/app/shared/load-state';
 import { useIsMounted } from '@/lib/use-is-mounted';
+import { withTimeout } from '@/lib/with-timeout';
 import {
   type GetPracticeSessionReviewOutput,
   getPracticeSessionReview,
 } from '@/src/adapters/controllers/practice-controller';
+
+const SESSION_REVIEW_TIMEOUT_MS = 10_000;
 
 export type UseHistorySessionsOutput = {
   selectedSessionId: string | null;
@@ -50,7 +53,10 @@ export function useHistorySessions(): UseHistorySessionsOutput {
 
       let res: Awaited<ReturnType<typeof getPracticeSessionReview>>;
       try {
-        res = await getPracticeSessionReview({ sessionId });
+        res = await withTimeout(
+          getPracticeSessionReview({ sessionId }),
+          SESSION_REVIEW_TIMEOUT_MS,
+        );
       } catch (error) {
         if (!isMounted()) return;
         if (latestReviewSessionId.current !== sessionId) return;

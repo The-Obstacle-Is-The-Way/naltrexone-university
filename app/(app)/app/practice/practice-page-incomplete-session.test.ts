@@ -28,7 +28,7 @@ describe('practice-page-incomplete-session', () => {
       expect(setStatus).toHaveBeenCalledWith('loading');
       expect(setError).toHaveBeenCalledWith(null);
 
-      await Promise.resolve();
+      await new Promise((r) => setTimeout(r, 0));
 
       expect(getIncompletePracticeSessionFn).toHaveBeenCalledWith({});
       expect(setSession).toHaveBeenCalledWith({ sessionId: 'session-1' });
@@ -50,7 +50,7 @@ describe('practice-page-incomplete-session', () => {
         setIncompleteSession: setSession,
       });
 
-      await Promise.resolve();
+      await new Promise((r) => setTimeout(r, 0));
 
       expect(setStatus).toHaveBeenLastCalledWith('error');
       expect(setError).toHaveBeenLastCalledWith('boom');
@@ -72,7 +72,7 @@ describe('practice-page-incomplete-session', () => {
         setIncompleteSession: setSession,
       });
 
-      await Promise.resolve();
+      await new Promise((r) => setTimeout(r, 0));
 
       expect(setStatus).toHaveBeenLastCalledWith('error');
       expect(setError).toHaveBeenLastCalledWith('Nope');
@@ -101,7 +101,7 @@ describe('practice-page-incomplete-session', () => {
       cleanup();
       deferred.resolve(ok({ sessionId: 'session-1' }));
 
-      await Promise.resolve();
+      await new Promise((r) => setTimeout(r, 0));
 
       expect(setSession).not.toHaveBeenCalled();
       expect(setStatus).toHaveBeenCalledTimes(1);

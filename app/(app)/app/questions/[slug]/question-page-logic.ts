@@ -5,10 +5,15 @@ import {
 import { runTransitionedAsyncAction } from '@/app/(app)/app/practice/shared/question-flow-actions';
 import type { AsyncLoadState } from '@/app/(app)/app/shared/load-state';
 import type { QuestionOrigin } from '@/lib/routes';
+import { withTimeout } from '@/lib/with-timeout';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import type { GetQuestionBySlugOutput } from '@/src/adapters/controllers/question-view-controller';
 import type { GetPreviousAttemptOutput } from '@/src/application/use-cases/get-previous-attempt';
 import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
+
+const QUESTION_LOAD_TIMEOUT_MS = 15_000;
+const ANSWER_SUBMIT_TIMEOUT_MS = 15_000;
+const PREVIOUS_ATTEMPT_TIMEOUT_MS = 10_000;
 
 export type LoadState = AsyncLoadState;
 
@@ -61,7 +66,10 @@ export async function loadQuestion(input: {
 
   let res: ActionResult<GetQuestionBySlugOutput>;
   try {
-    res = await input.getQuestionBySlugFn({ slug: input.slug });
+    res = await withTimeout(
+      input.getQuestionBySlugFn({ slug: input.slug }),
+      QUESTION_LOAD_TIMEOUT_MS,
+    );
   } catch (error) {
     if (!isMounted()) return;
 
@@ -140,12 +148,15 @@ export async function submitSelectedAnswer(input: {
 
   let res: ActionResult<SubmitAnswerOutput>;
   try {
-    res = await input.submitAnswerFn({
-      questionId: input.question.questionId,
-      choiceId: input.selectedChoiceId,
-      idempotencyKey: input.submitIdempotencyKey ?? undefined,
-      timeSpentSeconds,
-    });
+    res = await withTimeout(
+      input.submitAnswerFn({
+        questionId: input.question.questionId,
+        choiceId: input.selectedChoiceId,
+        idempotencyKey: input.submitIdempotencyKey ?? undefined,
+        timeSpentSeconds,
+      }),
+      ANSWER_SUBMIT_TIMEOUT_MS,
+    );
   } catch (error) {
     if (!isMounted()) return;
 
@@ -217,11 +228,14 @@ export async function loadPreviousAttempt(input: {
 
   let res: ActionResult<GetPreviousAttemptOutput | null>;
   try {
-    res = await input.getPreviousAttemptFn({
-      questionId: input.questionId,
-      ...(input.attemptId ? { attemptId: input.attemptId } : {}),
-      ...(input.sessionId ? { sessionId: input.sessionId } : {}),
-    });
+    res = await withTimeout(
+      input.getPreviousAttemptFn({
+        questionId: input.questionId,
+        ...(input.attemptId ? { attemptId: input.attemptId } : {}),
+        ...(input.sessionId ? { sessionId: input.sessionId } : {}),
+      }),
+      PREVIOUS_ATTEMPT_TIMEOUT_MS,
+    );
   } catch {
     // Silently fall back to attempt mode — review is best-effort
     return;

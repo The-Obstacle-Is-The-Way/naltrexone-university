@@ -8,6 +8,7 @@ import { createWebhookHandler } from './handler';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
+export const maxDuration = 30;
 
 async function verifyClerkWebhook(req: Request): Promise<ClerkWebhookEvent> {
   type ClerkRequestLike = Parameters<typeof verifyWebhook>[0];

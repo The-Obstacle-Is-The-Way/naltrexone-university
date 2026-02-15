@@ -975,7 +975,7 @@ describe('practice-session-page-logic effects', () => {
         setNavigatorLoadState,
       });
 
-      await Promise.resolve();
+      await new Promise((r) => setTimeout(r, 0));
 
       expect(setNavigator).toHaveBeenCalledWith(null);
       expect(setNavigatorLoadState).toHaveBeenLastCalledWith({
@@ -1006,7 +1006,7 @@ describe('practice-session-page-logic effects', () => {
         setNavigatorLoadState,
       });
 
-      await Promise.resolve();
+      await new Promise((r) => setTimeout(r, 0));
 
       expect(setNavigator).toHaveBeenCalledWith(null);
       expect(setNavigatorLoadState).toHaveBeenLastCalledWith({
@@ -1092,7 +1092,7 @@ describe('practice-session-page-logic effects', () => {
         setSummaryReviewLoadState,
       });
 
-      await Promise.resolve();
+      await new Promise((r) => setTimeout(r, 0));
 
       expect(setSummaryReviewLoadState).toHaveBeenLastCalledWith({
         status: 'error',
@@ -1119,7 +1119,7 @@ describe('practice-session-page-logic effects', () => {
         setSummaryReviewLoadState,
       });
 
-      await Promise.resolve();
+      await new Promise((r) => setTimeout(r, 0));
 
       expect(setSummaryReviewLoadState).toHaveBeenLastCalledWith({
         status: 'error',

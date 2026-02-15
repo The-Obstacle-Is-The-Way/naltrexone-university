@@ -3,8 +3,12 @@ import {
   getThrownErrorMessage,
 } from '@/app/(app)/app/practice/practice-logic';
 import type { AsyncLoadStateWithIdle } from '@/app/(app)/app/shared/load-state';
+import { withTimeout } from '@/lib/with-timeout';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
+
+const LOAD_QUESTION_TIMEOUT_MS = 15_000;
+const SUBMIT_ANSWER_TIMEOUT_MS = 15_000;
 
 export function buildTimeSpentSeconds(
   questionLoadedAtMs: number | null,
@@ -47,7 +51,10 @@ export async function runLoadQuestionFlow<TQuestion>(input: {
 
   let res: ActionResult<TQuestion | null>;
   try {
-    res = await input.getQuestionFn(input.requestInput);
+    res = await withTimeout(
+      input.getQuestionFn(input.requestInput),
+      LOAD_QUESTION_TIMEOUT_MS,
+    );
   } catch (error) {
     if (!canCommit()) return;
 
@@ -152,13 +159,16 @@ export async function runSubmitAnswerFlow<
 
   let res: ActionResult<SubmitAnswerOutput>;
   try {
-    res = await input.submitAnswerFn(
-      input.buildSubmitInput({
-        question: input.question,
-        selectedChoiceId: input.selectedChoiceId,
-        idempotencyKey: input.submitIdempotencyKey,
-        timeSpentSeconds,
-      }),
+    res = await withTimeout(
+      input.submitAnswerFn(
+        input.buildSubmitInput({
+          question: input.question,
+          selectedChoiceId: input.selectedChoiceId,
+          idempotencyKey: input.submitIdempotencyKey,
+          timeSpentSeconds,
+        }),
+      ),
+      SUBMIT_ANSWER_TIMEOUT_MS,
     );
   } catch (error) {
     if (!isMounted()) return;

@@ -5,6 +5,96 @@ import {
   FakeRateLimiter,
 } from '@/src/application/test-helpers/fakes';
 
+describe('GET /api/health', () => {
+  it('returns ok=true when the database is reachable', async () => {
+    const execute = vi.fn(async () => undefined);
+    const logger = new FakeLogger();
+    const rateLimiter = new FakeRateLimiter();
+    const now = () => new Date('2026-02-04T00:00:00.000Z');
+
+    const { GET } = createHealthHandler({
+      db: { execute },
+      logger,
+      rateLimiter,
+      now,
+    });
+
+    const res = await GET(
+      new Request('http://localhost/api/health', {
+        method: 'GET',
+        headers: { 'x-vercel-forwarded-for': '198.51.100.9' },
+      }),
+    );
+
+    expect(res.status).toBe(200);
+    await expect(res.json()).resolves.toEqual({
+      ok: true,
+      db: true,
+      timestamp: '2026-02-04T00:00:00.000Z',
+    });
+    expect(execute).toHaveBeenCalledTimes(1);
+  });
+
+  it('returns 500 when the database query fails', async () => {
+    const execute = vi.fn(async () => {
+      throw new Error('db down');
+    });
+    const logger = new FakeLogger();
+    const rateLimiter = new FakeRateLimiter();
+    const now = () => new Date('2026-02-04T00:00:00.000Z');
+
+    const { GET } = createHealthHandler({
+      db: { execute },
+      logger,
+      rateLimiter,
+      now,
+    });
+
+    const res = await GET(
+      new Request('http://localhost/api/health', {
+        method: 'GET',
+        headers: { 'x-forwarded-for': '203.0.113.1' },
+      }),
+    );
+
+    expect(res.status).toBe(500);
+    await expect(res.json()).resolves.toEqual({
+      ok: false,
+      error: 'Database connection failed',
+    });
+    expect(logger.errorCalls).toHaveLength(1);
+  });
+
+  it('returns 429 when rate limited', async () => {
+    const execute = vi.fn(async () => undefined);
+    const logger = new FakeLogger();
+    const rateLimiter = new FakeRateLimiter({
+      success: false,
+      limit: 600,
+      remaining: 0,
+      retryAfterSeconds: 42,
+    });
+    const now = () => new Date('2026-02-04T00:00:00.000Z');
+
+    const { GET } = createHealthHandler({
+      db: { execute },
+      logger,
+      rateLimiter,
+      now,
+    });
+
+    const res = await GET(
+      new Request('http://localhost/api/health', {
+        method: 'GET',
+        headers: { 'x-real-ip': '203.0.113.2' },
+      }),
+    );
+
+    expect(res.status).toBe(429);
+    expect(execute).toHaveBeenCalledTimes(0);
+  });
+});
+
 describe('POST /api/health', () => {
   it('returns ok=true when the database is reachable', async () => {
     const execute = vi.fn(async () => undefined);
@@ -12,7 +102,7 @@ describe('POST /api/health', () => {
     const rateLimiter = new FakeRateLimiter();
     const now = () => new Date('2026-02-04T00:00:00.000Z');
 
-    const POST = createHealthHandler({
+    const { POST } = createHealthHandler({
       db: { execute },
       logger,
       rateLimiter,
@@ -51,7 +141,7 @@ describe('POST /api/health', () => {
     const rateLimiter = new FakeRateLimiter();
     const now = () => new Date('2026-02-04T00:00:00.000Z');
 
-    const POST = createHealthHandler({
+    const { POST } = createHealthHandler({
       db: { execute },
       logger,
       rateLimiter,
@@ -96,7 +186,7 @@ describe('POST /api/health', () => {
     });
     const now = () => new Date('2026-02-04T00:00:00.000Z');
 
-    const POST = createHealthHandler({
+    const { POST } = createHealthHandler({
       db: { execute },
       logger,
       rateLimiter,
@@ -135,7 +225,7 @@ describe('POST /api/health', () => {
     const rateLimiter = new FakeRateLimiter(new Error('rate limiter down'));
     const now = () => new Date('2026-02-04T00:00:00.000Z');
 
-    const POST = createHealthHandler({
+    const { POST } = createHealthHandler({
       db: { execute },
       logger,
       rateLimiter,

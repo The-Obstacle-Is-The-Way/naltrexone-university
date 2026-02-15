@@ -8,6 +8,7 @@ import {
   runLoadQuestionFlow,
   runSubmitAnswerFlow,
 } from '@/app/(app)/app/practice/shared/question-flow-actions';
+import { withTimeout } from '@/lib/with-timeout';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import type {
   EndPracticeSessionOutput,
@@ -15,6 +16,9 @@ import type {
 } from '@/src/adapters/controllers/practice-controller';
 import type { NextQuestion } from '@/src/application/use-cases/get-next-question';
 import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
+
+const END_SESSION_TIMEOUT_MS = 15_000;
+const SESSION_REVIEW_TIMEOUT_MS = 10_000;
 
 export async function loadNextQuestion(input: {
   sessionId: string;
@@ -167,10 +171,13 @@ export async function endSession(input: {
 
   let res: ActionResult<EndPracticeSessionOutput>;
   try {
-    res = await input.endPracticeSessionFn({
-      sessionId: input.sessionId,
-      idempotencyKey: input.endSessionIdempotencyKey,
-    });
+    res = await withTimeout(
+      input.endPracticeSessionFn({
+        sessionId: input.sessionId,
+        idempotencyKey: input.endSessionIdempotencyKey,
+      }),
+      END_SESSION_TIMEOUT_MS,
+    );
   } catch (error) {
     if (!isMounted()) return;
 
@@ -222,9 +229,12 @@ export function createNavigatorEffect(input: {
   void (async () => {
     let res: Awaited<ReturnType<typeof input.getPracticeSessionReviewFn>>;
     try {
-      res = await input.getPracticeSessionReviewFn({
-        sessionId: input.sessionId,
-      });
+      res = await withTimeout(
+        input.getPracticeSessionReviewFn({
+          sessionId: input.sessionId,
+        }),
+        SESSION_REVIEW_TIMEOUT_MS,
+      );
     } catch (error) {
       if (!mounted || !isMounted()) return;
       input.setNavigator(null);
@@ -278,9 +288,12 @@ export function createSummaryReviewEffect(input: {
   void (async () => {
     let res: Awaited<ReturnType<typeof input.getPracticeSessionReviewFn>>;
     try {
-      res = await input.getPracticeSessionReviewFn({
-        sessionId: input.sessionId,
-      });
+      res = await withTimeout(
+        input.getPracticeSessionReviewFn({
+          sessionId: input.sessionId,
+        }),
+        SESSION_REVIEW_TIMEOUT_MS,
+      );
     } catch (error) {
       if (!mounted || !isMounted()) return;
       input.setSummaryReviewLoadState({
