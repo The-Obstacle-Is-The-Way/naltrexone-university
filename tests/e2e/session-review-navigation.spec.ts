@@ -79,7 +79,7 @@ test.describe('session review navigation (SPEC-027)', () => {
 
     await expect(
       navigatorCard.locator(
-        '[data-slot="button"].bg-success, [data-slot="button"].bg-destructive',
+        '[data-slot="button"][aria-label*=": Correct"], [data-slot="button"][aria-label*=": Incorrect"]',
       ),
     ).toHaveCount(2, { timeout: 15_000 });
 
