@@ -1,7 +1,7 @@
 # Technical Debt Register
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-02-14
+**Last Updated:** 2026-02-15
 
 ---
 
@@ -27,16 +27,16 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 | ID | Title | Priority | Resolved | GitHub Issue |
 |----|-------|----------|----------|--------------|
-| [DEBT-213](./debt-213-useeffect-derived-state-sync-antipatterns.md) | useEffect Derived-State Sync Anti-Patterns in Practice Hooks (5 instances) | P4 | 2026-02-14 | — |
-| [DEBT-212](./debt-212-duplicate-sleep-utility-adapter-shared.md) | Duplicate `sleep()` Utility in Adapter Shared Modules | P4 | 2026-02-14 | #91 |
-| [DEBT-208](./debt-208-e2e-cross-page-navigation-tests.md) | Missing E2E Tests for Cross-Page Navigation Flows | P3 | 2026-02-14 | #81 |
+| [DEBT-213](../_archive/debt/debt-213-useeffect-derived-state-sync-antipatterns.md) | useEffect Derived-State Sync Anti-Patterns in Practice Hooks (5 instances) | P4 | 2026-02-14 | — |
+| [DEBT-212](../_archive/debt/debt-212-duplicate-sleep-utility-adapter-shared.md) | Duplicate `sleep()` Utility in Adapter Shared Modules | P4 | 2026-02-14 | #91 |
+| [DEBT-208](../_archive/debt/debt-208-e2e-cross-page-navigation-tests.md) | Missing E2E Tests for Cross-Page Navigation Flows | P3 | 2026-02-14 | #81 |
 | [DEBT-215](../_archive/debt/debt-215-backwards-compatibility-shims-cleanup.md) | Backwards Compatibility Shims in a Greenfield Codebase | P3 | 2026-02-14 | — |
 | [DEBT-216](../_archive/debt/debt-216-remaining-drizzle-dry-violations.md) | Remaining Drizzle Repository Violations (God Method, Race Condition, DRY) | P3 | 2026-02-14 | — |
 | [DEBT-214](../_archive/debt/debt-214-drizzle-query-duplication-attempt-repository.md) | Drizzle Query Duplication in Attempt Repository (Conditional JOINs via Copy-Paste) | P3 | 2026-02-14 | — |
 | [DEBT-210](../_archive/debt/debt-210-dead-routes-app-review-constant.md) | Dead `ROUTES.APP_REVIEW` Constant in Route Definitions | P4 | 2026-02-14 (Subsumed by DEBT-215) | #90 |
 | [DEBT-207](../_archive/debt/debt-207-missing-session-question-count-warning.md) | No Warning When Practice Session Has Fewer Questions Than Requested | P3 | 2026-02-14 | #82 |
 | [DEBT-209](../brainstorming/bs-015-practice-starter-available-count-display.md) | Practice Starter Shows Available Question Count Before Session Start | P3 | 2026-02-14 | #53 |
-| [DEBT-206](./debt-206-client-side-difficulty-tag-filters-history.md) | Client-Side Difficulty/Tag Filters Cause Inaccurate Pagination on History Questions Tab | P2 | 2026-02-14 | #87 |
+| [DEBT-206](../_archive/debt/debt-206-client-side-difficulty-tag-filters-history.md) | Client-Side Difficulty/Tag Filters Cause Inaccurate Pagination on History Questions Tab | P2 | 2026-02-14 | #87 |
 
 ---
 
@@ -280,11 +280,8 @@ All frontend-specific UI/UX debt. Items use `FE-XXX` IDs and are cross-reference
 
 | ID | Title | Now | Reason |
 |----|-------|-----|--------|
-<<<<<<< HEAD
 | DEBT-209 | Practice Session Starter Missing Question Counts Per Tag | [BS-015](../brainstorming/bs-015-practice-starter-available-count-display.md) | Problem is real but solution scope unclear — display only vs input constraint; needs design pass |
-=======
 | DEBT-207 | No Warning When Practice Session Has Fewer Questions Than Requested | [BS-014](../brainstorming/bs-014-practice-starter-question-count-ux.md) | Problem is real but proposed fix (post-creation toast) needs UX design work; related to DEBT-209 |
->>>>>>> 84d9ba7 (Fix DEBT-209: Show available question count in practice starter)
 
 ### Invalidated (False Positives)
 
