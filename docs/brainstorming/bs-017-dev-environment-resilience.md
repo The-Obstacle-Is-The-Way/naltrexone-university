@@ -1,205 +1,362 @@
-# BS-017: Dev Environment Resilience — Connection Timeouts and Server Action Hangs
+# BS-017: Dev Environment Resilience — Server Action Hangs and Observable Failure Gaps
 
 **Date:** 2026-02-15
-**Triggered by:** Two AI agent sessions hung indefinitely while running Playwright screenshots against localhost:3000. Server actions returned no response, leaving the UI in a permanent "Loading…" state with no timeout or error recovery.
-**Scope:** The local dev stack has no connection timeouts, no server action client-side timeouts, and no graceful degradation for Neon Postgres cold starts — causing silent hangs that waste developer and agent time.
+**Triggered by:** Two AI agent sessions hung indefinitely while running Playwright screenshots against localhost:3000. Server actions returned no response, leaving the UI in a permanent "Loading..." state with no timeout or error recovery.
+**Scope:** The codebase has no client-side timeout on server action calls — the only layer in the stack without a timeout. When a server action hangs (database stall, network partition, Neon cold start edge case), the UI waits forever with no error feedback.
 **Related:** [Testing Infrastructure](../dev/testing-infrastructure.md), [AGENTS.md](../../AGENTS.md) (port 3000 cleanup tip)
 
 ---
 
-## Open Questions
+## What This Doc Covers
 
-1. **What connection timeout is appropriate?** Neon cold starts take 1–5 seconds. A 10-second `connect_timeout` covers cold starts without masking real outages. Is 10s right, or should dev and production differ?
-2. **Should server actions use AbortController?** Adding a client-side timeout (e.g., 15 seconds) to every server action call would surface errors instead of hanging forever. But should this be a per-call wrapper or a global middleware?
-3. **Should we add a health check endpoint?** A `/api/health` route that pings the database would let Playwright's `webServer` config verify the app is truly ready — not just listening on port 3000 but actually able to serve data.
-4. **Connection pool limits?** The `postgres` driver defaults to 10 connections. In dev with HMR, we never explicitly set `max`. Should we cap it lower (e.g., 3) to avoid exhausting Neon's free-tier connection limit?
+This brainstorming doc investigates **observable failure gaps** in both dev and production. It follows the fail-fast / fail-loud philosophy: every failure should be detected quickly and surfaced clearly. No silent swallowing, no fallbacks that mask errors.
 
----
+### Audience
 
-## The Problem
-
-### What Happens
-
-When a developer (or AI agent) runs the Next.js dev server and makes a request that triggers a server action calling the database, the request sometimes hangs indefinitely — no error, no timeout, no feedback. The UI shows "Loading…" forever.
-
-This was observed twice during Playwright-based screenshot sessions:
-- **Agent 1:** Spent 38 minutes debugging a `getNextQuestion` server action that never returned. The agent never took a single screenshot.
-- **Agent 2:** Got partial screenshots but `SessionNavigationBar` never rendered because the underlying `getPracticeSessionReview` server action hung silently.
-
-Both agents were unable to distinguish "slow response" from "will never respond" because there is no timeout at any layer of the stack.
-
-### Why It Matters
-
-- **Developer time wasted:** A human developer hitting this would kill the server and restart, losing a few minutes. An AI agent (which can't intuit "this is hung") loses its entire context window trying to debug infrastructure.
-- **Flaky E2E tests:** Playwright tests with `timeout: 15_000` will fail, but the failure message ("locator timed out") gives no hint that the database connection is the root cause.
-- **Production risk:** The same missing timeouts exist in production. A Neon outage would cause server actions to hang forever with no error boundary catching it.
+Developers, AI agents, and anyone debugging "the UI is stuck on Loading..." scenarios.
 
 ---
 
-## Root Cause Analysis
+## What's Already Good (Verified)
 
-### 1. No postgres connection timeout
+Before listing gaps, it's important to document what the codebase already does well. These were verified against source code on 2026-02-15.
 
-**File:** `lib/db-connection-options.ts`
+### Database Connection (`lib/db.ts`)
+
+| Feature | Status | Evidence |
+|---------|--------|----------|
+| **`connect_timeout`** | 30 seconds (driver default) | `postgres@3.4.8` source: `connect_timeout: 30` — NOT infinity |
+| **`max_lifetime`** | Random 30–60 minutes (driver default) | Source: `60 * (30 + Math.random() * 30)` — jittered to prevent thundering herd |
+| **`keep_alive`** | 60 seconds (driver default) | TCP keepalive detects broken connections |
+| **`max`** | 10 connections (driver default) | Appropriate for Vercel serverless with Neon pooled endpoint |
+| **Reconnection backoff** | Built-in exponential with jitter | Source: `(0.5 + Math.random()/2) * Math.min(3^retries / 100, 20)` — caps at ~20s |
+| **Singleton pattern** | Correct | `globalForDb` in dev prevents HMR connection leaks; fresh instance per serverless invocation in prod |
+| **Driver choice** | Correct | `postgres` (porsager) is the right driver for Node.js runtime on Vercel. `@neondatabase/serverless` is only needed for edge/worker runtimes without TCP. |
+| **Prepared statements** | Safe | `prepare: true` (default) works with Neon's PgBouncer since v1.22.0 (`max_prepared_statements=1000`) |
+
+### Error Handling
+
+| Feature | Status | Evidence |
+|---------|--------|----------|
+| **`createAction` wrapper** | Every server action wrapped in try/catch | `src/adapters/controllers/create-action.ts` — errors never propagate as unhandled rejections |
+| **Typed `ActionResult<T>`** | Discriminated union | `{ ok: true, data }` or `{ ok: false, error: { code, message } }` — forces callers to check |
+| **Error boundaries** | 11 `error.tsx` files + `global-error.tsx` | Every user-facing route has a dedicated boundary with contextual UI |
+| **Loading states** | 8 `loading.tsx` files | Every major route has a loading state |
+| **Suspense fallback** | Present with accessible text | `app/(app)/app/layout.tsx:95-103` renders `<output aria-live="polite">Loading app content...</output>` |
+| **Error logging** | Structured pino with secret redaction | `lib/logger.ts` — `server-only` import, JSON output, Vercel-compatible |
+| **`handleError`** | Catches all error types | `ApplicationError` (typed codes), `ZodError` (field-level), unknown (logged + generic message to client) |
+
+### Health Check
+
+| Feature | Status | Evidence |
+|---------|--------|----------|
+| **`/api/health` endpoint** | Already exists (POST) | `app/api/health/route.ts` — runs `SELECT 1`, rate-limited, returns `{ ok, db, timestamp }` with proper HTTP status codes (200/429/500/503) |
+
+### Retry Infrastructure
+
+| Feature | Status | Evidence |
+|---------|--------|----------|
+| **Retry utility** | Well-designed, production-quality | `src/adapters/shared/retry.ts` — exponential backoff, configurable factor, max delay, injectable sleep for testing |
+| **`isTransientExternalError`** | Classifies retryable errors | Covers `ECONNRESET`, `ETIMEDOUT`, `EAI_AGAIN`, `ENOTFOUND`, `ECONNREFUSED`, `EHOSTUNREACH`, `EPIPE`, HTTP 429, 5xx |
+| **Applied to external APIs** | Stripe + Clerk | `stripe-retry.ts`, `clerk-auth-gateway.ts` — 3 attempts, 100ms initial, factor 2, max 1000ms |
+
+### Client-Side Safety
+
+| Feature | Status | Evidence |
+|---------|--------|----------|
+| **`useIsMounted` guard** | Used in 30+ files | Prevents state updates on unmounted components |
+| **Stale closure prevention** | `isStale` flag + cleanup | `use-question-page-controller.ts:161-163` — cancels outdated requests |
+| **`useTransition`** | Consistent usage | Provides `isPending` state for loading UI |
+
+---
+
+## The Actual Gaps
+
+### Gap 1: No Client-Side Timeout on Server Action Calls (HIGH — the root cause of the observed hangs)
+
+**What happens:** When a server action hangs (database stall beyond the 30s `connect_timeout`, Neon compute unreachable, network partition), the client-side promise waits forever. The user sees "Loading..." indefinitely with no error, no timeout, and no way to recover without refreshing.
+
+**Why error boundaries don't help:** React error boundaries only catch errors during rendering. A server action that hangs (promise never resolves or rejects) will never trigger an error boundary. The `createAction` try/catch on the server side only fires if the operation errors — a hang means neither success nor error.
+
+**Why AbortController doesn't help:** As of Next.js 16, server actions **cannot be aborted** via `AbortController`. This is a [known limitation](https://github.com/vercel/next.js/issues/81418). The abort signal does not propagate to the server function. For cancellable operations, you must use Route Handlers with `fetch()` instead.
+
+**Canonical 2026 pattern — `Promise.race` with timeout:**
 
 ```typescript
-export const POSTGRES_CONNECTION_PARAMETERS = {
-  TimeZone: 'UTC',
-} as const;
-```
+// lib/with-timeout.ts
+export class TimeoutError extends Error {
+  constructor(ms: number) {
+    super(`Operation timed out after ${ms}ms`);
+    this.name = 'TimeoutError';
+  }
+}
 
-**File:** `lib/db.ts:17`
-
-```typescript
-const conn =
-  globalForDb.conn ??
-  postgres(connectionString, { connection: POSTGRES_CONNECTION_PARAMETERS });
-```
-
-The `postgres` driver (`postgres ^3.4.8`) accepts `connect_timeout`, `idle_timeout`, and `max_lifetime` options — none are set. If Neon's connection pooler is slow or the database is cold-starting, the driver will wait forever to establish a connection.
-
-**What's missing:**
-
-| Option | Purpose | Current | Suggested |
-|--------|---------|---------|-----------|
-| `connect_timeout` | Max seconds to wait for initial connection | ∞ (default) | 10 |
-| `idle_timeout` | Seconds before idle connections are closed | 0 (never) | 30 |
-| `max_lifetime` | Max seconds a connection can exist | ∞ (default) | 300 (5 min) |
-| `max` | Max connections in pool | 10 (default) | 3 (dev) / 10 (prod) |
-
-### 2. No server action client-side timeout
-
-**Evidence:** `grep -r "AbortController" app/` returns zero results.
-
-Every server action call in the app is a bare `await controllerFunction(args)` with no timeout wrapper. The `fetch` that Next.js generates under the hood for server actions has no `signal` or `AbortController` attached.
-
-**Example call chain** (review mode):
-1. `use-question-page-controller.ts` calls `getPracticeSessionReview(sessionId)`
-2. This is a server action in `src/adapters/controllers/review-controller.ts`
-3. The controller calls the database via Drizzle → postgres driver
-4. If step 3 hangs, step 1 awaits forever — no timeout, no error, no UI feedback
-
-### 3. Neon Postgres cold starts
-
-Neon's free tier suspends compute after 5 minutes of inactivity. The first connection after suspension triggers a cold start taking 1–5 seconds. During this window:
-- The postgres driver is blocked on TCP connect
-- No timeout fires (because none is configured)
-- The server action promise is pending
-- The client sees "Loading…" indefinitely if the cold start exceeds expectations
-
-### 4. Next.js HMR connection leaks
-
-**File:** `lib/db.ts:18-20`
-
-```typescript
-if (process.env.NODE_ENV !== 'production') {
-  globalForDb.conn = conn;
+export function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  let timer: ReturnType<typeof setTimeout>;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new TimeoutError(ms)), ms);
+  });
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
 }
 ```
 
-The singleton pattern prevents creating a new connection on every HMR reload. However, if a file outside the `lib/db.ts` module boundary is edited and causes a partial re-evaluation, the old connection may become stale while `globalForDb.conn` still references it. The postgres driver will try to reuse the dead connection, and — with no `idle_timeout` or `max_lifetime` — it won't know to discard it.
+**Important caveat:** `Promise.race` only prevents the **client from waiting** — the server action continues running until it completes or the platform kills it (via `maxDuration` / Vercel timeout). This is a **UX safeguard**, not a server-side cancellation.
 
-### 5. No graceful degradation or error boundary for data loading
+**Where to apply:** This should wrap server action calls in client hooks, not inside `createAction` itself. Per Clean Architecture, the timeout is a presentation-layer concern — the adapter/controller layer should not know about client-side timeouts.
 
-Server action failures (including hangs) bubble up as unhandled promise rejections. There is no:
-- Client-side error boundary wrapping server action calls with a timeout
-- Retry-with-backoff for transient connection failures
-- User-facing "Connection lost — retry?" UI for data loading failures
+**Evidence:** `grep -r "AbortController" app/ src/` returns zero results. No server action call site has any timeout mechanism.
 
----
+### Gap 2: No `maxDuration` on Any Route (MEDIUM — relies on implicit platform defaults)
 
-## Severity Assessment
+**What happens:** Without `export const maxDuration` on any page or route, server actions inherit Vercel's implicit default:
+- **Without Fluid Compute (legacy):** 10s (Hobby) / 15s (Pro)
+- **With Fluid Compute (default since April 2025):** 300s (5 min)
 
-| Dimension | Rating | Notes |
-|-----------|--------|-------|
-| **Frequency** | Moderate | Happens after 5+ minutes of dev inactivity (Neon cold start), or when connection pool is exhausted |
-| **Impact** | High | Complete UI hang with no recovery path; wastes significant agent/developer time |
-| **Blast radius** | Dev + Prod | Same code path runs in production — a Neon outage would cause identical hangs |
-| **Effort to fix** | Low | Most fixes are 1–5 line config changes |
+If Fluid Compute is enabled (likely for new projects), a hung server action could run for **5 minutes** before Vercel kills it.
 
----
-
-## Proposed Fixes (Sketches)
-
-### Fix 1: Add connection timeouts to postgres driver (Low effort)
-
-**File:** `lib/db-connection-options.ts`
-
-Add `connect_timeout`, `idle_timeout`, and `max_lifetime` to the existing connection parameters. These are driver-level options passed directly to `postgres()`, not inside `connection:`.
-
-**File:** `lib/db.ts`
-
-Pass the timeout options alongside the existing `connection` parameter:
+**Best practice:** Set `maxDuration` explicitly per-route based on expected execution time with a reasonable buffer. Don't rely on implicit defaults.
 
 ```typescript
+// app/(app)/app/questions/[slug]/page.tsx
+export const maxDuration = 30; // All server actions on this page get 30s
+```
+
+For global configuration, consider `vercel.json`:
+
+```json
+{
+  "functions": {
+    "app/**/*": { "maxDuration": 30 },
+    "app/api/cron/**/*": { "maxDuration": 60 }
+  }
+}
+```
+
+**Evidence:** `grep -r "maxDuration" app/` returns zero results. No route file in the codebase exports `maxDuration`.
+
+### Gap 3: Silent Error on Session Navigation Fetch (LOW — acceptable degradation, but no observability)
+
+**File:** `app/(app)/app/questions/[slug]/use-question-page-controller.ts:126-131`
+
+```typescript
+void getPracticeSessionReview({ sessionId }).then((result) => {
+  if (isStale) return;
+  if (!isMounted()) return;
+  if (!result.ok) {
+    setSessionNavigation(null);  // ← Error silently swallowed
+    return;
+  }
+  // ...
+});
+```
+
+**What happens:** If `getPracticeSessionReview` returns `{ ok: false }`, the session navigation (prev/next buttons) silently disappears. No error is logged, no toast is shown. The user has no idea that session navigation failed — the buttons simply don't render.
+
+**Why this is LOW severity:** Session navigation is supplementary UI. The user can still interact with the question, submit answers, and navigate manually. Setting navigation to `null` on error is a valid degradation strategy.
+
+**What's missing:** A `logger.warn()` or `console.warn()` so that developers/agents can see that the fetch failed. The degradation is correct; the lack of observability is the gap.
+
+**Additionally:** The `.then()` chain has no `.catch()` handler. If `getPracticeSessionReview` throws (network error, etc.) rather than returning `{ ok: false }`, the error is swallowed by `startTransition`'s internal handling with no dev-mode logging. Compare with `runTransitionedAsyncAction` in `question-flow-actions.ts:100-121` which has an explicit catch with `console.error` in dev mode.
+
+### Gap 4: Retry Infrastructure Not Wired to Database Operations (LOW — driver handles reconnection, but queries don't retry)
+
+**What happens:** The `retry` utility and `isTransientExternalError` are only wired to Stripe and Clerk calls. Database queries through Drizzle → postgres do not use application-level retry.
+
+**Why this is LOW severity:** The postgres driver handles **connection-level** reconnection internally (via `backoff`). Individual query failures (e.g., a transient `ECONNRESET` mid-query) would need application-level retry, but these are rare with Neon's pooled connections.
+
+**Per Clean Architecture:** Retry logic belongs in the **adapter layer**, not the use case layer. If we add DB query retry, it should be in a repository adapter wrapping the Drizzle calls, not in the use case or controller.
+
+### Gap 5: `idle_timeout` Not Set — Connections Never Auto-Close When Idle (LOW — acceptable for serverless)
+
+**Current:** `idle_timeout: null` (driver default) — connections stay open when idle.
+
+**Why this is LOW for our setup:**
+- **Vercel serverless:** Function instances are frozen/recycled by the platform, so idle connections are cleaned up by runtime lifecycle.
+- **Development:** The singleton pattern prevents connection accumulation across HMR reloads.
+- **`max_lifetime`** (30-60 min random) already handles connection recycling.
+
+**When it matters:** If connections go stale (e.g., Neon suspends compute while a connection is idle), the postgres driver's `keep_alive: 60` will detect the dead connection, and `max_lifetime` will eventually recycle it. Setting `idle_timeout: 20` would close idle connections faster, reducing the window for stale connection issues.
+
+**Recommended:** Set `idle_timeout: 20` as a belt-and-suspenders measure, especially for dev where the server may sit idle between work sessions.
+
+### Gap 6: Playwright `webServer` Config Doesn't Verify DB Connectivity (LOW — health endpoint exists but isn't used)
+
+**Current (`playwright.config.ts:37-42`):**
+
+```typescript
+webServer: {
+  command: process.env.CI ? 'pnpm start' : 'pnpm dev',
+  url: baseURL,  // Just checks if port 3000 responds
+  reuseExistingServer: !process.env.CI,
+  timeout: 120000,
+},
+```
+
+**Gap:** The health check endpoint (`/api/health`) exists and verifies DB connectivity, but Playwright's `webServer.url` just checks if the server is listening on port 3000. The server can be "up" (responding to HTTP) but unable to serve data (database unreachable).
+
+**Fix:** Change `url` to point to the health check. However, since the health check is `POST`-only, Playwright's URL polling (which uses `GET`) won't work directly. Options:
+1. Add a `GET` handler to the health check route
+2. Create a lightweight `/api/health/ready` GET endpoint
+3. Keep current config (the 30s `connect_timeout` will surface DB errors quickly in test assertions)
+
+---
+
+## Severity Summary
+
+| Gap | Severity | Frequency | Effort | Impact |
+|-----|----------|-----------|--------|--------|
+| **1. No client-side timeout** | HIGH | Every hung server action | Low (utility function + usage) | Eliminates indefinite "Loading..." hangs |
+| **2. No `maxDuration`** | MEDIUM | Vercel-deployed functions | Low (1-line exports) | Explicit platform timeout instead of implicit defaults |
+| **3. Silent session nav error** | LOW | When session review fetch fails | Trivial (add console.warn) | Better dev/agent observability |
+| **4. No DB query retry** | LOW | Rare transient failures | Medium | Driver handles reconnection; query retry is incremental |
+| **5. `idle_timeout` not set** | LOW | Stale connections after inactivity | Trivial (config change) | Faster stale connection cleanup |
+| **6. Playwright health check** | LOW | E2E test startup | Low | Better test reliability |
+
+---
+
+## Proposed Fixes (Prioritized)
+
+### Fix 1: Client-Side Timeout Wrapper (HIGH priority, Low effort)
+
+Create `lib/with-timeout.ts` (see Gap 1 code above). Apply to critical server action calls in client hooks. Start with the most impactful call sites:
+
+1. `use-question-page-controller.ts` — question loading and session navigation
+2. Practice session hooks — `startSession`, `submitAnswer`, `getNextQuestion`
+3. History/review hooks — session review loading
+
+**Where it lives (Clean Architecture):** The `withTimeout` utility is a **lib-level concern** (outermost layer). It wraps the call at the presentation layer, not inside the controller or use case.
+
+**Timer cleanup:** Always use `.finally(() => clearTimeout(timer))` to prevent timer leaks.
+
+### Fix 2: Add `maxDuration` to Routes (MEDIUM priority, Trivial effort)
+
+Add explicit `maxDuration` exports to key routes:
+
+```typescript
+// app/(app)/app/questions/[slug]/page.tsx
+export const maxDuration = 30;
+
+// app/api/cron/reconcile-stripe-subscriptions/route.ts
+export const maxDuration = 60; // Already has runtime='nodejs'
+
+// app/api/stripe/webhook/route.ts
+export const maxDuration = 30;
+
+// app/api/webhooks/clerk/route.ts
+export const maxDuration = 30;
+```
+
+**Note:** `maxDuration` goes on the **page or layout** that uses server actions, not on the server action file itself.
+
+### Fix 3: Add Observability to Session Navigation Error (LOW priority, Trivial effort)
+
+```typescript
+// use-question-page-controller.ts, inside the .then() callback
+if (!result.ok) {
+  if (process.env.NODE_ENV === 'development') {
+    console.warn('[SessionNavigation] Review fetch failed:', result.error);
+  }
+  setSessionNavigation(null);
+  return;
+}
+```
+
+Also add a `.catch()` handler:
+
+```typescript
+void getPracticeSessionReview({ sessionId })
+  .then((result) => { /* existing code */ })
+  .catch((error) => {
+    if (isStale || !isMounted()) return;
+    if (process.env.NODE_ENV === 'development') {
+      console.error('[SessionNavigation] Review fetch threw:', error);
+    }
+    setSessionNavigation(null);
+  });
+```
+
+### Fix 4: Set `idle_timeout` in DB Config (LOW priority, Trivial effort)
+
+```typescript
+// lib/db.ts
 const conn =
   globalForDb.conn ??
   postgres(connectionString, {
-    connect_timeout: 10,
-    idle_timeout: 30,
-    max_lifetime: 300,
-    max: process.env.NODE_ENV === 'production' ? 10 : 3,
+    idle_timeout: 20,
     connection: POSTGRES_CONNECTION_PARAMETERS,
   });
 ```
 
-**Note:** `connect_timeout`, `idle_timeout`, `max_lifetime`, and `max` are top-level `postgres()` options, NOT inside the `connection` object (which maps to PostgreSQL `SET` parameters). See [postgres.js docs](https://github.com/porsager/postgres#connection).
+**What NOT to change:**
+- `connect_timeout` — the 30s default is good (covers Neon cold starts with buffer)
+- `max_lifetime` — the random 30-60 min default with jitter is optimal
+- `max` — the default 10 is appropriate for Vercel serverless with Neon pooled endpoint
+- `keep_alive` — the 60s default is standard
 
-### Fix 2: Server action timeout wrapper (Low effort)
+### Fix 5: Add GET Handler to Health Check (LOW priority, Trivial effort)
 
-Create a utility that wraps server action calls with an AbortController or Promise.race timeout:
-
-```typescript
-// lib/with-timeout.ts
-export function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
-  return Promise.race([
-    promise,
-    new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error(`Server action timed out after ${ms}ms`)), ms)
-    ),
-  ]);
-}
-```
-
-Usage in controllers or client hooks:
-
-```typescript
-const result = await withTimeout(getPracticeSessionReview(sessionId), 15_000);
-```
-
-### Fix 3: Health check endpoint (Low effort)
-
-Add `/api/health` that runs `SELECT 1` against the database. Update `playwright.config.ts` to use it:
+Add a `GET` export alongside the existing `POST` in `app/api/health/route.ts`, or create a lightweight `/api/health/ready` GET route. Then update `playwright.config.ts`:
 
 ```typescript
 webServer: {
-  command: 'pnpm dev',
-  url: 'http://localhost:3000/api/health', // Currently just http://localhost:3000
-  timeout: 120_000,
+  command: process.env.CI ? 'pnpm start' : 'pnpm dev',
+  url: 'http://localhost:3000/api/health/ready',
   reuseExistingServer: !process.env.CI,
+  timeout: 120000,
 },
 ```
 
-### Fix 4: Document troubleshooting in testing-infrastructure.md (Low effort)
+---
 
-Add a section to `docs/dev/testing-infrastructure.md` covering:
-- Neon cold start symptoms and how to recognize them
-- How to verify the database is reachable: `psql $DATABASE_URL -c "SELECT 1"`
-- Port 3000 zombie cleanup (already in `AGENTS.md:138`, should be in testing docs too)
-- Connection pool exhaustion signs and recovery
+## What We Investigated and Ruled Out
+
+These were initially suspected as problems but investigation proved they are either non-issues or already handled.
+
+| Suspected Issue | Verdict | Why |
+|-----------------|---------|-----|
+| "No connection timeout" | **Non-issue** | `connect_timeout: 30` is the driver default. Connections time out after 30 seconds. |
+| "No max_lifetime" | **Non-issue** | Random 30-60 minute jitter is the driver default. Connections are recycled. |
+| "No health check" | **Non-issue** | `/api/health` exists with DB check, rate limiting, and proper status codes. |
+| "No error boundaries" | **Non-issue** | 11 route-level boundaries + `global-error.tsx` cover every user-facing route. |
+| "Server action errors bubble as unhandled rejections" | **Non-issue** | `createAction` wraps every server action in try/catch. Errors return as `{ ok: false }`. |
+| "No retry for transient failures" | **Partially addressed** | Retry exists for Stripe/Clerk. Driver handles connection reconnection. Only DB query-level retry is missing (low risk). |
+| "HMR connection leaks" | **Non-issue** | Singleton pattern + `max_lifetime` handle this. The `keep_alive` setting detects dead connections. |
+| "No structured logging" | **Non-issue** | Pino with JSON output, secret redaction, and `server-only` enforcement. |
+| "Need `@neondatabase/serverless`" | **Non-issue** | Standard `postgres` driver is correct for Node.js runtime. `@neondatabase/serverless` is for edge/worker environments without TCP. |
+| "`prepare: false` needed for PgBouncer" | **Non-issue** | Neon's PgBouncer supports protocol-level prepared statements since v1.22.0. |
 
 ---
 
-## Affected Files
+## Neon Cold Start Context
 
-| File | Issue |
-|------|-------|
-| `lib/db-connection-options.ts` | No timeout parameters |
-| `lib/db.ts` | No `max`, `idle_timeout`, `max_lifetime` on `postgres()` call |
-| `next.config.ts` | No `serverActions.bodySizeLimit` or timeout config |
-| `playwright.config.ts` | `webServer.url` doesn't verify DB connectivity |
-| `docs/dev/testing-infrastructure.md` | No troubleshooting for connection hangs |
-| All server action callers in `app/` | No client-side timeout or AbortController |
+Neon's free tier suspends compute after 5 minutes of inactivity. Current cold start latency (2026): **~400-750ms** (down from 1-5 seconds in earlier versions).
+
+**Why this usually isn't a problem:**
+- The postgres driver's `connect_timeout: 30` provides a 30-second window — far more than the ~750ms worst case.
+- The driver's built-in exponential backoff retries connection failures automatically.
+- `keep_alive: 60` detects broken connections within a minute.
+
+**When it IS a problem:**
+- If Neon compute is unreachable (not just cold, but actually down), the 30-second `connect_timeout` fires and returns an error — but there is no client-side timeout, so the UI waits for the full 30 seconds of server-side timeout PLUS any server-side processing time before the error propagates back.
+- If multiple cold starts happen simultaneously (e.g., Playwright running multiple tests), connections can queue up.
+
+**Mitigation already in place:** The 30s `connect_timeout` ensures the server side fails within a bounded time. The missing piece is Gap 1 (client-side timeout) to bound the total wait time from the user's perspective.
+
+---
+
+## Clean Architecture Alignment
+
+Per Robert C. Martin's dependency rule and industry best practices:
+
+| Concern | Belongs In | Current Status |
+|---------|-----------|----------------|
+| **Connection timeout** | Adapter layer (driver config) | Handled by driver defaults |
+| **Query retry** | Adapter layer (repository implementation) | Not implemented (LOW priority) |
+| **Client-side timeout** | Presentation layer (hooks/components) | NOT implemented (HIGH priority — Gap 1) |
+| **Error translation** | Adapter → Application boundary | Handled by `createAction` + `handleError` |
+| **Typed error results** | Application layer | Handled by `ActionResult<T>` |
+| **Error boundaries** | Presentation layer | Handled by `error.tsx` files |
+| **Platform timeout** | Infrastructure config | NOT configured (MEDIUM priority — Gap 2) |
 
 ---
 
@@ -207,14 +364,19 @@ Add a section to `docs/dev/testing-infrastructure.md` covering:
 
 | Date | Decision | Rationale |
 |------|----------|-----------|
-| 2026-02-15 | Created BS-017 | Two agent sessions hung on server action calls; root cause traced to missing connection timeouts |
+| 2026-02-15 | Created BS-017 | Two agent sessions hung on server action calls; initial root cause traced to missing connection timeouts |
+| 2026-02-15 | Corrected BS-017 after deep investigation | Driver defaults provide 30s connect timeout, random 30-60 min max_lifetime, and exponential backoff. Original doc incorrectly claimed these were infinite/missing. Root cause narrowed to no client-side timeout on server actions (Gap 1). |
 
 ---
 
 ## Related Documentation
 
 - [postgres.js connection options](https://github.com/porsager/postgres#connection) — `connect_timeout`, `idle_timeout`, `max_lifetime`, `max`
-- [Neon cold starts](https://neon.tech/docs/introduction/auto-suspend) — Auto-suspend behavior and cold start latency
-- [Next.js Server Actions](https://nextjs.org/docs/app/building-your-application/data-fetching/server-actions-and-mutations) — No built-in client-side timeout mechanism
-- [Testing Infrastructure](../dev/testing-infrastructure.md) — Existing troubleshooting (minimal)
-- [AGENTS.md](../../AGENTS.md) — Port 3000 cleanup tip (line ~138)
+- [Neon: Connection Latency and Timeouts](https://neon.com/docs/connect/connection-latency) — Cold start ~400-750ms
+- [Neon: Connection Pooling](https://neon.com/docs/connect/connection-pooling) — PgBouncer transaction mode, 10k client connection limit
+- [Next.js Server Actions — Cannot Be Aborted](https://github.com/vercel/next.js/issues/81418) — Known limitation, use Route Handlers for cancellable operations
+- [Next.js Route Segment Config](https://nextjs.org/docs/app/api-reference/file-conventions/route-segment-config) — `maxDuration` goes on pages/layouts, not server action files
+- [Vercel Functions Duration](https://vercel.com/docs/functions/configuring-functions/duration) — Fluid Compute defaults to 300s
+- [Vercel: Efficiently Manage DB Pools with Fluid](https://vercel.com/kb/guide/efficiently-manage-database-connection-pools-with-fluid-compute) — Pool reuse in serverless
+- [Testing Infrastructure](../dev/testing-infrastructure.md) — Playwright config, troubleshooting
+- [AGENTS.md](../../AGENTS.md) — Port 3000 cleanup tip

@@ -336,6 +336,38 @@ killall "Google Chrome"
 - Use `waitForLoadState('networkidle')` before assertions
 - Add explicit waits: `await page.waitForTimeout(1000)`
 
+### Server actions hang / UI stuck on "Loading..."
+
+**Symptoms:** Playwright screenshots show "Loading..." or skeleton states that never resolve. Server actions return no response. Tests time out with "locator timed out" errors that give no hint about the root cause.
+
+**Most likely causes (in order):**
+
+1. **Neon Postgres cold start:** Free tier suspends compute after 5 minutes of inactivity. Cold starts take ~400-750ms. The postgres driver has a 30-second `connect_timeout` and automatic reconnection with exponential backoff, so this usually resolves itself. If tests still fail, verify the database is reachable:
+
+   ```bash
+   psql "$DATABASE_URL" -c "SELECT 1"
+   ```
+
+2. **Port 3000 zombie process:** A previous dev server is still running but in a bad state.
+
+   ```bash
+   lsof -ti:3000 | xargs kill -9
+   ```
+
+3. **Connection pool exhaustion:** The postgres driver defaults to `max: 10` connections. In dev, the singleton pattern (`globalForDb`) prevents accumulation across HMR reloads. If you suspect exhaustion, restart the dev server.
+
+4. **Network partition / Neon outage:** Check [Neon status page](https://neonstatus.com/). The `connect_timeout: 30` will fire and return an error within 30 seconds — but there is currently no client-side timeout on server action calls, so the UI may wait for the full 30s before showing an error.
+
+**What the codebase already handles:**
+- `connect_timeout: 30s` (postgres driver default) — connections time out
+- `max_lifetime: 30-60 min` (random jitter) — connections are recycled
+- `keep_alive: 60s` — detects broken TCP connections
+- Exponential backoff with jitter on reconnection
+- `createAction` try/catch wraps every server action
+- Error boundaries on every route
+
+**Known gap:** No client-side timeout on server action calls. See [BS-017](../brainstorming/bs-017-dev-environment-resilience.md) for analysis and proposed `withTimeout` wrapper.
+
 ---
 
 ## Related Documentation

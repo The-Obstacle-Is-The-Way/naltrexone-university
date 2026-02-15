@@ -1,7 +1,7 @@
 # Brainstorming Register
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-02-14
+**Last Updated:** 2026-02-15
 
 ---
 
@@ -30,7 +30,7 @@ Brainstorming (BS-NNN) → Spec (SPEC-NNN) → Implementation → Archive
 | [BS-014](./bs-014-practice-starter-question-count-ux.md) | Practice Starter — Silent Truncation When Fewer Questions Available | Active | — |
 | [BS-015](./bs-015-practice-starter-available-count-display.md) | Practice Starter — Show Available Question Count Before Session Start | Active | — |
 | [BS-016](./bs-016-review-mode-question-navigator.md) | Color-Coded Question Navigator in Review Mode | Active | — |
-| [BS-017](./bs-017-dev-environment-resilience.md) | Dev Environment Resilience — Connection Timeouts and Server Action Hangs | Active | — |
+| [BS-017](./bs-017-dev-environment-resilience.md) | Dev Environment Resilience — Server Action Hangs and Observable Failure Gaps | Active | — |
 
 **Next Brainstorming ID:** BS-018
 
