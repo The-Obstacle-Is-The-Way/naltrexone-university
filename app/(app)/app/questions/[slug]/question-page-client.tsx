@@ -15,6 +15,7 @@ import {
 } from '@/lib/routes';
 import type { GetQuestionBySlugOutput } from '@/src/adapters/controllers/question-view-controller';
 import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
+import { ReviewQuestionNavigator } from './components/review-question-navigator';
 import type { LoadState, SessionNavigation } from './question-page-logic';
 import { useQuestionPageController } from './use-question-page-controller';
 
@@ -197,10 +198,16 @@ export function QuestionView(props: QuestionViewProps) {
       </div>
 
       {props.sessionNavigation ? (
-        <SessionNavigationBar
-          navigation={props.sessionNavigation}
-          historyHref={props.historyHref}
-        />
+        <>
+          <ReviewQuestionNavigator
+            navigation={props.sessionNavigation}
+            historyHref={props.historyHref}
+          />
+          <SessionNavigationBar
+            navigation={props.sessionNavigation}
+            historyHref={props.historyHref}
+          />
+        </>
       ) : null}
 
       {props.loadState.status === 'error' ? (
