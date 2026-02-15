@@ -24,7 +24,7 @@ describe('practice-page-tags', () => {
 
       expect(setTagLoadStatus).toHaveBeenCalledWith('loading');
 
-      await Promise.resolve();
+      await new Promise((resolve) => setTimeout(resolve, 0));
 
       expect(getTagsFn).toHaveBeenCalledWith({});
       expect(setAvailableTags).toHaveBeenCalledWith([{ slug: 'tag-1' }]);
@@ -47,7 +47,7 @@ describe('practice-page-tags', () => {
         logError,
       });
 
-      await Promise.resolve();
+      await new Promise((resolve) => setTimeout(resolve, 0));
 
       expect(setTagLoadStatus).toHaveBeenLastCalledWith('error');
       expect(setAvailableTags).not.toHaveBeenCalled();
@@ -71,7 +71,7 @@ describe('practice-page-tags', () => {
         logError,
       });
 
-      await Promise.resolve();
+      await new Promise((resolve) => setTimeout(resolve, 0));
 
       expect(setTagLoadStatus).toHaveBeenLastCalledWith('error');
       expect(setAvailableTags).not.toHaveBeenCalled();
@@ -104,7 +104,7 @@ describe('practice-page-tags', () => {
       cleanup();
       deferred.resolve(ok({ rows: [{ slug: 'tag-1' }] }));
 
-      await Promise.resolve();
+      await new Promise((resolve) => setTimeout(resolve, 0));
 
       expect(setAvailableTags).not.toHaveBeenCalled();
       expect(setTagLoadStatus).toHaveBeenCalledTimes(1);

@@ -1,9 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
+import { TimeoutError } from '@/lib/with-timeout';
 import { err, ok } from '@/src/adapters/controllers/action-result';
 import type { NextQuestion } from '@/src/application/use-cases/get-next-question';
 import {
   applyBookmarkUpdate,
   getActionResultErrorMessage,
+  getThrownErrorMessage,
   loadBookmarkedQuestionIds,
   loadNextQuestion,
   submitSelectedAnswer,
@@ -24,6 +26,14 @@ describe('practice-logic', () => {
     it('returns a fallback message for ok ActionResult', () => {
       expect(getActionResultErrorMessage({ ok: true, data: null })).toBe(
         'Unexpected ok result',
+      );
+    });
+  });
+
+  describe('getThrownErrorMessage', () => {
+    it('returns a friendly message when error is TimeoutError', () => {
+      expect(getThrownErrorMessage(new TimeoutError(5000))).toBe(
+        'Request timed out. Please try again.',
       );
     });
   });

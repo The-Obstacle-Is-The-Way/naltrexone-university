@@ -1,6 +1,9 @@
+import { TimeoutError } from '@/lib/with-timeout';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import type { NextQuestion } from '@/src/application/use-cases/get-next-question';
 import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
+
+const FRIENDLY_TIMEOUT_MESSAGE = 'Request timed out. Please try again.';
 
 export function getActionResultErrorMessage(
   result: ActionResult<unknown>,
@@ -10,6 +13,7 @@ export function getActionResultErrorMessage(
 }
 
 export function getThrownErrorMessage(error: unknown): string {
+  if (error instanceof TimeoutError) return FRIENDLY_TIMEOUT_MESSAGE;
   if (error instanceof Error && error.message) return error.message;
   if (typeof error === 'string' && error.length > 0) return error;
   return 'Unexpected error';

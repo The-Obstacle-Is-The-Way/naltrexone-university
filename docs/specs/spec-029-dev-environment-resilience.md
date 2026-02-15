@@ -137,11 +137,11 @@ Add a `GET` export to `app/api/health/route.ts`. The GET handler:
 - Applies rate limiting (same limits)
 - Returns the same `{ ok, db, timestamp }` response shape
 
-This allows Playwright (which uses HEAD/GET for `webServer.url` polling) to verify DB connectivity at startup.
+This allows Playwright (which uses GET for `webServer.url` polling) to verify DB connectivity at startup.
 
 ### Fix 6: Playwright Config Update (LOW)
 
-Change `playwright.config.ts` `webServer.url` from `baseURL` (just port check) to `${baseURL}/api/health` (DB-aware readiness). Playwright's HEAD request will hit the new GET handler.
+Change `playwright.config.ts` `webServer.url` from `baseURL` (just port check) to `${baseURL}/api/health` (DB-aware readiness). Playwright's GET request will hit the new GET handler.
 
 ---
 

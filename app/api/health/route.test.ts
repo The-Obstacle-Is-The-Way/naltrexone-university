@@ -91,7 +91,61 @@ describe('GET /api/health', () => {
     );
 
     expect(res.status).toBe(429);
+    await expect(res.json()).resolves.toEqual({
+      ok: false,
+      error: 'Too many requests',
+    });
+    expect(res.headers.get('Retry-After')).toBe('42');
+    expect(res.headers.get('X-RateLimit-Limit')).toBe('600');
+    expect(res.headers.get('X-RateLimit-Remaining')).toBe('0');
+    expect(rateLimiter.inputs).toEqual([
+      {
+        key: 'health:203.0.113.2',
+        limit: 600,
+        windowMs: 60_000,
+      },
+    ]);
     expect(execute).toHaveBeenCalledTimes(0);
+    expect(logger.errorCalls).toHaveLength(0);
+  });
+
+  it('returns 503 when the rate limiter fails', async () => {
+    const execute = vi.fn(async () => undefined);
+    const logger = new FakeLogger();
+    const rateLimiter = new FakeRateLimiter(new Error('rate limiter down'));
+    const now = () => new Date('2026-02-04T00:00:00.000Z');
+
+    const { GET } = createHealthHandler({
+      db: { execute },
+      logger,
+      rateLimiter,
+      now,
+    });
+
+    const res = await GET(
+      new Request('http://localhost/api/health', {
+        method: 'GET',
+      }),
+    );
+
+    expect(res.status).toBe(503);
+    await expect(res.json()).resolves.toEqual({
+      ok: false,
+      error: 'Rate limiter unavailable',
+    });
+    expect(rateLimiter.inputs).toEqual([
+      {
+        key: 'health:unknown',
+        limit: 600,
+        windowMs: 60_000,
+      },
+    ]);
+    expect(execute).toHaveBeenCalledTimes(0);
+    expect(logger.errorCalls).toHaveLength(1);
+    expect(logger.errorCalls[0]).toEqual({
+      context: { error: expect.any(Error) },
+      msg: 'Health check rate limiter failed',
+    });
   });
 });
 

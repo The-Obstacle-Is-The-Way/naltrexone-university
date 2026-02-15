@@ -1,4 +1,5 @@
 import type { AsyncLoadStateWithIdle } from '@/app/(app)/app/shared/load-state';
+import { withTimeout } from '@/lib/with-timeout';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import type { NextQuestion } from '@/src/application/use-cases/get-next-question';
 import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
@@ -26,6 +27,8 @@ export type { PracticeFilters } from './practice-page-types';
 export { statusDisplayLabel } from './practice-page-types';
 
 export type LoadState = AsyncLoadStateWithIdle;
+
+const TOGGLE_BOOKMARK_TIMEOUT_MS = 10_000;
 
 export function canSubmitAnswer(input: {
   loadState: LoadState;
@@ -169,10 +172,13 @@ export async function toggleBookmarkForQuestion(input: {
 
   let res: ActionResult<{ bookmarked: boolean }>;
   try {
-    res = await input.toggleBookmarkFn({
-      questionId,
-      idempotencyKey: requestIdempotencyKey ?? undefined,
-    });
+    res = await withTimeout(
+      input.toggleBookmarkFn({
+        questionId,
+        idempotencyKey: requestIdempotencyKey ?? undefined,
+      }),
+      TOGGLE_BOOKMARK_TIMEOUT_MS,
+    );
   } catch (_error) {
     if (!isMounted()) return;
     input.onBookmarkError?.('Failed to save bookmark. Please try again.');

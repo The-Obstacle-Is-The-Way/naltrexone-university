@@ -1,5 +1,10 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { TimeoutError, withTimeout } from './with-timeout';
+
+afterEach(() => {
+  vi.useRealTimers();
+  vi.restoreAllMocks();
+});
 
 describe('TimeoutError', () => {
   it('has name "TimeoutError"', () => {
@@ -28,6 +33,15 @@ describe('withTimeout', () => {
     const fast = Promise.resolve('done');
     const result = await withTimeout(fast, 1000);
     expect(result).toBe('done');
+  });
+
+  it('clears the timer after promise resolves (no timer leak)', async () => {
+    vi.useFakeTimers();
+    const clearTimeoutSpy = vi.spyOn(globalThis, 'clearTimeout');
+
+    await withTimeout(Promise.resolve('done'), 1000);
+
+    expect(clearTimeoutSpy).toHaveBeenCalledTimes(1);
   });
 
   it('rejects with TimeoutError when promise exceeds timeout', async () => {

@@ -356,7 +356,7 @@ killall "Google Chrome"
 
 3. **Connection pool exhaustion:** The postgres driver defaults to `max: 10` connections. In dev, the singleton pattern (`globalForDb`) prevents accumulation across HMR reloads. If you suspect exhaustion, restart the dev server.
 
-4. **Network partition / Neon outage:** Check [Neon status page](https://neonstatus.com/). The `connect_timeout: 30` will fire and return an error within 30 seconds — but there is currently no client-side timeout on server action calls, so the UI may wait for the full 30s before showing an error.
+4. **Network partition / Neon outage:** Check [Neon status page](https://neonstatus.com/). The `connect_timeout: 30` will fire and return an error within 30 seconds, but client-side server action calls are wrapped with `withTimeout` (SPEC-029), so the UI should fail fast (~10–15s) instead of hanging indefinitely.
 
 **What the codebase already handles:**
 - `connect_timeout: 30s` (postgres driver default) — connections time out
@@ -366,7 +366,7 @@ killall "Google Chrome"
 - `createAction` try/catch wraps every server action
 - Error boundaries on every route
 
-**Known gap:** No client-side timeout on server action calls. See [BS-017](../brainstorming/bs-017-dev-environment-resilience.md) for analysis and proposed `withTimeout` wrapper.
+**Client-side timeouts:** `lib/with-timeout.ts` wraps client-side server action calls (SPEC-029), preventing indefinite "Loading..." states. See [SPEC-029](../specs/spec-029-dev-environment-resilience.md).
 
 ---
 
