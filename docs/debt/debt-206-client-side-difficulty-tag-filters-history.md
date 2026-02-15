@@ -3,6 +3,7 @@
 **Status:** Resolved
 **Priority:** P2
 **Date:** 2026-02-11
+**Resolved:** 2026-02-14
 **GitHub Issue:** #87
 
 ---
@@ -70,15 +71,15 @@ Remove the `displayRows` / `hasActiveDifficultyOrTagFilters` logic from `history
 
 ### Step 5: Tag Options
 
-The tag filter dropdown currently builds its `<option>` list from tags present on the current page. With server-side filtering, the dropdown should show all available tags for attempted questions (or all tags in the system). This may require a separate lightweight query.
+The tag filter dropdown options are populated server-side via the tags controller and passed into `HistoryQuestionsTab` as `{ slug, name }[]`. The dropdown displays the human-readable tag name while still submitting the tag slug via the `tag` query param, so users can filter by tags that are not present on the current page of results.
 
 ## Verification
 
-1. All existing `history-questions-tab.test.tsx` tests pass (update assertions for server-side filtering)
-2. New test: filtering by "Hard" difficulty shows accurate pagination counts
-3. New test: filtering by tag shows only matching questions across all pages
-4. `pnpm typecheck && pnpm lint && pnpm test --run && pnpm test:integration`
-5. Manual: apply Difficulty filter → pagination count matches visible rows
+1. `src/application/use-cases/get-attempted-questions.test.ts` covers `difficulty` + `tagSlug` filters
+2. `tests/integration/repositories.integration.test.ts` covers attempted-question `difficulty`/`tagSlug` filtering + accurate counts
+3. `app/(app)/app/history/components/history-questions-tab.test.tsx` verifies client-side mismatch hints are gone and tag options render display names
+4. `pnpm typecheck && pnpm lint && pnpm test --run && pnpm test:integration && pnpm build`
+5. Manual: apply Difficulty/Tag filters → pagination totals reflect filtered counts, and filters persist across page navigation
 
 ## Related
 

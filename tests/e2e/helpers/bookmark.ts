@@ -1,8 +1,16 @@
 import { expect, type Page } from '@playwright/test';
 
+const QUICK_PRACTICE_BASE = '/app/practice/quick';
+
+type QuickPracticeStatus = 'unanswered' | 'incorrect';
+
+function toQuickPracticeHref(status: QuickPracticeStatus): string {
+  return `${QUICK_PRACTICE_BASE}?status=${status}`;
+}
+
 async function isButtonVisible(
   page: Page,
-  name: string,
+  name: string | RegExp,
   timeout: number,
 ): Promise<boolean> {
   try {
@@ -16,38 +24,79 @@ async function isButtonVisible(
   }
 }
 
-export async function ensureBookmarkedQuestion(page: Page): Promise<void> {
-  await page.goto('/app/practice/quick');
-  await expect(
-    page.getByRole('heading', { name: 'Quick Practice' }),
-  ).toBeVisible();
-  await page
-    .getByRole('button', { name: 'Next Question' })
+async function hasQuickPracticeQuestion(page: Page): Promise<boolean> {
+  const nextQuestionButton = page.getByRole('button', {
+    name: 'Next Question',
+  });
+  const noMoreQuestionsText = page.getByText('No more questions found.', {
+    exact: true,
+  });
+
+  try {
+    await Promise.race([
+      nextQuestionButton.first().waitFor({ state: 'visible', timeout: 15_000 }),
+      noMoreQuestionsText.waitFor({ state: 'visible', timeout: 15_000 }),
+    ]);
+  } catch {
+    // Fall through to the explicit visibility check below.
+  }
+
+  return nextQuestionButton
     .first()
-    .waitFor({ state: 'visible', timeout: 15_000 });
+    .isVisible()
+    .catch(() => false);
+}
+
+export async function ensureBookmarkedQuestion(page: Page): Promise<void> {
+  const bookmarkButtonName = /^Bookmark$/;
+
+  const statusesToTry: QuickPracticeStatus[] = ['unanswered', 'incorrect'];
+  for (const status of statusesToTry) {
+    await page.goto(toQuickPracticeHref(status), {
+      timeout: 60_000,
+      waitUntil: 'domcontentloaded',
+    });
+    await expect(
+      page.getByRole('heading', { name: 'Quick Practice' }),
+    ).toBeVisible();
+
+    if (await hasQuickPracticeQuestion(page)) {
+      break;
+    }
+  }
+
+  await expect(
+    page.getByRole('button', { name: 'Next Question' }).first(),
+  ).toBeVisible({ timeout: 15_000 });
 
   for (let attempt = 0; attempt < 8; attempt += 1) {
     if (await isButtonVisible(page, 'Remove bookmark', 500)) {
       return;
     }
 
-    if (await isButtonVisible(page, 'Bookmark', 500)) {
-      await page.getByRole('button', { name: 'Bookmark' }).first().click();
+    if (await isButtonVisible(page, bookmarkButtonName, 500)) {
+      await page
+        .getByRole('button', { name: bookmarkButtonName })
+        .first()
+        .click();
       await expect(
         page.getByRole('button', { name: 'Remove bookmark' }).first(),
       ).toBeVisible({ timeout: 10_000 });
       return;
     }
 
-    await page.getByRole('button', { name: 'Next Question' }).click();
+    await page.getByRole('button', { name: 'Next Question' }).first().click();
     await Promise.race([
       page
-        .getByRole('button', { name: 'Bookmark' })
+        .getByRole('button', { name: bookmarkButtonName })
         .first()
         .waitFor({ state: 'visible', timeout: 10_000 }),
       page
         .getByRole('button', { name: 'Remove bookmark' })
         .first()
+        .waitFor({ state: 'visible', timeout: 10_000 }),
+      page
+        .getByText('No more questions found.', { exact: true })
         .waitFor({ state: 'visible', timeout: 10_000 }),
     ]).catch(() => undefined);
   }

@@ -1,3 +1,4 @@
+import { delay } from '@/src/adapters/shared/delay';
 import { ApplicationError, isApplicationError } from '@/src/application/errors';
 import type { Logger } from '@/src/application/ports/logger';
 import type { IdempotencyKeyRepository } from '@/src/application/ports/repositories';
@@ -7,10 +8,6 @@ const DEFAULT_MAX_WAIT_MS = 2_000;
 const DEFAULT_POLL_INTERVAL_MS = 50;
 const ERROR_MESSAGE_LIMIT = 1000;
 const PRUNE_BATCH_LIMIT = 100;
-
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
 
 function toErrorMessage(error: unknown): string {
   if (error instanceof Error) {
@@ -129,7 +126,7 @@ export async function withIdempotency<T>(input: {
       }
     }
 
-    await sleep(pollIntervalMs);
+    await delay(pollIntervalMs);
   }
 
   throw new ApplicationError(
