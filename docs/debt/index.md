@@ -18,7 +18,6 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 | ID | Title | Priority | Status | GitHub Issue |
 |----|-------|----------|--------|--------------|
 | [DEBT-217](./debt-217-history-back-link-loses-tab-and-filter-state.md) | History Back Link Loses Tab and Filter State | P2 | Open | — |
-| [DEBT-213](./debt-213-useeffect-derived-state-sync-antipatterns.md) | useEffect Derived-State Sync Anti-Patterns in Practice Hooks (5 instances) | P4 | Open | — |
 
 **Next Debt ID:** DEBT-218
 
@@ -28,6 +27,7 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 | ID | Title | Priority | Resolved | GitHub Issue |
 |----|-------|----------|----------|--------------|
+| [DEBT-213](./debt-213-useeffect-derived-state-sync-antipatterns.md) | useEffect Derived-State Sync Anti-Patterns in Practice Hooks (5 instances) | P4 | 2026-02-14 | — |
 | [DEBT-212](./debt-212-duplicate-sleep-utility-adapter-shared.md) | Duplicate `sleep()` Utility in Adapter Shared Modules | P4 | 2026-02-14 | #91 |
 | [DEBT-208](./debt-208-e2e-cross-page-navigation-tests.md) | Missing E2E Tests for Cross-Page Navigation Flows | P3 | 2026-02-14 | #81 |
 | [DEBT-215](../_archive/debt/debt-215-backwards-compatibility-shims-cleanup.md) | Backwards Compatibility Shims in a Greenfield Codebase | P3 | 2026-02-14 | — |

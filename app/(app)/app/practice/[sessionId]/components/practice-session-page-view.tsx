@@ -1,4 +1,8 @@
 import { PracticeView } from '@/app/(app)/app/practice/components/practice-view';
+import {
+  fireAndForget,
+  logUnhandledAsyncError,
+} from '@/app/(app)/app/practice/fire-and-forget';
 import { ErrorCard } from '@/components/error-card';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -43,7 +47,7 @@ export type PracticeSessionPageViewProps = {
   onNextQuestion: () => void;
   onNavigateQuestion?: (questionId: string) => void;
   onOpenReviewQuestion?: (questionId: string) => void;
-  onFinalizeReview?: () => void;
+  onFinalizeReview?: () => Promise<void>;
 };
 
 export function PracticeSessionPageView(props: PracticeSessionPageViewProps) {
@@ -89,7 +93,13 @@ export function PracticeSessionPageView(props: PracticeSessionPageViewProps) {
           <Button
             type="button"
             variant="outline"
-            onClick={props.onFinalizeReview ?? props.onEndSession}
+            onClick={() => {
+              if (props.onFinalizeReview) {
+                fireAndForget(props.onFinalizeReview(), logUnhandledAsyncError);
+                return;
+              }
+              props.onEndSession();
+            }}
           >
             End session
           </Button>
@@ -99,12 +109,18 @@ export function PracticeSessionPageView(props: PracticeSessionPageViewProps) {
   }
 
   if (review) {
+    const onFinalizeReview =
+      props.onFinalizeReview ??
+      (async () => {
+        props.onEndSession();
+      });
+
     return (
       <ExamReviewView
         review={review}
         isPending={props.isPending}
         onOpenQuestion={props.onOpenReviewQuestion ?? (() => undefined)}
-        onFinalizeReview={props.onFinalizeReview ?? props.onEndSession}
+        onFinalizeReview={onFinalizeReview}
       />
     );
   }

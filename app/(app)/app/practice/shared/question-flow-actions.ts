@@ -105,8 +105,14 @@ export function runTransitionedAsyncAction(input: {
     input.startTransition(async () => {
       try {
         await input.run();
-      } catch (_error) {
+      } catch (error) {
         // The caller owns error state; this prevents unhandled rejections.
+        if (process.env.NODE_ENV === 'development') {
+          console.error(
+            'runTransitionedAsyncAction: unhandled error in run()',
+            error,
+          );
+        }
       } finally {
         resolve();
       }
@@ -131,6 +137,7 @@ export async function runSubmitAnswerFlow<
   nowMs: () => number;
   setLoadState: (state: AsyncLoadStateWithIdle) => void;
   setSubmitResult: (result: SubmitAnswerOutput | null) => void;
+  onSuccess?: (result: SubmitAnswerOutput) => void;
   isMounted?: () => boolean;
 }): Promise<void> {
   if (!input.question) return;
@@ -173,5 +180,6 @@ export async function runSubmitAnswerFlow<
   }
 
   input.setSubmitResult(res.data);
+  input.onSuccess?.(res.data);
   input.setLoadState({ status: 'ready' });
 }

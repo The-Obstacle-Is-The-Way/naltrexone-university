@@ -311,7 +311,7 @@ describe('app/(app)/app/practice/[sessionId]', () => {
         onSubmit={() => undefined}
         onNextQuestion={() => undefined}
         onOpenReviewQuestion={() => undefined}
-        onFinalizeReview={() => undefined}
+        onFinalizeReview={async () => undefined}
       />,
     );
 
@@ -368,7 +368,7 @@ describe('app/(app)/app/practice/[sessionId]', () => {
         onSubmit={() => undefined}
         onNextQuestion={() => undefined}
         onOpenReviewQuestion={() => undefined}
-        onFinalizeReview={() => undefined}
+        onFinalizeReview={async () => undefined}
       />,
     );
 

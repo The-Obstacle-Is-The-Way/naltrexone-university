@@ -1,5 +1,6 @@
 import { expect, test, vi } from 'vitest';
 import { render } from 'vitest-browser-react';
+import { createDeferred } from '@/tests/test-helpers/create-deferred';
 import { ExamReviewView, QuestionNavigator } from './exam-review-view';
 
 test('renders navigator states and disables unavailable questions', async () => {
@@ -112,7 +113,7 @@ test('uses correctness labels only in tutor mode', async () => {
 
 test('opens a review question and finalizes the exam', async () => {
   const onOpenQuestion = vi.fn();
-  const onFinalizeReview = vi.fn();
+  const onFinalizeReview = vi.fn(async () => undefined);
 
   const screen = await render(
     <ExamReviewView
@@ -175,7 +176,7 @@ test('opens a review question and finalizes the exam', async () => {
 });
 
 test('guards against double-clicking confirm submit before pending state updates', async () => {
-  const onFinalizeReview = vi.fn();
+  const onFinalizeReview = vi.fn(() => new Promise<void>(() => {}));
 
   const screen = await render(
     <ExamReviewView
@@ -201,6 +202,48 @@ test('guards against double-clicking confirm submit before pending state updates
   expect(onFinalizeReview).toHaveBeenCalledTimes(1);
 });
 
+test('allows submitting again after finalize resolves even when pending state never flips', async () => {
+  const finalizeDeferred = createDeferred<void>();
+  const onFinalizeReview = vi.fn(() => finalizeDeferred.promise);
+
+  const screen = await render(
+    <ExamReviewView
+      review={{
+        sessionId: 'session-1',
+        mode: 'exam',
+        totalCount: 1,
+        answeredCount: 0,
+        markedCount: 0,
+        rows: [],
+      }}
+      isPending={false}
+      onOpenQuestion={() => undefined}
+      onFinalizeReview={onFinalizeReview}
+    />,
+  );
+
+  await screen.getByRole('button', { name: 'Submit exam' }).click();
+  await expect
+    .element(screen.getByRole('alertdialog', { name: 'Submit exam?' }))
+    .toBeVisible();
+  await screen.getByRole('button', { name: 'Confirm submit' }).click();
+  expect(onFinalizeReview).toHaveBeenCalledTimes(1);
+
+  finalizeDeferred.resolve();
+  await finalizeDeferred.promise;
+
+  await expect
+    .element(screen.getByRole('alertdialog', { name: 'Submit exam?' }))
+    .not.toBeInTheDocument();
+
+  await screen.getByRole('button', { name: 'Submit exam' }).click();
+  await expect
+    .element(screen.getByRole('alertdialog', { name: 'Submit exam?' }))
+    .toBeVisible();
+  await screen.getByRole('button', { name: 'Confirm submit' }).click();
+  expect(onFinalizeReview).toHaveBeenCalledTimes(2);
+});
+
 test('omits unanswered warning when all exam questions are answered', async () => {
   const screen = await render(
     <ExamReviewView
@@ -214,7 +257,7 @@ test('omits unanswered warning when all exam questions are answered', async () =
       }}
       isPending={false}
       onOpenQuestion={() => undefined}
-      onFinalizeReview={() => undefined}
+      onFinalizeReview={async () => undefined}
     />,
   );
 
@@ -226,7 +269,7 @@ test('omits unanswered warning when all exam questions are answered', async () =
 
 test('omits the stem preview in the open question aria-label when stem is empty', async () => {
   const onOpenQuestion = vi.fn();
-  const onFinalizeReview = vi.fn();
+  const onFinalizeReview = vi.fn(async () => undefined);
 
   const screen = await render(
     <ExamReviewView

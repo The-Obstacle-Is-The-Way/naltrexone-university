@@ -48,7 +48,7 @@ export type UsePracticeSessionReviewStageOutput = {
   onRetryReview: () => void;
   onRetryNavigator: () => void;
   onOpenReviewQuestion: (questionId: string) => void;
-  onFinalizeReview: () => void;
+  onFinalizeReview: () => Promise<void>;
 };
 
 export function usePracticeSessionReviewStage(

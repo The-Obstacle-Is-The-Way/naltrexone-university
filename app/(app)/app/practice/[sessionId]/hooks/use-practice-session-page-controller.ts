@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useCallback } from 'react';
 import { usePracticeSessionQuestionFlow } from '@/app/(app)/app/practice/[sessionId]/hooks/use-practice-session-question-flow';
 import { maybeAutoAdvanceAfterSubmit } from '@/app/(app)/app/practice/[sessionId]/practice-session-page-logic';
 import { usePracticeQuestionBookmarks } from '@/app/(app)/app/practice/hooks/use-practice-question-bookmarks';
@@ -42,23 +42,27 @@ export function usePracticeSessionPageController(
     loadSpecificQuestion: questionFlow.onNavigateQuestion,
   });
 
-  useEffect(() => {
+  const onSubmit = useCallback(async (): Promise<void> => {
+    const submitResult = await questionFlow.onSubmit();
     if (reviewStage.isInReviewStage) return;
 
+    // Note: `questionFlow.loadState.status`, `questionFlow.sessionInfo`, `questionFlow.sessionMode`,
+    // and `reviewStage.isInReviewStage` are closure-captured and may be stale after the await.
+    // Today this is safe because mode/info don't change during submit, and auto-advance is gated by `submitResult`.
     maybeAutoAdvanceAfterSubmit({
       mode: questionFlow.sessionMode,
-      submitResult: questionFlow.submitResult,
+      submitResult,
       loadStateStatus: questionFlow.loadState.status,
       sessionInfo: questionFlow.sessionInfo,
       advance: questionFlow.onNextQuestion,
     });
   }, [
-    reviewStage.isInReviewStage,
-    questionFlow.sessionMode,
-    questionFlow.submitResult,
     questionFlow.loadState.status,
-    questionFlow.sessionInfo,
     questionFlow.onNextQuestion,
+    questionFlow.onSubmit,
+    questionFlow.sessionInfo,
+    questionFlow.sessionMode,
+    reviewStage.isInReviewStage,
   ]);
 
   const { isMarkingForReview, onToggleMarkForReview } =
@@ -103,7 +107,7 @@ export function usePracticeSessionPageController(
     onToggleBookmark: bookmarks.onToggleBookmark,
     onToggleMarkForReview,
     onSelectChoice: questionFlow.onSelectChoice,
-    onSubmit: questionFlow.onSubmit,
+    onSubmit,
     onNextQuestion: questionFlow.onNextQuestion,
     onNavigateQuestion: questionFlow.onNavigateQuestion,
     onOpenReviewQuestion: reviewStage.onOpenReviewQuestion,

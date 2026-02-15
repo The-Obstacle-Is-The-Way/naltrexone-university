@@ -54,14 +54,16 @@ export type UseQuestionFlowCoreOutput = {
 export function useQuestionFlowCore(
   input: UseQuestionFlowCoreInput,
 ): UseQuestionFlowCoreOutput {
-  const [question, setQuestion] = useState<NextQuestion | null>(null);
+  const [question, setQuestionState] = useState<NextQuestion | null>(null);
   const [selectedChoiceId, setSelectedChoiceId] = useState<string | null>(null);
   const [isAnswered, setIsAnswered] = useState(false);
-  const [submitResult, setSubmitResult] = useState<SubmitAnswerOutput | null>(
-    null,
-  );
+  const [submitResult, setSubmitResultState] =
+    useState<SubmitAnswerOutput | null>(null);
+  const questionRef = useRef<NextQuestion | null>(null);
   const draftSelectedChoicesRef = useRef<Map<string, string>>(new Map());
-  const [loadState, setLoadState] = useState<LoadState>({ status: 'idle' });
+  const [loadState, setLoadStateState] = useState<LoadState>({
+    status: 'idle',
+  });
   const [isPending, startTransition] = useTransition();
   const [questionLoadedAt, setQuestionLoadedAt] = useState<number | null>(null);
   const [submitIdempotencyKey, setSubmitIdempotencyKey] = useState<
@@ -105,42 +107,66 @@ export function useQuestionFlowCore(
     [],
   );
 
-  useEffect(() => {
-    if (!submitResult) return;
-    setIsAnswered(true);
-  }, [submitResult]);
-
-  useEffect(() => {
-    if (loadState.status === 'loading') {
+  const setQuestion = useCallback((nextQuestion: NextQuestion | null) => {
+    questionRef.current = nextQuestion;
+    setQuestionState(nextQuestion);
+    if (!nextQuestion) {
       setIsAnswered(false);
-      return;
     }
+  }, []);
 
-    if (loadState.status !== 'ready') return;
-
-    if (!question) {
-      setIsAnswered(false);
-      return;
-    }
-
-    const sessionSelectedChoiceId = question.session?.latestSelectedChoiceId;
-    if (typeof sessionSelectedChoiceId === 'string') {
-      setSelectedChoiceId(sessionSelectedChoiceId);
+  const setSubmitResult = useCallback((result: SubmitAnswerOutput | null) => {
+    setSubmitResultState(result);
+    if (result) {
       setIsAnswered(true);
-      updateDraftSelectedChoices((prev) => {
-        if (!prev.has(question.questionId)) return prev;
-        const next = new Map(prev);
-        next.delete(question.questionId);
-        return next;
-      });
-      return;
     }
+  }, []);
 
-    setSelectedChoiceId(
-      draftSelectedChoicesRef.current.get(question.questionId) ?? null,
-    );
-    setIsAnswered(false);
-  }, [loadState.status, question, updateDraftSelectedChoices]);
+  const syncQuestionStateFromDraftOrSession = useCallback(
+    (nextQuestion: NextQuestion | null) => {
+      if (!nextQuestion) {
+        setSelectedChoiceId(null);
+        setIsAnswered(false);
+        return;
+      }
+
+      const sessionSelectedChoiceId =
+        nextQuestion.session?.latestSelectedChoiceId;
+      if (typeof sessionSelectedChoiceId === 'string') {
+        setSelectedChoiceId(sessionSelectedChoiceId);
+        setIsAnswered(true);
+        updateDraftSelectedChoices((prev) => {
+          if (!prev.has(nextQuestion.questionId)) return prev;
+          const next = new Map(prev);
+          next.delete(nextQuestion.questionId);
+          return next;
+        });
+        return;
+      }
+
+      setSelectedChoiceId(
+        draftSelectedChoicesRef.current.get(nextQuestion.questionId) ?? null,
+      );
+      setIsAnswered(false);
+    },
+    [updateDraftSelectedChoices],
+  );
+
+  const setLoadState = useCallback(
+    (state: LoadState) => {
+      setLoadStateState(state);
+
+      if (state.status === 'loading') {
+        setIsAnswered(false);
+        return;
+      }
+
+      if (state.status !== 'ready') return;
+
+      syncQuestionStateFromDraftOrSession(questionRef.current);
+    },
+    [syncQuestionStateFromDraftOrSession],
+  );
 
   const onSelectChoice = useCallback(
     (choiceId: string) => {

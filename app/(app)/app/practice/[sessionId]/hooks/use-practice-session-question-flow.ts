@@ -44,7 +44,7 @@ export type UsePracticeSessionQuestionFlowOutput = {
   onNextQuestion: () => void;
   onNavigateQuestion: (questionId: string) => void;
   onSelectChoice: (choiceId: string) => void;
-  onSubmit: () => Promise<void>;
+  onSubmit: () => Promise<SubmitAnswerOutput | null>;
 };
 
 export function usePracticeSessionQuestionFlow(
@@ -77,6 +77,20 @@ export function usePracticeSessionQuestionFlow(
   const [sessionInfo, setSessionInfo] = useState<NextQuestion['session']>(null);
   const [sessionMode, setSessionMode] = useState<'tutor' | 'exam' | null>(null);
 
+  const applySessionInfo = useCallback<
+    UsePracticeSessionQuestionFlowOutput['applySessionInfo']
+  >((next) => {
+    setSessionInfo((prev) => {
+      // applySessionInfo supports updater functions; call setSessionMode inside the setSessionInfo updater
+      // to sync sessionMode with the resolved sessionInfo value.
+      const resolved = typeof next === 'function' ? next(prev) : next;
+      if (resolved?.mode) {
+        setSessionMode(resolved.mode);
+      }
+      return resolved;
+    });
+  }, []);
+
   const loadQuestionConfig = useMemo(
     () => ({
       sessionId: input.sessionId,
@@ -89,7 +103,7 @@ export function usePracticeSessionQuestionFlow(
       setSubmitIdempotencyKey,
       setQuestionLoadedAt,
       setQuestion,
-      setSessionInfo,
+      setSessionInfo: applySessionInfo,
       createRequestSequenceId,
       isLatestRequest,
       isMounted,
@@ -97,6 +111,7 @@ export function usePracticeSessionQuestionFlow(
     [
       input.sessionId,
       input.getNextQuestionFn,
+      applySessionInfo,
       createIdempotencyKey,
       createRequestSequenceId,
       isLatestRequest,
@@ -121,17 +136,6 @@ export function usePracticeSessionQuestionFlow(
 
   // Load the first question on mount and whenever the sessionId changes.
   useEffect(onTryAgain, [onTryAgain]);
-
-  useEffect(() => {
-    if (!sessionInfo?.mode) return;
-    setSessionMode(sessionInfo.mode);
-  }, [sessionInfo?.mode]);
-
-  const applySessionInfo = useCallback<
-    UsePracticeSessionQuestionFlowOutput['applySessionInfo']
-  >((next) => {
-    setSessionInfo(next);
-  }, []);
 
   const resetQuestionState = useCallback(() => {
     setQuestion(null);
@@ -174,7 +178,11 @@ export function usePracticeSessionQuestionFlow(
     startTransition,
   ]);
 
-  const onSubmit = useCallback(() => {
+  const onSubmit = useCallback((): Promise<SubmitAnswerOutput | null> => {
+    // `onSuccess` is invoked synchronously within submitAnswerForQuestion before the promise resolves,
+    // ensuring `captured` is populated before `.then(() => captured)` runs.
+    let captured: SubmitAnswerOutput | null = null;
+
     return runTransitionedAsyncAction({
       startTransition,
       run: () =>
@@ -188,9 +196,12 @@ export function usePracticeSessionQuestionFlow(
           nowMs: Date.now,
           setLoadState,
           setSubmitResult,
+          onSuccess: (result) => {
+            captured = result;
+          },
           isMounted,
         }),
-    });
+    }).then(() => captured);
   }, [
     input.sessionId,
     input.submitAnswerFn,

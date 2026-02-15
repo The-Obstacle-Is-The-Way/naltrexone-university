@@ -101,6 +101,7 @@ export async function submitAnswerForQuestion(input: {
   nowMs: () => number;
   setLoadState: (state: LoadState) => void;
   setSubmitResult: (result: SubmitAnswerOutput | null) => void;
+  onSuccess?: (result: SubmitAnswerOutput) => void;
   isMounted?: () => boolean;
 }): Promise<void> {
   return runSubmitAnswerFlow({
@@ -124,6 +125,7 @@ export async function submitAnswerForQuestion(input: {
     nowMs: input.nowMs,
     setLoadState: input.setLoadState,
     setSubmitResult: input.setSubmitResult,
+    onSuccess: input.onSuccess,
     isMounted: input.isMounted,
   });
 }

@@ -64,6 +64,9 @@ describe('question-flow-actions', () => {
   });
 
   it('resolves transitioned async action even when it throws', async () => {
+    vi.stubEnv('NODE_ENV', 'development');
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
     const promise = runTransitionedAsyncAction({
       startTransition: (fn) => {
         fn();
@@ -74,6 +77,14 @@ describe('question-flow-actions', () => {
     });
 
     await expect(promise).resolves.toBeUndefined();
+
+    expect(consoleSpy).toHaveBeenCalledWith(
+      'runTransitionedAsyncAction: unhandled error in run()',
+      expect.any(Error),
+    );
+
+    consoleSpy.mockRestore();
+    vi.unstubAllEnvs();
   });
 
   it('clears selection and submit state when question load returns non-ok after an async state mutation', async () => {
