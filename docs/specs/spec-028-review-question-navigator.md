@@ -332,8 +332,8 @@ Add assertions to the existing "Session Summary → sequential review" test:
 ```
 Existing test extension:
   - verify question navigator grid is visible on review question page
-  - verify navigator contains colored buttons (correct/incorrect variants)
-  - verify current question button has ring highlight
+  - verify navigator contains answered-status buttons (aria-label includes ": Correct" or ": Incorrect")
+  - verify current question is indicated via aria-current="step"
   - click a navigator button to jump to a different question
   - verify URL updates to the clicked question
   - verify navigator re-renders with new current question highlighted
