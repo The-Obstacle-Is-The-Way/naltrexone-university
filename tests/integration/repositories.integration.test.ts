@@ -296,6 +296,45 @@ describe('DrizzleQuestionRepository', () => {
     expect(allForTag).toEqual([q1.id, q2.id]);
   });
 
+  it('countPublishedCandidateIds returns accurate totals for difficulty + tags', async () => {
+    const tagSlug = `it-count-tag-${randomUUID()}`;
+    const tag = await createTag({ slug: tagSlug, kind: 'topic' });
+
+    const createdAt = new Date('2026-01-01T00:00:00.000Z');
+
+    await createQuestion({
+      slug: `it-count-q1-${randomUUID()}`,
+      status: 'published',
+      difficulty: 'easy',
+      createdAt,
+      tagIds: [tag.id],
+    });
+
+    await createQuestion({
+      slug: `it-count-q2-${randomUUID()}`,
+      status: 'published',
+      difficulty: 'hard',
+      createdAt,
+      tagIds: [tag.id],
+    });
+
+    const repo = new DrizzleQuestionRepository(db);
+
+    await expect(
+      repo.countPublishedCandidateIds({
+        tagSlugs: [tagSlug],
+        difficulties: ['easy'],
+      }),
+    ).resolves.toBe(1);
+
+    await expect(
+      repo.countPublishedCandidateIds({
+        tagSlugs: [tagSlug],
+        difficulties: [],
+      }),
+    ).resolves.toBe(2);
+  });
+
   describe('listPublishedCandidateIds with status filters', () => {
     it('returns only unanswered questions when status=unanswered', async () => {
       const user = await createUser();
@@ -634,6 +673,121 @@ describe('DrizzleQuestionRepository', () => {
       });
 
       expect(result).toEqual([qTagged.id]);
+    });
+  });
+
+  describe('countPublishedCandidateIds with status filters', () => {
+    it('returns only bookmarked questions when status=bookmarked', async () => {
+      const user = await createUser();
+      const tag = await createTag({
+        slug: `it-count-bookmarked-tag-${randomUUID()}`,
+        kind: 'topic',
+      });
+
+      const qBookmarked = await createQuestion({
+        slug: `it-count-bookmarked-${randomUUID()}`,
+        status: 'published',
+        difficulty: 'easy',
+        createdAt: new Date('2026-01-01T00:00:00.000Z'),
+        tagIds: [tag.id],
+      });
+      const _qUnbookmarked = await createQuestion({
+        slug: `it-count-unbookmarked-${randomUUID()}`,
+        status: 'published',
+        difficulty: 'easy',
+        createdAt: new Date('2026-01-02T00:00:00.000Z'),
+        tagIds: [tag.id],
+      });
+
+      await db.insert(schema.bookmarks).values({
+        userId: user.id,
+        questionId: qBookmarked.id,
+      });
+
+      const repo = new DrizzleQuestionRepository(db);
+      const result = await repo.countPublishedCandidateIds({
+        tagSlugs: [tag.slug],
+        difficulties: [],
+        statuses: ['bookmarked'],
+        userId: user.id,
+      });
+
+      expect(result).toBe(1);
+    });
+
+    it('combines unanswered and incorrect with OR logic', async () => {
+      const user = await createUser();
+      const tag = await createTag({
+        slug: `it-count-or-tag-${randomUUID()}`,
+        kind: 'topic',
+      });
+
+      const qIncorrect = await createQuestion({
+        slug: `it-count-or-incorrect-${randomUUID()}`,
+        status: 'published',
+        difficulty: 'easy',
+        createdAt: new Date('2026-01-01T00:00:00.000Z'),
+        tagIds: [tag.id],
+      });
+      const _qUnanswered = await createQuestion({
+        slug: `it-count-or-unanswered-${randomUUID()}`,
+        status: 'published',
+        difficulty: 'easy',
+        createdAt: new Date('2026-01-02T00:00:00.000Z'),
+        tagIds: [tag.id],
+      });
+      const qCorrect = await createQuestion({
+        slug: `it-count-or-correct-${randomUUID()}`,
+        status: 'published',
+        difficulty: 'easy',
+        createdAt: new Date('2026-01-03T00:00:00.000Z'),
+        tagIds: [tag.id],
+      });
+
+      const [qIncorrectChoiceA] = await db
+        .select({ id: schema.choices.id })
+        .from(schema.choices)
+        .where(
+          and(
+            eq(schema.choices.questionId, qIncorrect.id),
+            eq(schema.choices.label, 'A'),
+          ),
+        )
+        .limit(1);
+      if (!qIncorrectChoiceA) {
+        throw new Error('Failed to load incorrect choice for setup');
+      }
+
+      await db.insert(schema.attempts).values([
+        {
+          userId: user.id,
+          questionId: qIncorrect.id,
+          practiceSessionId: null,
+          selectedChoiceId: qIncorrectChoiceA.id,
+          isCorrect: false,
+          timeSpentSeconds: 0,
+          answeredAt: new Date('2026-02-01T00:00:00.000Z'),
+        },
+        {
+          userId: user.id,
+          questionId: qCorrect.id,
+          practiceSessionId: null,
+          selectedChoiceId: qCorrect.correctChoiceId,
+          isCorrect: true,
+          timeSpentSeconds: 0,
+          answeredAt: new Date('2026-02-02T00:00:00.000Z'),
+        },
+      ]);
+
+      const repo = new DrizzleQuestionRepository(db);
+      const result = await repo.countPublishedCandidateIds({
+        tagSlugs: [tag.slug],
+        difficulties: [],
+        statuses: ['unanswered', 'incorrect'],
+        userId: user.id,
+      });
+
+      expect(result).toBe(2);
     });
   });
 });

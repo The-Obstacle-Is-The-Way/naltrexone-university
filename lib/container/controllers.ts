@@ -79,6 +79,8 @@ export function createControllerFactories(input: {
       getSessionHistoryUseCase: useCases.createGetSessionHistoryUseCase(),
       setPracticeSessionQuestionMarkUseCase:
         useCases.createSetPracticeSessionQuestionMarkUseCase(),
+      countAvailableQuestionsUseCase:
+        useCases.createCountAvailableQuestionsUseCase(),
       startPracticeSessionUseCase: useCases.createStartPracticeSessionUseCase(),
       endPracticeSessionUseCase: useCases.createEndPracticeSessionUseCase(),
       now: primitives.now,

@@ -4,6 +4,11 @@ export {
   CheckEntitlementUseCase,
 } from './check-entitlement';
 export {
+  type CountAvailableQuestionsInput,
+  type CountAvailableQuestionsOutput,
+  CountAvailableQuestionsUseCase,
+} from './count-available-questions';
+export {
   type CreateCheckoutSessionInput,
   type CreateCheckoutSessionOutput,
   CreateCheckoutSessionUseCase,

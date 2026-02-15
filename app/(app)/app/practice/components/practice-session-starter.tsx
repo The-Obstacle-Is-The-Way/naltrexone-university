@@ -24,6 +24,8 @@ export type PracticeSessionStarterProps = {
   sessionMode: 'tutor' | 'exam';
   sessionCount: number;
   filters: PracticeFilters;
+  availableCountStatus: 'idle' | 'loading' | 'error';
+  availableCount: number | null;
   tagLoadStatus: 'idle' | 'loading' | 'error';
   availableTags: TagRow[];
   sessionStartStatus: 'idle' | 'loading' | 'error';
@@ -65,6 +67,33 @@ export function PracticeSessionStarter(props: PracticeSessionStarterProps) {
     () => new Set(props.filters.tagSlugs),
     [props.filters.tagSlugs],
   );
+
+  const availableCountMessage = useMemo(() => {
+    if (props.availableCountStatus === 'loading') {
+      return 'Counting questions…';
+    }
+
+    if (props.availableCountStatus === 'error') {
+      return 'Question count unavailable.';
+    }
+
+    if (typeof props.availableCount !== 'number') return null;
+
+    if (props.availableCount === 0) {
+      return 'No questions match your filters.';
+    }
+
+    if (props.sessionCount > props.availableCount) {
+      return `Only ${props.availableCount} questions available. Starting session with ${props.availableCount}.`;
+    }
+
+    return `${props.availableCount} questions available.`;
+  }, [props.availableCount, props.availableCountStatus, props.sessionCount]);
+
+  const isStartDisabled =
+    props.sessionStartStatus === 'loading' ||
+    (props.availableCountStatus === 'idle' && props.availableCount === 0);
+
   const tagsByKind = useMemo(() => {
     const map = new Map<string, TagRow[]>();
     for (const tag of props.availableTags) {
@@ -221,11 +250,19 @@ export function PracticeSessionStarter(props: PracticeSessionStarterProps) {
           : null}
       </div>
 
-      <div className="mt-5 flex justify-end">
+      <div className="mt-5 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end sm:gap-3">
+        {availableCountMessage ? (
+          <output
+            className="text-sm text-muted-foreground sm:mr-auto"
+            aria-live="polite"
+          >
+            {availableCountMessage}
+          </output>
+        ) : null}
         <Button
           type="button"
           className="rounded-full"
-          disabled={props.sessionStartStatus === 'loading'}
+          disabled={isStartDisabled}
           onClick={props.onStartSession}
         >
           {props.sessionStartStatus === 'loading'

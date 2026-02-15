@@ -4,6 +4,8 @@ import type {
 } from '@/src/application/ports/bookmarks';
 import type { UseCase } from '@/src/application/ports/use-cases';
 import type {
+  CountAvailableQuestionsInput,
+  CountAvailableQuestionsOutput,
   CreateCheckoutSessionInput,
   CreateCheckoutSessionOutput,
   CreatePortalSessionInput,
@@ -79,6 +81,26 @@ export class FakeStartPracticeSessionUseCase
   async execute(
     input: StartPracticeSessionInput,
   ): Promise<StartPracticeSessionOutput> {
+    this.inputs.push(input);
+    if (this.toThrow) throw this.toThrow;
+    return this.output;
+  }
+}
+
+export class FakeCountAvailableQuestionsUseCase
+  implements
+    UseCase<CountAvailableQuestionsInput, CountAvailableQuestionsOutput>
+{
+  readonly inputs: CountAvailableQuestionsInput[] = [];
+
+  constructor(
+    private readonly output: CountAvailableQuestionsOutput,
+    private readonly toThrow?: unknown,
+  ) {}
+
+  async execute(
+    input: CountAvailableQuestionsInput,
+  ): Promise<CountAvailableQuestionsOutput> {
     this.inputs.push(input);
     if (this.toThrow) throw this.toThrow;
     return this.output;

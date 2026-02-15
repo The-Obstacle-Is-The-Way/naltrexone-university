@@ -63,6 +63,8 @@ export default function PracticePageClient() {
             sessionMode={sessionControls.sessionMode}
             sessionCount={sessionControls.sessionCount}
             filters={sessionControls.filters}
+            availableCountStatus={sessionControls.availableCountStatus}
+            availableCount={sessionControls.availableCount}
             tagLoadStatus={sessionControls.tagLoadStatus}
             availableTags={sessionControls.availableTags}
             sessionStartStatus={sessionControls.sessionStartStatus}

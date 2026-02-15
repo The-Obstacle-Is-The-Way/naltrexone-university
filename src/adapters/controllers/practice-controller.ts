@@ -11,6 +11,8 @@ import type {
 import type { Logger } from '@/src/application/ports/logger';
 import type { IdempotencyKeyRepository } from '@/src/application/ports/repositories';
 import type {
+  CountAvailableQuestionsInput,
+  CountAvailableQuestionsOutput,
   EndPracticeSessionInput,
   EndPracticeSessionOutput,
   GetIncompletePracticeSessionInput,
@@ -26,6 +28,8 @@ import type {
 } from '@/src/application/use-cases';
 import { createAction } from './create-action';
 import {
+  CountAvailableQuestionsInputSchema,
+  CountAvailableQuestionsOutputSchema,
   EmptyInputSchema,
   EndPracticeSessionInputSchema,
   EndPracticeSessionOutputSchema,
@@ -41,6 +45,7 @@ import type { CheckEntitlementUseCase } from './require-entitled-user-id';
 import { requireEntitledUserId } from './require-entitled-user-id';
 
 export type {
+  CountAvailableQuestionsOutput,
   EndPracticeSessionOutput,
   GetIncompletePracticeSessionOutput,
   GetPracticeSessionReviewOutput,
@@ -64,6 +69,11 @@ export type PracticeControllerDeps = {
     execute: (
       input: StartPracticeSessionInput,
     ) => Promise<StartPracticeSessionOutput>;
+  };
+  countAvailableQuestionsUseCase: {
+    execute: (
+      input: CountAvailableQuestionsInput,
+    ) => Promise<CountAvailableQuestionsOutput>;
   };
   endPracticeSessionUseCase: {
     execute: (
@@ -142,6 +152,23 @@ export const startPracticeSession = createAction({
       parseResult: (value) => StartPracticeSessionOutputSchema.parse(value),
       execute: createNewSession,
     });
+  },
+});
+
+export const countAvailableQuestions = createAction({
+  schema: CountAvailableQuestionsInputSchema,
+  getDeps,
+  execute: async (input, d) => {
+    const userId = await requireEntitledUserId(d);
+
+    const output = await d.countAvailableQuestionsUseCase.execute({
+      userId,
+      tagSlugs: input.tagSlugs,
+      difficulties: input.difficulties,
+      statuses: input.statuses,
+    });
+
+    return CountAvailableQuestionsOutputSchema.parse(output);
   },
 });
 

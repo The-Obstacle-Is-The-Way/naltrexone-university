@@ -1,6 +1,7 @@
 import { useIsMounted } from '@/lib/use-is-mounted';
 import type { PracticeSessionStarterProps } from '../components/practice-session-starter';
 import type { PracticeFilters } from '../practice-page-logic';
+import { usePracticeAvailableQuestionsCount } from './use-practice-available-questions-count';
 import { usePracticeIncompleteSession } from './use-practice-incomplete-session';
 import { usePracticeSessionStart } from './use-practice-session-start';
 import { usePracticeSessionTags } from './use-practice-session-tags';
@@ -9,6 +10,8 @@ export type UsePracticeSessionControlsOutput = {
   filters: PracticeFilters;
   sessionMode: 'tutor' | 'exam';
   sessionCount: number;
+  availableCountStatus: 'idle' | 'loading' | 'error';
+  availableCount: number | null;
   tagLoadStatus: 'idle' | 'loading' | 'error';
   availableTags: ReturnType<typeof usePracticeSessionTags>['availableTags'];
   sessionStartStatus: 'idle' | 'loading' | 'error';
@@ -30,6 +33,9 @@ export type UsePracticeSessionControlsOutput = {
 export function usePracticeSessionControls(): UsePracticeSessionControlsOutput {
   const isMounted = useIsMounted();
   const sessionStart = usePracticeSessionStart({ isMounted });
+  const availableCount = usePracticeAvailableQuestionsCount({
+    filters: sessionStart.filters,
+  });
   const tags = usePracticeSessionTags();
   const incomplete = usePracticeIncompleteSession({ isMounted });
 
@@ -37,6 +43,8 @@ export function usePracticeSessionControls(): UsePracticeSessionControlsOutput {
     filters: sessionStart.filters,
     sessionMode: sessionStart.sessionMode,
     sessionCount: sessionStart.sessionCount,
+    availableCountStatus: availableCount.availableCountStatus,
+    availableCount: availableCount.availableCount,
     tagLoadStatus: tags.tagLoadStatus,
     availableTags: tags.availableTags,
     sessionStartStatus: sessionStart.sessionStartStatus,

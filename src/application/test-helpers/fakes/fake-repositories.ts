@@ -54,6 +54,7 @@ export class FakeQuestionRepository implements QuestionRepository {
   private readonly questions: readonly Question[];
   readonly findPublishedByIdsCalls: string[][] = [];
   readonly listPublishedCandidateIdsCalls: QuestionFilters[] = [];
+  readonly countPublishedCandidateIdsCalls: QuestionFilters[] = [];
 
   constructor(questions: readonly Question[]) {
     this.questions = questions;
@@ -102,6 +103,15 @@ export class FakeQuestionRepository implements QuestionRepository {
       });
 
     return matches.map((q) => q.id);
+  }
+
+  async countPublishedCandidateIds(filters: QuestionFilters): Promise<number> {
+    this.countPublishedCandidateIdsCalls.push(filters);
+
+    return this.questions
+      .filter((q) => q.status === 'published')
+      .filter((q) => matchesDifficulty(q.difficulty, filters.difficulties))
+      .filter((q) => matchesTags(q, filters.tagSlugs)).length;
   }
 }
 

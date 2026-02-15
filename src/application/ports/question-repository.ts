@@ -36,4 +36,13 @@ export interface QuestionRepository {
   listPublishedCandidateIds(
     filters: QuestionFilters,
   ): Promise<readonly string[]>;
+
+  /**
+   * Return the total number of published question candidates for the given filters.
+   *
+   * Requirements:
+   * - Only counts `questions.status='published'`.
+   * - Applies the same filter semantics as `listPublishedCandidateIds`.
+   */
+  countPublishedCandidateIds(filters: QuestionFilters): Promise<number>;
 }

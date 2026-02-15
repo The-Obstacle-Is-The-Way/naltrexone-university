@@ -17,6 +17,7 @@ export {
   FakeUserRepository,
 } from './fake-repositories';
 export {
+  FakeCountAvailableQuestionsUseCase,
   FakeCreateCheckoutSessionUseCase,
   FakeCreatePortalSessionUseCase,
   FakeEndPracticeSessionUseCase,

@@ -1,5 +1,6 @@
 import {
   CheckEntitlementUseCase,
+  CountAvailableQuestionsUseCase,
   CreateCheckoutSessionUseCase,
   CreatePortalSessionUseCase,
   EndPracticeSessionUseCase,
@@ -47,6 +48,10 @@ export function createUseCaseFactories(input: {
       new CreatePortalSessionUseCase(
         repositories.createStripeCustomerRepository(),
         gateways.createPaymentGateway(),
+      ),
+    createCountAvailableQuestionsUseCase: () =>
+      new CountAvailableQuestionsUseCase(
+        repositories.createQuestionRepository(),
       ),
     createEndPracticeSessionUseCase: () =>
       new EndPracticeSessionUseCase(

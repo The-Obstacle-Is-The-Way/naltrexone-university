@@ -16,25 +16,32 @@ import { AllQuestionProgressStatuses } from '@/src/domain/value-objects';
 
 export const zPracticeMode = z.enum(['tutor', 'exam']);
 
+const PracticeFiltersSchema = z.object({
+  tagSlugs: z
+    .array(z.string().min(1).max(MAX_TAG_SLUG_LENGTH))
+    .max(MAX_PRACTICE_SESSION_TAG_FILTERS)
+    .default([]),
+  difficulties: z
+    .array(zDifficulty)
+    .max(MAX_PRACTICE_SESSION_DIFFICULTY_FILTERS)
+    .default([]),
+  statuses: z
+    .array(zQuestionProgressStatus)
+    .max(AllQuestionProgressStatuses.length)
+    .default([]),
+});
+
 export const StartPracticeSessionInputSchema = z
   .object({
     mode: zPracticeMode,
     count: z.number().int().min(1).max(MAX_PRACTICE_SESSION_QUESTIONS),
     idempotencyKey: zUuid.optional(),
-    tagSlugs: z
-      .array(z.string().min(1).max(MAX_TAG_SLUG_LENGTH))
-      .max(MAX_PRACTICE_SESSION_TAG_FILTERS)
-      .default([]),
-    difficulties: z
-      .array(zDifficulty)
-      .max(MAX_PRACTICE_SESSION_DIFFICULTY_FILTERS)
-      .default([]),
-    statuses: z
-      .array(zQuestionProgressStatus)
-      .max(AllQuestionProgressStatuses.length)
-      .default([]),
   })
+  .merge(PracticeFiltersSchema)
   .strict();
+
+export const CountAvailableQuestionsInputSchema =
+  PracticeFiltersSchema.strict();
 
 export const EndPracticeSessionInputSchema = z
   .object({
@@ -72,6 +79,12 @@ export const StartPracticeSessionOutputSchema = z
     sessionId: zUuid,
     requestedCount: z.number().int().min(1).max(MAX_PRACTICE_SESSION_QUESTIONS),
     actualCount: z.number().int().min(1).max(MAX_PRACTICE_SESSION_QUESTIONS),
+  })
+  .strict();
+
+export const CountAvailableQuestionsOutputSchema = z
+  .object({
+    count: z.number().int().min(0),
   })
   .strict();
 
