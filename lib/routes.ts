@@ -29,6 +29,7 @@ export function toQuestionRoute(
     mode?: QuestionMode;
     sessionId?: string;
     attemptId?: string;
+    historyHref?: string;
   },
 ): string {
   const base = `${ROUTES.APP_QUESTIONS}/${slug}`;
@@ -37,6 +38,7 @@ export function toQuestionRoute(
   if (options?.mode) params.set('mode', options.mode);
   if (options?.sessionId) params.set('sessionId', options.sessionId);
   if (options?.attemptId) params.set('attemptId', options.attemptId);
+  if (options?.historyHref) params.set('historyHref', options.historyHref);
   const qs = params.toString();
   return qs ? `${base}?${qs}` : base;
 }

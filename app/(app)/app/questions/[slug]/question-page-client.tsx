@@ -31,21 +31,32 @@ function parseQuestionMode(value: string | undefined): QuestionMode | null {
   return null;
 }
 
+function parseHistoryHref(value: string | undefined): string | null {
+  if (!value) return null;
+  if (value.startsWith('/app/history?')) return value;
+  if (value === '/app/history') return value;
+  return null;
+}
+
 function getOriginUi(
   origin: QuestionOrigin | null,
   sessionId?: string,
+  historyHref?: string,
 ): {
   backHref: string;
   backLabel: string;
   subtitle: string;
 } {
   const resolvedOrigin = origin ?? 'dashboard';
+  const resolvedHistoryHref = parseHistoryHref(historyHref);
 
   if (resolvedOrigin === 'history') {
     return {
-      backHref: sessionId
-        ? `${ROUTES.APP_HISTORY}?tab=sessions`
-        : ROUTES.APP_HISTORY,
+      backHref:
+        resolvedHistoryHref ??
+        (sessionId
+          ? `${ROUTES.APP_HISTORY}?tab=sessions`
+          : `${ROUTES.APP_HISTORY}?tab=questions`),
       backLabel: 'Back to History',
       subtitle: 'Reviewing a question from your history.',
     };
@@ -78,8 +89,10 @@ function getOriginUi(
 
 function SessionNavigationBar({
   navigation,
+  historyHref,
 }: {
   navigation: SessionNavigation;
+  historyHref?: string;
 }) {
   const { questions, currentIndex, sessionId, from } = navigation;
   const total = questions.length;
@@ -101,6 +114,7 @@ function SessionNavigationBar({
             from,
             mode: 'review',
             sessionId,
+            historyHref,
           })}
           className={linkClassName}
         >
@@ -120,6 +134,7 @@ function SessionNavigationBar({
             from,
             mode: 'review',
             sessionId,
+            historyHref,
           })}
           className={linkClassName}
         >
@@ -142,6 +157,7 @@ export type QuestionViewProps = {
   isPending: boolean;
   origin?: QuestionOrigin | null;
   sessionId?: string;
+  historyHref?: string;
   onTryAgain: () => void;
   onSelectChoice: (choiceId: string) => void;
   onSubmit: () => void;
@@ -150,7 +166,11 @@ export type QuestionViewProps = {
 
 export function QuestionView(props: QuestionViewProps) {
   const correctChoiceId = props.submitResult?.correctChoiceId ?? null;
-  const originUi = getOriginUi(props.origin ?? null, props.sessionId);
+  const originUi = getOriginUi(
+    props.origin ?? null,
+    props.sessionId,
+    props.historyHref,
+  );
 
   return (
     <div className="space-y-6">
@@ -170,7 +190,10 @@ export function QuestionView(props: QuestionViewProps) {
       </div>
 
       {props.sessionNavigation ? (
-        <SessionNavigationBar navigation={props.sessionNavigation} />
+        <SessionNavigationBar
+          navigation={props.sessionNavigation}
+          historyHref={props.historyHref}
+        />
       ) : null}
 
       {props.loadState.status === 'error' ? (
@@ -265,12 +288,14 @@ export default function QuestionPageClient({
   mode,
   sessionId,
   attemptId,
+  historyHref,
 }: {
   slug: string;
   from?: string;
   mode?: string;
   sessionId?: string;
   attemptId?: string;
+  historyHref?: string;
 }) {
   const origin = parseQuestionOrigin(from);
   const controller = useQuestionPageController({
@@ -280,5 +305,12 @@ export default function QuestionPageClient({
     sessionId,
     attemptId,
   });
-  return <QuestionView {...controller} origin={origin} sessionId={sessionId} />;
+  return (
+    <QuestionView
+      {...controller}
+      origin={origin}
+      sessionId={sessionId}
+      historyHref={historyHref}
+    />
+  );
 }

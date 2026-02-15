@@ -39,7 +39,7 @@ const unavailableRow: PracticeSessionReviewRow = {
 
 async function renderList(
   rows: PracticeSessionReviewRow[],
-  props?: { from?: QuestionOrigin; sessionId?: string },
+  props?: { from?: QuestionOrigin; sessionId?: string; historyHref?: string },
 ) {
   const { SessionBreakdownList } = await import('./session-breakdown-list');
   return renderToStaticMarkup(<SessionBreakdownList rows={rows} {...props} />);
@@ -74,6 +74,28 @@ describe('SessionBreakdownList', () => {
     expect(links).toHaveLength(1);
     expect(links[0]?.getAttribute('href')).toBe(
       toQuestionRoute('q-1', { from: 'practice', mode: 'review', sessionId }),
+    );
+  });
+
+  it('includes historyHref in href when historyHref prop is provided', async () => {
+    const sessionId = '00000000-0000-4000-8000-000000000001';
+    const historyHref = '/app/history?tab=sessions&offset=0&limit=20';
+    const html = await renderList([availableRow], {
+      from: 'history',
+      sessionId,
+      historyHref,
+    });
+
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const links = Array.from(doc.querySelectorAll('a'));
+    expect(links).toHaveLength(1);
+    expect(links[0]?.getAttribute('href')).toBe(
+      toQuestionRoute('q-1', {
+        from: 'history',
+        mode: 'review',
+        sessionId,
+        historyHref,
+      }),
     );
   });
 

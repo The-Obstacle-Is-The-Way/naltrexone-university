@@ -103,6 +103,7 @@ export function HistoryQuestionsTab({
   const hasNextPage = offset + rows.length < totalCount;
   const showingStart = rows.length > 0 ? offset + 1 : 0;
   const showingEnd = offset + rows.length;
+  const historyHref = buildHistoryQuestionsHref({ limit, offset, filters });
 
   const resolvedTagOptions = (() => {
     const optionsBySlug = new Map(
@@ -300,6 +301,7 @@ export function HistoryQuestionsTab({
               const href = toQuestionRoute(row.slug, {
                 from: 'history',
                 mode: 'review',
+                historyHref,
               });
 
               return (

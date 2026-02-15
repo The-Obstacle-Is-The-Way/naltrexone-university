@@ -80,7 +80,10 @@ test.describe('cross-page navigation', () => {
     });
 
     await page.getByRole('link', { name: 'Back to History' }).click();
-    await expect(page).toHaveURL('/app/history');
+    await expect(page).toHaveURL(/\/app\/history\?tab=questions/);
+    await expect(page).toHaveURL(/result=incorrect/);
+    await expect(page).toHaveURL(/offset=0/);
+    await expect(page).toHaveURL(/limit=20/);
   });
 
   test('bookmarks → question detail → back to bookmarks', async ({ page }) => {
