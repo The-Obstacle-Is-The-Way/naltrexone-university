@@ -44,6 +44,17 @@ describe('withTimeout', () => {
     expect(clearTimeoutSpy).toHaveBeenCalledTimes(1);
   });
 
+  it('clears the timer after promise rejects (no timer leak)', async () => {
+    vi.useFakeTimers();
+    const clearTimeoutSpy = vi.spyOn(globalThis, 'clearTimeout');
+
+    await expect(
+      withTimeout(Promise.reject(new Error('boom')), 1000),
+    ).rejects.toThrow('boom');
+
+    expect(clearTimeoutSpy).toHaveBeenCalledTimes(1);
+  });
+
   it('rejects with TimeoutError when promise exceeds timeout', async () => {
     const never = new Promise<string>(() => {});
     await expect(withTimeout(never, 50)).rejects.toThrow(TimeoutError);

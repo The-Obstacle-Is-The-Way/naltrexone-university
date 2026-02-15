@@ -16,6 +16,8 @@ import {
 } from '@/src/adapters/controllers/stats-controller';
 import { getStemPreview } from '@/src/adapters/shared/stem-preview';
 
+export const maxDuration = 30;
+
 export const metadata: Metadata = {
   title: 'Dashboard - Addiction Boards',
 };

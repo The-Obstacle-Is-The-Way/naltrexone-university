@@ -109,12 +109,16 @@ Add `export const maxDuration` to key route files:
 | Route File | `maxDuration` | Rationale |
 |------------|---------------|-----------|
 | `app/(app)/app/questions/[slug]/page.tsx` | 30 | Server actions on question pages (load, submit, review) |
+| `app/(app)/app/dashboard/page.tsx` | 30 | Server Component with DB calls (stats, session history) |
+| `app/(app)/app/history/page.tsx` | 30 | Server Component with DB calls (sessions, questions, tags) |
+| `app/(app)/app/bookmarks/page.tsx` | 30 | Server Component with DB calls + server action (toggle bookmark) |
+| `app/(app)/app/billing/page.tsx` | 30 | Server Component with DB calls (auth, subscription lookup) |
 | `app/api/cron/reconcile-stripe-subscriptions/route.ts` | 60 | Long-running reconciliation job |
 | `app/api/stripe/webhook/route.ts` | 30 | Webhook processing |
 | `app/api/webhooks/clerk/route.ts` | 30 | Webhook processing |
 | `app/api/health/route.ts` | 10 | Health check should be fast |
 
-Per [Next.js docs](https://nextjs.org/docs/app/api-reference/file-conventions/route-segment-config), `maxDuration` on a page applies to all server actions invoked from that page. For route handlers, it applies to the handler itself.
+Per [Next.js docs](https://nextjs.org/docs/app/api-reference/file-conventions/route-segment-config), `maxDuration` on a page applies to all server actions invoked from that page. For route handlers, it applies to the handler itself. **All Server Component pages that make database calls during SSR should have `maxDuration` to prevent 300s Fluid Compute defaults.**
 
 ### Fix 3: Session Navigation Error Observability (LOW)
 
