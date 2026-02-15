@@ -41,7 +41,7 @@ Thread a single canonical `historyHref` (relative `/app/history?...`) through qu
 - `app/(app)/app/questions/[slug]/page.tsx#L14`:
   - Extracts `historyHref` from search params and passes it into `QuestionPageClient`.
 - `app/(app)/app/questions/[slug]/question-page-client.tsx#L34` + `app/(app)/app/questions/[slug]/question-page-client.tsx#L41`:
-  - Validates `historyHref` to only allow `'/app/history'` or `'/app/history?...'` (guards against open-redirect-style back links).
+  - Validates `historyHref` to only allow `'/app/history?tab=sessions|questions...'` (guards against open-redirect-style back links).
   - Prefers `historyHref` for the History back link; falls back to `?tab=sessions` when `sessionId` exists, otherwise `?tab=questions`.
 - `app/(app)/app/questions/[slug]/question-page-client.tsx#L90`:
   - Threads `historyHref` into SessionNavigationBar prev/next links so the param survives sequential review navigation.

@@ -33,9 +33,16 @@ function parseQuestionMode(value: string | undefined): QuestionMode | null {
 
 function parseHistoryHref(value: string | undefined): string | null {
   if (!value) return null;
-  if (value.startsWith('/app/history?')) return value;
-  if (value === '/app/history') return value;
-  return null;
+  const prefix = `${ROUTES.APP_HISTORY}?`;
+  if (!value.startsWith(prefix)) return null;
+  try {
+    const parsed = new URL(value, 'http://localhost');
+    const tab = parsed.searchParams.get('tab');
+    if (tab !== 'sessions' && tab !== 'questions') return null;
+    return value;
+  } catch {
+    return null;
+  }
 }
 
 function getOriginUi(
