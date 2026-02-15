@@ -136,7 +136,7 @@ test.describe('cross-page navigation', () => {
     await expect(page).toHaveURL('/app/history');
   });
 
-  test('bookmarks navigates to question detail and back', async ({ page }) => {
+  test('bookmarks → question detail → back to bookmarks', async ({ page }) => {
     await signInWithClerkPassword(page);
     await ensureSubscribed(page);
     await ensureBookmarkExistsOnBookmarksPage(page);
