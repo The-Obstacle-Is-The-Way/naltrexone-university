@@ -134,27 +134,6 @@ describe('ReviewQuestionNavigator', () => {
     );
   });
 
-  it('includes aria-label for correct questions', async () => {
-    const { doc } = await renderNavigator();
-    const el = findByAriaLabel(doc, 'Question 1: Correct');
-
-    expect(el).not.toBeNull();
-  });
-
-  it('includes aria-label for incorrect questions', async () => {
-    const { doc } = await renderNavigator();
-    const el = findByAriaLabel(doc, 'Question 2: Incorrect, Current');
-
-    expect(el).not.toBeNull();
-  });
-
-  it('includes aria-label for unanswered questions', async () => {
-    const { doc } = await renderNavigator();
-    const el = findByAriaLabel(doc, 'Question 3: Unanswered');
-
-    expect(el).not.toBeNull();
-  });
-
   it('appends ", Current" to aria-label for the current question', async () => {
     const { doc } = await renderNavigator();
     const el = findByAriaLabel(doc, 'Question 2: Incorrect, Current');

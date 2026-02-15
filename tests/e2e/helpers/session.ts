@@ -52,4 +52,12 @@ export async function startSession(
   await expect(page.getByRole('heading', { name: headingName })).toBeVisible({
     timeout: 15_000,
   });
+
+  // Wait for the first question to load. When running against `pnpm dev`,
+  // initial compilation can delay the first client-side server action call.
+  await expect(page.getByRole('group', { name: 'Answer choices' })).toBeVisible(
+    {
+      timeout: 60_000,
+    },
+  );
 }

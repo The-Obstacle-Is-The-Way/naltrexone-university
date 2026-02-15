@@ -181,7 +181,7 @@ export function ReviewQuestionNavigator({
 
 ```typescript
 success:
-  'bg-success text-success-foreground shadow-xs hover:bg-success/90 focus-visible:ring-success/20 dark:focus-visible:ring-success/40',
+  'bg-success text-success-foreground shadow-xs hover:bg-success/90 focus-visible:ring-success/20 dark:focus-visible:ring-success/40 dark:bg-success/60',
 ```
 
 This follows the existing `destructive` variant structure (same utility "shape", swapping `success` tokens for `destructive` tokens). Current `destructive` variant (at `components/ui/button.tsx:14-15`):
