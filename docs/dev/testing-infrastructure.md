@@ -24,7 +24,7 @@ This document covers our E2E testing tools: Playwright and Vercel's agent-browse
 
 ```ts
 testDir: './tests/e2e',
-fullyParallel: true,
+fullyParallel: false,
 retries: process.env.CI ? 2 : 0,
 workers: 1,
 webServer: {

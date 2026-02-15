@@ -42,7 +42,7 @@ Before listing gaps, it's important to document what the codebase already does w
 | **Typed `ActionResult<T>`** | Discriminated union | `{ ok: true, data }` or `{ ok: false, error: { code, message } }` — forces callers to check |
 | **Error boundaries** | 11 `error.tsx` files + `global-error.tsx` | Every user-facing route has a dedicated boundary with contextual UI |
 | **Loading states** | 8 `loading.tsx` files | Every major route has a loading state |
-| **Suspense fallback** | Present with accessible text | `app/(app)/app/layout.tsx:95-103` renders `<output aria-live="polite">Loading app content...</output>` |
+| **Suspense fallback** | Present with accessible text | `app/(app)/app/layout.tsx:95-103` renders `<output aria-live="polite">Loading app content…</output>` |
 | **Error logging** | Structured pino with secret redaction | `lib/logger.ts` — `server-only` import, JSON output, Vercel-compatible |
 | **`handleError`** | Catches all error types | `ApplicationError` (typed codes), `ZodError` (field-level), unknown (logged + generic message to client) |
 
@@ -64,7 +64,7 @@ Before listing gaps, it's important to document what the codebase already does w
 
 | Feature | Status | Evidence |
 |---------|--------|----------|
-| **`useIsMounted` guard** | Used in 30+ files | Prevents state updates on unmounted components |
+| **`useIsMounted` guard** | Used across ~24 source files | Prevents state updates on unmounted components |
 | **Stale closure prevention** | `isStale` flag + cleanup | `use-question-page-controller.ts:161-163` — cancels outdated requests |
 | **`useTransition`** | Consistent usage | Provides `isPending` state for loading UI |
 
