@@ -16,6 +16,7 @@ describe('practice-page-available-count', () => {
 
       createAvailableQuestionsCountEffect({
         countAvailableQuestionsFn,
+        debounceMs: 0,
         filters: { tagSlugs: [], difficulties: [], statuses: ['unanswered'] },
         setAvailableCountStatus,
         setAvailableCount,
@@ -46,6 +47,7 @@ describe('practice-page-available-count', () => {
 
       createAvailableQuestionsCountEffect({
         countAvailableQuestionsFn,
+        debounceMs: 0,
         filters: { tagSlugs: [], difficulties: [], statuses: ['unanswered'] },
         setAvailableCountStatus,
         setAvailableCount,
@@ -73,6 +75,7 @@ describe('practice-page-available-count', () => {
 
       createAvailableQuestionsCountEffect({
         countAvailableQuestionsFn,
+        debounceMs: 0,
         filters: { tagSlugs: [], difficulties: [], statuses: ['unanswered'] },
         setAvailableCountStatus,
         setAvailableCount,
@@ -103,6 +106,7 @@ describe('practice-page-available-count', () => {
 
       const cleanup = createAvailableQuestionsCountEffect({
         countAvailableQuestionsFn,
+        debounceMs: 0,
         filters: { tagSlugs: [], difficulties: [], statuses: ['unanswered'] },
         setAvailableCountStatus,
         setAvailableCount,
@@ -118,6 +122,41 @@ describe('practice-page-available-count', () => {
       expect(setAvailableCountStatus).toHaveBeenCalledTimes(1);
       expect(setAvailableCountStatus).toHaveBeenCalledWith('loading');
       expect(logError).not.toHaveBeenCalled();
+    });
+
+    it('debounces the request and cancels before the debounce elapses', async () => {
+      vi.useFakeTimers();
+      try {
+        const setAvailableCountStatus = vi.fn();
+        const setAvailableCount = vi.fn();
+        const logError = vi.fn();
+        const countAvailableQuestionsFn = vi.fn(
+          async (): Promise<ActionResult<{ count: number }>> =>
+            ok({ count: 42 }),
+        );
+
+        const cleanup = createAvailableQuestionsCountEffect({
+          countAvailableQuestionsFn,
+          debounceMs: 200,
+          filters: { tagSlugs: [], difficulties: [], statuses: ['unanswered'] },
+          setAvailableCountStatus,
+          setAvailableCount,
+          logError,
+        });
+
+        cleanup();
+
+        await vi.advanceTimersByTimeAsync(200);
+        await Promise.resolve();
+
+        expect(countAvailableQuestionsFn).not.toHaveBeenCalled();
+        expect(setAvailableCountStatus).toHaveBeenCalledTimes(1);
+        expect(setAvailableCountStatus).toHaveBeenCalledWith('loading');
+        expect(setAvailableCount).not.toHaveBeenCalled();
+        expect(logError).not.toHaveBeenCalled();
+      } finally {
+        vi.useRealTimers();
+      }
     });
   });
 });

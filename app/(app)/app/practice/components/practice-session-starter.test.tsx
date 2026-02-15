@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
-import { PracticeSessionStarter } from './practice-session-starter';
+import { PracticeSessionStarter } from '@/app/(app)/app/practice/components/practice-session-starter';
 
 describe('PracticeSessionStarter', () => {
   it('uses shadcn Card + Input primitives for starter UI', () => {
