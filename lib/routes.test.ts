@@ -67,6 +67,18 @@ describe('lib/routes', () => {
     );
   });
 
+  it('supports historyHref query parameters for question routes', () => {
+    expect(
+      toQuestionRoute('opioid-use-disorder', {
+        from: 'history',
+        mode: 'review',
+        historyHref: '/app/history?tab=questions&offset=0&limit=20',
+      }),
+    ).toBe(
+      '/app/questions/opioid-use-disorder?from=history&mode=review&historyHref=%2Fapp%2Fhistory%3Ftab%3Dquestions%26offset%3D0%26limit%3D20',
+    );
+  });
+
   it('omits mode query parameter when mode is undefined', () => {
     expect(
       toQuestionRoute('opioid-use-disorder', {

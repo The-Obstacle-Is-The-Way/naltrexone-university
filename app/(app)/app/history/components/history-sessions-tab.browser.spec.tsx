@@ -73,6 +73,63 @@ describe('HistorySessionsTab (browser)', () => {
     await expect.element(screen.getByText('Stem for q1')).toBeVisible();
   });
 
+  it('threads canonical historyHref into breakdown question links', async () => {
+    getPracticeSessionReviewMock.mockResolvedValue(
+      ok({
+        sessionId: 'session-1',
+        mode: 'exam',
+        totalCount: 1,
+        answeredCount: 1,
+        markedCount: 0,
+        rows: [
+          {
+            questionId: 'q1',
+            slug: 'q-1',
+            order: 1,
+            isAvailable: true,
+            stemMd: 'Stem for q1',
+            difficulty: 'easy',
+            isAnswered: true,
+            isCorrect: false,
+            markedForReview: false,
+          },
+        ],
+      }),
+    );
+
+    const screen = await render(
+      <HistorySessionsTab
+        result={ok({
+          rows: [
+            {
+              sessionId: 'session-1',
+              mode: 'exam',
+              questionCount: 10,
+              answered: 10,
+              correct: 8,
+              accuracy: 0.8,
+              durationSeconds: 1200,
+              startedAt: '2026-02-07T00:00:00.000Z',
+              endedAt: '2026-02-07T00:20:00.000Z',
+            },
+          ],
+          total: 1,
+          limit: 20,
+          offset: 0,
+        })}
+      />,
+    );
+
+    await screen.getByRole('button', { name: 'View breakdown' }).click();
+
+    const expectedHref =
+      '/app/questions/q-1?from=history&mode=review&sessionId=session-1&historyHref=%2Fapp%2Fhistory%3Ftab%3Dsessions%26offset%3D0%26limit%3D20';
+
+    await expect
+      .element(screen.getByRole('link', { name: /Stem for q1/ }))
+      .toHaveAttribute('href', expectedHref);
+  });
+
   it('clicking Hide breakdown collapses the selected session', async () => {
     getPracticeSessionReviewMock.mockResolvedValue(
       ok({

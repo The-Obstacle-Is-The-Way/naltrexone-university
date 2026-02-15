@@ -150,9 +150,15 @@ test.describe('session review navigation (SPEC-027)', () => {
       timeout: 15_000,
     });
 
-    // Verify back link goes to /app/history (sessions tab)
-    const backLink = page.locator('a[href*="/app/history"]');
+    // Verify back link uses the canonical sessions history href (tab + pagination)
+    const backLink = page.locator('a[href^="/app/history"]');
     await expect(backLink.first()).toBeVisible({ timeout: 15_000 });
+    await expect(backLink.first()).toHaveAttribute(
+      'href',
+      /\/app\/history\?tab=sessions/,
+    );
+    await expect(backLink.first()).toHaveAttribute('href', /offset=0/);
+    await expect(backLink.first()).toHaveAttribute('href', /limit=20/);
   });
 
   test('Non-session question flows have no session navigation', async ({

@@ -79,10 +79,48 @@ describe('QuestionView', () => {
       />,
     );
     const doc = new DOMParser().parseFromString(html, 'text/html');
-    const backLink = doc.querySelector('a[href="/app/history"]');
+    const backLink = doc.querySelector('a[href="/app/history?tab=questions"]');
 
     expect(backLink?.textContent?.trim()).toBe('Back to History');
     expect(html).toContain('Reviewing a question from your history.');
+  });
+
+  it('prefers historyHref when origin=history and historyHref is present', async () => {
+    const { QuestionView } = await import('./question-page-client');
+
+    const historyHref = '/app/history?tab=questions&offset=20&limit=20';
+
+    const html = renderToStaticMarkup(
+      <QuestionView
+        {...createBaseProps()}
+        origin="history"
+        historyHref={historyHref}
+      />,
+    );
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const backLink = Array.from(doc.querySelectorAll('a')).find((a) =>
+      a.textContent?.includes('Back to History'),
+    );
+
+    expect(backLink?.getAttribute('href')).toBe(historyHref);
+  });
+
+  it('ignores invalid historyHref values when origin=history', async () => {
+    const { QuestionView } = await import('./question-page-client');
+
+    const html = renderToStaticMarkup(
+      <QuestionView
+        {...createBaseProps()}
+        origin="history"
+        historyHref="https://example.com/phish"
+      />,
+    );
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const backLink = Array.from(doc.querySelectorAll('a')).find((a) =>
+      a.textContent?.includes('Back to History'),
+    );
+
+    expect(backLink?.getAttribute('href')).toBe('/app/history?tab=questions');
   });
 
   it('uses a session-aware back link when origin=practice and sessionId is present', async () => {

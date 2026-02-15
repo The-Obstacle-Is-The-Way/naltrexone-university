@@ -21,6 +21,7 @@ export default async function QuestionPage({
     mode?: string | string[];
     sessionId?: string | string[];
     attemptId?: string | string[];
+    historyHref?: string | string[];
   }>;
 }) {
   const { slug } = await params;
@@ -41,6 +42,10 @@ export default async function QuestionPage({
     typeof resolvedSearchParams?.attemptId === 'string'
       ? resolvedSearchParams.attemptId
       : undefined;
+  const historyHref =
+    typeof resolvedSearchParams?.historyHref === 'string'
+      ? resolvedSearchParams.historyHref
+      : undefined;
   return (
     <QuestionPageClient
       slug={slug}
@@ -48,6 +53,7 @@ export default async function QuestionPage({
       mode={mode}
       sessionId={sessionId}
       attemptId={attemptId}
+      historyHref={historyHref}
     />
   );
 }

@@ -9,10 +9,12 @@ export function SessionBreakdownList({
   rows,
   from = 'practice',
   sessionId,
+  historyHref,
 }: {
   rows: PracticeSessionReviewRow[];
   from?: QuestionOrigin;
   sessionId?: string;
+  historyHref?: string;
 }) {
   return (
     <ul className="space-y-2">
@@ -27,6 +29,7 @@ export function SessionBreakdownList({
                 from,
                 mode: 'review',
                 sessionId,
+                historyHref,
               })}
               className="flex items-center gap-2 font-medium text-foreground hover:underline"
             >

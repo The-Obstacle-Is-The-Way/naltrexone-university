@@ -104,6 +104,25 @@ describe('app/(app)/app/questions/[slug]', () => {
     });
   }, 20_000);
 
+  it('passes historyHref searchParams into the client page', async () => {
+    const QuestionPage = (await import('@/app/(app)/app/questions/[slug]/page'))
+      .default;
+
+    const element = await QuestionPage({
+      params: Promise.resolve({ slug: 'q-1' }),
+      searchParams: Promise.resolve({
+        historyHref: '/app/history?tab=questions&offset=0&limit=20',
+      }),
+    } as never);
+
+    expect(element).toMatchObject({
+      props: {
+        slug: 'q-1',
+        historyHref: '/app/history?tab=questions&offset=0&limit=20',
+      },
+    });
+  }, 20_000);
+
   it('renders a question shell', async () => {
     const QuestionPage = (await import('@/app/(app)/app/questions/[slug]/page'))
       .default;

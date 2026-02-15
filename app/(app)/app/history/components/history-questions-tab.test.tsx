@@ -1,6 +1,10 @@
 // @vitest-environment jsdom
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
+import {
+  buildHistoryQuestionsHref,
+  type QuestionsFilters,
+} from '@/app/(app)/app/history/history-search-params';
 import { toQuestionRoute } from '@/lib/routes';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import type { GetAttemptedQuestionsOutput } from '@/src/adapters/controllers/review-controller';
@@ -63,7 +67,16 @@ describe('HistoryQuestionsTab', () => {
       },
     };
 
-    const html = renderToStaticMarkup(<HistoryQuestionsTab result={result} />);
+    const filters: QuestionsFilters = {
+      difficulty: 'hard',
+      tagSlug: 'opioids',
+      result: 'incorrect',
+      source: 'exam',
+    };
+
+    const html = renderToStaticMarkup(
+      <HistoryQuestionsTab result={result} filters={filters} />,
+    );
     const doc = new DOMParser().parseFromString(html, 'text/html');
 
     expect(html).toContain('Stem for correct');
@@ -78,17 +91,28 @@ describe('HistoryQuestionsTab', () => {
     expect(html).toContain('Review');
     expect(html).not.toContain('Reattempt');
 
+    const historyHref = buildHistoryQuestionsHref({
+      limit: result.data.limit,
+      offset: result.data.offset,
+      filters,
+    });
+
     const correctHref = toQuestionRoute('q-correct', {
       from: 'history',
       mode: 'review',
+      historyHref,
     });
     const incorrectHref = toQuestionRoute('q-incorrect', {
       from: 'history',
       mode: 'review',
+      historyHref,
     });
 
-    expect(doc.querySelectorAll(`a[href="${correctHref}"]`)).toHaveLength(2);
-    expect(doc.querySelectorAll(`a[href="${incorrectHref}"]`)).toHaveLength(2);
+    const hrefs = Array.from(doc.querySelectorAll('a')).map((a) =>
+      a.getAttribute('href'),
+    );
+    expect(hrefs.filter((href) => href === correctHref)).toHaveLength(2);
+    expect(hrefs.filter((href) => href === incorrectHref)).toHaveLength(2);
   });
 
   it('includes mode=review in incorrect question links', () => {
@@ -113,12 +137,21 @@ describe('HistoryQuestionsTab', () => {
     const html = renderToStaticMarkup(<HistoryQuestionsTab result={result} />);
     const doc = new DOMParser().parseFromString(html, 'text/html');
 
+    const historyHref = buildHistoryQuestionsHref({
+      limit: result.data.limit,
+      offset: result.data.offset,
+    });
+
     const incorrectHref = toQuestionRoute('q-incorrect', {
       from: 'history',
       mode: 'review',
+      historyHref,
     });
 
-    expect(doc.querySelectorAll(`a[href="${incorrectHref}"]`)).toHaveLength(2);
+    const hrefs = Array.from(doc.querySelectorAll('a')).map((a) =>
+      a.getAttribute('href'),
+    );
+    expect(hrefs.filter((href) => href === incorrectHref)).toHaveLength(2);
     expect(html).toContain('Review');
     expect(html).not.toContain('Reattempt');
   });

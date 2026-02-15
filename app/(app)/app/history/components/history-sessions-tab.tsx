@@ -52,6 +52,7 @@ export function HistorySessionsTab({ result }: HistorySessionsTabProps) {
   const prevOffset = Math.max(0, offset - limit);
   const nextOffset = offset + limit;
   const hasNextPage = offset + rows.length < total;
+  const historyHref = buildHistorySessionsHref({ limit, offset });
 
   return (
     <div className="space-y-4">
@@ -119,6 +120,7 @@ export function HistorySessionsTab({ result }: HistorySessionsTabProps) {
                       rows={selectedReview.rows}
                       from="history"
                       sessionId={row.sessionId}
+                      historyHref={historyHref}
                     />
                   ) : null}
                 </div>
