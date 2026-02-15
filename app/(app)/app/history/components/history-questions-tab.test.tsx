@@ -1,13 +1,13 @@
 // @vitest-environment jsdom
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
-import { toQuestionRoute } from '@/lib/routes';
-import type { ActionResult } from '@/src/adapters/controllers/action-result';
-import type { GetAttemptedQuestionsOutput } from '@/src/adapters/controllers/review-controller';
 import {
   buildHistoryQuestionsHref,
   type QuestionsFilters,
-} from '../history-search-params';
+} from '@/app/(app)/app/history/history-search-params';
+import { toQuestionRoute } from '@/lib/routes';
+import type { ActionResult } from '@/src/adapters/controllers/action-result';
+import type { GetAttemptedQuestionsOutput } from '@/src/adapters/controllers/review-controller';
 import { HistoryQuestionsTab } from './history-questions-tab';
 
 vi.mock('next/link', () => ({
