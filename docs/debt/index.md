@@ -17,9 +17,10 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 | ID | Title | Priority | Status | GitHub Issue |
 |----|-------|----------|--------|--------------|
+| [DEBT-217](./debt-217-history-back-link-loses-tab-and-filter-state.md) | History Back Link Loses Tab and Filter State | P2 | Open | — |
 | [DEBT-213](./debt-213-useeffect-derived-state-sync-antipatterns.md) | useEffect Derived-State Sync Anti-Patterns in Practice Hooks (5 instances) | P4 | Open | — |
 
-**Next Debt ID:** DEBT-217
+**Next Debt ID:** DEBT-218
 
 ---
 
