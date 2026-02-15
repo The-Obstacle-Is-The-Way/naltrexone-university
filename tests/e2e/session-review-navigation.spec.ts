@@ -89,6 +89,7 @@ test.describe('session review navigation (SPEC-027)', () => {
     await expect(currentNavigatorButton).toBeVisible({ timeout: 15_000 });
     const navigatorCurrentTextOnFirstQuestion =
       await currentNavigatorButton.textContent();
+    expect(navigatorCurrentTextOnFirstQuestion).not.toBeNull();
 
     // Verify back link goes to /app/practice/{sessionId} with label "Back to Session"
     const backLink = page.locator(`a[href*="/app/practice/${sessionId}"]`);
@@ -139,6 +140,7 @@ test.describe('session review navigation (SPEC-027)', () => {
     const navigatorCurrentTextOnSecondQuestion = await navigatorCard
       .locator('[aria-current="step"]')
       .textContent();
+    expect(navigatorCurrentTextOnSecondQuestion).not.toBeNull();
     expect(navigatorCurrentTextOnSecondQuestion?.trim()).not.toBe(
       navigatorCurrentTextOnFirstQuestion?.trim(),
     );
@@ -168,6 +170,7 @@ test.describe('session review navigation (SPEC-027)', () => {
     const navigatorCurrentTextAfterJump = await navigatorCard
       .locator('[aria-current="step"]')
       .textContent();
+    expect(navigatorCurrentTextAfterJump).not.toBeNull();
     expect(navigatorCurrentTextAfterJump?.trim()).toBe(
       navigatorCurrentTextOnFirstQuestion?.trim(),
     );
