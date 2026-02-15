@@ -34,7 +34,7 @@ The data for color-coded correctness is already available. `SessionNavigation.qu
 |----------|----------|-----------|
 | Reuse `QuestionNavigator` or new component? | **New `ReviewQuestionNavigator`** (Option B) | Different navigation paradigms (state callback vs URL links), different data shapes (`GetPracticeSessionReviewOutput` vs `SessionNavigation`). Separation of concerns, zero regression risk to active session. |
 | Color scheme? | **`success`/`destructive`/`outline`** button variants | Matches existing `ChoiceButton` and `Feedback` coloring. `success`/`destructive` CSS tokens already defined in `globals.css`. |
-| Add `success` variant to `Button`? | **Yes** | Follows the exact pattern of existing `destructive` variant. CSS variables `--success` and `--success-foreground` already exist. |
+| Add `success` variant to `Button`? | **Yes** | Follows the existing `destructive` variant structure (bg/text/shadow/hover + focus-visible ring override), swapping in `success` tokens. CSS variables `--success` and `--success-foreground` already exist. |
 | Current question styling? | **`ring-2 ring-ring` + `aria-current="step"` + not a link** | Consistent with focus ring pattern. Current question is already displayed — clicking it would be a no-op. |
 | Grid layout? | **`grid-cols-5 gap-2 sm:grid-cols-8 lg:grid-cols-10`** | Matches existing `QuestionNavigator` grid exactly. |
 | Where does it render? | **Inside `QuestionView`, between header/subtitle and `SessionNavigationBar`** | Natural reading order: grid overview → linear nav → question content. |
@@ -175,7 +175,7 @@ export function ReviewQuestionNavigator({
 ### 4.2 Modified File: `Button` — Add `success` Variant
 
 **File:** `components/ui/button.tsx`
-**Line:** 14 (after `destructive` variant)
+**Line:** Insert immediately after `destructive` (currently `components/ui/button.tsx:14-15`)
 
 **Add:**
 
@@ -184,7 +184,7 @@ success:
   'bg-success text-success-foreground shadow-xs hover:bg-success/90 focus-visible:ring-success/20 dark:focus-visible:ring-success/40',
 ```
 
-This follows the exact pattern of the existing `destructive` variant on line 14-15:
+This follows the existing `destructive` variant structure (same utility "shape", swapping `success` tokens for `destructive` tokens). Current `destructive` variant (at `components/ui/button.tsx:14-15`):
 
 ```typescript
 destructive:
@@ -305,7 +305,7 @@ ReviewQuestionNavigator:
 
 ### 6.2 Unit Tests — `Button` `success` Variant
 
-**File:** `components/ui/button.test.tsx` (create if doesn't exist, or add to existing)
+**File:** `components/ui/button.test.tsx` (add to existing)
 
 ```
 Button:

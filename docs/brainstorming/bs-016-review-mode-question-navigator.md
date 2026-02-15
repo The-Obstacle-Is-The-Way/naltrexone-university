@@ -115,7 +115,7 @@ The review page already fetches `GetPracticeSessionReviewOutput` which contains 
 
 ### Existing Components and Their Contracts
 
-**`QuestionNavigator`** — `exam-review-view.tsx:24-85`
+**`QuestionNavigator`** — `app/(app)/app/practice/[sessionId]/components/exam-review-view.tsx:24-85`
 ```typescript
 // Props:
 review: GetPracticeSessionReviewOutput     // Full session review data
@@ -132,7 +132,7 @@ onNavigateQuestion: (questionId: string) => void  // State-based callback (NOT U
 - Primary-colored dot for markedForReview (span with `bg-primary` — navy in light, light gray in dark)
 ```
 
-**`SessionNavigationBar`** — `question-page-client.tsx:97-155`
+**`SessionNavigationBar`** — `app/(app)/app/questions/[slug]/question-page-client.tsx:97-155`
 ```typescript
 // Props:
 navigation: SessionNavigation  // { questions[], currentIndex, sessionId, from }
@@ -145,7 +145,7 @@ historyHref?: string           // Encoded history URL for back navigation
 - text-sm font-medium text-muted-foreground with hover:text-foreground
 ```
 
-**`SessionNavigation` type** — `question-page-logic.ts:15-24`
+**`SessionNavigation` type** — `app/(app)/app/questions/[slug]/question-page-logic.ts:15-24`
 ```typescript
 {
   questions: ReadonlyArray<{
@@ -159,7 +159,7 @@ historyHref?: string           // Encoded history URL for back navigation
 }
 ```
 
-**`useQuestionPageController`** — `use-question-page-controller.ts:48-259`
+**`useQuestionPageController`** — `app/(app)/app/questions/[slug]/use-question-page-controller.ts:48-259`
 ```typescript
 // How SessionNavigation is built:
 // 1. On mount, if sessionId provided, calls getPracticeSessionReview({ sessionId })
@@ -170,7 +170,7 @@ historyHref?: string           // Encoded history URL for back navigation
 // 6. Returns sessionNavigation: SessionNavigation | null
 ```
 
-**`GetPracticeSessionReviewOutput`** — `get-practice-session-review.ts:40-47`
+**`GetPracticeSessionReviewOutput`** — `src/application/use-cases/get-practice-session-review.ts:40-47`
 ```typescript
 {
   sessionId: string;
@@ -182,7 +182,7 @@ historyHref?: string           // Encoded history URL for back navigation
 }
 ```
 
-**`QuestionView`** — `question-page-client.tsx:157-289`
+**`QuestionView`** — `app/(app)/app/questions/[slug]/question-page-client.tsx:174-289`
 ```typescript
 // The review mode question page. Layout:
 // 1. Header: "Question" + backHref link
@@ -198,7 +198,7 @@ historyHref?: string           // Encoded history URL for back navigation
 | Component | File | Notes |
 |-----------|------|-------|
 | `Button` | `components/ui/button.tsx` | CVA variants: default, destructive, outline, secondary, ghost, link. Sizes: default (h-9), sm (h-8), lg (h-10), icon (size-9) |
-| `Card` | `components/ui/card.tsx` | Simple div with `rounded-2xl border p-6 shadow-sm` |
+| `Card` | `components/ui/card.tsx` | `<div data-slot="card">` with `bg-card text-card-foreground flex flex-col gap-0 rounded-2xl border p-6 shadow-sm` (then merged with `className` via `twMerge`) |
 | `QuestionCard` | `components/question/question-card.tsx` | Stem + ChoiceButton fieldset |
 | `ChoiceButton` | `components/question/choice-button.tsx` | Radio label with correctness coloring: `border-success bg-success/10` (correct), `border-destructive bg-destructive/10` (incorrect) |
 | `Feedback` | `components/question/feedback.tsx` | Card with `border-success bg-success/10` or `border-destructive bg-destructive/10` |
@@ -486,7 +486,7 @@ The `Button` component (`components/ui/button.tsx`) currently has no `success` v
 success: 'bg-success text-success-foreground shadow-xs hover:bg-success/90 focus-visible:ring-success/20 dark:focus-visible:ring-success/40',
 ```
 
-This follows the exact pattern of the existing `destructive` variant, substituting `success` tokens for `destructive` tokens. The `success` and `success-foreground` CSS variables are already defined in `globals.css` for both light and dark modes.
+This follows the existing `destructive` variant structure (same utility "shape", swapping `success` tokens for `destructive` tokens). The `success` and `success-foreground` CSS variables are already defined in `globals.css` for both light and dark modes.
 
 ---
 
