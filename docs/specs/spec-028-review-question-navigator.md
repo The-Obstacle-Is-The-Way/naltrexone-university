@@ -392,7 +392,7 @@ Phase 4: Verification
 - [ ] Each button has `aria-label` with format: "Question {order}: {Correct|Incorrect|Unanswered}{, Current}"
 - [ ] Current question has `aria-current="step"`
 - [ ] All link buttons are keyboard-focusable with visible focus ring
-- [ ] Touch targets meet WCAG 2.5.8 minimum (h-9 = 36px + gap-2 = 8px = 44px effective)
+- [ ] Touch targets are h-9 (36px) with gap-2 (8px) spacing, exceeding WCAG 2.5.8 Level AA minimum (24px)
 
 ### Data Preservation
 
@@ -413,7 +413,7 @@ Phase 4: Verification
 
 - **"Review Incorrect Only" filter** — Click to show only red buttons. Deferred to v2 if users request it.
 - **Collapsible grid on mobile** — 20-question sessions produce 4 rows (~110px). Acceptable. Monitor for 40+ sessions.
-- **Marked-for-review indicator** — The active session navigator shows a red dot for marked questions. Review mode doesn't need this since the exam is over.
+- **Marked-for-review indicator** — The active session navigator shows a primary-colored dot (`bg-primary`) for marked questions. Review mode doesn't need this since the exam is over.
 - **Shared `NavigatorGrid` layout component** — Extracting a shared grid wrapper between `QuestionNavigator` and `ReviewQuestionNavigator`. Nice-to-have refactor, not required for v1. Both grids use the same Tailwind classes.
 - **Modifying `QuestionNavigator` (Option A)** — Rejected. Different navigation paradigms (state vs URL), different data shapes, regression risk.
 - **Inline dot navigator (Option C)** — Rejected. Too compact for 20+ questions, fails WCAG touch targets, loses numbered labels.

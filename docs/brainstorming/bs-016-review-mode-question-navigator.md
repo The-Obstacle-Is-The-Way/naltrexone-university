@@ -23,7 +23,7 @@
 
 When a user finishes a 20-question practice session and enters review mode, their primary goal is almost always: **find and study the questions I got wrong.** The current review UI forces them to click "Next →" up to 19 times sequentially to locate, say, question 17 which they missed.
 
-Meanwhile, during the _active_ session, users see a question navigator grid — numbered circular buttons 1 through 20 — with random access to any question. This navigation disappears entirely in review mode, replaced by bare "← Previous" / "Next →" links.
+Meanwhile, during the _active_ session, users see a question navigator grid — numbered pill-shaped buttons 1 through 20 — with random access to any question. This navigation disappears entirely in review mode, replaced by bare "← Previous" / "Next →" links.
 
 ### What Exists Today — Visual Inventory
 
@@ -45,7 +45,7 @@ _(All screenshots captured 2026-02-15 via Playwright against localhost:3000)_
   - `default` variant (dark bg): current question
   - `secondary` variant (gray bg): answered
   - `outline` variant (white bg, border): unanswered
-  - Red dot: marked for review
+  - Primary-colored dot (`bg-primary`): marked for review
 - Question list with stem previews + "Open question" buttons
 - "Submit exam" button with confirmation dialog
 
@@ -74,7 +74,7 @@ _(All screenshots captured 2026-02-15 via Playwright against localhost:3000)_
 - Expanded: `SessionBreakdownList` with question links
 
 **6. History — Questions Tab** (`/app/history?tab=questions`)
-- Filter chips: Result (All/Correct/Incorrect), Difficulty, Tag, Source
+- Filter dropdowns (`<select>`): Result (All/Correct/Incorrect), Difficulty, Tag, Source
 - Long scrollable list of all attempted questions with result badges
 - Each question links to review mode
 
@@ -83,7 +83,7 @@ _(All screenshots captured 2026-02-15 via Playwright against localhost:3000)_
 - Questions count input
 - Status: Unanswered / Incorrect / Bookmarked segmented control
 - Difficulty: All / Easy / Medium / Hard
-- Tag accordion selectors (Exam Section, Substance, Topic, Treatment)
+- Tag accordion selectors (Exam Section, Substance, Topic, Treatment, Diagnosis)
 - "Start session" button
 
 ### Task Mismatch
@@ -129,7 +129,7 @@ onNavigateQuestion: (questionId: string) => void  // State-based callback (NOT U
   - default (current), secondary (answered), outline (unanswered)
 - Disabled when !row.isAvailable
 - aria-label with status description
-- Red dot for markedForReview (span with bg-primary)
+- Primary-colored dot for markedForReview (span with `bg-primary` — navy in light, light gray in dark)
 ```
 
 **`SessionNavigationBar`** — `question-page-client.tsx:97-155`
@@ -215,14 +215,15 @@ historyHref?: string           // Encoded history URL for back navigation
 | `--primary` | `222.2 47.4% 11.2%` (dark navy) | `0 0% 93%` (light gray) | Default button bg, mark-for-review dot |
 | `--secondary` | `210 40% 96.1%` (light blue-gray) | `0 0% 11%` (dark gray) | Answered button bg |
 
-### Button Variant CSS (from `buttonVariants`)
+### Button Variant CSS (abridged from `buttonVariants` — see `components/ui/button.tsx` for full classes including dark mode overrides)
 
 ```
-default:   bg-primary text-primary-foreground shadow-xs hover:bg-primary/90
-destructive: bg-destructive text-white shadow-xs hover:bg-destructive/90
-outline:   border bg-background shadow-xs hover:bg-accent
-secondary: bg-secondary text-secondary-foreground shadow-xs hover:bg-secondary/80
-ghost:     hover:bg-accent hover:text-accent-foreground
+default:     bg-primary text-primary-foreground shadow-xs hover:bg-primary/90
+destructive: bg-destructive text-white shadow-xs hover:bg-destructive/90 ... dark:bg-destructive/60
+outline:     border bg-background shadow-xs hover:bg-accent ... dark:bg-input/30
+secondary:   bg-secondary text-secondary-foreground shadow-xs hover:bg-secondary/80
+ghost:       hover:bg-accent hover:text-accent-foreground ... dark:hover:bg-accent/50
+link:        text-primary underline-offset-4 hover:underline
 ```
 
 **Key insight:** Button already has `destructive` variant (red bg, white text). There is NO `success` button variant — we would need to add one, or use custom classes.
@@ -253,7 +254,7 @@ ghost:     hover:bg-accent hover:text-accent-foreground
   // OR Review mode (new):
   mode="review"
   questionLinks={navigation.questions.map(q => ({
-    questionId: q.questionId,
+    slug: q.slug,
     href: toQuestionRoute(q.slug, { from, mode: 'review', sessionId, historyHref })
   }))}
 />
@@ -499,11 +500,11 @@ This follows the exact pattern of the existing `destructive` variant, substituti
 | Tablet (640-1024px) | 8 | 1 row | 3 rows | 5 rows |
 | Desktop (>1024px) | 10 | 1 row | 2 rows | 4 rows |
 
-### Assessment
+### Height Estimates (h-9 = 36px per button, gap-2 = 8px, card p-4 + heading + mt-3 ≈ 64px overhead)
 
-- **5-question sessions:** 1 row everywhere — trivial.
-- **20-question sessions (typical):** 4 rows on mobile (80px + gaps ≈ 110px). Acceptable — about the height of 2 question choices. The at-a-glance benefit outweighs the vertical cost.
-- **40-question sessions (rare):** 8 rows on mobile (≈ 220px). This is significant. Two mitigations:
+- **5-question sessions:** 1 row everywhere — ~100px total card height. Trivial.
+- **20-question sessions (typical):** 4 rows on mobile → grid: (4×36)+(3×8) = 168px + ~64px overhead ≈ **232px** total. Acceptable — comparable to a feedback card. The at-a-glance benefit outweighs the vertical cost.
+- **40-question sessions (rare):** 8 rows on mobile → grid: (8×36)+(7×8) = 344px + ~64px overhead ≈ **408px**. This is significant. Two mitigations:
   1. **Collapsible:** Wrap in a disclosure (`<details>` or custom) that defaults to expanded but can be collapsed.
   2. **Scroll region:** `max-h-[160px] overflow-y-auto` — shows ~5 rows with scroll indicator.
 
@@ -516,7 +517,7 @@ This follows the exact pattern of the existing `destructive` variant, substituti
 1. **ARIA labels:** Each button gets `aria-label="Question {order}: {Correct|Incorrect|Unanswered}{, Current}"`.
 2. **`aria-current="step"`** on the current question button (WAI-ARIA step pattern).
 3. **Color is not the only indicator:** The `aria-label` conveys correctness for screen readers. For color-blind users, the difference between success (green bg, white text) and destructive (red bg, white text) is visible because lightness differs significantly (35% vs 60% in light mode). The outline variant (no fill) is visually distinct from both.
-4. **Touch targets:** Each button is `h-9` (36px) with `rounded-full`. The grid gap is `gap-2` (8px). Combined: 44px effective touch target — meets WCAG 2.5.8 minimum.
+4. **Touch targets:** Each button is `h-9` (36px) with `rounded-full` and `gap-2` (8px) spacing between buttons. The 36px target exceeds the WCAG 2.5.8 Level AA minimum (24px). Does not meet WCAG 2.5.5 Level AAA (44px) — acceptable for v1.
 5. **Keyboard navigation:** `<Link>` elements are natively focusable. Tab order follows DOM order (left-to-right, top-to-bottom). The existing `focus-visible:ring` styles apply.
 6. **Reduced motion:** No animations in the navigator grid.
 
