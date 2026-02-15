@@ -53,7 +53,7 @@ _(All screenshots captured 2026-02-15 via Playwright against localhost:3000)_
 - Header: "Session Summary" + "Here's how you did."
 - 4 stat cards: Answered, Correct, Accuracy %, Duration
 - `SessionBreakdownList`: numbered questions with stem previews
-  - Green "Correct" / Red "Incorrect" / Gray "Unanswered" badges
+  - Green "Correct" / Red "Incorrect" / Gray "Unanswered" text labels (not badge components)
   - Each question links to `/app/questions/[slug]?from=practice&mode=review&sessionId=...`
 - Buttons: Back to Dashboard, View in History, Start another session
 
@@ -75,7 +75,7 @@ _(All screenshots captured 2026-02-15 via Playwright against localhost:3000)_
 
 **6. History — Questions Tab** (`/app/history?tab=questions`)
 - Filter dropdowns (`<select>`): Result (All/Correct/Incorrect), Difficulty, Tag, Source
-- Long scrollable list of all attempted questions with result badges
+- Long scrollable list of all attempted questions with colored result labels (text, not badges)
 - Each question links to review mode
 
 **7. Practice Setup** (`/app/practice`)
@@ -83,7 +83,7 @@ _(All screenshots captured 2026-02-15 via Playwright against localhost:3000)_
 - Questions count input
 - Status: Unanswered / Incorrect / Bookmarked segmented control
 - Difficulty: All / Easy / Medium / Hard
-- Tag accordion selectors (Exam Section, Substance, Topic, Treatment, Diagnosis)
+- Tag accordion selectors (Exam Section, Substance, Topic, Treatment). *(Diagnosis accordion appears only when diagnosis tags exist in the available tags list.)*
 - "Start session" button
 
 ### Task Mismatch
@@ -417,7 +417,7 @@ function NavigatorGrid({ children }: { children: React.ReactNode }) {
 **Cons:**
 - Becomes cramped for 20+ questions — 20 circles at 16px + 4px gap = 400px, fine on desktop but tight on mobile
 - 40-question sessions would overflow — requires horizontal scroll or wrapping, both ugly
-- Circles are too small for reliable touch targets (minimum 44px recommended by WCAG)
+- Circles are too small for reliable touch targets (fails WCAG 2.5.8 Target Size (Minimum) 24×24; also far below WCAG 2.5.5 Target Size (Enhanced) 44×44)
 - Loses the numbered labels — users can't identify question 17 without counting
 - Conflates two concerns: sequential navigation (prev/next) and random access (jump to any)
 

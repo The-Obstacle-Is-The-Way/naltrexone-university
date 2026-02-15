@@ -38,7 +38,7 @@ The data for color-coded correctness is already available. `SessionNavigation.qu
 | Current question styling? | **`ring-2 ring-ring` + `aria-current="step"` + not a link** | Consistent with focus ring pattern. Current question is already displayed — clicking it would be a no-op. |
 | Grid layout? | **`grid-cols-5 gap-2 sm:grid-cols-8 lg:grid-cols-10`** | Matches existing `QuestionNavigator` grid exactly. |
 | Where does it render? | **Inside `QuestionView`, between header/subtitle and `SessionNavigationBar`** | Natural reading order: grid overview → linear nav → question content. |
-| Mobile collapsing? | **Not in v1** | 20-question sessions (4 rows on mobile, ~110px) are acceptable. Defer collapsing if 40+ sessions become common. |
+| Mobile collapsing? | **Not in v1** | 20-question sessions (4 rows on mobile; grid-only height ~168px) are acceptable. Defer collapsing if 40+ sessions become common. |
 | "Review Incorrect Only" filter? | **Not in v1** | Visual scanning of colored grid is sufficient for typical 20-question sessions. |
 
 ---
@@ -392,7 +392,7 @@ Phase 4: Verification
 - [ ] Each button has `aria-label` with format: "Question {order}: {Correct|Incorrect|Unanswered}{, Current}"
 - [ ] Current question has `aria-current="step"`
 - [ ] All link buttons are keyboard-focusable with visible focus ring
-- [ ] Touch targets are h-9 (36px) with gap-2 (8px) spacing, exceeding WCAG 2.5.8 Level AA minimum (24px)
+- [ ] Touch targets meet WCAG 2.5.8 Target Size (Minimum) (24×24): buttons are `h-9` (~36px) and wide enough via `px-4` (≈80px). *(They do not meet WCAG 2.5.5 Target Size (Enhanced) 44×44 — acceptable for v1.)*
 
 ### Data Preservation
 
@@ -412,11 +412,11 @@ Phase 4: Verification
 ## 9. Non-Goals (Explicitly Out of Scope)
 
 - **"Review Incorrect Only" filter** — Click to show only red buttons. Deferred to v2 if users request it.
-- **Collapsible grid on mobile** — 20-question sessions produce 4 rows (~110px). Acceptable. Monitor for 40+ sessions.
+- **Collapsible grid on mobile** — 20-question sessions produce 4 rows (~168px grid-only). Acceptable. Monitor for 40+ sessions.
 - **Marked-for-review indicator** — The active session navigator shows a primary-colored dot (`bg-primary`) for marked questions. Review mode doesn't need this since the exam is over.
 - **Shared `NavigatorGrid` layout component** — Extracting a shared grid wrapper between `QuestionNavigator` and `ReviewQuestionNavigator`. Nice-to-have refactor, not required for v1. Both grids use the same Tailwind classes.
 - **Modifying `QuestionNavigator` (Option A)** — Rejected. Different navigation paradigms (state vs URL), different data shapes, regression risk.
-- **Inline dot navigator (Option C)** — Rejected. Too compact for 20+ questions, fails WCAG touch targets, loses numbered labels.
+- **Inline dot navigator (Option C)** — Rejected. Too compact for 20+ questions, fails WCAG 2.5.8 Target Size (Minimum) (24×24), loses numbered labels.
 
 ---
 
