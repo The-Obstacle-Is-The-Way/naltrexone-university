@@ -15,9 +15,11 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 ## Debt Index (Active)
 
-*No active debt items.*
+| ID | Title | Priority | Status |
+|----|-------|----------|--------|
+| [DEBT-224](debt-224-file-size-audit-production-and-test.md) | File Size Audit — Production and Test Files Exceeding Guidelines | P3 | Open |
 
-**Next Debt ID:** DEBT-224
+**Next Debt ID:** DEBT-225
 
 ---
 
