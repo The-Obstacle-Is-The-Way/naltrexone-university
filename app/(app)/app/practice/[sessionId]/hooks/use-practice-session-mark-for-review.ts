@@ -89,10 +89,12 @@ export function usePracticeSessionMarkForReview(
       );
     } catch (error) {
       if (!input.isMounted()) return;
-      input.setLoadState({
-        status: 'error',
-        message: getThrownErrorMessage(error),
-      });
+      if (currentQuestionIdRef.current === requestQuestionId) {
+        input.setLoadState({
+          status: 'error',
+          message: getThrownErrorMessage(error),
+        });
+      }
       isMarkingRef.current = false;
       setIsMarkingForReview(false);
       return;
@@ -100,10 +102,12 @@ export function usePracticeSessionMarkForReview(
     if (!input.isMounted()) return;
 
     if (!res.ok) {
-      input.setLoadState({
-        status: 'error',
-        message: getActionResultErrorMessage(res),
-      });
+      if (currentQuestionIdRef.current === requestQuestionId) {
+        input.setLoadState({
+          status: 'error',
+          message: getActionResultErrorMessage(res),
+        });
+      }
       isMarkingRef.current = false;
       setIsMarkingForReview(false);
       return;

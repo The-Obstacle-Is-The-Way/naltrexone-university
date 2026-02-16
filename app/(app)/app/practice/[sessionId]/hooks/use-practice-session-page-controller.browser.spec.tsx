@@ -1132,4 +1132,108 @@ describe('usePracticeSessionPageController (browser)', () => {
       .element(screen.getByTestId('marked-for-review'))
       .toHaveTextContent('false');
   });
+
+  it('does not show an error on the wrong question when a mark-for-review request fails after navigating away', async () => {
+    const deferred =
+      createDeferred<
+        ActionResult<{ questionId: string; markedForReview: boolean }>
+      >();
+
+    getNextQuestionMock
+      .mockResolvedValueOnce(
+        ok({
+          questionId: 'question-1',
+          slug: 'question-1',
+          stemMd: 'Question 1',
+          difficulty: 'easy',
+          choices: [
+            {
+              id: 'choice_1',
+              label: 'A',
+              textMd: 'Option A',
+              sortOrder: 1,
+            },
+          ],
+          session: {
+            sessionId: 'session-1',
+            mode: 'exam',
+            index: 0,
+            total: 2,
+            isMarkedForReview: false,
+          },
+        }),
+      )
+      .mockResolvedValueOnce(
+        ok({
+          questionId: 'question-2',
+          slug: 'question-2',
+          stemMd: 'Question 2',
+          difficulty: 'easy',
+          choices: [
+            {
+              id: 'choice_1',
+              label: 'A',
+              textMd: 'Option A',
+              sortOrder: 1,
+            },
+          ],
+          session: {
+            sessionId: 'session-1',
+            mode: 'exam',
+            index: 1,
+            total: 2,
+            isMarkedForReview: false,
+          },
+        }),
+      );
+    getBookmarksMock.mockResolvedValue(ok({ rows: [] }));
+    getPracticeSessionReviewMock.mockResolvedValue(
+      ok({
+        sessionId: 'session-1',
+        mode: 'exam',
+        totalCount: 2,
+        answeredCount: 0,
+        markedCount: 0,
+        rows: [],
+      }),
+    );
+    setPracticeSessionQuestionMarkMock.mockImplementation(
+      async () => deferred.promise,
+    );
+
+    const screen = await render(
+      <PracticeSessionPageControllerMarkForReviewProbe />,
+    );
+
+    await expect
+      .element(screen.getByTestId('load-status'))
+      .toHaveTextContent('ready');
+    await expect
+      .element(screen.getByTestId('question-id'))
+      .toHaveTextContent('question-1');
+
+    await screen
+      .getByRole('button', { name: 'toggle-mark-for-review' })
+      .click();
+    await expect
+      .poll(() => setPracticeSessionQuestionMarkMock.mock.calls.length)
+      .toBe(1);
+
+    await screen.getByRole('button', { name: 'next-question' }).click();
+    await expect
+      .element(screen.getByTestId('question-id'))
+      .toHaveTextContent('question-2');
+
+    deferred.reject(new Error('Network timeout'));
+
+    await expect
+      .element(screen.getByTestId('is-marking'))
+      .toHaveTextContent('false');
+    await expect
+      .element(screen.getByTestId('load-status'))
+      .toHaveTextContent('ready');
+    await expect
+      .element(screen.getByTestId('question-id'))
+      .toHaveTextContent('question-2');
+  });
 });
