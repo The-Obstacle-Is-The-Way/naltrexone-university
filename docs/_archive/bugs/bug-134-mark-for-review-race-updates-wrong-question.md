@@ -1,13 +1,14 @@
 # BUG-134: Mark-for-Review Race Can Update the Wrong Question UI State
 
+**Status:** Resolved
 **Priority:** P2
-**Status:** Open
-**Found:** 2026-02-16
+**Date:** 2026-02-16
+**Resolved:** 2026-02-16
 **Component:** Frontend — Practice Session Mark-for-Review
 
 ---
 
-## Summary
+## Description
 
 In an **Exam** session, `onToggleMarkForReview` can update the *current* question’s `sessionInfo.isMarkedForReview` using the result of an async request that was initiated for a **different** question. If the user navigates to another question while the mark/unmark request is in-flight, the late response mutates `sessionInfo` without verifying the currently displayed question, causing the Mark/Unmark UI to reflect the wrong question’s state.
 
@@ -16,7 +17,7 @@ In an **Exam** session, `onToggleMarkForReview` can update the *current* questio
 - The Mark/Unmark button can flip unexpectedly on the next question after navigation.
 - A follow-up click can toggle the wrong server-side question (user intent mismatch) because the UI state is incorrect.
 
-## Reproduction (Likely)
+## Reproduction (Timing-Dependent)
 
 1. Start an **Exam** practice session.
 2. On question A, click **Mark for review**.
@@ -39,23 +40,29 @@ In an **Exam** session, `onToggleMarkForReview` can update the *current* questio
   - `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-mark-for-review.ts:109`
 - Navigation does not disable while marking:
   - Next Question disabled state ignores `isMarkingForReview`:
-    - `app/(app)/app/practice/components/practice-view.tsx:260`
-  - Mark button disabled state does include `isMarkingForReview`:
-    - `app/(app)/app/practice/components/practice-view.tsx:283`
+  - `app/(app)/app/practice/components/practice-view.tsx:260`
+- Mark button disabled state does include `isMarkingForReview`:
+  - `app/(app)/app/practice/components/practice-view.tsx:283`
 
-## Suggested Fix
+## Resolution
 
-Guard the post-await `applySessionInfo` update so it only applies when the request still matches the currently displayed question:
+The post-await `applySessionInfo` update is now guarded so it only applies when the request still matches the currently displayed question.
 
-- Track the current `questionId` in a ref that is updated every render.
-- Capture `requestQuestionId` at click time.
-- After the await, only call `applySessionInfo` when `currentQuestionIdRef.current === requestQuestionId`.
+Key files:
 
-The `review` update already scopes by `res.data.questionId` and should remain as-is.
+- `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-mark-for-review.ts`
+- `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-page-controller.browser.spec.tsx`
 
 ## Acceptance Criteria
 
-- [ ] Navigating during mark/unmark cannot change the Mark/Unmark state of the wrong question.
-- [ ] Mark/unmark still updates immediately on the current question when the user stays on that question.
-- [ ] Add deterministic regression coverage (preferred) or document why it cannot be made deterministic.
+- [x] Navigating during mark/unmark cannot change the Mark/Unmark state of the wrong question
+- [x] Mark/unmark still updates immediately on the current question when the user stays on that question
+- [x] Regression coverage added
 
+## Verification
+
+- `pnpm typecheck`
+- `pnpm lint`
+- `pnpm test --run`
+- `pnpm test:browser`
+- `pnpm build`

@@ -17,8 +17,8 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 | ID | Title | Priority | Status |
 |----|-------|----------|--------|
-| [BUG-133](bug-133-stale-closure-practice-session-onsubmit.md) | Stale Closure in Practice Session onSubmit After Async Await | P3 | Open |
-| [BUG-134](bug-134-mark-for-review-race-updates-wrong-question.md) | Mark-for-Review Race Can Update the Wrong Question UI State | P2 | Open |
+
+_(none)_
 
 **Next Bug ID:** BUG-135
 
@@ -26,6 +26,8 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 | ID | Title | Status | Resolution |
 |----|-------|--------|------------|
+| [BUG-134](../_archive/bugs/bug-134-mark-for-review-race-updates-wrong-question.md) | Mark-for-Review Race Can Update the Wrong Question UI State | Resolved | Guard mark-for-review sessionInfo updates by current questionId; add browser regression coverage |
+| [BUG-133](../_archive/bugs/bug-133-stale-closure-practice-session-onsubmit.md) | Stale Closure in Practice Session onSubmit After Async Await | Resolved | Read post-await values from refs in submit handler; add browser regression coverage |
 | [BUG-132](../_archive/bugs/bug-132-duplicate-nav-links-pricing-dashboard.md) | Duplicate Nav Links — "Pricing" and "Dashboard" Appear Twice in Header | Resolved | Removed duplicate links from AuthNav; layout owns left-nav links, AuthNav owns right-side auth controls |
 | [BUG-131](../_archive/bugs/bug-131-e2e-bookmarks-empty-state-assertion-failure.md) | E2E Bookmarks Empty State Assertion Fails After Remove | Resolved | Stabilized the test by asserting either count decrement or empty-state with increased timeout |
 | [BUG-130](../_archive/bugs/bug-130-e2e-session-start-selector-mismatch.md) | E2E Session Start Selectors Don't Match Current UI | Resolved | Updated `startSession()` to click SegmentedControl buttons and fill `Questions` input |

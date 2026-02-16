@@ -56,6 +56,8 @@ export function usePracticeSessionMarkForReview(
   const [isMarkingForReview, setIsMarkingForReview] = useState(false);
   const isMarkingRef = useRef(false);
   const markRequestIdempotencyKeyRef = useRef<string | null>(null);
+  const currentQuestionIdRef = useRef<string | null>(null);
+  currentQuestionIdRef.current = input.question?.questionId ?? null;
 
   const onToggleMarkForReview = useCallback(async () => {
     if (!input.question) return;
@@ -63,6 +65,7 @@ export function usePracticeSessionMarkForReview(
     if (isMarkingRef.current) return;
     if (!input.sessionInfo) return;
 
+    const requestQuestionId = input.question.questionId;
     const markedForReview = !input.sessionInfo.isMarkedForReview;
     isMarkingRef.current = true;
     setIsMarkingForReview(true);
@@ -106,13 +109,15 @@ export function usePracticeSessionMarkForReview(
       return;
     }
 
-    input.applySessionInfo((prev) => {
-      if (!prev) return prev;
-      return {
-        ...prev,
-        isMarkedForReview: res.data.markedForReview,
-      };
-    });
+    if (currentQuestionIdRef.current === requestQuestionId) {
+      input.applySessionInfo((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          isMarkedForReview: res.data.markedForReview,
+        };
+      });
+    }
 
     input.setReview((prev) => {
       if (!prev) return prev;
