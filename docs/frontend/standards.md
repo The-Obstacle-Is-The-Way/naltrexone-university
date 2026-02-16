@@ -331,37 +331,29 @@ Change button text and disable during pending:
 
 ### Error boundaries (`error.tsx`)
 
-Every route MUST have an `error.tsx`. All error boundaries follow this template:
+Every route MUST have an `error.tsx`. All error boundaries use the shared `ErrorBoundaryPage` component:
+
+**Component:** `components/error-boundary-page.tsx`
 
 ```tsx
 'use client';
-import Link from 'next/link';
-import { useEffect } from 'react';
-import { Button } from '@/components/ui/button';
-import { ROUTES } from '@/lib/routes';
-import { REPORT_ISSUE_URL } from '@/lib/support';
+import { ErrorBoundaryPage } from '@/components/error-boundary-page';
 
 export default function ErrorPage({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
-  useEffect(() => { console.error('[route/error]', error); }, [error]);
-
   return (
-    <div className="flex min-h-[50vh] items-center justify-center bg-background text-foreground">
-      <div className="mx-auto max-w-md space-y-6 px-4 text-center">
-        <h2 className="text-xl font-semibold">Context-specific title</h2>
-        <p className="text-sm text-muted-foreground">Context-specific message.</p>
-        {error.digest && <p className="text-xs text-muted-foreground">Error ID: {error.digest}</p>}
-        <div className="flex flex-col gap-3">
-          <Button onClick={reset}>Try again</Button>
-          <Button asChild variant="outline"><Link href={ROUTES.APP_DASHBOARD}>Back to Dashboard</Link></Button>
-          <Button asChild variant="outline"><a href={REPORT_ISSUE_URL} target="_blank" rel="noreferrer noopener">Report issue</a></Button>
-        </div>
-      </div>
-    </div>
+    <ErrorBoundaryPage
+      error={error}
+      reset={reset}
+      title="Context-specific title"
+      description="Context-specific message."
+      links={[{ href: ROUTES.APP_DASHBOARD, label: 'Back to Dashboard' }]}
+      logPrefix="app/(app)/app/route-name/error.tsx:"
+    />
   );
 }
 ```
 
-Three action buttons: Try Again, contextual navigation, Report Issue. Always in that order.
+`ErrorBoundaryPage` renders three action buttons: Try Again, contextual navigation link(s), Report Issue — always in that order. Pass `includeMainLandmark` when the error boundary replaces the page's `<main>` element (uses `<h1>` instead of `<h2>`).
 
 ### Inline errors
 
@@ -413,7 +405,7 @@ Destructive actions MUST show a confirmation dialog before executing:
 - Remove bookmark (bookmarks page)
 - Submit/end exam session
 
-Use an `AlertDialog` from Radix UI (to be added to `components/ui/`).
+Use `AlertDialog` from `components/ui/alert-dialog.tsx` (Radix UI wrapper). Currently used in bookmarks page, exam review, and incomplete session card.
 
 ---
 
@@ -597,15 +589,25 @@ Issues documented below are tracked as tech debt in `docs/debt/index.md` (Fronte
 
 ### P1 — Must fix before UI/UX refactor
 
-*No P1 items. All god hooks have been decomposed.*
+*No P1 items.*
 
 ### P2 — Fix during UI/UX refactor
 
-*No active P2 items.*
+Three hooks exceed the 200-line "god hook" threshold (§12):
+
+| Hook | Lines | File |
+|------|-------|------|
+| `useQuestionPageController` | 282 | `app/(app)/app/questions/[slug]/use-question-page-controller.ts` |
+| `usePracticeSessionQuestionFlow` | 238 | `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-question-flow.ts` |
+| `useQuestionFlowCore` | 215 | `app/(app)/app/practice/shared/use-question-flow-core.ts` |
 
 ### P3 — Fix as encountered
 
-*No active P3 items.*
+| ID | Summary | File(s) |
+|----|---------|---------|
+| [FE-054](../debt/fe-054-hardcoded-emerald-color-bypasses-design-tokens.md) | Hardcoded `text-emerald-500` bypasses design system tokens | session-breakdown-list.tsx, history-questions-tab.tsx, dashboard/page.tsx |
+| [FE-055](../debt/fe-055-exam-navigator-missing-nav-landmark.md) | Exam review navigator missing `nav` landmark and `aria-controls` | exam-review-view.tsx |
+| — | `Markdown.tsx` uses PascalCase filename (violates §13 kebab-case convention) | `components/markdown/Markdown.tsx` |
 
 ---
 
@@ -623,12 +625,14 @@ Issues documented below are tracked as tech debt in `docs/debt/index.md` (Fronte
 | `metallic-border.tsx` | MetallicBorder | **No** | Yes | No | |
 | `metallic-cta-button.tsx` | MetallicCtaButton | No | No | No | |
 | `notification-provider.tsx` | NotificationProvider, useNotification | **No** | Yes | No | |
+| `alert-dialog.tsx` | AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader, AlertDialogFooter, AlertDialogTitle, AlertDialogDescription, AlertDialogCancel, AlertDialogAction | Yes | Yes | No | Radix UI wrapper |
 | `segmented-control.tsx` | SegmentedControl | **No** | Yes | **No** | |
 
 ### `components/` (shared non-primitive)
 
 | File | Component(s) | Purpose |
 |------|-------------|---------|
+| `error-boundary-page.tsx` | ErrorBoundaryPage | Reusable error boundary content (Try again + nav links + Report issue) |
 | `error-card.tsx` | ErrorCard | Inline error alert |
 | `get-started-cta.tsx` | GetStartedCta | Marketing CTA |
 | `auth-nav.tsx` | AuthNav | Auth-aware nav buttons |

@@ -8,8 +8,9 @@ Canonical reference for layout composition patterns and UX design rules. While [
 
 ## 1. Navigation Zone Model
 
-**Established by:** SPEC-030 (Question View UX Unification)
+**Defined by:** SPEC-030 (Question View UX Unification)
 **Applies to:** All question-viewing contexts (practice sessions, review pages, quick practice)
+**Current compliance:** Partially violated — `SessionNavigationBar` in `/app/questions/[slug]` renders Previous/Next inline in Zone 1. SPEC-030 will relocate these to Zone 2.
 
 Question-related pages use two non-overlapping navigation zones:
 
@@ -57,9 +58,22 @@ Action bars are rendered inline per context (not via a shared component). The bu
  sequential    primary action    secondary actions              navigation
 ```
 
-### By Context
+### By Context (Current State)
 
-| Context | Bottom Action Bar |
+| Context | Bottom Action Bar (current) |
+|---------|-------------------|
+| Practice — before submit | [Submit] [Next Question] [Bookmark] |
+| Practice — after submit (Tutor) | [Next Question] [Bookmark] |
+| Practice — after submit (Exam) | [Next Question] [Bookmark] [Mark for review] |
+| Quick Practice | [Submit] [Next Question] [Bookmark] |
+| History Session Review (answered) | [Try Again] [Back to History] |
+| History Session Review (unanswered) | [Submit] |
+| History Individual Review | [Try Again] [Back to History] |
+| Exam Review Stage | [Submit Exam] |
+
+> **Note:** Previous/Next for session review currently live in `SessionNavigationBar` (Zone 1 inline), not in the bottom action bar. SPEC-030 will move them to Zone 2 and add a Previous button to active practice. The target state after SPEC-030:
+
+| Context | Bottom Action Bar (after SPEC-030) |
 |---------|-------------------|
 | Practice — before submit | [← Previous] [Submit] [Next Question] [Bookmark] |
 | Practice — after submit (Tutor) | [← Previous] [Next Question] [Bookmark] |
@@ -79,14 +93,14 @@ Action bars are rendered inline per context (not via a shared component). The bu
 
 ## 3. State Persistence Expectations
 
-| Mode | On revisit, user expects to see... |
-|------|------------------------------------|
-| Tutor (active session) | Full post-submission state: selected answer, correct/incorrect highlighting, explanation |
-| Exam (active session) | Selected answer only ("Answered" status). No correctness, no explanation (deferred to review). |
-| History Review | Full post-submission state from the specific attempt |
-| Quick Practice | N/A — no revisit mechanism (each question is independent) |
+| Mode | On revisit, user expects to see... | Current Status |
+|------|------------------------------------|----------------|
+| Tutor (active session) | Full post-submission state: selected answer, correct/incorrect highlighting, explanation | **Bug:** Only `selectedChoiceId` + `isAnswered` restored; correctness/explanation lost (BS-018, SPEC-030 Problem A) |
+| Exam (active session) | Selected answer only ("Answered" status). No correctness, no explanation (deferred to review). | Working |
+| History Review | Full post-submission state from the specific attempt | Working |
+| Quick Practice | N/A — no revisit mechanism (each question is independent) | N/A |
 
-**Rule:** If a mode shows feedback immediately after submission, that same feedback must be visible when the user revisits the question within the same session.
+**Rule:** If a mode shows feedback immediately after submission, that same feedback must be visible when the user revisits the question within the same session. SPEC-030 will fix the Tutor mode violation.
 
 ---
 
@@ -123,6 +137,8 @@ When building or modifying a question-viewing context, verify:
 - [ ] State persistence matches the mode's expectations (§3)
 - [ ] Shared components (`QuestionCard`, `Feedback`) are used — don't rebuild them
 - [ ] The context is documented in [Question Rendering Architecture](../practice-engine/question-rendering-architecture.md)
+
+> **Known violations:** History Session Review currently places Previous/Next in Zone 1 (`SessionNavigationBar` inline). Active practice has no Previous button. These are tracked in SPEC-030.
 
 ---
 
