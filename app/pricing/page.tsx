@@ -19,6 +19,8 @@ export const metadata: Metadata = {
   title: 'Pricing - Addiction Boards',
 };
 
+export const maxDuration = 30;
+
 export type { PricingViewProps } from '@/app/pricing/pricing-view';
 export { runSubscribeAction } from '@/app/pricing/subscribe-action';
 export { PricingView };

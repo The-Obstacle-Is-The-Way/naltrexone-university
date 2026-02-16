@@ -11,6 +11,8 @@ export const metadata: Metadata = {
   title: 'Checkout Success - Addiction Boards',
 };
 
+export const maxDuration = 30;
+
 export {
   runCheckoutSuccessPage,
   syncCheckoutSuccess,

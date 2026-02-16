@@ -108,17 +108,20 @@ Add `export const maxDuration` to key route files:
 
 | Route File | `maxDuration` | Rationale |
 |------------|---------------|-----------|
+| `app/(app)/app/layout.tsx` | 30 | Shared app layout performs auth + entitlement DB checks during SSR for every app route |
 | `app/(app)/app/questions/[slug]/page.tsx` | 30 | Server actions on question pages (load, submit, review) |
 | `app/(app)/app/dashboard/page.tsx` | 30 | Server Component with DB calls (stats, session history) |
 | `app/(app)/app/history/page.tsx` | 30 | Server Component with DB calls (sessions, questions, tags) |
 | `app/(app)/app/bookmarks/page.tsx` | 30 | Server Component with DB calls + server action (toggle bookmark) |
 | `app/(app)/app/billing/page.tsx` | 30 | Server Component with DB calls (auth, subscription lookup) |
+| `app/pricing/page.tsx` | 30 | Server Component checks current user entitlement during SSR |
+| `app/(marketing)/checkout/success/page.tsx` | 30 | Server Component syncs Stripe subscription + DB during SSR after checkout completion |
 | `app/api/cron/reconcile-stripe-subscriptions/route.ts` | 60 | Long-running reconciliation job |
 | `app/api/stripe/webhook/route.ts` | 30 | Webhook processing |
 | `app/api/webhooks/clerk/route.ts` | 30 | Webhook processing |
 | `app/api/health/route.ts` | 10 | Health check should be fast |
 
-Per [Next.js docs](https://nextjs.org/docs/app/api-reference/file-conventions/route-segment-config), `maxDuration` on a page applies to all server actions invoked from that page. For route handlers, it applies to the handler itself. **All Server Component pages that make database calls during SSR should have `maxDuration` to prevent 300s Fluid Compute defaults.**
+Per [Next.js docs](https://nextjs.org/docs/app/api-reference/file-conventions/route-segment-config), `maxDuration` on a page/layout applies to all server actions invoked from that segment. For route handlers, it applies to the handler itself. **All Server Component pages/layouts that make database calls during SSR should have `maxDuration` to prevent 300s Fluid Compute defaults.**
 
 ### Fix 3: Session Navigation Error Observability (LOW)
 
@@ -250,7 +253,7 @@ The session navigation error logging is a dev-mode observability concern. Testin
 - [ ] All tests pass for `withTimeout` (resolve, reject, timeout, timer cleanup)
 - [ ] Server action calls in question page hooks are wrapped with `withTimeout`
 - [ ] `TimeoutError` triggers existing error states (no new UI needed)
-- [ ] `maxDuration` exported on 5 key routes
+- [ ] `maxDuration` exported on all listed pages/layouts/routes
 - [ ] Session navigation fetch has `.catch()` + dev-mode warning
 - [ ] `idle_timeout: 20` set in `lib/db.ts`
 - [ ] `/api/health` responds to GET with DB check
