@@ -16,6 +16,8 @@ import { selectChoiceIfAllowed } from '@/app/(app)/app/shared/question-guards';
 import type { NextQuestion } from '@/src/application/use-cases/get-next-question';
 import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
 
+export const RESTORED_ATTEMPT_ID = 'restored';
+
 export type UseQuestionFlowCoreInput = {
   isMounted: () => boolean;
 };
@@ -34,7 +36,10 @@ export type UseQuestionFlowCoreOutput = {
   isAnswered: boolean;
   setIsAnswered: (answered: boolean) => void;
   submitResult: SubmitAnswerOutput | null;
-  setSubmitResult: (result: SubmitAnswerOutput | null) => void;
+  setSubmitResult: (
+    result: SubmitAnswerOutput | null,
+    questionId?: string | null,
+  ) => void;
   loadState: LoadState;
   setLoadState: (state: LoadState) => void;
   isPending: boolean;
@@ -116,14 +121,21 @@ export function useQuestionFlowCore(
     }
   }, []);
 
-  const setSubmitResult = useCallback((result: SubmitAnswerOutput | null) => {
+  const setSubmitResult = useCallback<
+    UseQuestionFlowCoreOutput['setSubmitResult']
+  >((result, questionId) => {
     setSubmitResultState(result);
-    submitResultQuestionIdRef.current = result
-      ? (questionRef.current?.questionId ?? null)
-      : null;
+
     if (result) {
+      submitResultQuestionIdRef.current =
+        typeof questionId === 'string'
+          ? questionId
+          : (questionRef.current?.questionId ?? null);
       setIsAnswered(true);
+      return;
     }
+
+    submitResultQuestionIdRef.current = null;
   }, []);
 
   const syncQuestionStateFromDraftOrSession = useCallback(
@@ -148,17 +160,18 @@ export function useQuestionFlowCore(
           const isCorrect =
             typeof sessionIsCorrect === 'boolean'
               ? sessionIsCorrect
-              : typeof prev.correctChoiceId === 'string'
-                ? prev.correctChoiceId === sessionSelectedChoiceId
-                : false;
+              : prev.correctChoiceId === sessionSelectedChoiceId;
 
-          setSubmitResult({
-            attemptId: 'restored',
-            isCorrect,
-            correctChoiceId: prev.correctChoiceId,
-            explanationMd: prev.explanationMd,
-            choiceExplanations: prev.choiceExplanations,
-          });
+          setSubmitResult(
+            {
+              attemptId: RESTORED_ATTEMPT_ID,
+              isCorrect,
+              correctChoiceId: prev.correctChoiceId,
+              explanationMd: prev.explanationMd,
+              choiceExplanations: prev.choiceExplanations,
+            },
+            nextQuestion.questionId,
+          );
         } else {
           setSubmitResult(null);
         }

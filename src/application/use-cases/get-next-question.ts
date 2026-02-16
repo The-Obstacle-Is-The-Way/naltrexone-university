@@ -14,8 +14,11 @@ import type {
   QuestionFilters,
   QuestionRepository,
 } from '../ports/repositories';
-import { buildShuffledChoiceViews } from '../shared/shuffled-choice-views';
-import type { ChoiceExplanation } from './submit-answer';
+import {
+  buildShuffledChoiceViews,
+  type ChoiceExplanation,
+  type ShuffledChoiceView,
+} from '../shared/shuffled-choice-views';
 
 export type PublicChoice = {
   id: string;
@@ -25,7 +28,7 @@ export type PublicChoice = {
 };
 
 export type PreviousSubmission = {
-  correctChoiceId: string | null;
+  correctChoiceId: string;
   explanationMd: string | null;
   choiceExplanations: ChoiceExplanation[];
 };
@@ -92,11 +95,10 @@ export class GetNextQuestionUseCase {
     return this.executeForFilters(input.userId, input.filters);
   }
 
-  private mapChoicesForOutput(
-    question: Question,
-    userId: string,
+  private mapChoiceViewsForOutput(
+    choiceViews: readonly ShuffledChoiceView[],
   ): PublicChoice[] {
-    return buildShuffledChoiceViews(question, userId).map((choice) => ({
+    return choiceViews.map((choice) => ({
       id: choice.choiceId,
       label: choice.displayLabel,
       textMd: choice.textMd,
@@ -106,7 +108,7 @@ export class GetNextQuestionUseCase {
 
   private buildPreviousSubmission(
     question: Question,
-    userId: string,
+    choiceViews: readonly ShuffledChoiceView[],
   ): PreviousSubmission {
     const correctChoice = question.choices.find((c) => c.isCorrect);
     if (!correctChoice) {
@@ -119,15 +121,13 @@ export class GetNextQuestionUseCase {
     return {
       correctChoiceId: correctChoice.id,
       explanationMd: question.explanationMd,
-      choiceExplanations: buildShuffledChoiceViews(question, userId).map(
-        (choice) => ({
-          choiceId: choice.choiceId,
-          displayLabel: choice.displayLabel,
-          textMd: choice.textMd,
-          isCorrect: choice.isCorrect,
-          explanationMd: choice.explanationMd,
-        }),
-      ),
+      choiceExplanations: choiceViews.map((choice) => ({
+        choiceId: choice.choiceId,
+        displayLabel: choice.displayLabel,
+        textMd: choice.textMd,
+        isCorrect: choice.isCorrect,
+        explanationMd: choice.explanationMd,
+      })),
     };
   }
 
@@ -189,11 +189,13 @@ export class GetNextQuestionUseCase {
       throw new ApplicationError('NOT_FOUND', 'Question not found');
     }
 
+    const choiceViews = buildShuffledChoiceViews(question, userId);
+    const choices = this.mapChoiceViewsForOutput(choiceViews);
     const isAnswered = typeof targetState.latestSelectedChoiceId === 'string';
     const isTutor = session.mode === 'tutor';
     const previousSubmission =
       isAnswered && isTutor
-        ? this.buildPreviousSubmission(question, userId)
+        ? this.buildPreviousSubmission(question, choiceViews)
         : null;
 
     return {
@@ -201,7 +203,7 @@ export class GetNextQuestionUseCase {
       slug: question.slug,
       stemMd: question.stemMd,
       difficulty: question.difficulty,
-      choices: this.mapChoicesForOutput(question, userId),
+      choices,
       session: {
         sessionId: session.id,
         mode: session.mode,
@@ -242,12 +244,16 @@ export class GetNextQuestionUseCase {
       throw new ApplicationError('NOT_FOUND', 'Question not found');
     }
 
+    const choices = this.mapChoiceViewsForOutput(
+      buildShuffledChoiceViews(question, userId),
+    );
+
     return {
       questionId: question.id,
       slug: question.slug,
       stemMd: question.stemMd,
       difficulty: question.difficulty,
-      choices: this.mapChoicesForOutput(question, userId),
+      choices,
       session: null,
     };
   }

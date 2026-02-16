@@ -40,6 +40,15 @@ function QuestionFlowCoreProbe() {
       <button
         type="button"
         onClick={() => {
+          core.setQuestion(createNextQuestion({ questionId: 'q_2' }));
+          core.setLoadState({ status: 'ready' });
+        }}
+      >
+        load-no-session-q2
+      </button>
+      <button
+        type="button"
+        onClick={() => {
           core.setQuestion(
             createNextQuestion({
               questionId: 'q_1',
@@ -122,6 +131,23 @@ function QuestionFlowCoreProbe() {
       >
         set-submit-result
       </button>
+      <button
+        type="button"
+        onClick={() => {
+          core.setSubmitResult(
+            {
+              attemptId: 'attempt_1',
+              isCorrect: false,
+              correctChoiceId: 'choice_1',
+              explanationMd: 'Explanation',
+              choiceExplanations: [],
+            },
+            'q_1',
+          );
+        }}
+      >
+        set-stale-submit-result
+      </button>
       <button type="button" onClick={() => core.setQuestion(null)}>
         clear-question
       </button>
@@ -144,7 +170,9 @@ function QuestionFlowCoreProbe() {
 test('clears derived selection state when the current question becomes null', async () => {
   const screen = await render(<QuestionFlowCoreProbe />);
 
-  await screen.getByRole('button', { name: 'load-no-session' }).click();
+  await screen
+    .getByRole('button', { name: 'load-no-session', exact: true })
+    .click();
   await screen.getByRole('button', { name: 'select-choice-1' }).click();
   await expect
     .element(screen.getByTestId('selected-choice-id'))
@@ -168,7 +196,9 @@ test('clears derived selection state when the current question becomes null', as
 test('prefers session-selected choices over drafts and clears draft state', async () => {
   const screen = await render(<QuestionFlowCoreProbe />);
 
-  await screen.getByRole('button', { name: 'load-no-session' }).click();
+  await screen
+    .getByRole('button', { name: 'load-no-session', exact: true })
+    .click();
   await screen.getByRole('button', { name: 'select-choice-1' }).click();
   await expect
     .element(screen.getByTestId('selected-choice-id'))
@@ -187,7 +217,9 @@ test('prefers session-selected choices over drafts and clears draft state', asyn
     .element(screen.getByTestId('is-answered'))
     .toHaveTextContent('true');
 
-  await screen.getByRole('button', { name: 'load-no-session' }).click();
+  await screen
+    .getByRole('button', { name: 'load-no-session', exact: true })
+    .click();
   await expect
     .element(screen.getByTestId('selected-choice-id'))
     .toHaveTextContent('');
@@ -254,7 +286,28 @@ test('clears submitResult when previousSubmission is not present or question is 
     .element(screen.getByTestId('has-submit-result'))
     .toHaveTextContent('false');
 
-  await screen.getByRole('button', { name: 'load-no-session' }).click();
+  await screen
+    .getByRole('button', { name: 'load-no-session', exact: true })
+    .click();
+  await expect
+    .element(screen.getByTestId('has-submit-result'))
+    .toHaveTextContent('false');
+});
+
+test('clears submitResult when it belongs to a different question than the current question', async () => {
+  const screen = await render(<QuestionFlowCoreProbe />);
+
+  await screen.getByRole('button', { name: 'load-no-session-q2' }).click();
+  await expect
+    .element(screen.getByTestId('has-submit-result'))
+    .toHaveTextContent('false');
+
+  await screen.getByRole('button', { name: 'set-stale-submit-result' }).click();
+  await expect
+    .element(screen.getByTestId('has-submit-result'))
+    .toHaveTextContent('true');
+
+  await screen.getByRole('button', { name: 'set-ready' }).click();
   await expect
     .element(screen.getByTestId('has-submit-result'))
     .toHaveTextContent('false');

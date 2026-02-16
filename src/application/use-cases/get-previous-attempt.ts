@@ -2,8 +2,10 @@ import type { Logger } from '@/src/application/ports/logger';
 import type { QuestionRepository } from '@/src/application/ports/repositories';
 import { ApplicationError } from '../errors';
 import type { AttemptSingleQuestionReader } from '../ports/attempt-repository';
-import { buildShuffledChoiceViews } from '../shared/shuffled-choice-views';
-import type { ChoiceExplanation } from './submit-answer';
+import {
+  buildShuffledChoiceViews,
+  type ChoiceExplanation,
+} from '../shared/shuffled-choice-views';
 
 export type GetPreviousAttemptInput = {
   userId: string;

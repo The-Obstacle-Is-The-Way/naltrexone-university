@@ -61,6 +61,7 @@ export function PracticeSessionPageView(props: PracticeSessionPageViewProps) {
   const navigator = props.navigator ?? null;
   const navigatorLoadState = props.navigatorLoadState ?? { status: 'idle' };
   const currentQuestionId = props.question?.questionId ?? null;
+  const onNavigateQuestion = props.onNavigateQuestion;
 
   const previousQuestionId = useMemo(() => {
     if (!navigator || !currentQuestionId) return null;
@@ -80,10 +81,10 @@ export function PracticeSessionPageView(props: PracticeSessionPageViewProps) {
   }, [navigator, currentQuestionId]);
 
   const onPreviousQuestion = useCallback(() => {
-    if (previousQuestionId && props.onNavigateQuestion) {
-      props.onNavigateQuestion(previousQuestionId);
+    if (previousQuestionId && onNavigateQuestion) {
+      onNavigateQuestion(previousQuestionId);
     }
-  }, [previousQuestionId, props.onNavigateQuestion]);
+  }, [previousQuestionId, onNavigateQuestion]);
 
   if (props.summary) {
     return (

@@ -26,7 +26,10 @@ export async function runLoadQuestionFlow<TQuestion>(input: {
   nowMs: () => number;
   setLoadState: (state: AsyncLoadStateWithIdle) => void;
   setSelectedChoiceId: (choiceId: string | null) => void;
-  setSubmitResult: (result: SubmitAnswerOutput | null) => void;
+  setSubmitResult: (
+    result: SubmitAnswerOutput | null,
+    questionId?: string | null,
+  ) => void;
   setSubmitIdempotencyKey: (key: string | null) => void;
   setQuestionLoadedAt: (loadedAtMs: number | null) => void;
   setQuestion: (question: TQuestion | null) => void;
@@ -143,7 +146,10 @@ export async function runSubmitAnswerFlow<
   }) => unknown;
   nowMs: () => number;
   setLoadState: (state: AsyncLoadStateWithIdle) => void;
-  setSubmitResult: (result: SubmitAnswerOutput | null) => void;
+  setSubmitResult: (
+    result: SubmitAnswerOutput | null,
+    questionId?: string | null,
+  ) => void;
   onSuccess?: (result: SubmitAnswerOutput) => void;
   isMounted?: () => boolean;
 }): Promise<void> {
@@ -189,7 +195,7 @@ export async function runSubmitAnswerFlow<
     return;
   }
 
-  input.setSubmitResult(res.data);
+  input.setSubmitResult(res.data, input.question.questionId);
   input.onSuccess?.(res.data);
   input.setLoadState({ status: 'ready' });
 }

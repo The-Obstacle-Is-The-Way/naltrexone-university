@@ -25,19 +25,8 @@ describe('QuestionView', () => {
   }
 
   function getBottomActionBar(doc: Document): HTMLDivElement | null {
-    const candidates = Array.from(
-      doc.querySelectorAll<HTMLDivElement>(
-        'div.flex.flex-col.gap-3.sm\\:flex-row',
-      ),
-    );
-
-    return (
-      candidates.find((candidate) => {
-        return (
-          !candidate.classList.contains('sm:items-baseline') &&
-          !candidate.classList.contains('sm:justify-between')
-        );
-      }) ?? null
+    return doc.querySelector<HTMLDivElement>(
+      '[data-testid="bottom-action-bar"]',
     );
   }
 

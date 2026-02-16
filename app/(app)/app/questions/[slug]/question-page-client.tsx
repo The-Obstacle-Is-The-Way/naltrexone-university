@@ -214,7 +214,10 @@ export function QuestionView(props: QuestionViewProps) {
         />
       ) : null}
 
-      <div className="flex flex-col gap-3 sm:flex-row">
+      <div
+        className="flex flex-col gap-3 sm:flex-row"
+        data-testid="bottom-action-bar"
+      >
         {props.sessionNavigation && navPrev ? (
           <Button asChild variant="outline" className="rounded-full">
             <Link

@@ -110,17 +110,17 @@ QuestionView (question-page-client.tsx)
 
 **File:** `src/application/use-cases/get-next-question.ts`
 
-Import `ChoiceExplanation` from `submit-answer.ts`:
+Import `ChoiceExplanation` from `src/application/shared/shuffled-choice-views.ts`:
 
 ```typescript
-import type { ChoiceExplanation } from './submit-answer';
+import type { ChoiceExplanation } from '../shared/shuffled-choice-views';
 ```
 
 Add a dedicated type for the restored submission payload:
 
 ```typescript
 export type PreviousSubmission = {
-  correctChoiceId: string | null;
+  correctChoiceId: string;
   explanationMd: string | null;
   choiceExplanations: ChoiceExplanation[];
 };

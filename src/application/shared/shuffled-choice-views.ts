@@ -12,6 +12,11 @@ export type ShuffledChoiceView = {
   explanationMd: string | null;
 };
 
+export type ChoiceExplanation = Pick<
+  ShuffledChoiceView,
+  'choiceId' | 'displayLabel' | 'textMd' | 'isCorrect' | 'explanationMd'
+>;
+
 export function buildShuffledChoiceViews(
   question: Question,
   userId: string,
