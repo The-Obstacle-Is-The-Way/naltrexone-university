@@ -257,6 +257,108 @@ describe('reconcileStripeSubscriptions', () => {
     });
   });
 
+  it('continues processing remaining rows when one row fails under concurrency', async () => {
+    const goodSub1 = createSubscriptionFixture({
+      id: 'sub_1',
+      userId: 'user_1',
+      customerId: 'cus_1',
+    });
+    const goodSub3 = createSubscriptionFixture({
+      id: 'sub_3',
+      userId: 'user_3',
+      customerId: 'cus_3',
+    });
+    // sub_2 has mismatched metadata userId → will fail reconciliation
+    const badSub = createSubscriptionFixture({
+      id: 'sub_2',
+      userId: 'user_other',
+      customerId: 'cus_2',
+    });
+
+    const subscriptionsByCustomer: Record<
+      string,
+      Array<{ id: string; status: 'active' }>
+    > = {
+      cus_1: [{ id: 'sub_1', status: 'active' }],
+      cus_2: [{ id: 'sub_2', status: 'active' }],
+      cus_3: [{ id: 'sub_3', status: 'active' }],
+    };
+
+    const stripe = {
+      subscriptions: {
+        retrieve: vi.fn(async (subscriptionId: string) => {
+          const map: Record<string, StripeSubscriptionFixture> = {
+            sub_1: goodSub1,
+            sub_2: badSub,
+            sub_3: goodSub3,
+          };
+          const sub = map[subscriptionId];
+          if (!sub) throw new Error(`Unknown: ${subscriptionId}`);
+          return sub;
+        }),
+        list: vi.fn(async (input: { customer: string }) => ({
+          data: subscriptionsByCustomer[input.customer] ?? [],
+        })),
+        cancel: vi.fn(async () => ({ id: 'sub_canceled' })),
+      },
+      customers: {
+        create: vi.fn(async () => ({ id: 'cus_unused' })),
+      },
+      checkout: {
+        sessions: {
+          create: vi.fn(async () => ({ id: 'cs_unused', url: null })),
+          list: vi.fn(async () => ({ data: [] })),
+          retrieve: vi.fn(async () => ({ id: 'cs_unused', url: null })),
+          expire: vi.fn(async () => ({ id: 'cs_unused', url: null })),
+        },
+      },
+      billingPortal: {
+        sessions: { create: vi.fn(async () => ({ url: null })) },
+      },
+      webhooks: {
+        constructEvent: vi.fn(() => ({
+          id: 'evt_unused',
+          type: 'unused',
+          data: { object: {} },
+        })),
+      },
+    } as const;
+
+    const stripeCustomers = new FakeStripeCustomerRepository();
+    const subscriptions = new FakeSubscriptionRepository();
+    const logger = new FakeLogger();
+
+    const result = await reconcileStripeSubscriptions(
+      { limit: 10, offset: 0, concurrency: 3 },
+      {
+        stripe,
+        priceIds: { monthly: 'price_m', annual: 'price_a' },
+        logger,
+        listLocalSubscriptions: async () => [
+          { userId: 'user_1', stripeSubscriptionId: 'sub_1' },
+          { userId: 'user_2', stripeSubscriptionId: 'sub_2' },
+          { userId: 'user_3', stripeSubscriptionId: 'sub_3' },
+        ],
+        transaction: async (fn) => fn({ stripeCustomers, subscriptions }),
+      },
+    );
+
+    expect(result.scanned).toBe(3);
+    expect(result.updated).toBe(2);
+    expect(result.failed).toBe(1);
+    expect(result.failures).toHaveLength(1);
+    expect(result.failures[0]).toMatchObject({
+      stripeSubscriptionId: 'sub_2',
+    });
+
+    // Good rows still persisted despite the middle row failing
+    await expect(subscriptions.findByUserId('user_1')).resolves.not.toBeNull();
+    await expect(subscriptions.findByUserId('user_3')).resolves.not.toBeNull();
+    // Failed row was NOT persisted
+    await expect(subscriptions.findByUserId('user_2')).resolves.toBeNull();
+    expect(logger.errorCalls.length).toBeGreaterThan(0);
+  });
+
   it('upserts subscriptions and customer mappings for local subscriptions', async () => {
     const subscription = createSubscriptionFixture({
       id: 'sub_123',
