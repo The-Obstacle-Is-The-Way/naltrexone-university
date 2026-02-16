@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { ReviewQuestionNavigator } from '@/app/(app)/app/questions/[slug]/components/review-question-navigator';
 import { ErrorCard } from '@/components/error-card';
 import { Feedback } from '@/components/question/feedback';
 import { QuestionCard } from '@/components/question/question-card';
@@ -15,7 +16,6 @@ import {
 } from '@/lib/routes';
 import type { GetQuestionBySlugOutput } from '@/src/adapters/controllers/question-view-controller';
 import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
-import { ReviewQuestionNavigator } from './components/review-question-navigator';
 import type { LoadState, SessionNavigation } from './question-page-logic';
 import { useQuestionPageController } from './use-question-page-controller';
 
