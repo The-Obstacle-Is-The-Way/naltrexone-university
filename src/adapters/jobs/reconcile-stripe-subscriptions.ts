@@ -52,7 +52,11 @@ async function mapWithConcurrencyLimit<T, R>(
       const index = nextIndex;
       nextIndex += 1;
       const item = items[index];
-      if (!item) continue;
+      if (item === undefined) {
+        throw new Error(
+          `mapWithConcurrencyLimit: missing item at index ${index}`,
+        );
+      }
       results[index] = await fn(item);
     }
   });

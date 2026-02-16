@@ -10,13 +10,13 @@
 
 ## Summary
 
-The `QuestionNavigator` component (defined in `app/(app)/app/practice/[sessionId]/components/exam-review-view.tsx`, lines 24–85 — note: this file also exports the post-session `ExamReviewView` at lines 87–235) renders numbered buttons for jumping between questions during an **in-progress** practice session (tutor/exam). It is rendered via `PracticeSessionPageView` when the navigator data is loaded.
+The `QuestionNavigator` component (defined in `app/(app)/app/practice/[sessionId]/components/exam-review-view.tsx`, lines 24–90 — note: this file also exports the post-session `ExamReviewView` at lines 92–240) renders numbered buttons for jumping between questions during an **in-progress** practice session (tutor/exam). It is rendered via `PracticeSessionPageView` when the navigator data is loaded.
 
 The component had good per-button `aria-label`s, but previously lacked a navigation landmark on the wrapper and didn’t expose the current-question state via `aria-current="step"`.
 
 ## Affected File
 
-- `app/(app)/app/practice/[sessionId]/components/exam-review-view.tsx:24-80`
+- `app/(app)/app/practice/[sessionId]/components/exam-review-view.tsx:24-90`
 
 ## Resolution
 

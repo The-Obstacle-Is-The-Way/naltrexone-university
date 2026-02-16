@@ -18,7 +18,7 @@ Replaced `text-emerald-500` with the semantic `text-success` token in:
 
 - `app/(app)/app/shared/components/session-breakdown-list.tsx:49`
 - `app/(app)/app/history/components/history-questions-tab.tsx:38`
-- `app/(app)/app/dashboard/page.tsx:188`
+- `app/(app)/app/dashboard/page.tsx:192`
 
 Updated the regression test:
 
