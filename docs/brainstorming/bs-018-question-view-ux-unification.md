@@ -155,12 +155,76 @@ Two approaches documented in the architecture doc:
 | 2026-02-16 | Document created | Live UI audit revealed 5 concerns across all question-viewing contexts |
 | 2026-02-16 | Tutor state persistence identified as highest priority | Core pedagogical bug that defeats the purpose of Tutor mode |
 | 2026-02-16 | Bottom-bar-only navigation proposed | Reduces redundancy, aligns with where user attention lands after reading content |
+| 2026-02-16 | Code verification completed | All file paths and line numbers verified against codebase (~50 claims, 98% accurate). Two minor fixes applied to architecture doc. Verified code paths added to this document for spec readiness. |
+
+---
+
+## Verified Code Paths (Spec-Ready)
+
+All file paths and line numbers verified against codebase on 2026-02-16.
+
+### Concern 1 & 4: Navigation Placement — Files to Change
+
+| What | File | Lines | Current Behavior |
+|------|------|-------|------------------|
+| Inline Previous/Next row (to remove) | `questions/[slug]/question-page-client.tsx` | 98-156 (`SessionNavigationBar`) | Renders "← Previous / Question X of Y / Next →" via `<Link>` elements when `sessionNavigation` is non-null |
+| History Review renders it here | `questions/[slug]/question-page-client.tsx` | ~208-210 | `<SessionNavigationBar navigation={...} />` rendered between navigator grid and question content |
+| "Question X of Y" status label | Same component | Line 135-137 | Rendered inside the nav row — needs to be extracted to heading area if row is removed |
+
+### Concern 2: Tutor State Persistence — Files to Change
+
+| What | File | Lines | Detail |
+|------|------|-------|--------|
+| State cleared on navigation | `practice/shared/question-flow-actions.ts` | 46-50 | `setSelectedChoiceId(null)`, `setSubmitResult(null)`, `setSubmitIdempotencyKey(null)`, `setQuestionLoadedAt(null)` |
+| Partial restore (bug site) | `practice/shared/use-question-flow-core.ts` | 133-144 | `syncQuestionStateFromDraftOrSession()` restores `selectedChoiceId` and `isAnswered` but NOT `submitResult` |
+| `NextQuestion` type (missing fields) | `src/application/use-cases/get-next-question.ts` | 26-41 | `session` includes `latestSelectedChoiceId` and `latestIsCorrect` but NOT `correctChoiceId`, `explanationMd`, `choiceExplanations` |
+| How History Review works (reference) | `questions/[slug]/question-page-logic.ts` | 216-259 | `loadPreviousAttempt()` returns full `SubmitAnswerOutput` with ALL fields — sets both `selectedChoiceId` AND `submitResult` |
+| `SubmitAnswerOutput` type | `src/application/use-cases/submit-answer.ts` | (output type) | Contains `attemptId`, `isCorrect`, `correctChoiceId`, `explanationMd`, `choiceExplanations` |
+
+**Backend fix path:** Modify `get-next-question.ts` use case to include `correctChoiceId` + `explanationMd` + `choiceExplanations` in the `NextQuestion.session` type when the question was previously answered. Then update `syncQuestionStateFromDraftOrSession()` to construct and set `submitResult` from these fields.
+
+### Concern 3: Action Bar Inconsistency — Files to Change
+
+| Context | File | Lines | Current Buttons |
+|---------|------|-------|-----------------|
+| Active Practice (Tutor/Exam) | `practice/components/practice-view.tsx` | 245-290 | [Submit] [Next Question] [Bookmark] [Mark for review (exam)] |
+| Exam Review Stage | `practice/[sessionId]/components/exam-review-view.tsx` | 183-232 | [Submit exam] with AlertDialog |
+| Session Summary | `practice/[sessionId]/components/session-summary-view.tsx` | 92-102 | [Back to Dashboard] [View in History] [Start another] |
+| Question Review (all origins) | `questions/[slug]/question-page-client.tsx` | 262-294 | [Submit] (pre-answer) or [Try Again] [Back to X] (post-answer) |
+
+### Concern 5: No Previous in Active Practice — Files to Change
+
+| What | File | Lines | Detail |
+|------|------|-------|--------|
+| Action bar (add Previous here) | `practice/components/practice-view.tsx` | 245-290 | Currently: Submit, Next Question, Bookmark. Needs: ← Previous added |
+| Navigation handler (needs new callback) | `practice/[sessionId]/hooks/use-practice-session-question-flow.ts` | hook output | Currently exports `onNextQuestion` and `onNavigateQuestion`. Needs: `onPreviousQuestion` or reuse `onNavigateQuestion` with prev question ID |
+| Session info (needs prev question context) | `src/application/use-cases/get-next-question.ts` | 26-41 | `NextQuestion.session` has `index` and `total` but no `previousQuestionId`. Controller would need to derive previous from navigator data or session state |
+
+### Shared Component Verification
+
+| Component | File | Shared? | Notes |
+|-----------|------|---------|-------|
+| `QuestionCard` | `components/question/question-card.tsx` | Yes — all contexts | Props: `correctChoiceId`, `disabled`, `onSelectChoice` |
+| `ChoiceButton` | `components/question/choice-button.tsx` | Yes — all contexts | Radio-style, uses `type="radio"` input |
+| `Feedback` | `components/question/feedback.tsx` | Yes — all contexts | `isCorrect`, `explanationMd`, `choiceExplanations` |
+| `QuestionNavigator` | `practice/[sessionId]/components/exam-review-view.tsx:24-85` | Active session only | Callback-based (`onNavigateQuestion`) |
+| `ReviewQuestionNavigator` | `questions/[slug]/components/review-question-navigator.tsx` | Review pages only | Link-based (`<Link href={toQuestionRoute(...)}>`) |
+| Action bars | 4 separate inline implementations | **Not shared** | Each context renders its own buttons inline |
+
+### Two Navigator Implementations (Context for Unification)
+
+| Aspect | `QuestionNavigator` | `ReviewQuestionNavigator` |
+|--------|---------------------|---------------------------|
+| Navigation | Callback: `onNavigateQuestion(questionId)` | Link: `<Link href={toQuestionRoute(...)}>` |
+| Color coding | default/secondary/outline (answered status) | success/destructive/outline (correctness) |
+| `aria-label` | "Question N: Current, Marked for review, Answered" | "Question N: Correct/Incorrect/Unanswered, Current" |
+| `aria-current` | Not used | `aria-current="step"` on current question |
 
 ---
 
 ## Related Documentation
 
-- [Question Rendering Architecture](../practice-engine/question-rendering-architecture.md) — canonical reference for all 5 contexts
+- [Question Rendering Architecture](../practice-engine/question-rendering-architecture.md) — canonical reference for all 5 contexts (verified accurate 2026-02-16)
 - SPEC-020 — Practice Session UX (documents intentional no-Previous decision)
 - SPEC-027 — Session Review Navigation (added the inline Previous/Next row)
 - SPEC-028 — Review Question Navigator (the color-coded grid)

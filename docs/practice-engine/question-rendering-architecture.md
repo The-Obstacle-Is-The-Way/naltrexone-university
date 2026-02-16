@@ -48,7 +48,7 @@ These three components are the **core question UI**, shared across all contexts:
 | Prop | Tutor (active) | Exam (active) | Review (all) |
 |------|---------------|---------------|--------------|
 | `correctChoiceId` | Set after submit | `null` (hidden) | Set from attempt data |
-| `disabled` | `false` until submitted | `false` until submitted | `true` always |
+| `disabled` | `false` until submitted (also `true` during pending/loading) | `false` until submitted (also `true` during pending/loading) | `true` during pending/loading; effectively locked by `selectChoiceIfAllowed` guard when `submitResult` exists |
 | `onSelectChoice` | Interactive | Interactive | No-op (locked) |
 
 Feedback is conditionally rendered by the parent:
@@ -440,7 +440,7 @@ The codebase has two navigators that look similar but serve different contexts:
 | `practice/[sessionId]/hooks/use-practice-session-mark-for-review.ts` | `usePracticeSessionMarkForReview` | Mark-for-review toggle (exam only) |
 | `practice/hooks/use-practice-question-bookmarks.ts` | `usePracticeQuestionBookmarks` | Bookmark toggle + status |
 | `questions/[slug]/use-question-page-controller.ts` | `useQuestionPageController` | Master controller for question review page |
-| `questions/[slug]/question-page-logic.ts` | `loadPreviousAttempt`, `buildSessionNavigation` | Pure logic for question page |
+| `questions/[slug]/question-page-logic.ts` | `loadPreviousAttempt` | Pure logic for question page (session navigation built inline in controller) |
 
 ### Route Utilities
 
@@ -487,3 +487,4 @@ The bottom action bar is implemented inline in 4 different places. A future spec
 | Date | Change |
 |------|--------|
 | 2026-02-16 | Initial version — comprehensive audit of all 5 question-viewing contexts. Documented state persistence bug in Tutor Mode, navigation architecture, shared vs context-specific components. |
+| 2026-02-16 | Accuracy pass — fixed `disabled` prop table (was oversimplified), removed non-existent `buildSessionNavigation` export from file index (logic is inline in controller). |
