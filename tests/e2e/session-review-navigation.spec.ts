@@ -66,6 +66,31 @@ test.describe('session review navigation (SPEC-027)', () => {
       timeout: 15_000,
     });
 
+    // SPEC-028: ReviewQuestionNavigator grid
+    const navigatorCard = page.locator('[data-slot="card"]', {
+      hasText: 'Question navigator',
+    });
+    await expect(page.getByText('Question navigator')).toBeVisible({
+      timeout: 15_000,
+    });
+
+    const navigatorButtons = navigatorCard.locator('[data-slot="button"]');
+    await expect(navigatorButtons).toHaveCount(2, { timeout: 15_000 });
+
+    await expect(
+      navigatorCard.locator(
+        '[data-slot="button"][aria-label*=": Correct"], [data-slot="button"][aria-label*=": Incorrect"]',
+      ),
+    ).toHaveCount(2, { timeout: 15_000 });
+
+    const currentNavigatorButton = navigatorCard.locator(
+      '[aria-current="step"]',
+    );
+    await expect(currentNavigatorButton).toBeVisible({ timeout: 15_000 });
+    const navigatorCurrentTextOnFirstQuestion =
+      await currentNavigatorButton.textContent();
+    expect(navigatorCurrentTextOnFirstQuestion).not.toBeNull();
+
     // Verify back link goes to /app/practice/{sessionId} with label "Back to Session"
     const backLink = page.locator(`a[href*="/app/practice/${sessionId}"]`);
     await expect(backLink).toBeVisible({ timeout: 15_000 });
@@ -110,6 +135,49 @@ test.describe('session review navigation (SPEC-027)', () => {
 
     // Verify no "Next →" link on last question
     await expect(page.getByText('Next →')).toHaveCount(0);
+
+    // SPEC-028: jump navigation via ReviewQuestionNavigator
+    const navigatorCurrentTextOnSecondQuestion = await navigatorCard
+      .locator('[aria-current="step"]')
+      .textContent();
+    expect(navigatorCurrentTextOnSecondQuestion).not.toBeNull();
+    expect(navigatorCurrentTextOnSecondQuestion?.trim()).not.toBe(
+      navigatorCurrentTextOnFirstQuestion?.trim(),
+    );
+
+    const nonCurrentNavigatorButton = navigatorCard
+      .locator('[data-slot="button"]:not([aria-current="step"])')
+      .first();
+    const pathnameBeforeJump = new URL(page.url()).pathname;
+    await nonCurrentNavigatorButton.click();
+
+    await page.waitForURL(
+      (url) =>
+        url.pathname !== pathnameBeforeJump &&
+        url.pathname.startsWith('/app/questions/') &&
+        url.searchParams.get('sessionId') === sessionId &&
+        url.searchParams.get('from') === 'practice' &&
+        url.searchParams.get('mode') === 'review',
+      { timeout: 15_000 },
+    );
+    await expect(page.getByText(/Loading question/i)).toBeHidden({
+      timeout: 15_000,
+    });
+    await expect(page.getByText('Question navigator')).toBeVisible({
+      timeout: 15_000,
+    });
+
+    const navigatorCurrentTextAfterJump = await navigatorCard
+      .locator('[aria-current="step"]')
+      .textContent();
+    expect(navigatorCurrentTextAfterJump).not.toBeNull();
+    expect(navigatorCurrentTextAfterJump?.trim()).toBe(
+      navigatorCurrentTextOnFirstQuestion?.trim(),
+    );
+
+    await expect(page.getByText('Question 1 of 2')).toBeVisible({
+      timeout: 15_000,
+    });
   });
 
   test('History → Session Review carries sessionId context', async ({
@@ -151,14 +219,16 @@ test.describe('session review navigation (SPEC-027)', () => {
     });
 
     // Verify back link uses the canonical sessions history href (tab + pagination)
-    const backLink = page.locator('a[href^="/app/history"]');
-    await expect(backLink.first()).toBeVisible({ timeout: 15_000 });
-    await expect(backLink.first()).toHaveAttribute(
+    const backLink = page
+      .getByRole('link', { name: 'Back to History' })
+      .first();
+    await expect(backLink).toBeVisible({ timeout: 15_000 });
+    await expect(backLink).toHaveAttribute(
       'href',
       /\/app\/history\?tab=sessions/,
     );
-    await expect(backLink.first()).toHaveAttribute('href', /offset=0/);
-    await expect(backLink.first()).toHaveAttribute('href', /limit=20/);
+    await expect(backLink).toHaveAttribute('href', /offset=0/);
+    await expect(backLink).toHaveAttribute('href', /limit=20/);
   });
 
   test('Non-session question flows have no session navigation', async ({
@@ -216,5 +286,6 @@ test.describe('session review navigation (SPEC-027)', () => {
     await expect(page.getByText('← Previous')).toHaveCount(0);
     await expect(page.getByText('Next →')).toHaveCount(0);
     await expect(page.getByText(/Question \d+ of \d+/)).toHaveCount(0);
+    await expect(page.getByText('Question navigator')).toHaveCount(0);
   });
 });

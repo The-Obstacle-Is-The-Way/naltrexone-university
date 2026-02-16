@@ -33,4 +33,13 @@ describe('components/ui/button', () => {
     expect(html).toContain('href="/pricing"');
     expect(html).not.toContain('type="button"');
   });
+
+  it('renders success variant classes', async () => {
+    const { Button } = await import('@/components/ui/button');
+
+    const html = renderToStaticMarkup(<Button variant="success">Click</Button>);
+
+    expect(html).toContain('bg-success');
+    expect(html).toContain('text-success-foreground');
+  });
 });

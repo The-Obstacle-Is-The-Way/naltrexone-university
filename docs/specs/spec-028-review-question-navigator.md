@@ -4,7 +4,7 @@
 > Write tests FIRST. Red → Green → Refactor. No implementation without a failing test.
 > Principles: SOLID, DRY, Clean Code, Gang of Four patterns where appropriate.
 
-**Status:** Ready
+**Status:** Implemented
 **Layer:** Presentation
 **Date:** 2026-02-15
 **Depends On:** SPEC-027 (Session Review Navigation — implemented)
@@ -181,7 +181,7 @@ export function ReviewQuestionNavigator({
 
 ```typescript
 success:
-  'bg-success text-success-foreground shadow-xs hover:bg-success/90 focus-visible:ring-success/20 dark:focus-visible:ring-success/40',
+  'bg-success text-success-foreground shadow-xs hover:bg-success/90 focus-visible:ring-success/20 dark:focus-visible:ring-success/40 dark:bg-success/60',
 ```
 
 This follows the existing `destructive` variant structure (same utility "shape", swapping `success` tokens for `destructive` tokens). Current `destructive` variant (at `components/ui/button.tsx:14-15`):
@@ -332,8 +332,8 @@ Add assertions to the existing "Session Summary → sequential review" test:
 ```
 Existing test extension:
   - verify question navigator grid is visible on review question page
-  - verify navigator contains colored buttons (correct/incorrect variants)
-  - verify current question button has ring highlight
+  - verify navigator contains answered-status buttons (aria-label includes ": Correct" or ": Incorrect")
+  - verify current question is indicated via aria-current="step"
   - click a navigator button to jump to a different question
   - verify URL updates to the clicked question
   - verify navigator re-renders with new current question highlighted

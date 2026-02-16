@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { ReviewQuestionNavigator } from '@/app/(app)/app/questions/[slug]/components/review-question-navigator';
 import { ErrorCard } from '@/components/error-card';
 import { Feedback } from '@/components/question/feedback';
 import { QuestionCard } from '@/components/question/question-card';
@@ -197,10 +198,16 @@ export function QuestionView(props: QuestionViewProps) {
       </div>
 
       {props.sessionNavigation ? (
-        <SessionNavigationBar
-          navigation={props.sessionNavigation}
-          historyHref={props.historyHref}
-        />
+        <>
+          <ReviewQuestionNavigator
+            navigation={props.sessionNavigation}
+            historyHref={props.historyHref}
+          />
+          <SessionNavigationBar
+            navigation={props.sessionNavigation}
+            historyHref={props.historyHref}
+          />
+        </>
       ) : null}
 
       {props.loadState.status === 'error' ? (

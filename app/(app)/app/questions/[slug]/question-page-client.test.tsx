@@ -334,6 +334,44 @@ describe('QuestionView', () => {
     expect(html).toContain('Question 2 of 3');
   });
 
+  it('renders ReviewQuestionNavigator when sessionNavigation is present', async () => {
+    const { QuestionView } = await import('./question-page-client');
+
+    const html = renderToStaticMarkup(
+      <QuestionView
+        {...createBaseProps()}
+        sessionNavigation={sharedSessionNavigation}
+      />,
+    );
+
+    expect(html).toContain('Question navigator');
+  });
+
+  it('does not render ReviewQuestionNavigator when sessionNavigation is null', async () => {
+    const { QuestionView } = await import('./question-page-client');
+
+    const html = renderToStaticMarkup(
+      <QuestionView {...createBaseProps()} sessionNavigation={null} />,
+    );
+
+    expect(html).not.toContain('Question navigator');
+  });
+
+  it('renders navigator buttons with correct/incorrect/unanswered variants', async () => {
+    const { QuestionView } = await import('./question-page-client');
+
+    const html = renderToStaticMarkup(
+      <QuestionView
+        {...createBaseProps()}
+        sessionNavigation={sharedSessionNavigation}
+      />,
+    );
+
+    expect(html).toContain('bg-success');
+    expect(html).toContain('bg-destructive');
+    expect(html).toContain('bg-background');
+  });
+
   it('does not render a previous link on the first question', async () => {
     const { QuestionView } = await import('./question-page-client');
 
