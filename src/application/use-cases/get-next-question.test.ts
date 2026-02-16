@@ -308,6 +308,180 @@ describe('GetNextQuestionUseCase', () => {
     });
   });
 
+  it('includes previousSubmission when question was answered in tutor mode', async () => {
+    const userId = 'user-1';
+    const sessionId = 'session-1';
+
+    const questionId = 'q1';
+
+    const question = createQuestion({
+      id: questionId,
+      status: 'published',
+      stemMd: 'Stem',
+      explanationMd: 'Explanation',
+      choices: [
+        createChoice({
+          id: 'c1',
+          questionId,
+          label: 'A',
+          isCorrect: false,
+          explanationMd: 'Choice 1 explainer',
+        }),
+        createChoice({
+          id: 'c2',
+          questionId,
+          label: 'B',
+          isCorrect: true,
+          explanationMd: 'Choice 2 explainer',
+        }),
+        createChoice({
+          id: 'c3',
+          questionId,
+          label: 'C',
+          isCorrect: false,
+          explanationMd: null,
+        }),
+      ],
+    });
+
+    const session = createPracticeSession({
+      id: sessionId,
+      userId,
+      mode: 'tutor',
+      questionIds: [questionId],
+      questionStates: [
+        {
+          questionId,
+          markedForReview: false,
+          latestSelectedChoiceId: 'c1',
+          latestIsCorrect: false,
+          latestAnsweredAt: new Date('2026-01-31T00:00:00Z'),
+        },
+      ],
+    });
+
+    const useCase = new GetNextQuestionUseCase(
+      new FakeQuestionRepository([question]),
+      new FakeAttemptRepository([]),
+      new FakePracticeSessionRepository([session]),
+    );
+
+    const result = await useCase.execute({
+      userId,
+      sessionId,
+      questionId,
+    });
+
+    const previousSubmission = result?.session?.previousSubmission;
+    if (!previousSubmission) {
+      throw new Error('Expected previousSubmission to be present');
+    }
+
+    expect(previousSubmission.correctChoiceId).toBe('c2');
+    expect(previousSubmission.explanationMd).toBe('Explanation');
+    expect(previousSubmission.choiceExplanations).toHaveLength(
+      result?.choices.length ?? 0,
+    );
+    expect(
+      previousSubmission.choiceExplanations.map((choice) => choice.choiceId),
+    ).toEqual(result?.choices.map((choice) => choice.id) ?? []);
+    expect(
+      previousSubmission.choiceExplanations.map(
+        (choice) => choice.displayLabel,
+      ),
+    ).toEqual(result?.choices.map((choice) => choice.label) ?? []);
+  });
+
+  it('does not include previousSubmission when question is unanswered', async () => {
+    const userId = 'user-1';
+    const sessionId = 'session-1';
+
+    const questionId = 'q1';
+
+    const question = createQuestion({
+      id: questionId,
+      status: 'published',
+      choices: [
+        createChoice({ id: 'c1', questionId, label: 'A', isCorrect: true }),
+      ],
+    });
+
+    const session = createPracticeSession({
+      id: sessionId,
+      userId,
+      mode: 'tutor',
+      questionIds: [questionId],
+      questionStates: [
+        {
+          questionId,
+          markedForReview: false,
+          latestSelectedChoiceId: null,
+          latestIsCorrect: null,
+          latestAnsweredAt: null,
+        },
+      ],
+    });
+
+    const useCase = new GetNextQuestionUseCase(
+      new FakeQuestionRepository([question]),
+      new FakeAttemptRepository([]),
+      new FakePracticeSessionRepository([session]),
+    );
+
+    const result = await useCase.execute({
+      userId,
+      sessionId,
+      questionId,
+    });
+
+    expect(result?.session?.previousSubmission).toBeUndefined();
+  });
+
+  it('does not include previousSubmission in exam mode even when answered', async () => {
+    const userId = 'user-1';
+    const sessionId = 'session-1';
+
+    const questionId = 'q1';
+
+    const question = createQuestion({
+      id: questionId,
+      status: 'published',
+      choices: [
+        createChoice({ id: 'c1', questionId, label: 'A', isCorrect: true }),
+      ],
+    });
+
+    const session = createPracticeSession({
+      id: sessionId,
+      userId,
+      mode: 'exam',
+      questionIds: [questionId],
+      questionStates: [
+        {
+          questionId,
+          markedForReview: false,
+          latestSelectedChoiceId: 'c1',
+          latestIsCorrect: true,
+          latestAnsweredAt: new Date('2026-01-31T00:00:00Z'),
+        },
+      ],
+    });
+
+    const useCase = new GetNextQuestionUseCase(
+      new FakeQuestionRepository([question]),
+      new FakeAttemptRepository([]),
+      new FakePracticeSessionRepository([session]),
+    );
+
+    const result = await useCase.execute({
+      userId,
+      sessionId,
+      questionId,
+    });
+
+    expect(result?.session?.previousSubmission).toBeUndefined();
+  });
+
   it('returns session index using question order position', async () => {
     const userId = 'user-1';
     const sessionId = 'session-1';

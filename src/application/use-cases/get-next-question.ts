@@ -15,12 +15,19 @@ import type {
   QuestionRepository,
 } from '../ports/repositories';
 import { buildShuffledChoiceViews } from '../shared/shuffled-choice-views';
+import type { ChoiceExplanation } from './submit-answer';
 
 export type PublicChoice = {
   id: string;
   label: string;
   textMd: string;
   sortOrder: number;
+};
+
+export type PreviousSubmission = {
+  correctChoiceId: string | null;
+  explanationMd: string | null;
+  choiceExplanations: ChoiceExplanation[];
 };
 
 export type NextQuestion = {
@@ -37,6 +44,7 @@ export type NextQuestion = {
     isMarkedForReview?: boolean;
     latestSelectedChoiceId?: string | null;
     latestIsCorrect?: boolean | null;
+    previousSubmission?: PreviousSubmission;
   };
 };
 
@@ -94,6 +102,33 @@ export class GetNextQuestionUseCase {
       textMd: choice.textMd,
       sortOrder: choice.sortOrder,
     }));
+  }
+
+  private buildPreviousSubmission(
+    question: Question,
+    userId: string,
+  ): PreviousSubmission {
+    const correctChoice = question.choices.find((c) => c.isCorrect);
+    if (!correctChoice) {
+      throw new ApplicationError(
+        'INTERNAL_ERROR',
+        `Question ${question.id} has no correct choice`,
+      );
+    }
+
+    return {
+      correctChoiceId: correctChoice.id,
+      explanationMd: question.explanationMd,
+      choiceExplanations: buildShuffledChoiceViews(question, userId).map(
+        (choice) => ({
+          choiceId: choice.choiceId,
+          displayLabel: choice.displayLabel,
+          textMd: choice.textMd,
+          isCorrect: choice.isCorrect,
+          explanationMd: choice.explanationMd,
+        }),
+      ),
+    };
   }
 
   private async executeForSession(
@@ -154,6 +189,13 @@ export class GetNextQuestionUseCase {
       throw new ApplicationError('NOT_FOUND', 'Question not found');
     }
 
+    const isAnswered = typeof targetState.latestSelectedChoiceId === 'string';
+    const isTutor = session.mode === 'tutor';
+    const previousSubmission =
+      isAnswered && isTutor
+        ? this.buildPreviousSubmission(question, userId)
+        : null;
+
     return {
       questionId: question.id,
       slug: question.slug,
@@ -168,6 +210,7 @@ export class GetNextQuestionUseCase {
         isMarkedForReview: targetState.markedForReview,
         latestSelectedChoiceId: targetState.latestSelectedChoiceId,
         latestIsCorrect: targetState.latestIsCorrect,
+        ...(previousSubmission ? { previousSubmission } : {}),
       },
     };
   }

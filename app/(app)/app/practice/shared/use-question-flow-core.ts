@@ -127,6 +127,7 @@ export function useQuestionFlowCore(
       if (!nextQuestion) {
         setSelectedChoiceId(null);
         setIsAnswered(false);
+        setSubmitResult(null);
         return;
       }
 
@@ -135,6 +136,29 @@ export function useQuestionFlowCore(
       if (typeof sessionSelectedChoiceId === 'string') {
         setSelectedChoiceId(sessionSelectedChoiceId);
         setIsAnswered(true);
+
+        const prev = nextQuestion.session?.previousSubmission;
+        if (prev) {
+          const sessionIsCorrect =
+            nextQuestion.session?.latestIsCorrect ?? null;
+          const isCorrect =
+            typeof sessionIsCorrect === 'boolean'
+              ? sessionIsCorrect
+              : typeof prev.correctChoiceId === 'string'
+                ? prev.correctChoiceId === sessionSelectedChoiceId
+                : false;
+
+          setSubmitResult({
+            attemptId: 'restored',
+            isCorrect,
+            correctChoiceId: prev.correctChoiceId,
+            explanationMd: prev.explanationMd,
+            choiceExplanations: prev.choiceExplanations,
+          });
+        } else {
+          setSubmitResult(null);
+        }
+
         updateDraftSelectedChoices((prev) => {
           if (!prev.has(nextQuestion.questionId)) return prev;
           const next = new Map(prev);
@@ -148,8 +172,9 @@ export function useQuestionFlowCore(
         draftSelectedChoicesRef.current.get(nextQuestion.questionId) ?? null,
       );
       setIsAnswered(false);
+      setSubmitResult(null);
     },
-    [updateDraftSelectedChoices],
+    [updateDraftSelectedChoices, setSubmitResult],
   );
 
   const setLoadState = useCallback(

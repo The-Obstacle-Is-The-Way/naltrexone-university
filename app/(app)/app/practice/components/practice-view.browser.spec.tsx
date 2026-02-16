@@ -186,3 +186,40 @@ test('renders bookmark feedback in shared toast region', async () => {
     .toBeInTheDocument();
   await expect.element(screen.getByText('Question bookmarked.')).toBeVisible();
 });
+
+test('calls onPreviousQuestion when clicked', async () => {
+  const onPreviousQuestion = vi.fn();
+
+  const screen = await render(
+    <PracticeView
+      loadState={{ status: 'ready' }}
+      question={{
+        questionId: 'question-1',
+        slug: 'question-1',
+        stemMd: 'What is the next best step?',
+        difficulty: 'easy',
+        choices: [
+          { id: 'choice_a', label: 'A', textMd: 'Option A', sortOrder: 1 },
+        ],
+        session: null,
+      }}
+      selectedChoiceId={null}
+      isAnswered={false}
+      submitResult={null}
+      isPending={false}
+      bookmarkStatus="idle"
+      isBookmarked={false}
+      canSubmit={false}
+      onTryAgain={() => undefined}
+      onToggleBookmark={() => undefined}
+      onSelectChoice={() => undefined}
+      onSubmit={() => undefined}
+      onNextQuestion={() => undefined}
+      onPreviousQuestion={onPreviousQuestion}
+      hasPreviousQuestion
+    />,
+  );
+
+  await screen.getByRole('button', { name: '← Previous' }).click();
+  expect(onPreviousQuestion).toHaveBeenCalledTimes(1);
+});
