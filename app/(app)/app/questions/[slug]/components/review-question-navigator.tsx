@@ -1,11 +1,11 @@
 'use client';
 
 import Link from 'next/link';
+import type { SessionNavigation } from '@/app/(app)/app/questions/[slug]/question-page-logic';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { toQuestionRoute } from '@/lib/routes';
 import { cn } from '@/lib/utils';
-import type { SessionNavigation } from '../question-page-logic';
 
 type ReviewQuestionNavigatorProps = {
   navigation: SessionNavigation;

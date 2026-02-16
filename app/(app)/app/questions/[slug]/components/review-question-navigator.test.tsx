@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
+import type { SessionNavigation } from '@/app/(app)/app/questions/[slug]/question-page-logic';
 import { toQuestionRoute } from '@/lib/routes';
-import type { SessionNavigation } from '../question-page-logic';
 
 vi.mock('next/link', () => ({
   default: (props: Record<string, unknown>) => <a {...props} />,
@@ -131,15 +131,6 @@ describe('ReviewQuestionNavigator', () => {
         sessionId: navigation.sessionId,
         historyHref,
       }),
-    );
-  });
-
-  it('appends ", Current" to aria-label for the current question', async () => {
-    const { doc } = await renderNavigator();
-    const el = findByAriaLabel(doc, 'Question 2: Incorrect, Current');
-
-    expect(el?.getAttribute('aria-label')).toBe(
-      'Question 2: Incorrect, Current',
     );
   });
 

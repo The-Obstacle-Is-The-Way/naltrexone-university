@@ -219,7 +219,9 @@ test.describe('session review navigation (SPEC-027)', () => {
     });
 
     // Verify back link uses the canonical sessions history href (tab + pagination)
-    const backLink = page.getByRole('link', { name: 'Back to History' });
+    const backLink = page
+      .getByRole('link', { name: 'Back to History' })
+      .first();
     await expect(backLink).toBeVisible({ timeout: 15_000 });
     await expect(backLink).toHaveAttribute(
       'href',
