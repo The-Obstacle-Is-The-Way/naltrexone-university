@@ -1,5 +1,7 @@
 # BS-016: Color-Coded Question Navigator in Review Mode
 
+**Status:** Resolved
+**Resolved:** 2026-02-15
 **Date:** 2026-02-14
 **Updated:** 2026-02-15
 **Triggered by:** UX comparison of active session view (question navigator grid) vs review mode (linear previous/next only)

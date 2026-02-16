@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useRef } from 'react';
 import { usePracticeSessionQuestionFlow } from '@/app/(app)/app/practice/[sessionId]/hooks/use-practice-session-question-flow';
 import { maybeAutoAdvanceAfterSubmit } from '@/app/(app)/app/practice/[sessionId]/practice-session-page-logic';
 import { usePracticeQuestionBookmarks } from '@/app/(app)/app/practice/hooks/use-practice-question-bookmarks';
@@ -42,28 +42,33 @@ export function usePracticeSessionPageController(
     loadSpecificQuestion: questionFlow.onNavigateQuestion,
   });
 
-  const onSubmit = useCallback(async (): Promise<void> => {
-    const submitResult = await questionFlow.onSubmit();
-    if (reviewStage.isInReviewStage) return;
+  const isInReviewStageRef = useRef(reviewStage.isInReviewStage);
+  isInReviewStageRef.current = reviewStage.isInReviewStage;
 
-    // Note: `questionFlow.loadState.status`, `questionFlow.sessionInfo`, `questionFlow.sessionMode`,
-    // and `reviewStage.isInReviewStage` are closure-captured and may be stale after the await.
-    // Today this is safe because mode/info don't change during submit, and auto-advance is gated by `submitResult`.
+  const sessionModeRef = useRef(questionFlow.sessionMode);
+  sessionModeRef.current = questionFlow.sessionMode;
+
+  const loadStateStatusRef = useRef(questionFlow.loadState.status);
+  loadStateStatusRef.current = questionFlow.loadState.status;
+
+  const sessionInfoRef = useRef(questionFlow.sessionInfo);
+  sessionInfoRef.current = questionFlow.sessionInfo;
+
+  const submitCurrentAnswer = questionFlow.onSubmit;
+  const advanceToNextQuestion = questionFlow.onNextQuestion;
+
+  const onSubmit = useCallback(async (): Promise<void> => {
+    const submitResult = await submitCurrentAnswer();
+    if (isInReviewStageRef.current) return;
+
     maybeAutoAdvanceAfterSubmit({
-      mode: questionFlow.sessionMode,
+      mode: sessionModeRef.current,
       submitResult,
-      loadStateStatus: questionFlow.loadState.status,
-      sessionInfo: questionFlow.sessionInfo,
-      advance: questionFlow.onNextQuestion,
+      loadStateStatus: loadStateStatusRef.current,
+      sessionInfo: sessionInfoRef.current,
+      advance: advanceToNextQuestion,
     });
-  }, [
-    questionFlow.loadState.status,
-    questionFlow.onNextQuestion,
-    questionFlow.onSubmit,
-    questionFlow.sessionInfo,
-    questionFlow.sessionMode,
-    reviewStage.isInReviewStage,
-  ]);
+  }, [advanceToNextQuestion, submitCurrentAnswer]);
 
   const { isMarkingForReview, onToggleMarkForReview } =
     usePracticeSessionMarkForReview({

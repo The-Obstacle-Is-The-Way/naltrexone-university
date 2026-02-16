@@ -1,5 +1,7 @@
 # BS-017: Dev Environment Resilience — Server Action Hangs and Observable Failure Gaps
 
+**Status:** Resolved
+**Resolved:** 2026-02-15
 **Date:** 2026-02-15
 **Triggered by:** Two AI agent sessions hung indefinitely while running Playwright screenshots against localhost:3000. Server actions returned no response, leaving the UI in a permanent "Loading..." state with no timeout or error recovery.
 **Scope:** The codebase has no client-side timeout on server action calls — the only layer in the stack without a timeout. When a server action hangs (database stall, network partition, Neon cold start edge case), the UI waits forever with no error feedback.

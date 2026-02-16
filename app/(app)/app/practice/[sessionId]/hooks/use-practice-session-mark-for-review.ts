@@ -56,6 +56,8 @@ export function usePracticeSessionMarkForReview(
   const [isMarkingForReview, setIsMarkingForReview] = useState(false);
   const isMarkingRef = useRef(false);
   const markRequestIdempotencyKeyRef = useRef<string | null>(null);
+  const currentQuestionIdRef = useRef<string | null>(null);
+  currentQuestionIdRef.current = input.question?.questionId ?? null;
 
   const onToggleMarkForReview = useCallback(async () => {
     if (!input.question) return;
@@ -63,6 +65,7 @@ export function usePracticeSessionMarkForReview(
     if (isMarkingRef.current) return;
     if (!input.sessionInfo) return;
 
+    const requestQuestionId = input.question.questionId;
     const markedForReview = !input.sessionInfo.isMarkedForReview;
     isMarkingRef.current = true;
     setIsMarkingForReview(true);
@@ -86,10 +89,12 @@ export function usePracticeSessionMarkForReview(
       );
     } catch (error) {
       if (!input.isMounted()) return;
-      input.setLoadState({
-        status: 'error',
-        message: getThrownErrorMessage(error),
-      });
+      if (currentQuestionIdRef.current === requestQuestionId) {
+        input.setLoadState({
+          status: 'error',
+          message: getThrownErrorMessage(error),
+        });
+      }
       isMarkingRef.current = false;
       setIsMarkingForReview(false);
       return;
@@ -97,22 +102,26 @@ export function usePracticeSessionMarkForReview(
     if (!input.isMounted()) return;
 
     if (!res.ok) {
-      input.setLoadState({
-        status: 'error',
-        message: getActionResultErrorMessage(res),
-      });
+      if (currentQuestionIdRef.current === requestQuestionId) {
+        input.setLoadState({
+          status: 'error',
+          message: getActionResultErrorMessage(res),
+        });
+      }
       isMarkingRef.current = false;
       setIsMarkingForReview(false);
       return;
     }
 
-    input.applySessionInfo((prev) => {
-      if (!prev) return prev;
-      return {
-        ...prev,
-        isMarkedForReview: res.data.markedForReview,
-      };
-    });
+    if (currentQuestionIdRef.current === requestQuestionId) {
+      input.applySessionInfo((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          isMarkedForReview: res.data.markedForReview,
+        };
+      });
+    }
 
     input.setReview((prev) => {
       if (!prev) return prev;

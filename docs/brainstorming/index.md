@@ -1,7 +1,7 @@
 # Brainstorming Register
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-02-15
+**Last Updated:** 2026-02-16
 
 ---
 
@@ -28,9 +28,6 @@ Brainstorming (BS-NNN) → Spec (SPEC-NNN) → Implementation → Archive
 | ID | Title | Status | Related Spec |
 |----|-------|--------|--------------|
 | [BS-014](./bs-014-practice-starter-question-count-ux.md) | Practice Starter — Silent Truncation When Fewer Questions Available | Active | — |
-| [BS-015](./bs-015-practice-starter-available-count-display.md) | Practice Starter — Show Available Question Count Before Session Start | Active | — |
-| [BS-016](./bs-016-review-mode-question-navigator.md) | Color-Coded Question Navigator in Review Mode | Active | — |
-| [BS-017](./bs-017-dev-environment-resilience.md) | Dev Environment Resilience — Server Action Hangs and Observable Failure Gaps | Active | — |
 
 **Next Brainstorming ID:** BS-018
 
@@ -54,6 +51,9 @@ Brainstorming (BS-NNN) → Spec (SPEC-NNN) → Implementation → Archive
 | [BS-011](../_archive/brainstorming/bs-011-history-review-wiring-and-choice-label-desync.md) Bug B | Choice Label Desync | Specced as SPEC-025 (Implemented) |
 | [BS-012](../_archive/brainstorming/bs-012-question-status-filter.md) | Question Status Filter | Specced as SPEC-024 (Implemented) |
 | [BS-013](../_archive/brainstorming/bs-013-status-filter-ux-confusion.md) | Status Filter UX Confusion | Resolved by SPEC-028 (Implemented) |
+| [BS-015](../_archive/brainstorming/bs-015-practice-starter-available-count-display.md) | Practice Starter — Show Available Question Count | Resolved (2026-02-14); implemented directly |
+| [BS-016](../_archive/brainstorming/bs-016-review-mode-question-navigator.md) | Color-Coded Question Navigator in Review Mode | Specced as SPEC-028 (Implemented) |
+| [BS-017](../_archive/brainstorming/bs-017-dev-environment-resilience.md) | Dev Environment Resilience | Specced as SPEC-029 (Implemented) |
 
 ---
 

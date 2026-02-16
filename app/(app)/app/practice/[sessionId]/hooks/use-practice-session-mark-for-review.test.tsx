@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { ok } from '@/src/adapters/controllers/action-result';
+import { err, ok } from '@/src/adapters/controllers/action-result';
 import { createNextQuestion } from '@/src/application/test-helpers/create-next-question';
 import { renderHook } from '@/src/application/test-helpers/render-hook';
 import { usePracticeSessionMarkForReview } from './use-practice-session-mark-for-review';
@@ -93,5 +93,83 @@ describe('usePracticeSessionMarkForReview', () => {
     expect(setLoadState).not.toHaveBeenCalledWith(
       expect.objectContaining({ status: 'error' }),
     );
+  });
+
+  it('sets loadState error when mark-for-review request throws', async () => {
+    const setLoadState = vi.fn();
+    const applySessionInfo = vi.fn();
+    const setReview = vi.fn();
+
+    const setPracticeSessionQuestionMarkFn = vi.fn(async () => {
+      throw new Error('Mark for review failed');
+    });
+
+    const output = renderHook(() =>
+      usePracticeSessionMarkForReview({
+        question: createNextQuestion(),
+        sessionMode: 'exam',
+        sessionInfo: {
+          sessionId: 'session-1',
+          mode: 'exam',
+          index: 0,
+          total: 10,
+          isMarkedForReview: false,
+        },
+        sessionId: 'session-1',
+        applySessionInfo,
+        setLoadState,
+        setReview,
+        isMounted: () => true,
+        setPracticeSessionQuestionMarkFn,
+      }),
+    );
+
+    await output.onToggleMarkForReview();
+
+    expect(setLoadState).toHaveBeenCalledWith({
+      status: 'error',
+      message: 'Mark for review failed',
+    });
+    expect(applySessionInfo).not.toHaveBeenCalled();
+    expect(setReview).not.toHaveBeenCalled();
+  });
+
+  it('sets loadState error when mark-for-review request returns an error result', async () => {
+    const setLoadState = vi.fn();
+    const applySessionInfo = vi.fn();
+    const setReview = vi.fn();
+
+    const setPracticeSessionQuestionMarkFn = vi.fn(async () =>
+      err('INTERNAL_ERROR', 'Mark for review failed'),
+    );
+
+    const output = renderHook(() =>
+      usePracticeSessionMarkForReview({
+        question: createNextQuestion(),
+        sessionMode: 'exam',
+        sessionInfo: {
+          sessionId: 'session-1',
+          mode: 'exam',
+          index: 0,
+          total: 10,
+          isMarkedForReview: false,
+        },
+        sessionId: 'session-1',
+        applySessionInfo,
+        setLoadState,
+        setReview,
+        isMounted: () => true,
+        setPracticeSessionQuestionMarkFn,
+      }),
+    );
+
+    await output.onToggleMarkForReview();
+
+    expect(setLoadState).toHaveBeenCalledWith({
+      status: 'error',
+      message: 'Mark for review failed',
+    });
+    expect(applySessionInfo).not.toHaveBeenCalled();
+    expect(setReview).not.toHaveBeenCalled();
   });
 });
