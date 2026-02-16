@@ -359,6 +359,62 @@ describe('reconcileStripeSubscriptions', () => {
     expect(logger.errorCalls.length).toBeGreaterThan(0);
   });
 
+  it('throws STRIPE_ERROR when Stripe subscriptions API is unavailable for reconciliation', async () => {
+    const fullStripe = createStripeStub({
+      subscriptionsById: {},
+      listedSubscriptions: [],
+    });
+    const stripe = { ...fullStripe, subscriptions: undefined };
+
+    const stripeCustomers = new FakeStripeCustomerRepository();
+    const subscriptions = new FakeSubscriptionRepository();
+    const logger = new FakeLogger();
+
+    await expect(
+      reconcileStripeSubscriptions(
+        { limit: 10, offset: 0 },
+        {
+          stripe,
+          priceIds: { monthly: 'price_m', annual: 'price_a' },
+          logger,
+          listLocalSubscriptions: async () => [],
+          transaction: async (fn) => fn({ stripeCustomers, subscriptions }),
+        },
+      ),
+    ).rejects.toMatchObject({
+      code: 'STRIPE_ERROR',
+      message: 'Stripe subscriptions API is unavailable for reconciliation',
+    });
+  });
+
+  it('fails loudly when the local subscription list contains holes (internal invariant)', async () => {
+    const sparseRows = new Array<{
+      userId: string;
+      stripeSubscriptionId: string;
+    }>(1);
+    const stripe = createStripeStub({
+      subscriptionsById: {},
+      listedSubscriptions: [],
+    });
+
+    const stripeCustomers = new FakeStripeCustomerRepository();
+    const subscriptions = new FakeSubscriptionRepository();
+    const logger = new FakeLogger();
+
+    await expect(
+      reconcileStripeSubscriptions(
+        { limit: 10, offset: 0, concurrency: 1 },
+        {
+          stripe,
+          priceIds: { monthly: 'price_m', annual: 'price_a' },
+          logger,
+          listLocalSubscriptions: async () => sparseRows,
+          transaction: async (fn) => fn({ stripeCustomers, subscriptions }),
+        },
+      ),
+    ).rejects.toThrow('mapWithConcurrencyLimit: missing item at index 0');
+  });
+
   it('upserts subscriptions and customer mappings for local subscriptions', async () => {
     const subscription = createSubscriptionFixture({
       id: 'sub_123',
