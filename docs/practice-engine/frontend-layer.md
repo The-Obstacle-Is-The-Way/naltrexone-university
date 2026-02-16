@@ -25,7 +25,7 @@
 ```text
 PracticePageClient (/app/practice)
 └── usePracticeSessionControls (63 lines, composite)
-    ├── usePracticeSessionStart (126 lines)
+    ├── usePracticeSessionStart (140 lines)
     ├── usePracticeSessionTags (34 lines)
     └── usePracticeIncompleteSession (66 lines)
 

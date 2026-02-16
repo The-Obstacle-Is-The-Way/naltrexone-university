@@ -65,9 +65,10 @@ controllers/
 ```
 (app)/app/practice/
   page.tsx, loading.tsx, error.tsx
-  practice-page-client.tsx, practice-page-logic.ts, practice-page-types.ts,
+  practice-page-client.tsx, practice-page-logic.ts, practice-logic.ts, practice-page-types.ts,
   practice-page-session-start.ts, practice-page-tags.ts, practice-page-bookmarks.ts,
-  practice-page-incomplete-session.ts, client-navigation.ts, fire-and-forget.ts
+  practice-page-incomplete-session.ts, practice-page-available-count.ts,
+  client-navigation.ts, fire-and-forget.ts
   hooks/ (session starter + filters + ad-hoc question flow + bookmarks + utilities)
   components/ (practice-view.tsx, practice-session-starter.tsx, incomplete-session-card.tsx)
   shared/ (question-flow-actions.ts, use-question-flow-core.ts)
@@ -75,16 +76,18 @@ controllers/
     page.tsx, loading.tsx, error.tsx, quick-practice-client.tsx
   [sessionId]/
     page.tsx, loading.tsx, error.tsx
-    practice-session-page-client.tsx, practice-session-page-logic.ts, practice-session-page-utils.ts
+    practice-session-page-client.tsx, practice-session-page-logic.ts, practice-session-page-utils.ts,
+    practice-session-toast.tsx
     hooks/ (page controller + question flow + review stage + navigator + mark-for-review + summary review)
     components/ (practice-session-page-view.tsx, session-summary-view.tsx, exam-review-view.tsx)
 (app)/app/history/
   page.tsx, loading.tsx, error.tsx, history-page-client.tsx, history-search-params.ts
   hooks/ (use-history-sessions.ts)
   components/ (history-tab-bar.tsx, history-sessions-tab.tsx, history-questions-tab.tsx)
-(app)/app/dashboard/page.tsx
-(app)/app/bookmarks/page.tsx
+(app)/app/dashboard/ (page.tsx, loading.tsx, error.tsx)
+(app)/app/bookmarks/ (page.tsx, loading.tsx, error.tsx, bookmarks-toast.tsx)
 (app)/app/questions/[slug]/ (page.tsx, loading.tsx, error.tsx, question-page-client.tsx, use-question-page-controller.ts, question-page-logic.ts)
+  components/ (review-question-navigator.tsx)
 ```
 
 ## Content (`content/`)

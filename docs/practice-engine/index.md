@@ -49,7 +49,7 @@ The Practice Engine is the core feature of Naltrexone University. It's the syste
 │  ToggleBookmark          GetIncompletePracticeSession                │
 │  GetBookmarks            SetPracticeSessionQuestionMark              │
 │  GetAttemptedQuestions   GetSessionHistory                          │
-│  GetUserStats                                                     │
+│  GetUserStats            CountAvailableQuestions                    │
 └──────────────────────────────┬──────────────────────────────────────┘
                                │ Port interfaces
 ┌──────────────────────────────┴──────────────────────────────────────┐
@@ -87,7 +87,7 @@ Dependencies point **inward only** (Clean Architecture, ADR-001). The domain lay
 | [Current State](./current-state.md) | What's working, open debt, SPEC-019 status, product decisions |
 | [Spec Coverage Map](./spec-coverage-map.md) | Maps each component to its defining spec; drift summary |
 | [File Index](./file-index.md) | Directory listings for all practice-engine source files |
-| [Content Pipeline](./content-pipeline.md) | Full end-to-end trace: MDX authoring → seeding → database → shuffling → rendering. Includes BS-011 Bug B root cause analysis and developer operations (import, seed, troubleshoot). |
+| [Content Pipeline](./content-pipeline.md) | Full end-to-end trace: MDX authoring → seeding → database → shuffling → rendering. Includes resolved BS-011 root cause analysis (SPEC-025, SPEC-026) and developer operations (import, seed, troubleshoot). |
 | [Question Rendering Architecture](./question-rendering-architecture.md) | How questions are rendered, navigated, and state-managed across all 6 viewing contexts. Shared vs context-specific components, state persistence bug, navigation patterns. |
 
 ---
@@ -97,15 +97,22 @@ Dependencies point **inward only** (Clean Architecture, ADR-001). The domain lay
 | Document | Purpose |
 |----------|---------|
 | [Master Spec](../specs/master_spec.md) | Complete technical specification (SSOT) |
-| [SPEC-012](../specs/spec-012-core-question-loop.md) | Core question loop requirements |
-| [SPEC-013](../specs/spec-013-practice-sessions.md) | Practice session requirements |
-| [SPEC-014](../specs/spec-014-review-bookmarks.md) | Review + bookmarks requirements |
-| [SPEC-015](../specs/spec-015-dashboard.md) | Dashboard requirements |
-| [SPEC-019](../specs/spec-019-practice-ux-redesign.md) | UX redesign (all phases implemented) |
-| [SPEC-020](../specs/spec-020-practice-engine-completion.md) | Practice engine completion (all done) |
-| [SPEC-021](../specs/spec-021-history-page-restructure.md) | History page restructure (replaces `/app/review`) |
-| [SPEC-022](../specs/spec-022-question-log.md) | Question Log (History Questions tab = attempted-question log) |
-| [SPEC-023](../specs/spec-023-question-review-mode.md) | Question Review Mode (`?mode=review`) |
+| [SPEC-012](../_archive/specs/spec-012-core-question-loop.md) | Core question loop requirements |
+| [SPEC-013](../_archive/specs/spec-013-practice-sessions.md) | Practice session requirements |
+| [SPEC-014](../_archive/specs/spec-014-review-bookmarks.md) | Review + bookmarks requirements |
+| [SPEC-015](../_archive/specs/spec-015-dashboard.md) | Dashboard requirements |
+| [SPEC-019](../_archive/specs/spec-019-practice-ux-redesign.md) | UX redesign (all phases implemented) |
+| [SPEC-020](../_archive/specs/spec-020-practice-engine-completion.md) | Practice engine completion (all done) |
+| [SPEC-021](../_archive/specs/spec-021-history-page-restructure.md) | History page restructure (replaces `/app/review`) |
+| [SPEC-022](../_archive/specs/spec-022-question-log.md) | Question Log (History Questions tab = attempted-question log) |
+| [SPEC-023](../_archive/specs/spec-023-question-review-mode.md) | Question Review Mode (`?mode=review`) |
+| [SPEC-024](../_archive/specs/spec-024-question-status-filter.md) | Question status filter for practice starter |
+| [SPEC-025](../_archive/specs/spec-025-choice-label-desync-fix.md) | Choice label desync fix (resolved BS-011 Bug B) |
+| [SPEC-026](../_archive/specs/spec-026-history-review-only.md) | History review-only links (resolved BS-011 Bug A) |
+| [SPEC-027](../_archive/specs/spec-027-session-review-navigation.md) | Session review navigation (Previous/Next in review) |
+| [SPEC-028](../_archive/specs/spec-028-review-question-navigator.md) | Review question navigator (color-coded grid) |
+| [SPEC-029](../_archive/specs/spec-029-dev-environment-resilience.md) | Dev environment resilience (timeouts, error handling) |
+| [SPEC-030](../specs/spec-030-question-view-ux-unification.md) | Question View UX Unification (Ready — not yet implemented) |
 | [ADR-001](../adr/adr-001-clean-architecture-layers.md) | Clean Architecture decision |
 | [ADR-003](../adr/adr-003-testing-strategy.md) | Testing strategy (TDD, fakes over mocks) |
 | [ADR-006](../adr/adr-006-error-handling-strategy.md) | Error handling (ApplicationError) |
