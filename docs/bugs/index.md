@@ -18,8 +18,9 @@ Bug reports document issues discovered in the codebase along with their root cau
 | ID | Title | Priority | Status |
 |----|-------|----------|--------|
 | [BUG-133](bug-133-stale-closure-practice-session-onsubmit.md) | Stale Closure in Practice Session onSubmit After Async Await | P3 | Open |
+| [BUG-134](bug-134-mark-for-review-race-updates-wrong-question.md) | Mark-for-Review Race Can Update the Wrong Question UI State | P2 | Open |
 
-**Next Bug ID:** BUG-134
+**Next Bug ID:** BUG-135
 
 ## Recently Triaged
 
