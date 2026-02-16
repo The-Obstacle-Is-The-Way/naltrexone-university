@@ -8,6 +8,7 @@ import type {
 } from '@/src/application/ports/repositories';
 import type { QuestionDifficulty } from '@/src/domain/value-objects';
 import { enrichWithQuestion } from '../shared/enrich-with-question';
+import { fetchQuestionsById } from '../shared/fetch-questions-by-id';
 
 export type GetAttemptedQuestionsInput = {
   userId: string;
@@ -88,9 +89,10 @@ export class GetAttemptedQuestionsUseCase {
       };
     }
 
-    const questionIds = page.map((m) => m.questionId);
-    const questions = await this.questions.findPublishedByIds(questionIds);
-    const byId = new Map(questions.map((q) => [q.id, q]));
+    const byId = await fetchQuestionsById(
+      this.questions,
+      page.map((attempted) => attempted.questionId),
+    );
 
     const rows = enrichWithQuestion({
       rows: page,

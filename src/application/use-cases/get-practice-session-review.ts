@@ -6,6 +6,7 @@ import type {
 } from '@/src/application/ports/repositories';
 import { createDefaultQuestionState } from '@/src/domain/services';
 import { enrichWithQuestion } from '../shared/enrich-with-question';
+import { fetchQuestionsById } from '../shared/fetch-questions-by-id';
 
 export type GetPracticeSessionReviewInput = {
   userId: string;
@@ -64,11 +65,9 @@ export class GetPracticeSessionReviewUseCase {
       throw new ApplicationError('NOT_FOUND', 'Practice session not found');
     }
 
-    const questions = await this.questions.findPublishedByIds(
+    const questionById = await fetchQuestionsById(
+      this.questions,
       session.questionIds,
-    );
-    const questionById = new Map(
-      questions.map((question) => [question.id, question]),
     );
     const stateByQuestionId = new Map(
       session.questionStates.map((state) => [state.questionId, state]),
