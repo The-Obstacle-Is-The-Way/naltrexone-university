@@ -15,9 +15,9 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 ## Debt Index (Active)
 
-*No active items.*
+*No active debt items.*
 
-**Next Debt ID:** DEBT-218
+**Next Debt ID:** DEBT-219
 
 ---
 
@@ -25,6 +25,7 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 | ID | Title | Priority | Resolved | GitHub Issue |
 |----|-------|----------|----------|--------------|
+| [DEBT-218](../_archive/debt/debt-218-server-component-pages-missing-maxduration.md) | Server Component Pages Missing maxDuration + Dead Code in practice-logic.ts | P2 | 2026-02-15 | — |
 | [DEBT-217](../_archive/debt/debt-217-history-back-link-loses-tab-and-filter-state.md) | History Back Link Loses Tab and Filter State | P2 | 2026-02-15 | — |
 | [DEBT-213](../_archive/debt/debt-213-useeffect-derived-state-sync-antipatterns.md) | useEffect Derived-State Sync Anti-Patterns in Practice Hooks (5 instances) | P4 | 2026-02-14 | — |
 | [DEBT-212](../_archive/debt/debt-212-duplicate-sleep-utility-adapter-shared.md) | Duplicate `sleep()` Utility in Adapter Shared Modules | P4 | 2026-02-14 | #91 |

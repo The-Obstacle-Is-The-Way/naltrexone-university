@@ -1,4 +1,7 @@
+import { withTimeout } from '@/lib/with-timeout';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
+
+const TAGS_LOAD_TIMEOUT_MS = 10_000;
 
 export function createTagsEffect<T>(input: {
   getTagsFn: (input: unknown) => Promise<ActionResult<{ rows: T[] }>>;
@@ -14,7 +17,7 @@ export function createTagsEffect<T>(input: {
   void (async () => {
     let res: Awaited<ReturnType<typeof input.getTagsFn>>;
     try {
-      res = await input.getTagsFn({});
+      res = await withTimeout(input.getTagsFn({}), TAGS_LOAD_TIMEOUT_MS);
     } catch (error) {
       if (!mounted) return;
       logError('Failed to load tags', error);

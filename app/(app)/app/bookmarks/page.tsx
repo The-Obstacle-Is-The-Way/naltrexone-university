@@ -30,6 +30,8 @@ import {
 } from '@/src/adapters/shared/stem-preview';
 import { BookmarksToast } from './bookmarks-toast';
 
+export const maxDuration = 30;
+
 export const metadata: Metadata = {
   title: 'Bookmarks - Addiction Boards',
 };

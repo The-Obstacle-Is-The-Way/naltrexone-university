@@ -1,4 +1,7 @@
+import { withTimeout } from '@/lib/with-timeout';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
+
+const BOOKMARKS_LOAD_TIMEOUT_MS = 10_000;
 
 type SetTimeoutFn = (
   fn: () => void,
@@ -52,7 +55,10 @@ export function createBookmarksEffect(input: {
     input.setBookmarkStatus('loading');
     let res: ActionResult<{ rows: Array<{ questionId: string }> }>;
     try {
-      res = await input.getBookmarksFn({});
+      res = await withTimeout(
+        input.getBookmarksFn({}),
+        BOOKMARKS_LOAD_TIMEOUT_MS,
+      );
     } catch (error) {
       if (!mounted) return;
       handleBookmarkLoadFailure(error);

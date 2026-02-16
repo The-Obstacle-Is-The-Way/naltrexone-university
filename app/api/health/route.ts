@@ -6,16 +6,26 @@ import { createHealthHandler } from './handler';
 
 const rateLimiter = new DrizzleRateLimiter(db, () => new Date(), appLogger);
 
-export async function POST(req: Request) {
+export const maxDuration = 10;
+
+function buildHandler() {
   const ctx = createRequestContext();
   const logger = getRequestLogger(ctx);
 
-  const handlePost = createHealthHandler({
+  return createHealthHandler({
     db,
     logger,
     rateLimiter,
     now: () => new Date(),
   });
+}
 
-  return handlePost(req);
+export async function GET(req: Request) {
+  const handler = buildHandler();
+  return handler.GET(req);
+}
+
+export async function POST(req: Request) {
+  const handler = buildHandler();
+  return handler.POST(req);
 }

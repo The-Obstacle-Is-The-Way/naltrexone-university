@@ -13,6 +13,7 @@ import {
 import { selectChoiceIfAllowed } from '@/app/(app)/app/shared/question-guards';
 import type { QuestionMode, QuestionOrigin } from '@/lib/routes';
 import { useIsMounted } from '@/lib/use-is-mounted';
+import { withTimeout } from '@/lib/with-timeout';
 import { getPracticeSessionReview } from '@/src/adapters/controllers/practice-controller';
 import { submitAnswer } from '@/src/adapters/controllers/question-controller';
 import {
@@ -22,6 +23,8 @@ import {
 } from '@/src/adapters/controllers/question-view-controller';
 import type { AvailablePracticeSessionReviewRow } from '@/src/application/use-cases/get-practice-session-review';
 import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
+
+const SESSION_REVIEW_TIMEOUT_MS = 10_000;
 
 export type UseQuestionPageControllerInput = {
   slug: string;
@@ -123,39 +126,59 @@ export function useQuestionPageController(
     setSessionNavigation(null);
 
     startTransition(() => {
-      void getPracticeSessionReview({ sessionId }).then((result) => {
-        if (isStale) return;
-        if (!isMounted()) return;
-        if (!result.ok) {
+      void withTimeout(
+        getPracticeSessionReview({ sessionId }),
+        SESSION_REVIEW_TIMEOUT_MS,
+      )
+        .then((result) => {
+          if (isStale) return;
+          if (!isMounted()) return;
+          if (!result.ok) {
+            if (process.env.NODE_ENV === 'development') {
+              console.warn(
+                '[SessionNavigation] Review fetch failed:',
+                result.error,
+              );
+            }
+            setSessionNavigation(null);
+            return;
+          }
+
+          const questions = result.data.rows
+            .filter(
+              (row): row is AvailablePracticeSessionReviewRow =>
+                row.isAvailable,
+            )
+            .map((row) => ({
+              slug: row.slug,
+              order: row.order,
+              isCorrect: row.isCorrect,
+            }));
+
+          const currentIndex = questions.findIndex(
+            (q) => q.slug === input.slug,
+          );
+          if (currentIndex === -1) {
+            setSessionNavigation(null);
+            return;
+          }
+
+          sessionQuestionsBySessionIdRef.current.set(sessionId, questions);
+
+          setSessionNavigation({
+            questions,
+            currentIndex,
+            sessionId,
+            from: input.from ?? 'practice',
+          });
+        })
+        .catch((error: unknown) => {
+          if (isStale || !isMounted()) return;
+          if (process.env.NODE_ENV === 'development') {
+            console.error('[SessionNavigation] Review fetch threw:', error);
+          }
           setSessionNavigation(null);
-          return;
-        }
-
-        const questions = result.data.rows
-          .filter(
-            (row): row is AvailablePracticeSessionReviewRow => row.isAvailable,
-          )
-          .map((row) => ({
-            slug: row.slug,
-            order: row.order,
-            isCorrect: row.isCorrect,
-          }));
-
-        const currentIndex = questions.findIndex((q) => q.slug === input.slug);
-        if (currentIndex === -1) {
-          setSessionNavigation(null);
-          return;
-        }
-
-        sessionQuestionsBySessionIdRef.current.set(sessionId, questions);
-
-        setSessionNavigation({
-          questions,
-          currentIndex,
-          sessionId,
-          from: input.from ?? 'practice',
         });
-      });
     });
 
     return () => {

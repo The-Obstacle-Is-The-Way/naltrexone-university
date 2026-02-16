@@ -7,10 +7,13 @@ import {
   getThrownErrorMessage,
 } from '@/app/(app)/app/practice/practice-logic';
 import type { LoadState } from '@/app/(app)/app/practice/practice-page-logic';
+import { withTimeout } from '@/lib/with-timeout';
 import {
   type GetPracticeSessionReviewOutput,
   getPracticeSessionReview,
 } from '@/src/adapters/controllers/practice-controller';
+
+const SESSION_REVIEW_TIMEOUT_MS = 10_000;
 
 export type UsePracticeSessionReviewStageStateInput = {
   sessionId: string;
@@ -49,7 +52,10 @@ export function usePracticeSessionReviewStageState(
 
     let res: Awaited<ReturnType<typeof getPracticeSessionReview>>;
     try {
-      res = await getPracticeSessionReview({ sessionId: input.sessionId });
+      res = await withTimeout(
+        getPracticeSessionReview({ sessionId: input.sessionId }),
+        SESSION_REVIEW_TIMEOUT_MS,
+      );
     } catch (error) {
       if (!input.isMounted()) return;
       setReviewLoadState({

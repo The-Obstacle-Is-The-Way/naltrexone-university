@@ -18,6 +18,8 @@ import {
   type QuestionsFilters,
 } from './history-search-params';
 
+export const maxDuration = 30;
+
 export const metadata: Metadata = {
   title: 'History - Addiction Boards',
 };

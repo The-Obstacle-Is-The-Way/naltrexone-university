@@ -12,9 +12,12 @@ import {
   getThrownErrorMessage,
 } from '@/app/(app)/app/practice/practice-logic';
 import type { LoadState } from '@/app/(app)/app/practice/practice-page-logic';
+import { withTimeout } from '@/lib/with-timeout';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import type { NextQuestion } from '@/src/application/use-cases/get-next-question';
 import type { GetPracticeSessionReviewOutput } from '@/src/application/use-cases/get-practice-session-review';
+
+const MARK_FOR_REVIEW_TIMEOUT_MS = 10_000;
 
 export type SetPracticeSessionQuestionMarkFn = (input: {
   sessionId: string;
@@ -72,12 +75,15 @@ export function usePracticeSessionMarkForReview(
     const requestIdempotencyKey = markRequestIdempotencyKeyRef.current;
 
     try {
-      res = await input.setPracticeSessionQuestionMarkFn({
-        sessionId: input.sessionId,
-        questionId: input.question.questionId,
-        markedForReview,
-        idempotencyKey: requestIdempotencyKey,
-      });
+      res = await withTimeout(
+        input.setPracticeSessionQuestionMarkFn({
+          sessionId: input.sessionId,
+          questionId: input.question.questionId,
+          markedForReview,
+          idempotencyKey: requestIdempotencyKey,
+        }),
+        MARK_FOR_REVIEW_TIMEOUT_MS,
+      );
     } catch (error) {
       if (!input.isMounted()) return;
       input.setLoadState({

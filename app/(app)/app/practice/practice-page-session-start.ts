@@ -4,8 +4,11 @@ import {
 } from '@/app/(app)/app/practice/practice-logic';
 import type { PracticeFilters } from '@/app/(app)/app/practice/practice-page-types';
 import { toPracticeSessionRoute } from '@/lib/routes';
+import { withTimeout } from '@/lib/with-timeout';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import type { StartPracticeSessionOutput } from '@/src/adapters/controllers/practice-controller';
+
+const SESSION_START_TIMEOUT_MS = 15_000;
 
 export const SESSION_COUNT_MIN = 1;
 export const SESSION_COUNT_MAX = 100;
@@ -59,14 +62,19 @@ export async function startSession(input: {
 
   let res: ActionResult<StartPracticeSessionOutput>;
   try {
-    res = await input.startPracticeSessionFn({
-      mode: input.sessionMode,
-      count: input.sessionCount,
-      idempotencyKey: input.idempotencyKey,
-      tagSlugs: input.filters.tagSlugs,
-      difficulties: input.filters.difficulty ? [input.filters.difficulty] : [],
-      statuses: [input.filters.status],
-    });
+    res = await withTimeout(
+      input.startPracticeSessionFn({
+        mode: input.sessionMode,
+        count: input.sessionCount,
+        idempotencyKey: input.idempotencyKey,
+        tagSlugs: input.filters.tagSlugs,
+        difficulties: input.filters.difficulty
+          ? [input.filters.difficulty]
+          : [],
+        statuses: [input.filters.status],
+      }),
+      SESSION_START_TIMEOUT_MS,
+    );
   } catch (error) {
     if (!isMounted()) return;
 

@@ -194,7 +194,7 @@ webServer: {
 
 **Gap:** The health check endpoint (`/api/health`) exists and verifies DB connectivity, but Playwright's `webServer.url` just checks if the server is listening on port 3000. The server can be "up" (responding to HTTP) but unable to serve data (database unreachable).
 
-**Fix:** Change `url` to point to the health check. However, since the health check is `POST`-only, Playwright's URL polling (which uses `GET`) won't work directly. Options:
+**Fix:** Change `url` to point to the health check. However, since the health check is `POST`-only, Playwright's URL polling (which uses `GET` requests) won't work directly. Options:
 1. Add a `GET` handler to the health check route
 2. Create a lightweight `/api/health/ready` GET endpoint
 3. Keep current config (the 30s `connect_timeout` will surface DB errors quickly in test assertions)

@@ -7,6 +7,8 @@ import type { AuthGateway } from '@/src/application/ports/gateways';
 import type { SubscriptionRepository } from '@/src/application/ports/repositories';
 import type { Subscription } from '@/src/domain/entities';
 
+export const maxDuration = 30;
+
 export const metadata: Metadata = {
   title: 'Billing - Addiction Boards',
 };

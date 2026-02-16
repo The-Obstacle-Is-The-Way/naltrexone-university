@@ -373,7 +373,7 @@ describe('practice-page-logic', () => {
         logError: vi.fn(),
       });
 
-      await Promise.resolve();
+      await new Promise((resolve) => setTimeout(resolve, 0));
 
       expect(setBookmarkedQuestionIds).toHaveBeenCalledWith(
         new Set(['q_1', 'q_2']),
@@ -412,7 +412,7 @@ describe('practice-page-logic', () => {
           logError: vi.fn(),
         });
 
-        await Promise.resolve();
+        await vi.advanceTimersByTimeAsync(0);
 
         expect(setTimeoutFn).toHaveBeenCalledWith(expect.any(Function), 1000);
 
@@ -441,7 +441,7 @@ describe('practice-page-logic', () => {
         logError: vi.fn(),
       });
 
-      await Promise.resolve();
+      await new Promise((resolve) => setTimeout(resolve, 0));
       expect(setTimeoutFn).not.toHaveBeenCalled();
 
       cleanup();
@@ -468,7 +468,7 @@ describe('practice-page-logic', () => {
           logError: vi.fn(),
         });
 
-        await Promise.resolve();
+        await vi.advanceTimersByTimeAsync(0);
         cleanup();
 
         expect(clearTimeoutFn).toHaveBeenCalledTimes(1);
@@ -511,7 +511,7 @@ describe('practice-page-logic', () => {
         }),
       );
 
-      await Promise.resolve();
+      await new Promise((resolve) => setTimeout(resolve, 0));
 
       expect(setBookmarkedQuestionIds).not.toHaveBeenCalled();
       expect(setBookmarkStatus).toHaveBeenCalledTimes(1);
@@ -540,7 +540,7 @@ describe('practice-page-logic', () => {
           logError,
         });
 
-        await Promise.resolve();
+        await vi.advanceTimersByTimeAsync(0);
 
         expect(logError).toHaveBeenCalledWith(
           'Failed to load bookmarks',

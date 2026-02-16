@@ -1,8 +1,11 @@
+import { withTimeout } from '@/lib/with-timeout';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import type {
   QuestionDifficulty,
   QuestionProgressStatus,
 } from '@/src/domain/value-objects';
+
+const AVAILABLE_COUNT_TIMEOUT_MS = 10_000;
 
 export type AvailableQuestionsCountStatus = 'idle' | 'loading' | 'error';
 
@@ -34,7 +37,10 @@ export function createAvailableQuestionsCountEffect(input: {
     void (async () => {
       let res: Awaited<ReturnType<typeof input.countAvailableQuestionsFn>>;
       try {
-        res = await input.countAvailableQuestionsFn(input.filters);
+        res = await withTimeout(
+          input.countAvailableQuestionsFn(input.filters),
+          AVAILABLE_COUNT_TIMEOUT_MS,
+        );
       } catch (error) {
         if (!mounted) return;
         logError('Failed to count available questions', error);

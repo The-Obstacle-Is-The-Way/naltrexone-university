@@ -25,7 +25,7 @@ describe('practice-page-available-count', () => {
 
       expect(setAvailableCountStatus).toHaveBeenCalledWith('loading');
 
-      await Promise.resolve();
+      await new Promise((r) => setTimeout(r, 0));
 
       expect(countAvailableQuestionsFn).toHaveBeenCalledWith({
         tagSlugs: [],
@@ -54,7 +54,7 @@ describe('practice-page-available-count', () => {
         logError,
       });
 
-      await Promise.resolve();
+      await new Promise((r) => setTimeout(r, 0));
 
       expect(setAvailableCountStatus).toHaveBeenLastCalledWith('error');
       expect(setAvailableCount).not.toHaveBeenCalled();
@@ -82,7 +82,7 @@ describe('practice-page-available-count', () => {
         logError,
       });
 
-      await Promise.resolve();
+      await new Promise((r) => setTimeout(r, 0));
 
       expect(setAvailableCountStatus).toHaveBeenLastCalledWith('error');
       expect(setAvailableCount).not.toHaveBeenCalled();
@@ -116,7 +116,7 @@ describe('practice-page-available-count', () => {
       cleanup();
       deferred.resolve(ok({ count: 42 }));
 
-      await Promise.resolve();
+      await new Promise((r) => setTimeout(r, 0));
 
       expect(setAvailableCount).not.toHaveBeenCalled();
       expect(setAvailableCountStatus).toHaveBeenCalledTimes(1);
@@ -147,7 +147,7 @@ describe('practice-page-available-count', () => {
         cleanup();
 
         await vi.advanceTimersByTimeAsync(200);
-        await Promise.resolve();
+        await vi.advanceTimersByTimeAsync(0);
 
         expect(countAvailableQuestionsFn).not.toHaveBeenCalled();
         expect(setAvailableCountStatus).toHaveBeenCalledTimes(1);

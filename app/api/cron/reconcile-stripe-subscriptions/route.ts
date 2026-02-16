@@ -9,6 +9,7 @@ import { CRON_RECONCILE_STRIPE_SUBSCRIPTIONS_RATE_LIMIT } from '@/src/adapters/s
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
+export const maxDuration = 60;
 
 function getAuthorizationToken(req: Request): string | null {
   const header = req.headers.get('authorization');

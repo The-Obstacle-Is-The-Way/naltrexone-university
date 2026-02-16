@@ -2,7 +2,11 @@ import {
   getActionResultErrorMessage,
   getThrownErrorMessage,
 } from '@/app/(app)/app/practice/practice-logic';
+import { withTimeout } from '@/lib/with-timeout';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
+
+const INCOMPLETE_SESSION_TIMEOUT_MS = 10_000;
+const ABANDON_SESSION_TIMEOUT_MS = 15_000;
 
 export type IncompleteSessionStatus = 'idle' | 'loading' | 'error';
 
@@ -21,7 +25,10 @@ export function createIncompleteSessionEffect<T>(input: {
   void (async () => {
     let res: Awaited<ReturnType<typeof input.getIncompletePracticeSessionFn>>;
     try {
-      res = await input.getIncompletePracticeSessionFn({});
+      res = await withTimeout(
+        input.getIncompletePracticeSessionFn({}),
+        INCOMPLETE_SESSION_TIMEOUT_MS,
+      );
     } catch (error) {
       if (!mounted) return;
       input.setIncompleteSessionStatus('error');
@@ -60,10 +67,13 @@ export async function abandonIncompleteSession<T>(input: {
 
   let res: Awaited<ReturnType<typeof input.endPracticeSessionFn>>;
   try {
-    res = await input.endPracticeSessionFn({
-      sessionId: input.sessionId,
-      idempotencyKey: input.sessionId,
-    });
+    res = await withTimeout(
+      input.endPracticeSessionFn({
+        sessionId: input.sessionId,
+        idempotencyKey: input.sessionId,
+      }),
+      ABANDON_SESSION_TIMEOUT_MS,
+    );
   } catch (error) {
     if (!input.isMounted()) return;
     input.setIncompleteSessionStatus('error');

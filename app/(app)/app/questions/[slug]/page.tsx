@@ -4,6 +4,8 @@ import QuestionPageClient, {
   type QuestionViewProps,
 } from './question-page-client';
 
+export const maxDuration = 30;
+
 export const metadata: Metadata = {
   title: 'Question - Addiction Boards',
 };
