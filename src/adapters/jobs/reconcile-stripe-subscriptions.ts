@@ -88,6 +88,18 @@ export async function reconcileStripeSubscriptions(
     offset: safeOffset,
   });
 
+  const subscriptionsClient = deps.stripe.subscriptions;
+  const listSubscriptions =
+    subscriptionsClient?.list?.bind(subscriptionsClient);
+  const cancelSubscription =
+    subscriptionsClient?.cancel?.bind(subscriptionsClient);
+  if (!listSubscriptions || !cancelSubscription) {
+    throw new ApplicationError(
+      'STRIPE_ERROR',
+      'Stripe subscriptions API is unavailable for reconciliation',
+    );
+  }
+
   const results = await mapWithConcurrencyLimit(
     rows,
     safeConcurrency,
@@ -117,16 +129,6 @@ export async function reconcileStripeSubscriptions(
           throw new ApplicationError(
             'CONFLICT',
             'Stripe subscription user id mismatch',
-          );
-        }
-
-        const subscriptionsClient = deps.stripe.subscriptions;
-        const listSubscriptions =
-          subscriptionsClient?.list?.bind(subscriptionsClient);
-        if (!listSubscriptions) {
-          throw new ApplicationError(
-            'STRIPE_ERROR',
-            'Stripe subscriptions.list is unavailable for reconciliation',
           );
         }
 
@@ -225,15 +227,6 @@ export async function reconcileStripeSubscriptions(
           );
 
           if (!dryRun && duplicateIds.length > 0) {
-            const cancelSubscription =
-              subscriptionsClient?.cancel?.bind(subscriptionsClient);
-            if (!cancelSubscription) {
-              throw new ApplicationError(
-                'STRIPE_ERROR',
-                'Stripe subscriptions.cancel is unavailable for reconciliation',
-              );
-            }
-
             for (const duplicateId of duplicateIds) {
               await callStripeWithRetry({
                 operation: 'subscriptions.cancel',

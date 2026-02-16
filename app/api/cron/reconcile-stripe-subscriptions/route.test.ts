@@ -215,6 +215,60 @@ describe('POST /api/cron/reconcile-stripe-subscriptions', () => {
     );
   });
 
+  it('clamps concurrency=0 to 1', async () => {
+    const response = await POST(
+      new Request(
+        'http://localhost/api/cron/reconcile-stripe-subscriptions?concurrency=0',
+        {
+          method: 'POST',
+          headers: { authorization: 'Bearer test-secret' },
+        },
+      ),
+    );
+
+    expect(response.status).toBe(200);
+    expect(reconcileStripeSubscriptions).toHaveBeenCalledWith(
+      expect.objectContaining({ concurrency: 1 }),
+      expect.any(Object),
+    );
+  });
+
+  it('falls back concurrency=-1 to default then clamps', async () => {
+    const response = await POST(
+      new Request(
+        'http://localhost/api/cron/reconcile-stripe-subscriptions?concurrency=-1',
+        {
+          method: 'POST',
+          headers: { authorization: 'Bearer test-secret' },
+        },
+      ),
+    );
+
+    expect(response.status).toBe(200);
+    expect(reconcileStripeSubscriptions).toHaveBeenCalledWith(
+      expect.objectContaining({ concurrency: 10 }),
+      expect.any(Object),
+    );
+  });
+
+  it('falls back malformed concurrency to default', async () => {
+    const response = await POST(
+      new Request(
+        'http://localhost/api/cron/reconcile-stripe-subscriptions?concurrency=abc',
+        {
+          method: 'POST',
+          headers: { authorization: 'Bearer test-secret' },
+        },
+      ),
+    );
+
+    expect(response.status).toBe(200);
+    expect(reconcileStripeSubscriptions).toHaveBeenCalledWith(
+      expect.objectContaining({ concurrency: 10 }),
+      expect.any(Object),
+    );
+  });
+
   it('returns 429 when rate limited', async () => {
     const rateLimiter = new FakeRateLimiter({
       success: false,
