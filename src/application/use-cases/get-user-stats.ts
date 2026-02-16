@@ -1,11 +1,12 @@
 import type { Logger } from '@/src/application/ports/logger';
-import { computeAccuracy, computeStreak, DAY_MS } from '@/src/domain/services';
-import type { QuestionDifficulty } from '@/src/domain/value-objects';
 import type {
   AttemptStatsReader,
   QuestionRepository,
-} from '../ports/repositories';
-import { enrichWithQuestion } from '../shared/enrich-with-question';
+} from '@/src/application/ports/repositories';
+import { enrichWithQuestion } from '@/src/application/shared/enrich-with-question';
+import { fetchQuestionsById } from '@/src/application/shared/fetch-questions-by-id';
+import { computeAccuracy, computeStreak, DAY_MS } from '@/src/domain/services';
+import type { QuestionDifficulty } from '@/src/domain/value-objects';
 
 /**
  * Dashboard "last 7 days" accuracy window.
@@ -100,17 +101,10 @@ export class GetUserStatsUseCase {
     );
     const currentStreakDays = computeStreak(attemptsLast60Days, now);
 
-    const uniqueQuestionIds: string[] = [];
-    const seen = new Set<string>();
-    for (const attempt of recentAttempts) {
-      if (seen.has(attempt.questionId)) continue;
-      seen.add(attempt.questionId);
-      uniqueQuestionIds.push(attempt.questionId);
-    }
-
-    const questions =
-      await this.questions.findPublishedByIds(uniqueQuestionIds);
-    const questionById = new Map(questions.map((q) => [q.id, q]));
+    const questionById = await fetchQuestionsById(
+      this.questions,
+      recentAttempts.map((attempt) => attempt.questionId),
+    );
 
     const recentActivity = enrichWithQuestion({
       rows: recentAttempts,

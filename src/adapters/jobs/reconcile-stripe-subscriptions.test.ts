@@ -103,6 +103,614 @@ function createStripeStub(input: {
 }
 
 describe('reconcileStripeSubscriptions', () => {
+  it('processes rows with bounded concurrency (default 10)', async () => {
+    function createDeferred<T>() {
+      let resolve: (value: T) => void = () => undefined;
+      let reject: (reason?: unknown) => void = () => undefined;
+      const promise = new Promise<T>((res, rej) => {
+        resolve = res;
+        reject = rej;
+      });
+      return { promise, resolve, reject };
+    }
+
+    async function flushUntil(
+      condition: () => boolean,
+      input?: { maxTicks?: number },
+    ) {
+      const maxTicks = input?.maxTicks ?? 50;
+      for (let i = 0; i < maxTicks; i += 1) {
+        if (condition()) return;
+        await Promise.resolve();
+      }
+      throw new Error('Timed out waiting for condition');
+    }
+
+    const rows = Array.from({ length: 12 }, (_, i) => ({
+      userId: `user_${i + 1}`,
+      stripeSubscriptionId: `sub_${i + 1}`,
+    }));
+
+    const subscriptionsById: Record<string, StripeSubscriptionFixture> = {};
+    const subscriptionIdByCustomerId = new Map<string, string>();
+    for (const row of rows) {
+      const customerId = `cus_${row.stripeSubscriptionId}`;
+      subscriptionsById[row.stripeSubscriptionId] = createSubscriptionFixture({
+        id: row.stripeSubscriptionId,
+        userId: row.userId,
+        customerId,
+        status: 'active',
+      });
+      subscriptionIdByCustomerId.set(customerId, row.stripeSubscriptionId);
+    }
+
+    let inFlight = 0;
+    let maxInFlight = 0;
+    const resolvedSubscriptionIds = new Set<string>();
+    const deferredBySubscriptionId = new Map<
+      string,
+      ReturnType<typeof createDeferred<StripeSubscriptionFixture>>
+    >();
+
+    const retrieve = vi.fn((subscriptionId: string) => {
+      inFlight += 1;
+      maxInFlight = Math.max(maxInFlight, inFlight);
+
+      const deferred = createDeferred<StripeSubscriptionFixture>();
+      deferredBySubscriptionId.set(subscriptionId, deferred);
+
+      return deferred.promise.finally(() => {
+        inFlight -= 1;
+      });
+    });
+
+    const list = vi.fn(async (input: { customer: string }) => {
+      const subscriptionId = subscriptionIdByCustomerId.get(input.customer);
+      if (!subscriptionId) {
+        throw new Error(`Unknown customer: ${input.customer}`);
+      }
+      return {
+        data: [{ id: subscriptionId, status: 'active' as const }],
+      };
+    });
+
+    const stripe = {
+      subscriptions: {
+        retrieve,
+        list,
+        cancel: vi.fn(async () => ({ id: 'sub_canceled' })),
+      },
+      customers: {
+        create: vi.fn(async () => ({ id: 'cus_unused' })),
+      },
+      checkout: {
+        sessions: {
+          create: vi.fn(async () => ({ id: 'cs_unused', url: null })),
+          list: vi.fn(async () => ({ data: [] })),
+          retrieve: vi.fn(async () => ({ id: 'cs_unused', url: null })),
+          expire: vi.fn(async () => ({ id: 'cs_unused', url: null })),
+        },
+      },
+      billingPortal: {
+        sessions: {
+          create: vi.fn(async () => ({ url: null })),
+        },
+      },
+      webhooks: {
+        constructEvent: vi.fn(() => ({
+          id: 'evt_unused',
+          type: 'unused',
+          data: { object: {} },
+        })),
+      },
+    } as const;
+
+    const stripeCustomers = new FakeStripeCustomerRepository();
+    const subscriptions = new FakeSubscriptionRepository();
+    const logger = new FakeLogger();
+
+    const promise = reconcileStripeSubscriptions(
+      { limit: 20, offset: 0 },
+      {
+        stripe,
+        priceIds: { monthly: 'price_m', annual: 'price_a' },
+        logger,
+        listLocalSubscriptions: async () => rows,
+        transaction: async (fn) => fn({ stripeCustomers, subscriptions }),
+      },
+    );
+
+    await flushUntil(() => retrieve.mock.calls.length === 10);
+
+    expect(retrieve).toHaveBeenCalledTimes(10);
+    expect(maxInFlight).toBe(10);
+
+    for (const [subscriptionId, deferred] of deferredBySubscriptionId) {
+      const fixture = subscriptionsById[subscriptionId];
+      if (!fixture) throw new Error(`Missing fixture for ${subscriptionId}`);
+      deferred.resolve(fixture);
+      resolvedSubscriptionIds.add(subscriptionId);
+    }
+
+    await flushUntil(() => retrieve.mock.calls.length === 12);
+
+    const remainingSubscriptionIds = rows
+      .map((row) => row.stripeSubscriptionId)
+      .filter((subscriptionId) => !resolvedSubscriptionIds.has(subscriptionId));
+    expect(remainingSubscriptionIds).toHaveLength(2);
+
+    for (const subscriptionId of remainingSubscriptionIds) {
+      const fixture = subscriptionsById[subscriptionId];
+      if (!fixture) throw new Error(`Missing fixture for ${subscriptionId}`);
+      const deferred = deferredBySubscriptionId.get(subscriptionId);
+      if (!deferred) {
+        throw new Error(`Missing deferred for ${subscriptionId}`);
+      }
+      deferred.resolve(fixture);
+      resolvedSubscriptionIds.add(subscriptionId);
+    }
+
+    await expect(promise).resolves.toMatchObject({
+      scanned: 12,
+      updated: 12,
+      failed: 0,
+    });
+  });
+
+  it('continues processing remaining rows when one row fails under concurrency', async () => {
+    const goodSub1 = createSubscriptionFixture({
+      id: 'sub_1',
+      userId: 'user_1',
+      customerId: 'cus_1',
+    });
+    const goodSub3 = createSubscriptionFixture({
+      id: 'sub_3',
+      userId: 'user_3',
+      customerId: 'cus_3',
+    });
+    // sub_2 has mismatched metadata userId → will fail reconciliation
+    const badSub = createSubscriptionFixture({
+      id: 'sub_2',
+      userId: 'user_other',
+      customerId: 'cus_2',
+    });
+
+    const subscriptionsByCustomer: Record<
+      string,
+      Array<{ id: string; status: 'active' }>
+    > = {
+      cus_1: [{ id: 'sub_1', status: 'active' }],
+      cus_2: [{ id: 'sub_2', status: 'active' }],
+      cus_3: [{ id: 'sub_3', status: 'active' }],
+    };
+
+    const stripe = {
+      subscriptions: {
+        retrieve: vi.fn(async (subscriptionId: string) => {
+          const map: Record<string, StripeSubscriptionFixture> = {
+            sub_1: goodSub1,
+            sub_2: badSub,
+            sub_3: goodSub3,
+          };
+          const sub = map[subscriptionId];
+          if (!sub) throw new Error(`Unknown: ${subscriptionId}`);
+          return sub;
+        }),
+        list: vi.fn(async (input: { customer: string }) => ({
+          data: subscriptionsByCustomer[input.customer] ?? [],
+        })),
+        cancel: vi.fn(async () => ({ id: 'sub_canceled' })),
+      },
+      customers: {
+        create: vi.fn(async () => ({ id: 'cus_unused' })),
+      },
+      checkout: {
+        sessions: {
+          create: vi.fn(async () => ({ id: 'cs_unused', url: null })),
+          list: vi.fn(async () => ({ data: [] })),
+          retrieve: vi.fn(async () => ({ id: 'cs_unused', url: null })),
+          expire: vi.fn(async () => ({ id: 'cs_unused', url: null })),
+        },
+      },
+      billingPortal: {
+        sessions: { create: vi.fn(async () => ({ url: null })) },
+      },
+      webhooks: {
+        constructEvent: vi.fn(() => ({
+          id: 'evt_unused',
+          type: 'unused',
+          data: { object: {} },
+        })),
+      },
+    } as const;
+
+    const stripeCustomers = new FakeStripeCustomerRepository();
+    const subscriptions = new FakeSubscriptionRepository();
+    const logger = new FakeLogger();
+
+    const result = await reconcileStripeSubscriptions(
+      { limit: 10, offset: 0, concurrency: 3 },
+      {
+        stripe,
+        priceIds: { monthly: 'price_m', annual: 'price_a' },
+        logger,
+        listLocalSubscriptions: async () => [
+          { userId: 'user_1', stripeSubscriptionId: 'sub_1' },
+          { userId: 'user_2', stripeSubscriptionId: 'sub_2' },
+          { userId: 'user_3', stripeSubscriptionId: 'sub_3' },
+        ],
+        transaction: async (fn) => fn({ stripeCustomers, subscriptions }),
+      },
+    );
+
+    expect(result.scanned).toBe(3);
+    expect(result.updated).toBe(2);
+    expect(result.failed).toBe(1);
+    expect(result.failures).toHaveLength(1);
+    expect(result.failures[0]).toMatchObject({
+      stripeSubscriptionId: 'sub_2',
+    });
+
+    // Good rows still persisted despite the middle row failing
+    await expect(subscriptions.findByUserId('user_1')).resolves.not.toBeNull();
+    await expect(subscriptions.findByUserId('user_3')).resolves.not.toBeNull();
+    // Failed row was NOT persisted
+    await expect(subscriptions.findByUserId('user_2')).resolves.toBeNull();
+    expect(logger.errorCalls.length).toBeGreaterThan(0);
+  });
+
+  it('throws STRIPE_ERROR when Stripe subscriptions API is unavailable for reconciliation', async () => {
+    const fullStripe = createStripeStub({
+      subscriptionsById: {},
+      listedSubscriptions: [],
+    });
+    const stripe = { ...fullStripe, subscriptions: undefined };
+
+    const stripeCustomers = new FakeStripeCustomerRepository();
+    const subscriptions = new FakeSubscriptionRepository();
+    const logger = new FakeLogger();
+
+    await expect(
+      reconcileStripeSubscriptions(
+        { limit: 10, offset: 0 },
+        {
+          stripe,
+          priceIds: { monthly: 'price_m', annual: 'price_a' },
+          logger,
+          listLocalSubscriptions: async () => [],
+          transaction: async (fn) => fn({ stripeCustomers, subscriptions }),
+        },
+      ),
+    ).rejects.toMatchObject({
+      code: 'STRIPE_ERROR',
+      message: 'Stripe subscriptions API is unavailable for reconciliation',
+    });
+  });
+
+  it('fails loudly when the local subscription list contains holes (internal invariant)', async () => {
+    const sparseRows = new Array<{
+      userId: string;
+      stripeSubscriptionId: string;
+    }>(1);
+    const stripe = createStripeStub({
+      subscriptionsById: {},
+      listedSubscriptions: [],
+    });
+
+    const stripeCustomers = new FakeStripeCustomerRepository();
+    const subscriptions = new FakeSubscriptionRepository();
+    const logger = new FakeLogger();
+
+    await expect(
+      reconcileStripeSubscriptions(
+        { limit: 10, offset: 0, concurrency: 1 },
+        {
+          stripe,
+          priceIds: { monthly: 'price_m', annual: 'price_a' },
+          logger,
+          listLocalSubscriptions: async () => sparseRows,
+          transaction: async (fn) => fn({ stripeCustomers, subscriptions }),
+        },
+      ),
+    ).rejects.toThrow('mapWithConcurrencyLimit: missing item at index 0');
+  });
+
+  it('defaults invalid numeric inputs using safe fallbacks', async () => {
+    const stripe = createStripeStub({
+      subscriptionsById: {},
+      listedSubscriptions: [],
+    });
+
+    const listLocalSubscriptions = vi.fn(async () => []);
+    const stripeCustomers = new FakeStripeCustomerRepository();
+    const subscriptions = new FakeSubscriptionRepository();
+    const logger = new FakeLogger();
+
+    const result = await reconcileStripeSubscriptions(
+      {
+        limit: Number.NaN,
+        offset: Number.POSITIVE_INFINITY,
+        concurrency: 1.5,
+      },
+      {
+        stripe,
+        priceIds: { monthly: 'price_m', annual: 'price_a' },
+        logger,
+        listLocalSubscriptions,
+        transaction: async (fn) => fn({ stripeCustomers, subscriptions }),
+      },
+    );
+
+    expect(listLocalSubscriptions).toHaveBeenCalledWith({
+      limit: 100,
+      offset: 0,
+    });
+    expect(result).toEqual({
+      scanned: 0,
+      updated: 0,
+      failed: 0,
+      failures: [],
+    });
+  });
+
+  it('surfaces non-Error thrown values in failures', async () => {
+    const baseStripe = createStripeStub({
+      subscriptionsById: {},
+      listedSubscriptions: [],
+    });
+
+    const stripe = {
+      ...baseStripe,
+      subscriptions: {
+        ...baseStripe.subscriptions,
+        retrieve: vi.fn(async () => {
+          throw 'boom';
+        }),
+      },
+    } as const;
+
+    const stripeCustomers = new FakeStripeCustomerRepository();
+    const subscriptions = new FakeSubscriptionRepository();
+    const logger = new FakeLogger();
+
+    const result = await reconcileStripeSubscriptions(
+      { limit: 10, offset: 0 },
+      {
+        stripe,
+        priceIds: { monthly: 'price_m', annual: 'price_a' },
+        logger,
+        listLocalSubscriptions: async () => [
+          { userId: 'user_1', stripeSubscriptionId: 'sub_1' },
+        ],
+        transaction: async (fn) => fn({ stripeCustomers, subscriptions }),
+      },
+    );
+
+    expect(result.failed).toBe(1);
+    expect(result.failures[0]).toMatchObject({
+      stripeSubscriptionId: 'sub_1',
+      error: 'boom',
+    });
+  });
+
+  it('falls back to error.name when an Error has an empty message', async () => {
+    const baseStripe = createStripeStub({
+      subscriptionsById: {},
+      listedSubscriptions: [],
+    });
+
+    const stripe = {
+      ...baseStripe,
+      subscriptions: {
+        ...baseStripe.subscriptions,
+        retrieve: vi.fn(async () => {
+          throw new Error('');
+        }),
+      },
+    } as const;
+
+    const stripeCustomers = new FakeStripeCustomerRepository();
+    const subscriptions = new FakeSubscriptionRepository();
+    const logger = new FakeLogger();
+
+    const result = await reconcileStripeSubscriptions(
+      { limit: 10, offset: 0 },
+      {
+        stripe,
+        priceIds: { monthly: 'price_m', annual: 'price_a' },
+        logger,
+        listLocalSubscriptions: async () => [
+          { userId: 'user_1', stripeSubscriptionId: 'sub_1' },
+        ],
+        transaction: async (fn) => fn({ stripeCustomers, subscriptions }),
+      },
+    );
+
+    expect(result.failed).toBe(1);
+    expect(result.failures[0]).toMatchObject({
+      stripeSubscriptionId: 'sub_1',
+      error: 'Error',
+    });
+  });
+
+  it('does not attempt canonical selection when Stripe returns no blocking subscriptions', async () => {
+    const canceled = createSubscriptionFixture({
+      id: 'sub_canceled',
+      userId: 'user_1',
+      status: 'canceled',
+    });
+    const stripe = createStripeStub({
+      subscriptionsById: { sub_canceled: canceled },
+      listedSubscriptions: [],
+    });
+
+    const stripeCustomers = new FakeStripeCustomerRepository();
+    const subscriptions = new FakeSubscriptionRepository();
+    const logger = new FakeLogger();
+
+    await expect(
+      reconcileStripeSubscriptions(
+        { limit: 10, offset: 0, dryRun: true },
+        {
+          stripe,
+          priceIds: { monthly: 'price_m', annual: 'price_a' },
+          logger,
+          listLocalSubscriptions: async () => [
+            { userId: 'user_1', stripeSubscriptionId: 'sub_canceled' },
+          ],
+          transaction: async (fn) => fn({ stripeCustomers, subscriptions }),
+        },
+      ),
+    ).resolves.toMatchObject({ updated: 1, failed: 0 });
+
+    await expect(subscriptions.findByUserId('user_1')).resolves.toMatchObject({
+      status: 'canceled',
+    });
+  });
+
+  it('reports a failure when a blocking subscription belongs to a different user', async () => {
+    const local = createSubscriptionFixture({
+      id: 'sub_local',
+      userId: 'user_1',
+      customerId: 'cus_1',
+      status: 'active',
+    });
+    const blockingMismatch = createSubscriptionFixture({
+      id: 'sub_blocking',
+      userId: 'user_other',
+      customerId: 'cus_1',
+      status: 'active',
+    });
+
+    const stripe = createStripeStub({
+      subscriptionsById: {
+        [local.id]: local,
+        [blockingMismatch.id]: blockingMismatch,
+      },
+      listedSubscriptions: [
+        { id: local.id, status: local.status },
+        { id: blockingMismatch.id, status: blockingMismatch.status },
+      ],
+    });
+
+    const stripeCustomers = new FakeStripeCustomerRepository();
+    const subscriptions = new FakeSubscriptionRepository();
+    const logger = new FakeLogger();
+
+    const result = await reconcileStripeSubscriptions(
+      { limit: 10, offset: 0, dryRun: true },
+      {
+        stripe,
+        priceIds: { monthly: 'price_m', annual: 'price_a' },
+        logger,
+        listLocalSubscriptions: async () => [
+          { userId: 'user_1', stripeSubscriptionId: local.id },
+        ],
+        transaction: async (fn) => fn({ stripeCustomers, subscriptions }),
+      },
+    );
+
+    expect(result.updated).toBe(0);
+    expect(result.failed).toBe(1);
+    expect(result.failures[0]).toMatchObject({
+      stripeSubscriptionId: 'sub_local',
+      error: 'Blocking Stripe subscription user id mismatch',
+    });
+
+    await expect(subscriptions.findByUserId('user_1')).resolves.toBeNull();
+    await expect(stripeCustomers.findByUserId('user_1')).resolves.toBeNull();
+  });
+
+  it('reports a failure when the canonical Stripe subscription cannot be determined', async () => {
+    const localCanceled = createSubscriptionFixture({
+      id: 'sub_local',
+      userId: 'user_1',
+      status: 'canceled',
+    });
+    const emptyId = createSubscriptionFixture({
+      id: '',
+      userId: 'user_1',
+      status: 'active',
+    });
+
+    const stripe = createStripeStub({
+      subscriptionsById: {
+        [localCanceled.id]: localCanceled,
+        sub_blocking: emptyId,
+      },
+      listedSubscriptions: [{ id: 'sub_blocking', status: 'active' }],
+    });
+
+    const stripeCustomers = new FakeStripeCustomerRepository();
+    const subscriptions = new FakeSubscriptionRepository();
+    const logger = new FakeLogger();
+
+    const result = await reconcileStripeSubscriptions(
+      { limit: 10, offset: 0, dryRun: true },
+      {
+        stripe,
+        priceIds: { monthly: 'price_m', annual: 'price_a' },
+        logger,
+        listLocalSubscriptions: async () => [
+          { userId: 'user_1', stripeSubscriptionId: localCanceled.id },
+        ],
+        transaction: async (fn) => fn({ stripeCustomers, subscriptions }),
+      },
+    );
+
+    expect(result.updated).toBe(0);
+    expect(result.failed).toBe(1);
+    expect(result.failures[0]).toMatchObject({
+      stripeSubscriptionId: localCanceled.id,
+      error: 'Unable to determine canonical Stripe subscription',
+    });
+  });
+
+  it('reports a failure when canonical Stripe subscription data is missing', async () => {
+    const localCanceled = createSubscriptionFixture({
+      id: 'sub_local',
+      userId: 'user_1',
+      status: 'canceled',
+    });
+    const mismatch = createSubscriptionFixture({
+      id: 'sub_other',
+      userId: 'user_1',
+      status: 'active',
+    });
+
+    const stripe = createStripeStub({
+      subscriptionsById: {
+        [localCanceled.id]: localCanceled,
+        sub_blocking: mismatch,
+      },
+      listedSubscriptions: [{ id: 'sub_blocking', status: 'active' }],
+    });
+
+    const stripeCustomers = new FakeStripeCustomerRepository();
+    const subscriptions = new FakeSubscriptionRepository();
+    const logger = new FakeLogger();
+
+    const result = await reconcileStripeSubscriptions(
+      { limit: 10, offset: 0, dryRun: true },
+      {
+        stripe,
+        priceIds: { monthly: 'price_m', annual: 'price_a' },
+        logger,
+        listLocalSubscriptions: async () => [
+          { userId: 'user_1', stripeSubscriptionId: localCanceled.id },
+        ],
+        transaction: async (fn) => fn({ stripeCustomers, subscriptions }),
+      },
+    );
+
+    expect(result.updated).toBe(0);
+    expect(result.failed).toBe(1);
+    expect(result.failures[0]).toMatchObject({
+      stripeSubscriptionId: localCanceled.id,
+      error: 'Canonical Stripe subscription data is missing',
+    });
+  });
+
   it('upserts subscriptions and customer mappings for local subscriptions', async () => {
     const subscription = createSubscriptionFixture({
       id: 'sub_123',
@@ -275,13 +883,23 @@ describe('reconcileStripeSubscriptions', () => {
       status: 'active',
       currentPeriodEnd: 1_700_001_000,
     });
+    const trialing = createSubscriptionFixture({
+      id: 'sub_trialing',
+      userId: 'user_1',
+      status: 'trialing',
+      currentPeriodEnd: 1_700_000_500,
+    });
 
     const stripe = createStripeStub({
       subscriptionsById: {
         [localCanceled.id]: localCanceled,
         [active.id]: active,
+        [trialing.id]: trialing,
       },
-      listedSubscriptions: [{ id: active.id, status: active.status }],
+      listedSubscriptions: [
+        { id: active.id, status: active.status },
+        { id: trialing.id, status: trialing.status },
+      ],
     });
 
     const stripeCustomers = new FakeStripeCustomerRepository();
@@ -313,9 +931,75 @@ describe('reconcileStripeSubscriptions', () => {
       status: 'active',
     });
     await expect(
+      subscriptions.findByExternalSubscriptionId(trialing.id),
+    ).resolves.toBeNull();
+    await expect(
       subscriptions.findByExternalSubscriptionId(localCanceled.id),
     ).resolves.toBeNull();
     expect(stripe.subscriptions.cancel).not.toHaveBeenCalled();
+  });
+
+  it('breaks ties deterministically when multiple blocking subscriptions share the same currentPeriodEnd', async () => {
+    const localCanceled = createSubscriptionFixture({
+      id: 'sub_local_canceled',
+      userId: 'user_1',
+      status: 'canceled',
+      currentPeriodEnd: 1_700_000_000,
+    });
+    const a = createSubscriptionFixture({
+      id: 'sub_a',
+      userId: 'user_1',
+      status: 'active',
+      currentPeriodEnd: 1_700_001_000,
+    });
+    const b = createSubscriptionFixture({
+      id: 'sub_b',
+      userId: 'user_1',
+      status: 'active',
+      currentPeriodEnd: 1_700_001_000,
+    });
+
+    const stripe = createStripeStub({
+      subscriptionsById: {
+        [localCanceled.id]: localCanceled,
+        [a.id]: a,
+        [b.id]: b,
+      },
+      listedSubscriptions: [
+        { id: b.id, status: b.status },
+        { id: a.id, status: a.status },
+      ],
+    });
+
+    const stripeCustomers = new FakeStripeCustomerRepository();
+    const subscriptions = new FakeSubscriptionRepository();
+    const logger = new FakeLogger();
+
+    await expect(
+      reconcileStripeSubscriptions(
+        { limit: 10, offset: 0, dryRun: true },
+        {
+          stripe,
+          priceIds: { monthly: 'price_m', annual: 'price_a' },
+          logger,
+          listLocalSubscriptions: async () => [
+            { userId: 'user_1', stripeSubscriptionId: localCanceled.id },
+          ],
+          transaction: async (fn) => fn({ stripeCustomers, subscriptions }),
+        },
+      ),
+    ).resolves.toMatchObject({ updated: 1, failed: 0 });
+
+    // Tie-breaker: currentPeriodEnd equal → lowest externalSubscriptionId wins.
+    await expect(
+      subscriptions.findByExternalSubscriptionId('sub_a'),
+    ).resolves.toMatchObject({
+      userId: 'user_1',
+      status: 'active',
+    });
+    await expect(
+      subscriptions.findByExternalSubscriptionId('sub_b'),
+    ).resolves.toBeNull();
   });
 
   it('reports a failure when Stripe subscription metadata user id mismatches', async () => {

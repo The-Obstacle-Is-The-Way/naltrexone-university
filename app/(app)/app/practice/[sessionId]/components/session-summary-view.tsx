@@ -21,7 +21,10 @@ export function SessionSummaryView({
 }) {
   const summaryReview = review ?? null;
   const summaryReviewLoadState = reviewLoadState ?? { status: 'idle' };
-  const accuracyPercent = Math.round(summary.totals.accuracy * 100);
+  const accuracyLabel =
+    summary.totals.answered > 0
+      ? `${Math.round(summary.totals.accuracy * 100)}%`
+      : '—';
 
   return (
     <div className="space-y-6">
@@ -50,7 +53,7 @@ export function SessionSummaryView({
         <Card className="gap-0 rounded-2xl p-6 shadow-sm transition-colors hover:border-border/80 hover:bg-muted/50">
           <div className="text-sm text-muted-foreground">Accuracy</div>
           <div className="mt-2 text-3xl font-bold font-display text-foreground">
-            {accuracyPercent}%
+            {accuracyLabel}
           </div>
         </Card>
 

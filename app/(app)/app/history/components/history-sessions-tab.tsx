@@ -61,7 +61,9 @@ export function HistorySessionsTab({ result }: HistorySessionsTabProps) {
           const isSelected =
             historySessions.selectedSessionId === row.sessionId;
           const endedOn = formatDate(row.endedAt);
-          const sessionSummary = `${formatSessionMode(row.mode)} session: ${row.correct}/${row.questionCount} correct (${formatSessionAccuracy(row.accuracy)}), ${formatDuration(row.durationSeconds)}, ${endedOn}`;
+          const accuracyLabel =
+            row.answered > 0 ? formatSessionAccuracy(row.accuracy) : '—';
+          const sessionSummary = `${formatSessionMode(row.mode)} session: ${row.correct}/${row.questionCount} correct (${accuracyLabel}), ${formatDuration(row.durationSeconds)}, ${endedOn}`;
           const selectedReview =
             historySessions.selectedReview?.sessionId === row.sessionId
               ? historySessions.selectedReview
@@ -79,8 +81,7 @@ export function HistorySessionsTab({ result }: HistorySessionsTabProps) {
                   </span>
                   <span className="mx-2">•</span>
                   <span>
-                    {row.correct}/{row.questionCount} correct (
-                    {formatSessionAccuracy(row.accuracy)})
+                    {row.correct}/{row.questionCount} correct ({accuracyLabel})
                   </span>
                   <span className="mx-2">•</span>
                   <span>{formatDuration(row.durationSeconds)}</span>

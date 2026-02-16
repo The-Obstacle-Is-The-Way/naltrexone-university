@@ -8,24 +8,26 @@ vi.mock('next/link', () => ({
   default: (props: Record<string, unknown>) => <a {...props} />,
 }));
 
+type SessionHistoryResult = ActionResult<{
+  rows: Array<{
+    sessionId: string;
+    mode: 'exam' | 'tutor';
+    questionCount: number;
+    answered: number;
+    correct: number;
+    accuracy: number;
+    durationSeconds: number;
+    startedAt: string;
+    endedAt: string;
+  }>;
+  total: number;
+  limit: number;
+  offset: number;
+}>;
+
 describe('HistorySessionsTab', () => {
   it('renders session rows with expected summary fields', () => {
-    const result: ActionResult<{
-      rows: Array<{
-        sessionId: string;
-        mode: 'exam' | 'tutor';
-        questionCount: number;
-        answered: number;
-        correct: number;
-        accuracy: number;
-        durationSeconds: number;
-        startedAt: string;
-        endedAt: string;
-      }>;
-      total: number;
-      limit: number;
-      offset: number;
-    }> = {
+    const result: SessionHistoryResult = {
       ok: true,
       data: {
         rows: [
@@ -56,13 +58,36 @@ describe('HistorySessionsTab', () => {
     expect(html).toContain('View breakdown');
   });
 
+  it('renders — for session accuracy when answered is 0', () => {
+    const result: SessionHistoryResult = {
+      ok: true,
+      data: {
+        rows: [
+          {
+            sessionId: 'session-1',
+            mode: 'exam',
+            questionCount: 10,
+            answered: 0,
+            correct: 0,
+            accuracy: 0,
+            durationSeconds: 1200,
+            startedAt: '2026-02-07T00:00:00.000Z',
+            endedAt: '2026-02-07T00:20:00.000Z',
+          },
+        ],
+        total: 1,
+        limit: 20,
+        offset: 0,
+      },
+    };
+
+    const html = renderToStaticMarkup(<HistorySessionsTab result={result} />);
+
+    expect(html).toContain('0/10 correct (—)');
+  });
+
   it('renders empty state when there are no completed sessions', () => {
-    const result: ActionResult<{
-      rows: [];
-      total: 0;
-      limit: 20;
-      offset: 0;
-    }> = {
+    const result: SessionHistoryResult = {
       ok: true,
       data: {
         rows: [],

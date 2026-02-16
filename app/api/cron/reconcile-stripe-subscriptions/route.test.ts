@@ -26,7 +26,10 @@ vi.mock('@/lib/container', () => ({
   createContainer,
 }));
 
-import { RECONCILE_STRIPE_SUBSCRIPTIONS_MAX_LIMIT } from '@/src/adapters/jobs/reconcile-stripe-subscriptions';
+import {
+  RECONCILE_STRIPE_SUBSCRIPTIONS_DEFAULT_CONCURRENCY,
+  RECONCILE_STRIPE_SUBSCRIPTIONS_MAX_LIMIT,
+} from '@/src/adapters/jobs/reconcile-stripe-subscriptions';
 import { POST } from './route';
 
 type CronContainer = {
@@ -186,6 +189,89 @@ describe('POST /api/cron/reconcile-stripe-subscriptions', () => {
         offset: 7,
         dryRun: false,
       },
+      expect.any(Object),
+    );
+  });
+
+  it('parses concurrency query param before reconciliation when provided', async () => {
+    const response = await POST(
+      new Request(
+        'http://localhost/api/cron/reconcile-stripe-subscriptions?limit=12&offset=7&dryRun=false&concurrency=3',
+        {
+          method: 'POST',
+          headers: {
+            authorization: 'Bearer test-secret',
+          },
+        },
+      ),
+    );
+
+    expect(response.status).toBe(200);
+    expect(reconcileStripeSubscriptions).toHaveBeenCalledWith(
+      {
+        limit: 12,
+        offset: 7,
+        dryRun: false,
+        concurrency: 3,
+      },
+      expect.any(Object),
+    );
+  });
+
+  it('clamps concurrency=0 to 1', async () => {
+    const response = await POST(
+      new Request(
+        'http://localhost/api/cron/reconcile-stripe-subscriptions?concurrency=0',
+        {
+          method: 'POST',
+          headers: { authorization: 'Bearer test-secret' },
+        },
+      ),
+    );
+
+    expect(response.status).toBe(200);
+    expect(reconcileStripeSubscriptions).toHaveBeenCalledWith(
+      expect.objectContaining({ concurrency: 1 }),
+      expect.any(Object),
+    );
+  });
+
+  it('falls back concurrency=-1 to default then clamps', async () => {
+    const response = await POST(
+      new Request(
+        'http://localhost/api/cron/reconcile-stripe-subscriptions?concurrency=-1',
+        {
+          method: 'POST',
+          headers: { authorization: 'Bearer test-secret' },
+        },
+      ),
+    );
+
+    expect(response.status).toBe(200);
+    expect(reconcileStripeSubscriptions).toHaveBeenCalledWith(
+      expect.objectContaining({
+        concurrency: RECONCILE_STRIPE_SUBSCRIPTIONS_DEFAULT_CONCURRENCY,
+      }),
+      expect.any(Object),
+    );
+  });
+
+  it('falls back malformed concurrency to default', async () => {
+    const response = await POST(
+      new Request(
+        'http://localhost/api/cron/reconcile-stripe-subscriptions?concurrency=abc',
+        {
+          method: 'POST',
+          headers: { authorization: 'Bearer test-secret' },
+        },
+      ),
+    );
+
+    expect(response.status).toBe(200);
+    expect(reconcileStripeSubscriptions).toHaveBeenCalledWith(
+      expect.objectContaining({
+        concurrency: RECONCILE_STRIPE_SUBSCRIPTIONS_DEFAULT_CONCURRENCY,
+      }),
       expect.any(Object),
     );
   });

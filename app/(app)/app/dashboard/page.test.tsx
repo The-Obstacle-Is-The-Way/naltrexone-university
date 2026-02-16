@@ -4,6 +4,14 @@ import { describe, expect, it } from 'vitest';
 import { ROUTES, toQuestionRoute } from '@/lib/routes';
 import { DashboardView, renderDashboard } from './page';
 
+function findStatValue(doc: Document, label: string): string | null {
+  const labelEl =
+    Array.from(doc.querySelectorAll('div')).find(
+      (el) => el.textContent === label,
+    ) ?? null;
+  return labelEl?.nextElementSibling?.textContent ?? null;
+}
+
 describe('app/(app)/app/dashboard', () => {
   it('renders user stats and recent sections', () => {
     const html = renderToStaticMarkup(
@@ -106,6 +114,29 @@ describe('app/(app)/app/dashboard', () => {
     expect(html).toContain('Answered Feb 2, 2026');
     expect(html).toContain('Answered Feb 3, 2026');
     expect(html).not.toContain('Recent missed');
+  });
+
+  it('renders — for accuracy when there are no attempts', () => {
+    const html = renderToStaticMarkup(
+      <DashboardView
+        stats={{
+          totalAnswered: 0,
+          accuracyOverall: 0,
+          answeredLast7Days: 0,
+          accuracyLast7Days: 0,
+          currentStreakDays: 0,
+          recentActivity: [],
+        }}
+        sessionHistoryResult={{
+          ok: true,
+          data: { rows: [], total: 0, limit: 3, offset: 0 },
+        }}
+      />,
+    );
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+
+    expect(findStatValue(doc, 'Overall accuracy')).toBe('—');
+    expect(findStatValue(doc, 'Accuracy (7 days)')).toBe('—');
   });
 
   it('renders placeholder text for unavailable recent activity rows', () => {

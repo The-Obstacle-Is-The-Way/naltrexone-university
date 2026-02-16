@@ -8,6 +8,8 @@ import type {
   BookmarkRepository,
   QuestionRepository,
 } from '@/src/application/ports/repositories';
+import { enrichWithQuestion } from '@/src/application/shared/enrich-with-question';
+import { fetchQuestionsById } from '@/src/application/shared/fetch-questions-by-id';
 
 export type {
   AvailableBookmarkRow,
@@ -29,38 +31,31 @@ export class GetBookmarksUseCase {
 
     if (bookmarks.length === 0) return { rows: [] };
 
-    const questionIds = [...new Set(bookmarks.map((b) => b.questionId))];
-    if (questionIds.length === 0) return { rows: [] };
+    const questionsById = await fetchQuestionsById(
+      this.questions,
+      bookmarks.map((bookmark) => bookmark.questionId),
+    );
 
-    const questions = await this.questions.findPublishedByIds(questionIds);
-    const byId = new Map(questions.map((q) => [q.id, q]));
-
-    const rows: BookmarkRow[] = [];
-    for (const bookmark of bookmarks) {
-      const question = byId.get(bookmark.questionId);
-      if (!question) {
-        // Graceful degradation: questions can be unpublished/deleted while bookmarks persist.
-        this.logger.warn(
-          { questionId: bookmark.questionId },
-          'Bookmark references missing question',
-        );
-        rows.push({
-          isAvailable: false,
-          questionId: bookmark.questionId,
-          bookmarkedAt: bookmark.createdAt.toISOString(),
-        });
-        continue;
-      }
-
-      rows.push({
+    const rows = enrichWithQuestion({
+      rows: bookmarks,
+      getQuestionId: (bookmark) => bookmark.questionId,
+      questionsById,
+      available: (bookmark, question): BookmarkRow => ({
         isAvailable: true,
         questionId: question.id,
         slug: question.slug,
         stemMd: question.stemMd,
         difficulty: question.difficulty,
         bookmarkedAt: bookmark.createdAt.toISOString(),
-      });
-    }
+      }),
+      unavailable: (bookmark): BookmarkRow => ({
+        isAvailable: false,
+        questionId: bookmark.questionId,
+        bookmarkedAt: bookmark.createdAt.toISOString(),
+      }),
+      logger: this.logger,
+      missingQuestionMessage: 'Bookmark references missing question',
+    });
 
     return { rows };
   }

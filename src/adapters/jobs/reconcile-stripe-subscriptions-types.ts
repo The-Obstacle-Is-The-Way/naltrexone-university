@@ -15,6 +15,7 @@ export type ReconcileStripeSubscriptionsInput = {
   limit: number;
   offset: number;
   dryRun?: boolean;
+  concurrency?: number;
 };
 
 export type ReconcileStripeSubscriptionsOutput = {

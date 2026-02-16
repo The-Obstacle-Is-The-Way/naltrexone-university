@@ -15,13 +15,7 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 ## Debt Index (Active)
 
-| ID | Title | Priority | Status |
-|----|-------|----------|--------|
-| [DEBT-219](debt-219-sequential-stripe-api-reconciliation.md) | Sequential Stripe API Calls in Reconciliation Cron Job | P3 | Open |
-| [DEBT-220](debt-220-duplicated-enrich-with-question-boilerplate.md) | Duplicated enrichWithQuestion Boilerplate Across 4 Use Cases | P3 | Open |
-| [DEBT-221](debt-221-compute-accuracy-conflates-zero-with-no-attempts.md) | `computeAccuracy()` Conflates "No Attempts" With "0% Accuracy" | P4 | Open |
-| [DEBT-222](debt-222-bookmark-retry-state-should-be-refs.md) | Bookmark Idempotency Key Should Use `useRef` (retryCount must stay as state) | P4 | Open |
-| [DEBT-223](debt-223-verbose-set-array-dedup-pattern.md) | Verbose Set+Array Dedup Pattern in get-user-stats.ts | P4 | Open |
+*No active debt items.*
 
 **Next Debt ID:** DEBT-224
 
@@ -31,6 +25,11 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 | ID | Title | Priority | Resolved | GitHub Issue |
 |----|-------|----------|----------|--------------|
+| [DEBT-223](../_archive/debt/debt-223-verbose-set-array-dedup-pattern.md) | Verbose Set+Array Dedup Pattern in get-user-stats.ts | P4 | 2026-02-16 | — |
+| [DEBT-222](../_archive/debt/debt-222-bookmark-retry-state-should-be-refs.md) | Bookmark Idempotency Key Should Use `useRef` (retryCount must stay as state) | P4 | 2026-02-16 | — |
+| [DEBT-221](../_archive/debt/debt-221-compute-accuracy-conflates-zero-with-no-attempts.md) | `computeAccuracy()` Conflates "No Attempts" With "0% Accuracy" | P4 | 2026-02-16 | — |
+| [DEBT-220](../_archive/debt/debt-220-duplicated-enrich-with-question-boilerplate.md) | Duplicated enrichWithQuestion Boilerplate Across 4 Use Cases | P3 | 2026-02-16 | — |
+| [DEBT-219](../_archive/debt/debt-219-sequential-stripe-api-reconciliation.md) | Sequential Stripe API Calls in Reconciliation Cron Job | P3 | 2026-02-16 | — |
 | [DEBT-218](../_archive/debt/debt-218-server-component-pages-missing-maxduration.md) | Server Component Pages Missing maxDuration + Dead Code in practice-logic.ts | P2 | 2026-02-15 | — |
 | [DEBT-217](../_archive/debt/debt-217-history-back-link-loses-tab-and-filter-state.md) | History Back Link Loses Tab and Filter State | P2 | 2026-02-15 | — |
 | [DEBT-213](../_archive/debt/debt-213-useeffect-derived-state-sync-antipatterns.md) | useEffect Derived-State Sync Anti-Patterns in Practice Hooks (5 instances) | P4 | 2026-02-14 | — |
@@ -56,10 +55,7 @@ All frontend-specific UI/UX debt. Items use `FE-XXX` IDs and are cross-reference
 
 ### P3 — Fix as encountered
 
-| ID | Summary | File(s) |
-|----|---------|---------|
-| [FE-054](fe-054-hardcoded-emerald-color-bypasses-design-tokens.md) | Hardcoded `text-emerald-500` bypasses design system tokens (3 files) | session-breakdown-list.tsx, history-questions-tab.tsx, dashboard/page.tsx |
-| [FE-055](fe-055-exam-navigator-missing-nav-landmark.md) | Exam review navigator missing `nav` landmark and `aria-controls` | exam-review-view.tsx |
+*No active P3 items.*
 
 **Next Frontend ID:** FE-056
 
@@ -88,6 +84,8 @@ All frontend-specific UI/UX debt. Items use `FE-XXX` IDs and are cross-reference
 | FE-051 | No warning when submitting exam with unanswered questions | Added unanswered warning copy in exam review confirmation dialog, with regression coverage |
 | FE-052 | Loading state `<output>` missing `aria-live` in `practice-view.tsx` | Added `aria-live="polite"` to practice loading output and updated tests |
 | FE-053 | Bookmark error card never auto-dismisses and has no retry button | Added `Retry bookmarks` action wired to reload bookmarks, with test coverage |
+| [FE-054](../_archive/debt/fe-054-hardcoded-emerald-color-bypasses-design-tokens.md) | Hardcoded `text-emerald-500` bypasses design system tokens (3 files) | Replaced `text-emerald-500` with `text-success` and updated regression test |
+| [FE-055](../_archive/debt/fe-055-exam-navigator-missing-nav-landmark.md) | Practice session question navigator missing navigation landmark + `aria-current` | Added navigation landmark + `aria-current="step"` with regression test coverage |
 | FE-002 | `usePracticeSessionReviewStage` exceeds 150-line guideline | Refactored to 212 lines; summary + navigator extracted to sub-hooks |
 | FE-007 | Raw `<button>` in pricing client | Replaced with `Button` component and preserved pending state |
 | FE-008 | Raw styled links used as buttons | Adopted `Button asChild` and standardized focus rings |
@@ -119,8 +117,6 @@ All frontend-specific UI/UX debt. Items use `FE-XXX` IDs and are cross-reference
 | FE-036 | Unused shadcn/ui components | Removed `avatar`, `label`, and `radio-group` primitives + tests |
 | FE-045 | Duplicate question flow hooks | Extracted shared core hook for both flows |
 | FE-049 | Missing `createBookmark()` factory | Added factory + barrel export + unit test |
-
-**Next frontend debt ID:** FE-054
 
 ## Archived Debt
 

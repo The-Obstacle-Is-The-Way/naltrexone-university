@@ -35,7 +35,7 @@ function getSessionOriginLabel(input: {
 
 function getResultBadge(isCorrect: boolean) {
   if (isCorrect) {
-    return <span className="text-emerald-500">Correct</span>;
+    return <span className="text-success">Correct</span>;
   }
   return <span className="text-destructive">Incorrect</span>;
 }

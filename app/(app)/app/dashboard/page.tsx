@@ -68,7 +68,9 @@ export function DashboardView({
         <Card className="gap-0 rounded-2xl p-6 shadow-sm transition-colors hover:border-border/80 hover:bg-muted/50">
           <div className="text-sm text-muted-foreground">Overall accuracy</div>
           <div className="mt-2 text-3xl font-bold font-display text-foreground">
-            {formatPercent(stats.accuracyOverall)}
+            {stats.totalAnswered > 0
+              ? formatPercent(stats.accuracyOverall)
+              : '—'}
           </div>
         </Card>
 
@@ -82,7 +84,9 @@ export function DashboardView({
         <Card className="gap-0 rounded-2xl p-6 shadow-sm transition-colors hover:border-border/80 hover:bg-muted/50">
           <div className="text-sm text-muted-foreground">Accuracy (7 days)</div>
           <div className="mt-2 text-3xl font-bold font-display text-foreground">
-            {formatPercent(stats.accuracyLast7Days)}
+            {stats.answeredLast7Days > 0
+              ? formatPercent(stats.accuracyLast7Days)
+              : '—'}
           </div>
         </Card>
       </div>
@@ -156,7 +160,7 @@ export function DashboardView({
                       </span>
                       <span className="text-muted-foreground">
                         {' '}
-                        ({formatPercent(row.accuracy)})
+                        ({row.answered > 0 ? formatPercent(row.accuracy) : '—'})
                       </span>
                     </div>
                   </Link>
@@ -185,7 +189,7 @@ export function DashboardView({
               {recentActivityRows.map((row) => {
                 const resultLabel = row.isCorrect ? 'Correct' : 'Incorrect';
                 const resultClass = row.isCorrect
-                  ? 'text-emerald-500'
+                  ? 'text-success'
                   : 'text-destructive';
 
                 if (!row.isAvailable) {
