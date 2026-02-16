@@ -28,6 +28,7 @@
 | History page restructure (tabbed Sessions + Questions, filters, replaces old review page) | SPEC-021 | Implemented | `/app/review` → `/app/history`; `GetAttemptedQuestions` with result/source filters |
 | Question Log (attempted questions) | SPEC-022 | Implemented | History "Questions" tab = filterable attempted-question log (Result/Source server-side; Difficulty/Tag client-side in v1) |
 | Question Review Mode | SPEC-023 | Implemented | `?mode=review` pre-populates previous answer + shows explanation on load |
+| Question Status Filter | SPEC-024 | Implemented | Status filter (unanswered/incorrect/marked) on Practice session creation + Quick Practice; extends `listPublishedCandidateIds` |
 | Choice Label Desync Fix | SPEC-025 | Implemented | Shuffled choice views ensure consistent labels across QuestionCard and Feedback |
 | History Tab — Review-Only Links | SPEC-026 | Implemented | History Questions tab routes all rows through `mode=review` consistently |
 | Session Review Navigation | SPEC-027 | Implemented | Sequential prev/next nav + "Question X of Y" in review; attempt identity via `sessionId`/`attemptId` URL params |
