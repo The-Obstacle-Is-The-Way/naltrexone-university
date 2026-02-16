@@ -49,7 +49,16 @@ Callers would then display "—" or "N/A" instead of "0%".
 
 ---
 
-## Related
+## Callers Requiring Update
 
-- `src/application/use-cases/get-user-stats.ts:96-100` — primary caller
-- `app/(app)/app/dashboard/page.tsx` — renders accuracy on dashboard
+1. `src/application/use-cases/get-user-stats.ts:96-100` — `accuracyOverall` and `accuracyLast7Days` in dashboard stats
+2. `src/application/use-cases/end-practice-session.ts:42` — `accuracy` in session summary totals
+3. `src/application/use-cases/get-session-history.ts:63` — `accuracy` per session row in history
+
+## UI Impact
+
+- `app/(app)/app/dashboard/page.tsx:71,85` — `formatPercent(stats.accuracyOverall)` → would render `NaN%` if null
+- `app/(app)/app/dashboard/page.tsx:159` — `formatPercent(row.accuracy)` for session history rows
+- `app/(app)/app/history/` — session history tab renders accuracy per row
+
+Note: `end-practice-session` and `get-session-history` always operate on completed sessions with `answered >= 1`, so the null path only triggers from `get-user-stats` for new users. However, the return type change propagates to all three callers' output types.
