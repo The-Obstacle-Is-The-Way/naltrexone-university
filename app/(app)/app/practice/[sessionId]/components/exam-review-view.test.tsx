@@ -71,7 +71,7 @@ describe('QuestionNavigator', () => {
     const { doc } = await renderNavigator();
 
     expect(
-      doc.querySelector('[role="navigation"][aria-label="Question navigator"]'),
+      doc.querySelector('nav[aria-label="Question navigator"]'),
     ).not.toBeNull();
   });
 

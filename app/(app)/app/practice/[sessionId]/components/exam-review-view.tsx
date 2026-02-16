@@ -31,61 +31,59 @@ export function QuestionNavigator({
   onNavigateQuestion: (questionId: string) => void;
 }) {
   return (
-    <Card
-      className="gap-0 rounded-2xl p-4 shadow-sm"
-      role="navigation"
-      aria-label="Question navigator"
-    >
-      <div className="text-sm font-medium text-foreground">
-        Question navigator
-      </div>
-      <div className="mt-3 grid grid-cols-5 gap-2 sm:grid-cols-8 lg:grid-cols-10">
-        {review.rows.map((row) => {
-          const isCurrent = row.questionId === currentQuestionId;
-          const answeredLabel = row.isAnswered
-            ? review.mode === 'tutor'
-              ? row.isCorrect === true
-                ? 'Correct'
-                : row.isCorrect === false
-                  ? 'Incorrect'
-                  : 'Answered'
-              : 'Answered'
-            : 'Unanswered';
-          const statusParts = [
-            ...(isCurrent ? (['Current'] as const) : []),
-            ...(row.markedForReview ? (['Marked for review'] as const) : []),
-            answeredLabel,
-          ];
+    <nav aria-label="Question navigator">
+      <Card className="gap-0 rounded-2xl p-4 shadow-sm">
+        <div className="text-sm font-medium text-foreground">
+          Question navigator
+        </div>
+        <div className="mt-3 grid grid-cols-5 gap-2 sm:grid-cols-8 lg:grid-cols-10">
+          {review.rows.map((row) => {
+            const isCurrent = row.questionId === currentQuestionId;
+            const answeredLabel = row.isAnswered
+              ? review.mode === 'tutor'
+                ? row.isCorrect === true
+                  ? 'Correct'
+                  : row.isCorrect === false
+                    ? 'Incorrect'
+                    : 'Answered'
+                : 'Answered'
+              : 'Unanswered';
+            const statusParts = [
+              ...(isCurrent ? (['Current'] as const) : []),
+              ...(row.markedForReview ? (['Marked for review'] as const) : []),
+              answeredLabel,
+            ];
 
-          const variant = isCurrent
-            ? 'default'
-            : row.isAnswered
-              ? 'secondary'
-              : 'outline';
+            const variant = isCurrent
+              ? 'default'
+              : row.isAnswered
+                ? 'secondary'
+                : 'outline';
 
-          return (
-            <Button
-              key={row.questionId}
-              type="button"
-              variant={variant}
-              className="relative rounded-full"
-              disabled={!row.isAvailable}
-              onClick={() => onNavigateQuestion(row.questionId)}
-              aria-label={`Question ${row.order}: ${statusParts.join(', ')}`}
-              aria-current={isCurrent ? 'step' : undefined}
-            >
-              {row.order}
-              {row.markedForReview ? (
-                <span
-                  aria-hidden="true"
-                  className="absolute -right-0.5 -top-0.5 size-2 rounded-full bg-primary"
-                />
-              ) : null}
-            </Button>
-          );
-        })}
-      </div>
-    </Card>
+            return (
+              <Button
+                key={row.questionId}
+                type="button"
+                variant={variant}
+                className="relative rounded-full"
+                disabled={!row.isAvailable}
+                onClick={() => onNavigateQuestion(row.questionId)}
+                aria-label={`Question ${row.order}: ${statusParts.join(', ')}`}
+                aria-current={isCurrent ? 'step' : undefined}
+              >
+                {row.order}
+                {row.markedForReview ? (
+                  <span
+                    aria-hidden="true"
+                    className="absolute -right-0.5 -top-0.5 size-2 rounded-full bg-primary"
+                  />
+                ) : null}
+              </Button>
+            );
+          })}
+        </div>
+      </Card>
+    </nav>
   );
 }
 
