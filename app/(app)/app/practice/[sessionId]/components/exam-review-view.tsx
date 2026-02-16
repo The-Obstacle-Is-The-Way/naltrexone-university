@@ -31,7 +31,11 @@ export function QuestionNavigator({
   onNavigateQuestion: (questionId: string) => void;
 }) {
   return (
-    <Card className="gap-0 rounded-2xl p-4 shadow-sm">
+    <Card
+      className="gap-0 rounded-2xl p-4 shadow-sm"
+      role="navigation"
+      aria-label="Question navigator"
+    >
       <div className="text-sm font-medium text-foreground">
         Question navigator
       </div>
@@ -68,6 +72,7 @@ export function QuestionNavigator({
               disabled={!row.isAvailable}
               onClick={() => onNavigateQuestion(row.questionId)}
               aria-label={`Question ${row.order}: ${statusParts.join(', ')}`}
+              aria-current={isCurrent ? 'step' : undefined}
             >
               {row.order}
               {row.markedForReview ? (
