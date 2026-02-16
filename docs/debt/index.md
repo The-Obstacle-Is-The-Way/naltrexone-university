@@ -19,7 +19,6 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 |----|-------|----------|--------|
 | [DEBT-219](debt-219-sequential-stripe-api-reconciliation.md) | Sequential Stripe API Calls in Reconciliation Cron Job | P3 | Open |
 | [DEBT-220](debt-220-duplicated-enrich-with-question-boilerplate.md) | Duplicated enrichWithQuestion Boilerplate Across 4 Use Cases | P3 | Open |
-| [DEBT-221](debt-221-compute-accuracy-conflates-zero-with-no-attempts.md) | `computeAccuracy()` Conflates "No Attempts" With "0% Accuracy" | P4 | Open |
 | [DEBT-222](debt-222-bookmark-retry-state-should-be-refs.md) | Bookmark Idempotency Key Should Use `useRef` (retryCount must stay as state) | P4 | Open |
 | [DEBT-223](debt-223-verbose-set-array-dedup-pattern.md) | Verbose Set+Array Dedup Pattern in get-user-stats.ts | P4 | Open |
 
@@ -31,6 +30,7 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 | ID | Title | Priority | Resolved | GitHub Issue |
 |----|-------|----------|----------|--------------|
+| [DEBT-221](../_archive/debt/debt-221-compute-accuracy-conflates-zero-with-no-attempts.md) | `computeAccuracy()` Conflates "No Attempts" With "0% Accuracy" | P4 | 2026-02-16 | — |
 | [DEBT-218](../_archive/debt/debt-218-server-component-pages-missing-maxduration.md) | Server Component Pages Missing maxDuration + Dead Code in practice-logic.ts | P2 | 2026-02-15 | — |
 | [DEBT-217](../_archive/debt/debt-217-history-back-link-loses-tab-and-filter-state.md) | History Back Link Loses Tab and Filter State | P2 | 2026-02-15 | — |
 | [DEBT-213](../_archive/debt/debt-213-useeffect-derived-state-sync-antipatterns.md) | useEffect Derived-State Sync Anti-Patterns in Practice Hooks (5 instances) | P4 | 2026-02-14 | — |
