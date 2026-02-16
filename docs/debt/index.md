@@ -59,7 +59,7 @@ All frontend-specific UI/UX debt. Items use `FE-XXX` IDs and are cross-reference
 | ID | Summary | File(s) |
 |----|---------|---------|
 | [FE-054](fe-054-hardcoded-emerald-color-bypasses-design-tokens.md) | Hardcoded `text-emerald-500` bypasses design system tokens (3 files) | session-breakdown-list.tsx, history-questions-tab.tsx, dashboard/page.tsx |
-| [FE-055](fe-055-exam-navigator-missing-nav-landmark.md) | Exam review navigator missing `nav` landmark and `aria-controls` | exam-review-view.tsx |
+| [FE-055](fe-055-exam-navigator-missing-nav-landmark.md) | Practice session question navigator missing navigation landmark + `aria-current` | exam-review-view.tsx |
 
 **Next Frontend ID:** FE-056
 
@@ -119,8 +119,6 @@ All frontend-specific UI/UX debt. Items use `FE-XXX` IDs and are cross-reference
 | FE-036 | Unused shadcn/ui components | Removed `avatar`, `label`, and `radio-group` primitives + tests |
 | FE-045 | Duplicate question flow hooks | Extracted shared core hook for both flows |
 | FE-049 | Missing `createBookmark()` factory | Added factory + barrel export + unit test |
-
-**Next frontend debt ID:** FE-054
 
 ## Archived Debt
 

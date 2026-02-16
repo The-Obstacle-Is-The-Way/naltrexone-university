@@ -42,4 +42,4 @@ Both preserve insertion order. The one-liner is more idiomatic and easier to rea
 
 ## Related
 
-- `get-bookmarks.ts:32` — already uses `[...new Set(...)]` pattern correctly
+- `src/application/use-cases/get-bookmarks.ts:32` — already uses `[...new Set(...)]` pattern correctly

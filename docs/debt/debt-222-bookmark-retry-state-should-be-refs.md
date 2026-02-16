@@ -46,7 +46,10 @@ Replace only `bookmarkIdempotencyKey` with `useRef`:
 const bookmarkIdempotencyKeyRef = useRef<string | null>(null);
 ```
 
-Update `onToggleBookmark` callback and `toggleBookmarkForQuestion` call to use `.current` instead of the setter.
+Update `onToggleBookmark` to read/write `.current` instead of state. To keep `toggleBookmarkForQuestion()` unchanged, pass a setter that mutates the ref without triggering a re-render:
+
+- `bookmarkIdempotencyKey: bookmarkIdempotencyKeyRef.current`
+- `setBookmarkIdempotencyKey: (key) => { bookmarkIdempotencyKeyRef.current = key; }`
 
 ## Acceptance Criteria
 
@@ -54,11 +57,11 @@ Update `onToggleBookmark` callback and `toggleBookmarkForQuestion` call to use `
 - [ ] `bookmarkRetryCount` remains as `useState` (effect dependency)
 - [ ] No unnecessary re-renders triggered by idempotency key updates
 - [ ] Existing bookmark behavior unchanged
-- [ ] Tests continue to pass
+- [ ] Tests continue to pass (`app/(app)/app/practice/hooks/use-practice-question-bookmarks.test.tsx`)
 
 ---
 
 ## Related
 
-- `bookmark-message-timeout.ts` — related bookmark timing logic
-- `practice-page-logic.ts:203-204` — sets next idempotency key after toggle
+- `app/(app)/app/practice/hooks/bookmark-message-timeout.ts` — related bookmark timing logic
+- `app/(app)/app/practice/practice-page-logic.ts:147-207` — `toggleBookmarkForQuestion()` rotates the idempotency key
