@@ -1,7 +1,7 @@
 # Technical Debt Register
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-02-15
+**Last Updated:** 2026-02-16
 
 ---
 
@@ -15,9 +15,15 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 ## Debt Index (Active)
 
-*No active debt items.*
+| ID | Title | Priority | Status |
+|----|-------|----------|--------|
+| [DEBT-219](debt-219-sequential-stripe-api-reconciliation.md) | Sequential Stripe API Calls in Reconciliation Cron Job | P3 | Open |
+| [DEBT-220](debt-220-duplicated-enrich-with-question-boilerplate.md) | Duplicated enrichWithQuestion Boilerplate Across 4 Use Cases | P3 | Open |
+| [DEBT-221](debt-221-compute-accuracy-conflates-zero-with-no-attempts.md) | `computeAccuracy()` Conflates "No Attempts" With "0% Accuracy" | P4 | Open |
+| [DEBT-222](debt-222-bookmark-retry-state-should-be-refs.md) | Bookmark Retry/Idempotency State Should Use `useRef` | P4 | Open |
+| [DEBT-223](debt-223-verbose-set-array-dedup-pattern.md) | Verbose Set+Array Dedup Pattern in get-user-stats.ts | P4 | Open |
 
-**Next Debt ID:** DEBT-219
+**Next Debt ID:** DEBT-224
 
 ---
 
@@ -50,7 +56,12 @@ All frontend-specific UI/UX debt. Items use `FE-XXX` IDs and are cross-reference
 
 ### P3 — Fix as encountered
 
-*No active P3 items.*
+| ID | Summary | File(s) |
+|----|---------|---------|
+| [FE-054](fe-054-hardcoded-emerald-color-bypasses-design-tokens.md) | Hardcoded `text-emerald-500` bypasses design system tokens (3 files) | session-breakdown-list.tsx, history-questions-tab.tsx, dashboard/page.tsx |
+| [FE-055](fe-055-exam-navigator-missing-nav-landmark.md) | Exam review navigator missing `nav` landmark and `aria-controls` | exam-review-view.tsx |
+
+**Next Frontend ID:** FE-056
 
 ### Frontend Debt — Resolved
 

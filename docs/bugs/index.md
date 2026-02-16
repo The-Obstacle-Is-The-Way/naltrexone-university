@@ -1,7 +1,7 @@
 # Bug Reports
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-02-13
+**Last Updated:** 2026-02-16
 
 ---
 
@@ -17,9 +17,9 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 | ID | Title | Priority | Status |
 |----|-------|----------|--------|
-| — | No active bugs | — | — |
+| [BUG-133](bug-133-stale-closure-practice-session-onsubmit.md) | Stale Closure in Practice Session onSubmit After Async Await | P3 | Open |
 
-**Next Bug ID:** BUG-133
+**Next Bug ID:** BUG-134
 
 ## Recently Triaged
 
