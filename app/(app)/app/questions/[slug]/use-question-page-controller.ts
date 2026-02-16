@@ -14,9 +14,6 @@ import { selectChoiceIfAllowed } from '@/app/(app)/app/shared/question-guards';
 import type { QuestionMode, QuestionOrigin } from '@/lib/routes';
 import { useIsMounted } from '@/lib/use-is-mounted';
 import { withTimeout } from '@/lib/with-timeout';
-
-const SESSION_REVIEW_TIMEOUT_MS = 10_000;
-
 import { getPracticeSessionReview } from '@/src/adapters/controllers/practice-controller';
 import { submitAnswer } from '@/src/adapters/controllers/question-controller';
 import {
@@ -26,6 +23,8 @@ import {
 } from '@/src/adapters/controllers/question-view-controller';
 import type { AvailablePracticeSessionReviewRow } from '@/src/application/use-cases/get-practice-session-review';
 import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
+
+const SESSION_REVIEW_TIMEOUT_MS = 10_000;
 
 export type UseQuestionPageControllerInput = {
   slug: string;

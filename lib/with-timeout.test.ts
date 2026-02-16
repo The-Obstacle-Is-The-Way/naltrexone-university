@@ -56,15 +56,25 @@ describe('withTimeout', () => {
   });
 
   it('rejects with TimeoutError when promise exceeds timeout', async () => {
+    vi.useFakeTimers();
     const never = new Promise<string>(() => {});
-    await expect(withTimeout(never, 50)).rejects.toThrow(TimeoutError);
+    const promise = withTimeout(never, 50);
+    const expectation = expect(promise).rejects.toThrow(TimeoutError);
+
+    await vi.advanceTimersByTimeAsync(50);
+    await expectation;
   });
 
   it('includes timeout duration in TimeoutError', async () => {
+    vi.useFakeTimers();
     const never = new Promise<string>(() => {});
-    await expect(withTimeout(never, 75)).rejects.toThrow(
+    const promise = withTimeout(never, 75);
+    const expectation = expect(promise).rejects.toThrow(
       'Operation timed out after 75ms',
     );
+
+    await vi.advanceTimersByTimeAsync(75);
+    await expectation;
   });
 
   it('preserves the resolved value', async () => {
