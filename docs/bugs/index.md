@@ -17,20 +17,17 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 | ID | Title | Priority | Status |
 |----|-------|----------|--------|
-| [BUG-135](bug-135-empty-practice-session-no-count-validation.md) | StartPracticeSession Accepts count <= 0, Creating Empty Sessions | P2 | Open |
 | [BUG-136](bug-136-logger-uses-inlined-node-env-for-level.md) | Logger Uses Unreliable Inlined NODE_ENV for Log Level Selection | P2 | Open |
 | [BUG-137](bug-137-entitlement-off-by-one-period-end-boundary.md) | Entitlement Check Off-by-One at Period End Boundary | P3 | Open |
-| [BUG-138](bug-138-session-history-pagination-total-inaccurate.md) | Session History Pagination Total Inaccurate When Defensive Skip Triggers | P3 | Open |
 | [BUG-139](bug-139-get-previous-attempt-silent-null-on-data-mismatch.md) | GetPreviousAttemptUseCase Silently Returns Null on Data Integrity Mismatch | P3 | Open |
-| [BUG-140](bug-140-payment-processing-excluded-from-entitled-statuses.md) | `paymentProcessing` Excluded from EntitledStatuses — Potential User Lockout | P3 | Open |
-| [BUG-141](bug-141-use-case-ports-file-incomplete.md) | `ports/use-cases.ts` Only Defines 1 of 17 Use Case Type Aliases | P4 | Open |
-| [BUG-142](bug-142-container-logger-fallback-bypasses-redaction.md) | Container Logger Fallback to `console` Bypasses Secret Redaction | P3 | Open |
 
 **Next Bug ID:** BUG-143
 
 ## Audit #3 — Codebase-Wide Bug Sweep (2026-02-16)
 
-Five-axis audit covering domain, application, adapters, frontend, and configuration layers. Ran 5 parallel exploration agents, then manually verified every P0/P1 claim. **Multiple agent-reported "critical" findings turned out to be false positives** — the following were confirmed incorrect after manual code review:
+Five-axis audit covering domain, application, adapters, frontend, and configuration layers. Ran 5 parallel exploration agents, then **triple-checked every finding** with full vertical/horizontal tracer-bullet traces through the actual code paths.
+
+**14 agent-reported findings were confirmed as false positives** after manual code review:
 
 - DB singleton `NODE_ENV` pattern (standard Next.js pattern, correct as-is)
 - `mapWithConcurrencyLimit` race condition (JS is single-threaded; `nextIndex` access is atomic between await points)
@@ -38,11 +35,16 @@ Five-axis audit covering domain, application, adapters, frontend, and configurat
 - Stripe SDK `.bind()` missing in canceler (method calls on objects bind `this` correctly)
 - Question repo `or()` with empty array (guarded by `hasStatusFilter` check)
 - Frontend stale closure in practice controller (refs ARE the solution, not the problem)
-- Missing pricing `error.tsx` (it exists)
-- Subscribe button missing `disabled` (already has `disabled={pending}`)
+- Missing pricing `error.tsx` (it exists at `app/pricing/error.tsx`)
+- Subscribe button missing `disabled` (already has `disabled={pending}` on line 17)
 - `crypto.randomUUID()` missing fallback (supported in all modern browsers)
+- `StartPracticeSession` count <= 0 (Zod schema enforces `min(1)`, UI clamps to `[1,100]`, output requires `min(1)`)
+- Session history pagination total inaccurate (Drizzle repo filters `isNotNull(endedAt)` on both COUNT and ROWS)
+- `paymentProcessing` excluded from `EntitledStatuses` (intentional design; BUG-077 resolved this with specific messaging; test coverage exists)
+- `ports/use-cases.ts` incomplete (architectural preference with zero runtime impact)
+- Container logger fallback bypasses redaction (unreachable code — no caller passes `undefined` logger; DEBT-088 resolved)
 
-Only verified, genuine issues are filed above as BUG-135 through BUG-142.
+Only **3 verified, genuine issues** are filed above as BUG-136, BUG-137, and BUG-139. Each includes full stack traces proving the bug exists.
 
 ---
 
@@ -114,7 +116,7 @@ Only verified, genuine issues are filed above as BUG-135 through BUG-142.
 
 - **2026-02-02:** [Foundation Audit Report #1](../_archive/audits/audit-001-foundation-report.md) — Vertical/horizontal trace of all critical paths
 - **2026-02-07:** [Foundation Audit Report #2](../_archive/audits/audit-002-foundation-report-2.md) — Six-axis deep audit (billing, practice, auth, UI, DB, code quality)
-- **2026-02-16:** Audit #3 — Five-axis codebase sweep (domain, application, adapters, frontend, config). BUG-135 through BUG-142.
+- **2026-02-16:** Audit #3 — Five-axis codebase sweep (domain, application, adapters, frontend, config). 3 confirmed bugs (BUG-136, BUG-137, BUG-139) out of 17 initial findings after triple-check verification.
 
 ## Archived Bugs
 
