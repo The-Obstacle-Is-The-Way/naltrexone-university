@@ -37,7 +37,7 @@ describe('ReviewQuestionNavigator', () => {
     historyHref?: string;
   }) {
     const { ReviewQuestionNavigator } = await import(
-      './review-question-navigator'
+      '@/app/(app)/app/questions/[slug]/components/review-question-navigator'
     );
     const navigation = input?.navigation ?? baseNavigation;
     const html = renderToStaticMarkup(
