@@ -102,11 +102,18 @@ export async function POST(req: Request) {
   );
   const offset = parseNonNegativeInt(url.searchParams.get('offset'), 0);
   const dryRun = parseBoolean(url.searchParams.get('dryRun'), true);
+  const concurrencyParam = url.searchParams.get('concurrency');
+  const concurrency =
+    concurrencyParam !== null
+      ? Math.max(1, parseNonNegativeInt(concurrencyParam, 10))
+      : null;
 
   let result: unknown;
   try {
     result = await reconcileStripeSubscriptions(
-      { limit, offset, dryRun },
+      concurrency === null
+        ? { limit, offset, dryRun }
+        : { limit, offset, dryRun, concurrency },
       {
         stripe: container.stripe,
         priceIds: {

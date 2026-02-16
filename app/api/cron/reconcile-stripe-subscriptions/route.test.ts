@@ -190,6 +190,31 @@ describe('POST /api/cron/reconcile-stripe-subscriptions', () => {
     );
   });
 
+  it('parses concurrency query param before reconciliation when provided', async () => {
+    const response = await POST(
+      new Request(
+        'http://localhost/api/cron/reconcile-stripe-subscriptions?limit=12&offset=7&dryRun=false&concurrency=3',
+        {
+          method: 'POST',
+          headers: {
+            authorization: 'Bearer test-secret',
+          },
+        },
+      ),
+    );
+
+    expect(response.status).toBe(200);
+    expect(reconcileStripeSubscriptions).toHaveBeenCalledWith(
+      {
+        limit: 12,
+        offset: 7,
+        dryRun: false,
+        concurrency: 3,
+      },
+      expect.any(Object),
+    );
+  });
+
   it('returns 429 when rate limited', async () => {
     const rateLimiter = new FakeRateLimiter({
       success: false,

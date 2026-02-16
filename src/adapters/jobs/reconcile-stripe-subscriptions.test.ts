@@ -103,6 +103,160 @@ function createStripeStub(input: {
 }
 
 describe('reconcileStripeSubscriptions', () => {
+  it('processes rows with bounded concurrency (default 10)', async () => {
+    function createDeferred<T>() {
+      let resolve: (value: T) => void = () => undefined;
+      let reject: (reason?: unknown) => void = () => undefined;
+      const promise = new Promise<T>((res, rej) => {
+        resolve = res;
+        reject = rej;
+      });
+      return { promise, resolve, reject };
+    }
+
+    async function flushUntil(
+      condition: () => boolean,
+      input?: { maxTicks?: number },
+    ) {
+      const maxTicks = input?.maxTicks ?? 50;
+      for (let i = 0; i < maxTicks; i += 1) {
+        if (condition()) return;
+        await Promise.resolve();
+      }
+      throw new Error('Timed out waiting for condition');
+    }
+
+    const rows = Array.from({ length: 12 }, (_, i) => ({
+      userId: `user_${i + 1}`,
+      stripeSubscriptionId: `sub_${i + 1}`,
+    }));
+
+    const subscriptionsById: Record<string, StripeSubscriptionFixture> = {};
+    const subscriptionIdByCustomerId = new Map<string, string>();
+    for (const row of rows) {
+      const customerId = `cus_${row.stripeSubscriptionId}`;
+      subscriptionsById[row.stripeSubscriptionId] = createSubscriptionFixture({
+        id: row.stripeSubscriptionId,
+        userId: row.userId,
+        customerId,
+        status: 'active',
+      });
+      subscriptionIdByCustomerId.set(customerId, row.stripeSubscriptionId);
+    }
+
+    let inFlight = 0;
+    let maxInFlight = 0;
+    const resolvedSubscriptionIds = new Set<string>();
+    const deferredBySubscriptionId = new Map<
+      string,
+      ReturnType<typeof createDeferred<StripeSubscriptionFixture>>
+    >();
+
+    const retrieve = vi.fn((subscriptionId: string) => {
+      inFlight += 1;
+      maxInFlight = Math.max(maxInFlight, inFlight);
+
+      const deferred = createDeferred<StripeSubscriptionFixture>();
+      deferredBySubscriptionId.set(subscriptionId, deferred);
+
+      return deferred.promise.finally(() => {
+        inFlight -= 1;
+      });
+    });
+
+    const list = vi.fn(async (input: { customer: string }) => {
+      const subscriptionId = subscriptionIdByCustomerId.get(input.customer);
+      if (!subscriptionId) {
+        throw new Error(`Unknown customer: ${input.customer}`);
+      }
+      return {
+        data: [{ id: subscriptionId, status: 'active' as const }],
+      };
+    });
+
+    const stripe = {
+      subscriptions: {
+        retrieve,
+        list,
+        cancel: vi.fn(async () => ({ id: 'sub_canceled' })),
+      },
+      customers: {
+        create: vi.fn(async () => ({ id: 'cus_unused' })),
+      },
+      checkout: {
+        sessions: {
+          create: vi.fn(async () => ({ id: 'cs_unused', url: null })),
+          list: vi.fn(async () => ({ data: [] })),
+          retrieve: vi.fn(async () => ({ id: 'cs_unused', url: null })),
+          expire: vi.fn(async () => ({ id: 'cs_unused', url: null })),
+        },
+      },
+      billingPortal: {
+        sessions: {
+          create: vi.fn(async () => ({ url: null })),
+        },
+      },
+      webhooks: {
+        constructEvent: vi.fn(() => ({
+          id: 'evt_unused',
+          type: 'unused',
+          data: { object: {} },
+        })),
+      },
+    } as const;
+
+    const stripeCustomers = new FakeStripeCustomerRepository();
+    const subscriptions = new FakeSubscriptionRepository();
+    const logger = new FakeLogger();
+
+    const promise = reconcileStripeSubscriptions(
+      { limit: 20, offset: 0 },
+      {
+        stripe,
+        priceIds: { monthly: 'price_m', annual: 'price_a' },
+        logger,
+        listLocalSubscriptions: async () => rows,
+        transaction: async (fn) => fn({ stripeCustomers, subscriptions }),
+      },
+    );
+
+    await flushUntil(() => retrieve.mock.calls.length === 10);
+
+    expect(retrieve).toHaveBeenCalledTimes(10);
+    expect(maxInFlight).toBe(10);
+
+    for (const [subscriptionId, deferred] of deferredBySubscriptionId) {
+      const fixture = subscriptionsById[subscriptionId];
+      if (!fixture) throw new Error(`Missing fixture for ${subscriptionId}`);
+      deferred.resolve(fixture);
+      resolvedSubscriptionIds.add(subscriptionId);
+    }
+
+    await flushUntil(() => retrieve.mock.calls.length === 12);
+
+    const remainingSubscriptionIds = rows
+      .map((row) => row.stripeSubscriptionId)
+      .filter((subscriptionId) => !resolvedSubscriptionIds.has(subscriptionId));
+    expect(remainingSubscriptionIds).toHaveLength(2);
+
+    for (const subscriptionId of remainingSubscriptionIds) {
+      const fixture = subscriptionsById[subscriptionId];
+      if (!fixture) throw new Error(`Missing fixture for ${subscriptionId}`);
+      const deferred = deferredBySubscriptionId.get(subscriptionId);
+      if (!deferred) {
+        throw new Error(`Missing deferred for ${subscriptionId}`);
+      }
+      deferred.resolve(fixture);
+      resolvedSubscriptionIds.add(subscriptionId);
+    }
+
+    await expect(promise).resolves.toMatchObject({
+      scanned: 12,
+      updated: 12,
+      failed: 0,
+    });
+  });
+
   it('upserts subscriptions and customer mappings for local subscriptions', async () => {
     const subscription = createSubscriptionFixture({
       id: 'sub_123',
