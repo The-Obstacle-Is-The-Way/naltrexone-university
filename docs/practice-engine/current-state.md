@@ -8,7 +8,7 @@
 
 ## 1. What's Fully Working
 
-- All three practice modes (ad-hoc, tutor, exam) + Quick Practice (filters-based, no session)
+- Two session modes (tutor, exam) + Quick Practice route (stateless, filters-based, no session tracking)
 - Session lifecycle: create → answer → navigate → review → end → summary
 - In-run question navigation (back/jump) in both tutor and exam modes via Question Navigator grid
 - Per-question session summary with explanations
@@ -27,6 +27,7 @@
 
 ## 2. Open Debt (Practice-Specific)
 
+- **BS-014:** Practice Starter — Silent truncation when fewer questions match than requested count (no spec yet)
 - **BS-018:** Question View UX Unification — Tutor mode loses answered state on revisit; no Previous button in active practice; navigation placement inconsistent between practice and review (specced as SPEC-030)
 
 ---
