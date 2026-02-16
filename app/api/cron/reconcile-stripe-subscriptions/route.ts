@@ -2,6 +2,7 @@ import { createHash, timingSafeEqual } from 'node:crypto';
 import { NextResponse } from 'next/server';
 import { createContainer } from '@/lib/container';
 import {
+  RECONCILE_STRIPE_SUBSCRIPTIONS_DEFAULT_CONCURRENCY,
   RECONCILE_STRIPE_SUBSCRIPTIONS_MAX_LIMIT,
   reconcileStripeSubscriptions,
 } from '@/src/adapters/jobs/reconcile-stripe-subscriptions';
@@ -105,7 +106,13 @@ export async function POST(req: Request) {
   const concurrencyParam = url.searchParams.get('concurrency');
   const concurrency =
     concurrencyParam !== null
-      ? Math.max(1, parseNonNegativeInt(concurrencyParam, 10))
+      ? Math.max(
+          1,
+          parseNonNegativeInt(
+            concurrencyParam,
+            RECONCILE_STRIPE_SUBSCRIPTIONS_DEFAULT_CONCURRENCY,
+          ),
+        )
       : null;
 
   let result: unknown;

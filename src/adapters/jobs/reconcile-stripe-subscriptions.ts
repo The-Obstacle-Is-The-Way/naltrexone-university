@@ -11,8 +11,8 @@ import { ApplicationError } from '@/src/application/errors';
 
 const DEFAULT_LIMIT = 100;
 export const RECONCILE_STRIPE_SUBSCRIPTIONS_MAX_LIMIT = 500;
-const DEFAULT_CONCURRENCY = 10;
-const MAX_CONCURRENCY = 25;
+export const RECONCILE_STRIPE_SUBSCRIPTIONS_DEFAULT_CONCURRENCY = 10;
+export const RECONCILE_STRIPE_SUBSCRIPTIONS_MAX_CONCURRENCY = 25;
 const SUBSCRIPTION_LIST_LIMIT = 100;
 const BLOCKING_STATUSES = new Set([
   'active',
@@ -76,10 +76,13 @@ export async function reconcileStripeSubscriptions(
   const safeOffset = Math.max(0, toSafeInt(input.offset, 0));
   const dryRun = input.dryRun ?? true;
   const safeConcurrency = Math.min(
-    MAX_CONCURRENCY,
+    RECONCILE_STRIPE_SUBSCRIPTIONS_MAX_CONCURRENCY,
     Math.max(
       1,
-      toSafeInt(input.concurrency ?? DEFAULT_CONCURRENCY, DEFAULT_CONCURRENCY),
+      toSafeInt(
+        input.concurrency ?? RECONCILE_STRIPE_SUBSCRIPTIONS_DEFAULT_CONCURRENCY,
+        RECONCILE_STRIPE_SUBSCRIPTIONS_DEFAULT_CONCURRENCY,
+      ),
     ),
   );
 

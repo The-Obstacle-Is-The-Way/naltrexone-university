@@ -26,7 +26,10 @@ vi.mock('@/lib/container', () => ({
   createContainer,
 }));
 
-import { RECONCILE_STRIPE_SUBSCRIPTIONS_MAX_LIMIT } from '@/src/adapters/jobs/reconcile-stripe-subscriptions';
+import {
+  RECONCILE_STRIPE_SUBSCRIPTIONS_DEFAULT_CONCURRENCY,
+  RECONCILE_STRIPE_SUBSCRIPTIONS_MAX_LIMIT,
+} from '@/src/adapters/jobs/reconcile-stripe-subscriptions';
 import { POST } from './route';
 
 type CronContainer = {
@@ -246,7 +249,9 @@ describe('POST /api/cron/reconcile-stripe-subscriptions', () => {
 
     expect(response.status).toBe(200);
     expect(reconcileStripeSubscriptions).toHaveBeenCalledWith(
-      expect.objectContaining({ concurrency: 10 }),
+      expect.objectContaining({
+        concurrency: RECONCILE_STRIPE_SUBSCRIPTIONS_DEFAULT_CONCURRENCY,
+      }),
       expect.any(Object),
     );
   });
@@ -264,7 +269,9 @@ describe('POST /api/cron/reconcile-stripe-subscriptions', () => {
 
     expect(response.status).toBe(200);
     expect(reconcileStripeSubscriptions).toHaveBeenCalledWith(
-      expect.objectContaining({ concurrency: 10 }),
+      expect.objectContaining({
+        concurrency: RECONCILE_STRIPE_SUBSCRIPTIONS_DEFAULT_CONCURRENCY,
+      }),
       expect.any(Object),
     );
   });
