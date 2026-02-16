@@ -2,7 +2,7 @@
 
 > **Parent:** [Practice Engine Index](./index.md)
 > **Scope:** Maps each part of the Practice Engine to the spec that defines it
-> **Last Verified:** 2026-02-12
+> **Last Verified:** 2026-02-16
 
 ---
 
@@ -28,11 +28,17 @@
 | History page restructure (tabbed Sessions + Questions, filters, replaces old review page) | SPEC-021 | Implemented | `/app/review` → `/app/history`; `GetAttemptedQuestions` with result/source filters |
 | Question Log (attempted questions) | SPEC-022 | Implemented | History "Questions" tab = filterable attempted-question log (Result/Source server-side; Difficulty/Tag client-side in v1) |
 | Question Review Mode | SPEC-023 | Implemented | `?mode=review` pre-populates previous answer + shows explanation on load |
+| Choice Label Desync Fix | SPEC-025 | Implemented | Shuffled choice views ensure consistent labels across QuestionCard and Feedback |
+| History Tab — Review-Only Links | SPEC-026 | Implemented | History Questions tab routes all rows through `mode=review` consistently |
+| Session Review Navigation | SPEC-027 | Implemented | Sequential prev/next nav + "Question X of Y" in review; attempt identity via `sessionId`/`attemptId` URL params |
+| Status Filter Segmented Control + Review Navigator | SPEC-028 | Implemented | Segmented control for status/difficulty filters; color-coded question navigator grid in review mode |
+| Dev Environment Resilience | SPEC-029 | Implemented | Client-side timeouts, observable failure states, `ErrorCard` recovery actions |
+| Question View UX Unification | SPEC-030 | Ready | Tutor state persistence fix, Previous button in practice, review nav relocation to bottom bar |
 
 ---
 
 ## 2. Spec Drift Summary
 
-As of **2026-02-12**, the previously identified spec drift items for the Practice Engine have been paid down by syncing the core specs (ports, use cases, schema, repositories, controllers) to the current implementation. SPEC-021 (History page restructure), SPEC-022 (Question Log), and SPEC-023 (Review Mode) changes are now reflected.
+As of **2026-02-16**, the previously identified spec drift items for the Practice Engine have been paid down by syncing the core specs (ports, use cases, schema, repositories, controllers) to the current implementation. SPEC-021 through SPEC-029 are all implemented and reflected. SPEC-030 (Question View UX Unification) is specced and ready for implementation.
 
 When behavior changes introduce new public contracts (ports/use case IO/controller outputs), update the corresponding spec and add a changelog entry.

@@ -2,7 +2,7 @@
 
 > **Parent:** [Practice Engine Index](./index.md)
 > **Scope:** Routes, hooks, data flow, shared UI components, error handling
-> **Last Verified:** 2026-02-12
+> **Last Verified:** 2026-02-16
 
 ---
 
@@ -24,7 +24,7 @@
 
 ```text
 PracticePageClient (/app/practice)
-└── usePracticeSessionControls (53 lines, composite)
+└── usePracticeSessionControls (63 lines, composite)
     ├── usePracticeSessionStart (126 lines)
     ├── usePracticeSessionTags (34 lines)
     └── usePracticeIncompleteSession (66 lines)
@@ -43,14 +43,14 @@ Note: Session history was moved to the dedicated `/app/history` route (SPEC-021)
 
 ```text
 PracticeSessionPageClient
-└── usePracticeSessionPageController (112 lines, composite)
-    ├── usePracticeSessionQuestionFlow (227 lines) ← over 150-line guideline
+└── usePracticeSessionPageController (121 lines, composite)
+    ├── usePracticeSessionQuestionFlow (238 lines) ← over 150-line guideline
     ├── usePracticeQuestionBookmarks (116 lines, reused)
     ├── usePracticeSessionReviewStage (133 lines)
     │   ├── usePracticeSessionReviewStageState (state machine for review stage)
     │   ├── usePracticeSessionNavigator (70 lines)
     │   └── usePracticeSessionSummaryReview (52 lines)
-    └── usePracticeSessionMarkForReview (140 lines)
+    └── usePracticeSessionMarkForReview (155 lines)
 ```
 
 ---

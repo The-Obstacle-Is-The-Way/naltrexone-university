@@ -1,8 +1,10 @@
 # Frontend Standards
 
-**Last Updated:** 2026-02-08
+**Last Updated:** 2026-02-16
 
 Canonical reference for all frontend patterns, component usage, accessibility, and styling conventions. Every UI change MUST be consistent with this document. If a pattern isn't documented here, don't invent one — add it here first.
+
+**See also:** [Design Principles](./design-principles.md) — Layout composition patterns, navigation zones, action bar conventions, state persistence expectations.
 
 ---
 

@@ -88,7 +88,7 @@ Dependencies point **inward only** (Clean Architecture, ADR-001). The domain lay
 | [Spec Coverage Map](./spec-coverage-map.md) | Maps each component to its defining spec; drift summary |
 | [File Index](./file-index.md) | Directory listings for all practice-engine source files |
 | [Content Pipeline](./content-pipeline.md) | Full end-to-end trace: MDX authoring → seeding → database → shuffling → rendering. Includes BS-011 Bug B root cause analysis and developer operations (import, seed, troubleshoot). |
-| [Question Rendering Architecture](./question-rendering-architecture.md) | How questions are rendered, navigated, and state-managed across all 5 viewing contexts. Shared vs context-specific components, state persistence bug, navigation patterns. |
+| [Question Rendering Architecture](./question-rendering-architecture.md) | How questions are rendered, navigated, and state-managed across all 6 viewing contexts. Shared vs context-specific components, state persistence bug, navigation patterns. |
 
 ---
 
@@ -111,6 +111,7 @@ Dependencies point **inward only** (Clean Architecture, ADR-001). The domain lay
 | [ADR-006](../adr/adr-006-error-handling-strategy.md) | Error handling (ApplicationError) |
 | [ADR-015](../adr/adr-015-idempotency-strategy.md) | Idempotency strategy |
 | [Frontend Standards](../frontend/standards.md) | UI/UX standards and known violations |
+| [Frontend Design Principles](../frontend/design-principles.md) | Navigation zones, action bar composition, state persistence expectations |
 | [BS-011](../_archive/brainstorming/bs-011-history-review-wiring-and-choice-label-desync.md) | History review wiring + choice label desync (resolved; see SPEC-025, SPEC-026) |
 | [Debt Register](../debt/index.md) | All open technical debt |
 

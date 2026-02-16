@@ -2,20 +2,24 @@
 
 > **Parent:** [Practice Engine Index](./index.md)
 > **Scope:** What's working, open debt, SPEC-019 status, product decisions
-> **Last Verified:** 2026-02-12
+> **Last Verified:** 2026-02-16
 
 ---
 
 ## 1. What's Fully Working
 
-- All three practice modes (ad-hoc, tutor, exam)
+- All three practice modes (ad-hoc, tutor, exam) + Quick Practice (filters-based, no session)
 - Session lifecycle: create → answer → navigate → review → end → summary
-- In-run question navigation (back/jump) in both tutor and exam modes
+- In-run question navigation (back/jump) in both tutor and exam modes via Question Navigator grid
 - Per-question session summary with explanations
 - Bookmark toggle on question view
-- Dashboard stats with session context (grouping by session)
+- Dashboard stats with session context (grouping by session), attempt-specific review links
 - History page with tabbed Sessions + Questions views (SPEC-021)
 - Session history with drill-down to per-question breakdown
+- Session review navigation with sequential Previous/Next and "Question X of Y" (SPEC-027)
+- Color-coded question navigator grid in review mode showing correct/incorrect/unanswered (SPEC-028)
+- Status and difficulty filters with segmented control redesign (SPEC-028)
+- Client-side timeouts and observable failure states for resilient dev experience (SPEC-029)
 - Error handling with visible recovery actions everywhere
 - Rate limiting on mutation-heavy actions; optional idempotency keys supported for key mutations
 
@@ -23,10 +27,7 @@
 
 ## 2. Open Debt (Practice-Specific)
 
-- **BS-009:** Session Review Navigation Gap — review-mode back links lose session context; no session-aware next/prev navigation
-- **BS-010:** Review Mode Attempt Identity Gap — review mode always loads the latest attempt for a question (no `attemptId` in URL)
-- **BS-011 Bug A:** History Questions tab uses `mode=review` only for Correct rows (Incorrect rows route to reattempt URLs); inconsistent with other review entry points + subtitle copy
-- **BS-011 Bug B:** Choice label desync on standalone question page (QuestionCard labels vs Feedback choice explanations)
+- **BS-018:** Question View UX Unification — Tutor mode loses answered state on revisit; no Previous button in active practice; navigation placement inconsistent between practice and review (specced as SPEC-030)
 
 ---
 
@@ -40,7 +41,7 @@
 
 ---
 
-## 4. Product Decisions (2026-02-12)
+## 4. Product Decisions (2026-02-16)
 
 | Decision | Outcome | Reference |
 |----------|---------|-----------|
