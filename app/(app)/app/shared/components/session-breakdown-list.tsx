@@ -46,7 +46,7 @@ export function SessionBreakdownList({
           )}
           {row.isAnswered ? (
             row.isCorrect === true ? (
-              <span className="text-emerald-500">Correct</span>
+              <span className="text-success">Correct</span>
             ) : row.isCorrect === false ? (
               <span className="text-destructive">Incorrect</span>
             ) : null

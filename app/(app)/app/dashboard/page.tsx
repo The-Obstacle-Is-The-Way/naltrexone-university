@@ -185,7 +185,7 @@ export function DashboardView({
               {recentActivityRows.map((row) => {
                 const resultLabel = row.isCorrect ? 'Correct' : 'Incorrect';
                 const resultClass = row.isCorrect
-                  ? 'text-emerald-500'
+                  ? 'text-success'
                   : 'text-destructive';
 
                 if (!row.isAvailable) {

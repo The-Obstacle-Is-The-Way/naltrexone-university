@@ -127,7 +127,7 @@ describe('SessionBreakdownList', () => {
     if (!correctLabel) {
       throw new Error('Expected Correct label');
     }
-    expect(correctLabel.getAttribute('class')).toContain('text-emerald-500');
+    expect(correctLabel.getAttribute('class')).toContain('text-success');
 
     const unansweredLabel = Array.from(doc.querySelectorAll('span')).find(
       (el) => el.textContent === 'Unanswered',
