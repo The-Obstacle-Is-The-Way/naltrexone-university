@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import { FakeQuestionRepository } from '@/src/application/test-helpers/fakes';
 import { createQuestion } from '@/src/domain/test-helpers';
-import { FakeQuestionRepository } from '../test-helpers/fakes';
 import { fetchQuestionsById } from './fetch-questions-by-id';
 
 describe('fetchQuestionsById', () => {
