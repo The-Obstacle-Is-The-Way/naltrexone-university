@@ -45,7 +45,7 @@ All three problems touch overlapping files: `practice-view.tsx` (action bar), `u
 | Add Previous to which modes? | **Tutor + Exam** | Real exams (USMLE, bar) allow backtracking. The navigator grid already provides random-access back-navigation; a bottom-bar Previous is just more convenient. |
 | Add Previous to Quick Practice? | **No** | Quick Practice has no session context, no navigator grid, no question ordering. Each question is independent. |
 | Move inline nav to bottom bar? | **Yes** | Users scroll down to read explanations; placing Next at the bottom avoids the scroll-back-up problem. |
-| Keep "Question X of Y" label? | **Yes, as non-interactive status text** | Positioned in the heading area for context, not as clickable links. |
+| Keep "Question X of Y" label? | **Yes, as non-interactive status text** | Rendered in the **top navigation zone** (below the navigator grid) so users get context without a second clickable nav row. |
 | Extract shared `QuestionActionBar` component? | **No** | Button sets differ enough that a shared component adds more complexity than it saves. Keep inline but consistent. |
 | Where to place Previous/Next in review action bar? | **Before existing buttons** | `[← Previous] [Next →] [Try Again] [Back to History]` — sequential nav first, then actions. |
 
@@ -116,6 +116,16 @@ Import `ChoiceExplanation` from `submit-answer.ts`:
 import type { ChoiceExplanation } from './submit-answer';
 ```
 
+Add a dedicated type for the restored submission payload:
+
+```typescript
+export type PreviousSubmission = {
+  correctChoiceId: string | null;
+  explanationMd: string | null;
+  choiceExplanations: ChoiceExplanation[];
+};
+```
+
 Add `previousSubmission` to the `session` type:
 
 ```typescript
@@ -133,11 +143,7 @@ export type NextQuestion = {
     isMarkedForReview?: boolean;
     latestSelectedChoiceId?: string | null;
     latestIsCorrect?: boolean | null;
-    previousSubmission?: {                     // ← NEW
-      correctChoiceId: string | null;
-      explanationMd: string | null;
-      choiceExplanations: ChoiceExplanation[];
-    };
+    previousSubmission?: PreviousSubmission;   // ← NEW
   };
 };
 ```
@@ -180,14 +186,17 @@ Add the helper method:
 private buildPreviousSubmission(
   question: Question,
   userId: string,
-): NextQuestion['session'] extends infer S
-  ? S extends { previousSubmission?: infer P }
-    ? NonNullable<P>
-    : never
-  : never {
+): PreviousSubmission {
   const correctChoice = question.choices.find((c) => c.isCorrect);
+  if (!correctChoice) {
+    throw new ApplicationError(
+      'INTERNAL_ERROR',
+      `Question ${question.id} has no correct choice`,
+    );
+  }
+
   return {
-    correctChoiceId: correctChoice?.id ?? null,
+    correctChoiceId: correctChoice.id,
     explanationMd: question.explanationMd,
     choiceExplanations: buildShuffledChoiceViews(question, userId).map(
       (choice) => ({
@@ -201,6 +210,8 @@ private buildPreviousSubmission(
   };
 }
 ```
+
+**Important:** `choiceExplanations` MUST be built with `buildShuffledChoiceViews(question, userId)` so the `displayLabel` mapping matches the shuffled `choices` returned by `GetNextQuestion` for the `QuestionCard`.
 
 ### 4.3 Restore `submitResult` on Revisit (Frontend)
 
@@ -227,9 +238,17 @@ const syncQuestionStateFromDraftOrSession = useCallback(
       // NEW: Restore full submission state for previously-answered tutor questions
       const prev = nextQuestion.session?.previousSubmission;
       if (prev) {
+        const sessionIsCorrect = nextQuestion.session?.latestIsCorrect ?? null;
+        const isCorrect =
+          typeof sessionIsCorrect === 'boolean'
+            ? sessionIsCorrect
+            : typeof prev.correctChoiceId === 'string'
+              ? prev.correctChoiceId === sessionSelectedChoiceId
+              : false;
+
         setSubmitResult({
-          attemptId: '',  // not available from NextQuestion; not used by PracticeView
-          isCorrect: nextQuestion.session?.latestIsCorrect ?? false,
+          attemptId: 'restored', // not available from NextQuestion; not used by PracticeView
+          isCorrect,
           correctChoiceId: prev.correctChoiceId,
           explanationMd: prev.explanationMd,
           choiceExplanations: prev.choiceExplanations,
@@ -461,11 +480,12 @@ Delete the entire `SessionNavigationBar` function (lines 98-156). Its Previous/N
 | `src/application/use-cases/get-next-question.ts` | Add `previousSubmission` to `NextQuestion.session` type; populate in tutor mode when question was previously answered |
 | `src/application/use-cases/get-next-question.test.ts` | Test `previousSubmission` population: tutor+answered, tutor+unanswered, exam+answered |
 | `app/(app)/app/practice/shared/use-question-flow-core.ts` | Update `syncQuestionStateFromDraftOrSession` to restore `submitResult` from `previousSubmission` |
-| `app/(app)/app/practice/shared/use-question-flow-core.test.ts` | Test state restoration with and without `previousSubmission` |
+| `app/(app)/app/practice/shared/use-question-flow-core.browser.spec.tsx` | Test state restoration with and without `previousSubmission` |
 | `app/(app)/app/practice/components/practice-view.tsx` | Add `← Previous` button, `onPreviousQuestion` + `hasPreviousQuestion` props |
 | `app/(app)/app/practice/components/practice-view.test.tsx` | Test Previous button rendering and disabled states |
+| `app/(app)/app/practice/components/practice-view.browser.spec.tsx` | Test Previous click behavior |
 | `app/(app)/app/practice/[sessionId]/components/practice-session-page-view.tsx` | Compute `previousQuestionId` from navigator data; wire `onPreviousQuestion` |
-| `app/(app)/app/practice/[sessionId]/components/practice-session-page-view.test.tsx` | Test Previous callback wiring |
+| `app/(app)/app/practice/[sessionId]/components/practice-session-page-view.browser.spec.tsx` | Test Previous callback wiring |
 | `app/(app)/app/questions/[slug]/question-page-client.tsx` | Remove `SessionNavigationBar`; add Previous/Next to bottom action bar; add "Question X of Y" status label |
 | `app/(app)/app/questions/[slug]/question-page-client.test.tsx` | Update tests: remove SessionNavigationBar assertions, add bottom-bar nav assertions |
 
@@ -494,7 +514,7 @@ previousSubmission (tutor state persistence):
 
 ### 6.2 Unit Tests — Frontend State
 
-**File:** `app/(app)/app/practice/shared/use-question-flow-core.test.ts`
+**File:** `app/(app)/app/practice/shared/use-question-flow-core.browser.spec.tsx`
 
 ```
 syncQuestionStateFromDraftOrSession:
@@ -509,7 +529,9 @@ syncQuestionStateFromDraftOrSession:
 
 ### 6.3 Component Tests — Practice View
 
-**File:** `app/(app)/app/practice/components/practice-view.test.tsx`
+**Files:**
+- `app/(app)/app/practice/components/practice-view.test.tsx` (static markup; `renderToStaticMarkup`)
+- `app/(app)/app/practice/components/practice-view.browser.spec.tsx` (interaction; `vitest-browser-react`)
 
 ```
 Previous button:
@@ -524,15 +546,15 @@ Previous button:
 
 ### 6.4 Component Tests — Practice Session Page View
 
-**File:** `app/(app)/app/practice/[sessionId]/components/practice-session-page-view.test.tsx`
+**File:** `app/(app)/app/practice/[sessionId]/components/practice-session-page-view.browser.spec.tsx`
 
 ```
 Previous question wiring:
-  - passes onPreviousQuestion to PracticeView when navigator is loaded
-  - does not pass onPreviousQuestion when navigator is not loaded
+  - renders Previous button in the session answering branch
   - hasPreviousQuestion is false when current question is first in navigator
+  - hasPreviousQuestion is false when navigator is missing or current question is not found
   - hasPreviousQuestion is true when current question is not first
-  - onPreviousQuestion calls onNavigateQuestion with the previous question's ID
+  - clicking Previous calls onNavigateQuestion with the previous question's ID
 ```
 
 ### 6.5 Component Tests — Question Page Client
@@ -546,7 +568,7 @@ Bottom-bar navigation (session review):
   - does not render Previous in bottom bar when first question
   - does not render Next in bottom bar when last question
   - Previous/Next links include sessionId and from params
-  - renders "Question X of Y" status text above question content
+  - renders "Question X of Y" status text below the navigator grid
   - does not render inline SessionNavigationBar (removed)
 
 Unanswered review fallback:
@@ -558,14 +580,14 @@ Non-session flows:
   - does not render "Question X of Y" when sessionNavigation is null
 ```
 
-### 6.6 Browser Tests
+### 6.6 Integration (Browser)
 
-**File:** `app/(app)/app/practice/shared/use-question-flow-core.browser.spec.tsx` (if exists)
+**File:** `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-page-controller.browser.spec.tsx`
 
 ```
-State persistence integration:
-  - restores full post-submission UI (highlighting + feedback) on revisit in tutor mode
-  - does not restore post-submission UI in exam mode on revisit
+Tutor revisit integration:
+  - submit in tutor mode, then navigate away and back
+  - restores submitResult from NextQuestion.session.previousSubmission
 ```
 
 ---
@@ -627,7 +649,7 @@ Phase 5: Full Verification
 - [ ] Previous is disabled while loading or during pending transitions
 - [ ] Previous navigates to the previous question in session order
 - [ ] Previous does NOT appear in Quick Practice (no session context)
-- [ ] Previous does NOT appear when navigator data is not loaded
+- [ ] Previous is disabled when navigator data is not loaded (no known previous question)
 
 ### Review Navigation Relocation (Problem C)
 
@@ -653,7 +675,7 @@ Phase 5: Full Verification
 - **Exam mode state persistence** — Exam mode intentionally hides explanations. If a user revisits an answered exam question, they see their selection highlighted as "Answered" but not correct/incorrect. This is by design.
 - **Quick Practice Previous button** — Quick Practice has no session ordering. Each question is independently selected by filters.
 - **Page-refresh persistence** — The backend enhancement makes `previousSubmission` available on every `NextQuestion` fetch, so page refreshes are handled naturally (the data is re-fetched from the server).
-- **`attemptId` in restored `submitResult`** — The `SubmitAnswerOutput.attemptId` field is set to `''` in the reconstructed result because `NextQuestion` doesn't carry it. No code in `PracticeView` references `attemptId`, so this is safe. Future work could add it if needed.
+- **`attemptId` in restored `submitResult`** — The `SubmitAnswerOutput.attemptId` field is set to a sentinel value (`'restored'`) in the reconstructed result because `NextQuestion` doesn't carry it. No production code currently references `attemptId` in the session UI, so this is safe. If a future UI needs a real attemptId, `previousSubmission` can be extended to include it (requires an attempts lookup).
 
 ---
 
