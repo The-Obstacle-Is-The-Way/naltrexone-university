@@ -151,6 +151,7 @@ Same component tree as Tutor, differentiated by `sessionInfo.mode === 'exam'`:
 **Differences from Tutor:**
 - `correctChoiceId` forced to `null` (`app/(app)/app/practice/components/practice-view.tsx:90-92`) — no green/red highlighting during exam
 - Feedback hidden: `{submitResult && !isExamMode ? ... : null}` (`app/(app)/app/practice/components/practice-view.tsx:237`)
+- After submit, exam mode **auto-advances** to the next question (unless last) via `maybeAutoAdvanceAfterSubmit` in `usePracticeSessionPageController`
 - "Mark for review" button visible (`app/(app)/app/practice/components/practice-view.tsx:277-288`)
 - "End session" becomes "Review answers" (triggers exam review stage)
 - QuestionNavigator does **not** reveal correctness in exam mode (answered buttons are labeled "Answered", not "Correct/Incorrect")
@@ -280,7 +281,7 @@ In Tutor Mode, when a user:
 3. Uses the Question Navigator to go back to Question 1
 
 **Expected:** Question 1 shows the submitted answer, correct/incorrect highlighting, and explanation.
-**Actual:** Question 1 appears unanswered — no highlighting, no explanation. However, the Navigator's aria-labels correctly say "Question 1: Incorrect".
+**Actual:** Question 1 restores the selected choice and locks the question, but shows no correctness highlighting or explanation. However, the Navigator's aria-labels correctly say "Question 1: Incorrect".
 
 ### Root Cause
 

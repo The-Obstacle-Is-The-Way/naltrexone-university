@@ -136,7 +136,7 @@ agent-browser install
 
 **Verify:**
 ```bash
-agent-browser --version  # Should show 0.8.x
+agent-browser --version  # Should show 0.9.x (or newer)
 ```
 
 ### Core Concepts

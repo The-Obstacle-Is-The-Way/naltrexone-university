@@ -33,7 +33,7 @@ The user sees Previous/Next at the top in one context and at the bottom in anoth
 3. Navigates back to Question 1
 
 **Expected:** Full post-submission state (selected answer, highlighting, explanation)
-**Actual:** Blank unanswered state — as if the question was never attempted
+**Actual:** The selected answer is restored and the question is locked, but correctness highlighting and the explanation panel disappear (no Feedback renders).
 
 The Question Navigator's aria-labels correctly say "Question 1: Incorrect" — the state IS tracked internally. It just isn't rendered.
 

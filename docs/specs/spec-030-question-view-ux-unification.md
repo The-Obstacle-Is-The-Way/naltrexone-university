@@ -16,7 +16,7 @@
 
 ### Problem A: Tutor Mode Loses Answered State on Revisit (BS-018 §Concern 2)
 
-**Severity: High.** In Tutor Mode, when a user answers a question, navigates away, then returns — the answer highlighting, correct/incorrect state, and explanation vanish. The question appears blank, as if never attempted.
+**Severity: High.** In Tutor Mode, when a user answers a question, navigates away, then returns — the UI restores the selected choice and locks the question, but the correctness feedback is missing (no green/red highlighting, no explanation panel).
 
 **Root cause:** `syncQuestionStateFromDraftOrSession()` in `use-question-flow-core.ts:125-153` restores `selectedChoiceId` and `isAnswered` from `NextQuestion.session`, but `submitResult` (which carries `correctChoiceId`, `explanationMd`, `choiceExplanations`) is cleared by `runLoadQuestionFlow` and never restored. The `NextQuestion` type lacks these fields.
 
@@ -40,7 +40,7 @@ All three problems touch overlapping files: `practice-view.tsx` (action bar), `u
 
 | Question | Decision | Rationale |
 |----------|----------|-----------|
-| Fix approach for state persistence? | **Backend enhancement** (extend `NextQuestion`) | Authoritative; survives page refresh; aligns with how History Review already works. Data exists server-side. |
+| Fix approach for state persistence? | **Backend enhancement** (extend `NextQuestion`) | Authoritative; avoids client-only cache; aligns with how History Review already works. Data exists server-side. |
 | Include explanation data for exam mode? | **Tutor mode only** | Exam mode hides explanations until review. Sending correct answers over the wire during an active exam session is a security concern. |
 | Add Previous to which modes? | **Tutor + Exam** | Real exams (USMLE, bar) allow backtracking. The navigator grid already provides random-access back-navigation; a bottom-bar Previous is just more convenient. |
 | Add Previous to Quick Practice? | **No** | Quick Practice has no session context, no navigator grid, no question ordering. Each question is independent. |
@@ -78,7 +78,7 @@ syncQuestionStateFromDraftOrSession()
 PracticeSessionPageView
   ↓ has navigator (GetPracticeSessionReviewOutput) with ordered question list
   ↓ has currentQuestionId from props.question
-  ↓ computes previousQuestionId: navigator.rows[currentIndex - 1].questionId
+  ↓ computes previousQuestionId: nearest previous *available* row in navigator data
   ↓
   passes onPreviousQuestion to PracticeView
   ↓
@@ -339,8 +339,15 @@ const previousQuestionId = useMemo(() => {
     (r) => r.questionId === currentQuestionId,
   );
   if (currentIdx <= 0) return null;
-  const prevRow = navigator.rows[currentIdx - 1];
-  return prevRow?.questionId ?? null;
+
+  for (let i = currentIdx - 1; i >= 0; i -= 1) {
+    const row = navigator.rows[i];
+    if (!row) continue;
+    if (!row.isAvailable) continue;
+    return row.questionId;
+  }
+
+  return null;
 }, [navigator, currentQuestionId]);
 
 const onPreviousQuestion = useCallback(() => {
@@ -442,26 +449,25 @@ Update the bottom action bar:
     <Button type="button" className="rounded-full" ...>
       Submit
     </Button>
-  ) : null}
+  ) : (
+    <Button variant="outline" className="rounded-full" ...>
+      Try Again
+    </Button>
+  )}
 
-  {props.submitResult ? (
-    <>
-      <Button variant="outline" className="rounded-full" ...>
-        Try Again
-      </Button>
-      <Button asChild variant="ghost" className="rounded-full">
-        <Link href={originUi.backHref}>{originUi.backLabel}</Link>
-      </Button>
-    </>
+  {props.sessionNavigation || props.submitResult ? (
+    <Button asChild variant="ghost" className="rounded-full">
+      <Link href={originUi.backHref}>{originUi.backLabel}</Link>
+    </Button>
   ) : null}
 </div>
 ```
 
 **Step 3: Fix unanswered review fallback action bar**
 
-When `sessionNavigation` exists but `submitResult` is null (unanswered question in session review), the user currently sees only [Submit]. After this change, they'll see [← Previous] [Next →] [Submit] — plus the Back link from the heading area.
+When `sessionNavigation` exists but `submitResult` is null (unanswered question in session review), the user currently sees only [Submit]. After this change, they'll see sequential navigation (as available) plus [Submit] and [Back to …] in the bottom bar.
 
-No additional code needed; the sequential nav buttons are rendered independently of `submitResult`, so they appear in both answered and unanswered states.
+No additional code needed beyond rendering the Back button independently of `submitResult`; sequential nav + Back appear in both answered and unanswered states.
 
 ### 4.7 Remove `SessionNavigationBar` Component
 
@@ -573,7 +579,8 @@ Bottom-bar navigation (session review):
 
 Unanswered review fallback:
   - renders Previous/Next links alongside Submit for unanswered session questions
-  - renders Submit button for unanswered session questions (unchanged)
+  - renders Back button in bottom bar for unanswered session questions
+  - renders Submit button for unanswered session questions
 
 Non-session flows:
   - does not render Previous/Next when sessionNavigation is null
@@ -657,7 +664,7 @@ Phase 5: Full Verification
 - [ ] "Question X of Y" appears as non-interactive status text below the navigator grid
 - [ ] "← Previous" and "Next →" links appear in the bottom action bar for session review
 - [ ] Previous/Next links preserve all URL params (`sessionId`, `from`, `mode=review`, `historyHref`)
-- [ ] Unanswered session-review questions show [← Previous] [Next →] [Submit] in bottom bar
+- [ ] Unanswered session-review questions show sequential nav (as available) plus [Submit] and [Back to …] in the bottom bar
 - [ ] Non-session review flows are unchanged (no Previous/Next, no status label)
 
 ### General
@@ -674,7 +681,7 @@ Phase 5: Full Verification
 - **Navigator convergence** — `QuestionNavigator` (callback-based, active session) and `ReviewQuestionNavigator` (link-based, review pages) remain separate. A shared base component is a future enhancement.
 - **Exam mode state persistence** — Exam mode intentionally hides explanations. If a user revisits an answered exam question, they see their selection highlighted as "Answered" but not correct/incorrect. This is by design.
 - **Quick Practice Previous button** — Quick Practice has no session ordering. Each question is independently selected by filters.
-- **Page-refresh persistence** — The backend enhancement makes `previousSubmission` available on every `NextQuestion` fetch, so page refreshes are handled naturally (the data is re-fetched from the server).
+- **"Stay on the same question" after hard refresh** — `/app/practice/[sessionId]` still loads the next unanswered question on hard refresh (existing behavior). This spec only ensures that when a previously-answered question is loaded via `questionId` navigation, the tutor feedback state can be reconstructed.
 - **`attemptId` in restored `submitResult`** — The `SubmitAnswerOutput.attemptId` field is set to a sentinel value (`'restored'`) in the reconstructed result because `NextQuestion` doesn't carry it. No production code currently references `attemptId` in the session UI, so this is safe. If a future UI needs a real attemptId, `previousSubmission` can be extended to include it (requires an attempts lookup).
 
 ---
@@ -694,10 +701,10 @@ Phase 5: Full Verification
 
 | Before | After |
 |--------|-------|
-| Tutor: revisit answered question → blank state | Tutor: revisit answered question → full highlighting + explanation |
+| Tutor: revisit answered question → locked selection but no feedback | Tutor: revisit answered question → full highlighting + explanation |
 | Practice: no "Previous" in bottom bar; must use navigator grid | Practice: "← Previous" in bottom bar alongside "Next Question" |
 | Review: Previous/Next at top (inline row); must scroll up to advance | Review: Previous/Next at bottom (action bar); advance without scrolling |
-| Review: unanswered question shows only [Submit] | Review: unanswered question shows [← Previous] [Next →] [Submit] |
+| Review: unanswered question shows only [Submit] | Review: unanswered question shows sequential nav + [Back to …] (not just [Submit]) |
 | Practice: navigator grid is only back-navigation mechanism | Practice: grid (random-access) + Previous (sequential) — complementary |
 
 ---
