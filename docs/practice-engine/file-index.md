@@ -2,7 +2,7 @@
 
 > **Parent:** [Practice Engine Index](./index.md)
 > **Scope:** Directory listings for all practice-engine-related source files
-> **Last Verified:** 2026-02-12
+> **Last Verified:** 2026-02-16
 
 ---
 
@@ -12,8 +12,8 @@
 entities/
   question.ts, choice.ts, attempt.ts, practice-session.ts, bookmark.ts, tag.ts, user.ts, subscription.ts, index.ts
 value-objects/
-  practice-mode.ts, question-difficulty.ts, question-status.ts, choice-label.ts, tag-kind.ts,
-  subscription-plan.ts, subscription-status.ts, index.ts
+  practice-mode.ts, question-difficulty.ts, question-status.ts, question-progress-status.ts,
+  choice-label.ts, tag-kind.ts, subscription-plan.ts, subscription-status.ts, index.ts
   (each with colocated .test.ts)
 services/
   grading.ts, entitlement.ts, session.ts, session-stats.ts, statistics.ts, shuffle.ts, question-selection.ts, index.ts
@@ -37,11 +37,12 @@ use-cases/
   get-incomplete-practice-session.ts, get-practice-session-review.ts,
   set-practice-session-question-mark.ts, get-session-history.ts,
   toggle-bookmark.ts, get-bookmarks.ts, get-attempted-questions.ts, get-previous-attempt.ts, get-user-stats.ts,
-  check-entitlement.ts, create-checkout-session.ts, create-portal-session.ts
+  count-available-questions.ts, check-entitlement.ts, create-checkout-session.ts, create-portal-session.ts
   (each with colocated .test.ts)
 errors/
   application-errors.ts
 test-helpers/
+  create-next-question.ts
   fakes/ (fake-logger.ts, fake-repositories.ts, fake-gateways.ts, fake-use-cases.ts, index.ts)
 ```
 
