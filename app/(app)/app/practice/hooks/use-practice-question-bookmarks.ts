@@ -39,9 +39,7 @@ export function usePracticeQuestionBookmarks(
     null,
   );
   const [bookmarkRetryCount, setBookmarkRetryCount] = useState(0);
-  const [bookmarkIdempotencyKey, setBookmarkIdempotencyKey] = useState<
-    string | null
-  >(null);
+  const bookmarkIdempotencyKeyRef = useRef<string | null>(null);
 
   useEffect(() => {
     return createBookmarksEffect({
@@ -71,9 +69,11 @@ export function usePracticeQuestionBookmarks(
   const onToggleBookmark = useCallback(async () => {
     await toggleBookmarkForQuestion({
       question: input.question,
-      bookmarkIdempotencyKey,
+      bookmarkIdempotencyKey: bookmarkIdempotencyKeyRef.current,
       createIdempotencyKey: () => crypto.randomUUID(),
-      setBookmarkIdempotencyKey,
+      setBookmarkIdempotencyKey: (key) => {
+        bookmarkIdempotencyKeyRef.current = key;
+      },
       toggleBookmarkFn: toggleBookmark,
       setBookmarkStatus,
       setBookmarkedQuestionIds,
@@ -99,7 +99,7 @@ export function usePracticeQuestionBookmarks(
       },
       isMounted: input.isMounted,
     });
-  }, [bookmarkIdempotencyKey, input.question, input.isMounted]);
+  }, [input.question, input.isMounted]);
 
   const onRetryBookmarks = useCallback(() => {
     setBookmarkRetryCount((prev) => prev + 1);
