@@ -6,9 +6,9 @@ import type {
   AttemptedQuestionsSourceFilter,
   QuestionRepository,
 } from '@/src/application/ports/repositories';
+import { enrichWithQuestion } from '@/src/application/shared/enrich-with-question';
+import { fetchQuestionsById } from '@/src/application/shared/fetch-questions-by-id';
 import type { QuestionDifficulty } from '@/src/domain/value-objects';
-import { enrichWithQuestion } from '../shared/enrich-with-question';
-import { fetchQuestionsById } from '../shared/fetch-questions-by-id';
 
 export type GetAttemptedQuestionsInput = {
   userId: string;

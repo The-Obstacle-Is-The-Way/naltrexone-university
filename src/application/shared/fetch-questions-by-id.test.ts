@@ -22,4 +22,15 @@ describe('fetchQuestionsById', () => {
     expect(byId.get('q2')?.id).toBe('q2');
     expect(byId.has('q-missing')).toBe(false);
   });
+
+  it('short-circuits when ids are empty', async () => {
+    const repo = new FakeQuestionRepository([
+      createQuestion({ id: 'q1', slug: 'q-1', stemMd: 'Stem 1' }),
+    ]);
+
+    const byId = await fetchQuestionsById(repo, []);
+
+    expect(byId.size).toBe(0);
+    expect(repo.findPublishedByIdsCalls).toEqual([]);
+  });
 });

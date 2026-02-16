@@ -1,12 +1,12 @@
 import type { Logger } from '@/src/application/ports/logger';
-import { computeAccuracy, computeStreak, DAY_MS } from '@/src/domain/services';
-import type { QuestionDifficulty } from '@/src/domain/value-objects';
 import type {
   AttemptStatsReader,
   QuestionRepository,
-} from '../ports/repositories';
-import { enrichWithQuestion } from '../shared/enrich-with-question';
-import { fetchQuestionsById } from '../shared/fetch-questions-by-id';
+} from '@/src/application/ports/repositories';
+import { enrichWithQuestion } from '@/src/application/shared/enrich-with-question';
+import { fetchQuestionsById } from '@/src/application/shared/fetch-questions-by-id';
+import { computeAccuracy, computeStreak, DAY_MS } from '@/src/domain/services';
+import type { QuestionDifficulty } from '@/src/domain/value-objects';
 
 /**
  * Dashboard "last 7 days" accuracy window.

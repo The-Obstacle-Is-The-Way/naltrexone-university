@@ -8,8 +8,8 @@ import type {
   BookmarkRepository,
   QuestionRepository,
 } from '@/src/application/ports/repositories';
-import { enrichWithQuestion } from '../shared/enrich-with-question';
-import { fetchQuestionsById } from '../shared/fetch-questions-by-id';
+import { enrichWithQuestion } from '@/src/application/shared/enrich-with-question';
+import { fetchQuestionsById } from '@/src/application/shared/fetch-questions-by-id';
 
 export type {
   AvailableBookmarkRow,

@@ -159,6 +159,11 @@ export async function reconcileStripeSubscriptions(
           ],
         ]);
 
+        // Intentionally sequential: in this per-row callback we iterate
+        // blockingSubscriptionIds one-at-a-time. retrieveAndNormalizeStripeSubscription
+        // still runs concurrently across rows (bounded by safeConcurrency), but
+        // keeping this loop sequential avoids hammering Stripe for a single
+        // customer while building canonicalById.
         for (const blockingId of blockingSubscriptionIds) {
           if (canonicalById.has(blockingId)) continue;
           const blockingUpdate = await retrieveAndNormalizeStripeSubscription({
