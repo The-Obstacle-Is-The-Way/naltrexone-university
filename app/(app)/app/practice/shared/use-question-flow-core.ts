@@ -61,6 +61,7 @@ export function useQuestionFlowCore(
     useState<SubmitAnswerOutput | null>(null);
   const questionRef = useRef<NextQuestion | null>(null);
   const draftSelectedChoicesRef = useRef<Map<string, string>>(new Map());
+  const submitResultQuestionIdRef = useRef<string | null>(null);
   const [loadState, setLoadStateState] = useState<LoadState>({
     status: 'idle',
   });
@@ -117,6 +118,9 @@ export function useQuestionFlowCore(
 
   const setSubmitResult = useCallback((result: SubmitAnswerOutput | null) => {
     setSubmitResultState(result);
+    submitResultQuestionIdRef.current = result
+      ? (questionRef.current?.questionId ?? null)
+      : null;
     if (result) {
       setIsAnswered(true);
     }
@@ -171,6 +175,11 @@ export function useQuestionFlowCore(
       setSelectedChoiceId(
         draftSelectedChoicesRef.current.get(nextQuestion.questionId) ?? null,
       );
+
+      if (submitResultQuestionIdRef.current === nextQuestion.questionId) {
+        return;
+      }
+
       setIsAnswered(false);
       setSubmitResult(null);
     },
