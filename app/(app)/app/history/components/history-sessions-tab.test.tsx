@@ -87,12 +87,7 @@ describe('HistorySessionsTab', () => {
   });
 
   it('renders empty state when there are no completed sessions', () => {
-    const result: ActionResult<{
-      rows: [];
-      total: 0;
-      limit: 20;
-      offset: 0;
-    }> = {
+    const result: SessionHistoryResult = {
       ok: true,
       data: {
         rows: [],

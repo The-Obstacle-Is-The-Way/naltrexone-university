@@ -33,9 +33,9 @@ export function QuestionNavigator({
   return (
     <nav aria-label="Question navigator">
       <Card className="gap-0 rounded-2xl p-4 shadow-sm">
-        <div className="text-sm font-medium text-foreground">
+        <h2 className="text-sm font-medium text-foreground">
           Question navigator
-        </div>
+        </h2>
         <div className="mt-3 grid grid-cols-5 gap-2 sm:grid-cols-8 lg:grid-cols-10">
           {review.rows.map((row) => {
             const isCurrent = row.questionId === currentQuestionId;
