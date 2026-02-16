@@ -82,12 +82,9 @@ describe('withTimeout', () => {
 
   it('does not reject with TimeoutError when promise rejects first', async () => {
     const failing = Promise.reject(new Error('fast fail'));
-    try {
-      await withTimeout(failing, 1000);
-    } catch (error) {
-      expect(error).not.toBeInstanceOf(TimeoutError);
-      expect(error).toBeInstanceOf(Error);
-    }
+    await expect(withTimeout(failing, 1000)).rejects.toSatisfy(
+      (error) => error instanceof Error && !(error instanceof TimeoutError),
+    );
   });
 
   it('resolves with void for void promises', async () => {

@@ -29,5 +29,22 @@ describe('practice-logic', () => {
         'Request timed out. Please try again.',
       );
     });
+
+    it('returns the message from a standard Error', () => {
+      expect(getThrownErrorMessage(new Error('Something broke'))).toBe(
+        'Something broke',
+      );
+    });
+
+    it('returns the string directly when thrown value is a non-empty string', () => {
+      expect(getThrownErrorMessage('network failure')).toBe('network failure');
+    });
+
+    it('returns fallback for unknown thrown values', () => {
+      expect(getThrownErrorMessage(undefined)).toBe('Unexpected error');
+      expect(getThrownErrorMessage(null)).toBe('Unexpected error');
+      expect(getThrownErrorMessage(42)).toBe('Unexpected error');
+      expect(getThrownErrorMessage('')).toBe('Unexpected error');
+    });
   });
 });

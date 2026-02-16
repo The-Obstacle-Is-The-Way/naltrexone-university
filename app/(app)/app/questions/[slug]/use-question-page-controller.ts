@@ -14,6 +14,9 @@ import { selectChoiceIfAllowed } from '@/app/(app)/app/shared/question-guards';
 import type { QuestionMode, QuestionOrigin } from '@/lib/routes';
 import { useIsMounted } from '@/lib/use-is-mounted';
 import { withTimeout } from '@/lib/with-timeout';
+
+const SESSION_REVIEW_TIMEOUT_MS = 10_000;
+
 import { getPracticeSessionReview } from '@/src/adapters/controllers/practice-controller';
 import { submitAnswer } from '@/src/adapters/controllers/question-controller';
 import {
@@ -124,7 +127,10 @@ export function useQuestionPageController(
     setSessionNavigation(null);
 
     startTransition(() => {
-      void withTimeout(getPracticeSessionReview({ sessionId }), 10_000)
+      void withTimeout(
+        getPracticeSessionReview({ sessionId }),
+        SESSION_REVIEW_TIMEOUT_MS,
+      )
         .then((result) => {
           if (isStale) return;
           if (!isMounted()) return;
