@@ -18,7 +18,6 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 | ID | Title | Priority | Status |
 |----|-------|----------|--------|
 | [DEBT-219](debt-219-sequential-stripe-api-reconciliation.md) | Sequential Stripe API Calls in Reconciliation Cron Job | P3 | Open |
-| [DEBT-222](debt-222-bookmark-retry-state-should-be-refs.md) | Bookmark Idempotency Key Should Use `useRef` (retryCount must stay as state) | P4 | Open |
 
 **Next Debt ID:** DEBT-224
 
@@ -29,6 +28,7 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 | ID | Title | Priority | Resolved | GitHub Issue |
 |----|-------|----------|----------|--------------|
 | [DEBT-223](../_archive/debt/debt-223-verbose-set-array-dedup-pattern.md) | Verbose Set+Array Dedup Pattern in get-user-stats.ts | P4 | 2026-02-16 | — |
+| [DEBT-222](../_archive/debt/debt-222-bookmark-retry-state-should-be-refs.md) | Bookmark Idempotency Key Should Use `useRef` (retryCount must stay as state) | P4 | 2026-02-16 | — |
 | [DEBT-221](../_archive/debt/debt-221-compute-accuracy-conflates-zero-with-no-attempts.md) | `computeAccuracy()` Conflates "No Attempts" With "0% Accuracy" | P4 | 2026-02-16 | — |
 | [DEBT-220](../_archive/debt/debt-220-duplicated-enrich-with-question-boilerplate.md) | Duplicated enrichWithQuestion Boilerplate Across 4 Use Cases | P3 | 2026-02-16 | — |
 | [DEBT-218](../_archive/debt/debt-218-server-component-pages-missing-maxduration.md) | Server Component Pages Missing maxDuration + Dead Code in practice-logic.ts | P2 | 2026-02-15 | — |
