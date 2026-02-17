@@ -211,8 +211,6 @@ test.describe('BS-020: Card Contrast and Hover Audit', () => {
     // is flaky due to dev server timeouts. Verify source-level parity with
     // dashboard stat card hover classes instead.
 
-    await signInWithClerkPassword(page);
-
     // Read the session-summary-view.tsx source to verify CSS classes
     const fs = await import('node:fs/promises');
     const source = await fs.readFile(

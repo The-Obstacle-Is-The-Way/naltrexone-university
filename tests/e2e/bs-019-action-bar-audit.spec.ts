@@ -411,12 +411,12 @@ test.describe('BS-019: Action Bar Label and Ordering Audit', () => {
 
       // Wait for review data to fully load — "Back to" only appears after
       // async session navigation data settles (not in default/pre-load state)
-      const backToLink = page
+      const backToLinkLast = page
         .getByTestId('bottom-action-bar')
         .locator('[data-slot="button"]')
         .filter({ hasText: /^Back to/ })
         .first();
-      await expect(backToLink).toBeVisible({ timeout: 15_000 });
+      await expect(backToLinkLast).toBeVisible({ timeout: 15_000 });
     }
 
     const labelsLast = await getHistoryBarLabels(page);

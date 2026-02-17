@@ -311,7 +311,7 @@ describe('PracticeView', () => {
     const previousButton = Array.from(doc.querySelectorAll('button')).find(
       (button) => button.textContent?.includes('Previous'),
     );
-    expect(previousButton).not.toBeNull();
+    expect(previousButton).not.toBeUndefined();
     expect(previousButton?.hasAttribute('disabled')).toBe(true);
   });
 

@@ -30,6 +30,8 @@ describe('QuestionView', () => {
     );
   }
 
+  // Uses shadcn's data-slot="button" to capture both <button> and asChild <a> elements.
+  // If shadcn removes data-slot, fall back to 'button, a' combined selector.
   function getBottomActionLabels(doc: Document): string[] {
     const bottomBar = getBottomActionBar(doc);
     if (!bottomBar) {

@@ -140,6 +140,9 @@ describe('theme token regression', () => {
 
     for (const card of [...dashboardHoverCards, ...summaryHoverCards]) {
       expect(card.getAttribute('class') ?? '').toContain('hover:border-border');
+      expect(card.getAttribute('class') ?? '').not.toContain(
+        'hover:border-border/80',
+      );
     }
   });
 

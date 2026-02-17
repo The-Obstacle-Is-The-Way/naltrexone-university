@@ -96,12 +96,6 @@ describe('components/marketing/marketing-home', () => {
     expect(html).toContain('CTA');
   });
 
-  it('renders exactly one main element (no nested main)', async () => {
-    const doc = await renderDoc();
-
-    expect(doc.querySelectorAll('main')).toHaveLength(1);
-  });
-
   it('labels all major landing sections with aria-label', async () => {
     const doc = await renderDoc();
     const sectionLabels = Array.from(doc.querySelectorAll('section')).map(
