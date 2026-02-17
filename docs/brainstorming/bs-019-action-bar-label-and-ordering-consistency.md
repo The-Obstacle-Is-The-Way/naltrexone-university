@@ -250,9 +250,28 @@ Next → | Submit | Bookmark
 
 ---
 
+## Recommended Direction (Opinionated)
+
+**Recommended baseline for implementation spec:** **Option A**.
+
+Why Option A:
+- Lowest disruption: preserves current Practice/Quick Practice mental model (`Submit` then `Next`)
+- Requires fewer behavior changes in live session flows
+- Aligns best with the current user habit loop (answer, then move forward)
+
+Concrete direction:
+1. Standardize `Next` label to `Next →` in Practice + Quick Practice.
+2. Standardize order to `Previous` → primary action (`Submit` / `Try Again`) → `Next` → secondary actions (`Bookmark` / `Mark for review`) → back link.
+3. Keep Quick Practice without `Previous` (intentional, no session context).
+4. Standardize boundary handling to **disabled-but-visible** for edge sequential controls where session context exists.
+5. Standardize back navigation to a single placement per context (prefer header-only for parity with Practice/Quick Practice).
+6. Update `docs/frontend/design-principles.md` after implementation so the composition table matches code reality.
+
+---
+
 ## Open Questions
 
-1. **Which option feels right?** Option A mirrors Practice's existing pattern (Next after primary action). Option C mirrors History's existing pattern (Next before primary action). Option B is the most disruptive but most principled.
+1. **Which option feels right?** *(Provisional answer: Option A recommended above for spec baseline. Final sign-off still needed.)*
 
 2. **"Try Again" — is the label right?** In History Review, "Try Again" re-attempts the same question. In Practice, the equivalent is just "Submit" again (after clearing). Should these labels converge? Or does the context difference (reviewing a historical attempt vs. practicing live) justify different labels?
 
@@ -286,6 +305,7 @@ Next → | Submit | Bookmark
 | 2026-02-17 | External browser sweep reconciled | Added origin-variant coverage for `from=practice`, `from=dashboard`, and `from=bookmarks`, including their action-bar and back-label differences |
 | 2026-02-17 | Scope boundary clarified with BS-020/BS-021 | Action bar interaction consistency is BS-019 scope; landing/app visual surface alignment and shell parity are tracked independently |
 | 2026-02-17 | Playwright E2E audit completed | `tests/e2e/bs-019-action-bar-audit.spec.ts` — 4 tests covering Quick Practice (pre/post-submit), Tutor (Q1 pre/post-submit, Q2 boundary), Exam (Mark for review), History Review (Q1 labels/ordering/element types, last-Q boundary via navigator grid). All 9 inconsistencies confirmed with assertions. Tutor/Exam tests depend on `startSession` helper which is sensitive to dev server stability |
+| 2026-02-17 | Option A set as recommended baseline | Preferred path is to align History to Practice ordering model and standardize `Next →` labels, while preserving Quick Practice's intentional no-Previous behavior |
 
 ---
 
