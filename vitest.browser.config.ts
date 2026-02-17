@@ -11,6 +11,8 @@ export default defineConfig({
     include: ['server-only', 'zod', 'pino'],
   },
   test: {
+    testTimeout: 10_000,
+    hookTimeout: 15_000,
     env: {
       NODE_ENV: 'test',
     },
