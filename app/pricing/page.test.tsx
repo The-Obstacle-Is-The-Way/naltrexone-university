@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { renderToStaticMarkup } from 'react-dom/server';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { PRICING_DATA } from '@/lib/pricing-data';
 import type { AuthGateway } from '@/src/application/ports/gateways';
 
@@ -10,10 +10,33 @@ vi.mock('next/link', () => ({
   default: (props: Record<string, unknown>) => <a {...props} />,
 }));
 
+type PricingPageModule = typeof import('@/app/pricing/page');
+type PricingClientModule = typeof import('@/app/pricing/pricing-client');
+
+let PricingView: PricingPageModule['PricingView'];
+let getPricingBanner: PricingPageModule['getPricingBanner'];
+let loadPricingData: PricingPageModule['loadPricingData'];
+let runSubscribeAction: PricingPageModule['runSubscribeAction'];
+let PricingPage: PricingPageModule['default'];
+let SubscribeButton: PricingClientModule['SubscribeButton'];
+
 describe('app/pricing', () => {
   type CreateCheckoutSessionFn = Parameters<
     typeof import('@/app/pricing/page').runSubscribeAction
   >[1]['createCheckoutSessionFn'];
+
+  beforeAll(async () => {
+    const [pageModule, pricingClientModule] = await Promise.all([
+      import('@/app/pricing/page'),
+      import('@/app/pricing/pricing-client'),
+    ]);
+    PricingView = pageModule.PricingView;
+    getPricingBanner = pageModule.getPricingBanner;
+    loadPricingData = pageModule.loadPricingData;
+    runSubscribeAction = pageModule.runSubscribeAction;
+    PricingPage = pageModule.default;
+    SubscribeButton = pricingClientModule.SubscribeButton;
+  });
 
   afterEach(() => {
     vi.resetModules();
@@ -22,8 +45,6 @@ describe('app/pricing', () => {
   });
 
   it('renders subscribe actions when user is not subscribed', async () => {
-    const { PricingView } = await import('@/app/pricing/page');
-
     const html = renderToStaticMarkup(
       <PricingView
         isEntitled={false}
@@ -40,11 +61,9 @@ describe('app/pricing', () => {
     expect(backLink?.textContent?.trim()).toBe('Back to Home');
     expect(doc.querySelector('[data-testid="pricing-root"]')).not.toBeNull();
     expect(doc.querySelector('header')).not.toBeNull();
-  }, 10_000);
+  });
 
   it('shows an error banner when checkout=error', async () => {
-    const { PricingView } = await import('@/app/pricing/page');
-
     const html = renderToStaticMarkup(
       <PricingView
         isEntitled={false}
@@ -61,8 +80,6 @@ describe('app/pricing', () => {
   });
 
   it('renders pricing plan headings', async () => {
-    const { PricingView } = await import('@/app/pricing/page');
-
     const html = renderToStaticMarkup(
       <PricingView
         isEntitled={false}
@@ -81,8 +98,6 @@ describe('app/pricing', () => {
   });
 
   it('renders shared pricing values', async () => {
-    const { PricingView } = await import('@/app/pricing/page');
-
     const html = renderToStaticMarkup(
       <PricingView
         isEntitled={false}
@@ -98,8 +113,6 @@ describe('app/pricing', () => {
   });
 
   it('uses a semantic heading hierarchy for pricing sections', async () => {
-    const { PricingView } = await import('@/app/pricing/page');
-
     const html = renderToStaticMarkup(
       <PricingView
         isEntitled={false}
@@ -120,8 +133,6 @@ describe('app/pricing', () => {
   });
 
   it('uses the shared Button primitive for manage-billing form submit actions', async () => {
-    const { PricingView } = await import('@/app/pricing/page');
-
     const html = renderToStaticMarkup(
       <PricingView
         isEntitled={false}
@@ -147,8 +158,6 @@ describe('app/pricing', () => {
   });
 
   it('uses the shared Button primitive for subscribe form submit actions', async () => {
-    const { PricingView } = await import('@/app/pricing/page');
-
     const html = renderToStaticMarkup(
       <PricingView
         isEntitled={false}
@@ -170,8 +179,6 @@ describe('app/pricing', () => {
   });
 
   it('shows a cancel banner when checkout=cancel', async () => {
-    const { PricingView } = await import('@/app/pricing/page');
-
     const html = renderToStaticMarkup(
       <PricingView
         isEntitled={false}
@@ -188,8 +195,6 @@ describe('app/pricing', () => {
   });
 
   it('hides subscribe actions when user is already subscribed', async () => {
-    const { PricingView } = await import('@/app/pricing/page');
-
     const html = renderToStaticMarkup(
       <PricingView
         isEntitled
@@ -205,8 +210,6 @@ describe('app/pricing', () => {
   });
 
   it('builds the subscription-required banner when reason=subscription_required', async () => {
-    const { getPricingBanner } = await import('@/app/pricing/page');
-
     expect(getPricingBanner({ reason: 'subscription_required' })).toMatchObject(
       {
         tone: 'info',
@@ -216,8 +219,6 @@ describe('app/pricing', () => {
   });
 
   it('builds the manage-billing banner when reason=manage_billing', async () => {
-    const { getPricingBanner } = await import('@/app/pricing/page');
-
     expect(getPricingBanner({ reason: 'manage_billing' })).toMatchObject({
       tone: 'info',
       message: 'Subscription found. Manage billing to resolve payment issues.',
@@ -225,8 +226,6 @@ describe('app/pricing', () => {
   });
 
   it('builds the payment-processing banner when reason=payment_processing', async () => {
-    const { getPricingBanner } = await import('@/app/pricing/page');
-
     expect(getPricingBanner({ reason: 'payment_processing' })).toMatchObject({
       tone: 'info',
       message:
@@ -235,8 +234,6 @@ describe('app/pricing', () => {
   });
 
   it('builds the checkout error banner when checkout=error', async () => {
-    const { getPricingBanner } = await import('@/app/pricing/page');
-
     expect(getPricingBanner({ checkout: 'error' })).toMatchObject({
       tone: 'error',
       message: 'Checkout failed. Please try again.',
@@ -244,8 +241,6 @@ describe('app/pricing', () => {
   });
 
   it('builds the checkout canceled banner when checkout=cancel', async () => {
-    const { getPricingBanner } = await import('@/app/pricing/page');
-
     expect(getPricingBanner({ checkout: 'cancel' })).toMatchObject({
       tone: 'info',
       message: 'Checkout canceled.',
@@ -253,8 +248,6 @@ describe('app/pricing', () => {
   });
 
   it('builds the rate-limited banner when checkout=rate_limited', async () => {
-    const { getPricingBanner } = await import('@/app/pricing/page');
-
     expect(getPricingBanner({ checkout: 'rate_limited' })).toMatchObject({
       tone: 'info',
       message: 'Too many checkout attempts. Please wait and try again.',
@@ -262,14 +255,10 @@ describe('app/pricing', () => {
   });
 
   it('returns null when no banner parameters are set', async () => {
-    const { getPricingBanner } = await import('@/app/pricing/page');
-
     expect(getPricingBanner({})).toBe(null);
   });
 
   it('loadPricingData returns isEntitled=false when unauthenticated', async () => {
-    const { loadPricingData } = await import('@/app/pricing/page');
-
     const authGateway: AuthGateway = {
       getCurrentUser: vi.fn(async () => null),
       requireUser: vi.fn(async () => {
@@ -291,8 +280,6 @@ describe('app/pricing', () => {
   });
 
   it('loadPricingData returns isEntitled=true when entitled', async () => {
-    const { loadPricingData } = await import('@/app/pricing/page');
-
     const authGateway: AuthGateway = {
       getCurrentUser: vi.fn(async () => ({
         id: 'user_1',
@@ -315,8 +302,6 @@ describe('app/pricing', () => {
   });
 
   it('loadPricingData returns reason from entitlement check for non-entitled users', async () => {
-    const { loadPricingData } = await import('@/app/pricing/page');
-
     const authGateway: AuthGateway = {
       getCurrentUser: vi.fn(async () => ({
         id: 'user_1',
@@ -345,8 +330,6 @@ describe('app/pricing', () => {
   });
 
   it('runSubscribeAction redirects to checkout url on success', async () => {
-    const { runSubscribeAction } = await import('@/app/pricing/page');
-
     const createCheckoutSessionFn = vi.fn<CreateCheckoutSessionFn>(
       async () => ({
         ok: true,
@@ -375,8 +358,6 @@ describe('app/pricing', () => {
   });
 
   it('runSubscribeAction redirects to /sign-up when unauthenticated', async () => {
-    const { runSubscribeAction } = await import('@/app/pricing/page');
-
     const createCheckoutSessionFn = vi.fn<CreateCheckoutSessionFn>(
       async () => ({
         ok: false,
@@ -405,8 +386,6 @@ describe('app/pricing', () => {
   });
 
   it('runSubscribeAction redirects to /pricing?reason=manage_billing when already subscribed', async () => {
-    const { runSubscribeAction } = await import('@/app/pricing/page');
-
     const createCheckoutSessionFn = vi.fn<CreateCheckoutSessionFn>(
       async () => ({
         ok: false,
@@ -435,8 +414,6 @@ describe('app/pricing', () => {
   });
 
   it('runSubscribeAction redirects to /pricing?checkout=rate_limited when rate limited', async () => {
-    const { runSubscribeAction } = await import('@/app/pricing/page');
-
     const createCheckoutSessionFn = vi.fn<CreateCheckoutSessionFn>(
       async () => ({
         ok: false,
@@ -465,8 +442,6 @@ describe('app/pricing', () => {
   });
 
   it('runSubscribeAction redirects to /pricing?checkout=error for other errors', async () => {
-    const { runSubscribeAction } = await import('@/app/pricing/page');
-
     const createCheckoutSessionFn = vi.fn<CreateCheckoutSessionFn>(
       async () => ({
         ok: false,
@@ -497,8 +472,6 @@ describe('app/pricing', () => {
   });
 
   it('renders a manage-billing action when provided', async () => {
-    const { PricingView } = await import('@/app/pricing/page');
-
     const html = renderToStaticMarkup(
       <PricingView
         isEntitled={false}
@@ -519,8 +492,6 @@ describe('app/pricing', () => {
   });
 
   it('renders dismiss link when banner is present', async () => {
-    const { PricingView } = await import('@/app/pricing/page');
-
     const html = renderToStaticMarkup(
       <PricingView
         isEntitled={false}
@@ -539,8 +510,6 @@ describe('app/pricing', () => {
   });
 
   it('SubscribeButton renders children when not pending', async () => {
-    const { SubscribeButton } = await import('@/app/pricing/pricing-client');
-
     const html = renderToStaticMarkup(
       <SubscribeButton>Subscribe Monthly</SubscribeButton>,
     );
@@ -551,8 +520,6 @@ describe('app/pricing', () => {
   });
 
   it('does not render dismiss link when banner is null', async () => {
-    const { PricingView } = await import('@/app/pricing/page');
-
     const html = renderToStaticMarkup(
       <PricingView
         isEntitled={false}
@@ -566,8 +533,6 @@ describe('app/pricing', () => {
   });
 
   it('renders PricingPage when deps are injected', async () => {
-    const PricingPage = (await import('@/app/pricing/page')).default;
-
     const element = await PricingPage({
       searchParams: Promise.resolve({}),
       authNavFn: async () => <div>AuthNav</div>,
@@ -590,8 +555,6 @@ describe('app/pricing', () => {
   });
 
   it('renders exactly one main landmark through the full pricing page', async () => {
-    const PricingPage = (await import('@/app/pricing/page')).default;
-
     const element = await PricingPage({
       searchParams: Promise.resolve({}),
       authNavFn: async () => <div>AuthNav</div>,
@@ -617,8 +580,6 @@ describe('app/pricing', () => {
   });
 
   it('renders manage billing guidance when entitlement reason is manage_billing', async () => {
-    const PricingPage = (await import('@/app/pricing/page')).default;
-
     const element = await PricingPage({
       searchParams: Promise.resolve({}),
       authNavFn: async () => <div>AuthNav</div>,

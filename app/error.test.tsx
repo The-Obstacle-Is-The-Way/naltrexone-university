@@ -1,11 +1,15 @@
 // @vitest-environment jsdom
 import { renderToStaticMarkup } from 'react-dom/server';
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
+
+let ErrorPage: typeof import('./error').default;
+
+beforeAll(async () => {
+  ErrorPage = (await import('./error')).default;
+});
 
 describe('app/error', () => {
-  it('renders a recoverable error UI', async () => {
-    const ErrorPage = (await import('./error')).default;
-
+  it('renders a recoverable error UI', () => {
     const error = new Error('boom');
     (error as Error & { digest?: string }).digest = 'digest_123';
     const html = renderToStaticMarkup(
@@ -21,5 +25,5 @@ describe('app/error', () => {
     expect(html).toContain('<main id="main-content"');
     expect(html).toContain('tabindex="-1"');
     expect(tryAgainButton?.getAttribute('type')).toBe('button');
-  }, 10_000);
+  });
 });

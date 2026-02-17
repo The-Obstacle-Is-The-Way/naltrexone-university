@@ -1,11 +1,23 @@
 // @vitest-environment jsdom
 import { renderToStaticMarkup } from 'react-dom/server';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { createChoice, createQuestion } from '@/src/domain/test-helpers';
 
 vi.mock('next/link', () => ({
   default: (props: Record<string, unknown>) => <a {...props} />,
 }));
+
+type QuestionPageModule =
+  typeof import('@/app/(app)/app/questions/[slug]/page');
+
+let QuestionPage: QuestionPageModule['default'];
+let QuestionView: QuestionPageModule['QuestionView'];
+
+beforeAll(async () => {
+  const module = await import('@/app/(app)/app/questions/[slug]/page');
+  QuestionPage = module.default;
+  QuestionView = module.QuestionView;
+});
 
 function toGetQuestionBySlugOutput(
   question: ReturnType<typeof createQuestion>,
@@ -25,9 +37,6 @@ function toGetQuestionBySlugOutput(
 
 describe('app/(app)/app/questions/[slug]', () => {
   it('unwraps async params before rendering the client page', async () => {
-    const QuestionPage = (await import('@/app/(app)/app/questions/[slug]/page'))
-      .default;
-
     const element = await QuestionPage({
       params: Promise.resolve({ slug: 'q-1' }),
       searchParams: Promise.resolve({}),
@@ -36,12 +45,9 @@ describe('app/(app)/app/questions/[slug]', () => {
     expect(element).toMatchObject({
       props: { slug: 'q-1' },
     });
-  }, 20_000);
+  });
 
   it('passes origin searchParams into the client page', async () => {
-    const QuestionPage = (await import('@/app/(app)/app/questions/[slug]/page'))
-      .default;
-
     const element = await QuestionPage({
       params: Promise.resolve({ slug: 'q-1' }),
       searchParams: Promise.resolve({ from: 'review' }),
@@ -50,12 +56,9 @@ describe('app/(app)/app/questions/[slug]', () => {
     expect(element).toMatchObject({
       props: { slug: 'q-1', from: 'review' },
     });
-  }, 20_000);
+  });
 
   it('passes mode searchParams into the client page', async () => {
-    const QuestionPage = (await import('@/app/(app)/app/questions/[slug]/page'))
-      .default;
-
     const element = await QuestionPage({
       params: Promise.resolve({ slug: 'q-1' }),
       searchParams: Promise.resolve({ mode: 'review' }),
@@ -64,12 +67,9 @@ describe('app/(app)/app/questions/[slug]', () => {
     expect(element).toMatchObject({
       props: { slug: 'q-1', mode: 'review' },
     });
-  }, 20_000);
+  });
 
   it('passes sessionId searchParams into the client page', async () => {
-    const QuestionPage = (await import('@/app/(app)/app/questions/[slug]/page'))
-      .default;
-
     const element = await QuestionPage({
       params: Promise.resolve({ slug: 'q-1' }),
       searchParams: Promise.resolve({
@@ -83,12 +83,9 @@ describe('app/(app)/app/questions/[slug]', () => {
         sessionId: '00000000-0000-4000-8000-000000000001',
       },
     });
-  }, 20_000);
+  });
 
   it('passes attemptId searchParams into the client page', async () => {
-    const QuestionPage = (await import('@/app/(app)/app/questions/[slug]/page'))
-      .default;
-
     const element = await QuestionPage({
       params: Promise.resolve({ slug: 'q-1' }),
       searchParams: Promise.resolve({
@@ -102,12 +99,9 @@ describe('app/(app)/app/questions/[slug]', () => {
         attemptId: '00000000-0000-4000-8000-000000000002',
       },
     });
-  }, 20_000);
+  });
 
   it('passes historyHref searchParams into the client page', async () => {
-    const QuestionPage = (await import('@/app/(app)/app/questions/[slug]/page'))
-      .default;
-
     const element = await QuestionPage({
       params: Promise.resolve({ slug: 'q-1' }),
       searchParams: Promise.resolve({
@@ -121,12 +115,9 @@ describe('app/(app)/app/questions/[slug]', () => {
         historyHref: '/app/history?tab=questions&offset=0&limit=20',
       },
     });
-  }, 20_000);
+  });
 
   it('renders a question shell', async () => {
-    const QuestionPage = (await import('@/app/(app)/app/questions/[slug]/page'))
-      .default;
-
     const element = await QuestionPage({
       params: Promise.resolve({ slug: 'q-1' }),
       searchParams: Promise.resolve({}),
@@ -139,13 +130,9 @@ describe('app/(app)/app/questions/[slug]', () => {
     expect(html).toContain('Back to Dashboard');
     expect(html).toContain('Submit');
     expect(html).toContain('aria-live="polite"');
-  }, 10_000);
+  });
 
   it('renders an error state with try again button', async () => {
-    const { QuestionView } = await import(
-      '@/app/(app)/app/questions/[slug]/page'
-    );
-
     const html = renderToStaticMarkup(
       <QuestionView
         loadState={{ status: 'error', message: 'Boom' }}
@@ -167,10 +154,6 @@ describe('app/(app)/app/questions/[slug]', () => {
   });
 
   it('renders not-found state when ready with no question', async () => {
-    const { QuestionView } = await import(
-      '@/app/(app)/app/questions/[slug]/page'
-    );
-
     const html = renderToStaticMarkup(
       <QuestionView
         loadState={{ status: 'ready' }}
@@ -191,10 +174,6 @@ describe('app/(app)/app/questions/[slug]', () => {
   });
 
   it('renders the question card when question exists', async () => {
-    const { QuestionView } = await import(
-      '@/app/(app)/app/questions/[slug]/page'
-    );
-
     const choice = createChoice({
       id: 'c1',
       questionId: 'q_1',
@@ -230,10 +209,6 @@ describe('app/(app)/app/questions/[slug]', () => {
   });
 
   it('renders feedback and post-submit actions when submitResult exists', async () => {
-    const { QuestionView } = await import(
-      '@/app/(app)/app/questions/[slug]/page'
-    );
-
     const html = renderToStaticMarkup(
       <QuestionView
         loadState={{ status: 'ready' }}
@@ -263,10 +238,6 @@ describe('app/(app)/app/questions/[slug]', () => {
   });
 
   it('disables submit while loading to prevent duplicate submissions', async () => {
-    const { QuestionView } = await import(
-      '@/app/(app)/app/questions/[slug]/page'
-    );
-
     const choice = createChoice({
       id: 'c1',
       questionId: 'q_1',

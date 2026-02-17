@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { renderToStaticMarkup } from 'react-dom/server';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { ROUTES } from '@/lib/routes';
 import { createNextQuestion } from '@/src/application/test-helpers/create-next-question';
 
@@ -8,10 +8,19 @@ vi.mock('next/link', () => ({
   default: (props: Record<string, unknown>) => <a {...props} />,
 }));
 
-describe('PracticeView', () => {
-  it('renders Back to Dashboard link with correct href', async () => {
-    const { PracticeView } = await import('./practice-view');
+type PracticeViewModule = typeof import('./practice-view');
 
+let PracticeView: PracticeViewModule['PracticeView'];
+let getBookmarkNotificationTransition: PracticeViewModule['getBookmarkNotificationTransition'];
+
+beforeAll(async () => {
+  const module = await import('./practice-view');
+  PracticeView = module.PracticeView;
+  getBookmarkNotificationTransition = module.getBookmarkNotificationTransition;
+});
+
+describe('PracticeView', () => {
+  it('renders Back to Dashboard link with correct href', () => {
     const html = renderToStaticMarkup(
       <PracticeView
         loadState={{ status: 'ready' }}
@@ -35,9 +44,7 @@ describe('PracticeView', () => {
     expect(html).toContain(`href="${ROUTES.APP_DASHBOARD}"`);
   });
 
-  it('renders topContent above the page heading when provided', async () => {
-    const { PracticeView } = await import('./practice-view');
-
+  it('renders topContent above the page heading when provided', () => {
     const html = renderToStaticMarkup(
       <PracticeView
         topContent={<div data-testid="top-content">Top</div>}
@@ -74,9 +81,7 @@ describe('PracticeView', () => {
     );
   });
 
-  it('renders belowHeadingContent after the heading and before the question area', async () => {
-    const { PracticeView } = await import('./practice-view');
-
+  it('renders belowHeadingContent after the heading and before the question area', () => {
     const html = renderToStaticMarkup(
       <PracticeView
         belowHeadingContent={
@@ -125,8 +130,7 @@ describe('PracticeView', () => {
     );
   });
 
-  it('renders submit pending copy without rendering question-loading text', async () => {
-    const { PracticeView } = await import('./practice-view');
+  it('renders submit pending copy without rendering question-loading text', () => {
     const question = createNextQuestion({
       questionId: 'question-1',
       slug: 'question-1',
@@ -163,9 +167,7 @@ describe('PracticeView', () => {
     expect(html).not.toContain('Loading question');
   });
 
-  it('announces description updates for assistive tech via aria-live', async () => {
-    const { PracticeView } = await import('./practice-view');
-
+  it('announces description updates for assistive tech via aria-live', () => {
     const html = renderToStaticMarkup(
       <PracticeView
         description="Question 2 of 10 — Explanations shown after you submit the exam."
@@ -192,8 +194,7 @@ describe('PracticeView', () => {
     expect(progress?.textContent).toContain('Question 2 of 10');
   });
 
-  it('exposes toggle state via aria-pressed for bookmark button', async () => {
-    const { PracticeView } = await import('./practice-view');
+  it('exposes toggle state via aria-pressed for bookmark button', () => {
     const question = createNextQuestion();
 
     const html = renderToStaticMarkup(
@@ -223,9 +224,7 @@ describe('PracticeView', () => {
     expect(bookmarkButton?.getAttribute('aria-pressed')).toBe('true');
   });
 
-  it('renders an explicit session action when no more questions remain', async () => {
-    const { PracticeView } = await import('./practice-view');
-
+  it('renders an explicit session action when no more questions remain', () => {
     const html = renderToStaticMarkup(
       <PracticeView
         endSessionLabel="Review answers"
@@ -254,8 +253,7 @@ describe('PracticeView', () => {
     expect(endButtons).toHaveLength(2);
   });
 
-  it('renders a Previous button when onPreviousQuestion is provided', async () => {
-    const { PracticeView } = await import('./practice-view');
+  it('renders a Previous button when onPreviousQuestion is provided', () => {
     const question = createNextQuestion();
 
     const html = renderToStaticMarkup(
@@ -282,8 +280,7 @@ describe('PracticeView', () => {
     expect(html).toContain('← Previous');
   });
 
-  it('disables Previous when hasPreviousQuestion is false', async () => {
-    const { PracticeView } = await import('./practice-view');
+  it('disables Previous when hasPreviousQuestion is false', () => {
     const question = createNextQuestion();
 
     const html = renderToStaticMarkup(
@@ -315,8 +312,7 @@ describe('PracticeView', () => {
     expect(previousButton?.hasAttribute('disabled')).toBe(true);
   });
 
-  it('renders "Next →" (not "Next Question")', async () => {
-    const { PracticeView } = await import('./practice-view');
+  it('renders "Next →" (not "Next Question")', () => {
     const question = createNextQuestion();
 
     const props: Parameters<typeof PracticeView>[0] = {
@@ -344,8 +340,7 @@ describe('PracticeView', () => {
     expect(html).not.toContain('Next Question');
   });
 
-  it('disables Next when hasNextQuestion is false', async () => {
-    const { PracticeView } = await import('./practice-view');
+  it('disables Next when hasNextQuestion is false', () => {
     const question = createNextQuestion();
 
     const props: Parameters<typeof PracticeView>[0] = {
@@ -378,8 +373,7 @@ describe('PracticeView', () => {
     expect(nextButton?.hasAttribute('disabled')).toBe(true);
   });
 
-  it('orders session buttons as Previous, Submit, Next, Bookmark', async () => {
-    const { PracticeView } = await import('./practice-view');
+  it('orders session buttons as Previous, Submit, Next, Bookmark', () => {
     const question = createNextQuestion();
 
     const props: Parameters<typeof PracticeView>[0] = {
@@ -416,11 +410,7 @@ describe('PracticeView', () => {
 });
 
 describe('getBookmarkNotificationTransition', () => {
-  it('resets last key and returns no notification when message is null', async () => {
-    const { getBookmarkNotificationTransition } = await import(
-      './practice-view'
-    );
-
+  it('resets last key and returns no notification when message is null', () => {
     const transition = getBookmarkNotificationTransition({
       message: null,
       version: 1,
@@ -432,11 +422,7 @@ describe('getBookmarkNotificationTransition', () => {
     expect(transition.notification).toBeNull();
   });
 
-  it('returns a success notification for new messages when status is not error', async () => {
-    const { getBookmarkNotificationTransition } = await import(
-      './practice-view'
-    );
-
+  it('returns a success notification for new messages when status is not error', () => {
     const transition = getBookmarkNotificationTransition({
       message: 'Question bookmarked.',
       version: 2,
@@ -451,11 +437,7 @@ describe('getBookmarkNotificationTransition', () => {
     });
   });
 
-  it('returns an error notification when bookmarkStatus is error', async () => {
-    const { getBookmarkNotificationTransition } = await import(
-      './practice-view'
-    );
-
+  it('returns an error notification when bookmarkStatus is error', () => {
     const transition = getBookmarkNotificationTransition({
       message: 'Failed.',
       version: 3,
@@ -469,11 +451,7 @@ describe('getBookmarkNotificationTransition', () => {
     });
   });
 
-  it('returns no notification for duplicate messages', async () => {
-    const { getBookmarkNotificationTransition } = await import(
-      './practice-view'
-    );
-
+  it('returns no notification for duplicate messages', () => {
     const transition = getBookmarkNotificationTransition({
       message: 'Question bookmarked.',
       version: 2,
