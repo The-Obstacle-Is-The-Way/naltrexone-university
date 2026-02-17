@@ -15,9 +15,11 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 ## Bug Index (Active)
 
-_No open bugs._
+| ID | Title | Priority | Status |
+|----|-------|----------|--------|
+| — | No active bugs | — | — |
 
-**Next Bug ID:** BUG-144
+**Next Bug ID:** BUG-147
 
 ## Audit #4 — Middleware, Core Paths, and Security Deep Dive (2026-02-16)
 
@@ -81,6 +83,9 @@ Audit #3 produced BUG-136 and BUG-139. BUG-137 was reclassified as SSOT-consiste
 
 | ID | Title | Status | Resolution |
 |----|-------|--------|------------|
+| [BUG-146](../_archive/bugs/bug-146-marketing-footer-sign-in-up-casing-inconsistent.md) | Marketing Footer “Sign in/up” Casing Is Inconsistent with the Rest of the App | Resolved | Standardized footer auth labels to “Sign In” / “Sign Up” and added regression coverage |
+| [BUG-145](../_archive/bugs/bug-145-frontend-ssot-docs-out-of-sync-with-question-view.md) | Frontend SSOT Docs Are Out of Sync with Current Question View Implementation | Resolved | Updated stale SSOT architecture docs to match current question page navigation and state restoration behavior |
+| [BUG-144](../_archive/bugs/bug-144-marketing-layout-nests-main-landmarks.md) | MarketingLayout Nests `<main>` Landmarks (Regression of BUG-100) | Resolved | Centralized `#main-content` ownership in MarketingLayout and removed nested child `<main>` landmarks with regression tests |
 | [BUG-137](../_archive/bugs/bug-137-entitlement-off-by-one-period-end-boundary.md) | Entitlement Check Off-by-One at Period End Boundary | Reclassified | SSOT and implementation both use an exclusive boundary (`currentPeriodEnd > now`); keep doc as policy record with a spec-change path for inclusive semantics |
 | [BUG-139](../_archive/bugs/bug-139-get-previous-attempt-silent-null-on-data-mismatch.md) | GetPreviousAttemptUseCase Silently Returns Null on Data Integrity Mismatch | Resolved | Throw `NOT_FOUND` on attemptId/questionId mismatch (keeps UX fallback, but makes mismatch distinguishable); add regression coverage |
 | [BUG-143](../_archive/bugs/bug-143-sentry-environment-tag-uses-inlined-node-env.md) | Sentry Environment Tag Uses Inlined NODE_ENV — Preview Errors Report as Production | Resolved | Use `VERCEL_ENV` (server) + `NEXT_PUBLIC_VERCEL_ENV` (client) for Sentry environment tags; inject client env via `next.config.ts`; add regression tests |
@@ -155,6 +160,9 @@ Audit #3 produced BUG-136 and BUG-139. BUG-137 was reclassified as SSOT-consiste
 
 | ID | Title | Priority | Resolved |
 |----|-------|----------|----------|
+| [BUG-146](../_archive/bugs/bug-146-marketing-footer-sign-in-up-casing-inconsistent.md) | Marketing Footer “Sign in/up” Casing Is Inconsistent with the Rest of the App | P4 | 2026-02-17 |
+| [BUG-145](../_archive/bugs/bug-145-frontend-ssot-docs-out-of-sync-with-question-view.md) | Frontend SSOT Docs Are Out of Sync with Current Question View Implementation | P3 | 2026-02-17 |
+| [BUG-144](../_archive/bugs/bug-144-marketing-layout-nests-main-landmarks.md) | MarketingLayout Nests `<main>` Landmarks (Regression of BUG-100) | P2 | 2026-02-17 |
 | [BUG-132](../_archive/bugs/bug-132-duplicate-nav-links-pricing-dashboard.md) | Duplicate Nav Links — "Pricing" and "Dashboard" Appear Twice in Header | P3 | 2026-02-13 |
 | [BUG-116](../_archive/bugs/bug-116-cron-route-blocked-by-clerk-middleware.md) | Cron Reconcile Route Blocked by Clerk Middleware | P2 | 2026-02-08 |
 | [BUG-115](../_archive/bugs/bug-115-cron-secret-validation-crashes-production-build.md) | DEBT-160 CRON_SECRET Startup Validation Crashes Production Build | P0 | 2026-02-08 |

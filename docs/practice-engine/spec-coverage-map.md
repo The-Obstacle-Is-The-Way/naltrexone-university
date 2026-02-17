@@ -34,7 +34,7 @@
 | Session Review Navigation | SPEC-027 | Implemented | Sequential prev/next nav + "Question X of Y" in review; attempt identity via `sessionId`/`attemptId` URL params |
 | Status Filter Segmented Control + Review Navigator | SPEC-028 | Implemented | Segmented control for status/difficulty filters; color-coded question navigator grid in review mode |
 | Dev Environment Resilience | SPEC-029 | Implemented | Client-side timeouts, observable failure states, `ErrorCard` recovery actions |
-| Question View UX Unification | SPEC-030 | Ready | Tutor state persistence fix, Previous button in practice, review nav relocation to bottom bar |
+| Question View UX Unification | SPEC-030 | Implemented | Tutor state persistence fix, Previous button in practice, review nav relocation to bottom bar |
 
 ---
 

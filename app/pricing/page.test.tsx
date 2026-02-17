@@ -38,7 +38,7 @@ describe('app/pricing', () => {
     expect(html).toContain('Subscribe Monthly');
     expect(html).toContain('Subscribe Annual');
     expect(backLink?.textContent?.trim()).toBe('Back to Home');
-    expect(doc.querySelector('main#main-content')).not.toBeNull();
+    expect(doc.querySelector('[data-testid="pricing-root"]')).not.toBeNull();
     expect(doc.querySelector('header')).not.toBeNull();
   }, 10_000);
 
@@ -587,6 +587,33 @@ describe('app/pricing', () => {
 
     expect(html).toContain('Pricing');
     expect(html).toContain('Subscribe Monthly');
+  });
+
+  it('renders exactly one main landmark through the full pricing page', async () => {
+    const PricingPage = (await import('@/app/pricing/page')).default;
+
+    const element = await PricingPage({
+      searchParams: Promise.resolve({}),
+      authNavFn: async () => <div>AuthNav</div>,
+      deps: {
+        authGateway: {
+          getCurrentUser: async () => null,
+          requireUser: async () => {
+            throw new Error('not used');
+          },
+        },
+        checkEntitlementUseCase: {
+          execute: async () => ({ isEntitled: false }),
+        },
+      },
+    });
+    const html = renderToStaticMarkup(element);
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const mainLandmarks = doc.querySelectorAll('main');
+
+    expect(mainLandmarks).toHaveLength(1);
+    expect(mainLandmarks[0]?.getAttribute('id')).toBe('main-content');
+    expect(mainLandmarks[0]?.getAttribute('tabindex')).toBe('-1');
   });
 
   it('renders manage billing guidance when entitlement reason is manage_billing', async () => {

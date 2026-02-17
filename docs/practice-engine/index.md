@@ -112,7 +112,7 @@ Dependencies point **inward only** (Clean Architecture, ADR-001). The domain lay
 | [SPEC-027](../_archive/specs/spec-027-session-review-navigation.md) | Session review navigation (Previous/Next in review) |
 | [SPEC-028](../_archive/specs/spec-028-review-question-navigator.md) | Review question navigator (color-coded grid) |
 | [SPEC-029](../_archive/specs/spec-029-dev-environment-resilience.md) | Dev environment resilience (timeouts, error handling) |
-| [SPEC-030](../specs/spec-030-question-view-ux-unification.md) | Question View UX Unification (Ready — not yet implemented) |
+| [SPEC-030](../_archive/specs/spec-030-question-view-ux-unification.md) | Question View UX Unification (Implemented) |
 | [ADR-001](../adr/adr-001-clean-architecture-layers.md) | Clean Architecture decision |
 | [ADR-003](../adr/adr-003-testing-strategy.md) | Testing strategy (TDD, fakes over mocks) |
 | [ADR-006](../adr/adr-006-error-handling-strategy.md) | Error handling (ApplicationError) |

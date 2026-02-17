@@ -32,9 +32,8 @@ export function PricingView({
   SubscribeButtonComponent = DefaultButton,
 }: PricingViewProps) {
   return (
-    <main
-      id="main-content"
-      tabIndex={-1}
+    <div
+      data-testid="pricing-root"
       className="min-h-screen bg-background py-16"
     >
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -190,6 +189,6 @@ export function PricingView({
           </Link>
         </div>
       </div>
-    </main>
+    </div>
   );
 }
