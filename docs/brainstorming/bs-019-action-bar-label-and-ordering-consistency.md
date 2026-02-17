@@ -2,7 +2,7 @@
 
 **Date:** 2026-02-17
 **Triggered by:** Live UI audit — visual comparison of bottom action bars across Practice, Quick Practice, and History Review views
-**Scope:** The "Next" button has different labels and different positioning relative to the primary action across Practice, Quick Practice, and History Review, creating a disjointed UX
+**Scope:** Bottom action bar label, ordering, boundary behavior, and navigation consistency across Practice, Quick Practice, and review contexts (History Session + History Individual)
 **Related:** [BS-018](../_archive/brainstorming/bs-018-question-view-ux-unification.md), [SPEC-030](../_archive/specs/spec-030-question-view-ux-unification.md), [Design Principles §2](../frontend/design-principles.md)
 
 ---
@@ -25,10 +25,21 @@ Submit | Next Question | Bookmark
  text     TEXT (no arrow)   text
 ```
 
-**History Session Review** (`question-page-client.tsx:221-276`):
+**History Session Review** (`question-page-client.tsx:221-281`):
 ```
 ← Previous | Next → | Try Again | Back to History
  arrow        ARROW     text        text
+```
+
+**History Individual Review** (`question-page-client.tsx`, no `sessionId`):
+```
+Submit
+ text
+```
+or, when a previous attempt exists:
+```
+Try Again | Back to History
+ text          text
 ```
 
 ### Inconsistency 1: Label Style
@@ -99,18 +110,27 @@ Users can bookmark questions during practice but cannot bookmark while reviewing
 
 Practice disables Submit after use; History swaps it for a different button. The context justifies some difference (re-answering a historical attempt vs. submitting live), but the action bar visually mutates in History in a way it doesn't in Practice.
 
-### Inconsistency 8: "Back to ___" Placement and Element Types
+### Inconsistency 8: Back Navigation Placement + Element Types
 
 | Context | Back Navigation | Location | Element |
 |---------|----------------|----------|---------|
 | Practice (Tutor) | `End session` | Top-right header | `<button>` |
 | Practice (Exam) | `Review answers` | Top-right header | `<button>` |
 | Quick Practice | `Back to Practice` | Top-right header | `<a>` link |
-| History Review | `Back to History` | **Bottom action bar** | `<a>` ghost link (muted text, no border) |
+| History Review | `Back to History` | **Top-right header + bottom action bar** (bottom shown when `sessionNavigation || submitResult`) | `<a>` link in both locations |
 
-History puts its back-navigation in the action bar alongside action buttons. All other modes put it in the header. This means History's action bar has a mixed concern (navigation + actions + escape hatch) while Practice's action bar is purely actions + navigation.
+History currently duplicates back navigation in review contexts (header + bottom bar), while Practice and Quick Practice expose a single top-right escape action.
 
-Additionally, History's nav buttons (`← Previous`, `Next →`, `Back to History`) are `<a>` link elements, while Practice's are `<button>` elements. Same visual appearance, different semantics — this affects keyboard navigation and accessibility.
+Element semantics also differ by interaction model: History's sequential nav + back actions are route links (`<a>` via `Button asChild`), while Practice's sequential nav uses callback buttons (`<button>`).
+
+### Additional Inconsistency 9: Mobile Action-Bar Layout Model
+
+| Context | Container class | Mobile behavior |
+|---------|-----------------|-----------------|
+| Practice / Quick Practice | `flex flex-wrap items-center gap-3` | Buttons wrap within a horizontal flow |
+| History Review / Exam Review Stage / Session Summary | `flex flex-col gap-3 sm:flex-row` | Buttons stack vertically on small screens |
+
+Button order is conceptually similar, but the mobile layout model itself differs (wrap vs stack), so cross-context muscle memory is weaker on narrow viewports.
 
 ### Why This Matters
 
@@ -141,10 +161,11 @@ Quick Practice was added separately, reusing `PracticeView` without passing `onP
 | Last-Q Next: enabled vs hidden | Low-Medium | Users on last question | End of every session |
 | Bookmark absent from History Review | **Medium** | Users reviewing past attempts who want to flag questions | Variable — depends on workflow |
 | Submit disabled vs replaced with Try Again | Low | Users comparing Practice and History flows | Every History session |
-| "Back to ___" in action bar vs header | Low | All users | Every session |
-| `<a>` vs `<button>` element type mismatch | Low | Screen reader / keyboard users | Every History session |
+| Back-navigation duplication in History (header + action bar) | Low | Users in review contexts | Every review session |
+| `<a>` vs `<button>` element type split for sequential/back nav | Low | Screen reader / keyboard users | Every review/practice session |
+| Mobile action-bar layout mismatch (wrap vs stack) | Low | Mobile users switching contexts | Frequent |
 
-These are not bugs — all views work correctly. But they undermine the product's sense of being *one coherent system*. The bookmark gap in History Review is the most impactful finding — it's a functional limitation, not just cosmetic. For a study tool where users build habits through repetition, consistent button placement, labels, and available actions reduce cognitive load.
+These are not correctness bugs — all views still work. But they undermine the product's sense of being *one coherent system*. The bookmark gap in History Review remains the highest-impact finding because it's functional, not just visual. For a study tool where users build habits through repetition, consistent button placement, labels, and action availability reduce cognitive load.
 
 ---
 
@@ -228,7 +249,7 @@ Next → | Submit | Bookmark
 
 3. **Should "Next Question" (verbose) exist anywhere?** The arrow style (`Next →`) is compact and visually symmetric with `← Previous`. Is there ever a reason to prefer the verbose label?
 
-4. **Does this warrant a spec or a quick fix?** The change is 3 files (Practice, Quick Practice, History), ~15 lines total. It could be implemented directly or folded into a SPEC-030 follow-up.
+4. **Does this warrant a spec or a quick fix?** Label/order alignment is still a small change (3 primary files: `practice-view.tsx`, `quick-practice-client.tsx`, `question-page-client.tsx`). If we also standardize mobile layout patterns, scope expands to `exam-review-view.tsx` and `session-summary-view.tsx`.
 
 5. **Quick Practice post-submit state?** After submitting in Quick Practice, does the action bar change (e.g., does Submit disable/hide, does "Next Question" become more prominent)? Should the post-submit state be audited as part of this work? *(Answered by Chrome agent audit: Submit stays in DOM but disabled, same as Tutor.)*
 
@@ -236,9 +257,11 @@ Next → | Submit | Bookmark
 
 7. **First/last question boundary: hide or disable?** Practice disables Previous on Q1 (visible but grayed out). History hides it entirely. Should we standardize? Disabled-but-visible signals "this exists, you're just at the start." Hidden keeps the UI clean. Pick one.
 
-8. **Should "Back to History" move out of the action bar?** Every other mode puts back-navigation in the top-right header. History puts it in the bottom action bar as a ghost link. Should History match the others, or should all modes move their back-nav into the action bar for consistency?
+8. **Should History keep duplicate back navigation (header + bottom)?** `question-page-client.tsx` now renders back in both places for review contexts (`sessionNavigation || submitResult`). Should we keep both, or standardize to one location across contexts?
 
-9. **`<a>` vs `<button>` for nav buttons?** History uses `<a>` links for Previous/Next (they're actual route navigations). Practice uses `<button>` (they trigger JS callbacks). Both look identical. Should we standardize the element type, or is the semantic difference correct (route change vs. state change)?
+9. **`<a>` vs `<button>` for nav buttons?** History uses `<a>` links for Previous/Next (route navigations). Practice uses `<button>` callbacks (state transitions). Both look identical. Should we standardize visuals only, or enforce one semantic model?
+
+10. **Should mobile action bars standardize on wrap or stack?** Practice/Quick use horizontal wrapping; History/Exam Review/Summary use vertical stacking at small widths. Pick one responsive pattern for all bottom action bars?
 
 ---
 
@@ -250,6 +273,7 @@ Next → | Submit | Bookmark
 | 2026-02-17 | Added Quick Practice to audit scope | Quick Practice was missing from original analysis. Uses same `PracticeView` component (inherits "Next Question" label) but intentionally omits Previous — ad hoc mode has no session to navigate |
 | 2026-02-17 | Quick Practice: no Previous by design | Quick Practice is stateless/ad hoc — user answers one question and moves on. If they want to revisit, they use History. Adding Previous would imply a session context that doesn't exist |
 | 2026-02-17 | Chrome agent full UI audit completed | Systematic walkthrough of all 19 action bar states across Quick Practice, Tutor, Exam, and History Review. Confirmed original 3 inconsistencies and surfaced 5 additional: first/last Q boundary handling, bookmark absent from History, Submit vs Try Again swap, back-nav placement, and `<a>` vs `<button>` element types |
+| 2026-02-17 | Source-code audit completed and corrected | Verified every cited path/line against current code. Corrected stale claim about History back-nav location (now header + conditional bottom), added missing History Individual Review action-bar states, corrected disabled-state notes for unanswered History states, and recorded mobile layout-model divergence |
 
 ---
 
@@ -258,12 +282,26 @@ Next → | Submit | Bookmark
 | What | File | Lines | Current |
 |------|------|-------|---------|
 | Practice "Next Question" button | `app/(app)/app/practice/components/practice-view.tsx` | 274-282 | Text label, no arrow, after Submit |
-| Quick Practice client (reuses PracticeView) | `app/(app)/app/practice/quick/quick-practice-client.tsx` | 69-118 | Passes `onNextQuestion` but NOT `onPreviousQuestion` — Previous absent by design |
-| PracticeView Previous conditional | `app/(app)/app/practice/components/practice-view.tsx` | 249-263 | Renders `← Previous` only if `onPreviousQuestion` prop is provided |
-| History "Next →" link | `app/(app)/app/questions/[slug]/question-page-client.tsx` | 236-249 | Arrow label, before Try Again |
-| History "Try Again" button | Same file | 266-276 | After "Next →" |
-| Design principles ordering | `docs/frontend/design-principles.md` | 56-58 | `[← Previous] [Submit / Next →] [Bookmark / Mark for review] [Back link]` |
-| BS-018 proposed unified bar | `docs/brainstorming/bs-018-question-view-ux-unification.md` | 116-122 | Proposed `Next →` everywhere, but SPEC-030 implementation kept "Next Question" |
+| Quick Practice client (reuses PracticeView) | `app/(app)/app/practice/quick/quick-practice-client.tsx` | 69-117 | Passes `onNextQuestion` but not `onPreviousQuestion` |
+| PracticeView Previous conditional | `app/(app)/app/practice/components/practice-view.tsx` | 249-263 | Renders `← Previous` only when `onPreviousQuestion` is provided |
+| Session runner Previous wiring | `app/(app)/app/practice/[sessionId]/components/practice-session-page-view.tsx` | 66-87, 215-219 | Computes `previousQuestionId`; passes `onPreviousQuestion` + `hasPreviousQuestion` into `PracticeView` |
+| History "Next →" link | `app/(app)/app/questions/[slug]/question-page-client.tsx` | 236-249 | Arrow label, positioned before Submit/Try Again |
+| History Submit/Try Again switch | `app/(app)/app/questions/[slug]/question-page-client.tsx` | 251-276 | `Submit` when unanswered; `Try Again` when `submitResult` exists |
+| History header back link | `app/(app)/app/questions/[slug]/question-page-client.tsx` | 147-152 | Back link is always in header |
+| History bottom back link | `app/(app)/app/questions/[slug]/question-page-client.tsx` | 278-281 | Additional back link rendered when `sessionNavigation || submitResult` |
+| Exam Review Stage action bar | `app/(app)/app/practice/[sessionId]/components/exam-review-view.tsx` | 186-191 | Bottom action bar contains `Submit exam` |
+| Session Summary action bar | `app/(app)/app/practice/[sessionId]/components/session-summary-view.tsx` | 95-104 | Bottom action bar contains 3 navigation actions |
+| Design principles ordering reference | `docs/frontend/design-principles.md` | 56-58 | High-level ordering still states `sequential → primary → secondary → back` |
+| Design principles context-row drift | `docs/frontend/design-principles.md` | 70 | `History Session Review (unanswered)` row omits `Back to History`; current code includes it |
+| BS-018 proposed unified bar | `docs/_archive/brainstorming/bs-018-question-view-ux-unification.md` | 116-122 | Proposed `Next →` everywhere, but implementation retained "Next Question" in Practice |
+
+---
+
+## Audit Scope Coverage
+
+- Bottom action bars exist in four implementation files: `practice-view.tsx`, `question-page-client.tsx`, `exam-review-view.tsx`, and `session-summary-view.tsx`.
+- Missing from the original BS-019 scope: **History Individual Review** (no `sessionId`), which has distinct bottom-bar states. Added to Appendix rows 29-31.
+- `rg` scan across `app/(app)/app/practice`, `app/(app)/app/questions`, and `app/(app)/app/history` found no additional bottom action bar implementations beyond the four files above.
 
 ---
 
@@ -275,28 +313,45 @@ Next → | Submit | Bookmark
 
 ---
 
-## Appendix: Full Action Bar State Matrix (Chrome Agent Audit)
+## Appendix: Full Action Bar State Matrix (Source Code Audit)
 
-Complete audit of every action bar state, captured via systematic browser walkthrough on 2026-02-17.
+Code-verified matrix of currently reachable action-bar states as of 2026-02-17.
 
 | # | Mode + State | Buttons (left → right) | Arrows | Disabled? |
 |---|-------------|----------------------|--------|-----------|
-| 1 | Quick Practice / Pre-submit (no answer) | Submit · Next Question · Bookmark | None | Submit disabled |
+| 1 | Quick Practice / Pre-submit (no answer selected) | Submit · Next Question · Bookmark | None | Submit disabled |
 | 2 | Quick Practice / Pre-submit (answer selected) | Submit · Next Question · Bookmark | None | All enabled |
 | 3 | Quick Practice / Post-submit (correct) | Submit · Next Question · Bookmark | None | Submit disabled |
 | 4 | Quick Practice / Post-submit (incorrect) | Submit · Next Question · Bookmark | None | Submit disabled |
-| 5 | Quick Practice / Bookmarked toggle | Submit · Next Question · Remove bookmark | None | — |
-| 6 | Tutor / Q1 pre-submit (no answer) | ← Previous · Submit · Next Question · Bookmark | ← only | Previous disabled, Submit disabled |
-| 7 | Tutor / Q1 post-submit | ← Previous · Submit · Next Question · Bookmark | ← only | Previous disabled, Submit disabled |
-| 8 | Tutor / Middle Q pre-submit | ← Previous · Submit · Next Question · Bookmark | ← only | Submit disabled |
-| 9 | Tutor / Last Q pre-submit | ← Previous · Submit · Next Question · Bookmark | ← only | Submit disabled |
-| 10 | Exam / Q1 pre-submit | ← Previous · Submit · Next Question · Bookmark · Mark for review | ← only | Previous disabled, Submit disabled |
-| 11 | Exam / Middle Q | ← Previous · Submit · Next Question · Bookmark · Mark for review | ← only | Submit disabled |
-| 12 | Exam / Last Q | ← Previous · Submit · Next Question · Bookmark · Mark for review | ← only | Submit disabled |
-| 13 | Exam / Mark for review toggled | … · Unmark review | — | — |
-| 14 | Exam / Review Questions page | Submit exam | None | — |
-| 15 | History / Q1 (answered) | Next → · Try Again · Back to History | → only | None |
-| 16 | History / Middle Q (answered) | ← Previous · Next → · Try Again · Back to History | ← and → | None |
-| 17 | History / Middle Q (unanswered) | ← Previous · Next → · Submit · Back to History | ← and → | None |
-| 18 | History / Last Q (unanswered) | ← Previous · Submit · Back to History | ← only | None |
-| 19 | Session Summary (Tutor & Exam) | Back to Dashboard · View in History · Start another session | None | — |
+| 5 | Quick Practice / Bookmarked toggle | Submit · Next Question · Remove bookmark | None | Submit state-dependent |
+| 6 | Tutor / Q1 pre-submit (no answer selected) | ← Previous · Submit · Next Question · Bookmark | ← only | Previous disabled, Submit disabled |
+| 7 | Tutor / Q1 pre-submit (answer selected) | ← Previous · Submit · Next Question · Bookmark | ← only | Previous disabled |
+| 8 | Tutor / Q1 post-submit | ← Previous · Submit · Next Question · Bookmark | ← only | Previous disabled, Submit disabled |
+| 9 | Tutor / Middle Q pre-submit (no answer selected) | ← Previous · Submit · Next Question · Bookmark | ← only | Submit disabled |
+| 10 | Tutor / Middle Q pre-submit (answer selected) | ← Previous · Submit · Next Question · Bookmark | ← only | All enabled |
+| 11 | Tutor / Middle Q post-submit | ← Previous · Submit · Next Question · Bookmark | ← only | Submit disabled |
+| 12 | Tutor / Last Q pre-submit (no answer selected) | ← Previous · Submit · Next Question · Bookmark | ← only | Submit disabled |
+| 13 | Tutor / Last Q pre-submit (answer selected) | ← Previous · Submit · Next Question · Bookmark | ← only | All enabled |
+| 14 | Tutor / Last Q post-submit | ← Previous · Submit · Next Question · Bookmark | ← only | Submit disabled |
+| 15 | Exam / Q1 pre-submit (no answer selected) | ← Previous · Submit · Next Question · Bookmark · Mark for review | ← only | Previous disabled, Submit disabled |
+| 16 | Exam / Q1 pre-submit (answer selected) | ← Previous · Submit · Next Question · Bookmark · Mark for review | ← only | Previous disabled |
+| 17 | Exam / Middle Q pre-submit (no answer selected) | ← Previous · Submit · Next Question · Bookmark · Mark for review | ← only | Submit disabled |
+| 18 | Exam / Middle Q pre-submit (answer selected) | ← Previous · Submit · Next Question · Bookmark · Mark for review | ← only | All enabled |
+| 19 | Exam / Last Q pre-submit (no answer selected) | ← Previous · Submit · Next Question · Bookmark · Mark for review | ← only | Submit disabled |
+| 20 | Exam / Last Q pre-submit (answer selected) | ← Previous · Submit · Next Question · Bookmark · Mark for review | ← only | All enabled |
+| 21 | Exam / Mark for review toggled | ← Previous · Submit · Next Question · Bookmark · Unmark review | ← only | Submit state-dependent |
+| 22 | Exam / Review Questions page | Submit exam | None | Submit exam disabled while pending |
+| 23 | History Session Review / Q1 answered | Next → · Try Again · Back to History | → only | Try Again disabled only while pending |
+| 24 | History Session Review / Q1 unanswered | Next → · Submit · Back to History | → only | Submit disabled until choice selected |
+| 25 | History Session Review / Middle Q answered | ← Previous · Next → · Try Again · Back to History | ← and → | Try Again disabled only while pending |
+| 26 | History Session Review / Middle Q unanswered | ← Previous · Next → · Submit · Back to History | ← and → | Submit disabled until choice selected |
+| 27 | History Session Review / Last Q answered | ← Previous · Try Again · Back to History | ← only | Try Again disabled only while pending |
+| 28 | History Session Review / Last Q unanswered | ← Previous · Submit · Back to History | ← only | Submit disabled until choice selected |
+| 29 | History Individual Review / Answered | Try Again · Back to History | None | Try Again disabled only while pending |
+| 30 | History Individual Review / Unanswered (no choice selected) | Submit | None | Submit disabled |
+| 31 | History Individual Review / Unanswered (choice selected) | Submit | None | Submit enabled |
+| 32 | Session Summary (Tutor & Exam) | Back to Dashboard · View in History · Start another session | None | — |
+
+Notes:
+- `QuestionView` always renders a top-right header back link. Bottom-bar back appears only when `sessionNavigation || submitResult`.
+- Exam auto-advances after submit when not on the last question, so non-last exam post-submit action-bar states are transient.
