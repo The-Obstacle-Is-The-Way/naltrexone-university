@@ -21,14 +21,25 @@ See [BS-019](../brainstorming/bs-019-action-bar-label-and-ordering-consistency.m
 
 ---
 
+## Test Harness Requirements (Mandatory)
+
+All test work in this spec must follow repo-wide React 19 + Vitest rules:
+
+1. Every `*.test.tsx` file must start with `// @vitest-environment jsdom` on line 1
+2. Render-output tests must use `renderToStaticMarkup` (not `@testing-library/react`)
+3. Interactive/async checks belong in `*.browser.spec.tsx` or Playwright E2E
+4. Update existing test files/helpers first; avoid duplicate test files for the same behavior
+
+---
+
 ## Requirements
 
 ### Functional
 
 1. **Label standardization:** All contexts use `Next →` (arrow suffix), never `Next Question`
-2. **Ordering standardization:** All contexts follow `← Previous → primary action → Next → → secondary actions → back link`
-3. **Boundary standardization:** First-question Previous and last-question Next are **disabled-but-visible** (not hidden) in all session-based contexts
-4. **Back navigation:** Single placement per context — header-only for Practice/Quick Practice, header + bottom for History/review contexts (preserving current History UX where bottom back link appears alongside sequential nav)
+2. **Ordering standardization:** All contexts follow `← Previous · primary action · Next → · secondary actions · back link`
+3. **Boundary standardization:** First-question Previous and last-question Next are **disabled-but-visible** (not hidden) in session-based contexts when session navigation metadata exists
+4. **Back navigation placement policy:** Keep current pattern — header-only in Practice/Quick Practice; in review contexts, header is always present and bottom back appears when `sessionNavigation` or `submitResult` is present
 5. **Quick Practice:** No Previous (intentional — no session context), follows same label and ordering otherwise
 6. **Bookmark in History Review:** Deferred (separate feature addition, not a consistency fix)
 
@@ -37,7 +48,7 @@ See [BS-019](../brainstorming/bs-019-action-bar-label-and-ordering-consistency.m
 1. No shared action bar component — keep inline rendering per context (per design-principles §4)
 2. No changes to Exam Review Stage or Session Summary action bars (specialized, not part of this standardization)
 3. No mobile layout model changes (wrap vs stack) — defer to separate concern
-4. `<a>` vs `<button>` semantics preserved per context (History uses route links, Practice uses callbacks — both correct for their navigation model)
+4. `<a>` vs `<button>` semantics preserved per context: enabled History nav remains links; disabled boundary states render native disabled buttons (no disabled `<a>`)
 
 ---
 
@@ -89,11 +100,18 @@ See [BS-019](../brainstorming/bs-019-action-bar-label-and-ordering-consistency.m
 + Next →
 ```
 
-**Change B — Boundary:** Disable Next on last question instead of leaving it always enabled. Add `hasNextQuestion` prop to `PracticeView` (or use existing wiring to determine if current is last).
+**Change B — Boundary:** Disable Next on last question instead of leaving it always enabled.
+
+- Add optional `hasNextQuestion?: boolean` to `PracticeViewProps`
+- For session-based views, pass explicit value from session navigator wiring
+- For non-session contexts (Quick Practice), default to enabled (`hasNextQuestion !== false`)
 
 ### File 2: `app/(app)/app/practice/[sessionId]/components/practice-session-page-view.tsx`
 
-**Change C — Last-Q wiring:** Compute and pass `hasNextQuestion` to `PracticeView`, similar to how `hasPreviousQuestion` already works.
+**Change C — Last-Q wiring:** Compute and pass `hasNextQuestion` to `PracticeView`, mirroring the existing `previousQuestionId` wiring.
+
+- Compute `nextQuestionId` from `navigator.rows` + `currentQuestionId` (skip unavailable rows, same guard style as previous lookup)
+- Pass `hasNextQuestion={nextQuestionId !== null}` into `PracticeView`
 
 ### File 3: `app/(app)/app/questions/[slug]/question-page-client.tsx`
 
@@ -111,19 +129,12 @@ Target order:
 
 **Change E — Boundary:** Show disabled Previous on Q1 and disabled Next on last Q, instead of hiding them.
 
-```diff
-// Instead of conditionally rendering Previous/Next based on existence:
-- {sessionNavigation?.previousUrl && (
--   <Button asChild ...><Link href={previousUrl}>← Previous</Link></Button>
-- )}
-+ <Button asChild disabled={!sessionNavigation?.previousUrl} ...>
-+   <Link href={sessionNavigation?.previousUrl ?? '#'}>← Previous</Link>
-+ </Button>
-```
+Use this required rendering pattern in `QuestionView`:
 
-Same pattern for Next.
+- **Enabled state:** `<Button asChild><Link ...>...</Link></Button>`
+- **Disabled state:** `<Button disabled>...</Button>` (no `Link`)
 
-**Note:** The disabled `<a>` pattern needs care — ensure `aria-disabled="true"` and `pointer-events: none` or `tabindex="-1"` to prevent keyboard activation on disabled links. Alternatively, switch to `<button>` with `onClick={() => router.push(url)}` for disabled support.
+This keeps enabled route-navigation semantics as links while using valid disabled behavior at boundaries.
 
 ### File 4: `docs/frontend/design-principles.md`
 
@@ -184,18 +195,32 @@ it('orders buttons as: Previous, Submit, Next, Bookmark', () => {
 ```
 
 ```typescript
+// app/(app)/app/practice/components/practice-view.browser.spec.tsx — update existing checks
+it('uses "Next →" in interactive practice flow', async () => {
+  // Replace role/name lookups that currently target "Next Question"
+});
+```
+
+```typescript
+// app/(app)/app/practice/[sessionId]/components/practice-session-page-view.browser.spec.tsx — add
+it('passes hasNextQuestion=false when current question is last available', async () => {
+  // Assert PracticeView receives Next disabled at session boundary
+});
+```
+
+```typescript
 // app/(app)/app/questions/[slug]/question-page-client.test.tsx — update/add
 it('orders History Review buttons as: Previous, Try Again, Next, Back', () => {
   // Assert DOM order: ← Previous, Try Again, Next →, Back to History
 });
 
 it('shows disabled Previous on first question of session review', () => {
-  // Render with sessionNavigation.previousUrl = null
+  // Render sessionNavigation with currentIndex=0
   // Assert Previous button exists AND is disabled
 });
 
 it('shows disabled Next on last question of session review', () => {
-  // Render with sessionNavigation.nextUrl = null
+  // Render sessionNavigation with currentIndex=questions.length-1
   // Assert Next button exists AND is disabled
 });
 ```
@@ -207,27 +232,41 @@ it('shows disabled Next on last question of session review', () => {
 - History: ordering matches `← Previous · Try Again · Next → · Back to ...`
 - Boundary: disabled Previous/Next visible at edges (not hidden)
 
+Also update shared helpers/assertions that currently hard-code `Next Question`, especially:
+- `tests/e2e/helpers/bookmark.ts`
+- `tests/e2e/bs-019-action-bar-audit.spec.ts`
+- any E2E specs that assert hidden boundary links on session review first/last question
+
 ---
 
 ## Implementation Notes
 
 ### Disabled link pattern
 
-History Review uses `<Button asChild><Link>` for Previous/Next (renders as `<a>`). HTML `<a>` elements don't natively support `disabled`. Two approaches:
+History Review uses `<Button asChild><Link>` for enabled Previous/Next (renders as `<a>`). HTML `<a>` elements don't natively support `disabled`.
 
-**Option 1 (Preferred):** Render a `<Button>` (not `asChild`) when disabled, `<Button asChild><Link>` when enabled. This avoids fighting HTML semantics.
+This spec requires one pattern:
+- Render a `<Button>` (not `asChild`) when disabled
+- Render `<Button asChild><Link>` when enabled
 
 ```tsx
-{sessionNavigation?.previousUrl ? (
+{navPrev ? (
   <Button variant="outline" size="sm" asChild>
-    <Link href={sessionNavigation.previousUrl}>← Previous</Link>
+    <Link
+      href={toQuestionRoute(navPrev.slug, {
+        from: props.sessionNavigation.from,
+        mode: 'review',
+        sessionId: props.sessionNavigation.sessionId,
+        historyHref: props.historyHref,
+      })}
+    >
+      ← Previous
+    </Link>
   </Button>
 ) : (
   <Button variant="outline" size="sm" disabled>← Previous</Button>
 )}
 ```
-
-**Option 2:** Use `aria-disabled="true"` + `pointer-events-none` on the `<a>`. Works but less clean.
 
 ### Ordering consistency verification
 

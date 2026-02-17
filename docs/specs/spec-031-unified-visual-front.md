@@ -23,6 +23,17 @@ See the brainstorming docs for full root cause analysis, severity assessment, an
 
 ---
 
+## Test Harness Requirements (Mandatory)
+
+All test work in this spec must follow repo-wide React 19 + Vitest rules:
+
+1. Every `*.test.tsx` file must start with `// @vitest-environment jsdom` on line 1
+2. Render-output tests must use `renderToStaticMarkup` (not `@testing-library/react`)
+3. Interactive/async UI checks belong in `*.browser.spec.tsx` (via `vitest-browser-react`) or Playwright E2E
+4. Update existing tests where possible; do not create duplicate coverage files for the same behavior
+
+---
+
 ## Phase 1: Card Contrast Alignment (BS-020)
 
 ### Problem Summary
@@ -83,6 +94,7 @@ Change `hover:border-border/80` → `hover:border-border` on all stat cards. Bor
 | BS-020 Open Question | Resolution |
 |---------------------|------------|
 | Q1: Is two-tone background intentional? | **No.** Treat as drift. `bg-muted` was a reasonable early choice but inverts card elevation. |
+| Q4: Does browser verification matter? | **Yes.** Playwright audit is authoritative for measured contrast behavior and should be updated from “verify bug” to “verify fix.” |
 | Q2: Should stat cards have hover effects? | **Defer.** Keep hover for now; evaluate removing from non-interactive cards as follow-up after visual verification post-deploy. |
 | Q3: Audit light mode? | **Done.** Impact is minimal — pure white vs off-white. No regression. |
 | Q5: Landing impact stat cards hover? | **Defer.** They work fine without hover. Not in scope. |
@@ -93,7 +105,7 @@ Change `hover:border-border/80` → `hover:border-border` on all stat cards. Bor
 Write these tests before implementation:
 
 ```typescript
-// app/(app)/app/layout.test.ts — add test
+// app/(app)/app/layout-shell.test.tsx — add test
 it('uses bg-background for the app body (not bg-muted)', () => {
   // Verify the layout root uses bg-background
   // This guards against regression to bg-muted
@@ -106,6 +118,8 @@ it('uses semantic hover tokens for dashboard stat cards', () => {
   // Update: assert hover:border-border (not hover:border-border/80)
 });
 ```
+
+Also update any assertions in `tests/e2e/bs-020-card-contrast-audit.spec.ts` that currently validate the broken state (`bg-muted` layout root, `hover:border-border/80`) so they validate the fixed state.
 
 **E2E verification:** `tests/e2e/bs-020-card-contrast-audit.spec.ts` already measures contrast. After the fix:
 - Dashboard card lightness (7%) should be GREATER than page bg (3.5%) — inverted from current
@@ -127,14 +141,14 @@ The marketing landing page has semantic HTML bugs (nested `<main>` elements, unl
 
 1. Landing page must have exactly one `<main>` element (not nested)
 2. All major landing sections must have accessible labels
-3. "Sign in" casing must be consistent across the entire product
+3. "Sign in" casing must be consistent across marketing-shell + unauthenticated auth-nav CTAs
 4. Hero `<h1>` accessible name must be verified and fixed if broken
 
 #### Non-Functional
 
 1. No navigation IA changes (marketing and app nav intentionally differ)
 2. No theme toggle changes (deferred — needs product decision)
-3. Skip-link (`#main-content`) must continue to work after `<main>` fix
+3. Skip-link (`#main-content`) must continue to work after `<main>` fix, with a focusable target (`tabIndex={-1}`)
 
 ### Exact Changes
 
@@ -145,7 +159,7 @@ The marketing layout renders `<main>{children}</main>`, and `marketing-home.tsx`
 ```diff
 // components/marketing/marketing-layout.tsx:59
 - <main>{children}</main>
-+ <main id="main-content">{children}</main>
++ <main id="main-content" tabIndex={-1}>{children}</main>
 ```
 
 ```diff
@@ -168,7 +182,7 @@ Add `aria-label` to the five unlabeled sections in `marketing-home.tsx`:
 | 68 | `<section>` (hero) | `aria-label="Hero"` |
 | 95 | `<section>` (stats) | `aria-label="Impact statistics"` |
 | 129 | `<section id="features">` | `aria-label="Features"` |
-| 170 | `<section id="how-it-works">` | `aria-label="How it works"` |
+| 170 | `<section>` (pricing) | `aria-label="Pricing"` |
 | 237 | `<section>` (CTA) | `aria-label="Get started"` |
 
 #### 2C. Standardize "Sign in" casing
@@ -189,7 +203,7 @@ Canonical form: **"Sign in"** (sentence case). Update these locations:
 
 #### 2D. Verify hero `<h1>` accessible name
 
-`marketing-home.tsx:73-77` splits the heading across two spans. Verify the computed accessible name reads correctly. If the spans concatenate without space (e.g., "Master AddictionMedicine"), add `aria-label` on the `<h1>`.
+`marketing-home.tsx:73-77` splits the heading across two spans. Verify the computed accessible name reads correctly. If the spans concatenate without spacing (e.g., `Master YourBoard Exams.`), add `aria-label` on the `<h1>`.
 
 **Action:** Test in browser, fix only if needed.
 
@@ -198,7 +212,7 @@ Canonical form: **"Sign in"** (sentence case). Update these locations:
 | BS-021 Open Question | Resolution |
 |---------------------|------------|
 | Q1: Theme toggle on marketing? | **Defer.** Low severity, needs product decision. Not in scope. |
-| Q2: Canonical "Sign in" casing? | **Yes.** Sentence case ("Sign in") everywhere. |
+| Q2: Canonical "Sign in" casing? | **Yes.** Sentence case ("Sign in") on marketing-shell + unauthenticated auth-nav CTAs. |
 | Q3: Section landmarks as hard standard? | **Yes for landing page.** Add labels now. Formalize as standard in design-principles after implementation. |
 | Q4: Formalize parity in design-principles? | **Phase 3 follow-up.** Codify after Phase 1 + 2 are implemented and verified. |
 | Q5: Landing as baseline for polish? | **Yes.** Validated by BS-020 impact analysis. Codify in Phase 3. |
@@ -218,12 +232,25 @@ it('labels all major landing sections with aria-label', () => {
 it('uses consistent "Sign in" casing in CTA', () => {
   // Assert CTA text is "Sign in" not "Sign In"
 });
+
+it('exposes the hero heading with accessible name "Master Your Board Exams."', () => {
+  // Verify heading accessible name (or aria-label fallback) includes proper spacing
+});
+```
+
+Also update any existing assertions in `components/marketing/marketing-home.test.tsx` that currently expect `<main id="main-content"` to come from `marketing-home.tsx`; after this change the target `<main>` lives in `marketing-layout.tsx`.
+
+```typescript
+// components/marketing/marketing-layout.test.tsx — update existing test
+it('renders the outer main with id="main-content" and tabIndex="-1"', () => {
+  // Assert skip-link target lives on the single outer <main>
+});
 ```
 
 ```typescript
-// components/auth-nav.test.tsx — update existing test
+// components/auth-nav.test.tsx — update existing assertions
 it('uses sentence-case "Sign in" for unauthenticated users', () => {
-  // Assert link text is "Sign in" not "Sign In"
+  // Update all unauthenticated assertions that currently expect "Sign In"
 });
 ```
 
@@ -258,7 +285,7 @@ These are explicitly tracked as follow-up, not forgotten:
 - `components/marketing/marketing-layout.tsx` — move `id="main-content"` to outer `<main>`
 - `components/marketing/marketing-home.tsx` — remove inner `<main>`, add section labels, fix CTA casing
 - `components/auth-nav.tsx` — fix "Sign In" → "Sign in"
-- Unit tests (marketing-home tests, auth-nav test update)
+- Unit tests (`marketing-home.test.tsx`, `marketing-layout.test.tsx`, `auth-nav.test.tsx` updates)
 
 ### Sequencing
 Phase 1 and Phase 2 can be **separate PRs** or **one PR with two commits**. Phase 1 should land first (higher visibility, resolves the most impactful bug). Phase 2 has no dependency on Phase 1 code but follows logically in the unified-front initiative.
@@ -272,7 +299,7 @@ Phase 1 and Phase 2 can be **separate PRs** or **one PR with two commits**. Phas
 3. Landing → Dashboard transition feels like the same product
 4. Landing page has exactly one `<main>` element
 5. All landing sections are discoverable via screen reader landmark navigation
-6. "Sign in" is consistently cased across the entire product
+6. "Sign in" is consistently cased across marketing-shell + unauthenticated auth-nav CTAs
 7. No visual regression in light mode
 
 ---
