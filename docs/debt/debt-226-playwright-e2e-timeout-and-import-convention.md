@@ -9,104 +9,130 @@
 
 ## Description
 
-CodeRabbit feedback repeatedly targets two E2E conventions:
+Code review repeatedly flags two E2E style decisions that are currently implicit but not documented as project policy:
 
-1. `test.setTimeout(...)` usage and timeout value consistency
-2. Relative helper imports in `tests/e2e/**` versus global alias preference
+1. `test.setTimeout(...)` usage and value consistency in `tests/e2e/**/*.spec.ts`
+2. Relative helper imports (`./helpers/...`) in E2E specs versus global `@/...` alias preference
 
-After codebase-wide audit, the current behavior is mostly intentional, but the intent is not documented in SSOT docs. This creates recurring review noise and inconsistent style decisions across contributors.
+Current behavior is internally consistent enough to work, but because policy is undocumented in SSOT docs, each PR re-litigates the same choices.
 
 ## Evidence (Current State)
 
-### Timeout patterns
+### Rebase Validation Snapshot (2026-02-17)
 
-- `tests/e2e` contains **18** `*.spec.ts` files
-- **13 files** use `test.setTimeout(...)` (**15 total occurrences**)
-- Current suite-level timeout values:
-  - `120_000` (7 occurrences)
-  - `180_000` (7 occurrences)
-  - `300_000` (1 occurrence — `bs-019-action-bar-audit.spec.ts`, 4-test suite with Clerk + Stripe + multi-question flows)
-- `test.slow()` usage in `tests/e2e/**/*.spec.ts`: **0 occurrences**
-- `playwright.config.ts` defines `webServer.timeout` only — no `timeout`, `expect.timeout`, `actionTimeout`, or `navigationTimeout` at config level (all use Playwright defaults: 30s test, 5s expect, 30s action, 30s navigation)
-
-#### Inline timeout overrides (~73 instances beyond `test.setTimeout`)
-
-The suite-level timeouts are only part of the picture. Across E2E specs and helpers:
-
-| Pattern | Count | Common values |
-|---------|-------|---------------|
-| `.toBeVisible({ timeout })`, `.toHaveURL({ timeout })`, etc. | ~67 | `15_000`, `10_000`, `30_000` |
-| `page.goto(..., { timeout })` | ~21 | `60_000` (with `waitUntil: 'domcontentloaded'`) |
-| `locator.waitFor({ timeout })` | ~10 | `10_000`, `15_000` |
-| `page.waitForURL({ timeout })` | 1 | `15_000` |
-| `page.waitForFunction({ timeout })` | 1 | `5_000` |
-
-These inline overrides are the **de facto timeout policy** — the config is silent, so every timeout is set per-call.
-
-### Import patterns
-
+- `tests/e2e` spec files: **18**
+- Files using `test.setTimeout(...)`: **13**
+- Total `test.setTimeout(...)` occurrences: **15**
+- Timeout values currently in use:
+  - `120_000`: **7**
+  - `180_000`: **7**
+  - `300_000`: **1**
+- `test.slow()` occurrences in E2E specs: **0**
+- `playwright.config.ts` has `webServer.timeout` but no top-level Playwright test policy fields (`timeout`, `expect.timeout`)
 - Alias imports (`@/...`) in `tests/e2e/**/*.spec.ts` and `tests/e2e/**/*.ts`: **0**
-- Relative helper imports (`./helpers/...`) in E2E specs: **45**
-- Pattern is highly consistent within E2E, but global guidance currently says to “Prefer importing via `@/...` alias” (AGENTS.md), with no E2E-specific exception documented
+- Relative `./helpers/...` imports in E2E specs: **45**
+
+### Timeout Inventory Notes
+
+- The single `300_000` outlier is in `tests/e2e/bs-019-action-bar-audit.spec.ts`
+- `tests/e2e/bs-020-card-contrast-audit.spec.ts` contains 3 `test.setTimeout(...)` calls
+- `tests/e2e/bs-019-action-bar-audit.spec.ts` contains 1 `test.setTimeout(...)` call (the `300_000` outlier)
+
+### Policy Gap
+
+Current docs do not define a clear E2E timeout/import convention:
+
+- `AGENTS.md` says "Prefer importing via `@/...` alias" globally, with no E2E scoped exception
+- `playwright.config.ts` configures web server startup timeout only
+- No single doc states when to use default timeout vs `expect` timeout vs `test.setTimeout` vs `test.slow`
+
+### Audit Commands (repeatable)
+
+```bash
+# Count E2E spec files
+rg --files tests/e2e -g '*.spec.ts' | wc -l
+
+# Timeout usage and value distribution
+rg -n "test\\.setTimeout\\(" tests/e2e -g '*.spec.ts'
+rg -n "test\\.setTimeout\\(([^)]*)\\)" tests/e2e -g '*.spec.ts' \
+  | sed -E 's/.*test\\.setTimeout\\(([^)]*)\\).*/\\1/' | sort | uniq -c
+rg -n "test\\.slow\\(" tests/e2e -g '*.spec.ts'
+
+# Import convention usage
+rg -n "@/" tests/e2e -g '*.spec.ts' -g '*.ts'    # expect 0
+rg -n "from './helpers/" tests/e2e -g '*.spec.ts' | wc -l
+
+# Playwright global timeout fields
+rg -n "timeout|expect" playwright.config.ts
+```
 
 ## Why This Is Not DEBT-225
 
-This debt is adjacent to DEBT-225 but not the same problem:
+- **DEBT-225:** Vitest unit/component cold-import timeout behavior (`pnpm test --run`)
+- **DEBT-226:** Playwright E2E timeout/import policy clarity (`pnpm test:e2e`)
 
-- **DEBT-225**: Vitest cold-import timeout flakes in unit/component tests (`pnpm test --run`)
-- **DEBT-226**: Playwright E2E timeout/import convention clarity (`pnpm test:e2e`)
-
-Shared theme: timeout discipline and consistency.
-
-Different root causes: Vitest module-load budget vs. Playwright end-to-end flow budgets.
+Shared theme: timeout discipline. Different runtime, tooling, and failure mode.
 
 ## Impact
 
-- **Review churn**: repeat CodeRabbit comments on already-intentional patterns
-- **Policy ambiguity**: contributors can’t tell when `test.setTimeout` is preferred vs `test.slow`
-- **Style drift risk**: timeout values may keep diverging without rationale
-- **Onboarding friction**: E2E conventions are inferred from examples, not documented standards
+- Repeated review churn on otherwise intentional E2E patterns
+- Inconsistent timeout values without explicit rationale trail
+- Onboarding friction (contributors infer standards from existing files)
+- Higher risk of style drift in future E2E additions
 
 ## Resolution Plan
 
-1. **Document E2E import convention explicitly**
-   - Decide and state one policy for `tests/e2e/**` (relative helper imports vs alias imports)
-   - Record this as a scoped exception if it differs from global alias preference
+### Part 1: Publish explicit E2E import convention
 
-2. **Define Playwright timeout policy with concrete bands**
-   - Clarify when to use each mechanism (`test.setTimeout`, `test.slow`, inline `{ timeout }`, config defaults)
-   - Proposed timeout bands based on current usage patterns:
+Document one policy for `tests/e2e/**` imports, including scoped exception behavior if needed.
 
-     | Band | Value | Use case |
-     |------|-------|----------|
-     | Immediate | `1_000–5_000` | Error state checks, negation assertions, fast element presence |
-     | Standard | `10_000–15_000` | Element visibility after async ops, heading loads, navigation waits |
-     | Extended | `30_000` | Async data loads, loading-text hide, form submission feedback |
-     | Navigation | `60_000` | `page.goto()` with `waitUntil: 'domcontentloaded'` (server startup + SSR) |
-     | Suite: Standard | `120_000` | Multi-test suites with Clerk auth + basic page interactions |
-     | Suite: Audit | `180_000` | Multi-test audit suites with multi-page navigation + screenshots |
-     | Suite: Mega | `300_000` | Exceptional multi-step suites only — **requires inline comment with rationale** |
+Recommended convention:
 
-   - Values outside these bands require a comment justifying the deviation
+- Use relative imports for E2E-local helpers: `./helpers/...`
+- Use `@/...` for app/src/lib imports outside `tests/e2e/**`
 
-3. **Normalize or justify outliers**
-   - Keep existing values where justified
-   - Add concise rationale comments for exceptional values (e.g., `300_000`) or reduce them
+### Part 2: Define Playwright timeout policy hierarchy
 
-4. **Add a lightweight guardrail**
-   - Add PR checklist/docs checklist item for E2E timeout/import policy compliance
-   - Optional: add a simple script check if drift recurs
+Document concrete usage rules for:
+
+- Global config `timeout`
+- Global config `expect.timeout`
+- Per-assertion timeout overrides
+- `test.slow()`
+- `test.setTimeout(...)`
+
+At minimum, document:
+
+- Default baseline values
+- Approved bands for common flow types
+- Required rationale comment format for outliers
+
+### Part 3: Normalize current suite or document explicit exceptions
+
+- Keep existing values only with explicit rationale comments
+- Evaluate reduction of `300_000` outlier, or justify why it cannot be reduced yet
+- Avoid introducing additional ad-hoc values without policy reference
+
+### Part 4: Add a lightweight guardrail
+
+- Add checklist item in PR/review docs for E2E timeout/import policy compliance
+- If churn continues, add a small CI script to detect new disallowed timeout values or import-style drift
+
+### Part 5: Update SSOT locations (not just one doc)
+
+Document the policy in at least:
+
+- `AGENTS.md` (scoped E2E exception from global alias preference, if adopted)
+- `docs/dev/testing-infrastructure.md` (Playwright timeout hierarchy and examples)
 
 ## Acceptance Criteria
 
-- [ ] E2E import convention is explicitly documented (in AGENTS.md or `.claude/rules/`)
-- [ ] E2E timeout bands are documented with concrete usage rules
-- [ ] `playwright.config.ts` sets sensible defaults (`timeout`, `expect.timeout`) so inline overrides are the exception, not the rule
-- [ ] Existing `test.setTimeout` values are either standardized or explicitly justified with inline comments
-- [ ] The `300_000` outlier in `bs-019` has an inline rationale comment
-- [ ] AGENTS.md or `.claude/rules/` has an E2E testing section (currently missing — only Vitest is documented)
-- [ ] Review guidance references the policy to reduce repeat false-positive style comments
-- [ ] DEBT-226 is closed after one full PR cycle with no recurring timeout/import-style review churn
+- [ ] E2E import convention is explicitly documented with scoped rules for `tests/e2e/**`
+- [ ] Playwright timeout policy is documented with concrete rules and baseline values
+- [ ] Existing `test.setTimeout` values are standardized or justified with concise comments
+- [ ] The `300_000` outlier is reduced or explicitly justified in-file
+- [ ] Review guidance references the policy, reducing repeat style comments
+- [ ] One full PR cycle completes with no recurring timeout/import-style review churn
 
 ## References
 
@@ -116,5 +142,5 @@ Different root causes: Vitest module-load budget vs. Playwright end-to-end flow 
 
 ## Related
 
-- [DEBT-225](debt-225-vitest-cold-import-timeout-flakes.md) — Vitest cold-import timeout flakes
-- [DEBT-110](../_archive/debt/debt-110-e2e-helper-anti-patterns.md) — Prior E2E timeout misuse (`isVisible({ timeout })`)
+- [DEBT-225](debt-225-vitest-cold-import-timeout-flakes.md) - Vitest cold-import timeout flakes
+- [DEBT-110](../_archive/debt/debt-110-e2e-helper-anti-patterns.md) - prior E2E timeout misuse (`isVisible({ timeout })`)
