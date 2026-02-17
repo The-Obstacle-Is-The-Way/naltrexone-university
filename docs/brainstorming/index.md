@@ -28,8 +28,10 @@ Brainstorming (BS-NNN) → Spec (SPEC-NNN) → Implementation → Archive
 | ID | Title | Status | Related Spec |
 |----|-------|--------|--------------|
 | [BS-014](./bs-014-practice-starter-question-count-ux.md) | Practice Starter — Silent Truncation When Fewer Questions Available | Active | — |
+| [BS-022](./bs-022-unanswered-question-review-handling.md) | Unanswered Question Review Handling | Active | — |
+| [BS-023](./bs-023-try-again-state-consistency.md) | Try Again — State Consistency and Business Logic Gaps | Active | — |
 
-**Next Brainstorming ID:** BS-022
+**Next Brainstorming ID:** BS-024
 
 ---
 
