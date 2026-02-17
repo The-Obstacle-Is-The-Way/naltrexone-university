@@ -151,7 +151,7 @@ A kind only renders if at least one published question has a tag of that kind. C
 
 ---
 
-## 3. Full Pipeline: Tag Flow Diagram
+## 4. Full Pipeline: Tag Flow Diagram
 
 ```text
 ┌────────────────────────────────────────────────────────────────────────┐
@@ -196,9 +196,9 @@ A kind only renders if at least one published question has a tag of that kind. C
 │        name: "Alcohol"                                                  │
 │        kind: "substance"                                                │
 │                                                                         │
-│    ⚠️  CURRENT STATE: The imported MDX files have MANUALLY SET domain   │
-│    tags (from the external question-generation repo) that do NOT match  │
-│    the directory-derived values the import script would produce.        │
+│    ⚠️  CURRENT STATE: Imported MDX domain tags do NOT match             │
+│    directory-derived domain slugs (948/948 imported files mismatch       │
+│    root directory slug vs domain tag slug).                              │
 ├────────────────────────────────────────────────────────────────────────┤
 │ 4. SEED: pnpm db:seed                                                   │
 │    scripts/seed.ts                                                       │
@@ -238,22 +238,30 @@ A kind only renders if at least one published question has a tag of that kind. C
 
 ---
 
-## 4. Current Tag Values (What's in Production)
+## 5. Current Tag Values (Current MDX Corpus)
+
+These values are from `content/questions/**/*.mdx` in the repository.  
+They are what `pnpm db:seed` can ingest.
+
+Note: UI values can differ by environment if seeded with `SEED_INCLUDE_PLACEHOLDERS=false` (placeholder questions excluded/archived).
+All 958 current MDX files have `status: published`.
 
 ### Domain (Exam Section) — 8 values
 
-| Slug | Display Name | Source |
+| Slug | Display Name | Source in repo |
 |------|-------------|--------|
-| `co-occurring-complications` | Co-occurring & Medical Complications | MDX (manual) |
-| `epidemiology-prevention` | Epidemiology & Prevention | MDX (manual) |
-| `ethics-legal-policy` | Ethics, Legal & Policy | MDX (manual) |
+| `co-occurring-complications` | Co-occurring & Medical Complications | Imported MDX |
+| `epidemiology-prevention` | Epidemiology & Prevention | Imported MDX |
+| `ethics-legal-policy` | Ethics, Legal & Policy | Imported MDX |
 | `general` | General | Placeholder |
-| `pharmacology-neuroscience` | Pharmacology & Neuroscience | MDX (manual) |
-| `psychosocial-interventions` | Psychosocial Interventions | MDX (manual) |
-| `screening-diagnosis` | Screening & Diagnosis | MDX (manual) |
-| `treatment-pharmacotherapy` | Treatment & Pharmacotherapy | MDX (manual) |
+| `pharmacology-neuroscience` | Pharmacology & Neuroscience | Imported MDX |
+| `psychosocial-interventions` | Psychosocial Interventions | Imported MDX |
+| `screening-diagnosis` | Screening & Diagnosis | Imported MDX |
+| `treatment-pharmacotherapy` | Treatment & Pharmacotherapy | Imported MDX |
 
 **No centralized taxonomy list exists for domain slugs.** Values come directly from MDX frontmatter.
+
+**Domain coverage exception:** 9 published placeholder files have **no** domain tag at all. Only 949 of 958 published MDX questions currently include a `kind: domain` tag.
 
 ### Substance — 10 published values (11 in taxonomy)
 
@@ -316,7 +324,7 @@ No published questions currently use `kind: diagnosis` tags. The kind exists in 
 
 ---
 
-## 5. Validation Rules (What's Enforced Where)
+## 6. Validation Rules (What's Enforced Where)
 
 | Layer | What's Validated | What's NOT Validated |
 |-------|-----------------|---------------------|
@@ -330,13 +338,14 @@ No published questions currently use `kind: diagnosis` tags. The kind exists in 
 
 ---
 
-## 6. Known Gaps and Issues
+## 7. Known Gaps and Issues
 
 ### Gap 1: Domain tags are not centrally defined
 
 **Problem:** Domain tag values (Exam Section) have no canonical list. They originate from:
 - Directory names during `pnpm content:import:drafts` (e.g., `cochrane` → domain slug `cochrane`)
-- Manual edits to MDX files (the current state — MDX files have proper exam-board names like `psychosocial-interventions`)
+- Existing MDX files (current state) where domain tags are already blueprint-aligned (`psychosocial-interventions`, etc.)
+- A one-off migration path (`scripts/migrate-domain-tags.ts`) that maps old source-based domain slugs to blueprint slugs
 
 **Risk:** Re-running `pnpm content:import:drafts` would overwrite the correct domain tags with directory-based ones. The directory names (`cochrane`, `prescribers-guide`, `therapy`) don't match the exam-board section names (`Psychosocial Interventions`, `Pharmacology & Neuroscience`).
 
@@ -394,7 +403,7 @@ These are independent dimensions (a question can be in any exam section AND any 
 
 ### Gap 8: MDX files are canonical but treated as generated artifacts
 
-**Problem:** The `content/questions/imported/` directory is gitignored and documented as "safe to delete and regenerate." But the current MDX files contain manually set domain tags that CANNOT be regenerated from drafts. Deleting this directory would lose the correct domain tag assignments.
+**Problem:** `content/questions/imported/` is gitignored, and `docs/practice-engine/content-pipeline.md` currently states these files are safe to delete/regenerate. With the current importer, regeneration would produce directory-derived domain tags (not the current blueprint-aligned tags).
 
 **Impact:** If someone follows the documented workflow ("Delete `content/questions/imported/` any time and re-run the importer"), they would lose all correct domain tags and get wrong directory-based ones.
 
@@ -403,9 +412,25 @@ These are independent dimensions (a question can be in any exam section AND any 
 2. Add domain information to draft files so the import can fully reconstruct correct MDX
 3. Clearly document that `imported/` is NOT safe to delete in its current state
 
+### Gap 9: Domain tag requirement is not enforced in MDX schema
+
+**Problem:** `QuestionFrontmatterSchema` requires `tags: Tag[]` but does not require at least one `kind: domain` tag. Current corpus contains 9 published placeholders without any domain tag.
+
+**Impact:** Questions can seed and publish without an exam section, which weakens the "Exam Section" filter and taxonomy completeness.
+
+**Where to fix:** Add validation for exactly one domain tag per question (import-time and/or seed-time), then backfill existing files.
+
+### Gap 10: Draft documentation contradicts importer implementation for domain assignment
+
+**Problem:** `content/drafts/questions/SCHEMA.md` says draft domain is inferred from `topics`, but `scripts/import-draft-questions.ts` actually derives domain from directory root (`domainFromPath()`).
+
+**Impact:** Author guidance and pipeline behavior diverge; agents/authors can follow docs and still produce unexpected domains.
+
+**Where to fix:** Align docs and code to a single strategy (explicit `domain` field strongly preferred).
+
 ---
 
-## 7. Key Files Reference
+## 8. Key Files Reference
 
 ### Taxonomy & Validation
 
@@ -423,14 +448,17 @@ These are independent dimensions (a question can be in any exam section AND any 
 | `scripts/import-draft-questions.ts` | CLI entry point for `pnpm content:import:drafts` — discovers files, derives domain from directory |
 | `scripts/draft-question-import.ts` | Core import logic — parses drafts, converts to MDX, applies `titleCaseFromSlug()` |
 | `scripts/seed.ts` | Seeds MDX files into database — `upsertTags()` function |
+| `scripts/migrate-domain-tags.ts` | One-off migration utility that maps old source-based domain slugs to exam-blueprint domain slugs |
 | `content/drafts/questions/CLAUDE.md` | Question generation instructions with vocabulary lists |
-| `content/drafts/questions/SCHEMA.md` | Draft format schema (if it exists) |
+| `content/drafts/questions/SCHEMA.md` | Draft format schema and vocabulary reference |
+| `content/drafts/questions/AGENTS.md` | Agent-specific generation instructions (mirrors CLAUDE + SCHEMA constraints) |
 
 ### Database & Query
 
 | File | Purpose |
 |------|---------|
 | `db/schema.ts` (lines 34–40, 280–310) | PostgreSQL schema — `tagKindEnum`, `tags` table, `question_tags` table |
+| `db/migrations/0000_jazzy_vermin.sql` | Initial migration that creates `tag_kind`, `tags`, and `question_tags` (later migrations do not modify tag schema) |
 | `src/adapters/repositories/drizzle-tag-repository.ts` | `listAll()` — fetches distinct tags from published questions |
 | `src/adapters/repositories/drizzle-question-repository.ts` | Tag-based filtering via `inArray(tags.slug, [...slugs])` |
 
@@ -448,11 +476,11 @@ These are independent dimensions (a question can be in any exam section AND any 
 |------|---------|
 | `content/drafts/questions/` | Draft question source files (human-authored, gitignored) |
 | `content/questions/placeholder/` | 10 committed example MDX files (some have rogue tags) |
-| `content/questions/imported/` | Generated MDX files from drafts (gitignored, regenerable) |
+| `content/questions/imported/` | Gitignored imported MDX files currently used by seeding; not fully reproducible with current importer domain logic |
 
 ---
 
-## 8. How to Safely Modify Tags
+## 9. How to Safely Modify Tags
 
 ### To rename a tag's display name
 
@@ -483,17 +511,18 @@ These are independent dimensions (a question can be in any exam section AND any 
 
 ---
 
-## 9. Relationship to Other Documentation
+## 10. Relationship to Other Documentation
 
 | Document | Relationship |
 |----------|-------------|
-| [Content Pipeline](../practice-engine/content-pipeline.md) | Full question flow (authoring → seeding → shuffle → render). Covers tags briefly but focuses on question content and choice labels. |
+| [Content Pipeline](../practice-engine/content-pipeline.md) | Full question flow (authoring → seeding → shuffle → render). Currently includes a "safe to delete/regenerate imported/" statement that conflicts with current domain behavior. |
 | [Master Spec](../specs/master_spec.md) | Defines the MDX schema as the SSOT for content format. |
 | [Draft Question CLAUDE.md](../../content/drafts/questions/CLAUDE.md) | Question generation instructions including vocabulary lists for substances and topics (mirrors `draftTaxonomy.ts`). |
+| [Draft Question SCHEMA.md](../../content/drafts/questions/SCHEMA.md) | Declares domain intent, but currently diverges from importer implementation (`topics`-inferred in docs vs directory-derived in code). |
 
 ---
 
-## 10. Recommended Next Steps
+## 11. Recommended Next Steps
 
 These are observations, not commitments. Decisions should be made via brainstorming docs.
 
@@ -503,6 +532,10 @@ These are observations, not commitments. Decisions should be made via brainstorm
 
 3. **Add treatment taxonomy** — Add `DRAFT_TREATMENT_SLUGS` to `draftTaxonomy.ts` to validate treatment tags during import.
 
-4. **Evaluate Exam Section vs Topic overlap** — Consider whether "Exam Section" (domain) should remain as a separate filter dimension or be collapsed into "Topic". This is a product decision, not a code fix.
+4. **Enforce domain presence** — Require exactly one `kind: domain` tag per MDX question (and backfill the 9 placeholders currently missing domain).
 
-5. **Rename confusing topic slug `treatment`** — Consider renaming to `treatment-approaches` or similar to disambiguate from the Treatment filter kind.
+5. **Align docs with implementation** — Update `content/drafts/questions/SCHEMA.md` and `docs/practice-engine/content-pipeline.md` so they match the actual pipeline behavior (or update code to match documented behavior).
+
+6. **Evaluate Exam Section vs Topic overlap** — Consider whether "Exam Section" (domain) should remain as a separate filter dimension or be collapsed into "Topic". This is a product decision, not a code fix.
+
+7. **Rename confusing topic slug `treatment`** — Consider renaming to `treatment-approaches` or similar to disambiguate from the Treatment filter kind.
