@@ -54,24 +54,23 @@ Question-related pages use two non-overlapping navigation zones:
 Action bars are rendered inline per context (not via a shared component). The button sets differ enough that abstraction would add complexity without benefit. However, they follow consistent ordering:
 
 ```
-[← Previous] [Submit / Next →] [Bookmark / Mark for review] [Back link]
- sequential    primary action    secondary actions              navigation
+[← Previous] [Submit / Try Again] [Next →] [Bookmark / Mark for review] [Back link]
+ sequential    primary action      sequential  secondary actions           navigation
 ```
 
 ### By Context
 
 | Context | Bottom Action Bar |
 |---------|-------------------|
-| Practice — before submit | [← Previous] [Submit] [Next Question] [Bookmark] |
-| Practice — after submit (Tutor) | [← Previous] [Next Question] [Bookmark] |
-| Practice — after submit (Exam) | [← Previous] [Next Question] [Bookmark] [Mark for review] |
-| Quick Practice | [Submit] [Next Question] [Bookmark] |
-| History Session Review (answered) | [← Previous] [Next →] [Try Again] [Back to History] |
-| History Session Review (unanswered) | [← Previous] [Next →] [Submit] |
-| History Individual Review | [Try Again] [Back to History] |
+| Practice — before submit | [← Previous] [Submit] [Next →] [Bookmark] |
+| Practice — after submit (Tutor) | [← Previous] [Submit] (disabled) [Next →] [Bookmark] |
+| Practice — after submit (Exam) | [← Previous] [Submit] (disabled) [Next →] [Bookmark] [Mark for review] |
+| Quick Practice | [Submit] [Next →] [Bookmark] |
+| Quick Practice — after submit | [Submit] (disabled) [Next →] [Bookmark] |
+| History Session Review (answered) | [← Previous] [Try Again] [Next →] [Back to ...] |
+| History Session Review (unanswered) | [← Previous] [Submit] [Next →] [Back to ...] |
+| History Individual Review | [Try Again] [Back to ...] |
 | Exam Review Stage | [Submit Exam] |
-
-> **Known inconsistency:** Practice uses "Next Question" (text) while History Review uses "Next →" (arrow), and the position of Next relative to the primary action differs between views. Tracked in [BS-019](../brainstorming/bs-019-action-bar-label-and-ordering-consistency.md).
 
 **Rules:**
 - Previous only appears when there's a session-ordered question list
@@ -126,8 +125,6 @@ When building or modifying a question-viewing context, verify:
 - [ ] State persistence matches the mode's expectations (§3)
 - [ ] Shared components (`QuestionCard`, `Feedback`) are used — don't rebuild them
 - [ ] The context is documented in [Question Rendering Architecture](../practice-engine/question-rendering-architecture.md)
-
-> **Known inconsistency:** "Next Question" (practice) vs "Next →" (history review) label and ordering mismatch. Tracked in [BS-019](../brainstorming/bs-019-action-bar-label-and-ordering-consistency.md).
 
 ---
 

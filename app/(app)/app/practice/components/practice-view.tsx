@@ -47,6 +47,7 @@ export type PracticeViewProps = {
   onNextQuestion: () => void;
   onPreviousQuestion?: () => void;
   hasPreviousQuestion?: boolean;
+  hasNextQuestion?: boolean;
 };
 
 export function getBookmarkNotificationTransition(input: {
@@ -275,10 +276,14 @@ export function PracticeView(props: PracticeViewProps) {
             type="button"
             variant="outline"
             className="rounded-full"
-            disabled={props.isPending || props.loadState.status === 'loading'}
+            disabled={
+              props.hasNextQuestion === false ||
+              props.isPending ||
+              props.loadState.status === 'loading'
+            }
             onClick={props.onNextQuestion}
           >
-            Next Question
+            Next →
           </Button>
 
           <Button

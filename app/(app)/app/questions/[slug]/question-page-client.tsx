@@ -218,34 +218,25 @@ export function QuestionView(props: QuestionViewProps) {
         className="flex flex-col gap-3 sm:flex-row"
         data-testid="bottom-action-bar"
       >
-        {props.sessionNavigation && navPrev ? (
-          <Button asChild variant="outline" className="rounded-full">
-            <Link
-              href={toQuestionRoute(navPrev.slug, {
-                from: props.sessionNavigation.from,
-                mode: 'review',
-                sessionId: props.sessionNavigation.sessionId,
-                historyHref: props.historyHref,
-              })}
-            >
+        {props.sessionNavigation ? (
+          navPrev ? (
+            <Button asChild variant="outline" className="rounded-full">
+              <Link
+                href={toQuestionRoute(navPrev.slug, {
+                  from: props.sessionNavigation.from,
+                  mode: 'review',
+                  sessionId: props.sessionNavigation.sessionId,
+                  historyHref: props.historyHref,
+                })}
+              >
+                ← Previous
+              </Link>
+            </Button>
+          ) : (
+            <Button variant="outline" className="rounded-full" disabled>
               ← Previous
-            </Link>
-          </Button>
-        ) : null}
-
-        {props.sessionNavigation && navNext ? (
-          <Button asChild variant="outline" className="rounded-full">
-            <Link
-              href={toQuestionRoute(navNext.slug, {
-                from: props.sessionNavigation.from,
-                mode: 'review',
-                sessionId: props.sessionNavigation.sessionId,
-                historyHref: props.historyHref,
-              })}
-            >
-              Next →
-            </Link>
-          </Button>
+            </Button>
+          )
         ) : null}
 
         {!props.submitResult ? (
@@ -273,6 +264,27 @@ export function QuestionView(props: QuestionViewProps) {
           >
             Try Again
           </Button>
+        ) : null}
+
+        {props.sessionNavigation ? (
+          navNext ? (
+            <Button asChild variant="outline" className="rounded-full">
+              <Link
+                href={toQuestionRoute(navNext.slug, {
+                  from: props.sessionNavigation.from,
+                  mode: 'review',
+                  sessionId: props.sessionNavigation.sessionId,
+                  historyHref: props.historyHref,
+                })}
+              >
+                Next →
+              </Link>
+            </Button>
+          ) : (
+            <Button variant="outline" className="rounded-full" disabled>
+              Next →
+            </Button>
+          )
         ) : null}
 
         {props.sessionNavigation || props.submitResult ? (
