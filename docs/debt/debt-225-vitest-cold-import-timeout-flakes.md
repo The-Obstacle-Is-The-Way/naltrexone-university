@@ -11,9 +11,9 @@
 
 Three test files intermittently fail with `Error: Test timed out in 5000ms` on their **first `it()` block only**. They pass on immediate re-run. This is not a behavioral flake (race condition, timing dependency, or non-deterministic logic). It is a **deterministic cost problem**: the first test in each file pays the full ESM module resolution + transpilation + tree-shaking cost for a heavy import chain, and that cost intermittently exceeds Vitest's default 5000ms timeout.
 
-Additionally, **28 ad-hoc timeout overrides** are scattered across **16 test files** — all working around the same root cause. Zero of these overrides protect genuinely long-running operations.
+The deeper problem: **27 magic-number timeout overrides** are scattered across **15 test files** — all working around the same root cause. None protect genuinely long-running operations. These are unprincipled values (`10_000`, `20_000`, `40000`) with no documented rationale, written by different people at different times (note the inconsistent formatting: `40000` vs `20_000`). This is textbook scattered technical debt.
 
-### Actively Flaking Tests (no override, default 5s)
+### Actively Flaking Tests (no override, hit the 5s default)
 
 | File | First Test | Import Pattern | Transitive Weight |
 |------|-----------|----------------|-------------------|
@@ -21,13 +21,17 @@ Additionally, **28 ad-hoc timeout overrides** are scattered across **16 test fil
 | `app/(app)/app/practice/components/practice-view.test.tsx:12` | "renders Back to Dashboard link with correct href" | `await import('./practice-view')` | UI component tree + `practice-page-logic` (321 lines) |
 | `app/(app)/app/questions/[slug]/question-page-client.test.tsx:55` | "renders a Back to Dashboard utility link" | `await import('./question-page-client')` | Controller hooks + question-page-logic + route utils |
 
-### Ad-Hoc Override Inventory (28 instances, 16 files)
+### Magic-Number Override Inventory (27 instances, 15 files)
 
-| Timeout | Count | Files | Pattern |
-|---------|-------|-------|---------|
-| 40,000ms | 4 | `lib/container.test.ts` | Container factory integration — heaviest import chain |
-| 20,000ms | 17 | `practice/page.test.tsx` (2), `practice/quick/page.test.tsx` (1), `practice/[sessionId]/page.test.tsx` (2), `questions/[slug]/page.test.tsx` (6), `container.skip-clerk.test.ts` (2), 4 others | `renderToStaticMarkup` + `await import()` in `it()` |
-| 10,000ms | 7 | `dashboard/error.test.tsx`, `practice/quick/error.test.tsx`, `practice/[sessionId]/error.test.tsx`, `practice/error.test.tsx`, `layout-shell.test.tsx`, `billing/error.test.tsx`, `app/error.test.tsx`, `global-error.test.tsx`, `pricing/page.test.tsx` | Error boundary / page-level render tests |
+Every override follows the same pattern: `await import()` inside `it()` with an arbitrary trailing timeout.
+
+| Timeout | Count | Files |
+|---------|-------|-------|
+| `40000` | 4 | `lib/container.test.ts` |
+| `20_000` | 13 | `lib/container.skip-clerk.test.ts` (2), `questions/[slug]/page.test.tsx` (6), `practice/page.test.tsx` (2), `practice/quick/page.test.tsx` (1), `practice/[sessionId]/page.test.tsx` (2) |
+| `10_000` | 10 | `questions/[slug]/page.test.tsx` (1), `pricing/page.test.tsx` (1), `global-error.test.tsx` (1), `error.test.tsx` (1), `dashboard/error.test.tsx` (1), `layout-shell.test.tsx` (1), `billing/error.test.tsx` (1), `practice/quick/error.test.tsx` (1), `practice/[sessionId]/error.test.tsx` (1), `practice/error.test.tsx` (1) |
+
+> Note: `questions/[slug]/page.test.tsx` has both 20_000 and 10_000 overrides (7 total in one file).
 
 ### Evidence It's Cold-Import, Not Behavioral
 
@@ -38,25 +42,33 @@ Additionally, **28 ad-hoc timeout overrides** are scattered across **16 test fil
 
 ## Root Cause
 
-**No `testTimeout` is configured in any of the 3 Vitest config files.** All rely on Vitest's 5000ms default. The codebase uses heavy `await import()` patterns inside test bodies (not at module top-level or in `beforeAll`), so the import cost is counted against the test's timeout budget.
+Two compounding problems:
+
+### 1. No global timeout configured
+
+None of the 3 Vitest config files specify `testTimeout` or `hookTimeout`. All rely on Vitest defaults:
+
+| Config File | `testTimeout` | `hookTimeout` |
+|------------|---------------|---------------|
+| `vitest.config.ts` | 5000ms (default) | 10000ms (default) |
+| `vitest.browser.config.ts` | 5000ms (default) | 10000ms (default) |
+| `vitest.integration.config.ts` | 5000ms (default) | 10000ms (default) |
+
+### 2. The `testing-react19.md` rule codifies imports inside `it()`
+
+The project rule `.claude/rules/testing-react19.md` mandates:
 
 ```typescript
-// vitest.config.ts — NO testTimeout specified
-export default defineConfig({
-  test: {
-    globals: true,
-    environment: 'node',
-    // testTimeout: ???  ← missing (defaults to 5000ms)
-    // hookTimeout: ???  ← missing (defaults to 10000ms)
-  },
+it('renders correctly', async () => {
+  const MyComponent = (await import('./MyComponent')).default;
+  const html = renderToStaticMarkup(<MyComponent />);
+  expect(html).toContain('Expected text');
 });
 ```
 
-**Affected configs:** `vitest.config.ts`, `vitest.browser.config.ts`, `vitest.integration.config.ts` — none specify `testTimeout` or `hookTimeout`.
+This was the right call when it was written — React 19 broke `@testing-library/react`, and dynamic imports avoid module initialization side effects. But it places the **entire ESM resolution + transpilation cost inside the test's timeout budget** (`testTimeout`, 5s). When import chains are heavy, this intermittently exceeds 5s.
 
-### Why Some Tests Already Work
-
-16 test files (28 individual tests) already use inline timeout overrides like `it('...', async () => { ... }, 10_000)`. These were added ad hoc as developers encountered the same cold-import problem. This is the anti-pattern that every Vitest guide warns against — it works but doesn't address the systemic issue, and it will silently repeat as new test files are added.
+Vitest has a separate `hookTimeout` (default 10s) for lifecycle hooks. The `testing-react19.md` rule should be updated to recommend moving shared imports into `beforeAll()`, where the import cost is charged against `hookTimeout` instead — a budget that's already double `testTimeout`.
 
 ### Connection to DEBT-224
 
@@ -64,100 +76,137 @@ DEBT-224 tracks file sizes exceeding guidelines. The heaviest import chains (`db
 
 ### Community Context
 
-- [Vitest issue #6441](https://github.com/vitest-dev/vitest/issues/6441) confirms cold-start module loading is a known community pain point. A contributor proved persistent module caching drops startup from 8s to 200ms — but it's not shipped yet.
-- [Vitest timing breakdown analysis](https://sordyl.dev/dev-bites/vitest-timing-breakdown/) confirms "transform" and "setup" are the dominant time sinks, not test execution.
-- [Vitest discussion #7890](https://github.com/vitest-dev/vitest/discussions/7890) shows dynamic per-suite timeout is a recurring request — confirming ad-hoc overrides are a common coping mechanism, not a solution.
+- [Vitest issue #6441](https://github.com/vitest-dev/vitest/issues/6441) — Cold-start module loading is a known community pain point. A contributor proved persistent module caching drops startup from 8s to 200ms — not shipped yet.
+- [Vitest timing breakdown](https://sordyl.dev/dev-bites/vitest-timing-breakdown/) — "Transform" and "setup" are the dominant time sinks, not test execution.
+- [Vitest discussion #7890](https://github.com/vitest-dev/vitest/discussions/7890) — Dynamic per-suite timeout is a recurring community request, confirming ad-hoc overrides are a common coping mechanism.
 - No community guide recommends per-test ad-hoc overrides. Every source says: configure globally or restructure the import pattern.
 
 ## Impact
 
-- **CI flakes** — 3 tests fail intermittently in CI and on developer machines, requiring re-runs
-- **False confidence** — Developers learn to dismiss timeout failures as "just flakes," which could mask real test failures
+- **CI flakes** — 3 tests fail intermittently, requiring re-runs
+- **Magic numbers** — 27 arbitrary timeout values scattered across 15 files with no principled basis
+- **False confidence** — Developers learn to dismiss timeout failures as "just flakes"
 - **Wasted time** — Each flake requires a re-run (~55s for the full suite)
-- **Perception of instability** — Intermittent failures erode trust in the test suite
-- **Scattered complexity** — 28 ad-hoc overrides across 16 files add noise and obscure test intent
+- **Invisible coupling** — New test files silently inherit the 5s default and will flake when import chains are heavy, prompting yet another ad-hoc override
+- **Eroded test suite trust** — Intermittent failures undermine confidence in the entire suite
 
-## Resolution Options
+## Resolution
 
-### Option A: Set global `testTimeout` + remove ad-hoc overrides (Recommended — immediate)
+### The Fix: `beforeAll` imports + global timeout safety net
 
-Add `testTimeout: 15_000` to all 3 Vitest config files. This gives all tests 15s instead of 5s, accommodating cold imports without being so generous that genuinely hanging tests take forever to fail. Then remove all 28 ad-hoc timeout overrides.
+This is a two-part fix, done in the same PR.
+
+#### Part 1: Migrate `await import()` from `it()` into `beforeAll()` (root cause fix)
+
+For each of the 15 affected files, move the repeated `await import()` into a `beforeAll()` hook. This:
+
+- Charges import cost against `hookTimeout` (10s default) instead of `testTimeout` (5s default)
+- Pays the import cost **once** per `describe` block instead of per-test
+- Makes test bodies synchronous — faster, cleaner, more deterministic
+- Eliminates the need for any timeout overrides
 
 ```typescript
-// vitest.config.ts
+// BEFORE (anti-pattern — import inside test, charged against 5s testTimeout):
+it('renders a contextual error boundary', async () => {
+  const DashboardError = (await import('./error')).default;
+  const html = renderToStaticMarkup(
+    <DashboardError error={new Error('boom')} reset={() => {}} />,
+  );
+  expect(html).toContain('Dashboard');
+}, 10_000);  // ← magic number band-aid
+
+// AFTER (import in beforeAll, charged against 10s hookTimeout):
+let DashboardError: typeof import('./error')['default'];
+
+beforeAll(async () => {
+  DashboardError = (await import('./error')).default;
+});
+
+it('renders a contextual error boundary', () => {
+  const html = renderToStaticMarkup(
+    <DashboardError error={new Error('boom')} reset={() => {}} />,
+  );
+  expect(html).toContain('Dashboard');
+});
+// No magic number. No override. Test body is synchronous.
+```
+
+**Why `vi.mock()` still works:** Vitest hoists `vi.mock()` calls above all imports and hooks. The mock is in place before `beforeAll()` runs, so the dynamic import resolves the mocked module correctly.
+
+#### Part 2: Set global timeouts as safety net
+
+Add explicit timeouts to all 3 Vitest config files:
+
+```typescript
 export default defineConfig({
   test: {
-    globals: true,
-    environment: 'node',
-    testTimeout: 15_000,
+    testTimeout: 10_000,
+    hookTimeout: 15_000,
     // ...
   },
 });
 ```
 
-**Exception:** `container.test.ts` uses 40,000ms overrides. These 4 tests load the entire DI container with all 10 repositories + Drizzle. After setting the global to 15s, we should verify whether 15s is sufficient for container tests or if they genuinely need a higher override (this is the one case where an override might be warranted for a legitimately heavy operation).
+- `testTimeout: 10_000` — 2x the default. Catches genuinely hanging tests within 10s (not 15s), preserving fast-fail signal. With a 55s suite, 10s per failure is acceptable.
+- `hookTimeout: 15_000` — 1.5x the default. Accommodates the heaviest import chains (`container.ts` with all 10 repos + Drizzle) during `beforeAll()`.
 
-**Pros:** Eliminates the entire class of flakes. Removes 28 scattered overrides (24–28 depending on container tests). One config change per config file.
-**Cons:** Genuinely hanging tests take 15s instead of 5s to fail. Acceptable trade-off given a 55s total suite runtime.
+#### Part 3: Remove all 27 magic-number overrides
 
-### Option B: Add `10_000` to the 3 failing tests (Band-aid — NOT recommended)
+After Parts 1 and 2, remove every ad-hoc timeout. The global config is the safety net; the `beforeAll` pattern is the fix.
 
-Add timeout overrides to just the 3 actively flaking tests. This is what 16 other files already do.
+#### Part 4: Update `testing-react19.md`
 
-**Pros:** Minimal change, low risk.
-**Cons:** Doesn't address the systemic issue. New test files with heavy imports will hit the same problem. The 28 existing overrides remain scattered across the codebase. Contra community best practice.
-
-### Option C: Move `await import()` into `beforeAll` (Structural fix — future)
-
-Vitest has separate timeout configs: `testTimeout` (default 5s) for `it()` blocks and `hookTimeout` (default 10s) for lifecycle hooks. Moving `await import()` from inside `it()` into `beforeAll()` means the import cost is:
-
-- Paid **once** per `describe` block (not per-test)
-- Charged against `hookTimeout` (10s by default) instead of `testTimeout` (5s)
-- Completely decoupled from test execution time
+Update the project rule to recommend the `beforeAll` pattern for files with multiple tests importing the same module:
 
 ```typescript
-// Before (anti-pattern — import inside test):
-it('renders...', async () => {
-  const { PracticeView } = await import('./practice-view');
-  const html = renderToStaticMarkup(<PracticeView />);
-  expect(html).toContain('...');
-}, 20_000);
-
-// After (best practice — import in beforeAll):
-let PracticeView: typeof import('./practice-view')['PracticeView'];
-beforeAll(async () => {
-  ({ PracticeView } = await import('./practice-view'));
+// Single-test files (simple — keep inline import):
+it('renders correctly', async () => {
+  const MyComponent = (await import('./MyComponent')).default;
+  // ...
 });
 
-it('renders...', () => {
-  const html = renderToStaticMarkup(<PracticeView />);
-  expect(html).toContain('...');
+// Multi-test files (use beforeAll to pay import cost once):
+let MyComponent: typeof import('./MyComponent')['default'];
+
+beforeAll(async () => {
+  MyComponent = (await import('./MyComponent')).default;
+});
+
+it('renders correctly', () => {
+  // ...
 });
 ```
 
-**Why this is safe:** `vi.mock()` calls are hoisted by Vitest above all imports and hooks. The mock is already in place before `beforeAll()` runs, so the dynamic import resolves the mocked module correctly.
+### Exception: `container.skip-clerk.test.ts`
 
-**Pros:** Eliminates the root cause entirely. Tests become synchronous. Import cost paid once. No timeout overrides needed at all. Aligns with Vitest's `hookTimeout` architecture.
-**Cons:** Requires updating the `testing-react19.md` rule and migrating ~50 test files. Higher effort but straightforward — each migration is mechanical.
+This file uses `vi.resetModules()` + `vi.doMock()` per-test with different mock configurations for each test. Each test **must** call `await import('./container')` after its own `vi.doMock()` setup to get a fresh module evaluation. The `beforeAll` pattern does not apply here.
 
-### Recommendation
+These 2 overrides (currently `20_000`) should be removed only if the global `hookTimeout: 15_000` is sufficient (test with the import in a per-test `beforeEach` if possible), or kept with a comment explaining why.
 
-**Do Option A now** (global `testTimeout: 15_000` + remove ad-hoc overrides). This is a 30-minute fix that eliminates the entire class of flakes immediately.
+### Discarded alternatives
 
-**Evaluate Option C** as a follow-up. It's the best-practice structural fix, but requires updating project conventions and migrating test files. Can be done incrementally, file by file.
+**Bumping `testTimeout` to 15s alone (Option A in earlier draft):** This was the original recommendation. It's a valid safety net but it's **not a fix** — it raises the pain threshold without addressing the root cause. Tests that should take <100ms of execution time would get a 15s budget, masking legitimate hangs. The `beforeAll` pattern is the actual fix.
+
+**Adding `10_000` to just the 3 flaking tests (band-aid):** Creates override #28, #29, #30. The codebase already has 27. This is how we got here.
+
+**`server.warmup` for Vite transform cache:** This is for Vite's HTTP dev server, not Vitest worker threads. No evidence it helps in test context. Discarded.
+
+**Static top-level imports (Option C in earlier draft):** Would work — `vi.mock()` hoists above static imports. But requires auditing every file for subtle import-order dependencies and doesn't preserve the lazy-evaluation semantics the `testing-react19.md` rule was designed around. The `beforeAll` dynamic import is safer and achieves the same goal.
 
 ## Acceptance Criteria
 
-- [ ] All 3 Vitest config files have an explicit `testTimeout` value
+- [ ] All 3 Vitest config files have explicit `testTimeout` and `hookTimeout` values
+- [ ] All 15 affected test files migrated to `beforeAll` import pattern (except `container.skip-clerk.test.ts` if structurally incompatible)
+- [ ] All 27 magic-number timeout overrides removed (or justified with a comment for exceptions)
+- [ ] `testing-react19.md` updated with `beforeAll` guidance for multi-test files
 - [ ] The 3 actively flaking tests pass reliably without re-runs (verify with 5 consecutive `pnpm test --run`)
-- [ ] All 28 ad-hoc timeout overrides are evaluated — remove where the global timeout is sufficient, document any that must remain
 - [ ] No new timeout flakes in the next 10 CI runs
-- [ ] `container.test.ts` verified: can its 40s overrides be reduced to 15s, or does it need a justified override?
 
 ## Related
 
-- [DEBT-224](debt-224-file-size-audit-production-and-test.md) — File size audit (heavy import chains are the root cause)
+- [DEBT-224](debt-224-file-size-audit-production-and-test.md) — File size audit (heavy import chains are the upstream root cause)
 - [DEBT-204](../_archive/debt/debt-204-stripe-payment-gateway-test-god-file.md) — Previous test god file (resolved, reduced from 2,468 lines)
 - [DEBT-110](../_archive/debt/debt-110-e2e-helper-anti-patterns.md) — E2E helper `isVisible` timeout anti-pattern (resolved, different symptom, same theme)
 - [Vitest #6441](https://github.com/vitest-dev/vitest/issues/6441) — Persistent module cache feature request (upstream)
 - [Vitest timing breakdown](https://sordyl.dev/dev-bites/vitest-timing-breakdown/) — Analysis of where Vitest spends time
+- [Vitest #7890](https://github.com/vitest-dev/vitest/discussions/7890) — Dynamic per-suite timeout discussion
