@@ -20,8 +20,6 @@ Implementation specifications provide detailed technical guidance for building e
 | [Master Spec](./master_spec.md) | Complete Technical Specification (SSOT) | Living | All |
 | [SPEC-016](./spec-016-observability.md) | Observability (Logging, Error Tracking) | Partially Implemented | Infrastructure |
 | [SPEC-017](./spec-017-rate-limiting.md) | Rate Limiting | Partial (MVP done) | Infrastructure |
-| [SPEC-031](./spec-031-unified-visual-front.md) | Unified Visual Front — Card Contrast + Shell Parity | Ready | Feature |
-| [SPEC-032](./spec-032-action-bar-standardization.md) | Action Bar Standardization | Ready | Feature |
 
 **Master Spec split parts (readability):**
 
@@ -65,6 +63,8 @@ Implementation specifications provide detailed technical guidance for building e
 | [SPEC-028b](../_archive/specs/spec-028-review-question-navigator.md) | Review Question Navigator (Color-Coded Grid) | Presentation |
 | [SPEC-029](../_archive/specs/spec-029-dev-environment-resilience.md) | Dev Environment Resilience — Client-Side Timeouts & Observable Failures | Infrastructure |
 | [SPEC-030](../_archive/specs/spec-030-question-view-ux-unification.md) | Question View UX Unification — State Persistence, Navigation, Action Bar | Feature |
+| [SPEC-031](../_archive/specs/spec-031-unified-visual-front.md) | Unified Visual Front — Card Contrast + Shell Parity | Feature |
+| [SPEC-032](../_archive/specs/spec-032-action-bar-standardization.md) | Action Bar Standardization | Feature |
 
 ## Spec Statuses
 

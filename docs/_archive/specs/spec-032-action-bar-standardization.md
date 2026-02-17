@@ -4,9 +4,10 @@
 > Write tests FIRST. Red → Green → Refactor. No implementation without a failing test.
 > Principles: SOLID, DRY, Clean Code, Gang of Four patterns where appropriate.
 
-**Status:** Ready
+**Status:** Implemented
 **Layer:** Feature
 **Date:** 2026-02-17
+**Implemented:** PR #113 (2026-02-17)
 **Resolves:** [BS-019](../brainstorming/bs-019-action-bar-label-and-ordering-consistency.md)
 
 ---
