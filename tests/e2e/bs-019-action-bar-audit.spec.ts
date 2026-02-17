@@ -18,13 +18,21 @@ import { ensureSubscribed } from './helpers/subscription';
  * for robustness across React re-renders.
  */
 
+function escapeExactText(text: string): string {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 /** Assert a data-slot="button" element with the given text has the expected tagName. */
 async function expectElementTag(
   page: Page,
   text: string,
   expectedTag: 'BUTTON' | 'A',
 ): Promise<void> {
-  const el = page.locator('[data-slot="button"]', { hasText: text }).first();
+  const exactText = new RegExp(`^${escapeExactText(text)}$`);
+  const el = page
+    .locator('[data-slot="button"]')
+    .filter({ hasText: exactText })
+    .first();
   await expect(el).toBeVisible({ timeout: 5_000 });
   const tag = await el.evaluate((node) => node.tagName);
   expect(tag, `Expected "${text}" to be <${expectedTag.toLowerCase()}>`).toBe(
@@ -250,8 +258,16 @@ test.describe('BS-019: Action Bar Label and Ordering Audit', () => {
       await expect(
         page.getByRole('heading', { name: 'Session Summary' }),
       ).toBeVisible({ timeout: 15_000 });
-    } catch {
+    } catch (error) {
       // Cleanup failed — session will be abandoned by startSession helper in next test
+      const message =
+        error instanceof Error
+          ? `${error.name}: ${error.message}`
+          : String(error);
+      test.info().annotations.push({
+        type: 'warning',
+        description: `cleanup failed in bs-019-action-bar-audit (exam): ${message}`,
+      });
     }
   });
 
@@ -342,7 +358,11 @@ test.describe('BS-019: Action Bar Label and Ordering Audit', () => {
       .locator('[data-slot="button"]')
       .filter({ hasText: /^Try Again$/ })
       .first();
-    if (await tryAgainBtn.isVisible().catch(() => false)) {
+    const tryAgainVisible = await expect(tryAgainBtn)
+      .toBeVisible({ timeout: 1_500 })
+      .then(() => true)
+      .catch(() => false);
+    if (tryAgainVisible) {
       const tryAgainTag = await tryAgainBtn.evaluate((el) => el.tagName);
       expect(tryAgainTag).toBe('BUTTON');
 
@@ -368,66 +388,70 @@ test.describe('BS-019: Action Bar Label and Ordering Audit', () => {
     const positionText = await page
       .getByText(/Question \d+ of \d+/)
       .textContent();
+    expect(positionText).not.toBeNull();
     const totalMatch = positionText?.match(/of (\d+)/);
-    const totalQuestions = totalMatch ? parseInt(totalMatch[1], 10) : 0;
+    expect(totalMatch).not.toBeNull();
+    const totalQuestions = Number.parseInt(totalMatch?.[1] ?? '0', 10);
+    expect(
+      totalQuestions,
+      'Expected "Question X of Y" text with totalQuestions >= 2',
+    ).toBeGreaterThanOrEqual(2);
 
-    if (totalQuestions >= 2) {
-      // Click the LAST question button in the navigator grid
-      const lastQButton = navigatorCard
-        .locator(
-          `[data-slot="button"][aria-label*="Question ${totalQuestions}:"]`,
-        )
-        .first();
-      await expect(lastQButton).toBeVisible({ timeout: 5_000 });
+    // Click the LAST question button in the navigator grid
+    const lastQButton = navigatorCard
+      .locator(
+        `[data-slot="button"][aria-label*="Question ${totalQuestions}:"]`,
+      )
+      .first();
+    await expect(lastQButton).toBeVisible({ timeout: 5_000 });
 
-      const isCurrentLast = await lastQButton.getAttribute('aria-current');
-      if (isCurrentLast !== 'step') {
-        // Navigate to the last question
-        const urlBefore = page.url();
-        await lastQButton.click();
-        await page.waitForURL(
-          (url) =>
-            url.toString() !== urlBefore &&
-            url.pathname.startsWith('/app/questions/'),
-          { timeout: 15_000 },
-        );
-        await expect(page.getByText(/Loading question/i)).toBeHidden({
-          timeout: 30_000,
-        });
-        await expect(
-          page.getByText(`Question ${totalQuestions} of ${totalQuestions}`),
-        ).toBeVisible({ timeout: 15_000 });
+    const isCurrentLast = await lastQButton.getAttribute('aria-current');
+    if (isCurrentLast !== 'step') {
+      // Navigate to the last question
+      const urlBefore = page.url();
+      await lastQButton.click();
+      await page.waitForURL(
+        (url) =>
+          url.toString() !== urlBefore &&
+          url.pathname.startsWith('/app/questions/'),
+        { timeout: 15_000 },
+      );
+      await expect(page.getByText(/Loading question/i)).toBeHidden({
+        timeout: 30_000,
+      });
+      await expect(
+        page.getByText(`Question ${totalQuestions} of ${totalQuestions}`),
+      ).toBeVisible({ timeout: 15_000 });
 
-        // Wait for review data to fully load — "Back to" only appears after
-        // async session navigation data settles (not in default/pre-load state)
-        const backToLink = page
-          .getByTestId('bottom-action-bar')
-          .locator('[data-slot="button"]')
-          .filter({ hasText: /^Back to/ })
-          .first();
-        await expect(backToLink).toBeVisible({ timeout: 15_000 });
-      }
-
-      const labelsLast = await getHistoryBarLabels(page);
-
-      // Last Q: Previous present
-      expect(labelsLast).toContain('← Previous');
-
-      // BS-019 Inconsistency 5: Last Q in History HIDES Next (vs Practice KEEPS it)
-      expect(labelsLast).not.toContain('Next →');
-
-      // Previous is an <a> link (BS-019 Inconsistency 9)
-      const prevBtn = page
+      // Wait for review data to fully load — "Back to" only appears after
+      // async session navigation data settles (not in default/pre-load state)
+      const bottomActionBarBackLink = page
         .getByTestId('bottom-action-bar')
         .locator('[data-slot="button"]')
-        .filter({ hasText: '← Previous' })
+        .filter({ hasText: /^Back to/ })
         .first();
-      const prevTag = await prevBtn.evaluate((el) => el.tagName);
-      expect(prevTag).toBe('A');
-
-      await page.screenshot({
-        path: 'test-results/bs019/history-last-q-answered.png',
-      });
+      await expect(bottomActionBarBackLink).toBeVisible({ timeout: 15_000 });
     }
+
+    const labelsLast = await getHistoryBarLabels(page);
+
+    // Last Q: Previous present
+    expect(labelsLast).toContain('← Previous');
+
+    // BS-019 Inconsistency 5: Last Q in History HIDES Next (vs Practice KEEPS it)
+    expect(labelsLast).not.toContain('Next →');
+
+    // Previous is an <a> link (BS-019 Inconsistency 9)
+    const prevBtn = page
+      .getByTestId('bottom-action-bar')
+      .locator('[data-slot="button"]')
+      .filter({ hasText: '← Previous' })
+      .first();
+    const prevTag = await prevBtn.evaluate((el) => el.tagName);
+    expect(prevTag).toBe('A');
+
+    await page.screenshot({
+      path: 'test-results/bs019/history-last-q-answered.png',
+    });
   });
 });

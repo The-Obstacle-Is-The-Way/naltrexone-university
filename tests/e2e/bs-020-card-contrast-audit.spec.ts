@@ -3,6 +3,11 @@ import {
   hasClerkCredentials,
   signInWithClerkPassword,
 } from './helpers/clerk-auth';
+import {
+  getComputedBgColor,
+  getCssVariables,
+  requireLightness,
+} from './helpers/color-utils';
 import { ensureSubscribed } from './helpers/subscription';
 
 /**
@@ -17,84 +22,28 @@ import { ensureSubscribed } from './helpers/subscription';
  * parent work correctly.
  */
 
-type ColorInfo = {
-  background: string;
-  card: string;
-  muted: string;
-  border: string;
-};
-
-/** Read CSS custom properties from :root in current color scheme. */
-async function getCssVariables(page: Page): Promise<ColorInfo> {
-  return page.evaluate(() => {
-    const root = document.documentElement;
-    const computed = getComputedStyle(root);
-    return {
-      background: computed.getPropertyValue('--background').trim(),
-      card: computed.getPropertyValue('--card').trim(),
-      muted: computed.getPropertyValue('--muted').trim(),
-      border: computed.getPropertyValue('--border').trim(),
-    };
-  });
-}
-
-/** Get computed background-color of an element. */
-async function getComputedBgColor(
-  page: Page,
-  selector: string,
-): Promise<string> {
-  return page.evaluate((sel) => {
-    const el = document.querySelector(sel);
-    if (!el) return 'NOT_FOUND';
-    return getComputedStyle(el).backgroundColor;
-  }, selector);
-}
-
 /** Force dark mode via prefers-color-scheme emulation. */
 async function enableDarkMode(page: Page): Promise<void> {
-  // Disable CSS transitions to avoid reading mid-transition computed values.
-  // Cards use transition-colors which causes flaky color measurements.
-  await page.addStyleTag({
-    content: '*, *::before, *::after { transition: none !important; }',
-  });
   await page.emulateMedia({ colorScheme: 'dark' });
   // Wait for theme to apply
   await page.waitForFunction(
     () => document.documentElement.classList.contains('dark'),
     { timeout: 5_000 },
   );
+  // Disable CSS transitions to avoid reading mid-transition computed values.
+  // Cards use transition-colors which causes flaky color measurements.
+  await page.addStyleTag({
+    content: '*, *::before, *::after { transition: none !important; }',
+  });
   // Allow a repaint cycle for styles to settle
   await page.evaluate(() => new Promise((r) => requestAnimationFrame(r)));
 }
 
-function parseRgba(
-  rgba: string,
-): { r: number; g: number; b: number; a: number } | null {
-  const match = rgba.match(
-    /rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*(?:,\s*([\d.]+))?\s*\)/,
-  );
-  if (!match) return null;
-  return {
-    r: Number(match[1]),
-    g: Number(match[2]),
-    b: Number(match[3]),
-    a: match[4] !== undefined ? Number(match[4]) : 1,
-  };
-}
-
-/** Compute approximate lightness (0-100) from an rgb(a) string. */
-function approximateLightness(rgba: string): number | null {
-  const parsed = parseRgba(rgba);
-  if (!parsed) return null;
-  // Simple average approach (not perceptual, but good enough for audit)
-  return ((parsed.r + parsed.g + parsed.b) / 3 / 255) * 100;
-}
-
 test.describe('BS-020: Card Contrast and Hover Audit', () => {
-  test.setTimeout(180_000);
   test.skip(!hasClerkCredentials, 'Missing Clerk E2E credentials');
 
   test('Dark mode CSS variables match documented values', async ({ page }) => {
+    test.setTimeout(180_000);
     await signInWithClerkPassword(page);
     await page.goto('/app/dashboard', {
       timeout: 60_000,
@@ -117,6 +66,7 @@ test.describe('BS-020: Card Contrast and Hover Audit', () => {
   test('Dashboard: page background is bg-muted, cards lose contrast on hover', async ({
     page,
   }) => {
+    test.setTimeout(180_000);
     await signInWithClerkPassword(page);
     await ensureSubscribed(page);
 
@@ -131,9 +81,7 @@ test.describe('BS-020: Card Contrast and Hover Audit', () => {
 
     // BS-020: App layout uses bg-muted (11% lightness)
     const pageBg = await getComputedBgColor(page, '.min-h-screen.bg-muted');
-    const pageLightness = approximateLightness(pageBg);
-    if (pageLightness === null)
-      throw new Error('Could not read page bg lightness');
+    const pageLightness = requireLightness(pageBg, 'dashboard page background');
     // bg-muted in dark = hsl(0 0% 11%) ≈ rgb(28, 28, 28) ≈ 11% lightness
     expect(pageLightness).toBeGreaterThan(8);
     expect(pageLightness).toBeLessThan(15);
@@ -146,9 +94,10 @@ test.describe('BS-020: Card Contrast and Hover Audit', () => {
     const cardBgRest = await statCard.evaluate(
       (el) => getComputedStyle(el).backgroundColor,
     );
-    const cardLightnessRest = approximateLightness(cardBgRest);
-    if (cardLightnessRest === null)
-      throw new Error('Could not read card bg lightness');
+    const cardLightnessRest = requireLightness(
+      cardBgRest,
+      'dashboard rest card',
+    );
 
     // BS-020 KEY CLAIM: card (7%) is DARKER than page bg (11%)
     // This is the contrast inversion — card sinks into the page
@@ -160,22 +109,21 @@ test.describe('BS-020: Card Contrast and Hover Audit', () => {
 
     // Hover over the card
     await statCard.hover();
-    // Small delay for CSS transition
-    await page.waitForTimeout(300);
 
     const cardBgHover = await statCard.evaluate(
       (el) => getComputedStyle(el).backgroundColor,
     );
-    const cardLightnessHover = approximateLightness(cardBgHover);
+    const cardLightnessHover = requireLightness(
+      cardBgHover,
+      'dashboard hover card',
+    );
 
     // BS-020 KEY CLAIM: hover:bg-muted/50 blends toward page bg (11%)
     // The card hover lightness approaches the page background lightness
     // Difference between hover and page bg should be very small
-    if (cardLightnessHover !== null && pageLightness !== null) {
-      const hoverVsPageDiff = Math.abs(cardLightnessHover - pageLightness);
-      // The card nearly disappears — lightness diff < 5%
-      expect(hoverVsPageDiff).toBeLessThan(5);
-    }
+    const hoverVsPageDiff = Math.abs(cardLightnessHover - pageLightness);
+    // The card nearly disappears — lightness diff < 5%
+    expect(hoverVsPageDiff).toBeLessThan(5);
 
     await page.screenshot({
       path: 'test-results/bs020/dashboard-dark-hover.png',
@@ -194,19 +142,19 @@ test.describe('BS-020: Card Contrast and Hover Audit', () => {
 
     // BS-020: Landing uses bg-background (3.5% lightness)
     const pageBg = await getComputedBgColor(page, '.min-h-\\[100dvh\\]');
-    const pageLightness = approximateLightness(pageBg);
+    let pageLightness =
+      pageBg === 'NOT_FOUND'
+        ? null
+        : requireLightness(pageBg, 'landing page background');
 
     // If we can't find the landing container by exact class, try body
     if (pageLightness === null) {
       const bodyBg = await getComputedBgColor(page, 'body');
-      const bodyLightness = approximateLightness(bodyBg);
-      if (bodyLightness === null)
-        throw new Error('Could not read body bg lightness');
+      pageLightness = requireLightness(bodyBg, 'landing body background');
       // bg-background = hsl(0 0% 3.5%) ≈ rgb(9, 9, 9) ≈ 3.5%
-      expect(bodyLightness).toBeLessThan(8);
-    } else {
       expect(pageLightness).toBeLessThan(8);
     }
+    expect(pageLightness).toBeLessThan(8);
 
     // Find a feature card (in the Features section)
     const featureCard = page.locator('#features [data-slot="card"]').first();
@@ -220,13 +168,14 @@ test.describe('BS-020: Card Contrast and Hover Audit', () => {
     const cardBgRest = await featureCard.evaluate(
       (el) => getComputedStyle(el).backgroundColor,
     );
-    const cardLightnessRest = approximateLightness(cardBgRest);
+    const cardLightnessRest = requireLightness(
+      cardBgRest,
+      'landing feature card rest',
+    );
 
     // BS-020: Card (bg-card 7%) is LIGHTER than landing bg (3.5%)
     // Card pops out — good contrast
-    if (cardLightnessRest !== null && pageLightness !== null) {
-      expect(cardLightnessRest).toBeGreaterThan(pageLightness);
-    }
+    expect(cardLightnessRest).toBeGreaterThan(pageLightness);
 
     await page.screenshot({
       path: 'test-results/bs020/landing-dark-rest.png',
@@ -235,20 +184,20 @@ test.describe('BS-020: Card Contrast and Hover Audit', () => {
 
     // Hover over feature card
     await featureCard.hover();
-    await page.waitForTimeout(300);
 
     const cardBgHover = await featureCard.evaluate(
       (el) => getComputedStyle(el).backgroundColor,
     );
-    const cardLightnessHover = approximateLightness(cardBgHover);
+    const cardLightnessHover = requireLightness(
+      cardBgHover,
+      'landing feature card hover',
+    );
 
     // BS-020: hover:bg-muted (11%) on bg-background (3.5%) has 7.5% gap
     // Much more visible than dashboard hover
-    if (cardLightnessHover !== null && pageLightness !== null) {
-      const hoverVsPageDiff = Math.abs(cardLightnessHover - pageLightness);
-      // Visible contrast — lightness diff > 5%
-      expect(hoverVsPageDiff).toBeGreaterThan(5);
-    }
+    const hoverVsPageDiff = Math.abs(cardLightnessHover - pageLightness);
+    // Visible contrast — lightness diff > 5%
+    expect(hoverVsPageDiff).toBeGreaterThan(5);
 
     await page.screenshot({
       path: 'test-results/bs020/landing-dark-hover.png',
@@ -256,55 +205,10 @@ test.describe('BS-020: Card Contrast and Hover Audit', () => {
     });
   });
 
-  test('Session Summary source: stat cards use same problematic hover as dashboard', async ({
-    page,
-  }) => {
-    // The Session Summary page requires completing a live session, which
-    // is flaky due to dev server timeouts. Instead, verify the BS-020 claim
-    // at the source level: session-summary-view.tsx uses the exact same
-    // hover:bg-muted/50 classes as dashboard stat cards.
-    //
-    // This is valid because the Dashboard test already proves that
-    // hover:bg-muted/50 on a bg-muted parent causes contrast loss.
-
-    await signInWithClerkPassword(page);
-
-    // Read the session-summary-view.tsx source to verify CSS classes
-    const fs = await import('node:fs/promises');
-    const source = await fs.readFile(
-      'app/(app)/app/practice/[sessionId]/components/session-summary-view.tsx',
-      'utf-8',
-    );
-
-    // BS-020 claim: Session Summary stat cards use hover:bg-muted/50
-    const hoverMatches = source.match(/hover:bg-muted\/50/g) ?? [];
-    expect(
-      hoverMatches.length,
-      'Session Summary should have 4 stat cards with hover:bg-muted/50',
-    ).toBe(4);
-
-    // BS-020 claim: Session Summary stat cards use hover:border-border/80
-    const borderMatches = source.match(/hover:border-border\/80/g) ?? [];
-    expect(
-      borderMatches.length,
-      'Session Summary should have 4 stat cards with hover:border-border/80',
-    ).toBe(4);
-
-    // Verify this matches dashboard exactly
-    const dashSource = await fs.readFile(
-      'app/(app)/app/dashboard/page.tsx',
-      'utf-8',
-    );
-    const dashHoverMatches = dashSource.match(/hover:bg-muted\/50/g) ?? [];
-    expect(
-      dashHoverMatches.length,
-      'Dashboard should have stat cards with hover:bg-muted/50',
-    ).toBeGreaterThanOrEqual(4);
-  });
-
   test('Hover pattern divergence: three different strategies', async ({
     page,
   }) => {
+    test.setTimeout(180_000);
     await signInWithClerkPassword(page);
     await ensureSubscribed(page);
 

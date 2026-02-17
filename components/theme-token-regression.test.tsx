@@ -75,6 +75,75 @@ describe('theme token regression', () => {
     expect(dashboardHtml).not.toContain('hover:bg-zinc-900/80');
   });
 
+  it('uses the same hover token pattern in session summary stat cards', async () => {
+    const { DashboardView } = await import('@/app/(app)/app/dashboard/page');
+    const { SessionSummaryView } = await import(
+      '@/app/(app)/app/practice/[sessionId]/components/session-summary-view'
+    );
+
+    const dashboardHtml = renderToStaticMarkup(
+      <DashboardView
+        stats={{
+          totalAnswered: 10,
+          accuracyOverall: 0.7,
+          answeredLast7Days: 5,
+          accuracyLast7Days: 0.8,
+          currentStreakDays: 3,
+          recentActivity: [],
+        }}
+        sessionHistoryResult={{
+          ok: true,
+          data: { rows: [], total: 0, limit: 3, offset: 0 },
+        }}
+      />,
+    );
+    const summaryHtml = renderToStaticMarkup(
+      <SessionSummaryView
+        summary={{
+          sessionId: 'session-1',
+          endedAt: '2026-02-07T00:00:00.000Z',
+          totals: {
+            answered: 8,
+            correct: 6,
+            accuracy: 0.75,
+            durationSeconds: 600,
+          },
+        }}
+        review={null}
+        reviewLoadState={{ status: 'idle' }}
+      />,
+    );
+
+    const dashboardDoc = new DOMParser().parseFromString(
+      dashboardHtml,
+      'text/html',
+    );
+    const summaryDoc = new DOMParser().parseFromString(
+      summaryHtml,
+      'text/html',
+    );
+
+    const dashboardHoverCards = Array.from(
+      dashboardDoc.querySelectorAll('[data-slot="card"]'),
+    ).filter((card) =>
+      (card.getAttribute('class') ?? '').includes('hover:bg-muted/50'),
+    );
+    const summaryHoverCards = Array.from(
+      summaryDoc.querySelectorAll('[data-slot="card"]'),
+    ).filter((card) =>
+      (card.getAttribute('class') ?? '').includes('hover:bg-muted/50'),
+    );
+
+    expect(dashboardHoverCards.length).toBeGreaterThan(0);
+    expect(summaryHoverCards.length).toBeGreaterThan(0);
+
+    for (const card of [...dashboardHoverCards, ...summaryHoverCards]) {
+      expect(card.getAttribute('class') ?? '').toContain(
+        'hover:border-border/80',
+      );
+    }
+  });
+
   it('uses semantic border token for ChoiceButton selected state', async () => {
     const { ChoiceButton } = await import(
       '@/components/question/choice-button'
