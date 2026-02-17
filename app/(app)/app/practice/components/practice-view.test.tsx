@@ -404,9 +404,7 @@ describe('PracticeView', () => {
 
     const html = renderToStaticMarkup(<PracticeView {...props} />);
     const doc = new DOMParser().parseFromString(html, 'text/html');
-    const actionBar = doc.querySelector(
-      'div.flex.flex-wrap.items-center.gap-3',
-    );
+    const actionBar = doc.querySelector('[data-testid="bottom-action-bar"]');
     if (!actionBar) throw new Error('Expected action bar');
 
     const labels = Array.from(actionBar.querySelectorAll('button')).map(

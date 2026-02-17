@@ -246,7 +246,10 @@ export function PracticeView(props: PracticeViewProps) {
       ) : null}
 
       {props.question ? (
-        <div className="flex flex-wrap items-center gap-3">
+        <div
+          className="flex flex-wrap items-center gap-3"
+          data-testid="bottom-action-bar"
+        >
           {props.onPreviousQuestion ? (
             <Button
               type="button"

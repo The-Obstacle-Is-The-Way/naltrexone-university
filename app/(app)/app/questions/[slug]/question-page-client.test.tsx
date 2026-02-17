@@ -467,6 +467,7 @@ describe('QuestionView', () => {
 
     expect(previousButton).not.toBeUndefined();
     expect(previousButton?.hasAttribute('disabled')).toBe(true);
+    expect(previousButton?.getAttribute('type')).toBe('button');
     expect(nextLink?.getAttribute('href')).toBe(
       toQuestionRoute('q2', {
         from: 'practice',
@@ -507,6 +508,7 @@ describe('QuestionView', () => {
 
     expect(nextButton).not.toBeUndefined();
     expect(nextButton?.hasAttribute('disabled')).toBe(true);
+    expect(nextButton?.getAttribute('type')).toBe('button');
     expect(previousLink?.getAttribute('href')).toBe(
       toQuestionRoute('q1', {
         from: 'practice',

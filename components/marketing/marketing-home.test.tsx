@@ -138,10 +138,10 @@ describe('components/marketing/marketing-home', () => {
     const heading = doc.querySelector('h1');
 
     expect(heading).not.toBeNull();
-    const fallbackText = (heading?.textContent ?? '')
+    expect(heading?.getAttribute('aria-label')).toBeNull();
+    const accessibleName = (heading?.textContent ?? '')
       .replace(/\s+/g, ' ')
       .trim();
-    const accessibleName = heading?.getAttribute('aria-label') ?? fallbackText;
     expect(accessibleName).toBe('Master Your Board Exams.');
   });
 });

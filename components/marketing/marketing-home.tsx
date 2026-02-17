@@ -70,11 +70,8 @@ export function MarketingHomeShell({
             <p className="inline-flex items-center rounded-full border border-border bg-muted px-3 py-1 text-xs font-medium text-muted-foreground">
               Board prep, built for outcomes
             </p>
-            <h1
-              aria-label="Master Your Board Exams."
-              className="mt-6 font-display text-5xl font-bold tracking-tight md:text-7xl"
-            >
-              <span className="block text-foreground">Master Your</span>
+            <h1 className="mt-6 font-display text-5xl font-bold tracking-tight md:text-7xl">
+              <span className="block text-foreground">Master Your</span>{' '}
               <span className="bg-gradient-to-r from-muted-foreground via-foreground to-muted-foreground bg-clip-text text-transparent">
                 Board Exams.
               </span>
