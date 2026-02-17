@@ -28,6 +28,8 @@ describe('app/(app)/app/layout (shell)', () => {
     expect(html).toContain('AuthNav');
     expect(html).toContain('MobileNav');
     expect(html).toContain('Child content');
+    expect(html).toContain('min-h-screen bg-background');
+    expect(html).not.toContain('min-h-screen bg-muted');
     expect(html).toContain('<main id="main-content"');
   }, 10_000);
 

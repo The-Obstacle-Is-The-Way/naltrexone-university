@@ -69,7 +69,8 @@ describe('theme token regression', () => {
       />,
     );
 
-    expect(dashboardHtml).toContain('hover:border-border/80');
+    expect(dashboardHtml).toContain('hover:border-border');
+    expect(dashboardHtml).not.toContain('hover:border-border/80');
     expect(dashboardHtml).toContain('hover:bg-muted/50');
     expect(dashboardHtml).not.toContain('hover:border-zinc-700/50');
     expect(dashboardHtml).not.toContain('hover:bg-zinc-900/80');

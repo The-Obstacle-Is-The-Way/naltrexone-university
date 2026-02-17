@@ -70,7 +70,7 @@ export function AppLayoutShell({
   banner,
 }: AppLayoutShellProps) {
   return (
-    <div className="min-h-screen bg-muted">
+    <div className="min-h-screen bg-background">
       {banner}
       <header className="relative border-b border-border bg-background">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">

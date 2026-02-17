@@ -16,10 +16,9 @@ import { ensureSubscribed } from './helpers/subscription';
  * Audits the card hover behavior and background color layering
  * documented in docs/brainstorming/bs-020-card-contrast-and-hover-consistency.md
  *
- * Key claim: Dashboard stat cards using `hover:bg-muted/50` on a
- * `bg-muted` parent cause cards to disappear on hover in dark mode,
- * while landing page cards using `hover:bg-muted` on `bg-background`
- * parent work correctly.
+ * Verifies the fixed state: dashboard and landing both use
+ * `bg-background` parent surfaces, cards remain elevated at rest,
+ * and hover states preserve visible contrast.
  */
 
 /** Force dark mode via prefers-color-scheme emulation. */
@@ -63,7 +62,7 @@ test.describe('BS-020: Card Contrast and Hover Audit', () => {
     expect(vars.border).toBe('0 0% 15%');
   });
 
-  test('Dashboard: page background is bg-muted, cards lose contrast on hover', async ({
+  test('Dashboard: page background is bg-background, cards stay elevated on hover', async ({
     page,
   }) => {
     test.setTimeout(180_000);
@@ -79,12 +78,14 @@ test.describe('BS-020: Card Contrast and Hover Audit', () => {
     ).toBeVisible();
     await enableDarkMode(page);
 
-    // BS-020: App layout uses bg-muted (11% lightness)
-    const pageBg = await getComputedBgColor(page, '.min-h-screen.bg-muted');
+    // SPEC-031 fix: App layout now uses bg-background (3.5% lightness)
+    const pageBg = await getComputedBgColor(
+      page,
+      '.min-h-screen.bg-background',
+    );
     const pageLightness = requireLightness(pageBg, 'dashboard page background');
-    // bg-muted in dark = hsl(0 0% 11%) ≈ rgb(28, 28, 28) ≈ 11% lightness
-    expect(pageLightness).toBeGreaterThan(8);
-    expect(pageLightness).toBeLessThan(15);
+    // bg-background in dark = hsl(0 0% 3.5%) ≈ rgb(9, 9, 9) ≈ 3.5% lightness
+    expect(pageLightness).toBeLessThan(8);
 
     // Find the first stat card
     const statCard = page.locator('[data-slot="card"]').first();
@@ -99,9 +100,9 @@ test.describe('BS-020: Card Contrast and Hover Audit', () => {
       'dashboard rest card',
     );
 
-    // BS-020 KEY CLAIM: card (7%) is DARKER than page bg (11%)
-    // This is the contrast inversion — card sinks into the page
-    expect(cardLightnessRest).toBeLessThan(pageLightness);
+    // Fixed state: card (7%) is LIGHTER than page bg (3.5%)
+    // Card remains elevated above the page.
+    expect(cardLightnessRest).toBeGreaterThan(pageLightness);
 
     await page.screenshot({
       path: 'test-results/bs020/dashboard-dark-rest.png',
@@ -118,12 +119,10 @@ test.describe('BS-020: Card Contrast and Hover Audit', () => {
       'dashboard hover card',
     );
 
-    // BS-020 KEY CLAIM: hover:bg-muted/50 blends toward page bg (11%)
-    // The card hover lightness approaches the page background lightness
-    // Difference between hover and page bg should be very small
+    // Fixed state: hover contrast remains visibly separated from the page.
+    // Difference between hover and page background should stay > 5%.
     const hoverVsPageDiff = Math.abs(cardLightnessHover - pageLightness);
-    // The card nearly disappears — lightness diff < 5%
-    expect(hoverVsPageDiff).toBeLessThan(5);
+    expect(hoverVsPageDiff).toBeGreaterThan(5);
 
     await page.screenshot({
       path: 'test-results/bs020/dashboard-dark-hover.png',
@@ -205,6 +204,48 @@ test.describe('BS-020: Card Contrast and Hover Audit', () => {
     });
   });
 
+  test('Session Summary source: stat cards match dashboard hover token pattern', async ({
+    page,
+  }) => {
+    // The Session Summary page requires completing a live session, which
+    // is flaky due to dev server timeouts. Verify source-level parity with
+    // dashboard stat card hover classes instead.
+
+    await signInWithClerkPassword(page);
+
+    // Read the session-summary-view.tsx source to verify CSS classes
+    const fs = await import('node:fs/promises');
+    const source = await fs.readFile(
+      'app/(app)/app/practice/[sessionId]/components/session-summary-view.tsx',
+      'utf-8',
+    );
+
+    // BS-020 claim: Session Summary stat cards use hover:bg-muted/50
+    const hoverMatches = source.match(/hover:bg-muted\/50/g) ?? [];
+    expect(
+      hoverMatches.length,
+      'Session Summary should have 4 stat cards with hover:bg-muted/50',
+    ).toBe(4);
+
+    // SPEC-031 fix: Session Summary stat cards use hover:border-border
+    const borderMatches = source.match(/hover:border-border(?!\/)/g) ?? [];
+    expect(
+      borderMatches.length,
+      'Session Summary should have 4 stat cards with hover:border-border',
+    ).toBe(4);
+
+    // Verify this matches dashboard exactly
+    const dashSource = await fs.readFile(
+      'app/(app)/app/dashboard/page.tsx',
+      'utf-8',
+    );
+    const dashHoverMatches = dashSource.match(/hover:bg-muted\/50/g) ?? [];
+    expect(
+      dashHoverMatches.length,
+      'Dashboard should have stat cards with hover:bg-muted/50',
+    ).toBeGreaterThanOrEqual(4);
+  });
+
   test('Hover pattern divergence: three different strategies', async ({
     page,
   }) => {
@@ -230,8 +271,9 @@ test.describe('BS-020: Card Contrast and Hover Audit', () => {
     const dashboardCardClasses = await dashboardCard.getAttribute('class');
     // BS-020 documents: dashboard stat cards use hover:bg-muted/50
     expect(dashboardCardClasses).toContain('hover:bg-muted/50');
-    // BS-020 documents: dashboard stat cards use hover:border-border/80
-    expect(dashboardCardClasses).toContain('hover:border-border/80');
+    // SPEC-031 fix: dashboard stat cards use hover:border-border
+    expect(dashboardCardClasses).toContain('hover:border-border');
+    expect(dashboardCardClasses).not.toContain('hover:border-border/80');
 
     // 2. Dashboard list items: hover:bg-muted/40
     const listItem = page.locator('a[class*="hover:bg-muted"]').first();
