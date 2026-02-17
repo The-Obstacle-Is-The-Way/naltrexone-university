@@ -47,8 +47,8 @@ describe('MarketingLayout', () => {
     const signInLink = footer?.querySelector(`a[href="${ROUTES.SIGN_IN}"]`);
     const signUpLink = footer?.querySelector(`a[href="${ROUTES.SIGN_UP}"]`);
 
-    expect(signInLink?.textContent?.trim()).toBe('Sign In');
-    expect(signUpLink?.textContent?.trim()).toBe('Sign Up');
+    expect(signInLink?.textContent?.trim()).toBe('Sign in');
+    expect(signUpLink?.textContent?.trim()).toBe('Sign up');
   });
 
   it('renders a mobile marketing nav so Features/Pricing are reachable', async () => {

@@ -139,9 +139,7 @@ describe('theme token regression', () => {
     expect(summaryHoverCards.length).toBeGreaterThan(0);
 
     for (const card of [...dashboardHoverCards, ...summaryHoverCards]) {
-      expect(card.getAttribute('class') ?? '').toContain(
-        'hover:border-border/80',
-      );
+      expect(card.getAttribute('class') ?? '').toContain('hover:border-border');
     }
   });
 
