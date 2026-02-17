@@ -1,6 +1,6 @@
 # BUG-145: Frontend SSOT Docs Are Out of Sync with Current Question View Implementation
 
-**Status:** Open
+**Status:** Fixed
 **Priority:** P3
 **Date:** 2026-02-17
 **Component:** Documentation — Frontend / Practice Engine

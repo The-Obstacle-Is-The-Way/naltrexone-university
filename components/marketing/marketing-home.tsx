@@ -63,7 +63,7 @@ export function MarketingHomeShell({
 }: MarketingHomeShellProps) {
   return (
     <MarketingLayout authNav={authNav} featuresHref="#features">
-      <main id="main-content" tabIndex={-1}>
+      <section>
         {/* Hero */}
         <section className="py-20 lg:py-32">
           <div className="mx-auto max-w-4xl px-4 text-center sm:px-6 lg:px-8">
@@ -253,7 +253,7 @@ export function MarketingHomeShell({
             </div>
           </div>
         </section>
-      </main>
+      </section>
     </MarketingLayout>
   );
 }

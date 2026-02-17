@@ -18,6 +18,39 @@ vi.mock('next/link', () => ({
 }));
 
 describe('MarketingLayout', () => {
+  it('renders a single focusable main landmark', async () => {
+    const { MarketingLayout } = await import('./marketing-layout');
+
+    const html = renderToStaticMarkup(
+      <MarketingLayout authNav={<div>Auth</div>} featuresHref="/#features">
+        <div>Content</div>
+      </MarketingLayout>,
+    );
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const mainLandmarks = doc.querySelectorAll('main');
+
+    expect(mainLandmarks).toHaveLength(1);
+    expect(mainLandmarks[0]?.getAttribute('id')).toBe('main-content');
+    expect(mainLandmarks[0]?.getAttribute('tabindex')).toBe('-1');
+  });
+
+  it('uses title case auth labels in the footer', async () => {
+    const { MarketingLayout } = await import('./marketing-layout');
+
+    const html = renderToStaticMarkup(
+      <MarketingLayout authNav={<div>Auth</div>} featuresHref="/#features">
+        <div>Content</div>
+      </MarketingLayout>,
+    );
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const footer = doc.querySelector('footer');
+    const signInLink = footer?.querySelector('a[href="/sign-in"]');
+    const signUpLink = footer?.querySelector('a[href="/sign-up"]');
+
+    expect(signInLink?.textContent?.trim()).toBe('Sign In');
+    expect(signUpLink?.textContent?.trim()).toBe('Sign Up');
+  });
+
   it('renders a mobile marketing nav so Features/Pricing are reachable', async () => {
     const { MarketingLayout } = await import('./marketing-layout');
 

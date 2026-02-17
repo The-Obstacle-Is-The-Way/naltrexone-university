@@ -53,6 +53,22 @@ describe('components/marketing/marketing-home', () => {
     },
   );
 
+  it('renders exactly one main landmark through MarketingHomeShell', async () => {
+    const { MarketingHomeShell } = await import('./marketing-home');
+
+    const html = renderToStaticMarkup(
+      <MarketingHomeShell
+        authNav={<div>AuthNav</div>}
+        primaryCta={<a href="/pricing">Get Started</a>}
+      />,
+    );
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const mainLandmarks = doc.querySelectorAll('main');
+
+    expect(mainLandmarks).toHaveLength(1);
+    expect(mainLandmarks[0]?.getAttribute('id')).toBe('main-content');
+  });
+
   it('renders via renderMarketingHome with injected deps', async () => {
     const { renderMarketingHome } = await import('./marketing-home');
 

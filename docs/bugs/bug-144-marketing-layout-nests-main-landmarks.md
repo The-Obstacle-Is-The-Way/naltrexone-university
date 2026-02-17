@@ -1,6 +1,6 @@
 # BUG-144: MarketingLayout Nests `<main>` Landmarks (Regression of BUG-100)
 
-**Status:** Open
+**Status:** Fixed
 **Priority:** P2
 **Date:** 2026-02-17
 **Component:** Frontend — Marketing Shell (Accessibility)

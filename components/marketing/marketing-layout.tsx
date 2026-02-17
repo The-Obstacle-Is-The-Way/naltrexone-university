@@ -56,7 +56,9 @@ export function MarketingLayout({
         </div>
       </header>
 
-      <main>{children}</main>
+      <main id="main-content" tabIndex={-1}>
+        {children}
+      </main>
 
       <footer className="border-t border-border">
         <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
@@ -82,10 +84,10 @@ export function MarketingLayout({
               <p className="text-sm font-semibold text-foreground">Account</p>
               <div className="mt-3 flex flex-col gap-2 text-sm text-muted-foreground">
                 <Link href={ROUTES.SIGN_IN} className={navLinkClass}>
-                  Sign in
+                  Sign In
                 </Link>
                 <Link href={ROUTES.SIGN_UP} className={navLinkClass}>
-                  Sign up
+                  Sign Up
                 </Link>
               </div>
             </div>

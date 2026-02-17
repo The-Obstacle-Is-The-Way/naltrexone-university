@@ -1,6 +1,6 @@
 # BUG-146: Marketing Footer “Sign in/up” Casing Is Inconsistent with the Rest of the App
 
-**Status:** Open
+**Status:** Fixed
 **Priority:** P4
 **Date:** 2026-02-17
 **Component:** Frontend — Marketing Shell (Copy Consistency)

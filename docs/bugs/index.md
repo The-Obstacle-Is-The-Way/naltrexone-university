@@ -17,9 +17,9 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 | ID | Title | Priority | Status |
 |----|-------|----------|--------|
-| [BUG-144](./bug-144-marketing-layout-nests-main-landmarks.md) | MarketingLayout Nests `<main>` Landmarks (Regression of BUG-100) | P2 | Open |
-| [BUG-145](./bug-145-frontend-ssot-docs-out-of-sync-with-question-view.md) | Frontend SSOT Docs Are Out of Sync with Current Question View Implementation | P3 | Open |
-| [BUG-146](./bug-146-marketing-footer-sign-in-up-casing-inconsistent.md) | Marketing Footer “Sign in/up” Casing Is Inconsistent with the Rest of the App | P4 | Open |
+| [BUG-144](./bug-144-marketing-layout-nests-main-landmarks.md) | MarketingLayout Nests `<main>` Landmarks (Regression of BUG-100) | P2 | Fixed |
+| [BUG-145](./bug-145-frontend-ssot-docs-out-of-sync-with-question-view.md) | Frontend SSOT Docs Are Out of Sync with Current Question View Implementation | P3 | Fixed |
+| [BUG-146](./bug-146-marketing-footer-sign-in-up-casing-inconsistent.md) | Marketing Footer “Sign in/up” Casing Is Inconsistent with the Rest of the App | P4 | Fixed |
 
 **Next Bug ID:** BUG-147
 
