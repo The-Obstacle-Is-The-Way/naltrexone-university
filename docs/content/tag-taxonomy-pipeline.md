@@ -29,7 +29,7 @@ content/
 │       │
 │       │   Directories organized by SOURCE (where papers came from):
 │       ├── 50-studies-every-psychiatrist-should-know/  (4 papers)
-│       ├── article-based-pathway/                      (40 papers, 10 chapters)
+│       ├── article-based-pathway/                      (41 subfolders: 40 papers + 1 correction notice)
 │       │   ├── 01-screening-evaluation-prevention/
 │       │   ├── 02-alcohol/
 │       │   ├── 03-cannabis/
@@ -44,13 +44,17 @@ content/
 │       ├── cochrane/                (2 reviews)
 │       ├── personal-inquiries/      (empty)
 │       ├── personal-papers/         (11 papers)
-│       ├── prescribers-guide/       (36 medications + stahls-chunked)
+│       ├── prescribers-guide/       (36 medication folders + stahls-chunked)
 │       └── therapy/                 (1 guideline)
 │
-│       Each paper folder contains:
+│       Typical paper folder contains:
 │         <paper-name>.md   ← Source article notes
 │         recall.md         ← 6 recall questions (2 easy, 2 medium, 2 hard)
 │         vignettes.md      ← 6 vignette questions (2 easy, 2 medium, 2 hard)
+│
+│       Exceptions:
+│         prescribers-guide medication folders → recall.md only (no vignettes.md)
+│         article-based-pathway/.../2024-cooperman-more-trial-correction/ → source-only (no recall/vignettes)
 │
 └── questions/                       ← What pnpm db:seed actually reads
     ├── README.md                    ← Format documentation
@@ -68,7 +72,11 @@ content/
         └── therapy/                 (1 subdir)
 ```
 
-**File counts:** 297 draft `.md` files → 948 imported `.mdx` files + 10 placeholder `.mdx` files = 958 total seedable questions.
+**File counts (current filesystem):**
+- 296 draft `.md` files + 1 draft `META.MD` file under `content/drafts/questions/`
+- 948 imported `.mdx` files under `content/questions/imported/`
+- 10 placeholder `.mdx` files under `content/questions/placeholder/`
+- 958 total seedable `.mdx` questions (`pnpm db:seed` reads `content/questions/**/*.mdx`)
 
 ### Critical Distinction: Directory Names ≠ Domain Tags
 
@@ -77,8 +85,8 @@ The directories are organized by **source** (where the paper/article came from).
 | Directory | Domain Tags Inside (per-question) |
 |-----------|----------------------------------|
 | `50-studies-every-psychiatrist-should-know` | 6 different sections |
-| `article-based-pathway` | All 7 sections + Ethics |
-| `asam-guidelines` | All 7 sections + Ethics |
+| `article-based-pathway` | 7 sections total (includes Ethics) |
+| `asam-guidelines` | 7 sections total (includes Ethics) |
 | `cochrane` | 3 sections |
 | `personal-papers` | 6 sections |
 | `prescribers-guide` | 3 sections |
@@ -86,9 +94,14 @@ The directories are organized by **source** (where the paper/article came from).
 
 **The import script's `domainFromPath()` function assigns the DIRECTORY NAME as the domain tag — this is wrong.** It would produce `domain: article-based-pathway` for all 40+ papers, when the correct behavior is per-question assignment like `domain: epidemiology-prevention` or `domain: treatment-pharmacotherapy`.
 
-### Why It Works Today
+### Why This Is Fragile Today
 
-The current MDX files in `content/questions/imported/` were **transplanted from an external question-generation repo** with correct per-question domain tags already baked in. The `pnpm content:import:drafts` pipeline was NOT used to produce the current MDX files — or if it was, the domain tags were manually corrected afterward. **Re-running the import would overwrite the correct domain tags with wrong source-directory-based ones.**
+What is directly verifiable from the repository:
+- `scripts/import-draft-questions.ts` derives `domainTagSlug` from the first directory segment under `content/drafts/questions/`.
+- All 948 imported MDX files currently use exam-blueprint domain slugs (for example `pharmacology-neuroscience`), not source-directory slugs (for example `article-based-pathway`).
+- `scripts/migrate-domain-tags.ts` exists to migrate old source-based domain slugs to blueprint domain slugs.
+
+Operational implication: **re-running the importer against current drafts would assign directory-derived domain slugs unless the importer is changed.**
 
 ---
 
