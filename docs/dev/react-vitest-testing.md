@@ -1,6 +1,6 @@
 # React 19 + Vitest Testing Guide
 
-**Last Updated:** 2026-02-07
+**Last Updated:** 2026-02-17
 
 This document exists because we got burned. Every claim is validated against official sources.
 
@@ -130,7 +130,40 @@ Every `.test.tsx` file must start with:
 
 **Why per-file?** Vitest 4 removed `environmentMatchGlobs` ([Vitest migration guide](https://vitest.dev/guide/migration.html)). The per-file directive is now the only way to set environment per test file.
 
-### 4. Browser Mode (for `pnpm test:browser`)
+### 4. Import Placement + Timeout Policy (DEBT-225)
+
+For `*.test.tsx` files, dynamic imports are still required for React 19 compatibility, but import placement is policy-controlled:
+
+- Load dynamic imports once in `beforeAll` by default
+- Use `beforeEach` only when mock-order/module-reset semantics require per-test re-imports
+- Do not import heavy modules inside individual `it()` blocks
+- Do not add per-test magic-number timeout overrides (`it(..., 10_000)`, `{ timeout: 15_000 }`)
+- Global Vitest timeout policy is defined in config:
+  - `testTimeout: 10_000`
+  - `hookTimeout: 15_000`
+
+Example pattern:
+
+```typescript
+// @vitest-environment jsdom
+import { renderToStaticMarkup } from 'react-dom/server';
+import { beforeAll, describe, expect, it } from 'vitest';
+
+let Component: typeof import('./Component').default;
+
+beforeAll(async () => {
+  Component = (await import('./Component')).default;
+});
+
+describe('Component', () => {
+  it('renders expected content', () => {
+    const html = renderToStaticMarkup(<Component />);
+    expect(html).toContain('Expected text');
+  });
+});
+```
+
+### 5. Browser Mode (for `pnpm test:browser`)
 
 Config: `vitest.browser.config.ts` — already configured with Playwright + Chromium.
 
@@ -287,7 +320,9 @@ vi.mock('./user-repository');
 
 - [ ] First line: `// @vitest-environment jsdom`
 - [ ] Use `renderToStaticMarkup` for render-output tests
-- [ ] Use dynamic imports: `const Component = (await import('./Component')).default`
+- [ ] Load dynamic imports in `beforeAll` (or `beforeEach` only when mock order requires it)
+- [ ] Avoid inline imports in `it()` blocks
+- [ ] Do not add per-test timeout overrides; use global Vitest timeout policy
 - [ ] Assert on HTML content: `expect(html).toContain('text')`
 - [ ] Use fakes for DI, not vi.mock() for our code
 
@@ -313,6 +348,7 @@ vi.mock('./user-repository');
 | 2026-02-07 | Clarified 3-tier testing strategy; renderLiveHook superseded by Browser Mode |
 | 2026-02-07 | Added hook test migration guide (DEBT-141) |
 | 2026-02-07 | Completed DEBT-141 migration and removed renderLiveHook harness |
+| 2026-02-17 | Added DEBT-225 guidance: import placement in hooks + explicit Vitest timeout policy |
 
 ---
 

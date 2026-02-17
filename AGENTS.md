@@ -15,16 +15,34 @@ Repository guidelines for AI coding agents (Codex CLI, Claude Code, Cursor, GitH
 ```typescript
 // @vitest-environment jsdom   ← MUST be first line
 import { renderToStaticMarkup } from 'react-dom/server';
+import { beforeAll, describe, expect, it } from 'vitest';
+
+let MyComponent: typeof import('./MyComponent').default;
+
+beforeAll(async () => {
+  MyComponent = (await import('./MyComponent')).default;
+});
 
 // Use renderToStaticMarkup for render-output tests
-const html = renderToStaticMarkup(<MyComponent />);
-expect(html).toContain('Expected text');
+describe('MyComponent', () => {
+  it('renders output', () => {
+    const html = renderToStaticMarkup(<MyComponent />);
+    expect(html).toContain('Expected text');
+  });
+});
 ```
 
 ### Why:
 - `@testing-library/react` has a [known bug](https://github.com/testing-library/react-testing-library/issues/1392) with React 19 + Vitest — **no fix coming**
 - Git hooks and CI load production builds where `act()` is undefined
 - `renderToStaticMarkup` is a stable first-party React API that works everywhere
+
+### Import placement + timeout policy (DEBT-225):
+
+- Keep dynamic imports, but load them in `beforeAll` (or `beforeEach` only when mock/module-reset order requires it)
+- Do **not** import heavy modules inside individual `it()` blocks
+- Do **not** add per-test timeout overrides (`it(..., 10_000)` or `{ timeout: 15_000 }`)
+- Global Vitest policy is configured in `vitest.config.ts`, `vitest.browser.config.ts`, and `vitest.integration.config.ts`
 
 ### DO NOT USE for jsdom component tests:
 
