@@ -65,12 +65,15 @@ export function MarketingHomeShell({
     <MarketingLayout authNav={authNav} featuresHref="#features">
       <section>
         {/* Hero */}
-        <section className="py-20 lg:py-32">
+        <section aria-label="Hero" className="py-20 lg:py-32">
           <div className="mx-auto max-w-4xl px-4 text-center sm:px-6 lg:px-8">
             <p className="inline-flex items-center rounded-full border border-border bg-muted px-3 py-1 text-xs font-medium text-muted-foreground">
               Board prep, built for outcomes
             </p>
-            <h1 className="mt-6 font-display text-5xl font-bold tracking-tight md:text-7xl">
+            <h1
+              aria-label="Master Your Board Exams."
+              className="mt-6 font-display text-5xl font-bold tracking-tight md:text-7xl"
+            >
               <span className="block text-foreground">Master Your</span>
               <span className="bg-gradient-to-r from-muted-foreground via-foreground to-muted-foreground bg-clip-text text-transparent">
                 Board Exams.
@@ -92,7 +95,10 @@ export function MarketingHomeShell({
         </section>
 
         {/* Impact stats */}
-        <section className="border-t border-border py-16">
+        <section
+          aria-label="Impact statistics"
+          className="border-t border-border py-16"
+        >
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               {impactStats.map((stat) => {
@@ -126,7 +132,11 @@ export function MarketingHomeShell({
         </section>
 
         {/* Features */}
-        <section id="features" className="border-t border-border py-16">
+        <section
+          id="features"
+          aria-label="Features"
+          className="border-t border-border py-16"
+        >
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <div className="max-w-2xl">
               <h2 className="font-heading text-3xl font-bold tracking-tight md:text-4xl">
@@ -167,7 +177,7 @@ export function MarketingHomeShell({
         </section>
 
         {/* Pricing */}
-        <section className="border-t border-border py-16">
+        <section aria-label="Pricing" className="border-t border-border py-16">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <div className="text-center">
               <h2 className="font-heading text-3xl font-bold tracking-tight md:text-4xl">
@@ -234,7 +244,10 @@ export function MarketingHomeShell({
         </section>
 
         {/* CTA */}
-        <section className="border-t border-border py-20">
+        <section
+          aria-label="Get started"
+          className="border-t border-border py-20"
+        >
           <div className="mx-auto max-w-3xl px-4 text-center sm:px-6 lg:px-8">
             <h2 className="font-heading text-3xl font-bold tracking-tight md:text-4xl">
               Ready to start studying?
@@ -248,7 +261,7 @@ export function MarketingHomeShell({
                 Get Started
               </MetallicCtaButton>
               <Button asChild variant="outline" className={outlinePillClasses}>
-                <Link href={ROUTES.SIGN_IN}>Sign In</Link>
+                <Link href={ROUTES.SIGN_IN}>Sign in</Link>
               </Button>
             </div>
           </div>

@@ -75,4 +75,21 @@ describe('MarketingLayout', () => {
       mobileNavElement.querySelector(`a[href="${ROUTES.PRICING}"]`),
     ).not.toBeNull();
   });
+
+  it('renders the outer main with id="main-content" and tabIndex="-1"', async () => {
+    const { MarketingLayout } = await import('./marketing-layout');
+
+    const html = renderToStaticMarkup(
+      <MarketingLayout authNav={<div>Auth</div>} featuresHref="/#features">
+        <div>Content</div>
+      </MarketingLayout>,
+    );
+
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const main = doc.querySelector('main');
+
+    expect(main).not.toBeNull();
+    expect(main?.getAttribute('id')).toBe('main-content');
+    expect(main?.getAttribute('tabindex')).toBe('-1');
+  });
 });

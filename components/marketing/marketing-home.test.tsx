@@ -8,6 +8,18 @@ vi.mock('next/link', () => ({
 }));
 
 describe('components/marketing/marketing-home', () => {
+  function renderDoc() {
+    return import('./marketing-home').then(({ MarketingHomeShell }) => {
+      const html = renderToStaticMarkup(
+        <MarketingHomeShell
+          authNav={<div>AuthNav</div>}
+          primaryCta={<a href="/pricing">Get Started</a>}
+        />,
+      );
+      return new DOMParser().parseFromString(html, 'text/html');
+    });
+  }
+
   it('renders shared pricing values', async () => {
     const { MarketingHomeShell } = await import('./marketing-home');
 
@@ -82,5 +94,54 @@ describe('components/marketing/marketing-home', () => {
     expect(getStartedCtaFn).toHaveBeenCalledTimes(1);
     expect(html).toContain('AuthNav');
     expect(html).toContain('CTA');
+  });
+
+  it('renders exactly one main element (no nested main)', async () => {
+    const doc = await renderDoc();
+
+    expect(doc.querySelectorAll('main')).toHaveLength(1);
+  });
+
+  it('labels all major landing sections with aria-label', async () => {
+    const doc = await renderDoc();
+    const sectionLabels = Array.from(doc.querySelectorAll('section')).map(
+      (section) => section.getAttribute('aria-label'),
+    );
+
+    expect(sectionLabels).toEqual([
+      'Hero',
+      'Impact statistics',
+      'Features',
+      'Pricing',
+      'Get started',
+    ]);
+  });
+
+  it('uses consistent "Sign in" casing in CTA', async () => {
+    const doc = await renderDoc();
+    const ctaLink = Array.from(doc.querySelectorAll('a')).find(
+      (link) =>
+        (link.textContent ?? '').trim() === 'Sign in' &&
+        link.getAttribute('href') === '/sign-in',
+    );
+
+    expect(ctaLink).not.toBeUndefined();
+    expect(
+      Array.from(doc.querySelectorAll('a')).some(
+        (link) => (link.textContent ?? '').trim() === 'Sign In',
+      ),
+    ).toBe(false);
+  });
+
+  it('exposes the hero heading with accessible name "Master Your Board Exams."', async () => {
+    const doc = await renderDoc();
+    const heading = doc.querySelector('h1');
+
+    expect(heading).not.toBeNull();
+    const fallbackText = (heading?.textContent ?? '')
+      .replace(/\s+/g, ' ')
+      .trim();
+    const accessibleName = heading?.getAttribute('aria-label') ?? fallbackText;
+    expect(accessibleName).toBe('Master Your Board Exams.');
   });
 });
