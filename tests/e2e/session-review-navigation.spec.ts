@@ -8,6 +8,7 @@ import { startSession } from './helpers/session';
 import { ensureSubscribed } from './helpers/subscription';
 
 test.describe('session review navigation (SPEC-027)', () => {
+  // Multi-page audit flows can exceed the default timeout due to sequential navigation and assertions in CI.
   test.setTimeout(180_000);
   test.skip(!hasClerkCredentials, 'Missing Clerk E2E credentials');
 

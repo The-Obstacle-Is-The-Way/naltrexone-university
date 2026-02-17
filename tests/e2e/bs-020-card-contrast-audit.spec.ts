@@ -42,6 +42,7 @@ test.describe('BS-020: Card Contrast and Hover Audit', () => {
   test.skip(!hasClerkCredentials, 'Missing Clerk E2E credentials');
 
   test('Dark mode CSS variables match documented values', async ({ page }) => {
+    // Multi-page audit flows can exceed the default timeout due to sequential navigation and assertions in CI.
     test.setTimeout(180_000);
     await signInWithClerkPassword(page);
     await page.goto('/app/dashboard', {
@@ -65,6 +66,7 @@ test.describe('BS-020: Card Contrast and Hover Audit', () => {
   test('Dashboard: page background is bg-background, cards stay elevated on hover', async ({
     page,
   }) => {
+    // Multi-page audit flows can exceed the default timeout due to sequential navigation and assertions in CI.
     test.setTimeout(180_000);
     await signInWithClerkPassword(page);
     await ensureSubscribed(page);
@@ -247,6 +249,7 @@ test.describe('BS-020: Card Contrast and Hover Audit', () => {
   test('Hover pattern divergence: three different strategies', async ({
     page,
   }) => {
+    // Multi-page audit flows can exceed the default timeout due to sequential navigation and assertions in CI.
     test.setTimeout(180_000);
     await signInWithClerkPassword(page);
     await ensureSubscribed(page);

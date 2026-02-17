@@ -8,6 +8,7 @@ import { startSession } from './helpers/session';
 import { ensureSubscribed } from './helpers/subscription';
 
 test.describe('practice', () => {
+  // Authenticated E2E flows include Clerk sign-in and seeded subscription setup; allow CI headroom.
   test.setTimeout(120_000);
   test.skip(!hasClerkCredentials, 'Missing Clerk E2E credentials');
 

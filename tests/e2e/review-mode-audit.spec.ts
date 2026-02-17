@@ -55,6 +55,7 @@ async function expectNoChoicesChecked(page: Page): Promise<void> {
 }
 
 test.describe('review mode audit', () => {
+  // Multi-page audit flows can exceed the default timeout due to sequential navigation and assertions in CI.
   test.setTimeout(180_000);
   test.skip(!hasClerkCredentials, 'Missing Clerk E2E credentials');
 

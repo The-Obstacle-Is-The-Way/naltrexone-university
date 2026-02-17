@@ -58,6 +58,10 @@ async function getHistoryBarLabels(page: Page): Promise<string[]> {
 }
 
 test.describe('BS-019: Action Bar Label and Ordering Audit', () => {
+  // Outlier budget: this spec exercises four full authenticated flows
+  // (Quick Practice, Tutor, Exam, History review) with repeated navigation
+  // and screenshot capture. Keep 300s until the suite is split.
+  // Tracked by DEBT-226.
   test.setTimeout(300_000);
   test.skip(!hasClerkCredentials, 'Missing Clerk E2E credentials');
 
