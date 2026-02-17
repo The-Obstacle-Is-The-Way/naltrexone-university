@@ -312,6 +312,15 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 - **E2E tests:** `tests/e2e/*.spec.ts` (Playwright)
 - **E2E timeout policy:** `docs/dev/testing-infrastructure.md` → "Playwright Timeout Policy"
 
+### Playwright E2E Conventions
+
+- In `tests/e2e/**/*.spec.ts`, use relative imports for local helper modules (`./helpers/...`)
+- Keep `@/...` imports for app/runtime modules outside `tests/e2e/**`
+- Prefer Playwright defaults first; only use `test.setTimeout(...)` for full-flow budget increases
+- Prefer assertion/locator timeouts before increasing full test timeout
+- Any non-default `test.setTimeout(...)` must include a concise in-file rationale comment
+- Approved timeout bands: `120_000` (standard authenticated flows), `180_000` (multi-page audits), `300_000` (documented temporary outlier only)
+
 ### Running Integration Tests Locally
 
 Integration tests require a local Postgres database. Use Docker:
