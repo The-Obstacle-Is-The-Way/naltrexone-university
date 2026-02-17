@@ -24,6 +24,7 @@ test.describe('practice session continuation', () => {
     ).toBeVisible();
     await expect(page.getByText(/Question 1 of/)).toBeVisible();
 
+    await page.waitForURL(/\/app\/practice\/[^/]+$/);
     const sessionUrl = page.url();
     await page.goto('/app/dashboard');
     await expect(

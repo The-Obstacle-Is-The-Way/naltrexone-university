@@ -63,7 +63,7 @@ describe('container factories', () => {
     createContainer = await loadContainer();
   });
 
-  it('exposes factory functions for repositories, use cases, and controllers', async () => {
+  it('exposes factory functions for repositories, use cases, and controllers', () => {
     const container = createContainer({
       primitives: {
         db: {} as unknown as DrizzleDb,
@@ -116,7 +116,7 @@ describe('container factories', () => {
     expect(typeof container.createTagControllerDeps).toBe('function');
   });
 
-  it('wires concrete implementations for all factories', async () => {
+  it('wires concrete implementations for all factories', () => {
     const container = createContainer({
       primitives: {
         db: {} as unknown as DrizzleDb,
@@ -317,7 +317,7 @@ describe('container factories', () => {
     expect(tagDeps.tagRepository).toBeInstanceOf(DrizzleTagRepository);
   });
 
-  it('shares Stripe price IDs between subscription repository and payment gateway', async () => {
+  it('shares Stripe price IDs between subscription repository and payment gateway', () => {
     const container = createContainer({
       primitives: {
         db: {} as unknown as DrizzleDb,

@@ -39,7 +39,6 @@ describe('app/pricing', () => {
   });
 
   afterEach(() => {
-    vi.resetModules();
     vi.restoreAllMocks();
     vi.unstubAllEnvs();
   });

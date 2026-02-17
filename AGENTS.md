@@ -33,6 +33,7 @@ describe('MyComponent', () => {
 ```
 
 ### Why:
+
 - `@testing-library/react` has a [known bug](https://github.com/testing-library/react-testing-library/issues/1392) with React 19 + Vitest — **no fix coming**
 - Git hooks and CI load production builds where `act()` is undefined
 - `renderToStaticMarkup` is a stable first-party React API that works everywhere

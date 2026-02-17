@@ -29,7 +29,7 @@ describe('components/marketing/marketing-home', () => {
     return new DOMParser().parseFromString(html, 'text/html');
   }
 
-  it('renders shared pricing values', async () => {
+  it('renders shared pricing values', () => {
     const html = renderToStaticMarkup(
       <MarketingHomeShell
         authNav={<div>AuthNav</div>}
@@ -42,7 +42,7 @@ describe('components/marketing/marketing-home', () => {
     expect(html).toContain(PRICING_DATA.annual.savings);
   });
 
-  it('renders marketing sections with injected nav and cta', async () => {
+  it('renders marketing sections with injected nav and cta', () => {
     const html = renderToStaticMarkup(
       <MarketingHomeShell
         authNav={<div>AuthNav</div>}
@@ -66,7 +66,7 @@ describe('components/marketing/marketing-home', () => {
     expect(html).toContain('<main id="main-content"');
   });
 
-  it('renders exactly one main landmark through MarketingHomeShell', async () => {
+  it('renders exactly one main landmark through MarketingHomeShell', () => {
     const html = renderToStaticMarkup(
       <MarketingHomeShell
         authNav={<div>AuthNav</div>}
@@ -93,8 +93,8 @@ describe('components/marketing/marketing-home', () => {
     expect(html).toContain('CTA');
   });
 
-  it('labels all major landing sections with aria-label', async () => {
-    const doc = await renderDoc();
+  it('labels all major landing sections with aria-label', () => {
+    const doc = renderDoc();
     const sectionLabels = Array.from(doc.querySelectorAll('section')).map(
       (section) => section.getAttribute('aria-label'),
     );
@@ -108,8 +108,8 @@ describe('components/marketing/marketing-home', () => {
     ]);
   });
 
-  it('uses consistent "Sign in" casing in CTA', async () => {
-    const doc = await renderDoc();
+  it('uses consistent "Sign in" casing in CTA', () => {
+    const doc = renderDoc();
     const ctaLink = Array.from(doc.querySelectorAll('a')).find(
       (link) =>
         (link.textContent ?? '').trim() === 'Sign in' &&
@@ -124,8 +124,8 @@ describe('components/marketing/marketing-home', () => {
     ).toBe(false);
   });
 
-  it('exposes the hero heading with accessible name "Master Your Board Exams."', async () => {
-    const doc = await renderDoc();
+  it('exposes the hero heading with accessible name "Master Your Board Exams."', () => {
+    const doc = renderDoc();
     const heading = doc.querySelector('h1');
 
     expect(heading).not.toBeNull();

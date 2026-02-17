@@ -132,7 +132,7 @@ describe('app/(app)/app/questions/[slug]', () => {
     expect(html).toContain('aria-live="polite"');
   });
 
-  it('renders an error state with try again button', async () => {
+  it('renders an error state with try again button', () => {
     const html = renderToStaticMarkup(
       <QuestionView
         loadState={{ status: 'error', message: 'Boom' }}
@@ -153,7 +153,7 @@ describe('app/(app)/app/questions/[slug]', () => {
     expect(html).toContain('Try again');
   });
 
-  it('renders not-found state when ready with no question', async () => {
+  it('renders not-found state when ready with no question', () => {
     const html = renderToStaticMarkup(
       <QuestionView
         loadState={{ status: 'ready' }}
@@ -173,7 +173,7 @@ describe('app/(app)/app/questions/[slug]', () => {
     expect(html).toContain('Question not found.');
   });
 
-  it('renders the question card when question exists', async () => {
+  it('renders the question card when question exists', () => {
     const choice = createChoice({
       id: 'c1',
       questionId: 'q_1',
@@ -208,7 +208,7 @@ describe('app/(app)/app/questions/[slug]', () => {
     expect(html).toContain('Choice A');
   });
 
-  it('renders feedback and post-submit actions when submitResult exists', async () => {
+  it('renders feedback and post-submit actions when submitResult exists', () => {
     const html = renderToStaticMarkup(
       <QuestionView
         loadState={{ status: 'ready' }}
@@ -237,7 +237,7 @@ describe('app/(app)/app/questions/[slug]', () => {
     expect(html).not.toContain('Submit');
   });
 
-  it('disables submit while loading to prevent duplicate submissions', async () => {
+  it('disables submit while loading to prevent duplicate submissions', () => {
     const choice = createChoice({
       id: 'c1',
       questionId: 'q_1',
