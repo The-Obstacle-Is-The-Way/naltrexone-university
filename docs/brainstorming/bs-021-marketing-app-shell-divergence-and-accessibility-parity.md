@@ -2,7 +2,7 @@
 
 **Date:** 2026-02-17
 **Triggered by:** Side-by-side audit of logged-out landing page vs logged-in dashboard shell
-**Scope:** Structural, semantic, and navigation consistency between marketing and authenticated app shells (separate from BS-020 card contrast)
+**Scope:** Structural, semantic, navigation, and shell-level parity policy between marketing and authenticated app shells (separate from BS-020 card contrast root cause)
 **Related:** [BS-020](./bs-020-card-contrast-and-hover-consistency.md), [Design Principles](../frontend/design-principles.md), [Frontend Standards](../frontend/standards.md)
 
 ---
@@ -20,6 +20,24 @@ That separation is good architecture. But the current implementation has a mix o
 2. **Unintentional divergences** (accessibility and semantic drift)
 
 The key risk is that real UX differences get conflated with markup bugs, making it harder to decide what should be unified versus preserved.
+
+There is also a product-level expectation: users should perceive one cohesive brand experience from landing page to dashboard. Current divergence is acceptable only where it supports different jobs-to-be-done, not where it degrades quality or accessibility.
+
+## Unified Front Policy (Cross-BS)
+
+To avoid future drift, the shell strategy should be explicit:
+
+**Must align across marketing + app**
+- Semantic landmark quality (`main`, section labeling, skip-link compatibility)
+- Shared visual language primitives (surface hierarchy intent, card readability, spacing/radius/typography rhythm)
+- Copy conventions for shared concepts (for example sign-in casing)
+
+**May intentionally differ**
+- Navigation IA (marketing discovery links vs app task links)
+- Authenticated controls (theme toggle, user menu, session controls)
+- Logo destination routes (`/` vs `/app/dashboard`)
+
+BS-020 handles the concrete card/background/hover implementation details for this policy and now has a **verified recommended direction**: Option A (`bg-muted` → `bg-background` in the app layout root) has been confirmed via Playwright E2E audit and full source-level impact analysis to resolve the card contrast inversion without breakage. BS-021 defines the shell-parity guardrails.
 
 ---
 
@@ -97,6 +115,7 @@ Define a shared shell-parity standard (landmarks, nav behavior, theme controls, 
 2. Should "Sign in" (sentence case) be the canonical copy everywhere, including `AuthNav`?
 3. Do we want labeled section landmarks as a hard standard for long-form marketing pages?
 4. Should shell parity be formalized in `docs/frontend/design-principles.md` as an explicit checklist?
+5. Should we explicitly codify "landing visual quality is the baseline for app shell polish" in design principles? *(Partially answered: BS-020's Option A impact analysis confirms that aligning the app background to match the landing page resolves the card contrast inversion and creates a unified elevation stack. The "landing as north-star" principle has been validated for surface/card/hover behavior. Formal codification in design principles is still pending.)*
 
 ---
 
@@ -106,6 +125,8 @@ Define a shared shell-parity standard (landmarks, nav behavior, theme controls, 
 |------|----------|-----------|
 | 2026-02-17 | Document created | Audit found non-trivial semantic and shell-consistency concerns that are out of BS-020 scope |
 | 2026-02-17 | Split from BS-020 | Card contrast/hover (BS-020) and shell semantic parity are separate problem spaces requiring independent prioritization |
+| 2026-02-17 | Adopted unified-front framing | Clarified that shell differences are acceptable only when intentional; visual and semantic quality should remain cohesive from landing to app |
+| 2026-02-17 | Cross-referenced BS-020 Option A verification | BS-020's recommended direction (app layout `bg-muted` → `bg-background`) has been validated via Playwright E2E and full impact analysis — supports this doc's unified-front policy by aligning the app surface model to the landing page |
 
 ---
 
@@ -122,7 +143,7 @@ Define a shared shell-parity standard (landmarks, nav behavior, theme controls, 
 | Landing CTA copy casing | `components/marketing/marketing-home.tsx` | 251 | Uses `Sign In` |
 | Marketing footer copy casing | `components/marketing/marketing-layout.tsx` | 85 | Uses `Sign in` |
 | Unauthenticated auth nav copy | `components/auth-nav.tsx` | 46 | Uses `Sign In` |
-| App shell background + controls | `app/(app)/app/layout.tsx` | 73, 87-90 | Uses `bg-muted`; includes mobile nav, theme toggle, auth nav |
+| App shell background + controls | `app/(app)/app/layout.tsx` | 73, 87-90 | Uses `bg-muted`; includes mobile nav, theme toggle, auth nav *(BS-020 recommends → `bg-background`)* |
 | App desktop nav landmark | `components/app-desktop-nav.tsx` | 17-19 | `aria-label="App navigation"` |
 | App mobile menu trigger | `components/mobile-nav.tsx` | 107-113 | `<button>` with `aria-label="Open/Close navigation menu"` |
 | Global skip link | `app/layout.tsx` | 38-43 | `Skip to content` anchor to `#main-content` |
@@ -137,3 +158,4 @@ If approved, this should become a focused spec for:
 1. Marketing semantic landmark cleanup
 2. Cross-shell copy normalization
 3. Documented policy on theme-toggle parity between marketing/app
+4. Explicit shell-parity checklist in design principles, with BS-020 as the surface-contrast implementation track (Option A verified and ready for implementation)

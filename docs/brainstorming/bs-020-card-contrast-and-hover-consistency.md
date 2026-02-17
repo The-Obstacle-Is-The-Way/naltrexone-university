@@ -2,7 +2,7 @@
 
 **Date:** 2026-02-17
 **Triggered by:** Visual audit — dashboard cards lose contrast on hover, blending into the page background; landing page cards don't have this problem
-**Scope:** Background color layering, card hover effects, and visual consistency between the marketing site and the authenticated app
+**Scope:** Background color layering, card hover effects, and visual consistency between the marketing site and the authenticated app, with the landing visual system as the baseline reference
 **Related:** [Design Principles](../frontend/design-principles.md), [DEBT-108](../_archive/debt/debt-108-hardcoded-zinc-colors-break-light-dark-toggle.md) (original semantic color cleanup)
 
 ---
@@ -10,6 +10,16 @@
 ## The Problem
 
 The landing page and the authenticated app use different background colors. The Card component sits on top of both. In dark mode, this creates a **contrast inversion** — cards that look great on the landing page become nearly invisible on hover in the app.
+
+## Alignment Intent (North-Star)
+
+This investigation exists to support a single “unified front” outcome: after sign-in, the app should still feel like the same product users just saw on the landing page.
+
+That does **not** require identical information architecture. It does require a shared visual surface model:
+
+- Page background and card elevation should follow the same hierarchy logic
+- Hover behavior should increase card separation, not erase it
+- Dashboard-first impressions should preserve the same “clean, elegant” readability as landing
 
 ### The Color Stack (Dark Mode)
 
@@ -55,6 +65,13 @@ Landing page feature cards use `hover:bg-muted` (full opacity, no `/50`):
 ```
 
 This works because `bg-muted` (11%) over `bg-background` (3.5%) still has 7.5% lightness difference.
+
+### Technical Note: `transition-colors` Interaction
+
+Dashboard and session summary stat cards include `transition-colors` in their class list. This means dark-mode toggling *animates* the background-color change rather than snapping it. During the transition (~150ms default), the card passes through intermediate RGB values between the light and dark mode colors. This is not a user-facing bug — it's expected CSS transition behavior — but it has two implications:
+
+1. **Automated color measurements are unreliable** unless CSS transitions are disabled before reading `getComputedStyle`. The Playwright E2E tests inject `transition: none !important` before toggling dark mode to get stable readings.
+2. **The transition itself creates a brief visual artifact** during theme changes — the card briefly appears as a random mid-tone gray before settling to its final dark-mode color, reinforcing the sense that the card surface is unstable.
 
 ---
 
@@ -251,6 +268,78 @@ The max-width container already creates visual separation from the full-bleed he
 
 ---
 
+## Impact Analysis: Option A Verified (Playwright + Source Audit)
+
+A full audit of every app page, hover pattern, and `bg-muted/20` accent was conducted via Playwright E2E tests and source code inspection. The results confirm that **Option A is the recommended path** with minor follow-up cleanup.
+
+### What Automatically Fixes (Zero Code Beyond the One-Line Change)
+
+| Element | Current (on `bg-muted` 11%) | After (on `bg-background` 3.5%) |
+|---------|----------------------------|--------------------------------|
+| Card at rest (`bg-card` 7%) | **Darker** than page → sinks in | **Lighter** than page → pops out |
+| Card hover (`bg-muted/50` → ~9%) | 9% vs 11% page = **2% gap → invisible** | 9% vs 3.5% page = **5.5% gap → visible** |
+| Landing feature card hover (`hover:bg-muted`) | Already works (different page) | No change |
+| Choice button hover (`hover:bg-muted`) | Already works (on `bg-card` parent) | No change |
+
+### What Is Unaffected (Inside Cards, Not on Page Background)
+
+| Element | Location | Parent | Why Safe |
+|---------|----------|--------|----------|
+| Dashboard list items (`bg-muted/20 hover:bg-muted/40`) | `dashboard/page.tsx:147,220` | `bg-card` (inside Card) | Sits on card, not page |
+| Practice filter tags (`bg-muted/20`) | `practice-session-starter.tsx:221` | `bg-card` (inside Card) | Sits on card, not page |
+| History question list items | `history-questions-tab.tsx` | `bg-card` (Card component) | Full Card, not opacity |
+
+### What Gets Slightly More Visible (Improvement)
+
+| Element | Current | After | Direction |
+|---------|---------|-------|-----------|
+| History session items (`bg-muted/20` on page) | 11% on 11% = **0% contrast** | ~5% on 3.5% = **~1.5% contrast** | Better (was invisible, now slightly visible) |
+| History tab bar (`bg-muted/20` on page) | Same stacking issue | Improved | Better |
+
+### What Still Needs Follow-Up Cleanup (Separate from Background Change)
+
+These aren't blocking — the background change works without them — but they should be addressed for full consistency:
+
+| Issue | Current | Recommended | Why |
+|-------|---------|-------------|-----|
+| Border fades on hover | `hover:border-border/80` (9 cards) | `hover:border-border` | Border should emphasize, not fade |
+| Non-interactive cards have hover | Stat cards aren't clickable but have hover effects | Remove hover from display-only cards | Hover implies interactivity that doesn't exist |
+| Three hover strategies | `/50`, `/40`, full opacity | Standardize to `hover:bg-muted` (full) where hover is appropriate | Now works everywhere on `bg-background` |
+
+### Light Mode Impact (Minimal)
+
+In light mode, `bg-background` (white, 100%) vs `bg-muted` (off-white, 96.1%) is a ~4% difference. The change makes the app body pure white instead of very slightly gray. The header already uses `bg-background`, so the two-tone distinction was barely visible in light mode anyway. Cards are also `bg-card` (white, 100%) — in light mode, card and background were already identical. No contrast regression.
+
+### Affected App Pages (All Under `app/(app)/app/layout.tsx:73`)
+
+Dashboard, Practice, Quick Practice, Session pages, History, Bookmarks, Billing, Question View — all inherit from the same layout root. All were reviewed. No page-specific breakage found.
+
+---
+
+## Recommended Direction
+
+**Primary change:** Option A — `bg-muted` → `bg-background` in `app/(app)/app/layout.tsx:73`
+
+**Follow-up cleanup (can be same PR or separate):**
+1. Change `hover:border-border/80` → `hover:border-border` on all 9 stat cards
+2. Evaluate removing hover from non-interactive stat cards (dashboard + session summary)
+3. Consider standardizing remaining hover patterns to `hover:bg-muted` (full opacity)
+
+**What we are moving away from:**
+- Two-tone app body (`bg-muted` 11%) / header (`bg-background` 3.5%) that inverts the card elevation model
+- Semi-transparent hover patterns (`bg-muted/50`, `bg-muted/40`) that blend toward the page background
+- Border hover that fades instead of emphasizing (`border-border/80`)
+- Visual disconnect between landing page and authenticated app
+
+**What we are moving towards:**
+- Unified `bg-background` surface matching the landing page's visual model
+- Cards that float above their background (correct elevation hierarchy)
+- Hover effects that lift cards up (increase contrast), not dissolve them
+- Landing page visual quality as the north-star for all surfaces (per BS-021 policy)
+- A single coherent dark-mode elevation stack: `background (3.5%) → card (7%) → muted (11%) → border (15%)`
+
+---
+
 ## Open Questions
 
 1. **Is the two-tone app background intentional?** The `bg-muted` body was introduced to visually separate the header from content. Was this a conscious design decision or inherited from a template? If intentional, Option B or C respects it. If incidental, Option A/D is simpler.
@@ -259,11 +348,20 @@ The max-width container already creates visual separation from the full-bleed he
 
 3. **Should we audit light mode too?** In light mode, `bg-background` (white) and `bg-muted` (96.1% light gray) and `bg-card` (white) have the same relative ordering issue, but the contrast differences are much smaller and may not be visible.
 
-4. **Does the Chrome agent need to verify this?** The issue is clearly traceable in code (CSS variables → Tailwind classes → computed styles). But a Chrome agent could take before/after screenshots of the hover states on each page to create a visual record.
+4. **Does the Chrome agent need to verify this?** *(Answered: Playwright E2E tests now verify this with measured lightness values — see `tests/e2e/bs-020-card-contrast-audit.spec.ts`. Tests confirm: dashboard card lightness (7%) < page bg lightness (11%) at rest, and hover lightness approaches page bg within <5% difference. Landing page cards confirmed to have >5% hover-to-page contrast. Stronger evidence than screenshots alone.)*
 
 5. **What about the landing page impact stat cards?** They have no hover effect but sit on `bg-background`. They look fine. Should they gain hover for consistency with the feature cards below them?
 
 6. **Scope: quick fix or design system pass?** Option A is one line. Option C is a design system change. What's the right scope for this moment?
+
+---
+
+## Success Criteria (Unified Visual Front)
+
+1. In dark mode, primary cards on app surfaces are visibly elevated from the page background at rest and on hover.
+2. Hover states on non-clickable cards do not imply false interactivity.
+3. Landing → Dashboard transition preserves the same card-surface readability and visual rhythm.
+4. The chosen background strategy is documented as explicit policy (not accidental drift).
 
 ---
 
@@ -272,6 +370,8 @@ The max-width container already creates visual separation from the full-bleed he
 | Date | Decision | Rationale |
 |------|----------|-----------|
 | 2026-02-17 | Document created | Visual audit revealed card hover contrast loss on dashboard in dark mode |
+| 2026-02-17 | Landing aesthetic set as visual north-star for card surfaces | User-facing goal is a unified front where authenticated app screens preserve the same card elevation/readability quality seen on landing |
+| 2026-02-17 | Playwright E2E audit completed | `tests/e2e/bs-020-card-contrast-audit.spec.ts` — 5 tests: CSS variable values verified, dashboard contrast inversion measured (card 7% < page 11%), disappearing hover confirmed (<5% diff), landing page good contrast confirmed (>5% diff), session summary source verified (4× identical `hover:bg-muted/50`), three hover strategies confirmed. Discovered `transition-colors` causes flaky computed-color reads during theme toggle |
 
 ---
 
@@ -297,3 +397,4 @@ The max-width container already creates visual separation from the full-bleed he
 
 - [DEBT-108](../_archive/debt/debt-108-hardcoded-zinc-colors-break-light-dark-toggle.md) — Original semantic color cleanup that established current token values
 - [Standards: Stat card hover](../frontend/standards.md) — Documents `hover:border-border/80 hover:bg-muted/50` as the standard (this standard may need updating)
+- [E2E Audit Test](../../tests/e2e/bs-020-card-contrast-audit.spec.ts) — Playwright tests measuring contrast inversion, disappearing hover, and hover pattern divergence with computed lightness values

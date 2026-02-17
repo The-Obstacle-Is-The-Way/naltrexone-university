@@ -3,7 +3,7 @@
 **Date:** 2026-02-17
 **Triggered by:** Live UI audit — visual comparison of bottom action bars across Practice, Quick Practice, and review views
 **Scope:** Bottom action bar label, ordering, boundary behavior, and navigation consistency across Practice, Quick Practice, and review origins (`history`, `practice`, `dashboard`, `bookmarks`)
-**Related:** [BS-018](../_archive/brainstorming/bs-018-question-view-ux-unification.md), [SPEC-030](../_archive/specs/spec-030-question-view-ux-unification.md), [Design Principles §2](../frontend/design-principles.md)
+**Related:** [BS-018](../_archive/brainstorming/bs-018-question-view-ux-unification.md), [SPEC-030](../_archive/specs/spec-030-question-view-ux-unification.md), [BS-020](./bs-020-card-contrast-and-hover-consistency.md), [BS-021](./bs-021-marketing-app-shell-divergence-and-accessibility-parity.md), [Design Principles §2](../frontend/design-principles.md)
 
 ---
 
@@ -136,6 +136,15 @@ Button order is conceptually similar, but the mobile layout model itself differs
 
 Users who practice questions (Practice mode) and later review them (History) are the same people doing the same cognitive task — navigating a question list. When the same "Next" button has a different name and a different position relative to the action button, it creates friction. The user's muscle memory from Practice doesn't transfer to History.
 
+### Scope Boundary (Cross-BS Clarification)
+
+BS-019 covers **interaction consistency** (labels, ordering, boundary behavior, and action availability) inside question action bars.
+
+It does **not** define visual surface styling (card/background/hover contrast) or shell-level parity. Those are tracked separately:
+
+- Visual surface + card contrast alignment: [BS-020](./bs-020-card-contrast-and-hover-consistency.md)
+- Marketing/app shell parity + semantic/a11y drift: [BS-021](./bs-021-marketing-app-shell-divergence-and-accessibility-parity.md)
+
 ---
 
 ## Root Cause
@@ -251,7 +260,7 @@ Next → | Submit | Bookmark
 
 4. **Does this warrant a spec or a quick fix?** Label/order alignment is still a small change (3 primary files: `practice-view.tsx`, `quick-practice-client.tsx`, `question-page-client.tsx`). If we also standardize mobile layout patterns, scope expands to `exam-review-view.tsx` and `session-summary-view.tsx`.
 
-5. **Quick Practice post-submit state?** After submitting in Quick Practice, does the action bar change (e.g., does Submit disable/hide, does "Next Question" become more prominent)? Should the post-submit state be audited as part of this work? *(Answered by Chrome agent audit: Submit stays in DOM but disabled, same as Tutor.)*
+5. **Quick Practice post-submit state?** After submitting in Quick Practice, does the action bar change (e.g., does Submit disable/hide, does "Next Question" become more prominent)? Should the post-submit state be audited as part of this work? *(Answered by Chrome agent audit and confirmed by Playwright E2E: Submit stays in DOM but disabled, no "Try Again" swap — same as Tutor. See `tests/e2e/bs-019-action-bar-audit.spec.ts`.)*
 
 6. **Should Bookmark be added to History Review?** Users can bookmark during Practice but not while reviewing in History. If a user encounters a tricky question during review, they have no way to flag it for later. Is this an intentional scope limitation or an oversight?
 
@@ -275,6 +284,8 @@ Next → | Submit | Bookmark
 | 2026-02-17 | Chrome agent full UI audit completed | Systematic walkthrough of all 19 action bar states across Quick Practice, Tutor, Exam, and History Review. Confirmed original 3 inconsistencies and surfaced 5 additional: first/last Q boundary handling, bookmark absent from History, Submit vs Try Again swap, back-nav placement, and `<a>` vs `<button>` element types |
 | 2026-02-17 | Source-code audit completed and corrected | Verified every cited path/line against current code. Corrected stale claim about History back-nav location (now header + conditional bottom), added missing History Individual Review action-bar states, corrected disabled-state notes for unanswered History states, and recorded mobile layout-model divergence |
 | 2026-02-17 | External browser sweep reconciled | Added origin-variant coverage for `from=practice`, `from=dashboard`, and `from=bookmarks`, including their action-bar and back-label differences |
+| 2026-02-17 | Scope boundary clarified with BS-020/BS-021 | Action bar interaction consistency is BS-019 scope; landing/app visual surface alignment and shell parity are tracked independently |
+| 2026-02-17 | Playwright E2E audit completed | `tests/e2e/bs-019-action-bar-audit.spec.ts` — 4 tests covering Quick Practice (pre/post-submit), Tutor (Q1 pre/post-submit, Q2 boundary), Exam (Mark for review), History Review (Q1 labels/ordering/element types, last-Q boundary via navigator grid). All 9 inconsistencies confirmed with assertions. Tutor/Exam tests depend on `startSession` helper which is sensitive to dev server stability |
 
 ---
 
@@ -325,6 +336,7 @@ Next → | Submit | Bookmark
 - [BS-018 Concern 3](../_archive/brainstorming/bs-018-question-view-ux-unification.md) — Action bar inconsistency (high-level)
 - [Design Principles §2](../frontend/design-principles.md) — Action bar composition ordering
 - [SPEC-030](../_archive/specs/spec-030-question-view-ux-unification.md) — Implemented structural unification; did not reconcile labels/ordering
+- [E2E Audit Test](../../tests/e2e/bs-019-action-bar-audit.spec.ts) — Playwright tests verifying all 9 inconsistencies across Quick Practice, Tutor, Exam, and History Review
 
 ---
 
