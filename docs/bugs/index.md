@@ -1,7 +1,7 @@
 # Bug Reports
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-02-16
+**Last Updated:** 2026-02-17
 
 ---
 
@@ -78,7 +78,7 @@ Five-axis audit covering domain, application, adapters, frontend, and configurat
 - `ports/use-cases.ts` incomplete (architectural preference with zero runtime impact)
 - Container logger fallback bypasses redaction (unreachable code — no caller passes `undefined` logger; DEBT-088 resolved)
 
-Only **3 verified, genuine issues** are filed above as BUG-136, BUG-137, and BUG-139. Each includes full stack traces proving the bug exists.
+Audit #3 resulted in **3 verified issues**: BUG-136, BUG-137, and BUG-139. Audit #4 added BUG-143.
 
 ---
 

@@ -21,12 +21,15 @@ Both Sentry configuration files (`instrumentation.ts` and `sentry.client.config.
 ```typescript
 export async function register() {
   const dsn = process.env.SENTRY_DSN ?? process.env.NEXT_PUBLIC_SENTRY_DSN;
-  if (!dsn) return;
+
+  if (!dsn) {
+    return;
+  }
 
   Sentry.init({
     dsn,
     tracesSampleRate: 0,
-    environment: process.env.NODE_ENV,  // ← INLINED by Turbopack as 'production'
+    environment: process.env.NODE_ENV,
   });
 }
 ```
@@ -36,13 +39,15 @@ export async function register() {
 ### 2. The Bug — Client-Side: `sentry.client.config.ts:11`
 
 ```typescript
+const dsn = process.env.NEXT_PUBLIC_SENTRY_DSN;
+
 if (dsn) {
   Sentry.init({
     dsn,
     tracesSampleRate: 0,
     replaysSessionSampleRate: 0,
     replaysOnErrorSampleRate: 0,
-    environment: process.env.NODE_ENV,  // ← Always 'production' in production builds
+    environment: process.env.NODE_ENV,
   });
 }
 ```
@@ -52,13 +57,24 @@ Client bundles **always** inline `process.env.NODE_ENV` as `'production'` during
 ### 3. The Same Codebase Documents Why This Is Wrong — `lib/env.ts:95-112`
 
 ```typescript
-// NODE_ENV is NOT reliable here because:
-//   1. `next build` sets NODE_ENV='production' internally
-//   2. Turbopack inlines process.env.NODE_ENV as 'production' in server bundles
-//   3. At runtime the baked value overrides the actual process env
-//   4. This causes CI E2E (NODE_ENV=test) and Vercel preview (VERCEL_ENV=preview)
-//      to be misidentified as production
-const isProductionRuntime = process.env.VERCEL_ENV === 'production';
+  // VERCEL_ENV is injected by Vercel and available during both the Build Step
+  // and Function execution. Unlike NODE_ENV, it is never inlined into the
+  // JavaScript bundle by Turbopack — it remains a live process.env lookup.
+  //
+  // NODE_ENV is NOT reliable here because:
+  //   1. `next build` sets NODE_ENV='production' internally
+  //   2. Turbopack inlines process.env.NODE_ENV as 'production' in server bundles
+  //   3. At runtime the baked value overrides the actual process env
+  //   4. This causes CI E2E (NODE_ENV=test) and Vercel preview (VERCEL_ENV=preview)
+  //      to be misidentified as production
+  //
+  // IMPORTANT: Because VERCEL_ENV is available at build time, any validation
+  // gated on isProductionRuntime also runs during `next build`'s "Collecting
+  // page data" phase. Only gate env vars here that MUST be present for the
+  // build to succeed (e.g., Clerk keys for auth middleware). Secrets only
+  // needed at request time (e.g., CRON_SECRET) should be validated at their
+  // point of use, not here.
+  const isProductionRuntime = process.env.VERCEL_ENV === 'production';
 ```
 
 The team already solved this problem for `isProductionRuntime`. Neither the logger (BUG-136) nor Sentry was updated.
@@ -75,7 +91,7 @@ it('returns initialized client with safe defaults when NEXT_PUBLIC_SENTRY_DSN is
     tracesSampleRate: 0,
     replaysSessionSampleRate: 0,
     replaysOnErrorSampleRate: 0,
-    environment: process.env.NODE_ENV,       // ← Asserts current (buggy) behavior
+    environment: process.env.NODE_ENV,
   });
 });
 ```
@@ -128,7 +144,7 @@ Sentry.init({
 });
 ```
 
-Note: `NEXT_PUBLIC_VERCEL_ENV` must be explicitly set in the Vercel project settings (it's not auto-populated like `VERCEL_ENV`). Configure it as: `NEXT_PUBLIC_VERCEL_ENV = $VERCEL_ENV` so it gets inlined with the correct value per deployment.
+Note: `NEXT_PUBLIC_VERCEL_ENV` must be explicitly set in Vercel project settings (it's not auto-populated like `VERCEL_ENV`). Set it per deployment environment (Production = `production`, Preview = `preview`, Development = `development`) so the client bundle can inline the correct value.
 
 ## Verification
 

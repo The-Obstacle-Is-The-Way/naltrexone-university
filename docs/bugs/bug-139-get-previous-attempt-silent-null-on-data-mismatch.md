@@ -19,21 +19,31 @@ When `GetPreviousAttemptUseCase` fetches an attempt by ID and the attempt's `que
 ### 1. The Bug — `src/application/use-cases/get-previous-attempt.ts:35-59`
 
 ```typescript
-const attempt = input.attemptId
-  ? await this.attempts.findByIdAndUserId(input.attemptId, input.userId)  // ← No questionId filter
-  : input.sessionId
-    ? await this.attempts.findBySessionIdAndQuestionId(...)                // ← Has questionId filter
-    : await this.attempts.findLatestByUserAndQuestion(...);                // ← Has questionId filter
+    const attempt = input.attemptId
+      ? await this.attempts.findByIdAndUserId(input.attemptId, input.userId)
+      : input.sessionId
+        ? await this.attempts.findBySessionIdAndQuestionId(
+            input.sessionId,
+            input.userId,
+            input.questionId,
+          )
+        : await this.attempts.findLatestByUserAndQuestion(
+            input.userId,
+            input.questionId,
+          );
 
-if (!attempt) return null;
-
-if (attempt.questionId !== input.questionId) {                            // Line 49: Mismatch detected
-  this.logger.warn(                                                       // Line 50: Warning only
-    { attemptId: input.attemptId, questionId: input.questionId, attemptQuestionId: attempt.questionId },
-    'Previous attempt does not match requested question',
-  );
-  return null;                                                            // Line 58: Silent null
-}
+    if (!attempt) return null;
+    if (attempt.questionId !== input.questionId) {
+      this.logger.warn(
+        {
+          attemptId: input.attemptId,
+          questionId: input.questionId,
+          attemptQuestionId: attempt.questionId,
+        },
+        'Previous attempt does not match requested question',
+      );
+      return null;
+    }
 ```
 
 The first branch (`findByIdAndUserId`) is the only one that can produce a mismatch, because the other two branches include `questionId` in their queries.
@@ -41,20 +51,18 @@ The first branch (`findByIdAndUserId`) is the only one that can produce a mismat
 ### 2. Repository Confirms the Gap — `src/adapters/repositories/drizzle-attempt-repository.ts:205-216`
 
 ```typescript
-async findByIdAndUserId(
-  attemptId: string,
-  userId: string,
-): Promise<Attempt | null> {
-  const [row] = await this.db
-    .select()
-    .from(attempts)
-    .where(and(
-      eq(attempts.id, attemptId),
-      eq(attempts.userId, userId),       // ← Only filters by attemptId + userId
-    ))                                    // ← NO questionId filter
-    .limit(1);
-  return row ? toAttemptDomain(row) : null;
-}
+  async findByIdAndUserId(
+    attemptId: string,
+    userId: string,
+  ): Promise<Attempt | null> {
+    const [row] = await this.db
+      .select()
+      .from(attempts)
+      .where(and(eq(attempts.id, attemptId), eq(attempts.userId, userId)))
+      .limit(1);
+
+    return row ? toAttemptDomain(row) : null;
+  }
 ```
 
 **Contrast with the safe methods:**
@@ -93,19 +101,26 @@ Returns `GetPreviousAttemptOutput | null`. The controller does not distinguish b
 ### 5. UI Treats Null as "No Previous Attempt" — `app/(app)/app/questions/[slug]/question-page-logic.ts:229-248`
 
 ```typescript
-let res: ActionResult<GetPreviousAttemptOutput | null>;   // Line 229
-try {
-  res = await withTimeout(
-    input.getPreviousAttemptFn({...}),
-    PREVIOUS_ATTEMPT_TIMEOUT_MS,
-  );
-} catch {
-  return;                           // ← Silently falls back to attempt mode
-}
+  let res: ActionResult<GetPreviousAttemptOutput | null>;
+  try {
+    res = await withTimeout(
+      input.getPreviousAttemptFn({
+        questionId: input.questionId,
+        ...(input.attemptId ? { attemptId: input.attemptId } : {}),
+        ...(input.sessionId ? { sessionId: input.sessionId } : {}),
+      }),
+      PREVIOUS_ATTEMPT_TIMEOUT_MS,
+    );
+  } catch {
+    // Silently fall back to attempt mode — review is best-effort
+    return;
+  }
+  if (!isMounted()) return;
 
-if (!res.ok || !res.data) {         // Line 245
-  return;                           // ← Null treated as "no attempt" — shows attempt mode
-}
+  if (!res.ok || !res.data) {
+    // No previous attempt or error — stay in attempt mode
+    return;
+  }
 ```
 
 When `null` is returned (from either "not found" or "data mismatch"), the UI shows **attempt mode** (blank choice selection + submit button) instead of **review mode** (showing the previous answer). The user has no indication that something went wrong.

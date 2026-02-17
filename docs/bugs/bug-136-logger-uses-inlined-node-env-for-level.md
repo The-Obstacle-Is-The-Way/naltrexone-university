@@ -21,9 +21,9 @@
 ```typescript
 const level =
   envLevel ||
-  (process.env.NODE_ENV === 'production'   // ← INLINED by Turbopack as 'production'
+  (process.env.NODE_ENV === 'production'
     ? 'info'
-    : process.env.NODE_ENV === 'test'       // ← Also inlined
+    : process.env.NODE_ENV === 'test'
       ? 'silent'
       : 'debug');
 ```
@@ -31,17 +31,24 @@ const level =
 ### 2. The Same Codebase Documents Why This Is Wrong — `lib/env.ts:95-112`
 
 ```typescript
-// VERCEL_ENV is injected by Vercel and available during both the Build Step
-// and Function execution. Unlike NODE_ENV, it is never inlined into the
-// JavaScript bundle by Turbopack — it remains a live process.env lookup.
-//
-// NODE_ENV is NOT reliable here because:
-//   1. `next build` sets NODE_ENV='production' internally
-//   2. Turbopack inlines process.env.NODE_ENV as 'production' in server bundles
-//   3. At runtime the baked value overrides the actual process env
-//   4. This causes CI E2E (NODE_ENV=test) and Vercel preview (VERCEL_ENV=preview)
-//      to be misidentified as production
-const isProductionRuntime = process.env.VERCEL_ENV === 'production';
+  // VERCEL_ENV is injected by Vercel and available during both the Build Step
+  // and Function execution. Unlike NODE_ENV, it is never inlined into the
+  // JavaScript bundle by Turbopack — it remains a live process.env lookup.
+  //
+  // NODE_ENV is NOT reliable here because:
+  //   1. `next build` sets NODE_ENV='production' internally
+  //   2. Turbopack inlines process.env.NODE_ENV as 'production' in server bundles
+  //   3. At runtime the baked value overrides the actual process env
+  //   4. This causes CI E2E (NODE_ENV=test) and Vercel preview (VERCEL_ENV=preview)
+  //      to be misidentified as production
+  //
+  // IMPORTANT: Because VERCEL_ENV is available at build time, any validation
+  // gated on isProductionRuntime also runs during `next build`'s "Collecting
+  // page data" phase. Only gate env vars here that MUST be present for the
+  // build to succeed (e.g., Clerk keys for auth middleware). Secrets only
+  // needed at request time (e.g., CRON_SECRET) should be validated at their
+  // point of use, not here.
+  const isProductionRuntime = process.env.VERCEL_ENV === 'production';
 ```
 
 The team already solved this problem in `env.ts` using `VERCEL_ENV`. The logger was not updated.
@@ -50,10 +57,10 @@ The team already solved this problem in `env.ts` using `VERCEL_ENV`. The logger 
 
 ```typescript
 it('defaults to info in production when LOG_LEVEL is unset', async () => {
-  vi.stubEnv('NODE_ENV', 'production');   // ← vi.stubEnv works in Vitest
+  vi.stubEnv('NODE_ENV', 'production');
   vi.stubEnv('LOG_LEVEL', '');
   const { logger } = await importLogger();
-  expect(logger.level).toBe('info');      // ← Passes — but tests don't test Turbopack inlining
+  expect(logger.level).toBe('info');
 });
 ```
 
@@ -85,17 +92,17 @@ The logger was created before the Turbopack inlining issue was discovered. When 
 Align with the existing `VERCEL_ENV` pattern from `lib/env.ts`:
 
 ```typescript
-const isProductionRuntime = process.env.VERCEL_ENV === 'production';
+const runtimeEnv = process.env.VERCEL_ENV ?? process.env.NODE_ENV;
 const level =
   envLevel ||
-  (isProductionRuntime
+  (runtimeEnv === 'production'
     ? 'info'
-    : process.env.NODE_ENV === 'test'
+    : runtimeEnv === 'test'
       ? 'silent'
       : 'debug');
 ```
 
-Note: The `NODE_ENV === 'test'` check is safe to keep because test environments run Vitest directly (no Turbopack inlining) — `NODE_ENV` is reliably `'test'` in that context.
+Note: This preserves the existing behavior outside Vercel (`NODE_ENV` drives the default), while allowing Vercel preview deployments (`VERCEL_ENV=preview`) to correctly default to `'debug'`.
 
 ## Verification
 
@@ -108,5 +115,5 @@ Note: The `NODE_ENV === 'test'` check is safe to keep because test environments 
 - `lib/logger.ts:4-12` — Log level selection
 - `lib/logger.test.ts:31-37` — Tests that pass but don't cover Turbopack behavior
 - `lib/env.ts:95-112` — Documents the `NODE_ENV` inlining problem and `VERCEL_ENV` solution
-- [BUG-002](../../_archive/bugs/bug-002-next-build-node-env-skip-clerk.md) — Original `NODE_ENV` build issue
-- [BUG-115](../../_archive/bugs/bug-115-cron-secret-validation-crashes-production-build.md) — CRON_SECRET startup validation crash from same root cause
+- [BUG-002](../_archive/bugs/bug-002-next-build-node-env-skip-clerk.md) — Original `NODE_ENV` build issue
+- [BUG-115](../_archive/bugs/bug-115-cron-secret-validation-crashes-production-build.md) — CRON_SECRET startup validation crash from same root cause
