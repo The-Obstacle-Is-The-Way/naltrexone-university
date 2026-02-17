@@ -43,7 +43,7 @@ export async function AuthNav({
   const unauthenticatedNav = (
     <div className="flex items-center">
       <Button asChild size="sm" className="rounded-full">
-        <Link href={ROUTES.SIGN_IN}>Sign In</Link>
+        <Link href={ROUTES.SIGN_IN}>Sign in</Link>
       </Button>
     </div>
   );

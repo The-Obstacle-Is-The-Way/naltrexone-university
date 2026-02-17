@@ -47,6 +47,7 @@ export type PracticeViewProps = {
   onNextQuestion: () => void;
   onPreviousQuestion?: () => void;
   hasPreviousQuestion?: boolean;
+  hasNextQuestion?: boolean;
 };
 
 export function getBookmarkNotificationTransition(input: {
@@ -245,7 +246,10 @@ export function PracticeView(props: PracticeViewProps) {
       ) : null}
 
       {props.question ? (
-        <div className="flex flex-wrap items-center gap-3">
+        <div
+          className="flex flex-wrap items-center gap-3"
+          data-testid="bottom-action-bar"
+        >
           {props.onPreviousQuestion ? (
             <Button
               type="button"
@@ -275,10 +279,14 @@ export function PracticeView(props: PracticeViewProps) {
             type="button"
             variant="outline"
             className="rounded-full"
-            disabled={props.isPending || props.loadState.status === 'loading'}
+            disabled={
+              props.hasNextQuestion === false ||
+              props.isPending ||
+              props.loadState.status === 'loading'
+            }
             onClick={props.onNextQuestion}
           >
-            Next Question
+            Next →
           </Button>
 
           <Button

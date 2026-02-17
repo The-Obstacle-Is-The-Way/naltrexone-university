@@ -311,8 +311,107 @@ describe('PracticeView', () => {
     const previousButton = Array.from(doc.querySelectorAll('button')).find(
       (button) => button.textContent?.includes('Previous'),
     );
-    expect(previousButton).not.toBeNull();
+    expect(previousButton).not.toBeUndefined();
     expect(previousButton?.hasAttribute('disabled')).toBe(true);
+  });
+
+  it('renders "Next →" (not "Next Question")', async () => {
+    const { PracticeView } = await import('./practice-view');
+    const question = createNextQuestion();
+
+    const props: Parameters<typeof PracticeView>[0] = {
+      loadState: { status: 'ready' },
+      question,
+      selectedChoiceId: null,
+      isAnswered: false,
+      submitResult: null,
+      isPending: false,
+      bookmarkStatus: 'idle',
+      isBookmarked: false,
+      canSubmit: false,
+      onTryAgain: () => undefined,
+      onToggleBookmark: () => undefined,
+      onSelectChoice: () => undefined,
+      onSubmit: () => undefined,
+      onNextQuestion: () => undefined,
+      onPreviousQuestion: () => undefined,
+      hasPreviousQuestion: true,
+    };
+
+    const html = renderToStaticMarkup(<PracticeView {...props} />);
+
+    expect(html).toContain('Next →');
+    expect(html).not.toContain('Next Question');
+  });
+
+  it('disables Next when hasNextQuestion is false', async () => {
+    const { PracticeView } = await import('./practice-view');
+    const question = createNextQuestion();
+
+    const props: Parameters<typeof PracticeView>[0] = {
+      loadState: { status: 'ready' },
+      question,
+      selectedChoiceId: null,
+      isAnswered: false,
+      submitResult: null,
+      isPending: false,
+      bookmarkStatus: 'idle',
+      isBookmarked: false,
+      canSubmit: false,
+      onTryAgain: () => undefined,
+      onToggleBookmark: () => undefined,
+      onSelectChoice: () => undefined,
+      onSubmit: () => undefined,
+      onNextQuestion: () => undefined,
+      onPreviousQuestion: () => undefined,
+      hasPreviousQuestion: true,
+      hasNextQuestion: false,
+    };
+
+    const html = renderToStaticMarkup(<PracticeView {...props} />);
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const nextButton = Array.from(doc.querySelectorAll('button')).find(
+      (button) => button.textContent?.includes('Next →'),
+    );
+
+    expect(nextButton).not.toBeUndefined();
+    expect(nextButton?.hasAttribute('disabled')).toBe(true);
+  });
+
+  it('orders session buttons as Previous, Submit, Next, Bookmark', async () => {
+    const { PracticeView } = await import('./practice-view');
+    const question = createNextQuestion();
+
+    const props: Parameters<typeof PracticeView>[0] = {
+      loadState: { status: 'ready' },
+      question,
+      selectedChoiceId: null,
+      isAnswered: false,
+      submitResult: null,
+      isPending: false,
+      bookmarkStatus: 'idle',
+      isBookmarked: false,
+      canSubmit: false,
+      onTryAgain: () => undefined,
+      onToggleBookmark: () => undefined,
+      onSelectChoice: () => undefined,
+      onSubmit: () => undefined,
+      onNextQuestion: () => undefined,
+      onPreviousQuestion: () => undefined,
+      hasPreviousQuestion: true,
+      hasNextQuestion: true,
+    };
+
+    const html = renderToStaticMarkup(<PracticeView {...props} />);
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const actionBar = doc.querySelector('[data-testid="bottom-action-bar"]');
+    if (!actionBar) throw new Error('Expected action bar');
+
+    const labels = Array.from(actionBar.querySelectorAll('button')).map(
+      (button) => (button.textContent ?? '').trim(),
+    );
+
+    expect(labels).toEqual(['← Previous', 'Submit', 'Next →', 'Bookmark']);
   });
 });
 

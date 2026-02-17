@@ -268,7 +268,7 @@ Standard: `p-6`. Use `p-4` only for intentionally dense/compact views (e.g., exa
 Standard hover treatment:
 
 ```text
-transition-colors hover:border-border/80 hover:bg-muted/50
+transition-colors hover:border-border hover:bg-muted/50
 ```
 
 Do not use `transition-all` for cards. Do not use different hover opacities (`/50` vs `/80`) for the same pattern.

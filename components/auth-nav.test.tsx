@@ -66,7 +66,7 @@ describe('AuthNav', () => {
 
     expect(pricingLinks).toHaveLength(MARKETING_LAYOUT_PRICING_LINK_COUNT);
     expect(header.querySelector('a[href="/sign-in"]')?.textContent).toBe(
-      'Sign In',
+      'Sign in',
     );
     expect(header.querySelector('[data-testid="user-button"]')).toBeNull();
   });
@@ -107,7 +107,7 @@ describe('AuthNav', () => {
     expect(featuresLinks).toHaveLength(MARKETING_LAYOUT_FEATURES_LINK_COUNT);
     expect(pricingLinks).toHaveLength(MARKETING_LAYOUT_PRICING_LINK_COUNT);
     expect(header.querySelector('a[href="/sign-in"]')?.textContent).toBe(
-      'Sign In',
+      'Sign in',
     );
     expect(header.querySelector('[data-testid="user-button"]')).toBeNull();
   });
@@ -148,7 +148,7 @@ describe('AuthNav', () => {
     expect(featuresLinks).toHaveLength(MARKETING_LAYOUT_FEATURES_LINK_COUNT);
     expect(pricingLinks).toHaveLength(MARKETING_LAYOUT_PRICING_LINK_COUNT);
     expect(header.querySelector('a[href="/sign-in"]')?.textContent).toBe(
-      'Sign In',
+      'Sign in',
     );
     expect(header.querySelector('[data-testid="user-button"]')).toBeNull();
   });

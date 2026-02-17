@@ -504,6 +504,80 @@ test('hasPreviousQuestion is true when current question is not first', async () 
     .not.toBeDisabled();
 });
 
+test('hasNextQuestion is false when current question is last available', async () => {
+  const screen = await render(
+    <PracticeSessionPageView
+      summary={null}
+      review={null}
+      navigator={{
+        sessionId: 'session-1',
+        mode: 'tutor',
+        totalCount: 2,
+        answeredCount: 0,
+        markedCount: 0,
+        rows: [
+          {
+            questionId: 'q1',
+            slug: 'q-1',
+            order: 1,
+            isAvailable: true,
+            stemMd: 'Stem 1',
+            difficulty: 'easy',
+            isAnswered: false,
+            isCorrect: null,
+            markedForReview: false,
+          },
+          {
+            questionId: 'q2',
+            slug: 'q-2',
+            order: 2,
+            isAvailable: true,
+            stemMd: 'Stem 2',
+            difficulty: 'medium',
+            isAnswered: false,
+            isCorrect: null,
+            markedForReview: false,
+          },
+        ],
+      }}
+      sessionInfo={{
+        sessionId: 'session-1',
+        mode: 'tutor',
+        index: 1,
+        total: 2,
+        isMarkedForReview: false,
+      }}
+      loadState={{ status: 'ready' }}
+      question={{
+        questionId: 'q2',
+        slug: 'q-2',
+        stemMd: 'Stem 2',
+        difficulty: 'medium',
+        choices: [{ id: 'c1', label: 'A', textMd: 'Choice A', sortOrder: 1 }],
+        session: null,
+      }}
+      selectedChoiceId={null}
+      isAnswered={false}
+      submitResult={null}
+      isPending={false}
+      bookmarkStatus="idle"
+      isBookmarked={false}
+      canSubmit={false}
+      onEndSession={() => undefined}
+      onTryAgain={() => undefined}
+      onToggleBookmark={() => undefined}
+      onSelectChoice={() => undefined}
+      onSubmit={() => undefined}
+      onNextQuestion={() => undefined}
+      onNavigateQuestion={() => undefined}
+    />,
+  );
+
+  await expect
+    .element(screen.getByRole('button', { name: 'Next →' }))
+    .toBeDisabled();
+});
+
 test("clicking Previous calls onNavigateQuestion with the previous question's ID", async () => {
   const onNavigateQuestion = vi.fn();
 

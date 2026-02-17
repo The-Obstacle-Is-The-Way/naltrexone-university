@@ -69,7 +69,8 @@ describe('theme token regression', () => {
       />,
     );
 
-    expect(dashboardHtml).toContain('hover:border-border/80');
+    expect(dashboardHtml).toContain('hover:border-border');
+    expect(dashboardHtml).not.toContain('hover:border-border/80');
     expect(dashboardHtml).toContain('hover:bg-muted/50');
     expect(dashboardHtml).not.toContain('hover:border-zinc-700/50');
     expect(dashboardHtml).not.toContain('hover:bg-zinc-900/80');
@@ -138,7 +139,8 @@ describe('theme token regression', () => {
     expect(summaryHoverCards.length).toBeGreaterThan(0);
 
     for (const card of [...dashboardHoverCards, ...summaryHoverCards]) {
-      expect(card.getAttribute('class') ?? '').toContain(
+      expect(card.getAttribute('class') ?? '').toContain('hover:border-border');
+      expect(card.getAttribute('class') ?? '').not.toContain(
         'hover:border-border/80',
       );
     }

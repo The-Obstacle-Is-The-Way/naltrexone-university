@@ -1,7 +1,7 @@
 # Technical Debt Register
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-02-16
+**Last Updated:** 2026-02-17
 
 ---
 
@@ -18,8 +18,9 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 | ID | Title | Priority | Status |
 |----|-------|----------|--------|
 | [DEBT-224](debt-224-file-size-audit-production-and-test.md) | File Size Audit — Production and Test Files Exceeding Guidelines | P3 | Open |
+| [DEBT-225](debt-225-vitest-cold-import-timeout-flakes.md) | Vitest Cold-Import Timeout Flakes — 3 Tests Hit Default 5s Wall | P2 | Open |
 
-**Next Debt ID:** DEBT-225
+**Next Debt ID:** DEBT-226
 
 ---
 

@@ -76,6 +76,8 @@ All test work in this spec must follow repo-wide React 19 + Vitest rules:
 | History Individual Review (unanswered) | `Submit` |
 | History Individual Review (post-submit) | `Try Again` · `Back to ...` |
 
+> **Origin variants:** Practice Session Review (`from=practice&mode=review&sessionId=...`), Dashboard Individual Review (`from=dashboard&mode=review&attemptId=...`), and Bookmarks Reattempt (`from=bookmarks`) all route through `question-page-client.tsx`. They inherit the same button structure and ordering changes above; only the back-label text varies per origin.
+
 ### Boundary Behavior (Target State)
 
 | Boundary | Current (Mixed) | Target |

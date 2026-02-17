@@ -80,6 +80,23 @@ export function PracticeSessionPageView(props: PracticeSessionPageViewProps) {
     return null;
   }, [navigator, currentQuestionId]);
 
+  const nextQuestionId = useMemo(() => {
+    if (!navigator || !currentQuestionId) return null;
+    const currentIdx = navigator.rows.findIndex(
+      (r) => r.questionId === currentQuestionId,
+    );
+    if (currentIdx < 0 || currentIdx >= navigator.rows.length - 1) return null;
+
+    for (let i = currentIdx + 1; i < navigator.rows.length; i += 1) {
+      const row = navigator.rows[i];
+      if (!row) continue;
+      if (!row.isAvailable) continue;
+      return row.questionId;
+    }
+
+    return null;
+  }, [navigator, currentQuestionId]);
+
   const onPreviousQuestion = useCallback(() => {
     if (previousQuestionId && onNavigateQuestion) {
       onNavigateQuestion(previousQuestionId);
@@ -216,6 +233,7 @@ export function PracticeSessionPageView(props: PracticeSessionPageViewProps) {
         props.onNavigateQuestion ? onPreviousQuestion : undefined
       }
       hasPreviousQuestion={previousQuestionId !== null}
+      hasNextQuestion={nextQuestionId !== null}
     />
   );
 }

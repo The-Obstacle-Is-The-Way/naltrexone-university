@@ -83,13 +83,7 @@ test.describe('BS-019: Action Bar Label and Ordering Audit', () => {
 
     // ── Pre-submit ──
 
-    // BS-019 Inconsistency 1: Quick Practice uses "Next Question" (no arrow)
-    await expect(
-      page.getByRole('button', { name: 'Next Question' }),
-    ).toBeVisible();
-    await expect(
-      page.locator('[data-slot="button"]', { hasText: 'Next →' }),
-    ).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Next →' })).toBeVisible();
 
     // BS-019 Inconsistency 3: No Previous (ad hoc mode, by design)
     await expect(
@@ -98,7 +92,7 @@ test.describe('BS-019: Action Bar Label and Ordering Audit', () => {
 
     // Verify all are <button> elements (BS-019 Inconsistency 9)
     await expectElementTag(page, 'Submit', 'BUTTON');
-    await expectElementTag(page, 'Next Question', 'BUTTON');
+    await expectElementTag(page, 'Next →', 'BUTTON');
     await expectElementTag(page, 'Bookmark', 'BUTTON');
 
     // Submit disabled (no choice selected)
@@ -135,13 +129,7 @@ test.describe('BS-019: Action Bar Label and Ordering Audit', () => {
 
     // ── Q1 pre-submit ──
 
-    // BS-019 Inconsistency 1: Practice uses "Next Question" (verbose, no arrow)
-    await expect(
-      page.getByRole('button', { name: 'Next Question' }),
-    ).toBeVisible();
-    await expect(
-      page.locator('[data-slot="button"]', { hasText: 'Next →' }),
-    ).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Next →' })).toBeVisible();
 
     // All buttons present
     await expect(
@@ -168,7 +156,7 @@ test.describe('BS-019: Action Bar Label and Ordering Audit', () => {
     // All elements are <button> in Practice view
     await expectElementTag(page, '← Previous', 'BUTTON');
     await expectElementTag(page, 'Submit', 'BUTTON');
-    await expectElementTag(page, 'Next Question', 'BUTTON');
+    await expectElementTag(page, 'Next →', 'BUTTON');
     await expectElementTag(page, 'Bookmark', 'BUTTON');
 
     await page.screenshot({
@@ -190,7 +178,7 @@ test.describe('BS-019: Action Bar Label and Ordering Audit', () => {
     });
 
     // ── Navigate to Q2 ──
-    await page.getByRole('button', { name: 'Next Question' }).click();
+    await page.getByRole('button', { name: 'Next →' }).click();
     await expect(
       page.getByRole('group', { name: 'Answer choices' }),
     ).toBeVisible({ timeout: 60_000 });
@@ -200,10 +188,7 @@ test.describe('BS-019: Action Bar Label and Ordering Audit', () => {
       page.getByRole('button', { name: '← Previous' }),
     ).toBeEnabled();
 
-    // BS-019 Inconsistency 5: Last Q Next — PRESENT and ENABLED in Practice
-    await expect(
-      page.getByRole('button', { name: 'Next Question' }),
-    ).toBeEnabled();
+    await expect(page.getByRole('button', { name: 'Next →' })).toBeDisabled();
 
     await page.screenshot({
       path: 'test-results/bs019/tutor-q2-pre-submit.png',
@@ -229,9 +214,7 @@ test.describe('BS-019: Action Bar Label and Ordering Audit', () => {
       page.getByRole('button', { name: '← Previous' }),
     ).toBeVisible();
     await expect(page.getByRole('button', { name: 'Submit' })).toBeVisible();
-    await expect(
-      page.getByRole('button', { name: 'Next Question' }),
-    ).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Next →' })).toBeVisible();
     await expect(
       page.getByRole('button', { name: /^Bookmark$/ }),
     ).toBeVisible();
@@ -330,21 +313,24 @@ test.describe('BS-019: Action Bar Label and Ordering Audit', () => {
     // ── Q1 (first question) ──
     const labelsQ1 = await getHistoryBarLabels(page);
 
-    // BS-019 Inconsistency 1: History uses "Next →" (arrow), not "Next Question"
     expect(labelsQ1).toContain('Next →');
-    expect(labelsQ1).not.toContain('Next Question');
-
-    // BS-019 Inconsistency 4: Q1 in History HIDES Previous (vs Practice DISABLES)
-    expect(labelsQ1).not.toContain('← Previous');
+    expect(labelsQ1).toContain('← Previous');
 
     // BS-019 Inconsistency 6: No Bookmark in History Review
     expect(labelsQ1).not.toContain('Bookmark');
     expect(labelsQ1).not.toContain('Remove bookmark');
 
-    // BS-019 Inconsistency 8: "Back to ..." in bottom action bar
     expect(labelsQ1.some((l) => l.startsWith('Back to'))).toBe(true);
 
-    // BS-019 Inconsistency 9: History uses <a> for nav, <button> for actions
+    const prevBtnQ1 = page
+      .getByTestId('bottom-action-bar')
+      .locator('[data-slot="button"]')
+      .filter({ hasText: '← Previous' })
+      .first();
+    await expect(prevBtnQ1).toBeDisabled();
+    const prevTagQ1 = await prevBtnQ1.evaluate((el) => el.tagName);
+    expect(prevTagQ1).toBe('BUTTON');
+
     const nextBtn = page
       .getByTestId('bottom-action-bar')
       .locator('[data-slot="button"]')
@@ -366,12 +352,12 @@ test.describe('BS-019: Action Bar Label and Ordering Audit', () => {
       const tryAgainTag = await tryAgainBtn.evaluate((el) => el.tagName);
       expect(tryAgainTag).toBe('BUTTON');
 
-      // BS-019 Inconsistency 2: In History, Next BEFORE primary action
-      expect(labelsQ1.indexOf('Next →')).toBeLessThan(
+      expect(labelsQ1.indexOf('← Previous')).toBeLessThan(
         labelsQ1.indexOf('Try Again'),
       );
-
-      // BS-019 Inconsistency 7: Answered shows "Try Again", not disabled "Submit"
+      expect(labelsQ1.indexOf('Try Again')).toBeLessThan(
+        labelsQ1.indexOf('Next →'),
+      );
       expect(labelsQ1).not.toContain('Submit');
     }
 
@@ -425,12 +411,12 @@ test.describe('BS-019: Action Bar Label and Ordering Audit', () => {
 
       // Wait for review data to fully load — "Back to" only appears after
       // async session navigation data settles (not in default/pre-load state)
-      const bottomActionBarBackLink = page
+      const backToLinkLast = page
         .getByTestId('bottom-action-bar')
         .locator('[data-slot="button"]')
         .filter({ hasText: /^Back to/ })
         .first();
-      await expect(bottomActionBarBackLink).toBeVisible({ timeout: 15_000 });
+      await expect(backToLinkLast).toBeVisible({ timeout: 15_000 });
     }
 
     const labelsLast = await getHistoryBarLabels(page);
@@ -438,10 +424,10 @@ test.describe('BS-019: Action Bar Label and Ordering Audit', () => {
     // Last Q: Previous present
     expect(labelsLast).toContain('← Previous');
 
-    // BS-019 Inconsistency 5: Last Q in History HIDES Next (vs Practice KEEPS it)
-    expect(labelsLast).not.toContain('Next →');
+    // SPEC-032 fix: Last Q shows disabled Next (consistent with Practice)
+    expect(labelsLast).toContain('Next →');
 
-    // Previous is an <a> link (BS-019 Inconsistency 9)
+    // Previous is enabled link, Next is disabled button.
     const prevBtn = page
       .getByTestId('bottom-action-bar')
       .locator('[data-slot="button"]')
@@ -449,6 +435,15 @@ test.describe('BS-019: Action Bar Label and Ordering Audit', () => {
       .first();
     const prevTag = await prevBtn.evaluate((el) => el.tagName);
     expect(prevTag).toBe('A');
+
+    const nextBtnLast = page
+      .getByTestId('bottom-action-bar')
+      .locator('[data-slot="button"]')
+      .filter({ hasText: 'Next →' })
+      .first();
+    await expect(nextBtnLast).toBeDisabled();
+    const nextTagLast = await nextBtnLast.evaluate((el) => el.tagName);
+    expect(nextTagLast).toBe('BUTTON');
 
     await page.screenshot({
       path: 'test-results/bs019/history-last-q-answered.png',

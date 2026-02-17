@@ -84,10 +84,10 @@ export function MarketingLayout({
               <p className="text-sm font-semibold text-foreground">Account</p>
               <div className="mt-3 flex flex-col gap-2 text-sm text-muted-foreground">
                 <Link href={ROUTES.SIGN_IN} className={navLinkClass}>
-                  Sign In
+                  Sign in
                 </Link>
                 <Link href={ROUTES.SIGN_UP} className={navLinkClass}>
-                  Sign Up
+                  Sign up
                 </Link>
               </div>
             </div>

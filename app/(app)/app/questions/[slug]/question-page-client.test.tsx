@@ -30,6 +30,19 @@ describe('QuestionView', () => {
     );
   }
 
+  // Uses shadcn's data-slot="button" to capture both <button> and asChild <a> elements.
+  // If shadcn removes data-slot, fall back to 'button, a' combined selector.
+  function getBottomActionLabels(doc: Document): string[] {
+    const bottomBar = getBottomActionBar(doc);
+    if (!bottomBar) {
+      throw new Error('Expected bottom action bar');
+    }
+
+    return Array.from(bottomBar.querySelectorAll('[data-slot="button"]')).map(
+      (element) => (element.textContent ?? '').trim(),
+    );
+  }
+
   const sharedSessionNavigation = {
     questions: [
       { slug: 'q1', order: 1, isCorrect: false },
@@ -333,6 +346,34 @@ describe('QuestionView', () => {
     );
   });
 
+  it('orders session review actions as Previous, Try Again, Next, Back', async () => {
+    const { QuestionView } = await import('./question-page-client');
+
+    const html = renderToStaticMarkup(
+      <QuestionView
+        {...createBaseProps()}
+        origin="history"
+        sessionId="session_123"
+        sessionNavigation={sharedSessionNavigation}
+        submitResult={{
+          attemptId: 'attempt_1',
+          isCorrect: false,
+          correctChoiceId: 'c1',
+          explanationMd: 'Explanation',
+          choiceExplanations: [],
+        }}
+      />,
+    );
+
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    expect(getBottomActionLabels(doc)).toEqual([
+      '← Previous',
+      'Try Again',
+      'Next →',
+      'Back to History',
+    ]);
+  });
+
   it('renders the position indicator when sessionNavigation is present', async () => {
     const { QuestionView } = await import('./question-page-client');
 
@@ -397,7 +438,7 @@ describe('QuestionView', () => {
     expect(html).toContain('bg-background');
   });
 
-  it('does not render a previous link on the first question', async () => {
+  it('shows disabled Previous on the first question of session review', async () => {
     const { QuestionView } = await import('./question-page-client');
 
     const html = renderToStaticMarkup(
@@ -419,14 +460,16 @@ describe('QuestionView', () => {
     const bottomBar = getBottomActionBar(doc);
     if (!bottomBar) throw new Error('Expected bottom action bar');
 
-    const previousLink = Array.from(bottomBar.querySelectorAll('a')).find((a) =>
-      a.textContent?.includes('← Previous'),
-    );
+    const previousButton = Array.from(
+      bottomBar.querySelectorAll('button'),
+    ).find((button) => button.textContent?.includes('← Previous'));
     const nextLink = Array.from(bottomBar.querySelectorAll('a')).find((a) =>
       a.textContent?.includes('Next →'),
     );
 
-    expect(previousLink).toBeUndefined();
+    expect(previousButton).not.toBeUndefined();
+    expect(previousButton?.hasAttribute('disabled')).toBe(true);
+    expect(previousButton?.getAttribute('type')).toBe('button');
     expect(nextLink?.getAttribute('href')).toBe(
       toQuestionRoute('q2', {
         from: 'practice',
@@ -436,7 +479,7 @@ describe('QuestionView', () => {
     );
   });
 
-  it('does not render a next link on the last question', async () => {
+  it('shows disabled Next on the last question of session review', async () => {
     const { QuestionView } = await import('./question-page-client');
 
     const html = renderToStaticMarkup(
@@ -461,11 +504,13 @@ describe('QuestionView', () => {
     const previousLink = Array.from(bottomBar.querySelectorAll('a')).find((a) =>
       a.textContent?.includes('← Previous'),
     );
-    const nextLink = Array.from(bottomBar.querySelectorAll('a')).find((a) =>
-      a.textContent?.includes('Next →'),
+    const nextButton = Array.from(bottomBar.querySelectorAll('button')).find(
+      (button) => button.textContent?.includes('Next →'),
     );
 
-    expect(nextLink).toBeUndefined();
+    expect(nextButton).not.toBeUndefined();
+    expect(nextButton?.hasAttribute('disabled')).toBe(true);
+    expect(nextButton?.getAttribute('type')).toBe('button');
     expect(previousLink?.getAttribute('href')).toBe(
       toQuestionRoute('q1', {
         from: 'practice',
