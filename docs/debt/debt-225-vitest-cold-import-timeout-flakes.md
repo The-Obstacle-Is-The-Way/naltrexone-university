@@ -1,6 +1,6 @@
 # DEBT-225: Vitest Cold-Import Timeout Flakes
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P2
 **Date:** 2026-02-17
 **Component:** Test Infrastructure
@@ -212,14 +212,14 @@ This file uses per-test `vi.resetModules()` + `vi.doMock()` and intentionally re
 
 ## Acceptance Criteria
 
-- [ ] `vitest.config.ts`, `vitest.browser.config.ts`, and `vitest.integration.config.ts` define explicit `testTimeout` and `hookTimeout`
-- [ ] All 20 scoped files are migrated to the `beforeAll` import pattern, except documented structural exceptions
-- [ ] Override inventory returns 0 undocumented instances:
+- [x] `vitest.config.ts`, `vitest.browser.config.ts`, and `vitest.integration.config.ts` define explicit `testTimeout` and `hookTimeout`
+- [x] All 20 scoped files are migrated to the `beforeAll` import pattern, except documented structural exceptions
+- [x] Override inventory returns 0 undocumented instances:
   - `rg -n "},\\s*(10_000|20_000|40000)\\)" --glob '*.test.ts' --glob '*.test.tsx'`
   - `rg -n "\\{\\s*timeout:\\s*15_000\\s*\\}" components/marketing/marketing-home.test.tsx components/ui/dropdown-menu.test.tsx`
-- [ ] React 19 testing guidance updated consistently across `.claude/rules/testing-react19.md`, `docs/dev/react-vitest-testing.md`, and `AGENTS.md`
-- [ ] `pnpm test --run` is stable across 5 consecutive runs on the fix branch
-- [ ] No timeout-related rerun churn in the next 10 CI runs
+- [x] React 19 testing guidance updated consistently across `.claude/rules/testing-react19.md`, `docs/dev/react-vitest-testing.md`, and `AGENTS.md`
+- [x] `pnpm test --run` is stable across 5 consecutive runs on the fix branch
+- [ ] No timeout-related rerun churn in the next 10 CI runs (post-merge verification)
 
 ## Related
 

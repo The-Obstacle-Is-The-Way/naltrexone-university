@@ -1,6 +1,6 @@
 # DEBT-226: Playwright E2E Timeout Policy and Import Convention Are Undocumented
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P3
 **Date:** 2026-02-17
 **Component:** E2E Test Infrastructure
@@ -127,12 +127,12 @@ Document the policy in at least:
 
 ## Acceptance Criteria
 
-- [ ] E2E import convention is explicitly documented with scoped rules for `tests/e2e/**`
-- [ ] Playwright timeout policy is documented with concrete rules and baseline values
-- [ ] Existing `test.setTimeout` values are standardized or justified with concise comments
-- [ ] The `300_000` outlier is reduced or explicitly justified in-file
-- [ ] Review guidance references the policy, reducing repeat style comments
-- [ ] One full PR cycle completes with no recurring timeout/import-style review churn
+- [x] E2E import convention is explicitly documented with scoped rules for `tests/e2e/**`
+- [x] Playwright timeout policy is documented with concrete rules and baseline values
+- [x] Existing `test.setTimeout` values are standardized or justified with concise comments
+- [x] The `300_000` outlier is reduced or explicitly justified in-file
+- [x] Review guidance references the policy, reducing repeat style comments
+- [ ] One full PR cycle completes with no recurring timeout/import-style review churn (post-merge verification)
 
 ## References
 
