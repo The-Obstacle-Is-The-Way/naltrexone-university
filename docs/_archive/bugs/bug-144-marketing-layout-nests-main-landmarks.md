@@ -105,7 +105,7 @@ Choose **one** owner of the main landmark for marketing routes:
 
 ## Related
 
-- [BUG-100](../_archive/bugs/bug-100-nested-main-landmarks-in-layouts.md) — original nested-main fix
+- [BUG-100](./bug-100-nested-main-landmarks-in-layouts.md) — original nested-main fix
 - `components/marketing/marketing-layout.tsx`
 - `components/marketing/marketing-home.tsx`
 - `app/pricing/page.tsx`
