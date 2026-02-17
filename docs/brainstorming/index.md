@@ -30,8 +30,9 @@ Brainstorming (BS-NNN) → Spec (SPEC-NNN) → Implementation → Archive
 | [BS-014](./bs-014-practice-starter-question-count-ux.md) | Practice Starter — Silent Truncation When Fewer Questions Available | Active | — |
 | [BS-022](./bs-022-unanswered-question-review-handling.md) | Unanswered Question Review Handling | Active | — |
 | [BS-023](./bs-023-try-again-state-consistency.md) | Try Again — State Consistency and Business Logic Gaps | Active | — |
+| [BS-024](./bs-024-tag-taxonomy-cleanup.md) | Tag Taxonomy Cleanup — Unify Pipeline and Eliminate Drift | Active | — |
 
-**Next Brainstorming ID:** BS-024
+**Next Brainstorming ID:** BS-025
 
 ---
 

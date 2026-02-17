@@ -62,7 +62,7 @@ This document serves two purposes:
 
 - `content/drafts/` (gitignored) — Local-only working area for writing/editing questions in a human-friendly format.
 - `content/questions/placeholder/` (committed) — Small set of 10 example MDX questions to validate the pipeline and provide templates.
-- `content/questions/imported/` (gitignored) — 948 generated MDX files from drafts (safe to delete and regenerate).
+- `content/questions/imported/` (gitignored) — 948 imported MDX files. **NOT safe to blindly delete and regenerate** — the current files contain blueprint-aligned domain tags (e.g., `psychosocial-interventions`) that the importer cannot reproduce (it derives domain from directory names like `cochrane` instead). See `docs/content/tag-taxonomy-pipeline.md` for the full trace.
 
 Because real question content is proprietary, it is **gitignored** and must be present locally (or in a private deployment workflow) when running the seed.
 
@@ -150,7 +150,7 @@ pnpm content:import:drafts -- --status published
 ```
 
 Notes:
-- Imported MDX files are **generated artifacts**. Delete `content/questions/imported/` any time and re-run the importer.
+- Imported MDX files were originally generated from drafts, but their domain tags have since been corrected by `scripts/migrate-domain-tags.ts`. **Do not delete `content/questions/imported/` without first ensuring the importer can reproduce correct domain tags.** See `docs/content/tag-taxonomy-pipeline.md` Gap 7–8 for details.
 - The importer validates output against `lib/content/schemas.ts` before writing.
 
 ---
