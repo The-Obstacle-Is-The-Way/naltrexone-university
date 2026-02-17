@@ -29,8 +29,9 @@ Brainstorming (BS-NNN) → Spec (SPEC-NNN) → Implementation → Archive
 |----|-------|--------|--------------|
 | [BS-014](./bs-014-practice-starter-question-count-ux.md) | Practice Starter — Silent Truncation When Fewer Questions Available | Active | — |
 | [BS-018](./bs-018-question-view-ux-unification.md) | Question View UX Unification — Navigation, State, and Action Bar Consistency | Active | SPEC-030 |
+| [BS-019](./bs-019-action-bar-label-and-ordering-consistency.md) | Action Bar Label and Ordering Consistency | Active | — |
 
-**Next Brainstorming ID:** BS-019
+**Next Brainstorming ID:** BS-020
 
 ---
 
