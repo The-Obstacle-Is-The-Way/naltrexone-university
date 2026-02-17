@@ -350,6 +350,9 @@ describe('QuestionView', () => {
     expect(indicator).not.toBeNull();
     expect(indicator?.classList.contains('text-center')).toBe(true);
 
+    // Regression guard: the old inline indicator was removed in SPEC-030.
+    // Class-based selector is intentional here — we're asserting a removed
+    // element is absent, so there's no production element to tag with data-testid.
     const inlineIndicator = Array.from(
       doc.querySelectorAll('span.text-sm.text-muted-foreground'),
     ).find((span) => span.textContent?.includes('Question 2 of 3'));
