@@ -28,9 +28,9 @@ Brainstorming (BS-NNN) → Spec (SPEC-NNN) → Implementation → Archive
 | ID | Title | Status | Related Spec |
 |----|-------|--------|--------------|
 | [BS-014](./bs-014-practice-starter-question-count-ux.md) | Practice Starter — Silent Truncation When Fewer Questions Available | Active | — |
-| [BS-019](./bs-019-action-bar-label-and-ordering-consistency.md) | Action Bar Label and Ordering Consistency | Active | — |
-| [BS-020](./bs-020-card-contrast-and-hover-consistency.md) | Card Contrast and Hover Consistency — Landing Page vs App | Active | — |
-| [BS-021](./bs-021-marketing-app-shell-divergence-and-accessibility-parity.md) | Marketing/App Shell Divergence and Accessibility Parity | Active | — |
+| [BS-019](./bs-019-action-bar-label-and-ordering-consistency.md) | Action Bar Label and Ordering Consistency | Active | [SPEC-032](../specs/spec-032-action-bar-standardization.md) |
+| [BS-020](./bs-020-card-contrast-and-hover-consistency.md) | Card Contrast and Hover Consistency — Landing Page vs App | Active | [SPEC-031](../specs/spec-031-unified-visual-front.md) |
+| [BS-021](./bs-021-marketing-app-shell-divergence-and-accessibility-parity.md) | Marketing/App Shell Divergence and Accessibility Parity | Active | [SPEC-031](../specs/spec-031-unified-visual-front.md) |
 
 **Next Brainstorming ID:** BS-022
 
