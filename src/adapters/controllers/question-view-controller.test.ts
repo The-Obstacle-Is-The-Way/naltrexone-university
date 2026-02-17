@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { ApplicationError } from '@/src/application/errors';
 import type { QuestionRepository } from '@/src/application/ports/repositories';
 import { buildShuffledChoiceViews } from '@/src/application/shared/shuffled-choice-views';
 import {
@@ -441,6 +442,29 @@ describe('question-view-controller', () => {
           choiceExplanations: [],
           answeredAt: '2026-02-01T00:00:00.000Z',
         },
+      });
+    });
+
+    it('returns NOT_FOUND when attemptId does not match questionId', async () => {
+      const deps = createDeps({
+        getPreviousAttemptUseCase: {
+          execute: async () => {
+            throw new ApplicationError(
+              'NOT_FOUND',
+              'Previous attempt does not belong to the requested question',
+            );
+          },
+        },
+      });
+
+      const result = await getPreviousAttempt(
+        { questionId: 'q1' },
+        deps as never,
+      );
+
+      expect(result).toMatchObject({
+        ok: false,
+        error: { code: 'NOT_FOUND' },
       });
     });
 
