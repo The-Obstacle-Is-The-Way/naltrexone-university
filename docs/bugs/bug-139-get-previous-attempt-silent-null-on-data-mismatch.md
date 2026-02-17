@@ -32,7 +32,7 @@ if (attempt.questionId !== input.questionId) {                            // Lin
     { attemptId: input.attemptId, questionId: input.questionId, attemptQuestionId: attempt.questionId },
     'Previous attempt does not match requested question',
   );
-  return null;                                                            // Line 57: Silent null
+  return null;                                                            // Line 58: Silent null
 }
 ```
 
@@ -90,17 +90,20 @@ export const getPreviousAttempt = createAction({
 
 Returns `GetPreviousAttemptOutput | null`. The controller does not distinguish between `null` from "not found" vs `null` from "data mismatch."
 
-### 5. UI Treats Null as "No Previous Attempt" — `app/(app)/app/questions/[slug]/question-page-logic.ts:239-248`
+### 5. UI Treats Null as "No Previous Attempt" — `app/(app)/app/questions/[slug]/question-page-logic.ts:229-248`
 
 ```typescript
-let res: ActionResult<GetPreviousAttemptOutput | null>;
+let res: ActionResult<GetPreviousAttemptOutput | null>;   // Line 229
 try {
-  res = await withTimeout(input.getPreviousAttemptFn({...}), PREVIOUS_ATTEMPT_TIMEOUT_MS);
+  res = await withTimeout(
+    input.getPreviousAttemptFn({...}),
+    PREVIOUS_ATTEMPT_TIMEOUT_MS,
+  );
 } catch {
   return;                           // ← Silently falls back to attempt mode
 }
 
-if (!res.ok || !res.data) {
+if (!res.ok || !res.data) {         // Line 245
   return;                           // ← Null treated as "no attempt" — shows attempt mode
 }
 ```
@@ -109,10 +112,10 @@ When `null` is returned (from either "not found" or "data mismatch"), the UI sho
 
 ### 6. Test Confirms the Behavior — `src/application/use-cases/get-previous-attempt.test.ts:114-172`
 
-The test suite has explicit coverage for the mismatch scenario, confirming the silent-null behavior is intentional but undocumented:
+The test suite has a single test covering the mismatch scenario with two assertions, confirming the silent-null behavior is intentional but undocumented:
 
-- Test: verifies that `null` is returned when `attemptId` references a different question
-- Test: verifies that a warning is logged
+- Assertion 1 (line 160): verifies that `null` is returned when `attemptId` references a different question
+- Assertion 2 (lines 162-171): verifies that a warning is logged with correct context
 
 ### 7. Summary: The Indistinguishability Problem
 
@@ -167,5 +170,5 @@ Add an inline comment explaining why the silent null is intentional (e.g., "Trea
 - `src/application/use-cases/get-previous-attempt.ts:35-58` — Bug location
 - `src/adapters/repositories/drizzle-attempt-repository.ts:205-216` — Repository without `questionId` filter
 - `src/adapters/controllers/question-view-controller.ts:94-106` — Controller pass-through
-- `app/(app)/app/questions/[slug]/question-page-logic.ts:239-248` — UI silent fallback
+- `app/(app)/app/questions/[slug]/question-page-logic.ts:229-248` — UI silent fallback
 - `src/application/use-cases/get-previous-attempt.test.ts:114-172` — Existing mismatch tests
