@@ -57,7 +57,10 @@ export class GetPreviousAttemptUseCase {
         },
         'Previous attempt does not match requested question',
       );
-      return null;
+      throw new ApplicationError(
+        'NOT_FOUND',
+        'Previous attempt does not belong to the requested question',
+      );
     }
 
     const question = await this.questions.findPublishedById(attempt.questionId);

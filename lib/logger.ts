@@ -3,11 +3,15 @@ import pino from 'pino';
 
 const envLevel = process.env.LOG_LEVEL?.trim();
 
+const nodeEnv = process.env.NODE_ENV?.trim();
+const vercelEnv = process.env.VERCEL_ENV?.trim();
+const runtimeEnv = nodeEnv === 'test' ? 'test' : vercelEnv || nodeEnv;
+
 const level =
   envLevel ||
-  (process.env.NODE_ENV === 'production'
+  (runtimeEnv === 'production'
     ? 'info'
-    : process.env.NODE_ENV === 'test'
+    : runtimeEnv === 'test'
       ? 'silent'
       : 'debug');
 

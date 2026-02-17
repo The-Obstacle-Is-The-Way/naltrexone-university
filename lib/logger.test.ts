@@ -37,6 +37,26 @@ describe('logger', () => {
     expect(logger.level).toBe('info');
   });
 
+  it('defaults to debug in Vercel preview when LOG_LEVEL is unset', async () => {
+    vi.stubEnv('NODE_ENV', 'production');
+    vi.stubEnv('VERCEL_ENV', 'preview');
+    vi.stubEnv('LOG_LEVEL', '');
+
+    const { logger } = await importLogger();
+
+    expect(logger.level).toBe('debug');
+  });
+
+  it('defaults to info in Vercel production when LOG_LEVEL is unset', async () => {
+    vi.stubEnv('NODE_ENV', 'development');
+    vi.stubEnv('VERCEL_ENV', 'production');
+    vi.stubEnv('LOG_LEVEL', '');
+
+    const { logger } = await importLogger();
+
+    expect(logger.level).toBe('info');
+  });
+
   it('defaults to debug in development when LOG_LEVEL is unset', async () => {
     vi.stubEnv('NODE_ENV', 'development');
     vi.stubEnv('LOG_LEVEL', '');

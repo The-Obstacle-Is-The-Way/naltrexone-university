@@ -1,7 +1,7 @@
 # Bug Reports
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-02-16
+**Last Updated:** 2026-02-17
 
 ---
 
@@ -15,17 +15,76 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 ## Bug Index (Active)
 
-| ID | Title | Priority | Status |
-|----|-------|----------|--------|
+_No open bugs._
 
-_(none)_
+**Next Bug ID:** BUG-144
 
-**Next Bug ID:** BUG-135
+## Audit #4 — Middleware, Core Paths, and Security Deep Dive (2026-02-16)
+
+Eight-axis investigation covering middleware consistency, auth enforcement, webhook security, data validation, error handling, question selection, Stripe subscription lifecycle, and data consistency edge cases. Ran 8 parallel exploration agents, then manually verified every finding through the actual code.
+
+**1 new confirmed bug filed:** BUG-143 (same root cause as BUG-136 — `NODE_ENV` Turbopack inlining — but affecting Sentry environment tag).
+
+**Findings confirmed as NOT bugs after tracer-bullet verification:**
+
+- Practice session CAS retry without backoff (correct pattern for optimistic concurrency; immediate retry is optimal for short contention windows)
+- Orphaned attempt on rollback failure (already resolved as DEBT-190)
+- Practice session review missing question state (already resolved as DEBT-159)
+- Cron endpoint 503 when CRON_SECRET missing (correct status — service unavailable, not unauthorized)
+- Client `runTransitionedAsyncAction` error swallowing in prod (callers handle errors in `run()`; catch is a safety net, not primary handler)
+- `pastDue` status granting entitlement (standard SaaS practice: grace period during Stripe payment retries)
+- `cancelAtPeriodEnd` not checked in `isEntitled()` (correct Stripe convention: user paid through period end; status transitions to `canceled` naturally)
+- Reconciliation job subscription selection heuristic (keeping longest-remaining subscription is correct deduplication strategy)
+- History pagination total inconsistency (repository already filters `isNotNull(endedAt)` on both COUNT and ROWS — same finding as Audit #3)
+- Bookmark toggle race condition (handled by `onConflictDoUpdate` conflict strategy)
+- Webhook peek optimization race window (secondary `lock()` guard prevents double-processing)
+- Cron error message information disclosure (minimal impact — reveals config name only, not secrets)
+
+**Security posture confirmed solid across all axes:**
+
+- Middleware applies consistently to all protected routes; no bypass patterns
+- Three-layer auth enforcement: middleware → layout entitlement → server action `requireEntitledUserId()`
+- All queries properly scoped to authenticated userId (no IDOR)
+- All SQL parameterized via Drizzle ORM (no injection)
+- Markdown rendering sanitized via `rehype-sanitize` + `skipHtml` (no XSS)
+- Webhook signatures verified (Stripe HMAC, Clerk Svix, cron timing-safe comparison)
+- Rate limiting on all public endpoints with fail-closed behavior
+- CSP, HSTS, X-Frame-Options, Permissions-Policy all configured
+- No redirect loops detected
+
+## Audit #3 — Codebase-Wide Bug Sweep (2026-02-16)
+
+Five-axis audit covering domain, application, adapters, frontend, and configuration layers. Ran 5 parallel exploration agents, then **triple-checked every finding** with full vertical/horizontal tracer-bullet traces through the actual code paths.
+
+**14 agent-reported findings were confirmed as false positives** after manual code review:
+
+- DB singleton `NODE_ENV` pattern (standard Next.js pattern, correct as-is)
+- `mapWithConcurrencyLimit` race condition (JS is single-threaded; `nextIndex` access is atomic between await points)
+- Idempotency key `lt(expiresAt, now())` "inverted" logic (correctly reclaims expired keys)
+- Stripe SDK `.bind()` missing in canceler (method calls on objects bind `this` correctly)
+- Question repo `or()` with empty array (guarded by `hasStatusFilter` check)
+- Frontend stale closure in practice controller (refs ARE the solution, not the problem)
+- Missing pricing `error.tsx` (it exists at `app/pricing/error.tsx`)
+- Subscribe button missing `disabled` (already has `disabled={pending}` on line 17)
+- `crypto.randomUUID()` missing fallback (supported in all modern browsers)
+- `StartPracticeSession` count <= 0 (Zod schema enforces `min(1)`, UI clamps to `[1,100]`, output requires `min(1)`)
+- Session history pagination total inaccurate (Drizzle repo filters `isNotNull(endedAt)` on both COUNT and ROWS)
+- `paymentProcessing` excluded from `EntitledStatuses` (intentional design; BUG-077 resolved this with specific messaging; test coverage exists)
+- `ports/use-cases.ts` incomplete (architectural preference with zero runtime impact)
+- Container logger fallback bypasses redaction (unreachable code — no caller passes `undefined` logger; DEBT-088 resolved)
+
+Audit #3 produced BUG-136 and BUG-139. BUG-137 was reclassified as SSOT-consistent. Audit #4 added BUG-143.
+
+---
 
 ## Recently Triaged
 
 | ID | Title | Status | Resolution |
 |----|-------|--------|------------|
+| [BUG-137](../_archive/bugs/bug-137-entitlement-off-by-one-period-end-boundary.md) | Entitlement Check Off-by-One at Period End Boundary | Reclassified | SSOT and implementation both use an exclusive boundary (`currentPeriodEnd > now`); keep doc as policy record with a spec-change path for inclusive semantics |
+| [BUG-139](../_archive/bugs/bug-139-get-previous-attempt-silent-null-on-data-mismatch.md) | GetPreviousAttemptUseCase Silently Returns Null on Data Integrity Mismatch | Resolved | Throw `NOT_FOUND` on attemptId/questionId mismatch (keeps UX fallback, but makes mismatch distinguishable); add regression coverage |
+| [BUG-143](../_archive/bugs/bug-143-sentry-environment-tag-uses-inlined-node-env.md) | Sentry Environment Tag Uses Inlined NODE_ENV — Preview Errors Report as Production | Resolved | Use `VERCEL_ENV` (server) + `NEXT_PUBLIC_VERCEL_ENV` (client) for Sentry environment tags; inject client env via `next.config.ts`; add regression tests |
+| [BUG-136](../_archive/bugs/bug-136-logger-uses-inlined-node-env-for-level.md) | Logger Uses Unreliable Inlined NODE_ENV for Log Level Selection | Resolved | Prefer `VERCEL_ENV` runtime lookup for default level selection; add regression tests |
 | [BUG-134](../_archive/bugs/bug-134-mark-for-review-race-updates-wrong-question.md) | Mark-for-Review Race Can Update the Wrong Question UI State | Resolved | Guard mark-for-review sessionInfo updates by current questionId; add browser regression coverage |
 | [BUG-133](../_archive/bugs/bug-133-stale-closure-practice-session-onsubmit.md) | Stale Closure in Practice Session onSubmit After Async Await | Resolved | Read post-await values from refs in submit handler; add browser regression coverage |
 | [BUG-132](../_archive/bugs/bug-132-duplicate-nav-links-pricing-dashboard.md) | Duplicate Nav Links — "Pricing" and "Dashboard" Appear Twice in Header | Resolved | Removed duplicate links from AuthNav; layout owns left-nav links, AuthNav owns right-side auth controls |
@@ -90,6 +149,7 @@ _(none)_
 
 - **2026-02-02:** [Foundation Audit Report #1](../_archive/audits/audit-001-foundation-report.md) — Vertical/horizontal trace of all critical paths
 - **2026-02-07:** [Foundation Audit Report #2](../_archive/audits/audit-002-foundation-report-2.md) — Six-axis deep audit (billing, practice, auth, UI, DB, code quality)
+- **2026-02-16:** Audit #3 — Five-axis codebase sweep (domain, application, adapters, frontend, config). 3 confirmed bugs (BUG-136, BUG-137, BUG-139) out of 17 initial findings after triple-check verification.
 
 ## Archived Bugs
 
