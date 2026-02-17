@@ -7,13 +7,14 @@ vi.mock('next/link', () => ({
   default: (props: Record<string, unknown>) => <a {...props} />,
 }));
 
-type MarketingHomeModule = typeof import('./marketing-home');
+type MarketingHomeModule =
+  typeof import('@/components/marketing/marketing-home');
 
 let MarketingHomeShell: MarketingHomeModule['MarketingHomeShell'];
 let renderMarketingHome: MarketingHomeModule['renderMarketingHome'];
 
 beforeAll(async () => {
-  const module = await import('./marketing-home');
+  const module = await import('@/components/marketing/marketing-home');
   MarketingHomeShell = module.MarketingHomeShell;
   renderMarketingHome = module.renderMarketingHome;
 });
@@ -42,38 +43,43 @@ describe('components/marketing/marketing-home', () => {
     expect(html).toContain(PRICING_DATA.annual.savings);
   });
 
-  it('renders marketing sections with injected nav and cta', () => {
-    const html = renderToStaticMarkup(
-      <MarketingHomeShell
-        authNav={<div>AuthNav</div>}
-        primaryCta={<a href="/pricing">Get Started</a>}
-      />,
-    );
+  it('renders injected auth nav content', () => {
+    const html = renderDoc().documentElement.innerHTML;
 
-    expect(html).toContain('Addiction Boards');
     expect(html).toContain('AuthNav');
+  });
+
+  it('renders injected primary CTA link and feature anchor', () => {
+    const html = renderDoc().documentElement.innerHTML;
+
     expect(html).toContain('Get Started');
     expect(html).toContain('href="/pricing"');
     expect(html).toContain('href="#features"');
-    // Impact stats
-    expect(html).toContain('500+');
-    expect(html).toContain('Board-Style Questions');
-    // CTA section
-    expect(html).toContain('Ready to start studying?');
-    // Hero gradient text
+  });
+
+  it('renders hero heading copy', () => {
+    const html = renderDoc().documentElement.innerHTML;
+
+    expect(html).toContain('Addiction Boards');
     expect(html).toContain('Master Your');
     expect(html).toContain('Board Exams.');
-    expect(html).toContain('<main id="main-content"');
+  });
+
+  it('renders impact statistics copy', () => {
+    const html = renderDoc().documentElement.innerHTML;
+
+    expect(html).toContain('500+');
+    expect(html).toContain('Board-Style Questions');
+  });
+
+  it('renders get-started section copy', () => {
+    const html = renderDoc().documentElement.innerHTML;
+
+    expect(html).toContain('Ready to start studying?');
   });
 
   it('renders exactly one main landmark through MarketingHomeShell', () => {
-    const html = renderToStaticMarkup(
-      <MarketingHomeShell
-        authNav={<div>AuthNav</div>}
-        primaryCta={<a href="/pricing">Get Started</a>}
-      />,
-    );
-    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const doc = renderDoc();
     const mainLandmarks = doc.querySelectorAll('main');
 
     expect(mainLandmarks).toHaveLength(1);

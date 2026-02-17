@@ -293,7 +293,7 @@ Rules:
 - TypeScript + React (Next.js). Keep modules small, prefer pure functions in `lib/`
 - Avoid non-null assertions (`!`) and unused imports/variables (Biome errors)
 - Prefer importing via `@/...` alias
-- Scoped E2E exception: in `tests/e2e/**/*.spec.ts`, use relative imports for local helpers (`./helpers/...`); keep `@/...` for app/runtime modules outside `tests/e2e/**`
+- For E2E-specific import/timeout conventions, see `Playwright E2E Conventions` below.
 
 ## Testing
 
@@ -345,11 +345,16 @@ pnpm db:test:down                                  # Stop database when done
 ```typescript
 // @vitest-environment jsdom
 import { renderToStaticMarkup } from 'react-dom/server';
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
+
+let MyComponent: typeof import('./MyComponent').default;
+
+beforeAll(async () => {
+  MyComponent = (await import('./MyComponent')).default;
+});
 
 describe('MyComponent', () => {
-  it('renders correctly', async () => {
-    const MyComponent = (await import('./MyComponent')).default;
+  it('renders correctly', () => {
     const html = renderToStaticMarkup(<MyComponent />);
     expect(html).toContain('Expected text');
   });

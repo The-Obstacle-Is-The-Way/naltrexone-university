@@ -20,24 +20,24 @@ let runSubscribeAction: PricingPageModule['runSubscribeAction'];
 let PricingPage: PricingPageModule['default'];
 let SubscribeButton: PricingClientModule['SubscribeButton'];
 
+type CreateCheckoutSessionFn = Parameters<
+  typeof import('@/app/pricing/page').runSubscribeAction
+>[1]['createCheckoutSessionFn'];
+
+beforeAll(async () => {
+  const [pageModule, pricingClientModule] = await Promise.all([
+    import('@/app/pricing/page'),
+    import('@/app/pricing/pricing-client'),
+  ]);
+  PricingView = pageModule.PricingView;
+  getPricingBanner = pageModule.getPricingBanner;
+  loadPricingData = pageModule.loadPricingData;
+  runSubscribeAction = pageModule.runSubscribeAction;
+  PricingPage = pageModule.default;
+  SubscribeButton = pricingClientModule.SubscribeButton;
+});
+
 describe('app/pricing', () => {
-  type CreateCheckoutSessionFn = Parameters<
-    typeof import('@/app/pricing/page').runSubscribeAction
-  >[1]['createCheckoutSessionFn'];
-
-  beforeAll(async () => {
-    const [pageModule, pricingClientModule] = await Promise.all([
-      import('@/app/pricing/page'),
-      import('@/app/pricing/pricing-client'),
-    ]);
-    PricingView = pageModule.PricingView;
-    getPricingBanner = pageModule.getPricingBanner;
-    loadPricingData = pageModule.loadPricingData;
-    runSubscribeAction = pageModule.runSubscribeAction;
-    PricingPage = pageModule.default;
-    SubscribeButton = pricingClientModule.SubscribeButton;
-  });
-
   afterEach(() => {
     vi.restoreAllMocks();
     vi.unstubAllEnvs();
