@@ -3,7 +3,7 @@
 **Date:** 2026-02-17
 **Triggered by:** Live UI audit — visual comparison of bottom action bars across Practice and History Review views
 **Scope:** The "Next" button has different labels and different positioning relative to the primary action across Practice and History Review, creating a disjointed UX
-**Related:** [BS-018](./bs-018-question-view-ux-unification.md), SPEC-030, [Design Principles §2](../frontend/design-principles.md)
+**Related:** [BS-018](../_archive/brainstorming/bs-018-question-view-ux-unification.md), [SPEC-030](../_archive/specs/spec-030-question-view-ux-unification.md), [Design Principles §2](../frontend/design-principles.md)
 
 ---
 
@@ -162,6 +162,6 @@ Keep history's current ordering and apply it to Practice too:
 
 ## Related Documentation
 
-- [BS-018 Concern 3](./bs-018-question-view-ux-unification.md) — Action bar inconsistency (high-level)
+- [BS-018 Concern 3](../_archive/brainstorming/bs-018-question-view-ux-unification.md) — Action bar inconsistency (high-level)
 - [Design Principles §2](../frontend/design-principles.md) — Action bar composition ordering
-- [SPEC-030](../specs/spec-030-question-view-ux-unification.md) — Implemented structural unification; did not reconcile labels/ordering
+- [SPEC-030](../_archive/specs/spec-030-question-view-ux-unification.md) — Implemented structural unification; did not reconcile labels/ordering

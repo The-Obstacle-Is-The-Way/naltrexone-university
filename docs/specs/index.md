@@ -1,7 +1,7 @@
 # Implementation Specifications
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-02-16
+**Last Updated:** 2026-02-17
 
 ---
 
@@ -20,7 +20,6 @@ Implementation specifications provide detailed technical guidance for building e
 | [Master Spec](./master_spec.md) | Complete Technical Specification (SSOT) | Living | All |
 | [SPEC-016](./spec-016-observability.md) | Observability (Logging, Error Tracking) | Partially Implemented | Infrastructure |
 | [SPEC-017](./spec-017-rate-limiting.md) | Rate Limiting | Partial (MVP done) | Infrastructure |
-| [SPEC-030](./spec-030-question-view-ux-unification.md) | Question View UX Unification — State Persistence, Navigation, Action Bar | Ready | Feature |
 
 **Master Spec split parts (readability):**
 
@@ -63,6 +62,7 @@ Implementation specifications provide detailed technical guidance for building e
 | [SPEC-028](../_archive/specs/spec-028-status-filter-segmented-control.md) | Status & Difficulty Filter — Segmented Control Redesign | Feature |
 | [SPEC-028b](../_archive/specs/spec-028-review-question-navigator.md) | Review Question Navigator (Color-Coded Grid) | Presentation |
 | [SPEC-029](../_archive/specs/spec-029-dev-environment-resilience.md) | Dev Environment Resilience — Client-Side Timeouts & Observable Failures | Infrastructure |
+| [SPEC-030](../_archive/specs/spec-030-question-view-ux-unification.md) | Question View UX Unification — State Persistence, Navigation, Action Bar | Feature |
 
 ## Spec Statuses
 
