@@ -342,17 +342,17 @@ Dashboard, Practice, Quick Practice, Session pages, History, Bookmarks, Billing,
 
 ## Open Questions
 
-1. **Is the two-tone app background intentional?** The `bg-muted` body was introduced to visually separate the header from content. Was this a conscious design decision or inherited from a template? If intentional, Option B or C respects it. If incidental, Option A/D is simpler.
+1. **Is the two-tone app background intentional?** *(Resolved for this initiative: treat as drift, not a preserved design requirement. Option A is the baseline implementation path.)*
 
 2. **Should stat cards even have hover effects?** The dashboard stat cards aren't clickable — they're display-only. The hover effect implies interactivity that doesn't exist. Should we remove hover from non-interactive cards entirely and only add it where there's a click action?
 
-3. **Should we audit light mode too?** In light mode, `bg-background` (white) and `bg-muted` (96.1% light gray) and `bg-card` (white) have the same relative ordering issue, but the contrast differences are much smaller and may not be visible.
+3. **Should we audit light mode too?** *(Answered: audited in this doc; impact is minimal and no contrast regression expected.)*
 
 4. **Does the Chrome agent need to verify this?** *(Answered: Playwright E2E tests now verify this with measured lightness values — see `tests/e2e/bs-020-card-contrast-audit.spec.ts`. Tests confirm: dashboard card lightness (7%) < page bg lightness (11%) at rest, and hover lightness approaches page bg within <5% difference. Landing page cards confirmed to have >5% hover-to-page contrast. Stronger evidence than screenshots alone.)*
 
 5. **What about the landing page impact stat cards?** They have no hover effect but sit on `bg-background`. They look fine. Should they gain hover for consistency with the feature cards below them?
 
-6. **Scope: quick fix or design system pass?** Option A is one line. Option C is a design system change. What's the right scope for this moment?
+6. **Scope: quick fix or design system pass?** *(Resolved direction: ship Option A + targeted hover cleanup first; defer token-level redesign unless follow-up review still finds issues.)*
 
 ---
 
@@ -372,6 +372,7 @@ Dashboard, Practice, Quick Practice, Session pages, History, Bookmarks, Billing,
 | 2026-02-17 | Document created | Visual audit revealed card hover contrast loss on dashboard in dark mode |
 | 2026-02-17 | Landing aesthetic set as visual north-star for card surfaces | User-facing goal is a unified front where authenticated app screens preserve the same card elevation/readability quality seen on landing |
 | 2026-02-17 | Playwright E2E audit completed | `tests/e2e/bs-020-card-contrast-audit.spec.ts` — 5 tests: CSS variable values verified, dashboard contrast inversion measured (card 7% < page 11%), disappearing hover confirmed (<5% diff), landing page good contrast confirmed (>5% diff), session summary source verified (4× identical `hover:bg-muted/50`), three hover strategies confirmed. Discovered `transition-colors` causes flaky computed-color reads during theme toggle |
+| 2026-02-17 | Option A selected as implementation baseline | Verified one-line layout background change resolves the core contrast inversion and best supports unified-front visual direction; follow-up cleanup remains scoped and incremental |
 
 ---
 

@@ -109,6 +109,18 @@ Define a shared shell-parity standard (landmarks, nav behavior, theme controls, 
 
 ---
 
+## Execution Order (Opinionated)
+
+To keep momentum high and risk low, execute in this order:
+
+1. **Implement BS-020 Option A first** (`app/(app)/app/layout.tsx` background alignment + scoped hover cleanup).
+2. **Then implement BS-021 semantic/copy cleanup** (nested `main`, section labels, sign-in casing, hero accessible name verification).
+3. **Then codify the policy** in `docs/frontend/design-principles.md` so parity expectations are enforceable.
+
+This sequencing fixes the highest-visibility visual mismatch first, then closes accessibility/copy drift, then locks standards.
+
+---
+
 ## Open Questions
 
 1. Should marketing intentionally remain dark-only, or should it expose the same theme toggle as the app?
@@ -127,6 +139,7 @@ Define a shared shell-parity standard (landmarks, nav behavior, theme controls, 
 | 2026-02-17 | Split from BS-020 | Card contrast/hover (BS-020) and shell semantic parity are separate problem spaces requiring independent prioritization |
 | 2026-02-17 | Adopted unified-front framing | Clarified that shell differences are acceptable only when intentional; visual and semantic quality should remain cohesive from landing to app |
 | 2026-02-17 | Cross-referenced BS-020 Option A verification | BS-020's recommended direction (app layout `bg-muted` → `bg-background`) has been validated via Playwright E2E and full impact analysis — supports this doc's unified-front policy by aligning the app surface model to the landing page |
+| 2026-02-17 | Sequencing direction set | Prioritized implementation order: BS-020 surface alignment first, then BS-021 semantic/copy parity, then design-principles codification |
 
 ---
 
