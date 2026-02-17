@@ -292,6 +292,7 @@ Rules:
 - TypeScript + React (Next.js). Keep modules small, prefer pure functions in `lib/`
 - Avoid non-null assertions (`!`) and unused imports/variables (Biome errors)
 - Prefer importing via `@/...` alias
+- Scoped E2E exception: in `tests/e2e/**/*.spec.ts`, use relative imports for local helpers (`./helpers/...`); keep `@/...` for app/runtime modules outside `tests/e2e/**`
 
 ## Testing
 
