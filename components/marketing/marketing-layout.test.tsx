@@ -44,8 +44,8 @@ describe('MarketingLayout', () => {
     );
     const doc = new DOMParser().parseFromString(html, 'text/html');
     const footer = doc.querySelector('footer');
-    const signInLink = footer?.querySelector('a[href="/sign-in"]');
-    const signUpLink = footer?.querySelector('a[href="/sign-up"]');
+    const signInLink = footer?.querySelector(`a[href="${ROUTES.SIGN_IN}"]`);
+    const signUpLink = footer?.querySelector(`a[href="${ROUTES.SIGN_UP}"]`);
 
     expect(signInLink?.textContent?.trim()).toBe('Sign In');
     expect(signUpLink?.textContent?.trim()).toBe('Sign Up');

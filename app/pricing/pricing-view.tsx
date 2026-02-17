@@ -32,7 +32,10 @@ export function PricingView({
   SubscribeButtonComponent = DefaultButton,
 }: PricingViewProps) {
   return (
-    <div className="min-h-screen bg-background py-16">
+    <div
+      data-testid="pricing-root"
+      className="min-h-screen bg-background py-16"
+    >
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <header className="text-center">
           <h1 className="text-4xl font-bold font-heading tracking-tight text-foreground">
