@@ -11,7 +11,9 @@
 
 Three test files intermittently fail with `Error: Test timed out in 5000ms` on their **first `it()` block only**. They pass on immediate re-run. This is not a behavioral flake (race condition, timing dependency, or non-deterministic logic). It is a **deterministic cost problem**: the first test in each file pays the full ESM module resolution + transpilation + tree-shaking cost for a heavy import chain, and that cost intermittently exceeds Vitest's default 5000ms timeout.
 
-The deeper problem: **27 magic-number timeout overrides** are scattered across **15 test files** — all working around the same root cause. None protect genuinely long-running operations. These are unprincipled values (`10_000`, `20_000`, `40000`) with no documented rationale, written by different people at different times (note the inconsistent formatting: `40000` vs `20_000`). This is textbook scattered technical debt.
+The deeper problem: **29 magic-number timeout overrides** are scattered across **17 test files** — all working around the same root cause. None protect genuinely long-running operations. These are unprincipled values (`10_000`, `15_000`, `20_000`, `40000`) with no documented rationale, written by different people at different times (note the inconsistent formatting: `40000` vs `20_000` vs `{ timeout: 15_000 }`). This is textbook scattered technical debt.
+
+Beyond the files with overrides, **~39 additional test files** use `await import()` inside `it()` with **no timeout protection at all** — silently relying on the 5s default. These are equally vulnerable to cold-import flakes but haven't hit the wall yet (or have, and developers simply re-ran).
 
 ### Actively Flaking Tests (no override, hit the 5s default)
 
@@ -21,17 +23,22 @@ The deeper problem: **27 magic-number timeout overrides** are scattered across *
 | `app/(app)/app/practice/components/practice-view.test.tsx:12` | "renders Back to Dashboard link with correct href" | `await import('./practice-view')` | UI component tree + `practice-page-logic` (321 lines) |
 | `app/(app)/app/questions/[slug]/question-page-client.test.tsx:55` | "renders a Back to Dashboard utility link" | `await import('./question-page-client')` | Controller hooks + question-page-logic + route utils |
 
-### Magic-Number Override Inventory (27 instances, 15 files)
+### Magic-Number Override Inventory (29 instances, 17 files)
 
-Every override follows the same pattern: `await import()` inside `it()` with an arbitrary trailing timeout.
+Most overrides use the positional trailing-number syntax (`}, 10_000)`). Two use the object syntax (`{ timeout: 15_000 }`).
 
-| Timeout | Count | Files |
-|---------|-------|-------|
-| `40000` | 4 | `lib/container.test.ts` |
-| `20_000` | 13 | `lib/container.skip-clerk.test.ts` (2), `questions/[slug]/page.test.tsx` (6), `practice/page.test.tsx` (2), `practice/quick/page.test.tsx` (1), `practice/[sessionId]/page.test.tsx` (2) |
-| `10_000` | 10 | `questions/[slug]/page.test.tsx` (1), `pricing/page.test.tsx` (1), `global-error.test.tsx` (1), `error.test.tsx` (1), `dashboard/error.test.tsx` (1), `layout-shell.test.tsx` (1), `billing/error.test.tsx` (1), `practice/quick/error.test.tsx` (1), `practice/[sessionId]/error.test.tsx` (1), `practice/error.test.tsx` (1) |
+| Timeout | Syntax | Count | Files |
+|---------|--------|-------|-------|
+| `40000` | positional | 4 | `lib/container.test.ts` |
+| `20_000` | positional | 13 | `lib/container.skip-clerk.test.ts` (2), `questions/[slug]/page.test.tsx` (6), `practice/page.test.tsx` (2), `practice/quick/page.test.tsx` (1), `practice/[sessionId]/page.test.tsx` (2) |
+| `15_000` | `{ timeout }` | 2 | `components/ui/dropdown-menu.test.tsx` (1), `components/marketing/marketing-home.test.tsx` (1) |
+| `10_000` | positional | 10 | `questions/[slug]/page.test.tsx` (1), `pricing/page.test.tsx` (1), `global-error.test.tsx` (1), `error.test.tsx` (1), `dashboard/error.test.tsx` (1), `layout-shell.test.tsx` (1), `billing/error.test.tsx` (1), `practice/quick/error.test.tsx` (1), `practice/[sessionId]/error.test.tsx` (1), `practice/error.test.tsx` (1) |
 
 > Note: `questions/[slug]/page.test.tsx` has both 20_000 and 10_000 overrides (7 total in one file).
+
+### Unprotected Vulnerable Files (~39 files)
+
+An additional ~39 test files use `await import()` inside `it()` with **no timeout override**, silently relying on the 5s default. These include the 3 actively flaking tests above plus files like `components/auth-nav.test.tsx` (10 `await import()` calls), `app/(app)/app/billing/page.test.tsx` (8 calls), and many others. The `beforeAll` migration (Part 1 of the fix) must cover all files with this pattern, not just the 17 with overrides.
 
 ### Evidence It's Cold-Import, Not Behavioral
 
@@ -84,7 +91,7 @@ DEBT-224 tracks file sizes exceeding guidelines. The heaviest import chains (`db
 ## Impact
 
 - **CI flakes** — 3 tests fail intermittently, requiring re-runs
-- **Magic numbers** — 27 arbitrary timeout values scattered across 15 files with no principled basis
+- **Magic numbers** — 29 arbitrary timeout values scattered across 17 files with no principled basis
 - **False confidence** — Developers learn to dismiss timeout failures as "just flakes"
 - **Wasted time** — Each flake requires a re-run (~55s for the full suite)
 - **Invisible coupling** — New test files silently inherit the 5s default and will flake when import chains are heavy, prompting yet another ad-hoc override
@@ -98,7 +105,7 @@ This is a two-part fix, done in the same PR.
 
 #### Part 1: Migrate `await import()` from `it()` into `beforeAll()` (root cause fix)
 
-For each of the 15 affected files, move the repeated `await import()` into a `beforeAll()` hook. This:
+For **all files** with `await import()` inside `it()` (~56 total: 17 with overrides + ~39 unprotected), move the repeated `await import()` into a `beforeAll()` hook. This:
 
 - Charges import cost against `hookTimeout` (10s default) instead of `testTimeout` (5s default)
 - Pays the import cost **once** per `describe` block instead of per-test
@@ -150,9 +157,9 @@ export default defineConfig({
 - `testTimeout: 10_000` — 2x the default. Catches genuinely hanging tests within 10s (not 15s), preserving fast-fail signal. With a 55s suite, 10s per failure is acceptable.
 - `hookTimeout: 15_000` — 1.5x the default. Accommodates the heaviest import chains (`container.ts` with all 10 repos + Drizzle) during `beforeAll()`.
 
-#### Part 3: Remove all 27 magic-number overrides
+#### Part 3: Remove all 29 magic-number overrides
 
-After Parts 1 and 2, remove every ad-hoc timeout. The global config is the safety net; the `beforeAll` pattern is the fix.
+After Parts 1 and 2, remove every ad-hoc timeout (both positional and `{ timeout }` syntax). The global config is the safety net; the `beforeAll` pattern is the fix.
 
 #### Part 4: Update `testing-react19.md`
 
@@ -196,11 +203,12 @@ These 2 overrides (currently `20_000`) should be removed only if the global `hoo
 ## Acceptance Criteria
 
 - [ ] All 3 Vitest config files have explicit `testTimeout` and `hookTimeout` values
-- [ ] All 15 affected test files migrated to `beforeAll` import pattern (except `container.skip-clerk.test.ts` if structurally incompatible)
-- [ ] All 27 magic-number timeout overrides removed (or justified with a comment for exceptions)
+- [ ] All ~56 files with `await import()` inside `it()` migrated to `beforeAll` import pattern (except `container.skip-clerk.test.ts` if structurally incompatible, and single-test files where inline import is acceptable)
+- [ ] All 29 magic-number timeout overrides removed (or justified with a comment for exceptions)
 - [ ] `testing-react19.md` updated with `beforeAll` guidance for multi-test files
 - [ ] The 3 actively flaking tests pass reliably without re-runs (verify with 5 consecutive `pnpm test --run`)
 - [ ] No new timeout flakes in the next 10 CI runs
+- [ ] Zero remaining `await import()` inside `it()` in multi-test files (grep verification)
 
 ## Related
 
