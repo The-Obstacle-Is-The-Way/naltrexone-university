@@ -310,6 +310,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 - **Unit tests:** `*.test.ts` colocated next to source files (e.g., `grading.ts` → `grading.test.ts`)
 - **Integration tests:** `tests/integration/*.integration.test.ts` (requires local Postgres)
 - **E2E tests:** `tests/e2e/*.spec.ts` (Playwright)
+- **E2E timeout policy:** `docs/dev/testing-infrastructure.md` → "Playwright Timeout Policy"
 
 ### Running Integration Tests Locally
 
