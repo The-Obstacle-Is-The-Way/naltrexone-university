@@ -16,7 +16,7 @@ When `GetPreviousAttemptUseCase` fetches an attempt by ID and the attempt's `que
 
 ## Evidence: Full Vertical Trace
 
-### 1. The Bug — `src/application/use-cases/get-previous-attempt.ts:35-58`
+### 1. The Bug — `src/application/use-cases/get-previous-attempt.ts:35-59`
 
 ```typescript
 const attempt = input.attemptId
@@ -167,7 +167,7 @@ Add an inline comment explaining why the silent null is intentional (e.g., "Trea
 
 ## Related
 
-- `src/application/use-cases/get-previous-attempt.ts:35-58` — Bug location
+- `src/application/use-cases/get-previous-attempt.ts:35-59` — Bug location
 - `src/adapters/repositories/drizzle-attempt-repository.ts:205-216` — Repository without `questionId` filter
 - `src/adapters/controllers/question-view-controller.ts:94-106` — Controller pass-through
 - `app/(app)/app/questions/[slug]/question-page-logic.ts:229-248` — UI silent fallback
