@@ -95,66 +95,6 @@ function getOriginUi(
   };
 }
 
-function SessionNavigationBar({
-  navigation,
-  historyHref,
-}: {
-  navigation: SessionNavigation;
-  historyHref?: string;
-}) {
-  const { questions, currentIndex, sessionId, from } = navigation;
-  const total = questions.length;
-  if (total === 0) return null;
-  if (currentIndex < 0 || currentIndex >= total) return null;
-
-  const prev = currentIndex > 0 ? questions[currentIndex - 1] : null;
-  const next =
-    currentIndex < questions.length - 1 ? questions[currentIndex + 1] : null;
-
-  const linkClassName =
-    'text-sm font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]';
-
-  return (
-    <div className="flex items-center justify-between">
-      {prev ? (
-        <Link
-          href={toQuestionRoute(prev.slug, {
-            from,
-            mode: 'review',
-            sessionId,
-            historyHref,
-          })}
-          className={linkClassName}
-        >
-          ← Previous
-        </Link>
-      ) : (
-        <span aria-hidden="true" />
-      )}
-
-      <span className="text-sm text-muted-foreground">
-        Question {currentIndex + 1} of {total}
-      </span>
-
-      {next ? (
-        <Link
-          href={toQuestionRoute(next.slug, {
-            from,
-            mode: 'review',
-            sessionId,
-            historyHref,
-          })}
-          className={linkClassName}
-        >
-          Next →
-        </Link>
-      ) : (
-        <span aria-hidden="true" />
-      )}
-    </div>
-  );
-}
-
 export type QuestionViewProps = {
   loadState: LoadState;
   question: GetQuestionBySlugOutput | null;
@@ -180,6 +120,21 @@ export function QuestionView(props: QuestionViewProps) {
     props.historyHref,
   );
 
+  const navPrev =
+    props.sessionNavigation && props.sessionNavigation.currentIndex > 0
+      ? props.sessionNavigation.questions[
+          props.sessionNavigation.currentIndex - 1
+        ]
+      : null;
+  const navNext =
+    props.sessionNavigation &&
+    props.sessionNavigation.currentIndex <
+      props.sessionNavigation.questions.length - 1
+      ? props.sessionNavigation.questions[
+          props.sessionNavigation.currentIndex + 1
+        ]
+      : null;
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-baseline sm:justify-between">
@@ -203,10 +158,10 @@ export function QuestionView(props: QuestionViewProps) {
             navigation={props.sessionNavigation}
             historyHref={props.historyHref}
           />
-          <SessionNavigationBar
-            navigation={props.sessionNavigation}
-            historyHref={props.historyHref}
-          />
+          <p className="text-center text-sm text-muted-foreground">
+            Question {props.sessionNavigation.currentIndex + 1} of{' '}
+            {props.sessionNavigation.questions.length}
+          </p>
         </>
       ) : null}
 
@@ -259,7 +214,40 @@ export function QuestionView(props: QuestionViewProps) {
         />
       ) : null}
 
-      <div className="flex flex-col gap-3 sm:flex-row">
+      <div
+        className="flex flex-col gap-3 sm:flex-row"
+        data-testid="bottom-action-bar"
+      >
+        {props.sessionNavigation && navPrev ? (
+          <Button asChild variant="outline" className="rounded-full">
+            <Link
+              href={toQuestionRoute(navPrev.slug, {
+                from: props.sessionNavigation.from,
+                mode: 'review',
+                sessionId: props.sessionNavigation.sessionId,
+                historyHref: props.historyHref,
+              })}
+            >
+              ← Previous
+            </Link>
+          </Button>
+        ) : null}
+
+        {props.sessionNavigation && navNext ? (
+          <Button asChild variant="outline" className="rounded-full">
+            <Link
+              href={toQuestionRoute(navNext.slug, {
+                from: props.sessionNavigation.from,
+                mode: 'review',
+                sessionId: props.sessionNavigation.sessionId,
+                historyHref: props.historyHref,
+              })}
+            >
+              Next →
+            </Link>
+          </Button>
+        ) : null}
+
         {!props.submitResult ? (
           <Button
             type="button"
@@ -276,20 +264,21 @@ export function QuestionView(props: QuestionViewProps) {
         ) : null}
 
         {props.submitResult ? (
-          <>
-            <Button
-              type="button"
-              variant="outline"
-              className="rounded-full"
-              disabled={props.isPending}
-              onClick={props.onReattempt}
-            >
-              Try Again
-            </Button>
-            <Button asChild variant="ghost" className="rounded-full">
-              <Link href={originUi.backHref}>{originUi.backLabel}</Link>
-            </Button>
-          </>
+          <Button
+            type="button"
+            variant="outline"
+            className="rounded-full"
+            disabled={props.isPending}
+            onClick={props.onReattempt}
+          >
+            Try Again
+          </Button>
+        ) : null}
+
+        {props.sessionNavigation || props.submitResult ? (
+          <Button asChild variant="ghost" className="rounded-full">
+            <Link href={originUi.backHref}>{originUi.backLabel}</Link>
+          </Button>
         ) : null}
       </div>
     </div>

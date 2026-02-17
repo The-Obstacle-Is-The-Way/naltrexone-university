@@ -2,7 +2,7 @@
 
 > **Parent:** [Practice Engine Index](./index.md)
 > **Scope:** Clean Architecture layers — Domain, Application, Adapters
-> **Last Verified:** 2026-02-12
+> **Last Verified:** 2026-02-16
 
 ---
 
@@ -61,7 +61,7 @@ Pure functions with zero side effects. They live in `src/domain/services/`.
 
 ### 1.5 Test Coverage
 
-Every service and value object has colocated `.test.ts` files (16 test files total). Entity files are pure types with no runtime behavior, so they correctly have no tests. Domain test helpers provide factories: `createQuestion()`, `createChoice()`, `createAttempt()`, `createBookmark()`, `createPracticeSession()`, `createSubscription()`, `createUser()`, `createTag()`.
+Every service and value object has colocated `.test.ts` files (17 test files total, including factory tests). Entity files are pure types with no runtime behavior, so they correctly have no tests. Domain test helpers provide factories: `createQuestion()`, `createChoice()`, `createAttempt()`, `createBookmark()`, `createPracticeSession()`, `createSubscription()`, `createUser()`, `createTag()`.
 
 ---
 
@@ -75,14 +75,14 @@ All use cases follow the pattern: constructor injection of port interfaces, sing
 
 | Use Case | Input | Output | Error Codes |
 |----------|-------|--------|-------------|
-| `GetNextQuestion` | `{ userId, sessionId?, questionId? }` or `{ userId, filters }` | `NextQuestion` (stem, choices without `isCorrect`, session info) or `null` | `NOT_FOUND`, `VALIDATION_ERROR` |
+| `GetNextQuestion` | `{ userId, sessionId, questionId?, fromIndex? }` or `{ userId, filters }` | `NextQuestion` (stem, choices without `isCorrect`, session info) or `null` | `NOT_FOUND`, `VALIDATION_ERROR` |
 | `SubmitAnswer` | `{ userId, questionId, choiceId, sessionId?, timeSpentSeconds? }` | `{ attemptId, isCorrect, correctChoiceId, explanationMd?, choiceExplanations[] }` | `NOT_FOUND`, `CONFLICT`, `INTERNAL_ERROR` |
 
 #### Practice Sessions
 
 | Use Case | Input | Output | Error Codes |
 |----------|-------|--------|-------------|
-| `StartPracticeSession` | `{ userId, mode, count, tagSlugs, difficulties }` | `{ sessionId }` | `NOT_FOUND` (no matching questions), `CONFLICT` (incomplete session exists) |
+| `StartPracticeSession` | `{ userId, mode, count, tagSlugs, difficulties, statuses? }` | `{ sessionId, requestedCount, actualCount }` | `NOT_FOUND` (no matching questions), `CONFLICT` (incomplete session exists) |
 | `EndPracticeSession` | `{ userId, sessionId }` | `{ sessionId, endedAt, totals }` | `INTERNAL_ERROR` |
 | `GetIncompletePracticeSession` | `{ userId }` | Session summary or `null` | (propagates) |
 | `GetPracticeSessionReview` | `{ userId, sessionId }` | Per-question breakdown with states | `NOT_FOUND` |
@@ -116,7 +116,7 @@ Ports define what the application layer needs from the outside world. The actual
 - `AttemptSingleQuestionReader` — most recent attempt for a specific question (review mode)
 - `AttemptMostRecentAnsweredAtReader` — for question selection ordering
 
-Other ports: `QuestionRepository` (4 methods), `PracticeSessionRepository` (7 methods with CAS concurrency), `BookmarkRepository` (4 methods), `TagRepository` (1 method).
+Other ports: `QuestionRepository` (5 methods), `PracticeSessionRepository` (7 methods with CAS concurrency), `BookmarkRepository` (4 methods), `TagRepository` (1 method).
 
 ### 2.3 Test Coverage
 
@@ -130,7 +130,7 @@ Other ports: `QuestionRepository` (4 methods), `PracticeSessionRepository` (7 me
 
 | Repository | Port Interface | Methods | Key Patterns |
 |-----------|---------------|---------|-------------|
-| `DrizzleQuestionRepository` | `QuestionRepository` | 4 | Relational loading with `with:` clause; tag-filtered candidate query uses `INNER JOIN + GROUP BY` |
+| `DrizzleQuestionRepository` | `QuestionRepository` | 5 | Relational loading with `with:` clause; tag-filtered candidate query uses `INNER JOIN + GROUP BY` |
 | `DrizzleAttemptRepository` | `AttemptRepository` (composite) | 14 | `row_number()` window function selects latest attempt per question (attempted-question summaries); partial unique index `(practiceSessionId, questionId)` prevents duplicate session answers |
 | `DrizzlePracticeSessionRepository` | `PracticeSessionRepository` | 7 | Optimistic concurrency (CAS) with 3 retries for `recordQuestionAnswer` and `setQuestionMarkedForReview`; Zod validation on `paramsJson` read/write |
 | `DrizzleBookmarkRepository` | `BookmarkRepository` | 4 | `ON CONFLICT DO NOTHING` for idempotent add |
@@ -170,4 +170,4 @@ Practice-related tables in `db/schema.ts`:
 
 ### 3.4 Test Coverage
 
-All 5 practice-engine repositories have colocated unit tests (61 `it()` cases total) plus shared integration tests in `tests/integration/repositories.integration.test.ts`.
+All 5 practice-engine repositories have colocated unit tests (62 `it()` cases total) plus shared integration tests in `tests/integration/repositories.integration.test.ts`.

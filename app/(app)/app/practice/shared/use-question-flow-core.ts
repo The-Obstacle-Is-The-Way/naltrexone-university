@@ -16,6 +16,8 @@ import { selectChoiceIfAllowed } from '@/app/(app)/app/shared/question-guards';
 import type { NextQuestion } from '@/src/application/use-cases/get-next-question';
 import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
 
+export const RESTORED_ATTEMPT_ID = 'restored';
+
 export type UseQuestionFlowCoreInput = {
   isMounted: () => boolean;
 };
@@ -34,7 +36,10 @@ export type UseQuestionFlowCoreOutput = {
   isAnswered: boolean;
   setIsAnswered: (answered: boolean) => void;
   submitResult: SubmitAnswerOutput | null;
-  setSubmitResult: (result: SubmitAnswerOutput | null) => void;
+  setSubmitResult: (
+    result: SubmitAnswerOutput | null,
+    questionId?: string | null,
+  ) => void;
   loadState: LoadState;
   setLoadState: (state: LoadState) => void;
   isPending: boolean;
@@ -61,6 +66,7 @@ export function useQuestionFlowCore(
     useState<SubmitAnswerOutput | null>(null);
   const questionRef = useRef<NextQuestion | null>(null);
   const draftSelectedChoicesRef = useRef<Map<string, string>>(new Map());
+  const submitResultQuestionIdRef = useRef<string | null>(null);
   const [loadState, setLoadStateState] = useState<LoadState>({
     status: 'idle',
   });
@@ -115,11 +121,21 @@ export function useQuestionFlowCore(
     }
   }, []);
 
-  const setSubmitResult = useCallback((result: SubmitAnswerOutput | null) => {
+  const setSubmitResult = useCallback<
+    UseQuestionFlowCoreOutput['setSubmitResult']
+  >((result, questionId) => {
     setSubmitResultState(result);
+
     if (result) {
+      submitResultQuestionIdRef.current =
+        typeof questionId === 'string'
+          ? questionId
+          : (questionRef.current?.questionId ?? null);
       setIsAnswered(true);
+      return;
     }
+
+    submitResultQuestionIdRef.current = null;
   }, []);
 
   const syncQuestionStateFromDraftOrSession = useCallback(
@@ -127,6 +143,7 @@ export function useQuestionFlowCore(
       if (!nextQuestion) {
         setSelectedChoiceId(null);
         setIsAnswered(false);
+        setSubmitResult(null);
         return;
       }
 
@@ -135,6 +152,30 @@ export function useQuestionFlowCore(
       if (typeof sessionSelectedChoiceId === 'string') {
         setSelectedChoiceId(sessionSelectedChoiceId);
         setIsAnswered(true);
+
+        const prev = nextQuestion.session?.previousSubmission;
+        if (prev) {
+          const sessionIsCorrect =
+            nextQuestion.session?.latestIsCorrect ?? null;
+          const isCorrect =
+            typeof sessionIsCorrect === 'boolean'
+              ? sessionIsCorrect
+              : prev.correctChoiceId === sessionSelectedChoiceId;
+
+          setSubmitResult(
+            {
+              attemptId: RESTORED_ATTEMPT_ID,
+              isCorrect,
+              correctChoiceId: prev.correctChoiceId,
+              explanationMd: prev.explanationMd,
+              choiceExplanations: prev.choiceExplanations,
+            },
+            nextQuestion.questionId,
+          );
+        } else {
+          setSubmitResult(null);
+        }
+
         updateDraftSelectedChoices((prev) => {
           if (!prev.has(nextQuestion.questionId)) return prev;
           const next = new Map(prev);
@@ -147,9 +188,15 @@ export function useQuestionFlowCore(
       setSelectedChoiceId(
         draftSelectedChoicesRef.current.get(nextQuestion.questionId) ?? null,
       );
+
+      if (submitResultQuestionIdRef.current === nextQuestion.questionId) {
+        return;
+      }
+
       setIsAnswered(false);
+      setSubmitResult(null);
     },
-    [updateDraftSelectedChoices],
+    [updateDraftSelectedChoices, setSubmitResult],
   );
 
   const setLoadState = useCallback(

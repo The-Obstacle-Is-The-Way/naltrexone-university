@@ -10,7 +10,10 @@ import type {
   PracticeSessionRepository,
   QuestionRepository,
 } from '../ports/repositories';
-import { buildShuffledChoiceViews } from '../shared/shuffled-choice-views';
+import {
+  buildShuffledChoiceViews,
+  type ChoiceExplanation,
+} from '../shared/shuffled-choice-views';
 
 export type SubmitAnswerInput = {
   userId: string;
@@ -26,14 +29,6 @@ export type SubmitAnswerOutput = {
   correctChoiceId: string | null;
   explanationMd: string | null;
   choiceExplanations: ChoiceExplanation[];
-};
-
-export type ChoiceExplanation = {
-  choiceId: string;
-  displayLabel: string;
-  textMd: string;
-  isCorrect: boolean;
-  explanationMd: string | null;
 };
 
 export const SUBMIT_ANSWER_MAX_TIME_SPENT_SECONDS = 86_400;

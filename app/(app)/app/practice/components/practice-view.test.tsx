@@ -253,6 +253,67 @@ describe('PracticeView', () => {
     );
     expect(endButtons).toHaveLength(2);
   });
+
+  it('renders a Previous button when onPreviousQuestion is provided', async () => {
+    const { PracticeView } = await import('./practice-view');
+    const question = createNextQuestion();
+
+    const html = renderToStaticMarkup(
+      <PracticeView
+        loadState={{ status: 'ready' }}
+        question={question}
+        selectedChoiceId={null}
+        isAnswered={false}
+        submitResult={null}
+        isPending={false}
+        bookmarkStatus="idle"
+        isBookmarked={false}
+        canSubmit={false}
+        onTryAgain={() => undefined}
+        onToggleBookmark={() => undefined}
+        onSelectChoice={() => undefined}
+        onSubmit={() => undefined}
+        onNextQuestion={() => undefined}
+        onPreviousQuestion={() => undefined}
+        hasPreviousQuestion={true}
+      />,
+    );
+
+    expect(html).toContain('← Previous');
+  });
+
+  it('disables Previous when hasPreviousQuestion is false', async () => {
+    const { PracticeView } = await import('./practice-view');
+    const question = createNextQuestion();
+
+    const html = renderToStaticMarkup(
+      <PracticeView
+        loadState={{ status: 'ready' }}
+        question={question}
+        selectedChoiceId={null}
+        isAnswered={false}
+        submitResult={null}
+        isPending={false}
+        bookmarkStatus="idle"
+        isBookmarked={false}
+        canSubmit={false}
+        onTryAgain={() => undefined}
+        onToggleBookmark={() => undefined}
+        onSelectChoice={() => undefined}
+        onSubmit={() => undefined}
+        onNextQuestion={() => undefined}
+        onPreviousQuestion={() => undefined}
+        hasPreviousQuestion={false}
+      />,
+    );
+
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const previousButton = Array.from(doc.querySelectorAll('button')).find(
+      (button) => button.textContent?.includes('Previous'),
+    );
+    expect(previousButton).not.toBeNull();
+    expect(previousButton?.hasAttribute('disabled')).toBe(true);
+  });
 });
 
 describe('getBookmarkNotificationTransition', () => {

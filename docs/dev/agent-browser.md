@@ -177,7 +177,8 @@ Each session has independent cookies, storage, and auth state.
 ## Common Pitfalls
 
 1. **Refs expire after navigation** — Always re-snapshot after `open`, `click` that navigates, or DOM changes
-2. **`.env.local` isn’t auto-loaded** — Export env vars yourself or use Node dotenv extraction (see above)
-3. **Clerk sign-in has anti-automation** — Prefer Playwright storageState (Option C) over direct fill (Option D)
-4. **`agent-browser wait --url` uses glob patterns** — Use `**/dashboard` not `/app/dashboard`
-5. **Temp files** — Never commit state JSON, screenshots, or temp scripts to the repo
+2. **Hidden radios can hang clicks** — Our answer-choice inputs are `sr-only`; clicking the `radio` refs may hang. Prefer `agent-browser find text "<choice text>" click` (or click the wrapping `<label>`).
+3. **`.env.local` isn’t auto-loaded** — Export env vars yourself or use Node dotenv extraction (see above)
+4. **Clerk sign-in has anti-automation** — Prefer Playwright storageState (Option C) over direct fill (Option D)
+5. **`agent-browser wait --url` uses glob patterns** — Use `**/dashboard` not `/app/dashboard`
+6. **Temp files** — Never commit state JSON, screenshots, or temp scripts to the repo

@@ -393,6 +393,7 @@ describe('practice-session-page-logic', () => {
       });
       expect(setSubmitResult).toHaveBeenCalledWith(
         expect.objectContaining({ isCorrect: true }),
+        'q_1',
       );
       expect(setLoadState).toHaveBeenCalledWith({ status: 'ready' });
     });

@@ -2,7 +2,7 @@
 
 > **Parent:** [Practice Engine Index](./index.md)
 > **Scope:** Full end-to-end trace from authored MDX files through seeding, database, shuffling, and UI rendering
-> **Last Verified:** 2026-02-12
+> **Last Verified:** 2026-02-16
 
 This document serves two purposes:
 1. **Architectural trace** — understanding where data flows and where bugs happen (e.g., BS-011 choice label desync)
@@ -39,7 +39,7 @@ This document serves two purposes:
 │    buildShuffledChoiceViews(question, userId) → shuffled displayLabel │
 ├───────────────────────────────────────────────────────────────────────┤
 │ 6. CONTROLLER / SERVER ACTION LAYER                                   │
-│    Two different paths diverge here (BUG — see §8)                    │
+│    Unified shuffle path (all paths call buildShuffledChoiceViews)      │
 ├───────────────────────────────────────────────────────────────────────┤
 │ 7. FRONTEND RENDERING                                                 │
 │    react-markdown + remark-gfm + rehype-sanitize                      │
@@ -234,9 +234,9 @@ This excludes `content/questions/placeholder/**/*.mdx` from the seed input and a
 
 **Repository:** `src/adapters/repositories/drizzle-question-repository.ts`
 
-The `toDomain()` method (line 106) converts DB rows to domain entities:
+The `toDomain()` method (line 242) converts DB rows to domain entities:
 - Validates each choice label with `isValidChoiceLabel()`
-- **Sorts choices by `sortOrder` ascending** (line 138): `mappedChoices.sort((a, b) => a.sortOrder - b.sortOrder)`
+- **Sorts choices by `sortOrder` ascending** (line 274): `mappedChoices.sort((a, b) => a.sortOrder - b.sortOrder)`
 - Returns choices in canonical/authored order: A(1), B(2), C(3), D(4), E(5) (when present)
 
 The domain `Question` entity has `choices: Choice[]` always in this canonical order.
@@ -264,11 +264,12 @@ The domain `Question` entity has `choices: Choice[]` always in this canonical or
 
 | Caller | File | Returns shuffled labels? |
 |--------|------|------------------------|
-| `GetNextQuestionUseCase.mapChoicesForOutput()` | `get-next-question.ts:86-96` | **Yes** — returns `choice.displayLabel` as `label` |
+| `getQuestionBySlug` controller | `question-view-controller.ts:77` | **Yes** — returns `choice.displayLabel` as `label` (added by SPEC-025) |
+| `GetNextQuestionUseCase.mapChoicesForOutput()` | `get-next-question.ts:87-97` | **Yes** — returns `choice.displayLabel` as `label` |
 | `SubmitAnswerUseCase.mapChoiceExplanations()` | `submit-answer.ts:49-60` | **Yes** — returns `choice.displayLabel` |
-| `GetPreviousAttemptUseCase.execute()` | `get-previous-attempt.ts:58-67` | **Yes** — returns `choice.displayLabel` |
+| `GetPreviousAttemptUseCase.execute()` | `get-previous-attempt.ts:79-88` | **Yes** — returns `choice.displayLabel` |
 
-All three use cases produce **shuffled** labels for their outputs.
+All four callers produce **shuffled** labels for their outputs. This was unified by SPEC-025 (previously, `getQuestionBySlug` returned canonical labels).
 
 ---
 
@@ -289,67 +290,41 @@ All three use cases produce **shuffled** labels for their outputs.
 - Renders each incorrect choice with `choice.displayLabel` and `choice.explanationMd`
 - Letter labels are displayed as-received — no re-labeling
 
-Both components are pure presentational — they render whatever labels they receive. The bug is not in the components, it's in the data they receive from different sources.
+Both components are pure presentational — they render whatever labels they receive. Since SPEC-025 unified all shuffle paths, all data sources now produce consistent shuffled labels.
 
 ---
 
-## 8. Controller Layer Desync (BS-011 Bug B)
+## 8. Controller Layer Shuffle (Formerly BS-011 Bug B — RESOLVED)
 
-**Two different controller paths serve choices to the same page, and they disagree on ordering:**
+> **Status:** Fixed by SPEC-025 (Choice Label Desync Fix)
 
-### Path A: `getQuestionBySlug` (question-view-controller.ts:59-82)
+Previously, `getQuestionBySlug` returned choices with canonical DB labels (A–E in authored order) while use cases (`SubmitAnswer`, `GetPreviousAttempt`) returned shuffled `displayLabel` values. This caused letter label mismatches between the QuestionCard and Feedback components on the `/app/questions/[slug]` page.
 
-This is the controller that serves question data to the `/app/questions/[slug]` page (used for History Questions Tab, Bookmarks, Dashboard links, and review mode).
+### The fix (SPEC-025)
+
+`getQuestionBySlug` now calls `buildShuffledChoiceViews(question, userId)` just like the use cases:
 
 ```typescript
-// question-view-controller.ts:70-80
-return {
-	  choices: question.choices.map((choice) => ({
-	    id: choice.id,
-	    label: choice.label,    // ← ORIGINAL DB label (A–E in canonical order)
-	    textMd: choice.textMd,
-	  })),
-	};
+// question-view-controller.ts:77-81
+choices: buildShuffledChoiceViews(question, userId).map((choice) => ({
+  id: choice.choiceId,
+  label: choice.displayLabel,  // ← NOW SHUFFLED (was canonical)
+  textMd: choice.textMd,
+})),
 ```
 
-**This controller does NOT shuffle.** It returns choices in canonical DB order with the authored labels (A–E). It does not compute the shuffle seed — it returns canonical labels as stored.
-
-### Path B: `SubmitAnswer` / `GetPreviousAttempt` (use-case layer)
-
-These use cases call `buildShuffledChoiceViews(question, userId)` to produce `choiceExplanations` with **shuffled** `displayLabel` values.
-
-**The result:** The QuestionCard renders choices with original DB labels (Path A), while the Feedback component renders "Why other answers are wrong" with shuffled labels (Path B). The letter labels don't match.
-
-### Why it works for practice sessions but not standalone question pages
-
-For practice sessions (Quick Practice, Tutor, Exam), the `GetNextQuestion` use case serves choices through `mapChoicesForOutput()` which **does** shuffle via `buildShuffledChoiceViews()`. Both the question card and the feedback card use shuffled labels — they match.
-
-For standalone question pages (`/app/questions/[slug]`), `getQuestionBySlug` serves the question data **without** shuffling. But `submitAnswer` / `getPreviousAttempt` returns feedback **with** shuffling. Mismatch.
-
-### Path diagram (the desync)
+### Current state (all paths consistent)
 
 ```text
-PRACTICE SESSIONS (consistent — both shuffled):
-  GetNextQuestion ──[shuffled labels]──→ QuestionCard ✓
-  SubmitAnswer ────[shuffled labels]──→ Feedback      ✓
-  Labels match.
-
-STANDALONE QUESTION PAGE (BS-011 Bug B — inconsistent):
-  getQuestionBySlug ──[original DB labels]──→ QuestionCard ✗
-  submitAnswer ───────[shuffled labels]────→ Feedback      ✗
-  getPreviousAttempt ─[shuffled labels]────→ Feedback      ✗
-  Letters DON'T MATCH.
+ALL CONTEXTS (consistent — all shuffled):
+  getQuestionBySlug ─[shuffled labels]──→ QuestionCard ✓
+  GetNextQuestion ───[shuffled labels]──→ QuestionCard ✓
+  SubmitAnswer ──────[shuffled labels]──→ Feedback      ✓
+  GetPreviousAttempt [shuffled labels]──→ Feedback      ✓
+  Labels always match.
 ```
 
-### Root cause summary
-
-`question-view-controller.ts:getQuestionBySlug` returns `choice.label` (the canonical/authored label from the database), while `submit-answer.ts:mapChoiceExplanations` and `get-previous-attempt.ts` return `choice.displayLabel` (the shuffled label). The QuestionCard on the `/app/questions/[slug]` page renders the original labels, but the Feedback card renders shuffled labels. Since the shuffle reorders choices, the letter assignments diverge.
-
-### Why this is deterministic per user (not intermittent)
-
-For a given `(userId, questionId)` pair, the shuffle is deterministic — the same user will see the same shuffled order on every load. That means the desync is not “flaky”: if a user sees a mismatch for a question once, it will keep happening for that user.
-
-An identity permutation *is* possible (probability `1 / N!` for `N` choices), which means some user+question pairs may not visibly reproduce the bug.
+All four callers of `buildShuffledChoiceViews` produce consistent shuffled labels. The shuffle remains deterministic per `(userId, questionId)` pair.
 
 ---
 
@@ -370,12 +345,16 @@ An identity permutation *is* possible (probability `1 / N!` for `N` choices), wh
 
 ---
 
-## 10. Known Bugs in This Pipeline
+## 10. Resolved Bugs in This Pipeline
 
-| Bug | Severity | Location in Pipeline | Reference |
-|-----|----------|---------------------|-----------|
-| **Bug B: Choice label desync** | Medium-High | Step 6 — controller returns original labels, use case returns shuffled labels | BS-011 §Bug B |
-| **Bug A: Result-dependent `mode=review` wiring** | Medium | Not in content pipeline — History Questions tab uses `mode=review` only for Correct rows (`history-questions-tab.tsx:330-332`) | BS-011 §Bug A |
+Both bugs identified during the BS-011 audit have been fixed:
+
+| Bug | Fix | Reference |
+|-----|-----|-----------|
+| **Bug B: Choice label desync** | `getQuestionBySlug` now calls `buildShuffledChoiceViews()` — all paths produce consistent shuffled labels | SPEC-025 |
+| **Bug A: Result-dependent `mode=review` wiring** | History Questions tab now routes all rows through `mode=review` consistently, regardless of result | SPEC-026 |
+
+No known content-pipeline bugs remain as of 2026-02-16.
 
 ---
 

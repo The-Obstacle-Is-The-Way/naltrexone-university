@@ -24,6 +24,12 @@ describe('QuestionView', () => {
     };
   }
 
+  function getBottomActionBar(doc: Document): HTMLDivElement | null {
+    return doc.querySelector<HTMLDivElement>(
+      '[data-testid="bottom-action-bar"]',
+    );
+  }
+
   const sharedSessionNavigation = {
     questions: [
       { slug: 'q1', order: 1, isCorrect: false },
@@ -284,7 +290,10 @@ describe('QuestionView', () => {
     );
 
     const doc = new DOMParser().parseFromString(html, 'text/html');
-    const previousLink = Array.from(doc.querySelectorAll('a')).find((a) =>
+    const bottomBar = getBottomActionBar(doc);
+    if (!bottomBar) throw new Error('Expected bottom action bar');
+
+    const previousLink = Array.from(bottomBar.querySelectorAll('a')).find((a) =>
       a.textContent?.includes('← Previous'),
     );
 
@@ -308,7 +317,10 @@ describe('QuestionView', () => {
     );
 
     const doc = new DOMParser().parseFromString(html, 'text/html');
-    const nextLink = Array.from(doc.querySelectorAll('a')).find((a) =>
+    const bottomBar = getBottomActionBar(doc);
+    if (!bottomBar) throw new Error('Expected bottom action bar');
+
+    const nextLink = Array.from(bottomBar.querySelectorAll('a')).find((a) =>
       a.textContent?.includes('Next →'),
     );
 
@@ -331,7 +343,20 @@ describe('QuestionView', () => {
       />,
     );
 
-    expect(html).toContain('Question 2 of 3');
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const indicator = Array.from(doc.querySelectorAll('p')).find((p) =>
+      p.textContent?.includes('Question 2 of 3'),
+    );
+    expect(indicator).not.toBeNull();
+    expect(indicator?.classList.contains('text-center')).toBe(true);
+
+    // Regression guard: the old inline indicator was removed in SPEC-030.
+    // Class-based selector is intentional here — we're asserting a removed
+    // element is absent, so there's no production element to tag with data-testid.
+    const inlineIndicator = Array.from(
+      doc.querySelectorAll('span.text-sm.text-muted-foreground'),
+    ).find((span) => span.textContent?.includes('Question 2 of 3'));
+    expect(inlineIndicator).toBeUndefined();
   });
 
   it('renders ReviewQuestionNavigator when sessionNavigation is present', async () => {
@@ -391,11 +416,24 @@ describe('QuestionView', () => {
     );
 
     const doc = new DOMParser().parseFromString(html, 'text/html');
-    const previousLink = Array.from(doc.querySelectorAll('a')).find((a) =>
+    const bottomBar = getBottomActionBar(doc);
+    if (!bottomBar) throw new Error('Expected bottom action bar');
+
+    const previousLink = Array.from(bottomBar.querySelectorAll('a')).find((a) =>
       a.textContent?.includes('← Previous'),
+    );
+    const nextLink = Array.from(bottomBar.querySelectorAll('a')).find((a) =>
+      a.textContent?.includes('Next →'),
     );
 
     expect(previousLink).toBeUndefined();
+    expect(nextLink?.getAttribute('href')).toBe(
+      toQuestionRoute('q2', {
+        from: 'practice',
+        mode: 'review',
+        sessionId: 'session_123',
+      }),
+    );
   });
 
   it('does not render a next link on the last question', async () => {
@@ -417,11 +455,69 @@ describe('QuestionView', () => {
     );
 
     const doc = new DOMParser().parseFromString(html, 'text/html');
-    const nextLink = Array.from(doc.querySelectorAll('a')).find((a) =>
+    const bottomBar = getBottomActionBar(doc);
+    if (!bottomBar) throw new Error('Expected bottom action bar');
+
+    const previousLink = Array.from(bottomBar.querySelectorAll('a')).find((a) =>
+      a.textContent?.includes('← Previous'),
+    );
+    const nextLink = Array.from(bottomBar.querySelectorAll('a')).find((a) =>
       a.textContent?.includes('Next →'),
     );
 
     expect(nextLink).toBeUndefined();
+    expect(previousLink?.getAttribute('href')).toBe(
+      toQuestionRoute('q1', {
+        from: 'practice',
+        mode: 'review',
+        sessionId: 'session_123',
+      }),
+    );
+  });
+
+  it('renders Previous/Next links alongside Submit for unanswered session questions', async () => {
+    const { QuestionView } = await import('./question-page-client');
+
+    const html = renderToStaticMarkup(
+      <QuestionView
+        {...createBaseProps()}
+        origin="history"
+        sessionId="session_123"
+        sessionNavigation={sharedSessionNavigation}
+        submitResult={null}
+      />,
+    );
+
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const bottomBar = getBottomActionBar(doc);
+    if (!bottomBar) throw new Error('Expected bottom action bar');
+
+    expect(bottomBar.textContent).toContain('Submit');
+    expect(bottomBar.textContent).toContain('← Previous');
+    expect(bottomBar.textContent).toContain('Next →');
+  });
+
+  it('renders Back button in bottom bar for unanswered session questions', async () => {
+    const { QuestionView } = await import('./question-page-client');
+
+    const html = renderToStaticMarkup(
+      <QuestionView
+        {...createBaseProps()}
+        origin="history"
+        sessionId="session_123"
+        sessionNavigation={sharedSessionNavigation}
+        submitResult={null}
+      />,
+    );
+
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const bottomBar = getBottomActionBar(doc);
+    if (!bottomBar) throw new Error('Expected bottom action bar');
+
+    const backLink = Array.from(bottomBar.querySelectorAll('a')).find((a) =>
+      a.textContent?.includes('Back to History'),
+    );
+    expect(backLink?.getAttribute('href')).toBe('/app/history?tab=sessions');
   });
 
   it('does not render the session navigation bar when sessionNavigation is null', async () => {
@@ -434,5 +530,11 @@ describe('QuestionView', () => {
     expect(html).not.toContain('← Previous');
     expect(html).not.toContain('Next →');
     expect(html).not.toContain('Question 1 of');
+
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const indicator = Array.from(doc.querySelectorAll('p')).find((p) =>
+      p.textContent?.includes('Question 1 of'),
+    );
+    expect(indicator).toBeUndefined();
   });
 });

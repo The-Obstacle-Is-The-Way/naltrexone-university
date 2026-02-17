@@ -8,25 +8,26 @@
 
 ## 1. Overview
 
-Questions appear in **5 distinct viewing contexts** across the application. Each context shares the same core display components (`QuestionCard`, `ChoiceButton`, `Feedback`) but differs in navigation chrome, action bars, state management, and data sources.
+Questions appear in **6 distinct viewing contexts** across the application (plus multiple “origin” variants on the question page). Each context shares the same core display components (`QuestionCard`, `ChoiceButton`, `Feedback`) but differs in navigation chrome, action bars, state management, and data sources.
 
 This document is the single source of truth for understanding how each context works today and what needs to change.
 
 ---
 
-## 2. The Five Contexts
+## 2. Viewing Contexts
 
 | # | Context | Route Pattern | Entry Point |
 |---|---------|---------------|-------------|
 | A | **Tutor Mode** (active session) | `/app/practice/[sessionId]` | Practice landing → Start session (tutor) |
 | B | **Exam Mode** (active session) | `/app/practice/[sessionId]` | Practice landing → Start session (exam) |
-| C | **Exam Review Stage** (pre-submit review) | `/app/practice/[sessionId]` (same URL, different view) | Exam mode → all questions answered → auto-transition |
+| C | **Exam Review Stage** (pre-submit review) | `/app/practice/[sessionId]` (same URL, different view) | Exam mode → click "Review answers" (top-right) |
 | D | **History Session Review** (post-session) | `/app/questions/[slug]?from=history&mode=review&sessionId=...` | History → Sessions tab → View breakdown → click question |
 | E | **History Individual Review** (standalone) | `/app/questions/[slug]?from=history&mode=review` | History → Questions tab → Review |
+| F | **Quick Practice** (ad-hoc, no session) | `/app/practice/quick` | Practice → Quick Practice |
 
 Additional minor contexts (use same `/app/questions/[slug]` route):
-- **Bookmarks Review:** `?from=bookmarks&mode=review`
-- **Dashboard Review:** `?from=dashboard&mode=review`
+- **Bookmarks Reattempt:** `?from=bookmarks` (no `mode=review` → no previous attempt auto-load)
+- **Dashboard Review:** `?from=dashboard&mode=review&attemptId=...`
 - **Practice Session Review:** `?from=practice&mode=review&sessionId=...` (from Session Summary → breakdown)
 
 ---
@@ -48,20 +49,20 @@ These three components are the **core question UI**, shared across all contexts:
 | Prop | Tutor (active) | Exam (active) | Review (all) |
 |------|---------------|---------------|--------------|
 | `correctChoiceId` | Set after submit | `null` (hidden) | Set from attempt data |
-| `disabled` | `false` until submitted | `false` until submitted | `true` always |
-| `onSelectChoice` | Interactive | Interactive | No-op (locked) |
+| `disabled` | `false` until submitted (also `true` during pending/loading) | `false` until submitted (also `true` during pending/loading) | `true` during pending/loading; effectively locked by `selectChoiceIfAllowed` guard when `submitResult` exists |
+| `onSelectChoice` | Interactive | Interactive | Still wired, but choice changes are blocked by `selectChoiceIfAllowed` once `submitResult` exists |
 
 Feedback is conditionally rendered by the parent:
-- **Tutor active:** `{submitResult && !isExamMode ? <Feedback ... /> : null}` (practice-view.tsx:237)
+- **Tutor active:** `{submitResult && !isExamMode ? <Feedback ... /> : null}` (`app/(app)/app/practice/components/practice-view.tsx:237`)
 - **Exam active:** Hidden (feedback deferred until review)
-- **Review modes:** `{submitResult ? <Feedback ... /> : null}` (question-page-client.tsx:254)
+- **Review modes:** `{submitResult ? <Feedback ... /> : null}` (`app/(app)/app/questions/[slug]/question-page-client.tsx:254`)
 
 ### 3.2 Navigator Components (Context-Specific)
 
 | Component | File | Context | Navigation Method |
 |-----------|------|---------|-------------------|
-| `QuestionNavigator` | `practice/[sessionId]/components/exam-review-view.tsx:24-85` | Active session (exam nav during answering + review stage) | **Callback-based** (`onNavigateQuestion(questionId)`) |
-| `ReviewQuestionNavigator` | `questions/[slug]/components/review-question-navigator.tsx` | Post-session review (History, Practice) | **Link-based** (`<Link href={toQuestionRoute(...)}>`) |
+| `QuestionNavigator` | `app/(app)/app/practice/[sessionId]/components/exam-review-view.tsx:24-85` | Active session (tutor + exam) during **answering** | **Callback-based** (`onNavigateQuestion(questionId)`) |
+| `ReviewQuestionNavigator` | `app/(app)/app/questions/[slug]/components/review-question-navigator.tsx` | Post-session review (History, Practice) | **Link-based** (`<Link href={toQuestionRoute(...)}>`) |
 
 **Key difference:** `QuestionNavigator` uses callbacks to change question within the same SPA page state. `ReviewQuestionNavigator` uses Next.js `<Link>` navigation to route between separate question pages.
 
@@ -69,7 +70,7 @@ Feedback is conditionally rendered by the parent:
 
 | Component | File | Location |
 |-----------|------|----------|
-| `SessionNavigationBar` | `questions/[slug]/question-page-client.tsx:98-156` | Inline (not standalone) |
+| `SessionNavigationBar` | `app/(app)/app/questions/[slug]/question-page-client.tsx:98-156` | Inline (not standalone) |
 
 Renders "← Previous / Question X of Y / Next →" via `<Link>` elements. Only appears when `sessionNavigation` is non-null (requires `sessionId` in URL).
 
@@ -79,14 +80,14 @@ Action bars are **not abstracted** — each context renders its own buttons inli
 
 | Context | File:Lines | Buttons |
 |---------|-----------|---------|
-| Active Practice (Tutor/Exam) | `practice/components/practice-view.tsx:245-290` | Submit, Next Question, Bookmark, Mark for review (exam only) |
-| Exam Review Stage | `practice/[sessionId]/components/exam-review-view.tsx:183-232` | Submit exam (with AlertDialog confirmation) |
-| Session Summary | `practice/[sessionId]/components/session-summary-view.tsx:92-102` | Back to Dashboard, View in History, Start another |
-| Question Review (all origins) | `questions/[slug]/question-page-client.tsx:262-294` | Submit (pre-answer), Try Again + Back (post-answer) |
+| Practice answering UI (active sessions + quick practice) | `app/(app)/app/practice/components/practice-view.tsx:245-290` | Submit, Next Question, Bookmark (+ Mark for review in exam sessions only) |
+| Exam Review Stage | `app/(app)/app/practice/[sessionId]/components/exam-review-view.tsx:183-232` | Submit exam (with AlertDialog confirmation) |
+| Session Summary | `app/(app)/app/practice/[sessionId]/components/session-summary-view.tsx:92-102` | Back to Dashboard, View in History, Start another |
+| Question page (all origins) | `app/(app)/app/questions/[slug]/question-page-client.tsx:262-294` | Submit (pre-answer), Try Again + Back (post-answer) |
 
 ### 3.5 Back Links
 
-Handled by `getOriginUi()` in `questions/[slug]/question-page-client.tsx:49-96`:
+Handled by `getOriginUi()` in `app/(app)/app/questions/[slug]/question-page-client.tsx:49-96`:
 
 | Origin (`from=`) | `sessionId` present? | Back Label | Back Href |
 |-------------------|---------------------|------------|-----------|
@@ -97,7 +98,7 @@ Handled by `getOriginUi()` in `questions/[slug]/question-page-client.tsx:49-96`:
 | `bookmarks` | — | "Back to Bookmarks" | `/app/bookmarks` |
 | default | — | "Back to Dashboard" | `/app/dashboard` |
 
-`historyHref` is validated by `parseHistoryHref()` (lines 35-47) to prevent open-redirect attacks — only `/app/history?tab=sessions|questions` URLs are allowed.
+`historyHref` is validated by `parseHistoryHref()` (`app/(app)/app/questions/[slug]/question-page-client.tsx:35-47`) to prevent open-redirect attacks — only `/app/history?tab=sessions|questions` URLs are allowed.
 
 ---
 
@@ -108,9 +109,9 @@ Handled by `getOriginUi()` in `questions/[slug]/question-page-client.tsx:49-96`:
 ```
 Route:     /app/practice/[sessionId]
 Server:    app/(app)/app/practice/[sessionId]/page.tsx
-Client:    practice-session-page-client.tsx → PracticeSessionPageView → PracticeView
-Controller: use-practice-session-page-controller.ts
-State core: practice/shared/use-question-flow-core.ts
+Client:    app/(app)/app/practice/[sessionId]/practice-session-page-client.tsx → PracticeSessionPageView → PracticeView
+Controller: app/(app)/app/practice/[sessionId]/hooks/use-practice-session-page-controller.ts
+State core: app/(app)/app/practice/shared/use-question-flow-core.ts
 ```
 
 **Component hierarchy:**
@@ -118,7 +119,7 @@ State core: practice/shared/use-question-flow-core.ts
 PracticeSessionPage (server)
   └─ PracticeSessionPageClient
        └─ PracticeSessionPageView
-            ├─ QuestionNavigator (if navigator data loaded, exam mode only)
+            ├─ QuestionNavigator (if navigator data loaded; tutor + exam)
             └─ PracticeView
                  ├─ Header: "Tutor Session" / "Question X of Y — Explanations shown after each answer."
                  ├─ End session button (top-right)
@@ -136,8 +137,8 @@ PracticeSessionPage (server)
 
 **Data flow for "Next Question":**
 1. User clicks "Next Question"
-2. `onNextQuestion()` → `loadNextQuestion()` (question-flow-actions.ts)
-3. State cleared: `setSelectedChoiceId(null)`, `setSubmitResult(null)` (line 47-48)
+2. `onNextQuestion()` → `loadNextQuestion()` (`app/(app)/app/practice/[sessionId]/practice-session-page-logic.ts`, which calls `runLoadQuestionFlow()` in `app/(app)/app/practice/shared/question-flow-actions.ts`)
+3. State cleared: `setSelectedChoiceId(null)`, `setSubmitResult(null)` (`app/(app)/app/practice/shared/question-flow-actions.ts:47-48`)
 4. Server action `getNextQuestion({ sessionId })` fetches next question
 5. On success: `setLoadState({ status: 'ready' })` triggers `syncQuestionStateFromDraftOrSession()`
 6. Sync restores `selectedChoiceId` and `isAnswered` from `session.latestSelectedChoiceId`
@@ -148,18 +149,19 @@ PracticeSessionPage (server)
 Same component tree as Tutor, differentiated by `sessionInfo.mode === 'exam'`:
 
 **Differences from Tutor:**
-- `correctChoiceId` forced to `null` (practice-view.tsx:90-92) — no green/red highlighting during exam
-- Feedback hidden: `{submitResult && !isExamMode ? ... : null}` (line 237)
-- "Mark for review" button visible (lines 277-288)
+- `correctChoiceId` forced to `null` (`app/(app)/app/practice/components/practice-view.tsx:90-92`) — no green/red highlighting during exam
+- Feedback hidden: `{submitResult && !isExamMode ? ... : null}` (`app/(app)/app/practice/components/practice-view.tsx:237`)
+- After submit, exam mode **auto-advances** to the next question (unless last) via `maybeAutoAdvanceAfterSubmit` in `usePracticeSessionPageController`
+- "Mark for review" button visible (`app/(app)/app/practice/components/practice-view.tsx:277-288`)
 - "End session" becomes "Review answers" (triggers exam review stage)
-- QuestionNavigator visible during answering (shows answered/unanswered/marked status)
+- QuestionNavigator does **not** reveal correctness in exam mode (answered buttons are labeled "Answered", not "Correct/Incorrect")
 
 ### Context C: Exam Review Stage
 
-When all exam questions are answered (or user clicks "Review answers"), `PracticeSessionPageView` switches to `ExamReviewView`:
+When the user clicks "Review answers" (top-right) in exam mode, `PracticeSessionPageView` loads review data and switches to `ExamReviewView`:
 
 ```
-PracticeSessionPageView (line 111: if (review) → ExamReviewView)
+PracticeSessionPageView (app/(app)/app/practice/[sessionId]/components/practice-session-page-view.tsx:111 — if (review) → ExamReviewView)
   └─ ExamReviewView
        ├─ Header: "Review Questions"
        ├─ Stats cards: Answered / Unanswered / Marked
@@ -175,8 +177,8 @@ PracticeSessionPageView (line 111: if (review) → ExamReviewView)
 Entry:     /app/history?tab=sessions → "View breakdown" → click question link
 Route:     /app/questions/[slug]?from=history&mode=review&sessionId={uuid}&historyHref={encoded}
 Server:    app/(app)/app/questions/[slug]/page.tsx
-Client:    question-page-client.tsx → QuestionView
-Controller: use-question-page-controller.ts
+Client:    app/(app)/app/questions/[slug]/question-page-client.tsx → QuestionView
+Controller: app/(app)/app/questions/[slug]/use-question-page-controller.ts
 ```
 
 **Component hierarchy:**
@@ -187,15 +189,17 @@ QuestionPage (server)
             ├─ Header: "Question" / "Reviewing a question from your history." / "Back to History"
             ├─ ReviewQuestionNavigator (color-coded grid)
             ├─ SessionNavigationBar ("← Previous / Question X of Y / Next →")
-            ├─ QuestionCard (shared) — disabled, shows previous answer
-            ├─ Feedback (shared) — always visible
-            └─ Action bar: [Try Again] [Back to History]
+            ├─ QuestionCard (shared)
+            ├─ Feedback (shared) — shown when `submitResult` exists
+            └─ Action bar:
+                 - Answered question (has previous attempt): [Try Again] [Back to History]
+                 - Unanswered question (no previous attempt): [Submit] only (falls back to attempt mode)
 ```
 
 **State management:**
 - `useQuestionPageController` loads question via `getQuestionBySlug()`
-- When `mode=review`, calls `loadPreviousAttempt()` which returns full `SubmitAnswerOutput`
-- This populates BOTH `selectedChoiceId` AND `submitResult` (including `correctChoiceId`, `explanationMd`)
+- When `mode=review`, calls `loadPreviousAttempt()` which returns a full `SubmitAnswerOutput` **when an attempt exists**
+- If `getPreviousAttempt()` returns `null` (e.g., session question was never answered), the page remains in attempt mode: `selectedChoiceId=null`, `submitResult=null`
 - Session navigation loaded via `getPracticeSessionReview({ sessionId })` — cached per sessionId
 - Navigation is URL-driven (`<Link>` elements) — fully supports browser back/forward
 
@@ -210,9 +214,31 @@ Route:     /app/questions/[slug]?from=history&mode=review&historyHref={encoded}
 
 **Key differences from Context D:**
 - `sessionNavigation` is `null` (no sessionId → no sibling questions)
-- `ReviewQuestionNavigator` NOT rendered (line 200: `if (props.sessionNavigation)`)
+- `ReviewQuestionNavigator` NOT rendered (`app/(app)/app/questions/[slug]/question-page-client.tsx:200` — `if (props.sessionNavigation)`)
 - `SessionNavigationBar` NOT rendered
 - Only: QuestionCard + Feedback + [Try Again] [Back to History]
+
+### Context F: Quick Practice (Ad-hoc, No Session)
+
+```
+Route:     /app/practice/quick
+Server:    app/(app)/app/practice/quick/page.tsx
+Client:    app/(app)/app/practice/quick/quick-practice-client.tsx → PracticeView
+Controller: app/(app)/app/practice/hooks/use-practice-question-flow.ts
+State core: app/(app)/app/practice/shared/use-question-flow-core.ts
+```
+
+**Component hierarchy:**
+```
+QuickPracticePage (server)
+  └─ QuickPracticeClient
+       └─ PracticeView
+            ├─ Header: "Quick Practice"
+            ├─ Top-right link: "Back to Practice"
+            ├─ QuestionCard (shared)
+            ├─ Feedback (shared) — shown immediately after submit
+            └─ Action bar: [Submit] [Next Question] [Bookmark]
+```
 
 ---
 
@@ -220,26 +246,25 @@ Route:     /app/questions/[slug]?from=history&mode=review&historyHref={encoded}
 
 ### 5.1 Feature Presence
 
-| Feature | A: Tutor | B: Exam | C: Exam Review | D: Session Review | E: Individual Review |
-|---------|:--------:|:-------:|:--------------:|:-----------------:|:--------------------:|
-| QuestionCard | Yes | Yes | No (list view) | Yes | Yes |
-| Feedback (explanation) | Immediate | Hidden | No | Always | Always |
-| Can submit answer | Yes | Yes | No | No | No |
-| Can reattempt | No | No | No | Yes ("Try Again") | Yes ("Try Again") |
-| Next Question button | Yes | Yes | No | No | No |
-| Previous Question button | **No** | **No** | No | Yes (← Previous link) | No |
-| Question Navigator grid | Exam only | Yes | No (inline list) | Yes (color-coded) | No |
-| Sequential nav (X of Y) | In description | In description | No | Yes (inline row) | No |
-| Mark for review | No | Yes | View only | No | No |
-| Bookmark button | Yes | Yes | No | No | No |
-| Back link | Dashboard | Dashboard | N/A | History (preserved) | History (preserved) |
-| End/Submit button | End session | Review answers | Submit exam | N/A | N/A |
+| Feature | A: Tutor | B: Exam | C: Exam Review | D: Session Review | E: Individual Review | F: Quick Practice |
+|---------|:--------:|:-------:|:--------------:|:-----------------:|:--------------------:|:----------------:|
+| QuestionCard | Yes | Yes | No (list view) | Yes | Yes | Yes |
+| Feedback (explanation) | Immediate | Hidden | No | When answered (falls back when unanswered) | Always | Immediate |
+| Can submit answer | Yes | Yes | No | Only when unanswered (answered questions are review-locked) | No | Yes |
+| Can reattempt | No | No | No | Yes ("Try Again" when answered) | Yes ("Try Again") | No |
+| Next Question button | Yes | Yes | No | No | No | Yes |
+| Previous Question button | **No** | **No** | No | Yes (← Previous link) | No | No |
+| Question Navigator grid | Yes | Yes | No (inline list) | Yes (color-coded) | No | No |
+| Sequential nav (X of Y) | In description | In description | No | Yes (inline row) | No | No |
+| Mark for review | No | Yes | View only | No | No | No |
+| Bookmark button | Yes | Yes | No | No | No | Yes |
+| Top-right control | End session | Review answers | None | Back to History (preserved) | Back to History (preserved) | Back to Practice |
 
 ### 5.2 State Persistence
 
 | Aspect | Active Practice | Session Review | Individual Review |
 |--------|:--------------:|:--------------:|:-----------------:|
-| Answer selection restored on revisit | Partial (choice only) | Full | Full |
+| Answer selection restored on revisit | Partial (choice only) | Full (answered questions) | Full |
 | Correct/incorrect highlighting | **Lost on revisit** | Preserved | Preserved |
 | Explanation visible on revisit | **Lost on revisit** | Preserved | Preserved |
 | Data source for restoration | `session.latestSelectedChoiceId` | `getPreviousAttempt()` | `getPreviousAttempt()` |
@@ -256,14 +281,14 @@ In Tutor Mode, when a user:
 3. Uses the Question Navigator to go back to Question 1
 
 **Expected:** Question 1 shows the submitted answer, correct/incorrect highlighting, and explanation.
-**Actual:** Question 1 appears unanswered — no highlighting, no explanation. However, the Navigator's aria-labels correctly say "Question 1: Incorrect".
+**Actual:** Question 1 restores the selected choice and locks the question, but shows no correctness highlighting or explanation. However, the Navigator's aria-labels correctly say "Question 1: Incorrect".
 
 ### Root Cause
 
-The `syncQuestionStateFromDraftOrSession()` function in `use-question-flow-core.ts:125-153` only restores **two** of the three needed state values:
+The `syncQuestionStateFromDraftOrSession()` function in `app/(app)/app/practice/shared/use-question-flow-core.ts:125-153` only restores **two** of the three needed state values:
 
 ```typescript
-// use-question-flow-core.ts:133-144
+// app/(app)/app/practice/shared/use-question-flow-core.ts:133-144
 const sessionSelectedChoiceId = nextQuestion.session?.latestSelectedChoiceId;
 if (typeof sessionSelectedChoiceId === 'string') {
   setSelectedChoiceId(sessionSelectedChoiceId);  // RESTORED
@@ -273,7 +298,7 @@ if (typeof sessionSelectedChoiceId === 'string') {
 }
 ```
 
-Meanwhile, `runLoadQuestionFlow` in `question-flow-actions.ts:46-48` clears all state before fetching:
+Meanwhile, `runLoadQuestionFlow` in `app/(app)/app/practice/shared/question-flow-actions.ts:46-50` clears all state before fetching:
 
 ```typescript
 input.setSelectedChoiceId(null);
@@ -281,9 +306,9 @@ input.setSubmitResult(null);       // Cleared and never restored
 input.setSubmitIdempotencyKey(null);
 ```
 
-### Why It Can't Be Fixed With Current Data
+### Why It Can't Be Fixed With The Current `NextQuestion` Payload Alone
 
-The `NextQuestion` type (get-next-question.ts:26-41) only includes:
+The `NextQuestion` type (`src/application/use-cases/get-next-question.ts:26-41`) only includes:
 - `session.latestSelectedChoiceId` — which choice was selected
 - `session.latestIsCorrect` — whether it was correct (boolean)
 
@@ -295,16 +320,17 @@ It does **NOT** include:
 ### Why History Review Works
 
 The question review page uses a completely different data path:
-1. `useQuestionPageController` calls `loadPreviousAttempt()` (question-page-logic.ts)
+1. `useQuestionPageController` calls `loadPreviousAttempt()` (`app/(app)/app/questions/[slug]/question-page-logic.ts`)
 2. This fetches via `getPreviousAttempt` server action → `GetPreviousAttempt` use case
 3. Returns a full `SubmitAnswerOutput` with ALL fields (correctChoiceId, explanationMd, etc.)
 4. Both `selectedChoiceId` AND `submitResult` are populated
 
 ### Fix Direction
 
-Two approaches:
+Three viable approaches:
 1. **Enhance `NextQuestion`** to include `correctChoiceId` + `explanationMd` when question was previously answered in this session (requires backend change)
 2. **Client-side cache:** Store `submitResult` per-questionId in a `Map<string, SubmitAnswerOutput>` ref, and restore from cache on revisit (frontend-only, but doesn't survive page refresh)
+3. **Fetch attempt details on revisit (tutor-only):** When `nextQuestion.session.latestSelectedChoiceId` exists in tutor mode but `submitResult` is null, call `getPreviousAttempt({ sessionId, questionId })` and hydrate `submitResult` from the response (must be gated to tutor mode to avoid leaking answers in active exam sessions)
 
 ---
 
@@ -314,7 +340,7 @@ Two approaches:
 
 | Decision | Rationale | Source |
 |----------|-----------|--------|
-| No "Previous" in active practice | Pedagogical: answer linearly, don't second-guess | SPEC-020 |
+| No "Previous" in active practice | Current implementation has no bottom-bar Previous; no explicit rationale found in specs as of 2026-02-16 | Implementation (`PracticeView`) |
 | Session context required for sequential nav | URL-driven: no sessionId = no sibling questions | SPEC-027 |
 | Navigator grid above sequential nav | Hierarchy: random-access (grid) → linear (prev/next) → content | SPEC-028 |
 | `historyHref` preservation | Carry pagination + filters through review navigation | DEBT-217 |
@@ -328,7 +354,7 @@ Two approaches:
 | `mode=review` | Review contexts | Signals read-only view with previous attempt loaded |
 | `sessionId` | Session-based contexts | Enables navigator grid + sequential nav |
 | `historyHref` | History-based contexts | Preserves history page pagination/filter state |
-| `attemptId` | Rare | Specific attempt to load (optional) |
+| `attemptId` | Dashboard review | Specific attempt to load (attempt identity) |
 
 ### 7.3 Two Navigator Implementations
 
@@ -340,7 +366,7 @@ The codebase has two navigators that look similar but serve different contexts:
 | Navigation | `onNavigateQuestion(questionId)` callback | `<Link href={toQuestionRoute(...)}>` routing |
 | Color coding | default/secondary/outline (answered status) | success/destructive/outline (correctness) |
 | Mark-for-review indicator | Red dot overlay | Not applicable |
-| `aria-label` format | "Question N: Current, Marked for review, Answered" | "Question N: Correct/Incorrect/Unanswered, Current" |
+| `aria-label` format | "Question N: Current, Marked for review, (Correct/Incorrect/Answered/Unanswered)" | "Question N: Correct/Incorrect/Unanswered, Current" |
 
 ---
 
@@ -402,6 +428,8 @@ The codebase has two navigators that look similar but serve different contexts:
 |------|------|
 | `app/(app)/app/practice/[sessionId]/page.tsx` | Server component: passes sessionId to client |
 | `app/(app)/app/practice/[sessionId]/practice-session-page-client.tsx` | Client entry for practice session |
+| `app/(app)/app/practice/quick/page.tsx` | Server component: quick practice |
+| `app/(app)/app/practice/quick/quick-practice-client.tsx` | Client entry for quick practice |
 | `app/(app)/app/questions/[slug]/page.tsx` | Server component: passes slug + search params to client |
 | `app/(app)/app/questions/[slug]/question-page-client.tsx` | Client entry for question review + QuestionView + SessionNavigationBar |
 | `app/(app)/app/history/page.tsx` | Server component: history page |
@@ -411,14 +439,14 @@ The codebase has two navigators that look similar but serve different contexts:
 
 | File | Component | Used By |
 |------|-----------|---------|
-| `practice/[sessionId]/components/practice-session-page-view.tsx` | `PracticeSessionPageView` | Practice session client |
-| `practice/components/practice-view.tsx` | `PracticeView` | Active answering (tutor + exam) |
-| `practice/[sessionId]/components/exam-review-view.tsx` | `ExamReviewView`, `QuestionNavigator` | Exam review stage |
-| `practice/[sessionId]/components/session-summary-view.tsx` | `SessionSummaryView` | Post-session summary |
-| `questions/[slug]/components/review-question-navigator.tsx` | `ReviewQuestionNavigator` | Session-based question review |
-| `history/components/history-sessions-tab.tsx` | `HistorySessionsTab` | History sessions list |
-| `history/components/history-questions-tab.tsx` | `HistoryQuestionsTab` | History questions list |
-| `shared/components/session-breakdown-list.tsx` | `SessionBreakdownList` | Session summary + history breakdown |
+| `app/(app)/app/practice/[sessionId]/components/practice-session-page-view.tsx` | `PracticeSessionPageView` | Practice session client |
+| `app/(app)/app/practice/components/practice-view.tsx` | `PracticeView` | Active answering (sessions + quick practice) |
+| `app/(app)/app/practice/[sessionId]/components/exam-review-view.tsx` | `ExamReviewView`, `QuestionNavigator` | Exam review stage + active-session navigator grid |
+| `app/(app)/app/practice/[sessionId]/components/session-summary-view.tsx` | `SessionSummaryView` | Post-session summary |
+| `app/(app)/app/questions/[slug]/components/review-question-navigator.tsx` | `ReviewQuestionNavigator` | Session-based question review |
+| `app/(app)/app/history/components/history-sessions-tab.tsx` | `HistorySessionsTab` | History sessions list |
+| `app/(app)/app/history/components/history-questions-tab.tsx` | `HistoryQuestionsTab` | History questions list |
+| `app/(app)/app/shared/components/session-breakdown-list.tsx` | `SessionBreakdownList` | Session summary + history breakdown |
 
 ### Shared UI Components
 
@@ -433,14 +461,17 @@ The codebase has two navigators that look similar but serve different contexts:
 
 | File | Hook/Function | Role |
 |------|---------------|------|
-| `practice/[sessionId]/hooks/use-practice-session-page-controller.ts` | `usePracticeSessionPageController` | Master controller for practice session |
-| `practice/shared/use-question-flow-core.ts` | `useQuestionFlowCore` | Shared question state (selection, submission, loading) |
-| `practice/shared/question-flow-actions.ts` | `runLoadQuestionFlow`, `runSubmitAnswerFlow` | Async action flows with timeout |
-| `practice/[sessionId]/hooks/use-practice-session-question-flow.ts` | `usePracticeSessionQuestionFlow` | Session-specific question flow (next, navigate, submit) |
-| `practice/[sessionId]/hooks/use-practice-session-mark-for-review.ts` | `usePracticeSessionMarkForReview` | Mark-for-review toggle (exam only) |
-| `practice/hooks/use-practice-question-bookmarks.ts` | `usePracticeQuestionBookmarks` | Bookmark toggle + status |
-| `questions/[slug]/use-question-page-controller.ts` | `useQuestionPageController` | Master controller for question review page |
-| `questions/[slug]/question-page-logic.ts` | `loadPreviousAttempt`, `buildSessionNavigation` | Pure logic for question page |
+| `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-page-controller.ts` | `usePracticeSessionPageController` | Master controller for practice session |
+| `app/(app)/app/practice/shared/use-question-flow-core.ts` | `useQuestionFlowCore` | Shared question state (selection, submission, loading) |
+| `app/(app)/app/practice/shared/question-flow-actions.ts` | `runLoadQuestionFlow`, `runSubmitAnswerFlow` | Async action flows with timeout |
+| `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-question-flow.ts` | `usePracticeSessionQuestionFlow` | Session-specific question flow (next, navigate, submit) |
+| `app/(app)/app/practice/[sessionId]/practice-session-page-logic.ts` | `loadNextQuestion`, `createLoadNextQuestionAction`, `submitAnswerForQuestion`, `maybeAutoAdvanceAfterSubmit`, `endSession`, `createNavigatorEffect`, `createSummaryReviewEffect` | Session runner async flows + review/navigator wiring |
+| `app/(app)/app/practice/hooks/use-practice-question-flow.ts` | `usePracticeQuestionFlow` | Quick practice/ad-hoc question flow (filters-based) |
+| `app/(app)/app/practice/practice-page-logic.ts` | `loadNextQuestion`, `submitAnswerForQuestion` | Quick practice async flows (filters-based) |
+| `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-mark-for-review.ts` | `usePracticeSessionMarkForReview` | Mark-for-review toggle (exam only) |
+| `app/(app)/app/practice/hooks/use-practice-question-bookmarks.ts` | `usePracticeQuestionBookmarks` | Bookmark toggle + status |
+| `app/(app)/app/questions/[slug]/use-question-page-controller.ts` | `useQuestionPageController` | Master controller for question page |
+| `app/(app)/app/questions/[slug]/question-page-logic.ts` | `loadPreviousAttempt` | Pure logic for question page (previous attempt hydration) |
 
 ### Route Utilities
 
@@ -464,7 +495,7 @@ The bottom action bar is implemented inline in 4 different places. A future spec
 
 ### 10.3 Navigator Convergence
 
-`QuestionNavigator` (exam) and `ReviewQuestionNavigator` (review) have similar visual layouts but different data sources and navigation methods. A shared base component with pluggable navigation (callback vs link) could reduce duplication, but the current approach is clear and well-tested.
+`QuestionNavigator` (active session) and `ReviewQuestionNavigator` (question page review) have similar visual layouts but different data sources and navigation methods. A shared base component with pluggable navigation (callback vs link) could reduce duplication, but the current approach is clear and well-tested.
 
 ---
 
@@ -486,4 +517,6 @@ The bottom action bar is implemented inline in 4 different places. A future spec
 
 | Date | Change |
 |------|--------|
-| 2026-02-16 | Initial version — comprehensive audit of all 5 question-viewing contexts. Documented state persistence bug in Tutor Mode, navigation architecture, shared vs context-specific components. |
+| 2026-02-16 | Initial version — comprehensive audit of question-viewing contexts. Documented state persistence bug in Tutor Mode, navigation architecture, shared vs context-specific components. |
+| 2026-02-16 | Accuracy pass — fixed `disabled` prop table (was oversimplified), removed non-existent `buildSessionNavigation` export from file index (logic is inline in controller). |
+| 2026-02-16 | Accuracy pass — corrected QuestionNavigator usage (not exam-only), fixed Bookmarks query params, documented unanswered “review mode” fallback behavior, and added Quick Practice context. |

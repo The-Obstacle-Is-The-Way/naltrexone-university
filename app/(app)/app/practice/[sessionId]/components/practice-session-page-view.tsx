@@ -1,3 +1,4 @@
+import { useCallback, useMemo } from 'react';
 import { PracticeView } from '@/app/(app)/app/practice/components/practice-view';
 import {
   fireAndForget,
@@ -59,6 +60,31 @@ export function PracticeSessionPageView(props: PracticeSessionPageViewProps) {
   };
   const navigator = props.navigator ?? null;
   const navigatorLoadState = props.navigatorLoadState ?? { status: 'idle' };
+  const currentQuestionId = props.question?.questionId ?? null;
+  const onNavigateQuestion = props.onNavigateQuestion;
+
+  const previousQuestionId = useMemo(() => {
+    if (!navigator || !currentQuestionId) return null;
+    const currentIdx = navigator.rows.findIndex(
+      (r) => r.questionId === currentQuestionId,
+    );
+    if (currentIdx <= 0) return null;
+
+    for (let i = currentIdx - 1; i >= 0; i -= 1) {
+      const row = navigator.rows[i];
+      if (!row) continue;
+      if (!row.isAvailable) continue;
+      return row.questionId;
+    }
+
+    return null;
+  }, [navigator, currentQuestionId]);
+
+  const onPreviousQuestion = useCallback(() => {
+    if (previousQuestionId && onNavigateQuestion) {
+      onNavigateQuestion(previousQuestionId);
+    }
+  }, [previousQuestionId, onNavigateQuestion]);
 
   if (props.summary) {
     return (
@@ -186,6 +212,10 @@ export function PracticeSessionPageView(props: PracticeSessionPageViewProps) {
       onSelectChoice={props.onSelectChoice}
       onSubmit={props.onSubmit}
       onNextQuestion={props.onNextQuestion}
+      onPreviousQuestion={
+        props.onNavigateQuestion ? onPreviousQuestion : undefined
+      }
+      hasPreviousQuestion={previousQuestionId !== null}
     />
   );
 }

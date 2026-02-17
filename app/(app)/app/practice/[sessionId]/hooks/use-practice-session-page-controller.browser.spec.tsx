@@ -76,9 +76,21 @@ function PracticeSessionPageControllerNavigationProbe() {
       <div data-testid="selected-choice-id">
         {output.selectedChoiceId ?? ''}
       </div>
+      <div data-testid="has-submit-result">
+        {String(output.submitResult !== null)}
+      </div>
+      <div data-testid="submit-result-correct-choice-id">
+        {output.submitResult?.correctChoiceId ?? ''}
+      </div>
+      <div data-testid="submit-result-explanation-md">
+        {output.submitResult?.explanationMd ?? ''}
+      </div>
       <div data-testid="can-submit">{String(output.canSubmit)}</div>
       <button type="button" onClick={() => output.onSelectChoice('choice_1')}>
         select-choice-1
+      </button>
+      <button type="button" onClick={() => void output.onSubmit()}>
+        submit-answer
       </button>
       <button type="button" onClick={() => output.onNextQuestion()}>
         next-question
@@ -708,6 +720,212 @@ describe('usePracticeSessionPageController (browser)', () => {
     await expect
       .element(screen.getByTestId('can-submit'))
       .toHaveTextContent('true');
+  });
+
+  it('restores submitResult when navigating away and back after submitting in tutor mode', async () => {
+    getNextQuestionMock
+      .mockResolvedValueOnce(
+        ok({
+          questionId: 'question-1',
+          slug: 'question-1',
+          stemMd: 'Question 1',
+          difficulty: 'easy',
+          choices: [
+            {
+              id: 'choice_1',
+              label: 'A',
+              textMd: 'Option A',
+              sortOrder: 1,
+            },
+            {
+              id: 'choice_2',
+              label: 'B',
+              textMd: 'Option B',
+              sortOrder: 2,
+            },
+          ],
+          session: {
+            sessionId: 'session-1',
+            mode: 'tutor',
+            index: 0,
+            total: 2,
+            isMarkedForReview: false,
+            latestSelectedChoiceId: null,
+            latestIsCorrect: null,
+          },
+        }),
+      )
+      .mockResolvedValueOnce(
+        ok({
+          questionId: 'question-2',
+          slug: 'question-2',
+          stemMd: 'Question 2',
+          difficulty: 'easy',
+          choices: [
+            {
+              id: 'choice_3',
+              label: 'A',
+              textMd: 'Option A',
+              sortOrder: 1,
+            },
+          ],
+          session: {
+            sessionId: 'session-1',
+            mode: 'tutor',
+            index: 1,
+            total: 2,
+            isMarkedForReview: false,
+            latestSelectedChoiceId: null,
+            latestIsCorrect: null,
+          },
+        }),
+      )
+      .mockResolvedValueOnce(
+        ok({
+          questionId: 'question-1',
+          slug: 'question-1',
+          stemMd: 'Question 1',
+          difficulty: 'easy',
+          choices: [
+            {
+              id: 'choice_1',
+              label: 'A',
+              textMd: 'Option A',
+              sortOrder: 1,
+            },
+            {
+              id: 'choice_2',
+              label: 'B',
+              textMd: 'Option B',
+              sortOrder: 2,
+            },
+          ],
+          session: {
+            sessionId: 'session-1',
+            mode: 'tutor',
+            index: 0,
+            total: 2,
+            isMarkedForReview: false,
+            latestSelectedChoiceId: 'choice_1',
+            latestIsCorrect: false,
+            previousSubmission: {
+              correctChoiceId: 'choice_2',
+              explanationMd: 'Because',
+              choiceExplanations: [
+                {
+                  choiceId: 'choice_1',
+                  displayLabel: 'A',
+                  textMd: 'Option A',
+                  isCorrect: false,
+                  explanationMd: null,
+                },
+                {
+                  choiceId: 'choice_2',
+                  displayLabel: 'B',
+                  textMd: 'Option B',
+                  isCorrect: true,
+                  explanationMd: 'This is correct.',
+                },
+              ],
+            },
+          },
+        }),
+      );
+
+    submitAnswerMock.mockResolvedValue(
+      ok({
+        attemptId: 'attempt-1',
+        isCorrect: false,
+        correctChoiceId: 'choice_2',
+        explanationMd: 'Because',
+        choiceExplanations: [
+          {
+            choiceId: 'choice_1',
+            displayLabel: 'A',
+            textMd: 'Option A',
+            isCorrect: false,
+            explanationMd: null,
+          },
+          {
+            choiceId: 'choice_2',
+            displayLabel: 'B',
+            textMd: 'Option B',
+            isCorrect: true,
+            explanationMd: 'This is correct.',
+          },
+        ],
+      }),
+    );
+
+    getBookmarksMock.mockResolvedValue(ok({ rows: [] }));
+    getPracticeSessionReviewMock.mockResolvedValue(
+      ok({
+        sessionId: 'session-1',
+        mode: 'tutor',
+        totalCount: 2,
+        answeredCount: 0,
+        markedCount: 0,
+        rows: [],
+      }),
+    );
+
+    const screen = await render(
+      <PracticeSessionPageControllerNavigationProbe />,
+    );
+
+    await expect
+      .element(screen.getByTestId('load-status'))
+      .toHaveTextContent('ready');
+    await expect
+      .element(screen.getByTestId('question-id'))
+      .toHaveTextContent('question-1');
+    await expect
+      .element(screen.getByTestId('has-submit-result'))
+      .toHaveTextContent('false');
+
+    await screen.getByRole('button', { name: 'select-choice-1' }).click();
+    await expect
+      .element(screen.getByTestId('selected-choice-id'))
+      .toHaveTextContent('choice_1');
+    await expect
+      .element(screen.getByTestId('can-submit'))
+      .toHaveTextContent('true');
+    await screen.getByRole('button', { name: 'submit-answer' }).click();
+
+    await expect
+      .element(screen.getByTestId('has-submit-result'))
+      .toHaveTextContent('true');
+    await expect
+      .element(screen.getByTestId('submit-result-correct-choice-id'))
+      .toHaveTextContent('choice_2');
+    await expect
+      .element(screen.getByTestId('submit-result-explanation-md'))
+      .toHaveTextContent('Because');
+
+    await screen.getByRole('button', { name: 'next-question' }).click();
+    await expect
+      .element(screen.getByTestId('question-id'))
+      .toHaveTextContent('question-2');
+    await expect
+      .element(screen.getByTestId('has-submit-result'))
+      .toHaveTextContent('false');
+
+    await screen.getByRole('button', { name: 'navigate-question-1' }).click();
+    await expect
+      .element(screen.getByTestId('question-id'))
+      .toHaveTextContent('question-1');
+    await expect
+      .element(screen.getByTestId('selected-choice-id'))
+      .toHaveTextContent('choice_1');
+    await expect
+      .element(screen.getByTestId('has-submit-result'))
+      .toHaveTextContent('true');
+    await expect
+      .element(screen.getByTestId('submit-result-correct-choice-id'))
+      .toHaveTextContent('choice_2');
+    await expect
+      .element(screen.getByTestId('submit-result-explanation-md'))
+      .toHaveTextContent('Because');
   });
 
   it('locks selection when loading a previously answered question', async () => {

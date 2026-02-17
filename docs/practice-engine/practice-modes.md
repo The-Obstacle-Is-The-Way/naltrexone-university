@@ -2,13 +2,13 @@
 
 > **Parent:** [Practice Engine Index](./index.md)
 > **Scope:** Ad-hoc, Tutor, and Exam modes — lifecycle, grading, concurrency
-> **Last Verified:** 2026-02-12
+> **Last Verified:** 2026-02-16
 
 ---
 
 ## 1. Mode Comparison
 
-The Practice Engine supports three distinct user experiences:
+The Practice Engine supports two session modes (tutor, exam) plus a stateless Quick Practice route:
 
 | Mode | Route | Session? | Explanation Timing | Progress | Summary |
 |------|-------|----------|-------------------|----------|---------|
@@ -58,7 +58,7 @@ For ad-hoc mode, `selectNextQuestionId()` prefers the **first unattempted** cand
 
 ## 5. Answer Grading
 
-`gradeAnswer(question, choiceId)` → `{ isCorrect, correctChoiceId }`. Pure domain function. The use case then:
+`gradeAnswer(question, choiceId)` → `{ isCorrect, correctChoiceId, correctLabel }`. Pure domain function. The use case then:
 1. Inserts an `Attempt` row
 2. If session: updates `questionStates` via CAS (optimistic concurrency, 3 retries)
 3. Returns grading result + explanations (gated by mode)
