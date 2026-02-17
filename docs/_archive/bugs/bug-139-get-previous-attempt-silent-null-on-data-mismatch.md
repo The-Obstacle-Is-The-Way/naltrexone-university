@@ -1,22 +1,26 @@
 # BUG-139: GetPreviousAttemptUseCase Silently Returns Null on Data Integrity Mismatch
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P3
 **Date:** 2026-02-16
+**Resolved:** 2026-02-17
+**Component:** Application — GetPreviousAttemptUseCase
 
 ---
 
 ## Description
 
-When `GetPreviousAttemptUseCase` fetches an attempt by ID and the attempt's `questionId` doesn't match `input.questionId`, it logs a warning and returns `null`. Callers cannot distinguish between "no attempt exists" and "data integrity mismatch." The mismatch scenario is reachable because `findByIdAndUserId()` does not filter by `questionId`.
+Prior to 2026-02-17, when `GetPreviousAttemptUseCase` fetched an attempt by ID and the attempt's `questionId` didn't match `input.questionId`, it logged a warning and returned `null`. Callers could not distinguish between "no attempt exists" and "data integrity mismatch." The mismatch scenario is reachable because `findByIdAndUserId()` does not filter by `questionId`.
 
-**Observed:** Mismatched `attemptId <> questionId` pairs produce a warning log and return `null` — identical to "no previous attempt."
+**Observed (pre-fix):** Mismatched `attemptId <> questionId` pairs produced a warning log and returned `null` — identical to "no previous attempt."
 
-**Expected:** A mismatch should either throw an `ApplicationError` or be explicitly documented as intentional behavior.
+**Expected:** A mismatch should throw an `ApplicationError` so callers can distinguish it from "no attempt exists."
+
+**Now (fixed):** The use case logs and throws `ApplicationError('NOT_FOUND', …)` on mismatch. The UI still falls back to attempt mode (review is best-effort), but the mismatch is now distinguishable via the action error code.
 
 ## Evidence: Full Vertical Trace
 
-### 1. The Bug — `src/application/use-cases/get-previous-attempt.ts:35-59`
+### 1. The Fix (Current) — `src/application/use-cases/get-previous-attempt.ts:37-64`
 
 ```typescript
     const attempt = input.attemptId
@@ -42,7 +46,10 @@ When `GetPreviousAttemptUseCase` fetches an attempt by ID and the attempt's `que
         },
         'Previous attempt does not match requested question',
       );
-      return null;
+      throw new ApplicationError(
+        'NOT_FOUND',
+        'Previous attempt does not belong to the requested question',
+      );
     }
 ```
 
@@ -78,7 +85,7 @@ A user visits `/app/questions/[slug]?attemptId=<attemptId>` where the `attemptId
 - Copy-pasted URLs with wrong parameters
 - Client-side state bugs that pair the wrong `attemptId` with a `questionId`
 
-### 4. Controller Passes Through Silently — `src/adapters/controllers/question-view-controller.ts:94-106`
+### 4. Controller Passes Through (createAction maps errors) — `src/adapters/controllers/question-view-controller.ts:94-106`
 
 ```typescript
 export const getPreviousAttempt = createAction({
@@ -96,9 +103,9 @@ export const getPreviousAttempt = createAction({
 });
 ```
 
-Returns `GetPreviousAttemptOutput | null`. The controller does not distinguish between `null` from "not found" vs `null` from "data mismatch."
+Returns `GetPreviousAttemptOutput | null` on success. If the use case throws an `ApplicationError` (e.g., `code: 'NOT_FOUND'`), `createAction` catches it and returns `{ ok: false, error: { code, message, … } }`, making the mismatch distinguishable from `{ ok: true, data: null }`.
 
-### 5. UI Treats Null as "No Previous Attempt" — `app/(app)/app/questions/[slug]/question-page-logic.ts:229-248`
+### 5. UI Treats Null/Error as "No Previous Attempt" — `app/(app)/app/questions/[slug]/question-page-logic.ts:229-248`
 
 ```typescript
   let res: ActionResult<GetPreviousAttemptOutput | null>;
@@ -123,24 +130,24 @@ Returns `GetPreviousAttemptOutput | null`. The controller does not distinguish b
   }
 ```
 
-When `null` is returned (from either "not found" or "data mismatch"), the UI shows **attempt mode** (blank choice selection + submit button) instead of **review mode** (showing the previous answer). The user has no indication that something went wrong.
+When a mismatch occurs, the controller returns `{ ok: false, error: { code: 'NOT_FOUND', … } }` and the UI falls back to **attempt mode** (blank choice selection + submit button) instead of **review mode** (showing the previous answer). The user has no indication that something went wrong (intentional best-effort UX), but the mismatch is now observable as a structured error code.
 
 ### 6. Test Confirms the Behavior — `src/application/use-cases/get-previous-attempt.test.ts:114-172`
 
-The test suite has a single test covering the mismatch scenario with two assertions, confirming the silent-null behavior is intentional but undocumented:
+The test suite has a regression test covering the mismatch scenario with two assertions:
 
-- Assertion 1 (line 160): verifies that `null` is returned when `attemptId` references a different question
-- Assertion 2 (lines 162-171): verifies that a warning is logged with correct context
+- Assertion 1 (lines 160-161): verifies that `ApplicationError` is thrown with `code: 'NOT_FOUND'`
+- Assertion 2 (lines 163-172): verifies that a warning is logged with correct context
 
 ### 7. Summary: The Indistinguishability Problem
 
-| Scenario | Use Case Returns | UI Behavior | User Experience |
-|----------|-----------------|-------------|-----------------|
-| No attempt exists | `null` | Attempt mode | Correct |
-| Attempt exists, wrong question | `null` | Attempt mode | **Misleading — user expected review** |
-| Network error / timeout | Exception → `null` | Attempt mode | Acceptable fallback |
+| Scenario | Use Case Returns | UI Behavior | Observability |
+|----------|-----------------|-------------|---------------|
+| No attempt exists | `null` | Attempt mode | Normal (no error code) |
+| Attempt exists, wrong question | `ApplicationError('NOT_FOUND')` | Attempt mode | **Distinguishable** (`NOT_FOUND`) |
+| Network error / timeout | Exception → `null` | Attempt mode | Acceptable fallback (no action result) |
 
-All three produce identical UI behavior, but only one indicates a potential data integrity problem.
+All three still produce identical UI behavior, but mismatches are now distinguishable from "no attempt" through structured error codes and logs.
 
 ## Root Cause
 
@@ -148,42 +155,36 @@ Design choice: the use case was written to be resilient against bad `attemptId` 
 
 ## Fix
 
-**Option A — Escalate to error (preferred for data integrity):**
+Throw `NOT_FOUND` when `attemptId` does not belong to the requested `questionId` (while still logging for observability):
 
 ```typescript
 if (attempt.questionId !== input.questionId) {
-  this.logger.error(
-    { attemptId: input.attemptId, questionId: input.questionId, attemptQuestionId: attempt.questionId },
-    'Previous attempt does not match requested question — possible data corruption',
+  this.logger.warn(
+    {
+      attemptId: input.attemptId,
+      questionId: input.questionId,
+      attemptQuestionId: attempt.questionId,
+    },
+    'Previous attempt does not match requested question',
   );
   throw new ApplicationError(
-    'INTERNAL_ERROR',
-    'Attempt does not belong to the requested question',
+    'NOT_FOUND',
+    'Previous attempt does not belong to the requested question',
   );
 }
 ```
 
-**Option B — Keep soft-fail but document explicitly:**
-
-Add an inline comment explaining why the silent null is intentional (e.g., "Treat cross-question attempt lookups as not-found for graceful URL handling"):
-
-```typescript
-// INTENTIONAL: Return null (not error) for cross-question attemptId lookups.
-// Users may reach this via stale URLs or browser history. Showing attempt-mode
-// (fresh answer) is the correct UX degradation. The logger.warn provides
-// observability for monitoring dashboards.
-```
-
 ## Verification
 
-- [ ] Unit test: `it('throws INTERNAL_ERROR when attempt questionId mismatches input questionId')` (Option A)
-- [ ] OR: Add inline comment documenting intentional soft-fail (Option B)
-- [ ] Review `loadPreviousAttempt` in `question-page-logic.ts` to handle new error gracefully
+- `pnpm typecheck`
+- `pnpm lint`
+- `pnpm test --run`
+- Unit test updated in `src/application/use-cases/get-previous-attempt.test.ts`
 
 ## Related
 
-- `src/application/use-cases/get-previous-attempt.ts:35-59` — Bug location
+- `src/application/use-cases/get-previous-attempt.ts:37-64` — Mismatch guard (fixed)
 - `src/adapters/repositories/drizzle-attempt-repository.ts:205-216` — Repository without `questionId` filter
 - `src/adapters/controllers/question-view-controller.ts:94-106` — Controller pass-through
 - `app/(app)/app/questions/[slug]/question-page-logic.ts:229-248` — UI silent fallback
-- `src/application/use-cases/get-previous-attempt.test.ts:114-172` — Existing mismatch tests
+- `src/application/use-cases/get-previous-attempt.test.ts:114-172` — Mismatch regression test

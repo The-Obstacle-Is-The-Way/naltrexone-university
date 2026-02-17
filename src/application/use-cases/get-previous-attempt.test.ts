@@ -111,7 +111,7 @@ describe('GetPreviousAttemptUseCase', () => {
     ).resolves.toBeNull();
   });
 
-  it('returns null when attemptId does not match questionId (defense-in-depth)', async () => {
+  it('throws NOT_FOUND when attemptId does not match questionId (defense-in-depth)', async () => {
     const logger = new FakeLogger();
 
     const question = createQuestion({
@@ -151,13 +151,14 @@ describe('GetPreviousAttemptUseCase', () => {
       logger,
     );
 
-    await expect(
-      useCase.execute({
-        userId: 'user-1',
-        questionId: 'q1',
-        attemptId: 'attempt-q2',
-      }),
-    ).resolves.toBeNull();
+    const promise = useCase.execute({
+      userId: 'user-1',
+      questionId: 'q1',
+      attemptId: 'attempt-q2',
+    });
+
+    await expect(promise).rejects.toBeInstanceOf(ApplicationError);
+    await expect(promise).rejects.toMatchObject({ code: 'NOT_FOUND' });
 
     expect(logger.warnCalls).toEqual([
       {

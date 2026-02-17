@@ -1,8 +1,10 @@
 # BUG-137: Entitlement Check Off-by-One at Period End Boundary
 
-**Status:** Open
+**Status:** Reclassified
 **Priority:** P3
 **Date:** 2026-02-16
+**Reclassified:** 2026-02-17
+**Component:** Domain — Entitlement Boundary
 
 ---
 
@@ -12,7 +14,7 @@
 
 **Observed:** `isEntitled()` returns `false` when `currentPeriodEnd === now`.
 
-**Expected:** Per current SSOT, `currentPeriodEnd === now` is **not** entitled (`current_period_end > now()`). If the product decides the boundary should be inclusive, this is a spec change and requires code changes across all call sites (see Fix).
+**Expected:** Per current SSOT, `currentPeriodEnd === now` is **not** entitled (`current_period_end > now()`). This report was reclassified because implementation and SSOT are already aligned. If the product decides the boundary should be inclusive, follow Option B under Fix (spec + code change).
 
 ## Evidence: Full Vertical + Horizontal Trace
 

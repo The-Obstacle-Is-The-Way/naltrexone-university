@@ -12,6 +12,12 @@ vi.mock('@sentry/nextjs', () => ({
 describe('Sentry configuration', () => {
   const originalEnv = { ...process.env };
 
+  const getClientEnvironment = () =>
+    process.env.NEXT_PUBLIC_VERCEL_ENV ?? process.env.NODE_ENV;
+
+  const getServerEnvironment = () =>
+    process.env.VERCEL_ENV ?? process.env.NODE_ENV;
+
   beforeEach(() => {
     initMock.mockClear();
     captureRequestErrorMock.mockClear();
@@ -48,7 +54,25 @@ describe('Sentry configuration', () => {
         tracesSampleRate: 0,
         replaysSessionSampleRate: 0,
         replaysOnErrorSampleRate: 0,
-        environment: process.env.NODE_ENV,
+        environment: getClientEnvironment(),
+      });
+    });
+
+    it('uses NEXT_PUBLIC_VERCEL_ENV when provided', async () => {
+      // Arrange
+      process.env.NEXT_PUBLIC_SENTRY_DSN = 'https://examplePublicDsn';
+      process.env.NEXT_PUBLIC_VERCEL_ENV = 'preview';
+
+      // Act
+      await import('./sentry.client.config');
+
+      // Assert
+      expect(initMock).toHaveBeenCalledWith({
+        dsn: 'https://examplePublicDsn',
+        tracesSampleRate: 0,
+        replaysSessionSampleRate: 0,
+        replaysOnErrorSampleRate: 0,
+        environment: 'preview',
       });
     });
   });
@@ -67,7 +91,7 @@ describe('Sentry configuration', () => {
         tracesSampleRate: 0,
         replaysSessionSampleRate: 0,
         replaysOnErrorSampleRate: 0,
-        environment: process.env.NODE_ENV,
+        environment: getClientEnvironment(),
       });
     });
   });
@@ -98,7 +122,7 @@ describe('Sentry configuration', () => {
       expect(initMock).toHaveBeenCalledWith({
         dsn: 'https://exampleServerDsn',
         tracesSampleRate: 0,
-        environment: process.env.NODE_ENV,
+        environment: getServerEnvironment(),
       });
     });
 
@@ -115,7 +139,24 @@ describe('Sentry configuration', () => {
       expect(initMock).toHaveBeenCalledWith({
         dsn: 'https://examplePublicDsn',
         tracesSampleRate: 0,
-        environment: process.env.NODE_ENV,
+        environment: getServerEnvironment(),
+      });
+    });
+
+    it('uses VERCEL_ENV when provided', async () => {
+      // Arrange
+      process.env.SENTRY_DSN = 'https://exampleServerDsn';
+      process.env.VERCEL_ENV = 'preview';
+
+      // Act
+      const instrumentation = await import('./instrumentation');
+      await instrumentation.register();
+
+      // Assert
+      expect(initMock).toHaveBeenCalledWith({
+        dsn: 'https://exampleServerDsn',
+        tracesSampleRate: 0,
+        environment: 'preview',
       });
     });
 

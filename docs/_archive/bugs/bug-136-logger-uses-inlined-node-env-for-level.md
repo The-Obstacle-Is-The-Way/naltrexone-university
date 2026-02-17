@@ -1,29 +1,37 @@
 # BUG-136: Logger Uses Unreliable Inlined NODE_ENV for Log Level Selection
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P2
 **Date:** 2026-02-16
+**Resolved:** 2026-02-17
+**Component:** Infrastructure — Logger
 
 ---
 
 ## Description
 
-`lib/logger.ts` uses `process.env.NODE_ENV` to determine the log level, but the codebase's own `lib/env.ts:99-104` explicitly documents that `NODE_ENV` is unreliable because Turbopack inlines it as `'production'` during `next build`. This causes incorrect log levels in Vercel preview environments.
+Prior to 2026-02-17, `lib/logger.ts` derived its default log level from `process.env.NODE_ENV`. The codebase's own `lib/env.ts:99-104` explicitly documents that `NODE_ENV` is unreliable because Turbopack inlines it as `'production'` during `next build`. This caused incorrect log levels in Vercel preview environments.
 
-**Observed:** In Vercel preview deployments (`VERCEL_ENV=preview`), the logger defaults to `'info'` because the inlined `NODE_ENV` is `'production'`.
+**Observed (pre-fix):** In Vercel preview deployments (`VERCEL_ENV=preview`), the logger defaulted to `'info'` because the inlined `NODE_ENV` was `'production'`.
 
 **Expected:** Preview environments should use `'debug'` level for better observability during staging/QA.
 
 ## Evidence: Full Vertical Trace
 
-### 1. The Bug — `lib/logger.ts:6-12`
+### 1. The Fix (Current) — `lib/logger.ts:4-16`
 
 ```typescript
+const envLevel = process.env.LOG_LEVEL?.trim();
+
+const nodeEnv = process.env.NODE_ENV?.trim();
+const vercelEnv = process.env.VERCEL_ENV?.trim();
+const runtimeEnv = nodeEnv === 'test' ? 'test' : vercelEnv || nodeEnv;
+
 const level =
   envLevel ||
-  (process.env.NODE_ENV === 'production'
+  (runtimeEnv === 'production'
     ? 'info'
-    : process.env.NODE_ENV === 'test'
+    : runtimeEnv === 'test'
       ? 'silent'
       : 'debug');
 ```
@@ -64,7 +72,7 @@ it('defaults to info in production when LOG_LEVEL is unset', async () => {
 });
 ```
 
-Tests use `vi.stubEnv()` which modifies `process.env` at runtime. But Turbopack inlining replaces `process.env.NODE_ENV` with a string literal at build time. Tests cannot reproduce this behavior.
+Tests use `vi.stubEnv()` which modifies `process.env` at runtime. But Turbopack inlining replaces `process.env.NODE_ENV` with a string literal at build time. Tests cannot reproduce this behavior; instead, they assert the intended precedence logic (e.g., `VERCEL_ENV` overrides inlined `NODE_ENV`).
 
 ### 4. The `LOG_LEVEL` Escape Hatch — `lib/logger.ts:4`
 
@@ -79,20 +87,22 @@ const envLevel = process.env.LOG_LEVEL?.trim();
 | Environment | `process.env.NODE_ENV` (inlined) | `VERCEL_ENV` (live) | Logger Level | Correct? |
 |-------------|----------------------------------|---------------------|--------------|----------|
 | Production  | `'production'`                   | `'production'`      | `'info'`     | Yes |
-| Preview     | `'production'`                   | `'preview'`         | `'info'`     | **No — should be `'debug'`** |
+| Preview     | `'production'`                   | `'preview'`         | `'debug'`    | Yes |
 | Local dev   | `'development'`                  | undefined           | `'debug'`    | Yes |
-| CI E2E      | `'production'` (after build)     | undefined           | `'info'`     | **No — should be `'silent'`** |
+| CI E2E      | `'production'` (after build)     | undefined           | `'info'`     | Yes (production build; override with `LOG_LEVEL` if desired) |
 
 ## Root Cause
 
 The logger was created before the Turbopack inlining issue was discovered. When `lib/env.ts` was updated with the `VERCEL_ENV` workaround (around BUG-002/BUG-115), the logger was not updated to match.
 
-## Fix
+## Resolution
 
 Align with the existing `VERCEL_ENV` pattern from `lib/env.ts`:
 
 ```typescript
-const runtimeEnv = process.env.VERCEL_ENV ?? process.env.NODE_ENV;
+const nodeEnv = process.env.NODE_ENV?.trim();
+const vercelEnv = process.env.VERCEL_ENV?.trim();
+const runtimeEnv = nodeEnv === 'test' ? 'test' : vercelEnv || nodeEnv;
 const level =
   envLevel ||
   (runtimeEnv === 'production'
@@ -106,14 +116,15 @@ Note: This preserves the existing behavior outside Vercel (`NODE_ENV` drives the
 
 ## Verification
 
-- [ ] Unit test: Stub `VERCEL_ENV=production` → level is `'info'`
-- [ ] Unit test: Stub `VERCEL_ENV=preview`, no `LOG_LEVEL` → level is `'debug'`
-- [ ] Manual: Deploy to Vercel preview and confirm debug logs appear
+- `pnpm typecheck`
+- `pnpm lint`
+- `pnpm test --run`
+- Unit tests cover `VERCEL_ENV=preview` and `VERCEL_ENV=production` defaults in `lib/logger.test.ts`
 
 ## Related
 
-- `lib/logger.ts:4-12` — Log level selection
+- `lib/logger.ts:4-16` — Log level selection
 - `lib/logger.test.ts:31-37` — Tests that pass but don't cover Turbopack behavior
 - `lib/env.ts:95-112` — Documents the `NODE_ENV` inlining problem and `VERCEL_ENV` solution
-- [BUG-002](../_archive/bugs/bug-002-next-build-node-env-skip-clerk.md) — Original `NODE_ENV` build issue
-- [BUG-115](../_archive/bugs/bug-115-cron-secret-validation-crashes-production-build.md) — CRON_SECRET startup validation crash from same root cause
+- [BUG-002](bug-002-next-build-node-env-skip-clerk.md) — Original `NODE_ENV` build issue
+- [BUG-115](bug-115-cron-secret-validation-crashes-production-build.md) — CRON_SECRET startup validation crash from same root cause

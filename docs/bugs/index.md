@@ -15,12 +15,7 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 ## Bug Index (Active)
 
-| ID | Title | Priority | Status |
-|----|-------|----------|--------|
-| [BUG-136](bug-136-logger-uses-inlined-node-env-for-level.md) | Logger Uses Unreliable Inlined NODE_ENV for Log Level Selection | P2 | Open |
-| [BUG-137](bug-137-entitlement-off-by-one-period-end-boundary.md) | Entitlement Check Off-by-One at Period End Boundary | P3 | Open |
-| [BUG-139](bug-139-get-previous-attempt-silent-null-on-data-mismatch.md) | GetPreviousAttemptUseCase Silently Returns Null on Data Integrity Mismatch | P3 | Open |
-| [BUG-143](bug-143-sentry-environment-tag-uses-inlined-node-env.md) | Sentry Environment Tag Uses Inlined NODE_ENV — Preview Errors Report as Production | P3 | Open |
+_No open bugs._
 
 **Next Bug ID:** BUG-144
 
@@ -78,7 +73,7 @@ Five-axis audit covering domain, application, adapters, frontend, and configurat
 - `ports/use-cases.ts` incomplete (architectural preference with zero runtime impact)
 - Container logger fallback bypasses redaction (unreachable code — no caller passes `undefined` logger; DEBT-088 resolved)
 
-Audit #3 resulted in **3 verified issues**: BUG-136, BUG-137, and BUG-139. Audit #4 added BUG-143.
+Audit #3 produced BUG-136 and BUG-139. BUG-137 was reclassified as SSOT-consistent. Audit #4 added BUG-143.
 
 ---
 
@@ -86,6 +81,10 @@ Audit #3 resulted in **3 verified issues**: BUG-136, BUG-137, and BUG-139. Audit
 
 | ID | Title | Status | Resolution |
 |----|-------|--------|------------|
+| [BUG-137](../_archive/bugs/bug-137-entitlement-off-by-one-period-end-boundary.md) | Entitlement Check Off-by-One at Period End Boundary | Reclassified | SSOT and implementation both use an exclusive boundary (`currentPeriodEnd > now`); keep doc as policy record with a spec-change path for inclusive semantics |
+| [BUG-139](../_archive/bugs/bug-139-get-previous-attempt-silent-null-on-data-mismatch.md) | GetPreviousAttemptUseCase Silently Returns Null on Data Integrity Mismatch | Resolved | Throw `NOT_FOUND` on attemptId/questionId mismatch (keeps UX fallback, but makes mismatch distinguishable); add regression coverage |
+| [BUG-143](../_archive/bugs/bug-143-sentry-environment-tag-uses-inlined-node-env.md) | Sentry Environment Tag Uses Inlined NODE_ENV — Preview Errors Report as Production | Resolved | Use `VERCEL_ENV` (server) + `NEXT_PUBLIC_VERCEL_ENV` (client) for Sentry environment tags; inject client env via `next.config.ts`; add regression tests |
+| [BUG-136](../_archive/bugs/bug-136-logger-uses-inlined-node-env-for-level.md) | Logger Uses Unreliable Inlined NODE_ENV for Log Level Selection | Resolved | Prefer `VERCEL_ENV` runtime lookup for default level selection; add regression tests |
 | [BUG-134](../_archive/bugs/bug-134-mark-for-review-race-updates-wrong-question.md) | Mark-for-Review Race Can Update the Wrong Question UI State | Resolved | Guard mark-for-review sessionInfo updates by current questionId; add browser regression coverage |
 | [BUG-133](../_archive/bugs/bug-133-stale-closure-practice-session-onsubmit.md) | Stale Closure in Practice Session onSubmit After Async Await | Resolved | Read post-await values from refs in submit handler; add browser regression coverage |
 | [BUG-132](../_archive/bugs/bug-132-duplicate-nav-links-pricing-dashboard.md) | Duplicate Nav Links — "Pricing" and "Dashboard" Appear Twice in Header | Resolved | Removed duplicate links from AuthNav; layout owns left-nav links, AuthNav owns right-side auth controls |
