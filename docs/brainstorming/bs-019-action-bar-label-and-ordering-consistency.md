@@ -1,8 +1,8 @@
 # BS-019: Action Bar Label and Ordering Consistency
 
 **Date:** 2026-02-17
-**Triggered by:** Live UI audit — visual comparison of bottom action bars across Practice, Quick Practice, and History Review views
-**Scope:** Bottom action bar label, ordering, boundary behavior, and navigation consistency across Practice, Quick Practice, and review contexts (History Session + History Individual)
+**Triggered by:** Live UI audit — visual comparison of bottom action bars across Practice, Quick Practice, and review views
+**Scope:** Bottom action bar label, ordering, boundary behavior, and navigation consistency across Practice, Quick Practice, and review origins (`history`, `practice`, `dashboard`, `bookmarks`)
 **Related:** [BS-018](../_archive/brainstorming/bs-018-question-view-ux-unification.md), [SPEC-030](../_archive/specs/spec-030-question-view-ux-unification.md), [Design Principles §2](../frontend/design-principles.md)
 
 ---
@@ -274,6 +274,7 @@ Next → | Submit | Bookmark
 | 2026-02-17 | Quick Practice: no Previous by design | Quick Practice is stateless/ad hoc — user answers one question and moves on. If they want to revisit, they use History. Adding Previous would imply a session context that doesn't exist |
 | 2026-02-17 | Chrome agent full UI audit completed | Systematic walkthrough of all 19 action bar states across Quick Practice, Tutor, Exam, and History Review. Confirmed original 3 inconsistencies and surfaced 5 additional: first/last Q boundary handling, bookmark absent from History, Submit vs Try Again swap, back-nav placement, and `<a>` vs `<button>` element types |
 | 2026-02-17 | Source-code audit completed and corrected | Verified every cited path/line against current code. Corrected stale claim about History back-nav location (now header + conditional bottom), added missing History Individual Review action-bar states, corrected disabled-state notes for unanswered History states, and recorded mobile layout-model divergence |
+| 2026-02-17 | External browser sweep reconciled | Added origin-variant coverage for `from=practice`, `from=dashboard`, and `from=bookmarks`, including their action-bar and back-label differences |
 
 ---
 
@@ -289,6 +290,10 @@ Next → | Submit | Bookmark
 | History Submit/Try Again switch | `app/(app)/app/questions/[slug]/question-page-client.tsx` | 251-276 | `Submit` when unanswered; `Try Again` when `submitResult` exists |
 | History header back link | `app/(app)/app/questions/[slug]/question-page-client.tsx` | 147-152 | Back link is always in header |
 | History bottom back link | `app/(app)/app/questions/[slug]/question-page-client.tsx` | 278-281 | Additional back link rendered when `sessionNavigation || submitResult` |
+| Origin-specific back labels | `app/(app)/app/questions/[slug]/question-page-client.tsx` | 61-95 | `history` → Back to History; `practice` + sessionId → Back to Session; `bookmarks` → Back to Bookmarks; default → Back to Dashboard |
+| Practice-origin review links | `app/(app)/app/shared/components/session-breakdown-list.tsx` | 10, 28-33 | Session summary breakdown links open `from=practice&mode=review&sessionId=...` |
+| Dashboard-origin review links | `app/(app)/app/dashboard/page.tsx` | 215-219 | Recent activity links open `from=dashboard&mode=review&attemptId=...` |
+| Bookmarks-origin reattempt links | `app/(app)/app/bookmarks/page.tsx` | 151-153, 199-201 | Links open `from=bookmarks` without review mode |
 | Exam Review Stage action bar | `app/(app)/app/practice/[sessionId]/components/exam-review-view.tsx` | 186-191 | Bottom action bar contains `Submit exam` |
 | Session Summary action bar | `app/(app)/app/practice/[sessionId]/components/session-summary-view.tsx` | 95-104 | Bottom action bar contains 3 navigation actions |
 | Design principles ordering reference | `docs/frontend/design-principles.md` | 56-58 | High-level ordering still states `sequential → primary → secondary → back` |
@@ -301,7 +306,17 @@ Next → | Submit | Bookmark
 
 - Bottom action bars exist in four implementation files: `practice-view.tsx`, `question-page-client.tsx`, `exam-review-view.tsx`, and `session-summary-view.tsx`.
 - Missing from the original BS-019 scope: **History Individual Review** (no `sessionId`), which has distinct bottom-bar states. Added to Appendix rows 29-31.
+- External browser sweep added origin variants that reuse the same `QuestionView` action bar with different back labels/routes: `from=practice` (Back to Session), `from=dashboard` (Back to Dashboard), and `from=bookmarks` (Back to Bookmarks).
+- Clarification: Exam Review Stage does include a bottom action bar (`Submit exam`) in `exam-review-view.tsx`; it is a specialized review-stage action bar, not a question-level one.
 - `rg` scan across `app/(app)/app/practice`, `app/(app)/app/questions`, and `app/(app)/app/history` found no additional bottom action bar implementations beyond the four files above.
+
+### Origin Variant Additions (from External Sweep)
+
+| Variant | Route Pattern | Action Bar Pattern | Back Label |
+|---------|---------------|--------------------|------------|
+| Practice Session Review | `/app/questions/[slug]?from=practice&mode=review&sessionId=...` | Same as History Session Review state machine | Back to Session |
+| Dashboard Individual Review | `/app/questions/[slug]?from=dashboard&mode=review&attemptId=...` | Same as individual review (`Try Again + Back` when attempt loads) | Back to Dashboard |
+| Bookmarks Reattempt | `/app/questions/[slug]?from=bookmarks` | Pre-submit: `Submit` only; post-submit: `Try Again + Back` | Back to Bookmarks |
 
 ---
 
@@ -351,6 +366,12 @@ Code-verified matrix of currently reachable action-bar states as of 2026-02-17.
 | 30 | History Individual Review / Unanswered (no choice selected) | Submit | None | Submit disabled |
 | 31 | History Individual Review / Unanswered (choice selected) | Submit | None | Submit enabled |
 | 32 | Session Summary (Tutor & Exam) | Back to Dashboard · View in History · Start another session | None | — |
+| 33 | Practice Session Review / Q1 answered | Next → · Try Again · Back to Session | → only | Try Again disabled only while pending |
+| 34 | Practice Session Review / Last Q unanswered | ← Previous · Submit · Back to Session | ← only | Submit disabled until choice selected |
+| 35 | Dashboard Individual Review / Answered | Try Again · Back to Dashboard | None | Try Again disabled only while pending |
+| 36 | Bookmarks Reattempt / Pre-submit (no choice selected) | Submit | None | Submit disabled |
+| 37 | Bookmarks Reattempt / Pre-submit (choice selected) | Submit | None | Submit enabled |
+| 38 | Bookmarks Reattempt / Post-submit | Try Again · Back to Bookmarks | None | Try Again disabled only while pending |
 
 Notes:
 - `QuestionView` always renders a top-right header back link. Bottom-bar back appears only when `sessionNavigation || submitResult`.
