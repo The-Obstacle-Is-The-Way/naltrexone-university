@@ -176,6 +176,14 @@ export function validateSeedQuestionTags(input: {
   slug: string;
   tags: Array<Omit<SeedTag, 'kind'> & { kind: SeedTag['kind'] | 'domain' }>;
 }): void {
+  for (const tag of input.tags) {
+    if (tag.kind === 'domain') {
+      throw new Error(
+        `Question "${input.slug}" has domain tag "${tag.slug}" which is not allowed`,
+      );
+    }
+  }
+
   const topicCount = input.tags.filter((tag) => tag.kind === 'topic').length;
   const substanceCount = input.tags.filter(
     (tag) => tag.kind === 'substance',
@@ -193,12 +201,6 @@ export function validateSeedQuestionTags(input: {
   }
 
   for (const tag of input.tags) {
-    if (tag.kind === 'domain') {
-      throw new Error(
-        `Question "${input.slug}" has domain tag "${tag.slug}" which is not allowed`,
-      );
-    }
-
     if (tag.kind === 'topic' && !CANONICAL_TOPIC_SLUG_SET.has(tag.slug)) {
       throw new Error(
         `Question "${input.slug}" has non-canonical topic slug "${tag.slug}"`,

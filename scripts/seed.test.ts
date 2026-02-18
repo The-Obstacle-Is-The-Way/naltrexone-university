@@ -2,6 +2,21 @@ import { describe, expect, it } from 'vitest';
 import { validateSeedQuestionTags } from './seed';
 
 describe('validateSeedQuestionTags', () => {
+  it('rejects domain tags before minimum tag count checks', () => {
+    expect(() =>
+      validateSeedQuestionTags({
+        slug: 'demo-000',
+        tags: [
+          {
+            slug: 'general',
+            name: 'General',
+            kind: 'domain',
+          },
+        ],
+      }),
+    ).toThrow(/domain/i);
+  });
+
   it('rejects domain tags during seed validation', () => {
     expect(() =>
       validateSeedQuestionTags({
@@ -47,7 +62,7 @@ describe('validateSeedQuestionTags', () => {
     ).toThrow(/canonical/i);
   });
 
-  it('rejects questions missing topic or substance tags', () => {
+  it('rejects questions missing topic tags', () => {
     expect(() =>
       validateSeedQuestionTags({
         slug: 'demo-003',
@@ -60,7 +75,9 @@ describe('validateSeedQuestionTags', () => {
         ],
       }),
     ).toThrow(/at least one topic/i);
+  });
 
+  it('rejects questions missing substance tags', () => {
     expect(() =>
       validateSeedQuestionTags({
         slug: 'demo-004',

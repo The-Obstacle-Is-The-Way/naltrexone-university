@@ -2153,7 +2153,7 @@ describe('DrizzleRateLimiter', () => {
 
 describe('DrizzleTagRepository', () => {
   it('lists tags ordered by kind then slug, excluding orphaned tags', async () => {
-    const substanceSlug = `z-substance-${randomUUID()}`;
+    const substanceSlug = `0-substance-${randomUUID()}`;
     const topicSlugA = `a-topic-${randomUUID()}`;
     const topicSlugB = `b-topic-${randomUUID()}`;
     const orphanSlug = `orphan-${randomUUID()}`;

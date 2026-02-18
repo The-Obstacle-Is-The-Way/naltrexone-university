@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   type MigrationInput,
   migrateQuestionTags,
+  parseCliArgs,
 } from './migrate-tag-taxonomy';
 
 function createInput(overrides?: Partial<MigrationInput>): MigrationInput {
@@ -12,7 +13,11 @@ function createInput(overrides?: Partial<MigrationInput>): MigrationInput {
     choices: [{ text: 'Choice A' }, { text: 'Choice B' }],
     tags: [
       { slug: 'alcohol', name: 'Alcohol', kind: 'substance' },
-      { slug: 'treatment', name: 'Treatment', kind: 'topic' },
+      {
+        slug: 'treatment-pharmacotherapy',
+        name: 'Treatment & Pharmacotherapy',
+        kind: 'topic',
+      },
     ],
     ...overrides,
   };
@@ -171,7 +176,7 @@ describe('migrateQuestionTags', () => {
     });
   });
 
-  it('fails when migrated question has no topic or no substance', () => {
+  it('fails when migrated question has no topic', () => {
     expect(() =>
       migrateQuestionTags(
         createInput({
@@ -179,7 +184,9 @@ describe('migrateQuestionTags', () => {
         }),
       ),
     ).toThrow(/at least one topic/i);
+  });
 
+  it('fails when migrated question has no substance', () => {
     expect(() =>
       migrateQuestionTags(
         createInput({
@@ -257,5 +264,13 @@ describe('migrateQuestionTags', () => {
     expect(
       tags.filter((tag) => tag.slug === 'pharmacology-neuroscience'),
     ).toHaveLength(1);
+  });
+});
+
+describe('parseCliArgs', () => {
+  it('rejects --report when the next token is another flag', () => {
+    expect(() => parseCliArgs(['--report', '--write'])).toThrow(
+      /missing value for --report/i,
+    );
   });
 });

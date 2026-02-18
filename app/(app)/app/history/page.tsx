@@ -5,7 +5,10 @@ import {
   getSessionHistory,
 } from '@/src/adapters/controllers/practice-controller';
 import { getAttemptedQuestions } from '@/src/adapters/controllers/review-controller';
-import { getTags } from '@/src/adapters/controllers/tag-controller';
+import {
+  getTags,
+  type TagRow,
+} from '@/src/adapters/controllers/tag-controller';
 import { HistoryPageClient } from './history-page-client';
 import {
   parseDifficultyFilter,
@@ -33,6 +36,12 @@ type HistorySearchParams = {
   result?: string;
   source?: string;
 };
+
+const VISIBLE_TAG_KINDS = new Set<TagRow['kind']>([
+  'topic',
+  'substance',
+  'treatment',
+]);
 
 export function createHistoryPage(deps?: {
   getSessionHistoryFn?: typeof getSessionHistory;
@@ -74,10 +83,9 @@ export function createHistoryPage(deps?: {
         getTagsFn({}),
       ]);
 
-      const visibleKinds = new Set(['topic', 'substance', 'treatment']);
       const tagOptions = tagsResult.ok
         ? tagsResult.data.rows
-            .filter((t) => visibleKinds.has(t.kind))
+            .filter((t) => VISIBLE_TAG_KINDS.has(t.kind))
             .map((t) => ({ slug: t.slug, name: t.name }))
             .sort(
               (a, b) =>

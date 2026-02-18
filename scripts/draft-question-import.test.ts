@@ -260,7 +260,7 @@ describe('draft question import', () => {
     expect(() => parseDraftQuestionBlock(block)).toThrow(/treatment/i);
   });
 
-  it('requires at least one topic and one substance', () => {
+  it('requires at least one topic', () => {
     const missingTopics = [
       '---',
       'qid: demo-006',
@@ -288,7 +288,9 @@ describe('draft question import', () => {
       '---',
     ].join('\n');
     expect(() => parseDraftQuestionBlock(missingTopics)).toThrow(/topic/i);
+  });
 
+  it('requires at least one substance', () => {
     const missingSubstances = [
       '---',
       'qid: demo-007',

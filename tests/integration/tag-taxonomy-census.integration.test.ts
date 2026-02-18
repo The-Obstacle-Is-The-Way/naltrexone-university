@@ -47,9 +47,13 @@ describe('tag taxonomy census', () => {
       where kind::text = 'topic'
     `;
 
+    expect(rows.length).toBeGreaterThan(0);
     const canonical = new Set<string>(CANONICAL_TOPIC_SLUGS);
     for (const row of rows) {
-      expect(canonical.has(row.slug)).toBe(true);
+      expect(
+        canonical.has(row.slug),
+        `non-canonical topic slug: "${row.slug}"`,
+      ).toBe(true);
     }
   });
 
@@ -60,9 +64,13 @@ describe('tag taxonomy census', () => {
       where kind::text = 'substance'
     `;
 
+    expect(rows.length).toBeGreaterThan(0);
     const canonical = new Set<string>(CANONICAL_SUBSTANCE_SLUGS);
     for (const row of rows) {
-      expect(canonical.has(row.slug)).toBe(true);
+      expect(
+        canonical.has(row.slug),
+        `non-canonical substance slug: "${row.slug}"`,
+      ).toBe(true);
     }
   });
 
@@ -73,9 +81,13 @@ describe('tag taxonomy census', () => {
       where kind::text = 'treatment'
     `;
 
+    expect(rows.length).toBeGreaterThan(0);
     const canonical = new Set<string>(CANONICAL_TREATMENT_SLUGS);
     for (const row of rows) {
-      expect(canonical.has(row.slug)).toBe(true);
+      expect(
+        canonical.has(row.slug),
+        `non-canonical treatment slug: "${row.slug}"`,
+      ).toBe(true);
     }
   });
 });

@@ -474,7 +474,7 @@ export function parseCliArgs(argv: string[]): CliArgs {
 
     if (arg === '--report') {
       const value = args[index + 1];
-      if (!value) {
+      if (!value || value.startsWith('--')) {
         throw new Error('Missing value for --report');
       }
       reportPath = value;

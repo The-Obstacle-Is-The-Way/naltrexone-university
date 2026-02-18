@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { QuestionFrontmatterSchema, TagFrontmatterSchema } from './schemas';
 
-describe('QuestionFrontmatterSchema', () => {
-  it('rejects domain kind in TagFrontmatterSchema', () => {
+describe('TagFrontmatterSchema', () => {
+  it('rejects domain kind', () => {
     const result = TagFrontmatterSchema.safeParse({
       slug: 'screening-diagnosis',
       name: 'Screening & Diagnosis',
@@ -51,7 +51,9 @@ describe('QuestionFrontmatterSchema', () => {
 
     expect(result.success).toBe(true);
   });
+});
 
+describe('QuestionFrontmatterSchema', () => {
   it('rejects duplicate tag slugs', () => {
     const result = QuestionFrontmatterSchema.safeParse({
       slug: 'example-question',
@@ -81,7 +83,7 @@ describe('QuestionFrontmatterSchema', () => {
     ]);
   });
 
-  it('requires at least one topic and one substance tag in QuestionFrontmatterSchema', () => {
+  it('requires at least one topic tag', () => {
     const missingTopic = QuestionFrontmatterSchema.safeParse({
       slug: 'question-without-topic',
       difficulty: 'medium',
@@ -93,7 +95,9 @@ describe('QuestionFrontmatterSchema', () => {
       ],
     });
     expect(missingTopic.success).toBe(false);
+  });
 
+  it('requires at least one substance tag', () => {
     const missingSubstance = QuestionFrontmatterSchema.safeParse({
       slug: 'question-without-substance',
       difficulty: 'medium',

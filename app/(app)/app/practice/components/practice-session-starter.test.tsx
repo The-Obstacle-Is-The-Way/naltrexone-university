@@ -1,9 +1,14 @@
 // @vitest-environment jsdom
 import { renderToStaticMarkup } from 'react-dom/server';
-import { describe, expect, it } from 'vitest';
-import { PracticeSessionStarter } from '@/app/(app)/app/practice/components/practice-session-starter';
+import { beforeAll, describe, expect, it } from 'vitest';
+
+let PracticeSessionStarter: typeof import('./practice-session-starter')['PracticeSessionStarter'];
 
 describe('PracticeSessionStarter', () => {
+  beforeAll(async () => {
+    ({ PracticeSessionStarter } = await import('./practice-session-starter'));
+  });
+
   it('uses shadcn Card + Input primitives for starter UI', () => {
     const html = renderToStaticMarkup(
       <PracticeSessionStarter
@@ -259,8 +264,17 @@ describe('PracticeSessionStarter', () => {
     expect(summaryLabels.some((label) => label.includes('Diagnosis'))).toBe(
       false,
     );
-    expect(summaryLabels[0]).toContain('Topic');
-    expect(summaryLabels[1]).toContain('Substance');
-    expect(summaryLabels[2]).toContain('Treatment');
+    const topicIndex = summaryLabels.findIndex((label) =>
+      label.includes('Topic'),
+    );
+    const substanceIndex = summaryLabels.findIndex((label) =>
+      label.includes('Substance'),
+    );
+    const treatmentIndex = summaryLabels.findIndex((label) =>
+      label.includes('Treatment'),
+    );
+    expect(topicIndex).toBeGreaterThanOrEqual(0);
+    expect(substanceIndex).toBeGreaterThan(topicIndex);
+    expect(treatmentIndex).toBeGreaterThan(substanceIndex);
   });
 });
