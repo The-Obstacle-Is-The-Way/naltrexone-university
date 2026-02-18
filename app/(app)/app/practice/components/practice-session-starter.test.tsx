@@ -204,4 +204,63 @@ describe('PracticeSessionStarter', () => {
     );
     expect(activeDifficulty?.textContent).toBe('All');
   });
+
+  it('renders Topic, Substance, Treatment filter sections in order without Exam Section', () => {
+    const html = renderToStaticMarkup(
+      <PracticeSessionStarter
+        sessionMode="tutor"
+        sessionCount={20}
+        filters={{ tagSlugs: [], difficulty: null, status: 'unanswered' }}
+        availableCountStatus="idle"
+        availableCount={null}
+        tagLoadStatus="idle"
+        availableTags={[
+          {
+            id: 'tag-topic',
+            slug: 'screening-diagnosis',
+            name: 'Screening & Diagnosis',
+            kind: 'topic',
+          },
+          {
+            id: 'tag-substance',
+            slug: 'opioids',
+            name: 'Opioids',
+            kind: 'substance',
+          },
+          {
+            id: 'tag-treatment',
+            slug: 'naltrexone',
+            name: 'Naltrexone',
+            kind: 'treatment',
+          },
+          {
+            id: 'tag-diagnosis',
+            slug: 'opioid-use-disorder',
+            name: 'Opioid Use Disorder',
+            kind: 'diagnosis',
+          },
+        ]}
+        sessionStartStatus="idle"
+        sessionStartError={null}
+        onDifficultyChange={() => undefined}
+        onStatusChange={() => undefined}
+        onToggleTag={() => undefined}
+        onSessionModeChange={() => undefined}
+        onSessionCountChange={() => undefined}
+        onStartSession={() => undefined}
+      />,
+    );
+
+    expect(html).not.toContain('Exam Section');
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const summaryLabels = Array.from(doc.querySelectorAll('summary')).map(
+      (el) => el.textContent ?? '',
+    );
+    expect(summaryLabels.some((label) => label.includes('Diagnosis'))).toBe(
+      false,
+    );
+    expect(summaryLabels[0]).toContain('Topic');
+    expect(summaryLabels[1]).toContain('Substance');
+    expect(summaryLabels[2]).toContain('Treatment');
+  });
 });

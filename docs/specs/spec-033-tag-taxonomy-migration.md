@@ -2,7 +2,7 @@
 
 > **⚠️ TDD MANDATE:** This spec follows Test-Driven Development. Write failing tests FIRST for every behavioral change.
 
-**Status:** Proposed  
+**Status:** Implemented  
 **Layer:** Feature  
 **Date:** 2026-02-17  
 **Resolves:** [BS-024](../brainstorming/bs-024-tag-taxonomy-cleanup.md)

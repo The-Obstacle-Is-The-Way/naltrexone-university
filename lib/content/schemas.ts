@@ -1,4 +1,13 @@
 import { z } from 'zod';
+import {
+  CANONICAL_SUBSTANCE_SLUGS,
+  CANONICAL_TOPIC_SLUGS,
+  CANONICAL_TREATMENT_SLUGS,
+} from './draftTaxonomy';
+
+const CANONICAL_TOPIC_SLUG_SET = new Set<string>(CANONICAL_TOPIC_SLUGS);
+const CANONICAL_SUBSTANCE_SLUG_SET = new Set<string>(CANONICAL_SUBSTANCE_SLUGS);
+const CANONICAL_TREATMENT_SLUG_SET = new Set<string>(CANONICAL_TREATMENT_SLUGS);
 
 export const ChoiceFrontmatterSchema = z
   .object({
@@ -15,9 +24,40 @@ export const TagFrontmatterSchema = z
       .min(1)
       .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/),
     name: z.string().min(1),
-    kind: z.enum(['domain', 'topic', 'substance', 'treatment', 'diagnosis']),
+    kind: z.enum(['topic', 'substance', 'treatment', 'diagnosis']),
   })
-  .strict();
+  .strict()
+  .superRefine((val, ctx) => {
+    if (val.kind === 'topic' && !CANONICAL_TOPIC_SLUG_SET.has(val.slug)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: `topic slug must be one of: ${CANONICAL_TOPIC_SLUGS.join(', ')}`,
+        path: ['slug'],
+      });
+    }
+
+    if (
+      val.kind === 'substance' &&
+      !CANONICAL_SUBSTANCE_SLUG_SET.has(val.slug)
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: `substance slug must be one of: ${CANONICAL_SUBSTANCE_SLUGS.join(', ')}`,
+        path: ['slug'],
+      });
+    }
+
+    if (
+      val.kind === 'treatment' &&
+      !CANONICAL_TREATMENT_SLUG_SET.has(val.slug)
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: `treatment slug must be one of: ${CANONICAL_TREATMENT_SLUGS.join(', ')}`,
+        path: ['slug'],
+      });
+    }
+  });
 
 export const QuestionFrontmatterSchema = z
   .object({
@@ -54,6 +94,26 @@ export const QuestionFrontmatterSchema = z
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         message: 'tag slugs must be unique',
+        path: ['tags'],
+      });
+    }
+
+    const topicCount = val.tags.filter((tag) => tag.kind === 'topic').length;
+    if (topicCount < 1) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'at least one topic tag is required',
+        path: ['tags'],
+      });
+    }
+
+    const substanceCount = val.tags.filter(
+      (tag) => tag.kind === 'substance',
+    ).length;
+    if (substanceCount < 1) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'at least one substance tag is required',
         path: ['tags'],
       });
     }

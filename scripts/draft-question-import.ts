@@ -1,8 +1,12 @@
 import matter from 'gray-matter';
 import { z } from 'zod';
 import {
-  DRAFT_SUBSTANCE_SLUGS,
-  DRAFT_TOPIC_SLUGS,
+  CANONICAL_SUBSTANCE_DISPLAY_NAMES,
+  CANONICAL_SUBSTANCE_SLUGS,
+  CANONICAL_TOPIC_DISPLAY_NAMES,
+  CANONICAL_TOPIC_SLUGS,
+  CANONICAL_TREATMENT_DISPLAY_NAMES,
+  CANONICAL_TREATMENT_SLUGS,
 } from '../lib/content/draftTaxonomy';
 import { canonicalizeMarkdown } from '../lib/content/parseMdxQuestion';
 import { QuestionFrontmatterSchema } from '../lib/content/schemas';
@@ -12,28 +16,18 @@ const DraftTagSlugSchema = z
   .min(1)
   .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, 'tag slugs must be kebab-case');
 
-const DraftSubstanceSlugSchema = DraftTagSlugSchema.refine(
-  (slug) => (DRAFT_SUBSTANCE_SLUGS as readonly string[]).includes(slug),
-  {
-    message: `substances must be one of: ${DRAFT_SUBSTANCE_SLUGS.join(', ')}`,
-  },
-);
-
-const DraftTopicSlugSchema = DraftTagSlugSchema.refine(
-  (slug) => (DRAFT_TOPIC_SLUGS as readonly string[]).includes(slug),
-  {
-    message: `topics must be one of: ${DRAFT_TOPIC_SLUGS.join(', ')}`,
-  },
-);
+const DraftSubstanceSlugSchema = z.enum(CANONICAL_SUBSTANCE_SLUGS);
+const DraftTopicSlugSchema = z.enum(CANONICAL_TOPIC_SLUGS);
+const DraftTreatmentSlugSchema = z.enum(CANONICAL_TREATMENT_SLUGS);
 
 const DraftFrontmatterSchema = z
   .object({
     qid: z.string().min(1),
     type: z.enum(['recall', 'vignette']),
     difficulty: z.enum(['easy', 'medium', 'hard']),
-    substances: z.array(DraftSubstanceSlugSchema).default([]),
-    topics: z.array(DraftTopicSlugSchema).default([]),
-    treatments: z.array(DraftTagSlugSchema).default([]),
+    substances: z.array(DraftSubstanceSlugSchema).min(1),
+    topics: z.array(DraftTopicSlugSchema).min(1),
+    treatments: z.array(DraftTreatmentSlugSchema).default([]),
     diagnoses: z.array(DraftTagSlugSchema).default([]),
     source: z.string().min(1),
     answer: z.string().regex(/^[A-E]$/, 'answer must be A-E'),
@@ -191,7 +185,7 @@ export function parseDraftQuestionBlock(block: string): DraftQuestion {
   };
 }
 
-function titleCaseFromSlug(slug: string): string {
+function diagnosisDisplayNameFromSlug(slug: string): string {
   return slug
     .split('-')
     .filter(Boolean)
@@ -206,43 +200,50 @@ function yamlQuotedString(value: string): string {
 export function convertDraftQuestionToMdx(input: {
   draft: DraftQuestion;
   status: 'draft' | 'published' | 'archived';
-  domainTagSlug?: string;
 }): string {
   const { draft } = input;
 
   const tags: Array<{
     slug: string;
     name: string;
-    kind: 'domain' | 'topic' | 'substance' | 'treatment' | 'diagnosis';
+    kind: 'topic' | 'substance' | 'treatment' | 'diagnosis';
   }> = [];
 
-  if (input.domainTagSlug) {
+  for (const slug of draft.frontmatter.substances) {
     tags.push({
-      slug: input.domainTagSlug,
-      name: titleCaseFromSlug(input.domainTagSlug),
-      kind: 'domain',
+      slug,
+      name: CANONICAL_SUBSTANCE_DISPLAY_NAMES[slug],
+      kind: 'substance',
     });
   }
 
-  for (const slug of draft.frontmatter.substances) {
-    tags.push({ slug, name: titleCaseFromSlug(slug), kind: 'substance' });
-  }
-
   for (const slug of draft.frontmatter.topics) {
-    tags.push({ slug, name: titleCaseFromSlug(slug), kind: 'topic' });
+    tags.push({
+      slug,
+      name: CANONICAL_TOPIC_DISPLAY_NAMES[slug],
+      kind: 'topic',
+    });
   }
 
   for (const slug of draft.frontmatter.treatments) {
-    tags.push({ slug, name: titleCaseFromSlug(slug), kind: 'treatment' });
+    tags.push({
+      slug,
+      name: CANONICAL_TREATMENT_DISPLAY_NAMES[slug],
+      kind: 'treatment',
+    });
   }
 
   for (const slug of draft.frontmatter.diagnoses) {
-    tags.push({ slug, name: titleCaseFromSlug(slug), kind: 'diagnosis' });
+    tags.push({
+      slug,
+      name: diagnosisDisplayNameFromSlug(slug),
+      kind: 'diagnosis',
+    });
   }
 
   const uniqueTags = new Map<string, (typeof tags)[number]>();
   for (const tag of tags) {
-    uniqueTags.set(tag.slug, tag);
+    uniqueTags.set(`${tag.kind}:${tag.slug}`, tag);
   }
 
   const answerLabel = draft.frontmatter.answer as DraftChoice['label'];

@@ -38,29 +38,21 @@ export type PracticeSessionStarterProps = {
   onStartSession: () => void;
 };
 
-const tagKindLabels: Record<TagRow['kind'], string> = {
-  domain: 'Exam Section',
+type VisibleTagKind = 'topic' | 'substance' | 'treatment';
+
+const tagKindLabels: Record<VisibleTagKind, string> = {
   topic: 'Topic',
   substance: 'Substance',
   treatment: 'Treatment',
-  diagnosis: 'Diagnosis',
 };
 
-const tagKindPluralLabels: Record<TagRow['kind'], string> = {
-  domain: 'sections',
+const tagKindPluralLabels: Record<VisibleTagKind, string> = {
   topic: 'topics',
   substance: 'substances',
   treatment: 'treatments',
-  diagnosis: 'diagnoses',
 };
 
-const tagKindOrder: TagRow['kind'][] = [
-  'domain',
-  'substance',
-  'topic',
-  'treatment',
-  'diagnosis',
-];
+const tagKindOrder: VisibleTagKind[] = ['topic', 'substance', 'treatment'];
 
 export function PracticeSessionStarter(props: PracticeSessionStarterProps) {
   const selectedTagSlugs = useMemo(

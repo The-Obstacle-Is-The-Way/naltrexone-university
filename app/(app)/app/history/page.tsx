@@ -74,8 +74,10 @@ export function createHistoryPage(deps?: {
         getTagsFn({}),
       ]);
 
+      const visibleKinds = new Set(['topic', 'substance', 'treatment']);
       const tagOptions = tagsResult.ok
         ? tagsResult.data.rows
+            .filter((t) => visibleKinds.has(t.kind))
             .map((t) => ({ slug: t.slug, name: t.name }))
             .sort(
               (a, b) =>
