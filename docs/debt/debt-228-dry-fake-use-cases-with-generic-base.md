@@ -3,6 +3,7 @@
 **Status:** Open
 **Priority:** P4
 **Date:** 2026-02-18
+**Last Verified:** 2026-02-18
 **Parent:** [DEBT-224](debt-224-file-size-audit-production-and-test.md)
 **Component:** `src/application/test-helpers/fakes/fake-use-cases.ts`
 
@@ -10,7 +11,7 @@
 
 ## Description
 
-`fake-use-cases.ts` is **320 lines** containing 14 nearly identical fake use case implementations. Every class follows the exact same pattern:
+`fake-use-cases.ts` is **320 lines** containing **15** nearly identical fake use case implementations. Every class follows the same pattern:
 
 ```typescript
 export class FakeXxxUseCase implements UseCase<Input, Output> {
@@ -26,13 +27,18 @@ export class FakeXxxUseCase implements UseCase<Input, Output> {
 
 The only variation between classes is the type parameters.
 
-**Disposition:** C — Extractable boilerplate/duplication.
+**Disposition:** C - Extractable boilerplate/duplication.
 
 ## Impact
 
 - Adding a new use case fake requires copy-pasting ~20 lines of identical boilerplate
-- 14 copies of the same logic is a DRY violation
-- Bug fixes to the fake pattern must be applied 14 times
+- 15 copies of the same logic is a DRY violation
+- Bug fixes to the fake pattern must be applied in many places
+
+## Why This Is Worth Fixing
+
+- **Robustness gain:** one behavior implementation means fewer divergence bugs in test doubles.
+- **Complexity risk to avoid:** do not hide behavior behind opaque metaprogramming; keep named classes for readability.
 
 ## Resolution
 
@@ -57,12 +63,14 @@ export class FakeGetNextQuestionUseCase extends FakeUseCase<
 // ... etc.
 ```
 
-This preserves named classes (important for test readability and `instanceof` checks) while eliminating ~200 lines of duplication.
+This preserves named classes (important for test readability and potential `instanceof` checks) while removing repeated method bodies.
+
+Guardrail: if any fake needs custom behavior, that fake should stay standalone rather than forcing inheritance.
 
 ## Verification
 
 - [ ] Generic `FakeUseCase<I, O>` base class exists
-- [ ] All 14 named fakes extend it (no duplicate `execute()` implementations)
+- [ ] All 15 named fakes extend it (no duplicate `execute()` implementations)
 - [ ] All existing imports and `instanceof` checks still work
 - [ ] `fakes.test.ts` passes without modification (or with minimal updates)
 - [ ] `pnpm test --run` passes
@@ -70,5 +78,5 @@ This preserves named classes (important for test readability and `instanceof` ch
 
 ## Related
 
-- [DEBT-227](debt-227-split-fake-repositories-into-individual-files.md) — Companion: split fake-repositories.ts
-- [DEBT-224](debt-224-file-size-audit-production-and-test.md) — Parent audit
+- [DEBT-227](debt-227-split-fake-repositories-into-individual-files.md) - Companion split of fake repositories
+- [DEBT-224](debt-224-file-size-audit-production-and-test.md) - Parent file-size audit

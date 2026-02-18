@@ -3,8 +3,9 @@
 **Status:** Open
 **Priority:** P4
 **Date:** 2026-02-18
+**Last Verified:** 2026-02-18
 **Parent:** [DEBT-224](debt-224-file-size-audit-production-and-test.md)
-**Component:** Biome / lint configuration
+**Component:** `biome.json` (or CI script if Biome lacks native support)
 
 ---
 
@@ -20,6 +21,11 @@ DEBT-224 identified this as a recurring pattern: debt gets resolved, then files 
 - Developers don't know they've crossed the threshold until a debt ticket is filed
 - Regression happens silently over weeks/months
 
+## Why This Is Worth Fixing
+
+- **Robustness gain:** early automated signals prevent silent growth regressions.
+- **Complexity risk to avoid:** enforcement should be warning-level and allow explicit justified exceptions.
+
 ## Resolution
 
 Add a `max-lines` rule (or equivalent) to the project's lint configuration:
@@ -34,6 +40,8 @@ If Biome doesn't support `max-lines`, consider:
 - A simple CI script that checks `wc -l` on production files
 - A pre-commit hook that warns on files over 350 lines
 
+Guardrail: keep the implementation transparent and low-maintenance; avoid complex custom lint frameworks.
+
 ## Verification
 
 - [ ] Lint rule or CI check in place
@@ -44,6 +52,6 @@ If Biome doesn't support `max-lines`, consider:
 
 ## Related
 
-- [DEBT-224](debt-224-file-size-audit-production-and-test.md) — Parent audit
-- [DEBT-233](debt-233-add-why-comments-to-justified-large-files.md) — WHY comments for exempted files
-- [DEBT-193](../_archive/debt/debt-193-backend-production-files-over-300-lines.md) — Original 300-line guideline
+- [DEBT-224](debt-224-file-size-audit-production-and-test.md) - Parent file-size audit
+- [DEBT-233](debt-233-add-why-comments-to-justified-large-files.md) - WHY comments for justified exemptions
+- [DEBT-193](../_archive/debt/debt-193-backend-production-files-over-300-lines.md) - Original 300-line guideline

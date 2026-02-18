@@ -3,6 +3,7 @@
 **Status:** Open
 **Priority:** P3
 **Date:** 2026-02-18
+**Last Verified:** 2026-02-18
 **Parent:** [DEBT-224](debt-224-file-size-audit-production-and-test.md)
 **Component:** `app/(app)/app/bookmarks/page.tsx`
 
@@ -10,7 +11,7 @@
 
 ## Description
 
-`bookmarks/page.tsx` is **322 lines** mixing three distinct concerns:
+`bookmarks/page.tsx` is **322 lines** and currently mixes three concerns:
 
 1. **Server action** (`removeBookmarkAction`) — async mutation logic
 2. **Error handling** (`parseRemoveBookmarkErrorCode`, `getRemoveBookmarkErrorMessage`) — error code parsing and user-facing messages
@@ -18,13 +19,18 @@
 
 Server actions and error-code-to-message maps are reusable patterns that should not live inside page components.
 
-**Disposition:** B — Multiple responsibilities that should be split.
+**Disposition:** B - Multiple responsibilities should be split.
 
 ## Impact
 
 - Server action is not reusable from other pages
 - Error handling code is boilerplate mixed with rendering
 - File slightly exceeds 300-line production guideline
+
+## Why This Is Worth Fixing
+
+- **Robustness gain:** action/error logic becomes reusable and independently testable.
+- **Complexity risk to avoid:** avoid over-fragmentation; keep only three focused modules.
 
 ## Resolution
 
@@ -39,6 +45,8 @@ app/(app)/app/bookmarks/
 
 Keep the `createBookmarksPage` factory pattern in `page.tsx` as the main export.
 
+Guardrail: do not introduce a new abstraction layer beyond the two extracted modules (`bookmarks-actions.ts`, `bookmarks-errors.ts`).
+
 ## Verification
 
 - [ ] `removeBookmarkAction` extracted to `bookmarks-actions.ts`
@@ -50,4 +58,4 @@ Keep the `createBookmarksPage` factory pattern in `page.tsx` as the main export.
 
 ## Related
 
-- [DEBT-224](debt-224-file-size-audit-production-and-test.md) — Parent audit
+- [DEBT-224](debt-224-file-size-audit-production-and-test.md) - Parent file-size audit

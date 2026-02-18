@@ -3,6 +3,7 @@
 **Status:** Open
 **Priority:** P4
 **Date:** 2026-02-18
+**Last Verified:** 2026-02-18
 **Parent:** [DEBT-224](debt-224-file-size-audit-production-and-test.md)
 **Component:** `scripts/seed.ts`
 
@@ -18,7 +19,7 @@
 4. **Question sync** — diff computation, upsert/delete orchestration
 5. **Placeholder archival** — moving placeholder files
 
-**Disposition:** B — Multiple responsibilities that should be split.
+**Disposition:** B - Multiple responsibilities should be split.
 
 ## Impact
 
@@ -26,6 +27,11 @@
 - Growing steadily (+17% since audit) as content pipeline evolves
 - Difficult to unit test individual stages
 - New developers must read 500 lines to understand the seed process
+
+## Why This Is Worth Fixing
+
+- **Robustness gain:** clearer seams for parsing/sync/archival reduce regression blast radius in content pipeline changes.
+- **Complexity risk to avoid:** keep orchestration flow linear in `seed.ts`; do not add framework-like indirection.
 
 ## Resolution
 
@@ -44,6 +50,8 @@ scripts/
 
 Keep `seed.ts` as the thin orchestrator calling each stage in sequence.
 
+Guardrail: reuse existing `scripts/seed-helpers.ts` where appropriate instead of creating duplicate utility modules.
+
 ## Verification
 
 - [ ] Each stage extracted to its own module
@@ -54,4 +62,4 @@ Keep `seed.ts` as the thin orchestrator calling each stage in sequence.
 
 ## Related
 
-- [DEBT-224](debt-224-file-size-audit-production-and-test.md) — Parent audit
+- [DEBT-224](debt-224-file-size-audit-production-and-test.md) - Parent file-size audit
