@@ -2,15 +2,16 @@
 
 Generate board-style questions for Addiction Psychiatry certification (NTX University).
 
-**This file is for agent invocations. For full quality standards, see the skill file.**
+**This file is for agent invocations. For full quality standards, see META.MD Part 2.**
 
 ---
 
 ## Required Reading (In Order)
 
-1. **`/.claude/skills/generate-questions/SKILL.md`** - Full NBME quality standards, technical flaw taxonomy, examples
+1. **`META.MD`** - Part 2 contains full NBME quality standards, technical flaw taxonomy, examples
 2. **`SCHEMA.md`** - YAML format, tags, vocabularies
-3. **`PLAN.md`** - Targets, progress tracker
+3. **`QUESTION-FORMAT-SPEC.md`** - Complete pipeline spec (how drafts become database questions)
+4. **`PLAN.md`** - Targets, progress tracker
 
 ---
 
@@ -31,8 +32,9 @@ Generate board-style questions for Addiction Psychiatry certification (NTX Unive
 3. `qid: {source}-{number}` format (e.g., `white-2020-001`)
 4. **Test clinical concepts, NOT statistics**
 5. **Cover-the-options rule**: Can you answer without seeing the choices?
-6. **Check for technical flaws** (see SKILL.md for full taxonomy)
+6. **Check for technical flaws** (see META.MD Part 2 for full taxonomy)
 7. **No domain tags** in draft frontmatter (taxonomy is topic/substance/treatment/diagnosis)
+8. **Frontmatter is strict** — unknown YAML keys will be rejected by the import script
 
 ### Workflow
 
@@ -41,7 +43,7 @@ Generate board-style questions for Addiction Psychiatry certification (NTX Unive
 2. Identify 6-12 clinically relevant concepts (NOT statistics)
 3. Write 6 recall questions (2 easy, 2 medium, 2 hard) -> recall.md
 4. Write 6 vignette questions (2 easy, 2 medium, 2 hard) -> vignettes.md
-5. Apply quality checklist from SKILL.md
+5. Apply quality checklist from META.MD Part 2
 6. Update PLAN.md checkboxes
 ```
 
@@ -65,7 +67,7 @@ Generate board-style questions for Addiction Psychiatry certification (NTX Unive
 - Heterogeneity values (I-squared)
 - Publication dates
 
-**For the complete list and examples, see SKILL.md.**
+**For the complete list and examples, see META.MD Part 2.**
 
 ---
 
@@ -76,3 +78,25 @@ Generate board-style questions for Addiction Psychiatry certification (NTX Unive
 **Topics:** screening-diagnosis, epidemiology-prevention, pharmacology-neuroscience, intoxication-toxicology, withdrawal-management, treatment-pharmacotherapy, psychosocial-interventions, co-occurring-disorders, medical-complications, harm-reduction, ethics-legal, special-populations, general
 
 **Treatments:** acamprosate, buprenorphine, bupropion, disulfiram, gabapentin, methadone, naloxone, naltrexone, nrt, topiramate, varenicline, other-treatment
+
+> These are canonical slugs. The import script rejects anything else. If your existing drafts use old slugs (e.g., `pharmacology` instead of `pharmacology-neuroscience`), see the migration map in QUESTION-FORMAT-SPEC.md §4.
+
+---
+
+## Special Cases
+
+- `questions/prescribers-guide/`: 4 recall questions per medication (no vignettes). See `SCHEMA.md` for details.
+- `questions/article-based-pathway/09-therapy/2024-cooperman-more-trial-correction/`: correction notice folder (no questions).
+
+---
+
+## Reference Files in This Directory
+
+| File | Purpose |
+|------|---------|
+| `SCHEMA.md` | YAML format spec, tag vocabularies, QID rules, quality checklist |
+| `QUESTION-FORMAT-SPEC.md` | Complete pipeline spec — how fields map through import → MDX → seed → database → UI |
+| `TAG-TAXONOMY.md` | Canonical tag tables, migration maps, content gaps |
+| `META.MD` | Inventory, historical audit prompt, **full NBME quality standards (Part 2)** |
+| `NOTES.md` | Audit findings (quality tiers, failure modes, stabilization status) |
+| `PLAN.md` | Progress tracker (all 480 article-based questions complete) |

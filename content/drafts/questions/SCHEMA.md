@@ -2,12 +2,15 @@
 
 **Purpose:** Board-style questions for Addiction Psychiatry certification exam prep.
 
-**Version:** 1.6
+**Version:** 1.7
 **Last Updated:** February 18, 2026
 
 **Related Files:**
-- `/.claude/skills/generate-questions/SKILL.md` - Full NBME quality standards, technical flaw taxonomy
+- `META.MD` - Full NBME quality standards, technical flaw taxonomy (Part 2)
+- `QUESTION-FORMAT-SPEC.md` - Complete pipeline spec (how fields map through import → MDX → seed → database → UI)
+- `TAG-TAXONOMY.md` - Canonical tag tables with display names, migration maps, content gaps
 - `CLAUDE.md` - Quick-start generation instructions
+- `AGENTS.md` - Agent-specific instructions
 - `PLAN.md` - Progress tracker
 - `NOTES.md` - Audit findings
 
@@ -17,6 +20,7 @@
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.7 | 2026-02-18 | Fixed broken SKILL.md reference, added QUESTION-FORMAT-SPEC.md and TAG-TAXONOMY.md cross-references, added strict frontmatter note, treatments guidance |
 | 1.6 | 2026-02-18 | Canonical taxonomy alignment (Topic/Substance/Treatment), removed legacy domain guidance, added treatment canonical list |
 | 1.5 | 2026-02-04 | Documented source-only full-conversion folder and added validation script reference |
 | 1.4 | 2026-02-04 | Documented special-case sections (Stahl's medications), clarified QID rules for multi-entry sources |
@@ -137,12 +141,14 @@ Every question MUST have these tags in the YAML frontmatter:
 | `source` | paper identifier | e.g., `white-2020`, `jones-2023` |
 | `answer` | `A`, `B`, `C`, `D`, or `E` | The correct answer letter |
 
-Optional tags (recommended when relevant):
+**Strict frontmatter:** The import script uses `DraftFrontmatterSchema.strict()` — any unknown YAML key will be rejected. Only include fields from this table.
+
+Recommended tags (include when relevant):
 
 | Tag | Values | Description |
 |-----|--------|-------------|
-| `treatments` | Array from canonical list below | Specific treatment tags (e.g., `buprenorphine`, `naltrexone`) |
-| `diagnoses` | Array of kebab-case slugs | Specific diagnoses (e.g., `opioid-use-disorder`) |
+| `treatments` | Array from canonical list below | Specific treatment tags (e.g., `buprenorphine`, `naltrexone`). **Include whenever a medication is discussed by name.** |
+| `diagnoses` | Array of kebab-case slugs | Specific diagnoses (e.g., `opioid-use-disorder`). Stored in DB but not shown in UI. |
 
 ### QID Format
 
@@ -291,14 +297,16 @@ Before finalizing questions:
 
 ---
 
-## Optional Metadata (Not Required)
+## Optional Metadata (Not Supported Yet)
 
-If you want to better support cutting-edge or rapidly changing topics without bloating stems or explanations, consider adding OPTIONAL frontmatter tags in the future (only if the importer/app supports them).
-
-Suggested minimal additions:
+These fields are NOT currently supported by the import script (strict mode will reject them). They are design proposals for a future version:
 
 - `evidence:` one of `guideline`, `systematic-review`, `rct`, `observational`, `case-series`, `expert-consensus`
 - `certainty:` one of `high`, `moderate`, `low`, `very-low`, `na`
+- `citation:` structured citation string (e.g., `"White AM, et al. JAMA. 2020;323(2):130-131."`)
+- `doi:` DOI string (e.g., `"10.1001/jama.2019.20318"`)
+
+**Do not include these in drafts** — the strict frontmatter schema will reject them. For now, embed citations in the `## Explanation` section.
 
 ## Validation (Recommended)
 
@@ -310,4 +318,14 @@ Optional length cue audit for a single source folder:
 
 `python3 scripts/validate_questions.py --root questions/personal-papers/lancet-gbd --check-length-cues`
 
-Guideline: keep these optional and use them sparingly. For most workflows, storing source-level metadata (type, year, version) outside individual questions is cleaner than repeating it in every item.
+---
+
+## Pipeline Deep Dive
+
+For complete details on how draft fields map through the import → MDX → seed → database → UI pipeline, including:
+- How `answer: B` becomes `correct: true` on the right choice
+- How tag slugs expand to `{slug, name, kind}` objects
+- How explanations are parsed into per-choice feedback
+- All validation rejection points with error messages
+
+See **`QUESTION-FORMAT-SPEC.md`** in this directory.

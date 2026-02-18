@@ -6,11 +6,10 @@ Generate board-style questions for Addiction Psychiatry certification (NTX Unive
 
 **Read these files in order:**
 
-1. `/.claude/skills/generate-questions/SKILL.md` - **Full quality standards** (NBME rules, technical flaws, examples)
+1. `META.MD` - Part 2 has **full quality standards** (NBME rules, technical flaws, examples)
 2. `SCHEMA.md` - Format, tags, vocabularies
-3. `PLAN.md` - Targets, progress tracker
-
-The SKILL.md is the authoritative reference for question quality. This file is a quick-start summary.
+3. `QUESTION-FORMAT-SPEC.md` - Complete pipeline spec (how fields map through the system)
+4. `PLAN.md` - Targets, progress tracker
 
 ---
 
@@ -40,10 +39,12 @@ Difficulty per file: 2 easy, 2 medium, 2 hard
 1. `answer: B` in frontmatter (NOT `*` in choices)
 2. `substances: [alcohol]` and `topics: [screening-diagnosis]` (arrays with brackets)
 3. `qid: {source}-{number}` format (e.g., `white-2020-001`)
-4. **Test clinical concepts, NOT statistics** (see SKILL.md for full list)
+4. **Test clinical concepts, NOT statistics** (see META.MD Part 2 for full list)
 5. **Cover-the-options rule**: Can you answer without seeing the choices?
 6. **No technical flaws**: Word repeats, convergence, length cues, grammatical cues
 7. **No domain tags** in draft frontmatter (taxonomy is topic/substance/treatment/diagnosis)
+8. **Frontmatter is strict** — unknown YAML keys are rejected by the import script
+9. **Include `treatments`** when a specific medication is discussed by name
 
 ---
 
@@ -57,7 +58,7 @@ Difficulty per file: 2 easy, 2 medium, 2 hard
 5. Save: questions/[chapter]/[paper]/recall.md
 6. Write 6 vignette questions (2 easy, 2 medium, 2 hard)
 7. Save: questions/[chapter]/[paper]/vignettes.md
-8. Apply quality checklist from SKILL.md
+8. Apply quality checklist from META.MD Part 2
 9. Update PLAN.md checkboxes
 ```
 
@@ -74,9 +75,10 @@ Before saving, verify:
 - [ ] No word repeats between stem and correct answer
 - [ ] Each wrong answer explanation teaches a concept
 - [ ] Clinical pearl included
+- [ ] `treatments` tag included if a medication is mentioned
 - [ ] Optional: run `python3 scripts/validate_questions.py --root questions/<paper-folder> --check-length-cues`
 
-**For the full checklist and technical flaw taxonomy, see SKILL.md.**
+**For the full checklist and technical flaw taxonomy, see META.MD Part 2.**
 
 ---
 
@@ -87,3 +89,5 @@ Before saving, verify:
 **Topics:** screening-diagnosis, epidemiology-prevention, pharmacology-neuroscience, intoxication-toxicology, withdrawal-management, treatment-pharmacotherapy, psychosocial-interventions, co-occurring-disorders, medical-complications, harm-reduction, ethics-legal, special-populations, general
 
 **Treatments:** acamprosate, buprenorphine, bupropion, disulfiram, gabapentin, methadone, naloxone, naltrexone, nrt, topiramate, varenicline, other-treatment
+
+> Old slugs like `pharmacology`, `treatment`, `withdrawal` are rejected. See the migration map in `QUESTION-FORMAT-SPEC.md` §4.
