@@ -1,8 +1,9 @@
 # DEBT-228: DRY fake-use-cases.ts With Generic Base Class
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P4
 **Date:** 2026-02-18
+**Resolved:** 2026-02-18
 **Last Verified:** 2026-02-18
 **Parent:** [DEBT-224](debt-224-file-size-audit-production-and-test.md)
 **Component:** `src/application/test-helpers/fakes/fake-use-cases.ts`
@@ -11,7 +12,7 @@
 
 ## Description
 
-`fake-use-cases.ts` is **320 lines** containing **15** nearly identical fake use case implementations. Every class follows the same pattern:
+`fake-use-cases.ts` was **320 lines** containing **15** nearly identical fake use case implementations. Every class followed the same pattern:
 
 ```typescript
 export class FakeXxxUseCase implements UseCase<Input, Output> {
@@ -69,12 +70,12 @@ Guardrail: if any fake needs custom behavior, that fake should stay standalone r
 
 ## Verification
 
-- [ ] Generic `FakeUseCase<I, O>` base class exists
-- [ ] All 15 named fakes extend it (no duplicate `execute()` implementations)
-- [ ] All existing imports and `instanceof` checks still work
-- [ ] `fakes.test.ts` passes without modification (or with minimal updates)
-- [ ] `pnpm test --run` passes
-- [ ] `pnpm typecheck` passes
+- [x] Generic `FakeUseCase<I, O>` base class exists
+- [x] All 15 named fakes extend it (no duplicate `execute()` implementations)
+- [x] All existing imports and `instanceof` checks still work
+- [x] `fakes.test.ts` passes without modification (or with minimal updates)
+- [x] `pnpm test --run` passes
+- [x] `pnpm typecheck` passes
 
 ## Related
 
