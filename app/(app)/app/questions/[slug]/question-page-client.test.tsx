@@ -1,11 +1,19 @@
 // @vitest-environment jsdom
 import { renderToStaticMarkup } from 'react-dom/server';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { toQuestionRoute } from '@/lib/routes';
 
 vi.mock('next/link', () => ({
   default: (props: Record<string, unknown>) => <a {...props} />,
 }));
+
+type QuestionPageClientModule = typeof import('./question-page-client');
+
+let QuestionView: QuestionPageClientModule['QuestionView'];
+
+beforeAll(async () => {
+  ({ QuestionView } = await import('./question-page-client'));
+});
 
 describe('QuestionView', () => {
   function createBaseProps() {
@@ -54,9 +62,7 @@ describe('QuestionView', () => {
     from: 'practice',
   } as const;
 
-  it('renders a Back to Dashboard utility link', async () => {
-    const { QuestionView } = await import('./question-page-client');
-
+  it('renders a Back to Dashboard utility link', () => {
     const html = renderToStaticMarkup(
       <QuestionView
         loadState={{ status: 'ready' }}
@@ -78,9 +84,7 @@ describe('QuestionView', () => {
     expect(backLink?.textContent?.trim()).toBe('Back to Dashboard');
   });
 
-  it('renders an origin-aware back link when origin=history', async () => {
-    const { QuestionView } = await import('./question-page-client');
-
+  it('renders an origin-aware back link when origin=history', () => {
     const html = renderToStaticMarkup(
       <QuestionView
         loadState={{ status: 'ready' }}
@@ -104,9 +108,7 @@ describe('QuestionView', () => {
     expect(html).toContain('Reviewing a question from your history.');
   });
 
-  it('prefers historyHref when origin=history and historyHref is present', async () => {
-    const { QuestionView } = await import('./question-page-client');
-
+  it('prefers historyHref when origin=history and historyHref is present', () => {
     const historyHref = '/app/history?tab=questions&offset=20&limit=20';
 
     const html = renderToStaticMarkup(
@@ -124,9 +126,7 @@ describe('QuestionView', () => {
     expect(backLink?.getAttribute('href')).toBe(historyHref);
   });
 
-  it('ignores invalid historyHref values when origin=history', async () => {
-    const { QuestionView } = await import('./question-page-client');
-
+  it('ignores invalid historyHref values when origin=history', () => {
     const html = renderToStaticMarkup(
       <QuestionView
         {...createBaseProps()}
@@ -142,9 +142,7 @@ describe('QuestionView', () => {
     expect(backLink?.getAttribute('href')).toBe('/app/history?tab=questions');
   });
 
-  it('uses a session-aware back link when origin=practice and sessionId is present', async () => {
-    const { QuestionView } = await import('./question-page-client');
-
+  it('uses a session-aware back link when origin=practice and sessionId is present', () => {
     const html = renderToStaticMarkup(
       <QuestionView
         {...createBaseProps()}
@@ -158,9 +156,7 @@ describe('QuestionView', () => {
     expect(backLink?.textContent?.trim()).toBe('Back to Session');
   });
 
-  it('uses a sessions-tab back link when origin=history and sessionId is present', async () => {
-    const { QuestionView } = await import('./question-page-client');
-
+  it('uses a sessions-tab back link when origin=history and sessionId is present', () => {
     const html = renderToStaticMarkup(
       <QuestionView
         {...createBaseProps()}
@@ -174,9 +170,7 @@ describe('QuestionView', () => {
     expect(backLink?.textContent?.trim()).toBe('Back to History');
   });
 
-  it('renders an origin-aware back link when origin=bookmarks', async () => {
-    const { QuestionView } = await import('./question-page-client');
-
+  it('renders an origin-aware back link when origin=bookmarks', () => {
     const html = renderToStaticMarkup(
       <QuestionView
         loadState={{ status: 'ready' }}
@@ -200,9 +194,7 @@ describe('QuestionView', () => {
     expect(html).toContain('Reattempt a question from your bookmarks.');
   });
 
-  it('uses origin-aware post-submit back actions', async () => {
-    const { QuestionView } = await import('./question-page-client');
-
+  it('uses origin-aware post-submit back actions', () => {
     const html = renderToStaticMarkup(
       <QuestionView
         loadState={{ status: 'ready' }}
@@ -233,9 +225,7 @@ describe('QuestionView', () => {
     expect(html).toContain('Review a question from your practice history.');
   });
 
-  it('renders Feedback when submitResult is pre-populated (review mode)', async () => {
-    const { QuestionView } = await import('./question-page-client');
-
+  it('renders Feedback when submitResult is pre-populated (review mode)', () => {
     const html = renderToStaticMarkup(
       <QuestionView
         loadState={{ status: 'ready' }}
@@ -263,9 +253,7 @@ describe('QuestionView', () => {
     expect(html).toContain('Explanation');
   });
 
-  it('renders "Try Again" instead of "Submit" when submitResult exists', async () => {
-    const { QuestionView } = await import('./question-page-client');
-
+  it('renders "Try Again" instead of "Submit" when submitResult exists', () => {
     const html = renderToStaticMarkup(
       <QuestionView
         loadState={{ status: 'ready' }}
@@ -292,9 +280,7 @@ describe('QuestionView', () => {
     expect(html).not.toContain('>Submit<');
   });
 
-  it('renders a previous link when sessionNavigation is not on the first question', async () => {
-    const { QuestionView } = await import('./question-page-client');
-
+  it('renders a previous link when sessionNavigation is not on the first question', () => {
     const html = renderToStaticMarkup(
       <QuestionView
         {...createBaseProps()}
@@ -319,9 +305,7 @@ describe('QuestionView', () => {
     );
   });
 
-  it('renders a next link when sessionNavigation is not on the last question', async () => {
-    const { QuestionView } = await import('./question-page-client');
-
+  it('renders a next link when sessionNavigation is not on the last question', () => {
     const html = renderToStaticMarkup(
       <QuestionView
         {...createBaseProps()}
@@ -346,9 +330,7 @@ describe('QuestionView', () => {
     );
   });
 
-  it('orders session review actions as Previous, Try Again, Next, Back', async () => {
-    const { QuestionView } = await import('./question-page-client');
-
+  it('orders session review actions as Previous, Try Again, Next, Back', () => {
     const html = renderToStaticMarkup(
       <QuestionView
         {...createBaseProps()}
@@ -374,9 +356,7 @@ describe('QuestionView', () => {
     ]);
   });
 
-  it('renders the position indicator when sessionNavigation is present', async () => {
-    const { QuestionView } = await import('./question-page-client');
-
+  it('renders the position indicator when sessionNavigation is present', () => {
     const html = renderToStaticMarkup(
       <QuestionView
         {...createBaseProps()}
@@ -400,9 +380,7 @@ describe('QuestionView', () => {
     expect(inlineIndicator).toBeUndefined();
   });
 
-  it('renders ReviewQuestionNavigator when sessionNavigation is present', async () => {
-    const { QuestionView } = await import('./question-page-client');
-
+  it('renders ReviewQuestionNavigator when sessionNavigation is present', () => {
     const html = renderToStaticMarkup(
       <QuestionView
         {...createBaseProps()}
@@ -413,9 +391,7 @@ describe('QuestionView', () => {
     expect(html).toContain('Question navigator');
   });
 
-  it('does not render ReviewQuestionNavigator when sessionNavigation is null', async () => {
-    const { QuestionView } = await import('./question-page-client');
-
+  it('does not render ReviewQuestionNavigator when sessionNavigation is null', () => {
     const html = renderToStaticMarkup(
       <QuestionView {...createBaseProps()} sessionNavigation={null} />,
     );
@@ -423,9 +399,7 @@ describe('QuestionView', () => {
     expect(html).not.toContain('Question navigator');
   });
 
-  it('renders navigator buttons with correct/incorrect/unanswered variants', async () => {
-    const { QuestionView } = await import('./question-page-client');
-
+  it('renders navigator buttons with correct/incorrect/unanswered variants', () => {
     const html = renderToStaticMarkup(
       <QuestionView
         {...createBaseProps()}
@@ -438,9 +412,7 @@ describe('QuestionView', () => {
     expect(html).toContain('bg-background');
   });
 
-  it('shows disabled Previous on the first question of session review', async () => {
-    const { QuestionView } = await import('./question-page-client');
-
+  it('shows disabled Previous on the first question of session review', () => {
     const html = renderToStaticMarkup(
       <QuestionView
         {...createBaseProps()}
@@ -479,9 +451,7 @@ describe('QuestionView', () => {
     );
   });
 
-  it('shows disabled Next on the last question of session review', async () => {
-    const { QuestionView } = await import('./question-page-client');
-
+  it('shows disabled Next on the last question of session review', () => {
     const html = renderToStaticMarkup(
       <QuestionView
         {...createBaseProps()}
@@ -520,9 +490,7 @@ describe('QuestionView', () => {
     );
   });
 
-  it('renders Previous/Next links alongside Submit for unanswered session questions', async () => {
-    const { QuestionView } = await import('./question-page-client');
-
+  it('renders Previous/Next links alongside Submit for unanswered session questions', () => {
     const html = renderToStaticMarkup(
       <QuestionView
         {...createBaseProps()}
@@ -542,9 +510,7 @@ describe('QuestionView', () => {
     expect(bottomBar.textContent).toContain('Next →');
   });
 
-  it('renders Back button in bottom bar for unanswered session questions', async () => {
-    const { QuestionView } = await import('./question-page-client');
-
+  it('renders Back button in bottom bar for unanswered session questions', () => {
     const html = renderToStaticMarkup(
       <QuestionView
         {...createBaseProps()}
@@ -565,9 +531,7 @@ describe('QuestionView', () => {
     expect(backLink?.getAttribute('href')).toBe('/app/history?tab=sessions');
   });
 
-  it('does not render the session navigation bar when sessionNavigation is null', async () => {
-    const { QuestionView } = await import('./question-page-client');
-
+  it('does not render the session navigation bar when sessionNavigation is null', () => {
     const html = renderToStaticMarkup(
       <QuestionView {...createBaseProps()} sessionNavigation={null} />,
     );

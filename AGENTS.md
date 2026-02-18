@@ -15,16 +15,35 @@ Repository guidelines for AI coding agents (Codex CLI, Claude Code, Cursor, GitH
 ```typescript
 // @vitest-environment jsdom   ← MUST be first line
 import { renderToStaticMarkup } from 'react-dom/server';
+import { beforeAll, describe, expect, it } from 'vitest';
+
+let MyComponent: typeof import('./MyComponent').default;
+
+beforeAll(async () => {
+  MyComponent = (await import('./MyComponent')).default;
+});
 
 // Use renderToStaticMarkup for render-output tests
-const html = renderToStaticMarkup(<MyComponent />);
-expect(html).toContain('Expected text');
+describe('MyComponent', () => {
+  it('renders output', () => {
+    const html = renderToStaticMarkup(<MyComponent />);
+    expect(html).toContain('Expected text');
+  });
+});
 ```
 
 ### Why:
+
 - `@testing-library/react` has a [known bug](https://github.com/testing-library/react-testing-library/issues/1392) with React 19 + Vitest — **no fix coming**
 - Git hooks and CI load production builds where `act()` is undefined
 - `renderToStaticMarkup` is a stable first-party React API that works everywhere
+
+### Import placement + timeout policy (DEBT-225):
+
+- Keep dynamic imports, but load them in `beforeAll` (or `beforeEach` only when mock/module-reset order requires it)
+- Do **not** import heavy modules inside individual `it()` blocks
+- Do **not** add per-test timeout overrides (`it(..., 10_000)` or `{ timeout: 15_000 }`)
+- Global Vitest policy is configured in `vitest.config.ts`, `vitest.browser.config.ts`, and `vitest.integration.config.ts`
 
 ### DO NOT USE for jsdom component tests:
 
@@ -274,6 +293,7 @@ Rules:
 - TypeScript + React (Next.js). Keep modules small, prefer pure functions in `lib/`
 - Avoid non-null assertions (`!`) and unused imports/variables (Biome errors)
 - Prefer importing via `@/...` alias
+- For E2E-specific import/timeout conventions, see `Playwright E2E Conventions` below.
 
 ## Testing
 
@@ -291,6 +311,16 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 - **Unit tests:** `*.test.ts` colocated next to source files (e.g., `grading.ts` → `grading.test.ts`)
 - **Integration tests:** `tests/integration/*.integration.test.ts` (requires local Postgres)
 - **E2E tests:** `tests/e2e/*.spec.ts` (Playwright)
+- **E2E timeout policy:** `docs/dev/testing-infrastructure.md` → "Playwright Timeout Policy"
+
+### Playwright E2E Conventions
+
+- In `tests/e2e/**/*.spec.ts`, use relative imports for local helper modules (`./helpers/...`)
+- Keep `@/...` imports for app/runtime modules outside `tests/e2e/**`
+- Prefer Playwright defaults first; only use `test.setTimeout(...)` for full-flow budget increases
+- Prefer assertion/locator timeouts before increasing full test timeout
+- Any non-default `test.setTimeout(...)` must include a concise in-file rationale comment
+- Approved timeout bands: `120_000` (standard authenticated flows), `180_000` (multi-page audits), `300_000` (documented temporary outlier only)
 
 ### Running Integration Tests Locally
 
@@ -315,11 +345,16 @@ pnpm db:test:down                                  # Stop database when done
 ```typescript
 // @vitest-environment jsdom
 import { renderToStaticMarkup } from 'react-dom/server';
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
+
+let MyComponent: typeof import('./MyComponent').default;
+
+beforeAll(async () => {
+  MyComponent = (await import('./MyComponent')).default;
+});
 
 describe('MyComponent', () => {
-  it('renders correctly', async () => {
-    const MyComponent = (await import('./MyComponent')).default;
+  it('renders correctly', () => {
     const html = renderToStaticMarkup(<MyComponent />);
     expect(html).toContain('Expected text');
   });

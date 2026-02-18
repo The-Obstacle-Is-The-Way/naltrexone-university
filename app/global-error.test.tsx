@@ -1,11 +1,15 @@
 // @vitest-environment jsdom
 import { renderToStaticMarkup } from 'react-dom/server';
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
+
+let GlobalErrorPage: typeof import('./global-error').default;
+
+beforeAll(async () => {
+  GlobalErrorPage = (await import('./global-error')).default;
+});
 
 describe('app/global-error', () => {
-  it('renders a full-document error UI', async () => {
-    const GlobalErrorPage = (await import('./global-error')).default;
-
+  it('renders a full-document error UI', () => {
     const error = new Error('boom');
     (error as Error & { digest?: string }).digest = 'digest_123';
     const html = renderToStaticMarkup(
@@ -29,5 +33,5 @@ describe('app/global-error', () => {
     const htmlEl = doc.querySelector('html');
     expect(htmlEl?.getAttribute('lang')).toBe('en');
     expect(tryAgainButton?.getAttribute('type')).toBe('button');
-  }, 10_000);
+  });
 });

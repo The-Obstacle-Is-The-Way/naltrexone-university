@@ -97,6 +97,7 @@ async function extractFeedbackLabels(page: Page): Promise<Map<string, string>> {
 }
 
 test.describe('brainstorming audit — validate documented issues', () => {
+  // Multi-page audit flows can exceed the default timeout due to sequential navigation and assertions in CI.
   test.setTimeout(180_000);
   test.skip(!hasClerkCredentials, 'Missing Clerk E2E credentials');
 

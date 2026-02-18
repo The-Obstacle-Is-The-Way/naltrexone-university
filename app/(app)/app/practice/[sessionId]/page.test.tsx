@@ -1,17 +1,29 @@
 // @vitest-environment jsdom
 import { renderToStaticMarkup } from 'react-dom/server';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeAll, describe, expect, it, vi } from 'vitest';
 
 vi.mock('next/link', () => ({
   default: (props: Record<string, unknown>) => <a {...props} />,
 }));
 
+type PracticeSessionPageModule =
+  typeof import('@/app/(app)/app/practice/[sessionId]/page');
+
+let PracticeSessionPage: PracticeSessionPageModule['default'];
+let SessionSummaryView: PracticeSessionPageModule['SessionSummaryView'];
+let PracticeSessionPageView: PracticeSessionPageModule['PracticeSessionPageView'];
+let isQuestionBookmarked: PracticeSessionPageModule['isQuestionBookmarked'];
+
+beforeAll(async () => {
+  const module = await import('@/app/(app)/app/practice/[sessionId]/page');
+  PracticeSessionPage = module.default;
+  SessionSummaryView = module.SessionSummaryView;
+  PracticeSessionPageView = module.PracticeSessionPageView;
+  isQuestionBookmarked = module.isQuestionBookmarked;
+});
+
 describe('app/(app)/app/practice/[sessionId]', () => {
   it('unwraps async params before rendering the client page', async () => {
-    const PracticeSessionPage = (
-      await import('@/app/(app)/app/practice/[sessionId]/page')
-    ).default;
-
     const element = await PracticeSessionPage({
       params: Promise.resolve({ sessionId: 'session-1' }),
     } as never);
@@ -19,13 +31,9 @@ describe('app/(app)/app/practice/[sessionId]', () => {
     expect(element).toMatchObject({
       props: { sessionId: 'session-1' },
     });
-  }, 20_000);
+  });
 
   it('renders a practice session shell', async () => {
-    const PracticeSessionPage = (
-      await import('@/app/(app)/app/practice/[sessionId]/page')
-    ).default;
-
     const element = await PracticeSessionPage({
       params: Promise.resolve({ sessionId: 'session-1' }),
     } as never);
@@ -35,13 +43,9 @@ describe('app/(app)/app/practice/[sessionId]', () => {
     expect(html).toContain('Tutor Session');
     expect(html).toContain('End session');
     expect(html).not.toContain('Back to Dashboard');
-  }, 20_000);
+  });
 
   it('renders the session summary view', async () => {
-    const { SessionSummaryView } = await import(
-      '@/app/(app)/app/practice/[sessionId]/page'
-    );
-
     const html = renderToStaticMarkup(
       <SessionSummaryView
         summary={{
@@ -73,10 +77,6 @@ describe('app/(app)/app/practice/[sessionId]', () => {
   });
 
   it('renders per-question breakdown on session summary when review rows are provided', async () => {
-    const { SessionSummaryView } = await import(
-      '@/app/(app)/app/practice/[sessionId]/page'
-    );
-
     const html = renderToStaticMarkup(
       <SessionSummaryView
         summary={{
@@ -130,10 +130,6 @@ describe('app/(app)/app/practice/[sessionId]', () => {
   });
 
   it('announces summary breakdown loading with live semantics', async () => {
-    const { SessionSummaryView } = await import(
-      '@/app/(app)/app/practice/[sessionId]/page'
-    );
-
     const loadingHtml = renderToStaticMarkup(
       <SessionSummaryView
         summary={{
@@ -155,10 +151,6 @@ describe('app/(app)/app/practice/[sessionId]', () => {
   });
 
   it('announces summary breakdown errors with alert semantics', async () => {
-    const { SessionSummaryView } = await import(
-      '@/app/(app)/app/practice/[sessionId]/page'
-    );
-
     const errorHtml = renderToStaticMarkup(
       <SessionSummaryView
         summary={{
@@ -180,10 +172,6 @@ describe('app/(app)/app/practice/[sessionId]', () => {
   });
 
   it('renders the session summary branch in PracticeSessionPageView', async () => {
-    const { PracticeSessionPageView } = await import(
-      '@/app/(app)/app/practice/[sessionId]/page'
-    );
-
     const html = renderToStaticMarkup(
       <PracticeSessionPageView
         summary={{
@@ -219,10 +207,6 @@ describe('app/(app)/app/practice/[sessionId]', () => {
   });
 
   it('does not render bookmarkMessage inline when provided', async () => {
-    const { PracticeSessionPageView } = await import(
-      '@/app/(app)/app/practice/[sessionId]/page'
-    );
-
     const html = renderToStaticMarkup(
       <PracticeSessionPageView
         summary={null}
@@ -264,10 +248,6 @@ describe('app/(app)/app/practice/[sessionId]', () => {
   });
 
   it('renders exam review stage in PracticeSessionPageView', async () => {
-    const { PracticeSessionPageView } = await import(
-      '@/app/(app)/app/practice/[sessionId]/page'
-    );
-
     const html = renderToStaticMarkup(
       <PracticeSessionPageView
         summary={null}
@@ -321,10 +301,6 @@ describe('app/(app)/app/practice/[sessionId]', () => {
   });
 
   it('renders exam review submit pending label when isPending=true', async () => {
-    const { PracticeSessionPageView } = await import(
-      '@/app/(app)/app/practice/[sessionId]/page'
-    );
-
     const html = renderToStaticMarkup(
       <PracticeSessionPageView
         summary={null}
@@ -377,10 +353,6 @@ describe('app/(app)/app/practice/[sessionId]', () => {
   });
 
   it('announces review loading state before exam review is available', async () => {
-    const { PracticeSessionPageView } = await import(
-      '@/app/(app)/app/practice/[sessionId]/page'
-    );
-
     const html = renderToStaticMarkup(
       <PracticeSessionPageView
         summary={null}
@@ -412,10 +384,6 @@ describe('app/(app)/app/practice/[sessionId]', () => {
   });
 
   it('renders in-run question navigator in PracticeSessionPageView', async () => {
-    const { PracticeSessionPageView } = await import(
-      '@/app/(app)/app/practice/[sessionId]/page'
-    );
-
     const html = renderToStaticMarkup(
       <PracticeSessionPageView
         summary={null}
@@ -500,10 +468,6 @@ describe('app/(app)/app/practice/[sessionId]', () => {
   });
 
   it('isQuestionBookmarked returns true when questionId is in set', async () => {
-    const { isQuestionBookmarked } = await import(
-      '@/app/(app)/app/practice/[sessionId]/page'
-    );
-
     expect(
       isQuestionBookmarked(
         {

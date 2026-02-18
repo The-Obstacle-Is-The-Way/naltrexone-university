@@ -11,16 +11,21 @@ paths:
 
 1. Start with `// @vitest-environment jsdom` as the **first line**
 2. Use `renderToStaticMarkup` from `react-dom/server` for render-output tests
-3. Use dynamic imports for components
+3. Use dynamic imports for components, loaded once in `beforeAll` (or `beforeEach` when mock order requires per-test imports)
 
 ```typescript
 // @vitest-environment jsdom
 import { renderToStaticMarkup } from 'react-dom/server';
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
+
+let MyComponent: typeof import('./MyComponent').default;
+
+beforeAll(async () => {
+  MyComponent = (await import('./MyComponent')).default;
+});
 
 describe('MyComponent', () => {
-  it('renders correctly', async () => {
-    const MyComponent = (await import('./MyComponent')).default;
+  it('renders correctly', () => {
     const html = renderToStaticMarkup(<MyComponent />);
     expect(html).toContain('Expected text');
   });

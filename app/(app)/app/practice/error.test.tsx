@@ -1,11 +1,15 @@
 // @vitest-environment jsdom
 import { renderToStaticMarkup } from 'react-dom/server';
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
+
+let PracticeError: typeof import('./error').default;
+
+beforeAll(async () => {
+  PracticeError = (await import('./error')).default;
+});
 
 describe('app/(app)/app/practice/error', () => {
-  it('renders a contextual error boundary', async () => {
-    const PracticeError = (await import('./error')).default;
-
+  it('renders a contextual error boundary', () => {
     const error = new Error('boom');
     (error as Error & { digest?: string }).digest = 'digest_123';
 
@@ -21,5 +25,5 @@ describe('app/(app)/app/practice/error', () => {
     expect(html).toContain('Error ID');
     expect(html).toContain('digest_123');
     expect(tryAgainButton?.getAttribute('type')).toBe('button');
-  }, 10_000);
+  });
 });

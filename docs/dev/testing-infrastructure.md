@@ -1,6 +1,6 @@
 # Testing Infrastructure
 
-**Last Updated:** 2026-02-10
+**Last Updated:** 2026-02-17
 
 This document covers our E2E testing tools: Playwright and Vercel's agent-browser.
 
@@ -37,6 +37,27 @@ webServer: {
 - Runs Chromium only (for now)
 - Auto-starts dev server (`pnpm dev`) or uses production build in CI (`pnpm start`)
 - Runs with **1 worker** to avoid shared-user state conflicts (bookmarks, session continuation)
+
+### Playwright Timeout Policy
+
+Timeout usage is policy-controlled. Do not introduce ad-hoc values.
+
+1. **Default first:** Use Playwright defaults unless the flow demonstrably exceeds them.
+2. **Prefer assertion-level waits:** Use locator/assertion timeouts for specific async UI points before escalating test-level timeout.
+3. **Use `test.setTimeout(...)` only for whole-flow budget increases** when setup + navigation + assertions legitimately require more wall-clock time.
+4. **Document every non-default timeout with a rationale comment** directly above the call.
+
+Current approved `test.setTimeout` bands in `tests/e2e/**/*.spec.ts`:
+
+- `120_000`: standard authenticated flows with Clerk + seeded subscription setup.
+- `180_000`: multi-page audits or long navigation chains.
+- `300_000`: temporary outlier only where explicitly justified in-file.
+
+Current repo posture:
+
+- `playwright.config.ts` sets `webServer.timeout` (server startup budget).
+- No global `timeout` / `expect.timeout` overrides are set in Playwright config.
+- `test.slow()` is not currently used in `tests/e2e/**/*.spec.ts`.
 
 ### Existing Tests
 

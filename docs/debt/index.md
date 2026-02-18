@@ -18,9 +18,10 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 | ID | Title | Priority | Status |
 |----|-------|----------|--------|
 | [DEBT-224](debt-224-file-size-audit-production-and-test.md) | File Size Audit — Production and Test Files Exceeding Guidelines | P3 | Open |
-| [DEBT-225](debt-225-vitest-cold-import-timeout-flakes.md) | Vitest Cold-Import Timeout Flakes — 3 Tests Hit Default 5s Wall | P2 | Open |
+| [DEBT-225](debt-225-vitest-cold-import-timeout-flakes.md) | Vitest Cold-Import Timeout Flakes — 3 Tests Hit Default 5s Wall | P2 | Resolved |
+| [DEBT-226](debt-226-playwright-e2e-timeout-and-import-convention.md) | Playwright E2E Timeout Policy and Import Convention Are Undocumented | P3 | Resolved |
 
-**Next Debt ID:** DEBT-226
+**Next Debt ID:** DEBT-227
 
 ---
 

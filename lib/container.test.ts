@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { beforeAll, describe, expect, it, vi } from 'vitest';
 import type { StripeWebhookDeps } from '@/src/adapters/controllers/stripe-webhook-controller';
 import {
   ClerkAuthGateway,
@@ -56,11 +56,14 @@ async function loadContainer() {
   return mod.createContainer;
 }
 
-const createContainerPromise = loadContainer();
+let createContainer: Awaited<ReturnType<typeof loadContainer>>;
+
+beforeAll(async () => {
+  createContainer = await loadContainer();
+});
 
 describe('container factories', () => {
-  it('exposes factory functions for repositories, use cases, and controllers', async () => {
-    const createContainer = await createContainerPromise;
+  it('exposes factory functions for repositories, use cases, and controllers', () => {
     const container = createContainer({
       primitives: {
         db: {} as unknown as DrizzleDb,
@@ -111,10 +114,9 @@ describe('container factories', () => {
     expect(typeof container.createReviewControllerDeps).toBe('function');
     expect(typeof container.createStatsControllerDeps).toBe('function');
     expect(typeof container.createTagControllerDeps).toBe('function');
-  }, 40000);
+  });
 
-  it('wires concrete implementations for all factories', async () => {
-    const createContainer = await createContainerPromise;
+  it('wires concrete implementations for all factories', () => {
     const container = createContainer({
       primitives: {
         db: {} as unknown as DrizzleDb,
@@ -313,10 +315,9 @@ describe('container factories', () => {
       CheckEntitlementUseCase,
     );
     expect(tagDeps.tagRepository).toBeInstanceOf(DrizzleTagRepository);
-  }, 40000);
+  });
 
-  it('shares Stripe price IDs between subscription repository and payment gateway', async () => {
-    const createContainer = await createContainerPromise;
+  it('shares Stripe price IDs between subscription repository and payment gateway', () => {
     const container = createContainer({
       primitives: {
         db: {} as unknown as DrizzleDb,
@@ -341,10 +342,9 @@ describe('container factories', () => {
     ).toBe(
       (subscriptionRepository as unknown as { priceIds: unknown }).priceIds,
     );
-  }, 40000);
+  });
 
   it('uses repository factories inside createStripeWebhookDeps transactions', async () => {
-    const createContainer = await createContainerPromise;
     const tx = { tx: true } as const;
     const transaction = vi.fn(
       async <T>(fn: (db: unknown) => Promise<T>): Promise<T> => fn(tx),
@@ -416,5 +416,5 @@ describe('container factories', () => {
     expect(createStripeEventRepository).toHaveBeenCalledWith(tx);
     expect(createSubscriptionRepository).toHaveBeenCalledWith(tx);
     expect(createStripeCustomerRepository).toHaveBeenCalledWith(tx);
-  }, 40000);
+  });
 });

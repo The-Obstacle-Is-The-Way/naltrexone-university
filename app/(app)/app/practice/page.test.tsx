@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { renderToStaticMarkup } from 'react-dom/server';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeAll, describe, expect, it, vi } from 'vitest';
 
 vi.mock('next/link', () => ({
   default: (props: Record<string, unknown>) => <a {...props} />,
@@ -12,30 +12,44 @@ vi.mock('next/navigation', () => ({
   },
 }));
 
-describe('app/(app)/app/practice', () => {
-  it('renders a practice shell', async () => {
-    const PracticePage = (await import('@/app/(app)/app/practice/page'))
-      .default;
+type PracticePageModule = typeof import('@/app/(app)/app/practice/page');
+type PracticeNavigationModule =
+  typeof import('@/app/(app)/app/practice/client-navigation');
 
+let PracticePage: PracticePageModule['default'];
+let PracticeView: PracticePageModule['PracticeView'];
+let PracticeSessionStarter: PracticePageModule['PracticeSessionStarter'];
+let IncompleteSessionCard: PracticePageModule['IncompleteSessionCard'];
+let navigateTo: PracticeNavigationModule['navigateTo'];
+
+beforeAll(async () => {
+  const [pageModule, navigationModule] = await Promise.all([
+    import('@/app/(app)/app/practice/page'),
+    import('@/app/(app)/app/practice/client-navigation'),
+  ]);
+  PracticePage = pageModule.default;
+  PracticeView = pageModule.PracticeView;
+  PracticeSessionStarter = pageModule.PracticeSessionStarter;
+  IncompleteSessionCard = pageModule.IncompleteSessionCard;
+  navigateTo = navigationModule.navigateTo;
+});
+
+describe('app/(app)/app/practice', () => {
+  it('renders a practice shell', () => {
     const html = renderToStaticMarkup(<PracticePage />);
     expect(html).toContain('Practice');
     expect(html).toContain('Back to Dashboard');
-  }, 20_000);
+  });
 
-  it('does not render a Quick Practice CTA card on the landing page', async () => {
-    const PracticePage = (await import('@/app/(app)/app/practice/page'))
-      .default;
-
+  it('does not render a Quick Practice CTA card on the landing page', () => {
     const html = renderToStaticMarkup(<PracticePage />);
     expect(html).not.toContain(
       'No session tracking — just jump in and practice.',
     );
     expect(html).not.toContain('Quick Practice →');
-  }, 20_000);
+  });
 
-  it('renders an error banner when loadState is error', async () => {
-    const { PracticeView } = await import('@/app/(app)/app/practice/page');
-
+  it('renders an error banner when loadState is error', () => {
     const html = renderToStaticMarkup(
       <PracticeView
         loadState={{ status: 'error', message: 'Nope' }}
@@ -59,9 +73,7 @@ describe('app/(app)/app/practice', () => {
     expect(html).toContain('Try again');
   });
 
-  it('renders a loading banner when loadState is loading', async () => {
-    const { PracticeView } = await import('@/app/(app)/app/practice/page');
-
+  it('renders a loading banner when loadState is loading', () => {
     const html = renderToStaticMarkup(
       <PracticeView
         loadState={{ status: 'loading' }}
@@ -88,9 +100,7 @@ describe('app/(app)/app/practice', () => {
     expect(output?.getAttribute('aria-live')).toBe('polite');
   });
 
-  it('renders empty state when no question remains', async () => {
-    const { PracticeView } = await import('@/app/(app)/app/practice/page');
-
+  it('renders empty state when no question remains', () => {
     const html = renderToStaticMarkup(
       <PracticeView
         loadState={{ status: 'ready' }}
@@ -113,9 +123,7 @@ describe('app/(app)/app/practice', () => {
     expect(html).toContain('No more questions found.');
   });
 
-  it('renders bookmark control when question is present', async () => {
-    const { PracticeView } = await import('@/app/(app)/app/practice/page');
-
+  it('renders bookmark control when question is present', () => {
     const html = renderToStaticMarkup(
       <PracticeView
         loadState={{ status: 'ready' }}
@@ -152,9 +160,7 @@ describe('app/(app)/app/practice', () => {
     expect(html).toContain('Remove bookmark');
   });
 
-  it('renders mark-for-review control in exam sessions', async () => {
-    const { PracticeView } = await import('@/app/(app)/app/practice/page');
-
+  it('renders mark-for-review control in exam sessions', () => {
     const html = renderToStaticMarkup(
       <PracticeView
         sessionInfo={{
@@ -201,9 +207,7 @@ describe('app/(app)/app/practice', () => {
     expect(html).toContain('Unmark review');
   });
 
-  it('renders feedback when submitResult is present', async () => {
-    const { PracticeView } = await import('@/app/(app)/app/practice/page');
-
+  it('renders feedback when submitResult is present', () => {
     const html = renderToStaticMarkup(
       <PracticeView
         loadState={{ status: 'ready' }}
@@ -232,9 +236,7 @@ describe('app/(app)/app/practice', () => {
     expect(html).toContain('Explanation');
   });
 
-  it('does not render feedback in exam mode', async () => {
-    const { PracticeView } = await import('@/app/(app)/app/practice/page');
-
+  it('does not render feedback in exam mode', () => {
     const html = renderToStaticMarkup(
       <PracticeView
         sessionInfo={{
@@ -271,9 +273,7 @@ describe('app/(app)/app/practice', () => {
     expect(html).not.toContain('Incorrect');
   });
 
-  it('renders a bookmark warning when bookmarkStatus is error', async () => {
-    const { PracticeView } = await import('@/app/(app)/app/practice/page');
-
+  it('renders a bookmark warning when bookmarkStatus is error', () => {
     const html = renderToStaticMarkup(
       <PracticeView
         loadState={{ status: 'ready' }}
@@ -312,9 +312,7 @@ describe('app/(app)/app/practice', () => {
     expect(html).toContain('Retry bookmarks');
   });
 
-  it('renders bookmark warning even before a question is loaded', async () => {
-    const { PracticeView } = await import('@/app/(app)/app/practice/page');
-
+  it('renders bookmark warning even before a question is loaded', () => {
     const html = renderToStaticMarkup(
       <PracticeView
         loadState={{ status: 'ready' }}
@@ -339,9 +337,7 @@ describe('app/(app)/app/practice', () => {
     expect(html).toContain('Retry bookmarks');
   });
 
-  it('renders custom title and description when provided', async () => {
-    const { PracticeView } = await import('@/app/(app)/app/practice/page');
-
+  it('renders custom title and description when provided', () => {
     const html = renderToStaticMarkup(
       <PracticeView
         title="Tutor Session"
@@ -368,11 +364,7 @@ describe('app/(app)/app/practice', () => {
     expect(html).toContain('Question 1 of 10');
   });
 
-  it('renders session start error when starter is in error state', async () => {
-    const { PracticeSessionStarter } = await import(
-      '@/app/(app)/app/practice/page'
-    );
-
+  it('renders session start error when starter is in error state', () => {
     const html = renderToStaticMarkup(
       <PracticeSessionStarter
         sessionMode="tutor"
@@ -396,11 +388,7 @@ describe('app/(app)/app/practice', () => {
     expect(html).toContain('No questions');
   });
 
-  it('renders loading text when starter is in loading state', async () => {
-    const { PracticeSessionStarter } = await import(
-      '@/app/(app)/app/practice/page'
-    );
-
+  it('renders loading text when starter is in loading state', () => {
     const html = renderToStaticMarkup(
       <PracticeSessionStarter
         sessionMode="tutor"
@@ -424,11 +412,7 @@ describe('app/(app)/app/practice', () => {
     expect(html).toContain('Starting…');
   });
 
-  it('renders incomplete session card content', async () => {
-    const { IncompleteSessionCard } = await import(
-      '@/app/(app)/app/practice/page'
-    );
-
+  it('renders incomplete session card content', () => {
     const html = renderToStaticMarkup(
       <IncompleteSessionCard
         session={{
@@ -450,11 +434,7 @@ describe('app/(app)/app/practice', () => {
     expect(html).toContain('Abandon session');
   });
 
-  it('renders tag chips grouped by kind when tags are available', async () => {
-    const { PracticeSessionStarter } = await import(
-      '@/app/(app)/app/practice/page'
-    );
-
+  it('renders tag chips grouped by kind when tags are available', () => {
     const html = renderToStaticMarkup(
       <PracticeSessionStarter
         sessionMode="tutor"
@@ -488,11 +468,7 @@ describe('app/(app)/app/practice', () => {
     expect(html).toContain('Topic 1');
   });
 
-  it('renders segmented control for mode selection', async () => {
-    const { PracticeSessionStarter } = await import(
-      '@/app/(app)/app/practice/page'
-    );
-
+  it('renders segmented control for mode selection', () => {
     const html = renderToStaticMarkup(
       <PracticeSessionStarter
         sessionMode="tutor"
@@ -518,11 +494,7 @@ describe('app/(app)/app/practice', () => {
     expect(html).toContain('<fieldset');
   });
 
-  it('renders difficulty filter chips', async () => {
-    const { PracticeSessionStarter } = await import(
-      '@/app/(app)/app/practice/page'
-    );
-
+  it('renders difficulty filter chips', () => {
     const html = renderToStaticMarkup(
       <PracticeSessionStarter
         sessionMode="tutor"
@@ -550,11 +522,7 @@ describe('app/(app)/app/practice', () => {
     expect(html).toContain('aria-pressed="false"');
   });
 
-  it('navigateTo calls window.location.assign', async () => {
-    const { navigateTo } = await import(
-      '@/app/(app)/app/practice/client-navigation'
-    );
-
+  it('navigateTo calls window.location.assign', () => {
     const assign = vi.fn();
     navigateTo('#practice-nav-test', { assign });
 

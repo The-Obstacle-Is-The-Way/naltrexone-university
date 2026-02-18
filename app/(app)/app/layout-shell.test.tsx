@@ -1,15 +1,24 @@
 // @vitest-environment jsdom
 import { renderToStaticMarkup } from 'react-dom/server';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeAll, describe, expect, it, vi } from 'vitest';
 
 vi.mock('next/link', () => ({
   default: (props: Record<string, unknown>) => <a {...props} />,
 }));
 
+type AppLayoutModule = typeof import('@/app/(app)/app/layout');
+
+let AppLayoutShell: AppLayoutModule['AppLayoutShell'];
+let renderAppLayout: AppLayoutModule['renderAppLayout'];
+
+beforeAll(async () => {
+  const module = await import('@/app/(app)/app/layout');
+  AppLayoutShell = module.AppLayoutShell;
+  renderAppLayout = module.renderAppLayout;
+});
+
 describe('app/(app)/app/layout (shell)', () => {
   it('renders the app navigation and children', async () => {
-    const { AppLayoutShell } = await import('@/app/(app)/app/layout');
-
     const html = renderToStaticMarkup(
       <AppLayoutShell
         authNav={<div>AuthNav</div>}
@@ -31,11 +40,9 @@ describe('app/(app)/app/layout (shell)', () => {
     expect(html).toContain('min-h-screen bg-background');
     expect(html).not.toContain('min-h-screen bg-muted');
     expect(html).toContain('<main id="main-content"');
-  }, 10_000);
+  });
 
   it('renders AppLayout via renderAppLayout with injected deps', async () => {
-    const { renderAppLayout } = await import('@/app/(app)/app/layout');
-
     const enforceEntitledAppUserFn = vi.fn(async () => ({
       subscriptionStatus: 'active' as const,
     }));
@@ -59,8 +66,6 @@ describe('app/(app)/app/layout (shell)', () => {
   });
 
   it('renders payment-failed banner for pastDue subscribers', async () => {
-    const { renderAppLayout } = await import('@/app/(app)/app/layout');
-
     const enforceEntitledAppUserFn = vi.fn(async () => ({
       subscriptionStatus: 'pastDue' as const,
     }));
@@ -90,8 +95,6 @@ describe('app/(app)/app/layout (shell)', () => {
   });
 
   it('renders a suspense fallback when child content suspends', async () => {
-    const { AppLayoutShell } = await import('@/app/(app)/app/layout');
-
     function Suspends(): never {
       throw Promise.resolve();
     }
