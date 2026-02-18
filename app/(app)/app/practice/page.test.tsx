@@ -440,7 +440,7 @@ describe('app/(app)/app/practice', () => {
         sessionMode="tutor"
         sessionCount={20}
         filters={{
-          tagSlugs: ['topic-1'],
+          tagSlugs: ['topic-1', 'substance-1'],
           difficulty: 'easy',
           status: 'unanswered',
         }}
@@ -448,8 +448,13 @@ describe('app/(app)/app/practice', () => {
         availableCount={null}
         tagLoadStatus="idle"
         availableTags={[
-          { id: 'tag-1', slug: 'domain-1', name: 'Domain 1', kind: 'domain' },
-          { id: 'tag-2', slug: 'topic-1', name: 'Topic 1', kind: 'topic' },
+          { id: 'tag-1', slug: 'topic-1', name: 'Topic 1', kind: 'topic' },
+          {
+            id: 'tag-2',
+            slug: 'substance-1',
+            name: 'Substance 1',
+            kind: 'substance',
+          },
         ]}
         sessionStartStatus="idle"
         sessionStartError={null}
@@ -462,10 +467,11 @@ describe('app/(app)/app/practice', () => {
       />,
     );
 
-    expect(html).toContain('Exam Section');
     expect(html).toContain('Topic');
-    expect(html).toContain('Domain 1');
+    expect(html).toContain('Substance');
     expect(html).toContain('Topic 1');
+    expect(html).toContain('Substance 1');
+    expect(html).not.toContain('Exam Section');
   });
 
   it('renders segmented control for mode selection', () => {

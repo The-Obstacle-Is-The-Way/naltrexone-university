@@ -1,7 +1,7 @@
 # Technical Debt Register
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-02-17
+**Last Updated:** 2026-02-18
 
 ---
 
@@ -18,8 +18,6 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 | ID | Title | Priority | Status |
 |----|-------|----------|--------|
 | [DEBT-224](debt-224-file-size-audit-production-and-test.md) | File Size Audit — Production and Test Files Exceeding Guidelines | P3 | Open |
-| [DEBT-225](debt-225-vitest-cold-import-timeout-flakes.md) | Vitest Cold-Import Timeout Flakes — 3 Tests Hit Default 5s Wall | P2 | Resolved |
-| [DEBT-226](debt-226-playwright-e2e-timeout-and-import-convention.md) | Playwright E2E Timeout Policy and Import Convention Are Undocumented | P3 | Resolved |
 
 **Next Debt ID:** DEBT-227
 
@@ -29,6 +27,8 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 | ID | Title | Priority | Resolved | GitHub Issue |
 |----|-------|----------|----------|--------------|
+| [DEBT-226](../_archive/debt/debt-226-playwright-e2e-timeout-and-import-convention.md) | Playwright E2E Timeout Policy and Import Convention Are Undocumented | P3 | 2026-02-18 | — |
+| [DEBT-225](../_archive/debt/debt-225-vitest-cold-import-timeout-flakes.md) | Vitest Cold-Import Timeout Flakes — 3 Tests Hit Default 5s Wall | P2 | 2026-02-18 | — |
 | [DEBT-223](../_archive/debt/debt-223-verbose-set-array-dedup-pattern.md) | Verbose Set+Array Dedup Pattern in get-user-stats.ts | P4 | 2026-02-16 | — |
 | [DEBT-222](../_archive/debt/debt-222-bookmark-retry-state-should-be-refs.md) | Bookmark Idempotency Key Should Use `useRef` (retryCount must stay as state) | P4 | 2026-02-16 | — |
 | [DEBT-221](../_archive/debt/debt-221-compute-accuracy-conflates-zero-with-no-attempts.md) | `computeAccuracy()` Conflates "No Attempts" With "0% Accuracy" | P4 | 2026-02-16 | — |

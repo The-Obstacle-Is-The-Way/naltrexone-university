@@ -2,7 +2,7 @@
 
 > **Parent:** [Practice Engine Index](./index.md)
 > **Scope:** Full end-to-end trace from authored MDX files through seeding, database, shuffling, and UI rendering
-> **Last Verified:** 2026-02-16
+> **Last Verified:** 2026-02-18
 
 This document serves two purposes:
 1. **Architectural trace** — understanding where data flows and where bugs happen (e.g., BS-011 choice label desync)
@@ -49,20 +49,75 @@ This document serves two purposes:
 
 ---
 
-## 2. Step 1: Content Authoring
+## 2. Content Directory Quick Reference
+
+### Which directory feeds production?
+
+**Only `content/questions/**/*.mdx`** — the seed script (`pnpm db:seed`) reads exclusively from this directory. It never touches `content/drafts/`.
+
+### How the three directories relate
+
+```text
+content/drafts/questions/**/*.md       YOUR WORKSPACE (raw authoring, gitignored)
+        │                              Safe to modify, delete, restructure anytime.
+        │                              Nothing reads from here automatically.
+        │
+        │  pnpm content:import:drafts  (manual — you choose when to run)
+        │  Validates tags against canonical taxonomy, expands slugs to
+        │  {slug, name, kind} objects, splits multi-Q files into 1 MDX each.
+        ▼
+content/questions/imported/**/*.mdx    GENERATED OUTPUT (gitignored)
+        │                              One MDX file per question.
+        │                              Derived from drafts — do not hand-edit.
+        │
+        │  pnpm db:seed                (manual — you choose when to run)
+        │  Reads ALL .mdx under content/questions/, validates, upserts to DB.
+        ▼
+PostgreSQL (questions, choices, tags, question_tags)
+```
+
+### What about `content/questions/placeholder/`?
+
+10 hand-written example MDXs committed to the repo so the app works out of the box. By default, `pnpm db:seed` **excludes them** and archives any existing placeholder rows. They're templates, not production content.
+
+To include them: `SEED_INCLUDE_PLACEHOLDERS=true pnpm db:seed`
+
+### Can I modify drafts freely?
+
+**Yes.** `content/drafts/` is completely decoupled from the seed. Changes there have zero effect on the database until you explicitly run `pnpm content:import:drafts` to regenerate the MDX output, then `pnpm db:seed` to push it to the database.
+
+### Where do tag display names come from?
+
+You author slugs in draft YAML (`topics: [pharmacology-neuroscience]`). The import script looks up display names from `lib/content/draftTaxonomy.ts` (`"Pharmacology & Neuroscience"`). You never need to write display names in drafts.
+
+---
+
+## 3. Content Authoring
 
 ### Sources of Truth
 
-- **MDX schema (SSOT):** `docs/specs/master_spec.md` → **Section 5: Content Pipeline**
+- **Draft question format:** `docs/content/question-format-spec.md` — single source of truth for authoring
+- **Canonical tag taxonomy:** `lib/content/draftTaxonomy.ts` (code), `docs/content/tag-taxonomy-golden-spec.md` (reference)
 - **Schema enforcement (code):** `lib/content/schemas.ts`, `lib/content/parseMdxQuestion.ts`
 - **Database tables:** `db/schema.ts` (`questions`, `choices`, `tags`, `question_tags`)
-- **Seeder:** `scripts/seed.ts` (`pnpm db:seed`)
+
+### Pipeline Scripts
+
+| Script | Command | What It Does |
+|--------|---------|-------------|
+| `scripts/import-draft-questions.ts` | `pnpm content:import:drafts` | Discovers `**/recall.md` + `**/vignettes.md` under `content/drafts/questions/`, splits multi-question blocks, converts each to one MDX file |
+| `scripts/draft-question-import.ts` | (library, called by above) | Parses draft YAML (`DraftFrontmatterSchema`), expands tag slugs to `{slug, name, kind}` objects via `convertDraftQuestionToMdx()` |
+| `scripts/seed.ts` | `pnpm db:seed` | Reads all `content/questions/**/*.mdx`, validates, upserts to PostgreSQL (questions, choices, tags, question_tags) |
+| `scripts/seed-helpers.ts` | (library, called by seed) | Parses "Why other answers are wrong" into per-choice explanations, computes choice sync plans |
+| `lib/content/draftTaxonomy.ts` | (library, called by import) | Canonical slug lists + display name maps for topics, substances, treatments |
+| `lib/content/schemas.ts` | (library, called by import + seed) | Zod schemas for MDX frontmatter validation |
+| `lib/content/parseMdxQuestion.ts` | (library, called by seed) | Extracts `## Stem` / `## Explanation` sections, canonicalizes markdown |
 
 ### Directory Roles
 
 - `content/drafts/` (gitignored) — Local-only working area for writing/editing questions in a human-friendly format.
 - `content/questions/placeholder/` (committed) — Small set of 10 example MDX questions to validate the pipeline and provide templates.
-- `content/questions/imported/` (gitignored) — 948 generated MDX files from drafts (safe to delete and regenerate).
+- `content/questions/imported/` (gitignored) — imported MDX files generated from drafts. Import now emits canonical `topic`/`substance`/`treatment` tags and no legacy Exam Section tags.
 
 Because real question content is proprietary, it is **gitignored** and must be present locally (or in a private deployment workflow) when running the seed.
 
@@ -78,7 +133,7 @@ status: published|draft|archived
 tags:
   - slug: "tag-slug"
     name: "Tag Display Name"
-    kind: domain|topic|substance|treatment|diagnosis
+    kind: topic|substance|treatment|diagnosis
 choices:
   - label: "A"
     text: "Choice text (supports YAML multiline >-)"
@@ -121,11 +176,12 @@ General explanation of the correct answer.
 
 ### Draft Format (Authoring)
 
-Draft question sets live under `content/drafts/questions/**` and are usually stored as `recall.md` or `vignettes.md`. Each file contains multiple question blocks. Each block:
+Draft question sets live under `content/drafts/questions/**` and are imported from files named `recall.md` and `vignettes.md` (the importer scans only these filenames). Each file contains multiple question blocks. Each block:
 
 - Starts with YAML frontmatter containing `qid`, `type`, `difficulty`, `substances`, `topics`, `source`, and `answer`
   - Optional: `treatments[]`, `diagnoses[]` for more specific tagging (mapped to MDX `kind: treatment|diagnosis`)
 - Uses headings in this order: `## Question` (or `## Stem`), `## Choices`, `## Explanation`
+- Must begin with `---` then `qid:` on the next line (`splitDraftQuestionsFile()` looks for `^---\\nqid:`)
 
 Notes:
 - Draft `substances[]` and `topics[]` are validated against the canonical taxonomy in `lib/content/draftTaxonomy.ts`.
@@ -150,12 +206,12 @@ pnpm content:import:drafts -- --status published
 ```
 
 Notes:
-- Imported MDX files are **generated artifacts**. Delete `content/questions/imported/` any time and re-run the importer.
+- Imported MDX files are generated from drafts by a deterministic canonical taxonomy path (no domain repair pass).
 - The importer validates output against `lib/content/schemas.ts` before writing.
 
 ---
 
-## 3. Step 2: Seeding (Content → Database)
+## 4. Seeding (Content → Database)
 
 **Script:** `scripts/seed.ts` — run via `pnpm db:seed`
 
@@ -206,7 +262,7 @@ This excludes `content/questions/placeholder/**/*.mdx` from the seed input and a
 
 ---
 
-## 4. Step 3: Database Storage
+## 5. Database Storage
 
 **Schema:** `db/schema.ts`
 
@@ -230,7 +286,7 @@ This excludes `content/questions/placeholder/**/*.mdx` from the seed input and a
 
 ---
 
-## 5. Step 4: Query Layer
+## 6. Query Layer
 
 **Repository:** `src/adapters/repositories/drizzle-question-repository.ts`
 
@@ -243,7 +299,7 @@ The domain `Question` entity has `choices: Choice[]` always in this canonical or
 
 ---
 
-## 6. Step 5: Choice Shuffling (Where It Happens)
+## 7. Choice Shuffling (Where It Happens)
 
 **Shuffle service:** `src/domain/services/shuffle.ts`
 
@@ -273,7 +329,7 @@ All four callers produce **shuffled** labels for their outputs. This was unified
 
 ---
 
-## 7. Step 6: Frontend Rendering
+## 8. Frontend Rendering
 
 **Markdown rendering:** `components/markdown/Markdown.tsx`
 - Uses `react-markdown` with `remark-gfm` (GitHub Flavored Markdown) and `rehype-sanitize` (XSS protection)
@@ -294,7 +350,7 @@ Both components are pure presentational — they render whatever labels they rec
 
 ---
 
-## 8. Controller Layer Shuffle (Formerly BS-011 Bug B — RESOLVED)
+## 9. Controller Layer Shuffle (Formerly BS-011 Bug B — RESOLVED)
 
 > **Status:** Fixed by SPEC-025 (Choice Label Desync Fix)
 
@@ -328,7 +384,7 @@ All four callers of `buildShuffledChoiceViews` produce consistent shuffled label
 
 ---
 
-## 9. Summary Table
+## 10. Summary Table
 
 | Step | Location | Input | Output | Labels |
 |------|----------|-------|--------|--------|
@@ -345,7 +401,7 @@ All four callers of `buildShuffledChoiceViews` produce consistent shuffled label
 
 ---
 
-## 10. Resolved Bugs in This Pipeline
+## 11. Resolved Bugs in This Pipeline
 
 Both bugs identified during the BS-011 audit have been fixed:
 
@@ -358,7 +414,7 @@ No known content-pipeline bugs remain as of 2026-02-16.
 
 ---
 
-## 11. Dependencies (Content Processing)
+## 12. Dependencies (Content Processing)
 
 | Package | Version | Purpose |
 |---------|---------|---------|
@@ -372,7 +428,7 @@ No known content-pipeline bugs remain as of 2026-02-16.
 
 ---
 
-## 12. Operations: Seeding (Local, Test DB)
+## 13. Operations: Seeding (Local, Test DB)
 
 Recommended end-to-end sanity check:
 
@@ -386,7 +442,7 @@ pnpm dev
 
 ---
 
-## 13. Operations: Seeding (Staging / Production)
+## 14. Operations: Seeding (Staging / Production)
 
 Seeding requires two things:
 
@@ -403,7 +459,23 @@ DATABASE_URL="<target-db-url>" pnpm db:migrate
 
 ---
 
-## 14. Troubleshooting
+## 15. When to Reseed
+
+Re-run `pnpm db:seed` whenever the database's question/tag data may be out of sync with the MDX source files. Common triggers:
+
+| Trigger | Why Reseed Is Needed |
+|---------|---------------------|
+| **After `pnpm db:migrate`** (schema changes) | Migrations may alter enums or constraints that require fresh data insertion. |
+| **After MDX content changes** (new questions, updated tags, edited frontmatter) | The seed script is the only path from MDX files to database rows. |
+| **After tag taxonomy changes** (SPEC-033, renamed slugs, new kinds) | Taxonomy migrations include tag data cleanup (see SPEC-033 §14). Run `pnpm db:migrate` first, then `pnpm db:seed`. |
+| **After switching Neon branches** | Different branches may have different data states. |
+| **After `pnpm db:test:reset`** | Test DB is wiped; seed restores content. |
+
+**Important:** The seed is **not** automatically run by Vercel, CI, or `pnpm db:migrate`. It is always a manual operator step. See `docs/dev/deployment-procedure.md` for the full deployment flow.
+
+---
+
+## 16. Troubleshooting
 
 ### Practice shows "Internal error" on Start session / Submit
 

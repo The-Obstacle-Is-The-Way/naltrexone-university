@@ -155,6 +155,84 @@ describe('app/(app)/app/history/page', () => {
     expect(html).not.toContain('Reattempt');
   });
 
+  it('excludes diagnosis and domain kinds from tag options', async () => {
+    const output: GetAttemptedQuestionsOutput = {
+      rows: [
+        {
+          isAvailable: true,
+          questionId: 'q-visible',
+          isCorrect: true,
+          sessionId: null,
+          sessionMode: null,
+          slug: 'q-visible',
+          stemMd: 'Visible question',
+          difficulty: 'easy',
+          tagSlugs: [],
+          lastAnsweredAt: '2026-02-01T00:00:00.000Z',
+        },
+      ],
+      totalCount: 1,
+      limit: 20,
+      offset: 0,
+    };
+
+    const getAttemptedQuestionsFn = vi.fn(async (_input: unknown) =>
+      ok(output),
+    );
+    const getTagsFn = vi.fn(async (_input: unknown) =>
+      ok({
+        rows: [
+          {
+            id: 'tag-topic',
+            slug: 'screening-diagnosis',
+            name: 'Screening & Diagnosis',
+            kind: 'topic',
+          },
+          {
+            id: 'tag-substance',
+            slug: 'opioids',
+            name: 'Opioids',
+            kind: 'substance',
+          },
+          {
+            id: 'tag-treatment',
+            slug: 'naltrexone',
+            name: 'Naltrexone',
+            kind: 'treatment',
+          },
+          {
+            id: 'tag-diagnosis',
+            slug: 'opioid-use-disorder',
+            name: 'Opioid Use Disorder',
+            kind: 'diagnosis',
+          },
+          {
+            id: 'tag-domain',
+            slug: 'screening-diagnosis-domain',
+            name: 'Exam Section Domain',
+            kind: 'domain',
+          },
+        ],
+      } as unknown as GetTagsOutput),
+    );
+
+    const HistoryPage = createHistoryPage({
+      getAttemptedQuestionsFn,
+      getTagsFn,
+    });
+
+    const element = await HistoryPage({
+      searchParams: Promise.resolve({ tab: 'questions' }),
+    });
+    const html = renderToStaticMarkup(element);
+
+    expect(html).toContain('Screening &amp; Diagnosis');
+    expect(html).toContain('Opioids');
+    expect(html).toContain('Naltrexone');
+    expect(html).not.toContain('Opioid Use Disorder');
+    expect(html).not.toContain('Exam Section Domain');
+  });
+
   it('passes difficulty and tag filters to attempted questions fetch', async () => {
     const output: GetAttemptedQuestionsOutput = {
       rows: [],

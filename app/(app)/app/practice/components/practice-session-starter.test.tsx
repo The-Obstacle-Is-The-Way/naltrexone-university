@@ -1,9 +1,14 @@
 // @vitest-environment jsdom
 import { renderToStaticMarkup } from 'react-dom/server';
-import { describe, expect, it } from 'vitest';
-import { PracticeSessionStarter } from '@/app/(app)/app/practice/components/practice-session-starter';
+import { beforeAll, describe, expect, it } from 'vitest';
+
+let PracticeSessionStarter: typeof import('./practice-session-starter')['PracticeSessionStarter'];
 
 describe('PracticeSessionStarter', () => {
+  beforeAll(async () => {
+    ({ PracticeSessionStarter } = await import('./practice-session-starter'));
+  });
+
   it('uses shadcn Card + Input primitives for starter UI', () => {
     const html = renderToStaticMarkup(
       <PracticeSessionStarter
@@ -203,5 +208,73 @@ describe('PracticeSessionStarter', () => {
       'button[aria-pressed="true"]',
     );
     expect(activeDifficulty?.textContent).toBe('All');
+  });
+
+  it('renders Topic, Substance, Treatment filter sections in order without Exam Section', () => {
+    const html = renderToStaticMarkup(
+      <PracticeSessionStarter
+        sessionMode="tutor"
+        sessionCount={20}
+        filters={{ tagSlugs: [], difficulty: null, status: 'unanswered' }}
+        availableCountStatus="idle"
+        availableCount={null}
+        tagLoadStatus="idle"
+        availableTags={[
+          {
+            id: 'tag-topic',
+            slug: 'screening-diagnosis',
+            name: 'Screening & Diagnosis',
+            kind: 'topic',
+          },
+          {
+            id: 'tag-substance',
+            slug: 'opioids',
+            name: 'Opioids',
+            kind: 'substance',
+          },
+          {
+            id: 'tag-treatment',
+            slug: 'naltrexone',
+            name: 'Naltrexone',
+            kind: 'treatment',
+          },
+          {
+            id: 'tag-diagnosis',
+            slug: 'opioid-use-disorder',
+            name: 'Opioid Use Disorder',
+            kind: 'diagnosis',
+          },
+        ]}
+        sessionStartStatus="idle"
+        sessionStartError={null}
+        onDifficultyChange={() => undefined}
+        onStatusChange={() => undefined}
+        onToggleTag={() => undefined}
+        onSessionModeChange={() => undefined}
+        onSessionCountChange={() => undefined}
+        onStartSession={() => undefined}
+      />,
+    );
+
+    expect(html).not.toContain('Exam Section');
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const summaryLabels = Array.from(doc.querySelectorAll('summary')).map(
+      (el) => el.textContent ?? '',
+    );
+    expect(summaryLabels.some((label) => label.includes('Diagnosis'))).toBe(
+      false,
+    );
+    const topicIndex = summaryLabels.findIndex((label) =>
+      label.includes('Topic'),
+    );
+    const substanceIndex = summaryLabels.findIndex((label) =>
+      label.includes('Substance'),
+    );
+    const treatmentIndex = summaryLabels.findIndex((label) =>
+      label.includes('Treatment'),
+    );
+    expect(topicIndex).toBeGreaterThanOrEqual(0);
+    expect(substanceIndex).toBeGreaterThan(topicIndex);
+    expect(treatmentIndex).toBeGreaterThan(substanceIndex);
   });
 });

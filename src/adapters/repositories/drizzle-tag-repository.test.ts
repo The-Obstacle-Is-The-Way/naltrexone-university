@@ -25,7 +25,7 @@ describe('DrizzleTagRepository', () => {
           id: 'tag_1',
           slug: 'pharmacology-neuroscience',
           name: 'Pharmacology & Neuroscience',
-          kind: 'domain',
+          kind: 'topic',
         },
         {
           id: 'tag_2',
@@ -44,7 +44,7 @@ describe('DrizzleTagRepository', () => {
           id: 'tag_1',
           slug: 'pharmacology-neuroscience',
           name: 'Pharmacology & Neuroscience',
-          kind: 'domain',
+          kind: 'topic',
         },
         {
           id: 'tag_2',

@@ -23,7 +23,7 @@ status: "published"         # draft | published | archived
 tags:
   - slug: "naltrexone"
     name: "Naltrexone"
-    kind: "treatment"       # domain | topic | substance | treatment | diagnosis
+    kind: "treatment"       # topic | substance | treatment | diagnosis
 choices:
   - label: "A"
     text: "First choice..."

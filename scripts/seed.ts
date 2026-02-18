@@ -9,6 +9,11 @@ import matter from 'gray-matter';
 import postgres from 'postgres';
 import * as schema from '../db/schema';
 import {
+  CANONICAL_SUBSTANCE_SLUGS,
+  CANONICAL_TOPIC_SLUGS,
+  CANONICAL_TREATMENT_SLUGS,
+} from '../lib/content/draftTaxonomy';
+import {
   canonicalizeMarkdown,
   canonicalJsonString,
   parseMdxQuestionBody,
@@ -46,6 +51,10 @@ type SeedQuestionRep = {
   choices: SeedChoice[];
   tags: SeedTag[];
 };
+
+const CANONICAL_TOPIC_SLUG_SET = new Set<string>(CANONICAL_TOPIC_SLUGS);
+const CANONICAL_SUBSTANCE_SLUG_SET = new Set<string>(CANONICAL_SUBSTANCE_SLUGS);
+const CANONICAL_TREATMENT_SLUG_SET = new Set<string>(CANONICAL_TREATMENT_SLUGS);
 
 function buildSeedRepFromFile(full: unknown): SeedQuestionRep {
   const parsed = FullQuestionSchema.parse(full);
@@ -163,95 +172,282 @@ function parseFrontmatterOrThrow(data: unknown) {
   return QuestionFrontmatterSchema.parse(data);
 }
 
-const databaseUrl = process.env.DATABASE_URL;
-if (!databaseUrl) {
-  throw new Error('DATABASE_URL environment variable is required for db:seed');
-}
+export function validateSeedQuestionTags(input: {
+  slug: string;
+  tags: Array<Omit<SeedTag, 'kind'> & { kind: SeedTag['kind'] | 'domain' }>;
+}): void {
+  for (const tag of input.tags) {
+    if (tag.kind === 'domain') {
+      throw new Error(
+        `Question "${input.slug}" has domain tag "${tag.slug}" which is not allowed`,
+      );
+    }
+  }
 
-const sql = postgres(databaseUrl, { max: 1 });
-const db = drizzle(sql, { schema });
+  const topicCount = input.tags.filter((tag) => tag.kind === 'topic').length;
+  const substanceCount = input.tags.filter(
+    (tag) => tag.kind === 'substance',
+  ).length;
 
-async function main(): Promise<void> {
-  const includePlaceholders = process.env.SEED_INCLUDE_PLACEHOLDERS !== 'false';
-  const patterns = includePlaceholders
-    ? ['content/questions/**/*.mdx']
-    : ['content/questions/**/*.mdx', '!content/questions/placeholder/**/*.mdx'];
-
-  const files = await fg(patterns, {
-    onlyFiles: true,
-    unique: true,
-    absolute: true,
-    dot: false,
-  });
-
-  if (files.length === 0) {
+  if (topicCount < 1) {
     throw new Error(
-      includePlaceholders
-        ? 'No question files found at content/questions/**/*.mdx. Seed requires at least one MDX file.'
-        : 'No question files found after excluding placeholders. Re-run with SEED_INCLUDE_PLACEHOLDERS=true or generate imported content under content/questions/imported/.',
+      `Question "${input.slug}" must have at least one topic tag`,
+    );
+  }
+  if (substanceCount < 1) {
+    throw new Error(
+      `Question "${input.slug}" must have at least one substance tag`,
     );
   }
 
-  let inserted = 0;
-  let updated = 0;
-  let skipped = 0;
+  for (const tag of input.tags) {
+    if (tag.kind === 'topic' && !CANONICAL_TOPIC_SLUG_SET.has(tag.slug)) {
+      throw new Error(
+        `Question "${input.slug}" has non-canonical topic slug "${tag.slug}"`,
+      );
+    }
 
-  for (const file of files) {
-    const raw = await readFile(file, 'utf8');
-    const { data, content } = matter(raw);
+    if (
+      tag.kind === 'substance' &&
+      !CANONICAL_SUBSTANCE_SLUG_SET.has(tag.slug)
+    ) {
+      throw new Error(
+        `Question "${input.slug}" has non-canonical substance slug "${tag.slug}"`,
+      );
+    }
 
-    const frontmatter = parseFrontmatterOrThrow(data);
-    const { stemMd, explanationMd } = parseMdxQuestionBody(content);
+    if (
+      tag.kind === 'treatment' &&
+      !CANONICAL_TREATMENT_SLUG_SET.has(tag.slug)
+    ) {
+      throw new Error(
+        `Question "${input.slug}" has non-canonical treatment slug "${tag.slug}"`,
+      );
+    }
+  }
+}
 
-    const seedFromFile = buildSeedRepFromFile({
-      frontmatter,
-      stemMd,
-      explanationMd,
+async function main(): Promise<void> {
+  const databaseUrl = process.env.DATABASE_URL;
+  if (!databaseUrl) {
+    throw new Error(
+      'DATABASE_URL environment variable is required for db:seed',
+    );
+  }
+
+  const sql = postgres(databaseUrl, { max: 1 });
+  const db = drizzle(sql, { schema });
+  try {
+    const includePlaceholders =
+      process.env.SEED_INCLUDE_PLACEHOLDERS === 'true';
+    const patterns = includePlaceholders
+      ? ['content/questions/**/*.mdx']
+      : [
+          'content/questions/**/*.mdx',
+          '!content/questions/placeholder/**/*.mdx',
+        ];
+
+    const files = await fg(patterns, {
+      onlyFiles: true,
+      unique: true,
+      absolute: true,
+      dot: false,
     });
 
-    const fileHash = sha256Hex(canonicalJsonString(seedFromFile));
+    if (files.length === 0) {
+      throw new Error(
+        includePlaceholders
+          ? 'No question files found at content/questions/**/*.mdx. Seed requires at least one MDX file.'
+          : 'No question files found after excluding placeholders. Re-run with SEED_INCLUDE_PLACEHOLDERS=true or generate imported content under content/questions/imported/.',
+      );
+    }
 
-    const existing = await db
-      .select()
-      .from(schema.questions)
-      .where(eq(schema.questions.slug, seedFromFile.slug))
-      .limit(1);
-    const existingQuestion = existing.at(0);
+    let inserted = 0;
+    let updated = 0;
+    let skipped = 0;
 
-    if (!existingQuestion) {
+    for (const file of files) {
+      const raw = await readFile(file, 'utf8');
+      const { data, content } = matter(raw);
+
+      const frontmatter = parseFrontmatterOrThrow(data);
+      const { stemMd, explanationMd } = parseMdxQuestionBody(content);
+
+      const seedFromFile = buildSeedRepFromFile({
+        frontmatter,
+        stemMd,
+        explanationMd,
+      });
+      validateSeedQuestionTags({
+        slug: seedFromFile.slug,
+        tags: seedFromFile.tags,
+      });
+
+      const fileHash = sha256Hex(canonicalJsonString(seedFromFile));
+
+      const existing = await db
+        .select()
+        .from(schema.questions)
+        .where(eq(schema.questions.slug, seedFromFile.slug))
+        .limit(1);
+      const existingQuestion = existing.at(0);
+
+      if (!existingQuestion) {
+        await db.transaction(async (tx) => {
+          const [createdQuestion] = await tx
+            .insert(schema.questions)
+            .values({
+              slug: seedFromFile.slug,
+              stemMd: seedFromFile.stem_md,
+              explanationMd: seedFromFile.explanation_md,
+              difficulty: seedFromFile.difficulty,
+              status: seedFromFile.status,
+            })
+            .returning({ id: schema.questions.id });
+
+          if (!createdQuestion) {
+            throw new Error(
+              `Failed to insert question for slug "${seedFromFile.slug}"`,
+            );
+          }
+
+          await tx.insert(schema.choices).values(
+            seedFromFile.choices.map((c) => ({
+              questionId: createdQuestion.id,
+              label: c.label,
+              textMd: c.text_md,
+              isCorrect: c.is_correct,
+              explanationMd: c.explanation_md,
+              sortOrder: c.sort_order,
+            })),
+          );
+
+          const tagMap = await upsertTags(tx, seedFromFile.tags);
+          await tx.insert(schema.questionTags).values(
+            seedFromFile.tags.map((t) => ({
+              questionId: createdQuestion.id,
+              tagId:
+                tagMap.get(t.slug)?.id ??
+                (() => {
+                  throw new Error(`Missing tag id for slug "${t.slug}"`);
+                })(),
+            })),
+          );
+        });
+
+        inserted += 1;
+        continue;
+      }
+
+      const existingChoices = await db
+        .select()
+        .from(schema.choices)
+        .where(eq(schema.choices.questionId, existingQuestion.id));
+
+      const existingTags = await db
+        .select({
+          slug: schema.tags.slug,
+          name: schema.tags.name,
+          kind: schema.tags.kind,
+        })
+        .from(schema.questionTags)
+        .innerJoin(schema.tags, eq(schema.questionTags.tagId, schema.tags.id))
+        .where(eq(schema.questionTags.questionId, existingQuestion.id));
+
+      const seedFromDb = buildSeedRepFromDb(
+        existingQuestion,
+        existingChoices,
+        existingTags,
+      );
+
+      const dbHash = sha256Hex(canonicalJsonString(seedFromDb));
+      if (dbHash === fileHash) {
+        skipped += 1;
+        continue;
+      }
+
+      const desiredLabels = new Set(seedFromFile.choices.map((c) => c.label));
+      const deleteCandidates = existingChoices.filter(
+        (c) => !desiredLabels.has(c.label),
+      );
+
+      const referencedChoiceIds = new Set<string>();
+      if (deleteCandidates.length > 0) {
+        const deleteCandidateIds = deleteCandidates.map((c) => c.id);
+
+        const referenced = await db
+          .select({ selectedChoiceId: schema.attempts.selectedChoiceId })
+          .from(schema.attempts)
+          .where(
+            and(
+              eq(schema.attempts.questionId, existingQuestion.id),
+              inArray(schema.attempts.selectedChoiceId, deleteCandidateIds),
+            ),
+          );
+
+        for (const row of referenced) {
+          if (row.selectedChoiceId)
+            referencedChoiceIds.add(row.selectedChoiceId);
+        }
+      }
+
+      const { deleteChoiceIds } = computeChoiceSyncPlan({
+        existingChoices: existingChoices.map((c) => ({
+          id: c.id,
+          label: c.label,
+        })),
+        desiredChoices: seedFromFile.choices.map((c) => ({ label: c.label })),
+        referencedChoiceIds,
+      });
+
       await db.transaction(async (tx) => {
-        const [createdQuestion] = await tx
-          .insert(schema.questions)
-          .values({
-            slug: seedFromFile.slug,
+        await tx
+          .update(schema.questions)
+          .set({
             stemMd: seedFromFile.stem_md,
             explanationMd: seedFromFile.explanation_md,
             difficulty: seedFromFile.difficulty,
             status: seedFromFile.status,
+            updatedAt: new Date(),
           })
-          .returning({ id: schema.questions.id });
+          .where(eq(schema.questions.id, existingQuestion.id));
 
-        if (!createdQuestion) {
-          throw new Error(
-            `Failed to insert question for slug "${seedFromFile.slug}"`,
-          );
+        if (deleteChoiceIds.length > 0) {
+          await tx
+            .delete(schema.choices)
+            .where(inArray(schema.choices.id, deleteChoiceIds));
         }
 
-        await tx.insert(schema.choices).values(
-          seedFromFile.choices.map((c) => ({
-            questionId: createdQuestion.id,
-            label: c.label,
-            textMd: c.text_md,
-            isCorrect: c.is_correct,
-            explanationMd: c.explanation_md,
-            sortOrder: c.sort_order,
-          })),
-        );
+        for (const choice of seedFromFile.choices) {
+          await tx
+            .insert(schema.choices)
+            .values({
+              questionId: existingQuestion.id,
+              label: choice.label,
+              textMd: choice.text_md,
+              isCorrect: choice.is_correct,
+              explanationMd: choice.explanation_md,
+              sortOrder: choice.sort_order,
+            })
+            .onConflictDoUpdate({
+              target: [schema.choices.questionId, schema.choices.label],
+              set: {
+                textMd: choice.text_md,
+                isCorrect: choice.is_correct,
+                explanationMd: choice.explanation_md,
+                sortOrder: choice.sort_order,
+              },
+            });
+        }
+
+        await tx
+          .delete(schema.questionTags)
+          .where(eq(schema.questionTags.questionId, existingQuestion.id));
 
         const tagMap = await upsertTags(tx, seedFromFile.tags);
         await tx.insert(schema.questionTags).values(
           seedFromFile.tags.map((t) => ({
-            questionId: createdQuestion.id,
+            questionId: existingQuestion.id,
             tagId:
               tagMap.get(t.slug)?.id ??
               (() => {
@@ -261,152 +457,30 @@ async function main(): Promise<void> {
         );
       });
 
-      inserted += 1;
-      continue;
+      updated += 1;
     }
 
-    const existingChoices = await db
-      .select()
-      .from(schema.choices)
-      .where(eq(schema.choices.questionId, existingQuestion.id));
-
-    const existingTags = await db
-      .select({
-        slug: schema.tags.slug,
-        name: schema.tags.name,
-        kind: schema.tags.kind,
-      })
-      .from(schema.questionTags)
-      .innerJoin(schema.tags, eq(schema.questionTags.tagId, schema.tags.id))
-      .where(eq(schema.questionTags.questionId, existingQuestion.id));
-
-    const seedFromDb = buildSeedRepFromDb(
-      existingQuestion,
-      existingChoices,
-      existingTags,
-    );
-
-    const dbHash = sha256Hex(canonicalJsonString(seedFromDb));
-    if (dbHash === fileHash) {
-      skipped += 1;
-      continue;
-    }
-
-    const desiredLabels = new Set(seedFromFile.choices.map((c) => c.label));
-    const deleteCandidates = existingChoices.filter(
-      (c) => !desiredLabels.has(c.label),
-    );
-
-    const referencedChoiceIds = new Set<string>();
-    if (deleteCandidates.length > 0) {
-      const deleteCandidateIds = deleteCandidates.map((c) => c.id);
-
-      const referenced = await db
-        .select({ selectedChoiceId: schema.attempts.selectedChoiceId })
-        .from(schema.attempts)
-        .where(
-          and(
-            eq(schema.attempts.questionId, existingQuestion.id),
-            inArray(schema.attempts.selectedChoiceId, deleteCandidateIds),
-          ),
-        );
-
-      for (const row of referenced) {
-        if (row.selectedChoiceId) referencedChoiceIds.add(row.selectedChoiceId);
-      }
-    }
-
-    const { deleteChoiceIds } = computeChoiceSyncPlan({
-      existingChoices: existingChoices.map((c) => ({
-        id: c.id,
-        label: c.label,
-      })),
-      desiredChoices: seedFromFile.choices.map((c) => ({ label: c.label })),
-      referencedChoiceIds,
-    });
-
-    await db.transaction(async (tx) => {
-      await tx
-        .update(schema.questions)
-        .set({
-          stemMd: seedFromFile.stem_md,
-          explanationMd: seedFromFile.explanation_md,
-          difficulty: seedFromFile.difficulty,
-          status: seedFromFile.status,
-          updatedAt: new Date(),
-        })
-        .where(eq(schema.questions.id, existingQuestion.id));
-
-      if (deleteChoiceIds.length > 0) {
-        await tx
-          .delete(schema.choices)
-          .where(inArray(schema.choices.id, deleteChoiceIds));
-      }
-
-      for (const choice of seedFromFile.choices) {
-        await tx
-          .insert(schema.choices)
-          .values({
-            questionId: existingQuestion.id,
-            label: choice.label,
-            textMd: choice.text_md,
-            isCorrect: choice.is_correct,
-            explanationMd: choice.explanation_md,
-            sortOrder: choice.sort_order,
-          })
-          .onConflictDoUpdate({
-            target: [schema.choices.questionId, schema.choices.label],
-            set: {
-              textMd: choice.text_md,
-              isCorrect: choice.is_correct,
-              explanationMd: choice.explanation_md,
-              sortOrder: choice.sort_order,
-            },
-          });
-      }
-
-      await tx
-        .delete(schema.questionTags)
-        .where(eq(schema.questionTags.questionId, existingQuestion.id));
-
-      const tagMap = await upsertTags(tx, seedFromFile.tags);
-      await tx.insert(schema.questionTags).values(
-        seedFromFile.tags.map((t) => ({
-          questionId: existingQuestion.id,
-          tagId:
-            tagMap.get(t.slug)?.id ??
-            (() => {
-              throw new Error(`Missing tag id for slug "${t.slug}"`);
-            })(),
-        })),
-      );
-    });
-
-    updated += 1;
-  }
-
-  console.info(
-    `Seed complete: inserted=${inserted} updated=${updated} skipped=${skipped} (files=${files.length})`,
-  );
-  console.info(`Content root: ${path.resolve('content/questions')}`);
-
-  if (!includePlaceholders) {
-    const archived = await db
-      .update(schema.questions)
-      .set({ status: 'archived', updatedAt: new Date() })
-      .where(like(schema.questions.slug, 'placeholder-%'))
-      .returning({ id: schema.questions.id });
     console.info(
-      `Archived placeholders: ${archived.length} (slug LIKE "placeholder-%")`,
+      `Seed complete: inserted=${inserted} updated=${updated} skipped=${skipped} (files=${files.length})`,
     );
+    console.info(`Content root: ${path.resolve('content/questions')}`);
+
+    if (!includePlaceholders) {
+      const archived = await db
+        .update(schema.questions)
+        .set({ status: 'archived', updatedAt: new Date() })
+        .where(like(schema.questions.slug, 'placeholder-%'))
+        .returning({ id: schema.questions.id });
+      console.info(
+        `Archived placeholders: ${archived.length} (slug LIKE "placeholder-%")`,
+      );
+    }
+  } finally {
+    await sql.end({ timeout: 5 });
   }
 }
 
-main()
-  .catch((error) => {
-    console.error(error);
-    process.exitCode = 1;
-  })
-  .finally(async () => {
-    await sql.end({ timeout: 5 });
-  });
+main().catch((error) => {
+  console.error(error);
+  process.exitCode = 1;
+});

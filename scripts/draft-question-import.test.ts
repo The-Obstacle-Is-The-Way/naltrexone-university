@@ -19,7 +19,7 @@ describe('draft question import', () => {
       'type: recall',
       'difficulty: easy',
       'substances: [alcohol]',
-      'topics: [treatment]',
+      'topics: [treatment-pharmacotherapy]',
       'source: demo',
       'answer: B',
       '---',
@@ -44,7 +44,7 @@ describe('draft question import', () => {
       'type: recall',
       'difficulty: medium',
       'substances: [alcohol]',
-      'topics: [treatment]',
+      'topics: [treatment-pharmacotherapy]',
       'source: demo',
       'answer: A',
       '---',
@@ -78,7 +78,7 @@ describe('draft question import', () => {
       'type: recall',
       'difficulty: easy',
       'substances: [polysubstance]',
-      'topics: [psychotherapy, treatment]',
+      'topics: [psychosocial-interventions, treatment-pharmacotherapy]',
       'source: demo-source',
       'answer: B',
       '---',
@@ -108,7 +108,6 @@ describe('draft question import', () => {
     const mdx = convertDraftQuestionToMdx({
       draft,
       status: 'draft',
-      domainTagSlug: 'cochrane',
     });
 
     const { data, content } = matter(mdx);
@@ -121,6 +120,7 @@ describe('draft question import', () => {
     expect(frontmatter.choices.find((c) => c.label === 'B')?.correct).toBe(
       true,
     );
+    expect(frontmatter.tags.map((tag) => tag.kind)).not.toContain('domain');
     expect(stemMd).toContain('motivational interviewing');
     expect(explanationMd).toContain('collaborative');
 
@@ -134,8 +134,8 @@ describe('draft question import', () => {
       'type: recall',
       'difficulty: easy',
       'substances: [opioids]',
-      'topics: [treatment]',
-      'treatments: [buprenorphine]',
+      'topics: [treatment-pharmacotherapy]',
+      'treatments: [buprenorphine, nrt]',
       'diagnoses: [opioid-use-disorder]',
       'source: demo-source',
       'answer: A',
@@ -161,18 +161,22 @@ describe('draft question import', () => {
     const mdx = convertDraftQuestionToMdx({
       draft,
       status: 'draft',
-      domainTagSlug: 'cochrane',
     });
 
     const { data } = matter(mdx);
     const frontmatter = QuestionFrontmatterSchema.parse(data);
 
+    expect(frontmatter.tags.map((tag) => tag.kind)).not.toContain('domain');
     expect(frontmatter.tags).toEqual(
       expect.arrayContaining([
-        { slug: 'cochrane', name: 'Cochrane', kind: 'domain' },
         { slug: 'opioids', name: 'Opioids', kind: 'substance' },
-        { slug: 'treatment', name: 'Treatment', kind: 'topic' },
+        {
+          slug: 'treatment-pharmacotherapy',
+          name: 'Treatment & Pharmacotherapy',
+          kind: 'topic',
+        },
         { slug: 'buprenorphine', name: 'Buprenorphine', kind: 'treatment' },
+        { slug: 'nrt', name: 'NRT', kind: 'treatment' },
         {
           slug: 'opioid-use-disorder',
           name: 'Opioid Use Disorder',
@@ -182,10 +186,197 @@ describe('draft question import', () => {
     );
   });
 
-  it('rejects non-canonical topic slugs to prevent tag fragmentation', () => {
+  it('does not emit domain tags during draft conversion', () => {
     const block = [
       '---',
       'qid: demo-004',
+      'type: recall',
+      'difficulty: easy',
+      'substances: [alcohol]',
+      'topics: [screening-diagnosis]',
+      'source: demo-source',
+      'answer: A',
+      '---',
+      '',
+      '## Question',
+      '',
+      'Question?',
+      '',
+      '## Choices',
+      '',
+      '- A) Correct',
+      '- B) Incorrect',
+      '',
+      '## Explanation',
+      '',
+      'Because.',
+      '',
+      '---',
+    ].join('\n');
+
+    const draft = parseDraftQuestionBlock(block);
+    const mdx = convertDraftQuestionToMdx({
+      draft,
+      status: 'draft',
+    });
+
+    const { data } = matter(mdx);
+    const frontmatter = QuestionFrontmatterSchema.parse(data);
+    expect(frontmatter.tags.map((tag) => tag.kind)).not.toContain('domain');
+    expect(new Set(frontmatter.tags.map((tag) => tag.kind))).toEqual(
+      new Set(['substance', 'topic']),
+    );
+  });
+
+  it('rejects non-canonical treatment slugs', () => {
+    const block = [
+      '---',
+      'qid: demo-005',
+      'type: recall',
+      'difficulty: easy',
+      'substances: [alcohol]',
+      'topics: [screening-diagnosis]',
+      'treatments: [fake-drug]',
+      'source: demo-source',
+      'answer: A',
+      '---',
+      '',
+      '## Question',
+      '',
+      'Question?',
+      '',
+      '## Choices',
+      '',
+      '- A) Correct',
+      '- B) Incorrect',
+      '',
+      '## Explanation',
+      '',
+      'Because.',
+      '',
+      '---',
+    ].join('\n');
+
+    expect(() => parseDraftQuestionBlock(block)).toThrow(/treatment/i);
+  });
+
+  it('requires at least one topic', () => {
+    const missingTopics = [
+      '---',
+      'qid: demo-006',
+      'type: recall',
+      'difficulty: easy',
+      'substances: [alcohol]',
+      'topics: []',
+      'source: demo-source',
+      'answer: A',
+      '---',
+      '',
+      '## Question',
+      '',
+      'Question?',
+      '',
+      '## Choices',
+      '',
+      '- A) Correct',
+      '- B) Incorrect',
+      '',
+      '## Explanation',
+      '',
+      'Because.',
+      '',
+      '---',
+    ].join('\n');
+    expect(() => parseDraftQuestionBlock(missingTopics)).toThrow(/topic/i);
+  });
+
+  it('requires at least one substance', () => {
+    const missingSubstances = [
+      '---',
+      'qid: demo-007',
+      'type: recall',
+      'difficulty: easy',
+      'substances: []',
+      'topics: [screening-diagnosis]',
+      'source: demo-source',
+      'answer: A',
+      '---',
+      '',
+      '## Question',
+      '',
+      'Question?',
+      '',
+      '## Choices',
+      '',
+      '- A) Correct',
+      '- B) Incorrect',
+      '',
+      '## Explanation',
+      '',
+      'Because.',
+      '',
+      '---',
+    ].join('\n');
+    expect(() => parseDraftQuestionBlock(missingSubstances)).toThrow(
+      /substance/i,
+    );
+  });
+
+  it('applies canonical display names from lookup, not titleCaseFromSlug', () => {
+    const block = [
+      '---',
+      'qid: demo-008',
+      'type: recall',
+      'difficulty: medium',
+      'substances: [alcohol]',
+      'topics: [co-occurring-disorders, ethics-legal]',
+      'treatments: [nrt]',
+      'source: demo-source',
+      'answer: C',
+      '---',
+      '',
+      '## Question',
+      '',
+      'Question?',
+      '',
+      '## Choices',
+      '',
+      '- A) Wrong',
+      '- B) Wrong',
+      '- C) Right',
+      '',
+      '## Explanation',
+      '',
+      'Because.',
+      '',
+      '---',
+    ].join('\n');
+
+    const draft = parseDraftQuestionBlock(block);
+    const mdx = convertDraftQuestionToMdx({
+      draft,
+      status: 'published',
+    });
+    const { data } = matter(mdx);
+    const frontmatter = QuestionFrontmatterSchema.parse(data);
+
+    expect(frontmatter.tags).toEqual(
+      expect.arrayContaining([
+        {
+          slug: 'co-occurring-disorders',
+          name: 'Co-occurring Disorders',
+          kind: 'topic',
+        },
+        { slug: 'ethics-legal', name: 'Ethics & Legal', kind: 'topic' },
+        { slug: 'nrt', name: 'NRT', kind: 'treatment' },
+      ]),
+    );
+  });
+
+  it('rejects non-canonical topic slugs to prevent tag fragmentation', () => {
+    const block = [
+      '---',
+      'qid: demo-009',
       'type: recall',
       'difficulty: easy',
       'substances: [alcohol]',

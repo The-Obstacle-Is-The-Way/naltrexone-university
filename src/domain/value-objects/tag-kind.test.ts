@@ -4,7 +4,6 @@ import { AllTagKinds, isValidTagKind } from './tag-kind';
 describe('TagKind', () => {
   it('contains the canonical set of kinds', () => {
     expect(AllTagKinds).toEqual([
-      'domain',
       'topic',
       'substance',
       'treatment',
@@ -20,5 +19,9 @@ describe('TagKind', () => {
 
   it('rejects unknown kinds', () => {
     expect(isValidTagKind('system')).toBe(false);
+  });
+
+  it('rejects domain as a valid tag kind', () => {
+    expect(isValidTagKind('domain')).toBe(false);
   });
 });

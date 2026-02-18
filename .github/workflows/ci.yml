@@ -92,6 +92,8 @@ jobs:
 
       - name: Seed DB (placeholder content)
         run: pnpm db:seed
+        env:
+          SEED_INCLUDE_PLACEHOLDERS: 'true'
 
       - name: Unit tests with coverage
         run: pnpm test:coverage
