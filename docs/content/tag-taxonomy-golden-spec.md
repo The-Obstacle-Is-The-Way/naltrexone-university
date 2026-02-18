@@ -80,7 +80,9 @@ Medications only. Alphabetical order:
 | 9 | `nrt` | NRT |
 | 10 | `topiramate` | Topiramate |
 | 11 | `varenicline` | Varenicline |
-| 12 | `other` | Other |
+| 12 | `other-treatment` | Other |
+
+> **Slug note:** Treatment "Other" uses `other-treatment` (not `other`) because `tags.slug` is globally unique across all kinds. Substance already uses `other`, so the treatment fallback must use a distinct slug. Display name remains "Other".
 
 ---
 
@@ -135,7 +137,7 @@ Note: `caffeine` from the draft taxonomy (`DRAFT_SUBSTANCE_SLUGS`) is dropped â€
 | `naloxone` | `naloxone` |
 | `naltrexone` | `naltrexone` |
 
-Add 9 new treatment tags: `acamprosate`, `bupropion`, `disulfiram`, `gabapentin`, `methadone`, `nrt`, `topiramate`, `varenicline`, `other`.
+Add 9 new treatment tags: `acamprosate`, `bupropion`, `disulfiram`, `gabapentin`, `methadone`, `nrt`, `topiramate`, `varenicline`, `other-treatment`.
 
 Existing questions should be re-scanned for treatment mentions and tagged accordingly.
 
