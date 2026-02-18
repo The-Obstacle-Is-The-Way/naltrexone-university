@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { createQuestionSeed, shuffleWithSeed } from '@/src/domain/services';
 import {
   createAttempt,
@@ -8,10 +8,7 @@ import {
   createTag,
 } from '@/src/domain/test-helpers';
 import { ApplicationError } from '../errors';
-import type {
-  QuestionFilters,
-  QuestionRepository,
-} from '../ports/repositories';
+import type { QuestionFilters } from '../ports/repositories';
 import {
   FakeAttemptRepository,
   FakePracticeSessionRepository,
@@ -723,26 +720,13 @@ describe('GetNextQuestionUseCase', () => {
   });
 
   it('throws NOT_FOUND when repository returns a candidate id that cannot be loaded', async () => {
-    const misbehavingQuestions: QuestionRepository = {
-      async findPublishedById() {
-        return null;
-      },
-      async findPublishedBySlug() {
-        return null;
-      },
-      async findPublishedByIds() {
-        return [];
-      },
-      async listPublishedCandidateIds() {
-        return ['missing'];
-      },
-      async countPublishedCandidateIds() {
-        return 0;
-      },
-    };
+    const questionRepo = new FakeQuestionRepository([]);
+    vi.spyOn(questionRepo, 'listPublishedCandidateIds').mockResolvedValueOnce([
+      'missing',
+    ]);
 
     const getNextQuestion = new GetNextQuestionUseCase(
-      misbehavingQuestions,
+      questionRepo,
       new FakeAttemptRepository([]),
       new FakePracticeSessionRepository([]),
     );

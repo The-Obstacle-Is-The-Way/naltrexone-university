@@ -1,6 +1,25 @@
 #!/usr/bin/env sh
 
 MAX_LINES=350
+REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
+
+to_repo_relative() {
+  file_path="$1"
+
+  case "$file_path" in
+    "$REPO_ROOT"/*)
+      file_path=${file_path#"$REPO_ROOT"/}
+      ;;
+  esac
+
+  case "$file_path" in
+    ./*)
+      file_path=${file_path#./}
+      ;;
+  esac
+
+  printf '%s\n' "$file_path"
+}
 
 is_known_exempt() {
   case "$1" in
@@ -19,7 +38,7 @@ is_known_exempt() {
 
 is_test_file() {
   case "$1" in
-    *.test.ts | *.test.tsx | *.spec.ts | *.spec.tsx | *.browser.spec.tsx)
+    *.test.ts | *.test.tsx | *.spec.ts | *.spec.tsx)
       return 0
       ;;
     *)
@@ -56,8 +75,6 @@ is_root_config_file() {
 should_check_file() {
   file_path="$1"
 
-  [ -f "$file_path" ] || return 1
-
   case "$file_path" in
     *.ts | *.tsx) ;;
     *)
@@ -74,13 +91,23 @@ should_check_file() {
 }
 
 for file_path in "$@"; do
-  should_check_file "$file_path" || continue
+  repo_relative_path=$(to_repo_relative "$file_path")
 
-  line_count=$(wc -l < "$file_path")
+  if [ -f "$file_path" ]; then
+    actual_path="$file_path"
+  elif [ -f "$repo_relative_path" ]; then
+    actual_path="$repo_relative_path"
+  else
+    continue
+  fi
+
+  should_check_file "$repo_relative_path" || continue
+
+  line_count=$(wc -l < "$actual_path")
   line_count=$(printf '%s' "$line_count" | tr -d '[:space:]')
 
   if [ "$line_count" -gt "$MAX_LINES" ]; then
-    printf '⚠ %s exceeds %s lines (%s). Consider splitting or add a // WHY: comment.\n' "$file_path" "$MAX_LINES" "$line_count" >&2
+    printf '⚠ %s exceeds %s lines (%s). Consider splitting or add a // WHY: comment.\n' "$repo_relative_path" "$MAX_LINES" "$line_count" >&2
   fi
 done
 
