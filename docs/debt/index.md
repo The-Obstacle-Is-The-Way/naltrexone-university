@@ -25,7 +25,7 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 | [DEBT-231](debt-231-reduce-browser-spec-probe-duplication.md) | Reduce Browser Spec Probe Component Duplication | P3 | Open |
 | [DEBT-232](debt-232-reduce-get-next-question-test-inflation.md) | Reduce get-next-question.test.ts Test Inflation | P3 | Open |
 | [DEBT-233](debt-233-add-why-comments-to-justified-large-files.md) | Add WHY Comments to Justified Large Files | P4 | Open |
-| [DEBT-234](debt-234-add-max-lines-lint-rule.md) | Add max-lines Lint Rule to Prevent File Size Regression | P4 | Open |
+| [DEBT-234](debt-234-add-max-lines-lint-rule.md) | Add max-lines Check to Prevent File Size Regression | P4 | Open |
 
 **Next Debt ID:** DEBT-235
 

@@ -22,7 +22,7 @@ This audit has been decomposed into 8 child debt tickets. The table below is tit
 | [DEBT-231](debt-231-reduce-browser-spec-probe-duplication.md) | Reduce Browser Spec Probe Component Duplication | P3 | Test bloat |
 | [DEBT-232](debt-232-reduce-get-next-question-test-inflation.md) | Reduce get-next-question.test.ts Test Inflation | P3 | Test bloat |
 | [DEBT-233](debt-233-add-why-comments-to-justified-large-files.md) | Add WHY Comments to Justified Large Files | P4 | A - Document |
-| [DEBT-234](debt-234-add-max-lines-lint-rule.md) | Add max-lines Lint Rule to Prevent File Size Regression | P4 | Prevention |
+| [DEBT-234](debt-234-add-max-lines-lint-rule.md) | Add max-lines Check to Prevent File Size Regression | P4 | Prevention |
 
 ## Audit Method
 
@@ -87,7 +87,7 @@ These tests are large but currently justified by scenario/domain breadth. Monito
 | # | File | Lines | Tracking | Notes |
 |---|------|------:|----------|-------|
 | 1 | `tests/integration/repositories.integration.test.ts` | 2,193 | Investigated acceptable | Keep; monitor |
-| 2 | `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-page-controller.browser.spec.tsx` | 1,457 | [DEBT-231](debt-231-reduce-browser-spec-probe-duplication.md) | Duplicate probe/test setup |
+| 2 | `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-page-controller.browser.spec.tsx` | 1,458 | [DEBT-231](debt-231-reduce-browser-spec-probe-duplication.md) | Duplicate probe/test setup |
 | 3 | `app/(app)/app/practice/practice-page-logic.test.ts` | 1,277 | Investigated acceptable | Keep; monitor |
 | 4 | `src/adapters/gateways/stripe-payment-gateway.test.ts` | 1,171 | Investigated acceptable | Keep; monitor |
 | 5 | `app/(app)/app/practice/[sessionId]/practice-session-page-logic.test.ts` | 1,133 | Investigated acceptable | Keep; monitor |

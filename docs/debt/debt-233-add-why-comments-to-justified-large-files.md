@@ -18,7 +18,7 @@ Five production files exceed the 300-line guideline but are justified as "deep m
 | `db/schema.ts` | 548 | SSOT for all database tables; splitting would scatter related columns |
 | `src/adapters/repositories/drizzle-attempt-repository.ts` | 438 | Deep module: cohesive repository query surface |
 | `app/(app)/app/history/components/history-questions-tab.tsx` | 393 | Cohesive presentation component; helpers are integral to the view |
-| `app/(app)/app/practice/[sessionId]/practice-session-page-logic.ts` | 321 | Single-concern async flow orchestration; 5 tightly coupled functions |
+| `app/(app)/app/practice/[sessionId]/practice-session-page-logic.ts` | 321 | Single-concern async flow orchestration; 7 tightly coupled exported functions |
 | `app/(app)/app/questions/[slug]/question-page-client.tsx` | 331 | Cohesive question viewer; navigation helpers are integral to rendering |
 
 **Disposition:** A - Deep modules doing one thing well. Document, do not split.

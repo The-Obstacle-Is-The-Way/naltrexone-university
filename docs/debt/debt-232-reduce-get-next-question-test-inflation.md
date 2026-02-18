@@ -11,13 +11,13 @@
 
 ## Description
 
-`get-next-question.test.ts` is **1,020 lines** with **23 declared tests** - an average of **44 lines per test**. The file is inflated by:
+`get-next-question.test.ts` is **1,020 lines** with **23 declared tests** — an average of **44 lines per test**. The file is inflated by:
 
-1. **Inline test data** — question/choice/session objects constructed from scratch in nearly every test with slight variations
-2. **Repeated repository instantiation** - `new FakeQuestionRepository([...])`, `new FakeAttemptRepository([])`, `new FakePracticeSessionRepository([...])` repeated across nearly every test
-3. **No parametrization** — similar scenarios (e.g., "returns next unanswered question") have 3+ near-identical test bodies instead of using `describe.each()` or `it.each()`
+1. **Over-specified test data** — the file already imports `createQuestion()`, `createChoice()`, `createPracticeSession()` from `src/domain/test-helpers/`, but nearly every test overrides most factory parameters inline instead of leaning on sensible defaults
+2. **Repeated repository instantiation** — `new FakeQuestionRepository([...])`, `new FakeAttemptRepository([])`, `new FakePracticeSessionRepository([...])` appear 23-24 times each (once per test)
+3. **No parametrization** — similar scenarios have 3+ near-identical test bodies (e.g., "previousSubmission" tests at lines 395-483, "shuffle order" tests at lines 753-868) that could use `it.each()`
 
-**Disposition:** Test file over-inflated with inline test data and limited parametrization.
+**Disposition:** Test file over-inflated with verbose inline setup and limited parametrization.
 
 ## Impact
 
@@ -27,17 +27,17 @@
 
 ## Why This Is Worth Fixing
 
-- **Robustness gain:** shared factories reduce accidental setup inconsistencies between scenarios.
+- **Robustness gain:** reducing inline over-specification makes tests easier to read and less prone to accidental setup inconsistencies.
 - **Complexity risk to avoid:** over-parameterization can hide intent; use `it.each` only for truly identical assertion shapes.
 
 ## Resolution
 
-1. Create `createTestScenario()` builder that accepts overrides for question counts, modes, answered states
-2. Extract `createDefaultQuestion()`, `createDefaultSession()` factories with sensible defaults
-3. Use `it.each()` / `describe.each()` for parametrized test variants
+1. Create a `createTestScenario()` builder that accepts overrides for question counts, modes, and answered states — wiring the three fake repositories internally so tests only specify what varies
+2. Reduce inline factory overrides — lean on existing `createQuestion()` / `createPracticeSession()` defaults instead of re-specifying every field
+3. Use `it.each()` for the "previousSubmission" group (~2 tests) and "shuffle order" group (~3 tests) where setup is near-identical
 4. Target: reduce to ~650-700 lines (saving 300-350 lines)
 
-Guardrail: keep each test's behavioral assertion explicit; only abstract Arrange boilerplate.
+Guardrail: keep each test's behavioral assertion explicit; only abstract Arrange boilerplate. Existing domain factories (`createQuestion`, `createChoice`, `createPracticeSession`) are already imported — do not create duplicates.
 
 ## Verification
 
