@@ -223,9 +223,9 @@ This file uses per-test `vi.resetModules()` + `vi.doMock()` and intentionally re
 
 ## Related
 
-- [DEBT-224](debt-224-file-size-audit-production-and-test.md) - file size audit (upstream contributor to cold-import cost)
-- [DEBT-204](../_archive/debt/debt-204-stripe-payment-gateway-test-god-file.md) - previous test-god-file cleanup
-- [DEBT-110](../_archive/debt/debt-110-e2e-helper-anti-patterns.md) - related timeout-discipline theme in E2E
+- [DEBT-224](../../debt/debt-224-file-size-audit-production-and-test.md) - file size audit (upstream contributor to cold-import cost)
+- [DEBT-204](debt-204-stripe-payment-gateway-test-god-file.md) - previous test-god-file cleanup
+- [DEBT-110](debt-110-e2e-helper-anti-patterns.md) - related timeout-discipline theme in E2E
 - [Vitest #6441](https://github.com/vitest-dev/vitest/issues/6441)
 - [Vitest timing breakdown](https://sordyl.dev/dev-bites/vitest-timing-breakdown/)
 - [Vitest #7890](https://github.com/vitest-dev/vitest/discussions/7890)

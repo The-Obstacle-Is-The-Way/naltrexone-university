@@ -143,4 +143,4 @@ Document the policy in at least:
 ## Related
 
 - [DEBT-225](debt-225-vitest-cold-import-timeout-flakes.md) - Vitest cold-import timeout flakes
-- [DEBT-110](../_archive/debt/debt-110-e2e-helper-anti-patterns.md) - prior E2E timeout misuse (`isVisible({ timeout })`)
+- [DEBT-110](debt-110-e2e-helper-anti-patterns.md) - prior E2E timeout misuse (`isVisible({ timeout })`)
