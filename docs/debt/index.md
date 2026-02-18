@@ -23,7 +23,6 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 | [DEBT-230](debt-230-decompose-seed-script-into-modules.md) | Decompose seed.ts Into Focused Modules | P4 | Open |
 | [DEBT-231](debt-231-reduce-browser-spec-probe-duplication.md) | Reduce Browser Spec Probe Component Duplication | P3 | Open |
 | [DEBT-232](debt-232-reduce-get-next-question-test-inflation.md) | Reduce get-next-question.test.ts Test Inflation | P3 | Open |
-| [DEBT-233](debt-233-add-why-comments-to-justified-large-files.md) | Add WHY Comments to Justified Large Files | P4 | Open |
 | [DEBT-234](debt-234-add-max-lines-lint-rule.md) | Add max-lines Check to Prevent File Size Regression | P4 | Open |
 
 **Next Debt ID:** DEBT-235
@@ -34,6 +33,7 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 | ID | Title | Priority | Resolved | GitHub Issue |
 |----|-------|----------|----------|--------------|
+| [DEBT-233](../_archive/debt/debt-233-add-why-comments-to-justified-large-files.md) | Add WHY Comments to Justified Large Files | P4 | 2026-02-18 | — |
 | [DEBT-228](../_archive/debt/debt-228-dry-fake-use-cases-with-generic-base.md) | DRY fake-use-cases.ts With Generic Base Class | P4 | 2026-02-18 | — |
 | [DEBT-226](../_archive/debt/debt-226-playwright-e2e-timeout-and-import-convention.md) | Playwright E2E Timeout Policy and Import Convention Are Undocumented | P3 | 2026-02-18 | — |
 | [DEBT-225](../_archive/debt/debt-225-vitest-cold-import-timeout-flakes.md) | Vitest Cold-Import Timeout Flakes — 3 Tests Hit Default 5s Wall | P2 | 2026-02-18 | — |

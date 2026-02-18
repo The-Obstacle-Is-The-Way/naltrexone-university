@@ -65,5 +65,5 @@ Guardrail: keep the implementation transparent and low-maintenance; a simple she
 ## Related
 
 - [DEBT-224](debt-224-file-size-audit-production-and-test.md) - Parent file-size audit
-- [DEBT-233](debt-233-add-why-comments-to-justified-large-files.md) - WHY comments for justified exemptions
+- [DEBT-233](../_archive/debt/debt-233-add-why-comments-to-justified-large-files.md) - WHY comments for justified exemptions
 - [DEBT-193](../_archive/debt/debt-193-backend-production-files-over-300-lines.md) - Original 300-line guideline

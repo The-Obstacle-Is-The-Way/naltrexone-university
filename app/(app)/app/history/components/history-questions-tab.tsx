@@ -17,6 +17,10 @@ import {
   type QuestionsFilters,
 } from '../history-search-params';
 
+// WHY: This file exceeds the 300-line guideline intentionally.
+// It is a deep module (Ousterhout) with a single responsibility: render the History Questions tab with its filter controls, pagination state, and question-row presentation.
+// Splitting would fragment shared filter/pagination/href context across components and increase risk of mismatched query-state and navigation behavior.
+// Reviewed in DEBT-224 audit (2026-02-18).
 const headerLinkButtonClasses =
   'h-auto p-0 text-muted-foreground no-underline hover:text-foreground hover:no-underline';
 

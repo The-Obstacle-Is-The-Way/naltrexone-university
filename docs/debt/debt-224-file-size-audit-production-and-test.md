@@ -21,7 +21,7 @@ This audit has been decomposed into 8 child debt tickets. The table below is tit
 | [DEBT-230](debt-230-decompose-seed-script-into-modules.md) | Decompose seed.ts Into Focused Modules | P4 | B - Split |
 | [DEBT-231](debt-231-reduce-browser-spec-probe-duplication.md) | Reduce Browser Spec Probe Component Duplication | P3 | Test bloat |
 | [DEBT-232](debt-232-reduce-get-next-question-test-inflation.md) | Reduce get-next-question.test.ts Test Inflation | P3 | Test bloat |
-| [DEBT-233](debt-233-add-why-comments-to-justified-large-files.md) | Add WHY Comments to Justified Large Files | P4 | A - Document |
+| [DEBT-233](../_archive/debt/debt-233-add-why-comments-to-justified-large-files.md) | Add WHY Comments to Justified Large Files | P4 | A - Document (Resolved) |
 | [DEBT-234](debt-234-add-max-lines-lint-rule.md) | Add max-lines Check to Prevent File Size Regression | P4 | Prevention |
 
 ## Audit Method
@@ -70,13 +70,13 @@ These tests are large but currently justified by scenario/domain breadth. Monito
 |---|------|------:|----------|-------|
 | 1 | `src/application/test-helpers/fakes/fake-repositories.ts` | 1,127 | [DEBT-227](debt-227-split-fake-repositories-into-individual-files.md) | Split into per-fake files |
 | 2 | `scripts/migrate-tag-taxonomy.ts` | 591 | Residual (new debt ticket needed) | Large migration script, currently un-decomposed |
-| 3 | `db/schema.ts` | 548 | [DEBT-233](debt-233-add-why-comments-to-justified-large-files.md) | Deep module; document WHY |
+| 3 | `db/schema.ts` | 548 | [DEBT-233](../_archive/debt/debt-233-add-why-comments-to-justified-large-files.md) | Deep module; document WHY |
 | 4 | `scripts/seed.ts` | 484 | [DEBT-230](debt-230-decompose-seed-script-into-modules.md) | Script decomposition candidate |
-| 5 | `src/adapters/repositories/drizzle-attempt-repository.ts` | 438 | [DEBT-233](debt-233-add-why-comments-to-justified-large-files.md) | Deep module; document WHY |
-| 6 | `app/(app)/app/history/components/history-questions-tab.tsx` | 393 | [DEBT-233](debt-233-add-why-comments-to-justified-large-files.md) | Deep module; document WHY |
-| 7 | `app/(app)/app/questions/[slug]/question-page-client.tsx` | 331 | [DEBT-233](debt-233-add-why-comments-to-justified-large-files.md) | Deep module; document WHY |
+| 5 | `src/adapters/repositories/drizzle-attempt-repository.ts` | 438 | [DEBT-233](../_archive/debt/debt-233-add-why-comments-to-justified-large-files.md) | Deep module; document WHY |
+| 6 | `app/(app)/app/history/components/history-questions-tab.tsx` | 393 | [DEBT-233](../_archive/debt/debt-233-add-why-comments-to-justified-large-files.md) | Deep module; document WHY |
+| 7 | `app/(app)/app/questions/[slug]/question-page-client.tsx` | 331 | [DEBT-233](../_archive/debt/debt-233-add-why-comments-to-justified-large-files.md) | Deep module; document WHY |
 | 8 | `app/(app)/app/bookmarks/page.tsx` | 322 | [DEBT-229](debt-229-extract-bookmarks-server-action-and-errors.md) | Split mixed concerns |
-| 9 | `app/(app)/app/practice/[sessionId]/practice-session-page-logic.ts` | 321 | [DEBT-233](debt-233-add-why-comments-to-justified-large-files.md) | Deep module; document WHY |
+| 9 | `app/(app)/app/practice/[sessionId]/practice-session-page-logic.ts` | 321 | [DEBT-233](../_archive/debt/debt-233-add-why-comments-to-justified-large-files.md) | Deep module; document WHY |
 | 10 | `src/application/test-helpers/fakes/fake-use-cases.ts` | 320 | [DEBT-228](debt-228-dry-fake-use-cases-with-generic-base.md) | Remove duplication |
 | 11 | `app/(app)/app/practice/components/practice-view.tsx` | 319 | Residual (new debt ticket needed) | Slightly over cap, not yet triaged |
 | 12 | `src/adapters/jobs/reconcile-stripe-subscriptions.ts` | 315 | Residual (new debt ticket needed) | Hot-path job module, not yet triaged |

@@ -35,6 +35,10 @@ import {
 } from './postgres-errors';
 import { latestAttemptRankSql } from './shared/latest-attempt-rank-sql';
 
+// WHY: This file exceeds the 300-line guideline intentionally.
+// It is a deep module (Ousterhout) with a single responsibility: implement the full AttemptRepository query and write surface against Drizzle for attempt/history workflows.
+// Splitting would duplicate shared SQL/filter semantics across files and increase risk of inconsistent paging, filtering, and latest-attempt ranking behavior.
+// Reviewed in DEBT-224 audit (2026-02-18).
 export class DrizzleAttemptRepository implements AttemptRepository {
   constructor(private readonly db: DrizzleDb) {}
 
