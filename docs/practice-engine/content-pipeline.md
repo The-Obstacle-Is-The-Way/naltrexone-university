@@ -2,7 +2,7 @@
 
 > **Parent:** [Practice Engine Index](./index.md)
 > **Scope:** Full end-to-end trace from authored MDX files through seeding, database, shuffling, and UI rendering
-> **Last Verified:** 2026-02-16
+> **Last Verified:** 2026-02-18
 
 This document serves two purposes:
 1. **Architectural trace** — understanding where data flows and where bugs happen (e.g., BS-011 choice label desync)
@@ -96,10 +96,22 @@ You author slugs in draft YAML (`topics: [pharmacology-neuroscience]`). The impo
 
 ### Sources of Truth
 
-- **MDX schema (SSOT):** `docs/specs/master_spec.md` → **Section 5: Content Pipeline**
+- **Draft question format:** `docs/content/question-format-spec.md` — single source of truth for authoring
+- **Canonical tag taxonomy:** `lib/content/draftTaxonomy.ts` (code), `docs/content/tag-taxonomy-golden-spec.md` (reference)
 - **Schema enforcement (code):** `lib/content/schemas.ts`, `lib/content/parseMdxQuestion.ts`
 - **Database tables:** `db/schema.ts` (`questions`, `choices`, `tags`, `question_tags`)
-- **Seeder:** `scripts/seed.ts` (`pnpm db:seed`)
+
+### Pipeline Scripts
+
+| Script | Command | What It Does |
+|--------|---------|-------------|
+| `scripts/import-draft-questions.ts` | `pnpm content:import:drafts` | Discovers `**/recall.md` + `**/vignettes.md` under `content/drafts/questions/`, splits multi-question blocks, converts each to one MDX file |
+| `scripts/draft-question-import.ts` | (library, called by above) | Parses draft YAML (`DraftFrontmatterSchema`), expands tag slugs to `{slug, name, kind}` objects via `convertDraftQuestionToMdx()` |
+| `scripts/seed.ts` | `pnpm db:seed` | Reads all `content/questions/**/*.mdx`, validates, upserts to PostgreSQL (questions, choices, tags, question_tags) |
+| `scripts/seed-helpers.ts` | (library, called by seed) | Parses "Why other answers are wrong" into per-choice explanations, computes choice sync plans |
+| `lib/content/draftTaxonomy.ts` | (library, called by import) | Canonical slug lists + display name maps for topics, substances, treatments |
+| `lib/content/schemas.ts` | (library, called by import + seed) | Zod schemas for MDX frontmatter validation |
+| `lib/content/parseMdxQuestion.ts` | (library, called by seed) | Extracts `## Stem` / `## Explanation` sections, canonicalizes markdown |
 
 ### Directory Roles
 
@@ -164,11 +176,12 @@ General explanation of the correct answer.
 
 ### Draft Format (Authoring)
 
-Draft question sets live under `content/drafts/questions/**` and are usually stored as `recall.md` or `vignettes.md`. Each file contains multiple question blocks. Each block:
+Draft question sets live under `content/drafts/questions/**` and are imported from files named `recall.md` and `vignettes.md` (the importer scans only these filenames). Each file contains multiple question blocks. Each block:
 
 - Starts with YAML frontmatter containing `qid`, `type`, `difficulty`, `substances`, `topics`, `source`, and `answer`
   - Optional: `treatments[]`, `diagnoses[]` for more specific tagging (mapped to MDX `kind: treatment|diagnosis`)
 - Uses headings in this order: `## Question` (or `## Stem`), `## Choices`, `## Explanation`
+- Must begin with `---` then `qid:` on the next line (`splitDraftQuestionsFile()` looks for `^---\\nqid:`)
 
 Notes:
 - Draft `substances[]` and `topics[]` are validated against the canonical taxonomy in `lib/content/draftTaxonomy.ts`.

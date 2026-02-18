@@ -64,12 +64,12 @@ in primary care, taking under 1 minute to administer.
 
 | Field | Type | Description | Example |
 |-------|------|-------------|---------|
-| `qid` | string | Globally unique question ID. Format: `{source}-{number}` | `white-2020-001` |
+| `qid` | string | Non-empty string. Used as the output MDX `slug` | `white-2020-001` |
 | `type` | enum | `recall` or `vignette` | `recall` |
 | `difficulty` | enum | `easy`, `medium`, or `hard` | `medium` |
 | `substances` | string[] | At least one canonical substance slug (see §3) | `[alcohol]` |
 | `topics` | string[] | At least one canonical topic slug (see §3) | `[screening-diagnosis]` |
-| `source` | string | Paper/textbook identifier | `white-2020` |
+| `source` | string | Non-empty source identifier | `white-2020` |
 | `answer` | enum | Correct answer letter: `A`, `B`, `C`, `D`, or `E` | `B` |
 
 ### Recommended Fields
@@ -83,7 +83,13 @@ in primary care, taking under 1 minute to administer.
 
 **When to include `diagnoses`:** When the question tests a specific DSM-5 / ICD diagnosis. Currently stored in the database but not exposed in the practice UI.
 
-### QID Rules
+### Importer enforcement details
+
+- Frontmatter is strict: unknown YAML keys are rejected (`DraftFrontmatterSchema.strict()`).
+- `treatments` and `diagnoses` default to `[]` when omitted.
+- `qid` and `source` are validated as non-empty strings only (no regex/uniqueness check in code).
+
+### QID Policy (authoring convention)
 
 - Must be globally unique across the entire 948+ question bank
 - Format: `{source}-{number}` (e.g., `white-2020-001`)
@@ -194,7 +200,12 @@ The question stem. For recall questions, this is a direct clinical question. For
 
 ### `## Choices`
 
-4-5 answer options as a bullet list. Each bullet follows the format `- X) Choice text` where X is A-E.
+2-5 answer options as a bullet list. Standard is 4; the pipeline allows 2-5.
+
+Draft parser bullet pattern:
+- Must start with `-`
+- Label must be uppercase `A`-`E`
+- Delimiter can be `)`, `.`, or `:`
 
 ```markdown
 ## Choices
@@ -206,9 +217,10 @@ The question stem. For recall questions, this is a direct clinical question. For
 ```
 
 **Rules:**
-- Labels must be uppercase A-E, sequential
+- Labels must be uppercase A-E
 - The correct answer is specified in the YAML `answer` field, NOT marked in the choices
-- Standard is 4 choices (the system supports 2-5)
+- Import parse requires at least 2 parsed choices; MDX schema enforces max 5 choices
+- Label sequence is recommended, not strictly enforced
 - All choices must be plausible and homogeneous (same category of thing)
 - The correct answer must not be longer than distractors (length cue)
 - No "all of the above" or "none of the above"
@@ -245,11 +257,14 @@ The seed script splits the explanation into two parts at the `**Why other answer
 2. **Per-choice explanations** — each `- X)` bullet below the heading is parsed into a separate explanation keyed by choice label. Stored in `choices.explanation_md`. Displayed next to the specific wrong choice in the feedback UI.
 
 **Important:**
-- The heading must be exactly `**Why other answers are wrong:**` (bold, with or without colon)
-- Each bullet must start with `- X)` where X matches a choice label (A-E)
+- Heading match is case-insensitive; bold/underline markers are optional; trailing `:` is optional
+- Per-choice bullets can start with `-`, `*`, or `+`
+- Bullet label can use `A)` / `A.` / `A:` (and lowercase is normalized to uppercase)
+- Parsing stops at the next markdown heading (`#`..`######`)
+- Any non-heading lines after a bullet are included in that bullet body (multi-line supported)
 - You do NOT need to include the correct answer in the per-choice section (it's already covered by the general explanation)
 - If you omit the "Why other answers are wrong" section entirely, per-choice explanations will be empty — the general explanation still displays
-- Multi-line explanations work — indent continuation lines under the bullet
+- Per-choice labels must exist in the question's choices, or seed fails
 
 ---
 
@@ -279,7 +294,7 @@ choices:
     correct: false
 ```
 
-**In the database:** Each choice row has `is_correct: boolean`. Exactly one choice per question is `true`.
+**In the database:** Each choice row has `is_correct: boolean`. The pipeline enforces exactly one `true` before insert/update.
 
 **In the UI:** Choices are shuffled per-user using a deterministic seed (`userId + questionId`). The user sees different letter labels than the authored labels, but the correct choice is always the same.
 
@@ -342,6 +357,7 @@ Your draft will be **rejected** if any of these fail:
 
 | Validation | Where | Error |
 |-----------|-------|-------|
+| Unknown draft frontmatter key | Import script (Zod `.strict()`) | `Unrecognized key(s) in object` |
 | `topics` contains non-canonical slug | Import script (Zod) | `Invalid enum value` |
 | `substances` contains non-canonical slug | Import script (Zod) | `Invalid enum value` |
 | `treatments` contains non-canonical slug | Import script (Zod) | `Invalid enum value` |
@@ -350,8 +366,15 @@ Your draft will be **rejected** if any of these fail:
 | `qid` missing or empty | Import script (Zod) | `String must contain at least 1 character` |
 | `answer` not A-E | Import script (Zod) | `Invalid enum value` |
 | `type` not recall/vignette | Import script (Zod) | `Invalid enum value` |
-| Tag with `kind: domain` | Seed script | `domain tag not allowed` |
-| Duplicate tag slugs in one question | Seed script (Zod) | `tag slugs must be unique` |
+| Missing required headings / bad heading order | Import parser | `Missing required heading` / `Invalid heading order` |
+| Choices parse fewer than 2 options | Import parser | `Choices parsing failed: expected at least 2 choices` |
+| No matching choice for `answer` (0 or >1 correct after conversion) | MDX schema (`QuestionFrontmatterSchema`) | `choices must contain exactly 1 correct=true` |
+| Duplicate choice labels | MDX schema (`QuestionFrontmatterSchema`) | `choice labels must be unique` |
+| More than 5 choices | MDX schema (`QuestionFrontmatterSchema`) | `Array must contain at most 5 element(s)` |
+| Duplicate tag slugs in one question | MDX schema (`QuestionFrontmatterSchema`) | `tag slugs must be unique` |
+| Missing topic or substance tags in MDX | MDX schema + seed validation | `at least one topic tag is required` / `at least one substance tag is required` |
+| Tag with `kind: domain` in MDX | Seed script | `Question \"...\" has domain tag \"...\" which is not allowed` |
+| Per-choice explanation references label not in choices | Seed script | `Explanation references choice label` |
 
 ---
 
@@ -386,6 +409,8 @@ Diagnosis tags are stored in the database but intentionally hidden from the prac
 
 Each draft `.md` file can contain multiple questions, separated by `---`:
 
+**Important splitter rule:** each question block must start with `---` followed immediately by `qid:` on the next line. (`splitDraftQuestionsFile()` looks for `^---\nqid:`.)
+
 ```markdown
 ---
 qid: source-001
@@ -408,6 +433,10 @@ type: recall
 ...
 ```
 
+Notes:
+- Extra separator lines between blocks are tolerated, but not required.
+- If `qid` is not the first frontmatter key in a block, that block will not be discovered by the splitter.
+
 ### Directory structure
 
 ```text
@@ -426,7 +455,7 @@ content/drafts/questions/
 
 ### Import output
 
-`pnpm content:import:drafts` reads from `content/drafts/questions/` and writes one MDX file per question to `content/questions/imported/`:
+`pnpm content:import:drafts` reads from `content/drafts/questions/`, scans only `**/recall.md` and `**/vignettes.md`, and writes one MDX file per question to `content/questions/imported/`:
 
 ```text
 content/questions/imported/
@@ -452,8 +481,8 @@ pnpm content:import:drafts -- --status published
 # Seed MDX → database
 pnpm db:seed
 
-# Seed without placeholders (production)
-SEED_INCLUDE_PLACEHOLDERS=false pnpm db:seed
+# Include placeholders (debug/template seeding)
+SEED_INCLUDE_PLACEHOLDERS=true pnpm db:seed
 
 # Full pipeline: import + seed
 pnpm content:import:drafts -- --status published && pnpm db:seed
@@ -466,10 +495,12 @@ pnpm content:import:drafts -- --status published && pnpm db:seed
 Before submitting questions:
 
 - [ ] Every `qid` is globally unique (`{source}-{number}`)
+- [ ] In multi-question files, each block starts with `---` then `qid:` as the first key
 - [ ] `answer` is in YAML frontmatter (A-E), NOT marked in choices
 - [ ] `substances` uses canonical slugs from §3 (array, even for single values)
 - [ ] `topics` uses canonical slugs from §3 (NOT old slugs like `pharmacology`)
 - [ ] `treatments` included when a specific medication is discussed
+- [ ] File is named `recall.md` or `vignettes.md` so importer will pick it up
 - [ ] `## Question`, `## Choices`, `## Explanation` sections all present
 - [ ] Lead-in ends with `?` and passes cover-the-options test
 - [ ] 4 choices, all plausible, homogeneous, no length cues

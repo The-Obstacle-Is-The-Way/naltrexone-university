@@ -1,9 +1,9 @@
 # Tag Taxonomy — Golden Spec
 
-> **Status:** Approved (2026-02-17)
+> **Status:** Implemented (2026-02-18 via SPEC-033)
 > **Companion doc:** [`tag-taxonomy-pipeline.md`](./tag-taxonomy-pipeline.md) — traces how tags flow through the system today
 >
-> This is the **target-state** canonical reference. Current implementation still differs in several places; use this with `tag-taxonomy-pipeline.md` when planning migration.
+> This is the canonical taxonomy reference. Runtime implementation is aligned; use this with `tag-taxonomy-pipeline.md` for day-to-day validation.
 
 ---
 
@@ -17,7 +17,7 @@ Kill the "Exam Section" (domain kind) filter entirely. Reduce from 4 filter cate
 
 Display order on the Practice page: Topic → Substance → Treatment.
 
-The `diagnosis` tag kind remains in the schema but is intentionally not exposed in the Practice filter UI in the target state.
+The `diagnosis` tag kind remains in the schema but is intentionally not exposed in the Practice filter UI.
 
 ---
 
@@ -143,43 +143,40 @@ Existing questions should be re-scanned for treatment mentions and tagged accord
 
 ---
 
-## What Needs to Change (Implementation Checklist)
+## Implementation Status (SPEC-033)
 
-These are the systems that need updating to align with this spec. Implementation order matters — content first, then code.
+The migration defined by this doc is complete. Summary by phase:
 
 ### Phase 1: Content (MDX files)
 
-- [ ] Map every existing domain tag to its new topic tag per the migration table
-- [ ] Map every existing topic tag to its new topic slug per the migration table
-- [ ] Remove all `domain` kind tags from MDX frontmatter
-- [ ] Manually retag questions with the rogue `topic` slug based on their actual content
-- [ ] Scan questions for treatment medication mentions and add treatment tags
-- [ ] Validate: every question has at least one topic tag and one substance tag
-- [ ] Decide placeholder policy (delete vs keep as compliant templates vs exclude from default seed)
+- [x] Domain tags migrated to topic tags using the mapping tables
+- [x] Legacy topic slugs migrated to canonical topic slugs
+- [x] `domain` kind removed from MDX frontmatter
+- [x] Rogue placeholder slugs remapped (`topic`, `psychosocial`)
+- [x] Treatment tags expanded via migration scan
+- [x] Invariants enforced (`>=1 topic`, `>=1 substance`)
+- [x] Placeholder policy set to default-exclude in seed (opt-in include)
 
 ### Phase 2: Pipeline code
 
-- [ ] Remove `domain` from `AllTagKinds` in `src/domain/value-objects/tag-kind.ts`
-- [ ] Remove `domain` from the PostgreSQL enum in `db/schema.ts` (migration)
-- [ ] Update `lib/content/draftTaxonomy.ts` with the canonical topic, substance, and treatment slug lists
-- [ ] Fix `domainFromPath()` in `scripts/import-draft-questions.ts` — either remove or replace with explicit topic assignment
-- [ ] Update `titleCaseFromSlug()` or replace with an explicit slug→name lookup table
-- [ ] Update `scripts/seed.ts` `upsertTags()` to validate against the new canonical lists
+- [x] `lib/content/draftTaxonomy.ts` aligned to canonical topic/substance/treatment sets
+- [x] `scripts/import-draft-questions.ts` no longer assigns taxonomy from directory names
+- [x] `scripts/draft-question-import.ts` no longer emits domain tags; canonical name lookups are explicit
+- [x] `lib/content/schemas.ts` enforces canonical slugs by kind and required topic/substance presence
+- [x] `scripts/seed.ts` rejects domain tags and non-canonical slugs
 
 ### Phase 3: UI
 
-- [ ] Remove `domain` from `tagKindLabels` and `tagKindOrder` in `practice-session-starter.tsx`
-- [ ] Update display order to: Topic → Substance → Treatment
-- [ ] Remove any "Exam Section" references from the UI
-- [ ] Verify filter counts update correctly with the new tag structure
-- [ ] Verify History page tag dropdown no longer exposes legacy domain slugs after migration
+- [x] Practice filter UI shows Topic → Substance → Treatment
+- [x] "Exam Section" removed from runtime filters
+- [x] History filter options restricted to visible kinds (topic/substance/treatment)
 
 ### Phase 4: Cleanup
 
-- [ ] Delete rogue placeholder tags (`topic`, `psychosocial`) from the database
-- [ ] Remove `caffeine` from `DRAFT_SUBSTANCE_SLUGS` if it's no longer needed
-- [ ] Update `tag-taxonomy-pipeline.md` to reflect the new state
-- [ ] Run tag count report to identify content gaps for future question generation
+- [x] `caffeine` removed from canonical draft taxonomy
+- [x] `scripts/migrate-domain-tags.ts` retired
+- [x] Pipeline docs updated
+- [x] Census report generated (`docs/content/reports/tag-census-2026-02-18.md`)
 
 ---
 
