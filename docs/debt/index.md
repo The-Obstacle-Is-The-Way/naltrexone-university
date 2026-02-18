@@ -17,9 +17,17 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 | ID | Title | Priority | Status |
 |----|-------|----------|--------|
-| [DEBT-224](debt-224-file-size-audit-production-and-test.md) | File Size Audit — Production and Test Files Exceeding Guidelines | P3 | Open |
+| [DEBT-224](debt-224-file-size-audit-production-and-test.md) | File Size Audit — Production and Test Files Exceeding Guidelines (Master) | P3 | Decomposed |
+| [DEBT-227](debt-227-split-fake-repositories-into-individual-files.md) | Split fake-repositories.ts Into Individual Files | P3 | Open |
+| [DEBT-228](debt-228-dry-fake-use-cases-with-generic-base.md) | DRY fake-use-cases.ts With Generic Base Class | P4 | Open |
+| [DEBT-229](debt-229-extract-bookmarks-server-action-and-errors.md) | Extract Server Action and Errors From bookmarks/page.tsx | P3 | Open |
+| [DEBT-230](debt-230-decompose-seed-script-into-modules.md) | Decompose seed.ts Into Focused Modules | P4 | Open |
+| [DEBT-231](debt-231-reduce-browser-spec-probe-duplication.md) | Reduce Browser Spec Probe Component Duplication | P3 | Open |
+| [DEBT-232](debt-232-reduce-get-next-question-test-inflation.md) | Reduce get-next-question.test.ts Test Inflation | P3 | Open |
+| [DEBT-233](debt-233-add-why-comments-to-justified-large-files.md) | Add WHY Comments to Justified Large Files | P4 | Open |
+| [DEBT-234](debt-234-add-max-lines-lint-rule.md) | Add max-lines Lint Rule to Prevent File Size Regression | P4 | Open |
 
-**Next Debt ID:** DEBT-227
+**Next Debt ID:** DEBT-235
 
 ---
 

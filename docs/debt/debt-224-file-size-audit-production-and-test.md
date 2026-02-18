@@ -1,9 +1,52 @@
 # DEBT-224: File Size Audit — Production and Test Files Exceeding Guidelines
 
-**Status:** Open
+**Status:** Decomposed
 **Priority:** P3
 **Date:** 2026-02-16
+**Decomposed:** 2026-02-18
 **Component:** Codebase-wide
+
+---
+
+## Decomposition
+
+This audit has been investigated and decomposed into 8 individual debt tickets. Resolve the children below, then archive this master document.
+
+| Child | Title | Priority | Disposition |
+|-------|-------|----------|-------------|
+| [DEBT-227](debt-227-split-fake-repositories-into-individual-files.md) | Split fake-repositories.ts into individual files | P3 | B — Split |
+| [DEBT-228](debt-228-dry-fake-use-cases-with-generic-base.md) | DRY fake-use-cases.ts with generic base class | P4 | C — DRY |
+| [DEBT-229](debt-229-extract-bookmarks-server-action-and-errors.md) | Extract server action and errors from bookmarks/page.tsx | P3 | B — Split |
+| [DEBT-230](debt-230-decompose-seed-script-into-modules.md) | Decompose seed.ts into focused modules | P4 | B — Split |
+| [DEBT-231](debt-231-reduce-browser-spec-probe-duplication.md) | Reduce browser spec probe duplication | P3 | Test bloat |
+| [DEBT-232](debt-232-reduce-get-next-question-test-inflation.md) | Reduce get-next-question.test.ts inflation | P3 | Test bloat |
+| [DEBT-233](debt-233-add-why-comments-to-justified-large-files.md) | Add WHY comments to 5 justified large files | P4 | A — Document |
+| [DEBT-234](debt-234-add-max-lines-lint-rule.md) | Add max-lines lint rule to prevent regression | P4 | Prevention |
+
+### Files Investigated — No Action Needed
+
+These files were investigated and determined to be well-designed deep modules (Disposition A):
+
+| File | Lines | Justification |
+|------|------:|---------------|
+| `db/schema.ts` | 548 | SSOT for all tables; splitting would scatter schema |
+| `drizzle-attempt-repository.ts` | 438 | 12 cohesive query methods for one entity |
+| `history-questions-tab.tsx` | 393 | Cohesive presentation component |
+| `practice-session-page-logic.ts` | 321 | Single-concern async orchestration |
+| `question-page-client.tsx` | 331 | Cohesive question viewer |
+
+### Test Files Investigated — Acceptable
+
+These test files were investigated and found to be justified by scenario count or domain complexity:
+
+| File | Lines | Tests | Verdict |
+|------|------:|------:|---------|
+| `repositories.integration.test.ts` | 2,193 | 46 | Integration tests are inherently verbose |
+| `practice-page-logic.test.ts` | 1,277 | 61 | Good ratio at 21 lines/test |
+| `stripe-payment-gateway.test.ts` | 1,171 | 39 | Stripe API complexity justifies size |
+| `practice-session-page-logic.test.ts` | 1,133 | 50 | Acceptable at 22 lines/test |
+| `fakes.test.ts` | 1,096 | 43 | Clean; minor opportunities only |
+| `practice-controller.test.ts` | 1,041 | 33 | Justified by action count |
 
 ---
 
