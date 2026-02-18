@@ -1,21 +1,22 @@
 # DEBT-232: Reduce get-next-question.test.ts Test Inflation
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P3
 **Date:** 2026-02-18
+**Resolved:** 2026-02-18
 **Last Verified:** 2026-02-18
-**Parent:** [DEBT-224](debt-224-file-size-audit-production-and-test.md)
+**Parent:** [DEBT-224](../../debt/debt-224-file-size-audit-production-and-test.md)
 **Component:** `src/application/use-cases/get-next-question.test.ts`
 
 ---
 
 ## Description
 
-`get-next-question.test.ts` is **1,020 lines** with **23 declared tests** — an average of **44 lines per test**. The file is inflated by:
+`get-next-question.test.ts` was reduced from **1,020 lines** to **757 lines** while retaining **23 passing scenarios** (about **33 lines per test**). The inflation came from:
 
 1. **Over-specified test data** — the file already imports `createQuestion()`, `createChoice()`, `createPracticeSession()` from `src/domain/test-helpers/`, but nearly every test overrides most factory parameters inline instead of leaning on sensible defaults
 2. **Repeated repository instantiation** — `new FakeQuestionRepository([...])`, `new FakeAttemptRepository([])`, `new FakePracticeSessionRepository([...])` appear 23-24 times each (once per test)
-3. **No parametrization** — similar scenarios have 3+ near-identical test bodies (e.g., "previousSubmission" tests at lines 395-483, "shuffle order" tests at lines 753-868) that could use `it.each()`
+3. **Limited parametrization** — near-identical previous-submission scenarios were copy-pasted instead of table-driven
 
 **Disposition:** Test file over-inflated with verbose inline setup and limited parametrization.
 
@@ -32,21 +33,21 @@
 
 ## Resolution
 
-1. Create a `createTestScenario()` builder that accepts overrides for question counts, modes, and answered states — wiring the three fake repositories internally so tests only specify what varies
+1. Add a `createTestDeps()` builder inside the test file that wires fake repositories + use case and accepts per-test seeds
 2. Reduce inline factory overrides — lean on existing `createQuestion()` / `createPracticeSession()` defaults instead of re-specifying every field
-3. Use `it.each()` for the "previousSubmission" group (~2 tests) and "shuffle order" group (~3 tests) where setup is near-identical
-4. Target: reduce to ~650-700 lines (saving 300-350 lines)
+3. Use `it.each()` for the near-identical "previousSubmission" no-submission scenarios; keep shuffle tests separate where assertion shape differs
+4. Land under the `<800` cap without changing assertions or behavior
 
 Guardrail: keep each test's behavioral assertion explicit; only abstract Arrange boilerplate. Existing domain factories (`createQuestion`, `createChoice`, `createPracticeSession`) are already imported — do not create duplicates.
 
 ## Verification
 
-- [ ] Test data factories extracted
-- [ ] Parametrized tests replace copy-pasted variants
-- [ ] All 23 declared tests still pass: `pnpm test --run`
-- [ ] File under 800 lines
-- [ ] No test behavior changed (same coverage, same assertions)
+- [x] Test data factories extracted
+- [x] Parametrized tests replace copy-pasted variants
+- [x] All 23 declared tests still pass: `pnpm test --run src/application/use-cases/get-next-question.test.ts`
+- [x] File under 800 lines (`757`)
+- [x] No test behavior changed (same coverage, same assertions)
 
 ## Related
 
-- [DEBT-224](debt-224-file-size-audit-production-and-test.md) - Parent file-size audit
+- [DEBT-224](../../debt/debt-224-file-size-audit-production-and-test.md) - Parent file-size audit

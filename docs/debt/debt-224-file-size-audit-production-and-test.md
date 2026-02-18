@@ -20,7 +20,7 @@ This audit has been decomposed into 8 child debt tickets. The table below is tit
 | [DEBT-229](debt-229-extract-bookmarks-server-action-and-errors.md) | Extract Server Action and Error Handling From bookmarks/page.tsx | P3 | B - Split |
 | [DEBT-230](debt-230-decompose-seed-script-into-modules.md) | Decompose seed.ts Into Focused Modules | P4 | B - Split |
 | [DEBT-231](debt-231-reduce-browser-spec-probe-duplication.md) | Reduce Browser Spec Probe Component Duplication | P3 | Test bloat |
-| [DEBT-232](debt-232-reduce-get-next-question-test-inflation.md) | Reduce get-next-question.test.ts Test Inflation | P3 | Test bloat |
+| [DEBT-232](../_archive/debt/debt-232-reduce-get-next-question-test-inflation.md) | Reduce get-next-question.test.ts Test Inflation | P3 | Test bloat (Resolved) |
 | [DEBT-233](../_archive/debt/debt-233-add-why-comments-to-justified-large-files.md) | Add WHY Comments to Justified Large Files | P4 | A - Document (Resolved) |
 | [DEBT-234](../_archive/debt/debt-234-add-max-lines-lint-rule.md) | Add max-lines Check to Prevent File Size Regression | P4 | Prevention (Resolved) |
 
@@ -94,7 +94,7 @@ These tests are large but currently justified by scenario/domain breadth. Monito
 | 6 | `src/application/test-helpers/fakes.test.ts` | 1,096 | Investigated acceptable | Keep; monitor |
 | 7 | `src/adapters/jobs/reconcile-stripe-subscriptions.test.ts` | 1,085 | Residual (new debt ticket needed) | Large adapter test file, not yet triaged |
 | 8 | `src/adapters/controllers/practice-controller.test.ts` | 1,041 | Investigated acceptable | Keep; monitor |
-| 9 | `src/application/use-cases/get-next-question.test.ts` | 1,020 | [DEBT-232](debt-232-reduce-get-next-question-test-inflation.md) | Boilerplate-heavy setup |
+| 9 | `src/application/use-cases/get-next-question.test.ts` | 1,020 | [DEBT-232](../_archive/debt/debt-232-reduce-get-next-question-test-inflation.md) | Boilerplate-heavy setup (Resolved) |
 
 ## Forest-First Decision Guardrails
 
