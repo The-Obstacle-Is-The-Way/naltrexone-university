@@ -401,16 +401,16 @@ These are independent dimensions (a question can be in any exam section AND any 
 2. Create a mapping file that maps `(source-directory, paper)` → domain slug — but this is fragile and duplicates information
 3. Accept that the MDX files (not drafts) are the canonical source and stop treating the import script as the primary pipeline
 
-### Gap 8: MDX files are canonical but treated as generated artifacts
+### Gap 8: MDX files are canonical but still operationally fragile
 
-**Problem:** `content/questions/imported/` is gitignored, and `docs/practice-engine/content-pipeline.md` currently states these files are safe to delete/regenerate. With the current importer, regeneration would produce directory-derived domain tags (not the current blueprint-aligned tags).
+**Problem:** `content/questions/imported/` is gitignored and not reproducible from drafts with current importer logic. Documentation now correctly warns not to delete/regenerate this folder, but the underlying fragility remains: importer output and canonical MDX state can diverge.
 
-**Impact:** If someone follows the documented workflow ("Delete `content/questions/imported/` any time and re-run the importer"), they would lose all correct domain tags and get wrong directory-based ones.
+**Impact:** A cleanup/re-import workflow in a fresh environment can still reintroduce directory-derived domain slugs and lose blueprint-aligned domains unless `scripts/migrate-domain-tags.ts` is re-applied correctly.
 
 **Where to fix:** Either:
 1. Commit the imported MDX files (make them the permanent source of truth, not gitignored)
-2. Add domain information to draft files so the import can fully reconstruct correct MDX
-3. Clearly document that `imported/` is NOT safe to delete in its current state
+2. Add domain information to draft files so the import can fully reconstruct correct MDX in one pass
+3. Add guardrails (CI/script check) that block seeding when source-derived domain slugs are detected
 
 ### Gap 9: Domain tag requirement is not enforced in MDX schema
 
@@ -420,13 +420,17 @@ These are independent dimensions (a question can be in any exam section AND any 
 
 **Where to fix:** Add validation for exactly one domain tag per question (import-time and/or seed-time), then backfill existing files.
 
-### Gap 10: Draft documentation contradicts importer implementation for domain assignment
+### Gap 10: Domain assignment depends on a two-step process
 
-**Problem:** `content/drafts/questions/SCHEMA.md` says draft domain is inferred from `topics`, but `scripts/import-draft-questions.ts` actually derives domain from directory root (`domainFromPath()`).
+**Problem:** Domain correctness currently depends on running two separate steps in order:
+1. `scripts/import-draft-questions.ts` writes directory-derived domain slugs
+2. `scripts/migrate-domain-tags.ts` rewrites those slugs to blueprint-aligned values via topic inference
 
-**Impact:** Author guidance and pipeline behavior diverge; agents/authors can follow docs and still produce unexpected domains.
+Docs now describe this accurately, but the process itself is brittle.
 
-**Where to fix:** Align docs and code to a single strategy (explicit `domain` field strongly preferred).
+**Impact:** Skipping the migration step (or running importer later without migration) silently produces wrong domain tags.
+
+**Where to fix:** Collapse to a single authoritative domain assignment strategy at import time (explicit draft field or deterministic mapping config), then retire the post-import repair step.
 
 ---
 
@@ -515,10 +519,10 @@ These are independent dimensions (a question can be in any exam section AND any 
 
 | Document | Relationship |
 |----------|-------------|
-| [Content Pipeline](../practice-engine/content-pipeline.md) | Full question flow (authoring → seeding → shuffle → render). Currently includes a "safe to delete/regenerate imported/" statement that conflicts with current domain behavior. |
+| [Content Pipeline](../practice-engine/content-pipeline.md) | Full question flow (authoring → seeding → shuffle → render). Now correctly warns that `content/questions/imported/` is not safe to blindly delete/regenerate with current importer behavior. |
 | [Master Spec](../specs/master_spec.md) | Defines the MDX schema as the SSOT for content format. |
 | [Draft Question CLAUDE.md](../../content/drafts/questions/CLAUDE.md) | Question generation instructions including vocabulary lists for substances and topics (mirrors `draftTaxonomy.ts`). |
-| [Draft Question SCHEMA.md](../../content/drafts/questions/SCHEMA.md) | Declares domain intent, but currently diverges from importer implementation (`topics`-inferred in docs vs directory-derived in code). |
+| [Draft Question SCHEMA.md](../../content/drafts/questions/SCHEMA.md) | Accurately documents current behavior: importer derives domain from directory path, then optional migration script can remap to blueprint domains. |
 
 ---
 
@@ -534,7 +538,7 @@ These are observations, not commitments. Decisions should be made via brainstorm
 
 4. **Enforce domain presence** — Require exactly one `kind: domain` tag per MDX question (and backfill the 9 placeholders currently missing domain).
 
-5. **Align docs with implementation** — Update `content/drafts/questions/SCHEMA.md` and `docs/practice-engine/content-pipeline.md` so they match the actual pipeline behavior (or update code to match documented behavior).
+5. **Keep docs and guardrails aligned with implementation** — Docs are currently aligned; add lightweight checks/tests so future pipeline changes cannot silently reintroduce stale guidance.
 
 6. **Evaluate Exam Section vs Topic overlap** — Consider whether "Exam Section" (domain) should remain as a separate filter dimension or be collapsed into "Topic". This is a product decision, not a code fix.
 

@@ -3,7 +3,7 @@
 > **Status:** Approved (2026-02-17)
 > **Companion doc:** [`tag-taxonomy-pipeline.md`](./tag-taxonomy-pipeline.md) — traces how tags flow through the system today
 >
-> This is the canonical reference for which tags NTX University uses. All MDX content, the import pipeline, the seed script, and the UI must align to this spec.
+> This is the **target-state** canonical reference. Current implementation still differs in several places; use this with `tag-taxonomy-pipeline.md` when planning migration.
 
 ---
 
@@ -17,7 +17,7 @@ Kill the "Exam Section" (domain kind) filter entirely. Reduce from 4 filter cate
 
 Display order on the Practice page: Topic → Substance → Treatment.
 
-The `diagnosis` tag kind remains in the schema but is not exposed in the UI filter and has no current values.
+The `diagnosis` tag kind remains in the schema but is intentionally not exposed in the Practice filter UI in the target state.
 
 ---
 
@@ -153,6 +153,7 @@ These are the systems that need updating to align with this spec. Implementation
 - [ ] Manually retag questions with the rogue `topic` slug based on their actual content
 - [ ] Scan questions for treatment medication mentions and add treatment tags
 - [ ] Validate: every question has at least one topic tag and one substance tag
+- [ ] Decide placeholder policy (delete vs keep as compliant templates vs exclude from default seed)
 
 ### Phase 2: Pipeline code
 
@@ -169,6 +170,7 @@ These are the systems that need updating to align with this spec. Implementation
 - [ ] Update display order to: Topic → Substance → Treatment
 - [ ] Remove any "Exam Section" references from the UI
 - [ ] Verify filter counts update correctly with the new tag structure
+- [ ] Verify History page tag dropdown no longer exposes legacy domain slugs after migration
 
 ### Phase 4: Cleanup
 

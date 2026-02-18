@@ -1,103 +1,159 @@
 # BS-024: Tag Taxonomy Cleanup — Unify Pipeline and Eliminate Drift
 
-**Date:** 2026-02-17
-**Triggered by:** Practice page filter audit — discovering 4 overlapping filter categories (Exam Section, Substance, Topic, Treatment) with redundant values, rogue tags, and a broken import pipeline
-**Scope:** Simplify from 4 tag categories to 3 (Topic, Substance, Treatment), fix the import pipeline, and align all content
+**Date:** 2026-02-17  
+**Last Re-Verified:** 2026-02-17  
+**Triggered by:** Practice filter audit surfaced overlap, rogue tags, and fragile domain assignment  
+**Scope:** Move from 4 visible filter categories to 3 (Topic, Substance, Treatment), harden draft→MDX→DB tag pipeline, and remove taxonomy cruft  
 **Related:**
-- [`docs/content/tag-taxonomy-pipeline.md`](../content/tag-taxonomy-pipeline.md) — Full pipeline trace (how tags flow today)
-- [`docs/content/tag-taxonomy-golden-spec.md`](../content/tag-taxonomy-golden-spec.md) — Approved target taxonomy (what we're migrating to)
-- [`docs/practice-engine/content-pipeline.md`](../practice-engine/content-pipeline.md) — Content pipeline doc (updated with safety warnings)
-- [`content/drafts/questions/SCHEMA.md`](../../content/drafts/questions/SCHEMA.md) — Draft question schema (corrected domain inference claim)
+- [`docs/content/tag-taxonomy-pipeline.md`](../content/tag-taxonomy-pipeline.md) — Current-state pipeline trace (source-accurate)
+- [`docs/content/tag-taxonomy-golden-spec.md`](../content/tag-taxonomy-golden-spec.md) — Target taxonomy and migration map
+- [`docs/practice-engine/content-pipeline.md`](../practice-engine/content-pipeline.md) — End-to-end content pipeline and seed behavior
+- [`content/drafts/questions/SCHEMA.md`](../../content/drafts/questions/SCHEMA.md) — Draft authoring format and vocabulary constraints
 
 ---
 
-## The Problem
+## Verified Baseline (Current State)
 
-The tag taxonomy has accumulated drift from multiple sources:
+This baseline is verified from repository code + local content files:
 
-1. **Exam Section overlaps Topic.** "Ethics, Legal & Policy" (Exam Section) vs "Ethics Legal" (Topic) test the same concept. "Treatment & Pharmacotherapy" (Exam Section) vs "Treatment" (Topic) are nearly identical. Users see both in the filter UI, which is confusing and redundant.
+| Metric | Verified Value |
+|--------|----------------|
+| Draft source files | 296 `.md` + 1 `META.MD` under `content/drafts/questions/` |
+| Imported MDX files | 948 under `content/questions/imported/` |
+| Placeholder MDX files | 10 under `content/questions/placeholder/` |
+| Total seedable MDX files | 958 under `content/questions/**/*.mdx` |
+| Published status in MDX corpus | 958/958 are `status: published` |
+| Domain tag presence | 949 have domain tag, 9 do not (placeholders) |
+| Domain mismatch risk | 948/948 imported files have domain slug ≠ imported root directory |
 
-2. **The import pipeline produces wrong domain tags.** `domainFromPath()` derives domain from directory names (`cochrane`, `prescribers-guide`) which are source-based, not exam-section-based. The current MDX files have correct blueprint-aligned domain tags only because `migrate-domain-tags.ts` was run as a one-off fix.
+Current MDX corpus tag values:
+- Domain: 8 values
+- Substance: 10 values (taxonomy has 11; `caffeine` + `inhalants` unused in corpus)
+- Topic: 17 values (15 canonical + 2 rogue: `topic`, `psychosocial`)
+- Treatment: 3 values
+- Diagnosis: 0 values
 
-3. **No centralized taxonomy for domain or treatment tags.** Substance and Topic slugs are validated against `lib/content/draftTaxonomy.ts`, but domain and treatment tags have no canonical list — they're whatever appears in MDX frontmatter.
+---
 
-4. **Rogue tags exist.** Two placeholder files introduced `topic` (slug) and `psychosocial` as topic tags that don't match any canonical value.
+## Vertical Tracer Bullet (Tag Flow)
 
-5. **Documentation was wrong.** `content-pipeline.md` said imported/ was "safe to delete and regenerate" (it's not — domain tags would be lost). `SCHEMA.md` said domain was "inferred from topics" (it's actually derived from directory path). Both have been corrected as of 2026-02-17.
+| Stage | Source of Truth | Verified Behavior |
+|------|------------------|-------------------|
+| Draft vocabulary | `content/drafts/questions/CLAUDE.md`, `content/drafts/questions/AGENTS.md`, `lib/content/draftTaxonomy.ts` | Canonical lists exist only for `substances` and `topics` |
+| Draft parsing | `scripts/draft-question-import.ts` | `substances[]` / `topics[]` validated against canonical lists; `treatments[]` / `diagnoses[]` are free-form kebab-case |
+| Domain assignment at import | `scripts/import-draft-questions.ts` | `domainFromPath()` uses first directory segment, not question content |
+| MDX conversion | `scripts/draft-question-import.ts` | `titleCaseFromSlug()` auto-generates names; no canonical slug→name map |
+| Post-import repair | `scripts/migrate-domain-tags.ts` | Rewrites old source-based domain slugs to blueprint slugs using topic inference + fallback |
+| MDX schema validation | `lib/content/schemas.ts` | Validates tag shape and enum kind; does **not** enforce canonical slug sets or required domain tag |
+| Seed to DB | `scripts/seed.ts` | `upsertTags()` enforces slug uniqueness + name/kind consistency, but not canonical lists |
+| Database model | `db/schema.ts`, `db/migrations/0000_jazzy_vermin.sql` | `tag_kind` enum has 5 kinds (`domain`, `topic`, `substance`, `treatment`, `diagnosis`) |
+| Read path | `src/adapters/repositories/drizzle-tag-repository.ts`, `src/adapters/controllers/tag-controller.ts` | Returns distinct tags attached to published questions |
+| UI consumers | `app/(app)/app/practice/components/practice-session-starter.tsx`, `app/(app)/app/history/page.tsx`, `app/(app)/app/history/components/history-questions-tab.tsx` | Practice groups by kind; History exposes all tags in a single dropdown |
 
-## Root Cause Analysis
+---
 
-The tag system was built incrementally:
-- **Phase 1:** Draft taxonomy defined substance and topic slugs, validated at import time
-- **Phase 2:** Domain tags added to MDX files from an external question-generation workflow, organized by exam blueprint sections
-- **Phase 3:** Treatment and diagnosis tag kinds added to the schema but never given a canonical slug list
-- **No phase** ever unified these into a single, centralized taxonomy with validation across all tag kinds
+## Horizontal Tracer Bullet (Where Drift Enters/Spreads)
 
-The result: substance and topic are validated, domain is ad hoc, treatment has 3 values, diagnosis has 0 values, and the import pipeline can't reproduce the correct domain assignments.
+1. **Taxonomy asymmetry:** only substance/topic have canonical draft vocab; domain/treatment/diagnosis do not.  
+2. **Two-step domain pipeline:** importer writes directory domain, migration script rewrites later.  
+3. **Placeholder bleed-through:** placeholders are published and included by default unless `SEED_INCLUDE_PLACEHOLDERS=false`.  
+4. **Schema permissiveness:** MDX tag schema allows non-canonical slugs and missing domain tags.  
+5. **UI propagation:** any seeded slug immediately appears in Practice filter chips and History tag dropdown.
+
+---
+
+## Confirmed Problems (What Must Be Fixed)
+
+1. **Exam Section overlaps Topic** (semantic duplication in filter UX).  
+2. **Importer cannot reproduce correct domain tags** without post-import repair.  
+3. **No centralized domain/treatment taxonomy** (drift can continue).  
+4. **Rogue topic slugs in placeholders** (`topic`, `psychosocial`).  
+5. **Domain tag not enforced per question** (9 published placeholders have no domain).  
+6. **Operational fragility from gitignored imported MDX** (canonical content not reproducible in one step).  
+7. **Practice/History both consume raw seeded tags** (scope is broader than Practice page only).
+
+Historical documentation drift is now corrected in `docs/practice-engine/content-pipeline.md` and `content/drafts/questions/SCHEMA.md`; the remaining issue is pipeline design, not doc wording.
+
+---
 
 ## Severity Assessment
 
 | Issue | Severity | Impact |
 |-------|----------|--------|
-| Overlapping Exam Section / Topic filters | Medium | Confuses users, weakens filter utility |
-| Import pipeline produces wrong domain tags | High | Re-running import would corrupt 948 questions |
-| No domain/treatment taxonomy validation | Medium | Allows drift to continue unchecked |
-| Rogue placeholder tags | Low | 2 junk values appear in Topic filter |
-| Stale documentation | High | Could lead someone to delete imported/ and lose data |
+| Importer domain mismatch | High | Re-import can reintroduce wrong domain tags across 948 imported MDX files |
+| Missing canonical domain/treatment lists | High | Enables silent taxonomy drift and inconsistent UI filters |
+| Overlapping Domain/Topic semantics | Medium | Confusing filter model and weaker discoverability |
+| Missing required domain tag | Medium | Questions can publish without exam-section classification |
+| Placeholder rogue tags | Medium | Pollutes filter options in environments that include placeholders |
+| Two-step domain assignment | Medium | Easy to skip migration step and ship bad tags |
 
-## What We've Already Done
+---
+
+## What Has Already Been Done
 
 | Date | Action | Artifact |
 |------|--------|----------|
-| 2026-02-17 | Full pipeline trace — documented how tags flow from content to UI | `docs/content/tag-taxonomy-pipeline.md` |
-| 2026-02-17 | Golden spec approved — decided on 3-category taxonomy (13 Topics, 11 Substances, 12 Treatments) | `docs/content/tag-taxonomy-golden-spec.md` |
-| 2026-02-17 | Fixed dangerous "safe to delete" claim in content-pipeline.md | `docs/practice-engine/content-pipeline.md` |
-| 2026-02-17 | Fixed wrong domain inference claim in SCHEMA.md | `content/drafts/questions/SCHEMA.md` |
-| 2026-02-17 | Other agent audited pipeline doc for factual accuracy — all claims verified | Pipeline doc updated with corrections |
+| 2026-02-17 | Full current-state pipeline trace completed | `docs/content/tag-taxonomy-pipeline.md` |
+| 2026-02-17 | Golden target taxonomy defined (3 visible categories) | `docs/content/tag-taxonomy-golden-spec.md` |
+| 2026-02-17 | Content pipeline doc corrected to warn imported content is not blindly regenerable | `docs/practice-engine/content-pipeline.md` |
+| 2026-02-17 | Draft schema doc updated to match real importer domain behavior | `content/drafts/questions/SCHEMA.md` |
+| 2026-02-17 | First-principles re-audit completed (vertical + horizontal tracer bullets) | This BS-024 update |
 
-## What Still Needs to Happen (Spec Scope)
+---
 
-The golden spec (`tag-taxonomy-golden-spec.md`) defines the target. A future implementation spec should cover:
+## Spec Scope Required to Implement Safely
 
-### Phase 1: Content Migration (MDX files)
-- Map every existing domain tag → new topic tag per the migration table
-- Map every existing topic tag → new topic slug per the migration table
-- Remove all `domain` kind tags from MDX frontmatter
-- Retag questions with the rogue `topic` slug based on actual content
-- Scan questions for treatment medication mentions and add treatment tags
-- Validate: every question has at least one topic tag and one substance tag
+A follow-up implementation spec must cover all of the below, or drift will remain:
 
-### Phase 2: Pipeline Code
-- Remove `domain` from `AllTagKinds` in `src/domain/value-objects/tag-kind.ts`
-- Remove `domain` from the PostgreSQL enum (requires migration)
-- Update `lib/content/draftTaxonomy.ts` with canonical topic, substance, and treatment slug lists
-- Fix or remove `domainFromPath()` in the import script
-- Replace `titleCaseFromSlug()` with explicit slug→name lookup
-- Update `upsertTags()` to validate against canonical lists
+### Phase 1: Content Migration (MDX corpus)
+- Map all legacy domain tags to target topic slugs per golden-spec migration table
+- Map all legacy topic slugs to target topic slugs
+- Remove `domain` tags from MDX frontmatter
+- Retag rogue placeholder topic slugs (`topic`, `psychosocial`)
+- Add missing treatment tags where clinically present
+- Validate every question has at least one topic + one substance tag
 
-### Phase 3: UI
-- Remove `domain` from `tagKindLabels` and `tagKindOrder` in `practice-session-starter.tsx`
-- Update display order to: Topic → Substance → Treatment
-- Remove "Exam Section" references
+### Phase 2: Pipeline Hardening (Draft → MDX)
+- Introduce canonical lists for all active kinds in `lib/content/draftTaxonomy.ts` (including treatment; domain decision depends on whether domain survives)
+- Replace ad hoc slug-to-name generation with explicit slug→display-name maps
+- Eliminate two-step domain repair flow (single authoritative assignment strategy)
+- Add validation guardrails at import and/or seed time for required kinds and allowed slugs
 
-### Phase 4: Cleanup
-- Delete rogue tags from database
-- Update pipeline doc and SCHEMA.md to reflect new state
-- Run tag count report to identify content generation priorities
+### Phase 3: UI + Query Alignment
+- Practice page: remove Exam Section filter and reorder to Topic → Substance → Treatment
+- History page: ensure Tag dropdown only reflects intended taxonomy after migration (no legacy domain slugs)
+- Confirm count/query behavior remains correct for tag filters after taxonomy changes
+
+### Phase 4: Cruft Cleanup Policy
+- Decide placeholder strategy: delete, keep as compliant templates, or exclude from default seed
+- Remove orphan/legacy tags from DB once no published questions reference them
+- Keep pipeline docs and schema docs aligned with implemented behavior
+
+### Phase 5: Verification
+- Add/adjust unit + integration coverage for importer/seed/tag query behavior
+- Add deterministic taxonomy report check (counts by kind + slug) to catch regressions
+- Re-run content census after migration and record in docs
+
+---
 
 ## Open Questions
 
 | # | Question | Status |
 |---|----------|--------|
-| 1 | Should we keep the `diagnosis` tag kind in the schema even though it has 0 values? | Open |
-| 2 | Can we write a migration script for MDX files, or must some questions be manually reviewed? | Open — the "Co-occurring & Medical Complications" → split requires human judgment |
-| 3 | Should the draft taxonomy (`SCHEMA.md`, `CLAUDE.md`) be updated to the new topic slugs before or after MDX migration? | Open |
-| 4 | Do we need a database migration to remove `domain` from the PostgreSQL enum, or can we leave it and just stop using it? | Open |
+| 1 | Keep `diagnosis` kind in schema (internal-only) or remove entirely? | Open |
+| 2 | Canonical source of truth: drafts-first or MDX-first? | Open |
+| 3 | Should placeholder files remain in runtime seed by default? | Open |
+| 4 | Remove `domain` from DB enum now, or deprecate first and remove later? | Open |
+| 5 | How much manual review is required for `co-occurring-complications` split mapping? | Open |
+| 6 | Should treatment tagging stay meds-only or include psychosocial modalities? | Open |
+
+---
 
 ## Decision Log
 
 | Date | Decision | Rationale |
 |------|----------|-----------|
-| 2026-02-17 | Kill Exam Section filter, reduce to 3 categories (Topic, Substance, Treatment) | Exam Section overlaps Topic heavily; 3 categories are simpler and sufficient for board exam prep filtering |
-| 2026-02-17 | 13 Topics, 11 Substances, 12 Treatments approved | Based on ABPN Addiction Psychiatry and ABAM/ASAM Addiction Medicine exam blueprints |
-| 2026-02-17 | Fix stale docs immediately, defer code changes to spec | Dangerous misinformation in docs was urgent; code changes need proper planning |
+| 2026-02-17 | Kill Exam Section filter; target 3 visible categories (Topic, Substance, Treatment) | Exam Section and Topic overlap is high and confusing |
+| 2026-02-17 | Golden taxonomy approved (13 Topics, 11 Substances, 12 Treatments) | Aligns with board blueprint coverage goals |
+| 2026-02-17 | Correct documentation first, then spec implementation | Prevents accidental destructive workflows while design is finalized |
+| 2026-02-17 | Completed first-principles tracer-bullet audit and refreshed BS-024 | Makes BS-024 spec-ready and source-accurate across code, content, and docs |
