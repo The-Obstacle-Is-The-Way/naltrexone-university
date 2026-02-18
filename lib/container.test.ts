@@ -58,11 +58,11 @@ async function loadContainer() {
 
 let createContainer: Awaited<ReturnType<typeof loadContainer>>;
 
-describe('container factories', () => {
-  beforeAll(async () => {
-    createContainer = await loadContainer();
-  });
+beforeAll(async () => {
+  createContainer = await loadContainer();
+});
 
+describe('container factories', () => {
   it('exposes factory functions for repositories, use cases, and controllers', () => {
     const container = createContainer({
       primitives: {
