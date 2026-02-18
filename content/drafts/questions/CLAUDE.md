@@ -11,6 +11,8 @@ Generate board-style questions for Addiction Psychiatry certification (NTX Unive
 3. `QUESTION-FORMAT-SPEC.md` - Complete pipeline spec (how fields map through the system)
 4. `PLAN.md` - Targets, progress tracker
 
+Use `SCHEMA.md` and `QUESTION-FORMAT-SPEC.md` as the source of truth for formatting/validation. Use `META.MD` Part 2 for quality principles only.
+
 ---
 
 ## Per Paper
@@ -29,8 +31,8 @@ Difficulty per file: 2 easy, 2 medium, 2 hard
 
 ## Special Cases
 
-- `questions/prescribers-guide/`: 4 recall questions per medication (no vignettes). See `SCHEMA.md` for details.
-- `questions/article-based-pathway/09-therapy/2024-cooperman-more-trial-correction/`: correction notice folder (no questions).
+- `content/drafts/questions/prescribers-guide/`: 4 recall questions per medication (no vignettes). See `SCHEMA.md` for details.
+- `content/drafts/questions/article-based-pathway/09-therapy/2024-cooperman-more-trial-correction/`: correction notice folder (no questions).
 
 ---
 
@@ -51,13 +53,13 @@ Difficulty per file: 2 easy, 2 medium, 2 hard
 ## Workflow
 
 ```
-1. Read: questions/[chapter]/[paper]/[paper].md
+1. Read: content/drafts/questions/[chapter]/[paper]/[paper].md
 2. Identify 6-12 clinically relevant concepts (NOT statistics)
 3. For each concept, ask: "What would a physician need to DO with this?"
 4. Write 6 recall questions (2 easy, 2 medium, 2 hard)
-5. Save: questions/[chapter]/[paper]/recall.md
+5. Save: content/drafts/questions/[chapter]/[paper]/recall.md
 6. Write 6 vignette questions (2 easy, 2 medium, 2 hard)
-7. Save: questions/[chapter]/[paper]/vignettes.md
+7. Save: content/drafts/questions/[chapter]/[paper]/vignettes.md
 8. Apply quality checklist from META.MD Part 2
 9. Update PLAN.md checkboxes
 ```
@@ -76,7 +78,7 @@ Before saving, verify:
 - [ ] Each wrong answer explanation teaches a concept
 - [ ] Clinical pearl included
 - [ ] `treatments` tag included if a medication is mentioned
-- [ ] Optional: run `python3 scripts/validate_questions.py --root questions/<paper-folder> --check-length-cues`
+- [ ] Optional: run `pnpm content:import:drafts -- --dry-run` from repo root for structural validation
 
 **For the full checklist and technical flaw taxonomy, see META.MD Part 2.**
 

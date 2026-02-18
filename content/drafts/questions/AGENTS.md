@@ -13,6 +13,8 @@ Generate board-style questions for Addiction Psychiatry certification (NTX Unive
 3. **`QUESTION-FORMAT-SPEC.md`** - Complete pipeline spec (how drafts become database questions)
 4. **`PLAN.md`** - Targets, progress tracker
 
+Use `SCHEMA.md` and `QUESTION-FORMAT-SPEC.md` as the source of truth for formatting/validation. Use `META.MD` Part 2 for quality principles only.
+
 ---
 
 ## Quick Reference
@@ -39,10 +41,10 @@ Generate board-style questions for Addiction Psychiatry certification (NTX Unive
 ### Workflow
 
 ```
-1. Read: questions/[chapter]/[paper]/[paper].md
+1. Read: content/drafts/questions/[chapter]/[paper]/[paper].md
 2. Identify 6-12 clinically relevant concepts (NOT statistics)
-3. Write 6 recall questions (2 easy, 2 medium, 2 hard) -> recall.md
-4. Write 6 vignette questions (2 easy, 2 medium, 2 hard) -> vignettes.md
+3. Write 6 recall questions (2 easy, 2 medium, 2 hard) -> content/drafts/questions/.../recall.md
+4. Write 6 vignette questions (2 easy, 2 medium, 2 hard) -> content/drafts/questions/.../vignettes.md
 5. Apply quality checklist from META.MD Part 2
 6. Update PLAN.md checkboxes
 ```
@@ -85,8 +87,8 @@ Generate board-style questions for Addiction Psychiatry certification (NTX Unive
 
 ## Special Cases
 
-- `questions/prescribers-guide/`: 4 recall questions per medication (no vignettes). See `SCHEMA.md` for details.
-- `questions/article-based-pathway/09-therapy/2024-cooperman-more-trial-correction/`: correction notice folder (no questions).
+- `content/drafts/questions/prescribers-guide/`: 4 recall questions per medication (no vignettes). See `SCHEMA.md` for details.
+- `content/drafts/questions/article-based-pathway/09-therapy/2024-cooperman-more-trial-correction/`: correction notice folder (no questions).
 
 ---
 

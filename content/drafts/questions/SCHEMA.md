@@ -2,7 +2,7 @@
 
 **Purpose:** Board-style questions for Addiction Psychiatry certification exam prep.
 
-**Version:** 1.7
+**Version:** 1.8
 **Last Updated:** February 18, 2026
 
 **Related Files:**
@@ -20,7 +20,8 @@
 
 | Version | Date | Changes |
 |---------|------|---------|
-| 1.7 | 2026-02-18 | Fixed broken SKILL.md reference, added QUESTION-FORMAT-SPEC.md and TAG-TAXONOMY.md cross-references, added strict frontmatter note, treatments guidance |
+| 1.8 | 2026-02-18 | Synced with QUESTION-FORMAT-SPEC.md and runtime importer behavior (2-5 choices allowed, validation commands updated, legacy skill-file references removed) |
+| 1.7 | 2026-02-18 | Fixed broken legacy skill-file reference, added QUESTION-FORMAT-SPEC.md and TAG-TAXONOMY.md cross-references, added strict frontmatter note, treatments guidance |
 | 1.6 | 2026-02-18 | Canonical taxonomy alignment (Topic/Substance/Treatment), removed legacy domain guidance, added treatment canonical list |
 | 1.5 | 2026-02-04 | Documented source-only full-conversion folder and added validation script reference |
 | 1.4 | 2026-02-04 | Documented special-case sections (Stahl's medications), clarified QID rules for multi-entry sources |
@@ -50,7 +51,7 @@
 
 ### Prescriber's Guide Medications (Recall Only)
 
-Folder: `questions/prescribers-guide/`
+Folder: `content/drafts/questions/prescribers-guide/`
 
 - Each medication has **4 recall questions** (no `vignettes.md`).
 - Medication folders are named with a numeric prefix (for example `01-acamprosate`, `23-naltrexone`).
@@ -60,14 +61,14 @@ Folder: `questions/prescribers-guide/`
 ### Prescriber's Guide Full Conversion (No Questions)
 
 Paths:
-- `questions/prescribers-guide/stahls-prescribers-guide.md`
-- `questions/prescribers-guide/stahls-chunked/`
+- `content/drafts/questions/prescribers-guide/stahls-prescribers-guide.md`
+- `content/drafts/questions/prescribers-guide/stahls-chunked/`
 
-This content contains the full-book Markdown conversion for reference. It intentionally has no `recall.md` or `vignettes.md`. The medication question sets live under `questions/prescribers-guide/`.
+This content contains the full-book Markdown conversion for reference. It intentionally has no `recall.md` or `vignettes.md`. The medication question sets live under `content/drafts/questions/prescribers-guide/`.
 
 ### Correction Notice (No Questions)
 
-Folder: `questions/article-based-pathway/09-therapy/2024-cooperman-more-trial-correction/`
+Folder: `content/drafts/questions/article-based-pathway/09-therapy/2024-cooperman-more-trial-correction/`
 
 This folder is a correction notice source-only folder and intentionally has no `recall.md` or `vignettes.md`.
 
@@ -78,7 +79,7 @@ This folder is a correction notice source-only folder and intentionally has no `
 Each paper gets two question files in its folder:
 
 ```
-questions/
+content/drafts/questions/
   └── 01-screening-evaluation-prevention/
       └── 2020-white-gender-differences-alcohol-harms/
           ├── 2020-white-gender-differences-alcohol-harms.pdf
@@ -167,6 +168,8 @@ Examples:
 - Default: Use the same `source` identifier as the `source` tag, and number sequentially within each source
 - Number sequentially within each paper (001, 002, 003...)
 - Never reuse a qid, even if you delete a question
+
+**Enforcement note:** Import currently enforces only non-empty `qid`/`source`. Global uniqueness and `{source}-{number}` format are authoring policy and must be maintained by content authors.
 
 **Exception (multi-entry sources):**
 For sources like textbooks where many independent question sets live under a single `source` identifier, the `qid` may include an additional sub-identifier (for example a medication name) to preserve global uniqueness and keep IDs meaningful.
@@ -261,7 +264,7 @@ Examples:
 Every question MUST include:
 
 1. **Question** - The stem (vignette if applicable) + lead-in question
-2. **Choices** - 4-5 options labeled A-E (correct answer specified in frontmatter)
+2. **Choices** - 2-5 options labeled A-E (standard authoring target: 4; correct answer specified in frontmatter)
 3. **Explanation** - Why the correct answer is right AND why others are wrong
 
 ### NBME-Style Guidelines
@@ -274,7 +277,7 @@ Based on [NBME Item-Writing Guide](https://www.nbme.org/educators/item-writing-g
 - Vignettes follow order: demographics, history, physical, labs, treatment
 - Prefer application of knowledge over isolated recall
 
-**For the complete technical flaw taxonomy (word repeats, convergence, grammatical cues, etc.), see SKILL.md.**
+**For the complete technical flaw taxonomy (word repeats, convergence, grammatical cues, etc.), see META.MD Part 2.**
 
 ---
 
@@ -310,13 +313,11 @@ These fields are NOT currently supported by the import script (strict mode will 
 
 ## Validation (Recommended)
 
-Repo-wide structural validation:
+Repo-wide structural validation (import parser + schema checks):
 
-`python3 scripts/validate_questions.py`
+`pnpm content:import:drafts -- --dry-run`
 
-Optional length cue audit for a single source folder:
-
-`python3 scripts/validate_questions.py --root questions/personal-papers/lancet-gbd --check-length-cues`
+There is currently no dedicated length-cue validator script in this repo.
 
 ---
 
