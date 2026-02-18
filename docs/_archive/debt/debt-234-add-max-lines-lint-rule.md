@@ -1,10 +1,11 @@
 # DEBT-234: Add max-lines Check to Prevent File Size Regression
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P4
 **Date:** 2026-02-18
+**Resolved:** 2026-02-18
 **Last Verified:** 2026-02-18
-**Parent:** [DEBT-224](debt-224-file-size-audit-production-and-test.md)
+**Parent:** [DEBT-224](../../debt/debt-224-file-size-audit-production-and-test.md)
 **Component:** `.husky/pre-commit` (or `.github/workflows/ci.yml` as fallback)
 
 ---
@@ -43,7 +44,7 @@ Add a file-size check to the existing Husky pre-commit pipeline:
 1. Create a `scripts/check-file-size.sh` script that runs `wc -l` on staged production `.ts`/`.tsx` files
 2. Set threshold at 350 lines (soft warning, non-blocking)
 3. Exempt known deep modules: `db/schema.ts` and Disposition A files documented in DEBT-233
-4. Exempt test files (`*.test.ts`, `*.test.tsx`, `*.spec.tsx`, `*.browser.spec.tsx`)
+4. Exempt test files (`*.test.ts`, `*.test.tsx`, `*.spec.ts`, `*.spec.tsx`, `*.browser.spec.tsx`)
 5. Exempt scripts (`scripts/` directory)
 6. Wire into `.husky/pre-commit` or `lint-staged` config
 
@@ -55,15 +56,15 @@ Guardrail: keep the implementation transparent and low-maintenance; a simple she
 
 ## Verification
 
-- [ ] Pre-commit hook or CI check in place
-- [ ] Known deep modules are exempted
-- [ ] Test files and scripts are exempted
-- [ ] Violations produce warnings (not errors) to allow deliberate exceptions
-- [ ] `pnpm lint` still passes on current codebase
-- [ ] Pre-commit hook does not noticeably slow down commits
+- [x] Pre-commit hook or CI check in place
+- [x] Known deep modules are exempted
+- [x] Test files and scripts are exempted
+- [x] Violations produce warnings (not errors) to allow deliberate exceptions
+- [x] `pnpm lint` still passes on current codebase
+- [x] Pre-commit hook does not noticeably slow down commits
 
 ## Related
 
-- [DEBT-224](debt-224-file-size-audit-production-and-test.md) - Parent file-size audit
-- [DEBT-233](../_archive/debt/debt-233-add-why-comments-to-justified-large-files.md) - WHY comments for justified exemptions
-- [DEBT-193](../_archive/debt/debt-193-backend-production-files-over-300-lines.md) - Original 300-line guideline
+- [DEBT-224](../../debt/debt-224-file-size-audit-production-and-test.md) - Parent file-size audit
+- [DEBT-233](debt-233-add-why-comments-to-justified-large-files.md) - WHY comments for justified exemptions
+- [DEBT-193](debt-193-backend-production-files-over-300-lines.md) - Original 300-line guideline
