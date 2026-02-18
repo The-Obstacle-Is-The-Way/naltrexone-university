@@ -267,6 +267,33 @@ describe('migrateQuestionTags', () => {
       tags.filter((tag) => tag.slug === 'pharmacology-neuroscience'),
     ).toHaveLength(1);
   });
+
+  it('fails when duplicate slug has conflicting names', () => {
+    expect(() =>
+      migrateQuestionTags(
+        createInput({
+          tags: [
+            {
+              slug: 'screening-diagnosis',
+              name: 'Screening & Diagnosis',
+              kind: 'topic',
+            },
+            { slug: 'alcohol', name: 'Alcohol', kind: 'substance' },
+            {
+              slug: 'opioid-use-disorder',
+              name: 'Opioid Use Disorder',
+              kind: 'diagnosis',
+            },
+            {
+              slug: 'opioid-use-disorder',
+              name: 'OUD',
+              kind: 'diagnosis',
+            },
+          ],
+        }),
+      ),
+    ).toThrow(/conflicting names/i);
+  });
 });
 
 describe('parseCliArgs', () => {

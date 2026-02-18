@@ -203,6 +203,12 @@ function addOrValidateTag(
       `Tag slug "${nextTag.slug}" has conflicting kinds: ${existing.kind} vs ${nextTag.kind}`,
     );
   }
+
+  if (existing.name !== nextTag.name) {
+    throw new Error(
+      `Tag slug "${nextTag.slug}" has conflicting names: "${existing.name}" vs "${nextTag.name}"`,
+    );
+  }
 }
 
 function inferTreatmentSlugs(input: MigrationInput): string[] {
