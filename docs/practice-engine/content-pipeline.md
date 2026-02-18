@@ -403,7 +403,23 @@ DATABASE_URL="<target-db-url>" pnpm db:migrate
 
 ---
 
-## 14. Troubleshooting
+## 14. When to Reseed
+
+Re-run `pnpm db:seed` whenever the database's question/tag data may be out of sync with the MDX source files. Common triggers:
+
+| Trigger | Why Reseed Is Needed |
+|---------|---------------------|
+| **After `pnpm db:migrate`** (schema changes) | Migrations may alter enums or constraints that require fresh data insertion. |
+| **After MDX content changes** (new questions, updated tags, edited frontmatter) | The seed script is the only path from MDX files to database rows. |
+| **After tag taxonomy changes** (SPEC-033, renamed slugs, new kinds) | Taxonomy migrations include tag data cleanup (see SPEC-033 §14). Run `pnpm db:migrate` first, then `pnpm db:seed`. |
+| **After switching Neon branches** | Different branches may have different data states. |
+| **After `pnpm db:test:reset`** | Test DB is wiped; seed restores content. |
+
+**Important:** The seed is **not** automatically run by Vercel, CI, or `pnpm db:migrate`. It is always a manual operator step. See `docs/dev/deployment-procedure.md` for the full deployment flow.
+
+---
+
+## 15. Troubleshooting
 
 ### Practice shows "Internal error" on Start session / Submit
 

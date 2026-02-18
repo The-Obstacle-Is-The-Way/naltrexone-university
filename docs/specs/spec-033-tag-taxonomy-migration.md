@@ -464,6 +464,53 @@ If bad data is detected:
 
 ---
 
+## 14. Database Synchronization
+
+> **Added 2026-02-18** — Documents a gap discovered after SPEC-033 code changes were deployed.
+
+### Problem
+
+SPEC-033 Phases 1–5 migrated code, MDX files, types, and UI — but the **databases were never updated**. The consequences:
+
+1. **Stale tag rows** — The `tags` table still contains 17 legacy topic slugs (e.g., `comorbidity`, `ethics-legal-policy`) instead of the 13 canonical slugs. Display names are also stale (e.g., `Ethics Legal Policy` instead of `Ethics & Legal`).
+2. **Orphaned migration** — Migration `0010_remove_domain_tag_kind.sql` was hand-written but never registered in Drizzle's `_journal.json`. Running `pnpm db:migrate` silently skipped it.
+3. **Partial UI effect** — Some changes appeared to work (e.g., "Exam Section" filter group gone) because the *code* changed, but tag *data* still came from the database.
+
+### Fix
+
+1. **Regenerated migration 0010** via `pnpm db:generate` — Drizzle detected the diff between `db/schema.ts` (no `domain` in `tagKindEnum`) and snapshot 0009 (has `domain`), and produced a proper migration with journal entry + snapshot.
+2. **Safety assertion preserved** — The generated SQL was edited to include a pre-flight check: `IF EXISTS (SELECT 1 FROM tags WHERE kind = 'domain') THEN RAISE EXCEPTION`.
+
+### Per-Environment Sync Procedure
+
+For each environment (local → preview → production):
+
+```bash
+# 1. Apply migration 0010 (cleans tag data + removes 'domain' from tag_kind enum)
+DATABASE_URL="<target>" pnpm db:migrate
+
+# 2. Rebuild tags + associations from canonical MDX
+DATABASE_URL="<target>" pnpm db:seed
+```
+
+```sql
+-- 3. Verify: should show topic/substance/treatment/diagnosis only, 0 domain
+SELECT kind, COUNT(*) FROM tags GROUP BY kind;
+```
+
+No manual SQL cleanup is needed — migration 0010 deletes all `question_tags` and `tags` rows before the enum change. The seed rebuilds them from canonical MDX source files.
+
+**Why full tag wipe instead of surgical update:** The seed's `upsertTags()` throws if an existing tag has a different `name` than expected (seed.ts:144). SPEC-033 changed many display names (e.g., `Ethics Legal Policy` → `Ethics & Legal`). A clean slate avoids upsert conflicts.
+
+### Safety Notes
+
+- `question_tags` references only `tags` (FK cascade) and `questions` (FK cascade).
+- `tags` is only referenced by `question_tags`.
+- Neither is referenced by `attempts`, `practice_sessions`, or `bookmarks`.
+- Full wipe + reseed is safe — no user-generated data is lost.
+
+---
+
 ## 13. Related
 
 - [BS-024](../brainstorming/bs-024-tag-taxonomy-cleanup.md)
