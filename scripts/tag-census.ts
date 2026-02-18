@@ -44,7 +44,7 @@ function parseArgs(argv: string[]): ParsedArgs {
 
     if (arg === '--out') {
       const value = argv[index + 1];
-      if (!value) {
+      if (!value || value.startsWith('--')) {
         throw new Error('Missing value for --out');
       }
       outPath = value;
@@ -54,7 +54,7 @@ function parseArgs(argv: string[]): ParsedArgs {
 
     if (arg === '--threshold') {
       const value = argv[index + 1];
-      if (!value) {
+      if (!value || value.startsWith('--')) {
         throw new Error('Missing value for --threshold');
       }
       const parsed = Number.parseInt(value, 10);

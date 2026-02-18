@@ -75,8 +75,8 @@ describe('migrateQuestionTags', () => {
     ).toBeUndefined();
   });
 
-  it('splits co-occurring-complications domain using existing topic signal', () => {
-    const mappedToCoOccurring = migrateQuestionTags(
+  it('maps co-occurring-complications domain to co-occurring-disorders when comorbidity topic present', () => {
+    const tags = migrateQuestionTags(
       createInput({
         tags: [
           {
@@ -90,13 +90,15 @@ describe('migrateQuestionTags', () => {
       }),
     );
 
-    expect(mappedToCoOccurring).toContainEqual({
+    expect(tags).toContainEqual({
       slug: 'co-occurring-disorders',
       name: 'Co-occurring Disorders',
       kind: 'topic',
     });
+  });
 
-    const mappedToMedical = migrateQuestionTags(
+  it('maps co-occurring-complications domain to medical-complications when that topic present', () => {
+    const tags = migrateQuestionTags(
       createInput({
         tags: [
           {
@@ -114,7 +116,7 @@ describe('migrateQuestionTags', () => {
       }),
     );
 
-    expect(mappedToMedical).toContainEqual({
+    expect(tags).toContainEqual({
       slug: 'medical-complications',
       name: 'Medical Complications',
       kind: 'topic',
@@ -268,6 +270,24 @@ describe('migrateQuestionTags', () => {
 });
 
 describe('parseCliArgs', () => {
+  it('defaults to dry-run with no arguments', () => {
+    expect(parseCliArgs([])).toEqual({ mode: 'dry-run', reportPath: null });
+  });
+
+  it('parses --write mode', () => {
+    expect(parseCliArgs(['--write'])).toEqual({
+      mode: 'write',
+      reportPath: null,
+    });
+  });
+
+  it('parses --report with a valid path', () => {
+    expect(parseCliArgs(['--report', 'out.json'])).toEqual({
+      mode: 'dry-run',
+      reportPath: 'out.json',
+    });
+  });
+
   it('rejects --report when the next token is another flag', () => {
     expect(() => parseCliArgs(['--report', '--write'])).toThrow(
       /missing value for --report/i,

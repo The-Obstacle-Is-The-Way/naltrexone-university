@@ -3,6 +3,11 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import fg from 'fast-glob';
 import matter from 'gray-matter';
+import {
+  CANONICAL_SUBSTANCE_DISPLAY_NAMES,
+  CANONICAL_TOPIC_DISPLAY_NAMES,
+  CANONICAL_TREATMENT_DISPLAY_NAMES,
+} from '../lib/content/draftTaxonomy';
 import { parseMdxQuestionBody } from '../lib/content/parseMdxQuestion';
 
 type CanonicalKind = 'topic' | 'substance' | 'treatment' | 'diagnosis';
@@ -44,50 +49,9 @@ export type CliArgs = {
   reportPath: string | null;
 };
 
-const TOPIC_DISPLAY_NAMES = {
-  'screening-diagnosis': 'Screening & Diagnosis',
-  'epidemiology-prevention': 'Epidemiology & Prevention',
-  'pharmacology-neuroscience': 'Pharmacology & Neuroscience',
-  'intoxication-toxicology': 'Intoxication & Toxicology',
-  'withdrawal-management': 'Withdrawal Management',
-  'treatment-pharmacotherapy': 'Treatment & Pharmacotherapy',
-  'psychosocial-interventions': 'Psychosocial Interventions',
-  'co-occurring-disorders': 'Co-occurring Disorders',
-  'medical-complications': 'Medical Complications',
-  'harm-reduction': 'Harm Reduction',
-  'ethics-legal': 'Ethics & Legal',
-  'special-populations': 'Special Populations',
-  general: 'General',
-} as const;
-
-const SUBSTANCE_DISPLAY_NAMES = {
-  alcohol: 'Alcohol',
-  cannabis: 'Cannabis',
-  cocaine: 'Cocaine',
-  hallucinogens: 'Hallucinogens',
-  inhalants: 'Inhalants',
-  opioids: 'Opioids',
-  polysubstance: 'Polysubstance',
-  sedatives: 'Sedatives',
-  stimulants: 'Stimulants',
-  tobacco: 'Tobacco',
-  other: 'Other',
-} as const;
-
-const TREATMENT_DISPLAY_NAMES = {
-  acamprosate: 'Acamprosate',
-  buprenorphine: 'Buprenorphine',
-  bupropion: 'Bupropion',
-  disulfiram: 'Disulfiram',
-  gabapentin: 'Gabapentin',
-  methadone: 'Methadone',
-  naloxone: 'Naloxone',
-  naltrexone: 'Naltrexone',
-  nrt: 'NRT',
-  topiramate: 'Topiramate',
-  varenicline: 'Varenicline',
-  'other-treatment': 'Other',
-} as const;
+const TOPIC_DISPLAY_NAMES = CANONICAL_TOPIC_DISPLAY_NAMES;
+const SUBSTANCE_DISPLAY_NAMES = CANONICAL_SUBSTANCE_DISPLAY_NAMES;
+const TREATMENT_DISPLAY_NAMES = CANONICAL_TREATMENT_DISPLAY_NAMES;
 
 const DIRECT_DOMAIN_TO_TOPIC = {
   general: 'general',
@@ -399,6 +363,19 @@ function parseTags(rawTags: unknown, filePath: string): MigrationTag[] {
       );
     }
 
+    const VALID_INPUT_KINDS = new Set<string>([
+      'topic',
+      'substance',
+      'treatment',
+      'diagnosis',
+      'domain',
+    ]);
+    if (!VALID_INPUT_KINDS.has(record.kind)) {
+      throw new Error(
+        `Invalid tag kind "${record.kind}" at index ${index} in ${filePath}: expected one of ${[...VALID_INPUT_KINDS].join(', ')}`,
+      );
+    }
+
     return {
       slug: record.slug,
       name: record.name,
@@ -550,10 +527,6 @@ export async function runMigration(args: CliArgs): Promise<MigrationReport> {
     await writeFile(args.reportPath, JSON.stringify(report, null, 2), 'utf8');
   }
 
-  if (report.failedFiles > 0) {
-    throw new Error(`Migration failed for ${report.failedFiles} files`);
-  }
-
   return report;
 }
 
@@ -582,6 +555,7 @@ if (isMain) {
         for (const failure of report.failures) {
           console.info(`  - ${failure.filePath}: ${failure.message}`);
         }
+        process.exitCode = 1;
       }
     })
     .catch((error) => {

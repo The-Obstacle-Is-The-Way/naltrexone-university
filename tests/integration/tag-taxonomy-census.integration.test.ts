@@ -40,7 +40,7 @@ describe('tag taxonomy census', () => {
     expect(rows[0]?.count ?? 0).toBe(0);
   });
 
-  it('all topic slugs are from the canonical 13', async () => {
+  it(`all topic slugs are from the canonical ${CANONICAL_TOPIC_SLUGS.length}`, async () => {
     const rows = await sql<{ slug: string }[]>`
       select slug
       from tags
@@ -57,7 +57,7 @@ describe('tag taxonomy census', () => {
     }
   });
 
-  it('all substance slugs are from the canonical 11', async () => {
+  it(`all substance slugs are from the canonical ${CANONICAL_SUBSTANCE_SLUGS.length}`, async () => {
     const rows = await sql<{ slug: string }[]>`
       select slug
       from tags
@@ -74,7 +74,7 @@ describe('tag taxonomy census', () => {
     }
   });
 
-  it('all treatment slugs are from the canonical 12', async () => {
+  it(`all treatment slugs are from the canonical ${CANONICAL_TREATMENT_SLUGS.length}`, async () => {
     const rows = await sql<{ slug: string }[]>`
       select slug
       from tags
