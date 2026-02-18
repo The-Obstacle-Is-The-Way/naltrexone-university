@@ -5,10 +5,10 @@
 **Triggered by:** Practice filter audit surfaced overlap, rogue tags, and fragile domain assignment  
 **Scope:** Move from 4 visible filter categories to 3 (Topic, Substance, Treatment), harden draft→MDX→DB tag pipeline, and remove taxonomy cruft  
 **Related:**
-- [`docs/content/tag-taxonomy-pipeline.md`](../content/tag-taxonomy-pipeline.md) — Current-state pipeline trace (source-accurate)
-- [`docs/content/tag-taxonomy-golden-spec.md`](../content/tag-taxonomy-golden-spec.md) — Target taxonomy and migration map
-- [`docs/practice-engine/content-pipeline.md`](../practice-engine/content-pipeline.md) — End-to-end content pipeline and seed behavior
-- [`content/drafts/questions/SCHEMA.md`](../../content/drafts/questions/SCHEMA.md) — Draft authoring format and vocabulary constraints
+- [`docs/content/tag-taxonomy-pipeline.md`](../../content/tag-taxonomy-pipeline.md) — Current-state pipeline trace (source-accurate)
+- [`docs/content/tag-taxonomy-golden-spec.md`](../../content/tag-taxonomy-golden-spec.md) — Target taxonomy and migration map
+- [`docs/practice-engine/content-pipeline.md`](../../practice-engine/content-pipeline.md) — End-to-end content pipeline and seed behavior
+- [`content/drafts/questions/SCHEMA.md`](../../../content/drafts/questions/SCHEMA.md) — Draft authoring format and vocabulary constraints
 
 ---
 
