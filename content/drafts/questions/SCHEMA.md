@@ -169,7 +169,7 @@ Examples:
 - Number sequentially within each paper (001, 002, 003...)
 - Never reuse a qid, even if you delete a question
 
-**Enforcement note:** Import currently enforces only non-empty `qid`/`source`. Global uniqueness and `{source}-{number}` format are authoring policy and must be maintained by content authors.
+**Enforcement note:** Import enforces non-empty `qid`/`source`, and conversion to MDX additionally enforces kebab-case on `qid` (because `qid` becomes MDX `slug`). Global uniqueness and `{source}-{number}` format remain authoring policy and must be maintained by content authors.
 
 **Exception (multi-entry sources):**
 For sources like textbooks where many independent question sets live under a single `source` identifier, the `qid` may include an additional sub-identifier (for example a medication name) to preserve global uniqueness and keep IDs meaningful.
