@@ -19,7 +19,7 @@ This audit has been decomposed into 8 child debt tickets. The table below is tit
 | [DEBT-228](../_archive/debt/debt-228-dry-fake-use-cases-with-generic-base.md) | DRY fake-use-cases.ts With Generic Base Class | P4 | C - DRY (Resolved) |
 | [DEBT-229](../_archive/debt/debt-229-extract-bookmarks-server-action-and-errors.md) | Extract Server Action and Error Handling From bookmarks/page.tsx | P3 | B - Split (Resolved) |
 | [DEBT-230](debt-230-decompose-seed-script-into-modules.md) | Decompose seed.ts Into Focused Modules | P4 | B - Split |
-| [DEBT-231](debt-231-reduce-browser-spec-probe-duplication.md) | Reduce Browser Spec Probe Component Duplication | P3 | Test bloat |
+| [DEBT-231](../_archive/debt/debt-231-reduce-browser-spec-probe-duplication.md) | Reduce Browser Spec Probe Component Duplication | P3 | Test bloat (Resolved) |
 | [DEBT-232](../_archive/debt/debt-232-reduce-get-next-question-test-inflation.md) | Reduce get-next-question.test.ts Test Inflation | P3 | Test bloat (Resolved) |
 | [DEBT-233](../_archive/debt/debt-233-add-why-comments-to-justified-large-files.md) | Add WHY Comments to Justified Large Files | P4 | A - Document (Resolved) |
 | [DEBT-234](../_archive/debt/debt-234-add-max-lines-lint-rule.md) | Add max-lines Check to Prevent File Size Regression | P4 | Prevention (Resolved) |
@@ -87,7 +87,7 @@ These tests are large but currently justified by scenario/domain breadth. Monito
 | # | File | Lines | Tracking | Notes |
 |---|------|------:|----------|-------|
 | 1 | `tests/integration/repositories.integration.test.ts` | 2,193 | Investigated acceptable | Keep; monitor |
-| 2 | `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-page-controller.browser.spec.tsx` | 1,458 | [DEBT-231](debt-231-reduce-browser-spec-probe-duplication.md) | Duplicate probe/test setup |
+| 2 | `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-page-controller.browser.spec.tsx` | 1,458 | [DEBT-231](../_archive/debt/debt-231-reduce-browser-spec-probe-duplication.md) | Duplicate probe/test setup (Resolved) |
 | 3 | `app/(app)/app/practice/practice-page-logic.test.ts` | 1,277 | Investigated acceptable | Keep; monitor |
 | 4 | `src/adapters/gateways/stripe-payment-gateway.test.ts` | 1,171 | Investigated acceptable | Keep; monitor |
 | 5 | `app/(app)/app/practice/[sessionId]/practice-session-page-logic.test.ts` | 1,133 | Investigated acceptable | Keep; monitor |
