@@ -18,8 +18,11 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 | ID | Title | Priority | Status |
 |----|-------|----------|--------|
 | [DEBT-224](debt-224-file-size-audit-production-and-test.md) | File Size Audit - Production and Test Files Exceeding Guidelines | P3 | Decomposed |
+| [DEBT-235](debt-235-split-migrate-tag-taxonomy-script.md) | Split migrate-tag-taxonomy.ts Into Focused Modules | P3 | Open |
+| [DEBT-236](debt-236-extract-reconciliation-concurrency-utility.md) | Extract Concurrency Utility and Document Reconciliation Algorithm | P4 | Open |
+| [DEBT-237](debt-237-extract-reconciliation-test-factory.md) | Extract Reconciliation Test Factory to Reduce Boilerplate | P4 | Open |
 
-**Next Debt ID:** DEBT-235
+**Next Debt ID:** DEBT-238
 
 ---
 
@@ -52,7 +55,7 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 | [DEBT-214](../_archive/debt/debt-214-drizzle-query-duplication-attempt-repository.md) | Drizzle Query Duplication in Attempt Repository (Conditional JOINs via Copy-Paste) | P3 | 2026-02-14 | — |
 | [DEBT-210](../_archive/debt/debt-210-dead-routes-app-review-constant.md) | Dead `ROUTES.APP_REVIEW` Constant in Route Definitions | P4 | 2026-02-14 (Subsumed by DEBT-215) | #90 |
 | [DEBT-207](../_archive/debt/debt-207-missing-session-question-count-warning.md) | No Warning When Practice Session Has Fewer Questions Than Requested | P3 | 2026-02-14 | #82 |
-| [DEBT-209](../brainstorming/bs-015-practice-starter-available-count-display.md) | Practice Starter Shows Available Question Count Before Session Start | P3 | 2026-02-14 | #53 |
+| [DEBT-209](../_archive/brainstorming/bs-015-practice-starter-available-count-display.md) | Practice Starter Shows Available Question Count Before Session Start | P3 | 2026-02-14 | #53 |
 | [DEBT-206](../_archive/debt/debt-206-client-side-difficulty-tag-filters-history.md) | Client-Side Difficulty/Tag Filters Cause Inaccurate Pagination on History Questions Tab | P2 | 2026-02-14 | #87 |
 
 ---
@@ -299,7 +302,7 @@ All frontend-specific UI/UX debt. Items use `FE-XXX` IDs and are cross-reference
 
 | ID | Title | Now | Reason |
 |----|-------|-----|--------|
-| DEBT-209 | Practice Session Starter Missing Question Counts Per Tag | [BS-015](../brainstorming/bs-015-practice-starter-available-count-display.md) | Problem is real but solution scope unclear — display only vs input constraint; needs design pass |
+| DEBT-209 | Practice Session Starter Missing Question Counts Per Tag | [BS-015](../_archive/brainstorming/bs-015-practice-starter-available-count-display.md) | Problem is real but solution scope unclear — display only vs input constraint; needs design pass |
 | DEBT-207 | No Warning When Practice Session Has Fewer Questions Than Requested | [BS-014](../brainstorming/bs-014-practice-starter-question-count-ux.md) | Problem is real but proposed fix (post-creation toast) needs UX design work; related to DEBT-209 |
 
 ### Invalidated (False Positives)
