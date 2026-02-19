@@ -21,8 +21,9 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 | [DEBT-235](debt-235-split-migrate-tag-taxonomy-script.md) | Split migrate-tag-taxonomy.ts Into Focused Modules | P3 | Open |
 | [DEBT-236](debt-236-extract-reconciliation-concurrency-utility.md) | Extract Concurrency Utility and Document Reconciliation Algorithm | P4 | Open |
 | [DEBT-237](debt-237-extract-reconciliation-test-factory.md) | Extract Reconciliation Test Factory to Reduce Boilerplate | P4 | Open |
+| [DEBT-238](debt-238-orphaned-from-review-test-artifact.md) | Orphaned `from=review` Test Artifact From DEBT-215 Cleanup | P4 | Open |
 
-**Next Debt ID:** DEBT-238
+**Next Debt ID:** DEBT-239
 
 ---
 
