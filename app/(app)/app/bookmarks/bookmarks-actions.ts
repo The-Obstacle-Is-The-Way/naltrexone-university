@@ -18,7 +18,7 @@ export async function removeBookmarkAction(
   const redirectFn = deps?.redirectFn ?? redirect;
 
   const questionId = formData.get('questionId');
-  if (typeof questionId !== 'string') {
+  if (typeof questionId !== 'string' || questionId === '') {
     return redirectFn(`${ROUTES.APP_BOOKMARKS}?error=missing_question_id`);
   }
 

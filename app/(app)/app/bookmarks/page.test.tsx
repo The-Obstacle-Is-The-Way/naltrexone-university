@@ -204,6 +204,21 @@ describe('app/(app)/app/bookmarks', () => {
     });
   });
 
+  it('redirects when removeBookmarkAction receives empty questionId', async () => {
+    const formData = new FormData();
+    formData.set('questionId', '');
+
+    await expect(
+      removeBookmarkAction(formData, {
+        redirectFn: (url: string): never => {
+          throw new Error(`redirect:${url}`);
+        },
+      }),
+    ).rejects.toMatchObject({
+      message: `redirect:${ROUTES.APP_BOOKMARKS}?error=missing_question_id`,
+    });
+  });
+
   it('redirects when removeBookmarkAction cannot toggle bookmark', async () => {
     const formData = new FormData();
     formData.set('questionId', 'q_1');

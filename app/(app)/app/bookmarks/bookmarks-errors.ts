@@ -32,5 +32,9 @@ export function getRemoveBookmarkErrorMessage(
       return 'Unable to remove bookmark. Please try again.';
     case 'remove_failed':
       return 'Unable to remove bookmark. Please refresh and try again.';
+    default: {
+      const _exhaustive: never = code;
+      return _exhaustive;
+    }
   }
 }
