@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { validateSeedQuestionTags } from './seed';
+import { validateSeedQuestionTags } from './seed/tag-manager';
 
 describe('validateSeedQuestionTags', () => {
   it('rejects domain tags before minimum tag count checks', () => {
