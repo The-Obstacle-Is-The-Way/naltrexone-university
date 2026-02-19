@@ -1,3 +1,4 @@
+import { ApplicationError } from '@/src/application/errors';
 import type {
   QuestionFilters,
   QuestionRepository,
@@ -17,6 +18,16 @@ function matchesTags(question: Question, tagSlugs: readonly string[]): boolean {
   if (tagSlugs.length === 0) return true;
   const slugs = new Set(question.tags.map((t) => t.slug));
   return tagSlugs.some((slug) => slugs.has(slug));
+}
+
+function validateStatusFilterInvariant(filters: QuestionFilters): void {
+  const statuses = filters.statuses ?? [];
+  if (statuses.length > 0 && typeof filters.userId !== 'string') {
+    throw new ApplicationError(
+      'VALIDATION_ERROR',
+      'userId is required when filtering by status',
+    );
+  }
 }
 
 export class FakeQuestionRepository implements QuestionRepository {
@@ -58,6 +69,7 @@ export class FakeQuestionRepository implements QuestionRepository {
   async listPublishedCandidateIds(
     filters: QuestionFilters,
   ): Promise<readonly string[]> {
+    validateStatusFilterInvariant(filters);
     this.listPublishedCandidateIdsCalls.push(filters);
     const matches = this.questions
       .filter((q) => q.status === 'published')
@@ -75,6 +87,7 @@ export class FakeQuestionRepository implements QuestionRepository {
   }
 
   async countPublishedCandidateIds(filters: QuestionFilters): Promise<number> {
+    validateStatusFilterInvariant(filters);
     this.countPublishedCandidateIdsCalls.push(filters);
 
     return this.questions

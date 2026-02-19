@@ -36,25 +36,27 @@ export class FakeStripeEventRepository implements StripeEventRepository {
   ): Promise<{ processedAt: Date | null; error: string | null }> {
     const event = this.events.get(eventId);
     if (!event) {
-      throw new ApplicationError('NOT_FOUND', 'Event not found');
+      throw new ApplicationError('NOT_FOUND', 'Stripe event not found');
     }
     return { processedAt: event.processedAt, error: event.error };
   }
 
   async markProcessed(eventId: string): Promise<void> {
     const event = this.events.get(eventId);
-    if (event) {
-      event.processedAt = new Date();
-      event.error = null;
+    if (!event) {
+      throw new ApplicationError('NOT_FOUND', 'Stripe event not found');
     }
+    event.processedAt = new Date();
+    event.error = null;
   }
 
   async markFailed(eventId: string, error: string): Promise<void> {
     const event = this.events.get(eventId);
-    if (event) {
-      event.processedAt = null;
-      event.error = error;
+    if (!event) {
+      throw new ApplicationError('NOT_FOUND', 'Stripe event not found');
     }
+    event.processedAt = null;
+    event.error = error;
   }
 
   async pruneProcessedBefore(cutoff: Date, limit: number): Promise<number> {
