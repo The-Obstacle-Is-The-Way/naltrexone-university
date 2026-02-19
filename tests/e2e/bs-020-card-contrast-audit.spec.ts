@@ -206,9 +206,7 @@ test.describe('BS-020: Card Contrast and Hover Audit', () => {
     });
   });
 
-  test('Session Summary source: stat cards match dashboard hover token pattern', async ({
-    page,
-  }) => {
+  test('Session Summary source: stat cards match dashboard hover token pattern', async () => {
     // The Session Summary page requires completing a live session, which
     // is flaky due to dev server timeouts. Verify source-level parity with
     // dashboard stat card hover classes instead.
