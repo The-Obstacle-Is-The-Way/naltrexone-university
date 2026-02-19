@@ -65,4 +65,4 @@ This should reduce the file to ~850 lines while making each test's unique scenar
 ## Related
 
 - [DEBT-224](debt-224-file-size-audit-production-and-test.md) — Parent audit
-- [DEBT-236](debt-236-extract-reconciliation-concurrency-utility.md) — Companion: production file refactor
+- [DEBT-236](../_archive/debt/debt-236-extract-reconciliation-concurrency-utility.md) — Companion: production file refactor
