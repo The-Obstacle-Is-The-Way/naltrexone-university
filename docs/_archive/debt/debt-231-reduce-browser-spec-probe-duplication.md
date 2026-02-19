@@ -1,17 +1,18 @@
 # DEBT-231: Reduce Browser Spec Probe Component Duplication
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P3
 **Date:** 2026-02-18
-**Last Verified:** 2026-02-18
-**Parent:** [DEBT-224](debt-224-file-size-audit-production-and-test.md)
+**Resolved:** 2026-02-19
+**Last Verified:** 2026-02-19
+**Parent:** [DEBT-224](../../debt/debt-224-file-size-audit-production-and-test.md)
 **Component:** `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-page-controller.browser.spec.tsx`
 
 ---
 
 ## Description
 
-`use-practice-session-page-controller.browser.spec.tsx` is **1,458 lines** with **13 declared tests** — an average of **112 lines per test**. This is the worst lines-per-test ratio among the current files over 1,000 lines.
+`use-practice-session-page-controller.browser.spec.tsx` was reduced from **1,458 lines** to **1,099 lines** while retaining **13 passing tests** (about **85 lines per test**). The file previously had the worst lines-per-test ratio among the files over 1,000 lines.
 
 The file defines **7 probe/wrapper components**, each rendering a different subset of the hook's API into DOM elements for assertion:
 
@@ -25,7 +26,7 @@ The file defines **7 probe/wrapper components**, each rendering a different subs
 
 The probes are **structurally distinct** (each exposes different data-testid fields and some have custom hooks logic), but they share common patterns: rendering hook state into divs and wiring button onClick handlers. The duplication is in the *scaffolding pattern*, not in identical code.
 
-Additionally, `vi.hoisted()` + `vi.mock()` setup at the file top spans **33 lines** and could be extracted.
+Additionally, `vi.hoisted()` + `vi.mock()` setup was extracted into a dedicated browser setup helper module.
 
 **Disposition:** Test file with repetitive probe scaffolding patterns that inflate line count.
 
@@ -42,21 +43,21 @@ Additionally, `vi.hoisted()` + `vi.mock()` setup at the file top spans **33 line
 
 ## Resolution
 
-1. Extract shared patterns: a `renderHookState()` utility for common div-rendering and a `renderActionButtons()` utility for onClick wiring
-2. Extract `vi.hoisted()` + `vi.mock()` setup (~33 lines) into a shared helper (e.g., `practice-session-page-controller.browser.setup.ts`)
-3. Keep each probe as a named component (they test genuinely different feature subsets) but reduce scaffolding boilerplate within each
-4. Target: reduce to ~1,000-1,100 lines (saving 350-450 lines)
+1. Extract shared patterns into `renderHookState()` and `renderActionButtons()` for repeated state and button scaffolding
+2. Extract `vi.hoisted()` + `vi.mock()` setup into `practice-session-page-controller.browser.setup.ts`
+3. Keep each probe as a named component in `practice-session-page-controller.browser.probes.tsx` while removing duplicate JSX scaffolding
+4. Land at `1,099` lines (within the 1,000-1,100 target band) with all test assertions unchanged
 
 Guardrail: preserve current test readability by keeping scenario assertions explicit even if scaffolding is abstracted. Do not force all 7 probes into one generic factory — they serve different feature concerns.
 
 ## Verification
 
-- [ ] Probe components consolidated to factory or parametrized component
-- [ ] Mock setup extracted to shared helper
-- [ ] All 13 tests still pass: `pnpm test:browser`
-- [ ] File under 1,100 lines
+- [x] Shared probe scaffolding extracted (`renderHookState`, `renderActionButtons`)
+- [x] Mock setup extracted to shared helper
+- [x] All 13 tests still pass: `pnpm test:browser`
+- [x] File under 1,100 lines (`1,099`)
 
 ## Related
 
-- [DEBT-224](debt-224-file-size-audit-production-and-test.md) - Parent file-size audit
-- [DEBT-204](../_archive/debt/debt-204-stripe-payment-gateway-test-god-file.md) - Similar duplication pattern in tests
+- [DEBT-224](../../debt/debt-224-file-size-audit-production-and-test.md) - Parent file-size audit
+- [DEBT-204](debt-204-stripe-payment-gateway-test-god-file.md) - Similar duplication pattern in tests

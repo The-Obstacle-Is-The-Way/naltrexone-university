@@ -1,11 +1,27 @@
-import { useEffect, useState } from 'react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { render } from 'vitest-browser-react';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
 import { createDeferred } from '@/tests/test-helpers/create-deferred';
 import { ok } from '@/tests/test-helpers/ok';
-import { usePracticeSessionPageController } from './use-practice-session-page-controller';
+import {
+  createChoice,
+  createQuestionResponse,
+  createReviewResponse,
+  createReviewRow,
+} from './practice-session-page-controller.browser.fixtures';
+import {
+  getPracticeSessionPageControllerBrowserMocks,
+  resetPracticeSessionPageControllerBrowserMocks,
+} from './practice-session-page-controller.browser.setup';
+
+let PracticeSessionPageControllerBookmarkPendingProbe: typeof import('./practice-session-page-controller.browser.probes').PracticeSessionPageControllerBookmarkPendingProbe;
+let PracticeSessionPageControllerBookmarkProbe: typeof import('./practice-session-page-controller.browser.probes').PracticeSessionPageControllerBookmarkProbe;
+let PracticeSessionPageControllerHookProbe: typeof import('./practice-session-page-controller.browser.probes').PracticeSessionPageControllerHookProbe;
+let PracticeSessionPageControllerMarkForReviewProbe: typeof import('./practice-session-page-controller.browser.probes').PracticeSessionPageControllerMarkForReviewProbe;
+let PracticeSessionPageControllerNavigationProbe: typeof import('./practice-session-page-controller.browser.probes').PracticeSessionPageControllerNavigationProbe;
+let PracticeSessionPageControllerReviewProbe: typeof import('./practice-session-page-controller.browser.probes').PracticeSessionPageControllerReviewProbe;
+let PracticeSessionPageControllerSubmitDuringReviewProbe: typeof import('./practice-session-page-controller.browser.probes').PracticeSessionPageControllerSubmitDuringReviewProbe;
 
 const {
   getNextQuestionMock,
@@ -13,234 +29,54 @@ const {
   getBookmarksMock,
   toggleBookmarkMock,
   getPracticeSessionReviewMock,
-  endPracticeSessionMock,
   setPracticeSessionQuestionMarkMock,
-} = vi.hoisted(() => ({
-  getNextQuestionMock: vi.fn(),
-  submitAnswerMock: vi.fn(),
-  getBookmarksMock: vi.fn(),
-  toggleBookmarkMock: vi.fn(),
-  getPracticeSessionReviewMock: vi.fn(),
-  endPracticeSessionMock: vi.fn(),
-  setPracticeSessionQuestionMarkMock: vi.fn(),
-}));
+} = getPracticeSessionPageControllerBrowserMocks();
 
-vi.mock('@/src/adapters/controllers/question-controller', () => ({
-  getNextQuestion: getNextQuestionMock,
-  submitAnswer: submitAnswerMock,
-}));
-
-vi.mock('@/src/adapters/controllers/bookmark-controller', () => ({
-  getBookmarks: getBookmarksMock,
-  toggleBookmark: toggleBookmarkMock,
-}));
-
-vi.mock('@/src/adapters/controllers/practice-controller', () => ({
-  getPracticeSessionReview: getPracticeSessionReviewMock,
-  endPracticeSession: endPracticeSessionMock,
-  setPracticeSessionQuestionMark: setPracticeSessionQuestionMarkMock,
-}));
-
-function PracticeSessionPageControllerHookProbe() {
-  const output = usePracticeSessionPageController('session-1');
-  const errorMessage =
-    output.loadState.status === 'error' ? output.loadState.message : '';
-
-  return (
-    <>
-      <div data-testid="load-status">{output.loadState.status}</div>
-      <div data-testid="is-pending">{String(output.isPending)}</div>
-      <div data-testid="question-id">{output.question?.questionId ?? ''}</div>
-      <div data-testid="selected-choice-id">
-        {output.selectedChoiceId ?? ''}
-      </div>
-      <div data-testid="can-submit">{String(output.canSubmit)}</div>
-      <div data-testid="error-message">{errorMessage}</div>
-      <button type="button" onClick={() => output.onSelectChoice('choice_1')}>
-        select-choice-1
-      </button>
-      <button type="button" onClick={() => void output.onSubmit()}>
-        submit-answer
-      </button>
-    </>
+beforeAll(async () => {
+  const probes = await import(
+    './practice-session-page-controller.browser.probes'
   );
-}
+  PracticeSessionPageControllerBookmarkPendingProbe =
+    probes.PracticeSessionPageControllerBookmarkPendingProbe;
+  PracticeSessionPageControllerBookmarkProbe =
+    probes.PracticeSessionPageControllerBookmarkProbe;
+  PracticeSessionPageControllerHookProbe =
+    probes.PracticeSessionPageControllerHookProbe;
+  PracticeSessionPageControllerMarkForReviewProbe =
+    probes.PracticeSessionPageControllerMarkForReviewProbe;
+  PracticeSessionPageControllerNavigationProbe =
+    probes.PracticeSessionPageControllerNavigationProbe;
+  PracticeSessionPageControllerReviewProbe =
+    probes.PracticeSessionPageControllerReviewProbe;
+  PracticeSessionPageControllerSubmitDuringReviewProbe =
+    probes.PracticeSessionPageControllerSubmitDuringReviewProbe;
+});
 
-function PracticeSessionPageControllerNavigationProbe() {
-  const output = usePracticeSessionPageController('session-1');
+const EMPTY_BOOKMARKS_RESULT = ok({ rows: [] });
+const CHOICE_1 = createChoice({ id: 'choice_1' });
+const CHOICE_2 = createChoice({
+  id: 'choice_2',
+  label: 'B',
+  textMd: 'Option B',
+  sortOrder: 2,
+});
+const CHOICE_3 = createChoice({
+  id: 'choice_3',
+  label: 'C',
+  textMd: 'Option C',
+  sortOrder: 3,
+});
 
-  return (
-    <>
-      <div data-testid="load-status">{output.loadState.status}</div>
-      <div data-testid="question-id">{output.question?.questionId ?? ''}</div>
-      <div data-testid="selected-choice-id">
-        {output.selectedChoiceId ?? ''}
-      </div>
-      <div data-testid="has-submit-result">
-        {String(output.submitResult !== null)}
-      </div>
-      <div data-testid="submit-result-correct-choice-id">
-        {output.submitResult?.correctChoiceId ?? ''}
-      </div>
-      <div data-testid="submit-result-explanation-md">
-        {output.submitResult?.explanationMd ?? ''}
-      </div>
-      <div data-testid="can-submit">{String(output.canSubmit)}</div>
-      <button type="button" onClick={() => output.onSelectChoice('choice_1')}>
-        select-choice-1
-      </button>
-      <button type="button" onClick={() => void output.onSubmit()}>
-        submit-answer
-      </button>
-      <button type="button" onClick={() => output.onNextQuestion()}>
-        next-question
-      </button>
-      <button
-        type="button"
-        onClick={() => output.onNavigateQuestion?.('question-1')}
-      >
-        navigate-question-1
-      </button>
-    </>
-  );
-}
-
-function PracticeSessionPageControllerBookmarkProbe() {
-  const output = usePracticeSessionPageController('session-1');
-  const [bookmarkFeedbackCount, setBookmarkFeedbackCount] = useState(0);
-  const bookmarkMessage = output.bookmarkMessage;
-  const bookmarkMessageVersion = output.bookmarkMessageVersion ?? 0;
-
-  useEffect(() => {
-    if (!bookmarkMessage) return;
-    if (bookmarkMessageVersion < 1) return;
-    setBookmarkFeedbackCount((prev) => prev + 1);
-  }, [bookmarkMessage, bookmarkMessageVersion]);
-
-  return (
-    <>
-      <div data-testid="load-status">{output.loadState.status}</div>
-      <div data-testid="bookmark-feedback-count">{bookmarkFeedbackCount}</div>
-      <button type="button" onClick={() => void output.onToggleBookmark()}>
-        toggle-bookmark
-      </button>
-    </>
-  );
-}
-
-function PracticeSessionPageControllerBookmarkPendingProbe() {
-  const output = usePracticeSessionPageController('session-1');
-
-  return (
-    <>
-      <div data-testid="load-status">{output.loadState.status}</div>
-      <div data-testid="is-pending">{String(output.isPending)}</div>
-      <button type="button" onClick={() => void output.onToggleBookmark()}>
-        toggle-bookmark
-      </button>
-    </>
-  );
-}
-
-function PracticeSessionPageControllerReviewProbe() {
-  const output = usePracticeSessionPageController('session-1');
-  const activeView = output.review
-    ? 'review'
-    : output.question
-      ? 'question'
-      : '';
-
-  return (
-    <>
-      <div data-testid="active-view">{activeView}</div>
-      <div data-testid="load-status">{output.loadState.status}</div>
-      <div data-testid="review-answered-count">
-        {output.review ? String(output.review.answeredCount) : ''}
-      </div>
-      <div data-testid="review-row-answered">
-        {output.review?.rows[0]?.isAnswered !== undefined
-          ? String(output.review.rows[0].isAnswered)
-          : ''}
-      </div>
-      <button type="button" onClick={() => output.onEndSession()}>
-        review-answers
-      </button>
-      <button
-        type="button"
-        onClick={() => output.onOpenReviewQuestion?.('question-1')}
-      >
-        open-review-question-1
-      </button>
-      <button type="button" onClick={() => output.onSelectChoice('choice_1')}>
-        select-choice-1
-      </button>
-      <button type="button" onClick={() => void output.onSubmit()}>
-        submit-answer
-      </button>
-    </>
-  );
-}
-
-function PracticeSessionPageControllerSubmitDuringReviewProbe() {
-  const output = usePracticeSessionPageController('session-1');
-  const activeView = output.review
-    ? 'review'
-    : output.question
-      ? 'question'
-      : '';
-
-  return (
-    <>
-      <div data-testid="active-view">{activeView}</div>
-      <div data-testid="load-status">{output.loadState.status}</div>
-      <div data-testid="question-id">{output.question?.questionId ?? ''}</div>
-      <button type="button" onClick={() => output.onSelectChoice('choice_1')}>
-        select-choice-1
-      </button>
-      <button type="button" onClick={() => void output.onSubmit()}>
-        submit-answer
-      </button>
-      <button type="button" onClick={() => output.onEndSession()}>
-        review-answers
-      </button>
-    </>
-  );
-}
-
-function PracticeSessionPageControllerMarkForReviewProbe() {
-  const output = usePracticeSessionPageController('session-1');
-  const isMarkedForReview = output.sessionInfo?.isMarkedForReview ?? null;
-
-  return (
-    <>
-      <div data-testid="load-status">{output.loadState.status}</div>
-      <div data-testid="question-id">{output.question?.questionId ?? ''}</div>
-      <div data-testid="is-marking">{String(output.isMarkingForReview)}</div>
-      <div data-testid="marked-for-review">
-        {isMarkedForReview === null ? '' : String(isMarkedForReview)}
-      </div>
-      <button
-        type="button"
-        onClick={() => void output.onToggleMarkForReview?.()}
-      >
-        toggle-mark-for-review
-      </button>
-      <button type="button" onClick={() => output.onNextQuestion()}>
-        next-question
-      </button>
-    </>
-  );
+function mockBookmarksAndReview(
+  review: ReturnType<typeof createReviewResponse>,
+) {
+  getBookmarksMock.mockResolvedValue(EMPTY_BOOKMARKS_RESULT);
+  getPracticeSessionReviewMock.mockResolvedValue(ok(review));
 }
 
 describe('usePracticeSessionPageController (browser)', () => {
   afterEach(() => {
-    getNextQuestionMock.mockReset();
-    submitAnswerMock.mockReset();
-    getBookmarksMock.mockReset();
-    toggleBookmarkMock.mockReset();
-    getPracticeSessionReviewMock.mockReset();
-    endPracticeSessionMock.mockReset();
-    setPracticeSessionQuestionMarkMock.mockReset();
+    resetPracticeSessionPageControllerBrowserMocks();
   });
 
   it('loads the current question and allows selecting a choice', async () => {
@@ -250,14 +86,7 @@ describe('usePracticeSessionPageController (browser)', () => {
         slug: 'question-1',
         stemMd: 'Question 1',
         difficulty: 'easy',
-        choices: [
-          {
-            id: 'choice_1',
-            label: 'A',
-            textMd: 'Option A',
-            sortOrder: 1,
-          },
-        ],
+        choices: [CHOICE_1],
         session: {
           sessionId: 'session-1',
           mode: 'tutor',
@@ -267,15 +96,12 @@ describe('usePracticeSessionPageController (browser)', () => {
         },
       }),
     );
-    getBookmarksMock.mockResolvedValue(ok({ rows: [] }));
-    getPracticeSessionReviewMock.mockResolvedValue(
-      ok({
-        sessionId: 'session-1',
+    mockBookmarksAndReview(
+      createReviewResponse({
         mode: 'tutor',
         totalCount: 10,
         answeredCount: 0,
         markedCount: 0,
-        rows: [],
       }),
     );
 
@@ -299,15 +125,12 @@ describe('usePracticeSessionPageController (browser)', () => {
 
   it('transitions to error when question loading throws', async () => {
     getNextQuestionMock.mockRejectedValue(new Error('Question load failed'));
-    getBookmarksMock.mockResolvedValue(ok({ rows: [] }));
-    getPracticeSessionReviewMock.mockResolvedValue(
-      ok({
-        sessionId: 'session-1',
+    mockBookmarksAndReview(
+      createReviewResponse({
         mode: 'exam',
         totalCount: 10,
         answeredCount: 0,
         markedCount: 0,
-        rows: [],
       }),
     );
 
@@ -331,14 +154,7 @@ describe('usePracticeSessionPageController (browser)', () => {
         slug: 'question-1',
         stemMd: 'Question 1',
         difficulty: 'easy',
-        choices: [
-          {
-            id: 'choice_1',
-            label: 'A',
-            textMd: 'Option A',
-            sortOrder: 1,
-          },
-        ],
+        choices: [CHOICE_1],
         session: {
           sessionId: 'session-1',
           mode: 'tutor',
@@ -348,15 +164,12 @@ describe('usePracticeSessionPageController (browser)', () => {
         },
       }),
     );
-    getBookmarksMock.mockResolvedValue(ok({ rows: [] }));
-    getPracticeSessionReviewMock.mockResolvedValue(
-      ok({
-        sessionId: 'session-1',
+    mockBookmarksAndReview(
+      createReviewResponse({
         mode: 'tutor',
         totalCount: 10,
         answeredCount: 0,
         markedCount: 0,
-        rows: [],
       }),
     );
     toggleBookmarkMock.mockResolvedValue(ok({ bookmarked: true }));
@@ -387,14 +200,7 @@ describe('usePracticeSessionPageController (browser)', () => {
         slug: 'question-1',
         stemMd: 'Question 1',
         difficulty: 'easy',
-        choices: [
-          {
-            id: 'choice_1',
-            label: 'A',
-            textMd: 'Option A',
-            sortOrder: 1,
-          },
-        ],
+        choices: [CHOICE_1],
         session: {
           sessionId: 'session-1',
           mode: 'tutor',
@@ -404,15 +210,12 @@ describe('usePracticeSessionPageController (browser)', () => {
         },
       }),
     );
-    getBookmarksMock.mockResolvedValue(ok({ rows: [] }));
-    getPracticeSessionReviewMock.mockResolvedValue(
-      ok({
-        sessionId: 'session-1',
+    mockBookmarksAndReview(
+      createReviewResponse({
         mode: 'tutor',
         totalCount: 10,
         answeredCount: 0,
         markedCount: 0,
-        rows: [],
       }),
     );
     toggleBookmarkMock.mockImplementation(async () => deferred.promise);
@@ -445,14 +248,7 @@ describe('usePracticeSessionPageController (browser)', () => {
         slug: 'question-1',
         stemMd: 'Question 1',
         difficulty: 'easy',
-        choices: [
-          {
-            id: 'choice_1',
-            label: 'A',
-            textMd: 'Option A',
-            sortOrder: 1,
-          },
-        ],
+        choices: [CHOICE_1],
         session: {
           sessionId: 'session-1',
           mode: 'tutor',
@@ -462,15 +258,12 @@ describe('usePracticeSessionPageController (browser)', () => {
         },
       }),
     );
-    getBookmarksMock.mockResolvedValue(ok({ rows: [] }));
-    getPracticeSessionReviewMock.mockResolvedValue(
-      ok({
-        sessionId: 'session-1',
+    mockBookmarksAndReview(
+      createReviewResponse({
         mode: 'tutor',
         totalCount: 10,
         answeredCount: 0,
         markedCount: 0,
-        rows: [],
       }),
     );
     submitAnswerMock.mockImplementation(async () => deferred.promise);
@@ -514,14 +307,7 @@ describe('usePracticeSessionPageController (browser)', () => {
           slug: 'question-1',
           stemMd: 'Question 1',
           difficulty: 'easy',
-          choices: [
-            {
-              id: 'choice_1',
-              label: 'A',
-              textMd: 'Option A',
-              sortOrder: 1,
-            },
-          ],
+          choices: [CHOICE_1],
           session: {
             sessionId: 'session-1',
             mode: 'exam',
@@ -537,14 +323,7 @@ describe('usePracticeSessionPageController (browser)', () => {
           slug: 'question-2',
           stemMd: 'Question 2',
           difficulty: 'easy',
-          choices: [
-            {
-              id: 'choice_1',
-              label: 'A',
-              textMd: 'Option A',
-              sortOrder: 1,
-            },
-          ],
+          choices: [CHOICE_1],
           session: {
             sessionId: 'session-1',
             mode: 'exam',
@@ -554,15 +333,12 @@ describe('usePracticeSessionPageController (browser)', () => {
           },
         }),
       );
-    getBookmarksMock.mockResolvedValue(ok({ rows: [] }));
-    getPracticeSessionReviewMock.mockResolvedValue(
-      ok({
-        sessionId: 'session-1',
+    mockBookmarksAndReview(
+      createReviewResponse({
         mode: 'exam',
         totalCount: 2,
         answeredCount: 0,
         markedCount: 0,
-        rows: [],
       }),
     );
     submitAnswerMock.mockResolvedValue(
@@ -601,14 +377,7 @@ describe('usePracticeSessionPageController (browser)', () => {
           slug: 'question-1',
           stemMd: 'Question 1',
           difficulty: 'easy',
-          choices: [
-            {
-              id: 'choice_1',
-              label: 'A',
-              textMd: 'Option A',
-              sortOrder: 1,
-            },
-          ],
+          choices: [CHOICE_1],
           session: {
             sessionId: 'session-1',
             mode: 'tutor',
@@ -621,29 +390,22 @@ describe('usePracticeSessionPageController (browser)', () => {
         }),
       )
       .mockResolvedValueOnce(
-        ok({
-          questionId: 'question-2',
-          slug: 'question-2',
-          stemMd: 'Question 2',
-          difficulty: 'easy',
-          choices: [
-            {
-              id: 'choice_2',
-              label: 'A',
-              textMd: 'Option A',
-              sortOrder: 1,
+        ok(
+          createQuestionResponse({
+            questionId: 'question-2',
+            difficulty: 'easy',
+            choices: [createChoice({ id: 'choice_2' })],
+            session: {
+              sessionId: 'session-1',
+              mode: 'tutor',
+              index: 1,
+              total: 2,
+              isMarkedForReview: false,
+              latestSelectedChoiceId: null,
+              latestIsCorrect: null,
             },
-          ],
-          session: {
-            sessionId: 'session-1',
-            mode: 'tutor',
-            index: 1,
-            total: 2,
-            isMarkedForReview: false,
-            latestSelectedChoiceId: null,
-            latestIsCorrect: null,
-          },
-        }),
+          }),
+        ),
       )
       .mockResolvedValueOnce(
         ok({
@@ -651,14 +413,7 @@ describe('usePracticeSessionPageController (browser)', () => {
           slug: 'question-1',
           stemMd: 'Question 1',
           difficulty: 'easy',
-          choices: [
-            {
-              id: 'choice_1',
-              label: 'A',
-              textMd: 'Option A',
-              sortOrder: 1,
-            },
-          ],
+          choices: [CHOICE_1],
           session: {
             sessionId: 'session-1',
             mode: 'tutor',
@@ -670,15 +425,12 @@ describe('usePracticeSessionPageController (browser)', () => {
           },
         }),
       );
-    getBookmarksMock.mockResolvedValue(ok({ rows: [] }));
-    getPracticeSessionReviewMock.mockResolvedValue(
-      ok({
-        sessionId: 'session-1',
+    mockBookmarksAndReview(
+      createReviewResponse({
         mode: 'tutor',
         totalCount: 2,
         answeredCount: 0,
         markedCount: 0,
-        rows: [],
       }),
     );
 
@@ -730,20 +482,7 @@ describe('usePracticeSessionPageController (browser)', () => {
           slug: 'question-1',
           stemMd: 'Question 1',
           difficulty: 'easy',
-          choices: [
-            {
-              id: 'choice_1',
-              label: 'A',
-              textMd: 'Option A',
-              sortOrder: 1,
-            },
-            {
-              id: 'choice_2',
-              label: 'B',
-              textMd: 'Option B',
-              sortOrder: 2,
-            },
-          ],
+          choices: [CHOICE_1, CHOICE_2],
           session: {
             sessionId: 'session-1',
             mode: 'tutor',
@@ -761,14 +500,7 @@ describe('usePracticeSessionPageController (browser)', () => {
           slug: 'question-2',
           stemMd: 'Question 2',
           difficulty: 'easy',
-          choices: [
-            {
-              id: 'choice_3',
-              label: 'A',
-              textMd: 'Option A',
-              sortOrder: 1,
-            },
-          ],
+          choices: [CHOICE_3],
           session: {
             sessionId: 'session-1',
             mode: 'tutor',
@@ -786,20 +518,7 @@ describe('usePracticeSessionPageController (browser)', () => {
           slug: 'question-1',
           stemMd: 'Question 1',
           difficulty: 'easy',
-          choices: [
-            {
-              id: 'choice_1',
-              label: 'A',
-              textMd: 'Option A',
-              sortOrder: 1,
-            },
-            {
-              id: 'choice_2',
-              label: 'B',
-              textMd: 'Option B',
-              sortOrder: 2,
-            },
-          ],
+          choices: [CHOICE_1, CHOICE_2],
           session: {
             sessionId: 'session-1',
             mode: 'tutor',
@@ -857,15 +576,12 @@ describe('usePracticeSessionPageController (browser)', () => {
       }),
     );
 
-    getBookmarksMock.mockResolvedValue(ok({ rows: [] }));
-    getPracticeSessionReviewMock.mockResolvedValue(
-      ok({
-        sessionId: 'session-1',
+    mockBookmarksAndReview(
+      createReviewResponse({
         mode: 'tutor',
         totalCount: 2,
         answeredCount: 0,
         markedCount: 0,
-        rows: [],
       }),
     );
 
@@ -935,20 +651,7 @@ describe('usePracticeSessionPageController (browser)', () => {
         slug: 'question-1',
         stemMd: 'Question 1',
         difficulty: 'easy',
-        choices: [
-          {
-            id: 'choice_1',
-            label: 'A',
-            textMd: 'Option A',
-            sortOrder: 1,
-          },
-          {
-            id: 'choice_2',
-            label: 'B',
-            textMd: 'Option B',
-            sortOrder: 2,
-          },
-        ],
+        choices: [CHOICE_1, CHOICE_2],
         session: {
           sessionId: 'session-1',
           mode: 'exam',
@@ -960,15 +663,12 @@ describe('usePracticeSessionPageController (browser)', () => {
         },
       }),
     );
-    getBookmarksMock.mockResolvedValue(ok({ rows: [] }));
-    getPracticeSessionReviewMock.mockResolvedValue(
-      ok({
-        sessionId: 'session-1',
+    mockBookmarksAndReview(
+      createReviewResponse({
         mode: 'exam',
         totalCount: 2,
         answeredCount: 1,
         markedCount: 0,
-        rows: [],
       }),
     );
 
@@ -998,14 +698,7 @@ describe('usePracticeSessionPageController (browser)', () => {
         slug: 'question-1',
         stemMd: 'Question 1',
         difficulty: 'easy',
-        choices: [
-          {
-            id: 'choice_1',
-            label: 'A',
-            textMd: 'Option A',
-            sortOrder: 1,
-          },
-        ],
+        choices: [CHOICE_1],
         session: {
           sessionId: 'session-1',
           mode: 'exam',
@@ -1018,72 +711,49 @@ describe('usePracticeSessionPageController (browser)', () => {
       }),
     );
     getBookmarksMock.mockResolvedValue(ok({ rows: [] }));
+    const unansweredRow = createReviewRow({
+      questionId: 'question-1',
+      order: 1,
+    });
+    const answeredRow = createReviewRow({
+      questionId: 'question-1',
+      order: 1,
+      isAnswered: true,
+      isCorrect: true,
+    });
     getPracticeSessionReviewMock
       .mockResolvedValueOnce(
-        ok({
-          sessionId: 'session-1',
-          mode: 'exam',
-          totalCount: 1,
-          answeredCount: 0,
-          markedCount: 0,
-          rows: [
-            {
-              questionId: 'question-1',
-              slug: 'question-1',
-              order: 1,
-              isAvailable: true,
-              stemMd: 'Question 1',
-              difficulty: 'easy',
-              isAnswered: false,
-              isCorrect: null,
-              markedForReview: false,
-            },
-          ],
-        }),
+        ok(
+          createReviewResponse({
+            mode: 'exam',
+            totalCount: 1,
+            answeredCount: 0,
+            markedCount: 0,
+            rows: [unansweredRow],
+          }),
+        ),
       )
       .mockResolvedValueOnce(
-        ok({
-          sessionId: 'session-1',
-          mode: 'exam',
-          totalCount: 1,
-          answeredCount: 0,
-          markedCount: 0,
-          rows: [
-            {
-              questionId: 'question-1',
-              slug: 'question-1',
-              order: 1,
-              isAvailable: true,
-              stemMd: 'Question 1',
-              difficulty: 'easy',
-              isAnswered: false,
-              isCorrect: null,
-              markedForReview: false,
-            },
-          ],
-        }),
+        ok(
+          createReviewResponse({
+            mode: 'exam',
+            totalCount: 1,
+            answeredCount: 0,
+            markedCount: 0,
+            rows: [unansweredRow],
+          }),
+        ),
       )
       .mockResolvedValueOnce(
-        ok({
-          sessionId: 'session-1',
-          mode: 'exam',
-          totalCount: 1,
-          answeredCount: 1,
-          markedCount: 0,
-          rows: [
-            {
-              questionId: 'question-1',
-              slug: 'question-1',
-              order: 1,
-              isAvailable: true,
-              stemMd: 'Question 1',
-              difficulty: 'easy',
-              isAnswered: true,
-              isCorrect: true,
-              markedForReview: false,
-            },
-          ],
-        }),
+        ok(
+          createReviewResponse({
+            mode: 'exam',
+            totalCount: 1,
+            answeredCount: 1,
+            markedCount: 0,
+            rows: [answeredRow],
+          }),
+        ),
       );
     submitAnswerMock.mockResolvedValue(
       ok({
@@ -1141,14 +811,7 @@ describe('usePracticeSessionPageController (browser)', () => {
           slug: 'question-1',
           stemMd: 'Question 1',
           difficulty: 'easy',
-          choices: [
-            {
-              id: 'choice_1',
-              label: 'A',
-              textMd: 'Option A',
-              sortOrder: 1,
-            },
-          ],
+          choices: [CHOICE_1],
           session: {
             sessionId: 'session-1',
             mode: 'exam',
@@ -1164,14 +827,7 @@ describe('usePracticeSessionPageController (browser)', () => {
           slug: 'question-2',
           stemMd: 'Question 2',
           difficulty: 'easy',
-          choices: [
-            {
-              id: 'choice_1',
-              label: 'A',
-              textMd: 'Option A',
-              sortOrder: 1,
-            },
-          ],
+          choices: [CHOICE_1],
           session: {
             sessionId: 'session-1',
             mode: 'exam',
@@ -1181,15 +837,12 @@ describe('usePracticeSessionPageController (browser)', () => {
           },
         }),
       );
-    getBookmarksMock.mockResolvedValue(ok({ rows: [] }));
-    getPracticeSessionReviewMock.mockResolvedValue(
-      ok({
-        sessionId: 'session-1',
+    mockBookmarksAndReview(
+      createReviewResponse({
         mode: 'exam',
         totalCount: 2,
         answeredCount: 0,
         markedCount: 0,
-        rows: [],
       }),
     );
     submitAnswerMock.mockImplementation(async () => deferred.promise);
@@ -1251,14 +904,7 @@ describe('usePracticeSessionPageController (browser)', () => {
           slug: 'question-1',
           stemMd: 'Question 1',
           difficulty: 'easy',
-          choices: [
-            {
-              id: 'choice_1',
-              label: 'A',
-              textMd: 'Option A',
-              sortOrder: 1,
-            },
-          ],
+          choices: [CHOICE_1],
           session: {
             sessionId: 'session-1',
             mode: 'exam',
@@ -1274,14 +920,7 @@ describe('usePracticeSessionPageController (browser)', () => {
           slug: 'question-2',
           stemMd: 'Question 2',
           difficulty: 'easy',
-          choices: [
-            {
-              id: 'choice_1',
-              label: 'A',
-              textMd: 'Option A',
-              sortOrder: 1,
-            },
-          ],
+          choices: [CHOICE_1],
           session: {
             sessionId: 'session-1',
             mode: 'exam',
@@ -1291,15 +930,12 @@ describe('usePracticeSessionPageController (browser)', () => {
           },
         }),
       );
-    getBookmarksMock.mockResolvedValue(ok({ rows: [] }));
-    getPracticeSessionReviewMock.mockResolvedValue(
-      ok({
-        sessionId: 'session-1',
+    mockBookmarksAndReview(
+      createReviewResponse({
         mode: 'exam',
         totalCount: 2,
         answeredCount: 0,
         markedCount: 0,
-        rows: [],
       }),
     );
     setPracticeSessionQuestionMarkMock.mockImplementation(
@@ -1364,14 +1000,7 @@ describe('usePracticeSessionPageController (browser)', () => {
           slug: 'question-1',
           stemMd: 'Question 1',
           difficulty: 'easy',
-          choices: [
-            {
-              id: 'choice_1',
-              label: 'A',
-              textMd: 'Option A',
-              sortOrder: 1,
-            },
-          ],
+          choices: [CHOICE_1],
           session: {
             sessionId: 'session-1',
             mode: 'exam',
@@ -1387,14 +1016,7 @@ describe('usePracticeSessionPageController (browser)', () => {
           slug: 'question-2',
           stemMd: 'Question 2',
           difficulty: 'easy',
-          choices: [
-            {
-              id: 'choice_1',
-              label: 'A',
-              textMd: 'Option A',
-              sortOrder: 1,
-            },
-          ],
+          choices: [CHOICE_1],
           session: {
             sessionId: 'session-1',
             mode: 'exam',
@@ -1404,15 +1026,12 @@ describe('usePracticeSessionPageController (browser)', () => {
           },
         }),
       );
-    getBookmarksMock.mockResolvedValue(ok({ rows: [] }));
-    getPracticeSessionReviewMock.mockResolvedValue(
-      ok({
-        sessionId: 'session-1',
+    mockBookmarksAndReview(
+      createReviewResponse({
         mode: 'exam',
         totalCount: 2,
         answeredCount: 0,
         markedCount: 0,
-        rows: [],
       }),
     );
     setPracticeSessionQuestionMarkMock.mockImplementation(
