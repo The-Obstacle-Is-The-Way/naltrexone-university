@@ -17,7 +17,7 @@ This audit has been decomposed into 8 child debt tickets. The table below is tit
 |-------|-------|----------|-------------|
 | [DEBT-227](debt-227-split-fake-repositories-into-individual-files.md) | Split fake-repositories.ts Into Individual Files | P3 | B - Split |
 | [DEBT-228](../_archive/debt/debt-228-dry-fake-use-cases-with-generic-base.md) | DRY fake-use-cases.ts With Generic Base Class | P4 | C - DRY (Resolved) |
-| [DEBT-229](debt-229-extract-bookmarks-server-action-and-errors.md) | Extract Server Action and Error Handling From bookmarks/page.tsx | P3 | B - Split |
+| [DEBT-229](../_archive/debt/debt-229-extract-bookmarks-server-action-and-errors.md) | Extract Server Action and Error Handling From bookmarks/page.tsx | P3 | B - Split (Resolved) |
 | [DEBT-230](debt-230-decompose-seed-script-into-modules.md) | Decompose seed.ts Into Focused Modules | P4 | B - Split |
 | [DEBT-231](debt-231-reduce-browser-spec-probe-duplication.md) | Reduce Browser Spec Probe Component Duplication | P3 | Test bloat |
 | [DEBT-232](../_archive/debt/debt-232-reduce-get-next-question-test-inflation.md) | Reduce get-next-question.test.ts Test Inflation | P3 | Test bloat (Resolved) |
@@ -75,7 +75,7 @@ These tests are large but currently justified by scenario/domain breadth. Monito
 | 5 | `src/adapters/repositories/drizzle-attempt-repository.ts` | 438 | [DEBT-233](../_archive/debt/debt-233-add-why-comments-to-justified-large-files.md) | Deep module; document WHY |
 | 6 | `app/(app)/app/history/components/history-questions-tab.tsx` | 393 | [DEBT-233](../_archive/debt/debt-233-add-why-comments-to-justified-large-files.md) | Deep module; document WHY |
 | 7 | `app/(app)/app/questions/[slug]/question-page-client.tsx` | 331 | [DEBT-233](../_archive/debt/debt-233-add-why-comments-to-justified-large-files.md) | Deep module; document WHY |
-| 8 | `app/(app)/app/bookmarks/page.tsx` | 322 | [DEBT-229](debt-229-extract-bookmarks-server-action-and-errors.md) | Split mixed concerns |
+| 8 | `app/(app)/app/bookmarks/page.tsx` | 322 | [DEBT-229](../_archive/debt/debt-229-extract-bookmarks-server-action-and-errors.md) | Split mixed concerns (Resolved) |
 | 9 | `app/(app)/app/practice/[sessionId]/practice-session-page-logic.ts` | 321 | [DEBT-233](../_archive/debt/debt-233-add-why-comments-to-justified-large-files.md) | Deep module; document WHY |
 | 10 | `src/application/test-helpers/fakes/fake-use-cases.ts` | 320 | [DEBT-228](debt-228-dry-fake-use-cases-with-generic-base.md) | Remove duplication |
 | 11 | `app/(app)/app/practice/components/practice-view.tsx` | 319 | Residual (new debt ticket needed) | Slightly over cap, not yet triaged |

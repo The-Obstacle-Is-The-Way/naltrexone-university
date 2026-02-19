@@ -1,10 +1,10 @@
 // @vitest-environment jsdom
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
+import { removeBookmarkAction } from '@/app/(app)/app/bookmarks/bookmarks-actions';
 import {
   BookmarksView,
   createBookmarksPage,
-  removeBookmarkAction,
   renderBookmarks,
 } from '@/app/(app)/app/bookmarks/page';
 import { ROUTES, toQuestionRoute } from '@/lib/routes';

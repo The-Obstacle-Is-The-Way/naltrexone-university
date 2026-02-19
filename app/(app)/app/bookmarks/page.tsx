@@ -1,7 +1,5 @@
 import type { Metadata } from 'next';
-import { revalidatePath } from 'next/cache';
 import Link from 'next/link';
-import { redirect } from 'next/navigation';
 import { ErrorCard } from '@/components/error-card';
 import {
   AlertDialog,
@@ -22,12 +20,16 @@ import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import {
   type GetBookmarksOutput,
   getBookmarks,
-  toggleBookmark,
 } from '@/src/adapters/controllers/bookmark-controller';
 import {
   getStemPreview,
   toPlainText,
 } from '@/src/adapters/shared/stem-preview';
+import { removeBookmarkAction } from './bookmarks-actions';
+import {
+  getRemoveBookmarkErrorMessage,
+  parseRemoveBookmarkErrorCode,
+} from './bookmarks-errors';
 import { BookmarksToast } from './bookmarks-toast';
 
 export const maxDuration = 30;
@@ -35,67 +37,6 @@ export const maxDuration = 30;
 export const metadata: Metadata = {
   title: 'Bookmarks - Addiction Boards',
 };
-
-type RemoveBookmarkErrorCode =
-  | 'missing_question_id'
-  | 'toggle_failed'
-  | 'remove_failed';
-
-function parseRemoveBookmarkErrorCode(
-  code: string | undefined,
-): RemoveBookmarkErrorCode | undefined {
-  if (code === 'missing_question_id') return code;
-  if (code === 'toggle_failed') return code;
-  if (code === 'remove_failed') return code;
-  return undefined;
-}
-
-function getRemoveBookmarkErrorMessage(
-  code: RemoveBookmarkErrorCode | undefined,
-): string | null {
-  if (!code) return null;
-
-  switch (code) {
-    case 'missing_question_id':
-      return 'Unable to remove bookmark: missing question id.';
-    case 'toggle_failed':
-      return 'Unable to remove bookmark. Please try again.';
-    case 'remove_failed':
-      return 'Unable to remove bookmark. Please refresh and try again.';
-  }
-}
-
-export async function removeBookmarkAction(
-  formData: FormData,
-  deps?: {
-    toggleBookmarkFn?: typeof toggleBookmark;
-    revalidatePathFn?: typeof revalidatePath;
-    redirectFn?: (url: string) => never;
-  },
-) {
-  'use server';
-
-  const toggleBookmarkFn = deps?.toggleBookmarkFn ?? toggleBookmark;
-  const revalidatePathFn = deps?.revalidatePathFn ?? revalidatePath;
-  const redirectFn = deps?.redirectFn ?? redirect;
-
-  const questionId = formData.get('questionId');
-  if (typeof questionId !== 'string') {
-    return redirectFn(`${ROUTES.APP_BOOKMARKS}?error=missing_question_id`);
-  }
-
-  const result = await toggleBookmarkFn({ questionId });
-  if (!result.ok) {
-    return redirectFn(`${ROUTES.APP_BOOKMARKS}?error=toggle_failed`);
-  }
-
-  if (result.data.bookmarked) {
-    return redirectFn(`${ROUTES.APP_BOOKMARKS}?error=remove_failed`);
-  }
-
-  revalidatePathFn(ROUTES.APP_BOOKMARKS);
-  return redirectFn(`${ROUTES.APP_BOOKMARKS}?toast=bookmark_removed`);
-}
 
 export function BookmarksView({ rows }: { rows: GetBookmarksOutput['rows'] }) {
   return (

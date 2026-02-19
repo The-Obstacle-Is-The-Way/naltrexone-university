@@ -1,10 +1,11 @@
 # DEBT-229: Extract Server Action and Error Handling From bookmarks/page.tsx
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P3
 **Date:** 2026-02-18
-**Last Verified:** 2026-02-18
-**Parent:** [DEBT-224](debt-224-file-size-audit-production-and-test.md)
+**Resolved:** 2026-02-19
+**Last Verified:** 2026-02-19
+**Parent:** [DEBT-224](../../debt/debt-224-file-size-audit-production-and-test.md)
 **Component:** `app/(app)/app/bookmarks/page.tsx`
 
 ---
@@ -49,13 +50,13 @@ Guardrail: do not introduce a new abstraction layer beyond the two extracted mod
 
 ## Verification
 
-- [ ] `removeBookmarkAction` extracted to `bookmarks-actions.ts`
-- [ ] Error parsing extracted to `bookmarks-errors.ts`
-- [ ] `page.tsx` under 300 lines
-- [ ] Bookmark removal still works end-to-end
-- [ ] `pnpm test --run` passes
-- [ ] `pnpm typecheck` passes
+- [x] `removeBookmarkAction` extracted to `bookmarks-actions.ts`
+- [x] Error parsing extracted to `bookmarks-errors.ts`
+- [x] `page.tsx` under 300 lines
+- [x] Bookmark removal still works end-to-end
+- [x] `pnpm test --run` passes
+- [x] `pnpm typecheck` passes
 
 ## Related
 
-- [DEBT-224](debt-224-file-size-audit-production-and-test.md) - Parent file-size audit
+- [DEBT-224](../../debt/debt-224-file-size-audit-production-and-test.md) - Parent file-size audit
