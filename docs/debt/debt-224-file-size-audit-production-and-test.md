@@ -4,7 +4,7 @@
 **Priority:** P3
 **Date:** 2026-02-16
 **Decomposed:** 2026-02-18
-**Last Verified:** 2026-02-18
+**Last Verified:** 2026-02-19
 **Component:** Codebase-wide
 
 ---
@@ -18,7 +18,7 @@ This audit has been decomposed into 8 child debt tickets. The table below is tit
 | [DEBT-227](debt-227-split-fake-repositories-into-individual-files.md) | Split fake-repositories.ts Into Individual Files | P3 | B - Split |
 | [DEBT-228](../_archive/debt/debt-228-dry-fake-use-cases-with-generic-base.md) | DRY fake-use-cases.ts With Generic Base Class | P4 | C - DRY (Resolved) |
 | [DEBT-229](../_archive/debt/debt-229-extract-bookmarks-server-action-and-errors.md) | Extract Server Action and Error Handling From bookmarks/page.tsx | P3 | B - Split (Resolved) |
-| [DEBT-230](debt-230-decompose-seed-script-into-modules.md) | Decompose seed.ts Into Focused Modules | P4 | B - Split |
+| [DEBT-230](../_archive/debt/debt-230-decompose-seed-script-into-modules.md) | Decompose seed.ts Into Focused Modules | P4 | B - Split (Resolved) |
 | [DEBT-231](../_archive/debt/debt-231-reduce-browser-spec-probe-duplication.md) | Reduce Browser Spec Probe Component Duplication | P3 | Test bloat (Resolved) |
 | [DEBT-232](../_archive/debt/debt-232-reduce-get-next-question-test-inflation.md) | Reduce get-next-question.test.ts Test Inflation | P3 | Test bloat (Resolved) |
 | [DEBT-233](../_archive/debt/debt-233-add-why-comments-to-justified-large-files.md) | Add WHY Comments to Justified Large Files | P4 | A - Document (Resolved) |
@@ -71,7 +71,7 @@ These tests are large but currently justified by scenario/domain breadth. Monito
 | 1 | `src/application/test-helpers/fakes/fake-repositories.ts` | 1,127 | [DEBT-227](debt-227-split-fake-repositories-into-individual-files.md) | Split into per-fake files |
 | 2 | `scripts/migrate-tag-taxonomy.ts` | 591 | Residual (new debt ticket needed) | Large migration script, currently un-decomposed |
 | 3 | `db/schema.ts` | 548 | [DEBT-233](../_archive/debt/debt-233-add-why-comments-to-justified-large-files.md) | Deep module; document WHY |
-| 4 | `scripts/seed.ts` | 484 | [DEBT-230](debt-230-decompose-seed-script-into-modules.md) | Script decomposition candidate |
+| 4 | `scripts/seed.ts` | 484 | [DEBT-230](../_archive/debt/debt-230-decompose-seed-script-into-modules.md) | Script decomposition candidate (Resolved) |
 | 5 | `src/adapters/repositories/drizzle-attempt-repository.ts` | 438 | [DEBT-233](../_archive/debt/debt-233-add-why-comments-to-justified-large-files.md) | Deep module; document WHY |
 | 6 | `app/(app)/app/history/components/history-questions-tab.tsx` | 393 | [DEBT-233](../_archive/debt/debt-233-add-why-comments-to-justified-large-files.md) | Deep module; document WHY |
 | 7 | `app/(app)/app/questions/[slug]/question-page-client.tsx` | 331 | [DEBT-233](../_archive/debt/debt-233-add-why-comments-to-justified-large-files.md) | Deep module; document WHY |

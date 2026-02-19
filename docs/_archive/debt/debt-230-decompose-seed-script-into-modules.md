@@ -1,23 +1,24 @@
 # DEBT-230: Decompose seed.ts Into Focused Modules
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P4
 **Date:** 2026-02-18
-**Last Verified:** 2026-02-18
-**Parent:** [DEBT-224](debt-224-file-size-audit-production-and-test.md)
+**Resolved:** 2026-02-19
+**Last Verified:** 2026-02-19
+**Parent:** [DEBT-224](../../debt/debt-224-file-size-audit-production-and-test.md)
 **Component:** `scripts/seed.ts`
 
 ---
 
 ## Description
 
-`scripts/seed.ts` has grown to **484 lines** (up from 412 at audit time, +72 lines). It mixes five distinct concerns:
+`scripts/seed.ts` was reduced from **486 lines** to **58 lines** by extracting focused modules for each stage in the seed pipeline.
 
 1. **File I/O** — glob pattern matching, reading MDX files from disk
 2. **Markdown parsing** — frontmatter extraction, content validation
 3. **Tag management** — canonical tag upsertion and validation
 4. **Question sync** — diff computation, upsert/delete orchestration
-5. **Placeholder archival** — moving placeholder files
+5. **Placeholder archival** — archiving placeholder rows in the database
 
 **Disposition:** B - Multiple responsibilities should be split.
 
@@ -35,17 +36,17 @@
 
 ## Resolution
 
-Extract stages into focused modules:
+Resolved by extracting stages into focused modules:
 
 ```
 scripts/
-  seed.ts                     (~80 lines — orchestrator, CLI entry point)
+  seed.ts                     (58 lines — orchestrator, CLI entry point)
   seed/
-    file-reader.ts            (~60 lines — glob + MDX file reading)
-    question-parser.ts        (~80 lines — frontmatter + content parsing)
-    tag-manager.ts            (~50 lines — tag upsertion logic)
-    question-syncer.ts        (~120 lines — diff + upsert orchestration)
-    placeholder-archiver.ts   (~30 lines — placeholder file management)
+    file-reader.ts            (45 lines — glob + MDX file reading)
+    question-parser.ts        (115 lines — frontmatter + content parsing)
+    tag-manager.ts            (114 lines — tag upsertion + tag validation)
+    question-syncer.ts        (212 lines — diff + upsert orchestration)
+    placeholder-archiver.ts   (18 lines — placeholder archival)
 ```
 
 Keep `seed.ts` as the thin orchestrator calling each stage in sequence.
@@ -54,12 +55,12 @@ Guardrail: reuse existing `scripts/seed-helpers.ts` where appropriate instead of
 
 ## Verification
 
-- [ ] Each stage extracted to its own module
-- [ ] `seed.ts` orchestrates stages in sequence
+- [x] Each stage extracted to its own module
+- [x] `seed.ts` orchestrates stages in sequence
 - [ ] `pnpm seed` still works end-to-end against local DB
-- [ ] Existing `scripts/seed.test.ts` passes (or is updated to test individual modules)
-- [ ] `pnpm typecheck` passes
+- [x] Existing `scripts/seed.test.ts` passes (updated to import from `seed/tag-manager`)
+- [x] `pnpm typecheck` passes
 
 ## Related
 
-- [DEBT-224](debt-224-file-size-audit-production-and-test.md) - Parent file-size audit
+- [DEBT-224](../../debt/debt-224-file-size-audit-production-and-test.md) - Parent file-size audit

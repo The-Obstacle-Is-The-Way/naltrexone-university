@@ -1,0 +1,217 @@
+import { and, eq, inArray } from 'drizzle-orm';
+import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
+import * as schema from '../../db/schema';
+import {
+  canonicalJsonString,
+  sha256Hex,
+} from '../../lib/content/parseMdxQuestion';
+import { computeChoiceSyncPlan } from '../seed-helpers';
+import type { SeedSourceFile } from './file-reader';
+import { buildSeedRepFromDb, parseSeedQuestionFile } from './question-parser';
+import { upsertTags, validateSeedQuestionTags } from './tag-manager';
+
+export type SeedSyncCounts = {
+  inserted: number;
+  updated: number;
+  skipped: number;
+};
+
+export async function syncQuestionsFromFiles(
+  db: PostgresJsDatabase<typeof schema>,
+  files: SeedSourceFile[],
+): Promise<SeedSyncCounts> {
+  let inserted = 0;
+  let updated = 0;
+  let skipped = 0;
+
+  for (const file of files) {
+    const seedFromFile = parseSeedQuestionFile(file.raw);
+    validateSeedQuestionTags({
+      slug: seedFromFile.slug,
+      tags: seedFromFile.tags,
+    });
+
+    const fileHash = sha256Hex(canonicalJsonString(seedFromFile));
+
+    const existing = await db
+      .select()
+      .from(schema.questions)
+      .where(eq(schema.questions.slug, seedFromFile.slug))
+      .limit(1);
+    const existingQuestion = existing.at(0);
+
+    if (!existingQuestion) {
+      await db.transaction(async (tx) => {
+        const [createdQuestion] = await tx
+          .insert(schema.questions)
+          .values({
+            slug: seedFromFile.slug,
+            stemMd: seedFromFile.stem_md,
+            explanationMd: seedFromFile.explanation_md,
+            difficulty: seedFromFile.difficulty,
+            status: seedFromFile.status,
+          })
+          .returning({ id: schema.questions.id });
+
+        if (!createdQuestion) {
+          throw new Error(
+            `Failed to insert question for slug "${seedFromFile.slug}"`,
+          );
+        }
+
+        await tx.insert(schema.choices).values(
+          seedFromFile.choices.map((choice) => ({
+            questionId: createdQuestion.id,
+            label: choice.label,
+            textMd: choice.text_md,
+            isCorrect: choice.is_correct,
+            explanationMd: choice.explanation_md,
+            sortOrder: choice.sort_order,
+          })),
+        );
+
+        const tagMap = await upsertTags(tx, seedFromFile.tags);
+        await tx.insert(schema.questionTags).values(
+          seedFromFile.tags.map((tag) => ({
+            questionId: createdQuestion.id,
+            tagId:
+              tagMap.get(tag.slug)?.id ??
+              (() => {
+                throw new Error(`Missing tag id for slug "${tag.slug}"`);
+              })(),
+          })),
+        );
+      });
+
+      inserted += 1;
+      continue;
+    }
+
+    const existingChoices = await db
+      .select()
+      .from(schema.choices)
+      .where(eq(schema.choices.questionId, existingQuestion.id));
+
+    const existingTags = await db
+      .select({
+        slug: schema.tags.slug,
+        name: schema.tags.name,
+        kind: schema.tags.kind,
+      })
+      .from(schema.questionTags)
+      .innerJoin(schema.tags, eq(schema.questionTags.tagId, schema.tags.id))
+      .where(eq(schema.questionTags.questionId, existingQuestion.id));
+
+    const seedFromDb = buildSeedRepFromDb(
+      existingQuestion,
+      existingChoices,
+      existingTags,
+    );
+
+    const dbHash = sha256Hex(canonicalJsonString(seedFromDb));
+    if (dbHash === fileHash) {
+      skipped += 1;
+      continue;
+    }
+
+    const desiredLabels = new Set(
+      seedFromFile.choices.map((choice) => choice.label),
+    );
+    const deleteCandidates = existingChoices.filter(
+      (choice) => !desiredLabels.has(choice.label),
+    );
+
+    const referencedChoiceIds = new Set<string>();
+    if (deleteCandidates.length > 0) {
+      const deleteCandidateIds = deleteCandidates.map((choice) => choice.id);
+
+      const referenced = await db
+        .select({ selectedChoiceId: schema.attempts.selectedChoiceId })
+        .from(schema.attempts)
+        .where(
+          and(
+            eq(schema.attempts.questionId, existingQuestion.id),
+            inArray(schema.attempts.selectedChoiceId, deleteCandidateIds),
+          ),
+        );
+
+      for (const row of referenced) {
+        if (row.selectedChoiceId) {
+          referencedChoiceIds.add(row.selectedChoiceId);
+        }
+      }
+    }
+
+    const { deleteChoiceIds } = computeChoiceSyncPlan({
+      existingChoices: existingChoices.map((choice) => ({
+        id: choice.id,
+        label: choice.label,
+      })),
+      desiredChoices: seedFromFile.choices.map((choice) => ({
+        label: choice.label,
+      })),
+      referencedChoiceIds,
+    });
+
+    await db.transaction(async (tx) => {
+      await tx
+        .update(schema.questions)
+        .set({
+          stemMd: seedFromFile.stem_md,
+          explanationMd: seedFromFile.explanation_md,
+          difficulty: seedFromFile.difficulty,
+          status: seedFromFile.status,
+          updatedAt: new Date(),
+        })
+        .where(eq(schema.questions.id, existingQuestion.id));
+
+      if (deleteChoiceIds.length > 0) {
+        await tx
+          .delete(schema.choices)
+          .where(inArray(schema.choices.id, deleteChoiceIds));
+      }
+
+      for (const choice of seedFromFile.choices) {
+        await tx
+          .insert(schema.choices)
+          .values({
+            questionId: existingQuestion.id,
+            label: choice.label,
+            textMd: choice.text_md,
+            isCorrect: choice.is_correct,
+            explanationMd: choice.explanation_md,
+            sortOrder: choice.sort_order,
+          })
+          .onConflictDoUpdate({
+            target: [schema.choices.questionId, schema.choices.label],
+            set: {
+              textMd: choice.text_md,
+              isCorrect: choice.is_correct,
+              explanationMd: choice.explanation_md,
+              sortOrder: choice.sort_order,
+            },
+          });
+      }
+
+      await tx
+        .delete(schema.questionTags)
+        .where(eq(schema.questionTags.questionId, existingQuestion.id));
+
+      const tagMap = await upsertTags(tx, seedFromFile.tags);
+      await tx.insert(schema.questionTags).values(
+        seedFromFile.tags.map((tag) => ({
+          questionId: existingQuestion.id,
+          tagId:
+            tagMap.get(tag.slug)?.id ??
+            (() => {
+              throw new Error(`Missing tag id for slug "${tag.slug}"`);
+            })(),
+        })),
+      );
+    });
+
+    updated += 1;
+  }
+
+  return { inserted, updated, skipped };
+}
