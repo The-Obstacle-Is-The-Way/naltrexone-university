@@ -272,8 +272,9 @@ export class FakeAttemptRepository implements AttemptRepository {
       );
     }
 
+    const questionsById = this.questionsById;
     return filteredBySource.filter((attempt) => {
-      const question = this.questionsById?.get(attempt.questionId);
+      const question = questionsById.get(attempt.questionId);
       if (!question) return false;
       if (question.status !== 'published') return false;
 

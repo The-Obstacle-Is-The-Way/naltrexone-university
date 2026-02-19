@@ -75,7 +75,6 @@ export class FakeQuestionRepository implements QuestionRepository {
       .filter((q) => q.status === 'published')
       .filter((q) => matchesDifficulty(q.difficulty, filters.difficulties))
       .filter((q) => matchesTags(q, filters.tagSlugs))
-      .slice()
       .sort((a, b) => {
         // Deterministic order: createdAt desc, then id asc
         const created = b.createdAt.getTime() - a.createdAt.getTime();

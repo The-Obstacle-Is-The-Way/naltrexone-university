@@ -256,7 +256,7 @@ export class FakePracticeSessionRepository
     }
 
     const ended: PracticeSession = { ...existing, endedAt: new Date() };
-    this.sessions = this.sessions.map((s) => (s.id === id ? ended : s));
+    this.updateSession(id, () => ended);
     return ended;
   }
 }
