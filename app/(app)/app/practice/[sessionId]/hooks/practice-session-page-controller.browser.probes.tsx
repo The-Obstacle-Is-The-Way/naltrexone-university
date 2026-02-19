@@ -18,7 +18,7 @@ function toDisplayValue(value: HookStateValue): string {
   return String(value);
 }
 
-export function renderHookState(entries: readonly HookStateEntry[]) {
+function renderHookState(entries: readonly HookStateEntry[]) {
   return entries.map(({ testId, value }) => (
     <div key={testId} data-testid={testId}>
       {toDisplayValue(value)}
@@ -26,7 +26,7 @@ export function renderHookState(entries: readonly HookStateEntry[]) {
   ));
 }
 
-export function renderActionButtons(actions: readonly ProbeAction[]) {
+function renderActionButtons(actions: readonly ProbeAction[]) {
   return actions.map(({ label, onClick }) => (
     <button key={label} type="button" onClick={onClick}>
       {label}

@@ -46,11 +46,9 @@ export function getPracticeSessionPageControllerBrowserMocks() {
 }
 
 export function resetPracticeSessionPageControllerBrowserMocks() {
-  practiceSessionPageControllerBrowserMocks.getNextQuestionMock.mockReset();
-  practiceSessionPageControllerBrowserMocks.submitAnswerMock.mockReset();
-  practiceSessionPageControllerBrowserMocks.getBookmarksMock.mockReset();
-  practiceSessionPageControllerBrowserMocks.toggleBookmarkMock.mockReset();
-  practiceSessionPageControllerBrowserMocks.getPracticeSessionReviewMock.mockReset();
-  practiceSessionPageControllerBrowserMocks.endPracticeSessionMock.mockReset();
-  practiceSessionPageControllerBrowserMocks.setPracticeSessionQuestionMarkMock.mockReset();
+  for (const mock of Object.values(practiceSessionPageControllerBrowserMocks)) {
+    if (mock && typeof mock.mockReset === 'function') {
+      mock.mockReset();
+    }
+  }
 }

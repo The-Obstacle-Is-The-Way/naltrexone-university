@@ -6,6 +6,7 @@ import { createDeferred } from '@/tests/test-helpers/create-deferred';
 import { ok } from '@/tests/test-helpers/ok';
 import {
   createChoice,
+  createQuestionResponse,
   createReviewResponse,
 } from './practice-session-page-controller.browser.fixtures';
 import {
@@ -58,7 +59,12 @@ const CHOICE_2 = createChoice({
   textMd: 'Option B',
   sortOrder: 2,
 });
-const CHOICE_3 = createChoice({ id: 'choice_3' });
+const CHOICE_3 = createChoice({
+  id: 'choice_3',
+  label: 'C',
+  textMd: 'Option C',
+  sortOrder: 3,
+});
 
 function mockBookmarksAndReview(
   review: ReturnType<typeof createReviewResponse>,
@@ -383,29 +389,22 @@ describe('usePracticeSessionPageController (browser)', () => {
         }),
       )
       .mockResolvedValueOnce(
-        ok({
-          questionId: 'question-2',
-          slug: 'question-2',
-          stemMd: 'Question 2',
-          difficulty: 'easy',
-          choices: [
-            {
-              id: 'choice_2',
-              label: 'A',
-              textMd: 'Option A',
-              sortOrder: 1,
+        ok(
+          createQuestionResponse({
+            questionId: 'question-2',
+            difficulty: 'easy',
+            choices: [createChoice({ id: 'choice_2' })],
+            session: {
+              sessionId: 'session-1',
+              mode: 'tutor',
+              index: 1,
+              total: 2,
+              isMarkedForReview: false,
+              latestSelectedChoiceId: null,
+              latestIsCorrect: null,
             },
-          ],
-          session: {
-            sessionId: 'session-1',
-            mode: 'tutor',
-            index: 1,
-            total: 2,
-            isMarkedForReview: false,
-            latestSelectedChoiceId: null,
-            latestIsCorrect: null,
-          },
-        }),
+          }),
+        ),
       )
       .mockResolvedValueOnce(
         ok({
