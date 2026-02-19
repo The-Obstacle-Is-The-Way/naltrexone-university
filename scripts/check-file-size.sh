@@ -105,7 +105,7 @@ for file_path in "$@"; do
   line_count=$(printf '%s' "$line_count" | tr -d '[:space:]')
 
   if [ "$line_count" -gt "$MAX_LINES" ]; then
-    printf '⚠ %s exceeds %s lines (%s). Consider splitting or add a // WHY: comment.\n' "$repo_relative_path" "$MAX_LINES" "$line_count" >&2
+    printf '⚠ %s exceeds %s lines (%s). To suppress: add a WHY comment to the file AND add it to is_known_exempt in scripts/check-file-size.sh.\n' "$repo_relative_path" "$MAX_LINES" "$line_count" >&2
   fi
 done
 
