@@ -69,6 +69,12 @@ describe('mapWithConcurrencyLimit', () => {
     expect(result).toEqual([2, 4, 6]);
   });
 
+  it('throws when limit is less than 1', async () => {
+    await expect(
+      mapWithConcurrencyLimit([1], 0, async (x) => x),
+    ).rejects.toThrow('limit must be >= 1');
+  });
+
   it('propagates mapper errors', async () => {
     await expect(
       mapWithConcurrencyLimit([1, 2, 3], 2, async (item) => {

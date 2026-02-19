@@ -3,6 +3,9 @@ export async function mapWithConcurrencyLimit<T, R>(
   limit: number,
   fn: (item: T) => Promise<R>,
 ): Promise<R[]> {
+  if (limit < 1) {
+    throw new Error('mapWithConcurrencyLimit: limit must be >= 1');
+  }
   const results: R[] = new Array(items.length);
   let nextIndex = 0;
 
@@ -11,12 +14,12 @@ export async function mapWithConcurrencyLimit<T, R>(
     while (nextIndex < items.length) {
       const index = nextIndex;
       nextIndex += 1;
-      const item = items[index];
-      if (item === undefined) {
+      if (!(index in items)) {
         throw new Error(
           `mapWithConcurrencyLimit: missing item at index ${index}`,
         );
       }
+      const item = items[index] as T;
       results[index] = await fn(item);
     }
   });

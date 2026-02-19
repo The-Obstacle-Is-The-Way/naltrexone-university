@@ -675,6 +675,9 @@ describe('reconcileStripeSubscriptions', () => {
     expect(scenario.logger.errorCalls).toHaveLength(0);
   });
 
+  // sub_keep is retained because the production code short-circuits: when the
+  // local row's subscription is still in the blocking set, it is always chosen
+  // as canonical regardless of period-end ordering.
   it('cancels duplicate blocking subscriptions when dryRun is disabled', async () => {
     const keep = createUserSubscriptionFixture('sub_keep', {
       status: 'active',
