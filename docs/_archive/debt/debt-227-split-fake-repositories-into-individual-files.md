@@ -1,10 +1,11 @@
 # DEBT-227: Split fake-repositories.ts Into Individual Files
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P3
 **Date:** 2026-02-18
-**Last Verified:** 2026-02-18
-**Parent:** [DEBT-224](debt-224-file-size-audit-production-and-test.md)
+**Resolved:** 2026-02-19
+**Last Verified:** 2026-02-19
+**Parent:** [DEBT-224](../../debt/debt-224-file-size-audit-production-and-test.md)
 **Component:** `src/application/test-helpers/fakes/fake-repositories.ts`
 
 ---
@@ -67,14 +68,14 @@ Implementation sequence:
 
 ## Verification
 
-- [ ] Each fake has its own file
-- [ ] `src/application/test-helpers/fakes/index.ts` re-exports all fake repositories
-- [ ] All existing imports resolve (barrel or direct imports)
-- [ ] `pnpm test --run` passes
-- [ ] `pnpm typecheck` passes
-- [ ] Old `fake-repositories.ts` deleted
+- [x] Each fake has its own file
+- [x] `src/application/test-helpers/fakes/index.ts` re-exports all fake repositories
+- [x] All existing imports resolve (barrel or direct imports)
+- [x] `pnpm test --run` passes
+- [x] `pnpm typecheck` passes
+- [x] Old `fake-repositories.ts` deleted
 
 ## Related
 
-- [DEBT-163](../_archive/debt/debt-163-fakes-file-approaching-split-threshold.md) - Previous threshold flag
+- [DEBT-163](debt-163-fakes-file-approaching-split-threshold.md) - Previous threshold flag
 - [DEBT-228](debt-228-dry-fake-use-cases-with-generic-base.md) - Companion: DRY fake use case helpers
