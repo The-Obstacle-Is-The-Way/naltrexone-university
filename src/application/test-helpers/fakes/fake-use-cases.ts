@@ -1,4 +1,3 @@
-import type * as B from '@/src/application/ports/bookmarks';
 import type { UseCase } from '@/src/application/ports/use-cases';
 import type * as U from '@/src/application/use-cases';
 
@@ -12,7 +11,7 @@ export class FakeUseCase<I, O> implements UseCase<I, O> {
 
   async execute(input: I): Promise<O> {
     this.inputs.push(input);
-    if (this.toThrow) throw this.toThrow;
+    if (this.toThrow !== undefined) throw this.toThrow;
     return this.output;
   }
 }
@@ -22,8 +21,8 @@ export class FakeToggleBookmarkUseCase extends FakeUseCase<
   U.ToggleBookmarkOutput
 > {}
 export class FakeGetBookmarksUseCase extends FakeUseCase<
-  B.GetBookmarksInput,
-  B.GetBookmarksOutput
+  U.GetBookmarksInput,
+  U.GetBookmarksOutput
 > {}
 export class FakeStartPracticeSessionUseCase extends FakeUseCase<
   U.StartPracticeSessionInput,

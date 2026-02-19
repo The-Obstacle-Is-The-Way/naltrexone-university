@@ -4,21 +4,21 @@ MAX_LINES=350
 REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
 
 to_repo_relative() {
-  file_path="$1"
+  rel_path="$1"
 
-  case "$file_path" in
+  case "$rel_path" in
     "$REPO_ROOT"/*)
-      file_path=${file_path#"$REPO_ROOT"/}
+      rel_path=${rel_path#"$REPO_ROOT"/}
       ;;
   esac
 
-  case "$file_path" in
+  case "$rel_path" in
     ./*)
-      file_path=${file_path#./}
+      rel_path=${rel_path#./}
       ;;
   esac
 
-  printf '%s\n' "$file_path"
+  printf '%s\n' "$rel_path"
 }
 
 is_known_exempt() {
@@ -73,19 +73,17 @@ is_root_config_file() {
 }
 
 should_check_file() {
-  file_path="$1"
-
-  case "$file_path" in
+  case "$1" in
     *.ts | *.tsx) ;;
     *)
       return 1
       ;;
   esac
 
-  is_known_exempt "$file_path" && return 1
-  is_test_file "$file_path" && return 1
-  is_script_file "$file_path" && return 1
-  is_root_config_file "$file_path" && return 1
+  is_known_exempt "$1" && return 1
+  is_test_file "$1" && return 1
+  is_script_file "$1" && return 1
+  is_root_config_file "$1" && return 1
 
   return 0
 }

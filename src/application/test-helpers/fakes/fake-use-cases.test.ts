@@ -22,4 +22,30 @@ describe('FakeUseCase', () => {
     await expect(fakeUseCase.execute({ value: 99 })).rejects.toBe(error);
     expect(fakeUseCase.inputs).toEqual([{ value: 99 }]);
   });
+
+  it('throws null when toThrow is null', async () => {
+    const fakeUseCase = new FakeUseCase<{ value: number }, { ok: boolean }>(
+      { ok: true },
+      null,
+    );
+
+    await expect(fakeUseCase.execute({ value: 1 })).rejects.toBeNull();
+    expect(fakeUseCase.inputs).toEqual([{ value: 1 }]);
+  });
+
+  it('accumulates inputs across multiple calls', async () => {
+    const fakeUseCase = new FakeUseCase<{ value: number }, { ok: boolean }>({
+      ok: true,
+    });
+
+    await fakeUseCase.execute({ value: 1 });
+    await fakeUseCase.execute({ value: 2 });
+    await fakeUseCase.execute({ value: 3 });
+
+    expect(fakeUseCase.inputs).toEqual([
+      { value: 1 },
+      { value: 2 },
+      { value: 3 },
+    ]);
+  });
 });

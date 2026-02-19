@@ -35,7 +35,7 @@
       "biome check --write --no-errors-on-unmatched"
     ],
     "*.{ts,tsx}": [
-      "bash scripts/check-file-size.sh"
+      "sh scripts/check-file-size.sh"
     ]
   },
   "dependencies": {
