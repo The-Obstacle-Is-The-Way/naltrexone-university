@@ -8,6 +8,7 @@ import {
   createChoice,
   createQuestionResponse,
   createReviewResponse,
+  createReviewRow,
 } from './practice-session-page-controller.browser.fixtures';
 import {
   getPracticeSessionPageControllerBrowserMocks,
@@ -710,72 +711,49 @@ describe('usePracticeSessionPageController (browser)', () => {
       }),
     );
     getBookmarksMock.mockResolvedValue(ok({ rows: [] }));
+    const unansweredRow = createReviewRow({
+      questionId: 'question-1',
+      order: 1,
+    });
+    const answeredRow = createReviewRow({
+      questionId: 'question-1',
+      order: 1,
+      isAnswered: true,
+      isCorrect: true,
+    });
     getPracticeSessionReviewMock
       .mockResolvedValueOnce(
-        ok({
-          sessionId: 'session-1',
-          mode: 'exam',
-          totalCount: 1,
-          answeredCount: 0,
-          markedCount: 0,
-          rows: [
-            {
-              questionId: 'question-1',
-              slug: 'question-1',
-              order: 1,
-              isAvailable: true,
-              stemMd: 'Question 1',
-              difficulty: 'easy',
-              isAnswered: false,
-              isCorrect: null,
-              markedForReview: false,
-            },
-          ],
-        }),
+        ok(
+          createReviewResponse({
+            mode: 'exam',
+            totalCount: 1,
+            answeredCount: 0,
+            markedCount: 0,
+            rows: [unansweredRow],
+          }),
+        ),
       )
       .mockResolvedValueOnce(
-        ok({
-          sessionId: 'session-1',
-          mode: 'exam',
-          totalCount: 1,
-          answeredCount: 0,
-          markedCount: 0,
-          rows: [
-            {
-              questionId: 'question-1',
-              slug: 'question-1',
-              order: 1,
-              isAvailable: true,
-              stemMd: 'Question 1',
-              difficulty: 'easy',
-              isAnswered: false,
-              isCorrect: null,
-              markedForReview: false,
-            },
-          ],
-        }),
+        ok(
+          createReviewResponse({
+            mode: 'exam',
+            totalCount: 1,
+            answeredCount: 0,
+            markedCount: 0,
+            rows: [unansweredRow],
+          }),
+        ),
       )
       .mockResolvedValueOnce(
-        ok({
-          sessionId: 'session-1',
-          mode: 'exam',
-          totalCount: 1,
-          answeredCount: 1,
-          markedCount: 0,
-          rows: [
-            {
-              questionId: 'question-1',
-              slug: 'question-1',
-              order: 1,
-              isAvailable: true,
-              stemMd: 'Question 1',
-              difficulty: 'easy',
-              isAnswered: true,
-              isCorrect: true,
-              markedForReview: false,
-            },
-          ],
-        }),
+        ok(
+          createReviewResponse({
+            mode: 'exam',
+            totalCount: 1,
+            answeredCount: 1,
+            markedCount: 0,
+            rows: [answeredRow],
+          }),
+        ),
       );
     submitAnswerMock.mockResolvedValue(
       ok({
