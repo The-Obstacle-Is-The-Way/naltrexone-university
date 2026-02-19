@@ -19,6 +19,12 @@ import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answ
 import type { LoadState, SessionNavigation } from './question-page-logic';
 import { useQuestionPageController } from './use-question-page-controller';
 
+// WHY: This file exceeds the 300-line soft guideline intentionally.
+// DEBT-234 enforces a warning threshold at 350 lines; DEBT-224 keeps 300 as the design guideline.
+// It is a deep module (Ousterhout) with a single responsibility: compose question review page UI with origin-aware navigation and controller wiring.
+// Splitting would decouple route-origin parsing and navigation contracts from rendering, increasing risk of inconsistent back-link and session-navigation behavior.
+// Reviewed in DEBT-224 audit (2026-02-18).
+// Keep parseQuestionOrigin in sync with QuestionOrigin in '@/lib/routes'.
 function parseQuestionOrigin(value: string | undefined): QuestionOrigin | null {
   if (value === 'dashboard') return value;
   if (value === 'bookmarks') return value;

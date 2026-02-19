@@ -17,9 +17,13 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 | ID | Title | Priority | Status |
 |----|-------|----------|--------|
-| [DEBT-224](debt-224-file-size-audit-production-and-test.md) | File Size Audit — Production and Test Files Exceeding Guidelines | P3 | Open |
+| [DEBT-224](debt-224-file-size-audit-production-and-test.md) | File Size Audit - Production and Test Files Exceeding Guidelines | P3 | Decomposed |
+| [DEBT-227](debt-227-split-fake-repositories-into-individual-files.md) | Split fake-repositories.ts Into Individual Files | P3 | Open |
+| [DEBT-229](debt-229-extract-bookmarks-server-action-and-errors.md) | Extract Server Action and Error Handling From bookmarks/page.tsx | P3 | Open |
+| [DEBT-230](debt-230-decompose-seed-script-into-modules.md) | Decompose seed.ts Into Focused Modules | P4 | Open |
+| [DEBT-231](debt-231-reduce-browser-spec-probe-duplication.md) | Reduce Browser Spec Probe Component Duplication | P3 | Open |
 
-**Next Debt ID:** DEBT-227
+**Next Debt ID:** DEBT-235
 
 ---
 
@@ -27,6 +31,10 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 | ID | Title | Priority | Resolved | GitHub Issue |
 |----|-------|----------|----------|--------------|
+| [DEBT-234](../_archive/debt/debt-234-add-max-lines-lint-rule.md) | Add max-lines Check to Prevent File Size Regression | P4 | 2026-02-18 | — |
+| [DEBT-233](../_archive/debt/debt-233-add-why-comments-to-justified-large-files.md) | Add WHY Comments to Justified Large Files | P4 | 2026-02-18 | — |
+| [DEBT-232](../_archive/debt/debt-232-reduce-get-next-question-test-inflation.md) | Reduce get-next-question.test.ts Test Inflation | P3 | 2026-02-18 | — |
+| [DEBT-228](../_archive/debt/debt-228-dry-fake-use-cases-with-generic-base.md) | DRY fake-use-cases.ts With Generic Base Class | P4 | 2026-02-18 | — |
 | [DEBT-226](../_archive/debt/debt-226-playwright-e2e-timeout-and-import-convention.md) | Playwright E2E Timeout Policy and Import Convention Are Undocumented | P3 | 2026-02-18 | — |
 | [DEBT-225](../_archive/debt/debt-225-vitest-cold-import-timeout-flakes.md) | Vitest Cold-Import Timeout Flakes — 3 Tests Hit Default 5s Wall | P2 | 2026-02-18 | — |
 | [DEBT-223](../_archive/debt/debt-223-verbose-set-array-dedup-pattern.md) | Verbose Set+Array Dedup Pattern in get-user-stats.ts | P4 | 2026-02-16 | — |

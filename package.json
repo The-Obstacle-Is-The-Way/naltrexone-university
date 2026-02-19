@@ -33,6 +33,9 @@
   "lint-staged": {
     "*.{js,jsx,ts,tsx,mjs,cjs,json}": [
       "biome check --write --no-errors-on-unmatched"
+    ],
+    "*.{ts,tsx}": [
+      "sh scripts/check-file-size.sh"
     ]
   },
   "dependencies": {

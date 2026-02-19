@@ -1,13 +1,14 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { createQuestionSeed, shuffleWithSeed } from '@/src/domain/services';
 import {
+  createAttempt,
   createChoice,
   createPracticeSession,
   createQuestion,
   createTag,
 } from '@/src/domain/test-helpers';
 import { ApplicationError } from '../errors';
-import type { QuestionRepository } from '../ports/repositories';
+import type { QuestionFilters } from '../ports/repositories';
 import {
   FakeAttemptRepository,
   FakePracticeSessionRepository,
@@ -15,55 +16,99 @@ import {
 } from '../test-helpers/fakes';
 import { GetNextQuestionUseCase } from './get-next-question';
 
+const USER_ID = 'user-1';
+const SESSION_ID = 'session-1';
+const ANSWERED_AT = new Date('2026-01-31T00:00:00Z');
+const EMPTY_FILTERS: QuestionFilters = { tagSlugs: [], difficulties: [] };
+
+type TestDepsOverrides = {
+  questions?: ConstructorParameters<typeof FakeQuestionRepository>[0];
+  attempts?: ConstructorParameters<typeof FakeAttemptRepository>[0];
+  sessions?: ConstructorParameters<typeof FakePracticeSessionRepository>[0];
+};
+
+function createTestDeps(overrides: TestDepsOverrides = {}) {
+  const questionRepo = new FakeQuestionRepository(overrides.questions ?? []);
+  const attemptRepo = new FakeAttemptRepository(overrides.attempts ?? []);
+  const sessionRepo = new FakePracticeSessionRepository(
+    overrides.sessions ?? [],
+  );
+  const getNextQuestion = new GetNextQuestionUseCase(
+    questionRepo,
+    attemptRepo,
+    sessionRepo,
+  );
+
+  return { questionRepo, attemptRepo, sessionRepo, getNextQuestion };
+}
+
+type QuestionState = ReturnType<
+  typeof createPracticeSession
+>['questionStates'][number];
+
+function createQuestionState(
+  questionId: string,
+  overrides: Partial<QuestionState> = {},
+): QuestionState {
+  return {
+    questionId,
+    markedForReview: false,
+    latestSelectedChoiceId: null,
+    latestIsCorrect: null,
+    latestAnsweredAt: null,
+    ...overrides,
+  };
+}
+
+function createSingleChoiceQuestion(questionId: string, choiceId: string) {
+  return createQuestion({
+    id: questionId,
+    choices: [createChoice({ id: choiceId, questionId })],
+  });
+}
+
+function createShuffleQuestion(questionId: string) {
+  return createQuestion({
+    id: questionId,
+    choices: [
+      createChoice({ id: 'c1', questionId, label: 'A', sortOrder: 1 }),
+      createChoice({ id: 'c2', questionId, label: 'B', sortOrder: 2 }),
+      createChoice({ id: 'c3', questionId, label: 'C', sortOrder: 3 }),
+      createChoice({ id: 'c4', questionId, label: 'D', sortOrder: 4 }),
+    ],
+  });
+}
+
 describe('GetNextQuestionUseCase', () => {
   it('returns next unanswered question for a session', async () => {
-    const userId = 'user-1';
-    const sessionId = 'session-1';
-
-    const q1 = createQuestion({
-      id: 'q1',
-      status: 'published',
-      choices: [createChoice({ id: 'c1', questionId: 'q1', label: 'A' })],
-    });
-    const q2 = createQuestion({
-      id: 'q2',
-      status: 'published',
-      choices: [createChoice({ id: 'c2', questionId: 'q2', label: 'A' })],
-    });
+    const q1 = createSingleChoiceQuestion('q1', 'c1');
+    const q2 = createSingleChoiceQuestion('q2', 'c2');
 
     const session = createPracticeSession({
-      id: sessionId,
-      userId,
-      mode: 'tutor',
       questionIds: ['q1', 'q2'],
       questionStates: [
-        {
-          questionId: 'q1',
-          markedForReview: false,
+        createQuestionState('q1', {
           latestSelectedChoiceId: 'c1',
           latestIsCorrect: false,
-          latestAnsweredAt: new Date('2026-01-31T00:00:00Z'),
-        },
-        {
-          questionId: 'q2',
-          markedForReview: false,
-          latestSelectedChoiceId: null,
-          latestIsCorrect: null,
-          latestAnsweredAt: null,
-        },
+          latestAnsweredAt: ANSWERED_AT,
+        }),
+        createQuestionState('q2'),
       ],
     });
 
-    const questions = new FakeQuestionRepository([q1, q2]);
-    const attempts = new FakeAttemptRepository([]);
-    const sessions = new FakePracticeSessionRepository([session]);
+    const { getNextQuestion } = createTestDeps({
+      questions: [q1, q2],
+      sessions: [session],
+    });
 
-    const useCase = new GetNextQuestionUseCase(questions, attempts, sessions);
+    const result = await getNextQuestion.execute({
+      userId: USER_ID,
+      sessionId: SESSION_ID,
+    });
 
-    const result = await useCase.execute({ userId, sessionId });
     expect(result?.questionId).toBe('q2');
     expect(result?.session).toEqual({
-      sessionId,
+      sessionId: SESSION_ID,
       mode: 'tutor',
       index: 1,
       total: 2,
@@ -75,53 +120,28 @@ describe('GetNextQuestionUseCase', () => {
   });
 
   it('returns next unanswered question after fromIndex when provided', async () => {
-    const userId = 'user-1';
-    const sessionId = 'session-1';
-
-    const q1 = createQuestion({
-      id: 'q1',
-      status: 'published',
-      choices: [createChoice({ id: 'c1', questionId: 'q1', label: 'A' })],
-    });
-    const q2 = createQuestion({
-      id: 'q2',
-      status: 'published',
-      choices: [createChoice({ id: 'c2', questionId: 'q2', label: 'A' })],
-    });
+    const q1 = createSingleChoiceQuestion('q1', 'c1');
+    const q2 = createSingleChoiceQuestion('q2', 'c2');
 
     const session = createPracticeSession({
-      id: sessionId,
-      userId,
-      mode: 'tutor',
       questionIds: ['q1', 'q2'],
-      questionStates: [
-        {
-          questionId: 'q1',
-          markedForReview: false,
-          latestSelectedChoiceId: null,
-          latestIsCorrect: null,
-          latestAnsweredAt: null,
-        },
-        {
-          questionId: 'q2',
-          markedForReview: false,
-          latestSelectedChoiceId: null,
-          latestIsCorrect: null,
-          latestAnsweredAt: null,
-        },
-      ],
+      questionStates: [createQuestionState('q1'), createQuestionState('q2')],
     });
 
-    const useCase = new GetNextQuestionUseCase(
-      new FakeQuestionRepository([q1, q2]),
-      new FakeAttemptRepository([]),
-      new FakePracticeSessionRepository([session]),
-    );
+    const { getNextQuestion } = createTestDeps({
+      questions: [q1, q2],
+      sessions: [session],
+    });
 
-    const result = await useCase.execute({ userId, sessionId, fromIndex: 0 });
+    const result = await getNextQuestion.execute({
+      userId: USER_ID,
+      sessionId: SESSION_ID,
+      fromIndex: 0,
+    });
+
     expect(result?.questionId).toBe('q2');
     expect(result?.session).toMatchObject({
-      sessionId,
+      sessionId: SESSION_ID,
       mode: 'tutor',
       index: 1,
       total: 2,
@@ -129,65 +149,38 @@ describe('GetNextQuestionUseCase', () => {
   });
 
   it('wraps to earlier unanswered questions when no unanswered remain after fromIndex', async () => {
-    const userId = 'user-1';
-    const sessionId = 'session-1';
-
-    const q1 = createQuestion({
-      id: 'q1',
-      status: 'published',
-      choices: [createChoice({ id: 'c1', questionId: 'q1', label: 'A' })],
-    });
-    const q2 = createQuestion({
-      id: 'q2',
-      status: 'published',
-      choices: [createChoice({ id: 'c2', questionId: 'q2', label: 'A' })],
-    });
-    const q3 = createQuestion({
-      id: 'q3',
-      status: 'published',
-      choices: [createChoice({ id: 'c3', questionId: 'q3', label: 'A' })],
-    });
+    const q1 = createSingleChoiceQuestion('q1', 'c1');
+    const q2 = createSingleChoiceQuestion('q2', 'c2');
+    const q3 = createSingleChoiceQuestion('q3', 'c3');
 
     const session = createPracticeSession({
-      id: sessionId,
-      userId,
       mode: 'exam',
       questionIds: ['q1', 'q2', 'q3'],
       questionStates: [
-        {
-          questionId: 'q1',
-          markedForReview: false,
+        createQuestionState('q1', {
           latestSelectedChoiceId: 'c1',
           latestIsCorrect: true,
-          latestAnsweredAt: new Date('2026-01-31T00:00:00Z'),
-        },
-        {
-          questionId: 'q2',
-          markedForReview: false,
-          latestSelectedChoiceId: null,
-          latestIsCorrect: null,
-          latestAnsweredAt: null,
-        },
-        {
-          questionId: 'q3',
-          markedForReview: false,
-          latestSelectedChoiceId: null,
-          latestIsCorrect: null,
-          latestAnsweredAt: null,
-        },
+          latestAnsweredAt: ANSWERED_AT,
+        }),
+        createQuestionState('q2'),
+        createQuestionState('q3'),
       ],
     });
 
-    const useCase = new GetNextQuestionUseCase(
-      new FakeQuestionRepository([q1, q2, q3]),
-      new FakeAttemptRepository([]),
-      new FakePracticeSessionRepository([session]),
-    );
+    const { getNextQuestion } = createTestDeps({
+      questions: [q1, q2, q3],
+      sessions: [session],
+    });
 
-    const result = await useCase.execute({ userId, sessionId, fromIndex: 2 });
+    const result = await getNextQuestion.execute({
+      userId: USER_ID,
+      sessionId: SESSION_ID,
+      fromIndex: 2,
+    });
+
     expect(result?.questionId).toBe('q2');
     expect(result?.session).toMatchObject({
-      sessionId,
+      sessionId: SESSION_ID,
       mode: 'exam',
       index: 1,
       total: 3,
@@ -195,53 +188,35 @@ describe('GetNextQuestionUseCase', () => {
   });
 
   it('uses persisted session question state (not attempts) to choose next question', async () => {
-    const userId = 'user-1';
-    const sessionId = 'session-1';
-
-    const q1 = createQuestion({
-      id: 'q1',
-      status: 'published',
-      choices: [createChoice({ id: 'c1', questionId: 'q1', label: 'A' })],
-    });
-    const q2 = createQuestion({
-      id: 'q2',
-      status: 'published',
-      choices: [createChoice({ id: 'c2', questionId: 'q2', label: 'A' })],
-    });
+    const q1 = createSingleChoiceQuestion('q1', 'c1');
+    const q2 = createSingleChoiceQuestion('q2', 'c2');
 
     const session = createPracticeSession({
-      id: sessionId,
-      userId,
       mode: 'exam',
       questionIds: ['q1', 'q2'],
       questionStates: [
-        {
-          questionId: 'q1',
-          markedForReview: false,
+        createQuestionState('q1', {
           latestSelectedChoiceId: 'c1',
           latestIsCorrect: true,
-          latestAnsweredAt: new Date('2026-01-31T00:00:00Z'),
-        },
-        {
-          questionId: 'q2',
-          markedForReview: false,
-          latestSelectedChoiceId: null,
-          latestIsCorrect: null,
-          latestAnsweredAt: null,
-        },
+          latestAnsweredAt: ANSWERED_AT,
+        }),
+        createQuestionState('q2'),
       ],
     });
 
-    const useCase = new GetNextQuestionUseCase(
-      new FakeQuestionRepository([q1, q2]),
-      new FakeAttemptRepository([]),
-      new FakePracticeSessionRepository([session]),
-    );
+    const { getNextQuestion } = createTestDeps({
+      questions: [q1, q2],
+      sessions: [session],
+    });
 
-    const result = await useCase.execute({ userId, sessionId });
+    const result = await getNextQuestion.execute({
+      userId: USER_ID,
+      sessionId: SESSION_ID,
+    });
+
     expect(result?.questionId).toBe('q2');
     expect(result?.session).toMatchObject({
-      sessionId,
+      sessionId: SESSION_ID,
       mode: 'exam',
       index: 1,
       total: 2,
@@ -250,57 +225,37 @@ describe('GetNextQuestionUseCase', () => {
   });
 
   it('returns a specific session question when questionId is provided', async () => {
-    const userId = 'user-1';
-    const sessionId = 'session-1';
-
-    const q1 = createQuestion({
-      id: 'q1',
-      status: 'published',
-      choices: [createChoice({ id: 'c1', questionId: 'q1', label: 'A' })],
-    });
-    const q2 = createQuestion({
-      id: 'q2',
-      status: 'published',
-      choices: [createChoice({ id: 'c2', questionId: 'q2', label: 'A' })],
-    });
+    const q1 = createSingleChoiceQuestion('q1', 'c1');
+    const q2 = createSingleChoiceQuestion('q2', 'c2');
 
     const session = createPracticeSession({
-      id: sessionId,
-      userId,
       mode: 'exam',
       questionIds: ['q1', 'q2'],
       questionStates: [
-        {
-          questionId: 'q1',
+        createQuestionState('q1', {
           markedForReview: true,
           latestSelectedChoiceId: 'c1',
           latestIsCorrect: false,
-          latestAnsweredAt: new Date('2026-01-31T00:00:00Z'),
-        },
-        {
-          questionId: 'q2',
-          markedForReview: false,
-          latestSelectedChoiceId: null,
-          latestIsCorrect: null,
-          latestAnsweredAt: null,
-        },
+          latestAnsweredAt: ANSWERED_AT,
+        }),
+        createQuestionState('q2'),
       ],
     });
 
-    const useCase = new GetNextQuestionUseCase(
-      new FakeQuestionRepository([q1, q2]),
-      new FakeAttemptRepository([]),
-      new FakePracticeSessionRepository([session]),
-    );
+    const { getNextQuestion } = createTestDeps({
+      questions: [q1, q2],
+      sessions: [session],
+    });
 
-    const result = await useCase.execute({
-      userId,
-      sessionId,
+    const result = await getNextQuestion.execute({
+      userId: USER_ID,
+      sessionId: SESSION_ID,
       questionId: 'q1',
     });
+
     expect(result?.questionId).toBe('q1');
     expect(result?.session).toMatchObject({
-      sessionId,
+      sessionId: SESSION_ID,
       mode: 'exam',
       index: 0,
       total: 2,
@@ -309,16 +264,10 @@ describe('GetNextQuestionUseCase', () => {
   });
 
   it('includes previousSubmission when question was answered in tutor mode', async () => {
-    const userId = 'user-1';
-    const sessionId = 'session-1';
-
     const questionId = 'q1';
 
     const question = createQuestion({
       id: questionId,
-      status: 'published',
-      stemMd: 'Stem',
-      explanationMd: 'Explanation',
       choices: [
         createChoice({
           id: 'c1',
@@ -345,30 +294,24 @@ describe('GetNextQuestionUseCase', () => {
     });
 
     const session = createPracticeSession({
-      id: sessionId,
-      userId,
-      mode: 'tutor',
       questionIds: [questionId],
       questionStates: [
-        {
-          questionId,
-          markedForReview: false,
+        createQuestionState(questionId, {
           latestSelectedChoiceId: 'c1',
           latestIsCorrect: false,
-          latestAnsweredAt: new Date('2026-01-31T00:00:00Z'),
-        },
+          latestAnsweredAt: ANSWERED_AT,
+        }),
       ],
     });
 
-    const useCase = new GetNextQuestionUseCase(
-      new FakeQuestionRepository([question]),
-      new FakeAttemptRepository([]),
-      new FakePracticeSessionRepository([session]),
-    );
+    const { getNextQuestion } = createTestDeps({
+      questions: [question],
+      sessions: [session],
+    });
 
-    const result = await useCase.execute({
-      userId,
-      sessionId,
+    const result = await getNextQuestion.execute({
+      userId: USER_ID,
+      sessionId: SESSION_ID,
       questionId,
     });
 
@@ -392,90 +335,43 @@ describe('GetNextQuestionUseCase', () => {
     ).toEqual(result?.choices.map((choice) => choice.label) ?? []);
   });
 
-  it('does not include previousSubmission when question is unanswered', async () => {
-    const userId = 'user-1';
-    const sessionId = 'session-1';
-
+  it.each([
+    {
+      name: 'does not include previousSubmission when question is unanswered',
+      mode: 'tutor' as const,
+      questionState: createQuestionState('q1'),
+    },
+    {
+      name: 'does not include previousSubmission in exam mode even when answered',
+      mode: 'exam' as const,
+      questionState: createQuestionState('q1', {
+        latestSelectedChoiceId: 'c1',
+        latestIsCorrect: true,
+        latestAnsweredAt: ANSWERED_AT,
+      }),
+    },
+  ])('$name', async ({ mode, questionState }) => {
     const questionId = 'q1';
 
     const question = createQuestion({
       id: questionId,
-      status: 'published',
-      choices: [
-        createChoice({ id: 'c1', questionId, label: 'A', isCorrect: true }),
-      ],
+      choices: [createChoice({ id: 'c1', questionId, isCorrect: true })],
     });
 
     const session = createPracticeSession({
-      id: sessionId,
-      userId,
-      mode: 'tutor',
+      mode,
       questionIds: [questionId],
-      questionStates: [
-        {
-          questionId,
-          markedForReview: false,
-          latestSelectedChoiceId: null,
-          latestIsCorrect: null,
-          latestAnsweredAt: null,
-        },
-      ],
+      questionStates: [questionState],
     });
 
-    const useCase = new GetNextQuestionUseCase(
-      new FakeQuestionRepository([question]),
-      new FakeAttemptRepository([]),
-      new FakePracticeSessionRepository([session]),
-    );
-
-    const result = await useCase.execute({
-      userId,
-      sessionId,
-      questionId,
+    const { getNextQuestion } = createTestDeps({
+      questions: [question],
+      sessions: [session],
     });
 
-    expect(result?.session?.previousSubmission).toBeUndefined();
-  });
-
-  it('does not include previousSubmission in exam mode even when answered', async () => {
-    const userId = 'user-1';
-    const sessionId = 'session-1';
-
-    const questionId = 'q1';
-
-    const question = createQuestion({
-      id: questionId,
-      status: 'published',
-      choices: [
-        createChoice({ id: 'c1', questionId, label: 'A', isCorrect: true }),
-      ],
-    });
-
-    const session = createPracticeSession({
-      id: sessionId,
-      userId,
-      mode: 'exam',
-      questionIds: [questionId],
-      questionStates: [
-        {
-          questionId,
-          markedForReview: false,
-          latestSelectedChoiceId: 'c1',
-          latestIsCorrect: true,
-          latestAnsweredAt: new Date('2026-01-31T00:00:00Z'),
-        },
-      ],
-    });
-
-    const useCase = new GetNextQuestionUseCase(
-      new FakeQuestionRepository([question]),
-      new FakeAttemptRepository([]),
-      new FakePracticeSessionRepository([session]),
-    );
-
-    const result = await useCase.execute({
-      userId,
-      sessionId,
+    const result = await getNextQuestion.execute({
+      userId: USER_ID,
+      sessionId: SESSION_ID,
       questionId,
     });
 
@@ -483,66 +379,36 @@ describe('GetNextQuestionUseCase', () => {
   });
 
   it('returns session index using question order position', async () => {
-    const userId = 'user-1';
-    const sessionId = 'session-1';
-
-    const q1 = createQuestion({
-      id: 'q1',
-      status: 'published',
-      choices: [createChoice({ id: 'c1', questionId: 'q1', label: 'A' })],
-    });
-    const q2 = createQuestion({
-      id: 'q2',
-      status: 'published',
-      choices: [createChoice({ id: 'c2', questionId: 'q2', label: 'A' })],
-    });
-    const q3 = createQuestion({
-      id: 'q3',
-      status: 'published',
-      choices: [createChoice({ id: 'c3', questionId: 'q3', label: 'A' })],
-    });
+    const q1 = createSingleChoiceQuestion('q1', 'c1');
+    const q2 = createSingleChoiceQuestion('q2', 'c2');
+    const q3 = createSingleChoiceQuestion('q3', 'c3');
 
     const session = createPracticeSession({
-      id: sessionId,
-      userId,
-      mode: 'tutor',
       questionIds: ['q1', 'q2', 'q3'],
       questionStates: [
-        {
-          questionId: 'q1',
-          markedForReview: false,
-          latestSelectedChoiceId: null,
-          latestIsCorrect: null,
-          latestAnsweredAt: null,
-        },
-        {
-          questionId: 'q2',
-          markedForReview: false,
+        createQuestionState('q1'),
+        createQuestionState('q2', {
           latestSelectedChoiceId: 'c2',
           latestIsCorrect: false,
-          latestAnsweredAt: new Date('2026-01-31T00:00:00Z'),
-        },
-        {
-          questionId: 'q3',
-          markedForReview: false,
-          latestSelectedChoiceId: null,
-          latestIsCorrect: null,
-          latestAnsweredAt: null,
-        },
+          latestAnsweredAt: ANSWERED_AT,
+        }),
+        createQuestionState('q3'),
       ],
     });
 
-    const questions = new FakeQuestionRepository([q1, q2, q3]);
-    const attempts = new FakeAttemptRepository([]);
-    const sessions = new FakePracticeSessionRepository([session]);
+    const { getNextQuestion } = createTestDeps({
+      questions: [q1, q2, q3],
+      sessions: [session],
+    });
 
-    const useCase = new GetNextQuestionUseCase(questions, attempts, sessions);
-
-    const result = await useCase.execute({ userId, sessionId });
+    const result = await getNextQuestion.execute({
+      userId: USER_ID,
+      sessionId: SESSION_ID,
+    });
 
     expect(result?.questionId).toBe('q1');
     expect(result?.session).toEqual({
-      sessionId,
+      sessionId: SESSION_ID,
       mode: 'tutor',
       index: 0,
       total: 3,
@@ -553,145 +419,96 @@ describe('GetNextQuestionUseCase', () => {
   });
 
   it('throws NOT_FOUND when next session question is not published', async () => {
-    const userId = 'user-1';
-    const sessionId = 'session-1';
-
     const questionId = 'q1';
 
-    const session = createPracticeSession({
-      id: sessionId,
-      userId,
-      mode: 'tutor',
-      questionIds: [questionId],
-    });
+    const session = createPracticeSession({ questionIds: [questionId] });
 
-    const useCase = new GetNextQuestionUseCase(
-      new FakeQuestionRepository([
+    const { getNextQuestion } = createTestDeps({
+      questions: [
         createQuestion({
           id: questionId,
           status: 'draft',
-          choices: [createChoice({ id: 'c1', questionId, label: 'A' })],
+          choices: [createChoice({ id: 'c1', questionId })],
         }),
-      ]),
-      new FakeAttemptRepository([]),
-      new FakePracticeSessionRepository([session]),
-    );
+      ],
+      sessions: [session],
+    });
 
-    await expect(useCase.execute({ userId, sessionId })).rejects.toEqual(
-      new ApplicationError('NOT_FOUND', 'Question not found'),
-    );
+    await expect(
+      getNextQuestion.execute({ userId: USER_ID, sessionId: SESSION_ID }),
+    ).rejects.toEqual(new ApplicationError('NOT_FOUND', 'Question not found'));
   });
 
   it('returns null when session is complete', async () => {
-    const userId = 'user-1';
-    const sessionId = 'session-1';
+    const q1 = createSingleChoiceQuestion('q1', 'c1');
 
-    const q1 = createQuestion({
-      id: 'q1',
-      status: 'published',
-      choices: [createChoice({ id: 'c1', questionId: 'q1', label: 'A' })],
-    });
     const session = createPracticeSession({
-      id: sessionId,
-      userId,
-      mode: 'tutor',
       questionIds: ['q1'],
       questionStates: [
-        {
-          questionId: 'q1',
-          markedForReview: false,
+        createQuestionState('q1', {
           latestSelectedChoiceId: 'c1',
           latestIsCorrect: false,
-          latestAnsweredAt: new Date('2026-01-31T00:00:00Z'),
-        },
+          latestAnsweredAt: ANSWERED_AT,
+        }),
       ],
     });
 
-    const useCase = new GetNextQuestionUseCase(
-      new FakeQuestionRepository([q1]),
-      new FakeAttemptRepository([]),
-      new FakePracticeSessionRepository([session]),
-    );
+    const { getNextQuestion } = createTestDeps({
+      questions: [q1],
+      sessions: [session],
+    });
 
-    await expect(useCase.execute({ userId, sessionId })).resolves.toBeNull();
+    await expect(
+      getNextQuestion.execute({ userId: USER_ID, sessionId: SESSION_ID }),
+    ).resolves.toBeNull();
   });
 
   it('throws NOT_FOUND when session does not exist', async () => {
-    const useCase = new GetNextQuestionUseCase(
-      new FakeQuestionRepository([]),
-      new FakeAttemptRepository([]),
-      new FakePracticeSessionRepository([]),
-    );
+    const { getNextQuestion } = createTestDeps();
 
     await expect(
-      useCase.execute({ userId: 'user-1', sessionId: 'missing' }),
+      getNextQuestion.execute({ userId: USER_ID, sessionId: 'missing' }),
     ).rejects.toEqual(
       new ApplicationError('NOT_FOUND', 'Practice session not found'),
     );
   });
 
   it('returns null when no questions match filters', async () => {
-    const useCase = new GetNextQuestionUseCase(
-      new FakeQuestionRepository([]),
-      new FakeAttemptRepository([]),
-      new FakePracticeSessionRepository([]),
-    );
+    const { getNextQuestion } = createTestDeps();
 
     await expect(
-      useCase.execute({
-        userId: 'user-1',
-        filters: { tagSlugs: [], difficulties: [] },
-      }),
+      getNextQuestion.execute({ userId: USER_ID, filters: EMPTY_FILTERS }),
     ).resolves.toBeNull();
   });
 
   it('passes statuses + userId through to listPublishedCandidateIds', async () => {
-    const userId = 'user-1';
+    const { questionRepo, getNextQuestion } = createTestDeps({
+      questions: [createSingleChoiceQuestion('q1', 'c1')],
+    });
 
-    const questions = new FakeQuestionRepository([
-      createQuestion({
-        id: 'q1',
-        status: 'published',
-        choices: [createChoice({ id: 'c1', questionId: 'q1', label: 'A' })],
-      }),
-    ]);
-
-    const useCase = new GetNextQuestionUseCase(
-      questions,
-      new FakeAttemptRepository([]),
-      new FakePracticeSessionRepository([]),
-    );
-
-    await useCase.execute({
-      userId,
+    await getNextQuestion.execute({
+      userId: USER_ID,
       filters: {
-        tagSlugs: [],
-        difficulties: [],
+        ...EMPTY_FILTERS,
         statuses: ['incorrect'] as const,
       },
     });
 
-    expect(questions.listPublishedCandidateIdsCalls[0]).toEqual({
-      tagSlugs: [],
-      difficulties: [],
+    expect(questionRepo.listPublishedCandidateIdsCalls[0]).toEqual({
+      ...EMPTY_FILTERS,
       statuses: ['incorrect'],
-      userId,
+      userId: USER_ID,
     });
   });
 
   it('returns null when status filters yield no candidates', async () => {
-    const useCase = new GetNextQuestionUseCase(
-      new FakeQuestionRepository([]),
-      new FakeAttemptRepository([]),
-      new FakePracticeSessionRepository([]),
-    );
+    const { getNextQuestion } = createTestDeps();
 
     await expect(
-      useCase.execute({
-        userId: 'user-1',
+      getNextQuestion.execute({
+        userId: USER_ID,
         filters: {
-          tagSlugs: [],
-          difficulties: [],
+          ...EMPTY_FILTERS,
           statuses: ['unanswered'] as const,
         },
       }),
@@ -699,50 +516,37 @@ describe('GetNextQuestionUseCase', () => {
   });
 
   it('prefers never-attempted questions in filter mode', async () => {
-    const userId = 'user-1';
-
     const tag = createTag({ slug: 'opioids', kind: 'topic' });
 
     const attempted = createQuestion({
       id: 'q-old',
       slug: 'q-old',
-      status: 'published',
       createdAt: new Date('2026-01-01T00:00:00Z'),
-      choices: [createChoice({ id: 'c-old', questionId: 'q-old', label: 'A' })],
+      choices: [createChoice({ id: 'c-old', questionId: 'q-old' })],
       tags: [tag],
     });
 
     const unattempted = createQuestion({
       id: 'q-new',
       slug: 'q-new',
-      status: 'published',
       createdAt: new Date('2026-02-01T00:00:00Z'),
-      choices: [createChoice({ id: 'c-new', questionId: 'q-new', label: 'A' })],
+      choices: [createChoice({ id: 'c-new', questionId: 'q-new' })],
       tags: [tag],
     });
 
-    const questions = new FakeQuestionRepository([attempted, unattempted]);
-    const attempts = new FakeAttemptRepository([
-      {
-        id: 'attempt-1',
-        userId,
-        questionId: 'q-old',
-        practiceSessionId: null,
-        selectedChoiceId: 'c-old',
-        isCorrect: false,
-        timeSpentSeconds: 0,
-        answeredAt: new Date('2026-01-31T00:00:00Z'),
-      },
-    ]);
+    const { getNextQuestion } = createTestDeps({
+      questions: [attempted, unattempted],
+      attempts: [
+        createAttempt({
+          questionId: 'q-old',
+          selectedChoiceId: 'c-old',
+          answeredAt: ANSWERED_AT,
+        }),
+      ],
+    });
 
-    const useCase = new GetNextQuestionUseCase(
-      questions,
-      attempts,
-      new FakePracticeSessionRepository([]),
-    );
-
-    const result = await useCase.execute({
-      userId,
+    const result = await getNextQuestion.execute({
+      userId: USER_ID,
       filters: { tagSlugs: ['opioids'], difficulties: [] },
     });
 
@@ -752,26 +556,13 @@ describe('GetNextQuestionUseCase', () => {
 
   it('shuffles choices based on userId and questionId', async () => {
     const questionId = 'q1';
-    const question = createQuestion({
-      id: questionId,
-      status: 'published',
-      choices: [
-        createChoice({ id: 'c1', questionId, label: 'A', sortOrder: 1 }),
-        createChoice({ id: 'c2', questionId, label: 'B', sortOrder: 2 }),
-        createChoice({ id: 'c3', questionId, label: 'C', sortOrder: 3 }),
-        createChoice({ id: 'c4', questionId, label: 'D', sortOrder: 4 }),
-      ],
+    const { getNextQuestion } = createTestDeps({
+      questions: [createShuffleQuestion(questionId)],
     });
 
-    const useCase = new GetNextQuestionUseCase(
-      new FakeQuestionRepository([question]),
-      new FakeAttemptRepository([]),
-      new FakePracticeSessionRepository([]),
-    );
-
-    const result = await useCase.execute({
-      userId: 'user-1',
-      filters: { tagSlugs: [], difficulties: [] },
+    const result = await getNextQuestion.execute({
+      userId: USER_ID,
+      filters: EMPTY_FILTERS,
     });
 
     expect(result?.choices).toHaveLength(4);
@@ -782,31 +573,18 @@ describe('GetNextQuestionUseCase', () => {
 
   it('same user+question always gets same shuffle order', async () => {
     const questionId = 'q1';
-    const question = createQuestion({
-      id: questionId,
-      status: 'published',
-      choices: [
-        createChoice({ id: 'c1', questionId, label: 'A', sortOrder: 1 }),
-        createChoice({ id: 'c2', questionId, label: 'B', sortOrder: 2 }),
-        createChoice({ id: 'c3', questionId, label: 'C', sortOrder: 3 }),
-        createChoice({ id: 'c4', questionId, label: 'D', sortOrder: 4 }),
-      ],
+    const { getNextQuestion } = createTestDeps({
+      questions: [createShuffleQuestion(questionId)],
     });
 
-    const useCase = new GetNextQuestionUseCase(
-      new FakeQuestionRepository([question]),
-      new FakeAttemptRepository([]),
-      new FakePracticeSessionRepository([]),
-    );
-
-    const result1 = await useCase.execute({
-      userId: 'user-1',
-      filters: { tagSlugs: [], difficulties: [] },
+    const result1 = await getNextQuestion.execute({
+      userId: USER_ID,
+      filters: EMPTY_FILTERS,
     });
 
-    const result2 = await useCase.execute({
-      userId: 'user-1',
-      filters: { tagSlugs: [], difficulties: [] },
+    const result2 = await getNextQuestion.execute({
+      userId: USER_ID,
+      filters: EMPTY_FILTERS,
     });
 
     expect(result1?.choices.map((c) => c.id)).toEqual(
@@ -816,16 +594,7 @@ describe('GetNextQuestionUseCase', () => {
 
   it('assigns sequential labels (A-E) in presented order after shuffling', async () => {
     const questionId = 'q1';
-    const question = createQuestion({
-      id: questionId,
-      status: 'published',
-      choices: [
-        createChoice({ id: 'c1', questionId, label: 'A', sortOrder: 1 }),
-        createChoice({ id: 'c2', questionId, label: 'B', sortOrder: 2 }),
-        createChoice({ id: 'c3', questionId, label: 'C', sortOrder: 3 }),
-        createChoice({ id: 'c4', questionId, label: 'D', sortOrder: 4 }),
-      ],
-    });
+    const question = createShuffleQuestion(questionId);
 
     const stableInput = question.choices.slice().sort((a, b) => {
       const bySortOrder = a.sortOrder - b.sortOrder;
@@ -852,15 +621,11 @@ describe('GetNextQuestionUseCase', () => {
       );
     }
 
-    const useCase = new GetNextQuestionUseCase(
-      new FakeQuestionRepository([question]),
-      new FakeAttemptRepository([]),
-      new FakePracticeSessionRepository([]),
-    );
+    const { getNextQuestion } = createTestDeps({ questions: [question] });
 
-    const result = await useCase.execute({
+    const result = await getNextQuestion.execute({
       userId,
-      filters: { tagSlugs: [], difficulties: [] },
+      filters: EMPTY_FILTERS,
     });
 
     expect(result?.choices.map((c) => c.label)).toEqual(['A', 'B', 'C', 'D']);
@@ -877,11 +642,7 @@ describe('GetNextQuestionUseCase', () => {
       createChoice({ id: 'c4', questionId, label: 'D', sortOrder: 1 }),
     ];
 
-    const baseQuestion = createQuestion({
-      id: questionId,
-      status: 'published',
-      choices,
-    });
+    const baseQuestion = createQuestion({ id: questionId, choices });
 
     const questionOrdered = baseQuestion;
     const questionUnordered = {
@@ -889,26 +650,21 @@ describe('GetNextQuestionUseCase', () => {
       choices: [choices[2], choices[0], choices[3], choices[1]],
     };
 
-    const useCase1 = new GetNextQuestionUseCase(
-      new FakeQuestionRepository([questionOrdered]),
-      new FakeAttemptRepository([]),
-      new FakePracticeSessionRepository([]),
-    );
-
-    const useCase2 = new GetNextQuestionUseCase(
-      new FakeQuestionRepository([questionUnordered]),
-      new FakeAttemptRepository([]),
-      new FakePracticeSessionRepository([]),
-    );
-
-    const result1 = await useCase1.execute({
-      userId: 'user-1',
-      filters: { tagSlugs: [], difficulties: [] },
+    const { getNextQuestion: getNextQuestionOrdered } = createTestDeps({
+      questions: [questionOrdered],
+    });
+    const { getNextQuestion: getNextQuestionUnordered } = createTestDeps({
+      questions: [questionUnordered],
     });
 
-    const result2 = await useCase2.execute({
-      userId: 'user-1',
-      filters: { tagSlugs: [], difficulties: [] },
+    const result1 = await getNextQuestionOrdered.execute({
+      userId: USER_ID,
+      filters: EMPTY_FILTERS,
+    });
+
+    const result2 = await getNextQuestionUnordered.execute({
+      userId: USER_ID,
+      filters: EMPTY_FILTERS,
     });
 
     expect(result1?.choices.map((c) => c.id)).toEqual(
@@ -917,103 +673,68 @@ describe('GetNextQuestionUseCase', () => {
   });
 
   it('chooses the question with the oldest last attempt if all attempted', async () => {
-    const userId = 'user-1';
-
     const q1 = createQuestion({
       id: 'q1',
-      status: 'published',
       createdAt: new Date('2026-01-01T00:00:00Z'),
-      choices: [createChoice({ id: 'c1', questionId: 'q1', label: 'A' })],
+      choices: [createChoice({ id: 'c1', questionId: 'q1' })],
     });
 
     const q2 = createQuestion({
       id: 'q2',
-      status: 'published',
       createdAt: new Date('2026-01-02T00:00:00Z'),
-      choices: [createChoice({ id: 'c2', questionId: 'q2', label: 'A' })],
+      choices: [createChoice({ id: 'c2', questionId: 'q2' })],
     });
 
-    const questions = new FakeQuestionRepository([q1, q2]);
-    const attempts = new FakeAttemptRepository([
-      {
-        id: 'attempt-1',
-        userId,
-        questionId: 'q1',
-        practiceSessionId: null,
-        selectedChoiceId: 'c1',
-        isCorrect: false,
-        timeSpentSeconds: 0,
-        answeredAt: new Date('2026-01-30T00:00:00Z'),
-      },
-      {
-        id: 'attempt-2',
-        userId,
-        questionId: 'q2',
-        practiceSessionId: null,
-        selectedChoiceId: 'c2',
-        isCorrect: false,
-        timeSpentSeconds: 0,
-        answeredAt: new Date('2026-01-31T00:00:00Z'),
-      },
-    ]);
+    const { getNextQuestion } = createTestDeps({
+      questions: [q1, q2],
+      attempts: [
+        createAttempt({
+          questionId: 'q1',
+          selectedChoiceId: 'c1',
+          answeredAt: new Date('2026-01-30T00:00:00Z'),
+        }),
+        createAttempt({
+          questionId: 'q2',
+          selectedChoiceId: 'c2',
+          answeredAt: ANSWERED_AT,
+        }),
+      ],
+    });
 
-    const useCase = new GetNextQuestionUseCase(
-      questions,
-      attempts,
-      new FakePracticeSessionRepository([]),
-    );
-
-    const result = await useCase.execute({
-      userId,
-      filters: { tagSlugs: [], difficulties: [] },
+    const result = await getNextQuestion.execute({
+      userId: USER_ID,
+      filters: EMPTY_FILTERS,
     });
 
     expect(result?.questionId).toBe('q1');
   });
 
   it('throws VALIDATION_ERROR when input is missing both sessionId and filters', async () => {
-    const useCase = new GetNextQuestionUseCase(
-      new FakeQuestionRepository([]),
-      new FakeAttemptRepository([]),
-      new FakePracticeSessionRepository([]),
-    );
+    const { getNextQuestion } = createTestDeps();
 
     await expect(
-      useCase.execute({ userId: 'user-1' } as unknown as Parameters<
-        typeof useCase.execute
+      getNextQuestion.execute({ userId: USER_ID } as unknown as Parameters<
+        typeof getNextQuestion.execute
       >[0]),
     ).rejects.toMatchObject({ code: 'VALIDATION_ERROR' });
   });
 
   it('throws NOT_FOUND when repository returns a candidate id that cannot be loaded', async () => {
-    const misbehavingQuestions: QuestionRepository = {
-      async findPublishedById() {
-        return null;
-      },
-      async findPublishedBySlug() {
-        return null;
-      },
-      async findPublishedByIds() {
-        return [];
-      },
-      async listPublishedCandidateIds() {
-        return ['missing'];
-      },
-      async countPublishedCandidateIds() {
-        return 0;
-      },
-    };
+    const questionRepo = new FakeQuestionRepository([]);
+    vi.spyOn(questionRepo, 'listPublishedCandidateIds').mockResolvedValueOnce([
+      'missing',
+    ]);
 
-    const useCase = new GetNextQuestionUseCase(
-      misbehavingQuestions,
+    const getNextQuestion = new GetNextQuestionUseCase(
+      questionRepo,
       new FakeAttemptRepository([]),
       new FakePracticeSessionRepository([]),
     );
 
     await expect(
-      useCase.execute({
-        userId: 'user-1',
-        filters: { tagSlugs: [], difficulties: [] },
+      getNextQuestion.execute({
+        userId: USER_ID,
+        filters: EMPTY_FILTERS,
       }),
     ).rejects.toEqual(new ApplicationError('NOT_FOUND', 'Question not found'));
   });

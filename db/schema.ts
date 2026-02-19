@@ -16,6 +16,11 @@ import {
   varchar,
 } from 'drizzle-orm/pg-core';
 
+// WHY: This file exceeds the 300-line soft guideline intentionally.
+// DEBT-234 enforces a warning threshold at 350 lines; DEBT-224 keeps 300 as the design guideline.
+// It is a deep module (Ousterhout) with a single responsibility: define the complete relational schema contract (enums, tables, relations, and inferred types) as one SSOT.
+// Splitting would scatter tightly coupled table, relation, and type definitions, making schema changes easier to miss and increasing migration drift risk.
+// Reviewed in DEBT-224 audit (2026-02-18).
 /**
  * ENUMS
  */
