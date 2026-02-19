@@ -284,7 +284,7 @@ describe('app/(app)/app/bookmarks', () => {
     });
     const html = renderToStaticMarkup(element);
 
-    expect(html).toContain('Unable to remove bookmark.');
+    expect(html).toContain('Unable to remove bookmark. Please try again.');
     expect(html).toContain('Stem for q1');
   });
 

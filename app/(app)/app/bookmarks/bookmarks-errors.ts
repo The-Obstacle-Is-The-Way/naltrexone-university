@@ -1,15 +1,23 @@
+const REMOVE_BOOKMARK_ERROR_CODES = [
+  'missing_question_id',
+  'toggle_failed',
+  'remove_failed',
+] as const;
+
 export type RemoveBookmarkErrorCode =
-  | 'missing_question_id'
-  | 'toggle_failed'
-  | 'remove_failed';
+  (typeof REMOVE_BOOKMARK_ERROR_CODES)[number];
+
+function isRemoveBookmarkErrorCode(
+  code: string,
+): code is RemoveBookmarkErrorCode {
+  return (REMOVE_BOOKMARK_ERROR_CODES as readonly string[]).includes(code);
+}
 
 export function parseRemoveBookmarkErrorCode(
   code: string | undefined,
 ): RemoveBookmarkErrorCode | undefined {
-  if (code === 'missing_question_id') return code;
-  if (code === 'toggle_failed') return code;
-  if (code === 'remove_failed') return code;
-  return undefined;
+  if (!code) return undefined;
+  return isRemoveBookmarkErrorCode(code) ? code : undefined;
 }
 
 export function getRemoveBookmarkErrorMessage(
