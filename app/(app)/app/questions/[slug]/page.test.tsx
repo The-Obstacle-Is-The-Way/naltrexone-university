@@ -50,11 +50,11 @@ describe('app/(app)/app/questions/[slug]', () => {
   it('passes origin searchParams into the client page', async () => {
     const element = await QuestionPage({
       params: Promise.resolve({ slug: 'q-1' }),
-      searchParams: Promise.resolve({ from: 'review' }),
+      searchParams: Promise.resolve({ from: 'history' }),
     } as never);
 
     expect(element).toMatchObject({
-      props: { slug: 'q-1', from: 'review' },
+      props: { slug: 'q-1', from: 'history' },
     });
   });
 
