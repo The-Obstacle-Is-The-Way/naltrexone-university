@@ -33,6 +33,7 @@ Target: reduce the file to ~280 lines with clearer phase separation.
 ## Verification
 
 - [x] `mapWithConcurrencyLimit` is importable from a shared module (`src/adapters/shared/concurrency.ts`)
+- [x] `mapWithConcurrencyLimit` has dedicated unit coverage (`src/adapters/shared/concurrency.test.ts`)
 - [x] All existing `reconcile-stripe-subscriptions.test.ts` tests pass unchanged
 - [x] Reconciliation file is under 300 lines (`294` lines)
 - [x] Algorithm phases are documented with inline comments
@@ -40,4 +41,4 @@ Target: reduce the file to ~280 lines with clearer phase separation.
 ## Related
 
 - [DEBT-224](../../debt/debt-224-file-size-audit-production-and-test.md) — Parent audit
-- [DEBT-237](../../debt/debt-237-extract-reconciliation-test-factory.md) — Companion: test file boilerplate
+- [DEBT-237](debt-237-extract-reconciliation-test-factory.md) — Companion: test file boilerplate
