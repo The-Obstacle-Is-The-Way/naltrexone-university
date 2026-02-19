@@ -7,6 +7,7 @@ import {
   FakeLogger,
   FakePaymentGateway,
   FakePracticeSessionRepository,
+  FakeQuestionRepository,
   FakeStripeCustomerRepository,
   FakeStripeEventRepository,
   FakeSubscriptionRepository,
@@ -65,6 +66,42 @@ describe('FakePracticeSessionRepository', () => {
 
     await expect(repo.end('session-1', 'user-1')).rejects.toEqual(
       new ApplicationError('CONFLICT', 'Practice session already ended'),
+    );
+  });
+});
+
+describe('FakeQuestionRepository', () => {
+  it('throws VALIDATION_ERROR when status filters are provided without userId', async () => {
+    const repo = new FakeQuestionRepository([createQuestion({ id: 'q1' })]);
+
+    const promise = repo.listPublishedCandidateIds({
+      tagSlugs: [],
+      difficulties: [],
+      statuses: ['incorrect'],
+    });
+
+    await expect(promise).rejects.toEqual(
+      new ApplicationError(
+        'VALIDATION_ERROR',
+        'userId is required when filtering by status',
+      ),
+    );
+  });
+
+  it('throws VALIDATION_ERROR from count when status filters are provided without userId', async () => {
+    const repo = new FakeQuestionRepository([createQuestion({ id: 'q1' })]);
+
+    const promise = repo.countPublishedCandidateIds({
+      tagSlugs: [],
+      difficulties: [],
+      statuses: ['incorrect'],
+    });
+
+    await expect(promise).rejects.toEqual(
+      new ApplicationError(
+        'VALIDATION_ERROR',
+        'userId is required when filtering by status',
+      ),
     );
   });
 });
@@ -487,6 +524,14 @@ describe('FakeStripeEventRepository', () => {
       expect(state.processedAt).toBeInstanceOf(Date);
       expect(state.error).toBeNull();
     });
+
+    it('throws NOT_FOUND when event is missing', async () => {
+      const repo = new FakeStripeEventRepository();
+
+      await expect(repo.markProcessed('evt_missing')).rejects.toEqual(
+        new ApplicationError('NOT_FOUND', 'Stripe event not found'),
+      );
+    });
   });
 
   describe('markFailed', () => {
@@ -500,6 +545,16 @@ describe('FakeStripeEventRepository', () => {
       const state = await repo.lock('evt_123');
       expect(state.processedAt).toBeNull();
       expect(state.error).toBe('Something went wrong');
+    });
+
+    it('throws NOT_FOUND when event is missing', async () => {
+      const repo = new FakeStripeEventRepository();
+
+      await expect(
+        repo.markFailed('evt_missing', 'Something went wrong'),
+      ).rejects.toEqual(
+        new ApplicationError('NOT_FOUND', 'Stripe event not found'),
+      );
     });
   });
 
