@@ -5,7 +5,7 @@
 **Date:** 2026-02-18
 **Resolved:** 2026-02-19
 **Last Verified:** 2026-02-19
-**Parent:** [DEBT-224](../../debt/debt-224-file-size-audit-production-and-test.md)
+**Parent:** [DEBT-224](debt-224-file-size-audit-production-and-test.md)
 **Component:** `scripts/seed.ts`
 
 ---
@@ -63,4 +63,4 @@ Guardrail: reuse existing `scripts/seed-helpers.ts` where appropriate instead of
 
 ## Related
 
-- [DEBT-224](../../debt/debt-224-file-size-audit-production-and-test.md) - Parent file-size audit
+- [DEBT-224](debt-224-file-size-audit-production-and-test.md) - Parent file-size audit

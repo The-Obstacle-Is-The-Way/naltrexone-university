@@ -5,7 +5,7 @@
 **Date:** 2026-02-18
 **Resolved:** 2026-02-18
 **Last Verified:** 2026-02-18
-**Parent:** [DEBT-224](../../debt/debt-224-file-size-audit-production-and-test.md)
+**Parent:** [DEBT-224](debt-224-file-size-audit-production-and-test.md)
 **Component:** `db/schema.ts`, `src/adapters/repositories/drizzle-attempt-repository.ts`, `app/(app)/app/history/components/history-questions-tab.tsx`, `app/(app)/app/practice/[sessionId]/practice-session-page-logic.ts`, `app/(app)/app/questions/[slug]/question-page-client.tsx`
 
 ---
@@ -56,5 +56,5 @@ Guardrail: each comment must name the single responsibility and the concrete dow
 
 ## Related
 
-- [DEBT-224](../../debt/debt-224-file-size-audit-production-and-test.md) - Parent file-size audit
+- [DEBT-224](debt-224-file-size-audit-production-and-test.md) - Parent file-size audit
 - [DEBT-193](debt-193-backend-production-files-over-300-lines.md) - Earlier audit establishing the 300-line guideline

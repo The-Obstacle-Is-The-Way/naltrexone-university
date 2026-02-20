@@ -5,7 +5,7 @@
 **Date:** 2026-02-18
 **Resolved:** 2026-02-19
 **Last Verified:** 2026-02-19
-**Parent:** [DEBT-224](../../debt/debt-224-file-size-audit-production-and-test.md)
+**Parent:** [DEBT-224](debt-224-file-size-audit-production-and-test.md)
 **Component:** `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-page-controller.browser.spec.tsx`
 
 ---
@@ -59,5 +59,5 @@ Guardrail: preserve current test readability by keeping scenario assertions expl
 
 ## Related
 
-- [DEBT-224](../../debt/debt-224-file-size-audit-production-and-test.md) - Parent file-size audit
+- [DEBT-224](debt-224-file-size-audit-production-and-test.md) - Parent file-size audit
 - [DEBT-204](debt-204-stripe-payment-gateway-test-god-file.md) - Similar duplication pattern in tests

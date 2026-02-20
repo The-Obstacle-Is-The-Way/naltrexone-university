@@ -5,7 +5,7 @@
 **Date:** 2026-02-18
 **Resolved:** 2026-02-18
 **Last Verified:** 2026-02-18
-**Parent:** [DEBT-224](../../debt/debt-224-file-size-audit-production-and-test.md)
+**Parent:** [DEBT-224](debt-224-file-size-audit-production-and-test.md)
 **Component:** `src/application/use-cases/get-next-question.test.ts`
 
 ---
@@ -50,4 +50,4 @@ Guardrail: keep each test's behavioral assertion explicit; only abstract Arrange
 
 ## Related
 
-- [DEBT-224](../../debt/debt-224-file-size-audit-production-and-test.md) - Parent file-size audit
+- [DEBT-224](debt-224-file-size-audit-production-and-test.md) - Parent file-size audit

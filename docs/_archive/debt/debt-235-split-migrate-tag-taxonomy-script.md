@@ -1,8 +1,9 @@
 # DEBT-235: Split migrate-tag-taxonomy.ts Into Focused Modules
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P3
 **Date:** 2026-02-19
+**Resolved:** 2026-02-19
 **Component:** `scripts/migrate-tag-taxonomy.ts`
 **Parent:** [DEBT-224](debt-224-file-size-audit-production-and-test.md)
 
@@ -10,7 +11,7 @@
 
 ## Description
 
-`scripts/migrate-tag-taxonomy.ts` is 571 lines and conflates four distinct concerns:
+`scripts/migrate-tag-taxonomy.ts` was 571 lines and conflated four distinct concerns:
 
 1. **CLI argument parsing** — flag handling, help text, dry-run mode
 2. **Tag transformation logic** — mapping legacy taxonomy to canonical taxonomy (pure functions)
@@ -30,23 +31,24 @@ This violates single responsibility and makes the core migration logic harder to
 
 Split into focused modules under `scripts/migrate-tag-taxonomy/`:
 
-| Module | Responsibility | Estimated Lines |
-|--------|---------------|----------------|
-| `tag-taxonomy-mappers.ts` | Mapping tables and functions (`inferDomainTopicSlug`, `mapLegacyTopicSlug`, `canonicalXxxName`) | ~80 |
-| `tag-migration-logic.ts` | Core migration algorithm (`migrateQuestionTags`, `validateInvariants`) | ~120 |
-| `tag-parsers.ts` | `parseTags`, `parseChoiceTexts`, `tagsSignature` | ~90 |
-| `migrate-tag-taxonomy.ts` | CLI entry point — argument parsing, file orchestration, reporting | ~150 |
+| Module | Responsibility | Final Lines |
+|--------|---------------|------------:|
+| `scripts/migrate-tag-taxonomy/tag-taxonomy-mappers.ts` | Mapping tables and functions (`inferDomainTopicSlug`, `mapLegacyTopicSlug`, `canonicalXxxName`) | 189 |
+| `scripts/migrate-tag-taxonomy/tag-migration-logic.ts` | Core migration algorithm (`migrateQuestionTags`, `validateInvariants`) | 123 |
+| `scripts/migrate-tag-taxonomy/tag-parsers.ts` | `parseTags`, `parseChoiceTexts`, `tagsSignature` | 83 |
+| `scripts/migrate-tag-taxonomy/types.ts` | Shared migration/CLI/report types | 38 |
+| `scripts/migrate-tag-taxonomy.ts` | Thin CLI entry point — argument parsing, file orchestration, reporting | 180 |
 
 Follow the same pattern used in DEBT-230 (`scripts/seed/` decomposition).
 
 ## Verification
 
-- [ ] All existing `scripts/migrate-tag-taxonomy.test.ts` tests pass unchanged
-- [ ] No file in the module exceeds 300 lines
-- [ ] CLI behavior is identical (dry-run, verbose, file targeting)
-- [ ] Core mapping functions are independently importable and testable
+- [x] All existing `scripts/migrate-tag-taxonomy.test.ts` tests pass unchanged
+- [x] No file in the module exceeds 300 lines
+- [x] CLI behavior is identical (dry-run, write, report)
+- [x] Core mapping functions are independently importable and testable
 
 ## Related
 
 - [DEBT-224](debt-224-file-size-audit-production-and-test.md) — Parent audit
-- [DEBT-230](../_archive/debt/debt-230-decompose-seed-script-into-modules.md) — Precedent: seed.ts decomposition
+- [DEBT-230](debt-230-decompose-seed-script-into-modules.md) — Precedent: seed.ts decomposition
