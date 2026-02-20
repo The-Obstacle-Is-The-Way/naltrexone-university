@@ -96,7 +96,7 @@ These tests are large but currently justified by scenario/domain breadth. Monito
 |------|----:|----:|------------|
 | `src/application/test-helpers/fakes/fake-repositories.ts` | 1,127 | deleted | DEBT-227: Split into 13 individual fake files |
 | `scripts/seed.ts` | 484 | 58 | DEBT-230: Decomposed into `scripts/seed/` modules |
-| `scripts/migrate-tag-taxonomy.ts` | 571 | 180 | DEBT-235: Decomposed into `scripts/migrate-tag-taxonomy/` modules |
+| `scripts/migrate-tag-taxonomy.ts` | 571 | 182 | DEBT-235: Decomposed into `scripts/migrate-tag-taxonomy/` modules |
 | `app/(app)/app/bookmarks/page.tsx` | 322 | 263 | DEBT-229: Extracted server action and error handling |
 | `src/application/test-helpers/fakes/fake-use-cases.ts` | 320 | 78 | DEBT-228: DRY with generic base class |
 | `src/adapters/jobs/reconcile-stripe-subscriptions.ts` | 315 | 294 | DEBT-236: Extracted shared concurrency utility and phase comments |

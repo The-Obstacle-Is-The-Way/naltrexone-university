@@ -35,9 +35,9 @@ Split into focused modules under `scripts/migrate-tag-taxonomy/`:
 |--------|---------------|------------:|
 | `scripts/migrate-tag-taxonomy/tag-taxonomy-mappers.ts` | Mapping tables and functions (`inferDomainTopicSlug`, `mapLegacyTopicSlug`, `canonicalXxxName`) | 189 |
 | `scripts/migrate-tag-taxonomy/tag-migration-logic.ts` | Core migration algorithm (`migrateQuestionTags`, `validateInvariants`) | 123 |
-| `scripts/migrate-tag-taxonomy/tag-parsers.ts` | `parseTags`, `parseChoiceTexts`, `tagsSignature` | 83 |
-| `scripts/migrate-tag-taxonomy/types.ts` | Shared migration/CLI/report types | 38 |
-| `scripts/migrate-tag-taxonomy.ts` | Thin CLI entry point — argument parsing, file orchestration, reporting | 180 |
+| `scripts/migrate-tag-taxonomy/tag-parsers.ts` | `parseTags`, `parseChoiceTexts`, `tagsSignature` | 79 |
+| `scripts/migrate-tag-taxonomy/types.ts` | Shared migration/CLI/report types | 45 |
+| `scripts/migrate-tag-taxonomy.ts` | Thin CLI entry point — argument parsing, file orchestration, reporting | 182 |
 
 Follow the same pattern used in DEBT-230 (`scripts/seed/` decomposition).
 
