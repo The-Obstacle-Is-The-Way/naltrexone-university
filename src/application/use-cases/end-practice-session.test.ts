@@ -10,42 +10,49 @@ describe('EndPracticeSessionUseCase', () => {
     vi.restoreAllMocks();
   });
 
+  function buildSessionWithOneAnswered(
+    id: string,
+    mode: 'exam' | 'tutor',
+  ): ReturnType<typeof createPracticeSession> {
+    return createPracticeSession({
+      id,
+      userId: 'user-1',
+      mode,
+      questionIds: ['q1', 'q2', 'q3'],
+      questionStates: [
+        {
+          questionId: 'q1',
+          markedForReview: false,
+          latestSelectedChoiceId: 'choice-1',
+          latestIsCorrect: true,
+          latestAnsweredAt: new Date('2026-02-01T00:05:00Z'),
+        },
+        {
+          questionId: 'q2',
+          markedForReview: false,
+          latestSelectedChoiceId: null,
+          latestIsCorrect: null,
+          latestAnsweredAt: null,
+        },
+        {
+          questionId: 'q3',
+          markedForReview: false,
+          latestSelectedChoiceId: null,
+          latestIsCorrect: null,
+          latestAnsweredAt: null,
+        },
+      ],
+      startedAt: new Date('2026-02-01T00:00:00Z'),
+      endedAt: null,
+    });
+  }
+
   it('computes exam accuracy using total question count denominator', async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-02-01T00:10:00Z'));
 
     const sessions = new FakePracticeSessionRepository([
-      createPracticeSession({
-        id: 'session-exam',
-        userId: 'user-1',
-        mode: 'exam',
-        questionIds: ['q1', 'q2', 'q3'],
-        questionStates: [
-          {
-            questionId: 'q1',
-            markedForReview: false,
-            latestSelectedChoiceId: 'choice-1',
-            latestIsCorrect: true,
-            latestAnsweredAt: new Date('2026-02-01T00:05:00Z'),
-          },
-          {
-            questionId: 'q2',
-            markedForReview: false,
-            latestSelectedChoiceId: null,
-            latestIsCorrect: null,
-            latestAnsweredAt: null,
-          },
-          {
-            questionId: 'q3',
-            markedForReview: false,
-            latestSelectedChoiceId: null,
-            latestIsCorrect: null,
-            latestAnsweredAt: null,
-          },
-        ],
-        startedAt: new Date('2026-02-01T00:00:00Z'),
-        endedAt: null,
-      }),
+      buildSessionWithOneAnswered('session-exam', 'exam'),
     ]);
 
     const useCase = new EndPracticeSessionUseCase(sessions);
@@ -69,37 +76,7 @@ describe('EndPracticeSessionUseCase', () => {
     vi.setSystemTime(new Date('2026-02-01T00:10:00Z'));
 
     const sessions = new FakePracticeSessionRepository([
-      createPracticeSession({
-        id: 'session-tutor',
-        userId: 'user-1',
-        mode: 'tutor',
-        questionIds: ['q1', 'q2', 'q3'],
-        questionStates: [
-          {
-            questionId: 'q1',
-            markedForReview: false,
-            latestSelectedChoiceId: 'choice-1',
-            latestIsCorrect: true,
-            latestAnsweredAt: new Date('2026-02-01T00:05:00Z'),
-          },
-          {
-            questionId: 'q2',
-            markedForReview: false,
-            latestSelectedChoiceId: null,
-            latestIsCorrect: null,
-            latestAnsweredAt: null,
-          },
-          {
-            questionId: 'q3',
-            markedForReview: false,
-            latestSelectedChoiceId: null,
-            latestIsCorrect: null,
-            latestAnsweredAt: null,
-          },
-        ],
-        startedAt: new Date('2026-02-01T00:00:00Z'),
-        endedAt: null,
-      }),
+      buildSessionWithOneAnswered('session-tutor', 'tutor'),
     ]);
 
     const useCase = new EndPracticeSessionUseCase(sessions);
