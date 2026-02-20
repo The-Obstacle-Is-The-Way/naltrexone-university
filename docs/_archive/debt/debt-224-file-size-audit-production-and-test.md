@@ -1,9 +1,10 @@
 # DEBT-224: File Size Audit - Production and Test Files Exceeding Guidelines
 
-**Status:** Decomposed
+**Status:** Resolved
 **Priority:** P3
 **Date:** 2026-02-16
 **Decomposed:** 2026-02-18
+**Resolved:** 2026-02-19
 **Last Verified:** 2026-02-19
 **Component:** Codebase-wide
 
@@ -11,28 +12,28 @@
 
 ## Decomposition
 
-This audit was decomposed into 8 child debt tickets (all resolved) plus 3 follow-up tickets for residual files discovered during final audit.
+This audit was decomposed into 8 child debt tickets plus 3 follow-up tickets for residual files discovered during final audit. All children are now resolved.
 
 ### Original Children (All Resolved)
 
 | Child | Title | Priority | Disposition |
 |-------|-------|----------|-------------|
-| [DEBT-227](../_archive/debt/debt-227-split-fake-repositories-into-individual-files.md) | Split fake-repositories.ts Into Individual Files | P3 | B - Split (Resolved) |
-| [DEBT-228](../_archive/debt/debt-228-dry-fake-use-cases-with-generic-base.md) | DRY fake-use-cases.ts With Generic Base Class | P4 | C - DRY (Resolved) |
-| [DEBT-229](../_archive/debt/debt-229-extract-bookmarks-server-action-and-errors.md) | Extract Server Action and Error Handling From bookmarks/page.tsx | P3 | B - Split (Resolved) |
-| [DEBT-230](../_archive/debt/debt-230-decompose-seed-script-into-modules.md) | Decompose seed.ts Into Focused Modules | P4 | B - Split (Resolved) |
-| [DEBT-231](../_archive/debt/debt-231-reduce-browser-spec-probe-duplication.md) | Reduce Browser Spec Probe Component Duplication | P3 | Test bloat (Resolved) |
-| [DEBT-232](../_archive/debt/debt-232-reduce-get-next-question-test-inflation.md) | Reduce get-next-question.test.ts Test Inflation | P3 | Test bloat (Resolved) |
-| [DEBT-233](../_archive/debt/debt-233-add-why-comments-to-justified-large-files.md) | Add WHY Comments to Justified Large Files | P4 | A - Document (Resolved) |
-| [DEBT-234](../_archive/debt/debt-234-add-max-lines-lint-rule.md) | Add max-lines Check to Prevent File Size Regression | P4 | Prevention (Resolved) |
+| [DEBT-227](debt-227-split-fake-repositories-into-individual-files.md) | Split fake-repositories.ts Into Individual Files | P3 | B - Split (Resolved) |
+| [DEBT-228](debt-228-dry-fake-use-cases-with-generic-base.md) | DRY fake-use-cases.ts With Generic Base Class | P4 | C - DRY (Resolved) |
+| [DEBT-229](debt-229-extract-bookmarks-server-action-and-errors.md) | Extract Server Action and Error Handling From bookmarks/page.tsx | P3 | B - Split (Resolved) |
+| [DEBT-230](debt-230-decompose-seed-script-into-modules.md) | Decompose seed.ts Into Focused Modules | P4 | B - Split (Resolved) |
+| [DEBT-231](debt-231-reduce-browser-spec-probe-duplication.md) | Reduce Browser Spec Probe Component Duplication | P3 | Test bloat (Resolved) |
+| [DEBT-232](debt-232-reduce-get-next-question-test-inflation.md) | Reduce get-next-question.test.ts Test Inflation | P3 | Test bloat (Resolved) |
+| [DEBT-233](debt-233-add-why-comments-to-justified-large-files.md) | Add WHY Comments to Justified Large Files | P4 | A - Document (Resolved) |
+| [DEBT-234](debt-234-add-max-lines-lint-rule.md) | Add max-lines Check to Prevent File Size Regression | P4 | Prevention (Resolved) |
 
-### Follow-Up Children (1 Open, 2 Resolved)
+### Follow-Up Children (All Resolved)
 
 | Child | Title | Priority | Disposition |
 |-------|-------|----------|-------------|
-| [DEBT-235](debt-235-split-migrate-tag-taxonomy-script.md) | Split migrate-tag-taxonomy.ts Into Focused Modules | P3 | B - Split |
-| [DEBT-236](../_archive/debt/debt-236-extract-reconciliation-concurrency-utility.md) | Extract Concurrency Utility and Document Reconciliation Algorithm | P4 | B - Split (Resolved) |
-| [DEBT-237](../_archive/debt/debt-237-extract-reconciliation-test-factory.md) | Extract Reconciliation Test Factory to Reduce Boilerplate | P4 | Test bloat (Resolved) |
+| [DEBT-235](debt-235-split-migrate-tag-taxonomy-script.md) | Split migrate-tag-taxonomy.ts Into Focused Modules | P3 | B - Split (Resolved) |
+| [DEBT-236](debt-236-extract-reconciliation-concurrency-utility.md) | Extract Concurrency Utility and Document Reconciliation Algorithm | P4 | B - Split (Resolved) |
+| [DEBT-237](debt-237-extract-reconciliation-test-factory.md) | Extract Reconciliation Test Factory to Reduce Boilerplate | P4 | Test bloat (Resolved) |
 
 ## Audit Method
 
@@ -44,7 +45,7 @@ This audit was decomposed into 8 child debt tickets (all resolved) plus 3 follow
 
 Current repository snapshot includes:
 
-- **8 production files over 300 lines** (was 13; 5 resolved below threshold)
+- **7 production files over 300 lines** (was 13; 6 resolved below threshold)
 - **7 test files over 1,000 lines** (was 9; 2 resolved below threshold)
 
 Every current over-threshold TypeScript/JavaScript file is listed below.
@@ -81,14 +82,13 @@ These tests are large but currently justified by scenario/domain breadth. Monito
 
 | # | File | Lines | Tracking | Notes |
 |---|------|------:|----------|-------|
-| 1 | `scripts/migrate-tag-taxonomy.ts` | 571 | [DEBT-235](debt-235-split-migrate-tag-taxonomy-script.md) | Mixed concerns: CLI/I/O/logic |
-| 2 | `db/schema.ts` | 553 | [DEBT-233](../_archive/debt/debt-233-add-why-comments-to-justified-large-files.md) | Deep module; document WHY |
-| 3 | `src/adapters/repositories/drizzle-attempt-repository.ts` | 443 | [DEBT-233](../_archive/debt/debt-233-add-why-comments-to-justified-large-files.md) | Deep module; document WHY |
-| 4 | `app/(app)/app/history/components/history-questions-tab.tsx` | 398 | [DEBT-233](../_archive/debt/debt-233-add-why-comments-to-justified-large-files.md) | Deep module; document WHY |
-| 5 | `app/(app)/app/questions/[slug]/question-page-client.tsx` | 337 | [DEBT-233](../_archive/debt/debt-233-add-why-comments-to-justified-large-files.md) | Deep module; document WHY |
-| 6 | `app/(app)/app/practice/[sessionId]/practice-session-page-logic.ts` | 326 | [DEBT-233](../_archive/debt/debt-233-add-why-comments-to-justified-large-files.md) | Deep module; document WHY |
-| 7 | `app/(app)/app/practice/components/practice-view.tsx` | 319 | Investigated acceptable | Cohesive prop-driven presentation; no split opportunity |
-| 8 | `scripts/tag-census.ts` | 301 | Investigated acceptable | Single-purpose CLI; well-factored pure functions |
+| 1 | `db/schema.ts` | 553 | [DEBT-233](debt-233-add-why-comments-to-justified-large-files.md) | Deep module; document WHY |
+| 2 | `src/adapters/repositories/drizzle-attempt-repository.ts` | 443 | [DEBT-233](debt-233-add-why-comments-to-justified-large-files.md) | Deep module; document WHY |
+| 3 | `app/(app)/app/history/components/history-questions-tab.tsx` | 398 | [DEBT-233](debt-233-add-why-comments-to-justified-large-files.md) | Deep module; document WHY |
+| 4 | `app/(app)/app/questions/[slug]/question-page-client.tsx` | 337 | [DEBT-233](debt-233-add-why-comments-to-justified-large-files.md) | Deep module; document WHY |
+| 5 | `app/(app)/app/practice/[sessionId]/practice-session-page-logic.ts` | 326 | [DEBT-233](debt-233-add-why-comments-to-justified-large-files.md) | Deep module; document WHY |
+| 6 | `app/(app)/app/practice/components/practice-view.tsx` | 319 | Investigated acceptable | Cohesive prop-driven presentation; no split opportunity |
+| 7 | `scripts/tag-census.ts` | 301 | Investigated acceptable | Single-purpose CLI; well-factored pure functions |
 
 ### Previously Over Threshold - Now Resolved
 
@@ -96,6 +96,7 @@ These tests are large but currently justified by scenario/domain breadth. Monito
 |------|----:|----:|------------|
 | `src/application/test-helpers/fakes/fake-repositories.ts` | 1,127 | deleted | DEBT-227: Split into 13 individual fake files |
 | `scripts/seed.ts` | 484 | 58 | DEBT-230: Decomposed into `scripts/seed/` modules |
+| `scripts/migrate-tag-taxonomy.ts` | 571 | 182 | DEBT-235: Decomposed into `scripts/migrate-tag-taxonomy/` modules |
 | `app/(app)/app/bookmarks/page.tsx` | 322 | 263 | DEBT-229: Extracted server action and error handling |
 | `src/application/test-helpers/fakes/fake-use-cases.ts` | 320 | 78 | DEBT-228: DRY with generic base class |
 | `src/adapters/jobs/reconcile-stripe-subscriptions.ts` | 315 | 294 | DEBT-236: Extracted shared concurrency utility and phase comments |
@@ -109,7 +110,7 @@ These tests are large but currently justified by scenario/domain breadth. Monito
 | 3 | `src/adapters/gateways/stripe-payment-gateway.test.ts` | 1,171 | 33 | 35.5 | Investigated acceptable | Keep; monitor |
 | 4 | `src/application/test-helpers/fakes.test.ts` | 1,151 | 58 | 19.8 | Investigated acceptable | Keep; monitor (grew from DEBT-227 split) |
 | 5 | `app/(app)/app/practice/[sessionId]/practice-session-page-logic.test.ts` | 1,133 | 38 | 29.8 | Investigated acceptable | Keep; monitor |
-| 6 | `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-page-controller.browser.spec.tsx` | 1,076 | 13 | 82.8 | [DEBT-231](../_archive/debt/debt-231-reduce-browser-spec-probe-duplication.md) | Reduced from 1,458; browser overhead justifies ratio (Resolved) |
+| 6 | `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-page-controller.browser.spec.tsx` | 1,076 | 13 | 82.8 | [DEBT-231](debt-231-reduce-browser-spec-probe-duplication.md) | Reduced from 1,458; browser overhead justifies ratio (Resolved) |
 | 7 | `src/adapters/controllers/practice-controller.test.ts` | 1,041 | 39 | 26.7 | Investigated acceptable | Keep; monitor |
 
 ### Previously Over Threshold - Now Resolved
@@ -117,7 +118,7 @@ These tests are large but currently justified by scenario/domain breadth. Monito
 | File | Was | Now | Resolution |
 |------|----:|----:|------------|
 | `src/application/use-cases/get-next-question.test.ts` | 1,020 | 741 | DEBT-232: Reduced boilerplate-heavy setup |
-| `src/adapters/jobs/reconcile-stripe-subscriptions.test.ts` | 1,085 | 895 | DEBT-237: Extracted reconciliation test scenario factory and reduced setup boilerplate |
+| `src/adapters/jobs/reconcile-stripe-subscriptions.test.ts` | 1,085 | 899 | DEBT-237: Extracted reconciliation test scenario factory and reduced setup boilerplate |
 
 ## Forest-First Decision Guardrails
 
@@ -140,7 +141,7 @@ To avoid "line-count cargo culting," apply this decision order:
 2. ~~Resolve DEBT-233 to lock in justified exceptions.~~ ✅ Done
 3. ~~Resolve DEBT-234 to prevent silent regression.~~ ✅ Done
 4. ~~Create follow-up debt tickets for residual over-threshold files.~~ ✅ Done (DEBT-235, DEBT-236, DEBT-237)
-5. Resolve DEBT-235 or re-evaluate as acceptable before archiving this master.
+5. ~~Resolve DEBT-235 or re-evaluate as acceptable before archiving this master.~~ ✅ Done
 
 ## Acceptance Criteria
 
@@ -150,11 +151,11 @@ To avoid "line-count cargo culting," apply this decision order:
   - an investigated acceptable rationale
 - [x] No residual over-threshold files remain untracked
 - [x] DEBT-227 through DEBT-234 stay title/status/priority-consistent with this master and the index
-- [ ] DEBT-235 resolved or re-evaluated before archiving this master
+- [x] DEBT-235 resolved or re-evaluated before archiving this master
 
 ## Related
 
-- [DEBT-193](../_archive/debt/debt-193-backend-production-files-over-300-lines.md) - Previous production file audit
-- [DEBT-204](../_archive/debt/debt-204-stripe-payment-gateway-test-god-file.md) - Stripe test god file
-- [DEBT-163](../_archive/debt/debt-163-fakes-file-approaching-split-threshold.md) - Fakes file threshold
-- [DEBT-139](../_archive/debt/debt-139-production-files-exceed-size-guardrail.md) - Earlier global guardrail attempt
+- [DEBT-193](debt-193-backend-production-files-over-300-lines.md) - Previous production file audit
+- [DEBT-204](debt-204-stripe-payment-gateway-test-god-file.md) - Stripe test god file
+- [DEBT-163](debt-163-fakes-file-approaching-split-threshold.md) - Fakes file threshold
+- [DEBT-139](debt-139-production-files-exceed-size-guardrail.md) - Earlier global guardrail attempt

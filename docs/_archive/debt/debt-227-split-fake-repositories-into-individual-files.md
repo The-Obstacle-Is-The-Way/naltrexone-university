@@ -5,7 +5,7 @@
 **Date:** 2026-02-18
 **Resolved:** 2026-02-19
 **Last Verified:** 2026-02-19
-**Parent:** [DEBT-224](../../debt/debt-224-file-size-audit-production-and-test.md)
+**Parent:** [DEBT-224](debt-224-file-size-audit-production-and-test.md)
 **Component:** `src/application/test-helpers/fakes/fake-repositories.ts`
 
 ---

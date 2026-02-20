@@ -5,7 +5,7 @@
 **Date:** 2026-02-19
 **Resolved:** 2026-02-19
 **Component:** `src/adapters/jobs/reconcile-stripe-subscriptions.ts`
-**Parent:** [DEBT-224](../../debt/debt-224-file-size-audit-production-and-test.md)
+**Parent:** [DEBT-224](debt-224-file-size-audit-production-and-test.md)
 
 ---
 
@@ -40,5 +40,5 @@ Target: reduce the file to ~280 lines with clearer phase separation.
 
 ## Related
 
-- [DEBT-224](../../debt/debt-224-file-size-audit-production-and-test.md) — Parent audit
+- [DEBT-224](debt-224-file-size-audit-production-and-test.md) — Parent audit
 - [DEBT-237](debt-237-extract-reconciliation-test-factory.md) — Companion: test file boilerplate
