@@ -19,10 +19,8 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 |----|-------|----------|--------|
 | [DEBT-224](debt-224-file-size-audit-production-and-test.md) | File Size Audit - Production and Test Files Exceeding Guidelines | P3 | Decomposed |
 | [DEBT-235](debt-235-split-migrate-tag-taxonomy-script.md) | Split migrate-tag-taxonomy.ts Into Focused Modules | P3 | Open |
-| [DEBT-236](debt-236-extract-reconciliation-concurrency-utility.md) | Extract Concurrency Utility and Document Reconciliation Algorithm | P4 | Open |
-| [DEBT-237](debt-237-extract-reconciliation-test-factory.md) | Extract Reconciliation Test Factory to Reduce Boilerplate | P4 | Open |
 
-**Next Debt ID:** DEBT-238
+**Next Debt ID:** DEBT-239
 
 ---
 
@@ -30,6 +28,9 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 | ID | Title | Priority | Resolved | GitHub Issue |
 |----|-------|----------|----------|--------------|
+| [DEBT-237](../_archive/debt/debt-237-extract-reconciliation-test-factory.md) | Extract Reconciliation Test Factory to Reduce Boilerplate | P4 | 2026-02-19 | — |
+| [DEBT-236](../_archive/debt/debt-236-extract-reconciliation-concurrency-utility.md) | Extract Concurrency Utility and Document Reconciliation Algorithm | P4 | 2026-02-19 | — |
+| [DEBT-238](../_archive/debt/debt-238-orphaned-from-review-test-artifact.md) | Orphaned `from=review` Test Artifact From DEBT-215 Cleanup | P4 | 2026-02-19 | #89 |
 | [DEBT-234](../_archive/debt/debt-234-add-max-lines-lint-rule.md) | Add max-lines Check to Prevent File Size Regression | P4 | 2026-02-18 | — |
 | [DEBT-233](../_archive/debt/debt-233-add-why-comments-to-justified-large-files.md) | Add WHY Comments to Justified Large Files | P4 | 2026-02-18 | — |
 | [DEBT-232](../_archive/debt/debt-232-reduce-get-next-question-test-inflation.md) | Reduce get-next-question.test.ts Test Inflation | P3 | 2026-02-18 | — |

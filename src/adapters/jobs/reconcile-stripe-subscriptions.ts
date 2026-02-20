@@ -7,6 +7,7 @@ import type {
   ReconcileStripeSubscriptionsInput,
   ReconcileStripeSubscriptionsOutput,
 } from '@/src/adapters/jobs/reconcile-stripe-subscriptions-types';
+import { mapWithConcurrencyLimit } from '@/src/adapters/shared/concurrency';
 import { ApplicationError } from '@/src/application/errors';
 
 const DEFAULT_LIMIT = 100;
@@ -36,33 +37,6 @@ function toSafeInt(value: number, fallback: number): number {
 
 function isBlockingStatus(status: unknown): status is string {
   return typeof status === 'string' && BLOCKING_STATUSES.has(status);
-}
-
-async function mapWithConcurrencyLimit<T, R>(
-  items: readonly T[],
-  limit: number,
-  fn: (item: T) => Promise<R>,
-): Promise<R[]> {
-  const results: R[] = new Array(items.length);
-  let nextIndex = 0;
-
-  const workerCount = Math.min(limit, items.length);
-  const workers = Array.from({ length: workerCount }, async () => {
-    while (nextIndex < items.length) {
-      const index = nextIndex;
-      nextIndex += 1;
-      const item = items[index];
-      if (item === undefined) {
-        throw new Error(
-          `mapWithConcurrencyLimit: missing item at index ${index}`,
-        );
-      }
-      results[index] = await fn(item);
-    }
-  });
-
-  await Promise.all(workers);
-  return results;
 }
 
 export async function reconcileStripeSubscriptions(
@@ -108,6 +82,7 @@ export async function reconcileStripeSubscriptions(
     safeConcurrency,
     async (row) => {
       try {
+        // Phase 1: normalize the local row's Stripe subscription and validate user identity.
         const localSubscriptionUpdate =
           await retrieveAndNormalizeStripeSubscription({
             stripe: deps.stripe,
@@ -135,6 +110,7 @@ export async function reconcileStripeSubscriptions(
           );
         }
 
+        // Phase 2: fetch and normalize all blocking subscriptions for the same customer.
         const listedSubscriptions = await callStripeWithRetry({
           operation: 'subscriptions.list',
           fn: () =>
@@ -196,6 +172,7 @@ export async function reconcileStripeSubscriptions(
         }
 
         if (blockingSubscriptionIds.length > 0) {
+          // Phase 3: select the canonical subscription via period-end sort + deterministic tie-break.
           const keptSubscriptionId = blockingSubscriptionIds.includes(
             row.stripeSubscriptionId,
           )
@@ -234,6 +211,7 @@ export async function reconcileStripeSubscriptions(
             (id) => id !== keptSubscriptionId,
           );
 
+          // Phase 4: cancel duplicate blocking subscriptions when not in dry-run mode.
           if (!dryRun && duplicateIds.length > 0) {
             for (const duplicateId of duplicateIds) {
               await callStripeWithRetry({
@@ -263,6 +241,7 @@ export async function reconcileStripeSubscriptions(
           }
         }
 
+        // Phase 5: persist canonical subscription and customer mapping atomically.
         await deps.transaction(async ({ stripeCustomers, subscriptions }) => {
           await stripeCustomers.insert(
             canonical.userId,

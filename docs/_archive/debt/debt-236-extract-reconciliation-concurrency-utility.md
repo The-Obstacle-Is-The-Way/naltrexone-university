@@ -1,10 +1,11 @@
 # DEBT-236: Extract Concurrency Utility and Document Reconciliation Algorithm
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P4
 **Date:** 2026-02-19
+**Resolved:** 2026-02-19
 **Component:** `src/adapters/jobs/reconcile-stripe-subscriptions.ts`
-**Parent:** [DEBT-224](debt-224-file-size-audit-production-and-test.md)
+**Parent:** [DEBT-224](../../debt/debt-224-file-size-audit-production-and-test.md)
 
 ---
 
@@ -23,7 +24,7 @@
 
 ## Resolution
 
-1. **Extract `mapWithConcurrencyLimit`** to `src/adapters/shared/concurrency.ts` (or similar shared location)
+1. **Extract `mapWithConcurrencyLimit`** to `src/adapters/shared/concurrency.ts`
 2. **Add phase comments** to the reconciliation algorithm documenting: validation/normalization → fetch canonical + blocking subs → select canonical via sort → cancel duplicates → upsert to DB
 3. **Keep type-checking helpers grouped** (`toErrorMessage`, `toSafeInt`, `isBlockingStatus`) at the top of the module, and move to shared only if reuse emerges
 
@@ -31,12 +32,13 @@ Target: reduce the file to ~280 lines with clearer phase separation.
 
 ## Verification
 
-- [ ] `mapWithConcurrencyLimit` is importable from a shared module
-- [ ] All existing `reconcile-stripe-subscriptions.test.ts` tests pass unchanged
-- [ ] Reconciliation file is under 300 lines
-- [ ] Algorithm phases are documented with inline comments
+- [x] `mapWithConcurrencyLimit` is importable from a shared module (`src/adapters/shared/concurrency.ts`)
+- [x] `mapWithConcurrencyLimit` has dedicated unit coverage (`src/adapters/shared/concurrency.test.ts`)
+- [x] All existing `reconcile-stripe-subscriptions.test.ts` tests pass unchanged
+- [x] Reconciliation file is under 300 lines (`294` lines)
+- [x] Algorithm phases are documented with inline comments
 
 ## Related
 
-- [DEBT-224](debt-224-file-size-audit-production-and-test.md) — Parent audit
+- [DEBT-224](../../debt/debt-224-file-size-audit-production-and-test.md) — Parent audit
 - [DEBT-237](debt-237-extract-reconciliation-test-factory.md) — Companion: test file boilerplate
