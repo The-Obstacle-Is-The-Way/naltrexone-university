@@ -20,7 +20,6 @@ Implementation specifications provide detailed technical guidance for building e
 | [Master Spec](./master_spec.md) | Complete Technical Specification (SSOT) | Living | All |
 | [SPEC-016](./spec-016-observability.md) | Observability (Logging, Error Tracking) | Partially Implemented | Infrastructure |
 | [SPEC-017](./spec-017-rate-limiting.md) | Rate Limiting | Partial (MVP done) | Infrastructure |
-| [SPEC-034](./spec-034-review-mode-readonly-and-try-again-scoping.md) | Review Mode Read-Only Behavior & Try Again Scoping | Proposed | Feature |
 
 **Master Spec split parts (readability):**
 
@@ -67,6 +66,7 @@ Implementation specifications provide detailed technical guidance for building e
 | [SPEC-031](../_archive/specs/spec-031-unified-visual-front.md) | Unified Visual Front — Card Contrast + Shell Parity | Feature |
 | [SPEC-032](../_archive/specs/spec-032-action-bar-standardization.md) | Action Bar Standardization | Feature |
 | [SPEC-033](../_archive/specs/spec-033-tag-taxonomy-migration.md) | Tag Taxonomy Migration | Feature |
+| [SPEC-034](../_archive/specs/spec-034-review-mode-readonly-and-try-again-scoping.md) | Review Mode Read-Only Behavior & Try Again Scoping | Feature |
 | [SPEC-035](../_archive/specs/spec-035-reference-field-and-content-import.md) | Reference Field & Content Import Pipeline | Feature |
 
 ## Spec Statuses

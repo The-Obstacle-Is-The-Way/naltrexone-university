@@ -2,10 +2,10 @@
 
 > **⚠️ TDD MANDATE:** This spec follows Test-Driven Development. Write failing tests FIRST for every behavioral change.
 
-**Status:** Proposed  
+**Status:** Implemented
 **Layer:** Feature  
 **Date:** 2026-02-18  
-**Resolves:** [BS-022](../brainstorming/bs-022-unanswered-question-review-handling.md), [BS-023](../brainstorming/bs-023-try-again-state-consistency.md)
+**Resolves:** [BS-022](../_archive/brainstorming/bs-022-unanswered-question-review-handling.md), [BS-023](../_archive/brainstorming/bs-023-try-again-state-consistency.md)
 
 ---
 
@@ -338,7 +338,7 @@ All tests below follow Red → Green → Refactor.
 
 ## 12. Related
 
-- [BS-022](../brainstorming/bs-022-unanswered-question-review-handling.md)
-- [BS-023](../brainstorming/bs-023-try-again-state-consistency.md)
+- [BS-022](../_archive/brainstorming/bs-022-unanswered-question-review-handling.md)
+- [BS-023](../_archive/brainstorming/bs-023-try-again-state-consistency.md)
 - [SPEC-027](../_archive/specs/spec-027-session-review-navigation.md)
 - [SPEC-032](../_archive/specs/spec-032-action-bar-standardization.md)

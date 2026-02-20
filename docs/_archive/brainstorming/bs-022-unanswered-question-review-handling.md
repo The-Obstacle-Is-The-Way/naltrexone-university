@@ -3,7 +3,7 @@
 **Date:** 2026-02-17
 **Triggered by:** Manual QA of exam mode review — unanswered questions present as blank submittable forms instead of revealing the correct answer
 **Scope:** How unanswered questions should behave in review mode across all session-based contexts (tutor, exam) and what the question navigator should display
-**Related:** [BS-023](./bs-023-try-again-state-consistency.md), [SPEC-027](../_archive/specs/spec-027-session-review-navigation.md), [SPEC-032](../_archive/specs/spec-032-action-bar-standardization.md)
+**Related:** [BS-023](./bs-023-try-again-state-consistency.md), [SPEC-027](../specs/spec-027-session-review-navigation.md), [SPEC-032](../specs/spec-032-action-bar-standardization.md)
 
 ---
 
@@ -395,3 +395,4 @@ Based on the full codebase investigation and live QA, here is the complete fix b
 | 2026-02-20 | Post-session submission confirmed as functional bug | Submit button works in review mode for unanswered questions |
 | 2026-02-20 | Robust fix design documented (4 layers) | Layer 1 (P0): auto-reveal, Layer 2 (P1): stats consistency, Layer 3 (P1): block submission, Layer 4: in scope via SPEC-034 Phase 3 |
 | 2026-02-20 | Option 2C recommended for stats display | Mode-aware: exam=correct/total, tutor=correct/answered |
+| 2026-02-20 | **Resolved — Implemented via SPEC-034** | All 4 layers implemented: Phase 1 (auto-reveal), Phase 2 (session review read-only), Phase 3 (mode-aware scoring). PR #124. |
