@@ -360,6 +360,28 @@ test.describe('review mode audit', () => {
     await expect(page.getByRole('button', { name: 'Try Again' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Submit' })).toHaveCount(0);
     await expectChoiceChecked(page, selectedLabel);
+
+    // Teardown: remove the bookmark created for this test to keep cross-spec state deterministic.
+    await page.goto(`/app/questions/${CORRECT_SLUG}`, {
+      timeout: 60_000,
+      waitUntil: 'domcontentloaded',
+    });
+    await expect(page.getByRole('heading', { name: 'Question' })).toBeVisible();
+    await expect(page.getByText(/Loading question/i)).toBeHidden({
+      timeout: 15_000,
+    });
+    const teardownRemoveBookmarkButton = page
+      .getByRole('button', { name: 'Remove bookmark' })
+      .first();
+    const canRemoveBookmark = await teardownRemoveBookmarkButton
+      .isVisible()
+      .catch(() => false);
+    if (canRemoveBookmark) {
+      await teardownRemoveBookmarkButton.click();
+      await expect(
+        page.getByRole('button', { name: 'Bookmark' }).first(),
+      ).toBeVisible({ timeout: 10_000 });
+    }
   });
 
   test('post-submit feedback component renders correctly', async ({ page }) => {
