@@ -241,12 +241,37 @@ test.describe('review mode audit', () => {
     expect(reviewChoiceText).toBe(selectedChoiceText);
   });
 
-  test('Try Again resets review mode back to a blank attempt form', async ({
+  test('session review is read-only and non-session review allows reattempt', async ({
     page,
   }) => {
     await signInWithClerkPassword(page);
     await ensureSubscribed(page);
     await assertQuestionSlugExists(page, CORRECT_SLUG);
+
+    await startSession(page, 'tutor', 1);
+    await selectChoiceByLabel(page, 'A');
+    await page.getByRole('button', { name: 'Submit' }).click();
+    await expectFeedbackVisible(page);
+
+    await page.getByRole('button', { name: 'End session' }).click();
+    await expect(
+      page.getByRole('heading', { name: 'Session Summary' }),
+    ).toBeVisible({ timeout: 15_000 });
+
+    const breakdownLink = page.locator('a[href*="/app/questions/"]').first();
+    await expect(breakdownLink).toBeVisible({ timeout: 15_000 });
+    await expect(breakdownLink).toHaveAttribute('href', /mode=review/);
+    await expect(breakdownLink).toHaveAttribute('href', /sessionId=/);
+
+    await breakdownLink.click();
+    await expect(page).toHaveURL(/\/app\/questions\//, { timeout: 15_000 });
+    await expect(page).toHaveURL(/mode=review/);
+    await expect(page).toHaveURL(/sessionId=/);
+    await expectFeedbackVisible(page);
+    await expect(page.getByRole('button', { name: 'Try Again' })).toHaveCount(
+      0,
+    );
+    await expect(page.getByRole('button', { name: 'Submit' })).toHaveCount(0);
 
     await submitQuestionForOutcome(page, CORRECT_SLUG, 'Correct');
 

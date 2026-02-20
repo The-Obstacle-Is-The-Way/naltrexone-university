@@ -51,6 +51,8 @@ describe('app/(app)/app/practice/[sessionId]', () => {
         summary={{
           sessionId: 'session-1',
           endedAt: '2026-02-01T00:00:00.000Z',
+          mode: 'tutor',
+          questionCount: 10,
           totals: {
             answered: 10,
             correct: 7,
@@ -82,6 +84,8 @@ describe('app/(app)/app/practice/[sessionId]', () => {
         summary={{
           sessionId: 'session-1',
           endedAt: '2026-02-01T00:00:00.000Z',
+          mode: 'exam',
+          questionCount: 2,
           totals: {
             answered: 2,
             correct: 1,
@@ -135,6 +139,8 @@ describe('app/(app)/app/practice/[sessionId]', () => {
         summary={{
           sessionId: 'session-1',
           endedAt: '2026-02-01T00:00:00.000Z',
+          mode: 'exam',
+          questionCount: 2,
           totals: {
             answered: 2,
             correct: 1,
@@ -156,6 +162,8 @@ describe('app/(app)/app/practice/[sessionId]', () => {
         summary={{
           sessionId: 'session-1',
           endedAt: '2026-02-01T00:00:00.000Z',
+          mode: 'exam',
+          questionCount: 2,
           totals: {
             answered: 2,
             correct: 1,
@@ -177,6 +185,8 @@ describe('app/(app)/app/practice/[sessionId]', () => {
         summary={{
           sessionId: 'session-1',
           endedAt: '2026-02-01T00:00:00.000Z',
+          mode: 'tutor',
+          questionCount: 10,
           totals: {
             answered: 10,
             correct: 7,

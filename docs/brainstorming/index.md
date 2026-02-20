@@ -28,10 +28,8 @@ Brainstorming (BS-NNN) → Spec (SPEC-NNN) → Implementation → Archive
 | ID | Title | Status | Related Spec |
 |----|-------|--------|--------------|
 | [BS-014](./bs-014-practice-starter-question-count-ux.md) | Practice Starter — Silent Truncation When Fewer Questions Available | Active | — |
-| [BS-022](./bs-022-unanswered-question-review-handling.md) | Unanswered Question Review Handling | Active | SPEC-034 |
-| [BS-023](./bs-023-try-again-state-consistency.md) | Try Again — State Consistency and Business Logic Gaps | Active | SPEC-034 |
 
-**Next Brainstorming ID:** BS-025
+**Next Brainstorming ID:** BS-026
 
 ---
 
@@ -60,7 +58,10 @@ Brainstorming (BS-NNN) → Spec (SPEC-NNN) → Implementation → Archive
 | [BS-019](../_archive/brainstorming/bs-019-action-bar-label-and-ordering-consistency.md) | Action Bar Label and Ordering Consistency | Specced as SPEC-032 (Implemented). Core inconsistencies 1-5 resolved; residual items (bookmark in history, mobile layout) deferred |
 | [BS-020](../_archive/brainstorming/bs-020-card-contrast-and-hover-consistency.md) | Card Contrast and Hover Consistency — Landing Page vs App | Specced as SPEC-031 (Implemented). bg-muted→bg-background + hover token fix; residual hover standardization deferred |
 | [BS-021](../_archive/brainstorming/bs-021-marketing-app-shell-divergence-and-accessibility-parity.md) | Marketing/App Shell Divergence and Accessibility Parity | Specced as SPEC-031 (Implemented). All actionable items resolved: nested main, section labels, casing |
+| [BS-022](../_archive/brainstorming/bs-022-unanswered-question-review-handling.md) | Unanswered Question Review Handling | Specced as SPEC-034 (Implemented). All 4 layers resolved: auto-reveal, stats consistency, block submission, exam scoring |
+| [BS-023](../_archive/brainstorming/bs-023-try-again-state-consistency.md) | Try Again — State Consistency and Business Logic Gaps | Specced as SPEC-034 (Implemented). Try Again removed from session review, kept in standalone contexts |
 | [BS-024](../_archive/brainstorming/bs-024-tag-taxonomy-cleanup.md) | Tag Taxonomy Cleanup — Unify Pipeline and Eliminate Drift | Specced as SPEC-033 (Implemented). All 7 problems resolved: domain removed, pipeline hardened, taxonomy canonical |
+| [BS-025](../_archive/brainstorming/BS-025-reference-section-pipeline-support.md) | Reference Section Pipeline Support | Specced as SPEC-035 (Implemented). Full vertical slice: reference_md field from seed to UI |
 
 ---
 

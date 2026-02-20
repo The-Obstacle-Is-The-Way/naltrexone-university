@@ -68,6 +68,7 @@ export function createUseCaseFactories(input: {
         repositories.createAttemptRepository(),
         repositories.createQuestionRepository(),
         primitives.logger,
+        repositories.createPracticeSessionRepository(),
       ),
     createGetBookmarksUseCase: () =>
       new GetBookmarksUseCase(

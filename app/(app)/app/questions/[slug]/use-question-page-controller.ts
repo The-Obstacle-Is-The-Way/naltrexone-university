@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import {
+  canReattemptInContext,
   canSubmitQuestionAnswer,
   createLoadQuestionAction,
   createSubmitSelectedAnswerAction,
@@ -9,6 +10,7 @@ import {
   loadPreviousAttempt,
   reattemptQuestion,
   type SessionNavigation,
+  type SessionUnansweredReveal,
 } from '@/app/(app)/app/questions/[slug]/question-page-logic';
 import { selectChoiceIfAllowed } from '@/app/(app)/app/shared/question-guards';
 import type { QuestionMode, QuestionOrigin } from '@/lib/routes';
@@ -39,6 +41,7 @@ export type UseQuestionPageControllerOutput = {
   question: GetQuestionBySlugOutput | null;
   selectedChoiceId: string | null;
   submitResult: SubmitAnswerOutput | null;
+  sessionUnansweredReveal: SessionUnansweredReveal | null;
   sessionNavigation: SessionNavigation | null;
   canSubmit: boolean;
   isPending: boolean;
@@ -58,6 +61,8 @@ export function useQuestionPageController(
   const [submitResult, setSubmitResult] = useState<SubmitAnswerOutput | null>(
     null,
   );
+  const [sessionUnansweredReveal, setSessionUnansweredReveal] =
+    useState<SessionUnansweredReveal | null>(null);
   const [questionLoadedAt, setQuestionLoadedAt] = useState<number | null>(null);
   const [submitIdempotencyKey, setSubmitIdempotencyKey] = useState<
     string | null
@@ -87,6 +92,7 @@ export function useQuestionPageController(
         setSubmitIdempotencyKey,
         setQuestionLoadedAt,
         setQuestion,
+        setSessionUnansweredReveal,
         isMounted,
       }),
     [input.slug, isMounted],
@@ -199,6 +205,7 @@ export function useQuestionPageController(
         getPreviousAttemptFn: getPreviousAttempt,
         setSelectedChoiceId,
         setSubmitResult,
+        setSessionUnansweredReveal,
         isMounted,
       });
     });
@@ -217,18 +224,27 @@ export function useQuestionPageController(
       question,
       selectedChoiceId,
       submitResult,
+      mode: input.mode,
+      sessionId: input.sessionId,
     });
-  }, [loadState, question, selectedChoiceId, submitResult]);
+  }, [
+    loadState,
+    question,
+    selectedChoiceId,
+    submitResult,
+    input.mode,
+    input.sessionId,
+  ]);
 
   const onSelectChoice = useMemo(() => {
     return (choiceId: string) => {
       selectChoiceIfAllowed(
-        { isAnswered: false, submitResult },
+        { isAnswered: sessionUnansweredReveal !== null, submitResult },
         setSelectedChoiceId,
         choiceId,
       );
     };
-  }, [submitResult]);
+  }, [sessionUnansweredReveal, submitResult]);
 
   const onSubmit = useMemo(
     () =>
@@ -236,6 +252,8 @@ export function useQuestionPageController(
         startTransition,
         question,
         selectedChoiceId,
+        mode: input.mode,
+        sessionId: input.sessionId,
         questionLoadedAtMs: questionLoadedAt,
         submitIdempotencyKey,
         submitAnswerFn: submitAnswer,
@@ -249,28 +267,37 @@ export function useQuestionPageController(
       questionLoadedAt,
       selectedChoiceId,
       submitIdempotencyKey,
+      input.mode,
+      input.sessionId,
       isMounted,
     ],
   );
 
-  const onReattempt = useMemo(
-    () =>
-      reattemptQuestion.bind(null, {
-        createIdempotencyKey: () => crypto.randomUUID(),
-        nowMs: Date.now,
-        setSelectedChoiceId,
-        setSubmitResult,
-        setSubmitIdempotencyKey,
-        setQuestionLoadedAt,
-      }),
-    [],
-  );
+  const onReattempt = useMemo(() => {
+    const canReattempt = canReattemptInContext({
+      mode: input.mode,
+      sessionId: input.sessionId,
+    });
+    if (!canReattempt) {
+      return () => undefined;
+    }
+    return reattemptQuestion.bind(null, {
+      createIdempotencyKey: () => crypto.randomUUID(),
+      nowMs: Date.now,
+      setSelectedChoiceId,
+      setSubmitResult,
+      setSubmitIdempotencyKey,
+      setQuestionLoadedAt,
+      setSessionUnansweredReveal,
+    });
+  }, [input.mode, input.sessionId]);
 
   return {
     loadState,
     question,
     selectedChoiceId,
     submitResult,
+    sessionUnansweredReveal,
     canSubmit,
     isPending,
     onTryAgain: loadQuestion,

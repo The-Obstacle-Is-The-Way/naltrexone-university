@@ -70,10 +70,20 @@ function Probe({
       <div data-testid="load-status">{output.loadState.status}</div>
       <div data-testid="selected-choice">{output.selectedChoiceId ?? ''}</div>
       <div data-testid="attempt-id">{output.submitResult?.attemptId ?? ''}</div>
+      <div data-testid="unanswered-reveal-correct-choice">
+        {output.sessionUnansweredReveal?.correctChoiceId ?? ''}
+      </div>
       <div data-testid="session-nav-total">{total ?? ''}</div>
       <div data-testid="session-nav-index">{index ?? ''}</div>
       <div data-testid="session-nav-prev-slug">{prevSlug ?? ''}</div>
       <div data-testid="session-nav-next-slug">{nextSlug ?? ''}</div>
+      <button
+        type="button"
+        data-testid="trigger-reattempt"
+        onClick={output.onReattempt}
+      >
+        Trigger reattempt
+      </button>
     </>
   );
 }
@@ -102,11 +112,13 @@ describe('useQuestionPageController (browser)', () => {
 
     getPreviousAttemptMock.mockResolvedValue(
       ok({
+        kind: 'attempt',
         attemptId: 'attempt-1',
         selectedChoiceId: 'choice-2',
         isCorrect: true,
         correctChoiceId: 'choice-2',
         explanationMd: 'Because.',
+        referenceMd: null,
         choiceExplanations: [],
         answeredAt: '2026-02-01T00:00:00.000Z',
       }),
@@ -172,11 +184,13 @@ describe('useQuestionPageController (browser)', () => {
 
     getPreviousAttemptMock.mockResolvedValue(
       ok({
+        kind: 'attempt',
         attemptId,
         selectedChoiceId: 'choice-2',
         isCorrect: true,
         correctChoiceId: 'choice-2',
         explanationMd: 'Because.',
+        referenceMd: null,
         choiceExplanations: [],
         answeredAt: '2026-02-01T00:00:00.000Z',
       }),
@@ -643,5 +657,142 @@ describe('useQuestionPageController (browser)', () => {
     await expect
       .element(screen.getByTestId('session-nav-index'))
       .toHaveTextContent('1');
+  });
+
+  it('onReattempt is no-op in session review context', async () => {
+    const sessionId = '00000000-0000-4000-8000-000000000010';
+
+    getQuestionBySlugMock.mockResolvedValue(
+      ok({
+        questionId: 'question-1',
+        slug: 'q-1',
+        stemMd: 'Stem',
+        difficulty: 'easy',
+        choices: [
+          { id: 'choice-1', label: 'A', textMd: 'Choice A' },
+          { id: 'choice-2', label: 'B', textMd: 'Choice B' },
+        ],
+      }),
+    );
+
+    getPracticeSessionReviewMock.mockResolvedValue(
+      ok({
+        sessionId,
+        mode: 'exam',
+        totalCount: 1,
+        answeredCount: 1,
+        markedCount: 0,
+        rows: [
+          {
+            isAvailable: true,
+            questionId: 'question-1',
+            slug: 'q-1',
+            stemMd: 'Stem',
+            difficulty: 'easy',
+            order: 1,
+            isAnswered: true,
+            isCorrect: true,
+            markedForReview: false,
+          },
+        ],
+      }),
+    );
+
+    getPreviousAttemptMock.mockResolvedValue(
+      ok({
+        kind: 'attempt',
+        attemptId: 'attempt-1',
+        selectedChoiceId: 'choice-2',
+        isCorrect: true,
+        correctChoiceId: 'choice-2',
+        explanationMd: 'Because.',
+        referenceMd: null,
+        choiceExplanations: [],
+        answeredAt: '2026-02-01T00:00:00.000Z',
+      }),
+    );
+
+    const screen = await render(<Probe mode="review" sessionId={sessionId} />);
+
+    await expect
+      .element(screen.getByTestId('selected-choice'))
+      .toHaveTextContent('choice-2');
+    await expect
+      .element(screen.getByTestId('attempt-id'))
+      .toHaveTextContent('attempt-1');
+
+    await screen.getByTestId('trigger-reattempt').click();
+
+    await expect
+      .element(screen.getByTestId('selected-choice'))
+      .toHaveTextContent('choice-2');
+    await expect
+      .element(screen.getByTestId('attempt-id'))
+      .toHaveTextContent('attempt-1');
+  });
+
+  it('maps kind=session_unanswered to reveal state and clears selected choice/result', async () => {
+    const sessionId = '00000000-0000-4000-8000-000000000011';
+
+    getQuestionBySlugMock.mockResolvedValue(
+      ok({
+        questionId: 'question-1',
+        slug: 'q-1',
+        stemMd: 'Stem',
+        difficulty: 'easy',
+        choices: [
+          { id: 'choice-1', label: 'A', textMd: 'Choice A' },
+          { id: 'choice-2', label: 'B', textMd: 'Choice B' },
+        ],
+      }),
+    );
+
+    getPracticeSessionReviewMock.mockResolvedValue(
+      ok({
+        sessionId,
+        mode: 'exam',
+        totalCount: 1,
+        answeredCount: 0,
+        markedCount: 0,
+        rows: [
+          {
+            isAvailable: true,
+            questionId: 'question-1',
+            slug: 'q-1',
+            stemMd: 'Stem',
+            difficulty: 'easy',
+            order: 1,
+            isAnswered: false,
+            isCorrect: null,
+            markedForReview: false,
+          },
+        ],
+      }),
+    );
+
+    getPreviousAttemptMock.mockResolvedValue(
+      ok({
+        kind: 'session_unanswered',
+        correctChoiceId: 'choice-2',
+        explanationMd: null,
+        referenceMd: null,
+        choiceExplanations: [],
+      }),
+    );
+
+    const screen = await render(<Probe mode="review" sessionId={sessionId} />);
+
+    await expect
+      .element(screen.getByTestId('load-status'))
+      .toHaveTextContent('ready');
+    await expect
+      .element(screen.getByTestId('selected-choice'))
+      .toHaveTextContent(/^$/);
+    await expect
+      .element(screen.getByTestId('attempt-id'))
+      .toHaveTextContent(/^$/);
+    await expect
+      .element(screen.getByTestId('unanswered-reveal-correct-choice'))
+      .toHaveTextContent('choice-2');
   });
 });

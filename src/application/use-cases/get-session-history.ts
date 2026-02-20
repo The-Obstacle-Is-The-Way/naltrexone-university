@@ -53,14 +53,17 @@ export class GetSessionHistoryUseCase {
       }
 
       const { answered, correct } = computeSessionStats(session.questionStates);
+      const questionCount = session.questionIds.length;
+      const accuracyDenominator =
+        session.mode === 'exam' ? questionCount : answered;
 
       rows.push({
         sessionId: session.id,
         mode: session.mode,
-        questionCount: session.questionIds.length,
+        questionCount,
         answered,
         correct,
-        accuracy: computeAccuracy(answered, correct),
+        accuracy: computeAccuracy(accuracyDenominator, correct),
         durationSeconds: computeSessionDurationSeconds(
           session.startedAt,
           endedAt,

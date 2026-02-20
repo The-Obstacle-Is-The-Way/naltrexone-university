@@ -16,7 +16,11 @@ import {
 } from '@/lib/routes';
 import type { GetQuestionBySlugOutput } from '@/src/adapters/controllers/question-view-controller';
 import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
-import type { LoadState, SessionNavigation } from './question-page-logic';
+import type {
+  LoadState,
+  SessionNavigation,
+  SessionUnansweredReveal,
+} from './question-page-logic';
 import { useQuestionPageController } from './use-question-page-controller';
 
 // WHY: This file exceeds the 300-line soft guideline intentionally.
@@ -106,9 +110,11 @@ export type QuestionViewProps = {
   question: GetQuestionBySlugOutput | null;
   selectedChoiceId: string | null;
   submitResult: SubmitAnswerOutput | null;
+  sessionUnansweredReveal?: SessionUnansweredReveal | null;
   sessionNavigation: SessionNavigation | null;
   canSubmit: boolean;
   isPending: boolean;
+  mode?: QuestionMode | null;
   origin?: QuestionOrigin | null;
   sessionId?: string;
   historyHref?: string;
@@ -119,7 +125,15 @@ export type QuestionViewProps = {
 };
 
 export function QuestionView(props: QuestionViewProps) {
-  const correctChoiceId = props.submitResult?.correctChoiceId ?? null;
+  const sessionUnansweredReveal = props.sessionUnansweredReveal ?? null;
+  const isReviewMode = props.mode === 'review';
+  const hasSessionId = typeof props.sessionId === 'string';
+  const isSessionReviewReadOnly = isReviewMode && hasSessionId;
+  const isSessionReviewUnansweredReveal = sessionUnansweredReveal !== null;
+  const correctChoiceId =
+    sessionUnansweredReveal?.correctChoiceId ??
+    props.submitResult?.correctChoiceId ??
+    null;
   const originUi = getOriginUi(
     props.origin ?? null,
     props.sessionId,
@@ -198,26 +212,52 @@ export function QuestionView(props: QuestionViewProps) {
       ) : null}
 
       {props.question ? (
-        <QuestionCard
-          stemMd={props.question.stemMd}
-          choices={props.question.choices.map((c) => ({
-            id: c.id,
-            label: c.label,
-            textMd: c.textMd,
-          }))}
-          selectedChoiceId={props.selectedChoiceId}
-          correctChoiceId={correctChoiceId}
-          disabled={props.isPending || props.loadState.status === 'loading'}
-          onSelectChoice={props.onSelectChoice}
-        />
+        <>
+          {isSessionReviewUnansweredReveal ? (
+            <Card
+              className="gap-0 rounded-2xl border-warning/50 bg-warning/5 p-4 text-sm text-foreground shadow-sm"
+              role="status"
+            >
+              You did not answer this question during this session.
+            </Card>
+          ) : null}
+          <QuestionCard
+            stemMd={props.question.stemMd}
+            choices={props.question.choices.map((c) => ({
+              id: c.id,
+              label: c.label,
+              textMd: c.textMd,
+            }))}
+            selectedChoiceId={props.selectedChoiceId}
+            correctChoiceId={correctChoiceId}
+            disabled={
+              props.isPending ||
+              props.loadState.status === 'loading' ||
+              isSessionReviewReadOnly
+            }
+            onSelectChoice={props.onSelectChoice}
+          />
+        </>
       ) : null}
 
-      {props.submitResult ? (
+      {props.submitResult || sessionUnansweredReveal ? (
         <Feedback
-          isCorrect={props.submitResult.isCorrect}
-          explanationMd={props.submitResult.explanationMd}
-          referenceMd={props.submitResult.referenceMd ?? null}
-          choiceExplanations={props.submitResult.choiceExplanations}
+          isCorrect={props.submitResult?.isCorrect ?? false}
+          explanationMd={
+            props.submitResult?.explanationMd ??
+            sessionUnansweredReveal?.explanationMd ??
+            null
+          }
+          referenceMd={
+            props.submitResult?.referenceMd ??
+            sessionUnansweredReveal?.referenceMd ??
+            null
+          }
+          choiceExplanations={
+            props.submitResult?.choiceExplanations ??
+            sessionUnansweredReveal?.choiceExplanations ??
+            []
+          }
         />
       ) : null}
 
@@ -246,7 +286,7 @@ export function QuestionView(props: QuestionViewProps) {
           )
         ) : null}
 
-        {!props.submitResult ? (
+        {!props.submitResult && !isSessionReviewReadOnly ? (
           <Button
             type="button"
             className="rounded-full"
@@ -261,7 +301,7 @@ export function QuestionView(props: QuestionViewProps) {
           </Button>
         ) : null}
 
-        {props.submitResult ? (
+        {props.submitResult && !isSessionReviewReadOnly ? (
           <Button
             type="button"
             variant="outline"
@@ -294,7 +334,9 @@ export function QuestionView(props: QuestionViewProps) {
           )
         ) : null}
 
-        {props.sessionNavigation || props.submitResult ? (
+        {props.sessionNavigation ||
+        props.submitResult ||
+        isSessionReviewReadOnly ? (
           <Button asChild variant="ghost" className="rounded-full">
             <Link href={originUi.backHref}>{originUi.backLabel}</Link>
           </Button>
@@ -320,9 +362,10 @@ export default function QuestionPageClient({
   historyHref?: string;
 }) {
   const origin = parseQuestionOrigin(from);
+  const parsedMode = parseQuestionMode(mode);
   const controller = useQuestionPageController({
     slug,
-    mode: parseQuestionMode(mode),
+    mode: parsedMode,
     from: origin,
     sessionId,
     attemptId,
@@ -330,6 +373,7 @@ export default function QuestionPageClient({
   return (
     <QuestionView
       {...controller}
+      mode={parsedMode}
       origin={origin}
       sessionId={sessionId}
       historyHref={historyHref}

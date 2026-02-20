@@ -8,6 +8,8 @@ test('renders session summary branch when summary is present', async () => {
       summary={{
         sessionId: 'session-1',
         endedAt: '2026-02-07T00:00:00.000Z',
+        mode: 'tutor',
+        questionCount: 10,
         totals: {
           answered: 10,
           correct: 8,

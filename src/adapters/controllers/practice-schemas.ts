@@ -91,6 +91,8 @@ export const CountAvailableQuestionsOutputSchema = z
 export const EndPracticeSessionOutputSchema = z
   .object({
     sessionId: zUuid,
+    mode: zPracticeMode,
+    questionCount: z.number().int().min(1).max(MAX_PRACTICE_SESSION_QUESTIONS),
     endedAt: z.string().datetime(),
     totals: z
       .object({
@@ -110,7 +112,16 @@ export const EndPracticeSessionOutputSchema = z
         }
       }),
   })
-  .strict();
+  .strict()
+  .superRefine((value, ctx) => {
+    if (value.totals.answered > value.questionCount) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'answered must be <= questionCount',
+        path: ['totals', 'answered'],
+      });
+    }
+  });
 
 export const SetPracticeSessionQuestionMarkOutputSchema = z
   .object({

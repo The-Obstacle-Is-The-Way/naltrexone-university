@@ -1,11 +1,18 @@
 // @vitest-environment jsdom
 import { renderToStaticMarkup } from 'react-dom/server';
-import { describe, expect, it, vi } from 'vitest';
-import { SessionSummaryView } from './session-summary-view';
+import { beforeAll, describe, expect, it, vi } from 'vitest';
 
 vi.mock('next/link', () => ({
   default: (props: Record<string, unknown>) => <a {...props} />,
 }));
+
+type SessionSummaryViewModule = typeof import('./session-summary-view');
+
+let SessionSummaryView: SessionSummaryViewModule['SessionSummaryView'];
+
+beforeAll(async () => {
+  ({ SessionSummaryView } = await import('./session-summary-view'));
+});
 
 function findStatValue(doc: Document, label: string): string | null {
   const labelEl =
@@ -21,6 +28,8 @@ describe('SessionSummaryView', () => {
       <SessionSummaryView
         summary={{
           sessionId: 'session-1',
+          mode: 'tutor',
+          questionCount: 8,
           endedAt: '2026-02-07T00:00:00.000Z',
           totals: {
             answered: 8,
@@ -38,11 +47,37 @@ describe('SessionSummaryView', () => {
     expect(findStatValue(doc, 'Accuracy')).toBe('75%');
   });
 
-  it('renders — for accuracy when answered is 0', () => {
+  it('shows 0% for exam summary when answered is zero', () => {
     const html = renderToStaticMarkup(
       <SessionSummaryView
         summary={{
           sessionId: 'session-1',
+          mode: 'exam',
+          questionCount: 10,
+          endedAt: '2026-02-07T00:00:00.000Z',
+          totals: {
+            answered: 0,
+            correct: 0,
+            accuracy: 0,
+            durationSeconds: 0,
+          },
+        }}
+        review={null}
+        reviewLoadState={{ status: 'idle' }}
+      />,
+    );
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+
+    expect(findStatValue(doc, 'Accuracy')).toBe('0%');
+  });
+
+  it('shows — for tutor summary when answered is zero', () => {
+    const html = renderToStaticMarkup(
+      <SessionSummaryView
+        summary={{
+          sessionId: 'session-1',
+          mode: 'tutor',
+          questionCount: 10,
           endedAt: '2026-02-07T00:00:00.000Z',
           totals: {
             answered: 0,

@@ -126,6 +126,8 @@ function createDeps(overrides?: {
     overrides?.endOutput ?? {
       sessionId: '22222222-2222-2222-2222-222222222222',
       endedAt: '2026-02-01T00:00:00.000Z',
+      mode: 'tutor',
+      questionCount: 1,
       totals: { answered: 0, correct: 0, accuracy: 0, durationSeconds: 0 },
     },
     overrides?.endThrows,
@@ -457,6 +459,8 @@ describe('practice-controller', () => {
       const endOutput = {
         sessionId: 'session_123',
         endedAt: '2026-02-01T00:00:00.000Z',
+        mode: 'tutor',
+        questionCount: 2,
         totals: {
           answered: 2,
           correct: 1,
@@ -502,6 +506,8 @@ describe('practice-controller', () => {
         endOutput: {
           sessionId: '22222222-2222-2222-2222-222222222222',
           endedAt: '2026-02-01T00:00:00.000Z',
+          mode: 'tutor',
+          questionCount: 2,
           totals: {
             answered: 2,
             correct: 1,
@@ -524,6 +530,8 @@ describe('practice-controller', () => {
         data: {
           sessionId: '22222222-2222-2222-2222-222222222222',
           endedAt: '2026-02-01T00:00:00.000Z',
+          mode: 'tutor',
+          questionCount: 2,
           totals: {
             answered: 2,
             correct: 1,

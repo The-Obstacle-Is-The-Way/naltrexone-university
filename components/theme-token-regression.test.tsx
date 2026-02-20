@@ -103,6 +103,8 @@ describe('theme token regression', () => {
         summary={{
           sessionId: 'session-1',
           endedAt: '2026-02-07T00:00:00.000Z',
+          mode: 'tutor',
+          questionCount: 8,
           totals: {
             answered: 8,
             correct: 6,

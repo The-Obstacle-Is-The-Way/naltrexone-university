@@ -3,7 +3,7 @@
 **Date:** 2026-02-17
 **Triggered by:** Suspicion that "Try Again" in review mode doesn't integrate consistently with session scoring, attempt history, or user progress tracking
 **Scope:** Does the Try Again feature produce coherent state transitions, or does it silently create orphaned attempts with no business logic impact?
-**Related:** [BS-022](./bs-022-unanswered-question-review-handling.md), [SPEC-032](../_archive/specs/spec-032-action-bar-standardization.md)
+**Related:** [BS-022](./bs-022-unanswered-question-review-handling.md), [SPEC-032](../specs/spec-032-action-bar-standardization.md)
 
 ---
 
@@ -259,3 +259,4 @@ The two brainstorming docs converge on the same principle: **review mode should 
 | 2026-02-17 | Created brainstorming doc | Suspicion that Try Again doesn't integrate with session scoring or attempt tracking consistently |
 | 2026-02-17 | Confirmed: ended sessions reject submissions with CONFLICT | `submit-answer.ts` line 85-87 — Try Again in session review may already be broken |
 | 2026-02-17 | Confirmed: no domain concept of "reattempt" | `Attempt` entity has no linking fields — each attempt is independent |
+| 2026-02-20 | **Resolved — Implemented via SPEC-034** | Option A+D adopted: Try Again removed from session review (Phase 2), kept in standalone contexts (bookmarks, individual review). Reattempt chain tracking (Option C) deferred. PR #124. |

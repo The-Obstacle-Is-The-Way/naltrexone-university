@@ -156,11 +156,17 @@ export function DashboardView({
                     </div>
                     <div className="mt-2 text-sm text-foreground">
                       <span className="font-medium">
-                        {row.correct}/{row.questionCount} correct
+                        {row.correct}/
+                        {row.mode === 'exam' ? row.questionCount : row.answered}{' '}
+                        correct
                       </span>
                       <span className="text-muted-foreground">
                         {' '}
-                        ({row.answered > 0 ? formatPercent(row.accuracy) : '—'})
+                        (
+                        {row.mode === 'exam' || row.answered > 0
+                          ? formatPercent(row.accuracy)
+                          : '—'}
+                        )
                       </span>
                     </div>
                   </Link>

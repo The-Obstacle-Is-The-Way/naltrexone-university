@@ -2,10 +2,10 @@
 
 > **⚠️ TDD MANDATE:** This spec follows Test-Driven Development. Write failing tests FIRST for every behavioral change.
 
-**Status:** Proposed  
+**Status:** Implemented
 **Layer:** Feature  
 **Date:** 2026-02-18  
-**Resolves:** [BS-022](../brainstorming/bs-022-unanswered-question-review-handling.md), [BS-023](../brainstorming/bs-023-try-again-state-consistency.md)
+**Resolves:** [BS-022](../_archive/brainstorming/bs-022-unanswered-question-review-handling.md), [BS-023](../_archive/brainstorming/bs-023-try-again-state-consistency.md)
 
 ---
 
@@ -86,6 +86,7 @@ Replace output contract with a discriminated union:
 - `correctChoiceId`
 - `explanationMd`
 - `choiceExplanations`
+- `referenceMd`
 
 Resolution logic:
 
@@ -146,8 +147,10 @@ For `mode='review'` with session navigation present and unanswered reveal active
 Introduce explicit derived flags:
 
 - `isReviewMode = props.mode === 'review'`
-- `hasSessionContext = props.sessionNavigation !== null`
-- `isSessionReviewReadOnly = isReviewMode && hasSessionContext`
+- `hasSessionId = typeof props.sessionId === 'string'`
+- `isSessionReviewReadOnly = isReviewMode && hasSessionId`
+
+Read-only scoping must key off route session identity (not loaded navigation data). This prevents fail-open behavior where `sessionNavigation` is `null` due to fetch/error conditions but the route is still session review.
 
 Button visibility rules:
 
@@ -156,10 +159,12 @@ Button visibility rules:
 
 ### 5.2 `app/(app)/app/questions/[slug]/question-page-logic.ts`
 
-Add a guard helper:
+Add guard helpers:
 
 - `canReattemptInContext({ mode, sessionId })`
 - returns `false` for review + session contexts
+- `canSubmitQuestionAnswer({ mode, sessionId, selectedChoiceId, submitResult })`
+- returns `false` for review + session contexts before checking selection/submit state
 
 ### 5.3 `app/(app)/app/questions/[slug]/use-question-page-controller.ts`
 
@@ -198,6 +203,10 @@ Update `EndPracticeSessionOutput` to include:
 - `mode`
 - `questionCount`
 
+Update output schema validation in:
+
+- `src/adapters/controllers/practice-schemas.ts` (Zod contract for `EndPracticeSessionOutput`)
+
 ### 6.3 `src/application/use-cases/get-session-history.ts`
 
 Compute row accuracy with same policy:
@@ -214,10 +223,16 @@ Use `summary.mode` to render accuracy label:
 
 ### 6.5 `app/(app)/app/history/components/history-sessions-tab.tsx`
 
-Use row mode for accuracy label:
+Use row mode for fraction and accuracy label:
 
-- exam rows: always show percent
-- tutor rows: keep current em-dash behavior for zero answered
+- exam rows: fraction `${row.correct}/${row.questionCount}`, percent from exam denominator
+- tutor rows: fraction `${row.correct}/${row.answered}`, keep em-dash behavior for zero answered
+
+Current mixed-denominator string interpolation (`${row.correct}/${row.questionCount}` for all rows) must become mode-aware.
+
+### 6.6 `app/(app)/app/dashboard/page.tsx`
+
+Dashboard recent-session snippets consume the same history row semantics and must apply the same mode-aware denominator policy (exam total vs tutor answered) to avoid reintroducing mixed labels.
 
 ---
 
@@ -230,6 +245,7 @@ All tests below follow Red → Green → Refactor.
 | Test File | Test Name | Assertion | Type |
 |---|---|---|---|
 | `src/application/use-cases/get-previous-attempt.test.ts` | `returns kind=session_unanswered with answer key when session question is unanswered in ended session` | No attempt + valid ended session yields reveal payload | Unit (`.test.ts`) |
+| `src/application/use-cases/get-previous-attempt.test.ts` | `includes referenceMd in kind=session_unanswered payload when question has reference content` | Reveal payload carries optional reference field for review rendering | Unit |
 | `src/application/use-cases/get-previous-attempt.test.ts` | `returns null for unanswered question when session is active or question not in session` | Reveal path is restricted to ended session review | Unit |
 | `app/(app)/app/questions/[slug]/question-page-logic.test.ts` | `maps kind=session_unanswered to sessionUnansweredReveal without submitResult` | No pseudo submit result is created | Unit |
 | `app/(app)/app/questions/[slug]/question-page-client.test.tsx` | `renders unanswered banner and read-only reveal for session review unanswered question` | Banner appears; Submit/Try Again absent | Component (`.test.tsx`) |
@@ -254,6 +270,11 @@ All tests below follow Red → Green → Refactor.
 | `app/(app)/app/practice/[sessionId]/components/session-summary-view.test.tsx` | `shows 0% for exam summary when answered is zero` | Exam UI no longer renders em dash for zero answered | Component |
 | `app/(app)/app/history/components/history-sessions-tab.test.tsx` | `shows exam zero-answered accuracy as 0% and keeps tutor zero-answered as —` | Session list mode-specific display is correct | Component |
 
+### Existing test updates required
+
+- `app/(app)/app/questions/[slug]/question-page-client.test.tsx` (around `~333`, `~493`) currently encodes pre-read-only review actions and must be updated for session review Submit/Try Again removal.
+- `app/(app)/app/history/components/history-sessions-tab.browser.spec.tsx` (around `~274`) currently encodes old mixed-denominator rendering and must be updated for mode-aware fraction/percentage behavior.
+
 ### Test conventions (mandatory)
 
 - Every new `*.test.tsx` starts with `// @vitest-environment jsdom` on line 1.
@@ -271,6 +292,8 @@ All tests below follow Red → Green → Refactor.
 4. Quick Practice remains unchanged.
 5. In-progress Practice session behavior remains unchanged; only review behavior is altered.
 6. No API contract breakage for unrelated routes/actions.
+7. Tutor end-session flow (no confirmation dialog) remains unchanged.
+8. Exam pre-submit Review Questions screen remains unchanged.
 
 ---
 
@@ -315,7 +338,7 @@ All tests below follow Red → Green → Refactor.
 
 ## 12. Related
 
-- [BS-022](../brainstorming/bs-022-unanswered-question-review-handling.md)
-- [BS-023](../brainstorming/bs-023-try-again-state-consistency.md)
+- [BS-022](../_archive/brainstorming/bs-022-unanswered-question-review-handling.md)
+- [BS-023](../_archive/brainstorming/bs-023-try-again-state-consistency.md)
 - [SPEC-027](../_archive/specs/spec-027-session-review-navigation.md)
 - [SPEC-032](../_archive/specs/spec-032-action-bar-standardization.md)
