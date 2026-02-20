@@ -4,7 +4,7 @@ import {
 } from '@/app/(app)/app/practice/practice-logic';
 import { runTransitionedAsyncAction } from '@/app/(app)/app/practice/shared/question-flow-actions';
 import type { AsyncLoadState } from '@/app/(app)/app/shared/load-state';
-import type { QuestionOrigin } from '@/lib/routes';
+import type { QuestionMode, QuestionOrigin } from '@/lib/routes';
 import { withTimeout } from '@/lib/with-timeout';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import type { GetQuestionBySlugOutput } from '@/src/adapters/controllers/question-view-controller';
@@ -28,12 +28,33 @@ export type SessionNavigation = {
   from: QuestionOrigin;
 };
 
+export type SessionUnansweredReveal = {
+  correctChoiceId: string;
+  explanationMd: string | null;
+  referenceMd: string | null;
+  choiceExplanations: SubmitAnswerOutput['choiceExplanations'];
+};
+
+export function canReattemptInContext(input: {
+  mode: QuestionMode | null | undefined;
+  sessionId?: string;
+}): boolean {
+  return !(input.mode === 'review' && typeof input.sessionId === 'string');
+}
+
 export function canSubmitQuestionAnswer(input: {
   loadState: LoadState;
   question: GetQuestionBySlugOutput | null;
   selectedChoiceId: string | null;
   submitResult: SubmitAnswerOutput | null;
+  mode?: QuestionMode | null;
+  sessionId?: string;
 }): boolean {
+  if (
+    !canReattemptInContext({ mode: input.mode, sessionId: input.sessionId })
+  ) {
+    return false;
+  }
   if (input.loadState.status === 'loading') return false;
   if (!input.question) return false;
   if (!input.selectedChoiceId) return false;
@@ -54,6 +75,7 @@ export async function loadQuestion(input: {
   setSubmitIdempotencyKey: (key: string | null) => void;
   setQuestionLoadedAt: (loadedAtMs: number | null) => void;
   setQuestion: (question: GetQuestionBySlugOutput | null) => void;
+  setSessionUnansweredReveal?: (reveal: SessionUnansweredReveal | null) => void;
   isMounted?: () => boolean;
 }): Promise<void> {
   const isMounted = input.isMounted ?? (() => true);
@@ -63,6 +85,7 @@ export async function loadQuestion(input: {
   input.setSubmitResult(null);
   input.setSubmitIdempotencyKey(null);
   input.setQuestionLoadedAt(null);
+  input.setSessionUnansweredReveal?.(null);
 
   let res: ActionResult<GetQuestionBySlugOutput>;
   try {
@@ -111,6 +134,7 @@ export function createLoadQuestionAction(input: {
   setSubmitIdempotencyKey: (key: string | null) => void;
   setQuestionLoadedAt: (loadedAtMs: number | null) => void;
   setQuestion: (question: GetQuestionBySlugOutput | null) => void;
+  setSessionUnansweredReveal?: (reveal: SessionUnansweredReveal | null) => void;
   isMounted?: () => boolean;
 }): () => void {
   return () => {
@@ -123,6 +147,8 @@ export function createLoadQuestionAction(input: {
 export async function submitSelectedAnswer(input: {
   question: GetQuestionBySlugOutput | null;
   selectedChoiceId: string | null;
+  mode?: QuestionMode | null;
+  sessionId?: string;
   questionLoadedAtMs: number | null;
   submitIdempotencyKey: string | null;
   submitAnswerFn: (input: unknown) => Promise<ActionResult<SubmitAnswerOutput>>;
@@ -131,6 +157,11 @@ export async function submitSelectedAnswer(input: {
   setSubmitResult: (result: SubmitAnswerOutput | null) => void;
   isMounted?: () => boolean;
 }): Promise<void> {
+  if (
+    !canReattemptInContext({ mode: input.mode, sessionId: input.sessionId })
+  ) {
+    return;
+  }
   if (!input.question) return;
   if (!input.selectedChoiceId) return;
 
@@ -184,6 +215,8 @@ export function createSubmitSelectedAnswerAction(input: {
   startTransition: (fn: () => void) => void;
   question: GetQuestionBySlugOutput | null;
   selectedChoiceId: string | null;
+  mode?: QuestionMode | null;
+  sessionId?: string;
   questionLoadedAtMs: number | null;
   submitIdempotencyKey: string | null;
   submitAnswerFn: (input: unknown) => Promise<ActionResult<SubmitAnswerOutput>>;
@@ -222,9 +255,13 @@ export async function loadPreviousAttempt(input: {
   ) => Promise<ActionResult<GetPreviousAttemptOutput | null>>;
   setSelectedChoiceId: (choiceId: string | null) => void;
   setSubmitResult: (result: SubmitAnswerOutput | null) => void;
+  setSessionUnansweredReveal?: (reveal: SessionUnansweredReveal | null) => void;
   isMounted?: () => boolean;
 }): Promise<void> {
   const isMounted = input.isMounted ?? (() => true);
+  const setSessionUnansweredReveal =
+    input.setSessionUnansweredReveal ?? (() => undefined);
+  setSessionUnansweredReveal(null);
 
   let res: ActionResult<GetPreviousAttemptOutput | null>;
   try {
@@ -248,6 +285,19 @@ export async function loadPreviousAttempt(input: {
   }
 
   const data = res.data;
+  if (data.kind === 'session_unanswered') {
+    input.setSelectedChoiceId(null);
+    input.setSubmitResult(null);
+    setSessionUnansweredReveal({
+      correctChoiceId: data.correctChoiceId,
+      explanationMd: data.explanationMd,
+      referenceMd: data.referenceMd ?? null,
+      choiceExplanations: data.choiceExplanations,
+    });
+    return;
+  }
+
+  setSessionUnansweredReveal(null);
   input.setSelectedChoiceId(data.selectedChoiceId);
   input.setSubmitResult({
     attemptId: data.attemptId,

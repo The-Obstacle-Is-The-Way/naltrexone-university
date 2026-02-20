@@ -255,7 +255,7 @@ describe('QuestionView', () => {
     expect(html).toContain('Explanation');
   });
 
-  it('renders "Try Again" instead of "Submit" when submitResult exists', () => {
+  it('keeps Try Again in history individual review', () => {
     const html = renderToStaticMarkup(
       <QuestionView
         loadState={{ status: 'ready' }}
@@ -272,6 +272,8 @@ describe('QuestionView', () => {
         sessionNavigation={null}
         canSubmit={false}
         isPending={false}
+        mode="review"
+        origin="history"
         onTryAgain={() => undefined}
         onSelectChoice={() => undefined}
         onSubmit={() => undefined}
@@ -333,10 +335,11 @@ describe('QuestionView', () => {
     );
   });
 
-  it('orders session review actions as Previous, Try Again, Next, Back', () => {
+  it('hides Try Again in answered session review', () => {
     const html = renderToStaticMarkup(
       <QuestionView
         {...createBaseProps()}
+        mode="review"
         origin="history"
         sessionId="session_123"
         sessionNavigation={sharedSessionNavigation}
@@ -354,7 +357,6 @@ describe('QuestionView', () => {
     const doc = new DOMParser().parseFromString(html, 'text/html');
     expect(getBottomActionLabels(doc)).toEqual([
       '← Previous',
-      'Try Again',
       'Next →',
       'Back to History',
     ]);
@@ -494,13 +496,14 @@ describe('QuestionView', () => {
     );
   });
 
-  it('renders Previous/Next links alongside Submit for unanswered session questions', () => {
+  it('hides Submit when route is session review and session navigation is unavailable', () => {
     const html = renderToStaticMarkup(
       <QuestionView
         {...createBaseProps()}
+        mode="review"
         origin="history"
         sessionId="session_123"
-        sessionNavigation={sharedSessionNavigation}
+        sessionNavigation={null}
         submitResult={null}
       />,
     );
@@ -509,9 +512,7 @@ describe('QuestionView', () => {
     const bottomBar = getBottomActionBar(doc);
     if (!bottomBar) throw new Error('Expected bottom action bar');
 
-    expect(bottomBar.textContent).toContain('Submit');
-    expect(bottomBar.textContent).toContain('← Previous');
-    expect(bottomBar.textContent).toContain('Next →');
+    expect(bottomBar.textContent).not.toContain('Submit');
   });
 
   it('renders Back button in bottom bar for unanswered session questions', () => {
@@ -533,6 +534,49 @@ describe('QuestionView', () => {
       a.textContent?.includes('Back to History'),
     );
     expect(backLink?.getAttribute('href')).toBe('/app/history?tab=sessions');
+  });
+
+  it('renders unanswered banner and read-only reveal for session review unanswered question', () => {
+    const html = renderToStaticMarkup(
+      <QuestionView
+        {...createBaseProps()}
+        mode="review"
+        origin="history"
+        sessionId="session_123"
+        question={{
+          questionId: 'q2',
+          slug: 'q2',
+          stemMd: 'Question stem',
+          difficulty: 'easy',
+          choices: [
+            { id: 'c1', label: 'A', textMd: 'Choice A' },
+            { id: 'c2', label: 'B', textMd: 'Choice B' },
+          ],
+        }}
+        sessionNavigation={sharedSessionNavigation}
+        submitResult={null}
+        sessionUnansweredReveal={{
+          correctChoiceId: 'c2',
+          explanationMd: 'Explanation for unanswered review',
+          referenceMd: 'Anton RF et al. JAMA. 2006;295(17):2003-2017.',
+          choiceExplanations: [],
+        }}
+      />,
+    );
+
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const bottomBar = getBottomActionBar(doc);
+    if (!bottomBar) throw new Error('Expected bottom action bar');
+
+    expect(html).toContain(
+      'You did not answer this question during this session.',
+    );
+    expect(html).toContain('Explanation for unanswered review');
+    expect(bottomBar.textContent).not.toContain('Submit');
+    expect(bottomBar.textContent).not.toContain('Try Again');
+    expect(bottomBar.textContent).toContain('← Previous');
+    expect(bottomBar.textContent).toContain('Next →');
+    expect(bottomBar.textContent).toContain('Back to History');
   });
 
   it('does not render the session navigation bar when sessionNavigation is null', () => {

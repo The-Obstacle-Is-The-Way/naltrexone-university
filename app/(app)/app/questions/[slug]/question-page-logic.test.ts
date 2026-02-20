@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
+  canReattemptInContext,
   canSubmitQuestionAnswer,
   createLoadQuestionAction,
   createSubmitSelectedAnswerAction,
@@ -98,6 +99,30 @@ describe('question-page-logic', () => {
             referenceMd: null,
             choiceExplanations: [],
           } satisfies SubmitAnswerOutput,
+        }),
+      ).toBe(false);
+    });
+
+    it('returns false for review plus session context', () => {
+      expect(
+        canSubmitQuestionAnswer({
+          loadState: { status: 'ready' },
+          question: createQuestionOutput(),
+          selectedChoiceId: 'choice_1',
+          submitResult: null,
+          mode: 'review',
+          sessionId: '00000000-0000-4000-8000-000000000001',
+        }),
+      ).toBe(false);
+    });
+  });
+
+  describe('canReattemptInContext', () => {
+    it('canReattemptInContext returns false for review plus session', () => {
+      expect(
+        canReattemptInContext({
+          mode: 'review',
+          sessionId: '00000000-0000-4000-8000-000000000001',
         }),
       ).toBe(false);
     });
@@ -320,6 +345,7 @@ describe('question-page-logic', () => {
         questionId: 'q_1',
         getPreviousAttemptFn: async () =>
           ok({
+            kind: 'attempt',
             attemptId: 'attempt_1',
             selectedChoiceId: 'choice_1',
             isCorrect: false,
@@ -342,6 +368,37 @@ describe('question-page-logic', () => {
         referenceMd: 'Anton RF et al. JAMA. 2006;295(17):2003-2017.',
         choiceExplanations: [],
       } satisfies SubmitAnswerOutput);
+    });
+
+    it('maps kind=session_unanswered to sessionUnansweredReveal without submitResult', async () => {
+      const setSelectedChoiceId = vi.fn();
+      const setSubmitResult = vi.fn();
+      const setSessionUnansweredReveal = vi.fn();
+
+      await loadPreviousAttempt({
+        questionId: 'q_1',
+        sessionId: '00000000-0000-4000-8000-000000000002',
+        getPreviousAttemptFn: async () =>
+          ok({
+            kind: 'session_unanswered',
+            correctChoiceId: 'choice_2',
+            explanationMd: 'Explanation',
+            referenceMd: 'Anton RF et al. JAMA. 2006;295(17):2003-2017.',
+            choiceExplanations: [],
+          } satisfies GetPreviousAttemptOutput),
+        setSelectedChoiceId,
+        setSubmitResult,
+        setSessionUnansweredReveal,
+      });
+
+      expect(setSessionUnansweredReveal).toHaveBeenCalledWith({
+        correctChoiceId: 'choice_2',
+        explanationMd: 'Explanation',
+        referenceMd: 'Anton RF et al. JAMA. 2006;295(17):2003-2017.',
+        choiceExplanations: [],
+      });
+      expect(setSubmitResult).toHaveBeenCalledWith(null);
+      expect(setSelectedChoiceId).toHaveBeenCalledWith(null);
     });
 
     it('does not set state when previous attempt returns null', async () => {
@@ -400,6 +457,7 @@ describe('question-page-logic', () => {
         questionId: 'q_1',
         getPreviousAttemptFn: async () =>
           ok({
+            kind: 'attempt',
             attemptId: 'attempt_1',
             selectedChoiceId: 'choice_1',
             isCorrect: true,

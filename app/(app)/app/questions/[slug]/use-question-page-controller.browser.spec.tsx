@@ -74,6 +74,13 @@ function Probe({
       <div data-testid="session-nav-index">{index ?? ''}</div>
       <div data-testid="session-nav-prev-slug">{prevSlug ?? ''}</div>
       <div data-testid="session-nav-next-slug">{nextSlug ?? ''}</div>
+      <button
+        type="button"
+        data-testid="trigger-reattempt"
+        onClick={output.onReattempt}
+      >
+        Trigger reattempt
+      </button>
     </>
   );
 }
@@ -643,5 +650,77 @@ describe('useQuestionPageController (browser)', () => {
     await expect
       .element(screen.getByTestId('session-nav-index'))
       .toHaveTextContent('1');
+  });
+
+  it('onReattempt is no-op in session review context', async () => {
+    const sessionId = '00000000-0000-4000-8000-000000000010';
+
+    getQuestionBySlugMock.mockResolvedValue(
+      ok({
+        questionId: 'question-1',
+        slug: 'q-1',
+        stemMd: 'Stem',
+        difficulty: 'easy',
+        choices: [
+          { id: 'choice-1', label: 'A', textMd: 'Choice A' },
+          { id: 'choice-2', label: 'B', textMd: 'Choice B' },
+        ],
+      }),
+    );
+
+    getPracticeSessionReviewMock.mockResolvedValue(
+      ok({
+        sessionId,
+        mode: 'exam',
+        totalCount: 1,
+        answeredCount: 1,
+        markedCount: 0,
+        rows: [
+          {
+            isAvailable: true,
+            questionId: 'question-1',
+            slug: 'q-1',
+            stemMd: 'Stem',
+            difficulty: 'easy',
+            order: 1,
+            isAnswered: true,
+            isCorrect: true,
+            markedForReview: false,
+          },
+        ],
+      }),
+    );
+
+    getPreviousAttemptMock.mockResolvedValue(
+      ok({
+        kind: 'attempt',
+        attemptId: 'attempt-1',
+        selectedChoiceId: 'choice-2',
+        isCorrect: true,
+        correctChoiceId: 'choice-2',
+        explanationMd: 'Because.',
+        referenceMd: null,
+        choiceExplanations: [],
+        answeredAt: '2026-02-01T00:00:00.000Z',
+      }),
+    );
+
+    const screen = await render(<Probe mode="review" sessionId={sessionId} />);
+
+    await expect
+      .element(screen.getByTestId('selected-choice'))
+      .toHaveTextContent('choice-2');
+    await expect
+      .element(screen.getByTestId('attempt-id'))
+      .toHaveTextContent('attempt-1');
+
+    await screen.getByTestId('trigger-reattempt').click();
+
+    await expect
+      .element(screen.getByTestId('selected-choice'))
+      .toHaveTextContent('choice-2');
+    await expect
+      .element(screen.getByTestId('attempt-id'))
+      .toHaveTextContent('attempt-1');
   });
 });
