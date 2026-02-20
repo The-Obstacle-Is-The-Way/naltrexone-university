@@ -28,7 +28,7 @@ export type SubmitAnswerOutput = {
   isCorrect: boolean;
   correctChoiceId: string | null;
   explanationMd: string | null;
-  referenceMd?: string | null;
+  referenceMd: string | null;
   choiceExplanations: ChoiceExplanation[];
 };
 

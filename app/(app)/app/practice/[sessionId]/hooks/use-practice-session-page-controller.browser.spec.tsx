@@ -290,6 +290,7 @@ describe('usePracticeSessionPageController (browser)', () => {
         isCorrect: true,
         correctChoiceId: 'choice_1',
         explanationMd: 'Because',
+        referenceMd: null,
         choiceExplanations: [],
       } satisfies SubmitAnswerOutput),
     );
@@ -347,6 +348,7 @@ describe('usePracticeSessionPageController (browser)', () => {
         isCorrect: true,
         correctChoiceId: null,
         explanationMd: null,
+        referenceMd: null,
         choiceExplanations: [],
       }),
     );
@@ -530,6 +532,7 @@ describe('usePracticeSessionPageController (browser)', () => {
             previousSubmission: {
               correctChoiceId: 'choice_2',
               explanationMd: 'Because',
+              referenceMd: null,
               choiceExplanations: [
                 {
                   choiceId: 'choice_1',
@@ -557,6 +560,7 @@ describe('usePracticeSessionPageController (browser)', () => {
         isCorrect: false,
         correctChoiceId: 'choice_2',
         explanationMd: 'Because',
+        referenceMd: null,
         choiceExplanations: [
           {
             choiceId: 'choice_1',
@@ -761,6 +765,7 @@ describe('usePracticeSessionPageController (browser)', () => {
         isCorrect: true,
         correctChoiceId: null,
         explanationMd: null,
+        referenceMd: null,
         choiceExplanations: [],
       }),
     );
@@ -878,6 +883,7 @@ describe('usePracticeSessionPageController (browser)', () => {
         isCorrect: true,
         correctChoiceId: null,
         explanationMd: null,
+        referenceMd: null,
         choiceExplanations: [],
       } satisfies SubmitAnswerOutput),
     );

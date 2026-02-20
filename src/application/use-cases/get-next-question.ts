@@ -30,7 +30,7 @@ export type PublicChoice = {
 export type PreviousSubmission = {
   correctChoiceId: string;
   explanationMd: string | null;
-  referenceMd?: string | null;
+  referenceMd: string | null;
   choiceExplanations: ChoiceExplanation[];
 };
 

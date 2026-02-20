@@ -197,6 +197,7 @@ describe('usePracticeQuestionFlow (browser)', () => {
         isCorrect: true,
         correctChoiceId: 'choice_1',
         explanationMd: 'Because',
+        referenceMd: null,
         choiceExplanations: [],
       } satisfies SubmitAnswerOutput),
     );

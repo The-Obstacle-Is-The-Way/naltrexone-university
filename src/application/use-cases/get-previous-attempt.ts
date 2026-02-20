@@ -20,7 +20,7 @@ export type GetPreviousAttemptOutput = {
   isCorrect: boolean;
   correctChoiceId: string;
   explanationMd: string | null;
-  referenceMd?: string | null;
+  referenceMd: string | null;
   choiceExplanations: ChoiceExplanation[];
   answeredAt: string; // ISO 8601
 };

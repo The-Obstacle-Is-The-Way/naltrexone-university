@@ -124,6 +124,7 @@ test('disables choice selection after a submit in exam mode', async () => {
         isCorrect: true,
         correctChoiceId: 'choice_a',
         explanationMd: 'Because',
+        referenceMd: null,
         choiceExplanations: [],
       }}
       isPending={false}

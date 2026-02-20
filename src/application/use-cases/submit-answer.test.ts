@@ -118,18 +118,16 @@ describe('SubmitAnswerUseCase', () => {
     const userId = 'user-1';
 
     const questionId = 'q1';
-    const question = Object.assign(
-      createQuestion({
-        id: questionId,
-        status: 'published',
-        explanationMd: 'Because.',
-        choices: [
-          createChoice({ id: 'c1', questionId, label: 'A', isCorrect: false }),
-          createChoice({ id: 'c2', questionId, label: 'B', isCorrect: true }),
-        ],
-      }),
-      { referenceMd: 'Anton RF et al. JAMA. 2006;295(17):2003-2017.' },
-    );
+    const question = createQuestion({
+      id: questionId,
+      status: 'published',
+      explanationMd: 'Because.',
+      referenceMd: 'Anton RF et al. JAMA. 2006;295(17):2003-2017.',
+      choices: [
+        createChoice({ id: 'c1', questionId, label: 'A', isCorrect: false }),
+        createChoice({ id: 'c2', questionId, label: 'B', isCorrect: true }),
+      ],
+    });
 
     const questions = new FakeQuestionRepository([question]);
     const attempts = new FakeAttemptRepository();
@@ -374,18 +372,15 @@ describe('SubmitAnswerUseCase', () => {
     const userId = 'user-1';
 
     const questionId = 'q1';
-    const question = Object.assign(
-      createQuestion({
-        id: questionId,
-        status: 'published',
-        explanationMd: 'Because.',
-        choices: [
-          createChoice({ id: 'c1', questionId, label: 'A', isCorrect: false }),
-          createChoice({ id: 'c2', questionId, label: 'B', isCorrect: true }),
-        ],
-      }),
-      { referenceMd: 'Anton RF et al. JAMA. 2006;295(17):2003-2017.' },
-    );
+    const question = createQuestion({
+      id: questionId,
+      status: 'published',
+      explanationMd: 'Because.',
+      choices: [
+        createChoice({ id: 'c1', questionId, label: 'A', isCorrect: false }),
+        createChoice({ id: 'c2', questionId, label: 'B', isCorrect: true }),
+      ],
+    });
 
     const attempts = new FakeAttemptRepository();
     const useCase = new SubmitAnswerUseCase(

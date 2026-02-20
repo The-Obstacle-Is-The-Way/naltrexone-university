@@ -1,7 +1,12 @@
 // @vitest-environment jsdom
 import { renderToStaticMarkup } from 'react-dom/server';
-import { describe, expect, it } from 'vitest';
-import { Feedback } from '@/components/question/feedback';
+import { beforeAll, describe, expect, it } from 'vitest';
+
+let Feedback: typeof import('@/components/question/feedback').Feedback;
+
+beforeAll(async () => {
+  ({ Feedback } = await import('@/components/question/feedback'));
+});
 
 describe('Feedback', () => {
   it('renders correct feedback with explanation', () => {

@@ -95,6 +95,7 @@ describe('question-page-logic', () => {
             isCorrect: true,
             correctChoiceId: 'choice_1',
             explanationMd: null,
+            referenceMd: null,
             choiceExplanations: [],
           } satisfies SubmitAnswerOutput,
         }),
@@ -266,6 +267,7 @@ describe('question-page-logic', () => {
         isCorrect: true,
         correctChoiceId: 'choice_1',
         explanationMd: null,
+        referenceMd: null,
         choiceExplanations: [],
       } satisfies SubmitAnswerOutput;
 
@@ -403,6 +405,7 @@ describe('question-page-logic', () => {
             isCorrect: true,
             correctChoiceId: 'choice_1',
             explanationMd: 'Explanation',
+            referenceMd: null,
             choiceExplanations: [],
             answeredAt: '2026-02-01T00:00:00.000Z',
           } satisfies GetPreviousAttemptOutput),
@@ -424,6 +427,7 @@ describe('question-page-logic', () => {
           isCorrect: true,
           correctChoiceId: 'choice_1',
           explanationMd: 'Because...',
+          referenceMd: null,
           choiceExplanations: [],
         } satisfies SubmitAnswerOutput),
       );
@@ -449,6 +453,7 @@ describe('question-page-logic', () => {
           isCorrect: true,
           correctChoiceId: 'choice_1',
           explanationMd: 'Because...',
+          referenceMd: null,
           choiceExplanations: [],
         } satisfies SubmitAnswerOutput),
       );
@@ -486,6 +491,7 @@ describe('question-page-logic', () => {
           isCorrect: true,
           correctChoiceId: 'choice_1',
           explanationMd: 'Because...',
+          referenceMd: null,
           choiceExplanations: [],
         } satisfies SubmitAnswerOutput),
       );
@@ -513,6 +519,7 @@ describe('question-page-logic', () => {
           isCorrect: true,
           correctChoiceId: 'choice_1',
           explanationMd: 'Because...',
+          referenceMd: null,
           choiceExplanations: [],
         } satisfies SubmitAnswerOutput),
       );
@@ -582,6 +589,7 @@ describe('question-page-logic', () => {
           isCorrect: true,
           correctChoiceId: 'choice_1',
           explanationMd: 'Because...',
+          referenceMd: null,
           choiceExplanations: [],
         } satisfies SubmitAnswerOutput),
       );

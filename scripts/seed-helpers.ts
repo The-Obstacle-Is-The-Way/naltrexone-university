@@ -102,15 +102,13 @@ export function parseChoiceExplanations(explanationMd: string): {
 
   commitCurrent();
 
-  const referenceMd =
-    referenceHeadingLineIndex === null
-      ? null
-      : (() => {
-          const value = canonicalizeMarkdown(
-            lines.slice(referenceHeadingLineIndex + 1).join('\n'),
-          );
-          return value.length > 0 ? value : null;
-        })();
+  let referenceMd: string | null = null;
+  if (referenceHeadingLineIndex !== null) {
+    const value = canonicalizeMarkdown(
+      lines.slice(referenceHeadingLineIndex + 1).join('\n'),
+    );
+    referenceMd = value.length > 0 ? value : null;
+  }
 
   return {
     generalExplanation,

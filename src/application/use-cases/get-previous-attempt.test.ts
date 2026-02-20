@@ -574,22 +574,20 @@ describe('GetPreviousAttemptUseCase', () => {
         }),
       ]),
       new FakeQuestionRepository([
-        Object.assign(
-          createQuestion({
-            id: 'q1',
-            status: 'published',
-            explanationMd: 'Because.',
-            choices: [
-              createChoice({
-                id: 'c1',
-                questionId: 'q1',
-                label: 'A',
-                isCorrect: true,
-              }),
-            ],
-          }),
-          { referenceMd: 'Anton RF et al. JAMA. 2006;295(17):2003-2017.' },
-        ),
+        createQuestion({
+          id: 'q1',
+          status: 'published',
+          explanationMd: 'Because.',
+          referenceMd: 'Anton RF et al. JAMA. 2006;295(17):2003-2017.',
+          choices: [
+            createChoice({
+              id: 'c1',
+              questionId: 'q1',
+              label: 'A',
+              isCorrect: true,
+            }),
+          ],
+        }),
       ]),
       new FakeLogger(),
     );

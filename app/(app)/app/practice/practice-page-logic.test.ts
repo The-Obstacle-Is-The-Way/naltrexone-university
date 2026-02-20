@@ -78,6 +78,7 @@ describe('practice-page-logic', () => {
             isCorrect: true,
             correctChoiceId: 'choice_1',
             explanationMd: 'Because…',
+            referenceMd: null,
             choiceExplanations: [],
           },
         }),
@@ -564,6 +565,7 @@ describe('practice-page-logic', () => {
           isCorrect: true,
           correctChoiceId: 'choice_1',
           explanationMd: 'Because...',
+          referenceMd: null,
           choiceExplanations: [],
         } satisfies SubmitAnswerOutput),
       );
@@ -602,6 +604,7 @@ describe('practice-page-logic', () => {
           isCorrect: true,
           correctChoiceId: 'choice_1',
           explanationMd: 'Because...',
+          referenceMd: null,
           choiceExplanations: [],
         } satisfies SubmitAnswerOutput),
       );
@@ -629,6 +632,7 @@ describe('practice-page-logic', () => {
           isCorrect: true,
           correctChoiceId: 'choice_1',
           explanationMd: 'Because...',
+          referenceMd: null,
           choiceExplanations: [],
         } satisfies SubmitAnswerOutput),
       );
@@ -717,6 +721,7 @@ describe('practice-page-logic', () => {
           isCorrect: true,
           correctChoiceId: 'choice_1',
           explanationMd: 'Because...',
+          referenceMd: null,
           choiceExplanations: [],
         } satisfies SubmitAnswerOutput),
       );
@@ -882,6 +887,7 @@ describe('practice-page-logic', () => {
             isCorrect: true,
             correctChoiceId: 'choice_1',
             explanationMd: 'Because...',
+            referenceMd: null,
             choiceExplanations: [],
           },
         },

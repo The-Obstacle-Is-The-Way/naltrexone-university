@@ -343,6 +343,7 @@ describe('question-controller', () => {
           isCorrect: false,
           correctChoiceId: '77777777-7777-7777-7777-777777777777',
           explanationMd: null,
+          referenceMd: null,
           choiceExplanations: [],
         },
       });
@@ -362,6 +363,7 @@ describe('question-controller', () => {
           isCorrect: false,
           correctChoiceId: '77777777-7777-7777-7777-777777777777',
           explanationMd: null,
+          referenceMd: null,
           choiceExplanations: [],
         },
       });
