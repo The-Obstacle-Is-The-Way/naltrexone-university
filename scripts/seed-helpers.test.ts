@@ -136,6 +136,29 @@ describe('parseChoiceExplanations', () => {
     );
   });
 
+  it('extracts referenceMd when another heading appears before reference', () => {
+    const explanationMd = [
+      'General rationale paragraph.',
+      '',
+      '**Why other answers are wrong:**',
+      '- A) Reason A.',
+      '',
+      '### Clinical Pearl',
+      'Ancillary note.',
+      '',
+      '### Reference',
+      '',
+      "Anton RF, O'Malley SS, Ciraulo DA, et al. JAMA. 2006;295(17):2003-2017.",
+    ].join('\n');
+
+    const parsed = parseChoiceExplanations(explanationMd);
+
+    expect(parsed.perChoice.get('A')).toBe('Reason A.');
+    expect(parsed.referenceMd).toBe(
+      "Anton RF, O'Malley SS, Ciraulo DA, et al. JAMA. 2006;295(17):2003-2017.",
+    );
+  });
+
   it('extracts multiline referenceMd when citation spans lines', () => {
     const explanationMd = [
       'General rationale paragraph.',

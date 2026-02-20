@@ -102,6 +102,16 @@ export function parseChoiceExplanations(explanationMd: string): {
 
   commitCurrent();
 
+  if (referenceHeadingLineIndex === null) {
+    const relativeReferenceLineIndex = lines
+      .slice(headingIndex + 1)
+      .findIndex((line) => REFERENCE_HEADING_PATTERN.test(line));
+    referenceHeadingLineIndex =
+      relativeReferenceLineIndex === -1
+        ? null
+        : headingIndex + 1 + relativeReferenceLineIndex;
+  }
+
   let referenceMd: string | null = null;
   if (referenceHeadingLineIndex !== null) {
     const value = canonicalizeMarkdown(
