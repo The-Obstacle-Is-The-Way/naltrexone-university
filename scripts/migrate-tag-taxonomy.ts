@@ -16,6 +16,7 @@ import type {
   MigrationTag,
   ReportMode,
 } from './migrate-tag-taxonomy/types';
+import { CANONICAL_KINDS } from './migrate-tag-taxonomy/types';
 
 export { migrateQuestionTags } from './migrate-tag-taxonomy/tag-migration-logic';
 export type {
@@ -29,13 +30,12 @@ export type {
 } from './migrate-tag-taxonomy/types';
 
 function emptyTagCounts(): Record<string, number> {
-  return {
-    topic: 0,
-    substance: 0,
-    treatment: 0,
-    diagnosis: 0,
-    domain: 0,
-  };
+  // Derive from the canonical kinds SSOT to prevent drift.
+  const counts = Object.fromEntries(
+    [...CANONICAL_KINDS, 'domain'].map((kind) => [kind, 0]),
+  );
+
+  return counts;
 }
 
 function incrementTagCounts(
