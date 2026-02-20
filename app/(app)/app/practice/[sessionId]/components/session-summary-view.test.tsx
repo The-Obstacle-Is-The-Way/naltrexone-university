@@ -1,11 +1,18 @@
 // @vitest-environment jsdom
 import { renderToStaticMarkup } from 'react-dom/server';
-import { describe, expect, it, vi } from 'vitest';
-import { SessionSummaryView } from './session-summary-view';
+import { beforeAll, describe, expect, it, vi } from 'vitest';
 
 vi.mock('next/link', () => ({
   default: (props: Record<string, unknown>) => <a {...props} />,
 }));
+
+type SessionSummaryViewModule = typeof import('./session-summary-view');
+
+let SessionSummaryView: SessionSummaryViewModule['SessionSummaryView'];
+
+beforeAll(async () => {
+  ({ SessionSummaryView } = await import('./session-summary-view'));
+});
 
 function findStatValue(doc: Document, label: string): string | null {
   const labelEl =

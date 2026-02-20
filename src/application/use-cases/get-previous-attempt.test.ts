@@ -260,6 +260,78 @@ describe('GetPreviousAttemptUseCase', () => {
     ).resolves.toBeNull();
   });
 
+  it('returns null and logs warning when session unanswered reveal references missing question', async () => {
+    const logger = new FakeLogger();
+    const session = createPracticeSession({
+      id: 'session-1',
+      userId: 'user-1',
+      questionIds: ['q1'],
+      endedAt: new Date('2026-02-01T12:10:00Z'),
+    });
+
+    const useCase = new GetPreviousAttemptUseCase(
+      new FakeAttemptRepository([]),
+      new FakeQuestionRepository([]),
+      logger,
+      new FakePracticeSessionRepository([session]),
+    );
+
+    await expect(
+      useCase.execute({
+        userId: 'user-1',
+        questionId: 'q1',
+        sessionId: 'session-1',
+      }),
+    ).resolves.toBeNull();
+
+    expect(logger.warnCalls).toEqual([
+      {
+        context: { questionId: 'q1', sessionId: 'session-1' },
+        msg: 'Session unanswered reveal references missing question',
+      },
+    ]);
+  });
+
+  it('throws INTERNAL_ERROR when session unanswered reveal question has no correct choice', async () => {
+    const question = createQuestion({
+      id: 'q1',
+      status: 'published',
+      choices: [
+        createChoice({
+          id: 'c1',
+          questionId: 'q1',
+          label: 'A',
+          isCorrect: false,
+        }),
+      ],
+    });
+
+    const session = createPracticeSession({
+      id: 'session-1',
+      userId: 'user-1',
+      questionIds: ['q1'],
+      endedAt: new Date('2026-02-01T12:10:00Z'),
+    });
+
+    const useCase = new GetPreviousAttemptUseCase(
+      new FakeAttemptRepository([]),
+      new FakeQuestionRepository([question]),
+      new FakeLogger(),
+      new FakePracticeSessionRepository([session]),
+    );
+
+    await expect(
+      useCase.execute({
+        userId: 'user-1',
+        questionId: 'q1',
+        sessionId: 'session-1',
+      }),
+    ).rejects.toMatchObject({
+      code: 'INTERNAL_ERROR',
+      message: 'Question q1 has no correct choice',
+    } satisfies Partial<ApplicationError>);
+  });
+
   it('returns null when user has no attempts for the question', async () => {
     const useCase = new GetPreviousAttemptUseCase(
       new FakeAttemptRepository([]),

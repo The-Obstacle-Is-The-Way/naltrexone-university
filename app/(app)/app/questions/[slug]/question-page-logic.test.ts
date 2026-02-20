@@ -700,6 +700,7 @@ describe('question-page-logic', () => {
       const setSubmitResult = vi.fn();
       const setSubmitIdempotencyKey = vi.fn();
       const setQuestionLoadedAt = vi.fn();
+      const setSessionUnansweredReveal = vi.fn();
 
       reattemptQuestion({
         createIdempotencyKey: () => 'idem_1',
@@ -708,12 +709,14 @@ describe('question-page-logic', () => {
         setSubmitResult,
         setSubmitIdempotencyKey,
         setQuestionLoadedAt,
+        setSessionUnansweredReveal,
       });
 
       expect(setSelectedChoiceId).toHaveBeenCalledWith(null);
       expect(setSubmitResult).toHaveBeenCalledWith(null);
       expect(setSubmitIdempotencyKey).toHaveBeenCalledWith('idem_1');
       expect(setQuestionLoadedAt).toHaveBeenCalledWith(1234);
+      expect(setSessionUnansweredReveal).toHaveBeenCalledWith(null);
     });
   });
 });

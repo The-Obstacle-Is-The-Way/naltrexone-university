@@ -2,6 +2,7 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
+import type { GetSessionHistoryOutput } from '@/src/adapters/controllers/practice-controller';
 
 vi.mock('next/link', () => ({
   default: (props: Record<string, unknown>) => <a {...props} />,
@@ -14,22 +15,7 @@ beforeAll(async () => {
     .HistorySessionsTab;
 });
 
-type SessionHistoryResult = ActionResult<{
-  rows: Array<{
-    sessionId: string;
-    mode: 'exam' | 'tutor';
-    questionCount: number;
-    answered: number;
-    correct: number;
-    accuracy: number;
-    durationSeconds: number;
-    startedAt: string;
-    endedAt: string;
-  }>;
-  total: number;
-  limit: number;
-  offset: number;
-}>;
+type SessionHistoryResult = ActionResult<GetSessionHistoryOutput>;
 
 describe('HistorySessionsTab', () => {
   it('renders session rows with expected summary fields', () => {
@@ -64,7 +50,7 @@ describe('HistorySessionsTab', () => {
     expect(html).toContain('View breakdown');
   });
 
-  it('shows exam zero-answered accuracy as 0% and keeps tutor zero-answered as —', () => {
+  it('shows exam zero-answered accuracy as 0%', () => {
     const result: SessionHistoryResult = {
       ok: true,
       data: {
@@ -80,6 +66,23 @@ describe('HistorySessionsTab', () => {
             startedAt: '2026-02-07T00:00:00.000Z',
             endedAt: '2026-02-07T00:20:00.000Z',
           },
+        ],
+        total: 1,
+        limit: 20,
+        offset: 0,
+      },
+    };
+
+    const html = renderToStaticMarkup(<HistorySessionsTab result={result} />);
+
+    expect(html).toContain('0/10 correct (0%)');
+  });
+
+  it('shows tutor zero-answered accuracy as —', () => {
+    const result: SessionHistoryResult = {
+      ok: true,
+      data: {
+        rows: [
           {
             sessionId: 'session-tutor',
             mode: 'tutor',
@@ -92,7 +95,7 @@ describe('HistorySessionsTab', () => {
             endedAt: '2026-02-08T00:03:00.000Z',
           },
         ],
-        total: 2,
+        total: 1,
         limit: 20,
         offset: 0,
       },
@@ -100,7 +103,6 @@ describe('HistorySessionsTab', () => {
 
     const html = renderToStaticMarkup(<HistorySessionsTab result={result} />);
 
-    expect(html).toContain('0/10 correct (0%)');
     expect(html).toContain('0/0 correct (—)');
   });
 

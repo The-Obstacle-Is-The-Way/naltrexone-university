@@ -571,6 +571,7 @@ describe('QuestionView', () => {
     expect(html).toContain(
       'You did not answer this question during this session.',
     );
+    expect(html).toContain('Incorrect');
     expect(html).toContain('Explanation for unanswered review');
     expect(bottomBar.textContent).not.toContain('Submit');
     expect(bottomBar.textContent).not.toContain('Try Again');
