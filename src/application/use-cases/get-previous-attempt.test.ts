@@ -260,6 +260,23 @@ describe('GetPreviousAttemptUseCase', () => {
     ).resolves.toBeNull();
   });
 
+  it('returns null when sessionId is provided but session is not found', async () => {
+    const useCase = new GetPreviousAttemptUseCase(
+      new FakeAttemptRepository([]),
+      new FakeQuestionRepository([]),
+      new FakeLogger(),
+      new FakePracticeSessionRepository([]),
+    );
+
+    await expect(
+      useCase.execute({
+        userId: 'user-1',
+        questionId: 'q1',
+        sessionId: 'session-ghost',
+      }),
+    ).resolves.toBeNull();
+  });
+
   it('returns null and logs warning when session unanswered reveal references missing question', async () => {
     const logger = new FakeLogger();
     const session = createPracticeSession({
