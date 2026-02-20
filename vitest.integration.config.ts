@@ -12,7 +12,6 @@ export default defineConfig({
     // (for example, taxonomy census reading rows while repository tests
     // are inserting temporary tags).
     fileParallelism: false,
-    maxWorkers: 1,
     testTimeout: 10_000,
     hookTimeout: 15_000,
     env: {
