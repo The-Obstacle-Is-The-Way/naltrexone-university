@@ -10,6 +10,7 @@ export type Question = {
   readonly slug: string;
   readonly stemMd: string;
   readonly explanationMd: string;
+  readonly referenceMd: string | null;
   readonly difficulty: QuestionDifficulty;
   readonly status: QuestionStatus;
   readonly choices: readonly Choice[];

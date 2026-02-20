@@ -1,7 +1,7 @@
 # Implementation Specifications
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-02-18
+**Last Updated:** 2026-02-20
 
 ---
 
@@ -20,7 +20,6 @@ Implementation specifications provide detailed technical guidance for building e
 | [Master Spec](./master_spec.md) | Complete Technical Specification (SSOT) | Living | All |
 | [SPEC-016](./spec-016-observability.md) | Observability (Logging, Error Tracking) | Partially Implemented | Infrastructure |
 | [SPEC-017](./spec-017-rate-limiting.md) | Rate Limiting | Partial (MVP done) | Infrastructure |
-| [SPEC-033](./spec-033-tag-taxonomy-migration.md) | Tag Taxonomy Migration | Implemented | Feature |
 | [SPEC-034](./spec-034-review-mode-readonly-and-try-again-scoping.md) | Review Mode Read-Only Behavior & Try Again Scoping | Proposed | Feature |
 
 **Master Spec split parts (readability):**
@@ -30,7 +29,7 @@ Implementation specifications provide detailed technical guidance for building e
 - [Master Spec — Part 3](./master_spec_part3.md) — Content Pipeline, Directory Structure, Vertical Slices
 - [Master Spec — Part 4](./master_spec_part4.md) — Testing, Security, Env Vars, Deployment
 
-**Next Spec ID:** SPEC-035
+**Next Spec ID:** SPEC-036
 
 ## Archived Specs
 
@@ -67,6 +66,8 @@ Implementation specifications provide detailed technical guidance for building e
 | [SPEC-030](../_archive/specs/spec-030-question-view-ux-unification.md) | Question View UX Unification — State Persistence, Navigation, Action Bar | Feature |
 | [SPEC-031](../_archive/specs/spec-031-unified-visual-front.md) | Unified Visual Front — Card Contrast + Shell Parity | Feature |
 | [SPEC-032](../_archive/specs/spec-032-action-bar-standardization.md) | Action Bar Standardization | Feature |
+| [SPEC-033](../_archive/specs/spec-033-tag-taxonomy-migration.md) | Tag Taxonomy Migration | Feature |
+| [SPEC-035](../_archive/specs/spec-035-reference-field-and-content-import.md) | Reference Field & Content Import Pipeline | Feature |
 
 ## Spec Statuses
 

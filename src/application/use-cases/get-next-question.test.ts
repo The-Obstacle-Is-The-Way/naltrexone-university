@@ -268,6 +268,7 @@ describe('GetNextQuestionUseCase', () => {
 
     const question = createQuestion({
       id: questionId,
+      referenceMd: 'Anton RF et al. JAMA. 2006;295(17):2003-2017.',
       choices: [
         createChoice({
           id: 'c1',
@@ -322,6 +323,9 @@ describe('GetNextQuestionUseCase', () => {
 
     expect(previousSubmission.correctChoiceId).toBe('c2');
     expect(previousSubmission.explanationMd).toBe('Explanation');
+    expect(previousSubmission.referenceMd).toBe(
+      'Anton RF et al. JAMA. 2006;295(17):2003-2017.',
+    );
     expect(previousSubmission.choiceExplanations).toHaveLength(
       result?.choices.length ?? 0,
     );

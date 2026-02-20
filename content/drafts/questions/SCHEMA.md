@@ -7,7 +7,7 @@
 
 **Related Files:**
 - `META.MD` - Full NBME quality standards, technical flaw taxonomy (Part 2)
-- `QUESTION-FORMAT-SPEC.md` - Complete pipeline spec (how fields map through import → MDX → seed → database → UI)
+- `QUESTION-FORMAT-SPEC.md` - Complete pipeline spec (how fields map through import -> MDX -> seed -> database -> UI)
 - `TAG-TAXONOMY.md` - Canonical tag tables with display names, migration maps, content gaps
 - `CLAUDE.md` - Quick-start generation instructions
 - `AGENTS.md` - Agent-specific instructions
@@ -51,24 +51,24 @@
 
 ### Prescriber's Guide Medications (Recall Only)
 
-Folder: `content/drafts/questions/prescribers-guide/`
+Folder: `questions/prescribers-guide/` (App repo path: `content/drafts/questions/prescribers-guide/`)
 
 - Each medication has **4 recall questions** (no `vignettes.md`).
 - Medication folders are named with a numeric prefix (for example `01-acamprosate`, `23-naltrexone`).
 - QID format: `qid: stahls-[medication]-[number]` (example: `stahls-naltrexone-001`)
-- `source` tag reflects the textbook edition (for example: `stahls-8e` or `stahls-7e`), so for medications the `qid` prefix does not necessarily match the `source` value.
+- `source` tag reflects the textbook edition. In this repo, Prescriber's Guide questions should use `source: stahls-8e` to avoid split output directories.
 
 ### Prescriber's Guide Full Conversion (No Questions)
 
 Paths:
-- `content/drafts/questions/prescribers-guide/stahls-prescribers-guide.md`
-- `content/drafts/questions/prescribers-guide/stahls-chunked/`
+- `questions/prescribers-guide/stahls-prescribers-guide.md`
+- `questions/prescribers-guide/stahls-chunked/`
 
-This content contains the full-book Markdown conversion for reference. It intentionally has no `recall.md` or `vignettes.md`. The medication question sets live under `content/drafts/questions/prescribers-guide/`.
+This content contains the full-book Markdown conversion for reference. It intentionally has no `recall.md` or `vignettes.md`. The medication question sets live under `questions/prescribers-guide/`.
 
 ### Correction Notice (No Questions)
 
-Folder: `content/drafts/questions/article-based-pathway/09-therapy/2024-cooperman-more-trial-correction/`
+Folder: `questions/article-based-pathway/09-therapy/2024-cooperman-more-trial-correction/` (App repo path: `content/drafts/questions/article-based-pathway/09-therapy/2024-cooperman-more-trial-correction/`)
 
 This folder is a correction notice source-only folder and intentionally has no `recall.md` or `vignettes.md`.
 
@@ -79,7 +79,7 @@ This folder is a correction notice source-only folder and intentionally has no `
 Each paper gets two question files in its folder:
 
 ```
-content/drafts/questions/
+questions/
   └── 01-screening-evaluation-prevention/
       └── 2020-white-gender-differences-alcohol-harms/
           ├── 2020-white-gender-differences-alcohol-harms.pdf
@@ -123,6 +123,10 @@ The AUDIT-C uses sex-specific cutoffs: 3 or more for women and 4 or more for men
 - C) This is the male cutoff, not female
 - D) Would miss at-risk drinkers
 
+### Reference
+
+White AM, Castle IP, Hingson RW, Powell PA. Using death certificates to explore changes in alcohol-related mortality in the United States, 1999 to 2017. Alcohol Clin Exp Res. 2020;44(1):178-187.
+
 ---
 ```
 
@@ -142,7 +146,7 @@ Every question MUST have these tags in the YAML frontmatter:
 | `source` | paper identifier | e.g., `white-2020`, `jones-2023` |
 | `answer` | `A`, `B`, `C`, `D`, or `E` | The correct answer letter |
 
-**Strict frontmatter:** The import script uses `DraftFrontmatterSchema.strict()` — any unknown YAML key will be rejected. Only include fields from this table.
+**Strict frontmatter:** The import script uses `DraftFrontmatterSchema.strict()`. Any unknown YAML key will be rejected. Only include fields from this table.
 
 Recommended tags (include when relevant):
 
@@ -266,6 +270,7 @@ Every question MUST include:
 1. **Question** - The stem (vignette if applicable) + lead-in question
 2. **Choices** - 2-5 options labeled A-E (standard authoring target: 4; correct answer specified in frontmatter)
 3. **Explanation** - Why the correct answer is right AND why others are wrong
+4. **Reference** - AMA-format citation at end of explanation (as `### Reference` subsection)
 
 ### NBME-Style Guidelines
 
@@ -295,6 +300,7 @@ Before finalizing questions:
 - [ ] Distractors are plausible, not obviously wrong
 - [ ] No "all of the above" or "none of the above"
 - [ ] Statistics/numbers verified against source paper
+- [ ] `### Reference` section at end of explanation with AMA-format citation
 - [ ] recall.md has 6 questions (2 easy, 2 medium, 2 hard)
 - [ ] vignettes.md has 6 questions (2 easy, 2 medium, 2 hard)
 
@@ -302,14 +308,16 @@ Before finalizing questions:
 
 ## Optional Metadata (Not Supported Yet)
 
-These fields are NOT currently supported by the import script (strict mode will reject them). They are design proposals for a future version:
+These YAML fields are NOT currently supported by the import script (strict mode will reject them). They are design proposals for a future version:
 
 - `evidence:` one of `guideline`, `systematic-review`, `rct`, `observational`, `case-series`, `expert-consensus`
 - `certainty:` one of `high`, `moderate`, `low`, `very-low`, `na`
-- `citation:` structured citation string (e.g., `"White AM, et al. JAMA. 2020;323(2):130-131."`)
+- `citation:` structured citation string (e.g., `"White AM, et al. Alcohol Clin Exp Res. 2020;44(1):178-187."`)
 - `doi:` DOI string (e.g., `"10.1001/jama.2019.20318"`)
 
-**Do not include these in drafts** — the strict frontmatter schema will reject them. For now, embed citations in the `## Explanation` section.
+**Do not include these in YAML frontmatter** -- `DraftFrontmatterSchema.strict()` will reject them.
+
+**Current citation approach:** Every question includes a `### Reference` subsection at the end of `## Explanation` with an AMA-format citation. This is the content source of truth. See `QUESTION-FORMAT-SPEC.md` section 5 for the full spec and section 10 for pipeline implementation status.
 
 ## Validation (Recommended)
 
@@ -323,7 +331,7 @@ There is currently no dedicated length-cue validator script in this repo.
 
 ## Pipeline Deep Dive
 
-For complete details on how draft fields map through the import → MDX → seed → database → UI pipeline, including:
+For complete details on how draft fields map through the import -> MDX -> seed -> database -> UI pipeline, including:
 - How `answer: B` becomes `correct: true` on the right choice
 - How tag slugs expand to `{slug, name, kind}` objects
 - How explanations are parsed into per-choice feedback

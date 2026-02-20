@@ -1,7 +1,12 @@
 // @vitest-environment jsdom
 import { renderToStaticMarkup } from 'react-dom/server';
-import { describe, expect, it } from 'vitest';
-import { Feedback } from '@/components/question/feedback';
+import { beforeAll, describe, expect, it } from 'vitest';
+
+let Feedback: typeof import('@/components/question/feedback').Feedback;
+
+beforeAll(async () => {
+  ({ Feedback } = await import('@/components/question/feedback'));
+});
 
 describe('Feedback', () => {
   it('renders correct feedback with explanation', () => {
@@ -79,5 +84,30 @@ describe('Feedback', () => {
 
     expect(html).toContain('Fallback explanation.');
     expect(html).not.toContain('Why other answers are wrong:');
+  });
+
+  it('renders reference section when referenceMd is provided', () => {
+    const html = renderToStaticMarkup(
+      <Feedback
+        isCorrect={true}
+        explanationMd="Because..."
+        referenceMd="Anton RF et al. JAMA. 2006;295(17):2003-2017."
+      />,
+    );
+
+    expect(html).toContain('Reference');
+    expect(html).toContain('Anton RF et al. JAMA. 2006;295(17):2003-2017.');
+  });
+
+  it('does not render reference section when referenceMd is null', () => {
+    const html = renderToStaticMarkup(
+      <Feedback
+        isCorrect={true}
+        explanationMd="Because..."
+        referenceMd={null}
+      />,
+    );
+
+    expect(html).not.toContain('Reference');
   });
 });

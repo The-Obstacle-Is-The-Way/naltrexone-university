@@ -205,6 +205,7 @@ describe('QuestionView', () => {
           isCorrect: false,
           correctChoiceId: 'c1',
           explanationMd: 'Explanation',
+          referenceMd: null,
           choiceExplanations: [],
         }}
         sessionNavigation={null}
@@ -236,6 +237,7 @@ describe('QuestionView', () => {
           isCorrect: true,
           correctChoiceId: 'c1',
           explanationMd: 'Explanation',
+          referenceMd: null,
           choiceExplanations: [],
         }}
         sessionNavigation={null}
@@ -264,6 +266,7 @@ describe('QuestionView', () => {
           isCorrect: false,
           correctChoiceId: 'c1',
           explanationMd: 'Explanation',
+          referenceMd: null,
           choiceExplanations: [],
         }}
         sessionNavigation={null}
@@ -342,6 +345,7 @@ describe('QuestionView', () => {
           isCorrect: false,
           correctChoiceId: 'c1',
           explanationMd: 'Explanation',
+          referenceMd: null,
           choiceExplanations: [],
         }}
       />,

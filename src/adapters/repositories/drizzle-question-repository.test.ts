@@ -5,11 +5,24 @@ import { DrizzleQuestionRepository } from './drizzle-question-repository';
 
 type RepoDb = ConstructorParameters<typeof DrizzleQuestionRepository>[0];
 
-const baseQuestionRow = {
+type QuestionRow = {
+  id: string;
+  slug: string;
+  stemMd: string;
+  explanationMd: string;
+  referenceMd: string | null;
+  difficulty: 'easy' | 'medium' | 'hard';
+  status: 'draft' | 'published' | 'archived';
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+const baseQuestionRow: QuestionRow = {
   id: 'question_1',
   slug: 'question-1',
   stemMd: 'stem',
   explanationMd: 'explanation',
+  referenceMd: null,
   difficulty: 'easy',
   status: 'published',
   createdAt: new Date('2026-02-01T00:00:00Z'),
@@ -17,7 +30,7 @@ const baseQuestionRow = {
 };
 
 function createQuestionRow(
-  overrides: Partial<typeof baseQuestionRow> = {},
+  overrides: Partial<QuestionRow> = {},
   choices = [
     {
       id: 'choice_1',
@@ -76,7 +89,7 @@ describe('DrizzleQuestionRepository', () => {
     });
 
     it('maps the question, sorts choices, and maps tags', async () => {
-      const row = createQuestionRow();
+      const row = createQuestionRow({ referenceMd: 'Anton RF et al. JAMA.' });
       const db = {
         query: {
           questions: {
@@ -105,6 +118,7 @@ describe('DrizzleQuestionRepository', () => {
           kind: 'topic',
         },
       ]);
+      expect(result?.referenceMd).toBe('Anton RF et al. JAMA.');
     });
 
     it('throws INTERNAL_ERROR when a choice label is invalid', async () => {

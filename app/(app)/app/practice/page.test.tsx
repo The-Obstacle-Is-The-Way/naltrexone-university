@@ -219,6 +219,7 @@ describe('app/(app)/app/practice', () => {
           isCorrect: false,
           correctChoiceId: 'choice-1',
           explanationMd: 'Explanation',
+          referenceMd: null,
           choiceExplanations: [],
         }}
         isPending={false}
@@ -254,6 +255,7 @@ describe('app/(app)/app/practice', () => {
           isCorrect: false,
           correctChoiceId: 'choice-1',
           explanationMd: null,
+          referenceMd: null,
           choiceExplanations: [],
         }}
         isPending={false}

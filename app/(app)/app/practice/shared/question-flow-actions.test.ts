@@ -95,6 +95,7 @@ describe('question-flow-actions', () => {
       isCorrect: false,
       correctChoiceId: 'choice_1',
       explanationMd: null,
+      referenceMd: null,
       choiceExplanations: [],
     };
     let submitIdempotencyKey: string | null = 'idemp_1';
@@ -131,6 +132,7 @@ describe('question-flow-actions', () => {
           isCorrect: true,
           correctChoiceId: 'choice_2',
           explanationMd: null,
+          referenceMd: null,
           choiceExplanations: [],
         });
         setSubmitIdempotencyKey('idemp_2');
@@ -168,6 +170,7 @@ describe('question-flow-actions', () => {
       isCorrect: false,
       correctChoiceId: 'choice_1',
       explanationMd: null,
+      referenceMd: null,
       choiceExplanations: [],
     };
     let submitIdempotencyKey: string | null = 'idemp_1';
@@ -222,6 +225,7 @@ describe('question-flow-actions', () => {
       isCorrect: false,
       correctChoiceId: 'choice_1',
       explanationMd: null,
+      referenceMd: null,
       choiceExplanations: [],
     };
     let submitIdempotencyKey: string | null = 'idemp_1';
@@ -275,6 +279,7 @@ describe('question-flow-actions', () => {
       isCorrect: false,
       correctChoiceId: 'choice_1',
       explanationMd: null,
+      referenceMd: null,
       choiceExplanations: [],
     };
     let submitIdempotencyKey: string | null = 'idemp_1';
@@ -373,6 +378,7 @@ describe('question-flow-actions', () => {
           isCorrect: true,
           correctChoiceId: 'choice_1',
           explanationMd: null,
+          referenceMd: null,
           choiceExplanations: [],
         },
       }),
@@ -402,6 +408,7 @@ describe('question-flow-actions', () => {
         isCorrect: true,
         correctChoiceId: 'choice_1',
         explanationMd: null,
+        referenceMd: null,
         choiceExplanations: [],
       },
     }));
@@ -476,6 +483,7 @@ describe('question-flow-actions', () => {
         isCorrect: true,
         correctChoiceId: 'choice_1',
         explanationMd: null,
+        referenceMd: null,
         choiceExplanations: [],
       },
     }));
@@ -530,6 +538,7 @@ describe('question-flow-actions', () => {
         isCorrect: true,
         correctChoiceId: 'choice_1',
         explanationMd: null,
+        referenceMd: null,
         choiceExplanations: [],
       } satisfies SubmitAnswerOutput),
     );

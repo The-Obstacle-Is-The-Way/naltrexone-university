@@ -22,6 +22,9 @@ function QuestionFlowCoreProbe() {
       <div data-testid="submit-result-explanation-md">
         {core.submitResult?.explanationMd ?? ''}
       </div>
+      <div data-testid="submit-result-reference-md">
+        {core.submitResult?.referenceMd ?? ''}
+      </div>
       <div data-testid="submit-result-choice-explanations-length">
         {String(core.submitResult?.choiceExplanations.length ?? 0)}
       </div>
@@ -66,6 +69,7 @@ function QuestionFlowCoreProbe() {
                 previousSubmission: {
                   correctChoiceId: 'choice_1',
                   explanationMd: 'Explanation',
+                  referenceMd: 'Anton RF et al. JAMA. 2006;295(17):2003-2017.',
                   choiceExplanations: [
                     {
                       choiceId: 'choice_1',
@@ -125,6 +129,7 @@ function QuestionFlowCoreProbe() {
             isCorrect: false,
             correctChoiceId: 'choice_1',
             explanationMd: 'Explanation',
+            referenceMd: null,
             choiceExplanations: [],
           })
         }
@@ -140,6 +145,7 @@ function QuestionFlowCoreProbe() {
               isCorrect: false,
               correctChoiceId: 'choice_1',
               explanationMd: 'Explanation',
+              referenceMd: null,
               choiceExplanations: [],
             },
             'q_1',
@@ -261,6 +267,9 @@ test('restores submitResult when previousSubmission exists in session data', asy
   await expect
     .element(screen.getByTestId('submit-result-explanation-md'))
     .toHaveTextContent('Explanation');
+  await expect
+    .element(screen.getByTestId('submit-result-reference-md'))
+    .toHaveTextContent('Anton RF et al. JAMA. 2006;295(17):2003-2017.');
   await expect
     .element(screen.getByTestId('submit-result-choice-explanations-length'))
     .toHaveTextContent('2');

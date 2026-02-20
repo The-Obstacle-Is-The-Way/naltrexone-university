@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { parseSeedQuestionFile } from './seed/question-parser';
 import { validateSeedQuestionTags } from './seed/tag-manager';
 
 describe('validateSeedQuestionTags', () => {
@@ -90,5 +91,93 @@ describe('validateSeedQuestionTags', () => {
         ],
       }),
     ).toThrow(/at least one substance/i);
+  });
+});
+
+describe('parseSeedQuestionFile', () => {
+  it('includes reference_md from parsed explanation content', () => {
+    const raw = [
+      '---',
+      'slug: "demo-100"',
+      'difficulty: "easy"',
+      'status: "published"',
+      'tags:',
+      '  - slug: "screening-diagnosis"',
+      '    name: "Screening & Diagnosis"',
+      '    kind: "topic"',
+      '  - slug: "alcohol"',
+      '    name: "Alcohol"',
+      '    kind: "substance"',
+      'choices:',
+      '  - label: "A"',
+      '    text: "Choice A"',
+      '    correct: false',
+      '  - label: "B"',
+      '    text: "Choice B"',
+      '    correct: true',
+      '---',
+      '',
+      '## Stem',
+      '',
+      'What is the best answer?',
+      '',
+      '## Explanation',
+      '',
+      'General explanation.',
+      '',
+      '**Why other answers are wrong:**',
+      '- A) Because A is incorrect.',
+      '',
+      '### Reference',
+      '',
+      "Anton RF, O'Malley SS, Ciraulo DA, et al. JAMA. 2006;295(17):2003-2017.",
+      '',
+    ].join('\n');
+
+    const parsed = parseSeedQuestionFile(raw);
+
+    expect(parsed.reference_md).toBe(
+      "Anton RF, O'Malley SS, Ciraulo DA, et al. JAMA. 2006;295(17):2003-2017.",
+    );
+  });
+
+  it('sets reference_md to null when no reference section exists', () => {
+    const raw = [
+      '---',
+      'slug: "demo-101"',
+      'difficulty: "easy"',
+      'status: "published"',
+      'tags:',
+      '  - slug: "screening-diagnosis"',
+      '    name: "Screening & Diagnosis"',
+      '    kind: "topic"',
+      '  - slug: "alcohol"',
+      '    name: "Alcohol"',
+      '    kind: "substance"',
+      'choices:',
+      '  - label: "A"',
+      '    text: "Choice A"',
+      '    correct: false',
+      '  - label: "B"',
+      '    text: "Choice B"',
+      '    correct: true',
+      '---',
+      '',
+      '## Stem',
+      '',
+      'What is the best answer?',
+      '',
+      '## Explanation',
+      '',
+      'General explanation.',
+      '',
+      '**Why other answers are wrong:**',
+      '- A) Because A is incorrect.',
+      '',
+    ].join('\n');
+
+    const parsed = parseSeedQuestionFile(raw);
+
+    expect(parsed.reference_md).toBeNull();
   });
 });

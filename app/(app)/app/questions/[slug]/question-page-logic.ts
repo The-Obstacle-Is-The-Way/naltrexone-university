@@ -254,6 +254,7 @@ export async function loadPreviousAttempt(input: {
     isCorrect: data.isCorrect,
     correctChoiceId: data.correctChoiceId,
     explanationMd: data.explanationMd,
+    referenceMd: data.referenceMd ?? null,
     choiceExplanations: data.choiceExplanations,
   });
 }

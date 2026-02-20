@@ -231,6 +231,7 @@ export const questions = pgTable(
     slug: varchar('slug', { length: 255 }).notNull(),
     stemMd: text('stem_md').notNull(),
     explanationMd: text('explanation_md').notNull(),
+    referenceMd: text('reference_md'),
     difficulty: questionDifficultyEnum('difficulty').notNull(),
     status: questionStatusEnum('status').notNull(),
     createdAt: timestamp('created_at', { withTimezone: true })

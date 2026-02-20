@@ -34,6 +34,7 @@ export type SeedQuestionRep = {
   slug: string;
   stem_md: string;
   explanation_md: string;
+  reference_md: string | null;
   difficulty: QuestionDifficulty;
   status: QuestionStatus;
   choices: SeedChoice[];
@@ -65,6 +66,7 @@ function buildSeedRepFromParsed(full: unknown): SeedQuestionRep {
     slug: parsed.frontmatter.slug,
     stem_md: canonicalizeMarkdown(parsed.stemMd),
     explanation_md: generalExplanation,
+    reference_md: parsedExplanations.referenceMd,
     difficulty: parsed.frontmatter.difficulty,
     status: parsed.frontmatter.status,
     tags: sortedTags.map((tag) => ({
@@ -103,6 +105,9 @@ export function buildSeedRepFromDb(
     slug: question.slug,
     stem_md: canonicalizeMarkdown(question.stemMd),
     explanation_md: canonicalizeMarkdown(question.explanationMd),
+    reference_md: question.referenceMd
+      ? canonicalizeMarkdown(question.referenceMd)
+      : null,
     difficulty: question.difficulty,
     status: question.status,
     choices: [...choices]

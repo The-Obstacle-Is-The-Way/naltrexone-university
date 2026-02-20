@@ -122,6 +122,7 @@ describe('SubmitAnswerUseCase', () => {
       id: questionId,
       status: 'published',
       explanationMd: 'Because.',
+      referenceMd: 'Anton RF et al. JAMA. 2006;295(17):2003-2017.',
       choices: [
         createChoice({ id: 'c1', questionId, label: 'A', isCorrect: false }),
         createChoice({ id: 'c2', questionId, label: 'B', isCorrect: true }),
@@ -147,6 +148,9 @@ describe('SubmitAnswerUseCase', () => {
     expect(result.isCorrect).toBe(true);
     expect(result.correctChoiceId).toBe('c2');
     expect(result.explanationMd).toBe('Because.');
+    expect(result.referenceMd).toBe(
+      'Anton RF et al. JAMA. 2006;295(17):2003-2017.',
+    );
     expect(result.choiceExplanations).toHaveLength(2);
 
     const inserted = attempts.getAll();
@@ -437,6 +441,7 @@ describe('SubmitAnswerUseCase', () => {
 
     expect(result.correctChoiceId).toBeNull();
     expect(result.explanationMd).toBeNull();
+    expect(result.referenceMd).toBeNull();
     expect(result.choiceExplanations).toEqual([]);
   });
 
