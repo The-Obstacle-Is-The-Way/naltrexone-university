@@ -249,6 +249,7 @@ function expectSingleFailure(
 ): void {
   expect(result.updated).toBe(0);
   expect(result.failed).toBe(1);
+  expect(result.failures).toHaveLength(1);
   expect(result.failures[0]).toMatchObject(input);
 }
 

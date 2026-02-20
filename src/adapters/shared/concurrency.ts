@@ -3,7 +3,7 @@ export async function mapWithConcurrencyLimit<T, R>(
   limit: number,
   fn: (item: T) => Promise<R>,
 ): Promise<R[]> {
-  if (limit < 1) {
+  if (!(limit >= 1)) {
     throw new Error('mapWithConcurrencyLimit: limit must be >= 1');
   }
   const results: R[] = new Array(items.length);

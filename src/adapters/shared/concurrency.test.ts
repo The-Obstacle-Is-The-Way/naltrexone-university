@@ -75,6 +75,12 @@ describe('mapWithConcurrencyLimit', () => {
     ).rejects.toThrow('limit must be >= 1');
   });
 
+  it('throws when limit is NaN', async () => {
+    await expect(
+      mapWithConcurrencyLimit([1], NaN, async (x) => x),
+    ).rejects.toThrow('limit must be >= 1');
+  });
+
   it('propagates mapper errors', async () => {
     await expect(
       mapWithConcurrencyLimit([1, 2, 3], 2, async (item) => {
