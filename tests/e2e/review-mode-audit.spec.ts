@@ -340,7 +340,11 @@ test.describe('review mode audit', () => {
       await expect(questionLinks.nth(i)).toHaveAttribute('href', /mode=review/);
     }
 
-    await questionLinks.first().click();
+    const targetReviewLink = page
+      .locator(`a[aria-label^="Review question:"][href*="${CORRECT_SLUG}"]`)
+      .first();
+    await expect(targetReviewLink).toBeVisible({ timeout: 15_000 });
+    await targetReviewLink.click();
 
     await expect(page).toHaveURL(/\/app\/questions\//, { timeout: 15_000 });
     await expect(page).toHaveURL(/from=bookmarks/);
@@ -356,10 +360,6 @@ test.describe('review mode audit', () => {
     await expect(page.getByRole('button', { name: 'Try Again' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Submit' })).toHaveCount(0);
     await expectChoiceChecked(page, selectedLabel);
-
-    const checkedRadios = page.locator('input[type="radio"]:checked');
-    await expect(checkedRadios.first()).toBeVisible();
-    expect(await checkedRadios.count()).toBeGreaterThan(0);
   });
 
   test('post-submit feedback component renders correctly', async ({ page }) => {

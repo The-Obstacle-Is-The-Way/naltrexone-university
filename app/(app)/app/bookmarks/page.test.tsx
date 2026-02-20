@@ -107,7 +107,7 @@ describe('app/(app)/app/bookmarks', () => {
     expect(html).toContain('Stem for q1');
     expect(html).toContain('easy');
     expect(html).toContain('Bookmarked Feb 1, 2026');
-    expect(html).toContain('Review');
+    expect(html).toContain('>Review<');
     expect(html).toContain(reviewHref);
     expect(html).toContain('aria-label="Review question: Stem for q1"');
     expect(html).toContain('Remove');
