@@ -13,6 +13,8 @@ export type EndPracticeSessionInput = {
 
 export type EndPracticeSessionOutput = {
   sessionId: string;
+  mode: 'tutor' | 'exam';
+  questionCount: number;
   endedAt: string; // ISO
   totals: {
     answered: number;
@@ -39,7 +41,10 @@ export class EndPracticeSessionUseCase {
     }
 
     const { answered, correct } = computeSessionStats(session.questionStates);
-    const accuracy = computeAccuracy(answered, correct);
+    const questionCount = session.questionIds.length;
+    const accuracyDenominator =
+      session.mode === 'exam' ? questionCount : answered;
+    const accuracy = computeAccuracy(accuracyDenominator, correct);
 
     const durationSeconds = computeSessionDurationSeconds(
       session.startedAt,
@@ -48,6 +53,8 @@ export class EndPracticeSessionUseCase {
 
     return {
       sessionId: session.id,
+      mode: session.mode,
+      questionCount,
       endedAt: endedAt.toISOString(),
       totals: {
         answered,

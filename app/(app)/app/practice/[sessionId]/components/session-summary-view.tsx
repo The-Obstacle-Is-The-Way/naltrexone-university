@@ -21,10 +21,13 @@ export function SessionSummaryView({
 }) {
   const summaryReview = review ?? null;
   const summaryReviewLoadState = reviewLoadState ?? { status: 'idle' };
+  const accuracyPercent = `${Math.round(summary.totals.accuracy * 100)}%`;
   const accuracyLabel =
-    summary.totals.answered > 0
-      ? `${Math.round(summary.totals.accuracy * 100)}%`
-      : '—';
+    summary.mode === 'exam'
+      ? accuracyPercent
+      : summary.totals.answered > 0
+        ? accuracyPercent
+        : '—';
 
   return (
     <div className="space-y-6">

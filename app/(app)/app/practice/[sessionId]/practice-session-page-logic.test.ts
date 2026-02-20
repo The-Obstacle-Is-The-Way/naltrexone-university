@@ -721,6 +721,8 @@ describe('practice-session-page-logic', () => {
     const successfulEndSessionOutput: EndPracticeSessionOutput = {
       sessionId: 'session-1',
       endedAt: '2026-02-01T00:00:00.000Z',
+      mode: 'tutor',
+      questionCount: 10,
       totals: {
         answered: 10,
         correct: 7,
@@ -865,6 +867,8 @@ describe('practice-session-page-logic', () => {
         ok({
           sessionId: 'session-1',
           endedAt: '2026-02-01T00:00:00.000Z',
+          mode: 'tutor',
+          questionCount: 1,
           totals: { answered: 1, correct: 1, accuracy: 1, durationSeconds: 1 },
         }),
       );
@@ -887,6 +891,8 @@ describe('practice-session-page-logic effects', () => {
         summary: {
           sessionId: 'session-1',
           endedAt: '2026-02-01T00:00:00.000Z',
+          mode: 'tutor',
+          questionCount: 1,
           totals: { answered: 1, correct: 1, accuracy: 1, durationSeconds: 1 },
         },
         isInReviewStage: false,
@@ -1062,6 +1068,8 @@ describe('practice-session-page-logic effects', () => {
         summary: {
           sessionId: 'session-1',
           endedAt: '2026-02-01T00:00:00.000Z',
+          mode: 'tutor',
+          questionCount: 1,
           totals: { answered: 1, correct: 1, accuracy: 1, durationSeconds: 1 },
         },
         sessionId: 'session-1',
@@ -1095,6 +1103,8 @@ describe('practice-session-page-logic effects', () => {
         summary: {
           sessionId: 'session-1',
           endedAt: '2026-02-01T00:00:00.000Z',
+          mode: 'tutor',
+          questionCount: 1,
           totals: { answered: 1, correct: 1, accuracy: 1, durationSeconds: 1 },
         },
         sessionId: 'session-1',
@@ -1122,6 +1132,8 @@ describe('practice-session-page-logic effects', () => {
         summary: {
           sessionId: 'session-1',
           endedAt: '2026-02-01T00:00:00.000Z',
+          mode: 'tutor',
+          questionCount: 1,
           totals: { answered: 1, correct: 1, accuracy: 1, durationSeconds: 1 },
         },
         sessionId: 'session-1',

@@ -21,6 +21,8 @@ describe('SessionSummaryView', () => {
       <SessionSummaryView
         summary={{
           sessionId: 'session-1',
+          mode: 'tutor',
+          questionCount: 8,
           endedAt: '2026-02-07T00:00:00.000Z',
           totals: {
             answered: 8,
@@ -38,11 +40,13 @@ describe('SessionSummaryView', () => {
     expect(findStatValue(doc, 'Accuracy')).toBe('75%');
   });
 
-  it('renders — for accuracy when answered is 0', () => {
+  it('shows 0% for exam summary when answered is zero', () => {
     const html = renderToStaticMarkup(
       <SessionSummaryView
         summary={{
           sessionId: 'session-1',
+          mode: 'exam',
+          questionCount: 10,
           endedAt: '2026-02-07T00:00:00.000Z',
           totals: {
             answered: 0,
@@ -57,6 +61,6 @@ describe('SessionSummaryView', () => {
     );
     const doc = new DOMParser().parseFromString(html, 'text/html');
 
-    expect(findStatValue(doc, 'Accuracy')).toBe('—');
+    expect(findStatValue(doc, 'Accuracy')).toBe('0%');
   });
 });

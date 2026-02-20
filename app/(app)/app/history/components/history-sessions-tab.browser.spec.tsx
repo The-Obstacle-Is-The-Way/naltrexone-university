@@ -254,9 +254,9 @@ describe('HistorySessionsTab (browser)', () => {
               sessionId: 'session-2',
               mode: 'tutor',
               questionCount: 10,
-              answered: 10,
-              correct: 7,
-              accuracy: 0.7,
+              answered: 0,
+              correct: 0,
+              accuracy: 0,
               durationSeconds: 180,
               startedAt: '2026-02-08T00:00:00.000Z',
               endedAt: '2026-02-08T00:03:00.000Z',
@@ -278,7 +278,7 @@ describe('HistorySessionsTab (browser)', () => {
 
     await screen
       .getByRole('button', {
-        name: 'View breakdown for Tutor session: 7/10 correct (70%), 3m, Feb 8, 2026',
+        name: 'View breakdown for Tutor session: 0/0 correct (—), 3m, Feb 8, 2026',
       })
       .click();
     await expect.element(screen.getByText('Stem for session 2')).toBeVisible();

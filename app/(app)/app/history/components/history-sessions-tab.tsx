@@ -61,9 +61,14 @@ export function HistorySessionsTab({ result }: HistorySessionsTabProps) {
           const isSelected =
             historySessions.selectedSessionId === row.sessionId;
           const endedOn = formatDate(row.endedAt);
+          const fractionDenominator =
+            row.mode === 'exam' ? row.questionCount : row.answered;
+          const fractionLabel = `${row.correct}/${fractionDenominator}`;
           const accuracyLabel =
-            row.answered > 0 ? formatSessionAccuracy(row.accuracy) : '—';
-          const sessionSummary = `${formatSessionMode(row.mode)} session: ${row.correct}/${row.questionCount} correct (${accuracyLabel}), ${formatDuration(row.durationSeconds)}, ${endedOn}`;
+            row.mode === 'exam' || row.answered > 0
+              ? formatSessionAccuracy(row.accuracy)
+              : '—';
+          const sessionSummary = `${formatSessionMode(row.mode)} session: ${fractionLabel} correct (${accuracyLabel}), ${formatDuration(row.durationSeconds)}, ${endedOn}`;
           const selectedReview =
             historySessions.selectedReview?.sessionId === row.sessionId
               ? historySessions.selectedReview
@@ -81,7 +86,7 @@ export function HistorySessionsTab({ result }: HistorySessionsTabProps) {
                   </span>
                   <span className="mx-2">•</span>
                   <span>
-                    {row.correct}/{row.questionCount} correct ({accuracyLabel})
+                    {fractionLabel} correct ({accuracyLabel})
                   </span>
                   <span className="mx-2">•</span>
                   <span>{formatDuration(row.durationSeconds)}</span>

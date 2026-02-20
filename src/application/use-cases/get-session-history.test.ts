@@ -20,7 +20,7 @@ describe('GetSessionHistoryUseCase', () => {
     });
   });
 
-  it('returns completed sessions with computed totals', async () => {
+  it('computes per-row accuracy by mode (exam total, tutor answered)', async () => {
     const sessionOneStartedAt = new Date('2026-02-06T10:00:00.000Z');
     const sessionOneEndedAt = new Date('2026-02-06T10:15:00.000Z');
     const sessionTwoStartedAt = new Date('2026-02-05T10:00:00.000Z');
@@ -106,7 +106,7 @@ describe('GetSessionHistoryUseCase', () => {
           questionCount: 3,
           answered: 2,
           correct: 1,
-          accuracy: 0.5,
+          accuracy: 1 / 3,
           durationSeconds: 900,
           startedAt: sessionOneStartedAt.toISOString(),
           endedAt: sessionOneEndedAt.toISOString(),

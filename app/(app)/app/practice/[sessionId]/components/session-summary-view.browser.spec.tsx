@@ -8,6 +8,8 @@ test('renders summary totals and per-question breakdown', async () => {
       summary={{
         sessionId: 'session-1',
         endedAt: '2026-02-07T00:00:00.000Z',
+        mode: 'exam',
+        questionCount: 10,
         totals: {
           answered: 10,
           correct: 7,
@@ -68,6 +70,8 @@ test('renders loading and error states for summary review', async () => {
       summary={{
         sessionId: 'session-1',
         endedAt: '2026-02-07T00:00:00.000Z',
+        mode: 'tutor',
+        questionCount: 1,
         totals: {
           answered: 1,
           correct: 1,

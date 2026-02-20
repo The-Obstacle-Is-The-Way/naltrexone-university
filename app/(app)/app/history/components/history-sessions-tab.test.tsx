@@ -58,13 +58,13 @@ describe('HistorySessionsTab', () => {
     expect(html).toContain('View breakdown');
   });
 
-  it('renders — for session accuracy when answered is 0', () => {
+  it('shows exam zero-answered accuracy as 0% and keeps tutor zero-answered as —', () => {
     const result: SessionHistoryResult = {
       ok: true,
       data: {
         rows: [
           {
-            sessionId: 'session-1',
+            sessionId: 'session-exam',
             mode: 'exam',
             questionCount: 10,
             answered: 0,
@@ -74,8 +74,19 @@ describe('HistorySessionsTab', () => {
             startedAt: '2026-02-07T00:00:00.000Z',
             endedAt: '2026-02-07T00:20:00.000Z',
           },
+          {
+            sessionId: 'session-tutor',
+            mode: 'tutor',
+            questionCount: 10,
+            answered: 0,
+            correct: 0,
+            accuracy: 0,
+            durationSeconds: 180,
+            startedAt: '2026-02-08T00:00:00.000Z',
+            endedAt: '2026-02-08T00:03:00.000Z',
+          },
         ],
-        total: 1,
+        total: 2,
         limit: 20,
         offset: 0,
       },
@@ -83,7 +94,8 @@ describe('HistorySessionsTab', () => {
 
     const html = renderToStaticMarkup(<HistorySessionsTab result={result} />);
 
-    expect(html).toContain('0/10 correct (—)');
+    expect(html).toContain('0/10 correct (0%)');
+    expect(html).toContain('0/0 correct (—)');
   });
 
   it('renders empty state when there are no completed sessions', () => {

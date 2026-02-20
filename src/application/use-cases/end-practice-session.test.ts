@@ -11,6 +11,114 @@ describe('EndPracticeSessionUseCase', () => {
     vi.restoreAllMocks();
   });
 
+  it('computes exam accuracy using total question count denominator', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-02-01T00:10:00Z'));
+
+    const sessions = new FakePracticeSessionRepository([
+      createPracticeSession({
+        id: 'session-exam',
+        userId: 'user-1',
+        mode: 'exam',
+        questionIds: ['q1', 'q2', 'q3'],
+        questionStates: [
+          {
+            questionId: 'q1',
+            markedForReview: false,
+            latestSelectedChoiceId: 'choice-1',
+            latestIsCorrect: true,
+            latestAnsweredAt: new Date('2026-02-01T00:05:00Z'),
+          },
+          {
+            questionId: 'q2',
+            markedForReview: false,
+            latestSelectedChoiceId: null,
+            latestIsCorrect: null,
+            latestAnsweredAt: null,
+          },
+          {
+            questionId: 'q3',
+            markedForReview: false,
+            latestSelectedChoiceId: null,
+            latestIsCorrect: null,
+            latestAnsweredAt: null,
+          },
+        ],
+        startedAt: new Date('2026-02-01T00:00:00Z'),
+        endedAt: null,
+      }),
+    ]);
+
+    const useCase = new EndPracticeSessionUseCase(sessions);
+
+    await expect(
+      useCase.execute({ userId: 'user-1', sessionId: 'session-exam' }),
+    ).resolves.toMatchObject({
+      sessionId: 'session-exam',
+      mode: 'exam',
+      questionCount: 3,
+      totals: {
+        answered: 1,
+        correct: 1,
+        accuracy: 1 / 3,
+      },
+    });
+  });
+
+  it('keeps tutor accuracy denominator as answered', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-02-01T00:10:00Z'));
+
+    const sessions = new FakePracticeSessionRepository([
+      createPracticeSession({
+        id: 'session-tutor',
+        userId: 'user-1',
+        mode: 'tutor',
+        questionIds: ['q1', 'q2', 'q3'],
+        questionStates: [
+          {
+            questionId: 'q1',
+            markedForReview: false,
+            latestSelectedChoiceId: 'choice-1',
+            latestIsCorrect: true,
+            latestAnsweredAt: new Date('2026-02-01T00:05:00Z'),
+          },
+          {
+            questionId: 'q2',
+            markedForReview: false,
+            latestSelectedChoiceId: null,
+            latestIsCorrect: null,
+            latestAnsweredAt: null,
+          },
+          {
+            questionId: 'q3',
+            markedForReview: false,
+            latestSelectedChoiceId: null,
+            latestIsCorrect: null,
+            latestAnsweredAt: null,
+          },
+        ],
+        startedAt: new Date('2026-02-01T00:00:00Z'),
+        endedAt: null,
+      }),
+    ]);
+
+    const useCase = new EndPracticeSessionUseCase(sessions);
+
+    await expect(
+      useCase.execute({ userId: 'user-1', sessionId: 'session-tutor' }),
+    ).resolves.toMatchObject({
+      sessionId: 'session-tutor',
+      mode: 'tutor',
+      questionCount: 3,
+      totals: {
+        answered: 1,
+        correct: 1,
+        accuracy: 1,
+      },
+    });
+  });
+
   it('returns totals from persisted latest question state (not raw attempt count)', async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-02-01T00:10:00Z'));
@@ -47,6 +155,8 @@ describe('EndPracticeSessionUseCase', () => {
       useCase.execute({ userId: 'user-1', sessionId: 'session-1' }),
     ).resolves.toEqual({
       sessionId: 'session-1',
+      mode: 'tutor',
+      questionCount: 2,
       endedAt: '2026-02-01T00:10:00.000Z',
       totals: {
         answered: 1,
