@@ -1,4 +1,11 @@
-export type CanonicalKind = 'topic' | 'substance' | 'treatment' | 'diagnosis';
+export const CANONICAL_KINDS = [
+  'topic',
+  'substance',
+  'treatment',
+  'diagnosis',
+] as const;
+
+export type CanonicalKind = (typeof CANONICAL_KINDS)[number];
 
 export type MigrationTag = {
   slug: string;

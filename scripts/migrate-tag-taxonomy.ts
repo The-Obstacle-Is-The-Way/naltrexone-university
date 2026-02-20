@@ -116,6 +116,8 @@ export async function runMigration(args: CliArgs): Promise<MigrationReport> {
       });
       incrementTagCounts(report.tagCountsByKind, migratedTags);
 
+      // Intentionally order-sensitive compare: tag-order changes in frontmatter
+      // are treated as file changes.
       const changed = tagsSignature(tags) !== tagsSignature(migratedTags);
       if (changed) {
         report.changedFiles += 1;

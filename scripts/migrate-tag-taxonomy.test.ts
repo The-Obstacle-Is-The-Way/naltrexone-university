@@ -4,6 +4,7 @@ import {
   migrateQuestionTags,
   parseCliArgs,
 } from './migrate-tag-taxonomy';
+import { tagsSignature } from './migrate-tag-taxonomy/tag-parsers';
 
 function createInput(overrides?: Partial<MigrationInput>): MigrationInput {
   return {
@@ -319,5 +320,22 @@ describe('parseCliArgs', () => {
     expect(() => parseCliArgs(['--report', '--write'])).toThrow(
       /missing value for --report/i,
     );
+  });
+});
+
+describe('tagsSignature', () => {
+  it('is order-sensitive by design', () => {
+    const tags: MigrationInput['tags'] = [
+      { slug: 'alcohol', name: 'Alcohol', kind: 'substance' },
+      {
+        slug: 'screening-diagnosis',
+        name: 'Screening & Diagnosis',
+        kind: 'topic',
+      },
+    ];
+
+    const reversed: MigrationInput['tags'] = [tags[1], tags[0]];
+
+    expect(tagsSignature(tags)).not.toBe(tagsSignature(reversed));
   });
 });

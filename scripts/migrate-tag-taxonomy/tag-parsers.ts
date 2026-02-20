@@ -1,12 +1,6 @@
-import type { MigrationTag } from './types';
+import { CANONICAL_KINDS, type MigrationTag } from './types';
 
-const VALID_INPUT_KINDS = new Set<string>([
-  'topic',
-  'substance',
-  'treatment',
-  'diagnosis',
-  'domain',
-]);
+const VALID_INPUT_KINDS = new Set<string>([...CANONICAL_KINDS, 'domain']);
 
 export function parseTags(rawTags: unknown, filePath: string): MigrationTag[] {
   if (!Array.isArray(rawTags)) {
@@ -73,6 +67,8 @@ export function parseChoiceTexts(rawChoices: unknown): Array<{ text: string }> {
 }
 
 export function tagsSignature(tags: readonly MigrationTag[]): string {
+  // Intentionally order-sensitive so frontmatter tag-order changes are treated
+  // as content changes by runMigration.
   return JSON.stringify(
     tags.map((tag) => ({
       slug: tag.slug,
