@@ -28,7 +28,6 @@ Brainstorming (BS-NNN) → Spec (SPEC-NNN) → Implementation → Archive
 | ID | Title | Status | Related Spec |
 |----|-------|--------|--------------|
 | [BS-014](./bs-014-practice-starter-question-count-ux.md) | Practice Starter — Silent Truncation When Fewer Questions Available | Active | — |
-| [BS-026](./bs-026-bookmark-reattempt-review-mode-consistency.md) | Bookmark Reattempt vs Review Mode Consistency | Active | — |
 
 **Next Brainstorming ID:** BS-027
 
@@ -63,6 +62,7 @@ Brainstorming (BS-NNN) → Spec (SPEC-NNN) → Implementation → Archive
 | [BS-023](../_archive/brainstorming/bs-023-try-again-state-consistency.md) | Try Again — State Consistency and Business Logic Gaps | Specced as SPEC-034 (Implemented). Try Again removed from session review, kept in standalone contexts |
 | [BS-024](../_archive/brainstorming/bs-024-tag-taxonomy-cleanup.md) | Tag Taxonomy Cleanup — Unify Pipeline and Eliminate Drift | Specced as SPEC-033 (Implemented). All 7 problems resolved: domain removed, pipeline hardened, taxonomy canonical |
 | [BS-025](../_archive/brainstorming/BS-025-reference-section-pipeline-support.md) | Reference Section Pipeline Support | Specced as SPEC-035 (Implemented). Full vertical slice: reference_md field from seed to UI |
+| [BS-026](../_archive/brainstorming/bs-026-bookmark-reattempt-review-mode-consistency.md) | Bookmark Reattempt vs Review Mode Consistency | Specced as SPEC-036 (Implemented). Bookmarks aligned to review-first contract |
 
 ---
 

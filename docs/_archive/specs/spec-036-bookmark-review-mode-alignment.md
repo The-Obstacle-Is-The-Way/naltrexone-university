@@ -1,7 +1,7 @@
 # SPEC-036: Bookmark Review Mode Alignment
 
 **Date:** 2026-02-20
-**Status:** Ready for implementation
+**Status:** Implemented
 **Layer:** Feature
 **Resolves:** BS-026
 **Related:** SPEC-034 (Review Mode Read-Only & Try Again Scoping), SPEC-023 (Question Review Mode)
@@ -47,6 +47,7 @@ Adopt **review-first bookmarks** (Option A): all bookmark question links will in
 | `app/(app)/app/questions/[slug]/question-page-client.tsx` | In `getOriginUi` bookmarks branch, change subtitle string to `Reviewing a bookmarked question.` | ~83-88 |
 | `tests/e2e/review-mode-audit.spec.ts` | Replace/flip existing test `bookmarks links do not include mode=review` to assert bookmark links include `mode=review`, then click and assert review-mode-on-load state (feedback visible, `Try Again` visible, `Submit` absent, prior choice pre-selected). Keep loading guard before assertions. | ~294-340 |
 | `app/(app)/app/bookmarks/page.test.tsx` | Update render assertions for bookmark action copy/aria and href generation to expect `mode=review` and `Review question:` labels. Update unavailable-bookmark negative assertion from `not.toContain('Reattempt')` to `not.toContain('Review question:')` (the word "Review" alone appears in the page header, so the negative assertion must target the aria-label prefix). | existing bookmark assertions section |
+| `app/(app)/app/questions/[slug]/question-page-client.test.tsx` | Update bookmarks-origin subtitle assertion from `'Reattempt a question from your bookmarks.'` to `'Reviewing a bookmarked question.'` | ~194 |
 
 ### Files confirmed unchanged
 
@@ -65,7 +66,7 @@ Adopt **review-first bookmarks** (Option A): all bookmark question links will in
 1. Update `app/(app)/app/bookmarks/page.test.tsx` to assert bookmark links render with `mode=review` in href for both title link and action link. Specifically, change `toQuestionRoute('q-1', { from: 'bookmarks' })` to `toQuestionRoute('q-1', { from: 'bookmarks', mode: 'review' })`.
 2. Update `app/(app)/app/bookmarks/page.test.tsx` to assert action text is `Review` and aria label starts with `Review question:`.
 3. Update the unavailable-bookmark test (`'renders unavailable bookmarks without a reattempt link'`) to use `expect(html).not.toContain('Review question:')` instead of `expect(html).not.toContain('Reattempt')`. The generic word "Review" appears in the page header ("Review questions you've bookmarked"), so the negative assertion must target the aria-label prefix to be meaningful.
-4. The subtitle change in `getOriginUi('bookmarks')` has no existing unit test — `question-page-client.test.tsx` does not exist and this spec does not require creating it. The subtitle is verified by the E2E test (step 2 below).
+4. Update `app/(app)/app/questions/[slug]/question-page-client.test.tsx` bookmarks-origin subtitle assertion from `'Reattempt a question from your bookmarks.'` to `'Reviewing a bookmarked question.'` (line ~194).
 5. Ensure all updated tests keep React 19 + Vitest conventions already used in these files (no testing-library migration, no per-test timeout overrides).
 
 ### E2E tests
@@ -126,5 +127,5 @@ Adopt **review-first bookmarks** (Option A): all bookmark question links will in
 
 1. **Data migration:** none.
 2. **Release risk:** low; routing/query-param and copy updates only.
-3. **Rollback plan:** revert the four changed files listed above.
+3. **Rollback plan:** revert the five changed files listed above.
 4. **Post-rollback state:** bookmarks return to `from=bookmarks` fresh-attempt behavior, with old `Reattempt` copy.

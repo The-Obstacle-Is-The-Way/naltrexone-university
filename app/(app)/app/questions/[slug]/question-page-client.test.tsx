@@ -191,7 +191,7 @@ describe('QuestionView', () => {
     const backLink = doc.querySelector('a[href="/app/bookmarks"]');
 
     expect(backLink?.textContent?.trim()).toBe('Back to Bookmarks');
-    expect(html).toContain('Reattempt a question from your bookmarks.');
+    expect(html).toContain('Reviewing a bookmarked question.');
   });
 
   it('uses origin-aware post-submit back actions', () => {

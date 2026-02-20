@@ -18,7 +18,6 @@ Implementation specifications provide detailed technical guidance for building e
 | ID | Title | Status | Layer |
 |----|-------|--------|-------|
 | [Master Spec](./master_spec.md) | Complete Technical Specification (SSOT) | Living | All |
-| [SPEC-036](./spec-036-bookmark-review-mode-alignment.md) | Bookmark Review Mode Alignment | Ready | Feature |
 | [SPEC-016](./spec-016-observability.md) | Observability (Logging, Error Tracking) | Partially Implemented | Infrastructure |
 | [SPEC-017](./spec-017-rate-limiting.md) | Rate Limiting | Partial (MVP done) | Infrastructure |
 
@@ -69,6 +68,7 @@ Implementation specifications provide detailed technical guidance for building e
 | [SPEC-033](../_archive/specs/spec-033-tag-taxonomy-migration.md) | Tag Taxonomy Migration | Feature |
 | [SPEC-034](../_archive/specs/spec-034-review-mode-readonly-and-try-again-scoping.md) | Review Mode Read-Only Behavior & Try Again Scoping | Feature |
 | [SPEC-035](../_archive/specs/spec-035-reference-field-and-content-import.md) | Reference Field & Content Import Pipeline | Feature |
+| [SPEC-036](../_archive/specs/spec-036-bookmark-review-mode-alignment.md) | Bookmark Review Mode Alignment | Feature |
 
 ## Spec Statuses
 

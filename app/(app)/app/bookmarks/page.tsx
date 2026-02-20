@@ -91,6 +91,7 @@ export function BookmarksView({ rows }: { rows: GetBookmarksOutput['rows'] }) {
                             <Link
                               href={toQuestionRoute(row.slug, {
                                 from: 'bookmarks',
+                                mode: 'review',
                               })}
                               className="hover:underline"
                             >
@@ -139,10 +140,11 @@ export function BookmarksView({ rows }: { rows: GetBookmarksOutput['rows'] }) {
                           <Link
                             href={toQuestionRoute(row.slug, {
                               from: 'bookmarks',
+                              mode: 'review',
                             })}
-                            aria-label={`Reattempt question: ${ariaLabelStem}`}
+                            aria-label={`Review question: ${ariaLabelStem}`}
                           >
-                            Reattempt
+                            Review
                           </Link>
                         </Button>
                       ) : null}

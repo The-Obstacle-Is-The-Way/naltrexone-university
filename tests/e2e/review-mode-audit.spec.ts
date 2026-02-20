@@ -1,5 +1,4 @@
 import { expect, type Page, test } from '@playwright/test';
-import { ensureBookmarkExistsOnBookmarksPage } from './helpers/bookmark';
 import {
   hasClerkCredentials,
   signInWithClerkPassword,
@@ -291,10 +290,46 @@ test.describe('review mode audit', () => {
     await expectNoChoicesChecked(page);
   });
 
-  test('bookmarks links do not include mode=review', async ({ page }) => {
+  test('bookmarks links include mode=review and open in review mode', async ({
+    page,
+  }) => {
     await signInWithClerkPassword(page);
     await ensureSubscribed(page);
-    await ensureBookmarkExistsOnBookmarksPage(page);
+    await assertQuestionSlugExists(page, CORRECT_SLUG);
+
+    const selectedLabel = await submitQuestionForOutcome(
+      page,
+      CORRECT_SLUG,
+      'Correct',
+    );
+
+    await page.goto(`/app/questions/${CORRECT_SLUG}`, {
+      timeout: 60_000,
+      waitUntil: 'domcontentloaded',
+    });
+    await expect(page.getByRole('heading', { name: 'Question' })).toBeVisible();
+    await expect(page.getByText(/Loading question/i)).toBeHidden({
+      timeout: 15_000,
+    });
+
+    const removeBookmarkButton = page
+      .getByRole('button', { name: 'Remove bookmark' })
+      .first();
+    const isAlreadyBookmarked = await removeBookmarkButton
+      .isVisible()
+      .catch(() => false);
+    if (!isAlreadyBookmarked) {
+      await page.getByRole('button', { name: 'Bookmark' }).first().click();
+      await expect(removeBookmarkButton).toBeVisible({ timeout: 10_000 });
+    }
+
+    await page.goto('/app/bookmarks', {
+      timeout: 60_000,
+      waitUntil: 'domcontentloaded',
+    });
+    await expect(
+      page.getByRole('heading', { name: 'Bookmarks' }),
+    ).toBeVisible();
 
     const questionLinks = page.locator('a[href^="/app/questions/"]');
     await expect(questionLinks.first()).toBeVisible({ timeout: 15_000 });
@@ -302,9 +337,29 @@ test.describe('review mode audit', () => {
     expect(count).toBeGreaterThan(0);
 
     for (let i = 0; i < count; i++) {
-      const href = await questionLinks.nth(i).getAttribute('href');
-      expect(href).not.toContain('mode=review');
+      await expect(questionLinks.nth(i)).toHaveAttribute('href', /mode=review/);
     }
+
+    await questionLinks.first().click();
+
+    await expect(page).toHaveURL(/\/app\/questions\//, { timeout: 15_000 });
+    await expect(page).toHaveURL(/from=bookmarks/);
+    await expect(page).toHaveURL(/mode=review/);
+    await expect(page.getByText(/Loading question/i)).toBeHidden({
+      timeout: 15_000,
+    });
+    await expect(
+      page.getByText('Reviewing a bookmarked question.', { exact: true }),
+    ).toBeVisible();
+
+    await expectFeedbackVisible(page);
+    await expect(page.getByRole('button', { name: 'Try Again' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Submit' })).toHaveCount(0);
+    await expectChoiceChecked(page, selectedLabel);
+
+    const checkedRadios = page.locator('input[type="radio"]:checked');
+    await expect(checkedRadios.first()).toBeVisible();
+    expect(await checkedRadios.count()).toBeGreaterThan(0);
   });
 
   test('post-submit feedback component renders correctly', async ({ page }) => {
