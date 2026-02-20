@@ -84,6 +84,10 @@ describe('app/(app)/app/bookmarks', () => {
   });
 
   it('renders bookmarks', () => {
+    const reviewHref = toQuestionRoute('q-1', {
+      from: 'bookmarks',
+      mode: 'review',
+    }).replaceAll('&', '&amp;');
     const html = renderToStaticMarkup(
       <BookmarksView
         rows={[
@@ -103,9 +107,9 @@ describe('app/(app)/app/bookmarks', () => {
     expect(html).toContain('Stem for q1');
     expect(html).toContain('easy');
     expect(html).toContain('Bookmarked Feb 1, 2026');
-    expect(html).toContain('Reattempt');
-    expect(html).toContain(toQuestionRoute('q-1', { from: 'bookmarks' }));
-    expect(html).toContain('aria-label="Reattempt question: Stem for q1"');
+    expect(html).toContain('>Review<');
+    expect(html).toContain(reviewHref);
+    expect(html).toContain('aria-label="Review question: Stem for q1"');
     expect(html).toContain('Remove');
     expect(html).toContain('aria-label="Remove bookmark: Stem for q1"');
     expect(html).toContain('Go to Practice');
@@ -140,7 +144,7 @@ describe('app/(app)/app/bookmarks', () => {
     expect(html).toContain('[Question no longer available]');
     expect(html).toContain('Bookmarked Feb 1, 2026');
     expect(html).toContain('Remove');
-    expect(html).not.toContain('Reattempt');
+    expect(html).not.toContain('Review question:');
   });
 
   it('renders an error state when bookmarks load fails', () => {

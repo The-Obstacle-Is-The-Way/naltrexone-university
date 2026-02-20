@@ -28,7 +28,7 @@ Implementation specifications provide detailed technical guidance for building e
 - [Master Spec — Part 3](./master_spec_part3.md) — Content Pipeline, Directory Structure, Vertical Slices
 - [Master Spec — Part 4](./master_spec_part4.md) — Testing, Security, Env Vars, Deployment
 
-**Next Spec ID:** SPEC-036
+**Next Spec ID:** SPEC-037
 
 ## Archived Specs
 
@@ -68,6 +68,7 @@ Implementation specifications provide detailed technical guidance for building e
 | [SPEC-033](../_archive/specs/spec-033-tag-taxonomy-migration.md) | Tag Taxonomy Migration | Feature |
 | [SPEC-034](../_archive/specs/spec-034-review-mode-readonly-and-try-again-scoping.md) | Review Mode Read-Only Behavior & Try Again Scoping | Feature |
 | [SPEC-035](../_archive/specs/spec-035-reference-field-and-content-import.md) | Reference Field & Content Import Pipeline | Feature |
+| [SPEC-036](../_archive/specs/spec-036-bookmark-review-mode-alignment.md) | Bookmark Review Mode Alignment | Feature |
 
 ## Spec Statuses
 

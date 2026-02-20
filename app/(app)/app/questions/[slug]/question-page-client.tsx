@@ -84,7 +84,7 @@ function getOriginUi(
     return {
       backHref: ROUTES.APP_BOOKMARKS,
       backLabel: 'Back to Bookmarks',
-      subtitle: 'Reattempt a question from your bookmarks.',
+      subtitle: 'Reviewing a bookmarked question.',
     };
   }
 
