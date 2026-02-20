@@ -286,9 +286,49 @@ Render after per-choice explanations, before closing `</Card>`:
 
 ### 7.2 Wiring — callers of `<Feedback>`
 
-Update all components that render `<Feedback>` to pass `referenceMd` through. Trace from controller output to the component prop. These are likely in:
-- `app/(app)/app/questions/[slug]/question-page-client.tsx` (or similar)
-- Practice session question flow components
+Three files render `<Feedback>` or reconstruct `SubmitAnswerOutput` from `PreviousSubmission`. All three need `referenceMd` threaded through:
+
+**File:** `app/(app)/app/questions/[slug]/question-page-client.tsx` (line ~218)
+
+```tsx
+<Feedback
+  isCorrect={props.submitResult.isCorrect}
+  explanationMd={props.submitResult.explanationMd}
+  referenceMd={props.submitResult.referenceMd}  // NEW
+  choiceExplanations={props.submitResult.choiceExplanations}
+/>
+```
+
+**File:** `app/(app)/app/practice/components/practice-view.tsx` (line ~243)
+
+```tsx
+<Feedback
+  isCorrect={props.submitResult.isCorrect}
+  explanationMd={props.submitResult.explanationMd}
+  referenceMd={props.submitResult.referenceMd}  // NEW
+  choiceExplanations={props.submitResult.choiceExplanations}
+/>
+```
+
+**File:** `app/(app)/app/practice/shared/use-question-flow-core.ts` (line ~170)
+
+This file manually reconstructs a `SubmitAnswerOutput` from `PreviousSubmission` when re-navigating to an already-answered question in tutor mode. It cherry-picks fields — it does NOT spread:
+
+```typescript
+setSubmitResult(
+  {
+    attemptId: RESTORED_ATTEMPT_ID,
+    isCorrect,
+    correctChoiceId: prev.correctChoiceId,
+    explanationMd: prev.explanationMd,
+    referenceMd: prev.referenceMd,  // NEW — without this, tutor re-nav loses reference
+    choiceExplanations: prev.choiceExplanations,
+  },
+  nextQuestion.questionId,
+);
+```
+
+**Why this matters:** If `use-question-flow-core.ts` is missed, the reference renders on first answer but disappears when navigating away and back within a tutor session.
 
 ---
 
@@ -406,6 +446,9 @@ FROM questions;
 | 12 | `src/adapters/controllers/question-controller.ts` | Add to output Zod schemas | Controller |
 | 13 | `components/question/feedback.tsx` | Render reference section | UI |
 | 14 | `components/question/Feedback.test.tsx` | Add reference rendering tests | Test |
+| 15 | `app/(app)/app/questions/[slug]/question-page-client.tsx` | Pass `referenceMd` to `<Feedback>` | UI wiring |
+| 16 | `app/(app)/app/practice/components/practice-view.tsx` | Pass `referenceMd` to `<Feedback>` | UI wiring |
+| 17 | `app/(app)/app/practice/shared/use-question-flow-core.ts` | Add `referenceMd` to `PreviousSubmission` → `SubmitAnswerOutput` reconstruction | UI wiring |
 
 ---
 
@@ -441,7 +484,7 @@ Single PR is appropriate — the change is a coherent vertical slice with no int
 5. Reference is hidden in exam mode (same gating as `explanationMd`).
 6. Reference is shown in exam review mode (same as `explanationMd`).
 7. `pnpm typecheck`, `pnpm lint`, `pnpm test --run`, and `pnpm build` pass.
-8. All 14 files in §11 are the only files changed.
+8. All 17 files in §11 are the only files changed.
 
 ---
 
