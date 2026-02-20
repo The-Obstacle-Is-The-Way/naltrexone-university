@@ -29,11 +29,6 @@ afterAll(async () => {
   await sql.end({ timeout: 5 });
 });
 
-// Integration tests create tags with an `it-tag-` slug prefix (see repositories.integration.test.ts).
-// If a CI run is interrupted before afterEach cleanup runs, these artifacts persist in the shared
-// database. Exclude them so the census validates only production/seeded data.
-const EXCLUDE_TEST_ARTIFACTS = `AND slug NOT LIKE 'it-tag-%'`;
-
 describe('tag taxonomy census', () => {
   it('all tags have canonical kinds (no domain rows)', async () => {
     const rows = await sql<{ count: number }[]>`
@@ -46,9 +41,11 @@ describe('tag taxonomy census', () => {
   });
 
   it(`all topic slugs are from the canonical ${CANONICAL_TOPIC_SLUGS.length}`, async () => {
-    const rows = await sql.unsafe<{ slug: string }[]>(
-      `select slug from tags where kind::text = 'topic' ${EXCLUDE_TEST_ARTIFACTS}`,
-    );
+    const rows = await sql<{ slug: string }[]>`
+      select slug
+      from tags
+      where kind::text = 'topic'
+    `;
 
     expect(rows.length).toBeGreaterThan(0);
     const canonical = new Set<string>(CANONICAL_TOPIC_SLUGS);
@@ -61,9 +58,11 @@ describe('tag taxonomy census', () => {
   });
 
   it(`all substance slugs are from the canonical ${CANONICAL_SUBSTANCE_SLUGS.length}`, async () => {
-    const rows = await sql.unsafe<{ slug: string }[]>(
-      `select slug from tags where kind::text = 'substance' ${EXCLUDE_TEST_ARTIFACTS}`,
-    );
+    const rows = await sql<{ slug: string }[]>`
+      select slug
+      from tags
+      where kind::text = 'substance'
+    `;
 
     expect(rows.length).toBeGreaterThan(0);
     const canonical = new Set<string>(CANONICAL_SUBSTANCE_SLUGS);
@@ -76,9 +75,11 @@ describe('tag taxonomy census', () => {
   });
 
   it(`all treatment slugs are from the canonical ${CANONICAL_TREATMENT_SLUGS.length}`, async () => {
-    const rows = await sql.unsafe<{ slug: string }[]>(
-      `select slug from tags where kind::text = 'treatment' ${EXCLUDE_TEST_ARTIFACTS}`,
-    );
+    const rows = await sql<{ slug: string }[]>`
+      select slug
+      from tags
+      where kind::text = 'treatment'
+    `;
 
     expect(rows.length).toBeGreaterThan(0);
     const canonical = new Set<string>(CANONICAL_TREATMENT_SLUGS);
