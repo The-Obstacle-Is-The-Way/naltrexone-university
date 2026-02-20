@@ -127,7 +127,7 @@ function createDeps(overrides?: {
       sessionId: '22222222-2222-2222-2222-222222222222',
       endedAt: '2026-02-01T00:00:00.000Z',
       mode: 'tutor',
-      questionCount: 0,
+      questionCount: 1,
       totals: { answered: 0, correct: 0, accuracy: 0, durationSeconds: 0 },
     },
     overrides?.endThrows,

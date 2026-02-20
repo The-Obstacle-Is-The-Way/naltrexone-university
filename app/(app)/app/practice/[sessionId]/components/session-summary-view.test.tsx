@@ -63,4 +63,28 @@ describe('SessionSummaryView', () => {
 
     expect(findStatValue(doc, 'Accuracy')).toBe('0%');
   });
+
+  it('shows — for tutor summary when answered is zero', () => {
+    const html = renderToStaticMarkup(
+      <SessionSummaryView
+        summary={{
+          sessionId: 'session-1',
+          mode: 'tutor',
+          questionCount: 10,
+          endedAt: '2026-02-07T00:00:00.000Z',
+          totals: {
+            answered: 0,
+            correct: 0,
+            accuracy: 0,
+            durationSeconds: 0,
+          },
+        }}
+        review={null}
+        reviewLoadState={{ status: 'idle' }}
+      />,
+    );
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+
+    expect(findStatValue(doc, 'Accuracy')).toBe('—');
+  });
 });

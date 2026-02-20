@@ -35,6 +35,11 @@ export type SessionUnansweredReveal = {
   choiceExplanations: SubmitAnswerOutput['choiceExplanations'];
 };
 
+/**
+ * Returns false when the user is reviewing a specific session (read-only).
+ * Gates both the Submit button (via canSubmitQuestionAnswer) and the
+ * Try Again/reattempt binding.
+ */
 export function canReattemptInContext(input: {
   mode: QuestionMode | null | undefined;
   sessionId?: string;
@@ -239,11 +244,13 @@ export function reattemptQuestion(input: {
   setSubmitResult: (result: SubmitAnswerOutput | null) => void;
   setSubmitIdempotencyKey: (key: string | null) => void;
   setQuestionLoadedAt: (loadedAtMs: number) => void;
+  setSessionUnansweredReveal?: (reveal: SessionUnansweredReveal | null) => void;
 }): void {
   input.setSelectedChoiceId(null);
   input.setSubmitResult(null);
   input.setSubmitIdempotencyKey(input.createIdempotencyKey());
   input.setQuestionLoadedAt(input.nowMs());
+  input.setSessionUnansweredReveal?.(null);
 }
 
 export async function loadPreviousAttempt(input: {

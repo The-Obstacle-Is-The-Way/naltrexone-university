@@ -83,28 +83,26 @@ describe('GetPreviousAttemptUseCase', () => {
   });
 
   it('includes referenceMd in kind=session_unanswered payload when question has reference content', async () => {
-    const question = Object.assign(
-      createQuestion({
-        id: 'q1',
-        status: 'published',
-        explanationMd: 'General explanation',
-        choices: [
-          createChoice({
-            id: 'c1',
-            questionId: 'q1',
-            label: 'A',
-            isCorrect: false,
-          }),
-          createChoice({
-            id: 'c2',
-            questionId: 'q1',
-            label: 'B',
-            isCorrect: true,
-          }),
-        ],
-      }),
-      { referenceMd: 'Anton RF et al. JAMA. 2006;295(17):2003-2017.' },
-    );
+    const question = createQuestion({
+      id: 'q1',
+      status: 'published',
+      explanationMd: 'General explanation',
+      referenceMd: 'Anton RF et al. JAMA. 2006;295(17):2003-2017.',
+      choices: [
+        createChoice({
+          id: 'c1',
+          questionId: 'q1',
+          label: 'A',
+          isCorrect: false,
+        }),
+        createChoice({
+          id: 'c2',
+          questionId: 'q1',
+          label: 'B',
+          isCorrect: true,
+        }),
+      ],
+    });
 
     const session = createPracticeSession({
       id: 'session-1',
@@ -132,7 +130,7 @@ describe('GetPreviousAttemptUseCase', () => {
     });
   });
 
-  it('returns null for unanswered question when session is active or question not in session', async () => {
+  it('returns null for unanswered question when session is still active', async () => {
     const question = createQuestion({
       id: 'q1',
       status: 'published',
@@ -159,6 +157,42 @@ describe('GetPreviousAttemptUseCase', () => {
       endedAt: null,
     });
 
+    const useCase = new GetPreviousAttemptUseCase(
+      new FakeAttemptRepository([]),
+      new FakeQuestionRepository([question]),
+      new FakeLogger(),
+      new FakePracticeSessionRepository([activeSession]),
+    );
+
+    await expect(
+      useCase.execute({
+        userId: 'user-1',
+        questionId: 'q1',
+        sessionId: 'session-active',
+      }),
+    ).resolves.toBeNull();
+  });
+
+  it('returns null for unanswered question when question is not in session', async () => {
+    const question = createQuestion({
+      id: 'q1',
+      status: 'published',
+      choices: [
+        createChoice({
+          id: 'c1',
+          questionId: 'q1',
+          label: 'A',
+          isCorrect: false,
+        }),
+        createChoice({
+          id: 'c2',
+          questionId: 'q1',
+          label: 'B',
+          isCorrect: true,
+        }),
+      ],
+    });
+
     const endedSessionWithoutQuestion = createPracticeSession({
       id: 'session-ended-missing-question',
       userId: 'user-1',
@@ -170,25 +204,58 @@ describe('GetPreviousAttemptUseCase', () => {
       new FakeAttemptRepository([]),
       new FakeQuestionRepository([question]),
       new FakeLogger(),
-      new FakePracticeSessionRepository([
-        activeSession,
-        endedSessionWithoutQuestion,
-      ]),
+      new FakePracticeSessionRepository([endedSessionWithoutQuestion]),
     );
 
     await expect(
       useCase.execute({
         userId: 'user-1',
         questionId: 'q1',
-        sessionId: 'session-active',
+        sessionId: 'session-ended-missing-question',
       }),
     ).resolves.toBeNull();
+  });
+
+  it('returns null when explicit attemptId is not found even if sessionId is present', async () => {
+    const question = createQuestion({
+      id: 'q1',
+      status: 'published',
+      choices: [
+        createChoice({
+          id: 'c1',
+          questionId: 'q1',
+          label: 'A',
+          isCorrect: false,
+        }),
+        createChoice({
+          id: 'c2',
+          questionId: 'q1',
+          label: 'B',
+          isCorrect: true,
+        }),
+      ],
+    });
+
+    const endedSession = createPracticeSession({
+      id: 'session-1',
+      userId: 'user-1',
+      questionIds: ['q1'],
+      endedAt: new Date('2026-02-01T12:10:00Z'),
+    });
+
+    const useCase = new GetPreviousAttemptUseCase(
+      new FakeAttemptRepository([]),
+      new FakeQuestionRepository([question]),
+      new FakeLogger(),
+      new FakePracticeSessionRepository([endedSession]),
+    );
 
     await expect(
       useCase.execute({
         userId: 'user-1',
         questionId: 'q1',
-        sessionId: 'session-ended-missing-question',
+        attemptId: 'attempt-missing',
+        sessionId: 'session-1',
       }),
     ).resolves.toBeNull();
   });

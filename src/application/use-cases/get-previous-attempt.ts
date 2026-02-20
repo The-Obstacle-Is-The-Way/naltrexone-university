@@ -3,6 +3,7 @@ import type {
   PracticeSessionRepository,
   QuestionRepository,
 } from '@/src/application/ports/repositories';
+import type { Question } from '@/src/domain/entities';
 import { ApplicationError } from '../errors';
 import type { AttemptSingleQuestionReader } from '../ports/attempt-repository';
 import {
@@ -46,6 +47,19 @@ type PracticeSessionReader = Pick<
   'findByIdAndUserId'
 >;
 
+function mapChoiceExplanations(
+  question: Question,
+  userId: string,
+): ChoiceExplanation[] {
+  return buildShuffledChoiceViews(question, userId).map((view) => ({
+    choiceId: view.choiceId,
+    displayLabel: view.displayLabel,
+    textMd: view.textMd,
+    isCorrect: view.isCorrect,
+    explanationMd: view.explanationMd,
+  }));
+}
+
 export class GetPreviousAttemptUseCase {
   constructor(
     private readonly attempts: AttemptSingleQuestionReader,
@@ -73,7 +87,7 @@ export class GetPreviousAttemptUseCase {
           );
 
     if (!attempt) {
-      if (!input.sessionId) return null;
+      if (!input.sessionId || input.attemptId) return null;
 
       const session = await this.sessions.findByIdAndUserId(
         input.sessionId,
@@ -100,16 +114,7 @@ export class GetPreviousAttemptUseCase {
         );
       }
 
-      const choiceExplanations: ChoiceExplanation[] = buildShuffledChoiceViews(
-        question,
-        input.userId,
-      ).map((view) => ({
-        choiceId: view.choiceId,
-        displayLabel: view.displayLabel,
-        textMd: view.textMd,
-        isCorrect: view.isCorrect,
-        explanationMd: view.explanationMd,
-      }));
+      const choiceExplanations = mapChoiceExplanations(question, input.userId);
 
       return {
         kind: 'session_unanswered',
@@ -152,16 +157,7 @@ export class GetPreviousAttemptUseCase {
       );
     }
 
-    const choiceExplanations: ChoiceExplanation[] = buildShuffledChoiceViews(
-      question,
-      input.userId,
-    ).map((view) => ({
-      choiceId: view.choiceId,
-      displayLabel: view.displayLabel,
-      textMd: view.textMd,
-      isCorrect: view.isCorrect,
-      explanationMd: view.explanationMd,
-    }));
+    const choiceExplanations = mapChoiceExplanations(question, input.userId);
 
     return {
       kind: 'attempt',

@@ -109,11 +109,13 @@ describe('useQuestionPageController (browser)', () => {
 
     getPreviousAttemptMock.mockResolvedValue(
       ok({
+        kind: 'attempt',
         attemptId: 'attempt-1',
         selectedChoiceId: 'choice-2',
         isCorrect: true,
         correctChoiceId: 'choice-2',
         explanationMd: 'Because.',
+        referenceMd: null,
         choiceExplanations: [],
         answeredAt: '2026-02-01T00:00:00.000Z',
       }),
@@ -179,11 +181,13 @@ describe('useQuestionPageController (browser)', () => {
 
     getPreviousAttemptMock.mockResolvedValue(
       ok({
+        kind: 'attempt',
         attemptId,
         selectedChoiceId: 'choice-2',
         isCorrect: true,
         correctChoiceId: 'choice-2',
         explanationMd: 'Because.',
+        referenceMd: null,
         choiceExplanations: [],
         answeredAt: '2026-02-01T00:00:00.000Z',
       }),

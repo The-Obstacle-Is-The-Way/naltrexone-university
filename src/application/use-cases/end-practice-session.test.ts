@@ -1,4 +1,3 @@
-// @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { ApplicationError } from '@/src/application/errors';
 import { createPracticeSession } from '@/src/domain/test-helpers';
@@ -127,6 +126,7 @@ describe('EndPracticeSessionUseCase', () => {
       createPracticeSession({
         id: 'session-1',
         userId: 'user-1',
+        mode: 'tutor',
         questionIds: ['q1', 'q2'],
         questionStates: [
           {

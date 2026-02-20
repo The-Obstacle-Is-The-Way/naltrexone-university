@@ -1,12 +1,18 @@
 // @vitest-environment jsdom
 import { renderToStaticMarkup } from 'react-dom/server';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeAll, describe, expect, it, vi } from 'vitest';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
-import { HistorySessionsTab } from './history-sessions-tab';
 
 vi.mock('next/link', () => ({
   default: (props: Record<string, unknown>) => <a {...props} />,
 }));
+
+let HistorySessionsTab: typeof import('./history-sessions-tab').HistorySessionsTab;
+
+beforeAll(async () => {
+  HistorySessionsTab = (await import('./history-sessions-tab'))
+    .HistorySessionsTab;
+});
 
 type SessionHistoryResult = ActionResult<{
   rows: Array<{

@@ -118,13 +118,25 @@ describe('question-page-logic', () => {
   });
 
   describe('canReattemptInContext', () => {
-    it('canReattemptInContext returns false for review plus session', () => {
+    it('returns false for review plus session', () => {
       expect(
         canReattemptInContext({
           mode: 'review',
           sessionId: '00000000-0000-4000-8000-000000000001',
         }),
       ).toBe(false);
+    });
+
+    it('returns true for review without sessionId', () => {
+      expect(canReattemptInContext({ mode: 'review' })).toBe(true);
+    });
+
+    it('returns true when mode is null', () => {
+      expect(canReattemptInContext({ mode: null })).toBe(true);
+    });
+
+    it('returns true when mode is undefined', () => {
+      expect(canReattemptInContext({ mode: undefined })).toBe(true);
     });
   });
 
@@ -391,7 +403,7 @@ describe('question-page-logic', () => {
         setSessionUnansweredReveal,
       });
 
-      expect(setSessionUnansweredReveal).toHaveBeenCalledWith({
+      expect(setSessionUnansweredReveal).toHaveBeenLastCalledWith({
         correctChoiceId: 'choice_2',
         explanationMd: 'Explanation',
         referenceMd: 'Anton RF et al. JAMA. 2006;295(17):2003-2017.',

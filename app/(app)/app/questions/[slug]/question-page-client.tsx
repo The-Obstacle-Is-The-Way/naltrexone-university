@@ -129,8 +129,7 @@ export function QuestionView(props: QuestionViewProps) {
   const isReviewMode = props.mode === 'review';
   const hasSessionId = typeof props.sessionId === 'string';
   const isSessionReviewReadOnly = isReviewMode && hasSessionId;
-  const isSessionReviewUnansweredReveal =
-    props.sessionNavigation !== null && sessionUnansweredReveal !== null;
+  const isSessionReviewUnansweredReveal = sessionUnansweredReveal !== null;
   const correctChoiceId =
     sessionUnansweredReveal?.correctChoiceId ??
     props.submitResult?.correctChoiceId ??
@@ -234,8 +233,7 @@ export function QuestionView(props: QuestionViewProps) {
             disabled={
               props.isPending ||
               props.loadState.status === 'loading' ||
-              isSessionReviewReadOnly ||
-              isSessionReviewUnansweredReveal
+              isSessionReviewReadOnly
             }
             onSelectChoice={props.onSelectChoice}
           />
@@ -338,8 +336,7 @@ export function QuestionView(props: QuestionViewProps) {
 
         {props.sessionNavigation ||
         props.submitResult ||
-        isSessionReviewReadOnly ||
-        isSessionReviewUnansweredReveal ? (
+        isSessionReviewReadOnly ? (
           <Button asChild variant="ghost" className="rounded-full">
             <Link href={originUi.backHref}>{originUi.backLabel}</Link>
           </Button>

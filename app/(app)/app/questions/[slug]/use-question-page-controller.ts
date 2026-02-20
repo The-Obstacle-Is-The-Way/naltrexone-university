@@ -288,6 +288,7 @@ export function useQuestionPageController(
       setSubmitResult,
       setSubmitIdempotencyKey,
       setQuestionLoadedAt,
+      setSessionUnansweredReveal,
     });
   }, [input.mode, input.sessionId]);
 
