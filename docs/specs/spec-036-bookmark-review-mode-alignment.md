@@ -46,8 +46,7 @@ Adopt **review-first bookmarks** (Option A): all bookmark question links will in
 | `app/(app)/app/bookmarks/page.tsx` | Add `mode: 'review'` to both `toQuestionRoute(row.slug, { ... })` calls used by the stem title link and action button link. Change action button text `Reattempt` -> `Review`. Change action aria-label prefix `Reattempt question:` -> `Review question:`. | ~92-94, ~139-145 |
 | `app/(app)/app/questions/[slug]/question-page-client.tsx` | In `getOriginUi` bookmarks branch, change subtitle string to `Reviewing a bookmarked question.` | ~83-88 |
 | `tests/e2e/review-mode-audit.spec.ts` | Replace/flip existing test `bookmarks links do not include mode=review` to assert bookmark links include `mode=review`, then click and assert review-mode-on-load state (feedback visible, `Try Again` visible, `Submit` absent, prior choice pre-selected). Keep loading guard before assertions. | ~294-340 |
-| `app/(app)/app/bookmarks/page.test.tsx` | Update render assertions for bookmark action copy/aria and href generation to expect `mode=review` and `Review question:` labels. | existing bookmark assertions section |
-| `app/(app)/app/questions/[slug]/question-page-client.test.tsx` | Update bookmarks-origin subtitle assertion to expect `Reviewing a bookmarked question.` | existing bookmarks subtitle assertion section |
+| `app/(app)/app/bookmarks/page.test.tsx` | Update render assertions for bookmark action copy/aria and href generation to expect `mode=review` and `Review question:` labels. Update unavailable-bookmark negative assertion from `not.toContain('Reattempt')` to `not.toContain('Review question:')` (the word "Review" alone appears in the page header, so the negative assertion must target the aria-label prefix). | existing bookmark assertions section |
 
 ### Files confirmed unchanged
 
@@ -63,23 +62,29 @@ Adopt **review-first bookmarks** (Option A): all bookmark question links will in
 
 ### Unit tests
 
-1. Update `app/(app)/app/bookmarks/page.test.tsx` to assert bookmark links render with `mode=review` in href for both title link and action link.
+1. Update `app/(app)/app/bookmarks/page.test.tsx` to assert bookmark links render with `mode=review` in href for both title link and action link. Specifically, change `toQuestionRoute('q-1', { from: 'bookmarks' })` to `toQuestionRoute('q-1', { from: 'bookmarks', mode: 'review' })`.
 2. Update `app/(app)/app/bookmarks/page.test.tsx` to assert action text is `Review` and aria label starts with `Review question:`.
-3. Update `app/(app)/app/questions/[slug]/question-page-client.test.tsx` bookmarks-origin subtitle expectation to `Reviewing a bookmarked question.`.
-4. Ensure all updated tests keep React 19 + Vitest conventions already used in these files (no testing-library migration, no per-test timeout overrides).
+3. Update the unavailable-bookmark test (`'renders unavailable bookmarks without a reattempt link'`) to use `expect(html).not.toContain('Review question:')` instead of `expect(html).not.toContain('Reattempt')`. The generic word "Review" appears in the page header ("Review questions you've bookmarked"), so the negative assertion must target the aria-label prefix to be meaningful.
+4. The subtitle change in `getOriginUi('bookmarks')` has no existing unit test — `question-page-client.test.tsx` does not exist and this spec does not require creating it. The subtitle is verified by the E2E test (step 2 below).
+5. Ensure all updated tests keep React 19 + Vitest conventions already used in these files (no testing-library migration, no per-test timeout overrides).
 
 ### E2E tests
 
-1. In `tests/e2e/review-mode-audit.spec.ts`, replace the bookmarks link assertion test:
-   - Old assertion: bookmark links **do not** include `mode=review`.
-   - New assertion: bookmark links **do** include `mode=review`.
-2. Add/extend bookmark flow assertions after click:
+**Critical setup requirement:** The existing `ensureBookmarkExistsOnBookmarksPage()` helper bookmarks a question from Quick Practice **without ever answering it**. A review-mode click-through test requires a bookmarked question that has a prior attempt. The test must create a prior attempt before asserting review-mode state.
+
+1. In `tests/e2e/review-mode-audit.spec.ts`, replace the bookmarks link assertion test (`'bookmarks links do not include mode=review'`, lines ~294-308) with a new test that covers both link assertions and click-through review state. Setup sequence:
+   - Use `submitQuestionForOutcome(page, CORRECT_SLUG, 'Correct')` to create a prior attempt on a known seeded question.
+   - Bookmark that question (navigate to it, click the Bookmark action bar button, confirm "Remove bookmark" appears).
+   - Navigate to `/app/bookmarks`.
+   - Assert all `a[href^="/app/questions/"]` links include `mode=review` (flipped from the old negative assertion).
+2. After the link assertion, click through and assert review-mode-on-load state:
    - Wait for `Loading question` to be hidden before state assertions.
    - Assert URL contains `from=bookmarks` and `mode=review`.
+   - Assert subtitle text `Reviewing a bookmarked question.` is visible.
    - Assert feedback is visible using existing pattern:
      - `page.locator('[role="alert"]').filter({ hasText: /^(Correct|Incorrect)/ })`
-   - Assert `Try Again` visible.
-   - Assert `Submit` count is `0`.
+   - Assert `Try Again` button is visible.
+   - Assert `Submit` button count is `0`.
    - Assert at least one radio is checked (previous answer restored).
 3. Keep existing session-review assertions intact to ensure read-only behavior remains unaffected.
 
@@ -121,5 +126,5 @@ Adopt **review-first bookmarks** (Option A): all bookmark question links will in
 
 1. **Data migration:** none.
 2. **Release risk:** low; routing/query-param and copy updates only.
-3. **Rollback plan:** revert the five changed files listed above.
+3. **Rollback plan:** revert the four changed files listed above.
 4. **Post-rollback state:** bookmarks return to `from=bookmarks` fresh-attempt behavior, with old `Reattempt` copy.
