@@ -206,9 +206,188 @@ No changes needed. Quick Practice has no session context and no review mode for 
 
 ---
 
+## Live QA Findings (2026-02-20)
+
+Findings from manual browser testing that were **not captured in the original analysis**:
+
+### Finding 1: Tutor mode has NO end-session confirmation dialog
+
+Exam mode shows an `AlertDialog` with an explicit red warning: _"You have X unanswered questions that will be scored as incorrect."_ Tutor mode **skips the dialog entirely** — clicking "End session" auto-finalizes via `input.finalizeSession()` with no warning about unanswered questions.
+
+**File:** `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-review-stage-state.ts` (lines 77-83)
+
+This is acceptable behavior (tutor is learning-oriented, not punitive), but worth documenting.
+
+### Finding 2: History page Tutor mode has contradictory stats
+
+The History session card displays: **`1/5 correct (100%)`**
+
+- **Fraction** `1/5` uses denominator = `questionCount` (total questions in session, including unanswered)
+- **Percentage** `100%` uses denominator = `answered` (only questions submitted, via `computeAccuracy(answered, correct)`)
+- These two numbers in the same label use **different denominators**, making the display internally contradictory
+
+**Root cause:** `history-sessions-tab.tsx` line 66 renders `${row.correct}/${row.questionCount}` for the fraction, but `row.accuracy` is computed as `correct / answered` in `get-session-history.ts` line 64.
+
+Exam mode happens to be "consistent" when all answered questions are wrong (0/20, 0%), but would show the same contradiction if some answers were correct (e.g., `1/20 correct (100%)` if only 1 question was answered and it was correct).
+
+**Severity: Medium** — This is a display-level bug that exists for both modes, not just tutor.
+
+### Finding 3: Session Summary vs History use different denominators
+
+| View | Fraction | Percentage | Denominator |
+|------|----------|------------|-------------|
+| **Session Summary** | Not shown as fraction | `correct / answered` | `answered` only |
+| **History card** | `correct / questionCount` | `correct / answered` | Mixed — fraction uses total, percentage uses answered |
+
+The Session Summary (post-session screen) is internally consistent — it shows `answered`, `correct`, and `accuracy` as separate stat cards. The History card mashes them into one label with mismatched denominators.
+
+### Finding 4: Submit button in review mode is functional
+
+The Chrome investigation confirmed that unanswered questions in review mode are not merely visual — the **Submit button actually works**. Users can select a choice and submit an answer for an unanswered question after the exam/session has ended. This creates a post-session attempt record.
+
+**Root cause:** `question-page-logic.ts` line 31-42 — `canSubmitQuestionAnswer()` returns `true` whenever `selectedChoiceId` is set and `submitResult` is null. There is no check for whether the session has ended or whether the user is in review mode.
+
+### Finding 5: "Review Questions" pre-submit screen in exam mode
+
+Before final exam submission, an intermediate "Review Questions" screen shows:
+- **Answered / Unanswered / Marked** counts
+- Per-question status labels (e.g., "Answered • Not marked • Incorrect", "Unanswered • Not marked")
+- The app pre-scores answered questions before the user submits the exam
+
+This screen was not analyzed in the original doc but is **working correctly** and needs no changes.
+
+---
+
+## Robust Fix Design (2026-02-20)
+
+Based on the full codebase investigation and live QA, here is the complete fix broken into layers.
+
+### Layer 1: Review Mode — Auto-reveal for unanswered questions (P0)
+
+**Problem:** Unanswered questions in review mode show a blank, submittable form.
+**Fix:** When `mode=review` and `loadPreviousAttempt()` returns null and the question belongs to a completed session, render a synthetic "unanswered" review state.
+
+**Files to change:**
+
+1. **`app/(app)/app/questions/[slug]/use-question-page-controller.ts`** (lines 189-212)
+   - In `loadPreviousAttempt()`, when the attempt is null AND a `sessionId` is present:
+   - Check `sessionNavigation.rows` to confirm this question exists in the session (rules out "never seen")
+   - Set a new state flag: `isUnansweredInSession = true`
+   - Construct a synthetic `submitResult`-like object that contains:
+     - `selectedChoiceId: null` (no user selection)
+     - `isCorrect: false` (unanswered = incorrect for display purposes)
+     - `correctChoiceId`: derived from `question.choices.find(c => c.isCorrect)?.id`
+     - `explanation`: from the question data (already loaded)
+   - This allows the existing review rendering to show green highlight on the correct answer and display the explanation
+
+2. **`app/(app)/app/questions/[slug]/question-page-client.tsx`** (lines 248-261)
+   - When `isUnansweredInSession === true`:
+     - Hide the Submit button
+     - Hide the Try Again button
+     - Show only navigation: `← Previous · Next → · Back to Session`
+   - Add a banner/indicator: **"You did not answer this question"** above the choices
+
+3. **Choice rendering** (wherever choices are displayed)
+   - When `isUnansweredInSession === true`:
+     - No choice highlighted as "selected" (since none was)
+     - Correct choice highlighted in green
+     - Other choices shown in neutral/dimmed state
+   - This is visually distinct from "incorrect" (which shows red selection + green correct)
+
+### Layer 2: Stats consistency — Fix the History card denominator mismatch (P1)
+
+**Problem:** History card shows `1/5 correct (100%)` — fraction uses total, percentage uses answered.
+**Fix:** Align the percentage with the fraction by using the same denominator.
+
+**Decision needed:** Which denominator to standardize on?
+
+**Option 2A: Standardize on `questionCount` for exam, `answered` for tutor**
+- Exam: `1/20 correct (5%)` — percentage = `correct / questionCount`
+- Tutor: `1/1 correct (100%)` — both fraction and percentage use `answered`
+- Requires: change fraction in tutor to `correct/answered`, OR change percentage in exam to `correct/questionCount`
+
+**Option 2B: Standardize on `questionCount` for both modes**
+- Exam: `1/20 correct (5%)`
+- Tutor: `1/5 correct (20%)`
+- Simpler, but penalizes tutor sessions where skipping is expected
+
+**Option 2C (Recommended): Mode-aware display**
+- Exam History card: `1/20 correct (5%)` — `correct / questionCount` for both fraction and percentage
+- Tutor History card: `1/1 correct (100%)` — `correct / answered` for both fraction and percentage
+- Requires: `history-sessions-tab.tsx` to branch on `row.mode`
+- Session Summary: Keep as-is (separate stat cards, internally consistent)
+
+**Files to change:**
+- `app/(app)/app/history/components/history-sessions-tab.tsx` (line 64-66) — branch fraction/percentage display on mode
+- `src/application/use-cases/get-session-history.ts` (line 64) — optionally add `examAccuracy: computeAccuracy(questionCount, correct)` to the output
+
+### Layer 3: Prevent post-session submission for unanswered questions (P1)
+
+**Problem:** Users can submit answers to unanswered questions in review mode, creating post-session attempt records.
+**Fix:** Block submission when in review mode.
+
+**Files to change:**
+
+1. **`app/(app)/app/questions/[slug]/question-page-logic.ts`** (lines 31-42)
+   - Add a `mode` parameter to `canSubmitQuestionAnswer()`
+   - Return `false` when `mode === 'review'` AND `isUnansweredInSession === true`
+   - This prevents the Submit button from being clickable even if it were somehow rendered
+
+2. **Controller level** — The synthetic review state from Layer 1 already prevents submission by not rendering the Submit button, but this adds defense-in-depth.
+
+### Layer 4: Exam stats enforcement (P2 — deferred, needs product decision)
+
+**Problem:** `computeSessionStats()` excludes unanswered questions. The submit dialog says they count as incorrect, but they don't.
+**Fix (if decided):** Add a mode-aware stats computation.
+
+**Files to change:**
+- `src/domain/services/session-stats.ts` — Add optional `mode` parameter. When `mode === 'exam'`, include unanswered in the denominator for accuracy.
+- `src/application/use-cases/end-practice-session.ts` — Pass mode to stats computation.
+
+**Deferred because:** This changes the _stored_ accuracy for exam sessions, which affects historical data. Needs a product decision on whether to backfill or only apply going forward. The display-level fix in Layer 2 addresses the visible symptom without changing stored data.
+
+### Files NOT changing
+
+| File | Why |
+|------|-----|
+| `review-question-navigator.tsx` | Navigator colors are correct (gray for unanswered) |
+| `session-breakdown-list.tsx` | Breakdown labels are correct ("Unanswered" in gray) |
+| `exam-review-view.tsx` | Submit warning dialog is correct |
+| `session-summary-view.tsx` | Summary cards are internally consistent |
+| Quick Practice paths | No session context, not affected |
+
+### Implementation Order
+
+1. **Layer 1** first — this is the core UX fix and the P0
+2. **Layer 2** next — the History card mismatch is a visible bug
+3. **Layer 3** alongside Layer 1 — defense-in-depth, small change
+4. **Layer 4** deferred — requires product decision on scoring semantics
+
+---
+
+## Updated Open Questions
+
+| # | Question | Status |
+|---|----------|--------|
+| Q1 | Should unanswered questions in exam mode count as incorrect in stats? | **Deferred to Layer 4** — display fix in Layer 2 addresses the visible symptom |
+| Q2 | Should tutor mode treat unanswered differently from exam mode? | **Answered: Yes** — Tutor uses `correct/answered`, Exam uses `correct/total` for display |
+| Q3 | Should auto-reveal show a "You did not answer this question" banner? | **Answered: Yes** — Layer 1 includes banner to distinguish from incorrect |
+| Q4 | Should the review action bar for unanswered questions still offer "Try Again"? | **Answered: No** — nothing to retry, navigation only |
+| Q5 | Should accuracy be `correct / answered` or `correct / total` for exam mode? | **Answered: `correct / total` for exam display** (Layer 2) |
+| Q6 | Should we backfill historical exam session accuracy? | **New** — Layer 4 would change stored accuracy; needs decision on backfill |
+| Q7 | How should the "unanswered review" state be modeled? | **Answered** — synthetic state in controller, not a new domain concept |
+
+---
+
 ## Decision Log
 
 | Date | Decision | Rationale |
 |------|----------|-----------|
 | 2026-02-17 | Created brainstorming doc | Manual QA revealed unanswered questions render as blank forms in review mode |
 | 2026-02-17 | Question navigator colors confirmed correct | Gray for unanswered is the right signal — no change needed |
+| 2026-02-20 | Chrome agent live QA completed | Confirmed all original findings + discovered 5 new issues (see Live QA Findings) |
+| 2026-02-20 | History card denominator mismatch confirmed as bug | `1/5 correct (100%)` — fraction and percentage use different denominators |
+| 2026-02-20 | Tutor mode no-dialog behavior confirmed acceptable | Learning-oriented mode doesn't need punitive warning |
+| 2026-02-20 | Post-session submission confirmed as functional bug | Submit button works in review mode for unanswered questions |
+| 2026-02-20 | Robust fix design documented (4 layers) | Layer 1 (P0): auto-reveal, Layer 2 (P1): stats consistency, Layer 3 (P1): block submission, Layer 4 (P2): deferred scoring |
+| 2026-02-20 | Option 2C recommended for stats display | Mode-aware: exam=correct/total, tutor=correct/answered |
