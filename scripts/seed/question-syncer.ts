@@ -48,6 +48,7 @@ export async function syncQuestionsFromFiles(
             slug: seedFromFile.slug,
             stemMd: seedFromFile.stem_md,
             explanationMd: seedFromFile.explanation_md,
+            referenceMd: seedFromFile.reference_md,
             difficulty: seedFromFile.difficulty,
             status: seedFromFile.status,
           })
@@ -159,6 +160,7 @@ export async function syncQuestionsFromFiles(
         .set({
           stemMd: seedFromFile.stem_md,
           explanationMd: seedFromFile.explanation_md,
+          referenceMd: seedFromFile.reference_md,
           difficulty: seedFromFile.difficulty,
           status: seedFromFile.status,
           updatedAt: new Date(),

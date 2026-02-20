@@ -31,11 +31,13 @@ export function computeChoiceSyncPlan(input: {
 const WRONG_ANSWERS_HEADING_PATTERN =
   /^\s*(?:\*\*|__)?\s*Why other answers are wrong\s*:?\s*(?:\*\*|__)?\s*$/i;
 const SECTION_HEADING_PATTERN = /^\s*#{1,6}\s+\S+/;
+const REFERENCE_HEADING_PATTERN = /^\s*#{1,6}\s+Reference\b/i;
 const CHOICE_BULLET_PATTERN = /^\s*[-*+]\s*([A-Ea-e])\s*(?:[).:])+\s*(.*)$/;
 
 export function parseChoiceExplanations(explanationMd: string): {
   generalExplanation: string;
   perChoice: Map<string, string>;
+  referenceMd: string | null;
 } {
   const normalized = explanationMd.replace(/\r\n?/g, '\n');
   const lines = normalized.split('\n');
@@ -47,6 +49,7 @@ export function parseChoiceExplanations(explanationMd: string): {
     return {
       generalExplanation: canonicalizeMarkdown(explanationMd),
       perChoice: new Map(),
+      referenceMd: null,
     };
   }
 
@@ -54,6 +57,7 @@ export function parseChoiceExplanations(explanationMd: string): {
     lines.slice(0, headingIndex).join('\n'),
   );
   const perChoice = new Map<string, string>();
+  let referenceHeadingLineIndex: number | null = null;
 
   let currentLabel: string | null = null;
   let currentBodyLines: string[] = [];
@@ -68,8 +72,11 @@ export function parseChoiceExplanations(explanationMd: string): {
     currentBodyLines = [];
   };
 
-  for (const line of lines.slice(headingIndex + 1)) {
+  for (const [offset, line] of lines.slice(headingIndex + 1).entries()) {
     if (SECTION_HEADING_PATTERN.test(line)) {
+      if (REFERENCE_HEADING_PATTERN.test(line)) {
+        referenceHeadingLineIndex = headingIndex + 1 + offset;
+      }
       break;
     }
 
@@ -95,8 +102,19 @@ export function parseChoiceExplanations(explanationMd: string): {
 
   commitCurrent();
 
+  const referenceMd =
+    referenceHeadingLineIndex === null
+      ? null
+      : (() => {
+          const value = canonicalizeMarkdown(
+            lines.slice(referenceHeadingLineIndex + 1).join('\n'),
+          );
+          return value.length > 0 ? value : null;
+        })();
+
   return {
     generalExplanation,
     perChoice,
+    referenceMd,
   };
 }

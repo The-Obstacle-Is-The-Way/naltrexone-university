@@ -92,6 +92,7 @@ export function createQuestion(overrides: Partial<Question> = {}): Question {
     slug: 'question-1',
     stemMd: 'Stem',
     explanationMd: 'Explanation',
+    referenceMd: null,
     difficulty: 'easy' satisfies QuestionDifficulty,
     status: 'published' satisfies QuestionStatus,
     choices: [],

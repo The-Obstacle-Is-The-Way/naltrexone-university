@@ -118,15 +118,18 @@ describe('SubmitAnswerUseCase', () => {
     const userId = 'user-1';
 
     const questionId = 'q1';
-    const question = createQuestion({
-      id: questionId,
-      status: 'published',
-      explanationMd: 'Because.',
-      choices: [
-        createChoice({ id: 'c1', questionId, label: 'A', isCorrect: false }),
-        createChoice({ id: 'c2', questionId, label: 'B', isCorrect: true }),
-      ],
-    });
+    const question = Object.assign(
+      createQuestion({
+        id: questionId,
+        status: 'published',
+        explanationMd: 'Because.',
+        choices: [
+          createChoice({ id: 'c1', questionId, label: 'A', isCorrect: false }),
+          createChoice({ id: 'c2', questionId, label: 'B', isCorrect: true }),
+        ],
+      }),
+      { referenceMd: 'Anton RF et al. JAMA. 2006;295(17):2003-2017.' },
+    );
 
     const questions = new FakeQuestionRepository([question]);
     const attempts = new FakeAttemptRepository();
@@ -147,6 +150,9 @@ describe('SubmitAnswerUseCase', () => {
     expect(result.isCorrect).toBe(true);
     expect(result.correctChoiceId).toBe('c2');
     expect(result.explanationMd).toBe('Because.');
+    expect(result.referenceMd).toBe(
+      'Anton RF et al. JAMA. 2006;295(17):2003-2017.',
+    );
     expect(result.choiceExplanations).toHaveLength(2);
 
     const inserted = attempts.getAll();
@@ -368,15 +374,18 @@ describe('SubmitAnswerUseCase', () => {
     const userId = 'user-1';
 
     const questionId = 'q1';
-    const question = createQuestion({
-      id: questionId,
-      status: 'published',
-      explanationMd: 'Because.',
-      choices: [
-        createChoice({ id: 'c1', questionId, label: 'A', isCorrect: false }),
-        createChoice({ id: 'c2', questionId, label: 'B', isCorrect: true }),
-      ],
-    });
+    const question = Object.assign(
+      createQuestion({
+        id: questionId,
+        status: 'published',
+        explanationMd: 'Because.',
+        choices: [
+          createChoice({ id: 'c1', questionId, label: 'A', isCorrect: false }),
+          createChoice({ id: 'c2', questionId, label: 'B', isCorrect: true }),
+        ],
+      }),
+      { referenceMd: 'Anton RF et al. JAMA. 2006;295(17):2003-2017.' },
+    );
 
     const attempts = new FakeAttemptRepository();
     const useCase = new SubmitAnswerUseCase(
@@ -437,6 +446,7 @@ describe('SubmitAnswerUseCase', () => {
 
     expect(result.correctChoiceId).toBeNull();
     expect(result.explanationMd).toBeNull();
+    expect(result.referenceMd).toBeNull();
     expect(result.choiceExplanations).toEqual([]);
   });
 

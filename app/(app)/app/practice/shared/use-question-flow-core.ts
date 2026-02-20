@@ -168,6 +168,7 @@ export function useQuestionFlowCore(
               isCorrect,
               correctChoiceId: prev.correctChoiceId,
               explanationMd: prev.explanationMd,
+              referenceMd: prev.referenceMd ?? null,
               choiceExplanations: prev.choiceExplanations,
             },
             nextQuestion.questionId,

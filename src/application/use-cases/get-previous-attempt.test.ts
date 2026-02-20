@@ -563,7 +563,7 @@ describe('GetPreviousAttemptUseCase', () => {
     } satisfies Partial<ApplicationError>);
   });
 
-  it('returns explanationMd from the question entity', async () => {
+  it('returns explanationMd and referenceMd from the question entity', async () => {
     const useCase = new GetPreviousAttemptUseCase(
       new FakeAttemptRepository([
         createAttempt({
@@ -574,19 +574,22 @@ describe('GetPreviousAttemptUseCase', () => {
         }),
       ]),
       new FakeQuestionRepository([
-        createQuestion({
-          id: 'q1',
-          status: 'published',
-          explanationMd: 'Because.',
-          choices: [
-            createChoice({
-              id: 'c1',
-              questionId: 'q1',
-              label: 'A',
-              isCorrect: true,
-            }),
-          ],
-        }),
+        Object.assign(
+          createQuestion({
+            id: 'q1',
+            status: 'published',
+            explanationMd: 'Because.',
+            choices: [
+              createChoice({
+                id: 'c1',
+                questionId: 'q1',
+                label: 'A',
+                isCorrect: true,
+              }),
+            ],
+          }),
+          { referenceMd: 'Anton RF et al. JAMA. 2006;295(17):2003-2017.' },
+        ),
       ]),
       new FakeLogger(),
     );
@@ -595,6 +598,7 @@ describe('GetPreviousAttemptUseCase', () => {
       useCase.execute({ userId: 'user-1', questionId: 'q1' }),
     ).resolves.toMatchObject({
       explanationMd: 'Because.',
+      referenceMd: 'Anton RF et al. JAMA. 2006;295(17):2003-2017.',
     });
   });
 

@@ -266,32 +266,35 @@ describe('GetNextQuestionUseCase', () => {
   it('includes previousSubmission when question was answered in tutor mode', async () => {
     const questionId = 'q1';
 
-    const question = createQuestion({
-      id: questionId,
-      choices: [
-        createChoice({
-          id: 'c1',
-          questionId,
-          label: 'A',
-          isCorrect: false,
-          explanationMd: 'Choice 1 explainer',
-        }),
-        createChoice({
-          id: 'c2',
-          questionId,
-          label: 'B',
-          isCorrect: true,
-          explanationMd: 'Choice 2 explainer',
-        }),
-        createChoice({
-          id: 'c3',
-          questionId,
-          label: 'C',
-          isCorrect: false,
-          explanationMd: null,
-        }),
-      ],
-    });
+    const question = Object.assign(
+      createQuestion({
+        id: questionId,
+        choices: [
+          createChoice({
+            id: 'c1',
+            questionId,
+            label: 'A',
+            isCorrect: false,
+            explanationMd: 'Choice 1 explainer',
+          }),
+          createChoice({
+            id: 'c2',
+            questionId,
+            label: 'B',
+            isCorrect: true,
+            explanationMd: 'Choice 2 explainer',
+          }),
+          createChoice({
+            id: 'c3',
+            questionId,
+            label: 'C',
+            isCorrect: false,
+            explanationMd: null,
+          }),
+        ],
+      }),
+      { referenceMd: 'Anton RF et al. JAMA. 2006;295(17):2003-2017.' },
+    );
 
     const session = createPracticeSession({
       questionIds: [questionId],
@@ -322,6 +325,9 @@ describe('GetNextQuestionUseCase', () => {
 
     expect(previousSubmission.correctChoiceId).toBe('c2');
     expect(previousSubmission.explanationMd).toBe('Explanation');
+    expect(previousSubmission.referenceMd).toBe(
+      'Anton RF et al. JAMA. 2006;295(17):2003-2017.',
+    );
     expect(previousSubmission.choiceExplanations).toHaveLength(
       result?.choices.length ?? 0,
     );

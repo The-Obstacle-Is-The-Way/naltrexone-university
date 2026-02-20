@@ -269,6 +269,7 @@ export class DrizzleQuestionRepository implements QuestionRepository {
       slug: row.slug,
       stemMd: row.stemMd,
       explanationMd: row.explanationMd,
+      referenceMd: row.referenceMd ?? null,
       difficulty: row.difficulty,
       status: row.status,
       choices: mappedChoices.sort((a, b) => a.sortOrder - b.sortOrder),

@@ -20,6 +20,7 @@ export type GetPreviousAttemptOutput = {
   isCorrect: boolean;
   correctChoiceId: string;
   explanationMd: string | null;
+  referenceMd?: string | null;
   choiceExplanations: ChoiceExplanation[];
   answeredAt: string; // ISO 8601
 };
@@ -98,6 +99,7 @@ export class GetPreviousAttemptUseCase {
       isCorrect: attempt.isCorrect,
       correctChoiceId: correctChoice.id,
       explanationMd: question.explanationMd,
+      referenceMd: question.referenceMd,
       choiceExplanations,
       answeredAt: attempt.answeredAt.toISOString(),
     };

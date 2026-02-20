@@ -115,4 +115,94 @@ describe('parseChoiceExplanations', () => {
       E: 'Fifth explanation.',
     });
   });
+
+  it('extracts referenceMd from content with a reference section', () => {
+    const explanationMd = [
+      'General rationale paragraph.',
+      '',
+      '**Why other answers are wrong:**',
+      '- A) Reason A.',
+      '- C) Reason C.',
+      '',
+      '### Reference',
+      '',
+      "Anton RF, O'Malley SS, Ciraulo DA, et al. JAMA. 2006;295(17):2003-2017.",
+    ].join('\n');
+
+    const parsed = parseChoiceExplanations(explanationMd);
+
+    expect(parsed.referenceMd).toBe(
+      "Anton RF, O'Malley SS, Ciraulo DA, et al. JAMA. 2006;295(17):2003-2017.",
+    );
+  });
+
+  it('extracts multiline referenceMd when citation spans lines', () => {
+    const explanationMd = [
+      'General rationale paragraph.',
+      '',
+      '**Why other answers are wrong:**',
+      '- A) Reason A.',
+      '',
+      '### Reference',
+      '',
+      "Anton RF, O'Malley SS, Ciraulo DA, et al.",
+      'Combined pharmacotherapies and behavioral interventions',
+      'for alcohol dependence. JAMA. 2006;295(17):2003-2017.',
+    ].join('\n');
+
+    const parsed = parseChoiceExplanations(explanationMd);
+
+    expect(parsed.referenceMd).toBe(
+      [
+        "Anton RF, O'Malley SS, Ciraulo DA, et al.",
+        'Combined pharmacotherapies and behavioral interventions',
+        'for alcohol dependence. JAMA. 2006;295(17):2003-2017.',
+      ].join('\n'),
+    );
+  });
+
+  it('returns null referenceMd when no reference section exists', () => {
+    const explanationMd = [
+      'General rationale paragraph.',
+      '',
+      '**Why other answers are wrong:**',
+      '- A) Reason A.',
+      '- C) Reason C.',
+    ].join('\n');
+
+    const parsed = parseChoiceExplanations(explanationMd);
+
+    expect(parsed.referenceMd).toBeNull();
+  });
+
+  it('preserves generalExplanation and perChoice when reference is present', () => {
+    const explanationMd = [
+      'General rationale paragraph.',
+      '',
+      '**Clinical pearl:** Keep naloxone first-line.',
+      '',
+      '**Why other answers are wrong:**',
+      '- A) Reason A.',
+      '- C) Reason C.',
+      '',
+      '### Reference',
+      '',
+      'A concise AMA citation.',
+    ].join('\n');
+
+    const parsed = parseChoiceExplanations(explanationMd);
+
+    expect(parsed.generalExplanation).toBe(
+      [
+        'General rationale paragraph.',
+        '',
+        '**Clinical pearl:** Keep naloxone first-line.',
+      ].join('\n'),
+    );
+    expect(mapEntries(parsed.perChoice)).toEqual({
+      A: 'Reason A.',
+      C: 'Reason C.',
+    });
+    expect(parsed.referenceMd).toBe('A concise AMA citation.');
+  });
 });

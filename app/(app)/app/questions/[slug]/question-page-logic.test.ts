@@ -323,6 +323,7 @@ describe('question-page-logic', () => {
             isCorrect: false,
             correctChoiceId: 'choice_2',
             explanationMd: 'Explanation',
+            referenceMd: 'Anton RF et al. JAMA. 2006;295(17):2003-2017.',
             choiceExplanations: [],
             answeredAt: '2026-02-01T00:00:00.000Z',
           } satisfies GetPreviousAttemptOutput),
@@ -336,6 +337,7 @@ describe('question-page-logic', () => {
         isCorrect: false,
         correctChoiceId: 'choice_2',
         explanationMd: 'Explanation',
+        referenceMd: 'Anton RF et al. JAMA. 2006;295(17):2003-2017.',
         choiceExplanations: [],
       } satisfies SubmitAnswerOutput);
     });

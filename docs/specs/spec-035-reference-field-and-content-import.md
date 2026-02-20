@@ -2,7 +2,7 @@
 
 > **⚠️ TDD MANDATE:** This spec follows Test-Driven Development. Write failing tests FIRST for every behavioral change.
 
-**Status:** Proposed
+**Status:** Implemented
 **Layer:** Feature
 **Date:** 2026-02-20
 **Resolves:** [BS-025](../brainstorming/BS-025-reference-section-pipeline-support.md)
@@ -254,7 +254,31 @@ Add to `SubmitAnswerOutputSchema`:
 referenceMd: z.string().nullable(),  // NEW — after explanationMd
 ```
 
-Add to `NextQuestionOutputSchema`'s `previousSubmission` shape (if it has one) or wherever `PreviousSubmission` is validated.
+`question-controller.ts` currently has runtime validation only for inputs and `SubmitAnswerOutput` (idempotency parse). `getNextQuestion` output is type-enforced via `GetNextQuestionOutput` (no output Zod schema in this controller).
+
+### 6.6 `src/application/use-cases/get-previous-attempt.ts`
+
+Add `referenceMd` to `GetPreviousAttemptOutput` and propagate it from the question entity so History/Review keeps citation visibility:
+
+```typescript
+export type GetPreviousAttemptOutput = {
+  // ...
+  explanationMd: string | null;
+  referenceMd: string | null;  // NEW
+  choiceExplanations: ChoiceExplanation[];
+  // ...
+};
+```
+
+```typescript
+return {
+  // ...
+  explanationMd: question.explanationMd,
+  referenceMd: question.referenceMd,  // NEW
+  choiceExplanations,
+  // ...
+};
+```
 
 ---
 
@@ -286,7 +310,7 @@ Render after per-choice explanations, before closing `</Card>`:
 
 ### 7.2 Wiring — callers of `<Feedback>`
 
-Three files render `<Feedback>` or reconstruct `SubmitAnswerOutput` from `PreviousSubmission`. All three need `referenceMd` threaded through:
+Four files render `<Feedback>` or reconstruct `SubmitAnswerOutput` from review/session payloads. All four need `referenceMd` threaded through:
 
 **File:** `app/(app)/app/questions/[slug]/question-page-client.tsx` (line ~218)
 
@@ -328,7 +352,22 @@ setSubmitResult(
 );
 ```
 
-**Why this matters:** If `use-question-flow-core.ts` is missed, the reference renders on first answer but disappears when navigating away and back within a tutor session.
+**File:** `app/(app)/app/questions/[slug]/question-page-logic.ts` (line ~256)
+
+This file manually maps `GetPreviousAttemptOutput` to `SubmitAnswerOutput` in review mode. It must include:
+
+```typescript
+input.setSubmitResult({
+  attemptId: data.attemptId,
+  isCorrect: data.isCorrect,
+  correctChoiceId: data.correctChoiceId,
+  explanationMd: data.explanationMd,
+  referenceMd: data.referenceMd,  // NEW
+  choiceExplanations: data.choiceExplanations,
+});
+```
+
+**Why this matters:** If either mapping file is missed, reference renders on first submit but disappears on tutor revisit or history review restore.
 
 ---
 
@@ -359,6 +398,7 @@ Every behavioral change follows Red → Green → Refactor.
 | `src/application/use-cases/submit-answer.test.ts` | `returns referenceMd when shouldShowExplanation is true` | Output includes `referenceMd` from question | Unit |
 | `src/application/use-cases/submit-answer.test.ts` | `returns null referenceMd in exam mode` | Output `referenceMd` is `null` when explanation hidden | Unit |
 | `src/application/use-cases/get-next-question.test.ts` | `includes referenceMd in PreviousSubmission` | `previousSubmission.referenceMd` matches question | Unit |
+| `src/application/use-cases/get-previous-attempt.test.ts` | `returns referenceMd from the question entity` | Review payload includes `referenceMd` | Unit |
 | `src/adapters/controllers/question-controller.test.ts` | `validates referenceMd in SubmitAnswerOutput schema` | Schema accepts `referenceMd: string` and `referenceMd: null` | Unit |
 
 ### Phase 5 tests (UI)
@@ -367,6 +407,8 @@ Every behavioral change follows Red → Green → Refactor.
 |---|---|---|---|
 | `components/question/Feedback.test.tsx` | `renders reference section when referenceMd is non-null` | Output contains "Reference" label and citation text | Component (jsdom) |
 | `components/question/Feedback.test.tsx` | `hides reference section when referenceMd is null` | Output does not contain "Reference" label | Component (jsdom) |
+| `app/(app)/app/questions/[slug]/question-page-logic.test.ts` | `maps previous-attempt referenceMd into submitResult` | Review state retains citation | Unit |
+| `app/(app)/app/practice/shared/use-question-flow-core.browser.spec.tsx` | `restores referenceMd from previousSubmission` | Tutor revisit keeps citation | Browser |
 
 ### Test convention enforcement
 
@@ -399,7 +441,7 @@ pnpm content:import:drafts -- --status published
 pnpm db:seed
 ```
 
-**Expected:** 948 questions inserted/updated with `stem_md`, `explanation_md`, `reference_md`, choices, and tags. SHA256 change detection handles idempotent re-runs.
+**Expected:** 948 published questions inserted/updated with `stem_md`, `explanation_md`, `reference_md`, choices, and tags (plus 10 archived placeholders retained in the table for 958 total rows). SHA256 change detection handles idempotent re-runs.
 
 ### Step 3: Verify
 
@@ -411,9 +453,10 @@ pnpm typecheck && pnpm lint && pnpm test --run
 ```sql
 -- Verify reference_md is populated
 SELECT COUNT(*) AS total,
-       COUNT(reference_md) AS with_reference
+       COUNT(reference_md) AS with_reference,
+       COUNT(*) FILTER (WHERE status = 'published') AS published
 FROM questions;
--- Expected: total=948, with_reference=948
+-- Expected: total=958, with_reference=948, published=948
 ```
 
 ---
@@ -434,21 +477,33 @@ FROM questions;
 |---|------|--------|-------|
 | 1 | `db/schema.ts` | Add `referenceMd` column to `questions` | Database |
 | 2 | `db/migrations/0011_*.sql` | Auto-generated by `pnpm db:generate` | Database |
-| 3 | `scripts/seed-helpers.ts` | Extract `### Reference` as third return value | Seed parsing |
-| 4 | `scripts/seed-helpers.test.ts` | Add reference extraction tests | Test |
-| 5 | `scripts/seed/question-parser.ts` | Add `reference_md` to `SeedQuestionRep` + `buildSeedRepFromDb` | Seed pipeline |
-| 6 | `scripts/seed/question-syncer.ts` | Include `referenceMd` in insert/update | Seed pipeline |
-| 7 | `scripts/seed.test.ts` | Update seed rep assertions | Test |
-| 8 | `src/domain/entities/question.ts` | Add `referenceMd` field | Domain |
-| 9 | `src/adapters/repositories/drizzle-question-repository.ts` | Map new column in `toDomain()` | Repository |
-| 10 | `src/application/use-cases/submit-answer.ts` | Propagate `referenceMd` in output | Use case |
-| 11 | `src/application/use-cases/get-next-question.ts` | Propagate in `PreviousSubmission` | Use case |
-| 12 | `src/adapters/controllers/question-controller.ts` | Add to output Zod schemas | Controller |
-| 13 | `components/question/feedback.tsx` | Render reference section | UI |
-| 14 | `components/question/Feedback.test.tsx` | Add reference rendering tests | Test |
-| 15 | `app/(app)/app/questions/[slug]/question-page-client.tsx` | Pass `referenceMd` to `<Feedback>` | UI wiring |
-| 16 | `app/(app)/app/practice/components/practice-view.tsx` | Pass `referenceMd` to `<Feedback>` | UI wiring |
-| 17 | `app/(app)/app/practice/shared/use-question-flow-core.ts` | Add `referenceMd` to `PreviousSubmission` → `SubmitAnswerOutput` reconstruction | UI wiring |
+| 3 | `db/migrations/meta/_journal.json` | Auto-updated migration journal | Database |
+| 4 | `db/migrations/meta/0011_snapshot.json` | Auto-generated schema snapshot | Database |
+| 5 | `scripts/seed-helpers.ts` | Extract `### Reference` as third return value | Seed parsing |
+| 6 | `scripts/seed-helpers.test.ts` | Add reference extraction tests | Test |
+| 7 | `scripts/seed/question-parser.ts` | Add `reference_md` to `SeedQuestionRep` + `buildSeedRepFromDb` | Seed pipeline |
+| 8 | `scripts/seed/question-syncer.ts` | Include `referenceMd` in insert/update | Seed pipeline |
+| 9 | `scripts/seed.test.ts` | Add seed rep assertions for `reference_md` | Test |
+| 10 | `src/domain/entities/question.ts` | Add `referenceMd` field | Domain |
+| 11 | `src/domain/test-helpers/factories.ts` | Add default `referenceMd` in question factory | Domain test helper |
+| 12 | `src/adapters/repositories/drizzle-question-repository.ts` | Map new column in `toDomain()` | Repository |
+| 13 | `src/adapters/repositories/drizzle-question-repository.test.ts` | Assert mapped `referenceMd` | Test |
+| 14 | `src/application/use-cases/submit-answer.ts` | Propagate `referenceMd` in output | Use case |
+| 15 | `src/application/use-cases/submit-answer.test.ts` | Add `referenceMd` behavior assertions | Test |
+| 16 | `src/application/use-cases/get-next-question.ts` | Propagate in `PreviousSubmission` | Use case |
+| 17 | `src/application/use-cases/get-next-question.test.ts` | Assert `previousSubmission.referenceMd` | Test |
+| 18 | `src/application/use-cases/get-previous-attempt.ts` | Propagate `referenceMd` in review payload | Use case |
+| 19 | `src/application/use-cases/get-previous-attempt.test.ts` | Assert review `referenceMd` mapping | Test |
+| 20 | `src/adapters/controllers/question-controller.ts` | Add to submit output Zod schema | Controller |
+| 21 | `src/adapters/controllers/question-controller.test.ts` | Assert submit output includes `referenceMd` | Test |
+| 22 | `app/(app)/app/questions/[slug]/question-page-client.tsx` | Pass `referenceMd` to `<Feedback>` | UI wiring |
+| 23 | `app/(app)/app/practice/components/practice-view.tsx` | Pass `referenceMd` to `<Feedback>` | UI wiring |
+| 24 | `app/(app)/app/practice/shared/use-question-flow-core.ts` | Add `referenceMd` to tutor restored submit result | UI wiring |
+| 25 | `app/(app)/app/practice/shared/use-question-flow-core.browser.spec.tsx` | Assert tutor restoration keeps `referenceMd` | Browser test |
+| 26 | `app/(app)/app/questions/[slug]/question-page-logic.ts` | Add `referenceMd` to review submit-result mapping | UI wiring |
+| 27 | `app/(app)/app/questions/[slug]/question-page-logic.test.ts` | Assert review mapping keeps `referenceMd` | Test |
+| 28 | `components/question/feedback.tsx` | Render reference section | UI |
+| 29 | `components/question/Feedback.test.tsx` | Add reference rendering tests | Test |
 
 ---
 
@@ -484,7 +539,7 @@ Single PR is appropriate — the change is a coherent vertical slice with no int
 5. Reference is hidden in exam mode (same gating as `explanationMd`).
 6. Reference is shown in exam review mode (same as `explanationMd`).
 7. `pnpm typecheck`, `pnpm lint`, `pnpm test --run`, and `pnpm build` pass.
-8. All 17 files in §11 are the only files changed.
+8. All required propagation paths in §11 (submit, tutor revisit restore, review restore) are implemented and tested.
 
 ---
 

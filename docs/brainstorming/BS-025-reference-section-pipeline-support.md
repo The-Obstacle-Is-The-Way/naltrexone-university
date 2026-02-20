@@ -1,6 +1,6 @@
 # BS-025: Reference Section Pipeline Support
 
-> **Status:** Open
+> **Status:** Implemented via [SPEC-035](../specs/spec-035-reference-field-and-content-import.md)
 > **Created:** 2026-02-19
 > **Context:** New draft questions include `### Reference` sections with AMA-format citations. The current pipeline silently drops them during seeding. This document traces the problem from first principles and proposes the architecturally correct fix.
 
@@ -119,7 +119,7 @@ return { generalExplanation, perChoice };          // ← No third field
 
 ## 3. The Draft Content Structure
 
-Here's what the new drafts look like (958 questions across all sources):
+Here's what the new drafts look like (948 questions across all sources):
 
 ```markdown
 ## Explanation
@@ -199,7 +199,7 @@ Move reference text from `## Explanation` body into YAML frontmatter.
 
 **Why this is wrong for now:**
 - Requires changing DraftFrontmatterSchema AND QuestionFrontmatterSchema (both `.strict()`)
-- Requires all 958 draft files to move citation from body to YAML
+- Requires all 948 draft questions to move citation from body to YAML
 - YAML is for structured metadata (slugs, enums, arrays). AMA citations are prose.
 - The current `### Reference` in the body is natural for authors — it reads like a paper
 - If we later need structured fields (DOI, PubMed ID, journal, year), THAT is when YAML makes sense — but that's a different feature
@@ -213,7 +213,7 @@ Move reference text from `## Explanation` body into YAML frontmatter.
 Modify the import script to remove `### Reference` before writing MDX.
 
 **Why this is wrong:**
-- We have 958 questions with carefully authored AMA citations
+- We have 948 questions with carefully authored AMA citations
 - Stripping them discards real value that authors spent time creating
 - Citations are important for a board-prep product — learners need to know the source
 - We'd have to re-add them later anyway
@@ -224,7 +224,7 @@ Modify the import script to remove `### Reference` before writing MDX.
 
 ## 5. Recommendation: Option B — Full Vertical Slice
 
-### Implementation Plan (14 files, ordered by dependency)
+### Implementation Plan (minimum vertical slice, ordered by dependency)
 
 #### Layer 1: Database Schema
 
@@ -334,9 +334,21 @@ return {
 };
 ```
 
+**File:** `src/application/use-cases/get-previous-attempt.ts`
+
+Add `referenceMd` to review payload so History/Review pages can render citations:
+```typescript
+return {
+  // ...
+  explanationMd: question.explanationMd,
+  referenceMd: question.referenceMd,     // NEW
+  choiceExplanations,
+};
+```
+
 #### Layer 7: Controllers
 
-Update output Zod schemas to include `referenceMd: z.string().nullable()`.
+Update controller output contracts to include `referenceMd: z.string().nullable()` where runtime schemas exist (e.g., `submitAnswer`), and propagate the new field through review payloads.
 
 #### Layer 8: UI
 
@@ -390,7 +402,7 @@ Smaller text, muted color, border separator — visually distinct from teaching 
 
 ## 7. Why Not Later?
 
-We have 958 questions with citations ready to import. The pipeline needs to handle references BEFORE the first import run, not after. Running `pnpm db:seed` without this fix silently discards every citation. Re-importing later wastes a full seed cycle and risks data inconsistency.
+We have 948 questions with citations ready to import. The pipeline needs to handle references BEFORE the first import run, not after. Running `pnpm db:seed` without this fix silently discards every citation. Re-importing later wastes a full seed cycle and risks data inconsistency.
 
 Build it once, build it right, build it now.
 
@@ -424,7 +436,10 @@ Build it once, build it right, build it now.
 | `src/adapters/repositories/drizzle-question-repository.ts` | Map new column | Repository |
 | `src/application/use-cases/submit-answer.ts` | Propagate `referenceMd` | Use case |
 | `src/application/use-cases/get-next-question.ts` | Propagate in `PreviousSubmission` | Use case |
+| `src/application/use-cases/get-previous-attempt.ts` | Propagate for review payloads | Use case |
 | `src/adapters/controllers/question-controller.ts` | Add to output schema | Controller |
+| `app/(app)/app/practice/shared/use-question-flow-core.ts` | Restore `referenceMd` from tutor session previousSubmission | Practice UI state |
+| `app/(app)/app/questions/[slug]/question-page-logic.ts` | Map review payload `referenceMd` into submitResult | Review UI state |
 | `components/question/feedback.tsx` | Render reference section | UI |
 | `components/question/Feedback.test.tsx` | Add reference rendering tests | Test |
 

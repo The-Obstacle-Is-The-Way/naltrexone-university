@@ -15,12 +15,14 @@ export type FeedbackChoiceExplanation = {
 export type FeedbackProps = {
   isCorrect: boolean;
   explanationMd: string | null;
+  referenceMd?: string | null;
   choiceExplanations?: readonly FeedbackChoiceExplanation[];
 };
 
 export function Feedback({
   isCorrect,
   explanationMd,
+  referenceMd,
   choiceExplanations = [],
 }: FeedbackProps) {
   const visibleChoiceExplanations = choiceExplanations.filter(
@@ -83,6 +85,15 @@ export function Feedback({
               </div>
             ))}
           </div>
+        </div>
+      ) : null}
+
+      {referenceMd ? (
+        <div className="mt-4 border-t border-border/40 pt-3">
+          <div className="text-xs font-medium text-muted-foreground">
+            Reference
+          </div>
+          <Markdown content={referenceMd} className="mt-1 text-xs" />
         </div>
       ) : null}
     </Card>

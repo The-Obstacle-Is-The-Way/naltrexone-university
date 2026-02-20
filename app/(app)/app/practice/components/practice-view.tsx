@@ -241,6 +241,7 @@ export function PracticeView(props: PracticeViewProps) {
         <Feedback
           isCorrect={props.submitResult.isCorrect}
           explanationMd={props.submitResult.explanationMd}
+          referenceMd={props.submitResult.referenceMd ?? null}
           choiceExplanations={props.submitResult.choiceExplanations}
         />
       ) : null}

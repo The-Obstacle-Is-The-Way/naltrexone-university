@@ -94,6 +94,7 @@ const SubmitAnswerOutputSchema = z
     isCorrect: z.boolean(),
     correctChoiceId: zUuid.nullable(),
     explanationMd: z.string().nullable(),
+    referenceMd: z.string().nullable().optional().default(null),
     choiceExplanations: z.array(
       z
         .object({

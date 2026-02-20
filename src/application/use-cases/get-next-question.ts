@@ -30,6 +30,7 @@ export type PublicChoice = {
 export type PreviousSubmission = {
   correctChoiceId: string;
   explanationMd: string | null;
+  referenceMd?: string | null;
   choiceExplanations: ChoiceExplanation[];
 };
 
@@ -121,6 +122,7 @@ export class GetNextQuestionUseCase {
     return {
       correctChoiceId: correctChoice.id,
       explanationMd: question.explanationMd,
+      referenceMd: question.referenceMd,
       choiceExplanations: choiceViews.map((choice) => ({
         choiceId: choice.choiceId,
         displayLabel: choice.displayLabel,
