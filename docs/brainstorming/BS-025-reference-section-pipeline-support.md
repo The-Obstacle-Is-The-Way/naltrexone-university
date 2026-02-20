@@ -224,7 +224,7 @@ Modify the import script to remove `### Reference` before writing MDX.
 
 ## 5. Recommendation: Option B — Full Vertical Slice
 
-### Implementation Plan (12 files, ordered by dependency)
+### Implementation Plan (14 files, ordered by dependency)
 
 #### Layer 1: Database Schema
 
@@ -401,8 +401,8 @@ Build it once, build it right, build it now.
 1. **Unit test** (`seed-helpers.test.ts`): `parseChoiceExplanations` extracts `referenceMd` from content with `### Reference` section
 2. **Unit test** (`seed-helpers.test.ts`): Returns `null` when no `### Reference` present
 3. **Unit test** (`question-parser.test.ts` or `seed.test.ts`): `SeedQuestionRep` carries `reference_md` through
-4. **Unit test** (`feedback.test.tsx`): Feedback renders reference section when `referenceMd` is non-null
-5. **Unit test** (`feedback.test.tsx`): Feedback hides reference section when `referenceMd` is null
+4. **Unit test** (`Feedback.test.tsx`): Feedback renders reference section when `referenceMd` is non-null
+5. **Unit test** (`Feedback.test.tsx`): Feedback hides reference section when `referenceMd` is null
 6. **Integration**: `pnpm content:import:drafts -- --dry-run` passes on new drafts
 7. **Integration**: `pnpm db:seed` stores reference content in new column
 8. **Visual**: Reference appears in UI after answering a question
@@ -426,7 +426,7 @@ Build it once, build it right, build it now.
 | `src/application/use-cases/get-next-question.ts` | Propagate in `PreviousSubmission` | Use case |
 | `src/adapters/controllers/question-controller.ts` | Add to output schema | Controller |
 | `components/question/feedback.tsx` | Render reference section | UI |
-| `components/question/feedback.test.tsx` | Test reference rendering | Test |
+| `components/question/Feedback.test.tsx` | Add reference rendering tests | Test |
 
 ---
 
