@@ -31,8 +31,34 @@ Difficulty per file: 2 easy, 2 medium, 2 hard
 
 ## Special Cases
 
-- `content/drafts/questions/prescribers-guide/`: 4 recall questions per medication (no vignettes). See `SCHEMA.md` for details.
-- `content/drafts/questions/article-based-pathway/09-therapy/2024-cooperman-more-trial-correction/`: correction notice folder (no questions).
+- `questions/prescribers-guide/`: 4 recall questions per medication (no vignettes). See `SCHEMA.md` for details. (App repo path: `content/drafts/questions/prescribers-guide/`.)
+- `questions/article-based-pathway/09-therapy/2024-cooperman-more-trial-correction/`: correction notice folder (no questions). (App repo path: `content/drafts/questions/article-based-pathway/09-therapy/2024-cooperman-more-trial-correction/`.)
+
+### Prescriber's Guide: Addiction Relevance Filter
+
+Every Prescriber's Guide question must have an explicit addiction psychiatry connection. The 36 medications were hand-selected for their relevance to addiction practice, but generic pharmacology questions about them do not belong in an addiction board prep product.
+
+**Every question must test at least one addiction hook:**
+- Abuse/dependence potential (scheduling, misuse patterns, abuse-deterrent design)
+- Withdrawal or overdose recognition and management
+- Drug interactions with SUD treatment medications (methadone, buprenorphine, naltrexone, etc.)
+- Prescribing considerations in patients with SUD history
+- Harm reduction (naloxone reversal, drug-facilitated assault detection, overdose prevention)
+- Behavioral addiction connections (binge eating disorder, food addiction)
+- Forensic/legal relevance (diversion, drug-facilitated assault, controlled substance scheduling)
+- Comorbid SUD management (e.g., smoking cessation impact on olanzapine dosing)
+- Tolerance, cross-tolerance, and sensitization relevant to substance use
+- Dependence/addiction potential of the medication as a clinical concern (e.g., ketamine, esketamine, Z-drugs)
+
+**Do NOT test in isolation (without an addiction hook):**
+- Generic pharmacology (metabolic pathways, release kinetics) unless tied to abuse potential or SUD interactions
+- Non-addiction indications (ADHD, bipolar, obesity, TRD) unless the question includes a SUD patient or addiction-relevant angle
+- Formulation minutiae not related to abuse deterrence or adherence in SUD populations
+- Side effects unrelated to SUD population management
+- Generic drug interactions not relevant to patients with SUDs
+- Geriatric/pediatric dosing without SUD context
+
+**Rewrite pattern:** Convert off-target questions to clinical scenarios where the addiction hook is explicit. Example: instead of testing Concerta's osmotic delivery in GI narrowing, test stimulant formulation features that reduce diversion risk.
 
 ---
 
@@ -45,21 +71,22 @@ Difficulty per file: 2 easy, 2 medium, 2 hard
 5. **Cover-the-options rule**: Can you answer without seeing the choices?
 6. **No technical flaws**: Word repeats, convergence, length cues, grammatical cues
 7. **No domain tags** in draft frontmatter (taxonomy is topic/substance/treatment/diagnosis)
-8. **Frontmatter is strict** — unknown YAML keys are rejected by the import script
+8. **Frontmatter is strict**: unknown YAML keys are rejected by the import script
 9. **Include `treatments`** when a specific medication is discussed by name
+10. **Include `### Reference`** at the very end of `## Explanation` with AMA-format citation for the source paper
 
 ---
 
 ## Workflow
 
 ```
-1. Read: content/drafts/questions/[chapter]/[paper]/[paper].md
+1. Read: questions/[chapter]/[paper]/[paper].md
 2. Identify 6-12 clinically relevant concepts (NOT statistics)
 3. For each concept, ask: "What would a physician need to DO with this?"
 4. Write 6 recall questions (2 easy, 2 medium, 2 hard)
-5. Save: content/drafts/questions/[chapter]/[paper]/recall.md
+5. Save: questions/[chapter]/[paper]/recall.md
 6. Write 6 vignette questions (2 easy, 2 medium, 2 hard)
-7. Save: content/drafts/questions/[chapter]/[paper]/vignettes.md
+7. Save: questions/[chapter]/[paper]/vignettes.md
 8. Apply quality checklist from META.MD Part 2
 9. Update PLAN.md checkboxes
 ```
@@ -78,7 +105,8 @@ Before saving, verify:
 - [ ] Each wrong answer explanation teaches a concept
 - [ ] Clinical pearl included
 - [ ] `treatments` tag included if a medication is mentioned
-- [ ] Optional: run `pnpm content:import:drafts -- --dry-run` from repo root for structural validation
+- [ ] `### Reference` at end of explanation with AMA-format citation
+- [ ] Optional: run `python3 scripts/validate_questions.py --root questions` for structural validation
 
 **For the full checklist and technical flaw taxonomy, see META.MD Part 2.**
 
