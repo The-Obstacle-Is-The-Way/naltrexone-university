@@ -28,7 +28,7 @@ Brainstorming (BS-NNN) → Spec (SPEC-NNN) → Implementation → Archive
 | ID | Title | Status | Related Spec |
 |----|-------|--------|--------------|
 | [BS-014](./bs-014-practice-starter-question-count-ux.md) | Practice Starter — Silent Truncation When Fewer Questions Available | Active | — |
-| [BS-027](./bs-027-history-tab-bar-visual-inconsistency.md) | History Tab Bar Visual Inconsistency — Pill vs Segmented Control | Active | — |
+| [BS-027](./bs-027-history-tab-bar-visual-inconsistency.md) | History Tab Bar Visual Inconsistency — Pill vs Segmented Control | Active | [SPEC-037](../specs/spec-037-tab-switch-visual-unification.md) |
 
 **Next Brainstorming ID:** BS-028
 

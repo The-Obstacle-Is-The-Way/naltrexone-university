@@ -79,6 +79,18 @@ The wrappers are different, but not totally unrelated. They still share primitiv
 - `components/ui/filter-chip.tsx:10` (used at `app/(app)/app/practice/components/practice-session-starter.tsx:227`)
 - `components/theme-toggle.tsx:8` (theme toggle; not a segmented/tab control but another toggle pattern)
 
+### FilterChip proves the true root cause
+
+`FilterChip` uses `rounded-full` (pill shape, same as `HistoryTabBar`) **but** its active state is `border-primary bg-primary text-primary-foreground` (same active color as `SegmentedControl`). This is critical evidence:
+
+| Component | Shape | Active Color |
+|---|---|---|
+| `SegmentedControl` | rectangular (`rounded-md`) | `bg-primary text-primary-foreground` (white) |
+| `FilterChip` | pill (`rounded-full`) | `bg-primary text-primary-foreground` (white) |
+| `HistoryTabBar` | pill (`rounded-full`) | `bg-background text-foreground` (dark-on-dark) |
+
+**The pill shape is not the problem.** `FilterChip` is pill-shaped and looks fine. The **isolated root cause is `HistoryTabBar` using `bg-background` as its active state** — the only component in the entire app that does this. In dark mode, `bg-background` resolves to `rgb(9,9,9)`, which is the page canvas color itself, making the active indicator essentially invisible against the `bg-muted/20` container.
+
 ---
 
 ## 3. shadcn Tabs Check
@@ -165,46 +177,25 @@ Overall: the browser feedback is useful and directionally consistent with this d
 
 ---
 
-## Opinionated Recommendation (Best Fix Path)
+## Fix Direction (Decided)
 
-### Recommended approach: Option C-lite (shared visual primitive + separate semantic components)
+**Approach:** Shared visual class constants with separate semantic wrappers (specced as SPEC-037).
 
-Keep semantics separate:
-- `SegmentedControl` stays button/fieldset/`aria-pressed`.
-- `HistoryTabBar` stays link/nav/`aria-current`.
+- Extract canonical tab-switch visual tokens into `components/ui/tab-switch-styles.ts`
+- `SegmentedControl` and `HistoryTabBar` both consume the shared constants
+- Semantic structure stays separate: `fieldset`/`button`/`aria-pressed` vs `nav`/`Link`/`aria-current`
+- Use current `SegmentedControl` visuals as source of truth
+- Add parity tests + frontend standards documentation
 
-Unify visuals via shared style constants:
-- Create a shared style module for tab-switch shell/item/active/inactive classes.
-- Both components consume the same visual class constants.
+**Why this approach (not alternatives):**
+1. Polymorphic component (link+button in one) — rejected: mixes concerns, complicates accessibility contracts
+2. One-time restyle without shared constants — rejected: they will drift again
+3. Shared visual primitive + separate wrappers — **chosen**: prevents drift, preserves semantics, minimal abstraction
 
-Why this is the best fit:
-1. Avoids overloading `SegmentedControl` with polymorphic link/button rendering.
-2. Prevents future style drift better than a one-time restyle.
-3. Preserves semantic correctness and accessibility contracts.
-
-### Visual baseline to standardize on
-
-Use current SegmentedControl visuals as source of truth:
-- Container: `rounded-lg border border-border bg-muted p-1`
-- Item: `rounded-md px-4 py-1.5 text-sm font-medium`
-- Active: `bg-primary text-primary-foreground shadow-sm`
-- Inactive: `text-muted-foreground hover:text-foreground`
-
-### Additional guardrails
-
-1. Add parity tests that assert both tab components include the same shared visual class constants.
-2. Add a short note to `docs/frontend/standards.md` defining the canonical tab-switch token set.
-3. Keep row-card/container unification as a separate follow-up (not bundled into this fix), because that is a broader page composition decision.
-
----
-
-## Implementation Checklist
-
-- [ ] Extract shared tab-switch class constants (visual only).
-- [ ] Refactor `SegmentedControl` to consume shared constants.
-- [ ] Refactor `HistoryTabBar` to consume shared constants while keeping `Link` semantics.
-- [ ] Add/extend tests to cover visual parity and active-state semantics.
-- [ ] Update frontend standards doc with canonical tab-switch tokens.
+**Out of scope for this fix:**
+- Row-card/container unification (History `<li>` vs Dashboard `<a>` rows) — separate UX pattern decision
+- `FilterChip` visual unification — already uses `bg-primary`, not drifted
+- Token opacity patterns (`bg-muted/20`, `border-border/60`) — used consistently across pages, not the root cause
 
 ---
 
@@ -213,4 +204,6 @@ Use current SegmentedControl visuals as source of truth:
 | Date | Decision | Rationale |
 |------|----------|-----------|
 | 2026-02-21 | Created original brainstorm | Initial visual inconsistency found |
-| 2026-02-21 | Re-audited and corrected | Confirmed class-level facts, corrected false assumptions, selected Option C-lite as recommended path |
+| 2026-02-21 | Re-audited and corrected | Confirmed class-level facts, corrected false assumptions about token isolation and test coverage |
+| 2026-02-21 | FilterChip analysis added | Proves pill shape is not the problem; `bg-background` active state is the isolated root cause |
+| 2026-02-21 | Fix direction decided | Shared visual constants + separate semantic wrappers; specced as SPEC-037 |
