@@ -28,6 +28,7 @@ The shape difference (pill vs rectangle) is not the core issue — `FilterChip` 
 | Container shape | `rounded-lg` | `rounded-full` |
 | Container bg | `bg-muted` (100%) | `bg-muted/20` (20% opacity) |
 | Container border | `border-border` (100%) | `border-border/60` (60% opacity) |
+| Container extras | (none) | `items-center gap-1` (not present on SegmentedControl) |
 | Item shape | `rounded-md` | `rounded-full` |
 | Item padding | `py-1.5` | `py-2` |
 | Active state | `bg-primary text-primary-foreground shadow-sm` | `bg-background text-foreground shadow-sm` |
@@ -42,12 +43,16 @@ The shape difference (pill vs rectangle) is not the core issue — `FilterChip` 
 |----------|--------|-----------|
 | Fix approach | Shared visual class constants consumed by both components | Prevents future drift; one-time restyle would re-diverge |
 | Shared module location | `components/ui/tab-switch-styles.ts` | Colocated with the UI primitives that consume it |
-| Visual baseline | Current `SegmentedControl` tokens | Already used in 2 pages, matches `FilterChip` active pattern |
+| Visual baseline | Current `SegmentedControl` tokens exactly | `SegmentedControl` is source of truth; refactor must not add/remove visual utility classes there |
 | Semantic structure | Keep separate (`fieldset`/`button` vs `nav`/`Link`) | Different HTML is correct; visual should be identical |
 | `HistoryTabBar` refactor scope | Consume shared constants + switch to `cn()` | Align visuals and class composition method |
 | `SegmentedControl` refactor scope | Consume shared constants (extract inline strings) | Source of truth moves from inline to shared module |
 | Container token changes | `bg-muted/20` > `bg-muted`, `border-border/60` > `border-border` on HistoryTabBar | Match SegmentedControl; opacity tokens on the tab bar container are the drift |
-| Shape standardization | Use `rounded-lg` container + `rounded-md` items | Match SegmentedControl; pill shape is not needed |
+| Shape standardization | Use `rounded-lg` container + `rounded-md` items on HistoryTabBar | Match SegmentedControl for strict parity; active-state contrast remains the critical fix |
+| `items-center gap-1` removal | Drop from HistoryTabBar container; do not add to shared constant | SegmentedControl has never had these; `inline-flex` with uniform-height children centers naturally. Keeping them would be code-level inconsistency even if visually imperceptible |
+| SegmentedControl regression guard | No added `gap-*` / `items-*` container classes | Prevent accidental visual change while extracting constants |
+| Test strategy | Behavior-first assertions | Avoid brittle implementation checks (no grep/import-coupling tests) |
+| React 19 test policy | `// @vitest-environment jsdom` + dynamic import in `beforeAll` for touched `.test.tsx` | Required by repo testing policy |
 | Frontend standards update | Add canonical tab-switch section | Codify the pattern to prevent future drift |
 | Row/card unification | Out of scope | Different UX pattern (expand-in-place vs navigate); separate decision |
 | `FilterChip` changes | None | Already uses `bg-primary`; not drifted |
@@ -71,7 +76,7 @@ The shape difference (pill vs rectangle) is not the core issue — `FilterChip` 
 
 /** Outer container wrapping all tab items. */
 export const tabSwitchContainerClasses =
-  'inline-flex items-center gap-1 rounded-lg border border-border bg-muted p-1';
+  'inline-flex rounded-lg border border-border bg-muted p-1';
 
 /** Base classes for each tab item (active or inactive). */
 export const tabSwitchItemBaseClasses =
@@ -85,6 +90,8 @@ export const tabSwitchItemActiveClasses =
 export const tabSwitchItemInactiveClasses =
   'text-muted-foreground hover:text-foreground';
 ```
+
+**Constraint:** `tabSwitchContainerClasses` must remain an exact visual match for the current `SegmentedControl` container baseline. Do not add `gap-*` or `items-*` utilities unless both consumers intentionally adopt a new approved visual standard.
 
 ### 3.2 Refactor `SegmentedControl` to Consume Shared Constants
 
@@ -182,7 +189,7 @@ import {
 - `<Link>`, `href`, `aria-current` — unchanged
 - Delete `const baseTabClasses` (replaced by shared imports)
 - Switch from template string concatenation to `cn()` (consistent with project style)
-- Container goes from `rounded-full bg-muted/20 border-border/60` to shared constants (`rounded-lg bg-muted border-border`)
+- Container goes from `inline-flex items-center gap-1 rounded-full border border-border/60 bg-muted/20 p-1` to `tabSwitchContainerClasses` only — **drop `items-center gap-1`** (SegmentedControl has never had them; `inline-flex` with same-height children centers naturally and container `p-1` provides spacing)
 - Active state goes from `bg-background text-foreground` to `bg-primary text-primary-foreground` (the critical fix)
 
 ### 3.4 Update Frontend Standards Doc
@@ -198,7 +205,7 @@ All tab-switch / segmented-control components MUST use the shared visual constan
 
 | Constant | Classes | Usage |
 |----------|---------|-------|
-| `tabSwitchContainerClasses` | `inline-flex items-center gap-1 rounded-lg border border-border bg-muted p-1` | Outer wrapper |
+| `tabSwitchContainerClasses` | `inline-flex rounded-lg border border-border bg-muted p-1` | Outer wrapper |
 | `tabSwitchItemBaseClasses` | `rounded-md px-4 py-1.5 text-sm font-medium transition-colors focus-visible:...` | Every tab item |
 | `tabSwitchItemActiveClasses` | `bg-primary text-primary-foreground shadow-sm` | Selected item |
 | `tabSwitchItemInactiveClasses` | `text-muted-foreground hover:text-foreground` | Unselected items |
@@ -232,9 +239,9 @@ Also update the Component Inventory table to add:
 | File | Change |
 |------|--------|
 | `components/ui/segmented-control.tsx` | Import shared constants; replace inline class strings |
-| `components/ui/segmented-control.test.tsx` | Add test asserting shared constant usage |
+| `components/ui/segmented-control.test.tsx` | Update tests to behavior-first parity assertions; migrate to `beforeAll` dynamic import policy |
 | `app/(app)/app/history/components/history-tab-bar.tsx` | Import shared constants; replace inline class strings; switch to `cn()` |
-| `app/(app)/app/history/components/history-tab-bar.test.tsx` | Add test asserting shared constant usage; update active-state assertion |
+| `app/(app)/app/history/components/history-tab-bar.test.tsx` | Add visual regression assertions; migrate to `beforeAll` dynamic import policy |
 | `docs/frontend/standards.md` | Add Tab-Switch Visual Standard section + component inventory entry |
 
 ### Unchanged Files
@@ -259,9 +266,12 @@ Also update the Component Inventory table to add:
 - tabSwitchContainerClasses includes 'rounded-lg'
 - tabSwitchContainerClasses includes 'bg-muted'
 - tabSwitchContainerClasses includes 'border-border'
+- tabSwitchContainerClasses equals 'inline-flex rounded-lg border border-border bg-muted p-1'
 - tabSwitchContainerClasses does NOT include 'rounded-full'
 - tabSwitchContainerClasses does NOT include 'bg-muted/20'
 - tabSwitchContainerClasses does NOT include 'border-border/60'
+- tabSwitchContainerClasses does NOT include 'gap-'
+- tabSwitchContainerClasses does NOT include 'items-'
 - tabSwitchItemActiveClasses includes 'bg-primary'
 - tabSwitchItemActiveClasses includes 'text-primary-foreground'
 - tabSwitchItemActiveClasses does NOT include 'bg-background'
@@ -274,43 +284,41 @@ Also update the Component Inventory table to add:
 
 **File:** `components/ui/segmented-control.test.tsx`
 
-Existing tests continue passing (they assert `bg-primary`, `<fieldset>`, `aria-pressed`, etc.).
+Policy updates for this file:
+- Keep `// @vitest-environment jsdom` first line
+- Use dynamic import loaded once in `beforeAll` (not inside each `it()`)
 
-Add one new test:
+Behavior assertions to add:
 ```
-- container uses shared tabSwitchContainerClasses (import and assert equality)
+- rendered fieldset includes 'inline-flex rounded-lg border border-border bg-muted p-1'
+- rendered output does NOT include 'gap-1' or 'items-center' on the container
+- existing semantics still hold: fieldset wrapper, button elements, aria-pressed, disabled behavior
 ```
 
 ### 5.3 HistoryTabBar Tests (UPDATE existing)
 
 **File:** `app/(app)/app/history/components/history-tab-bar.test.tsx`
 
-Existing tests continue passing (they assert links, `aria-current`, href values).
+Policy updates for this file:
+- Keep `// @vitest-environment jsdom` first line
+- Use dynamic import loaded once in `beforeAll`
+- Keep `next/link` mock
 
 Add/update:
 ```
 - active tab includes bg-primary (not bg-background) — update from current assertion
-- container uses shared tabSwitchContainerClasses (import and assert substring)
-- renders nav element with aria-label (existing — should still pass)
+- container includes rounded-lg + bg-muted + border-border and excludes rounded-full + bg-muted/20 + border-border/60
+- container does NOT include items-center or gap-1 (parity with SegmentedControl)
+- existing semantics still hold: nav landmark, link hrefs, aria-current switching
 ```
 
-### 5.4 Visual Parity Test (NEW — in shared constants test file)
-
-**File:** `components/ui/tab-switch-styles.test.ts` (additional test)
-
-```
-- SegmentedControl and HistoryTabBar both import from tab-switch-styles (grep-level validation)
-```
-
-This can be a simple import check — if either component stops importing the shared module, the test fails.
-
-### 5.5 Full Suite Verification
+### 5.4 Full Suite Verification
 
 ```bash
 pnpm typecheck && pnpm lint && pnpm test --run && pnpm test:integration && pnpm build
 ```
 
-All existing tests must continue passing. The visual change is CSS-class-only — no logic, no props, no DOM structure changes (except `rounded-full` > `rounded-lg` on HistoryTabBar container and items).
+All existing tests must continue passing. The visual change is CSS-class-only: no logic changes, no prop/interface changes, and no DOM structure changes.
 
 ---
 
@@ -323,12 +331,12 @@ Phase 1: Create Shared Constants (RED > GREEN)
   3. Run pnpm test --run — new tests pass
 
 Phase 2: Refactor SegmentedControl (RED > GREEN)
-  4. Add "uses shared constants" test to segmented-control.test.tsx
+  4. Update segmented-control.test.tsx to `beforeAll` dynamic import + behavior parity assertions
   5. Update segmented-control.tsx to import and use shared constants
-  6. Run pnpm test --run — all SegmentedControl tests pass (including existing bg-primary assertion)
+  6. Run pnpm test --run — SegmentedControl tests pass with no visual regression
 
 Phase 3: Refactor HistoryTabBar (RED > GREEN)
-  7. Update history-tab-bar.test.tsx: add bg-primary assertion, add shared constants assertion
+  7. Update history-tab-bar.test.tsx to `beforeAll` dynamic import + new visual assertions
   8. Update history-tab-bar.tsx: import shared constants, switch to cn(), remove baseTabClasses
   9. Run pnpm test --run — all HistoryTabBar tests pass
 
@@ -347,13 +355,13 @@ Phase 5: Full Verification
 
 - [ ] History "Sessions | Questions" tab bar is visually identical to Practice "Tutor | Exam" segmented control
 - [ ] Active tab on History uses `bg-primary text-primary-foreground` (high-contrast white in dark mode)
-- [ ] History tab container uses `rounded-lg bg-muted border-border` (solid, not translucent)
-- [ ] Both `SegmentedControl` and `HistoryTabBar` import from `components/ui/tab-switch-styles.ts`
-- [ ] Neither component has inline visual class strings that duplicate the shared constants
-- [ ] `HistoryTabBar` uses `cn()` for class composition (not template string concatenation)
+- [ ] History tab container uses exactly `tabSwitchContainerClasses` — no extra utilities (`items-center`, `gap-1` removed)
+- [ ] SegmentedControl container remains `inline-flex rounded-lg border border-border bg-muted p-1` (no added `gap-*` or `items-*`)
+- [ ] Both containers produce identical class output (strict code-level parity, not just visual equivalence)
 - [ ] `HistoryTabBar` preserves `<nav>` element, `<Link>` children, and `aria-current` semantics
 - [ ] `SegmentedControl` preserves `<fieldset>` element, `<button>` children, `aria-pressed`, and `disabled` support
 - [ ] Regression tests prevent re-introduction of `bg-background` as an active state or `bg-muted/20` on container
+- [ ] Touched `.test.tsx` files comply with React 19 policy (`jsdom` directive first + dynamic import in `beforeAll`)
 - [ ] `docs/frontend/standards.md` documents the canonical tab-switch token set
 - [ ] `pnpm typecheck && pnpm lint && pnpm test --run && pnpm test:integration && pnpm build` all pass
 
@@ -375,9 +383,9 @@ Phase 5: Full Verification
 
 - No logic changes — only CSS class strings are modified
 - No prop changes — no callers need updating
-- No DOM structure changes (except `rounded-full` > `rounded-lg` border-radius)
-- The `SegmentedControl` is already the visual target — its tests all continue passing as-is
-- `HistoryTabBar`'s existing tests assert links and `aria-current`, not specific class strings (they will pass)
+- No DOM structure changes
+- SegmentedControl visual baseline is explicitly locked by regression assertions
+- HistoryTabBar semantics (`nav`/`Link`/`aria-current`) remain unchanged and test-covered
 - Shared constants are a plain TypeScript export — no runtime cost, no new dependencies
 
 ---
