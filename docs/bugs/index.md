@@ -1,7 +1,7 @@
 # Bug Reports
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-02-17
+**Last Updated:** 2026-02-21
 
 ---
 
@@ -17,9 +17,9 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 | ID | Title | Priority | Status |
 |----|-------|----------|--------|
-| — | No active bugs | — | — |
+| [BUG-147](bug-147-user-upsert-unhandled-email-uniqueness-conflict.md) | User Upsert Fails on Email Uniqueness Conflict When Clerk User ID Changes | P1 | Open |
 
-**Next Bug ID:** BUG-147
+**Next Bug ID:** BUG-148
 
 ## Audit #4 — Middleware, Core Paths, and Security Deep Dive (2026-02-16)
 
