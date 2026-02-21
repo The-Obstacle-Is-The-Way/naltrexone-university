@@ -99,21 +99,15 @@ test.describe('BS-028: History Page UX Audit', () => {
     await expect(firstSessionCard).toBeVisible();
     const cardText = await firstSessionCard.textContent();
 
-    // BS-028 P0-1: The score should show X/2 (questionCount), NOT X/1 (answered)
-    // Current buggy behavior: shows "1/1 correct (100%)" or "0/0 correct (—)"
-    // Expected behavior: shows "1/2 correct (50%)" or "0/2 correct (0%)"
-    // This test documents the CURRENT behavior — flip assertion when fixed.
+    // BS-028 P0-1: The score should show X/2 (questionCount), NOT X/1 (answered).
+    // Asserts the fixed behavior: denominator equals questionCount.
     const scoreMatch = cardText?.match(/(\d+)\/(\d+)\s+correct/);
     expect(scoreMatch).toBeTruthy();
     if (scoreMatch) {
       const denominator = Number(scoreMatch[2]);
-      // EXPECTED (after fix): denominator should be 2 (questionCount)
-      // CURRENT (before fix): denominator is 1 (answered count)
-      // Documenting current state — this will fail when the fix lands (which is correct).
       expect(
         denominator,
-        `BS-028 P0-1: Score denominator should be questionCount (2), got ${denominator}. ` +
-          `If this assertion fails because denominator=2, the fix has landed — update this test.`,
+        `BS-028 P0-1: Score denominator should be questionCount (2), got ${denominator}.`,
       ).toBe(2);
     }
   });
@@ -645,10 +639,6 @@ test.describe('BS-027: Tab Bar Visual Consistency Audit', () => {
         `vs SegmentedControl active bg lightness (${segmentActiveLightness.toFixed(1)}%). ` +
         `Delta=${activeBgDelta.toFixed(1)}% — should be <10% for visual consistency.`,
     ).toBeLessThan(10);
-
-    // Also check container tokens
-    const _historyContainer = page.locator('nav').first();
-    const _segmentContainer = page.locator('fieldset').first();
 
     // Navigate back to history for the container check
     await goToHistorySessions(page);

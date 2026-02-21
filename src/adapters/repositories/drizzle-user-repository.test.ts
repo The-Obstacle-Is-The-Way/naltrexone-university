@@ -225,6 +225,24 @@ describe('DrizzleUserRepository', () => {
       );
       expect(db._mocks.updateWhere).toHaveBeenCalledTimes(1);
     });
+
+    it('maps fallback update errors to ApplicationError when email-conflict update fails', async () => {
+      const db = createDbMock();
+      db._mocks.insertReturning.mockRejectedValue({
+        code: '23505',
+        constraint: 'users_email_uq',
+      });
+      db._mocks.updateReturning.mockRejectedValue({
+        code: '23505',
+        constraint: 'users_clerk_user_id_uq',
+      });
+
+      const repo = new DrizzleUserRepository(db as unknown as RepoDb);
+
+      const promise = repo.upsertByClerkId('clerk_2', 'a@example.com');
+      await expect(promise).rejects.toBeInstanceOf(ApplicationError);
+      await expect(promise).rejects.toMatchObject({ code: 'CONFLICT' });
+    });
   });
 
   describe('deleteByClerkId', () => {

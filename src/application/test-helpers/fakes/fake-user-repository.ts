@@ -75,10 +75,8 @@ export class FakeUserRepository implements UserRepository {
         email,
         updatedAt: observedAt,
       };
-      if (existing.user.email !== email) {
-        this.byEmail.delete(existing.user.email);
-        this.byEmail.set(email, clerkId);
-      }
+      this.byEmail.delete(existing.user.email);
+      this.byEmail.set(email, clerkId);
       this.byClerkId.set(clerkId, { user: updatedUser, clerkId });
       return updatedUser;
     }

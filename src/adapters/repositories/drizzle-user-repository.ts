@@ -92,23 +92,27 @@ export class DrizzleUserRepository implements UserRepository {
         isPostgresUniqueViolation(error) &&
         getPostgresConstraintName(error) === 'users_email_uq'
       ) {
-        const [row] = await this.db
-          .update(users)
-          .set({
-            clerkUserId: sql`CASE WHEN ${users.updatedAt} < ${observedAtParam} THEN ${clerkId} ELSE ${users.clerkUserId} END`,
-            updatedAt: sql`GREATEST(${users.updatedAt}, ${observedAtParam})`,
-          })
-          .where(eq(users.email, email))
-          .returning();
+        try {
+          const [row] = await this.db
+            .update(users)
+            .set({
+              clerkUserId: sql`CASE WHEN ${users.updatedAt} < ${observedAtParam} THEN ${clerkId} ELSE ${users.clerkUserId} END`,
+              updatedAt: sql`GREATEST(${users.updatedAt}, ${observedAtParam})`,
+            })
+            .where(eq(users.email, email))
+            .returning();
 
-        if (!row) {
-          throw new ApplicationError(
-            'INTERNAL_ERROR',
-            'Failed to ensure user row',
-          );
+          if (!row) {
+            throw new ApplicationError(
+              'INTERNAL_ERROR',
+              'Failed to ensure user row',
+            );
+          }
+
+          return this.toDomain(row);
+        } catch (updateError) {
+          throw this.mapDbError(updateError);
         }
-
-        return this.toDomain(row);
       }
 
       throw this.mapDbError(error);
