@@ -317,6 +317,7 @@ Each question row is a `<Link>` to `toQuestionRoute(slug, { from, mode: 'review'
 | 11 | "Try Again" on correct questions | **P3** | Correct question review | Semantic mismatch |
 | 12 | No sort on Questions tab | **P3** | Questions tab use | Missing educational feature |
 | 13 | Mid-sentence truncation | **P3** | All question cards | Low utility preview text |
+| 14 | Native `<select>` dropdowns diverge from design system | **P2** | Every Questions tab filter use | Only native form controls in the app; visually incoherent with dark theme |
 
 ---
 
