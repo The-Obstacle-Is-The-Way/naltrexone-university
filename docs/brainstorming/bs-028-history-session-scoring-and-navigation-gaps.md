@@ -186,7 +186,7 @@ Question cards truncate at ~120 characters, often mid-sentence or mid-drug name.
 
 #### Problem 14: Filter Dropdowns Use Native `<select>` — Visually Divergent from Design System
 
-**Observed by dogfooding — new finding:**
+**Observed by dogfooding + browser agent DOM inspection — convergent finding:**
 
 The History Questions tab filter bar uses four raw HTML `<select>` elements for Result, Source, Difficulty, and Tag. The project does **not** have a `components/ui/select.tsx` — the shadcn/ui Select component has never been installed. The trigger state is hand-styled with Tailwind (`history-questions-tab.tsx:28-29`):
 
@@ -202,7 +202,18 @@ This makes the closed/trigger look passable, but when the dropdown opens, the **
 - No animations, transitions, or theme-aware hover states
 - On macOS dark mode: semi-dark picker. On Windows: potentially bright white. Inconsistent.
 
-**Why it feels "janky":** The subtle border spacing, the mismatched arrow glyph, the font rendering inside options, and the overall lack of cohesion with the rest of the dark-theme UI. Every other interactive element on the page (buttons, links, chips, cards) follows the design system — these four dropdowns don't.
+**Browser agent quantified 6 specific visual defects:**
+
+| Defect | Detail | Evidence |
+|--------|--------|----------|
+| **Height mismatch** | Selects are `h-10` (40px); Apply button is `h-9` (36px, default `Button` size). The row is 4px uneven. | `selectClassName` has `h-10`; `button.tsx:27` default size is `h-9` |
+| **Font weight/line-height drift** | Native `<select>` renders `font-weight: 400` / `line-height: normal`. Design system standard is `font-weight: 500` / `line-height: 20px`. | Chrome DevTools computed styles vs `button.tsx:8` `text-sm font-medium` baseline |
+| **Background "sunken" effect** | `bg-background` resolves to `rgb(9, 9, 9)` — darker than the card surface (`rgb(18, 18, 18)` from `bg-card`). Selects appear *inset* into the card. | CSS computed values in dark mode |
+| **No `appearance: none`** | The `selectClassName` does not include `appearance-none`. The OS draws its own arrow glyph, inner borders, and focus chrome *on top* of the Tailwind styling. | Absent from class string; no `appearance` CSS override found in component |
+| **No right-padding compensation** | `px-3` applies 12px on both sides, but the native arrow occupies the right edge. Text gets cramped against the arrow with no clearance. A custom Select would use `pr-8` to clear an SVG icon. | `selectClassName` uses `px-3` (symmetric); no `pr-*` override |
+| **Label weight inconsistency** | The label `<div className="font-medium text-foreground">` is `font-weight: 500`, but it sits inside `<label className="text-sm">` which inherits `400`. The shadcn `<Label>` component would normalize this. | `history-questions-tab.tsx:141-142` |
+
+**Why it feels "janky":** The subtle border spacing, the mismatched arrow glyph, the font rendering inside options, the sunken background, the 4px height misalignment with the Apply button, and the overall lack of cohesion with the rest of the dark-theme UI. Every other interactive element on the page (buttons, links, chips, cards) follows the design system — these four dropdowns don't.
 
 **Contrast with Practice page:** The Practice session starter uses `FilterChip` components for tag selection — fully styled, theme-aware pill buttons with `bg-primary text-primary-foreground` active states. No native form controls. The History Questions tab is the only place in the app using native `<select>` for user-facing filtering.
 
@@ -214,9 +225,9 @@ This makes the closed/trigger look passable, but when the dropdown opens, the **
 - `npx shadcn@latest add select`
 - Refactor `<select>` → `<Select>` / `<SelectTrigger>` / `<SelectContent>` / `<SelectItem>`
 - For the Tag filter specifically: use `<SelectGroup>` + `<SelectLabel>` to group by kind (Topic/Substance/Treatment), which also solves the duplicate "Other" problem (Problem 10)
-- Radix Select supports `name` prop for native form data, so the existing `method="get"` form submission should still work
 - Full dark mode theme integration, animated open/close, keyboard navigation with typeahead
 - Trade-off: ~8-12 KB bundle addition; minor Radix accessibility gaps (missing `aria-activedescendant` — [Radix issue #3636](https://github.com/radix-ui/primitives/issues/3636)) that are non-blocking for filter controls
+- **Architectural opportunity:** Migrating from the current `<form method="get">` native submission to `useRouter`-driven URL param updates would eliminate the Apply button entirely (filter-on-change, like every modern filter UI). This also fixes the height mismatch since the button goes away. Radix Select does support a `name` prop for native form data if the current form approach is kept.
 
 **Option B (Future — not ready yet): CSS `appearance: base-select`.**
 - A new CSS-only opt-in that makes native `<select>` fully stylable (dropdown panel, options, arrow, animations)
@@ -317,7 +328,7 @@ Each question row is a `<Link>` to `toQuestionRoute(slug, { from, mode: 'review'
 | 11 | "Try Again" on correct questions | **P3** | Correct question review | Semantic mismatch |
 | 12 | No sort on Questions tab | **P3** | Questions tab use | Missing educational feature |
 | 13 | Mid-sentence truncation | **P3** | All question cards | Low utility preview text |
-| 14 | Native `<select>` dropdowns diverge from design system | **P2** | Every Questions tab filter use | Only native form controls in the app; visually incoherent with dark theme |
+| 14 | Native `<select>` dropdowns diverge from design system (6 verified defects) | **P2** | Every Questions tab filter use | Only native form controls in the app; 6 specific visual defects quantified by browser agent |
 
 ---
 
@@ -392,7 +403,7 @@ Each question row is a `<Link>` to `toQuestionRoute(slug, { from, mode: 'review'
 - **Navigator scroll:** Auto-scroll to top on question load, or make navigator sticky
 - **Sessions filters/counts:** Add Type filter (Tutor/Exam) and "Showing X–Y of Z" count
 - **Dual "Back to History":** Remove top-right duplicate, keep bottom action area only
-- **Native `<select>` → shadcn/ui Select:** Install `select` component via shadcn CLI, refactor all 4 filter dropdowns. Use `<SelectGroup>` with kind labels for the Tag dropdown, which also solves the duplicate "Other" issue (Problem 10). Verify `name` prop works with existing `method="get"` form submission.
+- **Native `<select>` → shadcn/ui Select:** Install `select` component via shadcn CLI, refactor all 4 filter dropdowns. Use `<SelectGroup>` with kind labels for the Tag dropdown, which also solves the duplicate "Other" issue (Problem 10). Consider migrating from `<form method="get">` to `useRouter`-based filter-on-change (eliminates Apply button, fixes h-10/h-9 height mismatch). If keeping form approach, verify `name` prop works with native form submission.
 
 ### Fix 10–13: Minor Polish (P3)
 
@@ -447,3 +458,4 @@ These should be preserved in any refactor:
 | 2026-02-21 | Created brainstorming doc (3 problems) | Dogfooding revealed misleading Tutor score and navigation friction |
 | 2026-02-21 | Expanded to 13 problems after browser audit | Chrome agent audit found 8 additional issues across both tabs: duration bug, review parity gap, hover states, pagination, filters, Questions tab minor issues |
 | 2026-02-21 | Added Problem 14: native `<select>` jank | Dogfooding + investigation revealed filter dropdowns are the only native form controls in the app; shadcn/ui Select never installed. Root cause: OS-rendered dropdown panels can't match the dark theme. Practice page avoids this via `FilterChip` components. Fix: install shadcn/ui Select, refactor dropdowns, use `<SelectGroup>` for tag kind grouping. `appearance: base-select` tracked as future simplification path (needs Firefox/Safari support). |
+| 2026-02-21 | Problem 14: browser agent convergence verified | Chrome browser agent DOM inspection independently identified the same root cause (native `<select>` without shadcn/ui) and quantified 6 specific visual defects: height mismatch (h-10 vs h-9), font-weight/line-height drift, background sunken effect, missing `appearance: none`, no right-padding compensation for arrow, label weight inconsistency. Also surfaced architectural opportunity to eliminate Apply button via filter-on-change with `useRouter`. All findings incorporated into Problem 14's defect table. |
