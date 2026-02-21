@@ -387,11 +387,12 @@ Each question row is a `<Link>` to `toQuestionRoute(slug, { from, mode: 'review'
 - Or add border/outline change on hover for the "View breakdown" button and session card
 - Cross-reference with BS-027 / SPEC-037 dark mode token work
 
-### Fix 7–9: Moderate Polish (P2)
+### Fix 7–9, 14: Moderate Polish (P2)
 
 - **Navigator scroll:** Auto-scroll to top on question load, or make navigator sticky
 - **Sessions filters/counts:** Add Type filter (Tutor/Exam) and "Showing X–Y of Z" count
 - **Dual "Back to History":** Remove top-right duplicate, keep bottom action area only
+- **Native `<select>` → shadcn/ui Select:** Install `select` component via shadcn CLI, refactor all 4 filter dropdowns. Use `<SelectGroup>` with kind labels for the Tag dropdown, which also solves the duplicate "Other" issue (Problem 10). Verify `name` prop works with existing `method="get"` form submission.
 
 ### Fix 10–13: Minor Polish (P3)
 
@@ -445,3 +446,4 @@ These should be preserved in any refactor:
 |------|----------|-----------|
 | 2026-02-21 | Created brainstorming doc (3 problems) | Dogfooding revealed misleading Tutor score and navigation friction |
 | 2026-02-21 | Expanded to 13 problems after browser audit | Chrome agent audit found 8 additional issues across both tabs: duration bug, review parity gap, hover states, pagination, filters, Questions tab minor issues |
+| 2026-02-21 | Added Problem 14: native `<select>` jank | Dogfooding + investigation revealed filter dropdowns are the only native form controls in the app; shadcn/ui Select never installed. Root cause: OS-rendered dropdown panels can't match the dark theme. Practice page avoids this via `FilterChip` components. Fix: install shadcn/ui Select, refactor dropdowns, use `<SelectGroup>` for tag kind grouping. `appearance: base-select` tracked as future simplification path (needs Firefox/Safari support). |
