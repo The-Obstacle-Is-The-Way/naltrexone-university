@@ -41,12 +41,19 @@ async function goToHistorySessions(page: Page): Promise<void> {
   });
   await expect(page.getByRole('heading', { name: 'History' })).toBeVisible();
   // Wait for session list or empty state
-  const sessionCard = page.locator('li').first();
-  const emptyMessage = page.getByText(/No sessions yet/i);
+  const sessionCard = getFirstSessionCard(page);
+  const emptyMessage = page.getByText(/No (completed )?sessions yet/i);
   await sessionCard.or(emptyMessage).waitFor({
     state: 'visible',
     timeout: 15_000,
   });
+}
+
+function getFirstSessionCard(page: Page) {
+  return page
+    .getByRole('button', { name: /(View|Hide) breakdown/i })
+    .first()
+    .locator('xpath=ancestor::li[1]');
 }
 
 /** Navigate to History Questions tab and wait for content. */
@@ -94,8 +101,8 @@ test.describe('BS-028: History Page UX Audit', () => {
     // Navigate to History Sessions tab
     await goToHistorySessions(page);
 
-    // Find the most recent session card (first <li>)
-    const firstSessionCard = page.locator('li').first();
+    // Find the most recent session card
+    const firstSessionCard = getFirstSessionCard(page);
     await expect(firstSessionCard).toBeVisible();
     const cardText = await firstSessionCard.textContent();
 
@@ -122,7 +129,9 @@ test.describe('BS-028: History Page UX Audit', () => {
 
     // Collect all visible duration values
     const durations = await page.evaluate(() => {
-      const sessionCards = document.querySelectorAll('li');
+      const sessionCards = Array.from(document.querySelectorAll('li')).filter(
+        (card) => card.querySelector('button[aria-label*="breakdown for"]'),
+      );
       const results: { text: string; minutes: number }[] = [];
 
       for (const card of sessionCards) {
@@ -219,7 +228,7 @@ test.describe('BS-028: History Page UX Audit', () => {
 
     await goToHistorySessions(page);
 
-    const firstSessionLi = page.locator('li').first();
+    const firstSessionLi = getFirstSessionCard(page);
     await expect(firstSessionLi).toBeVisible();
 
     // BS-028 P1-4: Session card should be clickable
@@ -337,7 +346,7 @@ test.describe('BS-028: History Page UX Audit', () => {
     ).toBeGreaterThan(5);
 
     // Also verify session card hover (should have cursor: pointer)
-    const firstSessionLi = page.locator('li').first();
+    const firstSessionLi = getFirstSessionCard(page);
     await firstSessionLi.hover();
     const cardCursor = await firstSessionLi.evaluate(
       (el) => getComputedStyle(el).cursor,
