@@ -8,6 +8,7 @@ type StoredUser = { user: User; clerkId: string };
 
 export class FakeUserRepository implements UserRepository {
   private readonly byClerkId = new Map<string, StoredUser>();
+  private readonly byEmail = new Map<string, string>();
   private nextId = 1;
   private lastObservedAtMs: number | null = null;
 
@@ -37,6 +38,28 @@ export class FakeUserRepository implements UserRepository {
       this.lastObservedAtMs ?? 0,
       observedAt.getTime(),
     );
+
+    const existingClerkIdForEmail = this.byEmail.get(email);
+    if (existingClerkIdForEmail && existingClerkIdForEmail !== clerkId) {
+      const existingByEmail = this.byClerkId.get(existingClerkIdForEmail);
+      if (existingByEmail) {
+        if (existingByEmail.user.updatedAt >= observedAt) {
+          return existingByEmail.user;
+        }
+
+        const migratedUser: User = {
+          ...existingByEmail.user,
+          updatedAt: observedAt,
+        };
+        this.byClerkId.delete(existingClerkIdForEmail);
+        this.byClerkId.set(clerkId, { user: migratedUser, clerkId });
+        this.byEmail.set(email, clerkId);
+        return migratedUser;
+      }
+
+      this.byEmail.delete(email);
+    }
+
     const existing = this.byClerkId.get(clerkId);
 
     if (existing) {
@@ -52,6 +75,10 @@ export class FakeUserRepository implements UserRepository {
         email,
         updatedAt: observedAt,
       };
+      if (existing.user.email !== email) {
+        this.byEmail.delete(existing.user.email);
+        this.byEmail.set(email, clerkId);
+      }
       this.byClerkId.set(clerkId, { user: updatedUser, clerkId });
       return updatedUser;
     }
@@ -64,10 +91,19 @@ export class FakeUserRepository implements UserRepository {
       updatedAt: now,
     };
     this.byClerkId.set(clerkId, { user: newUser, clerkId });
+    this.byEmail.set(email, clerkId);
     return newUser;
   }
 
   async deleteByClerkId(clerkId: string): Promise<boolean> {
-    return this.byClerkId.delete(clerkId);
+    const stored = this.byClerkId.get(clerkId);
+    if (!stored) return false;
+
+    this.byClerkId.delete(clerkId);
+    if (this.byEmail.get(stored.user.email) === clerkId) {
+      this.byEmail.delete(stored.user.email);
+    }
+
+    return true;
   }
 }

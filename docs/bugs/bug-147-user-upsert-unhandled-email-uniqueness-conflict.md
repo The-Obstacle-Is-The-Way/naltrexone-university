@@ -1,8 +1,9 @@
 # BUG-147: User Upsert Fails on Email Uniqueness Conflict When Clerk User ID Changes
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P1
 **Date:** 2026-02-21
+**Resolved:** 2026-02-21
 
 ---
 
@@ -170,13 +171,13 @@ Why this fix:
 
 ## Verification Checklist
 
-- [ ] New integration test fails before fix and passes after fix.
-- [ ] New unit tests for repository email-conflict branch pass.
-- [ ] `FakeUserRepository` behavior matches production uniqueness semantics.
-- [ ] `pnpm typecheck`
-- [ ] `pnpm lint`
-- [ ] `pnpm test --run`
-- [ ] `pnpm test:integration`
+- [x] New integration test fails before fix and passes after fix.
+- [x] New unit tests for repository email-conflict branch pass.
+- [x] `FakeUserRepository` behavior matches production uniqueness semantics.
+- [x] `pnpm typecheck`
+- [x] `pnpm lint`
+- [x] `pnpm test --run`
+- [x] `pnpm test:integration`
 - [ ] Manual verification on localhost and Preview with a forced stale `clerk_user_id` scenario.
 
 ## Related

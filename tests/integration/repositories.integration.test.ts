@@ -2025,6 +2025,60 @@ describe('DrizzleUserRepository', () => {
     });
   });
 
+  it('updates clerkUserId when a different clerkId arrives for the same email', async () => {
+    const repo = new DrizzleUserRepository(db);
+    const email = `it-${randomUUID()}@example.com`;
+    const clerkId1 = `user_${randomUUID().replaceAll('-', '')}`;
+    const clerkId2 = `user_${randomUUID().replaceAll('-', '')}`;
+
+    const first = await repo.upsertByClerkId(clerkId1, email);
+    cleanup.userIds.push(first.id);
+
+    const second = await repo.upsertByClerkId(clerkId2, email);
+
+    expect(second).toMatchObject({
+      id: first.id,
+      email,
+    });
+
+    await expect(repo.findByClerkId(clerkId2)).resolves.toMatchObject({
+      id: first.id,
+      email,
+    });
+    await expect(repo.findByClerkId(clerkId1)).resolves.toBeNull();
+  });
+
+  it('preserves existing clerkUserId when stale observedAt arrives during email conflict', async () => {
+    const repo = new DrizzleUserRepository(db);
+    const email = `it-${randomUUID()}@example.com`;
+    const clerkId1 = `user_${randomUUID().replaceAll('-', '')}`;
+    const clerkId2 = `user_${randomUUID().replaceAll('-', '')}`;
+    const t2 = new Date('2026-02-01T02:00:00.000Z');
+    const t1 = new Date('2026-02-01T01:00:00.000Z');
+
+    const first = await repo.upsertByClerkId(clerkId1, email, {
+      observedAt: t2,
+    });
+    cleanup.userIds.push(first.id);
+
+    const stale = await repo.upsertByClerkId(clerkId2, email, {
+      observedAt: t1,
+    });
+
+    expect(stale).toMatchObject({
+      id: first.id,
+      email,
+      createdAt: t2,
+      updatedAt: t2,
+    });
+
+    await expect(repo.findByClerkId(clerkId1)).resolves.toMatchObject({
+      id: first.id,
+      email,
+    });
+    await expect(repo.findByClerkId(clerkId2)).resolves.toBeNull();
+  });
+
   it('deletes by clerk id and returns false when missing', async () => {
     const repo = new DrizzleUserRepository(db);
     await expect(repo.deleteByClerkId('user_missing')).resolves.toBe(false);
