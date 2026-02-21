@@ -29,7 +29,7 @@ Brainstorming (BS-NNN) → Spec (SPEC-NNN) → Implementation → Archive
 |----|-------|--------|--------------|
 | [BS-014](./bs-014-practice-starter-question-count-ux.md) | Practice Starter — Silent Truncation When Fewer Questions Available | Active | — |
 | [BS-027](./bs-027-history-tab-bar-visual-inconsistency.md) | History Tab Bar Visual Inconsistency — Pill vs Segmented Control | Active | [SPEC-037](../specs/spec-037-tab-switch-visual-unification.md) |
-| [BS-028](./bs-028-history-session-scoring-and-navigation-gaps.md) | History Session Scoring and Navigation Gaps — Tutor Mode Misleading % + Card Clickability | Active | — |
+| [BS-028](./bs-028-history-session-scoring-and-navigation-gaps.md) | History Page UX Audit — Scoring, Duration, Navigation, Review Parity (13 findings) | Active | — |
 
 **Next Brainstorming ID:** BS-029
 

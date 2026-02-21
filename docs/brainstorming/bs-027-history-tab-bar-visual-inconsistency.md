@@ -199,6 +199,19 @@ Overall: the browser feedback is useful and directionally consistent with this d
 
 ---
 
+## 9. Browser Audit: Dark Mode Hover Contrast Extends Beyond Tab Bar
+
+A comprehensive browser audit (2026-02-21) confirmed the dark mode contrast issue extends beyond the tab bar to other History page interactive elements:
+
+- **"View breakdown" button:** Has `hover:bg-accent` / `dark:hover:bg-input/50` but `--accent: 0 0% 11%` against the similarly dark card background produces near-zero visible contrast change. Users hovering the button see nothing happen.
+- **Session card rows:** No hover state at all (`cursor: auto`, no visual change).
+- **"Previous"/"Next" pagination links:** No visible hover state.
+- **Tab buttons (Sessions/Questions):** Barely perceptible hover delta.
+
+This reinforces the core finding: the dark mode token system has insufficient contrast deltas for interactive states. The SPEC-037 tab-switch token fix should be coordinated with broader interactive-state contrast improvements tracked in [BS-028](./bs-028-history-session-scoring-and-navigation-gaps.md) (Problem 6).
+
+---
+
 ## Decision Log
 
 | Date | Decision | Rationale |
@@ -207,3 +220,4 @@ Overall: the browser feedback is useful and directionally consistent with this d
 | 2026-02-21 | Re-audited and corrected | Confirmed class-level facts, corrected false assumptions about token isolation and test coverage |
 | 2026-02-21 | FilterChip analysis added | Proves pill shape is not the problem; `bg-background` active state is the isolated root cause |
 | 2026-02-21 | Fix direction decided | Shared visual constants + separate semantic wrappers; specced as SPEC-037 |
+| 2026-02-21 | Browser audit cross-reference added | Dark mode hover contrast issue extends to session card buttons, pagination, and card rows — broader than just the tab bar |
