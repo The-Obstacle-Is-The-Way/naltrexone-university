@@ -87,10 +87,13 @@ describe('HistoryTabBar', () => {
 
   it('uses high-contrast active styling instead of background-on-background active styling', () => {
     const html = renderToStaticMarkup(<HistoryTabBar activeTab="sessions" />);
+    const links = getLinks(html);
+    const sessions = links.find((l) => l.textContent === 'Sessions');
+    const sessionsClass = sessions?.getAttribute('class') ?? '';
 
-    expect(html).toContain('bg-primary');
-    expect(html).toContain('text-primary-foreground');
-    expect(html).toContain('shadow-sm');
-    expect(html).not.toContain('bg-background text-foreground shadow-sm');
+    expect(sessionsClass).toContain('bg-primary');
+    expect(sessionsClass).toContain('text-primary-foreground');
+    expect(sessionsClass).toContain('shadow-sm');
+    expect(sessionsClass).not.toContain('bg-background');
   });
 });

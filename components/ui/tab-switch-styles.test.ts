@@ -22,6 +22,7 @@ describe('tab-switch-styles', () => {
   it('defines the canonical active classes', () => {
     expect(tabSwitchItemActiveClasses).toContain('bg-primary');
     expect(tabSwitchItemActiveClasses).toContain('text-primary-foreground');
+    expect(tabSwitchItemActiveClasses).toContain('shadow-sm');
     expect(tabSwitchItemActiveClasses).not.toContain('bg-background');
   });
 
@@ -32,5 +33,6 @@ describe('tab-switch-styles', () => {
 
   it('defines the canonical inactive classes', () => {
     expect(tabSwitchItemInactiveClasses).toContain('text-muted-foreground');
+    expect(tabSwitchItemInactiveClasses).toContain('hover:text-foreground');
   });
 });
