@@ -9,9 +9,6 @@ import {
 
 describe('tab-switch-styles', () => {
   it('defines the canonical container classes', () => {
-    expect(tabSwitchContainerClasses).toContain('rounded-lg');
-    expect(tabSwitchContainerClasses).toContain('bg-muted');
-    expect(tabSwitchContainerClasses).toContain('border-border');
     expect(tabSwitchContainerClasses).toBe(
       'inline-flex rounded-lg border border-border bg-muted p-1',
     );
@@ -28,9 +25,12 @@ describe('tab-switch-styles', () => {
     expect(tabSwitchItemActiveClasses).not.toContain('bg-background');
   });
 
-  it('defines the canonical base and inactive classes', () => {
+  it('defines the canonical base classes', () => {
     expect(tabSwitchItemBaseClasses).toContain('rounded-md');
     expect(tabSwitchItemBaseClasses).toContain('focus-visible');
+  });
+
+  it('defines the canonical inactive classes', () => {
     expect(tabSwitchItemInactiveClasses).toContain('text-muted-foreground');
   });
 });
