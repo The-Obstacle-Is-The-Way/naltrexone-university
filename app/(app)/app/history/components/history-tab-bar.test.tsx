@@ -1,16 +1,26 @@
 // @vitest-environment jsdom
 import { renderToStaticMarkup } from 'react-dom/server';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { ROUTES } from '@/lib/routes';
-import { HistoryTabBar } from './history-tab-bar';
+
+let HistoryTabBar: typeof import('./history-tab-bar').HistoryTabBar;
 
 vi.mock('next/link', () => ({
   default: (props: Record<string, unknown>) => <a {...props} />,
 }));
 
+beforeAll(async () => {
+  ({ HistoryTabBar } = await import('./history-tab-bar'));
+});
+
 function getLinks(html: string) {
   const doc = new DOMParser().parseFromString(html, 'text/html');
   return Array.from(doc.querySelectorAll('a'));
+}
+
+function getContainer(html: string) {
+  const doc = new DOMParser().parseFromString(html, 'text/html');
+  return doc.querySelector('nav > div');
 }
 
 describe('HistoryTabBar', () => {
@@ -51,5 +61,39 @@ describe('HistoryTabBar', () => {
 
     expect(questions2?.getAttribute('aria-current')).toBe('page');
     expect(sessions2?.getAttribute('aria-current')).toBeNull();
+  });
+
+  it('renders nav landmark with an accessible label', () => {
+    const html = renderToStaticMarkup(<HistoryTabBar activeTab="sessions" />);
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const nav = doc.querySelector('nav');
+
+    expect(nav?.getAttribute('aria-label')).toBe('History tabs');
+  });
+
+  it('uses canonical container classes and removes legacy history-only container tokens', () => {
+    const html = renderToStaticMarkup(<HistoryTabBar activeTab="sessions" />);
+    const containerClass = getContainer(html)?.getAttribute('class') ?? '';
+
+    expect(containerClass).toContain(
+      'inline-flex rounded-lg border border-border bg-muted p-1',
+    );
+    expect(containerClass).not.toContain('rounded-full');
+    expect(containerClass).not.toContain('bg-muted/20');
+    expect(containerClass).not.toContain('border-border/60');
+    expect(containerClass).not.toContain('items-center');
+    expect(containerClass).not.toContain('gap-1');
+  });
+
+  it('uses high-contrast active styling instead of background-on-background active styling', () => {
+    const html = renderToStaticMarkup(<HistoryTabBar activeTab="sessions" />);
+    const links = getLinks(html);
+    const sessions = links.find((l) => l.textContent === 'Sessions');
+    const sessionsClass = sessions?.getAttribute('class') ?? '';
+
+    expect(sessionsClass).toContain('bg-primary');
+    expect(sessionsClass).toContain('text-primary-foreground');
+    expect(sessionsClass).toContain('shadow-sm');
+    expect(sessionsClass).not.toContain('bg-background');
   });
 });

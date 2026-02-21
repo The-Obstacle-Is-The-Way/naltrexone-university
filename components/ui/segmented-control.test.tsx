@@ -1,13 +1,15 @@
 // @vitest-environment jsdom
 import { renderToStaticMarkup } from 'react-dom/server';
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
+
+let SegmentedControl: typeof import('./segmented-control').SegmentedControl;
+
+beforeAll(async () => {
+  ({ SegmentedControl } = await import('./segmented-control'));
+});
 
 describe('SegmentedControl', () => {
-  it('renders all provided options', async () => {
-    const { SegmentedControl } = await import(
-      '@/components/ui/segmented-control'
-    );
-
+  it('renders all provided options', () => {
     const html = renderToStaticMarkup(
       <SegmentedControl
         options={[
@@ -23,11 +25,7 @@ describe('SegmentedControl', () => {
     expect(html).toContain('Exam');
   });
 
-  it('renders as button elements', async () => {
-    const { SegmentedControl } = await import(
-      '@/components/ui/segmented-control'
-    );
-
+  it('renders as button elements', () => {
     const html = renderToStaticMarkup(
       <SegmentedControl
         options={[
@@ -42,11 +40,7 @@ describe('SegmentedControl', () => {
     expect(html).toContain('type="button"');
   });
 
-  it('marks the active option with aria-pressed true', async () => {
-    const { SegmentedControl } = await import(
-      '@/components/ui/segmented-control'
-    );
-
+  it('marks the active option with aria-pressed true', () => {
     const html = renderToStaticMarkup(
       <SegmentedControl
         options={[
@@ -64,11 +58,7 @@ describe('SegmentedControl', () => {
     expect(html).toContain('aria-pressed="false"');
   });
 
-  it('applies active styling to the selected option', async () => {
-    const { SegmentedControl } = await import(
-      '@/components/ui/segmented-control'
-    );
-
+  it('applies active styling to the selected option', () => {
     const html = renderToStaticMarkup(
       <SegmentedControl
         options={[
@@ -83,11 +73,7 @@ describe('SegmentedControl', () => {
     expect(html).toContain('bg-primary');
   });
 
-  it('wraps options in a fieldset', async () => {
-    const { SegmentedControl } = await import(
-      '@/components/ui/segmented-control'
-    );
-
+  it('wraps options in a fieldset', () => {
     const html = renderToStaticMarkup(
       <SegmentedControl
         options={[
@@ -102,11 +88,7 @@ describe('SegmentedControl', () => {
     expect(html).toContain('<fieldset');
   });
 
-  it('renders sr-only legend when legend prop is provided', async () => {
-    const { SegmentedControl } = await import(
-      '@/components/ui/segmented-control'
-    );
-
+  it('renders sr-only legend when legend prop is provided', () => {
     const html = renderToStaticMarkup(
       <SegmentedControl
         options={[
@@ -124,11 +106,7 @@ describe('SegmentedControl', () => {
     expect(html).toContain('Mode');
   });
 
-  it('omits legend when legend prop is not provided', async () => {
-    const { SegmentedControl } = await import(
-      '@/components/ui/segmented-control'
-    );
-
+  it('omits legend when legend prop is not provided', () => {
     const html = renderToStaticMarkup(
       <SegmentedControl
         options={[
@@ -143,11 +121,7 @@ describe('SegmentedControl', () => {
     expect(html).not.toContain('<legend');
   });
 
-  it('disables all buttons when disabled', async () => {
-    const { SegmentedControl } = await import(
-      '@/components/ui/segmented-control'
-    );
-
+  it('disables all buttons when disabled', () => {
     const html = renderToStaticMarkup(
       <SegmentedControl
         options={[
@@ -163,5 +137,24 @@ describe('SegmentedControl', () => {
     // Both buttons should be disabled
     const matches = html.match(/disabled/g) ?? [];
     expect(matches.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('uses the canonical container classes without extra spacing utilities', () => {
+    const html = renderToStaticMarkup(
+      <SegmentedControl
+        options={[
+          { value: 'tutor', label: 'Tutor' },
+          { value: 'exam', label: 'Exam' },
+        ]}
+        value="tutor"
+        onChange={() => undefined}
+      />,
+    );
+
+    expect(html).toContain(
+      'inline-flex rounded-lg border border-border bg-muted p-1',
+    );
+    expect(html).not.toContain('items-center');
+    expect(html).not.toContain('gap-1');
   });
 });

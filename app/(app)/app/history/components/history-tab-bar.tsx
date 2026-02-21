@@ -1,8 +1,12 @@
 import Link from 'next/link';
+import {
+  tabSwitchContainerClasses,
+  tabSwitchItemActiveClasses,
+  tabSwitchItemBaseClasses,
+  tabSwitchItemInactiveClasses,
+} from '@/components/ui/tab-switch-styles';
 import { ROUTES } from '@/lib/routes';
-
-const baseTabClasses =
-  'rounded-full px-4 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]';
+import { cn } from '@/lib/utils';
 
 export function HistoryTabBar({
   activeTab,
@@ -11,26 +15,28 @@ export function HistoryTabBar({
 }) {
   return (
     <nav aria-label="History tabs">
-      <div className="inline-flex items-center gap-1 rounded-full border border-border/60 bg-muted/20 p-1">
+      <div className={tabSwitchContainerClasses}>
         <Link
           href={`${ROUTES.APP_HISTORY}?tab=sessions`}
           aria-current={activeTab === 'sessions' ? 'page' : undefined}
-          className={`${baseTabClasses} ${
+          className={cn(
+            tabSwitchItemBaseClasses,
             activeTab === 'sessions'
-              ? 'bg-background text-foreground shadow-sm'
-              : 'text-muted-foreground hover:text-foreground'
-          }`}
+              ? tabSwitchItemActiveClasses
+              : tabSwitchItemInactiveClasses,
+          )}
         >
           Sessions
         </Link>
         <Link
           href={`${ROUTES.APP_HISTORY}?tab=questions`}
           aria-current={activeTab === 'questions' ? 'page' : undefined}
-          className={`${baseTabClasses} ${
+          className={cn(
+            tabSwitchItemBaseClasses,
             activeTab === 'questions'
-              ? 'bg-background text-foreground shadow-sm'
-              : 'text-muted-foreground hover:text-foreground'
-          }`}
+              ? tabSwitchItemActiveClasses
+              : tabSwitchItemInactiveClasses,
+          )}
         >
           Questions
         </Link>

@@ -1,4 +1,10 @@
 import { cn } from '@/lib/utils';
+import {
+  tabSwitchContainerClasses,
+  tabSwitchItemActiveClasses,
+  tabSwitchItemBaseClasses,
+  tabSwitchItemInactiveClasses,
+} from './tab-switch-styles';
 
 export type SegmentedControlOption = {
   value: string;
@@ -21,7 +27,7 @@ export function SegmentedControl({
   legend,
 }: SegmentedControlProps) {
   return (
-    <fieldset className="inline-flex rounded-lg border border-border bg-muted p-1">
+    <fieldset className={tabSwitchContainerClasses}>
       {legend ? <legend className="sr-only">{legend}</legend> : null}
       {options.map((option) => {
         const isActive = option.value === value;
@@ -33,12 +39,11 @@ export function SegmentedControl({
             disabled={disabled}
             onClick={() => onChange(option.value)}
             className={cn(
-              'rounded-md px-4 py-1.5 text-sm font-medium transition-colors',
-              'focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]',
+              tabSwitchItemBaseClasses,
               'disabled:pointer-events-none disabled:opacity-50',
               isActive
-                ? 'bg-primary text-primary-foreground shadow-sm'
-                : 'text-muted-foreground hover:text-foreground',
+                ? tabSwitchItemActiveClasses
+                : tabSwitchItemInactiveClasses,
             )}
           >
             {option.label}
