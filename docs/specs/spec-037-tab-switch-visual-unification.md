@@ -56,6 +56,7 @@ The shape difference (pill vs rectangle) is not the core issue — `FilterChip` 
 | Frontend standards update | Add canonical tab-switch section | Codify the pattern to prevent future drift |
 | Row/card unification | Out of scope | Different UX pattern (expand-in-place vs navigate); separate decision |
 | `FilterChip` changes | None | Already uses `bg-primary`; not drifted |
+| Codebase-wide tab-switch coverage | Complete for this control family | Only `SegmentedControl` and `HistoryTabBar` are mutually exclusive horizontal tab-switch controls in current runtime UI |
 
 ---
 
@@ -372,6 +373,9 @@ Phase 5: Full Verification
 - **Row card hover/interactivity alignment** — History `<li>` rows vs Dashboard `<a>` rows is a separate UX pattern (expand-in-place vs navigate). Not related to the tab switch.
 - **History section card wrapper** — Whether History should wrap its content in a `bg-card` container like Practice/Dashboard is a broader layout decision. Not in scope.
 - **FilterChip changes** — Already uses `bg-primary` correctly. Not drifted.
+- **Global app navigation links** — Desktop/mobile app nav (`aria-current="page"`) are route navigation patterns, not segmented tab-switch controls.
+- **Question navigator grids** — Review/exam question index chips (`aria-current="step"`) are progress/navigation indicators, not tab switches.
+- **Action toggles in PracticeView** — Bookmark/mark-for-review `aria-pressed` buttons are binary action toggles, not multi-option view switches.
 - **Opacity token cleanup** — `bg-muted/20` and `border-border/60` are used consistently across Dashboard, Practice, and History for row elements. The tab bar was the only place they caused a visibility problem (because the active state was also low-contrast). Row token unification is a separate initiative.
 - **Animated tab indicator** — No sliding/morphing animation. Both components use static class swaps on active state. Keep it simple.
 
@@ -399,3 +403,25 @@ Phase 5: Full Verification
 - `components/ui/segmented-control.tsx` — Button-based consumer
 - `app/(app)/app/history/components/history-tab-bar.tsx` — Link-based consumer
 - `components/ui/filter-chip.tsx` — Reference: uses `bg-primary` correctly (proves pill shape is not the issue)
+
+---
+
+## 11. Codebase-Wide Audit Coverage
+
+### 11.1 Controls Inventory (Audited)
+
+| Control | File(s) | Interaction Model | In Scope for SPEC-037 |
+|---|---|---|---|
+| `SegmentedControl` | `components/ui/segmented-control.tsx` | Single-select segmented buttons (`aria-pressed`) | Yes |
+| `HistoryTabBar` | `app/(app)/app/history/components/history-tab-bar.tsx` | Single-select tab navigation links (`aria-current="page"`) | Yes |
+| `FilterChip` | `components/ui/filter-chip.tsx` | Multi-select tag chips (`aria-pressed`) | No |
+| App desktop/mobile nav | `components/app-desktop-nav.tsx`, `components/mobile-nav.tsx` | Site/page navigation (`aria-current="page"`) | No |
+| Review/exam question navigators | `app/(app)/app/questions/[slug]/components/review-question-navigator.tsx`, `app/(app)/app/practice/[sessionId]/components/exam-review-view.tsx` | Progress/step navigation (`aria-current="step"`) | No |
+| Practice action toggles | `app/(app)/app/practice/components/practice-view.tsx` | Binary action toggles (`aria-pressed`) | No |
+| Theme toggle | `components/theme-toggle.tsx` | Theme state toggle | No |
+
+### 11.2 Coverage Conclusion
+
+For the specific family of **mutually exclusive horizontal tab-switch controls used to switch content views**, this spec is complete: current runtime consumers are `SegmentedControl` and `HistoryTabBar` only.
+
+This means implementing SPEC-037 closes the identified drift for that family without over-coupling unrelated control patterns.
