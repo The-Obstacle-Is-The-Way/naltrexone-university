@@ -4,7 +4,7 @@
 > Write tests FIRST. Red > Green > Refactor. No implementation without a failing test.
 > Principles: SOLID, DRY, Clean Code, Gang of Four patterns where appropriate.
 
-**Status:** Ready
+**Status:** Implemented
 **Layer:** Feature
 **Date:** 2026-02-21
 **Brainstorming:** [BS-027](../brainstorming/bs-027-history-tab-bar-visual-inconsistency.md)

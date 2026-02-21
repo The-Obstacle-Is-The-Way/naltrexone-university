@@ -153,6 +153,23 @@ The `buttonVariants` CVA export from `button.tsx` is intrinsic to the Button mod
 
 These are purpose-built UI primitives in `components/ui/`. They correctly use raw `<button>` internally — this is acceptable since they ARE the component layer.
 
+### Tab-Switch Visual Standard
+
+All tab-switch / segmented-control components MUST use shared visual constants from `components/ui/tab-switch-styles.ts`.
+
+| Constant | Classes | Usage |
+|----------|---------|-------|
+| `tabSwitchContainerClasses` | `inline-flex rounded-lg border border-border bg-muted p-1` | Outer wrapper |
+| `tabSwitchItemBaseClasses` | `rounded-md px-4 py-1.5 text-sm font-medium transition-colors focus-visible:...` | Every tab item |
+| `tabSwitchItemActiveClasses` | `bg-primary text-primary-foreground shadow-sm` | Selected item |
+| `tabSwitchItemInactiveClasses` | `text-muted-foreground hover:text-foreground` | Unselected items |
+
+Semantic structure (element types, ARIA attributes) is component-specific:
+- Button-based segmented controls: `<fieldset>` + `<button>` + `aria-pressed`
+- Link-based tab bars: `<nav>` + `<Link>` + `aria-current`
+
+Do not create new tab-switch components without consuming these constants.
+
 ### NotificationProvider
 
 **Component:** `components/ui/notification-provider.tsx`
@@ -627,6 +644,7 @@ Three hooks exceed the 200-line "god hook" threshold (§12):
 | `notification-provider.tsx` | NotificationProvider, useNotification | **No** | Yes | No | |
 | `alert-dialog.tsx` | AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader, AlertDialogFooter, AlertDialogTitle, AlertDialogDescription, AlertDialogCancel, AlertDialogAction | Yes | Yes | No | Radix UI wrapper |
 | `segmented-control.tsx` | SegmentedControl | **No** | Yes | **No** | |
+| `tab-switch-styles.ts` | (style constants only) | **No** | No | **No** | Shared by SegmentedControl + HistoryTabBar |
 
 ### `components/` (shared non-primitive)
 
