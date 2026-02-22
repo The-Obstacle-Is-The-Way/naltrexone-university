@@ -25,7 +25,7 @@ Re-validation was run from first principles on `dev` with authenticated flows:
 | 3 | Questions-tab review lacks navigator parity | **Confirmed** | Playwright P1-3 failed; code path has no `sessionId` for Questions-tab links |
 | 4 | Session card not clickable | **Confirmed** | Playwright P1-4 failed (`cursor=auto`, no role/tabIndex/link); code confirms plain `<li>` |
 | 5 | No "Review session" action in breakdown | **Confirmed** | Playwright P1-5 failed; `SessionBreakdownList` exposes only per-question links |
-| 6 | Hover affordance is near-invisible in dark mode | **Confirmed** | Measured hover delta is tiny (~0.35% luminance change after compositing), despite class change |
+| 6 | Hover affordance is near-invisible in dark mode | **Confirmed (partial)** | "View breakdown" button and session card: confirmed near-invisible (~3% delta). Previous/Next pagination: has visible `hover:text-foreground` (45%→93%); revised in detail table below |
 | 7 | Navigator loads off-screen | **Not reproduced** | Agent-browser measured `scrollY=0` and navigator in viewport (`navTop=185`, `inView=true`) when entering from Sessions |
 | 8 | Sessions tab missing filters/count context | **Confirmed** | Playwright P2-8 failed; Sessions tab still only has Previous/Next links |
 | 9 | Dual "Back to History" links on review page | **Confirmed** | Playwright P2-9 failed with 2 links; agent-browser snapshot showed top + bottom links |
@@ -38,6 +38,15 @@ Re-validation was run from first principles on `dev` with authenticated flows:
 ### Audit Harness Note
 
 Playwright check P1-6 originally errored in `color-utils.ts` because Tailwind v4 emits `oklab(...)` color strings and the parser expected `rgb/rgba`. This is a **test harness issue**, not a product fix by itself. Re-validation used browser-canvas conversion to evaluate real luminance delta.
+
+### E2E Coverage Gaps
+
+The Playwright audit suite (`tests/e2e/bs-028-history-ux-audit.spec.ts`) covers 12 of 14 findings. Two P3 items lack E2E tests:
+
+- **Problem 11** ("Try Again" on correct questions) — confirmed via agent-browser only, no Playwright test
+- **Problem 13** (mid-sentence truncation) — confirmed via agent-browser only, no Playwright test
+
+These should be added as unit tests during SPEC-038 Phase 3 implementation.
 
 ---
 
@@ -135,12 +144,12 @@ This is a major inconsistency. A user reviewing from the Questions tab is comple
 | Element | Has Visible Hover? |
 |---------|-------------------|
 | Session card row | No visual change, no cursor change |
-| "View breakdown" button | `hover:bg-accent` exists but accent color (`--accent: 0 0% 11%`) against the similarly dark background produces near-zero contrast delta |
+| "View breakdown" button | Dark mode overrides `hover:bg-accent` with `dark:hover:bg-input/50` (`--input: 0 0% 15%` at 50% opacity vs base `dark:bg-input/30` at 30% opacity); effective delta ~3% lightness — near-invisible |
 | Question links (in breakdown) | Underlines on hover (good) |
-| "Previous"/"Next" pagination | No visible hover state |
+| "Previous"/"Next" pagination | `hover:text-foreground` present — text changes from `--muted-foreground: 0 0% 45%` to `--foreground: 0 0% 93%`; visible but text-only (no background change) |
 | Tab buttons (Sessions/Questions) | Barely perceptible |
 
-The "View breakdown" button has Tailwind hover utilities (`hover:bg-accent`, `hover:text-accent-foreground`, `dark:hover:bg-input/50`) but the theme values in dark mode produce virtually zero visible contrast change. Users hovering the button see nothing happen, making it feel unresponsive.
+The "View breakdown" button uses the `outline` Button variant. In dark mode, the base is `dark:bg-input/30` and hover is `dark:hover:bg-input/50` (`--input: 0 0% 15%`). The effective lightness delta is ~3%, producing virtually zero visible contrast change. The "Previous"/"Next" pagination links DO have a visible text-color hover (`hover:text-foreground`), but the button and session card remain the primary hover-deficient elements.
 
 **Recommendation:** Minimum 15% luminance difference on hover. Either increase the accent lightness delta or add a border/outline change on hover.
 
@@ -356,7 +365,7 @@ Each question row is a `<Link>` to `toQuestionRoute(slug, { from, mode: 'review'
 | 3 | Sessions vs Questions review parity | **P1** | Every Questions tab review | No navigator, no Previous/Next from Questions | Confirmed |
 | 4 | Session card not clickable | **P1** | Every session interaction | Violates tap-target convention | Confirmed |
 | 5 | No "Review session" in breakdown | **P1** | Every breakdown expansion | Must click individual question to enter review | Confirmed |
-| 6 | Hover states effectively invisible in dark mode | **P1** | Every interaction | Buttons feel unresponsive | Confirmed |
+| 6 | Hover states effectively invisible in dark mode | **P1** | Every interaction | "View breakdown" button and session card near-invisible; Prev/Next text-only hover is visible | Confirmed (partial — see detail table) |
 | 7 | Navigator off-screen on load | **P2** | Unclear | Orientation tool hidden | Not reproduced (keep as watch item) |
 | 8 | Sessions tab missing filters/counts | **P2** | Growing with session count | Unusable at scale | Confirmed |
 | 9 | Dual "Back to History" links | **P2** | Every question review page | Redundant, inconsistent styling | Confirmed |

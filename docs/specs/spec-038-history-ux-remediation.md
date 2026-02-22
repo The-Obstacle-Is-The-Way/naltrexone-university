@@ -277,6 +277,10 @@ Tag filter groups:
 - P1-6 uses robust color conversion and verifies minimum hover contrast delta.
 - P7 remains informational only (not a required fail/pass gate in this spec).
 
+**Coverage gaps (add during implementation):**
+- FR-10 ("Try Again" → "Practice Again") — no E2E test exists; add during Phase 3
+- FR-12 (sentence-aware truncation) — no E2E test exists; unit test in `stem-preview.test.ts` is primary; E2E optional
+
 ---
 
 ## 6. Rollout Plan
