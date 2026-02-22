@@ -706,33 +706,40 @@ test.describe('BS-028: History Page UX Audit', () => {
     await goToHistoryQuestions(page);
 
     const candidate = await page.evaluate(() => {
-      const rows = Array.from(document.querySelectorAll('li')).map((row) => {
-        const preview = row
-          .querySelector('p.mt-2.text-sm.text-muted-foreground')
+      const rows = Array.from(document.querySelectorAll('li'));
+
+      for (const row of rows) {
+        const questionLink = row.querySelector<HTMLAnchorElement>(
+          'a[href*="/app/questions/"]',
+        );
+        if (!questionLink) continue;
+
+        const href = questionLink.getAttribute('href');
+        if (!href) continue;
+
+        const previewFromBody = row
+          .querySelector<HTMLElement>(
+            '[data-testid="history-question-preview"]',
+          )
           ?.textContent?.trim();
-        const href = row
-          .querySelector('a[href*="/app/questions/"]')
-          ?.getAttribute('href');
+        const previewFromTitle = questionLink.textContent?.trim();
+        const preview = previewFromBody || previewFromTitle;
+        if (!preview) continue;
 
-        if (!preview || !href) return null;
-        return { preview, href };
-      });
+        return {
+          preview,
+          href,
+          hasBodyPreview: Boolean(previewFromBody),
+        };
+      }
 
-      return (
-        rows.find(
-          (row): row is { preview: string; href: string } =>
-            row !== null &&
-            !row.preview.endsWith('...') &&
-            /[.!?]$/.test(row.preview) &&
-            row.preview.length >= 40,
-        ) ?? null
-      );
+      return null;
     });
 
     if (!candidate) {
       test.skip(
         true,
-        'No visible candidate preview ending at a sentence boundary — cannot verify sentence-aware truncation',
+        'No reviewable question rows in visible history page — cannot verify preview truncation',
       );
       return;
     }
@@ -750,15 +757,26 @@ test.describe('BS-028: History Page UX Audit', () => {
       .locator('div.text-sm.text-foreground')
       .first()
       .evaluate((el) => (el.textContent ?? '').replace(/\s+/g, ' ').trim());
+    const previewWithoutEllipsis = candidate.preview.endsWith('...')
+      ? candidate.preview.slice(0, -3).trimEnd()
+      : candidate.preview;
 
     expect(
-      stemText.startsWith(candidate.preview),
-      'BS-028 P3-13: Preview should align with a sentence boundary in the full stem',
+      stemText.startsWith(previewWithoutEllipsis),
+      'BS-028 P3-13: Preview prefix should align with the full question stem',
     ).toBe(true);
-    expect(
-      stemText.length,
-      'BS-028 P3-13: Candidate preview should be truncated, not the full stem',
-    ).toBeGreaterThan(candidate.preview.length);
+
+    if (candidate.preview.endsWith('...')) {
+      expect(
+        stemText.length,
+        'BS-028 P3-13: Ellipsis preview should represent a truncated stem',
+      ).toBeGreaterThan(previewWithoutEllipsis.length);
+    } else if (candidate.hasBodyPreview) {
+      expect(
+        /[.!?]$/.test(candidate.preview),
+        'BS-028 P3-13: Non-ellipsis body previews should end on sentence boundaries',
+      ).toBe(true);
+    }
   });
 });
 

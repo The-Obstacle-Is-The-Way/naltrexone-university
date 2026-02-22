@@ -203,8 +203,13 @@ describe('HistoryQuestionsTab', () => {
     };
 
     const html = renderToStaticMarkup(<HistoryQuestionsTab result={result} />);
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const preview = doc.querySelector(
+      '[data-testid="history-question-preview"]',
+    );
 
-    expect(html).toContain(expectedBodyPreview);
+    expect(preview).not.toBeNull();
+    expect(preview?.textContent).toContain(expectedBodyPreview);
     expect(html).not.toContain(longStem);
   });
 

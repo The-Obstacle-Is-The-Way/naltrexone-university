@@ -520,7 +520,10 @@ export function HistoryQuestionsTab({
                         </Link>
 
                         {shouldShowBodyText ? (
-                          <div className="text-sm text-muted-foreground">
+                          <div
+                            className="text-sm text-muted-foreground"
+                            data-testid="history-question-preview"
+                          >
                             {bodyPreview}
                           </div>
                         ) : null}
