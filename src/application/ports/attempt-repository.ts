@@ -33,12 +33,18 @@ export type AttemptedQuestionSummary = {
 
 export type AttemptedQuestionsResultFilter = 'correct' | 'incorrect';
 export type AttemptedQuestionsSourceFilter = 'tutor' | 'exam' | 'adhoc';
+export type AttemptedQuestionsSort =
+  | 'recent'
+  | 'incorrect-first'
+  | 'correct-first'
+  | 'difficulty';
 
 export type AttemptedQuestionsFilters = {
   result?: AttemptedQuestionsResultFilter | null;
   source?: AttemptedQuestionsSourceFilter | null;
   difficulty?: QuestionDifficulty | null;
   tagSlug?: string | null;
+  sort?: AttemptedQuestionsSort | null;
 };
 
 export type RecentAttempt = Attempt & {

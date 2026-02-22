@@ -295,7 +295,7 @@ describe('app/(app)/app/history/page', () => {
     );
   });
 
-  it('applies incorrect-first questions sort ordering', async () => {
+  it('passes incorrect-first sort to attempted questions fetch and renders backend order', async () => {
     const output: GetAttemptedQuestionsOutput = {
       rows: [
         {
@@ -357,18 +357,23 @@ describe('app/(app)/app/history/page', () => {
     });
     const html = renderToStaticMarkup(element);
 
-    const incorrectRecentIndex = html.indexOf('Incorrect recent');
-    const incorrectOldIndex = html.indexOf('Incorrect old');
     const correctRecentIndex = html.indexOf('Correct recent');
+    const incorrectOldIndex = html.indexOf('Incorrect old');
+    const incorrectRecentIndex = html.indexOf('Incorrect recent');
 
     expect(incorrectRecentIndex).toBeGreaterThanOrEqual(0);
     expect(incorrectOldIndex).toBeGreaterThanOrEqual(0);
     expect(correctRecentIndex).toBeGreaterThanOrEqual(0);
-    expect(incorrectRecentIndex).toBeLessThan(incorrectOldIndex);
-    expect(incorrectOldIndex).toBeLessThan(correctRecentIndex);
+    expect(getAttemptedQuestionsFn).toHaveBeenCalledWith(
+      expect.objectContaining({
+        sort: 'incorrect-first',
+      }),
+    );
+    expect(correctRecentIndex).toBeLessThan(incorrectOldIndex);
+    expect(incorrectOldIndex).toBeLessThan(incorrectRecentIndex);
   });
 
-  it('applies difficulty sort ordering (hard, medium, easy)', async () => {
+  it('passes difficulty sort to attempted questions fetch and renders backend order', async () => {
     const output: GetAttemptedQuestionsOutput = {
       rows: [
         {
@@ -430,15 +435,20 @@ describe('app/(app)/app/history/page', () => {
     });
     const html = renderToStaticMarkup(element);
 
+    const easyIndex = html.indexOf('Easy question');
     const hardIndex = html.indexOf('Hard question');
     const mediumIndex = html.indexOf('Medium question');
-    const easyIndex = html.indexOf('Easy question');
 
     expect(hardIndex).toBeGreaterThanOrEqual(0);
     expect(mediumIndex).toBeGreaterThanOrEqual(0);
     expect(easyIndex).toBeGreaterThanOrEqual(0);
+    expect(getAttemptedQuestionsFn).toHaveBeenCalledWith(
+      expect.objectContaining({
+        sort: 'difficulty',
+      }),
+    );
+    expect(easyIndex).toBeLessThan(hardIndex);
     expect(hardIndex).toBeLessThan(mediumIndex);
-    expect(mediumIndex).toBeLessThan(easyIndex);
   });
 
   it('renders an error state when session history fetch returns not-ok', async () => {

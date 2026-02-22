@@ -461,16 +461,38 @@ describe('question-page-logic', () => {
       expect(setSubmitResult).not.toHaveBeenCalled();
     });
 
-    it('does not set state when previous-attempt response is malformed', async () => {
+    it('does not set state when previous-attempt request times out', async () => {
+      vi.useFakeTimers();
       const setSelectedChoiceId = vi.fn();
       const setSubmitResult = vi.fn();
 
-      await loadPreviousAttempt({
+      const promise = loadPreviousAttempt({
         questionId: 'q_1',
-        getPreviousAttemptFn: async () => undefined as never,
+        getPreviousAttemptFn: async () => new Promise<never>(() => {}),
         setSelectedChoiceId,
         setSubmitResult,
       });
+
+      await vi.advanceTimersByTimeAsync(10_000);
+      await promise;
+
+      expect(setSelectedChoiceId).not.toHaveBeenCalled();
+      expect(setSubmitResult).not.toHaveBeenCalled();
+      vi.useRealTimers();
+    });
+
+    it('throws when previous-attempt response violates ActionResult contract', async () => {
+      const setSelectedChoiceId = vi.fn();
+      const setSubmitResult = vi.fn();
+
+      await expect(
+        loadPreviousAttempt({
+          questionId: 'q_1',
+          getPreviousAttemptFn: async () => undefined as never,
+          setSelectedChoiceId,
+          setSubmitResult,
+        }),
+      ).rejects.toThrow();
 
       expect(setSelectedChoiceId).not.toHaveBeenCalled();
       expect(setSubmitResult).not.toHaveBeenCalled();

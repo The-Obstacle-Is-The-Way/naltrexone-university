@@ -4,10 +4,7 @@ import {
   type GetSessionHistoryOutput,
   getSessionHistory,
 } from '@/src/adapters/controllers/practice-controller';
-import {
-  type GetAttemptedQuestionsOutput,
-  getAttemptedQuestions,
-} from '@/src/adapters/controllers/review-controller';
+import { getAttemptedQuestions } from '@/src/adapters/controllers/review-controller';
 import {
   getTags,
   type TagRow,
@@ -24,7 +21,6 @@ import {
   parseSourceFilter,
   parseTagSlugFilter,
   type QuestionsFilters,
-  type QuestionsSort,
 } from './history-search-params';
 
 export const maxDuration = 30;
@@ -55,57 +51,6 @@ function getTagKindSortValue(kind: VisibleTagKind): number {
   if (kind === 'topic') return 0;
   if (kind === 'substance') return 1;
   return 2;
-}
-
-function sortAttemptedRows(
-  rows: GetAttemptedQuestionsOutput['rows'],
-  sort: QuestionsSort,
-): GetAttemptedQuestionsOutput['rows'] {
-  const sorted = [...rows];
-
-  if (sort === 'recent') {
-    return sorted.sort(
-      (a, b) =>
-        new Date(b.lastAnsweredAt).getTime() -
-        new Date(a.lastAnsweredAt).getTime(),
-    );
-  }
-
-  if (sort === 'incorrect-first') {
-    return sorted.sort((a, b) => {
-      if (a.isCorrect === b.isCorrect) {
-        return (
-          new Date(b.lastAnsweredAt).getTime() -
-          new Date(a.lastAnsweredAt).getTime()
-        );
-      }
-      return a.isCorrect ? 1 : -1;
-    });
-  }
-
-  if (sort === 'correct-first') {
-    return sorted.sort((a, b) => {
-      if (a.isCorrect === b.isCorrect) {
-        return (
-          new Date(b.lastAnsweredAt).getTime() -
-          new Date(a.lastAnsweredAt).getTime()
-        );
-      }
-      return a.isCorrect ? -1 : 1;
-    });
-  }
-
-  return sorted.sort((a, b) => {
-    const aDifficulty = a.isAvailable ? a.difficulty : 'easy';
-    const bDifficulty = b.isAvailable ? b.difficulty : 'easy';
-    const difficultyRank = { hard: 0, medium: 1, easy: 2 };
-    const rankDiff = difficultyRank[aDifficulty] - difficultyRank[bDifficulty];
-    if (rankDiff !== 0) return rankDiff;
-    return (
-      new Date(b.lastAnsweredAt).getTime() -
-      new Date(a.lastAnsweredAt).getTime()
-    );
-  });
 }
 
 export function createHistoryPage(deps?: {
@@ -145,6 +90,7 @@ export function createHistoryPage(deps?: {
           source: questionsFilters.source ?? undefined,
           difficulty: questionsFilters.difficulty ?? undefined,
           tagSlug: questionsFilters.tagSlug ?? undefined,
+          sort: questionsFilters.sort ?? undefined,
         }),
         getTagsFn({}),
       ]);
@@ -163,24 +109,10 @@ export function createHistoryPage(deps?: {
             )
         : [];
 
-      const sortedQuestionsResult: ActionResult<GetAttemptedQuestionsOutput> =
-        result.ok
-          ? {
-              ok: true,
-              data: {
-                ...result.data,
-                rows: sortAttemptedRows(
-                  result.data.rows,
-                  questionsFilters.sort ?? 'recent',
-                ),
-              },
-            }
-          : result;
-
       return (
         <HistoryPageClient
           activeTab="questions"
-          questionsResult={sortedQuestionsResult}
+          questionsResult={result}
           questionsFilters={questionsFilters}
           questionsTagOptions={tagOptions}
         />

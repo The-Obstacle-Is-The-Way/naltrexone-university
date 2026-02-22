@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import type { ComponentType } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
@@ -9,15 +10,41 @@ vi.mock('next/link', () => ({
 }));
 
 let HistorySessionsTab: typeof import('./history-sessions-tab').HistorySessionsTab;
+let SessionSummaryContent: ComponentType<{
+  mode: 'tutor' | 'exam';
+  fractionLabel: string;
+  accuracyLabel: string;
+  durationLabel: string;
+  endedOn: string;
+}>;
 
 beforeAll(async () => {
-  HistorySessionsTab = (await import('./history-sessions-tab'))
-    .HistorySessionsTab;
+  const module = await import('./history-sessions-tab');
+  HistorySessionsTab = module.HistorySessionsTab;
+  SessionSummaryContent =
+    module.SessionSummaryContent as typeof SessionSummaryContent;
 });
 
 type SessionHistoryResult = ActionResult<GetSessionHistoryOutput>;
 
 describe('HistorySessionsTab', () => {
+  it('renders SessionSummaryContent with mode, score, duration, and date', () => {
+    const html = renderToStaticMarkup(
+      <SessionSummaryContent
+        mode="exam"
+        fractionLabel="8/10"
+        accuracyLabel="80%"
+        durationLabel="20m"
+        endedOn="Feb 7, 2026"
+      />,
+    );
+
+    expect(html).toContain('Exam');
+    expect(html).toContain('8/10 correct (80%)');
+    expect(html).toContain('20m');
+    expect(html).toContain('Feb 7, 2026');
+  });
+
   it('renders session rows with expected summary fields', () => {
     const result: SessionHistoryResult = {
       ok: true,
@@ -114,9 +141,10 @@ describe('HistorySessionsTab', () => {
     expect(reviewLink?.getAttribute('href')).toContain('/app/questions/q-1');
     expect(reviewLink?.getAttribute('href')).toContain('mode=review');
     expect(reviewLink?.getAttribute('href')).toContain('sessionId=session-1');
+    expect(html).toContain('data-session-summary-content="true"');
   });
 
-  it('adds pointer affordance classes to session rows', () => {
+  it('does not render cursor-pointer on li rows', () => {
     const result: SessionHistoryResult = {
       ok: true,
       data: {
@@ -142,8 +170,36 @@ describe('HistorySessionsTab', () => {
 
     const html = renderToStaticMarkup(<HistorySessionsTab result={result} />);
 
-    expect(html).toContain('cursor-pointer');
+    expect(html).not.toContain('cursor-pointer');
     expect(html).toContain('hover:bg-accent');
+  });
+
+  it('uses SessionSummaryContent for non-link session summaries', () => {
+    const result: SessionHistoryResult = {
+      ok: true,
+      data: {
+        rows: [
+          {
+            sessionId: 'session-1',
+            mode: 'exam',
+            questionCount: 10,
+            firstQuestionSlug: null,
+            answered: 10,
+            correct: 8,
+            accuracy: 0.8,
+            durationSeconds: 1200,
+            startedAt: '2026-02-07T00:00:00.000Z',
+            endedAt: '2026-02-07T00:20:00.000Z',
+          },
+        ],
+        total: 1,
+        limit: 20,
+        offset: 0,
+      },
+    };
+
+    const html = renderToStaticMarkup(<HistorySessionsTab result={result} />);
+    expect(html).toContain('data-session-summary-content="true"');
   });
 
   it('shows exam zero-answered accuracy as 0%', () => {

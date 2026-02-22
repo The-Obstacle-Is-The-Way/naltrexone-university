@@ -28,6 +28,14 @@ export type HistorySessionsTabProps = {
   modeFilter?: SessionModeFilter;
 };
 
+type SessionSummaryContentProps = {
+  mode: 'tutor' | 'exam';
+  fractionLabel: string;
+  accuracyLabel: string;
+  durationLabel: string;
+  endedOn: string;
+};
+
 function formatSessionAccuracy(value: number): string {
   return `${Math.round(value * 100)}%`;
 }
@@ -44,6 +52,28 @@ function formatSessionDurationDisplay(durationSeconds: number): string {
     return `>${MAX_DISPLAY_DURATION_MINUTES}m`;
   }
   return formatDuration(durationSeconds);
+}
+
+export function SessionSummaryContent({
+  mode,
+  fractionLabel,
+  accuracyLabel,
+  durationLabel,
+  endedOn,
+}: SessionSummaryContentProps) {
+  return (
+    <span data-session-summary-content="true">
+      <span className="font-medium">{formatSessionMode(mode)}</span>
+      <span className="mx-2">•</span>
+      <span>
+        {fractionLabel} correct ({accuracyLabel})
+      </span>
+      <span className="mx-2">•</span>
+      <span>{durationLabel}</span>
+      <span className="mx-2">•</span>
+      <span>{endedOn}</span>
+    </span>
+  );
 }
 
 export function HistorySessionsTab({
@@ -145,9 +175,7 @@ export function HistorySessionsTab({
           return (
             <li
               key={row.sessionId}
-              className={`rounded-xl border border-border/60 bg-muted/20 p-3 transition-colors hover:bg-accent/40 dark:hover:bg-foreground/10 ${
-                sessionReviewHref ? 'cursor-pointer' : ''
-              }`}
+              className="rounded-xl border border-border/60 bg-muted/20 p-3 transition-colors hover:bg-accent/40 dark:hover:bg-foreground/10"
             >
               <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                 {sessionReviewHref ? (
@@ -155,31 +183,23 @@ export function HistorySessionsTab({
                     href={sessionReviewHref}
                     className="rounded-md text-sm text-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]"
                   >
-                    <span className="font-medium">
-                      {formatSessionMode(row.mode)}
-                    </span>
-                    <span className="mx-2">•</span>
-                    <span>
-                      {fractionLabel} correct ({accuracyLabel})
-                    </span>
-                    <span className="mx-2">•</span>
-                    <span>{durationLabel}</span>
-                    <span className="mx-2">•</span>
-                    <span>{endedOn}</span>
+                    <SessionSummaryContent
+                      mode={row.mode}
+                      fractionLabel={fractionLabel}
+                      accuracyLabel={accuracyLabel}
+                      durationLabel={durationLabel}
+                      endedOn={endedOn}
+                    />
                   </Link>
                 ) : (
                   <div className="text-sm text-foreground">
-                    <span className="font-medium">
-                      {formatSessionMode(row.mode)}
-                    </span>
-                    <span className="mx-2">•</span>
-                    <span>
-                      {fractionLabel} correct ({accuracyLabel})
-                    </span>
-                    <span className="mx-2">•</span>
-                    <span>{durationLabel}</span>
-                    <span className="mx-2">•</span>
-                    <span>{endedOn}</span>
+                    <SessionSummaryContent
+                      mode={row.mode}
+                      fractionLabel={fractionLabel}
+                      accuracyLabel={accuracyLabel}
+                      durationLabel={durationLabel}
+                      endedOn={endedOn}
+                    />
                   </div>
                 )}
                 <Button

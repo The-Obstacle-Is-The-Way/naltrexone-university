@@ -286,9 +286,6 @@ export async function loadPreviousAttempt(input: {
     return;
   }
   if (!isMounted()) return;
-  if (!res || typeof res !== 'object' || !('ok' in res)) {
-    return;
-  }
 
   if (!res.ok || !res.data) {
     // No previous attempt or error — stay in attempt mode
