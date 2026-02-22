@@ -1,3 +1,4 @@
+import { ApplicationError } from '@/src/application/errors';
 import type {
   UpsertUserByClerkIdOptions,
   UserRepository,
@@ -45,6 +46,13 @@ export class FakeUserRepository implements UserRepository {
       if (existingByEmail) {
         if (existingByEmail.user.updatedAt >= observedAt) {
           return existingByEmail.user;
+        }
+
+        if (this.byClerkId.has(clerkId)) {
+          throw new ApplicationError(
+            'CONFLICT',
+            'User could not be upserted due to a uniqueness constraint',
+          );
         }
 
         const migratedUser: User = {

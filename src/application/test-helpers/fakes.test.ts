@@ -325,6 +325,37 @@ describe('FakeUserRepository', () => {
       });
       await expect(repo.findByClerkId('clerk-2')).resolves.toBeNull();
     });
+
+    it('throws CONFLICT when migrating email to a clerkId already used by another user', async () => {
+      const repo = new FakeUserRepository();
+      const t1 = new Date('2026-02-01T01:00:00.000Z');
+      const t2 = new Date('2026-02-01T02:00:00.000Z');
+
+      const userA = await repo.upsertByClerkId('clerk-1', 'a@example.com', {
+        observedAt: t1,
+      });
+      const userB = await repo.upsertByClerkId('clerk-2', 'b@example.com', {
+        observedAt: t1,
+      });
+
+      await expect(
+        repo.upsertByClerkId('clerk-2', 'a@example.com', { observedAt: t2 }),
+      ).rejects.toEqual(
+        new ApplicationError(
+          'CONFLICT',
+          'User could not be upserted due to a uniqueness constraint',
+        ),
+      );
+
+      await expect(repo.findByClerkId('clerk-1')).resolves.toMatchObject({
+        id: userA.id,
+        email: 'a@example.com',
+      });
+      await expect(repo.findByClerkId('clerk-2')).resolves.toMatchObject({
+        id: userB.id,
+        email: 'b@example.com',
+      });
+    });
   });
 
   describe('deleteByClerkId', () => {

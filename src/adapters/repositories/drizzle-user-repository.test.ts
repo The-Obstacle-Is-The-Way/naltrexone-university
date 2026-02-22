@@ -194,7 +194,6 @@ describe('DrizzleUserRepository', () => {
       const db = createDbMock();
       const row = {
         id: 'user_1',
-        clerkUserId: 'clerk_2',
         email: 'a@example.com',
         createdAt: new Date('2026-02-01T00:00:00Z'),
         updatedAt: observedAt,
