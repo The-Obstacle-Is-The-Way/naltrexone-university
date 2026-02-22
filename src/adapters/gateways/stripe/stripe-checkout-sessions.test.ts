@@ -99,6 +99,53 @@ describe('createStripeCheckoutSession', () => {
     logger = new FakeLogger();
   });
 
+  it('uses a deterministic fallback idempotency key when caller key is missing', async () => {
+    const { stripe, sessionsCreate } = createStripeMock({
+      openSessionsData: [],
+      createdSessionUrl: 'https://stripe/checkout/new',
+    });
+
+    await expect(
+      createStripeCheckoutSession({
+        stripe,
+        input,
+        priceIds,
+        logger,
+      }),
+    ).resolves.toEqual({ url: 'https://stripe/checkout/new' });
+
+    expect(sessionsCreate).toHaveBeenCalledWith(
+      expect.any(Object),
+      expect.objectContaining({
+        idempotencyKey: 'checkout_session:user_1:monthly',
+      }),
+    );
+  });
+
+  it('uses the caller-provided idempotency key when present', async () => {
+    const { stripe, sessionsCreate } = createStripeMock({
+      openSessionsData: [],
+      createdSessionUrl: 'https://stripe/checkout/new',
+    });
+
+    await expect(
+      createStripeCheckoutSession({
+        stripe,
+        input,
+        options: { idempotencyKey: 'checkout_idem_custom_1' },
+        priceIds,
+        logger,
+      }),
+    ).resolves.toEqual({ url: 'https://stripe/checkout/new' });
+
+    expect(sessionsCreate).toHaveBeenCalledWith(
+      expect.any(Object),
+      expect.objectContaining({
+        idempotencyKey: 'checkout_idem_custom_1',
+      }),
+    );
+  });
+
   it('preserves this-binding when calling subscriptions.list', async () => {
     const makeRequest = vi.fn(async (_params: unknown) => ({
       data: [{ id: 'sub_active', status: 'active' as const }],

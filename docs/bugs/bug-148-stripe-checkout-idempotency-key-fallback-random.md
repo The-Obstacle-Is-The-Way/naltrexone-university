@@ -1,6 +1,6 @@
 # BUG-148: Stripe Checkout Idempotency Key Fallback Uses randomUUID()
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P3
 **Date:** 2026-02-22
 
@@ -8,7 +8,8 @@
 
 ## Description
 
-`createStripeCheckoutSession()` in `src/adapters/gateways/stripe/stripe-checkout-sessions.ts:194-196` falls back to a non-deterministic idempotency key when callers do not provide one:
+Before this fix, `createStripeCheckoutSession()` used a non-deterministic
+fallback idempotency key when callers did not provide one:
 
 ```typescript
 const idempotencyKey =
@@ -16,7 +17,8 @@ const idempotencyKey =
   `checkout_session:${input.userId}:${randomUUID()}`;
 ```
 
-This means fallback behavior is idempotent per single call/retry loop, but not deterministic across separate caller retries.
+That behavior was idempotent per single call/retry loop, but not deterministic
+across separate caller retries.
 
 ## Verified Caller Chain (UI -> Server Action -> Controller -> Use Case -> Gateway)
 
@@ -26,7 +28,7 @@ This means fallback behavior is idempotent per single call/retry loop, but not d
 4. `createCheckoutSession` action forwards optional `idempotencyKey` in `src/adapters/controllers/billing-controller.ts`.
 5. `CreateCheckoutSessionUseCase` passes optional key through in `src/application/use-cases/create-checkout-session.ts`.
 6. `StripePaymentGateway.createCheckoutSession` forwards options in `src/adapters/gateways/stripe-payment-gateway.ts`.
-7. `createStripeCheckoutSession` applies the random fallback in `src/adapters/gateways/stripe/stripe-checkout-sessions.ts`.
+7. `createStripeCheckoutSession` now applies deterministic fallback in `src/adapters/gateways/stripe/stripe-checkout-sessions.ts`.
 
 ## Reachability in Production
 
@@ -52,31 +54,28 @@ const idempotencyKey =
   options?.idempotencyKey ?? `create_stripe_customer:${input.userId}`;
 ```
 
-This differs from checkout session behavior.
+Both methods now use deterministic fallbacks.
 
 ## Scope Check: Other Stripe Methods
 
-No other Stripe gateway method currently uses the same random fallback pattern.
+No Stripe gateway method currently uses a random fallback pattern.
+Before this fix, only `stripe-checkout-sessions.ts` did.
 
 - `stripe-customers.ts`: deterministic fallback
 - `stripe-portal.ts`: uses only caller-provided key (no random fallback)
-- `stripe-checkout-sessions.ts`: only method using `randomUUID()` fallback
+- `stripe-checkout-sessions.ts`: now deterministic fallback (`userId + plan`)
 
 ## Root Cause
 
-Two conditions together create the issue:
+Pre-fix root cause was two conditions together:
 
 1. Checkout idempotency key is optional at upper layers.
 2. Gateway fallback uses non-deterministic `randomUUID()`.
 
-## Recommended Fix
+## Resolution
 
-Preferred:
-
-1. Require `idempotencyKey` at the controller boundary for checkout session creation.
-2. Remove random fallback from `createStripeCheckoutSession()`.
-
-Fallback-compatible alternative (if optional key must remain):
+Implemented deterministic fallback in
+`src/adapters/gateways/stripe/stripe-checkout-sessions.ts`:
 
 ```typescript
 const idempotencyKey =
@@ -84,17 +83,23 @@ const idempotencyKey =
   `checkout_session:${input.userId}:${input.plan}`;
 ```
 
-Do not use timestamp-based fallback; it remains non-deterministic across retries.
+This removes `randomUUID()` from fallback generation while preserving
+caller-provided key precedence.
 
 ## Verification
 
-- [ ] Unit test: fallback key (if retained) is deterministic for same input
-- [ ] Unit test: caller-provided key takes precedence
-- [ ] Controller test: missing `idempotencyKey` is rejected (if key is made required)
+- [x] Unit test: fallback key is deterministic for same input
+- [x] Unit test: caller-provided key takes precedence
+
+Added tests:
+
+- `src/adapters/gateways/stripe/stripe-checkout-sessions.test.ts`
+  - `uses a deterministic fallback idempotency key when caller key is missing`
+  - `uses the caller-provided idempotency key when present`
 
 ## Related
 
-- `src/adapters/gateways/stripe/stripe-checkout-sessions.ts:194-196`
+- `src/adapters/gateways/stripe/stripe-checkout-sessions.ts:193-194`
 - `src/adapters/gateways/stripe/stripe-customers.ts:83-84`
 - `src/adapters/gateways/stripe/stripe-portal.ts:29-30`
 - `app/pricing/pricing-client.tsx:7-9`

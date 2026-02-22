@@ -1,4 +1,3 @@
-import { randomUUID } from 'node:crypto';
 import type { StripePriceIds } from '@/src/adapters/config/stripe-prices';
 import { getStripePriceId } from '@/src/adapters/config/stripe-prices';
 import type {
@@ -192,8 +191,7 @@ export async function createStripeCheckoutSession({
   } satisfies CheckoutSessionCreateParams;
 
   const idempotencyKey =
-    options?.idempotencyKey ??
-    `checkout_session:${input.userId}:${randomUUID()}`;
+    options?.idempotencyKey ?? `checkout_session:${input.userId}:${input.plan}`;
   const session = await callStripeWithRetry({
     operation: 'checkout.sessions.create',
     fn: () =>
