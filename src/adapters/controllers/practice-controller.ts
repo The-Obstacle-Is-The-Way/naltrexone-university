@@ -237,6 +237,7 @@ export const getSessionHistory = createAction({
       userId,
       limit: input.limit,
       offset: input.offset,
+      mode: input.mode ?? null,
     });
   },
 });

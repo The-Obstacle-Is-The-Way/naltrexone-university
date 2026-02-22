@@ -163,6 +163,7 @@ export function QuestionView(props: QuestionViewProps) {
     props.sessionId,
     props.historyHref,
   );
+  const shouldShowTopBackLink = props.origin !== 'history';
 
   const navPrev =
     props.sessionNavigation && props.sessionNavigation.currentIndex > 0
@@ -189,12 +190,14 @@ export function QuestionView(props: QuestionViewProps) {
           </h1>
           <p className="mt-1 text-muted-foreground">{originUi.subtitle}</p>
         </div>
-        <Link
-          href={originUi.backHref}
-          className="rounded-md text-sm font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]"
-        >
-          {originUi.backLabel}
-        </Link>
+        {shouldShowTopBackLink ? (
+          <Link
+            href={originUi.backHref}
+            className="rounded-md text-sm font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]"
+          >
+            {originUi.backLabel}
+          </Link>
+        ) : null}
       </div>
 
       {props.sessionNavigation ? (
@@ -367,7 +370,8 @@ export function QuestionView(props: QuestionViewProps) {
           )
         ) : null}
 
-        {props.sessionNavigation ||
+        {props.origin === 'history' ||
+        props.sessionNavigation ||
         props.submitResult ||
         isSessionReviewReadOnly ? (
           <Button asChild variant="ghost" className="rounded-full">

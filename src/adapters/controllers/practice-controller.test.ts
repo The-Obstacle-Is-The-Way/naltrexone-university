@@ -804,7 +804,21 @@ describe('practice-controller', () => {
         },
       });
       expect(deps.getSessionHistoryUseCase.inputs).toEqual([
-        { userId: 'user_1', limit: 20, offset: 0 },
+        { userId: 'user_1', limit: 20, offset: 0, mode: null },
+      ]);
+    });
+
+    it('passes optional mode filter to session history use case', async () => {
+      const deps = createDeps();
+
+      const result = await getSessionHistory(
+        { limit: 20, offset: 0, mode: 'tutor' },
+        deps,
+      );
+
+      expect(result).toMatchObject({ ok: true });
+      expect(deps.getSessionHistoryUseCase.inputs).toEqual([
+        { userId: 'user_1', limit: 20, offset: 0, mode: 'tutor' },
       ]);
     });
   });

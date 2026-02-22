@@ -95,13 +95,20 @@ describe('QuestionView', () => {
     expect(backLink?.textContent?.trim()).toBe('Back to Dashboard');
   });
 
-  it('renders an origin-aware back link when origin=history', () => {
+  it('renders a single Back to History link for history origin', () => {
     const html = renderToStaticMarkup(
       <QuestionView
         loadState={{ status: 'ready' }}
         question={null}
         selectedChoiceId={null}
-        submitResult={null}
+        submitResult={{
+          attemptId: 'attempt_1',
+          isCorrect: false,
+          correctChoiceId: 'c1',
+          explanationMd: 'Explanation',
+          referenceMd: null,
+          choiceExplanations: [],
+        }}
         sessionNavigation={null}
         canSubmit={false}
         isPending={false}
@@ -113,9 +120,15 @@ describe('QuestionView', () => {
       />,
     );
     const doc = new DOMParser().parseFromString(html, 'text/html');
-    const backLink = doc.querySelector('a[href="/app/history?tab=questions"]');
-
-    expect(backLink?.textContent?.trim()).toBe('Back to History');
+    const historyBackLinks = Array.from(doc.querySelectorAll('a')).filter(
+      (link) => link.textContent?.trim() === 'Back to History',
+    );
+    expect(historyBackLinks).toHaveLength(1);
+    const bottomBar = getBottomActionBar(doc);
+    if (!bottomBar) {
+      throw new Error('Expected bottom action bar');
+    }
+    expect(bottomBar.textContent).toContain('Back to History');
     expect(html).toContain('Reviewing a question from your history.');
   });
 

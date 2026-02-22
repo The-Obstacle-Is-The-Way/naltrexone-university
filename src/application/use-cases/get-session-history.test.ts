@@ -205,6 +205,81 @@ describe('GetSessionHistoryUseCase', () => {
     });
   });
 
+  it('supports filtering completed sessions by mode before pagination', async () => {
+    const startedAt = new Date('2026-02-06T10:00:00.000Z');
+    const endedAt = new Date('2026-02-06T10:01:00.000Z');
+
+    const useCase = new GetSessionHistoryUseCase(
+      new FakePracticeSessionRepository([
+        createPracticeSession({
+          id: 'session-exam',
+          userId: 'user-1',
+          mode: 'exam',
+          questionIds: ['q-exam'],
+          questionStates: [
+            {
+              questionId: 'q-exam',
+              markedForReview: false,
+              latestSelectedChoiceId: null,
+              latestIsCorrect: null,
+              latestAnsweredAt: null,
+            },
+          ],
+          startedAt,
+          endedAt,
+        }),
+        createPracticeSession({
+          id: 'session-tutor',
+          userId: 'user-1',
+          mode: 'tutor',
+          questionIds: ['q-tutor'],
+          questionStates: [
+            {
+              questionId: 'q-tutor',
+              markedForReview: false,
+              latestSelectedChoiceId: null,
+              latestIsCorrect: null,
+              latestAnsweredAt: null,
+            },
+          ],
+          startedAt,
+          endedAt,
+        }),
+      ]),
+      new FakeQuestionRepository([
+        createQuestion({ id: 'q-exam', slug: 'q-exam' }),
+        createQuestion({ id: 'q-tutor', slug: 'q-tutor' }),
+      ]),
+    );
+
+    await expect(
+      useCase.execute({
+        userId: 'user-1',
+        limit: 10,
+        offset: 0,
+        mode: 'exam',
+      }),
+    ).resolves.toEqual({
+      rows: [
+        {
+          sessionId: 'session-exam',
+          mode: 'exam',
+          questionCount: 1,
+          firstQuestionSlug: 'q-exam',
+          answered: 0,
+          correct: 0,
+          accuracy: 0,
+          durationSeconds: 60,
+          startedAt: startedAt.toISOString(),
+          endedAt: endedAt.toISOString(),
+        },
+      ],
+      total: 1,
+      limit: 10,
+      offset: 0,
+    });
+  });
+
   it('returns null firstQuestionSlug when the first session question is unavailable', async () => {
     const startedAt = new Date('2026-02-06T10:00:00.000Z');
     const endedAt = new Date('2026-02-06T10:01:00.000Z');

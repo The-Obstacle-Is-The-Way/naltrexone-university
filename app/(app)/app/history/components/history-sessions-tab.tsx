@@ -4,11 +4,19 @@ import Link from 'next/link';
 import { SessionBreakdownList } from '@/app/(app)/app/shared/components/session-breakdown-list';
 import { ErrorCard } from '@/components/error-card';
 import { Button } from '@/components/ui/button';
+import {
+  tabSwitchContainerClasses,
+  tabSwitchItemActiveClasses,
+  tabSwitchItemBaseClasses,
+  tabSwitchItemInactiveClasses,
+} from '@/components/ui/tab-switch-styles';
 import { formatDate } from '@/lib/format-date';
 import { formatDuration } from '@/lib/format-duration';
 import { ROUTES, toQuestionRoute } from '@/lib/routes';
+import { cn } from '@/lib/utils';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import type { GetSessionHistoryOutput } from '@/src/adapters/controllers/practice-controller';
+import type { SessionModeFilter } from '../history-search-params';
 import { buildHistorySessionsHref } from '../history-search-params';
 import { useHistorySessions } from '../hooks/use-history-sessions';
 
@@ -17,6 +25,7 @@ const headerLinkButtonClasses =
 
 export type HistorySessionsTabProps = {
   result: ActionResult<GetSessionHistoryOutput>;
+  modeFilter?: SessionModeFilter;
 };
 
 function formatSessionAccuracy(value: number): string {
@@ -37,7 +46,10 @@ function formatSessionDurationDisplay(durationSeconds: number): string {
   return formatDuration(durationSeconds);
 }
 
-export function HistorySessionsTab({ result }: HistorySessionsTabProps) {
+export function HistorySessionsTab({
+  result,
+  modeFilter = 'all',
+}: HistorySessionsTabProps) {
   const historySessions = useHistorySessions();
 
   if (!result.ok) {
@@ -62,10 +74,49 @@ export function HistorySessionsTab({ result }: HistorySessionsTabProps) {
   const prevOffset = Math.max(0, offset - limit);
   const nextOffset = offset + limit;
   const hasNextPage = offset + rows.length < total;
-  const historyHref = buildHistorySessionsHref({ limit, offset });
+  const historyHref = buildHistorySessionsHref({
+    limit,
+    offset,
+    mode: modeFilter,
+  });
+  const showingStart = rows.length > 0 ? offset + 1 : 0;
+  const showingEnd = offset + rows.length;
 
   return (
     <div className="space-y-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="text-sm text-muted-foreground">
+          Showing {showingStart}–{showingEnd} of {total} sessions
+        </div>
+        <nav aria-label="Session mode filter">
+          <div className={tabSwitchContainerClasses}>
+            {[
+              { value: 'all', label: 'All' },
+              { value: 'tutor', label: 'Tutor' },
+              { value: 'exam', label: 'Exam' },
+            ].map((option) => (
+              <Link
+                key={option.value}
+                href={buildHistorySessionsHref({
+                  limit,
+                  offset: 0,
+                  mode: option.value as SessionModeFilter,
+                })}
+                aria-current={modeFilter === option.value ? 'page' : undefined}
+                className={cn(
+                  tabSwitchItemBaseClasses,
+                  modeFilter === option.value
+                    ? tabSwitchItemActiveClasses
+                    : tabSwitchItemInactiveClasses,
+                )}
+              >
+                {option.label}
+              </Link>
+            ))}
+          </div>
+        </nav>
+      </div>
+
       <ul className="space-y-2">
         {rows.map((row) => {
           const isSelected =
@@ -183,7 +234,11 @@ export function HistorySessionsTab({ result }: HistorySessionsTabProps) {
         {offset > 0 ? (
           <Button asChild variant="link" className={headerLinkButtonClasses}>
             <Link
-              href={buildHistorySessionsHref({ limit, offset: prevOffset })}
+              href={buildHistorySessionsHref({
+                limit,
+                offset: prevOffset,
+                mode: modeFilter,
+              })}
             >
               Previous
             </Link>
@@ -195,7 +250,11 @@ export function HistorySessionsTab({ result }: HistorySessionsTabProps) {
         {hasNextPage ? (
           <Button asChild variant="link" className={headerLinkButtonClasses}>
             <Link
-              href={buildHistorySessionsHref({ limit, offset: nextOffset })}
+              href={buildHistorySessionsHref({
+                limit,
+                offset: nextOffset,
+                mode: modeFilter,
+              })}
             >
               Next
             </Link>

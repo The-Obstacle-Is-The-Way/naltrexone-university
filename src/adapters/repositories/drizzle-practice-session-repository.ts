@@ -9,6 +9,7 @@ import type {
   PracticeSession,
   PracticeSessionQuestionState,
 } from '@/src/domain/entities';
+import type { PracticeMode } from '@/src/domain/value-objects';
 import type { DrizzleDb } from '../shared/database-types';
 import {
   getPostgresConstraintName,
@@ -48,10 +49,14 @@ export class DrizzlePracticeSessionRepository
     };
   }
 
-  private completedSessionCondition(userId: string) {
+  private completedSessionCondition(
+    userId: string,
+    mode?: PracticeMode | null,
+  ) {
     return and(
       eq(practiceSessions.userId, userId),
       isNotNull(practiceSessions.endedAt),
+      mode ? eq(practiceSessions.mode, mode) : undefined,
     );
   }
 
@@ -92,11 +97,16 @@ export class DrizzlePracticeSessionRepository
     return this.toDomain(row, params);
   }
 
-  async findCompletedByUserId(userId: string, limit: number, offset: number) {
+  async findCompletedByUserId(
+    userId: string,
+    limit: number,
+    offset: number,
+    mode?: PracticeMode | null,
+  ) {
     const [countRow] = await this.db
       .select({ count: sql<number>`count(*)::int` })
       .from(practiceSessions)
-      .where(this.completedSessionCondition(userId));
+      .where(this.completedSessionCondition(userId, mode));
     const total = countRow?.count ?? 0;
 
     const safeLimit = Number.isInteger(limit) && limit > 0 ? limit : 0;
@@ -107,7 +117,7 @@ export class DrizzlePracticeSessionRepository
     }
 
     const rows = await this.db.query.practiceSessions.findMany({
-      where: this.completedSessionCondition(userId),
+      where: this.completedSessionCondition(userId, mode),
       orderBy: (table, { desc }) => [
         desc(table.endedAt),
         desc(table.startedAt),

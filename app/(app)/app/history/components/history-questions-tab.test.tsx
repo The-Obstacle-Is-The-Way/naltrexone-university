@@ -14,6 +14,10 @@ vi.mock('next/link', () => ({
   default: (props: Record<string, unknown>) => <a {...props} />,
 }));
 
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ push: vi.fn() }),
+}));
+
 type AttemptedQuestionRow = GetAttemptedQuestionsOutput['rows'][number];
 type AvailableAttemptedQuestionRow = Extract<
   AttemptedQuestionRow,
@@ -204,7 +208,7 @@ describe('HistoryQuestionsTab', () => {
     expect(html).not.toContain(longStem);
   });
 
-  it('renders result and source filter dropdowns', () => {
+  it('renders design-system filter controls with grouped tags and sort', () => {
     const result: ActionResult<GetAttemptedQuestionsOutput> = {
       ok: true,
       data: {
@@ -222,71 +226,29 @@ describe('HistoryQuestionsTab', () => {
     const html = renderToStaticMarkup(
       <HistoryQuestionsTab
         result={result}
-        tagOptions={[{ slug: 'opioids', name: 'Opioids' }]}
+        tagOptions={[
+          { slug: 'opioids', name: 'Opioids', kind: 'substance' },
+          { slug: 'other', name: 'Other', kind: 'substance' },
+          { slug: 'other-treatment', name: 'Other', kind: 'treatment' },
+          { slug: 'screening', name: 'Screening', kind: 'topic' },
+        ]}
       />,
     );
     const doc = new DOMParser().parseFromString(html, 'text/html');
 
-    const resultSelect = doc.querySelector('select[name="result"]');
-    expect(resultSelect).not.toBeNull();
-
-    const sourceSelect = doc.querySelector('select[name="source"]');
-    expect(sourceSelect).not.toBeNull();
-
-    const resultOptions = Array.from(
-      resultSelect?.querySelectorAll('option') ?? [],
+    expect(doc.querySelectorAll('form select')).toHaveLength(0);
+    expect(doc.querySelector('select[name="result"]')).toBeNull();
+    expect(doc.querySelector('select[name="source"]')).toBeNull();
+    expect(doc.querySelector('select[name="difficulty"]')).toBeNull();
+    expect(doc.querySelector('select[name="tag"]')).toBeNull();
+    expect(doc.querySelectorAll('[data-slot="select-trigger"]')).toHaveLength(
+      5,
     );
-    expect(resultOptions.some((o) => o.getAttribute('value') === '')).toBe(
-      true,
-    );
-    expect(
-      resultOptions.some(
-        (o) =>
-          o.getAttribute('value') === 'correct' && o.textContent === 'Correct',
-      ),
-    ).toBe(true);
-    expect(
-      resultOptions.some(
-        (o) =>
-          o.getAttribute('value') === 'incorrect' &&
-          o.textContent === 'Incorrect',
-      ),
-    ).toBe(true);
-
-    const sourceOptions = Array.from(
-      sourceSelect?.querySelectorAll('option') ?? [],
-    );
-    expect(sourceOptions.some((o) => o.getAttribute('value') === '')).toBe(
-      true,
-    );
-    expect(
-      sourceOptions.some(
-        (o) => o.getAttribute('value') === 'tutor' && o.textContent === 'Tutor',
-      ),
-    ).toBe(true);
-    expect(
-      sourceOptions.some(
-        (o) => o.getAttribute('value') === 'exam' && o.textContent === 'Exam',
-      ),
-    ).toBe(true);
-    expect(
-      sourceOptions.some(
-        (o) =>
-          o.getAttribute('value') === 'adhoc' &&
-          o.textContent === 'Ad-hoc practice',
-      ),
-    ).toBe(true);
-
-    expect(doc.querySelector('select[name="difficulty"]')).not.toBeNull();
-    const tagSelect = doc.querySelector('select[name="tag"]');
-    expect(tagSelect).not.toBeNull();
-    expect(
-      Array.from(tagSelect?.querySelectorAll('option') ?? []).some(
-        (option) =>
-          option.getAttribute('value') === 'opioids' &&
-          option.textContent === 'Opioids',
-      ),
-    ).toBe(true);
+    expect(html).toContain('Result');
+    expect(html).toContain('Source');
+    expect(html).toContain('Difficulty');
+    expect(html).toContain('Tag');
+    expect(html).toContain('Sort');
   });
 
   it('does not render a client-side filtering "(X visible after filters)" hint', () => {

@@ -13,6 +13,7 @@ export type GetSessionHistoryInput = {
   userId: string;
   limit: number;
   offset: number;
+  mode?: PracticeMode | null;
 };
 
 export type SessionHistoryRow = {
@@ -48,6 +49,7 @@ export class GetSessionHistoryUseCase {
       input.userId,
       input.limit,
       input.offset,
+      input.mode ?? null,
     );
 
     const firstQuestionIds = Array.from(

@@ -51,6 +51,37 @@ describe('HistorySessionsTab', () => {
     expect(html).toContain('View breakdown');
   });
 
+  it('renders showing-count context and mode filter controls', () => {
+    const result: SessionHistoryResult = {
+      ok: true,
+      data: {
+        rows: [
+          {
+            sessionId: 'session-1',
+            mode: 'exam',
+            questionCount: 10,
+            firstQuestionSlug: 'q-1',
+            answered: 10,
+            correct: 8,
+            accuracy: 0.8,
+            durationSeconds: 1200,
+            startedAt: '2026-02-07T00:00:00.000Z',
+            endedAt: '2026-02-07T00:20:00.000Z',
+          },
+        ],
+        total: 3,
+        limit: 20,
+        offset: 0,
+      },
+    };
+
+    const html = renderToStaticMarkup(<HistorySessionsTab result={result} />);
+
+    expect(html).toContain('Showing 1–1 of 3 sessions');
+    expect(html).toContain('mode=tutor');
+    expect(html).toContain('mode=exam');
+  });
+
   it('renders the session summary as a primary review link when a first question exists', () => {
     const row = {
       sessionId: 'session-1',

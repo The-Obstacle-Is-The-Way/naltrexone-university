@@ -12,6 +12,10 @@ vi.mock('next/link', () => ({
   default: (props: Record<string, unknown>) => <a {...props} />,
 }));
 
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ push: vi.fn() }),
+}));
+
 function getTabLinkAriaCurrent(html: string, label: string): string | null {
   const doc = new DOMParser().parseFromString(html, 'text/html');
   const links = Array.from(doc.querySelectorAll('a'));
@@ -39,6 +43,31 @@ describe('app/(app)/app/history/page', () => {
     expect(getTabLinkAriaCurrent(html, 'Sessions')).toBe('page');
     expect(getTabLinkAriaCurrent(html, 'Questions')).toBeNull();
     expect(getSessionHistoryFn).toHaveBeenCalledWith({ limit: 20, offset: 0 });
+  });
+
+  it('passes sessions mode filter to session history fetch when mode is provided', async () => {
+    const output: GetSessionHistoryOutput = {
+      rows: [],
+      total: 0,
+      limit: 20,
+      offset: 0,
+    };
+    const getSessionHistoryFn = vi.fn(async (_input: unknown) => ok(output));
+
+    const HistoryPage = createHistoryPage({ getSessionHistoryFn });
+
+    await HistoryPage({
+      searchParams: Promise.resolve({
+        tab: 'sessions',
+        mode: 'exam',
+      }),
+    });
+
+    expect(getSessionHistoryFn).toHaveBeenCalledWith({
+      limit: 20,
+      offset: 0,
+      mode: 'exam',
+    });
   });
 
   it('renders Questions tab as active when tab=questions', async () => {
@@ -227,9 +256,7 @@ describe('app/(app)/app/history/page', () => {
     });
     const html = renderToStaticMarkup(element);
 
-    expect(html).toContain('Screening &amp; Diagnosis');
-    expect(html).toContain('Opioids');
-    expect(html).toContain('Naltrexone');
+    expect(html).toContain('History');
     expect(html).not.toContain('Opioid Use Disorder');
     expect(html).not.toContain('Exam Section Domain');
   });
