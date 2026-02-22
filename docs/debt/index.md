@@ -1,7 +1,7 @@
 # Technical Debt Register
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-02-19
+**Last Updated:** 2026-02-22
 
 ---
 
@@ -15,11 +15,9 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 ## Debt Index (Active)
 
-| ID | Title | Priority | Status |
-|----|-------|----------|--------|
-| _None_ | — | — | — |
+*No active debt items.*
 
-**Next Debt ID:** DEBT-239
+**Next Debt ID:** DEBT-240
 
 ---
 
@@ -27,6 +25,7 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 | ID | Title | Priority | Resolved | GitHub Issue |
 |----|-------|----------|----------|--------------|
+| [DEBT-239](debt-239-env-local-stripe-account-mismatch.md) | .env.local Stripe Account Mismatch, E2E Credential Gaps, and Audit Test Infrastructure | P1 | 2026-02-22 | — |
 | [DEBT-235](../_archive/debt/debt-235-split-migrate-tag-taxonomy-script.md) | Split migrate-tag-taxonomy.ts Into Focused Modules | P3 | 2026-02-19 | — |
 | [DEBT-224](../_archive/debt/debt-224-file-size-audit-production-and-test.md) | File Size Audit - Production and Test Files Exceeding Guidelines | P3 | 2026-02-19 | — |
 | [DEBT-237](../_archive/debt/debt-237-extract-reconciliation-test-factory.md) | Extract Reconciliation Test Factory to Reduce Boilerplate | P4 | 2026-02-19 | — |
