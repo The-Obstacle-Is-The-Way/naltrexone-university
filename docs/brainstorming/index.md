@@ -30,7 +30,6 @@ Brainstorming (BS-NNN) → Spec (SPEC-NNN) → Implementation → Archive
 | [BS-014](./bs-014-practice-starter-question-count-ux.md) | Practice Starter — Silent Truncation When Fewer Questions Available | Active | — |
 | [BS-027](./bs-027-history-tab-bar-visual-inconsistency.md) | History Tab Bar Visual Inconsistency — Pill vs Segmented Control | Active | [SPEC-037](../specs/spec-037-tab-switch-visual-unification.md) |
 | [BS-028](./bs-028-history-session-scoring-and-navigation-gaps.md) | History Page UX Audit — Scoring, Duration, Navigation, Review Parity (13 findings) | Active | — |
-| [BS-029](./bs-029-clerk-user-id-email-upsert-conflict.md) | Clerk User ID / Email Upsert Conflict — Unhandled Unique Constraint | Active | [SPEC-029](../specs/spec-029-dev-environment-resilience.md) |
 
 **Next Brainstorming ID:** BS-030
 
@@ -66,6 +65,7 @@ Brainstorming (BS-NNN) → Spec (SPEC-NNN) → Implementation → Archive
 | [BS-024](../_archive/brainstorming/bs-024-tag-taxonomy-cleanup.md) | Tag Taxonomy Cleanup — Unify Pipeline and Eliminate Drift | Specced as SPEC-033 (Implemented). All 7 problems resolved: domain removed, pipeline hardened, taxonomy canonical |
 | [BS-025](../_archive/brainstorming/BS-025-reference-section-pipeline-support.md) | Reference Section Pipeline Support | Specced as SPEC-035 (Implemented). Full vertical slice: reference_md field from seed to UI |
 | [BS-026](../_archive/brainstorming/bs-026-bookmark-reattempt-review-mode-consistency.md) | Bookmark Reattempt vs Review Mode Consistency | Specced as SPEC-036 (Implemented). Bookmarks aligned to review-first contract |
+| [BS-029](../_archive/brainstorming/bs-029-clerk-user-id-email-upsert-conflict.md) | Clerk User ID / Email Upsert Conflict — Unhandled Unique Constraint | Resolved as BUG-147 (Fix C: catch-and-update for `users_email_uq` in `DrizzleUserRepository`) |
 
 ---
 
