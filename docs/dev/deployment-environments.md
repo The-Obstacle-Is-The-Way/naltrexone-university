@@ -57,7 +57,7 @@ This document is the single source of truth for how Clerk, Stripe, Neon, and Ver
 
 ---
 
-## Current Vercel Environment Variables (Verified 2026-02-06)
+## Current Vercel Environment Variables (Verified 2026-02-22)
 
 ### Properly Scoped (each environment has its own value)
 
@@ -73,6 +73,9 @@ This document is the single source of truth for how Clerk, Stripe, Neon, and Ver
 | `STRIPE_WEBHOOK_SECRET` | Live webhook secret | Test webhook secret | Test webhook secret | Correct |
 | `NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY` | Live price ID ($29/mo) | Test price ID ($29/mo) | Test price ID ($29/mo) | Correct |
 | `NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL` | Live price ID ($199/yr) | Test price ID ($199/yr) | Test price ID ($199/yr) | Correct |
+| `NEXT_PUBLIC_SENTRY_DSN` | Same DSN (all envs) | Same DSN (all envs) | Same DSN (all envs) | Correct (added 2026-02-22) |
+| `SENTRY_DSN` | Same DSN (all envs) | Same DSN (all envs) | Same DSN (all envs) | Correct (added 2026-02-22) |
+| `CRON_SECRET` | Shared secret | Shared secret | Shared secret | Correct (Dev added 2026-02-22) |
 
 ### Auto-Generated Neon Vars — REMOVED (2026-02-06)
 
