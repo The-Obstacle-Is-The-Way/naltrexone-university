@@ -1,7 +1,7 @@
 # Deployment Environments: Source of Truth
 
-**Last Verified:** 2026-02-06 (post database isolation + env scoping + Stripe single-account consolidation + Neon var cleanup + Clerk webhook fix + Deployment Protection fix + env var trailing newline fix)
-**Last Reviewed (docs/code):** 2026-02-09 (no config changes required; pending verification items remain pending)
+**Last Verified:** 2026-02-22 (Sentry DSN added to all Vercel environments, CRON_SECRET added to Development, local .env.local DATABASE_URL fixed to dev branch)
+**Last Reviewed (docs/code):** 2026-02-22 (all env vars verified consistent across Production, Preview, Development, and localhost)
 
 This document is the single source of truth for how Clerk, Stripe, Neon, and Vercel are configured across all environments.
 

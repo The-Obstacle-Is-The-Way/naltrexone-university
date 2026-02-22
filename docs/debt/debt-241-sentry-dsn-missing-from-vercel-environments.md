@@ -1,73 +1,64 @@
 # DEBT-241: Sentry DSN Missing From All Vercel Environments
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P2
 **Date:** 2026-02-22
+**Resolved:** 2026-02-22
 
 ---
 
 ## Description
 
-Neither `NEXT_PUBLIC_SENTRY_DSN` nor `SENTRY_DSN` is configured in any Vercel environment (Development, Preview, or Production). This means **error tracking is silently disabled in all deployed environments**.
+Neither `NEXT_PUBLIC_SENTRY_DSN` nor `SENTRY_DSN` was configured in any Vercel environment (Development, Preview, or Production). Error tracking was silently disabled in all deployed environments.
 
-The Sentry SDK is installed, configured in `sentry.client.config.ts` and `instrumentation.ts`, and the DSN exists in `.env.local` for local development — but it was never added to Vercel.
+The Sentry SDK was installed and configured, and the DSN existed in `.env.local` for local development — but it was never added to Vercel.
 
-### Current State
+### Root Cause
 
-| Environment | `NEXT_PUBLIC_SENTRY_DSN` | `SENTRY_DSN` | Error Tracking Active? |
-|-------------|--------------------------|--------------|------------------------|
-| `.env.local` | Set | Set | Yes (local only) |
-| Vercel Development | **Missing** | **Missing** | **No** |
-| Vercel Preview | **Missing** | **Missing** | **No** |
-| Vercel Production | **Missing** | **Missing** | **No** |
+When Sentry was originally set up (DEBT-101, resolved 2026-02-05), the SDK and config files were added to the codebase but the DSN was only set in `.env.local`. Nobody added the env vars to Vercel.
 
-### Why It's Silent
+### Why It Was Silent
 
-The Sentry initialization code guards against missing DSN:
-
+The Sentry initialization guards against missing DSN:
 - **Client** (`sentry.client.config.ts`): `if (dsn) { Sentry.init({...}) }` — silently skips
 - **Server** (`instrumentation.ts`): `if (!dsn) { return; }` — silently skips
 - The DSN is **not** in the Zod env schema (`lib/env.ts`), so the app starts without error
 
-Additionally, all sample rates are currently set to 0:
+## Resolution
+
+Added both `NEXT_PUBLIC_SENTRY_DSN` and `SENTRY_DSN` to all three Vercel environments via CLI:
+
+```bash
+printf '%s' '<dsn>' | vercel env add NEXT_PUBLIC_SENTRY_DSN production --yes --force
+printf '%s' '<dsn>' | vercel env add NEXT_PUBLIC_SENTRY_DSN preview --yes --force
+printf '%s' '<dsn>' | vercel env add NEXT_PUBLIC_SENTRY_DSN development --yes --force
+printf '%s' '<dsn>' | vercel env add SENTRY_DSN production --yes --force
+printf '%s' '<dsn>' | vercel env add SENTRY_DSN preview --yes --force
+printf '%s' '<dsn>' | vercel env add SENTRY_DSN development --yes --force
+```
+
+All six env vars confirmed via `vercel env ls`.
+
+### Remaining Follow-Up
+
+The sample rates are still set to 0:
 - `tracesSampleRate: 0`
 - `replaysSessionSampleRate: 0`
 - `replaysOnErrorSampleRate: 0`
 
-Even after adding the DSN, the sample rates would need to be tuned for actual error capture.
+These should be tuned for production. At minimum, `replaysOnErrorSampleRate` should be set to `1.0` to capture session replays when errors occur. This is a separate task — the DSN wiring is now complete.
 
-## Impact
-
-- **No production error visibility:** Runtime errors in production are invisible. Users may encounter bugs with no signal reaching the team.
-- **No preview error visibility:** Preview deployments (PR reviews) also lack error tracking.
-- **False confidence:** Sentry is "set up" in the codebase but provides zero value in deployed environments.
-
-## Resolution
-
-1. Add `NEXT_PUBLIC_SENTRY_DSN` and `SENTRY_DSN` to all Vercel environments via Vercel Dashboard or CLI:
-   ```bash
-   vercel env add NEXT_PUBLIC_SENTRY_DSN production preview development
-   vercel env add SENTRY_DSN production preview development
-   ```
-   Value: `https://8283ca0e4e6a0414f2c7cba18660c34f@o4508933259198464.ingest.us.sentry.io/4510829539164160`
-
-2. Update sample rates for production (at minimum):
-   - `replaysOnErrorSampleRate: 1.0` (capture replays when errors occur)
-   - `tracesSampleRate: 0.1` (sample 10% of traces, adjust based on volume)
-
-3. Redeploy to pick up the new env vars
-
-4. Optionally add `SENTRY_DSN` to the Zod env schema in `lib/env.ts` as a required field so missing DSN causes a startup error instead of silent skip
+**Important:** Since `NEXT_PUBLIC_SENTRY_DSN` is a `NEXT_PUBLIC_*` variable, it's inlined at build time. A fresh deployment (not `vercel redeploy`) is required for production to pick it up. Push any commit to trigger a fresh build.
 
 ## Verification
 
-- Trigger a test error in a preview deployment and confirm it appears in Sentry dashboard
-- Verify Sentry initialization logs in production deployment
-- Check Sentry dashboard shows events flowing from production
+- [x] `vercel env ls` shows all six Sentry vars across all environments
+- [ ] Trigger a test error in a preview deployment and confirm it appears in Sentry dashboard (requires fresh deployment)
+- [ ] Verify Sentry dashboard shows events from production (requires fresh deployment)
 
 ## Related
 
-- `sentry.client.config.ts` — client-side Sentry initialization
-- `instrumentation.ts` — server-side Sentry initialization
-- `lib/env.ts` — Zod env schema (DSN not included)
-- [DEBT-101](../_archive/debt/debt-101-add-sentry-error-tracking.md) — original Sentry setup debt (resolved 2026-02-05, but env vars never deployed)
+- `sentry.client.config.ts` — client-side Sentry initialization (uses `NEXT_PUBLIC_VERCEL_ENV` for environment tagging)
+- `instrumentation.ts` — server-side Sentry initialization (uses `VERCEL_ENV` for environment tagging)
+- `lib/env.ts` — Zod schema (DSN not included — could be added as required field in future)
+- [DEBT-101](../_archive/debt/debt-101-add-sentry-error-tracking.md) — original Sentry setup (resolved 2026-02-05)
