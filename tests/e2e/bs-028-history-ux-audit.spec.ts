@@ -85,6 +85,37 @@ async function goToHistoryQuestions(page: Page): Promise<void> {
   });
 }
 
+async function openHistoryQuestionWithResult(
+  page: Page,
+  resultLabel: 'Correct' | 'Incorrect',
+): Promise<boolean> {
+  const candidateRow = page
+    .locator('li')
+    .filter({
+      has: page.getByText(resultLabel, { exact: true }),
+    })
+    .filter({
+      has: page.locator('a[href*="/app/questions/"]'),
+    })
+    .first();
+
+  if (!(await candidateRow.isVisible().catch(() => false))) {
+    return false;
+  }
+
+  const reviewLink = candidateRow.getByRole('link', { name: 'Review' }).first();
+  if (!(await reviewLink.isVisible().catch(() => false))) {
+    return false;
+  }
+
+  await reviewLink.click();
+  await expect(page).toHaveURL(/\/app\/questions\//, { timeout: 15_000 });
+  await expect(page.getByText(/Loading question/i)).toBeHidden({
+    timeout: 15_000,
+  });
+  return true;
+}
+
 test.describe('BS-028: History Page UX Audit', () => {
   // Multi-page audit flows can exceed the default timeout due to sequential navigation and assertions in CI.
   test.setTimeout(180_000);
@@ -346,7 +377,7 @@ test.describe('BS-028: History Page UX Audit', () => {
       page,
       '.min-h-screen.bg-background',
     );
-    const _pageLightness = requireLightness(pageBg, 'page background');
+    const pageLightness = requireLightness(pageBg, 'page background');
 
     // Get "View breakdown" button colors at rest vs hover
     const viewBreakdownButton = page
@@ -357,7 +388,11 @@ test.describe('BS-028: History Page UX Audit', () => {
     const restBg = await viewBreakdownButton.evaluate(
       (el) => getComputedStyle(el).backgroundColor,
     );
-    const restLightness = requireLightness(restBg, 'button rest');
+    const restLightness = requireLightness(
+      restBg,
+      'button rest',
+      pageLightness,
+    );
 
     await viewBreakdownButton.hover();
     // Allow hover state to settle
@@ -366,7 +401,11 @@ test.describe('BS-028: History Page UX Audit', () => {
     const hoverBg = await viewBreakdownButton.evaluate(
       (el) => getComputedStyle(el).backgroundColor,
     );
-    const hoverLightness = requireLightness(hoverBg, 'button hover');
+    const hoverLightness = requireLightness(
+      hoverBg,
+      'button hover',
+      pageLightness,
+    );
 
     // BS-028 P1-6: Hover should produce a visible contrast change (>5% lightness delta)
     const hoverDelta = Math.abs(hoverLightness - restLightness);
@@ -572,13 +611,67 @@ test.describe('BS-028: History Page UX Audit', () => {
     const radixTagTrigger = page.getByRole('combobox', { name: /tag/i });
     if (await radixTagTrigger.isVisible().catch(() => false)) {
       await radixTagTrigger.click();
-      const otherItems = page.getByRole('option', { name: 'Other' });
+      const otherItems = page.getByRole('option', { name: /^Other$/ });
       const otherCount = await otherItems.count();
       expect(
         otherCount,
         `BS-028 P3-10: Found ${otherCount} "Other" options in tag dropdown (expected ≤1)`,
       ).toBeLessThanOrEqual(1);
     }
+  });
+
+  test('P3-11a: Correct history review uses "Practice Again" CTA', async ({
+    page,
+  }) => {
+    await signInWithClerkPassword(page);
+    await ensureSubscribed(page);
+
+    await goToHistoryQuestions(page);
+
+    const opened = await openHistoryQuestionWithResult(page, 'Correct');
+    if (!opened) {
+      test.skip(
+        true,
+        'No correct attempted questions in visible history page — cannot verify CTA label',
+      );
+      return;
+    }
+
+    await expect(
+      page.getByRole('button', { name: /^Practice Again$/ }),
+    ).toBeVisible({
+      timeout: 10_000,
+    });
+    await expect(page.getByRole('button', { name: /^Try Again$/ })).toHaveCount(
+      0,
+    );
+  });
+
+  test('P3-11b: Incorrect history review keeps "Try Again" CTA', async ({
+    page,
+  }) => {
+    await signInWithClerkPassword(page);
+    await ensureSubscribed(page);
+
+    await goToHistoryQuestions(page);
+
+    const opened = await openHistoryQuestionWithResult(page, 'Incorrect');
+    if (!opened) {
+      test.skip(
+        true,
+        'No incorrect attempted questions in visible history page — cannot verify CTA label',
+      );
+      return;
+    }
+
+    await expect(page.getByRole('button', { name: /^Try Again$/ })).toBeVisible(
+      {
+        timeout: 10_000,
+      },
+    );
+    await expect(
+      page.getByRole('button', { name: /^Practice Again$/ }),
+    ).toHaveCount(0);
   });
 
   test('P3-12: Questions tab has sort controls', async ({ page }) => {
@@ -602,6 +695,70 @@ test.describe('BS-028: History Page UX Audit', () => {
       'BS-028 P3-12: Questions tab should have a sort control. ' +
         'Currently no way to sort by difficulty, result, or recency.',
     ).toBe(true);
+  });
+
+  test('P3-13: Sentence-aware previews avoid mid-sentence truncation when possible', async ({
+    page,
+  }) => {
+    await signInWithClerkPassword(page);
+    await ensureSubscribed(page);
+
+    await goToHistoryQuestions(page);
+
+    const candidate = await page.evaluate(() => {
+      const rows = Array.from(document.querySelectorAll('li')).map((row) => {
+        const preview = row
+          .querySelector('p.mt-2.text-sm.text-muted-foreground')
+          ?.textContent?.trim();
+        const href = row
+          .querySelector('a[href*="/app/questions/"]')
+          ?.getAttribute('href');
+
+        if (!preview || !href) return null;
+        return { preview, href };
+      });
+
+      return (
+        rows.find(
+          (row): row is { preview: string; href: string } =>
+            row !== null &&
+            !row.preview.endsWith('...') &&
+            /[.!?]$/.test(row.preview) &&
+            row.preview.length >= 40,
+        ) ?? null
+      );
+    });
+
+    if (!candidate) {
+      test.skip(
+        true,
+        'No visible candidate preview ending at a sentence boundary — cannot verify sentence-aware truncation',
+      );
+      return;
+    }
+
+    await page.goto(candidate.href, {
+      timeout: 60_000,
+      waitUntil: 'domcontentloaded',
+    });
+    await expect(page).toHaveURL(/\/app\/questions\//, { timeout: 15_000 });
+    await expect(page.getByText(/Loading question/i)).toBeHidden({
+      timeout: 15_000,
+    });
+
+    const stemText = await page
+      .locator('div.text-sm.text-foreground')
+      .first()
+      .evaluate((el) => (el.textContent ?? '').replace(/\s+/g, ' ').trim());
+
+    expect(
+      stemText.startsWith(candidate.preview),
+      'BS-028 P3-13: Preview should align with a sentence boundary in the full stem',
+    ).toBe(true);
+    expect(
+      stemText.length,
+      'BS-028 P3-13: Candidate preview should be truncated, not the full stem',
+    ).toBeGreaterThan(candidate.preview.length);
   });
 });
 

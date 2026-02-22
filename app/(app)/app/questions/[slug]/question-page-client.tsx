@@ -153,6 +153,7 @@ export function QuestionView(props: QuestionViewProps) {
   const isReviewMode = props.mode === 'review';
   const hasSessionId = typeof props.sessionId === 'string';
   const isSessionReviewReadOnly = isReviewMode && hasSessionId;
+  const isStandaloneHistoryReview = props.origin === 'history' && !hasSessionId;
   const isSessionReviewUnansweredReveal = sessionUnansweredReveal !== null;
   const correctChoiceId =
     sessionUnansweredReveal?.correctChoiceId ??
@@ -180,6 +181,10 @@ export function QuestionView(props: QuestionViewProps) {
         ]
       : null;
   const historySeqParam = props.sessionNavigation?.historySequence?.join(',');
+  const reattemptLabel =
+    isStandaloneHistoryReview && props.submitResult?.isCorrect
+      ? 'Practice Again'
+      : 'Try Again';
 
   return (
     <div className="space-y-6">
@@ -341,7 +346,7 @@ export function QuestionView(props: QuestionViewProps) {
             disabled={props.isPending}
             onClick={props.onReattempt}
           >
-            Try Again
+            {reattemptLabel}
           </Button>
         ) : null}
 

@@ -295,6 +295,152 @@ describe('app/(app)/app/history/page', () => {
     );
   });
 
+  it('applies incorrect-first questions sort ordering', async () => {
+    const output: GetAttemptedQuestionsOutput = {
+      rows: [
+        {
+          isAvailable: true,
+          questionId: 'q-correct-recent',
+          isCorrect: true,
+          sessionId: null,
+          sessionMode: null,
+          slug: 'q-correct-recent',
+          stemMd: 'Correct recent',
+          difficulty: 'easy',
+          tagSlugs: [],
+          lastAnsweredAt: '2026-02-03T00:00:00.000Z',
+        },
+        {
+          isAvailable: true,
+          questionId: 'q-incorrect-old',
+          isCorrect: false,
+          sessionId: null,
+          sessionMode: null,
+          slug: 'q-incorrect-old',
+          stemMd: 'Incorrect old',
+          difficulty: 'easy',
+          tagSlugs: [],
+          lastAnsweredAt: '2026-02-01T00:00:00.000Z',
+        },
+        {
+          isAvailable: true,
+          questionId: 'q-incorrect-recent',
+          isCorrect: false,
+          sessionId: null,
+          sessionMode: null,
+          slug: 'q-incorrect-recent',
+          stemMd: 'Incorrect recent',
+          difficulty: 'easy',
+          tagSlugs: [],
+          lastAnsweredAt: '2026-02-02T00:00:00.000Z',
+        },
+      ],
+      totalCount: 3,
+      limit: 20,
+      offset: 0,
+    };
+
+    const getAttemptedQuestionsFn = vi.fn(async (_input: unknown) =>
+      ok(output),
+    );
+    const getTagsFn = vi.fn(async (_input: unknown) => ok({ rows: [] }));
+    const HistoryPage = createHistoryPage({
+      getAttemptedQuestionsFn,
+      getTagsFn,
+    });
+
+    const element = await HistoryPage({
+      searchParams: Promise.resolve({
+        tab: 'questions',
+        sort: 'incorrect-first',
+      }),
+    });
+    const html = renderToStaticMarkup(element);
+
+    const incorrectRecentIndex = html.indexOf('Incorrect recent');
+    const incorrectOldIndex = html.indexOf('Incorrect old');
+    const correctRecentIndex = html.indexOf('Correct recent');
+
+    expect(incorrectRecentIndex).toBeGreaterThanOrEqual(0);
+    expect(incorrectOldIndex).toBeGreaterThanOrEqual(0);
+    expect(correctRecentIndex).toBeGreaterThanOrEqual(0);
+    expect(incorrectRecentIndex).toBeLessThan(incorrectOldIndex);
+    expect(incorrectOldIndex).toBeLessThan(correctRecentIndex);
+  });
+
+  it('applies difficulty sort ordering (hard, medium, easy)', async () => {
+    const output: GetAttemptedQuestionsOutput = {
+      rows: [
+        {
+          isAvailable: true,
+          questionId: 'q-easy',
+          isCorrect: true,
+          sessionId: null,
+          sessionMode: null,
+          slug: 'q-easy',
+          stemMd: 'Easy question',
+          difficulty: 'easy',
+          tagSlugs: [],
+          lastAnsweredAt: '2026-02-03T00:00:00.000Z',
+        },
+        {
+          isAvailable: true,
+          questionId: 'q-hard',
+          isCorrect: false,
+          sessionId: null,
+          sessionMode: null,
+          slug: 'q-hard',
+          stemMd: 'Hard question',
+          difficulty: 'hard',
+          tagSlugs: [],
+          lastAnsweredAt: '2026-02-01T00:00:00.000Z',
+        },
+        {
+          isAvailable: true,
+          questionId: 'q-medium',
+          isCorrect: false,
+          sessionId: null,
+          sessionMode: null,
+          slug: 'q-medium',
+          stemMd: 'Medium question',
+          difficulty: 'medium',
+          tagSlugs: [],
+          lastAnsweredAt: '2026-02-02T00:00:00.000Z',
+        },
+      ],
+      totalCount: 3,
+      limit: 20,
+      offset: 0,
+    };
+
+    const getAttemptedQuestionsFn = vi.fn(async (_input: unknown) =>
+      ok(output),
+    );
+    const getTagsFn = vi.fn(async (_input: unknown) => ok({ rows: [] }));
+    const HistoryPage = createHistoryPage({
+      getAttemptedQuestionsFn,
+      getTagsFn,
+    });
+
+    const element = await HistoryPage({
+      searchParams: Promise.resolve({
+        tab: 'questions',
+        sort: 'difficulty',
+      }),
+    });
+    const html = renderToStaticMarkup(element);
+
+    const hardIndex = html.indexOf('Hard question');
+    const mediumIndex = html.indexOf('Medium question');
+    const easyIndex = html.indexOf('Easy question');
+
+    expect(hardIndex).toBeGreaterThanOrEqual(0);
+    expect(mediumIndex).toBeGreaterThanOrEqual(0);
+    expect(easyIndex).toBeGreaterThanOrEqual(0);
+    expect(hardIndex).toBeLessThan(mediumIndex);
+    expect(mediumIndex).toBeLessThan(easyIndex);
+  });
+
   it('renders an error state when session history fetch returns not-ok', async () => {
     const getSessionHistoryFn = vi.fn(
       async (

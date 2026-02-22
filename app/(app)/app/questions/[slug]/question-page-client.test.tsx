@@ -279,7 +279,38 @@ describe('QuestionView', () => {
     expect(html).toContain('Explanation');
   });
 
-  it('keeps Try Again in history individual review', () => {
+  it('shows Practice Again for correct standalone history review', () => {
+    const html = renderToStaticMarkup(
+      <QuestionView
+        loadState={{ status: 'ready' }}
+        question={null}
+        selectedChoiceId={null}
+        submitResult={{
+          attemptId: 'attempt_1',
+          isCorrect: true,
+          correctChoiceId: 'c1',
+          explanationMd: 'Explanation',
+          referenceMd: null,
+          choiceExplanations: [],
+        }}
+        sessionNavigation={null}
+        canSubmit={false}
+        isPending={false}
+        mode="review"
+        origin="history"
+        onTryAgain={() => undefined}
+        onSelectChoice={() => undefined}
+        onSubmit={() => undefined}
+        onReattempt={() => undefined}
+      />,
+    );
+
+    expect(html).toContain('Practice Again');
+    expect(html).not.toContain('Try Again');
+    expect(html).not.toContain('>Submit<');
+  });
+
+  it('keeps Try Again for incorrect standalone history review', () => {
     const html = renderToStaticMarkup(
       <QuestionView
         loadState={{ status: 'ready' }}
