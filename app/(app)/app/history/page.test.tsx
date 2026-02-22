@@ -82,6 +82,7 @@ describe('app/(app)/app/history/page', () => {
           sessionId: 'session-1',
           mode: 'exam',
           questionCount: 10,
+          firstQuestionSlug: 'q-1',
           answered: 10,
           correct: 8,
           accuracy: 0.8,

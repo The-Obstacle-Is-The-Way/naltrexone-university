@@ -57,6 +57,7 @@ describe('app/(app)/app/dashboard', () => {
                 sessionId: 'session_1',
                 mode: 'exam',
                 questionCount: 20,
+                firstQuestionSlug: 'q-correct',
                 answered: 20,
                 correct: 15,
                 accuracy: 0.75,

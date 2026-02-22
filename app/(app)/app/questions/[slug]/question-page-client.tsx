@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { useMemo } from 'react';
 import { ReviewQuestionNavigator } from '@/app/(app)/app/questions/[slug]/components/review-question-navigator';
 import { ErrorCard } from '@/components/error-card';
 import { Feedback } from '@/components/question/feedback';
@@ -54,6 +55,27 @@ function parseHistoryHref(value: string | undefined): string | null {
   } catch {
     return null;
   }
+}
+
+const MAX_HISTORY_SEQUENCE_LENGTH = 20;
+
+function parseHistorySequence(value: string | undefined): string[] | null {
+  if (!value) return null;
+  const slugs = value
+    .split(',')
+    .map((slug) => slug.trim())
+    .filter((slug) => slug.length > 0)
+    .slice(0, MAX_HISTORY_SEQUENCE_LENGTH);
+
+  if (slugs.length === 0) return null;
+  return slugs;
+}
+
+function parseHistoryIndex(value: string | undefined): number | null {
+  if (!value) return null;
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed < 0) return null;
+  return parsed;
 }
 
 function getOriginUi(
@@ -118,6 +140,8 @@ export type QuestionViewProps = {
   origin?: QuestionOrigin | null;
   sessionId?: string;
   historyHref?: string;
+  historySeq?: string;
+  historyIndex?: string;
   onTryAgain: () => void;
   onSelectChoice: (choiceId: string) => void;
   onSubmit: () => void;
@@ -154,6 +178,7 @@ export function QuestionView(props: QuestionViewProps) {
           props.sessionNavigation.currentIndex + 1
         ]
       : null;
+  const historySeqParam = props.sessionNavigation?.historySequence?.join(',');
 
   return (
     <div className="space-y-6">
@@ -274,6 +299,10 @@ export function QuestionView(props: QuestionViewProps) {
                   mode: 'review',
                   sessionId: props.sessionNavigation.sessionId,
                   historyHref: props.historyHref,
+                  historySeq: historySeqParam,
+                  historyIndex: historySeqParam
+                    ? props.sessionNavigation.currentIndex - 1
+                    : undefined,
                 })}
               >
                 ← Previous
@@ -322,6 +351,10 @@ export function QuestionView(props: QuestionViewProps) {
                   mode: 'review',
                   sessionId: props.sessionNavigation.sessionId,
                   historyHref: props.historyHref,
+                  historySeq: historySeqParam,
+                  historyIndex: historySeqParam
+                    ? props.sessionNavigation.currentIndex + 1
+                    : undefined,
                 })}
               >
                 Next →
@@ -353,6 +386,8 @@ export default function QuestionPageClient({
   sessionId,
   attemptId,
   historyHref,
+  historySeq,
+  historyIndex,
 }: {
   slug: string;
   from?: string;
@@ -360,15 +395,27 @@ export default function QuestionPageClient({
   sessionId?: string;
   attemptId?: string;
   historyHref?: string;
+  historySeq?: string;
+  historyIndex?: string;
 }) {
   const origin = parseQuestionOrigin(from);
   const parsedMode = parseQuestionMode(mode);
+  const parsedHistorySequence = useMemo(
+    () => parseHistorySequence(historySeq),
+    [historySeq],
+  );
+  const parsedHistoryIndex = useMemo(
+    () => parseHistoryIndex(historyIndex),
+    [historyIndex],
+  );
   const controller = useQuestionPageController({
     slug,
     mode: parsedMode,
     from: origin,
     sessionId,
     attemptId,
+    historySequence: parsedHistorySequence,
+    historyIndex: parsedHistoryIndex,
   });
   return (
     <QuestionView

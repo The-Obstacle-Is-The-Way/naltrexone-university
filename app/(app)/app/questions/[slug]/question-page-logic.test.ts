@@ -461,6 +461,21 @@ describe('question-page-logic', () => {
       expect(setSubmitResult).not.toHaveBeenCalled();
     });
 
+    it('does not set state when previous-attempt response is malformed', async () => {
+      const setSelectedChoiceId = vi.fn();
+      const setSubmitResult = vi.fn();
+
+      await loadPreviousAttempt({
+        questionId: 'q_1',
+        getPreviousAttemptFn: async () => undefined as never,
+        setSelectedChoiceId,
+        setSubmitResult,
+      });
+
+      expect(setSelectedChoiceId).not.toHaveBeenCalled();
+      expect(setSubmitResult).not.toHaveBeenCalled();
+    });
+
     it('does not set state when component is unmounted', async () => {
       const setSelectedChoiceId = vi.fn();
       const setSubmitResult = vi.fn();

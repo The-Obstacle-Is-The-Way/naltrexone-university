@@ -30,7 +30,9 @@ export function ReviewQuestionNavigator({
   navigation,
   historyHref,
 }: ReviewQuestionNavigatorProps) {
-  const { questions, currentIndex, sessionId, from } = navigation;
+  const { questions, currentIndex, sessionId, from, historySequence } =
+    navigation;
+  const historySeqParam = historySequence?.join(',');
   if (questions.length === 0) return null;
   if (currentIndex < 0 || currentIndex >= questions.length) return null;
 
@@ -67,6 +69,8 @@ export function ReviewQuestionNavigator({
                       mode: 'review',
                       sessionId,
                       historyHref,
+                      historySeq: historySeqParam,
+                      historyIndex: historySeqParam ? i : undefined,
                     })}
                   >
                     {q.order}

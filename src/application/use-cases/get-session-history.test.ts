@@ -1,13 +1,20 @@
 import { describe, expect, it } from 'vitest';
 import { ApplicationError } from '@/src/application/errors';
-import { createPracticeSession } from '@/src/domain/test-helpers';
-import { FakePracticeSessionRepository } from '../test-helpers/fakes';
+import {
+  createPracticeSession,
+  createQuestion,
+} from '@/src/domain/test-helpers';
+import {
+  FakePracticeSessionRepository,
+  FakeQuestionRepository,
+} from '../test-helpers/fakes';
 import { GetSessionHistoryUseCase } from './get-session-history';
 
 describe('GetSessionHistoryUseCase', () => {
   it('returns empty rows when user has no completed sessions', async () => {
     const useCase = new GetSessionHistoryUseCase(
       new FakePracticeSessionRepository([]),
+      new FakeQuestionRepository([]),
     );
 
     await expect(
@@ -58,6 +65,11 @@ describe('GetSessionHistoryUseCase', () => {
           endedAt,
         }),
       ]),
+      new FakeQuestionRepository([
+        createQuestion({ id: 'q1', slug: 'q-1' }),
+        createQuestion({ id: 'q2', slug: 'q-2' }),
+        createQuestion({ id: 'q3', slug: 'q-3' }),
+      ]),
     );
 
     await expect(
@@ -68,6 +80,7 @@ describe('GetSessionHistoryUseCase', () => {
           sessionId: 'session-1',
           mode: 'exam',
           questionCount: 3,
+          firstQuestionSlug: 'q-1',
           answered: 2,
           correct: 1,
           accuracy: 1 / 3,
@@ -82,7 +95,7 @@ describe('GetSessionHistoryUseCase', () => {
     });
   });
 
-  it('computes tutor accuracy using answered denominator', async () => {
+  it('computes tutor accuracy using total question count denominator', async () => {
     const startedAt = new Date('2026-02-05T10:00:00.000Z');
     const endedAt = new Date('2026-02-05T10:30:00.000Z');
 
@@ -113,6 +126,10 @@ describe('GetSessionHistoryUseCase', () => {
           endedAt,
         }),
       ]),
+      new FakeQuestionRepository([
+        createQuestion({ id: 'q10', slug: 'q-10' }),
+        createQuestion({ id: 'q11', slug: 'q-11' }),
+      ]),
     );
 
     await expect(
@@ -123,9 +140,10 @@ describe('GetSessionHistoryUseCase', () => {
           sessionId: 'session-2',
           mode: 'tutor',
           questionCount: 2,
+          firstQuestionSlug: 'q-10',
           answered: 1,
           correct: 1,
-          accuracy: 1,
+          accuracy: 0.5,
           durationSeconds: 1800,
           startedAt: startedAt.toISOString(),
           endedAt: endedAt.toISOString(),
@@ -161,6 +179,7 @@ describe('GetSessionHistoryUseCase', () => {
           endedAt,
         }),
       ]),
+      new FakeQuestionRepository([createQuestion({ id: 'q1', slug: 'q-1' })]),
     );
 
     await expect(
@@ -171,6 +190,64 @@ describe('GetSessionHistoryUseCase', () => {
           sessionId: 'session-zero',
           mode: 'tutor',
           questionCount: 1,
+          firstQuestionSlug: 'q-1',
+          answered: 0,
+          correct: 0,
+          accuracy: 0,
+          durationSeconds: 60,
+          startedAt: startedAt.toISOString(),
+          endedAt: endedAt.toISOString(),
+        },
+      ],
+      total: 1,
+      limit: 10,
+      offset: 0,
+    });
+  });
+
+  it('returns null firstQuestionSlug when the first session question is unavailable', async () => {
+    const startedAt = new Date('2026-02-06T10:00:00.000Z');
+    const endedAt = new Date('2026-02-06T10:01:00.000Z');
+
+    const useCase = new GetSessionHistoryUseCase(
+      new FakePracticeSessionRepository([
+        createPracticeSession({
+          id: 'session-missing-first',
+          userId: 'user-1',
+          mode: 'tutor',
+          questionIds: ['q-missing', 'q2'],
+          questionStates: [
+            {
+              questionId: 'q-missing',
+              markedForReview: false,
+              latestSelectedChoiceId: null,
+              latestIsCorrect: null,
+              latestAnsweredAt: null,
+            },
+            {
+              questionId: 'q2',
+              markedForReview: false,
+              latestSelectedChoiceId: null,
+              latestIsCorrect: null,
+              latestAnsweredAt: null,
+            },
+          ],
+          startedAt,
+          endedAt,
+        }),
+      ]),
+      new FakeQuestionRepository([createQuestion({ id: 'q2', slug: 'q-2' })]),
+    );
+
+    await expect(
+      useCase.execute({ userId: 'user-1', limit: 10, offset: 0 }),
+    ).resolves.toEqual({
+      rows: [
+        {
+          sessionId: 'session-missing-first',
+          mode: 'tutor',
+          questionCount: 2,
+          firstQuestionSlug: null,
           answered: 0,
           correct: 0,
           accuracy: 0,
@@ -198,7 +275,10 @@ describe('GetSessionHistoryUseCase', () => {
       total: 1,
     });
 
-    const useCase = new GetSessionHistoryUseCase(sessions);
+    const useCase = new GetSessionHistoryUseCase(
+      sessions,
+      new FakeQuestionRepository([]),
+    );
 
     await expect(
       useCase.execute({ userId: 'user-1', limit: 10, offset: 0 }),
@@ -216,7 +296,10 @@ describe('GetSessionHistoryUseCase', () => {
       throw new ApplicationError('INTERNAL_ERROR', 'Failed query');
     };
 
-    const useCase = new GetSessionHistoryUseCase(sessions);
+    const useCase = new GetSessionHistoryUseCase(
+      sessions,
+      new FakeQuestionRepository([]),
+    );
 
     await expect(
       useCase.execute({ userId: 'user-1', limit: 10, offset: 0 }),

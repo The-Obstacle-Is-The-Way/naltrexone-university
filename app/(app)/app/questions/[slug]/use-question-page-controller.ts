@@ -34,6 +34,8 @@ export type UseQuestionPageControllerInput = {
   from?: QuestionOrigin | null;
   sessionId?: string;
   attemptId?: string;
+  historySequence?: readonly string[] | null;
+  historyIndex?: number | null;
 };
 
 export type UseQuestionPageControllerOutput = {
@@ -103,6 +105,32 @@ export function useQuestionPageController(
   useEffect(() => {
     const sessionId = input.sessionId;
     if (!sessionId) {
+      const historySequence = input.historySequence ?? null;
+      if (historySequence && historySequence.length > 0) {
+        const from = input.from ?? 'history';
+        const historyIndex = input.historyIndex ?? null;
+        const fallbackIndex = historySequence.indexOf(input.slug);
+        const currentIndex =
+          historyIndex !== null &&
+          historyIndex < historySequence.length &&
+          historySequence[historyIndex] === input.slug
+            ? historyIndex
+            : fallbackIndex;
+
+        if (currentIndex !== -1) {
+          setSessionNavigation({
+            questions: historySequence.map((slug, index) => ({
+              slug,
+              order: index + 1,
+              isCorrect: null,
+            })),
+            currentIndex,
+            from,
+            historySequence,
+          });
+          return;
+        }
+      }
       setSessionNavigation(null);
       return;
     }
@@ -176,6 +204,7 @@ export function useQuestionPageController(
             currentIndex,
             sessionId,
             from: input.from ?? 'practice',
+            historySequence: null,
           });
         })
         .catch((error: unknown) => {
@@ -190,7 +219,14 @@ export function useQuestionPageController(
     return () => {
       isStale = true;
     };
-  }, [input.sessionId, input.slug, input.from, isMounted]);
+  }, [
+    input.sessionId,
+    input.slug,
+    input.from,
+    input.historySequence,
+    input.historyIndex,
+    isMounted,
+  ]);
 
   useEffect(() => {
     if (input.mode !== 'review') return;

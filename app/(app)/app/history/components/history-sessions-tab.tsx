@@ -6,7 +6,7 @@ import { ErrorCard } from '@/components/error-card';
 import { Button } from '@/components/ui/button';
 import { formatDate } from '@/lib/format-date';
 import { formatDuration } from '@/lib/format-duration';
-import { ROUTES } from '@/lib/routes';
+import { ROUTES, toQuestionRoute } from '@/lib/routes';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import type { GetSessionHistoryOutput } from '@/src/adapters/controllers/practice-controller';
 import { buildHistorySessionsHref } from '../history-search-params';
@@ -25,6 +25,16 @@ function formatSessionAccuracy(value: number): string {
 
 function formatSessionMode(mode: 'tutor' | 'exam'): string {
   return mode === 'exam' ? 'Exam' : 'Tutor';
+}
+
+const MAX_DISPLAY_DURATION_MINUTES = 120;
+const MAX_DISPLAY_DURATION_SECONDS = MAX_DISPLAY_DURATION_MINUTES * 60;
+
+function formatSessionDurationDisplay(durationSeconds: number): string {
+  if (durationSeconds > MAX_DISPLAY_DURATION_SECONDS) {
+    return `>${MAX_DISPLAY_DURATION_MINUTES}m`;
+  }
+  return formatDuration(durationSeconds);
 }
 
 export function HistorySessionsTab({ result }: HistorySessionsTabProps) {
@@ -61,42 +71,70 @@ export function HistorySessionsTab({ result }: HistorySessionsTabProps) {
           const isSelected =
             historySessions.selectedSessionId === row.sessionId;
           const endedOn = formatDate(row.endedAt);
-          const fractionDenominator =
-            row.mode === 'exam' ? row.questionCount : row.answered;
+          const fractionDenominator = row.questionCount;
           const fractionLabel = `${row.correct}/${fractionDenominator}`;
-          const accuracyLabel =
-            row.mode === 'exam' || row.answered > 0
-              ? formatSessionAccuracy(row.accuracy)
-              : '—';
-          const sessionSummary = `${formatSessionMode(row.mode)} session: ${fractionLabel} correct (${accuracyLabel}), ${formatDuration(row.durationSeconds)}, ${endedOn}`;
+          const accuracyLabel = formatSessionAccuracy(row.accuracy);
+          const durationLabel = formatSessionDurationDisplay(
+            row.durationSeconds,
+          );
+          const sessionSummary = `${formatSessionMode(row.mode)} session: ${fractionLabel} correct (${accuracyLabel}), ${durationLabel}, ${endedOn}`;
           const selectedReview =
             historySessions.selectedReview?.sessionId === row.sessionId
               ? historySessions.selectedReview
               : null;
+          const sessionReviewHref = row.firstQuestionSlug
+            ? toQuestionRoute(row.firstQuestionSlug, {
+                from: 'history',
+                mode: 'review',
+                sessionId: row.sessionId,
+                historyHref,
+              })
+            : null;
 
           return (
             <li
               key={row.sessionId}
-              className="rounded-xl border border-border/60 bg-muted/20 p-3"
+              className={`rounded-xl border border-border/60 bg-muted/20 p-3 transition-colors hover:bg-accent/40 dark:hover:bg-foreground/10 ${
+                sessionReviewHref ? 'cursor-pointer' : ''
+              }`}
             >
               <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                <div className="text-sm text-foreground">
-                  <span className="font-medium">
-                    {formatSessionMode(row.mode)}
-                  </span>
-                  <span className="mx-2">•</span>
-                  <span>
-                    {fractionLabel} correct ({accuracyLabel})
-                  </span>
-                  <span className="mx-2">•</span>
-                  <span>{formatDuration(row.durationSeconds)}</span>
-                  <span className="mx-2">•</span>
-                  <span>{endedOn}</span>
-                </div>
+                {sessionReviewHref ? (
+                  <Link
+                    href={sessionReviewHref}
+                    className="rounded-md text-sm text-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]"
+                  >
+                    <span className="font-medium">
+                      {formatSessionMode(row.mode)}
+                    </span>
+                    <span className="mx-2">•</span>
+                    <span>
+                      {fractionLabel} correct ({accuracyLabel})
+                    </span>
+                    <span className="mx-2">•</span>
+                    <span>{durationLabel}</span>
+                    <span className="mx-2">•</span>
+                    <span>{endedOn}</span>
+                  </Link>
+                ) : (
+                  <div className="text-sm text-foreground">
+                    <span className="font-medium">
+                      {formatSessionMode(row.mode)}
+                    </span>
+                    <span className="mx-2">•</span>
+                    <span>
+                      {fractionLabel} correct ({accuracyLabel})
+                    </span>
+                    <span className="mx-2">•</span>
+                    <span>{durationLabel}</span>
+                    <span className="mx-2">•</span>
+                    <span>{endedOn}</span>
+                  </div>
+                )}
                 <Button
                   type="button"
                   variant="outline"
-                  className="rounded-full"
+                  className="rounded-full transition-colors dark:border-foreground/30 dark:bg-foreground/10 dark:hover:bg-foreground/25"
                   aria-label={`${isSelected ? 'Hide' : 'View'} breakdown for ${sessionSummary}`}
                   onClick={() => {
                     void historySessions.onOpenSession(row.sessionId);
@@ -108,6 +146,11 @@ export function HistorySessionsTab({ result }: HistorySessionsTabProps) {
 
               {isSelected ? (
                 <div className="mt-3 space-y-2 border-t border-border/40 pt-3">
+                  {sessionReviewHref ? (
+                    <Button asChild variant="outline" className="rounded-full">
+                      <Link href={sessionReviewHref}>Review session</Link>
+                    </Button>
+                  ) : null}
                   {historySessions.reviewLoadState.status === 'loading' ? (
                     <output
                       className="text-sm text-muted-foreground"

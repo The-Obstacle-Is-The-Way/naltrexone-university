@@ -117,6 +117,24 @@ describe('app/(app)/app/questions/[slug]', () => {
     });
   });
 
+  it('passes history sequence params into the client page', async () => {
+    const element = await QuestionPage({
+      params: Promise.resolve({ slug: 'q-1' }),
+      searchParams: Promise.resolve({
+        historySeq: 'q-1,q-2,q-3',
+        historyIndex: '1',
+      }),
+    } as never);
+
+    expect(element).toMatchObject({
+      props: {
+        slug: 'q-1',
+        historySeq: 'q-1,q-2,q-3',
+        historyIndex: '1',
+      },
+    });
+  });
+
   it('renders a question shell', async () => {
     const element = await QuestionPage({
       params: Promise.resolve({ slug: 'q-1' }),

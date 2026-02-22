@@ -128,6 +128,14 @@ export function HistoryQuestionsTab({
   })();
 
   const shouldShowFiltersCard = totalCount > 0 || hasActiveFilters;
+  const historySequence = rows.flatMap((row) =>
+    row.isAvailable ? [row.slug] : [],
+  );
+  const historySequenceParam =
+    historySequence.length > 0 ? historySequence.join(',') : undefined;
+  const historyIndexBySlug = new Map(
+    historySequence.map((slug, index) => [slug, index]),
+  );
 
   return (
     <div className="space-y-6">
@@ -307,6 +315,8 @@ export function HistoryQuestionsTab({
                 from: 'history',
                 mode: 'review',
                 historyHref,
+                historySeq: historySequenceParam,
+                historyIndex: historyIndexBySlug.get(row.slug),
               });
 
               return (

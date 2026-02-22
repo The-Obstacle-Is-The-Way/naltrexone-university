@@ -96,16 +96,21 @@ describe('HistoryQuestionsTab', () => {
       offset: result.data.offset,
       filters,
     });
+    const historySeq = 'q-correct,q-incorrect';
 
     const correctHref = toQuestionRoute('q-correct', {
       from: 'history',
       mode: 'review',
       historyHref,
+      historySeq,
+      historyIndex: 0,
     });
     const incorrectHref = toQuestionRoute('q-incorrect', {
       from: 'history',
       mode: 'review',
       historyHref,
+      historySeq,
+      historyIndex: 1,
     });
 
     const hrefs = Array.from(doc.querySelectorAll('a')).map((a) =>
@@ -113,6 +118,23 @@ describe('HistoryQuestionsTab', () => {
     );
     expect(hrefs.filter((href) => href === correctHref)).toHaveLength(2);
     expect(hrefs.filter((href) => href === incorrectHref)).toHaveLength(2);
+
+    const correctLinks = hrefs.filter((href) =>
+      href?.startsWith('/app/questions/q-correct?'),
+    );
+    const incorrectLinks = hrefs.filter((href) =>
+      href?.startsWith('/app/questions/q-incorrect?'),
+    );
+
+    expect(correctLinks.every((href) => href?.includes('historySeq='))).toBe(
+      true,
+    );
+    expect(correctLinks.every((href) => href?.includes('historyIndex=0'))).toBe(
+      true,
+    );
+    expect(
+      incorrectLinks.every((href) => href?.includes('historyIndex=1')),
+    ).toBe(true);
   });
 
   it('includes mode=review in incorrect question links', () => {
@@ -146,6 +168,8 @@ describe('HistoryQuestionsTab', () => {
       from: 'history',
       mode: 'review',
       historyHref,
+      historySeq: 'q-incorrect',
+      historyIndex: 0,
     });
 
     const hrefs = Array.from(doc.querySelectorAll('a')).map((a) =>
