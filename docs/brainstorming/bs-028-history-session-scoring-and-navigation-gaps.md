@@ -1,9 +1,43 @@
 # BS-028: History Page UX Audit — Scoring, Navigation, and Interaction Gaps
 
 **Date:** 2026-02-21
+**Last Re-Validated:** 2026-02-22
 **Triggered by:** Dogfooding + comprehensive browser agent audit of the History page (both Sessions and Questions tabs)
 **Scope:** Tutor mode score misleads users; absurd session durations; session card not clickable; Sessions vs Questions review experience parity gap; missing hover states, filters, pagination counts; Questions tab minor issues
-**Related:** [BS-022](../_archive/brainstorming/bs-022-unanswered-question-review-handling.md) (Unanswered Question Review Handling — archived), [SPEC-034](../specs/spec-034-unanswered-question-review-handling.md), [BS-027](./bs-027-history-tab-bar-visual-inconsistency.md) (Tab bar visual drift)
+**Related:** [BS-022](../_archive/brainstorming/bs-022-unanswered-question-review-handling.md) (Unanswered Question Review Handling — archived), [SPEC-034](../specs/spec-034-unanswered-question-review-handling.md), [BS-027](./bs-027-history-tab-bar-visual-inconsistency.md) (Tab bar visual drift), [SPEC-038](../specs/spec-038-history-ux-remediation.md) (proposed remediation spec)
+
+---
+
+## 2026-02-22 Independent Re-Validation (Playwright + Agent-Browser)
+
+Re-validation was run from first principles on `dev` with authenticated flows:
+
+- `pnpm playwright test tests/e2e/bs-028-history-ux-audit.spec.ts --reporter=line`
+- `agent-browser` snapshots on `/app/history?tab=sessions`, `/app/history?tab=questions`, and question review pages
+- Direct code traces in `src/application/use-cases/get-session-history.ts`, `src/domain/services/session-stats.ts`, `app/(app)/app/history/components/history-sessions-tab.tsx`, `app/(app)/app/history/components/history-questions-tab.tsx`, and `app/(app)/app/questions/[slug]/question-page-client.tsx`
+
+### Re-Validation Status
+
+| # | Finding | 2026-02-22 Status | Evidence |
+|---|---------|--------------------|----------|
+| 1 | Tutor score denominator misleading (`1/1` when session had unanswered questions) | **Confirmed** | Playwright P0-1 failed: denominator remained `answered` (1) not `questionCount` (2) |
+| 2 | Absurd session durations | **Confirmed** | Playwright P0-2 failed with `7182m 49s`; agent-browser snapshot also captured `7182m 49s` |
+| 3 | Questions-tab review lacks navigator parity | **Confirmed** | Playwright P1-3 failed; code path has no `sessionId` for Questions-tab links |
+| 4 | Session card not clickable | **Confirmed** | Playwright P1-4 failed (`cursor=auto`, no role/tabIndex/link); code confirms plain `<li>` |
+| 5 | No "Review session" action in breakdown | **Confirmed** | Playwright P1-5 failed; `SessionBreakdownList` exposes only per-question links |
+| 6 | Hover affordance is near-invisible in dark mode | **Confirmed** | Measured hover delta is tiny (~0.35% luminance change after compositing), despite class change |
+| 7 | Navigator loads off-screen | **Not reproduced** | Agent-browser measured `scrollY=0` and navigator in viewport (`navTop=185`, `inView=true`) when entering from Sessions |
+| 8 | Sessions tab missing filters/count context | **Confirmed** | Playwright P2-8 failed; Sessions tab still only has Previous/Next links |
+| 9 | Dual "Back to History" links on review page | **Confirmed** | Playwright P2-9 failed with 2 links; agent-browser snapshot showed top + bottom links |
+| 10 | Duplicate "Other" tag entries | **Confirmed** | Playwright P3-10 failed; agent-browser snapshot showed two "Other" options |
+| 11 | "Try Again" shown for already-correct Questions-tab review | **Confirmed** | Agent-browser opened a correct question and still showed `Try Again` |
+| 12 | No sort control on Questions tab | **Confirmed** | Playwright P3-12 failed; no sort input/button in UI |
+| 13 | Mid-sentence truncation in question previews | **Confirmed** | Agent-browser snapshot showed multiple ellipsis truncations; code uses fixed-length `getStemPreview(...)` |
+| 14 | Native `<select>` divergence from design system | **Confirmed** | Playwright P2-14 failed; code uses native `<select>` for all four filters |
+
+### Audit Harness Note
+
+Playwright check P1-6 originally errored in `color-utils.ts` because Tailwind v4 emits `oklab(...)` color strings and the parser expected `rgb/rgba`. This is a **test harness issue**, not a product fix by itself. Re-validation used browser-canvas conversion to evaluate real luminance delta.
 
 ---
 
@@ -121,6 +155,8 @@ The "View breakdown" button has Tailwind hover utilities (`hover:bg-accent`, `ho
 When landing on the question review page from the Sessions tab, the page loads with the navigator scrolled out of view. The user lands mid-page at the question text. The navigator — the primary orientation tool — requires scrolling up to find.
 
 **Recommendation:** Either auto-scroll to top on question load, make the navigator sticky, or relocate it below the question content.
+
+**2026-02-22 re-validation update:** Not reproduced in current build. Agent-browser measurement from Sessions-tab navigation showed `scrollY=0` with navigator fully visible in viewport.
 
 #### Problem 8: Sessions Tab Missing Filters and Pagination Counts
 
@@ -313,22 +349,22 @@ Each question row is a `<Link>` to `toQuestionRoute(slug, { from, mode: 'review'
 
 ## Severity Assessment
 
-| # | Problem | Priority | Frequency | Impact |
-|---|---------|----------|-----------|--------|
-| 1 | Misleading Tutor score (1/1 vs 1/5) | **P0** | Every early-quit Tutor session | False confidence; undermines scoring trust |
-| 2 | Absurd session durations (1403m) | **P0** | Multiple existing sessions | Nonsensical data; undermines trust |
-| 3 | Sessions vs Questions review parity | **P1** | Every Questions tab review | No navigator, no Previous/Next from Questions |
-| 4 | Session card not clickable | **P1** | Every session interaction | Violates tap-target convention |
-| 5 | No "Review session" in breakdown | **P1** | Every breakdown expansion | Must click individual question to enter review |
-| 6 | Hover states invisible in dark mode | **P1** | Every interaction | Buttons feel unresponsive |
-| 7 | Navigator off-screen on load | **P2** | Every question review entry | Orientation tool hidden |
-| 8 | Sessions tab missing filters/counts | **P2** | Growing with session count | Unusable at scale |
-| 9 | Dual "Back to History" links | **P2** | Every question review page | Redundant, inconsistent styling |
-| 10 | Duplicate "Other" tag | **P3** | Questions tab filter use | Confusing but minor |
-| 11 | "Try Again" on correct questions | **P3** | Correct question review | Semantic mismatch |
-| 12 | No sort on Questions tab | **P3** | Questions tab use | Missing educational feature |
-| 13 | Mid-sentence truncation | **P3** | All question cards | Low utility preview text |
-| 14 | Native `<select>` dropdowns diverge from design system (6 verified defects) | **P2** | Every Questions tab filter use | Only native form controls in the app; 6 specific visual defects quantified by browser agent |
+| # | Problem | Priority | Frequency | Impact | 2026-02-22 Status |
+|---|---------|----------|-----------|--------|-------------------|
+| 1 | Misleading Tutor score (1/1 vs 1/5) | **P0** | Every early-quit Tutor session | False confidence; undermines scoring trust | Confirmed |
+| 2 | Absurd session durations (1403m+) | **P0** | Multiple existing sessions | Nonsensical data; undermines trust | Confirmed |
+| 3 | Sessions vs Questions review parity | **P1** | Every Questions tab review | No navigator, no Previous/Next from Questions | Confirmed |
+| 4 | Session card not clickable | **P1** | Every session interaction | Violates tap-target convention | Confirmed |
+| 5 | No "Review session" in breakdown | **P1** | Every breakdown expansion | Must click individual question to enter review | Confirmed |
+| 6 | Hover states effectively invisible in dark mode | **P1** | Every interaction | Buttons feel unresponsive | Confirmed |
+| 7 | Navigator off-screen on load | **P2** | Unclear | Orientation tool hidden | Not reproduced (keep as watch item) |
+| 8 | Sessions tab missing filters/counts | **P2** | Growing with session count | Unusable at scale | Confirmed |
+| 9 | Dual "Back to History" links | **P2** | Every question review page | Redundant, inconsistent styling | Confirmed |
+| 10 | Duplicate "Other" tag | **P3** | Questions tab filter use | Confusing but minor | Confirmed |
+| 11 | "Try Again" on correct questions | **P3** | Correct question review | Semantic mismatch | Confirmed |
+| 12 | No sort on Questions tab | **P3** | Questions tab use | Missing educational feature | Confirmed |
+| 13 | Mid-sentence truncation | **P3** | All question cards | Low utility preview text | Confirmed |
+| 14 | Native `<select>` dropdowns diverge from design system (6 verified defects) | **P2** | Every Questions tab filter use | Only native form controls in the app; 6 specific visual defects quantified by browser agent | Confirmed |
 
 ---
 
@@ -459,3 +495,4 @@ These should be preserved in any refactor:
 | 2026-02-21 | Expanded to 13 problems after browser audit | Chrome agent audit found 8 additional issues across both tabs: duration bug, review parity gap, hover states, pagination, filters, Questions tab minor issues |
 | 2026-02-21 | Added Problem 14: native `<select>` jank | Dogfooding + investigation revealed filter dropdowns are the only native form controls in the app; shadcn/ui Select never installed. Root cause: OS-rendered dropdown panels can't match the dark theme. Practice page avoids this via `FilterChip` components. Fix: install shadcn/ui Select, refactor dropdowns, use `<SelectGroup>` for tag kind grouping. `appearance: base-select` tracked as future simplification path (needs Firefox/Safari support). |
 | 2026-02-21 | Problem 14: browser agent convergence verified | Chrome browser agent DOM inspection independently identified the same root cause (native `<select>` without shadcn/ui) and quantified 6 specific visual defects: height mismatch (h-10 vs h-9), font-weight/line-height drift, background sunken effect, missing `appearance: none`, no right-padding compensation for arrow, label weight inconsistency. Also surfaced architectural opportunity to eliminate Apply button via filter-on-change with `useRouter`. All findings incorporated into Problem 14's defect table. |
+| 2026-02-22 | Independent re-validation completed | 13 findings confirmed via Playwright + agent-browser + code traces; Problem 7 was not reproduced; created SPEC-038 for implementation scope |
