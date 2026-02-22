@@ -699,11 +699,8 @@ test.describe('BS-027: Tab Bar Visual Consistency Audit', () => {
     await goToHistorySessions(page);
     await enableDarkMode(page);
 
-    const historyTabBarNav = page
-      .locator('nav')
-      .filter({ has: page.locator('a[href="/app/history?tab=sessions"]') });
     const historyContainerClasses =
-      (await historyTabBarNav.getAttribute('class')) ?? '';
+      (await historyTabBar.getAttribute('class')) ?? '';
     // BS-027: HistoryTabBar uses rounded-full, SegmentedControl uses rounded-lg
     // After unification, both should use the same border-radius
     const historyUsesRoundedFull =

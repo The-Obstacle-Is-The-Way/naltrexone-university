@@ -56,12 +56,13 @@ export async function startSession(
   // Wait for the first question to load. In dev mode, the getNextQuestion
   // server action may hit its 15s withTimeout on the first call due to
   // on-demand compilation, showing "Request timed out. Please try again."
-  // Retry up to 2 times if this happens — the second call succeeds because
-  // the compilation is cached.
+  // Most runs recover on the next call after compilation is cached, but we
+  // keep one extra retry to absorb occasional cold-start variance in CI/local.
   const answerChoices = page.getByRole('group', { name: 'Answer choices' });
   const tryAgainButton = page.getByRole('button', { name: 'Try again' });
+  const maxLoadAttempts = 3;
 
-  for (let attempt = 0; attempt < 3; attempt++) {
+  for (let attempt = 1; attempt <= maxLoadAttempts; attempt++) {
     await answerChoices.or(tryAgainButton).waitFor({
       state: 'visible',
       timeout: 60_000,
@@ -71,8 +72,11 @@ export async function startSession(
       return; // Question loaded successfully
     }
 
-    // "Request timed out" — click "Try again" to retry
-    if (await tryAgainButton.isVisible().catch(() => false)) {
+    // "Request timed out" — click "Try again" while attempts remain.
+    if (
+      attempt < maxLoadAttempts &&
+      (await tryAgainButton.isVisible().catch(() => false))
+    ) {
       await tryAgainButton.click();
     }
   }
