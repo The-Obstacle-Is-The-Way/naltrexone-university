@@ -20,7 +20,6 @@ Implementation specifications provide detailed technical guidance for building e
 | [Master Spec](./master_spec.md) | Complete Technical Specification (SSOT) | Living | All |
 | [SPEC-016](./spec-016-observability.md) | Observability (Logging, Error Tracking) | Partially Implemented | Infrastructure |
 | [SPEC-017](./spec-017-rate-limiting.md) | Rate Limiting | Partial (MVP done) | Infrastructure |
-| [SPEC-037](./spec-037-tab-switch-visual-unification.md) | Tab Switch Visual Unification — Shared Style Constants | Implemented | Feature |
 
 **Master Spec split parts (readability):**
 
@@ -70,6 +69,7 @@ Implementation specifications provide detailed technical guidance for building e
 | [SPEC-034](../_archive/specs/spec-034-review-mode-readonly-and-try-again-scoping.md) | Review Mode Read-Only Behavior & Try Again Scoping | Feature |
 | [SPEC-035](../_archive/specs/spec-035-reference-field-and-content-import.md) | Reference Field & Content Import Pipeline | Feature |
 | [SPEC-036](../_archive/specs/spec-036-bookmark-review-mode-alignment.md) | Bookmark Review Mode Alignment | Feature |
+| [SPEC-037](../_archive/specs/spec-037-tab-switch-visual-unification.md) | Tab Switch Visual Unification — Shared Style Constants | Feature |
 
 ## Spec Statuses
 

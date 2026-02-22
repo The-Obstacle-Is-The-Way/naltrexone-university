@@ -39,7 +39,7 @@
     ]
   },
   "dependencies": {
-    "@clerk/nextjs": "^6.37.1",
+    "@clerk/nextjs": "^6.38.1",
     "@clerk/themes": "^2.4.51",
     "@sentry/nextjs": "^10.38.0",
     "@tailwindcss/postcss": "4.1.18",
@@ -72,7 +72,7 @@
   },
   "devDependencies": {
     "@biomejs/biome": "^2.3.13",
-    "@clerk/testing": "^1.13.35",
+    "@clerk/testing": "^1.14.0",
     "@playwright/test": "^1.58.1",
     "@types/node": "^22.15.18",
     "@types/react": "19.2.10",

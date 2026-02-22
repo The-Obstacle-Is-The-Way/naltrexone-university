@@ -1,7 +1,7 @@
 # Deployment Environments: Source of Truth
 
-**Last Verified:** 2026-02-06 (post database isolation + env scoping + Stripe single-account consolidation + Neon var cleanup + Clerk webhook fix + Deployment Protection fix + env var trailing newline fix)
-**Last Reviewed (docs/code):** 2026-02-09 (no config changes required; pending verification items remain pending)
+**Last Verified:** 2026-02-22 (Sentry DSN added to all Vercel environments, CRON_SECRET added to Development, local .env.local DATABASE_URL fixed to dev branch)
+**Last Reviewed (docs/code):** 2026-02-22 (all env vars verified consistent across Production, Preview, Development, and localhost)
 
 This document is the single source of truth for how Clerk, Stripe, Neon, and Vercel are configured across all environments.
 
@@ -57,7 +57,7 @@ This document is the single source of truth for how Clerk, Stripe, Neon, and Ver
 
 ---
 
-## Current Vercel Environment Variables (Verified 2026-02-06)
+## Current Vercel Environment Variables (Verified 2026-02-22)
 
 ### Properly Scoped (each environment has its own value)
 
@@ -73,6 +73,9 @@ This document is the single source of truth for how Clerk, Stripe, Neon, and Ver
 | `STRIPE_WEBHOOK_SECRET` | Live webhook secret | Test webhook secret | Test webhook secret | Correct |
 | `NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY` | Live price ID ($29/mo) | Test price ID ($29/mo) | Test price ID ($29/mo) | Correct |
 | `NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL` | Live price ID ($199/yr) | Test price ID ($199/yr) | Test price ID ($199/yr) | Correct |
+| `NEXT_PUBLIC_SENTRY_DSN` | Same DSN (all envs) | Same DSN (all envs) | Same DSN (all envs) | Correct (added 2026-02-22) |
+| `SENTRY_DSN` | Same DSN (all envs) | Same DSN (all envs) | Same DSN (all envs) | Correct (added 2026-02-22) |
+| `CRON_SECRET` | Shared secret | Shared secret | Shared secret | Correct (Dev added 2026-02-22) |
 
 ### Auto-Generated Neon Vars — REMOVED (2026-02-06)
 

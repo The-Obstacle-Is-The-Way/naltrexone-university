@@ -53,11 +53,34 @@ export async function startSession(
     timeout: 15_000,
   });
 
-  // Wait for the first question to load. When running against `pnpm dev`,
-  // initial compilation can delay the first client-side server action call.
-  await expect(page.getByRole('group', { name: 'Answer choices' })).toBeVisible(
-    {
+  // Wait for the first question to load. In dev mode, the getNextQuestion
+  // server action may hit its 15s withTimeout on the first call due to
+  // on-demand compilation, showing "Request timed out. Please try again."
+  // Most runs recover on the next call after compilation is cached, but we
+  // keep one extra retry to absorb occasional cold-start variance in CI/local.
+  const answerChoices = page.getByRole('group', { name: 'Answer choices' });
+  const tryAgainButton = page.getByRole('button', { name: 'Try again' });
+  const maxLoadAttempts = 3;
+
+  for (let attempt = 1; attempt <= maxLoadAttempts; attempt++) {
+    await answerChoices.or(tryAgainButton).waitFor({
+      state: 'visible',
       timeout: 60_000,
-    },
-  );
+    });
+
+    if (await answerChoices.isVisible().catch(() => false)) {
+      return; // Question loaded successfully
+    }
+
+    // "Request timed out" — click "Try again" while attempts remain.
+    if (
+      attempt < maxLoadAttempts &&
+      (await tryAgainButton.isVisible().catch(() => false))
+    ) {
+      await tryAgainButton.click();
+    }
+  }
+
+  // Final check — if still no answer choices after retries, fail explicitly
+  await expect(answerChoices).toBeVisible({ timeout: 60_000 });
 }
