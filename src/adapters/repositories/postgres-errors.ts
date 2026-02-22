@@ -18,19 +18,31 @@ export function getPostgresErrorCode(error: unknown): string | null {
 }
 
 export function getPostgresConstraintName(error: unknown): string | null {
+  const getConstraintName = (value: unknown): string | null => {
+    if (!value || typeof value !== 'object') return null;
+
+    if ('constraint' in value) {
+      const name = (value as { constraint?: unknown }).constraint;
+      if (typeof name === 'string') return name;
+    }
+
+    if ('constraint_name' in value) {
+      const name = (value as { constraint_name?: unknown }).constraint_name;
+      if (typeof name === 'string') return name;
+    }
+
+    return null;
+  };
+
   if (!error || typeof error !== 'object') return null;
 
-  if ('constraint' in error) {
-    const name = (error as { constraint?: unknown }).constraint;
-    if (typeof name === 'string') return name;
-  }
+  const topLevelName = getConstraintName(error);
+  if (topLevelName) return topLevelName;
 
   if ('cause' in error) {
     const cause = (error as { cause?: unknown }).cause;
-    if (!cause || typeof cause !== 'object') return null;
-
-    const name = (cause as { constraint?: unknown }).constraint;
-    if (typeof name === 'string') return name;
+    const causeName = getConstraintName(cause);
+    if (causeName) return causeName;
   }
 
   return null;

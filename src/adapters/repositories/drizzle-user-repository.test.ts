@@ -17,6 +17,11 @@ function createDbMock() {
   }));
   const insert = vi.fn(() => ({ values: insertValues }));
 
+  const updateReturning = vi.fn();
+  const updateWhere = vi.fn(() => ({ returning: updateReturning }));
+  const updateSet = vi.fn(() => ({ where: updateWhere }));
+  const updateFn = vi.fn(() => ({ set: updateSet }));
+
   const deleteReturning = vi.fn();
   const deleteWhere = vi.fn(() => ({ returning: deleteReturning }));
   const deleteFn = vi.fn(() => ({ where: deleteWhere }));
@@ -28,12 +33,17 @@ function createDbMock() {
       },
     },
     insert,
+    update: updateFn,
     delete: deleteFn,
     _mocks: {
       queryFindFirst,
       insertReturning,
       insertOnConflictDoUpdate,
       insertValues,
+      updateReturning,
+      updateWhere,
+      updateSet,
+      updateFn,
       deleteReturning,
       deleteWhere,
       deleteFn,
@@ -177,6 +187,60 @@ describe('DrizzleUserRepository', () => {
       const promise = repo.upsertByClerkId('clerk_1', 'new@example.com');
       await expect(promise).rejects.toBeInstanceOf(ApplicationError);
       await expect(promise).rejects.toMatchObject({ code: 'INTERNAL_ERROR' });
+    });
+
+    it('returns updated user when users_email_uq conflict occurs', async () => {
+      const observedAt = new Date('2026-02-01T00:30:00Z');
+      const db = createDbMock();
+      const row = {
+        id: 'user_1',
+        email: 'a@example.com',
+        createdAt: new Date('2026-02-01T00:00:00Z'),
+        updatedAt: observedAt,
+      };
+      db._mocks.insertReturning.mockRejectedValue({
+        code: '23505',
+        constraint: 'users_email_uq',
+      });
+      db._mocks.updateReturning.mockResolvedValue([row]);
+
+      const repo = new DrizzleUserRepository(db as unknown as RepoDb);
+
+      await expect(
+        repo.upsertByClerkId('clerk_2', 'a@example.com', { observedAt }),
+      ).resolves.toEqual({
+        id: row.id,
+        email: row.email,
+        createdAt: row.createdAt,
+        updatedAt: row.updatedAt,
+      });
+
+      expect(db._mocks.updateFn).toHaveBeenCalledTimes(1);
+      expect(db._mocks.updateSet).toHaveBeenCalledWith(
+        expect.objectContaining({
+          clerkUserId: expect.anything(),
+          updatedAt: expect.anything(),
+        }),
+      );
+      expect(db._mocks.updateWhere).toHaveBeenCalledTimes(1);
+    });
+
+    it('maps fallback update errors to ApplicationError when email-conflict update fails', async () => {
+      const db = createDbMock();
+      db._mocks.insertReturning.mockRejectedValue({
+        code: '23505',
+        constraint: 'users_email_uq',
+      });
+      db._mocks.updateReturning.mockRejectedValue({
+        code: '23505',
+        constraint: 'users_clerk_user_id_uq',
+      });
+
+      const repo = new DrizzleUserRepository(db as unknown as RepoDb);
+
+      const promise = repo.upsertByClerkId('clerk_2', 'a@example.com');
+      await expect(promise).rejects.toBeInstanceOf(ApplicationError);
+      await expect(promise).rejects.toMatchObject({ code: 'CONFLICT' });
     });
   });
 

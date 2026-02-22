@@ -7,7 +7,10 @@ import type {
 } from '@/src/application/ports/repositories';
 import type { User } from '@/src/domain/entities';
 import type { DrizzleDb } from '../shared/database-types';
-import { isPostgresUniqueViolation } from './postgres-errors';
+import {
+  getPostgresConstraintName,
+  isPostgresUniqueViolation,
+} from './postgres-errors';
 
 export class DrizzleUserRepository implements UserRepository {
   constructor(
@@ -85,6 +88,33 @@ export class DrizzleUserRepository implements UserRepository {
 
       return this.toDomain(row);
     } catch (error) {
+      if (
+        isPostgresUniqueViolation(error) &&
+        getPostgresConstraintName(error) === 'users_email_uq'
+      ) {
+        try {
+          const [row] = await this.db
+            .update(users)
+            .set({
+              clerkUserId: sql`CASE WHEN ${users.updatedAt} < ${observedAtParam} THEN ${clerkId} ELSE ${users.clerkUserId} END`,
+              updatedAt: sql`GREATEST(${users.updatedAt}, ${observedAtParam})`,
+            })
+            .where(eq(users.email, email))
+            .returning();
+
+          if (!row) {
+            throw new ApplicationError(
+              'INTERNAL_ERROR',
+              'Failed to ensure user row',
+            );
+          }
+
+          return this.toDomain(row);
+        } catch (updateError) {
+          throw this.mapDbError(updateError);
+        }
+      }
+
       throw this.mapDbError(error);
     }
   }

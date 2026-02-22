@@ -1,7 +1,7 @@
 # Brainstorming Register
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-02-20
+**Last Updated:** 2026-02-21
 
 ---
 
@@ -29,9 +29,10 @@ Brainstorming (BS-NNN) → Spec (SPEC-NNN) → Implementation → Archive
 |----|-------|--------|--------------|
 | [BS-014](./bs-014-practice-starter-question-count-ux.md) | Practice Starter — Silent Truncation When Fewer Questions Available | Active | — |
 | [BS-027](./bs-027-history-tab-bar-visual-inconsistency.md) | History Tab Bar Visual Inconsistency — Pill vs Segmented Control | Active | [SPEC-037](../specs/spec-037-tab-switch-visual-unification.md) |
-| [BS-028](./bs-028-history-session-scoring-and-navigation-gaps.md) | History Session Scoring and Navigation Gaps — Tutor Mode Misleading % + Card Clickability | Active | — |
+| [BS-028](./bs-028-history-session-scoring-and-navigation-gaps.md) | History Page UX Audit — Scoring, Duration, Navigation, Review Parity (13 findings) | Active | — |
+| [BS-029](./bs-029-clerk-user-id-email-upsert-conflict.md) | Clerk User ID / Email Upsert Conflict — Unhandled Unique Constraint | Active | [SPEC-029](../specs/spec-029-dev-environment-resilience.md) |
 
-**Next Brainstorming ID:** BS-029
+**Next Brainstorming ID:** BS-030
 
 ---
 
