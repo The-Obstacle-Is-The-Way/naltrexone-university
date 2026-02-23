@@ -1,170 +1,289 @@
-# DEBT-243: E2E Credential Drift Causes Confusing Test Failures
+# DEBT-243: E2E Credential Drift and Silent Failure (Definitive Resolution)
 
-**Status:** Open
-**Priority:** P2
-**Date:** 2026-02-23
+**Status:** Approved design (no optional paths)  
+**Date:** 2026-02-23  
+**Owner:** Test Infrastructure
 
----
+## Problem
 
-## Description
+We fixed one incident (wrong `E2E_CLERK_USER_PASSWORD`), but not the structural failure mode.
 
-When the Clerk E2E test user's password drifts from the value stored in `.env.local` (or GitHub Actions secrets), authenticated Playwright tests fail with a generic error from the `@clerk/testing/playwright` SDK:
+Current E2E behavior still allows credential drift to surface as late, repeated, low-signal failures:
 
-```
-Error: Clerk: Failed to sign in: Password is incorrect. Try again, or use another method.
-```
+- `tests/e2e/global.setup.ts` silently skips subscription seeding when env is missing.
+- `tests/e2e/helpers/clerk-auth.ts` only checks credential presence, not validity.
+- Invalid-but-present credentials fail later inside Clerk/Stripe/DB SDK calls.
 
-This error is thrown inside `signInWithClerkPassword()` and propagated as a raw test failure. There is **no pre-flight credential validation** — the system only discovers the password is wrong when the first authenticated test attempts to sign in. Each of the 15+ authenticated E2E tests then fails independently with the same error, producing a wall of identical failures that obscures the root cause.
+This debt item standardizes one fail-fast preflight check that runs once before E2E specs.
 
-### Root Cause
+## Full System Audit (Current State)
 
-The `hasClerkCredentials` guard in `tests/e2e/helpers/clerk-auth.ts` only checks for the **presence** of env vars, not their **correctness**:
+### 1. E2E pipeline behavior today
 
-```typescript
-export const hasClerkCredentials = Boolean(clerkUsername && clerkPassword);
-```
+- `tests/e2e/global.setup.ts`
+  - Runs `clerkSetup()`.
+  - Skips seeding when `E2E_CLERK_USER_USERNAME` or `STRIPE_SECRET_KEY` is missing (`setup.skip()`), which is low-signal for credential drift.
+- `tests/e2e/helpers/clerk-auth.ts`
+  - `hasClerkCredentials` is a truthiness guard (`username && password`), so stale credentials still pass the gate.
+  - Wrong password fails only when `signInWithClerkPassword()` reaches Clerk APIs.
 
-This means:
-- **Missing credentials** → `hasClerkCredentials = false` → tests skip gracefully with a clear message
-- **Incorrect credentials** → `hasClerkCredentials = true` → tests attempt auth → fail with a confusing SDK error
+### 2. Test infrastructure env dependencies
 
-### How Credential Drift Happens
+`tests/` currently depends on:
 
-1. The test user `e2e-test@addictionboards.com` is created **manually** in the Clerk dashboard
-2. The password is stored **independently** in three places:
-   - Clerk's backend (bcrypt hash — cannot be read, only verified or reset)
-   - `.env.local` (plaintext, gitignored)
-   - GitHub Actions secrets (encrypted)
-3. Any of these can be changed independently, causing drift
-4. Clerk passwords can expire or be reset via dashboard, email, or API — none of which notify `.env.local` or CI
+- `DATABASE_URL`
+- `ALLOW_NON_LOCAL_DATABASE_URL`
+- `CLERK_SECRET_KEY`
+- `E2E_CLERK_USER_USERNAME`
+- `E2E_CLERK_USER_PASSWORD`
+- `STRIPE_SECRET_KEY`
+- `NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY`
 
-### Impact on This Session
+Failure behavior today:
 
-During the BUG-151 affordance audit (2026-02-23), both Playwright E2E tests and the `agent-browser` tool hit "Password is incorrect" for all authenticated pages. The root cause took significant investigation to isolate because:
+- **Loud early failures:** integration setup (`tests/integration/setup.ts`) for invalid/missing DB config.
+- **Silent/low-signal behavior:** E2E seeding skip in `global.setup.ts`; Clerk password drift not detected until first login action.
 
-1. The error looked like it could be a dotenv parsing issue (the password contains `!`, which is a bash history expansion character)
-2. It could have been a `@clerk/testing/playwright` SDK issue
-3. It could have been a Clerk configuration change (2FA enabled, password strategy disabled, etc.)
-4. The actual cause — password drift in Clerk's backend — required a Clerk Backend API call to `verify_password` to confirm
+### 3. Environment contract vs runtime validation
 
-## Impact
+External credentials in `.env.local` include:
 
-- **Developer time waste:** Every session that attempts authenticated E2E tests will hit a wall of confusing failures until someone manually diagnoses the password mismatch
-- **False confidence:** If developers don't run E2E tests locally (relying on CI), credential drift can go undetected for days or weeks
-- **CI fragility:** If the GitHub Actions secret drifts from Clerk, the entire authenticated E2E suite silently fails (tests skip if creds are missing, but fail noisily if creds are present but wrong)
-- **Audit blocking:** Source-level verification can substitute for some browser testing, but focus-ring visibility, hover visual changes, and keyboard navigation can only be validated with a live browser session
+- Neon/Postgres: `DATABASE_URL`
+- Clerk: `CLERK_SECRET_KEY`, `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, `CLERK_WEBHOOK_SIGNING_SECRET`
+- Stripe: `STRIPE_SECRET_KEY`, `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`, `STRIPE_WEBHOOK_SECRET`, `NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY`, `NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL`
+- Sentry: `NEXT_PUBLIC_SENTRY_DSN`, `SENTRY_DSN`
+- Cron auth: `CRON_SECRET`
+- E2E auth: `E2E_CLERK_USER_USERNAME`, `E2E_CLERK_USER_PASSWORD`
 
-## Resolution
+Audit findings:
 
-### Option A: Pre-Flight Credential Verification (Recommended)
+- `lib/env.ts` enforces strong validation for DB, Stripe, and Clerk rules.
+- `.env.example` and runtime expectations are not fully aligned for non-E2E concerns (notably `CRON_SECRET`/Sentry expectations), which creates separate drift risk outside this debt item's E2E scope.
 
-Add a setup step in `tests/e2e/global.setup.ts` that verifies the E2E password against the Clerk Backend API **before** any tests run. If verification fails, skip all authenticated tests with a clear, actionable error message.
+### 4. CI secret handling
 
-```typescript
-// In global.setup.ts, after clerkSetup():
-setup('verify E2E credentials', async () => {
-  if (!process.env.E2E_CLERK_USER_USERNAME || !process.env.E2E_CLERK_USER_PASSWORD) {
-    setup.skip();
-    return;
+`.github/workflows/ci.yml` uses dummy fallbacks for several Clerk/Stripe values. This avoids hard CI failure for missing secrets but can mask drift until runtime behavior fails.
+
+## Drift Risk Matrix
+
+| Credential | Used by E2E setup path | If missing today | If wrong/stale today | Risk class |
+|---|---:|---|---|---|
+| `DATABASE_URL` | Yes | Loud throw (integration + seeder) | Loud DB connect error | Noisy |
+| `CLERK_SECRET_KEY` | Yes | Loud throw in seeder | Loud Clerk API error | Noisy |
+| `E2E_CLERK_USER_USERNAME` | Yes | Seeder skip path in global setup; spec-level skips | Clerk login fails later | Silent/late |
+| `E2E_CLERK_USER_PASSWORD` | Yes | Spec-level skips / missing-credential throw | Clerk login fails later | Silent/late |
+| `STRIPE_SECRET_KEY` | Yes | Seeder skip path in global setup | Stripe API error during seeding | Silent when missing, noisy when stale |
+| `NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY` | Yes (seeding) | Loud throw in seeder | Stripe invalid-price error | Noisy |
+| `CRON_SECRET` | No (not in E2E setup) | Not validated by E2E today | Runtime cron auth mismatch risk | Separate debt |
+| `SENTRY_DSN` / `NEXT_PUBLIC_SENTRY_DSN` | No (not in E2E setup) | Not blocking E2E | Telemetry loss risk | Separate debt |
+
+## Definitive Decision
+
+Implement **one** fail-fast credential preflight in E2E global setup.
+
+There is no Option A/Option B split anymore.
+
+### Final architecture
+
+- Add `tests/e2e/helpers/credential-health-check.ts`.
+- Add `runE2ECredentialHealthCheck()` that executes a small validator list.
+- Call it once from `tests/e2e/global.setup.ts` before seeding/spec execution.
+- Remove silent `setup.skip()` behavior for missing E2E seed credentials.
+- Throw one aggregated, actionable error if any check fails.
+
+This satisfies:
+
+- **Single Responsibility:** one module owns credential health checks.
+- **Dependency Inversion:** validators are abstractions (`CredentialValidator`) invoked by orchestrator.
+- **Open/Closed:** add new validators by appending to a list, no orchestrator rewrite.
+- **No over-engineering:** exactly 3 service validators (DB, Clerk, Stripe) because these are actual E2E setup dependencies.
+
+## Concrete Implementation Spec (Do This Exactly)
+
+### A. New module: `tests/e2e/helpers/credential-health-check.ts`
+
+```ts
+import Stripe from 'stripe';
+import { Client } from 'pg';
+
+type CredentialValidator = {
+  id: string;
+  run: () => Promise<void>;
+};
+
+class CredentialValidationError extends Error {
+  constructor(
+    public readonly code: string,
+    message: string,
+    public readonly fix: string,
+  ) {
+    super(message);
+    this.name = 'CredentialValidationError';
   }
+}
 
-  const clerkSecretKey = process.env.CLERK_SECRET_KEY;
-  if (!clerkSecretKey) {
-    throw new Error('CLERK_SECRET_KEY required for E2E credential verification');
-  }
+export async function runE2ECredentialHealthCheck(): Promise<void> {
+  const validators: CredentialValidator[] = [
+    databaseValidator,
+    clerkValidator,
+    stripeValidator,
+  ];
 
-  // 1. Resolve user ID
-  const email = process.env.E2E_CLERK_USER_USERNAME;
-  const usersRes = await fetch(
-    `https://api.clerk.com/v1/users?email_address=${encodeURIComponent(email)}&limit=1`,
-    { headers: { Authorization: `Bearer ${clerkSecretKey}` } },
-  );
-  const users = await usersRes.json();
-  if (!Array.isArray(users) || users.length === 0) {
-    throw new Error(
-      `E2E CREDENTIAL ERROR: No Clerk user found for ${email}. ` +
-      `Create the user in the Clerk dashboard or update E2E_CLERK_USER_USERNAME.`
-    );
-  }
+  const failures: CredentialValidationError[] = [];
 
-  // 2. Verify password
-  const userId = users[0].id;
-  const verifyRes = await fetch(
-    `https://api.clerk.com/v1/users/${userId}/verify_password`,
-    {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${clerkSecretKey}` },
-      body: new URLSearchParams({ password: process.env.E2E_CLERK_USER_PASSWORD }),
-    },
-  );
-  const result = await verifyRes.json();
+  for (const validator of validators) {
+    try {
+      await validator.run();
+    } catch (error) {
+      if (error instanceof CredentialValidationError) {
+        failures.push(error);
+        continue;
+      }
 
-  if (!result.verified) {
-    throw new Error(
-      `E2E CREDENTIAL ERROR: Password in E2E_CLERK_USER_PASSWORD does not match ` +
-      `Clerk's stored password for ${email} (${userId}). ` +
-      `Reset the password in the Clerk dashboard to match .env.local, ` +
-      `or update .env.local to match Clerk. ` +
-      `CLI fix: curl -X PATCH https://api.clerk.com/v1/users/${userId} ` +
-      `-H "Authorization: Bearer $CLERK_SECRET_KEY" ` +
-      `-d "password=<new-password>"`
-    );
-  }
-});
-```
-
-This turns a wall of 15+ confusing test failures into a single, actionable setup error.
-
-### Option B: Wrap signInWithClerkPassword Error
-
-Minimum viable fix — catch the SDK error and re-throw with context:
-
-```typescript
-export async function signInWithClerkPassword(page: Page): Promise<void> {
-  if (!clerkUsername || !clerkPassword) {
-    throw new Error('Missing Clerk E2E credentials');
-  }
-
-  try {
-    await page.goto('/sign-in');
-    await clerk.signIn({
-      page,
-      signInParams: {
-        strategy: 'password',
-        identifier: clerkUsername,
-        password: clerkPassword,
-      },
-    });
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    if (message.includes('incorrect') || message.includes('Password')) {
-      throw new Error(
-        `E2E CREDENTIAL DRIFT: Clerk rejected the password for ${clerkUsername}. ` +
-        `The password in E2E_CLERK_USER_PASSWORD does not match Clerk's stored value. ` +
-        `Reset it in the Clerk dashboard or via API. Original: ${message}`
+      failures.push(
+        new CredentialValidationError(
+          'E2E_PREFLIGHT:UNEXPECTED',
+          `[${validator.id}] Unexpected preflight error: ${String(error)}`,
+          'Inspect the stack trace above and fix the validator implementation or external dependency.',
+        ),
       );
     }
-    throw error;
+  }
+
+  if (failures.length > 0) {
+    const lines = [
+      `[E2E_PREFLIGHT] Credential validation failed (${failures.length}):`,
+      ...failures.flatMap((failure, index) => [
+        `${index + 1}. [${failure.code}] ${failure.message}`,
+        `   Fix: ${failure.fix}`,
+      ]),
+    ];
+
+    throw new Error(lines.join('\n'));
   }
 }
 ```
 
-### Recommendation
+### B. Required validators (blocking)
 
-**Implement Option A.** It catches the problem once at setup, prevents 15+ redundant failures, and provides a copy-pasteable CLI fix in the error message. Option B can be added as defense-in-depth but doesn't prevent the wall of failures.
+1. `databaseValidator`
 
-## Verification
+- Validate `DATABASE_URL` is present.
+- Open `pg` connection and run `SELECT 1`.
+- Close connection.
 
-1. Set `E2E_CLERK_USER_PASSWORD` to a known-incorrect value
-2. Run `pnpm test:e2e`
-3. Verify a single, clear error appears in setup (not 15+ test failures)
-4. Error message includes the user ID, email, and actionable fix instructions
-5. Reset password to correct value and verify tests pass
+Error messages:
 
-## Related
+- `[E2E_PREFLIGHT:DATABASE_URL_MISSING] DATABASE_URL is missing.`
+  - Fix: `Set DATABASE_URL in .env.local (dev) or repository secrets (CI).`
+- `[E2E_PREFLIGHT:DATABASE_CONNECT_FAILED] Cannot connect to Postgres with DATABASE_URL.`
+  - Fix: `Verify Neon/Postgres URL, credentials, and network reachability.`
 
-- [DEBT-104](../_archive/debt/debt-104-missing-e2e-test-credentials.md) — Original "missing credentials" debt (addressed presence, not correctness)
-- [DEBT-239](../_archive/debt/debt-239-env-local-stripe-account-mismatch.md) — Recent env credential gaps audit
-- [DEBT-205](../_archive/debt/debt-205-e2e-selector-drift-from-ui-refactors.md) — Similar drift problem with E2E selectors
-- `tests/e2e/helpers/clerk-auth.ts` — Current `hasClerkCredentials` implementation
-- `tests/e2e/global.setup.ts` — Where pre-flight verification should be added
+2. `clerkValidator`
+
+- Validate presence of `CLERK_SECRET_KEY`, `E2E_CLERK_USER_USERNAME`, `E2E_CLERK_USER_PASSWORD`.
+- Use Clerk Backend API with `CLERK_SECRET_KEY`:
+  - Resolve user by email (`E2E_CLERK_USER_USERNAME`).
+  - Call `verify_password` for that user with `E2E_CLERK_USER_PASSWORD`.
+
+Error messages:
+
+- `[E2E_PREFLIGHT:CLERK_SECRET_KEY_MISSING] CLERK_SECRET_KEY is missing.`
+  - Fix: `Set CLERK_SECRET_KEY in .env.local or CI secrets.`
+- `[E2E_PREFLIGHT:E2E_CLERK_USER_USERNAME_MISSING] E2E_CLERK_USER_USERNAME is missing.`
+  - Fix: `Set E2E_CLERK_USER_USERNAME to the E2E Clerk user email.`
+- `[E2E_PREFLIGHT:E2E_CLERK_USER_PASSWORD_MISSING] E2E_CLERK_USER_PASSWORD is missing.`
+  - Fix: `Set E2E_CLERK_USER_PASSWORD to match the Clerk E2E user password.`
+- `[E2E_PREFLIGHT:CLERK_USER_NOT_FOUND] Clerk user "<email>" was not found.`
+  - Fix: `Create that user in Clerk Dashboard or update E2E_CLERK_USER_USERNAME.`
+- `[E2E_PREFLIGHT:CLERK_PASSWORD_INVALID] Password for Clerk user "<email>" is out of sync.`
+  - Fix: `Reset password in Clerk and update E2E_CLERK_USER_PASSWORD to the same value.`
+- `[E2E_PREFLIGHT:CLERK_API_UNAVAILABLE] Clerk API request failed (5xx/timeout).`
+  - Fix: `Retry after Clerk/API network recovery; do not change secrets until availability is restored.`
+
+3. `stripeValidator`
+
+- Validate presence of `STRIPE_SECRET_KEY` and `NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY`.
+- Use Stripe SDK in test mode:
+  - `stripe.accounts.retrieve()` to validate API key.
+  - `stripe.prices.retrieve(NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY)` to validate price ID.
+
+Error messages:
+
+- `[E2E_PREFLIGHT:STRIPE_SECRET_KEY_MISSING] STRIPE_SECRET_KEY is missing.`
+  - Fix: `Set STRIPE_SECRET_KEY in .env.local or CI secrets.`
+- `[E2E_PREFLIGHT:STRIPE_MONTHLY_PRICE_ID_MISSING] NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY is missing.`
+  - Fix: `Set NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY to a valid Stripe test price ID.`
+- `[E2E_PREFLIGHT:STRIPE_SECRET_KEY_INVALID] Stripe rejected STRIPE_SECRET_KEY.`
+  - Fix: `Use a valid Stripe test secret key (sk_test_...).`
+- `[E2E_PREFLIGHT:STRIPE_MONTHLY_PRICE_ID_INVALID] Stripe price "<id>" was not found.`
+  - Fix: `Update NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY to an existing test-mode price ID.`
+
+### C. Global setup integration: `tests/e2e/global.setup.ts`
+
+Replace current silent seeding skip path with hard preflight gate.
+
+```ts
+import { runE2ECredentialHealthCheck } from './helpers/credential-health-check';
+
+async function globalSetup(config: FullConfig) {
+  await runE2ECredentialHealthCheck();
+  await clerkSetup();
+  await seedTestSubscription();
+}
+```
+
+Required behavior:
+
+- Preflight runs once.
+- Any failed check aborts the suite immediately with one aggregated error.
+- No `setup.skip()` for missing E2E seed credentials.
+
+## Scope Boundary (Explicit)
+
+This debt item covers credentials required for deterministic E2E execution: **DB + Clerk + Stripe**.
+
+- `CRON_SECRET` and Sentry DSNs are real drift risks, but they are not consumed by E2E setup path.
+- They must be handled in runtime config hardening, not in this E2E preflight module, to avoid coupling product telemetry/cron concerns to E2E auth/payment setup.
+
+## Dev vs CI vs Production Validation
+
+- **Dev (local E2E):** preflight validates live DB/Clerk/Stripe credentials before browser tests start.
+- **CI (Playwright):** preflight fails loudly when secrets are dummy/missing/stale; no masked skip path.
+- **Production runtime:** still governed by `lib/env.ts` + runtime handlers; this debt does not alter production startup logic.
+
+## Verification Plan (Required)
+
+Run each scenario by editing env values and executing `pnpm test:e2e`.
+
+1. `DATABASE_URL` missing
+- Expected: one setup failure with `[E2E_PREFLIGHT:DATABASE_URL_MISSING]`.
+
+2. `DATABASE_URL` invalid host/password
+- Expected: one setup failure with `[E2E_PREFLIGHT:DATABASE_CONNECT_FAILED]`.
+
+3. `CLERK_SECRET_KEY` missing
+- Expected: one setup failure with `[E2E_PREFLIGHT:CLERK_SECRET_KEY_MISSING]`.
+
+4. `E2E_CLERK_USER_USERNAME` typo (nonexistent user)
+- Expected: one setup failure with `[E2E_PREFLIGHT:CLERK_USER_NOT_FOUND]`.
+
+5. `E2E_CLERK_USER_PASSWORD` wrong
+- Expected: one setup failure with `[E2E_PREFLIGHT:CLERK_PASSWORD_INVALID]`.
+
+6. `STRIPE_SECRET_KEY` invalid
+- Expected: one setup failure with `[E2E_PREFLIGHT:STRIPE_SECRET_KEY_INVALID]`.
+
+7. `NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY` invalid
+- Expected: one setup failure with `[E2E_PREFLIGHT:STRIPE_MONTHLY_PRICE_ID_INVALID]`.
+
+8. Multiple invalid credentials at once
+- Expected: one aggregated failure listing all failing checks, each with a `Fix:` line.
+
+## Acceptance Criteria
+
+- No option language remains in this debt item.
+- E2E credential drift cannot produce repeated downstream auth failures before a clear setup error.
+- Global setup emits a single actionable failure report when credentials drift.
+- Adding a new credential check requires only adding one validator to the list.
+
