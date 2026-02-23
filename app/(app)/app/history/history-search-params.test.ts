@@ -7,7 +7,9 @@ import {
   parseHistoryTab,
   parseLimit,
   parseNonNegativeInt,
+  parseQuestionsSort,
   parseResultFilter,
+  parseSessionModeFilter,
   parseSourceFilter,
   parseTagSlugFilter,
 } from './history-search-params';
@@ -105,11 +107,41 @@ describe('app/(app)/app/history/history-search-params', () => {
     });
   });
 
+  describe('parseSessionModeFilter', () => {
+    it('defaults to all for missing or invalid values', () => {
+      expect(parseSessionModeFilter(undefined)).toBe('all');
+      expect(parseSessionModeFilter('nope')).toBe('all');
+    });
+
+    it('parses tutor and exam values', () => {
+      expect(parseSessionModeFilter('tutor')).toBe('tutor');
+      expect(parseSessionModeFilter('exam')).toBe('exam');
+    });
+  });
+
+  describe('parseQuestionsSort', () => {
+    it('defaults to recent for missing or invalid values', () => {
+      expect(parseQuestionsSort(undefined)).toBe('recent');
+      expect(parseQuestionsSort('nope')).toBe('recent');
+    });
+
+    it('parses supported sort values', () => {
+      expect(parseQuestionsSort('recent')).toBe('recent');
+      expect(parseQuestionsSort('incorrect-first')).toBe('incorrect-first');
+      expect(parseQuestionsSort('correct-first')).toBe('correct-first');
+      expect(parseQuestionsSort('difficulty')).toBe('difficulty');
+    });
+  });
+
   describe('href builders', () => {
     it('builds sessions tab hrefs with pagination', () => {
       expect(buildHistorySessionsHref({ limit: 20, offset: 0 })).toBe(
         `${ROUTES.APP_HISTORY}?tab=sessions&offset=0&limit=20`,
       );
+
+      expect(
+        buildHistorySessionsHref({ limit: 20, offset: 0, mode: 'tutor' }),
+      ).toBe(`${ROUTES.APP_HISTORY}?tab=sessions&offset=0&limit=20&mode=tutor`);
     });
 
     it('builds questions tab hrefs with pagination and optional filters', () => {
@@ -146,10 +178,11 @@ describe('app/(app)/app/history/history-search-params', () => {
             tagSlug: 'alcohol',
             result: 'incorrect',
             source: 'exam',
+            sort: 'incorrect-first',
           },
         }),
       ).toBe(
-        `${ROUTES.APP_HISTORY}?tab=questions&offset=0&limit=20&difficulty=hard&tag=alcohol&result=incorrect&source=exam`,
+        `${ROUTES.APP_HISTORY}?tab=questions&offset=0&limit=20&difficulty=hard&tag=alcohol&result=incorrect&source=exam&sort=incorrect-first`,
       );
     });
   });

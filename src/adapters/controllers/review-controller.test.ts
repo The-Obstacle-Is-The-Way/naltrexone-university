@@ -135,6 +135,7 @@ describe('review-controller', () => {
           source: null,
           difficulty: null,
           tagSlug: null,
+          sort: null,
         },
       ]);
     });
@@ -157,6 +158,7 @@ describe('review-controller', () => {
           source: 'adhoc',
           difficulty: null,
           tagSlug: null,
+          sort: null,
         },
       ]);
     });
@@ -184,6 +186,30 @@ describe('review-controller', () => {
           source: null,
           difficulty: 'hard',
           tagSlug: 'opioids',
+          sort: null,
+        },
+      ]);
+    });
+
+    it('passes through sort filter', async () => {
+      const deps = createDeps();
+
+      const result = await getAttemptedQuestions(
+        { limit: 10, offset: 0, sort: 'incorrect-first' },
+        deps,
+      );
+
+      expect(result.ok).toBe(true);
+      expect(deps.getAttemptedQuestionsUseCase.inputs).toEqual([
+        {
+          userId: 'user_1',
+          limit: 10,
+          offset: 0,
+          result: null,
+          source: null,
+          difficulty: null,
+          tagSlug: null,
+          sort: 'incorrect-first',
         },
       ]);
     });

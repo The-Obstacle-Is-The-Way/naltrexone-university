@@ -15,7 +15,9 @@ import {
   parseHistoryTab,
   parseLimit,
   parseNonNegativeInt,
+  parseQuestionsSort,
   parseResultFilter,
+  parseSessionModeFilter,
   parseSourceFilter,
   parseTagSlugFilter,
   type QuestionsFilters,
@@ -31,17 +33,25 @@ type HistorySearchParams = {
   tab?: string;
   limit?: string;
   offset?: string;
+  mode?: string;
   difficulty?: string;
   tag?: string;
   result?: string;
   source?: string;
+  sort?: string;
 };
 
-const VISIBLE_TAG_KINDS = new Set<TagRow['kind']>([
-  'topic',
-  'substance',
-  'treatment',
-]);
+type VisibleTagKind = 'topic' | 'substance' | 'treatment';
+
+function isVisibleTagKind(kind: TagRow['kind']): kind is VisibleTagKind {
+  return kind === 'topic' || kind === 'substance' || kind === 'treatment';
+}
+
+function getTagKindSortValue(kind: VisibleTagKind): number {
+  if (kind === 'topic') return 0;
+  if (kind === 'substance') return 1;
+  return 2;
+}
 
 export function createHistoryPage(deps?: {
   getSessionHistoryFn?: typeof getSessionHistory;
@@ -69,6 +79,7 @@ export function createHistoryPage(deps?: {
         tagSlug: parseTagSlugFilter(params.tag),
         result: parseResultFilter(params.result),
         source: parseSourceFilter(params.source),
+        sort: parseQuestionsSort(params.sort),
       };
 
       const [result, tagsResult] = await Promise.all([
@@ -79,17 +90,22 @@ export function createHistoryPage(deps?: {
           source: questionsFilters.source ?? undefined,
           difficulty: questionsFilters.difficulty ?? undefined,
           tagSlug: questionsFilters.tagSlug ?? undefined,
+          sort: questionsFilters.sort ?? undefined,
         }),
         getTagsFn({}),
       ]);
 
       const tagOptions = tagsResult.ok
         ? tagsResult.data.rows
-            .filter((t) => VISIBLE_TAG_KINDS.has(t.kind))
-            .map((t) => ({ slug: t.slug, name: t.name }))
+            .filter((t): t is TagRow & { kind: VisibleTagKind } =>
+              isVisibleTagKind(t.kind),
+            )
+            .map((t) => ({ slug: t.slug, name: t.name, kind: t.kind }))
             .sort(
               (a, b) =>
-                a.name.localeCompare(b.name) || a.slug.localeCompare(b.slug),
+                getTagKindSortValue(a.kind) - getTagKindSortValue(b.kind) ||
+                a.name.localeCompare(b.name) ||
+                a.slug.localeCompare(b.slug),
             )
         : [];
 
@@ -103,13 +119,21 @@ export function createHistoryPage(deps?: {
       );
     }
 
+    const modeFilter = parseSessionModeFilter(params.mode);
     const result: ActionResult<GetSessionHistoryOutput> =
       await getSessionHistoryFn({
         limit,
         offset,
+        mode: modeFilter === 'all' ? undefined : modeFilter,
       });
 
-    return <HistoryPageClient activeTab="sessions" sessionsResult={result} />;
+    return (
+      <HistoryPageClient
+        activeTab="sessions"
+        sessionsResult={result}
+        sessionsModeFilter={modeFilter}
+      />
+    );
   };
 }
 

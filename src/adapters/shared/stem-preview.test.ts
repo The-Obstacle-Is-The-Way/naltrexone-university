@@ -12,6 +12,15 @@ describe('getStemPreview', () => {
     ).toBe('A very long ste...');
   });
 
+  it('prefers truncating at a sentence boundary when one fits inside the limit', () => {
+    expect(
+      getStemPreview(
+        'A patient has severe withdrawal symptoms. The second sentence keeps going with more detail.',
+        54,
+      ),
+    ).toBe('A patient has severe withdrawal symptoms.');
+  });
+
   it('strips markdown formatting and links', () => {
     expect(
       getStemPreview('# Heading with [link](https://example.com)', 100),

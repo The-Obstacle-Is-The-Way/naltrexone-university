@@ -3,6 +3,7 @@ import type {
   AttemptAllQuestionsReader,
   AttemptedQuestionsFilters,
   AttemptedQuestionsResultFilter,
+  AttemptedQuestionsSort,
   AttemptedQuestionsSourceFilter,
   QuestionRepository,
 } from '@/src/application/ports/repositories';
@@ -18,6 +19,7 @@ export type GetAttemptedQuestionsInput = {
   source?: AttemptedQuestionsSourceFilter | null;
   difficulty?: QuestionDifficulty | null;
   tagSlug?: string | null;
+  sort?: AttemptedQuestionsSort | null;
 };
 
 export type AvailableAttemptedQuestionRow = {
@@ -68,6 +70,7 @@ export class GetAttemptedQuestionsUseCase {
       source: input.source ?? null,
       difficulty: input.difficulty ?? null,
       tagSlug: input.tagSlug ?? null,
+      sort: input.sort ?? null,
     };
 
     const [totalCount, page] = await Promise.all([

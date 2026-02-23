@@ -559,6 +559,128 @@ describe('review controller (integration)', () => {
       },
     ]);
   });
+
+  it('applies incorrect-first ordering before pagination across pages', async () => {
+    const user = await createUser();
+    const correctRecent = await createQuestion({
+      slug: `it-correct-recent-${randomUUID()}`,
+      status: 'published',
+      difficulty: 'easy',
+    });
+    const incorrectRecent = await createQuestion({
+      slug: `it-incorrect-recent-${randomUUID()}`,
+      status: 'published',
+      difficulty: 'easy',
+    });
+    const correctOld = await createQuestion({
+      slug: `it-correct-old-${randomUUID()}`,
+      status: 'published',
+      difficulty: 'easy',
+    });
+    const incorrectOld = await createQuestion({
+      slug: `it-incorrect-old-${randomUUID()}`,
+      status: 'published',
+      difficulty: 'easy',
+    });
+
+    await db.insert(schema.attempts).values([
+      {
+        userId: user.id,
+        questionId: correctRecent.id,
+        practiceSessionId: null,
+        selectedChoiceId: correctRecent.correctChoiceId,
+        isCorrect: true,
+        timeSpentSeconds: 1,
+        answeredAt: new Date('2026-02-04T00:00:00.000Z'),
+      },
+      {
+        userId: user.id,
+        questionId: incorrectRecent.id,
+        practiceSessionId: null,
+        selectedChoiceId: incorrectRecent.wrongChoiceId,
+        isCorrect: false,
+        timeSpentSeconds: 1,
+        answeredAt: new Date('2026-02-03T00:00:00.000Z'),
+      },
+      {
+        userId: user.id,
+        questionId: correctOld.id,
+        practiceSessionId: null,
+        selectedChoiceId: correctOld.correctChoiceId,
+        isCorrect: true,
+        timeSpentSeconds: 1,
+        answeredAt: new Date('2026-02-02T00:00:00.000Z'),
+      },
+      {
+        userId: user.id,
+        questionId: incorrectOld.id,
+        practiceSessionId: null,
+        selectedChoiceId: incorrectOld.wrongChoiceId,
+        isCorrect: false,
+        timeSpentSeconds: 1,
+        answeredAt: new Date('2026-02-01T00:00:00.000Z'),
+      },
+    ]);
+
+    const authGateway: AuthGateway = {
+      getCurrentUser: async () => ({
+        id: user.id,
+        email: user.email,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      }),
+      requireUser: async () => ({
+        id: user.id,
+        email: user.email,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      }),
+    };
+
+    const deps = {
+      authGateway,
+      checkEntitlementUseCase: {
+        execute: async () => ({ isEntitled: true }),
+      },
+      getAttemptedQuestionsUseCase: new GetAttemptedQuestionsUseCase(
+        new DrizzleAttemptRepository(db),
+        new DrizzleQuestionRepository(db),
+        new FakeLogger(),
+      ),
+    };
+
+    const firstPage = await getAttemptedQuestions(
+      { limit: 2, offset: 0, sort: 'incorrect-first' },
+      deps,
+    );
+
+    expect(firstPage.ok).toBe(true);
+    if (!firstPage.ok) return;
+
+    expect(firstPage.data.rows.map((row) => row.questionId)).toEqual([
+      incorrectRecent.id,
+      incorrectOld.id,
+    ]);
+    expect(firstPage.data.rows.every((row) => row.isCorrect === false)).toBe(
+      true,
+    );
+
+    const secondPage = await getAttemptedQuestions(
+      { limit: 2, offset: 2, sort: 'incorrect-first' },
+      deps,
+    );
+
+    expect(secondPage.ok).toBe(true);
+    if (!secondPage.ok) return;
+
+    expect(secondPage.data.rows.map((row) => row.questionId)).toEqual([
+      correctRecent.id,
+      correctOld.id,
+    ]);
+    expect(secondPage.data.rows.every((row) => row.isCorrect === true)).toBe(
+      true,
+    );
+  });
 });
 
 describe('stripe webhook controller (integration)', () => {

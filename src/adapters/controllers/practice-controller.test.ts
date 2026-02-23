@@ -764,6 +764,7 @@ describe('practice-controller', () => {
               sessionId: '11111111-1111-1111-1111-111111111111',
               mode: 'exam',
               questionCount: 20,
+              firstQuestionSlug: 'question-1',
               answered: 20,
               correct: 15,
               accuracy: 0.75,
@@ -788,6 +789,7 @@ describe('practice-controller', () => {
               sessionId: '11111111-1111-1111-1111-111111111111',
               mode: 'exam',
               questionCount: 20,
+              firstQuestionSlug: 'question-1',
               answered: 20,
               correct: 15,
               accuracy: 0.75,
@@ -802,7 +804,21 @@ describe('practice-controller', () => {
         },
       });
       expect(deps.getSessionHistoryUseCase.inputs).toEqual([
-        { userId: 'user_1', limit: 20, offset: 0 },
+        { userId: 'user_1', limit: 20, offset: 0, mode: null },
+      ]);
+    });
+
+    it('passes optional mode filter to session history use case', async () => {
+      const deps = createDeps();
+
+      const result = await getSessionHistory(
+        { limit: 20, offset: 0, mode: 'tutor' },
+        deps,
+      );
+
+      expect(result).toMatchObject({ ok: true });
+      expect(deps.getSessionHistoryUseCase.inputs).toEqual([
+        { userId: 'user_1', limit: 20, offset: 0, mode: 'tutor' },
       ]);
     });
   });

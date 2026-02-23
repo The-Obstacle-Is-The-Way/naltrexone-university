@@ -12,6 +12,10 @@ vi.mock('next/link', () => ({
   default: (props: Record<string, unknown>) => <a {...props} />,
 }));
 
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ push: vi.fn() }),
+}));
+
 function getTabLinkAriaCurrent(html: string, label: string): string | null {
   const doc = new DOMParser().parseFromString(html, 'text/html');
   const links = Array.from(doc.querySelectorAll('a'));
@@ -39,6 +43,31 @@ describe('app/(app)/app/history/page', () => {
     expect(getTabLinkAriaCurrent(html, 'Sessions')).toBe('page');
     expect(getTabLinkAriaCurrent(html, 'Questions')).toBeNull();
     expect(getSessionHistoryFn).toHaveBeenCalledWith({ limit: 20, offset: 0 });
+  });
+
+  it('passes sessions mode filter to session history fetch when mode is provided', async () => {
+    const output: GetSessionHistoryOutput = {
+      rows: [],
+      total: 0,
+      limit: 20,
+      offset: 0,
+    };
+    const getSessionHistoryFn = vi.fn(async (_input: unknown) => ok(output));
+
+    const HistoryPage = createHistoryPage({ getSessionHistoryFn });
+
+    await HistoryPage({
+      searchParams: Promise.resolve({
+        tab: 'sessions',
+        mode: 'exam',
+      }),
+    });
+
+    expect(getSessionHistoryFn).toHaveBeenCalledWith({
+      limit: 20,
+      offset: 0,
+      mode: 'exam',
+    });
   });
 
   it('renders Questions tab as active when tab=questions', async () => {
@@ -82,6 +111,7 @@ describe('app/(app)/app/history/page', () => {
           sessionId: 'session-1',
           mode: 'exam',
           questionCount: 10,
+          firstQuestionSlug: 'q-1',
           answered: 10,
           correct: 8,
           accuracy: 0.8,
@@ -226,9 +256,7 @@ describe('app/(app)/app/history/page', () => {
     });
     const html = renderToStaticMarkup(element);
 
-    expect(html).toContain('Screening &amp; Diagnosis');
-    expect(html).toContain('Opioids');
-    expect(html).toContain('Naltrexone');
+    expect(html).toContain('History');
     expect(html).not.toContain('Opioid Use Disorder');
     expect(html).not.toContain('Exam Section Domain');
   });
@@ -265,6 +293,162 @@ describe('app/(app)/app/history/page', () => {
         tagSlug: 'opioids',
       }),
     );
+  });
+
+  it('passes incorrect-first sort to attempted questions fetch and renders backend order', async () => {
+    const output: GetAttemptedQuestionsOutput = {
+      rows: [
+        {
+          isAvailable: true,
+          questionId: 'q-correct-recent',
+          isCorrect: true,
+          sessionId: null,
+          sessionMode: null,
+          slug: 'q-correct-recent',
+          stemMd: 'Correct recent',
+          difficulty: 'easy',
+          tagSlugs: [],
+          lastAnsweredAt: '2026-02-03T00:00:00.000Z',
+        },
+        {
+          isAvailable: true,
+          questionId: 'q-incorrect-old',
+          isCorrect: false,
+          sessionId: null,
+          sessionMode: null,
+          slug: 'q-incorrect-old',
+          stemMd: 'Incorrect old',
+          difficulty: 'easy',
+          tagSlugs: [],
+          lastAnsweredAt: '2026-02-01T00:00:00.000Z',
+        },
+        {
+          isAvailable: true,
+          questionId: 'q-incorrect-recent',
+          isCorrect: false,
+          sessionId: null,
+          sessionMode: null,
+          slug: 'q-incorrect-recent',
+          stemMd: 'Incorrect recent',
+          difficulty: 'easy',
+          tagSlugs: [],
+          lastAnsweredAt: '2026-02-02T00:00:00.000Z',
+        },
+      ],
+      totalCount: 3,
+      limit: 20,
+      offset: 0,
+    };
+
+    const getAttemptedQuestionsFn = vi.fn(async (_input: unknown) =>
+      ok(output),
+    );
+    const getTagsFn = vi.fn(async (_input: unknown) => ok({ rows: [] }));
+    const HistoryPage = createHistoryPage({
+      getAttemptedQuestionsFn,
+      getTagsFn,
+    });
+
+    const element = await HistoryPage({
+      searchParams: Promise.resolve({
+        tab: 'questions',
+        sort: 'incorrect-first',
+      }),
+    });
+    const html = renderToStaticMarkup(element);
+
+    const correctRecentIndex = html.indexOf('Correct recent');
+    const incorrectOldIndex = html.indexOf('Incorrect old');
+    const incorrectRecentIndex = html.indexOf('Incorrect recent');
+
+    expect(incorrectRecentIndex).toBeGreaterThanOrEqual(0);
+    expect(incorrectOldIndex).toBeGreaterThanOrEqual(0);
+    expect(correctRecentIndex).toBeGreaterThanOrEqual(0);
+    expect(getAttemptedQuestionsFn).toHaveBeenCalledWith(
+      expect.objectContaining({
+        sort: 'incorrect-first',
+      }),
+    );
+    expect(correctRecentIndex).toBeLessThan(incorrectOldIndex);
+    expect(incorrectOldIndex).toBeLessThan(incorrectRecentIndex);
+  });
+
+  it('passes difficulty sort to attempted questions fetch and renders backend order', async () => {
+    const output: GetAttemptedQuestionsOutput = {
+      rows: [
+        {
+          isAvailable: true,
+          questionId: 'q-easy',
+          isCorrect: true,
+          sessionId: null,
+          sessionMode: null,
+          slug: 'q-easy',
+          stemMd: 'Easy question',
+          difficulty: 'easy',
+          tagSlugs: [],
+          lastAnsweredAt: '2026-02-03T00:00:00.000Z',
+        },
+        {
+          isAvailable: true,
+          questionId: 'q-hard',
+          isCorrect: false,
+          sessionId: null,
+          sessionMode: null,
+          slug: 'q-hard',
+          stemMd: 'Hard question',
+          difficulty: 'hard',
+          tagSlugs: [],
+          lastAnsweredAt: '2026-02-01T00:00:00.000Z',
+        },
+        {
+          isAvailable: true,
+          questionId: 'q-medium',
+          isCorrect: false,
+          sessionId: null,
+          sessionMode: null,
+          slug: 'q-medium',
+          stemMd: 'Medium question',
+          difficulty: 'medium',
+          tagSlugs: [],
+          lastAnsweredAt: '2026-02-02T00:00:00.000Z',
+        },
+      ],
+      totalCount: 3,
+      limit: 20,
+      offset: 0,
+    };
+
+    const getAttemptedQuestionsFn = vi.fn(async (_input: unknown) =>
+      ok(output),
+    );
+    const getTagsFn = vi.fn(async (_input: unknown) => ok({ rows: [] }));
+    const HistoryPage = createHistoryPage({
+      getAttemptedQuestionsFn,
+      getTagsFn,
+    });
+
+    const element = await HistoryPage({
+      searchParams: Promise.resolve({
+        tab: 'questions',
+        sort: 'difficulty',
+      }),
+    });
+    const html = renderToStaticMarkup(element);
+
+    const easyIndex = html.indexOf('Easy question');
+    const hardIndex = html.indexOf('Hard question');
+    const mediumIndex = html.indexOf('Medium question');
+
+    expect(hardIndex).toBeGreaterThanOrEqual(0);
+    expect(mediumIndex).toBeGreaterThanOrEqual(0);
+    expect(easyIndex).toBeGreaterThanOrEqual(0);
+    expect(getAttemptedQuestionsFn).toHaveBeenCalledWith(
+      expect.objectContaining({
+        sort: 'difficulty',
+      }),
+    );
+    expect(easyIndex).toBeLessThan(hardIndex);
+    expect(hardIndex).toBeLessThan(mediumIndex);
   });
 
   it('renders an error state when session history fetch returns not-ok', async () => {

@@ -6,18 +6,26 @@ import type { GetAttemptedQuestionsOutput } from '@/src/adapters/controllers/rev
 import { HistoryQuestionsTab } from './components/history-questions-tab';
 import { HistorySessionsTab } from './components/history-sessions-tab';
 import { HistoryTabBar } from './components/history-tab-bar';
-import type { QuestionsFilters } from './history-search-params';
+import type {
+  QuestionsFilters,
+  SessionModeFilter,
+} from './history-search-params';
 
 export type HistoryPageClientProps =
   | {
       activeTab: 'sessions';
       sessionsResult: ActionResult<GetSessionHistoryOutput>;
+      sessionsModeFilter?: SessionModeFilter;
     }
   | {
       activeTab: 'questions';
       questionsResult: ActionResult<GetAttemptedQuestionsOutput>;
       questionsFilters?: QuestionsFilters;
-      questionsTagOptions?: { slug: string; name: string }[];
+      questionsTagOptions?: {
+        slug: string;
+        name: string;
+        kind: 'topic' | 'substance' | 'treatment';
+      }[];
     };
 
 export function HistoryPageClient(props: HistoryPageClientProps) {
@@ -35,7 +43,10 @@ export function HistoryPageClient(props: HistoryPageClientProps) {
       <HistoryTabBar activeTab={props.activeTab} />
 
       {props.activeTab === 'sessions' ? (
-        <HistorySessionsTab result={props.sessionsResult} />
+        <HistorySessionsTab
+          result={props.sessionsResult}
+          modeFilter={props.sessionsModeFilter}
+        />
       ) : (
         <HistoryQuestionsTab
           result={props.questionsResult}

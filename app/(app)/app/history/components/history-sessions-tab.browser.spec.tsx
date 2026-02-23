@@ -49,6 +49,7 @@ describe('HistorySessionsTab (browser)', () => {
               sessionId: 'session-1',
               mode: 'exam',
               questionCount: 10,
+              firstQuestionSlug: 'q-1',
               answered: 10,
               correct: 8,
               accuracy: 0.8,
@@ -71,6 +72,64 @@ describe('HistorySessionsTab (browser)', () => {
     });
 
     await expect.element(screen.getByText('Stem for q1')).toBeVisible();
+  });
+
+  it('renders a Review session action in the expanded breakdown panel', async () => {
+    getPracticeSessionReviewMock.mockResolvedValue(
+      ok({
+        sessionId: 'session-1',
+        mode: 'exam',
+        totalCount: 1,
+        answeredCount: 1,
+        markedCount: 0,
+        rows: [
+          {
+            questionId: 'q1',
+            slug: 'q-1',
+            order: 1,
+            isAvailable: true,
+            stemMd: 'Stem for q1',
+            difficulty: 'easy',
+            isAnswered: true,
+            isCorrect: false,
+            markedForReview: false,
+          },
+        ],
+      }),
+    );
+
+    const screen = await render(
+      <HistorySessionsTab
+        result={ok({
+          rows: [
+            {
+              sessionId: 'session-1',
+              mode: 'exam',
+              questionCount: 10,
+              firstQuestionSlug: 'q-1',
+              answered: 10,
+              correct: 8,
+              accuracy: 0.8,
+              durationSeconds: 1200,
+              startedAt: '2026-02-07T00:00:00.000Z',
+              endedAt: '2026-02-07T00:20:00.000Z',
+            },
+          ],
+          total: 1,
+          limit: 20,
+          offset: 0,
+        })}
+      />,
+    );
+
+    await screen.getByRole('button', { name: 'View breakdown' }).click();
+
+    await expect
+      .element(screen.getByRole('link', { name: 'Review session' }))
+      .toHaveAttribute(
+        'href',
+        '/app/questions/q-1?from=history&mode=review&sessionId=session-1&historyHref=%2Fapp%2Fhistory%3Ftab%3Dsessions%26offset%3D0%26limit%3D20',
+      );
   });
 
   it('threads canonical historyHref into breakdown question links', async () => {
@@ -105,6 +164,7 @@ describe('HistorySessionsTab (browser)', () => {
               sessionId: 'session-1',
               mode: 'exam',
               questionCount: 10,
+              firstQuestionSlug: 'q-1',
               answered: 10,
               correct: 8,
               accuracy: 0.8,
@@ -162,6 +222,7 @@ describe('HistorySessionsTab (browser)', () => {
               sessionId: 'session-1',
               mode: 'exam',
               questionCount: 10,
+              firstQuestionSlug: 'q-1',
               answered: 10,
               correct: 8,
               accuracy: 0.8,
@@ -243,6 +304,7 @@ describe('HistorySessionsTab (browser)', () => {
               sessionId: 'session-1',
               mode: 'exam',
               questionCount: 10,
+              firstQuestionSlug: 'q-1',
               answered: 10,
               correct: 8,
               accuracy: 0.8,
@@ -254,6 +316,7 @@ describe('HistorySessionsTab (browser)', () => {
               sessionId: 'session-2',
               mode: 'tutor',
               questionCount: 10,
+              firstQuestionSlug: 'q-2',
               answered: 0,
               correct: 0,
               accuracy: 0,
@@ -278,7 +341,7 @@ describe('HistorySessionsTab (browser)', () => {
 
     await screen
       .getByRole('button', {
-        name: 'View breakdown for Tutor session: 0/0 correct (—), 3m, Feb 8, 2026',
+        name: 'View breakdown for Tutor session: 0/10 correct (0%), 3m, Feb 8, 2026',
       })
       .click();
     await expect.element(screen.getByText('Stem for session 2')).toBeVisible();

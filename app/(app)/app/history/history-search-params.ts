@@ -1,17 +1,24 @@
 import { ROUTES } from '@/lib/routes';
 
 export type HistoryTab = 'sessions' | 'questions';
+export type SessionModeFilter = 'all' | 'tutor' | 'exam';
 
 export type DifficultyFilter = 'easy' | 'medium' | 'hard';
 
 export type ResultFilter = 'correct' | 'incorrect';
 export type SourceFilter = 'tutor' | 'exam' | 'adhoc';
+export type QuestionsSort =
+  | 'recent'
+  | 'incorrect-first'
+  | 'correct-first'
+  | 'difficulty';
 
 export type QuestionsFilters = {
   difficulty?: DifficultyFilter | null;
   tagSlug?: string | null;
   result?: ResultFilter | null;
   source?: SourceFilter | null;
+  sort?: QuestionsSort | null;
 };
 
 export function parseHistoryTab(value: string | undefined): HistoryTab {
@@ -67,14 +74,33 @@ export function parseSourceFilter(
   return null;
 }
 
+export function parseSessionModeFilter(
+  value: string | undefined,
+): SessionModeFilter {
+  if (value === 'tutor') return value;
+  if (value === 'exam') return value;
+  return 'all';
+}
+
+export function parseQuestionsSort(value: string | undefined): QuestionsSort {
+  if (value === 'incorrect-first') return value;
+  if (value === 'correct-first') return value;
+  if (value === 'difficulty') return value;
+  return 'recent';
+}
+
 export function buildHistorySessionsHref(input: {
   limit: number;
   offset: number;
+  mode?: SessionModeFilter;
 }): string {
   const params = new URLSearchParams();
   params.set('tab', 'sessions');
   params.set('offset', String(input.offset));
   params.set('limit', String(input.limit));
+  if (input.mode && input.mode !== 'all') {
+    params.set('mode', input.mode);
+  }
   return `${ROUTES.APP_HISTORY}?${params.toString()}`;
 }
 
@@ -92,11 +118,13 @@ export function buildHistoryQuestionsHref(input: {
   const tagSlug = input.filters?.tagSlug ?? null;
   const result = input.filters?.result ?? null;
   const source = input.filters?.source ?? null;
+  const sort = input.filters?.sort ?? null;
 
   if (difficulty) params.set('difficulty', difficulty);
   if (tagSlug) params.set('tag', tagSlug);
   if (result) params.set('result', result);
   if (source) params.set('source', source);
+  if (sort && sort !== 'recent') params.set('sort', sort);
 
   return `${ROUTES.APP_HISTORY}?${params.toString()}`;
 }

@@ -24,6 +24,8 @@ export default async function QuestionPage({
     sessionId?: string | string[];
     attemptId?: string | string[];
     historyHref?: string | string[];
+    historySeq?: string | string[];
+    historyIndex?: string | string[];
   }>;
 }) {
   const { slug } = await params;
@@ -48,6 +50,14 @@ export default async function QuestionPage({
     typeof resolvedSearchParams?.historyHref === 'string'
       ? resolvedSearchParams.historyHref
       : undefined;
+  const historySeq =
+    typeof resolvedSearchParams?.historySeq === 'string'
+      ? resolvedSearchParams.historySeq
+      : undefined;
+  const historyIndex =
+    typeof resolvedSearchParams?.historyIndex === 'string'
+      ? resolvedSearchParams.historyIndex
+      : undefined;
   return (
     <QuestionPageClient
       slug={slug}
@@ -56,6 +66,8 @@ export default async function QuestionPage({
       sessionId={sessionId}
       attemptId={attemptId}
       historyHref={historyHref}
+      historySeq={historySeq}
+      historyIndex={historyIndex}
     />
   );
 }

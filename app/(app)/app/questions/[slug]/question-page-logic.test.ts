@@ -461,6 +461,44 @@ describe('question-page-logic', () => {
       expect(setSubmitResult).not.toHaveBeenCalled();
     });
 
+    it('does not set state when previous-attempt request times out', async () => {
+      vi.useFakeTimers();
+      try {
+        const setSelectedChoiceId = vi.fn();
+        const setSubmitResult = vi.fn();
+
+        const promise = loadPreviousAttempt({
+          questionId: 'q_1',
+          getPreviousAttemptFn: async () => new Promise<never>(() => {}),
+          setSelectedChoiceId,
+          setSubmitResult,
+        });
+
+        await vi.advanceTimersByTimeAsync(10_000);
+        await promise;
+
+        expect(setSelectedChoiceId).not.toHaveBeenCalled();
+        expect(setSubmitResult).not.toHaveBeenCalled();
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it('silently returns when previous-attempt response is undefined (mock reset edge case)', async () => {
+      const setSelectedChoiceId = vi.fn();
+      const setSubmitResult = vi.fn();
+
+      await loadPreviousAttempt({
+        questionId: 'q_1',
+        getPreviousAttemptFn: async () => undefined as never,
+        setSelectedChoiceId,
+        setSubmitResult,
+      });
+
+      expect(setSelectedChoiceId).not.toHaveBeenCalled();
+      expect(setSubmitResult).not.toHaveBeenCalled();
+    });
+
     it('does not set state when component is unmounted', async () => {
       const setSelectedChoiceId = vi.fn();
       const setSubmitResult = vi.fn();

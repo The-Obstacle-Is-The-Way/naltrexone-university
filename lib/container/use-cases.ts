@@ -95,6 +95,7 @@ export function createUseCaseFactories(input: {
     createGetSessionHistoryUseCase: () =>
       new GetSessionHistoryUseCase(
         repositories.createPracticeSessionRepository(),
+        repositories.createQuestionRepository(),
       ),
     createGetUserStatsUseCase: () =>
       new GetUserStatsUseCase(

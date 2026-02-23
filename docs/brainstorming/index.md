@@ -1,7 +1,7 @@
 # Brainstorming Register
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-02-21
+**Last Updated:** 2026-02-22
 
 ---
 
@@ -28,9 +28,10 @@ Brainstorming (BS-NNN) → Spec (SPEC-NNN) → Implementation → Archive
 | ID | Title | Status | Related Spec |
 |----|-------|--------|--------------|
 | [BS-014](./bs-014-practice-starter-question-count-ux.md) | Practice Starter — Silent Truncation When Fewer Questions Available | Active | — |
-| [BS-028](./bs-028-history-session-scoring-and-navigation-gaps.md) | History Page UX Audit — Scoring, Duration, Navigation, Review Parity (13 findings) | Active | — |
+| [BS-028](./bs-028-history-session-scoring-and-navigation-gaps.md) | History Page UX Audit — Scoring, Duration, Navigation, Review Parity (2026-02-22 re-validated) | Active | [SPEC-038](../specs/spec-038-history-ux-remediation.md) |
+| [BS-030](./bs-030-proxy-middleware-layer-analysis.md) | Proxy/Middleware Layer — First-Principles Architecture Analysis | Active | — |
 
-**Next Brainstorming ID:** BS-030
+**Next Brainstorming ID:** BS-031
 
 ---
 

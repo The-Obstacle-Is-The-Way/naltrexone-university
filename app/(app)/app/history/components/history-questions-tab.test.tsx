@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { renderToStaticMarkup } from 'react-dom/server';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeAll, describe, expect, it, vi } from 'vitest';
 import {
   buildHistoryQuestionsHref,
   type QuestionsFilters,
@@ -8,11 +8,21 @@ import {
 import { toQuestionRoute } from '@/lib/routes';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import type { GetAttemptedQuestionsOutput } from '@/src/adapters/controllers/review-controller';
-import { HistoryQuestionsTab } from './history-questions-tab';
 
 vi.mock('next/link', () => ({
   default: (props: Record<string, unknown>) => <a {...props} />,
 }));
+
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ push: vi.fn() }),
+}));
+
+let HistoryQuestionsTab: typeof import('./history-questions-tab').HistoryQuestionsTab;
+
+beforeAll(async () => {
+  const module = await import('./history-questions-tab');
+  HistoryQuestionsTab = module.HistoryQuestionsTab;
+});
 
 type AttemptedQuestionRow = GetAttemptedQuestionsOutput['rows'][number];
 type AvailableAttemptedQuestionRow = Extract<
@@ -96,16 +106,21 @@ describe('HistoryQuestionsTab', () => {
       offset: result.data.offset,
       filters,
     });
+    const historySeq = 'q-correct,q-incorrect';
 
     const correctHref = toQuestionRoute('q-correct', {
       from: 'history',
       mode: 'review',
       historyHref,
+      historySeq,
+      historyIndex: 0,
     });
     const incorrectHref = toQuestionRoute('q-incorrect', {
       from: 'history',
       mode: 'review',
       historyHref,
+      historySeq,
+      historyIndex: 1,
     });
 
     const hrefs = Array.from(doc.querySelectorAll('a')).map((a) =>
@@ -113,6 +128,23 @@ describe('HistoryQuestionsTab', () => {
     );
     expect(hrefs.filter((href) => href === correctHref)).toHaveLength(2);
     expect(hrefs.filter((href) => href === incorrectHref)).toHaveLength(2);
+
+    const correctLinks = hrefs.filter((href) =>
+      href?.startsWith('/app/questions/q-correct?'),
+    );
+    const incorrectLinks = hrefs.filter((href) =>
+      href?.startsWith('/app/questions/q-incorrect?'),
+    );
+
+    expect(correctLinks.every((href) => href?.includes('historySeq='))).toBe(
+      true,
+    );
+    expect(correctLinks.every((href) => href?.includes('historyIndex=0'))).toBe(
+      true,
+    );
+    expect(
+      incorrectLinks.every((href) => href?.includes('historyIndex=1')),
+    ).toBe(true);
   });
 
   it('includes mode=review in incorrect question links', () => {
@@ -146,6 +178,8 @@ describe('HistoryQuestionsTab', () => {
       from: 'history',
       mode: 'review',
       historyHref,
+      historySeq: 'q-incorrect',
+      historyIndex: 0,
     });
 
     const hrefs = Array.from(doc.querySelectorAll('a')).map((a) =>
@@ -175,12 +209,17 @@ describe('HistoryQuestionsTab', () => {
     };
 
     const html = renderToStaticMarkup(<HistoryQuestionsTab result={result} />);
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const preview = doc.querySelector(
+      '[data-testid="history-question-preview"]',
+    );
 
-    expect(html).toContain(expectedBodyPreview);
+    expect(preview).not.toBeNull();
+    expect(preview?.textContent).toContain(expectedBodyPreview);
     expect(html).not.toContain(longStem);
   });
 
-  it('renders result and source filter dropdowns', () => {
+  it('renders design-system filter controls with grouped tags and sort', () => {
     const result: ActionResult<GetAttemptedQuestionsOutput> = {
       ok: true,
       data: {
@@ -198,71 +237,29 @@ describe('HistoryQuestionsTab', () => {
     const html = renderToStaticMarkup(
       <HistoryQuestionsTab
         result={result}
-        tagOptions={[{ slug: 'opioids', name: 'Opioids' }]}
+        tagOptions={[
+          { slug: 'opioids', name: 'Opioids', kind: 'substance' },
+          { slug: 'other', name: 'Other', kind: 'substance' },
+          { slug: 'other-treatment', name: 'Other', kind: 'treatment' },
+          { slug: 'screening', name: 'Screening', kind: 'topic' },
+        ]}
       />,
     );
     const doc = new DOMParser().parseFromString(html, 'text/html');
 
-    const resultSelect = doc.querySelector('select[name="result"]');
-    expect(resultSelect).not.toBeNull();
-
-    const sourceSelect = doc.querySelector('select[name="source"]');
-    expect(sourceSelect).not.toBeNull();
-
-    const resultOptions = Array.from(
-      resultSelect?.querySelectorAll('option') ?? [],
+    expect(doc.querySelectorAll('form select')).toHaveLength(0);
+    expect(doc.querySelector('select[name="result"]')).toBeNull();
+    expect(doc.querySelector('select[name="source"]')).toBeNull();
+    expect(doc.querySelector('select[name="difficulty"]')).toBeNull();
+    expect(doc.querySelector('select[name="tag"]')).toBeNull();
+    expect(doc.querySelectorAll('[data-slot="select-trigger"]')).toHaveLength(
+      5,
     );
-    expect(resultOptions.some((o) => o.getAttribute('value') === '')).toBe(
-      true,
-    );
-    expect(
-      resultOptions.some(
-        (o) =>
-          o.getAttribute('value') === 'correct' && o.textContent === 'Correct',
-      ),
-    ).toBe(true);
-    expect(
-      resultOptions.some(
-        (o) =>
-          o.getAttribute('value') === 'incorrect' &&
-          o.textContent === 'Incorrect',
-      ),
-    ).toBe(true);
-
-    const sourceOptions = Array.from(
-      sourceSelect?.querySelectorAll('option') ?? [],
-    );
-    expect(sourceOptions.some((o) => o.getAttribute('value') === '')).toBe(
-      true,
-    );
-    expect(
-      sourceOptions.some(
-        (o) => o.getAttribute('value') === 'tutor' && o.textContent === 'Tutor',
-      ),
-    ).toBe(true);
-    expect(
-      sourceOptions.some(
-        (o) => o.getAttribute('value') === 'exam' && o.textContent === 'Exam',
-      ),
-    ).toBe(true);
-    expect(
-      sourceOptions.some(
-        (o) =>
-          o.getAttribute('value') === 'adhoc' &&
-          o.textContent === 'Ad-hoc practice',
-      ),
-    ).toBe(true);
-
-    expect(doc.querySelector('select[name="difficulty"]')).not.toBeNull();
-    const tagSelect = doc.querySelector('select[name="tag"]');
-    expect(tagSelect).not.toBeNull();
-    expect(
-      Array.from(tagSelect?.querySelectorAll('option') ?? []).some(
-        (option) =>
-          option.getAttribute('value') === 'opioids' &&
-          option.textContent === 'Opioids',
-      ),
-    ).toBe(true);
+    expect(html).toContain('Result');
+    expect(html).toContain('Source');
+    expect(html).toContain('Difficulty');
+    expect(html).toContain('Tag');
+    expect(html).toContain('Sort');
   });
 
   it('does not render a client-side filtering "(X visible after filters)" hint', () => {

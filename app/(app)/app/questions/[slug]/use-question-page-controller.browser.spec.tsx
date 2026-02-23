@@ -39,12 +39,16 @@ function Probe({
   sessionId,
   attemptId,
   from,
+  historySequence,
+  historyIndex,
 }: {
   slug?: string;
   mode?: 'review' | null;
   sessionId?: string;
   attemptId?: string;
   from?: QuestionOrigin | null;
+  historySequence?: readonly string[] | null;
+  historyIndex?: number | null;
 }) {
   const output = useQuestionPageController({
     slug,
@@ -52,6 +56,8 @@ function Probe({
     sessionId,
     attemptId,
     from,
+    historySequence,
+    historyIndex,
   });
 
   const total = output.sessionNavigation?.questions.length ?? null;
@@ -281,6 +287,49 @@ describe('useQuestionPageController (browser)', () => {
     await expect
       .element(screen.getByTestId('session-nav-next-slug'))
       .toHaveTextContent('q-2');
+  });
+
+  it('builds navigation from history sequence when sessionId is absent', async () => {
+    getQuestionBySlugMock.mockResolvedValue(
+      ok({
+        questionId: 'question-2',
+        slug: 'q-2',
+        stemMd: 'Stem',
+        difficulty: 'easy',
+        choices: [
+          { id: 'choice-1', label: 'A', textMd: 'Choice A' },
+          { id: 'choice-2', label: 'B', textMd: 'Choice B' },
+        ],
+      }),
+    );
+
+    const screen = await render(
+      <Probe
+        slug="q-2"
+        mode="review"
+        from="history"
+        historySequence={['q-1', 'q-2']}
+        historyIndex={1}
+      />,
+    );
+
+    await expect
+      .element(screen.getByTestId('load-status'))
+      .toHaveTextContent('ready');
+
+    expect(getPracticeSessionReviewMock).not.toHaveBeenCalled();
+    await expect
+      .element(screen.getByTestId('session-nav-total'))
+      .toHaveTextContent('2');
+    await expect
+      .element(screen.getByTestId('session-nav-index'))
+      .toHaveTextContent('1');
+    await expect
+      .element(screen.getByTestId('session-nav-prev-slug'))
+      .toHaveTextContent('q-1');
+    await expect
+      .element(screen.getByTestId('session-nav-next-slug'))
+      .toHaveTextContent(/^$/);
   });
 
   it('does not refetch the session review when slug changes within the same session', async () => {

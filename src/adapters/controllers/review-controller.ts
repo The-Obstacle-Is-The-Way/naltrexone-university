@@ -20,6 +20,9 @@ const GetAttemptedQuestionsInputSchema = z
     source: z.enum(['tutor', 'exam', 'adhoc']).optional(),
     difficulty: z.enum(['easy', 'medium', 'hard']).optional(),
     tagSlug: z.string().min(1).optional(),
+    sort: z
+      .enum(['recent', 'incorrect-first', 'correct-first', 'difficulty'])
+      .optional(),
   })
   .strict();
 
@@ -60,6 +63,7 @@ export const getAttemptedQuestions = createAction({
       source: input.source ?? null,
       difficulty: input.difficulty ?? null,
       tagSlug: input.tagSlug ?? null,
+      sort: input.sort ?? null,
     });
   },
 });

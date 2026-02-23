@@ -79,6 +79,19 @@ describe('lib/routes', () => {
     );
   });
 
+  it('supports history sequence query parameters for question routes', () => {
+    expect(
+      toQuestionRoute('opioid-use-disorder', {
+        from: 'history',
+        mode: 'review',
+        historySeq: 'q-1,q-2,q-3',
+        historyIndex: 1,
+      }),
+    ).toBe(
+      '/app/questions/opioid-use-disorder?from=history&mode=review&historySeq=q-1%2Cq-2%2Cq-3&historyIndex=1',
+    );
+  });
+
   it('omits mode query parameter when mode is undefined', () => {
     expect(
       toQuestionRoute('opioid-use-disorder', {

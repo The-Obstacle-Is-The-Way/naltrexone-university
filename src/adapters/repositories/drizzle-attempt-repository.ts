@@ -1,5 +1,6 @@
 import {
   and,
+  asc,
   desc,
   eq,
   gte,
@@ -21,6 +22,7 @@ import { ApplicationError } from '@/src/application/errors';
 import type {
   AttemptedQuestionSummary,
   AttemptedQuestionsFilters,
+  AttemptedQuestionsSort,
   AttemptMostRecentAnsweredAt,
   AttemptRepository,
   PageOptions,
@@ -103,6 +105,49 @@ export class DrizzleAttemptRepository implements AttemptRepository {
     }
 
     return conditions;
+  }
+
+  private getAttemptedQuestionsOrderBy(
+    latestAttemptRows: ReturnType<
+      DrizzleAttemptRepository['latestAttemptRowsSubquery']
+    >,
+    sort: AttemptedQuestionsSort | null,
+  ): SQL[] {
+    const byRecency = [
+      desc(latestAttemptRows.answeredAt),
+      desc(latestAttemptRows.questionId),
+    ] as const;
+
+    if (!sort || sort === 'recent') {
+      return [...byRecency];
+    }
+
+    if (sort === 'incorrect-first') {
+      return [
+        asc(
+          sql<number>`CASE WHEN ${latestAttemptRows.isCorrect} THEN 1 ELSE 0 END`,
+        ),
+        ...byRecency,
+      ];
+    }
+
+    if (sort === 'correct-first') {
+      return [
+        asc(
+          sql<number>`CASE WHEN ${latestAttemptRows.isCorrect} THEN 0 ELSE 1 END`,
+        ),
+        ...byRecency,
+      ];
+    }
+
+    return [
+      asc(sql<number>`CASE
+        WHEN ${questions.status} = 'published' AND ${questions.difficulty} = 'hard' THEN 0
+        WHEN ${questions.status} = 'published' AND ${questions.difficulty} = 'medium' THEN 1
+        ELSE 2
+      END`),
+      ...byRecency,
+    ];
   }
 
   async insert(input: {
@@ -334,6 +379,7 @@ export class DrizzleAttemptRepository implements AttemptRepository {
     );
 
     const tagSlug = filters?.tagSlug ?? null;
+    const sort = filters?.sort ?? null;
     const baseQuery = this.db
       .select({
         questionId: latestAttemptRows.questionId,
@@ -357,10 +403,7 @@ export class DrizzleAttemptRepository implements AttemptRepository {
 
     const rows = await query
       .where(and(...conditions))
-      .orderBy(
-        desc(latestAttemptRows.answeredAt),
-        desc(latestAttemptRows.questionId),
-      )
+      .orderBy(...this.getAttemptedQuestionsOrderBy(latestAttemptRows, sort))
       .limit(limit)
       .offset(offset);
 

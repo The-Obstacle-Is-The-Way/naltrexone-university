@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { useMemo } from 'react';
 import { ReviewQuestionNavigator } from '@/app/(app)/app/questions/[slug]/components/review-question-navigator';
 import { ErrorCard } from '@/components/error-card';
 import { Feedback } from '@/components/question/feedback';
@@ -54,6 +55,27 @@ function parseHistoryHref(value: string | undefined): string | null {
   } catch {
     return null;
   }
+}
+
+const MAX_HISTORY_SEQUENCE_LENGTH = 20;
+
+function parseHistorySequence(value: string | undefined): string[] | null {
+  if (!value) return null;
+  const slugs = value
+    .split(',')
+    .map((slug) => slug.trim())
+    .filter((slug) => slug.length > 0)
+    .slice(0, MAX_HISTORY_SEQUENCE_LENGTH);
+
+  if (slugs.length === 0) return null;
+  return slugs;
+}
+
+function parseHistoryIndex(value: string | undefined): number | null {
+  if (!value) return null;
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed < 0) return null;
+  return parsed;
 }
 
 function getOriginUi(
@@ -129,6 +151,7 @@ export function QuestionView(props: QuestionViewProps) {
   const isReviewMode = props.mode === 'review';
   const hasSessionId = typeof props.sessionId === 'string';
   const isSessionReviewReadOnly = isReviewMode && hasSessionId;
+  const isStandaloneHistoryReview = props.origin === 'history' && !hasSessionId;
   const isSessionReviewUnansweredReveal = sessionUnansweredReveal !== null;
   const correctChoiceId =
     sessionUnansweredReveal?.correctChoiceId ??
@@ -139,6 +162,7 @@ export function QuestionView(props: QuestionViewProps) {
     props.sessionId,
     props.historyHref,
   );
+  const shouldShowTopBackLink = props.origin !== 'history';
 
   const navPrev =
     props.sessionNavigation && props.sessionNavigation.currentIndex > 0
@@ -154,6 +178,11 @@ export function QuestionView(props: QuestionViewProps) {
           props.sessionNavigation.currentIndex + 1
         ]
       : null;
+  const historySeqParam = props.sessionNavigation?.historySequence?.join(',');
+  const reattemptLabel =
+    isStandaloneHistoryReview && props.submitResult?.isCorrect
+      ? 'Practice Again'
+      : 'Try Again';
 
   return (
     <div className="space-y-6">
@@ -164,12 +193,14 @@ export function QuestionView(props: QuestionViewProps) {
           </h1>
           <p className="mt-1 text-muted-foreground">{originUi.subtitle}</p>
         </div>
-        <Link
-          href={originUi.backHref}
-          className="rounded-md text-sm font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]"
-        >
-          {originUi.backLabel}
-        </Link>
+        {shouldShowTopBackLink ? (
+          <Link
+            href={originUi.backHref}
+            className="rounded-md text-sm font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]"
+          >
+            {originUi.backLabel}
+          </Link>
+        ) : null}
       </div>
 
       {props.sessionNavigation ? (
@@ -274,6 +305,10 @@ export function QuestionView(props: QuestionViewProps) {
                   mode: 'review',
                   sessionId: props.sessionNavigation.sessionId,
                   historyHref: props.historyHref,
+                  historySeq: historySeqParam,
+                  historyIndex: historySeqParam
+                    ? props.sessionNavigation.currentIndex - 1
+                    : undefined,
                 })}
               >
                 ← Previous
@@ -309,7 +344,7 @@ export function QuestionView(props: QuestionViewProps) {
             disabled={props.isPending}
             onClick={props.onReattempt}
           >
-            Try Again
+            {reattemptLabel}
           </Button>
         ) : null}
 
@@ -322,6 +357,10 @@ export function QuestionView(props: QuestionViewProps) {
                   mode: 'review',
                   sessionId: props.sessionNavigation.sessionId,
                   historyHref: props.historyHref,
+                  historySeq: historySeqParam,
+                  historyIndex: historySeqParam
+                    ? props.sessionNavigation.currentIndex + 1
+                    : undefined,
                 })}
               >
                 Next →
@@ -334,7 +373,8 @@ export function QuestionView(props: QuestionViewProps) {
           )
         ) : null}
 
-        {props.sessionNavigation ||
+        {props.origin === 'history' ||
+        props.sessionNavigation ||
         props.submitResult ||
         isSessionReviewReadOnly ? (
           <Button asChild variant="ghost" className="rounded-full">
@@ -353,6 +393,8 @@ export default function QuestionPageClient({
   sessionId,
   attemptId,
   historyHref,
+  historySeq,
+  historyIndex,
 }: {
   slug: string;
   from?: string;
@@ -360,15 +402,27 @@ export default function QuestionPageClient({
   sessionId?: string;
   attemptId?: string;
   historyHref?: string;
+  historySeq?: string;
+  historyIndex?: string;
 }) {
   const origin = parseQuestionOrigin(from);
   const parsedMode = parseQuestionMode(mode);
+  const parsedHistorySequence = useMemo(
+    () => parseHistorySequence(historySeq),
+    [historySeq],
+  );
+  const parsedHistoryIndex = useMemo(
+    () => parseHistoryIndex(historyIndex),
+    [historyIndex],
+  );
   const controller = useQuestionPageController({
     slug,
     mode: parsedMode,
     from: origin,
     sessionId,
     attemptId,
+    historySequence: parsedHistorySequence,
+    historyIndex: parsedHistoryIndex,
   });
   return (
     <QuestionView

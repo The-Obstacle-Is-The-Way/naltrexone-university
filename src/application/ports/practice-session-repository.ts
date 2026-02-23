@@ -2,6 +2,7 @@ import type {
   PracticeSession,
   PracticeSessionQuestionState,
 } from '@/src/domain/entities';
+import type { PracticeMode } from '@/src/domain/value-objects';
 
 export type CompletedPracticeSessionPage = {
   rows: readonly PracticeSession[];
@@ -18,6 +19,7 @@ export interface PracticeSessionRepository {
     userId: string,
     limit: number,
     offset: number,
+    mode?: PracticeMode | null,
   ): Promise<CompletedPracticeSessionPage>;
   create(input: {
     userId: string;

@@ -69,6 +69,7 @@ export const GetSessionHistoryInputSchema = z
   .object({
     limit: z.number().int().min(1).max(MAX_PAGINATION_LIMIT),
     offset: z.number().int().min(0).max(MAX_PAGINATION_OFFSET),
+    mode: zPracticeMode.optional(),
   })
   .strict();
 

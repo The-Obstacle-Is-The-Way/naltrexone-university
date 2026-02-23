@@ -62,6 +62,17 @@ describe('QuestionView', () => {
     from: 'practice',
   } as const;
 
+  const historySequenceNavigation = {
+    questions: [
+      { slug: 'q1', order: 1, isCorrect: null },
+      { slug: 'q2', order: 2, isCorrect: null },
+      { slug: 'q3', order: 3, isCorrect: null },
+    ],
+    currentIndex: 1,
+    from: 'history',
+    historySequence: ['q1', 'q2', 'q3'],
+  } as const;
+
   it('renders a Back to Dashboard utility link', () => {
     const html = renderToStaticMarkup(
       <QuestionView
@@ -84,13 +95,20 @@ describe('QuestionView', () => {
     expect(backLink?.textContent?.trim()).toBe('Back to Dashboard');
   });
 
-  it('renders an origin-aware back link when origin=history', () => {
+  it('renders a single Back to History link for history origin', () => {
     const html = renderToStaticMarkup(
       <QuestionView
         loadState={{ status: 'ready' }}
         question={null}
         selectedChoiceId={null}
-        submitResult={null}
+        submitResult={{
+          attemptId: 'attempt_1',
+          isCorrect: false,
+          correctChoiceId: 'c1',
+          explanationMd: 'Explanation',
+          referenceMd: null,
+          choiceExplanations: [],
+        }}
         sessionNavigation={null}
         canSubmit={false}
         isPending={false}
@@ -102,9 +120,15 @@ describe('QuestionView', () => {
       />,
     );
     const doc = new DOMParser().parseFromString(html, 'text/html');
-    const backLink = doc.querySelector('a[href="/app/history?tab=questions"]');
-
-    expect(backLink?.textContent?.trim()).toBe('Back to History');
+    const historyBackLinks = Array.from(doc.querySelectorAll('a')).filter(
+      (link) => link.textContent?.trim() === 'Back to History',
+    );
+    expect(historyBackLinks).toHaveLength(1);
+    const bottomBar = getBottomActionBar(doc);
+    if (!bottomBar) {
+      throw new Error('Expected bottom action bar');
+    }
+    expect(bottomBar.textContent).toContain('Back to History');
     expect(html).toContain('Reviewing a question from your history.');
   });
 
@@ -255,7 +279,38 @@ describe('QuestionView', () => {
     expect(html).toContain('Explanation');
   });
 
-  it('keeps Try Again in history individual review', () => {
+  it('shows Practice Again for correct standalone history review', () => {
+    const html = renderToStaticMarkup(
+      <QuestionView
+        loadState={{ status: 'ready' }}
+        question={null}
+        selectedChoiceId={null}
+        submitResult={{
+          attemptId: 'attempt_1',
+          isCorrect: true,
+          correctChoiceId: 'c1',
+          explanationMd: 'Explanation',
+          referenceMd: null,
+          choiceExplanations: [],
+        }}
+        sessionNavigation={null}
+        canSubmit={false}
+        isPending={false}
+        mode="review"
+        origin="history"
+        onTryAgain={() => undefined}
+        onSelectChoice={() => undefined}
+        onSubmit={() => undefined}
+        onReattempt={() => undefined}
+      />,
+    );
+
+    expect(html).toContain('Practice Again');
+    expect(html).not.toContain('Try Again');
+    expect(html).not.toContain('>Submit<');
+  });
+
+  it('keeps Try Again for incorrect standalone history review', () => {
     const html = renderToStaticMarkup(
       <QuestionView
         loadState={{ status: 'ready' }}
@@ -333,6 +388,35 @@ describe('QuestionView', () => {
         sessionId: 'session_123',
       }),
     );
+  });
+
+  it('renders history-sequence navigation links without sessionId', () => {
+    const html = renderToStaticMarkup(
+      <QuestionView
+        {...createBaseProps()}
+        origin="history"
+        mode="review"
+        sessionNavigation={historySequenceNavigation}
+      />,
+    );
+
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const bottomBar = getBottomActionBar(doc);
+    if (!bottomBar) throw new Error('Expected bottom action bar');
+
+    const previousLink = Array.from(bottomBar.querySelectorAll('a')).find((a) =>
+      a.textContent?.includes('← Previous'),
+    );
+    const nextLink = Array.from(bottomBar.querySelectorAll('a')).find((a) =>
+      a.textContent?.includes('Next →'),
+    );
+
+    expect(previousLink?.getAttribute('href')).toContain(
+      'historySeq=q1%2Cq2%2Cq3',
+    );
+    expect(previousLink?.getAttribute('href')).toContain('historyIndex=0');
+    expect(previousLink?.getAttribute('href')).not.toContain('sessionId=');
+    expect(nextLink?.getAttribute('href')).toContain('historyIndex=2');
   });
 
   it('hides Try Again in answered session review', () => {

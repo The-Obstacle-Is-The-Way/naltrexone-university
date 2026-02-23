@@ -1,7 +1,10 @@
 import { ApplicationError } from '@/src/application/errors';
 import type { PracticeSessionRepository } from '@/src/application/ports/repositories';
 import type { PracticeSession } from '@/src/domain/entities';
-import type { QuestionDifficulty } from '@/src/domain/value-objects';
+import type {
+  PracticeMode,
+  QuestionDifficulty,
+} from '@/src/domain/value-objects';
 
 export class FakePracticeSessionRepository
   implements PracticeSessionRepository
@@ -104,6 +107,7 @@ export class FakePracticeSessionRepository
     userId: string,
     limit: number,
     offset: number,
+    mode?: PracticeMode | null,
   ): Promise<{ rows: readonly PracticeSession[]; total: number }> {
     const normalizedLimit = Number.isFinite(limit) ? Math.floor(limit) : 0;
     const normalizedOffset = Number.isFinite(offset) ? Math.floor(offset) : 0;
@@ -112,6 +116,7 @@ export class FakePracticeSessionRepository
 
     const completed = this.sessions
       .filter((s) => s.userId === userId && s.endedAt !== null)
+      .filter((s) => (mode ? s.mode === mode : true))
       .slice()
       .sort((a, b) => {
         const endedDelta =
