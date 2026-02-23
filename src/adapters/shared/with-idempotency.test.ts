@@ -63,6 +63,35 @@ describe('withIdempotency', () => {
     expect(parseResult).toHaveBeenCalledTimes(1);
   });
 
+  it('replays legacy cached payloads when completedAt is missing', async () => {
+    class LegacyCompletedAtRepo extends FakeIdempotencyKeyRepository {
+      override async find(userId: string, action: string, key: string) {
+        const existing = await super.find(userId, action, key);
+        if (!existing) return null;
+        return { ...existing, completedAt: null };
+      }
+    }
+
+    const now = () => new Date();
+    const repo = new LegacyCompletedAtRepo(now);
+    const logger = new FakeLogger();
+    const execute = vi.fn(async () => ({ ok: true }));
+
+    const input = {
+      repo,
+      userId: 'user_1',
+      action: 'billing:createCheckoutSession',
+      key: '11111111-1111-1111-1111-111111111112',
+      now,
+      logger,
+      execute,
+    } as const;
+
+    await expect(withIdempotency(input)).resolves.toEqual({ ok: true });
+    await expect(withIdempotency(input)).resolves.toEqual({ ok: true });
+    expect(execute).toHaveBeenCalledTimes(1);
+  });
+
   it('waits for an in-progress request and returns the stored result', async () => {
     const now = () => new Date();
     const repo = new FakeIdempotencyKeyRepository(now);
@@ -104,6 +133,45 @@ describe('withIdempotency', () => {
     await expect(first).resolves.toEqual({ ok: true });
     await expect(second).resolves.toEqual({ ok: true });
     expect(execute).toHaveBeenCalledTimes(1);
+  });
+
+  it('replays cached null results without timing out', async () => {
+    const now = () => new Date();
+    const repo = new FakeIdempotencyKeyRepository(now);
+    const logger = new FakeLogger();
+
+    await repo.claim({
+      userId: 'user_1',
+      action: 'question:submitAnswer',
+      key: '22222222-2222-2222-2222-222222222223',
+      expiresAt: new Date('2026-03-01T00:00:00.000Z'),
+    });
+
+    setTimeout(() => {
+      void repo.storeResult({
+        userId: 'user_1',
+        action: 'question:submitAnswer',
+        key: '22222222-2222-2222-2222-222222222223',
+        resultJson: null,
+      });
+    }, 5);
+
+    const execute = vi.fn(async () => ({ ok: true }));
+    await expect(
+      withIdempotency({
+        repo,
+        userId: 'user_1',
+        action: 'question:submitAnswer',
+        key: '22222222-2222-2222-2222-222222222223',
+        now,
+        logger,
+        pollIntervalMs: 1,
+        maxWaitMs: 200,
+        execute,
+      }),
+    ).resolves.toBeNull();
+
+    expect(execute).not.toHaveBeenCalled();
   });
 
   it('rethrows the stored ApplicationError for a repeated idempotency key', async () => {

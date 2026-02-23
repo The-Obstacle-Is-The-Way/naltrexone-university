@@ -2098,7 +2098,8 @@ describe('DrizzleUserRepository', () => {
 describe('DrizzleIdempotencyKeyRepository', () => {
   it('claims keys and stores results + errors', async () => {
     const user = await createUser();
-    const now = () => new Date('2026-02-01T00:00:00.000Z');
+    const completedAt = new Date('2026-02-01T00:00:00.000Z');
+    const now = () => completedAt;
     const repo = new DrizzleIdempotencyKeyRepository(db, now);
 
     const expiresAt = new Date('2026-02-02T00:00:00.000Z');
@@ -2117,6 +2118,7 @@ describe('DrizzleIdempotencyKeyRepository', () => {
     await expect(repo.find(user.id, 'it', 'k1')).resolves.toMatchObject({
       resultJson: { ok: true },
       error: null,
+      completedAt,
       expiresAt,
     });
 
@@ -2134,6 +2136,33 @@ describe('DrizzleIdempotencyKeyRepository', () => {
     await expect(repo.find(user.id, 'it', 'k2')).resolves.toMatchObject({
       resultJson: null,
       error: { code: 'INTERNAL_ERROR', message: 'boom' },
+      completedAt,
+      expiresAt,
+    });
+  });
+
+  it('keeps completed null results distinguishable from pending rows', async () => {
+    const user = await createUser();
+    const completedAt = new Date('2026-02-01T00:00:00.000Z');
+    const now = () => completedAt;
+    const repo = new DrizzleIdempotencyKeyRepository(db, now);
+    const expiresAt = new Date('2026-02-02T00:00:00.000Z');
+
+    await expect(
+      repo.claim({ userId: user.id, action: 'it', key: 'k-null', expiresAt }),
+    ).resolves.toBe(true);
+
+    await repo.storeResult({
+      userId: user.id,
+      action: 'it',
+      key: 'k-null',
+      resultJson: null,
+    });
+
+    await expect(repo.find(user.id, 'it', 'k-null')).resolves.toMatchObject({
+      resultJson: null,
+      error: null,
+      completedAt,
       expiresAt,
     });
   });
@@ -2173,6 +2202,7 @@ describe('DrizzleIdempotencyKeyRepository', () => {
     await expect(repo.find(user.id, 'it', 'k3')).resolves.toMatchObject({
       resultJson: null,
       error: null,
+      completedAt: null,
       expiresAt: refreshedAt,
     });
   });
