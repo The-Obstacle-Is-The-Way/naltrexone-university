@@ -4,6 +4,10 @@ export function toPlainText(markdown: string): string {
   return withoutFormatting.replace(/\s+/g, ' ').trim();
 }
 
+/** Minimum fraction of the preview limit a sentence boundary must reach
+ *  before we prefer it over a mid-word ellipsis truncation. */
+const MIN_SENTENCE_BOUNDARY_RATIO = 0.6;
+
 function findLastSentenceBoundary(text: string): number {
   const boundaryPattern = /[.!?](?=\s|$)/g;
   let lastBoundary = -1;
@@ -25,7 +29,9 @@ export function getStemPreview(stemMd: string, maxLength: number): string {
   const previewLimit = maxLength - 3;
   const candidate = plain.slice(0, previewLimit).trimEnd();
   const sentenceBoundary = findLastSentenceBoundary(candidate);
-  const minBoundaryLength = Math.floor(previewLimit * 0.6);
+  const minBoundaryLength = Math.floor(
+    previewLimit * MIN_SENTENCE_BOUNDARY_RATIO,
+  );
 
   if (sentenceBoundary >= minBoundaryLength) {
     return candidate.slice(0, sentenceBoundary).trimEnd();

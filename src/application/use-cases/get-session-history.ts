@@ -61,10 +61,10 @@ export class GetSessionHistoryUseCase {
     );
     const firstQuestionSlugById = new Map<string, string>();
     if (firstQuestionIds.length > 0) {
-      const questions =
+      const publishedQuestions =
         await this.questions.findPublishedByIds(firstQuestionIds);
-      for (const question of questions) {
-        firstQuestionSlugById.set(question.id, question.slug);
+      for (const q of publishedQuestions) {
+        firstQuestionSlugById.set(q.id, q.slug);
       }
     }
 

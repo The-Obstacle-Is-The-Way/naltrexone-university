@@ -140,8 +140,6 @@ export type QuestionViewProps = {
   origin?: QuestionOrigin | null;
   sessionId?: string;
   historyHref?: string;
-  historySeq?: string;
-  historyIndex?: string;
   onTryAgain: () => void;
   onSelectChoice: (choiceId: string) => void;
   onSubmit: () => void;

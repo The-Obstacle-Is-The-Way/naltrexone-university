@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { renderToStaticMarkup } from 'react-dom/server';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeAll, describe, expect, it, vi } from 'vitest';
 import {
   buildHistoryQuestionsHref,
   type QuestionsFilters,
@@ -8,7 +8,6 @@ import {
 import { toQuestionRoute } from '@/lib/routes';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import type { GetAttemptedQuestionsOutput } from '@/src/adapters/controllers/review-controller';
-import { HistoryQuestionsTab } from './history-questions-tab';
 
 vi.mock('next/link', () => ({
   default: (props: Record<string, unknown>) => <a {...props} />,
@@ -17,6 +16,13 @@ vi.mock('next/link', () => ({
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: vi.fn() }),
 }));
+
+let HistoryQuestionsTab: typeof import('./history-questions-tab').HistoryQuestionsTab;
+
+beforeAll(async () => {
+  const module = await import('./history-questions-tab');
+  HistoryQuestionsTab = module.HistoryQuestionsTab;
+});
 
 type AttemptedQuestionRow = GetAttemptedQuestionsOutput['rows'][number];
 type AvailableAttemptedQuestionRow = Extract<
