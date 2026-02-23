@@ -104,6 +104,8 @@ The `<li>` row is already keyboard-focusable (`tabIndex={0}`, `role="link"`) and
 
 **File:** `app/(app)/app/history/components/history-questions-tab.tsx` line 517
 
+> **Note:** This diff is superseded by Fix 3. If Fix 3 is implemented (Pattern A conversion), the inner title `<Link>` at line 517 is removed entirely — it becomes a `<span>` inside the outer `<Link>`. Only apply this diff if Fix 3 is deferred.
+
 ```diff
 - className="text-sm font-medium text-foreground hover:underline"
 + className="rounded-sm text-sm font-medium text-foreground hover:underline focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]"
@@ -133,19 +135,50 @@ Convert history question cards from Pattern B to Pattern A by wrapping the entir
 
 In `history-questions-tab.tsx`, the `<Card>` becomes a child of `<Link>`:
 
+Current structure (lines 511–552):
+
+```tsx
+<li key={row.questionId}>
+  <Card className="gap-0 rounded-2xl border-border p-4 shadow-sm">
+    <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+      <div className="space-y-2">
+        <Link href={href} className="text-sm font-medium text-foreground hover:underline">
+          {title}
+        </Link>
+        {shouldShowBodyText ? (
+          <div className="text-sm text-muted-foreground" data-testid="history-question-preview">
+            {bodyPreview}
+          </div>
+        ) : null}
+        <QuestionMetadata row={row} middleLabel={row.difficulty} middleLabelClassName="capitalize" />
+      </div>
+      <Button asChild variant="outline" className="rounded-full">
+        <Link href={href} aria-label={`Review question: ${title}`}>Review</Link>
+      </Button>
+    </div>
+  </Card>
+</li>
+```
+
+Target structure (Pattern A):
+
 ```tsx
 <li key={row.questionId}>
   <Link
     href={href}
     className="block rounded-2xl border border-border p-4 shadow-sm transition-colors hover:bg-accent/40 focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]"
   >
-    {/* card content — remove inner <Link> and <Button asChild><Link> */}
     <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
       <div className="space-y-2">
         <span className="text-sm font-medium text-foreground">
           {title}
         </span>
-        {/* ...rest of content... */}
+        {shouldShowBodyText ? (
+          <div className="text-sm text-muted-foreground" data-testid="history-question-preview">
+            {bodyPreview}
+          </div>
+        ) : null}
+        <QuestionMetadata row={row} middleLabel={row.difficulty} middleLabelClassName="capitalize" />
       </div>
       <span className="inline-flex items-center rounded-full border px-4 py-2 text-sm">
         Review
@@ -155,7 +188,11 @@ In `history-questions-tab.tsx`, the `<Card>` becomes a child of `<Link>`:
 </li>
 ```
 
-The "Review" button becomes a visual indicator (non-interactive span styled as a button) since the entire card is the link.
+Key changes:
+- `<Card>` replaced by outer `<Link>` with equivalent border/padding/shadow styling plus hover and focus ring
+- Inner title `<Link>` (line 515) → `<span>` (no nested links)
+- `<Button asChild><Link>` (lines 537–548) → non-interactive `<span>` styled as a badge (the whole card is the link now)
+- `aria-label` on the Review button is no longer needed since the outer `<Link>` contains the full card content for screen readers
 
 **Rejected alternative:** Pattern C for question cards (`onClick`/`onKeyDown`/`tabIndex`) was considered and rejected because question cards have a single navigation destination and do not need click-guard complexity.
 
@@ -200,7 +237,7 @@ Bookmarks currently render both a title link and a "Review" button that resolve 
 | 2 | `app/(app)/app/practice/[sessionId]/components/session-summary-view.tsx` lines 40, 47, 54, 61 | Remove `hover:border-border hover:bg-muted/50` from 4 non-interactive summary cards | P2 |
 | 3 | `components/marketing/marketing-home.tsx` line 155 | Remove `transition-colors hover:bg-muted` from feature cards | P2 |
 | 4 | `history-sessions-tab.tsx` lines 183–186 | Add `focus-visible` ring to focusable LI row | P2 |
-| 5 | `history-questions-tab.tsx` line 517 | Add `focus-visible` ring to question title link | P3 |
+| 5 | `history-questions-tab.tsx` line 517 | Add `focus-visible` ring to question title link *(superseded by row 8 — inner link removed by Pattern A conversion)* | P3 |
 | 6 | `session-breakdown-list.tsx` line 34 | Add `focus-visible` ring to breakdown link | P3 |
 | 7 | `bookmarks/page.tsx` line 96 | Add `focus-visible` ring to bookmark title link | P3 |
 | 8 | `history-questions-tab.tsx` lines 511–552 | Convert question cards from Pattern B to Pattern A (Link-as-Card); keep session rows Pattern C | P1 |
@@ -223,7 +260,7 @@ Bookmarks currently render both a title link and a "Review" button that resolve 
 - [ ] History sessions tab: card-level click still works (no regression)
 - [ ] History sessions tab: keyboard activation on LI still works (Enter/Space)
 - [ ] Tab-key through history session rows shows visible focus ring on LI
-- [ ] Tab-key through history question title links shows visible focus ring
+- [ ] Tab-key through history question navigation target shows visible focus ring (outer card link after Fix 3, title link only if Fix 3 is deferred)
 - [ ] Tab-key through session breakdown links shows visible focus ring
 - [ ] Tab-key through bookmark title links shows visible focus ring
 - [ ] `components/theme-token-regression.test.tsx` expectations match the updated hover policy
