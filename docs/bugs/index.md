@@ -1,7 +1,7 @@
 # Bug Reports
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-02-21
+**Last Updated:** 2026-02-23
 
 ---
 
@@ -17,9 +17,43 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 | ID | Title | Priority | Status |
 |----|-------|----------|--------|
-| — | No active bugs | — | — |
+| [BUG-149](bug-149-idempotency-null-result-indistinguishable-from-pending.md) | Idempotency Null Result Indistinguishable from Pending State | P3 | Open |
 
-**Next Bug ID:** BUG-148
+**Next Bug ID:** BUG-150
+
+## Audit #5 — Six-Axis Codebase Bug Sweep (2026-02-22)
+
+Six-axis investigation covering domain layer, application layer, adapters layer, frontend/UI, configuration/infrastructure, and test coverage. Ran 6 parallel exploration agents, then **manually verified every finding** with full code traces and a production build.
+
+**2 new confirmed bugs filed:** BUG-148 (P3), BUG-149 (P3). Both are latent — not currently exploitable in production flows but represent defense-in-depth gaps.
+
+**Findings confirmed as NOT bugs after manual verification:**
+
+- `proxy.ts` naming is "broken middleware" (FALSE — Next.js 16 recognizes `proxy.ts` as middleware; confirmed via `pnpm build` output: `ƒ Proxy (Middleware)`)
+- AlertDialogAction missing `disabled` in incomplete session card (Radix auto-closes dialog on action click; trigger `disabled={isPending}` prevents re-open)
+- AlertDialogAction missing `disabled` in bookmarks removal (auto-close + page revalidation removes bookmark from UI; no second trigger possible)
+- Redundant `isPending` guard in ExamReviewView (code smell, not a bug; `disabled` attribute is sufficient)
+- `createPracticeSession` factory allows mismatched `questionIds`/`questionStates` (test helper only; application layer handles defensively with warning logs; tested explicitly)
+- Domain `PracticeSessionQuestionState` allows null fields together (intentional design for partial state)
+- `QuestionProgressStatus` missing "correct" value (intentional design per domain model)
+- `selectNextQuestionId` defensive null check (safe defensive programming)
+
+**Test coverage observations (not bugs, but noted for improvement):**
+
+- Cron auth token validation route handler lacks unit test (P1 coverage gap)
+- `practice-session-params.ts` serialization layer untested (P2 coverage gap)
+- `practice-session-question-state-updater.ts` retry logic untested (P2 coverage gap)
+- No E2E test for subscription cancellation → entitlement denial (P1 coverage gap)
+- No integration test for idempotency key persistence in billing flows (P1 coverage gap)
+
+**Security posture confirmed solid (re-verified from Audit #4):**
+
+- `proxy.ts` middleware running and applying Clerk auth + CSP headers
+- Three-layer auth enforcement intact: middleware → layout entitlement → server action `requireEntitledUserId()`
+- All queries scoped to authenticated userId (no IDOR)
+- All SQL parameterized via Drizzle ORM (no injection)
+- Webhook signatures verified, rate limiting fail-closed
+- Security headers (HSTS, X-Frame-Options, Permissions-Policy, X-Content-Type-Options) all configured
 
 ## Audit #4 — Middleware, Core Paths, and Security Deep Dive (2026-02-16)
 
@@ -83,6 +117,7 @@ Audit #3 produced BUG-136 and BUG-139. BUG-137 was reclassified as SSOT-consiste
 
 | ID | Title | Status | Resolution |
 |----|-------|--------|------------|
+| [BUG-148](../_archive/bugs/bug-148-stripe-checkout-idempotency-key-fallback-random.md) | Stripe Checkout Idempotency Key Fallback Uses randomUUID() | Resolved | Replaced random fallback with deterministic `checkout_session:${userId}:${plan}` and added stale-session replay detection with a recovery key path (`checkout_session_recovery:${userId}:${plan}:${sessionId}`) |
 | [BUG-147](../_archive/bugs/bug-147-user-upsert-unhandled-email-uniqueness-conflict.md) | User Upsert Fails on Email Uniqueness Conflict When Clerk User ID Changes | Resolved | Added `users_email_uq` catch-and-update path in `DrizzleUserRepository`, added fake email-uniqueness parity, and added integration/unit regression tests |
 | [BUG-146](../_archive/bugs/bug-146-marketing-footer-sign-in-up-casing-inconsistent.md) | Marketing Footer “Sign in/up” Casing Is Inconsistent with the Rest of the App | Resolved | Standardized footer auth labels to “Sign In” / “Sign Up” and added regression coverage |
 | [BUG-145](../_archive/bugs/bug-145-frontend-ssot-docs-out-of-sync-with-question-view.md) | Frontend SSOT Docs Are Out of Sync with Current Question View Implementation | Resolved | Updated stale SSOT architecture docs to match current question page navigation and state restoration behavior |
