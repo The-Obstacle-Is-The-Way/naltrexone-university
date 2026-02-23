@@ -247,6 +247,12 @@ describe('createStripeCheckoutSession', () => {
       idempotencyKey: 'expire_checkout_session:cs_open',
     });
     expect(sessionsCreate).toHaveBeenCalledTimes(1);
+    expect(sessionsCreate).toHaveBeenCalledWith(
+      expect.any(Object),
+      expect.objectContaining({
+        idempotencyKey: 'checkout_session:user_1:monthly',
+      }),
+    );
   });
 
   it('throws STRIPE_ERROR when expiring mismatched session fails', async () => {
