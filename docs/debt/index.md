@@ -1,7 +1,7 @@
 # Technical Debt Register
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-02-22
+**Last Updated:** 2026-02-23
 
 ---
 
@@ -15,9 +15,11 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 ## Debt Index (Active)
 
-*No active debt items.*
+| ID | Title | Priority | Date | GitHub Issue |
+|----|-------|----------|------|--------------|
+| [DEBT-243](debt-243-e2e-credential-drift-silent-failure.md) | E2E Credential Drift Causes Confusing Test Failures | P2 | 2026-02-23 | — |
 
-**Next Debt ID:** DEBT-243
+**Next Debt ID:** DEBT-244
 
 ---
 
