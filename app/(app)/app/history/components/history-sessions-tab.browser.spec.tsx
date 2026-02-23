@@ -3,8 +3,13 @@ import { render } from 'vitest-browser-react';
 import { ok } from '@/tests/test-helpers/ok';
 import { HistorySessionsTab } from './history-sessions-tab';
 
-const { getPracticeSessionReviewMock } = vi.hoisted(() => ({
+const { pushMock, getPracticeSessionReviewMock } = vi.hoisted(() => ({
+  pushMock: vi.fn(),
   getPracticeSessionReviewMock: vi.fn(),
+}));
+
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ push: pushMock }),
 }));
 
 vi.mock('@/src/adapters/controllers/practice-controller', () => ({
@@ -14,6 +19,7 @@ vi.mock('@/src/adapters/controllers/practice-controller', () => ({
 describe('HistorySessionsTab (browser)', () => {
   afterEach(() => {
     vi.restoreAllMocks();
+    pushMock.mockReset();
     getPracticeSessionReviewMock.mockReset();
   });
 

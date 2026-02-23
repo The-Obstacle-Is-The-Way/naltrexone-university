@@ -178,7 +178,6 @@ export function HistorySessionsTab({
           return (
             <li
               key={row.sessionId}
-              role={isRowInteractive ? 'link' : undefined}
               tabIndex={isRowInteractive ? 0 : undefined}
               className={cn(
                 'rounded-xl border border-border/60 bg-muted/20 p-3 transition-colors hover:bg-accent/40 dark:hover:bg-foreground/10',
@@ -215,7 +214,6 @@ export function HistorySessionsTab({
                 {sessionReviewHref ? (
                   <Link
                     href={sessionReviewHref}
-                    tabIndex={-1}
                     className="rounded-md text-sm text-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]"
                   >
                     <SessionSummaryContent
