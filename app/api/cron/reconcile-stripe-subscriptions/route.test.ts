@@ -39,6 +39,7 @@ type CronContainer = {
     NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL: string;
   };
   logger: {
+    warn: ReturnType<typeof vi.fn>;
     error: ReturnType<typeof vi.fn>;
   };
   createRateLimiter: () => RateLimiter;
@@ -65,6 +66,7 @@ function createMockContainer(): CronContainer {
       NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL: 'price_annual',
     },
     logger: {
+      warn: vi.fn(),
       error: vi.fn(),
     },
     createRateLimiter: () => rateLimiter,
@@ -152,6 +154,13 @@ describe('POST /api/cron/reconcile-stripe-subscriptions', () => {
     expect(response.status).toBe(401);
     await expect(response.json()).resolves.toEqual({ error: 'Unauthorized' });
     expect(reconcileStripeSubscriptions).not.toHaveBeenCalled();
+    expect(container.logger.warn).toHaveBeenCalledWith(
+      {
+        route: '/api/cron/reconcile-stripe-subscriptions',
+        reason: 'missing_authorization_header',
+      },
+      'Unauthorized cron request',
+    );
   });
 
   it('returns 401 when bearer token is invalid', async () => {
@@ -167,6 +176,13 @@ describe('POST /api/cron/reconcile-stripe-subscriptions', () => {
     expect(response.status).toBe(401);
     await expect(response.json()).resolves.toEqual({ error: 'Unauthorized' });
     expect(reconcileStripeSubscriptions).not.toHaveBeenCalled();
+    expect(container.logger.warn).toHaveBeenCalledWith(
+      {
+        route: '/api/cron/reconcile-stripe-subscriptions',
+        reason: 'invalid_token',
+      },
+      'Unauthorized cron request',
+    );
   });
 
   it('parses offset and dryRun query params before reconciliation', async () => {

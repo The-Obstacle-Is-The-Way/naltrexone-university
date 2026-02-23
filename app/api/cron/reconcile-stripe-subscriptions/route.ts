@@ -59,7 +59,25 @@ export async function POST(req: Request) {
   }
 
   const token = getAuthorizationToken(req);
-  if (!token || !isValidCronToken(token, cronSecret)) {
+  if (!token) {
+    container.logger.warn(
+      {
+        route: '/api/cron/reconcile-stripe-subscriptions',
+        reason: 'missing_authorization_header',
+      },
+      'Unauthorized cron request',
+    );
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  if (!isValidCronToken(token, cronSecret)) {
+    container.logger.warn(
+      {
+        route: '/api/cron/reconcile-stripe-subscriptions',
+        reason: 'invalid_token',
+      },
+      'Unauthorized cron request',
+    );
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 

@@ -61,6 +61,11 @@ const envSchema = z.object({
   // App
   NEXT_PUBLIC_APP_URL: z.string().url(),
 
+  // Observability note:
+  // Sentry DSNs are intentionally not part of startup validation in this module.
+  // instrumentation.ts handles DSN presence at runtime and emits warnings when
+  // telemetry is disabled in production.
+
   // Cron / Jobs
   CRON_SECRET: z.string().min(1).optional(),
 });

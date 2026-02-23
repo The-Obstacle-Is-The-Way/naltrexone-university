@@ -1,8 +1,19 @@
 # DEBT-243: E2E Credential Drift and Silent Failure (Definitive Resolution)
 
-**Status:** Approved design (no optional paths)  
+**Status:** Implemented  
 **Date:** 2026-02-23  
 **Owner:** Test Infrastructure
+
+## Implementation Completed
+
+Implemented in code with tests:
+
+- E2E preflight module: `tests/e2e/helpers/credential-health-check.ts`
+- E2E preflight tests: `tests/e2e/helpers/credential-health-check.test.ts`
+- Playwright setup integration: `tests/e2e/global.setup.ts`
+- CI guard for dummy/missing E2E secrets: `.github/workflows/ci.yml`
+- Runtime Sentry disabled warning policy: `instrumentation.ts`, `sentry-config.test.ts`, `.env.example`
+- Cron unauthorized observability logs: `app/api/cron/reconcile-stripe-subscriptions/route.ts`, `app/api/cron/reconcile-stripe-subscriptions/route.test.ts`
 
 ## Problem
 
@@ -192,6 +203,8 @@ Error messages:
 
 - `[E2E_PREFLIGHT:CLERK_SECRET_KEY_MISSING] CLERK_SECRET_KEY is missing.`
   - Fix: `Set CLERK_SECRET_KEY in .env.local or CI secrets.`
+- `[E2E_PREFLIGHT:CLERK_SECRET_KEY_INVALID] Clerk rejected CLERK_SECRET_KEY.`
+  - Fix: `Set CLERK_SECRET_KEY in .env.local or CI secrets.`
 - `[E2E_PREFLIGHT:E2E_CLERK_USER_USERNAME_MISSING] E2E_CLERK_USER_USERNAME is missing.`
   - Fix: `Set E2E_CLERK_USER_USERNAME to the E2E Clerk user email.`
 - `[E2E_PREFLIGHT:E2E_CLERK_USER_PASSWORD_MISSING] E2E_CLERK_USER_PASSWORD is missing.`
@@ -283,19 +296,22 @@ Run each scenario by editing env values and executing `pnpm test:e2e`.
 3. `CLERK_SECRET_KEY` missing
 - Expected: one setup failure with `[E2E_PREFLIGHT:CLERK_SECRET_KEY_MISSING]`.
 
-4. `E2E_CLERK_USER_USERNAME` typo (nonexistent user)
+4. `CLERK_SECRET_KEY` invalid
+- Expected: one setup failure with `[E2E_PREFLIGHT:CLERK_SECRET_KEY_INVALID]`.
+
+5. `E2E_CLERK_USER_USERNAME` typo (nonexistent user)
 - Expected: one setup failure with `[E2E_PREFLIGHT:CLERK_USER_NOT_FOUND]`.
 
-5. `E2E_CLERK_USER_PASSWORD` wrong
+6. `E2E_CLERK_USER_PASSWORD` wrong
 - Expected: one setup failure with `[E2E_PREFLIGHT:CLERK_PASSWORD_INVALID]`.
 
-6. `STRIPE_SECRET_KEY` invalid
+7. `STRIPE_SECRET_KEY` invalid
 - Expected: one setup failure with `[E2E_PREFLIGHT:STRIPE_SECRET_KEY_INVALID]`.
 
-7. `NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY` invalid
+8. `NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY` invalid
 - Expected: one setup failure with `[E2E_PREFLIGHT:STRIPE_MONTHLY_PRICE_ID_INVALID]`.
 
-8. Multiple invalid credentials at once
+9. Multiple invalid credentials at once
 - Expected: one aggregated failure listing all failing checks, each with a `Fix:` line.
 
 ## Acceptance Criteria
