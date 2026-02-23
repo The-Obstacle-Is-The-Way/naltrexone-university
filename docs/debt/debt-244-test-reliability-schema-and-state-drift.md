@@ -103,6 +103,6 @@ The DEBT-244 reliability gaps are closed:
 - Missing integration seed state fails once with explicit remediation.
 - E2E server mode uses production build/start to remove dev-server drift from long runs.
 
-Remaining E2E governance and pyramid migration work continues in:
+Related E2E governance and pyramid realignment work is documented in:
 
-- `docs/debt/debt-245-e2e-pyramid-drift-and-skip-governance.md`
+- `docs/debt/debt-245-e2e-pyramid-drift-and-skip-governance.md` (resolved)

@@ -313,10 +313,11 @@ test.describe('review mode audit', () => {
       state: 'visible',
       timeout: 15_000,
     });
-    if (await emptyState.isVisible().catch(() => false)) {
-      test.skip(true, 'No bookmarks available to verify review-link contract');
-      return;
-    }
+    const hasNoBookmarks = await emptyState.isVisible().catch(() => false);
+    expect(
+      hasNoBookmarks,
+      '[E2E_BASELINE_MISSING] Expected at least one bookmark for review-mode audit.',
+    ).toBe(false);
 
     const count = await reviewLinks.count();
     expect(count).toBeGreaterThan(0);

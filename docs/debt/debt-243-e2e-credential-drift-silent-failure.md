@@ -28,4 +28,4 @@ The structural failure mode documented by DEBT-243 is closed:
 DEBT-243 only covers credential correctness in the E2E setup path. Remaining E2E reliability work is tracked separately:
 
 - `docs/debt/debt-244-test-reliability-schema-and-state-drift.md`
-- `docs/debt/debt-245-e2e-pyramid-drift-and-skip-governance.md`
+- `docs/debt/debt-245-e2e-pyramid-drift-and-skip-governance.md` (resolved)

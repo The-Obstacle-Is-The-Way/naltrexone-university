@@ -87,6 +87,19 @@ jobs:
       - name: Lint and Format Check (Biome)
         run: pnpm lint:ci
 
+      - name: Enforce E2E skip policy
+        run: |
+          set -euo pipefail
+
+          violations="$(rg "test\.skip\(" tests/e2e/*.spec.ts -n \
+            | rg -v "test\.skip\(!hasClerkCredentials, 'Missing Clerk E2E credentials'\);")"
+
+          if [ -n "$violations" ]; then
+            echo "::error::Non-credential test.skip(...) is forbidden in tests/e2e/*.spec.ts"
+            echo "$violations"
+            exit 1
+          fi
+
       - name: Migrate DB
         run: pnpm db:migrate
 

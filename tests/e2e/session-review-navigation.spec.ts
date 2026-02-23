@@ -53,10 +53,10 @@ test.describe('session review navigation (SPEC-027)', () => {
     const breakdownLinks = page.locator('a[href*="/app/questions/"]');
     await expect(breakdownLinks.first()).toBeVisible({ timeout: 15_000 });
     const breakdownCount = await breakdownLinks.count();
-    if (breakdownCount < 2) {
-      test.skip(true, 'Session breakdown did not expose two reviewable items');
-      return;
-    }
+    expect(
+      breakdownCount,
+      '[E2E_BASELINE_MISSING] Expected at least two reviewable session breakdown links.',
+    ).toBeGreaterThanOrEqual(2);
 
     // Click first question link from breakdown
     const breakdownLink = breakdownLinks.first();
@@ -78,13 +78,6 @@ test.describe('session review navigation (SPEC-027)', () => {
       hasText: 'Question navigator',
     });
     const navigatorHeading = page.getByText('Question navigator');
-    if (!(await navigatorHeading.isVisible().catch(() => false))) {
-      test.skip(
-        true,
-        'Question navigator not rendered for this session review',
-      );
-      return;
-    }
     await expect(navigatorHeading).toBeVisible({ timeout: 15_000 });
 
     const navigatorButtons = navigatorCard.locator('[data-slot="button"]');
@@ -224,10 +217,13 @@ test.describe('session review navigation (SPEC-027)', () => {
       state: 'visible',
       timeout: 15_000,
     });
-    if (await emptySessionsMessage.isVisible().catch(() => false)) {
-      test.skip(true, 'No completed sessions available in history');
-      return;
-    }
+    const hasNoCompletedSessions = await emptySessionsMessage
+      .isVisible()
+      .catch(() => false);
+    expect(
+      hasNoCompletedSessions,
+      '[E2E_BASELINE_MISSING] Expected at least one completed history session.',
+    ).toBe(false);
     await expect(viewBreakdownButton).toBeVisible({ timeout: 15_000 });
     await viewBreakdownButton.click();
 
@@ -290,10 +286,10 @@ test.describe('session review navigation (SPEC-027)', () => {
     const hasNoAttemptedQuestions = await noAttemptedQuestionsMessage
       .isVisible()
       .catch(() => false);
-    if (hasNoAttemptedQuestions) {
-      test.skip(true, 'No attempted questions in history to verify');
-      return;
-    }
+    expect(
+      hasNoAttemptedQuestions,
+      '[E2E_BASELINE_MISSING] Expected at least one attempted question in history.',
+    ).toBe(false);
 
     await expect(questionLink).toBeVisible({ timeout: 15_000 });
 
