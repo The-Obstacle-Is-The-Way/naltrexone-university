@@ -175,8 +175,8 @@ describe('HistorySessionsTab', () => {
     const html = renderToStaticMarkup(<HistorySessionsTab result={result} />);
 
     expect(html).toContain('cursor-pointer');
-    expect(html).toContain('tabindex="0"');
-    expect(html).toContain('hover:bg-accent');
+    expect(html).toContain('hover:bg-accent/40');
+    expect(html).not.toContain('tabindex="0"');
   });
 
   it('does not render clickable row affordances when session review is unavailable', () => {
@@ -206,6 +206,7 @@ describe('HistorySessionsTab', () => {
     const html = renderToStaticMarkup(<HistorySessionsTab result={result} />);
 
     expect(html).not.toContain('cursor-pointer');
+    expect(html).not.toContain('hover:bg-accent/40');
     expect(html).not.toContain('tabindex="0"');
   });
 

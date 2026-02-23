@@ -178,10 +178,11 @@ export function HistorySessionsTab({
           return (
             <li
               key={row.sessionId}
-              tabIndex={isRowInteractive ? 0 : undefined}
               className={cn(
-                'rounded-xl border border-border/60 bg-muted/20 p-3 transition-colors hover:bg-accent/40 dark:hover:bg-foreground/10',
-                isRowInteractive ? 'cursor-pointer' : undefined,
+                'rounded-xl border border-border/60 bg-muted/20 p-3 transition-colors',
+                isRowInteractive
+                  ? 'cursor-pointer hover:bg-accent/40 dark:hover:bg-foreground/10'
+                  : undefined,
               )}
               onClick={(event) => {
                 if (!sessionReviewHref) return;

@@ -174,6 +174,89 @@ describe('withIdempotency', () => {
     expect(execute).not.toHaveBeenCalled();
   });
 
+  it('passes cached null results through parseResult when replaying', async () => {
+    const now = () => new Date('2026-02-07T00:00:00.000Z');
+    const repo = new FakeIdempotencyKeyRepository(now);
+    const logger = new FakeLogger();
+    const key = '55555555-5555-5555-5555-555555555555';
+
+    await repo.claim({
+      userId: 'user_1',
+      action: 'question:submitAnswer',
+      key,
+      expiresAt: new Date('2026-02-08T00:00:00.000Z'),
+    });
+    await repo.storeResult({
+      userId: 'user_1',
+      action: 'question:submitAnswer',
+      key,
+      resultJson: null,
+    });
+
+    const parseResult = vi.fn(() => 'replayed');
+    const execute = vi.fn(async () => 'executed');
+
+    await expect(
+      withIdempotency({
+        repo,
+        userId: 'user_1',
+        action: 'question:submitAnswer',
+        key,
+        now,
+        logger,
+        parseResult,
+        execute,
+      }),
+    ).resolves.toBe('replayed');
+
+    expect(parseResult).toHaveBeenCalledWith(null);
+    expect(execute).not.toHaveBeenCalled();
+  });
+
+  it('throws INTERNAL_ERROR when parseResult rejects a cached null replay', async () => {
+    const now = () => new Date('2026-02-07T00:00:00.000Z');
+    const repo = new FakeIdempotencyKeyRepository(now);
+    const logger = new FakeLogger();
+    const key = '66666666-6666-6666-6666-666666666666';
+
+    await repo.claim({
+      userId: 'user_1',
+      action: 'question:submitAnswer',
+      key,
+      expiresAt: new Date('2026-02-08T00:00:00.000Z'),
+    });
+    await repo.storeResult({
+      userId: 'user_1',
+      action: 'question:submitAnswer',
+      key,
+      resultJson: null,
+    });
+
+    const parseResult = vi.fn(() => {
+      throw new Error('invalid');
+    });
+    const execute = vi.fn(async () => ({ ok: true }));
+
+    await expect(
+      withIdempotency({
+        repo,
+        userId: 'user_1',
+        action: 'question:submitAnswer',
+        key,
+        now,
+        logger,
+        parseResult,
+        execute,
+      }),
+    ).rejects.toMatchObject({
+      code: 'INTERNAL_ERROR',
+      message: 'Cached idempotency result is invalid',
+    });
+
+    expect(parseResult).toHaveBeenCalledWith(null);
+    expect(execute).not.toHaveBeenCalled();
+  });
+
   it('rethrows the stored ApplicationError for a repeated idempotency key', async () => {
     const now = () => new Date();
     const repo = new FakeIdempotencyKeyRepository(now);

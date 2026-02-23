@@ -143,6 +143,7 @@ describe('DrizzleIdempotencyKeyRepository', () => {
           resultJson: { ok: true },
           errorCode: null,
           errorMessage: null,
+          completedAt: new Date('2026-02-08T00:00:00.000Z'),
           expiresAt: new Date('2026-02-08T00:00:00.000Z'),
         },
       ]);

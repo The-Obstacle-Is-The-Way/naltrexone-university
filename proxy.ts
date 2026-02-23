@@ -74,8 +74,8 @@ export default async function proxy(
     return NextResponse.next();
   }
 
-  const clerkMiddleware = await getClerkMiddleware();
-  return clerkMiddleware(request, event);
+  const clerkMw = await getClerkMiddleware();
+  return clerkMw(request, event);
 }
 
 export const config = {
