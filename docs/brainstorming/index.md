@@ -29,8 +29,9 @@ Brainstorming (BS-NNN) → Spec (SPEC-NNN) → Implementation → Archive
 |----|-------|--------|--------------|
 | [BS-014](./bs-014-practice-starter-question-count-ux.md) | Practice Starter — Silent Truncation When Fewer Questions Available | Active | — |
 | [BS-030](./bs-030-proxy-middleware-layer-analysis.md) | Proxy/Middleware Layer — First-Principles Architecture Analysis | Active | — |
+| [BS-031](./bs-031-card-row-affordance-consistency.md) | Card/Row Affordance Consistency — Interaction Pattern Audit | Active | — |
 
-**Next Brainstorming ID:** BS-031
+**Next Brainstorming ID:** BS-032
 
 ---
 
