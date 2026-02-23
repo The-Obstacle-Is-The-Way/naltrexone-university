@@ -176,7 +176,8 @@ describe('HistorySessionsTab', () => {
 
     expect(html).toContain('cursor-pointer');
     expect(html).toContain('hover:bg-accent/40');
-    expect(html).not.toContain('tabindex="0"');
+    expect(html).toContain('tabindex="0"');
+    expect(html).toContain('tabindex="-1"');
   });
 
   it('does not render clickable row affordances when session review is unavailable', () => {
