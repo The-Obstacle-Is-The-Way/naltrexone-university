@@ -23,6 +23,16 @@ describe('proxy middleware', () => {
     await expect(import('./proxy')).resolves.toBeDefined();
   });
 
+  it('keeps the default export function name as proxy (BUG-150 regression guard)', async () => {
+    process.env.NEXT_PUBLIC_SKIP_CLERK = 'true';
+    vi.doMock('@clerk/nextjs/server', () => {
+      throw new Error('Publishable key not valid.');
+    });
+
+    const { default: proxy } = await import('./proxy');
+    expect(proxy.name).toBe('proxy');
+  });
+
   it('returns NextResponse.next() when NEXT_PUBLIC_SKIP_CLERK=true', async () => {
     process.env.NEXT_PUBLIC_SKIP_CLERK = 'true';
     vi.doMock('@clerk/nextjs/server', () => {

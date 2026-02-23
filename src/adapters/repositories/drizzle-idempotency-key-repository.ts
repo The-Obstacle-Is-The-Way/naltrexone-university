@@ -33,6 +33,7 @@ export class DrizzleIdempotencyKeyRepository
         resultJson: null,
         errorCode: null,
         errorMessage: null,
+        completedAt: null,
         expiresAt: input.expiresAt,
       })
       .onConflictDoNothing({
@@ -52,6 +53,7 @@ export class DrizzleIdempotencyKeyRepository
         resultJson: null,
         errorCode: null,
         errorMessage: null,
+        completedAt: null,
         expiresAt: input.expiresAt,
       })
       .where(
@@ -77,6 +79,7 @@ export class DrizzleIdempotencyKeyRepository
         resultJson: idempotencyKeys.resultJson,
         errorCode: idempotencyKeys.errorCode,
         errorMessage: idempotencyKeys.errorMessage,
+        completedAt: idempotencyKeys.completedAt,
         expiresAt: idempotencyKeys.expiresAt,
       })
       .from(idempotencyKeys)
@@ -102,6 +105,7 @@ export class DrizzleIdempotencyKeyRepository
             message: row.errorMessage ?? row.errorCode,
           }
         : null,
+      completedAt: row.completedAt,
       expiresAt: row.expiresAt,
     };
   }
@@ -118,6 +122,7 @@ export class DrizzleIdempotencyKeyRepository
         resultJson: input.resultJson,
         errorCode: null,
         errorMessage: null,
+        completedAt: this.now(),
       })
       .where(
         and(
@@ -145,6 +150,7 @@ export class DrizzleIdempotencyKeyRepository
         resultJson: null,
         errorCode: input.error.code,
         errorMessage: input.error.message,
+        completedAt: this.now(),
       })
       .where(
         and(

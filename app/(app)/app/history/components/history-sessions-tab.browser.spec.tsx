@@ -3,8 +3,13 @@ import { render } from 'vitest-browser-react';
 import { ok } from '@/tests/test-helpers/ok';
 import { HistorySessionsTab } from './history-sessions-tab';
 
-const { getPracticeSessionReviewMock } = vi.hoisted(() => ({
+const { pushMock, getPracticeSessionReviewMock } = vi.hoisted(() => ({
+  pushMock: vi.fn(),
   getPracticeSessionReviewMock: vi.fn(),
+}));
+
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ push: pushMock }),
 }));
 
 vi.mock('@/src/adapters/controllers/practice-controller', () => ({
@@ -14,7 +19,77 @@ vi.mock('@/src/adapters/controllers/practice-controller', () => ({
 describe('HistorySessionsTab (browser)', () => {
   afterEach(() => {
     vi.restoreAllMocks();
+    pushMock.mockReset();
     getPracticeSessionReviewMock.mockReset();
+  });
+
+  it('clicking a session row outside nested controls navigates to review', async () => {
+    const screen = await render(
+      <HistorySessionsTab
+        result={ok({
+          rows: [
+            {
+              sessionId: 'session-1',
+              mode: 'exam',
+              questionCount: 10,
+              firstQuestionSlug: 'q-1',
+              answered: 10,
+              correct: 8,
+              accuracy: 0.8,
+              durationSeconds: 1200,
+              startedAt: '2026-02-07T00:00:00.000Z',
+              endedAt: '2026-02-07T00:20:00.000Z',
+            },
+          ],
+          total: 1,
+          limit: 20,
+          offset: 0,
+        })}
+      />,
+    );
+
+    await screen.getByRole('listitem').click();
+
+    expect(pushMock).toHaveBeenCalledWith(
+      expect.stringContaining('/app/questions/q-1'),
+    );
+  });
+
+  it('supports keyboard row navigation with Enter', async () => {
+    const screen = await render(
+      <HistorySessionsTab
+        result={ok({
+          rows: [
+            {
+              sessionId: 'session-1',
+              mode: 'exam',
+              questionCount: 10,
+              firstQuestionSlug: 'q-1',
+              answered: 10,
+              correct: 8,
+              accuracy: 0.8,
+              durationSeconds: 1200,
+              startedAt: '2026-02-07T00:00:00.000Z',
+              endedAt: '2026-02-07T00:20:00.000Z',
+            },
+          ],
+          total: 1,
+          limit: 20,
+          offset: 0,
+        })}
+      />,
+    );
+
+    const row = screen.getByRole('listitem');
+    const rowElement = row.element();
+    rowElement.focus();
+    rowElement.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }),
+    );
+
+    expect(pushMock).toHaveBeenCalledWith(
+      expect.stringContaining('/app/questions/q-1'),
+    );
   });
 
   it('clicking View breakdown loads and renders breakdown rows', async () => {

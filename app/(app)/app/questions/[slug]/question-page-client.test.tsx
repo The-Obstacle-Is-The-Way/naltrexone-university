@@ -10,9 +10,12 @@ vi.mock('next/link', () => ({
 type QuestionPageClientModule = typeof import('./question-page-client');
 
 let QuestionView: QuestionPageClientModule['QuestionView'];
+let parseHistorySequence: QuestionPageClientModule['parseHistorySequence'];
 
 beforeAll(async () => {
-  ({ QuestionView } = await import('./question-page-client'));
+  ({ QuestionView, parseHistorySequence } = await import(
+    './question-page-client'
+  ));
 });
 
 describe('QuestionView', () => {
@@ -678,5 +681,33 @@ describe('QuestionView', () => {
       p.textContent?.includes('Question 1 of'),
     );
     expect(indicator).toBeUndefined();
+  });
+});
+
+describe('parseHistorySequence', () => {
+  it.each([
+    ['undefined', undefined],
+    ['empty string', ''],
+  ] as const)('returns null for falsy input (%s)', (_label, input) => {
+    expect(parseHistorySequence(input)).toBeNull();
+  });
+
+  it('returns null when all slugs are invalid', () => {
+    expect(parseHistorySequence('../dashboard,./history,/app/path')).toBeNull();
+  });
+
+  it('filters out malformed slugs and keeps valid history sequence items', () => {
+    expect(parseHistorySequence('q-1, ../dashboard ,q-2,,q_3')).toEqual([
+      'q-1',
+      'q-2',
+    ]);
+  });
+
+  it('caps result at MAX_HISTORY_SEQUENCE_LENGTH (20) slugs', () => {
+    const input = Array.from({ length: 25 }, (_, i) => `q-${i + 1}`).join(',');
+    const result = parseHistorySequence(input);
+    expect(result).toHaveLength(20);
+    expect(result?.[0]).toBe('q-1');
+    expect(result?.[19]).toBe('q-20');
   });
 });

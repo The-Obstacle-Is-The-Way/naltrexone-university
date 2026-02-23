@@ -58,13 +58,16 @@ function parseHistoryHref(value: string | undefined): string | null {
 }
 
 const MAX_HISTORY_SEQUENCE_LENGTH = 20;
+const HISTORY_SEQUENCE_SLUG_PATTERN = /^[a-z0-9-]+$/;
 
-function parseHistorySequence(value: string | undefined): string[] | null {
+export function parseHistorySequence(
+  value: string | undefined,
+): string[] | null {
   if (!value) return null;
   const slugs = value
     .split(',')
     .map((slug) => slug.trim())
-    .filter((slug) => slug.length > 0)
+    .filter((slug) => HISTORY_SEQUENCE_SLUG_PATTERN.test(slug))
     .slice(0, MAX_HISTORY_SEQUENCE_LENGTH);
 
   if (slugs.length === 0) return null;

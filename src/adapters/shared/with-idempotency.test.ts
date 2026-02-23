@@ -63,6 +63,35 @@ describe('withIdempotency', () => {
     expect(parseResult).toHaveBeenCalledTimes(1);
   });
 
+  it('replays legacy cached payloads when completedAt is missing', async () => {
+    class LegacyCompletedAtRepo extends FakeIdempotencyKeyRepository {
+      override async find(userId: string, action: string, key: string) {
+        const existing = await super.find(userId, action, key);
+        if (!existing) return null;
+        return { ...existing, completedAt: null };
+      }
+    }
+
+    const now = () => new Date();
+    const repo = new LegacyCompletedAtRepo(now);
+    const logger = new FakeLogger();
+    const execute = vi.fn(async () => ({ ok: true }));
+
+    const input = {
+      repo,
+      userId: 'user_1',
+      action: 'billing:createCheckoutSession',
+      key: '11111111-1111-1111-1111-111111111112',
+      now,
+      logger,
+      execute,
+    } as const;
+
+    await expect(withIdempotency(input)).resolves.toEqual({ ok: true });
+    await expect(withIdempotency(input)).resolves.toEqual({ ok: true });
+    expect(execute).toHaveBeenCalledTimes(1);
+  });
+
   it('waits for an in-progress request and returns the stored result', async () => {
     const now = () => new Date();
     const repo = new FakeIdempotencyKeyRepository(now);
@@ -104,6 +133,125 @@ describe('withIdempotency', () => {
     await expect(first).resolves.toEqual({ ok: true });
     await expect(second).resolves.toEqual({ ok: true });
     expect(execute).toHaveBeenCalledTimes(1);
+  });
+
+  it('replays cached null results without invoking execute', async () => {
+    const now = () => new Date();
+    const repo = new FakeIdempotencyKeyRepository(now);
+    const logger = new FakeLogger();
+    const key = '22222222-2222-2222-2222-222222222223';
+
+    await repo.claim({
+      userId: 'user_1',
+      action: 'question:submitAnswer',
+      key,
+      expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+    });
+
+    await repo.storeResult({
+      userId: 'user_1',
+      action: 'question:submitAnswer',
+      key,
+      resultJson: null,
+    });
+
+    const execute = vi.fn(async () => ({ ok: true }));
+    await expect(
+      withIdempotency({
+        repo,
+        userId: 'user_1',
+        action: 'question:submitAnswer',
+        key,
+        now,
+        logger,
+        execute,
+      }),
+    ).resolves.toBeNull();
+
+    expect(execute).not.toHaveBeenCalled();
+  });
+
+  it('passes cached null results through parseResult when replaying', async () => {
+    const now = () => new Date('2026-02-07T00:00:00.000Z');
+    const repo = new FakeIdempotencyKeyRepository(now);
+    const logger = new FakeLogger();
+    const key = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
+
+    await repo.claim({
+      userId: 'user_1',
+      action: 'question:submitAnswer',
+      key,
+      expiresAt: new Date('2026-02-08T00:00:00.000Z'),
+    });
+    await repo.storeResult({
+      userId: 'user_1',
+      action: 'question:submitAnswer',
+      key,
+      resultJson: null,
+    });
+
+    const parseResult = vi.fn(() => 'replayed');
+    const execute = vi.fn(async () => 'executed');
+
+    await expect(
+      withIdempotency({
+        repo,
+        userId: 'user_1',
+        action: 'question:submitAnswer',
+        key,
+        now,
+        logger,
+        parseResult,
+        execute,
+      }),
+    ).resolves.toBe('replayed');
+
+    expect(parseResult).toHaveBeenCalledWith(null);
+    expect(execute).not.toHaveBeenCalled();
+  });
+
+  it('throws INTERNAL_ERROR when parseResult rejects a cached null replay', async () => {
+    const now = () => new Date('2026-02-07T00:00:00.000Z');
+    const repo = new FakeIdempotencyKeyRepository(now);
+    const logger = new FakeLogger();
+    const key = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb';
+
+    await repo.claim({
+      userId: 'user_1',
+      action: 'question:submitAnswer',
+      key,
+      expiresAt: new Date('2026-02-08T00:00:00.000Z'),
+    });
+    await repo.storeResult({
+      userId: 'user_1',
+      action: 'question:submitAnswer',
+      key,
+      resultJson: null,
+    });
+
+    const parseResult = vi.fn(() => {
+      throw new Error('invalid');
+    });
+    const execute = vi.fn(async () => ({ ok: true }));
+
+    await expect(
+      withIdempotency({
+        repo,
+        userId: 'user_1',
+        action: 'question:submitAnswer',
+        key,
+        now,
+        logger,
+        parseResult,
+        execute,
+      }),
+    ).rejects.toMatchObject({
+      code: 'INTERNAL_ERROR',
+      message: 'Cached idempotency result is invalid',
+    });
+
+    expect(parseResult).toHaveBeenCalledWith(null);
+    expect(execute).not.toHaveBeenCalled();
   });
 
   it('rethrows the stored ApplicationError for a repeated idempotency key', async () => {

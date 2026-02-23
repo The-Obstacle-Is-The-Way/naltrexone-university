@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { SessionBreakdownList } from '@/app/(app)/app/shared/components/session-breakdown-list';
 import { ErrorCard } from '@/components/error-card';
 import { Button } from '@/components/ui/button';
@@ -81,6 +82,7 @@ export function HistorySessionsTab({
   modeFilter = 'all',
 }: HistorySessionsTabProps) {
   const historySessions = useHistorySessions();
+  const router = useRouter();
 
   if (!result.ok) {
     return <ErrorCard>{result.error.message}</ErrorCard>;
@@ -171,16 +173,50 @@ export function HistorySessionsTab({
                 historyHref,
               })
             : null;
+          const isRowInteractive = sessionReviewHref !== null;
 
           return (
             <li
               key={row.sessionId}
-              className="rounded-xl border border-border/60 bg-muted/20 p-3 transition-colors hover:bg-accent/40 dark:hover:bg-foreground/10"
+              tabIndex={isRowInteractive ? 0 : undefined}
+              className={cn(
+                'rounded-xl border border-border/60 bg-muted/20 p-3 transition-colors',
+                isRowInteractive
+                  ? 'cursor-pointer hover:bg-accent/40 focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px] dark:hover:bg-foreground/10'
+                  : undefined,
+              )}
+              onClick={(event) => {
+                if (!sessionReviewHref) return;
+                const target = event.target;
+                if (!(target instanceof Element)) return;
+                const interactive = target.closest(
+                  'a,button,input,select,textarea,[role="button"],[role="link"]',
+                );
+                if (interactive && interactive !== event.currentTarget) {
+                  return;
+                }
+                router.push(sessionReviewHref);
+              }}
+              onKeyDown={(event) => {
+                if (!sessionReviewHref) return;
+                if (event.key !== 'Enter' && event.key !== ' ') return;
+                const target = event.target;
+                if (!(target instanceof Element)) return;
+                const interactive = target.closest(
+                  'a,button,input,select,textarea,[role="button"],[role="link"]',
+                );
+                if (interactive && interactive !== event.currentTarget) {
+                  return;
+                }
+                event.preventDefault();
+                router.push(sessionReviewHref);
+              }}
             >
               <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                 {sessionReviewHref ? (
                   <Link
                     href={sessionReviewHref}
+                    tabIndex={-1}
                     className="rounded-md text-sm text-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]"
                   >
                     <SessionSummaryContent

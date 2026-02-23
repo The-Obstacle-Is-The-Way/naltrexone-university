@@ -35,6 +35,11 @@ describe('DrizzleIdempotencyKeyRepository', () => {
       ).resolves.toBe(true);
 
       expect(update).not.toHaveBeenCalled();
+      expect(insertValues).toHaveBeenCalledWith(
+        expect.objectContaining({
+          completedAt: null,
+        }),
+      );
     });
 
     it('returns true when an expired key is reclaimed', async () => {
@@ -71,6 +76,11 @@ describe('DrizzleIdempotencyKeyRepository', () => {
         }),
       ).resolves.toBe(true);
       expect(update).toHaveBeenCalledTimes(1);
+      expect(updateSet).toHaveBeenCalledWith(
+        expect.objectContaining({
+          completedAt: null,
+        }),
+      );
     });
 
     it('returns false when existing key is still active', async () => {
@@ -133,6 +143,7 @@ describe('DrizzleIdempotencyKeyRepository', () => {
           resultJson: { ok: true },
           errorCode: null,
           errorMessage: null,
+          completedAt: new Date('2026-02-08T00:00:00.000Z'),
           expiresAt: new Date('2026-02-08T00:00:00.000Z'),
         },
       ]);
@@ -159,12 +170,14 @@ describe('DrizzleIdempotencyKeyRepository', () => {
 
     it('returns cached result and error payload for active keys', async () => {
       const expiresAt = new Date('2026-02-08T01:00:00.000Z');
+      const completedAt = new Date('2026-02-08T00:00:00.000Z');
       const selectWhere = vi.fn(async () => [
         {
           resultJson: { ok: true },
           errorCode: 'CONFLICT',
           errorMessage: 'already in progress',
           expiresAt,
+          completedAt,
         },
       ]);
       const selectFrom = vi.fn(() => ({ where: selectWhere }));
@@ -189,6 +202,45 @@ describe('DrizzleIdempotencyKeyRepository', () => {
         resultJson: { ok: true },
         error: { code: 'CONFLICT', message: 'already in progress' },
         expiresAt,
+        completedAt,
+      });
+    });
+
+    it('returns completed records even when resultJson is null', async () => {
+      const expiresAt = new Date('2026-02-08T01:00:00.000Z');
+      const completedAt = new Date('2026-02-08T00:00:00.000Z');
+      const selectWhere = vi.fn(async () => [
+        {
+          resultJson: null,
+          errorCode: null,
+          errorMessage: null,
+          expiresAt,
+          completedAt,
+        },
+      ]);
+      const selectFrom = vi.fn(() => ({ where: selectWhere }));
+      const select = vi.fn(() => ({ from: selectFrom }));
+
+      const db = {
+        select,
+      } as unknown as RepoDb;
+
+      const repo = new DrizzleIdempotencyKeyRepository(
+        db,
+        () => new Date('2026-02-08T00:00:00.000Z'),
+      );
+
+      await expect(
+        repo.find(
+          '11111111-1111-1111-1111-111111111111',
+          'question:submitAnswer',
+          'idem-1',
+        ),
+      ).resolves.toEqual({
+        resultJson: null,
+        error: null,
+        expiresAt,
+        completedAt,
       });
     });
   });
@@ -214,6 +266,36 @@ describe('DrizzleIdempotencyKeyRepository', () => {
           resultJson: { ok: true },
         }),
       ).resolves.toBeUndefined();
+    });
+
+    it('marks completedAt when storing result payloads', async () => {
+      const updateReturning = vi.fn(async () => [{ key: 'idem-1' }]);
+      const updateWhere = vi.fn(() => ({ returning: updateReturning }));
+      const updateSet = vi.fn(() => ({ where: updateWhere }));
+      const update = vi.fn(() => ({ set: updateSet }));
+      const now = new Date('2026-02-08T00:00:00.000Z');
+
+      const db = {
+        update,
+      } as unknown as RepoDb;
+
+      const repo = new DrizzleIdempotencyKeyRepository(db, () => now);
+
+      await repo.storeResult({
+        userId: '11111111-1111-1111-1111-111111111111',
+        action: 'question:submitAnswer',
+        key: 'idem-1',
+        resultJson: null,
+      });
+
+      expect(updateSet).toHaveBeenCalledWith(
+        expect.objectContaining({
+          resultJson: null,
+          errorCode: null,
+          errorMessage: null,
+          completedAt: now,
+        }),
+      );
     });
 
     it('throws NOT_FOUND when storing result for a missing claim', async () => {
@@ -265,6 +347,39 @@ describe('DrizzleIdempotencyKeyRepository', () => {
           },
         }),
       ).resolves.toBeUndefined();
+    });
+
+    it('marks completedAt when storing error payloads', async () => {
+      const updateReturning = vi.fn(async () => [{ key: 'idem-1' }]);
+      const updateWhere = vi.fn(() => ({ returning: updateReturning }));
+      const updateSet = vi.fn(() => ({ where: updateWhere }));
+      const update = vi.fn(() => ({ set: updateSet }));
+      const now = new Date('2026-02-08T00:00:00.000Z');
+
+      const db = {
+        update,
+      } as unknown as RepoDb;
+
+      const repo = new DrizzleIdempotencyKeyRepository(db, () => now);
+
+      await repo.storeError({
+        userId: '11111111-1111-1111-1111-111111111111',
+        action: 'question:submitAnswer',
+        key: 'idem-1',
+        error: {
+          code: 'INTERNAL_ERROR',
+          message: 'unexpected failure',
+        },
+      });
+
+      expect(updateSet).toHaveBeenCalledWith(
+        expect.objectContaining({
+          resultJson: null,
+          errorCode: 'INTERNAL_ERROR',
+          errorMessage: 'unexpected failure',
+          completedAt: now,
+        }),
+      );
     });
 
     it('throws NOT_FOUND when storing error for a missing claim', async () => {

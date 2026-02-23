@@ -8,6 +8,7 @@ import type {
 type InMemoryIdempotencyRecord = {
   resultJson: unknown;
   error: IdempotencyKeyError | null;
+  completedAt: Date | null;
   expiresAt: Date;
 };
 
@@ -35,6 +36,7 @@ export class FakeIdempotencyKeyRepository implements IdempotencyKeyRepository {
     this.records.set(id, {
       resultJson: null,
       error: null,
+      completedAt: null,
       expiresAt: input.expiresAt,
     });
     return true;
@@ -72,6 +74,7 @@ export class FakeIdempotencyKeyRepository implements IdempotencyKeyRepository {
       ...existing,
       resultJson: input.resultJson,
       error: null,
+      completedAt: this.now(),
     });
   }
 
@@ -91,6 +94,7 @@ export class FakeIdempotencyKeyRepository implements IdempotencyKeyRepository {
       ...existing,
       resultJson: null,
       error: input.error,
+      completedAt: this.now(),
     });
   }
 

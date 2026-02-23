@@ -287,11 +287,10 @@ export async function loadPreviousAttempt(input: {
   }
   if (!isMounted()) return;
 
-  // Server-action modules may return undefined when the underlying import is
-  // swapped at runtime (e.g. vi.mock resets in browser specs).  The type says
-  // ActionResult but the runtime value can be undefined in that edge case.
+  // Defensive guard: errors (!res.ok) and null results (!res.data, meaning
+  // no previous attempt found) both stay in attempt mode — review hydration
+  // is best-effort and non-blocking.
   if (!res || !res.ok || !res.data) {
-    // No previous attempt or error — stay in attempt mode
     return;
   }
 
