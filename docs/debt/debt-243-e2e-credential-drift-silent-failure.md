@@ -260,6 +260,7 @@ This debt item covers credentials required for deterministic E2E execution: **DB
 
 - `CRON_SECRET` and Sentry DSNs are real drift risks, but they are not consumed by E2E setup path.
 - They are handled by runtime modules (`app/api/cron/reconcile-stripe-subscriptions/route.ts`, `instrumentation.ts`, `sentry.client.config.ts`) and must be hardened in separate debt work, not in this E2E preflight module.
+- Post-implementation E2E instability unrelated to credential correctness (schema/state/spec drift) is tracked separately in [DEBT-244](debt-244-test-reliability-schema-and-state-drift.md).
 
 ## Required Companion Follow-Ups (System-Wide)
 
