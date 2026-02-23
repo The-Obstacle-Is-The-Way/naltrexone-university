@@ -4,7 +4,7 @@
 **Last Re-Validated:** 2026-02-22
 **Triggered by:** Dogfooding + comprehensive browser agent audit of the History page (both Sessions and Questions tabs)
 **Scope:** Tutor mode score misleads users; absurd session durations; session card not clickable; Sessions vs Questions review experience parity gap; missing hover states, filters, pagination counts; Questions tab minor issues
-**Related:** [BS-022](../_archive/brainstorming/bs-022-unanswered-question-review-handling.md) (Unanswered Question Review Handling — archived), [SPEC-034](../specs/spec-034-unanswered-question-review-handling.md), [BS-027](./bs-027-history-tab-bar-visual-inconsistency.md) (Tab bar visual drift), [SPEC-038](../specs/spec-038-history-ux-remediation.md) (proposed remediation spec)
+**Related:** [BS-022](../_archive/brainstorming/bs-022-unanswered-question-review-handling.md) (Unanswered Question Review Handling — archived), [SPEC-034](../specs/spec-034-unanswered-question-review-handling.md), [BS-027](./bs-027-history-tab-bar-visual-inconsistency.md) (Tab bar visual drift), [SPEC-038](../specs/spec-038-history-ux-remediation.md) (implemented remediation spec)
 
 ---
 

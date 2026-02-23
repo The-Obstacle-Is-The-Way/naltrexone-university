@@ -171,11 +171,35 @@ export function HistorySessionsTab({
                 historyHref,
               })
             : null;
+          const isRowInteractive = sessionReviewHref !== null;
 
           return (
             <li
               key={row.sessionId}
-              className="rounded-xl border border-border/60 bg-muted/20 p-3 transition-colors hover:bg-accent/40 dark:hover:bg-foreground/10"
+              tabIndex={isRowInteractive ? 0 : undefined}
+              className={cn(
+                'rounded-xl border border-border/60 bg-muted/20 p-3 transition-colors hover:bg-accent/40 dark:hover:bg-foreground/10',
+                isRowInteractive ? 'cursor-pointer' : undefined,
+              )}
+              onClick={(event) => {
+                if (!sessionReviewHref) return;
+                const target = event.target;
+                if (!(target instanceof Element)) return;
+                if (
+                  target.closest(
+                    'a,button,input,select,textarea,[role="button"],[role="link"]',
+                  )
+                ) {
+                  return;
+                }
+                window.location.assign(sessionReviewHref);
+              }}
+              onKeyDown={(event) => {
+                if (!sessionReviewHref) return;
+                if (event.key !== 'Enter' && event.key !== ' ') return;
+                event.preventDefault();
+                window.location.assign(sessionReviewHref);
+              }}
             >
               <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                 {sessionReviewHref ? (

@@ -1,7 +1,7 @@
 # Brainstorming Register
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-02-22
+**Last Updated:** 2026-02-23
 
 ---
 
@@ -28,7 +28,6 @@ Brainstorming (BS-NNN) → Spec (SPEC-NNN) → Implementation → Archive
 | ID | Title | Status | Related Spec |
 |----|-------|--------|--------------|
 | [BS-014](./bs-014-practice-starter-question-count-ux.md) | Practice Starter — Silent Truncation When Fewer Questions Available | Active | — |
-| [BS-028](./bs-028-history-session-scoring-and-navigation-gaps.md) | History Page UX Audit — Scoring, Duration, Navigation, Review Parity (2026-02-22 re-validated) | Active | [SPEC-038](../specs/spec-038-history-ux-remediation.md) |
 | [BS-030](./bs-030-proxy-middleware-layer-analysis.md) | Proxy/Middleware Layer — First-Principles Architecture Analysis | Active | — |
 
 **Next Brainstorming ID:** BS-031
@@ -66,6 +65,7 @@ Brainstorming (BS-NNN) → Spec (SPEC-NNN) → Implementation → Archive
 | [BS-025](../_archive/brainstorming/BS-025-reference-section-pipeline-support.md) | Reference Section Pipeline Support | Specced as SPEC-035 (Implemented). Full vertical slice: reference_md field from seed to UI |
 | [BS-026](../_archive/brainstorming/bs-026-bookmark-reattempt-review-mode-consistency.md) | Bookmark Reattempt vs Review Mode Consistency | Specced as SPEC-036 (Implemented). Bookmarks aligned to review-first contract |
 | [BS-027](../_archive/brainstorming/bs-027-history-tab-bar-visual-inconsistency.md) | History Tab Bar Visual Inconsistency — Pill vs Segmented Control | Resolved by SPEC-037 (Implemented). Shared style constants unify SegmentedControl and HistoryTabBar |
+| [BS-028](../_archive/brainstorming/bs-028-history-session-scoring-and-navigation-gaps.md) | History Page UX Audit — Scoring, Duration, Navigation, Review Parity | Resolved by SPEC-038 (Implemented). Re-verified by Playwright audit (`17/17` passing on 2026-02-23) |
 | [BS-029](../_archive/brainstorming/bs-029-clerk-user-id-email-upsert-conflict.md) | Clerk User ID / Email Upsert Conflict — Unhandled Unique Constraint | Resolved as BUG-147 (Fix C: catch-and-update for `users_email_uq` in `DrizzleUserRepository`) |
 
 ---

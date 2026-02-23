@@ -4,7 +4,7 @@
 > Write tests FIRST. Red > Green > Refactor. No implementation without a failing test.
 > Principles: SOLID, DRY, Clean Code, Gang of Four patterns where appropriate.
 
-**Status:** Proposed
+**Status:** Implemented (Archived 2026-02-23)
 **Layer:** Feature
 **Date:** 2026-02-22
 **Brainstorming:** [BS-028](../brainstorming/bs-028-history-session-scoring-and-navigation-gaps.md)

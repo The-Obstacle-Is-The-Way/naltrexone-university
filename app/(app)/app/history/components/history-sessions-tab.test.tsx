@@ -144,7 +144,7 @@ describe('HistorySessionsTab', () => {
     expect(html).toContain('data-session-summary-content="true"');
   });
 
-  it('does not render cursor-pointer on li rows', () => {
+  it('renders clickable row affordances when session review is available', () => {
     const result: SessionHistoryResult = {
       ok: true,
       data: {
@@ -170,8 +170,39 @@ describe('HistorySessionsTab', () => {
 
     const html = renderToStaticMarkup(<HistorySessionsTab result={result} />);
 
-    expect(html).not.toContain('cursor-pointer');
+    expect(html).toContain('cursor-pointer');
+    expect(html).toContain('tabindex="0"');
     expect(html).toContain('hover:bg-accent');
+  });
+
+  it('does not render clickable row affordances when session review is unavailable', () => {
+    const result: SessionHistoryResult = {
+      ok: true,
+      data: {
+        rows: [
+          {
+            sessionId: 'session-1',
+            mode: 'exam',
+            questionCount: 10,
+            firstQuestionSlug: null,
+            answered: 10,
+            correct: 8,
+            accuracy: 0.8,
+            durationSeconds: 1200,
+            startedAt: '2026-02-07T00:00:00.000Z',
+            endedAt: '2026-02-07T00:20:00.000Z',
+          },
+        ],
+        total: 1,
+        limit: 20,
+        offset: 0,
+      },
+    };
+
+    const html = renderToStaticMarkup(<HistorySessionsTab result={result} />);
+
+    expect(html).not.toContain('cursor-pointer');
+    expect(html).not.toContain('tabindex="0"');
   });
 
   it('uses SessionSummaryContent for non-link session summaries', () => {
