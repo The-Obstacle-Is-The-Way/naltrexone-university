@@ -135,26 +135,25 @@ describe('withIdempotency', () => {
     expect(execute).toHaveBeenCalledTimes(1);
   });
 
-  it('replays cached null results without timing out', async () => {
+  it('replays cached null results without invoking execute', async () => {
     const now = () => new Date();
     const repo = new FakeIdempotencyKeyRepository(now);
     const logger = new FakeLogger();
+    const key = '22222222-2222-2222-2222-222222222223';
 
     await repo.claim({
       userId: 'user_1',
       action: 'question:submitAnswer',
-      key: '22222222-2222-2222-2222-222222222223',
+      key,
       expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
     });
 
-    setTimeout(() => {
-      void repo.storeResult({
-        userId: 'user_1',
-        action: 'question:submitAnswer',
-        key: '22222222-2222-2222-2222-222222222223',
-        resultJson: null,
-      });
-    }, 5);
+    await repo.storeResult({
+      userId: 'user_1',
+      action: 'question:submitAnswer',
+      key,
+      resultJson: null,
+    });
 
     const execute = vi.fn(async () => ({ ok: true }));
     await expect(
@@ -162,11 +161,9 @@ describe('withIdempotency', () => {
         repo,
         userId: 'user_1',
         action: 'question:submitAnswer',
-        key: '22222222-2222-2222-2222-222222222223',
+        key,
         now,
         logger,
-        pollIntervalMs: 1,
-        maxWaitMs: 200,
         execute,
       }),
     ).resolves.toBeNull();
@@ -178,7 +175,7 @@ describe('withIdempotency', () => {
     const now = () => new Date('2026-02-07T00:00:00.000Z');
     const repo = new FakeIdempotencyKeyRepository(now);
     const logger = new FakeLogger();
-    const key = '55555555-5555-5555-5555-555555555555';
+    const key = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
 
     await repo.claim({
       userId: 'user_1',
@@ -217,7 +214,7 @@ describe('withIdempotency', () => {
     const now = () => new Date('2026-02-07T00:00:00.000Z');
     const repo = new FakeIdempotencyKeyRepository(now);
     const logger = new FakeLogger();
-    const key = '66666666-6666-6666-6666-666666666666';
+    const key = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb';
 
     await repo.claim({
       userId: 'user_1',

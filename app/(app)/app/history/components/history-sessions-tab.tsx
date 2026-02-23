@@ -176,6 +176,7 @@ export function HistorySessionsTab({
           const isRowInteractive = sessionReviewHref !== null;
 
           return (
+            // biome-ignore lint/a11y/useKeyWithClickEvents: Keyboard navigation is provided by the inner review link; row click is a pointer convenience.
             <li
               key={row.sessionId}
               className={cn(
@@ -194,20 +195,6 @@ export function HistorySessionsTab({
                 if (interactive && interactive !== event.currentTarget) {
                   return;
                 }
-                router.push(sessionReviewHref);
-              }}
-              onKeyDown={(event) => {
-                if (!sessionReviewHref) return;
-                if (event.key !== 'Enter' && event.key !== ' ') return;
-                const target = event.target;
-                if (!(target instanceof Element)) return;
-                const interactive = target.closest(
-                  'a,button,input,select,textarea,[role="button"],[role="link"]',
-                );
-                if (interactive && interactive !== event.currentTarget) {
-                  return;
-                }
-                event.preventDefault();
                 router.push(sessionReviewHref);
               }}
             >
