@@ -17,7 +17,6 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 | ID | Title | Priority | Status |
 |----|-------|----------|--------|
-| [BUG-150](bug-150-proxy-function-named-middleware.md) | Proxy Default Export Named `middleware` — Recurring False-Positive Audit Noise | P4 | Open |
 | [BUG-151](bug-151-card-row-affordance-inconsistency.md) | Card/Row Affordance Inconsistency — Misleading Hover, Missing Focus Rings, Pattern Asymmetry | P2 | Open |
 
 **Next Bug ID:** BUG-152
@@ -118,6 +117,7 @@ Audit #3 produced BUG-136 and BUG-139. BUG-137 was reclassified as SSOT-consiste
 
 | ID | Title | Status | Resolution |
 |----|-------|--------|------------|
+| [BUG-150](../_archive/bugs/bug-150-proxy-function-named-middleware.md) | Proxy Default Export Named `middleware` — Recurring False-Positive Audit Noise | Resolved | Renamed `proxy.ts` default export from `middleware` to `proxy`, renamed inner `clerkMiddleware` local to `clerkMw`, and added `proxy.test.ts` regression coverage to prevent naming drift |
 | [BUG-149](../_archive/bugs/bug-149-idempotency-null-result-indistinguishable-from-pending.md) | Idempotency Null Result Is Indistinguishable from Pending State | Resolved | Added explicit `completed_at` completion marker to `idempotency_keys`, updated idempotency repository contracts/implementations, switched `withIdempotency` to completion-marker semantics with legacy non-null payload fallback, and added unit + integration regression coverage for null-result replay |
 | [BUG-148](../_archive/bugs/bug-148-stripe-checkout-idempotency-key-fallback-random.md) | Stripe Checkout Idempotency Key Fallback Uses randomUUID() | Resolved | Replaced random fallback with deterministic `checkout_session:${userId}:${plan}` and added stale-session replay detection with a recovery key path (`checkout_session_recovery:${userId}:${plan}:${sessionId}`) |
 | [BUG-147](../_archive/bugs/bug-147-user-upsert-unhandled-email-uniqueness-conflict.md) | User Upsert Fails on Email Uniqueness Conflict When Clerk User ID Changes | Resolved | Added `users_email_uq` catch-and-update path in `DrizzleUserRepository`, added fake email-uniqueness parity, and added integration/unit regression tests |

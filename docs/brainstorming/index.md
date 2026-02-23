@@ -28,7 +28,6 @@ Brainstorming (BS-NNN) → Spec (SPEC-NNN) → Implementation → Archive
 | ID | Title | Status | Related Spec |
 |----|-------|--------|--------------|
 | [BS-014](./bs-014-practice-starter-question-count-ux.md) | Practice Starter — Silent Truncation When Fewer Questions Available | Active | — |
-| [BS-030](./bs-030-proxy-middleware-layer-analysis.md) | Proxy/Middleware Layer — First-Principles Architecture Analysis | Active | — |
 | [BS-031](./bs-031-card-row-affordance-consistency.md) | Card/Row Affordance Consistency — Interaction Pattern Audit | Active | — |
 
 **Next Brainstorming ID:** BS-032
@@ -68,6 +67,7 @@ Brainstorming (BS-NNN) → Spec (SPEC-NNN) → Implementation → Archive
 | [BS-027](../_archive/brainstorming/bs-027-history-tab-bar-visual-inconsistency.md) | History Tab Bar Visual Inconsistency — Pill vs Segmented Control | Resolved by SPEC-037 (Implemented). Shared style constants unify SegmentedControl and HistoryTabBar |
 | [BS-028](../_archive/brainstorming/bs-028-history-session-scoring-and-navigation-gaps.md) | History Page UX Audit — Scoring, Duration, Navigation, Review Parity | Resolved by SPEC-038 (Implemented). Re-verified by Playwright audit (`17/17` passing on 2026-02-23) |
 | [BS-029](../_archive/brainstorming/bs-029-clerk-user-id-email-upsert-conflict.md) | Clerk User ID / Email Upsert Conflict — Unhandled Unique Constraint | Resolved as BUG-147 (Fix C: catch-and-update for `users_email_uq` in `DrizzleUserRepository`) |
+| [BS-030](../_archive/brainstorming/bs-030-proxy-middleware-layer-analysis.md) | Proxy/Middleware Layer — First-Principles Architecture Analysis | Resolved as BUG-150. Export naming mismatch removed and guarded by `proxy.test.ts` regression test |
 
 ---
 

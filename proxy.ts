@@ -49,7 +49,7 @@ async function getClerkMiddleware(): Promise<NextMiddleware> {
 
   const isPublicRoute = createRouteMatcher(PUBLIC_ROUTE_PATTERNS);
 
-  const middleware = clerkMiddleware(
+  const clerkMw = clerkMiddleware(
     async (auth, request) => {
       if (!isPublicRoute(request)) {
         await auth.protect();
@@ -62,11 +62,11 @@ async function getClerkMiddleware(): Promise<NextMiddleware> {
     },
   );
 
-  cachedClerkMiddleware = middleware;
-  return middleware;
+  cachedClerkMiddleware = clerkMw;
+  return clerkMw;
 }
 
-export default async function middleware(
+export default async function proxy(
   request: NextRequest,
   event: NextFetchEvent,
 ) {

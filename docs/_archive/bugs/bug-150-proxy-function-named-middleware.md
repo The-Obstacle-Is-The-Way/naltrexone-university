@@ -1,14 +1,20 @@
 # BUG-150: Proxy Default Export Named `middleware` — Recurring False-Positive Audit Noise
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P4
 **Date:** 2026-02-23
+**Resolved:** 2026-02-23
 
 ---
 
 ## Description
 
-`proxy.ts` line 69 exports `async function middleware(...)`. The file is correctly named `proxy.ts` and Next.js 16 recognizes it as `ƒ Proxy (Middleware)` at build time. However, the default export is still named `middleware`, which:
+`proxy.ts` previously exported `async function middleware(...)`. The file is
+correctly named `proxy.ts` and Next.js 16 recognizes it as
+`ƒ Proxy (Middleware)` at build time. The stale function name created
+cross-audit false positives and local naming confusion.
+
+The mismatch:
 
 1. Triggers false-positive "auth bypass" flags in every automated sweep
 2. Confuses developers reading the code — the file says "proxy" but the function says "middleware"
@@ -67,11 +73,12 @@ No other files reference the default export by name — it's consumed by Next.js
 
 ## Verification
 
-- [ ] `pnpm build` still prints `ƒ Proxy (Middleware)` — confirms Next.js recognizes the proxy
-- [ ] `pnpm typecheck` passes
-- [ ] `pnpm lint` passes
-- [ ] `pnpm test --run` passes (no test references the function name)
-- [ ] Grep for `function middleware` returns zero results after fix
+- [x] `pnpm build` still prints `ƒ Proxy (Middleware)` — confirms Next.js recognizes the proxy
+- [x] `pnpm typecheck` passes
+- [x] `pnpm lint` passes
+- [x] `pnpm test --run` passes
+- [x] Added regression test `proxy.test.ts` to enforce default export name `proxy`
+- [x] `rg -n "function middleware\\(" proxy.ts` returns no matches
 
 ## Related
 
