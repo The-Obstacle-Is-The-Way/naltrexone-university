@@ -19,6 +19,7 @@ At the same time, E2E still contains 20 non-credential `test.skip(...)` call-sit
 - E2E spec files: `20`
 - Credential-gating skips (`test.skip(!hasClerkCredentials, ...)`): `16` call-sites across `15` files
 - Non-credential skips: `20` call-sites across `6` files
+- Deterministic baseline prerequisite (`B1-B7`): implemented via DEBT-244 resolution in `tests/e2e/helpers/reset-e2e-user-state.ts`
 
 ## Deterministic Preconditions for Skip Removal
 
@@ -63,7 +64,7 @@ At the same time, E2E still contains 20 non-credential `test.skip(...)` call-sit
 
 ### 1) Enforce deterministic authenticated E2E setup
 
-Use DEBT-244 §3 baseline seeding as a hard precondition for authenticated E2E. No non-credential skips remain after this.
+Use DEBT-244 §3 baseline seeding as a hard precondition for authenticated E2E. This prerequisite is complete.
 
 ### 2) Remove all 20 non-credential skips
 
@@ -197,10 +198,9 @@ Policy is absolute: the only allowed E2E skip is the credential gate line.
 
 ## Execution Order (No Optionality)
 
-1. Implement DEBT-244 deterministic baseline seeding (`B1-B7`).
-2. Remove all 20 non-credential skips and replace with hard assertions.
-3. Migrate/delete the 5 audit E2E specs exactly as mapped above.
-4. Add the CI skip-policy guard.
+1. Remove all 20 non-credential skips and replace with hard assertions.
+2. Migrate/delete the 5 audit E2E specs exactly as mapped above.
+3. Add the CI skip-policy guard.
 
 ## Verification Plan
 

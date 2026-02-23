@@ -1,5 +1,5 @@
 import postgres from 'postgres';
-import { afterAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import {
   CANONICAL_SUBSTANCE_SLUGS,
   CANONICAL_TOPIC_SLUGS,
@@ -27,6 +27,19 @@ const sql = postgres(databaseUrl, { max: 1 });
 
 afterAll(async () => {
   await sql.end({ timeout: 5 });
+});
+
+beforeAll(async () => {
+  const rows = await sql<{ count: number }[]>`
+    select count(*)::int as count
+    from tags
+  `;
+
+  if ((rows[0]?.count ?? 0) === 0) {
+    throw new Error(
+      '[INTEGRATION_SEED_MISSING] tags table is empty. Run pnpm db:seed before pnpm test:integration.',
+    );
+  }
 });
 
 describe('tag taxonomy census', () => {

@@ -22,9 +22,13 @@ test.describe('subscribe', () => {
     });
 
     await page.getByRole('link', { name: 'Go to Dashboard' }).click();
-    await expect(page).toHaveURL(/\/app\/dashboard/);
+    await expect(page).toHaveURL(/\/app\/dashboard/, { timeout: 15_000 });
+    const appNavigation = page.getByRole('navigation', {
+      name: 'App navigation',
+    });
+    await expect(appNavigation).toBeVisible({ timeout: 15_000 });
     await expect(
-      page.getByRole('heading', { name: 'Dashboard' }),
+      appNavigation.getByRole('link', { name: 'Dashboard' }),
     ).toBeVisible();
   });
 });

@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
+  E2EUserStateResetError,
   type E2EUserStateResetServices,
   runE2EUserStateReset,
 } from './reset-e2e-user-state';
@@ -25,11 +26,25 @@ function createEnv(
 function createServices(
   overrides: Partial<E2EUserStateResetServices> = {},
 ): E2EUserStateResetServices {
+  const questionFixtures = {
+    placeholder01Id: 'question_01',
+    placeholder02Id: 'question_02',
+    anton2006Id: 'question_03',
+  };
+  const choiceFixtures = {
+    placeholder01CorrectChoiceId: 'choice_01_correct',
+    placeholder02IncorrectChoiceId: 'choice_02_incorrect',
+  };
+
   return {
     ensurePlaceholderQuestionsPublished: vi.fn(async () => {}),
     resolveClerkUserIdByEmail: vi.fn(async () => 'user_123'),
     resolveAppUserIdByClerkUserId: vi.fn(async () => 'db_user_123'),
     clearUserState: vi.fn(async () => {}),
+    resolveRequiredQuestionFixtures: vi.fn(async () => questionFixtures),
+    resolveRequiredChoiceFixtures: vi.fn(async () => choiceFixtures),
+    seedDeterministicBaseline: vi.fn(async () => {}),
+    verifyDeterministicBaseline: vi.fn(async () => {}),
     ...overrides,
   };
 }
@@ -61,6 +76,33 @@ describe('runE2EUserStateReset', () => {
       databaseUrl: env.DATABASE_URL,
       userId: 'db_user_123',
     });
+    expect(services.resolveRequiredQuestionFixtures).toHaveBeenCalledWith({
+      databaseUrl: env.DATABASE_URL,
+    });
+    expect(services.resolveRequiredChoiceFixtures).toHaveBeenCalledWith({
+      databaseUrl: env.DATABASE_URL,
+      questionIds: {
+        placeholder01Id: 'question_01',
+        placeholder02Id: 'question_02',
+      },
+    });
+    expect(services.seedDeterministicBaseline).toHaveBeenCalledWith({
+      databaseUrl: env.DATABASE_URL,
+      userId: 'db_user_123',
+      questionFixtures: {
+        placeholder01Id: 'question_01',
+        placeholder02Id: 'question_02',
+        anton2006Id: 'question_03',
+      },
+      choiceFixtures: {
+        placeholder01CorrectChoiceId: 'choice_01_correct',
+        placeholder02IncorrectChoiceId: 'choice_02_incorrect',
+      },
+    });
+    expect(services.verifyDeterministicBaseline).toHaveBeenCalledWith({
+      databaseUrl: env.DATABASE_URL,
+      userId: 'db_user_123',
+    });
   });
 
   it('is a no-op when clerk user does not exist', async () => {
@@ -81,6 +123,10 @@ describe('runE2EUserStateReset', () => {
     });
     expect(services.resolveAppUserIdByClerkUserId).not.toHaveBeenCalled();
     expect(services.clearUserState).not.toHaveBeenCalled();
+    expect(services.resolveRequiredQuestionFixtures).not.toHaveBeenCalled();
+    expect(services.resolveRequiredChoiceFixtures).not.toHaveBeenCalled();
+    expect(services.seedDeterministicBaseline).not.toHaveBeenCalled();
+    expect(services.verifyDeterministicBaseline).not.toHaveBeenCalled();
   });
 
   it('is a no-op when app user row does not exist yet', async () => {
@@ -100,6 +146,10 @@ describe('runE2EUserStateReset', () => {
       databaseUrl: env.DATABASE_URL,
     });
     expect(services.clearUserState).not.toHaveBeenCalled();
+    expect(services.resolveRequiredQuestionFixtures).not.toHaveBeenCalled();
+    expect(services.resolveRequiredChoiceFixtures).not.toHaveBeenCalled();
+    expect(services.seedDeterministicBaseline).not.toHaveBeenCalled();
+    expect(services.verifyDeterministicBaseline).not.toHaveBeenCalled();
   });
 
   it('fails fast with actionable missing env errors', async () => {
@@ -142,6 +192,10 @@ describe('runE2EUserStateReset', () => {
     expect(services.resolveClerkUserIdByEmail).not.toHaveBeenCalled();
     expect(services.resolveAppUserIdByClerkUserId).not.toHaveBeenCalled();
     expect(services.clearUserState).not.toHaveBeenCalled();
+    expect(services.resolveRequiredQuestionFixtures).not.toHaveBeenCalled();
+    expect(services.resolveRequiredChoiceFixtures).not.toHaveBeenCalled();
+    expect(services.seedDeterministicBaseline).not.toHaveBeenCalled();
+    expect(services.verifyDeterministicBaseline).not.toHaveBeenCalled();
   });
 
   it('wraps unexpected errors with deterministic code', async () => {
@@ -163,8 +217,12 @@ describe('runE2EUserStateReset', () => {
   it('surfaces fixture availability failures with explicit code', async () => {
     const env = createEnv();
     const services = createServices({
-      ensurePlaceholderQuestionsPublished: vi.fn(async () => {
-        throw new Error('missing fixture rows');
+      resolveRequiredQuestionFixtures: vi.fn(async () => {
+        throw new E2EUserStateResetError(
+          'E2E_RESET:REQUIRED_QUESTION_FIXTURE_MISSING',
+          'Fixture missing',
+          'Run seed',
+        );
       }),
     });
 
@@ -173,6 +231,6 @@ describe('runE2EUserStateReset', () => {
         env,
         services,
       }),
-    ).rejects.toThrow('[E2E_RESET:UNEXPECTED]');
+    ).rejects.toThrow('[E2E_RESET:REQUIRED_QUESTION_FIXTURE_MISSING]');
   });
 });
