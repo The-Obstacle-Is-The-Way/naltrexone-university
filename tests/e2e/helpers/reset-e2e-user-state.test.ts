@@ -105,7 +105,7 @@ describe('runE2EUserStateReset', () => {
     });
   });
 
-  it('is a no-op when clerk user does not exist', async () => {
+  it('fails fast when clerk user does not exist', async () => {
     const env = createEnv();
     const services = createServices({
       resolveClerkUserIdByEmail: vi.fn(async () => null),
@@ -116,7 +116,7 @@ describe('runE2EUserStateReset', () => {
         env,
         services,
       }),
-    ).resolves.toBeUndefined();
+    ).rejects.toThrow('[E2E_RESET:CLERK_USER_NOT_FOUND]');
 
     expect(services.ensurePlaceholderQuestionsPublished).toHaveBeenCalledWith({
       databaseUrl: env.DATABASE_URL,
@@ -129,7 +129,7 @@ describe('runE2EUserStateReset', () => {
     expect(services.verifyDeterministicBaseline).not.toHaveBeenCalled();
   });
 
-  it('is a no-op when app user row does not exist yet', async () => {
+  it('fails fast when app user row does not exist yet', async () => {
     const env = createEnv();
     const services = createServices({
       resolveAppUserIdByClerkUserId: vi.fn(async () => null),
@@ -140,7 +140,7 @@ describe('runE2EUserStateReset', () => {
         env,
         services,
       }),
-    ).resolves.toBeUndefined();
+    ).rejects.toThrow('[E2E_RESET:APP_USER_NOT_FOUND]');
 
     expect(services.ensurePlaceholderQuestionsPublished).toHaveBeenCalledWith({
       databaseUrl: env.DATABASE_URL,

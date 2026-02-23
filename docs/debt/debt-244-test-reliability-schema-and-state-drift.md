@@ -18,6 +18,8 @@ The DEBT-244 resolution was re-audited against live repository state. All previo
     - `E2E_RESET:REQUIRED_QUESTION_FIXTURE_MISSING`
     - `E2E_RESET:CHOICE_FIXTURE_MISSING`
     - `E2E_RESET:BASELINE_STATE_INCOMPLETE`
+    - `E2E_RESET:CLERK_USER_NOT_FOUND`
+    - `E2E_RESET:APP_USER_NOT_FOUND`
   - Deterministic seed constants and row contract are implemented exactly:
     - fixed session/attempt UUIDs
     - fixed timestamps
@@ -55,14 +57,15 @@ Already implemented and retained:
 
 ### §3 Deterministic E2E user state
 
-Implemented in `tests/e2e/helpers/reset-e2e-user-state.ts`:
+Implemented in `tests/e2e/helpers/reset-e2e-user-state.ts` and `tests/e2e/global.setup.ts`:
 
-- setup order in `tests/e2e/global.setup.ts` remains:
+- setup order is:
   1. `runE2ECredentialHealthCheck()`
-  2. `runE2EUserStateReset()`
-  3. `clerkSetup()`
-  4. `seedTestSubscription()`
-- reset helper now clears mutable user state, resolves required published fixtures, resolves required choice fixtures, seeds deterministic baseline rows, and verifies post-seed invariants.
+  2. `seedTestSubscription()`
+  3. `runE2EUserStateReset()`
+  4. `clerkSetup()`
+- this ordering guarantees the app user row exists before reset/seeding runs.
+- reset helper now fails fast when Clerk user or app user row is missing, then clears mutable user state, resolves required published fixtures, resolves required choice fixtures, seeds deterministic baseline rows, and verifies post-seed invariants.
 
 ### §4 Repair stale references
 

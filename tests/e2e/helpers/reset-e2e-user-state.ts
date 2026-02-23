@@ -629,7 +629,11 @@ export async function runE2EUserStateReset(
     });
 
     if (!clerkUserId) {
-      return;
+      throw new E2EUserStateResetError(
+        'E2E_RESET:CLERK_USER_NOT_FOUND',
+        `Clerk user "${clerkEmail}" was not found.`,
+        'Create that user in Clerk Dashboard or update E2E_CLERK_USER_USERNAME.',
+      );
     }
 
     const appUserId = await services.resolveAppUserIdByClerkUserId({
@@ -638,7 +642,11 @@ export async function runE2EUserStateReset(
     });
 
     if (!appUserId) {
-      return;
+      throw new E2EUserStateResetError(
+        'E2E_RESET:APP_USER_NOT_FOUND',
+        `No app user row exists for Clerk user "${clerkUserId}".`,
+        'Run seedTestSubscription() before runE2EUserStateReset() in global setup so the user row exists.',
+      );
     }
 
     await services.clearUserState({

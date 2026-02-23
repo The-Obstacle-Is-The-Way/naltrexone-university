@@ -6,7 +6,7 @@ import { seedTestSubscription } from './helpers/seed-test-user';
 
 setup('global setup', async () => {
   await runE2ECredentialHealthCheck();
+  await seedTestSubscription();
   await runE2EUserStateReset();
   await clerkSetup();
-  await seedTestSubscription();
 });
