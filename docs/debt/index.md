@@ -19,7 +19,6 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 |----|-------|----------|------|--------------|
 | [DEBT-245](debt-245-e2e-pyramid-drift-and-skip-governance.md) | E2E Pyramid Drift and Data-Dependent Skip Governance | P1 | 2026-02-23 | [#133](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/issues/133) |
 | [DEBT-244](debt-244-test-reliability-schema-and-state-drift.md) | Test Reliability Drift (Schema + Stateful E2E Data + Spec Drift) | P1 | 2026-02-23 | — |
-| [DEBT-243](debt-243-e2e-credential-drift-silent-failure.md) | E2E Credential Drift Causes Confusing Test Failures | P2 | 2026-02-23 | — |
 
 **Next Debt ID:** DEBT-246
 
@@ -29,6 +28,7 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 | ID | Title | Priority | Resolved | GitHub Issue |
 |----|-------|----------|----------|--------------|
+| [DEBT-243](debt-243-e2e-credential-drift-silent-failure.md) | E2E Credential Drift and Silent Failure | P2 | 2026-02-23 | — |
 | [DEBT-242](../_archive/debt/debt-242-cron-secret-missing-from-vercel-development.md) | CRON_SECRET Missing From Vercel Development Environment | P3 | 2026-02-22 | — |
 | [DEBT-241](../_archive/debt/debt-241-sentry-dsn-missing-from-vercel-environments.md) | Sentry DSN Missing From All Vercel Environments | P2 | 2026-02-22 | — |
 | [DEBT-240](../_archive/debt/debt-240-local-dev-database-url-points-to-production.md) | Local Dev DATABASE_URL Points to Production Neon Branch | P1 | 2026-02-22 | — |

@@ -4,234 +4,292 @@
 **Date:** 2026-02-23  
 **Owner:** Test Infrastructure
 
-## Problem
+## Current Verified State
 
-Full verification currently reports:
-
-- Unit: `217/217` files passing (`1605` tests)
-- Browser-mode: `27/27` files passing (`128` tests)
-- Integration: passing after seed (`65` tests)
+- Unit tests: passing
+- Browser tests: passing
+- Integration tests: passing when seeded
 - Build: passing
-- E2E: `24` failed, `44` passed
+- E2E: `66 passed`, `2 skipped`, `0 failed` in latest local run
 
-This is not 24 independent bugs. It is a small number of systemic drifts causing cascading failures.
+Root-cause status after code audit:
 
-## Evidence (Direct)
+1. **Schema drift (`idempotency_keys.completed_at`)**: resolved by E2E preflight validator in `tests/e2e/helpers/credential-health-check.ts`.
+2. **Stale assertion drift from older UI contracts**: resolved for previously failing assertions in `tests/e2e/bug-151-affordance-audit.spec.ts` and `tests/e2e/session-review-navigation.spec.ts`.
+3. **State drift and data-dependent skips**: not resolved.
+4. **Dev-server stability (`ECONNRESET` during long Playwright runs)**: not resolved.
+5. **Integration seed precondition in taxonomy census test**: not resolved.
 
-### 1) Idempotency schema drift in active `.env.local` database
+## Resolution Status Matrix
 
-Code now expects `idempotency_keys.completed_at`:
+| Item | Status | Source of Truth |
+|---|---|---|
+| §1 Schema-shape preflight | Done | `tests/e2e/helpers/credential-health-check.ts` (`verifyIdempotencySchema`) |
+| §2 Migrations before E2E in CI | Done | `.github/workflows/ci.yml` (`Migrate DB` step before E2E) |
+| §3 Deterministic E2E user state | Not done | `tests/e2e/helpers/reset-e2e-user-state.ts` clears state but does not seed deterministic baseline rows |
+| §4 Stale reference handling | Partially done | App read paths are defensive; setup still lacks deterministic replacement data |
+| §5 Stale assertions against current UX contract | Done | Current listed specs align with current component contracts |
+| §6 Integration seed dependency | Not done | `tests/integration/tag-taxonomy-census.integration.test.ts` requires seeded tags but does not fail explicitly when missing |
+| §7 Web server stability for Playwright | Not done | `playwright.config.ts` uses `pnpm dev` locally with keep-alive reset risk |
 
-- `src/adapters/repositories/drizzle-idempotency-key-repository.ts`
+## §3 Deterministic E2E User State (Authoritative Spec)
 
-Live DB schema for `idempotency_keys` does **not** include `completed_at` (column list query on active `DATABASE_URL` confirms only: `user_id, action, key, result_json, error_code, error_message, created_at, expires_at`).
+### Current setup pipeline (verified)
 
-Migration history in DB is behind current migration set:
+`tests/e2e/global.setup.ts` currently executes:
 
-- DB `drizzle.__drizzle_migrations` latest timestamp aligns with `0011`
-- Repo includes `db/migrations/0012_whole_baron_strucker.sql` adding `completed_at`
+1. `runE2ECredentialHealthCheck()`
+2. `runE2EUserStateReset()`
+3. `clerkSetup()`
+4. `seedTestSubscription()`
 
-### 2) E2E user state drift references missing/unpublished questions
+`runE2EUserStateReset()` currently clears mutable rows for one user (`idempotency_keys`, `attempts`, `bookmarks`, `practice_sessions`) and republishes `placeholder-*` questions. It does **not** seed deterministic attempts/sessions/bookmarks.
 
-Active E2E user data query results:
+### Baseline data required by credential-gated E2E specs
 
-- `attempts` total: `550`
-- attempts pointing to missing/unpublished questions: `310`
-- session `questionIds` pointing to missing/unpublished questions: non-zero
+| Spec | Baseline requirement before test body |
+|---|---|
+| `tests/e2e/subscribe.spec.ts` | Active subscription row for E2E user |
+| `tests/e2e/practice.spec.ts` | Published question fixtures + active subscription |
+| `tests/e2e/session-continuation.spec.ts` | Published question fixtures + active subscription |
+| `tests/e2e/subscribe-and-practice.spec.ts` | Published question fixtures + active subscription |
+| `tests/e2e/bookmarks.spec.ts` | At least one bookmarkable published question + active subscription |
+| `tests/e2e/history.spec.ts` | `placeholder-01-naltrexone-mechanism` published |
+| `tests/e2e/core-app-pages.spec.ts` | `placeholder-01-naltrexone-mechanism` published + bookmarkable question |
+| `tests/e2e/cross-page-navigation.spec.ts` | `placeholder-01-naltrexone-mechanism` published + bookmarkable question |
+| `tests/e2e/review-mode-audit.spec.ts` | `placeholder-01...` and `placeholder-02...` published; at least one bookmark row |
+| `tests/e2e/session-review-navigation.spec.ts` | At least one completed 2-question session + at least one attempted question row |
+| `tests/e2e/bug-151-affordance-audit.spec.ts` | At least one completed session, one attempted question row, one bookmark row |
+| `tests/e2e/bs-019-action-bar-audit.spec.ts` | At least one completed session with 2 reviewable questions |
+| `tests/e2e/bs-020-card-contrast-audit.spec.ts` | Active subscription row |
+| `tests/e2e/bs-028-history-ux-audit.spec.ts` | At least one completed session, and both correct + incorrect attempted question rows |
+| `tests/e2e/brainstorming-audit.spec.ts` | `anton-2006-combine-001` published and containing per-choice explanations |
+| `tests/e2e/bs-028-history-ux-audit.spec.ts` (BS-027 block) | No extra data beyond authenticated history access |
 
-This directly matches multiple failing snapshots that render `Question not found`.
+### Deterministic seed contract to implement in `runE2EUserStateReset`
 
-### 3) E2E assertion drift vs current UI contract
+Modify `tests/e2e/helpers/reset-e2e-user-state.ts` only. Add these helpers and invoke them from `runE2EUserStateReset(...)` immediately after `clearUserState(...)`:
 
-Current history sessions implementation:
+1. `resolveRequiredQuestionFixtures(...)`
+2. `resolveRequiredChoiceFixtures(...)`
+3. `seedDeterministicBaseline(...)`
+4. `verifyDeterministicBaseline(...)`
+
+#### Required published questions
+
+Resolve IDs by slug and fail hard if any is missing/unpublished:
+
+- `placeholder-01-naltrexone-mechanism`
+- `placeholder-02-buprenorphine-induction-timing`
+- `anton-2006-combine-001`
+
+Error code:
+
+- `E2E_RESET:REQUIRED_QUESTION_FIXTURE_MISSING`
+
+#### Required fixture resolution SQL
+
+Execute this lookup before seeding:
+
+```sql
+SELECT id, slug
+FROM questions
+WHERE slug IN (
+  'placeholder-01-naltrexone-mechanism',
+  'placeholder-02-buprenorphine-induction-timing',
+  'anton-2006-combine-001'
+)
+  AND status = 'published';
+```
+
+Expected row count: `3`.  
+If count is not `3`, throw `E2E_RESET:REQUIRED_QUESTION_FIXTURE_MISSING`.
+
+#### Required choice resolution SQL
+
+Resolve all choices for the two placeholder questions:
+
+```sql
+SELECT id, question_id, is_correct
+FROM choices
+WHERE question_id IN ($1, $2);
+```
+
+From that result, require:
+
+- one `is_correct = true` choice for `placeholder-01-naltrexone-mechanism`
+- one `is_correct = false` choice for `placeholder-02-buprenorphine-induction-timing`
+
+If any required choice is missing, throw `E2E_RESET:CHOICE_FIXTURE_MISSING`.
+
+#### Required deterministic seed rows
+
+Use these exact constants inside `seedDeterministicBaseline(...)`:
+
+- `seededSessionId = '00000000-0000-4000-8000-000000000244'`
+- `seededAttemptInSessionId = '00000000-0000-4000-8000-000000000245'`
+- `seededAdhocAttemptId = '00000000-0000-4000-8000-000000000246'`
+- `seededStartedAt = 2026-01-01T00:00:00.000Z`
+- `seededEndedAt = 2026-01-01T00:02:00.000Z`
+- `seededAnsweredAtInSession = 2026-01-01T00:00:30.000Z`
+- `seededAnsweredAtAdhoc = 2026-01-01T00:03:00.000Z`
+- `seededBookmarkCreatedAt = 2026-01-01T00:05:00.000Z`
+
+Execute all inserts in one transaction, in this order:
+
+1. Insert into `practice_sessions`:
+- `id = seededSessionId`
+- `user_id = appUserId`
+- `mode = 'tutor'`
+- `started_at = seededStartedAt`
+- `ended_at = seededEndedAt`
+- `params_json` exactly:
+  - `count: 2`
+  - `tagSlugs: []`
+  - `difficulties: []`
+  - `questionIds: [placeholder01Id, placeholder02Id]`
+  - `questionStates[0]`:
+    - `questionId: placeholder01Id`
+    - `markedForReview: false`
+    - `latestSelectedChoiceId: placeholder01CorrectChoiceId`
+    - `latestIsCorrect: true`
+    - `latestAnsweredAt: '2026-01-01T00:00:30.000Z'`
+  - `questionStates[1]`:
+    - `questionId: placeholder02Id`
+    - `markedForReview: false`
+    - `latestSelectedChoiceId: null`
+    - `latestIsCorrect: null`
+    - `latestAnsweredAt: null`
+
+2. Insert first row into `attempts`:
+- `id = seededAttemptInSessionId`
+- `user_id = appUserId`
+- `question_id = placeholder01Id`
+- `practice_session_id = seededSessionId`
+- `selected_choice_id = placeholder01CorrectChoiceId`
+- `is_correct = true`
+- `time_spent_seconds = 30`
+- `answered_at = seededAnsweredAtInSession`
+
+3. Insert second row into `attempts`:
+- `id = seededAdhocAttemptId`
+- `user_id = appUserId`
+- `question_id = placeholder02Id`
+- `practice_session_id = null`
+- `selected_choice_id = placeholder02IncorrectChoiceId`
+- `is_correct = false`
+- `time_spent_seconds = 45`
+- `answered_at = seededAnsweredAtAdhoc`
+
+4. Insert one row into `bookmarks`:
+- `user_id = appUserId`
+- `question_id = placeholder01Id`
+- `created_at = seededBookmarkCreatedAt`
+
+5. Do not insert any row into `idempotency_keys`.
+6. Do not mutate `stripe_subscriptions`; `tests/e2e/helpers/seed-test-user.ts` remains the only subscription seeding path.
+
+#### Required post-seed invariant checks
+
+Immediately after insertions, verify:
+
+- Completed sessions for user: `>= 1`
+- Attempts for user: `>= 2`
+- Bookmarks for user: `>= 1`
+
+Fail with:
+
+- `E2E_RESET:BASELINE_STATE_INCOMPLETE`
+
+## §4 Repair Stale References (DB vs UI Source-of-Truth)
+
+### Read-path audit results
+
+History and dashboard paths are already defensive and do not emit broken links for unavailable questions:
+
+- History Questions list:
+  - `app/(app)/app/history/page.tsx`
+  - `src/adapters/controllers/review-controller.ts`
+  - `src/application/use-cases/get-attempted-questions.ts`
+- Dashboard Recent Activity:
+  - `app/(app)/app/dashboard/page.tsx`
+  - `src/adapters/controllers/stats-controller.ts`
+  - `src/application/use-cases/get-user-stats.ts`
+- Session breakdown rows:
+  - `app/(app)/app/history/hooks/use-history-sessions.ts`
+  - `src/adapters/controllers/practice-controller.ts` (`getPracticeSessionReview`)
+  - `src/application/use-cases/get-practice-session-review.ts`
+
+All three use `fetchQuestionsById(...)` + `enrichWithQuestion(...)` and render `isAvailable=false` placeholders instead of broken links.
+
+### Definitive conclusion
+
+Stale-reference incidents are caused by persisted user state drift in the database, not by UI link rendering defects.
+
+### Required fix
+
+Do not modify application read-path code for this debt item. Modify only `tests/e2e/helpers/reset-e2e-user-state.ts` to add deterministic reseeding and invariant checks exactly as specified in §3.
+
+## §5 Stale Assertion Audit (Current Code vs Current Specs)
+
+Audited files:
+
+- `tests/e2e/bug-151-affordance-audit.spec.ts`
+- `tests/e2e/session-review-navigation.spec.ts`
+
+Result: **no stale assertion deltas remain** between these files and current implementations in:
 
 - `app/(app)/app/history/components/history-sessions-tab.tsx`
-- Row uses `tabIndex` + keyboard handlers + `focus-visible` classes
-- Row is **not** `li[role="link"]`
-
-Failing BUG-151 specs still assert `li[role="link"]`/legacy structure:
-
-- `tests/e2e/bug-151-affordance-audit.spec.ts`
-
-Question page now intentionally supports history-sequence navigation without `sessionId`:
-
+- `app/(app)/app/history/components/history-questions-tab.tsx`
 - `app/(app)/app/questions/[slug]/question-page-client.tsx`
-- `app/(app)/app/questions/[slug]/question-page-client.test.tsx` (`renders history-sequence navigation links without sessionId`)
 
-Failing spec still expects zero previous/next in that flow:
+Action: no assertion rewrites are required under DEBT-244.
 
-- `tests/e2e/session-review-navigation.spec.ts`
+## §6 Integration Seed Dependency (Deterministic Failure Contract)
 
-### 4) Integration suite hidden seed dependency (separate but related)
+### Current gap
 
-On a clean test DB, integration failed until `pnpm db:seed` ran:
+`tests/integration/tag-taxonomy-census.integration.test.ts` assumes seeded `tags` rows exist and currently fails via low-signal assertions (`rows.length > 0`) when seed is missing.
 
-- `tests/integration/tag-taxonomy-census.integration.test.ts` (`rows.length` was `0`)
+### Required change
 
-This means `pnpm test:integration` is not self-contained against an empty migrated DB.
+Add an explicit precondition guard at the top of `tests/integration/tag-taxonomy-census.integration.test.ts`:
 
-## Failure Mapping (24 E2E Failures)
+1. Query total tag rows once:
+- `select count(*)::int as count from tags`
 
-### Root Cause A: idempotent mutation path broken by DB schema drift
+2. If zero rows, throw exactly:
 
-- `tests/e2e/practice.spec.ts` (2)
-- `tests/e2e/bs-019-action-bar-audit.spec.ts` (2)
-- `tests/e2e/bs-028-history-ux-audit.spec.ts` (1)
-- `tests/e2e/review-mode-audit.spec.ts` session-start-dependent cases (2)
-- `tests/e2e/session-continuation.spec.ts` (1)
-- `tests/e2e/session-review-navigation.spec.ts` session-creation case (1)
-- `tests/e2e/core-app-pages.spec.ts` bookmark-setup path (1)
-- `tests/e2e/subscribe-and-practice.spec.ts` bookmark-setup path (1)
+`[INTEGRATION_SEED_MISSING] tags table is empty. Run pnpm db:seed before pnpm test:integration.`
 
-Pattern: practice start remains on `/app/practice` with `Internal error`, or bookmark mutation never reaches `Remove bookmark`.
+No automatic seeding in test runtime. Failure must remain explicit and immediate.
 
-### Root Cause B: stale review/history references to missing questions
+## §7 Web Server Stability for Playwright
 
-- `tests/e2e/brainstorming-audit.spec.ts` (2)
-- `tests/e2e/cross-page-navigation.spec.ts` (2)
-- `tests/e2e/history.spec.ts` (1)
-- `tests/e2e/review-mode-audit.spec.ts` question-load cases (4)
+### Current gap
 
-Pattern: `/app/questions/[slug]` renders `Question not found`.
+`playwright.config.ts` runs local E2E against `pnpm dev` (`webServer.command`), which is the observed source of long-run `ECONNRESET` noise/failures.
 
-### Root Cause C: stale assertions after UX/interaction model changes
+### Required change
 
-- `tests/e2e/bug-151-affordance-audit.spec.ts` (3)
-- `tests/e2e/session-review-navigation.spec.ts` non-session-nav assertion (1)
+Update `playwright.config.ts` `webServer` to run production server for both local and CI E2E:
 
-Pattern: spec expects old DOM/behavior, app intentionally differs.
+- `command: 'pnpm build && pnpm start'`
+- `reuseExistingServer: false`
+- keep `url: ${baseURL}/api/health`
 
-### Root Cause D: Dev server ECONNRESET / keep-alive socket race (infrastructure)
-
-During 8+ minute E2E runs, the Next.js dev server emits `[WebServer] ⨯ Error: aborted` with `code: 'ECONNRESET'`. Root cause:
-
-- Node.js HTTP `keepAliveTimeout` defaults to 5 seconds
-- Playwright's Chromium aggressively reuses TCP keep-alive connections
-- After long-running specs (several set `test.setTimeout(180_000)`), stale sockets get closed server-side while Chromium still holds references
-- Next request on that stale socket → `ECONNRESET`
-
-This is the mechanism behind cascading `ERR_CONNECTION_REFUSED` failures observed in earlier runs. When benign, it produces a single noisy log line. When severe, the dev server process dies and all subsequent tests fail.
-
-Contributing gaps in this codebase:
-
-- `playwright.config.ts`: no `stdout`/`stderr` suppression for webServer noise
-- `next.config.ts`: no custom server to tune `keepAliveTimeout`/`headersTimeout`
-- No Playwright-level `page.on('requestfailed')` retry fixture for transient resets
-- `retry.ts` already handles `ECONNRESET` for outgoing Stripe calls but is not wired into the E2E layer
-
-## Current State Update (2026-02-23 end-of-day)
-
-After DEBT-243 preflight implementation and agent-driven assertion fixes:
-
-- E2E: `66` passed, `2` skipped, `0` failed (was `24` failed, `44` passed)
-- Schema drift (Root Cause A): resolved — `verifyIdempotencySchema` preflight added to `credential-health-check.ts`
-- Assertion drift (Root Cause C): partially resolved — agent updated selectors in `bug-151-affordance-audit.spec.ts` and `session-review-navigation.spec.ts`
-- Stale data (Root Cause B): masked by data-dependent `test.skip(...)` — not structurally resolved
-- Server stability (Root Cause D): not resolved — ECONNRESET still observed in latest passing run
-
-## Why This Happened (First Principles)
-
-1. Credential preflight (DEBT-243) validates secrets and service connectivity, but not **schema version/shape**.
-2. E2E uses a long-lived shared user account; mutable state accumulates across runs and content updates.
-3. Audit specs are coupled to implementation details (`role`, exact DOM shape) instead of stable behavior contracts.
-4. Integration test command does not enforce required seed preconditions.
-
-## Definitive Resolution (No Optionality)
-
-### 1) Add schema-shape preflight for E2E (extend DEBT-243 implementation)
-
-Update:
-
-- `tests/e2e/helpers/credential-health-check.ts`
-
-Add a blocking validator that checks:
-
-- `idempotency_keys.completed_at` exists
-- any other columns required by idempotent repositories
-
-Fail with explicit code:
-
-- `E2E_PREFLIGHT:SCHEMA_DRIFT_IDEMPOTENCY_KEYS`
-
-### 2) Enforce migrations before E2E in local and CI flows
-
-Update:
-
-- `.github/workflows/ci.yml`
-- E2E runbook/docs
-
-Requirement:
-
-- apply latest migrations against the E2E DB before Playwright starts
-- fail fast if migration level is behind repo migrations
-
-### 3) Make E2E user state deterministic per run
-
-Update setup:
-
-- `tests/e2e/global.setup.ts`
-- new helper, e.g. `tests/e2e/helpers/reset-e2e-user-state.ts`
-
-Reset before specs:
-
-- clear attempts, practice sessions, bookmarks for E2E user
-- seed only deterministic baseline rows needed by specs
-
-### 4) Repair stale review/history references in surfaced lists
-
-Update read paths to avoid brittle links to unavailable questions:
-
-- history question list controllers/use-cases
-- dashboard recent activity/session breakdown producers
-
-Policy:
-
-- if question is unavailable, exclude row from navigable review lists or surface explicit unavailable state (never silent broken link)
-
-### 5) Update stale E2E assertions to current contract
-
-Update:
-
-- `tests/e2e/bug-151-affordance-audit.spec.ts`
-- `tests/e2e/session-review-navigation.spec.ts`
-
-Use behavior assertions (focus visibility, keyboard navigation, destination correctness) over brittle legacy structure checks.
-
-### 6) Make integration command deterministic
-
-Update:
-
-- `package.json` integration workflow scripts or integration setup
-
-Guarantee `pnpm test:integration` has required seed data (or fails with explicit precondition error instructing exact command).
-
-### 7) Harden dev server stability for E2E runs
-
-Options (choose one):
-
-- Tune `keepAliveTimeout` / `headersTimeout` via custom `server.ts` or `instrumentation.ts`
-- Use `pnpm start` (production server) for local E2E instead of `pnpm dev`
-- Add Playwright navigation retry fixture for transient `ECONNRESET`
-
-Outcome: eliminate cascading connection-reset failures in long E2E suites.
+This is the only accepted server-mode policy for E2E under DEBT-244.
 
 ## Verification Plan
 
-1. Break schema intentionally (remove/rename `completed_at` in a temp DB) and run `pnpm test:e2e`.  
-Expected: one preflight failure with `E2E_PREFLIGHT:SCHEMA_DRIFT_IDEMPOTENCY_KEYS` before specs run.
+1. Break baseline intentionally by removing seeded attempts, then run `pnpm test:e2e`.  
+Expected: deterministic setup failure from `runE2EUserStateReset` with explicit `E2E_RESET:*` code.
 
-2. Run migrations, rerun only session-start specs (`practice.spec.ts`, `session-continuation.spec.ts`).  
-Expected: no `/app/practice` start timeout due `Internal error`.
+2. Unpublish `placeholder-02-buprenorphine-induction-timing` and run E2E.  
+Expected: `E2E_RESET:REQUIRED_QUESTION_FIXTURE_MISSING` before spec execution.
 
-3. Reset E2E user state, rerun history/review specs (`history.spec.ts`, `review-mode-audit.spec.ts`, `cross-page-navigation.spec.ts`).  
-Expected: no `Question not found` for seeded paths.
+3. Run `pnpm test:integration` without seeding on a clean DB.  
+Expected: explicit `[INTEGRATION_SEED_MISSING] ...` failure message.
 
-4. Update stale assertions and rerun targeted audits (`bug-151-affordance-audit.spec.ts`, `session-review-navigation.spec.ts`).  
-Expected: assertions match current UX contract.
-
-5. On clean Docker test DB: run integration from scratch via documented command path.  
-Expected: deterministic pass without ad-hoc manual recovery.
-
-## Priority
-
-**P1** — This blocks reliable E2E signal and causes false regression noise across feature branches.
+4. Run two consecutive `pnpm test:e2e` executions locally.  
+Expected: no web-server `ECONNRESET` crashes after switching to production server mode.
