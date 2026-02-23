@@ -8,12 +8,12 @@
 
 ## Description
 
-A codebase-wide audit of card/row interactive patterns reveals four categories of UX inconsistency:
+A card/row interaction audit across Dashboard, History, Bookmarks, Practice summary, and Marketing surfaces reveals four categories of UX inconsistency:
 
 1. **Non-interactive cards with hover affordance** — Cards change color on hover but don't do anything when clicked, misleading users into thinking they're interactive.
-2. **Interactive links missing `focus-visible` ring** — Keyboard users can't see where focus is when tabbing through card links.
-3. **Pattern asymmetry on the same page** — History sessions tab uses card-level `onClick` (Pattern C), while the questions tab on the same page uses inner-target links (Pattern B). Users switch tabs and the interaction model changes.
-4. **Landing page feature cards with misleading hover** — Marketing feature cards have `hover:bg-muted` but are purely display.
+2. **Interactive links missing `focus-visible` ring** — Several card-internal links rely on default outline behavior instead of the app-standard 3px `focus-visible` ring, creating weak keyboard affordance.
+3. **History sessions LI row missing focus ring** — The `<li>` has `tabIndex={0}` and `role="link"` but no `focus-visible` classes. The inner `<Link>` has `tabIndex={-1}`, so the keyboard-focusable container is visually under-indicated.
+4. **Pattern asymmetry on the same page** — History sessions tab uses card-level `onClick` (Pattern C), while the questions tab uses inner-target links (Pattern B). Users switch tabs and the interaction model changes.
 
 ## Codebase-Wide Audit Results
 
@@ -25,16 +25,17 @@ A codebase-wide audit of card/row interactive patterns reveals four categories o
 | 2 | Dashboard — streak card | `app/(app)/app/dashboard/page.tsx` | 95–103 | D | `hover:border-border hover:bg-muted/50` | None | No | **Misleading hover** |
 | 3 | Dashboard — recent sessions | `app/(app)/app/dashboard/page.tsx` | 145–172 | A | `hover:bg-muted/40` | `focus-visible:ring-[3px]` | Yes (Link-as-Card) | OK |
 | 4 | Dashboard — recent activity | `app/(app)/app/dashboard/page.tsx` | 220–241 | A | `hover:bg-muted/40` | `focus-visible:ring-[3px]` | Yes (Link-as-Card) | OK |
-| 5 | History — sessions tab rows | `history-sessions-tab.tsx` | 177–273 | C | `hover:bg-accent/40` + `cursor-pointer` | `tabIndex={0}` (row) + `focus-visible:ring-[3px]` (inner link) | Yes (card-level onClick) | OK but asymmetric with #6 |
-| 6 | History — questions tab cards | `history-questions-tab.tsx` | 511–552 | B | None (card); `hover:underline` (link) | **Missing** on title link (line 517) | Inner targets only | **Missing focus ring + asymmetry with #5** |
-| 7 | History — session breakdown links | `session-breakdown-list.tsx` | 27–38 | B | `hover:underline` (link) | **Missing** on link (line 34) | Inner target only | **Missing focus ring** |
-| 8 | Bookmarks — bookmark cards | `app/(app)/app/bookmarks/page.tsx` | 84–197 | B | None (card); `hover:underline` (link line 96) | **Missing** on title link (line 96) | Inner targets (link + buttons) | **Missing focus ring** |
-| 9 | Marketing — feature cards (×3+) | `components/marketing/marketing-home.tsx` | 152–169 | D | `hover:bg-muted` | None | No | **Misleading hover** |
-| 10 | Marketing — impact stat cards | `components/marketing/marketing-home.tsx` | 107–124 | D | None | None | No | OK (no misleading affordance) |
-| 11 | Marketing — pricing cards | `components/marketing/marketing-home.tsx` | 190–238 | D | None | None | No (buttons inside) | OK |
-| 12 | Pricing — pricing cards | `app/pricing/pricing-view.tsx` | 126–178 | D | None | None | No (form/buttons inside) | OK |
-| 13 | Practice — incomplete session card | `practice/components/incomplete-session-card.tsx` | 29–82 | B | None | N/A (button handles focus) | Inner button only | OK |
-| 14 | Practice — session starter | `practice/components/practice-session-starter.tsx` | 100–272 | B | None | N/A (button handles focus) | Inner button only | OK |
+| 5 | Practice session summary — stat cards (×4) | `app/(app)/app/practice/[sessionId]/components/session-summary-view.tsx` | 40–66 | D | `hover:border-border hover:bg-muted/50` | None | No | **Misleading hover** |
+| 6 | History — sessions tab rows | `history-sessions-tab.tsx` | 179–283 | C | `hover:bg-accent/40` + `cursor-pointer` | **Missing on LI row** (inner link has ring but `tabIndex={-1}`) | Yes (card-level onClick) | **Missing focus ring on focusable LI + asymmetric with #7** |
+| 7 | History — questions tab cards | `history-questions-tab.tsx` | 511–552 | B | None (card); `hover:underline` (link) | **Missing** on title link (line 517) | Inner targets only | **Missing focus ring + asymmetry with #6** |
+| 8 | History — session breakdown links | `session-breakdown-list.tsx` | 27–38 | B | `hover:underline` (link) | **Missing** on link (line 34) | Inner target only | **Missing focus ring** |
+| 9 | Bookmarks — bookmark cards | `app/(app)/app/bookmarks/page.tsx` | 84–197 | B | None (card); `hover:underline` (link line 96) | **Missing** on title link (line 96) | Inner targets (link + buttons) | **Missing focus ring** |
+| 10 | Marketing — feature cards (×4) | `components/marketing/marketing-home.tsx` | 152–169 | D | `hover:bg-muted` | None | No | **Misleading hover** |
+| 11 | Marketing — impact stat cards | `components/marketing/marketing-home.tsx` | 107–124 | D | None | None | No | OK (no misleading affordance) |
+| 12 | Marketing — pricing cards | `components/marketing/marketing-home.tsx` | 190–238 | D | None | None | No (buttons inside) | OK |
+| 13 | Pricing — pricing cards | `app/pricing/pricing-view.tsx` | 126–178 | D | None | None | No (form/buttons inside) | OK |
+| 14 | Practice — incomplete session card | `practice/components/incomplete-session-card.tsx` | 29–82 | B | None | N/A (button handles focus) | Inner button only | OK |
+| 15 | Practice — session starter | `practice/components/practice-session-starter.tsx` | 100–272 | B | None | N/A (button handles focus) | Inner button only | OK |
 
 ### Pattern Legend
 
@@ -47,9 +48,9 @@ A codebase-wide audit of card/row interactive patterns reveals four categories o
 
 ## Fix Plan
 
-### Fix 1: Remove misleading hover from non-interactive stat cards (P2)
+### Fix 1: Remove misleading hover from non-interactive cards (P2)
 
-**5 cards in dashboard, 3+ feature cards on landing page.**
+**5 cards in dashboard + 4 cards in session summary + 4 feature cards on landing page.**
 
 **File:** `app/(app)/app/dashboard/page.tsx`
 
@@ -61,6 +62,15 @@ Lines 61, 68, 77, 84, 95 — remove `transition-colors hover:border-border hover
 ```
 
 Apply to all 5 stat/streak cards (lines 61, 68, 77, 84, 95).
+
+**File:** `app/(app)/app/practice/[sessionId]/components/session-summary-view.tsx`
+
+Lines 40, 47, 54, 61 — remove `transition-colors hover:border-border hover:bg-muted/50` from all four summary stat cards.
+
+```diff
+- <Card className="gap-0 rounded-2xl p-6 shadow-sm transition-colors hover:border-border hover:bg-muted/50">
++ <Card className="gap-0 rounded-2xl p-6 shadow-sm">
+```
 
 **File:** `components/marketing/marketing-home.tsx`
 
@@ -74,11 +84,23 @@ Line 155 — remove `transition-colors hover:bg-muted` from feature cards.
 + className={cn(feature.wide && 'md:col-span-2')}
 ```
 
-### Fix 2: Add `focus-visible` ring to all interactive card links (P3)
+### Fix 2: Add `focus-visible` ring to all interactive card links and focusable rows (P2)
 
 **Consistent ring class:** `focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]`
 
-This matches the existing pattern used on dashboard Link-as-Card elements and the history session inner link.
+This matches the existing pattern used on dashboard Link-as-Card elements.
+
+**File:** `app/(app)/app/history/components/history-sessions-tab.tsx` lines 183–186
+
+The `<li>` row is keyboard-focusable (`tabIndex={0}`, `role="link"`) but has no focus-visible classes. The inner `<Link>` has `tabIndex={-1}`, so it's the LI that receives focus and needs explicit ring treatment.
+
+```diff
+  className={cn(
+-   'rounded-xl border border-border/60 bg-muted/20 p-3 transition-colors hover:bg-accent/40 dark:hover:bg-foreground/10',
++   'rounded-xl border border-border/60 bg-muted/20 p-3 transition-colors hover:bg-accent/40 dark:hover:bg-foreground/10 focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]',
+    isRowInteractive ? 'cursor-pointer' : undefined,
+  )}
+```
 
 **File:** `app/(app)/app/history/components/history-questions-tab.tsx` line 517
 
@@ -105,7 +127,7 @@ This matches the existing pattern used on dashboard Link-as-Card elements and th
 
 **Problem:** Sessions tab uses Pattern C (card-level onClick), questions tab uses Pattern B (inner targets only). Users switching tabs encounter different interaction models on the same page.
 
-**Decision required — two options:**
+**Decision required — choose one option and document it in this bug before implementation starts:**
 
 **Option A (Recommended): Promote question cards to Pattern A (Link-as-Card)**
 
@@ -141,7 +163,7 @@ The "Review" button becomes a visual indicator (non-interactive span styled as a
 
 Add `onClick`/`onKeyDown`/`tabIndex` to question card `<li>` elements, matching the session cards. This is more complex (needs click-guard logic) but preserves inner links as secondary click targets.
 
-**Recommendation:** Option A. It's simpler, uses native `<a>` semantics (better accessibility), and aligns with the dashboard's existing Link-as-Card pattern. The session cards on the history page use Pattern C because they have two genuinely distinct actions (review + view breakdown); question cards have only one action (review).
+**Recommendation:** Option A. It's simpler, uses native `<a>` semantics (better accessibility), and aligns with the dashboard's existing Link-as-Card pattern. Session cards can remain Pattern C because they have two distinct actions (row review navigation and breakdown toggle).
 
 ### Fix 4: Apply same Link-as-Card pattern to session breakdown list (optional, P3)
 
@@ -169,24 +191,34 @@ This is low-severity because the link already covers the primary content area. T
 | # | File | Change | Severity |
 |---|------|--------|----------|
 | 1 | `app/(app)/app/dashboard/page.tsx` lines 61, 68, 77, 84, 95 | Remove `hover:border-border hover:bg-muted/50` from 5 stat/streak cards | P2 |
-| 2 | `components/marketing/marketing-home.tsx` line 155 | Remove `transition-colors hover:bg-muted` from feature cards | P2 |
-| 3 | `history-questions-tab.tsx` line 517 | Add `focus-visible` ring to question title link | P3 |
-| 4 | `session-breakdown-list.tsx` line 34 | Add `focus-visible` ring to breakdown link | P3 |
-| 5 | `bookmarks/page.tsx` line 96 | Add `focus-visible` ring to bookmark title link | P3 |
-| 6 | `history-questions-tab.tsx` lines 511–552 | Convert question cards from Pattern B to Pattern A (Link-as-Card) | P1 |
+| 2 | `app/(app)/app/practice/[sessionId]/components/session-summary-view.tsx` lines 40, 47, 54, 61 | Remove `hover:border-border hover:bg-muted/50` from 4 non-interactive summary cards | P2 |
+| 3 | `components/marketing/marketing-home.tsx` line 155 | Remove `transition-colors hover:bg-muted` from feature cards | P2 |
+| 4 | `history-sessions-tab.tsx` lines 183–186 | Add `focus-visible` ring to focusable LI row | P2 |
+| 5 | `history-questions-tab.tsx` line 517 | Add `focus-visible` ring to question title link | P3 |
+| 6 | `session-breakdown-list.tsx` line 34 | Add `focus-visible` ring to breakdown link | P3 |
+| 7 | `bookmarks/page.tsx` line 96 | Add `focus-visible` ring to bookmark title link | P3 |
+| 8 | `history-questions-tab.tsx` lines 511–552 | Choose one asymmetry fix option (A or B) and implement | P1 |
+| 9 | `components/theme-token-regression.test.tsx` lines 53–149 | Update token regression assertions to match chosen hover policy | P2 |
 
-**Total files touched:** 5
-**Estimated complexity:** Low for fixes 1–5 (class string edits), moderate for fix 6 (restructure question card JSX).
+**Total files touched (expected):** 8–9
+**Estimated complexity:** Low for fixes 1–7 and 9 (class string + test assertions), moderate for fix 8 (question card structure/interaction model).
+
+## Note: Dark Mode Focus Ring Contrast
+
+`app/globals.css` line 152 sets `--ring: 0 0% 40%` in dark mode. Combined with `ring-ring/50` (50% opacity), the effective ring color is a ~20% opacity gray on dark backgrounds (`--background: 0 0% 3.5%`). This may fail WCAG 3:1 contrast ratio for focus indicators. Consider increasing to `--ring: 0 0% 60%` or higher in dark mode. This is a separate concern from the missing rings documented above — tracked here as context but may warrant its own bug if accessibility audit confirms contrast failure.
 
 ## Verification
 
 - [ ] Dashboard stat cards: hover produces no visual change
+- [ ] Session summary stat cards: hover produces no visual change
 - [ ] Marketing feature cards: hover produces no visual change
-- [ ] History questions tab: entire card is clickable, navigates to review
+- [ ] History interaction model is unified per chosen option (A or B) and documented in this bug
 - [ ] History sessions tab: card-level click still works (no regression)
-- [ ] Tab-key through history question cards shows visible focus ring
+- [ ] Tab-key through history session rows shows visible focus ring on LI
+- [ ] Tab-key through history question title links shows visible focus ring
 - [ ] Tab-key through session breakdown links shows visible focus ring
 - [ ] Tab-key through bookmark title links shows visible focus ring
+- [ ] `components/theme-token-regression.test.tsx` expectations match the updated hover policy
 - [ ] `pnpm typecheck` passes
 - [ ] `pnpm lint` passes
 - [ ] `pnpm test --run` passes
