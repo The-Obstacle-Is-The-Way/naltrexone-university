@@ -30,7 +30,14 @@ export type CheckoutSessionCreateParams = {
   };
 };
 
-export type StripeCheckoutSession = { id: string; url: string | null };
+export type StripeCheckoutSessionStatus = 'open' | 'complete' | 'expired';
+
+export type StripeCheckoutSession = {
+  id: string;
+  url: string | null;
+  status?: StripeCheckoutSessionStatus | null;
+  expires_at?: number;
+};
 
 export type StripeCheckoutSessionList = { data: StripeCheckoutSession[] };
 

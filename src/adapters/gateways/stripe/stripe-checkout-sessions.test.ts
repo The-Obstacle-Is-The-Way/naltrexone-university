@@ -13,6 +13,12 @@ function createStripeMock(overrides?: {
   shouldThrowOnRetrieve?: boolean;
   shouldThrowOnExpire?: boolean;
   createdSessionUrl?: string | null;
+  createdSessionResponses?: Array<{
+    id?: string;
+    url: string | null;
+    status?: 'open' | 'complete' | 'expired';
+    expiresAtUnix?: number;
+  }>;
 }) {
   const subscriptionsList = vi.fn(async () => ({
     data: overrides?.subscriptionsListData ?? [],
@@ -44,13 +50,22 @@ function createStripeMock(overrides?: {
 
     return { id: 'cs_old', url: null };
   });
-  const sessionsCreate = vi.fn(async () => ({
-    id: 'cs_new',
-    url:
-      overrides && 'createdSessionUrl' in overrides
-        ? overrides.createdSessionUrl
-        : 'https://stripe/checkout/new',
-  }));
+  let createCallIndex = 0;
+  const sessionsCreate = vi.fn(async () => {
+    const response = overrides?.createdSessionResponses?.[createCallIndex];
+    createCallIndex += 1;
+
+    return {
+      id: response?.id ?? 'cs_new',
+      url:
+        response?.url ??
+        (overrides && 'createdSessionUrl' in overrides
+          ? overrides.createdSessionUrl
+          : 'https://stripe/checkout/new'),
+      status: response?.status,
+      expires_at: response?.expiresAtUnix,
+    };
+  });
 
   const stripe = {
     customers: { create: vi.fn(async () => ({ id: 'cus_1' })) },
@@ -144,6 +159,82 @@ describe('createStripeCheckoutSession', () => {
         idempotencyKey: 'checkout_idem_custom_1',
       }),
     );
+  });
+
+  it('creates a fresh session when deterministic fallback key replays an expired session', async () => {
+    const nowUnix = Math.floor(Date.now() / 1000);
+    const { stripe, sessionsCreate } = createStripeMock({
+      openSessionsData: [],
+      createdSessionResponses: [
+        {
+          id: 'cs_expired',
+          url: 'https://stripe/checkout/expired',
+          status: 'open',
+          expiresAtUnix: nowUnix - 60,
+        },
+        {
+          id: 'cs_fresh',
+          url: 'https://stripe/checkout/fresh',
+          status: 'open',
+          expiresAtUnix: nowUnix + 3600,
+        },
+      ],
+    });
+
+    await expect(
+      createStripeCheckoutSession({
+        stripe,
+        input,
+        priceIds,
+        logger,
+      }),
+    ).resolves.toEqual({ url: 'https://stripe/checkout/fresh' });
+
+    expect(sessionsCreate).toHaveBeenCalledTimes(2);
+    expect(sessionsCreate).toHaveBeenNthCalledWith(
+      1,
+      expect.any(Object),
+      expect.objectContaining({
+        idempotencyKey: 'checkout_session:user_1:monthly',
+      }),
+    );
+    expect(sessionsCreate).toHaveBeenNthCalledWith(
+      2,
+      expect.any(Object),
+      expect.objectContaining({
+        idempotencyKey: 'checkout_session_recovery:user_1:monthly:cs_expired',
+      }),
+    );
+  });
+
+  it('throws STRIPE_ERROR when caller-provided key returns an expired session', async () => {
+    const nowUnix = Math.floor(Date.now() / 1000);
+    const { stripe, sessionsCreate } = createStripeMock({
+      openSessionsData: [],
+      createdSessionResponses: [
+        {
+          id: 'cs_expired',
+          url: 'https://stripe/checkout/expired',
+          status: 'open',
+          expiresAtUnix: nowUnix - 60,
+        },
+      ],
+    });
+
+    await expect(
+      createStripeCheckoutSession({
+        stripe,
+        input,
+        options: { idempotencyKey: 'checkout_idem_custom_1' },
+        priceIds,
+        logger,
+      }),
+    ).rejects.toMatchObject({
+      code: 'STRIPE_ERROR',
+      message: 'Stripe Checkout Session is expired or inactive',
+    });
+
+    expect(sessionsCreate).toHaveBeenCalledTimes(1);
   });
 
   it('preserves this-binding when calling subscriptions.list', async () => {

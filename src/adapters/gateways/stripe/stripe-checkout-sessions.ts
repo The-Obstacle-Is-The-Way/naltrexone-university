@@ -2,6 +2,7 @@ import type { StripePriceIds } from '@/src/adapters/config/stripe-prices';
 import { getStripePriceId } from '@/src/adapters/config/stripe-prices';
 import type {
   CheckoutSessionCreateParams,
+  StripeCheckoutSession,
   StripeClient,
   StripeListedSubscription,
   StripeSubscriptionStatus,
@@ -32,6 +33,34 @@ function getBlockingSubscriptionStatus(
   if (!subscription.status) return null;
   if (!BLOCKING_SUBSCRIPTION_STATUSES.has(subscription.status)) return null;
   return subscription.status;
+}
+
+function isSessionInactive(session: StripeCheckoutSession): boolean {
+  if (session.status && session.status !== 'open') {
+    return true;
+  }
+
+  if (
+    typeof session.expires_at === 'number' &&
+    session.expires_at * 1000 <= Date.now()
+  ) {
+    return true;
+  }
+
+  return false;
+}
+
+function fallbackCheckoutSessionIdempotencyKey(
+  input: CheckoutSessionInput,
+): string {
+  return `checkout_session:${input.userId}:${input.plan}`;
+}
+
+function recoveryCheckoutSessionIdempotencyKey(
+  input: CheckoutSessionInput,
+  sessionId: string,
+): string {
+  return `checkout_session_recovery:${input.userId}:${input.plan}:${sessionId}`;
 }
 
 export async function createStripeCheckoutSession({
@@ -190,16 +219,22 @@ export async function createStripeCheckoutSession({
     },
   } satisfies CheckoutSessionCreateParams;
 
-  const idempotencyKey =
-    options?.idempotencyKey ?? `checkout_session:${input.userId}:${input.plan}`;
-  const session = await callStripeWithRetry({
-    operation: 'checkout.sessions.create',
-    fn: () =>
-      stripe.checkout.sessions.create(params, {
-        idempotencyKey,
-      }),
-    logger,
-  });
+  async function createSession(
+    idempotencyKey: string,
+  ): Promise<StripeCheckoutSession> {
+    return callStripeWithRetry({
+      operation: 'checkout.sessions.create',
+      fn: () =>
+        stripe.checkout.sessions.create(params, {
+          idempotencyKey,
+        }),
+      logger,
+    });
+  }
+
+  const primaryIdempotencyKey =
+    options?.idempotencyKey ?? fallbackCheckoutSessionIdempotencyKey(input);
+  const session = await createSession(primaryIdempotencyKey);
 
   if (!session.url) {
     throw new ApplicationError(
@@ -208,5 +243,47 @@ export async function createStripeCheckoutSession({
     );
   }
 
-  return { url: session.url };
+  if (!isSessionInactive(session)) {
+    return { url: session.url };
+  }
+
+  if (options?.idempotencyKey) {
+    throw new ApplicationError(
+      'STRIPE_ERROR',
+      'Stripe Checkout Session is expired or inactive',
+    );
+  }
+
+  logger.warn(
+    {
+      userId: input.userId,
+      externalCustomerId: input.externalCustomerId,
+      plan: input.plan,
+      primaryIdempotencyKey,
+      sessionId: session.id,
+      status: session.status ?? null,
+      expiresAt: session.expires_at ?? null,
+    },
+    'Retrying checkout session creation with recovery idempotency key',
+  );
+
+  const recovered = await createSession(
+    recoveryCheckoutSessionIdempotencyKey(input, session.id),
+  );
+
+  if (!recovered.url) {
+    throw new ApplicationError(
+      'STRIPE_ERROR',
+      'Stripe Checkout Session URL is missing',
+    );
+  }
+
+  if (isSessionInactive(recovered)) {
+    throw new ApplicationError(
+      'STRIPE_ERROR',
+      'Stripe Checkout Session is expired or inactive',
+    );
+  }
+
+  return { url: recovered.url };
 }
