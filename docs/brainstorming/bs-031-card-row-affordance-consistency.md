@@ -13,6 +13,19 @@ During SPEC-038 work, we made history session cards fully clickable (card-level 
 
 The broader audit found multiple interaction affordance inconsistencies, including missing focus-visible treatment and misleading hover on non-interactive cards.
 
+## Decision (Locked)
+
+Adopt the following interaction policy:
+
+1. **Pattern A (Link-as-Card)** for single-destination cards.
+2. **Pattern C (card-level onClick with guard)** only when a row has a primary navigation action plus additional distinct controls.
+3. **Pattern B (inner targets)** only when there is no single primary row-level navigation target.
+
+Applied to History:
+
+- **Questions tab:** move from Pattern B to Pattern A.
+- **Sessions tab:** keep Pattern C.
+
 ## Three Interaction Patterns Currently in Use
 
 ### Pattern A: Link-as-Card
@@ -97,7 +110,7 @@ The title `<Link>` in history question cards, session breakdown links, and bookm
 
 ### Finding 7 Detail (from browser audit)
 
-The history sessions `<li>` row has `tabIndex={0}` and `role="link"` (lines 181–182 of `history-sessions-tab.tsx`) but its className (lines 183–186) contains only layout/hover/cursor classes — no `focus-visible` ring. The inner `<Link>` does have a ring but has `tabIndex={-1}`, removing it from the tab order. So the element that receives keyboard focus (the LI) has no explicit ring treatment.
+The history sessions `<li>` row has `tabIndex={0}` and `role="link"` (lines 181–182 of `history-sessions-tab.tsx`) and it already supports Enter/Space in `onKeyDown`, but its className (lines 183–186) contains only layout/hover/cursor classes — no `focus-visible` ring. The inner `<Link>` does have a ring but has `tabIndex={-1}`, removing it from the tab order. So the element that receives keyboard focus (the LI) has no explicit ring treatment.
 
 ### Finding 8 Detail (from browser audit)
 
@@ -111,9 +124,9 @@ The history sessions `<li>` row has `tabIndex={0}` and `role="link"` (lines 181�
 | P2 | 3 | Misleading hover affordances + under-indicated keyboard focus on focusable row |
 | P3 | 4 | Missing focus-visible rings on inner links + dark mode ring contrast concern |
 
-## Proposed Fix (Sketch)
+## Proposed Fix (Locked Direction)
 
-### Strategy: Unify on Pattern A where possible
+### Strategy: Use semantic-first pattern split
 
 1. **Single-action cards → Pattern A (Link-as-Card):** If a card has one primary navigation action, wrap the entire card in `<Link>`. This covers:
    - History question cards (primary action: review the question)
@@ -130,18 +143,18 @@ The history sessions `<li>` row has `tabIndex={0}` and `role="link"` (lines 181�
 ### Migration path
 
 - Findings 2–7 are small, low-risk class-string fixes.
-- Finding 1 (pattern unification) requires choosing whether to keep session rows as Pattern C and promote question rows to Pattern A, or adopt a different unified model.
+- Finding 1 is resolved: keep session rows as Pattern C and promote question rows to Pattern A.
 - `components/theme-token-regression.test.tsx` currently asserts the existing hover token pattern on dashboard/session-summary stat cards and will need updates if hover is removed.
+- Optional follow-up: evaluate a stretched-link approach for session rows if we want to reduce LI click-handler complexity while keeping breakdown as a distinct action.
+- Optional follow-up: evaluate de-duplicating Bookmarks' title-link + review-link same-destination pattern while preserving a distinct Remove action.
 
 ## Open Questions
 
-1. Should session cards keep Pattern C (card-level onClick) given they have two actions (breakdown + review)?
-2. Should history question cards move to Pattern A (full-card link) to remove tab-to-tab asymmetry?
-3. Should non-interactive stat cards ever link somewhere (e.g., "Total answered" → history questions tab) so hover affordance is justified?
-4. Is there value in a shared `InteractiveCard` component to encapsulate Pattern C click-guard/focus behavior if we keep it?
+1. Should non-interactive stat cards ever link somewhere (e.g., "Total answered" → history questions tab) so hover affordance is justified?
+2. Is there value in a shared `InteractiveCard` component to encapsulate Pattern C click-guard/focus behavior for future multi-action rows?
 
 ## Decision Log
 
 | Date | Decision | Rationale |
 |------|----------|-----------|
-| 2026-02-23 | Document as brainstorming; defer implementation to a future spec | Inconsistencies are real but non-blocking; need UX direction on pattern unification |
+| 2026-02-23 | Use Pattern A for history question cards; keep Pattern C for history session rows | Question cards are single-destination navigation; session rows are genuinely multi-action |

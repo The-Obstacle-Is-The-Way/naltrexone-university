@@ -13,7 +13,7 @@ A card/row interaction audit across Dashboard, History, Bookmarks, Practice summ
 1. **Non-interactive cards with hover affordance** — Cards change color on hover but don't do anything when clicked, misleading users into thinking they're interactive.
 2. **Interactive links missing `focus-visible` ring** — Several card-internal links rely on default outline behavior instead of the app-standard 3px `focus-visible` ring, creating weak keyboard affordance.
 3. **History sessions LI row missing focus ring** — The `<li>` has `tabIndex={0}` and `role="link"` but no `focus-visible` classes. The inner `<Link>` has `tabIndex={-1}`, so the keyboard-focusable container is visually under-indicated.
-4. **Pattern asymmetry on the same page** — History sessions tab uses card-level `onClick` (Pattern C), while the questions tab uses inner-target links (Pattern B). Users switch tabs and the interaction model changes.
+4. **Pattern asymmetry on the same page** — History sessions tab uses card-level `onClick` (Pattern C), while the questions tab uses inner-target links (Pattern B). Users switch tabs and the interaction model changes. **Decision:** promote question cards to Pattern A (Link-as-Card) while keeping sessions as Pattern C.
 
 ## Codebase-Wide Audit Results
 
@@ -92,7 +92,7 @@ This matches the existing pattern used on dashboard Link-as-Card elements.
 
 **File:** `app/(app)/app/history/components/history-sessions-tab.tsx` lines 183–186
 
-The `<li>` row is keyboard-focusable (`tabIndex={0}`, `role="link"`) but has no focus-visible classes. The inner `<Link>` has `tabIndex={-1}`, so it's the LI that receives focus and needs explicit ring treatment.
+The `<li>` row is already keyboard-focusable (`tabIndex={0}`, `role="link"`) and already handles keyboard activation (`onKeyDown` for Enter/Space), but it has no focus-visible classes. The inner `<Link>` has `tabIndex={-1}`, so it's the LI that receives focus and needs explicit ring treatment.
 
 ```diff
   className={cn(
@@ -123,15 +123,13 @@ The `<li>` row is keyboard-focusable (`tabIndex={0}`, `role="link"`) but has no 
 + className="rounded-sm hover:underline focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]"
 ```
 
-### Fix 3: Resolve history page pattern asymmetry (P1)
+### Fix 3: Adopt Pattern A for history question cards (P1, decision locked)
 
 **Problem:** Sessions tab uses Pattern C (card-level onClick), questions tab uses Pattern B (inner targets only). Users switching tabs encounter different interaction models on the same page.
 
-**Decision required — choose one option and document it in this bug before implementation starts:**
+**Decision:** History question cards move from Pattern B to **Pattern A (Link-as-Card)**. History session cards stay **Pattern C** because they have two distinct actions (row navigation + breakdown toggle).
 
-**Option A (Recommended): Promote question cards to Pattern A (Link-as-Card)**
-
-Convert history question cards from Pattern B to Pattern A by wrapping the entire card in a `<Link>`. This is the simplest unification — the card has one primary action (review the question), so Link-as-Card is the natural fit.
+Convert history question cards from Pattern B to Pattern A by wrapping the entire card in a `<Link>`. The card has one primary action (review question), so Link-as-Card is the simplest semantic model.
 
 In `history-questions-tab.tsx`, the `<Card>` becomes a child of `<Link>`:
 
@@ -159,11 +157,7 @@ In `history-questions-tab.tsx`, the `<Card>` becomes a child of `<Link>`:
 
 The "Review" button becomes a visual indicator (non-interactive span styled as a button) since the entire card is the link.
 
-**Option B: Promote question cards to Pattern C (card-level onClick)**
-
-Add `onClick`/`onKeyDown`/`tabIndex` to question card `<li>` elements, matching the session cards. This is more complex (needs click-guard logic) but preserves inner links as secondary click targets.
-
-**Recommendation:** Option A. It's simpler, uses native `<a>` semantics (better accessibility), and aligns with the dashboard's existing Link-as-Card pattern. Session cards can remain Pattern C because they have two distinct actions (row review navigation and breakdown toggle).
+**Rejected alternative:** Pattern C for question cards (`onClick`/`onKeyDown`/`tabIndex`) was considered and rejected because question cards have a single navigation destination and do not need click-guard complexity.
 
 ### Fix 4: Apply same Link-as-Card pattern to session breakdown list (optional, P3)
 
@@ -184,6 +178,18 @@ This is low-severity because the link already covers the primary content area. T
 
 **Recommendation:** Just add the focus ring (Fix 2) and leave the pattern as-is. The link covers enough of the visual area that the affordance is clear.
 
+### Optional Follow-Up: Sessions Row Full-Target Alternative (P3)
+
+Instead of LI-level click handling (Pattern C), a "stretched-link" implementation could make the existing inner `<Link>` fill the row click area while preserving the separate breakdown button. This can reduce JS click-guard complexity but introduces layout/z-index coordination and must preserve button accessibility. Keep this as an optional refactor; it is not required to resolve BUG-151.
+
+### Optional Follow-Up: Bookmarks Navigation Target Simplification (P3)
+
+Bookmarks currently render both a title link and a "Review" button that resolve to the same destination, plus a distinct "Remove" action. The card cannot be naively wrapped in a single link because of the destructive secondary action. Optional simplification:
+
+1. Keep a single primary navigation target.
+2. Keep "Remove" as the distinct secondary action.
+3. If row-level click is desired, use guarded container activation and preserve explicit focus affordance.
+
 ---
 
 ## Summary of All Changes
@@ -197,7 +203,7 @@ This is low-severity because the link already covers the primary content area. T
 | 5 | `history-questions-tab.tsx` line 517 | Add `focus-visible` ring to question title link | P3 |
 | 6 | `session-breakdown-list.tsx` line 34 | Add `focus-visible` ring to breakdown link | P3 |
 | 7 | `bookmarks/page.tsx` line 96 | Add `focus-visible` ring to bookmark title link | P3 |
-| 8 | `history-questions-tab.tsx` lines 511–552 | Choose one asymmetry fix option (A or B) and implement | P1 |
+| 8 | `history-questions-tab.tsx` lines 511–552 | Convert question cards from Pattern B to Pattern A (Link-as-Card); keep session rows Pattern C | P1 |
 | 9 | `components/theme-token-regression.test.tsx` lines 53–149 | Update token regression assertions to match chosen hover policy | P2 |
 
 **Total files touched (expected):** 8–9
@@ -212,8 +218,10 @@ This is low-severity because the link already covers the primary content area. T
 - [ ] Dashboard stat cards: hover produces no visual change
 - [ ] Session summary stat cards: hover produces no visual change
 - [ ] Marketing feature cards: hover produces no visual change
-- [ ] History interaction model is unified per chosen option (A or B) and documented in this bug
+- [ ] History questions tab cards use Pattern A (Link-as-Card)
+- [ ] History sessions tab rows remain Pattern C (row navigation + breakdown toggle)
 - [ ] History sessions tab: card-level click still works (no regression)
+- [ ] History sessions tab: keyboard activation on LI still works (Enter/Space)
 - [ ] Tab-key through history session rows shows visible focus ring on LI
 - [ ] Tab-key through history question title links shows visible focus ring
 - [ ] Tab-key through session breakdown links shows visible focus ring
@@ -223,6 +231,12 @@ This is low-severity because the link already covers the primary content area. T
 - [ ] `pnpm lint` passes
 - [ ] `pnpm test --run` passes
 - [ ] `pnpm build` succeeds
+
+## Decision Log
+
+| Date | Decision | Rationale |
+|------|----------|-----------|
+| 2026-02-23 | Use Pattern A (Link-as-Card) for history question cards; keep Pattern C for history session rows | Question cards are single-destination navigation; session rows are genuinely multi-action |
 
 ## Related
 
