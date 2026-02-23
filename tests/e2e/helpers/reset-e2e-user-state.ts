@@ -183,10 +183,14 @@ const defaultServices: E2EUserStateResetServices = {
     const sql = postgres(databaseUrl, { max: 1 });
     try {
       await sql.begin(async (tx) => {
-        await tx`DELETE FROM idempotency_keys WHERE user_id = ${userId}`;
-        await tx`DELETE FROM attempts WHERE user_id = ${userId}`;
-        await tx`DELETE FROM bookmarks WHERE user_id = ${userId}`;
-        await tx`DELETE FROM practice_sessions WHERE user_id = ${userId}`;
+        await tx.unsafe('DELETE FROM idempotency_keys WHERE user_id = $1', [
+          userId,
+        ]);
+        await tx.unsafe('DELETE FROM attempts WHERE user_id = $1', [userId]);
+        await tx.unsafe('DELETE FROM bookmarks WHERE user_id = $1', [userId]);
+        await tx.unsafe('DELETE FROM practice_sessions WHERE user_id = $1', [
+          userId,
+        ]);
       });
     } catch {
       throw new E2EUserStateResetError(
