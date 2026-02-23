@@ -55,13 +55,15 @@ function createStripeMock(overrides?: {
     const response = overrides?.createdSessionResponses?.[createCallIndex];
     createCallIndex += 1;
 
+    const fallbackUrl =
+      overrides && 'createdSessionUrl' in overrides
+        ? overrides.createdSessionUrl
+        : 'https://stripe/checkout/new';
+
     return {
       id: response?.id ?? 'cs_new',
-      url:
-        response?.url ??
-        (overrides && 'createdSessionUrl' in overrides
-          ? overrides.createdSessionUrl
-          : 'https://stripe/checkout/new'),
+      // Preserve explicit null values to exercise missing-URL branches.
+      url: response?.url !== undefined ? response.url : fallbackUrl,
       status: response?.status,
       expires_at: response?.expiresAtUnix,
     };
@@ -235,6 +237,76 @@ describe('createStripeCheckoutSession', () => {
     });
 
     expect(sessionsCreate).toHaveBeenCalledTimes(1);
+  });
+
+  it('throws STRIPE_ERROR when recovered session is missing URL', async () => {
+    const nowUnix = Math.floor(Date.now() / 1000);
+    const { stripe, sessionsCreate } = createStripeMock({
+      openSessionsData: [],
+      createdSessionResponses: [
+        {
+          id: 'cs_expired',
+          url: 'https://stripe/checkout/expired',
+          status: 'open',
+          expiresAtUnix: nowUnix - 60,
+        },
+        {
+          id: 'cs_recovered',
+          url: null,
+          status: 'open',
+          expiresAtUnix: nowUnix + 3600,
+        },
+      ],
+    });
+
+    await expect(
+      createStripeCheckoutSession({
+        stripe,
+        input,
+        priceIds,
+        logger,
+      }),
+    ).rejects.toMatchObject({
+      code: 'STRIPE_ERROR',
+      message: 'Stripe Checkout Session URL is missing',
+    });
+
+    expect(sessionsCreate).toHaveBeenCalledTimes(2);
+  });
+
+  it('throws STRIPE_ERROR when recovered session is expired or inactive', async () => {
+    const nowUnix = Math.floor(Date.now() / 1000);
+    const { stripe, sessionsCreate } = createStripeMock({
+      openSessionsData: [],
+      createdSessionResponses: [
+        {
+          id: 'cs_expired',
+          url: 'https://stripe/checkout/expired',
+          status: 'open',
+          expiresAtUnix: nowUnix - 60,
+        },
+        {
+          id: 'cs_recovered',
+          url: 'https://stripe/checkout/recovered',
+          status: 'expired',
+          expiresAtUnix: nowUnix + 3600,
+        },
+      ],
+    });
+
+    await expect(
+      createStripeCheckoutSession({
+        stripe,
+        input,
+        priceIds,
+        logger,
+      }),
+    ).rejects.toMatchObject({
+      code: 'STRIPE_ERROR',
+      message: 'Stripe Checkout Session is expired or inactive',
+    });
+
+    expect(sessionsCreate).toHaveBeenCalledTimes(2);
   });
 
   it('preserves this-binding when calling subscriptions.list', async () => {
