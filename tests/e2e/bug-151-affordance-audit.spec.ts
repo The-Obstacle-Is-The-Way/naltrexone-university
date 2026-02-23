@@ -180,7 +180,7 @@ test.describe('BUG-151: Card/Row Affordance Audit', () => {
 
   // ─── HISTORY SESSIONS TAB (Pattern C) ─────────────────────
 
-  test('History sessions: LI rows missing focus-visible ring despite tabIndex=0', async ({
+  test('History sessions: Pattern C rows are keyboard-focusable with explicit focus-visible ring', async ({
     page,
   }) => {
     test.setTimeout(120_000);
@@ -194,7 +194,12 @@ test.describe('BUG-151: Card/Row Affordance Audit', () => {
     await expect(page.getByRole('heading', { name: 'History' })).toBeVisible();
 
     // Wait for session rows to appear
-    const sessionRow = page.locator('li[role="link"]').first();
+    const sessionRow = page
+      .locator('li')
+      .filter({
+        has: page.locator('button[aria-label*="breakdown for"]'),
+      })
+      .first();
     const emptyMsg = page.getByText(/No (completed )?sessions yet/i);
     await sessionRow
       .or(emptyMsg)
@@ -206,26 +211,24 @@ test.describe('BUG-151: Card/Row Affordance Audit', () => {
       return;
     }
 
-    const rows = page.locator('li[role="link"]');
+    const rows = page.locator('li').filter({
+      has: page.locator('button[aria-label*="breakdown for"]'),
+    });
     const rowCount = await rows.count();
 
     for (let i = 0; i < Math.min(rowCount, 3); i++) {
       const row = rows.nth(i);
       const classes = (await row.getAttribute('class')) ?? '';
-      const role = await row.getAttribute('role');
       const tabindex = await row.getAttribute('tabindex');
 
-      // Verify Pattern C attributes present
-      expect(role).toBe('link');
+      // Verify Pattern C row-level interaction affordance.
       expect(tabindex).toBe('0');
       expect(classes).toContain('cursor-pointer');
       expect(classes).toContain('hover:bg-accent/40');
+      expect(classes).toContain('focus-visible:ring');
+      expect(classes).toContain('focus-visible:ring-[3px]');
 
-      // BUG: No focus-visible ring on the LI
-      const hasFocusRing = classes.includes('focus-visible:ring');
-      expect(hasFocusRing).toBe(false); // Documenting the current bug
-
-      // Verify inner link has tabIndex={-1} (focus goes to LI, not link)
+      // Inner title link remains out of tab order to keep row-level focus target.
       const innerLink = row.locator('a').first();
       if (await innerLink.isVisible().catch(() => false)) {
         const innerTabindex = await innerLink.getAttribute('tabindex');
@@ -254,7 +257,12 @@ test.describe('BUG-151: Card/Row Affordance Audit', () => {
       waitUntil: 'domcontentloaded',
     });
 
-    const sessionRow = page.locator('li[role="link"]').first();
+    const sessionRow = page
+      .locator('li')
+      .filter({
+        has: page.locator('button[aria-label*="breakdown for"]'),
+      })
+      .first();
     const emptyMsg = page.getByText(/No (completed )?sessions yet/i);
     await sessionRow
       .or(emptyMsg)
@@ -436,10 +444,12 @@ test.describe('BUG-151: Card/Row Affordance Audit', () => {
       waitUntil: 'domcontentloaded',
     });
 
-    const bookmarkCards = page.locator('[data-slot="card"]');
+    const bookmarkCards = page.locator(
+      '[data-slot="card"]:has(button:has-text("Remove"))',
+    );
     await bookmarkCards
       .first()
-      .or(page.getByText(/No bookmarks/i))
+      .or(page.getByText('No bookmarks yet.', { exact: true }))
       .waitFor({ state: 'visible', timeout: 15_000 });
 
     const hasCards = await bookmarkCards
@@ -548,7 +558,12 @@ test.describe('BUG-151: Card/Row Affordance Audit', () => {
       timeout: 60_000,
       waitUntil: 'domcontentloaded',
     });
-    const sessionRow = page.locator('li[role="link"]').first();
+    const sessionRow = page
+      .locator('li')
+      .filter({
+        has: page.locator('button[aria-label*="breakdown for"]'),
+      })
+      .first();
     const emptySessionMsg = page.getByText(/No (completed )?sessions yet/i);
     await sessionRow.or(emptySessionMsg).waitFor({
       state: 'visible',
@@ -562,8 +577,12 @@ test.describe('BUG-151: Card/Row Affordance Audit', () => {
       timeout: 60_000,
       waitUntil: 'domcontentloaded',
     });
-    const questionCard = page.locator('[data-slot="card"]').first();
-    const emptyQuestionMsg = page.getByText(/No questions/i);
+    const questionCard = page
+      .locator('[data-slot="card"]:has(a:has-text("Review"))')
+      .first();
+    const emptyQuestionMsg = page
+      .getByText(/No questions attempted yet/i)
+      .first();
     await questionCard.or(emptyQuestionMsg).waitFor({
       state: 'visible',
       timeout: 15_000,
@@ -572,15 +591,13 @@ test.describe('BUG-151: Card/Row Affordance Audit', () => {
     const hasQuestions = await questionCard.isVisible().catch(() => false);
 
     if (hasSessions && hasQuestions) {
-      // Sessions: LI has role=link (card-level interaction)
+      // Sessions: row is keyboard-focusable/card-level interactive.
       await page.goto('/app/history?tab=sessions', {
         timeout: 60_000,
         waitUntil: 'domcontentloaded',
       });
       await sessionRow.waitFor({ state: 'visible', timeout: 15_000 });
-      const sessionRole = await sessionRow.getAttribute('role');
       const sessionTabindex = await sessionRow.getAttribute('tabindex');
-      expect(sessionRole).toBe('link');
       expect(sessionTabindex).toBe('0');
 
       // Questions: Card has NO role or tabindex (Pattern B)

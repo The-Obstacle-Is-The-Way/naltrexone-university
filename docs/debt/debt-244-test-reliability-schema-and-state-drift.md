@@ -101,6 +101,34 @@ Pattern: `/app/questions/[slug]` renders `Question not found`.
 
 Pattern: spec expects old DOM/behavior, app intentionally differs.
 
+### Root Cause D: Dev server ECONNRESET / keep-alive socket race (infrastructure)
+
+During 8+ minute E2E runs, the Next.js dev server emits `[WebServer] ⨯ Error: aborted` with `code: 'ECONNRESET'`. Root cause:
+
+- Node.js HTTP `keepAliveTimeout` defaults to 5 seconds
+- Playwright's Chromium aggressively reuses TCP keep-alive connections
+- After long-running specs (several set `test.setTimeout(180_000)`), stale sockets get closed server-side while Chromium still holds references
+- Next request on that stale socket → `ECONNRESET`
+
+This is the mechanism behind cascading `ERR_CONNECTION_REFUSED` failures observed in earlier runs. When benign, it produces a single noisy log line. When severe, the dev server process dies and all subsequent tests fail.
+
+Contributing gaps in this codebase:
+
+- `playwright.config.ts`: no `stdout`/`stderr` suppression for webServer noise
+- `next.config.ts`: no custom server to tune `keepAliveTimeout`/`headersTimeout`
+- No Playwright-level `page.on('requestfailed')` retry fixture for transient resets
+- `retry.ts` already handles `ECONNRESET` for outgoing Stripe calls but is not wired into the E2E layer
+
+## Current State Update (2026-02-23 end-of-day)
+
+After DEBT-243 preflight implementation and agent-driven assertion fixes:
+
+- E2E: `66` passed, `2` skipped, `0` failed (was `24` failed, `44` passed)
+- Schema drift (Root Cause A): resolved — `verifyIdempotencySchema` preflight added to `credential-health-check.ts`
+- Assertion drift (Root Cause C): partially resolved — agent updated selectors in `bug-151-affordance-audit.spec.ts` and `session-review-navigation.spec.ts`
+- Stale data (Root Cause B): masked by data-dependent `test.skip(...)` — not structurally resolved
+- Server stability (Root Cause D): not resolved — ECONNRESET still observed in latest passing run
+
 ## Why This Happened (First Principles)
 
 1. Credential preflight (DEBT-243) validates secrets and service connectivity, but not **schema version/shape**.
@@ -176,6 +204,16 @@ Update:
 - `package.json` integration workflow scripts or integration setup
 
 Guarantee `pnpm test:integration` has required seed data (or fails with explicit precondition error instructing exact command).
+
+### 7) Harden dev server stability for E2E runs
+
+Options (choose one):
+
+- Tune `keepAliveTimeout` / `headersTimeout` via custom `server.ts` or `instrumentation.ts`
+- Use `pnpm start` (production server) for local E2E instead of `pnpm dev`
+- Add Playwright navigation retry fixture for transient `ECONNRESET`
+
+Outcome: eliminate cascading connection-reset failures in long E2E suites.
 
 ## Verification Plan
 

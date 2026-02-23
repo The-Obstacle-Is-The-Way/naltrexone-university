@@ -34,6 +34,7 @@ export class CredentialValidationError extends Error {
 
 export type CredentialHealthCheckServices = {
   checkDatabaseConnectivity: (databaseUrl: string) => Promise<void>;
+  verifyIdempotencySchema: (databaseUrl: string) => Promise<void>;
   resolveClerkUserId: (input: {
     clerkSecretKey: string;
     email: string;
@@ -113,6 +114,44 @@ const defaultServices: CredentialHealthCheckServices = {
         'E2E_PREFLIGHT:DATABASE_CONNECT_FAILED',
         'Cannot connect to Postgres with DATABASE_URL.',
         'Verify Neon/Postgres URL, credentials, and network reachability.',
+      );
+    } finally {
+      try {
+        await sql.end({ timeout: 5 });
+      } catch {
+        // Ignore shutdown errors in preflight teardown.
+      }
+    }
+  },
+  verifyIdempotencySchema: async (databaseUrl) => {
+    const sql = postgres(databaseUrl, { max: 1 });
+    try {
+      const rows = await sql<{ hasCompletedAt: boolean }[]>`
+        SELECT EXISTS (
+          SELECT 1
+          FROM information_schema.columns
+          WHERE table_schema = 'public'
+            AND table_name = 'idempotency_keys'
+            AND column_name = 'completed_at'
+        ) AS "hasCompletedAt"
+      `;
+      const hasCompletedAt = rows[0]?.hasCompletedAt === true;
+      if (!hasCompletedAt) {
+        throw new CredentialValidationError(
+          'E2E_PREFLIGHT:SCHEMA_DRIFT_IDEMPOTENCY_KEYS',
+          'Database schema drift detected: idempotency_keys.completed_at column is missing.',
+          'Run migrations against this database (pnpm db:migrate).',
+        );
+      }
+    } catch (error) {
+      if (error instanceof CredentialValidationError) {
+        throw error;
+      }
+
+      throw new CredentialValidationError(
+        'E2E_PREFLIGHT:SCHEMA_DRIFT_IDEMPOTENCY_KEYS',
+        'Unable to verify idempotency_keys schema contract.',
+        'Ensure DATABASE_URL points to the intended database and run pnpm db:migrate.',
       );
     } finally {
       try {
@@ -283,6 +322,7 @@ function buildValidators(
       id: 'database',
       run: async () => {
         await services.checkDatabaseConnectivity(databaseUrl);
+        await services.verifyIdempotencySchema(databaseUrl);
       },
     });
   }

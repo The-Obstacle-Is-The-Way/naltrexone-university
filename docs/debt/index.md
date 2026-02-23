@@ -17,10 +17,11 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 | ID | Title | Priority | Date | GitHub Issue |
 |----|-------|----------|------|--------------|
+| [DEBT-245](debt-245-e2e-pyramid-drift-and-skip-governance.md) | E2E Pyramid Drift and Data-Dependent Skip Governance | P1 | 2026-02-23 | [#133](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/issues/133) |
 | [DEBT-244](debt-244-test-reliability-schema-and-state-drift.md) | Test Reliability Drift (Schema + Stateful E2E Data + Spec Drift) | P1 | 2026-02-23 | — |
 | [DEBT-243](debt-243-e2e-credential-drift-silent-failure.md) | E2E Credential Drift Causes Confusing Test Failures | P2 | 2026-02-23 | — |
 
-**Next Debt ID:** DEBT-245
+**Next Debt ID:** DEBT-246
 
 ---
 

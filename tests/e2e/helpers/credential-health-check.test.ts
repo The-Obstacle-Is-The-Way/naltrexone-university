@@ -34,6 +34,7 @@ function createServices(
 ): CredentialHealthCheckServices {
   return {
     checkDatabaseConnectivity: vi.fn(async () => {}),
+    verifyIdempotencySchema: vi.fn(async () => {}),
     resolveClerkUserId: vi.fn(async () => 'user_123'),
     verifyClerkPassword: vi.fn(async () => true),
     verifyStripeSecretKey: vi.fn(async () => {}),
@@ -55,6 +56,9 @@ describe('runE2ECredentialHealthCheck', () => {
     ).resolves.toBeUndefined();
 
     expect(services.checkDatabaseConnectivity).toHaveBeenCalledWith(
+      env.DATABASE_URL,
+    );
+    expect(services.verifyIdempotencySchema).toHaveBeenCalledWith(
       env.DATABASE_URL,
     );
     expect(services.resolveClerkUserId).toHaveBeenCalledWith({
@@ -131,6 +135,7 @@ describe('runE2ECredentialHealthCheck', () => {
     ).rejects.toThrow('[E2E_PREFLIGHT:STRIPE_MONTHLY_PRICE_ID_MISSING]');
 
     expect(services.checkDatabaseConnectivity).not.toHaveBeenCalled();
+    expect(services.verifyIdempotencySchema).not.toHaveBeenCalled();
     expect(services.resolveClerkUserId).not.toHaveBeenCalled();
     expect(services.verifyClerkPassword).not.toHaveBeenCalled();
     expect(services.verifyStripeSecretKey).not.toHaveBeenCalled();
@@ -170,6 +175,26 @@ describe('runE2ECredentialHealthCheck', () => {
     await expect(promise).rejects.toThrow(
       '[E2E_PREFLIGHT:STRIPE_SECRET_KEY_INVALID]',
     );
+  });
+
+  it('fails with schema drift code when idempotency column check fails', async () => {
+    const env = createEnv();
+    const services = createServices({
+      verifyIdempotencySchema: vi.fn(async () => {
+        throw new CredentialValidationError(
+          'E2E_PREFLIGHT:SCHEMA_DRIFT_IDEMPOTENCY_KEYS',
+          'Database schema drift detected: idempotency_keys.completed_at column is missing.',
+          'Run migrations against this database (pnpm db:migrate).',
+        );
+      }),
+    });
+
+    await expect(
+      runE2ECredentialHealthCheck({
+        env,
+        services,
+      }),
+    ).rejects.toThrow('[E2E_PREFLIGHT:SCHEMA_DRIFT_IDEMPOTENCY_KEYS]');
   });
 
   it('wraps unexpected validator errors with a deterministic error code', async () => {

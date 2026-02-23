@@ -42,7 +42,9 @@ test.describe('cross-page navigation', () => {
 
     await expect(page).toHaveURL(/\/app\/questions\//, { timeout: 15_000 });
     await expect(page).toHaveURL(/from=dashboard/);
-    await expect(page.getByRole('heading', { name: 'Question' })).toBeVisible();
+    await expect(
+      page.getByRole('heading', { name: 'Question', exact: true }),
+    ).toBeVisible();
     await expect(page.getByText(/Loading question/i)).toBeHidden({
       timeout: 15_000,
     });
@@ -75,7 +77,9 @@ test.describe('cross-page navigation', () => {
 
     await expect(page).toHaveURL(new RegExp(`/app/questions/${QUESTION_SLUG}`));
     await expect(page).toHaveURL(/from=history/);
-    await expect(page.getByRole('heading', { name: 'Question' })).toBeVisible();
+    await expect(
+      page.getByRole('heading', { name: 'Question', exact: true }),
+    ).toBeVisible();
     await expect(page.getByText(/Loading question/i)).toBeHidden({
       timeout: 15_000,
     });
@@ -100,7 +104,9 @@ test.describe('cross-page navigation', () => {
 
     await expect(page).toHaveURL(/\/app\/questions\//, { timeout: 15_000 });
     await expect(page).toHaveURL(/from=bookmarks/);
-    await expect(page.getByRole('heading', { name: 'Question' })).toBeVisible();
+    await expect(
+      page.getByRole('heading', { name: 'Question', exact: true }),
+    ).toBeVisible();
     await expect(page.getByText(/Loading question/i)).toBeHidden({
       timeout: 15_000,
     });
