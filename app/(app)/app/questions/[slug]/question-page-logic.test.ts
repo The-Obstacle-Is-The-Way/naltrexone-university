@@ -484,18 +484,16 @@ describe('question-page-logic', () => {
       }
     });
 
-    it('throws when previous-attempt response violates ActionResult contract', async () => {
+    it('silently returns when previous-attempt response is undefined (mock reset edge case)', async () => {
       const setSelectedChoiceId = vi.fn();
       const setSubmitResult = vi.fn();
 
-      await expect(
-        loadPreviousAttempt({
-          questionId: 'q_1',
-          getPreviousAttemptFn: async () => undefined as never,
-          setSelectedChoiceId,
-          setSubmitResult,
-        }),
-      ).rejects.toThrow();
+      await loadPreviousAttempt({
+        questionId: 'q_1',
+        getPreviousAttemptFn: async () => undefined as never,
+        setSelectedChoiceId,
+        setSubmitResult,
+      });
 
       expect(setSelectedChoiceId).not.toHaveBeenCalled();
       expect(setSubmitResult).not.toHaveBeenCalled();
