@@ -12,12 +12,23 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
 
-function getAuthorizationToken(req: Request): string | null {
+type AuthorizationTokenResult =
+  | { ok: true; token: string }
+  | {
+      ok: false;
+      reason: 'missing_authorization_header' | 'malformed_authorization_header';
+    };
+
+function getAuthorizationToken(req: Request): AuthorizationTokenResult {
   const header = req.headers.get('authorization');
-  if (!header) return null;
+  if (!header) {
+    return { ok: false, reason: 'missing_authorization_header' };
+  }
   const [scheme, token] = header.split(' ', 2);
-  if (scheme !== 'Bearer' || !token) return null;
-  return token;
+  if (scheme !== 'Bearer' || !token) {
+    return { ok: false, reason: 'malformed_authorization_header' };
+  }
+  return { ok: true, token };
 }
 
 function isValidCronToken(token: string, secret: string): boolean {
@@ -58,19 +69,19 @@ export async function POST(req: Request) {
     );
   }
 
-  const token = getAuthorizationToken(req);
-  if (!token) {
+  const tokenResult = getAuthorizationToken(req);
+  if (!tokenResult.ok) {
     container.logger.warn(
       {
         route: '/api/cron/reconcile-stripe-subscriptions',
-        reason: 'missing_authorization_header',
+        reason: tokenResult.reason,
       },
       'Unauthorized cron request',
     );
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  if (!isValidCronToken(token, cronSecret)) {
+  if (!isValidCronToken(tokenResult.token, cronSecret)) {
     container.logger.warn(
       {
         route: '/api/cron/reconcile-stripe-subscriptions',

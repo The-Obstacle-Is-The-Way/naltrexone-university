@@ -3,8 +3,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const initMock = vi.fn();
 const captureRequestErrorMock = vi.fn();
-const SENTRY_DISABLED_IN_PRODUCTION_WARNING =
-  '[SENTRY_DISABLED] Sentry DSN is not configured; server telemetry is disabled.';
 
 vi.mock('@sentry/nextjs', () => ({
   init: initMock,
@@ -100,14 +98,21 @@ describe('Sentry configuration', () => {
   });
 
   describe('instrumentation', () => {
+    let instrumentation: typeof import('./instrumentation');
+
+    beforeEach(async () => {
+      instrumentation = await import('./instrumentation');
+    });
+
     it('returns no initialization when DSNs are unset', async () => {
       // Arrange
       delete process.env.SENTRY_DSN;
       delete process.env.NEXT_PUBLIC_SENTRY_DSN;
+      delete process.env.VERCEL_ENV;
+      process.env = { ...process.env, NODE_ENV: 'test' };
       const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
       // Act
-      const instrumentation = await import('./instrumentation');
       await instrumentation.register();
 
       // Assert
@@ -123,14 +128,13 @@ describe('Sentry configuration', () => {
       const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
       // Act
-      const instrumentation = await import('./instrumentation');
       await instrumentation.register();
 
       // Assert
       expect(initMock).not.toHaveBeenCalled();
       expect(warnSpy).toHaveBeenCalledTimes(1);
       expect(warnSpy).toHaveBeenCalledWith(
-        SENTRY_DISABLED_IN_PRODUCTION_WARNING,
+        instrumentation.SENTRY_DISABLED_IN_PRODUCTION_WARNING,
       );
     });
 
@@ -139,7 +143,6 @@ describe('Sentry configuration', () => {
       process.env.SENTRY_DSN = 'https://exampleServerDsn';
 
       // Act
-      const instrumentation = await import('./instrumentation');
       await instrumentation.register();
 
       // Assert
@@ -156,7 +159,6 @@ describe('Sentry configuration', () => {
       process.env.NEXT_PUBLIC_SENTRY_DSN = 'https://examplePublicDsn';
 
       // Act
-      const instrumentation = await import('./instrumentation');
       await instrumentation.register();
 
       // Assert
@@ -173,7 +175,6 @@ describe('Sentry configuration', () => {
       process.env.VERCEL_ENV = 'preview';
 
       // Act
-      const instrumentation = await import('./instrumentation');
       await instrumentation.register();
 
       // Assert
@@ -189,9 +190,6 @@ describe('Sentry configuration', () => {
       // (mocks are defined at module scope)
 
       // Act
-      const instrumentation = await import('./instrumentation');
-
-      // Assert
       expect(instrumentation.onRequestError).toBe(captureRequestErrorMock);
     });
   });

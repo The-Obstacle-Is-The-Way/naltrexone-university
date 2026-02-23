@@ -163,6 +163,28 @@ describe('POST /api/cron/reconcile-stripe-subscriptions', () => {
     );
   });
 
+  it('returns 401 when authorization header is malformed', async () => {
+    const response = await POST(
+      new Request('http://localhost/api/cron/reconcile-stripe-subscriptions', {
+        method: 'POST',
+        headers: {
+          authorization: 'Basic abc123',
+        },
+      }),
+    );
+
+    expect(response.status).toBe(401);
+    await expect(response.json()).resolves.toEqual({ error: 'Unauthorized' });
+    expect(reconcileStripeSubscriptions).not.toHaveBeenCalled();
+    expect(container.logger.warn).toHaveBeenCalledWith(
+      {
+        route: '/api/cron/reconcile-stripe-subscriptions',
+        reason: 'malformed_authorization_header',
+      },
+      'Unauthorized cron request',
+    );
+  });
+
   it('returns 401 when bearer token is invalid', async () => {
     const response = await POST(
       new Request('http://localhost/api/cron/reconcile-stripe-subscriptions', {

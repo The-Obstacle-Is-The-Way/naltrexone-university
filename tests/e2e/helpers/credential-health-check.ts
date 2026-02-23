@@ -2,6 +2,7 @@ import postgres from 'postgres';
 import Stripe from 'stripe';
 
 const CLERK_API_BASE = 'https://api.clerk.com/v1';
+const CLERK_API_TIMEOUT_MS = 15_000;
 
 type CredentialValidator = {
   id: 'database' | 'clerk' | 'stripe';
@@ -33,8 +34,8 @@ export class CredentialValidationError extends Error {
 }
 
 export type CredentialHealthCheckServices = {
-  checkDatabaseConnectivity: (databaseUrl: string) => Promise<void>;
-  verifyIdempotencySchema: (databaseUrl: string) => Promise<void>;
+  checkDatabaseConnectivity: (sql: postgres.Sql) => Promise<void>;
+  verifyIdempotencySchema: (sql: postgres.Sql) => Promise<void>;
   resolveClerkUserId: (input: {
     clerkSecretKey: string;
     email: string;
@@ -44,9 +45,9 @@ export type CredentialHealthCheckServices = {
     userId: string;
     password: string;
   }) => Promise<boolean>;
-  verifyStripeSecretKey: (stripeSecretKey: string) => Promise<void>;
+  verifyStripeSecretKey: (stripe: Stripe) => Promise<void>;
   verifyStripePriceId: (input: {
-    stripeSecretKey: string;
+    stripe: Stripe;
     priceId: string;
   }) => Promise<void>;
 };
@@ -104,9 +105,27 @@ const REQUIRED_ENV_VARS: readonly RequiredEnvVar[] = [
   },
 ] as const;
 
+type ClerkUserListResponse =
+  | Array<{ id?: string }>
+  | { data?: Array<{ id?: string }> };
+
+async function fetchWithTimeout(
+  input: string,
+  init: RequestInit,
+  timeoutMs: number,
+): Promise<Response> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    return await fetch(input, { ...init, signal: controller.signal });
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 const defaultServices: CredentialHealthCheckServices = {
-  checkDatabaseConnectivity: async (databaseUrl) => {
-    const sql = postgres(databaseUrl, { max: 1 });
+  checkDatabaseConnectivity: async (sql) => {
     try {
       await sql`SELECT 1`;
     } catch {
@@ -115,16 +134,9 @@ const defaultServices: CredentialHealthCheckServices = {
         'Cannot connect to Postgres with DATABASE_URL.',
         'Verify Neon/Postgres URL, credentials, and network reachability.',
       );
-    } finally {
-      try {
-        await sql.end({ timeout: 5 });
-      } catch {
-        // Ignore shutdown errors in preflight teardown.
-      }
     }
   },
-  verifyIdempotencySchema: async (databaseUrl) => {
-    const sql = postgres(databaseUrl, { max: 1 });
+  verifyIdempotencySchema: async (sql) => {
     try {
       const rows = await sql<{ hasCompletedAt: boolean }[]>`
         SELECT EXISTS (
@@ -153,12 +165,6 @@ const defaultServices: CredentialHealthCheckServices = {
         'Unable to verify idempotency_keys schema contract.',
         'Ensure DATABASE_URL points to the intended database and run pnpm db:migrate.',
       );
-    } finally {
-      try {
-        await sql.end({ timeout: 5 });
-      } catch {
-        // Ignore shutdown errors in preflight teardown.
-      }
     }
   },
 
@@ -167,9 +173,13 @@ const defaultServices: CredentialHealthCheckServices = {
 
     let response: Response;
     try {
-      response = await fetch(url, {
-        headers: { Authorization: `Bearer ${clerkSecretKey}` },
-      });
+      response = await fetchWithTimeout(
+        url,
+        {
+          headers: { Authorization: `Bearer ${clerkSecretKey}` },
+        },
+        CLERK_API_TIMEOUT_MS,
+      );
     } catch {
       throw new CredentialValidationError(
         'E2E_PREFLIGHT:CLERK_API_UNAVAILABLE',
@@ -194,8 +204,9 @@ const defaultServices: CredentialHealthCheckServices = {
       );
     }
 
-    const payload = (await response.json()) as Array<{ id?: string }>;
-    const firstUser = payload[0];
+    const payload = (await response.json()) as ClerkUserListResponse;
+    const users = Array.isArray(payload) ? payload : (payload.data ?? []);
+    const firstUser = users[0];
     if (!firstUser?.id) return null;
     return firstUser.id;
   },
@@ -205,11 +216,15 @@ const defaultServices: CredentialHealthCheckServices = {
 
     let response: Response;
     try {
-      response = await fetch(url, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${clerkSecretKey}` },
-        body: new URLSearchParams({ password }),
-      });
+      response = await fetchWithTimeout(
+        url,
+        {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${clerkSecretKey}` },
+          body: new URLSearchParams({ password }),
+        },
+        CLERK_API_TIMEOUT_MS,
+      );
     } catch {
       throw new CredentialValidationError(
         'E2E_PREFLIGHT:CLERK_API_UNAVAILABLE',
@@ -247,8 +262,7 @@ const defaultServices: CredentialHealthCheckServices = {
     return payload.verified === true;
   },
 
-  verifyStripeSecretKey: async (stripeSecretKey) => {
-    const stripe = new Stripe(stripeSecretKey);
+  verifyStripeSecretKey: async (stripe) => {
     try {
       await stripe.accounts.retrieve();
     } catch {
@@ -260,8 +274,7 @@ const defaultServices: CredentialHealthCheckServices = {
     }
   },
 
-  verifyStripePriceId: async ({ stripeSecretKey, priceId }) => {
-    const stripe = new Stripe(stripeSecretKey);
+  verifyStripePriceId: async ({ stripe, priceId }) => {
     try {
       await stripe.prices.retrieve(priceId);
     } catch {
@@ -321,8 +334,17 @@ function buildValidators(
     validators.push({
       id: 'database',
       run: async () => {
-        await services.checkDatabaseConnectivity(databaseUrl);
-        await services.verifyIdempotencySchema(databaseUrl);
+        const sql = postgres(databaseUrl, { max: 1 });
+        try {
+          await services.checkDatabaseConnectivity(sql);
+          await services.verifyIdempotencySchema(sql);
+        } finally {
+          try {
+            await sql.end({ timeout: 5 });
+          } catch {
+            // Ignore shutdown errors in preflight teardown.
+          }
+        }
       },
     });
   }
@@ -370,9 +392,10 @@ function buildValidators(
     validators.push({
       id: 'stripe',
       run: async () => {
-        await services.verifyStripeSecretKey(stripeSecretKey);
+        const stripe = new Stripe(stripeSecretKey);
+        await services.verifyStripeSecretKey(stripe);
         await services.verifyStripePriceId({
-          stripeSecretKey,
+          stripe,
           priceId: stripeMonthlyPriceId,
         });
       },

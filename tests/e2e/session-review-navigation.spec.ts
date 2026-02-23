@@ -7,6 +7,10 @@ import { selectChoiceByLabel } from './helpers/question';
 import { startSession } from './helpers/session';
 import { ensureSubscribed } from './helpers/subscription';
 
+function escapeRegexLiteral(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 test.describe('session review navigation (SPEC-027)', () => {
   // Multi-page audit flows can exceed the default timeout due to sequential navigation and assertions in CI.
   test.setTimeout(180_000);
@@ -102,9 +106,10 @@ test.describe('session review navigation (SPEC-027)', () => {
       .getByRole('link', { name: 'Back to Session' })
       .first();
     await expect(backLink).toBeVisible({ timeout: 15_000 });
+    const escapedSessionId = escapeRegexLiteral(sessionId ?? '');
     await expect(backLink).toHaveAttribute(
       'href',
-      new RegExp(`/app/practice/${sessionId}`),
+      new RegExp(`/app/practice/${escapedSessionId}`),
     );
 
     // Verify "Next →" link is present (we're on question 1)

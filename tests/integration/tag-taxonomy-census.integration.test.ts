@@ -25,10 +25,6 @@ if (!allowNonLocal && !isLocalhost) {
 
 const sql = postgres(databaseUrl, { max: 1 });
 
-afterAll(async () => {
-  await sql.end({ timeout: 5 });
-});
-
 beforeAll(async () => {
   const rows = await sql<{ count: number }[]>`
     select count(*)::int as count
@@ -40,6 +36,10 @@ beforeAll(async () => {
       '[INTEGRATION_SEED_MISSING] tags table is empty. Run pnpm db:seed before pnpm test:integration.',
     );
   }
+});
+
+afterAll(async () => {
+  await sql.end({ timeout: 5 });
 });
 
 describe('tag taxonomy census', () => {

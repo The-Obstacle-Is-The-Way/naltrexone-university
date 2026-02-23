@@ -33,12 +33,12 @@ function createServices(
   overrides: Partial<CredentialHealthCheckServices> = {},
 ): CredentialHealthCheckServices {
   return {
-    checkDatabaseConnectivity: vi.fn(async () => {}),
-    verifyIdempotencySchema: vi.fn(async () => {}),
+    checkDatabaseConnectivity: vi.fn(async (_sql) => {}),
+    verifyIdempotencySchema: vi.fn(async (_sql) => {}),
     resolveClerkUserId: vi.fn(async () => 'user_123'),
     verifyClerkPassword: vi.fn(async () => true),
-    verifyStripeSecretKey: vi.fn(async () => {}),
-    verifyStripePriceId: vi.fn(async () => {}),
+    verifyStripeSecretKey: vi.fn(async (_stripe) => {}),
+    verifyStripePriceId: vi.fn(async (_input) => {}),
     ...overrides,
   };
 }
@@ -55,12 +55,13 @@ describe('runE2ECredentialHealthCheck', () => {
       }),
     ).resolves.toBeUndefined();
 
-    expect(services.checkDatabaseConnectivity).toHaveBeenCalledWith(
-      env.DATABASE_URL,
-    );
-    expect(services.verifyIdempotencySchema).toHaveBeenCalledWith(
-      env.DATABASE_URL,
-    );
+    const databaseCallArg = vi.mocked(services.checkDatabaseConnectivity).mock
+      .calls[0]?.[0];
+    const schemaCallArg = vi.mocked(services.verifyIdempotencySchema).mock
+      .calls[0]?.[0];
+    expect(databaseCallArg).toBeDefined();
+    expect(schemaCallArg).toBeDefined();
+    expect(schemaCallArg).toBe(databaseCallArg);
     expect(services.resolveClerkUserId).toHaveBeenCalledWith({
       email: env.E2E_CLERK_USER_USERNAME,
       clerkSecretKey: env.CLERK_SECRET_KEY,
@@ -70,13 +71,16 @@ describe('runE2ECredentialHealthCheck', () => {
       password: env.E2E_CLERK_USER_PASSWORD,
       clerkSecretKey: env.CLERK_SECRET_KEY,
     });
-    expect(services.verifyStripeSecretKey).toHaveBeenCalledWith(
-      env.STRIPE_SECRET_KEY,
+    const stripeSecretCallArg = vi.mocked(services.verifyStripeSecretKey).mock
+      .calls[0]?.[0];
+    const stripePriceCallArg = vi.mocked(services.verifyStripePriceId).mock
+      .calls[0]?.[0];
+    expect(stripeSecretCallArg).toBeDefined();
+    expect(stripePriceCallArg).toBeDefined();
+    expect(stripePriceCallArg?.priceId).toBe(
+      env.NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY,
     );
-    expect(services.verifyStripePriceId).toHaveBeenCalledWith({
-      stripeSecretKey: env.STRIPE_SECRET_KEY,
-      priceId: env.NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY,
-    });
+    expect(stripePriceCallArg?.stripe).toBe(stripeSecretCallArg);
   });
 
   it('fails with actionable missing env errors and skips external calls', async () => {
@@ -90,49 +94,33 @@ describe('runE2ECredentialHealthCheck', () => {
       NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY: undefined,
     });
 
-    await expect(
-      runE2ECredentialHealthCheck({
+    let caughtError: Error | null = null;
+    try {
+      await runE2ECredentialHealthCheck({
         env,
         services,
-      }),
-    ).rejects.toThrow('[E2E_PREFLIGHT] Credential validation failed (6):');
+      });
+    } catch (error) {
+      caughtError = error as Error;
+    }
 
-    await expect(
-      runE2ECredentialHealthCheck({
-        env,
-        services,
-      }),
-    ).rejects.toThrow('[E2E_PREFLIGHT:DATABASE_URL_MISSING]');
-    await expect(
-      runE2ECredentialHealthCheck({
-        env,
-        services,
-      }),
-    ).rejects.toThrow('[E2E_PREFLIGHT:CLERK_SECRET_KEY_MISSING]');
-    await expect(
-      runE2ECredentialHealthCheck({
-        env,
-        services,
-      }),
-    ).rejects.toThrow('[E2E_PREFLIGHT:E2E_CLERK_USER_USERNAME_MISSING]');
-    await expect(
-      runE2ECredentialHealthCheck({
-        env,
-        services,
-      }),
-    ).rejects.toThrow('[E2E_PREFLIGHT:E2E_CLERK_USER_PASSWORD_MISSING]');
-    await expect(
-      runE2ECredentialHealthCheck({
-        env,
-        services,
-      }),
-    ).rejects.toThrow('[E2E_PREFLIGHT:STRIPE_SECRET_KEY_MISSING]');
-    await expect(
-      runE2ECredentialHealthCheck({
-        env,
-        services,
-      }),
-    ).rejects.toThrow('[E2E_PREFLIGHT:STRIPE_MONTHLY_PRICE_ID_MISSING]');
+    expect(caughtError).toBeInstanceOf(Error);
+    const message = caughtError?.message ?? '';
+    expect(message).toContain(
+      '[E2E_PREFLIGHT] Credential validation failed (6):',
+    );
+    expect(message).toContain('[E2E_PREFLIGHT:DATABASE_URL_MISSING]');
+    expect(message).toContain('[E2E_PREFLIGHT:CLERK_SECRET_KEY_MISSING]');
+    expect(message).toContain(
+      '[E2E_PREFLIGHT:E2E_CLERK_USER_USERNAME_MISSING]',
+    );
+    expect(message).toContain(
+      '[E2E_PREFLIGHT:E2E_CLERK_USER_PASSWORD_MISSING]',
+    );
+    expect(message).toContain('[E2E_PREFLIGHT:STRIPE_SECRET_KEY_MISSING]');
+    expect(message).toContain(
+      '[E2E_PREFLIGHT:STRIPE_MONTHLY_PRICE_ID_MISSING]',
+    );
 
     expect(services.checkDatabaseConnectivity).not.toHaveBeenCalled();
     expect(services.verifyIdempotencySchema).not.toHaveBeenCalled();
@@ -175,6 +163,36 @@ describe('runE2ECredentialHealthCheck', () => {
     await expect(promise).rejects.toThrow(
       '[E2E_PREFLIGHT:STRIPE_SECRET_KEY_INVALID]',
     );
+  });
+
+  it('accepts Clerk paginated user-list response shape in the default resolver', async () => {
+    const env = createEnv();
+    const verifyClerkPassword = vi.fn(async () => true);
+    const services: Partial<CredentialHealthCheckServices> = {
+      checkDatabaseConnectivity: vi.fn(async (_sql) => {}),
+      verifyIdempotencySchema: vi.fn(async (_sql) => {}),
+      verifyClerkPassword,
+      verifyStripeSecretKey: vi.fn(async (_stripe) => {}),
+      verifyStripePriceId: vi.fn(async (_input) => {}),
+    };
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({ data: [{ id: 'user_123' }] }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      }),
+    );
+
+    await expect(
+      runE2ECredentialHealthCheck({
+        env,
+        services,
+      }),
+    ).resolves.toBeUndefined();
+
+    expect(verifyClerkPassword).toHaveBeenCalledWith(
+      expect.objectContaining({ userId: 'user_123' }),
+    );
+    fetchSpy.mockRestore();
   });
 
   it('fails with schema drift code when idempotency column check fails', async () => {

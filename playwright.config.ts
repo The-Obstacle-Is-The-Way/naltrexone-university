@@ -35,7 +35,7 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: 'pnpm build && pnpm start',
+    command: process.env.CI ? 'pnpm start' : 'pnpm build && pnpm start',
     url: `${baseURL}/api/health`,
     reuseExistingServer: false,
     timeout: 120000,

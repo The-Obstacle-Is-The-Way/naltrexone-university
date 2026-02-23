@@ -1,6 +1,6 @@
 import * as Sentry from '@sentry/nextjs';
 
-const SENTRY_DISABLED_IN_PRODUCTION_WARNING =
+export const SENTRY_DISABLED_IN_PRODUCTION_WARNING =
   '[SENTRY_DISABLED] Sentry DSN is not configured; server telemetry is disabled.';
 
 export async function register() {

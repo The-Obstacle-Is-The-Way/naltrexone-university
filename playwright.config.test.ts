@@ -11,7 +11,10 @@ describe('playwright config', () => {
       throw new Error('Expected a single Playwright webServer config object.');
     }
 
-    expect(webServer.command).toBe('pnpm build && pnpm start');
+    const expectedCommand = process.env.CI
+      ? 'pnpm start'
+      : 'pnpm build && pnpm start';
+    expect(webServer.command).toBe(expectedCommand);
     expect(webServer.reuseExistingServer).toBe(false);
     expect(webServer.url).toContain('/api/health');
   });

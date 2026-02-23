@@ -46,6 +46,10 @@ const REQUIRED_ENV_VARS: readonly RequiredEnvVar[] = [
   },
 ] as const;
 
+type ClerkUserListResponse =
+  | Array<{ id?: string }>
+  | { data?: Array<{ id?: string }> };
+
 export class E2EUserStateResetError extends Error {
   constructor(
     public readonly code: string,
@@ -195,8 +199,9 @@ const defaultServices: E2EUserStateResetServices = {
       );
     }
 
-    const payload = (await response.json()) as Array<{ id?: string }>;
-    const firstUser = payload[0];
+    const payload = (await response.json()) as ClerkUserListResponse;
+    const users = Array.isArray(payload) ? payload : (payload.data ?? []);
+    const firstUser = users[0];
     if (!firstUser?.id) return null;
     return firstUser.id;
   },

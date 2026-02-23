@@ -105,6 +105,46 @@ describe('runE2EUserStateReset', () => {
     });
   });
 
+  it('accepts Clerk paginated user-list response shape in the default resolver', async () => {
+    const env = createEnv();
+    const resolveAppUserIdByClerkUserId = vi.fn(async () => 'db_user_123');
+    const services: Partial<E2EUserStateResetServices> = {
+      ensurePlaceholderQuestionsPublished: vi.fn(async () => {}),
+      resolveAppUserIdByClerkUserId,
+      clearUserState: vi.fn(async () => {}),
+      resolveRequiredQuestionFixtures: vi.fn(async () => ({
+        placeholder01Id: 'question_01',
+        placeholder02Id: 'question_02',
+        anton2006Id: 'question_03',
+      })),
+      resolveRequiredChoiceFixtures: vi.fn(async () => ({
+        placeholder01CorrectChoiceId: 'choice_01_correct',
+        placeholder02IncorrectChoiceId: 'choice_02_incorrect',
+      })),
+      seedDeterministicBaseline: vi.fn(async () => {}),
+      verifyDeterministicBaseline: vi.fn(async () => {}),
+    };
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({ data: [{ id: 'user_123' }] }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      }),
+    );
+
+    await expect(
+      runE2EUserStateReset({
+        env,
+        services,
+      }),
+    ).resolves.toBeUndefined();
+
+    expect(resolveAppUserIdByClerkUserId).toHaveBeenCalledWith({
+      databaseUrl: env.DATABASE_URL,
+      clerkUserId: 'user_123',
+    });
+    fetchSpy.mockRestore();
+  });
+
   it('fails fast when clerk user does not exist', async () => {
     const env = createEnv();
     const services = createServices({
