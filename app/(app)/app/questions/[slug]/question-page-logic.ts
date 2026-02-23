@@ -287,10 +287,10 @@ export async function loadPreviousAttempt(input: {
   }
   if (!isMounted()) return;
 
-  // Defensive guard: malformed responses are treated as "no previous attempt"
-  // so review-mode hydration remains best-effort and non-blocking.
+  // Defensive guard: errors (!res.ok) and null results (!res.data, meaning
+  // no previous attempt found) both stay in attempt mode — review hydration
+  // is best-effort and non-blocking.
   if (!res || !res.ok || !res.data) {
-    // No previous attempt or error — stay in attempt mode
     return;
   }
 

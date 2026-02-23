@@ -144,7 +144,7 @@ describe('withIdempotency', () => {
       userId: 'user_1',
       action: 'question:submitAnswer',
       key: '22222222-2222-2222-2222-222222222223',
-      expiresAt: new Date('2026-03-01T00:00:00.000Z'),
+      expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
     });
 
     setTimeout(() => {

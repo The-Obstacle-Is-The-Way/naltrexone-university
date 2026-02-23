@@ -67,9 +67,7 @@ export function parseHistorySequence(
   const slugs = value
     .split(',')
     .map((slug) => slug.trim())
-    .filter(
-      (slug) => slug.length > 0 && HISTORY_SEQUENCE_SLUG_PATTERN.test(slug),
-    )
+    .filter((slug) => HISTORY_SEQUENCE_SLUG_PATTERN.test(slug))
     .slice(0, MAX_HISTORY_SEQUENCE_LENGTH);
 
   if (slugs.length === 0) return null;

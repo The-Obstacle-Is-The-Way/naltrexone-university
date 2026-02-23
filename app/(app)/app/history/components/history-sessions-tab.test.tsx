@@ -9,6 +9,10 @@ vi.mock('next/link', () => ({
   default: (props: Record<string, unknown>) => <a {...props} />,
 }));
 
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ push: vi.fn() }),
+}));
+
 let HistorySessionsTab: typeof import('./history-sessions-tab').HistorySessionsTab;
 let SessionSummaryContent: ComponentType<{
   mode: 'tutor' | 'exam';

@@ -685,9 +685,14 @@ describe('QuestionView', () => {
 });
 
 describe('parseHistorySequence', () => {
-  it('returns null when no valid slugs remain', () => {
-    expect(parseHistorySequence(undefined)).toBeNull();
-    expect(parseHistorySequence('')).toBeNull();
+  it.each([
+    ['undefined', undefined],
+    ['empty string', ''],
+  ] as const)('returns null for falsy input (%s)', (_label, input) => {
+    expect(parseHistorySequence(input)).toBeNull();
+  });
+
+  it('returns null when all slugs are invalid', () => {
     expect(parseHistorySequence('../dashboard,./history,/app/path')).toBeNull();
   });
 
@@ -696,5 +701,13 @@ describe('parseHistorySequence', () => {
       'q-1',
       'q-2',
     ]);
+  });
+
+  it('caps result at MAX_HISTORY_SEQUENCE_LENGTH (20) slugs', () => {
+    const input = Array.from({ length: 25 }, (_, i) => `q-${i + 1}`).join(',');
+    const result = parseHistorySequence(input);
+    expect(result).toHaveLength(20);
+    expect(result?.[0]).toBe('q-1');
+    expect(result?.[19]).toBe('q-20');
   });
 });
