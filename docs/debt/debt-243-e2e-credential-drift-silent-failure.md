@@ -58,7 +58,9 @@ External credentials in `.env.local` include:
 Audit findings:
 
 - `lib/env.ts` enforces strong validation for DB, Stripe, and Clerk rules.
-- `.env.example` and runtime expectations are not fully aligned for non-E2E concerns (notably `CRON_SECRET`/Sentry expectations), which creates separate drift risk outside this debt item's E2E scope.
+- E2E credentials are intentionally outside `lib/env.ts` and read directly by Playwright helpers, so test infrastructure must do its own correctness validation.
+- Sentry DSNs are not validated by `lib/env.ts`; server/client Sentry bootstraps intentionally no-op when DSN is unset (`instrumentation.ts`, `sentry.client.config.ts`), so telemetry loss can be silent.
+- `.env.example` and runtime expectations are not fully aligned for non-E2E concerns (notably Sentry/`CRON_SECRET` semantics), which creates separate drift risk outside this debt item's E2E scope.
 
 ### 4. CI secret handling
 
@@ -244,7 +246,23 @@ Required behavior:
 This debt item covers credentials required for deterministic E2E execution: **DB + Clerk + Stripe**.
 
 - `CRON_SECRET` and Sentry DSNs are real drift risks, but they are not consumed by E2E setup path.
-- They must be handled in runtime config hardening, not in this E2E preflight module, to avoid coupling product telemetry/cron concerns to E2E auth/payment setup.
+- They are handled by runtime modules (`app/api/cron/reconcile-stripe-subscriptions/route.ts`, `instrumentation.ts`, `sentry.client.config.ts`) and must be hardened in separate debt work, not in this E2E preflight module.
+
+## Required Companion Follow-Ups (System-Wide)
+
+DEBT-243 is complete only for E2E preflight. The broader credential-drift program is complete only when all items below are tracked and implemented.
+
+1. Runtime observability credential hardening
+- Keep startup behavior non-blocking, but explicit: when both `SENTRY_DSN` and `NEXT_PUBLIC_SENTRY_DSN` are missing in production runtime, emit one structured startup warning that Sentry is disabled.
+- Align `.env.example` and `lib/env.ts` comments to this exact policy so operators do not assume DSNs are hard-required at startup.
+
+2. CI secret fallback hardening
+- In `.github/workflows/ci.yml`, add a guard step that fails E2E jobs when dummy placeholders are used for required E2E path credentials (`DATABASE_URL`, `CLERK_SECRET_KEY`, `STRIPE_SECRET_KEY`, `NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY`, `E2E_CLERK_USER_USERNAME`, `E2E_CLERK_USER_PASSWORD`).
+- Remove masked pass behavior for credential drift in E2E lanes.
+
+3. Cron credential observability
+- Keep route-level auth enforcement in `app/api/cron/reconcile-stripe-subscriptions/route.ts` as source of truth.
+- Add monitoring/alerting for repeated `401` and `503 CRON_SECRET is not configured` responses so secret drift is operationally visible.
 
 ## Dev vs CI vs Production Validation
 
@@ -286,4 +304,3 @@ Run each scenario by editing env values and executing `pnpm test:e2e`.
 - E2E credential drift cannot produce repeated downstream auth failures before a clear setup error.
 - Global setup emits a single actionable failure report when credentials drift.
 - Adding a new credential check requires only adding one validator to the list.
-
