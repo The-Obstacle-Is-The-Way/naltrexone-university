@@ -4,7 +4,6 @@ const CLERK_API_BASE = 'https://api.clerk.com/v1';
 const REQUIRED_QUESTION_SLUGS = {
   placeholder01: 'placeholder-01-naltrexone-mechanism',
   placeholder02: 'placeholder-02-buprenorphine-induction-timing',
-  anton2006: 'anton-2006-combine-001',
 } as const;
 
 const DETERMINISTIC_BASELINE = {
@@ -64,7 +63,6 @@ export class E2EUserStateResetError extends Error {
 export type RequiredQuestionFixtures = {
   placeholder01Id: string;
   placeholder02Id: string;
-  anton2006Id: string;
 };
 
 export type RequiredChoiceFixtures = {
@@ -267,8 +265,7 @@ const defaultServices: E2EUserStateResetServices = {
         FROM questions
         WHERE slug IN (
           ${REQUIRED_QUESTION_SLUGS.placeholder01},
-          ${REQUIRED_QUESTION_SLUGS.placeholder02},
-          ${REQUIRED_QUESTION_SLUGS.anton2006}
+          ${REQUIRED_QUESTION_SLUGS.placeholder02}
         )
           AND status = 'published'
       `;
@@ -280,20 +277,18 @@ const defaultServices: E2EUserStateResetServices = {
       const placeholder02Id = fixtureBySlug.get(
         REQUIRED_QUESTION_SLUGS.placeholder02,
       );
-      const anton2006Id = fixtureBySlug.get(REQUIRED_QUESTION_SLUGS.anton2006);
 
-      if (!placeholder01Id || !placeholder02Id || !anton2006Id) {
+      if (!placeholder01Id || !placeholder02Id) {
         throw new E2EUserStateResetError(
           'E2E_RESET:REQUIRED_QUESTION_FIXTURE_MISSING',
           'One or more required E2E question fixtures are missing or unpublished.',
-          `Ensure ${REQUIRED_QUESTION_SLUGS.placeholder01}, ${REQUIRED_QUESTION_SLUGS.placeholder02}, and ${REQUIRED_QUESTION_SLUGS.anton2006} exist with status=published.`,
+          `Ensure ${REQUIRED_QUESTION_SLUGS.placeholder01} and ${REQUIRED_QUESTION_SLUGS.placeholder02} exist with status=published.`,
         );
       }
 
       return {
         placeholder01Id,
         placeholder02Id,
-        anton2006Id,
       };
     } catch (error) {
       if (error instanceof E2EUserStateResetError) {

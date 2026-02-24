@@ -29,7 +29,6 @@ function createServices(
   const questionFixtures = {
     placeholder01Id: 'question_01',
     placeholder02Id: 'question_02',
-    anton2006Id: 'question_03',
   };
   const choiceFixtures = {
     placeholder01CorrectChoiceId: 'choice_01_correct',
@@ -92,7 +91,6 @@ describe('runE2EUserStateReset', () => {
       questionFixtures: {
         placeholder01Id: 'question_01',
         placeholder02Id: 'question_02',
-        anton2006Id: 'question_03',
       },
       choiceFixtures: {
         placeholder01CorrectChoiceId: 'choice_01_correct',
@@ -115,7 +113,6 @@ describe('runE2EUserStateReset', () => {
       resolveRequiredQuestionFixtures: vi.fn(async () => ({
         placeholder01Id: 'question_01',
         placeholder02Id: 'question_02',
-        anton2006Id: 'question_03',
       })),
       resolveRequiredChoiceFixtures: vi.fn(async () => ({
         placeholder01CorrectChoiceId: 'choice_01_correct',
