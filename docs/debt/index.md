@@ -18,8 +18,7 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 | ID | Title | Priority | Date | GitHub Issue |
 |----|-------|----------|------|--------------|
 | [DEBT-246](debt-246-e2e-coverage-gaps-visual-testing-strategy.md) | Targeted E2E Coverage Gaps and Visual/CSS Testing Layer Policy | P3 | 2026-02-24 | — |
-| [DEBT-247](debt-247-test-helper-structure-cleanup.md) | Test Helper Structure Cleanup (Orphans, Boundary Violations, Duplication) | P4 | 2026-02-24 | — |
-| [DEBT-248](debt-248-e2e-helper-robustness.md) | Post-PR-134 CodeRabbit Follow-Ups for E2E Helpers (9 deferred robustness fixes) | P4 | 2026-02-24 | — |
+| [DEBT-248](debt-248-e2e-helper-robustness.md) | Post-PR-134 CodeRabbit Follow-Ups for E2E Helpers (7 deferred robustness fixes) | P4 | 2026-02-24 | — |
 
 **Next Debt ID:** DEBT-249
 
@@ -29,6 +28,7 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 | ID | Title | Priority | Resolved | GitHub Issue |
 |----|-------|----------|----------|--------------|
+| [DEBT-247](../_archive/debt/debt-247-test-helper-structure-cleanup.md) | Test Helper Structure Cleanup (Orphans, Boundary Violations, Duplication) | P4 | 2026-02-24 | — |
 | [DEBT-245](../_archive/debt/debt-245-e2e-pyramid-drift-and-skip-governance.md) | E2E Pyramid Drift and Data-Dependent Skip Governance | P1 | 2026-02-23 | [#133](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/issues/133) |
 | [DEBT-244](../_archive/debt/debt-244-test-reliability-schema-and-state-drift.md) | Test Reliability Drift (Schema + Stateful E2E Data + Spec Drift) | P1 | 2026-02-23 | — |
 | [DEBT-243](../_archive/debt/debt-243-e2e-credential-drift-silent-failure.md) | E2E Credential Drift and Silent Failure | P2 | 2026-02-23 | — |

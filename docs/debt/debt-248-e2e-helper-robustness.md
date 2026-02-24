@@ -10,15 +10,21 @@
 
 ## Description
 
-CodeRabbit posted 10 actionable comments after PR #134 stabilization.  
+CodeRabbit follow-up on PR #134 surfaced helper-level robustness items across
+`credential-health-check.ts`, `reset-e2e-user-state.ts`, and
+`session-review-navigation.spec.ts`.
+
 A first-principles audit of current HEAD shows:
 
-- 2 comments are already fixed in this PR and must not be reworked.
-- 9 comments are valid robustness improvements and are intentionally deferred to the next PR.
+- 2 items are already fixed in merged PR #134 and must not be reworked.
+- 2 additional spec-level items were fixed in this follow-up branch.
+- 7 items remain as deferred robustness improvements.
 
-This document is the SSOT backlog for those 9 deferred items.
+This document is the SSOT backlog for those 7 remaining deferred items.
 
 ## Verified Triage (2026-02-24)
+
+Total tracked items in this triage table: 11 (4 resolved, 7 deferred).
 
 | CodeRabbit item | File | Verdict | Status |
 |---|---|---|---|
@@ -31,8 +37,8 @@ This document is the SSOT backlog for those 9 deferred items.
 | `resolveRequiredChoiceFixtures` row order nondeterministic | `tests/e2e/helpers/reset-e2e-user-state.ts` | Valid | Deferred here |
 | `resolvedEnv.* as string` casts hide mapping drift | `tests/e2e/helpers/reset-e2e-user-state.ts` | Valid | Deferred here |
 | Duplicate `CLERK_API_BASE` + timeout constants | `tests/e2e/helpers/credential-health-check.ts`, `tests/e2e/helpers/reset-e2e-user-state.ts` | Valid | Deferred here |
-| `breakdownLinks.count()` can race | `tests/e2e/session-review-navigation.spec.ts` | Valid | Deferred here |
-| `toBeDisabled()` missing timeout consistency | `tests/e2e/session-review-navigation.spec.ts` | Valid | Deferred here |
+| `breakdownLinks.count()` can race | `tests/e2e/session-review-navigation.spec.ts` | Valid | **Resolved in follow-up branch** |
+| `toBeDisabled()` missing timeout consistency | `tests/e2e/session-review-navigation.spec.ts` | Valid | **Resolved in follow-up branch** |
 
 ---
 
@@ -84,18 +90,6 @@ This document is the SSOT backlog for those 9 deferred items.
   - `CLERK_API_TIMEOUT_MS`
   - `ClerkUserListResponse`
 
-8. **Stabilize breakdown-link count assertion**
-- File: `tests/e2e/session-review-navigation.spec.ts`
-- Replace immediate `await breakdownLinks.count()` assertion with:
-  - `await expect.poll(() => breakdownLinks.count()).toBeGreaterThanOrEqual(2, { timeout: 15_000 })`
-
-9. **Add consistent timeout to `toBeDisabled()` assertion**
-- File: `tests/e2e/session-review-navigation.spec.ts`
-- The `toBeDisabled()` assertion on the Next button (line ~149) lacks an explicit timeout while surrounding assertions use `{ timeout: 15_000 }`.
-- Add `{ timeout: 15_000 }` for consistency.
-
----
-
 ## Verification
 
 - [ ] `fetchWithTimeout` respects both timeout and external abort signals.
@@ -105,11 +99,11 @@ This document is the SSOT backlog for those 9 deferred items.
 - [ ] `resolveRequiredChoiceFixtures` query includes deterministic `ORDER BY`.
 - [ ] `runE2EUserStateReset` has no `resolvedEnv.* as string` assertions.
 - [ ] `CLERK_API_BASE`, `CLERK_API_TIMEOUT_MS`, and `ClerkUserListResponse` are defined once.
-- [ ] Session breakdown count uses `expect.poll`.
-- [ ] `toBeDisabled()` assertions use consistent timeouts.
-- [ ] `pnpm test --run` passes.
+- [x] Session breakdown count uses `expect.poll`.
+- [x] `toBeDisabled()` assertions use consistent timeouts.
+- [x] `pnpm test --run` passes.
 
 ## Related
 
-- [DEBT-247](debt-247-test-helper-structure-cleanup.md)
+- [DEBT-247](../_archive/debt/debt-247-test-helper-structure-cleanup.md)
 - CodeRabbit reviews on PR #134 (2026-02-24)

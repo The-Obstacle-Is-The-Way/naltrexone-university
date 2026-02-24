@@ -6,6 +6,7 @@ import {
   FakeSubscriptionRepository,
 } from '@/src/application/test-helpers/fakes';
 import { loadJsonFixture } from '@/tests/shared/load-json-fixture';
+import { createDeferred } from '@/tests/test-helpers/create-deferred';
 import { reconcileStripeSubscriptions } from './reconcile-stripe-subscriptions';
 
 type StripeSubscriptionFixture = {
@@ -255,16 +256,6 @@ function expectSingleFailure(
 
 describe('reconcileStripeSubscriptions', () => {
   it('processes rows with bounded concurrency (default 10)', async () => {
-    function createDeferred<T>() {
-      let resolve: (value: T) => void = () => undefined;
-      let reject: (reason?: unknown) => void = () => undefined;
-      const promise = new Promise<T>((res, rej) => {
-        resolve = res;
-        reject = rej;
-      });
-      return { promise, resolve, reject };
-    }
-
     async function flushUntil(
       condition: () => boolean,
       input?: { maxTicks?: number },

@@ -1,15 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import { createDeferred } from '@/tests/test-helpers/create-deferred';
 import { mapWithConcurrencyLimit } from './concurrency';
-
-function createDeferred<T>() {
-  let resolve: (value: T | PromiseLike<T>) => void = () => undefined;
-  let reject: (reason?: unknown) => void = () => undefined;
-  const promise = new Promise<T>((res, rej) => {
-    resolve = res;
-    reject = rej;
-  });
-  return { promise, resolve, reject };
-}
 
 async function flushUntil(
   condition: () => boolean,
