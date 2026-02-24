@@ -118,12 +118,13 @@ export async function fetchWithTimeout(
   const timeoutController = new AbortController();
   const callerSignal = init.signal;
   const abortForTimeout = () => timeoutController.abort();
+  const abortFromCaller = () => timeoutController.abort(callerSignal?.reason);
   const timeout = setTimeout(abortForTimeout, timeoutMs);
 
   if (callerSignal?.aborted) {
     timeoutController.abort(callerSignal.reason);
   } else if (callerSignal) {
-    callerSignal.addEventListener('abort', abortForTimeout, { once: true });
+    callerSignal.addEventListener('abort', abortFromCaller, { once: true });
   }
 
   try {
@@ -131,7 +132,7 @@ export async function fetchWithTimeout(
   } finally {
     clearTimeout(timeout);
     if (callerSignal) {
-      callerSignal.removeEventListener('abort', abortForTimeout);
+      callerSignal.removeEventListener('abort', abortFromCaller);
     }
   }
 }

@@ -135,6 +135,47 @@ describe('fetchWithTimeout', () => {
       fetchSpy.mockRestore();
     }
   });
+
+  it('forwards caller abort reason to the internal signal', async () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(
+      async (_input, init) =>
+        new Promise((_resolve, reject) => {
+          const signal = init?.signal;
+          if (!signal) {
+            reject(new Error('signal missing'));
+            return;
+          }
+
+          signal.addEventListener(
+            'abort',
+            () => {
+              reject(signal.reason);
+            },
+            { once: true },
+          );
+        }),
+    );
+
+    const callerController = new AbortController();
+    const abortReason = new Error('caller-cancelled');
+
+    try {
+      const promise = fetchWithTimeout(
+        'https://example.com/slow',
+        {
+          method: 'GET',
+          signal: callerController.signal,
+        },
+        30_000,
+      );
+
+      callerController.abort(abortReason);
+
+      await expect(promise).rejects.toBe(abortReason);
+    } finally {
+      fetchSpy.mockRestore();
+    }
+  });
 });
 
 describe('runE2ECredentialHealthCheck', () => {
