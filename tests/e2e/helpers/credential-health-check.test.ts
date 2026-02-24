@@ -182,17 +182,20 @@ describe('runE2ECredentialHealthCheck', () => {
       }),
     );
 
-    await expect(
-      runE2ECredentialHealthCheck({
-        env,
-        services,
-      }),
-    ).resolves.toBeUndefined();
+    try {
+      await expect(
+        runE2ECredentialHealthCheck({
+          env,
+          services,
+        }),
+      ).resolves.toBeUndefined();
 
-    expect(verifyClerkPassword).toHaveBeenCalledWith(
-      expect.objectContaining({ userId: 'user_123' }),
-    );
-    fetchSpy.mockRestore();
+      expect(verifyClerkPassword).toHaveBeenCalledWith(
+        expect.objectContaining({ userId: 'user_123' }),
+      );
+    } finally {
+      fetchSpy.mockRestore();
+    }
   });
 
   it('fails with schema drift code when idempotency column check fails', async () => {

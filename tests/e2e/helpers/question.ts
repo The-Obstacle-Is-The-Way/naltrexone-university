@@ -24,7 +24,7 @@ export function rethrowIfQuestionMissingCheckError(error: unknown): void {
   throw error;
 }
 
-function escapeRegexLiteral(input: string): string {
+export function escapeRegexLiteral(input: string): string {
   return input.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 

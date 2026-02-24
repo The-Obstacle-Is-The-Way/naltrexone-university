@@ -3,13 +3,9 @@ import {
   hasClerkCredentials,
   signInWithClerkPassword,
 } from './helpers/clerk-auth';
-import { selectChoiceByLabel } from './helpers/question';
+import { escapeRegexLiteral, selectChoiceByLabel } from './helpers/question';
 import { startSession } from './helpers/session';
 import { ensureSubscribed } from './helpers/subscription';
-
-function escapeRegexLiteral(value: string): string {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
 
 test.describe('session review navigation (SPEC-027)', () => {
   // Multi-page audit flows can exceed the default timeout due to sequential navigation and assertions in CI.

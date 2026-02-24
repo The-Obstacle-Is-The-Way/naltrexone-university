@@ -126,15 +126,19 @@ const defaultServices: E2EUserStateResetServices = {
       const counts = await sql<{ count: string }[]>`
         SELECT COUNT(*)::text AS "count"
         FROM questions
-        WHERE slug LIKE 'placeholder-%'
+        WHERE slug IN (
+          ${REQUIRED_QUESTION_SLUGS.placeholder01},
+          ${REQUIRED_QUESTION_SLUGS.placeholder02}
+        )
       `;
       const count = Number.parseInt(counts[0]?.count ?? '0', 10);
+      const expectedCount = Object.values(REQUIRED_QUESTION_SLUGS).length;
 
-      if (count === 0) {
+      if (count < expectedCount) {
         throw new E2EUserStateResetError(
           'E2E_RESET:PLACEHOLDER_FIXTURES_MISSING',
-          'No placeholder question fixtures were found in the active database.',
-          'Run SEED_INCLUDE_PLACEHOLDERS=true pnpm db:seed before running E2E.',
+          'Required placeholder question fixtures were not found in the active database.',
+          `Run SEED_INCLUDE_PLACEHOLDERS=true pnpm db:seed and ensure ${REQUIRED_QUESTION_SLUGS.placeholder01} and ${REQUIRED_QUESTION_SLUGS.placeholder02} exist.`,
         );
       }
 
@@ -143,7 +147,10 @@ const defaultServices: E2EUserStateResetServices = {
         SET
           status = 'published',
           updated_at = now()
-        WHERE slug LIKE 'placeholder-%'
+        WHERE slug IN (
+          ${REQUIRED_QUESTION_SLUGS.placeholder01},
+          ${REQUIRED_QUESTION_SLUGS.placeholder02}
+        )
           AND status <> 'published'
       `;
     } catch (error) {

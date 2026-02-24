@@ -128,18 +128,21 @@ describe('runE2EUserStateReset', () => {
       }),
     );
 
-    await expect(
-      runE2EUserStateReset({
-        env,
-        services,
-      }),
-    ).resolves.toBeUndefined();
+    try {
+      await expect(
+        runE2EUserStateReset({
+          env,
+          services,
+        }),
+      ).resolves.toBeUndefined();
 
-    expect(resolveAppUserIdByClerkUserId).toHaveBeenCalledWith({
-      databaseUrl: env.DATABASE_URL,
-      clerkUserId: 'user_123',
-    });
-    fetchSpy.mockRestore();
+      expect(resolveAppUserIdByClerkUserId).toHaveBeenCalledWith({
+        databaseUrl: env.DATABASE_URL,
+        clerkUserId: 'user_123',
+      });
+    } finally {
+      fetchSpy.mockRestore();
+    }
   });
 
   it('fails fast when clerk user does not exist', async () => {
@@ -196,34 +199,23 @@ describe('runE2EUserStateReset', () => {
       E2E_CLERK_USER_USERNAME: undefined,
     });
 
-    await expect(
-      runE2EUserStateReset({
-        env,
-        services: createServices(),
-      }),
-    ).rejects.toThrow('[E2E_RESET:DATABASE_URL_MISSING]');
-
-    await expect(
-      runE2EUserStateReset({
-        env,
-        services: createServices(),
-      }),
-    ).rejects.toThrow('[E2E_RESET:CLERK_SECRET_KEY_MISSING]');
-
-    await expect(
-      runE2EUserStateReset({
-        env,
-        services: createServices(),
-      }),
-    ).rejects.toThrow('[E2E_RESET:E2E_CLERK_USER_USERNAME_MISSING]');
-
     const services = createServices();
-    await expect(
-      runE2EUserStateReset({
+    let caughtError: Error | null = null;
+    try {
+      await runE2EUserStateReset({
         env,
         services,
-      }),
-    ).rejects.toThrow('[E2E_RESET] E2E user-state reset failed');
+      });
+    } catch (error) {
+      caughtError = error as Error;
+    }
+
+    expect(caughtError).toBeInstanceOf(Error);
+    const message = caughtError?.message ?? '';
+    expect(message).toContain('[E2E_RESET] E2E user-state reset failed');
+    expect(message).toContain('[E2E_RESET:DATABASE_URL_MISSING]');
+    expect(message).toContain('[E2E_RESET:CLERK_SECRET_KEY_MISSING]');
+    expect(message).toContain('[E2E_RESET:E2E_CLERK_USER_USERNAME_MISSING]');
 
     expect(services.ensurePlaceholderQuestionsPublished).not.toHaveBeenCalled();
     expect(services.resolveClerkUserIdByEmail).not.toHaveBeenCalled();
