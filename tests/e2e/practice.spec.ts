@@ -42,6 +42,29 @@ test.describe('practice', () => {
     ).toHaveAttribute('href', '/app/history');
   });
 
+  test('quick practice submit shows correctness feedback', async ({ page }) => {
+    await signInWithClerkPassword(page);
+    await ensureSubscribed(page);
+
+    await page.goto('/app/practice/quick?status=unanswered');
+    await expect(
+      page.getByRole('heading', { name: 'Quick Practice' }),
+    ).toBeVisible();
+
+    const firstChoiceRadio = page.getByRole('radio').first();
+    await expect(firstChoiceRadio).toBeAttached({ timeout: 30_000 });
+
+    const firstChoiceLabel = page.locator('label').filter({
+      has: firstChoiceRadio,
+    });
+    await expect(firstChoiceLabel.first()).toBeVisible({ timeout: 30_000 });
+
+    await firstChoiceLabel.first().click();
+    await page.getByRole('button', { name: 'Submit' }).click();
+
+    await expect(page.getByText(/Correct|Incorrect/)).toBeVisible();
+  });
+
   test('exam mode completes session without showing explanation', async ({
     page,
   }) => {
@@ -56,6 +79,9 @@ test.describe('practice', () => {
     await expect(
       page.getByText('Explanation', { exact: true }),
     ).not.toBeVisible();
+    await expect(
+      page.getByRole('button', { name: 'Mark for review' }),
+    ).toBeVisible();
 
     // Click "Review answers" to enter exam review view
     await page.getByRole('button', { name: 'Review answers' }).click();

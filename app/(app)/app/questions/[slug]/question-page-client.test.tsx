@@ -2,6 +2,7 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { toQuestionRoute } from '@/lib/routes';
+import { createChoice, createQuestion } from '@/src/domain/test-helpers';
 
 vi.mock('next/link', () => ({
   default: (props: Record<string, unknown>) => <a {...props} />,
@@ -280,6 +281,83 @@ describe('QuestionView', () => {
 
     expect(html).toContain('Correct');
     expect(html).toContain('Explanation');
+  });
+
+  it('renders feedback labels and explanation text with matching question choice ids', () => {
+    const choiceA = createChoice({
+      id: 'choice-a',
+      questionId: 'question-1',
+      label: 'A',
+      textMd: 'Choice A text',
+      sortOrder: 1,
+    });
+    const choiceB = createChoice({
+      id: 'choice-b',
+      questionId: 'question-1',
+      label: 'B',
+      textMd: 'Choice B text',
+      sortOrder: 2,
+    });
+    const question = createQuestion({
+      id: 'question-1',
+      slug: 'question-1',
+      stemMd: 'Question stem',
+      difficulty: 'easy',
+      choices: [choiceA, choiceB],
+    });
+
+    const html = renderToStaticMarkup(
+      <QuestionView
+        loadState={{ status: 'ready' }}
+        question={{
+          questionId: question.id,
+          slug: question.slug,
+          stemMd: question.stemMd,
+          difficulty: question.difficulty,
+          choices: question.choices.map((choice) => ({
+            id: choice.id,
+            label: choice.label,
+            textMd: choice.textMd,
+          })),
+        }}
+        selectedChoiceId={choiceA.id}
+        submitResult={{
+          attemptId: 'attempt_1',
+          isCorrect: false,
+          correctChoiceId: 'choice-correct',
+          explanationMd: 'Overall explanation',
+          referenceMd: null,
+          choiceExplanations: [
+            {
+              choiceId: choiceA.id,
+              displayLabel: 'A',
+              textMd: 'Choice A text',
+              isCorrect: false,
+              explanationMd: 'A explanation',
+            },
+            {
+              choiceId: choiceB.id,
+              displayLabel: 'B',
+              textMd: 'Choice B text',
+              isCorrect: false,
+              explanationMd: 'B explanation',
+            },
+          ],
+        }}
+        sessionNavigation={null}
+        canSubmit={false}
+        isPending={false}
+        onTryAgain={() => undefined}
+        onSelectChoice={() => undefined}
+        onSubmit={() => undefined}
+        onReattempt={() => undefined}
+      />,
+    );
+
+    expect(html).toContain('A)');
+    expect(html).toContain('B)');
+    expect(html).toContain('Choice A text');
+    expect(html).toContain('Choice B text');
   });
 
   it('shows Practice Again for correct standalone history review', () => {
