@@ -1,8 +1,9 @@
 # DEBT-246: Targeted E2E Coverage Gaps and Visual/CSS Testing Layer Policy
 
-**Status:** Open  
+**Status:** Resolved  
 **Priority:** P3  
 **Date:** 2026-02-24  
+**Resolved:** 2026-02-24  
 **Owner:** Test Infrastructure  
 **Related:** DEBT-245 (resolved)
 
@@ -84,13 +85,13 @@ This debt tracks those real gaps and defines where visual/CSS checks must live g
 
 ## Verification
 
-- [ ] `tests/e2e/practice.spec.ts` includes a dedicated Quick Practice submit-feedback journey.
-- [ ] `tests/e2e/practice.spec.ts` exam flow asserts “Mark for review” visibility.
-- [ ] `app/(app)/app/questions/[slug]/question-page-client.test.tsx` includes choice-label parity regression.
-- [ ] No new Playwright specs assert CSS class tokens.
-- [ ] `pnpm test --run` and `pnpm test:e2e` pass.
+- [x] `tests/e2e/practice.spec.ts` includes a dedicated Quick Practice submit-feedback journey (`quick practice submit shows correctness feedback`).
+- [x] `tests/e2e/practice.spec.ts` exam flow asserts “Mark for review” visibility.
+- [x] `app/(app)/app/questions/[slug]/question-page-client.test.tsx` includes choice-label parity regression (`renders feedback labels and explanation text with matching question choice ids`).
+- [x] No new Playwright specs assert CSS class tokens.
+- [x] `pnpm test --run`, `pnpm test:e2e`, `pnpm typecheck`, and `pnpm lint` pass.
 
 ## Related
 
-- [DEBT-245](../_archive/debt/debt-245-e2e-pyramid-drift-and-skip-governance.md)
-- [DEBT-244](../_archive/debt/debt-244-test-reliability-schema-and-state-drift.md)
+- [DEBT-245](./debt-245-e2e-pyramid-drift-and-skip-governance.md)
+- [DEBT-244](./debt-244-test-reliability-schema-and-state-drift.md)

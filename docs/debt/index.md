@@ -15,9 +15,7 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 ## Debt Index (Active)
 
-| ID | Title | Priority | Date | GitHub Issue |
-|----|-------|----------|------|--------------|
-| [DEBT-246](debt-246-e2e-coverage-gaps-visual-testing-strategy.md) | Targeted E2E Coverage Gaps and Visual/CSS Testing Layer Policy | P3 | 2026-02-24 | — |
+*No active items.*
 
 **Next Debt ID:** DEBT-249
 
@@ -27,6 +25,7 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 | ID | Title | Priority | Resolved | GitHub Issue |
 |----|-------|----------|----------|--------------|
+| [DEBT-246](../_archive/debt/debt-246-e2e-coverage-gaps-visual-testing-strategy.md) | Targeted E2E Coverage Gaps and Visual/CSS Testing Layer Policy | P3 | 2026-02-24 | — |
 | [DEBT-248](../_archive/debt/debt-248-e2e-helper-robustness.md) | Post-PR-134 CodeRabbit Follow-Ups (E2E Helpers) | P4 | 2026-02-24 | — |
 | [DEBT-247](../_archive/debt/debt-247-test-helper-structure-cleanup.md) | Test Helper Structure Cleanup (Orphans, Boundary Violations, Duplication) | P4 | 2026-02-24 | — |
 | [DEBT-245](../_archive/debt/debt-245-e2e-pyramid-drift-and-skip-governance.md) | E2E Pyramid Drift and Data-Dependent Skip Governance | P1 | 2026-02-23 | [#133](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/issues/133) |
