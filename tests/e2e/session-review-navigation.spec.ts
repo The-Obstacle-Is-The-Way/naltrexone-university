@@ -225,7 +225,6 @@ test.describe('session review navigation (SPEC-027)', () => {
       hasNoCompletedSessions,
       '[E2E_BASELINE_MISSING] Expected at least one completed history session.',
     ).toBe(false);
-    await expect(viewBreakdownButton).toBeVisible({ timeout: 15_000 });
     await viewBreakdownButton.click();
 
     // Wait for breakdown question links to appear
@@ -314,9 +313,9 @@ test.describe('session review navigation (SPEC-027)', () => {
     // without sessionId, enabling in-page previous/next review navigation.
     await expect(page).toHaveURL(/historySeq=/);
     await expect(page).toHaveURL(/historyIndex=/);
-    await expect(page.getByText('← Previous')).toHaveCount(1);
-    await expect(page.getByText('Next →')).toHaveCount(1);
-    await expect(page.getByText(/Question \d+ of \d+/)).toHaveCount(1);
-    await expect(page.getByText('Question navigator')).toHaveCount(1);
+    await expect(page.getByText('← Previous')).toBeVisible();
+    await expect(page.getByText('Next →')).toBeVisible();
+    await expect(page.getByText(/Question \d+ of \d+/)).toBeVisible();
+    await expect(page.getByText('Question navigator')).toBeVisible();
   });
 });

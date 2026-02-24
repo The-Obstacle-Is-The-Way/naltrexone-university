@@ -695,6 +695,7 @@ export async function runE2EUserStateReset(
           'Inspect stack trace and fix the reset helper or external dependency.',
         ),
       ]),
+      { cause: error },
     );
   }
 }
