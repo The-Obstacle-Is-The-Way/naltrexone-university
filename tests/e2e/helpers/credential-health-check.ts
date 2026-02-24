@@ -1,8 +1,8 @@
 import postgres from 'postgres';
 import Stripe from 'stripe';
 
-const CLERK_API_BASE = 'https://api.clerk.com/v1';
-const CLERK_API_TIMEOUT_MS = 15_000;
+export const CLERK_API_BASE = 'https://api.clerk.com/v1';
+export const CLERK_API_TIMEOUT_MS = 15_000;
 
 type CredentialValidator = {
   id: 'database' | 'clerk' | 'stripe';
@@ -27,8 +27,9 @@ export class CredentialValidationError extends Error {
     public readonly code: string,
     message: string,
     public readonly fix: string,
+    options?: ErrorOptions,
   ) {
-    super(message);
+    super(message, options);
     this.name = 'CredentialValidationError';
   }
 }
@@ -105,7 +106,7 @@ const REQUIRED_ENV_VARS: readonly RequiredEnvVar[] = [
   },
 ] as const;
 
-type ClerkUserListResponse =
+export type ClerkUserListResponse =
   | Array<{ id?: string }>
   | { data?: Array<{ id?: string }> };
 
@@ -114,13 +115,24 @@ export async function fetchWithTimeout(
   init: RequestInit,
   timeoutMs: number,
 ): Promise<Response> {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  const timeoutController = new AbortController();
+  const callerSignal = init.signal;
+  const abortForTimeout = () => timeoutController.abort();
+  const timeout = setTimeout(abortForTimeout, timeoutMs);
+
+  if (callerSignal?.aborted) {
+    timeoutController.abort(callerSignal.reason);
+  } else if (callerSignal) {
+    callerSignal.addEventListener('abort', abortForTimeout, { once: true });
+  }
 
   try {
-    return await fetch(input, { ...init, signal: controller.signal });
+    return await fetch(input, { ...init, signal: timeoutController.signal });
   } finally {
     clearTimeout(timeout);
+    if (callerSignal) {
+      callerSignal.removeEventListener('abort', abortForTimeout);
+    }
   }
 }
 
@@ -220,8 +232,11 @@ const defaultServices: CredentialHealthCheckServices = {
         url,
         {
           method: 'POST',
-          headers: { Authorization: `Bearer ${clerkSecretKey}` },
-          body: new URLSearchParams({ password }),
+          headers: {
+            Authorization: `Bearer ${clerkSecretKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ password }),
         },
         CLERK_API_TIMEOUT_MS,
       );
@@ -265,11 +280,21 @@ const defaultServices: CredentialHealthCheckServices = {
   verifyStripeSecretKey: async (stripe) => {
     try {
       await stripe.accounts.retrieve();
-    } catch {
+    } catch (error) {
+      if (error instanceof Stripe.errors.StripeAuthenticationError) {
+        throw new CredentialValidationError(
+          'E2E_PREFLIGHT:STRIPE_SECRET_KEY_INVALID',
+          'Stripe rejected STRIPE_SECRET_KEY.',
+          'Use a valid Stripe test secret key (sk_test_...).',
+          { cause: error },
+        );
+      }
+
       throw new CredentialValidationError(
-        'E2E_PREFLIGHT:STRIPE_SECRET_KEY_INVALID',
-        'Stripe rejected STRIPE_SECRET_KEY.',
-        'Use a valid Stripe test secret key (sk_test_...).',
+        'E2E_PREFLIGHT:STRIPE_API_UNAVAILABLE',
+        'Stripe API request failed while validating STRIPE_SECRET_KEY.',
+        'Retry after Stripe/API network recovery; do not change secrets until availability is restored.',
+        { cause: error instanceof Error ? error : undefined },
       );
     }
   },
@@ -277,11 +302,30 @@ const defaultServices: CredentialHealthCheckServices = {
   verifyStripePriceId: async ({ stripe, priceId }) => {
     try {
       await stripe.prices.retrieve(priceId);
-    } catch {
+    } catch (error) {
+      if (error instanceof Stripe.errors.StripeAuthenticationError) {
+        throw new CredentialValidationError(
+          'E2E_PREFLIGHT:STRIPE_SECRET_KEY_INVALID',
+          'Stripe rejected STRIPE_SECRET_KEY.',
+          'Use a valid Stripe test secret key (sk_test_...).',
+          { cause: error },
+        );
+      }
+
+      if (error instanceof Stripe.errors.StripeInvalidRequestError) {
+        throw new CredentialValidationError(
+          'E2E_PREFLIGHT:STRIPE_MONTHLY_PRICE_ID_INVALID',
+          `Stripe price "${priceId}" was not found.`,
+          'Update NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY to an existing test-mode price ID.',
+          { cause: error },
+        );
+      }
+
       throw new CredentialValidationError(
-        'E2E_PREFLIGHT:STRIPE_MONTHLY_PRICE_ID_INVALID',
-        `Stripe price "${priceId}" was not found.`,
-        'Update NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY to an existing test-mode price ID.',
+        'E2E_PREFLIGHT:STRIPE_API_UNAVAILABLE',
+        `Stripe API request failed while validating price "${priceId}".`,
+        'Retry after Stripe/API network recovery; do not change secrets until availability is restored.',
+        { cause: error instanceof Error ? error : undefined },
       );
     }
   },
@@ -443,12 +487,16 @@ export async function runE2ECredentialHealthCheck(
           'E2E_PREFLIGHT:UNEXPECTED',
           `[${validator.id}] Unexpected preflight error: ${String(error)}`,
           'Inspect the stack trace above and fix the validator implementation or external dependency.',
+          { cause: error instanceof Error ? error : undefined },
         ),
       );
     }
   }
 
   if (failures.length > 0) {
-    throw new Error(formatFailureReport(failures));
+    const failureWithCause = failures.find((failure) => failure.cause);
+    throw new Error(formatFailureReport(failures), {
+      cause: failureWithCause,
+    });
   }
 }

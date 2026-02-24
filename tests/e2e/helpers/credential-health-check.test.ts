@@ -1,7 +1,9 @@
+import Stripe from 'stripe';
 import { describe, expect, it, vi } from 'vitest';
 import {
   type CredentialHealthCheckServices,
   CredentialValidationError,
+  fetchWithTimeout,
   runE2ECredentialHealthCheck,
 } from './credential-health-check';
 
@@ -42,6 +44,98 @@ function createServices(
     ...overrides,
   };
 }
+
+describe('fetchWithTimeout', () => {
+  it('aborts when the timeout elapses', async () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(
+      async (_input, init) =>
+        new Promise((_resolve, reject) => {
+          const signal = init?.signal;
+          if (!signal) {
+            reject(new Error('signal missing'));
+            return;
+          }
+
+          signal.addEventListener(
+            'abort',
+            () => {
+              reject(
+                new DOMException('The operation was aborted.', 'AbortError'),
+              );
+            },
+            { once: true },
+          );
+        }),
+    );
+
+    vi.useFakeTimers();
+
+    try {
+      const promise = fetchWithTimeout(
+        'https://example.com/slow',
+        {
+          method: 'GET',
+        },
+        5_000,
+      );
+      const rejection = expect(promise).rejects.toMatchObject({
+        name: 'AbortError',
+      });
+
+      await vi.advanceTimersByTimeAsync(5_000);
+
+      await rejection;
+    } finally {
+      vi.useRealTimers();
+      fetchSpy.mockRestore();
+    }
+  });
+
+  it('aborts when the caller signal aborts before timeout', async () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(
+      async (_input, init) =>
+        new Promise((_resolve, reject) => {
+          const signal = init?.signal;
+          if (!signal) {
+            reject(new Error('signal missing'));
+            return;
+          }
+
+          signal.addEventListener(
+            'abort',
+            () => {
+              reject(
+                new DOMException('The operation was aborted.', 'AbortError'),
+              );
+            },
+            { once: true },
+          );
+        }),
+    );
+
+    const callerController = new AbortController();
+
+    try {
+      const promise = fetchWithTimeout(
+        'https://example.com/slow',
+        {
+          method: 'GET',
+          signal: callerController.signal,
+        },
+        30_000,
+      );
+
+      callerController.abort();
+
+      await expect(promise).rejects.toMatchObject({ name: 'AbortError' });
+      const forwardedSignal = fetchSpy.mock.calls[0]?.[1]?.signal;
+      expect(forwardedSignal).toBeDefined();
+      expect(forwardedSignal).not.toBe(callerController.signal);
+    } finally {
+      fetchSpy.mockRestore();
+    }
+  });
+});
 
 describe('runE2ECredentialHealthCheck', () => {
   it('runs all validators when credentials are valid', async () => {
@@ -198,6 +292,53 @@ describe('runE2ECredentialHealthCheck', () => {
     }
   });
 
+  it('sends JSON when verifying Clerk password in the default verifier', async () => {
+    const env = createEnv();
+    const services: Partial<CredentialHealthCheckServices> = {
+      checkDatabaseConnectivity: vi.fn(async (_sql) => {}),
+      verifyIdempotencySchema: vi.fn(async (_sql) => {}),
+      verifyStripeSecretKey: vi.fn(async (_stripe) => {}),
+      verifyStripePriceId: vi.fn(async (_input) => {}),
+    };
+    const fetchSpy = vi.spyOn(globalThis, 'fetch');
+    fetchSpy
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ data: [{ id: 'user_123' }] }), {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        }),
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ verified: true }), {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        }),
+      );
+
+    try {
+      await expect(
+        runE2ECredentialHealthCheck({
+          env,
+          services,
+        }),
+      ).resolves.toBeUndefined();
+
+      const verifyPasswordCall = fetchSpy.mock.calls[1];
+      const verifyPasswordInit = verifyPasswordCall?.[1];
+
+      expect(verifyPasswordCall?.[0]).toContain('/verify_password');
+      expect(verifyPasswordInit?.method).toBe('POST');
+      expect(verifyPasswordInit?.headers).toMatchObject({
+        'Content-Type': 'application/json',
+      });
+      expect(verifyPasswordInit?.body).toBe(
+        JSON.stringify({ password: env.E2E_CLERK_USER_PASSWORD }),
+      );
+    } finally {
+      fetchSpy.mockRestore();
+    }
+  });
+
   it('fails with schema drift code when idempotency column check fails', async () => {
     const env = createEnv();
     const services = createServices({
@@ -220,17 +361,110 @@ describe('runE2ECredentialHealthCheck', () => {
 
   it('wraps unexpected validator errors with a deterministic error code', async () => {
     const env = createEnv();
+    const rootCause = new Error('timeout');
     const services = createServices({
       resolveClerkUserId: vi.fn(async () => {
-        throw new Error('timeout');
+        throw rootCause;
       }),
     });
 
-    await expect(
-      runE2ECredentialHealthCheck({
+    try {
+      await runE2ECredentialHealthCheck({
         env,
         services,
-      }),
-    ).rejects.toThrow('[E2E_PREFLIGHT:UNEXPECTED]');
+      });
+      throw new Error('Expected credential health check to throw');
+    } catch (error) {
+      expect(error).toBeInstanceOf(Error);
+      const topLevelError = error as Error;
+      expect(topLevelError.message).toContain('[E2E_PREFLIGHT:UNEXPECTED]');
+      expect(topLevelError.cause).toBeInstanceOf(CredentialValidationError);
+      const wrappedError = topLevelError.cause as CredentialValidationError;
+      expect(wrappedError.code).toBe('E2E_PREFLIGHT:UNEXPECTED');
+      expect(wrappedError.cause).toBe(rootCause);
+    }
+  });
+
+  it('preserves cause on CredentialValidationError', () => {
+    const rootCause = new Error('root');
+    const error = new CredentialValidationError(
+      'E2E_PREFLIGHT:TEST',
+      'test message',
+      'test fix',
+      { cause: rootCause },
+    );
+
+    expect(error.cause).toBe(rootCause);
+  });
+
+  it('maps Stripe authentication failures to credential-invalid code', async () => {
+    const env = createEnv();
+    const services: Partial<CredentialHealthCheckServices> = {
+      checkDatabaseConnectivity: vi.fn(async (_sql) => {}),
+      verifyIdempotencySchema: vi.fn(async (_sql) => {}),
+      resolveClerkUserId: vi.fn(async () => 'user_123'),
+      verifyClerkPassword: vi.fn(async () => true),
+    };
+    const stripeProbe = new Stripe('sk_test_probe');
+    const accountsResourcePrototype = Object.getPrototypeOf(
+      stripeProbe.accounts,
+    );
+    const accountRetrieveSpy = vi
+      .spyOn(accountsResourcePrototype, 'retrieve')
+      .mockRejectedValue(
+        new Stripe.errors.StripeAuthenticationError({
+          type: 'invalid_request_error',
+          message: 'invalid key',
+        }),
+      );
+
+    try {
+      await expect(
+        runE2ECredentialHealthCheck({
+          env,
+          services,
+        }),
+      ).rejects.toThrow('[E2E_PREFLIGHT:STRIPE_SECRET_KEY_INVALID]');
+    } finally {
+      accountRetrieveSpy.mockRestore();
+    }
+  });
+
+  it('maps non-auth Stripe price errors to API-unavailable code', async () => {
+    const env = createEnv();
+    const services: Partial<CredentialHealthCheckServices> = {
+      checkDatabaseConnectivity: vi.fn(async (_sql) => {}),
+      verifyIdempotencySchema: vi.fn(async (_sql) => {}),
+      resolveClerkUserId: vi.fn(async () => 'user_123'),
+      verifyClerkPassword: vi.fn(async () => true),
+    };
+    const stripeProbe = new Stripe('sk_test_probe');
+    const accountsResourcePrototype = Object.getPrototypeOf(
+      stripeProbe.accounts,
+    );
+    const pricesResourcePrototype = Object.getPrototypeOf(stripeProbe.prices);
+    const accountRetrieveSpy = vi
+      .spyOn(accountsResourcePrototype, 'retrieve')
+      .mockResolvedValue({} as Stripe.Response<Stripe.Account>);
+    const priceRetrieveSpy = vi
+      .spyOn(pricesResourcePrototype, 'retrieve')
+      .mockRejectedValue(
+        new Stripe.errors.StripeConnectionError({
+          type: 'api_error',
+          message: 'connection error',
+        }),
+      );
+
+    try {
+      await expect(
+        runE2ECredentialHealthCheck({
+          env,
+          services,
+        }),
+      ).rejects.toThrow('[E2E_PREFLIGHT:STRIPE_API_UNAVAILABLE]');
+    } finally {
+      priceRetrieveSpy.mockRestore();
+      accountRetrieveSpy.mockRestore();
+    }
   });
 });

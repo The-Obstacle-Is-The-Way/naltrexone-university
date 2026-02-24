@@ -1,8 +1,11 @@
 import postgres from 'postgres';
-import { fetchWithTimeout } from './credential-health-check';
+import {
+  CLERK_API_BASE,
+  CLERK_API_TIMEOUT_MS,
+  type ClerkUserListResponse,
+  fetchWithTimeout,
+} from './credential-health-check';
 
-const CLERK_API_BASE = 'https://api.clerk.com/v1';
-const CLERK_API_TIMEOUT_MS = 15_000;
 const REQUIRED_QUESTION_SLUGS = {
   placeholder01: 'placeholder-01-naltrexone-mechanism',
   placeholder02: 'placeholder-02-buprenorphine-induction-timing',
@@ -46,10 +49,6 @@ const REQUIRED_ENV_VARS: readonly RequiredEnvVar[] = [
     fix: 'Set E2E_CLERK_USER_USERNAME to the E2E Clerk user email.',
   },
 ] as const;
-
-type ClerkUserListResponse =
-  | Array<{ id?: string }>
-  | { data?: Array<{ id?: string }> };
 
 export class E2EUserStateResetError extends Error {
   constructor(
@@ -120,6 +119,12 @@ type ResolvedEnv = {
   databaseUrl?: string;
   clerkSecretKey?: string;
   clerkEmail?: string;
+};
+
+type RequiredResolvedEnv = {
+  databaseUrl: string;
+  clerkSecretKey: string;
+  clerkEmail: string;
 };
 
 const defaultServices: E2EUserStateResetServices = {
@@ -333,6 +338,7 @@ const defaultServices: E2EUserStateResetServices = {
           is_correct AS "isCorrect"
         FROM choices
         WHERE question_id IN (${questionIds.placeholder01Id}, ${questionIds.placeholder02Id})
+        ORDER BY question_id ASC, is_correct DESC, id ASC
       `;
 
       const placeholder01CorrectChoiceId = rows.find(
@@ -612,6 +618,41 @@ function formatFailureReport(failures: E2EUserStateResetError[]): string {
   return lines.join('\n');
 }
 
+function requireResolvedEnvOrThrow(
+  resolvedEnv: ResolvedEnv,
+): RequiredResolvedEnv {
+  const { databaseUrl, clerkSecretKey, clerkEmail } = resolvedEnv;
+  const missingMappedKeys: string[] = [];
+
+  if (!databaseUrl) {
+    missingMappedKeys.push('databaseUrl <- DATABASE_URL');
+  }
+  if (!clerkSecretKey) {
+    missingMappedKeys.push('clerkSecretKey <- CLERK_SECRET_KEY');
+  }
+  if (!clerkEmail) {
+    missingMappedKeys.push('clerkEmail <- E2E_CLERK_USER_USERNAME');
+  }
+
+  if (!databaseUrl || !clerkSecretKey || !clerkEmail) {
+    throw new Error(
+      formatFailureReport([
+        new E2EUserStateResetError(
+          'E2E_RESET:ENV_MAPPING_INCOMPLETE',
+          `Internal env mapping is incomplete. Missing mapped keys: ${missingMappedKeys.join(', ')}.`,
+          'Check resolveRequiredEnv() mappings for DATABASE_URL, CLERK_SECRET_KEY, and E2E_CLERK_USER_USERNAME.',
+        ),
+      ]),
+    );
+  }
+
+  return {
+    databaseUrl,
+    clerkSecretKey,
+    clerkEmail,
+  };
+}
+
 export async function runE2EUserStateReset(
   input: RunE2EUserStateResetInput = {},
 ): Promise<void> {
@@ -628,9 +669,8 @@ export async function runE2EUserStateReset(
     throw new Error(formatFailureReport(failures));
   }
 
-  const databaseUrl = resolvedEnv.databaseUrl as string;
-  const clerkSecretKey = resolvedEnv.clerkSecretKey as string;
-  const clerkEmail = resolvedEnv.clerkEmail as string;
+  const { databaseUrl, clerkSecretKey, clerkEmail } =
+    requireResolvedEnvOrThrow(resolvedEnv);
 
   try {
     await services.ensurePlaceholderQuestionsPublished({ databaseUrl });
