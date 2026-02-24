@@ -1,6 +1,14 @@
 // @vitest-environment jsdom
 import { renderToStaticMarkup } from 'react-dom/server';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import {
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from 'vitest';
 import {
   restoreProcessEnv,
   snapshotProcessEnv,
@@ -22,10 +30,7 @@ let Feedback: typeof import('@/components/question/feedback').Feedback;
 let BillingContent: typeof import('@/app/(app)/app/billing/page').BillingContent;
 
 describe('theme token regression', () => {
-  beforeEach(async () => {
-    restoreProcessEnv(ORIGINAL_ENV);
-    vi.resetModules();
-
+  beforeAll(async () => {
     ({ GetStartedCta } = await import('@/components/get-started-cta'));
     ({ PricingView } = await import('@/app/pricing/pricing-view'));
     ({ DashboardView } = await import('@/app/(app)/app/dashboard/page'));
@@ -40,9 +45,12 @@ describe('theme token regression', () => {
     ({ BillingContent } = await import('@/app/(app)/app/billing/page'));
   });
 
+  beforeEach(() => {
+    restoreProcessEnv(ORIGINAL_ENV);
+  });
+
   afterEach(() => {
     restoreProcessEnv(ORIGINAL_ENV);
-    vi.resetModules();
     vi.restoreAllMocks();
   });
 
