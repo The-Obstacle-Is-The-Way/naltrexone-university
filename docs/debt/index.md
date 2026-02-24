@@ -17,8 +17,8 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 | ID | Title | Priority | Date | GitHub Issue |
 |----|-------|----------|------|--------------|
-| [DEBT-246](debt-246-e2e-coverage-gaps-visual-testing-strategy.md) | E2E Coverage Gaps After Pyramid Rebalancing and Visual/CSS Testing Strategy | P3 | 2026-02-24 | — |
-| [DEBT-247](debt-247-test-helper-structure-cleanup.md) | Test Helper Structure Cleanup (Dead Code, Misplaced Test, Naming) | P4 | 2026-02-24 | — |
+| [DEBT-246](debt-246-e2e-coverage-gaps-visual-testing-strategy.md) | Targeted E2E Coverage Gaps and Visual/CSS Testing Layer Policy | P3 | 2026-02-24 | — |
+| [DEBT-247](debt-247-test-helper-structure-cleanup.md) | Test Helper Structure Cleanup (Orphans, Boundary Violations, Duplication) | P4 | 2026-02-24 | — |
 
 **Next Debt ID:** DEBT-248
 
