@@ -24,26 +24,28 @@ export function rethrowIfQuestionMissingCheckError(error: unknown): void {
   throw error;
 }
 
+export function escapeRegexLiteral(input: string): string {
+  return input.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 export async function selectChoiceByLabel(
   page: Page,
   label: 'A' | 'B' | 'C' | 'D' = 'A',
 ): Promise<void> {
-  // ChoiceButton renders: <label> wrapping an sr-only <input type="radio">
-  // and a flex div containing a circle indicator (with just the letter A/B/C/D)
-  // followed by the choice text in Markdown.
-  //
-  // Locate the label that contains a child div with the exact letter text.
-  // The circle indicator is the only element with just the single letter.
+  const choiceRadio = page
+    .getByRole('radio', {
+      name: new RegExp(`^${escapeRegexLiteral(label)}\\b`),
+    })
+    .first();
+  await expect(choiceRadio).toBeAttached({ timeout: 30_000 });
+
   const choiceLabel = page
     .locator('label')
-    .filter({
-      has: page.locator(`div.rounded-full:text-is("${label}")`),
-    })
+    .filter({ has: choiceRadio })
     .first();
   await expect(choiceLabel).toBeVisible({ timeout: 30_000 });
   await choiceLabel.click();
-  const radio = choiceLabel.locator('input[type="radio"]');
-  await expect(radio).toBeChecked();
+  await expect(choiceRadio).toBeChecked();
 }
 
 export async function assertQuestionSlugExists(
@@ -53,7 +55,7 @@ export async function assertQuestionSlugExists(
   await page.goto(`/app/questions/${slug}`);
   await expect(page.getByRole('heading', { name: 'Question' })).toBeVisible();
 
-  const notFound = page.getByText('Question not found.', { exact: true });
+  const notFound = page.getByText(/Question not found\.?/i);
   try {
     await notFound.waitFor({ state: 'visible', timeout: 2_000 });
     throw new SeededQuestionMissingError(slug);

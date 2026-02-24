@@ -35,23 +35,25 @@ export async function startSession(
   await expect(
     page.getByRole('button', { name: 'Tutor', exact: true }),
   ).toBeVisible({ timeout: 10_000 });
-  await page
-    .getByRole('button', {
-      name: mode === 'tutor' ? 'Tutor' : 'Exam',
-      exact: true,
-    })
-    .click();
+  const selectedModeButton = page.getByRole('button', {
+    name: mode === 'tutor' ? 'Tutor' : 'Exam',
+    exact: true,
+  });
+  await selectedModeButton.click();
+  await expect(selectedModeButton).toHaveAttribute('aria-pressed', 'true', {
+    timeout: 10_000,
+  });
 
   // Count: label is "Questions" (not "Count")
   await page.getByLabel('Questions').fill(String(count));
   await startSessionButton.click();
 
   await expect(page).toHaveURL(/\/app\/practice\/[^/]+$/, { timeout: 15_000 });
-  // Session page heading is "Tutor Session" or "Exam Session"
-  const headingName = mode === 'tutor' ? 'Tutor Session' : 'Exam Session';
-  await expect(page.getByRole('heading', { name: headingName })).toBeVisible({
-    timeout: 15_000,
-  });
+  const expectedHeadingName =
+    mode === 'tutor' ? 'Tutor Session' : 'Exam Session';
+  await page
+    .getByRole('heading', { name: expectedHeadingName })
+    .waitFor({ state: 'visible', timeout: 15_000 });
 
   // Wait for the first question to load. In dev mode, the getNextQuestion
   // server action may hit its 15s withTimeout on the first call due to

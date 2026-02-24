@@ -87,6 +87,20 @@ jobs:
       - name: Lint and Format Check (Biome)
         run: pnpm lint:ci
 
+      - name: Enforce E2E skip policy
+        run: |
+          set -euo pipefail
+
+          violations="$(rg "test\.skip\(" tests/e2e/*.spec.ts -n \
+            | rg -v "test\.skip\(!hasClerkCredentials, 'Missing Clerk E2E credentials'\);" \
+            || true)"
+
+          if [ -n "$violations" ]; then
+            echo "::error::Non-credential test.skip(...) is forbidden in tests/e2e/*.spec.ts"
+            echo "$violations"
+            exit 1
+          fi
+
       - name: Migrate DB
         run: pnpm db:migrate
 
@@ -118,6 +132,55 @@ jobs:
 
       - name: Build
         run: pnpm build
+
+      - name: Validate E2E credential inputs
+        if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
+        run: |
+          set -euo pipefail
+
+          failures=()
+
+          require_non_empty() {
+            local name="$1"
+            local value="${!name:-}"
+            if [ -z "$value" ]; then
+              failures+=("$name is missing.")
+            fi
+          }
+
+          require_not_dummy() {
+            local name="$1"
+            local dummy="$2"
+            local value="${!name:-}"
+            if [ "$value" = "$dummy" ]; then
+              failures+=("$name is still using dummy placeholder '$dummy'.")
+            fi
+          }
+
+          require_non_empty DATABASE_URL
+          require_non_empty CLERK_SECRET_KEY
+          require_non_empty NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
+          require_non_empty STRIPE_SECRET_KEY
+          require_non_empty NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY
+          require_non_empty E2E_CLERK_USER_USERNAME
+          require_non_empty E2E_CLERK_USER_PASSWORD
+
+          require_not_dummy CLERK_SECRET_KEY sk_test_dummy
+          require_not_dummy NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY pk_test_dummy
+          require_not_dummy STRIPE_SECRET_KEY sk_test_dummy
+          require_not_dummy NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY price_dummy_monthly
+
+          if [ "${NEXT_PUBLIC_SKIP_CLERK:-false}" = "true" ]; then
+            failures+=("NEXT_PUBLIC_SKIP_CLERK=true disables Clerk. E2E requires real Clerk credentials.")
+          fi
+
+          if [ "${#failures[@]}" -gt 0 ]; then
+            echo "::error::E2E credential input validation failed:"
+            for failure in "${failures[@]}"; do
+              echo "::error::$failure"
+            done
+            exit 1
+          fi
 
       - name: E2E smoke
         if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)

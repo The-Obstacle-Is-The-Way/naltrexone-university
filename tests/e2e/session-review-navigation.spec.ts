@@ -3,7 +3,7 @@ import {
   hasClerkCredentials,
   signInWithClerkPassword,
 } from './helpers/clerk-auth';
-import { selectChoiceByLabel } from './helpers/question';
+import { escapeRegexLiteral, selectChoiceByLabel } from './helpers/question';
 import { startSession } from './helpers/session';
 import { ensureSubscribed } from './helpers/subscription';
 
@@ -27,7 +27,7 @@ test.describe('session review navigation (SPEC-027)', () => {
     await expect(page.getByText(/Correct|Incorrect/).first()).toBeVisible({
       timeout: 10_000,
     });
-    await page.getByRole('button', { name: 'Next question' }).click();
+    await page.getByRole('button', { name: 'Next →' }).click();
 
     // Answer question 2: select choice + submit
     await selectChoiceByLabel(page, 'A');
@@ -50,10 +50,16 @@ test.describe('session review navigation (SPEC-027)', () => {
     const sessionId = sessionIdMatch?.[1];
 
     // Wait for breakdown links to load
-    const breakdownLink = page.locator('a[href*="/app/questions/"]').first();
-    await expect(breakdownLink).toBeVisible({ timeout: 15_000 });
+    const breakdownLinks = page.locator('a[href*="/app/questions/"]');
+    await expect(breakdownLinks.first()).toBeVisible({ timeout: 15_000 });
+    const breakdownCount = await breakdownLinks.count();
+    expect(
+      breakdownCount,
+      '[E2E_BASELINE_MISSING] Expected at least two reviewable session breakdown links.',
+    ).toBeGreaterThanOrEqual(2);
 
     // Click first question link from breakdown
+    const breakdownLink = breakdownLinks.first();
     await breakdownLink.click();
 
     // Verify URL contains sessionId, from=practice, mode=review
@@ -71,9 +77,8 @@ test.describe('session review navigation (SPEC-027)', () => {
     const navigatorCard = page.locator('[data-slot="card"]', {
       hasText: 'Question navigator',
     });
-    await expect(page.getByText('Question navigator')).toBeVisible({
-      timeout: 15_000,
-    });
+    const navigatorHeading = page.getByText('Question navigator');
+    await expect(navigatorHeading).toBeVisible({ timeout: 15_000 });
 
     const navigatorButtons = navigatorCard.locator('[data-slot="button"]');
     await expect(navigatorButtons).toHaveCount(2, { timeout: 15_000 });
@@ -93,9 +98,15 @@ test.describe('session review navigation (SPEC-027)', () => {
     expect(navigatorCurrentTextOnFirstQuestion).not.toBeNull();
 
     // Verify back link goes to /app/practice/{sessionId} with label "Back to Session"
-    const backLink = page.locator(`a[href*="/app/practice/${sessionId}"]`);
+    const backLink = page
+      .getByRole('link', { name: 'Back to Session' })
+      .first();
     await expect(backLink).toBeVisible({ timeout: 15_000 });
-    await expect(backLink).toContainText('Back to Session');
+    const escapedSessionId = escapeRegexLiteral(sessionId ?? '');
+    await expect(backLink).toHaveAttribute(
+      'href',
+      new RegExp(`/app/practice/${escapedSessionId}`),
+    );
 
     // Verify "Next →" link is present (we're on question 1)
     const nextLink = page.getByText('Next →');
@@ -134,8 +145,10 @@ test.describe('session review navigation (SPEC-027)', () => {
       timeout: 15_000,
     });
 
-    // Verify no "Next →" link on last question
-    await expect(page.getByText('Next →')).toHaveCount(0);
+    // Current contract keeps "Next →" visible but disabled on the last question.
+    const nextButtonOnLast = page.getByRole('button', { name: 'Next →' });
+    await expect(nextButtonOnLast).toBeVisible({ timeout: 15_000 });
+    await expect(nextButtonOnLast).toBeDisabled();
 
     // SPEC-028: jump navigation via ReviewQuestionNavigator
     const navigatorCurrentTextOnSecondQuestion = await navigatorCard
@@ -198,7 +211,20 @@ test.describe('session review navigation (SPEC-027)', () => {
     const viewBreakdownButton = page
       .getByRole('button', { name: /View breakdown/i })
       .first();
-    await expect(viewBreakdownButton).toBeVisible({ timeout: 15_000 });
+    const emptySessionsMessage = page.getByText(
+      /No (completed )?sessions yet/i,
+    );
+    await viewBreakdownButton.or(emptySessionsMessage).waitFor({
+      state: 'visible',
+      timeout: 15_000,
+    });
+    const hasNoCompletedSessions = await emptySessionsMessage
+      .isVisible()
+      .catch(() => false);
+    expect(
+      hasNoCompletedSessions,
+      '[E2E_BASELINE_MISSING] Expected at least one completed history session.',
+    ).toBe(false);
     await viewBreakdownButton.click();
 
     // Wait for breakdown question links to appear
@@ -232,7 +258,7 @@ test.describe('session review navigation (SPEC-027)', () => {
     await expect(backLink).toHaveAttribute('href', /limit=20/);
   });
 
-  test('Non-session question flows have no session navigation', async ({
+  test('History question flows keep sequence navigation without sessionId', async ({
     page,
   }) => {
     await signInWithClerkPassword(page);
@@ -260,12 +286,10 @@ test.describe('session review navigation (SPEC-027)', () => {
     const hasNoAttemptedQuestions = await noAttemptedQuestionsMessage
       .isVisible()
       .catch(() => false);
-    if (hasNoAttemptedQuestions) {
-      test.skip(true, 'No attempted questions in history to verify');
-      return;
-    }
-
-    await expect(questionLink).toBeVisible({ timeout: 15_000 });
+    expect(
+      hasNoAttemptedQuestions,
+      '[E2E_BASELINE_MISSING] Expected at least one attempted question in history.',
+    ).toBe(false);
 
     // Verify the link does NOT contain sessionId
     const href = await questionLink.getAttribute('href');
@@ -283,10 +307,13 @@ test.describe('session review navigation (SPEC-027)', () => {
       timeout: 15_000,
     });
 
-    // Verify no session navigation elements are present
-    await expect(page.getByText('← Previous')).toHaveCount(0);
-    await expect(page.getByText('Next →')).toHaveCount(0);
-    await expect(page.getByText(/Question \d+ of \d+/)).toHaveCount(0);
-    await expect(page.getByText('Question navigator')).toHaveCount(0);
+    // Current contract: history links can carry historySeq/historyIndex
+    // without sessionId, enabling in-page previous/next review navigation.
+    await expect(page).toHaveURL(/historySeq=/);
+    await expect(page).toHaveURL(/historyIndex=/);
+    await expect(page.getByText('← Previous')).toBeVisible();
+    await expect(page.getByText('Next →')).toBeVisible();
+    await expect(page.getByText(/Question \d+ of \d+/)).toBeVisible();
+    await expect(page.getByText('Question navigator')).toBeVisible();
   });
 });

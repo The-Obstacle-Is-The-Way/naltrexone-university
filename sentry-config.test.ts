@@ -27,6 +27,7 @@ describe('Sentry configuration', () => {
   afterEach(() => {
     process.env = originalEnv;
     vi.resetModules();
+    vi.restoreAllMocks();
   });
 
   describe('sentry.client.config', () => {
@@ -97,17 +98,44 @@ describe('Sentry configuration', () => {
   });
 
   describe('instrumentation', () => {
+    let instrumentation: typeof import('./instrumentation');
+
+    beforeEach(async () => {
+      instrumentation = await import('./instrumentation');
+    });
+
     it('returns no initialization when DSNs are unset', async () => {
       // Arrange
       delete process.env.SENTRY_DSN;
       delete process.env.NEXT_PUBLIC_SENTRY_DSN;
+      delete process.env.VERCEL_ENV;
+      process.env = { ...process.env, NODE_ENV: 'test' };
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
       // Act
-      const instrumentation = await import('./instrumentation');
       await instrumentation.register();
 
       // Assert
       expect(initMock).not.toHaveBeenCalled();
+      expect(warnSpy).not.toHaveBeenCalled();
+    });
+
+    it('logs one warning when DSNs are unset in production runtime', async () => {
+      // Arrange
+      delete process.env.SENTRY_DSN;
+      delete process.env.NEXT_PUBLIC_SENTRY_DSN;
+      process.env.VERCEL_ENV = 'production';
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+      // Act
+      await instrumentation.register();
+
+      // Assert
+      expect(initMock).not.toHaveBeenCalled();
+      expect(warnSpy).toHaveBeenCalledTimes(1);
+      expect(warnSpy).toHaveBeenCalledWith(
+        instrumentation.SENTRY_DISABLED_IN_PRODUCTION_WARNING,
+      );
     });
 
     it('returns initialized client using SENTRY_DSN when set', async () => {
@@ -115,7 +143,6 @@ describe('Sentry configuration', () => {
       process.env.SENTRY_DSN = 'https://exampleServerDsn';
 
       // Act
-      const instrumentation = await import('./instrumentation');
       await instrumentation.register();
 
       // Assert
@@ -132,7 +159,6 @@ describe('Sentry configuration', () => {
       process.env.NEXT_PUBLIC_SENTRY_DSN = 'https://examplePublicDsn';
 
       // Act
-      const instrumentation = await import('./instrumentation');
       await instrumentation.register();
 
       // Assert
@@ -149,7 +175,6 @@ describe('Sentry configuration', () => {
       process.env.VERCEL_ENV = 'preview';
 
       // Act
-      const instrumentation = await import('./instrumentation');
       await instrumentation.register();
 
       // Assert
@@ -165,9 +190,6 @@ describe('Sentry configuration', () => {
       // (mocks are defined at module scope)
 
       // Act
-      const instrumentation = await import('./instrumentation');
-
-      // Assert
       expect(instrumentation.onRequestError).toBe(captureRequestErrorMock);
     });
   });
