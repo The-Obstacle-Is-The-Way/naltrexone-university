@@ -358,6 +358,8 @@ describe('QuestionView', () => {
     expect(html).toContain('B)');
     expect(html).toContain('Choice A text');
     expect(html).toContain('Choice B text');
+    expect(html).toContain('A explanation');
+    expect(html).toContain('B explanation');
   });
 
   it('shows Practice Again for correct standalone history review', () => {

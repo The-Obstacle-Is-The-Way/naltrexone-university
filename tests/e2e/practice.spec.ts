@@ -51,15 +51,7 @@ test.describe('practice', () => {
       page.getByRole('heading', { name: 'Quick Practice' }),
     ).toBeVisible();
 
-    const firstChoiceRadio = page.getByRole('radio').first();
-    await expect(firstChoiceRadio).toBeAttached({ timeout: 30_000 });
-
-    const firstChoiceLabel = page.locator('label').filter({
-      has: firstChoiceRadio,
-    });
-    await expect(firstChoiceLabel.first()).toBeVisible({ timeout: 30_000 });
-
-    await firstChoiceLabel.first().click();
+    await selectChoiceByLabel(page, 'A');
     await page.getByRole('button', { name: 'Submit' }).click();
 
     await expect(page.getByText(/Correct|Incorrect/)).toBeVisible();
