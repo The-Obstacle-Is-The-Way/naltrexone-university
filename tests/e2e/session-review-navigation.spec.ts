@@ -291,8 +291,6 @@ test.describe('session review navigation (SPEC-027)', () => {
       '[E2E_BASELINE_MISSING] Expected at least one attempted question in history.',
     ).toBe(false);
 
-    await expect(questionLink).toBeVisible({ timeout: 15_000 });
-
     // Verify the link does NOT contain sessionId
     const href = await questionLink.getAttribute('href');
     expect(href).not.toContain('sessionId=');

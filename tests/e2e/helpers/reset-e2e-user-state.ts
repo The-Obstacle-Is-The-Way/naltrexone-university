@@ -1,6 +1,8 @@
 import postgres from 'postgres';
+import { fetchWithTimeout } from './credential-health-check';
 
 const CLERK_API_BASE = 'https://api.clerk.com/v1';
+const CLERK_API_TIMEOUT_MS = 15_000;
 const REQUIRED_QUESTION_SLUGS = {
   placeholder01: 'placeholder-01-naltrexone-mechanism',
   placeholder02: 'placeholder-02-buprenorphine-induction-timing',
@@ -177,9 +179,11 @@ const defaultServices: E2EUserStateResetServices = {
 
     let response: Response;
     try {
-      response = await fetch(url, {
-        headers: { Authorization: `Bearer ${clerkSecretKey}` },
-      });
+      response = await fetchWithTimeout(
+        url,
+        { headers: { Authorization: `Bearer ${clerkSecretKey}` } },
+        CLERK_API_TIMEOUT_MS,
+      );
     } catch {
       throw new E2EUserStateResetError(
         'E2E_RESET:CLERK_API_UNAVAILABLE',

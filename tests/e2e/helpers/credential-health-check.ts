@@ -109,7 +109,7 @@ type ClerkUserListResponse =
   | Array<{ id?: string }>
   | { data?: Array<{ id?: string }> };
 
-async function fetchWithTimeout(
+export async function fetchWithTimeout(
   input: string,
   init: RequestInit,
   timeoutMs: number,
