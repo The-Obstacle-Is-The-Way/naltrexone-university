@@ -19,7 +19,7 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 |----|-------|----------|------|--------------|
 | [DEBT-246](debt-246-e2e-coverage-gaps-visual-testing-strategy.md) | Targeted E2E Coverage Gaps and Visual/CSS Testing Layer Policy | P3 | 2026-02-24 | — |
 | [DEBT-247](debt-247-test-helper-structure-cleanup.md) | Test Helper Structure Cleanup (Orphans, Boundary Violations, Duplication) | P4 | 2026-02-24 | — |
-| [DEBT-248](debt-248-e2e-helper-robustness.md) | E2E Helper Robustness (Error Chaining, Stripe Error Discrimination, Race Conditions) | P4 | 2026-02-24 | — |
+| [DEBT-248](debt-248-e2e-helper-robustness.md) | Post-PR-134 CodeRabbit Follow-Ups for E2E Helpers (9 deferred robustness fixes) | P4 | 2026-02-24 | — |
 
 **Next Debt ID:** DEBT-249
 
