@@ -50,7 +50,7 @@ describe('theme token regression', () => {
     expect(pricingHtml).toContain('border-primary');
   });
 
-  it('uses semantic hover tokens for dashboard stat cards', async () => {
+  it('does not apply hover affordance tokens to non-interactive dashboard stat cards', async () => {
     const { DashboardView } = await import('@/app/(app)/app/dashboard/page');
     const dashboardHtml = renderToStaticMarkup(
       <DashboardView
@@ -69,14 +69,11 @@ describe('theme token regression', () => {
       />,
     );
 
-    expect(dashboardHtml).toContain('hover:border-border');
-    expect(dashboardHtml).not.toContain('hover:border-border/80');
-    expect(dashboardHtml).toContain('hover:bg-muted/50');
-    expect(dashboardHtml).not.toContain('hover:border-zinc-700/50');
-    expect(dashboardHtml).not.toContain('hover:bg-zinc-900/80');
+    expect(dashboardHtml).not.toContain('hover:border-border');
+    expect(dashboardHtml).not.toContain('hover:bg-muted/50');
   });
 
-  it('uses the same hover token pattern in session summary stat cards', async () => {
+  it('does not use stat-card hover token patterns in session summary cards', async () => {
     const { DashboardView } = await import('@/app/(app)/app/dashboard/page');
     const { SessionSummaryView } = await import(
       '@/app/(app)/app/practice/[sessionId]/components/session-summary-view'
@@ -137,14 +134,36 @@ describe('theme token regression', () => {
       (card.getAttribute('class') ?? '').includes('hover:bg-muted/50'),
     );
 
-    expect(dashboardHoverCards.length).toBeGreaterThan(0);
-    expect(summaryHoverCards.length).toBeGreaterThan(0);
+    expect(dashboardHoverCards).toHaveLength(0);
+    expect(summaryHoverCards).toHaveLength(0);
+  });
 
-    for (const card of [...dashboardHoverCards, ...summaryHoverCards]) {
-      expect(card.getAttribute('class') ?? '').toContain('hover:border-border');
-      expect(card.getAttribute('class') ?? '').not.toContain(
-        'hover:border-border/80',
+  it('does not apply non-interactive hover tokens to marketing feature cards', async () => {
+    const { MarketingHomeShell } = await import(
+      '@/components/marketing/marketing-home'
+    );
+
+    const html = renderToStaticMarkup(
+      <MarketingHomeShell authNav={<div />} primaryCta={<div />} />,
+    );
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const featureTitles = [
+      'High-Yield Explanations',
+      'Tutor + Exam Modes',
+      'Smart Bookmarking',
+      'Progress Dashboard',
+    ];
+
+    for (const title of featureTitles) {
+      const heading = Array.from(doc.querySelectorAll('h3')).find(
+        (element) => element.textContent?.trim() === title,
       );
+      expect(heading).not.toBeUndefined();
+      const featureCard = heading?.closest('[data-slot="card"]');
+      expect(featureCard).not.toBeNull();
+      const className = featureCard?.getAttribute('class') ?? '';
+      expect(className).not.toContain('transition-colors');
+      expect(className).not.toContain('hover:bg-muted');
     }
   });
 

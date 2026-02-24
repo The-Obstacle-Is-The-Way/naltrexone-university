@@ -31,7 +31,7 @@ export function SessionBreakdownList({
                 sessionId,
                 historyHref,
               })}
-              className="flex items-center gap-2 font-medium text-foreground hover:underline"
+              className="flex items-center gap-2 rounded-sm font-medium text-foreground hover:underline focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]"
             >
               <span>{row.order}.</span>
               <span>{getStemPreview(row.stemMd, STEM_PREVIEW_LENGTH)}</span>

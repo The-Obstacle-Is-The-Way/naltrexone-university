@@ -49,7 +49,7 @@ function createAvailableAttemptedQuestionRow(
 }
 
 describe('HistoryQuestionsTab', () => {
-  it('renders attempted question cards with expected metadata and action links', () => {
+  it('renders attempted question cards as single Link-as-Card rows with expected metadata', () => {
     const result: ActionResult<GetAttemptedQuestionsOutput> = {
       ok: true,
       data: {
@@ -126,8 +126,8 @@ describe('HistoryQuestionsTab', () => {
     const hrefs = Array.from(doc.querySelectorAll('a')).map((a) =>
       a.getAttribute('href'),
     );
-    expect(hrefs.filter((href) => href === correctHref)).toHaveLength(2);
-    expect(hrefs.filter((href) => href === incorrectHref)).toHaveLength(2);
+    expect(hrefs.filter((href) => href === correctHref)).toHaveLength(1);
+    expect(hrefs.filter((href) => href === incorrectHref)).toHaveLength(1);
 
     const correctLinks = hrefs.filter((href) =>
       href?.startsWith('/app/questions/q-correct?'),
@@ -145,6 +145,29 @@ describe('HistoryQuestionsTab', () => {
     expect(
       incorrectLinks.every((href) => href?.includes('historyIndex=1')),
     ).toBe(true);
+
+    const reviewAnchors = Array.from(doc.querySelectorAll('a')).filter(
+      (anchor) => anchor.textContent?.trim() === 'Review',
+    );
+    expect(reviewAnchors).toHaveLength(0);
+
+    const reviewSpans = Array.from(doc.querySelectorAll('span')).filter(
+      (span) => span.textContent?.trim() === 'Review',
+    );
+    expect(reviewSpans).toHaveLength(2);
+
+    expect(doc.querySelectorAll('a a')).toHaveLength(0);
+
+    const cardLinks = Array.from(doc.querySelectorAll('a')).filter((anchor) =>
+      (anchor.getAttribute('class') ?? '').includes('rounded-2xl'),
+    );
+    expect(cardLinks).toHaveLength(2);
+    for (const link of cardLinks) {
+      const className = link.getAttribute('class') ?? '';
+      expect(className).toContain('transition-colors');
+      expect(className).toContain('hover:bg-accent/40');
+      expect(className).toContain('focus-visible:ring-[3px]');
+    }
   });
 
   it('includes mode=review in incorrect question links', () => {
@@ -185,8 +208,18 @@ describe('HistoryQuestionsTab', () => {
     const hrefs = Array.from(doc.querySelectorAll('a')).map((a) =>
       a.getAttribute('href'),
     );
-    expect(hrefs.filter((href) => href === incorrectHref)).toHaveLength(2);
+    expect(hrefs.filter((href) => href === incorrectHref)).toHaveLength(1);
     expect(html).toContain('Review');
+    expect(
+      Array.from(doc.querySelectorAll('a')).some(
+        (a) => a.textContent?.trim() === 'Review',
+      ),
+    ).toBe(false);
+    expect(
+      Array.from(doc.querySelectorAll('span')).some(
+        (s) => s.textContent?.trim() === 'Review',
+      ),
+    ).toBe(true);
     expect(html).not.toContain('Reattempt');
   });
 

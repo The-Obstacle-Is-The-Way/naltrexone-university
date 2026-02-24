@@ -1,7 +1,7 @@
 # Bug Reports
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-02-23
+**Last Updated:** 2026-02-24
 
 ---
 
@@ -17,7 +17,7 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 | ID | Title | Priority | Status |
 |----|-------|----------|--------|
-| [BUG-151](bug-151-card-row-affordance-inconsistency.md) | Card/Row Affordance Inconsistency — Misleading Hover, Missing Focus Rings, Pattern Asymmetry | P2 | Open |
+| — | — | — | — |
 
 **Next Bug ID:** BUG-152
 
@@ -117,6 +117,7 @@ Audit #3 produced BUG-136 and BUG-139. BUG-137 was reclassified as SSOT-consiste
 
 | ID | Title | Status | Resolution |
 |----|-------|--------|------------|
+| [BUG-151](../_archive/bugs/bug-151-card-row-affordance-inconsistency.md) | Card/Row Affordance Inconsistency — Misleading Hover, Missing Focus Rings, Pattern Asymmetry | Resolved | Removed misleading hover from non-interactive cards, added missing focus-visible rings to interactive inner links, converted history question cards to Pattern A (Link-as-Card), and updated regression/test coverage |
 | [BUG-150](../_archive/bugs/bug-150-proxy-function-named-middleware.md) | Proxy Default Export Named `middleware` — Recurring False-Positive Audit Noise | Resolved | Renamed `proxy.ts` default export from `middleware` to `proxy`, renamed inner `clerkMiddleware` local to `clerkMw`, and added `proxy.test.ts` regression coverage to prevent naming drift |
 | [BUG-149](../_archive/bugs/bug-149-idempotency-null-result-indistinguishable-from-pending.md) | Idempotency Null Result Is Indistinguishable from Pending State | Resolved | Added explicit `completed_at` completion marker to `idempotency_keys`, updated idempotency repository contracts/implementations, switched `withIdempotency` to completion-marker semantics with legacy non-null payload fallback, and added unit + integration regression coverage for null-result replay |
 | [BUG-148](../_archive/bugs/bug-148-stripe-checkout-idempotency-key-fallback-random.md) | Stripe Checkout Idempotency Key Fallback Uses randomUUID() | Resolved | Replaced random fallback with deterministic `checkout_session:${userId}:${plan}` and added stale-session replay detection with a recovery key path (`checkout_session_recovery:${userId}:${plan}:${sessionId}`) |

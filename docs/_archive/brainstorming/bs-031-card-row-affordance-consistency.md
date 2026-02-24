@@ -93,7 +93,7 @@ The `<li>` has `onClick`, `onKeyDown`, and `tabIndex={0}`. A click guard skips a
 | 4 | History question title links lack `focus-visible` ring (no `focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]`) | P3 | `history-questions-tab.tsx` line 517 |
 | 5 | Session breakdown list links lack `focus-visible` ring | P3 | `session-breakdown-list.tsx` line 34 |
 | 6 | Bookmark title links lack `focus-visible` ring | P3 | `bookmarks/page.tsx` line 96 |
-| 7 | History sessions LI row (`tabIndex={0}`, `role="link"`) has no `focus-visible` classes — keyboard focus under-indicated | P2 | `history-sessions-tab.tsx` lines 183–186 |
+| 7 | History sessions LI row now has `focus-visible` classes; `role="link"` from the original audit is no longer present (inner `<Link>` still uses `tabIndex={-1}`) | Resolved | `history-sessions-tab.tsx` lines 181–220 |
 | 8 | Dark mode `--ring: 0 0% 40%` at 50% opacity may fail WCAG 3:1 contrast for focus indicators | P3 | `app/globals.css` line 152 |
 
 ### Finding 1 Detail
@@ -108,9 +108,9 @@ Dashboard stat/streak cards, practice session-summary stat cards, and marketing 
 
 The title `<Link>` in history question cards, session breakdown links, and bookmark title links use `hover:underline` but do not apply the app-standard `focus-visible` ring class set. Compared with dashboard Link-as-Card elements, keyboard affordance is inconsistent and weaker.
 
-### Finding 7 Detail (from browser audit)
+### Finding 7 Detail (current code check)
 
-The history sessions `<li>` row has `tabIndex={0}` and `role="link"` (lines 181–182 of `history-sessions-tab.tsx`) and it already supports Enter/Space in `onKeyDown`, but its className (lines 183–186) contains only layout/hover/cursor classes — no `focus-visible` ring. The inner `<Link>` does have a ring but has `tabIndex={-1}`, removing it from the tab order. So the element that receives keyboard focus (the LI) has no explicit ring treatment.
+The history sessions `<li>` row is keyboard-focusable when interactive (`tabIndex={isRowInteractive ? 0 : undefined}` at line 181) and now includes explicit focus-visible styling in its interactive class branch (`focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]` at line 185). The inner `<Link>` still has `tabIndex={-1}` (line 219). `role="link"` is not currently present on the `<li>`. This means the original missing-focus-ring concern is resolved.
 
 ### Finding 8 Detail (from browser audit)
 
@@ -121,8 +121,9 @@ The history sessions `<li>` row has `tabIndex={0}` and `role="link"` (lines 181�
 | Severity | Count | Impact |
 |----------|-------|--------|
 | P1 | 1 | Interaction model inconsistency within the same page — confuses users |
-| P2 | 3 | Misleading hover affordances + under-indicated keyboard focus on focusable row |
+| P2 | 2 | Misleading hover affordances on non-interactive cards |
 | P3 | 4 | Missing focus-visible rings on inner links + dark mode ring contrast concern |
+| Resolved | 1 | History sessions LI row focus ring gap closed; original `role="link"` observation is stale |
 
 ## Proposed Fix (Locked Direction)
 
@@ -142,7 +143,7 @@ The history sessions `<li>` row has `tabIndex={0}` and `role="link"` (lines 181�
 
 ### Migration path
 
-- Findings 2–7 are small, low-risk class-string fixes.
+- Findings 2–6 are small, low-risk class-string fixes.
 - Finding 1 is resolved: keep session rows as Pattern C and promote question rows to Pattern A.
 - `components/theme-token-regression.test.tsx` currently asserts the existing hover token pattern on dashboard/session-summary stat cards and will need updates if hover is removed.
 - Optional follow-up: evaluate a stretched-link approach for session rows if we want to reduce LI click-handler complexity while keeping breakdown as a distinct action.
