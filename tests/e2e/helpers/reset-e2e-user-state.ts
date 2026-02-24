@@ -56,8 +56,9 @@ export class E2EUserStateResetError extends Error {
     public readonly code: string,
     message: string,
     public readonly fix: string,
+    options?: ErrorOptions,
   ) {
-    super(message);
+    super(message, options);
     this.name = 'E2EUserStateResetError';
   }
 }
@@ -688,7 +689,7 @@ export async function runE2EUserStateReset(
     });
   } catch (error) {
     if (error instanceof E2EUserStateResetError) {
-      throw new Error(formatFailureReport([error]));
+      throw new Error(formatFailureReport([error]), { cause: error });
     }
 
     throw new Error(
