@@ -495,11 +495,8 @@ export async function runE2ECredentialHealthCheck(
   }
 
   if (failures.length > 0) {
-    // Keep a single primary cause on the top-level Error while preserving the
-    // full multi-failure detail in formatFailureReport().
-    const failureWithCause = failures.find((failure) => failure.cause);
     throw new Error(formatFailureReport(failures), {
-      cause: failureWithCause,
+      cause: failures,
     });
   }
 }

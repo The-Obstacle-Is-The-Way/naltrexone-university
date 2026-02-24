@@ -300,6 +300,42 @@ describe('runE2ECredentialHealthCheck', () => {
     );
   });
 
+  it('exposes all aggregated failures in top-level error cause', async () => {
+    const env = createEnv();
+    const services = createServices({
+      checkDatabaseConnectivity: vi.fn(async () => {
+        throw new CredentialValidationError(
+          'E2E_PREFLIGHT:DATABASE_CONNECT_FAILED',
+          'Cannot connect to Postgres with DATABASE_URL.',
+          'Verify Neon/Postgres URL, credentials, and network reachability.',
+        );
+      }),
+      verifyStripeSecretKey: vi.fn(async () => {
+        throw new CredentialValidationError(
+          'E2E_PREFLIGHT:STRIPE_SECRET_KEY_INVALID',
+          'Stripe rejected STRIPE_SECRET_KEY.',
+          'Use a valid Stripe test secret key (sk_test_...).',
+        );
+      }),
+    });
+
+    try {
+      await runE2ECredentialHealthCheck({
+        env,
+        services,
+      });
+      throw new Error('Expected credential health check to throw');
+    } catch (error) {
+      expect(error).toBeInstanceOf(Error);
+      const topLevelError = error as Error;
+      expect(Array.isArray(topLevelError.cause)).toBe(true);
+      const causes = topLevelError.cause as CredentialValidationError[];
+      expect(causes).toHaveLength(2);
+      expect(causes[0]?.code).toBe('E2E_PREFLIGHT:DATABASE_CONNECT_FAILED');
+      expect(causes[1]?.code).toBe('E2E_PREFLIGHT:STRIPE_SECRET_KEY_INVALID');
+    }
+  });
+
   it('accepts Clerk paginated user-list response shape in the default resolver', async () => {
     const env = createEnv();
     const verifyClerkPassword = vi.fn(async () => true);
@@ -419,8 +455,10 @@ describe('runE2ECredentialHealthCheck', () => {
       expect(error).toBeInstanceOf(Error);
       const topLevelError = error as Error;
       expect(topLevelError.message).toContain('[E2E_PREFLIGHT:UNEXPECTED]');
-      expect(topLevelError.cause).toBeInstanceOf(CredentialValidationError);
-      const wrappedError = topLevelError.cause as CredentialValidationError;
+      expect(Array.isArray(topLevelError.cause)).toBe(true);
+      const topLevelCauses = topLevelError.cause as CredentialValidationError[];
+      expect(topLevelCauses).toHaveLength(1);
+      const wrappedError = topLevelCauses[0];
       expect(wrappedError.code).toBe('E2E_PREFLIGHT:UNEXPECTED');
       expect(wrappedError.cause).toBe(rootCause);
     }
