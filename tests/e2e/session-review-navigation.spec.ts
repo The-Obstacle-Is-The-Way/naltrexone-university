@@ -52,11 +52,13 @@ test.describe('session review navigation (SPEC-027)', () => {
     // Wait for breakdown links to load
     const breakdownLinks = page.locator('a[href*="/app/questions/"]');
     await expect(breakdownLinks.first()).toBeVisible({ timeout: 15_000 });
-    const breakdownCount = await breakdownLinks.count();
-    expect(
-      breakdownCount,
-      '[E2E_BASELINE_MISSING] Expected at least two reviewable session breakdown links.',
-    ).toBeGreaterThanOrEqual(2);
+    await expect
+      .poll(() => breakdownLinks.count(), {
+        timeout: 15_000,
+        message:
+          '[E2E_BASELINE_MISSING] Expected at least two reviewable session breakdown links.',
+      })
+      .toBeGreaterThanOrEqual(2);
 
     // Click first question link from breakdown
     const breakdownLink = breakdownLinks.first();
@@ -148,7 +150,7 @@ test.describe('session review navigation (SPEC-027)', () => {
     // Current contract keeps "Next →" visible but disabled on the last question.
     const nextButtonOnLast = page.getByRole('button', { name: 'Next →' });
     await expect(nextButtonOnLast).toBeVisible({ timeout: 15_000 });
-    await expect(nextButtonOnLast).toBeDisabled();
+    await expect(nextButtonOnLast).toBeDisabled({ timeout: 15_000 });
 
     // SPEC-028: jump navigation via ReviewQuestionNavigator
     const navigatorCurrentTextOnSecondQuestion = await navigatorCard

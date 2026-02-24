@@ -1,11 +1,28 @@
 # DEBT-247: Test Helper Structure Cleanup
 
-**Status:** Open  
+**Status:** Resolved  
 **Priority:** P4  
 **Date:** 2026-02-24  
+**Resolved:** 2026-02-24  
 **Owner:** Test Infrastructure
 
 ---
+
+## Resolution Verification (2026-02-24)
+
+- Deleted orphan files:
+  - `tests/e2e/helpers/color-utils.ts`
+  - `tests/e2e/helpers/color-utils.test.ts`
+- Moved cross-boundary test:
+  - `tests/shared/question-helper.test.ts` → `tests/e2e/helpers/question.test.ts`
+- Added helper contract docs:
+  - `tests/shared/README.md`
+  - `tests/test-helpers/README.md`
+- Replaced local deferred helpers with canonical import:
+  - `src/adapters/jobs/reconcile-stripe-subscriptions.test.ts`
+  - `src/adapters/shared/concurrency.test.ts`
+- Validation:
+  - `pnpm test --run` passed
 
 ## Description
 
@@ -81,14 +98,14 @@ The audit found four concrete cleanup items that should be addressed to keep the
 
 ## Verification
 
-- [ ] `tests/e2e/helpers/color-utils.ts` and `tests/e2e/helpers/color-utils.test.ts` are deleted.
-- [ ] `tests/shared/question-helper.test.ts` no longer exists; replacement test lives at `tests/e2e/helpers/question.test.ts`.
-- [ ] `tests/shared/README.md` and `tests/test-helpers/README.md` are present and accurate.
-- [ ] No `createDeferred` local function remains in the two target files.
-- [ ] `rg "from.*e2e/helpers" tests/shared` returns no results.
-- [ ] `pnpm test --run` passes.
+- [x] `tests/e2e/helpers/color-utils.ts` and `tests/e2e/helpers/color-utils.test.ts` are deleted.
+- [x] `tests/shared/question-helper.test.ts` no longer exists; replacement test lives at `tests/e2e/helpers/question.test.ts`.
+- [x] `tests/shared/README.md` and `tests/test-helpers/README.md` are present and accurate.
+- [x] No `createDeferred` local function remains in the two target files.
+- [x] `rg "from.*e2e/helpers" tests/shared` returns no results.
+- [x] `pnpm test --run` passes.
 
 ## Related
 
-- [DEBT-246](debt-246-e2e-coverage-gaps-visual-testing-strategy.md)
+- [DEBT-246](../../debt/debt-246-e2e-coverage-gaps-visual-testing-strategy.md)
 - `.claude/rules/testing.md`

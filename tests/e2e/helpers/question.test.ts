@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   rethrowIfQuestionMissingCheckError,
   SeededQuestionMissingError,
-} from '../e2e/helpers/question';
+} from './question';
 
 describe('question helper error handling', () => {
   it('rethrows explicit seeded-question-missing errors', () => {
