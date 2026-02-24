@@ -33,7 +33,7 @@ The DEBT-244 resolution was re-audited against live repository state. All previo
     - `[INTEGRATION_SEED_MISSING] tags table is empty. Run pnpm db:seed before pnpm test:integration.`
 
 - [x] Playwright server mode is hardened in `playwright.config.ts`.
-  - `webServer.command` is now `pnpm build && pnpm start`.
+  - `webServer.command` is conditional: CI uses `pnpm start` (pre-built by the earlier Build step); local uses `pnpm build && pnpm start`.
   - `webServer.reuseExistingServer` is now `false`.
   - Health URL remains `${baseURL}/api/health`.
 
@@ -94,6 +94,8 @@ Implemented fail-fast seed precondition in:
 Implemented production-mode E2E server policy in:
 
 - `playwright.config.ts`
+  - CI: `process.env.CI ? 'pnpm start'` — no double-build since the CI "Build" step already runs `pnpm build`.
+  - Local: `'pnpm build && pnpm start'` — ensures a fresh production build to eliminate ECONNRESET from dev server keep-alive socket races.
 
 ## Final Outcome
 

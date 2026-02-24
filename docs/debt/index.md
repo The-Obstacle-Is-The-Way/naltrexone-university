@@ -1,7 +1,7 @@
 # Technical Debt Register
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-02-23
+**Last Updated:** 2026-02-24
 
 ---
 
@@ -15,9 +15,12 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 ## Debt Index (Active)
 
-*No active debt items.*
+| ID | Title | Priority | Date | GitHub Issue |
+|----|-------|----------|------|--------------|
+| [DEBT-246](debt-246-e2e-coverage-gaps-visual-testing-strategy.md) | E2E Coverage Gaps After Pyramid Rebalancing and Visual/CSS Testing Strategy | P3 | 2026-02-24 | — |
+| [DEBT-247](debt-247-test-helper-structure-cleanup.md) | Test Helper Structure Cleanup (Dead Code, Misplaced Test, Naming) | P4 | 2026-02-24 | — |
 
-**Next Debt ID:** DEBT-246
+**Next Debt ID:** DEBT-248
 
 ---
 
@@ -25,9 +28,9 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 | ID | Title | Priority | Resolved | GitHub Issue |
 |----|-------|----------|----------|--------------|
-| [DEBT-245](debt-245-e2e-pyramid-drift-and-skip-governance.md) | E2E Pyramid Drift and Data-Dependent Skip Governance | P1 | 2026-02-23 | [#133](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/issues/133) |
-| [DEBT-244](debt-244-test-reliability-schema-and-state-drift.md) | Test Reliability Drift (Schema + Stateful E2E Data + Spec Drift) | P1 | 2026-02-23 | — |
-| [DEBT-243](debt-243-e2e-credential-drift-silent-failure.md) | E2E Credential Drift and Silent Failure | P2 | 2026-02-23 | — |
+| [DEBT-245](../_archive/debt/debt-245-e2e-pyramid-drift-and-skip-governance.md) | E2E Pyramid Drift and Data-Dependent Skip Governance | P1 | 2026-02-23 | [#133](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/issues/133) |
+| [DEBT-244](../_archive/debt/debt-244-test-reliability-schema-and-state-drift.md) | Test Reliability Drift (Schema + Stateful E2E Data + Spec Drift) | P1 | 2026-02-23 | — |
+| [DEBT-243](../_archive/debt/debt-243-e2e-credential-drift-silent-failure.md) | E2E Credential Drift and Silent Failure | P2 | 2026-02-23 | — |
 | [DEBT-242](../_archive/debt/debt-242-cron-secret-missing-from-vercel-development.md) | CRON_SECRET Missing From Vercel Development Environment | P3 | 2026-02-22 | — |
 | [DEBT-241](../_archive/debt/debt-241-sentry-dsn-missing-from-vercel-environments.md) | Sentry DSN Missing From All Vercel Environments | P2 | 2026-02-22 | — |
 | [DEBT-240](../_archive/debt/debt-240-local-dev-database-url-points-to-production.md) | Local Dev DATABASE_URL Points to Production Neon Branch | P1 | 2026-02-22 | — |
