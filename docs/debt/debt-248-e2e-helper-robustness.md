@@ -10,15 +10,21 @@
 
 ## Description
 
-CodeRabbit posted 10 actionable comments after PR #134 stabilization.  
+CodeRabbit follow-up on PR #134 surfaced helper-level robustness items across
+`credential-health-check.ts`, `reset-e2e-user-state.ts`, and
+`session-review-navigation.spec.ts`.
+
 A first-principles audit of current HEAD shows:
 
-- 2 comments are already fixed in this PR and must not be reworked.
-- 9 comments are valid robustness improvements and are intentionally deferred to the next PR.
+- 2 items are already fixed in merged PR #134 and must not be reworked.
+- 9 items are valid robustness improvements and are intentionally deferred to
+  the next PR.
 
 This document is the SSOT backlog for those 9 deferred items.
 
 ## Verified Triage (2026-02-24)
+
+Total tracked items in this triage table: 11 (2 resolved, 9 deferred).
 
 | CodeRabbit item | File | Verdict | Status |
 |---|---|---|---|
