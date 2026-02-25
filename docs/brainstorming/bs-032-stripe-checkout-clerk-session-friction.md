@@ -110,7 +110,7 @@ Possible contributors (hypotheses, not yet proven in production logs):
 
 Clerk's current docs emphasize middleware-first protection for private routes. A Clerk Stripe tutorial example sends `success_url` to a protected member route (`/members`) rather than a public callback route.
 
-Interpretation: the overall direction is to protect authenticated post-payment pages, but query-preservation mechanics must be handled explicitly for Stripe return URLs.
+Interpretation: the overall direction is to protect authenticated post-payment pages, while query-preservation on Stripe return URLs should be verified with regression tests (and explicit `returnBackUrl` override only if needed).
 
 ---
 
@@ -127,9 +127,9 @@ Interpretation: the overall direction is to protect authenticated post-payment p
 2. Refreshes the JWT if expired but session is still valid
 3. Redirects to sign-in with `returnBackUrl` if session is invalid
 
-**Implementation note: keep page fallback initially**
+**Implementation note: keep page fallback permanently**
 ```typescript
-// Keep defense-in-depth for one rollout window
+// Keep permanent defense-in-depth for this payment-critical route
 const clerkAuth = await d.getClerkAuth();
 if (!clerkAuth.userId) {
   return clerkAuth.redirectToSignIn({ returnBackUrl });
@@ -137,7 +137,7 @@ if (!clerkAuth.userId) {
 const user = await d.authGateway.requireUser();
 ```
 
-**Risk:** Non-trivial unless redirect preservation is explicit. BUG-043 historically showed this route can lose `session_id` if auth redirects are not wired correctly.
+**Risk:** Non-trivial unless redirect preservation is verified by tests. BUG-043 historically showed this route can lose `session_id` if auth redirects are not wired correctly.
 
 ### Option 2: Keep as-is (current behavior)
 
@@ -207,6 +207,11 @@ Evidence from Clerk docs and SDK source:
 **Practical answer:** In current Clerk SDK behavior, bare `auth.protect()` should preserve the request URL (including query params) for sign-in redirects.  
 Explicit `returnBackUrl: req.url` is still acceptable for clarity, but is likely not strictly required on modern versions.
 
+Adversarial version check:
+
+- This behavior is present in both `@clerk/nextjs@6.37.1` (the version used when BUG-043 was filed) and `@clerk/nextjs@6.38.1`.
+- So we should **not** assume BUG-043 was solved by a recent Clerk redirect-default change; treat it as a route/config/integration regression risk and guard with tests.
+
 ### Clerk Handshake Redirect Risk
 
 Critical nuance for this flow:
@@ -229,7 +234,7 @@ Update BS-032 recommendation to:
 
 1. **Protect `/checkout/success` in middleware** (remove it from public routes).
 2. Keep **webhook-driven sync as source of truth**; treat success-page sync as UX optimization.
-3. For checkout-success unauthenticated redirects, ensure full return URL is preserved (`returnBackUrl: req.url`) so `session_id` survives.
+3. Ensure full return URL is preserved so `session_id` survives (validated against current Clerk default behavior and enforced by regression tests; explicitly pass `returnBackUrl: req.url` only if behavior changes).
 4. Avoid redirect config that can override `redirect_url` for this flow (especially sign-in force-redirect settings).
 5. Add an E2E regression test: Stripe success URL with `session_id` survives one auth bounce and still completes eager sync.
 6. Re-validate on a production-like environment/domain, not only preview with development Clerk keys.
@@ -237,11 +242,11 @@ Update BS-032 recommendation to:
 ### Adversarial downside analysis
 
 Historical context: **BUG-043** moved `/checkout/success` to public specifically to avoid query loss on auth bounce.  
-If we change route protection again, we can re-introduce that failure mode unless redirect behavior is explicit.
+If we change route protection again, we can re-introduce that failure mode unless redirect behavior is verified by regression tests.
 
 | Risk if we switch to protected route | Why it matters | Mitigation |
 |---|---|---|
-| `session_id` dropped during sign-in redirect | Eager sync fails; user may land in generic error despite successful payment | Use explicit middleware branch with `redirectToSignIn({ returnBackUrl: req.url })`, not implicit defaults only |
+| `session_id` dropped during sign-in redirect | Eager sync fails; user may land in generic error despite successful payment | Lock current Clerk default redirect behavior with regression tests; add explicit `returnBackUrl: req.url` override if a future SDK change regresses this |
 | Handshake redirect happens before middleware callback | Custom callback branch may never execute on some requests | Add explicit handshake regression tests for `/checkout/success?session_id=...` |
 | Force/fallback redirect config overrides `redirect_url` | User returns to dashboard/home instead of checkout success handler | Keep sign-in force redirects unset for this flow; add config check in rollout checklist |
 | Regressing previously fixed behavior (BUG-043) | Prior bug history indicates this can break in real use | Add regression tests before code change, plus staged rollout |
@@ -277,7 +282,10 @@ Do **not** treat this as a one-line matcher change. Treat it as a controlled har
 - MDN SameSite behavior reference: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie/SameSite
 - Clerk Next.js middleware source (redirect before callback): https://github.com/clerk/javascript/blob/main/packages/nextjs/src/server/clerkMiddleware.ts
 - Clerk Next.js `auth()` source (default returnBackUrl to request URL): https://github.com/clerk/javascript/blob/main/packages/nextjs/src/app-router/server/auth.ts
+- Clerk Next.js `auth()` at `@clerk/nextjs@6.37.1` (BUG-043-era baseline): https://github.com/clerk/javascript/blob/@clerk/nextjs@6.37.1/packages/nextjs/src/app-router/server/auth.ts
+- Clerk Next.js `auth()` at `@clerk/nextjs@6.38.1`: https://github.com/clerk/javascript/blob/@clerk/nextjs@6.38.1/packages/nextjs/src/app-router/server/auth.ts
 - Clerk protect flow source (unauthenticated page -> `redirectToSignIn()`): https://github.com/clerk/javascript/blob/main/packages/nextjs/src/server/protect.ts
+- Clerk middleware `nextErrors` at `@clerk/nextjs@6.37.1` (`returnBackUrl || url`): https://github.com/clerk/javascript/blob/@clerk/nextjs@6.37.1/packages/nextjs/src/server/nextErrors.ts
 - Clerk handshake builder source (`redirect_url` uses full `clerkUrl.href`): https://github.com/clerk/javascript/blob/main/packages/backend/src/tokens/handshake.ts
 - Clerk handshake tests (query preservation): https://github.com/clerk/javascript/blob/main/packages/backend/src/tokens/__tests__/handshake.test.ts
 - Clerk cross-origin handshake tests (non-Clerk cross-site document requests): https://github.com/clerk/javascript/blob/main/packages/backend/src/tokens/__tests__/request.test.ts
@@ -289,4 +297,4 @@ Do **not** treat this as a one-line matcher change. Treat it as a controlled har
 | Date | Decision | Rationale |
 |------|----------|-----------|
 | 2026-02-25 | Created BS-032 | Observed auth bounce during manual testing of new-user Apple OAuth → Stripe checkout flow on Preview deployment |
-| 2026-02-25 | Promoted to DEBT-249 for controlled remediation | Route-boundary change has historical regression risk (BUG-043), so fix requires explicit redirect-preservation logic + regression coverage |
+| 2026-02-25 | Promoted to DEBT-249 for controlled remediation | Route-boundary change has historical regression risk (BUG-043), so fix requires verified redirect-preservation behavior + regression coverage |

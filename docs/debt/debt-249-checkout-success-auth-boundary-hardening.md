@@ -29,6 +29,7 @@ Changing `PUBLIC_ROUTE_PATTERNS` alone is not sufficient; redirect semantics and
 1. Remove `/checkout/success(.*)` from `PUBLIC_ROUTE_PATTERNS`.
 2. In `proxy.ts`, protect `/checkout/success` with `auth.protect()` and lock redirect behavior with tests:
    - Current Clerk SDK behavior sets sign-in `redirect_url` to the current request URL by default.
+   - This behavior exists in both `@clerk/nextjs@6.37.1` and `@clerk/nextjs@6.38.1`; do not assume BUG-043 was fixed by a recent SDK default change.
    - Keep callback logic minimal; do not rely on callback-only branching for handshake cases.
 3. Explicitly cover handshake preemption:
    - Clerk may return a handshake redirect before middleware callback code executes.
@@ -71,7 +72,10 @@ Changing `PUBLIC_ROUTE_PATTERNS` alone is not sufficient; redirect semantics and
 - Clerk cookie settings (`SameSite=Lax`) and session token behavior: https://clerk.com/docs/guides/how-clerk-works/cookies
 - Clerk middleware source (redirect before user callback on location header): https://github.com/clerk/javascript/blob/main/packages/nextjs/src/server/clerkMiddleware.ts
 - Clerk `auth()` source (default returnBackUrl to current request URL): https://github.com/clerk/javascript/blob/main/packages/nextjs/src/app-router/server/auth.ts
+- Clerk `auth()` at `@clerk/nextjs@6.37.1` (BUG-043-era baseline): https://github.com/clerk/javascript/blob/@clerk/nextjs@6.37.1/packages/nextjs/src/app-router/server/auth.ts
+- Clerk `auth()` at `@clerk/nextjs@6.38.1`: https://github.com/clerk/javascript/blob/@clerk/nextjs@6.38.1/packages/nextjs/src/app-router/server/auth.ts
 - Clerk protect source (`auth.protect()` unauthenticated path): https://github.com/clerk/javascript/blob/main/packages/nextjs/src/server/protect.ts
+- Clerk middleware `nextErrors` at `@clerk/nextjs@6.37.1` (`returnBackUrl || url`): https://github.com/clerk/javascript/blob/@clerk/nextjs@6.37.1/packages/nextjs/src/server/nextErrors.ts
 - Clerk handshake source (`redirect_url` uses full current URL): https://github.com/clerk/javascript/blob/main/packages/backend/src/tokens/handshake.ts
 - Clerk handshake tests (query preservation and cleanup): https://github.com/clerk/javascript/blob/main/packages/backend/src/tokens/__tests__/handshake.test.ts
 - Clerk cross-origin handshake tests (cross-site document requests): https://github.com/clerk/javascript/blob/main/packages/backend/src/tokens/__tests__/request.test.ts
