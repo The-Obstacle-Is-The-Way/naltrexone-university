@@ -9,7 +9,7 @@
 
 ## The Problems
 
-Twenty issues identified from manual review + two Chrome agent audits (review mode + Quick Practice pre/post answer). Each is traced to its **root layer** in the pipeline.
+Twenty-two issues identified from manual review + two Chrome agent audits (review mode + Quick Practice pre/post answer) + code trace validation. Each is traced to its **root layer** in the pipeline.
 
 ### Problem 1: No visual break between question scenario and actual question
 
@@ -426,18 +426,18 @@ The `choiceExplanations` data doesn't currently include which choice the user se
 
 *(Added from Chrome agent Quick Practice audit 2026-02-25)*
 
-**What the user sees:** After submission, only the selected wrong answer (red) and the correct answer (green) get color treatment. Unchosen wrong answers (A, D in this case) remain completely unstyled — no dimming, no ✗ icon. This leaves them ambiguous. UWorld dims all wrong choices and adds a small ✗ to each.
+**What the user sees:** After submission, only the selected wrong answer (red) and the correct answer (green) get color treatment. Unchosen wrong answers (A, D in this case) are dimmed via `opacity-50` but have no explicit wrong indicator (no ✗ icon, no "Incorrect" label). They're passive — dimmed but ambiguous. UWorld dims all wrong choices and adds a small ✗ to each.
 
 **Root layer:** **React component (`choice-button.tsx`)**
 
-Currently, `correctness` is only set for the correct answer and the user's selected answer (`question-card.tsx:41-48`). Unchosen wrong answers get `correctness: null`.
+Currently, `correctness` is only set for the correct answer and the user's selected answer (`question-card.tsx:41-48`). Unchosen wrong answers get `correctness: null` and are dimmed via `disabled && !correctness && 'opacity-50'` (`choice-button.tsx:31`).
 
 **Fix options:**
 - (A) Set `correctness: 'incorrect'` on ALL wrong answers (not just the selected one) — but this would color them all red, which is too heavy
 - (B) Add a new state like `correctness: 'wrong-unselected'` that dims the card and adds a subtle ✗ without full red treatment
-- (C) Simply reduce opacity on unselected wrong answers post-submit (e.g., `opacity-60`)
+- (C) Keep existing dimming, add a small ✗ badge or "Incorrect" micro-label to unselected wrong answers
 
-**Recommendation:** Option C — simplest. Apply `opacity-60` to unchosen wrong answers post-submit.
+**Recommendation:** Option B or C — build on the existing `opacity-50` dimming by adding an explicit wrong indicator.
 
 **Files involved:** `components/question/choice-button.tsx`, `components/question/question-card.tsx`
 
@@ -520,6 +520,162 @@ None are blockers, but together they significantly degrade the reading experienc
 
 ---
 
+## Code Validation
+
+Validated against:
+- `components/question/feedback.tsx`
+- `components/question/question-card.tsx`
+- `components/question/choice-button.tsx`
+- `components/markdown/Markdown.tsx`
+- `app/(app)/app/practice/components/practice-view.tsx`
+- `app/(app)/app/practice/quick/quick-practice-client.tsx`
+- `app/(app)/app/questions/[slug]/question-page-client.tsx`
+
+Also traced supporting shared logic:
+- `app/(app)/app/practice/hooks/use-practice-question-answer-flow.ts`
+- `app/(app)/app/practice/shared/use-question-flow-core.ts`
+- `app/(app)/app/practice/practice-page-logic.ts`
+- `components/ui/segmented-control.tsx`
+- `components/ui/tab-switch-styles.ts`
+- `components/ui/button.tsx`
+
+### Per-Problem Validation
+
+| # | Validation Result | File/Line Validation | Notes / Corrections |
+|---|-------------------|----------------------|---------------------|
+| 1 | Confirmed | `components/markdown/Markdown.tsx:15`, `components/question/question-card.tsx:35` | Analysis is correct. `Markdown` adds no prose paragraph spacing. |
+| 2 | Confirmed | `components/question/feedback.tsx:44` | Entire feedback card gets success/destructive tint (`bg-success/10` / `bg-destructive/10`). |
+| 3 | Confirmed | `components/question/feedback.tsx:56` | Static `Explanation` heading is hardcoded. |
+| 4 | Confirmed (content + renderer) | `components/markdown/Markdown.tsx:15` | Correct diagnosis: blank lines in MDX matter, and renderer styling is minimal. |
+| 5 | Confirmed | `scripts/seed-helpers.ts:83` | Correct root cause is content convention; parser preserves text before/after colon. |
+| 6 | Confirmed | `components/question/feedback.tsx:34` | All-or-nothing wrong-answer render logic is implemented exactly as described. |
+| 7 | Confirmed | `components/question/question-card.tsx:35`, `components/question/feedback.tsx:56`, `components/question/choice-button.tsx:60` | `text-sm` is used across stem, feedback body, and choice body. |
+| 8 | Confirmed | `components/question/feedback.tsx:51` | Verdict is body-like text, not badge/chip styling. |
+| 9 | Confirmed | `components/question/feedback.tsx:93` | Reference label and content are similarly muted/small. |
+| 10 | Confirmed | `components/question/feedback.tsx:55` | Verdict and explanation block separated only by `mt-4`. |
+| 11 | Confirmed | `components/question/question-card.tsx:37` | Stem-to-choices gap is `mt-6`. |
+| 12 | Confirmed | `components/question/feedback.tsx:77` | Wrong-answer cards repeat full `choice.textMd`. |
+| 13 | Confirmed | `components/question/choice-button.tsx:50` | Badge uses `bg-background` + border; low contrast on dark theme. |
+| 14 | Partially Correct | `components/question/choice-button.tsx:28` | Correction: hover/focus states do exist in code (`hover:bg-muted`, `focus-within:ring`), but visual strength can still be too subtle. |
+| 15 | Partially Correct | `app/(app)/app/practice/components/practice-view.tsx:270`, `app/(app)/app/practice/practice-page-logic.ts:33`, `app/(app)/app/practice/shared/use-question-flow-core.ts:99` | Correction: pre-submit hierarchy is already differentiated (`Submit` default variant, `Next`/`Bookmark` outline). Confirmed: post-submit state change is weak (Submit remains present but disabled; Next is not promoted). |
+| 16 | Confirmed | `app/(app)/app/practice/quick/quick-practice-client.tsx:72`, `app/(app)/app/practice/components/practice-view.tsx:147` | Back link label is plain “Back to Practice” with no arrow/icon. |
+| 17 | Confirmed | `app/(app)/app/practice/hooks/use-practice-question-answer-flow.ts:127` | No `scrollIntoView` exists; only focus recovery (`questionAreaRef.current?.focus()`). |
+| 18 | Confirmed | `components/question/feedback.tsx:15` | `FeedbackProps` has no `selectedChoiceId`; wrong-answer cards cannot tag “Your answer.” |
+| 19 | Partially Correct | `components/question/question-card.tsx:41`, `components/question/choice-button.tsx:31` | Correction: unselected wrong answers are already dimmed post-submit via `disabled && !correctness && 'opacity-50'`. Missing indicator is specifically lack of explicit wrong marker/badge. |
+| 20 | Partially Correct | `app/(app)/app/practice/quick/quick-practice-client.tsx:76`, `components/ui/tab-switch-styles.ts:15` | Confirmed: no counts in tab labels; touch target may be below 44px (`py-1.5` + text). Correction: tabs are not disabled, but inactive affordance is weak. |
+
+### Shared vs Divergent Rendering (Quick Practice vs Review Mode)
+
+- Shared rendering path:
+  - `QuestionCard` (`components/question/question-card.tsx`)
+  - `ChoiceButton` (`components/question/choice-button.tsx`)
+  - `Feedback` (`components/question/feedback.tsx`)
+  - `Markdown` (`components/markdown/Markdown.tsx`)
+- Divergent page composition/state:
+  - Quick Practice: `quick-practice-client.tsx` -> `PracticeView` + `usePracticeQuestionFlow`
+  - Review Mode: `question-page-client.tsx` (`QuestionView`) + `useQuestionPageController`
+- Divergent action bars:
+  - Quick Practice action bar in `practice-view.tsx:249`
+  - Review action bar in `question-page-client.tsx:298`
+
+### New Problems Discovered During Code Trace
+
+#### Problem 21: Review-mode hydration flicker (transient non-review UI)
+
+`QuestionView` initially renders with `submitResult = null`, so the submit button is shown (`question-page-client.tsx:327`) until `loadPreviousAttempt` finishes asynchronously (`use-question-page-controller.ts:225`). This can briefly show attempt-mode controls in a review route before it switches to read-only review state.
+
+#### Problem 22: Feedback uses assertive live region for long content
+
+`Feedback` uses `role="alert"` (`components/question/feedback.tsx:45`), which is assertive and can force immediate screen-reader interruption for large blocks (verdict + explanation + wrong answers + reference). For this size/content type, `role="status"` or a smaller assertive announcement element may be more appropriate.
+
+### Existing Tests Likely Affected by UI Changes
+
+- `components/question/Feedback.test.tsx`
+- `components/question/ChoiceButton.test.tsx`
+- `components/question/ChoiceButton.browser.spec.tsx`
+- `components/question/QuestionCard.test.tsx`
+- `components/question/QuestionCard.browser.spec.tsx`
+- `components/markdown/Markdown.test.tsx`
+- `app/(app)/app/practice/components/practice-view.test.tsx`
+- `app/(app)/app/practice/components/practice-view.browser.spec.tsx`
+- `app/(app)/app/practice/components/practice-view-notification.browser.spec.tsx`
+- `app/(app)/app/practice/quick/quick-practice-client.test.tsx`
+- `app/(app)/app/practice/quick/quick-practice-client.browser.spec.tsx`
+- `app/(app)/app/questions/[slug]/question-page-client.test.tsx`
+- `components/theme-token-regression.test.tsx`
+- `tests/e2e/practice.spec.ts` (currently asserts literal “Explanation” text)
+- `tests/e2e/subscribe-and-practice.spec.ts` (currently asserts literal “Explanation” text)
+
+## Playwright Validation
+
+Validation run target:
+- `https://naltrexone-university-git-dev-john-h-jungs-projects.vercel.app`
+
+Temporary script used (not committed):
+- `.tmp-bs033-playwright-check.mjs`
+
+Artifacts:
+- `artifacts/bs-033-playwright/01-quick-pre-answer.png`
+- `artifacts/bs-033-playwright/02-quick-post-answer.png`
+- `artifacts/bs-033-playwright/03-review-mode-question.png`
+- `artifacts/bs-033-playwright/run-result.json`
+
+Captured review URL:
+- `https://naltrexone-university-git-dev-john-h-jungs-projects.vercel.app/app/questions/stahls-zolpidem-004?from=history&mode=review&historyHref=%2Fapp%2Fhistory%3Ftab%3Dquestions%26offset%3D0%26limit%3D20&historySeq=stahls-zolpidem-004%2Cstahls-zopiclone-001%2Cstahls-zopiclone-002%2Cstahls-zopiclone-003%2Ckast-2021-003%2Cmyran-2023-012%2Cplaceholder-01-naltrexone-mechanism%2Casam-aaap-2024-stud-009%2Cmeier-2022-003%2Cplaceholder-02-buprenorphine-induction-timing%2Cnollen-2021-004%2Cstahls-zopiclone-004%2Chien-2023-004&historyIndex=0`
+
+### Existing E2E Authentication Pattern (Clerk)
+
+- `tests/e2e/helpers/clerk-auth.ts` signs in via password (`E2E_CLERK_USER_USERNAME` + `E2E_CLERK_USER_PASSWORD`) and most specs gate with `test.skip(!hasClerkCredentials, ...)`.
+- `tests/e2e/global.setup.ts` runs:
+  1. `runE2ECredentialHealthCheck()`
+  2. `seedTestSubscription()`
+  3. `runE2EUserStateReset()`
+  4. `clerkSetup()`
+- `playwright.config.ts` loads `.env.local` then `.env`, and resolves base URL from `NEXT_PUBLIC_APP_URL` (fallback `http://127.0.0.1:3000`).
+- `.env.local` includes `E2E_CLERK_USER_USERNAME` and `E2E_CLERK_USER_PASSWORD` keys.
+
+For this targeted remote validation, `clerkSetup()` + Clerk ticket-style sign-in (`emailAddress`) was used in a temporary script to ensure reliable authentication in the dev deployment context.
+
+### Screenshot Findings
+
+#### 01 Quick Practice (Pre-Answer)
+
+Confirmed visually:
+- Problem 1 (stem paragraphs read as one compact block)
+- Problem 7 (small body text)
+- Problem 13 (choice badge contrast is weak)
+- Problem 16 (plain “Back to Practice” text link, no arrow affordance)
+- Problem 20 (status tabs have weak inactive affordance and no counts)
+
+Partially confirmed:
+- Problem 11 (stem-to-choice separation feels modest but acceptable)
+- Problem 15 pre-submit (Submit is already primary; Next/Bookmark are secondary, so “all same weight” is overstated)
+
+#### 02 Quick Practice (Post-Answer)
+
+Confirmed visually:
+- Problem 2 (entire feedback container tinted red/green)
+- Problem 3 (static “Explanation” heading)
+- Problem 8 (verdict appears as text, not a prominent badge)
+- Problem 10 (verdict + explanation hierarchy remains tight)
+- Problem 12 (wrong-answer cards repeat full answer text)
+- Problem 15 post-submit (Submit remains disabled instead of transitioning to a clearer next-step primary action)
+- Problem 18 (no “Your answer” marker in wrong-answer section)
+
+Partially confirmed:
+- Problem 19 (unchosen wrong answers are dimmed, but no explicit wrong indicator)
+- Problem 17 (no auto-scroll movement observed in this run; `run-result.json` shows `preSubmitY=0`, `postSubmitY=0`; question length was short enough to keep feedback in viewport)
+
+#### 03 Review Mode
+
+Confirmed visually:
+- Shared rendering stack with Quick Practice (same `QuestionCard`, `ChoiceButton`, `Feedback`, `Markdown` output)
+- Same feedback styling concerns (Problems 2, 3, 8, 10, 12) appear in review mode
+- Divergent action bar behavior from Quick Practice (review-specific Prev/Try Again/Next/Back actions)
+
+Additional observation:
+- Review mode can show transient pre-hydration state before prior-attempt data resolves (Problem 21); this was reproduced during automation and aligns with controller flow.
+
 ## Implementation Priority: Component-First Strategy
 
 **Decision (2026-02-25):** Fix everything possible at the **display/component layer first**, without touching any raw MDX content files. MDX/content-level fixes are deferred to a later phase once we know the full scope.
@@ -535,7 +691,7 @@ These are all React component changes. They improve rendering of existing conten
 | 1+4 | Stem paragraphs and clinical pearl run together | Add prose spacing to `<Markdown>` (e.g., `[&_p+p]:mt-3` or Tailwind `prose` classes) so existing `<p>` tags get visual separation | `components/markdown/Markdown.tsx` |
 | 2+8 | Feedback card green/red too heavy + verdict needs badge | Remove `bg-success/10` / `bg-destructive/10` from Card wrapper. Style "Correct"/"Incorrect" as a colored badge/chip (`rounded-full px-3 py-1 bg-success/15 text-success`). Card stays neutral | `components/question/feedback.tsx` |
 | 3 | "Explanation" label redundant — show correct answer | Replace static "Explanation" text with the correct answer's display label + text (data already in `choiceExplanations` prop) | `components/question/feedback.tsx` |
-| 15 | Button hierarchy + post-submit state | Pre-submit: Submit = filled primary, Next = ghost. Post-submit: hide/disable Submit, promote Next → to primary | `practice-view.tsx` (action bar) |
+| 15 | Button hierarchy + post-submit state | Keep current pre-submit hierarchy (Submit already primary). Post-submit: hide/disable Submit and promote Next → to primary | `practice-view.tsx` (action bar) |
 | 17 | Auto-scroll to feedback post-submit | `scrollIntoView({ behavior: 'smooth', block: 'start' })` on feedback card after submission | Practice view component |
 
 **Tier 2 — Medium severity, low effort:**
@@ -556,7 +712,7 @@ These are all React component changes. They improve rendering of existing conten
 | # | Problem | Fix | File(s) |
 |---|---------|-----|---------|
 | 16 | "Back to Practice" lacks arrow | Add `←` or `ChevronLeft` icon before text | Quick Practice page header |
-| 19 | Unchosen wrong answers unstyled post-submit | Apply `opacity-60` to unchosen wrong answers | `choice-button.tsx`, `question-card.tsx` |
+| 19 | Unchosen wrong answers have only passive dimming post-submit | Keep dimming, but add explicit indicator (e.g., subtle ✗ or “Incorrect” micro-badge) for unselected wrong answers | `choice-button.tsx`, `question-card.tsx` |
 | 20 | Filter tabs: affordance, counts, touch targets | Better inactive styling, add question counts, ensure 44px min height | Quick Practice filter component |
 
 **Total files touched:** ~6 components, 0 content files
@@ -616,3 +772,4 @@ Nice-to-have improvements that go beyond fixing current issues:
 | 2026-02-25 | Component-first strategy | Fix display layer without touching MDX. Defer content-level fixes until component changes are validated and content scope is assessed |
 | 2026-02-25 | Integrated Chrome agent audit #1 (review mode) | Added Problems 8-12 (verdict badge, reference label, spacing gaps, wrong-answer text repetition). All component-level |
 | 2026-02-25 | Integrated Chrome agent audit #2 (Quick Practice pre+post answer) | Added Problems 13-20 (badge contrast, hover/focus, button hierarchy, auto-scroll, "Your answer" label, unchosen answer dimming, filter tabs). Organized NOW into Tier 1/2/3 by severity |
+| 2026-02-25 | Playwright + code trace validation | All 20 original problems confirmed against source code. 4 partially corrected (P14: hover/focus exists but subtle; P15: pre-submit hierarchy already differentiated; P19: opacity-50 dimming already exists; P20: tabs not disabled, just weak affordance). 2 new problems discovered (P21: review-mode hydration flicker; P22: role="alert" on long content). Total: 22 problems |
