@@ -1,19 +1,19 @@
-# BS-014: Practice Starter — Silent Truncation When Fewer Questions Available
+# BS-014: Practice Starter — Question Count UX Polish
 
 **Date:** 2026-02-13
-**Last Updated:** 2026-02-22
+**Last Updated:** 2026-02-24
 **Triggered by:** UX review of practice session starter question count behavior
-**Scope:** Users can request more questions than their filters match, resulting in a silently truncated session
-**Related:** GitHub #82, Issue #53
+**Scope:** Remaining UX polish decisions for the practice starter question count experience
+**Related:** GitHub #82 (closed — core fix shipped), Issue #53
 **Originally:** DEBT-207 (moved to brainstorming — the problem is real but the right UX fix needs design work before implementation)
 
 ---
 
-## Current Status (2026-02-22)
+## Current Status (2026-02-24)
 
-The core problem (silent truncation) is **resolved for V1**. The pre-start available count display was implemented instead of the post-creation toast originally proposed. Users now see real-time feedback like "Only 2 questions available. Starting session with 2." before clicking Start. See [What Was Implemented](#what-was-implemented) below.
+The core problem (silent truncation) is **resolved** — GitHub #82 is closed. Users now see real-time feedback like "Only 2 questions available. Starting session with 2." before clicking Start.
 
-Remaining ideas for future UX polish are tracked in [Future Improvements](#future-improvements-not-yet-implemented).
+**This doc remains active for 4 remaining UX decisions** that need deliberation before implementing. See [Decisions Needed](#decisions-needed) below. None are bugs — the current behavior is functional and communicative.
 
 ---
 
@@ -71,37 +71,47 @@ This approach was originally described as the "Alternative Approach: Pre-Start C
 
 ---
 
-## Future Improvements (Not Yet Implemented)
+## Decisions Needed
 
-These are UX polish ideas that may be worth revisiting in future versions. None are bugs — the current behavior is functional and communicative.
+These 4 items need a deliberate yes/no decision before implementing. None are bugs — the current UX works.
 
-### 1. Dynamic Input Capping
+### 1. Dynamic Input Capping — Implement or skip?
 
 Auto-set the question count input's `max` attribute to the available count so users can't type a number higher than what's available. Currently the input allows 1–100 regardless of filter results.
 
 **Trade-off:** Could feel restrictive if the count updates lag behind filter changes. The current "Only N available" message is non-blocking and informative without constraining the input.
 
-### 2. Disable Start When Count > Available
+**Decision:** TBD
+
+### 2. Disable Start When Count > Available — Implement or skip?
 
 Currently Start is only disabled when `availableCount === 0`. Could also disable (or show a warning state) when the requested count exceeds available.
 
 **Trade-off:** The session still works fine with fewer questions — it's not an error state. Disabling Start might over-communicate.
 
-### 3. Per-Tag Question Counts (Issue #53)
+**Decision:** TBD
 
-Show the number of questions next to each tag chip (e.g., "Pharmacology (42)"). This helps users understand filter impact before selecting. Related to GitHub Issue #53.
+### 3. Per-Tag Question Counts (GitHub #53) — Implement or skip?
+
+Show the number of questions next to each `FilterChip` (e.g., "Pharmacology (42)"). Currently each chip only shows `tag.name` — users can't see per-tag question counts, only the overall available count. GitHub #53 tracks this as the last remaining item from the original tag selector enhancement.
+
+**Note:** The overall filter count ("N questions available") IS implemented via `availableCountMessage`. This decision is specifically about **per-tag** counts on individual chips.
 
 **Trade-off:** Requires an additional query or pre-computed counts. May add visual noise to the tag section.
 
-### 4. Post-Creation Toast (Original BS-014 Step 3)
+**Decision:** TBD — resolving this also resolves GitHub #53
+
+### 4. Post-Creation Toast — Implement or skip?
 
 Even with the pre-start count, a post-creation toast could serve as a secondary confirmation when `actualCount < requestedCount`. Low priority since the pre-start message already communicates this.
+
+**Decision:** TBD
 
 ---
 
 ## Open Questions
 
-1. **How do professional question banks handle this?** UWorld, Amboss, Kaplan — do they show available counts? Cap the input? Both? Research could inform future UX iterations.
+1. **How do professional question banks handle this?** UWorld, Amboss, Kaplan — do they show available counts? Cap the input? Both? Research could inform future UX iterations. Answering this could drive all 4 decisions above.
 
 ---
 
