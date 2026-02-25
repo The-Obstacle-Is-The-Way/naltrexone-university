@@ -7,6 +7,17 @@ import {
 
 const ORIGINAL_ENV = snapshotProcessEnv();
 
+const matchesPathnameAgainstPattern = (
+  pathname: string,
+  pattern: string,
+): boolean => {
+  try {
+    return new RegExp(`^${pattern}$`).test(pathname);
+  } catch {
+    return false;
+  }
+};
+
 describe('proxy middleware', () => {
   afterEach(() => {
     restoreProcessEnv(ORIGINAL_ENV);
@@ -240,12 +251,9 @@ describe('proxy middleware', () => {
     );
     const createRouteMatcher = vi.fn((patterns: string[]) => (req: unknown) => {
       const pathname = new URL((req as { url: string }).url).pathname;
-
-      if (pathname.startsWith('/checkout/success')) {
-        return patterns.some((p) => p.startsWith('/checkout/success'));
-      }
-
-      return false;
+      return patterns.some((pattern) =>
+        matchesPathnameAgainstPattern(pathname, pattern),
+      );
     });
 
     vi.doMock('@clerk/nextjs/server', () => ({
@@ -318,12 +326,9 @@ describe('proxy middleware', () => {
     );
     const createRouteMatcher = vi.fn((patterns: string[]) => (req: unknown) => {
       const pathname = new URL((req as { url: string }).url).pathname;
-
-      if (pathname.startsWith('/checkout/success')) {
-        return patterns.some((p) => p.startsWith('/checkout/success'));
-      }
-
-      return false;
+      return patterns.some((pattern) =>
+        matchesPathnameAgainstPattern(pathname, pattern),
+      );
     });
 
     vi.doMock('@clerk/nextjs/server', () => ({
