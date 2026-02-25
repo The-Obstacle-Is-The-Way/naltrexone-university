@@ -248,6 +248,26 @@ The Dashboard review shows "Try Again" for a correctly-answered question. The Hi
 
 3. **Should the related UX inconsistencies (subtitle, back link, Try Again label) be addressed in the same fix or tracked separately?** They are independent of the navigator bug and could be deferred to BS-033 (which already tracks feedback UX issues) or a separate pass.
 
+4. **Should the Questions tab scope be narrowed to ad-hoc questions only?** This is a higher-order design question. Two valid positions:
+
+   **Position A — Questions tab = ad-hoc only (clean separation):**
+   - Sessions tab owns Tutor + Exam review (session-level view with breakdown)
+   - Questions tab owns ad-hoc Quick Practice review (individual question view)
+   - Clear mental model: "Sessions" for sessions, "Questions" for one-offs
+   - Eliminates the current confusion of Tutor/Exam questions appearing on the Questions tab but losing their session context when reviewed
+   - Simpler implementation — no need to handle mixed session/ad-hoc review links
+
+   **Position B — Questions tab = unified question log (current design, fix the wiring):**
+   - Questions tab remains a searchable flat list of ALL attempted questions regardless of source
+   - Useful for "find that one question about topiramate" without remembering which session it was in
+   - The Source filter already lets users narrow to ad-hoc/tutor/exam
+   - Fix: session questions get `sessionId` in their review link, ad-hoc questions get standalone review
+   - More complex — two different review link patterns on the same tab
+
+   **Trade-off:** Position A is simpler and avoids mixed-mode confusion. Position B preserves the ability to search across all questions by topic/difficulty/tag. This decision affects the fix approach — Position A means filtering the query to exclude session questions; Position B means fixing the review link per row based on `sessionId`.
+
+   **This must be decided before speccing the fix.**
+
 ---
 
 ## Decision Log
