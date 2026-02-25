@@ -1,7 +1,7 @@
 # Technical Debt Register
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-02-24
+**Last Updated:** 2026-02-25
 
 ---
 
@@ -15,9 +15,11 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 ## Debt Index (Active)
 
-*No active items.*
+| ID | Title | Priority | GitHub Issue |
+|----|-------|----------|--------------|
+| [DEBT-249](./debt-249-checkout-success-auth-boundary-hardening.md) | Checkout Success Auth Boundary Hardening (Stripe Return + Clerk Redirect) | P1 | — |
 
-**Next Debt ID:** DEBT-249
+**Next Debt ID:** DEBT-250
 
 ---
 

@@ -1,7 +1,7 @@
 # Brainstorming Register
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-02-24
+**Last Updated:** 2026-02-25
 
 ---
 
@@ -28,8 +28,9 @@ Brainstorming (BS-NNN) → Spec (SPEC-NNN) → Implementation → Archive
 | ID | Title | Status | Related Spec |
 |----|-------|--------|--------------|
 | [BS-014](./bs-014-practice-starter-question-count-ux.md) | Practice Starter — Question Count UX Polish (4 decisions pending) | Active | — |
+| [BS-033](./bs-033-question-display-formatting-and-feedback-ux.md) | Question Display Formatting and Feedback UX — Stem Breaks, Feedback Colors, Explanation Layout | Active | — |
 
-**Next Brainstorming ID:** BS-032
+**Next Brainstorming ID:** BS-034
 
 ---
 
@@ -37,6 +38,7 @@ Brainstorming (BS-NNN) → Spec (SPEC-NNN) → Implementation → Archive
 
 | ID | Title | Outcome |
 |----|-------|---------|
+| [BS-032](../_archive/brainstorming/bs-032-stripe-checkout-clerk-session-friction.md) | Stripe Checkout → Clerk Session Friction — Post-Payment Auth Bounce | Promoted to DEBT-249; core auth-boundary hardening implemented, rollout instrumentation tracked in SPEC-016 |
 | [BS-031](../_archive/brainstorming/bs-031-card-row-affordance-consistency.md) | Card/Row Affordance Consistency — Interaction Pattern Audit | Resolved as BUG-151 |
 | [BS-001](../_archive/brainstorming/bs-001-practice-ux-audit.md) | Practice UX Audit (8 Problems) | All 8 problems resolved; led to SPEC-019 |
 | [BS-002](../_archive/brainstorming/bs-002-practice-engine-state-audit.md) | Practice Engine State Audit | All critical findings fixed; informed SPEC-020 |
