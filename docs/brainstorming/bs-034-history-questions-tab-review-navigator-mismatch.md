@@ -146,54 +146,39 @@ Since `isCorrect` is `null` for all historySeq-sourced questions, every button r
 
 ---
 
-## Proposed Fix (Sketch)
+## Proposed Fix (Decided: Position A — Ad-Hoc Only)
 
-### Option A: Route by `sessionId` presence per row (Recommended)
+With Open Question 4 resolved, the fix is to scope the Questions tab to ad-hoc questions only. This addresses both bugs simultaneously: the navigator bug (no `historySeq` needed) and the session context loss (session questions don't appear here).
 
-In `history-questions-tab.tsx`, differentiate the review link based on whether the question has a `sessionId`:
+### Changes Required
+
+**1. Filter query to ad-hoc only**
+
+The `GetAttemptedQuestions` use case already supports a `source` filter. Hardcode `source: 'adhoc'` when fetching for the Questions tab, so Tutor/Exam questions are excluded at the query level.
+
+**2. Remove `historySequence` computation and `historySeq` from review links**
+
+`history-questions-tab.tsx:192-199` — delete the `historySequence`, `historySequenceParam`, and `historyIndexBySlug` computation entirely.
+
+`history-questions-tab.tsx:502-508` — simplify review links to standalone:
 
 ```tsx
-// For questions WITH a session → use sessionId (real navigator)
-const href = row.sessionId
-  ? toQuestionRoute(row.slug, {
-      from: 'history',
-      mode: 'review',
-      sessionId: row.sessionId,
-      historyHref,
-    })
-  // For ad-hoc questions → standalone review (no sequence)
-  : toQuestionRoute(row.slug, {
-      from: 'history',
-      mode: 'review',
-      historyHref,
-    });
+const href = toQuestionRoute(row.slug, {
+  from: 'history',
+  mode: 'review',
+  historyHref,
+});
 ```
 
-**Pros:**
-- Session questions get the proper navigator (fetched from DB with real `isCorrect` values)
-- Ad-hoc questions get standalone review (matching Dashboard behavior)
-- Removes the `historySequence` computation entirely (lines 192-199 can be deleted)
-- Clean separation: sessions tab handles session navigation, questions tab is a flat list
+No `historySeq`, no `historyIndex`, no `sessionId`. Every question on the tab is ad-hoc, so every review is standalone.
 
-**Cons:**
-- Loses the ability to navigate between questions on the Questions tab page — but this was semantically wrong anyway since the questions aren't related
+**3. Remove the Source filter dropdown**
 
-### Option B: Filter `historySeq` to only include questions sharing the same `sessionId`
+With only ad-hoc questions on the tab, the Source filter (All / Tutor / Exam / Ad-hoc practice) is unnecessary. Remove it from the UI. The remaining filters (Result, Difficulty, Tag, Sort) are still useful.
 
-Keep the `historySeq` mechanism but only group questions that share a `sessionId`. Ad-hoc questions (no sessionId) would be excluded from any sequence.
+**4. Update subtitle**
 
-**Pros:**
-- Preserves navigation for session questions that appear on the same page
-- More surgical change
-
-**Cons:**
-- Still produces a partial, client-side view of the session (only questions visible on the current page, not all session questions)
-- The Sessions tab already provides the complete, correct session navigator via `sessionId`
-- Adds complexity for no real user benefit
-
-### Recommendation: **Option A**
-
-The Questions tab is a flat, filterable list of ALL attempted questions. Its job is to let users find and review individual questions — not to replicate session navigation. The Sessions tab already handles session-based review correctly. Option A simplifies the code and gives users the correct mental model: "I'm reviewing one question from my history."
+"Review completed sessions and all attempted questions." → "Review completed sessions and individual practice questions."
 
 ---
 
@@ -201,13 +186,16 @@ The Questions tab is a flat, filterable list of ALL attempted questions. Its job
 
 | File | Change |
 |------|--------|
-| `app/(app)/app/history/components/history-questions-tab.tsx` | Remove `historySequence` computation (L192-199). Update review link to use `sessionId` for session questions, standalone for ad-hoc (L502-508). |
-| `app/(app)/app/history/components/history-questions-tab.test.tsx` | Update test expectations for review link `href` values |
+| `app/(app)/app/history/components/history-questions-tab.tsx` | Hardcode `source: 'adhoc'` in query. Remove `historySequence` computation (L192-199). Simplify review links (L502-508). Remove Source filter dropdown. |
+| `app/(app)/app/history/components/history-questions-tab.test.tsx` | Update test expectations: review link `href` values no longer include `historySeq`/`historyIndex`. Remove or update Source filter tests. |
+| `app/(app)/app/history/history-search-params.ts` | Remove `source` from `QuestionsFilters` type (or keep for API but remove from UI). |
+| `app/(app)/app/history/page.tsx` (or parent) | Update subtitle text. |
 
 No changes needed to:
-- `use-question-page-controller.ts` — the `historySeq` path can remain as a valid fallback for any future use
-- `review-question-navigator.tsx` — unchanged, just won't receive historySeq-sourced data for ad-hoc questions
-- `lib/routes.ts` — `toQuestionRoute` already supports both signatures
+- `use-question-page-controller.ts` — the `historySeq` path can remain as a dead-code fallback for any future use
+- `review-question-navigator.tsx` — unchanged, just won't be triggered from the Questions tab
+- `lib/routes.ts` — `toQuestionRoute` already supports the simplified signature
+- `src/application/use-cases/get-attempted-questions.ts` — already supports `source` filter, just needs to be called with `'adhoc'`
 
 ---
 
@@ -242,31 +230,34 @@ The Dashboard review shows "Try Again" for a correctly-answered question. The Hi
 
 ## Open Questions
 
-1. **~~Should session questions on the Questions tab use `sessionId` or `historySeq`?~~** **Resolved:** Chrome agent confirmed Tutor/Exam questions from the Questions tab get `historySeq` instead of `sessionId`, losing all session context. Option A (`sessionId`) is now definitively the correct choice — it restores the real session relationship with color-coded buttons.
+1. **~~Should session questions on the Questions tab use `sessionId` or `historySeq`?~~** **Superseded by Q4 decision.** With Position A, session questions won't appear on the Questions tab at all.
 
 2. **Should we add an `attemptId` to the ad-hoc review link?** The Dashboard uses `attemptId` in its review links. The Questions tab currently doesn't have `attemptId` in its row data. Adding it would make the Dashboard and Questions tab review links identical for ad-hoc questions. Not strictly necessary — the question page works without `attemptId` — but worth considering for parity.
 
 3. **Should the related UX inconsistencies (subtitle, back link, Try Again label) be addressed in the same fix or tracked separately?** They are independent of the navigator bug and could be deferred to BS-033 (which already tracks feedback UX issues) or a separate pass.
 
-4. **Should the Questions tab scope be narrowed to ad-hoc questions only?** This is a higher-order design question. Two valid positions:
+4. **~~Should the Questions tab scope be narrowed to ad-hoc questions only?~~** **Resolved: Position A — ad-hoc only.**
 
-   **Position A — Questions tab = ad-hoc only (clean separation):**
-   - Sessions tab owns Tutor + Exam review (session-level view with breakdown)
-   - Questions tab owns ad-hoc Quick Practice review (individual question view)
-   - Clear mental model: "Sessions" for sessions, "Questions" for one-offs
-   - Eliminates the current confusion of Tutor/Exam questions appearing on the Questions tab but losing their session context when reviewed
-   - Simpler implementation — no need to handle mixed session/ad-hoc review links
+   The app's practice modes have a clear hierarchy:
+   - **Practice → Sessions** (Tutor / Exam) — batched, session-scoped, reviewed with navigator
+   - **Quick Practice** — individual, ad-hoc, reviewed standalone
 
-   **Position B — Questions tab = unified question log (current design, fix the wiring):**
-   - Questions tab remains a searchable flat list of ALL attempted questions regardless of source
-   - Useful for "find that one question about topiramate" without remembering which session it was in
-   - The Source filter already lets users narrow to ad-hoc/tutor/exam
-   - Fix: session questions get `sessionId` in their review link, ad-hoc questions get standalone review
-   - More complex — two different review link patterns on the same tab
+   History should mirror that same hierarchy:
+   - **History → Sessions tab** — review Tutor/Exam sessions (with session navigator, color-coded buttons, breakdown)
+   - **History → Questions tab** — review Quick Practice ad-hoc questions (standalone, no navigator)
 
-   **Trade-off:** Position A is simpler and avoids mixed-mode confusion. Position B preserves the ability to search across all questions by topic/difficulty/tag. This decision affects the fix approach — Position A means filtering the query to exclude session questions; Position B means fixing the review link per row based on `sessionId`.
+   **Why Position A wins:**
+   - Session questions ripped out of their session lose context (no color coding, wrong question group, no session score)
+   - The Questions tab can't meaningfully represent session relationships — it's a flat list
+   - The Source filter (Tutor/Exam/Ad-hoc) becomes unnecessary when only one source exists
+   - Simpler implementation — no mixed review link patterns, no `historySeq` at all
 
-   **This must be decided before speccing the fix.**
+   **Implementation implications:**
+   - Filter the `GetAttemptedQuestions` query to exclude questions with a `sessionId` (i.e., `source: 'adhoc'` hardcoded or equivalent)
+   - Remove the Source filter dropdown from the Questions tab UI
+   - Remove the `historySequence` computation and `historySeq`/`historyIndex` from review links
+   - Ad-hoc review links become standalone: `toQuestionRoute(slug, { from: 'history', mode: 'review', historyHref })`
+   - The subtitle can be updated: "Review completed sessions and all attempted questions." → "Review completed sessions and individual practice questions."
 
 ---
 
@@ -275,4 +266,5 @@ The Dashboard review shows "Try Again" for a correctly-answered question. The Hi
 | Date | Decision | Rationale |
 |------|----------|-----------|
 | 2026-02-25 | Created BS-034 | Manual UX walkthrough revealed ad-hoc questions incorrectly grouped into navigator |
-| 2026-02-25 | Chrome agent audit validates and expands scope | Confirmed bug at scale (20 buttons). Discovered Tutor/Exam questions also lose session context from Questions tab. Source filter does not suppress. Three related UX inconsistencies flagged. Severity upgraded from Medium-High to High. Open question 1 resolved in favor of Option A. |
+| 2026-02-25 | Chrome agent audit validates and expands scope | Confirmed bug at scale (20 buttons). Discovered Tutor/Exam questions also lose session context from Questions tab. Source filter does not suppress. Three related UX inconsistencies flagged. Severity upgraded from Medium-High to High. |
+| 2026-02-25 | **Decided: Position A — Questions tab = ad-hoc only** | History should mirror Practice hierarchy: Sessions tab for Tutor/Exam, Questions tab for Quick Practice. Session questions lose context on the Questions tab (no color coding, wrong group). Clean separation is simpler to implement and gives users the correct mental model. Source filter becomes unnecessary. |
