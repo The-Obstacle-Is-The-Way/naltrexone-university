@@ -354,4 +354,57 @@ describe('proxy middleware', () => {
     ).searchParams.get('redirect_url');
     expect(redirectUrl).toBe(checkoutSuccessUrl);
   });
+
+  it('preserves full checkout success URL including session_id when Clerk handshake redirects before callback execution', async () => {
+    process.env.NEXT_PUBLIC_SKIP_CLERK = 'false';
+
+    type ClerkMiddlewareCallback = (
+      auth: { protect: () => Promise<void> },
+      request: unknown,
+    ) => Promise<void> | void;
+
+    const checkoutSuccessUrl =
+      'https://example.com/checkout/success?session_id=cs_test_xxx';
+
+    const clerkMiddleware = vi.fn((_cb: ClerkMiddlewareCallback) =>
+      // Simulate authenticateRequest() returning a handshake redirect before invoking user callback.
+      vi.fn(async (req: unknown) => {
+        const redirectUrl = encodeURIComponent((req as { url: string }).url);
+        return new Response(null, {
+          status: 307,
+          headers: {
+            location: `https://clerk.accounts.dev/v1/client/handshake?__clerk_handshake=1&redirect_url=${redirectUrl}`,
+          },
+        });
+      }),
+    );
+    const createRouteMatcher = vi.fn(() => () => false);
+
+    vi.doMock('@clerk/nextjs/server', () => ({
+      clerkMiddleware,
+      createRouteMatcher,
+    }));
+
+    const { default: middleware } = await import('./proxy');
+
+    const res = await middleware(
+      {
+        url: checkoutSuccessUrl,
+      } as unknown as NextRequest,
+      {} as unknown as NextFetchEvent,
+    );
+
+    if (!res) {
+      throw new Error('Expected middleware to return a response');
+    }
+
+    expect(res.status).toBe(307);
+    const location = res.headers.get('location');
+    expect(location).not.toBeNull();
+
+    const redirectUrl = new URL(location ?? '').searchParams.get(
+      'redirect_url',
+    );
+    expect(redirectUrl).toBe(checkoutSuccessUrl);
+  });
 });

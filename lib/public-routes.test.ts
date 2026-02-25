@@ -6,14 +6,6 @@ describe('PUBLIC_ROUTE_PATTERNS', () => {
     expect(PUBLIC_ROUTE_PATTERNS).not.toContain('/checkout/success(.*)');
   });
 
-  it('explicitly keeps checkout success protected in middleware matching', () => {
-    const hasCheckoutSuccessMatcher = PUBLIC_ROUTE_PATTERNS.some(
-      (pattern) => pattern === '/checkout/success(.*)',
-    );
-
-    expect(hasCheckoutSuccessMatcher).toBe(false);
-  });
-
   it('includes the cron reconcile route so cron auth is enforced at route level', () => {
     expect(PUBLIC_ROUTE_PATTERNS).toContain(
       '/api/cron/reconcile-stripe-subscriptions(.*)',
