@@ -242,7 +242,7 @@ describe('proxy middleware', () => {
       const pathname = new URL((req as { url: string }).url).pathname;
 
       if (pathname.startsWith('/checkout/success')) {
-        return patterns.includes('/checkout/success(.*)');
+        return patterns.some((p) => p.startsWith('/checkout/success'));
       }
 
       return false;
@@ -320,7 +320,7 @@ describe('proxy middleware', () => {
       const pathname = new URL((req as { url: string }).url).pathname;
 
       if (pathname.startsWith('/checkout/success')) {
-        return patterns.includes('/checkout/success(.*)');
+        return patterns.some((p) => p.startsWith('/checkout/success'));
       }
 
       return false;
