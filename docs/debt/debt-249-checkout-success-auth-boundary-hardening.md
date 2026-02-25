@@ -39,7 +39,7 @@ Changing `PUBLIC_ROUTE_PATTERNS` alone is not sufficient; redirect semantics and
    - `lib/public-routes.test.ts` reflects protected route.
    - `proxy.test.ts` covers preserved `session_id` query in redirect behavior.
    - existing checkout success tests continue to pass.
-6. Add rollout instrumentation:
+6. Add rollout instrumentation (tracked in [SPEC-016](../specs/spec-016-observability.md)):
    - auth bounce count on `/checkout/success`
    - `%` of checkout-success requests missing `session_id`
    - checkout error redirect rate (`/pricing?checkout=error`)

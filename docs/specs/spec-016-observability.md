@@ -332,6 +332,11 @@ pnpm add -D pino-pretty              # Pretty logs in dev terminal
 - [ ] Pretty logs in dev (requires `pino-pretty`)
 - [ ] LOG_LEVEL documented in .env.example
 
+**Not Yet Done (DEBT-249 Rollout Instrumentation):**
+- [ ] Auth bounce count on `/checkout/success` — track how often middleware redirects unauthenticated users to sign-in on this route
+- [ ] % of checkout-success requests missing `session_id` — detect Stripe return URLs that lost the query param
+- [ ] Checkout error redirect rate (`/pricing?checkout=error`) — monitor how often the success page fails and falls back to the error redirect
+
 ---
 
 ## Testing
