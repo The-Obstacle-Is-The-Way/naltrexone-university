@@ -1,7 +1,7 @@
 # Brainstorming Register
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-02-24
+**Last Updated:** 2026-02-25
 
 ---
 
@@ -28,8 +28,9 @@ Brainstorming (BS-NNN) → Spec (SPEC-NNN) → Implementation → Archive
 | ID | Title | Status | Related Spec |
 |----|-------|--------|--------------|
 | [BS-014](./bs-014-practice-starter-question-count-ux.md) | Practice Starter — Question Count UX Polish (4 decisions pending) | Active | — |
+| [BS-032](./bs-032-stripe-checkout-clerk-session-friction.md) | Stripe Checkout → Clerk Session Friction — Post-Payment Auth Bounce | Active | — |
 
-**Next Brainstorming ID:** BS-032
+**Next Brainstorming ID:** BS-033
 
 ---
 
