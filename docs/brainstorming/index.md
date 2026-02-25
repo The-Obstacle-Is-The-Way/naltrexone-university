@@ -29,8 +29,9 @@ Brainstorming (BS-NNN) → Spec (SPEC-NNN) → Implementation → Archive
 |----|-------|--------|--------------|
 | [BS-014](./bs-014-practice-starter-question-count-ux.md) | Practice Starter — Question Count UX Polish (4 decisions pending) | Active | — |
 | [BS-033](./bs-033-question-display-formatting-and-feedback-ux.md) | Question Display Formatting and Feedback UX — Stem Breaks, Feedback Colors, Explanation Layout | Active | — |
+| [BS-034](./bs-034-history-questions-tab-review-navigator-mismatch.md) | History Questions Tab — Ad-Hoc Questions Incorrectly Grouped into Question Navigator | Active | — |
 
-**Next Brainstorming ID:** BS-034
+**Next Brainstorming ID:** BS-035
 
 ---
 
