@@ -151,10 +151,7 @@ export function MarketingHomeShell({
                 return (
                   <Card
                     key={feature.title}
-                    className={cn(
-                      'transition-colors hover:bg-muted',
-                      feature.wide && 'md:col-span-2',
-                    )}
+                    className={cn(feature.wide && 'md:col-span-2')}
                   >
                     <Icon
                       aria-hidden="true"

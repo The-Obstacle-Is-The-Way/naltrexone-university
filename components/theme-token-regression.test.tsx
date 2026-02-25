@@ -1,6 +1,14 @@
 // @vitest-environment jsdom
 import { renderToStaticMarkup } from 'react-dom/server';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import {
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from 'vitest';
 import {
   restoreProcessEnv,
   snapshotProcessEnv,
@@ -12,21 +20,42 @@ vi.mock('next/link', () => ({
 
 const ORIGINAL_ENV = snapshotProcessEnv();
 
+let GetStartedCta: typeof import('@/components/get-started-cta').GetStartedCta;
+let PricingView: typeof import('@/app/pricing/pricing-view').PricingView;
+let DashboardView: typeof import('@/app/(app)/app/dashboard/page').DashboardView;
+let SessionSummaryView: typeof import('@/app/(app)/app/practice/[sessionId]/components/session-summary-view').SessionSummaryView;
+let MarketingHomeShell: typeof import('@/components/marketing/marketing-home').MarketingHomeShell;
+let ChoiceButton: typeof import('@/components/question/choice-button').ChoiceButton;
+let Feedback: typeof import('@/components/question/feedback').Feedback;
+let BillingContent: typeof import('@/app/(app)/app/billing/page').BillingContent;
+
 describe('theme token regression', () => {
+  beforeAll(async () => {
+    ({ GetStartedCta } = await import('@/components/get-started-cta'));
+    ({ PricingView } = await import('@/app/pricing/pricing-view'));
+    ({ DashboardView } = await import('@/app/(app)/app/dashboard/page'));
+    ({ SessionSummaryView } = await import(
+      '@/app/(app)/app/practice/[sessionId]/components/session-summary-view'
+    ));
+    ({ MarketingHomeShell } = await import(
+      '@/components/marketing/marketing-home'
+    ));
+    ({ ChoiceButton } = await import('@/components/question/choice-button'));
+    ({ Feedback } = await import('@/components/question/feedback'));
+    ({ BillingContent } = await import('@/app/(app)/app/billing/page'));
+  });
+
   beforeEach(() => {
     restoreProcessEnv(ORIGINAL_ENV);
-    vi.resetModules();
   });
 
   afterEach(() => {
     restoreProcessEnv(ORIGINAL_ENV);
-    vi.resetModules();
     vi.restoreAllMocks();
   });
 
   it('uses semantic CTA classes in GetStartedCta', async () => {
     process.env.NEXT_PUBLIC_SKIP_CLERK = 'true';
-    const { GetStartedCta } = await import('@/components/get-started-cta');
     const ctaHtml = renderToStaticMarkup(await GetStartedCta());
 
     expect(ctaHtml).toContain('bg-primary');
@@ -35,7 +64,6 @@ describe('theme token regression', () => {
   });
 
   it('uses semantic border tokens in PricingView', async () => {
-    const { PricingView } = await import('@/app/pricing/pricing-view');
     const pricingHtml = renderToStaticMarkup(
       <PricingView
         isEntitled={false}
@@ -50,8 +78,7 @@ describe('theme token regression', () => {
     expect(pricingHtml).toContain('border-primary');
   });
 
-  it('uses semantic hover tokens for dashboard stat cards', async () => {
-    const { DashboardView } = await import('@/app/(app)/app/dashboard/page');
+  it('does not apply hover affordance tokens to non-interactive dashboard stat cards', async () => {
     const dashboardHtml = renderToStaticMarkup(
       <DashboardView
         stats={{
@@ -69,19 +96,11 @@ describe('theme token regression', () => {
       />,
     );
 
-    expect(dashboardHtml).toContain('hover:border-border');
-    expect(dashboardHtml).not.toContain('hover:border-border/80');
-    expect(dashboardHtml).toContain('hover:bg-muted/50');
-    expect(dashboardHtml).not.toContain('hover:border-zinc-700/50');
-    expect(dashboardHtml).not.toContain('hover:bg-zinc-900/80');
+    expect(dashboardHtml).not.toContain('hover:border-border');
+    expect(dashboardHtml).not.toContain('hover:bg-muted/50');
   });
 
-  it('uses the same hover token pattern in session summary stat cards', async () => {
-    const { DashboardView } = await import('@/app/(app)/app/dashboard/page');
-    const { SessionSummaryView } = await import(
-      '@/app/(app)/app/practice/[sessionId]/components/session-summary-view'
-    );
-
+  it('does not use stat-card hover token patterns in session summary cards', async () => {
     const dashboardHtml = renderToStaticMarkup(
       <DashboardView
         stats={{
@@ -137,21 +156,36 @@ describe('theme token regression', () => {
       (card.getAttribute('class') ?? '').includes('hover:bg-muted/50'),
     );
 
-    expect(dashboardHoverCards.length).toBeGreaterThan(0);
-    expect(summaryHoverCards.length).toBeGreaterThan(0);
+    expect(dashboardHoverCards).toHaveLength(0);
+    expect(summaryHoverCards).toHaveLength(0);
+  });
 
-    for (const card of [...dashboardHoverCards, ...summaryHoverCards]) {
-      expect(card.getAttribute('class') ?? '').toContain('hover:border-border');
-      expect(card.getAttribute('class') ?? '').not.toContain(
-        'hover:border-border/80',
+  it('does not apply non-interactive hover tokens to marketing feature cards', async () => {
+    const html = renderToStaticMarkup(
+      <MarketingHomeShell authNav={<div />} primaryCta={<div />} />,
+    );
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const featureTitles = [
+      'High-Yield Explanations',
+      'Tutor + Exam Modes',
+      'Smart Bookmarking',
+      'Progress Dashboard',
+    ];
+
+    for (const title of featureTitles) {
+      const heading = Array.from(doc.querySelectorAll('h3')).find(
+        (element) => element.textContent?.trim() === title,
       );
+      expect(heading).not.toBeUndefined();
+      const featureCard = heading?.closest('[data-slot="card"]');
+      expect(featureCard).not.toBeNull();
+      const className = featureCard?.getAttribute('class') ?? '';
+      expect(className).not.toContain('transition-colors');
+      expect(className).not.toContain('hover:bg-muted');
     }
   });
 
   it('uses semantic border token for ChoiceButton selected state', async () => {
-    const { ChoiceButton } = await import(
-      '@/components/question/choice-button'
-    );
     const html = renderToStaticMarkup(
       <ChoiceButton
         name="choices"
@@ -167,11 +201,6 @@ describe('theme token regression', () => {
   });
 
   it('uses semantic success/destructive tokens in question feedback components', async () => {
-    const { ChoiceButton } = await import(
-      '@/components/question/choice-button'
-    );
-    const { Feedback } = await import('@/components/question/feedback');
-
     const choiceHtml = renderToStaticMarkup(
       <div>
         <ChoiceButton
@@ -212,8 +241,6 @@ describe('theme token regression', () => {
   });
 
   it('uses semantic warning tokens in billing cancellation banner', async () => {
-    const { BillingContent } = await import('@/app/(app)/app/billing/page');
-
     const billingHtml = renderToStaticMarkup(
       <BillingContent
         subscription={{
@@ -236,8 +263,6 @@ describe('theme token regression', () => {
   });
 
   it('uses semantic success tokens in pricing savings label', async () => {
-    const { PricingView } = await import('@/app/pricing/pricing-view');
-
     const pricingHtml = renderToStaticMarkup(
       <PricingView
         isEntitled={false}

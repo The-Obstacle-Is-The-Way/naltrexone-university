@@ -509,15 +509,15 @@ export function HistoryQuestionsTab({
 
               return (
                 <li key={row.questionId}>
-                  <Card className="gap-0 rounded-2xl border-border p-4 shadow-sm">
+                  <Link
+                    href={href}
+                    className="block rounded-2xl border border-border p-4 shadow-sm transition-colors hover:bg-accent/40 focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]"
+                  >
                     <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                       <div className="space-y-2">
-                        <Link
-                          href={href}
-                          className="text-sm font-medium text-foreground hover:underline"
-                        >
+                        <span className="text-sm font-medium text-foreground">
                           {title}
-                        </Link>
+                        </span>
 
                         {shouldShowBodyText ? (
                           <div
@@ -534,20 +534,11 @@ export function HistoryQuestionsTab({
                         />
                       </div>
 
-                      <Button
-                        asChild
-                        variant="outline"
-                        className="rounded-full"
-                      >
-                        <Link
-                          href={href}
-                          aria-label={`Review question: ${title}`}
-                        >
-                          Review
-                        </Link>
-                      </Button>
+                      <span className="inline-flex items-center rounded-full border px-4 py-2 text-sm">
+                        Review
+                      </span>
                     </div>
-                  </Card>
+                  </Link>
                 </li>
               );
             })}

@@ -1,6 +1,6 @@
 # BUG-151: Card/Row Affordance Inconsistency — Misleading Hover, Missing Focus Rings, Pattern Asymmetry
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P2
 **Date:** 2026-02-23
 
@@ -12,7 +12,7 @@ A card/row interaction audit across Dashboard, History, Bookmarks, Practice summ
 
 1. **Non-interactive cards with hover affordance** — Cards change color on hover but don't do anything when clicked, misleading users into thinking they're interactive.
 2. **Interactive links missing `focus-visible` ring** — Several card-internal links rely on default outline behavior instead of the app-standard 3px `focus-visible` ring, creating weak keyboard affordance.
-3. **History sessions LI row missing focus ring** — The `<li>` has `tabIndex={0}` and `role="link"` but no `focus-visible` classes. The inner `<Link>` has `tabIndex={-1}`, so the keyboard-focusable container is visually under-indicated.
+3. **History sessions LI row focus ring status changed** — The interactive `<li>` now includes `focus-visible` classes and remains keyboard-focusable (`tabIndex={0}` when interactive). The inner `<Link>` still has `tabIndex={-1}`.
 4. **Pattern asymmetry on the same page** — History sessions tab uses card-level `onClick` (Pattern C), while the questions tab uses inner-target links (Pattern B). Users switch tabs and the interaction model changes. **Decision:** promote question cards to Pattern A (Link-as-Card) while keeping sessions as Pattern C.
 
 ## Codebase-Wide Audit Results
@@ -26,7 +26,7 @@ A card/row interaction audit across Dashboard, History, Bookmarks, Practice summ
 | 3 | Dashboard — recent sessions | `app/(app)/app/dashboard/page.tsx` | 145–172 | A | `hover:bg-muted/40` | `focus-visible:ring-[3px]` | Yes (Link-as-Card) | OK |
 | 4 | Dashboard — recent activity | `app/(app)/app/dashboard/page.tsx` | 220–241 | A | `hover:bg-muted/40` | `focus-visible:ring-[3px]` | Yes (Link-as-Card) | OK |
 | 5 | Practice session summary — stat cards (×4) | `app/(app)/app/practice/[sessionId]/components/session-summary-view.tsx` | 40–66 | D | `hover:border-border hover:bg-muted/50` | None | No | **Misleading hover** |
-| 6 | History — sessions tab rows | `history-sessions-tab.tsx` | 179–283 | C | `hover:bg-accent/40` + `cursor-pointer` | **Missing on LI row** (inner link has ring but `tabIndex={-1}`) | Yes (card-level onClick) | **Missing focus ring on focusable LI + asymmetric with #7** |
+| 6 | History — sessions tab rows | `history-sessions-tab.tsx` | 179–285 | C | `hover:bg-accent/40` + `cursor-pointer` | **Present on LI row** (`focus-visible:ring-[3px]` at line 185; inner link has ring and `tabIndex={-1}`) | Yes (card-level onClick) | **Asymmetric with #7 (Pattern C vs Pattern B)** |
 | 7 | History — questions tab cards | `history-questions-tab.tsx` | 511–552 | B | None (card); `hover:underline` (link) | **Missing** on title link (line 517) | Inner targets only | **Missing focus ring + asymmetry with #6** |
 | 8 | History — session breakdown links | `session-breakdown-list.tsx` | 27–38 | B | `hover:underline` (link) | **Missing** on link (line 34) | Inner target only | **Missing focus ring** |
 | 9 | Bookmarks — bookmark cards | `app/(app)/app/bookmarks/page.tsx` | 84–197 | B | None (card); `hover:underline` (link line 96) | **Missing** on title link (line 96) | Inner targets (link + buttons) | **Missing focus ring** |
@@ -90,16 +90,17 @@ Line 155 — remove `transition-colors hover:bg-muted` from feature cards.
 
 This matches the existing pattern used on dashboard Link-as-Card elements.
 
-**File:** `app/(app)/app/history/components/history-sessions-tab.tsx` lines 183–186
+**File:** `app/(app)/app/history/components/history-sessions-tab.tsx` lines 181–186
 
-The `<li>` row is already keyboard-focusable (`tabIndex={0}`, `role="link"`) and already handles keyboard activation (`onKeyDown` for Enter/Space), but it has no focus-visible classes. The inner `<Link>` has `tabIndex={-1}`, so it's the LI that receives focus and needs explicit ring treatment.
+This change is already present in current code. The interactive `<li>` now receives focus-visible styling directly:
 
-```diff
-  className={cn(
--   'rounded-xl border border-border/60 bg-muted/20 p-3 transition-colors hover:bg-accent/40 dark:hover:bg-foreground/10',
-+   'rounded-xl border border-border/60 bg-muted/20 p-3 transition-colors hover:bg-accent/40 dark:hover:bg-foreground/10 focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]',
-    isRowInteractive ? 'cursor-pointer' : undefined,
-  )}
+```tsx
+className={cn(
+  'rounded-xl border border-border/60 bg-muted/20 p-3 transition-colors',
+  isRowInteractive
+    ? 'cursor-pointer hover:bg-accent/40 focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px] dark:hover:bg-foreground/10'
+    : undefined,
+)}
 ```
 
 **File:** `app/(app)/app/history/components/history-questions-tab.tsx` line 517
@@ -236,14 +237,14 @@ Bookmarks currently render both a title link and a "Review" button that resolve 
 | 1 | `app/(app)/app/dashboard/page.tsx` lines 61, 68, 77, 84, 95 | Remove `hover:border-border hover:bg-muted/50` from 5 stat/streak cards | P2 |
 | 2 | `app/(app)/app/practice/[sessionId]/components/session-summary-view.tsx` lines 40, 47, 54, 61 | Remove `hover:border-border hover:bg-muted/50` from 4 non-interactive summary cards | P2 |
 | 3 | `components/marketing/marketing-home.tsx` line 155 | Remove `transition-colors hover:bg-muted` from feature cards | P2 |
-| 4 | `history-sessions-tab.tsx` lines 183–186 | Add `focus-visible` ring to focusable LI row | P2 |
+| 4 | `history-sessions-tab.tsx` lines 181–186 | `focus-visible` ring already present on focusable LI row (no code change needed) | Resolved |
 | 5 | `history-questions-tab.tsx` line 517 | Add `focus-visible` ring to question title link *(superseded by row 8 — inner link removed by Pattern A conversion)* | P3 |
 | 6 | `session-breakdown-list.tsx` line 34 | Add `focus-visible` ring to breakdown link | P3 |
 | 7 | `bookmarks/page.tsx` line 96 | Add `focus-visible` ring to bookmark title link | P3 |
 | 8 | `history-questions-tab.tsx` lines 511–552 | Convert question cards from Pattern B to Pattern A (Link-as-Card); keep session rows Pattern C | P1 |
 | 9 | `components/theme-token-regression.test.tsx` lines 53–149 | Update token regression assertions to match chosen hover policy | P2 |
 
-**Total files touched (expected):** 8–9
+**Total files touched (expected):** 7–8
 **Estimated complexity:** Low for fixes 1–7 and 9 (class string + test assertions), moderate for fix 8 (question card structure/interaction model).
 
 ## Note: Dark Mode Focus Ring Contrast
@@ -252,22 +253,22 @@ Bookmarks currently render both a title link and a "Review" button that resolve 
 
 ## Verification
 
-- [ ] Dashboard stat cards: hover produces no visual change
-- [ ] Session summary stat cards: hover produces no visual change
-- [ ] Marketing feature cards: hover produces no visual change
-- [ ] History questions tab cards use Pattern A (Link-as-Card)
-- [ ] History sessions tab rows remain Pattern C (row navigation + breakdown toggle)
-- [ ] History sessions tab: card-level click still works (no regression)
-- [ ] History sessions tab: keyboard activation on LI still works (Enter/Space)
-- [ ] Tab-key through history session rows shows visible focus ring on LI
-- [ ] Tab-key through history question navigation target shows visible focus ring (outer card link after Fix 3, title link only if Fix 3 is deferred)
-- [ ] Tab-key through session breakdown links shows visible focus ring
-- [ ] Tab-key through bookmark title links shows visible focus ring
-- [ ] `components/theme-token-regression.test.tsx` expectations match the updated hover policy
-- [ ] `pnpm typecheck` passes
-- [ ] `pnpm lint` passes
-- [ ] `pnpm test --run` passes
-- [ ] `pnpm build` succeeds
+- [x] Dashboard stat cards: hover produces no visual change
+- [x] Session summary stat cards: hover produces no visual change
+- [x] Marketing feature cards: hover produces no visual change
+- [x] History questions tab cards use Pattern A (Link-as-Card)
+- [x] History sessions tab rows remain Pattern C (row navigation + breakdown toggle)
+- [x] History sessions tab: card-level click still works (no regression)
+- [x] History sessions tab: keyboard activation on LI still works (Enter/Space)
+- [x] Tab-key through history session rows shows visible focus ring on LI
+- [x] Tab-key through history question navigation target shows visible focus ring (outer card link after Fix 3, title link only if Fix 3 is deferred)
+- [x] Tab-key through session breakdown links shows visible focus ring
+- [x] Tab-key through bookmark title links shows visible focus ring
+- [x] `components/theme-token-regression.test.tsx` expectations match the updated hover policy
+- [x] `pnpm typecheck` passes
+- [x] `pnpm lint` passes
+- [x] `pnpm test --run` passes
+- [x] `pnpm build` succeeds
 
 ## Decision Log
 

@@ -37,28 +37,28 @@ export function SessionSummaryView({
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Card className="gap-0 rounded-2xl p-6 shadow-sm transition-colors hover:border-border hover:bg-muted/50">
+        <Card className="gap-0 rounded-2xl p-6 shadow-sm">
           <div className="text-sm text-muted-foreground">Answered</div>
           <div className="mt-2 text-3xl font-bold font-display text-foreground">
             {summary.totals.answered}
           </div>
         </Card>
 
-        <Card className="gap-0 rounded-2xl p-6 shadow-sm transition-colors hover:border-border hover:bg-muted/50">
+        <Card className="gap-0 rounded-2xl p-6 shadow-sm">
           <div className="text-sm text-muted-foreground">Correct</div>
           <div className="mt-2 text-3xl font-bold font-display text-foreground">
             {summary.totals.correct}
           </div>
         </Card>
 
-        <Card className="gap-0 rounded-2xl p-6 shadow-sm transition-colors hover:border-border hover:bg-muted/50">
+        <Card className="gap-0 rounded-2xl p-6 shadow-sm">
           <div className="text-sm text-muted-foreground">Accuracy</div>
           <div className="mt-2 text-3xl font-bold font-display text-foreground">
             {accuracyLabel}
           </div>
         </Card>
 
-        <Card className="gap-0 rounded-2xl p-6 shadow-sm transition-colors hover:border-border hover:bg-muted/50">
+        <Card className="gap-0 rounded-2xl p-6 shadow-sm">
           <div className="text-sm text-muted-foreground">Duration</div>
           <div className="mt-2 text-3xl font-bold font-display text-foreground">
             {formatDuration(summary.totals.durationSeconds)}

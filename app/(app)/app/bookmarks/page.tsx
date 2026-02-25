@@ -93,7 +93,7 @@ export function BookmarksView({ rows }: { rows: GetBookmarksOutput['rows'] }) {
                                 from: 'bookmarks',
                                 mode: 'review',
                               })}
-                              className="hover:underline"
+                              className="rounded-sm hover:underline focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]"
                             >
                               {getStemPreview(row.stemMd, 80)}
                             </Link>

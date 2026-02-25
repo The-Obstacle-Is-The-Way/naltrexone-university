@@ -49,7 +49,7 @@ test.describe('cross-page navigation', () => {
       timeout: 15_000,
     });
 
-    await page.getByRole('link', { name: 'Back to Dashboard' }).click();
+    await page.getByRole('link', { name: 'Back to Dashboard' }).first().click();
     await expect(page).toHaveURL('/app/dashboard');
   });
 
