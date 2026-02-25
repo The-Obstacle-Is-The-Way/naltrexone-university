@@ -11,6 +11,7 @@ const matchesPathnameAgainstPattern = (
   pathname: string,
   pattern: string,
 ): boolean => {
+  // Pattern values come from static route matchers under test (not user input).
   try {
     return new RegExp(`^${pattern}$`).test(pathname);
   } catch {
@@ -407,9 +408,10 @@ describe('proxy middleware', () => {
     const location = res.headers.get('location');
     expect(location).not.toBeNull();
 
-    const redirectUrl = new URL(location ?? '').searchParams.get(
-      'redirect_url',
-    );
+    const redirectUrl = new URL(
+      location ?? '',
+      'https://example.com',
+    ).searchParams.get('redirect_url');
     expect(redirectUrl).toBe(checkoutSuccessUrl);
   });
 });

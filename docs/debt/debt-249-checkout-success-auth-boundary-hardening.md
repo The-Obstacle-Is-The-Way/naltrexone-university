@@ -4,7 +4,7 @@
 **Priority:** P1  
 **Date:** 2026-02-25  
 **Owner:** Billing/Auth  
-**Related:** [BS-032](../brainstorming/bs-032-stripe-checkout-clerk-session-friction.md), BUG-043, ADR-014
+**Related:** [BS-032](../_archive/brainstorming/bs-032-stripe-checkout-clerk-session-friction.md), BUG-043, ADR-014
 
 ---
 
