@@ -27,15 +27,18 @@ Changing `PUBLIC_ROUTE_PATTERNS` alone is not sufficient; redirect semantics and
 ## Required change set
 
 1. Remove `/checkout/success(.*)` from `PUBLIC_ROUTE_PATTERNS`.
-2. In `proxy.ts`, add an explicit checkout-success branch:
-   - if unauthenticated on `/checkout/success`, call `redirectToSignIn({ returnBackUrl: req.url })`.
-   - preserve existing protection behavior for all other private routes.
-3. Keep page-level fallback redirect in `checkout-success-sync.tsx` for one release as defense-in-depth.
-4. Add/adjust tests:
+2. In `proxy.ts`, protect `/checkout/success` with `auth.protect()` and lock redirect behavior with tests:
+   - Current Clerk SDK behavior sets sign-in `redirect_url` to the current request URL by default.
+   - Keep callback logic minimal; do not rely on callback-only branching for handshake cases.
+3. Explicitly cover handshake preemption:
+   - Clerk may return a handshake redirect before middleware callback code executes.
+   - Add regression tests for `/checkout/success?session_id=...` that validate query preservation across handshake redirects.
+4. Keep page-level fallback redirect in `checkout-success-sync.tsx` permanently as defense-in-depth.
+5. Add/adjust tests:
    - `lib/public-routes.test.ts` reflects protected route.
-   - `proxy.test.ts` covers preserved `session_id` query in return-back URL.
+   - `proxy.test.ts` covers preserved `session_id` query in redirect behavior.
    - existing checkout success tests continue to pass.
-5. Add rollout instrumentation:
+6. Add rollout instrumentation:
    - auth bounce count on `/checkout/success`
    - `%` of checkout-success requests missing `session_id`
    - checkout error redirect rate (`/pricing?checkout=error`)
@@ -44,6 +47,7 @@ Changing `PUBLIC_ROUTE_PATTERNS` alone is not sufficient; redirect semantics and
 
 - [ ] `/checkout/success` is no longer public in middleware matcher config.
 - [ ] Unauthenticated hit to `/checkout/success?session_id=cs_xxx` redirects to sign-in and returns with the same `session_id`.
+- [ ] Clerk handshake redirect on `/checkout/success?session_id=cs_xxx` preserves `session_id`.
 - [ ] Authenticated Stripe return reaches eager sync and redirects correctly.
 - [ ] Webhook-first and page-first races remain idempotent (no regressions from BUG-099 fix).
 - [ ] `pnpm test --run app/(marketing)/checkout/success/page.test.ts lib/public-routes.test.ts proxy.test.ts` passes.
@@ -52,7 +56,8 @@ Changing `PUBLIC_ROUTE_PATTERNS` alone is not sufficient; redirect semantics and
 
 | Risk | Mitigation |
 |---|---|
-| `session_id` dropped during sign-in redirect | Explicit `returnBackUrl: req.url` middleware redirect + regression test |
+| `session_id` dropped during sign-in redirect | Validate Clerk default `auth.protect()` redirect behavior with regression tests; explicit override only if needed |
+| Handshake redirect bypasses middleware callback branch | Add handshake-specific test case; do not assume callback ordering |
 | Clerk force-redirect config overrides `redirect_url` | Keep force redirect env vars unset for sign-in in this flow; verify in env audit |
 | Production behavior differs from preview/dev | Validate on production domain with test user flow before full rollout |
 | False negative if success page fails but webhook succeeds | Keep webhook as source of truth; monitor checkout error redirect rate |
@@ -64,5 +69,11 @@ Changing `PUBLIC_ROUTE_PATTERNS` alone is not sufficient; redirect semantics and
 - Clerk redirect URL behavior (`redirect_url`, force/fallback redirects): https://clerk.com/docs/guides/development/customize-redirect-urls
 - Clerk middleware example with `returnBackUrl: req.url`: https://clerk.com/docs/guides/development/add-onboarding-flow
 - Clerk cookie settings (`SameSite=Lax`) and session token behavior: https://clerk.com/docs/guides/how-clerk-works/cookies
+- Clerk middleware source (redirect before user callback on location header): https://github.com/clerk/javascript/blob/main/packages/nextjs/src/server/clerkMiddleware.ts
+- Clerk `auth()` source (default returnBackUrl to current request URL): https://github.com/clerk/javascript/blob/main/packages/nextjs/src/app-router/server/auth.ts
+- Clerk protect source (`auth.protect()` unauthenticated path): https://github.com/clerk/javascript/blob/main/packages/nextjs/src/server/protect.ts
+- Clerk handshake source (`redirect_url` uses full current URL): https://github.com/clerk/javascript/blob/main/packages/backend/src/tokens/handshake.ts
+- Clerk handshake tests (query preservation and cleanup): https://github.com/clerk/javascript/blob/main/packages/backend/src/tokens/__tests__/handshake.test.ts
+- Clerk cross-origin handshake tests (cross-site document requests): https://github.com/clerk/javascript/blob/main/packages/backend/src/tokens/__tests__/request.test.ts
 - Stripe: webhooks required for fulfillment: https://docs.stripe.com/payments/checkout/custom-success-page?payment-ui=embedded-form
 - Next.js cross-site first-load cookie discussion: https://github.com/vercel/next.js/discussions/17612

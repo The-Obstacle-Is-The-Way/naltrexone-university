@@ -197,13 +197,31 @@ So why can first-load auth still fail after Stripe redirect?
 
 ### 3) Does `auth.protect()` preserve query params like `?session_id=cs_xxx` through sign-in redirect?
 
-Evidence from Clerk docs:
+Evidence from Clerk docs and SDK source:
 
 - Clerk's redirect model stores the previous URL in `redirect_url` and sends users back after sign-in.
 - Middleware examples use `redirectToSignIn({ returnBackUrl: req.url })`; `req.url` is the full URL, including query params.
+- In current Clerk Next.js server code, `redirectToSignIn()` defaults `returnBackUrl` to `clerkUrl.toString()` (the current request URL) when not explicitly provided.
+- `auth.protect()` calls that redirect path for unauthenticated page/document requests, and Clerk middleware tests assert `redirect_url` contains the current protected URL.
 
-**Practical answer:** Query params should survive **when full URL is used as returnBackUrl**.  
-For this checkout path, if we want strong guarantees, use explicit `redirectToSignIn({ returnBackUrl: req.url })` on the unauthenticated middleware branch (or keep a server fallback) rather than relying on implicit behavior alone.
+**Practical answer:** In current Clerk SDK behavior, bare `auth.protect()` should preserve the request URL (including query params) for sign-in redirects.  
+Explicit `returnBackUrl: req.url` is still acceptable for clarity, but is likely not strictly required on modern versions.
+
+### Clerk Handshake Redirect Risk
+
+Critical nuance for this flow:
+
+- In Clerk middleware implementation, `authenticateRequest()` runs first.
+- If `authenticateRequest()` returns a redirect location (including handshake redirects), middleware returns that redirect **before** running your callback logic.
+- Therefore, a custom `/checkout/success` branch in the middleware callback can be bypassed during handshake.
+
+What that means for query preservation:
+
+- Clerk's handshake builder sets `redirect_url` from the full current URL (`clerkUrl.href`), and tests cover preserving existing query params/fragments.
+- Dev-handshake resolution strips Clerk handshake params (`__clerk_handshake*`, `__clerk_help`) while preserving unrelated query params.
+- Clerk backend tests show cross-site document requests from non-Clerk referrers can trigger handshake on primary domains, which is relevant to Stripe hosted checkout return flows.
+
+**Implication:** Even if we add explicit middleware redirect logic, we still need handshake-path regression tests. Handshake safety cannot be guaranteed by callback ordering alone.
 
 ### 4) Updated recommendation
 
@@ -224,6 +242,7 @@ If we change route protection again, we can re-introduce that failure mode unles
 | Risk if we switch to protected route | Why it matters | Mitigation |
 |---|---|---|
 | `session_id` dropped during sign-in redirect | Eager sync fails; user may land in generic error despite successful payment | Use explicit middleware branch with `redirectToSignIn({ returnBackUrl: req.url })`, not implicit defaults only |
+| Handshake redirect happens before middleware callback | Custom callback branch may never execute on some requests | Add explicit handshake regression tests for `/checkout/success?session_id=...` |
 | Force/fallback redirect config overrides `redirect_url` | User returns to dashboard/home instead of checkout success handler | Keep sign-in force redirects unset for this flow; add config check in rollout checklist |
 | Regressing previously fixed behavior (BUG-043) | Prior bug history indicates this can break in real use | Add regression tests before code change, plus staged rollout |
 | False confidence from preview-only validation | Preview/dev instance behavior can differ from production instance/domain | Validate on production domain with test user and Stripe test mode |
@@ -233,11 +252,12 @@ If we change route protection again, we can re-introduce that failure mode unles
 
 Do **not** treat this as a one-line matcher change. Treat it as a controlled hardening task:
 
-1. Move `/checkout/success` from public to protected **with explicit redirect preservation logic in middleware**.
-2. Keep the current in-page `redirectToSignIn({ returnBackUrl })` fallback for one release as defense-in-depth.
-3. Add regression coverage for query preservation and one auth bounce.
-4. Add observability on checkout-success auth bounce rate before/after rollout.
-5. Roll back quickly if bounce rate or checkout error rate increases.
+1. Move `/checkout/success` from public to protected.
+2. Keep middleware protection (`auth.protect()`) and lock behavior with tests, since current Clerk behavior already preserves request URL in redirect flow.
+3. Add handshake-path regression coverage (not just missing-session coverage) for `session_id` preservation.
+4. Keep the in-page `redirectToSignIn({ returnBackUrl })` fallback as permanent defense-in-depth for this payment-critical route.
+5. Add observability on checkout-success auth bounce rate before/after rollout.
+6. Roll back quickly if bounce rate or checkout error rate increases.
 
 ### Sources
 
@@ -255,6 +275,12 @@ Do **not** treat this as a one-line matcher change. Treat it as a controlled har
 - Stripe custom success page guidance (webhooks required for fulfillment): https://docs.stripe.com/payments/checkout/custom-success-page?payment-ui=embedded-form
 - Next.js discussion referenced in this BS: https://github.com/vercel/next.js/discussions/17612
 - MDN SameSite behavior reference: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie/SameSite
+- Clerk Next.js middleware source (redirect before callback): https://github.com/clerk/javascript/blob/main/packages/nextjs/src/server/clerkMiddleware.ts
+- Clerk Next.js `auth()` source (default returnBackUrl to request URL): https://github.com/clerk/javascript/blob/main/packages/nextjs/src/app-router/server/auth.ts
+- Clerk protect flow source (unauthenticated page -> `redirectToSignIn()`): https://github.com/clerk/javascript/blob/main/packages/nextjs/src/server/protect.ts
+- Clerk handshake builder source (`redirect_url` uses full `clerkUrl.href`): https://github.com/clerk/javascript/blob/main/packages/backend/src/tokens/handshake.ts
+- Clerk handshake tests (query preservation): https://github.com/clerk/javascript/blob/main/packages/backend/src/tokens/__tests__/handshake.test.ts
+- Clerk cross-origin handshake tests (non-Clerk cross-site document requests): https://github.com/clerk/javascript/blob/main/packages/backend/src/tokens/__tests__/request.test.ts
 
 ---
 
