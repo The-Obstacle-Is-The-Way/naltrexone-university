@@ -739,6 +739,25 @@ These require editing raw MDX files (gitignored, ~958 questions). Deferred until
 
 **Also deferred:** Update authoring guide (`question-format-spec.md`) with explicit wrong-answer format rules once we decide on the convention.
 
+### RESIDUAL — "Try Again" / "Practice Again" label inconsistency (from BS-034)
+
+The Chrome agent audit for BS-034 discovered that the Dashboard review path shows "Try Again" for correctly-answered questions, while the History review path correctly shows "Practice Again" for correct answers.
+
+**Root cause:** `question-page-client.tsx:185-188` — the `reattemptLabel` condition only checks `isStandaloneHistoryReview`:
+
+```tsx
+const reattemptLabel =
+  isStandaloneHistoryReview && props.submitResult?.isCorrect
+    ? 'Practice Again'
+    : 'Try Again';
+```
+
+The condition should cover ALL standalone review contexts (Dashboard, History, Bookmarks), not just history. When a user got the answer right, the button should say "Practice Again" regardless of which entry point they came from.
+
+**Context:** SPEC-034 and SPEC-036 already cleaned up the major reattempt issues (Try Again hidden in session review, bookmarks switched to review-first mode). This is a residual label bug that slipped through. The codebase is moving away from reattemptability — a future "reset question bank" feature would handle re-attempts at a higher level.
+
+**Fix:** Replace `isStandaloneHistoryReview` with a broader condition like `!isSessionReviewReadOnly` (any non-session review context) or simply `props.submitResult?.isCorrect` (always use "Practice Again" for correct answers regardless of context).
+
 ### FUTURE — Enhanced Formatting & Features (optional)
 
 Nice-to-have improvements that go beyond fixing current issues:

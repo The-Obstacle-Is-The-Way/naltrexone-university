@@ -44,6 +44,8 @@ The Source filter dropdown does not suppress the bug — filtering to "Ad-hoc pr
 - **Ad-hoc questions:** Standalone review (no navigator), identical to Dashboard review behavior
 - **Tutor/Exam questions:** Review with `sessionId`, showing the real session's questions with color-coded navigator — identical to Sessions tab review behavior
 
+Position A (decided) achieves this by scoping the Questions tab to ad-hoc only. Tutor/Exam questions are reviewed exclusively from the Sessions tab, which already handles them correctly.
+
 ### Contrast with working entry points (Chrome agent validated)
 
 | Entry point | URL params | Navigator? | Buttons | Color-coded? | Correct? |
@@ -178,7 +180,17 @@ With only ad-hoc questions on the tab, the Source filter (All / Tutor / Exam / A
 
 **4. Update subtitle**
 
-"Review completed sessions and all attempted questions." → "Review completed sessions and individual practice questions."
+"Review completed sessions and all attempted questions." → "Review completed sessions and your Quick Practice questions."
+
+Use the product term "Quick Practice" — it matches the nav bar label and directly tells users which mode's questions live on this tab.
+
+**5. Add empty state for the Questions tab**
+
+With only ad-hoc questions on the tab, users who have only done Tutor/Exam sessions (no Quick Practice) will see an empty Questions tab. Add an empty state that explains where their questions live:
+
+> *"No Quick Practice questions yet. Questions from Tutor and Exam sessions can be reviewed from the Sessions tab."*
+
+This prevents confusion when the tab is empty and teaches the mental model (Sessions tab for session questions, Questions tab for standalone practice).
 
 ---
 
@@ -186,7 +198,7 @@ With only ad-hoc questions on the tab, the Source filter (All / Tutor / Exam / A
 
 | File | Change |
 |------|--------|
-| `app/(app)/app/history/components/history-questions-tab.tsx` | Hardcode `source: 'adhoc'` in query. Remove `historySequence` computation (L192-199). Simplify review links (L502-508). Remove Source filter dropdown. |
+| `app/(app)/app/history/components/history-questions-tab.tsx` | Hardcode `source: 'adhoc'` in query. Remove `historySequence` computation (L192-199). Simplify review links (L502-508). Remove Source filter dropdown. Add empty state for zero ad-hoc questions. |
 | `app/(app)/app/history/components/history-questions-tab.test.tsx` | Update test expectations: review link `href` values no longer include `historySeq`/`historyIndex`. Remove or update Source filter tests. |
 | `app/(app)/app/history/history-search-params.ts` | Remove `source` from `QuestionsFilters` type (or keep for API but remove from UI). |
 | `app/(app)/app/history/page.tsx` (or parent) | Update subtitle text. |
@@ -232,9 +244,11 @@ The Dashboard review shows "Try Again" for a correctly-answered question. The Hi
 
 1. **~~Should session questions on the Questions tab use `sessionId` or `historySeq`?~~** **Superseded by Q4 decision.** With Position A, session questions won't appear on the Questions tab at all.
 
-2. **Should we add an `attemptId` to the ad-hoc review link?** The Dashboard uses `attemptId` in its review links. The Questions tab currently doesn't have `attemptId` in its row data. Adding it would make the Dashboard and Questions tab review links identical for ad-hoc questions. Not strictly necessary — the question page works without `attemptId` — but worth considering for parity.
+2. **~~Should we add an `attemptId` to the ad-hoc review link?~~** **Resolved: No.** The codebase is moving away from reattemptability (SPEC-034, SPEC-036). There is no multi-attempt review — `attemptId` is vestigial in review links. The question page loads the most recent attempt without it. A future "reset question bank" feature would handle re-attempts at a different level entirely, not per-link. No change needed.
 
-3. **Should the related UX inconsistencies (subtitle, back link, Try Again label) be addressed in the same fix or tracked separately?** They are independent of the navigator bug and could be deferred to BS-033 (which already tracks feedback UX issues) or a separate pass.
+3. **~~Should the related UX inconsistencies (subtitle, back link, Try Again label) be addressed in the same fix or tracked separately?~~** **Resolved: Track separately.**
+   - **Subtitle and back link position:** Minor cosmetic inconsistencies. Defer to a future polish pass or BS-033.
+   - **"Try Again" label on correct Dashboard answers:** This is a residual bug from the reattempt cleanup (SPEC-034 / SPEC-036). The label logic in `question-page-client.tsx:185-188` only checks `isStandaloneHistoryReview` but not Dashboard review context, so correct answers from the Dashboard show "Try Again" instead of "Practice Again". Track in BS-033 (which already covers feedback UX issues) as a concrete fix: extend the `reattemptLabel` condition to cover all standalone review contexts, not just history.
 
 4. **~~Should the Questions tab scope be narrowed to ad-hoc questions only?~~** **Resolved: Position A — ad-hoc only.**
 
@@ -257,7 +271,8 @@ The Dashboard review shows "Try Again" for a correctly-answered question. The Hi
    - Remove the Source filter dropdown from the Questions tab UI
    - Remove the `historySequence` computation and `historySeq`/`historyIndex` from review links
    - Ad-hoc review links become standalone: `toQuestionRoute(slug, { from: 'history', mode: 'review', historyHref })`
-   - The subtitle can be updated: "Review completed sessions and all attempted questions." → "Review completed sessions and individual practice questions."
+   - The subtitle can be updated: "Review completed sessions and all attempted questions." → "Review completed sessions and your Quick Practice questions."
+   - An empty state is needed for users with zero ad-hoc questions, pointing them to the Sessions tab
 
 ---
 
@@ -268,3 +283,5 @@ The Dashboard review shows "Try Again" for a correctly-answered question. The Hi
 | 2026-02-25 | Created BS-034 | Manual UX walkthrough revealed ad-hoc questions incorrectly grouped into navigator |
 | 2026-02-25 | Chrome agent audit validates and expands scope | Confirmed bug at scale (20 buttons). Discovered Tutor/Exam questions also lose session context from Questions tab. Source filter does not suppress. Three related UX inconsistencies flagged. Severity upgraded from Medium-High to High. |
 | 2026-02-25 | **Decided: Position A — Questions tab = ad-hoc only** | History should mirror Practice hierarchy: Sessions tab for Tutor/Exam, Questions tab for Quick Practice. Session questions lose context on the Questions tab (no color coding, wrong group). Clean separation is simpler to implement and gives users the correct mental model. Source filter becomes unnecessary. |
+| 2026-02-25 | Added empty state requirement + subtitle copy refinement | Second Chrome agent audit confirmed Position A. Surfaced two gaps: (1) users with only session questions will see empty Questions tab — needs explicit empty state pointing to Sessions tab; (2) subtitle should use product term "Quick Practice" instead of "individual practice" to match nav bar terminology. |
+| 2026-02-25 | Resolved all open questions (Q2, Q3) | Q2: `attemptId` is vestigial — codebase is moving away from reattemptability (SPEC-034, SPEC-036). No change needed. Q3: Subtitle/back link deferred to polish pass. "Try Again" label bug on Dashboard correct answers tracked for BS-033 as a concrete `reattemptLabel` condition fix. |
