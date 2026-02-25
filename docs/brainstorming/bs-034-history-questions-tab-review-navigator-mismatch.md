@@ -3,7 +3,7 @@
 **Date:** 2026-02-25
 **Triggered by:** Manual UX walkthrough. Clicking "Review" on any question from History → Questions tab renders a Question Navigator grouping all 20 visible page questions — despite them being independent, unrelated questions from different modes and topics.
 **Scope:** The History Questions tab treats all visible questions as a single navigable sequence, conflating ad-hoc practice with session-based review. Affects ALL question types on this tab — ad-hoc, Tutor, and Exam questions alike lose their real session context.
-**Related:** [SPEC-027](../specs/) (Session Review Navigation), [SPEC-022](../_archive/specs/spec-022-question-log.md) (Question Log)
+**Related:** [SPEC-027](../_archive/specs/spec-027-session-review-navigation.md) (Session Review Navigation), [SPEC-022](../_archive/specs/spec-022-question-log.md) (Question Log)
 
 ---
 
@@ -198,10 +198,11 @@ This prevents confusion when the tab is empty and teaches the mental model (Sess
 
 | File | Change |
 |------|--------|
-| `app/(app)/app/history/components/history-questions-tab.tsx` | Hardcode `source: 'adhoc'` in query. Remove `historySequence` computation (L192-199). Simplify review links (L502-508). Remove Source filter dropdown. Add empty state for zero ad-hoc questions. |
+| `app/(app)/app/history/page.tsx` | Hardcode `source: 'adhoc'` in the Questions-tab `getAttemptedQuestions` fetch while preserving other filters (`result`, `difficulty`, `tagSlug`, `sort`). |
+| `app/(app)/app/history/components/history-questions-tab.tsx` | Remove `historySequence` computation (L192-199). Simplify review links (L502-508). Remove Source filter dropdown and related source-filter state plumbing. Add empty state copy for zero ad-hoc questions. |
 | `app/(app)/app/history/components/history-questions-tab.test.tsx` | Update test expectations: review link `href` values no longer include `historySeq`/`historyIndex`. Remove or update Source filter tests. |
-| `app/(app)/app/history/history-search-params.ts` | Remove `source` from `QuestionsFilters` type (or keep for API but remove from UI). |
-| `app/(app)/app/history/page.tsx` (or parent) | Update subtitle text. |
+| `app/(app)/app/history/history-search-params.ts` | Optional cleanup: remove `source` from `QuestionsFilters` UI type, or keep parser/href support for backwards-compatible URLs while hiding source controls from UI. |
+| `app/(app)/app/history/history-page-client.tsx` | Update subtitle text. |
 
 No changes needed to:
 - `use-question-page-controller.ts` — the `historySeq` path can remain as a dead-code fallback for any future use
@@ -244,7 +245,7 @@ The Dashboard review shows "Try Again" for a correctly-answered question. The Hi
 
 1. **~~Should session questions on the Questions tab use `sessionId` or `historySeq`?~~** **Superseded by Q4 decision.** With Position A, session questions won't appear on the Questions tab at all.
 
-2. **~~Should we add an `attemptId` to the ad-hoc review link?~~** **Resolved: No.** The codebase is moving away from reattemptability (SPEC-034, SPEC-036). There is no multi-attempt review — `attemptId` is vestigial in review links. The question page loads the most recent attempt without it. A future "reset question bank" feature would handle re-attempts at a different level entirely, not per-link. No change needed.
+2. **~~Should we add an `attemptId` to the ad-hoc review link?~~** **Resolved: No (for the History Questions tab).** Each Questions-tab row already represents the latest attempt per question, and the question page can resolve that latest attempt without `attemptId`. `attemptId` is still meaningful for attempt-scoped entry points (e.g., Dashboard Recent Activity), where it preserves review of the specific attempt row clicked.
 
 3. **~~Should the related UX inconsistencies (subtitle, back link, Try Again label) be addressed in the same fix or tracked separately?~~** **Resolved: Track separately.**
    - **Subtitle and back link position:** Minor cosmetic inconsistencies. Defer to a future polish pass or BS-033.
@@ -284,4 +285,5 @@ The Dashboard review shows "Try Again" for a correctly-answered question. The Hi
 | 2026-02-25 | Chrome agent audit validates and expands scope | Confirmed bug at scale (20 buttons). Discovered Tutor/Exam questions also lose session context from Questions tab. Source filter does not suppress. Three related UX inconsistencies flagged. Severity upgraded from Medium-High to High. |
 | 2026-02-25 | **Decided: Position A — Questions tab = ad-hoc only** | History should mirror Practice hierarchy: Sessions tab for Tutor/Exam, Questions tab for Quick Practice. Session questions lose context on the Questions tab (no color coding, wrong group). Clean separation is simpler to implement and gives users the correct mental model. Source filter becomes unnecessary. |
 | 2026-02-25 | Added empty state requirement + subtitle copy refinement | Second Chrome agent audit confirmed Position A. Surfaced two gaps: (1) users with only session questions will see empty Questions tab — needs explicit empty state pointing to Sessions tab; (2) subtitle should use product term "Quick Practice" instead of "individual practice" to match nav bar terminology. |
-| 2026-02-25 | Resolved all open questions (Q2, Q3) | Q2: `attemptId` is vestigial — codebase is moving away from reattemptability (SPEC-034, SPEC-036). No change needed. Q3: Subtitle/back link deferred to polish pass. "Try Again" label bug on Dashboard correct answers tracked for BS-033 as a concrete `reattemptLabel` condition fix. |
+| 2026-02-25 | Resolved all open questions (Q2, Q3) | Q2: No `attemptId` needed for History Questions-tab links because rows are already latest-per-question; `attemptId` remains valid for attempt-scoped entry points like Dashboard. Q3: Subtitle/back link deferred to polish pass. "Try Again" label bug on Dashboard correct answers tracked for BS-033 as a concrete `reattemptLabel` condition fix. |
+| 2026-02-25 | Code-truth correction pass applied | Corrected SPEC-027 link target, corrected file ownership of the `source: 'adhoc'` change (`history/page.tsx`, not `history-questions-tab.tsx`), and narrowed Q2 rationale to avoid incorrectly labeling all `attemptId` usage as vestigial. |

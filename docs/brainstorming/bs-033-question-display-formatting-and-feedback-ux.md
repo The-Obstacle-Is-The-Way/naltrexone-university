@@ -754,9 +754,17 @@ const reattemptLabel =
 
 The condition should cover ALL standalone review contexts (Dashboard, History, Bookmarks), not just history. When a user got the answer right, the button should say "Practice Again" regardless of which entry point they came from.
 
-**Context:** SPEC-034 and SPEC-036 already cleaned up the major reattempt issues (Try Again hidden in session review, bookmarks switched to review-first mode). This is a residual label bug that slipped through. The codebase is moving away from reattemptability — a future "reset question bank" feature would handle re-attempts at a higher level.
+**Context:** [SPEC-034](../_archive/specs/spec-034-review-mode-readonly-and-try-again-scoping.md) and [SPEC-036](../_archive/specs/spec-036-bookmark-review-mode-alignment.md) already cleaned up the major reattempt issues (Try Again hidden in session review, bookmarks switched to review-first mode). This is a residual label bug that slipped through. The codebase is moving away from reattemptability — a future "reset question bank" feature would handle re-attempts at a higher level.
 
-**Fix:** Replace `isStandaloneHistoryReview` with a broader condition like `!isSessionReviewReadOnly` (any non-session review context) or simply `props.submitResult?.isCorrect` (always use "Practice Again" for correct answers regardless of context).
+**Fix:** Replace `isStandaloneHistoryReview` with a condition that keys off correctness across all standalone review origins. A safe implementation is:
+
+```tsx
+const reattemptLabel = props.submitResult?.isCorrect
+  ? 'Practice Again'
+  : 'Try Again';
+```
+
+`Try Again`/`Practice Again` is already hidden in session review contexts by the existing `!isSessionReviewReadOnly` button guard, so this label logic stays scoped to standalone flows.
 
 ### FUTURE — Enhanced Formatting & Features (optional)
 
@@ -792,3 +800,4 @@ Nice-to-have improvements that go beyond fixing current issues:
 | 2026-02-25 | Integrated Chrome agent audit #1 (review mode) | Added Problems 8-12 (verdict badge, reference label, spacing gaps, wrong-answer text repetition). All component-level |
 | 2026-02-25 | Integrated Chrome agent audit #2 (Quick Practice pre+post answer) | Added Problems 13-20 (badge contrast, hover/focus, button hierarchy, auto-scroll, "Your answer" label, unchosen answer dimming, filter tabs). Organized NOW into Tier 1/2/3 by severity |
 | 2026-02-25 | Playwright + code trace validation | All 20 original problems confirmed against source code. 4 partially corrected (P14: hover/focus exists but subtle; P15: pre-submit hierarchy already differentiated; P19: opacity-50 dimming already exists; P20: tabs not disabled, just weak affordance). 2 new problems discovered (P21: review-mode hydration flicker; P22: role="alert" on long content). Total: 22 problems |
+| 2026-02-25 | Code-truth correction pass applied | Clarified residual label fix to a correctness-based condition that works for Dashboard/History/Bookmarks standalone review paths and linked SPEC-034/SPEC-036 to actual archived files. |
