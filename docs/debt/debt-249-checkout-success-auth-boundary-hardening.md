@@ -1,0 +1,68 @@
+# DEBT-249: Checkout Success Auth Boundary Hardening (Stripe Return + Clerk Redirect)
+
+**Status:** Active  
+**Priority:** P1  
+**Date:** 2026-02-25  
+**Owner:** Billing/Auth  
+**Related:** [BS-032](../brainstorming/bs-032-stripe-checkout-clerk-session-friction.md), BUG-043, ADR-014
+
+---
+
+## Description
+
+`/checkout/success` is currently configured as a public route and performs a manual auth fallback inside the page (`auth() -> redirectToSignIn(returnBackUrl)`).
+
+This preserves `session_id` today, but it can produce a visible auth bounce after hosted Stripe redirect (pay -> sign-in -> return -> dashboard), which is poor conversion UX in a payment-critical path.
+
+The debt is to harden this flow so it is both:
+
+1. **User-robust**: fewer post-payment auth bounces.
+2. **Failure-robust**: no regression where `session_id` is lost during sign-in redirect.
+
+## Why this is debt (not a one-line fix)
+
+We have historical evidence (BUG-043) that route-protection changes here can regress query-param preservation.  
+Changing `PUBLIC_ROUTE_PATTERNS` alone is not sufficient; redirect semantics and test coverage must be updated together.
+
+## Required change set
+
+1. Remove `/checkout/success(.*)` from `PUBLIC_ROUTE_PATTERNS`.
+2. In `proxy.ts`, add an explicit checkout-success branch:
+   - if unauthenticated on `/checkout/success`, call `redirectToSignIn({ returnBackUrl: req.url })`.
+   - preserve existing protection behavior for all other private routes.
+3. Keep page-level fallback redirect in `checkout-success-sync.tsx` for one release as defense-in-depth.
+4. Add/adjust tests:
+   - `lib/public-routes.test.ts` reflects protected route.
+   - `proxy.test.ts` covers preserved `session_id` query in return-back URL.
+   - existing checkout success tests continue to pass.
+5. Add rollout instrumentation:
+   - auth bounce count on `/checkout/success`
+   - `%` of checkout-success requests missing `session_id`
+   - checkout error redirect rate (`/pricing?checkout=error`)
+
+## Acceptance criteria
+
+- [ ] `/checkout/success` is no longer public in middleware matcher config.
+- [ ] Unauthenticated hit to `/checkout/success?session_id=cs_xxx` redirects to sign-in and returns with the same `session_id`.
+- [ ] Authenticated Stripe return reaches eager sync and redirects correctly.
+- [ ] Webhook-first and page-first races remain idempotent (no regressions from BUG-099 fix).
+- [ ] `pnpm test --run app/(marketing)/checkout/success/page.test.ts lib/public-routes.test.ts proxy.test.ts` passes.
+
+## Risks and mitigations
+
+| Risk | Mitigation |
+|---|---|
+| `session_id` dropped during sign-in redirect | Explicit `returnBackUrl: req.url` middleware redirect + regression test |
+| Clerk force-redirect config overrides `redirect_url` | Keep force redirect env vars unset for sign-in in this flow; verify in env audit |
+| Production behavior differs from preview/dev | Validate on production domain with test user flow before full rollout |
+| False negative if success page fails but webhook succeeds | Keep webhook as source of truth; monitor checkout error redirect rate |
+
+## External evidence used
+
+- Clerk middleware route-protection pattern: https://clerk.com/docs/reference/nextjs/clerk-middleware
+- Clerk `auth.protect()` semantics: https://clerk.com/docs/reference/nextjs/app-router/auth
+- Clerk redirect URL behavior (`redirect_url`, force/fallback redirects): https://clerk.com/docs/guides/development/customize-redirect-urls
+- Clerk middleware example with `returnBackUrl: req.url`: https://clerk.com/docs/guides/development/add-onboarding-flow
+- Clerk cookie settings (`SameSite=Lax`) and session token behavior: https://clerk.com/docs/guides/how-clerk-works/cookies
+- Stripe: webhooks required for fulfillment: https://docs.stripe.com/payments/checkout/custom-success-page?payment-ui=embedded-form
+- Next.js cross-site first-load cookie discussion: https://github.com/vercel/next.js/discussions/17612

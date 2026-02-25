@@ -48,12 +48,13 @@ The `/checkout/success` route is explicitly **public** (`lib/public-routes.ts:6`
 Apple OAuth (apple.com) → Clerk callback (clerk.accounts.dev) → App → Stripe checkout (checkout.stripe.com) → App (/checkout/success)
 ```
 
-That's **4 cross-origin navigations** before landing on `/checkout/success`. Possible causes for session loss:
+That's **4 cross-origin navigations** before landing on `/checkout/success`.  
+Possible contributors (hypotheses, not yet proven in production logs):
 
 | Hypothesis | Likelihood | Evidence |
 |---|---|---|
-| **Safari ITP (Intelligent Tracking Prevention)** | Medium-High | Safari classifies cross-origin redirect chains as tracking behavior and may strip cookies. The Apple OAuth → Clerk → app → Stripe → app chain is exactly the pattern ITP targets. |
-| **Clerk JWT expiration during checkout** | Medium | Clerk JWTs have a short lifetime (~60s). If the user spent >60s on Stripe checkout, the JWT would expire. Middleware should refresh it, but there may be a race between middleware processing and `auth()` reading the token on public routes. |
+| **Safari ITP (Intelligent Tracking Prevention)** | Medium | Cross-site redirect chains can trigger stricter browser behavior. This is plausible but not yet reproduced with browser-matrix evidence. |
+| **Clerk session token expiration during checkout** | Medium-High | Clerk session tokens are short-lived (~60s). Time spent on hosted Stripe can exceed token freshness windows before return. |
 | **New session not fully propagated** | Low-Medium | The Clerk session was literally just created via Apple OAuth. There may be an eventual-consistency window where the session is valid in Clerk's backend but the JWT token hasn't been fully issued/propagated to the app's cookies. |
 | **Cookie SameSite restrictions** | Low | Clerk sets cookies with `SameSite=Lax` by default, which should survive top-level navigations (like Stripe redirects). But browser-specific behavior varies. |
 
@@ -105,32 +106,38 @@ That's **4 cross-origin navigations** before landing on `/checkout/success`. Pos
 - Webhook processes the payment, then sends a "Welcome" email with a magic link
 - **Trade-off:** Worse UX (user has to check email), but zero auth race conditions
 
-### What Clerk recommends
+### What Clerk patterns imply
 
-Clerk's documentation for Stripe integration recommends making the checkout success page a **protected route** and letting the middleware handle session validation. The `redirectToSignIn` fallback in the page component is a defensive pattern, not the recommended primary path.
+Clerk's current docs emphasize middleware-first protection for private routes. A Clerk Stripe tutorial example sends `success_url` to a protected member route (`/members`) rather than a public callback route.
+
+Interpretation: the overall direction is to protect authenticated post-payment pages, but query-preservation mechanics must be handled explicitly for Stripe return URLs.
 
 ---
 
 ## Proposed Approaches
 
-### Option 1: Make `/checkout/success` a protected route (Recommended)
+### Option 1: Make `/checkout/success` a protected route (Candidate, with guardrails)
 
 **Change:** Remove `/checkout/success(.*)` from `PUBLIC_ROUTE_PATTERNS` in `lib/public-routes.ts`.
 
-**Effect:** `clerkMiddleware` will call `auth.protect()` for this route, which:
+**Effect:** middleware will enforce authentication before page execution, which can reduce visible post-payment auth drift if redirect handling is correct.
+
+`auth.protect()`/redirect branch should:
 1. Validates the session token
 2. Refreshes the JWT if expired but session is still valid
 3. Redirects to sign-in with `returnBackUrl` if session is invalid
 
-**The checkout success page code simplifies:**
+**Implementation note: keep page fallback initially**
 ```typescript
-// auth.protect() already ran in middleware — userId is guaranteed non-null
+// Keep defense-in-depth for one rollout window
 const clerkAuth = await d.getClerkAuth();
-// Can remove the null check and redirectToSignIn logic
+if (!clerkAuth.userId) {
+  return clerkAuth.redirectToSignIn({ returnBackUrl });
+}
 const user = await d.authGateway.requireUser();
 ```
 
-**Risk:** Minimal. The only users hitting `/checkout/success` are those returning from Stripe checkout — they MUST be authenticated. There's no legitimate unauthenticated use case for this page.
+**Risk:** Non-trivial unless redirect preservation is explicit. BUG-043 historically showed this route can lose `session_id` if auth redirects are not wired correctly.
 
 ### Option 2: Keep as-is (current behavior)
 
@@ -184,6 +191,7 @@ So why can first-load auth still fail after Stripe redirect?
 - During hosted Stripe Checkout, users are off your app origin, so token refresh timing can be missed; first request back may present an expired/stale token.
 - In SSR flows Clerk may need a **handshake redirect** to FAPI to mint a fresh session token. If this chain is delayed/interrupted, first request can appear signed out and recover on retry/refresh.
 - This behavior can be more variable in preview environments using development instances (`pk_test_` / `sk_test_`) and `accounts.dev` flows.
+- The Next.js discussion about first-load missing cookies is older and browser/framework behavior has evolved, so treat it as supporting signal, not sole root-cause proof.
 
 **Conclusion:** `Lax` is necessary but not sufficient. The observed bounce is more consistent with token-refresh/handshake timing and cross-origin flow complexity than with a misconfigured SameSite policy.
 
@@ -208,6 +216,29 @@ Update BS-032 recommendation to:
 5. Add an E2E regression test: Stripe success URL with `session_id` survives one auth bounce and still completes eager sync.
 6. Re-validate on a production-like environment/domain, not only preview with development Clerk keys.
 
+### Adversarial downside analysis
+
+Historical context: **BUG-043** moved `/checkout/success` to public specifically to avoid query loss on auth bounce.  
+If we change route protection again, we can re-introduce that failure mode unless redirect behavior is explicit.
+
+| Risk if we switch to protected route | Why it matters | Mitigation |
+|---|---|---|
+| `session_id` dropped during sign-in redirect | Eager sync fails; user may land in generic error despite successful payment | Use explicit middleware branch with `redirectToSignIn({ returnBackUrl: req.url })`, not implicit defaults only |
+| Force/fallback redirect config overrides `redirect_url` | User returns to dashboard/home instead of checkout success handler | Keep sign-in force redirects unset for this flow; add config check in rollout checklist |
+| Regressing previously fixed behavior (BUG-043) | Prior bug history indicates this can break in real use | Add regression tests before code change, plus staged rollout |
+| False confidence from preview-only validation | Preview/dev instance behavior can differ from production instance/domain | Validate on production domain with test user and Stripe test mode |
+| Over-reliance on success page | Any redirect failure could block immediate entitlement UX | Keep webhook-first fulfillment as canonical state source |
+
+### Revised recommendation (debt-ready)
+
+Do **not** treat this as a one-line matcher change. Treat it as a controlled hardening task:
+
+1. Move `/checkout/success` from public to protected **with explicit redirect preservation logic in middleware**.
+2. Keep the current in-page `redirectToSignIn({ returnBackUrl })` fallback for one release as defense-in-depth.
+3. Add regression coverage for query preservation and one auth bounce.
+4. Add observability on checkout-success auth bounce rate before/after rollout.
+5. Roll back quickly if bounce rate or checkout error rate increases.
+
 ### Sources
 
 - Clerk `clerkMiddleware()` docs: https://clerk.com/docs/reference/nextjs/clerk-middleware
@@ -221,7 +252,9 @@ Update BS-032 recommendation to:
 - Clerk environment differences (development vs production): https://clerk.com/docs/guides/development/managing-environments
 - Clerk Stripe blog example (`success_url` to `/members`): https://clerk.com/blog/exploring-clerk-metadata-stripe-webhooks
 - Stripe Checkout fulfillment guidance (webhooks required + success_url pattern): https://docs.stripe.com/checkout/fulfillment
+- Stripe custom success page guidance (webhooks required for fulfillment): https://docs.stripe.com/payments/checkout/custom-success-page?payment-ui=embedded-form
 - Next.js discussion referenced in this BS: https://github.com/vercel/next.js/discussions/17612
+- MDN SameSite behavior reference: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie/SameSite
 
 ---
 
@@ -230,3 +263,4 @@ Update BS-032 recommendation to:
 | Date | Decision | Rationale |
 |------|----------|-----------|
 | 2026-02-25 | Created BS-032 | Observed auth bounce during manual testing of new-user Apple OAuth → Stripe checkout flow on Preview deployment |
+| 2026-02-25 | Promoted to DEBT-249 for controlled remediation | Route-boundary change has historical regression risk (BUG-043), so fix requires explicit redirect-preservation logic + regression coverage |
