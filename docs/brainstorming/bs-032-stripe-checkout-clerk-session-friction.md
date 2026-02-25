@@ -146,7 +146,7 @@ Add a loading state that checks auth client-side before triggering the server-si
 
 ---
 
-## Open Questions
+## Open Questions (Answered by research below)
 
 1. **Does `auth.protect()` in middleware preserve query parameters during redirect?** If the middleware redirects to sign-in and back, does `?session_id=cs_xxx` survive the round-trip? This is critical for Option 1 — if query params are lost, the eager sync fails.
 
@@ -155,6 +155,73 @@ Add a loading state that checks auth client-side before triggering the server-si
 3. **How long did the user spend on Stripe checkout?** If it was >60 seconds, JWT expiration is the likely cause. If it was <10 seconds, it's more likely ITP or session propagation delay.
 
 4. **Can we reproduce this reliably?** A manual test with timing instrumentation would confirm the root cause.
+
+---
+
+## Research Findings (Deep Web Search, 2026-02-25)
+
+### 1) Is our current public `/checkout/success` + manual `auth()` check pattern the standard?
+
+**Short answer:** It works, but it is not the strongest default for an authenticated SaaS checkout return path.
+
+What current guidance indicates:
+
+- **Clerk route protection guidance** in 2026 is middleware-first (`auth.protect()`), with private routes protected by default and only true public routes excluded.
+- Clerk's own Stripe example (metadata + webhook guide) sets `success_url` to a **protected member page** (`/members`), not a public callback page.
+- **Stripe's Checkout guidance** is webhook-first for correctness. Stripe explicitly says webhooks are required for reliable fulfillment, and the landing page redirect is mainly for immediate user UX.
+
+**Conclusion:** For this app's flow, Option 1 (protect `/checkout/success`) is the better architecture, with webhook as source of truth and the success page as best-effort UX/eager sync.
+
+### 2) SameSite/Lax: does Clerk already use `Lax`, and if yes why did session still fail?
+
+**Yes, Clerk already sets `SameSite=Lax`.**
+
+- Clerk's security and cookie docs state session cookies are set to `SameSite=Lax`.
+
+So why can first-load auth still fail after Stripe redirect?
+
+- Clerk's session token (`__session`) is **short-lived (60 seconds)** and refreshes every ~50 seconds while the app is active.
+- During hosted Stripe Checkout, users are off your app origin, so token refresh timing can be missed; first request back may present an expired/stale token.
+- In SSR flows Clerk may need a **handshake redirect** to FAPI to mint a fresh session token. If this chain is delayed/interrupted, first request can appear signed out and recover on retry/refresh.
+- This behavior can be more variable in preview environments using development instances (`pk_test_` / `sk_test_`) and `accounts.dev` flows.
+
+**Conclusion:** `Lax` is necessary but not sufficient. The observed bounce is more consistent with token-refresh/handshake timing and cross-origin flow complexity than with a misconfigured SameSite policy.
+
+### 3) Does `auth.protect()` preserve query params like `?session_id=cs_xxx` through sign-in redirect?
+
+Evidence from Clerk docs:
+
+- Clerk's redirect model stores the previous URL in `redirect_url` and sends users back after sign-in.
+- Middleware examples use `redirectToSignIn({ returnBackUrl: req.url })`; `req.url` is the full URL, including query params.
+
+**Practical answer:** Query params should survive **when full URL is used as returnBackUrl**.  
+For this checkout path, if we want strong guarantees, use explicit `redirectToSignIn({ returnBackUrl: req.url })` on the unauthenticated middleware branch (or keep a server fallback) rather than relying on implicit behavior alone.
+
+### 4) Updated recommendation
+
+Update BS-032 recommendation to:
+
+1. **Protect `/checkout/success` in middleware** (remove it from public routes).
+2. Keep **webhook-driven sync as source of truth**; treat success-page sync as UX optimization.
+3. For checkout-success unauthenticated redirects, ensure full return URL is preserved (`returnBackUrl: req.url`) so `session_id` survives.
+4. Avoid redirect config that can override `redirect_url` for this flow (especially sign-in force-redirect settings).
+5. Add an E2E regression test: Stripe success URL with `session_id` survives one auth bounce and still completes eager sync.
+6. Re-validate on a production-like environment/domain, not only preview with development Clerk keys.
+
+### Sources
+
+- Clerk `clerkMiddleware()` docs: https://clerk.com/docs/reference/nextjs/clerk-middleware
+- Clerk `auth()` docs: https://clerk.com/docs/reference/nextjs/app-router/auth
+- Clerk redirect URL behavior: https://clerk.com/docs/guides/development/customize-redirect-urls
+- Clerk middleware example using `returnBackUrl: req.url`: https://clerk.com/docs/guides/development/add-onboarding-flow
+- Clerk cookie behavior (`SameSite=Lax`): https://clerk.com/docs/guides/how-clerk-works/cookies
+- Clerk CSRF/SameSite guidance: https://clerk.com/docs/guides/secure/best-practices/csrf-protection
+- Clerk session/token/handshake internals: https://clerk.com/docs/guides/how-clerk-works/overview
+- Clerk session options and browser limitations: https://clerk.com/docs/guides/secure/session-options
+- Clerk environment differences (development vs production): https://clerk.com/docs/guides/development/managing-environments
+- Clerk Stripe blog example (`success_url` to `/members`): https://clerk.com/blog/exploring-clerk-metadata-stripe-webhooks
+- Stripe Checkout fulfillment guidance (webhooks required + success_url pattern): https://docs.stripe.com/checkout/fulfillment
+- Next.js discussion referenced in this BS: https://github.com/vercel/next.js/discussions/17612
 
 ---
 
