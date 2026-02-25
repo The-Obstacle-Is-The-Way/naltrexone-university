@@ -222,4 +222,136 @@ describe('proxy middleware', () => {
     expect(protect).not.toHaveBeenCalled();
     expect(await res.text()).toBe('ok');
   });
+
+  it('calls auth.protect for /checkout/success when the route is not public', async () => {
+    process.env.NEXT_PUBLIC_SKIP_CLERK = 'false';
+
+    type ClerkMiddlewareCallback = (
+      auth: { protect: () => Promise<void> },
+      request: unknown,
+    ) => Promise<void> | void;
+
+    const protect = vi.fn(async () => undefined);
+    const clerkMiddleware = vi.fn((cb: ClerkMiddlewareCallback) =>
+      vi.fn(async (req: unknown) => {
+        await cb({ protect }, req);
+        return new Response('ok');
+      }),
+    );
+    const createRouteMatcher = vi.fn((patterns: string[]) => (req: unknown) => {
+      const pathname = new URL((req as { url: string }).url).pathname;
+
+      if (pathname.startsWith('/checkout/success')) {
+        return patterns.includes('/checkout/success(.*)');
+      }
+
+      return false;
+    });
+
+    vi.doMock('@clerk/nextjs/server', () => ({
+      clerkMiddleware,
+      createRouteMatcher,
+    }));
+
+    const { default: middleware } = await import('./proxy');
+
+    const res = await middleware(
+      {
+        url: 'https://example.com/checkout/success',
+      } as unknown as NextRequest,
+      {} as unknown as NextFetchEvent,
+    );
+
+    if (!res) {
+      throw new Error('Expected middleware to return a response');
+    }
+
+    expect(protect).toHaveBeenCalledTimes(1);
+    expect(await res.text()).toBe('ok');
+  });
+
+  it('preserves full checkout success URL including session_id when auth.protect redirects to sign-in', async () => {
+    process.env.NEXT_PUBLIC_SKIP_CLERK = 'false';
+
+    type ClerkMiddlewareCallback = (
+      auth: { protect: () => Promise<void> },
+      request: unknown,
+    ) => Promise<void> | void;
+
+    const checkoutSuccessUrl =
+      'https://example.com/checkout/success?session_id=cs_test_xxx';
+
+    const clerkMiddleware = vi.fn((cb: ClerkMiddlewareCallback) =>
+      vi.fn(async (req: unknown) => {
+        const protect = vi.fn(async () => {
+          throw {
+            type: 'redirect',
+            returnBackUrl: (req as { url: string }).url,
+          };
+        });
+
+        try {
+          await cb({ protect }, req);
+          return new Response('ok');
+        } catch (error) {
+          if (
+            typeof error === 'object' &&
+            error &&
+            'type' in error &&
+            error.type === 'redirect' &&
+            'returnBackUrl' in error &&
+            typeof error.returnBackUrl === 'string'
+          ) {
+            const returnBackUrl = error.returnBackUrl;
+            const location = `/sign-in?redirect_url=${encodeURIComponent(returnBackUrl)}`;
+            return new Response(null, {
+              status: 307,
+              headers: {
+                location,
+              },
+            });
+          }
+
+          throw error;
+        }
+      }),
+    );
+    const createRouteMatcher = vi.fn((patterns: string[]) => (req: unknown) => {
+      const pathname = new URL((req as { url: string }).url).pathname;
+
+      if (pathname.startsWith('/checkout/success')) {
+        return patterns.includes('/checkout/success(.*)');
+      }
+
+      return false;
+    });
+
+    vi.doMock('@clerk/nextjs/server', () => ({
+      clerkMiddleware,
+      createRouteMatcher,
+    }));
+
+    const { default: middleware } = await import('./proxy');
+
+    const res = await middleware(
+      {
+        url: checkoutSuccessUrl,
+      } as unknown as NextRequest,
+      {} as unknown as NextFetchEvent,
+    );
+
+    if (!res) {
+      throw new Error('Expected middleware to return a response');
+    }
+
+    expect(res.status).toBe(307);
+    const location = res.headers.get('location');
+    expect(location).not.toBeNull();
+
+    const redirectUrl = new URL(
+      location ?? '',
+      'https://example.com',
+    ).searchParams.get('redirect_url');
+    expect(redirectUrl).toBe(checkoutSuccessUrl);
+  });
 });
