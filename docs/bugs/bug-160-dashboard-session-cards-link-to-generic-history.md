@@ -51,9 +51,13 @@ The dashboard does not replicate this pattern.
 - Clicking any session row feels broken — all cards lead to the same destination
 - The History page already deep-links correctly, creating an inconsistency
 
-## Suggested Fix
+## Fix
 
-Replace the static `historySessionsHref` in each session `<Link>` with a per-row deep-link using `toQuestionRoute` (or fall back to the generic history URL when `firstQuestionSlug` is null):
+Replace the static `historySessionsHref` in each session `<Link>` with a per-row deep-link using `toQuestionRoute`, falling back to the generic history URL when `firstQuestionSlug` is null.
+
+**No infrastructure changes needed.** `from: 'dashboard'` is already a valid `QuestionOrigin` (defined in `lib/routes.ts:21`). The same file's "Recent activity" section already uses this pattern correctly at line 221.
+
+### Code Change (`page.tsx`, inside the session card `.map()`)
 
 ```tsx
 const sessionReviewHref = row.firstQuestionSlug
@@ -63,13 +67,39 @@ const sessionReviewHref = row.firstQuestionSlug
       sessionId: row.sessionId,
     })
   : historySessionsHref;
+
+// Replace <Link href={historySessionsHref}> with:
+<Link href={sessionReviewHref} ...>
 ```
+
+### Edge Cases
+
+- **`firstQuestionSlug` is `null`** (question deleted/archived after session): Falls back to generic `historySessionsHref`. The use case explicitly handles this (`get-session-history.ts:89` uses `?? null`).
+- **Empty sessions** (0 questions): Cannot occur — sessions are created with `questionIds` from the request. If it did, the null-slug fallback covers it.
+- **"View all" link**: Unchanged — still points to generic `historySessionsHref` (line 129).
+
+### Test Change (`page.test.tsx`)
+
+Add assertions mirroring the existing "Recent activity" pattern (lines 93–110). The test fixture at line 60 already provides `firstQuestionSlug: 'q-correct'` — just assert the session card href matches:
+
+```tsx
+expect(html).toContain(
+  toQuestionRoute('q-correct', {
+    from: 'dashboard',
+    mode: 'review',
+    sessionId: 'session_1',
+  })
+);
+```
+
+Add a second test with `firstQuestionSlug: null` asserting fallback to generic history URL.
 
 ## Verification
 
-- [ ] Unit test: DashboardView renders per-session deep-link hrefs (not generic history)
-- [ ] Manual: Click a session card on dashboard → navigates to that session's review
-- [ ] Regression: Sessions without `firstQuestionSlug` still link to history
+- [ ] Unit test: Session card with `firstQuestionSlug` renders per-session deep-link href
+- [ ] Unit test: Session card with `firstQuestionSlug: null` renders fallback to `historySessionsHref`
+- [ ] Manual: Click a session card on dashboard → navigates to that session's review with question navigator
+- [ ] Regression: "View all" link still points to generic history
 
 ## Tracer-Bullet Verification (2026-02-25)
 

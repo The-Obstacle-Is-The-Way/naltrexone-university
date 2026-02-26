@@ -71,20 +71,66 @@ No other controllers are affected.
 
 `src/adapters/controllers/review-controller.test.ts:70–83` tests `offset: -1` (below min) but has no test for offset exceeding an upper bound. Compare with `src/adapters/controllers/practice-controller.test.ts:744–757` which explicitly tests `offset: MAX_PAGINATION_OFFSET + 1`.
 
-## Suggested Fix
+## Fix
 
-Add `.max(MAX_PAGINATION_OFFSET)` to the offset field in `GetAttemptedQuestionsInputSchema`:
+Two changes: one import addition, one schema addition.
+
+### 1. Import Change (`review-controller.ts:5`)
 
 ```typescript
-import { MAX_PAGINATION_OFFSET } from '@/src/adapters/shared/validation-limits';
+// FROM:
+import { MAX_PAGINATION_LIMIT } from '@/src/adapters/shared/validation-limits';
 
+// TO:
+import { MAX_PAGINATION_LIMIT, MAX_PAGINATION_OFFSET } from '@/src/adapters/shared/validation-limits';
+```
+
+### 2. Schema Change (`review-controller.ts:18`)
+
+```typescript
+// FROM:
+offset: z.number().int().min(0),
+
+// TO:
 offset: z.number().int().min(0).max(MAX_PAGINATION_OFFSET),
 ```
 
+### 3. Test Addition (`review-controller.test.ts`, after line 83)
+
+Mirror `practice-controller.test.ts:744–757`:
+
+```typescript
+it('returns VALIDATION_ERROR when offset exceeds the maximum', async () => {
+  const deps = createDeps();
+
+  const result = await getAttemptedQuestions(
+    { limit: 10, offset: MAX_PAGINATION_OFFSET + 1 },
+    deps,
+  );
+
+  expect(result).toMatchObject({
+    ok: false,
+    error: { code: 'VALIDATION_ERROR' },
+  });
+  expect(deps.getAttemptedQuestionsUseCase.inputs).toEqual([]);
+});
+```
+
+Import `MAX_PAGINATION_OFFSET` at the top of the test file.
+
+### Horizontal Audit (No Other Bugs)
+
+All 10 controller files scanned. Only 2 controllers accept an `offset` parameter:
+- `practice-schemas.ts` — correctly bounded ✓
+- `review-controller.ts` — **this bug** ✗
+
+`question-controller.ts` has a `fromIndex` field with `.min(0)` but no `.max()` — this is NOT a pagination offset; it's a session-specific question index already bounded by `MAX_PRACTICE_SESSION_QUESTIONS`.
+
 ## Verification
 
-- [ ] Unit test: `getAttemptedQuestions` rejects `offset > MAX_PAGINATION_OFFSET` with validation error (mirror `practice-controller.test.ts:744`)
-- [ ] Verify existing tests still pass
+- [ ] Unit test: `getAttemptedQuestions` rejects `offset: MAX_PAGINATION_OFFSET + 1` with `VALIDATION_ERROR`
+- [ ] Unit test: `getAttemptedQuestions` accepts `offset: MAX_PAGINATION_OFFSET` (boundary passes)
+- [ ] Regression: Existing tests still pass
 
 ## Tracer-Bullet Verification (2026-02-25)
 
