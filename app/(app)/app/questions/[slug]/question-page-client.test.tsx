@@ -283,7 +283,7 @@ describe('QuestionView', () => {
     expect(html).toContain('Explanation');
   });
 
-  it('renders feedback labels and explanation text with matching question choice ids', () => {
+  it('renders feedback labels, correct answer details, and selected-answer badge', () => {
     const choiceA = createChoice({
       id: 'choice-a',
       questionId: 'question-1',
@@ -339,7 +339,7 @@ describe('QuestionView', () => {
               choiceId: choiceB.id,
               displayLabel: 'B',
               textMd: 'Choice B text',
-              isCorrect: false,
+              isCorrect: true,
               explanationMd: 'B explanation',
             },
           ],
@@ -355,11 +355,12 @@ describe('QuestionView', () => {
     );
 
     expect(html).toContain('A)');
+    expect(html).toContain('Correct answer');
     expect(html).toContain('B)');
     expect(html).toContain('Choice A text');
     expect(html).toContain('Choice B text');
     expect(html).toContain('A explanation');
-    expect(html).toContain('B explanation');
+    expect(html).toContain('Your answer');
   });
 
   it('shows Practice Again for correct standalone history review', () => {

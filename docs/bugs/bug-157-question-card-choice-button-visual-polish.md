@@ -1,6 +1,6 @@
 # BUG-157: Question Card and Choice Button Visual Polish — Text Size, Spacing, Contrast, Post-Submit Indicators
 
-**Status:** Open
+**Status:** Fixed (2026-02-26)
 **Priority:** P2
 **Date:** 2026-02-25
 **Source:** [BS-033](../brainstorming/bs-033-question-display-formatting-and-feedback-ux.md) (Problems 7, 11, 13, 14, 19)
@@ -131,23 +131,22 @@ Keep the dimming but make it slightly less aggressive than `opacity-50`. A subtl
 | `components/question/choice-button.tsx` | Bump choice text size. Increase badge contrast. Verify hover/focus. Add `wrong-unselected` styling. Update correctness type. |
 | `components/question/QuestionCard.test.tsx` | Update assertions for text size, gap, correctness values |
 | `components/question/ChoiceButton.test.tsx` | Update assertions for text size, badge contrast, correctness type |
-| `components/question/ChoiceButton.browser.spec.tsx` | Verify hover/focus visual states |
 
 ## Verification
 
-- [ ] Question stem renders at `text-base` (16px)
-- [ ] Choice text renders at `text-base` (16px)
-- [ ] Stem-to-choices gap is visibly larger than before
-- [ ] A/B/C/D letter badges have adequate contrast on dark backgrounds
-- [ ] Hovering over an unselected choice produces a visible background change
-- [ ] Focus ring on choice is visible on dark backgrounds
-- [ ] Post-submit: correct answer has green treatment
-- [ ] Post-submit: selected wrong answer has red treatment
-- [ ] Post-submit: unselected wrong answers are dimmed but distinguishable from pre-answer state
-- [ ] Labels, metadata, and other secondary text remain at `text-sm`
-- [ ] `pnpm typecheck` passes
-- [ ] `pnpm lint` passes
-- [ ] `pnpm test --run` passes
+- [x] Question stem renders at `text-base` (16px)
+- [x] Choice text renders at `text-base` (16px)
+- [x] Stem-to-choices gap is visibly larger than before
+- [x] A/B/C/D letter badges have adequate contrast on dark backgrounds
+- [x] Hovering over an unselected choice produces a visible background change
+- [x] Focus ring on choice is visible on dark backgrounds
+- [x] Post-submit: correct answer has green treatment
+- [x] Post-submit: selected wrong answer has red treatment
+- [x] Post-submit: unselected wrong answers are dimmed but distinguishable from pre-answer state
+- [x] Labels, metadata, and other secondary text remain at `text-sm`
+- [x] `pnpm typecheck` passes
+- [x] `pnpm lint` passes
+- [x] `pnpm test --run` passes
 
 ## Related
 

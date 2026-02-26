@@ -1,6 +1,6 @@
 # BUG-155: Feedback Card Visual Overhaul — Verdict Badge, Correct Answer Display, Wrong-Answer Cards, Accessibility
 
-**Status:** Open
+**Status:** Fixed (2026-02-26)
 **Priority:** P2
 **Date:** 2026-02-25
 **Source:** [BS-033](../brainstorming/bs-033-question-display-formatting-and-feedback-ux.md) (Problems 2, 3, 8, 9, 10, 12, 18, 22)
@@ -183,27 +183,28 @@ Callers (`practice-view.tsx`, `question-page-client.tsx`) need to pass `selected
 | `tests/e2e/practice.spec.ts` | Update assertion for "Explanation" text if it changes to correct answer display |
 | `tests/e2e/subscribe-and-practice.spec.ts` | Same E2E update |
 | `tests/e2e/review-mode-audit.spec.ts` | Update feedback-card locator/expectations if role changes (`alert` → `status`) and if "Explanation" heading text changes. |
+| `tests/e2e/core-app-pages.spec.ts` | Update post-submit heading assertion from "Explanation" to "Correct answer". |
 | `components/theme-token-regression.test.tsx` | Update feedback token assertions if neutral-card treatment removes `border-success`/`border-destructive` from the outer card. |
 
 ## Verification
 
-- [ ] Feedback card has neutral background (no green/red tint)
-- [ ] "Correct" / "Incorrect" renders as a colored badge/chip
-- [ ] Correct answer text shown instead of "Explanation" heading
-- [ ] "Explanation" fallback still works when `choiceExplanations` is empty
-- [ ] Reference label is visually distinct from citation text (uppercase, tracking)
-- [ ] Verdict-to-explanation gap feels adequate (mt-6)
-- [ ] Wrong-answer choice text has reduced visual weight
-- [ ] "Your answer" badge appears on the user's selected wrong choice
-- [ ] "Your answer" badge does NOT appear on unselected wrong choices
-- [ ] Feedback card uses `role="status"` (verify with screen reader or DOM inspection)
-- [ ] Quick Practice feedback renders correctly
-- [ ] Review mode feedback renders correctly
-- [ ] Session review feedback renders correctly (including unanswered reveal)
-- [ ] `pnpm typecheck` passes
-- [ ] `pnpm lint` passes
-- [ ] `pnpm test --run` passes
-- [ ] `pnpm build` succeeds
+- [x] Feedback card has neutral background (no green/red tint)
+- [x] "Correct" / "Incorrect" renders as a colored badge/chip
+- [x] Correct answer text shown instead of "Explanation" heading
+- [x] "Explanation" fallback still works when `choiceExplanations` is empty
+- [x] Reference label is visually distinct from citation text (uppercase, tracking)
+- [x] Verdict-to-explanation gap feels adequate (mt-6)
+- [x] Wrong-answer choice text has reduced visual weight
+- [x] "Your answer" badge appears on the user's selected wrong choice
+- [x] "Your answer" badge does NOT appear on unselected wrong choices
+- [x] Feedback card uses `role="status"` (verify with screen reader or DOM inspection)
+- [x] Quick Practice feedback renders correctly
+- [x] Review mode feedback renders correctly
+- [x] Session review feedback renders correctly (including unanswered reveal)
+- [x] `pnpm typecheck` passes
+- [x] `pnpm lint` passes
+- [x] `pnpm test --run` passes
+- [x] `pnpm build` succeeds
 
 ## Related
 

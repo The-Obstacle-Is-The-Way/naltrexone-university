@@ -250,6 +250,7 @@ export function PracticeView(props: PracticeViewProps) {
             explanationMd={props.submitResult.explanationMd}
             referenceMd={props.submitResult.referenceMd ?? null}
             choiceExplanations={props.submitResult.choiceExplanations}
+            selectedChoiceId={props.selectedChoiceId}
           />
         </div>
       ) : null}

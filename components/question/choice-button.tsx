@@ -9,7 +9,7 @@ export type ChoiceButtonProps = {
   textMd: string;
   selected: boolean;
   disabled?: boolean;
-  correctness?: 'correct' | 'incorrect' | null;
+  correctness?: 'correct' | 'incorrect' | 'wrong-unselected' | null;
   onClick: () => void;
 };
 
@@ -26,9 +26,11 @@ export function ChoiceButton({
     <label
       className={cn(
         'block w-full rounded-xl border border-border bg-background p-4 text-left shadow-sm transition-colors focus-within:border-ring focus-within:ring-ring/50 focus-within:ring-[3px]',
-        !disabled && 'cursor-pointer hover:bg-muted',
+        !disabled &&
+          'cursor-pointer hover:border-muted-foreground/30 hover:bg-muted/80',
         disabled && 'cursor-not-allowed',
         disabled && !correctness && 'opacity-50',
+        correctness === 'wrong-unselected' && 'opacity-60',
         selected && correctness === null && 'border-ring',
         correctness === 'correct' &&
           'border-success bg-success/10 text-success-foreground',
@@ -47,7 +49,7 @@ export function ChoiceButton({
       <div className="flex items-start gap-3">
         <div
           className={cn(
-            'flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-border bg-background text-xs font-semibold leading-none text-foreground',
+            'flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-border bg-muted text-xs font-semibold leading-none text-foreground',
             selected && correctness === null && 'border-ring',
             correctness === 'correct' &&
               'border-success bg-success/15 text-success',
@@ -57,7 +59,7 @@ export function ChoiceButton({
         >
           {label}
         </div>
-        <Markdown content={textMd} className="text-sm text-foreground" />
+        <Markdown content={textMd} className="text-base text-foreground" />
       </div>
     </label>
   );

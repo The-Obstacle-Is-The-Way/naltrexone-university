@@ -24,6 +24,8 @@ test.describe('subscribe and practice', () => {
     await page.getByRole('button', { name: 'Submit' }).click();
 
     await expect(page.getByText(/Correct|Incorrect/)).toBeVisible();
-    await expect(page.getByText('Explanation', { exact: true })).toBeVisible();
+    await expect(
+      page.getByText('Correct answer', { exact: true }),
+    ).toBeVisible();
   });
 });

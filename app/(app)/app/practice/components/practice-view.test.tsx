@@ -486,6 +486,58 @@ describe('PracticeView', () => {
     expect(nextButton).not.toBeUndefined();
     expect(nextButton?.className).toContain('bg-primary');
   });
+
+  it('passes selected choice context to feedback after submit', () => {
+    const question = createNextQuestion();
+    const selectedChoice = question.choices[0];
+    if (!selectedChoice) {
+      throw new Error('Expected at least one choice');
+    }
+    const secondChoiceId = 'choice-2';
+
+    const html = renderToStaticMarkup(
+      <PracticeView
+        loadState={{ status: 'ready' }}
+        question={question}
+        selectedChoiceId={selectedChoice.id}
+        isAnswered={true}
+        submitResult={{
+          attemptId: 'attempt-1',
+          isCorrect: false,
+          correctChoiceId: secondChoiceId,
+          explanationMd: 'Because.',
+          referenceMd: null,
+          choiceExplanations: [
+            {
+              choiceId: selectedChoice.id,
+              displayLabel: selectedChoice.label,
+              textMd: selectedChoice.textMd,
+              isCorrect: false,
+              explanationMd: 'Selected choice explanation.',
+            },
+            {
+              choiceId: secondChoiceId,
+              displayLabel: 'B',
+              textMd: 'Choice B',
+              isCorrect: true,
+              explanationMd: 'Correct choice explanation.',
+            },
+          ],
+        }}
+        isPending={false}
+        bookmarkStatus="idle"
+        isBookmarked={false}
+        canSubmit={false}
+        onTryAgain={() => undefined}
+        onToggleBookmark={() => undefined}
+        onSelectChoice={() => undefined}
+        onSubmit={() => undefined}
+        onNextQuestion={() => undefined}
+      />,
+    );
+
+    expect(html).toContain('Your answer');
+  });
 });
 
 describe('getBookmarkNotificationTransition', () => {
