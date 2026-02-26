@@ -40,7 +40,7 @@ describe('PracticeView', () => {
       />,
     );
 
-    expect(html).toContain('Back to Dashboard');
+    expect(html).toContain('← Back to Dashboard');
     expect(html).toContain(`href="${ROUTES.APP_DASHBOARD}"`);
   });
 

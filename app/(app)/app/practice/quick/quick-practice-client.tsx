@@ -8,6 +8,7 @@ import {
   logUnhandledAsyncError,
 } from '@/app/(app)/app/practice/fire-and-forget';
 import { usePracticeQuestionFlow } from '@/app/(app)/app/practice/hooks/use-practice-question-flow';
+import { useQuickPracticeStatusCounts } from '@/app/(app)/app/practice/hooks/use-quick-practice-status-counts';
 import type { PracticeFilters } from '@/app/(app)/app/practice/practice-page-logic';
 import { statusDisplayLabel } from '@/app/(app)/app/practice/practice-page-types';
 import { SegmentedControl } from '@/components/ui/segmented-control';
@@ -64,18 +65,24 @@ export default function QuickPracticeClient() {
   const questionFlow = usePracticeQuestionFlow({
     filters,
   });
+  const counts = useQuickPracticeStatusCounts({
+    filters,
+  });
 
   return (
     <PracticeView
       title="Quick Practice"
       description="Answer one question at a time."
-      backLink={{ href: ROUTES.APP_PRACTICE, label: 'Back to Practice' }}
+      backLink={{ href: ROUTES.APP_PRACTICE, label: '← Back to Practice' }}
       belowHeadingContent={
         <div className="mt-4">
           <SegmentedControl
             options={AllQuestionProgressStatuses.map((s) => ({
               value: s,
-              label: statusDisplayLabel(s),
+              label:
+                counts[s] !== null
+                  ? `${statusDisplayLabel(s)} (${counts[s]})`
+                  : statusDisplayLabel(s),
             }))}
             value={status}
             onChange={(value) => {

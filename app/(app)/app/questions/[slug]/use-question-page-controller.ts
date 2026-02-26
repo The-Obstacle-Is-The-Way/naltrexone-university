@@ -43,6 +43,7 @@ export type UseQuestionPageControllerOutput = {
   question: GetQuestionBySlugOutput | null;
   selectedChoiceId: string | null;
   submitResult: SubmitAnswerOutput | null;
+  isLoadingPreviousAttempt: boolean;
   sessionUnansweredReveal: SessionUnansweredReveal | null;
   sessionNavigation: SessionNavigation | null;
   canSubmit: boolean;
@@ -74,6 +75,9 @@ export function useQuestionPageController(
   });
   const [sessionNavigation, setSessionNavigation] =
     useState<SessionNavigation | null>(null);
+  const [isLoadingPreviousAttempt, setIsLoadingPreviousAttempt] = useState(
+    input.mode === 'review',
+  );
   const [isPending, startTransition] = useTransition();
   const isMounted = useIsMounted();
   const sessionQuestionsBySessionIdRef = useRef<
@@ -229,9 +233,25 @@ export function useQuestionPageController(
   ]);
 
   useEffect(() => {
+    if (input.mode === 'review') {
+      setIsLoadingPreviousAttempt(true);
+      return;
+    }
+
+    setIsLoadingPreviousAttempt(false);
+  }, [input.mode]);
+
+  useEffect(() => {
     if (input.mode !== 'review') return;
     if (loadState.status !== 'ready') return;
-    if (!question) return;
+    if (!question) {
+      if (isMounted()) {
+        setIsLoadingPreviousAttempt(false);
+      }
+      return;
+    }
+
+    setIsLoadingPreviousAttempt(true);
 
     startTransition(() => {
       void loadPreviousAttempt({
@@ -243,6 +263,10 @@ export function useQuestionPageController(
         setSubmitResult,
         setSessionUnansweredReveal,
         isMounted,
+      }).finally(() => {
+        if (isMounted()) {
+          setIsLoadingPreviousAttempt(false);
+        }
       });
     });
   }, [
@@ -333,6 +357,7 @@ export function useQuestionPageController(
     question,
     selectedChoiceId,
     submitResult,
+    isLoadingPreviousAttempt,
     sessionUnansweredReveal,
     canSubmit,
     isPending,

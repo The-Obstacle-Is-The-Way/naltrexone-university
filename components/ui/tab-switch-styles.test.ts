@@ -29,10 +29,12 @@ describe('tab-switch-styles', () => {
   it('defines the canonical base classes', () => {
     expect(tabSwitchItemBaseClasses).toContain('rounded-md');
     expect(tabSwitchItemBaseClasses).toContain('focus-visible');
+    expect(tabSwitchItemBaseClasses).toContain('py-2');
   });
 
   it('defines the canonical inactive classes', () => {
     expect(tabSwitchItemInactiveClasses).toContain('text-muted-foreground');
+    expect(tabSwitchItemInactiveClasses).toContain('hover:bg-muted/50');
     expect(tabSwitchItemInactiveClasses).toContain('hover:text-foreground');
   });
 });

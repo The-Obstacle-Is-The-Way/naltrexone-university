@@ -1,6 +1,6 @@
 # BUG-153: "Try Again" Label Shown for Correct Answers on Dashboard and Bookmarks Review
 
-**Status:** Open
+**Status:** Fixed (2026-02-26)
 **Priority:** P3
 **Date:** 2026-02-25
 **Source:** [BS-033](../brainstorming/bs-033-question-display-formatting-and-feedback-ux.md) (Residual section), [BS-034](../brainstorming/bs-034-history-questions-tab-review-navigator-mismatch.md) (Related UX #3)
@@ -72,22 +72,22 @@ After this fix, `isStandaloneHistoryReview` is only used at line 157 as a declar
 
 | File | Change |
 |------|--------|
-| `app/(app)/app/questions/[slug]/question-page-client.tsx` | Simplify `reattemptLabel` condition (lines 185-188). Optionally remove `isStandaloneHistoryReview` if unused. |
+| `app/(app)/app/questions/[slug]/question-page-client.tsx` | Simplify `reattemptLabel` condition (lines 185-188) and remove dead `isStandaloneHistoryReview`. |
 | `app/(app)/app/questions/[slug]/question-page-client.test.tsx` | Update label assertions for Dashboard/Bookmarks review to expect "Practice Again" on correct answers |
 | `tests/e2e/review-mode-audit.spec.ts` | Update review-mode label assertions that currently expect `Try Again` for dashboard/bookmark review on correct answers. |
 
 ## Verification
 
-- [ ] Dashboard review of correct answer → button says "Practice Again"
-- [ ] Dashboard review of incorrect answer → button says "Try Again"
-- [ ] Bookmarks review of correct answer → button says "Practice Again"
-- [ ] Bookmarks review of incorrect answer → button says "Try Again"
-- [ ] History Questions review of correct answer → button says "Practice Again" (no regression)
-- [ ] History Questions review of incorrect answer → button says "Try Again" (no regression)
-- [ ] Session review → reattempt button NOT shown (no regression)
-- [ ] `pnpm typecheck` passes
-- [ ] `pnpm lint` passes
-- [ ] `pnpm test --run` passes
+- [x] Dashboard review of correct answer → button says "Practice Again"
+- [x] Dashboard review of incorrect answer → button says "Try Again"
+- [x] Bookmarks review of correct answer → button says "Practice Again"
+- [x] Bookmarks review of incorrect answer → button says "Try Again"
+- [x] History Questions review of correct answer → button says "Practice Again" (no regression)
+- [x] History Questions review of incorrect answer → button says "Try Again" (no regression)
+- [x] Session review → reattempt button NOT shown (no regression)
+- [x] `pnpm typecheck` passes
+- [x] `pnpm lint` passes
+- [x] `pnpm test --run` passes
 
 ## Related
 

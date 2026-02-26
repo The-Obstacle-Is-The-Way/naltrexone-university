@@ -135,6 +135,7 @@ export type QuestionViewProps = {
   question: GetQuestionBySlugOutput | null;
   selectedChoiceId: string | null;
   submitResult: SubmitAnswerOutput | null;
+  isLoadingPreviousAttempt?: boolean;
   sessionUnansweredReveal?: SessionUnansweredReveal | null;
   sessionNavigation: SessionNavigation | null;
   canSubmit: boolean;
@@ -154,7 +155,6 @@ export function QuestionView(props: QuestionViewProps) {
   const isReviewMode = props.mode === 'review';
   const hasSessionId = typeof props.sessionId === 'string';
   const isSessionReviewReadOnly = isReviewMode && hasSessionId;
-  const isStandaloneHistoryReview = props.origin === 'history' && !hasSessionId;
   const isSessionReviewUnansweredReveal = sessionUnansweredReveal !== null;
   const correctChoiceId =
     sessionUnansweredReveal?.correctChoiceId ??
@@ -182,10 +182,9 @@ export function QuestionView(props: QuestionViewProps) {
         ]
       : null;
   const historySeqParam = props.sessionNavigation?.historySequence?.join(',');
-  const reattemptLabel =
-    isStandaloneHistoryReview && props.submitResult?.isCorrect
-      ? 'Practice Again'
-      : 'Try Again';
+  const reattemptLabel = props.submitResult?.isCorrect
+    ? 'Practice Again'
+    : 'Try Again';
 
   return (
     <div className="space-y-6">
@@ -233,19 +232,28 @@ export function QuestionView(props: QuestionViewProps) {
         </ErrorCard>
       ) : null}
 
-      {props.loadState.status === 'loading' ? (
+      {props.loadState.status === 'loading' &&
+      !props.isLoadingPreviousAttempt ? (
         <Card className="gap-0 rounded-2xl p-6 text-sm text-muted-foreground shadow-sm">
           <output aria-live="polite">Loading question…</output>
         </Card>
       ) : null}
 
-      {props.loadState.status === 'ready' && props.question === null ? (
+      {props.loadState.status === 'ready' && props.isLoadingPreviousAttempt ? (
+        <Card className="gap-0 rounded-2xl p-6 text-sm text-muted-foreground shadow-sm">
+          <output aria-live="polite">Loading review…</output>
+        </Card>
+      ) : null}
+
+      {props.loadState.status === 'ready' &&
+      props.question === null &&
+      !props.isLoadingPreviousAttempt ? (
         <Card className="gap-0 rounded-2xl p-6 text-sm text-muted-foreground shadow-sm">
           Question not found.
         </Card>
       ) : null}
 
-      {props.question ? (
+      {props.question && !props.isLoadingPreviousAttempt ? (
         <>
           {isSessionReviewUnansweredReveal ? (
             <Card
@@ -274,7 +282,8 @@ export function QuestionView(props: QuestionViewProps) {
         </>
       ) : null}
 
-      {props.submitResult || sessionUnansweredReveal ? (
+      {(props.submitResult || sessionUnansweredReveal) &&
+      !props.isLoadingPreviousAttempt ? (
         <Feedback
           isCorrect={props.submitResult?.isCorrect ?? false}
           explanationMd={
@@ -296,96 +305,98 @@ export function QuestionView(props: QuestionViewProps) {
         />
       ) : null}
 
-      <div
-        className="flex flex-col gap-3 sm:flex-row"
-        data-testid="bottom-action-bar"
-      >
-        {props.sessionNavigation ? (
-          navPrev ? (
-            <Button asChild variant="outline" className="rounded-full">
-              <Link
-                href={toQuestionRoute(navPrev.slug, {
-                  from: props.sessionNavigation.from,
-                  mode: 'review',
-                  sessionId: props.sessionNavigation.sessionId,
-                  historyHref: props.historyHref,
-                  historySeq: historySeqParam,
-                  historyIndex: historySeqParam
-                    ? props.sessionNavigation.currentIndex - 1
-                    : undefined,
-                })}
-              >
+      {!props.isLoadingPreviousAttempt ? (
+        <div
+          className="flex flex-col gap-3 sm:flex-row"
+          data-testid="bottom-action-bar"
+        >
+          {props.sessionNavigation ? (
+            navPrev ? (
+              <Button asChild variant="outline" className="rounded-full">
+                <Link
+                  href={toQuestionRoute(navPrev.slug, {
+                    from: props.sessionNavigation.from,
+                    mode: 'review',
+                    sessionId: props.sessionNavigation.sessionId,
+                    historyHref: props.historyHref,
+                    historySeq: historySeqParam,
+                    historyIndex: historySeqParam
+                      ? props.sessionNavigation.currentIndex - 1
+                      : undefined,
+                  })}
+                >
+                  ← Previous
+                </Link>
+              </Button>
+            ) : (
+              <Button variant="outline" className="rounded-full" disabled>
                 ← Previous
-              </Link>
+              </Button>
+            )
+          ) : null}
+
+          {!props.submitResult && !isSessionReviewReadOnly ? (
+            <Button
+              type="button"
+              className="rounded-full"
+              disabled={
+                !props.canSubmit ||
+                props.isPending ||
+                props.loadState.status === 'loading'
+              }
+              onClick={props.onSubmit}
+            >
+              Submit
             </Button>
-          ) : (
-            <Button variant="outline" className="rounded-full" disabled>
-              ← Previous
+          ) : null}
+
+          {props.submitResult && !isSessionReviewReadOnly ? (
+            <Button
+              type="button"
+              variant="outline"
+              className="rounded-full"
+              disabled={props.isPending}
+              onClick={props.onReattempt}
+            >
+              {reattemptLabel}
             </Button>
-          )
-        ) : null}
+          ) : null}
 
-        {!props.submitResult && !isSessionReviewReadOnly ? (
-          <Button
-            type="button"
-            className="rounded-full"
-            disabled={
-              !props.canSubmit ||
-              props.isPending ||
-              props.loadState.status === 'loading'
-            }
-            onClick={props.onSubmit}
-          >
-            Submit
-          </Button>
-        ) : null}
-
-        {props.submitResult && !isSessionReviewReadOnly ? (
-          <Button
-            type="button"
-            variant="outline"
-            className="rounded-full"
-            disabled={props.isPending}
-            onClick={props.onReattempt}
-          >
-            {reattemptLabel}
-          </Button>
-        ) : null}
-
-        {props.sessionNavigation ? (
-          navNext ? (
-            <Button asChild variant="outline" className="rounded-full">
-              <Link
-                href={toQuestionRoute(navNext.slug, {
-                  from: props.sessionNavigation.from,
-                  mode: 'review',
-                  sessionId: props.sessionNavigation.sessionId,
-                  historyHref: props.historyHref,
-                  historySeq: historySeqParam,
-                  historyIndex: historySeqParam
-                    ? props.sessionNavigation.currentIndex + 1
-                    : undefined,
-                })}
-              >
+          {props.sessionNavigation ? (
+            navNext ? (
+              <Button asChild variant="outline" className="rounded-full">
+                <Link
+                  href={toQuestionRoute(navNext.slug, {
+                    from: props.sessionNavigation.from,
+                    mode: 'review',
+                    sessionId: props.sessionNavigation.sessionId,
+                    historyHref: props.historyHref,
+                    historySeq: historySeqParam,
+                    historyIndex: historySeqParam
+                      ? props.sessionNavigation.currentIndex + 1
+                      : undefined,
+                  })}
+                >
+                  Next →
+                </Link>
+              </Button>
+            ) : (
+              <Button variant="outline" className="rounded-full" disabled>
                 Next →
-              </Link>
-            </Button>
-          ) : (
-            <Button variant="outline" className="rounded-full" disabled>
-              Next →
-            </Button>
-          )
-        ) : null}
+              </Button>
+            )
+          ) : null}
 
-        {props.origin === 'history' ||
-        props.sessionNavigation ||
-        props.submitResult ||
-        isSessionReviewReadOnly ? (
-          <Button asChild variant="ghost" className="rounded-full">
-            <Link href={originUi.backHref}>{originUi.backLabel}</Link>
-          </Button>
-        ) : null}
-      </div>
+          {props.origin === 'history' ||
+          props.sessionNavigation ||
+          props.submitResult ||
+          isSessionReviewReadOnly ? (
+            <Button asChild variant="ghost" className="rounded-full">
+              <Link href={originUi.backHref}>{originUi.backLabel}</Link>
+            </Button>
+          ) : null}
+        </div>
+      ) : null}
     </div>
   );
 }

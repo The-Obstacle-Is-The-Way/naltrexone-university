@@ -22,6 +22,6 @@ describe('app/(app)/app/practice/quick', () => {
   it('renders a quick practice shell', () => {
     const html = renderToStaticMarkup(<QuickPracticePage />);
     expect(html).toContain('Quick Practice');
-    expect(html).toContain('Back to Practice');
+    expect(html).toContain('← Back to Practice');
   });
 });

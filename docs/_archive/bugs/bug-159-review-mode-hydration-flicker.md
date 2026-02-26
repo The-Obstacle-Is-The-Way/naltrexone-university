@@ -1,6 +1,6 @@
 # BUG-159: Review-Mode Hydration Flicker — Transient Submit UI Shown in Review Route
 
-**Status:** Open
+**Status:** Fixed (2026-02-26)
 **Priority:** P3
 **Date:** 2026-02-25
 **Source:** [BS-033](../brainstorming/bs-033-question-display-formatting-and-feedback-ux.md) (Problem 21)
@@ -88,16 +88,16 @@ A narrower patch can hide Submit while previous-attempt hydration is in-flight, 
 
 ## Verification
 
-- [ ] Review mode from Dashboard: no flash of Submit button
-- [ ] Review mode from Bookmarks: no flash of Submit button
-- [ ] Review mode from History: no flash of Submit button
-- [ ] Session review mode: no regression (already guarded by `isSessionReviewReadOnly`)
-- [ ] Submit mode (Quick Practice, new question): Submit button works normally — no regression
-- [ ] Loading state shows while previous attempt data loads
-- [ ] After load: feedback card, disabled choices, and correct answer highlight all render correctly
-- [ ] `pnpm typecheck` passes
-- [ ] `pnpm lint` passes
-- [ ] `pnpm test --run` passes
+- [x] Review mode from Dashboard: no flash of Submit button
+- [x] Review mode from Bookmarks: no flash of Submit button
+- [x] Review mode from History: no flash of Submit button
+- [x] Session review mode: no regression (already guarded by `isSessionReviewReadOnly`)
+- [x] Submit mode (Quick Practice, new question): Submit button works normally — no regression
+- [x] Loading state shows while previous attempt data loads
+- [x] After load: feedback card, disabled choices, and correct answer highlight all render correctly
+- [x] `pnpm typecheck` passes
+- [x] `pnpm lint` passes
+- [x] `pnpm test --run` passes
 
 ## Related
 

@@ -12,7 +12,7 @@ export const tabSwitchContainerClasses =
 
 /** Base classes for each tab item (active or inactive). */
 export const tabSwitchItemBaseClasses =
-  'rounded-md px-4 py-1.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]';
+  'rounded-md px-4 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]';
 
 /** Additional classes for the active/selected tab item. */
 export const tabSwitchItemActiveClasses =
@@ -20,4 +20,4 @@ export const tabSwitchItemActiveClasses =
 
 /** Additional classes for inactive tab items. */
 export const tabSwitchItemInactiveClasses =
-  'text-muted-foreground hover:text-foreground';
+  'text-muted-foreground hover:bg-muted/50 hover:text-foreground';

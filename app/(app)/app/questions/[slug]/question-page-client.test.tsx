@@ -283,6 +283,71 @@ describe('QuestionView', () => {
     expect(html).toContain('Explanation');
   });
 
+  it('renders Loading review while previous attempt is hydrating', () => {
+    const html = renderToStaticMarkup(
+      <QuestionView
+        loadState={{ status: 'ready' }}
+        question={{
+          questionId: 'q1',
+          slug: 'q1',
+          stemMd: 'Question stem',
+          difficulty: 'easy',
+          choices: [{ id: 'c1', label: 'A', textMd: 'Choice A' }],
+        }}
+        selectedChoiceId={null}
+        submitResult={null}
+        sessionNavigation={null}
+        canSubmit={true}
+        isPending={false}
+        mode="review"
+        origin="dashboard"
+        isLoadingPreviousAttempt={true}
+        onTryAgain={() => undefined}
+        onSelectChoice={() => undefined}
+        onSubmit={() => undefined}
+        onReattempt={() => undefined}
+      />,
+    );
+
+    expect(html).toContain('Loading review…');
+    expect(html).not.toContain('Loading question…');
+    expect(html).not.toContain('Question stem');
+    expect(html).not.toContain('data-testid="bottom-action-bar"');
+    expect(html).not.toContain('>Submit<');
+  });
+
+  it('renders question content when previous attempt hydration is complete', () => {
+    const html = renderToStaticMarkup(
+      <QuestionView
+        loadState={{ status: 'ready' }}
+        question={{
+          questionId: 'q1',
+          slug: 'q1',
+          stemMd: 'Question stem',
+          difficulty: 'easy',
+          choices: [{ id: 'c1', label: 'A', textMd: 'Choice A' }],
+        }}
+        selectedChoiceId={null}
+        submitResult={null}
+        sessionNavigation={null}
+        canSubmit={true}
+        isPending={false}
+        mode="review"
+        origin="dashboard"
+        isLoadingPreviousAttempt={false}
+        onTryAgain={() => undefined}
+        onSelectChoice={() => undefined}
+        onSubmit={() => undefined}
+        onReattempt={() => undefined}
+      />,
+    );
+
+    expect(html).not.toContain('Loading review…');
+    expect(html).toContain('Question stem');
+    expect(html).toContain('data-testid="bottom-action-bar"');
+    expect(html).toContain('>Submit<');
+  });
+
   it('renders feedback labels, correct answer details, and selected-answer badge', () => {
     const choiceA = createChoice({
       id: 'choice-a',
@@ -363,7 +428,7 @@ describe('QuestionView', () => {
     expect(html).toContain('Your answer');
   });
 
-  it('shows Practice Again for correct standalone history review', () => {
+  it('shows Practice Again for any correct standalone review', () => {
     const html = renderToStaticMarkup(
       <QuestionView
         loadState={{ status: 'ready' }}
@@ -382,6 +447,129 @@ describe('QuestionView', () => {
         isPending={false}
         mode="review"
         origin="history"
+        onTryAgain={() => undefined}
+        onSelectChoice={() => undefined}
+        onSubmit={() => undefined}
+        onReattempt={() => undefined}
+      />,
+    );
+
+    expect(html).toContain('Practice Again');
+    expect(html).not.toContain('Try Again');
+    expect(html).not.toContain('>Submit<');
+  });
+
+  it('shows Practice Again for correct standalone dashboard review', () => {
+    const html = renderToStaticMarkup(
+      <QuestionView
+        loadState={{ status: 'ready' }}
+        question={null}
+        selectedChoiceId={null}
+        submitResult={{
+          attemptId: 'attempt_1',
+          isCorrect: true,
+          correctChoiceId: 'c1',
+          explanationMd: 'Explanation',
+          referenceMd: null,
+          choiceExplanations: [],
+        }}
+        sessionNavigation={null}
+        canSubmit={false}
+        isPending={false}
+        mode="review"
+        origin="dashboard"
+        onTryAgain={() => undefined}
+        onSelectChoice={() => undefined}
+        onSubmit={() => undefined}
+        onReattempt={() => undefined}
+      />,
+    );
+
+    expect(html).toContain('Practice Again');
+    expect(html).not.toContain('Try Again');
+    expect(html).not.toContain('>Submit<');
+  });
+
+  it('shows Practice Again for correct standalone bookmarks review', () => {
+    const html = renderToStaticMarkup(
+      <QuestionView
+        loadState={{ status: 'ready' }}
+        question={null}
+        selectedChoiceId={null}
+        submitResult={{
+          attemptId: 'attempt_1',
+          isCorrect: true,
+          correctChoiceId: 'c1',
+          explanationMd: 'Explanation',
+          referenceMd: null,
+          choiceExplanations: [],
+        }}
+        sessionNavigation={null}
+        canSubmit={false}
+        isPending={false}
+        mode="review"
+        origin="bookmarks"
+        onTryAgain={() => undefined}
+        onSelectChoice={() => undefined}
+        onSubmit={() => undefined}
+        onReattempt={() => undefined}
+      />,
+    );
+
+    expect(html).toContain('Practice Again');
+    expect(html).not.toContain('Try Again');
+    expect(html).not.toContain('>Submit<');
+  });
+
+  it('shows Try Again for incorrect standalone dashboard review', () => {
+    const html = renderToStaticMarkup(
+      <QuestionView
+        loadState={{ status: 'ready' }}
+        question={null}
+        selectedChoiceId={null}
+        submitResult={{
+          attemptId: 'attempt_1',
+          isCorrect: false,
+          correctChoiceId: 'c1',
+          explanationMd: 'Explanation',
+          referenceMd: null,
+          choiceExplanations: [],
+        }}
+        sessionNavigation={null}
+        canSubmit={false}
+        isPending={false}
+        mode="review"
+        origin="dashboard"
+        onTryAgain={() => undefined}
+        onSelectChoice={() => undefined}
+        onSubmit={() => undefined}
+        onReattempt={() => undefined}
+      />,
+    );
+
+    expect(html).toContain('Try Again');
+    expect(html).not.toContain('Practice Again');
+    expect(html).not.toContain('>Submit<');
+  });
+
+  it('shows Practice Again for correct standalone review with no origin', () => {
+    const html = renderToStaticMarkup(
+      <QuestionView
+        loadState={{ status: 'ready' }}
+        question={null}
+        selectedChoiceId={null}
+        submitResult={{
+          attemptId: 'attempt_1',
+          isCorrect: true,
+          correctChoiceId: 'c1',
+          explanationMd: 'Explanation',
+          referenceMd: null,
+          choiceExplanations: [],
+        }}
+        sessionNavigation={null}
+        canSubmit={false}
+        isPending={false}
+        mode="review"
         onTryAgain={() => undefined}
         onSelectChoice={() => undefined}
         onSubmit={() => undefined}
