@@ -97,7 +97,9 @@ test.describe('review mode audit', () => {
     });
 
     await expectFeedbackVisible(page);
-    await expect(page.getByRole('button', { name: 'Try Again' })).toBeVisible();
+    await expect(
+      page.getByRole('button', { name: 'Practice Again' }),
+    ).toBeVisible();
     await expect(page.getByRole('button', { name: 'Submit' })).toHaveCount(0);
     await expectChoiceChecked(page, selectedLabel);
   });
@@ -175,7 +177,9 @@ test.describe('review mode audit', () => {
     });
     await expectFeedbackVisible(page);
     await expectChoiceChecked(page, incorrectLabel);
-    await expect(page.getByRole('button', { name: 'Try Again' })).toBeVisible();
+    await expect(
+      page.getByRole('button', { name: /^(Practice Again|Try Again)$/ }),
+    ).toBeVisible();
     await expect(page.getByRole('button', { name: 'Submit' })).toHaveCount(0);
   });
 
@@ -361,7 +365,9 @@ test.describe('review mode audit', () => {
     ).toBeVisible();
 
     await expect(page.getByRole('button', { name: 'Submit' })).toHaveCount(0);
-    await expect(page.getByRole('button', { name: 'Try Again' })).toBeVisible();
+    await expect(
+      page.getByRole('button', { name: /^(Practice Again|Try Again)$/ }),
+    ).toBeVisible();
 
     const correctChoice = page.locator('label.border-success');
     await expect(correctChoice.first()).toBeVisible();

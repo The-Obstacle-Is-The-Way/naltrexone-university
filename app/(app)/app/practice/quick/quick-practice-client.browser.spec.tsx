@@ -11,6 +11,7 @@ const {
   submitAnswerMock,
   getBookmarksMock,
   toggleBookmarkMock,
+  useQuickPracticeStatusCountsMock,
 } = vi.hoisted(() => ({
   pushMock: vi.fn(),
   useSearchParamsMock: vi.fn(),
@@ -18,6 +19,7 @@ const {
   submitAnswerMock: vi.fn(),
   getBookmarksMock: vi.fn(),
   toggleBookmarkMock: vi.fn(),
+  useQuickPracticeStatusCountsMock: vi.fn(),
 }));
 
 vi.mock('next/navigation', () => ({
@@ -35,6 +37,13 @@ vi.mock('@/src/adapters/controllers/question-controller', () => ({
   submitAnswer: submitAnswerMock,
 }));
 
+vi.mock(
+  '@/app/(app)/app/practice/hooks/use-quick-practice-status-counts',
+  () => ({
+    useQuickPracticeStatusCounts: useQuickPracticeStatusCountsMock,
+  }),
+);
+
 afterEach(() => {
   pushMock.mockReset();
   useSearchParamsMock.mockReset();
@@ -42,12 +51,18 @@ afterEach(() => {
   submitAnswerMock.mockReset();
   getBookmarksMock.mockReset();
   toggleBookmarkMock.mockReset();
+  useQuickPracticeStatusCountsMock.mockReset();
 });
 
 test('pushes a new status query param without scrolling', async () => {
   useSearchParamsMock.mockReturnValue(new URLSearchParams(''));
   getNextQuestionMock.mockResolvedValue(ok(null));
   getBookmarksMock.mockResolvedValue(ok({ rows: [] }));
+  useQuickPracticeStatusCountsMock.mockReturnValue({
+    unanswered: null,
+    incorrect: null,
+    bookmarked: null,
+  });
 
   const screen = await render(<QuickPracticeClient />);
 
@@ -63,6 +78,11 @@ test('removes the status query param without scrolling when toggling off', async
   useSearchParamsMock.mockReturnValue(new URLSearchParams('status=incorrect'));
   getNextQuestionMock.mockResolvedValue(ok(null));
   getBookmarksMock.mockResolvedValue(ok({ rows: [] }));
+  useQuickPracticeStatusCountsMock.mockReturnValue({
+    unanswered: null,
+    incorrect: null,
+    bookmarked: null,
+  });
 
   const screen = await render(<QuickPracticeClient />);
 

@@ -87,7 +87,7 @@ export function PracticeView(props: PracticeViewProps) {
   const endSessionLabel = props.endSessionLabel ?? 'End session';
   const backLink = props.backLink ?? {
     href: ROUTES.APP_DASHBOARD,
-    label: 'Back to Dashboard',
+    label: '← Back to Dashboard',
   };
   const isAnswerLocked = props.isAnswered || props.submitResult !== null;
   const correctChoiceId = isExamMode

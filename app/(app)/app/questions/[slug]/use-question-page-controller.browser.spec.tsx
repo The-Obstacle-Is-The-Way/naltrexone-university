@@ -83,6 +83,9 @@ function Probe({
       <div data-testid="session-nav-index">{index ?? ''}</div>
       <div data-testid="session-nav-prev-slug">{prevSlug ?? ''}</div>
       <div data-testid="session-nav-next-slug">{nextSlug ?? ''}</div>
+      <div data-testid="is-loading-previous-attempt">
+        {output.isLoadingPreviousAttempt ? 'true' : 'false'}
+      </div>
       <button
         type="button"
         data-testid="trigger-reattempt"
@@ -146,6 +149,65 @@ describe('useQuestionPageController (browser)', () => {
     expect(getPreviousAttemptMock).toHaveBeenCalledWith({
       questionId: 'question-1',
     });
+  });
+
+  it('starts in loading-review state and clears it when previous attempt resolves', async () => {
+    getQuestionBySlugMock.mockResolvedValue(
+      ok({
+        questionId: 'question-1',
+        slug: 'q-1',
+        stemMd: 'Stem',
+        difficulty: 'easy',
+        choices: [
+          { id: 'choice-1', label: 'A', textMd: 'Choice A' },
+          { id: 'choice-2', label: 'B', textMd: 'Choice B' },
+        ],
+      }),
+    );
+
+    const deferred =
+      createDeferred<
+        ActionResult<{
+          kind: 'attempt';
+          attemptId: string;
+          selectedChoiceId: string;
+          isCorrect: boolean;
+          correctChoiceId: string;
+          explanationMd: string | null;
+          referenceMd: string | null;
+          choiceExplanations: [];
+          answeredAt: string;
+        }>
+      >();
+    getPreviousAttemptMock.mockReturnValue(deferred.promise);
+
+    const screen = await render(<Probe mode="review" />);
+
+    await expect
+      .element(screen.getByTestId('load-status'))
+      .toHaveTextContent('ready');
+    await expect
+      .element(screen.getByTestId('is-loading-previous-attempt'))
+      .toHaveTextContent('true');
+
+    deferred.resolve(
+      ok({
+        kind: 'attempt',
+        attemptId: 'attempt-1',
+        selectedChoiceId: 'choice-2',
+        isCorrect: true,
+        correctChoiceId: 'choice-2',
+        explanationMd: 'Because.',
+        referenceMd: null,
+        choiceExplanations: [],
+        answeredAt: '2026-02-01T00:00:00.000Z',
+      }),
+    );
+    await deferred.promise;
+
+    await expect
+      .element(screen.getByTestId('is-loading-previous-attempt'))
+      .toHaveTextContent('false');
   });
 
   it('passes attemptId and sessionId to getPreviousAttempt in review mode when provided', async () => {

@@ -1,6 +1,6 @@
 # BUG-158: Quick Practice Page UX Polish — Back Link Arrow and Filter Tab Affordance
 
-**Status:** Open
+**Status:** Fixed (2026-02-26)
 **Priority:** P3
 **Date:** 2026-02-25
 **Source:** [BS-033](../brainstorming/bs-033-question-display-formatting-and-feedback-ux.md) (Problems 16, 20)
@@ -104,23 +104,26 @@ Or alternatively, add a `ChevronLeft` icon in `practice-view.tsx` before the lab
 | File | Change |
 |------|--------|
 | `app/(app)/app/practice/quick/quick-practice-client.tsx` | Update back link label. Render status labels with fetched counts. |
+| `app/(app)/app/practice/components/practice-view.tsx` | Update default fallback back-link label to `← Back to Dashboard` for consistency. |
 | `app/(app)/app/practice/hooks/use-quick-practice-status-counts.ts` | NEW: fetch per-status counts for Quick Practice segmented control. |
 | `components/ui/tab-switch-styles.ts` | Improve inactive tab styling. Increase touch target. |
+| `app/(app)/app/practice/components/practice-view.test.tsx` | Update default back-link label expectation to `← Back to Dashboard`. |
+| `app/(app)/app/practice/quick/page.test.tsx` | Update rendered back-link label expectation to `← Back to Practice`. |
 | `app/(app)/app/practice/quick/quick-practice-client.test.tsx` | Update assertions for back link text and count-enriched tab labels. |
 | `app/(app)/app/practice/quick/quick-practice-client.browser.spec.tsx` | Add/adjust interaction assertions for count labels and tab affordance. |
-| `app/(app)/app/practice/hooks/use-quick-practice-status-counts.test.tsx` | NEW: unit tests for count loading/error/success behavior. |
+| `app/(app)/app/practice/hooks/use-quick-practice-status-counts.test.ts` | NEW: unit tests for count loading/error/success behavior. |
 
 ## Verification
 
-- [ ] "← Back to Practice" shows with arrow on Quick Practice page
-- [ ] Back link navigates correctly (no regression)
-- [ ] Filter tabs show question counts (e.g., "Unanswered (48)")
-- [ ] Inactive tabs look clickable (not disabled)
-- [ ] Touch targets meet 44px minimum height
-- [ ] Active tab styling is clearly differentiated from inactive
-- [ ] `pnpm typecheck` passes
-- [ ] `pnpm lint` passes
-- [ ] `pnpm test --run` passes
+- [x] "← Back to Practice" shows with arrow on Quick Practice page
+- [x] Back link navigates correctly (no regression)
+- [x] Filter tabs show question counts (e.g., "Unanswered (48)")
+- [x] Inactive tabs look clickable (not disabled)
+- [x] Touch targets meet 44px minimum height
+- [x] Active tab styling is clearly differentiated from inactive
+- [x] `pnpm typecheck` passes
+- [x] `pnpm lint` passes
+- [x] `pnpm test --run` passes
 
 ## Related
 
