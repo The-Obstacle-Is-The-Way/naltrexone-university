@@ -18,7 +18,6 @@ import {
   parseQuestionsSort,
   parseResultFilter,
   parseSessionModeFilter,
-  parseSourceFilter,
   parseTagSlugFilter,
   type QuestionsFilters,
 } from './history-search-params';
@@ -78,7 +77,6 @@ export function createHistoryPage(deps?: {
         difficulty: parseDifficultyFilter(params.difficulty),
         tagSlug: parseTagSlugFilter(params.tag),
         result: parseResultFilter(params.result),
-        source: parseSourceFilter(params.source),
         sort: parseQuestionsSort(params.sort),
       };
 
@@ -87,7 +85,7 @@ export function createHistoryPage(deps?: {
           limit,
           offset,
           result: questionsFilters.result ?? undefined,
-          source: questionsFilters.source ?? undefined,
+          source: 'adhoc',
           difficulty: questionsFilters.difficulty ?? undefined,
           tagSlug: questionsFilters.tagSlug ?? undefined,
           sort: questionsFilters.sort ?? undefined,

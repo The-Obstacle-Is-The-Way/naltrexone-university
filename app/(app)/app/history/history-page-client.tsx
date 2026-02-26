@@ -36,7 +36,7 @@ export function HistoryPageClient(props: HistoryPageClientProps) {
           History
         </h1>
         <p className="text-muted-foreground">
-          Review completed sessions and all attempted questions.
+          Review completed sessions and your Quick Practice questions.
         </p>
       </div>
 

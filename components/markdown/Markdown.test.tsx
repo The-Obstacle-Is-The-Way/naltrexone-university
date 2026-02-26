@@ -28,4 +28,14 @@ describe('Markdown', () => {
 
     expect(html.toLowerCase()).not.toContain('javascript:');
   });
+
+  it('adds paragraph spacing utility class for multi-paragraph content', () => {
+    const html = renderToStaticMarkup(
+      <Markdown content={'Para 1\n\nPara 2'} />,
+    );
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const wrapper = doc.querySelector('div');
+
+    expect(wrapper?.className).toContain('[&_p+p]:mt-3');
+  });
 });

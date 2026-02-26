@@ -81,7 +81,6 @@ describe('HistoryQuestionsTab', () => {
       difficulty: 'hard',
       tagSlug: 'opioids',
       result: 'incorrect',
-      source: 'exam',
     };
 
     const html = renderToStaticMarkup(
@@ -106,21 +105,16 @@ describe('HistoryQuestionsTab', () => {
       offset: result.data.offset,
       filters,
     });
-    const historySeq = 'q-correct,q-incorrect';
 
     const correctHref = toQuestionRoute('q-correct', {
       from: 'history',
       mode: 'review',
       historyHref,
-      historySeq,
-      historyIndex: 0,
     });
     const incorrectHref = toQuestionRoute('q-incorrect', {
       from: 'history',
       mode: 'review',
       historyHref,
-      historySeq,
-      historyIndex: 1,
     });
 
     const hrefs = Array.from(doc.querySelectorAll('a')).map((a) =>
@@ -136,14 +130,11 @@ describe('HistoryQuestionsTab', () => {
       href?.startsWith('/app/questions/q-incorrect?'),
     );
 
-    expect(correctLinks.every((href) => href?.includes('historySeq='))).toBe(
-      true,
-    );
-    expect(correctLinks.every((href) => href?.includes('historyIndex=0'))).toBe(
+    expect(correctLinks.every((href) => !href?.includes('historySeq='))).toBe(
       true,
     );
     expect(
-      incorrectLinks.every((href) => href?.includes('historyIndex=1')),
+      incorrectLinks.every((href) => !href?.includes('historyIndex=')),
     ).toBe(true);
 
     const reviewAnchors = Array.from(doc.querySelectorAll('a')).filter(
@@ -201,8 +192,6 @@ describe('HistoryQuestionsTab', () => {
       from: 'history',
       mode: 'review',
       historyHref,
-      historySeq: 'q-incorrect',
-      historyIndex: 0,
     });
 
     const hrefs = Array.from(doc.querySelectorAll('a')).map((a) =>
@@ -221,6 +210,66 @@ describe('HistoryQuestionsTab', () => {
       ),
     ).toBe(true);
     expect(html).not.toContain('Reattempt');
+  });
+
+  it('builds standalone review links without historySeq/historyIndex params', () => {
+    const result: ActionResult<GetAttemptedQuestionsOutput> = {
+      ok: true,
+      data: {
+        rows: [
+          createAvailableAttemptedQuestionRow({
+            questionId: 'q_1',
+            slug: 'q-1',
+            stemMd: 'Stem for q1',
+          }),
+          createAvailableAttemptedQuestionRow({
+            questionId: 'q_2',
+            slug: 'q-2',
+            stemMd: 'Stem for q2',
+            lastAnsweredAt: '2026-02-02T00:00:00.000Z',
+          }),
+        ],
+        totalCount: 2,
+        limit: 20,
+        offset: 0,
+      },
+    };
+
+    const html = renderToStaticMarkup(<HistoryQuestionsTab result={result} />);
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const questionLinks = Array.from(doc.querySelectorAll('a'))
+      .map((anchor) => anchor.getAttribute('href'))
+      .filter((href): href is string =>
+        Boolean(href?.startsWith('/app/questions/')),
+      );
+
+    expect(questionLinks.length).toBeGreaterThan(0);
+    expect(questionLinks.every((href) => !href.includes('historySeq='))).toBe(
+      true,
+    );
+    expect(questionLinks.every((href) => !href.includes('historyIndex='))).toBe(
+      true,
+    );
+  });
+
+  it('does not render a Source filter control', () => {
+    const result: ActionResult<GetAttemptedQuestionsOutput> = {
+      ok: true,
+      data: {
+        rows: [createAvailableAttemptedQuestionRow()],
+        totalCount: 1,
+        limit: 20,
+        offset: 0,
+      },
+    };
+
+    const html = renderToStaticMarkup(<HistoryQuestionsTab result={result} />);
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+
+    expect(html).not.toContain('Source');
+    expect(doc.querySelectorAll('[data-slot="select-trigger"]')).toHaveLength(
+      4,
+    );
   });
 
   it('caps long question stems in the body preview', () => {
@@ -282,14 +331,12 @@ describe('HistoryQuestionsTab', () => {
 
     expect(doc.querySelectorAll('form select')).toHaveLength(0);
     expect(doc.querySelector('select[name="result"]')).toBeNull();
-    expect(doc.querySelector('select[name="source"]')).toBeNull();
     expect(doc.querySelector('select[name="difficulty"]')).toBeNull();
     expect(doc.querySelector('select[name="tag"]')).toBeNull();
     expect(doc.querySelectorAll('[data-slot="select-trigger"]')).toHaveLength(
-      5,
+      4,
     );
     expect(html).toContain('Result');
-    expect(html).toContain('Source');
     expect(html).toContain('Difficulty');
     expect(html).toContain('Tag');
     expect(html).toContain('Sort');
@@ -373,7 +420,7 @@ describe('HistoryQuestionsTab', () => {
 
     const html = renderToStaticMarkup(<HistoryQuestionsTab result={result} />);
 
-    expect(html).toContain('No questions attempted yet.');
+    expect(html).toContain('No Quick Practice questions yet.');
   });
 
   it('renders pagination links when there are more rows than the page limit', () => {

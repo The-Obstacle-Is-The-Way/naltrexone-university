@@ -1,6 +1,6 @@
 # BUG-154: Markdown Prose Spacing — Question Stem and Explanation Paragraphs Run Together
 
-**Status:** Open
+**Status:** Fixed (2026-02-26)
 **Priority:** P1
 **Date:** 2026-02-25
 **Source:** [BS-033](../brainstorming/bs-033-question-display-formatting-and-feedback-ux.md) (Problems 1, 4)
@@ -88,15 +88,15 @@ The component fix still has high impact because:
 
 ## Verification
 
-- [ ] Multi-paragraph question stems show visible spacing between paragraphs
-- [ ] Clinical pearl text is visually separated from preceding explanation
-- [ ] Explanation paragraphs in feedback card have spacing
-- [ ] Wrong-answer explanation paragraphs have spacing
-- [ ] Single-paragraph content is unaffected (no extra top margin)
-- [ ] Choice button text (also uses `<Markdown>`) is unaffected visually
-- [ ] `pnpm typecheck` passes
-- [ ] `pnpm lint` passes
-- [ ] `pnpm test --run` passes
+- [x] Multi-paragraph question stems show visible spacing between paragraphs
+- [x] Clinical pearl text is visually separated from preceding explanation
+- [x] Explanation paragraphs in feedback card have spacing
+- [x] Wrong-answer explanation paragraphs have spacing
+- [x] Single-paragraph content is unaffected (no extra top margin)
+- [x] Choice button text (also uses `<Markdown>`) is unaffected visually
+- [x] `pnpm typecheck` passes
+- [x] `pnpm lint` passes
+- [x] `pnpm test --run` passes
 
 ## Related
 

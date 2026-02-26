@@ -1,6 +1,6 @@
 # BUG-156: Practice View Post-Submit UX — Button Promotion and Auto-Scroll to Feedback
 
-**Status:** Open
+**Status:** Fixed (2026-02-26)
 **Priority:** P1
 **Date:** 2026-02-25
 **Source:** [BS-033](../brainstorming/bs-033-question-display-formatting-and-feedback-ux.md) (Problems 15, 17)
@@ -160,17 +160,17 @@ Wrap the feedback rendering with the ref:
 
 ## Verification
 
-- [ ] Pre-submit: Submit is primary, Next → is outline — no regression
-- [ ] Post-submit: Submit is hidden
-- [ ] Post-submit: Next → is promoted to primary (filled) variant
-- [ ] Post-submit: Bookmark button remains visible and functional
-- [ ] Post-submit: Viewport scrolls smoothly to feedback card
-- [ ] Short questions (feedback visible without scroll): no jarring scroll behavior
-- [ ] Exam mode: no feedback scroll (feedback not shown inline)
-- [ ] Session mode (Tutor): button hierarchy works correctly
-- [ ] `pnpm typecheck` passes
-- [ ] `pnpm lint` passes
-- [ ] `pnpm test --run` passes
+- [x] Pre-submit: Submit is primary, Next → is outline — no regression
+- [x] Post-submit: Submit is hidden
+- [x] Post-submit: Next → is promoted to primary (filled) variant
+- [x] Post-submit: Bookmark button remains visible and functional
+- [x] Post-submit: Viewport scrolls smoothly to feedback card
+- [x] Short questions (feedback visible without scroll): no jarring scroll behavior
+- [x] Exam mode: no feedback scroll (feedback not shown inline)
+- [x] Session mode (Tutor): button hierarchy works correctly
+- [x] `pnpm typecheck` passes
+- [x] `pnpm lint` passes
+- [x] `pnpm test --run` passes
 
 ## Related
 

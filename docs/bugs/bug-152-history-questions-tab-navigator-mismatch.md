@@ -1,6 +1,6 @@
 # BUG-152: History Questions Tab Navigator Mismatch — Ad-Hoc Questions Grouped Into Fake Session
 
-**Status:** Open
+**Status:** Fixed (2026-02-26)
 **Priority:** P1
 **Date:** 2026-02-25
 **Source:** [BS-034](../brainstorming/bs-034-history-questions-tab-review-navigator-mismatch.md)
@@ -170,18 +170,18 @@ Users who have only done Tutor/Exam sessions will see an empty Questions tab. Ad
 
 ## Verification
 
-- [ ] Questions tab shows only ad-hoc (Quick Practice) questions
-- [ ] Tutor/Exam questions do NOT appear on Questions tab
-- [ ] Clicking "Review" on a question shows standalone review (no navigator)
-- [ ] Sessions tab still shows Tutor/Exam sessions with correct navigator and color coding
-- [ ] Source filter dropdown is removed from Questions tab
-- [ ] Subtitle reads "Review completed sessions and your Quick Practice questions."
-- [ ] Empty state shown when user has zero ad-hoc questions
-- [ ] Review link `href` does NOT contain `historySeq` or `historyIndex` params
-- [ ] `pnpm typecheck` passes
-- [ ] `pnpm lint` passes
-- [ ] `pnpm test --run` passes
-- [ ] `pnpm build` succeeds
+- [x] Questions tab shows only ad-hoc (Quick Practice) questions
+- [x] Tutor/Exam questions do NOT appear on Questions tab
+- [x] Clicking "Review" on a question shows standalone review (no navigator)
+- [x] Sessions tab still shows Tutor/Exam sessions with correct navigator and color coding
+- [x] Source filter dropdown is removed from Questions tab
+- [x] Subtitle reads "Review completed sessions and your Quick Practice questions."
+- [x] Empty state shown when user has zero ad-hoc questions
+- [x] Review link `href` does NOT contain `historySeq` or `historyIndex` params
+- [x] `pnpm typecheck` passes
+- [x] `pnpm lint` passes
+- [x] `pnpm test --run` passes
+- [x] `pnpm build` succeeds
 
 ## Related
 
