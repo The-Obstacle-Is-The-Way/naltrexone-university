@@ -140,38 +140,46 @@ export function DashboardView({
             </div>
           ) : (
             <ul className="mt-4 space-y-2">
-              {sessionHistoryResult.data.rows.map((row) => (
-                <li key={row.sessionId}>
-                  <Link
-                    href={historySessionsHref}
-                    className="block rounded-xl border border-border/60 bg-muted/20 p-3 transition-colors hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]"
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="inline-flex items-center rounded-full border border-border/60 px-2 py-0.5 text-xs font-medium text-muted-foreground">
-                        {toSentenceCase(row.mode)}
-                      </span>
-                      <span className="text-xs text-muted-foreground">
-                        {formatDate(row.endedAt)}
-                      </span>
-                    </div>
-                    <div className="mt-2 text-sm text-foreground">
-                      <span className="font-medium">
-                        {row.correct}/
-                        {row.mode === 'exam' ? row.questionCount : row.answered}{' '}
-                        correct
-                      </span>
-                      <span className="text-muted-foreground">
-                        {' '}
-                        (
-                        {row.mode === 'exam' || row.answered > 0
-                          ? formatPercent(row.accuracy)
-                          : '—'}
-                        )
-                      </span>
-                    </div>
-                  </Link>
-                </li>
-              ))}
+              {sessionHistoryResult.data.rows.map((row) => {
+                const sessionReviewHref = row.firstQuestionSlug
+                  ? toQuestionRoute(row.firstQuestionSlug, {
+                      from: 'dashboard',
+                      mode: 'review',
+                      sessionId: row.sessionId,
+                    })
+                  : historySessionsHref;
+
+                return (
+                  <li key={row.sessionId}>
+                    <Link
+                      href={sessionReviewHref}
+                      className="block rounded-xl border border-border/60 bg-muted/20 p-3 transition-colors hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]"
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="inline-flex items-center rounded-full border border-border/60 px-2 py-0.5 text-xs font-medium text-muted-foreground">
+                          {toSentenceCase(row.mode)}
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          {formatDate(row.endedAt)}
+                        </span>
+                      </div>
+                      <div className="mt-2 text-sm text-foreground">
+                        <span className="font-medium">
+                          {row.correct}/{row.questionCount} correct
+                        </span>
+                        <span className="text-muted-foreground">
+                          {' '}
+                          (
+                          {row.mode === 'exam' || row.answered > 0
+                            ? formatPercent(row.accuracy)
+                            : '—'}
+                          )
+                        </span>
+                      </div>
+                    </Link>
+                  </li>
+                );
+              })}
             </ul>
           )}
         </Card>

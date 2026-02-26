@@ -2,7 +2,10 @@
 
 import { z } from 'zod';
 import { createDepsResolver, loadAppContainer } from '@/lib/controller-helpers';
-import { MAX_PAGINATION_LIMIT } from '@/src/adapters/shared/validation-limits';
+import {
+  MAX_PAGINATION_LIMIT,
+  MAX_PAGINATION_OFFSET,
+} from '@/src/adapters/shared/validation-limits';
 import type { AuthGateway } from '@/src/application/ports/gateways';
 import type {
   GetAttemptedQuestionsInput,
@@ -15,7 +18,7 @@ import { requireEntitledUserId } from './require-entitled-user-id';
 const GetAttemptedQuestionsInputSchema = z
   .object({
     limit: z.number().int().min(1).max(MAX_PAGINATION_LIMIT),
-    offset: z.number().int().min(0),
+    offset: z.number().int().min(0).max(MAX_PAGINATION_OFFSET),
     result: z.enum(['correct', 'incorrect']).optional(),
     source: z.enum(['tutor', 'exam', 'adhoc']).optional(),
     difficulty: z.enum(['easy', 'medium', 'hard']).optional(),

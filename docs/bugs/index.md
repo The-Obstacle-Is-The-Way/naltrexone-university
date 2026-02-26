@@ -15,9 +15,72 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 ## Bug Index (Active)
 
-No active bugs.
+| ID | Title | Priority | Status |
+|----|-------|----------|--------|
+| _No active bugs_ | — | — | — |
 
-**Next Bug ID:** BUG-160
+**Next Bug ID:** BUG-165
+
+**Latest additions (2026-02-26):**
+- BUG-163 identified during tracer-bullet revalidation of BUG-160/161/162 docs.
+- BUG-164 identified as a deeper cross-surface analytics consistency issue while validating BUG-163.
+
+**Latest resolutions (2026-02-26):**
+- BUG-160 fixed: dashboard session cards now deep-link to per-session review when `firstQuestionSlug` is available.
+- BUG-161 fixed: `paymentFailed` now routes to `subscription_required` in entitlement and checkout-success paths.
+- BUG-162 fixed: review controller now enforces `offset <= MAX_PAGINATION_OFFSET` with boundary tests.
+- BUG-163 fixed: dashboard tutor session fraction now uses `correct/questionCount`.
+- BUG-164 fixed: tutor summary accuracy denominator now matches history/dashboard semantics (`questionCount`).
+
+## Audit #6 — Full-Stack Bug Sweep with 5 Parallel Agents (2026-02-25)
+
+Five-axis investigation covering: (1) existing bug documentation review, (2) source code architecture and logic, (3) tests and configuration, (4) API routes, server actions, and webhooks, and (5) UI/UX and accessibility. Ran 5 parallel exploration agents, then **manually verified every finding** with full code traces.
+
+**3 new confirmed bugs filed:** BUG-160 (P3), BUG-161 (P3), BUG-162 (P4). All 3 underwent full tracer-bullet verification.
+
+### Tracer-Bullet Verification (2026-02-25)
+
+All 3 bugs were traced end-to-end with vertical and horizontal tracer bullets:
+
+- **BUG-160:** 6-layer vertical trace (DB → use case → controller → dashboard render → history page reference → test gap). Confirmed `firstQuestionSlug` and `sessionId` are fetched but unused. Correct pattern exists 70 lines below the bug in the same file's "Recent activity" section.
+- **BUG-161:** 12+ file horizontal trace across webhook → normalizer → status mapper → DB → entitlement → layout → pricing page. Confirmed `paymentFailed` is routed through the same `payment_processing` reason path as `paymentProcessing`. Second affected path found in `checkout-success-sync.tsx:245`. Existing test at `check-entitlement.test.ts:120` encodes the bug as correct behavior.
+- **BUG-162:** Vertical trace from controller → use case → repository port → Drizzle impl → Postgres. Horizontal trace across all 10 controller files confirmed this is the sole unbounded offset instance. SQL path involves `ROW_NUMBER()` window function making large offsets especially costly.
+
+### Findings Confirmed as NOT Bugs (Initial Sweep — 10 False Positives)
+
+- History session state persistence across pagination (correct UX — toggle deselects, `useHistorySessions` manages via refs)
+- `GetPreviousAttemptUseCase` silent null return (already documented and fixed as BUG-139)
+- Empty catch blocks (none found in codebase)
+- Skipped tests (only E2E credential-gated skips, not logic gaps)
+- TODO/FIXME/HACK markers (none found)
+- Stale closure in practice controller (refs ARE the solution)
+- `paymentProcessing` excluded from `EntitledStatuses` (intentional — BUG-077 resolved with specific messaging)
+- Missing pricing error boundary (exists at `app/pricing/error.tsx`)
+- Subscribe button missing disabled state (has `disabled={pending}`)
+- Middleware naming false positive (Next.js 16 `proxy.ts` pattern, confirmed via build)
+
+### Findings Confirmed as NOT Bugs (Deep Dive — 12 False Positives)
+
+- Dashboard stats error handling (ErrorCard with retry renders correctly)
+- Practice session CAS retry pattern (correct for optimistic concurrency)
+- Session history drill-down toggle (correct accordion-style UX)
+- Bookmark message timeout (cleanup on unmount already handled)
+- Rate limiter fail-closed behavior (correct — denies on error)
+- Webhook signature verification (Stripe HMAC verified before processing)
+- Clerk webhook Svix verification (standard Clerk pattern)
+- CSP header configuration (delegated to Clerk middleware correctly)
+- Question selection randomization (Fisher-Yates shuffle, correct)
+- Pagination total count consistency (filtered identically on COUNT and ROWS)
+- Stripe customer search query safety (validated before interpolation, BUG-106 resolved)
+- Idempotency key pruning (hot-path pruning wired, BUG-103/104 resolved)
+
+### Security Posture Re-Verified
+
+- Three-layer auth enforcement intact: middleware → layout entitlement → server action `requireEntitledUserId()`
+- All queries scoped to authenticated userId (no IDOR)
+- All SQL parameterized via Drizzle ORM (no injection)
+- Webhook signatures verified, rate limiting fail-closed
+- Security headers (HSTS, X-Frame-Options, Permissions-Policy, X-Content-Type-Options) all configured
 
 ## Audit #5 — Six-Axis Codebase Bug Sweep (2026-02-22)
 

@@ -1,9 +1,11 @@
 # BS-034: History Questions Tab — Ad-Hoc Questions Incorrectly Grouped into Question Navigator
 
 **Date:** 2026-02-25
+**Archived:** 2026-02-26
+**Outcome:** Fully resolved. Core bug fixed as BUG-152 (PR #141). All 4 open questions resolved. Position A (ad-hoc only) decided and implemented. Residual "Try Again" label bug tracked in BS-033 and fixed as BUG-153 (PR #143). Related UX inconsistencies (subtitle, back link) deferred to future polish.
 **Triggered by:** Manual UX walkthrough. Clicking "Review" on any question from History → Questions tab renders a Question Navigator grouping all 20 visible page questions — despite them being independent, unrelated questions from different modes and topics.
 **Scope:** The History Questions tab treats all visible questions as a single navigable sequence, conflating ad-hoc practice with session-based review. Affects ALL question types on this tab — ad-hoc, Tutor, and Exam questions alike lose their real session context.
-**Related:** [SPEC-027](../_archive/specs/spec-027-session-review-navigation.md) (Session Review Navigation), [SPEC-022](../_archive/specs/spec-022-question-log.md) (Question Log)
+**Related:** [SPEC-027](../specs/spec-027-session-review-navigation.md) (Session Review Navigation), [SPEC-022](../specs/spec-022-question-log.md) (Question Log)
 
 ---
 
@@ -239,6 +241,8 @@ Different layout patterns for the same conceptual navigation. Not blocking, but 
 
 Dashboard and Bookmarks review show "Try Again" for correctly-answered questions. The History Questions review correctly shows "Practice Again" for correct and "Try Again" for incorrect. This is caused by history-only label gating in `question-page-client.tsx` (`isStandaloneHistoryReview`), not by correctness itself.
 
+**Resolution:** Fixed as BUG-153 (PR #143). The `reattemptLabel` condition now keys on `submitResult?.isCorrect` across all standalone review contexts.
+
 ### 4. Direct URL context mismatch (minor edge case)
 
 Manual agent-browser testing found a low-severity edge case for direct question URLs without query context (for example: `/app/questions/<slug>`):
@@ -258,7 +262,7 @@ This is not reachable via normal in-app flows, but it is a real state/copy misma
 
 3. **~~Should the related UX inconsistencies (subtitle, back link, Try Again label) be addressed in the same fix or tracked separately?~~** **Resolved: Track separately.**
    - **Subtitle and back link position:** Minor cosmetic inconsistencies. Defer to a future polish pass or BS-033.
-   - **"Try Again" label on correct Dashboard/Bookmarks answers:** This is a residual bug from the reattempt cleanup (SPEC-034 / SPEC-036). The label logic in `question-page-client.tsx:185-188` only checks `isStandaloneHistoryReview`, so correct answers from non-history standalone origins (Dashboard, Bookmarks) show "Try Again" instead of "Practice Again". Track in BS-033 (which already covers feedback UX issues) as a concrete fix: extend the `reattemptLabel` condition to cover all standalone review contexts, not just history.
+   - **"Try Again" label on correct Dashboard/Bookmarks answers:** Fixed as BUG-153 (PR #143).
 
 4. **~~Should the Questions tab scope be narrowed to ad-hoc questions only?~~** **Resolved: Position A — ad-hoc only.**
 
@@ -297,3 +301,4 @@ This is not reachable via normal in-app flows, but it is a real state/copy misma
 | 2026-02-25 | Resolved all open questions (Q2, Q3) | Q2: No `attemptId` needed for History Questions-tab links because rows are already latest-per-question; `attemptId` remains valid for attempt-scoped entry points like Dashboard. Q3: Subtitle/back link deferred to polish pass. "Try Again" label bug on correct standalone non-history answers (Dashboard/Bookmarks) tracked for BS-033 as a concrete `reattemptLabel` condition fix. |
 | 2026-02-25 | Code-truth correction pass applied | Corrected SPEC-027 link target, corrected file ownership of the `source: 'adhoc'` change (`history/page.tsx`, not `history-questions-tab.tsx`), and narrowed Q2 rationale to avoid incorrectly labeling all `attemptId` usage as vestigial. |
 | 2026-02-26 | Agent-browser validation pass | Reconfirmed BS-034 navigator bug manually (including pagination-window behavior via `limit/offset`). Expanded related residual label-scope note from Dashboard-only to Dashboard+Bookmarks, and documented minor direct-URL context mismatch edge case. |
+| 2026-02-26 | **Archived BS-034** | All findings resolved. Core bug fixed as BUG-152 (PR #141). Residual label bug fixed as BUG-153 (PR #143). All open questions answered. Position A decided and implemented. |
