@@ -149,6 +149,114 @@ test('disables choice selection after a submit in exam mode', async () => {
     .toBeDisabled();
 });
 
+test('scrolls feedback into view when a submit result is present', async () => {
+  const scrollIntoViewSpy = vi
+    .spyOn(Element.prototype, 'scrollIntoView')
+    .mockImplementation(() => undefined);
+
+  try {
+    await render(
+      <PracticeView
+        loadState={{ status: 'ready' }}
+        question={{
+          questionId: 'question-1',
+          slug: 'question-1',
+          stemMd: 'What is the next best step?',
+          difficulty: 'easy',
+          choices: [
+            { id: 'choice_a', label: 'A', textMd: 'Option A', sortOrder: 1 },
+          ],
+          session: null,
+        }}
+        selectedChoiceId="choice_a"
+        isAnswered={true}
+        submitResult={{
+          attemptId: 'attempt-1',
+          isCorrect: true,
+          correctChoiceId: 'choice_a',
+          explanationMd: 'Because',
+          referenceMd: null,
+          choiceExplanations: [],
+        }}
+        isPending={false}
+        bookmarkStatus="idle"
+        isBookmarked={false}
+        canSubmit={false}
+        onTryAgain={() => undefined}
+        onToggleBookmark={() => undefined}
+        onSelectChoice={() => undefined}
+        onSubmit={() => undefined}
+        onNextQuestion={() => undefined}
+      />,
+    );
+
+    await vi.waitFor(() => {
+      expect(scrollIntoViewSpy).toHaveBeenCalledWith({
+        behavior: 'smooth',
+        block: 'start',
+      });
+    });
+  } finally {
+    scrollIntoViewSpy.mockRestore();
+  }
+});
+
+test('does not scroll feedback in exam mode', async () => {
+  const scrollIntoViewSpy = vi
+    .spyOn(Element.prototype, 'scrollIntoView')
+    .mockImplementation(() => undefined);
+
+  try {
+    await render(
+      <PracticeView
+        sessionInfo={{
+          sessionId: 'session-1',
+          mode: 'exam',
+          index: 0,
+          total: 10,
+          isMarkedForReview: false,
+        }}
+        loadState={{ status: 'ready' }}
+        question={{
+          questionId: 'question-1',
+          slug: 'question-1',
+          stemMd: 'What is the next best step?',
+          difficulty: 'easy',
+          choices: [
+            { id: 'choice_a', label: 'A', textMd: 'Option A', sortOrder: 1 },
+          ],
+          session: null,
+        }}
+        selectedChoiceId="choice_a"
+        isAnswered={true}
+        submitResult={{
+          attemptId: 'attempt-1',
+          isCorrect: true,
+          correctChoiceId: 'choice_a',
+          explanationMd: 'Because',
+          referenceMd: null,
+          choiceExplanations: [],
+        }}
+        isPending={false}
+        bookmarkStatus="idle"
+        isBookmarked={false}
+        canSubmit={false}
+        onTryAgain={() => undefined}
+        onToggleBookmark={() => undefined}
+        onToggleMarkForReview={() => undefined}
+        onSelectChoice={() => undefined}
+        onSubmit={() => undefined}
+        onNextQuestion={() => undefined}
+      />,
+    );
+
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(scrollIntoViewSpy).not.toHaveBeenCalled();
+  } finally {
+    scrollIntoViewSpy.mockRestore();
+  }
+});
+
 test('renders bookmark feedback in shared toast region', async () => {
   const screen = await render(
     <NotificationProvider>

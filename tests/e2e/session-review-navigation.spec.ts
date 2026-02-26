@@ -260,7 +260,7 @@ test.describe('session review navigation (SPEC-027)', () => {
     await expect(backLink).toHaveAttribute('href', /limit=20/);
   });
 
-  test('History question flows keep sequence navigation without sessionId', async ({
+  test('History Questions tab provides standalone review without navigator (BUG-152)', async ({
     page,
   }) => {
     await signInWithClerkPassword(page);
@@ -275,47 +275,59 @@ test.describe('session review navigation (SPEC-027)', () => {
 
     // Find a question link (from questions tab, not session-scoped)
     const questionLink = page.locator('a[href*="/app/questions/"]').first();
-    const noAttemptedQuestionsMessage = page.getByText(
-      /No questions attempted yet/i,
+    const noQuestionsMessage = page.getByText(
+      /No Quick Practice questions yet/i,
     );
 
     // Wait for either the question list to load or for the empty state to appear.
-    await questionLink.or(noAttemptedQuestionsMessage).waitFor({
+    await questionLink.or(noQuestionsMessage).waitFor({
       state: 'visible',
       timeout: 15_000,
     });
 
-    const hasNoAttemptedQuestions = await noAttemptedQuestionsMessage
+    const hasNoQuestions = await noQuestionsMessage
       .isVisible()
       .catch(() => false);
     expect(
-      hasNoAttemptedQuestions,
-      '[E2E_BASELINE_MISSING] Expected at least one attempted question in history.',
+      hasNoQuestions,
+      '[E2E_BASELINE_MISSING] Expected at least one Quick Practice question in history.',
     ).toBe(false);
 
-    // Verify the link does NOT contain sessionId
+    // Verify the link does NOT contain sessionId or historySeq (BUG-152: removed)
     const href = await questionLink.getAttribute('href');
     expect(href).not.toContain('sessionId=');
+    expect(href).not.toContain('historySeq=');
+    expect(href).not.toContain('historyIndex=');
 
     // Click to navigate to the question
     await questionLink.click();
 
-    // Verify URL does NOT contain sessionId
+    // Verify URL is standalone review — no sessionId, no historySeq
     await expect(page).toHaveURL(/\/app\/questions\//, { timeout: 15_000 });
     await expect(page).not.toHaveURL(/sessionId=/);
+    await expect(page).not.toHaveURL(/historySeq=/);
+    await expect(page).not.toHaveURL(/historyIndex=/);
+    await expect(page).toHaveURL(/from=history/);
+    await expect(page).toHaveURL(/mode=review/);
 
     // Wait for question content to load
     await expect(page.getByText(/Loading question/i)).toBeHidden({
       timeout: 15_000,
     });
 
-    // Current contract: history links can carry historySeq/historyIndex
-    // without sessionId, enabling in-page previous/next review navigation.
-    await expect(page).toHaveURL(/historySeq=/);
-    await expect(page).toHaveURL(/historyIndex=/);
-    await expect(page.getByText('← Previous')).toBeVisible();
-    await expect(page.getByText('Next →')).toBeVisible();
-    await expect(page.getByText(/Question \d+ of \d+/)).toBeVisible();
-    await expect(page.getByText('Question navigator')).toBeVisible();
+    // BUG-152: standalone review has NO Question Navigator
+    await expect(page.getByText('Question navigator')).toBeHidden({
+      timeout: 5_000,
+    });
+
+    // Verify back link goes to History Questions tab
+    const backLink = page
+      .getByRole('link', { name: 'Back to History' })
+      .first();
+    await expect(backLink).toBeVisible({ timeout: 15_000 });
+    await expect(backLink).toHaveAttribute(
+      'href',
+      /\/app\/history\?tab=questions/,
+    );
   });
 });

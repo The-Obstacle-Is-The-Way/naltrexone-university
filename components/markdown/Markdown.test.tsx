@@ -1,7 +1,12 @@
 // @vitest-environment jsdom
 import { renderToStaticMarkup } from 'react-dom/server';
-import { describe, expect, it } from 'vitest';
-import { Markdown } from './Markdown';
+import { beforeAll, describe, expect, it } from 'vitest';
+
+let Markdown: typeof import('./Markdown').Markdown;
+
+beforeAll(async () => {
+  ({ Markdown } = await import('./Markdown'));
+});
 
 describe('Markdown', () => {
   it('renders markdown and does not render raw HTML tags', () => {
@@ -27,5 +32,15 @@ describe('Markdown', () => {
     );
 
     expect(html.toLowerCase()).not.toContain('javascript:');
+  });
+
+  it('adds paragraph spacing utility class for multi-paragraph content', () => {
+    const html = renderToStaticMarkup(
+      <Markdown content={'Para 1\n\nPara 2'} />,
+    );
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const wrapper = doc.querySelector('div');
+
+    expect(wrapper?.className).toContain('[&_p+p]:mt-3');
   });
 });

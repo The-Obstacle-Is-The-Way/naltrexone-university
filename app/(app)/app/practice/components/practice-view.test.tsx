@@ -407,6 +407,85 @@ describe('PracticeView', () => {
 
     expect(labels).toEqual(['← Previous', 'Submit', 'Next →', 'Bookmark']);
   });
+
+  it('keeps Submit visible and Next outlined before submission', () => {
+    const question = createNextQuestion();
+
+    const html = renderToStaticMarkup(
+      <PracticeView
+        loadState={{ status: 'ready' }}
+        question={question}
+        selectedChoiceId={null}
+        isAnswered={false}
+        submitResult={null}
+        isPending={false}
+        bookmarkStatus="idle"
+        isBookmarked={false}
+        canSubmit={false}
+        onTryAgain={() => undefined}
+        onToggleBookmark={() => undefined}
+        onSelectChoice={() => undefined}
+        onSubmit={() => undefined}
+        onNextQuestion={() => undefined}
+      />,
+    );
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const submitButton = Array.from(doc.querySelectorAll('button')).find(
+      (button) => button.textContent?.trim() === 'Submit',
+    );
+    const nextButton = Array.from(doc.querySelectorAll('button')).find(
+      (button) => button.textContent?.trim() === 'Next →',
+    );
+
+    expect(submitButton).not.toBeUndefined();
+    expect(nextButton).not.toBeUndefined();
+    expect(nextButton?.className).toContain('border bg-background');
+  });
+
+  it('hides Submit and promotes Next to primary after submission', () => {
+    const question = createNextQuestion();
+    const selectedChoice = question.choices[0];
+    if (!selectedChoice) {
+      throw new Error('Expected at least one choice');
+    }
+
+    const html = renderToStaticMarkup(
+      <PracticeView
+        loadState={{ status: 'ready' }}
+        question={question}
+        selectedChoiceId={selectedChoice.id}
+        isAnswered={true}
+        submitResult={{
+          attemptId: 'attempt-1',
+          isCorrect: true,
+          correctChoiceId: selectedChoice.id,
+          explanationMd: 'Because.',
+          referenceMd: null,
+          choiceExplanations: [],
+        }}
+        isPending={false}
+        bookmarkStatus="idle"
+        isBookmarked={false}
+        canSubmit={false}
+        onTryAgain={() => undefined}
+        onToggleBookmark={() => undefined}
+        onSelectChoice={() => undefined}
+        onSubmit={() => undefined}
+        onNextQuestion={() => undefined}
+      />,
+    );
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const submitButton = Array.from(doc.querySelectorAll('button')).find(
+      (button) => button.textContent?.trim() === 'Submit',
+    );
+    const nextButton = Array.from(doc.querySelectorAll('button')).find(
+      (button) => button.textContent?.trim() === 'Next →',
+    );
+
+    expect(submitButton).toBeUndefined();
+    expect(nextButton).not.toBeUndefined();
+    expect(nextButton?.className).toContain('bg-primary');
+  });
 });
 
 describe('getBookmarkNotificationTransition', () => {

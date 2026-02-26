@@ -126,14 +126,12 @@ export function HistoryQuestionsTab({
   const selectedDifficulty = filters?.difficulty ?? null;
   const selectedTagSlug = filters?.tagSlug ?? null;
   const selectedResult = filters?.result ?? null;
-  const selectedSource = filters?.source ?? null;
   const selectedSort = filters?.sort ?? 'recent';
 
   const hasActiveControls = Boolean(
     selectedDifficulty ||
       selectedTagSlug ||
       selectedResult ||
-      selectedSource ||
       selectedSort !== 'recent',
   );
 
@@ -160,7 +158,6 @@ export function HistoryQuestionsTab({
         'difficulty' in next ? (next.difficulty ?? null) : selectedDifficulty,
       tagSlug: 'tagSlug' in next ? (next.tagSlug ?? null) : selectedTagSlug,
       result: 'result' in next ? (next.result ?? null) : selectedResult,
-      source: 'source' in next ? (next.source ?? null) : selectedSource,
       sort: 'sort' in next ? (next.sort ?? 'recent') : selectedSort,
     };
   }
@@ -189,20 +186,11 @@ export function HistoryQuestionsTab({
   }
 
   const shouldShowFiltersCard = totalCount > 0 || hasActiveControls;
-  const historySequence = rows.flatMap((row) =>
-    row.isAvailable ? [row.slug] : [],
-  );
-  const historySequenceParam =
-    historySequence.length > 0 ? historySequence.join(',') : undefined;
-  const historyIndexBySlug = new Map(
-    historySequence.map((slug, index) => [slug, index]),
-  );
-
   return (
     <div className="space-y-6">
       {shouldShowFiltersCard ? (
         <Card className="gap-0 rounded-2xl border-border p-4 shadow-sm">
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <div className="space-y-2 text-sm">
               <label
                 htmlFor="history-questions-result"
@@ -234,42 +222,6 @@ export function HistoryQuestionsTab({
                   <SelectItem value={ALL_FILTER_VALUE}>All</SelectItem>
                   <SelectItem value="correct">Correct</SelectItem>
                   <SelectItem value="incorrect">Incorrect</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2 text-sm">
-              <label
-                htmlFor="history-questions-source"
-                className="font-medium text-foreground"
-              >
-                Source
-              </label>
-              <Select
-                value={selectedSource ?? ALL_FILTER_VALUE}
-                onValueChange={(value) =>
-                  applyFilter(
-                    patchFilters({
-                      source:
-                        value === ALL_FILTER_VALUE
-                          ? null
-                          : (value as NonNullable<QuestionsFilters['source']>),
-                    }),
-                  )
-                }
-              >
-                <SelectTrigger
-                  id="history-questions-source"
-                  className="w-full"
-                  aria-label="Source"
-                >
-                  <SelectValue placeholder="All" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={ALL_FILTER_VALUE}>All</SelectItem>
-                  <SelectItem value="tutor">Tutor</SelectItem>
-                  <SelectItem value="exam">Exam</SelectItem>
-                  <SelectItem value="adhoc">Ad-hoc practice</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -430,8 +382,8 @@ export function HistoryQuestionsTab({
           ) : (
             <Card className="gap-0 rounded-2xl p-6 text-sm text-muted-foreground shadow-sm">
               <div>
-                No questions attempted yet. Start practicing to build your
-                question history.
+                No Quick Practice questions yet. Questions from Tutor and Exam
+                sessions can be reviewed from the Sessions tab.
               </div>
               <div className="mt-4">
                 <Button asChild variant="outline" className="rounded-full">
@@ -503,8 +455,6 @@ export function HistoryQuestionsTab({
                 from: 'history',
                 mode: 'review',
                 historyHref,
-                historySeq: historySequenceParam,
-                historyIndex: historyIndexBySlug.get(row.slug),
               });
 
               return (

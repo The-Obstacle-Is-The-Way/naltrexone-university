@@ -99,6 +99,7 @@ describe('app/(app)/app/history/page', () => {
       expect.objectContaining({
         limit: 20,
         offset: 0,
+        source: 'adhoc',
       }),
     );
     expect(getTagsFn).toHaveBeenCalledWith({});
@@ -291,6 +292,7 @@ describe('app/(app)/app/history/page', () => {
       expect.objectContaining({
         difficulty: 'hard',
         tagSlug: 'opioids',
+        source: 'adhoc',
       }),
     );
   });
@@ -367,6 +369,7 @@ describe('app/(app)/app/history/page', () => {
     expect(getAttemptedQuestionsFn).toHaveBeenCalledWith(
       expect.objectContaining({
         sort: 'incorrect-first',
+        source: 'adhoc',
       }),
     );
     expect(correctRecentIndex).toBeLessThan(incorrectOldIndex);
@@ -445,6 +448,7 @@ describe('app/(app)/app/history/page', () => {
     expect(getAttemptedQuestionsFn).toHaveBeenCalledWith(
       expect.objectContaining({
         sort: 'difficulty',
+        source: 'adhoc',
       }),
     );
     expect(easyIndex).toBeLessThan(hardIndex);

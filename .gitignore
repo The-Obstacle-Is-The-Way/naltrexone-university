@@ -12,6 +12,7 @@
 /playwright-report
 /blob-report
 /audit-screenshots
+/artifacts
 
 # next.js
 /.next/

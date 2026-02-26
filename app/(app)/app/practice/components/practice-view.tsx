@@ -99,6 +99,7 @@ export function PracticeView(props: PracticeViewProps) {
     props.question !== null &&
     props.submitResult === null;
   const lastNotifiedBookmarkKeyRef = useRef<string | null>(null);
+  const feedbackRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const transition = getBookmarkNotificationTransition({
@@ -118,6 +119,11 @@ export function PracticeView(props: PracticeViewProps) {
     props.bookmarkMessageVersion,
     props.bookmarkStatus,
   ]);
+
+  useEffect(() => {
+    if (!props.submitResult || isExamMode) return;
+    feedbackRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, [props.submitResult, isExamMode]);
 
   return (
     <div className="space-y-6">
@@ -238,12 +244,14 @@ export function PracticeView(props: PracticeViewProps) {
       ) : null}
 
       {props.submitResult && !isExamMode ? (
-        <Feedback
-          isCorrect={props.submitResult.isCorrect}
-          explanationMd={props.submitResult.explanationMd}
-          referenceMd={props.submitResult.referenceMd ?? null}
-          choiceExplanations={props.submitResult.choiceExplanations}
-        />
+        <div ref={feedbackRef}>
+          <Feedback
+            isCorrect={props.submitResult.isCorrect}
+            explanationMd={props.submitResult.explanationMd}
+            referenceMd={props.submitResult.referenceMd ?? null}
+            choiceExplanations={props.submitResult.choiceExplanations}
+          />
+        </div>
       ) : null}
 
       {props.question ? (
@@ -267,18 +275,20 @@ export function PracticeView(props: PracticeViewProps) {
             </Button>
           ) : null}
 
-          <Button
-            type="button"
-            className="rounded-full"
-            disabled={!props.canSubmit || props.isPending}
-            onClick={props.onSubmit}
-          >
-            {isSubmittingAnswer ? 'Submitting…' : 'Submit'}
-          </Button>
+          {!props.submitResult ? (
+            <Button
+              type="button"
+              className="rounded-full"
+              disabled={!props.canSubmit || props.isPending}
+              onClick={props.onSubmit}
+            >
+              {isSubmittingAnswer ? 'Submitting…' : 'Submit'}
+            </Button>
+          ) : null}
 
           <Button
             type="button"
-            variant="outline"
+            variant={props.submitResult ? 'default' : 'outline'}
             className="rounded-full"
             disabled={
               props.hasNextQuestion === false ||
