@@ -36,7 +36,6 @@ type HistorySearchParams = {
   difficulty?: string;
   tag?: string;
   result?: string;
-  source?: string;
   sort?: string;
 };
 
