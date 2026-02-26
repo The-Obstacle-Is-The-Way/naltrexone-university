@@ -56,7 +56,7 @@ test.describe('practice', () => {
     await selectChoiceByLabel(page, 'A');
     await page.getByRole('button', { name: 'Submit' }).click();
 
-    await expect(page.getByText(/Correct|Incorrect/)).toBeVisible();
+    await expect(page.getByText(/^(Correct|Incorrect)$/)).toBeVisible();
   });
 
   test('exam mode completes session without showing explanation', async ({
