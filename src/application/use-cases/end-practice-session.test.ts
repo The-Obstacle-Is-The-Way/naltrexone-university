@@ -54,7 +54,7 @@ describe('EndPracticeSessionUseCase', () => {
     });
   }
 
-  it('computes exam accuracy using total question count denominator', async () => {
+  it('returns exam accuracy using total question count denominator when calculating session metrics', async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-02-01T00:10:00Z'));
 
@@ -78,7 +78,7 @@ describe('EndPracticeSessionUseCase', () => {
     });
   });
 
-  it('computes tutor accuracy using total question count denominator', async () => {
+  it('returns tutor accuracy using total question count denominator when calculating session metrics', async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-02-01T00:10:00Z'));
 
@@ -102,7 +102,7 @@ describe('EndPracticeSessionUseCase', () => {
     });
   });
 
-  it('matches tutor accuracy with session-history denominator semantics', async () => {
+  it('returns tutor accuracy that matches session-history denominator semantics', async () => {
     vi.useFakeTimers();
     const endedAt = new Date('2026-02-01T00:10:00Z');
     vi.setSystemTime(endedAt);

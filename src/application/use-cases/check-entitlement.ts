@@ -1,13 +1,13 @@
-import { isEntitled } from '@/src/domain/services';
+import {
+  determineNonEntitledReason,
+  isEntitled,
+  type NonEntitledReason,
+} from '@/src/domain/services';
 import type { SubscriptionStatus } from '@/src/domain/value-objects';
 import type { SubscriptionRepository } from '../ports/repositories';
 
 export type CheckEntitlementInput = { userId: string };
-
-export type NonEntitledReason =
-  | 'subscription_required'
-  | 'payment_processing'
-  | 'manage_billing';
+export type { NonEntitledReason } from '@/src/domain/services';
 
 export type CheckEntitlementOutput = {
   isEntitled: boolean;
@@ -15,16 +15,6 @@ export type CheckEntitlementOutput = {
   subscriptionStatus?: SubscriptionStatus | null;
   hasActiveSubscriptionPeriod?: boolean;
 };
-
-function getNonEntitledReason(
-  status: SubscriptionStatus,
-  hasActiveSubscriptionPeriod: boolean,
-): NonEntitledReason {
-  if (!hasActiveSubscriptionPeriod) return 'subscription_required';
-  if (status === 'paymentProcessing') return 'payment_processing';
-  if (status === 'paymentFailed') return 'subscription_required';
-  return 'manage_billing';
-}
 
 export class CheckEntitlementUseCase {
   constructor(
@@ -48,7 +38,10 @@ export class CheckEntitlementUseCase {
     const hasActiveSubscriptionPeriod = subscription.currentPeriodEnd > now;
     const reason: NonEntitledReason | null = entitled
       ? null
-      : getNonEntitledReason(subscription.status, hasActiveSubscriptionPeriod);
+      : determineNonEntitledReason(
+          subscription.status,
+          hasActiveSubscriptionPeriod,
+        );
 
     return {
       isEntitled: entitled,

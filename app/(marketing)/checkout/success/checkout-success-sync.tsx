@@ -4,6 +4,7 @@ import { ROUTES } from '@/lib/routes';
 import { getSubscriptionPlanFromPriceId } from '@/src/adapters/config/stripe-prices';
 import { stripeSubscriptionStatusToSubscriptionStatus } from '@/src/adapters/gateways/stripe';
 import { isTransientExternalError, retry } from '@/src/adapters/shared/retry';
+import { determineNonEntitledReason } from '@/src/domain/services';
 import {
   isEntitledStatus,
   type SubscriptionStatus,
@@ -237,16 +238,14 @@ export async function syncCheckoutSuccess(
     });
   });
 
-  const isEntitled =
-    isEntitledStatus(status) && currentPeriodEnd.getTime() > Date.now();
+  const hasActiveSubscriptionPeriod = currentPeriodEnd.getTime() > Date.now();
+  const isEntitled = isEntitledStatus(status) && hasActiveSubscriptionPeriod;
 
   if (!isEntitled) {
-    const reason =
-      status === 'paymentProcessing'
-        ? 'payment_processing'
-        : status === 'paymentFailed'
-          ? 'subscription_required'
-          : 'manage_billing';
+    const reason = determineNonEntitledReason(
+      status,
+      hasActiveSubscriptionPeriod,
+    );
 
     return redirectFn(`${ROUTES.PRICING}?reason=${reason}`);
   }

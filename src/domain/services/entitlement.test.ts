@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Subscription } from '../entities';
 import { createSubscription } from '../test-helpers';
-import { isEntitled } from './entitlement';
+import { determineNonEntitledReason, isEntitled } from './entitlement';
 
 describe('isEntitled', () => {
   const now = new Date('2026-01-31T12:00:00Z');
@@ -70,5 +70,29 @@ describe('isEntitled', () => {
 
   it('returns false for null subscription', () => {
     expect(isEntitled(null, now)).toBe(false);
+  });
+});
+
+describe('determineNonEntitledReason', () => {
+  it('returns subscription_required when current period is not active', () => {
+    expect(determineNonEntitledReason('active', false)).toBe(
+      'subscription_required',
+    );
+  });
+
+  it('returns payment_processing for paymentProcessing with active period', () => {
+    expect(determineNonEntitledReason('paymentProcessing', true)).toBe(
+      'payment_processing',
+    );
+  });
+
+  it('returns subscription_required for paymentFailed with active period', () => {
+    expect(determineNonEntitledReason('paymentFailed', true)).toBe(
+      'subscription_required',
+    );
+  });
+
+  it('returns manage_billing for other non-entitled statuses with active period', () => {
+    expect(determineNonEntitledReason('canceled', true)).toBe('manage_billing');
   });
 });

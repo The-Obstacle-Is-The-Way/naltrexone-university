@@ -851,6 +851,74 @@ describe('syncCheckoutSuccess', () => {
     });
   });
 
+  it('returns redirect to pricing with reason=subscription_required when current period has ended', async () => {
+    const stripeCustomers = new FakeStripeCustomerRepository();
+    const subscriptions = new FakeSubscriptionRepository();
+    const user = {
+      id: 'user_1',
+      email: 'user@example.com',
+      createdAt: new Date('2026-02-01T00:00:00Z'),
+      updatedAt: new Date('2026-02-01T00:00:00Z'),
+    };
+
+    const deps = {
+      authGateway: new FakeAuthGateway(user),
+      getClerkAuth: async () => ({
+        userId: 'clerk_user_1',
+        redirectToSignIn: () => {
+          throw new Error('should not redirect to sign-in');
+        },
+      }),
+      logger: new FakeLogger(),
+      stripe: {
+        checkout: {
+          sessions: {
+            retrieve: async () => ({
+              customer: 'cus_123',
+              subscription: 'sub_123',
+            }),
+          },
+        },
+        subscriptions: {
+          retrieve: async () => ({
+            id: 'sub_123',
+            customer: 'cus_123',
+            status: 'canceled',
+            cancel_at_period_end: false,
+            metadata: { user_id: 'user_1' },
+            items: {
+              data: [
+                {
+                  current_period_end: 1_000_000_000,
+                  price: { id: 'price_monthly' },
+                },
+              ],
+            },
+          }),
+        },
+      },
+      priceIds: { monthly: 'price_monthly', annual: 'price_annual' },
+      appUrl: 'https://example.com',
+      transaction: async <T>(
+        fn: (tx: CheckoutSuccessTransaction) => Promise<T>,
+      ): Promise<T> =>
+        fn({
+          stripeCustomers,
+          subscriptions,
+        }),
+    };
+
+    const redirectFn = (url: string): never => {
+      throw new RedirectError(url);
+    };
+
+    await expect(
+      syncCheckoutSuccess({ sessionId: 'cs_test' }, deps as never, redirectFn),
+    ).rejects.toMatchObject({
+      url: `${ROUTES.PRICING}?reason=subscription_required`,
+    });
+  });
+
   it('returns redirect to dashboard when subscription is pastDue with active period (dunning grace)', async () => {
     const stripeCustomers = new FakeStripeCustomerRepository();
     const subscriptions = new FakeSubscriptionRepository();

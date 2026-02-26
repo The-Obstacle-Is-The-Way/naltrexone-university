@@ -1,4 +1,8 @@
-export { isEntitled } from './entitlement';
+export {
+  determineNonEntitledReason,
+  isEntitled,
+  type NonEntitledReason,
+} from './entitlement';
 export { type GradeResult, gradeAnswer } from './grading';
 export {
   type AttemptHistory,
