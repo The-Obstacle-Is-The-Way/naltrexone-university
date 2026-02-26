@@ -1,8 +1,15 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { ApplicationError } from '@/src/application/errors';
-import { createPracticeSession } from '@/src/domain/test-helpers';
-import { FakePracticeSessionRepository } from '../test-helpers/fakes';
+import {
+  createPracticeSession,
+  createQuestion,
+} from '@/src/domain/test-helpers';
+import {
+  FakePracticeSessionRepository,
+  FakeQuestionRepository,
+} from '../test-helpers/fakes';
 import { EndPracticeSessionUseCase } from './end-practice-session';
+import { GetSessionHistoryUseCase } from './get-session-history';
 
 describe('EndPracticeSessionUseCase', () => {
   afterEach(() => {
@@ -71,7 +78,7 @@ describe('EndPracticeSessionUseCase', () => {
     });
   });
 
-  it('keeps tutor accuracy denominator as answered', async () => {
+  it('computes tutor accuracy using total question count denominator', async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-02-01T00:10:00Z'));
 
@@ -90,9 +97,83 @@ describe('EndPracticeSessionUseCase', () => {
       totals: {
         answered: 1,
         correct: 1,
-        accuracy: 1,
+        accuracy: 1 / 3,
       },
     });
+  });
+
+  it('matches tutor accuracy with session-history denominator semantics', async () => {
+    vi.useFakeTimers();
+    const endedAt = new Date('2026-02-01T00:10:00Z');
+    vi.setSystemTime(endedAt);
+    const startedAt = new Date('2026-02-01T00:00:00Z');
+
+    const completedTutorSession = createPracticeSession({
+      id: 'session-tutor',
+      userId: 'user-1',
+      mode: 'tutor',
+      questionIds: ['q1', 'q2', 'q3'],
+      questionStates: [
+        {
+          questionId: 'q1',
+          markedForReview: false,
+          latestSelectedChoiceId: 'choice-1',
+          latestIsCorrect: true,
+          latestAnsweredAt: new Date('2026-02-01T00:05:00Z'),
+        },
+        {
+          questionId: 'q2',
+          markedForReview: false,
+          latestSelectedChoiceId: null,
+          latestIsCorrect: null,
+          latestAnsweredAt: null,
+        },
+        {
+          questionId: 'q3',
+          markedForReview: false,
+          latestSelectedChoiceId: null,
+          latestIsCorrect: null,
+          latestAnsweredAt: null,
+        },
+      ],
+      startedAt,
+      endedAt,
+    });
+
+    const sessionsForEnd = new FakePracticeSessionRepository([
+      createPracticeSession({
+        ...completedTutorSession,
+        endedAt: null,
+      }),
+    ]);
+    const sessionsForHistory = new FakePracticeSessionRepository([
+      completedTutorSession,
+    ]);
+    const questions = new FakeQuestionRepository([
+      createQuestion({ id: 'q1', slug: 'q-1' }),
+      createQuestion({ id: 'q2', slug: 'q-2' }),
+      createQuestion({ id: 'q3', slug: 'q-3' }),
+    ]);
+
+    const endUseCase = new EndPracticeSessionUseCase(sessionsForEnd);
+    const historyUseCase = new GetSessionHistoryUseCase(
+      sessionsForHistory,
+      questions,
+    );
+
+    const endResult = await endUseCase.execute({
+      userId: 'user-1',
+      sessionId: 'session-tutor',
+    });
+    const historyResult = await historyUseCase.execute({
+      userId: 'user-1',
+      limit: 10,
+      offset: 0,
+      mode: 'tutor',
+    });
+
+    expect(historyResult.rows).toHaveLength(1);
+    expect(endResult.totals.accuracy).toBe(historyResult.rows[0]?.accuracy);
   });
 
   it('returns totals from persisted latest question state (not raw attempt count)', async () => {

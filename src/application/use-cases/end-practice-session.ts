@@ -42,8 +42,7 @@ export class EndPracticeSessionUseCase {
 
     const { answered, correct } = computeSessionStats(session.questionStates);
     const questionCount = session.questionIds.length;
-    const accuracyDenominator =
-      session.mode === 'exam' ? questionCount : answered;
+    const accuracyDenominator = questionCount;
     const accuracy = computeAccuracy(accuracyDenominator, correct);
 
     const durationSeconds = computeSessionDurationSeconds(

@@ -1,6 +1,6 @@
 # BUG-162: Review Controller Pagination Offset Missing Upper Bound Validation
 
-**Status:** Open
+**Status:** Fixed (2026-02-26)
 **Priority:** P4
 **Date:** 2026-02-25
 
@@ -148,9 +148,9 @@ All 10 controller files scanned. Only 2 controllers accept an `offset` parameter
 
 ## Verification
 
-- [ ] Unit test: `getAttemptedQuestions` rejects `offset: MAX_PAGINATION_OFFSET + 1` with `VALIDATION_ERROR`
-- [ ] Unit test: `getAttemptedQuestions` accepts `offset: MAX_PAGINATION_OFFSET` (boundary passes)
-- [ ] Regression: Existing tests still pass
+- [x] Unit test: `getAttemptedQuestions` rejects `offset: MAX_PAGINATION_OFFSET + 1` with `VALIDATION_ERROR`
+- [x] Unit test: `getAttemptedQuestions` accepts `offset: MAX_PAGINATION_OFFSET` (boundary passes)
+- [x] Regression: Existing tests still pass
 
 ## Tracer-Bullet Verification (2026-02-25)
 

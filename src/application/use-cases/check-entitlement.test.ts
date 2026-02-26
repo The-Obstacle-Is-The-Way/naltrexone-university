@@ -117,7 +117,7 @@ describe('CheckEntitlementUseCase', () => {
     });
   });
 
-  it('returns payment_processing for paymentFailed current subscriptions', async () => {
+  it('returns subscription_required for paymentFailed current subscriptions', async () => {
     const sub = createSubscription({
       userId: 'user-1',
       status: 'paymentFailed',
@@ -131,7 +131,7 @@ describe('CheckEntitlementUseCase', () => {
     const result = await useCase.execute({ userId: 'user-1' });
     expect(result).toEqual({
       isEntitled: false,
-      reason: 'payment_processing',
+      reason: 'subscription_required',
       subscriptionStatus: 'paymentFailed',
       hasActiveSubscriptionPeriod: true,
     });

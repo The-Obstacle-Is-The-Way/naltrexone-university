@@ -21,9 +21,8 @@ function getNonEntitledReason(
   hasActiveSubscriptionPeriod: boolean,
 ): NonEntitledReason {
   if (!hasActiveSubscriptionPeriod) return 'subscription_required';
-  if (status === 'paymentProcessing' || status === 'paymentFailed') {
-    return 'payment_processing';
-  }
+  if (status === 'paymentProcessing') return 'payment_processing';
+  if (status === 'paymentFailed') return 'subscription_required';
   return 'manage_billing';
 }
 

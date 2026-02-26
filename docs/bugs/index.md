@@ -17,17 +17,20 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 | ID | Title | Priority | Status |
 |----|-------|----------|--------|
-| [BUG-160](bug-160-dashboard-session-cards-link-to-generic-history.md) | Dashboard "Recent Sessions" Cards All Link to Generic History Page | P3 | Open |
-| [BUG-161](bug-161-incomplete-expired-maps-to-misleading-payment-failed.md) | Stripe `incomplete_expired` Routes to Misleading `payment_processing` Messaging | P3 | Open |
-| [BUG-162](bug-162-review-controller-offset-missing-upper-bound.md) | Review Controller Pagination Offset Missing Upper Bound Validation | P4 | Open |
-| [BUG-163](bug-163-dashboard-session-fraction-denominator-mismatches-accuracy.md) | Dashboard Session Fraction Denominator Mismatches Accuracy Calculation | P3 | Open |
-| [BUG-164](bug-164-tutor-accuracy-denominator-inconsistent-across-summary-vs-history.md) | Tutor Accuracy Denominator Inconsistent Across Session Summary vs History/Dashboard | P3 | Open |
+| _No active bugs_ | — | — | — |
 
 **Next Bug ID:** BUG-165
 
 **Latest additions (2026-02-26):**
 - BUG-163 identified during tracer-bullet revalidation of BUG-160/161/162 docs.
 - BUG-164 identified as a deeper cross-surface analytics consistency issue while validating BUG-163.
+
+**Latest resolutions (2026-02-26):**
+- BUG-160 fixed: dashboard session cards now deep-link to per-session review when `firstQuestionSlug` is available.
+- BUG-161 fixed: `paymentFailed` now routes to `subscription_required` in entitlement and checkout-success paths.
+- BUG-162 fixed: review controller now enforces `offset <= MAX_PAGINATION_OFFSET` with boundary tests.
+- BUG-163 fixed: dashboard tutor session fraction now uses `correct/questionCount`.
+- BUG-164 fixed: tutor summary accuracy denominator now matches history/dashboard semantics (`questionCount`).
 
 ## Audit #6 — Full-Stack Bug Sweep with 5 Parallel Agents (2026-02-25)
 

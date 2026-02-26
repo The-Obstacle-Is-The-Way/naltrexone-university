@@ -1,6 +1,6 @@
 # BUG-160: Dashboard "Recent Sessions" Cards All Link to Generic History Page
 
-**Status:** Open
+**Status:** Fixed (2026-02-26)
 **Priority:** P3
 **Date:** 2026-02-25
 
@@ -96,10 +96,10 @@ Add a second test with `firstQuestionSlug: null` asserting fallback to generic h
 
 ## Verification
 
-- [ ] Unit test: Session card with `firstQuestionSlug` renders per-session deep-link href
-- [ ] Unit test: Session card with `firstQuestionSlug: null` renders fallback to `historySessionsHref`
+- [x] Unit test: Session card with `firstQuestionSlug` renders per-session deep-link href
+- [x] Unit test: Session card with `firstQuestionSlug: null` renders fallback to `historySessionsHref`
 - [ ] Manual: Click a session card on dashboard → navigates to that session's review with question navigator
-- [ ] Regression: "View all" link still points to generic history
+- [x] Regression: "View all" link still points to generic history
 
 ## Tracer-Bullet Verification (2026-02-25)
 

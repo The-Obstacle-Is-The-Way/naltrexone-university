@@ -1,6 +1,6 @@
 # BUG-164: Tutor Accuracy Denominator Inconsistent Across Session Summary vs History/Dashboard
 
-**Status:** Open
+**Status:** Fixed (2026-02-26)
 **Priority:** P3
 **Date:** 2026-02-26
 
@@ -75,9 +75,9 @@ Align tutor accuracy denominator across both surfaces. Recommended: standardize 
 
 ## Verification
 
-- [ ] Unit test: tutor `end-practice-session` accuracy uses `questionCount`
-- [ ] Unit test: tutor `get-session-history` accuracy unchanged (`questionCount`)
-- [ ] Regression test: same tutor session yields equal accuracy in both outputs
+- [x] Unit test: tutor `end-practice-session` accuracy uses `questionCount`
+- [x] Unit test: tutor `get-session-history` accuracy unchanged (`questionCount`)
+- [x] Regression test: same tutor session yields equal accuracy in both outputs
 - [ ] Manual: complete tutor session with unanswered questions, confirm summary % equals history/dashboard %
 
 ## Related

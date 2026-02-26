@@ -1,6 +1,6 @@
 # BUG-161: Stripe `incomplete_expired` Routes to Misleading `payment_processing` Messaging
 
-**Status:** Open
+**Status:** Fixed (2026-02-26)
 **Priority:** P3
 **Date:** 2026-02-25
 
@@ -96,11 +96,11 @@ const reason =
 
 ## Verification
 
-- [ ] Unit test: `paymentFailed` with active period returns `subscription_required`
-- [ ] Unit test: `paymentProcessing` remains `payment_processing`
-- [ ] Unit test: checkout success with Stripe `incomplete_expired` redirects to `reason=subscription_required`
-- [ ] Unit test: checkout success with Stripe `incomplete` still redirects to `reason=payment_processing`
-- [ ] Regression: existing non-entitled billing statuses still map to `manage_billing`
+- [x] Unit test: `paymentFailed` with active period returns `subscription_required`
+- [x] Unit test: `paymentProcessing` remains `payment_processing`
+- [x] Unit test: checkout success with Stripe `incomplete_expired` redirects to `reason=subscription_required`
+- [x] Unit test: checkout success with Stripe `incomplete` still redirects to `reason=payment_processing`
+- [x] Regression: existing non-entitled billing statuses still map to `manage_billing`
 
 ## Tracer-Bullet Verification (2026-02-26)
 

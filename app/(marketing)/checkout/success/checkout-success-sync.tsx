@@ -242,9 +242,11 @@ export async function syncCheckoutSuccess(
 
   if (!isEntitled) {
     const reason =
-      status === 'paymentProcessing' || status === 'paymentFailed'
+      status === 'paymentProcessing'
         ? 'payment_processing'
-        : 'manage_billing';
+        : status === 'paymentFailed'
+          ? 'subscription_required'
+          : 'manage_billing';
 
     return redirectFn(`${ROUTES.PRICING}?reason=${reason}`);
   }

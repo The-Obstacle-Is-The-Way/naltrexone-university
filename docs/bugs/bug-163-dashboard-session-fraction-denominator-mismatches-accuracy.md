@@ -1,6 +1,6 @@
 # BUG-163: Dashboard Session Fraction Denominator Mismatches Accuracy Calculation
 
-**Status:** Open
+**Status:** Fixed (2026-02-26)
 **Priority:** P3
 **Date:** 2026-02-26
 
@@ -73,8 +73,8 @@ Use `questionCount` as denominator for all modes in DashboardView.
 
 ## Verification
 
-- [ ] Unit test: Tutor row with unanswered questions renders `correct/questionCount`
-- [ ] Unit test: Existing exam row rendering remains unchanged
+- [x] Unit test: Tutor row with unanswered questions renders `correct/questionCount`
+- [x] Unit test: Existing exam row rendering remains unchanged
 - [ ] Manual: Dashboard and History Sessions show consistent fraction semantics
 
 ## Related
