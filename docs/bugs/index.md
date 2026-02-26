@@ -21,10 +21,13 @@ Bug reports document issues discovered in the codebase along with their root cau
 | [BUG-161](bug-161-incomplete-expired-maps-to-misleading-payment-failed.md) | Stripe `incomplete_expired` Routes to Misleading `payment_processing` Messaging | P3 | Open |
 | [BUG-162](bug-162-review-controller-offset-missing-upper-bound.md) | Review Controller Pagination Offset Missing Upper Bound Validation | P4 | Open |
 | [BUG-163](bug-163-dashboard-session-fraction-denominator-mismatches-accuracy.md) | Dashboard Session Fraction Denominator Mismatches Accuracy Calculation | P3 | Open |
+| [BUG-164](bug-164-tutor-accuracy-denominator-inconsistent-across-summary-vs-history.md) | Tutor Accuracy Denominator Inconsistent Across Session Summary vs History/Dashboard | P3 | Open |
 
-**Next Bug ID:** BUG-164
+**Next Bug ID:** BUG-165
 
-**Latest addition (2026-02-26):** BUG-163 was identified during tracer-bullet revalidation of BUG-160/161/162 docs.
+**Latest additions (2026-02-26):**
+- BUG-163 identified during tracer-bullet revalidation of BUG-160/161/162 docs.
+- BUG-164 identified as a deeper cross-surface analytics consistency issue while validating BUG-163.
 
 ## Audit #6 — Full-Stack Bug Sweep with 5 Parallel Agents (2026-02-25)
 

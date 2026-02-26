@@ -41,6 +41,16 @@ This diverges from SSOT (`docs/specs/master_spec.md:1640`: `accuracy = correct /
 - Inconsistent semantics between Dashboard and History → Sessions (History uses `correct / questionCount`).
 - Reduced trust in performance data.
 
+## Caveat / Non-Goal
+
+This bug is about the **fraction label** on Dashboard session cards.
+
+A separate, real inconsistency exists between:
+- session-end summary accuracy (from `EndPracticeSessionUseCase`, tutor uses `correct/answered`)
+- history/dashboard accuracy (from `GetSessionHistoryUseCase`, both modes use `correct/questionCount`)
+
+That cross-surface accuracy discrepancy is tracked separately in BUG-164 and is not resolved by BUG-163.
+
 ## Fix
 
 Use `questionCount` as denominator for all modes in DashboardView.
@@ -74,3 +84,4 @@ Use `questionCount` as denominator for all modes in DashboardView.
 - `app/(app)/app/history/components/history-sessions-tab.tsx:157–159` — correct fraction denominator pattern
 - `docs/specs/master_spec.md:1640` — SSOT accuracy definition
 - BUG-160 — same dashboard session-card area
+- BUG-164 — cross-surface tutor accuracy denominator inconsistency

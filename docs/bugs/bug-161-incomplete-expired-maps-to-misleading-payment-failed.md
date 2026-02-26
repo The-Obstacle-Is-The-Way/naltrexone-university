@@ -55,6 +55,11 @@ And the same grouping exists in `app/(marketing)/checkout/success/checkout-succe
 Do not add new domain statuses. Keep `paymentFailed` and route it as terminal.
 No DB migration is required.
 
+### Messaging Note
+
+Using `subscription_required` keeps the fix minimal and correct. It is more accurate than `payment_processing` for terminal failed checkout states.
+If product later wants more specific copy ("Checkout expired, please subscribe again"), introduce a dedicated reason code in a follow-up change.
+
 ### 1. Entitlement Reason Mapping
 
 `src/application/use-cases/check-entitlement.ts`:
