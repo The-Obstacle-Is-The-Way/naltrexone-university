@@ -161,6 +161,7 @@ Users who have only done Tutor/Exam sessions will see an empty Questions tab. Ad
 | `app/(app)/app/history/components/history-questions-tab.test.tsx` | Update review link href expectations (no `historySeq`/`historyIndex`). Remove/update Source filter tests. |
 | `app/(app)/app/history/history-search-params.ts` | Optional: remove `source` from `QuestionsFilters` UI type |
 | `app/(app)/app/history/history-page-client.tsx` | Update subtitle text |
+| `tests/e2e/session-review-navigation.spec.ts` | Update E2E test to assert standalone review (no navigator, no `historySeq`/`historyIndex`). Update empty-state matcher for new "No Quick Practice questions yet" message. |
 
 **No changes needed to:**
 - `use-question-page-controller.ts` — `historySeq` path remains as dead-code fallback
