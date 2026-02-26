@@ -235,9 +235,18 @@ The History subtitle is identical whether you're reviewing a standalone question
 
 Different layout patterns for the same conceptual navigation. Not blocking, but worth unifying.
 
-### 3. "Try Again" label on correct Dashboard answers
+### 3. "Try Again" label on correct standalone non-history answers
 
-The Dashboard review shows "Try Again" for a correctly-answered question. The History Questions review correctly shows "Practice Again" for correct and "Try Again" for incorrect. The Dashboard path appears to not check the result state when choosing the button label.
+Dashboard and Bookmarks review show "Try Again" for correctly-answered questions. The History Questions review correctly shows "Practice Again" for correct and "Try Again" for incorrect. This is caused by history-only label gating in `question-page-client.tsx` (`isStandaloneHistoryReview`), not by correctness itself.
+
+### 4. Direct URL context mismatch (minor edge case)
+
+Manual agent-browser testing found a low-severity edge case for direct question URLs without query context (for example: `/app/questions/<slug>`):
+
+- UI copy defaults to dashboard review framing ("Review a question from your recent activity." / "Back to Dashboard")
+- Interaction mode is submit-mode (shows "Submit"), not review-mode
+
+This is not reachable via normal in-app flows, but it is a real state/copy mismatch for malformed or manually-entered deep links.
 
 ---
 
@@ -249,7 +258,7 @@ The Dashboard review shows "Try Again" for a correctly-answered question. The Hi
 
 3. **~~Should the related UX inconsistencies (subtitle, back link, Try Again label) be addressed in the same fix or tracked separately?~~** **Resolved: Track separately.**
    - **Subtitle and back link position:** Minor cosmetic inconsistencies. Defer to a future polish pass or BS-033.
-   - **"Try Again" label on correct Dashboard answers:** This is a residual bug from the reattempt cleanup (SPEC-034 / SPEC-036). The label logic in `question-page-client.tsx:185-188` only checks `isStandaloneHistoryReview` but not Dashboard review context, so correct answers from the Dashboard show "Try Again" instead of "Practice Again". Track in BS-033 (which already covers feedback UX issues) as a concrete fix: extend the `reattemptLabel` condition to cover all standalone review contexts, not just history.
+   - **"Try Again" label on correct Dashboard/Bookmarks answers:** This is a residual bug from the reattempt cleanup (SPEC-034 / SPEC-036). The label logic in `question-page-client.tsx:185-188` only checks `isStandaloneHistoryReview`, so correct answers from non-history standalone origins (Dashboard, Bookmarks) show "Try Again" instead of "Practice Again". Track in BS-033 (which already covers feedback UX issues) as a concrete fix: extend the `reattemptLabel` condition to cover all standalone review contexts, not just history.
 
 4. **~~Should the Questions tab scope be narrowed to ad-hoc questions only?~~** **Resolved: Position A — ad-hoc only.**
 
@@ -285,5 +294,6 @@ The Dashboard review shows "Try Again" for a correctly-answered question. The Hi
 | 2026-02-25 | Chrome agent audit validates and expands scope | Confirmed bug at scale (20 buttons). Discovered Tutor/Exam questions also lose session context from Questions tab. Source filter does not suppress. Three related UX inconsistencies flagged. Severity upgraded from Medium-High to High. |
 | 2026-02-25 | **Decided: Position A — Questions tab = ad-hoc only** | History should mirror Practice hierarchy: Sessions tab for Tutor/Exam, Questions tab for Quick Practice. Session questions lose context on the Questions tab (no color coding, wrong group). Clean separation is simpler to implement and gives users the correct mental model. Source filter becomes unnecessary. |
 | 2026-02-25 | Added empty state requirement + subtitle copy refinement | Second Chrome agent audit confirmed Position A. Surfaced two gaps: (1) users with only session questions will see empty Questions tab — needs explicit empty state pointing to Sessions tab; (2) subtitle should use product term "Quick Practice" instead of "individual practice" to match nav bar terminology. |
-| 2026-02-25 | Resolved all open questions (Q2, Q3) | Q2: No `attemptId` needed for History Questions-tab links because rows are already latest-per-question; `attemptId` remains valid for attempt-scoped entry points like Dashboard. Q3: Subtitle/back link deferred to polish pass. "Try Again" label bug on Dashboard correct answers tracked for BS-033 as a concrete `reattemptLabel` condition fix. |
+| 2026-02-25 | Resolved all open questions (Q2, Q3) | Q2: No `attemptId` needed for History Questions-tab links because rows are already latest-per-question; `attemptId` remains valid for attempt-scoped entry points like Dashboard. Q3: Subtitle/back link deferred to polish pass. "Try Again" label bug on correct standalone non-history answers (Dashboard/Bookmarks) tracked for BS-033 as a concrete `reattemptLabel` condition fix. |
 | 2026-02-25 | Code-truth correction pass applied | Corrected SPEC-027 link target, corrected file ownership of the `source: 'adhoc'` change (`history/page.tsx`, not `history-questions-tab.tsx`), and narrowed Q2 rationale to avoid incorrectly labeling all `attemptId` usage as vestigial. |
+| 2026-02-26 | Agent-browser validation pass | Reconfirmed BS-034 navigator bug manually (including pagination-window behavior via `limit/offset`). Expanded related residual label-scope note from Dashboard-only to Dashboard+Bookmarks, and documented minor direct-URL context mismatch edge case. |

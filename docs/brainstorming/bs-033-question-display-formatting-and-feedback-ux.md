@@ -741,7 +741,7 @@ These require editing raw MDX files (gitignored, ~958 questions). Deferred until
 
 ### RESIDUAL — "Try Again" / "Practice Again" label inconsistency (from BS-034)
 
-The Chrome agent audit for BS-034 discovered that the Dashboard review path shows "Try Again" for correctly-answered questions, while the History review path correctly shows "Practice Again" for correct answers.
+Chrome/agent-browser audits for BS-034 discovered that **Dashboard and Bookmarks** review paths show "Try Again" for correctly-answered questions, while the History review path correctly shows "Practice Again" for correct answers.
 
 **Root cause:** `question-page-client.tsx:185-188` — the `reattemptLabel` condition only checks `isStandaloneHistoryReview`:
 
@@ -751,6 +751,8 @@ const reattemptLabel =
     ? 'Practice Again'
     : 'Try Again';
 ```
+
+Because this condition gates on `isStandaloneHistoryReview`, only history-origin standalone reviews can ever render "Practice Again". Dashboard and Bookmarks are both standalone but non-history origins, so they fall through to "Try Again" even when correct.
 
 The condition should cover ALL standalone review contexts (Dashboard, History, Bookmarks), not just history. When a user got the answer right, the button should say "Practice Again" regardless of which entry point they came from.
 
@@ -765,6 +767,15 @@ const reattemptLabel = props.submitResult?.isCorrect
 ```
 
 `Try Again`/`Practice Again` is already hidden in session review contexts by the existing `!isSessionReviewReadOnly` button guard, so this label logic stays scoped to standalone flows.
+
+### NOTE — Direct URL context mismatch (minor edge case)
+
+Manual agent-browser walkthrough found a low-severity edge case on direct question URLs with no query context (for example: `/app/questions/<slug>`):
+
+- `getOriginUi()` defaults `origin` to `'dashboard'`, so subtitle/back-link copy is review-oriented ("Review a question from your recent activity." / "Back to Dashboard").
+- Without `mode=review`, the page renders submit-mode controls ("Submit") instead of review-mode controls.
+
+This is internally inconsistent copy, but it requires manual URL entry (or a broken deep link) and is not part of normal in-app navigation flows. Keep as a minor follow-up, not blocking for BS-033/BS-034 primary fixes.
 
 ### FUTURE — Enhanced Formatting & Features (optional)
 
@@ -801,3 +812,4 @@ Nice-to-have improvements that go beyond fixing current issues:
 | 2026-02-25 | Integrated Chrome agent audit #2 (Quick Practice pre+post answer) | Added Problems 13-20 (badge contrast, hover/focus, button hierarchy, auto-scroll, "Your answer" label, unchosen answer dimming, filter tabs). Organized NOW into Tier 1/2/3 by severity |
 | 2026-02-25 | Playwright + code trace validation | All 20 original problems confirmed against source code. 4 partially corrected (P14: hover/focus exists but subtle; P15: pre-submit hierarchy already differentiated; P19: opacity-50 dimming already exists; P20: tabs not disabled, just weak affordance). 2 new problems discovered (P21: review-mode hydration flicker; P22: role="alert" on long content). Total: 22 problems |
 | 2026-02-25 | Code-truth correction pass applied | Clarified residual label fix to a correctness-based condition that works for Dashboard/History/Bookmarks standalone review paths and linked SPEC-034/SPEC-036 to actual archived files. |
+| 2026-02-26 | Agent-browser validation pass expanded residual scope | Confirmed residual label bug affects Bookmarks in addition to Dashboard (same non-history standalone code path). Added minor direct-URL context mismatch note (`/app/questions/<slug>` defaults to dashboard review copy while rendering submit mode). |
