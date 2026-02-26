@@ -122,3 +122,4 @@ Full vertical trace across 6 layers:
 - `app/(app)/app/dashboard/page.test.tsx:60` — test fixture with unused `firstQuestionSlug`
 - `app/(app)/app/history/components/history-sessions-tab.tsx:168–175` — correct reference implementation
 - `lib/routes.ts:25–50` — `toQuestionRoute` helper
+- BUG-163 — dashboard session metric denominator inconsistency in the same UI section

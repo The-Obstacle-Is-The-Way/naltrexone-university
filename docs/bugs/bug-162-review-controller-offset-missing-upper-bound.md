@@ -8,9 +8,9 @@
 
 ## Description
 
-The `GetAttemptedQuestionsInputSchema` in `review-controller.ts` validates `offset` with `.min(0)` but lacks a `.max()` upper bound. This is inconsistent with the practice controller's `GetSessionHistoryInputSchema`, which correctly bounds offset with `.max(MAX_PAGINATION_OFFSET)` (10,000).
+`GetAttemptedQuestionsInputSchema` in `review-controller.ts` validates `offset` with `.min(0)` but has no `.max()` upper bound. This diverges from `GetSessionHistoryInputSchema` in `practice-schemas.ts`, which correctly bounds `offset` with `.max(MAX_PAGINATION_OFFSET)` (10,000).
 
-A client can submit an arbitrarily large offset (e.g., `offset: 999_999_999`), causing the database to scan and skip a large number of rows before returning results.
+A client can submit arbitrarily large offsets (for example `999_999_999`), forcing expensive DB work before returning an empty page.
 
 ## Root Cause
 
@@ -46,10 +46,10 @@ The unbounded offset flows through the entire stack without any clamping:
 
 1. **Controller** (`review-controller.ts:18`): Zod accepts `offset: 999_999_999` (passes `.min(0)` and `.int()`)
 2. **Use case** (`get-attempted-questions.ts:17`): `offset: number` — no domain bounds, passes through verbatim
-3. **Repository port** (`attempt-repository.ts:92–102`): `offset: number` — no constraints (correctly delegated to adapter)
+3. **Repository port** (`src/application/ports/attempt-repository.ts:92–102`): `offset: number` — no constraints (correctly delegated to adapter boundary validation)
 4. **Repository impl** (`drizzle-attempt-repository.ts:369–423`): `.offset(offset)` hits Postgres directly
 
-The query involves a `ROW_NUMBER()` window function in the `latest_attempt_rows` subquery. Postgres must evaluate the full windowed result set before applying `OFFSET`, making the cost worse than a simple sequential scan.
+The query uses a `ROW_NUMBER()` window function (`latest-attempt-rank-sql.ts:9`) in the `latest_attempt_rows` subquery. Large offsets therefore tend to become increasingly expensive because many ranked rows must be scanned/skipped before page rows are returned.
 
 **Note:** The same repository file's `findByUserId` method (line 203–223) has defensive clamping (`Math.max(0, page.offset)`), but `listAttemptedQuestionsByUserId` has no equivalent protection.
 
@@ -118,6 +118,26 @@ it('returns VALIDATION_ERROR when offset exceeds the maximum', async () => {
 
 Import `MAX_PAGINATION_OFFSET` at the top of the test file.
 
+### 4. Boundary Pass Test (`review-controller.test.ts`)
+
+Add a positive boundary case to lock the contract:
+
+```typescript
+it('accepts offset at MAX_PAGINATION_OFFSET boundary', async () => {
+  const deps = createDeps();
+
+  const result = await getAttemptedQuestions(
+    { limit: 10, offset: MAX_PAGINATION_OFFSET },
+    deps,
+  );
+
+  expect(result.ok).toBe(true);
+  expect(deps.getAttemptedQuestionsUseCase.inputs).toEqual([
+    expect.objectContaining({ offset: MAX_PAGINATION_OFFSET }),
+  ]);
+});
+```
+
 ### Horizontal Audit (No Other Bugs)
 
 All 10 controller files scanned. Only 2 controllers accept an `offset` parameter:
@@ -138,9 +158,11 @@ Full vertical trace from controller → use case → repository port → Drizzle
 
 ## Related
 
-- `src/adapters/controllers/review-controller.ts:18` — missing bound
-- `src/adapters/controllers/practice-schemas.ts:71` — correct pattern
+- `src/adapters/controllers/review-controller.ts:15–27` — missing `.max(MAX_PAGINATION_OFFSET)`
+- `src/adapters/controllers/practice-schemas.ts:68–74` — correct offset bound pattern
 - `src/adapters/shared/validation-limits.ts:16` — `MAX_PAGINATION_OFFSET = 10_000`
-- `src/adapters/repositories/drizzle-attempt-repository.ts:369–423` — SQL endpoint
-- `src/adapters/controllers/review-controller.test.ts:70` — test with no upper bound check
-- `src/adapters/controllers/practice-controller.test.ts:744` — correct test pattern
+- `src/application/ports/attempt-repository.ts:92–102` — offset passes through as number
+- `src/adapters/repositories/drizzle-attempt-repository.ts:369–423` — unbounded `.offset(offset)` sink
+- `src/adapters/repositories/shared/latest-attempt-rank-sql.ts:9` — `row_number()` ranking used in query path
+- `src/adapters/controllers/review-controller.test.ts:70–83` — current validation test gap
+- `src/adapters/controllers/practice-controller.test.ts:744–757` — existing correct max-offset test pattern

@@ -18,10 +18,13 @@ Bug reports document issues discovered in the codebase along with their root cau
 | ID | Title | Priority | Status |
 |----|-------|----------|--------|
 | [BUG-160](bug-160-dashboard-session-cards-link-to-generic-history.md) | Dashboard "Recent Sessions" Cards All Link to Generic History Page | P3 | Open |
-| [BUG-161](bug-161-incomplete-expired-maps-to-misleading-payment-failed.md) | Stripe `incomplete_expired` Maps to Misleading `paymentFailed` Status | P3 | Open |
+| [BUG-161](bug-161-incomplete-expired-maps-to-misleading-payment-failed.md) | Stripe `incomplete_expired` Routes to Misleading `payment_processing` Messaging | P3 | Open |
 | [BUG-162](bug-162-review-controller-offset-missing-upper-bound.md) | Review Controller Pagination Offset Missing Upper Bound Validation | P4 | Open |
+| [BUG-163](bug-163-dashboard-session-fraction-denominator-mismatches-accuracy.md) | Dashboard Session Fraction Denominator Mismatches Accuracy Calculation | P3 | Open |
 
-**Next Bug ID:** BUG-163
+**Next Bug ID:** BUG-164
+
+**Latest addition (2026-02-26):** BUG-163 was identified during tracer-bullet revalidation of BUG-160/161/162 docs.
 
 ## Audit #6 — Full-Stack Bug Sweep with 5 Parallel Agents (2026-02-25)
 
@@ -34,7 +37,7 @@ Five-axis investigation covering: (1) existing bug documentation review, (2) sou
 All 3 bugs were traced end-to-end with vertical and horizontal tracer bullets:
 
 - **BUG-160:** 6-layer vertical trace (DB → use case → controller → dashboard render → history page reference → test gap). Confirmed `firstQuestionSlug` and `sessionId` are fetched but unused. Correct pattern exists 70 lines below the bug in the same file's "Recent activity" section.
-- **BUG-161:** 12+ file horizontal trace across webhook → normalizer → status mapper → DB → entitlement → layout → pricing page. Confirmed Stripe retains `current_period_end` in future for ~30 days on `incomplete_expired`. Second affected path found in `checkout-success-sync.tsx:245`. Existing test at `check-entitlement.test.ts:120` encodes the bug as correct behavior.
+- **BUG-161:** 12+ file horizontal trace across webhook → normalizer → status mapper → DB → entitlement → layout → pricing page. Confirmed `paymentFailed` is routed through the same `payment_processing` reason path as `paymentProcessing`. Second affected path found in `checkout-success-sync.tsx:245`. Existing test at `check-entitlement.test.ts:120` encodes the bug as correct behavior.
 - **BUG-162:** Vertical trace from controller → use case → repository port → Drizzle impl → Postgres. Horizontal trace across all 10 controller files confirmed this is the sole unbounded offset instance. SQL path involves `ROW_NUMBER()` window function making large offsets especially costly.
 
 ### Findings Confirmed as NOT Bugs (Initial Sweep — 10 False Positives)
