@@ -177,9 +177,7 @@ test.describe('review mode audit', () => {
     });
     await expectFeedbackVisible(page);
     await expectChoiceChecked(page, incorrectLabel);
-    await expect(
-      page.getByRole('button', { name: /^(Practice Again|Try Again)$/ }),
-    ).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Try Again' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Submit' })).toHaveCount(0);
   });
 
