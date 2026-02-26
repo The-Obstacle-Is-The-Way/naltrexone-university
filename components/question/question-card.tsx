@@ -32,9 +32,9 @@ export function QuestionCard({
 
   return (
     <Card>
-      <Markdown content={stemMd} className="text-sm text-foreground" />
+      <Markdown content={stemMd} className="text-base text-foreground" />
 
-      <fieldset className="mt-6 space-y-3">
+      <fieldset className="mt-8 space-y-3">
         <legend className="sr-only">Answer choices</legend>
         {choices.map((choice) => {
           const selected = selectedChoiceId === choice.id;
@@ -45,7 +45,7 @@ export function QuestionCard({
                 ? 'correct'
                 : selected
                   ? 'incorrect'
-                  : null;
+                  : 'wrong-unselected';
 
           return (
             <ChoiceButton

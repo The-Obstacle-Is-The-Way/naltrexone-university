@@ -27,8 +27,10 @@ test.describe('practice', () => {
     await selectChoiceByLabel(page, 'A');
     await page.getByRole('button', { name: 'Submit' }).click();
 
-    await expect(page.getByText(/Correct|Incorrect/)).toBeVisible();
-    await expect(page.getByText('Explanation', { exact: true })).toBeVisible();
+    await expect(page.getByText(/^(Correct|Incorrect)$/)).toBeVisible();
+    await expect(
+      page.getByText('Correct answer', { exact: true }),
+    ).toBeVisible();
     await expect(
       page.getByText('Explanation not available.', { exact: true }),
     ).toHaveCount(0);
@@ -54,7 +56,7 @@ test.describe('practice', () => {
     await selectChoiceByLabel(page, 'A');
     await page.getByRole('button', { name: 'Submit' }).click();
 
-    await expect(page.getByText(/Correct|Incorrect/)).toBeVisible();
+    await expect(page.getByText(/^(Correct|Incorrect)$/)).toBeVisible();
   });
 
   test('exam mode completes session without showing explanation', async ({
@@ -69,7 +71,7 @@ test.describe('practice', () => {
 
     // Exam mode does not show explanation after submit
     await expect(
-      page.getByText('Explanation', { exact: true }),
+      page.getByText('Correct answer', { exact: true }),
     ).not.toBeVisible();
     await expect(
       page.getByRole('button', { name: 'Mark for review' }),

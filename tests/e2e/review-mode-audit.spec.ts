@@ -16,7 +16,7 @@ const CORRECT_SLUG = 'placeholder-01-naltrexone-mechanism';
 const INCORRECT_SLUG = 'placeholder-02-buprenorphine-induction-timing';
 
 function getFeedbackCard(page: Page) {
-  return page.locator('[role="alert"]').filter({
+  return page.locator('[role="status"]').filter({
     hasText: /^(Correct|Incorrect)/,
   });
 }
@@ -357,7 +357,7 @@ test.describe('review mode audit', () => {
       feedbackCard.getByText(/^(Correct|Incorrect)$/).first(),
     ).toBeVisible();
     await expect(
-      feedbackCard.getByText('Explanation', { exact: true }),
+      feedbackCard.getByText('Correct answer', { exact: true }),
     ).toBeVisible();
 
     await expect(page.getByRole('button', { name: 'Submit' })).toHaveCount(0);

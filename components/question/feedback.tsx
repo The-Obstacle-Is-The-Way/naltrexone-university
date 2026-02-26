@@ -17,6 +17,7 @@ export type FeedbackProps = {
   explanationMd: string | null;
   referenceMd?: string | null;
   choiceExplanations?: readonly FeedbackChoiceExplanation[];
+  selectedChoiceId?: string | null;
 };
 
 export function Feedback({
@@ -24,7 +25,10 @@ export function Feedback({
   explanationMd,
   referenceMd,
   choiceExplanations = [],
+  selectedChoiceId = null,
 }: FeedbackProps) {
+  const correctChoice =
+    choiceExplanations.find((choice) => choice.isCorrect) ?? null;
   const visibleChoiceExplanations = choiceExplanations.filter(
     (choice) =>
       !choice.isCorrect &&
@@ -41,19 +45,33 @@ export function Feedback({
     !hasMissingIncorrectExplanation && visibleChoiceExplanations.length > 0;
 
   return (
-    <Card
-      role="alert"
-      className={cn(
-        isCorrect && 'border-success bg-success/10',
-        !isCorrect && 'border-destructive bg-destructive/10',
-      )}
-    >
-      <div className="text-sm font-semibold text-foreground">
+    <Card role="status">
+      <span
+        className={cn(
+          'inline-flex rounded-full px-3 py-1 text-sm font-semibold',
+          isCorrect && 'bg-success/15 text-success',
+          !isCorrect && 'bg-destructive/15 text-destructive',
+        )}
+      >
         {isCorrect ? 'Correct' : 'Incorrect'}
-      </div>
+      </span>
 
-      <div className="mt-4">
-        <div className="text-sm font-medium text-foreground">Explanation</div>
+      <div className="mt-6">
+        {correctChoice ? (
+          <div className="space-y-1">
+            <div className="text-sm font-medium text-foreground">
+              Correct answer
+            </div>
+            <div className="flex items-start gap-1 text-sm text-foreground">
+              <span className="shrink-0 font-medium">
+                {correctChoice.displayLabel})
+              </span>
+              <Markdown content={correctChoice.textMd} />
+            </div>
+          </div>
+        ) : (
+          <div className="text-sm font-medium text-foreground">Explanation</div>
+        )}
         {explanationMd ? (
           <Markdown content={explanationMd} className="mt-2 text-sm" />
         ) : (
@@ -74,9 +92,14 @@ export function Feedback({
                 key={choice.choiceId}
                 className="rounded-xl border border-border/60 bg-background/50 p-3"
               >
-                <div className="flex items-start gap-1 text-sm font-medium text-foreground">
+                <div className="flex items-start gap-1 text-sm text-muted-foreground">
                   <span className="shrink-0">{choice.displayLabel})</span>
                   <Markdown content={choice.textMd} />
+                  {choice.choiceId === selectedChoiceId ? (
+                    <span className="ml-1 shrink-0 rounded-full bg-destructive/10 px-2 py-0.5 text-xs font-medium text-destructive">
+                      Your answer
+                    </span>
+                  ) : null}
                 </div>
                 <Markdown
                   content={choice.explanationMd ?? ''}
@@ -90,7 +113,7 @@ export function Feedback({
 
       {referenceMd ? (
         <div className="mt-4 border-t border-border/40 pt-3">
-          <div className="text-xs font-medium text-muted-foreground">
+          <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
             Reference
           </div>
           <Markdown content={referenceMd} className="mt-1 text-xs" />

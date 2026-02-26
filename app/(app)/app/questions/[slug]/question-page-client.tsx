@@ -292,6 +292,7 @@ export function QuestionView(props: QuestionViewProps) {
             sessionUnansweredReveal?.choiceExplanations ??
             []
           }
+          selectedChoiceId={props.selectedChoiceId}
         />
       ) : null}
 

@@ -46,6 +46,7 @@ export async function startSession(
 
   // Count: label is "Questions" (not "Count")
   await page.getByLabel('Questions').fill(String(count));
+  await expect(startSessionButton).toBeEnabled({ timeout: 10_000 });
   await startSessionButton.click();
 
   await expect(page).toHaveURL(/\/app\/practice\/[^/]+$/, { timeout: 15_000 });

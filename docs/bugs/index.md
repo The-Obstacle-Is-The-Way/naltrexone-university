@@ -18,8 +18,6 @@ Bug reports document issues discovered in the codebase along with their root cau
 | ID | Title | Priority | Status |
 |----|-------|----------|--------|
 | [BUG-153](bug-153-reattempt-label-incorrect-dashboard-bookmarks.md) | "Try Again" Label Shown for Correct Answers on Dashboard and Bookmarks Review | P3 | Open |
-| [BUG-155](bug-155-feedback-card-visual-overhaul.md) | Feedback Card Visual Overhaul — Verdict Badge, Correct Answer Display, Wrong-Answer Cards, Accessibility | P2 | Open |
-| [BUG-157](bug-157-question-card-choice-button-visual-polish.md) | Question Card and Choice Button Visual Polish — Text Size, Spacing, Contrast, Post-Submit Indicators | P2 | Open |
 | [BUG-158](bug-158-quick-practice-page-ux-polish.md) | Quick Practice Page UX Polish — Back Link Arrow and Filter Tab Affordance | P3 | Open |
 | [BUG-159](bug-159-review-mode-hydration-flicker.md) | Review-Mode Hydration Flicker — Transient Submit UI Shown in Review Route | P3 | Open |
 
