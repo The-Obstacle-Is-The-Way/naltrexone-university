@@ -225,8 +225,9 @@ describe('app/(app)/app/dashboard', () => {
     );
     const doc = new DOMParser().parseFromString(html, 'text/html');
 
+    // Scope to `li a` to target the session card link, not the "View all" header link
     expect(
-      doc.querySelector(`a[href="${ROUTES.APP_HISTORY}?tab=sessions"]`),
+      doc.querySelector(`li a[href="${ROUTES.APP_HISTORY}?tab=sessions"]`),
     ).not.toBeNull();
   });
 

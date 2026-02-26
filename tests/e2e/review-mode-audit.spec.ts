@@ -81,7 +81,9 @@ test.describe('review mode audit', () => {
     await expect(page.getByText('Recent activity')).toBeVisible();
 
     const dashboardLink = page
-      .locator(`a[href*="${CORRECT_SLUG}"][href*="from=dashboard"]`)
+      .locator(
+        `a[href*="${CORRECT_SLUG}"][href*="from=dashboard"]:not([href*="sessionId"])`,
+      )
       .first();
     await expect(dashboardLink).toBeVisible({ timeout: 15_000 });
     await expect(dashboardLink).toHaveAttribute('href', /mode=review/);
