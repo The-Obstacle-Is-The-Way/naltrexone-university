@@ -11,7 +11,9 @@
 
 Twenty-two issues identified from manual review + two Chrome agent audits (review mode + Quick Practice pre/post answer) + code trace validation. Each is traced to its **root layer** in the pipeline.
 
-### Problem 1: No visual break between question scenario and actual question
+> **Resolution Status (2026-02-26):** All 22 component-layer fixes are **COMPLETE** (BUG-152–159, PRs #141–#143). Remaining work is content-layer MDX fixes (deferred), open design questions, and optional future enhancements. See [Resolution Summary](#resolution-summary) below the problem list.
+
+### Problem 1: No visual break between question scenario and actual question — COMPONENT FIX DONE (BUG-154, PR #141); MDX content fix DEFERRED
 
 **What the user sees:**
 > An addiction psychiatrist is reviewing the safety of prescribing zopiclone to a patient on methadone maintenance treatment for opioid use disorder who reports persistent insomnia.
@@ -40,7 +42,7 @@ The `stemMd` is stored and rendered as raw markdown via `react-markdown`. If the
 
 ---
 
-### Problem 2: Entire feedback card has green/red background — too visually heavy
+### Problem 2: Entire feedback card has green/red background — too visually heavy — FIXED (BUG-155, PR #142)
 
 **What the user sees:** After answering correctly, the ENTIRE explanation box (Correct label + Explanation + Why other answers are wrong + Reference) is wrapped in a dark green border with green-tinted background (`border-success bg-success/10`). For incorrect answers, it's red.
 
@@ -72,7 +74,7 @@ The green/red styling is applied to the outermost `<Card>` wrapper, coloring eve
 
 ---
 
-### Problem 3: "Explanation" heading is redundant — should show the correct answer instead
+### Problem 3: "Explanation" heading is redundant — should show the correct answer instead — FIXED (BUG-155, PR #142)
 
 **What the user sees:**
 > **Correct**
@@ -99,7 +101,7 @@ The hardcoded "Explanation" label adds no information. Replacing it with the cor
 
 ---
 
-### Problem 4: Clinical pearl needs visual separation
+### Problem 4: Clinical pearl needs visual separation — COMPONENT FIX DONE (BUG-154, PR #141); MDX content fix DEFERRED
 
 **What the user sees:** The clinical pearl runs inline immediately after the main explanation paragraph with no visual break:
 > ...is potentially fatal.
@@ -125,7 +127,7 @@ In the MDX, `**Clinical pearl:**` is likely on the same line or in the same para
 
 ---
 
-### Problem 5: "Why other answers are wrong" — confusing short-label prefix
+### Problem 5: "Why other answers are wrong" — confusing short-label prefix — OPEN (content/authoring convention fix needed)
 
 **What the user sees:**
 > **A) Zopiclone is contraindicated with methadone due to a CYP enzyme interaction that dramatically increases methadone levels**
@@ -160,7 +162,7 @@ The short-label-colon-explanation format is an authoring convention in the draft
 
 ---
 
-### Problem 6: Inconsistency in wrong-answer explanation format across questions
+### Problem 6: Inconsistency in wrong-answer explanation format across questions — OPEN (content/authoring convention fix needed)
 
 **What the user sees:** Some questions have well-formatted wrong-answer explanations:
 ```markdown
@@ -193,7 +195,7 @@ If even one wrong choice lacks an explanation, ALL wrong-answer explanations are
 
 ---
 
-### Problem 7: Text size feels small
+### Problem 7: Text size feels small — FIXED (BUG-157, PR #142)
 
 **What the user sees:** Overall text in the question card and feedback feels small.
 
@@ -210,7 +212,7 @@ Both `question-card.tsx:35` and `feedback.tsx:56-58` use `text-sm` (14px). For a
 
 ---
 
-### Problem 8: "Correct"/"Incorrect" label reads as body text, not a verdict
+### Problem 8: "Correct"/"Incorrect" label reads as body text, not a verdict — FIXED (BUG-155, PR #142)
 
 *(Added from Chrome agent audit 2026-02-25)*
 
@@ -231,7 +233,7 @@ Both `question-card.tsx:35` and `feedback.tsx:56-58` use `text-sm` (14px). For a
 
 ---
 
-### Problem 9: "Reference" label not visually differentiated from citation text
+### Problem 9: "Reference" label not visually differentiated from citation text — FIXED (BUG-155, PR #142)
 
 *(Added from Chrome agent audit 2026-02-25)*
 
@@ -253,7 +255,7 @@ Both use `text-xs` and similar muted coloring. The label should be slightly bold
 
 ---
 
-### Problem 10: "Correct"/"Incorrect" and "Explanation" headings too close together
+### Problem 10: "Correct"/"Incorrect" and "Explanation" headings too close together — FIXED (BUG-155, PR #142)
 
 *(Added from Chrome agent audit 2026-02-25)*
 
@@ -269,7 +271,7 @@ The gap is `mt-4` (16px) between the verdict and the explanation block. With the
 
 ---
 
-### Problem 11: Gap between question stem and first answer choice feels tight
+### Problem 11: Gap between question stem and first answer choice feels tight — FIXED (BUG-157, PR #142)
 
 *(Added from Chrome agent audit 2026-02-25)*
 
@@ -290,7 +292,7 @@ The gap is `mt-4` (16px) between the verdict and the explanation block. With the
 
 ---
 
-### Problem 12: Wrong-answer cards in explanation repeat full answer text (redundant vertical space)
+### Problem 12: Wrong-answer cards in explanation repeat full answer text (redundant vertical space) — FIXED (BUG-155, PR #142)
 
 *(Added from Chrome agent audit 2026-02-25)*
 
@@ -322,7 +324,7 @@ The full `choice.textMd` is rendered for each wrong answer. The learner already 
 
 ---
 
-### Problem 13: Choice card letter badges have weak contrast
+### Problem 13: Choice card letter badges have weak contrast — FIXED (BUG-157, PR #142)
 
 *(Added from Chrome agent Quick Practice audit 2026-02-25)*
 
@@ -342,7 +344,7 @@ The full `choice.textMd` is rendered for each wrong answer. The learner already 
 
 ---
 
-### Problem 14: No hover or focus states on choice cards
+### Problem 14: No hover or focus states on choice cards — FIXED (BUG-157, PR #142)
 
 *(Added from Chrome agent Quick Practice audit 2026-02-25)*
 
@@ -358,7 +360,7 @@ The component does have `hover:bg-muted` when not disabled (`choice-button.tsx:2
 
 ---
 
-### Problem 15: Button hierarchy — Submit/Next/Bookmark all same weight; no post-submit state change
+### Problem 15: Button hierarchy — Submit/Next/Bookmark all same weight; no post-submit state change — FIXED (BUG-156, PR #141)
 
 *(Added from Chrome agent Quick Practice audit 2026-02-25)*
 
@@ -378,7 +380,7 @@ This is about the action bar rendering logic, which likely lives in the practice
 
 ---
 
-### Problem 16: "Back to Practice" link lacks arrow/affordance
+### Problem 16: "Back to Practice" link lacks arrow/affordance — FIXED (BUG-158, PR #143)
 
 *(Added from Chrome agent Quick Practice audit 2026-02-25)*
 
@@ -392,7 +394,7 @@ This is about the action bar rendering logic, which likely lives in the practice
 
 ---
 
-### Problem 17: Post-submit auto-scroll to feedback needed
+### Problem 17: Post-submit auto-scroll to feedback needed — FIXED (BUG-156, PR #141)
 
 *(Added from Chrome agent Quick Practice audit 2026-02-25)*
 
@@ -406,7 +408,7 @@ This is about the action bar rendering logic, which likely lives in the practice
 
 ---
 
-### Problem 18: User's selected wrong answer not labeled "Your answer" in wrong-answer cards
+### Problem 18: User's selected wrong answer not labeled "Your answer" in wrong-answer cards — FIXED (BUG-155, PR #142)
 
 *(Added from Chrome agent Quick Practice audit 2026-02-25)*
 
@@ -422,7 +424,7 @@ The `choiceExplanations` data doesn't currently include which choice the user se
 
 ---
 
-### Problem 19: Unchosen wrong answers have no visual indicator post-submit
+### Problem 19: Unchosen wrong answers have no visual indicator post-submit — FIXED (BUG-157, PR #142)
 
 *(Added from Chrome agent Quick Practice audit 2026-02-25)*
 
@@ -443,7 +445,7 @@ Currently, `correctness` is only set for the correct answer and the user's selec
 
 ---
 
-### Problem 20: Filter tabs (Unanswered/Incorrect/Bookmarked) — affordance, counts, touch targets
+### Problem 20: Filter tabs (Unanswered/Incorrect/Bookmarked) — affordance, counts, touch targets — FIXED (BUG-158, PR #143)
 
 *(Added from Chrome agent Quick Practice audit 2026-02-25)*
 
@@ -457,6 +459,33 @@ Currently, `correctness` is only set for the correct answer and the user's selec
 **Fix:** Give inactive tabs a visible border or subtle background to signal "clickable." Add question count to each tab. Ensure minimum 44px hit target height.
 
 **Files involved:** Quick Practice page component (wherever filter tabs are rendered)
+
+---
+
+## Resolution Summary
+
+### Component-Layer Fixes: ALL COMPLETE
+
+| Bug | Problems Fixed | PR | Phase |
+|-----|---------------|-----|-------|
+| BUG-152 | (BS-034 core bug) | PR #141 | Phase 1 |
+| BUG-153 | Residual reattempt label (BS-034 Q3) | PR #143 | Phase 3 |
+| BUG-154 | 1, 4 (prose spacing) | PR #141 | Phase 1 |
+| BUG-155 | 2, 3, 8, 9, 10, 12, 18, 22 (feedback overhaul) | PR #142 | Phase 2 |
+| BUG-156 | 15, 17 (post-submit UX) | PR #141 | Phase 1 |
+| BUG-157 | 7, 11, 13, 14, 19 (visual polish) | PR #142 | Phase 2 |
+| BUG-158 | 16, 20 (Quick Practice page UX) | PR #143 | Phase 3 |
+| BUG-159 | 21 (hydration flicker) | PR #143 | Phase 3 |
+
+### Remaining Open Items
+
+| Category | Problems | Status |
+|----------|----------|--------|
+| MDX content fixes | 1 (partial), 4 (partial) — blank lines in stems/pearls | Deferred — component prose fix handles visual spacing; content fix is semantic correctness |
+| Authoring convention | 5, 6 — wrong-answer explanation format inconsistency | Deferred — needs authoring guide update + bulk content review |
+| Design questions | See [Open Questions](#open-questions) (5 items) | Decisions needed before further iteration |
+| Future enhancements | See [FUTURE section](#future--enhanced-formatting--features-optional) | Optional — not blocking |
+| Direct URL edge case | See [NOTE section](#note--direct-url-context-mismatch-minor-edge-case) | Minor — not reachable via normal flows |
 
 ---
 
@@ -580,11 +609,11 @@ Also traced supporting shared logic:
 
 ### New Problems Discovered During Code Trace
 
-#### Problem 21: Review-mode hydration flicker (transient non-review UI)
+#### Problem 21: Review-mode hydration flicker (transient non-review UI) — FIXED (BUG-159, PR #143)
 
 `QuestionView` initially renders with `submitResult = null`, so the submit button is shown (`question-page-client.tsx:327`) until `loadPreviousAttempt` finishes asynchronously (`use-question-page-controller.ts:225`). This can briefly show attempt-mode controls in a review route before it switches to read-only review state.
 
-#### Problem 22: Feedback uses assertive live region for long content
+#### Problem 22: Feedback uses assertive live region for long content — FIXED (BUG-155, PR #142)
 
 `Feedback` uses `role="alert"` (`components/question/feedback.tsx:45`), which is assertive and can force immediate screen-reader interruption for large blocks (verdict + explanation + wrong answers + reference). For this size/content type, `role="status"` or a smaller assertive announcement element may be more appropriate.
 
@@ -739,7 +768,7 @@ These require editing raw MDX files (gitignored, ~958 questions). Deferred until
 
 **Also deferred:** Update authoring guide (`question-format-spec.md`) with explicit wrong-answer format rules once we decide on the convention.
 
-### RESIDUAL — "Try Again" / "Practice Again" label inconsistency (from BS-034)
+### RESIDUAL — "Try Again" / "Practice Again" label inconsistency (from BS-034) — FIXED (BUG-153, PR #143)
 
 Chrome/agent-browser audits for BS-034 discovered that **Dashboard and Bookmarks** review paths show "Try Again" for correctly-answered questions, while the History review path correctly shows "Practice Again" for correct answers.
 
@@ -813,3 +842,4 @@ Nice-to-have improvements that go beyond fixing current issues:
 | 2026-02-25 | Playwright + code trace validation | All 20 original problems confirmed against source code. 4 partially corrected (P14: hover/focus exists but subtle; P15: pre-submit hierarchy already differentiated; P19: opacity-50 dimming already exists; P20: tabs not disabled, just weak affordance). 2 new problems discovered (P21: review-mode hydration flicker; P22: role="alert" on long content). Total: 22 problems |
 | 2026-02-25 | Code-truth correction pass applied | Clarified residual label fix to a correctness-based condition that works for Dashboard/History/Bookmarks standalone review paths and linked SPEC-034/SPEC-036 to actual archived files. |
 | 2026-02-26 | Agent-browser validation pass expanded residual scope | Confirmed residual label bug affects Bookmarks in addition to Dashboard (same non-history standalone code path). Added minor direct-URL context mismatch note (`/app/questions/<slug>` defaults to dashboard review copy while rendering submit mode). |
+| 2026-02-26 | **All 22 component-layer fixes COMPLETE** | Filed as BUG-152–159 across 3 phases. Phase 1 (BUG-152, 154, 156) merged PR #141. Phase 2 (BUG-155, 157) merged PR #142. Phase 3 (BUG-153, 158, 159) merged PR #143. Residual label fix (BUG-153) also complete. Remaining: MDX content fixes (P1/4 partial, P5/6), open design questions, future enhancements. BS-033 stays active for these deferred items. |

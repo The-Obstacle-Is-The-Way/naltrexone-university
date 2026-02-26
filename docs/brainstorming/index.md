@@ -1,7 +1,7 @@
 # Brainstorming Register
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-02-25
+**Last Updated:** 2026-02-26
 
 ---
 
@@ -28,8 +28,7 @@ Brainstorming (BS-NNN) → Spec (SPEC-NNN) → Implementation → Archive
 | ID | Title | Status | Related Spec |
 |----|-------|--------|--------------|
 | [BS-014](./bs-014-practice-starter-question-count-ux.md) | Practice Starter — Question Count UX Polish (4 decisions pending) | Active | — |
-| [BS-033](./bs-033-question-display-formatting-and-feedback-ux.md) | Question Display Formatting and Feedback UX — Stem Breaks, Feedback Colors, Explanation Layout | Active | — |
-| [BS-034](./bs-034-history-questions-tab-review-navigator-mismatch.md) | History Questions Tab — Ad-Hoc Questions Incorrectly Grouped into Question Navigator | Active | — |
+| [BS-033](./bs-033-question-display-formatting-and-feedback-ux.md) | Question Display Formatting and Feedback UX — 22 Problems (component fixes complete, content/design items remain) | Active | — |
 
 **Next Brainstorming ID:** BS-035
 
@@ -39,6 +38,7 @@ Brainstorming (BS-NNN) → Spec (SPEC-NNN) → Implementation → Archive
 
 | ID | Title | Outcome |
 |----|-------|---------|
+| [BS-034](../_archive/brainstorming/bs-034-history-questions-tab-review-navigator-mismatch.md) | History Questions Tab — Ad-Hoc Questions Incorrectly Grouped into Question Navigator | Fully resolved. Core bug fixed as BUG-152 (PR #141). Residual label fixed as BUG-153 (PR #143). Position A (ad-hoc only) decided and implemented |
 | [BS-032](../_archive/brainstorming/bs-032-stripe-checkout-clerk-session-friction.md) | Stripe Checkout → Clerk Session Friction — Post-Payment Auth Bounce | Promoted to DEBT-249; core auth-boundary hardening implemented, rollout instrumentation tracked in SPEC-016 |
 | [BS-031](../_archive/brainstorming/bs-031-card-row-affordance-consistency.md) | Card/Row Affordance Consistency — Interaction Pattern Audit | Resolved as BUG-151 |
 | [BS-001](../_archive/brainstorming/bs-001-practice-ux-audit.md) | Practice UX Audit (8 Problems) | All 8 problems resolved; led to SPEC-019 |
