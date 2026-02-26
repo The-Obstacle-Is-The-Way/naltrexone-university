@@ -17,11 +17,8 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 | ID | Title | Priority | Status |
 |----|-------|----------|--------|
-| [BUG-152](bug-152-history-questions-tab-navigator-mismatch.md) | History Questions Tab Navigator Mismatch — Ad-Hoc Questions Grouped Into Fake Session | P1 | Fixed (2026-02-26) |
 | [BUG-153](bug-153-reattempt-label-incorrect-dashboard-bookmarks.md) | "Try Again" Label Shown for Correct Answers on Dashboard and Bookmarks Review | P3 | Open |
-| [BUG-154](bug-154-markdown-prose-spacing.md) | Markdown Prose Spacing — Question Stem and Explanation Paragraphs Run Together | P1 | Fixed (2026-02-26) |
 | [BUG-155](bug-155-feedback-card-visual-overhaul.md) | Feedback Card Visual Overhaul — Verdict Badge, Correct Answer Display, Wrong-Answer Cards, Accessibility | P2 | Open |
-| [BUG-156](bug-156-practice-view-post-submit-ux.md) | Practice View Post-Submit UX — Button Promotion and Auto-Scroll to Feedback | P1 | Fixed (2026-02-26) |
 | [BUG-157](bug-157-question-card-choice-button-visual-polish.md) | Question Card and Choice Button Visual Polish — Text Size, Spacing, Contrast, Post-Submit Indicators | P2 | Open |
 | [BUG-158](bug-158-quick-practice-page-ux-polish.md) | Quick Practice Page UX Polish — Back Link Arrow and Filter Tab Affordance | P3 | Open |
 | [BUG-159](bug-159-review-mode-hydration-flicker.md) | Review-Mode Hydration Flicker — Transient Submit UI Shown in Review Route | P3 | Open |
@@ -206,6 +203,9 @@ Audit #3 produced BUG-136 and BUG-139. BUG-137 was reclassified as SSOT-consiste
 
 | ID | Title | Priority | Resolved |
 |----|-------|----------|----------|
+| [BUG-156](../_archive/bugs/bug-156-practice-view-post-submit-ux.md) | Practice View Post-Submit UX — Button Promotion and Auto-Scroll to Feedback | P1 | 2026-02-26 |
+| [BUG-154](../_archive/bugs/bug-154-markdown-prose-spacing.md) | Markdown Prose Spacing — Question Stem and Explanation Paragraphs Run Together | P1 | 2026-02-26 |
+| [BUG-152](../_archive/bugs/bug-152-history-questions-tab-navigator-mismatch.md) | History Questions Tab Navigator Mismatch — Ad-Hoc Questions Grouped Into Fake Session | P1 | 2026-02-26 |
 | [BUG-147](../_archive/bugs/bug-147-user-upsert-unhandled-email-uniqueness-conflict.md) | User Upsert Fails on Email Uniqueness Conflict When Clerk User ID Changes | P1 | 2026-02-21 |
 | [BUG-146](../_archive/bugs/bug-146-marketing-footer-sign-in-up-casing-inconsistent.md) | Marketing Footer “Sign in/up” Casing Is Inconsistent with the Rest of the App | P4 | 2026-02-17 |
 | [BUG-145](../_archive/bugs/bug-145-frontend-ssot-docs-out-of-sync-with-question-view.md) | Frontend SSOT Docs Are Out of Sync with Current Question View Implementation | P3 | 2026-02-17 |

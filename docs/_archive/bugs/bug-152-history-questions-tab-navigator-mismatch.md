@@ -3,7 +3,7 @@
 **Status:** Fixed (2026-02-26)
 **Priority:** P1
 **Date:** 2026-02-25
-**Source:** [BS-034](../brainstorming/bs-034-history-questions-tab-review-navigator-mismatch.md)
+**Source:** [BS-034](../../brainstorming/bs-034-history-questions-tab-review-navigator-mismatch.md)
 
 ---
 
@@ -186,7 +186,7 @@ Users who have only done Tutor/Exam sessions will see an empty Questions tab. Ad
 
 ## Related
 
-- [BS-034](../brainstorming/bs-034-history-questions-tab-review-navigator-mismatch.md) — brainstorming doc (full analysis)
-- [SPEC-027](../_archive/specs/spec-027-session-review-navigation.md) — Session Review Navigation
-- [SPEC-022](../_archive/specs/spec-022-question-log.md) — Question Log
-- [BUG-151](../_archive/bugs/bug-151-card-row-affordance-inconsistency.md) — Card/Row Affordance (converted question cards to Pattern A)
+- [BS-034](../../brainstorming/bs-034-history-questions-tab-review-navigator-mismatch.md) — brainstorming doc (full analysis)
+- [SPEC-027](../specs/spec-027-session-review-navigation.md) — Session Review Navigation
+- [SPEC-022](../specs/spec-022-question-log.md) — Question Log
+- [BUG-151](./bug-151-card-row-affordance-inconsistency.md) — Card/Row Affordance (converted question cards to Pattern A)

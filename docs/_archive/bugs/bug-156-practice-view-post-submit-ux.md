@@ -3,7 +3,7 @@
 **Status:** Fixed (2026-02-26)
 **Priority:** P1
 **Date:** 2026-02-25
-**Source:** [BS-033](../brainstorming/bs-033-question-display-formatting-and-feedback-ux.md) (Problems 15, 17)
+**Source:** [BS-033](../../brainstorming/bs-033-question-display-formatting-and-feedback-ux.md) (Problems 15, 17)
 
 ---
 
@@ -174,5 +174,5 @@ Wrap the feedback rendering with the ref:
 
 ## Related
 
-- [BS-033](../brainstorming/bs-033-question-display-formatting-and-feedback-ux.md) — Problems 15 and 17
+- [BS-033](../../brainstorming/bs-033-question-display-formatting-and-feedback-ux.md) — Problems 15 and 17
 - BUG-155 — Feedback card visual overhaul (visual complement to this UX fix)

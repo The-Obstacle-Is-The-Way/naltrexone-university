@@ -3,7 +3,7 @@
 **Status:** Fixed (2026-02-26)
 **Priority:** P1
 **Date:** 2026-02-25
-**Source:** [BS-033](../brainstorming/bs-033-question-display-formatting-and-feedback-ux.md) (Problems 1, 4)
+**Source:** [BS-033](../../brainstorming/bs-033-question-display-formatting-and-feedback-ux.md) (Problems 1, 4)
 
 ---
 
@@ -100,4 +100,4 @@ The component fix still has high impact because:
 
 ## Related
 
-- [BS-033](../brainstorming/bs-033-question-display-formatting-and-feedback-ux.md) — Problems 1 and 4
+- [BS-033](../../brainstorming/bs-033-question-display-formatting-and-feedback-ux.md) — Problems 1 and 4
