@@ -324,7 +324,7 @@ describe('QuestionView', () => {
         submitResult={{
           attemptId: 'attempt_1',
           isCorrect: false,
-          correctChoiceId: 'choice-correct',
+          correctChoiceId: choiceB.id,
           explanationMd: 'Overall explanation',
           referenceMd: null,
           choiceExplanations: [
