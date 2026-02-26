@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { describe, expect, it } from 'vitest';
+import { MAX_PAGINATION_OFFSET } from '@/src/adapters/shared/validation-limits';
 import { ApplicationError } from '@/src/application/errors';
 import {
   FakeAuthGateway,
@@ -80,6 +81,35 @@ describe('review-controller', () => {
         error: { code: 'VALIDATION_ERROR' },
       });
       expect(deps.getAttemptedQuestionsUseCase.inputs).toEqual([]);
+    });
+
+    it('returns VALIDATION_ERROR when offset exceeds the maximum', async () => {
+      const deps = createDeps();
+
+      const result = await getAttemptedQuestions(
+        { limit: 10, offset: MAX_PAGINATION_OFFSET + 1 },
+        deps,
+      );
+
+      expect(result).toMatchObject({
+        ok: false,
+        error: { code: 'VALIDATION_ERROR' },
+      });
+      expect(deps.getAttemptedQuestionsUseCase.inputs).toEqual([]);
+    });
+
+    it('accepts offset at MAX_PAGINATION_OFFSET boundary', async () => {
+      const deps = createDeps();
+
+      const result = await getAttemptedQuestions(
+        { limit: 10, offset: MAX_PAGINATION_OFFSET },
+        deps,
+      );
+
+      expect(result.ok).toBe(true);
+      expect(deps.getAttemptedQuestionsUseCase.inputs).toEqual([
+        expect.objectContaining({ offset: MAX_PAGINATION_OFFSET }),
+      ]);
     });
 
     it('returns UNAUTHENTICATED when unauthenticated', async () => {

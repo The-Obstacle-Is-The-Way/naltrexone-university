@@ -140,6 +140,136 @@ describe('app/(app)/app/dashboard', () => {
     expect(findStatValue(doc, 'Accuracy (7 days)')).toBe('—');
   });
 
+  it('renders a per-session review link when firstQuestionSlug is available', () => {
+    const html = renderToStaticMarkup(
+      <DashboardView
+        stats={{
+          totalAnswered: 0,
+          accuracyOverall: 0,
+          answeredLast7Days: 0,
+          accuracyLast7Days: 0,
+          currentStreakDays: 0,
+          recentActivity: [],
+        }}
+        sessionHistoryResult={{
+          ok: true,
+          data: {
+            rows: [
+              {
+                sessionId: 'session_1',
+                mode: 'exam',
+                questionCount: 20,
+                firstQuestionSlug: 'q-correct',
+                answered: 20,
+                correct: 15,
+                accuracy: 0.75,
+                durationSeconds: 1800,
+                startedAt: '2026-02-01T00:00:00.000Z',
+                endedAt: '2026-02-01T00:30:00.000Z',
+              },
+            ],
+            total: 1,
+            limit: 3,
+            offset: 0,
+          },
+        }}
+      />,
+    );
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+
+    expect(
+      doc.querySelector(
+        `a[href="${toQuestionRoute('q-correct', {
+          from: 'dashboard',
+          mode: 'review',
+          sessionId: 'session_1',
+        })}"]`,
+      ),
+    ).not.toBeNull();
+  });
+
+  it('falls back to history sessions link when firstQuestionSlug is null', () => {
+    const html = renderToStaticMarkup(
+      <DashboardView
+        stats={{
+          totalAnswered: 0,
+          accuracyOverall: 0,
+          answeredLast7Days: 0,
+          accuracyLast7Days: 0,
+          currentStreakDays: 0,
+          recentActivity: [],
+        }}
+        sessionHistoryResult={{
+          ok: true,
+          data: {
+            rows: [
+              {
+                sessionId: 'session_1',
+                mode: 'exam',
+                questionCount: 20,
+                firstQuestionSlug: null,
+                answered: 20,
+                correct: 15,
+                accuracy: 0.75,
+                durationSeconds: 1800,
+                startedAt: '2026-02-01T00:00:00.000Z',
+                endedAt: '2026-02-01T00:30:00.000Z',
+              },
+            ],
+            total: 1,
+            limit: 3,
+            offset: 0,
+          },
+        }}
+      />,
+    );
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+
+    expect(
+      doc.querySelector(`a[href="${ROUTES.APP_HISTORY}?tab=sessions"]`),
+    ).not.toBeNull();
+  });
+
+  it('renders tutor session fraction using questionCount denominator', () => {
+    const html = renderToStaticMarkup(
+      <DashboardView
+        stats={{
+          totalAnswered: 0,
+          accuracyOverall: 0,
+          answeredLast7Days: 0,
+          accuracyLast7Days: 0,
+          currentStreakDays: 0,
+          recentActivity: [],
+        }}
+        sessionHistoryResult={{
+          ok: true,
+          data: {
+            rows: [
+              {
+                sessionId: 'session_1',
+                mode: 'tutor',
+                questionCount: 5,
+                firstQuestionSlug: 'q-correct',
+                answered: 2,
+                correct: 2,
+                accuracy: 0.4,
+                durationSeconds: 1800,
+                startedAt: '2026-02-01T00:00:00.000Z',
+                endedAt: '2026-02-01T00:30:00.000Z',
+              },
+            ],
+            total: 1,
+            limit: 3,
+            offset: 0,
+          },
+        }}
+      />,
+    );
+
+    expect(html).toContain('2/5 correct');
+    expect(html).not.toContain('2/2 correct');
+  });
+
   it('renders placeholder text for unavailable recent activity rows', () => {
     const html = renderToStaticMarkup(
       <DashboardView
