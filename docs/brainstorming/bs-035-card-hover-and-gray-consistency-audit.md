@@ -38,10 +38,12 @@ Similarly, `--border` and `--input` are identical in both modes (`214.3 31.8% 91
 
 ### 2. Hover Opacity Chaos (7 different values across components)
 
-The standards doc specifies **one canonical hoverable-card pattern**:
+At audit start, the standards doc used **one canonical hoverable-card example**:
 ```
 transition-colors hover:border-border hover:bg-muted/50
 ```
+
+Current standards now delegate hover opacity to a context-dependent scale in the Pattern Registry (`/40` in-card, `/50` on page background, `/60` direct-action).
 
 Actual usage across the codebase:
 
@@ -55,9 +57,9 @@ Actual usage across the codebase:
 | **Tab-switch inactive** | `components/ui/tab-switch-styles.ts:23` | `hover:bg-muted/50` | Nearly unchanged (parent is already `bg-muted`) |
 | **Filter chip (unselected)** | `components/ui/filter-chip.tsx:28` | `hover:bg-accent` (100%!) | 11% gray |
 | **Pricing pills (marketing)** | `components/marketing/marketing-home.tsx:58` | `hover:bg-muted` (100%) | 11% gray |
-| **Canonical standard** | `docs/frontend/standards.md:288` | `hover:bg-muted/50` | Context-dependent |
+| **Canonical standard** | `docs/frontend/standards.md:285` | Context-dependent (`/40`, `/50`, `/60`) | Context-dependent |
 
-**Note:** None of the actual card/row components match the canonical `hover:bg-muted/50` from the standards doc.
+**Note:** Dashboard in-card rows align with the `/40` baseline; history rows and direct-action controls still diverge in several places (tracked below).
 
 ### 3. Dark Mode Override Violations
 
@@ -142,13 +144,13 @@ Note: animations used by this repo (`metallic-shift`, `fade-in-up`) are defined 
 ### 8. Frontend Standards Cross-Reference (verified)
 
 Verified citations from BS-035:
-- Canonical hover pattern quote matches `docs/frontend/standards.md:288`
-- Dark-mode rule quote matches `docs/frontend/standards.md:598`
+- Hover guidance now points to the context-dependent Pattern Registry scale (`docs/frontend/standards.md:285`)
+- Dark-mode rule is now explicitly scoped to color overrides (`docs/frontend/standards.md:603`)
 
-Additional standards drift that BS-035 previously missed:
-- `standards.md` button variant list omits `success`, but `components/ui/button.tsx` defines it (`components/ui/button.tsx:16-17`)
-- `standards.md` documents `tabSwitchItemBaseClasses` as `py-1.5`, but actual code is `py-2` (`components/ui/tab-switch-styles.ts:15`)
-- `standards.md` says raw `<button>` should not be used outside `components/ui/`, but `components/mobile-nav.tsx:107` uses a raw button for nav toggle
+Previously identified standards drift has been synchronized:
+- Button variant list now includes `success` (`docs/frontend/standards.md:98`)
+- Tab-switch base class now documents `py-2` (`docs/frontend/standards.md:163`)
+- Raw `<button>` rule now includes an app-shell disclosure toggle exception (`docs/frontend/standards.md:76`)
 
 ---
 
@@ -160,10 +162,10 @@ Additional standards drift that BS-035 previously missed:
 | Expanded breakdown visual hierarchy | **High** | Every history session expansion | "Review session" button nearly invisible; card structure disappears |
 | `dark:` override violations | **Low** | History sessions tab only | Code maintainability; diverges from standards |
 | Identical muted/accent/secondary tokens | **Low** | Codebase-wide | No visible impact today, but tech debt — blocks future differentiation |
-| Standards doc not matching implementation | **Medium** | All hoverable elements | Misleading documentation |
+| Standards doc not matching implementation | **Low** | Historical (resolved) | Drift was corrected on 2026-02-27; keep monitoring as code evolves |
 | Link hover patterns divergent | **Medium** | All navigation links | Some underline, some bg change, some text-color only |
 | Button variant usage inconsistent in dark mode | **Medium** | Every outline/ghost button in dark mode | outline vs ghost have different dark strategies |
-| Warning/alert backgrounds inconsistent | **Low** | Billing, past-due banner, question page | Different opacity values for same semantic |
+| Warning/alert backgrounds inconsistent | **Low** | Billing, past-due banner, question page | Three opacities exist; now documented as a tiered scale but not fully normalized in implementation |
 
 ---
 
@@ -859,7 +861,7 @@ const headerLinkButtonClasses =
 | `bg-warning/10` | `app/(app)/app/layout.tsx:118` | Past-due banner |
 | `bg-warning/15` | `app/(app)/app/billing/page.tsx:90` | Cancellation scheduled alert |
 
-**Problem:** Three different warning background opacities for three different contexts. No documented scale.
+**Problem:** Three different warning background opacities are now documented as a formal tiered scale, but enforcement is still inconsistent across legacy surfaces.
 
 ### H. Pricing Page Raw Divs vs Card Component
 
@@ -888,15 +890,15 @@ The standards doc explicitly deprecates this pattern:
 
 The current standard is `ring-[3px] ring-ring/50`. The navigator uses the old ring style without `/50` opacity and with `ring-2` instead of `ring-[3px]`.
 
-### K. Standards Doc Drift vs Implementation
+### K. Standards Doc Drift vs Implementation (resolved)
 
-| Standard Doc Claim | Source | Actual Implementation | Source |
-|--------------------|--------|-----------------------|--------|
-| Button variants: `default`, `destructive`, `outline`, `secondary`, `ghost`, `link` | `docs/frontend/standards.md:96` | Includes additional `success` variant | `components/ui/button.tsx:16-17` |
-| Tab switch base uses `py-1.5` | `docs/frontend/standards.md:163` | Actual class is `py-2` | `components/ui/tab-switch-styles.ts:15` |
-| Raw `<button>` outside `components/ui/` should never be used | `docs/frontend/standards.md:74` | Mobile nav toggle uses raw button | `components/mobile-nav.tsx:107` |
+| Prior Drift | Previous Source | Current Standard | Current Source |
+|-------------|-----------------|------------------|----------------|
+| Button variants omitted `success` | Pre-2026-02-27 standards snapshot | Variant list includes `success` | `docs/frontend/standards.md:98` |
+| Tab switch base listed `py-1.5` | Pre-2026-02-27 standards snapshot | Base class is `py-2` | `docs/frontend/standards.md:163` |
+| Raw `<button>` rule had no app-shell exception | Pre-2026-02-27 standards snapshot | Exception documented for app-shell disclosure toggles | `docs/frontend/standards.md:76` |
 
-**Problem:** Canonical standards document has drifted from source of truth.
+**Status:** Resolved in documentation update on 2026-02-27.
 
 ### L. Error Surface Density Drift
 
@@ -920,21 +922,23 @@ The current standard is `ring-[3px] ring-ring/50`. The navigator uses the old ri
 
 ### Phase 1: Standardize the Hover Token (quick win)
 
-Define a single canonical row/card hover approach and enforce it:
+Define and enforce the canonical context-dependent hover scale:
 
 ```
-/* Canonical interactive row hover */
+/* Row inside card */
+transition-colors hover:bg-muted/40
+
+/* Standalone row on page background */
 transition-colors hover:bg-muted/50
 
 /* Canonical choice/option hover (needs more emphasis) */
 transition-colors hover:bg-muted/60
 ```
 
-Update all components to use one of these two values. Remove all `dark:hover:bg-foreground/*` overrides from page components.
+Remove all `dark:hover:bg-foreground/*` overrides from page components.
 
 **Files to change:**
-- `app/(app)/app/dashboard/page.tsx` — rows: `/40` → `/50`
-- `app/(app)/app/history/components/history-sessions-tab.tsx` — rows: `accent/40` + `dark:` → `muted/50`; remove `dark:` overrides
+- `app/(app)/app/history/components/history-sessions-tab.tsx` — rows: `accent/40` + `dark:` → `muted/40`; remove `dark:` overrides
 - `app/(app)/app/history/components/history-questions-tab.tsx` — rows: `accent/40` → `muted/50`
 - `components/question/choice-button.tsx` — `/80` → `/60` (or keep at `/80` with rationale)
 - `components/ui/filter-chip.tsx` — `hover:bg-accent` → `hover:bg-muted/50` or `/60`
@@ -962,7 +966,7 @@ Remove `dark:` overrides from the button and let the outline variant handle it. 
 
 ### Phase 4: Extract Shared Constants
 
-Extract `headerLinkButtonClasses` into a shared constant (e.g., `lib/shared-styles.ts` or add to `tab-switch-styles.ts` as a general style constants file) to eliminate the 3-file copy-paste.
+Extract `headerLinkButtonClasses` into a shared constant (e.g., `lib/shared-styles.ts` or add to `tab-switch-styles.ts` as a general style constants file) to eliminate the 6-file copy-paste.
 
 ### Phase 5: Standardize Row vs Card Patterns
 
@@ -1022,5 +1026,5 @@ This would require visual regression testing across all pages.
 | Date | Decision | Rationale |
 |------|----------|-----------|
 | 2026-02-27 | Created BS-035 | User reported visual inconsistencies across history, dashboard, and quick practice pages |
-| 2026-02-27 | Expanded to exhaustive audit | User requested complete page-by-page divergence inventory covering all 13 routes |
+| 2026-02-27 | Expanded to exhaustive audit | User requested complete page-by-page divergence inventory covering all 15 routes plus loading/error/auth surfaces |
 | 2026-02-27 | Verified and expanded by repo-wide crawl | Agent verified all line numbers, class names, and token references against source; added missing components and pages |

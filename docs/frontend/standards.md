@@ -1,10 +1,12 @@
 # Frontend Standards
 
-**Last Updated:** 2026-02-16
+**Last Updated:** 2026-02-27
 
 Canonical reference for all frontend patterns, component usage, accessibility, and styling conventions. Every UI change MUST be consistent with this document. If a pattern isn't documented here, don't invent one — add it here first.
 
-**See also:** [Design Principles](./design-principles.md) — Layout composition patterns, navigation zones, action bar conventions, state persistence expectations.
+**See also:**
+- [Pattern Registry](./pattern-registry.md) — Single source of truth for every visual pattern: hover opacities, link strategies, surface hierarchy, token scales, decision trees
+- [Design Principles](./design-principles.md) — Layout composition patterns, navigation zones, action bar conventions, state persistence expectations
 
 ---
 
@@ -71,7 +73,7 @@ Canonical reference for all frontend patterns, component usage, accessibility, a
 ### Button
 
 **Component:** `components/ui/button.tsx`
-**ALWAYS** use `<Button>` for interactive click targets. Never render raw `<button>` outside `components/ui/`.
+**ALWAYS** use `<Button>` for interactive click targets by default. Raw `<button>` is allowed only inside `components/ui/` primitives and app-shell disclosure toggles that follow Pattern Registry `I-6`.
 
 ```tsx
 // Standard button
@@ -93,7 +95,7 @@ Canonical reference for all frontend patterns, component usage, accessibility, a
 </Button>
 ```
 
-**Variants:** `default`, `destructive`, `outline`, `secondary`, `ghost`, `link`
+**Variants:** `default`, `destructive`, `success`, `outline`, `secondary`, `ghost`, `link`
 **Sizes:** `default` (h-9), `sm` (h-8), `lg` (h-10), `icon` (size-9)
 
 **Disabled styling standard:** `disabled:pointer-events-none disabled:opacity-50` — all interactive elements MUST use `opacity-50`, never `opacity-60`.
@@ -140,12 +142,10 @@ Use the shared `components/ui/input.tsx` for text inputs. Raw `<input>` is accep
 
 ### Unused Components (0 current consumers)
 
-The following shadcn/ui components have 0 production imports today. Context on each:
+Current repo snapshot has one `components/ui/` primitive with 0 production imports:
+- `components/ui/dropdown-menu.tsx` — **KEEP.** Explicitly required in `master_spec.md` SLICE-0 checklist. Needed for future progressive-disclosure filters and app-shell navigation patterns.
 
-- `components/ui/dropdown-menu.tsx` — **KEEP.** Explicitly required in `master_spec.md` SLICE-0 checklist. Will be needed for SPEC-019 Phase 3 progressive-disclosure filters and app-shell navigation patterns.
-- `components/ui/avatar.tsx` — **Safe to remove.** No user identity display in any spec. Social features/leaderboards explicitly out of scope (`master_spec.md` Section 13).
-- `components/ui/radio-group.tsx` — **Safe to remove.** Quiz choices use custom `ChoiceButton`. No spec references radio-button forms. No settings/profile/admin pages exist.
-- `components/ui/label.tsx` — **Safe to remove.** No structured form UI in specs. All user input is via buttons/chips/third-party UIs (Clerk, Stripe Portal).
+`avatar.tsx`, `radio-group.tsx`, and `label.tsx` are no longer present in `components/ui/`.
 
 The `buttonVariants` CVA export from `button.tsx` is intrinsic to the Button module (powers `asChild` pattern used in 20+ files). Do not remove.
 
@@ -160,9 +160,9 @@ All tab-switch / segmented-control components MUST use shared visual constants f
 | Constant | Classes | Usage |
 |----------|---------|-------|
 | `tabSwitchContainerClasses` | `inline-flex rounded-lg border border-border bg-muted p-1` | Outer wrapper |
-| `tabSwitchItemBaseClasses` | `rounded-md px-4 py-1.5 text-sm font-medium transition-colors focus-visible:...` | Every tab item |
+| `tabSwitchItemBaseClasses` | `rounded-md px-4 py-2 text-sm font-medium transition-colors focus-visible:...` | Every tab item |
 | `tabSwitchItemActiveClasses` | `bg-primary text-primary-foreground shadow-sm` | Selected item |
-| `tabSwitchItemInactiveClasses` | `text-muted-foreground hover:text-foreground` | Unselected items |
+| `tabSwitchItemInactiveClasses` | `text-muted-foreground hover:bg-muted/50 hover:text-foreground` | Unselected items |
 
 Semantic structure (element types, ARIA attributes) is component-specific:
 - Button-based segmented controls: `<fieldset>` + `<button>` + `aria-pressed`
@@ -280,15 +280,20 @@ Standard: `p-6`. Use `p-4` only for intentionally dense/compact views (e.g., exa
 - Button groups: `gap-3`
 - Form fields: `gap-2` to `gap-4`
 
-### Hoverable cards (stat cards)
+### Interactive row/card hover
 
-Standard hover treatment:
+Hover opacity is context-dependent. Use the Pattern Registry (`Part 1.2`, `I-1` through `I-4`) as canonical:
 
-```text
-transition-colors hover:border-border hover:bg-muted/50
-```
+| Context | Canonical Pattern |
+|---------|-------------------|
+| Inside card surface | `transition-colors hover:bg-muted/40` |
+| On page background (standalone row) | `transition-colors hover:bg-muted/50` |
+| Direct-action target (choice/chip) | `transition-colors hover:bg-muted/60` |
 
-Do not use `transition-all` for cards. Do not use different hover opacities (`/50` vs `/80`) for the same pattern.
+Rules:
+- Always use the `muted` token for neutral hover backgrounds
+- Do not use `transition-all` for hover color changes
+- Link-only underline hovers (`hover:underline`) are a separate link pattern (see Pattern Registry Part 4)
 
 ---
 
@@ -595,7 +600,8 @@ Dark mode is implemented via CSS custom properties in `.dark` class (globals.css
 
 **Rules:**
 - Use semantic tokens (`bg-background`, `text-foreground`, `bg-card`, etc.) — they adapt automatically
-- Do NOT add explicit `dark:` variants in page/component code — only in `components/ui/` primitives
+- Do NOT add explicit `dark:` color overrides in page/component code — keep dark color logic in `components/ui/` primitives
+- Structural visibility toggles (`dark:hidden`, `dark:block`) are acceptable when needed for theme-specific icon/content swaps
 - Clerk appearance follows the app theme via `providers.tsx`
 
 ---
@@ -614,16 +620,16 @@ Three hooks exceed the 200-line "god hook" threshold (§12):
 
 | Hook | Lines | File |
 |------|-------|------|
-| `useQuestionPageController` | 282 | `app/(app)/app/questions/[slug]/use-question-page-controller.ts` |
+| `useQuestionPageController` | 370 | `app/(app)/app/questions/[slug]/use-question-page-controller.ts` |
 | `usePracticeSessionQuestionFlow` | 238 | `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-question-flow.ts` |
-| `useQuestionFlowCore` | 215 | `app/(app)/app/practice/shared/use-question-flow-core.ts` |
+| `useQuestionFlowCore` | 263 | `app/(app)/app/practice/shared/use-question-flow-core.ts` |
 
 ### P3 — Fix as encountered
 
 | ID | Summary | File(s) |
 |----|---------|---------|
-| [FE-054](../debt/fe-054-hardcoded-emerald-color-bypasses-design-tokens.md) | Hardcoded `text-emerald-500` bypasses design system tokens | session-breakdown-list.tsx, history-questions-tab.tsx, dashboard/page.tsx |
-| [FE-055](../debt/fe-055-exam-navigator-missing-nav-landmark.md) | Exam review navigator missing `nav` landmark and `aria-controls` | exam-review-view.tsx |
+| [FE-055](../debt/fe-055-exam-navigator-missing-nav-landmark.md) | Exam review navigator still lacks `aria-controls` wiring between navigator buttons and controlled content | `app/(app)/app/practice/[sessionId]/components/exam-review-view.tsx` |
+| — | Active visual divergences are tracked in Pattern Registry Part 11 (`D-1` through `D-13`) | `docs/frontend/pattern-registry.md` + linked source files |
 | — | `Markdown.tsx` uses PascalCase filename (violates §13 kebab-case convention) | `components/markdown/Markdown.tsx` |
 
 ---
@@ -639,6 +645,7 @@ Three hooks exceed the 200-line "god hook" threshold (§12):
 | `dropdown-menu.tsx` | DropdownMenu, DropdownMenuTrigger, DropdownMenuItem, etc. | Yes | Yes | No | **0 consumers — KEEP (spec-mandated)** |
 | `filter-chip.tsx` | FilterChip | **No** | Yes | **No** | |
 | `input.tsx` | Input | Yes | Yes | No | |
+| `select.tsx` | Select, SelectTrigger, SelectContent, SelectItem, etc. | Yes | Yes | No | Radix UI wrapper |
 | `metallic-border.tsx` | MetallicBorder | **No** | Yes | No | |
 | `metallic-cta-button.tsx` | MetallicCtaButton | No | No | No | |
 | `notification-provider.tsx` | NotificationProvider, useNotification | **No** | Yes | No | |

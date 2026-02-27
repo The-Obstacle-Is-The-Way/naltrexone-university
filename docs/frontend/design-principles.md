@@ -131,6 +131,7 @@ When building or modifying a question-viewing context, verify:
 ## Related Documentation
 
 - [Frontend Standards](./standards.md) — Design tokens, component standards, accessibility, typography
+- [Pattern Registry](./pattern-registry.md) — Every visual pattern with canonical classes, token scales, and decision trees
 - [Question Rendering Architecture](../practice-engine/question-rendering-architecture.md) — All 6 viewing contexts, component inventory, state flows
 - [Practice Engine Frontend Layer](../practice-engine/frontend-layer.md) — Routes, hook architecture, data flow
 - [SPEC-030](../_archive/specs/spec-030-question-view-ux-unification.md) — Spec that established the navigation zone model (Implemented)
