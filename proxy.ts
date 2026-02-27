@@ -5,6 +5,7 @@ import {
   NextResponse,
 } from 'next/server';
 import { PUBLIC_ROUTE_PATTERNS } from '@/lib/public-routes';
+import { ROUTES } from '@/lib/routes';
 
 const CLERK_CSP_DIRECTIVES = {
   'base-uri': ['self'],
@@ -17,7 +18,7 @@ const CLERK_CSP_DIRECTIVES = {
 
 let cachedClerkMiddleware: NextMiddleware | null = null;
 let hasLoggedSkipClerkProductionWarning = false;
-const CHECKOUT_SUCCESS_PATHNAME = '/checkout/success';
+const CHECKOUT_SUCCESS_PATHNAME = ROUTES.CHECKOUT_SUCCESS;
 
 function isRedirectResponse(response: Response): boolean {
   return response.status >= 300 && response.status < 400;
