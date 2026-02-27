@@ -1,11 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { PUBLIC_ROUTE_PATTERNS } from '@/lib/public-routes';
+import { ROUTES } from '@/lib/routes';
 
 describe('PUBLIC_ROUTE_PATTERNS', () => {
   it('does not include any checkout success pattern (DEBT-249 regression guard)', () => {
     expect(
       PUBLIC_ROUTE_PATTERNS.some((pattern) =>
-        pattern.startsWith('/checkout/success'),
+        pattern.startsWith(ROUTES.CHECKOUT_SUCCESS),
       ),
     ).toBe(false);
   });

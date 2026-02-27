@@ -92,6 +92,14 @@ export async function syncCheckoutSuccess(
     reason: string,
     context: Record<string, unknown> = {},
   ): never => {
+    d.logger.info(
+      {
+        reason,
+        route: ROUTES.CHECKOUT_SUCCESS,
+        ...context,
+      },
+      'Checkout success redirected to checkout error',
+    );
     d.logger.error(
       {
         reason,

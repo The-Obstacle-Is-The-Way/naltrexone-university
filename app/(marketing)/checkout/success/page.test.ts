@@ -450,6 +450,7 @@ describe('syncCheckoutSuccess retry logging', () => {
       };
 
       const error = vi.fn();
+      const info = vi.fn();
       let sessionCalls = 0;
 
       const deps = {
@@ -460,7 +461,7 @@ describe('syncCheckoutSuccess retry logging', () => {
             throw new Error('should not redirect to sign-in');
           },
         }),
-        logger: { error },
+        logger: { info, error },
         stripe: {
           checkout: {
             sessions: {
@@ -689,6 +690,16 @@ describe('syncCheckoutSuccess', () => {
       msg: 'Checkout success validation failed',
       context: expect.objectContaining({ reason }),
     });
+    expect(logger.infoCalls).toHaveLength(1);
+    expect(logger.infoCalls[0]).toMatchObject({
+      msg: 'Checkout success redirected to checkout error',
+      context: expect.objectContaining({
+        reason,
+        route: ROUTES.CHECKOUT_SUCCESS,
+      }),
+    });
+
+    expect(logger.warnCalls).toHaveLength(0);
   });
 
   it('returns redirect to pricing with reason=payment_processing when subscription is not entitled', async () => {

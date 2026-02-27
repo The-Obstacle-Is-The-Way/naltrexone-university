@@ -1,7 +1,7 @@
 # Bug Reports
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-02-26
+**Last Updated:** 2026-02-27
 
 ---
 
@@ -21,9 +21,8 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 **Next Bug ID:** BUG-165
 
-**Latest additions (2026-02-26):**
-- BUG-163 identified during tracer-bullet revalidation of BUG-160/161/162 docs.
-- BUG-164 identified as a deeper cross-surface analytics consistency issue while validating BUG-163.
+**Latest archival (2026-02-27):**
+- BUG-160 through BUG-164 verified fixed, merged (PR #144), and archived to `docs/_archive/bugs/`.
 
 **Latest resolutions (2026-02-26):**
 - BUG-160 fixed: dashboard session cards now deep-link to per-session review when `firstQuestionSlug` is available.
