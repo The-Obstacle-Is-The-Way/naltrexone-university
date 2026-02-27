@@ -430,4 +430,56 @@ describe('proxy middleware', () => {
       }),
     );
   });
+
+  it('logs checkout success auth bounce when redirect_url is relative', async () => {
+    process.env.NEXT_PUBLIC_SKIP_CLERK = 'false';
+    const infoSpy = vi.spyOn(console, 'info').mockImplementation(() => {});
+
+    type ClerkMiddlewareCallback = (
+      auth: { protect: () => Promise<void> },
+      request: unknown,
+    ) => Promise<void> | void;
+
+    const checkoutSuccessUrl =
+      'https://example.com/checkout/success?session_id=cs_test_xxx';
+
+    const clerkMiddleware = vi.fn((_cb: ClerkMiddlewareCallback) =>
+      vi.fn(async () => {
+        const location = `/sign-in?redirect_url=${encodeURIComponent('/checkout/success?session_id=cs_test_xxx')}`;
+        return new Response(null, {
+          status: 307,
+          headers: {
+            location,
+          },
+        });
+      }),
+    );
+    const createRouteMatcher = vi.fn(() => () => false);
+
+    vi.doMock('@clerk/nextjs/server', () => ({
+      clerkMiddleware,
+      createRouteMatcher,
+    }));
+
+    const { default: middleware } = await import('./proxy');
+
+    const res = await middleware(
+      {
+        url: checkoutSuccessUrl,
+      } as unknown as NextRequest,
+      {} as unknown as NextFetchEvent,
+    );
+
+    if (!res) {
+      throw new Error('Expected middleware to return a response');
+    }
+
+    expect(infoSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: 'checkout_success_auth_bounce',
+        route: '/checkout/success',
+        hasSessionId: true,
+      }),
+    );
+  });
 });

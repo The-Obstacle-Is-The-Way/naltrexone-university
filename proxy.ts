@@ -41,16 +41,21 @@ function logCheckoutSuccessAuthBounce(
   const location = response.headers.get('location');
   if (!location) return;
 
-  let redirectUrl: string | null = null;
+  let redirectUrl: URL;
   try {
-    redirectUrl = new URL(location, requestUrl.origin).searchParams.get(
-      'redirect_url',
-    );
+    const redirectUrlParam = new URL(
+      location,
+      requestUrl.origin,
+    ).searchParams.get('redirect_url');
+    if (!redirectUrlParam) return;
+    redirectUrl = new URL(redirectUrlParam, requestUrl.origin);
   } catch {
     return;
   }
 
-  if (redirectUrl !== request.url) return;
+  if (redirectUrl.origin !== requestUrl.origin) return;
+  if (redirectUrl.pathname !== requestUrl.pathname) return;
+  if (redirectUrl.search !== requestUrl.search) return;
 
   console.info({
     event: 'checkout_success_auth_bounce',
