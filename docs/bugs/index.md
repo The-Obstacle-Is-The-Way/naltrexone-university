@@ -44,6 +44,8 @@ Five-axis investigation covering: (1) existing bug documentation and audit histo
 
 ### Tracer-Bullet Verification (2026-02-27)
 
+The traces below capture the pre-fix code state at discovery time during Audit #7.
+
 **BUG-165 — Full vertical + horizontal trace (12-step):**
 1. `app/(app)/app/billing/manage-billing-actions.ts` → server action entry point (`'use server'`)
 2. → `manage-billing-action.ts` → `runManageBillingActionCore` with `{ failure: '/app/billing?error=portal_failed' }` (NO `unauthenticated` key)
