@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { runManageBillingAction } from '@/app/pricing/manage-billing-action';
+import { FakeLogger } from '@/src/application/test-helpers/fakes';
 
 class RedirectError extends Error {
   constructor(readonly url: string) {
@@ -99,5 +100,26 @@ describe('runManageBillingAction', () => {
     } finally {
       vi.unstubAllEnvs();
     }
+  });
+
+  it('logs and redirects to pricing failure when portal session creation throws', async () => {
+    const redirectFn = (url: string): never => {
+      throw new RedirectError(url);
+    };
+    const logger = new FakeLogger();
+
+    const action = async () =>
+      runManageBillingAction({
+        createPortalSessionFn: vi.fn(async () => {
+          throw new Error('network');
+        }),
+        redirectFn,
+        logger,
+      });
+
+    await expect(action()).rejects.toMatchObject({
+      url: '/pricing?checkout=error',
+    });
+    expect(logger.errorCalls).toHaveLength(1);
   });
 });
