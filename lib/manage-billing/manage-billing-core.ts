@@ -28,11 +28,15 @@ export async function runManageBillingAction(deps: {
     result = await deps.createPortalSessionFn({});
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
+    const errorContext = {
+      error: errorMessage,
+      ...(error instanceof Error ? { errorName: error.name } : {}),
+      ...(error instanceof Error && error.stack
+        ? { errorStack: error.stack }
+        : {}),
+    };
     try {
-      deps.logger?.error(
-        { error: errorMessage },
-        'Billing portal session creation threw',
-      );
+      deps.logger?.error(errorContext, 'Billing portal session creation threw');
     } catch {
       // Never let logging failures block the fallback redirect.
     }

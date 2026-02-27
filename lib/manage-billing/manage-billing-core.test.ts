@@ -139,7 +139,11 @@ describe('manage-billing-core', () => {
     });
     expect(logger.errorCalls).toHaveLength(1);
     expect(logger.errorCalls[0]).toMatchObject({
-      context: { error: 'network' },
+      context: {
+        error: 'network',
+        errorName: 'Error',
+        errorStack: expect.any(String),
+      },
       msg: 'Billing portal session creation threw',
     });
   });
