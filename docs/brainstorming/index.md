@@ -1,7 +1,7 @@
 # Brainstorming Register
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-02-26
+**Last Updated:** 2026-02-27
 
 ---
 
@@ -29,8 +29,9 @@ Brainstorming (BS-NNN) → Spec (SPEC-NNN) → Implementation → Archive
 |----|-------|--------|--------------|
 | [BS-014](./bs-014-practice-starter-question-count-ux.md) | Practice Starter — Question Count UX Polish (4 decisions pending) | Active | — |
 | [BS-033](./bs-033-question-display-formatting-and-feedback-ux.md) | Question Display Formatting and Feedback UX — 22 Problems (component fixes complete, content/design items remain) | Active | — |
+| [BS-035](./bs-035-card-hover-and-gray-consistency-audit.md) | Card Hover and Gray Consistency Audit — hover opacity chaos, expanded breakdown hierarchy, dark mode override violations | Active | — |
 
-**Next Brainstorming ID:** BS-035
+**Next Brainstorming ID:** BS-036
 
 ---
 
