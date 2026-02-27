@@ -7,6 +7,8 @@ import {
 } from '@/tests/shared/process-env';
 
 const ORIGINAL_ENV = snapshotProcessEnv();
+const CHECKOUT_SUCCESS_URL = `https://example.com${ROUTES.CHECKOUT_SUCCESS}`;
+const CHECKOUT_SUCCESS_WITH_SESSION_ID_URL = `${CHECKOUT_SUCCESS_URL}?session_id=cs_test_xxx`;
 
 const matchesPathnameAgainstPattern = (
   pathname: string,
@@ -267,7 +269,7 @@ describe('proxy middleware', () => {
 
     const res = await middleware(
       {
-        url: 'https://example.com/checkout/success',
+        url: CHECKOUT_SUCCESS_URL,
       } as unknown as NextRequest,
       {} as unknown as NextFetchEvent,
     );
@@ -289,8 +291,7 @@ describe('proxy middleware', () => {
       request: unknown,
     ) => Promise<void> | void;
 
-    const checkoutSuccessUrl =
-      'https://example.com/checkout/success?session_id=cs_test_xxx';
+    const checkoutSuccessUrl = CHECKOUT_SUCCESS_WITH_SESSION_ID_URL;
 
     const clerkMiddleware = vi.fn((cb: ClerkMiddlewareCallback) =>
       vi.fn(async (req: unknown) => {
@@ -379,8 +380,7 @@ describe('proxy middleware', () => {
       request: unknown,
     ) => Promise<void> | void;
 
-    const checkoutSuccessUrl =
-      'https://example.com/checkout/success?session_id=cs_test_xxx';
+    const checkoutSuccessUrl = CHECKOUT_SUCCESS_WITH_SESSION_ID_URL;
 
     const clerkMiddleware = vi.fn((_cb: ClerkMiddlewareCallback) =>
       // Simulate authenticateRequest() returning a handshake redirect before invoking user callback.
@@ -441,12 +441,12 @@ describe('proxy middleware', () => {
       request: unknown,
     ) => Promise<void> | void;
 
-    const checkoutSuccessUrl =
-      'https://example.com/checkout/success?session_id=cs_test_xxx';
+    const checkoutSuccessUrl = CHECKOUT_SUCCESS_WITH_SESSION_ID_URL;
 
     const clerkMiddleware = vi.fn((_cb: ClerkMiddlewareCallback) =>
       vi.fn(async () => {
-        const location = `/sign-in?redirect_url=${encodeURIComponent('/checkout/success?session_id=cs_test_xxx')}`;
+        const relativeCheckoutSuccessUrl = `${ROUTES.CHECKOUT_SUCCESS}?session_id=cs_test_xxx`;
+        const location = `/sign-in?redirect_url=${encodeURIComponent(relativeCheckoutSuccessUrl)}`;
         return new Response(null, {
           status: 307,
           headers: {

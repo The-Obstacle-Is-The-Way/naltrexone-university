@@ -4,6 +4,7 @@ import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
 import { afterAll, afterEach, describe, expect, it } from 'vitest';
 import * as schema from '@/db/schema';
+import { ROUTES } from '@/lib/routes';
 import {
   createCheckoutSession,
   createPortalSession,
@@ -148,7 +149,7 @@ describe('billing controllers (integration)', () => {
       'checkout=cancel',
     );
     expect(paymentGateway.checkoutInputs[0]?.successUrl).toContain(
-      '/checkout/success',
+      ROUTES.CHECKOUT_SUCCESS,
     );
     expect(paymentGateway.checkoutInputs[0]?.successUrl).toContain(
       'session_id=',
