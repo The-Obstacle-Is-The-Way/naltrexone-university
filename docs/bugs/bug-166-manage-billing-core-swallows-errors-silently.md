@@ -46,7 +46,7 @@ export async function runManageBillingAction(deps: {
   createPortalSessionFn: CreatePortalSessionFn;
   redirectFn: RedirectFn;
   redirects: ManageBillingRedirects;
-  logger?: Pick<Logger, 'error'>;
+  logger?: ManageBillingLogger;
 }): Promise<void> {
   let result: Awaited<ReturnType<CreatePortalSessionFn>>;
   try {
