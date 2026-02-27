@@ -13,20 +13,14 @@ Bug reports document issues discovered in the codebase along with their root cau
 2. **Regression Prevention** — Ensure we don't reintroduce the same bugs
 3. **Knowledge Base** — Help future developers understand past issues
 
-## Bug Index (Current)
+## Bug Index (Active)
 
-| ID | Title | Priority | Status |
-|----|-------|----------|--------|
-| [BUG-165](./bug-165-app-billing-missing-unauthenticated-redirect.md) | App Billing Manage-Billing Action Missing `unauthenticated` Redirect | P3 | Resolved (2026-02-27) |
-| [BUG-166](./bug-166-manage-billing-core-swallows-errors-silently.md) | manage-billing-core Catch Block Swallows Errors Without Logging | P3 | Resolved (2026-02-27) |
+_No active bugs._
 
 **Next Bug ID:** BUG-167
 
-**Latest resolutions (2026-02-27):**
-- BUG-165 resolved in commit `181e89f4c6fad0ec37a5e9388c8bf0b388c105b3`: app billing manage-billing action now includes `unauthenticated` redirect and regression tests.
-- BUG-166 resolved in commit `181e89f4c6fad0ec37a5e9388c8bf0b388c105b3`: manage-billing core now logs thrown errors, with logger wiring from app + pricing billing actions.
-
 **Latest archival (2026-02-27):**
+- BUG-165 and BUG-166 verified fixed (PRs #146, #147), archived to `docs/_archive/bugs/`.
 - BUG-160 through BUG-164 verified fixed, merged (PR #144), and archived to `docs/_archive/bugs/`.
 
 **Earlier resolutions (2026-02-26):**
