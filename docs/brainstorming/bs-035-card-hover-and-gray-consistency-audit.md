@@ -2,7 +2,7 @@
 
 **Date:** 2026-02-27
 **Triggered by:** Visual inspection of history page, dashboard, quick practice, and landing page — inconsistent hover states, gray shades, and nested card visual hierarchy
-**Scope:** Exhaustive audit of every interactive element, hover behavior, background gray value, link style, button variant, border, and dark-mode strategy across all 13 routes
+**Scope:** Exhaustive audit of interactive elements, hover behavior, background gray value, link style, button variant, border, dark-mode strategy, loading states, and error surfaces across app/marketing routes plus shared UI primitives
 **Related:** [BS-020 (archived)](../_archive/brainstorming/bs-020-card-contrast-and-hover-consistency.md) — deferred residual hover standardization; [BS-031 (archived)](../_archive/brainstorming/bs-031-card-row-affordance-consistency.md); [Frontend Standards](../frontend/standards.md)
 
 ---
@@ -45,17 +45,17 @@ transition-colors hover:border-border hover:bg-muted/50
 
 Actual usage across the codebase:
 
-| Component | File | Hover Pattern | Effective Dark BG |
-|-----------|------|--------------|-------------------|
-| **Dashboard session rows** | `dashboard/page.tsx:156` | `hover:bg-muted/40` | 4.4% gray |
-| **Dashboard activity rows** | `dashboard/page.tsx:234` | `hover:bg-muted/40` | 4.4% gray |
-| **History sessions tab rows** | `history-sessions-tab.tsx:185` | `hover:bg-accent/40` + `dark:hover:bg-foreground/10` | 9.3% gray |
-| **History questions tab rows** | `history-questions-tab.tsx:464` | `hover:bg-accent/40` | 4.4% gray |
-| **Choice buttons** | `choice-button.tsx:30` | `hover:bg-muted/80` | 8.8% gray |
-| **Tab-switch inactive** | `tab-switch-styles.ts` | `hover:bg-muted/50` | 5.5% gray |
-| **Filter chip (unselected)** | `filter-chip.tsx:28` | `hover:bg-accent` (100%!) | 11% gray |
-| **Pricing pills (marketing)** | `marketing-home.tsx:58` | `hover:bg-muted` (100%) | 11% gray |
-| **Canonical standard** | `docs/frontend/standards.md` | `hover:bg-muted/50` | 5.5% gray |
+| Component | File | Hover Pattern | Dark Composite (approx.) |
+|-----------|------|--------------|---------------------------|
+| **Dashboard session rows** | `app/(app)/app/dashboard/page.tsx:156` | `hover:bg-muted/40` | ~8.6% (inside `bg-card`) |
+| **Dashboard activity rows** | `app/(app)/app/dashboard/page.tsx:234` | `hover:bg-muted/40` | ~8.6% (inside `bg-card`) |
+| **History sessions tab rows** | `app/(app)/app/history/components/history-sessions-tab.tsx:185` | `hover:bg-accent/40` + `dark:hover:bg-foreground/10` | ~6.5% (`accent/40`) or ~12.5% (`foreground/10`) |
+| **History questions tab rows** | `app/(app)/app/history/components/history-questions-tab.tsx:464` | `hover:bg-accent/40` | ~6.5% (on page background) |
+| **Choice buttons** | `components/question/choice-button.tsx:30` | `hover:bg-muted/80` | ~10.2% (inside `bg-card`) |
+| **Tab-switch inactive** | `components/ui/tab-switch-styles.ts:23` | `hover:bg-muted/50` | Nearly unchanged (parent is already `bg-muted`) |
+| **Filter chip (unselected)** | `components/ui/filter-chip.tsx:28` | `hover:bg-accent` (100%!) | 11% gray |
+| **Pricing pills (marketing)** | `components/marketing/marketing-home.tsx:58` | `hover:bg-muted` (100%) | 11% gray |
+| **Canonical standard** | `docs/frontend/standards.md:288` | `hover:bg-muted/50` | Context-dependent |
 
 **Note:** None of the actual card/row components match the canonical `hover:bg-muted/50` from the standards doc.
 
@@ -64,7 +64,7 @@ Actual usage across the codebase:
 The standards doc states:
 > Do NOT add explicit `dark:` variants in page/component code — only in `components/ui/`
 
-But `history-sessions-tab.tsx` uses:
+But `app/(app)/app/history/components/history-sessions-tab.tsx` uses:
 - `dark:hover:bg-foreground/10` (on the row `<li>`, line 185)
 - `dark:border-foreground/30 dark:bg-foreground/10 dark:hover:bg-foreground/25` (on the "View breakdown" button, line 244)
 
@@ -89,26 +89,66 @@ When a session card in history is expanded ("View breakdown"), the structure is:
 **Problems:**
 - The expanded content area has **no distinct background** — it sits inside the same `bg-muted/20` container
 - The `border-t border-border/40` separator uses 40% opacity on an already-low-contrast border color (15% gray in dark mode), making it nearly invisible
-- The "Review session" button uses the outline variant, which in dark mode is `dark:bg-input/30` (15% gray at 30% = 4.5% gray). Against the `bg-muted/20` parent (11% gray at 20% = 2.2% gray), there's only ~2.3% lightness difference
-- On hover, the entire `<li>` changes to `dark:hover:bg-foreground/10` (9.3% gray), which further reduces contrast with the button inside
+- The "Review session" button uses the outline variant, which in dark mode is `dark:bg-input/30` (`components/ui/button.tsx:19`). Against `bg-muted/20`, contrast is modest and drops further when the parent switches to `dark:hover:bg-foreground/10`
+- On hover, the entire `<li>` changes to `dark:hover:bg-foreground/10` (~12.5%), which is a much larger jump than dashboard rows and changes the hierarchy abruptly
 
 ### 5. Base Background Layer Confusion
 
-The gray "stack" in dark mode with very thin separation:
+The gray stack is context-dependent (page background vs card background). Verified values:
 
-| Layer | Value | HSL Lightness |
-|-------|-------|--------------|
+| Layer | Value | Approx Effective L* |
+|-------|-------|---------------------|
 | `--background` (page) | `0 0% 3.5%` | 3.5% |
 | `--card` (Card component) | `0 0% 7%` | 7% |
-| `bg-muted/20` (row default) | 11% at 20% opacity | ~4.9% effective |
-| `bg-muted/40` (dashboard hover) | 11% at 40% opacity | ~6.3% effective |
-| `bg-accent/40` (history hover) | 11% at 40% opacity | ~6.3% effective |
-| `dark:hover:bg-foreground/10` (history sessions) | 93% at 10% opacity | ~12.5% effective |
-| `bg-muted/80` (choice hover) | 11% at 80% opacity | ~9.5% effective |
+| `bg-muted/20` on page | 11% at 20% opacity | ~4.9% |
+| `bg-muted/20` inside card | 11% at 20% opacity over 7% | ~7.8% |
+| `bg-muted/40` inside card (dashboard hover) | 11% at 40% opacity over 7% | ~8.6% |
+| `bg-accent/40` on page (history questions hover) | 11% at 40% opacity over 3.5% | ~6.5% |
+| `dark:hover:bg-foreground/10` on page (history sessions hover) | 93% at 10% opacity over 3.5% | ~12.5% |
+| `bg-muted/80` inside card (choice hover) | 11% at 80% opacity over 7% | ~10.2% |
 
-**Key insight:** The difference between the page background (3.5%) and a row's resting state (~4.9%) is only 1.4% lightness. The difference between resting and hover on dashboard (~4.9% to ~6.3%) is also only 1.4%. These are barely perceptible, especially on non-calibrated monitors.
+**Key insight:** Dashboard rows are rendered inside `Card` surfaces, while history rows are on page background, so identical token/opacity values do not produce identical perceived contrast. This is the core context drift behind “same class, different feel.”
 
-Meanwhile, the history sessions tab jumps to a different token system entirely (`foreground/10` = ~12.5%), creating a visually jarring inconsistency compared to the dashboard's subtle `muted/40`.
+Meanwhile, the history sessions tab jumps to a different token system entirely (`foreground/10` = ~12.5%), creating a visually jarring inconsistency compared to dashboard’s `muted/40` (~8.6% inside card).
+
+### 6. `globals.css` Cross-Reference (verified)
+
+All token values cited above were re-verified against `app/globals.css`:
+- `--secondary`, `--muted`, `--accent` are identical in light (`210 40% 96.1%`) and dark (`0 0% 11%`) (`app/globals.css:98-103`, `app/globals.css:138-143`)
+- `--border` and `--input` are identical in light and dark (`app/globals.css:110-112`, `app/globals.css:150-152`)
+
+Additional visual-consistency tokens not previously called out in BS-035:
+- `--ring` (`app/globals.css:112`, `app/globals.css:152`) controls all focus ring color
+- `--radius` (`app/globals.css:118`) maps to `--radius-lg/md/sm` (`app/globals.css:59-61`)
+- Semantic status tokens: `--success`, `--success-foreground`, `--warning`, `--warning-foreground`, `--destructive`, `--destructive-foreground` (`app/globals.css:104-109`, `app/globals.css:144-149`)
+
+Global CSS behaviors affecting hover/focus/transition consistency:
+- Base `* { @apply border-border outline-ring/50; }` (`app/globals.css:169-176`) applies default border/ring tone project-wide
+- `.metallic-border` animated gradient + `@keyframes metallic-shift` (`app/globals.css:183-208`)
+- `.animate-fade-in-up` + reduced-motion override (`app/globals.css:211-238`)
+- `.scrollbar-hidden` utility (`app/globals.css:251-258`)
+
+### 7. `tailwind.config` Cross-Reference (verified)
+
+There is **no** `tailwind.config.ts` in this repo; active config file is `tailwind.config.js`.
+
+Relevant findings from `tailwind.config.js`:
+- `darkMode: ['class']` (`tailwind.config.js:2`)
+- `theme.extend` only defines semantic color aliases and border radius tokens (`tailwind.config.js:9-49`)
+- No custom plugins, no custom keyframes, and no animation extensions in this file
+
+Note: animations used by this repo (`metallic-shift`, `fade-in-up`) are defined in `app/globals.css`, not Tailwind config.
+
+### 8. Frontend Standards Cross-Reference (verified)
+
+Verified citations from BS-035:
+- Canonical hover pattern quote matches `docs/frontend/standards.md:288`
+- Dark-mode rule quote matches `docs/frontend/standards.md:598`
+
+Additional standards drift that BS-035 previously missed:
+- `standards.md` button variant list omits `success`, but `components/ui/button.tsx` defines it (`components/ui/button.tsx:16-17`)
+- `standards.md` documents `tabSwitchItemBaseClasses` as `py-1.5`, but actual code is `py-2` (`components/ui/tab-switch-styles.ts:15`)
+- `standards.md` says raw `<button>` should not be used outside `components/ui/`, but `components/mobile-nav.tsx:107` uses a raw button for nav toggle
 
 ---
 
@@ -190,7 +230,7 @@ Meanwhile, the history sessions tab jumps to a different token system entirely (
 | Past-due banner link | `underline font-medium transition-colors hover:text-foreground` | Underline + text color | **UNIQUE:** Only in-text link using base `underline` (always visible). All other links either have no underline or `hover:underline` |
 
 #### Navigation
-| Element | Desktop (`app-desktop-nav.tsx`) | Mobile (`mobile-nav.tsx`) |
+| Element | Desktop (`components/app-desktop-nav.tsx`) | Mobile (`components/mobile-nav.tsx`) |
 |---------|------|------|
 | Active link | `rounded-md text-foreground font-medium` | `block rounded-md bg-muted px-3 py-3 text-sm font-medium text-foreground` |
 | Inactive link | `rounded-md text-muted-foreground transition-colors hover:text-foreground` | `block rounded-md px-3 py-3 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground` |
@@ -258,7 +298,7 @@ Meanwhile, the history sessions tab jumps to a different token system entirely (
 
 ### Page 6: Practice Session (`/app/practice/[sessionId]`)
 
-**Files:** `practice-view.tsx`, `session-summary-view.tsx`
+**Files:** `app/(app)/app/practice/components/practice-view.tsx`, `app/(app)/app/practice/[sessionId]/components/practice-session-page-view.tsx`, `app/(app)/app/practice/[sessionId]/components/session-summary-view.tsx`
 
 #### Cards
 | Element | Classes | Notes |
@@ -319,7 +359,7 @@ Uses the same `PracticeView` component as Page 6. Interactive elements:
 | Unanswered session reveal | `Card` + `gap-0 rounded-2xl border-warning/50 bg-warning/5 p-4 text-sm text-foreground shadow-sm` | Warning-tinted card |
 | Loading states | `Card` + `gap-0 rounded-2xl p-6 text-sm text-muted-foreground shadow-sm` | Consistent |
 
-#### Review Question Navigator (`review-question-navigator.tsx`)
+#### Review Question Navigator (`app/(app)/app/questions/[slug]/components/review-question-navigator.tsx`)
 | Element | Classes | Notes |
 |---------|---------|-------|
 | Navigator container | `Card` + `gap-0 rounded-2xl p-4 shadow-sm` | Consistent |
@@ -333,7 +373,7 @@ Uses the same `PracticeView` component as Page 6. Interactive elements:
 |---------|---------|--------------|
 | Back link (top) | `rounded-md text-sm font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:...` | Text color change — consistent |
 
-#### Feedback Component (`feedback.tsx`)
+#### Feedback Component (`components/question/feedback.tsx`)
 | Element | Classes | Notes |
 |---------|---------|-------|
 | Correct badge | `inline-flex rounded-full px-3 py-1 text-sm font-semibold bg-success/15 text-success` | `/15` opacity on success |
@@ -454,43 +494,327 @@ Uses the same `PracticeView` component as Page 6. Interactive elements:
 
 ### Page 13: Auth Pages (`/sign-in`, `/sign-up`)
 
-These use Clerk components. No custom styling to audit.
+**Files:** `app/sign-in/[[...sign-in]]/sign-in-page-client.tsx`, `app/sign-up/[[...sign-up]]/sign-up-page-client.tsx`
+
+| Element | Classes | Notes |
+|---------|---------|-------|
+| Auth page wrapper `<main>` | `flex min-h-screen items-center justify-center bg-background` | Custom wrapper exists on both sign-in and sign-up pages |
+| Dynamic-loading fallback wrapper | `flex min-h-[200px] items-center justify-center` | Shows while Clerk component loads client-side |
+| Dynamic-loading text | `text-muted-foreground` | No animation/transition |
+| `NEXT_PUBLIC_SKIP_CLERK=true` fallback title | `text-xl font-semibold text-foreground` | Manual fallback UI in both pages |
+| `NEXT_PUBLIC_SKIP_CLERK=true` fallback description | `mt-2 text-muted-foreground` | No card container; plain centered text |
+
+---
+
+### Page 14: Checkout Success (`/checkout/success`)
+
+**Files:** `app/(marketing)/checkout/success/page.tsx`, `app/(marketing)/checkout/success/checkout-success-sync.tsx`
+
+| Element | Classes | Notes |
+|---------|---------|-------|
+| Success-page fallback `<main>` | `flex min-h-[60vh] items-center justify-center` | Only renders if redirect hasn’t fired yet |
+| Fallback heading | `text-xl font-semibold text-foreground` | Plain center block, no card |
+| Fallback description | `mt-2 text-muted-foreground` | Text-only status UI |
+
+**Audit note:** `app/(marketing)/checkout/success/page.tsx` is mostly orchestration; visible styling is in `checkout-success-sync.tsx`.
+
+---
+
+### Page 15: Error + Not Found Surfaces
+
+**Files:** `app/error.tsx`, `app/global-error.tsx`, `app/not-found.tsx`, `app/pricing/error.tsx`, `app/(marketing)/checkout/success/error.tsx`, `app/(app)/app/*/error.tsx`
+
+#### Route Error Wrappers
+| File | Styling Notes |
+|------|---------------|
+| `app/error.tsx` | No direct class strings; delegates to `ErrorBoundaryPage` |
+| `app/pricing/error.tsx` | No direct class strings; delegates to `ErrorBoundaryPage` |
+| `app/(marketing)/checkout/success/error.tsx` | No direct class strings; delegates to `ErrorBoundaryPage` |
+| `app/(app)/app/billing/error.tsx`, `bookmarks/error.tsx`, `dashboard/error.tsx`, `history/error.tsx`, `practice/error.tsx`, `practice/[sessionId]/error.tsx`, `practice/quick/error.tsx`, `questions/[slug]/error.tsx` | Same delegation pattern with route-specific copy |
+
+#### Shared Error Shell (`components/error-boundary-page.tsx`)
+| Element | Classes | Notes |
+|---------|---------|-------|
+| Outer container | `flex min-h-[50vh] items-center justify-center bg-background text-foreground` | Used by route-level error boundaries |
+| Content wrapper | `w-full max-w-md space-y-4 px-4 text-center` | Consistent spacing + width cap |
+| Heading | `text-xl font-semibold font-heading text-foreground` | `h1` or `h2` based on `includeMainLandmark` |
+| Description | `text-sm text-muted-foreground` | Shared muted body copy |
+| Digest text | `text-xs text-muted-foreground` | Optional error ID |
+| Action row | `flex flex-col justify-center gap-3 sm:flex-row` | Stacks on mobile |
+
+#### Global Error (`app/global-error.tsx`)
+| Element | Classes | Notes |
+|---------|---------|-------|
+| `<body>` | `min-h-[100dvh] bg-background text-foreground` | Full-document fallback |
+| Centering wrapper | `flex min-h-[100dvh] items-center justify-center` | Uses full viewport height |
+| Content wrapper | `w-full max-w-md space-y-4 px-4 text-center` | Mirrors `ErrorBoundaryPage` layout |
+| Heading | `text-2xl font-bold font-heading text-foreground` | Larger than route error shell |
+
+#### Not Found (`app/not-found.tsx`)
+| Element | Classes | Notes |
+|---------|---------|-------|
+| Main wrapper | `flex min-h-[100dvh] items-center justify-center` | Full-height center |
+| Content wrapper | `max-w-md space-y-8 p-4 text-center` | Larger vertical spacing than error shell |
+| Icon | `size-12 text-muted-foreground` | Decorative `CircleIcon` |
+| CTA button | `variant="outline" size="sm" className="mx-auto w-full max-w-48 rounded-full"` | Pill-ish small outline |
+
+#### Inline Error Component (`components/error-card.tsx`)
+| Element | Classes | Notes |
+|---------|---------|-------|
+| Error card wrapper | `rounded-2xl border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive shadow-sm` | Used throughout app for inline persistent errors |
+
+---
+
+## UI Primitive Audit
+
+### `components/ui/card.tsx`
+| Element | Classes | Notes |
+|---------|---------|-------|
+| `Card` default | `bg-card text-card-foreground flex flex-col gap-0 rounded-2xl border p-6 shadow-sm` | Baseline card surface; most pages extend this |
+
+### `components/ui/button.tsx`
+| Layer | Classes | Notes |
+|-------|---------|-------|
+| Base | `inline-flex items-center justify-center gap-2 ... transition-colors ... disabled:pointer-events-none disabled:opacity-50 ... focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]` | Transition + focus + disabled baseline |
+| `default` | `bg-primary text-primary-foreground shadow-xs hover:bg-primary/90` | Primary action |
+| `destructive` | `bg-destructive text-white shadow-xs hover:bg-destructive/90 ... dark:bg-destructive/60` | Dark base differs from light |
+| `success` | `bg-success text-success-foreground shadow-xs hover:bg-success/90 ... dark:bg-success/60` | Exists in code; missing from standards variant list |
+| `outline` | `border bg-background shadow-xs hover:bg-accent hover:text-accent-foreground dark:bg-input/30 dark:border-input dark:hover:bg-input/50` | Uses `input` token in dark mode |
+| `secondary` | `bg-secondary text-secondary-foreground shadow-xs hover:bg-secondary/80` | Standard secondary |
+| `ghost` | `hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50` | Uses `accent` token in dark mode |
+| `link` | `text-primary underline-offset-4 hover:underline` | Underline-hover strategy |
+
+### `components/ui/input.tsx`
+| Element | Classes | Notes |
+|---------|---------|-------|
+| `Input` default | `... dark:bg-input/30 border-input ... transition-[color,box-shadow] ... disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 ... focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]` | No explicit hover styles; focus + disabled only |
+
+### `components/ui/select.tsx`
+| Primitive | Classes | Notes |
+|-----------|---------|-------|
+| `SelectTrigger` | `border-input ... rounded-md border bg-transparent ... transition-[color,box-shadow] ... focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] ... disabled:cursor-not-allowed disabled:opacity-50` | No explicit hover styles |
+| `SelectContent` | `bg-popover text-popover-foreground ... rounded-md border shadow-md ... animate-in/out ...` | Popover surface + motion |
+| `SelectItem` | `focus:bg-accent focus:text-accent-foreground ... data-[disabled]:opacity-50` | Keyboard focus drives “hover-like” visual |
+| `SelectSeparator` | `bg-border ... h-px` | Neutral divider |
+
+### `components/ui/alert-dialog.tsx`
+| Primitive | Classes | Notes |
+|-----------|---------|-------|
+| Overlay | `fixed inset-0 z-50 bg-background/80 backdrop-blur-sm ... fade-in/out` | Dimmed + blurred backdrop |
+| Content | `fixed ... max-w-lg ... gap-4 rounded-2xl border border-border bg-card p-6 text-foreground shadow-lg ... zoom-in/out` | Card-like modal surface |
+| Actions | `AlertDialogCancel` and `AlertDialogAction` use `buttonVariants` | Inherits full button hover/dark behavior |
+
+### `components/ui/dropdown-menu.tsx`
+| Primitive | Classes | Notes |
+|-----------|---------|-------|
+| Content | `bg-popover text-popover-foreground ... rounded-md border p-1 shadow-md ... animate-in/out` | Popover token surface |
+| Item | `focus:bg-accent focus:text-accent-foreground ... data-[disabled]:opacity-50` | Focus-driven highlight |
+| Destructive item focus | `data-[variant=destructive]:focus:bg-destructive/10 dark:data-[variant=destructive]:focus:bg-destructive/20` | Has explicit dark override inside UI primitive |
+| Separator | `bg-border ... h-px` | Shared neutral divider |
+
+### `components/ui/segmented-control.tsx`
+| State | Classes | Notes |
+|-------|---------|-------|
+| Container | `tabSwitchContainerClasses` | `inline-flex rounded-lg border border-border bg-muted p-1` |
+| Base item | `tabSwitchItemBaseClasses` + `disabled:pointer-events-none disabled:opacity-50` | Shared across tabs |
+| Active item | `tabSwitchItemActiveClasses` | `bg-primary text-primary-foreground shadow-sm` |
+| Inactive item | `tabSwitchItemInactiveClasses` | `text-muted-foreground hover:bg-muted/50 hover:text-foreground` |
+
+### `components/ui/filter-chip.tsx`
+| State | Classes |
+|-------|---------|
+| Base | `inline-flex items-center rounded-full border px-3 py-1.5 text-sm font-medium transition-colors` + focus ring + disabled styles |
+| Selected | `border-primary bg-primary text-primary-foreground` |
+| Unselected | `border-border bg-background text-muted-foreground hover:bg-accent hover:text-accent-foreground` |
+
+### `components/ui/metallic-border.tsx`
+| Element | Classes | Notes |
+|---------|---------|-------|
+| Outer wrapper | `metallic-border inline-flex` | Pulls animated gradient from `app/globals.css` |
+| Inner wrapper | `flex-1 bg-background` | Masks center to background token; radius via inline style |
+
+### `components/ui/metallic-cta-button.tsx`
+| Element | Classes | Notes |
+|---------|---------|-------|
+| Inner content | `flex items-center gap-2 px-8 py-3 text-base font-medium text-foreground` | No hover utility; relies on animated border treatment |
+| Wrapper | `MetallicBorder borderRadius={9999} borderWidth={2}` | Pill shape via border component |
+
+### `components/ui/notification-provider.tsx`
+| Element | Classes | Notes |
+|---------|---------|-------|
+| Toast region | `pointer-events-none fixed inset-x-0 top-4 z-50 flex justify-center px-4` | Top-centered stack |
+| Toast base | `block rounded-xl border px-4 py-3 text-sm shadow-sm` | Shared toast shell |
+| `info` tone | `border-border bg-card text-foreground` | Neutral |
+| `success` tone | `border-success/30 bg-success/10 text-foreground` | Success-tinted |
+| `error` tone | `border-destructive/40 bg-destructive/10 text-foreground` | Error-tinted |
+
+### `components/ui/tab-switch-styles.ts`
+| Constant | Classes | Verification |
+|----------|---------|--------------|
+| `tabSwitchContainerClasses` | `inline-flex rounded-lg border border-border bg-muted p-1` | Verified |
+| `tabSwitchItemBaseClasses` | `rounded-md px-4 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]` | Verified |
+| `tabSwitchItemActiveClasses` | `bg-primary text-primary-foreground shadow-sm` | Verified |
+| `tabSwitchItemInactiveClasses` | `text-muted-foreground hover:bg-muted/50 hover:text-foreground` | `hover:bg-muted/50` claim is correct |
+
+---
+
+## Loading States
+
+All audited `loading.tsx` files use the shared `PageLoading` primitive:
+- `app/(app)/app/dashboard/loading.tsx`
+- `app/(app)/app/billing/loading.tsx`
+- `app/(app)/app/bookmarks/loading.tsx`
+- `app/(app)/app/history/loading.tsx`
+- `app/(app)/app/practice/loading.tsx`
+- `app/(app)/app/practice/[sessionId]/loading.tsx`
+- `app/(app)/app/practice/quick/loading.tsx`
+- `app/(app)/app/questions/[slug]/loading.tsx`
+
+`PageLoading` (`components/loading/page-loading.tsx`) styling:
+- Wrapper: `animate-pulse space-y-6` + `aria-busy="true"` + `aria-live="polite"`
+- Heading skeleton: `h-8 w-48 rounded-md bg-background`
+- Card skeleton shell: `space-y-4 rounded-2xl border border-border bg-background p-6`
+- Inner lines/buttons: `bg-muted` blocks (`h-4` text lines + `h-10 w-32` action bar)
+
+Route-level variance is only `label` and `cardCount`:
+| File | Label | `cardCount` |
+|------|-------|-------------|
+| `dashboard/loading.tsx` | `Loading dashboard` | 6 |
+| `billing/loading.tsx` | `Loading billing` | 2 |
+| `bookmarks/loading.tsx` | `Loading bookmarks` | 6 |
+| `history/loading.tsx` | `Loading history` | 6 |
+| `practice/loading.tsx` | `Loading practice` | 3 |
+| `practice/[sessionId]/loading.tsx` | `Loading practice session` | 1 |
+| `practice/quick/loading.tsx` | `Loading quick practice` | 3 |
+| `questions/[slug]/loading.tsx` | `Loading question` | 1 |
+
+**Consistency result:** High consistency (single primitive), but skeleton cards use `bg-background` instead of `bg-card`, so they are visually flatter than real cards they replace.
+
+---
+
+## Additional App Component Audit
+
+### `components/theme-toggle.tsx`
+| Element | Classes | Notes |
+|---------|---------|-------|
+| Toggle button | `variant="ghost" size="icon" className="relative rounded-full"` | Inherits ghost hover from Button |
+| Sun icon | `size-5 text-muted-foreground transition-colors dark:hidden` | Explicit `dark:` visibility toggle |
+| Moon icon | `size-5 text-muted-foreground transition-colors hidden dark:block` | Explicit `dark:` visibility toggle |
+
+### `components/auth-nav.tsx`
+| State | Classes | Notes |
+|-------|---------|-------|
+| Unauthenticated CTA | `Button size="sm" className="rounded-full"` | Pill sign-in button |
+| Authenticated primary link | `rounded-md text-sm font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:...` | Text-hover nav link style |
+
+### `components/get-started-cta.tsx`
+| Element | Classes | Notes |
+|---------|---------|-------|
+| CTA button class | `rounded-full px-8 py-3 text-base` | Same class for signed-in and signed-out cases |
+
+### `components/markdown/Markdown.tsx`
+| Element | Classes | Notes |
+|---------|---------|-------|
+| Markdown wrapper | `[&_p+p]:mt-3` | Only paragraph spacing is standardized |
+| Missing explicit styles | (none for `a`, `code`, `pre`, `ul`, `ol`, headings) | Markdown rendering depends on ambient typography, causing potential drift |
+
+### `app/(app)/app/practice/[sessionId]/components/exam-review-view.tsx`
+| Element | Classes | Notes |
+|---------|---------|-------|
+| Navigator card | `Card` + `gap-0 rounded-2xl p-4 shadow-sm` | Dense variant |
+| Summary stat cards | `Card` + `gap-0 rounded-2xl p-4 shadow-sm` | Dense variant, 3-column grid |
+| Per-question row cards | `Card` + `gap-0 rounded-2xl p-4 shadow-sm` | Non-hover rows with outline action buttons |
+
+### `app/(app)/app/practice/[sessionId]/components/practice-session-page-view.tsx`
+| Element | Classes | Notes |
+|---------|---------|-------|
+| Loading review fallback | `Card` + `gap-0 rounded-2xl p-6 text-sm text-muted-foreground shadow-sm` | Uses same loading-card pattern as PracticeView |
+| Error fallback | `ErrorCard` + outline buttons | No extra custom hover classes beyond Button variants |
+
+### `app/(app)/app/practice/[sessionId]/components/session-summary-view.tsx`
+| Element | Classes | Notes |
+|---------|---------|-------|
+| Stat cards (4) | `Card` + `gap-0 rounded-2xl p-6 shadow-sm` | Mirrors dashboard stats density |
+| Breakdown card | `Card` + `gap-0 rounded-2xl p-6 shadow-sm` | Contains `SessionBreakdownList` |
+
+### `app/(app)/app/practice/components/incomplete-session-card.tsx`
+| Element | Classes | Notes |
+|---------|---------|-------|
+| Card shell | `Card` + `gap-0 rounded-2xl p-6 shadow-sm` | Same surface as other practice cards |
+| Actions | `Button` default/outline + `rounded-full` | Includes AlertDialog destructive action |
+
+### `app/(app)/app/history/components/history-tab-bar.tsx`
+| Element | Classes | Notes |
+|---------|---------|-------|
+| Tabs | `tabSwitch*` constants | Visual style delegated entirely to shared tab-switch constants |
+
+### `app/(app)/app/billing/billing-client.tsx`
+| Element | Classes | Notes |
+|---------|---------|-------|
+| Manage billing button | `Button className="rounded-full"` | No custom hover tokens; variant default |
+
+### `app/(app)/app/questions/[slug]/components/review-question-navigator.tsx`
+| Element | Classes | Notes |
+|---------|---------|-------|
+| Current question ring | `ring-2 ring-ring` | Deprecated ring style still present at line 58 |
+
+### `components/question/question-card.tsx`
+| Element | Classes | Notes |
+|---------|---------|-------|
+| Wrapper | `<Card>` with no class overrides | Inherits `bg-card`/`border`/`p-6` defaults from primitive |
+| Choice list | `mt-8 space-y-3` | Spacing pattern consistent with quiz UI |
+
+### `app/(app)/app/shared/components/session-breakdown-list.tsx`
+| Element | Classes | Notes |
+|---------|---------|-------|
+| Link style | `... text-foreground hover:underline focus-visible:...` | Underline-hover pattern |
+| Unanswered label | `text-muted-foreground/60` | Only production instance of `/60` muted text |
+
+### Toast Trigger Components
+| File | Styling |
+|------|---------|
+| `app/(app)/app/bookmarks/bookmarks-toast.tsx` | No direct classes; delegates to `notify({ message, tone: 'success' })` |
+| `app/(app)/app/practice/[sessionId]/practice-session-toast.tsx` | No direct classes; delegates to `notify({ message, tone: 'info' | 'success' })` |
+
+These components are logic-only; all visual styling is centralized in `components/ui/notification-provider.tsx`.
 
 ---
 
 ## Cross-Cutting Divergences (Not Page-Specific)
 
-### A. Link Hover Patterns (4 distinct strategies)
+### A. Link Hover Patterns (5 distinct strategies)
 
 | Strategy | Where Used | Pattern |
 |----------|-----------|---------|
 | **Text color only** | Nav links (desktop, marketing, auth), back links, pricing links | `text-muted-foreground transition-colors hover:text-foreground` |
-| **Background color change** | Dashboard rows, history rows, mobile nav inactive | `hover:bg-muted/40` or `hover:bg-accent/40` |
+| **Background color change** | Dashboard rows, history rows, mobile nav inactive | `hover:bg-muted/40` / `hover:bg-accent/40` / `hover:bg-muted` |
 | **Underline** | Session breakdown links, bookmarks question links, button variant="link" | `hover:underline` |
 | **Opacity** | Pricing banner dismiss | `hover:opacity-70` |
+| **No hover affordance** | Marketing brand link, app-header logo link | No `hover:` class |
 
-**Problem:** No clear rule for when to use which. The standards doc says hoverable cards use bg change, but doesn't address link text or underline hover.
+**Problem:** No clear rule for when to use which. The standards doc covers hoverable cards, but not text-link/brand-link hover strategy.
 
-### B. "headerLinkButtonClasses" Pattern (5 files)
+### B. "headerLinkButtonClasses" Pattern (3 files)
 
-Used in: `dashboard/page.tsx`, `history-sessions-tab.tsx`, `history-questions-tab.tsx`, `practice-page-client.tsx`, `practice-view.tsx`
+Used in: `app/(app)/app/dashboard/page.tsx`, `app/(app)/app/history/components/history-sessions-tab.tsx`, `app/(app)/app/history/components/history-questions-tab.tsx`
 
 ```ts
 const headerLinkButtonClasses =
   'h-auto p-0 text-muted-foreground no-underline hover:text-foreground hover:no-underline';
 ```
 
-**Problem:** This is copy-pasted as a local const in 5 separate files. Not a shared constant. If the pattern changes, all 5 files need updating.
+**Problem:** This is copy-pasted as a local const in 3 separate files. Not a shared constant. If the pattern changes, all 3 files need updating.
 
 ### C. Border Opacity Values (3 different values)
 
 | Value | Where Used |
 |-------|-----------|
-| `border-border` (100%) | Card component default, filter card, history questions rows, marketing sections |
+| `border-border` (100%) | Card component default, filter card, history question rows, marketing sections |
 | `border-border/60` | Dashboard rows, history sessions rows, practice starter details, feedback choice boxes |
 | `border-border/40` | History expanded breakdown separator, feedback reference separator |
+| Semantic opacities (`/30`, `/40`, `/50`) | `ErrorCard`, toasts, warning reveal card | `border-destructive/30`, `border-success/30`, `border-destructive/40`, `border-warning/50` |
 
-**Problem:** No documented rationale for when to use which opacity. The `/40` borders are nearly invisible in dark mode.
+**Problem:** Neutral and semantic border opacity scales are mixed without a documented rationale.
 
 ### D. Background for Similar Elements (rows vs cards)
 
@@ -514,7 +838,7 @@ const headerLinkButtonClasses =
 | `destructive` | `hover:bg-destructive/90` + `dark:bg-destructive/60` | Different base in dark |
 | `success` | `hover:bg-success/90` + `dark:bg-success/60` | Different base in dark |
 
-**Problem:** `outline` uses `input` for dark hover; `ghost` uses `accent` for dark hover. These are different tokens (though currently identical values). If tokens diverge, these button variants will look different when they shouldn't.
+**Problem:** `outline` uses `input` for dark hover and `ghost` uses `accent`. These tokens are already different in dark mode (`input` = 15% lightness; `accent` = 11%), so the variants already diverge.
 
 ### F. Disabled State Opacity Values
 
@@ -529,21 +853,21 @@ const headerLinkButtonClasses =
 
 | Opacity | File | Context |
 |---------|------|---------|
-| `bg-warning/5` | `question-page-client.tsx:260` | Unanswered question reveal card |
-| `bg-warning/10` | `app/layout.tsx:118` | Past-due banner |
-| `bg-warning/15` | `billing/page.tsx:90` | Cancellation scheduled alert |
+| `bg-warning/5` | `app/(app)/app/questions/[slug]/question-page-client.tsx:260` | Unanswered question reveal card |
+| `bg-warning/10` | `app/(app)/app/layout.tsx:118` | Past-due banner |
+| `bg-warning/15` | `app/(app)/app/billing/page.tsx:90` | Cancellation scheduled alert |
 
 **Problem:** Three different warning background opacities for three different contexts. No documented scale.
 
 ### H. Pricing Page Raw Divs vs Card Component
 
-The pricing page (`pricing-view.tsx`) constructs card-like containers using raw `<div>` elements with manual classes (`rounded-2xl border border-border bg-card p-8 shadow-sm`) instead of the `<Card>` component. This means:
+The pricing page (`app/pricing/pricing-view.tsx`) constructs card-like containers using raw `<div>` elements with manual classes (`rounded-2xl border border-border bg-card p-8 shadow-sm`) instead of the `<Card>` component. This means:
 - Any future Card component changes won't propagate
 - The styling is close but not identical to `Card` (Card uses `gap-0` which raw divs don't)
 
 ### I. Marketing Annual Button Custom Colors
 
-`marketing-home.tsx:231`:
+`components/marketing/marketing-home.tsx:231`:
 ```
 bg-foreground py-3 text-sm font-medium text-background hover:bg-foreground/90
 ```
@@ -552,7 +876,7 @@ This completely bypasses the button variant system. It's a one-off color inversi
 
 ### J. Review Question Navigator Ring Style
 
-`review-question-navigator.tsx:58`:
+`app/(app)/app/questions/[slug]/components/review-question-navigator.tsx:58`:
 ```
 ring-2 ring-ring
 ```
@@ -561,6 +885,32 @@ The standards doc explicitly deprecates this pattern:
 > Deprecated pattern: `ring-2 ring-ring ring-offset-2` (do NOT use)
 
 The current standard is `ring-[3px] ring-ring/50`. The navigator uses the old ring style without `/50` opacity and with `ring-2` instead of `ring-[3px]`.
+
+### K. Standards Doc Drift vs Implementation
+
+| Standard Doc Claim | Source | Actual Implementation | Source |
+|--------------------|--------|-----------------------|--------|
+| Button variants: `default`, `destructive`, `outline`, `secondary`, `ghost`, `link` | `docs/frontend/standards.md:96` | Includes additional `success` variant | `components/ui/button.tsx:16-17` |
+| Tab switch base uses `py-1.5` | `docs/frontend/standards.md:163` | Actual class is `py-2` | `components/ui/tab-switch-styles.ts:15` |
+| Raw `<button>` outside `components/ui/` should never be used | `docs/frontend/standards.md:74` | Mobile nav toggle uses raw button | `components/mobile-nav.tsx:107` |
+
+**Problem:** Canonical standards document has drifted from source of truth.
+
+### L. Error Surface Density Drift
+
+| Surface | Container Height | Content Spacing | Pattern |
+|---------|------------------|-----------------|---------|
+| `ErrorBoundaryPage` route errors | `min-h-[50vh]` | `space-y-4` | Shared shell |
+| `app/global-error.tsx` | `min-h-[100dvh]` | `space-y-4` | Custom full-document shell |
+| `app/not-found.tsx` | `min-h-[100dvh]` | `space-y-8` | Distinct 404 treatment |
+
+**Problem:** Error density and vertical rhythm differ across fallback surfaces without explicit design guidance.
+
+### M. Markdown Styling Gaps
+
+`components/markdown/Markdown.tsx` only applies `[&_p+p]:mt-3` and does not define explicit link/code/list/heading styles.
+
+**Problem:** Markdown-rendered content can inherit inconsistent defaults across contexts, especially for links and code blocks.
 
 ---
 
@@ -610,7 +960,7 @@ Remove `dark:` overrides from the button and let the outline variant handle it. 
 
 ### Phase 4: Extract Shared Constants
 
-Extract `headerLinkButtonClasses` into a shared constant (e.g., `lib/shared-styles.ts` or add to `tab-switch-styles.ts` as a general style constants file) to eliminate the 5-file copy-paste.
+Extract `headerLinkButtonClasses` into a shared constant (e.g., `lib/shared-styles.ts` or add to `tab-switch-styles.ts` as a general style constants file) to eliminate the 3-file copy-paste.
 
 ### Phase 5: Standardize Row vs Card Patterns
 
@@ -659,7 +1009,7 @@ This would require visual regression testing across all pages.
 
 8. **Should the pricing page use `<Card>` components instead of raw divs?** Reduces drift risk.
 
-9. **Should we define a documented link-hover strategy?** Currently 4 distinct patterns (text color, bg change, underline, opacity) with no rule for when to use which.
+9. **Should we define a documented link-hover strategy?** Currently 5 patterns (text color, bg change, underline, opacity, no-hover) with no rule for when to use which.
 
 10. **Should the review question navigator ring be updated to the current standard?** `ring-2 ring-ring` → `ring-[3px] ring-ring/50`.
 
@@ -671,3 +1021,4 @@ This would require visual regression testing across all pages.
 |------|----------|-----------|
 | 2026-02-27 | Created BS-035 | User reported visual inconsistencies across history, dashboard, and quick practice pages |
 | 2026-02-27 | Expanded to exhaustive audit | User requested complete page-by-page divergence inventory covering all 13 routes |
+| 2026-02-27 | Verified and expanded by repo-wide crawl | Agent verified all line numbers, class names, and token references against source; added missing components and pages |
