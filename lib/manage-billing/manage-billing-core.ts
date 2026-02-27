@@ -1,5 +1,6 @@
 import type {
   CreatePortalSessionFn,
+  ManageBillingLogger,
   ManageBillingRedirects,
   RedirectFn,
 } from '@/lib/manage-billing/manage-billing-types';
@@ -20,11 +21,25 @@ export async function runManageBillingAction(deps: {
   createPortalSessionFn: CreatePortalSessionFn;
   redirectFn: RedirectFn;
   redirects: ManageBillingRedirects;
+  logger?: ManageBillingLogger;
 }): Promise<void> {
   let result: Awaited<ReturnType<CreatePortalSessionFn>>;
   try {
     result = await deps.createPortalSessionFn({});
-  } catch {
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    const errorContext = {
+      error: errorMessage,
+      ...(error instanceof Error ? { errorName: error.name } : {}),
+      ...(error instanceof Error && error.stack
+        ? { errorStack: error.stack }
+        : {}),
+    };
+    try {
+      deps.logger?.error(errorContext, 'Billing portal session creation threw');
+    } catch {
+      // Never let logging failures block the fallback redirect.
+    }
     return deps.redirectFn(deps.redirects.failure);
   }
   if (result.ok) return deps.redirectFn(result.data.url);

@@ -13,23 +13,113 @@ Bug reports document issues discovered in the codebase along with their root cau
 2. **Regression Prevention** — Ensure we don't reintroduce the same bugs
 3. **Knowledge Base** — Help future developers understand past issues
 
-## Bug Index (Active)
+## Bug Index (Current)
 
 | ID | Title | Priority | Status |
 |----|-------|----------|--------|
-| _No active bugs_ | — | — | — |
+| [BUG-165](./bug-165-app-billing-missing-unauthenticated-redirect.md) | App Billing Manage-Billing Action Missing `unauthenticated` Redirect | P3 | Resolved (2026-02-27) |
+| [BUG-166](./bug-166-manage-billing-core-swallows-errors-silently.md) | manage-billing-core Catch Block Swallows Errors Without Logging | P3 | Resolved (2026-02-27) |
 
-**Next Bug ID:** BUG-165
+**Next Bug ID:** BUG-167
+
+**Latest resolutions (2026-02-27):**
+- BUG-165 resolved in commit `181e89f4c6fad0ec37a5e9388c8bf0b388c105b3`: app billing manage-billing action now includes `unauthenticated` redirect and regression tests.
+- BUG-166 resolved in commit `181e89f4c6fad0ec37a5e9388c8bf0b388c105b3`: manage-billing core now logs thrown errors, with logger wiring from app + pricing billing actions.
 
 **Latest archival (2026-02-27):**
 - BUG-160 through BUG-164 verified fixed, merged (PR #144), and archived to `docs/_archive/bugs/`.
 
-**Latest resolutions (2026-02-26):**
+**Earlier resolutions (2026-02-26):**
 - BUG-160 fixed: dashboard session cards now deep-link to per-session review when `firstQuestionSlug` is available.
 - BUG-161 fixed: `paymentFailed` now routes to `subscription_required` in entitlement and checkout-success paths.
 - BUG-162 fixed: review controller now enforces `offset <= MAX_PAGINATION_OFFSET` with boundary tests.
 - BUG-163 fixed: dashboard tutor session fraction now uses `correct/questionCount`.
 - BUG-164 fixed: tutor summary accuracy denominator now matches history/dashboard semantics (`questionCount`).
+
+## Audit #7 — Deep Sweep for First-Principles, Silent-Drop, and Relative Bugs (2026-02-27)
+
+Five-axis investigation covering: (1) existing bug documentation and audit history, (2) domain layer entities and business logic, (3) application use cases and error handling, (4) adapters, server actions, and wiring, and (5) frontend components, race conditions, and accessibility. Ran 5 parallel exploration agents, then **manually verified every finding** against previous audit false-positive records and the actual code with full tracer-bullet traces.
+
+**2 new confirmed bugs filed:** BUG-165 (P3), BUG-166 (P3). Both underwent full tracer-bullet verification — **double-verified** with a second pass of 4 parallel exploration agents (adapters, frontend, domain/application, lib/config) plus manual code reading of every finding.
+
+### Tracer-Bullet Verification (2026-02-27)
+
+The traces below capture the pre-fix code state at discovery time during Audit #7.
+
+**BUG-165 — Full vertical + horizontal trace (12-step):**
+1. `app/(app)/app/billing/manage-billing-actions.ts` → server action entry point (`'use server'`)
+2. → `manage-billing-action.ts` → `runManageBillingActionCore` with `{ failure: '/app/billing?error=portal_failed' }` (NO `unauthenticated` key)
+3. → `manage-billing-core.ts` `runManageBillingAction` → calls `deps.createPortalSessionFn({})`
+4. → `billing-controller.ts` `createPortalSession` → `d.authGateway.requireUser()`
+5. → `clerk-auth-gateway.ts` line 78: throws `ApplicationError('UNAUTHENTICATED', 'User not authenticated')`
+6. → `create-action.ts` line 44-46: catches → `handleError()` → `err('UNAUTHENTICATED', ...)`
+7. → back to `manage-billing-core.ts` line 30: `result.ok` is false
+8. → line 33: `getManageBillingErrorRedirect('UNAUTHENTICATED', deps.redirects)`
+9. → line 12: `errorCode === 'UNAUTHENTICATED'` is true, BUT `redirects.unauthenticated` is `undefined`
+10. → line 16: falls back to `redirects.failure` → `/app/billing?error=portal_failed`
+11. User sees error banner instead of sign-in redirect
+- **Horizontal comparison:** `app/pricing/manage-billing-action.ts` provides `unauthenticated: ROUTES.SIGN_UP` (line 16) — app billing does not
+- **Type trace:** `ManageBillingRedirects.unauthenticated` is optional (`string?`) — type system does not enforce it
+- **Test trace:** Pricing page tests UNAUTHENTICATED → `/sign-up` ✓; App billing tests have NO UNAUTHENTICATED test case (the bug is untested)
+- **Core test:** `manage-billing-core.test.ts` line 73-79 tests the fallback path (when unauthenticated is not configured) — validates the bug behavior EXISTS
+
+**BUG-166 — Full vertical trace (catch-block anatomy):**
+1. `manage-billing-core.ts` lines 25-29: `catch {` — no error parameter binding
+2. Both `manage-billing-action.ts` files (app billing AND pricing) call this core function — both are affected
+3. `createPortalSessionFn` is `billing-controller.ts` `createPortalSession` wrapped by `createAction` — should NOT throw (returns `ActionResult`)
+4. Catch block defends against: container load failures (`loadAppContainer` dynamic import fails), JavaScript runtime errors, unexpected `createPortalSessionFn` implementations
+5. Impact: Even rare errors (container wiring, module resolution, unexpected Stripe SDK errors that bypass `createAction`) are permanently lost — zero server-side record
+6. The catch block has no error parameter, no logging, no monitoring — immediate redirect to failure URL
+
+### Findings Confirmed as NOT Bugs (27 False Positives)
+
+**Re-verified from previous audits (already documented):**
+- Session history pagination total (DB `isNotNull(endedAt)` filters both COUNT and ROWS — Audits #3, #4)
+- `StartPracticeSession` count/mode validation (Zod schema enforces at controller — Audit #3)
+- Bookmark toggle race condition (handled by `onConflictDoUpdate` — Audit #4)
+- `loadPreviousAttempt` silent catch (intentional best-effort design — Audit #4)
+- `paymentProcessing` excluded from `EntitledStatuses` (intentional — BUG-077)
+- DB singleton `NODE_ENV` caching pattern (standard Next.js HMR pattern — Audit #3; in production modules are cached by Node.js)
+
+**New false positives verified this audit:**
+- `SetPracticeSessionQuestionMark` missing question-in-session validation (FALSE — `practice-session-question-state-updater.ts` lines 43-51 validates membership with `NOT_FOUND` error)
+- `StartPracticeSession` missing `input.count` validation (FALSE — Zod schema `z.number().int().min(1).max(200)` at controller)
+- `StartPracticeSession` missing `input.mode` validation (FALSE — `zPracticeMode` enum validation at controller)
+- `GetSessionHistory` pagination broken by defensive filter (FALSE — DB already filters; `skippedCount` is always 0)
+- `GetSessionHistory` "dead code" defensive filter (not a bug — legitimate defense-in-depth)
+- `CreateCheckoutSession` missing email/URL validation (URLs constructed from internal `ROUTES` constants + `appUrl`; email from Clerk — system boundary already validated)
+- `CreateCheckoutSession` wrong error code for missing clerkUserId (INTERNAL_ERROR is correct — null `clerkUserId` with valid `userId` indicates corrupted user data, not unauthenticated access)
+- `GetPracticeSessionReviewUseCase` silent continue on null questionId (defensive guard for impossible `string[]` state)
+- `GetPreviousAttemptUseCase` default sessions no-op parameter (intentional test ergonomics)
+- `ToggleBookmarkUseCase` race condition (last-write-wins is acceptable; concurrent same-user bookmark is near-zero probability)
+- `CountAvailableQuestions` missing filter validation (empty arrays are valid filters — "no filter applied")
+- Domain test factory `86_400_000` magic number (correct value; importing `DAY_MS` would be cleaner but risk is zero — DAY_MS is a physical constant)
+- Health check 503 on rate limiter failure (correct behavior — service unavailable)
+- Idempotency prune silent catch (intentional — pruning must not block caller; logged as warning)
+- Subscription price ID rotation strategy (architectural concern, not a runtime bug)
+- `fireAndForget` without error UI (callers handle errors in `run()`; catch is safety net per Audit #4)
+- `practice-session-page-view` conditional button rendering (correct gating on optional callback)
+- Stripe checkout session retrieve failure leaves old session open (FALSE — intentional defensive design; old sessions auto-expire in 24h; attempting to expire an uninspectable session could be worse if user is mid-checkout; tested at `stripe-checkout-sessions.test.ts` line 443-463)
+- `stripe-subscription-normalizer.ts` missing `.bind()` on `stripeSubscriptions` (FALSE — `stripeSubscriptions` is the namespace OBJECT, not an extracted method; `stripeSubscriptions.retrieve(...)` preserves `this` because the method is called ON the object. Compare with BUG-069/070 where `stripe.customers.search` was extracted as a standalone FUNCTION variable, losing `this`)
+- `db.ts` connection not cached in production (FALSE — re-confirmed from Audit #3; standard Next.js pattern; in production, Node.js module caching ensures `conn` persists at module scope; `globalThis` caching is only needed for dev HMR which re-evaluates modules)
+- Frontend layer clean — no new error handling gaps, race conditions, or accessibility issues found across all pages and components
+- Domain layer clean — zero first-principles logic errors in scoring, grading, session state, entitlement, streak, or question selection
+
+### Domain Layer Health
+
+**Excellent.** Zero first-principles logic bugs. All scoring, grading, session state, entitlement, streak, and question selection logic verified correct. All domain value objects have proper validators with full test coverage. No `any` types, no unsafe assertions, no silent failures. Domain layer maintains zero external imports.
+
+### Security Posture Re-Verified
+
+- Three-layer auth enforcement intact: proxy.ts middleware → layout entitlement → server action `requireEntitledUserId()`
+- All queries scoped to authenticated userId (no IDOR)
+- All SQL parameterized via Drizzle ORM (no injection)
+- Webhook signatures verified (Stripe HMAC, Clerk Svix, cron timing-safe comparison)
+- Rate limiting fail-closed on all public endpoints
+- No magic numbers in security-critical paths
+- No silently dropped IDs, configs, or variables in critical paths
+
+---
 
 ## Audit #6 — Full-Stack Bug Sweep with 5 Parallel Agents (2026-02-25)
 

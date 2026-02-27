@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { err, ok } from '@/src/adapters/controllers/action-result';
+import { FakeLogger } from '@/src/application/test-helpers/fakes';
 import {
   getManageBillingErrorRedirect,
   runManageBillingAction,
@@ -8,6 +9,12 @@ import {
 class RedirectError extends Error {
   constructor(readonly url: string) {
     super(`redirect:${url}`);
+  }
+}
+
+class ThrowingLogger extends FakeLogger {
+  override error(): void {
+    throw new Error('logger failed');
   }
 }
 
@@ -105,6 +112,55 @@ describe('manage-billing-core', () => {
         redirects: {
           failure: '/app/billing?error=portal_failed',
         },
+      });
+
+    await expect(action()).rejects.toMatchObject({
+      url: '/app/billing?error=portal_failed',
+    });
+  });
+
+  it('logs error context when portal session creation throws and logger is provided', async () => {
+    const logger = new FakeLogger();
+
+    const action = async () =>
+      runManageBillingAction({
+        createPortalSessionFn: vi.fn(async () => {
+          throw new Error('network');
+        }),
+        redirectFn,
+        redirects: {
+          failure: '/app/billing?error=portal_failed',
+        },
+        logger,
+      });
+
+    await expect(action()).rejects.toMatchObject({
+      url: '/app/billing?error=portal_failed',
+    });
+    expect(logger.errorCalls).toHaveLength(1);
+    expect(logger.errorCalls[0]).toMatchObject({
+      context: {
+        error: 'network',
+        errorName: 'Error',
+        errorStack: expect.any(String),
+      },
+      msg: 'Billing portal session creation threw',
+    });
+  });
+
+  it('still redirects to failure route when logger throws while handling portal session exception', async () => {
+    const logger = new ThrowingLogger();
+
+    const action = async () =>
+      runManageBillingAction({
+        createPortalSessionFn: vi.fn(async () => {
+          throw new Error('network');
+        }),
+        redirectFn,
+        redirects: {
+          failure: '/app/billing?error=portal_failed',
+        },
+        logger,
       });
 
     await expect(action()).rejects.toMatchObject({

@@ -2,8 +2,10 @@
 
 import { redirect } from 'next/navigation';
 import { runManageBillingAction } from '@/app/(app)/app/billing/manage-billing-action';
+import { logger as appLogger } from '@/lib/logger';
 import type {
   CreatePortalSessionFn,
+  ManageBillingLogger,
   RedirectFn,
 } from '@/lib/manage-billing/manage-billing-types';
 import { createPortalSession } from '@/src/adapters/controllers/billing-controller';
@@ -11,6 +13,7 @@ import { createPortalSession } from '@/src/adapters/controllers/billing-controll
 export type ManageBillingActionDeps = {
   createPortalSessionFn: CreatePortalSessionFn;
   redirectFn: RedirectFn;
+  logger: ManageBillingLogger;
 };
 
 function getDeps(
@@ -22,6 +25,7 @@ function getDeps(
   return {
     createPortalSessionFn,
     redirectFn: deps?.redirectFn ?? redirect,
+    logger: deps?.logger ?? appLogger,
   };
 }
 
@@ -33,5 +37,6 @@ export async function manageBillingAction(
   return runManageBillingAction({
     createPortalSessionFn: d.createPortalSessionFn,
     redirectFn: d.redirectFn,
+    logger: d.logger,
   });
 }
