@@ -12,6 +12,12 @@ class RedirectError extends Error {
   }
 }
 
+class ThrowingLogger extends FakeLogger {
+  override error(): void {
+    throw new Error('logger failed');
+  }
+}
+
 describe('manage-billing-core', () => {
   const redirectFn = (url: string): never => {
     throw new RedirectError(url);
@@ -139,11 +145,7 @@ describe('manage-billing-core', () => {
   });
 
   it('still redirects to failure route when logger throws while handling portal session exception', async () => {
-    const logger = {
-      error: () => {
-        throw new Error('logger failed');
-      },
-    };
+    const logger = new ThrowingLogger();
 
     const action = async () =>
       runManageBillingAction({
