@@ -1,5 +1,6 @@
 import type { NextFetchEvent, NextRequest } from 'next/server';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { ROUTES } from '@/lib/routes';
 import {
   restoreProcessEnv,
   snapshotProcessEnv,
@@ -363,7 +364,7 @@ describe('proxy middleware', () => {
     expect(infoSpy).toHaveBeenCalledWith(
       expect.objectContaining({
         event: 'checkout_success_auth_bounce',
-        route: '/checkout/success',
+        route: ROUTES.CHECKOUT_SUCCESS,
         hasSessionId: true,
       }),
     );
@@ -425,7 +426,7 @@ describe('proxy middleware', () => {
     expect(infoSpy).toHaveBeenCalledWith(
       expect.objectContaining({
         event: 'checkout_success_auth_bounce',
-        route: '/checkout/success',
+        route: ROUTES.CHECKOUT_SUCCESS,
         hasSessionId: true,
       }),
     );
@@ -477,7 +478,7 @@ describe('proxy middleware', () => {
     expect(infoSpy).toHaveBeenCalledWith(
       expect.objectContaining({
         event: 'checkout_success_auth_bounce',
-        route: '/checkout/success',
+        route: ROUTES.CHECKOUT_SUCCESS,
         hasSessionId: true,
       }),
     );
