@@ -13,7 +13,7 @@ The `runManageBillingAction` function in `lib/manage-billing/manage-billing-core
 
 ## Root Cause
 
-`lib/manage-billing/manage-billing-core.ts` lines 25-29:
+`lib/manage-billing/manage-billing-core.ts` lines 24-29:
 
 ```typescript
 let result: Awaited<ReturnType<CreatePortalSessionFn>>;
