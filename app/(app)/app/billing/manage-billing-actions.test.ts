@@ -40,4 +40,20 @@ describe('app/(app)/app/billing/manage-billing-actions', () => {
       message: `redirect:${ROUTES.APP_BILLING}?error=portal_failed`,
     });
   });
+
+  it('redirects to sign-up when portal session creation is unauthenticated', async () => {
+    const createPortalSessionFn = async () =>
+      err('UNAUTHENTICATED', 'Not signed in');
+
+    const redirectFn = createRedirectFn();
+
+    await expect(
+      manageBillingAction(new FormData(), {
+        createPortalSessionFn,
+        redirectFn,
+      }),
+    ).rejects.toMatchObject({
+      message: `redirect:${ROUTES.SIGN_UP}`,
+    });
+  });
 });

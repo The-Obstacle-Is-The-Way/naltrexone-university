@@ -1,5 +1,6 @@
 import type {
   CreatePortalSessionFn,
+  ManageBillingLogger,
   ManageBillingRedirects,
   RedirectFn,
 } from '@/lib/manage-billing/manage-billing-types';
@@ -20,11 +21,16 @@ export async function runManageBillingAction(deps: {
   createPortalSessionFn: CreatePortalSessionFn;
   redirectFn: RedirectFn;
   redirects: ManageBillingRedirects;
+  logger?: ManageBillingLogger;
 }): Promise<void> {
   let result: Awaited<ReturnType<CreatePortalSessionFn>>;
   try {
     result = await deps.createPortalSessionFn({});
-  } catch {
+  } catch (error) {
+    deps.logger?.error(
+      { error: error instanceof Error ? error.message : String(error) },
+      'Billing portal session creation threw',
+    );
     return deps.redirectFn(deps.redirects.failure);
   }
   if (result.ok) return deps.redirectFn(result.data.url);
