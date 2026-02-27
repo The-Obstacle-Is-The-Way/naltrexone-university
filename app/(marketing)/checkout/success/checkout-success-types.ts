@@ -44,6 +44,7 @@ export type ClerkAuthLike = {
 };
 
 export type CheckoutSuccessLogger = {
+  info: (context: Record<string, unknown>, message: string) => void;
   error: (context: Record<string, unknown>, message: string) => void;
   warn?: (context: Record<string, unknown>, message: string) => void;
 };

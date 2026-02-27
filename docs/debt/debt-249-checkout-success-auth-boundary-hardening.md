@@ -2,7 +2,7 @@
 
 **Status:** Active  
 **Priority:** P1  
-**Date:** 2026-02-25  
+**Date:** 2026-02-27  
 **Owner:** Billing/Auth  
 **Related:** [BS-032](../_archive/brainstorming/bs-032-stripe-checkout-clerk-session-friction.md), BUG-043, ADR-014
 
@@ -10,14 +10,17 @@
 
 ## Description
 
-`/checkout/success` is currently configured as a public route and performs a manual auth fallback inside the page (`auth() -> redirectToSignIn(returnBackUrl)`).
+The route-protection hardening from BS-032 is now implemented in code:
 
-This preserves `session_id` today, but it can produce a visible auth bounce after hosted Stripe redirect (pay -> sign-in -> return -> dashboard), which is poor conversion UX in a payment-critical path.
+1. `/checkout/success` is no longer public (`lib/public-routes.ts`).
+2. `proxy.ts` protects non-public routes with `auth.protect()`, including `/checkout/success`.
+3. Query preservation across both sign-in redirect and handshake redirect is covered by `proxy.test.ts`.
+4. Page-level `redirectToSignIn({ returnBackUrl })` fallback remains in `checkout-success-sync.tsx`.
 
-The debt is to harden this flow so it is both:
+Remaining debt is rollout/operability hardening:
 
-1. **User-robust**: fewer post-payment auth bounces.
-2. **Failure-robust**: no regression where `session_id` is lost during sign-in redirect.
+1. **Observability**: emit dedicated instrumentation for checkout-success auth bounces and failure funnels.
+2. **Production validation**: explicitly run and record production-domain validation steps.
 
 ## Why this is debt (not a one-line fix)
 
@@ -26,32 +29,43 @@ Changing `PUBLIC_ROUTE_PATTERNS` alone is not sufficient; redirect semantics and
 
 ## Required change set
 
-1. Remove `/checkout/success(.*)` from `PUBLIC_ROUTE_PATTERNS`.
-2. In `proxy.ts`, protect `/checkout/success` with `auth.protect()` and lock redirect behavior with tests:
-   - Current Clerk SDK behavior sets sign-in `redirect_url` to the current request URL by default.
-   - This behavior exists in both `@clerk/nextjs@6.37.1` and `@clerk/nextjs@6.38.1`; do not assume BUG-043 was fixed by a recent SDK default change.
-   - Keep callback logic minimal; do not rely on callback-only branching for handshake cases.
-3. Explicitly cover handshake preemption:
-   - Clerk may return a handshake redirect before middleware callback code executes.
-   - Add regression tests for `/checkout/success?session_id=...` that validate query preservation across handshake redirects.
-4. Keep page-level fallback redirect in `checkout-success-sync.tsx` permanently as defense-in-depth.
-5. Add/adjust tests:
-   - `lib/public-routes.test.ts` reflects protected route.
-   - `proxy.test.ts` covers preserved `session_id` query in redirect behavior.
-   - existing checkout success tests continue to pass.
-6. Add rollout instrumentation (tracked in [SPEC-016](../specs/spec-016-observability.md)):
-   - auth bounce count on `/checkout/success`
-   - `%` of checkout-success requests missing `session_id`
-   - checkout error redirect rate (`/pricing?checkout=error`)
+### Completed in codebase
+
+- [x] Remove `/checkout/success(.*)` from `PUBLIC_ROUTE_PATTERNS`.
+- [x] Protect `/checkout/success` via middleware `auth.protect()` path.
+- [x] Cover sign-in redirect query preservation for `/checkout/success?session_id=...`.
+- [x] Cover Clerk handshake preemption/query preservation for `/checkout/success?session_id=...`.
+- [x] Keep page-level fallback redirect in `checkout-success-sync.tsx` as defense-in-depth.
+- [x] Keep checkout-success sync idempotent for webhook-first/page-first race paths.
+
+### Outstanding
+
+- [x] Add rollout instrumentation (tracked in [SPEC-016](../specs/spec-016-observability.md)):
+  - auth bounce count on `/checkout/success`
+  - `%` of checkout-success requests missing `session_id`
+  - checkout error redirect rate (`/pricing?checkout=error`)
+- [x] Document middleware logging boundary:
+  - `proxy.ts` runs in middleware/edge context and does not use container-injected app logger.
+  - auth-bounce instrumentation is emitted as structured middleware `console.info({...})` events.
+- [ ] Execute production-domain validation checklist and capture outcomes in this debt doc.
 
 ## Acceptance criteria
 
-- [ ] `/checkout/success` is no longer public in middleware matcher config.
-- [ ] Unauthenticated hit to `/checkout/success?session_id=cs_xxx` redirects to sign-in and returns with the same `session_id`.
-- [ ] Clerk handshake redirect on `/checkout/success?session_id=cs_xxx` preserves `session_id`.
-- [ ] Authenticated Stripe return reaches eager sync and redirects correctly.
-- [ ] Webhook-first and page-first races remain idempotent (no regressions from BUG-099 fix).
-- [ ] `pnpm test --run app/(marketing)/checkout/success/page.test.ts lib/public-routes.test.ts proxy.test.ts` passes.
+- [x] `/checkout/success` is no longer public in middleware matcher config.
+- [x] Unauthenticated hit to `/checkout/success?session_id=cs_xxx` redirects to sign-in and returns with the same `session_id`.
+- [x] Clerk handshake redirect on `/checkout/success?session_id=cs_xxx` preserves `session_id`.
+- [x] Authenticated Stripe return reaches eager sync and redirects correctly.
+- [x] Webhook-first and page-first races remain idempotent (no regressions from BUG-099 fix).
+- [x] `pnpm test --run app/(marketing)/checkout/success/page.test.ts lib/public-routes.test.ts proxy.test.ts` passes.
+- [x] Rollout instrumentation emits actionable events for:
+  - auth bounce count on `/checkout/success`
+  - missing `session_id` rate on checkout success requests
+  - checkout error redirect rate (`/pricing?checkout=error`)
+- [ ] Production validation completed and recorded:
+  - Stripe checkout return on production domain with active session
+  - Stripe checkout return on production domain with forced sign-out
+  - Verify `session_id` survives sign-in round-trip
+  - Verify no elevated `/pricing?checkout=error` rate after deployment
 
 ## Risks and mitigations
 

@@ -281,6 +281,7 @@ describe('proxy middleware', () => {
 
   it('preserves full checkout success URL including session_id when auth.protect redirects to sign-in', async () => {
     process.env.NEXT_PUBLIC_SKIP_CLERK = 'false';
+    const infoSpy = vi.spyOn(console, 'info').mockImplementation(() => {});
 
     type ClerkMiddlewareCallback = (
       auth: { protect: () => Promise<void> },
@@ -359,10 +360,18 @@ describe('proxy middleware', () => {
       'https://example.com',
     ).searchParams.get('redirect_url');
     expect(redirectUrl).toBe(checkoutSuccessUrl);
+    expect(infoSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: 'checkout_success_auth_bounce',
+        route: '/checkout/success',
+        hasSessionId: true,
+      }),
+    );
   });
 
   it('preserves full checkout success URL including session_id when Clerk handshake redirects before callback execution', async () => {
     process.env.NEXT_PUBLIC_SKIP_CLERK = 'false';
+    const infoSpy = vi.spyOn(console, 'info').mockImplementation(() => {});
 
     type ClerkMiddlewareCallback = (
       auth: { protect: () => Promise<void> },
@@ -413,5 +422,12 @@ describe('proxy middleware', () => {
       'https://example.com',
     ).searchParams.get('redirect_url');
     expect(redirectUrl).toBe(checkoutSuccessUrl);
+    expect(infoSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: 'checkout_success_auth_bounce',
+        route: '/checkout/success',
+        hasSessionId: true,
+      }),
+    );
   });
 });
