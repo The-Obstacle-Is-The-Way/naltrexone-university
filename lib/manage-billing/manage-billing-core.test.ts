@@ -137,4 +137,28 @@ describe('manage-billing-core', () => {
       msg: 'Billing portal session creation threw',
     });
   });
+
+  it('still redirects to failure route when logger throws while handling portal session exception', async () => {
+    const logger = {
+      error: () => {
+        throw new Error('logger failed');
+      },
+    };
+
+    const action = async () =>
+      runManageBillingAction({
+        createPortalSessionFn: vi.fn(async () => {
+          throw new Error('network');
+        }),
+        redirectFn,
+        redirects: {
+          failure: '/app/billing?error=portal_failed',
+        },
+        logger,
+      });
+
+    await expect(action()).rejects.toMatchObject({
+      url: '/app/billing?error=portal_failed',
+    });
+  });
 });
