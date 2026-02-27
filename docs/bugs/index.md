@@ -13,23 +13,23 @@ Bug reports document issues discovered in the codebase along with their root cau
 2. **Regression Prevention** — Ensure we don't reintroduce the same bugs
 3. **Knowledge Base** — Help future developers understand past issues
 
-## Bug Index (Active)
+## Bug Index (Current)
 
 | ID | Title | Priority | Status |
 |----|-------|----------|--------|
-| [BUG-165](./bug-165-app-billing-missing-unauthenticated-redirect.md) | App Billing Manage-Billing Action Missing `unauthenticated` Redirect | P3 | Open |
-| [BUG-166](./bug-166-manage-billing-core-swallows-errors-silently.md) | manage-billing-core Catch Block Swallows Errors Without Logging | P3 | Open |
+| [BUG-165](./bug-165-app-billing-missing-unauthenticated-redirect.md) | App Billing Manage-Billing Action Missing `unauthenticated` Redirect | P3 | Resolved (2026-02-27) |
+| [BUG-166](./bug-166-manage-billing-core-swallows-errors-silently.md) | manage-billing-core Catch Block Swallows Errors Without Logging | P3 | Resolved (2026-02-27) |
 
 **Next Bug ID:** BUG-167
 
-**Latest additions (2026-02-27):**
-- BUG-165 identified: app billing action missing `unauthenticated` redirect (inconsistent with pricing page).
-- BUG-166 identified: manage-billing-core catch block swallows all errors without logging.
+**Latest resolutions (2026-02-27):**
+- BUG-165 resolved in commit `181e89f4c6fad0ec37a5e9388c8bf0b388c105b3`: app billing manage-billing action now includes `unauthenticated` redirect and regression tests.
+- BUG-166 resolved in commit `181e89f4c6fad0ec37a5e9388c8bf0b388c105b3`: manage-billing core now logs thrown errors, with logger wiring from app + pricing billing actions.
 
 **Latest archival (2026-02-27):**
 - BUG-160 through BUG-164 verified fixed, merged (PR #144), and archived to `docs/_archive/bugs/`.
 
-**Latest resolutions (2026-02-26):**
+**Earlier resolutions (2026-02-26):**
 - BUG-160 fixed: dashboard session cards now deep-link to per-session review when `firstQuestionSlug` is available.
 - BUG-161 fixed: `paymentFailed` now routes to `subscription_required` in entitlement and checkout-success paths.
 - BUG-162 fixed: review controller now enforces `offset <= MAX_PAGINATION_OFFSET` with boundary tests.

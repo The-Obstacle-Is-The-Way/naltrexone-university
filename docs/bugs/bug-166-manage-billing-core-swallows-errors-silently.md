@@ -1,7 +1,7 @@
 # BUG-166: manage-billing-core Catch Block Swallows Errors Without Logging
 
 **Priority:** P3
-**Status:** Open
+**Status:** Resolved (2026-02-27)
 **Found:** 2026-02-27 (Audit #7)
 **Component:** Billing / Observability
 
@@ -9,11 +9,11 @@
 
 ## Problem
 
-The `runManageBillingAction` function in `lib/manage-billing/manage-billing-core.ts` catches all errors thrown by `createPortalSessionFn` and silently redirects to the failure URL without logging. In production, when Stripe's portal API fails, there is zero diagnostic visibility.
+The `runManageBillingAction` function in `lib/manage-billing/manage-billing-core.ts` caught all errors thrown by `createPortalSessionFn` and silently redirected to the failure URL without logging. In production, when Stripe's portal API failed, there was zero diagnostic visibility.
 
 ## Root Cause
 
-`lib/manage-billing/manage-billing-core.ts` lines 24-29:
+Before the fix, `lib/manage-billing/manage-billing-core.ts` had:
 
 ```typescript
 let result: Awaited<ReturnType<CreatePortalSessionFn>>;
@@ -62,9 +62,24 @@ export async function runManageBillingAction(deps: {
 }
 ```
 
-The logger is optional (`?`) to avoid breaking existing callers. Callers should be updated to pass `logger` from the container.
+The logger remains optional (`?`) to avoid breaking existing callers. Both app billing and pricing manage-billing actions now accept/pass logger dependencies, and their server-action wrappers default to `appLogger`.
 
 ## Verification
 
 1. Unit test: Invoke `runManageBillingAction` with a `createPortalSessionFn` that throws → assert `logger.error` is called with the error message
 2. Unit test: Invoke without logger → assert no crash (graceful degradation)
+3. Caller wiring tests: App billing and pricing `runManageBillingAction` tests pass a `FakeLogger` and verify thrown errors are logged.
+
+## Resolution
+
+- **Resolved:** 2026-02-27
+- **Commit:** `181e89f4c6fad0ec37a5e9388c8bf0b388c105b3`
+- **Changes:**
+  - Added optional `logger?: ManageBillingLogger` dependency to `runManageBillingAction` in `lib/manage-billing/manage-billing-core.ts`
+  - Logged thrown portal-session errors before redirecting to failure URL
+  - Wired logger through both callers:
+    - `app/(app)/app/billing/manage-billing-action.ts`
+    - `app/pricing/manage-billing-action.ts`
+  - Wired default logger in both server-action wrappers:
+    - `app/(app)/app/billing/manage-billing-actions.ts`
+    - `app/pricing/manage-billing-actions.ts`
