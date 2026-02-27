@@ -794,16 +794,18 @@ These components are logic-only; all visual styling is centralized in `component
 
 **Problem:** No clear rule for when to use which. The standards doc covers hoverable cards, but not text-link/brand-link hover strategy.
 
-### B. "headerLinkButtonClasses" Pattern (3 files)
+### B. "headerLinkButtonClasses" Pattern (6 files)
 
-Used in: `app/(app)/app/dashboard/page.tsx`, `app/(app)/app/history/components/history-sessions-tab.tsx`, `app/(app)/app/history/components/history-questions-tab.tsx`
+As a named `const headerLinkButtonClasses` in: `app/(app)/app/dashboard/page.tsx`, `app/(app)/app/history/components/history-sessions-tab.tsx`, `app/(app)/app/history/components/history-questions-tab.tsx`
+
+As an identical inline class string in: `app/(app)/app/practice/components/practice-view.tsx:156`, `app/(app)/app/bookmarks/page.tsx:56`, `app/(app)/app/practice/practice-page-client.tsx:35`
 
 ```ts
 const headerLinkButtonClasses =
   'h-auto p-0 text-muted-foreground no-underline hover:text-foreground hover:no-underline';
 ```
 
-**Problem:** This is copy-pasted as a local const in 3 separate files. Not a shared constant. If the pattern changes, all 3 files need updating.
+**Problem:** This is copy-pasted across 6 separate files (3 as a named const, 3 as inline class strings). Not a shared constant. If the pattern changes, all 6 files need updating.
 
 ### C. Border Opacity Values (3 different values)
 
