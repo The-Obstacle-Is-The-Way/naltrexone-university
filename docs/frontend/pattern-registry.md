@@ -809,6 +809,8 @@ These are tracked in [DEBT-250](../debt/debt-250-frontend-visual-divergence-comp
 | `AFFORD-1` | Affordance concern | I-3 selected-but-not-submitted state may add `bg-muted/20` (without changing border logic) |
 | `UX-1`–`UX-4` | UX seams | Non-visual/product decisions (documented in DEBT-250 Decisions 3, 6, 7, 8) |
 
+Clerk auth-surface radius/interaction differences are an accepted third-party seam and not a local styling target.
+
 ---
 
 ## Part 12: Typography System

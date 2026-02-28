@@ -76,6 +76,7 @@ Action bars are rendered inline per context (not via a shared component). The bu
 - Previous only appears when there's a session-ordered question list
 - Quick Practice has no Previous (no session context, no ordering)
 - Individual review has no Previous/Next (no session context)
+- Standalone individual review intentionally omits bookmark actions by design.
 
 ---
 

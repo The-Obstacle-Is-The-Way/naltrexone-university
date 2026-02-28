@@ -96,6 +96,24 @@ describe('app/pricing', () => {
     expect(headings).toContain('Pro Annual');
   });
 
+  it('relies on the outer marketing layout for viewport min-height', async () => {
+    const html = renderToStaticMarkup(
+      <PricingView
+        isEntitled={false}
+        banner={null}
+        subscribeMonthlyAction={async () => undefined}
+        subscribeAnnualAction={async () => undefined}
+      />,
+    );
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const root = doc.querySelector('[data-testid="pricing-root"]');
+    const classes = root?.getAttribute('class') ?? '';
+
+    expect(classes).toContain('bg-background');
+    expect(classes).toContain('py-16');
+    expect(classes).not.toContain('min-h-screen');
+  });
+
   it('renders shared pricing values', async () => {
     const html = renderToStaticMarkup(
       <PricingView
