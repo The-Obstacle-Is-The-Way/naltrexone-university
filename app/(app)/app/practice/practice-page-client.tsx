@@ -5,6 +5,7 @@ import { ErrorCard } from '@/components/error-card';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { ROUTES } from '@/lib/routes';
+import { headerActionLinkClasses } from '@/lib/shared-styles';
 import { IncompleteSessionCard, PracticeSessionStarter } from './components';
 import { fireAndForget, logUnhandledAsyncError } from './fire-and-forget';
 import { usePracticeSessionControls } from './hooks/use-practice-session-controls';
@@ -29,11 +30,7 @@ export default function PracticePageClient() {
             </p>
           </div>
           <div className="flex items-center gap-3">
-            <Button
-              asChild
-              variant="link"
-              className="h-auto p-0 text-muted-foreground no-underline hover:text-foreground hover:no-underline"
-            >
+            <Button asChild variant="link" className={headerActionLinkClasses}>
               <Link href={ROUTES.APP_DASHBOARD}>Back to Dashboard</Link>
             </Button>
           </div>

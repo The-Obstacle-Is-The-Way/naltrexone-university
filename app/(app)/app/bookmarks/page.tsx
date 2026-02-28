@@ -16,6 +16,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { formatDate } from '@/lib/format-date';
 import { ROUTES, toQuestionRoute } from '@/lib/routes';
+import { headerActionLinkClasses } from '@/lib/shared-styles';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import {
   type GetBookmarksOutput,
@@ -50,11 +51,7 @@ export function BookmarksView({ rows }: { rows: GetBookmarksOutput['rows'] }) {
             Review questions you&apos;ve bookmarked.
           </p>
         </div>
-        <Button
-          asChild
-          variant="link"
-          className="h-auto p-0 text-muted-foreground no-underline hover:text-foreground hover:no-underline"
-        >
+        <Button asChild variant="link" className={headerActionLinkClasses}>
           <Link href={ROUTES.APP_PRACTICE}>Go to Practice</Link>
         </Button>
       </div>

@@ -14,15 +14,13 @@ import {
 import { formatDate } from '@/lib/format-date';
 import { formatDuration } from '@/lib/format-duration';
 import { ROUTES, toQuestionRoute } from '@/lib/routes';
+import { headerActionLinkClasses } from '@/lib/shared-styles';
 import { cn } from '@/lib/utils';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import type { GetSessionHistoryOutput } from '@/src/adapters/controllers/practice-controller';
 import type { SessionModeFilter } from '../history-search-params';
 import { buildHistorySessionsHref } from '../history-search-params';
 import { useHistorySessions } from '../hooks/use-history-sessions';
-
-const headerLinkButtonClasses =
-  'h-auto p-0 text-muted-foreground no-underline hover:text-foreground hover:no-underline';
 
 export type HistorySessionsTabProps = {
   result: ActionResult<GetSessionHistoryOutput>;
@@ -288,7 +286,7 @@ export function HistorySessionsTab({
 
       <div className="flex items-center justify-between">
         {offset > 0 ? (
-          <Button asChild variant="link" className={headerLinkButtonClasses}>
+          <Button asChild variant="link" className={headerActionLinkClasses}>
             <Link
               href={buildHistorySessionsHref({
                 limit,
@@ -304,7 +302,7 @@ export function HistorySessionsTab({
         )}
 
         {hasNextPage ? (
-          <Button asChild variant="link" className={headerLinkButtonClasses}>
+          <Button asChild variant="link" className={headerActionLinkClasses}>
             <Link
               href={buildHistorySessionsHref({
                 limit,
