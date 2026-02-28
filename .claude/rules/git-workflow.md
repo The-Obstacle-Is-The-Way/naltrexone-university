@@ -13,7 +13,8 @@
 
 **Before opening a PR:**
 ```bash
-pnpm typecheck && pnpm lint && pnpm test --run && pnpm test:integration && pnpm build
+# Ensure test DB is running first (see AGENTS.md "Running Integration Tests Locally")
+pnpm typecheck && pnpm lint && pnpm test --run && pnpm test:browser && pnpm test:integration && pnpm build
 ```
 
 ## CodeRabbit Review (MANDATORY)

@@ -489,6 +489,7 @@ Integration tests run against a real Postgres instance. In CI, a service contain
 
 **Before opening a PR, run:**
 ```bash
+# Ensure test DB is running for integration tests (see "Running Integration Tests Locally")
 pnpm typecheck && pnpm lint && pnpm test --run && pnpm test:browser && pnpm test:integration && pnpm build
 ```
 
