@@ -128,26 +128,39 @@ describe('components/marketing/marketing-home', () => {
     // D-9: pills should not have custom hover:bg-muted or bg-card overrides
     for (const pill of [pricingLink, signInCta]) {
       expect(pill).not.toBeUndefined();
-      const cls = pill?.parentElement?.getAttribute('class') ?? '';
+      const cls = pill?.getAttribute('class') ?? '';
+      expect(cls).toContain('hover:bg-accent');
       expect(cls).not.toContain('hover:bg-muted');
       expect(cls).not.toContain('bg-card');
       expect(cls).not.toContain('border-border');
     }
   });
 
-  it('uses outline variant for monthly CTA instead of secondary', () => {
-    const html = renderToStaticMarkup(
-      <MarketingHomeShell
-        authNav={<div>AuthNav</div>}
-        primaryCta={<a href="/pricing">Get Started</a>}
-      />,
-    );
+  it('uses outline monthly CTA and default annual CTA in pricing cards', () => {
+    const doc = renderDoc();
+    const pricingSection = doc.querySelector('section[aria-label="Pricing"]');
+    const ctas = Array.from(
+      pricingSection?.querySelectorAll('a[href="/pricing"]') ?? [],
+    ).filter((link) => link.textContent?.trim() === 'Get Started');
 
-    // D-14: secondary variant was invisible in dark mode
-    expect(html).not.toContain('variant="secondary"');
+    expect(ctas).toHaveLength(2);
+
+    const monthlyCtaClass = ctas[0]?.getAttribute('class') ?? '';
+    const annualCtaClass = ctas[1]?.getAttribute('class') ?? '';
+
+    // D-14: monthly should be outline variant (not secondary)
+    expect(monthlyCtaClass).toContain('hover:bg-accent');
+    expect(monthlyCtaClass).not.toContain('bg-secondary');
+    expect(monthlyCtaClass).not.toContain('hover:bg-secondary/80');
+
+    // D-10: annual should use default variant classes (no manual fg/bg bypass)
+    expect(annualCtaClass).toContain('bg-primary');
+    expect(annualCtaClass).toContain('hover:bg-primary/90');
+    expect(annualCtaClass).not.toContain('bg-foreground');
+    expect(annualCtaClass).not.toContain('text-background');
   });
 
-  it('does not bypass variant system on annual CTA', () => {
+  it('marks MetallicCtaButton with debt exception data marker', () => {
     const html = renderToStaticMarkup(
       <MarketingHomeShell
         authNav={<div>AuthNav</div>}
@@ -155,20 +168,7 @@ describe('components/marketing/marketing-home', () => {
       />,
     );
 
-    // D-10: manual bg-foreground/text-background bypass should be gone
-    expect(html).not.toContain('bg-foreground');
-    expect(html).not.toContain('text-background');
-  });
-
-  it('marks MetallicCtaButton with debt exception comment', () => {
-    const html = renderToStaticMarkup(
-      <MarketingHomeShell
-        authNav={<div>AuthNav</div>}
-        primaryCta={<a href="/pricing">Get Started</a>}
-      />,
-    );
-
-    // D-15: exception marker prevents expansion to other pages
+    // D-15: machine-verifiable exception marker prevents expansion to other pages
     expect(html).toContain('data-debt-exception="D-15"');
   });
 

@@ -1,7 +1,7 @@
 # DEBT-256: Expanded Breakdown Visual Hierarchy
 
 **Status:** Resolved
-**Parent:** [DEBT-250](debt-250-frontend-visual-divergence-compliance-plan.md)
+**Parent:** [DEBT-250](../../debt/debt-250-frontend-visual-divergence-compliance-plan.md)
 **Items:** STRUCT-1
 **Unblocked:** Decision 4 resolved (recommended path) + DEBT-252 merged in PR #150
 **File:** `app/(app)/app/history/components/history-sessions-tab.tsx`
@@ -26,7 +26,7 @@
 <Button asChild variant="outline" className="rounded-full">
 ```
 
-**Target** (pending Decision 4 — recommended):
+**Target** (implemented, Decision 4 recommended path):
 ```tsx
 <div className="mt-3 -mx-1 space-y-2 rounded-lg border border-border/30 bg-background/60 p-3">
   <Button asChild variant="default" className="rounded-full">

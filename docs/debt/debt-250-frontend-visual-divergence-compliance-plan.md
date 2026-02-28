@@ -37,16 +37,16 @@ DEBT-250 is decomposed into 14 child specs (DEBT-251–264). Each child spec map
 | [DEBT-251](../_archive/debt/debt-251-choice-button-compliance.md) | D-3, D-6, A11Y-2, LIGHT-3 | `choice-button.tsx` | Resolved in PR #150 | [#150](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/150) |
 | [DEBT-252](../_archive/debt/debt-252-history-sessions-compliance.md) | D-1, D-5, A11Y-1 | `history-sessions-tab.tsx` | Resolved in PR #150 | [#150](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/150) |
 | [DEBT-253](../_archive/debt/debt-253-scattered-phase1-fixes.md) | D-2, D-4, D-7, D-12 | 4 independent files | Resolved in PR #150 | [#150](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/150) |
-| [DEBT-254](debt-254-headings-errorcard-compliance.md) | D-17, COMP-1 | 5 auth/error pages + `error-card.tsx` | Not started | — |
+| [DEBT-254](../_archive/debt/debt-254-headings-errorcard-compliance.md) | D-17, COMP-1 | 5 auth/error pages + `error-card.tsx` | Resolved (2026-02-28) | — |
 
 ### Decision-dependent
 
 | Spec | Items | Blocked By | Primary File(s) | Status | PR |
 |------|-------|-----------|-----------------|--------|----|
-| [DEBT-255](debt-255-mobile-nav-hover.md) | D-16 | ~~Decision 10~~ Resolved | `mobile-nav.tsx` | Ready | — |
-| [DEBT-256](debt-256-expanded-breakdown-hierarchy.md) | STRUCT-1 | Decision 4 + DEBT-252 merged | `history-sessions-tab.tsx` | Blocked | — |
-| [DEBT-257](debt-257-choice-selected-state.md) | AFFORD-1 | Decision 5 + DEBT-251 merged | `choice-button.tsx` | Blocked | — |
-| [DEBT-258](debt-258-marketing-alignment.md) | D-8, D-9, D-10, D-14, D-15 | Decision 1 (+ opt. 2) | `marketing-home.tsx` + layouts | Partially blocked (D-8 ready) | — |
+| [DEBT-255](../_archive/debt/debt-255-mobile-nav-hover.md) | D-16 | ~~Decision 10~~ Resolved | `mobile-nav.tsx` | Resolved (2026-02-28) | — |
+| [DEBT-256](../_archive/debt/debt-256-expanded-breakdown-hierarchy.md) | STRUCT-1 | ~~Decision 4 + DEBT-252 merged~~ Resolved | `history-sessions-tab.tsx` | Resolved (2026-02-28) | — |
+| [DEBT-257](../_archive/debt/debt-257-choice-selected-state.md) | AFFORD-1 | ~~Decision 5 + DEBT-251 merged~~ Resolved | `choice-button.tsx` | Resolved (2026-02-28) | — |
+| [DEBT-258](../_archive/debt/debt-258-marketing-alignment.md) | D-8, D-9, D-10, D-14, D-15 | ~~Decision 1 (+ opt. 2)~~ ~~Decision 2~~ Resolved | `marketing-home.tsx` + layouts | Resolved (2026-02-28) | — |
 | [DEBT-259](debt-259-shared-constants-extraction.md) | D-13, D-11 | DEBT-252/253 merged | 8 files (refactor) | Blocked | — |
 | [DEBT-260](debt-260-ux-seams.md) | UX-1, UX-2, UX-3, UX-4 | Decisions 3, 6, 7, 8 | 1–3 files | Blocked | — |
 | [DEBT-261](debt-261-touch-targets.md) | TOUCH-1, TOUCH-2 | Decision 11 | `mobile-nav.tsx`, `theme-toggle.tsx`, `auth-nav.tsx` | Blocked | — |

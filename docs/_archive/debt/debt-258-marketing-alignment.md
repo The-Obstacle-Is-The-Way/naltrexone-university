@@ -1,7 +1,7 @@
 # DEBT-258: Marketing Alignment
 
 **Status:** Resolved
-**Parent:** [DEBT-250](debt-250-frontend-visual-divergence-compliance-plan.md)
+**Parent:** [DEBT-250](../../debt/debt-250-frontend-visual-divergence-compliance-plan.md)
 **Items:** D-8, D-9, D-10, D-14, D-15
 **Unblocked:** Decision 1 resolved (recommended: Monthly→outline, Annual→default, kill outlinePillClasses) + Decision 2 resolved (recommended: keep MetallicCtaButton as documented exception)
 **Files:** `components/marketing/marketing-home.tsx`, `components/marketing/marketing-layout.tsx`, `app/(app)/app/layout.tsx` (Decision 2 alternative also touches `components/ui/metallic-cta-button.tsx` and `components/ui/metallic-border.tsx`)
@@ -98,7 +98,7 @@ Change `variant="secondary"` → `variant="outline"` for visible border in dark 
 
 ### D-15: MetallicCtaButton Exception
 
-**File:** `components/marketing/marketing-home.tsx:254-256`
+**File:** `components/marketing/marketing-home.tsx:253-257`
 
 **Current**:
 ```tsx
@@ -107,15 +107,17 @@ Change `variant="secondary"` → `variant="outline"` for visible border in dark 
 </MetallicCtaButton>
 ```
 
-**Target** (recommended):
+**Target** (implemented, Decision 2 recommended path):
 ```tsx
 {/* @debt-exception D-15: Marketing-only metallic CTA. Do not expand to other pages. */}
-<MetallicCtaButton href={ROUTES.PRICING}>
-  Get Started
-</MetallicCtaButton>
+<span data-debt-exception="D-15">
+  <MetallicCtaButton href={ROUTES.PRICING}>
+    Get Started
+  </MetallicCtaButton>
+</span>
 ```
 
-Add explicit exception comment and keep this usage marketing-only.
+Add explicit source comment and a machine-verifiable marker while keeping usage marketing-only.
 
 ---
 
@@ -123,7 +125,7 @@ Add explicit exception comment and keep this usage marketing-only.
 
 **Decision 1 — RESOLVED:** Monthly→`outline`, Annual→`default`, remove `outlinePillClasses`. Verified: `--primary` = `--foreground` in dark mode — zero visual regression on annual CTA switch.
 
-**Decision 2 — RESOLVED:** Keep MetallicCtaButton as documented marketing-only exception with `@debt-exception D-15` comment.
+**Decision 2 — RESOLVED:** Keep MetallicCtaButton as documented marketing-only exception with `@debt-exception D-15` source comment and `data-debt-exception="D-15"` marker.
 
 All items unblocked.
 
@@ -157,6 +159,10 @@ rg -n 'variant=\"secondary\"' components/marketing/marketing-home.tsx
 
 # D-15: exception marker present when keeping metallic CTA
 rg -n '@debt-exception D-15' components/marketing/marketing-home.tsx
+# Expected: 1 match on recommended Decision 2 path
+
+# D-15: machine-verifiable exception marker present
+rg -n 'data-debt-exception=\"D-15\"' components/marketing/marketing-home.tsx
 # Expected: 1 match on recommended Decision 2 path
 
 # D-15: MetallicCtaButton usage stays marketing-only across repo

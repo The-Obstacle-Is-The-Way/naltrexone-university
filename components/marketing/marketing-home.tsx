@@ -250,6 +250,7 @@ export function MarketingHomeShell({
               Full access, cancel anytime.
             </p>
             <div className="mt-8 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
+              {/* @debt-exception D-15: Marketing-only metallic CTA. Do not expand to other pages. */}
               <span data-debt-exception="D-15">
                 <MetallicCtaButton href={ROUTES.PRICING}>
                   Get Started
