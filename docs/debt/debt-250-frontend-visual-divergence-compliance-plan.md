@@ -10,12 +10,15 @@
 
 ## Description
 
-BS-035 audited every route, component, and shared primitive for visual consistency. It identified:
+BS-035 audited every route, component, and shared primitive for visual consistency. A follow-up deep sweep audited CSS, Tailwind config, typography, spacing, shadows, animations, z-index, responsive breakpoints, icons, and accessibility patterns. Together they identified:
 
 - **16 code divergences** (D-1 through D-16) — places where source code uses classes that violate the Pattern Registry
 - **1 high-severity structural issue** — expanded breakdown visual hierarchy collapse (not a D-item, but the highest-severity finding)
 - **1 medium-severity affordance concern** — choice button selected state subtlety
 - **4 low-severity UX seams** — pricing dead space, missing bookmark, missing ThemeToggle, Clerk styling seam
+- **1 typography inconsistency** (D-17) — auth/error page headings missing `font-heading` and `tracking-tight`
+- **1 component default inconsistency** (COMP-1) — ErrorCard default padding mismatched with usage
+- **1 accessibility gap** (A11Y-1) — interactive `<li>` rows missing ARIA role
 
 This spec is **self-contained**. Every item includes the exact file, line number, current class string, and target class string. No cross-referencing required.
 
@@ -389,6 +392,128 @@ block rounded-md px-3 py-3 text-sm text-muted-foreground transition-colors hover
 **Recommended:** Option 1 — keep active at `bg-muted` (100%), update Pattern Registry L-6 active definition. Document the principle: "Active state fill is always stronger than hover fill."
 
 **Verify (active):** After Decision 10, confirm the active state opacity is explicitly documented in L-6 and matches the code.
+
+---
+
+### D-17: Auth/Error Page Heading Inconsistency
+
+**Severity:** Low
+**Pattern:** Undocumented (now Pattern Registry Part 12 — Typography System)
+
+All app pages use `text-2xl font-bold font-heading tracking-tight text-foreground` for H1. Five utility/error pages diverge:
+
+| Page | File:Line | Current Classes | Missing |
+|------|-----------|----------------|---------|
+| Sign In | `app/sign-in/[[...sign-in]]/sign-in-page-client.tsx:25` | `text-xl font-semibold text-foreground` | `font-heading`, `tracking-tight`, wrong size/weight |
+| Sign Up | `app/sign-up/[[...sign-up]]/sign-up-page-client.tsx:25` | `text-xl font-semibold text-foreground` | `font-heading`, `tracking-tight`, wrong size/weight |
+| Checkout Success | `app/(marketing)/checkout/success/checkout-success-sync.tsx:283` | `text-xl font-semibold text-foreground` | `font-heading`, `tracking-tight`, wrong size/weight |
+| Global Error | `app/global-error.tsx:29` | `text-2xl font-bold font-heading text-foreground` | `tracking-tight` |
+| Error Boundary | `components/error-boundary-page.tsx:39` | `text-xl font-semibold font-heading text-foreground` | `tracking-tight`, wrong size/weight |
+
+**Note:** Sign In/Up H1s only render when `NEXT_PUBLIC_SKIP_CLERK=true` (dev/test fallback). In production, Clerk renders its own H1. Checkout Success is a transient "Finalizing..." state that redirects automatically.
+
+**Target:** Normalize all to the standard app heading pattern, **but at `text-xl font-semibold`** for utility pages (these are deliberately smaller than full app pages — they're centered, narrow-width contexts):
+```
+text-xl font-semibold font-heading tracking-tight text-foreground
+```
+
+For Global Error (which already uses `text-2xl font-bold font-heading`), just add `tracking-tight`:
+```
+text-2xl font-bold font-heading tracking-tight text-foreground
+```
+
+**Changes:**
+1. Sign In, Sign Up, Checkout Success: add `font-heading tracking-tight`
+2. Global Error: add `tracking-tight`
+3. Error Boundary: add `tracking-tight`
+
+**Verify:** `rg -n 'font-semibold text-foreground' app/sign-in app/sign-up app/global-error.tsx components/error-boundary-page.tsx` — every match should include `font-heading tracking-tight`.
+
+---
+
+### COMP-1: ErrorCard Default Padding Mismatch
+
+**Severity:** Medium
+**Pattern:** F-3 (ErrorCard)
+
+The `ErrorCard` component defaults to `p-4`, but the majority of call sites override it to `p-6`.
+
+**13 total call sites** (excluding tests):
+
+| # | File | className | Effective Padding |
+|---|------|-----------|-------------------|
+| 1 | `bookmarks/page.tsx:218` | `"p-6"` | p-6 (override) |
+| 2 | `bookmarks/page.tsx:258` | `"p-6"` | p-6 (override) |
+| 3 | `dashboard/page.tsx:134` | `"mt-4"` | p-4 (default) |
+| 4 | `dashboard/page.tsx:289` | `"p-6"` | p-6 (override) |
+| 5 | `billing/page.tsx:150` | `"p-6"` | p-6 (override) |
+| 6 | `question-page-client.tsx:222` | `"p-6"` | p-6 (override) |
+| 7 | `practice-page-client.tsx:58` | _(none)_ | p-4 (default) |
+| 8 | `practice-session-page-view.tsx:127` | `"p-6"` | p-6 (override) |
+| 9 | `practice-session-page-view.tsx:194` | `"p-4"` | p-4 (explicit) |
+| 10 | `practice-view.tsx:168` | `"p-6"` | p-6 (override) |
+| 11 | `practice-view.tsx:193` | `"p-6"` | p-6 (override) |
+| 12 | `history-sessions-tab.tsx:88` | _(none)_ | p-4 (default) |
+| 13 | `history-questions-tab.tsx:121` | _(none)_ | p-4 (default) |
+
+**Summary:** 8 use `p-6`, 5 use `p-4` (3 via default, 1 via `mt-4` only, 1 explicit).
+
+**Current** — `components/error-card.tsx:15`:
+```
+rounded-2xl border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive shadow-sm
+```
+
+**Target:**
+```
+rounded-2xl border border-destructive/30 bg-destructive/10 p-6 text-sm text-destructive shadow-sm
+```
+
+**Changes:**
+1. Change `p-4` to `p-6` in the ErrorCard component definition
+2. Remove `className="p-6"` from the 8 override call sites (now redundant)
+3. Add explicit `className="p-4"` to the 4 compact-context sites that currently rely on the default:
+   - `dashboard/page.tsx:134` — change `className="mt-4"` → `className="mt-4 p-4"`
+   - `practice-page-client.tsx:58` — add `className="p-4"`
+   - `history-sessions-tab.tsx:88` — add `className="p-4"`
+   - `history-questions-tab.tsx:121` — add `className="p-4"`
+4. Keep `practice-session-page-view.tsx:194` as-is (already explicit `className="p-4"`)
+
+**Net result:** 8 overrides removed, 3 explicit `p-4` added. The default now matches the majority usage.
+
+**Verify:** `rg -n 'ErrorCard.*p-6' app` returns 0 matches. `rg -n "p-6" components/error-card.tsx` returns 1 match (the default).
+
+---
+
+### A11Y-1: History Sessions Clickable Row Missing ARIA Role
+
+**Severity:** Medium
+**Blocks:** D-1 (related — D-1 addresses the hover pattern on the same element)
+
+**Problem:** History session rows use `<li tabIndex={0} onClick onKeyDown>` with a delegated click handler and nested `<Link tabIndex={-1}>`. Screen readers announce these as "list item" rather than conveying interactivity.
+
+**Current** — `app/(app)/app/history/components/history-sessions-tab.tsx:178-181`:
+```tsx
+<li
+  key={session.id}
+  tabIndex={isReviewable ? 0 : undefined}
+  className={
+```
+
+**Target:**
+```tsx
+<li
+  key={session.id}
+  role={isReviewable ? 'link' : undefined}
+  tabIndex={isReviewable ? 0 : undefined}
+  className={
+```
+
+**Changes:**
+1. Add `role="link"` when the row is interactive (`isReviewable`)
+
+**Note:** This fix should be applied together with D-1 (which changes the hover classes on the same element). The ideal long-term fix is to make the entire `<li>` a `<Link>` component (eliminating the delegated click pattern), but that requires more refactoring and is tracked as a known debt in Pattern Registry I-1.
+
+**Verify:** `rg -n 'role="link"' 'app/(app)/app/history/components/history-sessions-tab.tsx'` returns 1 match.
 
 ---
 
@@ -775,14 +900,16 @@ After all code changes are complete, update docs in lockstep.
 
 ```
 Phase 1 (no decisions needed — can start immediately)
-├── D-1: History sessions hover token
+├── D-1: History sessions hover token + A11Y-1 (role="link")
 ├── D-2: History questions hover token
 ├── D-3: Choice button hover opacity
 ├── D-4: Filter chip hover opacity
 ├── D-5: View breakdown dark overrides
 ├── D-6: Choice wrong-unselected opacity
 ├── D-7: Review navigator ring
-└── D-12: Pricing dismiss hover
+├── D-12: Pricing dismiss hover
+├── D-17: Auth/error page heading consistency
+└── COMP-1: ErrorCard default padding
 
 Phase 1.5 (needs Decision 10)
 └── D-16: Mobile nav hover intensity
@@ -833,6 +960,9 @@ Phase 6 (after all code changes)
 - [ ] All pricing card-like surfaces use `<Card>` component
 - [ ] Expanded breakdown area has distinct visual separation from parent card
 - [ ] Monthly pricing CTA is clearly visible in dark mode (>10% lightness contrast from card surface)
+- [ ] All auth/error page H1s include `font-heading tracking-tight`
+- [ ] ErrorCard default is `p-6`; no call sites pass `className="p-6"`
+- [ ] Interactive history session `<li>` rows have `role="link"` when clickable
 
 ### Documentation
 
@@ -864,6 +994,12 @@ Phase 6 (after all code changes)
 | `app/(app)/app/practice/components/practice-view.tsx` | inline header link classes | `import { headerActionLinkClasses }` |
 | `app/(app)/app/bookmarks/page.tsx` | inline header link classes | `import { headerActionLinkClasses }` |
 | `app/(app)/app/practice/practice-page-client.tsx` | inline header link classes | `import { headerActionLinkClasses }` |
+| `components/error-card.tsx` | `p-4` (default padding) | `p-6` |
+| `app/sign-in/[[...sign-in]]/sign-in-page-client.tsx` | H1 without `font-heading tracking-tight` | `font-heading tracking-tight` |
+| `app/sign-up/[[...sign-up]]/sign-up-page-client.tsx` | H1 without `font-heading tracking-tight` | `font-heading tracking-tight` |
+| `app/(marketing)/checkout/success/checkout-success-sync.tsx` | H1 without `font-heading tracking-tight` | `font-heading tracking-tight` |
+| `app/global-error.tsx` | H1 without `tracking-tight` | `tracking-tight` |
+| `components/error-boundary-page.tsx` | H1/H2 without `tracking-tight` | `tracking-tight` |
 
 ### Cross-codebase checks
 
@@ -898,6 +1034,18 @@ rg -n 'headerActionLinkClasses' \
 # Mobile nav hover no longer uses 100% muted fill
 rg -n 'hover:bg-muted[\" ]' components/mobile-nav.tsx
 # Expected: 0 matches
+
+# ErrorCard default is p-6, no call sites override
+rg -n 'ErrorCard.*p-6' app
+# Expected: 0 matches (no overrides needed)
+
+# All H1/H2 headings include font-heading and tracking-tight
+rg -n 'font-semibold.*text-foreground' app/sign-in app/sign-up app/global-error.tsx components/error-boundary-page.tsx
+# Expected: all matches include font-heading tracking-tight
+
+# Interactive li rows have role
+rg -n 'role="link"' 'app/(app)/app/history/components/history-sessions-tab.tsx'
+# Expected: 1 match
 ```
 
 ### Visual checks (manual or screenshot diff)
@@ -951,6 +1099,15 @@ These BS-035 findings are informational or deferred. They are NOT implementation
 | `<summary>` missing hover affordance | Page 5 Practice Starter (line 316) | The `<summary>` element in practice starter tag groups has `cursor-pointer` but no `hover:` class. Very low severity — the element has a visible disclosure triangle and cursor change. Could add `hover:text-foreground` in a future polish pass. |
 | Button dark mode (outline vs ghost) uses different tokens | Cross-cutting E, BS-035 severity: Medium | Rated Medium in BS-035 severity assessment but classified as out-of-scope here because the difference (`outline` = `input` 15%, `ghost` = `accent/50` 11%) is an intentional design choice, not a bug. Outline buttons need more visual weight (borders + fill) to communicate "secondary action." Ghost buttons are deliberately understated. The differentiation is documented in Pattern Registry Part 5. The Medium severity rating in BS-035 reflects the *noticeability* of the difference, not that it needs fixing. |
 | `<summary>` `outline-none` vs `focus-visible:outline-none` | Additional Audit | `practice-session-starter.tsx:215` uses `outline-none` (unconditional) instead of the canonical `focus-visible:outline-none`. Functionally identical since `focus-visible:ring-*` already replaces the outline. Could be normalized in a future polish pass. |
+| 13 unused CSS tokens (`chart-1`–`chart-5`, `sidebar-*` ×8) | CSS/Tailwind deep sweep | shadcn/ui scaffolding defaults never removed from `globals.css` `@theme` block and `:root`/`.dark` variable definitions. Zero `.tsx` references. Infrastructure cleanup — not a visual divergence. |
+| Dual Tailwind v3 config + v4 `@theme` block | CSS/Tailwind deep sweep | `tailwind.config.js` (v3) coexists with CSS `@theme` (v4). Color and radius definitions are duplicated. The CSS `@theme` is authoritative; the JS config is legacy. Migration debt, not visual. |
+| `scrollbar-hidden` dead CSS | CSS/Tailwind deep sweep | Class defined in `globals.css:251-258` but never applied in any `.tsx` file. Dead code — should be removed in a cleanup pass. |
+| All overlays share `z-50` | Shadow/Z-index deep sweep | Select, DropdownMenu, AlertDialog, and NotificationToast all use `z-50`. If a notification fires while a dialog is open, it renders behind the dialog overlay. No user-visible bug today (dialog overlay covers the viewport), but could cause issues in edge cases. Architectural concern, not visual consistency. |
+| Duplicate dark variant declarations | CSS/Tailwind deep sweep | `globals.css` line 5 (`@custom-variant dark`) and line 9 (`@variant dark`) both declare the dark variant. Migration artifact from Tailwind v3 to v4 — only one is needed. |
+| `aria-busy` inconsistent usage | Accessibility deep sweep | `PageLoading` uses `aria-busy="true"` on its `aria-live` region; 6 other `<output aria-live="polite">` loading states do not. Accessibility polish, not visual. |
+| No explicit `cursor-pointer` on FilterChip/SegmentedControl | Accessibility deep sweep | Both are `<button>` elements relying on browser default cursor behavior. Browser defaults are correct for native buttons. `cursor-pointer` only needed on non-button interactive elements (`<label>`, `<li>`, `<summary>`). |
+| Redundant `shadow-sm` on `<Card>` instances | Shadow deep sweep | ~30 `<Card className="... shadow-sm">` instances across app pages. The `<Card>` component's base class already includes `shadow-sm`. Harmless no-op — removal is cosmetic cleanup only. |
+| History heading wrapper uses `space-y-1` vs `mt-1` | Typography deep sweep | `history-page-client.tsx:33` wraps heading in `<div className="space-y-1">` with no `mt-1` on subtitle. All other pages use bare `<div>` + `mt-1` on `<p>`. Functionally identical (both produce 0.25rem gap). Structural inconsistency, not visual. |
 
 ---
 

@@ -705,6 +705,348 @@ Current codebase violations tracked in [BS-035](../brainstorming/bs-035-card-hov
 | D-14 | Monthly pricing CTA uses `variant="secondary"` — 4% lightness difference from card surface (`hsl(0 0% 11%)` on `hsl(0 0% 7%)`), near-invisible in dark mode | Use `default` variant, `outline` variant, or custom inverted (like Annual CTA) | `marketing-home.tsx` |
 | D-15 | `MetallicCtaButton` is a documented marketing-only exception but still outside standard Button variants | Keep as explicit marketing-only exception or replace with a standard variant | `metallic-cta-button.tsx`, `marketing-home.tsx` |
 | D-16 | Mobile nav inactive links use `hover:bg-muted` (100%) | L-6: `hover:bg-muted/50` | `components/mobile-nav.tsx` |
+| D-17 | Auth/error page H1s missing `font-heading tracking-tight` | Part 12 heading conventions | `sign-in-page-client.tsx`, `sign-up-page-client.tsx`, `checkout-success-sync.tsx`, `global-error.tsx`, `error-boundary-page.tsx` |
+
+---
+
+## Part 12: Typography System
+
+### 12.1 Font Families
+
+Three Google Fonts loaded via `next/font/google` in `app/layout.tsx`:
+
+| Class | Font Family | Fallback Chain | Weights | Role |
+|-------|------------|----------------|---------|------|
+| _(body default)_ | Manrope | Arial, Helvetica, sans-serif | All (variable) | Body text, UI labels, all default text |
+| `font-heading` | Instrument Sans | Manrope, system-ui, sans-serif | All (variable) | Page headings (H1, H2, H3), card section titles |
+| `font-display` | Plus Jakarta Sans | Manrope, system-ui, sans-serif | 700, 800 only | Large numeric values, stat card numbers, pricing amounts |
+
+**Source:** Font loading in `app/layout.tsx:13-22`. CSS classes in `app/globals.css:240-249`. Body font-family in `app/globals.css:82-86`.
+
+**Rule:** Never use `font-sans` or other Tailwind font utilities. The three classes above are the only font-family selectors.
+
+### 12.2 Heading Conventions
+
+**App page H1 (standard):**
+```
+text-2xl font-bold font-heading tracking-tight text-foreground
+```
+Used on: Dashboard, History, Bookmarks, Billing, Practice, Question Review, Exam Review, Session Summary.
+
+**Marketing/standalone H1:**
+```
+text-4xl font-bold font-heading tracking-tight text-foreground
+```
+Used on: Pricing page, Not Found page.
+
+**Marketing hero H1:**
+```
+font-display text-5xl font-bold tracking-tight md:text-7xl
+```
+Used on: Landing page hero (uses `font-display` instead of `font-heading`).
+
+**Marketing section H2:**
+```
+font-heading text-3xl font-bold tracking-tight md:text-4xl
+```
+
+**Utility page H1 (auth, error, checkout):**
+```
+text-xl font-semibold font-heading tracking-tight text-foreground
+```
+Deliberately smaller — these are centered narrow-width contexts.
+
+**Global error H1:**
+```
+text-2xl font-bold font-heading tracking-tight text-foreground
+```
+
+### 12.3 Text Size Roles
+
+| Role | Classes | Used For |
+|------|---------|----------|
+| Page subtitle (app) | `text-muted-foreground` (no size — inherits base/1rem) | All app page subtitles |
+| Page subtitle (marketing) | `text-lg text-muted-foreground` | Pricing, marketing hero |
+| Card section heading | `text-sm font-medium text-foreground` | "Subscription", "Start a session", section titles |
+| Card body / list items | `text-sm text-muted-foreground` | All card content text |
+| Compact stat labels | `text-xs text-muted-foreground` | Exam review stat cards |
+| Badge / pill text | `text-xs font-medium text-muted-foreground` | Tags, counts |
+| Question stem | `text-base text-foreground` | Question card body |
+| Error ID | `text-xs text-muted-foreground` | Error pages |
+| Reference label | `text-xs font-semibold uppercase tracking-wide text-muted-foreground` | Feedback reference section |
+
+### 12.4 Stat Card Tiers
+
+Two distinct stat card presentations:
+
+| Tier | Number Size | Card Padding | Label Size | Label Margin | Used In |
+|------|------------|-------------|------------|-------------|---------|
+| Full | `text-3xl font-bold font-display` | `p-6` | `text-sm` | `mt-2` | Dashboard, Session Summary |
+| Compact | `text-2xl font-bold font-display` | `p-4` | `text-xs` | `mt-1` | Exam Review |
+
+---
+
+## Part 13: Spacing Conventions
+
+### 13.1 Page-Level Container
+
+Universal responsive container pattern (all pages, marketing and app):
+```
+mx-auto max-w-7xl px-4 sm:px-6 lg:px-8
+```
+
+**Vertical padding:**
+- App layout content area: `py-8`
+- Marketing/pricing standalone: `py-16`
+- Marketing section spacing: varies per section design
+
+### 13.2 Page Section Spacing
+
+**Universal:** `space-y-6` at the page root container. Used on all app pages without exception.
+
+### 13.3 Card Padding Tiers
+
+| Tier | Padding | Usage |
+|------|---------|-------|
+| Standard | `p-6` | All content cards (stats, sections, bookmarks, practice) |
+| Dense | `p-4` | Compact cards (exam review stats, filter bars, question list items, navigator) |
+| Showcase | `p-8` | Marketing pricing cards, pricing page plan cards |
+
+**Rule:** `p-3` is for inner list items within cards (dashboard recent lists, feedback choices), never on `<Card>` directly.
+
+### 13.4 Grid Gap Scale
+
+| Gap | Usage |
+|-----|-------|
+| `gap-3` | Dense filter bar grids |
+| `gap-4` | Standard card grids (stats, features, section layouts) |
+| `gap-6` | Marketing pricing card grid |
+| `gap-8` | Pricing page plan grid |
+
+### 13.5 List Spacing Scale
+
+| Spacing | Tier | Usage |
+|---------|------|-------|
+| `space-y-2` | Dense | In-card lists (dashboard recent, session breakdown, history sessions) |
+| `space-y-3` | Standard | Item lists (bookmarks, exam review questions, pricing features, choices) |
+| `space-y-4` | Card-level | Card-like item lists (history questions, practice sections) |
+
+### 13.6 Max-Width Scale
+
+| Width | Purpose | Examples |
+|-------|---------|---------|
+| `max-w-7xl` (1280px) | Full-page layouts | App layout, marketing layout |
+| `max-w-4xl` | Hero content | Marketing hero section |
+| `max-w-3xl` | Featured sections | Marketing pricing grid, CTA section |
+| `max-w-2xl` | Centered content | Pricing cards, subtitles, feature headings |
+| `max-w-lg` | Dialogs | Alert dialog |
+| `max-w-md` | Error pages | Not Found, Global Error, Error Boundary |
+| `max-w-sm` | Toasts | Notification toast |
+
+---
+
+## Part 14: Shadow & Elevation Scale
+
+Four tiers, cleanly separated by element type:
+
+| Level | Class | Usage | Elements |
+|-------|-------|-------|----------|
+| Micro | `shadow-xs` | Form controls | Button (all variants except ghost/link), Input, Select trigger |
+| Surface | `shadow-sm` | Cards and surfaces | Card (built-in default), ErrorCard, ChoiceButton, Toast, TabSwitch active |
+| Popup | `shadow-md` | Floating menus | Select content, DropdownMenu content |
+| Modal | `shadow-lg` | Blocking overlays | AlertDialog, DropdownMenu sub-content |
+
+**Rule:** Never use `shadow`, `shadow-xl`, or `shadow-2xl`. The four tiers above are the complete scale.
+
+**Note:** The `<Card>` component includes `shadow-sm` in its base class. Callers do not need to pass `shadow-sm` explicitly (though many currently do — it's harmless but redundant).
+
+---
+
+## Part 15: Animation & Transition Conventions
+
+### 15.1 Transition Rules
+
+| Transition | When to Use |
+|-----------|-------------|
+| `transition-colors` | Any element with `hover:` color/background change. **Universal default.** |
+| `transition-[color,box-shadow]` | Form controls (Input, Select trigger) — animates both color and focus ring |
+
+**Never use:** `transition-all` (causes jank by animating everything), `transition-opacity`, `transition-transform`.
+
+**Duration:** No `duration-*` classes anywhere. All transitions use the Tailwind default (150ms). This is a deliberate design choice for snappy interactions.
+
+### 15.2 Custom Animations (globals.css)
+
+| Animation | Class/Selector | Duration | Usage | Locations |
+|-----------|---------------|----------|-------|-----------|
+| `metallic-shift` | `.metallic-border` | 6s ease infinite | Animated gradient border | `MetallicCtaButton` (1 location) |
+| `fade-in-up` | `.animate-fade-in-up` | 0.6s ease-out | Staggered entrance for marketing impact stats | `marketing-home.tsx:109` (1 location) |
+
+### 15.3 Radix UI Animations (tw-animate-css)
+
+The `tw-animate-css` library (imported in `globals.css:7`) provides enter/exit animation utilities consumed by Radix-based UI primitives:
+
+| Utility | Purpose | Consumers |
+|---------|---------|-----------|
+| `animate-in` / `animate-out` | Enter/exit animation wrapper | Select, DropdownMenu, AlertDialog |
+| `fade-in-0` / `fade-out-0` | Opacity 0→1 / 1→0 | Same |
+| `zoom-in-95` / `zoom-out-95` | Scale 0.95→1 / 1→0.95 | Select, AlertDialog |
+| `slide-in-from-top-2`, `slide-in-from-bottom-2`, etc. | Directional slide | Select, DropdownMenu |
+
+**Note:** `animate-pulse` (for skeleton loading shimmer in M-3) is a built-in Tailwind utility, not from `tw-animate-css`.
+
+### 15.4 Reduced Motion
+
+All custom CSS animations are properly disabled under `prefers-reduced-motion: reduce` (`globals.css:226-238`):
+- `scroll-behavior: smooth` → `auto`
+- `.metallic-border` animation → `none`
+- `.animate-fade-in-up` animation → `none`
+
+The `tw-animate-css` library handles its own reduced-motion support internally.
+
+---
+
+## Part 16: Responsive Breakpoint Strategy
+
+### 16.1 Breakpoints in Use
+
+| Prefix | Breakpoint | Usage |
+|--------|-----------|-------|
+| `sm:` | 640px | Widely used — grid columns, flex direction, padding |
+| `md:` | 768px | Marketing pages + `Input` text size only |
+| `lg:` | 1024px | Container padding, grid column layouts |
+| `xl:` / `2xl:` | — | **Not used anywhere.** `max-w-7xl` (1280px) makes these unnecessary |
+
+### 16.2 Responsive Patterns
+
+**Container padding (universal):**
+```
+px-4 sm:px-6 lg:px-8
+```
+
+**Stack-to-row (mobile-first):**
+```
+flex flex-col sm:flex-row
+```
+Used for: header action bars, card content layouts, button groups.
+
+**Show/hide (navigation):**
+- Desktop nav: `hidden sm:flex`
+- Mobile nav: `sm:hidden`
+
+### 16.3 Two-Tier Breakpoint Strategy
+
+- **App pages:** `sm:` + `lg:` only (skip `md:`)
+- **Marketing pages:** `sm:` + `md:` + `lg:`
+
+This is intentional — marketing pages have richer responsive layouts (multi-column features, pricing grids) while app pages are simpler single/dual column layouts.
+
+---
+
+## Part 17: Form Input Patterns
+
+### Input Component
+
+The `<Input>` component (`components/ui/input.tsx`) is the single form input primitive. All text/number inputs MUST use it.
+
+**Base classes:**
+```
+border-input flex h-9 w-full min-w-0 rounded-md border bg-transparent px-3 py-1 text-base shadow-xs
+transition-[color,box-shadow] outline-none md:text-sm
+```
+
+**Dark mode:** `dark:bg-input/30` (subtle dark background tint)
+
+**Focus:** `focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]`
+
+**Validation:** `aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive`
+
+**Disabled:** `disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50`
+
+**Placeholder:** `placeholder:text-muted-foreground` (centralized — no other placeholder styles exist)
+
+**Selection:** `selection:bg-primary selection:text-primary-foreground`
+
+**File input pseudo-element:** `file:text-foreground file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium`
+
+**Note:** Uses `transition-[color,box-shadow]` (not `transition-colors`) because form controls animate both color and the focus ring box-shadow.
+
+---
+
+## Part 18: Accessibility Patterns
+
+### 18.1 Landmarks
+
+Every page renders a `<main id="main-content" tabIndex={-1}>` landmark. A global skip-to-content link in `app/layout.tsx:38-43` targets it:
+```tsx
+<a href="#main-content" className="sr-only focus:not-sr-only ...">Skip to content</a>
+```
+
+All `<nav>` elements (8 total) have `aria-label`. Marketing page `<section>` elements have `aria-label` or `aria-labelledby`.
+
+### 18.2 Live Regions
+
+Loading states use the `<output>` HTML element with `aria-live="polite"`:
+```tsx
+<output aria-live="polite">Loading question...</output>
+```
+
+**Note:** The `<output>` element has implicit `role="status"` and `aria-live="polite"`, so the explicit `aria-live` is technically redundant but harmless.
+
+### 18.3 ARIA State Conventions
+
+| Attribute | Usage Pattern |
+|-----------|--------------|
+| `aria-current="page"` | Active nav links, active tab bar items |
+| `aria-current="step"` | Current question in navigator dots |
+| `aria-pressed` | SegmentedControl, FilterChip, bookmark/mark-for-review toggles |
+| `aria-expanded` + `aria-controls` | Mobile nav toggle button |
+| `role="alert"` | ErrorCard, pricing error banner, inline error messages |
+| `role="status"` | Feedback card, non-error notification toasts |
+
+### 18.4 Icon Accessibility
+
+All Lucide icons set `aria-hidden="true"`. Icon-only buttons provide screen reader text via `<span className="sr-only">`.
+
+**Icon sizing scale:**
+| Size | Class | Usage |
+|------|-------|-------|
+| 16px | `size-4` | Standard inline (buttons, menus, controls) |
+| 20px | `size-5` | Standalone (theme toggle) |
+| 24px | `size-6` | Prominent standalone (nav hamburger, feature icons) |
+| 48px | `size-12` | Decorative hero-level (404 page) |
+
+### 18.5 Global Defaults (globals.css)
+
+Two global defaults set in `@layer base` (`globals.css:169-176`):
+```css
+* { @apply border-border outline-ring/50; }
+body { @apply bg-background text-foreground; }
+```
+
+The `outline-ring/50` ensures all elements default to the ring token for outline color. The `border-border` ensures all borders default to the border token.
+
+Additionally, `html { scroll-behavior: smooth; }` (`globals.css:178-180`) enables smooth scrolling globally, properly disabled under `prefers-reduced-motion: reduce`.
+
+---
+
+## Part 19: CSS Infrastructure
+
+### 19.1 Tailwind Version
+
+The project uses **Tailwind CSS v4** with CSS-first configuration (`@theme` block in `globals.css`). A legacy **Tailwind v3** `tailwind.config.js` coexists with duplicated color and radius definitions. The CSS `@theme` is the authoritative source.
+
+### 19.2 Unused Tokens
+
+13 CSS custom properties are defined but never referenced in any component:
+- `chart-1` through `chart-5` — shadcn/ui scaffolding defaults
+- `sidebar-background`, `sidebar-foreground`, `sidebar-primary`, `sidebar-primary-foreground`, `sidebar-accent`, `sidebar-accent-foreground`, `sidebar-border`, `sidebar-ring` — shadcn/ui scaffolding defaults
+
+These should be removed in a cleanup pass.
+
+### 19.3 Dead CSS
+
+The `scrollbar-hidden` utility class (`globals.css:251-258`) is defined but has zero usages in any `.tsx` file.
 
 ---
 
