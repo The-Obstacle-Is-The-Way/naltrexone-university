@@ -45,7 +45,7 @@ Leave `h-9` system default unchanged (36px passes WCAG AA). Fix the worst offend
 - **Hamburger button:** `p-2` → `p-2.5` (40px → 44px)
 - **Theme toggle:** add touch-target wrapper or padding for 44px hit area on mobile
 - **Clerk UserButton:** appearance prop or wrapper div for minimum 44px hit area
-- **Auth CTA:** evaluate `size="sm"` (`h-8` = 32px) promotion to default size or touch-target wrapper
+- **Auth CTA:** remove `size="sm"` (`h-8` = 32px outlier) and use default button sizing for the unauthenticated header CTA
 
 ---
 
@@ -75,3 +75,4 @@ rg -n 'size="sm"' components/auth-nav.tsx
 ```
 
 Visual verification (required): inspect at 375px viewport and measure computed hit area for hamburger, theme toggle, and Clerk avatar trigger. All should be >=44px.
+Auth CTA should no longer render at 32px height.
