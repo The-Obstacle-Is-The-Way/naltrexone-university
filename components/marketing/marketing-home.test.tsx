@@ -160,16 +160,15 @@ describe('components/marketing/marketing-home', () => {
     expect(annualCtaClass).not.toContain('text-background');
   });
 
-  it('marks MetallicCtaButton with debt exception data marker', () => {
-    const html = renderToStaticMarkup(
-      <MarketingHomeShell
-        authNav={<div>AuthNav</div>}
-        primaryCta={<a href="/pricing">Get Started</a>}
-      />,
-    );
+  it('marks MetallicCtaButton with a div debt-exception wrapper', () => {
+    const doc = renderDoc();
+    const exceptionWrapper = doc.querySelector('[data-debt-exception="D-15"]');
+    const metallicCta = exceptionWrapper?.querySelector('a[href="/pricing"]');
 
-    // D-15: machine-verifiable exception marker prevents expansion to other pages
-    expect(html).toContain('data-debt-exception="D-15"');
+    // D-15: machine-verifiable marker and valid block wrapper semantics.
+    expect(exceptionWrapper).not.toBeNull();
+    expect(exceptionWrapper?.tagName).toBe('DIV');
+    expect(metallicCta).not.toBeNull();
   });
 
   it('uses consistent "Sign in" casing in CTA', () => {

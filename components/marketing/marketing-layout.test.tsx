@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import type { AnchorHTMLAttributes, ReactNode } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { ROUTES } from '@/lib/routes';
 
 type NextLinkMockProps = AnchorHTMLAttributes<HTMLAnchorElement> & {
@@ -17,10 +17,18 @@ vi.mock('next/link', () => ({
   ),
 }));
 
-describe('MarketingLayout', () => {
-  it('renders a single focusable main landmark', async () => {
-    const { MarketingLayout } = await import('./marketing-layout');
+type MarketingLayoutModule =
+  typeof import('@/components/marketing/marketing-layout');
+let MarketingLayout: MarketingLayoutModule['MarketingLayout'];
 
+beforeAll(async () => {
+  ({ MarketingLayout } = await import(
+    '@/components/marketing/marketing-layout'
+  ));
+});
+
+describe('MarketingLayout', () => {
+  it('renders a single focusable main landmark', () => {
     const html = renderToStaticMarkup(
       <MarketingLayout authNav={<div>Auth</div>} featuresHref="/#features">
         <div>Content</div>
@@ -34,9 +42,7 @@ describe('MarketingLayout', () => {
     expect(mainLandmarks[0]?.getAttribute('tabindex')).toBe('-1');
   });
 
-  it('uses sentence case auth labels in the footer', async () => {
-    const { MarketingLayout } = await import('./marketing-layout');
-
+  it('uses sentence case auth labels in the footer', () => {
     const html = renderToStaticMarkup(
       <MarketingLayout authNav={<div>Auth</div>} featuresHref="/#features">
         <div>Content</div>
@@ -51,9 +57,7 @@ describe('MarketingLayout', () => {
     expect(signUpLink?.textContent?.trim()).toBe('Sign up');
   });
 
-  it('applies L-4 hover and text-foreground to the brand link', async () => {
-    const { MarketingLayout } = await import('./marketing-layout');
-
+  it('applies L-4 hover and text-foreground to the brand link', () => {
     const html = renderToStaticMarkup(
       <MarketingLayout authNav={<div>Auth</div>} featuresHref="/#features">
         <div>Content</div>
@@ -69,9 +73,7 @@ describe('MarketingLayout', () => {
     expect(className).toContain('transition-colors');
   });
 
-  it('renders a mobile marketing nav so Features/Pricing are reachable', async () => {
-    const { MarketingLayout } = await import('./marketing-layout');
-
+  it('renders a mobile marketing nav so Features/Pricing are reachable', () => {
     const html = renderToStaticMarkup(
       <MarketingLayout authNav={<div>Auth</div>} featuresHref="/#features">
         <div>Content</div>
