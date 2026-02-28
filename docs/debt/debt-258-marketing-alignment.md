@@ -1,9 +1,9 @@
 # DEBT-258: Marketing Alignment
 
-**Status:** Partially blocked
+**Status:** Resolved
 **Parent:** [DEBT-250](debt-250-frontend-visual-divergence-compliance-plan.md)
 **Items:** D-8, D-9, D-10, D-14, D-15
-**Blocked by:** Decision 1 for D-9/D-10/D-14; Decision 2 for D-15 (`D-8` is unblocked)
+**Unblocked:** Decision 1 resolved (recommended: Monthly→outline, Annual→default, kill outlinePillClasses) + Decision 2 resolved (recommended: keep MetallicCtaButton as documented exception)
 **Files:** `components/marketing/marketing-home.tsx`, `components/marketing/marketing-layout.tsx`, `app/(app)/app/layout.tsx` (Decision 2 alternative also touches `components/ui/metallic-cta-button.tsx` and `components/ui/metallic-border.tsx`)
 
 ---
@@ -121,15 +121,11 @@ Add explicit exception comment and keep this usage marketing-only.
 
 ## Decision Dependencies
 
-**D-8** can be implemented immediately (no decision blocker).
+**Decision 1 — RESOLVED:** Monthly→`outline`, Annual→`default`, remove `outlinePillClasses`. Verified: `--primary` = `--foreground` in dark mode — zero visual regression on annual CTA switch.
 
-**Decision 1** must resolve for D-9, D-10, D-14:
-- **Recommended:** Monthly = `outline`, Annual = `default`, remove `outlinePillClasses`
-- **Alternative:** Keep inverted annual CTA, add `inverted` variant
+**Decision 2 — RESOLVED:** Keep MetallicCtaButton as documented marketing-only exception with `@debt-exception D-15` comment.
 
-**Decision 2** must resolve for D-15:
-- **Recommended:** Keep as documented exception
-- **Alternative:** Remove metallic components entirely
+All items unblocked.
 
 ---
 

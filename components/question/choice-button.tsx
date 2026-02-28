@@ -31,7 +31,7 @@ export function ChoiceButton({
         disabled && 'cursor-not-allowed',
         disabled && !correctness && 'opacity-50',
         correctness === 'wrong-unselected' && 'opacity-50',
-        selected && correctness === null && 'border-ring',
+        selected && correctness === null && 'border-ring bg-muted/20',
         correctness === 'correct' &&
           'border-success bg-success/10 text-success',
         correctness === 'incorrect' &&

@@ -1,9 +1,9 @@
 # DEBT-257: Choice Button Selected State
 
-**Status:** Blocked
+**Status:** Resolved
 **Parent:** [DEBT-250](debt-250-frontend-visual-divergence-compliance-plan.md)
 **Items:** AFFORD-1
-**Blocked by:** Decision 5 (Choice Button Selected State) + DEBT-251 merged
+**Unblocked:** Decision 5 resolved (recommended path) + DEBT-251 merged in PR #150
 **File:** `components/question/choice-button.tsx`
 
 ---
@@ -32,11 +32,9 @@ selected && correctness === null && 'border-ring bg-muted/20',
 
 ## Decision Dependency
 
-**Decision 5** must resolve before implementation:
-- **Recommended:** Add `bg-muted/20` for subtle background tint
-- **Alternative:** Accept current behavior as sufficient
+**Decision 5 — RESOLVED:** Add `bg-muted/20` for subtle background tint on selected pre-submission state.
 
-**Sequencing:** Must merge **after DEBT-251** (which modifies hover/opacity/correctness on the same file).
+**Sequencing:** DEBT-251 merged in PR #150. No remaining blockers.
 
 ---
 

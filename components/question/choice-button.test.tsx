@@ -203,6 +203,61 @@ describe('ChoiceButton', () => {
     expect(className).not.toContain('text-success-foreground');
   });
 
+  it('applies background tint when selected pre-submission', () => {
+    const html = renderToStaticMarkup(
+      <ChoiceButton
+        name="choices"
+        label="B"
+        textMd="Choice B"
+        selected
+        onClick={() => {}}
+      />,
+    );
+
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const wrapperLabel = doc.querySelector('label');
+
+    expect(wrapperLabel?.getAttribute('class')).toContain('bg-muted/20');
+    expect(wrapperLabel?.getAttribute('class')).toContain('border-ring');
+  });
+
+  it('does not apply background tint when unselected', () => {
+    const html = renderToStaticMarkup(
+      <ChoiceButton
+        name="choices"
+        label="A"
+        textMd="Choice A"
+        selected={false}
+        onClick={() => {}}
+      />,
+    );
+
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const wrapperLabel = doc.querySelector('label');
+
+    expect(wrapperLabel?.getAttribute('class')).not.toContain('bg-muted/20');
+  });
+
+  it('does not apply selected tint when correctness is set', () => {
+    const html = renderToStaticMarkup(
+      <ChoiceButton
+        name="choices"
+        label="A"
+        textMd="Choice A"
+        selected
+        disabled
+        correctness="correct"
+        onClick={() => {}}
+      />,
+    );
+
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const wrapperLabel = doc.querySelector('label');
+
+    expect(wrapperLabel?.getAttribute('class')).not.toContain('bg-muted/20');
+    expect(wrapperLabel?.getAttribute('class')).toContain('bg-success/10');
+  });
+
   it('sets radio input value equal to label', () => {
     const html = renderToStaticMarkup(
       <ChoiceButton

@@ -1,9 +1,9 @@
 # DEBT-256: Expanded Breakdown Visual Hierarchy
 
-**Status:** Blocked
+**Status:** Resolved
 **Parent:** [DEBT-250](debt-250-frontend-visual-divergence-compliance-plan.md)
 **Items:** STRUCT-1
-**Blocked by:** Decision 4 (Expanded Breakdown Background) + DEBT-252 merged
+**Unblocked:** Decision 4 resolved (recommended path) + DEBT-252 merged in PR #150
 **File:** `app/(app)/app/history/components/history-sessions-tab.tsx`
 
 ---
@@ -41,12 +41,9 @@
 
 ## Decision Dependency
 
-**Decision 4** must resolve before implementation:
-- **Recommended:** Inset background with `bg-background/60 border border-border/30`
-- **Alternative:** `bg-card` (less effective separation)
-- **Sub-question:** Promote "Review session" button to `default` variant?
+**Decision 4 — RESOLVED:** Inset background with `bg-background/60 border border-border/30`. Promote "Review session" to `default` variant.
 
-**Sequencing:** Must merge **after DEBT-252** (which modifies hover/role on the same file's `<li>` elements).
+**Sequencing:** DEBT-252 merged in PR #150. No remaining blockers.
 
 ---
 

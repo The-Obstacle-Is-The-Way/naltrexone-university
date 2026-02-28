@@ -252,9 +252,9 @@ export function HistorySessionsTab({
               </div>
 
               {isSelected ? (
-                <div className="mt-3 space-y-2 border-t border-border/40 pt-3">
+                <div className="mt-3 -mx-1 space-y-2 rounded-lg border border-border/30 bg-background/60 p-3">
                   {sessionReviewHref ? (
-                    <Button asChild variant="outline" className="rounded-full">
+                    <Button asChild variant="default" className="rounded-full">
                       <Link href={sessionReviewHref}>Review session</Link>
                     </Button>
                   ) : null}

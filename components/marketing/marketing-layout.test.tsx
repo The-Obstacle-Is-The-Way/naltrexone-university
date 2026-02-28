@@ -51,6 +51,24 @@ describe('MarketingLayout', () => {
     expect(signUpLink?.textContent?.trim()).toBe('Sign up');
   });
 
+  it('applies L-4 hover and text-foreground to the brand link', async () => {
+    const { MarketingLayout } = await import('./marketing-layout');
+
+    const html = renderToStaticMarkup(
+      <MarketingLayout authNav={<div>Auth</div>} featuresHref="/#features">
+        <div>Content</div>
+      </MarketingLayout>,
+    );
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const brandLink = doc.querySelector(`a[href="${ROUTES.HOME}"]`);
+
+    expect(brandLink).not.toBeNull();
+    const className = brandLink?.getAttribute('class') ?? '';
+    expect(className).toContain('text-foreground');
+    expect(className).toContain('hover:text-foreground/80');
+    expect(className).toContain('transition-colors');
+  });
+
   it('renders a mobile marketing nav so Features/Pricing are reachable', async () => {
     const { MarketingLayout } = await import('./marketing-layout');
 

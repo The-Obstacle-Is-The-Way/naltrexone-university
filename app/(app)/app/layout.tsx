@@ -77,7 +77,7 @@ export function AppLayoutShell({
           <div className="flex items-center gap-6">
             <Link
               href={ROUTES.APP_DASHBOARD}
-              className="text-sm font-semibold text-foreground"
+              className="rounded-md text-sm font-semibold text-foreground transition-colors hover:text-foreground/80 focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]"
             >
               Addiction Boards
             </Link>

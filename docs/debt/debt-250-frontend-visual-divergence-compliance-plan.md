@@ -106,6 +106,8 @@ The landing page has 5 distinct button treatments on one page. Three need resolu
 
 **Alternative:** Keep inverted annual CTA and add `inverted` variant to `button.tsx`. Monthly = `outline`.
 
+**RESOLVED (2026-02-28):** Recommended path. Monthly→`outline`, Annual→`default`, remove `outlinePillClasses`. Verified: `--primary` = `--foreground` in dark mode (0 0% 93%), so `default` variant is visually identical to the current `bg-foreground text-background` bypass — zero visual regression. In light mode, `--primary` (11.2%) ≈ `--foreground` (4.9%) — both dark buttons on white. Monthly `secondary` was invisible (4% dark-mode / 3.9% light-mode contrast vs card surface); `outline` gives a real border.
+
 ### Decision 2: MetallicCtaButton Policy
 
 **Blocks:** D-15
@@ -116,6 +118,8 @@ The landing page has 5 distinct button treatments on one page. Three need resolu
 **Recommended:** Keep as a documented marketing-only exception. No expansion to other pages. Add `/* @debt-exception D-15 */` comment in source.
 
 **Alternative:** Remove metallic components, replace with standard `Button variant="default"`.
+
+**RESOLVED (2026-02-28):** Recommended path. Keep MetallicCtaButton as a documented marketing-only exception. One distinctive element at the landing page bottom adds personality without system pollution. Add `@debt-exception D-15` comment to prevent expansion.
 
 ### Decision 3: Marketing ThemeToggle Parity
 
@@ -144,6 +148,8 @@ When a history session card is expanded, the breakdown content sits inside the s
 
 **Sub-question:** Should "Review session" be promoted from `outline` to `default` variant for better visibility? **Recommended:** Yes — it's the primary action in the expanded context.
 
+**RESOLVED (2026-02-28):** Recommended path. Inset well with `bg-background/60 border border-border/30 rounded-lg`, `-mx-1` for nesting. Promote "Review session" from `outline` to `default`. The inset creates a clear "drilled-down" visual layer. The `default` button ensures the primary action is immediately scannable — a busy physician reviewing past sessions should spot the next action in < 1 second.
+
 ### Decision 5: Choice Button Selected State
 
 **Blocks:** AFFORD-1
@@ -154,6 +160,8 @@ The selected-but-not-submitted choice state uses `border-ring` only — no backg
 **Recommended:** Add `bg-muted/20` to the selected state for stronger affordance while keeping the border pattern.
 
 **Alternative:** Accept current behavior as sufficient.
+
+**RESOLVED (2026-02-28):** Recommended path. Add `bg-muted/20` to selected pre-submission state. Selection is THE most critical interaction in a question bank — feedback must be belt-and-suspenders: border change for precision, background tint for area/mass. `bg-muted/20` is the lightest fill tier, appropriate for "chosen but not confirmed." Post-submission states (`bg-success/10`, `bg-destructive/10`) remain stronger.
 
 ### Decision 6: Pricing Subscribed-State Layout
 

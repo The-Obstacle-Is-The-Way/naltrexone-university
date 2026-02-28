@@ -114,6 +114,64 @@ describe('components/marketing/marketing-home', () => {
     ]);
   });
 
+  it('uses outline variant for marketing pills without custom hover overrides', () => {
+    const doc = renderDoc();
+    const pricingLink = Array.from(doc.querySelectorAll('a')).find(
+      (link) => link.textContent?.trim() === 'View pricing',
+    );
+    const signInCta = Array.from(doc.querySelectorAll('a')).find(
+      (link) =>
+        link.textContent?.trim() === 'Sign in' &&
+        link.getAttribute('href') === '/sign-in',
+    );
+
+    // D-9: pills should not have custom hover:bg-muted or bg-card overrides
+    for (const pill of [pricingLink, signInCta]) {
+      expect(pill).not.toBeUndefined();
+      const cls = pill?.parentElement?.getAttribute('class') ?? '';
+      expect(cls).not.toContain('hover:bg-muted');
+      expect(cls).not.toContain('bg-card');
+      expect(cls).not.toContain('border-border');
+    }
+  });
+
+  it('uses outline variant for monthly CTA instead of secondary', () => {
+    const html = renderToStaticMarkup(
+      <MarketingHomeShell
+        authNav={<div>AuthNav</div>}
+        primaryCta={<a href="/pricing">Get Started</a>}
+      />,
+    );
+
+    // D-14: secondary variant was invisible in dark mode
+    expect(html).not.toContain('variant="secondary"');
+  });
+
+  it('does not bypass variant system on annual CTA', () => {
+    const html = renderToStaticMarkup(
+      <MarketingHomeShell
+        authNav={<div>AuthNav</div>}
+        primaryCta={<a href="/pricing">Get Started</a>}
+      />,
+    );
+
+    // D-10: manual bg-foreground/text-background bypass should be gone
+    expect(html).not.toContain('bg-foreground');
+    expect(html).not.toContain('text-background');
+  });
+
+  it('marks MetallicCtaButton with debt exception comment', () => {
+    const html = renderToStaticMarkup(
+      <MarketingHomeShell
+        authNav={<div>AuthNav</div>}
+        primaryCta={<a href="/pricing">Get Started</a>}
+      />,
+    );
+
+    // D-15: exception marker prevents expansion to other pages
+    expect(html).toContain('data-debt-exception="D-15"');
+  });
+
   it('uses consistent "Sign in" casing in CTA', () => {
     const doc = renderDoc();
     const ctaLink = Array.from(doc.querySelectorAll('a')).find(

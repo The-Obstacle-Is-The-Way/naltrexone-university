@@ -54,8 +54,7 @@ const features = [
   },
 ];
 
-const outlinePillClasses =
-  'h-auto rounded-full border-border bg-card px-6 py-3 text-sm font-medium text-foreground hover:bg-muted';
+const pillSizeClasses = 'h-auto rounded-full px-6 py-3 text-sm font-medium';
 
 export function MarketingHomeShell({
   authNav,
@@ -84,7 +83,7 @@ export function MarketingHomeShell({
 
             <div className="mt-10 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
               {primaryCta}
-              <Button asChild variant="outline" className={outlinePillClasses}>
+              <Button asChild variant="outline" className={pillSizeClasses}>
                 <Link href={ROUTES.PRICING}>View pricing</Link>
               </Button>
             </div>
@@ -201,7 +200,7 @@ export function MarketingHomeShell({
                 </ul>
                 <Button
                   asChild
-                  variant="secondary"
+                  variant="outline"
                   className="mt-8 h-auto w-full rounded-full py-3 text-sm font-medium"
                 >
                   <Link href={ROUTES.PRICING}>Get Started</Link>
@@ -228,7 +227,7 @@ export function MarketingHomeShell({
                 </ul>
                 <Button
                   asChild
-                  className="mt-8 h-auto w-full rounded-full bg-foreground py-3 text-sm font-medium text-background hover:bg-foreground/90"
+                  className="mt-8 h-auto w-full rounded-full py-3 text-sm font-medium"
                 >
                   <Link href={ROUTES.PRICING}>Get Started</Link>
                 </Button>
@@ -251,10 +250,12 @@ export function MarketingHomeShell({
               Full access, cancel anytime.
             </p>
             <div className="mt-8 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
-              <MetallicCtaButton href={ROUTES.PRICING}>
-                Get Started
-              </MetallicCtaButton>
-              <Button asChild variant="outline" className={outlinePillClasses}>
+              <span data-debt-exception="D-15">
+                <MetallicCtaButton href={ROUTES.PRICING}>
+                  Get Started
+                </MetallicCtaButton>
+              </span>
+              <Button asChild variant="outline" className={pillSizeClasses}>
                 <Link href={ROUTES.SIGN_IN}>Sign in</Link>
               </Button>
             </div>
