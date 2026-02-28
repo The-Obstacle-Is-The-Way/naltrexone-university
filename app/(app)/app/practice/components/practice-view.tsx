@@ -165,7 +165,7 @@ export function PracticeView(props: PracticeViewProps) {
 
       <div ref={props.questionAreaRef} tabIndex={-1} className="outline-none">
         {props.loadState.status === 'error' ? (
-          <ErrorCard className="p-6">
+          <ErrorCard>
             <div>{props.loadState.message}</div>
             <div className="mt-4 flex flex-wrap items-center gap-3">
               <Button
@@ -190,7 +190,7 @@ export function PracticeView(props: PracticeViewProps) {
       </div>
 
       {props.bookmarkStatus === 'error' ? (
-        <ErrorCard className="p-6">
+        <ErrorCard>
           <div>Bookmarks unavailable.</div>
           {props.onRetryBookmarks ? (
             <div className="mt-4">

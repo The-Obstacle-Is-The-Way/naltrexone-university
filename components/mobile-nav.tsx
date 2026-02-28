@@ -72,7 +72,7 @@ function MobileNavLinks({
             className={
               isActive
                 ? 'block rounded-md bg-muted px-3 py-3 text-sm font-medium text-foreground focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]'
-                : 'block rounded-md px-3 py-3 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]'
+                : 'block rounded-md px-3 py-3 text-sm text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]'
             }
             onClick={onClose}
           >

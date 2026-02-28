@@ -215,7 +215,7 @@ export function renderBookmarks(result: ActionResult<GetBookmarksOutput>) {
             Unable to load bookmarks.
           </p>
         </div>
-        <ErrorCard className="p-6">{result.error.message}</ErrorCard>
+        <ErrorCard>{result.error.message}</ErrorCard>
         <Button asChild className="rounded-full">
           <Link href={ROUTES.APP_PRACTICE}>Go to Practice</Link>
         </Button>
@@ -255,7 +255,7 @@ export function createBookmarksPage(deps?: {
     return (
       <div className="space-y-6">
         <BookmarksToast code={toast} />
-        <ErrorCard className="p-6">{errorMessage}</ErrorCard>
+        <ErrorCard>{errorMessage}</ErrorCard>
         <BookmarksView rows={result.data.rows} />
       </div>
     );

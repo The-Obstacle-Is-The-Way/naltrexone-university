@@ -131,7 +131,7 @@ export function DashboardView({
           </div>
 
           {!sessionHistoryResult.ok ? (
-            <ErrorCard className="mt-4">
+            <ErrorCard className="mt-4 p-4">
               {sessionHistoryResult.error.message}
             </ErrorCard>
           ) : sessionHistoryResult.data.rows.length === 0 ? (
@@ -286,7 +286,7 @@ export function renderDashboard({
           </h1>
           <p className="mt-1 text-muted-foreground">Unable to load stats.</p>
         </div>
-        <ErrorCard className="p-6">{statsResult.error.message}</ErrorCard>
+        <ErrorCard>{statsResult.error.message}</ErrorCard>
         <Button asChild className="rounded-full">
           <Link href={ROUTES.APP_PRACTICE}>Go to Practice</Link>
         </Button>

@@ -25,9 +25,13 @@ describe('app/sign-up/[[...sign-up]]', () => {
       .default;
     const html = renderToStaticMarkup(<SignUpPage />);
     const doc = new DOMParser().parseFromString(html, 'text/html');
+    const heading = doc.querySelector('h1');
 
     expect(html).toContain('Sign Up');
     expect(html).toContain('Authentication unavailable in this environment.');
     expect(doc.querySelector('main#main-content')).not.toBeNull();
+    expect(heading?.getAttribute('class')).toBe(
+      'text-xl font-semibold font-heading tracking-tight text-foreground',
+    );
   });
 });

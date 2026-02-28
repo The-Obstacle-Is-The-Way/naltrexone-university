@@ -55,7 +55,9 @@ export default function PracticePageClient() {
         ) : null}
         {sessionControls.incompleteSessionStatus === 'error' &&
         sessionControls.incompleteSessionError ? (
-          <ErrorCard>{sessionControls.incompleteSessionError}</ErrorCard>
+          <ErrorCard className="p-4">
+            {sessionControls.incompleteSessionError}
+          </ErrorCard>
         ) : null}
 
         {shouldShowSessionStarter ? (

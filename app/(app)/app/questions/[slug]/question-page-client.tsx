@@ -219,7 +219,7 @@ export function QuestionView(props: QuestionViewProps) {
       ) : null}
 
       {props.loadState.status === 'error' ? (
-        <ErrorCard className="p-6">
+        <ErrorCard>
           <div>{props.loadState.message}</div>
           <Button
             type="button"
