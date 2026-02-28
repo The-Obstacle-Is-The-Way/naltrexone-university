@@ -43,7 +43,7 @@ DEBT-250 is decomposed into 14 child specs (DEBT-251–264). Each child spec map
 
 | Spec | Items | Blocked By | Primary File(s) | Status | PR |
 |------|-------|-----------|-----------------|--------|----|
-| [DEBT-255](debt-255-mobile-nav-hover.md) | D-16 | Decision 10 | `mobile-nav.tsx` | Blocked | — |
+| [DEBT-255](debt-255-mobile-nav-hover.md) | D-16 | ~~Decision 10~~ Resolved | `mobile-nav.tsx` | Ready | — |
 | [DEBT-256](debt-256-expanded-breakdown-hierarchy.md) | STRUCT-1 | Decision 4 + DEBT-252 merged | `history-sessions-tab.tsx` | Blocked | — |
 | [DEBT-257](debt-257-choice-selected-state.md) | AFFORD-1 | Decision 5 + DEBT-251 merged | `choice-button.tsx` | Blocked | — |
 | [DEBT-258](debt-258-marketing-alignment.md) | D-8, D-9, D-10, D-14, D-15 | Decision 1 (+ opt. 2) | `marketing-home.tsx` + layouts | Partially blocked (D-8 ready) | — |
