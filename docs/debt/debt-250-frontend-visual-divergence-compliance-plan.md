@@ -1404,4 +1404,4 @@ Route-level `app/**` wrappers not always cited by filename were reviewed for vis
 ### Conclusion
 
 No additional shadcn primitives are missing from documentation.
-No additional production React UI divergence category was discovered beyond `D-1` through `D-17` (plus `COMP-1`, `A11Y-1`, `A11Y-2`, `TOUCH-1`, `TOUCH-2`, `LIGHT-1`, `LIGHT-2`, and `LIGHT-3`, tracked in this spec).
+No additional production React UI divergence category was discovered beyond `D-1` through `D-17` (plus `STRUCT-1`, `AFFORD-1`, `COMP-1`, `A11Y-1`, `A11Y-2`, `UX-1` through `UX-4`, `TOUCH-1`, `TOUCH-2`, `LIGHT-1`, `LIGHT-2`, and `LIGHT-3`, tracked in this spec).
