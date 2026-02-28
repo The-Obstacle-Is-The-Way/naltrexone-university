@@ -197,16 +197,18 @@ Clerk surfaces use `borderRadius: 0.75rem` (12px) vs app's `rounded-2xl` (16px).
 
 **Recommended:** Defer. Standardize on `muted` token first (this spec). Token differentiation is a separate, larger effort requiring visual regression testing across all pages.
 
-### Decision 10: Mobile Nav Hover Strategy
+### Decision 10: Mobile Nav Hover Strategy — RESOLVED
 
 **Blocks:** D-16
 **BS-035 questions:** #9
+**Resolution:** Use `hover:bg-muted/50 hover:text-foreground` (recommended option).
 
-Mobile nav inactive links currently use `hover:bg-muted` (100% opacity), while desktop/app nav and other link patterns use text-only hover or partial-opacity background hover.
+**Rationale (first principles):**
 
-**Recommended:** Keep a dedicated mobile-menu row pattern but normalize hover to `hover:bg-muted/50 hover:text-foreground` (not 100% fill). Document as Pattern Registry `L-6`.
-
-**Alternative:** Make mobile nav match `L-1` text-only hover with no background.
+1. **Active vs hover hierarchy violation.** Active link uses `bg-muted` (100%) at line 74. Hover currently uses `hover:bg-muted` (100%) at line 75. These are visually identical, breaking the universal UI principle: active fill > hover fill > resting state. Apple HIG, Material Design state layers, and SwiftUI all enforce numerical separation between selected and hover states.
+2. **Opacity scale slot.** The design system defines `/50` as the standalone hover slot. Mobile nav links are standalone elements (not inside a card), so `/50` is the correct position in the scale.
+3. **Pattern Registry alignment.** L-6 (Mobile Menu Link) already documents `hover:bg-muted/50` as canonical. The code simply doesn't match the registry yet.
+4. **Text-only alternative rejected.** Mobile nav entries are full-width `px-3 py-3` touch targets. Background hover communicates tappability for wide rows better than text color change alone. Desktop nav (L-1) correctly uses text-only hover for compact inline links — this is an intentional responsive design split, not inconsistency.
 
 ### Decision 11: Mobile Touch Target Strategy
 
