@@ -112,6 +112,35 @@ describe('AuthNav', () => {
     expect(header.querySelector('[data-testid="user-button"]')).toBeNull();
   });
 
+  it('uses default Button sizing for unauthenticated Sign in CTA', async () => {
+    process.env.NEXT_PUBLIC_SKIP_CLERK = 'false';
+
+    const authGateway = new FakeAuthGateway(null);
+    const checkEntitlementUseCase = {
+      execute: vi.fn(async () => {
+        throw new Error('Should not be called for unauthenticated user');
+      }),
+    };
+
+    const { AuthNav } = await import('./auth-nav');
+
+    const authNav = await AuthNav({
+      deps: { authGateway, checkEntitlementUseCase },
+    });
+    const html = renderToStaticMarkup(
+      <MarketingLayout authNav={authNav} featuresHref="#features">
+        <div>Child content</div>
+      </MarketingLayout>,
+    );
+    const header = getHeader(html);
+    const signInLink = header.querySelector('a[href="/sign-in"]');
+    const signInButton = signInLink?.closest('[data-slot="button"]');
+    const classes = signInButton?.getAttribute('class') ?? '';
+
+    expect(classes).toContain('h-9');
+    expect(classes).not.toContain('h-8');
+  });
+
   it('scenario 2: unauthenticated pricing page renders only one Pricing link per breakpoint', async () => {
     process.env.NEXT_PUBLIC_SKIP_CLERK = 'false';
 
@@ -227,6 +256,47 @@ describe('AuthNav', () => {
     expect(dashboardLinks).toHaveLength(1);
     expect(header.querySelector('[data-testid="user-button"]')).not.toBeNull();
     expect(header.querySelector('a[href="/sign-in"]')).toBeNull();
+  });
+
+  it('wraps authenticated UserButton in a 44px minimum touch target container', async () => {
+    process.env.NEXT_PUBLIC_SKIP_CLERK = 'false';
+    vi.doMock('@clerk/nextjs', () => ({
+      UserButton: () => <div data-testid="user-button" />,
+    }));
+
+    const { AuthNav } = await import('./auth-nav');
+
+    const user = createUser({ id: 'user_1' });
+    const authGateway = new FakeAuthGateway(user);
+    const checkEntitlementUseCase = {
+      execute: vi.fn(async () => ({ isEntitled: false })),
+    };
+
+    const authNav = await AuthNav({
+      deps: { authGateway, checkEntitlementUseCase },
+      showPrimaryLink: false,
+    });
+    const html = renderToStaticMarkup(
+      <MarketingLayout authNav={authNav} featuresHref="#features">
+        <div>Child content</div>
+      </MarketingLayout>,
+    );
+    const header = getHeader(html);
+    const userButton = header.querySelector('[data-testid="user-button"]');
+    const touchTargetContainer = Array.from(
+      header.querySelectorAll<HTMLElement>('div'),
+    ).find((element) => {
+      const classes = element.getAttribute('class') ?? '';
+      return (
+        classes.includes('min-h-[44px]') &&
+        classes.includes('min-w-[44px]') &&
+        !!userButton &&
+        element.contains(userButton)
+      );
+    });
+
+    expect(userButton).not.toBeNull();
+    expect(touchTargetContainer).toBeDefined();
   });
 
   it('scenario 5: authenticated non-entitled marketing pages do not duplicate the Pricing link', async () => {

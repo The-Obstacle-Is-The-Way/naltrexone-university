@@ -32,6 +32,22 @@ describe('MobileNav', () => {
     expect(button?.querySelector('svg[aria-hidden="true"]')).not.toBeNull();
   });
 
+  it('uses 44px-equivalent padding on the hamburger touch target', async () => {
+    const { MobileNav } = await import('@/components/mobile-nav');
+
+    const html = renderToStaticMarkup(<MobileNav />);
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const button = doc.querySelector(
+      'button[aria-label="Open navigation menu"]',
+    );
+    const classTokens = (button?.getAttribute('class') ?? '')
+      .split(/\s+/)
+      .filter(Boolean);
+
+    expect(classTokens).toContain('p-2.5');
+    expect(classTokens).not.toContain('p-2');
+  });
+
   it('does not render links when menu is closed (initial state)', async () => {
     const { MobileNav } = await import('@/components/mobile-nav');
 

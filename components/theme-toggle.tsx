@@ -23,7 +23,7 @@ export function ThemeToggle() {
       variant="ghost"
       size="icon"
       onClick={() => setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')}
-      className="relative rounded-full"
+      className="relative rounded-full size-11 sm:size-9"
     >
       <Sun
         aria-hidden="true"
