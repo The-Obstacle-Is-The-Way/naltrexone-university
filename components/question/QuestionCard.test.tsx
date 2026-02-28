@@ -57,12 +57,12 @@ describe('QuestionCard', () => {
     const doc = new DOMParser().parseFromString(html, 'text/html');
     const labels = Array.from(doc.querySelectorAll('label'));
     const wrongUnselected = labels.filter((label) =>
-      (label.getAttribute('class') ?? '').includes('opacity-60'),
+      (label.getAttribute('class') ?? '').includes('opacity-50'),
     );
 
     expect(wrongUnselected).toHaveLength(1);
     expect(wrongUnselected[0]?.getAttribute('class')).not.toContain(
-      'opacity-50',
+      'opacity-60',
     );
   });
 });
