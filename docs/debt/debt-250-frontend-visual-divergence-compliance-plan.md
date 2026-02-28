@@ -26,6 +26,65 @@ This spec is **self-contained**. Every item includes the exact file, line number
 
 ---
 
+## Child Spec Progress
+
+DEBT-250 is decomposed into 14 child specs (DEBT-251–264). Each child spec maps to one PR. Items sharing source files are grouped together to prevent merge conflicts.
+
+### Immediate (no decisions needed)
+
+| Spec | Items | Primary File(s) | Status | PR |
+|------|-------|-----------------|--------|----|
+| [DEBT-251](debt-251-choice-button-compliance.md) | D-3, D-6, A11Y-2, LIGHT-3 | `choice-button.tsx` | Not started | — |
+| [DEBT-252](debt-252-history-sessions-compliance.md) | D-1, D-5, A11Y-1 | `history-sessions-tab.tsx` | Not started | — |
+| [DEBT-253](debt-253-scattered-phase1-fixes.md) | D-2, D-4, D-7, D-12 | 4 independent files | Not started | — |
+| [DEBT-254](debt-254-headings-errorcard-compliance.md) | D-17, COMP-1 | 5 auth/error pages + `error-card.tsx` | Not started | — |
+
+### Decision-dependent
+
+| Spec | Items | Blocked By | Primary File(s) | Status | PR |
+|------|-------|-----------|-----------------|--------|----|
+| [DEBT-255](debt-255-mobile-nav-hover.md) | D-16 | Decision 10 | `mobile-nav.tsx` | Blocked | — |
+| [DEBT-256](debt-256-expanded-breakdown-hierarchy.md) | STRUCT-1 | Decision 4 + DEBT-252 merged | `history-sessions-tab.tsx` | Blocked | — |
+| [DEBT-257](debt-257-choice-selected-state.md) | AFFORD-1 | Decision 5 + DEBT-251 merged | `choice-button.tsx` | Blocked | — |
+| [DEBT-258](debt-258-marketing-alignment.md) | D-8, D-9, D-10, D-14, D-15 | Decision 1 (+ opt. 2) | `marketing-home.tsx` + layouts | Blocked | — |
+| [DEBT-259](debt-259-shared-constants-extraction.md) | D-13, D-11 | DEBT-252/253 merged | 8 files (refactor) | Blocked | — |
+| [DEBT-260](debt-260-ux-seams.md) | UX-1, UX-2, UX-3, UX-4 | Decisions 3, 6, 7, 8 | 1–3 files | Blocked | — |
+| [DEBT-261](debt-261-touch-targets.md) | TOUCH-1, TOUCH-2 | Decision 11 | `mobile-nav.tsx`, `theme-toggle.tsx`, `auth-nav.tsx` | Blocked | — |
+| [DEBT-262](debt-262-light-mode-opacity.md) | LIGHT-1 | Decision 12 | `globals.css` or docs-only | Blocked | — |
+| [DEBT-263](debt-263-text-contrast.md) | LIGHT-2 | Decision 13 + DEBT-251 merged | `globals.css` | Blocked | — |
+
+### Final
+
+| Spec | Items | Blocked By | Status | PR |
+|------|-------|-----------|--------|----|
+| [DEBT-264](debt-264-documentation-sync.md) | Phase 6 doc sync | All code specs merged | Blocked | — |
+
+### Execution Order
+
+```
+IMMEDIATE (parallel):
+  DEBT-251 ──┐
+  DEBT-252 ──┤  16 items, 4 PRs, no blockers
+  DEBT-253 ──┤
+  DEBT-254 ──┘
+
+AFTER decisions resolve:
+  Decision 10 → DEBT-255
+  Decision 4  → DEBT-256 [after DEBT-252]
+  Decision 5  → DEBT-257 [after DEBT-251]
+  Decision 1  → DEBT-258
+  DEBT-252+253 merged → DEBT-259
+  Decisions 3,6,7,8 → DEBT-260
+  Decision 11 → DEBT-261
+  Decision 12 → DEBT-262
+  Decision 13 → DEBT-263 [after DEBT-251]
+
+LAST:
+  All merged → DEBT-264
+```
+
+---
+
 ## Required Decisions (Blockers)
 
 These questions must be answered before the corresponding implementation items can proceed. Each maps to one or more BS-035 open questions.
