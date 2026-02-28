@@ -1,10 +1,11 @@
 # DEBT-263: Text Contrast
 
-**Status:** Blocked
+**Status:** In Progress
 **Parent:** [DEBT-250](debt-250-frontend-visual-divergence-compliance-plan.md)
 **Items:** LIGHT-2
-**Blocked by:** Decision 13 (Success/Destructive Text Contrast Strategy) + DEBT-251 merged
-**Files:** `app/globals.css` + semantic text consumers across `app/**` and `components/**`
+**Decision 13:** Modified Option C — Subtle global darkening (success L=29%, destructive L=48%)
+**Sequencing:** DEBT-251 merged ✅ (PR #150)
+**Files:** `app/globals.css` (`:root` block, lines 104 and 106)
 
 ---
 
@@ -21,64 +22,104 @@
 - `--destructive: 0 84.2% 60.2%` (`app/globals.css:104`)
 
 **Current contrast on white** (computed from current token RGB):
-- `text-success` (`rgb(25,154,72)`) ≈ `3.65:1`
-- `text-destructive` (`rgb(239,68,68)`) ≈ `3.76:1`
-- WCAG AA normal text requires `>= 4.5:1`
+- `text-success` (`rgb(25,154,72)`) ≈ `3.648:1` — FAIL (AA requires >= 4.5:1)
+- `text-destructive` (`rgb(239,68,68)`) ≈ `3.763:1` — FAIL (AA requires >= 4.5:1)
 
 **Representative affected usage (small/normal text):**
-- Dashboard activity labels: `text-success` / `text-destructive` at `text-xs` (`app/(app)/app/dashboard/page.tsx:205-207`, `app/(app)/app/dashboard/page.tsx:244-246`)
-- Choice badges: semantic colors at `text-xs` (`components/question/choice-button.tsx:55-57`)
-- History question metadata badges: semantic colors inside a `text-xs` row (`app/(app)/app/history/components/history-questions-tab.tsx:64-69`, `app/(app)/app/history/components/history-questions-tab.tsx:86-88`)
-- Session breakdown result labels at `text-sm` (`app/(app)/app/shared/components/session-breakdown-list.tsx:24`, `app/(app)/app/shared/components/session-breakdown-list.tsx:49-51`)
-- Pricing/marketing annual savings labels at `text-sm` (`app/pricing/pricing-view.tsx:161`, `components/marketing/marketing-home.tsx:221`)
-- Exam review warning text at `text-sm` (`app/(app)/app/practice/[sessionId]/components/exam-review-view.tsx:199`)
-
-Token-level impact: any `text-success` or `text-destructive` usage on white/near-white surfaces is in scope for LIGHT-2; examples above are high-signal call sites, not an exhaustive list.
+- Dashboard activity labels: `text-success` / `text-destructive` at `text-xs`
+- Choice badges: semantic colors at `text-xs`
+- History question metadata badges: semantic colors inside a `text-xs` row
+- Session breakdown result labels at `text-sm`
+- Pricing/marketing annual savings labels at `text-sm`
+- Exam review warning text at `text-sm`
 
 ---
 
-## Decision Dependency
+## Decision 13 — RESOLVED: Modified Option C (Subtle Global Darkening)
 
-**Decision 13** must resolve:
-- **Option A:** Darken both in light mode: `--success` to `142 72% 28%`, `--destructive` to `0 84.2% 48%`
-- **Option B:** Use `text-foreground` for small-text instances, reserve semantic colors for large text/badges
-- **Option C (recommended):** Subtle global darkening: `--success: 142 72% 29%`, `--destructive: 0 84.2% 45%` (targets AA-safe contrast while keeping semantic hue identity)
+### Chosen values
 
-**Sequencing:** Must merge **after DEBT-251** (which fixes `text-success-foreground` → `text-success` on the same component).
+```css
+/* Light mode (:root) — CHANGE */
+--success: 142 72% 29%;        /* was: 142 72% 35% */
+--destructive: 0 84.2% 48%;    /* was: 0 84.2% 60.2% */
+
+/* Dark mode (.dark) — NO CHANGE */
+--success: 142 70% 42%;        /* unchanged */
+--destructive: 0 72% 51%;      /* unchanged */
+```
+
+### Contrast verification
+
+| Token | HSL | Approx RGB | Contrast on White | AA Normal (>=4.5) | Buffer |
+|-------|-----|------------|-------------------|-------------------|--------|
+| Success (current) | `142 72% 35%` | `rgb(25,154,72)` | 3.648:1 | FAIL | -0.852 |
+| Success (new) | `142 72% 29%` | `rgb(21,127,60)` | **5.081:1** | PASS | +0.581 (+12.9%) |
+| Destructive (current) | `0 84.2% 60.2%` | `rgb(239,68,68)` | 3.763:1 | FAIL | -0.737 |
+| Destructive (new) | `0 84.2% 48%` | `rgb(225,19,19)` | **4.879:1** | PASS | +0.379 (+8.4%) |
+
+### Reasoning
+
+**Why L=29% for success (not L=28% or L=35%):**
+- L=35% (current): 3.648:1 — fails AA by 18.9%
+- L=29%: 5.081:1 — passes with 12.9% buffer. Modest 6-point lightness shift from current. The green shifts from medium-bright to slightly deeper forest green. Hue and saturation unchanged — recognizably the same semantic green.
+- L=28% (Option A): 5.352:1 — only 0.271 more contrast for 1 additional point of darkening. Negligible benefit, slightly more visual shift.
+- AA threshold for this hue/sat combo: L=31.12%. L=29% has 2.12 points of safety margin.
+
+**Why L=48% for destructive (not L=45% or L=60.2%):**
+- L=60.2% (current): 3.763:1 — fails AA by 16.4%
+- L=48%: 4.879:1 — passes with 8.4% buffer. 12-point lightness shift (`rgb(225,19,19)`). Retains warmth as a clearly red color without the dramatic character change of deeper darkening.
+- L=45% (Option C as spec'd): 5.433:1 — 15-point drop transforms coral-red (`rgb(239,68,68)`, Tailwind red-500 territory) into blood red (`rgb(211,18,18)`). The visual character changes from "friendly warning" to "urgent alarm." Overshoot for a contrast fix.
+- AA threshold for this hue/sat combo: L=50.0%. L=48% has 2 points of safety margin.
+
+**Why not Option B (swap to text-foreground):**
+- Requires 12 files, 22 individual class changes
+- Cannot work on choice-button/feedback badges where semantic color IS the UX signal
+- "Correct" and "Incorrect" badges looking identical defeats the purpose
+- The blast radius is disproportionate and destroys semantic meaning
+
+**Dark mode safety:** Light and dark mode use completely separate CSS custom property declarations in `:root` vs `.dark`. Changing `:root` lines 104/106 has zero effect on `.dark` lines 144/146.
+
+### Known follow-up: tinted background contrast
+
+`text-success` on `bg-success/15` and `text-destructive` on `bg-destructive/15` still won't reach AA even with these changes (the tinted background reduces luminance contrast). Affected spots:
+- Choice-button badge circle (A/B/C/D letter) at `text-xs` on `bg-success/15`
+- Feedback verdict badge ("Correct"/"Incorrect") at `text-sm` on `bg-success/15`
+
+This is a separate concern — reducing tint opacity (e.g., `/15` → `/5`) or using a different pattern. Tracked as a potential follow-up item, not blocking this fix.
+
+---
+
+## Implementation
+
+Two-line change in `app/globals.css`, `:root` block:
+
+```diff
+-    --destructive: 0 84.2% 60.2%;
++    --destructive: 0 84.2% 48%;
+     --destructive-foreground: 210 40% 98%;
+-    --success: 142 72% 35%;
++    --success: 142 72% 29%;
+```
 
 ---
 
 ## Verification
 
 ```bash
-# Baseline: current token values
-rg -n '^\\s*--success:\\s*142 72% 35%;' app/globals.css
-rg -n '^\\s*--destructive:\\s*0 84\\.2% 60\\.2%;' app/globals.css
-# Expected: 1 match each currently
+# New token values present in light mode
+rg -n '^\s*--success:\s*142 72% 29%;' app/globals.css
+rg -n '^\s*--destructive:\s*0 84\.2% 48%;' app/globals.css
+# Expected: 1 match each
 
-# Baseline: current small-text semantic color usages
-rg -n 'text-success|text-destructive' app/'(app)'/app/dashboard/page.tsx components/question/choice-button.tsx
-# Expected: matches present in current state
+# Dark mode values UNCHANGED
+rg -n '^\s*--success:\s*142 70% 42%;' app/globals.css
+rg -n '^\s*--destructive:\s*0 72% 51%;' app/globals.css
+# Expected: 1 match each
 
-# Scope inventory (all semantic text usages in app code)
-rg -n 'text-success(?!-foreground)|text-destructive(?!-foreground)' \
-  app components --glob '!**/*.test.*' --pcre2
-# Expected: review output as LIGHT-2 inventory (classify by text size + background context)
-
-# Option A verification (if selected)
-rg -n '^\\s*--success:\\s*142 72% 28%;' app/globals.css
-rg -n '^\\s*--destructive:\\s*0 84\\.2% 48%;' app/globals.css
-# Expected: 1 match each when Option A is implemented
-
-# Option C verification (if selected)
-rg -n '^\\s*--success:\\s*142 72% 29%;' app/globals.css
-rg -n '^\\s*--destructive:\\s*0 84\\.2% 45%;' app/globals.css
-# Expected: 1 match each when Option C is implemented
-
-# Option B verification (if selected): semantic colors removed from failing small-text-on-light usages
-rg -n 'text-success(?!-foreground)|text-destructive(?!-foreground)' \
-  app components --glob '!**/*.test.*' --pcre2
-# Expected: remaining matches are explicitly approved (large-text/tinted/icon contexts) and documented in Decision 13 notes
+# text-success and text-destructive still used semantically (not replaced with text-foreground)
+rg -n 'text-success|text-destructive' app components --glob '!**/*.test.*'
+# Expected: matches present — semantic colors preserved
 ```
 
-Visual verification (required): in Chrome DevTools, inspect a `text-success`/`text-destructive` element at `text-xs` on a white or near-white background and confirm computed contrast is `>= 4.5:1` for the adopted option.
+Visual verification (required): in Chrome DevTools, inspect a `text-success`/`text-destructive` element at `text-xs` on a white background and confirm the green is slightly deeper and the red is moderately darker while remaining clearly green/red.

@@ -1,10 +1,10 @@
 # DEBT-262: Light-Mode Opacity Scale
 
-**Status:** Blocked
+**Status:** Resolved (documentation-only → folds into DEBT-264)
 **Parent:** [DEBT-250](debt-250-frontend-visual-divergence-compliance-plan.md)
 **Items:** LIGHT-1
-**Blocked by:** Decision 12 (Light-Mode Opacity Strategy)
-**Files:** `app/globals.css` (if Option A/B), and documentation updates in `docs/frontend/pattern-registry.md` (Part 1.2)
+**Decision 12:** Option C — Accept asymmetry
+**Files:** Documentation only: `docs/frontend/pattern-registry.md` (Part 1.2)
 
 ---
 
@@ -31,48 +31,63 @@ Token-level impact: any use of `bg-muted/*`, `hover:bg-muted/*`, `bg-accent/*`, 
 
 ---
 
-## Decision Dependency
+## Decision 12 — RESOLVED: Option C (Accept Asymmetry)
 
-**Decision 12** must resolve:
-- **Option A:** Darken `--muted` in light mode (`210 40% 96.1%` → `210 20% 88%`)
-- **Option B:** Introduce `--muted-hover` custom property for light mode
-- **Option C (recommended):** Accept asymmetry — light-mode hover relies more on border/shadow cues than background fill. Keep this explicitly documented in Pattern Registry Part 1.2.
+### Chosen path
 
-**If Option C:** This becomes a documentation-only update that folds into DEBT-264.
+Light-mode hover feedback relies on border/shadow cues, not background fills. The opacity scale remains unchanged. The Pattern Registry Part 1.2 caveat (already present) is refined in DEBT-264.
+
+### Reasoning
+
+**Option A is mathematically infeasible.** Even darkening `--muted` from L=96.1% to L=88%:
+- `bg-muted/40` on white produces ~1.07:1 contrast — still imperceptible
+- `bg-muted/20` on white produces ~1.035:1 — still invisible
+- To make `/40` visibly distinct (~1.3:1), `--muted` would need L≈75%, which turns every `bg-muted` surface into conspicuous medium gray and fundamentally changes the light theme character
+
+**Option A actively degrades Decision 13 fixes.** Cross-cutting contrast analysis proved:
+- Darker `--muted` backgrounds reduce `text-success`/`text-destructive` contrast ratios
+- D12-A + D13-C fails WCAG AA at `bg-muted/60`+ — exactly where choice-button hover lives
+- The two decisions interact adversely when Option A is chosen
+
+**Option B introduces disproportionate complexity.** A mode-specific `--muted-hover` token:
+- Breaks the elegant "one token, multiple opacities" pattern
+- Requires Tailwind theme registration and migration of all hover classes
+- Serves only light mode — cognitive overhead for a one-mode workaround
+
+**Option C is defensible because:**
+1. shadcn/ui ships identical `--accent`/`--muted` values (96.1%) and relies on text-color hover changes, not fills
+2. Production precedent: Vercel Dashboard, Linear, GitHub use border/shadow hover in light mode
+3. Most affected components already have non-fill hover cues (choice-button has `hover:border-muted-foreground/30`, mobile nav has `hover:text-foreground`, tabs/chips have `hover:text-foreground`)
+4. The 4 row components (dashboard, history) that lack non-fill hover feedback are addressed by DEBT-260 (UX-1) — hover border fixes belong there, not in a token change
+
+**Inventory of current hover affordance coverage:**
+
+| Component | Fill hover | Non-fill hover cue | Light-mode status |
+|-----------|-----------|--------------------|--------------------|
+| Choice button | `hover:bg-muted/60` | `hover:border-muted-foreground/30` | Border visible ✅ |
+| Mobile nav (inactive) | `hover:bg-muted/50` | `hover:text-foreground` | Text visible ✅ |
+| Tab switch (inactive) | `hover:bg-muted/50` | `hover:text-foreground` | Text visible ✅ |
+| Filter chip | `hover:bg-muted/50` | `hover:text-accent-foreground` | Text visible ✅ |
+| Button outline/ghost | `hover:bg-accent` | `hover:text-accent-foreground` | Text visible ✅ |
+| Dashboard rows | `hover:bg-muted/40` | None | Cursor only ⚠️ → DEBT-260 |
+| History session rows | `hover:bg-muted/40` | None | Cursor only ⚠️ → DEBT-260 |
+| History question rows | `hover:bg-muted/50` | None | Cursor only ⚠️ → DEBT-260 |
+
+### Result
+
+No CSS changes. Documentation update (Pattern Registry Part 1.2 caveat refinement) folds into DEBT-264 scope.
 
 ---
 
 ## Verification
 
 ```bash
-# Baseline: current light-mode muted token value
-rg -n '^\\s*--muted:\\s*210 40% 96\\.1%;' app/globals.css
-# Expected: 1 match currently
+# Option C: --muted token UNCHANGED
+rg -n '^\s*--muted:\s*210 40% 96\.1%;' app/globals.css
+# Expected: 1 match (light mode value preserved)
 
-# Baseline: current affected classes still present
-rg -n 'bg-muted/20|hover:bg-muted/40' app/'(app)'/app/dashboard/page.tsx
-rg -n 'bg-muted/20' app/'(app)'/app/history/components/history-sessions-tab.tsx
-rg -n 'hover:bg-muted/80' components/question/choice-button.tsx
-rg -n 'bg-muted px-3 py-3' components/mobile-nav.tsx
-# Expected: matches present in current state
-
-# Scope inventory (all potentially impacted muted/accent opacity usages)
-rg -n 'bg-(muted|accent)/(20|30|40|50|60|80)|hover:bg-(muted|accent)/(20|30|40|50|60|80)|\\bbg-muted\\b' \
-  app components
-# Expected: reviewed as LIGHT-1 inventory (not all entries are failures; classify by light-mode surface context)
-
-# Option A verification (if selected): muted token darkened
-rg -n '^\\s*--muted:\\s*210 20% 88%;' app/globals.css
-# Expected: 1 match when Option A is implemented
-
-# Option B verification (if selected): dedicated hover token added
-rg -n '^\\s*--muted-hover:' app/globals.css
-# Expected: >=1 match when Option B is implemented
-
-# Option C verification (if selected): asymmetry explicitly documented
-rg -n 'Light-mode caveat|light-mode hover feedback relies on border changes' \
+# Option C: asymmetry documented in Pattern Registry
+rg -n 'Light-mode caveat|light-mode hover feedback relies on border' \
   docs/frontend/pattern-registry.md
-# Expected: >=1 match
+# Expected: >=1 match (caveat already present, refined in DEBT-264)
 ```
-
-Visual verification (required): in light mode, hover dashboard/history rows and confirm whether feedback remains intentionally border/shadow-led (Option C) or becomes visibly fill-led (Option A/B).

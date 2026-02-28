@@ -40,9 +40,15 @@ Update "Needs Extraction" table to reflect completed extractions. Move completed
 
 If Decision 7 adds a bookmark to standalone review, update the action bar composition table.
 
-### 8. Pattern Registry Part 1.2
+### 8. Pattern Registry Part 1.2 (includes DEBT-262 fold-in)
 
-If Decision 12 accepts light-mode asymmetry, ensure the Part 1.2 caveat text reflects the final wording (the caveat already exists and may only need refinement).
+**Decision 12 resolved: Option C (accept asymmetry).** DEBT-262 is documentation-only and folds into this task.
+
+Refine the Part 1.2 light-mode caveat to:
+- Explicitly state the two-channel hover strategy: fills for dark mode, borders for light mode
+- Note that any new interactive row component must include at least one non-fill hover cue (border, shadow, or text color)
+- Remove the "See DEBT-250 LIGHT-1 / Decision 12 for resolution strategy" reference and replace with the resolved wording
+- Cross-reference DEBT-260 (UX-1) for the targeted hover border fixes on dashboard/history rows
 
 ### 9. Third-Party Exceptions
 
