@@ -62,14 +62,11 @@ DEBT-250 is decomposed into 14 child specs (DEBT-251–264). Each child spec map
 ### Execution Order
 
 ```
-IMMEDIATE (parallel):
-  DEBT-251 ──┐
-  DEBT-252 ──┤  14 items, 5 PRs, no blockers
-  DEBT-253 ──┤
-  DEBT-254 ──┤
-  DEBT-255 ──┘  (Decision 10 resolved)
+RESOLVED:
+  DEBT-251, DEBT-252, DEBT-253 → PR #150
+  DEBT-254, DEBT-255           → PR #149
 
-UNBLOCKED (parallel):
+READY NOW (parallel):
   DEBT-259 ──┐  DEBT-252/253 merged in PR #150
   DEBT-260 ──┤  Decisions 3, 6, 7, 8 resolved
   DEBT-261 ──┘  Decision 11 resolved (Option C)
@@ -131,7 +128,7 @@ The landing page has 5 distinct button treatments on one page. Three need resolu
 
 **Rationale (first principles):**
 
-1. **Preference continuity.** Theme preference is a user-level setting. A user who selects dark mode in the app shell and then navigates to `/pricing` or `/features` sees an abrupt snap to their system default. This breaks the principle of least surprise — the user explicitly chose a theme and expects it to persist across shells.
+1. **Control continuity across shells.** Theme preference persists globally via `next-themes`, but the marketing shell currently provides no in-context control to change it. Users browsing `/pricing` or `/features` must leave the page to change theme, while app-shell users can toggle instantly. Exposing the same control in both shells removes that inconsistency.
 2. **Zero-cost addition.** The `ThemeToggle` component already exists, handles SSR (returns `null` until mounted), and uses `next-themes` which shares state across the entire app via `ThemeProvider`. Adding it to the marketing header is a single import + render — no new dependencies, no new state management.
 3. **Marketing-only exclusion has no user benefit.** "Marketing uses system preference only" is a developer-facing distinction that users never asked for and can't discover. There's no design reason to suppress the toggle on marketing pages.
 
@@ -235,13 +232,13 @@ The selected-but-not-submitted choice state uses `border-ring` only — no backg
 1. **WCAG AA is the compliance bar; AAA is aspirational.** Every button in the app passes WCAG 2.2 SC 2.5.8 (Level AA, 24×24px minimum). The 44px threshold is Level AAA (WCAG 2.5.5) and Apple HIG — aspirational targets that most production apps (including shadcn/ui defaults, Vercel Dashboard, Linear) don't fully meet. We should fix genuinely problematic targets without chasing AAA across the entire button system.
 2. **Global change (Option A) rejected — disproportionate blast radius.** Changing `h-9` to `h-11 sm:h-9` alters every `<Button>` in the app. The visual regression surface is enormous (every page, every form, every dialog). The 36px default is a deliberate shadcn design decision shared by thousands of production apps. Overriding it creates a maintenance fork that diverges from the component library's design intent.
 3. **Do-nothing (Option B) rejected — genuine outliers exist.** While 36px is acceptable for most buttons, the hamburger at 40px (close but below 44px), auth CTA at 32px (`size="sm"` → `h-8`), and Clerk UserButton at ~28–33px are genuinely below comfortable mobile touch targets. These specific elements are in the header — the most-tapped region of any mobile app.
-4. **Targeted fixes (Option C) hit the sweet spot.** Fix the three worst offenders (hamburger padding bump `p-2` → `p-2.5`, theme toggle wrapper, Clerk avatar wrapper/appearance prop) without touching the proven system default. This follows the principle of minimum necessary change — fix what's actually problematic, leave what works.
+4. **Targeted fixes (Option C) hit the sweet spot.** Fix the four concrete outliers (hamburger padding bump `p-2` → `p-2.5`, theme toggle touch area, Clerk avatar touch area, and unauthenticated auth CTA size) without touching the proven system default. This follows the principle of minimum necessary change — fix what's actually problematic, leave what works.
 
 **Specific targets:**
 - Hamburger button: `p-2` → `p-2.5` (40px → 44px)
 - Theme toggle: add touch-target wrapper or padding for 44px hit area on mobile
 - Clerk UserButton: appearance prop or wrapper div for minimum 44px hit area
-- Auth CTA (`size="sm"`): evaluate promotion to default size or touch-target wrapper
+- Auth CTA (`size="sm"`): remove `size="sm"` (32px outlier) and use default button sizing for the unauthenticated header CTA
 
 **Key context preserved:** WCAG AA requires 24px minimum (we pass). Desktop nav uses text-only hover (L-1), mobile nav uses background + text hover (L-6). This responsive split is intentional by design.
 
