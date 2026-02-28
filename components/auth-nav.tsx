@@ -67,6 +67,11 @@ export async function AuthNav({
     entitlement.isEntitled && showPrimaryLink
       ? { href: ROUTES.APP_DASHBOARD, label: 'Dashboard' }
       : null;
+  const userButtonAppearance = {
+    elements: {
+      userButtonTrigger: 'min-h-[44px] min-w-[44px]',
+    },
+  } as const;
 
   const { UserButton } = await import('@clerk/nextjs');
 
@@ -81,7 +86,7 @@ export async function AuthNav({
         </Link>
       ) : null}
       <div className="flex min-h-[44px] min-w-[44px] items-center justify-center">
-        <UserButton />
+        <UserButton appearance={userButtonAppearance} />
       </div>
     </div>
   );

@@ -1,11 +1,16 @@
 // @vitest-environment jsdom
 import { renderToStaticMarkup } from 'react-dom/server';
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
+
+type MobileNavModule = typeof import('@/components/mobile-nav');
+let MobileNav: MobileNavModule['MobileNav'];
+
+beforeAll(async () => {
+  ({ MobileNav } = await import('@/components/mobile-nav'));
+});
 
 describe('MobileNav', () => {
-  it('renders an accessible menu toggle button on initial render', async () => {
-    const { MobileNav } = await import('@/components/mobile-nav');
-
+  it('renders an accessible menu toggle button on initial render', () => {
     const html = renderToStaticMarkup(<MobileNav />);
     const doc = new DOMParser().parseFromString(html, 'text/html');
     const button = doc.querySelector('button');
@@ -19,9 +24,7 @@ describe('MobileNav', () => {
     expect(doc.getElementById(ariaControls ?? '')).toBeNull();
   });
 
-  it('renders hamburger button on initial render', async () => {
-    const { MobileNav } = await import('@/components/mobile-nav');
-
+  it('renders hamburger button on initial render', () => {
     const html = renderToStaticMarkup(<MobileNav />);
     const doc = new DOMParser().parseFromString(html, 'text/html');
     const button = doc.querySelector(
@@ -32,9 +35,7 @@ describe('MobileNav', () => {
     expect(button?.querySelector('svg[aria-hidden="true"]')).not.toBeNull();
   });
 
-  it('uses 44px-equivalent padding on the hamburger touch target', async () => {
-    const { MobileNav } = await import('@/components/mobile-nav');
-
+  it('uses 44px-equivalent padding on the hamburger touch target', () => {
     const html = renderToStaticMarkup(<MobileNav />);
     const doc = new DOMParser().parseFromString(html, 'text/html');
     const button = doc.querySelector(
@@ -48,9 +49,7 @@ describe('MobileNav', () => {
     expect(classTokens).not.toContain('p-2');
   });
 
-  it('does not render links when menu is closed (initial state)', async () => {
-    const { MobileNav } = await import('@/components/mobile-nav');
-
+  it('does not render links when menu is closed (initial state)', () => {
     const html = renderToStaticMarkup(<MobileNav />);
 
     // Links should NOT be visible when menu is closed
@@ -60,9 +59,7 @@ describe('MobileNav', () => {
     expect(html).not.toContain('/app/billing');
   });
 
-  it('has sm:hidden class to only show on mobile', async () => {
-    const { MobileNav } = await import('@/components/mobile-nav');
-
+  it('has sm:hidden class to only show on mobile', () => {
     const html = renderToStaticMarkup(<MobileNav />);
 
     expect(html).toContain('sm:hidden');
