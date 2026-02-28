@@ -294,14 +294,7 @@ focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]
 ```
 
 **Active variant** (desktop): add `text-foreground font-medium` (remove `text-muted-foreground`)
-**Active variant** (mobile): add `bg-muted px-3 py-3 text-sm font-medium text-foreground`
-
-**Mobile inactive** adds background hover:
-```
-block rounded-md px-3 py-3 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground
-```
-
-**Design rationale:** Desktop nav uses text-only hover (compact horizontal space). Mobile nav adds background hover (larger touch targets need more visual feedback).
+**Design rationale:** Use this for compact nav links in header/footer/chrome where text-color hover is sufficient.
 
 ### L-2: Content Link
 
@@ -354,6 +347,25 @@ underline font-medium transition-colors hover:text-foreground
 **Source:** `app/(app)/app/layout.tsx` (past-due billing banner)
 
 **Design rationale:** In warning banners, persistent underline is preferred over hover-only affordance so the action remains obvious at a glance.
+
+### L-6: Mobile Menu Link
+
+Full-width mobile navigation items inside drawer/sheet menus.
+
+**Inactive:**
+```
+block rounded-md px-3 py-3 text-sm text-muted-foreground transition-colors
+hover:bg-muted/50 hover:text-foreground
+focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]
+```
+
+**Active:**
+```
+block rounded-md bg-muted/50 px-3 py-3 text-sm font-medium text-foreground
+focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]
+```
+
+**Design rationale:** Mobile menu entries are larger touch targets than desktop nav links, so they use row-style background hover. `/50` keeps parity with the global hover scale and avoids the heavier 100% muted fill.
 
 ---
 
@@ -615,6 +627,8 @@ Token: ALWAYS use `muted`. Never use `accent` or `foreground` for hover.
 
 ```
 Where is the link?
+├── Mobile drawer/sheet menu item → L-6 (Mobile Menu Link)
+│   row-style hover: hover:bg-muted/50 + hover:text-foreground
 ├── Navigation chrome (header, sidebar, footer) → L-1 (Nav Link)
 │   text color change: text-muted-foreground → hover:text-foreground
 ├── Card/section header action ("View all") → L-3 (Header Action Link)
@@ -690,6 +704,7 @@ Current codebase violations tracked in [BS-035](../brainstorming/bs-035-card-hov
 | D-13 | `headerLinkButtonClasses` copy-pasted in 6 files | Extract to `lib/shared-styles.ts` | See Part 10 |
 | D-14 | Monthly pricing CTA uses `variant="secondary"` — 4% lightness difference from card surface (`hsl(0 0% 11%)` on `hsl(0 0% 7%)`), near-invisible in dark mode | Use `default` variant, `outline` variant, or custom inverted (like Annual CTA) | `marketing-home.tsx` |
 | D-15 | `MetallicCtaButton` is a documented marketing-only exception but still outside standard Button variants | Keep as explicit marketing-only exception or replace with a standard variant | `metallic-cta-button.tsx`, `marketing-home.tsx` |
+| D-16 | Mobile nav inactive links use `hover:bg-muted` (100%) | L-6: `hover:bg-muted/50` | `components/mobile-nav.tsx` |
 
 ---
 
@@ -714,6 +729,7 @@ Compact lookup for code reviews and implementation.
 | L-3 | Header Action Link | `hover:text-foreground` | — | — |
 | L-4 | Brand Link | `hover:text-foreground/80` | `rounded-md` | — |
 | L-5 | Banner Inline Link | `hover:text-foreground` | — | — |
+| L-6 | Mobile Menu Link | `hover:bg-muted/50` | `rounded-md` | — |
 | F-3 | ErrorCard | — | `rounded-2xl` | `border-destructive/30` |
 | F-4 | Toast | — | `rounded-xl` | varies by tone |
 | M-1 | Badge/Pill | — | `rounded-full` | `border-border/60` |

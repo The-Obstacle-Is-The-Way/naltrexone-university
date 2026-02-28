@@ -629,7 +629,7 @@ Three hooks exceed the 200-line "god hook" threshold (§12):
 | ID | Summary | File(s) |
 |----|---------|---------|
 | [FE-055](../_archive/debt/fe-055-exam-navigator-missing-nav-landmark.md) | Exam review navigator still lacks `aria-controls` wiring between navigator buttons and controlled content | `app/(app)/app/practice/[sessionId]/components/exam-review-view.tsx` |
-| — | Active visual divergences are tracked in Pattern Registry Part 11 (`D-1` through `D-15`) and DEBT-250 implementation plan | `docs/frontend/pattern-registry.md`, `docs/debt/debt-250-frontend-visual-divergence-compliance-plan.md` |
+| — | Active visual divergences are tracked in Pattern Registry Part 11 (`D-1` through `D-16`) and DEBT-250 implementation plan | `docs/frontend/pattern-registry.md`, `docs/debt/debt-250-frontend-visual-divergence-compliance-plan.md` |
 | — | `Markdown.tsx` uses PascalCase filename (violates §13 kebab-case convention) | `components/markdown/Markdown.tsx` |
 
 ---

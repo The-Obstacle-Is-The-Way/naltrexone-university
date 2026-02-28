@@ -12,7 +12,7 @@
 
 BS-035 audited every route, component, and shared primitive for visual consistency. It identified:
 
-- **15 code divergences** (D-1 through D-15) — places where source code uses classes that violate the Pattern Registry
+- **16 code divergences** (D-1 through D-16) — places where source code uses classes that violate the Pattern Registry
 - **1 high-severity structural issue** — expanded breakdown visual hierarchy collapse (not a D-item, but the highest-severity finding)
 - **1 medium-severity affordance concern** — choice button selected state subtlety
 - **4 low-severity UX seams** — pricing dead space, missing bookmark, missing ThemeToggle, Clerk styling seam
@@ -96,7 +96,7 @@ The selected-but-not-submitted choice state uses `border-ring` only — no backg
 **Blocks:** UX-1
 **BS-035 question:** #11
 
-The pricing root container uses `min-h-screen` (`pricing-view.tsx:37`). For subscribed users, the content is a tiny centered card (~200px), leaving ~400px of blank space.
+The pricing root container uses `min-h-screen` (`app/pricing/pricing-view.tsx:37`). For subscribed users, the content is a tiny centered card (~200px), leaving ~400px of blank space.
 
 **Recommended:** Remove `min-h-screen` from the pricing root. The outer `MarketingLayout` already uses `min-h-[100dvh]` to push the footer down.
 
@@ -133,6 +133,37 @@ Clerk surfaces use `borderRadius: 0.75rem` (12px) vs app's `rounded-2xl` (16px).
 
 **Recommended:** Defer. Standardize on `muted` token first (this spec). Token differentiation is a separate, larger effort requiring visual regression testing across all pages.
 
+### Decision 10: Mobile Nav Hover Strategy
+
+**Blocks:** D-16
+**BS-035 questions:** #9
+
+Mobile nav inactive links currently use `hover:bg-muted` (100% opacity), while desktop/app nav and other link patterns use text-only hover or partial-opacity background hover.
+
+**Recommended:** Keep a dedicated mobile-menu row pattern but normalize hover to `hover:bg-muted/50 hover:text-foreground` (not 100% fill). Document as Pattern Registry `L-6`.
+
+**Alternative:** Make mobile nav match `L-1` text-only hover with no background.
+
+---
+
+## BS-035 Open Question Coverage (1-13)
+
+| BS-035 Question | Resolution in This Spec |
+|---|---|
+| #1 Choice hover/selection intensity | Decision 5 + D-3 + AFFORD-1 |
+| #2 Expanded breakdown background | Decision 4 + STRUCT-1 |
+| #3 Review-session button prominence | Decision 4 (sub-question) + STRUCT-1 |
+| #4 Token differentiation | Decision 9 (explicit defer) |
+| #5 Standards update order | Phase 6 (docs synchronized after code changes) |
+| #6 Filter-chip `hover:bg-accent` intent | D-4 + Decision 1 |
+| #7 Marketing CTA strategy + metallic exception | Decisions 1 and 2 + D-9/D-10/D-14/D-15 |
+| #8 Pricing raw divs vs Card | D-11 |
+| #9 Link-hover strategy taxonomy | Decision 10 + D-12 + D-16 |
+| #10 Review navigator ring style | D-7 |
+| #11 Pricing subscribed-state dead space | Decision 6 + UX-1 |
+| #12 Standalone review bookmark gap | Decision 7 + UX-2 |
+| #13 Marketing ThemeToggle parity | Decision 3 + UX-3 |
+
 ---
 
 ## Phase 1: Core Interaction Consistency
@@ -146,7 +177,7 @@ Foundation fixes for hover tokens, state modifiers, and focus rings. No decision
 **Severity:** Medium
 **Pattern:** I-1 (Hoverable Row inside Card)
 
-**Current** — `history-sessions-tab.tsx:185`:
+**Current** — `app/(app)/app/history/components/history-sessions-tab.tsx:185`:
 ```
 cursor-pointer hover:bg-accent/40 focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px] dark:hover:bg-foreground/10
 ```
@@ -160,7 +191,7 @@ cursor-pointer hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-r
 1. `hover:bg-accent/40` → `hover:bg-muted/40` (standardize on `muted` token)
 2. Remove `dark:hover:bg-foreground/10` (no page-level `dark:` overrides per standards)
 
-**Verify:** `grep -n 'hover:bg-accent' history-sessions-tab.tsx` returns 0 matches. `grep -n 'dark:hover:bg-foreground' history-sessions-tab.tsx` returns 0 matches.
+**Verify:** `rg -n 'hover:bg-accent|dark:hover:bg-foreground' 'app/(app)/app/history/components/history-sessions-tab.tsx'` returns 0 matches.
 
 ---
 
@@ -169,7 +200,7 @@ cursor-pointer hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-r
 **Severity:** Medium
 **Pattern:** I-2 (Hoverable Card Row, standalone)
 
-**Current** — `history-questions-tab.tsx:464`:
+**Current** — `app/(app)/app/history/components/history-questions-tab.tsx:464`:
 ```
 block rounded-2xl border border-border p-4 shadow-sm transition-colors hover:bg-accent/40 focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]
 ```
@@ -182,7 +213,7 @@ block rounded-2xl border border-border p-4 shadow-sm transition-colors hover:bg-
 **Changes:**
 1. `hover:bg-accent/40` → `hover:bg-muted/50` (standalone rows on page background use `/50`)
 
-**Verify:** `grep -n 'hover:bg-accent' history-questions-tab.tsx` returns 0 matches.
+**Verify:** `rg -n 'hover:bg-accent' 'app/(app)/app/history/components/history-questions-tab.tsx'` returns 0 matches.
 
 ---
 
@@ -191,7 +222,7 @@ block rounded-2xl border border-border p-4 shadow-sm transition-colors hover:bg-
 **Severity:** Medium
 **Pattern:** I-3 (Choice Button)
 
-**Current** — `choice-button.tsx:30`:
+**Current** — `components/question/choice-button.tsx:30`:
 ```
 cursor-pointer hover:border-muted-foreground/30 hover:bg-muted/80
 ```
@@ -204,7 +235,7 @@ cursor-pointer hover:border-muted-foreground/30 hover:bg-muted/60
 **Changes:**
 1. `hover:bg-muted/80` → `hover:bg-muted/60` (direct-action targets use `/60`, not `/80`)
 
-**Verify:** `grep -n 'muted/80' choice-button.tsx` returns 0 matches.
+**Verify:** `rg -n 'hover:bg-muted/80' components/question/choice-button.tsx` returns 0 matches.
 
 ---
 
@@ -213,7 +244,7 @@ cursor-pointer hover:border-muted-foreground/30 hover:bg-muted/60
 **Severity:** Medium
 **Pattern:** I-4 (Filter Chip)
 
-**Current** — `filter-chip.tsx:28`:
+**Current** — `components/ui/filter-chip.tsx:28`:
 ```
 border-border bg-background text-muted-foreground hover:bg-accent hover:text-accent-foreground
 ```
@@ -226,7 +257,7 @@ border-border bg-background text-muted-foreground hover:bg-muted/50 hover:text-a
 **Changes:**
 1. `hover:bg-accent` (100%!) → `hover:bg-muted/50` (standard interactive hover)
 
-**Verify:** `grep -n 'hover:bg-accent' filter-chip.tsx` returns 0 matches.
+**Verify:** `rg -n 'hover:bg-accent' components/ui/filter-chip.tsx` returns 0 matches.
 
 ---
 
@@ -235,7 +266,7 @@ border-border bg-background text-muted-foreground hover:bg-muted/50 hover:text-a
 **Severity:** Low
 **Pattern:** Part 5 rule — no `dark:` overrides outside `components/ui/`
 
-**Current** — `history-sessions-tab.tsx:244`:
+**Current** — `app/(app)/app/history/components/history-sessions-tab.tsx:244`:
 ```
 rounded-full transition-colors dark:border-foreground/30 dark:bg-foreground/10 dark:hover:bg-foreground/25
 ```
@@ -251,7 +282,7 @@ rounded-full
 
 **Note:** After removing the overrides, visually verify the outline button is still distinguishable inside the `bg-muted/20` row. If not, the fix belongs in `button.tsx`, not here.
 
-**Verify:** `grep -n 'dark:' history-sessions-tab.tsx` returns 0 matches for color/bg overrides.
+**Verify:** `rg -n 'dark:(?:border|bg|hover:bg)-foreground' 'app/(app)/app/history/components/history-sessions-tab.tsx'` returns 0 matches.
 
 ---
 
@@ -260,7 +291,7 @@ rounded-full
 **Severity:** Low
 **Pattern:** X-1 (Disabled — `opacity-50` universal)
 
-**Current** — `choice-button.tsx:33`:
+**Current** — `components/question/choice-button.tsx:33`:
 ```
 correctness === 'wrong-unselected' && 'opacity-60',
 ```
@@ -273,7 +304,7 @@ correctness === 'wrong-unselected' && 'opacity-50',
 **Changes:**
 1. `opacity-60` → `opacity-50` (align with universal disabled/dimmed treatment)
 
-**Verify:** `grep -rn 'opacity-60' components/question/` returns 0 matches.
+**Verify:** `rg -n 'opacity-60' components/question` returns 0 matches.
 
 ---
 
@@ -282,7 +313,7 @@ correctness === 'wrong-unselected' && 'opacity-50',
 **Severity:** Low
 **Pattern:** X-2 (Focus Ring — `ring-[3px] ring-ring/50`)
 
-**Current** — `review-question-navigator.tsx:58`:
+**Current** — `app/(app)/app/questions/[slug]/components/review-question-navigator.tsx:58`:
 ```
 isCurrent && 'ring-2 ring-ring',
 ```
@@ -296,7 +327,7 @@ isCurrent && 'ring-[3px] ring-ring/50',
 1. `ring-2` → `ring-[3px]` (standard width)
 2. `ring-ring` → `ring-ring/50` (standard opacity)
 
-**Verify:** `grep -rn 'ring-2' app/(app)/app/questions/` returns 0 matches.
+**Verify:** `rg -n 'ring-2 ring-ring' 'app/(app)/app/questions/[slug]/components/review-question-navigator.tsx'` returns 0 matches.
 
 ---
 
@@ -305,7 +336,7 @@ isCurrent && 'ring-[3px] ring-ring/50',
 **Severity:** Low
 **Pattern:** Link hover must use text-color or bg-color, never `opacity`
 
-**Current** — `pricing-view.tsx:75`:
+**Current** — `app/pricing/pricing-view.tsx:75`:
 ```
 ml-4 rounded-md text-current hover:opacity-70 focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]
 ```
@@ -319,7 +350,30 @@ ml-4 rounded-md text-muted-foreground transition-colors hover:text-foreground fo
 1. `text-current hover:opacity-70` → `text-muted-foreground transition-colors hover:text-foreground` (L-1 nav link hover pattern)
 2. Add `transition-colors` (X-3 rule — every hover needs a transition)
 
-**Verify:** `grep -rn 'hover:opacity' app/pricing/` returns 0 matches.
+**Verify:** `rg -n 'hover:opacity' app/pricing` returns 0 matches.
+
+---
+
+### D-16: Mobile Nav Inactive Hover Intensity
+
+**Severity:** Medium
+**Pattern:** L-6 (Mobile Menu Link)
+**Requires:** Decision 10
+
+**Current** — `components/mobile-nav.tsx:75`:
+```
+block rounded-md px-3 py-3 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]
+```
+
+**Target** (recommended):
+```
+block rounded-md px-3 py-3 text-sm text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]
+```
+
+**Changes:**
+1. `hover:bg-muted` (100%) → `hover:bg-muted/50` (align mobile menu row affordance to canonical hover scale)
+
+**Verify:** `rg -n 'hover:bg-muted[\" ]' components/mobile-nav.tsx` returns 0 matches.
 
 ---
 
@@ -400,14 +454,14 @@ Items affecting marketing pages. Most require Decision 1 and/or Decision 2.
 
 Two brand links exist. Neither fully matches the canonical L-4 pattern: `rounded-md text-sm font-semibold text-foreground transition-colors hover:text-foreground/80 focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]`
 
-**Marketing brand link** — `marketing-layout.tsx:16-17`:
+**Marketing brand link** — `components/marketing/marketing-layout.tsx:16-17`:
 ```tsx
 const brandLinkClass =
   'rounded-md text-sm font-semibold focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]';
 ```
 **Missing:** `text-foreground transition-colors hover:text-foreground/80`
 
-**App brand link** — `layout.tsx:80`:
+**App brand link** — `app/(app)/app/layout.tsx:80`:
 ```
 text-sm font-semibold text-foreground
 ```
@@ -430,7 +484,7 @@ rounded-md text-sm font-semibold text-foreground transition-colors hover:text-fo
 **Requires:** Decision 1
 **Pattern:** Button variant conventions (Part 5)
 
-**Current** — `marketing-home.tsx:57-58`:
+**Current** — `components/marketing/marketing-home.tsx:57-58`:
 ```tsx
 const outlinePillClasses =
   'h-auto rounded-full border-border bg-card px-6 py-3 text-sm font-medium text-foreground hover:bg-muted';
@@ -457,7 +511,7 @@ Used on "View pricing" (line 87) and "Sign in" (line 257).
 **Severity:** Medium
 **Requires:** Decision 1
 
-**Current** — `marketing-home.tsx:229-234`:
+**Current** — `components/marketing/marketing-home.tsx:229-234`:
 ```tsx
 <Button
   asChild
@@ -489,7 +543,7 @@ No `variant` prop — defaults to `"default"` but overrides all its colors.
 **Severity:** Low
 **Pattern:** S-1 (Card Surface)
 
-**Current** — `pricing-view.tsx` has 4 raw card-like divs:
+**Current** — `app/pricing/pricing-view.tsx` has 4 raw card-like divs:
 
 | Line | Current Classes | Context |
 |------|----------------|---------|
@@ -512,7 +566,7 @@ No `variant` prop — defaults to `"default"` but overrides all its colors.
 
 **Note:** `<Card>` provides `bg-card text-card-foreground rounded-2xl border shadow-sm` by default, plus `gap-0` (which raw divs lack). Verify no layout shift from `gap-0`.
 
-**Verify:** `grep -n 'rounded-2xl border.*bg-card' pricing-view.tsx` returns 0 matches (all replaced with `<Card>`).
+**Verify:** `rg -n 'rounded-2xl border(?:-2)? border-(?:border|primary) bg-card p-8' app/pricing/pricing-view.tsx` returns 0 matches (status banner `p-4` is allowed).
 
 ---
 
@@ -521,7 +575,7 @@ No `variant` prop — defaults to `"default"` but overrides all its colors.
 **Severity:** HIGH
 **Requires:** Decision 1
 
-**Current** — `marketing-home.tsx:202-208`:
+**Current** — `components/marketing/marketing-home.tsx:202-208`:
 ```tsx
 <Button
   asChild
@@ -553,14 +607,14 @@ No `variant` prop — defaults to `"default"` but overrides all its colors.
 **Severity:** Low
 **Requires:** Decision 2
 
-**Current** — `marketing-home.tsx:254-256`:
+**Current** — `components/marketing/marketing-home.tsx:254-256`:
 ```tsx
 <MetallicCtaButton href={ROUTES.PRICING}>
   Get Started
 </MetallicCtaButton>
 ```
 
-Source files: `components/ui/metallic-cta-button.tsx`, `components/ui/metallic-border.tsx`, CSS in `globals.css:183-208`.
+Source files: `components/ui/metallic-cta-button.tsx`, `components/ui/metallic-border.tsx`, CSS in `app/globals.css:183-208`.
 
 **Target** (recommended): Keep as documented exception. Add comment:
 ```tsx
@@ -616,7 +670,7 @@ import { headerActionLinkClasses } from '@/lib/shared-styles';
 - `hoverableRowInsideCardClasses` (I-1 — currently inline in dashboard + history)
 - `mutedRowClasses` (S-2 — currently inline in dashboard + practice starter)
 
-**Verify:** `grep -rn 'headerLinkButtonClasses' app/` returns 0 matches (old name removed). `grep -rn 'headerActionLinkClasses' app/` returns 6 matches (new shared import).
+**Verify:** `rg -n 'headerLinkButtonClasses' app` returns 0 matches (old name removed). `rg -n 'headerActionLinkClasses' app` returns 6 app-file matches.
 
 ---
 
@@ -631,7 +685,7 @@ Each item requires a decision. If the decision is "accept as-is," document that 
 **Severity:** Low
 **Requires:** Decision 6
 
-**Current** — `pricing-view.tsx:37`:
+**Current** — `app/pricing/pricing-view.tsx:37`:
 ```
 min-h-screen bg-background py-16
 ```
@@ -686,15 +740,17 @@ After all code changes are complete, update docs in lockstep.
 
 1. **Pattern Registry Part 11** — Remove resolved D-items from the divergence table. Only unresolved items or approved exceptions should remain.
 
-2. **BS-035** — Update line number references and class strings to match post-fix source. Add decision log entries recording each decision outcome.
+2. **Pattern Registry Part 4** — Add/confirm `L-6` (mobile menu link) and ensure mobile-nav classes map to that pattern.
 
-3. **Standards §17** — Update the divergence ID range to reflect only remaining items. If all resolved, remove the cross-reference section or mark as "historical."
+3. **BS-035** — Update line number references and class strings to match post-fix source. Add decision log entries recording each decision outcome.
 
-4. **Pattern Registry Part 5** — Document the final CTA strategy (Decision 1 outcome). If an `inverted` variant was added, document it.
+4. **Standards §17** — Update the divergence ID range to reflect only remaining items. If all resolved, remove the cross-reference section or mark as "historical."
 
-5. **Pattern Registry Part 10** — Update "Needs Extraction" table to reflect completed extractions. Move completed items to "Already Shared."
+5. **Pattern Registry Part 5** — Document the final CTA strategy (Decision 1 outcome). If an `inverted` variant was added, document it.
 
-6. **Design Principles §2** — If Decision 7 results in a bookmark addition, update the action bar composition table.
+6. **Pattern Registry Part 10** — Update "Needs Extraction" table to reflect completed extractions. Move completed items to "Already Shared."
+
+7. **Design Principles §2** — If Decision 7 results in a bookmark addition, update the action bar composition table.
 
 ---
 
@@ -710,6 +766,9 @@ Phase 1 (no decisions needed — can start immediately)
 ├── D-6: Choice wrong-unselected opacity
 ├── D-7: Review navigator ring
 └── D-12: Pricing dismiss hover
+
+Phase 1.5 (needs Decision 10)
+└── D-16: Mobile nav hover intensity
 
 Phase 2 (needs Decisions 4, 5)
 ├── STRUCT-1: Expanded breakdown hierarchy  ← highest severity
@@ -736,7 +795,7 @@ Phase 6 (after all code changes)
 └── Documentation sync
 ```
 
-**Critical path:** Decisions 1 and 4 are the most important blockers. Phase 1 can proceed in parallel with decision-making for Phases 2-5.
+**Critical path:** Decisions 1 and 4 are the most important blockers. Phase 1 can proceed immediately; D-16 depends on Decision 10 and can run in parallel with Phases 2-5 planning.
 
 ---
 
@@ -753,6 +812,7 @@ Phase 6 (after all code changes)
 - [ ] No `hover:bg-muted` or `hover:bg-accent` at 100% opacity for interactive hover (only for solid fills like tab-switch container)
 - [ ] `headerActionLinkClasses` exists as one shared constant; all 6 consumers import it
 - [ ] Marketing + app brand links both match L-4 canonical class set
+- [ ] Mobile nav inactive links use `hover:bg-muted/50` (not `hover:bg-muted`)
 - [ ] All pricing card-like surfaces use `<Card>` component
 - [ ] Expanded breakdown area has distinct visual separation from parent card
 - [ ] Monthly pricing CTA is clearly visible in dark mode (>10% lightness contrast from card surface)
@@ -761,7 +821,7 @@ Phase 6 (after all code changes)
 
 - [ ] Pattern Registry Part 11 contains only unresolved items or documented exceptions
 - [ ] BS-035 line references match post-fix source
-- [ ] All 9 decisions are recorded with outcomes in BS-035 decision log
+- [ ] All 10 decisions are recorded with outcomes in BS-035 decision log
 - [ ] Pattern Registry Part 5 documents final CTA strategy
 - [ ] Pattern Registry Part 10 reflects completed extractions
 
@@ -773,41 +833,54 @@ Phase 6 (after all code changes)
 
 | File | Must NOT contain | Must contain |
 |------|-----------------|-------------|
-| `history-sessions-tab.tsx` | `hover:bg-accent`, `dark:hover:bg-foreground`, `dark:border-foreground`, `dark:bg-foreground`, `headerLinkButtonClasses` (local) | `hover:bg-muted/40`, `import { headerActionLinkClasses }` |
-| `history-questions-tab.tsx` | `hover:bg-accent`, `headerLinkButtonClasses` (local) | `hover:bg-muted/50`, `import { headerActionLinkClasses }` |
-| `choice-button.tsx` | `hover:bg-muted/80`, `opacity-60` | `hover:bg-muted/60`, `opacity-50` |
-| `filter-chip.tsx` | `hover:bg-accent` (unselected) | `hover:bg-muted/50` |
-| `review-question-navigator.tsx` | `ring-2 ring-ring` (without `/50`) | `ring-[3px] ring-ring/50` |
-| `marketing-home.tsx` | `hover:bg-muted` at 100%, `bg-foreground text-background` (unless Decision 1 keeps inverted) | Standard variant-provided colors |
-| `pricing-view.tsx` | `hover:opacity-70`, `rounded-2xl border.*bg-card` (raw divs) | `<Card>` component imports |
-| `marketing-layout.tsx` | — | L-4 brand link classes, `ThemeToggle` (if Decision 3 approved) |
-| `layout.tsx` (app) | — | L-4 brand link classes |
-| `dashboard/page.tsx` | `headerLinkButtonClasses` (local const) | `import { headerActionLinkClasses }` |
-| `practice-view.tsx` | inline header link classes | `import { headerActionLinkClasses }` |
-| `bookmarks/page.tsx` | inline header link classes | `import { headerActionLinkClasses }` |
-| `practice-page-client.tsx` | inline header link classes | `import { headerActionLinkClasses }` |
+| `app/(app)/app/history/components/history-sessions-tab.tsx` | `hover:bg-accent`, `dark:hover:bg-foreground`, `dark:border-foreground`, `dark:bg-foreground`, `headerLinkButtonClasses` (local) | `hover:bg-muted/40`, `import { headerActionLinkClasses }` |
+| `app/(app)/app/history/components/history-questions-tab.tsx` | `hover:bg-accent`, `headerLinkButtonClasses` (local) | `hover:bg-muted/50`, `import { headerActionLinkClasses }` |
+| `components/question/choice-button.tsx` | `hover:bg-muted/80`, `opacity-60` | `hover:bg-muted/60`, `opacity-50` |
+| `components/ui/filter-chip.tsx` | `hover:bg-accent` (unselected) | `hover:bg-muted/50` |
+| `app/(app)/app/questions/[slug]/components/review-question-navigator.tsx` | `ring-2 ring-ring` (without `/50`) | `ring-[3px] ring-ring/50` |
+| `components/marketing/marketing-home.tsx` | `hover:bg-muted` at 100%, `bg-foreground text-background` (unless Decision 1 keeps inverted) | Standard variant-provided colors |
+| `app/pricing/pricing-view.tsx` | `hover:opacity-70`, `rounded-2xl border(?:-2)? border-(?:border|primary) bg-card p-8` | `<Card>` component imports |
+| `components/mobile-nav.tsx` | `hover:bg-muted` (inactive links) | `hover:bg-muted/50` |
+| `components/marketing/marketing-layout.tsx` | — | L-4 brand link classes, `ThemeToggle` (if Decision 3 approved) |
+| `app/(app)/app/layout.tsx` | — | L-4 brand link classes |
+| `app/(app)/app/dashboard/page.tsx` | `headerLinkButtonClasses` (local const) | `import { headerActionLinkClasses }` |
+| `app/(app)/app/practice/components/practice-view.tsx` | inline header link classes | `import { headerActionLinkClasses }` |
+| `app/(app)/app/bookmarks/page.tsx` | inline header link classes | `import { headerActionLinkClasses }` |
+| `app/(app)/app/practice/practice-page-client.tsx` | inline header link classes | `import { headerActionLinkClasses }` |
 
 ### Cross-codebase checks
 
 ```bash
-# No accent token used for hover backgrounds
-grep -rn 'hover:bg-accent' app/ components/ --include='*.tsx' | grep -v node_modules
-# Expected: 0 matches (or only inside components/ui/ if variant-level)
+# No non-UI accent hover backgrounds (UI primitives may use accent by design)
+rg -n --glob '!components/ui/**' 'hover:bg-accent' app components
+# Expected: 0 matches
 
 # No page-level dark: color overrides
-grep -rn 'dark:.*bg-foreground' app/ --include='*.tsx'
+rg -n 'dark:.*(?:bg|border)-foreground' app
 # Expected: 0 matches
 
 # No opacity hover for links
-grep -rn 'hover:opacity' app/ components/ --include='*.tsx'
+rg -n 'hover:opacity' app components
 # Expected: 0 matches
 
-# Shared constant is the single source
-grep -rn 'headerLinkButtonClasses' app/ --include='*.tsx'
+# Shared constant migration complete
+rg -n 'headerLinkButtonClasses' app
 # Expected: 0 matches (old name gone)
 
-grep -rn 'headerActionLinkClasses' app/ lib/ --include='*.ts' --include='*.tsx'
-# Expected: 7 matches (1 definition + 6 imports)
+# One definition + six app consumers
+rg -n 'export const headerActionLinkClasses' lib/shared-styles.ts
+rg -n 'headerActionLinkClasses' \
+  'app/(app)/app/dashboard/page.tsx' \
+  'app/(app)/app/history/components/history-sessions-tab.tsx' \
+  'app/(app)/app/history/components/history-questions-tab.tsx' \
+  'app/(app)/app/practice/components/practice-view.tsx' \
+  'app/(app)/app/bookmarks/page.tsx' \
+  'app/(app)/app/practice/practice-page-client.tsx'
+# Expected: 1 definition match; 6 app-file matches
+
+# Mobile nav hover no longer uses 100% muted fill
+rg -n 'hover:bg-muted[\" ]' components/mobile-nav.tsx
+# Expected: 0 matches
 ```
 
 ### Visual checks (manual or screenshot diff)
@@ -819,6 +892,7 @@ grep -rn 'headerActionLinkClasses' app/ lib/ --include='*.ts' --include='*.tsx'
 5. **Filter chip:** Hover an unselected filter chip. Background shift should match other hover patterns in intensity.
 6. **Landing page pricing:** Monthly "Get Started" button must be clearly visible in dark mode.
 7. **Brand links:** Both app and marketing brand links should dim slightly on hover.
+8. **Mobile nav inactive links:** Hovering each entry should produce a partial muted fill (`/50`), not a full 100% muted block.
 
 ---
 
