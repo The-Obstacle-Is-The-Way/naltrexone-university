@@ -1,10 +1,10 @@
 # DEBT-261: Touch Targets
 
-**Status:** Blocked
+**Status:** Ready
 **Parent:** [DEBT-250](debt-250-frontend-visual-divergence-compliance-plan.md)
 **Items:** TOUCH-1, TOUCH-2
-**Blocked by:** Decision 11 (Mobile Touch Target Strategy)
-**Files:** `components/mobile-nav.tsx`, `components/theme-toggle.tsx`, `components/auth-nav.tsx`, and (Option A only) `components/ui/button.tsx` (Option C alternative may also touch `components/providers.tsx`)
+**Decision 11:** Resolved — Option C (targeted fixes)
+**Files:** `components/mobile-nav.tsx`, `components/theme-toggle.tsx`, `components/auth-nav.tsx` (and possibly `components/providers.tsx` for Clerk avatar wrapper)
 
 ---
 
@@ -37,50 +37,41 @@ Clerk's `<UserButton />` renders at ~28–33px. Below WCAG AA would be 24px — 
 
 ---
 
-## Decision Dependency
+## Decision Dependency — Resolved
 
-**Decision 11** must resolve:
-- **Option A:** Increase Button default to `h-11 sm:h-9` (44px mobile, 36px desktop). Most thorough but alters entire app.
-- **Option B:** Leave as-is. Document as intentional WCAG AA compliance.
-- **Option C (recommended):** Targeted fixes — hamburger (`p-2` → `p-2.5`), theme toggle wrapper padding, auth fallback CTA sizing in `auth-nav.tsx`, and Clerk avatar wrapper/appearance prop. Leave `h-9` default unchanged.
+**Decision 11** resolved as **Option C: Targeted fixes.**
+
+Leave `h-9` system default unchanged (36px passes WCAG AA). Fix the worst offenders in the header:
+- **Hamburger button:** `p-2` → `p-2.5` (40px → 44px)
+- **Theme toggle:** add touch-target wrapper or padding for 44px hit area on mobile
+- **Clerk UserButton:** appearance prop or wrapper div for minimum 44px hit area
+- **Auth CTA:** evaluate `size="sm"` (`h-8` = 32px) promotion to default size or touch-target wrapper
 
 ---
 
 ## Verification
 
 ```bash
-# Baseline: current systemic sizes
-rg -n \"default: 'h-9|icon: 'size-9\" components/ui/button.tsx
-# Expected: 2 matches currently
+# System default UNCHANGED (Option C leaves these alone)
+rg -n "default: 'h-9|icon: 'size-9" components/ui/button.tsx
+# Expected: 2 matches (unchanged)
 
-# Baseline: current mobile-nav hamburger sizing
-rg -n 'className=\"p-2 .*hover:text-foreground' components/mobile-nav.tsx
-# Expected: 1 match currently
+# TOUCH-1: Hamburger padding bumped
+rg -n 'className="p-2\.5 .*hover:text-foreground' components/mobile-nav.tsx
+# Expected: 1 match (was p-2, now p-2.5)
 
-# Baseline: ThemeToggle uses icon button size variant
-rg -n 'size=\"icon\"' components/theme-toggle.tsx
-# Expected: 1 match currently
+# TOUCH-1: ThemeToggle touch target increased
+rg -n 'min-h-\[44px\]|min-h-11|p-2\.5' components/theme-toggle.tsx
+# Expected: >=1 match (implementation varies — wrapper or padding)
 
-# Baseline: Clerk UserButton remains default-sized
-rg -n '<UserButton />' components/auth-nav.tsx
-# Expected: 1 match currently
+# TOUCH-2: Clerk UserButton wrapper or appearance sizing
+rg -n 'min-h-\[44px\]|min-w-\[44px\]|\[&_\.cl-userButtonTrigger\]|\[&_\.cl-userButtonBox\]' \
+  components/auth-nav.tsx components/providers.tsx
+# Expected: >=1 match (implementation varies)
 
-# Baseline: unauthenticated auth-nav CTA uses small size
-rg -n 'size=\"sm\"' components/auth-nav.tsx
-# Expected: 1 match currently
-
-# Option A verification (if selected): default and icon sizes changed for mobile
-rg -n \"default: 'h-11 sm:h-9|icon: 'size-11 sm:size-9\" components/ui/button.tsx
-# Expected: 2 matches when Option A is implemented
-
-# Option C verification (if selected): targeted hamburger bump
-rg -n 'className=\"p-2\\.5 .*hover:text-foreground' components/mobile-nav.tsx
-# Expected: 1 match when Option C is implemented
-
-# Option C verification (if selected): either theme-toggle or clerk wrapper sizing added
-rg -n 'size-11|\\[&_\\.cl-userButtonTrigger\\]:size-11|\\[&_\\.cl-userButtonBox\\]:size-11' \
-  components/theme-toggle.tsx components/auth-nav.tsx components/providers.tsx
-# Expected: >=1 match when Option C is implemented (implementation choice varies)
+# TOUCH-1: Auth CTA no longer undersized
+rg -n 'size="sm"' components/auth-nav.tsx
+# Expected: 0 matches (promoted to default size or touch-target wrapped)
 ```
 
-Visual verification (required): inspect at 375px viewport and measure computed hit area for hamburger, theme toggle, and Clerk avatar trigger.
+Visual verification (required): inspect at 375px viewport and measure computed hit area for hamburger, theme toggle, and Clerk avatar trigger. All should be >=44px.

@@ -1,9 +1,9 @@
 # DEBT-259: Shared Constants Extraction
 
-**Status:** Blocked
+**Status:** Ready
 **Parent:** [DEBT-250](debt-250-frontend-visual-divergence-compliance-plan.md)
 **Items:** D-13, D-11
-**Blocked by:** DEBT-252 and DEBT-253 merged (D-13 touches files modified by both)
+**Unblocked:** DEBT-252 and DEBT-253 merged in PR #150 (2026-02-28)
 **Files:** `lib/shared-styles.ts` (new), `app/pricing/pricing-view.tsx`, and 6 app consumers for `headerActionLinkClasses`
 
 ---
@@ -71,7 +71,7 @@ Replace those 4 raw `<div>` card shells with `<Card>` + layout overrides.
 
 ## Decision Dependencies
 
-None — but sequenced after DEBT-252/253 to avoid merge conflicts on shared files.
+None. Sequencing constraint (after DEBT-252/253) is satisfied — both merged in PR #150.
 
 ---
 

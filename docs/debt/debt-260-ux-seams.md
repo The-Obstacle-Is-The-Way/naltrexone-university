@@ -1,10 +1,10 @@
 # DEBT-260: UX Seams
 
-**Status:** Blocked
+**Status:** Ready
 **Parent:** [DEBT-250](debt-250-frontend-visual-divergence-compliance-plan.md)
 **Items:** UX-1, UX-2, UX-3, UX-4
-**Blocked by:** Decisions 3, 6, 7, 8
-**Files:** `app/pricing/pricing-view.tsx`, `app/(app)/app/questions/[slug]/question-page-client.tsx`, `components/marketing/marketing-layout.tsx`, `components/providers.tsx`, and documentation updates in `docs/frontend/design-principles.md` / `docs/frontend/pattern-registry.md`
+**Unblocked:** Decisions 3, 6, 7, 8 all resolved (2026-02-28)
+**Files:** `app/pricing/pricing-view.tsx`, `components/marketing/marketing-layout.tsx`, and documentation updates in `docs/frontend/design-principles.md` / `docs/frontend/pattern-registry.md`
 
 ---
 
@@ -12,7 +12,7 @@
 
 ### UX-1: Pricing Subscribed-State Dead Space
 
-**Blocked by:** Decision 6
+**Decision 6:** Resolved — remove `min-h-screen`
 **File:** `app/pricing/pricing-view.tsx:37`
 
 **Current:**
@@ -26,7 +26,7 @@ className="min-h-screen bg-background py-16"
 
 ### UX-2: Standalone Question Review Bookmark Gap
 
-**Blocked by:** Decision 7
+**Decision 7:** Resolved — no code change, document explicitly
 
 **Current:** `app/(app)/app/questions/[slug]/question-page-client.tsx:309-398` renders `data-testid="bottom-action-bar"` with Previous / Submit or Try Again / Next / Back actions only. No bookmark action is rendered in this action bar.
 
@@ -34,7 +34,7 @@ className="min-h-screen bg-background py-16"
 
 ### UX-3: Marketing Shell Missing ThemeToggle
 
-**Blocked by:** Decision 3
+**Decision 3:** Resolved — add `<ThemeToggle />`
 **File:** `components/marketing/marketing-layout.tsx:42`
 
 **Current:** Header action area renders only `{authNav}`.
@@ -46,7 +46,7 @@ className="min-h-screen bg-background py-16"
 
 ### UX-4: Clerk Dark Mode Visual Seam
 
-**Blocked by:** Decision 8
+**Decision 8:** Resolved — accept and document as third-party trade-off
 
 **Current:** Clerk appearance uses `borderRadius: '0.75rem'` in both dark/light themes (`components/providers.tsx:22`, `components/providers.tsx:33`), while major app surfaces use `rounded-2xl` (16px). This creates a subtle seam on auth surfaces. Interaction states also differ from app button/link conventions because Clerk controls are third-party-rendered and not using local `Button`/link class systems.
 
@@ -54,16 +54,16 @@ className="min-h-screen bg-background py-16"
 
 ---
 
-## Decision Dependencies
+## Decision Dependencies — All Resolved
 
-| Item | Decision | Recommended Outcome |
-|------|----------|-------------------|
-| UX-1 | Decision 6 | Remove `min-h-screen` |
-| UX-2 | Decision 7 | No code change (docs only) |
-| UX-3 | Decision 3 | Add `<ThemeToggle />` to marketing header |
-| UX-4 | Decision 8 | No code change (docs only) |
+| Item | Decision | Resolution |
+|------|----------|-----------|
+| UX-1 | ~~Decision 6~~ Resolved | Remove `min-h-screen` from pricing root |
+| UX-2 | ~~Decision 7~~ Resolved | No code change — document explicitly in `design-principles.md` §2 |
+| UX-3 | ~~Decision 3~~ Resolved | Add `<ThemeToggle />` to marketing header |
+| UX-4 | ~~Decision 8~~ Resolved | No code change — accept and document Clerk seam in Pattern Registry |
 
-**Note:** If Decisions 7 and 8 accept the recommended "no code change" outcomes, those items become documentation-only updates that fold into DEBT-264.
+**Implementation scope:** UX-1 and UX-3 are code changes. UX-2 and UX-4 are documentation-only — their doc updates can fold into DEBT-264 or ship with this spec.
 
 ---
 
