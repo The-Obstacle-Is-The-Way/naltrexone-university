@@ -178,7 +178,6 @@ export function HistorySessionsTab({
           return (
             <li
               key={row.sessionId}
-              role={isRowInteractive ? 'link' : undefined}
               tabIndex={isRowInteractive ? 0 : undefined}
               className={cn(
                 'rounded-xl border border-border/60 bg-muted/20 p-3 transition-colors',

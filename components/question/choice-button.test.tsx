@@ -8,56 +8,214 @@ beforeAll(async () => {
   ({ ChoiceButton } = await import('./choice-button'));
 });
 
-function renderChoiceButton(
-  overrides: Partial<React.ComponentProps<typeof ChoiceButton>> = {},
-) {
-  const html = renderToStaticMarkup(
-    <ChoiceButton
-      name="answer"
-      label="B"
-      textMd="Choice text"
-      selected={false}
-      onClick={() => undefined}
-      {...overrides}
-    />,
-  );
-  const doc = new DOMParser().parseFromString(html, 'text/html');
-  const label = doc.querySelector('label');
-  const input = doc.querySelector('input[type="radio"]');
-
-  return { html, label, input };
-}
-
 describe('ChoiceButton', () => {
+  it('renders label and text with base body typography', () => {
+    const html = renderToStaticMarkup(
+      <ChoiceButton
+        name="choices"
+        label="A"
+        textMd="Choice A"
+        selected={false}
+        onClick={() => {}}
+      />,
+    );
+
+    expect(html).toContain('A');
+    expect(html).toContain('Choice A');
+    expect(html).toContain('type="radio"');
+    expect(html).toContain('name="choices"');
+    expect(html).not.toContain('checked=""');
+
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const input = doc.querySelector('input[type="radio"]');
+    const wrapperLabel = input?.closest('label');
+    const choiceParagraph = Array.from(doc.querySelectorAll('p')).find(
+      (paragraph) => paragraph.textContent?.trim() === 'Choice A',
+    );
+
+    expect(input).not.toBeNull();
+    expect(wrapperLabel).not.toBeNull();
+    expect(choiceParagraph).not.toBeUndefined();
+    if (!input || !wrapperLabel) {
+      throw new Error('Expected radio input and wrapper label to exist.');
+    }
+    expect(input.getAttribute('aria-label')).toBeNull();
+    expect(wrapperLabel.textContent).toContain('Choice A');
+    expect(choiceParagraph?.parentElement?.className).toContain('text-base');
+  });
+
+  it('exposes selected state via checked input', () => {
+    const html = renderToStaticMarkup(
+      <ChoiceButton
+        name="choices"
+        label="A"
+        textMd="Choice A"
+        selected
+        onClick={() => {}}
+      />,
+    );
+
+    expect(html).toContain('checked=""');
+  });
+
+  it('disables the choice input when disabled', () => {
+    const html = renderToStaticMarkup(
+      <ChoiceButton
+        name="choices"
+        label="A"
+        textMd="Choice A"
+        selected={false}
+        disabled
+        onClick={() => {}}
+      />,
+    );
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const input = doc.querySelector('input[type="radio"]');
+
+    expect(input).not.toBeNull();
+    if (!input) {
+      throw new Error('Expected radio input to exist.');
+    }
+    expect(input.hasAttribute('disabled')).toBe(true);
+  });
+
+  it('does not apply opacity-50 when disabled with correctness', () => {
+    const html = renderToStaticMarkup(
+      <ChoiceButton
+        name="choices"
+        label="A"
+        textMd="Choice A"
+        selected
+        disabled
+        correctness="correct"
+        onClick={() => {}}
+      />,
+    );
+
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const input = doc.querySelector('input[type="radio"]');
+    const wrapperLabel = input?.closest('label');
+
+    expect(wrapperLabel).not.toBeNull();
+    if (!wrapperLabel) {
+      throw new Error('Expected wrapper label to exist.');
+    }
+
+    expect(wrapperLabel.getAttribute('class')).toContain('cursor-not-allowed');
+    expect(wrapperLabel.getAttribute('class')).not.toContain('opacity-50');
+  });
+
+  it('applies opacity-50 when disabled without correctness', () => {
+    const html = renderToStaticMarkup(
+      <ChoiceButton
+        name="choices"
+        label="A"
+        textMd="Choice A"
+        selected={false}
+        disabled
+        onClick={() => {}}
+      />,
+    );
+
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const input = doc.querySelector('input[type="radio"]');
+    const wrapperLabel = input?.closest('label');
+
+    expect(wrapperLabel).not.toBeNull();
+    if (!wrapperLabel) {
+      throw new Error('Expected wrapper label to exist.');
+    }
+
+    expect(wrapperLabel.getAttribute('class')).toContain('opacity-50');
+    expect(wrapperLabel.getAttribute('class')).toContain('cursor-not-allowed');
+  });
+
+  it('uses muted hover contrast and muted badge background', () => {
+    const html = renderToStaticMarkup(
+      <ChoiceButton
+        name="choices"
+        label="A"
+        textMd="Choice A"
+        selected={false}
+        onClick={() => {}}
+      />,
+    );
+
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const input = doc.querySelector('input[type="radio"]');
+    const wrapperLabel = input?.closest('label');
+    const badge = wrapperLabel?.querySelector('div.h-7.w-7');
+
+    expect(wrapperLabel).not.toBeNull();
+    expect(badge).not.toBeNull();
+    expect(wrapperLabel?.getAttribute('class')).toContain('hover:bg-muted/60');
+    expect(wrapperLabel?.getAttribute('class')).not.toContain(
+      'hover:bg-muted/80',
+    );
+    expect(wrapperLabel?.getAttribute('class')).toContain(
+      'hover:border-muted-foreground/30',
+    );
+    expect(badge?.getAttribute('class')).toContain('bg-muted');
+    expect(badge?.getAttribute('class')).not.toContain('bg-background');
+  });
+
+  it('applies opacity-50 for wrong-unselected correctness', () => {
+    const html = renderToStaticMarkup(
+      <ChoiceButton
+        name="choices"
+        label="A"
+        textMd="Choice A"
+        selected={false}
+        disabled
+        correctness="wrong-unselected"
+        onClick={() => {}}
+      />,
+    );
+
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const input = doc.querySelector('input[type="radio"]');
+    const wrapperLabel = input?.closest('label');
+
+    expect(wrapperLabel).not.toBeNull();
+    expect(wrapperLabel?.getAttribute('class')).toContain('opacity-50');
+    expect(wrapperLabel?.getAttribute('class')).not.toContain('opacity-60');
+  });
+
   it('uses text-success (not text-success-foreground) for correct state', () => {
-    const { label } = renderChoiceButton({ correctness: 'correct' });
-    const className = label?.getAttribute('class') ?? '';
+    const html = renderToStaticMarkup(
+      <ChoiceButton
+        name="choices"
+        label="A"
+        textMd="Choice A"
+        selected
+        disabled
+        correctness="correct"
+        onClick={() => {}}
+      />,
+    );
+
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const input = doc.querySelector('input[type="radio"]');
+    const wrapperLabel = input?.closest('label');
+    const className = wrapperLabel?.getAttribute('class') ?? '';
 
     expect(className).toContain('text-success');
     expect(className).not.toContain('text-success-foreground');
   });
 
-  it('uses opacity-50 (not opacity-60) for wrong-unselected state', () => {
-    const { label } = renderChoiceButton({
-      disabled: true,
-      correctness: 'wrong-unselected',
-    });
-    const className = label?.getAttribute('class') ?? '';
-
-    expect(className).toContain('opacity-50');
-    expect(className).not.toContain('opacity-60');
-  });
-
-  it('uses hover:bg-muted/60 (not hover:bg-muted/80) for interactive hover', () => {
-    const { label } = renderChoiceButton({ disabled: false });
-    const className = label?.getAttribute('class') ?? '';
-
-    expect(className).toContain('hover:bg-muted/60');
-    expect(className).not.toContain('hover:bg-muted/80');
-  });
-
   it('sets radio input value equal to label', () => {
-    const { input } = renderChoiceButton({ label: 'D' });
+    const html = renderToStaticMarkup(
+      <ChoiceButton
+        name="choices"
+        label="D"
+        textMd="Choice D"
+        selected={false}
+        onClick={() => {}}
+      />,
+    );
+
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const input = doc.querySelector('input[type="radio"]');
 
     expect(input?.getAttribute('value')).toBe('D');
   });

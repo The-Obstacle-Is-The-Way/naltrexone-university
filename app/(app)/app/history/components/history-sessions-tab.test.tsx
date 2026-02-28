@@ -179,7 +179,7 @@ describe('HistorySessionsTab', () => {
     expect(html).not.toContain('hover:bg-accent/40');
     expect(html).not.toContain('dark:hover:bg-foreground/10');
     expect(html).toContain('tabindex="0"');
-    expect(html).toContain('role="link"');
+    expect(html).not.toContain('role="link"');
     expect(html).toContain('tabindex="-1"');
   });
 

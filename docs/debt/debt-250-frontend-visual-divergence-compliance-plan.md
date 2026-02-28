@@ -18,7 +18,7 @@ BS-035 audited every route, component, and shared primitive for visual consisten
 - **4 low-severity UX seams** — pricing dead space, missing bookmark, missing ThemeToggle, Clerk styling seam
 - **1 typography inconsistency** (D-17) — auth/error page headings missing `font-heading` and `tracking-tight`
 - **1 component default inconsistency** (COMP-1) — ErrorCard default padding mismatched with usage
-- **2 accessibility gaps** (A11Y-1, A11Y-2) — interactive `<li>` rows missing ARIA role; choice radio inputs missing `value` attribute
+- **2 accessibility gaps** (A11Y-1, A11Y-2) — interactive `<li>` rows (resolved: no `role="link"` due to ARIA nesting violation); choice radio inputs missing `value` attribute
 - **2 mobile touch target items** (TOUCH-1, TOUCH-2) — systemic `h-9` (36px) buttons fail WCAG AAA 44px minimum; Clerk UserButton ~28–33px is the smallest interactive element
 - **3 light-mode items** (LIGHT-1, LIGHT-2, LIGHT-3) — opacity scale produces imperceptible contrast on white; success/destructive text colors fail WCAG AA at normal text sizes; `text-success-foreground` (white) incorrectly used on tinted backgrounds
 
@@ -602,36 +602,18 @@ rounded-2xl border border-destructive/30 bg-destructive/10 p-6 text-sm text-dest
 
 ---
 
-### A11Y-1: History Sessions Clickable Row Missing ARIA Role
+### A11Y-1: History Sessions Clickable Row — No Explicit Role
 
 **Severity:** Medium
 **Blocks:** D-1 (related — D-1 addresses the hover pattern on the same element)
 
-**Problem:** History session rows use `<li tabIndex={0} onClick onKeyDown>` with a delegated click handler and nested `<Link tabIndex={-1}>`. Screen readers announce these as "list item" rather than conveying interactivity.
+**Problem:** History session rows use `<li tabIndex={0} onClick onKeyDown>` with a delegated click handler and nested `<Link tabIndex={-1}>`. The row is keyboard-navigable but screen readers announce it as "list item."
 
-**Current** — `app/(app)/app/history/components/history-sessions-tab.tsx:178-181`:
-```tsx
-<li
-  key={row.sessionId}
-  tabIndex={isRowInteractive ? 0 : undefined}
-  className={
-```
+**Resolution:** `role="link"` was considered and **rejected**. The `<li>` contains nested `<a>` elements (session summary link, "Review session" link, breakdown question links). Adding `role="link"` creates nested link roles, violating the ARIA spec ("Authors SHOULD NOT nest elements with the link role inside other elements with the link role") and breaking Playwright browser tests (`getByRole('link')` resolves to multiple elements). The row remains keyboard-accessible via `tabIndex={0}` + Enter handler, and screen reader users navigate via the contained `<a>` links.
 
-**Target:**
-```tsx
-<li
-  key={row.sessionId}
-  role={isRowInteractive ? 'link' : undefined}
-  tabIndex={isRowInteractive ? 0 : undefined}
-  className={
-```
+**Note:** The ideal long-term fix is to make the entire `<li>` a `<Link>` component (eliminating the delegated click pattern), but that requires more refactoring and is tracked as a known debt in Pattern Registry I-1.
 
-**Changes:**
-1. Add `role="link"` when the row is interactive (`isRowInteractive`)
-
-**Note:** This fix should be applied together with D-1 (which changes the hover classes on the same element). The ideal long-term fix is to make the entire `<li>` a `<Link>` component (eliminating the delegated click pattern), but that requires more refactoring and is tracked as a known debt in Pattern Registry I-1.
-
-**Verify:** `rg -n "role=\\{isRowInteractive \\? 'link'" 'app/(app)/app/history/components/history-sessions-tab.tsx'` returns 1 match.
+**Verify:** `rg -n "role=.*link" 'app/(app)/app/history/components/history-sessions-tab.tsx'` returns 0 matches.
 
 ---
 
@@ -1205,7 +1187,7 @@ After all code changes are complete, update docs in lockstep.
 
 ```
 Phase 1 (no decisions needed — can start immediately)
-├── D-1: History sessions hover token + A11Y-1 (role="link")
+├── D-1: History sessions hover token + A11Y-1 (no role="link" — ARIA nesting)
 ├── D-2: History questions hover token
 ├── D-3: Choice button hover opacity + A11Y-2 (radio value attr)
 ├── D-4: Filter chip hover opacity
