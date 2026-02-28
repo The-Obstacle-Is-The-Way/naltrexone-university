@@ -47,9 +47,9 @@ DEBT-250 is decomposed into 14 child specs (DEBT-251–264). Each child spec map
 | [DEBT-256](../_archive/debt/debt-256-expanded-breakdown-hierarchy.md) | STRUCT-1 | ~~Decision 4 + DEBT-252 merged~~ Resolved | `history-sessions-tab.tsx` | Resolved (2026-02-28) | — |
 | [DEBT-257](../_archive/debt/debt-257-choice-selected-state.md) | AFFORD-1 | ~~Decision 5 + DEBT-251 merged~~ Resolved | `choice-button.tsx` | Resolved (2026-02-28) | — |
 | [DEBT-258](../_archive/debt/debt-258-marketing-alignment.md) | D-8, D-9, D-10, D-14, D-15 | ~~Decision 1 (+ opt. 2)~~ ~~Decision 2~~ Resolved | `marketing-home.tsx` + layouts | Resolved (2026-02-28) | — |
-| [DEBT-259](debt-259-shared-constants-extraction.md) | D-13, D-11 | DEBT-252/253 merged | 8 files (refactor) | Blocked | — |
-| [DEBT-260](debt-260-ux-seams.md) | UX-1, UX-2, UX-3, UX-4 | Decisions 3, 6, 7, 8 | 1–3 files | Blocked | — |
-| [DEBT-261](debt-261-touch-targets.md) | TOUCH-1, TOUCH-2 | Decision 11 | `mobile-nav.tsx`, `theme-toggle.tsx`, `auth-nav.tsx` | Blocked | — |
+| [DEBT-259](debt-259-shared-constants-extraction.md) | D-13, D-11 | ~~DEBT-252/253 merged~~ Done | 8 files (refactor) | Ready | — |
+| [DEBT-260](debt-260-ux-seams.md) | UX-1, UX-2, UX-3, UX-4 | ~~Decisions 3, 6, 7, 8~~ Resolved | 1–3 files + docs | Ready | — |
+| [DEBT-261](debt-261-touch-targets.md) | TOUCH-1, TOUCH-2 | ~~Decision 11~~ Resolved (Option C) | `mobile-nav.tsx`, `theme-toggle.tsx`, `auth-nav.tsx` | Ready | — |
 | [DEBT-262](debt-262-light-mode-opacity.md) | LIGHT-1 | Decision 12 | `globals.css` or docs-only | Blocked | — |
 | [DEBT-263](debt-263-text-contrast.md) | LIGHT-2 | Decision 13 + DEBT-251 merged | `globals.css` | Blocked | — |
 
@@ -69,13 +69,15 @@ IMMEDIATE (parallel):
   DEBT-254 ──┤
   DEBT-255 ──┘  (Decision 10 resolved)
 
-AFTER decisions resolve:
+UNBLOCKED (parallel):
+  DEBT-259 ──┐  DEBT-252/253 merged in PR #150
+  DEBT-260 ──┤  Decisions 3, 6, 7, 8 resolved
+  DEBT-261 ──┘  Decision 11 resolved (Option C)
+
+AFTER remaining decisions resolve:
   Decision 4  → DEBT-256 [after DEBT-252]
   Decision 5  → DEBT-257 [after DEBT-251]
   Decision 1  → DEBT-258
-  DEBT-252+253 merged → DEBT-259
-  Decisions 3,6,7,8 → DEBT-260
-  Decision 11 → DEBT-261
   Decision 12 → DEBT-262
   Decision 13 → DEBT-263 [after DEBT-251]
 
@@ -121,16 +123,17 @@ The landing page has 5 distinct button treatments on one page. Three need resolu
 
 **RESOLVED (2026-02-28):** Recommended path. Keep MetallicCtaButton as a documented marketing-only exception. One distinctive element at the landing page bottom adds personality without system pollution. Add `@debt-exception D-15` comment to prevent expansion.
 
-### Decision 3: Marketing ThemeToggle Parity
+### Decision 3: Marketing ThemeToggle Parity — RESOLVED
 
 **Blocks:** UX-3
 **BS-035 question:** #13
+**Resolution:** Add `<ThemeToggle />` to the marketing header (recommended option).
 
-App shell has `<ThemeToggle />` in the header. Marketing shell does not. Users who manually override their theme in-app lose that override on marketing pages.
+**Rationale (first principles):**
 
-**Recommended:** Add `<ThemeToggle />` to `components/marketing/marketing-layout.tsx` header.
-
-**Alternative:** Keep absent and document as intentional ("marketing uses system preference only").
+1. **Preference continuity.** Theme preference is a user-level setting. A user who selects dark mode in the app shell and then navigates to `/pricing` or `/features` sees an abrupt snap to their system default. This breaks the principle of least surprise — the user explicitly chose a theme and expects it to persist across shells.
+2. **Zero-cost addition.** The `ThemeToggle` component already exists, handles SSR (returns `null` until mounted), and uses `next-themes` which shares state across the entire app via `ThemeProvider`. Adding it to the marketing header is a single import + render — no new dependencies, no new state management.
+3. **Marketing-only exclusion has no user benefit.** "Marketing uses system preference only" is a developer-facing distinction that users never asked for and can't discover. There's no design reason to suppress the toggle on marketing pages.
 
 ### Decision 4: Expanded Breakdown Background
 
@@ -163,38 +166,41 @@ The selected-but-not-submitted choice state uses `border-ring` only — no backg
 
 **RESOLVED (2026-02-28):** Recommended path. Add `bg-muted/20` to selected pre-submission state. Selection is THE most critical interaction in a question bank — feedback must be belt-and-suspenders: border change for precision, background tint for area/mass. `bg-muted/20` is the lightest fill tier, appropriate for "chosen but not confirmed." Post-submission states (`bg-success/10`, `bg-destructive/10`) remain stronger.
 
-### Decision 6: Pricing Subscribed-State Layout
+### Decision 6: Pricing Subscribed-State Layout — RESOLVED
 
 **Blocks:** UX-1
 **BS-035 question:** #11
+**Resolution:** Remove `min-h-screen` from the pricing root (recommended option).
 
-The pricing root container uses `min-h-screen` (`app/pricing/pricing-view.tsx:37`). For subscribed users, the content is a tiny centered card (~200px), leaving ~400px of blank space.
+**Rationale (first principles):**
 
-**Recommended:** Remove `min-h-screen` from the pricing root. The outer `MarketingLayout` already uses `min-h-[100dvh]` to push the footer down.
+1. **Redundant constraint.** `MarketingLayout` already applies `min-h-[100dvh]` on the outer wrapper (`marketing-layout.tsx:22`). The pricing root's `min-h-screen` is therefore redundant for the unsubscribed state (content fills the viewport anyway) and harmful for the subscribed state (forces ~400px of dead space below a ~200px card).
+2. **Content should dictate height.** The subscribed state is a small confirmation card with two buttons. Forcing it into a full viewport height violates the principle that containers should shrink-wrap their content unless there's a specific layout reason not to. The parent layout already handles footer positioning.
+3. **Alternative rejected.** Enriching the subscribed state with plan details / usage stats is a feature request, not a layout fix. It should be evaluated on its own merits in a separate ticket, not used to justify a redundant CSS constraint.
 
-**Alternative:** Enrich the subscribed state with plan details, usage stats, or renewal date.
-
-### Decision 7: Standalone Question Review Bookmark
+### Decision 7: Standalone Question Review Bookmark — RESOLVED
 
 **Blocks:** UX-2
 **BS-035 question:** #12
+**Resolution:** No code change — keep standalone review without bookmark (recommended option). Document explicitly in `design-principles.md` §2.
 
-Quick Practice has a bookmark button in its action bar. Standalone question review (`/app/questions/[slug]`) does not. `design-principles.md` §2 says no bookmark by design.
+**Rationale (first principles):**
 
-**Recommended:** Keep as-is (no bookmark). The standalone review is for focused reading, not collection-building.
+1. **Mode distinction.** Quick Practice and History Session Review are collection-oriented contexts — the user is working through a set, and bookmarking helps them build a review queue for later. Standalone question review (`/questions/[slug]`) is a focused-reading context — the user navigated directly to a specific question. These are fundamentally different user intents, and the action bar should reflect that.
+2. **design-principles.md already encodes this.** The §2 action bar table shows "History Individual Review" as `[Try Again] [Back to ...]` — no bookmark. The absence is intentional, not an oversight. However, this intent is documented by omission. Adding an explicit note removes ambiguity for future contributors.
+3. **Alternative rejected.** Adding bookmark to standalone review would blur the mode boundary and add UI clutter (a button the user doesn't expect in a focused context). Users who want to bookmark a question can do so from Quick Practice or the Questions list, where bookmarking is contextually appropriate.
 
-**Alternative:** Add bookmark button to standalone review action bar.
-
-### Decision 8: Clerk Visual Seam
+### Decision 8: Clerk Visual Seam — RESOLVED
 
 **Blocks:** UX-4
 **BS-035 question:** (none — identified in Chunk 3)
+**Resolution:** Accept the seam explicitly and document as a third-party trade-off (recommended option).
 
-Clerk surfaces use `borderRadius: 0.75rem` (12px) vs app's `rounded-2xl` (16px). Hover/focus behavior differs. Base colors are close due to `providers.tsx` appearance config.
+**Rationale (first principles):**
 
-**Recommended:** Accept the seam explicitly. The mismatch is minor and Clerk appearance customization adds ongoing maintenance burden.
-
-**Alternative:** Add full Clerk appearance token mapping in `components/providers.tsx` to match app tokens exactly.
+1. **Third-party rendering is not ours to own.** Clerk controls its own DOM and styling for auth surfaces (`<SignIn />`, `<SignUp />`, `<UserButton />`). The `appearance` config provides limited overrides (colors, border radius), but hover states, focus rings, transitions, and internal component structure are Clerk's domain. Trying to pixel-match these to our design system creates a maintenance coupling where every Clerk SDK update could silently break our overrides.
+2. **The delta is small.** The difference is 4px of border radius (12px vs 16px). Base colors already match well thanks to the existing `providers.tsx` appearance config. Users don't compare Clerk modals side-by-side with app cards — the seam exists in audit screenshots, not in real user flows.
+3. **Alternative rejected.** Full Clerk appearance token mapping would require tracking Clerk's internal CSS class hierarchy, which is undocumented and changes between versions. The maintenance burden is disproportionate to the visual improvement.
 
 ### Decision 9: Token Differentiation
 
@@ -218,22 +224,26 @@ Clerk surfaces use `borderRadius: 0.75rem` (12px) vs app's `rounded-2xl` (16px).
 3. **Pattern Registry alignment.** L-6 (Mobile Menu Link) already documents `hover:bg-muted/50` as canonical. The code simply doesn't match the registry yet.
 4. **Text-only alternative rejected.** Mobile nav entries are full-width `px-3 py-3` touch targets. Background hover communicates tappability for wide rows better than text color change alone. Desktop nav (L-1) correctly uses text-only hover for compact inline links — this is an intentional responsive design split, not inconsistency.
 
-### Decision 11: Mobile Touch Target Strategy
+### Decision 11: Mobile Touch Target Strategy — RESOLVED
 
 **Blocks:** TOUCH-1, TOUCH-2
 **Source:** Chrome Agent Mobile 375px audit (2026-02-28)
+**Resolution:** Option C — targeted fixes for worst offenders. Leave `h-9` system default unchanged.
 
-The default Button size (`h-9` = 36px) and icon variant (`size-9` = 36px) pass WCAG 2.2 SC 2.5.8 (Level AA, 24×24px minimum) but fail WCAG 2.5.5 (Level AAA, 44×44px minimum) and Apple HIG (44pt minimum). The hamburger menu (`p-2` + `size-6` = 40px) is close but also below 44px. Clerk's `<UserButton />` renders at ~28–33px (external dependency, size varies by version).
+**Rationale (first principles):**
 
-**Option A:** Increase Button default to `h-11 sm:h-9` (44px mobile, 36px desktop). Icon to `size-11 sm:size-9`. Most thorough but alters the entire app's proportions and requires extensive visual regression.
+1. **WCAG AA is the compliance bar; AAA is aspirational.** Every button in the app passes WCAG 2.2 SC 2.5.8 (Level AA, 24×24px minimum). The 44px threshold is Level AAA (WCAG 2.5.5) and Apple HIG — aspirational targets that most production apps (including shadcn/ui defaults, Vercel Dashboard, Linear) don't fully meet. We should fix genuinely problematic targets without chasing AAA across the entire button system.
+2. **Global change (Option A) rejected — disproportionate blast radius.** Changing `h-9` to `h-11 sm:h-9` alters every `<Button>` in the app. The visual regression surface is enormous (every page, every form, every dialog). The 36px default is a deliberate shadcn design decision shared by thousands of production apps. Overriding it creates a maintenance fork that diverges from the component library's design intent.
+3. **Do-nothing (Option B) rejected — genuine outliers exist.** While 36px is acceptable for most buttons, the hamburger at 40px (close but below 44px), auth CTA at 32px (`size="sm"` → `h-8`), and Clerk UserButton at ~28–33px are genuinely below comfortable mobile touch targets. These specific elements are in the header — the most-tapped region of any mobile app.
+4. **Targeted fixes (Option C) hit the sweet spot.** Fix the three worst offenders (hamburger padding bump `p-2` → `p-2.5`, theme toggle wrapper, Clerk avatar wrapper/appearance prop) without touching the proven system default. This follows the principle of minimum necessary change — fix what's actually problematic, leave what works.
 
-**Option B:** Leave as-is. Document as intentional WCAG AA compliance. Accept AAA gap.
+**Specific targets:**
+- Hamburger button: `p-2` → `p-2.5` (40px → 44px)
+- Theme toggle: add touch-target wrapper or padding for 44px hit area on mobile
+- Clerk UserButton: appearance prop or wrapper div for minimum 44px hit area
+- Auth CTA (`size="sm"`): evaluate promotion to default size or touch-target wrapper
 
-**Option C (recommended):** Targeted fixes for the worst offenders only — hamburger button (`p-2` → `p-2.5` for 44px), theme toggle (wrapper padding), Clerk avatar (appearance prop or wrapper). Leave `h-9` default unchanged since it's a deliberate shadcn design decision and 36px is above WCAG AA.
-
-**Key context:** WCAG AA requires 24px minimum (we pass). The 44px threshold is AAA and Apple HIG. Many production apps ship with 36px buttons.
-
-**Desktop/mobile strategy note:** Desktop nav uses text-only hover (L-1: `hover:text-foreground`, no background change). Mobile nav uses background + text hover (L-6: `hover:bg-muted/50 hover:text-foreground`). This is **intentional by design** — mobile entries are larger touch targets that benefit from a background fill to communicate tappability. Desktop nav links are compact inline text where background hover would be visually noisy. Do not attempt to unify these strategies.
+**Key context preserved:** WCAG AA requires 24px minimum (we pass). Desktop nav uses text-only hover (L-1), mobile nav uses background + text hover (L-6). This responsive split is intentional by design.
 
 ### Decision 12: Light-Mode Opacity Strategy
 
