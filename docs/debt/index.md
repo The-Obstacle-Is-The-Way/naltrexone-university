@@ -31,7 +31,7 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 | [DEBT-253](./debt-253-scattered-phase1-fixes.md) | Scattered Phase 1 Fixes (D-2, D-4, D-7, D-12) | P2 | — |
 | [DEBT-252](./debt-252-history-sessions-compliance.md) | History Sessions Compliance (D-1, D-5, A11Y-1) | P2 | — |
 | [DEBT-251](./debt-251-choice-button-compliance.md) | Choice Button Compliance (D-3, D-6, A11Y-2, LIGHT-3) | P2 | — |
-| [DEBT-250](./debt-250-frontend-visual-divergence-compliance-plan.md) | Frontend Visual Divergence Compliance Plan (BS-035 + Pattern Registry D-1..D-16) | P2 | — |
+| [DEBT-250](./debt-250-frontend-visual-divergence-compliance-plan.md) | Frontend Visual Divergence Compliance Plan (BS-035 + Pattern Registry D-1..D-17 + non-D items) | P2 | — |
 | [DEBT-249](./debt-249-checkout-success-auth-boundary-hardening.md) | Checkout Success Auth Boundary Hardening (Stripe Return + Clerk Redirect) | P1 | — |
 
 **Next Debt ID:** DEBT-265
@@ -97,7 +97,9 @@ All frontend-specific UI/UX debt. Items use `FE-XXX` IDs and are cross-reference
 
 ### P3 — Fix as encountered
 
-*No active P3 items.*
+| ID | Summary | File(s) |
+|----|---------|---------|
+| [FE-055](../_archive/debt/fe-055-exam-navigator-missing-nav-landmark.md) (follow-up) | Exam review navigator still lacks `aria-controls` wiring between navigator buttons and controlled content | `app/(app)/app/practice/[sessionId]/components/exam-review-view.tsx` |
 
 **Next Frontend ID:** FE-056
 
@@ -127,7 +129,7 @@ All frontend-specific UI/UX debt. Items use `FE-XXX` IDs and are cross-reference
 | FE-052 | Loading state `<output>` missing `aria-live` in `practice-view.tsx` | Added `aria-live="polite"` to practice loading output and updated tests |
 | FE-053 | Bookmark error card never auto-dismisses and has no retry button | Added `Retry bookmarks` action wired to reload bookmarks, with test coverage |
 | [FE-054](../_archive/debt/fe-054-hardcoded-emerald-color-bypasses-design-tokens.md) | Hardcoded `text-emerald-500` bypasses design system tokens (3 files) | Replaced `text-emerald-500` with `text-success` and updated regression test |
-| [FE-055](../_archive/debt/fe-055-exam-navigator-missing-nav-landmark.md) | Practice session question navigator missing navigation landmark + `aria-current` | Added navigation landmark + `aria-current="step"` with regression test coverage |
+| [FE-055](../_archive/debt/fe-055-exam-navigator-missing-nav-landmark.md) | Practice session question navigator missing navigation landmark + `aria-current` (phase 1) | Added navigation landmark + `aria-current="step"` with regression test coverage. Follow-up `aria-controls` wiring remains active in Frontend Debt (P3). |
 | FE-002 | `usePracticeSessionReviewStage` exceeds 150-line guideline | Refactored to 212 lines; summary + navigator extracted to sub-hooks |
 | FE-007 | Raw `<button>` in pricing client | Replaced with `Button` component and preserved pending state |
 | FE-008 | Raw styled links used as buttons | Adopted `Button asChild` and standardized focus rings |

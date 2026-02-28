@@ -4,6 +4,7 @@
 **Parent:** [DEBT-250](debt-250-frontend-visual-divergence-compliance-plan.md)
 **Items:** Phase 6 documentation sync
 **Blocked by:** All code specs (DEBT-251–263) merged
+**Files:** `docs/frontend/pattern-registry.md`, `docs/frontend/standards.md`, `docs/frontend/design-principles.md`, `docs/brainstorming/bs-035-card-hover-and-gray-consistency-audit.md`, `docs/debt/debt-250-frontend-visual-divergence-compliance-plan.md`, `docs/debt/index.md`
 
 ---
 
@@ -17,7 +18,7 @@ Remove resolved D-items from the divergence table. Only unresolved items or appr
 
 ### 2. Pattern Registry Part 4
 
-Add/confirm `L-6` (mobile menu link). Ensure mobile-nav classes map to that pattern.
+Confirm `L-6` (mobile menu link) remains canonical and matches the final Decision 10 outcome.
 
 ### 3. BS-035
 
@@ -41,7 +42,7 @@ If Decision 7 adds a bookmark to standalone review, update the action bar compos
 
 ### 8. Pattern Registry Part 1.2
 
-If Decision 12 accepts light-mode asymmetry, add documentation note about the intentional difference between dark-mode and light-mode hover feedback mechanisms.
+If Decision 12 accepts light-mode asymmetry, ensure the Part 1.2 caveat text reflects the final wording (the caveat already exists and may only need refinement).
 
 ### 9. Third-Party Exceptions
 
@@ -56,13 +57,24 @@ Update all child spec statuses to "Completed" with PR links.
 ## Verification
 
 ```bash
-# No stale D-item references in Pattern Registry Part 11
-# (manual check — ensure only exceptions remain)
+# Decision set still complete in parent spec
+rg -n '^### Decision [0-9]+:' docs/debt/debt-250-frontend-visual-divergence-compliance-plan.md | wc -l
+# Expected: 13
 
-# BS-035 line references match current source
-# (spot-check 3-5 references against actual file lines)
+# Child spec matrix still complete in parent progress table
+rg -n '\\[DEBT-25[1-9]\\]|\\[DEBT-26[0-4]\\]' \
+  docs/debt/debt-250-frontend-visual-divergence-compliance-plan.md | wc -l
+# Expected: 14 child specs referenced
 
-# All 13 decisions recorded with outcomes
-rg -c 'Decision [0-9]+.*outcome' docs/brainstorming/bs-035-*.md
-# Expected: 13 matches (or equivalent decision log format)
+# Pattern Registry still contains canonical mobile nav pattern ID
+rg -n '^### L-6: Mobile Menu Link' docs/frontend/pattern-registry.md
+# Expected: 1 match
+
+# Debt index includes DEBT-250 through DEBT-264 entries
+rg -n '\\[DEBT-26[0-4]\\]|\\[DEBT-25[0-9]\\]' docs/debt/index.md
+# Expected: rows present for DEBT-250..DEBT-264
+
+# BS-035 decision log has recent sync entries (manual spot-check)
+rg -n '^\\| 2026-02-28 \\|' docs/brainstorming/bs-035-card-hover-and-gray-consistency-audit.md
+# Expected: >=1 entries for latest integration updates
 ```

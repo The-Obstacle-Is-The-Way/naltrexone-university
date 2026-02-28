@@ -37,6 +37,7 @@ export const headerActionLinkClasses =
 ```
 
 **Implementation note:** Pattern Registry Part 10 extraction rule is `3+` files. This item qualifies with 6 files.
+**Implementation note:** This class string omits `transition-colors` intentionally because all current consumers use `<Button variant="link">`, and `button.tsx` base classes already provide `transition-colors`. If this constant is ever used outside `Button`, add `transition-colors` explicitly to satisfy Standards §14 and Pattern Registry X-3.
 
 ### D-11: Pricing Page Raw Divs → Card Component
 
@@ -64,6 +65,7 @@ Replace those 4 raw `<div>` card shells with `<Card>` + layout overrides.
 ```
 
 `Card` already provides `rounded-2xl border bg-card text-card-foreground shadow-sm`.
+`Card` also adds `gap-0` by default; verify no spacing regression in these pricing cards.
 
 ---
 

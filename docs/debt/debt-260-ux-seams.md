@@ -48,7 +48,7 @@ className="min-h-screen bg-background py-16"
 
 **Blocked by:** Decision 8
 
-**Current:** Clerk appearance uses `borderRadius: '0.75rem'` in both dark/light themes (`components/providers.tsx:22`, `components/providers.tsx:33`), while major app surfaces use `rounded-2xl` (16px). This creates a subtle seam on auth surfaces.
+**Current:** Clerk appearance uses `borderRadius: '0.75rem'` in both dark/light themes (`components/providers.tsx:22`, `components/providers.tsx:33`), while major app surfaces use `rounded-2xl` (16px). This creates a subtle seam on auth surfaces. Interaction states also differ from app button/link conventions because Clerk controls are third-party-rendered and not using local `Button`/link class systems.
 
 **Recommended:** No code change. Accept as documented third-party trade-off and add/maintain note in Pattern Registry.
 
