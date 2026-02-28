@@ -1,6 +1,6 @@
 # DEBT-255: Mobile Nav Hover
 
-**Status:** Ready
+**Status:** Resolved (2026-02-28)
 **Parent:** [DEBT-250](debt-250-frontend-visual-divergence-compliance-plan.md)
 **Items:** D-16
 **Decision 10:** Resolved — `hover:bg-muted/50` (see DEBT-250 for rationale)
