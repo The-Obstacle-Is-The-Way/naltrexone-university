@@ -160,7 +160,7 @@ All tab-switch / segmented-control components MUST use shared visual constants f
 | Constant | Classes | Usage |
 |----------|---------|-------|
 | `tabSwitchContainerClasses` | `inline-flex rounded-lg border border-border bg-muted p-1` | Outer wrapper |
-| `tabSwitchItemBaseClasses` | `rounded-md px-4 py-2 text-sm font-medium transition-colors focus-visible:...` | Every tab item |
+| `tabSwitchItemBaseClasses` | `rounded-md px-4 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]` | Every tab item |
 | `tabSwitchItemActiveClasses` | `bg-primary text-primary-foreground shadow-sm` | Selected item |
 | `tabSwitchItemInactiveClasses` | `text-muted-foreground hover:bg-muted/50 hover:text-foreground` | Unselected items |
 
@@ -235,7 +235,7 @@ Every interactive element MUST have a visible focus indicator. Text links, icon 
 | App page h1 | `text-2xl font-bold font-heading tracking-tight text-foreground` |
 | Marketing hero h1 | `font-display text-5xl font-bold tracking-tight md:text-7xl` |
 | Marketing section h2 | `font-heading text-3xl font-bold tracking-tight md:text-4xl` |
-| Error page heading | `text-xl font-semibold text-foreground` (use `<h2>` in route errors, `<h1>` in global-error) |
+| Error/utility page heading | `text-xl font-semibold font-heading tracking-tight text-foreground` (route errors use `<h2>` unless `includeMainLandmark`; `global-error.tsx` uses `text-2xl font-bold font-heading tracking-tight text-foreground`) |
 
 ### Heading hierarchy
 
@@ -452,7 +452,7 @@ Every interactive element MUST have a discernible accessible name:
 
 - `ErrorCard` has `role="alert"` (assertive) — correct
 - Inline errors: MUST have `role="alert"`
-- The `Feedback` component (correct/incorrect answer): MUST have `role="alert"` or `aria-live="assertive"`
+- The `Feedback` component (correct/incorrect answer): uses `role="status"` (polite) — correct
 - Loading regions: MUST have `aria-live="polite"` (PageLoading and `<output>` handle this)
 
 ### Heading levels
@@ -563,6 +563,25 @@ ALWAYS use `ROUTES.*` constants and helper functions for links. NEVER hardcode r
 - Mobile nav: `components/mobile-nav.tsx`
 - Both source from the same `APP_NAV_ITEMS` constant
 
+### App Shell Header
+
+**Source:** `app/(app)/app/layout.tsx:75-97`
+
+- Header: `relative border-b border-border bg-background`
+- Inner container: `mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8`
+- Sticky/z-index: not sticky; no explicit `z-*`
+- Brand link styling is tracked as divergence D-8 (Pattern Registry L-4). Current brand link classes: `text-sm font-semibold text-foreground` (`app/(app)/app/layout.tsx:80`)
+
+### Marketing Shell Header
+
+**Source:** `components/marketing/marketing-layout.tsx:22-56`
+
+- Header: `border-b border-border bg-background`
+- Inner container: `mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8`
+- Desktop nav: `hidden items-center gap-4 text-sm sm:flex`
+- Mobile nav: `mt-3 flex items-center gap-4 text-sm sm:hidden`
+- Marketing currently does not render `ThemeToggle` (UX-3 / DEBT-250)
+
 ### Transitions on interactive elements
 
 Every element with a `hover:` color change MUST also have `transition-colors`:
@@ -629,7 +648,7 @@ Three hooks exceed the 200-line "god hook" threshold (§12):
 | ID | Summary | File(s) |
 |----|---------|---------|
 | [FE-055](../_archive/debt/fe-055-exam-navigator-missing-nav-landmark.md) | Exam review navigator still lacks `aria-controls` wiring between navigator buttons and controlled content | `app/(app)/app/practice/[sessionId]/components/exam-review-view.tsx` |
-| — | Active visual divergences are tracked in Pattern Registry Part 11 (`D-1` through `D-16`) and DEBT-250 implementation plan | `docs/frontend/pattern-registry.md`, `docs/debt/debt-250-frontend-visual-divergence-compliance-plan.md` |
+| — | Active visual divergences are tracked in Pattern Registry Part 11 (`D-1` through `D-17`) and DEBT-250 implementation plan (includes `COMP-1` + `A11Y-1`) | `docs/frontend/pattern-registry.md`, `docs/debt/debt-250-frontend-visual-divergence-compliance-plan.md` |
 | — | `Markdown.tsx` uses PascalCase filename (violates §13 kebab-case convention) | `components/markdown/Markdown.tsx` |
 
 ---

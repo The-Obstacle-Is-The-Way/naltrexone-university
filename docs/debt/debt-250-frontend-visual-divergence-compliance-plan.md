@@ -313,7 +313,7 @@ correctness === 'wrong-unselected' && 'opacity-50',
 **Changes:**
 1. `opacity-60` → `opacity-50` (align with universal disabled/dimmed treatment)
 
-**Verify:** `rg -n 'opacity-60' components/question` returns 0 matches.
+**Verify:** `rg -n --glob '!**/*.test.*' --glob '!**/*.spec.*' 'opacity-60' components/question` returns 0 matches (production code only).
 
 ---
 
@@ -384,14 +384,7 @@ block rounded-md px-3 py-3 text-sm text-muted-foreground transition-colors hover
 
 **Verify:** `rg -n 'hover:bg-muted[\" ]' components/mobile-nav.tsx` returns 0 matches (inactive links).
 
-**Active state sub-item:** The **active** (current page) mobile nav link also diverges — uses `bg-muted` (100%) at `mobile-nav.tsx:74`, while Pattern Registry L-6 active specifies `bg-muted/50`. However, having active at 100% and hover at 50% creates a clear visual hierarchy (active > hover), which is logically correct. Two options:
-
-1. **Keep `bg-muted` (100%) for active** and update Pattern Registry L-6 to match. Active state SHOULD be stronger than hover.
-2. **Change active to `bg-muted/50`** per current registry, making active and hover visually identical — confusing.
-
-**Recommended:** Option 1 — keep active at `bg-muted` (100%), update Pattern Registry L-6 active definition. Document the principle: "Active state fill is always stronger than hover fill."
-
-**Verify (active):** After Decision 10, confirm the active state opacity is explicitly documented in L-6 and matches the code.
+**Active state note:** The active (current page) mobile nav link uses `bg-muted` (100%) at `components/mobile-nav.tsx:74`. This matches Pattern Registry L-6 active and is intentional: **active fill > hover fill**.
 
 ---
 
@@ -494,22 +487,22 @@ rounded-2xl border border-destructive/30 bg-destructive/10 p-6 text-sm text-dest
 **Current** — `app/(app)/app/history/components/history-sessions-tab.tsx:178-181`:
 ```tsx
 <li
-  key={session.id}
-  tabIndex={isReviewable ? 0 : undefined}
+  key={row.sessionId}
+  tabIndex={isRowInteractive ? 0 : undefined}
   className={
 ```
 
 **Target:**
 ```tsx
 <li
-  key={session.id}
-  role={isReviewable ? 'link' : undefined}
-  tabIndex={isReviewable ? 0 : undefined}
+  key={row.sessionId}
+  role={isRowInteractive ? 'link' : undefined}
+  tabIndex={isRowInteractive ? 0 : undefined}
   className={
 ```
 
 **Changes:**
-1. Add `role="link"` when the row is interactive (`isReviewable`)
+1. Add `role="link"` when the row is interactive (`isRowInteractive`)
 
 **Note:** This fix should be applied together with D-1 (which changes the hover classes on the same element). The ideal long-term fix is to make the entire `<li>` a `<Link>` component (eliminating the delegated click pattern), but that requires more refactoring and is tracked as a known debt in Pattern Registry I-1.
 
@@ -531,20 +524,20 @@ Items that require decisions but have clear recommended paths. These are the hig
 
 **Problem:** When a history session card is expanded via "View breakdown", the expanded content area sits inside the same `bg-muted/20` container with only a `border-t border-border/40` separator. The separator is nearly invisible (40% opacity on 15% gray = ~6% effective). The "Review session" outline button nearly disappears against the muted background.
 
-**Current** — `history-sessions-tab.tsx` (expanded breakdown area, after the session summary row):
+**Current** — `app/(app)/app/history/components/history-sessions-tab.tsx:255` (expanded breakdown area container):
 ```tsx
 <div className="mt-3 space-y-2 border-t border-border/40 pt-3">
-  <Button variant="outline" ... >Review session</Button>
-  <SessionBreakdownList ... />
-</div>
+```
+
+**Review session button (current)** — `app/(app)/app/history/components/history-sessions-tab.tsx:257`:
+```tsx
+<Button asChild variant="outline" className="rounded-full">
 ```
 
 **Target** (recommended):
 ```tsx
 <div className="mt-3 -mx-1 space-y-2 rounded-lg border border-border/30 bg-background/60 p-3">
-  <Button variant="default" ... >Review session</Button>
-  <SessionBreakdownList ... />
-</div>
+  <Button asChild variant="default" className="rounded-full">
 ```
 
 **Changes:**
@@ -564,7 +557,7 @@ Items that require decisions but have clear recommended paths. These are the hig
 
 **Problem:** When a user selects a choice before submitting, the only visual change is `border-ring` (border shifts from 15% to 40% lightness). No background tint. Chrome agent visual audit confirmed this is "hard to distinguish at a glance."
 
-**Current** — `choice-button.tsx` (selected state):
+**Current** — `components/question/choice-button.tsx:34` (selected, pre-submission outer wrapper):
 ```
 border-ring
 ```
@@ -846,7 +839,7 @@ The outer `MarketingLayout` already uses `min-h-[100dvh]` to push the footer dow
 **Severity:** Low
 **Requires:** Decision 7
 
-**Current:** `app/(app)/app/questions/[slug]/question-page-client.tsx` has no bookmark button in its action bar.
+**Current:** `app/(app)/app/questions/[slug]/question-page-client.tsx:311` renders the bottom action bar (`data-testid="bottom-action-bar"`) with Previous/Submit/Next/back actions only — no bookmark control.
 
 **Target** (recommended): No code change. Document in `design-principles.md` §2 that standalone review intentionally excludes bookmark.
 
@@ -857,7 +850,7 @@ The outer `MarketingLayout` already uses `min-h-[100dvh]` to push the footer dow
 **Severity:** Low
 **Requires:** Decision 3
 
-**Current** — `components/marketing/marketing-layout.tsx`: No `ThemeToggle` import or rendering.
+**Current** — `components/marketing/marketing-layout.tsx:1` and `components/marketing/marketing-layout.tsx:42`: No `ThemeToggle` import, and the header action area only renders `{authNav}`.
 
 **Target** (recommended): Add `<ThemeToggle />` to marketing header, matching app shell placement.
 
@@ -868,7 +861,7 @@ The outer `MarketingLayout` already uses `min-h-[100dvh]` to push the footer dow
 **Severity:** Low
 **Requires:** Decision 8
 
-**Current:** Clerk's `borderRadius: 0.75rem` (12px) vs app's `rounded-2xl` (16px). Hover/focus behavior differs from app patterns.
+**Current:** Clerk appearance is configured with `borderRadius: '0.75rem'` (`components/providers.tsx:22`, `components/providers.tsx:33`) while the app uses `rounded-2xl` (16px) for Cards and major surfaces. Hover/focus behavior differs from app patterns.
 
 **Target** (recommended): No code change. Accept as documented trade-off. Add a note to Pattern Registry Part 5 under "Marketing Button Overrides" or create a new "Third-Party Component Exceptions" section.
 
@@ -947,13 +940,13 @@ Phase 6 (after all code changes)
 
 ### Code
 
-- [ ] No `hover:bg-accent` anywhere in app code (all standardized to `hover:bg-muted/*`)
+- [ ] No non-UI neutral-surface hovers use `accent` token (`hover:bg-accent*`) in production code outside `components/ui/` (tests excluded)
 - [ ] No `dark:hover:bg-foreground/*` or `dark:bg-foreground/*` in page/component code (only in `components/ui/`)
 - [ ] No `hover:opacity-70` for link affordance anywhere in codebase
-- [ ] No `opacity-60` for interactive dimmed states (all use `opacity-50`)
+- [ ] No `opacity-60` for interactive dimmed states in production code (all use `opacity-50`; tests may mention prior behavior)
 - [ ] No `ring-2 ring-ring` without `/50` opacity (all use `ring-[3px] ring-ring/50`)
 - [ ] No `hover:bg-muted/80` (choice hover standardized to `/60`)
-- [ ] No `hover:bg-muted` or `hover:bg-accent` at 100% opacity for interactive hover (only for solid fills like tab-switch container)
+- [ ] No `hover:bg-muted` (100% fill) in non-UI code for neutral surface hover (mobile nav, marketing outline pills, etc.)
 - [ ] `headerActionLinkClasses` exists as one shared constant; all 6 consumers import it
 - [ ] Marketing + app brand links both match L-4 canonical class set
 - [ ] Mobile nav inactive links use `hover:bg-muted/50` (not `hover:bg-muted`)
@@ -1004,16 +997,16 @@ Phase 6 (after all code changes)
 ### Cross-codebase checks
 
 ```bash
-# No non-UI accent hover backgrounds (UI primitives may use accent by design)
-rg -n --glob '!components/ui/**' 'hover:bg-accent' app components
+# No non-UI accent hover backgrounds in production code (UI primitives may use accent by design)
+rg -n --glob '!components/ui/**' --glob '!**/*.test.*' --glob '!**/*.spec.*' 'hover:bg-accent' app components
 # Expected: 0 matches
 
 # No page-level dark: color overrides
 rg -n 'dark:.*(?:bg|border)-foreground' app
 # Expected: 0 matches
 
-# No opacity hover for links
-rg -n 'hover:opacity' app components
+# No opacity hover for links (production code only)
+rg -n --glob '!**/*.test.*' --glob '!**/*.spec.*' 'hover:opacity' app components
 # Expected: 0 matches
 
 # Shared constant migration complete
@@ -1104,7 +1097,7 @@ These BS-035 findings are informational or deferred. They are NOT implementation
 | `scrollbar-hidden` dead CSS | CSS/Tailwind deep sweep | Class defined in `globals.css:251-258` but never applied in any `.tsx` file. Dead code — should be removed in a cleanup pass. |
 | All overlays share `z-50` | Shadow/Z-index deep sweep | Select, DropdownMenu, AlertDialog, and NotificationToast all use `z-50`. If a notification fires while a dialog is open, it renders behind the dialog overlay. No user-visible bug today (dialog overlay covers the viewport), but could cause issues in edge cases. Architectural concern, not visual consistency. |
 | Duplicate dark variant declarations | CSS/Tailwind deep sweep | `globals.css` line 5 (`@custom-variant dark`) and line 9 (`@variant dark`) both declare the dark variant. Migration artifact from Tailwind v3 to v4 — only one is needed. |
-| `aria-busy` inconsistent usage | Accessibility deep sweep | `PageLoading` uses `aria-busy="true"` on its `aria-live` region; 6 other `<output aria-live="polite">` loading states do not. Accessibility polish, not visual. |
+| `aria-busy` inconsistent usage | Accessibility deep sweep | `PageLoading` uses `aria-busy="true"` on its `aria-live` region; 9 other `<output aria-live="polite">` loading states do not. Accessibility polish, not visual. |
 | No explicit `cursor-pointer` on FilterChip/SegmentedControl | Accessibility deep sweep | Both are `<button>` elements relying on browser default cursor behavior. Browser defaults are correct for native buttons. `cursor-pointer` only needed on non-button interactive elements (`<label>`, `<li>`, `<summary>`). |
 | Redundant `shadow-sm` on `<Card>` instances | Shadow deep sweep | ~30 `<Card className="... shadow-sm">` instances across app pages. The `<Card>` component's base class already includes `shadow-sm`. Harmless no-op — removal is cosmetic cleanup only. |
 | History heading wrapper uses `space-y-1` vs `mt-1` | Typography deep sweep | `history-page-client.tsx:33` wraps heading in `<div className="space-y-1">` with no `mt-1` on subtitle. All other pages use bare `<div>` + `mt-1` on `<p>`. Functionally identical (both produce 0.25rem gap). Structural inconsistency, not visual. |
@@ -1149,4 +1142,4 @@ Route-level `app/**` wrappers not always cited by filename were reviewed for vis
 ### Conclusion
 
 No additional shadcn primitives are missing from documentation.
-No additional production React UI divergence category was discovered beyond `D-1` through `D-16`.
+No additional production React UI divergence category was discovered beyond `D-1` through `D-17` (plus `COMP-1` and `A11Y-1`, tracked in this spec).

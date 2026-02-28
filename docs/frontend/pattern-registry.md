@@ -43,6 +43,21 @@ The foundation of the visual hierarchy. Every surface must sit at its correct la
 
 **Known debt:** `--muted`, `--secondary`, and `--accent` are identical values. `--border` and `--input` are identical values. If these tokens are ever differentiated, all patterns in this registry will need visual regression testing.
 
+### 1.1a Light Mode Gray Stack
+
+Light mode uses the same semantic tokens, but the layer ordering is inverted (page background is light, text is dark). Values below are sourced from `app/globals.css` `:root`.
+
+| Layer | Token | Light Mode Value | Approx Lightness | Role |
+|-------|-------|------------------|------------------|------|
+| 0 | `--background` | `0 0% 100%` | 100% | Page background — the lightest surface |
+| 1 | `--card` | `0 0% 100%` | 100% | Card surfaces (no elevation via fill in light mode; relies on border/shadow) |
+| 2 | `--muted` / `--secondary` / `--accent` | `210 40% 96.1%` | 96.1% | Subdued fills, hover targets, tinted backgrounds |
+| 3 | `--border` / `--input` | `214.3 31.8% 91.4%` | 91.4% | Borders, input outlines, separators |
+| 4 | `--muted-foreground` | `215.4 16.3% 46.9%` | 46.9% | Secondary text, labels, timestamps |
+| 5 | `--foreground` | `222.2 84% 4.9%` | 4.9% | Primary text, headings |
+
+**Known debt (light mode):** `--muted`, `--secondary`, and `--accent` are identical values. `--border` and `--input` are identical values.
+
 ### 1.2 Background Opacity Scale
 
 When to use each opacity on `bg-muted` (or equivalent layer-2 token):
@@ -138,18 +153,45 @@ bg-popover text-popover-foreground rounded-md border p-1 shadow-md
 
 Items within popovers use `focus:bg-accent focus:text-accent-foreground` — keyboard focus drives the highlight, not hover.
 
+**SelectContent (exact)** — `components/ui/select.tsx:59`:
+```text
+bg-popover text-popover-foreground data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 relative z-50 max-h-96 min-w-[8rem] overflow-x-hidden overflow-y-auto rounded-md border shadow-md
+```
+
+**Select viewport padding:** `components/ui/select.tsx:70` uses `p-1`.
+
+**DropdownMenuContent (exact)** — `components/ui/dropdown-menu.tsx:45`:
+```text
+bg-popover text-popover-foreground data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 z-50 max-h-(--radix-dropdown-menu-content-available-height) min-w-[8rem] origin-(--radix-dropdown-menu-content-transform-origin) overflow-x-hidden overflow-y-auto rounded-md border p-1 shadow-md
+```
+
+**DropdownMenuItem (exact)** — `components/ui/dropdown-menu.tsx:77`:
+```text
+focus:bg-accent focus:text-accent-foreground data-[variant=destructive]:text-destructive data-[variant=destructive]:focus:bg-destructive/10 dark:data-[variant=destructive]:focus:bg-destructive/20 data-[variant=destructive]:focus:text-destructive data-[variant=destructive]:*:[svg]:!text-destructive [&_svg:not([class*='text-'])]:text-muted-foreground relative flex cursor-default items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-hidden select-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50 data-[inset]:pl-8 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4
+```
+
+**DropdownMenuCheckboxItem / RadioItem (exact)** — `components/ui/dropdown-menu.tsx:95`, `components/ui/dropdown-menu.tsx:131`:
+```text
+focus:bg-accent focus:text-accent-foreground relative flex cursor-default items-center gap-2 rounded-sm py-1.5 pr-2 pl-8 text-sm outline-hidden select-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4
+```
+
+**DropdownMenuSubContent (exact)** — `components/ui/dropdown-menu.tsx:233`:
+```text
+bg-popover text-popover-foreground data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 z-50 min-w-[8rem] origin-(--radix-dropdown-menu-content-transform-origin) overflow-hidden rounded-md border p-1 shadow-lg
+```
+
 ### S-4: Modal Dialog Surface
 
 Blocking dialog surface used by confirmation flows.
 
 **Overlay:**
 ```
-fixed inset-0 z-50 bg-background/80 backdrop-blur-sm
+fixed inset-0 z-50 bg-background/80 backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0
 ```
 
 **Dialog card:**
 ```
-fixed ... max-w-lg ... rounded-2xl border border-border bg-card p-6 text-foreground shadow-lg
+fixed left-1/2 top-1/2 z-50 grid w-[calc(100%-2rem)] max-w-lg -translate-x-1/2 -translate-y-1/2 gap-4 rounded-2xl border border-border bg-card p-6 text-foreground shadow-lg outline-hidden data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 sm:w-full
 ```
 
 **Source:** `components/ui/alert-dialog.tsx`
@@ -244,6 +286,7 @@ disabled:pointer-events-none disabled:opacity-50
 **Source:** `components/ui/filter-chip.tsx`
 
 **Design rationale:** Unselected hover uses `/50` (same as standalone row hover) rather than `100%` — full-opacity hover was too aggressive and visually inconsistent with every other interactive element.
+**Current divergence:** D-4 — `FilterChip` currently uses `hover:bg-accent` (100%) in `components/ui/filter-chip.tsx:28`. Canonical target is the `hover:bg-muted/50` pattern documented above.
 
 ### I-5: Segmented Control Item
 
@@ -373,6 +416,36 @@ focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]
 
 Button variants are defined in `components/ui/button.tsx` via CVA. This section documents **app-level conventions** layered on top.
 
+### Button Component (Exact Class Strings)
+
+**Source of truth:** `components/ui/button.tsx:7-38`
+
+**CVA base classes (exact)** — `components/ui/button.tsx:8`:
+```text
+inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive
+```
+
+**Variant classes (exact)** — `components/ui/button.tsx:12-25`:
+```text
+default: bg-primary text-primary-foreground shadow-xs hover:bg-primary/90
+destructive: bg-destructive text-white shadow-xs hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40 dark:bg-destructive/60
+success: bg-success text-success-foreground shadow-xs hover:bg-success/90 focus-visible:ring-success/20 dark:focus-visible:ring-success/40 dark:bg-success/60
+outline: border bg-background shadow-xs hover:bg-accent hover:text-accent-foreground dark:bg-input/30 dark:border-input dark:hover:bg-input/50
+secondary: bg-secondary text-secondary-foreground shadow-xs hover:bg-secondary/80
+ghost: hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50
+link: text-primary underline-offset-4 hover:underline
+```
+
+**Size classes (exact)** — `components/ui/button.tsx:27-31`:
+```text
+default: h-9 px-4 py-2 has-[>svg]:px-3
+sm: h-8 rounded-md gap-1.5 px-3 has-[>svg]:px-2.5
+lg: h-10 rounded-md px-6 has-[>svg]:px-4
+icon: size-9
+```
+
+**Active state:** No `active:` utilities are applied currently (browser default only).
+
 ### Pill Shape Convention
 
 All standalone action buttons in the app use `rounded-full`:
@@ -468,17 +541,30 @@ Uses tier 3 (`/15`) background — these are emphasized status indicators.
 
 Inline persistent error within a page.
 
+**Canonical (target):**
+```
+rounded-2xl border border-destructive/30 bg-destructive/10 p-6 text-sm text-destructive shadow-sm
+```
+
+**Current (COMP-1):**
 ```
 rounded-2xl border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive shadow-sm
 ```
 
-**Source:** `components/error-card.tsx` — has `role="alert"` built in.
+**Source:** Current implementation is `components/error-card.tsx:15` (has `role="alert"` built in). Canonical target tracked as `COMP-1` in DEBT-250.
+
+**Dense override (compact contexts only):** `p-4` (once COMP-1 lands)
 
 **Never manually add `role="alert"`** when using ErrorCard.
 
 ### F-4: Toast
 
 Transient feedback notification via `useNotification()`.
+
+**Region positioning:**
+```
+pointer-events-none fixed inset-x-0 top-4 z-50 flex justify-center px-4
+```
 
 **Shell:**
 ```
@@ -620,7 +706,8 @@ What is the parent surface?
 ├── Direct-action target (choice, chip) → hover:bg-muted/60
 └── Tab-switch inactive → hover:bg-muted/50 (inside bg-muted container)
 
-Token: ALWAYS use `muted`. Never use `accent` or `foreground` for hover.
+Token (neutral surface fills): Use `muted`.
+Avoid introducing new `hover:bg-accent*` outside `components/ui/` (button variants use `accent` by design). Never use `foreground` for hover fills.
 ```
 
 ### "I need a link"
@@ -707,6 +794,18 @@ Current codebase violations tracked in [BS-035](../brainstorming/bs-035-card-hov
 | D-16 | Mobile nav inactive links use `hover:bg-muted` (100%) | L-6: `hover:bg-muted/50` | `components/mobile-nav.tsx` |
 | D-17 | Auth/error page H1s missing `font-heading tracking-tight` | Part 12 heading conventions | `sign-in-page-client.tsx`, `sign-up-page-client.tsx`, `checkout-success-sync.tsx`, `global-error.tsx`, `error-boundary-page.tsx` |
 
+### DEBT-250 Non-D Items (Also Active)
+
+These are tracked in [DEBT-250](../debt/debt-250-frontend-visual-divergence-compliance-plan.md) but are not part of the D-table above:
+
+| ID | Category | Canonical Pattern / Target |
+|----|----------|----------------------------|
+| `COMP-1` | Component default inconsistency | F-3 ErrorCard default padding = `p-6` (dense override = `p-4`) |
+| `A11Y-1` | Accessibility gap | Delegated clickable `<li>` must have `role="link"` (or be refactored to a `<Link>`) |
+| `STRUCT-1` | Structural hierarchy | Expanded breakdown area must be visually inset (see DEBT-250 Decision 4 target classes) |
+| `AFFORD-1` | Affordance concern | I-3 selected-but-not-submitted state may add `bg-muted/20` (without changing border logic) |
+| `UX-1`–`UX-4` | UX seams | Non-visual/product decisions (documented in DEBT-250 Decisions 3, 6, 7, 8) |
+
 ---
 
 ## Part 12: Typography System
@@ -790,10 +889,12 @@ Two distinct stat card presentations:
 
 ### 13.1 Page-Level Container
 
-Universal responsive container pattern (all pages, marketing and app):
+Default responsive container pattern (app + marketing shells):
 ```
 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8
 ```
+
+**Exceptions:** Centered utility pages (sign-in/up fallback, global error, error boundary, not found, checkout success) use their own centered layouts and do not use this container.
 
 **Vertical padding:**
 - App layout content area: `py-8`
@@ -802,7 +903,9 @@ mx-auto max-w-7xl px-4 sm:px-6 lg:px-8
 
 ### 13.2 Page Section Spacing
 
-**Universal:** `space-y-6` at the page root container. Used on all app pages without exception.
+**Default:** `space-y-6` at app page root containers.
+
+**Known exceptions (denser stacks):** Some tab panels and error-state fallbacks use `space-y-4` (e.g., `app/(app)/app/history/components/history-sessions-tab.tsx:118`, `app/(app)/app/history/components/history-questions-tab.tsx:420`, `app/(app)/app/practice/[sessionId]/components/practice-session-page-view.tsx:126`).
 
 ### 13.3 Card Padding Tiers
 
@@ -859,6 +962,15 @@ Four tiers, cleanly separated by element type:
 **Rule:** Never use `shadow`, `shadow-xl`, or `shadow-2xl`. The four tiers above are the complete scale.
 
 **Note:** The `<Card>` component includes `shadow-sm` in its base class. Callers do not need to pass `shadow-sm` explicitly (though many currently do — it's harmless but redundant).
+
+### 14.1 Z-index Conventions (Current)
+
+| Layer | Class | Used By | Source |
+|------|-------|---------|--------|
+| Overlays + popovers | `z-50` | AlertDialog overlay/content, SelectContent, DropdownMenu content/sub-content | `components/ui/alert-dialog.tsx:39`, `components/ui/alert-dialog.tsx:57`, `components/ui/select.tsx:59`, `components/ui/dropdown-menu.tsx:45`, `components/ui/dropdown-menu.tsx:233` |
+| Notifications | `z-50` | Toast region | `components/ui/notification-provider.tsx:125` |
+
+**Known limitation:** Since all overlays and toasts share `z-50`, a toast fired while a dialog is open can render behind the dialog overlay. Tracked as out-of-scope in DEBT-250.
 
 ---
 
@@ -969,7 +1081,32 @@ transition-[color,box-shadow] outline-none md:text-sm
 
 **File input pseudo-element:** `file:text-foreground file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium`
 
+**Exact `className` strings (current)** — `components/ui/input.tsx:11-13`:
+```text
+file:text-foreground placeholder:text-muted-foreground selection:bg-primary selection:text-primary-foreground dark:bg-input/30 border-input flex h-9 w-full min-w-0 rounded-md border bg-transparent px-3 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 md:text-sm
+focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]
+aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive
+```
+
 **Note:** Uses `transition-[color,box-shadow]` (not `transition-colors`) because form controls animate both color and the focus ring box-shadow.
+
+### Select Component
+
+The `<Select>` component (`components/ui/select.tsx`) is the single select/menu form primitive.
+
+**Trigger base classes:**
+```
+border-input data-[placeholder]:text-muted-foreground [&_svg:not([class*='text-'])]:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive flex h-9 w-fit items-center justify-between gap-2 rounded-md border bg-transparent px-3 py-2 text-sm whitespace-nowrap shadow-xs transition-[color,box-shadow] outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50 data-[size=default]:h-9 data-[size=sm]:h-8 *:data-[slot=select-value]:line-clamp-1 *:data-[slot=select-value]:flex *:data-[slot=select-value]:items-center *:data-[slot=select-value]:gap-2
+```
+
+**Content surface:** Uses S-3 (Popover Surface) + Radix enter/exit animations (Part 15.3).
+
+**Item base classes (keyboard focus highlight):**
+```
+focus:bg-accent focus:text-accent-foreground relative flex w-full cursor-default items-center gap-2 rounded-sm py-1.5 pr-8 pl-2 text-sm outline-none select-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4
+```
+
+**Note:** Like `<Input>`, uses `transition-[color,box-shadow]` on the trigger because focus rings animate via box-shadow.
 
 ---
 
@@ -977,16 +1114,25 @@ transition-[color,box-shadow] outline-none md:text-sm
 
 ### 18.1 Landmarks
 
-Every page renders a `<main id="main-content" tabIndex={-1}>` landmark. A global skip-to-content link in `app/layout.tsx:38-43` targets it:
+All route pages render a `<main id="main-content" tabIndex={-1}>` landmark **except** `app/global-error.tsx` (Next.js global error renders its own `<html>/<body>` and does not use `app/layout.tsx`).
+
+A global skip-to-content link in `app/layout.tsx:38-43` targets the main landmark:
 ```tsx
-<a href="#main-content" className="sr-only focus:not-sr-only ...">Skip to content</a>
+<a
+  href="#main-content"
+  className="sr-only focus:not-sr-only focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]"
+>
+  Skip to content
+</a>
 ```
 
 All `<nav>` elements (8 total) have `aria-label`. Marketing page `<section>` elements have `aria-label` or `aria-labelledby`.
 
 ### 18.2 Live Regions
 
-Loading states use the `<output>` HTML element with `aria-live="polite"`:
+Page-level Suspense loading uses the shared `<PageLoading>` component with `aria-busy="true"` + `aria-live="polite"` on its wrapper (`components/loading/page-loading.tsx`).
+
+Inline loading states use the `<output>` HTML element with `aria-live="polite"`:
 ```tsx
 <output aria-live="polite">Loading question...</output>
 ```
