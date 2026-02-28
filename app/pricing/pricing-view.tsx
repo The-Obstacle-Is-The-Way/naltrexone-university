@@ -3,6 +3,7 @@ import type { ComponentType, ReactNode } from 'react';
 import { IdempotencyKeyField } from '@/app/pricing/pricing-client';
 import type { PricingBanner } from '@/app/pricing/types';
 import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
 import { PRICING_DATA } from '@/lib/pricing-data';
 import { ROUTES } from '@/lib/routes';
 
@@ -82,7 +83,7 @@ export function PricingView({
         ) : null}
 
         {isEntitled ? (
-          <div className="mx-auto mt-16 max-w-2xl rounded-2xl border border-border bg-card p-8 text-center shadow-sm">
+          <Card className="mx-auto mt-16 max-w-2xl p-8 text-center">
             <div className="text-lg font-semibold text-foreground">
               You&apos;re already subscribed
             </div>
@@ -97,9 +98,9 @@ export function PricingView({
                 <Link href={ROUTES.APP_BILLING}>Manage Billing</Link>
               </Button>
             </div>
-          </div>
+          </Card>
         ) : !isEntitled && manageBillingAction ? (
-          <div className="mx-auto mt-16 max-w-2xl rounded-2xl border border-border bg-card p-8 text-center shadow-sm">
+          <Card className="mx-auto mt-16 max-w-2xl p-8 text-center">
             <div className="text-lg font-semibold text-foreground">
               Subscription needs attention
             </div>
@@ -113,7 +114,7 @@ export function PricingView({
                 </Button>
               </form>
             </div>
-          </div>
+          </Card>
         ) : (
           <section className="mt-16" aria-labelledby="pricing-plans-heading">
             <h2
@@ -123,7 +124,7 @@ export function PricingView({
               Plans
             </h2>
             <div className="mt-6 grid gap-8 md:grid-cols-2">
-              <div className="rounded-2xl border border-border bg-card p-8 shadow-sm">
+              <Card className="p-8">
                 <h3 className="font-heading font-semibold text-foreground">
                   {PRICING_DATA.monthly.name}
                 </h3>
@@ -147,8 +148,8 @@ export function PricingView({
                     Subscribe Monthly
                   </SubscribeButtonComponent>
                 </form>
-              </div>
-              <div className="rounded-2xl border-2 border-primary bg-card p-8 shadow-sm">
+              </Card>
+              <Card className="border-2 border-primary p-8">
                 <h3 className="font-heading font-semibold text-foreground">
                   {PRICING_DATA.annual.name}
                 </h3>
@@ -175,7 +176,7 @@ export function PricingView({
                     Subscribe Annual
                   </SubscribeButtonComponent>
                 </form>
-              </div>
+              </Card>
             </div>
           </section>
         )}

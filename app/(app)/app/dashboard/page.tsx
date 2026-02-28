@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { formatDate } from '@/lib/format-date';
 import { ROUTES, toQuestionRoute } from '@/lib/routes';
+import { headerActionLinkClasses } from '@/lib/shared-styles';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import {
   type GetSessionHistoryOutput,
@@ -29,9 +30,6 @@ function formatPercent(value: number): string {
 function toSentenceCase(value: string): string {
   return value.charAt(0).toUpperCase() + value.slice(1);
 }
-
-const headerLinkButtonClasses =
-  'h-auto p-0 text-muted-foreground no-underline hover:text-foreground hover:no-underline';
 
 type DashboardViewProps = {
   stats: UserStatsOutput;
@@ -125,7 +123,7 @@ export function DashboardView({
             <div className="text-sm font-medium text-foreground">
               Recent sessions
             </div>
-            <Button asChild variant="link" className={headerLinkButtonClasses}>
+            <Button asChild variant="link" className={headerActionLinkClasses}>
               <Link href={historySessionsHref}>View all</Link>
             </Button>
           </div>
@@ -189,7 +187,7 @@ export function DashboardView({
             <div className="text-sm font-medium text-foreground">
               Recent activity
             </div>
-            <Button asChild variant="link" className={headerLinkButtonClasses}>
+            <Button asChild variant="link" className={headerActionLinkClasses}>
               <Link href={historyQuestionsHref}>View all</Link>
             </Button>
           </div>

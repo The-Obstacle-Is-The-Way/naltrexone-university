@@ -16,6 +16,7 @@ import {
 } from '@/components/ui/select';
 import { formatDate } from '@/lib/format-date';
 import { ROUTES, toQuestionRoute } from '@/lib/routes';
+import { headerActionLinkClasses } from '@/lib/shared-styles';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import type {
   AttemptedQuestionRow,
@@ -32,9 +33,6 @@ import {
 // It is a deep module (Ousterhout) with a single responsibility: render the History Questions tab with its filter controls, pagination state, and question-row presentation.
 // Splitting would fragment shared filter/pagination/href context across components and increase risk of mismatched query-state and navigation behavior.
 // Reviewed in DEBT-224 audit (2026-02-18).
-const headerLinkButtonClasses =
-  'h-auto p-0 text-muted-foreground no-underline hover:text-foreground hover:no-underline';
-
 const ALL_FILTER_VALUE = '__all__';
 const TAG_KIND_ORDER = ['topic', 'substance', 'treatment'] as const;
 
@@ -355,7 +353,7 @@ export function HistoryQuestionsTab({
               <Button
                 asChild
                 variant="link"
-                className={headerLinkButtonClasses}
+                className={headerActionLinkClasses}
               >
                 <Link href={buildHistoryQuestionsHref({ limit, offset: 0 })}>
                   Clear filters
@@ -399,7 +397,7 @@ export function HistoryQuestionsTab({
               <Button
                 asChild
                 variant="link"
-                className={headerLinkButtonClasses}
+                className={headerActionLinkClasses}
               >
                 <Link
                   href={buildHistoryQuestionsHref({
@@ -499,7 +497,7 @@ export function HistoryQuestionsTab({
               <Button
                 asChild
                 variant="link"
-                className={headerLinkButtonClasses}
+                className={headerActionLinkClasses}
               >
                 <Link
                   href={buildHistoryQuestionsHref({
@@ -519,7 +517,7 @@ export function HistoryQuestionsTab({
               <Button
                 asChild
                 variant="link"
-                className={headerLinkButtonClasses}
+                className={headerActionLinkClasses}
               >
                 <Link
                   href={buildHistoryQuestionsHref({

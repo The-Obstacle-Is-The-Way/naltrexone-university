@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { useNotification } from '@/components/ui/notification-provider';
 import { ROUTES } from '@/lib/routes';
+import { headerActionLinkClasses } from '@/lib/shared-styles';
 import type { NextQuestion } from '@/src/application/use-cases/get-next-question';
 import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
 import type { LoadState } from '../practice-page-logic';
@@ -153,7 +154,7 @@ export function PracticeView(props: PracticeViewProps) {
               <Button
                 asChild
                 variant="link"
-                className="h-auto p-0 text-muted-foreground no-underline hover:text-foreground hover:no-underline"
+                className={headerActionLinkClasses}
               >
                 <Link href={backLink.href}>{backLink.label}</Link>
               </Button>

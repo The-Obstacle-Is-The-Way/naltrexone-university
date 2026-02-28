@@ -208,6 +208,62 @@ describe('app/pricing', () => {
     expect(html).not.toContain('Subscribe Annual');
   });
 
+  it('renders the subscribed state content inside the shared Card primitive', async () => {
+    const html = renderToStaticMarkup(
+      <PricingView
+        isEntitled
+        banner={null}
+        subscribeMonthlyAction={async () => undefined}
+        subscribeAnnualAction={async () => undefined}
+      />,
+    );
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const heading = doc.querySelector(
+      'div.text-lg.font-semibold.text-foreground',
+    );
+    const subscribedCard = heading?.closest('[data-slot="card"]');
+
+    expect(heading?.textContent).toContain("You're already subscribed");
+    expect(subscribedCard).not.toBeNull();
+  });
+
+  it('renders the billing-attention state inside the shared Card primitive', async () => {
+    const html = renderToStaticMarkup(
+      <PricingView
+        isEntitled={false}
+        banner={null}
+        manageBillingAction={async (_formData: FormData) => undefined}
+        subscribeMonthlyAction={async () => undefined}
+        subscribeAnnualAction={async () => undefined}
+      />,
+    );
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const heading = doc.querySelector(
+      'div.text-lg.font-semibold.text-foreground',
+    );
+    const billingCard = heading?.closest('[data-slot="card"]');
+
+    expect(heading?.textContent).toContain('Subscription needs attention');
+    expect(billingCard).not.toBeNull();
+  });
+
+  it('renders both plan containers with the shared Card primitive', async () => {
+    const html = renderToStaticMarkup(
+      <PricingView
+        isEntitled={false}
+        banner={null}
+        subscribeMonthlyAction={async () => undefined}
+        subscribeAnnualAction={async () => undefined}
+      />,
+    );
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const monthlyHeading = doc.querySelector('h3');
+    const annualHeading = doc.querySelectorAll('h3')[1] ?? null;
+
+    expect(monthlyHeading?.closest('[data-slot="card"]')).not.toBeNull();
+    expect(annualHeading?.closest('[data-slot="card"]')).not.toBeNull();
+  });
+
   it('builds the subscription-required banner when reason=subscription_required', async () => {
     expect(getPricingBanner({ reason: 'subscription_required' })).toMatchObject(
       {
