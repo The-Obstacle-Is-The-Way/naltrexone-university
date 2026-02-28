@@ -235,7 +235,7 @@ Every interactive element MUST have a visible focus indicator. Text links, icon 
 | App page h1 | `text-2xl font-bold font-heading tracking-tight text-foreground` |
 | Marketing hero h1 | `font-display text-5xl font-bold tracking-tight md:text-7xl` |
 | Marketing section h2 | `font-heading text-3xl font-bold tracking-tight md:text-4xl` |
-| Error/utility page heading | `text-xl font-semibold font-heading tracking-tight text-foreground` (route errors use `<h2>` unless `includeMainLandmark`; `global-error.tsx` uses `text-2xl font-bold font-heading tracking-tight text-foreground`). **D-17 note:** most error/utility pages currently lack `font-heading tracking-tight`; `global-error.tsx` has `font-heading` but is missing `tracking-tight`. |
+| Error/utility page heading | `text-xl font-semibold font-heading tracking-tight text-foreground` (route errors use `<h2>` unless `includeMainLandmark`; `global-error.tsx` uses `text-2xl font-bold font-heading text-foreground`). **D-17 note:** most error/utility pages currently lack `font-heading tracking-tight`; `global-error.tsx` has `font-heading` but is missing `tracking-tight`. |
 
 ### Heading hierarchy
 
