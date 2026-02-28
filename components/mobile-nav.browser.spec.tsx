@@ -72,16 +72,26 @@ test('applies reduced hover background intensity to inactive links', async () =>
 
   await expect
     .element(inactiveLink)
-    .toHaveAttribute(
-      'class',
-      expect.stringContaining('hover:bg-muted/50 hover:text-foreground'),
-    );
+    .toHaveAttribute('class', expect.stringContaining('hover:bg-muted/50'));
+  await expect
+    .element(inactiveLink)
+    .toHaveAttribute('class', expect.stringContaining('hover:text-foreground'));
   await expect
     .element(activeLink)
-    .toHaveAttribute(
-      'class',
-      expect.stringContaining(
-        'bg-muted px-3 py-3 text-sm font-medium text-foreground',
-      ),
-    );
+    .toHaveAttribute('class', expect.stringContaining('bg-muted'));
+  await expect
+    .element(activeLink)
+    .toHaveAttribute('class', expect.stringContaining('px-3'));
+  await expect
+    .element(activeLink)
+    .toHaveAttribute('class', expect.stringContaining('py-3'));
+  await expect
+    .element(activeLink)
+    .toHaveAttribute('class', expect.stringContaining('text-sm'));
+  await expect
+    .element(activeLink)
+    .toHaveAttribute('class', expect.stringContaining('font-medium'));
+  await expect
+    .element(activeLink)
+    .toHaveAttribute('class', expect.stringContaining('text-foreground'));
 });
