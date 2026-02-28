@@ -730,14 +730,14 @@ rounded-2xl border border-destructive/30 bg-destructive/10 p-6 text-sm text-dest
 
 **Problem:** The correct-answer choice label applies `text-success-foreground` (= `0 0% 100%` = white) on `bg-success/10` (a very light green tint). In light mode, this produces white text on a near-white background — invisible. Meanwhile, the incorrect label correctly uses `text-destructive` (red) on `bg-destructive/10` — visible.
 
-This asymmetry exists in both the code AND the Pattern Registry:
+This asymmetry exists in code. The Pattern Registry has already been corrected to the target state:
 
 | Source | Correct label | Incorrect label |
 |--------|--------------|-----------------|
-| **Code** (`choice-button.tsx:36-38`) | `text-success-foreground` (white) | `text-destructive` (red) |
-| **Pattern Registry** (line 256) | `text-success-foreground` | `text-destructive` |
+| **Code** (`choice-button.tsx:35-38`) | `text-success-foreground` (white) | `text-destructive` (red) |
+| **Pattern Registry I-3** (`pattern-registry.md:258-259`) | `text-success` | `text-destructive` |
 | **Badge** (same file, line 55) | `text-success` (green) | `text-destructive` (red) |
-| **Feedback pill** (Pattern Registry line 520) | `text-success` (green) | `text-destructive` (red) |
+| **Feedback pill** (Pattern Registry F-1) | `text-success` (green) | `text-destructive` (red) |
 
 The badge and feedback pill already use `text-success` (green) — symmetric and visible in both modes. Only the label uses the wrong token.
 
@@ -755,9 +755,7 @@ correctness === 'correct' &&
   'border-success bg-success/10 text-success',
 ```
 
-**Pattern Registry fix** — line 256:
-- Current: `**Correct:** \`border-success bg-success/10 text-success-foreground\``
-- Target: `**Correct:** \`border-success bg-success/10 text-success\``
+**Pattern Registry status:** Already fixed to `**Correct:** \`border-success bg-success/10 text-success\`` in I-3.
 
 **Verify:** In light mode, submit a practice question and check that the correct-answer label text is visible (green, not white).
 
