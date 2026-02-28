@@ -171,6 +171,10 @@ Previously identified standards drift has been synchronized:
 | Monthly pricing CTA near-invisible | **High** | Landing page pricing section | `variant="secondary"` (11%) on `bg-card` (7%) = 4% lightness difference; button boundary disappears in dark mode. Conversion impact |
 | Choice button selected state too subtle | **Medium** | Quick practice, practice session | `border-ring` only (no background change) for the most important interaction moment. Reported as hard to distinguish |
 | Landing page button style proliferation | **Medium** | Landing page only | 5 distinct button treatments on one page vs 2-3 in-app. Visual language inconsistency between marketing and product |
+| Pricing subscribed-state dead space | **Low** | Pricing page (subscribed users only) | ~400px empty gap between tiny card and footer due to `min-h-screen`. Page feels unfinished — layout density issue |
+| No bookmark on standalone question review | **Low** | Question review page | Functional gap: Quick Practice has bookmark, standalone review doesn't. By-design per `design-principles.md` §2 but may warrant revisiting |
+| Marketing nav missing ThemeToggle | **Low** | Landing page, pricing page | Users can't manually toggle dark/light mode on marketing pages. Falls back to system preference |
+| Clerk dark mode visual seam | **Low** | User menu dropdown, account modal | Third-party component uses Clerk's own dark theme, not app tokens. Expected trade-off |
 
 ---
 
@@ -230,6 +234,14 @@ Previously identified standards drift has been synchronized:
 | Banner dismiss "×" | `ml-4 rounded-md text-current hover:opacity-70 focus-visible:...` | **`hover:opacity-70`** | **UNIQUE:** Only element in entire codebase using opacity-based hover. Everything else uses bg/text color changes |
 | "Back to Home" link | `rounded-md text-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:...` | Text color change | Consistent with marketing nav links |
 | All buttons | Standard Button variants + `rounded-full` | Per variant | Consistent |
+
+**Visual QA note (2026-02-27):** Browser visual audit flagged three concerns on the subscribed-state pricing page:
+
+1. **Massive dead space on subscribed state.** The pricing root container uses `min-h-screen` (`pricing-view.tsx:35`), and the subscribed card is a tiny centered element (~200px tall). On a standard viewport, this leaves ~400px of pure `bg-background` between the card and the footer. The page feels like a stub. Consider either (a) removing `min-h-screen` in favor of the outer `MarketingLayout` `min-h-[100dvh]` handling footer push, or (b) enriching the subscribed state with plan details, usage stats, or an upsell.
+
+2. **"No hover on buttons" — debunked.** The audit incorrectly reported "zero visual change on hover" for both "Go to Dashboard" (`default` variant, `hover:bg-primary/90`) and "Manage Billing" (`outline` variant, `hover:bg-accent`). Both have hover states via their Button variants. The subtle primary hover (100% → 90% opacity) may have been imperceptible visually but the code is correct.
+
+3. **"Back to Home has no hover" — debunked.** The link has `hover:text-foreground` + `transition-colors` (see table above). The text shifts from `muted-foreground` (45% lightness) to `foreground` (93% lightness) — this is the standard L-1 nav link pattern.
 
 ---
 
@@ -394,6 +406,23 @@ Uses the same `PracticeView` component as Page 6. Interactive elements:
 | Element | Classes | Hover Pattern |
 |---------|---------|--------------|
 | Back link (top) | `rounded-md text-sm font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:...` | Text color change — consistent |
+
+#### Bottom Action Bar
+
+| Element | Variant | Extra Classes | Notes |
+|---------|---------|---------------|-------|
+| "← Previous" | `outline` | `rounded-full` | Disabled when on first question (`disabled:opacity-50`) |
+| "Submit" / "Try Again" | `default` | `rounded-full` | Submit when unanswered; Try Again when answered |
+| "Next →" | `outline` | `rounded-full` | Standard |
+| "Back to [origin]" | `ghost` | `rounded-full` | Ghost variant — no border/background at rest, very subtle in dark mode |
+
+**Visual QA note (2026-02-27):** Browser visual audit flagged three concerns on the question review bottom action bar:
+
+1. **Ghost "Back to [origin]" is very subtle in dark mode.** The `ghost` variant has no border, no background, and no shadow at rest — just text. In dark mode, `text-foreground` (93% lightness) against `bg-background` (3.5% lightness) is readable, but the lack of any container makes it visually recede compared to the adjacent outline buttons. This is working-as-designed per Pattern Registry Part 5 (`ghost` = tertiary/back navigation), but the Chrome agent's perception that it "barely registers" validates that ghost is inherently low-affordance.
+
+2. **Missing bookmark button.** Quick Practice has a bookmark action in its bottom bar, but standalone question review (`/app/questions/[slug]`) does not. Users reviewing a question from history who want to bookmark it must navigate elsewhere. This is a **functional gap**, not a style divergence. See `design-principles.md` §2 action bar table: `History Individual Review | [Try Again] [Back to ...]` — no bookmark by design. May warrant revisiting.
+
+3. **"Previous disabled indistinguishable" — debunked.** The audit reported disabled Previous is "visually indistinguishable from enabled." This is false — `disabled:opacity-50` (in `button.tsx` base styles) drops the button to 50% opacity, providing clear differentiation. Additionally, `disabled:pointer-events-none` removes cursor interaction.
 
 #### Feedback Component (`components/question/feedback.tsx`)
 | Element | Classes | Notes |
@@ -941,6 +970,30 @@ The current standard is `ring-[3px] ring-ring/50`. The navigator uses the old ri
 
 **Problem:** Markdown-rendered content can inherit inconsistent defaults across contexts, especially for links and code blocks.
 
+### N. Marketing/App Shell Feature Parity
+
+| Feature | App Shell | Marketing Shell | Notes |
+|---------|-----------|----------------|-------|
+| ThemeToggle | Present (`app/(app)/app/layout.tsx:88`) | **Absent** | Users on marketing pages (`/`, `/pricing`) cannot toggle between light/dark mode. They rely on system preference or must navigate to an app page. |
+| Dashboard link | Not shown (`showPrimaryLink: false`) | Shown for entitled users | Intentional — marketing helps users navigate to app |
+| Navigation scope | App-only links | Marketing-only links | No cross-linking — app nav has no "Home" or "Pricing", marketing nav has no "Practice" or "History" |
+
+**Problem:** The ThemeToggle absence on marketing pages means users who manually override their theme in-app lose that override when visiting marketing pages (which fall back to system preference via `next-themes`). This is unlikely to cause complaints but is a minor UX seam.
+
+### O. Clerk Dark Mode Visual Seam
+
+The Clerk `<UserButton>` popover and `<UserProfile>` account management modal use Clerk's built-in `dark` theme, which does NOT precisely match the app's dark mode token stack:
+
+| Property | App Token | Clerk Dark Theme | Difference |
+|----------|----------|-----------------|------------|
+| Card background | `--card: 0 0% 7%` | Clerk's own dark gray (~12-15% lightness) | Clerk surfaces are noticeably lighter |
+| Border radius | `rounded-2xl` (16px) | Clerk's own radius (~8px) | Clerk modals have sharper corners |
+| Hover states | Context-dependent opacity scale | Clerk's own hover (barely perceptible) | Different hover system |
+
+**Impact:** Low. Clerk components are clearly modal/overlay UI that users understand as "third-party." The mismatch is noticeable but not jarring. Customization is possible via Clerk's `appearance` prop but adds maintenance burden for a small visual gain.
+
+**Related:** `components/auth-nav.tsx` wraps `<UserButton>` and controls its placement, but not its internal styling.
+
 ---
 
 ## Proposed Fix Sketch
@@ -1044,6 +1097,12 @@ This would require visual regression testing across all pages.
 
 10. **Should the review question navigator ring be updated to the current standard?** `ring-2 ring-ring` → `ring-[3px] ring-ring/50`.
 
+11. **Should the pricing subscribed-state page be enriched?** Currently a stub with ~400px dead space due to `min-h-screen` + tiny card. Options: (a) remove `min-h-screen`, (b) add plan details / usage stats, (c) accept the sparse layout.
+
+12. **Should standalone question review have a bookmark button?** Quick Practice has one in its action bar; standalone review (`/app/questions/[slug]`) does not. `design-principles.md` §2 says no, but it may be a useful addition.
+
+13. **Should marketing pages have a ThemeToggle?** Currently absent from `MarketingLayout`. Users who set a manual theme in-app lose it on marketing pages.
+
 ---
 
 ## Decision Log
@@ -1053,3 +1112,4 @@ This would require visual regression testing across all pages.
 | 2026-02-27 | Created BS-035 | User reported visual inconsistencies across history, dashboard, and quick practice pages |
 | 2026-02-27 | Expanded to exhaustive audit | User requested complete page-by-page divergence inventory covering all 15 routes plus loading/error/auth surfaces |
 | 2026-02-27 | Verified and expanded by repo-wide crawl | Agent verified all line numbers, class names, and token references against source; added missing components and pages |
+| 2026-02-27 | Integrated Chrome Agent Chunk 3 findings (Pricing, Question Review, Header Nav, Clerk) | 5 new insights documented (dead space, missing bookmark, ghost button subtlety, ThemeToggle absence, Clerk seam), 4 false claims debunked (pricing button hover, Back to Home hover, disabled Previous, navigator "subtle" hover). Score: 3 TRUE, 2 PARTIALLY TRUE, 4 FALSE |
