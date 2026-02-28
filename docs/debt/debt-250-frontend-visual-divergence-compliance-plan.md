@@ -19,6 +19,8 @@ BS-035 audited every route, component, and shared primitive for visual consisten
 - **1 typography inconsistency** (D-17) — auth/error page headings missing `font-heading` and `tracking-tight`
 - **1 component default inconsistency** (COMP-1) — ErrorCard default padding mismatched with usage
 - **2 accessibility gaps** (A11Y-1, A11Y-2) — interactive `<li>` rows missing ARIA role; choice radio inputs missing `value` attribute
+- **2 mobile touch target items** (TOUCH-1, TOUCH-2) — systemic `h-9` (36px) buttons fail WCAG AAA 44px minimum; Clerk UserButton ~28–33px is the smallest interactive element
+- **3 light-mode items** (LIGHT-1, LIGHT-2, LIGHT-3) — opacity scale produces imperceptible contrast on white; success/destructive text colors fail WCAG AA at normal text sizes; `text-success-foreground` (white) incorrectly used on tinted backgrounds
 
 This spec is **self-contained**. Every item includes the exact file, line number, current class string, and target class string. No cross-referencing required.
 
@@ -146,6 +148,21 @@ Mobile nav inactive links currently use `hover:bg-muted` (100% opacity), while d
 **Recommended:** Keep a dedicated mobile-menu row pattern but normalize hover to `hover:bg-muted/50 hover:text-foreground` (not 100% fill). Document as Pattern Registry `L-6`.
 
 **Alternative:** Make mobile nav match `L-1` text-only hover with no background.
+
+### Decision 11: Mobile Touch Target Strategy
+
+**Blocks:** TOUCH-1, TOUCH-2
+**Source:** Chrome Agent Mobile 375px audit (2026-02-28)
+
+The default Button size (`h-9` = 36px) and icon variant (`size-9` = 36px) pass WCAG 2.2 SC 2.5.8 (Level AA, 24×24px minimum) but fail WCAG 2.5.5 (Level AAA, 44×44px minimum) and Apple HIG (44pt minimum). The hamburger menu (`p-2` + `size-6` = 40px) is close but also below 44px. Clerk's `<UserButton />` renders at ~28–33px (external dependency, size varies by version).
+
+**Option A:** Increase Button default to `h-11 sm:h-9` (44px mobile, 36px desktop). Icon to `size-11 sm:size-9`. Most thorough but alters the entire app's proportions and requires extensive visual regression.
+
+**Option B:** Leave as-is. Document as intentional WCAG AA compliance. Accept AAA gap.
+
+**Option C (recommended):** Targeted fixes for the worst offenders only — hamburger button (`p-2` → `p-2.5` for 44px), theme toggle (wrapper padding), Clerk avatar (appearance prop or wrapper). Leave `h-9` default unchanged since it's a deliberate shadcn design decision and 36px is above WCAG AA.
+
+**Key context:** WCAG AA requires 24px minimum (we pass). The 44px threshold is AAA and Apple HIG. Many production apps ship with 36px buttons.
 
 **Desktop/mobile strategy note:** Desktop nav uses text-only hover (L-1: `hover:text-foreground`, no background change). Mobile nav uses background + text hover (L-6: `hover:bg-muted/50 hover:text-foreground`). This is **intentional by design** — mobile entries are larger touch targets that benefit from a background fill to communicate tappability. Desktop nav links are compact inline text where background hover would be visually noisy. Do not attempt to unify these strategies.
 
@@ -535,6 +552,64 @@ rounded-2xl border border-destructive/30 bg-destructive/10 p-6 text-sm text-dest
 **Note:** The wrapping `<label>` element provides the accessible name — no `aria-label` is needed. The `<fieldset>` + `<legend class="sr-only">Answer choices</legend>` grouping is the standard HTML pattern and does not require `role="radiogroup"`.
 
 **Verify:** `rg -n 'value=' components/question/choice-button.tsx` returns 1 match on the radio input.
+
+---
+
+### TOUCH-1: Systemic Button Touch Targets Below WCAG AAA on Mobile
+
+**Severity:** Medium (WCAG AA compliant, fails AAA / Apple HIG)
+**Requires:** Decision 11
+**Source:** Chrome Agent Mobile 375px audit (2026-02-28)
+
+**Problem:** The Button component's default size (`h-9` = 36px) and icon size (`size-9` = 36px) are below the 44px minimum recommended by Apple HIG and WCAG 2.5.5 (Level AAA). This affects virtually every button in the app.
+
+**Affected components:**
+
+| Component | File | Size classes | Rendered | Gap from 44px |
+|-----------|------|-------------|----------|---------------|
+| Button default | `components/ui/button.tsx:27` | `h-9` | 36px | −8px |
+| Button icon | `components/ui/button.tsx:30` | `size-9` | 36×36px | −8px |
+| Hamburger menu | `components/mobile-nav.tsx:111` | `p-2` + `size-6` icon | ~40×40px | −4px |
+| Theme toggle | `components/theme-toggle.tsx:24` | `size="icon"` → `size-9` | 36×36px | −8px |
+| Clerk UserButton | `components/auth-nav.tsx:83` | External (no local sizing) | ~28–33px | −11 to −16px |
+
+**WCAG Compliance:**
+- SC 2.5.8 (Level AA): 24×24px minimum — ✅ PASSES (all targets ≥ 28px)
+- SC 2.5.5 (Level AAA): 44×44px minimum — ❌ FAILS
+
+**Target** depends on Decision 11 outcome.
+
+**Additional mobile observations (low priority, no separate items):**
+- Practice submit button is only 79px wide at 375px (auto-sized, not `w-full`). All three action buttons (Previous, Submit, Next) fit on one row, so this is functional but the primary action could be more prominent on mobile.
+- Mobile nav links have zero visual gap between them (only `py-3` internal padding, no `gap` or `space-y`). Touch targets don't overlap (each has 24px between text baselines), but adjacent items touch edge-to-edge visually.
+
+**Verify:** Inspect any Button at 375px viewport — measure computed height. Expected: 36px.
+
+---
+
+### TOUCH-2: Clerk UserButton Touch Target (External)
+
+**Severity:** Medium-High (smallest interactive element in the header)
+**Requires:** Decision 11
+**Source:** Chrome Agent Mobile 375px audit (2026-02-28)
+
+**Problem:** Clerk's `<UserButton />` renders at approximately 28–33px by default (varies by Clerk version). This is the smallest interactive element in the header. While it passes WCAG AA (24px minimum), it's significantly below the 44px AAA target and notably smaller than all other header controls.
+
+**Current** — `components/auth-nav.tsx:83`:
+```tsx
+<UserButton />
+```
+
+**Target (if Decision 11 selects option A or C):**
+```tsx
+<div className="[&_.cl-userButtonTrigger]:size-11 [&_.cl-userButtonBox]:size-11">
+  <UserButton />
+</div>
+```
+
+**Note:** Clerk CSS class selectors (`cl-userButtonTrigger`, `cl-userButtonBox`) may differ between Clerk versions. Verify exact selectors with browser DevTools before implementing. Alternative approach: use Clerk's `appearance` prop with `elements` key.
+
+**Verify:** Inspect `<UserButton />` at 375px — measure computed size of the outermost clickable element.
 
 ---
 
@@ -956,6 +1031,10 @@ Phase 5 (needs Decisions 3, 6, 7, 8)
 ├── UX-3: Marketing ThemeToggle
 └── UX-4: Clerk seam
 
+Phase 5.5 (needs Decision 11)
+├── TOUCH-1: Systemic button touch targets (h-9 = 36px vs 44px AAA)
+└── TOUCH-2: Clerk UserButton sizing (external, ~28-33px)
+
 Phase 6 (after all code changes)
 └── Documentation sync
 ```
@@ -1170,4 +1249,4 @@ Route-level `app/**` wrappers not always cited by filename were reviewed for vis
 ### Conclusion
 
 No additional shadcn primitives are missing from documentation.
-No additional production React UI divergence category was discovered beyond `D-1` through `D-17` (plus `COMP-1`, `A11Y-1`, and `A11Y-2`, tracked in this spec).
+No additional production React UI divergence category was discovered beyond `D-1` through `D-17` (plus `COMP-1`, `A11Y-1`, `A11Y-2`, `TOUCH-1`, and `TOUCH-2`, tracked in this spec).
