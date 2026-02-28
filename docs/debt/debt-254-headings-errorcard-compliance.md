@@ -1,6 +1,6 @@
 # DEBT-254: Headings + ErrorCard Compliance
 
-**Status:** Not started
+**Status:** Resolved (2026-02-28)
 **Parent:** [DEBT-250](debt-250-frontend-visual-divergence-compliance-plan.md)
 **Items:** D-17, COMP-1
 **Files:** 5 auth/error pages + `components/error-card.tsx` (13 call sites)
