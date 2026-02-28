@@ -258,10 +258,26 @@ describe('AuthNav', () => {
     expect(header.querySelector('a[href="/sign-in"]')).toBeNull();
   });
 
-  it('wraps authenticated UserButton in a 44px minimum touch target container', async () => {
+  it('passes 44px minimum trigger sizing to Clerk UserButton appearance', async () => {
     process.env.NEXT_PUBLIC_SKIP_CLERK = 'false';
+    const userButtonMock = vi.fn(
+      (props: {
+        appearance?: {
+          elements?: {
+            userButtonTrigger?: string;
+          };
+        };
+      }) => (
+        <div
+          data-testid="user-button"
+          data-user-button-trigger={
+            props.appearance?.elements?.userButtonTrigger
+          }
+        />
+      ),
+    );
     vi.doMock('@clerk/nextjs', () => ({
-      UserButton: () => <div data-testid="user-button" />,
+      UserButton: userButtonMock,
     }));
 
     const { AuthNav } = await import('./auth-nav');
@@ -283,20 +299,12 @@ describe('AuthNav', () => {
     );
     const header = getHeader(html);
     const userButton = header.querySelector('[data-testid="user-button"]');
-    const touchTargetContainer = Array.from(
-      header.querySelectorAll<HTMLElement>('div'),
-    ).find((element) => {
-      const classes = element.getAttribute('class') ?? '';
-      return (
-        classes.includes('min-h-[44px]') &&
-        classes.includes('min-w-[44px]') &&
-        !!userButton &&
-        element.contains(userButton)
-      );
-    });
+    const triggerClasses =
+      userButton?.getAttribute('data-user-button-trigger') ?? '';
 
     expect(userButton).not.toBeNull();
-    expect(touchTargetContainer).toBeDefined();
+    expect(triggerClasses).toContain('min-h-[44px]');
+    expect(triggerClasses).toContain('min-w-[44px]');
   });
 
   it('scenario 5: authenticated non-entitled marketing pages do not duplicate the Pricing link', async () => {
