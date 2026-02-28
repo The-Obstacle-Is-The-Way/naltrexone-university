@@ -3,7 +3,7 @@
 **Date:** 2026-02-27
 **Triggered by:** Visual inspection of history page, dashboard, quick practice, and landing page — inconsistent hover states, gray shades, and nested card visual hierarchy
 **Scope:** Exhaustive audit of interactive elements, hover behavior, background gray value, link style, button variant, border, dark-mode strategy, loading states, and error surfaces across app/marketing routes plus shared UI primitives
-**Related:** [BS-020 (archived)](../_archive/brainstorming/bs-020-card-contrast-and-hover-consistency.md) — deferred residual hover standardization; [BS-031 (archived)](../_archive/brainstorming/bs-031-card-row-affordance-consistency.md); [Frontend Standards](../frontend/standards.md)
+**Related:** [BS-020 (archived)](../_archive/brainstorming/bs-020-card-contrast-and-hover-consistency.md) — deferred residual hover standardization; [BS-031 (archived)](../_archive/brainstorming/bs-031-card-row-affordance-consistency.md); [Frontend Standards](../frontend/standards.md); [DEBT-250](../debt/debt-250-frontend-visual-divergence-compliance-plan.md)
 
 ---
 
@@ -237,7 +237,7 @@ Previously identified standards drift has been synchronized:
 
 **Visual QA note (2026-02-27):** Browser visual audit flagged three concerns on the subscribed-state pricing page:
 
-1. **Massive dead space on subscribed state.** The pricing root container uses `min-h-screen` (`pricing-view.tsx:35`), and the subscribed card is a tiny centered element (~200px tall). On a standard viewport, this leaves ~400px of pure `bg-background` between the card and the footer. The page feels like a stub. Consider either (a) removing `min-h-screen` in favor of the outer `MarketingLayout` `min-h-[100dvh]` handling footer push, or (b) enriching the subscribed state with plan details, usage stats, or an upsell.
+1. **Massive dead space on subscribed state.** The pricing root container uses `min-h-screen` (`app/pricing/pricing-view.tsx:35`), and the subscribed card is a tiny centered element (~200px tall). On a standard viewport, this leaves ~400px of pure `bg-background` between the card and the footer. The page feels like a stub. Consider either (a) removing `min-h-screen` in favor of the outer `MarketingLayout` `min-h-[100dvh]` handling footer push, or (b) enriching the subscribed state with plan details, usage stats, or an upsell.
 
 2. **"No hover on buttons" — debunked.** The audit incorrectly reported "zero visual change on hover" for both "Go to Dashboard" (`default` variant, `hover:bg-primary/90`) and "Manage Billing" (`outline` variant, `hover:bg-accent`). Both have hover states via their Button variants. The subtle primary hover (100% → 90% opacity) may have been imperceptible visually but the code is correct.
 
@@ -982,17 +982,19 @@ The current standard is `ring-[3px] ring-ring/50`. The navigator uses the old ri
 
 ### O. Clerk Dark Mode Visual Seam
 
-The Clerk `<UserButton>` popover and `<UserProfile>` account management modal use Clerk's built-in `dark` theme, which does NOT precisely match the app's dark mode token stack:
+Clerk UI is partially themed in `components/providers.tsx` via `appearance` variables, but it still does not perfectly match the app token system:
 
-| Property | App Token | Clerk Dark Theme | Difference |
-|----------|----------|-----------------|------------|
-| Card background | `--card: 0 0% 7%` | Clerk's own dark gray (~12-15% lightness) | Clerk surfaces are noticeably lighter |
-| Border radius | `rounded-2xl` (16px) | Clerk's own radius (~8px) | Clerk modals have sharper corners |
-| Hover states | Context-dependent opacity scale | Clerk's own hover (barely perceptible) | Different hover system |
+| Property | App Token / Pattern | Clerk Appearance Config | Difference |
+|----------|----------------------|-------------------------|------------|
+| Base dark background | `--card: 0 0% 7%` | `colorBackground: #121212` (~7.1%) | Close match at base layer |
+| Primary text | `--foreground: 0 0% 93%` | `colorText: #ededed` (~93%) | Close match |
+| Secondary text | `--muted-foreground: 0 0% 45%` | `colorTextSecondary: #737373` (~45%) | Close match |
+| Border radius | `rounded-2xl` card surfaces (16px) | `borderRadius: 0.75rem` (12px) | Clerk surfaces are visibly sharper than app cards |
+| Hover/focus behavior | Context-dependent app scale | Clerk base-theme interactions | Different interaction language |
 
-**Impact:** Low. Clerk components are clearly modal/overlay UI that users understand as "third-party." The mismatch is noticeable but not jarring. Customization is possible via Clerk's `appearance` prop but adds maintenance burden for a small visual gain.
+**Impact:** Low. The seam is now mostly in shape and interaction behavior, not raw color tokens. Clerk surfaces are still visually distinct from app surfaces, but this is acceptable unless a full Clerk appearance customization pass is prioritized.
 
-**Related:** `components/auth-nav.tsx` wraps `<UserButton>` and controls its placement, but not its internal styling.
+**Related:** `components/auth-nav.tsx` renders `<UserButton>`; `components/providers.tsx` owns Clerk appearance configuration.
 
 ---
 
@@ -1113,3 +1115,4 @@ This would require visual regression testing across all pages.
 | 2026-02-27 | Expanded to exhaustive audit | User requested complete page-by-page divergence inventory covering all 15 routes plus loading/error/auth surfaces |
 | 2026-02-27 | Verified and expanded by repo-wide crawl | Agent verified all line numbers, class names, and token references against source; added missing components and pages |
 | 2026-02-27 | Integrated Chrome Agent Chunk 3 findings (Pricing, Question Review, Header Nav, Clerk) | 5 new insights documented (dead space, missing bookmark, ghost button subtlety, ThemeToggle absence, Clerk seam), 4 false claims debunked (pricing button hover, Back to Home hover, disabled Previous, navigator "subtle" hover). Score: 3 TRUE, 2 PARTIALLY TRUE, 4 FALSE |
+| 2026-02-28 | Promoted active divergences to DEBT-250 implementation plan | Converted D-1..D-15 plus low-severity UX seams into an explicit compliance debt spec with acceptance criteria and tracer-bullet verification |

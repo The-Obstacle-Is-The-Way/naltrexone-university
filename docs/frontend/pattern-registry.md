@@ -1,6 +1,6 @@
 # Pattern Registry
 
-**Last Updated:** 2026-02-27
+**Last Updated:** 2026-02-28
 **Status:** Canonical — all UI changes MUST conform to this registry
 
 Single source of truth for every visual pattern in the app. If a pattern isn't here, don't invent one — add it here first, get approval, then implement.
@@ -9,6 +9,7 @@ Single source of truth for every visual pattern in the app. If a pattern isn't h
 - [Frontend Standards](./standards.md) — Component APIs, accessibility rules, hook architecture, file naming
 - [Design Principles](./design-principles.md) — Navigation zones, action bar composition, state persistence
 - [BS-035](../brainstorming/bs-035-card-hover-and-gray-consistency-audit.md) — Audit that identified current divergences from this registry
+- [DEBT-250](../debt/debt-250-frontend-visual-divergence-compliance-plan.md) — Implementation plan to resolve active divergences
 
 ---
 
@@ -338,7 +339,9 @@ focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]
 
 **Design rationale:** Brand links are always visible (not muted), so hover dims slightly rather than brightening. This is the opposite direction from nav links (which brighten from muted to foreground).
 
-**Note:** Currently missing `transition-colors` and hover class in both marketing and app headers — this is a known divergence that BS-035 identified.
+**Note:** Current code diverges from this pattern:
+- Marketing header brand link is missing `text-foreground transition-colors hover:text-foreground/80`.
+- App header brand link is missing `rounded-md` + focus ring classes + `transition-colors hover:text-foreground/80`.
 
 ### L-5: Banner Inline Link
 
@@ -417,7 +420,7 @@ metallic-border animated gradient (grays #3f3f46 → #a1a1aa, 6s cycle)
 
 **Source:** `components/ui/metallic-cta-button.tsx` + `components/ui/metallic-border.tsx` + CSS in `globals.css:193-208`
 
-**Status:** Undocumented pattern (D-15). Not a standard `Button` variant. Only used in one place — the bottom CTA of the landing page. If it stays, it should be documented as a marketing-only pattern. If the landing page buttons are rationalized (see D-14), this may be replaced with a standard variant.
+**Status:** Documented exception (D-15). Not a standard `Button` variant. Only used in one place — the bottom CTA of the landing page. If landing-page buttons are rationalized (see D-14), this may be replaced with a standard variant.
 
 ---
 
@@ -679,14 +682,14 @@ Current codebase violations tracked in [BS-035](../brainstorming/bs-035-card-hov
 | D-5 | "View breakdown" button has 3 `dark:` overrides | Remove — let outline variant handle dark mode | `history-sessions-tab.tsx` |
 | D-6 | Choice wrong-unselected uses `opacity-60` | X-1: `opacity-50` | `choice-button.tsx` |
 | D-7 | Review navigator uses `ring-2 ring-ring` | X-2: `ring-[3px] ring-ring/50` | `review-question-navigator.tsx` |
-| D-8 | Brand links missing hover affordance | L-4: `hover:text-foreground/80` | `components/marketing/marketing-layout.tsx`, `app/(app)/app/layout.tsx` |
+| D-8 | Brand links do not match L-4 class set (missing hover/transition; app shell also missing rounded/focus classes) | L-4 canonical brand-link classes | `components/marketing/marketing-layout.tsx`, `app/(app)/app/layout.tsx` |
 | D-9 | Marketing pricing pills use `hover:bg-muted` (100%) | Should use button variant or `/50` | `marketing-home.tsx` |
 | D-10 | Annual pricing button bypasses variant system | Needs decision on variant | `marketing-home.tsx` |
 | D-11 | Pricing page uses raw divs instead of `<Card>` | S-1: Use `<Card>` component | `pricing-view.tsx` |
 | D-12 | Pricing dismiss uses `hover:opacity-70` | Should use text color or bg hover pattern | `pricing-view.tsx` |
 | D-13 | `headerLinkButtonClasses` copy-pasted in 6 files | Extract to `lib/shared-styles.ts` | See Part 10 |
 | D-14 | Monthly pricing CTA uses `variant="secondary"` — 4% lightness difference from card surface (`hsl(0 0% 11%)` on `hsl(0 0% 7%)`), near-invisible in dark mode | Use `default` variant, `outline` variant, or custom inverted (like Annual CTA) | `marketing-home.tsx` |
-| D-15 | `MetallicCtaButton` has no pattern registry entry — animated gradient border button used as bottom CTA on landing page, not a standard Button variant | Document as a marketing-only pattern or replace with a standard variant | `metallic-cta-button.tsx`, `marketing-home.tsx` |
+| D-15 | `MetallicCtaButton` is a documented marketing-only exception but still outside standard Button variants | Keep as explicit marketing-only exception or replace with a standard variant | `metallic-cta-button.tsx`, `marketing-home.tsx` |
 
 ---
 
