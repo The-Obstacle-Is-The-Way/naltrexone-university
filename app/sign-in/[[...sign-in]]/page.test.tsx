@@ -27,12 +27,16 @@ describe('app/sign-in/[[...sign-in]]', () => {
 
   it('renders a fallback UI when NEXT_PUBLIC_SKIP_CLERK=true even if Clerk import would fail', () => {
     const html = renderToStaticMarkup(<SignInPage />);
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const headingClass = doc.querySelector('h1')?.getAttribute('class') ?? '';
 
     expect(html).toContain('Sign In');
     expect(html).toContain('Authentication unavailable in this environment.');
     expect(html).toContain('<main id="main-content"');
-    expect(html).toContain(
-      'class="text-xl font-semibold font-heading tracking-tight text-foreground"',
-    );
+    expect(headingClass).toContain('text-xl');
+    expect(headingClass).toContain('font-semibold');
+    expect(headingClass).toContain('font-heading');
+    expect(headingClass).toContain('tracking-tight');
+    expect(headingClass).toContain('text-foreground');
   });
 });

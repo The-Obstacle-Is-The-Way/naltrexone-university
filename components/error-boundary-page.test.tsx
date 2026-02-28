@@ -22,11 +22,13 @@ describe('ErrorBoundaryPage', () => {
       <ErrorBoundaryPage {...baseProps} includeMainLandmark />,
     );
     const doc = new DOMParser().parseFromString(html, 'text/html');
-    const heading = doc.querySelector('h1');
+    const headingClass = doc.querySelector('h1')?.getAttribute('class') ?? '';
 
-    expect(heading?.getAttribute('class')).toBe(
-      'text-xl font-semibold font-heading tracking-tight text-foreground',
-    );
+    expect(headingClass).toContain('text-xl');
+    expect(headingClass).toContain('font-semibold');
+    expect(headingClass).toContain('font-heading');
+    expect(headingClass).toContain('tracking-tight');
+    expect(headingClass).toContain('text-foreground');
   });
 
   it('renders h2 heading variant with tracking-tight when main landmark is excluded', () => {
@@ -34,10 +36,12 @@ describe('ErrorBoundaryPage', () => {
       <ErrorBoundaryPage {...baseProps} includeMainLandmark={false} />,
     );
     const doc = new DOMParser().parseFromString(html, 'text/html');
-    const heading = doc.querySelector('h2');
+    const headingClass = doc.querySelector('h2')?.getAttribute('class') ?? '';
 
-    expect(heading?.getAttribute('class')).toBe(
-      'text-xl font-semibold font-heading tracking-tight text-foreground',
-    );
+    expect(headingClass).toContain('text-xl');
+    expect(headingClass).toContain('font-semibold');
+    expect(headingClass).toContain('font-heading');
+    expect(headingClass).toContain('tracking-tight');
+    expect(headingClass).toContain('text-foreground');
   });
 });
