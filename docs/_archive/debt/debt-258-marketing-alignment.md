@@ -110,11 +110,11 @@ Change `variant="secondary"` → `variant="outline"` for visible border in dark 
 **Target** (implemented, Decision 2 recommended path):
 ```tsx
 {/* @debt-exception D-15: Marketing-only metallic CTA. Do not expand to other pages. */}
-<span data-debt-exception="D-15">
+<div data-debt-exception="D-15">
   <MetallicCtaButton href={ROUTES.PRICING}>
     Get Started
   </MetallicCtaButton>
-</span>
+</div>
 ```
 
 Add explicit source comment and a machine-verifiable marker while keeping usage marketing-only.

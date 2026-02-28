@@ -251,11 +251,11 @@ export function MarketingHomeShell({
             </p>
             <div className="mt-8 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
               {/* @debt-exception D-15: Marketing-only metallic CTA. Do not expand to other pages. */}
-              <span data-debt-exception="D-15">
+              <div data-debt-exception="D-15">
                 <MetallicCtaButton href={ROUTES.PRICING}>
                   Get Started
                 </MetallicCtaButton>
-              </span>
+              </div>
               <Button asChild variant="outline" className={pillSizeClasses}>
                 <Link href={ROUTES.SIGN_IN}>Sign in</Link>
               </Button>
