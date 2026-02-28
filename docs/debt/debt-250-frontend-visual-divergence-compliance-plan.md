@@ -144,6 +144,8 @@ Mobile nav inactive links currently use `hover:bg-muted` (100% opacity), while d
 
 **Alternative:** Make mobile nav match `L-1` text-only hover with no background.
 
+**Desktop/mobile strategy note:** Desktop nav uses text-only hover (L-1: `hover:text-foreground`, no background change). Mobile nav uses background + text hover (L-6: `hover:bg-muted/50 hover:text-foreground`). This is **intentional by design** — mobile entries are larger touch targets that benefit from a background fill to communicate tappability. Desktop nav links are compact inline text where background hover would be visually noisy. Do not attempt to unify these strategies.
+
 ---
 
 ## BS-035 Open Question Coverage (1-13)
@@ -192,6 +194,10 @@ cursor-pointer hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-r
 2. Remove `dark:hover:bg-foreground/10` (no page-level `dark:` overrides per standards)
 
 **Verify:** `rg -n 'hover:bg-accent|dark:hover:bg-foreground' 'app/(app)/app/history/components/history-sessions-tab.tsx'` returns 0 matches.
+
+**Visual QA note:** Chrome agent testing confirmed that `/40` inside cards (7% base → ~8.6% effective = 1.6pp shift) is at the perceptual threshold in dark mode. Kept because: (a) the user explicitly prefers dashboard subtlety over aggressive hover, (b) the card surface already elevates the row above page background, so the row doesn't need to "announce" itself, (c) bumping to `/50` would make in-card hover identical to standalone-row hover, collapsing the visual hierarchy. If this proves problematic after implementation, bump to `/50` — a one-token change.
+
+**Secondary cleanup:** The session summary `<Link>` inside the row (`history-sessions-tab.tsx:220`) uses `hover:text-foreground` on an element already styled `text-foreground` — a no-op hover. When D-1 is fixed (row interaction model changes), verify this inner link's hover is either removed or changed to something perceptible.
 
 ---
 
@@ -373,7 +379,16 @@ block rounded-md px-3 py-3 text-sm text-muted-foreground transition-colors hover
 **Changes:**
 1. `hover:bg-muted` (100%) → `hover:bg-muted/50` (align mobile menu row affordance to canonical hover scale)
 
-**Verify:** `rg -n 'hover:bg-muted[\" ]' components/mobile-nav.tsx` returns 0 matches.
+**Verify:** `rg -n 'hover:bg-muted[\" ]' components/mobile-nav.tsx` returns 0 matches (inactive links).
+
+**Active state sub-item:** The **active** (current page) mobile nav link also diverges — uses `bg-muted` (100%) at `mobile-nav.tsx:74`, while Pattern Registry L-6 active specifies `bg-muted/50`. However, having active at 100% and hover at 50% creates a clear visual hierarchy (active > hover), which is logically correct. Two options:
+
+1. **Keep `bg-muted` (100%) for active** and update Pattern Registry L-6 to match. Active state SHOULD be stronger than hover.
+2. **Change active to `bg-muted/50`** per current registry, making active and hover visually identical — confusing.
+
+**Recommended:** Option 1 — keep active at `bg-muted` (100%), update Pattern Registry L-6 active definition. Document the principle: "Active state fill is always stronger than hover fill."
+
+**Verify (active):** After Decision 10, confirm the active state opacity is explicitly documented in L-6 and matches the code.
 
 ---
 
@@ -670,6 +685,8 @@ import { headerActionLinkClasses } from '@/lib/shared-styles';
 - `hoverableRowInsideCardClasses` (I-1 — currently inline in dashboard + history)
 - `mutedRowClasses` (S-2 — currently inline in dashboard + practice starter)
 
+**Implementation note:** The current class string omits `transition-colors` — this works today because all 6 consumers apply it to `<Button variant="link">`, whose base class includes `transition-colors`. When extracting, consider adding `transition-colors` to the constant for safety in case it's ever used outside a `<Button>` context. The L-3 pattern has `hover:text-foreground`, which per X-3 requires a transition.
+
 **Verify:** `rg -n 'headerLinkButtonClasses' app` returns 0 matches (old name removed). `rg -n 'headerActionLinkClasses' app` returns 6 app-file matches.
 
 ---
@@ -921,6 +938,19 @@ These BS-035 findings are informational or deferred. They are NOT implementation
 | Error surface density drift (`min-h-[50vh]` vs `min-h-[100dvh]`) | Cross-cutting L | Minor inconsistency across error pages. Not user-facing enough to prioritize. |
 | Markdown styling gaps | Cross-cutting M | `Markdown.tsx` lacks explicit link/code/heading styles. Tangential to visual consistency audit. Separate feature request if needed. |
 | Skeleton card `bg-background` vs `bg-card` | Loading States section | Accepted — skeleton state intentionally flatter than real cards. |
+| Neutral border opacity 3-tier scale (100% / 60% / 40%) | Cross-cutting C | By design. Pattern Registry §1.3 documents this as the canonical scale: 100% for card/section edges, 60% for subordinate rows, 40% for internal separators. Not a divergence — it IS the system. |
+| Row vs Card background pattern differences | Cross-cutting D + Fix Sketch Phase 5 | By design. Dashboard/history use I-1 rows-in-Card, history-questions use I-2 standalone rows, bookmarks use Card-with-internal-links. The Pattern Registry decision tree (Part 9) explicitly guides which pattern to use based on context. These serve different UI purposes and should not be unified. |
+| Bookmarks vs history-questions interaction model | Page 11 Key Observation | By design. Bookmarks use non-hoverable `<Card>` containers with interactive buttons inside (question may be reviewed OR unbookmarked — two distinct actions). History-questions rows are single-action links (the whole row is the click target). Different interaction requirements dictate different patterns. |
+| `text-muted-foreground/60` unique usage | Page 9 (line 460) + session-breakdown-list | One instance in `SessionBreakdownList` for "Unanswered" labels. Unique opacity on a text token, but acceptable as a semantic de-emphasis — these labels are less important than other muted text. Too narrow to warrant a pattern or D-item. |
+| Review pill missing explicit tokens | Page 10 (line 490) | The history tab "Review" pill relies on inherited text/border defaults rather than explicit tokens. This works because the defaults are correct for its context. Adding explicit tokens would be defensive but not a fix for a visible problem. |
+| `bg-background/50` in feedback component | Page 8 Feedback (line 432) | Choice explanation boxes in `feedback.tsx` use `bg-background/50` — a unique treatment. This creates a subtle "recessed" effect inside the already-tinted correct/incorrect choice card, which is the intended visual result. Not a divergence pattern. |
+| Past-due banner link unique underline | Page 3 Header (line 256) | Already documented as Pattern Registry L-5 (Banner Inline Link). The always-visible underline is correct for in-banner action links where persistent affordance is required. |
+| Ghost button low affordance (back navigation) | Page 8 Visual QA note 1 | By design per Pattern Registry Part 5. Ghost buttons intentionally have minimal visual weight — they're for tertiary navigation ("Back to Dashboard") where the button should not compete with primary page actions. Visual QA confirmed the low affordance but validated it matches intent. |
+| Desktop vs mobile nav hover strategy split | Page 3 Navigation (lines 259-263) | By design. Desktop nav uses text-only hover (L-1) because links are compact inline text. Mobile nav uses background+text hover (L-6) because entries are full-width touch targets needing stronger tappability feedback. Decision 10 covers mobile intensity but the strategic split is intentional, not a divergence. |
+| FilterChip resting-state border contrast | Page 5 Visual QA note (line 318) | Visual QA flagged that unselected FilterChip border (`border-border` = 15% on 3.5% background) might read as non-interactive. D-4 fixes the hover, but the resting-state border is acceptable — filter chips always appear in groups with a visible "active" comparison, and the selected state (`border-primary bg-primary`) provides clear toggle feedback. |
+| `<summary>` missing hover affordance | Page 5 Practice Starter (line 316) | The `<summary>` element in practice starter tag groups has `cursor-pointer` but no `hover:` class. Very low severity — the element has a visible disclosure triangle and cursor change. Could add `hover:text-foreground` in a future polish pass. |
+| Button dark mode (outline vs ghost) uses different tokens | Cross-cutting E, BS-035 severity: Medium | Rated Medium in BS-035 severity assessment but classified as out-of-scope here because the difference (`outline` = `input` 15%, `ghost` = `accent/50` 11%) is an intentional design choice, not a bug. Outline buttons need more visual weight (borders + fill) to communicate "secondary action." Ghost buttons are deliberately understated. The differentiation is documented in Pattern Registry Part 5. The Medium severity rating in BS-035 reflects the *noticeability* of the difference, not that it needs fixing. |
+| `<summary>` `outline-none` vs `focus-visible:outline-none` | Additional Audit | `practice-session-starter.tsx:215` uses `outline-none` (unconditional) instead of the canonical `focus-visible:outline-none`. Functionally identical since `focus-visible:ring-*` already replaces the outline. Could be normalized in a future polish pass. |
 
 ---
 

@@ -361,11 +361,11 @@ focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]
 
 **Active:**
 ```
-block rounded-md bg-muted/50 px-3 py-3 text-sm font-medium text-foreground
+block rounded-md bg-muted px-3 py-3 text-sm font-medium text-foreground
 focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]
 ```
 
-**Design rationale:** Mobile menu entries are larger touch targets than desktop nav links, so they use row-style background hover. `/50` keeps parity with the global hover scale and avoids the heavier 100% muted fill.
+**Design rationale:** Mobile menu entries are larger touch targets than desktop nav links, so they use row-style background hover. `/50` keeps parity with the global hover scale and avoids the heavier 100% muted fill. The active state uses full `bg-muted` (100%) — stronger than hover — so the current page is always visually distinguished from hovered items. **Principle: active fill > hover fill.**
 
 ---
 
