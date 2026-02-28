@@ -18,7 +18,7 @@ BS-035 audited every route, component, and shared primitive for visual consisten
 - **4 low-severity UX seams** — pricing dead space, missing bookmark, missing ThemeToggle, Clerk styling seam
 - **1 typography inconsistency** (D-17) — auth/error page headings missing `font-heading` and `tracking-tight`
 - **1 component default inconsistency** (COMP-1) — ErrorCard default padding mismatched with usage
-- **1 accessibility gap** (A11Y-1) — interactive `<li>` rows missing ARIA role
+- **2 accessibility gaps** (A11Y-1, A11Y-2) — interactive `<li>` rows missing ARIA role; choice radio inputs missing `value` attribute
 
 This spec is **self-contained**. Every item includes the exact file, line number, current class string, and target class string. No cross-referencing required.
 
@@ -510,6 +510,34 @@ rounded-2xl border border-destructive/30 bg-destructive/10 p-6 text-sm text-dest
 
 ---
 
+### A11Y-2: Choice Button Radio Inputs Missing `value` Attribute
+
+**Severity:** Low
+**Source:** Chrome Agent Tutor Session audit (2026-02-28)
+
+**Problem:** Radio inputs in the choice button component have no `value` attribute. Since these are controlled React components using `onClick` handlers (not form submission), this is not a functional bug. However, adding `value` improves debuggability in browser DevTools and a11y inspection tooling.
+
+**Current** — `components/question/choice-button.tsx`:
+```tsx
+<input type="radio" name={name} checked={selected}
+  onChange={() => onClick()} disabled={disabled} className="sr-only" />
+```
+
+**Target:**
+```tsx
+<input type="radio" name={name} value={choiceId} checked={selected}
+  onChange={() => onClick()} disabled={disabled} className="sr-only" />
+```
+
+**Changes:**
+1. Add `value={choiceId}` to the radio input (requires threading `choiceId` prop through if not already available)
+
+**Note:** The wrapping `<label>` element provides the accessible name — no `aria-label` is needed. The `<fieldset>` + `<legend class="sr-only">Answer choices</legend>` grouping is the standard HTML pattern and does not require `role="radiogroup"`.
+
+**Verify:** `rg -n 'value=' components/question/choice-button.tsx` returns 1 match on the radio input.
+
+---
+
 ## Phase 2: Structural & Affordance Fixes
 
 Items that require decisions but have clear recommended paths. These are the highest-impact visual issues.
@@ -895,7 +923,7 @@ After all code changes are complete, update docs in lockstep.
 Phase 1 (no decisions needed — can start immediately)
 ├── D-1: History sessions hover token + A11Y-1 (role="link")
 ├── D-2: History questions hover token
-├── D-3: Choice button hover opacity
+├── D-3: Choice button hover opacity + A11Y-2 (radio value attr)
 ├── D-4: Filter chip hover opacity
 ├── D-5: View breakdown dark overrides
 ├── D-6: Choice wrong-unselected opacity
@@ -1142,4 +1170,4 @@ Route-level `app/**` wrappers not always cited by filename were reviewed for vis
 ### Conclusion
 
 No additional shadcn primitives are missing from documentation.
-No additional production React UI divergence category was discovered beyond `D-1` through `D-17` (plus `COMP-1` and `A11Y-1`, tracked in this spec).
+No additional production React UI divergence category was discovered beyond `D-1` through `D-17` (plus `COMP-1`, `A11Y-1`, and `A11Y-2`, tracked in this spec).

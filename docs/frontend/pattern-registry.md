@@ -707,6 +707,7 @@ What is the parent surface?
 └── Tab-switch inactive → hover:bg-muted/50 (inside bg-muted container)
 
 Token (neutral surface fills): Use `muted`.
+Border hovers use `muted-foreground` at lower opacities (e.g., `hover:border-muted-foreground/30` on I-3). These are separate from the bg-muted fill tiers.
 Avoid introducing new `hover:bg-accent*` outside `components/ui/` (button variants use `accent` by design). Never use `foreground` for hover fills.
 ```
 
