@@ -42,7 +42,7 @@ export async function AuthNav({
 
   const unauthenticatedNav = (
     <div className="flex items-center">
-      <Button asChild size="sm" className="rounded-full">
+      <Button asChild className="rounded-full">
         <Link href={ROUTES.SIGN_IN}>Sign in</Link>
       </Button>
     </div>
@@ -80,7 +80,9 @@ export async function AuthNav({
           {primaryLink.label}
         </Link>
       ) : null}
-      <UserButton />
+      <div className="flex min-h-[44px] min-w-[44px] items-center justify-center">
+        <UserButton />
+      </div>
     </div>
   );
 }

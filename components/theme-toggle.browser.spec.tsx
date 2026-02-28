@@ -46,3 +46,20 @@ test('click switches from dark to light', async () => {
 
   expect(setThemeMock).toHaveBeenCalledWith('light');
 });
+
+test('uses a larger mobile touch target with desktop fallback sizing', async () => {
+  useThemeMock.mockReturnValue({
+    resolvedTheme: 'light',
+    setTheme: setThemeMock,
+  });
+
+  const screen = await render(<ThemeToggle />);
+  const button = screen.getByRole('button', { name: 'Toggle theme' });
+
+  await expect
+    .element(button)
+    .toHaveAttribute('class', expect.stringContaining('size-11'));
+  await expect
+    .element(button)
+    .toHaveAttribute('class', expect.stringContaining('sm:size-9'));
+});
