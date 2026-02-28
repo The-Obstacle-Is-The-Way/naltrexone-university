@@ -21,11 +21,13 @@ The Pattern Registry opacity scale was designed for dark mode. In light mode, `-
 - `--accent: 210 40% 96.1%` (`app/globals.css:102`)
 - `--background: 0 0% 100%` (`app/globals.css:94`)
 
-**Affected patterns in current code:**
+**Representative affected patterns in current code (not exhaustive):**
 - Dashboard rows use `bg-muted/20` + `hover:bg-muted/40` (`app/(app)/app/dashboard/page.tsx:234`)
 - History session rows use `bg-muted/20` (`app/(app)/app/history/components/history-sessions-tab.tsx:183`)
 - Choice buttons use `hover:bg-muted/80` (`components/question/choice-button.tsx:30`)
 - Mobile nav active state uses `bg-muted` (`components/mobile-nav.tsx:74`)
+
+Token-level impact: any use of `bg-muted/*`, `hover:bg-muted/*`, `bg-accent/*`, or `hover:bg-accent/*` on white/near-white light-mode surfaces is in scope for LIGHT-1.
 
 ---
 
@@ -53,6 +55,11 @@ rg -n 'bg-muted/20' app/'(app)'/app/history/components/history-sessions-tab.tsx
 rg -n 'hover:bg-muted/80' components/question/choice-button.tsx
 rg -n 'bg-muted px-3 py-3' components/mobile-nav.tsx
 # Expected: matches present in current state
+
+# Scope inventory (all potentially impacted muted/accent opacity usages)
+rg -n 'bg-(muted|accent)/(20|30|40|50|60|80)|hover:bg-(muted|accent)/(20|30|40|50|60|80)|\\bbg-muted\\b' \
+  app components
+# Expected: reviewed as LIGHT-1 inventory (not all entries are failures; classify by light-mode surface context)
 
 # Option A verification (if selected): muted token darkened
 rg -n '^\\s*--muted:\\s*210 20% 88%;' app/globals.css
