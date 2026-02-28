@@ -1,7 +1,11 @@
 # DEBT-252: History Sessions Compliance
 
-**Status:** Implemented in PR #150 (pending merge)
-**Parent:** [DEBT-250](debt-250-frontend-visual-divergence-compliance-plan.md)
+**Status:** Resolved
+**Priority:** P2
+**Date:** 2026-02-28
+**Resolved:** 2026-02-28
+**Owner:** Frontend/UI
+**Parent:** [DEBT-250](../../debt/debt-250-frontend-visual-divergence-compliance-plan.md)
 **Items:** D-1, D-5, A11Y-1
 **File:** `app/(app)/app/history/components/history-sessions-tab.tsx`
 

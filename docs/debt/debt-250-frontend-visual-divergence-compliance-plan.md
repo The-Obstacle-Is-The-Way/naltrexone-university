@@ -34,9 +34,9 @@ DEBT-250 is decomposed into 14 child specs (DEBT-251–264). Each child spec map
 
 | Spec | Items | Primary File(s) | Status | PR |
 |------|-------|-----------------|--------|----|
-| [DEBT-251](debt-251-choice-button-compliance.md) | D-3, D-6, A11Y-2, LIGHT-3 | `choice-button.tsx` | In review | [#150](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/150) |
-| [DEBT-252](debt-252-history-sessions-compliance.md) | D-1, D-5, A11Y-1 | `history-sessions-tab.tsx` | In review | [#150](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/150) |
-| [DEBT-253](debt-253-scattered-phase1-fixes.md) | D-2, D-4, D-7, D-12 | 4 independent files | In review | [#150](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/150) |
+| [DEBT-251](../_archive/debt/debt-251-choice-button-compliance.md) | D-3, D-6, A11Y-2, LIGHT-3 | `choice-button.tsx` | Resolved in PR #150 | [#150](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/150) |
+| [DEBT-252](../_archive/debt/debt-252-history-sessions-compliance.md) | D-1, D-5, A11Y-1 | `history-sessions-tab.tsx` | Resolved in PR #150 | [#150](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/150) |
+| [DEBT-253](../_archive/debt/debt-253-scattered-phase1-fixes.md) | D-2, D-4, D-7, D-12 | 4 independent files | Resolved in PR #150 | [#150](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/150) |
 | [DEBT-254](debt-254-headings-errorcard-compliance.md) | D-17, COMP-1 | 5 auth/error pages + `error-card.tsx` | Not started | — |
 
 ### Decision-dependent
