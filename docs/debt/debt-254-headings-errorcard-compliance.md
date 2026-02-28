@@ -159,9 +159,9 @@ Total changes: 8 `p-6` overrides removed, 4 explicit compact-context `p-4` decla
 1. Existing: `components/error-card.test.tsx` (extend to assert default `p-6` and className override behavior)
 2. Existing: `app/global-error.test.tsx` (extend to assert `tracking-tight` on the heading)
 3. New: `components/error-boundary-page.test.tsx` (assert both h1/h2 paths include `tracking-tight`)
-4. New: `app/sign-in/[[...sign-in]]/sign-in-page-client.test.tsx` (skip-clerk fallback heading classes)
-5. New: `app/sign-up/[[...sign-up]]/sign-up-page-client.test.tsx` (skip-clerk fallback heading classes)
-6. New: `app/(marketing)/checkout/success/checkout-success-sync.test.tsx` (finalizing heading classes)
+4. Existing: `app/sign-in/[[...sign-in]]/page.test.tsx` (extend skip-clerk fallback assertions to include heading classes on `SignInPageClient`)
+5. Existing: `app/sign-up/[[...sign-up]]/page.test.tsx` (extend skip-clerk fallback assertions to include heading classes on `SignUpPageClient`)
+6. Existing: `app/(marketing)/checkout/success/page.test.ts` (extend fallback-shell assertion to include finalizing heading classes from `runCheckoutSuccessPage`)
 
 ---
 
