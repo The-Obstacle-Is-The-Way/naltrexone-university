@@ -17,6 +17,10 @@ vi.mock('next/link', () => ({
   ),
 }));
 
+vi.mock('next/navigation', () => ({
+  usePathname: () => '/app/dashboard',
+}));
+
 test('toggles open/close and renders navigation links', async () => {
   const screen = await render(<MobileNav />);
 
@@ -56,4 +60,28 @@ test('traps focus inside the menu and supports escape-to-close', async () => {
   await expect
     .element(screen.getByRole('button', { name: 'Open navigation menu' }))
     .toHaveFocus();
+});
+
+test('applies reduced hover background intensity to inactive links', async () => {
+  const screen = await render(<MobileNav />);
+
+  await screen.getByRole('button', { name: 'Open navigation menu' }).click();
+
+  const inactiveLink = screen.getByRole('link', { name: 'Billing' });
+  const activeLink = screen.getByRole('link', { name: 'Dashboard' });
+
+  await expect
+    .element(inactiveLink)
+    .toHaveAttribute(
+      'class',
+      expect.stringContaining('hover:bg-muted/50 hover:text-foreground'),
+    );
+  await expect
+    .element(activeLink)
+    .toHaveAttribute(
+      'class',
+      expect.stringContaining(
+        'bg-muted px-3 py-3 text-sm font-medium text-foreground',
+      ),
+    );
 });

@@ -280,7 +280,7 @@ export async function runCheckoutSuccessPage(
       className="flex min-h-[60vh] items-center justify-center"
     >
       <div className="text-center">
-        <h1 className="text-xl font-semibold text-foreground">
+        <h1 className="text-xl font-semibold font-heading tracking-tight text-foreground">
           Finalizing your subscription…
         </h1>
         <p className="mt-2 text-muted-foreground">

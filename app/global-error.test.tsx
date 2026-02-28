@@ -17,6 +17,7 @@ describe('app/global-error', () => {
     );
     const doc = new DOMParser().parseFromString(html, 'text/html');
     const tryAgainButton = doc.querySelector('button');
+    const heading = doc.querySelector('h1');
     const title = doc.querySelector('head > title');
     const viewportMeta = doc.querySelector('head > meta[name="viewport"]');
 
@@ -33,5 +34,8 @@ describe('app/global-error', () => {
     const htmlEl = doc.querySelector('html');
     expect(htmlEl?.getAttribute('lang')).toBe('en');
     expect(tryAgainButton?.getAttribute('type')).toBe('button');
+    expect(heading?.getAttribute('class')).toBe(
+      'text-2xl font-bold font-heading tracking-tight text-foreground',
+    );
   });
 });

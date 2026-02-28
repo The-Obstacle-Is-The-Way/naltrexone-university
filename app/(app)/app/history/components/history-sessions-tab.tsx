@@ -85,7 +85,7 @@ export function HistorySessionsTab({
   const router = useRouter();
 
   if (!result.ok) {
-    return <ErrorCard>{result.error.message}</ErrorCard>;
+    return <ErrorCard className="p-4">{result.error.message}</ErrorCard>;
   }
 
   const rows = result.data.rows;

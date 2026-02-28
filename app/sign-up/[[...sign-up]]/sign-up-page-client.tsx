@@ -22,7 +22,9 @@ export default function SignUpPageClient() {
     >
       {skipClerk ? (
         <div className="text-center">
-          <h1 className="text-xl font-semibold text-foreground">Sign Up</h1>
+          <h1 className="text-xl font-semibold font-heading tracking-tight text-foreground">
+            Sign Up
+          </h1>
           <p className="mt-2 text-muted-foreground">
             Authentication unavailable in this environment.
           </p>

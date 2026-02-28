@@ -25,9 +25,13 @@ describe('app/sign-in/[[...sign-in]]', () => {
       .default;
     const html = renderToStaticMarkup(<SignInPage />);
     const doc = new DOMParser().parseFromString(html, 'text/html');
+    const heading = doc.querySelector('h1');
 
     expect(html).toContain('Sign In');
     expect(html).toContain('Authentication unavailable in this environment.');
     expect(doc.querySelector('main#main-content')).not.toBeNull();
+    expect(heading?.getAttribute('class')).toBe(
+      'text-xl font-semibold font-heading tracking-tight text-foreground',
+    );
   });
 });

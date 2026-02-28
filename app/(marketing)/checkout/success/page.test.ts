@@ -254,9 +254,14 @@ describe('runCheckoutSuccessPage', () => {
     );
 
     const html = renderToStaticMarkup(element);
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const heading = doc.querySelector('h1');
     expect(redirectFn).toHaveBeenCalledWith(ROUTES.APP_DASHBOARD);
     expect(html).toContain('<main id="main-content"');
     expect(html).toContain('Finalizing your subscription…');
+    expect(heading?.getAttribute('class')).toBe(
+      'text-xl font-semibold font-heading tracking-tight text-foreground',
+    );
   });
 });
 

@@ -36,11 +36,11 @@ export function ErrorBoundaryPage({
   const content = (
     <div className="w-full max-w-md space-y-4 px-4 text-center">
       {includeMainLandmark ? (
-        <h1 className="text-xl font-semibold font-heading text-foreground">
+        <h1 className="text-xl font-semibold font-heading tracking-tight text-foreground">
           {title}
         </h1>
       ) : (
-        <h2 className="text-xl font-semibold font-heading text-foreground">
+        <h2 className="text-xl font-semibold font-heading tracking-tight text-foreground">
           {title}
         </h2>
       )}
