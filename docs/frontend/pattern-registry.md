@@ -207,6 +207,9 @@ cursor-pointer hover:border-muted-foreground/30 hover:bg-muted/60
 ```
 
 **Selected:** `border-ring`
+
+> **Affordance concern:** The selected-but-not-submitted state is border-only — no background tint. Visual QA confirmed this can be hard to distinguish at a glance (the border shifts from 15% to 40% lightness, perceptible but subtle compared to post-submission states). If strengthened, add a light `bg-muted/20` without changing the border pattern.
+
 **Correct:** `border-success bg-success/10 text-success-foreground`
 **Incorrect:** `border-destructive bg-destructive/10 text-destructive`
 **Disabled (no correctness):** `cursor-not-allowed opacity-50`
@@ -400,6 +403,21 @@ The marketing landing page has two custom button treatments that bypass the vari
 | Annual "Get Started" | `bg-foreground text-background hover:bg-foreground/90` | **Divergent** — inverted color button not available as variant |
 
 **Decision needed:** Should a `primary-inverted` variant be added to `button.tsx`, or should the annual button use the existing `default` variant?
+
+### MetallicCtaButton (Marketing Only)
+
+Custom animated-border CTA used at the bottom of the landing page.
+
+```
+metallic-border animated gradient (grays #3f3f46 → #a1a1aa, 6s cycle)
+├── outer: metallic-border inline-flex (animated border via CSS)
+├── inner: bg-background (button face)
+└── text: text-foreground + ArrowRight icon
+```
+
+**Source:** `components/ui/metallic-cta-button.tsx` + `components/ui/metallic-border.tsx` + CSS in `globals.css:193-208`
+
+**Status:** Undocumented pattern (D-15). Not a standard `Button` variant. Only used in one place — the bottom CTA of the landing page. If it stays, it should be documented as a marketing-only pattern. If the landing page buttons are rationalized (see D-14), this may be replaced with a standard variant.
 
 ---
 
@@ -667,6 +685,8 @@ Current codebase violations tracked in [BS-035](../brainstorming/bs-035-card-hov
 | D-11 | Pricing page uses raw divs instead of `<Card>` | S-1: Use `<Card>` component | `pricing-view.tsx` |
 | D-12 | Pricing dismiss uses `hover:opacity-70` | Should use text color or bg hover pattern | `pricing-view.tsx` |
 | D-13 | `headerLinkButtonClasses` copy-pasted in 6 files | Extract to `lib/shared-styles.ts` | See Part 10 |
+| D-14 | Monthly pricing CTA uses `variant="secondary"` — 4% lightness difference from card surface (`hsl(0 0% 11%)` on `hsl(0 0% 7%)`), near-invisible in dark mode | Use `default` variant, `outline` variant, or custom inverted (like Annual CTA) | `marketing-home.tsx` |
+| D-15 | `MetallicCtaButton` has no pattern registry entry — animated gradient border button used as bottom CTA on landing page, not a standard Button variant | Document as a marketing-only pattern or replace with a standard variant | `metallic-cta-button.tsx`, `marketing-home.tsx` |
 
 ---
 

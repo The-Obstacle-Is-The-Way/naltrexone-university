@@ -113,6 +113,8 @@ The gray stack is context-dependent (page background vs card background). Verifi
 
 Meanwhile, the history sessions tab jumps to a different token system entirely (`foreground/10` = ~12.5%), creating a visually jarring inconsistency compared to dashboard’s `muted/40` (~8.6% inside card).
 
+**Visual QA validation (2026-02-27):** A browser-based visual audit independently confirmed that the `/40` in-card hover (1.6 percentage-point shift from ~7% to ~8.6%) is **effectively invisible** to the human eye in dark mode. The audit reported "no visible hover state" on dashboard rows and history session rows despite hover classes being present in the code. This validates the concern that the low end of the opacity scale may need to be bumped — `/50` inside cards (~9% effective, a 2% shift) may be the practical minimum for perceptible hover feedback.
+
 ### 6. `globals.css` Cross-Reference (verified)
 
 All token values cited above were re-verified against `app/globals.css`:
@@ -166,6 +168,9 @@ Previously identified standards drift has been synchronized:
 | Link hover patterns divergent | **Medium** | All navigation links | Some underline, some bg change, some text-color only |
 | Button variant usage inconsistent in dark mode | **Medium** | Every outline/ghost button in dark mode | outline vs ghost have different dark strategies |
 | Warning/alert backgrounds inconsistent | **Low** | Billing, past-due banner, question page | Three opacities exist; now documented as a tiered scale but not fully normalized in implementation |
+| Monthly pricing CTA near-invisible | **High** | Landing page pricing section | `variant="secondary"` (11%) on `bg-card` (7%) = 4% lightness difference; button boundary disappears in dark mode. Conversion impact |
+| Choice button selected state too subtle | **Medium** | Quick practice, practice session | `border-ring` only (no background change) for the most important interaction moment. Reported as hard to distinguish |
+| Landing page button style proliferation | **Medium** | Landing page only | 5 distinct button treatments on one page vs 2-3 in-app. Visual language inconsistency between marketing and product |
 
 ---
 
@@ -190,6 +195,13 @@ Previously identified standards drift has been synchronized:
 | "Get Started" (monthly) | `secondary` | `mt-8 h-auto w-full rounded-full py-3 text-sm font-medium` | Standard secondary variant hover (`hover:bg-secondary/80`) |
 | "Get Started" (annual) | `default` (overridden) | `mt-8 h-auto w-full rounded-full bg-foreground py-3 text-sm font-medium text-background hover:bg-foreground/90` | **DIVERGENT:** Custom `bg-foreground` + `text-background` + `hover:bg-foreground/90` — completely bypasses button variant system |
 | "Sign in" pill | `outline` | same `outlinePillClasses` as "View pricing" | Same divergent hover pattern |
+| MetallicCtaButton (bottom CTA) | (custom) | `metallic-border` animated gradient + `bg-background text-foreground` | **UNDOCUMENTED:** No pattern registry entry. Animated gradient border, not a standard Button variant |
+
+**Visual QA note (2026-02-27):** Browser visual audit confirmed two landing page button issues:
+
+1. **Monthly "Get Started" is near-invisible in dark mode.** The `variant="secondary"` button (`bg-secondary` = `hsl(0 0% 11%)`) sits on `bg-card` (`hsl(0 0% 7%)`) — a **4 percentage-point** lightness difference. The button boundary virtually disappears. Meanwhile the Annual "Get Started" (`bg-foreground text-background`) has maximum contrast. This asymmetry hurts Monthly plan conversion affordance.
+
+2. **Button style proliferation.** The landing page uses **5 distinct button treatments** on a single page: (1) `default` variant (hero CTA), (2) `outline` with custom overrides (hero secondary + bottom "Sign in"), (3) `secondary` variant (Monthly CTA — near-invisible), (4) custom inverted `bg-foreground text-background` (Annual CTA), (5) MetallicCtaButton with animated border (bottom "Get Started"). In-app pages use 2-3 treatments. This should be rationalized — ideally down to `default` + `outline` + one marketing accent.
 
 #### Links
 | Element | Classes | Hover Pattern |
@@ -291,6 +303,8 @@ Previously identified standards drift has been synchronized:
 | Segmented controls | `SegmentedControl` component | Active: `bg-primary text-primary-foreground shadow-sm` / Inactive: `text-muted-foreground hover:bg-muted/50 hover:text-foreground` | Closest to canonical standard |
 | `<summary>` in details | `cursor-pointer list-none ... focus-visible:ring-ring/50 focus-visible:ring-[3px]` | No `hover:` classes | **Missing hover affordance** on clickable element |
 
+**Visual QA note (2026-02-27):** Browser-based audit flagged that SegmentedControl (grouped container, solid fill for selected) and FilterChip (individual bordered pills) use distinct visual languages on the same page. This is intentional — SegmentedControl is for mutually-exclusive single-select, FilterChip is for multi-select toggles — but unselected FilterChip border contrast (`border-border` = 15% on 3.5% background) is subtle enough that chips may read as non-interactive labels rather than toggle buttons. Consider whether unselected chips need a slightly more prominent resting state.
+
 #### Links
 | Element | Classes | Hover Pattern |
 |---------|---------|--------------|
@@ -329,11 +343,17 @@ Uses the same `PracticeView` component as Page 6. Interactive elements:
 |-------|---------|-------|
 | Default | `block w-full rounded-xl border border-border bg-background p-4 text-left shadow-sm transition-colors` | Uses `bg-background` — different from Card (`bg-card`). In dark mode: 3.5% vs 7% |
 | Hover (enabled) | `cursor-pointer hover:border-muted-foreground/30 hover:bg-muted/80` | **DIVERGENT:** `/80` is 2x more than canonical `/50` and far more than row hover `/40` |
-| Selected | `border-ring` | Ring color highlight |
+| Selected | `border-ring` | Ring color highlight. **See Visual QA note below** |
 | Correct | `border-success bg-success/10 text-success-foreground` | Green tint |
 | Incorrect | `border-destructive bg-destructive/10 text-destructive` | Red tint |
 | Disabled (no correctness) | `cursor-not-allowed opacity-50` | Standard |
 | Wrong-unselected | `opacity-60` | **DIVERGENT:** Different opacity than disabled (50 vs 60). Inconsistent disabled dimming |
+
+**Visual QA note (2026-02-27):** Browser visual audit flagged two choice-button affordance gaps:
+
+1. **Pre-submission selected state is too subtle.** The selected-but-not-submitted treatment is `border-ring` only — the border shifts from 15% lightness (`--border`) to 40% (`--ring`). This is perceptible but subtle compared to post-submission states which use full background tints (`bg-success/10`, `bg-destructive/10`). The audit reported the selection "requires close attention" to distinguish. Consider adding a light `bg-muted/20` or `bg-ring/10` to the selected-but-not-submitted state for stronger pre-commit affordance.
+
+2. **Hover exists but may be too subtle.** The audit incorrectly reported "zero hover state" — `hover:bg-muted/80` + `hover:border-muted-foreground/30` ARE present when `!disabled` (`choice-button.tsx:29-30`). However, the auditor's failure to perceive the hover visually reinforces the Chunk 1 finding about hover imperceptibility at low opacity values. The `/80` on `bg-background` (3.5% base) produces ~9.5% effective lightness (a ~6% shift) — more perceptible than in-card `/40` but still subtle enough to miss.
 
 #### Choice Badge Circle
 | State | Classes | Notes |
@@ -483,6 +503,11 @@ Uses the same `PracticeView` component as Page 6. Interactive elements:
 | Element | Classes | Notes |
 |---------|---------|-------|
 | Subscription card | `Card` + `gap-0 rounded-2xl p-6 shadow-sm` | Consistent |
+
+#### Buttons
+| Element | Variant | Extra Classes | Notes |
+|---------|---------|---------------|-------|
+| "Manage in Stripe" | `default` | `rounded-full` | Standard primary button — `bg-primary text-primary-foreground`. Browser audit flagged this as "different from every other button" but this is **incorrect**: same `default` variant used by Submit and other primary CTAs throughout the app. The billing page's sparse layout (single card, single button) may make the near-white button feel visually prominent in isolation, but the style is consistent. |
 
 #### Warning/Alert Boxes
 | Element | Classes | Notes |
