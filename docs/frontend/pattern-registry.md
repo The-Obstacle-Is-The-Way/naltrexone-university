@@ -75,6 +75,8 @@ When to use each opacity on `bg-muted` (or equivalent layer-2 token):
 
 **Decision:** Hover opacity is context-dependent. Use `/40` inside cards, `/50` on page background, `/60` for direct-action targets (choices, chips).
 
+**Light-mode caveat:** This scale was designed for dark mode where `--muted` at 11% lightness provides ample contrast headroom. In light mode, `--muted` at 96.1% lightness is only 3.9% from white — all opacities below `/100` produce contrast ratios under 1.1:1 (imperceptible). Light-mode hover feedback relies on border changes (`hover:border-muted-foreground/30`) and shadow, not background fills. See DEBT-250 LIGHT-1 / Decision 12 for resolution strategy.
+
 ### 1.3 Border Opacity Scale
 
 | Opacity | Name | Use Case |
@@ -253,7 +255,7 @@ cursor-pointer hover:border-muted-foreground/30 hover:bg-muted/60
 
 > **Affordance concern:** The selected-but-not-submitted state is border-only — no background tint. Visual QA confirmed this can be hard to distinguish at a glance (the border shifts from 15% to 40% lightness, perceptible but subtle compared to post-submission states). If strengthened, add a light `bg-muted/20` without changing the border pattern.
 
-**Correct:** `border-success bg-success/10 text-success-foreground`
+**Correct:** `border-success bg-success/10 text-success`
 **Incorrect:** `border-destructive bg-destructive/10 text-destructive`
 **Disabled (no correctness):** `cursor-not-allowed opacity-50`
 **Disabled (wrong-unselected):** `opacity-50`
