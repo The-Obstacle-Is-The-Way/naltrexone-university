@@ -64,12 +64,12 @@ DEBT-250 is decomposed into 14 child specs (DEBT-251–264). Each child spec map
 ```
 IMMEDIATE (parallel):
   DEBT-251 ──┐
-  DEBT-252 ──┤  13 items, 4 PRs, no blockers
+  DEBT-252 ──┤  14 items, 5 PRs, no blockers
   DEBT-253 ──┤
-  DEBT-254 ──┘
+  DEBT-254 ──┤
+  DEBT-255 ──┘  (Decision 10 resolved)
 
 AFTER decisions resolve:
-  Decision 10 → DEBT-255
   Decision 4  → DEBT-256 [after DEBT-252]
   Decision 5  → DEBT-257 [after DEBT-251]
   Decision 1  → DEBT-258
