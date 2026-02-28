@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { renderToStaticMarkup } from 'react-dom/server';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import {
   restoreProcessEnv,
   snapshotProcessEnv,
@@ -9,29 +9,30 @@ import {
 const ORIGINAL_ENV = snapshotProcessEnv();
 
 describe('app/sign-up/[[...sign-up]]', () => {
-  afterEach(() => {
+  let SignUpPage: typeof import('@/app/sign-up/[[...sign-up]]/page')['default'];
+
+  beforeAll(async () => {
+    process.env.NEXT_PUBLIC_SKIP_CLERK = 'true';
+    vi.doMock('@clerk/nextjs', () => {
+      throw new Error('Publishable key not valid.');
+    });
+    SignUpPage = (await import('@/app/sign-up/[[...sign-up]]/page')).default;
+  });
+
+  afterAll(() => {
     restoreProcessEnv(ORIGINAL_ENV);
     vi.resetModules();
     vi.restoreAllMocks();
   });
 
-  it('renders a fallback UI when NEXT_PUBLIC_SKIP_CLERK=true even if Clerk import would fail', async () => {
-    process.env.NEXT_PUBLIC_SKIP_CLERK = 'true';
-    vi.doMock('@clerk/nextjs', () => {
-      throw new Error('Publishable key not valid.');
-    });
-
-    const SignUpPage = (await import('@/app/sign-up/[[...sign-up]]/page'))
-      .default;
+  it('renders a fallback UI when NEXT_PUBLIC_SKIP_CLERK=true even if Clerk import would fail', () => {
     const html = renderToStaticMarkup(<SignUpPage />);
-    const doc = new DOMParser().parseFromString(html, 'text/html');
-    const heading = doc.querySelector('h1');
 
     expect(html).toContain('Sign Up');
     expect(html).toContain('Authentication unavailable in this environment.');
-    expect(doc.querySelector('main#main-content')).not.toBeNull();
-    expect(heading?.getAttribute('class')).toBe(
-      'text-xl font-semibold font-heading tracking-tight text-foreground',
+    expect(html).toContain('<main id="main-content"');
+    expect(html).toContain(
+      'class="text-xl font-semibold font-heading tracking-tight text-foreground"',
     );
   });
 });
