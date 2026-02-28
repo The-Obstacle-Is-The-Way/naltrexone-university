@@ -1,7 +1,8 @@
 # DEBT-262: Light-Mode Opacity Scale
 
 **Status:** Resolved (documentation-only → folds into DEBT-264)
-**Parent:** [DEBT-250](debt-250-frontend-visual-divergence-compliance-plan.md)
+**Resolved:** 2026-02-28
+**Parent:** [DEBT-250](../../debt/debt-250-frontend-visual-divergence-compliance-plan.md)
 **Items:** LIGHT-1
 **Decision 12:** Option C — Accept asymmetry
 **Files:** Documentation only: `docs/frontend/pattern-registry.md` (Part 1.2)
@@ -24,7 +25,7 @@ The Pattern Registry opacity scale was designed for dark mode. In light mode, `-
 **Representative affected patterns in current code (not exhaustive):**
 - Dashboard rows use `bg-muted/20` + `hover:bg-muted/40` (`app/(app)/app/dashboard/page.tsx:234`)
 - History session rows use `bg-muted/20` (`app/(app)/app/history/components/history-sessions-tab.tsx:183`)
-- Choice buttons use `hover:bg-muted/80` (`components/question/choice-button.tsx:30`)
+- Choice buttons use `hover:bg-muted/60` (`components/question/choice-button.tsx:30`)
 - Mobile nav active state uses `bg-muted` (`components/mobile-nav.tsx:74`)
 
 Token-level impact: any use of `bg-muted/*`, `hover:bg-muted/*`, `bg-accent/*`, or `hover:bg-accent/*` on white/near-white light-mode surfaces is in scope for LIGHT-1.
@@ -40,13 +41,13 @@ Light-mode hover feedback relies on border/shadow cues, not background fills. Th
 ### Reasoning
 
 **Option A is mathematically infeasible.** Even darkening `--muted` from L=96.1% to L=88%:
-- `bg-muted/40` on white produces ~1.07:1 contrast — still imperceptible
-- `bg-muted/20` on white produces ~1.035:1 — still invisible
-- To make `/40` visibly distinct (~1.3:1), `--muted` would need L≈75%, which turns every `bg-muted` surface into conspicuous medium gray and fundamentally changes the light theme character
+- `bg-muted/40` on white produces ~1.12:1 contrast — still imperceptible
+- `bg-muted/20` on white produces ~1.06:1 — still invisible
+- To make `/40` visibly distinct (~1.3:1), `--muted` would need L≈73%, which turns every `bg-muted` surface into conspicuous medium gray and fundamentally changes the light theme character
 
 **Option A actively degrades Decision 13 fixes.** Cross-cutting contrast analysis proved:
 - Darker `--muted` backgrounds reduce `text-success`/`text-destructive` contrast ratios
-- D12-A + D13-C fails WCAG AA at `bg-muted/60`+ — exactly where choice-button hover lives
+- D12-A + D13-C can fail WCAG AA on muted fills (`text-success` fails by `bg-muted/60`; `text-destructive` fails by `bg-muted/40`)
 - The two decisions interact adversely when Option A is chosen
 
 **Option B introduces disproportionate complexity.** A mode-specific `--muted-hover` token:

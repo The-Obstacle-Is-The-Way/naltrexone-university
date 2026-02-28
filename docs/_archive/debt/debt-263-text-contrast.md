@@ -1,7 +1,8 @@
 # DEBT-263: Text Contrast
 
-**Status:** In Progress
-**Parent:** [DEBT-250](debt-250-frontend-visual-divergence-compliance-plan.md)
+**Status:** Resolved
+**Resolved:** 2026-02-28
+**Parent:** [DEBT-250](../../debt/debt-250-frontend-visual-divergence-compliance-plan.md)
 **Items:** LIGHT-2
 **Decision 13:** Modified Option C — Subtle global darkening (success L=29%, destructive L=48%)
 **Sequencing:** DEBT-251 merged ✅ (PR #150)
@@ -17,11 +18,11 @@
 
 `text-success` and `text-destructive` fail WCAG AA for normal-sized text on white backgrounds.
 
-**Current token evidence** (`app/globals.css`):
+**Baseline token evidence (pre-fix)** (`app/globals.css`):
 - `--success: 142 72% 35%` (`app/globals.css:106`)
 - `--destructive: 0 84.2% 60.2%` (`app/globals.css:104`)
 
-**Current contrast on white** (computed from current token RGB):
+**Baseline contrast on white** (computed from prior token RGB):
 - `text-success` (`rgb(25,154,72)`) ≈ `3.648:1` — FAIL (AA requires >= 4.5:1)
 - `text-destructive` (`rgb(239,68,68)`) ≈ `3.763:1` — FAIL (AA requires >= 4.5:1)
 

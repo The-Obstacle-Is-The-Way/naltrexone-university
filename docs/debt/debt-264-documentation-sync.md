@@ -1,9 +1,9 @@
 # DEBT-264: Documentation Sync
 
-**Status:** Blocked
+**Status:** In Progress
 **Parent:** [DEBT-250](debt-250-frontend-visual-divergence-compliance-plan.md)
 **Items:** Phase 6 documentation sync
-**Blocked by:** All code specs (DEBT-251–263) merged
+**Blocked by:** Final completion of DEBT-259, DEBT-260, and DEBT-261 (DEBT-262 and DEBT-263 completed)
 **Files:** `docs/frontend/pattern-registry.md`, `docs/frontend/standards.md`, `docs/frontend/design-principles.md`, `docs/brainstorming/bs-035-card-hover-and-gray-consistency-audit.md`, `docs/debt/debt-250-frontend-visual-divergence-compliance-plan.md`, `docs/debt/index.md`
 
 ---
@@ -11,6 +11,13 @@
 ## Scope
 
 After all code changes are complete, update docs in lockstep:
+
+### Current Progress (2026-02-28)
+
+- Decision 12 and Decision 13 outcomes are now synced into DEBT-250 and child debt docs (`DEBT-262`, `DEBT-263`)
+- Pattern Registry Part 1.2 caveat has been refined to resolved wording (two-channel hover strategy; DEBT-260 cross-reference)
+- Light-mode token updates (`--success`, `--destructive`) are implemented and covered by `app/globals.test.ts`
+- Remaining DEBT-264 work is the final cross-doc sweep after DEBT-259/260/261 merge
 
 ### 1. Pattern Registry Part 11
 
