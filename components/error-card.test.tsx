@@ -1,7 +1,12 @@
 // @vitest-environment jsdom
 import { renderToStaticMarkup } from 'react-dom/server';
-import { describe, expect, it } from 'vitest';
-import { ErrorCard } from './error-card';
+import { beforeAll, describe, expect, it } from 'vitest';
+
+let ErrorCard: typeof import('./error-card').ErrorCard;
+
+beforeAll(async () => {
+  ErrorCard = (await import('./error-card')).ErrorCard;
+});
 
 describe('ErrorCard', () => {
   it('renders a consistent accessible error container', () => {
