@@ -145,6 +145,7 @@ Git hooks are installed automatically on `pnpm install` (via the `prepare` scrip
 
 - `pre-commit`: runs staged-file checks via `lint-staged` + Biome auto-fix
 - `pre-push`: runs `pnpm typecheck && pnpm test --run`
+- `pre-push` is intentionally fast and does **not** run browser/integration/build checks. Agents must run the full pre-PR gate manually.
 
 ## Non-Interactive Safety (No Vim / No Pagers)
 
@@ -488,7 +489,7 @@ Integration tests run against a real Postgres instance. In CI, a service contain
 
 **Before opening a PR, run:**
 ```bash
-pnpm typecheck && pnpm lint && pnpm test --run && pnpm test:integration && pnpm build
+pnpm typecheck && pnpm lint && pnpm test --run && pnpm test:browser && pnpm test:integration && pnpm build
 ```
 
 ---

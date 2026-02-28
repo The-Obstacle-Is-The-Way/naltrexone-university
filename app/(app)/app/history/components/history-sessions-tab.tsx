@@ -199,7 +199,7 @@ export function HistorySessionsTab({
               }}
               onKeyDown={(event) => {
                 if (!sessionReviewHref) return;
-                if (event.key !== 'Enter' && event.key !== ' ') return;
+                if (event.key !== 'Enter') return;
                 const target = event.target;
                 if (!(target instanceof Element)) return;
                 const interactive = target.closest(

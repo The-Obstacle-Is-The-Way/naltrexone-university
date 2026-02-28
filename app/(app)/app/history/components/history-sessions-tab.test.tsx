@@ -30,6 +30,25 @@ beforeAll(async () => {
 });
 
 type SessionHistoryResult = ActionResult<GetSessionHistoryOutput>;
+type SessionHistoryRow = GetSessionHistoryOutput['rows'][number];
+
+function makeSessionHistoryRow(
+  overrides: Partial<SessionHistoryRow> = {},
+): SessionHistoryRow {
+  return {
+    sessionId: 'session-1',
+    mode: 'exam',
+    questionCount: 10,
+    firstQuestionSlug: 'q-1',
+    answered: 10,
+    correct: 8,
+    accuracy: 0.8,
+    durationSeconds: 1200,
+    startedAt: '2026-02-07T00:00:00.000Z',
+    endedAt: '2026-02-07T00:20:00.000Z',
+    ...overrides,
+  };
+}
 
 describe('HistorySessionsTab', () => {
   it('renders SessionSummaryContent with mode, score, duration, and date', () => {
@@ -220,20 +239,7 @@ describe('HistorySessionsTab', () => {
     const result: SessionHistoryResult = {
       ok: true,
       data: {
-        rows: [
-          {
-            sessionId: 'session-1',
-            mode: 'exam',
-            questionCount: 10,
-            firstQuestionSlug: 'q-1',
-            answered: 10,
-            correct: 8,
-            accuracy: 0.8,
-            durationSeconds: 1200,
-            startedAt: '2026-02-07T00:00:00.000Z',
-            endedAt: '2026-02-07T00:20:00.000Z',
-          },
-        ],
+        rows: [makeSessionHistoryRow()],
         total: 1,
         limit: 20,
         offset: 0,

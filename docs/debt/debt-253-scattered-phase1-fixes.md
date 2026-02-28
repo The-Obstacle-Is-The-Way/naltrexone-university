@@ -1,6 +1,6 @@
 # DEBT-253: Scattered Phase 1 Fixes
 
-**Status:** Not started
+**Status:** Implemented in PR #150 (pending merge)
 **Parent:** [DEBT-250](debt-250-frontend-visual-divergence-compliance-plan.md)
 **Items:** D-2, D-4, D-7, D-12
 **Files:** 4 independent files (no collision risk — can be done in any order)

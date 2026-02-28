@@ -1,6 +1,6 @@
 # DEBT-251: Choice Button Compliance
 
-**Status:** Not started
+**Status:** Implemented in PR #150 (pending merge)
 **Parent:** [DEBT-250](debt-250-frontend-visual-divergence-compliance-plan.md)
 **Items:** D-3, D-6, A11Y-2, LIGHT-3
 **File:** `components/question/choice-button.tsx`
