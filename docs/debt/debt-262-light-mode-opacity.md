@@ -19,7 +19,7 @@ The Pattern Registry opacity scale was designed for dark mode. In light mode, `-
 **Current token evidence** (`app/globals.css`):
 - `--muted: 210 40% 96.1%` (`app/globals.css:100`)
 - `--accent: 210 40% 96.1%` (`app/globals.css:102`)
-- `--background: 0 0% 100%` (`app/globals.css:94`)
+- `--background: 0 0% 100%` (`app/globals.css:90`)
 
 **Representative affected patterns in current code (not exhaustive):**
 - Dashboard rows use `bg-muted/20` + `hover:bg-muted/40` (`app/(app)/app/dashboard/page.tsx:234`)
