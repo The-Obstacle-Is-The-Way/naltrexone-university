@@ -156,7 +156,8 @@ describe('HistoryQuestionsTab', () => {
     for (const link of cardLinks) {
       const className = link.getAttribute('class') ?? '';
       expect(className).toContain('transition-colors');
-      expect(className).toContain('hover:bg-accent/40');
+      expect(className).toContain('hover:bg-muted/50');
+      expect(className).not.toContain('hover:bg-accent/40');
       expect(className).toContain('focus-visible:ring-[3px]');
     }
   });

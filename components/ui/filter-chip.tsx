@@ -25,7 +25,7 @@ export function FilterChip({
         'disabled:pointer-events-none disabled:opacity-50',
         selected
           ? 'border-primary bg-primary text-primary-foreground'
-          : 'border-border bg-background text-muted-foreground hover:bg-accent hover:text-accent-foreground',
+          : 'border-border bg-background text-muted-foreground hover:bg-muted/50 hover:text-accent-foreground',
       )}
     >
       {label}

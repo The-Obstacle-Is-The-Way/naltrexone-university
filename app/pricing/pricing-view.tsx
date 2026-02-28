@@ -72,7 +72,7 @@ export function PricingView({
               ) : null}
               <Link
                 href={ROUTES.PRICING}
-                className="ml-4 rounded-md text-current hover:opacity-70 focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]"
+                className="ml-4 rounded-md text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]"
                 aria-label="Dismiss"
               >
                 ×
