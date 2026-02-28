@@ -93,8 +93,8 @@ rg -n 'dark:(?:border|bg|hover:bg)-foreground' \
   'app/(app)/app/history/components/history-sessions-tab.tsx'
 # Expected: 0 matches
 
-# A11Y-1: Interactive rows have role="link"
-rg -n 'role="link"' \
+# A11Y-1: Interactive rows set role to link when interactive
+rg -n "role=\\{isRowInteractive \\? 'link'" \
   'app/(app)/app/history/components/history-sessions-tab.tsx'
 # Expected: 1 match
 ```

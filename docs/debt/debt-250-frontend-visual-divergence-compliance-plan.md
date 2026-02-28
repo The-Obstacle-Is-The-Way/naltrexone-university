@@ -64,7 +64,7 @@ DEBT-250 is decomposed into 14 child specs (DEBT-251–264). Each child spec map
 ```
 IMMEDIATE (parallel):
   DEBT-251 ──┐
-  DEBT-252 ──┤  16 items, 4 PRs, no blockers
+  DEBT-252 ──┤  13 items, 4 PRs, no blockers
   DEBT-253 ──┤
   DEBT-254 ──┘
 
@@ -629,7 +629,7 @@ rounded-2xl border border-destructive/30 bg-destructive/10 p-6 text-sm text-dest
 
 **Note:** This fix should be applied together with D-1 (which changes the hover classes on the same element). The ideal long-term fix is to make the entire `<li>` a `<Link>` component (eliminating the delegated click pattern), but that requires more refactoring and is tracked as a known debt in Pattern Registry I-1.
 
-**Verify:** `rg -n 'role="link"' 'app/(app)/app/history/components/history-sessions-tab.tsx'` returns 1 match.
+**Verify:** `rg -n "role=\\{isRowInteractive \\? 'link'" 'app/(app)/app/history/components/history-sessions-tab.tsx'` returns 1 match.
 
 ---
 
@@ -648,12 +648,12 @@ rounded-2xl border border-destructive/30 bg-destructive/10 p-6 text-sm text-dest
 
 **Target:**
 ```tsx
-<input type="radio" name={name} value={choiceId} checked={selected}
+<input type="radio" name={name} value={label} checked={selected}
   onChange={() => onClick()} disabled={disabled} className="sr-only" />
 ```
 
 **Changes:**
-1. Add `value={choiceId}` to the radio input (requires threading `choiceId` prop through if not already available)
+1. Add `value={label}` to the radio input (no new prop needed; `label` is already unique per question choice set: A/B/C/D)
 
 **Note:** The wrapping `<label>` element provides the accessible name — no `aria-label` is needed. The `<fieldset>` + `<legend class="sr-only">Answer choices</legend>` grouping is the standard HTML pattern and does not require `role="radiogroup"`.
 
@@ -1358,7 +1358,7 @@ rg -n 'font-semibold.*text-foreground' app/sign-in app/sign-up app/global-error.
 # Expected: all matches include font-heading tracking-tight
 
 # Interactive li rows have role
-rg -n 'role="link"' 'app/(app)/app/history/components/history-sessions-tab.tsx'
+rg -n "role=\\{isRowInteractive \\? 'link'" 'app/(app)/app/history/components/history-sessions-tab.tsx'
 # Expected: 1 match
 ```
 

@@ -17,10 +17,24 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 | ID | Title | Priority | GitHub Issue |
 |----|-------|----------|--------------|
+| [DEBT-264](./debt-264-documentation-sync.md) | Documentation Sync (Finalize frontend docs after DEBT-251–263) | P2 | — |
+| [DEBT-263](./debt-263-text-contrast.md) | Text Contrast (LIGHT-2) | P2 | — |
+| [DEBT-262](./debt-262-light-mode-opacity.md) | Light-Mode Opacity Scale (LIGHT-1) | P2 | — |
+| [DEBT-261](./debt-261-touch-targets.md) | Touch Targets (TOUCH-1, TOUCH-2) | P2 | — |
+| [DEBT-260](./debt-260-ux-seams.md) | UX Seams (UX-1 through UX-4) | P2 | — |
+| [DEBT-259](./debt-259-shared-constants-extraction.md) | Shared Constants Extraction (D-13, D-11) | P2 | — |
+| [DEBT-258](./debt-258-marketing-alignment.md) | Marketing Alignment (D-8, D-9, D-10, D-14, D-15) | P2 | — |
+| [DEBT-257](./debt-257-choice-selected-state.md) | Choice Button Selected State (AFFORD-1) | P2 | — |
+| [DEBT-256](./debt-256-expanded-breakdown-hierarchy.md) | Expanded Breakdown Visual Hierarchy (STRUCT-1) | P2 | — |
+| [DEBT-255](./debt-255-mobile-nav-hover.md) | Mobile Nav Hover (D-16) | P2 | — |
+| [DEBT-254](./debt-254-headings-errorcard-compliance.md) | Headings + ErrorCard Compliance (D-17, COMP-1) | P2 | — |
+| [DEBT-253](./debt-253-scattered-phase1-fixes.md) | Scattered Phase 1 Fixes (D-2, D-4, D-7, D-12) | P2 | — |
+| [DEBT-252](./debt-252-history-sessions-compliance.md) | History Sessions Compliance (D-1, D-5, A11Y-1) | P2 | — |
+| [DEBT-251](./debt-251-choice-button-compliance.md) | Choice Button Compliance (D-3, D-6, A11Y-2, LIGHT-3) | P2 | — |
 | [DEBT-250](./debt-250-frontend-visual-divergence-compliance-plan.md) | Frontend Visual Divergence Compliance Plan (BS-035 + Pattern Registry D-1..D-16) | P2 | — |
 | [DEBT-249](./debt-249-checkout-success-auth-boundary-hardening.md) | Checkout Success Auth Boundary Hardening (Stripe Return + Clerk Redirect) | P1 | — |
 
-**Next Debt ID:** DEBT-251
+**Next Debt ID:** DEBT-265
 
 ---
 
