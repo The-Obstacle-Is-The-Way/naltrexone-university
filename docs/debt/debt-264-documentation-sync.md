@@ -52,6 +52,10 @@ If Decision 8 accepts the Clerk visual seam, add a "Third-Party Component Except
 
 Update all child spec statuses to "Completed" with PR links.
 
+### 11. Frontend Debt Cross-Doc Alignment
+
+Keep `docs/frontend/standards.md` Section 17 and `docs/debt/index.md` Frontend Debt in sync for unresolved follow-ups (currently `FE-055` `aria-controls` wiring).
+
 ---
 
 ## Verification
@@ -73,6 +77,10 @@ rg -n '^### L-6: Mobile Menu Link' docs/frontend/pattern-registry.md
 # Debt index includes DEBT-250 through DEBT-264 entries
 rg -n '\\[DEBT-26[0-4]\\]|\\[DEBT-25[0-9]\\]' docs/debt/index.md
 # Expected: rows present for DEBT-250..DEBT-264
+
+# FE-055 follow-up alignment between standards and debt index
+rg -n 'FE-055.*aria-controls' docs/frontend/standards.md docs/debt/index.md
+# Expected: both docs describe FE-055 follow-up as still active until aria-controls wiring is implemented
 
 # BS-035 decision log has recent sync entries (manual spot-check)
 rg -n '^\\| 2026-02-28 \\|' docs/brainstorming/bs-035-card-hover-and-gray-consistency-audit.md
