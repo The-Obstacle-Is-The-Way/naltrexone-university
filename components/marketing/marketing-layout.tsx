@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import type { ReactNode } from 'react';
+import { ThemeToggle } from '@/components/theme-toggle';
 import { ROUTES } from '@/lib/routes';
 
 export type MarketingLayoutProps = {
@@ -39,7 +40,10 @@ export function MarketingLayout({
                 </Link>
               </nav>
             </div>
-            <div className="flex items-center gap-2">{authNav}</div>
+            <div className="flex items-center gap-2">
+              <ThemeToggle />
+              {authNav}
+            </div>
           </div>
 
           <nav

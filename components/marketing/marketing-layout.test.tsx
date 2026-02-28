@@ -1,7 +1,12 @@
 // @vitest-environment jsdom
-import type { AnchorHTMLAttributes, ReactNode } from 'react';
+import {
+  type AnchorHTMLAttributes,
+  isValidElement,
+  type ReactNode,
+} from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
+import { ThemeToggle } from '@/components/theme-toggle';
 import { ROUTES } from '@/lib/routes';
 
 type NextLinkMockProps = AnchorHTMLAttributes<HTMLAnchorElement> & {
@@ -26,6 +31,18 @@ beforeAll(async () => {
     '@/components/marketing/marketing-layout'
   ));
 });
+
+function containsElementType(node: ReactNode, targetType: unknown): boolean {
+  if (!node) return false;
+  if (Array.isArray(node)) {
+    return node.some((child) => containsElementType(child, targetType));
+  }
+  if (!isValidElement(node)) return false;
+  if (node.type === targetType) return true;
+
+  const props = node.props as { children?: ReactNode };
+  return containsElementType(props.children ?? null, targetType);
+}
 
 describe('MarketingLayout', () => {
   it('renders a single focusable main landmark', () => {
@@ -94,5 +111,15 @@ describe('MarketingLayout', () => {
     expect(
       mobileNavElement.querySelector(`a[href="${ROUTES.PRICING}"]`),
     ).not.toBeNull();
+  });
+
+  it('includes ThemeToggle in the header action area', () => {
+    const tree = MarketingLayout({
+      authNav: <div>Auth</div>,
+      featuresHref: '/#features',
+      children: <div>Content</div>,
+    });
+
+    expect(containsElementType(tree, ThemeToggle)).toBe(true);
   });
 });
