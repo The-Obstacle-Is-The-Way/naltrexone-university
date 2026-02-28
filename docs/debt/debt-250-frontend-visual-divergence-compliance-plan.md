@@ -921,3 +921,45 @@ These BS-035 findings are informational or deferred. They are NOT implementation
 | Error surface density drift (`min-h-[50vh]` vs `min-h-[100dvh]`) | Cross-cutting L | Minor inconsistency across error pages. Not user-facing enough to prioritize. |
 | Markdown styling gaps | Cross-cutting M | `Markdown.tsx` lacks explicit link/code/heading styles. Tangential to visual consistency audit. Separate feature request if needed. |
 | Skeleton card `bg-background` vs `bg-card` | Loading States section | Accepted — skeleton state intentionally flatter than real cards. |
+
+---
+
+## Coverage Assurance (React + shadcn Sweep)
+
+Audit date: 2026-02-28.
+
+### shadcn / `components/ui/*` coverage
+
+All non-test files under `components/ui/` are explicitly covered by BS-035 + Standards + Pattern Registry:
+
+- `alert-dialog.tsx`
+- `button.tsx`
+- `card.tsx`
+- `dropdown-menu.tsx`
+- `filter-chip.tsx`
+- `input.tsx`
+- `metallic-border.tsx`
+- `metallic-cta-button.tsx`
+- `notification-provider.tsx`
+- `segmented-control.tsx`
+- `select.tsx`
+- `tab-switch-styles.ts`
+
+### React component coverage status
+
+All non-test files under `components/` are referenced by filename in frontend docs.
+
+Route-level `app/**` wrappers not always cited by filename were reviewed for visual impact:
+
+| File | Visual styling present? | Status |
+|---|---|---|
+| `app/pricing/pricing-client.tsx` | Yes (`SubscribeButton` sizing classes only) | Covered by pricing CTA conventions; no separate divergence |
+| `app/(app)/app/history/history-page-client.tsx` | Yes (page heading wrapper classes) | Consistent with existing page heading pattern; no separate divergence |
+| `app/(app)/app/practice/quick/quick-practice-client.tsx` | Minimal (`mt-4` wrapper) | Layout-only; no divergence |
+| `app/(app)/app/practice/[sessionId]/practice-session-page-client.tsx` | No meaningful styling (composition wrapper) | Non-visual orchestrator |
+| `app/(app)/app/practice/[sessionId]/hooks/practice-session-page-controller.browser.probes.tsx` | Browser probe fixture | Test-only support surface; excluded from production UI audit |
+
+### Conclusion
+
+No additional shadcn primitives are missing from documentation.
+No additional production React UI divergence category was discovered beyond `D-1` through `D-16`.
