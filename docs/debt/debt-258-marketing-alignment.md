@@ -1,10 +1,10 @@
 # DEBT-258: Marketing Alignment
 
-**Status:** Blocked
+**Status:** Partially blocked
 **Parent:** [DEBT-250](debt-250-frontend-visual-divergence-compliance-plan.md)
 **Items:** D-8, D-9, D-10, D-14, D-15
-**Blocked by:** Decision 1 (Marketing Pricing CTA Strategy), optionally Decision 2 (MetallicCtaButton Policy)
-**Files:** `components/marketing/marketing-home.tsx`, `components/marketing/marketing-layout.tsx`, `app/(app)/app/layout.tsx`
+**Blocked by:** Decision 1 for D-9/D-10/D-14; Decision 2 for D-15 (`D-8` is unblocked)
+**Files:** `components/marketing/marketing-home.tsx`, `components/marketing/marketing-layout.tsx`, `app/(app)/app/layout.tsx` (Decision 2 alternative also touches `components/ui/metallic-cta-button.tsx` and `components/ui/metallic-border.tsx`)
 
 ---
 
@@ -14,24 +14,61 @@
 
 **Files:** `components/marketing/marketing-layout.tsx:16-17`, `app/(app)/app/layout.tsx:80`
 
-Both brand links diverge from the canonical L-4 pattern. Target: extract to shared constant `brandLinkClasses` with full L-4 class set.
+Both brand links diverge from the canonical L-4 pattern.
+
+**Current marketing brand classes** (`marketing-layout.tsx:16-17`):
+```tsx
+const brandLinkClass =
+  'rounded-md text-sm font-semibold focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]';
+```
+
+**Current app brand classes** (`app layout.tsx:80`):
+```tsx
+className="text-sm font-semibold text-foreground"
+```
 
 **Target classes:**
 ```
 rounded-md text-sm font-semibold text-foreground transition-colors hover:text-foreground/80 focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]
 ```
 
+**Implementation note:** Apply this class set directly in both files for this spec. Pattern Registry Part 10 extraction rule is `3+` files; this class currently appears in 2 files.
+
 ### D-9: Marketing Outline Pill Hover
 
 **File:** `components/marketing/marketing-home.tsx:57-58`
 
-Remove custom `outlinePillClasses` const. Use `<Button variant="outline">` with sizing overrides only.
+**Current**:
+```tsx
+const outlinePillClasses =
+  'h-auto rounded-full border-border bg-card px-6 py-3 text-sm font-medium text-foreground hover:bg-muted';
+```
+
+**Target** (recommended):
+```tsx
+<Button asChild variant="outline" className="h-auto rounded-full px-6 py-3 text-sm font-medium">
+```
+
+Remove custom `outlinePillClasses`. Use `outline` variant with only sizing/shape overrides.
 
 ### D-10: Annual CTA Variant Bypass
 
 **File:** `components/marketing/marketing-home.tsx:229-234`
 
-Remove `bg-foreground text-background hover:bg-foreground/90` overrides. Let `default` variant provide standard colors.
+**Current**:
+```tsx
+<Button
+  asChild
+  className="mt-8 h-auto w-full rounded-full bg-foreground py-3 text-sm font-medium text-background hover:bg-foreground/90"
+>
+```
+
+**Target** (recommended):
+```tsx
+<Button asChild className="mt-8 h-auto w-full rounded-full py-3 text-sm font-medium">
+```
+
+Remove `bg-foreground text-background hover:bg-foreground/90`. Let `default` variant supply colors/hover.
 
 ### D-14: Monthly CTA Invisible in Dark Mode
 
@@ -39,17 +76,52 @@ Remove `bg-foreground text-background hover:bg-foreground/90` overrides. Let `de
 
 **File:** `components/marketing/marketing-home.tsx:202-208`
 
+**Current**:
+```tsx
+<Button
+  asChild
+  variant="secondary"
+  className="mt-8 h-auto w-full rounded-full py-3 text-sm font-medium"
+>
+```
+
+**Target** (recommended):
+```tsx
+<Button
+  asChild
+  variant="outline"
+  className="mt-8 h-auto w-full rounded-full py-3 text-sm font-medium"
+>
+```
+
 Change `variant="secondary"` → `variant="outline"` for visible border in dark mode.
 
 ### D-15: MetallicCtaButton Exception
 
 **File:** `components/marketing/marketing-home.tsx:254-256`
 
-Add `{/* @debt-exception D-15 */}` comment. Document as marketing-only exception.
+**Current**:
+```tsx
+<MetallicCtaButton href={ROUTES.PRICING}>
+  Get Started
+</MetallicCtaButton>
+```
+
+**Target** (recommended):
+```tsx
+{/* @debt-exception D-15: Marketing-only metallic CTA. Do not expand to other pages. */}
+<MetallicCtaButton href={ROUTES.PRICING}>
+  Get Started
+</MetallicCtaButton>
+```
+
+Add explicit exception comment and keep this usage marketing-only.
 
 ---
 
 ## Decision Dependencies
+
+**D-8** can be implemented immediately (no decision blocker).
 
 **Decision 1** must resolve for D-9, D-10, D-14:
 - **Recommended:** Monthly = `outline`, Annual = `default`, remove `outlinePillClasses`
@@ -64,17 +136,37 @@ Add `{/* @debt-exception D-15 */}` comment. Document as marketing-only exception
 ## Verification
 
 ```bash
-# No 100% muted hover in marketing
-rg -n 'hover:bg-muted[" ]' components/marketing/marketing-home.tsx
-# Expected: 0 matches
-
-# No variant bypass colors (unless Decision 1 keeps inverted)
-rg -n 'bg-foreground text-background' components/marketing/marketing-home.tsx
-# Expected: 0 matches
-
-# Brand links match L-4
+# D-8: both brand links include the L-4 hover token
 rg -n 'hover:text-foreground/80' \
   components/marketing/marketing-layout.tsx \
   'app/(app)/app/layout.tsx'
 # Expected: 1 match in each file
+
+# D-9: custom outlinePillClasses removed
+rg -n 'const outlinePillClasses' components/marketing/marketing-home.tsx
+# Expected: 0 matches
+
+# D-9: no 100% muted hover override on pricing/sign-in pills
+rg -n 'hover:bg-muted[" ]|hover:bg-muted$' components/marketing/marketing-home.tsx
+# Expected: 0 matches (recommended path)
+
+# D-10: annual CTA no longer bypasses variant colors (recommended path)
+rg -n 'bg-foreground text-background|hover:bg-foreground/90' \
+  components/marketing/marketing-home.tsx
+# Expected: 0 matches unless Decision 1 selects an explicit inverted strategy
+
+# D-14: monthly CTA no longer uses secondary variant (recommended path)
+rg -n 'variant=\"secondary\"' components/marketing/marketing-home.tsx
+# Expected: 0 matches
+
+# D-15: exception marker present when keeping metallic CTA
+rg -n '@debt-exception D-15' components/marketing/marketing-home.tsx
+# Expected: 1 match on recommended Decision 2 path
+
+# D-15: MetallicCtaButton usage stays marketing-only across repo
+rg -n '<MetallicCtaButton' components \
+  --glob '!**/*.test.tsx' \
+  --glob '!**/*.spec.tsx'
+# Expected: 1 match in marketing-home.tsx
+#           (or 0 only if Decision 2 removes metallic CTA entirely)
 ```

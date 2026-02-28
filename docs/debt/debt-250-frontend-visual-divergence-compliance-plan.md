@@ -46,7 +46,7 @@ DEBT-250 is decomposed into 14 child specs (DEBT-251–264). Each child spec map
 | [DEBT-255](debt-255-mobile-nav-hover.md) | D-16 | Decision 10 | `mobile-nav.tsx` | Blocked | — |
 | [DEBT-256](debt-256-expanded-breakdown-hierarchy.md) | STRUCT-1 | Decision 4 + DEBT-252 merged | `history-sessions-tab.tsx` | Blocked | — |
 | [DEBT-257](debt-257-choice-selected-state.md) | AFFORD-1 | Decision 5 + DEBT-251 merged | `choice-button.tsx` | Blocked | — |
-| [DEBT-258](debt-258-marketing-alignment.md) | D-8, D-9, D-10, D-14, D-15 | Decision 1 (+ opt. 2) | `marketing-home.tsx` + layouts | Blocked | — |
+| [DEBT-258](debt-258-marketing-alignment.md) | D-8, D-9, D-10, D-14, D-15 | Decision 1 (+ opt. 2) | `marketing-home.tsx` + layouts | Partially blocked (D-8 ready) | — |
 | [DEBT-259](debt-259-shared-constants-extraction.md) | D-13, D-11 | DEBT-252/253 merged | 8 files (refactor) | Blocked | — |
 | [DEBT-260](debt-260-ux-seams.md) | UX-1, UX-2, UX-3, UX-4 | Decisions 3, 6, 7, 8 | 1–3 files | Blocked | — |
 | [DEBT-261](debt-261-touch-targets.md) | TOUCH-1, TOUCH-2 | Decision 11 | `mobile-nav.tsx`, `theme-toggle.tsx`, `auth-nav.tsx` | Blocked | — |

@@ -48,4 +48,8 @@ rg -n 'hover:bg-muted hover:text-foreground' components/mobile-nav.tsx
 # D-16 target class present
 rg -n 'hover:bg-muted/50 hover:text-foreground' components/mobile-nav.tsx
 # Expected: 1 match (inactive links)
+
+# Active-state contrast remains stronger than hover
+rg -n "bg-muted px-3 py-3 text-sm font-medium text-foreground" components/mobile-nav.tsx
+# Expected: 1 match (active link)
 ```
