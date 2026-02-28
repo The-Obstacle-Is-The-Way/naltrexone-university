@@ -77,8 +77,10 @@ describe('ReviewQuestionNavigator', () => {
     const { doc } = await renderNavigator();
     const el = findByAriaLabel(doc, 'Question 2: Incorrect, Current');
 
-    expect(getClassList(el)).toContain('ring-2');
-    expect(getClassList(el)).toContain('ring-ring');
+    expect(getClassList(el)).toContain('ring-[3px]');
+    expect(getClassList(el)).toContain('ring-ring/50');
+    expect(getClassList(el)).not.toContain('ring-2');
+    expect(getClassList(el)).not.toContain('ring-ring');
   });
 
   it('sets aria-current="step" on the current question', async () => {

@@ -182,7 +182,7 @@ export function HistorySessionsTab({
               className={cn(
                 'rounded-xl border border-border/60 bg-muted/20 p-3 transition-colors',
                 isRowInteractive
-                  ? 'cursor-pointer hover:bg-accent/40 focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px] dark:hover:bg-foreground/10'
+                  ? 'cursor-pointer hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]'
                   : undefined,
               )}
               onClick={(event) => {
@@ -199,7 +199,7 @@ export function HistorySessionsTab({
               }}
               onKeyDown={(event) => {
                 if (!sessionReviewHref) return;
-                if (event.key !== 'Enter' && event.key !== ' ') return;
+                if (event.key !== 'Enter') return;
                 const target = event.target;
                 if (!(target instanceof Element)) return;
                 const interactive = target.closest(
@@ -217,7 +217,7 @@ export function HistorySessionsTab({
                   <Link
                     href={sessionReviewHref}
                     tabIndex={-1}
-                    className="rounded-md text-sm text-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]"
+                    className="rounded-md text-sm text-foreground transition-colors focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]"
                   >
                     <SessionSummaryContent
                       mode={row.mode}
@@ -241,7 +241,7 @@ export function HistorySessionsTab({
                 <Button
                   type="button"
                   variant="outline"
-                  className="rounded-full transition-colors dark:border-foreground/30 dark:bg-foreground/10 dark:hover:bg-foreground/25"
+                  className="rounded-full"
                   aria-label={`${isSelected ? 'Hide' : 'View'} breakdown for ${sessionSummary}`}
                   onClick={() => {
                     void historySessions.onOpenSession(row.sessionId);

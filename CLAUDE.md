@@ -53,6 +53,13 @@ pnpm lint                   # Biome lint + format
 pnpm build                  # Production build
 ```
 
+### Pre-PR Gate (CI Parity)
+
+```bash
+# Ensure test DB is running first (see AGENTS.md "Running Integration Tests Locally")
+pnpm typecheck && pnpm lint && pnpm test --run && pnpm test:browser && pnpm test:integration && pnpm build
+```
+
 ### Safety
 
 - **Never delete uncommitted work** — `git stash` and ask

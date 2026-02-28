@@ -1,7 +1,11 @@
 # DEBT-252: History Sessions Compliance
 
-**Status:** Not started
-**Parent:** [DEBT-250](debt-250-frontend-visual-divergence-compliance-plan.md)
+**Status:** Resolved
+**Priority:** P2
+**Date:** 2026-02-28
+**Resolved:** 2026-02-28
+**Owner:** Frontend/UI
+**Parent:** [DEBT-250](../../debt/debt-250-frontend-visual-divergence-compliance-plan.md)
 **Items:** D-1, D-5, A11Y-1
 **File:** `app/(app)/app/history/components/history-sessions-tab.tsx`
 
@@ -47,9 +51,9 @@ rounded-full
 
 **Post-fix check:** Visually verify the outline button is still distinguishable inside the `bg-muted/20` row.
 
-### A11Y-1: History Sessions Clickable Row Missing ARIA Role
+### A11Y-1: History Sessions Clickable Row — No Explicit Role
 
-**Current** (`history-sessions-tab.tsx:179-181`):
+**Current** (`history-sessions-tab.tsx:179-180`):
 ```tsx
 <li
   key={row.sessionId}
@@ -57,22 +61,15 @@ rounded-full
   className={
 ```
 
-**Target:**
-```tsx
-<li
-  key={row.sessionId}
-  role={isRowInteractive ? 'link' : undefined}
-  tabIndex={isRowInteractive ? 0 : undefined}
-  className={
-```
+**Target:** No change — `role="link"` was considered and rejected.
 
-**Why:** Screen readers announce `<li tabIndex={0} onClick>` as "list item" rather than conveying interactivity. Adding `role="link"` when interactive communicates the element's purpose.
+**Why `role="link"` was rejected:** The `<li>` contains nested `<a>` elements (session summary link, "Review session" link, breakdown question links). Adding `role="link"` to the `<li>` creates nested link roles, which violates the ARIA spec ("Authors SHOULD NOT nest elements with the `link` role inside other elements with the `link` role"). It also breaks Playwright/browser tests — `getByRole('link')` resolves to multiple elements (the `<li>` and its nested `<a>` elements). The row remains keyboard-navigable via `tabIndex={0}` + click/Enter handler, and screen reader users navigate via the contained `<a>` links.
 
 ---
 
 ## TDD Approach
 
-1. **A11Y-1 test:** Render a session row with a valid `firstQuestionSlug`. Assert the `<li>` has `role="link"`. Render without slug → assert no `role` attribute.
+1. **A11Y-1 test:** Render a session row with a valid `firstQuestionSlug`. Assert the `<li>` does NOT have `role="link"` (invalid ARIA nesting). Assert `tabIndex="0"` for keyboard access. Render without slug → assert no `tabIndex`.
 2. **D-1 test:** Render interactive row. Assert `hover:bg-muted/40` present, `hover:bg-accent/40` absent, `dark:hover:bg-foreground/10` absent.
 3. **D-5 test:** Render row with breakdown button. Assert button className contains `rounded-full` but not `dark:border-foreground/30`, `dark:bg-foreground/10`, or `dark:hover:bg-foreground/25`.
 
@@ -93,10 +90,10 @@ rg -n 'dark:(?:border|bg|hover:bg)-foreground' \
   'app/(app)/app/history/components/history-sessions-tab.tsx'
 # Expected: 0 matches
 
-# A11Y-1: Interactive rows set role to link when interactive
-rg -n "role=\\{isRowInteractive \\? 'link'" \
+# A11Y-1: No role="link" on <li> (invalid ARIA nesting with nested <a> elements)
+rg -n "role=.*link" \
   'app/(app)/app/history/components/history-sessions-tab.tsx'
-# Expected: 1 match
+# Expected: 0 matches (role="link" rejected — see A11Y-1 rationale)
 ```
 
 ---
@@ -105,7 +102,7 @@ rg -n "role=\\{isRowInteractive \\? 'link'" \
 
 1. **Dark mode:** Hover a history session row → subtle background shift visible (~8.6% effective)
 2. **Dark mode:** "View breakdown" outline button → distinguishable inside `bg-muted/20` row using system variant styling
-3. **Screen reader:** Navigate to a session row → announced as "link" (not just "list item")
+3. **Screen reader:** Navigate to a session row → keyboard accessible via `tabIndex={0}` + Enter handler; nested `<a>` links provide screen reader navigation targets
 
 ---
 

@@ -28,9 +28,6 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 | [DEBT-256](./debt-256-expanded-breakdown-hierarchy.md) | Expanded Breakdown Visual Hierarchy (STRUCT-1) | P2 | — |
 | [DEBT-255](./debt-255-mobile-nav-hover.md) | Mobile Nav Hover (D-16) | P2 | — |
 | [DEBT-254](./debt-254-headings-errorcard-compliance.md) | Headings + ErrorCard Compliance (D-17, COMP-1) | P2 | — |
-| [DEBT-253](./debt-253-scattered-phase1-fixes.md) | Scattered Phase 1 Fixes (D-2, D-4, D-7, D-12) | P2 | — |
-| [DEBT-252](./debt-252-history-sessions-compliance.md) | History Sessions Compliance (D-1, D-5, A11Y-1) | P2 | — |
-| [DEBT-251](./debt-251-choice-button-compliance.md) | Choice Button Compliance (D-3, D-6, A11Y-2, LIGHT-3) | P2 | — |
 | [DEBT-250](./debt-250-frontend-visual-divergence-compliance-plan.md) | Frontend Visual Divergence Compliance Plan (BS-035 + Pattern Registry D-1..D-17 + non-D items) | P2 | — |
 | [DEBT-249](./debt-249-checkout-success-auth-boundary-hardening.md) | Checkout Success Auth Boundary Hardening (Stripe Return + Clerk Redirect) | P1 | — |
 
@@ -42,6 +39,9 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 | ID | Title | Priority | Resolved | GitHub Issue |
 |----|-------|----------|----------|--------------|
+| [DEBT-253](../_archive/debt/debt-253-scattered-phase1-fixes.md) | Scattered Phase 1 Fixes (D-2, D-4, D-7, D-12) | P2 | 2026-02-28 | [#150](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/150) |
+| [DEBT-252](../_archive/debt/debt-252-history-sessions-compliance.md) | History Sessions Compliance (D-1, D-5, A11Y-1) | P2 | 2026-02-28 | [#150](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/150) |
+| [DEBT-251](../_archive/debt/debt-251-choice-button-compliance.md) | Choice Button Compliance (D-3, D-6, A11Y-2, LIGHT-3) | P2 | 2026-02-28 | [#150](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/150) |
 | [DEBT-246](../_archive/debt/debt-246-e2e-coverage-gaps-visual-testing-strategy.md) | Targeted E2E Coverage Gaps and Visual/CSS Testing Layer Policy | P3 | 2026-02-24 | — |
 | [DEBT-248](../_archive/debt/debt-248-e2e-helper-robustness.md) | Post-PR-134 CodeRabbit Follow-Ups (E2E Helpers) | P4 | 2026-02-24 | — |
 | [DEBT-247](../_archive/debt/debt-247-test-helper-structure-cleanup.md) | Test Helper Structure Cleanup (Orphans, Boundary Violations, Duplication) | P4 | 2026-02-24 | — |

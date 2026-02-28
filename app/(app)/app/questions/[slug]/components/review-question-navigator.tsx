@@ -55,7 +55,7 @@ export function ReviewQuestionNavigator({
                 variant={variant}
                 className={cn(
                   'relative rounded-full',
-                  isCurrent && 'ring-2 ring-ring',
+                  isCurrent && 'ring-[3px] ring-ring/50',
                 )}
                 aria-label={`Question ${q.order}: ${statusLabel}${isCurrent ? ', Current' : ''}`}
                 aria-current={isCurrent ? 'step' : undefined}

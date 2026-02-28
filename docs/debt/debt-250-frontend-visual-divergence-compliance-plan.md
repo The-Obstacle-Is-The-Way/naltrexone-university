@@ -18,7 +18,7 @@ BS-035 audited every route, component, and shared primitive for visual consisten
 - **4 low-severity UX seams** — pricing dead space, missing bookmark, missing ThemeToggle, Clerk styling seam
 - **1 typography inconsistency** (D-17) — auth/error page headings missing `font-heading` and `tracking-tight`
 - **1 component default inconsistency** (COMP-1) — ErrorCard default padding mismatched with usage
-- **2 accessibility gaps** (A11Y-1, A11Y-2) — interactive `<li>` rows missing ARIA role; choice radio inputs missing `value` attribute
+- **2 accessibility gaps** (A11Y-1, A11Y-2) — interactive `<li>` rows (resolved: no `role="link"` due to ARIA nesting violation); choice radio inputs missing `value` attribute
 - **2 mobile touch target items** (TOUCH-1, TOUCH-2) — systemic `h-9` (36px) buttons fail WCAG AAA 44px minimum; Clerk UserButton ~28–33px is the smallest interactive element
 - **3 light-mode items** (LIGHT-1, LIGHT-2, LIGHT-3) — opacity scale produces imperceptible contrast on white; success/destructive text colors fail WCAG AA at normal text sizes; `text-success-foreground` (white) incorrectly used on tinted backgrounds
 
@@ -34,16 +34,16 @@ DEBT-250 is decomposed into 14 child specs (DEBT-251–264). Each child spec map
 
 | Spec | Items | Primary File(s) | Status | PR |
 |------|-------|-----------------|--------|----|
-| [DEBT-251](debt-251-choice-button-compliance.md) | D-3, D-6, A11Y-2, LIGHT-3 | `choice-button.tsx` | Not started | — |
-| [DEBT-252](debt-252-history-sessions-compliance.md) | D-1, D-5, A11Y-1 | `history-sessions-tab.tsx` | Not started | — |
-| [DEBT-253](debt-253-scattered-phase1-fixes.md) | D-2, D-4, D-7, D-12 | 4 independent files | Not started | — |
+| [DEBT-251](../_archive/debt/debt-251-choice-button-compliance.md) | D-3, D-6, A11Y-2, LIGHT-3 | `choice-button.tsx` | Resolved in PR #150 | [#150](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/150) |
+| [DEBT-252](../_archive/debt/debt-252-history-sessions-compliance.md) | D-1, D-5, A11Y-1 | `history-sessions-tab.tsx` | Resolved in PR #150 | [#150](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/150) |
+| [DEBT-253](../_archive/debt/debt-253-scattered-phase1-fixes.md) | D-2, D-4, D-7, D-12 | 4 independent files | Resolved in PR #150 | [#150](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/150) |
 | [DEBT-254](debt-254-headings-errorcard-compliance.md) | D-17, COMP-1 | 5 auth/error pages + `error-card.tsx` | Not started | — |
 
 ### Decision-dependent
 
 | Spec | Items | Blocked By | Primary File(s) | Status | PR |
 |------|-------|-----------|-----------------|--------|----|
-| [DEBT-255](debt-255-mobile-nav-hover.md) | D-16 | Decision 10 | `mobile-nav.tsx` | Blocked | — |
+| [DEBT-255](debt-255-mobile-nav-hover.md) | D-16 | ~~Decision 10~~ Resolved | `mobile-nav.tsx` | Ready | — |
 | [DEBT-256](debt-256-expanded-breakdown-hierarchy.md) | STRUCT-1 | Decision 4 + DEBT-252 merged | `history-sessions-tab.tsx` | Blocked | — |
 | [DEBT-257](debt-257-choice-selected-state.md) | AFFORD-1 | Decision 5 + DEBT-251 merged | `choice-button.tsx` | Blocked | — |
 | [DEBT-258](debt-258-marketing-alignment.md) | D-8, D-9, D-10, D-14, D-15 | Decision 1 (+ opt. 2) | `marketing-home.tsx` + layouts | Partially blocked (D-8 ready) | — |
@@ -64,12 +64,12 @@ DEBT-250 is decomposed into 14 child specs (DEBT-251–264). Each child spec map
 ```
 IMMEDIATE (parallel):
   DEBT-251 ──┐
-  DEBT-252 ──┤  13 items, 4 PRs, no blockers
+  DEBT-252 ──┤  14 items, 5 PRs, no blockers
   DEBT-253 ──┤
-  DEBT-254 ──┘
+  DEBT-254 ──┤
+  DEBT-255 ──┘  (Decision 10 resolved)
 
 AFTER decisions resolve:
-  Decision 10 → DEBT-255
   Decision 4  → DEBT-256 [after DEBT-252]
   Decision 5  → DEBT-257 [after DEBT-251]
   Decision 1  → DEBT-258
@@ -197,16 +197,18 @@ Clerk surfaces use `borderRadius: 0.75rem` (12px) vs app's `rounded-2xl` (16px).
 
 **Recommended:** Defer. Standardize on `muted` token first (this spec). Token differentiation is a separate, larger effort requiring visual regression testing across all pages.
 
-### Decision 10: Mobile Nav Hover Strategy
+### Decision 10: Mobile Nav Hover Strategy — RESOLVED
 
 **Blocks:** D-16
 **BS-035 questions:** #9
+**Resolution:** Use `hover:bg-muted/50 hover:text-foreground` (recommended option).
 
-Mobile nav inactive links currently use `hover:bg-muted` (100% opacity), while desktop/app nav and other link patterns use text-only hover or partial-opacity background hover.
+**Rationale (first principles):**
 
-**Recommended:** Keep a dedicated mobile-menu row pattern but normalize hover to `hover:bg-muted/50 hover:text-foreground` (not 100% fill). Document as Pattern Registry `L-6`.
-
-**Alternative:** Make mobile nav match `L-1` text-only hover with no background.
+1. **Active vs hover hierarchy violation.** Active link uses `bg-muted` (100%) at line 74. Hover currently uses `hover:bg-muted` (100%) at line 75. These are visually identical, breaking the universal UI principle: active fill > hover fill > resting state. Apple HIG, Material Design state layers, and SwiftUI all enforce numerical separation between selected and hover states.
+2. **Opacity scale slot.** The design system defines `/50` as the standalone hover slot. Mobile nav links are standalone elements (not inside a card), so `/50` is the correct position in the scale.
+3. **Pattern Registry alignment.** L-6 (Mobile Menu Link) already documents `hover:bg-muted/50` as canonical. The code simply doesn't match the registry yet.
+4. **Text-only alternative rejected.** Mobile nav entries are full-width `px-3 py-3` touch targets. Background hover communicates tappability for wide rows better than text color change alone. Desktop nav (L-1) correctly uses text-only hover for compact inline links — this is an intentional responsive design split, not inconsistency.
 
 ### Decision 11: Mobile Touch Target Strategy
 
@@ -600,36 +602,18 @@ rounded-2xl border border-destructive/30 bg-destructive/10 p-6 text-sm text-dest
 
 ---
 
-### A11Y-1: History Sessions Clickable Row Missing ARIA Role
+### A11Y-1: History Sessions Clickable Row — No Explicit Role
 
 **Severity:** Medium
 **Blocks:** D-1 (related — D-1 addresses the hover pattern on the same element)
 
-**Problem:** History session rows use `<li tabIndex={0} onClick onKeyDown>` with a delegated click handler and nested `<Link tabIndex={-1}>`. Screen readers announce these as "list item" rather than conveying interactivity.
+**Problem:** History session rows use `<li tabIndex={0} onClick onKeyDown>` with a delegated click handler and nested `<Link tabIndex={-1}>`. The row is keyboard-navigable but screen readers announce it as "list item."
 
-**Current** — `app/(app)/app/history/components/history-sessions-tab.tsx:178-181`:
-```tsx
-<li
-  key={row.sessionId}
-  tabIndex={isRowInteractive ? 0 : undefined}
-  className={
-```
+**Resolution:** `role="link"` was considered and **rejected**. The `<li>` contains nested `<a>` elements (session summary link, "Review session" link, breakdown question links). Adding `role="link"` creates nested link roles, violating the ARIA spec ("Authors SHOULD NOT nest elements with the link role inside other elements with the link role") and breaking Playwright browser tests (`getByRole('link')` resolves to multiple elements). The row remains keyboard-accessible via `tabIndex={0}` + Enter handler, and screen reader users navigate via the contained `<a>` links.
 
-**Target:**
-```tsx
-<li
-  key={row.sessionId}
-  role={isRowInteractive ? 'link' : undefined}
-  tabIndex={isRowInteractive ? 0 : undefined}
-  className={
-```
+**Note:** The ideal long-term fix is to make the entire `<li>` a `<Link>` component (eliminating the delegated click pattern), but that requires more refactoring and is tracked as a known debt in Pattern Registry I-1.
 
-**Changes:**
-1. Add `role="link"` when the row is interactive (`isRowInteractive`)
-
-**Note:** This fix should be applied together with D-1 (which changes the hover classes on the same element). The ideal long-term fix is to make the entire `<li>` a `<Link>` component (eliminating the delegated click pattern), but that requires more refactoring and is tracked as a known debt in Pattern Registry I-1.
-
-**Verify:** `rg -n "role=\\{isRowInteractive \\? 'link'" 'app/(app)/app/history/components/history-sessions-tab.tsx'` returns 1 match.
+**Verify:** `rg -n "role=.*link" 'app/(app)/app/history/components/history-sessions-tab.tsx'` returns 0 matches.
 
 ---
 
@@ -1203,7 +1187,7 @@ After all code changes are complete, update docs in lockstep.
 
 ```
 Phase 1 (no decisions needed — can start immediately)
-├── D-1: History sessions hover token + A11Y-1 (role="link")
+├── D-1: History sessions hover token + A11Y-1 (no role="link" — ARIA nesting)
 ├── D-2: History questions hover token
 ├── D-3: Choice button hover opacity + A11Y-2 (radio value attr)
 ├── D-4: Filter chip hover opacity

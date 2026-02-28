@@ -502,10 +502,18 @@ describe('app/pricing', () => {
         subscribeAnnualAction={async () => undefined}
       />,
     );
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const dismissLink = doc.querySelector('a[aria-label="Dismiss"]');
+    const dismissClasses = dismissLink?.getAttribute('class') ?? '';
 
     expect(html).toContain('aria-label="Dismiss"');
     expect(html).toContain('×');
     expect(html).toContain('href="/pricing"');
+    expect(dismissClasses).toContain('text-muted-foreground');
+    expect(dismissClasses).toContain('transition-colors');
+    expect(dismissClasses).toContain('hover:text-foreground');
+    expect(dismissClasses).not.toContain('text-current');
+    expect(dismissClasses).not.toContain('hover:opacity-70');
   });
 
   it('SubscribeButton renders children when not pending', async () => {

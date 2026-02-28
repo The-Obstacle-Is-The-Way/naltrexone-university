@@ -27,13 +27,13 @@ export function ChoiceButton({
       className={cn(
         'block w-full rounded-xl border border-border bg-background p-4 text-left shadow-sm transition-colors focus-within:border-ring focus-within:ring-ring/50 focus-within:ring-[3px]',
         !disabled &&
-          'cursor-pointer hover:border-muted-foreground/30 hover:bg-muted/80',
+          'cursor-pointer hover:border-muted-foreground/30 hover:bg-muted/60',
         disabled && 'cursor-not-allowed',
         disabled && !correctness && 'opacity-50',
-        correctness === 'wrong-unselected' && 'opacity-60',
+        correctness === 'wrong-unselected' && 'opacity-50',
         selected && correctness === null && 'border-ring',
         correctness === 'correct' &&
-          'border-success bg-success/10 text-success-foreground',
+          'border-success bg-success/10 text-success',
         correctness === 'incorrect' &&
           'border-destructive bg-destructive/10 text-destructive',
       )}
@@ -41,6 +41,7 @@ export function ChoiceButton({
       <input
         type="radio"
         name={name}
+        value={label}
         checked={selected}
         onChange={() => onClick()}
         disabled={disabled}

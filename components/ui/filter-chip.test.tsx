@@ -44,6 +44,8 @@ describe('FilterChip', () => {
 
     expect(html).toContain('aria-pressed="false"');
     expect(html).not.toContain('bg-primary');
+    expect(html).toContain('hover:bg-muted/50');
+    expect(html).not.toContain('hover:bg-accent');
   });
 
   it('is disabled when disabled prop is true', async () => {

@@ -1,7 +1,11 @@
 # DEBT-253: Scattered Phase 1 Fixes
 
-**Status:** Not started
-**Parent:** [DEBT-250](debt-250-frontend-visual-divergence-compliance-plan.md)
+**Status:** Resolved
+**Priority:** P2
+**Date:** 2026-02-28
+**Resolved:** 2026-02-28
+**Owner:** Frontend/UI
+**Parent:** [DEBT-250](../../debt/debt-250-frontend-visual-divergence-compliance-plan.md)
 **Items:** D-2, D-4, D-7, D-12
 **Files:** 4 independent files (no collision risk — can be done in any order)
 

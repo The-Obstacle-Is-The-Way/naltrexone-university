@@ -30,6 +30,25 @@ beforeAll(async () => {
 });
 
 type SessionHistoryResult = ActionResult<GetSessionHistoryOutput>;
+type SessionHistoryRow = GetSessionHistoryOutput['rows'][number];
+
+function makeSessionHistoryRow(
+  overrides: Partial<SessionHistoryRow> = {},
+): SessionHistoryRow {
+  return {
+    sessionId: 'session-1',
+    mode: 'exam',
+    questionCount: 10,
+    firstQuestionSlug: 'q-1',
+    answered: 10,
+    correct: 8,
+    accuracy: 0.8,
+    durationSeconds: 1200,
+    startedAt: '2026-02-07T00:00:00.000Z',
+    endedAt: '2026-02-07T00:20:00.000Z',
+    ...overrides,
+  };
+}
 
 describe('HistorySessionsTab', () => {
   it('renders SessionSummaryContent with mode, score, duration, and date', () => {
@@ -175,8 +194,11 @@ describe('HistorySessionsTab', () => {
     const html = renderToStaticMarkup(<HistorySessionsTab result={result} />);
 
     expect(html).toContain('cursor-pointer');
-    expect(html).toContain('hover:bg-accent/40');
+    expect(html).toContain('hover:bg-muted/40');
+    expect(html).not.toContain('hover:bg-accent/40');
+    expect(html).not.toContain('dark:hover:bg-foreground/10');
     expect(html).toContain('tabindex="0"');
+    expect(html).not.toContain('role="link"');
     expect(html).toContain('tabindex="-1"');
   });
 
@@ -207,8 +229,29 @@ describe('HistorySessionsTab', () => {
     const html = renderToStaticMarkup(<HistorySessionsTab result={result} />);
 
     expect(html).not.toContain('cursor-pointer');
+    expect(html).not.toContain('hover:bg-muted/40');
     expect(html).not.toContain('hover:bg-accent/40');
+    expect(html).not.toContain('role="link"');
     expect(html).not.toContain('tabindex="0"');
+  });
+
+  it('uses outline button dark-mode styling from the primitive without page-level dark overrides', () => {
+    const result: SessionHistoryResult = {
+      ok: true,
+      data: {
+        rows: [makeSessionHistoryRow()],
+        total: 1,
+        limit: 20,
+        offset: 0,
+      },
+    };
+
+    const html = renderToStaticMarkup(<HistorySessionsTab result={result} />);
+
+    expect(html).toContain('rounded-full');
+    expect(html).not.toContain('dark:border-foreground/30');
+    expect(html).not.toContain('dark:bg-foreground/10');
+    expect(html).not.toContain('dark:hover:bg-foreground/25');
   });
 
   it('uses SessionSummaryContent for non-link session summaries', () => {
