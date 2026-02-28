@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { headerActionLinkClasses } from './shared-styles';
+import { headerActionLinkClasses } from '@/lib/shared-styles';
 
 describe('lib/shared-styles', () => {
   it('exports the shared header action link classes', () => {
