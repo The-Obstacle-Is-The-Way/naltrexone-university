@@ -52,4 +52,21 @@
 
 ## Verification
 
+```bash
+# STRUCT-1 legacy separator-only container removed (recommended path)
+rg -n 'mt-3 space-y-2 border-t border-border/40 pt-3' \
+  'app/(app)/app/history/components/history-sessions-tab.tsx'
+# Expected: 0 matches
+
+# STRUCT-1 inset container present (recommended path)
+rg -n 'mt-3 -mx-1 space-y-2 rounded-lg border border-border/30 bg-background/60 p-3' \
+  'app/(app)/app/history/components/history-sessions-tab.tsx'
+# Expected: 1 match
+
+# STRUCT-1 promoted action button (only if Decision 4 selects promotion)
+rg -n 'Button asChild variant="default" className="rounded-full"' \
+  'app/(app)/app/history/components/history-sessions-tab.tsx'
+# Expected: 1 match when promotion is chosen; otherwise 0 by design
+```
+
 Visual: Expanded breakdown is distinguishable from parent card. "Review session" button is the most prominent element.

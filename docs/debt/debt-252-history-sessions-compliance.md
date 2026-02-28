@@ -31,7 +31,7 @@ cursor-pointer hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-r
 
 ### D-5: View Breakdown Button Dark Overrides
 
-**Pattern:** Part 5 — no `dark:` overrides outside `components/ui/`
+**Pattern:** Standards §16 (Dark Mode) + Pattern Registry D-5 resolution — no page-level `dark:` color overrides outside `components/ui/`
 
 **Current** (`history-sessions-tab.tsx:244`):
 ```
@@ -76,7 +76,7 @@ rounded-full
 2. **D-1 test:** Render interactive row. Assert `hover:bg-muted/40` present, `hover:bg-accent/40` absent, `dark:hover:bg-foreground/10` absent.
 3. **D-5 test:** Render row with breakdown button. Assert button className contains `rounded-full` but not `dark:border-foreground/30`, `dark:bg-foreground/10`, or `dark:hover:bg-foreground/25`.
 
-**Test file:** `app/(app)/app/history/components/history-sessions-tab.test.tsx` (colocated, `renderToStaticMarkup` + jsdom)
+**Test file:** `app/(app)/app/history/components/history-sessions-tab.test.tsx` (existing colocated suite; update current class assertions for D-1/D-5 and add role assertion for A11Y-1 using `renderToStaticMarkup` + jsdom)
 
 ---
 

@@ -80,7 +80,7 @@ correctness === 'correct' &&
 3. **D-3 test:** Render with `disabled={false}` and no correctness. Assert `hover:bg-muted/60` class present (not `hover:bg-muted/80`).
 4. **A11Y-2 test:** Render with `label="B"`. Assert the radio input has `value="B"`.
 
-**Test file:** `components/question/choice-button.test.tsx` (colocated, `renderToStaticMarkup` + jsdom)
+**Test file:** `components/question/choice-button.test.tsx` (new colocated file, `renderToStaticMarkup` + jsdom)
 
 ---
 
@@ -92,7 +92,7 @@ rg -n 'hover:bg-muted/80' components/question/choice-button.tsx
 # Expected: 0 matches
 
 # D-6: No opacity-60 in production code
-rg -n --glob '!**/*.test.*' --glob '!**/*.spec.*' 'opacity-60' components/question
+rg -n "wrong-unselected' && 'opacity-60'" components/question/choice-button.tsx
 # Expected: 0 matches
 
 # A11Y-2: Radio input has value attribute

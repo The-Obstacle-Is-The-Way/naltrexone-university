@@ -14,7 +14,7 @@
 **File:** `app/(app)/app/history/components/history-questions-tab.tsx`
 **Pattern:** I-2 (Hoverable Card Row, standalone) — standalone rows on page background use `/50`
 
-**Current** (around line 464):
+**Current** (`history-questions-tab.tsx:464`):
 ```
 block rounded-2xl border border-border p-4 shadow-sm transition-colors hover:bg-accent/40 focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]
 ```
@@ -78,7 +78,7 @@ ml-4 rounded-md text-muted-foreground transition-colors hover:text-foreground fo
 ```
 
 **Changes:**
-1. `text-current hover:opacity-70` → `text-muted-foreground transition-colors hover:text-foreground` (L-1 nav link hover pattern)
+1. `text-current hover:opacity-70` → `text-muted-foreground transition-colors hover:text-foreground` (text-color hover pattern; no opacity-based hover)
 2. Add `transition-colors` (X-3 rule — every hover needs a transition)
 
 ---
@@ -90,7 +90,13 @@ ml-4 rounded-md text-muted-foreground transition-colors hover:text-foreground fo
 3. **D-7 test:** Render `ReviewQuestionNavigator` with a current question. Assert current button has `ring-[3px] ring-ring/50` (not `ring-2 ring-ring`).
 4. **D-12 test:** Render `PricingView` with a banner. Assert dismiss link has `hover:text-foreground` (not `hover:opacity-70`).
 
-**Test files:** Colocated with each source file, using `renderToStaticMarkup` + jsdom.
+**Test files:**
+1. Existing: `app/(app)/app/history/components/history-questions-tab.test.tsx` (update hover class expectation for D-2)
+2. Existing: `components/ui/filter-chip.test.tsx` (update unselected hover class expectation for D-4)
+3. Existing: `app/(app)/app/questions/[slug]/components/review-question-navigator.test.tsx` (update ring expectation for D-7)
+4. Existing: `app/pricing/page.test.tsx` (add D-12 assertion on rendered `PricingView` dismiss-link classes: text-color hover present, opacity hover absent)
+
+All use `renderToStaticMarkup` + jsdom.
 
 ---
 
@@ -112,7 +118,7 @@ rg -n 'ring-2 ring-ring' \
 # Expected: 0 matches
 
 # D-12: No opacity hover in pricing
-rg -n 'hover:opacity' app/pricing
+rg -n 'text-current hover:opacity-70' app/pricing/pricing-view.tsx
 # Expected: 0 matches
 ```
 

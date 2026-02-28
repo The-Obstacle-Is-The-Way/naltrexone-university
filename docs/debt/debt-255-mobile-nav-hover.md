@@ -41,6 +41,11 @@ block rounded-md px-3 py-3 text-sm text-muted-foreground transition-colors hover
 ## Verification
 
 ```bash
-rg -n 'hover:bg-muted[" ]' components/mobile-nav.tsx
-# Expected: 0 matches (inactive links)
+# D-16 legacy class removed
+rg -n 'hover:bg-muted hover:text-foreground' components/mobile-nav.tsx
+# Expected: 0 matches
+
+# D-16 target class present
+rg -n 'hover:bg-muted/50 hover:text-foreground' components/mobile-nav.tsx
+# Expected: 1 match (inactive links)
 ```

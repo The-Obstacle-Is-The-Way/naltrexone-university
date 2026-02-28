@@ -130,32 +130,38 @@ rounded-2xl border border-destructive/30 bg-destructive/10 p-6 text-sm text-dest
 | 7 | `app/(app)/app/practice/components/practice-view.tsx:168` | `"p-6"` | _(remove)_ |
 | 8 | `app/(app)/app/practice/components/practice-view.tsx:193` | `"p-6"` | _(remove)_ |
 
-#### Step 3: Add explicit `p-4` to compact-context sites (3 sites)
+#### Step 3: Add explicit `p-4` to compact-context sites that currently rely on the default (4 sites)
 
 | # | File | Current className | New className |
 |---|------|-------------------|---------------|
 | 1 | `app/(app)/app/dashboard/page.tsx:134` | `"mt-4"` | `"mt-4 p-4"` |
 | 2 | `app/(app)/app/practice/practice-page-client.tsx:58` | _(none)_ | `"p-4"` |
 | 3 | `app/(app)/app/history/components/history-sessions-tab.tsx:88` | _(none)_ | `"p-4"` |
+| 4 | `app/(app)/app/history/components/history-questions-tab.tsx:121` | _(none)_ | `"p-4"` |
 
 **Already explicit (no change needed):**
 - `app/(app)/app/practice/[sessionId]/components/practice-session-page-view.tsx:194` — already has `className="p-4"`
-- `app/(app)/app/history/components/history-questions-tab.tsx:121` — add `className="p-4"`
-
-**Note:** `history-questions-tab.tsx:121` currently has no className. Add `className="p-4"` to preserve current behavior.
 
 #### Step 4: Update compact-context site count
 
-Total changes: 8 `p-6` overrides removed, 4 explicit `p-4` added. Net: cleaner code, majority-case default.
+Total changes: 8 `p-6` overrides removed, 4 explicit compact-context `p-4` declarations after migration (3 newly added className props + 1 existing className expansion from `mt-4` to `mt-4 p-4`).
 
 ---
 
 ## TDD Approach
 
 1. **COMP-1 test:** Render `ErrorCard` with no className. Assert default includes `p-6` (not `p-4`). Render with `className="p-4"` → assert `p-4` overrides.
-2. **D-17 tests:** For each of the 5 pages, render the heading component and assert `font-heading` and `tracking-tight` are present.
+2. **D-17 tests:** Render each heading surface and assert target class string:
+   - utility headings use `text-xl font-semibold font-heading tracking-tight text-foreground`
+   - global error heading uses `text-2xl font-bold font-heading tracking-tight text-foreground`
 
-**Test files:** Colocated with each source file.
+**Test files:**
+1. Existing: `components/error-card.test.tsx` (extend to assert default `p-6` and className override behavior)
+2. Existing: `app/global-error.test.tsx` (extend to assert `tracking-tight` on the heading)
+3. New: `components/error-boundary-page.test.tsx` (assert both h1/h2 paths include `tracking-tight`)
+4. New: `app/sign-in/[[...sign-in]]/sign-in-page-client.test.tsx` (skip-clerk fallback heading classes)
+5. New: `app/sign-up/[[...sign-up]]/sign-up-page-client.test.tsx` (skip-clerk fallback heading classes)
+6. New: `app/(marketing)/checkout/success/checkout-success-sync.test.tsx` (finalizing heading classes)
 
 ---
 
@@ -167,19 +173,29 @@ rg -n 'p-6' components/error-card.tsx
 # Expected: 1 match (the default)
 
 # COMP-1: No call sites override to p-6
-rg -n 'ErrorCard.*p-6' app
+rg -n 'ErrorCard className="p-6"' app
 # Expected: 0 matches
 
-# D-17: All auth/error headings include font-heading tracking-tight
-rg -n 'font-semibold.*text-foreground' \
-  app/sign-in app/sign-up \
-  app/global-error.tsx components/error-boundary-page.tsx
-# Expected: every match includes font-heading tracking-tight
+# COMP-1: Compact-context explicit p-4 preserved
+rg -n 'ErrorCard className="mt-4 p-4"|ErrorCard className="p-4"|return <ErrorCard className="p-4"' \
+  'app/(app)/app/dashboard/page.tsx' \
+  'app/(app)/app/practice/practice-page-client.tsx' \
+  'app/(app)/app/history/components/history-sessions-tab.tsx' \
+  'app/(app)/app/history/components/history-questions-tab.tsx' \
+  'app/(app)/app/practice/[sessionId]/components/practice-session-page-view.tsx'
+# Expected: 5 matches (4 migrated compact contexts + existing explicit p-4 site)
 
-# D-17: Checkout success heading
-rg -n 'font-semibold.*text-foreground' \
-  'app/(marketing)/checkout/success/checkout-success-sync.tsx'
-# Expected: includes font-heading tracking-tight
+# D-17: Utility/error headings include tracking-tight targets
+rg -n 'text-xl font-semibold font-heading tracking-tight text-foreground' \
+  'app/sign-in/[[...sign-in]]/sign-in-page-client.tsx' \
+  'app/sign-up/[[...sign-up]]/sign-up-page-client.tsx' \
+  'app/(marketing)/checkout/success/checkout-success-sync.tsx' \
+  components/error-boundary-page.tsx
+# Expected: 5 matches (SignIn h1, SignUp h1, Checkout h1, ErrorBoundary h1 + h2)
+
+# D-17: Global error heading includes tracking-tight
+rg -n 'text-2xl font-bold font-heading tracking-tight text-foreground' app/global-error.tsx
+# Expected: 1 match
 ```
 
 ---
