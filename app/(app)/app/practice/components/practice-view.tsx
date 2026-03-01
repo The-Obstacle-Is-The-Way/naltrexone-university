@@ -37,6 +37,7 @@ export type PracticeViewProps = {
   bookmarkMessageVersion?: number;
   canSubmit: boolean;
   endSessionLabel?: string;
+  questionPanelId?: string;
   questionAreaRef?: React.RefObject<HTMLDivElement | null>;
   onEndSession?: () => void;
   onRetryBookmarks?: () => void;
@@ -164,7 +165,12 @@ export function PracticeView(props: PracticeViewProps) {
         {props.belowHeadingContent}
       </div>
 
-      <div ref={props.questionAreaRef} tabIndex={-1} className="outline-none">
+      <div
+        id={props.questionPanelId}
+        ref={props.questionAreaRef}
+        tabIndex={-1}
+        className="outline-none"
+      >
         {props.loadState.status === 'error' ? (
           <ErrorCard>
             <div>{props.loadState.message}</div>

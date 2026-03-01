@@ -647,7 +647,6 @@ Three hooks exceed the 200-line "god hook" threshold (§12):
 
 | ID | Summary | File(s) |
 |----|---------|---------|
-| [FE-055](../debt/fe-055-aria-controls-wiring.md) | QuestionNavigator buttons lack `aria-controls` wiring to question content panel | `exam-review-view.tsx`, `practice-view.tsx`, `practice-session-page-view.tsx` |
 | — | Visual divergences from BS-035 audit are resolved. Only approved exception `D-15` (MetallicCtaButton) remains. See Pattern Registry Part 11 for historical record. | `docs/frontend/pattern-registry.md` |
 | — | `Markdown.tsx` uses PascalCase filename (violates §13 kebab-case convention) | `components/markdown/Markdown.tsx` |
 
