@@ -44,6 +44,17 @@ export async function startSession(
     timeout: 10_000,
   });
 
+  // Use "All" progress status for deterministic availability across a long E2E run.
+  // The shared test user accumulates attempts, so "Unanswered" can drop to 0 and
+  // disable "Start session" in later specs.
+  const allStatusButton = page
+    .getByRole('button', { name: 'All', exact: true })
+    .first();
+  await allStatusButton.click();
+  await expect(allStatusButton).toHaveAttribute('aria-pressed', 'true', {
+    timeout: 10_000,
+  });
+
   // Count: label is "Questions" (not "Count")
   await page.getByLabel('Questions').fill(String(count));
   await expect(startSessionButton).toBeEnabled({ timeout: 10_000 });
