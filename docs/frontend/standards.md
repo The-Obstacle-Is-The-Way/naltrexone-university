@@ -1,6 +1,6 @@
 # Frontend Standards
 
-**Last Updated:** 2026-02-28
+**Last Updated:** 2026-03-01
 
 Canonical reference for all frontend patterns, component usage, accessibility, and styling conventions. Every UI change MUST be consistent with this document. If a pattern isn't documented here, don't invent one — add it here first.
 
@@ -570,7 +570,7 @@ ALWAYS use `ROUTES.*` constants and helper functions for links. NEVER hardcode r
 - Header: `relative border-b border-border bg-background`
 - Inner container: `mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8`
 - Sticky/z-index: not sticky; no explicit `z-*`
-- Brand link styling is tracked as divergence D-8 (Pattern Registry L-4). Current brand link classes: `text-sm font-semibold text-foreground` (`app/(app)/app/layout.tsx:80`)
+- Brand link follows Pattern Registry `L-4`: `rounded-md text-sm font-semibold text-foreground transition-colors hover:text-foreground/80 focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]`
 
 ### Marketing Shell Header
 
@@ -580,7 +580,7 @@ ALWAYS use `ROUTES.*` constants and helper functions for links. NEVER hardcode r
 - Inner container: `mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8`
 - Desktop nav: `hidden items-center gap-4 text-sm sm:flex`
 - Mobile nav: `mt-3 flex items-center gap-4 text-sm sm:hidden`
-- Marketing currently does not render `ThemeToggle` (UX-3 / DEBT-250)
+- Marketing header includes `ThemeToggle` (UX-3 resolved in DEBT-260 / PR #152)
 
 ### Transitions on interactive elements
 

@@ -1,6 +1,6 @@
 # Pattern Registry
 
-**Last Updated:** 2026-02-28
+**Last Updated:** 2026-03-01
 **Status:** Canonical — all UI changes MUST conform to this registry
 
 Single source of truth for every visual pattern in the app. If a pattern isn't here, don't invent one — add it here first, get approval, then implement.
@@ -9,7 +9,7 @@ Single source of truth for every visual pattern in the app. If a pattern isn't h
 - [Frontend Standards](./standards.md) — Component APIs, accessibility rules, hook architecture, file naming
 - [Design Principles](./design-principles.md) — Navigation zones, action bar composition, state persistence
 - [BS-035](../brainstorming/bs-035-card-hover-and-gray-consistency-audit.md) — Audit that identified current divergences from this registry
-- [DEBT-250](../debt/debt-250-frontend-visual-divergence-compliance-plan.md) — Implementation plan to resolve active divergences
+- [DEBT-250](../_archive/debt/debt-250-frontend-visual-divergence-compliance-plan.md) — Implementation plan and resolution history for frontend divergences
 
 ---
 
@@ -364,7 +364,7 @@ h-auto p-0 text-muted-foreground no-underline hover:text-foreground hover:no-und
 
 **Design rationale:** These override the link variant's default `hover:underline` because header action links are navigational controls, not content links. The text color change alone provides sufficient affordance in the context of a card header.
 
-**IMPORTANT:** This class string must be extracted to a shared constant (see Part 10). Currently copy-pasted in 6 files.
+**Status:** Extracted to `headerActionLinkClasses` in `lib/shared-styles.ts` (DEBT-259, PR #152). Reuse this constant for all header action links.
 
 ### L-4: Brand Link
 
@@ -377,9 +377,7 @@ focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]
 
 **Design rationale:** Brand links are always visible (not muted), so hover dims slightly rather than brightening. This is the opposite direction from nav links (which brighten from muted to foreground).
 
-**Note:** Current code diverges from this pattern:
-- Marketing header brand link is missing `text-foreground transition-colors hover:text-foreground/80`.
-- App header brand link is missing `rounded-md` + focus ring classes + `transition-colors hover:text-foreground/80`.
+**Status:** Implemented in both app and marketing headers (DEBT-258, PR #151).
 
 ### L-5: Banner Inline Link
 
@@ -780,7 +778,7 @@ Patterns that are currently copy-pasted and should be extracted to shared consta
 
 ## Part 11: Known Divergences from This Registry
 
-Approved exceptions tracked in [DEBT-250](../debt/debt-250-frontend-visual-divergence-compliance-plan.md):
+Approved exceptions tracked in [DEBT-250](../_archive/debt/debt-250-frontend-visual-divergence-compliance-plan.md):
 
 | ID | Divergence | Status | Files |
 |----|-----------|--------|-------|

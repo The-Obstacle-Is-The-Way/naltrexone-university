@@ -1,7 +1,7 @@
 # DEBT-258: Marketing Alignment
 
 **Status:** Resolved
-**Parent:** [DEBT-250](../../debt/debt-250-frontend-visual-divergence-compliance-plan.md)
+**Parent:** [DEBT-250](debt-250-frontend-visual-divergence-compliance-plan.md)
 **Items:** D-8, D-9, D-10, D-14, D-15
 **Unblocked:** Decision 1 resolved (recommended: Monthly→outline, Annual→default, kill outlinePillClasses) + Decision 2 resolved (recommended: keep MetallicCtaButton as documented exception)
 **Files:** `components/marketing/marketing-home.tsx`, `components/marketing/marketing-layout.tsx`, `app/(app)/app/layout.tsx` (Decision 2 alternative also touches `components/ui/metallic-cta-button.tsx` and `components/ui/metallic-border.tsx`)

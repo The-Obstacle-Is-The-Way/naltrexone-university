@@ -2,7 +2,7 @@
 
 **Status:** Resolved
 **Resolved:** 2026-02-28
-**Parent:** [DEBT-250](../../debt/debt-250-frontend-visual-divergence-compliance-plan.md)
+**Parent:** [DEBT-250](debt-250-frontend-visual-divergence-compliance-plan.md)
 **Items:** LIGHT-2
 **Decision 13:** Modified Option C — Subtle global darkening (success L=29%, destructive L=48%)
 **Sequencing:** DEBT-251 merged ✅ (PR #150)

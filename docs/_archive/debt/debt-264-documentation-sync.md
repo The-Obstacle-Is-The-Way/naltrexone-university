@@ -4,7 +4,7 @@
 **Parent:** [DEBT-250](debt-250-frontend-visual-divergence-compliance-plan.md)
 **Items:** Phase 6 documentation sync
 **Blocked by:** ~~DEBT-259, DEBT-260, DEBT-261~~ All resolved (PR #152); ~~DEBT-262, DEBT-263~~ Resolved (PR #153)
-**Files:** `docs/frontend/pattern-registry.md`, `docs/frontend/standards.md`, `docs/frontend/design-principles.md`, `docs/brainstorming/bs-035-card-hover-and-gray-consistency-audit.md`, `docs/debt/debt-250-frontend-visual-divergence-compliance-plan.md`, `docs/debt/index.md`
+**Files:** `docs/frontend/pattern-registry.md`, `docs/frontend/standards.md`, `docs/frontend/design-principles.md`, `docs/brainstorming/bs-035-card-hover-and-gray-consistency-audit.md`, `docs/_archive/debt/debt-250-frontend-visual-divergence-compliance-plan.md`, `docs/debt/index.md`
 
 ---
 
@@ -76,12 +76,12 @@ Keep `docs/frontend/standards.md` Section 17 and `docs/debt/index.md` Frontend D
 
 ```bash
 # Decision set still complete in parent spec
-rg -n '^### Decision [0-9]+:' docs/debt/debt-250-frontend-visual-divergence-compliance-plan.md | wc -l
+rg -n '^### Decision [0-9]+:' docs/_archive/debt/debt-250-frontend-visual-divergence-compliance-plan.md | wc -l
 # Expected: 13
 
 # Child spec matrix still complete in parent progress table
 rg -n '\\[DEBT-25[1-9]\\]|\\[DEBT-26[0-4]\\]' \
-  docs/debt/debt-250-frontend-visual-divergence-compliance-plan.md | wc -l
+  docs/_archive/debt/debt-250-frontend-visual-divergence-compliance-plan.md | wc -l
 # Expected: 14 child specs referenced
 
 # Pattern Registry still contains canonical mobile nav pattern ID

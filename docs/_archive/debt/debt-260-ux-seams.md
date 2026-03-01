@@ -1,7 +1,7 @@
 # DEBT-260: UX Seams
 
 **Status:** Resolved (2026-03-01)
-**Parent:** [DEBT-250](../../debt/debt-250-frontend-visual-divergence-compliance-plan.md)
+**Parent:** [DEBT-250](debt-250-frontend-visual-divergence-compliance-plan.md)
 **Items:** UX-1, UX-2, UX-3, UX-4
 **Resolution:** Implemented in PR #152 (2026-03-01)
 **Files:** `app/pricing/pricing-view.tsx`, `components/marketing/marketing-layout.tsx`, and documentation updates in `docs/frontend/design-principles.md` / `docs/frontend/pattern-registry.md`

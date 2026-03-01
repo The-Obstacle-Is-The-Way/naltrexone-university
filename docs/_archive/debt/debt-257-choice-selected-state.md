@@ -1,7 +1,7 @@
 # DEBT-257: Choice Button Selected State
 
 **Status:** Resolved
-**Parent:** [DEBT-250](../../debt/debt-250-frontend-visual-divergence-compliance-plan.md)
+**Parent:** [DEBT-250](debt-250-frontend-visual-divergence-compliance-plan.md)
 **Items:** AFFORD-1
 **Unblocked:** Decision 5 resolved (recommended path) + DEBT-251 merged in PR #150
 **File:** `components/question/choice-button.tsx`

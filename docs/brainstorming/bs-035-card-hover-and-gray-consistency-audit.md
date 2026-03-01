@@ -3,7 +3,7 @@
 **Date:** 2026-02-27
 **Triggered by:** Visual inspection of history page, dashboard, quick practice, and landing page — inconsistent hover states, gray shades, and nested card visual hierarchy
 **Scope:** Exhaustive audit of interactive elements, hover behavior, background gray value, link style, button variant, border, dark-mode strategy, loading states, and error surfaces across app/marketing routes plus shared UI primitives
-**Related:** [BS-020 (archived)](../_archive/brainstorming/bs-020-card-contrast-and-hover-consistency.md) — deferred residual hover standardization; [BS-031 (archived)](../_archive/brainstorming/bs-031-card-row-affordance-consistency.md); [Frontend Standards](../frontend/standards.md); [DEBT-250](../debt/debt-250-frontend-visual-divergence-compliance-plan.md)
+**Related:** [BS-020 (archived)](../_archive/brainstorming/bs-020-card-contrast-and-hover-consistency.md) — deferred residual hover standardization; [BS-031 (archived)](../_archive/brainstorming/bs-031-card-row-affordance-consistency.md); [Frontend Standards](../frontend/standards.md); [DEBT-250](../_archive/debt/debt-250-frontend-visual-divergence-compliance-plan.md)
 
 ---
 
