@@ -227,16 +227,12 @@ app/, lib/, db/    → Next.js framework code, infrastructure (outermost layer)
 
 ### Current State
 
-Implemented (see `docs/specs/index.md`):
-- **Domain:** entities, value objects, services, errors (`src/domain/**`) (SPEC-001 → SPEC-003)
-- **Application:** ports, core use cases, app errors (`src/application/**`) (SPEC-004 → SPEC-005)
-- **Adapters:** schema, repositories, gateways, controllers (`db/schema.ts`, `src/adapters/**`) (SPEC-006 → SPEC-010)
-- **Feature slices:** paywall, question loop, practice sessions, review + bookmarks, dashboard, UI integration, practice engine (`app/**`, `components/**`) (SPEC-011 → SPEC-015, SPEC-018, SPEC-020)
+All layers are implemented. See `docs/specs/index.md` for the full spec register (SPEC-001 through SPEC-038, with SPEC-016 and SPEC-017 partially implemented).
 
-In progress / proposed:
-- SPEC-016 Observability (partial)
-- SPEC-017 Rate Limiting (partial)
-- SPEC-019 Practice & Navigation UX Redesign (done — Phases 1–3 implemented)
+- **Domain:** entities, value objects, services, errors (`src/domain/**`)
+- **Application:** ports, core use cases, app errors (`src/application/**`)
+- **Adapters:** schema, repositories, gateways, controllers (`db/schema.ts`, `src/adapters/**`)
+- **Feature slices:** paywall, question loop, practice sessions, review + bookmarks, dashboard, UI integration, practice engine, history, observability (`app/**`, `components/**`)
 
 Framework code lives in:
 - `app/` - Next.js App Router pages, layouts, API routes
@@ -567,10 +563,12 @@ gh pr view <PR_NUMBER> --comments
 
 ## Documentation
 
-- `docs/specs/master_spec.md` - Complete technical specification (SSOT)
-- `docs/specs/spec-001 to spec-010` - Clean Architecture layer specs
-- `docs/specs/spec-011 to spec-020` - Feature/infrastructure specs
-- `docs/adr/` - Architecture Decision Records (ADR-001 through ADR-018)
+- `docs/specs/master_spec.md` — Complete technical specification (SSOT)
+- `docs/specs/index.md` — Full spec register (SPEC-001 through SPEC-038; active + archived)
+- `docs/adr/` — Architecture Decision Records (ADR-001 through ADR-018)
+- `docs/debt/index.md` — Technical debt register (active + resolved)
+- `docs/bugs/index.md` — Bug report register
+- `docs/brainstorming/index.md` — UX audits and design explorations
 
 ---
 
