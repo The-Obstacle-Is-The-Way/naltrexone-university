@@ -128,6 +128,37 @@ describe('SubmitAnswerUseCase', () => {
       ).toBe(false);
     });
 
+    it('does not call retry telemetry logging for non-retry submissions when info logger throws', async () => {
+      const userId = 'user-1';
+      const questionId = 'q1';
+      const logger = new ThrowingInfoLogger();
+
+      const question = createQuestion({
+        id: questionId,
+        status: 'published',
+        choices: [
+          createChoice({ id: 'c1', questionId, label: 'A', isCorrect: false }),
+          createChoice({ id: 'c2', questionId, label: 'B', isCorrect: true }),
+        ],
+      });
+
+      const useCase = new SubmitAnswerUseCase(
+        new FakeQuestionRepository([question]),
+        new FakeAttemptRepository(),
+        new FakePracticeSessionRepository(),
+        logger,
+      );
+
+      const output = await useCase.execute({
+        userId,
+        questionId,
+        choiceId: 'c2',
+      });
+
+      expect(output.isCorrect).toBe(true);
+      expect(logger.infoCallCount).toBe(0);
+    });
+
     it('does not fail retry submissions when retry telemetry logging throws', async () => {
       const userId = 'user-1';
       const questionId = 'q1';

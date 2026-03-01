@@ -49,6 +49,7 @@ export async function startSession(
   // first one that enables "Start session" for the requested count.
   const supportedStatuses = ['Unanswered', 'Incorrect', 'Bookmarked'] as const;
   let selectedStatus: (typeof supportedStatuses)[number] | null = null;
+  let lastProbeError: unknown = null;
 
   for (const statusLabel of supportedStatuses) {
     const statusButton = page.getByRole('button', {
@@ -67,8 +68,9 @@ export async function startSession(
       await expect(startSessionButton).toBeEnabled({ timeout: 3_000 });
       selectedStatus = statusLabel;
       break;
-    } catch {
+    } catch (error) {
       // Try the next supported status.
+      lastProbeError = error;
     }
   }
 
@@ -77,6 +79,7 @@ export async function startSession(
       `Could not enable Start session after trying statuses: ${supportedStatuses.join(
         ', ',
       )}`,
+      { cause: lastProbeError ?? undefined },
     );
   }
 
