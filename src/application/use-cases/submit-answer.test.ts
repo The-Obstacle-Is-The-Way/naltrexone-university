@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createQuestionSeed, shuffleWithSeed } from '@/src/domain/services';
 import {
+  createAttempt,
   createChoice,
   createPracticeSession,
   createQuestion,
@@ -31,6 +32,221 @@ class FailingRollbackAttemptRepository extends FakeAttemptRepository {
 }
 
 describe('SubmitAnswerUseCase', () => {
+  describe('retry provenance', () => {
+    it('stores retry provenance on standalone retry attempts', async () => {
+      const userId = 'user-1';
+      const questionId = 'q1';
+      const parentAttemptId = 'attempt-parent';
+      const retrySessionId = 'session-1';
+
+      const question = createQuestion({
+        id: questionId,
+        status: 'published',
+        choices: [
+          createChoice({ id: 'c1', questionId, label: 'A', isCorrect: false }),
+          createChoice({ id: 'c2', questionId, label: 'B', isCorrect: true }),
+        ],
+      });
+
+      const attempts = new FakeAttemptRepository([
+        createAttempt({
+          id: parentAttemptId,
+          userId,
+          questionId,
+          selectedChoiceId: 'c1',
+          isCorrect: false,
+          practiceSessionId: retrySessionId,
+        }),
+      ]);
+
+      const useCase = new SubmitAnswerUseCase(
+        new FakeQuestionRepository([question]),
+        attempts,
+        new FakePracticeSessionRepository(),
+        new FakeLogger(),
+      );
+
+      await useCase.execute({
+        userId,
+        questionId,
+        choiceId: 'c2',
+        retryOfAttemptId: parentAttemptId,
+        retryOrigin: 'history',
+      });
+
+      const inserted = attempts.getAll().find((a) => a.id !== parentAttemptId);
+      expect(inserted).toMatchObject({
+        practiceSessionId: null,
+        retryOfAttemptId: parentAttemptId,
+        retryOrigin: 'history',
+        retrySessionId: null,
+      });
+    });
+
+    it('allows session_review retries without a parent attempt id for session unanswered reveals', async () => {
+      const userId = 'user-1';
+      const questionId = 'q1';
+
+      const question = createQuestion({
+        id: questionId,
+        status: 'published',
+        choices: [
+          createChoice({ id: 'c1', questionId, label: 'A', isCorrect: false }),
+          createChoice({ id: 'c2', questionId, label: 'B', isCorrect: true }),
+        ],
+      });
+
+      const attempts = new FakeAttemptRepository();
+      const useCase = new SubmitAnswerUseCase(
+        new FakeQuestionRepository([question]),
+        attempts,
+        new FakePracticeSessionRepository(),
+        new FakeLogger(),
+      );
+
+      await useCase.execute({
+        userId,
+        questionId,
+        choiceId: 'c2',
+        retryOrigin: 'session_review',
+        retrySessionId: 'session-review-1',
+      });
+
+      expect(attempts.getAll()[0]).toMatchObject({
+        retryOfAttemptId: null,
+        retryOrigin: 'session_review',
+        retrySessionId: 'session-review-1',
+      });
+    });
+
+    it('throws NOT_FOUND when retry parent attempt is missing', async () => {
+      const userId = 'user-1';
+      const questionId = 'q1';
+
+      const question = createQuestion({
+        id: questionId,
+        status: 'published',
+        choices: [
+          createChoice({ id: 'c1', questionId, label: 'A', isCorrect: false }),
+          createChoice({ id: 'c2', questionId, label: 'B', isCorrect: true }),
+        ],
+      });
+
+      const useCase = new SubmitAnswerUseCase(
+        new FakeQuestionRepository([question]),
+        new FakeAttemptRepository(),
+        new FakePracticeSessionRepository(),
+        new FakeLogger(),
+      );
+
+      await expect(
+        useCase.execute({
+          userId,
+          questionId,
+          choiceId: 'c2',
+          retryOfAttemptId: 'attempt-missing',
+          retryOrigin: 'history',
+        }),
+      ).rejects.toEqual(
+        new ApplicationError('NOT_FOUND', 'Retry parent attempt not found'),
+      );
+    });
+
+    it('throws NOT_FOUND when retry parent attempt belongs to another question', async () => {
+      const userId = 'user-1';
+      const questionId = 'q1';
+
+      const question = createQuestion({
+        id: questionId,
+        status: 'published',
+        choices: [
+          createChoice({ id: 'c1', questionId, label: 'A', isCorrect: false }),
+          createChoice({ id: 'c2', questionId, label: 'B', isCorrect: true }),
+        ],
+      });
+
+      const attempts = new FakeAttemptRepository([
+        createAttempt({
+          id: 'attempt-parent',
+          userId,
+          questionId: 'q2',
+          selectedChoiceId: 'choice-q2',
+          isCorrect: false,
+        }),
+      ]);
+
+      const useCase = new SubmitAnswerUseCase(
+        new FakeQuestionRepository([question]),
+        attempts,
+        new FakePracticeSessionRepository(),
+        new FakeLogger(),
+      );
+
+      await expect(
+        useCase.execute({
+          userId,
+          questionId,
+          choiceId: 'c2',
+          retryOfAttemptId: 'attempt-parent',
+          retryOrigin: 'history',
+        }),
+      ).rejects.toEqual(
+        new ApplicationError(
+          'NOT_FOUND',
+          'Retry parent attempt does not belong to the requested question',
+        ),
+      );
+    });
+
+    it('throws VALIDATION_ERROR when retrySessionId is provided for non-session_review origins', async () => {
+      const userId = 'user-1';
+      const questionId = 'q1';
+      const parentAttemptId = 'attempt-parent';
+
+      const question = createQuestion({
+        id: questionId,
+        status: 'published',
+        choices: [
+          createChoice({ id: 'c1', questionId, label: 'A', isCorrect: false }),
+          createChoice({ id: 'c2', questionId, label: 'B', isCorrect: true }),
+        ],
+      });
+
+      const attempts = new FakeAttemptRepository([
+        createAttempt({
+          id: parentAttemptId,
+          userId,
+          questionId,
+          selectedChoiceId: 'c1',
+          isCorrect: false,
+        }),
+      ]);
+
+      const useCase = new SubmitAnswerUseCase(
+        new FakeQuestionRepository([question]),
+        attempts,
+        new FakePracticeSessionRepository(),
+        new FakeLogger(),
+      );
+
+      await expect(
+        useCase.execute({
+          userId,
+          questionId,
+          choiceId: 'c2',
+          retryOfAttemptId: parentAttemptId,
+          retryOrigin: 'history',
+          retrySessionId: 'session-1',
+        }),
+      ).rejects.toEqual(
+        new ApplicationError(
+          'VALIDATION_ERROR',
+          'Invalid retry provenance metadata',
+        ),
+      );
+    });
+  });
+
   it('returns choice explanations in deterministic display order', async () => {
     const userId = 'user-1';
     const questionId = 'q1';

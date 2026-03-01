@@ -101,6 +101,26 @@ describe('app/(app)/app/questions/[slug]', () => {
     });
   });
 
+  it('normalizes mixed review attemptId/sessionId by preferring sessionId', async () => {
+    const element = await QuestionPage({
+      params: Promise.resolve({ slug: 'q-1' }),
+      searchParams: Promise.resolve({
+        mode: 'review',
+        attemptId: '00000000-0000-4000-8000-000000000002',
+        sessionId: '00000000-0000-4000-8000-000000000001',
+      }),
+    } as never);
+
+    expect(element).toMatchObject({
+      props: {
+        slug: 'q-1',
+        mode: 'review',
+        sessionId: '00000000-0000-4000-8000-000000000001',
+        attemptId: undefined,
+      },
+    });
+  });
+
   it('passes historyHref searchParams into the client page', async () => {
     const element = await QuestionPage({
       params: Promise.resolve({ slug: 'q-1' }),

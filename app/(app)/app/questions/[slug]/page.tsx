@@ -58,13 +58,16 @@ export default async function QuestionPage({
     typeof resolvedSearchParams?.historyIndex === 'string'
       ? resolvedSearchParams.historyIndex
       : undefined;
+  const normalizedAttemptId =
+    mode === 'review' && sessionId && attemptId ? undefined : attemptId;
+
   return (
     <QuestionPageClient
       slug={slug}
       from={from}
       mode={mode}
       sessionId={sessionId}
-      attemptId={attemptId}
+      attemptId={normalizedAttemptId}
       historyHref={historyHref}
       historySeq={historySeq}
       historyIndex={historyIndex}

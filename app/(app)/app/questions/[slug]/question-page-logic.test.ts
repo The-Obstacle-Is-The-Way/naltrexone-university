@@ -1,11 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
-  canReattemptInContext,
   canSubmitQuestionAnswer,
   createLoadQuestionAction,
   createSubmitSelectedAnswerAction,
   loadPreviousAttempt,
   loadQuestion,
+  normalizeReviewIdentifiers,
   reattemptQuestion,
   submitSelectedAnswer,
 } from '@/app/(app)/app/questions/[slug]/question-page-logic';
@@ -103,7 +103,7 @@ describe('question-page-logic', () => {
       ).toBe(false);
     });
 
-    it('returns false for review plus session context', () => {
+    it('returns true for review plus session context', () => {
       expect(
         canSubmitQuestionAnswer({
           loadState: { status: 'ready' },
@@ -113,30 +113,36 @@ describe('question-page-logic', () => {
           mode: 'review',
           sessionId: '00000000-0000-4000-8000-000000000001',
         }),
-      ).toBe(false);
+      ).toBe(true);
     });
   });
 
-  describe('canReattemptInContext', () => {
-    it('returns false for review plus session', () => {
+  describe('normalizeReviewIdentifiers', () => {
+    it('keeps attemptId when sessionId is absent', () => {
       expect(
-        canReattemptInContext({
+        normalizeReviewIdentifiers({
           mode: 'review',
-          sessionId: '00000000-0000-4000-8000-000000000001',
+          attemptId: 'attempt-1',
         }),
-      ).toBe(false);
+      ).toEqual({
+        attemptId: 'attempt-1',
+        sessionId: undefined,
+        normalized: false,
+      });
     });
 
-    it('returns true for review without sessionId', () => {
-      expect(canReattemptInContext({ mode: 'review' })).toBe(true);
-    });
-
-    it('returns true when mode is null', () => {
-      expect(canReattemptInContext({ mode: null })).toBe(true);
-    });
-
-    it('returns true when mode is undefined', () => {
-      expect(canReattemptInContext({ mode: undefined })).toBe(true);
+    it('prefers sessionId when both attemptId and sessionId are provided in review mode', () => {
+      expect(
+        normalizeReviewIdentifiers({
+          mode: 'review',
+          sessionId: 'session-1',
+          attemptId: 'attempt-1',
+        }),
+      ).toEqual({
+        attemptId: undefined,
+        sessionId: 'session-1',
+        normalized: true,
+      });
     });
   });
 
@@ -352,6 +358,7 @@ describe('question-page-logic', () => {
     it('sets selectedChoiceId and submitResult when previous attempt exists', async () => {
       const setSelectedChoiceId = vi.fn();
       const setSubmitResult = vi.fn();
+      const setReviewHydrationState = vi.fn();
 
       await loadPreviousAttempt({
         questionId: 'q_1',
@@ -369,6 +376,7 @@ describe('question-page-logic', () => {
           } satisfies GetPreviousAttemptOutput),
         setSelectedChoiceId,
         setSubmitResult,
+        setReviewHydrationState,
       });
 
       expect(setSelectedChoiceId).toHaveBeenCalledWith('choice_1');
@@ -380,12 +388,14 @@ describe('question-page-logic', () => {
         referenceMd: 'Anton RF et al. JAMA. 2006;295(17):2003-2017.',
         choiceExplanations: [],
       } satisfies SubmitAnswerOutput);
+      expect(setReviewHydrationState).toHaveBeenCalledWith('attempt');
     });
 
     it('maps kind=session_unanswered to sessionUnansweredReveal without submitResult', async () => {
       const setSelectedChoiceId = vi.fn();
       const setSubmitResult = vi.fn();
       const setSessionUnansweredReveal = vi.fn();
+      const setReviewHydrationState = vi.fn();
 
       await loadPreviousAttempt({
         questionId: 'q_1',
@@ -401,6 +411,7 @@ describe('question-page-logic', () => {
         setSelectedChoiceId,
         setSubmitResult,
         setSessionUnansweredReveal,
+        setReviewHydrationState,
       });
 
       expect(setSessionUnansweredReveal).toHaveBeenLastCalledWith({
@@ -411,26 +422,33 @@ describe('question-page-logic', () => {
       });
       expect(setSubmitResult).toHaveBeenCalledWith(null);
       expect(setSelectedChoiceId).toHaveBeenCalledWith(null);
+      expect(setReviewHydrationState).toHaveBeenCalledWith(
+        'session_unanswered',
+      );
     });
 
-    it('does not set state when previous attempt returns null', async () => {
+    it('marks no_prior_attempt when previous attempt returns null', async () => {
       const setSelectedChoiceId = vi.fn();
       const setSubmitResult = vi.fn();
+      const setReviewHydrationState = vi.fn();
 
       await loadPreviousAttempt({
         questionId: 'q_1',
         getPreviousAttemptFn: async () => ok(null),
         setSelectedChoiceId,
         setSubmitResult,
+        setReviewHydrationState,
       });
 
       expect(setSelectedChoiceId).not.toHaveBeenCalled();
       expect(setSubmitResult).not.toHaveBeenCalled();
+      expect(setReviewHydrationState).toHaveBeenCalledWith('no_prior_attempt');
     });
 
-    it('does not set state when server action returns error', async () => {
+    it('marks hydration_error when server action returns error', async () => {
       const setSelectedChoiceId = vi.fn();
       const setSubmitResult = vi.fn();
+      const setReviewHydrationState = vi.fn();
 
       await loadPreviousAttempt({
         questionId: 'q_1',
@@ -438,15 +456,18 @@ describe('question-page-logic', () => {
           err('INTERNAL_ERROR', 'Internal error'),
         setSelectedChoiceId,
         setSubmitResult,
+        setReviewHydrationState,
       });
 
       expect(setSelectedChoiceId).not.toHaveBeenCalled();
       expect(setSubmitResult).not.toHaveBeenCalled();
+      expect(setReviewHydrationState).toHaveBeenCalledWith('hydration_error');
     });
 
-    it('does not set state when server action throws', async () => {
+    it('marks hydration_error when server action throws', async () => {
       const setSelectedChoiceId = vi.fn();
       const setSubmitResult = vi.fn();
+      const setReviewHydrationState = vi.fn();
 
       await loadPreviousAttempt({
         questionId: 'q_1',
@@ -455,23 +476,27 @@ describe('question-page-logic', () => {
         },
         setSelectedChoiceId,
         setSubmitResult,
+        setReviewHydrationState,
       });
 
       expect(setSelectedChoiceId).not.toHaveBeenCalled();
       expect(setSubmitResult).not.toHaveBeenCalled();
+      expect(setReviewHydrationState).toHaveBeenCalledWith('hydration_error');
     });
 
-    it('does not set state when previous-attempt request times out', async () => {
+    it('marks hydration_error when previous-attempt request times out', async () => {
       vi.useFakeTimers();
       try {
         const setSelectedChoiceId = vi.fn();
         const setSubmitResult = vi.fn();
+        const setReviewHydrationState = vi.fn();
 
         const promise = loadPreviousAttempt({
           questionId: 'q_1',
           getPreviousAttemptFn: async () => new Promise<never>(() => {}),
           setSelectedChoiceId,
           setSubmitResult,
+          setReviewHydrationState,
         });
 
         await vi.advanceTimersByTimeAsync(10_000);
@@ -479,24 +504,28 @@ describe('question-page-logic', () => {
 
         expect(setSelectedChoiceId).not.toHaveBeenCalled();
         expect(setSubmitResult).not.toHaveBeenCalled();
+        expect(setReviewHydrationState).toHaveBeenCalledWith('hydration_error');
       } finally {
         vi.useRealTimers();
       }
     });
 
-    it('silently returns when previous-attempt response is undefined (mock reset edge case)', async () => {
+    it('marks hydration_error when previous-attempt response is undefined (mock reset edge case)', async () => {
       const setSelectedChoiceId = vi.fn();
       const setSubmitResult = vi.fn();
+      const setReviewHydrationState = vi.fn();
 
       await loadPreviousAttempt({
         questionId: 'q_1',
         getPreviousAttemptFn: async () => undefined as never,
         setSelectedChoiceId,
         setSubmitResult,
+        setReviewHydrationState,
       });
 
       expect(setSelectedChoiceId).not.toHaveBeenCalled();
       expect(setSubmitResult).not.toHaveBeenCalled();
+      expect(setReviewHydrationState).toHaveBeenCalledWith('hydration_error');
     });
 
     it('does not set state when component is unmounted', async () => {
@@ -590,6 +619,82 @@ describe('question-page-logic', () => {
         expect.objectContaining({ isCorrect: true }),
       );
       expect(setLoadState).toHaveBeenCalledWith({ status: 'ready' });
+    });
+
+    it('passes retry provenance through to submit action payload', async () => {
+      const submitAnswerFn = vi.fn(async () =>
+        ok({
+          attemptId: 'attempt_retry_1',
+          isCorrect: true,
+          correctChoiceId: 'choice_1',
+          explanationMd: 'Because...',
+          referenceMd: null,
+          choiceExplanations: [],
+        } satisfies SubmitAnswerOutput),
+      );
+
+      await submitSelectedAnswer({
+        question: createQuestionOutput(),
+        selectedChoiceId: 'choice_1',
+        questionLoadedAtMs: 1000,
+        submitIdempotencyKey: 'idem_1',
+        retryProvenance: {
+          retryOfAttemptId: 'attempt_parent_1',
+          retryOrigin: 'history',
+          retrySessionId: null,
+        },
+        submitAnswerFn,
+        nowMs: () => 5000,
+        setLoadState: vi.fn(),
+        setSubmitResult: vi.fn(),
+      });
+
+      expect(submitAnswerFn).toHaveBeenCalledWith({
+        questionId: 'q_1',
+        choiceId: 'choice_1',
+        idempotencyKey: 'idem_1',
+        timeSpentSeconds: 4,
+        retryOfAttemptId: 'attempt_parent_1',
+        retryOrigin: 'history',
+      });
+    });
+
+    it('passes session review provenance without retryOfAttemptId for unanswered reveals', async () => {
+      const submitAnswerFn = vi.fn(async () =>
+        ok({
+          attemptId: 'attempt_retry_2',
+          isCorrect: true,
+          correctChoiceId: 'choice_1',
+          explanationMd: 'Because...',
+          referenceMd: null,
+          choiceExplanations: [],
+        } satisfies SubmitAnswerOutput),
+      );
+
+      await submitSelectedAnswer({
+        question: createQuestionOutput(),
+        selectedChoiceId: 'choice_1',
+        questionLoadedAtMs: 1000,
+        submitIdempotencyKey: 'idem_1',
+        retryProvenance: {
+          retryOfAttemptId: null,
+          retryOrigin: 'session_review',
+          retrySessionId: 'session_1',
+        },
+        submitAnswerFn,
+        nowMs: () => 5000,
+        setLoadState: vi.fn(),
+        setSubmitResult: vi.fn(),
+      });
+
+      expect(submitAnswerFn).toHaveBeenCalledWith({
+        questionId: 'q_1',
+        choiceId: 'choice_1',
+        idempotencyKey: 'idem_1',
+        timeSpentSeconds: 4,
+        retryOrigin: 'session_review',
+        retrySessionId: 'session_1',
+      });
     });
 
     it('computes timeSpentSeconds when questionLoadedAtMs is 0', async () => {

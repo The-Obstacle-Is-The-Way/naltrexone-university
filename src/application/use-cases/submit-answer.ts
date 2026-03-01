@@ -1,11 +1,13 @@
 import type { Logger } from '@/src/application/ports/logger';
-import type { Question } from '@/src/domain/entities';
+import type { AttemptRetryOrigin, Question } from '@/src/domain/entities';
+import { isValidAttemptProvenance } from '@/src/domain/entities';
 import {
   gradeAnswer,
   shouldShowExplanation as sessionShouldShowExplanation,
 } from '@/src/domain/services';
 import { ApplicationError } from '../errors';
 import type {
+  AttemptSingleQuestionReader,
   AttemptWriter,
   PracticeSessionRepository,
   QuestionRepository,
@@ -21,6 +23,9 @@ export type SubmitAnswerInput = {
   choiceId: string;
   sessionId?: string;
   timeSpentSeconds?: number;
+  retryOfAttemptId?: string;
+  retryOrigin?: AttemptRetryOrigin;
+  retrySessionId?: string;
 };
 
 export type SubmitAnswerOutput = {
@@ -37,7 +42,7 @@ export const SUBMIT_ANSWER_MAX_TIME_SPENT_SECONDS = 86_400;
 export class SubmitAnswerUseCase {
   constructor(
     private readonly questions: QuestionRepository,
-    private readonly attempts: AttemptWriter,
+    private readonly attempts: AttemptWriter & AttemptSingleQuestionReader,
     private readonly sessions: PracticeSessionRepository,
     private readonly logger: Logger,
   ) {}
@@ -67,6 +72,42 @@ export class SubmitAnswerUseCase {
     }
 
     const grade = gradeAnswer(question, input.choiceId);
+
+    const retryOfAttemptId = input.retryOfAttemptId ?? null;
+    const retryOrigin = input.retryOrigin ?? null;
+    const retrySessionId = input.retrySessionId ?? null;
+
+    if (
+      !isValidAttemptProvenance({
+        retryOfAttemptId,
+        retryOrigin,
+        retrySessionId,
+      })
+    ) {
+      throw new ApplicationError(
+        'VALIDATION_ERROR',
+        'Invalid retry provenance metadata',
+      );
+    }
+
+    if (retryOfAttemptId !== null) {
+      const parentAttempt = await this.attempts.findByIdAndUserId(
+        retryOfAttemptId,
+        input.userId,
+      );
+      if (!parentAttempt) {
+        throw new ApplicationError(
+          'NOT_FOUND',
+          'Retry parent attempt not found',
+        );
+      }
+      if (parentAttempt.questionId !== question.id) {
+        throw new ApplicationError(
+          'NOT_FOUND',
+          'Retry parent attempt does not belong to the requested question',
+        );
+      }
+    }
 
     const session = input.sessionId
       ? await this.sessions.findByIdAndUserId(input.sessionId, input.userId)
@@ -104,6 +145,9 @@ export class SubmitAnswerUseCase {
       selectedChoiceId: input.choiceId,
       isCorrect: grade.isCorrect,
       timeSpentSeconds,
+      retryOfAttemptId,
+      retryOrigin,
+      retrySessionId,
     });
 
     if (session) {

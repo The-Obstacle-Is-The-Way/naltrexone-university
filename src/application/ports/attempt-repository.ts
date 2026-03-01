@@ -1,4 +1,4 @@
-import type { Attempt } from '@/src/domain/entities';
+import type { Attempt, AttemptRetryOrigin } from '@/src/domain/entities';
 import type {
   PracticeMode,
   QuestionDifficulty,
@@ -16,6 +16,9 @@ export type AttemptInsertInput = {
   selectedChoiceId: string;
   isCorrect: boolean;
   timeSpentSeconds: number;
+  retryOfAttemptId?: string | null;
+  retryOrigin?: AttemptRetryOrigin | null;
+  retrySessionId?: string | null;
 };
 
 export type AttemptMostRecentAnsweredAt = {

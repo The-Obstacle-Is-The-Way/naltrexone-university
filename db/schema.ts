@@ -62,6 +62,14 @@ export const stripeSubscriptionStatusEnum = pgEnum(
   ],
 );
 
+export const attemptRetryOriginEnum = pgEnum('attempt_retry_origin', [
+  'history',
+  'dashboard',
+  'bookmarks',
+  'session_review',
+  'other',
+]);
+
 /**
  * TYPES (shared)
  */
@@ -72,6 +80,8 @@ export type TagKind = (typeof tagKindEnum.enumValues)[number];
 export type PracticeMode = (typeof practiceModeEnum.enumValues)[number];
 export type StripeSubscriptionStatus =
   (typeof stripeSubscriptionStatusEnum.enumValues)[number];
+export type AttemptRetryOrigin =
+  (typeof attemptRetryOriginEnum.enumValues)[number];
 
 export type PracticeSessionParams = {
   count: number; // number of questions in this session
@@ -372,6 +382,9 @@ export const attempts = pgTable(
       .references(() => choices.id, { onDelete: 'restrict' }),
     isCorrect: boolean('is_correct').notNull(),
     timeSpentSeconds: integer('time_spent_seconds').notNull().default(0),
+    retryOfAttemptId: uuid('retry_of_attempt_id'),
+    retryOrigin: attemptRetryOriginEnum('retry_origin'),
+    retrySessionId: uuid('retry_session_id'),
     answeredAt: timestamp('answered_at', { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -398,6 +411,9 @@ export const attempts = pgTable(
       desc(t.answeredAt),
     ),
     questionIdIdx: index('attempts_question_id_idx').on(t.questionId),
+    retryOfAttemptIdIdx: index('attempts_retry_of_attempt_id_idx').on(
+      t.retryOfAttemptId,
+    ),
     // BUG-105: Prevent duplicate attempts for the same question within a session.
     // Partial unique index — only enforced when practice_session_id IS NOT NULL.
     sessionQuestionUq: uniqueIndex(ATTEMPTS_SESSION_QUESTION_UQ)

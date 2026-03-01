@@ -29,6 +29,7 @@ import type {
   SubmitAnswerInput,
   SubmitAnswerOutput,
 } from '@/src/application/use-cases/submit-answer';
+import { AllAttemptRetryOrigins } from '@/src/domain/entities';
 import {
   AllChoiceLabels,
   AllQuestionProgressStatuses,
@@ -78,6 +79,9 @@ const SubmitAnswerInputSchema = z
     questionId: zUuid,
     choiceId: zUuid,
     sessionId: zUuid.optional(),
+    retryOfAttemptId: zUuid.optional(),
+    retryOrigin: z.enum(AllAttemptRetryOrigins).optional(),
+    retrySessionId: zUuid.optional(),
     idempotencyKey: zUuid.optional(),
     timeSpentSeconds: z
       .number()
@@ -86,7 +90,47 @@ const SubmitAnswerInputSchema = z
       .max(MAX_TIME_SPENT_SECONDS)
       .optional(),
   })
-  .strict();
+  .strict()
+  .superRefine((input, ctx) => {
+    if (input.retrySessionId && input.retryOrigin !== 'session_review') {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['retrySessionId'],
+        message:
+          'retrySessionId is only allowed when retryOrigin is session_review',
+      });
+    }
+
+    if (input.retryOrigin === 'session_review' && !input.retrySessionId) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['retrySessionId'],
+        message:
+          'retrySessionId is required when retryOrigin is session_review',
+      });
+    }
+
+    if (input.retryOfAttemptId && !input.retryOrigin) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['retryOrigin'],
+        message: 'retryOrigin is required when retryOfAttemptId is provided',
+      });
+    }
+
+    if (
+      input.retryOrigin &&
+      input.retryOrigin !== 'session_review' &&
+      !input.retryOfAttemptId
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['retryOfAttemptId'],
+        message:
+          'retryOfAttemptId is required for non-session_review retry origins',
+      });
+    }
+  });
 
 const SubmitAnswerOutputSchema = z
   .object({
@@ -169,6 +213,9 @@ export const submitAnswer = createAction({
       questionId,
       choiceId,
       sessionId,
+      retryOfAttemptId,
+      retryOrigin,
+      retrySessionId,
       idempotencyKey,
       timeSpentSeconds,
     } = input;
@@ -191,6 +238,9 @@ export const submitAnswer = createAction({
         choiceId,
         sessionId,
         timeSpentSeconds,
+        retryOfAttemptId,
+        retryOrigin,
+        retrySessionId,
       });
     }
 
