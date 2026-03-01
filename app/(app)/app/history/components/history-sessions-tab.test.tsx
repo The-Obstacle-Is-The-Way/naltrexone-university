@@ -166,11 +166,15 @@ describe('HistorySessionsTab', () => {
     expect(previousClassName).toContain('h-auto');
     expect(previousClassName).toContain('p-0');
     expect(previousClassName).toContain('text-muted-foreground');
+    expect(previousClassName).toContain('no-underline');
     expect(previousClassName).toContain('hover:text-foreground');
+    expect(previousClassName).toContain('hover:no-underline');
     expect(nextClassName).toContain('h-auto');
     expect(nextClassName).toContain('p-0');
     expect(nextClassName).toContain('text-muted-foreground');
+    expect(nextClassName).toContain('no-underline');
     expect(nextClassName).toContain('hover:text-foreground');
+    expect(nextClassName).toContain('hover:no-underline');
   });
 
   it('renders the session summary as a primary review link when a first question exists', () => {
