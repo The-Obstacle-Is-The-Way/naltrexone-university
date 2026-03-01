@@ -284,6 +284,7 @@ describe('SubmitAnswerUseCase', () => {
     it('allows session_review retries without a parent attempt id for session unanswered reveals', async () => {
       const userId = 'user-1';
       const questionId = 'q1';
+      const retrySessionId = 'session-review-1';
 
       const question = createQuestion({
         id: questionId,
@@ -295,10 +296,18 @@ describe('SubmitAnswerUseCase', () => {
       });
 
       const attempts = new FakeAttemptRepository();
+      const sessions = new FakePracticeSessionRepository([
+        createPracticeSession({
+          id: retrySessionId,
+          userId,
+          questionIds: [questionId],
+          endedAt: new Date('2026-02-01T00:00:00Z'),
+        }),
+      ]);
       const useCase = new SubmitAnswerUseCase(
         new FakeQuestionRepository([question]),
         attempts,
-        new FakePracticeSessionRepository(),
+        sessions,
         new FakeLogger(),
       );
 
@@ -307,7 +316,7 @@ describe('SubmitAnswerUseCase', () => {
         questionId,
         choiceId: 'c2',
         retryOrigin: 'session_review',
-        retrySessionId: 'session-review-1',
+        retrySessionId,
       });
 
       expect(attempts.getAll()[0]).toMatchObject({
@@ -315,6 +324,95 @@ describe('SubmitAnswerUseCase', () => {
         retryOrigin: 'session_review',
         retrySessionId: 'session-review-1',
       });
+    });
+
+    it('throws NOT_FOUND when session_review retrySessionId does not belong to the submitting user', async () => {
+      const userId = 'user-1';
+      const questionId = 'q1';
+      const retrySessionId = 'session-review-1';
+
+      const question = createQuestion({
+        id: questionId,
+        status: 'published',
+        choices: [
+          createChoice({ id: 'c1', questionId, label: 'A', isCorrect: false }),
+          createChoice({ id: 'c2', questionId, label: 'B', isCorrect: true }),
+        ],
+      });
+
+      const sessions = new FakePracticeSessionRepository([
+        createPracticeSession({
+          id: retrySessionId,
+          userId: 'other-user',
+          questionIds: [questionId],
+          endedAt: new Date('2026-02-01T00:00:00Z'),
+        }),
+      ]);
+
+      const useCase = new SubmitAnswerUseCase(
+        new FakeQuestionRepository([question]),
+        new FakeAttemptRepository(),
+        sessions,
+        new FakeLogger(),
+      );
+
+      await expect(
+        useCase.execute({
+          userId,
+          questionId,
+          choiceId: 'c2',
+          retryOrigin: 'session_review',
+          retrySessionId,
+        }),
+      ).rejects.toEqual(
+        new ApplicationError('NOT_FOUND', 'Retry session not found'),
+      );
+    });
+
+    it('throws NOT_FOUND when session_review retrySessionId does not include the requested question', async () => {
+      const userId = 'user-1';
+      const questionId = 'q1';
+      const retrySessionId = 'session-review-1';
+
+      const question = createQuestion({
+        id: questionId,
+        status: 'published',
+        choices: [
+          createChoice({ id: 'c1', questionId, label: 'A', isCorrect: false }),
+          createChoice({ id: 'c2', questionId, label: 'B', isCorrect: true }),
+        ],
+      });
+
+      const sessions = new FakePracticeSessionRepository([
+        createPracticeSession({
+          id: retrySessionId,
+          userId,
+          questionIds: ['other-question-id'],
+          endedAt: new Date('2026-02-01T00:00:00Z'),
+        }),
+      ]);
+
+      const useCase = new SubmitAnswerUseCase(
+        new FakeQuestionRepository([question]),
+        new FakeAttemptRepository(),
+        sessions,
+        new FakeLogger(),
+      );
+
+      await expect(
+        useCase.execute({
+          userId,
+          questionId,
+          choiceId: 'c2',
+          retryOrigin: 'session_review',
+          retrySessionId,
+        }),
+      ).rejects.toEqual(
+        new ApplicationError(
+          'NOT_FOUND',
+          'Retry session does not include the requested question',
+        ),
+      );
     });
 
     it('throws NOT_FOUND when retry parent attempt is missing', async () => {

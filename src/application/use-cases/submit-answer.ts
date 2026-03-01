@@ -109,6 +109,22 @@ export class SubmitAnswerUseCase {
       );
     }
 
+    if (retryOrigin === 'session_review' && retrySessionId !== null) {
+      const retrySession = await this.sessions.findByIdAndUserId(
+        retrySessionId,
+        input.userId,
+      );
+      if (!retrySession) {
+        throw new ApplicationError('NOT_FOUND', 'Retry session not found');
+      }
+      if (!retrySession.questionIds.includes(question.id)) {
+        throw new ApplicationError(
+          'NOT_FOUND',
+          'Retry session does not include the requested question',
+        );
+      }
+    }
+
     if (retryOfAttemptId !== null) {
       const parentAttempt = await this.attempts.findByIdAndUserId(
         retryOfAttemptId,

@@ -46,6 +46,9 @@ As of 2026-03-01, gaps 1-5 for DEBT-265 core scope are implemented in code and s
   - parent exists
   - same user scope
   - same question linkage
+- For `session_review` provenance, use case verifies `retrySessionId`:
+  - session exists for submitting user
+  - session contains the submitted question
 - Persisted provenance through repository insert path to DB.
 
 ### 2.3 Inline retry in session review (question page)

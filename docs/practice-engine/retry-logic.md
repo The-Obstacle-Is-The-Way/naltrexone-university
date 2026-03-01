@@ -93,6 +93,7 @@ Enforced by controller + use case + domain helper:
 - `retryOrigin = session_review` requires `retrySessionId`.
 - Non-session origins require `retryOfAttemptId`.
 - If `retryOfAttemptId` exists, parent attempt must exist for same user and same question.
+- If `retryOrigin = session_review`, `retrySessionId` must resolve to a session owned by the submitting user and that session must include the submitted question.
 
 ### 5.3 Legitimate `retryOfAttemptId = null` paths
 
@@ -179,7 +180,7 @@ When both are present in review mode:
 | DB | `attempt_retry_origin` pgEnum, nullable lineage fields, index | `db/schema.ts`, `db/migrations/0013_quick_xavin.sql` |
 | Ports/DTO | Optional provenance on `AttemptInsertInput` | `src/application/ports/attempt-repository.ts` |
 | Repositories | Provenance insert/read mapping + fake parity | `src/adapters/repositories/drizzle-attempt-repository.ts`, `src/adapters/repositories/attempt-row-mappers.ts`, `src/application/test-helpers/fakes/fake-attempt-repository.ts` |
-| Use case | Provenance validation + parent attempt ownership/question checks | `src/application/use-cases/submit-answer.ts` |
+| Use case | Provenance validation + parent attempt ownership/question checks + `retrySessionId` ownership/question linkage checks | `src/application/use-cases/submit-answer.ts` |
 | Controller | Zod schema + `superRefine` cross-field checks | `src/adapters/controllers/question-controller.ts` |
 | Question page | Inline retry, hydration states, provenance passthrough, local retry indicator | `app/(app)/app/questions/[slug]/question-page-logic.ts`, `use-question-page-controller.ts`, `question-page-client.tsx` |
 | Route boundary | Mixed ID normalization (`sessionId` precedence) | `app/(app)/app/questions/[slug]/page.tsx` |
