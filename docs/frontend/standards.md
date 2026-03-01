@@ -437,7 +437,7 @@ Use `AlertDialog` from `components/ui/alert-dialog.tsx` (Radix UI wrapper). Curr
 
 Every interactive element MUST have a discernible accessible name:
 - Buttons with visible text: text is sufficient
-- Icon-only buttons: add `aria-label`
+- Icon-only buttons: provide `aria-label` **or** visually hidden text (for example, `<span className="sr-only">`)
 - Repeated buttons in lists (e.g., "Remove", "Reattempt"): add `aria-label` with context
 
 ```tsx
@@ -648,6 +648,7 @@ Three hooks exceed the 200-line "god hook" threshold (§12):
 | ID | Summary | File(s) |
 |----|---------|---------|
 | — | Visual divergences from BS-035 audit are resolved. Only approved exception `D-15` (MetallicCtaButton) remains. See Pattern Registry Part 11 for historical record. | `docs/frontend/pattern-registry.md` |
+| — | History sessions expanded breakdown UI remains functionally correct but is under active redesign review for hierarchy/density/navigation clarity (BS-036). | `app/(app)/app/history/components/history-sessions-tab.tsx`, `app/(app)/app/shared/components/session-breakdown-list.tsx`, `docs/brainstorming/bs-036-history-breakdown-ux-redesign.md` |
 | — | `Markdown.tsx` uses PascalCase filename (violates §13 kebab-case convention) | `components/markdown/Markdown.tsx` |
 
 ---

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { renderToStaticMarkup } from 'react-dom/server';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { type QuestionOrigin, toQuestionRoute } from '@/lib/routes';
 import type { PracticeSessionReviewRow } from '@/src/application/use-cases';
 
@@ -37,11 +37,16 @@ const unavailableRow: PracticeSessionReviewRow = {
   markedForReview: false,
 };
 
+let SessionBreakdownList: typeof import('./session-breakdown-list').SessionBreakdownList;
+
+beforeAll(async () => {
+  ({ SessionBreakdownList } = await import('./session-breakdown-list'));
+});
+
 async function renderList(
   rows: PracticeSessionReviewRow[],
   props?: { from?: QuestionOrigin; sessionId?: string; historyHref?: string },
 ) {
-  const { SessionBreakdownList } = await import('./session-breakdown-list');
   return renderToStaticMarkup(<SessionBreakdownList rows={rows} {...props} />);
 }
 
@@ -149,5 +154,23 @@ describe('SessionBreakdownList', () => {
     expect(links[0]?.getAttribute('href')).toBe(
       toQuestionRoute('q-1', { from: 'history', mode: 'review' }),
     );
+  });
+
+  it('renders an empty-state message when there are no breakdown rows', async () => {
+    const html = await renderList([]);
+
+    expect(html).toContain('No questions available for this session.');
+    expect(html).toContain('text-sm');
+    expect(html).toContain('text-muted-foreground');
+  });
+
+  it('uses divided row styling on the list container for scanability', async () => {
+    const html = await renderList([availableRow, correctRow]);
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const list = doc.querySelector('ul');
+
+    expect(list).not.toBeNull();
+    expect(list?.getAttribute('class') ?? '').toContain('divide-y');
+    expect(list?.getAttribute('class') ?? '').toContain('divide-border/20');
   });
 });

@@ -1,9 +1,13 @@
 // @vitest-environment jsdom
 import type { ComponentType } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { beforeAll, describe, expect, it, vi } from 'vitest';
+import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { AsyncLoadStateWithIdle } from '@/app/(app)/app/shared/load-state';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
-import type { GetSessionHistoryOutput } from '@/src/adapters/controllers/practice-controller';
+import type {
+  GetPracticeSessionReviewOutput,
+  GetSessionHistoryOutput,
+} from '@/src/adapters/controllers/practice-controller';
 
 vi.mock('next/link', () => ({
   default: (props: Record<string, unknown>) => <a {...props} />,
@@ -11,6 +15,31 @@ vi.mock('next/link', () => ({
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: vi.fn() }),
+}));
+
+type MockUseHistorySessionsState = {
+  selectedSessionId: string | null;
+  selectedReview: GetPracticeSessionReviewOutput | null;
+  reviewLoadState: AsyncLoadStateWithIdle;
+  onOpenSession: (sessionId: string) => Promise<void>;
+};
+
+let mockUseHistorySessionsState: MockUseHistorySessionsState;
+
+function createMockUseHistorySessionsState(
+  overrides: Partial<MockUseHistorySessionsState> = {},
+): MockUseHistorySessionsState {
+  return {
+    selectedSessionId: null,
+    selectedReview: null,
+    reviewLoadState: { status: 'idle' },
+    onOpenSession: async () => undefined,
+    ...overrides,
+  };
+}
+
+vi.mock('../hooks/use-history-sessions', () => ({
+  useHistorySessions: () => mockUseHistorySessionsState,
 }));
 
 let HistorySessionsTab: typeof import('./history-sessions-tab').HistorySessionsTab;
@@ -27,6 +56,10 @@ beforeAll(async () => {
   HistorySessionsTab = module.HistorySessionsTab;
   SessionSummaryContent =
     module.SessionSummaryContent as typeof SessionSummaryContent;
+});
+
+beforeEach(() => {
+  mockUseHistorySessionsState = createMockUseHistorySessionsState();
 });
 
 type SessionHistoryResult = ActionResult<GetSessionHistoryOutput>;
@@ -242,9 +275,9 @@ describe('HistorySessionsTab', () => {
     expect(html).toContain('hover:bg-muted/40');
     expect(html).not.toContain('hover:bg-accent/40');
     expect(html).not.toContain('dark:hover:bg-foreground/10');
-    expect(html).toContain('tabindex="0"');
+    expect(html).not.toContain('tabindex="0"');
     expect(html).not.toContain('role="link"');
-    expect(html).toContain('tabindex="-1"');
+    expect(html).not.toContain('tabindex="-1"');
   });
 
   it('does not render clickable row affordances when session review is unavailable', () => {
@@ -297,6 +330,124 @@ describe('HistorySessionsTab', () => {
     expect(html).not.toContain('dark:border-foreground/30');
     expect(html).not.toContain('dark:bg-foreground/10');
     expect(html).not.toContain('dark:hover:bg-foreground/25');
+  });
+
+  it('wires collapsed disclosure accessibility attributes on the breakdown toggle', () => {
+    const result: SessionHistoryResult = {
+      ok: true,
+      data: {
+        rows: [makeSessionHistoryRow()],
+        total: 1,
+        limit: 20,
+        offset: 0,
+      },
+    };
+
+    const html = renderToStaticMarkup(<HistorySessionsTab result={result} />);
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const toggle = doc.querySelector(
+      'button[aria-label^="View breakdown for"]',
+    );
+
+    expect(toggle).not.toBeNull();
+    expect(toggle?.getAttribute('aria-expanded')).toBe('false');
+    expect(toggle?.getAttribute('aria-controls')).toBe('breakdown-session-1');
+  });
+
+  it('renders expanded breakdown panel as a flat disclosure region', () => {
+    mockUseHistorySessionsState = createMockUseHistorySessionsState({
+      selectedSessionId: 'session-1',
+      selectedReview: {
+        sessionId: 'session-1',
+        mode: 'exam',
+        totalCount: 1,
+        answeredCount: 1,
+        markedCount: 0,
+        rows: [
+          {
+            questionId: 'q-1',
+            slug: 'q-1',
+            stemMd: 'Stem preview',
+            difficulty: 'easy',
+            order: 1,
+            isAvailable: true,
+            isAnswered: true,
+            isCorrect: true,
+            markedForReview: false,
+          },
+        ],
+      },
+      reviewLoadState: { status: 'ready' },
+    });
+
+    const result: SessionHistoryResult = {
+      ok: true,
+      data: {
+        rows: [makeSessionHistoryRow()],
+        total: 1,
+        limit: 20,
+        offset: 0,
+      },
+    };
+
+    const html = renderToStaticMarkup(<HistorySessionsTab result={result} />);
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const panel = doc.getElementById('breakdown-session-1');
+
+    expect(panel).not.toBeNull();
+    expect(panel?.getAttribute('role')).toBe('region');
+    expect(panel?.getAttribute('aria-label')).toBe('Question breakdown');
+    expect(panel?.getAttribute('class') ?? '').toContain('mt-3');
+    expect(panel?.getAttribute('class') ?? '').toContain('pt-3');
+    expect(panel?.getAttribute('class') ?? '').toContain('border-t');
+    expect(panel?.getAttribute('class') ?? '').toContain('border-border/30');
+    expect(panel?.getAttribute('class') ?? '').not.toContain('bg-background');
+    expect(panel?.getAttribute('class') ?? '').not.toContain('rounded-lg');
+  });
+
+  it('does not render a redundant Review session button inside breakdown content', () => {
+    mockUseHistorySessionsState = createMockUseHistorySessionsState({
+      selectedSessionId: 'session-1',
+      selectedReview: {
+        sessionId: 'session-1',
+        mode: 'exam',
+        totalCount: 1,
+        answeredCount: 1,
+        markedCount: 0,
+        rows: [
+          {
+            questionId: 'q-1',
+            slug: 'q-1',
+            stemMd: 'Stem preview',
+            difficulty: 'easy',
+            order: 1,
+            isAvailable: true,
+            isAnswered: true,
+            isCorrect: true,
+            markedForReview: false,
+          },
+        ],
+      },
+      reviewLoadState: { status: 'ready' },
+    });
+
+    const result: SessionHistoryResult = {
+      ok: true,
+      data: {
+        rows: [makeSessionHistoryRow()],
+        total: 1,
+        limit: 20,
+        offset: 0,
+      },
+    };
+
+    const html = renderToStaticMarkup(<HistorySessionsTab result={result} />);
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const reviewLink = Array.from(doc.querySelectorAll('a')).find(
+      (link) => link.textContent?.trim() === 'Review session',
+    );
+
+    expect(reviewLink).toBeUndefined();
   });
 
   it('uses SessionSummaryContent for non-link session summaries', () => {

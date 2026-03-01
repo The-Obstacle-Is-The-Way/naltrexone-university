@@ -125,6 +125,7 @@ When building or modifying a question-viewing context, verify:
 - [ ] Action bar follows the ordering convention (sequential → primary → secondary → navigation)
 - [ ] State persistence matches the mode's expectations (§3)
 - [ ] Shared components (`QuestionCard`, `Feedback`) are used — don't rebuild them
+- [ ] Disclosure panels avoid duplicate primary CTAs when the parent row/header already performs the same navigation
 - [ ] The context is documented in [Question Rendering Architecture](../practice-engine/question-rendering-architecture.md)
 
 ---
