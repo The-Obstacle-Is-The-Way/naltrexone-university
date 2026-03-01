@@ -1,7 +1,7 @@
 # Question Rendering Architecture
 
 > **Type:** Canonical Reference Document (Living)
-> **Last Verified:** 2026-02-17
+> **Last Verified:** 2026-03-01
 > **Scope:** How questions are rendered, navigated, and state-managed across all viewing contexts
 
 ---
@@ -10,7 +10,7 @@
 
 Questions appear in **6 distinct viewing contexts** across the application (plus multiple “origin” variants on the question page). Each context shares the same core display components (`QuestionCard`, `ChoiceButton`, `Feedback`) but differs in navigation chrome, action bars, state management, and data sources.
 
-This document is the single source of truth for understanding how each context works today and what needs to change.
+This document is the single source of truth for understanding how each context works today.
 
 ---
 
@@ -26,7 +26,7 @@ This document is the single source of truth for understanding how each context w
 | F | **Quick Practice** (ad-hoc, no session) | `/app/practice/quick` | Practice → Quick Practice |
 
 Additional minor contexts (use same `/app/questions/[slug]` route):
-- **Bookmarks Reattempt:** `?from=bookmarks` (no `mode=review` → no previous attempt auto-load)
+- **Bookmarks Review:** `?from=bookmarks&mode=review`
 - **Dashboard Review:** `?from=dashboard&mode=review&attemptId=...`
 - **Practice Session Review:** `?from=practice&mode=review&sessionId=...` (from Session Summary → breakdown)
 
@@ -171,7 +171,7 @@ PracticeSessionPageView (app/(app)/app/practice/[sessionId]/components/practice-
 
 **Navigation model:** This is a **checklist UI**, not sequential. "Open question" buttons call `onOpenReviewQuestion(questionId)` which navigates the session runner back to that question (re-entering PracticeView for that question). There is no "Previous/Next" here.
 
-### Context D: History Session Review
+### Context D: Session Review (History/Practice/Dashboard Entry)
 
 ```
 Entry:     /app/history?tab=sessions → "View breakdown" → click question link
@@ -193,15 +193,22 @@ QuestionPage (server)
             ├─ Feedback (shared) — shown when `submitResult` exists
             └─ Action bar:
                  - [← Previous] / [Next →] when session navigation neighbors exist
-                 - Unanswered question (no previous attempt): [Submit] + [Back to History]
-                 - Answered question (has previous attempt): [Try Again] + [Back to History]
+                 - Hydrated answered question: [Try Again] (+ [Submit] after reset)
+                 - `session_unanswered` reveal: [Try Again] (then [Submit] after reset)
+                 - `hydration_error`: explicit fallback card [Retry load] / [Answer as new]
+                 - [Back to History]
 ```
 
 **State management:**
 - `useQuestionPageController` loads question via `getQuestionBySlug()`
-- When `mode=review`, calls `loadPreviousAttempt()` which returns a full `SubmitAnswerOutput` **when an attempt exists**
-- If `getPreviousAttempt()` returns `null` (e.g., session question was never answered), the page remains in attempt mode: `selectedChoiceId=null`, `submitResult=null`
+- When `mode=review`, calls `loadPreviousAttempt()` and classifies one of four hydration outcomes:
+  - `attempt`
+  - `session_unanswered`
+  - `no_prior_attempt`
+  - `hydration_error`
 - Session navigation loaded via `getPracticeSessionReview({ sessionId })` — cached per sessionId
+- Inline retry in this context submits standalone attempts with provenance (`retryOrigin=session_review`)
+- Retry marker (`wasRetried`) is maintained in session-scoped client navigation state for the current visit
 - Navigation is URL-driven (`<Link>` elements) — fully supports browser back/forward
 
 ### Context E: History Individual Review
@@ -217,7 +224,7 @@ Route:     /app/questions/[slug]?from=history&mode=review&historyHref={encoded}
 - `sessionNavigation` is `null` (no sessionId → no sibling questions)
 - `ReviewQuestionNavigator` NOT rendered (`app/(app)/app/questions/[slug]/question-page-client.tsx:155` — `if (props.sessionNavigation)`)
 - No sequential navigation (no `sessionId` → no sibling questions)
-- Only: QuestionCard + Feedback + [Try Again] [Back to History] for answered attempts (or [Submit] fallback when unanswered)
+- Action flow: hydrated attempts show [Try Again], which unlocks [Submit] for a new standalone attempt; hydration errors require explicit [Answer as new]
 
 ### Context F: Quick Practice (Ad-hoc, No Session)
 
@@ -250,9 +257,9 @@ QuickPracticePage (server)
 | Feature | A: Tutor | B: Exam | C: Exam Review | D: Session Review | E: Individual Review | F: Quick Practice |
 |---------|:--------:|:-------:|:--------------:|:-----------------:|:--------------------:|:----------------:|
 | QuestionCard | Yes | Yes | No (list view) | Yes | Yes | Yes |
-| Feedback (explanation) | Immediate | Hidden | No | When answered (falls back when unanswered) | Always | Immediate |
-| Can submit answer | Yes | Yes | No | Only when unanswered (answered questions are review-locked) | No | Yes |
-| Can reattempt | No | No | No | Yes ("Try Again" when answered) | Yes ("Try Again") | No |
+| Feedback (explanation) | Immediate | Hidden | No | Hydrated attempt/reveal | Hydrated attempt | Immediate |
+| Can submit answer | Yes | Yes | No | Yes (after Try Again or explicit fallback) | Yes (after Try Again or explicit fallback) | Yes |
+| Can reattempt | No | No | No | Yes (`attempt` and `session_unanswered`) | Yes (`attempt`) | No |
 | Next Question button | Yes | Yes | No | No | No | Yes |
 | Previous Question button | Yes (session-only) | Yes (session-only) | No | Yes (← Previous link) | No | No |
 | Question Navigator grid | Yes | Yes | No (inline list) | Yes (color-coded) | No | No |
@@ -299,7 +306,7 @@ This behavior is resolved by SPEC-030 implementation.
 | Param | Contexts | Purpose |
 |-------|----------|---------|
 | `from` | All question page contexts | Determines back link target (`history`, `practice`, `bookmarks`, `dashboard`) |
-| `mode=review` | Review contexts | Signals read-only view with previous attempt loaded |
+| `mode=review` | Review contexts | Enables review hydration semantics (`attempt` / `session_unanswered` / `no_prior_attempt` / `hydration_error`) |
 | `sessionId` | Session-based contexts | Enables navigator grid + sequential nav |
 | `historyHref` | History-based contexts | Preserves history page pagination/filter state |
 | `attemptId` | Dashboard review | Specific attempt to load (attempt identity) |
@@ -352,13 +359,11 @@ The codebase has two navigators that look similar but serve different contexts:
 │  use-question-page-controller.ts                                    │
 │    On mount (mode=review):                                          │
 │      1. getQuestionBySlug() → question data                         │
-│      2. loadPreviousAttempt() → full SubmitAnswerOutput              │
-│         ├─ selectedChoiceId      ──► restored                       │
-│         ├─ isCorrect             ──► restored                       │
-│         ├─ correctChoiceId       ──► restored                       │
-│         ├─ explanationMd         ──► restored                       │
-│         └─ choiceExplanations    ──► restored                       │
-│    Both selectedChoiceId AND submitResult are fully populated.       │
+│      2. loadPreviousAttempt() → one of 4 outcomes:                  │
+│         ├─ attempt              ──► selectedChoiceId + submitResult │
+│         ├─ session_unanswered   ──► reveal + Try Again path         │
+│         ├─ no_prior_attempt     ──► fresh submit path               │
+│         └─ hydration_error      ──► explicit fallback UI            │
 │                                                                     │
 │  On sequential nav (← Previous / Next →):                           │
 │    Bottom action bar links (<Link>) → new page load → fresh fetch  │
@@ -430,9 +435,9 @@ The codebase has two navigators that look similar but serve different contexts:
 
 ---
 
-## 10. What Needs to Change
+## 10. Follow-Up Debt
 
-### 10.1 Resolved: Tutor Mode State Persistence (Section 6)
+### 10.1 Resolved in This Slice
 
 **Status:** Resolved in SPEC-030.
 **Implementation:** Tutor revisit state restores from `session.previousSubmission` in `NextQuestion`, hydrated into `submitResult` by `useQuestionFlowCore`.
@@ -445,6 +450,16 @@ The bottom action bar is implemented inline in 4 different places. A future spec
 
 `QuestionNavigator` (active session) and `ReviewQuestionNavigator` (question page review) have similar visual layouts but different data sources and navigation methods. A shared base component with pluggable navigation (callback vs link) could reduce duplication, but the current approach is clear and well-tested.
 
+### 10.4 Retry Observability and Persistence Follow-Ups
+
+- Add server telemetry for retry origin/outcome and mixed identifier normalization events.
+- Decide whether session-review retry indicators (`wasRetried`) must persist across hard refresh/new visits; current behavior is visit-scoped by design.
+
+### 10.5 Previous-Attempt Identifier Contract Hardening
+
+- Harden `GetPreviousAttempt` to reject or type-discriminate mixed `attemptId + sessionId` instead of relying on permissive precedence behavior in downstream layers.
+- Keep route-boundary normalization as defense-in-depth while enforcing explicit application-layer contract semantics.
+
 ---
 
 ## 11. Related Documentation
@@ -453,11 +468,15 @@ The bottom action bar is implemented inline in 4 different places. A future spec
 |----------|-----------|
 | [Frontend Layer](./frontend-layer.md) | Routes, hook architecture, data flow |
 | [Practice Modes](./practice-modes.md) | Tutor vs Exam behavior differences |
+| [Retry Logic](./retry-logic.md) | Retry/reattempt SSOT including provenance, hydration states, and inline session-review retry contract |
 | [Frontend Standards](../frontend/standards.md) | Component inventory (Appendix) |
 | [SPEC-027](../_archive/specs/spec-027-session-review-navigation.md) | Session review navigation (implemented) |
 | [SPEC-028](../_archive/specs/spec-028-status-filter-segmented-control.md) | Status filter segmented control (implemented) |
 | [SPEC-028b](../_archive/specs/spec-028-review-question-navigator.md) | Review question navigator (implemented) |
 | [DEBT-217](../_archive/debt/debt-217-history-href.md) | History back link state preservation |
+| [DEBT-265](../debt/debt-265-retry-lineage-and-review-practice-unification.md) | Retry lineage and inline session-review retry implementation contract |
+| [DEBT-266](../debt/debt-266-retry-observability-and-session-review-marker-persistence.md) | Retry observability + marker-persistence follow-up debt |
+| [DEBT-267](../debt/debt-267-get-previous-attempt-identifier-contract-hardening.md) | Mixed `attemptId + sessionId` contract hardening for previous-attempt hydration |
 
 ---
 
@@ -465,6 +484,7 @@ The bottom action bar is implemented inline in 4 different places. A future spec
 
 | Date | Change |
 |------|--------|
+| 2026-03-01 | Synced to DEBT-265 implementation: updated review route ownership, hydration outcome model, session-review submit/reattempt matrix, and `mode=review` semantics. Added follow-up debt references for retry observability and marker-persistence policy (DEBT-266). |
 | 2026-02-17 | Accuracy pass for BUG-145: removed stale `SessionNavigationBar` references, updated action-bar/state-persistence docs to current `previousSubmission` restoration behavior, replaced Section 6 with resolved status, and refreshed file index references. |
 | 2026-02-16 | Initial version — comprehensive audit of question-viewing contexts. Documented state persistence bug in Tutor Mode, navigation architecture, shared vs context-specific components. |
 | 2026-02-16 | Accuracy pass — fixed `disabled` prop table (was oversimplified), removed non-existent `buildSessionNavigation` export from file index (logic is inline in controller). |

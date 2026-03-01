@@ -611,7 +611,7 @@ Also traced supporting shared logic:
 
 #### Problem 21: Review-mode hydration flicker (transient non-review UI) — FIXED (BUG-159, PR #143)
 
-`QuestionView` initially renders with `submitResult = null`, so the submit button is shown (`question-page-client.tsx:327`) until `loadPreviousAttempt` finishes asynchronously (`use-question-page-controller.ts:225`). This can briefly show attempt-mode controls in a review route before it switches to read-only review state.
+`QuestionView` initially renders with `submitResult = null`, so the submit button is shown (`question-page-client.tsx:327`) until `loadPreviousAttempt` finishes asynchronously (`use-question-page-controller.ts:225`). This can briefly show attempt-mode controls in a review route before it switches to hydrated review state (which now supports `Try Again`-driven inline retry in session review).
 
 #### Problem 22: Feedback uses assertive live region for long content — FIXED (BUG-155, PR #142)
 
