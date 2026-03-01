@@ -10,7 +10,7 @@
 
 ## Summary
 
-The `QuestionNavigator` component renders numbered buttons for jumping between questions during in-progress practice sessions (tutor/exam mode). Phase 1 ([FE-055 archived](../_archive/debt/fe-055-exam-navigator-missing-nav-landmark.md)) added the `<nav>` landmark and `aria-current="step"`. This follow-up adds the missing `aria-controls` wiring so screen readers can announce the programmatic relationship between each navigator button and the question content panel it controls.
+The `QuestionNavigator` component renders numbered buttons for jumping between questions during in-progress practice sessions (tutor/exam mode). Phase 1 ([FE-055 archived](./fe-055-exam-navigator-missing-nav-landmark.md)) added the `<nav>` landmark and `aria-current="step"`. This follow-up adds the missing `aria-controls` wiring so screen readers can announce the programmatic relationship between each navigator button and the question content panel it controls.
 
 ## Implemented Files
 
@@ -111,6 +111,6 @@ pnpm typecheck && pnpm lint && pnpm test --run
 
 ## Related
 
-- [FE-055 Phase 1 (archived)](../_archive/debt/fe-055-exam-navigator-missing-nav-landmark.md) — Added `<nav>` landmark + `aria-current="step"` (Resolved 2026-02-16)
+- [FE-055 Phase 1 (archived)](./fe-055-exam-navigator-missing-nav-landmark.md) — Added `<nav>` landmark + `aria-current="step"` (Resolved 2026-02-16)
 - `components/mobile-nav.tsx` — Reference implementation of `aria-controls` pattern
 - `docs/frontend/pattern-registry.md` Part 18.3 — Documents `aria-expanded` + `aria-controls` as standard pattern
