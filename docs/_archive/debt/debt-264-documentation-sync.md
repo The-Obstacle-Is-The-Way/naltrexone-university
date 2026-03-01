@@ -1,9 +1,9 @@
 # DEBT-264: Documentation Sync
 
-**Status:** In Progress
+**Status:** Resolved (2026-03-01)
 **Parent:** [DEBT-250](debt-250-frontend-visual-divergence-compliance-plan.md)
 **Items:** Phase 6 documentation sync
-**Blocked by:** Final completion of DEBT-259, DEBT-260, and DEBT-261 (DEBT-262 and DEBT-263 completed)
+**Blocked by:** ~~DEBT-259, DEBT-260, DEBT-261~~ All resolved (PR #152); ~~DEBT-262, DEBT-263~~ Resolved (PR #153)
 **Files:** `docs/frontend/pattern-registry.md`, `docs/frontend/standards.md`, `docs/frontend/design-principles.md`, `docs/brainstorming/bs-035-card-hover-and-gray-consistency-audit.md`, `docs/debt/debt-250-frontend-visual-divergence-compliance-plan.md`, `docs/debt/index.md`
 
 ---
@@ -12,12 +12,13 @@
 
 After all code changes are complete, update docs in lockstep:
 
-### Current Progress (2026-02-28)
+### Current Progress (2026-03-01)
 
-- Decision 12 and Decision 13 outcomes are now synced into DEBT-250 and child debt docs (`DEBT-262`, `DEBT-263`)
-- Pattern Registry Part 1.2 caveat has been refined to resolved wording (two-channel hover strategy; DEBT-260 cross-reference)
-- Light-mode token updates (`--success`, `--destructive`) are implemented and covered by `app/globals.test.ts`
-- Remaining DEBT-264 work is the final cross-doc sweep after DEBT-259/260/261 merge
+- All blockers cleared: DEBT-251–263 resolved across PRs #149–#153
+- Decision 12 and Decision 13 outcomes synced into DEBT-250 and child debt docs
+- Pattern Registry Part 1.2 caveat refined to resolved wording (two-channel hover strategy; DEBT-260 cross-reference)
+- Light-mode token updates (`--success`, `--destructive`) implemented and covered by `app/globals.test.ts`
+- **Completed:** final cross-doc sweep (Tasks 1–11 below) — all done 2026-03-01
 
 ### 1. Pattern Registry Part 11
 

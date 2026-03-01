@@ -75,7 +75,7 @@ When to use each opacity on `bg-muted` (or equivalent layer-2 token):
 
 **Decision:** Hover opacity is context-dependent. Use `/40` inside cards, `/50` on page background, `/60` for direct-action targets (choices, chips).
 
-**Light-mode caveat (Decision 12 resolved):** This scale was designed for dark mode where `--muted` at 11% lightness provides ample contrast headroom. In light mode, `--muted` at 96.1% lightness is only 3.9% from white — opacities below `/100` produce imperceptible fill contrast. The system intentionally uses two hover channels: background-fill deltas in dark mode, and non-fill cues (border/text/shadow) in light mode. Any new interactive row component MUST include at least one non-fill hover cue. Dashboard/history row cue hardening remains tracked in DEBT-260 (UX-1).
+**Light-mode caveat (Decision 12 resolved):** This scale was designed for dark mode where `--muted` at 11% lightness provides ample contrast headroom. In light mode, `--muted` at 96.1% lightness is only 3.9% from white — opacities below `/100` produce imperceptible fill contrast. The system intentionally uses two hover channels: background-fill deltas in dark mode, and non-fill cues (border/text/shadow) in light mode. Any new interactive row component MUST include at least one non-fill hover cue. Dashboard/history row hover borders were hardened in DEBT-260 (UX-1, PR #152).
 
 ### 1.3 Border Opacity Scale
 
@@ -483,18 +483,17 @@ All standalone action buttons in the app use `rounded-full`:
 
 **Rule:** These are the ONLY dark-mode overrides for buttons. Page/component code must NEVER add `dark:` classes to buttons. If a button looks wrong in dark mode, fix the variant in `button.tsx`.
 
-### Marketing Button Overrides
+### Marketing Button Overrides (Decision 1 — Resolved)
 
-The marketing landing page has two custom button treatments that bypass the variant system:
+The marketing landing page CTA strategy was standardized in DEBT-258:
 
-| Button | Custom Classes | Status |
-|--------|--------------|--------|
-| "View pricing" / "Sign in" pills | `hover:bg-muted` (100% opacity) | **Divergent** — should use `outline` variant or standardize |
-| Annual "Get Started" | `bg-foreground text-background hover:bg-foreground/90` | **Divergent** — inverted color button not available as variant |
+| Button | Treatment | Rationale |
+|--------|----------|-----------|
+| "View pricing" / "Sign in" pills | `variant="outline"` (standard hover) | Replaced custom `hover:bg-muted` (100% opacity) which was far more aggressive than any other hover |
+| Monthly "Get Started" | `variant="outline"` | Previously `variant="secondary"` — 4% lightness difference from card surface (invisible). Outline gives a real border. |
+| Annual "Get Started" | `variant="default"` (primary) | Replaced custom `bg-foreground text-background`. In dark mode `--primary` = `--foreground` (zero visual regression). Highest affordance for the promoted plan. |
 
-**Decision needed:** Should a `primary-inverted` variant be added to `button.tsx`, or should the annual button use the existing `default` variant?
-
-### MetallicCtaButton (Marketing Only)
+### MetallicCtaButton (Marketing Only — D-15 Exception)
 
 Custom animated-border CTA used at the bottom of the landing page.
 
@@ -507,7 +506,13 @@ metallic-border animated gradient (grays #3f3f46 → #a1a1aa, 6s cycle)
 
 **Source:** `components/ui/metallic-cta-button.tsx` + `components/ui/metallic-border.tsx` + CSS in `globals.css:193-208`
 
-**Status:** Documented exception (D-15). Not a standard `Button` variant. Only used in one place — the bottom CTA of the landing page. Keep scoped to this single marketing slot.
+**Status:** Approved marketing-only exception (Decision 2). One distinctive element at the landing page bottom adds personality without system pollution. Marked with `@debt-exception D-15` in source. Not a standard `Button` variant. Keep scoped to this single marketing slot.
+
+### Third-Party Component Exceptions (Decision 8)
+
+| Component | Owner | Visual Delta | Policy |
+|-----------|-------|-------------|--------|
+| Clerk auth surfaces (`<SignIn />`, `<SignUp />`, `<UserButton />`) | Clerk SDK | 4px border radius difference (12px vs 16px), internal hover/focus states | Accepted third-party seam. Base colors match via `providers.tsx` appearance config. Do not attempt pixel-match overrides — Clerk's internal CSS hierarchy is undocumented and changes between versions. |
 
 ---
 
@@ -759,12 +764,12 @@ Patterns that are currently copy-pasted and should be extracted to shared consta
 | `tabSwitchItemBaseClasses` | same | same |
 | `tabSwitchItemActiveClasses` | same | same |
 | `tabSwitchItemInactiveClasses` | same | same |
+| `headerActionLinkClasses` | `lib/shared-styles.ts` | Dashboard, History (sessions + questions), Practice, Bookmarks (7 files, DEBT-259/PR #152) |
 
 ### Needs Extraction
 
 | Pattern | Current State | Proposed Constant | Proposed File |
 |---------|--------------|-------------------|---------------|
-| Header action link classes | Copy-pasted in 6 files (3 as `headerLinkButtonClasses` const, 3 inline) | `headerActionLinkClasses` | `lib/shared-styles.ts` |
 | Hoverable row (inside Card) | Inline in dashboard, history sessions | `hoverableRowInsideCardClasses` | `lib/shared-styles.ts` |
 | Muted row (non-interactive) | Inline in dashboard, practice starter | `mutedRowClasses` | `lib/shared-styles.ts` |
 | Metadata badge/pill | Inline in dashboard (2 instances) | `metadataBadgeClasses` | `lib/shared-styles.ts` |
@@ -775,28 +780,23 @@ Patterns that are currently copy-pasted and should be extracted to shared consta
 
 ## Part 11: Known Divergences from This Registry
 
-Current unresolved codebase divergences tracked in [BS-035](../brainstorming/bs-035-card-hover-and-gray-consistency-audit.md) and [DEBT-250](../debt/debt-250-frontend-visual-divergence-compliance-plan.md):
+Approved exceptions tracked in [DEBT-250](../debt/debt-250-frontend-visual-divergence-compliance-plan.md):
 
-| ID | Divergence | Canonical Pattern | Files |
-|----|-----------|-------------------|-------|
-| D-11 | Pricing page uses raw divs instead of `<Card>` | S-1: Use `<Card>` component | `pricing-view.tsx` |
-| D-13 | `headerLinkButtonClasses` copy-pasted in 6 files | Extract to `lib/shared-styles.ts` | See Part 10 |
+| ID | Divergence | Status | Files |
+|----|-----------|--------|-------|
 | D-15 | `MetallicCtaButton` remains outside standard Button variants by explicit policy | Approved marketing-only exception (`@debt-exception D-15`) | `metallic-cta-button.tsx`, `marketing-home.tsx` |
 
-**Recently resolved:** `D-1` through `D-10`, `D-12`, `D-14`, `D-16`, `D-17` via DEBT-251 through DEBT-258.
+**Resolved (historical):** All 31 items from DEBT-250 are now resolved or documented as approved exceptions:
+- `D-1` through `D-10`, `D-12`, `D-14`, `D-16`, `D-17` — code fixes via DEBT-251 through DEBT-258 (PRs #149–#151)
+- `D-11` — pricing page converted to `<Card>` components (DEBT-259, PR #152)
+- `D-13` — `headerActionLinkClasses` extracted to `lib/shared-styles.ts` (DEBT-259, PR #152)
+- `COMP-1`, `A11Y-1`, `A11Y-2`, `STRUCT-1`, `AFFORD-1`, `LIGHT-3` — code fixes via DEBT-251–258
+- `UX-1` (pricing dead space), `UX-2` (standalone bookmark — no change by design), `UX-3` (ThemeToggle added to marketing), `UX-4` (Clerk seam — accepted third-party exception) — DEBT-260, PR #152
+- `TOUCH-1`, `TOUCH-2` — targeted touch target fixes (DEBT-261, PR #152)
+- `LIGHT-1` — light-mode opacity asymmetry accepted and documented (DEBT-262, Decision 12)
+- `LIGHT-2` — success/destructive token contrast fixed in `globals.css` (DEBT-263, PR #153)
 
-### DEBT-250 Non-D Items (Also Active)
-
-These are tracked in [DEBT-250](../debt/debt-250-frontend-visual-divergence-compliance-plan.md) but are not part of the D-table above:
-
-| ID | Category | Canonical Pattern / Target |
-|----|----------|----------------------------|
-| `UX-1`–`UX-4` | UX seams | Non-visual/product decisions (documented in DEBT-250 Decisions 3, 6, 7, 8) |
-| `TOUCH-1`, `TOUCH-2` | Touch target strategy | Pending Decision 11 implementation in DEBT-261 |
-
-**Recently resolved non-D items:** `COMP-1`, `A11Y-1`, `STRUCT-1`, `AFFORD-1`, `LIGHT-1`, `LIGHT-2`, and `LIGHT-3`.
-
-Clerk auth-surface radius/interaction differences are an accepted third-party seam and not a local styling target.
+Clerk auth-surface radius/interaction differences are an accepted third-party seam and not a local styling target (Decision 8).
 
 ---
 
