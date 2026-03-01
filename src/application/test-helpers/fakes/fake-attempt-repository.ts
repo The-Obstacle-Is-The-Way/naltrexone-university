@@ -7,7 +7,11 @@ import type {
   AttemptRepository,
   PageOptions,
 } from '@/src/application/ports/repositories';
-import type { Attempt, Question } from '@/src/domain/entities';
+import type {
+  Attempt,
+  AttemptRetryOrigin,
+  Question,
+} from '@/src/domain/entities';
 
 type InMemoryAttempt = Attempt & {
   practiceSessionId: string | null;
@@ -43,6 +47,9 @@ export class FakeAttemptRepository implements AttemptRepository {
     selectedChoiceId: string;
     isCorrect: boolean;
     timeSpentSeconds: number;
+    retryOfAttemptId?: string | null;
+    retryOrigin?: AttemptRetryOrigin | null;
+    retrySessionId?: string | null;
   }): Promise<Attempt> {
     // BUG-105: Enforce session+question uniqueness (mirrors DB partial unique index)
     if (input.practiceSessionId !== null) {
@@ -68,6 +75,9 @@ export class FakeAttemptRepository implements AttemptRepository {
       selectedChoiceId: input.selectedChoiceId,
       isCorrect: input.isCorrect,
       timeSpentSeconds: input.timeSpentSeconds,
+      retryOfAttemptId: input.retryOfAttemptId ?? null,
+      retryOrigin: input.retryOrigin ?? null,
+      retrySessionId: input.retrySessionId ?? null,
       answeredAt: new Date(),
     };
     this.attempts = [...this.attempts, attempt];

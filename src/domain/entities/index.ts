@@ -1,4 +1,10 @@
-export type { Attempt } from './attempt';
+export {
+  AllAttemptRetryOrigins,
+  type Attempt,
+  type AttemptRetryOrigin,
+  isValidAttemptProvenance,
+  isValidAttemptRetryOrigin,
+} from './attempt';
 export type { Bookmark } from './bookmark';
 export type { Choice } from './choice';
 export type {

@@ -1,7 +1,7 @@
 # Practice Engine
 
 > **Type:** Canonical Reference Document (Living)
-> **Last Verified:** 2026-02-16 (synced to SPEC-028)
+> **Last Verified:** 2026-03-01 (retry/reattempt audit sync)
 > **Scope:** Everything related to practicing questions — the core product feature
 
 ---
@@ -88,7 +88,8 @@ Dependencies point **inward only** (Clean Architecture, ADR-001). The domain lay
 | [Spec Coverage Map](./spec-coverage-map.md) | Maps each component to its defining spec; drift summary |
 | [File Index](./file-index.md) | Directory listings for all practice-engine source files |
 | [Content Pipeline](./content-pipeline.md) | Full end-to-end trace: MDX authoring → seeding → database → shuffling → rendering. Includes resolved BS-011 root cause analysis (SPEC-025, SPEC-026) and developer operations (import, seed, troubleshoot). |
-| [Question Rendering Architecture](./question-rendering-architecture.md) | How questions are rendered, navigated, and state-managed across all 6 viewing contexts. Shared vs context-specific components, state persistence bug, navigation patterns. |
+| [Question Rendering Architecture](./question-rendering-architecture.md) | How questions are rendered, navigated, and state-managed across all 6 viewing contexts. Shared vs context-specific components, hydration/retry state flows, navigation patterns. |
+| [Retry Logic](./retry-logic.md) | Canonical retry/reattempt behavior across tutor, exam, quick practice, history, dashboard, and bookmarks; includes runtime topology, provenance contract, tracer bullets, and acceptance status. |
 
 ---
 
@@ -128,6 +129,8 @@ Dependencies point **inward only** (Clean Architecture, ADR-001). The domain lay
 
 | Date | Change |
 |------|--------|
+| 2026-03-01 | Closed DEBT-266 and DEBT-267 after implementation: added retry/hydration/normalization telemetry, accepted visit-scoped retry-marker policy, and hardened mixed `attemptId + sessionId` previous-attempt contract. |
+| 2026-03-01 | Closed DEBT-265 core scope in debt tracking, moved observability/retry-marker persistence slices into DEBT-266, and added DEBT-267 for downstream mixed-identifier contract hardening. |
 | 2026-02-08 | Initial version — created from full vertical audit of domain → application → adapters → frontend layers. Cross-referenced against SPEC-001 through SPEC-020. |
 | 2026-02-09 | Synced with SPEC-019 updates: Phase 2 now "Ready for Implementation"; routes table adds `/app/practice/quick` (pending); practice mode table updated; Section 9.4 added for product decisions (review = missed-only, session runner route stays, nav label stays "Review"). |
 | 2026-02-09 | Implemented SPEC-019 Phase 2: `/app/practice` is now landing-only, `/app/practice/quick` hosts ad-hoc question flow, and the route/status tables updated accordingly. |
@@ -137,3 +140,5 @@ Dependencies point **inward only** (Clean Architecture, ADR-001). The domain lay
 | 2026-02-12 | Updated architecture diagram and related-links to reflect SPEC-022 and SPEC-023 implementations (History Questions = attempted-question log; question detail supports `?mode=review`). |
 | 2026-02-16 | Added Question Rendering Architecture document — cross-context component map, state persistence analysis, navigation architecture. Synced last-verified to SPEC-028. |
 | 2026-02-16 | Accuracy audit: added `CountAvailableQuestions` to architecture diagram; fixed 9 broken spec links (`../specs/` → `../_archive/specs/`); added SPEC-024 through SPEC-030 to related docs; updated Content Pipeline scope (Bug B resolved). Sub-docs: file-index missing files added, practice-modes mode count corrected, frontend-layer hook line count updated. |
+| 2026-03-01 | Added Retry Logic document as source of truth for reattempt semantics, including cross-mode behavior matrix, P0-P4 audit findings, and implementation contract. Linked DEBT-265 for follow-up remediation. |
+| 2026-03-01 | Practice-engine doc sync after DEBT-265 implementation: updated retry SSOT + debt execution doc to implemented state, corrected question-rendering matrix/hydration semantics, refreshed spec-coverage and architecture-layer contracts, and added DEBT-266 for observability/persistence follow-ups. |

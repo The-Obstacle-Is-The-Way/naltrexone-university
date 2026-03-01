@@ -10,6 +10,7 @@ import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import type { GetQuestionBySlugOutput } from '@/src/adapters/controllers/question-view-controller';
 import type { GetPreviousAttemptOutput } from '@/src/application/use-cases/get-previous-attempt';
 import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
+import type { AttemptRetryOrigin } from '@/src/domain/entities';
 
 const QUESTION_LOAD_TIMEOUT_MS = 15_000;
 const ANSWER_SUBMIT_TIMEOUT_MS = 15_000;
@@ -22,6 +23,7 @@ export type SessionNavigation = {
     slug: string;
     order: number;
     isCorrect: boolean | null;
+    wasRetried?: boolean;
   }>;
   currentIndex: number;
   sessionId?: string;
@@ -36,16 +38,44 @@ export type SessionUnansweredReveal = {
   choiceExplanations: SubmitAnswerOutput['choiceExplanations'];
 };
 
-/**
- * Returns false when the user is reviewing a specific session (read-only).
- * Gates both the Submit button (via canSubmitQuestionAnswer) and the
- * Try Again/reattempt binding.
- */
-export function canReattemptInContext(input: {
-  mode: QuestionMode | null | undefined;
+export type ReviewHydrationState =
+  | 'attempt'
+  | 'session_unanswered'
+  | 'no_prior_attempt'
+  | 'hydration_error';
+
+export type RetryProvenance = {
+  retryOfAttemptId: string | null;
+  retryOrigin: AttemptRetryOrigin;
+  retrySessionId: string | null;
+};
+
+export function normalizeReviewIdentifiers(input: {
+  mode?: QuestionMode | null;
   sessionId?: string;
-}): boolean {
-  return !(input.mode === 'review' && typeof input.sessionId === 'string');
+  attemptId?: string;
+}): {
+  sessionId?: string;
+  attemptId?: string;
+  normalized: boolean;
+} {
+  if (
+    input.mode === 'review' &&
+    typeof input.sessionId === 'string' &&
+    typeof input.attemptId === 'string'
+  ) {
+    return {
+      sessionId: input.sessionId,
+      attemptId: undefined,
+      normalized: true,
+    };
+  }
+
+  return {
+    sessionId: input.sessionId,
+    attemptId: input.attemptId,
+    normalized: false,
+  };
 }
 
 export function canSubmitQuestionAnswer(input: {
@@ -56,11 +86,6 @@ export function canSubmitQuestionAnswer(input: {
   mode?: QuestionMode | null;
   sessionId?: string;
 }): boolean {
-  if (
-    !canReattemptInContext({ mode: input.mode, sessionId: input.sessionId })
-  ) {
-    return false;
-  }
   if (input.loadState.status === 'loading') return false;
   if (!input.question) return false;
   if (!input.selectedChoiceId) return false;
@@ -157,17 +182,13 @@ export async function submitSelectedAnswer(input: {
   sessionId?: string;
   questionLoadedAtMs: number | null;
   submitIdempotencyKey: string | null;
+  retryProvenance?: RetryProvenance | null;
   submitAnswerFn: (input: unknown) => Promise<ActionResult<SubmitAnswerOutput>>;
   nowMs: () => number;
   setLoadState: (state: LoadState) => void;
   setSubmitResult: (result: SubmitAnswerOutput | null) => void;
   isMounted?: () => boolean;
 }): Promise<void> {
-  if (
-    !canReattemptInContext({ mode: input.mode, sessionId: input.sessionId })
-  ) {
-    return;
-  }
   if (!input.question) return;
   if (!input.selectedChoiceId) return;
 
@@ -184,14 +205,34 @@ export async function submitSelectedAnswer(input: {
         );
 
   let res: ActionResult<SubmitAnswerOutput>;
+  const submitInput: {
+    questionId: string;
+    choiceId: string;
+    idempotencyKey?: string;
+    timeSpentSeconds: number;
+    retryOfAttemptId?: string;
+    retryOrigin?: AttemptRetryOrigin;
+    retrySessionId?: string;
+  } = {
+    questionId: input.question.questionId,
+    choiceId: input.selectedChoiceId,
+    idempotencyKey: input.submitIdempotencyKey ?? undefined,
+    timeSpentSeconds,
+  };
+
+  if (input.retryProvenance) {
+    submitInput.retryOrigin = input.retryProvenance.retryOrigin;
+    if (input.retryProvenance.retryOfAttemptId !== null) {
+      submitInput.retryOfAttemptId = input.retryProvenance.retryOfAttemptId;
+    }
+    if (input.retryProvenance.retrySessionId !== null) {
+      submitInput.retrySessionId = input.retryProvenance.retrySessionId;
+    }
+  }
+
   try {
     res = await withTimeout(
-      input.submitAnswerFn({
-        questionId: input.question.questionId,
-        choiceId: input.selectedChoiceId,
-        idempotencyKey: input.submitIdempotencyKey ?? undefined,
-        timeSpentSeconds,
-      }),
+      input.submitAnswerFn(submitInput),
       ANSWER_SUBMIT_TIMEOUT_MS,
     );
   } catch (error) {
@@ -225,6 +266,7 @@ export function createSubmitSelectedAnswerAction(input: {
   sessionId?: string;
   questionLoadedAtMs: number | null;
   submitIdempotencyKey: string | null;
+  retryProvenance?: RetryProvenance | null;
   submitAnswerFn: (input: unknown) => Promise<ActionResult<SubmitAnswerOutput>>;
   nowMs: () => number;
   setLoadState: (state: LoadState) => void;
@@ -246,12 +288,15 @@ export function reattemptQuestion(input: {
   setSubmitIdempotencyKey: (key: string | null) => void;
   setQuestionLoadedAt: (loadedAtMs: number) => void;
   setSessionUnansweredReveal?: (reveal: SessionUnansweredReveal | null) => void;
+  setRetryProvenance?: (provenance: RetryProvenance | null) => void;
+  retryProvenance?: RetryProvenance | null;
 }): void {
   input.setSelectedChoiceId(null);
   input.setSubmitResult(null);
   input.setSubmitIdempotencyKey(input.createIdempotencyKey());
   input.setQuestionLoadedAt(input.nowMs());
   input.setSessionUnansweredReveal?.(null);
+  input.setRetryProvenance?.(input.retryProvenance ?? null);
 }
 
 export async function loadPreviousAttempt(input: {
@@ -264,33 +309,51 @@ export async function loadPreviousAttempt(input: {
   setSelectedChoiceId: (choiceId: string | null) => void;
   setSubmitResult: (result: SubmitAnswerOutput | null) => void;
   setSessionUnansweredReveal?: (reveal: SessionUnansweredReveal | null) => void;
+  setReviewHydrationState?: (state: ReviewHydrationState) => void;
   isMounted?: () => boolean;
 }): Promise<void> {
   const isMounted = input.isMounted ?? (() => true);
   const setSessionUnansweredReveal =
     input.setSessionUnansweredReveal ?? (() => undefined);
+  const setReviewHydrationState =
+    input.setReviewHydrationState ?? (() => undefined);
   setSessionUnansweredReveal(null);
 
   let res: ActionResult<GetPreviousAttemptOutput | null>;
+  const normalizedReviewIds = normalizeReviewIdentifiers({
+    mode: 'review',
+    sessionId: input.sessionId,
+    attemptId: input.attemptId,
+  });
+
   try {
     res = await withTimeout(
       input.getPreviousAttemptFn({
         questionId: input.questionId,
-        ...(input.attemptId ? { attemptId: input.attemptId } : {}),
-        ...(input.sessionId ? { sessionId: input.sessionId } : {}),
+        ...(normalizedReviewIds.attemptId
+          ? { attemptId: normalizedReviewIds.attemptId }
+          : {}),
+        ...(normalizedReviewIds.sessionId
+          ? { sessionId: normalizedReviewIds.sessionId }
+          : {}),
       }),
       PREVIOUS_ATTEMPT_TIMEOUT_MS,
     );
   } catch {
-    // Silently fall back to attempt mode — review is best-effort
+    setReviewHydrationState('hydration_error');
     return;
   }
   if (!isMounted()) return;
 
   // Defensive guard: errors (!res.ok) and null results (!res.data, meaning
-  // no previous attempt found) both stay in attempt mode — review hydration
-  // is best-effort and non-blocking.
-  if (!res || !res.ok || !res.data) {
+  // no previous attempt found) are differentiated for explicit fallback UX.
+  if (!res || !res.ok) {
+    setReviewHydrationState('hydration_error');
+    return;
+  }
+
+  if (!res.data) {
+    setReviewHydrationState('no_prior_attempt');
     return;
   }
 
@@ -304,6 +367,7 @@ export async function loadPreviousAttempt(input: {
       referenceMd: data.referenceMd ?? null,
       choiceExplanations: data.choiceExplanations,
     });
+    setReviewHydrationState('session_unanswered');
     return;
   }
 
@@ -317,4 +381,5 @@ export async function loadPreviousAttempt(input: {
     referenceMd: data.referenceMd ?? null,
     choiceExplanations: data.choiceExplanations,
   });
+  setReviewHydrationState('attempt');
 }

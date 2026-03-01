@@ -2,7 +2,7 @@
 
 > **Parent:** [Practice Engine Index](./index.md)
 > **Scope:** Clean Architecture layers — Domain, Application, Adapters
-> **Last Verified:** 2026-02-16
+> **Last Verified:** 2026-03-01
 
 ---
 
@@ -16,7 +16,7 @@ All entities are pure TypeScript type aliases with no runtime behavior. They liv
 |--------|-----------|---------|
 | `Question` | `id`, `slug`, `stemMd`, `explanationMd`, `difficulty`, `status`, `choices[]`, `tags[]` | A board-prep question with markdown content |
 | `Choice` | `id`, `questionId`, `label` (A–E), `textMd`, `isCorrect`, `explanationMd`, `sortOrder` | One answer choice; `explanationMd` is per-choice (beyond question-level explanation) |
-| `Attempt` | `id`, `userId`, `questionId`, `practiceSessionId` (nullable), `selectedChoiceId`, `isCorrect`, `timeSpentSeconds`, `answeredAt` | A single answer submission |
+| `Attempt` | `id`, `userId`, `questionId`, `practiceSessionId` (nullable), `selectedChoiceId`, `isCorrect`, `timeSpentSeconds`, `retryOfAttemptId` (nullable), `retryOrigin` (nullable), `retrySessionId` (nullable), `answeredAt` | A single answer submission with optional retry provenance lineage |
 | `PracticeSession` | `id`, `userId`, `mode`, `questionIds[]`, `questionStates[]`, `tagFilters[]`, `difficultyFilters[]`, `startedAt`, `endedAt` (nullable) | A structured practice session (tutor or exam) |
 | `PracticeSessionQuestionState` | `questionId`, `markedForReview`, `latestSelectedChoiceId` (nullable), `latestIsCorrect` (nullable), `latestAnsweredAt` (nullable) | Per-question state within a session |
 | `Bookmark` | `userId`, `questionId`, `createdAt` | A user-saved question |
@@ -61,7 +61,7 @@ Pure functions with zero side effects. They live in `src/domain/services/`.
 
 ### 1.5 Test Coverage
 
-Every service and value object has colocated `.test.ts` files (17 test files total, including factory tests). Entity files are pure types with no runtime behavior, so they correctly have no tests. Domain test helpers provide factories: `createQuestion()`, `createChoice()`, `createAttempt()`, `createBookmark()`, `createPracticeSession()`, `createSubscription()`, `createUser()`, `createTag()`.
+Every service and value object has colocated `.test.ts` files (17+ files total, including factory tests). Most entity files are pure types, but `attempt.ts` includes runtime provenance validation helpers and is covered by unit tests. Domain test helpers provide factories: `createQuestion()`, `createChoice()`, `createAttempt()`, `createBookmark()`, `createPracticeSession()`, `createSubscription()`, `createUser()`, `createTag()`.
 
 ---
 
@@ -76,7 +76,7 @@ All use cases follow the pattern: constructor injection of port interfaces, sing
 | Use Case | Input | Output | Error Codes |
 |----------|-------|--------|-------------|
 | `GetNextQuestion` | `{ userId, sessionId, questionId?, fromIndex? }` or `{ userId, filters }` | `NextQuestion` (stem, choices without `isCorrect`, session info) or `null` | `NOT_FOUND`, `VALIDATION_ERROR` |
-| `SubmitAnswer` | `{ userId, questionId, choiceId, sessionId?, timeSpentSeconds? }` | `{ attemptId, isCorrect, correctChoiceId, explanationMd?, choiceExplanations[] }` | `NOT_FOUND`, `CONFLICT`, `INTERNAL_ERROR` |
+| `SubmitAnswer` | `{ userId, questionId, choiceId, sessionId?, timeSpentSeconds?, retryOfAttemptId?, retryOrigin?, retrySessionId? }` | `{ attemptId, isCorrect, correctChoiceId, explanationMd?, referenceMd?, choiceExplanations[] }` | `NOT_FOUND`, `CONFLICT`, `INTERNAL_ERROR`, `VALIDATION_ERROR` |
 
 #### Practice Sessions
 
@@ -96,7 +96,7 @@ All use cases follow the pattern: constructor injection of port interfaces, sing
 | `ToggleBookmark` | `{ userId, questionId }` | `{ bookmarked: boolean }` | `NOT_FOUND` |
 | `GetBookmarks` | `{ userId }` | Bookmarked questions with availability | (graceful degradation) |
 | `GetAttemptedQuestions` | `{ userId, limit, offset, filters? }` | Paginated attempted questions with result/source filters | (graceful degradation) |
-| `GetPreviousAttempt` | `{ userId, questionId }` | Previous attempt state with shuffled choice views, or `null` | (propagates); returns `null` when no attempt or question missing |
+| `GetPreviousAttempt` | `{ userId, questionId, attemptId?, sessionId? }` | `attempt` state, `session_unanswered` reveal state, or `null` | (propagates); returns `null` when no applicable prior state exists |
 
 #### Dashboard
 
@@ -165,7 +165,7 @@ Practice-related tables in `db/schema.ts`:
 | `tags` | `slug` (unique), `kind+slug` | 5 kinds: domain, topic, substance, treatment, diagnosis |
 | `question_tags` | Composite PK, `tagId`, `questionId` | Many-to-many |
 | `practice_sessions` | `user+startedAt`, `user+endedAt` | `paramsJson` stores questionIds + questionStates |
-| `attempts` | 7 indexes covering all query patterns | Partial unique on `(practiceSessionId, questionId)` prevents duplicate session answers |
+| `attempts` | 8+ indexes covering query patterns | Partial unique on `(practiceSessionId, questionId)` prevents duplicate session answers; includes retry lineage fields (`retryOfAttemptId`, `retryOrigin`, `retrySessionId`) and retry-parent index |
 | `bookmarks` | Composite PK, `user+createdAt`, `questionId` | Idempotent add via `ON CONFLICT DO NOTHING` |
 
 ### 3.4 Test Coverage

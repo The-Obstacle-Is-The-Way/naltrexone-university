@@ -2,7 +2,7 @@
 
 > **Parent:** [Practice Engine Index](./index.md)
 > **Scope:** What's working, open debt, SPEC-019 status, product decisions
-> **Last Verified:** 2026-02-16
+> **Last Verified:** 2026-03-01
 
 ---
 
@@ -20,6 +20,11 @@
 - Color-coded question navigator grid in review mode showing correct/incorrect/unanswered (SPEC-028)
 - Status and difficulty filters with segmented control redesign (SPEC-028)
 - Client-side timeouts and observable failure states for resilient dev experience (SPEC-029)
+- Retry provenance model end-to-end (`retryOfAttemptId`, `retryOrigin`, `retrySessionId`) across controller -> use case -> repository -> DB (DEBT-265 core)
+- Inline retry in ended-session review routes (`/app/questions/[slug]?mode=review&sessionId=...`) with immutable session snapshot semantics (DEBT-265 core)
+- Explicit review hydration states (`attempt`, `session_unanswered`, `no_prior_attempt`, `hydration_error`) with explicit fallback UI
+- Retry observability events wired server-side (`retry_submitted`, `review_hydration_outcome`, `review_identifier_normalized`) with regression coverage (DEBT-266)
+- Mixed `attemptId + sessionId` previous-attempt contract is hardened (controller + use case rejection; boundary normalization defense-in-depth) (DEBT-267)
 - Error handling with visible recovery actions everywhere
 - Rate limiting on mutation-heavy actions; optional idempotency keys supported for key mutations
 
@@ -28,7 +33,6 @@
 ## 2. Open Debt (Practice-Specific)
 
 - **BS-014:** Practice Starter — Silent truncation when fewer questions match than requested count (no spec yet)
-- **BS-018:** Question View UX Unification — Tutor mode loses answered state on revisit; no Previous button in active practice; navigation placement inconsistent between practice and review (specced as SPEC-030)
 
 ---
 
@@ -42,7 +46,7 @@
 
 ---
 
-## 4. Product Decisions (2026-02-16)
+## 4. Product Decisions (2026-03-01)
 
 | Decision | Outcome | Reference |
 |----------|---------|-----------|
@@ -50,3 +54,6 @@
 | **Questions tab scope** | Questions tab is a filterable attempted-question log (result/source server-side filtering; difficulty/tag client-side in v1). | SPEC-022 |
 | **Session runner route** | Stays at `/app/practice/[sessionId]` (NOT renamed to `/app/practice/sessions/[id]`). Static `quick` segment takes priority over dynamic `[sessionId]` in Next.js routing. | SPEC-019 §5.2 |
 | **Nav label** | Nav item is **History** (not Review). | SPEC-021 |
+| **Session review retry ownership** | Inline retry for ended sessions is owned by `/app/questions/[slug]?mode=review&sessionId=...`; active session runner remains `/app/practice/[sessionId]`. | Retry Logic SSOT §3 |
+| **Session immutability on retry** | Retry attempts are standalone writes (`practiceSessionId = null`); historical session score/question states are never mutated. | Retry Logic SSOT §1, §6 |
+| **Session-review retried marker persistence** | `wasRetried` is intentionally visit-scoped (no cross-visit persistence requirement in current contract). | DEBT-266 |

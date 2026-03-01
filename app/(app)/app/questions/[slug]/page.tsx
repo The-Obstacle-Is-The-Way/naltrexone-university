@@ -58,13 +58,28 @@ export default async function QuestionPage({
     typeof resolvedSearchParams?.historyIndex === 'string'
       ? resolvedSearchParams.historyIndex
       : undefined;
+  const normalizedAttemptId =
+    mode === 'review' && sessionId && attemptId ? undefined : attemptId;
+
+  if (mode === 'review' && sessionId && attemptId) {
+    console.info('[Telemetry]', {
+      event: 'review_identifier_normalized',
+      mode,
+      normalizedTo: 'sessionId',
+      hadAttemptId: true,
+      hadSessionId: true,
+      slug,
+      from,
+    });
+  }
+
   return (
     <QuestionPageClient
       slug={slug}
       from={from}
       mode={mode}
       sessionId={sessionId}
-      attemptId={attemptId}
+      attemptId={normalizedAttemptId}
       historyHref={historyHref}
       historySeq={historySeq}
       historyIndex={historyIndex}

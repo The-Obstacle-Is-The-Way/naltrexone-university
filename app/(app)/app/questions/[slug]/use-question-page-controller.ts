@@ -2,12 +2,14 @@
 
 import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import {
-  canReattemptInContext,
   canSubmitQuestionAnswer,
   createLoadQuestionAction,
   createSubmitSelectedAnswerAction,
   type LoadState,
   loadPreviousAttempt,
+  normalizeReviewIdentifiers,
+  type RetryProvenance,
+  type ReviewHydrationState,
   reattemptQuestion,
   type SessionNavigation,
   type SessionUnansweredReveal,
@@ -25,8 +27,21 @@ import {
 } from '@/src/adapters/controllers/question-view-controller';
 import type { AvailablePracticeSessionReviewRow } from '@/src/application/use-cases/get-practice-session-review';
 import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
+import type { AttemptRetryOrigin } from '@/src/domain/entities';
 
 const SESSION_REVIEW_TIMEOUT_MS = 10_000;
+
+function resolveRetryOrigin(input: {
+  mode?: QuestionMode | null;
+  sessionId?: string;
+  from?: QuestionOrigin | null;
+}): AttemptRetryOrigin {
+  if (input.mode === 'review' && input.sessionId) return 'session_review';
+  if (input.from === 'history') return 'history';
+  if (input.from === 'dashboard') return 'dashboard';
+  if (input.from === 'bookmarks') return 'bookmarks';
+  return 'other';
+}
 
 export type UseQuestionPageControllerInput = {
   slug: string;
@@ -44,6 +59,7 @@ export type UseQuestionPageControllerOutput = {
   selectedChoiceId: string | null;
   submitResult: SubmitAnswerOutput | null;
   isLoadingPreviousAttempt: boolean;
+  reviewHydrationState: ReviewHydrationState | null;
   sessionUnansweredReveal: SessionUnansweredReveal | null;
   sessionNavigation: SessionNavigation | null;
   canSubmit: boolean;
@@ -52,6 +68,7 @@ export type UseQuestionPageControllerOutput = {
   onSelectChoice: (choiceId: string) => void;
   onSubmit: () => void;
   onReattempt: () => void;
+  onAnswerAsNew: () => void;
 };
 
 export function useQuestionPageController(
@@ -78,11 +95,28 @@ export function useQuestionPageController(
   const [isLoadingPreviousAttempt, setIsLoadingPreviousAttempt] = useState(
     input.mode === 'review',
   );
+  const [reviewHydrationState, setReviewHydrationState] =
+    useState<ReviewHydrationState | null>(
+      input.mode === 'review' ? 'no_prior_attempt' : null,
+    );
+  const [pendingRetryProvenance, setPendingRetryProvenance] =
+    useState<RetryProvenance | null>(null);
   const [isPending, startTransition] = useTransition();
   const isMounted = useIsMounted();
   const sessionQuestionsBySessionIdRef = useRef<
     Map<string, SessionNavigation['questions']>
   >(new Map());
+  const normalizedReviewIds = useMemo(
+    () =>
+      normalizeReviewIdentifiers({
+        mode: input.mode,
+        sessionId: input.sessionId,
+        attemptId: input.attemptId,
+      }),
+    [input.mode, input.sessionId, input.attemptId],
+  );
+  const normalizedSessionId = normalizedReviewIds.sessionId;
+  const normalizedAttemptId = normalizedReviewIds.attemptId;
 
   const loadQuestion = useMemo(
     () =>
@@ -107,7 +141,31 @@ export function useQuestionPageController(
   useEffect(loadQuestion, [loadQuestion]);
 
   useEffect(() => {
-    const sessionId = input.sessionId;
+    if (!input.slug) return;
+    setPendingRetryProvenance(null);
+  }, [input.slug]);
+
+  useEffect(() => {
+    if (!normalizedReviewIds.normalized) return;
+    if (process.env.NODE_ENV !== 'development') return;
+
+    console.warn(
+      '[QuestionPage] Normalized mixed review params by preferring sessionId over attemptId',
+      {
+        slug: input.slug,
+        sessionId: input.sessionId,
+        attemptId: input.attemptId,
+      },
+    );
+  }, [
+    normalizedReviewIds.normalized,
+    input.slug,
+    input.sessionId,
+    input.attemptId,
+  ]);
+
+  useEffect(() => {
+    const sessionId = normalizedSessionId;
     if (!sessionId) {
       const historySequence = input.historySequence ?? null;
       if (historySequence && historySequence.length > 0) {
@@ -127,6 +185,7 @@ export function useQuestionPageController(
               slug,
               order: index + 1,
               isCorrect: null,
+              wasRetried: false,
             })),
             currentIndex,
             from,
@@ -191,6 +250,7 @@ export function useQuestionPageController(
               slug: row.slug,
               order: row.order,
               isCorrect: row.isCorrect,
+              wasRetried: false,
             }));
 
           const currentIndex = questions.findIndex(
@@ -224,7 +284,7 @@ export function useQuestionPageController(
       isStale = true;
     };
   }, [
-    input.sessionId,
+    normalizedSessionId,
     input.slug,
     input.from,
     input.historySequence,
@@ -235,10 +295,12 @@ export function useQuestionPageController(
   useEffect(() => {
     if (input.mode === 'review') {
       setIsLoadingPreviousAttempt(true);
+      setReviewHydrationState('no_prior_attempt');
       return;
     }
 
     setIsLoadingPreviousAttempt(false);
+    setReviewHydrationState(null);
   }, [input.mode]);
 
   useEffect(() => {
@@ -247,21 +309,24 @@ export function useQuestionPageController(
     if (!question) {
       if (isMounted()) {
         setIsLoadingPreviousAttempt(false);
+        setReviewHydrationState('no_prior_attempt');
       }
       return;
     }
 
     setIsLoadingPreviousAttempt(true);
+    setReviewHydrationState('no_prior_attempt');
 
     startTransition(() => {
       void loadPreviousAttempt({
         questionId: question.questionId,
-        attemptId: input.attemptId,
-        sessionId: input.sessionId,
+        attemptId: normalizedAttemptId,
+        sessionId: normalizedSessionId,
         getPreviousAttemptFn: getPreviousAttempt,
         setSelectedChoiceId,
         setSubmitResult,
         setSessionUnansweredReveal,
+        setReviewHydrationState,
         isMounted,
       }).finally(() => {
         if (isMounted()) {
@@ -271,8 +336,8 @@ export function useQuestionPageController(
     });
   }, [
     input.mode,
-    input.attemptId,
-    input.sessionId,
+    normalizedAttemptId,
+    normalizedSessionId,
     loadState.status,
     question,
     isMounted,
@@ -285,7 +350,7 @@ export function useQuestionPageController(
       selectedChoiceId,
       submitResult,
       mode: input.mode,
-      sessionId: input.sessionId,
+      sessionId: normalizedSessionId,
     });
   }, [
     loadState,
@@ -293,7 +358,7 @@ export function useQuestionPageController(
     selectedChoiceId,
     submitResult,
     input.mode,
-    input.sessionId,
+    normalizedSessionId,
   ]);
 
   const onSelectChoice = useMemo(() => {
@@ -313,9 +378,10 @@ export function useQuestionPageController(
         question,
         selectedChoiceId,
         mode: input.mode,
-        sessionId: input.sessionId,
+        sessionId: normalizedSessionId,
         questionLoadedAtMs: questionLoadedAt,
         submitIdempotencyKey,
+        retryProvenance: pendingRetryProvenance,
         submitAnswerFn: submitAnswer,
         nowMs: Date.now,
         setLoadState,
@@ -328,29 +394,84 @@ export function useQuestionPageController(
       selectedChoiceId,
       submitIdempotencyKey,
       input.mode,
-      input.sessionId,
+      normalizedSessionId,
+      pendingRetryProvenance,
       isMounted,
     ],
   );
 
   const onReattempt = useMemo(() => {
-    const canReattempt = canReattemptInContext({
-      mode: input.mode,
-      sessionId: input.sessionId,
-    });
-    if (!canReattempt) {
-      return () => undefined;
+    return () => {
+      const retryOrigin = resolveRetryOrigin({
+        mode: input.mode,
+        sessionId: normalizedSessionId,
+        from: input.from,
+      });
+      const retryProvenance: RetryProvenance = {
+        retryOfAttemptId: submitResult?.attemptId ?? null,
+        retryOrigin,
+        retrySessionId:
+          retryOrigin === 'session_review'
+            ? (normalizedSessionId ?? null)
+            : null,
+      };
+
+      reattemptQuestion({
+        createIdempotencyKey: () => crypto.randomUUID(),
+        nowMs: Date.now,
+        setSelectedChoiceId,
+        setSubmitResult,
+        setSubmitIdempotencyKey,
+        setQuestionLoadedAt,
+        setSessionUnansweredReveal,
+        setRetryProvenance: setPendingRetryProvenance,
+        retryProvenance,
+      });
+      setReviewHydrationState('no_prior_attempt');
+    };
+  }, [input.mode, input.from, normalizedSessionId, submitResult]);
+
+  const onAnswerAsNew = useMemo(() => {
+    return () => {
+      setPendingRetryProvenance(null);
+      setSelectedChoiceId(null);
+      setSubmitResult(null);
+      setSessionUnansweredReveal(null);
+      setSubmitIdempotencyKey(crypto.randomUUID());
+      setQuestionLoadedAt(Date.now());
+      setReviewHydrationState('no_prior_attempt');
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!submitResult || !pendingRetryProvenance) return;
+
+    if (
+      pendingRetryProvenance.retryOrigin === 'session_review' &&
+      normalizedSessionId
+    ) {
+      setSessionNavigation((current) => {
+        if (!current) return current;
+        if (
+          current.currentIndex < 0 ||
+          current.currentIndex >= current.questions.length
+        ) {
+          return current;
+        }
+
+        const questions = current.questions.map((q, index) =>
+          index === current.currentIndex ? { ...q, wasRetried: true } : q,
+        );
+        sessionQuestionsBySessionIdRef.current.set(
+          normalizedSessionId,
+          questions,
+        );
+        return { ...current, questions };
+      });
     }
-    return reattemptQuestion.bind(null, {
-      createIdempotencyKey: () => crypto.randomUUID(),
-      nowMs: Date.now,
-      setSelectedChoiceId,
-      setSubmitResult,
-      setSubmitIdempotencyKey,
-      setQuestionLoadedAt,
-      setSessionUnansweredReveal,
-    });
-  }, [input.mode, input.sessionId]);
+
+    setPendingRetryProvenance(null);
+  }, [submitResult, pendingRetryProvenance, normalizedSessionId]);
 
   return {
     loadState,
@@ -358,6 +479,7 @@ export function useQuestionPageController(
     selectedChoiceId,
     submitResult,
     isLoadingPreviousAttempt,
+    reviewHydrationState,
     sessionUnansweredReveal,
     canSubmit,
     isPending,
@@ -365,6 +487,7 @@ export function useQuestionPageController(
     onSelectChoice,
     onSubmit,
     onReattempt,
+    onAnswerAsNew,
     sessionNavigation,
   };
 }

@@ -293,6 +293,74 @@ describe('question-controller', () => {
       });
     });
 
+    it('returns VALIDATION_ERROR when retrySessionId is provided without session_review origin', async () => {
+      const deps = createDeps();
+
+      const result = await submitAnswer(
+        {
+          questionId: '11111111-1111-1111-1111-111111111111',
+          choiceId: '22222222-2222-2222-2222-222222222222',
+          retryOfAttemptId: '44444444-4444-4444-4444-444444444444',
+          retryOrigin: 'history',
+          retrySessionId: '33333333-3333-3333-3333-333333333333',
+        },
+        deps,
+      );
+
+      expect(result).toMatchObject({
+        ok: false,
+        error: {
+          code: 'VALIDATION_ERROR',
+          fieldErrors: {
+            retrySessionId: expect.any(Array),
+          },
+        },
+      });
+    });
+
+    it('returns VALIDATION_ERROR when retryOrigin=session_review is missing retrySessionId', async () => {
+      const deps = createDeps();
+
+      const result = await submitAnswer(
+        {
+          questionId: '11111111-1111-1111-1111-111111111111',
+          choiceId: '22222222-2222-2222-2222-222222222222',
+          retryOrigin: 'session_review',
+        },
+        deps,
+      );
+
+      expect(result).toMatchObject({
+        ok: false,
+        error: {
+          code: 'VALIDATION_ERROR',
+        },
+      });
+    });
+
+    it('returns VALIDATION_ERROR when retry submissions include sessionId', async () => {
+      const deps = createDeps();
+
+      const result = await submitAnswer(
+        {
+          questionId: '11111111-1111-1111-1111-111111111111',
+          choiceId: '22222222-2222-2222-2222-222222222222',
+          sessionId: '33333333-3333-3333-3333-333333333333',
+          retryOfAttemptId: '44444444-4444-4444-4444-444444444444',
+          retryOrigin: 'history',
+        },
+        deps,
+      );
+
+      expect(result).toMatchObject({
+        ok: false,
+        error: {
+          code: 'VALIDATION_ERROR',
+        },
+      });
+      expect(deps.submitAnswerUseCase.inputs).toEqual([]);
+    });
+
     it('returns UNSUBSCRIBED when not entitled', async () => {
       const deps = createDeps({ isEntitled: false });
 
@@ -374,8 +442,33 @@ describe('question-controller', () => {
           choiceId: input.choiceId,
           sessionId: input.sessionId,
           timeSpentSeconds: undefined,
+          retryOfAttemptId: undefined,
+          retryOrigin: undefined,
+          retrySessionId: undefined,
         },
       ]);
+    });
+
+    it('passes retry provenance fields to the use case when provided', async () => {
+      const deps = createDeps();
+
+      const input = {
+        questionId: '11111111-1111-1111-1111-111111111111',
+        choiceId: '22222222-2222-2222-2222-222222222222',
+        retryOfAttemptId: '44444444-4444-4444-4444-444444444444',
+        retryOrigin: 'bookmarks' as const,
+      };
+
+      const result = await submitAnswer(input, deps);
+
+      expect(result).toMatchObject({ ok: true });
+      expect(deps.submitAnswerUseCase.inputs[0]).toMatchObject({
+        userId: 'user_1',
+        questionId: input.questionId,
+        choiceId: input.choiceId,
+        retryOfAttemptId: input.retryOfAttemptId,
+        retryOrigin: input.retryOrigin,
+      });
     });
 
     it('returns ok result when timeSpentSeconds is provided', async () => {

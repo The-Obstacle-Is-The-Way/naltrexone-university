@@ -43,6 +43,9 @@ export function createAttempt(
     selectedChoiceId: overrides.selectedChoiceId ?? 'choice-1',
     isCorrect: overrides.isCorrect ?? false,
     timeSpentSeconds: overrides.timeSpentSeconds ?? 0,
+    retryOfAttemptId: overrides.retryOfAttemptId ?? null,
+    retryOrigin: overrides.retryOrigin ?? null,
+    retrySessionId: overrides.retrySessionId ?? null,
     answeredAt: overrides.answeredAt ?? now,
   };
 

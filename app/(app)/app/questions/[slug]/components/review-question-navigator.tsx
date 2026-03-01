@@ -47,6 +47,7 @@ export function ReviewQuestionNavigator({
             const isCurrent = i === currentIndex;
             const variant = getVariant(q.isCorrect);
             const statusLabel = getStatusLabel(q.isCorrect);
+            const retryLabel = q.wasRetried ? ', Retried' : '';
 
             return (
               <Button
@@ -57,11 +58,19 @@ export function ReviewQuestionNavigator({
                   'relative rounded-full',
                   isCurrent && 'ring-[3px] ring-ring/50',
                 )}
-                aria-label={`Question ${q.order}: ${statusLabel}${isCurrent ? ', Current' : ''}`}
+                aria-label={`Question ${q.order}: ${statusLabel}${retryLabel}${isCurrent ? ', Current' : ''}`}
                 aria-current={isCurrent ? 'step' : undefined}
               >
                 {isCurrent ? (
-                  <span>{q.order}</span>
+                  <span>
+                    {q.order}
+                    {q.wasRetried ? (
+                      <span
+                        aria-hidden
+                        className="absolute -right-1 -top-1 size-2 rounded-full bg-primary"
+                      />
+                    ) : null}
+                  </span>
                 ) : (
                   <Link
                     href={toQuestionRoute(q.slug, {
@@ -74,6 +83,12 @@ export function ReviewQuestionNavigator({
                     })}
                   >
                     {q.order}
+                    {q.wasRetried ? (
+                      <span
+                        aria-hidden
+                        className="absolute -right-1 -top-1 size-2 rounded-full bg-primary"
+                      />
+                    ) : null}
                   </Link>
                 )}
               </Button>

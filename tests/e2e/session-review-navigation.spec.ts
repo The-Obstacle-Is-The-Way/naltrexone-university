@@ -20,6 +20,9 @@ test.describe('session review navigation (SPEC-027)', () => {
 
     // Create a tutor session with 2 questions
     await startSession(page, 'tutor', 2);
+    await expect(page.getByText('Question 1 of 2')).toBeVisible({
+      timeout: 15_000,
+    });
 
     // Answer question 1: select choice + submit + next
     await selectChoiceByLabel(page, 'A');
@@ -27,7 +30,11 @@ test.describe('session review navigation (SPEC-027)', () => {
     await expect(page.getByText(/Correct|Incorrect/).first()).toBeVisible({
       timeout: 10_000,
     });
-    await page.getByRole('button', { name: 'Next →' }).click();
+    const activeSessionNextButton = page.getByRole('button', {
+      name: 'Next →',
+    });
+    await expect(activeSessionNextButton).toBeEnabled({ timeout: 10_000 });
+    await activeSessionNextButton.click();
 
     // Answer question 2: select choice + submit
     await selectChoiceByLabel(page, 'A');

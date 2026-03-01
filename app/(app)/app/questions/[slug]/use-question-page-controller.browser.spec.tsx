@@ -86,12 +86,36 @@ function Probe({
       <div data-testid="is-loading-previous-attempt">
         {output.isLoadingPreviousAttempt ? 'true' : 'false'}
       </div>
+      <div data-testid="review-hydration-state">
+        {output.reviewHydrationState ?? ''}
+      </div>
+      <button
+        type="button"
+        data-testid="select-choice-1"
+        onClick={() => output.onSelectChoice('choice-1')}
+      >
+        Select choice 1
+      </button>
       <button
         type="button"
         data-testid="trigger-reattempt"
         onClick={output.onReattempt}
       >
         Trigger reattempt
+      </button>
+      <button
+        type="button"
+        data-testid="trigger-submit"
+        onClick={() => void output.onSubmit()}
+      >
+        Trigger submit
+      </button>
+      <button
+        type="button"
+        data-testid="trigger-answer-as-new"
+        onClick={output.onAnswerAsNew}
+      >
+        Trigger answer as new
       </button>
     </>
   );
@@ -210,7 +234,7 @@ describe('useQuestionPageController (browser)', () => {
       .toHaveTextContent('false');
   });
 
-  it('passes attemptId and sessionId to getPreviousAttempt in review mode when provided', async () => {
+  it('normalizes mixed attemptId and sessionId by preferring sessionId in review mode', async () => {
     const attemptId = '00000000-0000-4000-8000-000000000003';
     const sessionId = '00000000-0000-4000-8000-000000000004';
 
@@ -274,7 +298,6 @@ describe('useQuestionPageController (browser)', () => {
 
     expect(getPreviousAttemptMock).toHaveBeenCalledWith({
       questionId: 'question-1',
-      attemptId,
       sessionId,
     });
   });
@@ -770,7 +793,7 @@ describe('useQuestionPageController (browser)', () => {
       .toHaveTextContent('1');
   });
 
-  it('onReattempt is no-op in session review context', async () => {
+  it('supports inline retry in session review and submits standalone provenance payload', async () => {
     const sessionId = '00000000-0000-4000-8000-000000000010';
 
     getQuestionBySlugMock.mockResolvedValue(
@@ -823,6 +846,17 @@ describe('useQuestionPageController (browser)', () => {
       }),
     );
 
+    submitAnswerMock.mockResolvedValue(
+      ok({
+        attemptId: 'attempt-2',
+        isCorrect: true,
+        correctChoiceId: 'choice-1',
+        explanationMd: 'Because.',
+        referenceMd: null,
+        choiceExplanations: [],
+      }),
+    );
+
     const screen = await render(<Probe mode="review" sessionId={sessionId} />);
 
     await expect
@@ -833,13 +867,26 @@ describe('useQuestionPageController (browser)', () => {
       .toHaveTextContent('attempt-1');
 
     await screen.getByTestId('trigger-reattempt').click();
-
     await expect
       .element(screen.getByTestId('selected-choice'))
-      .toHaveTextContent('choice-2');
+      .toHaveTextContent(/^$/);
     await expect
       .element(screen.getByTestId('attempt-id'))
-      .toHaveTextContent('attempt-1');
+      .toHaveTextContent(/^$/);
+
+    await screen.getByTestId('select-choice-1').click();
+    await screen.getByTestId('trigger-submit').click();
+
+    await expect
+      .poll(() => submitAnswerMock.mock.calls.length)
+      .toBeGreaterThanOrEqual(1);
+    expect(submitAnswerMock.mock.calls[0]?.[0]).toMatchObject({
+      questionId: 'question-1',
+      choiceId: 'choice-1',
+      retryOfAttemptId: 'attempt-1',
+      retryOrigin: 'session_review',
+      retrySessionId: sessionId,
+    });
   });
 
   it('maps kind=session_unanswered to reveal state and clears selected choice/result', async () => {
@@ -905,5 +952,64 @@ describe('useQuestionPageController (browser)', () => {
     await expect
       .element(screen.getByTestId('unanswered-reveal-correct-choice'))
       .toHaveTextContent('choice-2');
+  });
+
+  it('requires explicit answer-as-new action after hydration error before submitting', async () => {
+    getQuestionBySlugMock.mockResolvedValue(
+      ok({
+        questionId: 'question-1',
+        slug: 'q-1',
+        stemMd: 'Stem',
+        difficulty: 'easy',
+        choices: [
+          { id: 'choice-1', label: 'A', textMd: 'Choice A' },
+          { id: 'choice-2', label: 'B', textMd: 'Choice B' },
+        ],
+      }),
+    );
+
+    getPreviousAttemptMock.mockResolvedValue({
+      ok: false,
+      error: { code: 'INTERNAL_ERROR', message: 'Boom' },
+    });
+
+    submitAnswerMock.mockResolvedValue(
+      ok({
+        attemptId: 'attempt-3',
+        isCorrect: true,
+        correctChoiceId: 'choice-1',
+        explanationMd: 'Because.',
+        referenceMd: null,
+        choiceExplanations: [],
+      }),
+    );
+
+    const screen = await render(<Probe mode="review" from="history" />);
+
+    await expect
+      .element(screen.getByTestId('review-hydration-state'))
+      .toHaveTextContent('hydration_error');
+
+    await screen.getByTestId('trigger-answer-as-new').click();
+    await expect
+      .element(screen.getByTestId('review-hydration-state'))
+      .toHaveTextContent('no_prior_attempt');
+
+    await screen.getByTestId('select-choice-1').click();
+    await screen.getByTestId('trigger-submit').click();
+
+    await expect
+      .poll(() => submitAnswerMock.mock.calls.length)
+      .toBeGreaterThanOrEqual(1);
+    expect(submitAnswerMock.mock.calls[0]?.[0]).toMatchObject({
+      questionId: 'question-1',
+      choiceId: 'choice-1',
+    });
+    expect(submitAnswerMock.mock.calls[0]?.[0]).not.toHaveProperty(
+      'retryOrigin',
+    );
+    expect(submitAnswerMock.mock.calls[0]?.[0]).not.toHaveProperty(
+      'retryOfAttemptId',
+    );
   });
 });
