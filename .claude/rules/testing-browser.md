@@ -63,27 +63,34 @@ Find all with: `glob **/*.browser.spec.tsx`
 - `use-practice-question-flow.browser.spec.tsx`
 - `use-practice-question-answer-flow.browser.spec.tsx`
 - `use-practice-session-controls.browser.spec.tsx`
-- `use-practice-session-history.browser.spec.tsx`
+- `use-practice-session-start.browser.spec.tsx`
 - `use-practice-session-page-controller.browser.spec.tsx`
 - `use-practice-session-mark-for-review.browser.spec.tsx`
 - `use-practice-session-review-stage.browser.spec.tsx`
 - `use-practice-session-review-stage-state.browser.spec.tsx`
+- `use-question-flow-core.browser.spec.tsx`
 
 **Practice components:**
 - `practice-view.browser.spec.tsx`
 - `practice-view-notification.browser.spec.tsx`
 - `practice-session-starter.browser.spec.tsx`
-- `practice-session-history-panel.browser.spec.tsx`
+- `practice-session-toast.browser.spec.tsx`
 - `incomplete-session-card.browser.spec.tsx`
+- `quick-practice-client.browser.spec.tsx`
 
 **Session components:**
 - `session-summary-view.browser.spec.tsx`
 - `exam-review-view.browser.spec.tsx`
 - `practice-session-page-view.browser.spec.tsx`
 
+**History components:**
+- `history-sessions-tab.browser.spec.tsx`
+- `use-history-sessions.browser.spec.tsx`
+
 **Question components:**
 - `QuestionCard.browser.spec.tsx`
 - `ChoiceButton.browser.spec.tsx`
+- `use-question-page-controller.browser.spec.tsx`
 
 **Other:**
 - `bookmarks-toast.browser.spec.tsx`
