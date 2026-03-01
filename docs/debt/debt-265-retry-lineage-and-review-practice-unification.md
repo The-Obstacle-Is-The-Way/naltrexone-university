@@ -1,89 +1,157 @@
 # DEBT-265: Retry Lineage and Review/Practice Unification
 
-**Status:** Active  
-**Priority:** P2  
-**Date:** 2026-03-01  
-**Owner:** Practice Engine  
-**Related:** [Practice Engine Retry Logic](../practice-engine/retry-logic.md), [SPEC-034](../_archive/specs/spec-034-review-mode-readonly-and-try-again-scoping.md), [SPEC-036](../_archive/specs/spec-036-bookmark-review-mode-alignment.md), BUG-068, BUG-153
+**Status:** Active
+**Priority:** P2
+**Date:** 2026-03-01
+**Owner:** Practice Engine
+**Related:** [Practice Engine Retry Logic](../practice-engine/retry-logic.md) (SSOT), [SPEC-034](../_archive/specs/spec-034-review-mode-readonly-and-try-again-scoping.md), [SPEC-036](../_archive/specs/spec-036-bookmark-review-mode-alignment.md), BUG-068, BUG-153
 
 ---
 
-## Description
+## Problem Statement
 
-The current retry experience is partially unified but still fragmented:
+The retry experience is partially unified but has three structural gaps:
 
-1. Session review (`mode=review&sessionId=...`) is correctly read-only.
-2. Standalone review surfaces (`history`, `dashboard`, `bookmarks`) allow "Try Again/Practice Again" and create new standalone attempts.
-3. Retry submissions currently have no explicit lineage/provenance metadata (`retryOfAttemptId`, retry origin/context), so analytics cannot reliably separate original attempts from retries.
-4. Session review has no explicit "Practice this question" bridge CTA to the standalone retry flow.
-5. Non-session review hydration failures can silently degrade to attempt mode, creating accidental duplicate attempts.
+1. **No provenance tracking.** Retry attempts have no lineage metadata (`retryOfAttemptId`, origin context). Analytics cannot distinguish "first attempt in tutor session" from "standalone retry after reviewing bookmarks." This matters for understanding learning patterns and mastery progression.
 
-## Why this is debt (not a one-line fix)
+2. **Session review is a dead end.** Session review is correctly read-only (no Submit/Try Again), but there is no bridge CTA to transition into standalone retry. A user who sees a wrong answer in session review has no direct path to practice that question again.
+
+3. **Silent hydration failures.** When review mode can't load a prior attempt (transient error, race condition), the page silently degrades to fresh-attempt mode. The user may unknowingly create a duplicate attempt without realizing they're no longer in review.
+
+---
+
+## Design Foundation: Two-Layer Model
+
+See [retry-logic.md §1](../practice-engine/retry-logic.md#1-core-design-principle-two-layer-model) for full explanation.
+
+**Key invariants this work must preserve:**
+
+- **Session scores are immutable.** A retry from session review never changes the session's score or question states. The session is a historical snapshot.
+- **Attempts are append-only.** Every retry creates a new standalone attempt row. Prior attempts are never mutated.
+- **Question global status uses latest-attempt-wins.** The "Incorrect" filter, dashboard stats, and any mastery query use the most recent attempt for each question, regardless of which context produced it.
+
+---
+
+## Why This Is Debt (Not a One-Line Fix)
 
 This crosses multiple architecture layers:
 
-- Domain model changes (attempt provenance semantics)
-- Application/port contract changes (submit payload + validation rules)
-- Controller schema changes (input surface)
-- Database schema migration (new columns/indexes)
-- Frontend state and UX changes (retry handoff + fallback messaging)
-- Observability/reporting alignment (retry-aware metrics)
+- **Domain model** — `Attempt` entity needs optional provenance fields
+- **Application/port contracts** — Submit payload + validation rules must accept and verify provenance
+- **Controller schema** — Input surface must pass provenance from frontend
+- **Database schema** — New nullable columns + index on `retryOfAttemptId`
+- **Frontend state + UX** — Retry handoff must carry provenance; session review needs bridge CTA; hydration failures need explicit fallback UI
+- **Observability** — Retry-aware telemetry by origin
 
 A local UI tweak cannot safely solve this without creating data/model drift.
 
-## Required change set
+---
 
-### 1) Retry provenance model
+## Required Change Set
 
-- Add nullable attempt lineage fields:
-  - `retryOfAttemptId`
-  - `retryOrigin` (`history`, `dashboard`, `bookmarks`, `session_review_bridge`, `other`)
-  - optional `retrySessionId` (originating session when bridged from session review)
-- Enforce validation:
-  - same user ownership
-  - same question linkage
-  - parent attempt exists when lineage is provided
+### 1) Retry Provenance Model
 
-### 2) Submit flow contract updates
+Add nullable fields to the `Attempt` entity and `attempts` table:
 
-- Extend `submitAnswer` controller schema/use-case input to accept optional retry provenance.
-- Preserve immutable historical attempts: retries must create new rows, never mutate existing attempts.
+| Field | Type | Purpose |
+|---|---|---|
+| `retryOfAttemptId` | `uuid \| null` | Points to the specific prior attempt the user was reviewing when they clicked "Try Again." One hop back only; chains are reconstructable by following pointers. |
+| `retryOrigin` | `enum \| null` | Which UI surface the retry came from: `history`, `dashboard`, `bookmarks`, `session_review_bridge`, `other` |
+| `retrySessionId` | `uuid \| null` | Populated when `retryOrigin = session_review_bridge`. Captures which session the user was reviewing when they decided to retry. |
 
-### 3) Review-mode UX unification
+**Validation rules:**
+- Same user ownership (retry attempt user = parent attempt user)
+- Same question linkage (retry attempt question = parent attempt question)
+- Parent attempt exists when `retryOfAttemptId` is provided
+- `retrySessionId` is only populated when `retryOrigin = session_review_bridge`
+
+**Cross-origin handling:** A bookmarked question may have been first encountered in a tutor session, exam session, quick practice, or never answered. The provenance chain handles this naturally: `retryOfAttemptId` points to the prior attempt, and the prior attempt already carries its own `practiceSessionId` (or null). No per-origin special-case logic needed. See [retry-logic.md §7](../practice-engine/retry-logic.md#7-cross-origin-provenance-the-bookmark-gotcha).
+
+### 2) Submit Flow Contract Updates
+
+- Extend `submitAnswer` controller schema and use-case input to accept optional retry provenance.
+- Preserve immutable historical attempts: retries always create new rows with `practiceSessionId = null`.
+- Validate provenance when provided; ignore gracefully when absent (forward-compatible with old clients).
+
+### 3) Session-Review Bridge CTA
 
 - Keep session review read-only (no inline submit/try again).
-- Add explicit CTA in session review: "Practice this question" (or equivalent), routing to standalone retry mode with origin context.
-- In standalone review, keep retry controls but attach retry provenance to submit payload after hydration.
+- Add a "Practice this question" CTA button visible in session review mode.
+- On click: navigate to the same question in standalone mode with query params carrying provenance context (`retryOfAttemptId`, `retryOrigin=session_review_bridge`, `retrySessionId`).
+- The standalone page hydrates the prior attempt for review, then allows retry with provenance.
 
-### 4) Hydration failure safety
+### 4) Hydration Failure Safety
 
 - Replace silent fallback in non-session review contexts with explicit UI state:
-  - clear message that prior attempt could not be loaded
-  - explicit user action before submitting as a fresh attempt
+  - Clear message: "Could not load your previous answer."
+  - Explicit user action required before submitting as a fresh attempt (e.g., "Answer as new" button).
+  - No provenance metadata attached to fallback attempts (since we don't know what they're retrying).
 
-### 5) Observability + docs consistency
+### 5) Observability + Docs Consistency
 
-- Emit retry-aware telemetry counters/events by `retryOrigin`.
+- Emit retry-aware telemetry counters/events by `retryOrigin` and outcome (correct/incorrect).
 - Keep docs synchronized:
-  - `docs/practice-engine/retry-logic.md` (SSOT)
+  - `docs/practice-engine/retry-logic.md` (SSOT — already updated)
   - `docs/practice-engine/question-rendering-architecture.md`
   - `docs/practice-engine/spec-coverage-map.md` terminology cleanup
 
-## Acceptance criteria
+---
 
-- [ ] Session review routes never submit attempts directly.
-- [ ] Standalone retries create new attempts and include provenance metadata when applicable.
+## Concrete Scenarios
+
+### Scenario: Tutor Session → Session Review → Retry
+
+1. User completes 20-question tutor session. Score: 15/20.
+2. Later, reviews the session from History. Sees Q7 was wrong.
+3. Clicks "Practice this question" (bridge CTA).
+4. Opens Q7 in standalone mode. User retries and gets it right.
+5. **Result:** Session stays 15/20. Q7's global status → correct. Q7 drops from "Incorrect" filter. Attempt history shows: (a) tutor session attempt (wrong), (b) standalone retry (correct, provenance → tutor attempt).
+
+### Scenario: Bookmarked from Exam → Retry from Bookmarks
+
+1. User bookmarked Q12 during an exam where they got it wrong.
+2. Opens Bookmarks → Q12. Review shows the exam attempt.
+3. Clicks "Try Again." Retries and gets it right.
+4. **Result:** Exam session score unchanged. Q12's global status → correct. Provenance: `retryOrigin=bookmarks`, `retryOfAttemptId=<exam-attempt-id>`.
+
+### Scenario: Chain Retry (Retry of a Retry)
+
+1. User retried Q7 from bookmarks, got it wrong again.
+2. Clicks "Try Again" on the retry result.
+3. **Result:** New attempt with `retryOfAttemptId` pointing to the first retry (not the original session attempt). The chain is: session attempt → retry 1 → retry 2. Fully reconstructable by following `retryOfAttemptId` pointers.
+
+### Scenario: Bookmarked but Never Answered
+
+1. User bookmarked Q15 before ever attempting it.
+2. Opens Bookmarks → Q15. No prior attempt to hydrate.
+3. Page loads in fresh-attempt mode (not review). No provenance — this is a first attempt, not a retry.
+4. **Result:** New standalone attempt, no retry metadata. Normal behavior.
+
+---
+
+## Acceptance Criteria
+
+- [ ] Session review routes never create attempts directly.
+- [ ] Session scores are never mutated by post-session retries.
+- [ ] Standalone retries create new attempts with provenance metadata (`retryOfAttemptId`, `retryOrigin`).
+- [ ] Question global status (correct/incorrect) always reflects the latest attempt, regardless of context.
+- [ ] The "Incorrect" filter on the Practice page respects latest-attempt-wins.
+- [ ] Session-review page provides a "Practice this question" bridge CTA.
+- [ ] Bridge CTA carries provenance context through to the standalone retry page.
+- [ ] Cross-origin retries (e.g., bookmarked question from exam, retried from bookmarks) correctly chain provenance without special-case logic.
+- [ ] Non-session review hydration failure is explicit (no silent degradation to attempt mode).
 - [ ] Retry provenance is queryable in DB and visible in logs/analytics.
-- [ ] Non-session review hydration failure is explicit (no silent degradation).
-- [ ] Session-review page provides a first-class bridge to standalone practice retry.
-- [ ] Practice-engine docs are consistent on retry semantics across tutor/exam/quick/bookmarks/history review.
+- [ ] Practice-engine docs are consistent on retry semantics across all modes.
 
-## Risks and mitigations
+---
+
+## Risks and Mitigations
 
 | Risk | Mitigation |
 |---|---|
-| Over-coupling retry metadata to frontend routing params | Validate + normalize in controller/use case; treat params as hints, not authority |
+| Over-coupling retry metadata to frontend routing params | Validate + normalize in controller/use case; treat route params as hints, not authority |
 | Backfill/reporting drift during migration | Keep provenance nullable and forward-compatible; default old rows to null lineage |
 | UX confusion between review and attempt modes | Explicit labels/CTA copy and visible mode indicators |
-| Session metrics contamination | Preserve immutable session attempts and compute session summaries from in-session rows only |
-
+| Session metrics contamination from retries | Compute session summaries from session-scoped attempts only (`WHERE practice_session_id = ?`); standalone retries are excluded by definition |
+| Chain provenance becoming expensive to query | Single-hop `retryOfAttemptId` is sufficient for most queries; full chain reconstruction is a reporting concern, not a hot path |
+| "Latest attempt wins" creating confusion when user retries and gets it wrong again | The latest attempt still wins — status stays "incorrect." The user sees they still need to study this question. This is correct behavior. |
