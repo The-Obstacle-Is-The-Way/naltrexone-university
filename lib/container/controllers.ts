@@ -41,6 +41,7 @@ export function createControllerFactories(input: {
     }),
     createQuestionViewControllerDeps: () => ({
       authGateway: gateways.createAuthGateway(),
+      logger: primitives.logger,
       checkEntitlementUseCase: useCases.createCheckEntitlementUseCase(),
       questionRepository: repositories.createQuestionRepository(),
       getPreviousAttemptUseCase: useCases.createGetPreviousAttemptUseCase(),

@@ -75,7 +75,7 @@ When to use each opacity on `bg-muted` (or equivalent layer-2 token):
 
 **Decision:** Hover opacity is context-dependent. Use `/40` inside cards, `/50` on page background, `/60` for direct-action targets (choices, chips).
 
-**Light-mode caveat (Decision 12 resolved):** This scale was designed for dark mode where `--muted` at 11% lightness provides ample contrast headroom. In light mode, `--muted` at 96.1% lightness is only 3.9% from white — opacities below `/100` produce imperceptible fill contrast. The system intentionally uses two hover channels: background-fill deltas in dark mode, and non-fill cues (border/text/shadow) in light mode. Any new interactive row component MUST include at least one non-fill hover cue. Dashboard/history row hover borders were hardened in DEBT-260 (UX-1, PR #152).
+**Light-mode caveat (Decision 12 resolved):** This scale was designed for dark mode where `--muted` at 11% lightness provides ample contrast headroom. In light mode, `--muted` at 96.1% lightness is only 3.9% from white — opacities below `/100` produce imperceptible fill contrast. The system intentionally uses two hover channels: background-fill deltas in dark mode, and non-fill cues (border/text/shadow) in light mode. Any new interactive row component MUST include at least one non-fill hover cue. Current I-1 rows use fill + focus-ring cues; no dedicated hover-border cue is applied.
 
 ### 1.3 Border Opacity Scale
 
@@ -213,7 +213,7 @@ block rounded-xl border border-border/60 bg-muted/20 p-3 transition-colors hover
 focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]
 ```
 
-**Used in:** Dashboard session rows, dashboard activity rows
+**Used in:** Dashboard session rows, dashboard activity rows, history sessions rows (delegated row click exception)
 
 **Design rationale:** `/40` hover inside a card (base 7% lightness) produces ~8.6% effective lightness — a subtle, satisfying shift. The card surface already elevates the row above page background, so the hover only needs a gentle nudge.
 
@@ -288,7 +288,7 @@ disabled:pointer-events-none disabled:opacity-50
 **Source:** `components/ui/filter-chip.tsx`
 
 **Design rationale:** Unselected hover uses `/50` (same as standalone row hover) rather than `100%` — full-opacity hover was too aggressive and visually inconsistent with every other interactive element.
-**Current divergence:** D-4 — `FilterChip` currently uses `hover:bg-accent` (100%) in `components/ui/filter-chip.tsx:28`. Canonical target is the `hover:bg-muted/50` pattern documented above.
+**Status:** Implemented in `components/ui/filter-chip.tsx` (`hover:bg-muted/50`).
 
 ### I-5: Segmented Control Item
 
@@ -317,7 +317,7 @@ focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]
 Compact icon-only disclosure toggle used in app chrome (example: mobile nav open/close).
 
 ```
-p-2 text-muted-foreground transition-colors hover:text-foreground
+p-2.5 text-muted-foreground transition-colors hover:text-foreground
 focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]
 ```
 
@@ -1142,7 +1142,7 @@ Inline loading states use the `<output>` HTML element with `aria-live="polite"`:
 
 ### 18.4 Icon Accessibility
 
-All Lucide icons set `aria-hidden="true"`. Icon-only buttons provide screen reader text via `<span className="sr-only">`.
+Decorative Lucide icons set `aria-hidden="true"`. Icon-only controls provide an accessible name via either `aria-label` or visually hidden text (for example, `<span className="sr-only">`).
 
 **Icon sizing scale:**
 | Size | Class | Usage |

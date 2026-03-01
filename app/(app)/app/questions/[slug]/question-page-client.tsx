@@ -19,6 +19,7 @@ import type { GetQuestionBySlugOutput } from '@/src/adapters/controllers/questio
 import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
 import type {
   LoadState,
+  ReviewHydrationState,
   SessionNavigation,
   SessionUnansweredReveal,
 } from './question-page-logic';
@@ -136,6 +137,7 @@ export type QuestionViewProps = {
   selectedChoiceId: string | null;
   submitResult: SubmitAnswerOutput | null;
   isLoadingPreviousAttempt?: boolean;
+  reviewHydrationState?: ReviewHydrationState | null;
   sessionUnansweredReveal?: SessionUnansweredReveal | null;
   sessionNavigation: SessionNavigation | null;
   canSubmit: boolean;
@@ -148,14 +150,17 @@ export type QuestionViewProps = {
   onSelectChoice: (choiceId: string) => void;
   onSubmit: () => void;
   onReattempt: () => void;
+  onAnswerAsNew?: () => void;
 };
 
 export function QuestionView(props: QuestionViewProps) {
   const sessionUnansweredReveal = props.sessionUnansweredReveal ?? null;
+  const reviewHydrationState = props.reviewHydrationState ?? null;
   const isReviewMode = props.mode === 'review';
-  const hasSessionId = typeof props.sessionId === 'string';
-  const isSessionReviewReadOnly = isReviewMode && hasSessionId;
   const isSessionReviewUnansweredReveal = sessionUnansweredReveal !== null;
+  const isReviewHydrationError =
+    isReviewMode && reviewHydrationState === 'hydration_error';
+  const onAnswerAsNew = props.onAnswerAsNew ?? (() => undefined);
   const correctChoiceId =
     sessionUnansweredReveal?.correctChoiceId ??
     props.submitResult?.correctChoiceId ??
@@ -246,6 +251,31 @@ export function QuestionView(props: QuestionViewProps) {
       ) : null}
 
       {props.loadState.status === 'ready' &&
+      !props.isLoadingPreviousAttempt &&
+      isReviewHydrationError ? (
+        <Card className="gap-4 rounded-2xl border-warning/50 bg-warning/5 p-6 text-sm text-foreground shadow-sm">
+          <div>Could not load your previous answer.</div>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              className="rounded-full"
+              onClick={props.onTryAgain}
+            >
+              Retry load
+            </Button>
+            <Button
+              type="button"
+              className="rounded-full"
+              onClick={onAnswerAsNew}
+            >
+              Answer as new
+            </Button>
+          </div>
+        </Card>
+      ) : null}
+
+      {props.loadState.status === 'ready' &&
       props.question === null &&
       !props.isLoadingPreviousAttempt ? (
         <Card className="gap-0 rounded-2xl p-6 text-sm text-muted-foreground shadow-sm">
@@ -253,7 +283,9 @@ export function QuestionView(props: QuestionViewProps) {
         </Card>
       ) : null}
 
-      {props.question && !props.isLoadingPreviousAttempt ? (
+      {props.question &&
+      !props.isLoadingPreviousAttempt &&
+      !isReviewHydrationError ? (
         <>
           {isSessionReviewUnansweredReveal ? (
             <Card
@@ -275,7 +307,8 @@ export function QuestionView(props: QuestionViewProps) {
             disabled={
               props.isPending ||
               props.loadState.status === 'loading' ||
-              isSessionReviewReadOnly
+              props.submitResult !== null ||
+              isSessionReviewUnansweredReveal
             }
             onSelectChoice={props.onSelectChoice}
           />
@@ -305,7 +338,7 @@ export function QuestionView(props: QuestionViewProps) {
         />
       ) : null}
 
-      {!props.isLoadingPreviousAttempt ? (
+      {!props.isLoadingPreviousAttempt && !isReviewHydrationError ? (
         <div
           className="flex flex-col gap-3 sm:flex-row"
           data-testid="bottom-action-bar"
@@ -335,7 +368,7 @@ export function QuestionView(props: QuestionViewProps) {
             )
           ) : null}
 
-          {!props.submitResult && !isSessionReviewReadOnly ? (
+          {!props.submitResult && !isSessionReviewUnansweredReveal ? (
             <Button
               type="button"
               className="rounded-full"
@@ -350,7 +383,7 @@ export function QuestionView(props: QuestionViewProps) {
             </Button>
           ) : null}
 
-          {props.submitResult && !isSessionReviewReadOnly ? (
+          {props.submitResult || isSessionReviewUnansweredReveal ? (
             <Button
               type="button"
               variant="outline"
@@ -389,8 +422,7 @@ export function QuestionView(props: QuestionViewProps) {
 
           {props.origin === 'history' ||
           props.sessionNavigation ||
-          props.submitResult ||
-          isSessionReviewReadOnly ? (
+          props.submitResult ? (
             <Button asChild variant="ghost" className="rounded-full">
               <Link href={originUi.backHref}>{originUi.backLabel}</Link>
             </Button>

@@ -691,7 +691,7 @@ describe('QuestionView', () => {
     expect(nextLink?.getAttribute('href')).toContain('historyIndex=2');
   });
 
-  it('hides Try Again in answered session review', () => {
+  it('shows Try Again in answered session review', () => {
     const html = renderToStaticMarkup(
       <QuestionView
         {...createBaseProps()}
@@ -713,6 +713,7 @@ describe('QuestionView', () => {
     const doc = new DOMParser().parseFromString(html, 'text/html');
     expect(getBottomActionLabels(doc)).toEqual([
       '← Previous',
+      'Try Again',
       'Next →',
       'Back to History',
     ]);
@@ -852,7 +853,7 @@ describe('QuestionView', () => {
     );
   });
 
-  it('hides Submit when route is session review and session navigation is unavailable', () => {
+  it('shows Submit when route is session review and session navigation is unavailable', () => {
     const html = renderToStaticMarkup(
       <QuestionView
         {...createBaseProps()}
@@ -868,7 +869,7 @@ describe('QuestionView', () => {
     const bottomBar = getBottomActionBar(doc);
     if (!bottomBar) throw new Error('Expected bottom action bar');
 
-    expect(bottomBar.textContent).not.toContain('Submit');
+    expect(bottomBar.textContent).toContain('Submit');
   });
 
   it('renders Back button in bottom bar for unanswered session questions', () => {
@@ -892,7 +893,7 @@ describe('QuestionView', () => {
     expect(backLink?.getAttribute('href')).toBe('/app/history?tab=sessions');
   });
 
-  it('renders unanswered banner and read-only reveal for session review unanswered question', () => {
+  it('renders unanswered banner and inline Try Again for session review unanswered question', () => {
     const html = renderToStaticMarkup(
       <QuestionView
         {...createBaseProps()}
@@ -930,10 +931,26 @@ describe('QuestionView', () => {
     expect(html).toContain('Incorrect');
     expect(html).toContain('Explanation for unanswered review');
     expect(bottomBar.textContent).not.toContain('Submit');
-    expect(bottomBar.textContent).not.toContain('Try Again');
+    expect(bottomBar.textContent).toContain('Try Again');
     expect(bottomBar.textContent).toContain('← Previous');
     expect(bottomBar.textContent).toContain('Next →');
     expect(bottomBar.textContent).toContain('Back to History');
+  });
+
+  it('renders explicit hydration error fallback with Answer as new action', () => {
+    const html = renderToStaticMarkup(
+      <QuestionView
+        {...createBaseProps()}
+        mode="review"
+        origin="history"
+        reviewHydrationState="hydration_error"
+      />,
+    );
+
+    expect(html).toContain('Could not load your previous answer.');
+    expect(html).toContain('Retry load');
+    expect(html).toContain('Answer as new');
+    expect(html).not.toContain('data-testid="bottom-action-bar"');
   });
 
   it('does not render the session navigation bar when sessionNavigation is null', () => {

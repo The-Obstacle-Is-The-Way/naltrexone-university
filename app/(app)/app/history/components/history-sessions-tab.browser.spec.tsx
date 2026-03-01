@@ -55,7 +55,7 @@ describe('HistorySessionsTab (browser)', () => {
     );
   });
 
-  it('supports keyboard row navigation with Enter', async () => {
+  it('keeps the session summary link keyboard-focusable as the primary navigation target', async () => {
     const screen = await render(
       <HistorySessionsTab
         result={ok({
@@ -80,51 +80,17 @@ describe('HistorySessionsTab (browser)', () => {
       />,
     );
 
-    const row = screen.getByRole('listitem');
-    const rowElement = row.element();
-    rowElement.focus();
-    rowElement.dispatchEvent(
-      new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }),
-    );
+    const summaryLink = screen.getByRole('link', {
+      name: /Exam.*8\/10 correct \(80%\).*20m.*Feb 7, 2026/,
+    });
 
-    expect(pushMock).toHaveBeenCalledWith(
-      expect.stringContaining('/app/questions/q-1'),
-    );
-  });
-
-  it('does not navigate when Space is pressed on a focusable row', async () => {
-    const screen = await render(
-      <HistorySessionsTab
-        result={ok({
-          rows: [
-            {
-              sessionId: 'session-1',
-              mode: 'exam',
-              questionCount: 10,
-              firstQuestionSlug: 'q-1',
-              answered: 10,
-              correct: 8,
-              accuracy: 0.8,
-              durationSeconds: 1200,
-              startedAt: '2026-02-07T00:00:00.000Z',
-              endedAt: '2026-02-07T00:20:00.000Z',
-            },
-          ],
-          total: 1,
-          limit: 20,
-          offset: 0,
-        })}
-      />,
-    );
-
-    const row = screen.getByRole('listitem');
-    const rowElement = row.element();
-    rowElement.focus();
-    rowElement.dispatchEvent(
-      new KeyboardEvent('keydown', { key: ' ', bubbles: true }),
-    );
-
-    expect(pushMock).not.toHaveBeenCalled();
+    await expect
+      .element(summaryLink)
+      .toHaveAttribute(
+        'href',
+        '/app/questions/q-1?from=history&mode=review&sessionId=session-1&historyHref=%2Fapp%2Fhistory%3Ftab%3Dsessions%26offset%3D0%26limit%3D20',
+      );
+    await expect.element(summaryLink).not.toHaveAttribute('tabindex');
   });
 
   it('clicking View breakdown loads and renders breakdown rows', async () => {
@@ -184,7 +150,7 @@ describe('HistorySessionsTab (browser)', () => {
     await expect.element(screen.getByText('Stem for q1')).toBeVisible();
   });
 
-  it('renders a Review session action in the expanded breakdown panel', async () => {
+  it('does not render a redundant Review session action in the expanded breakdown panel', async () => {
     getPracticeSessionReviewMock.mockResolvedValue(
       ok({
         sessionId: 'session-1',
@@ -235,11 +201,83 @@ describe('HistorySessionsTab (browser)', () => {
     await screen.getByRole('button', { name: 'View breakdown' }).click();
 
     await expect
+      .element(screen.getByRole('link', { name: /Stem for q1/ }))
+      .toBeVisible();
+    await expect
       .element(screen.getByRole('link', { name: 'Review session' }))
-      .toHaveAttribute(
-        'href',
-        '/app/questions/q-1?from=history&mode=review&sessionId=session-1&historyHref=%2Fapp%2Fhistory%3Ftab%3Dsessions%26offset%3D0%26limit%3D20',
-      );
+      .not.toBeInTheDocument();
+  });
+
+  it('wires disclosure accessibility attributes and region semantics on expand', async () => {
+    getPracticeSessionReviewMock.mockResolvedValue(
+      ok({
+        sessionId: 'session-1',
+        mode: 'exam',
+        totalCount: 1,
+        answeredCount: 1,
+        markedCount: 0,
+        rows: [
+          {
+            questionId: 'q1',
+            slug: 'q-1',
+            order: 1,
+            isAvailable: true,
+            stemMd: 'Stem for q1',
+            difficulty: 'easy',
+            isAnswered: true,
+            isCorrect: false,
+            markedForReview: false,
+          },
+        ],
+      }),
+    );
+
+    const screen = await render(
+      <HistorySessionsTab
+        result={ok({
+          rows: [
+            {
+              sessionId: 'session-1',
+              mode: 'exam',
+              questionCount: 10,
+              firstQuestionSlug: 'q-1',
+              answered: 10,
+              correct: 8,
+              accuracy: 0.8,
+              durationSeconds: 1200,
+              startedAt: '2026-02-07T00:00:00.000Z',
+              endedAt: '2026-02-07T00:20:00.000Z',
+            },
+          ],
+          total: 1,
+          limit: 20,
+          offset: 0,
+        })}
+      />,
+    );
+
+    const collapsedToggle = screen.getByRole('button', {
+      name: /View breakdown for Exam session: 8\/10 correct \(80%\), 20m, Feb 7, 2026/,
+    });
+    await expect
+      .element(collapsedToggle)
+      .toHaveAttribute('aria-expanded', 'false');
+    await expect
+      .element(collapsedToggle)
+      .toHaveAttribute('aria-controls', 'breakdown-session-1');
+
+    await collapsedToggle.click();
+
+    const expandedToggle = screen.getByRole('button', {
+      name: /Hide breakdown for Exam session: 8\/10 correct \(80%\), 20m, Feb 7, 2026/,
+    });
+    await expect
+      .element(expandedToggle)
+      .toHaveAttribute('aria-expanded', 'true');
+
+    await expect
+      .element(screen.getByRole('region', { name: 'Question breakdown' }))
+      .toHaveAttribute('id', 'breakdown-session-1');
   });
 
   it('threads canonical historyHref into breakdown question links', async () => {

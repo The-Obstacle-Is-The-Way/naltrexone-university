@@ -28,7 +28,7 @@ import type {
   PageOptions,
   RecentAttempt,
 } from '@/src/application/ports/repositories';
-import type { Attempt } from '@/src/domain/entities';
+import type { Attempt, AttemptRetryOrigin } from '@/src/domain/entities';
 import type { DrizzleDb } from '../shared/database-types';
 import { toAttemptDomain, toRecentAttempt } from './attempt-row-mappers';
 import {
@@ -157,6 +157,9 @@ export class DrizzleAttemptRepository implements AttemptRepository {
     selectedChoiceId: string;
     isCorrect: boolean;
     timeSpentSeconds: number;
+    retryOfAttemptId?: string | null;
+    retryOrigin?: AttemptRetryOrigin | null;
+    retrySessionId?: string | null;
   }) {
     let row: (typeof attempts)['$inferSelect'] | undefined;
     try {
@@ -169,6 +172,9 @@ export class DrizzleAttemptRepository implements AttemptRepository {
           selectedChoiceId: input.selectedChoiceId,
           isCorrect: input.isCorrect,
           timeSpentSeconds: input.timeSpentSeconds,
+          retryOfAttemptId: input.retryOfAttemptId ?? null,
+          retryOrigin: input.retryOrigin ?? null,
+          retrySessionId: input.retrySessionId ?? null,
         })
         .returning();
     } catch (error) {
@@ -338,6 +344,9 @@ export class DrizzleAttemptRepository implements AttemptRepository {
         selectedChoiceId: attempts.selectedChoiceId,
         isCorrect: attempts.isCorrect,
         timeSpentSeconds: attempts.timeSpentSeconds,
+        retryOfAttemptId: attempts.retryOfAttemptId,
+        retryOrigin: attempts.retryOrigin,
+        retrySessionId: attempts.retrySessionId,
         answeredAt: attempts.answeredAt,
         sessionMode: practiceSessions.mode,
       })

@@ -165,4 +165,20 @@ describe('ReviewQuestionNavigator', () => {
 
     expect(html).toContain('Question navigator');
   });
+
+  it('adds retried label metadata without changing correctness variant', async () => {
+    const { doc } = await renderNavigator({
+      navigation: {
+        ...baseNavigation,
+        questions: [
+          { slug: 'q1', order: 1, isCorrect: true, wasRetried: true },
+          { slug: 'q2', order: 2, isCorrect: false },
+          { slug: 'q3', order: 3, isCorrect: null },
+        ],
+      },
+    });
+    const retried = findByAriaLabel(doc, 'Question 1: Correct, Retried');
+    expect(retried).not.toBeNull();
+    expect(getClassList(retried)).toContain('bg-success');
+  });
 });

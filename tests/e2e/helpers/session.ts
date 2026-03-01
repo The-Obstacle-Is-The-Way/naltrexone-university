@@ -44,9 +44,45 @@ export async function startSession(
     timeout: 10_000,
   });
 
-  // Count: label is "Questions" (not "Count")
-  await page.getByLabel('Questions').fill(String(count));
-  await expect(startSessionButton).toBeEnabled({ timeout: 10_000 });
+  // Status options do not include "All". To avoid brittle failures when the shared
+  // E2E user has exhausted "Unanswered", probe the supported statuses and pick the
+  // first one that enables "Start session" for the requested count.
+  const supportedStatuses = ['Unanswered', 'Incorrect', 'Bookmarked'] as const;
+  let selectedStatus: (typeof supportedStatuses)[number] | null = null;
+  let lastProbeError: unknown = null;
+
+  for (const statusLabel of supportedStatuses) {
+    const statusButton = page.getByRole('button', {
+      name: statusLabel,
+      exact: true,
+    });
+    await statusButton.click();
+    await expect(statusButton).toHaveAttribute('aria-pressed', 'true', {
+      timeout: 10_000,
+    });
+
+    // Count: label is "Questions" (not "Count")
+    await page.getByLabel('Questions').fill(String(count));
+
+    try {
+      await expect(startSessionButton).toBeEnabled({ timeout: 3_000 });
+      selectedStatus = statusLabel;
+      break;
+    } catch (error) {
+      // Try the next supported status.
+      lastProbeError = error;
+    }
+  }
+
+  if (!selectedStatus) {
+    throw new Error(
+      `Could not enable Start session after trying statuses: ${supportedStatuses.join(
+        ', ',
+      )}`,
+      { cause: lastProbeError ?? undefined },
+    );
+  }
+
   await startSessionButton.click();
 
   await expect(page).toHaveURL(/\/app\/practice\/[^/]+$/, { timeout: 15_000 });

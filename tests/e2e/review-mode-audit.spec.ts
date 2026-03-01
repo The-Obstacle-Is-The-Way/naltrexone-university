@@ -263,10 +263,21 @@ test.describe('review mode audit', () => {
     await expect(page).toHaveURL(/mode=review/);
     await expect(page).toHaveURL(/sessionId=/);
     await expectFeedbackVisible(page);
-    await expect(page.getByRole('button', { name: 'Try Again' })).toHaveCount(
-      0,
-    );
+    const sessionReviewRetryButton = page.getByRole('button', {
+      name: /^(Practice Again|Try Again)$/,
+    });
+    await expect(sessionReviewRetryButton).toBeVisible();
     await expect(page.getByRole('button', { name: 'Submit' })).toHaveCount(0);
+
+    await sessionReviewRetryButton.click();
+    await expectFeedbackHidden(page);
+    await expect(page.getByRole('button', { name: 'Submit' })).toBeVisible({
+      timeout: 15_000,
+    });
+    await expectNoChoicesChecked(page);
+    await expect(
+      page.getByRole('button', { name: /^(Practice Again|Try Again)$/ }),
+    ).toHaveCount(0);
 
     await submitQuestionForOutcome(page, CORRECT_SLUG, 'Correct');
 

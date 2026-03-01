@@ -73,6 +73,13 @@ export class GetPreviousAttemptUseCase {
   async execute(
     input: GetPreviousAttemptInput,
   ): Promise<GetPreviousAttemptOutput | null> {
+    if (input.attemptId && input.sessionId) {
+      throw new ApplicationError(
+        'VALIDATION_ERROR',
+        'Provide either attemptId or sessionId, not both',
+      );
+    }
+
     const attempt = input.attemptId
       ? await this.attempts.findByIdAndUserId(input.attemptId, input.userId)
       : input.sessionId

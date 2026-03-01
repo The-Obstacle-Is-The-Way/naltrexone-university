@@ -206,6 +206,9 @@ describe('DrizzleAttemptRepository', () => {
         selectedChoiceId: 'choice_1',
         isCorrect: true,
         timeSpentSeconds: 42,
+        retryOfAttemptId: null,
+        retryOrigin: null,
+        retrySessionId: null,
         answeredAt,
       });
 
@@ -216,6 +219,9 @@ describe('DrizzleAttemptRepository', () => {
         selectedChoiceId: 'choice_1',
         isCorrect: true,
         timeSpentSeconds: 42,
+        retryOfAttemptId: null,
+        retryOrigin: null,
+        retrySessionId: null,
       });
     });
 
@@ -347,6 +353,9 @@ describe('DrizzleAttemptRepository', () => {
           selectedChoiceId: 'choice_1',
           isCorrect: true,
           timeSpentSeconds: 12,
+          retryOfAttemptId: null,
+          retryOrigin: null,
+          retrySessionId: null,
           answeredAt,
         },
       ]);
@@ -434,6 +443,9 @@ describe('DrizzleAttemptRepository', () => {
           selectedChoiceId: 'choice_1',
           isCorrect: false,
           timeSpentSeconds: 9,
+          retryOfAttemptId: null,
+          retryOrigin: null,
+          retrySessionId: null,
           answeredAt,
         },
       ]);
@@ -522,6 +534,9 @@ describe('DrizzleAttemptRepository', () => {
           selectedChoiceId: 'choice_1',
           isCorrect: true,
           timeSpentSeconds: 12,
+          retryOfAttemptId: null,
+          retryOrigin: null,
+          retrySessionId: null,
           answeredAt,
           sessionMode: null,
         },
