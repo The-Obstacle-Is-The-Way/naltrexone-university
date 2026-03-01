@@ -477,9 +477,9 @@ The bottom action bar is implemented inline in 4 different places. A future spec
 | [SPEC-028](../_archive/specs/spec-028-status-filter-segmented-control.md) | Status filter segmented control (implemented) |
 | [SPEC-028b](../_archive/specs/spec-028-review-question-navigator.md) | Review question navigator (implemented) |
 | [DEBT-217](../_archive/debt/debt-217-history-href.md) | History back link state preservation |
-| [DEBT-265](../debt/debt-265-retry-lineage-and-review-practice-unification.md) | Retry lineage and inline session-review retry implementation contract |
-| [DEBT-266](../debt/debt-266-retry-observability-and-session-review-marker-persistence.md) | Retry observability + marker-persistence policy (resolved) |
-| [DEBT-267](../debt/debt-267-get-previous-attempt-identifier-contract-hardening.md) | Mixed `attemptId + sessionId` contract hardening (resolved) |
+| [DEBT-265](../_archive/debt/debt-265-retry-lineage-and-review-practice-unification.md) | Retry lineage and inline session-review retry implementation contract |
+| [DEBT-266](../_archive/debt/debt-266-retry-observability-and-session-review-marker-persistence.md) | Retry observability + marker-persistence policy (resolved) |
+| [DEBT-267](../_archive/debt/debt-267-get-previous-attempt-identifier-contract-hardening.md) | Mixed `attemptId + sessionId` contract hardening (resolved) |
 
 ---
 

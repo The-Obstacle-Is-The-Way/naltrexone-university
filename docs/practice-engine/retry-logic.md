@@ -217,9 +217,9 @@ There are no open correctness gaps in retry lineage and review retry flow at thi
 
 ## 11. Related
 
-- [DEBT-265](../debt/debt-265-retry-lineage-and-review-practice-unification.md)
-- [DEBT-266](../debt/debt-266-retry-observability-and-session-review-marker-persistence.md)
-- [DEBT-267](../debt/debt-267-get-previous-attempt-identifier-contract-hardening.md)
+- [DEBT-265](../_archive/debt/debt-265-retry-lineage-and-review-practice-unification.md)
+- [DEBT-266](../_archive/debt/debt-266-retry-observability-and-session-review-marker-persistence.md)
+- [DEBT-267](../_archive/debt/debt-267-get-previous-attempt-identifier-contract-hardening.md)
 - [Question Rendering Architecture](./question-rendering-architecture.md)
 - [SPEC-034](../_archive/specs/spec-034-review-mode-readonly-and-try-again-scoping.md)
 - [SPEC-036](../_archive/specs/spec-036-bookmark-review-mode-alignment.md)
