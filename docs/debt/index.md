@@ -1,7 +1,7 @@
 # Technical Debt Register
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-02-28
+**Last Updated:** 2026-03-01
 
 ---
 
@@ -20,9 +20,6 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 | [DEBT-264](./debt-264-documentation-sync.md) | Documentation Sync (Finalize frontend docs after DEBT-251–263) | P2 | — |
 | [DEBT-263](./debt-263-text-contrast.md) | Text Contrast (LIGHT-2) | P2 | — |
 | [DEBT-262](./debt-262-light-mode-opacity.md) | Light-Mode Opacity Scale (LIGHT-1) | P2 | — |
-| [DEBT-261](./debt-261-touch-targets.md) | Touch Targets (TOUCH-1, TOUCH-2) | P2 | — |
-| [DEBT-260](./debt-260-ux-seams.md) | UX Seams (UX-1 through UX-4) | P2 | — |
-| [DEBT-259](./debt-259-shared-constants-extraction.md) | Shared Constants Extraction (D-13, D-11) | P2 | — |
 | [DEBT-250](./debt-250-frontend-visual-divergence-compliance-plan.md) | Frontend Visual Divergence Compliance Plan (BS-035 + Pattern Registry D-1..D-17 + non-D items) | P2 | — |
 | [DEBT-249](./debt-249-checkout-success-auth-boundary-hardening.md) | Checkout Success Auth Boundary Hardening (Stripe Return + Clerk Redirect) | P1 | — |
 
@@ -34,6 +31,9 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 | ID | Title | Priority | Resolved | GitHub Issue |
 |----|-------|----------|----------|--------------|
+| [DEBT-261](../_archive/debt/debt-261-touch-targets.md) | Touch Targets (TOUCH-1, TOUCH-2) | P2 | 2026-03-01 | [#152](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/152) |
+| [DEBT-260](../_archive/debt/debt-260-ux-seams.md) | UX Seams (UX-1 through UX-4) | P2 | 2026-03-01 | [#152](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/152) |
+| [DEBT-259](../_archive/debt/debt-259-shared-constants-extraction.md) | Shared Constants Extraction (D-13, D-11) | P2 | 2026-03-01 | [#152](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/152) |
 | [DEBT-258](../_archive/debt/debt-258-marketing-alignment.md) | Marketing Alignment (D-8, D-9, D-10, D-14, D-15) | P2 | 2026-02-28 | — |
 | [DEBT-257](../_archive/debt/debt-257-choice-selected-state.md) | Choice Button Selected State (AFFORD-1) | P2 | 2026-02-28 | — |
 | [DEBT-256](../_archive/debt/debt-256-expanded-breakdown-hierarchy.md) | Expanded Breakdown Visual Hierarchy (STRUCT-1) | P2 | 2026-02-28 | — |
