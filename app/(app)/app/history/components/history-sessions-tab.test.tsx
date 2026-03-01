@@ -132,6 +132,47 @@ describe('HistorySessionsTab', () => {
     expect(html).toContain('mode=exam');
   });
 
+  it('renders Previous and Next pagination links with shared header-action styling', () => {
+    const result: SessionHistoryResult = {
+      ok: true,
+      data: {
+        rows: Array.from({ length: 20 }, (_, index) =>
+          makeSessionHistoryRow({
+            sessionId: `session-${index + 1}`,
+            firstQuestionSlug: `q-${index + 1}`,
+          }),
+        ),
+        total: 60,
+        limit: 20,
+        offset: 20,
+      },
+    };
+
+    const html = renderToStaticMarkup(<HistorySessionsTab result={result} />);
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const previousLink = Array.from(doc.querySelectorAll('a')).find(
+      (link) => link.textContent?.trim() === 'Previous',
+    );
+    const nextLink = Array.from(doc.querySelectorAll('a')).find(
+      (link) => link.textContent?.trim() === 'Next',
+    );
+
+    expect(previousLink).not.toBeUndefined();
+    expect(nextLink).not.toBeUndefined();
+
+    const previousClassName = previousLink?.getAttribute('class') ?? '';
+    const nextClassName = nextLink?.getAttribute('class') ?? '';
+
+    expect(previousClassName).toContain('h-auto');
+    expect(previousClassName).toContain('p-0');
+    expect(previousClassName).toContain('text-muted-foreground');
+    expect(previousClassName).toContain('hover:text-foreground');
+    expect(nextClassName).toContain('h-auto');
+    expect(nextClassName).toContain('p-0');
+    expect(nextClassName).toContain('text-muted-foreground');
+    expect(nextClassName).toContain('hover:text-foreground');
+  });
+
   it('renders the session summary as a primary review link when a first question exists', () => {
     const row = {
       sessionId: 'session-1',
