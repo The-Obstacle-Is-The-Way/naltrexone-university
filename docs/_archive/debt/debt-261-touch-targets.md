@@ -1,7 +1,7 @@
 # DEBT-261: Touch Targets
 
 **Status:** Resolved (2026-03-01)
-**Parent:** [DEBT-250](../../debt/debt-250-frontend-visual-divergence-compliance-plan.md)
+**Parent:** [DEBT-250](debt-250-frontend-visual-divergence-compliance-plan.md)
 **Items:** TOUCH-1, TOUCH-2
 **Decision 11:** Resolved — Option C (targeted fixes)
 **Resolution:** Implemented in PR #152 (2026-03-01)

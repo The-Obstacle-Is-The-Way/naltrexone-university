@@ -2,7 +2,7 @@
 
 **Status:** Resolved (documentation-only → folds into DEBT-264)
 **Resolved:** 2026-02-28
-**Parent:** [DEBT-250](../../debt/debt-250-frontend-visual-divergence-compliance-plan.md)
+**Parent:** [DEBT-250](debt-250-frontend-visual-divergence-compliance-plan.md)
 **Items:** LIGHT-1
 **Decision 12:** Option C — Accept asymmetry
 **Files:** Documentation only: `docs/frontend/pattern-registry.md` (Part 1.2)

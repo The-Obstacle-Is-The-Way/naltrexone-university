@@ -1,7 +1,7 @@
 # DEBT-259: Shared Constants Extraction
 
 **Status:** Resolved (2026-03-01)
-**Parent:** [DEBT-250](../../debt/debt-250-frontend-visual-divergence-compliance-plan.md)
+**Parent:** [DEBT-250](debt-250-frontend-visual-divergence-compliance-plan.md)
 **Items:** D-13, D-11
 **Resolution:** Implemented in PR #152 (2026-03-01)
 **Files:** `lib/shared-styles.ts` (new), `app/pricing/pricing-view.tsx`, and 6 app consumers for `headerActionLinkClasses`

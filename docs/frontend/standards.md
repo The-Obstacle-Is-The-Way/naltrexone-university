@@ -1,6 +1,6 @@
 # Frontend Standards
 
-**Last Updated:** 2026-02-28
+**Last Updated:** 2026-03-01
 
 Canonical reference for all frontend patterns, component usage, accessibility, and styling conventions. Every UI change MUST be consistent with this document. If a pattern isn't documented here, don't invent one — add it here first.
 
@@ -570,7 +570,7 @@ ALWAYS use `ROUTES.*` constants and helper functions for links. NEVER hardcode r
 - Header: `relative border-b border-border bg-background`
 - Inner container: `mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8`
 - Sticky/z-index: not sticky; no explicit `z-*`
-- Brand link styling is tracked as divergence D-8 (Pattern Registry L-4). Current brand link classes: `text-sm font-semibold text-foreground` (`app/(app)/app/layout.tsx:80`)
+- Brand link follows Pattern Registry `L-4`: `rounded-md text-sm font-semibold text-foreground transition-colors hover:text-foreground/80 focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]`
 
 ### Marketing Shell Header
 
@@ -580,7 +580,7 @@ ALWAYS use `ROUTES.*` constants and helper functions for links. NEVER hardcode r
 - Inner container: `mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8`
 - Desktop nav: `hidden items-center gap-4 text-sm sm:flex`
 - Mobile nav: `mt-3 flex items-center gap-4 text-sm sm:hidden`
-- Marketing currently does not render `ThemeToggle` (UX-3 / DEBT-250)
+- Marketing header includes `ThemeToggle` (UX-3 resolved in DEBT-260 / PR #152)
 
 ### Transitions on interactive elements
 
@@ -648,7 +648,7 @@ Three hooks exceed the 200-line "god hook" threshold (§12):
 | ID | Summary | File(s) |
 |----|---------|---------|
 | [FE-055](../_archive/debt/fe-055-exam-navigator-missing-nav-landmark.md) | Exam review navigator still lacks `aria-controls` wiring between navigator buttons and controlled content | `app/(app)/app/practice/[sessionId]/components/exam-review-view.tsx` |
-| — | Active visual divergences are tracked in Pattern Registry Part 11 (`D-11`, `D-13`, plus approved exception `D-15`) and DEBT-250 implementation plan (active non-D items: `UX-1`–`UX-4`, `TOUCH-1`, `TOUCH-2`) | `docs/frontend/pattern-registry.md`, `docs/debt/debt-250-frontend-visual-divergence-compliance-plan.md` |
+| — | Visual divergences from BS-035 audit are resolved. Only approved exception `D-15` (MetallicCtaButton) remains. See Pattern Registry Part 11 for historical record. | `docs/frontend/pattern-registry.md` |
 | — | `Markdown.tsx` uses PascalCase filename (violates §13 kebab-case convention) | `components/markdown/Markdown.tsx` |
 
 ---

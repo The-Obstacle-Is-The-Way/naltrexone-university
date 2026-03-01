@@ -1,6 +1,6 @@
 # DEBT-250: Frontend Visual Divergence Compliance Plan
 
-**Status:** Active
+**Status:** Resolved (2026-03-01)
 **Priority:** P2
 **Date:** 2026-02-28
 **Owner:** Frontend/UI
@@ -57,23 +57,19 @@ DEBT-250 is decomposed into 14 child specs (DEBT-251–264). Each child spec map
 
 | Spec | Items | Blocked By | Status | PR |
 |------|-------|-----------|--------|----|
-| [DEBT-264](debt-264-documentation-sync.md) | Phase 6 doc sync | All code specs merged | Blocked | — |
+| [DEBT-264](debt-264-documentation-sync.md) | Phase 6 doc sync | ~~All code specs merged~~ Done | Resolved (2026-03-01) | — |
 
 ### Execution Order
 
 ```
-RESOLVED:
+ALL RESOLVED:
   DEBT-251, DEBT-252, DEBT-253 → PR #150
   DEBT-254, DEBT-255           → PR #149
   DEBT-256, DEBT-257, DEBT-258 → PR #151
   DEBT-259, DEBT-260, DEBT-261 → PR #152
-
-BLOCKED ON DECISIONS:
-  Decision 12 → DEBT-262
-  Decision 13 → DEBT-263 [after DEBT-251]
-
-LAST:
-  All merged → DEBT-264
+  DEBT-262 (docs-only)         → PR #153
+  DEBT-263                     → PR #153
+  DEBT-264 (documentation sync)
 ```
 
 ---
