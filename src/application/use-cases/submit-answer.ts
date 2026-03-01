@@ -102,6 +102,13 @@ export class SubmitAnswerUseCase {
       );
     }
 
+    if (retryOrigin !== null && input.sessionId) {
+      throw new ApplicationError(
+        'VALIDATION_ERROR',
+        'Retry submissions must not include sessionId',
+      );
+    }
+
     if (retryOfAttemptId !== null) {
       const parentAttempt = await this.attempts.findByIdAndUserId(
         retryOfAttemptId,

@@ -32,7 +32,10 @@ class FailingRollbackAttemptRepository extends FakeAttemptRepository {
 }
 
 class ThrowingInfoLogger extends FakeLogger {
+  infoCallCount = 0;
+
   override info(_context: Record<string, unknown>, _msg: string): void {
+    this.infoCallCount += 1;
     throw new Error('logger info failed');
   }
 }
@@ -129,6 +132,7 @@ describe('SubmitAnswerUseCase', () => {
       const userId = 'user-1';
       const questionId = 'q1';
       const parentAttemptId = 'attempt-parent';
+      const logger = new ThrowingInfoLogger();
 
       const question = createQuestion({
         id: questionId,
@@ -153,7 +157,7 @@ describe('SubmitAnswerUseCase', () => {
         new FakeQuestionRepository([question]),
         attempts,
         new FakePracticeSessionRepository(),
-        new ThrowingInfoLogger(),
+        logger,
       );
 
       const output = await useCase.execute({
@@ -167,7 +171,64 @@ describe('SubmitAnswerUseCase', () => {
       expect(output).toMatchObject({
         isCorrect: true,
       });
+      expect(logger.infoCallCount).toBe(1);
       expect(attempts.getAll()).toHaveLength(2);
+    });
+
+    it('rejects retry submissions that include sessionId', async () => {
+      const userId = 'user-1';
+      const questionId = 'q1';
+      const sessionId = 'session-1';
+      const parentAttemptId = 'attempt-parent';
+
+      const question = createQuestion({
+        id: questionId,
+        status: 'published',
+        choices: [
+          createChoice({ id: 'c1', questionId, label: 'A', isCorrect: false }),
+          createChoice({ id: 'c2', questionId, label: 'B', isCorrect: true }),
+        ],
+      });
+
+      const attempts = new FakeAttemptRepository([
+        createAttempt({
+          id: parentAttemptId,
+          userId,
+          questionId,
+          selectedChoiceId: 'c1',
+          isCorrect: false,
+          practiceSessionId: sessionId,
+        }),
+      ]);
+
+      const sessions = new FakePracticeSessionRepository([
+        createPracticeSession({
+          id: sessionId,
+          userId,
+          questionIds: [questionId],
+        }),
+      ]);
+
+      const useCase = new SubmitAnswerUseCase(
+        new FakeQuestionRepository([question]),
+        attempts,
+        sessions,
+        new FakeLogger(),
+      );
+
+      await expect(
+        useCase.execute({
+          userId,
+          questionId,
+          choiceId: 'c2',
+          sessionId,
+          retryOfAttemptId: parentAttemptId,
+          retryOrigin: 'history',
+        }),
+      ).rejects.toMatchObject({
+        code: 'VALIDATION_ERROR',
+        message: 'Retry submissions must not include sessionId',
+      });
     });
 
     it('stores retry provenance on standalone retry attempts', async () => {

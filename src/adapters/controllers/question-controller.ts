@@ -92,6 +92,14 @@ const SubmitAnswerInputSchema = z
   })
   .strict()
   .superRefine((input, ctx) => {
+    if (input.retryOrigin && input.sessionId) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['sessionId'],
+        message: 'sessionId is not allowed for retry submissions',
+      });
+    }
+
     if (input.retrySessionId && input.retryOrigin !== 'session_review') {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
