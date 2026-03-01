@@ -14,7 +14,7 @@ The retry experience is partially unified but has three structural gaps:
 
 1. **No provenance tracking.** Retry attempts have no lineage metadata (`retryOfAttemptId`, origin context). Analytics cannot distinguish "first attempt in tutor session" from "standalone retry after reviewing bookmarks." This matters for understanding learning patterns and mastery progression.
 
-2. **Session review is a dead end.** Session review is correctly read-only (no Submit/Try Again), but there is no bridge CTA to transition into standalone retry. A user who sees a wrong answer in session review has no direct path to practice that question again.
+2. **Session review is a dead end.** Session review currently blocks all retry (no Submit/Try Again). A user reviewing their tutor or exam results who sees a wrong answer has no way to retry it — they must manually navigate away to a different context. The fix is inline retry within the session review flow: the user clicks "Try Again" in place, retries without leaving the review daemon, and the result is persisted as a standalone attempt. Session scores remain immutable.
 
 3. **Silent hydration failures.** When review mode can't load a prior attempt (transient error, race condition), the page silently degrades to fresh-attempt mode. The user may unknowingly create a duplicate attempt without realizing they're no longer in review.
 
@@ -56,14 +56,14 @@ Add nullable fields to the `Attempt` entity and `attempts` table:
 | Field | Type | Purpose |
 |---|---|---|
 | `retryOfAttemptId` | `uuid \| null` | Points to the specific prior attempt the user was reviewing when they clicked "Try Again." One hop back only; chains are reconstructable by following pointers. |
-| `retryOrigin` | `enum \| null` | Which UI surface the retry came from: `history`, `dashboard`, `bookmarks`, `session_review_bridge`, `other` |
-| `retrySessionId` | `uuid \| null` | Populated when `retryOrigin = session_review_bridge`. Captures which session the user was reviewing when they decided to retry. |
+| `retryOrigin` | `enum \| null` | Which UI surface the retry came from: `history`, `dashboard`, `bookmarks`, `session_review`, `other` |
+| `retrySessionId` | `uuid \| null` | Populated when `retryOrigin = session_review`. Captures which session the user was reviewing when they decided to retry. |
 
 **Validation rules:**
 - Same user ownership (retry attempt user = parent attempt user)
 - Same question linkage (retry attempt question = parent attempt question)
 - Parent attempt exists when `retryOfAttemptId` is provided
-- `retrySessionId` is only populated when `retryOrigin = session_review_bridge`
+- `retrySessionId` is only populated when `retryOrigin = session_review`
 
 **Cross-origin handling:** A bookmarked question may have been first encountered in a tutor session, exam session, quick practice, or never answered. The provenance chain handles this naturally: `retryOfAttemptId` points to the prior attempt, and the prior attempt already carries its own `practiceSessionId` (or null). No per-origin special-case logic needed. See [retry-logic.md §7](../practice-engine/retry-logic.md#7-cross-origin-provenance-the-bookmark-gotcha).
 
@@ -73,12 +73,15 @@ Add nullable fields to the `Attempt` entity and `attempts` table:
 - Preserve immutable historical attempts: retries always create new rows with `practiceSessionId = null`.
 - Validate provenance when provided; ignore gracefully when absent (forward-compatible with old clients).
 
-### 3) Session-Review Bridge CTA
+### 3) Inline Retry Within Session Review
 
-- Keep session review read-only (no inline submit/try again).
-- Add a "Practice this question" CTA button visible in session review mode.
-- On click: navigate to the same question in standalone mode with query params carrying provenance context (`retryOfAttemptId`, `retryOrigin=session_review_bridge`, `retrySessionId`).
-- The standalone page hydrates the prior attempt for review, then allows retry with provenance.
+- Enable "Try Again" button within the session review flow (tutor and exam review).
+- User retries the question **in place** without leaving the session review daemon (prev/next navigation, question grid stay intact).
+- On submit: create a standalone attempt (`practiceSessionId = null`) with provenance (`retryOfAttemptId`, `retryOrigin=session_review`, `retrySessionId`).
+- **Session data remains immutable:** session score unchanged, session question states unchanged, original session attempt row unchanged.
+- After retry, user sees their new result inline, then continues reviewing the next question.
+- The session review question grid preserves original session state visually. Retry is additive context (e.g., a visual indicator that the question was retried), not a replacement of the original result.
+- Implementation: `canReattemptInContext()` must be updated to return `true` for session review, but the submit path must route to standalone attempt creation (not session attempt creation).
 
 ### 4) Hydration Failure Safety
 
@@ -99,13 +102,14 @@ Add nullable fields to the `Attempt` entity and `attempts` table:
 
 ## Concrete Scenarios
 
-### Scenario: Tutor Session → Session Review → Retry
+### Scenario: Tutor Session → Session Review → Inline Retry
 
 1. User completes 20-question tutor session. Score: 15/20.
-2. Later, reviews the session from History. Sees Q7 was wrong.
-3. Clicks "Practice this question" (bridge CTA).
-4. Opens Q7 in standalone mode. User retries and gets it right.
-5. **Result:** Session stays 15/20. Q7's global status → correct. Q7 drops from "Incorrect" filter. Attempt history shows: (a) tutor session attempt (wrong), (b) standalone retry (correct, provenance → tutor attempt).
+2. Later, reviews the session from History. Navigating question by question with prev/next.
+3. Lands on Q7 — they got it wrong. Sees their wrong answer, the correct answer, explanation.
+4. Clicks "Try Again" — stays in the session review flow.
+5. Form resets inline. User selects new answer, submits.
+6. **Result:** Session stays 15/20. Q7's global status → correct. Q7 drops from "Incorrect" filter. User clicks "Next" to continue reviewing Q8 — never left the review daemon. Question grid still shows Q7 as originally incorrect in session, with a visual indicator that it was retried.
 
 ### Scenario: Bookmarked from Exam → Retry from Bookmarks
 
@@ -131,13 +135,13 @@ Add nullable fields to the `Attempt` entity and `attempts` table:
 
 ## Acceptance Criteria
 
-- [ ] Session review routes never create attempts directly.
-- [ ] Session scores are never mutated by post-session retries.
-- [ ] Standalone retries create new attempts with provenance metadata (`retryOfAttemptId`, `retryOrigin`).
+- [ ] Session review supports inline retry ("Try Again" button) without leaving the review flow.
+- [ ] Inline retry within session review creates a standalone attempt (never a session-scoped attempt).
+- [ ] Session scores and session question states are never mutated by retries.
+- [ ] Session review question grid preserves original session state; retry is additive visual context.
+- [ ] All retries (session review, standalone review, bookmarks, history, dashboard) carry provenance metadata (`retryOfAttemptId`, `retryOrigin`).
 - [ ] Question global status (correct/incorrect) always reflects the latest attempt, regardless of context.
 - [ ] The "Incorrect" filter on the Practice page respects latest-attempt-wins.
-- [ ] Session-review page provides a "Practice this question" bridge CTA.
-- [ ] Bridge CTA carries provenance context through to the standalone retry page.
 - [ ] Cross-origin retries (e.g., bookmarked question from exam, retried from bookmarks) correctly chain provenance without special-case logic.
 - [ ] Non-session review hydration failure is explicit (no silent degradation to attempt mode).
 - [ ] Retry provenance is queryable in DB and visible in logs/analytics.
