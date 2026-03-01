@@ -97,9 +97,7 @@ All frontend-specific UI/UX debt. Items use `FE-XXX` IDs and are cross-reference
 
 ### P3 — Fix as encountered
 
-| ID | Summary | File(s) |
-|----|---------|---------|
-| [FE-055](../_archive/debt/fe-055-exam-navigator-missing-nav-landmark.md) (follow-up) | Exam review navigator still lacks `aria-controls` wiring between navigator buttons and controlled content | `app/(app)/app/practice/[sessionId]/components/exam-review-view.tsx` |
+*No active P3 items.*
 
 **Next Frontend ID:** FE-056
 
@@ -129,7 +127,7 @@ All frontend-specific UI/UX debt. Items use `FE-XXX` IDs and are cross-reference
 | FE-052 | Loading state `<output>` missing `aria-live` in `practice-view.tsx` | Added `aria-live="polite"` to practice loading output and updated tests |
 | FE-053 | Bookmark error card never auto-dismisses and has no retry button | Added `Retry bookmarks` action wired to reload bookmarks, with test coverage |
 | [FE-054](../_archive/debt/fe-054-hardcoded-emerald-color-bypasses-design-tokens.md) | Hardcoded `text-emerald-500` bypasses design system tokens (3 files) | Replaced `text-emerald-500` with `text-success` and updated regression test |
-| [FE-055](../_archive/debt/fe-055-exam-navigator-missing-nav-landmark.md) | Practice session question navigator missing navigation landmark + `aria-current` (phase 1) | Added navigation landmark + `aria-current="step"` with regression test coverage. Follow-up `aria-controls` wiring remains active in Frontend Debt (P3). |
+| [FE-055](./fe-055-aria-controls-wiring.md) ([phase 1](../_archive/debt/fe-055-exam-navigator-missing-nav-landmark.md)) | Practice session question navigator accessibility wiring (`<nav>` landmark, `aria-current`, `aria-controls`) | Completed in two stages: phase 1 added landmark + `aria-current="step"`; follow-up added end-to-end `aria-controls` → panel `id` wiring (`useId`) across `exam-review-view.tsx`, `practice-view.tsx`, and `practice-session-page-view.tsx` with regression coverage. |
 | FE-002 | `usePracticeSessionReviewStage` exceeds 150-line guideline | Refactored to 212 lines; summary + navigator extracted to sub-hooks |
 | FE-007 | Raw `<button>` in pricing client | Replaced with `Button` component and preserved pending state |
 | FE-008 | Raw styled links used as buttons | Adopted `Button asChild` and standardized focus rings |

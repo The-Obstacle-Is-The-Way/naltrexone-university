@@ -48,6 +48,7 @@ test('renders navigator states and disables unavailable questions', async () => 
         ],
       }}
       currentQuestionId="q1"
+      controlledPanelId="practice-question-panel"
       onNavigateQuestion={onNavigateQuestion}
     />,
   );
@@ -98,6 +99,7 @@ test('uses correctness labels only in tutor mode', async () => {
         ],
       }}
       currentQuestionId="q1"
+      controlledPanelId="practice-question-panel"
       onNavigateQuestion={onNavigateQuestion}
     />,
   );

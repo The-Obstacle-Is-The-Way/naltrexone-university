@@ -24,10 +24,12 @@ import type { GetPracticeSessionReviewOutput } from '@/src/application/use-cases
 export function QuestionNavigator({
   review,
   currentQuestionId,
+  controlledPanelId,
   onNavigateQuestion,
 }: {
   review: GetPracticeSessionReviewOutput;
   currentQuestionId: string | null;
+  controlledPanelId: string;
   onNavigateQuestion: (questionId: string) => void;
 }) {
   return (
@@ -70,6 +72,7 @@ export function QuestionNavigator({
                 onClick={() => onNavigateQuestion(row.questionId)}
                 aria-label={`Question ${row.order}: ${statusParts.join(', ')}`}
                 aria-current={isCurrent ? 'step' : undefined}
+                aria-controls={controlledPanelId}
               >
                 {row.order}
                 {row.markedForReview ? (

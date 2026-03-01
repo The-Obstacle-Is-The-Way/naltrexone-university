@@ -538,6 +538,33 @@ describe('PracticeView', () => {
 
     expect(html).toContain('Your answer');
   });
+
+  it('renders a question panel id for navigator aria-controls wiring', () => {
+    const html = renderToStaticMarkup(
+      <PracticeView
+        questionPanelId="practice-question-panel"
+        loadState={{ status: 'ready' }}
+        question={null}
+        selectedChoiceId={null}
+        isAnswered={false}
+        submitResult={null}
+        isPending={false}
+        bookmarkStatus="idle"
+        isBookmarked={false}
+        canSubmit={false}
+        onTryAgain={() => undefined}
+        onToggleBookmark={() => undefined}
+        onSelectChoice={() => undefined}
+        onSubmit={() => undefined}
+        onNextQuestion={() => undefined}
+      />,
+    );
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const questionPanel = doc.querySelector('div[tabindex="-1"]');
+
+    expect(questionPanel).not.toBeNull();
+    expect(questionPanel?.getAttribute('id')).toBe('practice-question-panel');
+  });
 });
 
 describe('getBookmarkNotificationTransition', () => {
