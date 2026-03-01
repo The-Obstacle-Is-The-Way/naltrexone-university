@@ -1,4 +1,6 @@
+import type { UserButton as ClerkUserButton } from '@clerk/nextjs';
 import Link from 'next/link';
+import type { ComponentProps } from 'react';
 import { Button } from '@/components/ui/button';
 import type {
   AuthCheckDeps,
@@ -12,6 +14,9 @@ import {
 import { ROUTES } from '@/lib/routes';
 
 export type AuthNavDeps = AuthCheckDeps;
+type UserButtonAppearance = NonNullable<
+  ComponentProps<typeof ClerkUserButton>['appearance']
+>;
 
 const getDeps = createDepsResolver<AuthNavDeps, AuthDepsContainer>(
   (container) => ({
@@ -71,7 +76,7 @@ export async function AuthNav({
     elements: {
       userButtonTrigger: 'min-h-[44px] min-w-[44px]',
     },
-  } as const;
+  } satisfies UserButtonAppearance;
 
   const { UserButton } = await import('@clerk/nextjs');
 
